@@ -23,7 +23,7 @@ Open technical and operational risks are tracked in
 | Alpha51 release assets | Exactly 6 immutable assets; official Ed25519 manifest and detached signature verified | VERIFIED |
 | Manifest-authorized archive | SHA256 `57d0321a13388392872bc3aef9af62646e2d700c23a4e0305d479df1e80ff365`; 22,644,115 bytes | VERIFIED |
 | Git tag signature | The Git tag is unsigned | VERIFIED; the Ed25519 manifest, not the tag signature, is update authority |
-| Handoff branch | `docs/alpha51-engineering-handoff` | Documentation-only handoff work; not part of the Alpha51 binary baseline |
+| Handoff documentation on `main` | [PR #74](https://github.com/celikbros/celikpanel/pull/74), merge commit `e29df589594b2b5929d067a0174ab98d8182e4b5` | VERIFIED; documentation-only, not part of the Alpha51 binary baseline |
 | GitHub open pull requests | 5 drafts: [#69](https://github.com/celikbros/celikpanel/pull/69), [#70](https://github.com/celikbros/celikpanel/pull/70), [#71](https://github.com/celikbros/celikpanel/pull/71), [#72](https://github.com/celikbros/celikpanel/pull/72), [#73](https://github.com/celikbros/celikpanel/pull/73) | VERIFIED as of 2026-08-29; none is part of Alpha51 |
 | Product lifecycle | Alpha / pre-release | REPOSITORY-DECLARED |
 | Production readiness | Not production ready | REPOSITORY-DECLARED in SECURITY.md |
@@ -43,9 +43,9 @@ not be merged as-is. Draft PR #73, head `archive/alpha35-portal-tooling` at
 commit `0ef899f3cb96390c4ef3822f199eddc67bb0ee1f`, archives five unique Alpha35
 portal scripts and an unpublished PR72-follow-up patch. It is archival and must
 not be merged or executed as-is. This handoff makes no claim that every check
-on any draft is green. Merging the handoff branch can put `main` ahead of
-Alpha51 with documentation-only changes; it does not create or replace a
-published binary release.
+on any draft is green. PR #74 merged the documentation-only handoff into
+`main`, putting `main` ahead of the Alpha51 source tag without creating or
+replacing a published binary release.
 
 ## 2. Legal and authority boundary
 
@@ -76,7 +76,8 @@ Use this order when facts disagree:
 7. ROADMAP.md and docs/AUTOPSY.md for planned work, debt and historical
    context; neither is proof of current runtime state.
 
-The handoff branch reconciles the previously identified source-document drift:
+The handoff package now on `main` reconciles the previously identified
+source-document drift:
 
 - docs/OPERATIONS.md and its Turkish pair now describe snapshot v6, rejection
   of v4/v5 by the current rollback path, and the matching historical-release
@@ -86,8 +87,8 @@ The handoff branch reconciles the previously identified source-document drift:
 - README, Roadmap, UI architecture and web onboarding are aligned with Alpha51,
   and the unused root create-vite scaffold is removed.
 
-R-001, R-002 and R-010 are therefore closed on this branch. R-012 is also
-closed/mitigated on the handoff branch for the root scaffold and duplicate
+R-001, R-002 and R-010 are therefore closed on `main`. R-012 is also
+closed/mitigated on `main` for the root scaffold and duplicate
 worktree/debris cleanup: after unique work was preserved in PR #72 and PR #73,
 the cleanup removed 109 registered duplicate worktrees, 105 stale local
 branches, 56 stale remote branches, `.attic`, `.worktrees`,
@@ -95,9 +96,9 @@ branches, 56 stale remote branches, `.attic`, `.worktrees`,
 Only the primary registered worktree remained. Tracked `.design-sync` was
 retained intentionally. The incoming team must still verify a fresh, clean
 `main` checkout at acceptance. This repository cleanup made no live-server
-change and is not live-state evidence. Until these changes are reviewed and
-merged, use the immutable Alpha51 scripts and contract tests as
-release/rollback authority.
+change and is not live-state evidence. For binary release and rollback
+authority, continue to use the immutable Alpha51 scripts and contract tests;
+the documentation-only `main` changes do not replace them.
 
 ## 4. Runtime architecture
 
@@ -210,8 +211,8 @@ checksum, signed manifest and detached signature.
 
 The Git tag itself is unsigned. Installation/update authority comes from the
 pinned Ed25519 trust anchor and verified signed manifest v2, not from a Git tag
-signature. The current published binary remains Alpha51 even if the
-documentation-only handoff branch is merged and `main` advances.
+signature. The documentation-only handoff is now merged and `main` is ahead of
+the source tag, while the current published binary remains Alpha51.
 
 Before the next release:
 

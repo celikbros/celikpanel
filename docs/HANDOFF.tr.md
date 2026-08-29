@@ -22,7 +22,7 @@ belgesinde ayrı tutulur. Açık teknik ve operasyonel riskler
 | Alpha51 sürüm ürünleri | Tam 6 değişmez ürün; resmi Ed25519 manifest'i ve ayrık imza doğrulandı | DOĞRULANMIŞ |
 | Manifest'in yetkilendirdiği arşiv | SHA256 `57d0321a13388392872bc3aef9af62646e2d700c23a4e0305d479df1e80ff365`; 22.644.115 bayt | DOĞRULANMIŞ |
 | Git etiketi imzası | Git etiketi imzasızdır | DOĞRULANMIŞ; update otoritesi etiket imzası değil Ed25519 manifest'idir |
-| Devir dalı | `docs/alpha51-engineering-handoff` | Yalnız belge devri çalışması; Alpha51 binary referansının parçası değildir |
+| `main` üzerindeki devir belgeleri | [PR #74](https://github.com/celikbros/celikpanel/pull/74), merge commit `e29df589594b2b5929d067a0174ab98d8182e4b5` | DOĞRULANMIŞ; yalnız belgedir, Alpha51 binary referansının parçası değildir |
 | GitHub açık pull request'leri | 5 taslak: [#69](https://github.com/celikbros/celikpanel/pull/69), [#70](https://github.com/celikbros/celikpanel/pull/70), [#71](https://github.com/celikbros/celikpanel/pull/71), [#72](https://github.com/celikbros/celikpanel/pull/72), [#73](https://github.com/celikbros/celikpanel/pull/73) | 29.08.2026 itibarıyla DOĞRULANMIŞ; hiçbiri Alpha51'in parçası değildir |
 | Ürün yaşam evresi | Alpha / ön sürüm | REPO TARAFINDAN BEYAN EDİLMİŞ |
 | Üretime hazır olma durumu | Üretime hazır değil | SECURITY.md içinde REPO BEYANI |
@@ -44,10 +44,10 @@ arşivliktir ve olduğu hâliyle merge edilmemelidir. Taslak PR #73,
 `0ef899f3cb96390c4ef3822f199eddc67bb0ee1f` commit'iyle beş benzersiz Alpha35
 portal scriptini ve yayımlanmamış bir PR72-follow-up patch'ini arşivler.
 Arşivliktir; olduğu hâliyle merge edilmemeli veya çalıştırılmamalıdır. Bu devir
-hiçbir taslaktaki bütün kontrollerin yeşil olduğunu iddia etmez. Devir dalının
-merge edilmesi `main` dalını yalnız belge değişiklikleriyle Alpha51'in önüne
-taşıyabilir; yeni bir binary sürüm oluşturmaz veya yayımlanmış sürümün yerini
-almaz.
+hiçbir taslaktaki bütün kontrollerin yeşil olduğunu iddia etmez. PR #74 yalnız
+belge içeren devir paketini `main` dalına merge ederek `main` dalını Alpha51
+kaynak etiketinin önüne taşımıştır; yeni bir binary sürüm oluşturmamış veya
+yayımlanmış sürümün yerini almamıştır.
 
 ## 2. Hukuk ve yetki sınırı
 
@@ -78,7 +78,8 @@ Bilgiler çeliştiğinde şu sırayı kullanın:
 7. Plan, borç ve tarihsel bağlam için ROADMAP.md ve docs/AUTOPSY.md; ikisi de
    güncel runtime durumunun kanıtı değildir.
 
-Devir dalı, daha önce saptanan kaynak-belge drift'ini uzlaştırır:
+Artık `main` üzerinde bulunan devir paketi, daha önce saptanan kaynak-belge
+drift'ini uzlaştırır:
 
 - docs/OPERATIONS.md ve Türkçe eşi snapshot v6'yı, güncel rollback yolunun
   v4/v5'i reddettiğini ve eski snapshot'lar için eşleşen tarihsel sürüm sınırını
@@ -88,17 +89,19 @@ Devir dalı, daha önce saptanan kaynak-belge drift'ini uzlaştırır:
 - README, Roadmap, UI mimarisi ve web onboarding Alpha51 ile uyumludur; gereksiz
   root create-vite scaffold'u kaldırılmıştır.
 
-Bu nedenle R-001, R-002 ve R-010 bu dalda kapanmıştır. R-012 de root scaffold ve
-kopya worktree/kalıntı temizliği için devir dalında kapanmış/azaltılmıştır:
+Bu nedenle R-001, R-002 ve R-010 `main` üzerinde kapanmıştır. R-012 de root
+scaffold ve kopya worktree/kalıntı temizliği için `main` üzerinde
+kapanmış/azaltılmıştır:
 benzersiz işler PR #72 ve PR #73'te korunduktan sonra 109 kayıtlı kopya worktree,
 105 eski yerel dal, 56 eski remote dal, `.attic`, `.worktrees`,
 `.claude/worktrees`, root `__pycache__` ve geçici devir worktree'si
 kaldırılmıştır. Yalnız primary kayıtlı worktree kalmıştır. Tracked
 `.design-sync` bilinçli olarak tutulmuştur. Yeni ekip kabul sırasında taze ve
 temiz bir `main` checkout'unu yine doğrulamalıdır. Bu repo temizliği canlı
-sunucuda değişiklik yapmamıştır ve canlı durum kanıtı değildir. Bu değişiklikler
-incelenip merge edilene kadar release/rollback otoritesi olarak değişmez Alpha51
-scriptlerini ve sözleşme testlerini kullanın.
+sunucuda değişiklik yapmamıştır ve canlı durum kanıtı değildir. Binary release
+ve rollback otoritesi için değişmez Alpha51 scriptlerini ve sözleşme testlerini
+kullanmaya devam edin; yalnız belge içeren `main` değişiklikleri bunların yerini
+almaz.
 
 ## 4. Runtime mimarisi
 
@@ -212,8 +215,8 @@ manifest ve ayrık imzadır.
 
 Git etiketinin kendisi imzasızdır. Kurulum/update otoritesi Git etiketi imzası
 değil, sabitlenmiş Ed25519 güven kökü ile doğrulanmış imzalı manifest v2'dir.
-Yalnız belge içeren devir dalı merge edilip `main` ilerlese bile güncel
-yayımlanmış binary Alpha51 olarak kalır.
+Yalnız belge içeren devir paketi artık merge edilmiştir ve `main` kaynak
+etiketinin önündedir; güncel yayımlanmış binary yine Alpha51'dir.
 
 Sonraki sürümden önce:
 

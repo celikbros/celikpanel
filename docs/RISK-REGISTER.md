@@ -2,8 +2,8 @@
 
 *Baseline: August 29, 2026 · [Türkçe](RISK-REGISTER.tr.md)*
 
-This register tracks known handoff gaps and the mitigations completed on
-`docs/alpha51-engineering-handoff`. It contains no secret values or real
+This register tracks known handoff gaps and the mitigations merged into `main`
+by [PR #74](https://github.com/celikbros/celikpanel/pull/74). It contains no secret values or real
 custodian names. Each owner, target date, acceptance and external evidence
 reference must be assigned in the approved out-of-repository handoff system.
 
@@ -24,9 +24,8 @@ all-checks-green claim is made for any draft.
 - OPEN: mitigation is incomplete.
 - REVERIFY: the condition may have changed, but current evidence is absent.
 - BLOCKER: do not perform the affected operation until the exit criteria pass.
-- CLOSED ON HANDOFF BRANCH: the repository-only exit criteria are satisfied by
-  this branch; verify review and merge before treating the closure as present
-  on `main`.
+- CLOSED ON MAIN: the repository-only exit criteria are satisfied on `main`;
+  this status is not live-server evidence.
 - PARTIALLY MITIGATED / REVERIFY: a bounded component is fixed, but the
   remaining condition still requires acceptance evidence.
 - Critical: can cause unrecoverable state, unsafe privileged operation or loss
@@ -39,8 +38,8 @@ all-checks-green claim is made for any draft.
 
 | ID | Severity | Status | Risk |
 |---|---|---|---|
-| R-001 | Critical | CLOSED ON HANDOFF BRANCH | Operations now documents snapshot v6, current v4/v5 rejection and the historical-release boundary |
-| R-002 | High | CLOSED ON HANDOFF BRANCH | README now separates optional local GPG use from canonical Ed25519 update authority |
+| R-001 | Critical | CLOSED ON MAIN | Operations now documents snapshot v6, current v4/v5 rejection and the historical-release boundary |
+| R-002 | High | CLOSED ON MAIN | README now separates optional local GPG use from canonical Ed25519 update authority |
 | R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS | No proven full control-plane disaster backup and restore drill |
 | R-004 | High | REVERIFY | Frankfurt live identity is unknown; Boston proof is only partial |
 | R-005 | High | OPEN | Boston/Frankfurt environment classification conflicts with the not-production-ready policy |
@@ -48,9 +47,9 @@ all-checks-green claim is made for any draft.
 | R-007 | High | OPEN | Required real-VM install/update/rollback/reboot evidence is not tracked in the handoff |
 | R-008 | High | REVERIFY | Alpha51 GitHub release chain is verified; portal equality and installed release floors are not |
 | R-009 | Medium | OPEN | External package/repository/CA endpoints can become stale without a live verification gate |
-| R-010 | Medium | CLOSED ON HANDOFF BRANCH | Architecture, onboarding and implementation-status documents are reconciled with Alpha51 |
+| R-010 | Medium | CLOSED ON MAIN | Architecture, onboarding and implementation-status documents are reconciled with Alpha51 |
 | R-011 | High | OPEN | Access, signing-key, provider and incident custodians are not assigned in the handoff |
-| R-012 | Medium | CLOSED/MITIGATED ON HANDOFF BRANCH / CLEAN MAIN REVERIFY | Root scaffold, duplicate worktrees/branches and listed debris were removed; the incoming team must verify a clean `main` checkout |
+| R-012 | Medium | CLOSED/MITIGATED ON MAIN / INCOMING CLEAN CHECKOUT REVERIFY | Root scaffold, duplicate worktrees/branches and listed debris were removed; the incoming team must verify a clean `main` checkout |
 | R-013 | Medium | OPEN | Browser golden-path, critical-endpoint and latency evidence remains incomplete |
 | R-014 | Medium | OPEN | Incident response, escalation and postmortem ownership are not formally defined |
 
@@ -58,20 +57,20 @@ all-checks-green claim is made for any draft.
 
 ### R-001 — Snapshot contract documentation mismatch
 
-- Evidence: this branch updates docs/OPERATIONS.md and its Turkish pair to
+- Evidence: `main` updates docs/OPERATIONS.md and its Turkish pair to
   snapshot v6, states that the current updater/rollback path rejects v4/v5, and
   limits an older snapshot to its matching immutable historical recovery
   release and rollback helper.
 - Impact: an incoming operator can select an incompatible rollback procedure or
   believe a non-restorable snapshot is accepted.
 - Closure basis: the English/Turkish runbooks now match the source contract.
-  Until merge, immutable Alpha51 scripts and contract tests remain authority.
-- Status: CLOSED ON HANDOFF BRANCH. This is documentation closure only; live or
+  Immutable Alpha51 scripts and contract tests remain binary authority.
+- Status: CLOSED ON MAIN. This is documentation closure only; live or
   disposable restore evidence remains governed by R-003 and R-007.
 
 ### R-002 — Release-signing authority ambiguity
 
-- Evidence: this branch makes README identify Ed25519 signed manifest v2,
+- Evidence: `main` makes README identify Ed25519 signed manifest v2,
   release sequence, pinned public key and exactly six assets as tagged-release
   update authority. Optional local GPG signing is explicitly non-authoritative.
 - Impact: a team can publish integrity-only or optional artifacts while
@@ -79,7 +78,7 @@ all-checks-green claim is made for any draft.
 - Closure basis: README and release-signing guidance now make the authority
   boundary explicit; the Alpha51 official manifest/signature and six-asset set
   are verified.
-- Status: CLOSED ON HANDOFF BRANCH. Portal/live equality remains tracked by
+- Status: CLOSED ON MAIN. Portal/live equality remains tracked by
   R-008 and is not implied by this documentation closure.
 
 ### R-003 — Control-plane disaster recovery is unproven
@@ -182,7 +181,7 @@ all-checks-green claim is made for any draft.
 
 ### R-010 — Documentation and onboarding drift
 
-- Evidence: this branch aligns README with Alpha51 and the signed-update path,
+- Evidence: `main` aligns README with Alpha51 and the signed-update path,
   makes Roadmap metrics generated rather than hand-maintained, describes the
   role-aware web/src/nav.ts registry in both UI architecture files, and replaces
   the generic web/README.md template with product-specific onboarding.
@@ -190,7 +189,7 @@ all-checks-green claim is made for any draft.
   implemented behavior or rebuild scaffolding instead of the product.
 - Closure basis: README, Roadmap status, architecture and web onboarding are
   reconciled with Alpha51; stale factual snapshots are dated or generated.
-- Status: CLOSED ON HANDOFF BRANCH. Future facts must still be updated or
+- Status: CLOSED ON MAIN. Future facts must still be updated or
   generated when their source changes.
 
 ### R-011 — Custodian and access continuity
@@ -208,7 +207,7 @@ all-checks-green claim is made for any draft.
 
 ### R-012 — Wrong-tree and repository clutter risk
 
-- Evidence: this branch removes the unused root package.json/package-lock.json
+- Evidence: `main` removes the unused root package.json/package-lock.json
   create-vite scaffold. After unique artifacts were preserved in PR #72 and PR
   #73, cleanup removed 109 registered duplicate worktrees, 105 stale local
   branches, 56 stale remote branches, `.attic`, `.worktrees`,
@@ -219,10 +218,10 @@ all-checks-green claim is made for any draft.
   committed and reviewed as product code.
 - Immediate control: the incoming team must use a fresh `main` checkout and
   verify git status and worktree list before work begins.
-- Exit criteria: the cleanup is closed/mitigated on this branch; incoming-team
+- Exit criteria: the cleanup is closed/mitigated on `main`; incoming-team
   evidence shows a clean `main` checkout with only intentional registered
   worktrees. Tracked `.design-sync` is not debris and remains intentionally.
-- Status: CLOSED/MITIGATED ON HANDOFF BRANCH / CLEAN MAIN REVERIFY. This cleanup
+- Status: CLOSED/MITIGATED ON MAIN / INCOMING CLEAN CHECKOUT REVERIFY. This cleanup
   changed no live server and supplies no live-runtime evidence.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
