@@ -205,16 +205,37 @@ func TestServiceOperationSnapshotCanonicalizesKnownHistoricalMigrationDDL(t *tes
 		name   string
 		schema serviceOperationSnapshotSchema
 		create func(*testing.T, string) string
+		ddl    string
 	}{
 		{
-			name:   "normal",
+			name:   "known historical normal",
 			schema: serviceOperationSnapshotSchemaNormal,
 			create: createCurrentPanelDatabaseInDirectory,
+			ddl:    knownLegacySchemaMigrationsSQL,
 		},
 		{
-			name:   "pre ledger",
+			name:   "known historical pre ledger",
 			schema: serviceOperationSnapshotSchemaPreLedger,
 			create: createPreLedgerPanelDatabaseInDirectory,
+			ddl:    knownLegacySchemaMigrationsSQL,
+		},
+		{
+			name:   "space formatted normal",
+			schema: serviceOperationSnapshotSchemaNormal,
+			create: createCurrentPanelDatabaseInDirectory,
+			ddl: `CREATE TABLE schema_migrations (
+    version INTEGER PRIMARY KEY,
+    applied_at TEXT DEFAULT (datetime('now'))
+)`,
+		},
+		{
+			name:   "space formatted pre ledger",
+			schema: serviceOperationSnapshotSchemaPreLedger,
+			create: createPreLedgerPanelDatabaseInDirectory,
+			ddl: `CREATE TABLE schema_migrations (
+    version INTEGER PRIMARY KEY,
+    applied_at TEXT DEFAULT (datetime('now'))
+)`,
 		},
 	}
 	for _, test := range tests {
@@ -224,18 +245,18 @@ func TestServiceOperationSnapshotCanonicalizesKnownHistoricalMigrationDDL(t *tes
 			if err := normalizeStandaloneSQLiteSnapshot(sourcePath); err != nil {
 				t.Fatal(err)
 			}
-			rebuildSchemaMigrationsDDLForTest(
-				t,
-				sourcePath,
-				knownLegacySchemaMigrationsSQL,
-			)
+			rebuildSchemaMigrationsDDLForTest(t, sourcePath, test.ddl)
 			setSchemaMigrationAppliedAtForTest(t, sourcePath, 1, sql.NullString{})
 
 			sourceSQLBefore, sourceRowsBefore := readSchemaMigrationsStateForTest(t, sourcePath)
-			if sourceSQLBefore != knownLegacySchemaMigrationsSQL {
+			if sourceSQLBefore != test.ddl {
 				t.Fatalf("historical source DDL=%q", sourceSQLBefore)
 			}
 			sourceBytesBefore, err := os.ReadFile(sourcePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sourceInfoBefore, err := os.Stat(sourcePath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -257,6 +278,13 @@ func TestServiceOperationSnapshotCanonicalizesKnownHistoricalMigrationDDL(t *tes
 			}
 			if !bytes.Equal(sourceBytesBefore, sourceBytesAfter) {
 				t.Fatal("canonical live source bytes changed")
+			}
+			sourceInfoAfter, err := os.Stat(sourcePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !samePinnedSQLiteFileMetadata(sourceInfoBefore, sourceInfoAfter) {
+				t.Fatal("canonical live source metadata changed")
 			}
 			sourceSQLAfter, sourceRowsAfter := readSchemaMigrationsStateForTest(t, sourcePath)
 			if sourceSQLAfter != sourceSQLBefore ||
@@ -382,24 +410,68 @@ func TestServiceOperationSnapshotRejectsHistoricalMigrationDDLWithBlobAppliedAt(
 	}
 }
 
-func TestServiceOperationSnapshotRejectsUnknownMigrationDDLVariants(t *testing.T) {
+func TestServiceOperationSnapshotRejectsIncompatibleMigrationDDLVariants(t *testing.T) {
 	tests := []struct {
-		name string
-		ddl  string
+		name    string
+		ddl     string
+		postDDL string
 	}{
 		{
-			name: "unknown whitespace",
+			name: "different default expression",
+			ddl: `CREATE TABLE schema_migrations (
+		version INTEGER PRIMARY KEY,
+		applied_at TEXT DEFAULT CURRENT_TIMESTAMP
+)`,
+		},
+		{
+			name: "extra column",
+			ddl: `CREATE TABLE schema_migrations (
+		version INTEGER PRIMARY KEY,
+		applied_at TEXT DEFAULT (datetime('now')),
+		note TEXT
+	)`,
+		},
+		{
+			name: "not null applied at",
+			ddl: `CREATE TABLE schema_migrations (
+		version INTEGER PRIMARY KEY,
+		applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+	)`,
+		},
+		{
+			name: "without rowid",
+			ddl: `CREATE TABLE schema_migrations (
+		version INTEGER PRIMARY KEY,
+		applied_at TEXT DEFAULT (datetime('now'))
+	) WITHOUT ROWID`,
+		},
+		{
+			name: "strict",
+			ddl: `CREATE TABLE schema_migrations (
+		version INTEGER PRIMARY KEY,
+		applied_at TEXT DEFAULT (datetime('now'))
+	) STRICT`,
+		},
+		{
+			name: "unexpected index",
 			ddl: `CREATE TABLE schema_migrations (
     version INTEGER PRIMARY KEY,
     applied_at TEXT DEFAULT (datetime('now'))
 )`,
+			postDDL: `CREATE INDEX unexpected_schema_migrations_applied_at
+			ON schema_migrations(applied_at)`,
 		},
 		{
-			name: "semantic change",
+			name: "unexpected trigger",
 			ddl: `CREATE TABLE schema_migrations (
-		version INTEGER PRIMARY KEY,
-		applied_at TEXT DEFAULT CURRENT_TIMESTAMP
-	)`,
+    version INTEGER PRIMARY KEY,
+    applied_at TEXT DEFAULT (datetime('now'))
+)`,
+			postDDL: `CREATE TRIGGER unexpected_schema_migrations_insert
+			AFTER INSERT ON schema_migrations
+			BEGIN
+				SELECT 1;
+			END`,
 		},
 	}
 	for _, test := range tests {
@@ -413,7 +485,14 @@ func TestServiceOperationSnapshotRejectsUnknownMigrationDDLVariants(t *testing.T
 				t.Fatal(err)
 			}
 			rebuildSchemaMigrationsDDLForTest(t, sourcePath, test.ddl)
+			if test.postDDL != "" {
+				execSnapshotTestSQL(t, sourcePath, test.postDDL)
+			}
 			sourceBytesBefore, err := os.ReadFile(sourcePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sourceInfoBefore, err := os.Stat(sourcePath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -435,6 +514,13 @@ func TestServiceOperationSnapshotRejectsUnknownMigrationDDLVariants(t *testing.T
 			}
 			if !bytes.Equal(sourceBytesBefore, sourceBytesAfter) {
 				t.Fatal("rejected source bytes changed")
+			}
+			sourceInfoAfter, statErr := os.Stat(sourcePath)
+			if statErr != nil {
+				t.Fatal(statErr)
+			}
+			if !samePinnedSQLiteFileMetadata(sourceInfoBefore, sourceInfoAfter) {
+				t.Fatal("rejected source metadata changed")
 			}
 			sourceSQL, _ := readSchemaMigrationsStateForTest(t, sourcePath)
 			if sourceSQL != test.ddl {
@@ -1179,6 +1265,26 @@ func rebuildSchemaMigrationsDDLForTest(
 	}
 	if !equalServiceOperationSnapshotMigrationRows(migrationRows, restoredRows) {
 		t.Fatal("test fixture rebuild changed migration rows")
+	}
+}
+
+func execSnapshotTestSQL(t *testing.T, databasePath, statement string) {
+	t.Helper()
+	database, err := sql.Open("sqlite", sqliteSnapshotURI(databasePath, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if _, err := database.ExecContext(ctx, statement); err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := normalizeStandaloneSQLiteSnapshot(databasePath); err != nil {
+		t.Fatal(err)
 	}
 }
 
