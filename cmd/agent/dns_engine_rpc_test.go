@@ -28,6 +28,7 @@ type fakeDNSEngineBackend struct {
 	readyErr           error
 	syncErr            error
 	switchErr          error
+	switchHook         func() error
 	result             transport.SwitchDNSEngineV1Response
 	switchCalls        int
 	switchManifest     mutationpayload.DNSEngineSwitchManifestCommitment
@@ -86,6 +87,11 @@ func (backend *fakeDNSEngineBackend) Switch(
 ) (transport.SwitchDNSEngineV1Response, error) {
 	backend.switchCalls++
 	backend.switchManifest = manifest
+	if backend.switchHook != nil {
+		if err := backend.switchHook(); err != nil {
+			return backend.result, err
+		}
+	}
 	return backend.result, backend.switchErr
 }
 
@@ -215,7 +221,7 @@ func TestSwitchDNSEnginePublishesExactTerminalReceipt(t *testing.T) {
 		t.Fatalf("response=%+v", response)
 	}
 	job := manager.status(testMutationRequestID)
-	wantPhase := dnsEngineSwitchPublishedPhasePrefix + testMutationRequestID + "/" + request.ManifestQualifier
+	wantPhase := dnsEngineSwitchFinalizedPhasePrefix + testMutationRequestID + "/" + request.ManifestQualifier
 	if job == nil || job.Status != serviceMutationStatusSucceeded || job.Phase != wantPhase {
 		t.Fatalf("terminal job=%+v want phase %q", job, wantPhase)
 	}
@@ -234,24 +240,250 @@ func TestSwitchDNSEnginePublishesExactTerminalReceipt(t *testing.T) {
 	}
 }
 
-func TestSwitchDNSEngineRetainsHostLeaseThroughFinalization(t *testing.T) {
+func TestSwitchDNSEngineReceiptWriteFailureKeepsDurableActiveLedgerAfterLockRelease(
+	t *testing.T,
+) {
+	request := canonicalSwitchRequest(t)
+	manager, root := newMutationTestManager(t)
+	installGlobalMutationTestManager(t, manager)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	backend := &fakeDNSEngineBackend{
+		result: transport.SwitchDNSEngineV1Response{
+			Applied: true, ActiveEngine: transport.DNSEngineBIND,
+			ActiveEpoch: 1, AppliedZones: 0,
+		},
+	}
+	useFakeDNSEngineBackend(t, backend)
+	fired := false
+	setServiceMutationWriteFault(manager, func(point string) error {
+		if point == serviceMutationWriteFaultBeforeRename && !fired {
+			fired = true
+			return errors.New("injected finalized receipt write failure")
+		}
+		return nil
+	})
+
+	var response SwitchDNSEngineV1Response
+	if err := (&Agent{}).SwitchDNSEngineV1(&request, &response); err != nil {
+		t.Fatal(err)
+	}
+	if !fired ||
+		response.Error != "DNS engine switch finished but its durable receipt could not be reverified" {
+		t.Fatalf("receipt failure fired=%v response=%+v", fired, response)
+	}
+	manager.mu.Lock()
+	poisoned := manager.poisoned != nil
+	active := manager.active
+	manager.mu.Unlock()
+	if !poisoned || active == nil || active.lock != nil ||
+		!exactActiveDNSEngineSwitchJob(
+			active.job,
+			request.MutationRequestID,
+			request.MutationOwnerID,
+			request.TargetEngine,
+			request.ManifestQualifier,
+		) {
+		t.Fatalf(
+			"receipt failure did not retain only durable active authority: poisoned=%v active=%+v",
+			poisoned, active,
+		)
+	}
+	durable, err := manager.loadLedgerFromDisk()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if durable.ActiveRequestID != request.MutationRequestID ||
+		!exactActiveDNSEngineSwitchJob(
+			durable.Jobs[request.MutationRequestID],
+			request.MutationRequestID,
+			request.MutationOwnerID,
+			request.TargetEngine,
+			request.ManifestQualifier,
+		) {
+		t.Fatalf("receipt failure exposed terminal durable state: %+v", durable)
+	}
+	if concurrent, beginErr := manager.begin(&ServiceMutationBeginRequest{
+		RequestID: strings.Repeat("d", 32),
+		OwnerID:   strings.Repeat("e", 32),
+		Kind:      "service_install",
+		Target:    "nginx",
+	}); !errors.Is(beginErr, errServiceMutationManagerPoisoned) || concurrent != nil {
+		t.Fatalf("poisoned manager accepted work: job=%+v err=%v", concurrent, beginErr)
+	}
+	if lock, lockErr := acquireServiceMutationFileLock(manager.lockPath); lockErr != nil {
+		t.Fatalf("host lock remained after finalization proof: %v", lockErr)
+	} else if err := lock.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	releasePoisonedFirewallApplyTestManager(manager)
+	backend.recovery = dnsEngineSwitchRecoveryFinalized
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil {
+		t.Fatalf("finalized receipt startup recovery failed: %v", err)
+	}
+	job := reloaded.status(request.MutationRequestID)
+	wantPhase, err := formatDNSEngineSwitchFinalizedPhase(
+		request.MutationRequestID, request.ManifestQualifier,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if backend.recoverCalls != 1 || backend.finalizeCalls != 1 ||
+		job == nil || job.Status != serviceMutationStatusSucceeded ||
+		job.Phase != wantPhase {
+		t.Fatalf(
+			"finalized receipt recovery backend=%+v job=%+v want phase=%q",
+			backend, job, wantPhase,
+		)
+	}
+	again, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil {
+		t.Fatalf("finalized receipt idempotent restart failed: %v", err)
+	}
+	againJob := again.status(request.MutationRequestID)
+	if backend.recoverCalls != 1 || backend.finalizeCalls != 1 ||
+		againJob == nil || againJob.Status != serviceMutationStatusSucceeded ||
+		againJob.Phase != wantPhase {
+		t.Fatalf(
+			"finalized receipt was not idempotent: backend=%+v job=%+v want phase=%q",
+			backend, againJob, wantPhase,
+		)
+	}
+}
+
+func TestSwitchDNSEngineFinalReceiptRetainsPublicationLeaseAfterHostRelease(
+	t *testing.T,
+) {
 	request := canonicalSwitchRequest(t)
 	manager, _ := newMutationTestManager(t)
 	installGlobalMutationTestManager(t, manager)
 	beginMutationTestJobWithIdentity(
 		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
 	)
+	useFakeDNSEngineBackend(t, &fakeDNSEngineBackend{
+		result: transport.SwitchDNSEngineV1Response{
+			Applied: true, ActiveEngine: transport.DNSEngineBIND,
+			ActiveEpoch: 1, AppliedZones: 0,
+		},
+	})
 	entered := make(chan struct{})
 	release := make(chan struct{})
+	fired := false
+	setServiceMutationWriteFault(manager, func(point string) error {
+		if point == serviceMutationWriteFaultBeforeRename && !fired {
+			fired = true
+			close(entered)
+			<-release
+		}
+		return nil
+	})
+
+	done := make(chan SwitchDNSEngineV1Response, 1)
+	go func() {
+		var response SwitchDNSEngineV1Response
+		_ = (&Agent{}).SwitchDNSEngineV1(&request, &response)
+		done <- response
+	}()
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("final DNS receipt publication did not reach its rename boundary")
+	}
+
+	hostProbe, err := acquireServiceMutationFileLock(manager.lockPath)
+	if err != nil {
+		t.Fatalf("DNS final receipt did not release the host lock: %v", err)
+	}
+	if err := hostProbe.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if competing, err := acquireServiceMutationHostAndPublicationLocks(
+		manager.lockPath,
+	); !errors.Is(err, errServiceMutationHostBusy) {
+		if competing != nil {
+			_ = competing.Close()
+		}
+		t.Fatalf("competing ledger publisher entered final receipt window: %v", err)
+	}
+	hostProbe, err = acquireServiceMutationFileLock(manager.lockPath)
+	if err != nil {
+		t.Fatalf("failed competing publisher retained the host lock: %v", err)
+	}
+	if err := hostProbe.Close(); err != nil {
+		t.Fatal(err)
+	}
+	durable, err := manager.loadLedgerFromDisk()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if durable.ActiveRequestID != request.MutationRequestID ||
+		!exactActiveDNSEngineSwitchJob(
+			durable.Jobs[request.MutationRequestID],
+			request.MutationRequestID,
+			request.MutationOwnerID,
+			request.TargetEngine,
+			request.ManifestQualifier,
+		) {
+		t.Fatalf("pre-rename receipt window exposed terminal state: %+v", durable)
+	}
+
+	close(release)
+	select {
+	case response := <-done:
+		if response.Error != "" || !response.Applied {
+			t.Fatalf("response=%+v", response)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("final DNS receipt publication did not finish")
+	}
+	job := manager.status(request.MutationRequestID)
+	wantPhase, err := formatDNSEngineSwitchFinalizedPhase(
+		request.MutationRequestID, request.ManifestQualifier,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if job == nil || job.Status != serviceMutationStatusSucceeded ||
+		job.Phase != wantPhase {
+		t.Fatalf("final receipt job=%+v want phase=%q", job, wantPhase)
+	}
+}
+
+func TestSwitchDNSEngineRetainsHostLeaseThroughFinalization(t *testing.T) {
+	request := canonicalSwitchRequest(t)
+	manager, root := newMutationTestManager(t)
+	installGlobalMutationTestManager(t, manager)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	journal := activeCommittedBINDStartupJournalFixture(
+		t, manager, root, request,
+	)
+	switchEntered := make(chan struct{})
+	releaseSwitch := make(chan struct{})
+	finalizeEntered := make(chan struct{})
+	releaseFinalize := make(chan struct{})
 	backend := &fakeDNSEngineBackend{
 		result: transport.SwitchDNSEngineV1Response{
 			Applied: true, ActiveEngine: transport.DNSEngineBIND,
 			ActiveEpoch: 1, AppliedZones: 0,
 		},
+		switchHook: func() error {
+			close(switchEntered)
+			<-releaseSwitch
+			return writeDNSEngineSwitchJournal(journal)
+		},
 		finalizeHook: func() error {
-			close(entered)
-			<-release
-			return nil
+			close(finalizeEntered)
+			<-releaseFinalize
+			return removeDNSEngineSwitchJournal()
 		},
 	}
 	useFakeDNSEngineBackend(t, backend)
@@ -263,10 +495,80 @@ func TestSwitchDNSEngineRetainsHostLeaseThroughFinalization(t *testing.T) {
 		done <- response
 	}()
 	select {
-	case <-entered:
+	case <-switchEntered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("DNS switch result hook did not start")
+	}
+
+	manager.mu.Lock()
+	runtime := manager.active
+	manager.mu.Unlock()
+	if runtime == nil {
+		t.Fatal("DNS switch runtime is absent")
+	}
+	journalPath := filepath.Join(
+		filepath.Dir(manager.ledgerPath), dnsEngineSwitchJournalFile,
+	)
+	if _, exists, err := readDNSEngineSwitchJournalAt(journalPath); err != nil || exists {
+		t.Fatalf("pre-commit hook unexpectedly has a journal: exists=%v err=%v", exists, err)
+	}
+	assertProtected := func(stage string) {
+		t.Helper()
+		manager.expire(runtime)
+		heartbeatJob, heartbeatErr := manager.heartbeat(&ServiceMutationHeartbeatRequest{
+			RequestID: request.MutationRequestID,
+			OwnerID:   request.MutationOwnerID,
+			Phase:     "must-not-overwrite-leased",
+		})
+		if heartbeatErr != nil {
+			t.Fatalf("%s heartbeat: %v", stage, heartbeatErr)
+		}
+		cancelJob, cancelErr := manager.cancelJob(&ServiceMutationCancelRequest{
+			RequestID:     request.MutationRequestID,
+			ExpectedOwner: request.MutationOwnerID,
+			Reason:        "must-not-cancel-finalizing-dns",
+		})
+		if cancelErr != nil {
+			t.Fatalf("%s cancel: %v", stage, cancelErr)
+		}
+		finishJob, finishErr := manager.finish(&ServiceMutationFinishRequest{
+			RequestID:   request.MutationRequestID,
+			OwnerID:     request.MutationOwnerID,
+			Success:     false,
+			FailureCode: "must-not-finish-finalizing-dns",
+			Message:     "must not finish finalizing DNS",
+		})
+		if finishErr == nil {
+			t.Fatalf("%s finish unexpectedly succeeded: %+v", stage, finishJob)
+		}
+		manager.mu.Lock()
+		protected := manager.active == runtime &&
+			runtime.dnsEngineSwitchFinalizing &&
+			manager.poisoned == nil
+		manager.mu.Unlock()
+		for _, job := range []*ServiceMutationJob{
+			heartbeatJob, cancelJob, finishJob,
+			manager.status(request.MutationRequestID),
+		} {
+			if job == nil || job.Status != serviceMutationStatusRunning ||
+				job.Phase != "leased" || job.ErrorCode != "" ||
+				job.ErrorMessage != "" || !job.FinishedAt.IsZero() {
+				t.Fatalf("%s protected job=%+v", stage, job)
+			}
+		}
+		if !protected {
+			t.Fatalf("%s finalizing runtime lost protection", stage)
+		}
+	}
+	assertProtected("Switch hook before committed journal write")
+
+	close(releaseSwitch)
+	select {
+	case <-finalizeEntered:
 	case <-time.After(5 * time.Second):
 		t.Fatal("DNS finalizer did not start")
 	}
+	assertProtected("blocked finalizer")
 
 	job, err := manager.begin(&ServiceMutationBeginRequest{
 		RequestID: strings.Repeat("d", 32),
@@ -276,7 +578,8 @@ func TestSwitchDNSEngineRetainsHostLeaseThroughFinalization(t *testing.T) {
 	})
 	if !errors.Is(err, errServiceMutationBusy) || job == nil ||
 		job.RequestID != request.MutationRequestID ||
-		job.Status != serviceMutationStatusSucceeded {
+		job.Status != serviceMutationStatusRunning ||
+		job.Phase != "leased" {
 		t.Fatalf("concurrent ordinary request job=%+v err=%v", job, err)
 	}
 	if lock, lockErr := acquireServiceMutationFileLock(manager.lockPath); !errors.Is(lockErr, errServiceMutationHostBusy) {
@@ -285,7 +588,7 @@ func TestSwitchDNSEngineRetainsHostLeaseThroughFinalization(t *testing.T) {
 		}
 		t.Fatalf("second host lock acquired during DNS finalization: %v", lockErr)
 	}
-	close(release)
+	close(releaseFinalize)
 	select {
 	case response := <-done:
 		if response.Error != "" || !response.Applied {
@@ -298,6 +601,180 @@ func TestSwitchDNSEngineRetainsHostLeaseThroughFinalization(t *testing.T) {
 		t.Fatalf("host lock remained after exact finalization: %v", lockErr)
 	} else if err := lock.Close(); err != nil {
 		t.Fatal(err)
+	}
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantPhase, err := formatDNSEngineSwitchFinalizedPhase(
+		request.MutationRequestID, request.ManifestQualifier,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job = reloaded.status(request.MutationRequestID)
+	if job == nil || job.Status != serviceMutationStatusSucceeded ||
+		job.Phase != wantPhase || reloaded.active != nil ||
+		reloaded.poisoned != nil {
+		t.Fatalf("restarted final receipt job=%+v active=%v poisoned=%v", job, reloaded.active != nil, reloaded.poisoned)
+	}
+}
+
+func TestSwitchDNSEngineProvenAbortKeepsExpiryWatchdogAlive(t *testing.T) {
+	request := canonicalSwitchRequest(t)
+	manager, _ := newMutationTestManager(t)
+	manager.leaseDuration = 100 * time.Millisecond
+	manager.overallDuration = 10 * time.Second
+	installGlobalMutationTestManager(t, manager)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+
+	switchEntered := make(chan struct{})
+	releaseSwitch := make(chan struct{})
+	backend := &fakeDNSEngineBackend{
+		switchErr: errors.New("injected pre-commit switch failure"),
+		recovery:  dnsEngineSwitchRecoveryAbsent,
+		switchHook: func() error {
+			close(switchEntered)
+			<-releaseSwitch
+			return nil
+		},
+	}
+	useFakeDNSEngineBackend(t, backend)
+
+	done := make(chan SwitchDNSEngineV1Response, 1)
+	go func() {
+		var response SwitchDNSEngineV1Response
+		_ = (&Agent{}).SwitchDNSEngineV1(&request, &response)
+		done <- response
+	}()
+	select {
+	case <-switchEntered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("DNS switch did not enter its guarded backend")
+	}
+
+	// The watchdog's first one-second tick observes the expired lease while
+	// the pre-commit guard is held. It must keep retrying instead of exiting.
+	time.Sleep(1200 * time.Millisecond)
+	manager.mu.Lock()
+	runtime := manager.active
+	guarded := runtime != nil && runtime.dnsEngineSwitchFinalizing &&
+		runtime.job.Status == serviceMutationStatusRunning &&
+		!manager.now().Before(runtime.job.LeaseExpiresAt)
+	manager.mu.Unlock()
+	if !guarded {
+		t.Fatal("expired DNS switch was not retained by its pre-commit guard")
+	}
+
+	close(releaseSwitch)
+	select {
+	case response := <-done:
+		if response.Error != "DNS engine switch did not complete; inspect the agent log" {
+			t.Fatalf("response=%+v", response)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("proven pre-commit abort did not return")
+	}
+
+	deadline := time.Now().Add(4 * time.Second)
+	for {
+		manager.mu.Lock()
+		active := manager.active
+		poisoned := manager.poisoned
+		job := cloneServiceMutationJob(manager.ledger.Jobs[request.MutationRequestID])
+		manager.mu.Unlock()
+		if poisoned != nil {
+			t.Fatalf("proven abort poisoned manager: %v", poisoned)
+		}
+		if active == nil && job != nil && job.Status == serviceMutationStatusFailed {
+			if job.ErrorCode != serviceMutationErrorLeaseExpired ||
+				job.ErrorMessage != serviceMutationMessageLeaseExpired {
+				t.Fatalf("expired terminal receipt=%+v", job)
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("watchdog did not resume after proven abort: active=%v job=%+v", active != nil, job)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if lock, err := acquireServiceMutationFileLock(manager.lockPath); err != nil {
+		t.Fatalf("host lock remained after resumed expiry: %v", err)
+	} else if err := lock.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSwitchDNSEnginePreCommitFailureClearsGuardOnlyAfterExactAbortReproof(
+	t *testing.T,
+) {
+	tests := []struct {
+		name       string
+		outcome    dnsEngineSwitchRecoveryOutcome
+		recoverErr error
+		wantPoison bool
+	}{
+		{name: "absent", outcome: dnsEngineSwitchRecoveryAbsent},
+		{name: "rolled back", outcome: dnsEngineSwitchRecoveryRolledBack},
+		{name: "committed is ambiguous", outcome: dnsEngineSwitchRecoveryCommitted, wantPoison: true},
+		{name: "finalized is ambiguous", outcome: dnsEngineSwitchRecoveryFinalized, wantPoison: true},
+		{name: "recovery error is ambiguous", outcome: dnsEngineSwitchRecoveryAbsent, recoverErr: errors.New("injected reproof failure"), wantPoison: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := canonicalSwitchRequest(t)
+			manager, _ := newMutationTestManager(t)
+			installGlobalMutationTestManager(t, manager)
+			beginMutationTestJobWithIdentity(
+				t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+			)
+			backend := &fakeDNSEngineBackend{
+				switchErr:  errors.New("injected pre-commit switch failure"),
+				recovery:   test.outcome,
+				recoverErr: test.recoverErr,
+			}
+			useFakeDNSEngineBackend(t, backend)
+
+			var response SwitchDNSEngineV1Response
+			if err := (&Agent{}).SwitchDNSEngineV1(&request, &response); err != nil {
+				t.Fatal(err)
+			}
+			if backend.switchCalls != 1 || backend.recoverCalls != 1 {
+				t.Fatalf("switch=%d recover=%d", backend.switchCalls, backend.recoverCalls)
+			}
+			manager.mu.Lock()
+			runtime := manager.active
+			poisoned := manager.poisoned
+			guarded := runtime != nil && runtime.dnsEngineSwitchFinalizing
+			manager.mu.Unlock()
+			if test.wantPoison {
+				defer releasePoisonedFirewallApplyTestManager(manager)
+				if poisoned == nil || !guarded ||
+					response.Error != "DNS engine switch outcome could not be verified; inspect the agent log" {
+					t.Fatalf("response=%+v poisoned=%v guarded=%v", response, poisoned, guarded)
+				}
+				return
+			}
+			if poisoned != nil || guarded ||
+				response.Error != "DNS engine switch did not complete; inspect the agent log" {
+				t.Fatalf("response=%+v poisoned=%v guarded=%v", response, poisoned, guarded)
+			}
+			finished, finishErr := manager.finish(&ServiceMutationFinishRequest{
+				RequestID:   request.MutationRequestID,
+				OwnerID:     request.MutationOwnerID,
+				Success:     false,
+				FailureCode: "expected_test_cleanup",
+				Message:     "expected test cleanup",
+			})
+			if finishErr != nil || finished == nil ||
+				finished.Status != serviceMutationStatusFailed {
+				t.Fatalf("finish job=%+v err=%v", finished, finishErr)
+			}
+		})
 	}
 }
 
@@ -376,9 +853,14 @@ func TestSwitchDNSEngineFinalizationFailureRetainsHostLeaseAndPoisons(t *testing
 		)
 	}
 	job := manager.status(testMutationRequestID)
-	if job == nil || job.Status != serviceMutationStatusSucceeded ||
-		!strings.HasPrefix(job.Phase, dnsEngineSwitchPublishedPhasePrefix) {
-		t.Fatalf("finalization failure lost terminal receipt: %+v", job)
+	if !exactActiveDNSEngineSwitchJob(
+		job,
+		request.MutationRequestID,
+		request.MutationOwnerID,
+		request.TargetEngine,
+		request.ManifestQualifier,
+	) {
+		t.Fatalf("finalization failure exposed a terminal receipt: %+v", job)
 	}
 	if concurrent, err := manager.begin(&ServiceMutationBeginRequest{
 		RequestID: strings.Repeat("d", 32),
@@ -506,7 +988,7 @@ func TestSwitchDNSEngineAcceptsGobCollapsedZeroZonesWithDurableLease(t *testing.
 		t.Fatal(err)
 	}
 	job := reloaded.status(testMutationRequestID)
-	wantPhase := dnsEngineSwitchPublishedPhasePrefix +
+	wantPhase := dnsEngineSwitchFinalizedPhasePrefix +
 		testMutationRequestID + "/" + request.ManifestQualifier
 	if job == nil || job.Status != serviceMutationStatusSucceeded ||
 		job.Phase != wantPhase {
@@ -544,7 +1026,10 @@ func TestSwitchDNSEngineHidesBackendCommandDetail(t *testing.T) {
 		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
 	)
 	secret := "named-checkconf /etc/bind/private failed: token=do-not-leak"
-	useFakeDNSEngineBackend(t, &fakeDNSEngineBackend{switchErr: errors.New(secret)})
+	useFakeDNSEngineBackend(t, &fakeDNSEngineBackend{
+		switchErr: errors.New(secret),
+		recovery:  dnsEngineSwitchRecoveryAbsent,
+	})
 
 	var response SwitchDNSEngineV1Response
 	if err := (&Agent{}).SwitchDNSEngineV1(&request, &response); err != nil {
@@ -613,7 +1098,7 @@ func TestSwitchDNSEngineRejectsNoncanonicalManifestBeforeLease(t *testing.T) {
 	}
 }
 
-func persistActiveCommittedBINDStartupJournal(
+func activeCommittedBINDStartupJournalFixture(
 	t *testing.T,
 	manager *serviceMutationManager,
 	root string,
@@ -636,10 +1121,74 @@ func persistActiveCommittedBINDStartupJournal(
 	if got := dnsEngineSwitchJournalPath(); got != wantPath {
 		t.Fatalf("DNS journal path=%q want %q", got, wantPath)
 	}
+	return journal
+}
+
+func persistActiveCommittedBINDStartupJournal(
+	t *testing.T,
+	manager *serviceMutationManager,
+	root string,
+	request SwitchDNSEngineV1Request,
+) dnsEngineSwitchJournal {
+	t.Helper()
+	journal := activeCommittedBINDStartupJournalFixture(
+		t, manager, root, request,
+	)
 	if err := writeDNSEngineSwitchJournal(journal); err != nil {
 		t.Fatal(err)
 	}
 	return journal
+}
+
+func persistActiveDNSEngineSwitchStartupLedger(
+	t *testing.T,
+	manager *serviceMutationManager,
+	journal dnsEngineSwitchJournal,
+	expiredCancelling bool,
+	mutate func(*ServiceMutationJob),
+) {
+	t.Helper()
+	now := manager.now()
+	job := &ServiceMutationJob{
+		RequestID:      journal.MutationRequestID,
+		OwnerID:        journal.MutationOwnerID,
+		Kind:           "dns_engine_switch",
+		Target:         string(journal.TargetEngine),
+		PackageName:    journal.ManifestQualifier,
+		Status:         serviceMutationStatusRunning,
+		Phase:          "leased",
+		Attempt:        1,
+		StartedAt:      now.Add(-2 * time.Minute),
+		UpdatedAt:      now,
+		LeaseExpiresAt: now.Add(time.Minute),
+		DeadlineAt:     now.Add(time.Hour),
+	}
+	if expiredCancelling {
+		job.Status = serviceMutationStatusCancelling
+		job.Phase = serviceMutationPhaseCancellingExpiredLease
+		job.LeaseExpiresAt = now.Add(-time.Minute)
+		job.ErrorCode = serviceMutationErrorLeaseExpired
+		job.ErrorMessage = serviceMutationMessageLeaseExpired
+	}
+	if mutate != nil {
+		mutate(job)
+	}
+	ledger := serviceMutationLedger{
+		Version:         serviceMutationLedgerVersion,
+		ActiveRequestID: job.RequestID,
+		Jobs:            map[string]*ServiceMutationJob{job.RequestID: job},
+	}
+	if err := validateServiceMutationLedger(&ledger); err != nil {
+		t.Fatalf("invalid active DNS startup ledger fixture: %v", err)
+	}
+	manager.mu.Lock()
+	before := cloneServiceMutationLedger(manager.ledger)
+	manager.ledger = ledger
+	err := manager.persistLedgerMutationLocked(before)
+	manager.mu.Unlock()
+	if err != nil {
+		t.Fatalf("persist active DNS startup ledger: %v", err)
+	}
 }
 
 func TestDNSEngineSwitchStartupForwardCompletesExactCommittedJournal(t *testing.T) {
@@ -663,10 +1212,166 @@ func TestDNSEngineSwitchStartupForwardCompletesExactCommittedJournal(t *testing.
 		t.Fatal(err)
 	}
 	job := reloaded.status(testMutationRequestID)
-	wantPhase := dnsEngineSwitchPublishedPhasePrefix + testMutationRequestID + "/" + request.ManifestQualifier
+	wantPhase := dnsEngineSwitchFinalizedPhasePrefix + testMutationRequestID + "/" + request.ManifestQualifier
 	if backend.recoverCalls != 1 || backend.finalizeCalls != 1 || job == nil ||
 		job.Status != serviceMutationStatusSucceeded || job.Phase != wantPhase {
 		t.Fatalf("recover=%d finalize=%d job=%+v", backend.recoverCalls, backend.finalizeCalls, job)
+	}
+}
+
+func TestDNSEngineSwitchStartupUpgradesExactExpiredLeaseWithCommittedJournal(
+	t *testing.T,
+) {
+	request := canonicalSwitchRequest(t)
+	manager, root := newMutationTestManager(t)
+	journal := persistActiveCommittedBINDStartupJournal(
+		t, manager, root, request,
+	)
+	persistActiveDNSEngineSwitchStartupLedger(
+		t, manager, journal, true, nil,
+	)
+	backend := &fakeDNSEngineBackend{
+		recovery:     dnsEngineSwitchRecoveryCommitted,
+		finalizeHook: removeDNSEngineSwitchJournal,
+	}
+	useFakeDNSEngineBackend(t, backend)
+
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantPhase, err := formatDNSEngineSwitchFinalizedPhase(
+		journal.MutationRequestID, journal.ManifestQualifier,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := reloaded.status(journal.MutationRequestID)
+	if backend.recoverCalls != 1 || backend.finalizeCalls != 1 ||
+		job == nil || job.Status != serviceMutationStatusSucceeded ||
+		job.Phase != wantPhase || reloaded.active != nil ||
+		reloaded.poisoned != nil {
+		t.Fatalf(
+			"recover=%d finalize=%d job=%+v active=%v poisoned=%v",
+			backend.recoverCalls, backend.finalizeCalls, job,
+			reloaded.active != nil, reloaded.poisoned,
+		)
+	}
+}
+
+func TestDNSEngineSwitchStartupUpgradesJournalFreeFinalizedHostCrash(
+	t *testing.T,
+) {
+	manager, root := newMutationTestManager(t)
+	journal, _, state, _ := signedUpdatePDNSBostonCommittedRecoveryFixture(t)
+	stateDir := filepath.Join(root, "state")
+	t.Setenv("CELIKPANEL_AGENT_STATE_DIR", stateDir)
+	journal.StateBefore.Path = filepath.Clean(dnsEngineStatePath())
+	if err := validateDNSEngineSwitchJournal(journal); err != nil {
+		t.Fatalf("invalid journal-free crash fixture: %v", err)
+	}
+	if err := writeDNSEngineState(state); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeDNSEngineOwnership(state); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists, err := readDNSEngineInstallOwnership(
+		journal.TargetEngine,
+	); err != nil || exists {
+		t.Fatalf("journal-free crash retains install ownership: exists=%v err=%v", exists, err)
+	}
+	if _, exists, err := readDNSEngineSwitchJournal(); err != nil || exists {
+		t.Fatalf("journal-free crash unexpectedly has journal: exists=%v err=%v", exists, err)
+	}
+	persistActiveDNSEngineSwitchStartupLedger(
+		t, manager, journal, true, nil,
+	)
+	useFakeDNSEngineBackend(t, hostDNSEngineBackend{})
+
+	reloaded, err := newServiceMutationManager(
+		stateDir, filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantPhase, err := formatDNSEngineSwitchFinalizedPhase(
+		journal.MutationRequestID, journal.ManifestQualifier,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := reloaded.status(journal.MutationRequestID)
+	if job == nil || job.Status != serviceMutationStatusSucceeded ||
+		job.Phase != wantPhase || reloaded.active != nil ||
+		reloaded.poisoned != nil {
+		t.Fatalf(
+			"journal-free recovered job=%+v active=%v poisoned=%v",
+			job, reloaded.active != nil, reloaded.poisoned,
+		)
+	}
+}
+
+func TestDNSEngineSwitchStartupExpiredLeaseMismatchFailsClosed(
+	t *testing.T,
+) {
+	tests := []struct {
+		name   string
+		mutate func(*ServiceMutationJob)
+	}{
+		{
+			name: "error message mismatch",
+			mutate: func(job *ServiceMutationJob) {
+				job.ErrorMessage = "arbitrary cancellation"
+			},
+		},
+		{
+			name: "updated timestamp predates expiry",
+			mutate: func(job *ServiceMutationJob) {
+				job.UpdatedAt = job.LeaseExpiresAt.Add(-time.Second)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := canonicalSwitchRequest(t)
+			manager, root := newMutationTestManager(t)
+			journal := persistActiveCommittedBINDStartupJournal(
+				t, manager, root, request,
+			)
+			persistActiveDNSEngineSwitchStartupLedger(
+				t, manager, journal, true, test.mutate,
+			)
+			backend := &fakeDNSEngineBackend{
+				recovery:     dnsEngineSwitchRecoveryCommitted,
+				finalizeHook: removeDNSEngineSwitchJournal,
+			}
+			useFakeDNSEngineBackend(t, backend)
+
+			reloaded, err := newServiceMutationManager(
+				filepath.Join(root, "state"),
+				filepath.Join(root, "service-mutation.lock"),
+			)
+			if err == nil || reloaded == nil || reloaded.poisoned == nil {
+				t.Fatalf("mismatched startup manager=%+v err=%v", reloaded, err)
+			}
+			defer releasePoisonedFirewallApplyTestManager(reloaded)
+			if backend.recoverCalls != 1 || backend.finalizeCalls != 0 {
+				t.Fatalf(
+					"mismatch reached finalization: recover=%d finalize=%d",
+					backend.recoverCalls, backend.finalizeCalls,
+				)
+			}
+			actual, exists, readErr := readDNSEngineSwitchJournal()
+			if readErr != nil || !exists || !reflect.DeepEqual(actual, journal) {
+				t.Fatalf(
+					"fail-closed startup changed journal: exists=%v journal=%+v err=%v",
+					exists, actual, readErr,
+				)
+			}
+		})
 	}
 }
 
@@ -773,9 +1478,14 @@ func TestDNSEngineSwitchStartupFinalizeFailureRetainsPoisonLock(t *testing.T) {
 	}
 	defer releasePoisonedFirewallApplyTestManager(reloaded)
 	job := reloaded.status(testMutationRequestID)
-	if job == nil || job.Status != serviceMutationStatusSucceeded ||
-		!strings.HasPrefix(job.Phase, dnsEngineSwitchPublishedPhasePrefix) {
-		t.Fatalf("recovered finalization lost terminal receipt: %+v", job)
+	if !exactActiveDNSEngineSwitchJob(
+		job,
+		request.MutationRequestID,
+		request.MutationOwnerID,
+		request.TargetEngine,
+		request.ManifestQualifier,
+	) {
+		t.Fatalf("recovered finalization exposed a terminal receipt: %+v", job)
 	}
 	journalPath := filepath.Join(
 		filepath.Dir(reloaded.ledgerPath), dnsEngineSwitchJournalFile,
@@ -948,7 +1658,7 @@ func TestDNSEngineSwitchStartupAutoFinalizesBostonCommittedPowerDNS(t *testing.T
 		t.Fatalf("unexpected Boston recovery calls: backend=%+v", backend)
 	}
 	job := reloaded.status(journal.MutationRequestID)
-	wantPhase, phaseErr := formatDNSEngineSwitchPublishedPhase(
+	wantPhase, phaseErr := formatDNSEngineSwitchFinalizedPhase(
 		journal.MutationRequestID, journal.ManifestQualifier,
 	)
 	if phaseErr != nil {
@@ -1037,6 +1747,132 @@ func TestHostDNSEngineFinalizeSwitchCompletesBostonPowerDNSFilesystemHandoff(
 	if _, exists, err := readDNSEngineSwitchJournalAt(journalPath); err != nil || exists {
 		t.Fatalf("committed journal remains: exists=%v err=%v", exists, err)
 	}
+	if err := (hostDNSEngineBackend{}).FinalizeSwitch(
+		context.Background(), journal.TargetEngine,
+		journal.ManifestQualifier, switchJournalBinding(journal),
+	); err != nil {
+		t.Fatalf("journal-free exact finalization was not idempotent: %v", err)
+	}
+	outcome, err := (hostDNSEngineBackend{}).RecoverSwitch(
+		context.Background(), journal.TargetEngine,
+		journal.ManifestQualifier, switchJournalBinding(journal),
+	)
+	if err != nil || outcome != dnsEngineSwitchRecoveryFinalized {
+		t.Fatalf("finalized host recovery outcome=%q err=%v", outcome, err)
+	}
+}
+
+func TestHostDNSEngineFinalizeSwitchWithoutJournalFailsClosedUnlessExact(
+	t *testing.T,
+) {
+	t.Run("clean absence is unproven", func(t *testing.T) {
+		request := canonicalSwitchRequest(t)
+		_, root := newMutationTestManager(t)
+		t.Setenv("CELIKPANEL_AGENT_STATE_DIR", filepath.Join(root, "state"))
+		err := (hostDNSEngineBackend{}).FinalizeSwitch(
+			context.Background(), request.TargetEngine,
+			request.ManifestQualifier, request.ServiceMutationBinding,
+		)
+		if err == nil {
+			t.Fatal("journal-free finalization accepted clean but unproven host state")
+		}
+	})
+
+	t.Run("partial ownership is inconsistent", func(t *testing.T) {
+		_, root := newMutationTestManager(t)
+		journal, _, state, _ := signedUpdatePDNSBostonCommittedRecoveryFixture(t)
+		t.Setenv("CELIKPANEL_AGENT_STATE_DIR", filepath.Join(root, "state"))
+		if err := os.MkdirAll(filepath.Join(root, "state"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := writeDNSEngineOwnership(state); err != nil {
+			t.Fatal(err)
+		}
+		err := (hostDNSEngineBackend{}).FinalizeSwitch(
+			context.Background(), journal.TargetEngine,
+			journal.ManifestQualifier, switchJournalBinding(journal),
+		)
+		if err == nil {
+			t.Fatal("journal-free finalization accepted ownership without active state")
+		}
+	})
+}
+
+func TestHostDNSEngineRecoverSwitchWithoutJournalClassifiesStableSource(
+	t *testing.T,
+) {
+	setupStableSource := func(t *testing.T) SwitchDNSEngineV1Request {
+		t.Helper()
+		request := canonicalSwitchRequest(t)
+		_, _, source, _ := signedUpdatePDNSBostonCommittedRecoveryFixture(t)
+		if source.Engine == request.TargetEngine {
+			t.Fatal("stable source fixture unexpectedly names the switch target")
+		}
+		if err := os.MkdirAll(serviceMutationStateDirectory(), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := writeDNSEngineState(source); err != nil {
+			t.Fatal(err)
+		}
+		if err := writeDNSEngineOwnership(source); err != nil {
+			t.Fatal(err)
+		}
+
+		staleTargetOwnership := source
+		staleTargetOwnership.Engine = request.TargetEngine
+		staleTargetOwnership.Generation = strings.Repeat("c", 64)
+		staleTargetOwnership.ManifestQualifier = request.ManifestQualifier
+		staleTargetOwnership.MutationRequestID = strings.Repeat("d", 32)
+		staleTargetOwnership.MutationOwnerID = strings.Repeat("e", 32)
+		if err := writeDNSEngineOwnership(staleTargetOwnership); err != nil {
+			t.Fatal(err)
+		}
+		return request
+	}
+
+	t.Run("stable source and stale target ownership are absent", func(t *testing.T) {
+		request := setupStableSource(t)
+		outcome, err := (hostDNSEngineBackend{}).RecoverSwitch(
+			context.Background(), request.TargetEngine,
+			request.ManifestQualifier, request.ServiceMutationBinding,
+		)
+		if err != nil || outcome != dnsEngineSwitchRecoveryAbsent {
+			t.Fatalf("stable source recovery outcome=%q err=%v", outcome, err)
+		}
+		if err := (hostDNSEngineBackend{}).FinalizeSwitch(
+			context.Background(), request.TargetEngine,
+			request.ManifestQualifier, request.ServiceMutationBinding,
+		); err == nil {
+			t.Fatal("stable source was accepted as exact journal-free finalization")
+		}
+	})
+
+	t.Run("target install residue remains fail closed", func(t *testing.T) {
+		request := setupStableSource(t)
+		install, err := newDNSEngineInstallOwnership(
+			request.TargetEngine, hostplatform.PackageManagerAPT,
+			[]string{"bind9"}, []string{"bind9"},
+			mutationpayload.DNSEngineSwitchManifestCommitment{
+				Mode:         request.Mode,
+				TargetEngine: request.TargetEngine,
+				Qualifier:    request.ManifestQualifier,
+			},
+			request.ServiceMutationBinding,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := writeDNSEngineInstallOwnership(install); err != nil {
+			t.Fatal(err)
+		}
+		outcome, err := (hostDNSEngineBackend{}).RecoverSwitch(
+			context.Background(), request.TargetEngine,
+			request.ManifestQualifier, request.ServiceMutationBinding,
+		)
+		if err == nil || outcome != dnsEngineSwitchRecoveryAbsent {
+			t.Fatalf("target residue recovery outcome=%q err=%v", outcome, err)
+		}
+	})
 }
 
 func TestDNSEngineSwitchStartupAutoFinalizesPacmanPowerDNSAdoptWithoutInstallReceipt(
@@ -1103,7 +1939,7 @@ func TestDNSEngineSwitchStartupAutoFinalizesPacmanPowerDNSAdoptWithoutInstallRec
 		t.Fatalf("pacman adopt startup recovery failed: %v", err)
 	}
 	job := reloaded.status(journal.MutationRequestID)
-	wantPhase, err := formatDNSEngineSwitchPublishedPhase(
+	wantPhase, err := formatDNSEngineSwitchFinalizedPhase(
 		journal.MutationRequestID, journal.ManifestQualifier,
 	)
 	if err != nil {
@@ -1147,7 +1983,7 @@ func TestDNSEngineSwitchStartupBostonCommittedPowerDNSMismatchFailsClosed(
 			},
 		},
 		{
-			name: "failed-terminal-job",
+			name: "inexact-failed-terminal-job",
 			mutate: func(
 				_ *dnsEngineSwitchJournal,
 				ledger *serviceMutationLedger,
@@ -1157,6 +1993,7 @@ func TestDNSEngineSwitchStartupBostonCommittedPowerDNSMismatchFailsClosed(
 					job.Phase = "failed"
 					job.ErrorCode = "injected_failure"
 					job.ErrorMessage = "injected terminal failure"
+					job.UpdatedAt = job.FinishedAt.Add(-time.Second)
 				}
 			},
 		},

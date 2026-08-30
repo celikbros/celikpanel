@@ -23,6 +23,7 @@ func TestAgentVersionPublishesClosedMutationCapabilities(t *testing.T) {
 		transport.AgentCapabilityMailTLSSyncV2,
 		transport.AgentCapabilityPanelCertificateIssueV2,
 		transport.AgentCapabilitySystemUpdateV1,
+		transport.AgentCapabilitySystemUpdateAbandonV1,
 		transport.AgentCapabilitySecurityAuditV1,
 	}
 	if !reflect.DeepEqual(response.Capabilities, want) {

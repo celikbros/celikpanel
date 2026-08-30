@@ -2864,12 +2864,106 @@ func terminalDNSEngineJob(
 		FinishedAt: now,
 	}
 	if status == agentMutationSucceeded {
-		job.Phase = "commit/dns-engine-switch/v1/published/" +
+		job.Phase = dnsEngineSwitchFinalizedPhasePrefix +
 			persisted.RequestID + "/" + persisted.Qualifier
 	} else {
 		job.Phase = "failed"
 	}
 	return job
+}
+
+func TestDNSEngineRecoveryLegacyV1ReceiptRemainsRecoveryRequired(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+	persisted := persistEmptyDNSEngineSwitchForTest(
+		t, panel, transport.DNSEngineBIND, strings.Repeat("d", 32),
+	)
+	job := terminalDNSEngineJob(persisted, agentMutationSucceeded)
+	job.Phase = dnsEngineSwitchLegacyPublishedPhasePrefix +
+		persisted.RequestID + "/" + persisted.Qualifier
+	setDNSEngineMutationJobForTest(t, agent, job, false)
+
+	handled, err := panel.recoverDNSEngineSwitchLocked(context.Background(), job)
+	if !handled || !errors.Is(err, errAgentMutationRecoveryRequired) {
+		t.Fatalf("legacy recovery handled=%v err=%v, want recovery required", handled, err)
+	}
+	state, readErr := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if state.CurrentSwitchID != persisted.SwitchID || state.ActiveEngine != "" ||
+		state.EngineEpoch != 0 {
+		t.Fatalf("legacy receipt changed panel authority: %+v", state)
+	}
+	operation, readErr := readPresentedDNSEngineOperation(
+		context.Background(), panel.db.GetDB(), persisted.SwitchID,
+	)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	panel.enrichAttachedDNSEngineOperation(
+		context.Background(), operation, persisted.SwitchID,
+	)
+	if operation.Status != "recovery_required" ||
+		operation.LastError != "The DNS engine switch is waiting for privileged recovery finalization." {
+		t.Fatalf("legacy presented operation = %+v", operation)
+	}
+
+	recovered, startupErr := panel.recoverInterruptedServiceOperations(
+		context.Background(),
+	)
+	if startupErr != nil || recovered != 0 {
+		t.Fatalf(
+			"legacy startup recovery recovered=%d err=%v, want nonfatal operator gate",
+			recovered, startupErr,
+		)
+	}
+	state, readErr = readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if state.CurrentSwitchID != persisted.SwitchID || state.ActiveEngine != "" ||
+		state.EngineEpoch != 0 {
+		t.Fatalf("nonfatal startup changed legacy authority: %+v", state)
+	}
+}
+
+func TestDNSEngineRecoveryMalformedSuccessRemainsRecoveryRequired(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+	persisted := persistEmptyDNSEngineSwitchForTest(
+		t, panel, transport.DNSEngineBIND, strings.Repeat("c", 32),
+	)
+	job := terminalDNSEngineJob(persisted, agentMutationSucceeded)
+	job.Phase = "completed"
+	setDNSEngineMutationJobForTest(t, agent, job, false)
+
+	recovered, err := panel.recoverInterruptedServiceOperations(
+		context.Background(),
+	)
+	if err != nil || recovered != 0 {
+		t.Fatalf(
+			"malformed startup recovery recovered=%d err=%v, want nonfatal operator gate",
+			recovered, err,
+		)
+	}
+	operation, err := readPresentedDNSEngineOperation(
+		context.Background(), panel.db.GetDB(), persisted.SwitchID,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	panel.enrichAttachedDNSEngineOperation(
+		context.Background(), operation, persisted.SwitchID,
+	)
+	if operation.Status != "recovery_required" ||
+		operation.LastError != "The DNS engine switch is waiting for privileged recovery finalization." {
+		t.Fatalf("malformed presented operation = %+v", operation)
+	}
 }
 
 func TestDNSEngineRecoveryForwardFinalizesLostResponse(t *testing.T) {

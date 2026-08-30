@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	paneldb "github.com/alicelik/celikpanel/internal/db"
 	sqlite "modernc.org/sqlite"
@@ -250,10 +251,12 @@ type serviceOperationSnapshotMigrationRow struct {
 }
 
 // canonicalizeKnownLegacySnapshotSchemaMigrations rewrites only the copied
-// snapshot stage when schema_migrations has the exact DDL emitted by the
-// initial CelikPanel release. Every other schema object must already match the
-// embedded contract. Unknown whitespace and semantic variants are deliberately
-// left untouched so the normal exact-schema validator rejects them.
+// snapshot stage when schema_migrations has the exact token sequence emitted
+// by CelikPanel but differs from the embedded contract only in insignificant
+// whitespace. The table shape is independently proved through SQLite's schema
+// PRAGMAs, and every other schema object must already match the embedded
+// contract. Semantic variants are deliberately left untouched so the normal
+// exact-schema validator rejects them.
 //
 // This function must only receive a private standalone copy. It is never
 // called with the canonical live database path.
@@ -289,8 +292,7 @@ func canonicalizeKnownLegacySnapshotSchemaMigrations(
 			break
 		}
 	}
-	if legacyIndex < 0 ||
-		actualObjects[legacyIndex].SQL != knownLegacySchemaMigrationsSQL {
+	if legacyIndex < 0 {
 		return nil
 	}
 
@@ -314,11 +316,18 @@ func canonicalizeKnownLegacySnapshotSchemaMigrations(
 			break
 		}
 	}
-	if canonicalSQL == "" || canonicalSQL == knownLegacySchemaMigrationsSQL {
+	if canonicalSQL == "" {
 		return fmt.Errorf("embedded migration ledger schema is unavailable")
 	}
+	if actualObjects[legacyIndex].SQL == canonicalSQL {
+		return nil
+	}
+	if compactSQLiteSchemaWhitespace(actualObjects[legacyIndex].SQL) !=
+		compactSQLiteSchemaWhitespace(knownLegacySchemaMigrationsSQL) {
+		return nil
+	}
 
-	// Prove that the historical formatting is the only schema difference before
+	// Prove that migration-ledger formatting is the only schema difference before
 	// dropping the copied ledger table. This prevents the rebuild from erasing
 	// an unexpected index or trigger and accidentally hiding schema drift.
 	comparableObjects := append([]paneldb.SQLiteSchemaObject(nil), actualObjects...)
@@ -327,7 +336,10 @@ func canonicalizeKnownLegacySnapshotSchemaMigrations(
 		expectedObjects,
 		comparableObjects,
 	); err != nil {
-		return fmt.Errorf("validate known legacy copied schema: %w", err)
+		return fmt.Errorf("validate compatible copied schema: %w", err)
+	}
+	if err := validateCanonicalizableSnapshotSchemaMigrations(ctx, database); err != nil {
+		return fmt.Errorf("validate copied migration ledger shape: %w", err)
 	}
 
 	var invalidAppliedAtStorageClasses int
@@ -403,6 +415,176 @@ func canonicalizeKnownLegacySnapshotSchemaMigrations(
 	}
 	if !equalServiceOperationSnapshotMigrationRows(migrationRows, restoredRows) {
 		return fmt.Errorf("copied migration ledger changed during canonicalization")
+	}
+	return nil
+}
+
+func compactSQLiteSchemaWhitespace(value string) string {
+	var compact strings.Builder
+	compact.Grow(len(value))
+	for _, character := range canonicalExactSQLiteSchemaSQL(value) {
+		if unicode.IsSpace(character) {
+			continue
+		}
+		compact.WriteRune(character)
+	}
+	return compact.String()
+}
+
+func validateCanonicalizableSnapshotSchemaMigrations(
+	ctx context.Context,
+	database *sql.DB,
+) error {
+	type migrationColumn struct {
+		cid          int
+		name         string
+		declaredType string
+		notNull      int
+		defaultValue sql.NullString
+		primaryKey   int
+		hidden       int
+	}
+	expectedColumns := []migrationColumn{
+		{
+			cid:          0,
+			name:         "version",
+			declaredType: "INTEGER",
+			notNull:      0,
+			primaryKey:   1,
+			hidden:       0,
+		},
+		{
+			cid:          1,
+			name:         "applied_at",
+			declaredType: "TEXT",
+			notNull:      0,
+			defaultValue: sql.NullString{
+				String: "datetime('now')",
+				Valid:  true,
+			},
+			primaryKey: 0,
+			hidden:     0,
+		},
+	}
+
+	columnRows, err := database.QueryContext(ctx, `
+		SELECT cid, name, type, "notnull", dflt_value, pk, hidden
+		FROM pragma_table_xinfo(?)
+		ORDER BY cid ASC
+	`, "schema_migrations")
+	if err != nil {
+		return fmt.Errorf("inspect migration ledger columns: %w", err)
+	}
+	actualColumns := make([]migrationColumn, 0, len(expectedColumns))
+	for columnRows.Next() {
+		var column migrationColumn
+		if err := columnRows.Scan(
+			&column.cid,
+			&column.name,
+			&column.declaredType,
+			&column.notNull,
+			&column.defaultValue,
+			&column.primaryKey,
+			&column.hidden,
+		); err != nil {
+			columnRows.Close()
+			return fmt.Errorf("read migration ledger column: %w", err)
+		}
+		actualColumns = append(actualColumns, column)
+	}
+	if err := columnRows.Err(); err != nil {
+		columnRows.Close()
+		return fmt.Errorf("iterate migration ledger columns: %w", err)
+	}
+	if err := columnRows.Close(); err != nil {
+		return fmt.Errorf("close migration ledger columns: %w", err)
+	}
+	if len(actualColumns) != len(expectedColumns) {
+		return fmt.Errorf(
+			"migration ledger has %d columns, expected %d",
+			len(actualColumns),
+			len(expectedColumns),
+		)
+	}
+	for index := range expectedColumns {
+		if actualColumns[index] != expectedColumns[index] {
+			return fmt.Errorf(
+				"migration ledger column %d differs from the canonical contract",
+				index,
+			)
+		}
+	}
+
+	tableRows, err := database.QueryContext(ctx, `
+		SELECT "schema", name, type, ncol, wr, strict
+		FROM pragma_table_list(?)
+		ORDER BY "schema" ASC, name ASC
+	`, "schema_migrations")
+	if err != nil {
+		return fmt.Errorf("inspect migration ledger table flags: %w", err)
+	}
+	tableCount := 0
+	for tableRows.Next() {
+		var schemaName, tableName, tableType string
+		var columnCount, withoutRowID, strict int
+		if err := tableRows.Scan(
+			&schemaName,
+			&tableName,
+			&tableType,
+			&columnCount,
+			&withoutRowID,
+			&strict,
+		); err != nil {
+			tableRows.Close()
+			return fmt.Errorf("read migration ledger table flags: %w", err)
+		}
+		tableCount++
+		if schemaName != "main" ||
+			tableName != "schema_migrations" ||
+			tableType != "table" ||
+			columnCount != 2 ||
+			withoutRowID != 0 ||
+			strict != 0 {
+			tableRows.Close()
+			return fmt.Errorf("migration ledger table flags differ from the canonical contract")
+		}
+	}
+	if err := tableRows.Err(); err != nil {
+		tableRows.Close()
+		return fmt.Errorf("iterate migration ledger table flags: %w", err)
+	}
+	if err := tableRows.Close(); err != nil {
+		return fmt.Errorf("close migration ledger table flags: %w", err)
+	}
+	if tableCount != 1 {
+		return fmt.Errorf("migration ledger table count is %d, expected 1", tableCount)
+	}
+
+	var indexCount int
+	if err := database.QueryRowContext(
+		ctx,
+		`SELECT COUNT(*) FROM pragma_index_list(?)`,
+		"schema_migrations",
+	).Scan(&indexCount); err != nil {
+		return fmt.Errorf("inspect migration ledger indexes: %w", err)
+	}
+	if indexCount != 0 {
+		return fmt.Errorf("migration ledger has %d unexpected index(es)", indexCount)
+	}
+
+	var foreignKeyCount int
+	if err := database.QueryRowContext(
+		ctx,
+		`SELECT COUNT(*) FROM pragma_foreign_key_list(?)`,
+		"schema_migrations",
+	).Scan(&foreignKeyCount); err != nil {
+		return fmt.Errorf("inspect migration ledger foreign keys: %w", err)
+	}
+	if foreignKeyCount != 0 {
+		return fmt.Errorf(
+			"migration ledger has %d unexpected foreign key(s)",
+			foreignKeyCount,
+		)
 	}
 	return nil
 }

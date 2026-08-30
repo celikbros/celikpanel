@@ -777,8 +777,20 @@ func (hostDNSEngineBackend) RecoverSwitch(
 	binding transport.ServiceMutationBinding,
 ) (dnsEngineSwitchRecoveryOutcome, error) {
 	journal, exists, err := readDNSEngineSwitchJournal()
-	if err != nil || !exists {
+	if err != nil {
 		return dnsEngineSwitchRecoveryAbsent, err
+	}
+	if !exists {
+		finalized, finalizedErr := exactFinalizedDNSEngineSwitchProvenanceOnHost(
+			target, qualifier, binding,
+		)
+		if finalizedErr != nil {
+			return dnsEngineSwitchRecoveryAbsent, finalizedErr
+		}
+		if finalized {
+			return dnsEngineSwitchRecoveryFinalized, nil
+		}
+		return dnsEngineSwitchRecoveryAbsent, nil
 	}
 	if !exactSwitchJournalIdentity(journal, target, qualifier, binding) {
 		return dnsEngineSwitchRecoveryAbsent, errors.New("DNS engine switch journal belongs to another mutation")
@@ -856,8 +868,25 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 	binding transport.ServiceMutationBinding,
 ) error {
 	journal, exists, err := readDNSEngineSwitchJournal()
-	if err != nil || !exists {
+	if err != nil {
 		return err
+	}
+	if !exists {
+		finalized, finalizedErr := exactFinalizedDNSEngineSwitchProvenanceOnHost(
+			target, qualifier, binding,
+		)
+		if finalizedErr != nil {
+			return fmt.Errorf(
+				"prove journal-free finalized DNS engine switch: %w",
+				finalizedErr,
+			)
+		}
+		if !finalized {
+			return errors.New(
+				"DNS engine switch journal is absent without exact finalized host provenance",
+			)
+		}
+		return nil
 	}
 	if !exactSwitchJournalIdentity(journal, target, qualifier, binding) ||
 		journal.Phase != dnsSwitchPhaseCommitted {
@@ -898,5 +927,26 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 	} else if installExists || !ownershipExists {
 		return errors.New("committed DNS engine ownership handoff is incomplete")
 	}
-	return removeDNSEngineSwitchJournal()
+	if err := removeDNSEngineSwitchJournal(); err != nil {
+		return err
+	}
+	_, journalExists, err := readDNSEngineSwitchJournal()
+	if err != nil {
+		return fmt.Errorf("reprove finalized DNS engine journal removal: %w", err)
+	}
+	if journalExists {
+		return errors.New("DNS engine switch journal remains after finalization")
+	}
+	finalized, err := exactFinalizedDNSEngineSwitchProvenanceOnHost(
+		target, qualifier, binding,
+	)
+	if err != nil {
+		return fmt.Errorf("reprove finalized DNS engine host provenance: %w", err)
+	}
+	if !finalized {
+		return errors.New(
+			"DNS engine switch journal was removed without exact finalized host provenance",
+		)
+	}
+	return nil
 }

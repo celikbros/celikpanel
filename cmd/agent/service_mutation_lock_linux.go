@@ -21,7 +21,8 @@ const serviceMutationExternalLockFDEnvironment = "CELIKPANEL_MUTATION_LOCK_FD"
 var serviceMutationLockFaultHook func(string) error
 
 type serviceMutationFileLock struct {
-	file *os.File
+	file        *os.File
+	publication *serviceMutationFileLock
 }
 
 // acquireExistingServiceMutationFileLock obtains the common host flock without
@@ -370,7 +371,7 @@ func ensureSecureServiceMutationLockDirectory(path string) error {
 	return nil
 }
 
-func (l *serviceMutationFileLock) Close() error {
+func (l *serviceMutationFileLock) closeOwn() error {
 	if l == nil || l.file == nil {
 		return nil
 	}
@@ -378,10 +379,36 @@ func (l *serviceMutationFileLock) Close() error {
 	unlockErr := unix.Flock(fd, unix.LOCK_UN)
 	closeErr := l.file.Close()
 	l.file = nil
-	if unlockErr != nil {
-		return unlockErr
+	return errors.Join(unlockErr, closeErr)
+}
+
+// closeHostRetainingPublication releases only the outer host mutation lease.
+// A DNS finalizer uses this narrow transition to make the host available while
+// retaining the cross-process ledger publication lease until its terminal
+// receipt is durable. Every acquisition remains host -> publication.
+func (l *serviceMutationFileLock) closeHostRetainingPublication() (
+	*serviceMutationFileLock,
+	error,
+) {
+	if l == nil {
+		return nil, nil
 	}
-	return closeErr
+	publication := l.publication
+	l.publication = nil
+	return publication, l.closeOwn()
+}
+
+func (l *serviceMutationFileLock) Close() error {
+	if l == nil {
+		return nil
+	}
+	hostErr := l.closeOwn()
+	publication := l.publication
+	l.publication = nil
+	if publication == nil {
+		return hostErr
+	}
+	return errors.Join(hostErr, publication.Close())
 }
 
 func probeServiceMutationFileLockIdle(path string) error {

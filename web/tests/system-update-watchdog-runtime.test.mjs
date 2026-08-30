@@ -15,6 +15,7 @@ async function importTypeScript(relativePath) {
 }
 
 const watchdog = await importTypeScript('../src/lib/systemUpdateWatchdog.ts');
+const lease = await importTypeScript('../src/lib/systemUpdateLease.ts');
 const component = readFileSync(
     new URL('../src/components/SystemUpdateOperation.tsx', import.meta.url),
     'utf8',
@@ -55,6 +56,17 @@ test('navigation release keeps exact GET tracking alive while mutation authority
     assert.equal(watchdog.systemUpdateMutationLocked(false, true), true);
 });
 
+test('a fresh document absence observation cannot renew the expired navigation lease', () => {
+    const createdAt = 1_000_000;
+    const deadline = watchdog.SYSTEM_UPDATE_BLOCKING_DEADLINE_MS;
+    const observation = lease.systemUpdateNotFoundAction(null, 'exact-a', 0, deadline);
+    assert.equal(observation.action, 'wait', 'a remount starts a fresh monotonic absence grace');
+    assert.equal(watchdog.systemUpdateNavigationBlocked(createdAt, createdAt + deadline), false,
+        'the independent page-navigation lease still opens at two minutes');
+    assert.equal(watchdog.systemUpdateMutationLocked(true, true), true,
+        'the exact canonical mutation gate remains closed during the fresh observation');
+});
+
 test('invalid or future clocks cannot create an unbounded page lock', () => {
     assert.equal(watchdog.systemUpdateNavigationBlocked(Number.NaN, 2_000_000), false);
     assert.equal(watchdog.systemUpdateNavigationBlocked(0, 2_000_000), false);
@@ -89,7 +101,7 @@ test('restart disconnect retries GET only and exact terminal states remain autho
     assert.match(component, /fetch\(systemUpdateExactStatusPath\(marker\.request_id\)/);
     const pollBody = component.slice(
         component.indexOf('async function pollExact'),
-        component.indexOf('function formatElapsed'),
+        component.indexOf('async function abandonExact'),
     );
     assert.doesNotMatch(pollBody, /method:\s*'POST'/);
     assert.match(component, /kind: 'retry',[\s\S]{0,180}disconnected: true/);
@@ -101,7 +113,8 @@ test('restart disconnect retries GET only and exact terminal states remain autho
     assert.match(component, /commitTerminal\([\s\n]*exactMarker,[\s\n]*'failed'/);
     assert.match(component, /systemUpdateCanonicalReloadAuthorized/);
     assert.equal((component.match(/\/api\/v1\/panel\/update\/start/g) ?? []).length, 1);
-    assert.equal((component.match(/method:\s*'POST'/g) ?? []).length, 1);
+    assert.equal((component.match(/\/api\/v1\/panel\/update\/abandon/g) ?? []).length, 1);
+    assert.equal((component.match(/method:\s*'POST'/g) ?? []).length, 2);
 });
 
 test('background watchdog visibly reports target, elapsed time, and exact request id', () => {

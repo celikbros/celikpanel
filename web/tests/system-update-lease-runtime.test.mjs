@@ -60,6 +60,20 @@ class ExclusiveLockManager {
     }
 }
 
+class FakeMonotonicClock {
+    constructor(initial = 0) {
+        this.value = initial;
+    }
+
+    now() {
+        return this.value;
+    }
+
+    advance(milliseconds) {
+        this.value += milliseconds;
+    }
+}
+
 class FakeTransaction {
     constructor(factory, mode, gate) {
         this.factory = factory;
@@ -525,13 +539,215 @@ test('dispatch begins only after the exact unique owner fence commits', async ()
     assert.equal(posts, 1, 'same-marker reentry cannot dispatch again');
 });
 
-test('not-found recovery policy never repeats a POST', () => {
-    const action = canonical.systemUpdateNotFoundAction;
-    assert.equal(action('claimed', 1000, undefined, 1099, 100), 'wait');
-    assert.equal(action('claimed', 1000, undefined, 1100, 100), 'fail-dispatch');
-    assert.equal(action('authorized', 1000, 1050, 1149, 100), 'wait');
-    assert.equal(action('authorized', 1000, 1050, 1150, 100), 'fail-dispatch');
-    assert.equal(action('legacy', 1000, undefined, 1100, 100), 'fail-dispatch');
+test('not-found recovery requires one exact per-document monotonic observation window', () => {
+    const clock = new FakeMonotonicClock(10);
+    let observation = null;
+    let decision = canonical.systemUpdateNotFoundAction(observation, 'exact-a', clock.now(), 100);
+    observation = decision.observation;
+    assert.equal(decision.action, 'wait');
+    assert.deepEqual(observation, { exactIdentity: 'exact-a', firstObservedAt: 10 });
+
+    clock.advance(99);
+    decision = canonical.systemUpdateNotFoundAction(observation, 'exact-a', clock.now(), 100);
+    assert.equal(decision.action, 'wait');
+    clock.advance(1);
+    decision = canonical.systemUpdateNotFoundAction(decision.observation, 'exact-a', clock.now(), 100);
+    assert.equal(decision.action, 'verify');
+
+    const successor = canonical.systemUpdateNotFoundAction(
+        decision.observation,
+        'exact-b',
+        clock.now(),
+        100,
+    );
+    assert.equal(successor.action, 'wait', 'a different exact request owns a fresh observation');
+    assert.deepEqual(successor.observation, { exactIdentity: 'exact-b', firstObservedAt: 110 });
+});
+
+test('future and rollback wall clocks cannot shorten grace, and a remount observes afresh', () => {
+    const persistedDispatchAttemptedAt = 5000;
+    const rolledBackWallNow = 4000;
+    assert.ok(persistedDispatchAttemptedAt > rolledBackWallNow);
+
+    const clock = new FakeMonotonicClock(25);
+    let firstDocument = canonical.systemUpdateNotFoundAction(null, 'exact-a', clock.now(), 100);
+    assert.equal(firstDocument.action, 'wait', 'persisted wall time is not an eligibility input');
+    clock.advance(100);
+    firstDocument = canonical.systemUpdateNotFoundAction(
+        firstDocument.observation,
+        'exact-a',
+        clock.now(),
+        100,
+    );
+    assert.equal(firstDocument.action, 'verify');
+
+    let remountedDocument = canonical.systemUpdateNotFoundAction(null, 'exact-a', clock.now(), 100);
+    assert.equal(remountedDocument.action, 'wait', 'a remount has no inherited absence observation');
+    clock.advance(99);
+    remountedDocument = canonical.systemUpdateNotFoundAction(
+        remountedDocument.observation,
+        'exact-a',
+        clock.now(),
+        100,
+    );
+    assert.equal(remountedDocument.action, 'wait');
+    clock.advance(1);
+    remountedDocument = canonical.systemUpdateNotFoundAction(
+        remountedDocument.observation,
+        'exact-a',
+        clock.now(),
+        100,
+    );
+    assert.equal(remountedDocument.action, 'verify');
+});
+
+test('elapsed absence requires an exact recheck and canonical CAS while a late POST wins', async () => {
+    const indexedDB = new FakeIndexedDB();
+    const storage = new MemoryStorage();
+    const authorizedA = {
+        ...activeA,
+        dispatch_owner: ownerA,
+        dispatch_state: 'authorized',
+        dispatch_attempted_at: 5000,
+    };
+    await transact(indexedDB, storage, ownerA, () => ({
+        kind: 'write', record: authorizedA, result: true,
+    }));
+
+    const clock = new FakeMonotonicClock();
+    let observation = null;
+    let serverFound = false;
+    let publishLatePostOnVerification = false;
+    let statusReads = 0;
+    let posts = 0;
+    const pollExact = async (phase) => {
+        statusReads += 1;
+        if (phase === 'verify' && publishLatePostOnVerification) {
+            publishLatePostOnVerification = false;
+            posts += 1;
+            serverFound = true;
+        }
+        return serverFound ? 'found' : 'not-found';
+    };
+    const recover = async (marker, exactIdentity, terminal) => {
+        if (await pollExact('initial') !== 'not-found') {
+            observation = null;
+            return 'found';
+        }
+        const decision = canonical.systemUpdateNotFoundAction(
+            observation,
+            exactIdentity,
+            clock.now(),
+            100,
+        );
+        observation = decision.observation;
+        if (decision.action !== 'verify') return 'wait';
+        if (await pollExact('verify') !== 'not-found') {
+            observation = null;
+            return 'found';
+        }
+        const committed = await transact(indexedDB, storage, ownerA, (current) => (
+            current?.phase === 'active' && sameMarker(current.marker, marker)
+                ? { kind: 'write', record: terminal, result: 'terminal' }
+                : { kind: 'keep', result: 'stale' }
+        ), false);
+        return committed.result;
+    };
+
+    assert.equal(await recover(markerA, 'exact-a', terminalA), 'wait');
+    assert.equal(statusReads, 1, 'the first exact 404 only starts the observation');
+    clock.advance(100);
+    publishLatePostOnVerification = true;
+    assert.equal(await recover(markerA, 'exact-a', terminalA), 'found');
+    assert.equal(statusReads, 3, 'elapsed grace still requires a second exact status read');
+    assert.equal(posts, 1);
+    const stillActive = await transact(indexedDB, storage, ownerB, (current) => ({
+        kind: 'keep', result: current,
+    }), false);
+    assert.ok(sameRecord(stillActive.result, authorizedA), 'late acceptance prevents terminal CAS');
+
+    const authorizedB = {
+        ...activeB,
+        dispatch_owner: ownerA,
+        dispatch_state: 'authorized',
+        dispatch_attempted_at: 6000,
+    };
+    await transact(indexedDB, storage, ownerA, () => ({
+        kind: 'write', record: authorizedB, result: true,
+    }), false);
+    observation = null;
+    serverFound = false;
+    const terminalB = { ...terminalA, marker: markerB, completed_at: 7000 };
+    assert.equal(await recover(markerB, 'exact-b', terminalB), 'wait');
+    clock.advance(100);
+    assert.equal(await recover(markerB, 'exact-b', terminalB), 'terminal');
+    const terminalSnapshot = await transact(indexedDB, storage, ownerB, (current) => ({
+        kind: 'keep', result: current,
+    }), false);
+    assert.ok(sameRecord(terminalSnapshot.result, terminalB),
+        'only sustained exact absence reaches the canonical terminal CAS');
+});
+
+test('authoritative abandon receipt serializes both proxy-in-flight start orderings', async () => {
+    const exact = {
+        request_id: markerA.request_id,
+        ...markerA.target,
+    };
+    const sameIdentity = (left, right) => left.request_id === right.request_id
+        && left.version === right.version
+        && left.commit === right.commit
+        && left.sequence === right.sequence
+        && left.os === right.os
+        && left.arch === right.arch
+        && left.archive_sha256 === right.archive_sha256
+        && left.archive_size === right.archive_size;
+    const makeAuthority = () => {
+        let state = null;
+        let launches = 0;
+        let tail = Promise.resolve();
+        const locked = (callback) => {
+            const result = tail.then(callback);
+            tail = result.then(() => undefined, () => undefined);
+            return result;
+        };
+        return {
+            abandon: (identity) => locked(() => {
+                if (state) {
+                    assert.ok(sameIdentity(state, identity));
+                    return state;
+                }
+                state = { ...identity, status: 'failed', error: 'authoritatively abandoned' };
+                return state;
+            }),
+            start: (identity) => locked(() => {
+                if (state) {
+                    assert.ok(sameIdentity(state, identity));
+                    return { accepted: false, state };
+                }
+                launches += 1;
+                state = { ...identity, status: 'queued' };
+                return { accepted: true, state };
+            }),
+            launches: () => launches,
+        };
+    };
+
+    const abandonFirst = makeAuthority();
+    const abandonReceipt = abandonFirst.abandon(exact);
+    const delayedStart = abandonFirst.start(exact);
+    assert.equal((await abandonReceipt).status, 'failed');
+    assert.deepEqual(await delayedStart, {
+        accepted: false,
+        state: { ...exact, status: 'failed', error: 'authoritatively abandoned' },
+    });
+    assert.equal(abandonFirst.launches(), 0, 'a delayed POST cannot launch after the negative receipt');
+
+    const startFirst = makeAuthority();
+    const acceptedStart = startFirst.start(exact);
+    const lateAbandon = startFirst.abandon(exact);
+    assert.equal((await acceptedStart).accepted, true);
+    assert.equal((await lateAbandon).status, 'queued');
+    assert.equal(startFirst.launches(), 1, 'abandon never overwrites a start that already owns the lock');
 });
 
 test('dispatch authorization is bound to one authenticated guarded generation', () => {
@@ -615,6 +831,7 @@ test('a cloned tab cannot steal a frozen authorized dispatch and exactly one POS
     }));
 
     const posts = [];
+    const observations = new Map();
     const recover = async (owner, now) => {
         const result = await transact(indexedDB, storage, owner, (current) => {
             if (current?.phase !== 'active' || !sameMarker(current.marker, markerA)) {
@@ -623,14 +840,14 @@ test('a cloned tab cannot steal a frozen authorized dispatch and exactly one POS
             if (current.dispatch_state === 'authorized' && current.dispatch_owner !== owner) {
                 return { kind: 'keep', result: { kind: 'wait' } };
             }
-            const action = canonical.systemUpdateNotFoundAction(
-                current.dispatch_state ?? 'legacy',
-                current.marker.created_at,
-                current.dispatch_attempted_at,
+            const decision = canonical.systemUpdateNotFoundAction(
+                observations.get(owner) ?? null,
+                'exact-a',
                 now,
                 100,
             );
-            if (action === 'wait') return { kind: 'keep', result: { kind: 'wait' } };
+            observations.set(owner, decision.observation);
+            if (decision.action === 'wait') return { kind: 'keep', result: { kind: 'wait' } };
             return { kind: 'write', record: terminalA, result: { kind: 'terminal' } };
         }, false);
         return result;
@@ -662,13 +879,15 @@ test('a cloned tab cannot steal a frozen authorized dispatch and exactly one POS
     assert.equal(await fencedPost(), true);
     assert.deepEqual(posts, [markerA.request_id], 'the original owner emits one POST after resuming');
 
-    const terminalized = await recover(ownerA, firstAttemptAt + 2000);
+    const firstOwnerObservation = await recover(ownerA, firstAttemptAt + 2000);
+    assert.equal(firstOwnerObservation.result.kind, 'wait');
+    const terminalized = await recover(ownerA, firstAttemptAt + 2100);
     assert.equal(terminalized.result.kind, 'terminal');
     assert.equal(await fencedPost(), false, 'a terminal canonical record fences any stale continuation');
     assert.equal(posts.length, 1, 'all interleavings emit at most one POST');
 });
 
-test('the cross-context lock orders terminal recovery around the final POST fence', async () => {
+test('monotonic grace and the cross-context lock protect a concurrent late POST', async () => {
     const indexedDB = new FakeIndexedDB();
     const storage = new MemoryStorage();
     const manager = new ExclusiveLockManager();
@@ -687,6 +906,8 @@ test('the cross-context lock orders terminal recovery around the final POST fenc
     let releaseDispatch;
     const dispatchEntered = new Promise((resolve) => { enterDispatch = resolve; });
     const dispatchGate = new Promise((resolve) => { releaseDispatch = resolve; });
+    const clock = new FakeMonotonicClock();
+    let observation = null;
     let posts = 0;
     let serverFound = false;
     let recoveryEntered = false;
@@ -703,6 +924,13 @@ test('the cross-context lock orders terminal recovery around the final POST fenc
         return 'sent';
     });
     await dispatchEntered;
+
+    let decision = canonical.systemUpdateNotFoundAction(observation, 'exact-a', clock.now(), 100);
+    observation = decision.observation;
+    assert.equal(decision.action, 'wait', 'the first exact 404 cannot clear a concurrent POST fence');
+    clock.advance(100);
+    decision = canonical.systemUpdateNotFoundAction(observation, 'exact-a', clock.now(), 100);
+    assert.equal(decision.action, 'verify', 'only elapsed monotonic grace permits an exact recheck');
 
     const recovery = canonical.runWithSystemUpdateLock(manager, lockName, async () => {
         recoveryEntered = true;
@@ -721,7 +949,7 @@ test('the cross-context lock orders terminal recovery around the final POST fenc
     await new Promise((resolve) => setTimeout(resolve, 5));
     assert.equal(recoveryEntered, false, 'foreign recovery cannot pass a live dispatch document');
     assert.equal(sameOwnerRecoveryEntered, false, 'same-owner polling cannot pass its own live dispatch');
-    assert.equal(posts, 0);
+    assert.equal(posts, 0, 'the POST remains suspended even after the observation grace elapsed');
     releaseDispatch();
     assert.deepEqual(await dispatch, { kind: 'completed', value: 'sent' });
     assert.deepEqual(await recovery, { kind: 'completed', value: 'found' });
@@ -972,7 +1200,7 @@ test('authentication publication resumes a paused guard synchronously without po
     authSignal.publishSystemUpdateAuthentication(false);
 });
 
-test('a 401 pause suppresses every wake poll until authentication resumes exactly once', () => {
+test('a 401 or 403 auth pause suppresses every wake poll until authentication resumes exactly once', () => {
     let authPaused = true;
     let polls = 0;
     const wake = () => {

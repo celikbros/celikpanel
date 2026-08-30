@@ -13,12 +13,13 @@ import (
 )
 
 const (
-	systemUpdateStateVersion = 1
-	systemUpdateQueued       = "queued"
-	systemUpdateRunning      = "running"
-	systemUpdateSucceeded    = "succeeded"
-	systemUpdateFailed       = "failed"
-	systemUpdateLaunchGrace  = 30 * time.Second
+	systemUpdateStateVersion   = 1
+	systemUpdateQueued         = "queued"
+	systemUpdateRunning        = "running"
+	systemUpdateSucceeded      = "succeeded"
+	systemUpdateFailed         = "failed"
+	systemUpdateAbandonedError = "system update start was authoritatively abandoned before acceptance"
+	systemUpdateLaunchGrace    = 30 * time.Second
 	// The transient worker and its OnFailure recovery service are independently
 	// bounded to 15 minutes. Keep the reviewed request active across both
 	// windows, then fail it instead of leaving an unbounded running record.
@@ -137,6 +138,7 @@ func sanitizedSystemUpdateError(err error) string {
 
 type systemUpdateBackend interface {
 	ReadFloor() (*systemUpdateFloor, error)
+	Abandon(context.Context, *systemUpdateState) (*systemUpdateState, error)
 	QueueAndLaunch(context.Context, *systemUpdateState) (*systemUpdateState, error)
 	Status(context.Context, string) (*systemUpdateState, error)
 	RunWorker(context.Context, string, systemUpdateManifestFetcher) error
@@ -216,6 +218,9 @@ func (service *systemUpdateService) start(ctx context.Context, request *transpor
 		if !systemUpdateStateMatchesRequest(existing, request) {
 			return transport.SystemUpdateStartResponse{}, errors.New("request_id belongs to another system update")
 		}
+		if systemUpdateStateIsAbandonReceipt(existing) {
+			return transport.SystemUpdateStartResponse{Status: existing.Status}, errors.New(systemUpdateAbandonedError)
+		}
 		// An exact retry identifies the already durable operation before
 		// comparing the now-installed build. This keeps Start idempotent after
 		// an agent restart has successfully installed the requested target.
@@ -263,6 +268,32 @@ func (service *systemUpdateService) start(ctx context.Context, request *transpor
 	return transport.SystemUpdateStartResponse{Accepted: true, Status: queued.Status}, nil
 }
 
+func (service *systemUpdateService) abandon(ctx context.Context, request *transport.SystemUpdateAbandonRequest) (transport.SystemUpdateStatusResponse, error) {
+	if !service.supported() {
+		return transport.SystemUpdateStatusResponse{}, service.unsupportedError()
+	}
+	if err := validateSystemUpdateStartRequest(request); err != nil {
+		return transport.SystemUpdateStatusResponse{}, err
+	}
+	now := service.now().UTC().Format(time.RFC3339Nano)
+	state := &systemUpdateState{
+		Version: systemUpdateStateVersion, RequestID: request.RequestID, Status: systemUpdateFailed,
+		TargetVersion: request.TargetVersion, TargetCommit: request.TargetCommit, TargetSequence: request.TargetSequence,
+		TargetOS: request.TargetOS, TargetArch: request.TargetArch, TargetArchiveSHA256: request.TargetArchiveSHA256,
+		TargetArchiveSize: request.TargetArchiveSize, ExpectedCurrentVersion: request.ExpectedCurrentVersion,
+		ExpectedCurrentCommit: request.ExpectedCurrentCommit, CreatedAt: now, UpdatedAt: now,
+		Error: systemUpdateAbandonedError,
+	}
+	receipt, err := service.backend.Abandon(ctx, state)
+	if err != nil {
+		return transport.SystemUpdateStatusResponse{}, err
+	}
+	if !systemUpdateStateMatchesRequest(receipt, request) {
+		return transport.SystemUpdateStatusResponse{}, errors.New("request_id belongs to another system update")
+	}
+	return systemUpdateStatusResponse(receipt), nil
+}
+
 func systemUpdateStateMatchesRequest(state *systemUpdateState, request *transport.SystemUpdateStartRequest) bool {
 	if state == nil || request == nil {
 		return false
@@ -277,6 +308,10 @@ func systemUpdateStateMatchesRequest(state *systemUpdateState, request *transpor
 		state.TargetArchiveSize == request.TargetArchiveSize &&
 		state.ExpectedCurrentVersion == request.ExpectedCurrentVersion &&
 		state.ExpectedCurrentCommit == request.ExpectedCurrentCommit
+}
+
+func systemUpdateStateIsAbandonReceipt(state *systemUpdateState) bool {
+	return state != nil && state.Status == systemUpdateFailed && state.Error == systemUpdateAbandonedError
 }
 
 func systemUpdateStatusResponse(state *systemUpdateState) transport.SystemUpdateStatusResponse {
@@ -334,6 +369,23 @@ func (a *Agent) StartSystemUpdate(request *transport.SystemUpdateStartRequest, r
 		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cancel()
 		*reply, err = service.start(ctx, request)
+	}
+	if err != nil {
+		reply.Error = sanitizedSystemUpdateError(err)
+	}
+	return nil
+}
+
+func (a *Agent) AbandonSystemUpdate(request *transport.SystemUpdateAbandonRequest, reply *transport.SystemUpdateStatusResponse) error {
+	if reply == nil {
+		return errors.New("system update abandon response is required")
+	}
+	*reply = transport.SystemUpdateStatusResponse{}
+	service, err := agentSystemUpdateService()
+	if err == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+		defer cancel()
+		*reply, err = service.abandon(ctx, request)
 	}
 	if err != nil {
 		reply.Error = sanitizedSystemUpdateError(err)

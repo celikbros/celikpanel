@@ -37,6 +37,9 @@ const (
 	// generic 15-second control-RPC reconciliation window.
 	panelFirewallCommitReconcileTimeout = 90 * time.Second
 	panelDNSCommitReconcileTimeout      = 5 * time.Minute
+
+	dnsEngineSwitchLegacyPublishedPhasePrefix = "commit/dns-engine-switch/v1/published/"
+	dnsEngineSwitchFinalizedPhasePrefix       = "commit/dns-engine-switch/v2/finalized/"
 )
 
 var waitExpectedAgentMutationTerminalFn = func(
@@ -86,6 +89,10 @@ var errAgentMutationTerminalFailed = errors.New(
 
 var errAgentMutationPublishedReceiptMismatch = errors.New(
 	"agent service mutation success lacks its exact canonical published receipt",
+)
+
+var errAgentMutationRecoveryRequired = errors.New(
+	"agent service mutation requires privileged recovery before it can be committed",
 )
 
 var errHostMutationBusy = errors.New(
@@ -143,7 +150,7 @@ func payloadBoundMutationTerminalError(
 
 func mutationTerminalUncertain(err error) bool {
 	var target *agentMutationTerminalUncertainError
-	return errors.As(err, &target)
+	return errors.As(err, &target) || errors.Is(err, errAgentMutationRecoveryRequired)
 }
 
 type agentMutationIdentity struct {
@@ -232,7 +239,7 @@ func payloadBoundMutationPublishedPhase(
 			!mutationpayload.ValidDNSEngineSwitchQualifier(identity.PackageName) {
 			return "", true, errAgentMutationPublishedReceiptMismatch
 		}
-		return "commit/dns-engine-switch/v1/published/" +
+		return dnsEngineSwitchFinalizedPhasePrefix +
 			identity.RequestID + "/" + identity.PackageName, true, nil
 	case "panel_certificate_issue":
 		canonicalTarget, err := hostname.CanonicalFQDN(identity.Target)
@@ -261,6 +268,15 @@ func validateAgentMutationSucceededReceipt(
 		return err
 	}
 	if required && job.Phase != expected {
+		if identity.Kind == dnsEngineSwitchKind {
+			return fmt.Errorf(
+				"%w: %w: got %q, want exact finalized receipt %q",
+				errAgentMutationRecoveryRequired,
+				errAgentMutationPublishedReceiptMismatch,
+				job.Phase,
+				expected,
+			)
+		}
 		return fmt.Errorf(
 			"%w: got %q, want %q",
 			errAgentMutationPublishedReceiptMismatch,

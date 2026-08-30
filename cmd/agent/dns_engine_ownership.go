@@ -583,3 +583,79 @@ func exactCommittedDNSEngineProvenanceOnHost(
 	}
 	return state, installExists, ownershipExists, nil
 }
+
+func exactFinalizedDNSEngineSwitchProvenanceOnHost(
+	target transport.DNSEngine,
+	qualifier string,
+	binding transport.ServiceMutationBinding,
+) (bool, error) {
+	state, stateExists, err := readDNSEngineState()
+	if err != nil {
+		return false, fmt.Errorf("read finalized DNS engine state receipt: %w", err)
+	}
+	ownership, ownershipExists, err := readDNSEngineOwnership(target)
+	if err != nil {
+		return false, fmt.Errorf("read finalized DNS engine ownership: %w", err)
+	}
+	_, installExists, err := readDNSEngineInstallOwnership(target)
+	if err != nil {
+		return false, fmt.Errorf("read finalized DNS engine install ownership: %w", err)
+	}
+	if !stateExists {
+		if ownershipExists || installExists {
+			return false, errors.New(
+				"finalized DNS engine provenance is inconsistent without active state",
+			)
+		}
+		return false, nil
+	}
+	if err := validateDNSEngineState(state); err != nil {
+		return false, fmt.Errorf("validate finalized DNS engine state receipt: %w", err)
+	}
+	exactTransaction := state.Engine == target &&
+		state.ManifestQualifier == qualifier &&
+		state.MutationRequestID == binding.MutationRequestID &&
+		state.MutationOwnerID == binding.MutationOwnerID
+	if !exactTransaction {
+		currentOwnership := ownership
+		currentOwnershipExists := ownershipExists
+		if state.Engine != target {
+			currentOwnership, currentOwnershipExists, err = readDNSEngineOwnership(state.Engine)
+			if err != nil {
+				return false, fmt.Errorf("read current DNS engine ownership: %w", err)
+			}
+		}
+		if !currentOwnershipExists {
+			return false, errors.New(
+				"journal-free DNS engine state has no matching active ownership",
+			)
+		}
+		if err := validateDNSEngineState(currentOwnership); err != nil {
+			return false, fmt.Errorf("validate current DNS engine ownership: %w", err)
+		}
+		if currentOwnership != state {
+			return false, errors.New(
+				"journal-free DNS engine state differs from its active ownership",
+			)
+		}
+		if installExists {
+			return false, errors.New(
+				"journal-free DNS engine target retains transitional install ownership",
+			)
+		}
+		return false, nil
+	}
+	if !ownershipExists {
+		return false, errors.New("finalized DNS engine ownership is absent")
+	}
+	if err := validateDNSEngineState(ownership); err != nil {
+		return false, fmt.Errorf("validate finalized DNS engine ownership: %w", err)
+	}
+	if ownership != state {
+		return false, errors.New("finalized DNS engine ownership differs from its active state")
+	}
+	if installExists {
+		return false, errors.New("finalized DNS engine install ownership was not retired")
+	}
+	return true, nil
+}

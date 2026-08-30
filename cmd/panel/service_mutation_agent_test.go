@@ -110,6 +110,7 @@ type terminalAuthorityTestAgent struct {
 	heartbeatSeen        chan struct{}
 	heartbeatSeenOnce    sync.Once
 	statusCalls          atomic.Int32
+	legacyDNSEngineV1    bool
 }
 
 func (a *terminalAuthorityTestAgent) PkgFamily(
@@ -133,6 +134,10 @@ func (a *terminalAuthorityTestAgent) markSucceededLocked(requestID string) *Serv
 	}
 	if phase, required, err := payloadBoundMutationPublishedPhase(identity); err == nil && required {
 		job.Phase = phase
+	}
+	if a.legacyDNSEngineV1 && identity.Kind == dnsEngineSwitchKind {
+		job.Phase = dnsEngineSwitchLegacyPublishedPhasePrefix +
+			identity.RequestID + "/" + identity.PackageName
 	}
 	if a.active == requestID {
 		a.active = ""
@@ -210,6 +215,71 @@ func TestPayloadBoundMutationSuccessRequiresExactPublishedReceipt(t *testing.T) 
 				t.Fatalf("completed success error = %v, want published receipt mismatch", err)
 			}
 		})
+	}
+}
+
+func TestDNSEngineSwitchSuccessRequiresExactFinalizedV2Receipt(t *testing.T) {
+	requestID := strings.Repeat("8", 32)
+	ownerID := strings.Repeat("9", 32)
+	qualifier := "dns-engine-switch/v1:sha256:" + strings.Repeat("a", 64)
+	identity := agentMutationIdentity{
+		RequestID: requestID, OwnerID: ownerID,
+		Kind: dnsEngineSwitchKind, Target: string(transport.DNSEngineBIND),
+		PackageName: qualifier,
+	}
+	finalizedPhase := dnsEngineSwitchFinalizedPhasePrefix + requestID + "/" + qualifier
+
+	exact := &agentMutationJob{
+		RequestID: requestID, OwnerID: ownerID,
+		Kind: dnsEngineSwitchKind, Target: string(transport.DNSEngineBIND),
+		PackageName: qualifier, Status: agentMutationSucceeded,
+		Phase: finalizedPhase,
+	}
+	if err := validateAgentMutationSucceededReceipt(exact, identity); err != nil {
+		t.Fatalf("exact v2 finalized receipt rejected: %v", err)
+	}
+
+	legacy := cloneAgentMutationJob(exact)
+	legacy.Phase = dnsEngineSwitchLegacyPublishedPhasePrefix + requestID + "/" + qualifier
+	legacyErr := validateAgentMutationSucceededReceipt(legacy, identity)
+	if !errors.Is(legacyErr, errAgentMutationRecoveryRequired) ||
+		!errors.Is(legacyErr, errAgentMutationPublishedReceiptMismatch) ||
+		!mutationTerminalUncertain(legacyErr) {
+		t.Fatalf("legacy v1 receipt error = %v, want recovery-required uncertainty", legacyErr)
+	}
+
+	malformed := cloneAgentMutationJob(exact)
+	malformed.Phase = "completed"
+	malformedErr := validateAgentMutationSucceededReceipt(malformed, identity)
+	if !errors.Is(malformedErr, errAgentMutationRecoveryRequired) ||
+		!errors.Is(malformedErr, errAgentMutationPublishedReceiptMismatch) ||
+		!mutationTerminalUncertain(malformedErr) {
+		t.Fatalf("malformed success receipt error = %v, want recovery-required uncertainty", malformedErr)
+	}
+
+	mismatched := cloneAgentMutationJob(exact)
+	mismatched.OwnerID = strings.Repeat("7", 32)
+	if err := validateAgentMutationSucceededReceipt(mismatched, identity); !errors.Is(err, errAgentMutationIdentityMismatch) {
+		t.Fatalf("mismatched v2 identity error = %v", err)
+	}
+}
+
+func TestStandaloneDNSEngineRPCErrorIsNotSuppressedByLegacyV1Receipt(t *testing.T) {
+	agent := &terminalAuthorityTestAgent{legacyDNSEngineV1: true}
+	panel := newPolicyDispatchTestPanel(t, agent)
+
+	err := panel.withStandaloneAgentMutation(
+		context.Background(),
+		dnsEngineSwitchKind,
+		string(transport.DNSEnginePowerDNS),
+		"dns-engine-switch/v1:sha256:"+strings.Repeat("b", 64),
+		func(context.Context, agentMutationBinding) error {
+			agent.markActiveSucceeded()
+			return errors.New("simulated DNS mutating RPC response loss")
+		},
+	)
+	if !errors.Is(err, errAgentMutationRecoveryRequired) {
+		t.Fatalf("legacy v1 RPC-loss result = %v, want recovery required", err)
 	}
 }
 

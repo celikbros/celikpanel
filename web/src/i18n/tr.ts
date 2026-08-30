@@ -2102,6 +2102,6 @@ export const tr: Record<TranslationKey, string> = {
     'panelUpdate.accepted': 'İstek kabul edildi; güvenli durum takibi başladı.',
     'panelUpdate.watch': 'Gezinin; işlem kilitli.',
     'panelUpdate.canonicalChecking': 'Tamamlanmamış güncelleme denetleniyor...',
-    'panelUpdate.interactionLocked': 'Bu işlem doğrulanana kadar sayfadan ayrılamazsınız.',
+    'panelUpdate.interactionLocked': 'Bu güncelleme denetlenirken gezinme geçici olarak kilitlidir. İki dakika sonra otomatik açılır; işlem arka planda izlenmeye devam eder.',
     'panelUpdate.ambiguous': 'Başlatma yanıtı belirsiz. İstek tekrarlanmayacak; aynı sunucu durumu izlenecek.',
 };

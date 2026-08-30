@@ -32,6 +32,10 @@ const (
 	serviceMutationStatusSucceeded  = "succeeded"
 	serviceMutationStatusFailed     = "failed"
 
+	serviceMutationPhaseCancellingExpiredLease = "cancelling_expired_lease"
+	serviceMutationErrorLeaseExpired           = "service_mutation_lease_expired"
+	serviceMutationMessageLeaseExpired         = "The panel stopped heartbeating before the service mutation completed."
+
 	serviceMutationLeaseDuration = 20 * time.Second
 	serviceMutationOverallLimit  = 45 * time.Minute
 	serviceMutationHistoryLimit  = 128
@@ -120,6 +124,7 @@ type serviceMutationRuntime struct {
 	dnsClusterConfigCommittedPhase      string
 	dnsZoneSyncAppliedPhase             string
 	dnsZoneSyncPublishedPhase           string
+	dnsEngineSwitchFinalizing           bool
 	dnsZoneSyncV3AppliedPhase           string
 	dnsZoneSyncV3Recovery               bool
 	dnsZoneSyncV3PendingPhase           string
@@ -158,6 +163,34 @@ func serviceMutationLockFile() string {
 	return "/run/celikpanel/service-mutation.lock"
 }
 
+func serviceMutationLedgerPublicationLockFile(hostLockPath string) string {
+	return filepath.Clean(hostLockPath) + ".ledger-publication"
+}
+
+// acquireServiceMutationHostAndPublicationLocks is the only production entry
+// to a service-mutation ledger publication lifetime. The fixed acquisition
+// order is host -> publication. DNS terminal publication may release the host
+// half first, but keeps publication until its durable v2 receipt is re-read.
+func acquireServiceMutationHostAndPublicationLocks(
+	hostLockPath string,
+) (*serviceMutationFileLock, error) {
+	hostLock, err := acquireServiceMutationFileLock(hostLockPath)
+	if err != nil {
+		return nil, err
+	}
+	publicationLock, publicationErr := acquireServiceMutationFileLock(
+		serviceMutationLedgerPublicationLockFile(hostLockPath),
+	)
+	if publicationErr != nil {
+		return nil, errors.Join(
+			fmt.Errorf("acquire service mutation ledger publication lock: %w", publicationErr),
+			hostLock.Close(),
+		)
+	}
+	hostLock.publication = publicationLock
+	return hostLock, nil
+}
+
 // initializeServiceMutationLedger publishes the canonical empty ledger exactly once while holding the host mutation lock.
 // initializeServiceMutationLedger, ana makine mutation kilidini tutarken kanonik boş ledger'ı yalnızca bir kez yayımlar.
 func initializeServiceMutationLedger(stateDir, lockPath string) (returnErr error) {
@@ -173,7 +206,7 @@ func initializeServiceMutationLedger(stateDir, lockPath string) (returnErr error
 		return errors.New("service mutation initialization paths must be absolute")
 	}
 
-	lock, err := acquireServiceMutationFileLock(lockPath)
+	lock, err := acquireServiceMutationHostAndPublicationLocks(lockPath)
 	if err != nil {
 		return fmt.Errorf("acquire service mutation initialization lock: %w", err)
 	}
@@ -763,7 +796,7 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 	// exclusive ownership of the same host mutation lock used by workers.
 	// Bu süreç, worker'ların kullandığı aynı host mutation kilidinin münhasır
 	// sahipliğini kanıtlamadan hiçbir başlangıç uzlaştırma sonucunu yayımlamaz.
-	lock, err := acquireServiceMutationFileLock(m.lockPath)
+	lock, err := acquireServiceMutationHostAndPublicationLocks(m.lockPath)
 	if err != nil {
 		return fmt.Errorf("acquire service mutation reconciliation lock: %w", err)
 	}
@@ -922,7 +955,7 @@ func (m *serviceMutationManager) tryResolvePersistedOrphan() error {
 	}
 	m.mu.Unlock()
 
-	lock, err := acquireServiceMutationFileLock(m.lockPath)
+	lock, err := acquireServiceMutationHostAndPublicationLocks(m.lockPath)
 	if err != nil {
 		return err
 	}
@@ -1178,7 +1211,7 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		}
 		return cloneServiceMutationJob(job), errServiceMutationBusy
 	}
-	lock, err := acquireServiceMutationFileLock(m.lockPath)
+	lock, err := acquireServiceMutationHostAndPublicationLocks(m.lockPath)
 	if err != nil {
 		return nil, err
 	}
@@ -1324,11 +1357,17 @@ func minMutationTime(left, right time.Time) time.Time {
 func (m *serviceMutationManager) watch(runtime *serviceMutationRuntime) {
 	timer := time.NewTimer(time.Second)
 	defer timer.Stop()
+	ctxDone := runtime.ctx.Done()
 	for {
 		select {
-		case <-runtime.ctx.Done():
-			m.expire(runtime)
-			return
+		case <-ctxDone:
+			if !m.expire(runtime) {
+				return
+			}
+			// A pre-commit DNS guard can outlive the runtime context. Disable
+			// the permanently-ready channel and let the periodic watchdog
+			// retry expiry without spinning.
+			ctxDone = nil
 		case <-timer.C:
 			m.mu.Lock()
 			active := m.poisoned == nil && m.active == runtime &&
@@ -1336,8 +1375,9 @@ func (m *serviceMutationManager) watch(runtime *serviceMutationRuntime) {
 			expired := active && !m.now().Before(runtime.job.LeaseExpiresAt)
 			m.mu.Unlock()
 			if expired {
-				m.expire(runtime)
-				return
+				if !m.expire(runtime) {
+					return
+				}
 			}
 			if !active {
 				return
@@ -1347,12 +1387,26 @@ func (m *serviceMutationManager) watch(runtime *serviceMutationRuntime) {
 	}
 }
 
-func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) {
+// expire returns true only when the exact guarded DNS runtime remains active
+// and its watchdog must retry. Every ordinary or terminal outcome returns
+// false, preserving the existing one-shot behavior for other mutations.
+func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) bool {
 	m.mu.Lock()
 	if m.poisoned != nil || m.active != runtime ||
 		runtime.job.Status != serviceMutationStatusRunning {
 		m.mu.Unlock()
-		return
+		return false
+	}
+	if protected, err := m.protectCommittedDNSEngineSwitchFinalizationLocked(runtime); err != nil {
+		m.poisonLock = runtime.lock
+		_ = m.poisonLocked(fmt.Errorf(
+			"protect committed DNS engine switch from lease expiry: %w", err,
+		))
+		m.mu.Unlock()
+		return false
+	} else if protected {
+		m.mu.Unlock()
+		return true
 	}
 	if runtime.vpnPeerSyncPublishedPhase != "" {
 		err := m.finishRuntimeTerminalLocked(
@@ -1362,7 +1416,7 @@ func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) {
 			_ = m.poisonLocked(err)
 		}
 		m.mu.Unlock()
-		return
+		return false
 	}
 	if runtime.panelCertificateIssuePublishedPhase != "" {
 		err := m.finishRuntimeTerminalLocked(
@@ -1372,19 +1426,19 @@ func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) {
 			_ = m.poisonLocked(err)
 		}
 		m.mu.Unlock()
-		return
+		return false
 	}
 	if runtime.firewallApplyCommittedPhase != "" {
 		m.mu.Unlock()
-		return
+		return false
 	}
 	if runtime.mailTLSSyncCommittedPhase != "" {
 		m.mu.Unlock()
-		return
+		return false
 	}
 	if runtime.dnsClusterConfigCommittedPhase != "" {
 		m.mu.Unlock()
-		return
+		return false
 	}
 	if runtime.dnsZoneSyncPublishedPhase != "" {
 		err := m.finishRuntimeTerminalLocked(
@@ -1394,28 +1448,28 @@ func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) {
 			_ = m.poisonLocked(err)
 		}
 		m.mu.Unlock()
-		return
+		return false
 	}
 	if runtime.dnsZoneSyncAppliedPhase != "" {
 		m.mu.Unlock()
-		return
+		return false
 	}
 	before := cloneServiceMutationLedger(m.ledger)
 	now := m.now()
 	runtime.job.Status = serviceMutationStatusCancelling
 	if !strings.HasPrefix(runtime.job.Phase, panelCertificateIssueCommitPhasePrefix) &&
 		!strings.HasPrefix(runtime.job.Phase, dnsZoneSyncV3CommitPhasePrefix) {
-		runtime.job.Phase = "cancelling_expired_lease"
+		runtime.job.Phase = serviceMutationPhaseCancellingExpiredLease
 	}
-	runtime.job.ErrorCode = "service_mutation_lease_expired"
-	runtime.job.ErrorMessage = "The panel stopped heartbeating before the service mutation completed."
+	runtime.job.ErrorCode = serviceMutationErrorLeaseExpired
+	runtime.job.ErrorMessage = serviceMutationMessageLeaseExpired
 	runtime.job.UpdatedAt = now
 	if err := m.persistLedgerMutationLocked(before); err != nil {
 		if m.poisoned == nil {
 			_ = m.poisonLocked(err)
 		}
 		m.mu.Unlock()
-		return
+		return false
 	}
 	runtime.cancel()
 	steps := runtime.steps
@@ -1423,6 +1477,7 @@ func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) {
 	if steps == 0 {
 		m.finishExpired(runtime)
 	}
+	return false
 }
 
 func (m *serviceMutationManager) finishExpired(runtime *serviceMutationRuntime) {
@@ -1458,6 +1513,14 @@ func (m *serviceMutationManager) heartbeat(
 		runtime.job.OwnerID != request.OwnerID ||
 		runtime.job.Status != serviceMutationStatusRunning {
 		return m.jobLocked(request.RequestID), errors.New("service mutation lease is not owned by this panel")
+	}
+	if protected, err := m.protectCommittedDNSEngineSwitchFinalizationLocked(runtime); err != nil {
+		m.poisonLock = runtime.lock
+		return cloneServiceMutationJob(runtime.job), m.poisonLocked(fmt.Errorf(
+			"protect committed DNS engine switch from heartbeat mutation: %w", err,
+		))
+	} else if protected {
+		return cloneServiceMutationJob(runtime.job), nil
 	}
 	if runtime.vpnPeerSyncPublishedPhase != "" {
 		err := m.finishRuntimeTerminalLocked(
@@ -1495,6 +1558,7 @@ func (m *serviceMutationManager) heartbeat(
 		return cloneServiceMutationJob(runtime.job), errors.New("service mutation deadline has expired")
 	}
 	if phase := strings.TrimSpace(request.Phase); phase != "" &&
+		runtime.job.Kind != "dns_engine_switch" &&
 		!strings.HasPrefix(runtime.job.Phase, vpnPeerSyncCommitPhasePrefix) &&
 		!strings.HasPrefix(runtime.job.Phase, firewallApplyCommitPhasePrefix) &&
 		!strings.HasPrefix(runtime.job.Phase, mailTLSSyncCommitPhasePrefix) &&
@@ -1556,6 +1620,19 @@ func (m *serviceMutationManager) cancelJob(
 			return job, nil
 		}
 		return job, errors.New("active service mutation identity changed")
+	}
+	if protected, err := m.protectCommittedDNSEngineSwitchFinalizationLocked(runtime); err != nil {
+		m.poisonLock = runtime.lock
+		job := cloneServiceMutationJob(runtime.job)
+		poisonErr := m.poisonLocked(fmt.Errorf(
+			"protect committed DNS engine switch from cancellation: %w", err,
+		))
+		m.mu.Unlock()
+		return job, poisonErr
+	} else if protected {
+		job := cloneServiceMutationJob(runtime.job)
+		m.mu.Unlock()
+		return job, nil
 	}
 	if runtime.vpnPeerSyncPublishedPhase != "" {
 		err := m.finishRuntimeTerminalLocked(
@@ -1670,6 +1747,16 @@ func (m *serviceMutationManager) finish(
 	}
 	if runtime.job.RequestID != request.RequestID || runtime.job.OwnerID != request.OwnerID {
 		return cloneServiceMutationJob(runtime.job), errors.New("service mutation lease is owned by another request")
+	}
+	if protected, err := m.protectCommittedDNSEngineSwitchFinalizationLocked(runtime); err != nil {
+		m.poisonLock = runtime.lock
+		return cloneServiceMutationJob(runtime.job), m.poisonLocked(fmt.Errorf(
+			"protect committed DNS engine switch from premature completion: %w", err,
+		))
+	} else if protected {
+		return cloneServiceMutationJob(runtime.job), errors.New(
+			"committed DNS engine switch is still finalizing",
+		)
 	}
 	if runtime.vpnPeerSyncPublishedPhase != "" {
 		if err := m.finishRuntimeTerminalLocked(

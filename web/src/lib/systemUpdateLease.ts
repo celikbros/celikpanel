@@ -42,9 +42,17 @@ export type CanonicalRecordOptions<Record> = {
     timeoutMS?: number;
 };
 
-export type SystemUpdateDispatchState = 'legacy' | 'claimed' | 'authorized';
+export type SystemUpdateNotFoundAction = 'wait' | 'verify';
 
-export type SystemUpdateNotFoundAction = 'wait' | 'fail-dispatch';
+export type SystemUpdateNotFoundObservation = {
+    exactIdentity: string;
+    firstObservedAt: number;
+};
+
+export type SystemUpdateNotFoundDecision = {
+    action: SystemUpdateNotFoundAction;
+    observation: SystemUpdateNotFoundObservation | null;
+};
 
 export type SystemUpdateLockManager = {
     request: <Result>(name: string, callback: () => Promise<Result>) => Promise<Result>;
@@ -118,19 +126,28 @@ export function systemUpdateDispatchAllowed(
 }
 
 export function systemUpdateNotFoundAction(
-    dispatchState: SystemUpdateDispatchState,
-    markerCreatedAt: number,
-    dispatchAttemptedAt: number | undefined,
-    now: number,
+    current: SystemUpdateNotFoundObservation | null,
+    exactIdentity: string,
+    monotonicNow: number,
     graceMS: number,
-): SystemUpdateNotFoundAction {
-    if (!Number.isFinite(now) || !Number.isFinite(graceMS) || graceMS < 0) return 'wait';
-    const startedAt = dispatchState === 'authorized'
-        ? dispatchAttemptedAt
-        : markerCreatedAt;
-    return startedAt !== undefined && Number.isFinite(startedAt) && now - startedAt >= graceMS
-        ? 'fail-dispatch'
-        : 'wait';
+): SystemUpdateNotFoundDecision {
+    if (!exactIdentity || !Number.isFinite(monotonicNow)
+        || monotonicNow < 0 || !Number.isFinite(graceMS) || graceMS < 0) {
+        return { action: 'wait', observation: current };
+    }
+    if (!current || current.exactIdentity !== exactIdentity
+        || !Number.isFinite(current.firstObservedAt) || current.firstObservedAt < 0
+        || monotonicNow < current.firstObservedAt) {
+        const observation = { exactIdentity, firstObservedAt: monotonicNow };
+        return {
+            action: graceMS === 0 ? 'verify' : 'wait',
+            observation,
+        };
+    }
+    return {
+        action: monotonicNow - current.firstObservedAt >= graceMS ? 'verify' : 'wait',
+        observation: current,
+    };
 }
 
 type PersistedCanonicalRecord = {

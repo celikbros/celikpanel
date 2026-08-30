@@ -24,6 +24,7 @@ import {
     type CanonicalRecordSnapshot,
     type MarkerCodec,
     type SystemUpdateLockManager,
+    type SystemUpdateNotFoundObservation,
 } from '../lib/systemUpdateLease';
 import { subscribeSystemUpdateAuthentication } from '../lib/systemUpdateAuthSignal';
 import {
@@ -501,15 +502,8 @@ async function pollExact(marker: UpdateMarker, t: Translate): Promise<PollOutcom
             signal: controller.signal,
         });
         if (!response.ok) {
-            if (response.status === 401) {
+            if (response.status === 401 || response.status === 403) {
                 return { kind: 'auth', message: systemUpdateResponseHint(response.status, t) };
-            }
-            if (response.status === 403) {
-                return {
-                    kind: 'retry',
-                    message: systemUpdateResponseHint(response.status, t),
-                    disconnected: false,
-                };
             }
             return {
                 kind: 'retry',
@@ -545,6 +539,55 @@ async function pollExact(marker: UpdateMarker, t: Translate): Promise<PollOutcom
     }
 }
 
+async function abandonExact(marker: UpdateMarker, t: Translate): Promise<PollOutcome> {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), POLL_REQUEST_TIMEOUT_MS);
+    try {
+        const response = await fetch('/api/v1/panel/update/abandon', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+                request_id: marker.request_id,
+                confirmed: true,
+                current_version: marker.current_version,
+                current_commit: marker.current_commit,
+                ...marker.target,
+            }),
+        });
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                return { kind: 'auth', message: systemUpdateResponseHint(response.status, t) };
+            }
+            return {
+                kind: 'retry',
+                message: systemUpdateResponseHint(response.status, t),
+                disconnected: response.status >= 500,
+            };
+        }
+        const payload = decodeUpdateStatus(await response.json());
+        if (!payload?.found || payload.request_id !== marker.request_id || !payload.target
+            || !sameUpdateTarget(payload.target, marker.target)) {
+            return { kind: 'retry', message: t('panelUpdate.invalidResponse'), disconnected: false };
+        }
+        if (payload.status === 'succeeded') return { kind: 'succeeded', operation: payload };
+        if (payload.status === 'failed') {
+            return { kind: 'failed', message: payload.summary || t('panelUpdate.notAccepted'), operation: payload };
+        }
+        return {
+            kind: 'retry',
+            message: payload.status === 'running' ? t('panelUpdate.running') : t('panelUpdate.queued'),
+            disconnected: false,
+            operation: payload,
+        };
+    } catch {
+        return { kind: 'retry', message: t('panelUpdate.connectionLost'), disconnected: true };
+    } finally {
+        window.clearTimeout(timeout);
+    }
+}
+
 function formatElapsed(startedAt: number, now: number): string {
     const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
     const hours = Math.floor(seconds / 3600);
@@ -553,6 +596,14 @@ function formatElapsed(startedAt: number, now: number): string {
     return hours > 0
         ? `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`
         : `${minutes.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
+}
+
+function systemUpdateMonotonicNow(): number {
+    try {
+        return performance.now();
+    } catch {
+        return Number.NaN;
+    }
 }
 
 function terminalResultFromRecord(record: TerminalUpdateRecord): TerminalResult {
@@ -609,6 +660,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
     const pendingCommitRef = useRef<PendingRenderCommit | null>(null);
     const guardReadyRef = useRef(false);
     const pollWakeRef = useRef<(() => void) | null>(null);
+    const notFoundObservationRef = useRef<SystemUpdateNotFoundObservation | null>(null);
     const authSignalGenerationRef = useRef(0);
     // Dispatch authority belongs to this live document only. sessionStorage is
     // deliberately not used: duplicated/opener tabs can inherit its values and
@@ -1087,8 +1139,8 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
     ): Promise<SystemUpdateStartResult> => {
         const manager = browserSystemUpdateLockManager();
         if (!manager) {
-            // Compatibility fallback remains safe because every authorized
-            // 404 recovery waits indefinitely when Web Locks are unavailable.
+            // The authoritative abandon receipt still fences a delayed POST
+            // when Web Locks are unavailable.
             return postAuthorizedStartUnlocked(exactMarker, dispatchFence, approvalGeneration);
         }
         const locked = await runWithSystemUpdateLock(
@@ -1103,7 +1155,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
 
     const recoverNotFoundCanonical = useCallback(async (
         exactMarker: UpdateMarker,
-        allowAuthorized: boolean,
+        rawMessage: string,
     ): Promise<NotFoundRecoveryResult> => {
         const ownerID = tabOwnerID;
         if (!ownerID) return { kind: 'wait' };
@@ -1114,24 +1166,13 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                 if (current?.phase !== 'active' || !markerMatches(current.marker, exactMarker)) {
                     return { kind: 'keep', result: { kind: 'stale' } };
                 }
-                const dispatchState = current.dispatch_state ?? 'legacy';
-                if (dispatchState === 'authorized' && !allowAuthorized) {
-                    return { kind: 'keep', result: { kind: 'wait' } };
-                }
-                const action = systemUpdateNotFoundAction(
-                    dispatchState,
-                    current.marker.created_at,
-                    current.dispatch_attempted_at,
-                    attemptedAt,
-                    NOT_FOUND_GRACE_MS,
-                );
-                if (action === 'wait') return { kind: 'keep', result: { kind: 'wait' } };
                 const terminalRecord: TerminalUpdateRecord = {
                     state_version: 1,
                     phase: 'terminal',
                     marker: exactMarker,
                     outcome: 'failed',
-                    message: t('panelUpdate.notAccepted'),
+                    message: rawMessage.replace(/[\x00-\x1f\x7f]/g, ' ').slice(0, 512)
+                        || t('panelUpdate.notAccepted'),
                     reload_scheduled: false,
                     completed_at: attemptedAt,
                     ...(current.required_reload ? { required_reload: current.required_reload } : {}),
@@ -1152,31 +1193,52 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
         return result.result;
     }, [adoptCanonicalSnapshot, reconcileCanonicalRecord, t, tabOwnerID]);
 
+    const clearNotFoundObservation = useCallback((exactMarker: UpdateMarker) => {
+        const exactIdentity = exactMarkerFingerprint(exactMarker);
+        if (notFoundObservationRef.current?.exactIdentity === exactIdentity) {
+            notFoundObservationRef.current = null;
+        }
+    }, []);
+
     const recoverNotFound = useCallback(async (
         exactMarker: UpdateMarker,
     ): Promise<NotFoundRecoveryResult> => {
-        const current = canonicalRecordRef.current;
-        const authorized = current?.phase === 'active'
-            && markerMatches(current.marker, exactMarker)
-            && current.dispatch_state === 'authorized';
-        if (!authorized) return recoverNotFoundCanonical(exactMarker, false);
-
-        const manager = browserSystemUpdateLockManager();
-        if (!manager) return { kind: 'wait' };
-        const locked = await runWithSystemUpdateLock(
-            manager,
-            SYSTEM_UPDATE_DISPATCH_LOCK,
-            async () => {
-                // The first 404 happened outside this lock. Read the server
-                // again after every same- or cross-document dispatch callback;
-                // only an exact second 404 permits authorized cleanup.
-                const verified = await pollExact(exactMarker, t);
-                if (verified.kind !== 'not-found') return { kind: 'wait' } as NotFoundRecoveryResult;
-                return recoverNotFoundCanonical(exactMarker, true);
-            },
+        const exactIdentity = exactMarkerFingerprint(exactMarker);
+        const decision = systemUpdateNotFoundAction(
+            notFoundObservationRef.current,
+            exactIdentity,
+            systemUpdateMonotonicNow(),
+            NOT_FOUND_GRACE_MS,
         );
-        return locked.kind === 'completed' ? locked.value : { kind: 'wait' };
-    }, [recoverNotFoundCanonical, t]);
+        notFoundObservationRef.current = decision.observation;
+        if (decision.action !== 'verify') return { kind: 'wait' };
+
+        const verifyAndRecover = async (): Promise<NotFoundRecoveryResult> => {
+            // The outer poll supplied the first exact 404. The second exact
+            // read is only a prerequisite for asking the server to publish a
+            // durable negative receipt; browser state is never the authority.
+            const verified = await pollExact(exactMarker, t);
+            if (verified.kind !== 'not-found') {
+                if (verified.kind === 'succeeded' || verified.kind === 'failed'
+                    || (verified.kind === 'retry' && verified.operation?.found === true)) {
+                    clearNotFoundObservation(exactMarker);
+                }
+                return { kind: 'wait' };
+            }
+            const abandoned = await abandonExact(exactMarker, t);
+            if (abandoned.kind !== 'failed' || !abandoned.operation?.found) {
+                if (abandoned.kind === 'succeeded'
+                    || (abandoned.kind === 'retry' && abandoned.operation?.found === true)) {
+                    clearNotFoundObservation(exactMarker);
+                }
+                return { kind: 'wait' };
+            }
+            const recovered = await recoverNotFoundCanonical(exactMarker, abandoned.message);
+            if (recovered.kind !== 'wait') clearNotFoundObservation(exactMarker);
+            return recovered;
+        };
+        return verifyAndRecover();
+    }, [clearNotFoundObservation, recoverNotFoundCanonical, t]);
 
     const acknowledgeTerminal = useCallback(async (record: TerminalUpdateRecord): Promise<boolean> => {
         if (record.outcome !== 'failed') return false;
@@ -1453,6 +1515,11 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                 return;
             }
 
+            if (outcome.kind === 'succeeded' || outcome.kind === 'failed'
+                || (outcome.kind === 'retry' && outcome.operation?.found === true)) {
+                clearNotFoundObservation(exactMarker);
+            }
+
             const attemptAt = Date.now();
             if (outcome.kind === 'auth') {
                 authPausedRef.current = true;
@@ -1534,7 +1601,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
             if (pollWakeRef.current === wake) pollWakeRef.current = null;
             if (timer !== null) window.clearTimeout(timer);
         };
-    }, [backgroundTracking, canonicalReady, commitTerminal, marker, reconcileCanonicalRecord, recoverNotFound, resumeTrackingGuard, t]);
+    }, [backgroundTracking, canonicalReady, clearNotFoundObservation, commitTerminal, marker, reconcileCanonicalRecord, recoverNotFound, resumeTrackingGuard, t]);
 
     useLayoutEffect(() => {
         if (!blocking) return undefined;

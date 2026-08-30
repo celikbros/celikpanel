@@ -38,10 +38,14 @@ type systemUpdateTestAgent struct {
 	startErr      error
 	status        transport.SystemUpdateStatusResponse
 	statusErr     error
+	abandon       transport.SystemUpdateStatusResponse
+	abandonErr    error
 	checkCalls    int
 	startCalls    int
 	statusCalls   int
+	abandonCalls  int
 	lastStart     transport.SystemUpdateStartRequest
+	lastAbandon   transport.SystemUpdateAbandonRequest
 	lastStatusID  string
 	packageFamily string
 }
@@ -50,7 +54,10 @@ func newSystemUpdateTestAgent() *systemUpdateTestAgent {
 	return &systemUpdateTestAgent{
 		version: transport.AgentVersionResponse{
 			Version: updateTestCurrentVersion, Commit: updateTestCurrentCommit,
-			Capabilities: []string{transport.AgentCapabilitySystemUpdateV1},
+			Capabilities: []string{
+				transport.AgentCapabilitySystemUpdateV1,
+				transport.AgentCapabilitySystemUpdateAbandonV1,
+			},
 		},
 		check: transport.SystemUpdateCheckResponse{
 			Supported: true, Available: true,
@@ -60,8 +67,15 @@ func newSystemUpdateTestAgent() *systemUpdateTestAgent {
 			TargetArchiveSHA256: updateTestTargetSHA, TargetArchiveSize: "1048576",
 			PublishedAt: "2026-08-12T12:00:00Z",
 		},
-		start:         transport.SystemUpdateStartResponse{Accepted: true, Status: "queued"},
-		status:        transport.SystemUpdateStatusResponse{Found: false},
+		start:  transport.SystemUpdateStartResponse{Accepted: true, Status: "queued"},
+		status: transport.SystemUpdateStatusResponse{Found: false},
+		abandon: transport.SystemUpdateStatusResponse{
+			Found: true, RequestID: updateTestRequestID, Status: "failed",
+			TargetVersion: updateTestTargetVersion, TargetCommit: updateTestTargetCommit,
+			TargetSequence: "14", TargetOS: "linux", TargetArch: "amd64",
+			TargetArchiveSHA256: updateTestTargetSHA, TargetArchiveSize: "1048576",
+			Error: "system update start was authoritatively abandoned before acceptance",
+		},
 		packageFamily: "apt",
 	}
 }
@@ -95,6 +109,15 @@ func (a *systemUpdateTestAgent) StartSystemUpdate(request *transport.SystemUpdat
 	a.lastStart = *request
 	*reply = a.start
 	return a.startErr
+}
+
+func (a *systemUpdateTestAgent) AbandonSystemUpdate(request *transport.SystemUpdateAbandonRequest, reply *transport.SystemUpdateStatusResponse) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.abandonCalls++
+	a.lastAbandon = *request
+	*reply = a.abandon
+	return a.abandonErr
 }
 
 func (a *systemUpdateTestAgent) SystemUpdateStatus(request *transport.SystemUpdateStatusRequest, reply *transport.SystemUpdateStatusResponse) error {
@@ -180,15 +203,17 @@ func TestPanelUpdateEndpointsAreAdminOnly(t *testing.T) {
 	}{
 		{http.MethodGet, panelUpdateCheckPath, ""},
 		{http.MethodPost, panelUpdateStartPath, systemUpdateStartBody(updateTestTargetVersion)},
+		{http.MethodPost, panelUpdateAbandonPath, systemUpdateStartBody(updateTestTargetVersion)},
 		{http.MethodGet, panelUpdateStatusPath + "?request_id=" + updateTestRequestID, ""},
 	}
 	for _, role := range []string{roleReseller, roleCustomer, "additional_user"} {
 		for _, test := range tests {
 			recorder := httptest.NewRecorder()
 			handler := map[string]http.HandlerFunc{
-				panelUpdateCheckPath:  fixture.panel.handlePanelUpdateCheck,
-				panelUpdateStartPath:  fixture.panel.handlePanelUpdateStart,
-				panelUpdateStatusPath: fixture.panel.handlePanelUpdateStatus,
+				panelUpdateCheckPath:   fixture.panel.handlePanelUpdateCheck,
+				panelUpdateStartPath:   fixture.panel.handlePanelUpdateStart,
+				panelUpdateAbandonPath: fixture.panel.handlePanelUpdateAbandon,
+				panelUpdateStatusPath:  fixture.panel.handlePanelUpdateStatus,
 			}[strings.Split(test.path, "?")[0]]
 			handler(recorder, systemUpdateRequest(test.method, test.path, test.body, role))
 			if recorder.Code != http.StatusForbidden {
@@ -207,6 +232,7 @@ func TestPanelUpdateRoutesRemainBehindAuthenticationAndCSRF(t *testing.T) {
 	for _, route := range []string{
 		"http.HandleFunc(panelUpdateCheckPath, panel.handlePanelUpdateCheck)",
 		"http.HandleFunc(panelUpdateStartPath, panel.handlePanelUpdateStart)",
+		"http.HandleFunc(panelUpdateAbandonPath, panel.handlePanelUpdateAbandon)",
 		"http.HandleFunc(panelUpdateStatusPath, panel.handlePanelUpdateStatus)",
 	} {
 		if !strings.Contains(text, route) {
@@ -239,6 +265,9 @@ func TestPanelUpdateCheckRequiresCapabilityAndExactBuildPair(t *testing.T) {
 	withSystemUpdateBuild(t)
 	for _, mutate := range []func(*systemUpdateTestAgent){
 		func(agent *systemUpdateTestAgent) { agent.version.Capabilities = nil },
+		func(agent *systemUpdateTestAgent) {
+			agent.version.Capabilities = []string{transport.AgentCapabilitySystemUpdateV1}
+		},
 		func(agent *systemUpdateTestAgent) { agent.version.Commit = strings.Repeat("e", 40) },
 		func(agent *systemUpdateTestAgent) {
 			agent.check.Error = "/var/lib/celikpanel-release-state/private failure"
@@ -331,6 +360,75 @@ func TestPanelUpdateStartSerializesWithServiceMutations(t *testing.T) {
 	))
 	if recorder.Code != http.StatusConflict || !strings.Contains(recorder.Body.String(), "PANEL_UPDATE_BUSY") {
 		t.Fatalf("active operation status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestPanelUpdateAbandonPublishesExactReceiptUnderServiceMutationLock(t *testing.T) {
+	withSystemUpdateBuild(t)
+	fixture := newSystemUpdateTestFixture(t)
+	recorder := httptest.NewRecorder()
+	fixture.panel.handlePanelUpdateAbandon(recorder, systemUpdateRequest(
+		http.MethodPost, panelUpdateAbandonPath, systemUpdateStartBody(updateTestTargetVersion), roleAdmin,
+	))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	fixture.agent.mu.Lock()
+	request := fixture.agent.lastAbandon
+	calls := fixture.agent.abandonCalls
+	fixture.agent.mu.Unlock()
+	if calls != 1 || request.RequestID != updateTestRequestID ||
+		request.TargetCommit != updateTestTargetCommit ||
+		request.ExpectedCurrentVersion != updateTestCurrentVersion ||
+		request.ExpectedCurrentCommit != updateTestCurrentCommit {
+		t.Fatalf("agent abandon lost exact identity: calls=%d request=%+v", calls, request)
+	}
+	var response panelUpdateStatusResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if !response.Found || response.Status != "failed" || response.Target == nil ||
+		!samePanelUpdateTarget(*response.Target, fixture.agent.checkTarget()) {
+		t.Fatalf("abandon response = %#v", response)
+	}
+
+	fixture.panel.serviceMutationMu.Lock()
+	recorder = httptest.NewRecorder()
+	fixture.panel.handlePanelUpdateAbandon(recorder, systemUpdateRequest(
+		http.MethodPost, panelUpdateAbandonPath, systemUpdateStartBody(updateTestTargetVersion), roleAdmin,
+	))
+	fixture.panel.serviceMutationMu.Unlock()
+	if recorder.Code != http.StatusConflict || !strings.Contains(recorder.Body.String(), "PANEL_UPDATE_BUSY") {
+		t.Fatalf("locked abandon status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	fixture.agent.mu.Lock()
+	defer fixture.agent.mu.Unlock()
+	if fixture.agent.abandonCalls != 1 {
+		t.Fatalf("locked abandon reached agent %d times", fixture.agent.abandonCalls)
+	}
+}
+
+func (a *systemUpdateTestAgent) checkTarget() panelUpdateTarget {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return panelUpdateTargetFromCheck(a.check)
+}
+
+func TestPanelUpdateStartRejectsAuthoritativeFailedReceipt(t *testing.T) {
+	withSystemUpdateBuild(t)
+	fixture := newSystemUpdateTestFixture(t)
+	fixture.agent.status = fixture.agent.abandon
+	recorder := httptest.NewRecorder()
+	fixture.panel.handlePanelUpdateStart(recorder, systemUpdateRequest(
+		http.MethodPost, panelUpdateStartPath, systemUpdateStartBody(updateTestTargetVersion), roleAdmin,
+	))
+	if recorder.Code != http.StatusConflict || !strings.Contains(recorder.Body.String(), "PANEL_UPDATE_START_REFUSED") {
+		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	fixture.agent.mu.Lock()
+	defer fixture.agent.mu.Unlock()
+	if fixture.agent.startCalls != 0 || fixture.agent.checkCalls != 0 {
+		t.Fatalf("failed receipt was relaunched: checks=%d starts=%d", fixture.agent.checkCalls, fixture.agent.startCalls)
 	}
 }
 

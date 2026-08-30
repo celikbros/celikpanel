@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const card = readFileSync(new URL('../src/components/PanelUpdateCard.tsx', import.meta.url), 'utf8');
 const tracker = readFileSync(new URL('../src/components/SystemUpdateOperation.tsx', import.meta.url), 'utf8');
+const admission = readFileSync(new URL('../src/lib/panelUpdateAdmission.ts', import.meta.url), 'utf8');
 const lease = readFileSync(new URL('../src/lib/systemUpdateLease.ts', import.meta.url), 'utf8');
 const watchdog = readFileSync(new URL('../src/lib/systemUpdateWatchdog.ts', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
@@ -16,7 +17,7 @@ const updateSources = card + tracker;
 test('update card is reachable only through the admin settings panel', () => {
     assert.match(settings, /role === 'admin'/);
     const adminBlock = settings.slice(settings.indexOf("{role === 'admin'"));
-    assert.match(adminBlock, /\{activeID === 'updates' && <PanelUpdateCard \/>\}/);
+    assert.match(adminBlock, /\{activeID === 'updates' && <Suspense[^>]*><PanelUpdateCard \/><\/Suspense>\}/);
     assert.ok(adminBlock.indexOf('<PanelUpdateCard />') < adminBlock.indexOf('id="settings-dns-panel"'));
 });
 
@@ -160,11 +161,25 @@ test('build identity reads bypass browser caches after a completed update', () =
     assert.match(layout, /fetch\('\/api\/v1\/panel\/version', \{ cache: 'no-store', credentials: 'same-origin' \}\)/);
 });
 
-test('definitive refusal, durable absence and identity mismatch cannot wedge the browser', () => {
+test('definitive refusal, server-receipted absence and identity mismatch cannot wedge the browser', () => {
     assert.match(tracker, /const NOT_FOUND_GRACE_MS = 120000/);
     assert.match(tracker, /response\.status === 400 \|\| response\.status === 401[\s\S]*response\.status === 409[\s\S]*response\.status === 429/);
     assert.match(tracker, /apiError\.code === 'PANEL_UPDATE_UNAVAILABLE'/);
     assert.match(tracker, /systemUpdateNotFoundAction\(/);
+    assert.match(tracker, /const notFoundObservationRef = useRef<SystemUpdateNotFoundObservation \| null>\(null\)/);
+    assert.match(tracker, /return performance\.now\(\)/);
+    assert.match(tracker, /systemUpdateNotFoundAction\([\s\n]*notFoundObservationRef\.current,[\s\n]*exactIdentity,[\s\n]*systemUpdateMonotonicNow\(\)/);
+    assert.match(tracker, /decision\.action !== 'verify'/);
+    assert.match(tracker, /fetch\('\/api\/v1\/panel\/update\/abandon'/);
+    assert.match(tracker, /request_id: marker\.request_id/);
+    assert.match(tracker, /\.\.\.marker\.target/);
+    const observationPolicy = lease.slice(
+        lease.indexOf('export function systemUpdateNotFoundAction'),
+        lease.indexOf('type PersistedCanonicalRecord'),
+    );
+    assert.match(observationPolicy, /monotonicNow - current\.firstObservedAt >= graceMS/);
+    assert.doesNotMatch(observationPolicy, /markerCreatedAt|dispatchAttemptedAt|Date\.now/,
+        'persisted wall-clock fields cannot shorten the per-document absence grace');
     assert.match(tracker, /current\.dispatch_owner !== ownerID/);
     assert.match(tracker, /const fenced = await transactStoredRecord<boolean>/);
     assert.doesNotMatch(tracker, /kind: 'replay'/);
@@ -203,7 +218,7 @@ test('server payloads, stored markers and bounded summaries fail closed at the b
 
 test('the exact discovered target is visible and rapid clicks are blocked', () => {
     assert.match(card, /actionInFlight\.current \|\| systemUpdate\.active/);
-    assert.match(card, /disabled=\{starting\}/);
+    assert.match(card, /disabled=\{starting \|\| readinessChecking \|\| readiness\?\.ready !== true\}/);
     assert.match(card, /t\('panelUpdate\.start', \{ version: target\.version \}\)/);
     assert.match(card, /\{t\('panelUpdate\.targetVersion'\)\}.*\{target\.version\}/s);
     assert.match(card, /\{t\('panelUpdate\.sequence'\)\}.*\{target\.sequence\}/s);
@@ -212,6 +227,65 @@ test('the exact discovered target is visible and rapid clicks are blocked', () =
     assert.match(card, /id="panel-update-start-button"/);
     assert.match(tracker, /const START_REQUEST_TIMEOUT_MS = 15000/);
     assert.match(tracker, /signal: controller\.signal/);
+});
+
+test('update admission performs a fresh bounded host-readiness preflight before any durable marker or modal', () => {
+    assert.match(admission, /request\('\/api\/v1\/host-mutation-readiness'/);
+    assert.match(admission, /method: 'GET'/);
+    assert.match(admission, /cache: 'no-store'/);
+    assert.match(admission, /credentials: 'same-origin'/);
+    assert.match(admission, /const HOST_MUTATION_READINESS_TIMEOUT_MS = 8000/);
+    assert.match(admission, /const controller = new AbortController\(\)/);
+    assert.match(admission, /const abortAndResolveUnavailable/);
+    assert.match(admission, /Promise\.race\(\[requestAndDecode, unavailable\]\)/);
+    assert.match(admission, /externalSignal\?\.addEventListener\('abort'/);
+    assert.match(admission, /signal: controller\.signal/);
+    assert.match(admission, /finally \{[\s\S]*cancel\(timeout\)/);
+    assert.doesNotMatch(card, /await import\('\.\.\/lib\/panelUpdateAdmission'\)/,
+        'the 8 second preflight may not start after an unbounded dynamic import');
+
+    const startIndex = card.indexOf('async function startUpdate()');
+    const localTarget = card.indexOf('const target = check?.target;', startIndex);
+    const renderedTarget = card.indexOf('const target = check?.target;', localTarget + 1);
+    const start = card.slice(startIndex, renderedTarget);
+    const freshCheck = start.indexOf('await runHostMutationAdmission(refreshHostMutationReadiness');
+    const requestIdentity = start.indexOf('createSystemUpdateRequestID()');
+    const durableMarker = start.indexOf('const exactMarker: UpdateMarker');
+    const trackerStart = start.indexOf('await systemUpdate.start(exactMarker)');
+    assert.ok(freshCheck >= 0 && requestIdentity > freshCheck
+        && durableMarker > requestIdentity && trackerStart > durableMarker,
+    'readiness must be freshly proven before marker creation or the global tracker starts');
+    assert.match(start, /backend remains the authoritative admission boundary/);
+    const generationGuard = start.indexOf('lifecycleGeneration.current !== generation');
+    assert.ok(generationGuard > freshCheck && requestIdentity > generationGuard,
+        'an abandoned route generation must stop before request identity or marker creation');
+    assert.match(card, /readinessAbort\.current\?\.abort\(\)/);
+    assert.match(card, /lifecycleGeneration\.current \+= 1/);
+    assert.doesNotMatch(card, /className="fixed inset-0/,
+        'the bounded advisory preflight must never own a full-page interaction lock');
+});
+
+test('host-readiness payloads fail closed and busy or unavailable states remain actionable', () => {
+    assert.match(admission, /function decodeHostMutationReadiness\(/);
+    assert.match(admission, /value\.ready === true/);
+    assert.match(admission, /value\.code === undefined && value\.reason === undefined/);
+    assert.match(admission, /HOST_MUTATION_BUSY/);
+    assert.match(admission, /HOST_MUTATION_UNAVAILABLE/);
+    for (const reason of [
+        'panel_operation_active',
+        'agent_mutation_active',
+        'host_lock_busy',
+        'package_manager_active',
+        'state_unverified',
+    ]) {
+        assert.ok(admission.includes(reason), `missing fail-closed readiness reason ${reason}`);
+    }
+    assert.match(admission, /return decodeHostMutationReadiness\(await response\.json\(\)\) \?\? unverifiedHostMutationReadiness\(\)/);
+    assert.match(admission, /if \(!response\.ok\) return unverifiedHostMutationReadiness\(\)/);
+    assert.match(card, /onClick=\{\(\) => void retryHostMutationReadiness\(\)\}/);
+    assert.match(card, /services\.mutationReadiness\.title/);
+    assert.match(card, /services\.mutationReadiness\.\$\{readiness\.reason\}/);
+    assert.match(card, /common\.retry/);
 });
 
 test('card carries alpha disclosure and safe response handling while tracking stays visible', () => {
@@ -250,6 +324,12 @@ test('update copy is localized and update components contain no visible Turkish 
     assert.match(tracker, /useI18n\(\)/);
 });
 
+test('navigation lock copy describes the same bounded two-minute watchdog policy', () => {
+    assert.ok(en.includes('It unlocks automatically after two minutes; tracking continues.'));
+    assert.ok(tr.includes('dakika sonra otomatik'));
+    assert.match(watchdog, /const SYSTEM_UPDATE_BLOCKING_DEADLINE_MS = 2 \* 60_000/);
+});
+
 test('browser never sends an update URL, path or command', () => {
     const postBody = tracker.slice(tracker.indexOf('body: JSON.stringify({'), tracker.indexOf('}),', tracker.indexOf('body: JSON.stringify({')));
     assert.doesNotMatch(postBody, /\b(url|path|command|args|environment)\b/i);
@@ -264,11 +344,25 @@ test('multi-tab ownership and browser lifecycle remain fail closed', () => {
         'dispatch authority must be unique to one live document, never cloneable storage');
     assert.match(tracker, /SYSTEM_UPDATE_DISPATCH_LOCK/);
     assert.match(tracker, /runWithSystemUpdateLock/);
-    assert.match(tracker, /if \(dispatchState === 'authorized' && !allowAuthorized\)/);
-    assert.match(tracker, /const authorized = current\?\.phase === 'active'[\s\S]*current\.dispatch_state === 'authorized'/);
     assert.doesNotMatch(tracker, /foreignAuthorized/);
     assert.match(tracker, /const verified = await pollExact\(exactMarker, t\)/);
     assert.match(tracker, /verified\.kind !== 'not-found'/);
+    const recovery = tracker.slice(
+        tracker.indexOf('const recoverNotFound = useCallback'),
+        tracker.indexOf('const acknowledgeTerminal'),
+    );
+    const observationDecision = recovery.indexOf('systemUpdateNotFoundAction(');
+    const graceGate = recovery.indexOf("decision.action !== 'verify'");
+    const exactRecheck = recovery.indexOf('const verified = await pollExact(exactMarker, t)');
+    const authoritativeAbandon = recovery.indexOf('const abandoned = await abandonExact(exactMarker, t)');
+    const failedReceipt = recovery.indexOf("abandoned.kind !== 'failed' || !abandoned.operation?.found");
+    const canonicalCAS = recovery.indexOf('recoverNotFoundCanonical(exactMarker, abandoned.message)');
+    assert.ok(observationDecision >= 0 && graceGate > observationDecision
+        && exactRecheck > graceGate && authoritativeAbandon > exactRecheck
+        && failedReceipt > authoritativeAbandon && canonicalCAS > failedReceipt,
+    'terminal cleanup requires monotonic grace, an exact recheck, an authoritative failed receipt, then canonical CAS');
+    assert.doesNotMatch(recovery.slice(exactRecheck, authoritativeAbandon), /recoverNotFoundCanonical/,
+        'a browser-observed 404 can never terminalize before the server publishes the exact negative receipt');
     assert.match(tracker, /transactCanonicalRecord/);
     assert.match(lease, /readwrite transaction owns the canonical record/);
     assert.match(lease, /transaction\.onabort/);
@@ -310,10 +404,11 @@ test('the provisional guard commits DOM inertness and beforeunload before any as
     assert.match(adopt, /setMarker\(record\.marker\)/);
 });
 
-test('authentication loss pauses only the global guard and resumes exact tracking after auth', () => {
+test('401 and 403 authentication loss pause only the global guard and resume exact tracking after auth', () => {
     const poll = tracker.slice(tracker.indexOf('async function pollExact'), tracker.indexOf('function terminalResultFromRecord'));
-    assert.match(poll, /response\.status === 401[\s\S]*kind: 'auth'/);
-    assert.match(poll, /response\.status === 403[\s\S]*kind: 'retry'/);
+    assert.match(poll, /response\.status === 401 \|\| response\.status === 403[\s\S]*kind: 'auth'/);
+    assert.doesNotMatch(poll, /if \(response\.status === 403\)/,
+        '403 must not have an independent retry branch');
     assert.match(tracker, /const operationBlocks = pendingReload !== null/);
     assert.match(tracker, /const blocking = systemUpdateGlobalNavigationBlocked\([\s\n]*operationBlocks,[\s\n]*navigationLease\.blocked/);
     assert.match(tracker, /\|\| \(!authPaused &&/);
