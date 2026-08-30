@@ -1,11 +1,21 @@
 # Operations Runbook
 
-*Last updated: July 28, 2026 · [Türkçe](OPERATIONS.tr.md)*
+*Last updated: August 30, 2026 · [Türkçe](OPERATIONS.tr.md)*
 
 This document is the operational source of truth for releasing and recovering
 CelikPanel. Strategy lives in the [ROADMAP](../ROADMAP.md), architectural
 decisions in [DECISIONS](DECISIONS.md), and contribution rules in
 [CONVENTIONS](CONVENTIONS.md).
+
+The current product release is Alpha52. Its reviewed source, signed artifacts
+and portal publication are verified in
+[RELEASE-EVIDENCE-v0.1.0-alpha.52.md](RELEASE-EVIDENCE-v0.1.0-alpha.52.md).
+The separate [dated live-state record](LIVE-STATE-2026-08-30.md) proves both
+Alpha52 installations and the pre-zone mixed DNS pair. Preserve
+[LIVE-STATE-2026-08-29.md](LIVE-STATE-2026-08-29.md) as historical evidence.
+For failures use the
+[August 26 incident runbook](INCIDENT-2026-08-26-UPDATE-DNS-RECOVERY.md) and
+[incident template](INCIDENT-TEMPLATE.md).
 
 ---
 
@@ -113,8 +123,11 @@ start until this evidence exists.
 ### Public prebuilt path (normal users)
 
 For a supported tagged release, normal users do not prepare a Git checkout and
-do not build on the server. Download `https://celikpanel.net/get.sh` over HTTPS
-and run it as root. With no mode flag it distinguishes a clean server from a
+do not build on the server. A new customer uses the public
+`https://celikpanel.net/get.sh` bootstrap on a clean server. A customer with a
+completed installation updates only through **Settings → CelikPanel updates**;
+the bootstrap and SSH updater are not routine existing-installation paths.
+With no mode flag the bootstrap distinguishes a clean server from a
 completed CelikPanel installation. Partial or ambiguous layouts still fail
 closed, with one deliberately narrow exception: an update interrupted by the
 `v0.1.0-alpha.4` panel TLS compatibility snapshot defect. The public no-flag
@@ -275,6 +288,26 @@ The scripts own root trust-chain validation, checksums, unit state, paired
 panel/agent/web/database state, retention, and restore ordering.
 
 ## 5. Two-server rollout and verification
+
+The Alpha51→Alpha52 promotion completed through the ordinary customer panel flow,
+Boston first and Frankfurt second. Both terminal receipts, exact build
+`adb25d8ec487dcb76dd95304a551d8cb37565115`, schema 37, floor 52, idle ledgers,
+byte-equal installed/served release artifacts and v6 rollback material passed.
+Both snapshot directory identities nevertheless contain `from-unknown`; retain
+the receipt-proven prior Alpha51 identity with the snapshot evidence and track
+the provenance warning under R-016. For later promotions, keep the operation
+tracker attached through restart and accept completion only from the exact
+server-authoritative terminal receipt. Never replace the request, edit markers
+or retry it through SSH.
+
+The stable DNS pair is intentionally mixed: Frankfurt is the BIND primary and
+Boston is the PowerDNS secondary. Pre-zone catalog serial `1`, empty membership
+and source-bound AXFR in both directions are verified. Parent delegation and
+glue (`ns1` to `72.62.38.15`, `ns2` to `2.25.80.4`, TTL `172800`) are verified;
+DS is absent. The `celikhost.com` child zone is not created: UDP/TCP queries are
+`REFUSED`, AXFR is `NOTAUTH`, and public recursion returns `SERVFAIL`. Publish
+the child zone through the panel before running and recording the complete
+post-zone AXFR, UDP/TCP AA/SOA, PairReady and public-recursive matrix.
 
 Deploy **Boston first**. Do not touch Frankfurt until all Boston checks pass:
 

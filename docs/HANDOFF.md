@@ -1,51 +1,55 @@
 # Engineering Handoff
 
-*Baseline: August 29, 2026 · [Türkçe](HANDOFF.tr.md)*
+*Baseline updated: August 30, 2026 · [Türkçe](HANDOFF.tr.md)*
 
 This is the entry point for an engineering team taking over CelikPanel. It
 identifies the frozen source baseline, the documents that carry authority, the
 minimum development and release workflow, and the information that must be
 transferred outside the repository.
 
-This file is not evidence that a server is healthy or current. Live facts are
-recorded separately in [LIVE-STATE-2026-08-29.md](LIVE-STATE-2026-08-29.md).
-Open technical and operational risks are tracked in
+This file is not evidence that a server is healthy or current. Preserve the
+historical [LIVE-STATE-2026-08-29.md](LIVE-STATE-2026-08-29.md) unchanged.
+The current product release is Alpha52, with reviewed release and portal proof
+in [RELEASE-EVIDENCE-v0.1.0-alpha.52.md](RELEASE-EVIDENCE-v0.1.0-alpha.52.md),
+and both Boston and Frankfurt now have terminal-success Alpha52 receipts. See
+the dated [live-state record](LIVE-STATE-2026-08-30.md) and
 [RISK-REGISTER.md](RISK-REGISTER.md).
 
 ## 1. Frozen handoff baseline
 
 | Item | Value | Status |
 |---|---|---|
-| Canonical source tag and release | [v0.1.0-alpha.51](https://github.com/celikbros/celikpanel/releases/tag/v0.1.0-alpha.51) | VERIFIED handoff baseline |
-| Canonical source commit | 45d01ffb29013b9457180072c3b25ab24d5ff7bd | VERIFIED handoff baseline |
-| Current published binary | v0.1.0-alpha.51 | VERIFIED |
+| Current canonical source tag and release | [v0.1.0-alpha.52](https://github.com/celikbros/celikpanel/releases/tag/v0.1.0-alpha.52) | VERIFIED product baseline; not live-install proof |
+| Current canonical source commit | adb25d8ec487dcb76dd95304a551d8cb37565115 | VERIFIED product baseline |
+| Current published binary | v0.1.0-alpha.52 | VERIFIED GitHub, portal and both live installations |
+| Alpha52 tagged-release CI | [Run 33283088681](https://github.com/celikbros/celikpanel/actions/runs/33283088681) passed | VERIFIED |
+| Alpha52 release assets | Exactly 6 immutable assets; official Ed25519 manifest and detached signature verified | VERIFIED |
+| Alpha52 manifest-authorized archive | SHA256 `9a604bf0f58855f53997a1adeb44a24cc76c4ff062fd8068ee6a66be66a28304`; 22,672,364 bytes | VERIFIED |
+| Historical live baseline tag | [v0.1.0-alpha.51](https://github.com/celikbros/celikpanel/releases/tag/v0.1.0-alpha.51) | VERIFIED pre-Alpha52 live baseline |
+| Historical live baseline commit | 45d01ffb29013b9457180072c3b25ab24d5ff7bd | VERIFIED pre-Alpha52 live baseline |
+| Last live-installed binary evidenced before promotion | v0.1.0-alpha.51 | VERIFIED historical pre-promotion state |
 | Alpha51 tagged-release CI | Passed for the published release | VERIFIED |
 | Alpha51 release assets | Exactly 6 immutable assets; official Ed25519 manifest and detached signature verified | VERIFIED |
 | Manifest-authorized archive | SHA256 `57d0321a13388392872bc3aef9af62646e2d700c23a4e0305d479df1e80ff365`; 22,644,115 bytes | VERIFIED |
 | Git tag signature | The Git tag is unsigned | VERIFIED; the Ed25519 manifest, not the tag signature, is update authority |
-| Handoff documentation on `main` | [PR #74](https://github.com/celikbros/celikpanel/pull/74), merge commit `e29df589594b2b5929d067a0174ab98d8182e4b5` | VERIFIED; documentation-only, not part of the Alpha51 binary baseline |
-| GitHub open pull requests | 5 drafts: [#69](https://github.com/celikbros/celikpanel/pull/69), [#70](https://github.com/celikbros/celikpanel/pull/70), [#71](https://github.com/celikbros/celikpanel/pull/71), [#72](https://github.com/celikbros/celikpanel/pull/72), [#73](https://github.com/celikbros/celikpanel/pull/73) | VERIFIED as of 2026-08-29; none is part of Alpha51 |
+| Historical handoff documentation | [PR #74](https://github.com/celikbros/celikpanel/pull/74), merge commit `e29df589594b2b5929d067a0174ab98d8182e4b5` | VERIFIED historical documentation baseline |
+| GitHub open pull requests | None | VERIFIED as of 2026-08-30 |
+| Intentional archival remote heads | `agent/ssl-hostnames-hsts` (PR #72) and `archive/alpha35-portal-tooling` (PR #73) | Preserve for archaeology only; do not merge or execute as-is |
 | Product lifecycle | Alpha / pre-release | REPOSITORY-DECLARED |
 | Production readiness | Not production ready | REPOSITORY-DECLARED in SECURITY.md |
-| Boston public panel recovery proof | HTTP 200; Alpha51 reported | VERIFIED handoff observation |
-| Frankfurt current live version | Not proven in this handoff | UNKNOWN / REVERIFY |
+| Boston live identity | panel/agent Alpha52 commit `adb25d8ec487dcb76dd95304a551d8cb37565115`; terminal receipt `b6fd0052b2c4a04b117a753637d68798`; services active; floor 52 | VERIFIED read-only on 2026-08-30 |
+| Frankfurt live identity | panel/agent Alpha52 commit `adb25d8ec487dcb76dd95304a551d8cb37565115`; terminal receipt `b85dee68b54a01689333112ae8ccaa5f`; services active; floor 52 | VERIFIED read-only on 2026-08-30 |
 
 A tag, source commit and public HTTP response do not prove the installed panel
 commit, agent commit, database schema, DNS role, firewall state, certificate
 state or rollback readiness. Do not infer those values. Complete the read-only
 live-state checklist before any deployment or panel mutation.
 
-Draft PR #69 covers migration DDL canonicalization. Draft PR #70 covers restart
-acknowledgement UX and requires a product decision. Draft PR #71 preserves CI
-duplicate-release validation work from `agent/ci-fast`. Draft PR #72 preserves
-archival SSL/backup WIP from `agent/ssl-hostnames-hsts`; it is archival and must
-not be merged as-is. Draft PR #73, head `archive/alpha35-portal-tooling` at
-commit `0ef899f3cb96390c4ef3822f199eddc67bb0ee1f`, archives five unique Alpha35
-portal scripts and an unpublished PR72-follow-up patch. It is archival and must
-not be merged or executed as-is. This handoff makes no claim that every check
-on any draft is green. PR #74 merged the documentation-only handoff into
-`main`, putting `main` ahead of the Alpha51 source tag without creating or
-replacing a published binary release.
+PRs #69, #70 and #71 are closed and superseded. PR #72 and PR #73 are archival;
+their two remote heads are retained only for source archaeology and must not be
+merged or executed as-is. Alpha52 is the canonical product source and published
+binary baseline. The only open branch at handoff preparation is the reviewed
+documentation branch that will carry this package through its own pull request.
 
 ## 2. Legal and authority boundary
 
@@ -84,7 +88,7 @@ source-document drift:
   boundary for older snapshots.
 - README.md now identifies the Ed25519 signed-manifest flow as tagged-release
   update authority and confines GPG signing to optional local use.
-- README, Roadmap, UI architecture and web onboarding are aligned with Alpha51,
+- README, Roadmap, UI architecture and web onboarding are aligned through Alpha52,
   and the unused root create-vite scaffold is removed.
 
 R-001, R-002 and R-010 are therefore closed on `main`. R-012 is also
@@ -97,7 +101,7 @@ Only the primary registered worktree remained. Tracked `.design-sync` was
 retained intentionally. The incoming team must still verify a fresh, clean
 `main` checkout at acceptance. This repository cleanup made no live-server
 change and is not live-state evidence. For binary release and rollback
-authority, continue to use the immutable Alpha51 scripts and contract tests;
+authority, continue to use the immutable Alpha52 scripts and contract tests;
 the documentation-only `main` changes do not replace them.
 
 ## 4. Runtime architecture
@@ -170,10 +174,12 @@ npm test
 npm run build
 ~~~
 
-The GitHub CI workflow is the complete gate. It adds Go formatting, build,
+The GitHub CI workflow is the current repository CI gate. It adds Go formatting, build,
 race-test shards, shell syntax, release/recovery contracts, web tests,
 cross-compilation and reproducible packaging. A local subset passing is not a
 substitute for a green workflow on the exact pushed commit.
+Browser rendering, critical-endpoint smoke and latency acceptance remain
+separate open evidence requirements.
 
 Release packaging is release-engineering work, not the normal development
 loop:
@@ -201,6 +207,35 @@ bin, web/dist or dist content as source authority.
 
 ## 8. Release and rollout handoff
 
+Alpha52 is the current product release and both normal panel updates completed
+with server-authoritative terminal success. The exact source, signed artifacts,
+portal publication and per-node receipts are recorded in the
+[Alpha52 release evidence](RELEASE-EVIDENCE-v0.1.0-alpha.52.md) and dated
+[live-state record](LIVE-STATE-2026-08-30.md). Both nodes passed build, service,
+idle-ledger, schema-37, floor-52, installed-artifact, served-UI, v6 snapshot and
+rollback-helper acceptance. The v6 snapshot source component is nevertheless
+`unknown` on both nodes; receipts independently prove the prior Alpha51 commit,
+so treat this as an open provenance warning rather than a live-service failure.
+
+The intended pre-zone mixed pair is verified: Frankfurt serves BIND as primary,
+Boston serves PowerDNS as secondary, catalog serial `1` is empty and equal, and
+source-bound catalog AXFR succeeds in both directions. Parent `.com` delegation
+and in-bailiwick glue are externally verified as
+`ns1.celikhost.com → 72.62.38.15` and `ns2.celikhost.com → 2.25.80.4`, with TTL
+`172800`; no DS is published. This is not public-authority proof. The
+`celikhost.com` child zone has not been created: direct UDP/TCP queries are
+`REFUSED`, AXFR is `NOTAUTH`, and public recursive resolution is `SERVFAIL`.
+Publish the child zone through the normal panel flow, then repeat the full
+post-zone catalog, AXFR, UDP/TCP authoritative and public-recursive acceptance
+matrix before declaring DNS cutover complete.
+
+Do not use the public bootstrap or an SSH updater for an existing installation,
+manufacture a replacement request ID, edit markers, or rewrite the historical
+live-state record. Add a new dated acceptance record. Recovery and escalation
+links: [operations](OPERATIONS.md),
+[August 26 incident](INCIDENT-2026-08-26-UPDATE-DNS-RECOVERY.md), and
+[incident template](INCIDENT-TEMPLATE.md).
+
 The [Alpha51 GitHub release](https://github.com/celikbros/celikpanel/releases/tag/v0.1.0-alpha.51),
 its tag/commit identity, tagged-release CI, exactly six immutable assets, and
 the official Ed25519 manifest/signature are verified for this handoff. The
@@ -211,8 +246,9 @@ checksum, signed manifest and detached signature.
 
 The Git tag itself is unsigned. Installation/update authority comes from the
 pinned Ed25519 trust anchor and verified signed manifest v2, not from a Git tag
-signature. The documentation-only handoff is now merged and `main` is ahead of
-the source tag, while the current published binary remains Alpha51.
+signature. Alpha52 is the current product release and the exact evidenced live
+installation on both nodes. DNS public cutover remains blocked by the absent
+child zone.
 
 Before the next release:
 
@@ -235,6 +271,10 @@ Actual account names, key locations, recovery codes, credentials, tokens,
 provider identifiers and custodian names must be transferred in an approved
 external password manager or access register. The repository records only the
 required categories:
+
+Treat every credential shared in chat, a ticket, a screenshot or shell history
+as compromised. Rotate it before incoming-team access and record the rotation
+evidence outside the repository without copying the credential value.
 
 | Access category | Repository value |
 |---|---|
@@ -259,9 +299,9 @@ read-only inventory and a controlled access test.
 
 - Confirm written authorization and external custodian assignments.
 - Clone a fresh checkout and prove tag, commit, origin and clean status.
-- Review the verified Alpha51 CI/release evidence and the five draft PRs; do not
-  treat any draft as part of the Alpha51 baseline. PR #72 and PR #73 are
-  archival; do not merge either as-is, and do not execute PR #73 as-is.
+- Review the Alpha52 release evidence and dated Alpha52 live-state record. PR
+  #72 and PR #73 are archival; do not merge either as-is, and do not execute
+  PR #73 as-is.
 - Read SECURITY.md, OPERATIONS.md, release-signing.md, DECISIONS.md and this
   handoff set before accessing a server.
 - Complete every UNKNOWN / REVERIFY field in the live-state record read-only.

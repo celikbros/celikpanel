@@ -1,24 +1,22 @@
 # Mühendislik ve Operasyon Risk Sicili
 
-*Referans: 29 Ağustos 2026 · [English](RISK-REGISTER.md)*
+*Referans: 30 Ağustos 2026 · [English](RISK-REGISTER.md)*
 
-Bu sicil, bilinen devir boşluklarını ve [PR #74](https://github.com/celikbros/celikpanel/pull/74)
-ile `main` dalına merge edilen azaltımları izler. Sır değeri veya gerçek custodian adı
+Bu sicil, bilinen devir boşluklarını ve
+[Alpha52 sürümüne](RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md) kadar `main` dalına
+merge edilen azaltımları izler. Sır değeri veya gerçek custodian adı
 içermez. Her sorumlu, hedef tarih, kabul ve harici kanıt referansı onaylı repo
 dışı devir sisteminde atanmalıdır.
 
-Beş taslak PR Alpha51 referansının dışındadır: [#69](https://github.com/celikbros/celikpanel/pull/69)
-(migration DDL canonicalization), [#70](https://github.com/celikbros/celikpanel/pull/70)
-(restart acknowledgement UX/ürün kararı), [#71](https://github.com/celikbros/celikpanel/pull/71)
-(`agent/ci-fast` dalındaki CI duplicate-release validation),
-[#72](https://github.com/celikbros/celikpanel/pull/72) (`agent/ssl-hostnames-hsts`
-dalındaki arşivlik SSL/backup WIP) ve [#73](https://github.com/celikbros/celikpanel/pull/73)
-(beş benzersiz Alpha35 portal scripti ile yayımlanmamış PR72-follow-up patch'i;
-head `archive/alpha35-portal-tooling`, commit
-`0ef899f3cb96390c4ef3822f199eddc67bb0ee1f`). PR #72 ve PR #73 arşivliktir.
-İkisi de olduğu hâliyle merge edilmemeli, PR #73 olduğu hâliyle
-çalıştırılmamalıdır. Hiçbir taslak için bütün kontrollerin yeşil olduğu iddia
-edilmez.
+[#69](https://github.com/celikbros/celikpanel/pull/69),
+[#70](https://github.com/celikbros/celikpanel/pull/70) ve
+[#71](https://github.com/celikbros/celikpanel/pull/71) kapalı ve superseded'dır.
+Bilinçli tutulan main dışı iki remote head; arşivlik PR
+[#72](https://github.com/celikbros/celikpanel/pull/72) kaynağı
+`agent/ssl-hostnames-hsts` ile arşivlik PR
+[#73](https://github.com/celikbros/celikpanel/pull/73) kaynağı
+`archive/alpha35-portal-tooling` dallarıdır. İkisi de olduğu hâliyle merge
+edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yoktur.
 
 ## Durum ve önem
 
@@ -29,6 +27,8 @@ edilmez.
   karşılandı; bu durum canlı sunucu kanıtı değildir.
 - KISMEN AZALTILDI / YENİDEN DOĞRULA: Sınırlı bir bileşen düzeltildi; kalan
   koşul için kabul kanıtı gerekir.
+- KISMEN AZALTILDI / AÇIK: Repo kontrolleri vardır; hesap verebilir harici atama
+  veya kabul koşulu açık kalır.
 - Kritik: Geri döndürülemez duruma, güvensiz yetkili işleme veya
   release/rollback otoritesi kaybına yol açabilir.
 - Yüksek: Kesintiye, güvenlik sınırı hatasına veya kanıtlanamayan canlı
@@ -42,17 +42,19 @@ edilmez.
 | R-001 | Kritik | MAIN ÜZERİNDE KAPALI | Operations artık snapshot v6'yı, güncel v4/v5 reddini ve tarihsel sürüm sınırını anlatıyor |
 | R-002 | Yüksek | MAIN ÜZERİNDE KAPALI | README artık isteğe bağlı yerel GPG kullanımını canonical Ed25519 update otoritesinden ayırıyor |
 | R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ | Tam kontrol düzlemi disaster backup ve restore tatbikatı kanıtlanmadı |
-| R-004 | Yüksek | YENİDEN DOĞRULA | Frankfurt canlı kimliği bilinmiyor; Boston kanıtı yalnız kısmi |
+| R-004 | Yüksek | KISMEN AZALTILDI / YENİDEN DOĞRULA | İki host exact Alpha52 ve terminal receipt ile tam kabulü geçti; snapshot kaynak provenance'ı `unknown` kaldı |
 | R-005 | Yüksek | AÇIK | Boston/Frankfurt ortam sınıfı üretime-hazır-değil politikasıyla çelişkili |
 | R-006 | Yüksek | AÇIK | Route/role ve API sözleşme borcu güvenlik sınırında sürüyor |
 | R-007 | Yüksek | AÇIK | Zorunlu gerçek VM install/update/rollback/reboot kanıtı devirde yok |
-| R-008 | Yüksek | YENİDEN DOĞRULA | Alpha51 GitHub sürüm zinciri doğrulandı; portal eşitliği ve kurulu release floor'lar kanıtlanmadı |
+| R-008 | Yüksek | KISMEN AZALTILDI / YENİDEN DOĞRULA | Alpha52 receipt'leri ve zone öncesi karma-motor katalog çifti doğrulandı; owner-zone ve zone sonrası otorite kanıtı yok |
 | R-009 | Orta | AÇIK | Harici paket/repo/CA endpoint'leri canlı doğrulama kapısı olmadan bayatlayabilir |
-| R-010 | Orta | MAIN ÜZERİNDE KAPALI | Mimari, onboarding ve uygulama-durumu belgeleri Alpha51 ile uzlaştırıldı |
+| R-010 | Orta | MAIN ÜZERİNDE KAPALI | Mimari, onboarding ve uygulama-durumu belgeleri Alpha52'ye kadar uzlaştırıldı |
 | R-011 | Yüksek | AÇIK | Erişim, signing key, provider ve olay custodian'ları devirde atanmadı |
 | R-012 | Orta | MAIN ÜZERİNDE KAPALI/AZALTILMIŞ / YENİ EKİP TEMİZ CHECKOUT YENİDEN DOĞRULA | Root scaffold, kopya worktree/dallar ve listelenen kalıntılar kaldırıldı; yeni ekip temiz bir `main` checkout'unu doğrulamalıdır |
 | R-013 | Orta | AÇIK | Tarayıcı golden-path, kritik endpoint ve latency kanıtı eksik |
-| R-014 | Orta | AÇIK | Olay müdahalesi, escalation ve postmortem sahipliği tanımlı değil |
+| R-014 | Orta | KISMEN AZALTILDI / AÇIK | Olay şablonu ve ilk olay kaydı var; harici müdahale sahipliği atanmadı |
+| R-015 | Yüksek | AÇIK / AÇIK DNS GEÇİŞİ İÇİN ENGELLEYİCİ | Parent delegation ve glue doğrulandı; `celikhost.com` child zone ve açık otorite yok |
+| R-016 | Orta | AÇIK / PROVENANCE UYARISI | İki geçerli v6 snapshot kaynak kimliğini `unknown` yazar; terminal receipt'ler önceki Alpha51 commit'ini kanıtlar |
 
 ## Ayrıntılı riskler
 
@@ -65,7 +67,7 @@ edilmez.
 - Etki: Yeni operatör uyumsuz rollback seçebilir veya restore edilemeyen
   snapshot'ın kabul edildiğini sanabilir.
 - Kapanış dayanağı: İngilizce/Türkçe runbook'lar artık kaynak sözleşmesiyle
-  uyumludur. Değişmez Alpha51 scriptleri ve sözleşme testleri binary otoritesi
+  uyumludur. Değişmez Alpha52 scriptleri ve sözleşme testleri binary otoritesi
   olarak kalır.
 - Durum: MAIN ÜZERİNDE KAPALI. Bu yalnız belge kapanışıdır; canlı veya disposable
   restore kanıtı R-003 ve R-007 tarafından izlenmeye devam eder.
@@ -79,7 +81,7 @@ edilmez.
 - Etki: Ekip yalnız bütünlük sağlayan veya isteğe bağlı ürünleri yayınlayıp
   yetkili update otoritesinin oluştuğunu sanabilir.
 - Kapanış dayanağı: README ve release-signing rehberi artık otorite sınırını
-  açıklar; Alpha51 resmi manifest/imzası ile altı ürün kümesi doğrulanmıştır.
+  açıklar; Alpha52 resmi manifest/imzası ile altı ürün kümesi doğrulanmıştır.
 - Durum: MAIN ÜZERİNDE KAPALI. Portal/canlı eşitliği R-008'de izlenir ve bu belge
   kapanışından türetilemez.
 
@@ -99,17 +101,22 @@ edilmez.
   kurtarmayı kanıtlar; RPO/RTO repo dışında kabul edilir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
-### R-004 — Eksik canlı kimlik
+### R-004 — Alpha52 canlı promotion kanıtlandı; artık kabul kanıtı korunmalı
 
-- Kanıt: Boston için açık HTTP 200 kurtarma gözlemi ve Alpha51 bildirimi vardır;
-  panel/agent commit'leri, şema ve rollback durumu alınmamıştır. Frankfurt'un
-  güncel sürümü kanıtlanmamıştır.
-- Etki: Rollout panel, agent, şema, UI veya eş DNS generation'larını
-  karıştırabilir.
-- Acil kontrol: Varsayılan eşitliğe göre değişiklik yapmayın.
-  LIVE-STATE-2026-08-29.tr.md belgesini salt okunur tamamlayın.
-- Çıkış ölçütü: İki node için tarihli panel/agent sürüm ve tam commit, şema, UI
-  ürünü, unit, operation-idle, release-floor ve v6 snapshot kanıtı vardır.
+- Kanıt: [Alpha52 sürüm kaydı](RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md) ve
+  [tarihli canlı durum](LIVE-STATE-2026-08-30.tr.md), iki node'da terminal
+  receipt, exact build `adb25d8ec487dcb76dd95304a551d8cb37565115`, aktif
+  servisler, idle ledger'lar, kesintisiz şema 37, floor 52, byte-equal kurulu
+  ürün/sunulan UI ile doğrulanmış v6 snapshot/rollback yardımcılarını kanıtlar.
+- Etki: Bu rollout artık kanıtlanmamış canlı-sürüm eşitliği riski taşımaz; fakat
+  kanıt sonraki sürümlerde ilişkilendirilebilir ve tekrarlanabilir kalmalıdır.
+- Acil kontrol: Tarihli kaydı ve exact receipt'leri koruyun; gelecekteki host
+  durumunu etiketten veya portaldan türetmeyin. Tarihsel
+  [LIVE-STATE-2026-08-29.tr.md](LIVE-STATE-2026-08-29.tr.md) kaydını değiştirmeyin.
+- Çıkış ölçütü: Yalnız R-016 snapshot provenance uyarısı daha sonraki incelenmiş
+  sürümde düzeltilip yeni normal panel update'iyle kanıtlandıktan sonra kapatın.
+- Durum: KISMEN AZALTILDI / YENİDEN DOĞRULA. Alpha52 canlı kimliği kanıtlandı;
+  kalan provenance koşulu R-016 altında ayrıca izlenir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-005 — Ortam ve hazır olma belirsizliği
@@ -152,21 +159,22 @@ edilmez.
   ürün digest'ine repo dışında bağlanmıştır.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
-### R-008 — Portal ve kurulu Alpha51 eşitliği tam kanıtlanmadı
+### R-008 — Alpha52 canlı otoritesi kanıtlandı; zone sonrası DNS kabulü açık
 
-- Kanıt: [Alpha51 GitHub sürümü](https://github.com/celikbros/celikpanel/releases/tag/v0.1.0-alpha.51),
-  etiket/commit kimliği, etiketli sürüm CI'ı, tam altı değişmez ürün ve resmi
-  Ed25519 manifest/imzası doğrulanmıştır. Manifest'in yetkilendirdiği arşiv
-  22.644.115 bayttır ve SHA256 değeri
-  `57d0321a13388392872bc3aef9af62646e2d700c23a4e0305d479df1e80ff365` şeklindedir.
-  Git etiketinin kendisi imzasızdır ve update otoritesi değildir. Portal
-  byte'ları ile iki sunucunun kurulu release-sequence floor'u kanıtlanmamıştır.
-- Etki: Doğrulanmış GitHub sürümü portal veya kurulu durumdan yine de farklı
-  olabilir.
-- Acil kontrol: Sürüm otoritesi olarak resmi Ed25519 manifest'ini kullanın;
-  yalnız etiket veya Boston sürüm metniyle hiçbir sunucuyu güncel saymayın.
-- Çıkış ölçütü: Portal source/staged eşitliği ve iki kurulu floor, doğrulanmış
-  sürüme karşı sınırlı ve sır içermeyen kanıtla kaydedilir.
+- Kanıt: [Alpha52 sürüm kaydı](RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md) ile
+  [tarihli canlı durum](LIVE-STATE-2026-08-30.tr.md), iki exact kurulumu ve zone
+  öncesi çifti kanıtlar: Frankfurt BIND primary, Boston PowerDNS secondary, boş
+  katalog serisi `1` eşit ve source-bound AXFR iki yönde geçer. Parent delegation
+  ve glue doğrulandı; owner zone yoktur.
+- Etki: Kontrol düzlemi çifti sağlıklıdır fakat `celikhost.com` için otorite
+  sunamaz; açık DNS hazır iddiası yanlış olur.
+- Acil kontrol: Doğrulanmış karma çifti koruyun ve child zone'u yalnız normal
+  panel akışıyla oluşturun. Başarısız açık kontrolleri atlamayın.
+- Çıkış ölçütü: Child-zone yayını sonrasında iki motor eşit katalog
+  üyeliği/serial, source-bound AXFR ve UDP/TCP AA/SOA kanıtlar; bağımsız recursive
+  resolver'lar `SERVFAIL` döndürmeyi bırakır.
+- Durum: KISMEN AZALTILDI / YENİDEN DOĞRULA. Kurulum ve zone öncesi eşleşme
+  geçer; zone sonrası kabul R-015 altında açıktır.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-009 — Harici endpoint güncelliği
@@ -183,14 +191,15 @@ edilmez.
 
 ### R-010 — Belge ve onboarding drift'i
 
-- Kanıt: `main` README'yi Alpha51 ve imzalı update yoluyla uyumlu yapar, Roadmap
+- Kanıt: `main` README'yi Alpha52 ve imzalı update yoluyla uyumlu yapar, Roadmap
   metriklerini elle tutmak yerine generated yapar, iki UI mimarisi belgesinde
   role-aware web/src/nav.ts registry'sini açıklar ve genel web/README.md şablonunu
   ürüne özel onboarding ile değiştirir.
 - Etki: Yeni mühendisler eski komut seçebilir, uygulanmış davranışı yanlış
   anlayabilir veya ürün yerine scaffolding'i yeniden kurabilir.
-- Kapanış dayanağı: README, Roadmap durumu, mimari ve web onboarding Alpha51 ile
-  uzlaştırılmıştır; eskiyebilecek fact snapshot'ları tarihlidir veya generated'dır.
+- Kapanış dayanağı: README, Roadmap durumu, mimari ve web onboarding Alpha52'ye
+  kadar uzlaştırılmıştır; eskiyebilecek fact snapshot'ları tarihlidir
+  veya generated'dır.
 - Durum: MAIN ÜZERİNDE KAPALI. Gelecekte kaynak değiştiğinde ilgili bilgiler yine
   güncellenmeli veya üretilmelidir.
 
@@ -242,15 +251,55 @@ edilmez.
 
 ### R-014 — Olay müdahalesi sahipliği
 
-- Kanıt: SECURITY.md özel bildirimi, docs/AUTOPSY.md arızaları tanımlar; fakat
-  on-call, severity, incident commander, escalation süresi veya postmortem
-  action-owner süreci atanmaz.
+- Kanıt: SECURITY.md özel bildirimi tanımlar. Sır içermeyen
+  [olay şablonu](INCIDENT-TEMPLATE.tr.md) ile
+  [26 Ağustos olay kaydı](INCIDENT-2026-08-26-UPDATE-DNS-RECOVERY.tr.md) artık
+  kanıt sözlüğü, zaman çizelgesi, kurtarma, düzeltici işlem ve kapanış yapısını
+  sağlar. Harici on-call, severity sorumlusu, incident commander, escalation
+  süresi veya postmortem action owner atanmamıştır.
 - Etki: DNS, release veya güvenlik olayı takılabilir ya da güvensiz ad-hoc
   değişikliklerle ele alınabilir.
 - Acil kontrol: Panel değişikliği ve salt okunur SSH sınırlarını koruyun; atanmış
   harici escalation kanalını kullanın.
 - Çıkış ölçütü: Repo dışında atanmış severity modeli, kişiler, commander,
-  iletişim yolu ve postmortem/action takibi; repoda sır içermeyen olay şablonu.
+  iletişim yolu ve postmortem/action takibi; bir tatbikat veya gerçek olay,
+  repo şablonuyla acknowledgement, devir ve action-owner kapanışını kanıtlar.
+- Durum: KISMEN AZALTILDI / AÇIK. Repo şablonu tamamdır; hesap verebilir harici
+  sorumlu atamasının yerini tutmaz.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-015 — Child-zone ve açık-otorite engelleyicisi
+
+- Kanıt: Parent delegation ve exact glue haricen doğrulandı:
+  `ns1.celikhost.com → 72.62.38.15` ve `ns2.celikhost.com → 2.25.80.4`, TTL
+  `172800`; DS yoktur. [Tarihli canlı durum](LIVE-STATE-2026-08-30.tr.md), child
+  zone'un oluşturulmadığını kaydeder: doğrudan UDP/TCP sorguları `REFUSED`, AXFR
+  `NOTAUTH`, açık recursive çözümleme `SERVFAIL` döndürür.
+- Etki: Resolver'lar delegated sunuculara ulaşır fakat authoritative
+  `celikhost.com` zone'u alamaz; açık çözümleme kullanılamaz.
+- Acil kontrol: Açık DNS trafiğini bu çifte geçirmeyin ve açık authoritative
+  availability iddiasında bulunmayın. Registrar kimlik bilgilerini repoya
+  koymayın.
+- Çıkış ölçütü: Child zone normal panel akışıyla yayımlanır; iki motor zone
+  sonrası eş katalog üyeliği/serial, source-bound AXFR ve UDP/TCP AA/SOA
+  kanıtlar; bağımsız resolver'lar zaten doğrulanmış delegation/glue üzerinden
+  açık yanıtları kanıtlar.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-016 — Snapshot kaynak kimliği `unknown`
+
+- Kanıt: İki Alpha52 terminal receipt'i beklenen önceki Alpha51 commit'ini
+  `45d01ffb29013b9457180072c3b25ab24d5ff7bd` olarak tanımlarken, iki doğrulanmış
+  v6 snapshot dizin kimliği `from-unknown-to-adb25d8ec487-*` kullanır. Snapshot
+  checksum, hedef kimliği ve rollback yardımcıları bütünüyle geçmiştir.
+- Etki: Rollback malzemesi sağlamdır; fakat snapshot yolu tek başına kaynak
+  build'i kanıtlayamaz ve forensic provenance ile otomatik devir kontrollerini
+  zayıflatır.
+- Acil kontrol: Terminal receipt'i snapshot kanıtıyla birlikte koruyun; canlı
+  snapshot'ı yeniden adlandırmayın, yazmayın veya yeniden kurmayın.
+- Çıkış ölçütü: İncelenmiş bir sürüm sonraki v6 snapshot kimliğine doğrulanmış
+  kurulu kaynak version/commit'ini yazar ve normal panel update'i düzeltmeyi
+  regresyonsuz kanıtlar.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

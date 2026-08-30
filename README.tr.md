@@ -187,7 +187,7 @@ sha256sum -c dist/celikpanel-v0.3.0.tar.gz.sha256
 ```
 
 Herkese açık etiketli sürümün kanonik yolu,
-[docs/release-signing.md](docs/release-signing.md) belgesindeki Ed25519 imzalı
+[docs/release-signing.tr.md](docs/release-signing.tr.md) belgesindeki Ed25519 imzalı
 manifest v2 sözleşmesidir. Etiketli CI tam altı değişmez ürün yayımlar: genel
 arşiv ve sağlama toplamı, Linux/amd64 arşivi ve sağlama toplamı, kanonik manifest
 ve onun ham ayrık Ed25519 imzası. Sürüm sırası, sürüme sabitlenmiş bootstrap ve
@@ -210,8 +210,13 @@ yayıncı kimliğini değil.
 ## Belgeler
 
 - [Mühendislik Devri](docs/HANDOFF.tr.md) — dondurulmuş kaynak referansı, otorite sırası ve yeni ekip kontrol listesi
-- [Tarihli Canlı Durum](docs/LIVE-STATE-2026-08-29.tr.md) — doğrulanmış, beyan edilmiş ve bilinmeyen sunucu bilgilerini ayrı tutan kayıt
+- [Alpha52 Sürüm Kanıtı](docs/RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md) — kaynak, etiket, CI, imzalı manifest, ürün ve portal kanıtı; canlı kabul ayrıca açık tutulur
+- [Güncel Tarihli Canlı Durum](docs/LIVE-STATE-2026-08-30.tr.md) — kalan engelleri açık tutan sınırlı Alpha52 canlı kurulum ve zone öncesi DNS kanıtı
+- [Tarihsel Canlı Durum](docs/LIVE-STATE-2026-08-29.tr.md) — doğrulanmış, beyan edilmiş ve bilinmeyen sunucu bilgilerini ayıran Alpha52 öncesi tarihsel kayıt
 - [Risk Sicili](docs/RISK-REGISTER.tr.md) — çıkış ölçütleriyle açık mühendislik ve operasyon riskleri
+- [26 Ağustos Güncelleme/DNS Kurtarma Olayı](docs/INCIDENT-2026-08-26-UPDATE-DNS-RECOVERY.tr.md) — kanıtla sınırlı olay geçmişi, nedenler, düzeltmeler ve açık canlı kabul
+- [Olay Şablonu](docs/INCIDENT-TEMPLATE.tr.md) — sır içermeyen UTC zaman çizelgesi, etki, kanıt ve düzeltici eylem yapısı
+- [İmzalı Sürüm Sözleşmesi](docs/release-signing.tr.md) — Ed25519 manifest, yayınlama, enrollment ve anti-rollback otoritesi
 - [CelikPanel AI Agent](docs/CELIKPANEL-AI-AGENT.tr.md) — yalnız panel kapsamı, onay, denetim ve abonelik kapısı planı
 - [Component Manifest V2](docs/COMPONENT-MANIFEST-V2.tr.md) — imzalı SQLite/JSON tarifleri ve platform adaptörü sınırı
 - [Mağaza](docs/STORE.tr.md) — teklif kataloğu, hak sınırı ve operatör iş akışı

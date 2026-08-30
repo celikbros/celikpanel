@@ -1,33 +1,43 @@
 # Mühendislik Devri
 
-*Referans: 29 Ağustos 2026 · [English](HANDOFF.md)*
+*Referans güncellemesi: 30 Ağustos 2026 · [English](HANDOFF.md)*
 
 Bu belge, CelikPanel'i devralacak mühendislik ekibinin başlangıç noktasıdır.
 Dondurulmuş kaynak referansını, otorite taşıyan belgeleri, asgari geliştirme ve
 sürüm akışını ve repo dışında devredilmesi gereken bilgileri tanımlar.
 
 Bu belge herhangi bir sunucunun sağlıklı veya güncel olduğunun kanıtı değildir.
-Canlı bilgiler [LIVE-STATE-2026-08-29.tr.md](LIVE-STATE-2026-08-29.tr.md)
-belgesinde ayrı tutulur. Açık teknik ve operasyonel riskler
-[RISK-REGISTER.tr.md](RISK-REGISTER.tr.md) içinde izlenir.
+Tarihsel [LIVE-STATE-2026-08-29.tr.md](LIVE-STATE-2026-08-29.tr.md) kaydını
+değiştirmeden koruyun. Güncel ürün sürümü Alpha52'dir ve incelenmiş sürüm/portal
+kanıtı [RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md](RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md)
+içindedir. Boston ve Frankfurt terminal başarılı Alpha52 receipt'leri üretmiştir.
+Bkz. tarihli [canlı durum kaydı](LIVE-STATE-2026-08-30.tr.md) ve
+[RISK-REGISTER.tr.md](RISK-REGISTER.tr.md).
 
 ## 1. Dondurulmuş devir referansı
 
 | Konu | Değer | Durum |
 |---|---|---|
-| Canonical kaynak etiketi ve sürümü | [v0.1.0-alpha.51](https://github.com/celikbros/celikpanel/releases/tag/v0.1.0-alpha.51) | DOĞRULANMIŞ devir referansı |
-| Canonical kaynak commit'i | 45d01ffb29013b9457180072c3b25ab24d5ff7bd | DOĞRULANMIŞ devir referansı |
-| Güncel yayımlanmış binary | v0.1.0-alpha.51 | DOĞRULANMIŞ |
+| Güncel canonical kaynak etiketi ve sürümü | [v0.1.0-alpha.52](https://github.com/celikbros/celikpanel/releases/tag/v0.1.0-alpha.52) | DOĞRULANMIŞ ürün referansı; canlı kurulum kanıtı değil |
+| Güncel canonical kaynak commit'i | adb25d8ec487dcb76dd95304a551d8cb37565115 | DOĞRULANMIŞ ürün referansı |
+| Güncel yayımlanmış binary | v0.1.0-alpha.52 | GitHub, portal ve iki canlı kurulumda DOĞRULANMIŞ |
+| Alpha52 etiketli sürüm CI'ı | [Run 33283088681](https://github.com/celikbros/celikpanel/actions/runs/33283088681) geçti | DOĞRULANMIŞ |
+| Alpha52 sürüm ürünleri | Tam 6 değişmez ürün; resmi Ed25519 manifest'i ve ayrık imza doğrulandı | DOĞRULANMIŞ |
+| Alpha52 manifest'inin yetkilendirdiği arşiv | SHA256 `9a604bf0f58855f53997a1adeb44a24cc76c4ff062fd8068ee6a66be66a28304`; 22.672.364 bayt | DOĞRULANMIŞ |
+| Tarihsel canlı referans etiketi | [v0.1.0-alpha.51](https://github.com/celikbros/celikpanel/releases/tag/v0.1.0-alpha.51) | Alpha52 öncesi DOĞRULANMIŞ canlı referansı |
+| Tarihsel canlı referans commit'i | 45d01ffb29013b9457180072c3b25ab24d5ff7bd | Alpha52 öncesi DOĞRULANMIŞ canlı referansı |
+| Promosyon öncesi son kanıtlanmış canlı binary | v0.1.0-alpha.51 | DOĞRULANMIŞ tarihsel promosyon öncesi durum |
 | Alpha51 etiketli sürüm CI'ı | Yayımlanmış sürüm için geçti | DOĞRULANMIŞ |
 | Alpha51 sürüm ürünleri | Tam 6 değişmez ürün; resmi Ed25519 manifest'i ve ayrık imza doğrulandı | DOĞRULANMIŞ |
 | Manifest'in yetkilendirdiği arşiv | SHA256 `57d0321a13388392872bc3aef9af62646e2d700c23a4e0305d479df1e80ff365`; 22.644.115 bayt | DOĞRULANMIŞ |
 | Git etiketi imzası | Git etiketi imzasızdır | DOĞRULANMIŞ; update otoritesi etiket imzası değil Ed25519 manifest'idir |
-| `main` üzerindeki devir belgeleri | [PR #74](https://github.com/celikbros/celikpanel/pull/74), merge commit `e29df589594b2b5929d067a0174ab98d8182e4b5` | DOĞRULANMIŞ; yalnız belgedir, Alpha51 binary referansının parçası değildir |
-| GitHub açık pull request'leri | 5 taslak: [#69](https://github.com/celikbros/celikpanel/pull/69), [#70](https://github.com/celikbros/celikpanel/pull/70), [#71](https://github.com/celikbros/celikpanel/pull/71), [#72](https://github.com/celikbros/celikpanel/pull/72), [#73](https://github.com/celikbros/celikpanel/pull/73) | 29.08.2026 itibarıyla DOĞRULANMIŞ; hiçbiri Alpha51'in parçası değildir |
+| Tarihsel devir belgeleri | [PR #74](https://github.com/celikbros/celikpanel/pull/74), merge commit `e29df589594b2b5929d067a0174ab98d8182e4b5` | DOĞRULANMIŞ tarihsel belge referansı |
+| GitHub açık pull request'leri | Yok | 30.08.2026 itibarıyla DOĞRULANMIŞ |
+| Bilinçli tutulan arşivlik remote head'ler | `agent/ssl-hostnames-hsts` (PR #72) ve `archive/alpha35-portal-tooling` (PR #73) | Yalnız kaynak arkeolojisi için koruyun; olduğu hâliyle merge etmeyin veya çalıştırmayın |
 | Ürün yaşam evresi | Alpha / ön sürüm | REPO TARAFINDAN BEYAN EDİLMİŞ |
 | Üretime hazır olma durumu | Üretime hazır değil | SECURITY.md içinde REPO BEYANI |
-| Boston açık panel kurtarma kanıtı | HTTP 200; Alpha51 bildirildi | DOĞRULANMIŞ devir gözlemi |
-| Frankfurt güncel canlı sürümü | Bu devirde kanıtlanmadı | BİLİNMİYOR / YENİDEN DOĞRULA |
+| Boston canlı kimliği | panel/agent Alpha52 commit `adb25d8ec487dcb76dd95304a551d8cb37565115`; terminal receipt `b6fd0052b2c4a04b117a753637d68798`; servisler aktif; floor 52 | 30.08.2026 salt okunur DOĞRULANDI |
+| Frankfurt canlı kimliği | panel/agent Alpha52 commit `adb25d8ec487dcb76dd95304a551d8cb37565115`; terminal receipt `b85dee68b54a01689333112ae8ccaa5f`; servisler aktif; floor 52 | 30.08.2026 salt okunur DOĞRULANDI |
 
 Bir etiket, kaynak commit'i ve açık HTTP yanıtı; kurulu panel commit'ini, agent
 commit'ini, veritabanı şemasını, DNS rolünü, firewall durumunu, sertifika
@@ -35,19 +45,11 @@ durumunu veya rollback hazırlığını kanıtlamaz. Bu değerleri türetmeyin. 
 bir dağıtım veya panel değişikliğinden önce salt okunur canlı durum listesini
 tamamlayın.
 
-Taslak PR #69 migration DDL canonicalization işini kapsar. Taslak PR #70 restart
-acknowledgement UX'ini kapsar ve ürün kararı gerektirir. Taslak PR #71
-`agent/ci-fast` dalındaki CI duplicate-release validation işini korur. Taslak PR
-#72 `agent/ssl-hostnames-hsts` dalındaki arşivlik SSL/backup WIP işini korur;
-arşivliktir ve olduğu hâliyle merge edilmemelidir. Taslak PR #73,
-`archive/alpha35-portal-tooling` head'i ve
-`0ef899f3cb96390c4ef3822f199eddc67bb0ee1f` commit'iyle beş benzersiz Alpha35
-portal scriptini ve yayımlanmamış bir PR72-follow-up patch'ini arşivler.
-Arşivliktir; olduğu hâliyle merge edilmemeli veya çalıştırılmamalıdır. Bu devir
-hiçbir taslaktaki bütün kontrollerin yeşil olduğunu iddia etmez. PR #74 yalnız
-belge içeren devir paketini `main` dalına merge ederek `main` dalını Alpha51
-kaynak etiketinin önüne taşımıştır; yeni bir binary sürüm oluşturmamış veya
-yayımlanmış sürümün yerini almamıştır.
+PR #69, #70 ve #71 kapalı ve superseded'dır. PR #72 ile PR #73 arşivliktir; iki
+remote head yalnız kaynak arkeolojisi için tutulur ve olduğu hâliyle merge
+edilmemeli veya çalıştırılmamalıdır. Alpha52 canonical ürün kaynağı ve yayımlanmış
+binary referansıdır. Devir hazırlanırken tek açık dal, bu paketi kendi pull
+request'i üzerinden taşıyacak incelenmiş belge dalıdır.
 
 ## 2. Hukuk ve yetki sınırı
 
@@ -70,7 +72,7 @@ Bilgiler çeliştiğinde şu sırayı kullanın:
 1. Tam incelenmiş kaynak commit'i, testler ve paketlenmiş sürüm sözleşmeleri.
 2. Kaynak sürüm kimliği için deploy/release-sequence-policy ve sürüme sabit
    download-portal/get.sh.
-3. İmzalı ürün üretimi ve güveni için docs/release-signing.md ile sürüm
+3. İmzalı ürün üretimi ve güveni için docs/release-signing.tr.md ile sürüm
    sözleşme testleri.
 4. Operasyonel sahiplik ve rollout kuralları için docs/OPERATIONS.md.
 5. Kalıcı ürün ve mimari kararlar için docs/DECISIONS.md.
@@ -86,7 +88,7 @@ drift'ini uzlaştırır:
   artık açıklar.
 - README.md etiketli sürüm update otoritesini Ed25519 imzalı manifest akışı
   olarak tanımlar ve GPG imzalamayı isteğe bağlı yerel kullanımla sınırlar.
-- README, Roadmap, UI mimarisi ve web onboarding Alpha51 ile uyumludur; gereksiz
+- README, Roadmap, UI mimarisi ve web onboarding Alpha52'ye kadar uyumludur; gereksiz
   root create-vite scaffold'u kaldırılmıştır.
 
 Bu nedenle R-001, R-002 ve R-010 `main` üzerinde kapanmıştır. R-012 de root
@@ -99,7 +101,7 @@ kaldırılmıştır. Yalnız primary kayıtlı worktree kalmıştır. Tracked
 `.design-sync` bilinçli olarak tutulmuştur. Yeni ekip kabul sırasında taze ve
 temiz bir `main` checkout'unu yine doğrulamalıdır. Bu repo temizliği canlı
 sunucuda değişiklik yapmamıştır ve canlı durum kanıtı değildir. Binary release
-ve rollback otoritesi için değişmez Alpha51 scriptlerini ve sözleşme testlerini
+ve rollback otoritesi için değişmez Alpha52 scriptlerini ve sözleşme testlerini
 kullanmaya devam edin; yalnız belge içeren `main` değişiklikleri bunların yerini
 almaz.
 
@@ -174,10 +176,12 @@ npm test
 npm run build
 ~~~
 
-Tam kapı GitHub CI workflow'udur. Go biçimlendirme, build, race-test parçaları,
+Mevcut repo CI kapısı GitHub CI workflow'udur. Go biçimlendirme, build, race-test parçaları,
 shell sözdizimi, sürüm/kurtarma sözleşmeleri, web testleri, cross-compile ve
 tekrarlanabilir paketleme bunun içindedir. Yerel bir alt kümenin geçmesi, tam
 itilmiş commit üzerindeki yeşil workflow'un yerine geçmez.
+Tarayıcı render'ı, kritik-endpoint smoke ve latency kabulü ayrı açık kanıt
+gereksinimleri olarak kalır.
 
 Sürüm paketleme, olağan geliştirme döngüsü değil release-engineering işidir:
 
@@ -205,6 +209,34 @@ veya dist içeriğini kaynak otoritesi saymayın.
 
 ## 8. Sürüm ve rollout devri
 
+Alpha52 güncel ürün sürümüdür ve iki normal panel update'i de sunucu-otoriteli
+terminal başarıyla tamamlanmıştır. Exact kaynak, imzalı ürünler, portal yayını ve
+node receipt'leri [Alpha52 sürüm kanıtında](RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md)
+ve tarihli [canlı durum kaydında](LIVE-STATE-2026-08-30.tr.md) kayıtlıdır. İki node
+da build, servis, idle-ledger, şema-37, floor-52, kurulu ürün, sunulan UI, v6
+snapshot ve rollback-yardımcısı kabulünü geçti. Buna karşın iki v6 snapshot'ın
+kaynak bileşeni `unknown` değerindedir; receipt'ler önceki Alpha51 commit'ini
+bağımsız kanıtladığından bunu canlı servis arızası değil açık provenance uyarısı
+olarak ele alın.
+
+Zone öncesi kasıtlı karma çift de doğrulanmıştır: Frankfurt BIND birincil, Boston
+PowerDNS ikincildir; boş katalog serisi `1` iki tarafta aynıdır ve kaynağa bağlı
+katalog AXFR iki yönde de geçer. Parent `.com` delegation ile in-bailiwick glue;
+`ns1.celikhost.com → 72.62.38.15` ve `ns2.celikhost.com → 2.25.80.4`, TTL `172800`
+olarak haricen doğrulandı; DS yoktur. Bu, açık otorite kanıtı değildir.
+`celikhost.com` child zone henüz oluşturulmamıştır: doğrudan UDP/TCP sorguları
+`REFUSED`, AXFR `NOTAUTH`, açık recursive çözümleme `SERVFAIL` döndürür. Child
+zone'u normal panel akışıyla yayımlayın; DNS geçişini tamamlanmış ilan etmeden
+önce zone sonrası katalog, AXFR, UDP/TCP authoritative ve açık-recursive kabul
+matrisini bütünüyle tekrarlayın.
+
+Mevcut kurulumda public bootstrap veya SSH updater kullanmayın; yeni request ID
+uydurmayın, marker düzenlemeyin ve tarihsel canlı durum kaydını yeniden yazmayın.
+Yeni tarihli kabul kaydı ekleyin. Kurtarma/eskalasyon bağlantıları:
+[işletim](OPERATIONS.tr.md),
+[26 Ağustos olayı](INCIDENT-2026-08-26-UPDATE-DNS-RECOVERY.tr.md) ve
+[olay şablonu](INCIDENT-TEMPLATE.tr.md).
+
 [Alpha51 GitHub sürümü](https://github.com/celikbros/celikpanel/releases/tag/v0.1.0-alpha.51),
 etiket/commit kimliği, etiketli sürüm CI'ı, tam altı değişmez ürün ve resmi
 Ed25519 manifest/imzası bu devir için doğrulanmıştır. Manifest'in yetkilendirdiği
@@ -215,8 +247,8 @@ manifest ve ayrık imzadır.
 
 Git etiketinin kendisi imzasızdır. Kurulum/update otoritesi Git etiketi imzası
 değil, sabitlenmiş Ed25519 güven kökü ile doğrulanmış imzalı manifest v2'dir.
-Yalnız belge içeren devir paketi artık merge edilmiştir ve `main` kaynak
-etiketinin önündedir; güncel yayımlanmış binary yine Alpha51'dir.
+Alpha52 güncel ürün sürümüdür ve iki node'daki exact kanıtlanmış canlı kurulumdur.
+Açık DNS geçişi child zone yokluğu nedeniyle engellidir.
 
 Sonraki sürümden önce:
 
@@ -242,6 +274,10 @@ token'lar, sağlayıcı kimlikleri ve custodian adları onaylı harici parola
 yöneticisi veya erişim sicilinde aktarılmalıdır. Repo yalnız gerekli
 kategorileri kaydeder:
 
+Chat, ticket, ekran görüntüsü veya shell history içinde paylaşılmış her kimlik
+bilgisini ele geçirilmiş sayın. Yeni ekip erişiminden önce yenileyin ve kimlik
+bilgisi değerini kopyalamadan yenileme kanıtını repo dışında kaydedin.
+
 | Erişim kategorisi | Repodaki değer |
 |---|---|
 | CELIKBROS yazılı yetkisi | REPO DIŞI / CUSTODIAN ATA |
@@ -265,10 +301,9 @@ envanteri ve kontrollü erişim testini tamamladıktan sonra kaldırın.
 
 - Yazılı yetkiyi ve harici custodian atamalarını doğrulayın.
 - Temiz bir checkout alın; etiketi, commit'i, origin'i ve temiz durumu kanıtlayın.
-- Doğrulanmış Alpha51 CI/release kanıtını ve beş taslak PR'yi inceleyin; hiçbir
-  taslağı Alpha51 referansının parçası saymayın. PR #72 ve PR #73 arşivliktir;
-  ikisini de olduğu hâliyle merge etmeyin ve PR #73'ü olduğu hâliyle
-  çalıştırmayın.
+- Alpha52 sürüm kanıtını ve tarihli Alpha52 canlı durum kaydını inceleyin. PR #72
+  ve PR #73 arşivliktir; ikisini de olduğu hâliyle merge etmeyin ve PR #73'ü
+  olduğu hâliyle çalıştırmayın.
 - Sunucuya erişmeden önce SECURITY.md, OPERATIONS.md, release-signing.md,
   DECISIONS.md ve bu devir belgelerini okuyun.
 - Canlı durum kaydındaki tüm BİLİNMİYOR / YENİDEN DOĞRULA alanlarını salt

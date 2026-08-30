@@ -5,7 +5,8 @@
 A concrete answer to "how much work is a FreeBSD port, really?" — every
 OS-touching point in the agent, its FreeBSD equivalent, and an honest
 estimate. No code was changed to produce this; it measures risk before any
-investment. See the decision this supports in [DECISIONS.md](DECISIONS.md#d-004).
+investment. See the decision this supports in
+[DECISIONS.md](DECISIONS.md#d-004--operating-system-ubuntu-lts-first-bsd-option-preserved-never-a-fork).
 
 ## Proven today
 
@@ -90,4 +91,4 @@ Keep the option, don't spend it yet. The seams above are worth extracting
 should go through a helper, not a raw `exec` — already the house style), so
 that if a real BSD demand appears, the port is a fill-in-the-backend job of
 weeks, never a fork. Full execution waits for real demand, per
-[DECISIONS.md D-004](DECISIONS.md#d-004).
+[DECISIONS.md D-004](DECISIONS.md#d-004--operating-system-ubuntu-lts-first-bsd-option-preserved-never-a-fork).

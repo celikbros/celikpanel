@@ -1,23 +1,21 @@
 # Engineering and Operations Risk Register
 
-*Baseline: August 29, 2026 · [Türkçe](RISK-REGISTER.tr.md)*
+*Baseline: August 30, 2026 · [Türkçe](RISK-REGISTER.tr.md)*
 
 This register tracks known handoff gaps and the mitigations merged into `main`
-by [PR #74](https://github.com/celikbros/celikpanel/pull/74). It contains no secret values or real
+through the [Alpha52 release](RELEASE-EVIDENCE-v0.1.0-alpha.52.md). It contains no secret values or real
 custodian names. Each owner, target date, acceptance and external evidence
 reference must be assigned in the approved out-of-repository handoff system.
 
-Five draft PRs are outside the Alpha51 baseline: [#69](https://github.com/celikbros/celikpanel/pull/69)
-(migration DDL canonicalization), [#70](https://github.com/celikbros/celikpanel/pull/70)
-(restart acknowledgement UX/product decision), [#71](https://github.com/celikbros/celikpanel/pull/71)
-(CI duplicate-release validation from `agent/ci-fast`),
-[#72](https://github.com/celikbros/celikpanel/pull/72) (archival SSL/backup WIP
-from `agent/ssl-hostnames-hsts`) and [#73](https://github.com/celikbros/celikpanel/pull/73)
-(five unique Alpha35 portal scripts plus an unpublished PR72-follow-up patch;
-head `archive/alpha35-portal-tooling`, commit
-`0ef899f3cb96390c4ef3822f199eddc67bb0ee1f`). PR #72 and PR #73 are archival.
-Neither may be merged as-is, and PR #73 must not be executed as-is. No
-all-checks-green claim is made for any draft.
+PRs [#69](https://github.com/celikbros/celikpanel/pull/69),
+[#70](https://github.com/celikbros/celikpanel/pull/70) and
+[#71](https://github.com/celikbros/celikpanel/pull/71) are closed and
+superseded. The only intentionally retained non-main remote heads are
+`agent/ssl-hostnames-hsts` from archival PR
+[#72](https://github.com/celikbros/celikpanel/pull/72) and
+`archive/alpha35-portal-tooling` from archival PR
+[#73](https://github.com/celikbros/celikpanel/pull/73). Neither may be merged
+or executed as-is. There are no open pull requests at this baseline.
 
 ## Status and severity
 
@@ -28,6 +26,8 @@ all-checks-green claim is made for any draft.
   this status is not live-server evidence.
 - PARTIALLY MITIGATED / REVERIFY: a bounded component is fixed, but the
   remaining condition still requires acceptance evidence.
+- PARTIALLY MITIGATED / OPEN: repository controls exist, but an accountable
+  external assignment or acceptance condition remains open.
 - Critical: can cause unrecoverable state, unsafe privileged operation or loss
   of release/rollback authority.
 - High: can cause outage, security boundary failure or an unverifiable live
@@ -41,17 +41,19 @@ all-checks-green claim is made for any draft.
 | R-001 | Critical | CLOSED ON MAIN | Operations now documents snapshot v6, current v4/v5 rejection and the historical-release boundary |
 | R-002 | High | CLOSED ON MAIN | README now separates optional local GPG use from canonical Ed25519 update authority |
 | R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS | No proven full control-plane disaster backup and restore drill |
-| R-004 | High | REVERIFY | Frankfurt live identity is unknown; Boston proof is only partial |
+| R-004 | High | PARTIALLY MITIGATED / REVERIFY | Both hosts run exact Alpha52 with terminal receipts and full acceptance; snapshot source provenance remains `unknown` |
 | R-005 | High | OPEN | Boston/Frankfurt environment classification conflicts with the not-production-ready policy |
 | R-006 | High | OPEN | Route/role and API-contract debt remains at a security boundary |
 | R-007 | High | OPEN | Required real-VM install/update/rollback/reboot evidence is not tracked in the handoff |
-| R-008 | High | REVERIFY | Alpha51 GitHub release chain is verified; portal equality and installed release floors are not |
+| R-008 | High | PARTIALLY MITIGATED / REVERIFY | Alpha52 receipts and the pre-zone mixed-engine catalog pair are verified; owner-zone and post-zone authority proof remain absent |
 | R-009 | Medium | OPEN | External package/repository/CA endpoints can become stale without a live verification gate |
-| R-010 | Medium | CLOSED ON MAIN | Architecture, onboarding and implementation-status documents are reconciled with Alpha51 |
+| R-010 | Medium | CLOSED ON MAIN | Architecture, onboarding and implementation-status documents are reconciled through Alpha52 |
 | R-011 | High | OPEN | Access, signing-key, provider and incident custodians are not assigned in the handoff |
 | R-012 | Medium | CLOSED/MITIGATED ON MAIN / INCOMING CLEAN CHECKOUT REVERIFY | Root scaffold, duplicate worktrees/branches and listed debris were removed; the incoming team must verify a clean `main` checkout |
 | R-013 | Medium | OPEN | Browser golden-path, critical-endpoint and latency evidence remains incomplete |
-| R-014 | Medium | OPEN | Incident response, escalation and postmortem ownership are not formally defined |
+| R-014 | Medium | PARTIALLY MITIGATED / OPEN | Incident template and first incident record exist; external response ownership is not assigned |
+| R-015 | High | OPEN / BLOCKER FOR PUBLIC DNS CUTOVER | Parent delegation and glue are verified; the `celikhost.com` child zone and public authority are absent |
+| R-016 | Medium | OPEN / PROVENANCE WARNING | Both valid v6 snapshots encode an `unknown` source identity although terminal receipts prove the prior Alpha51 commit |
 
 ## Detailed risks
 
@@ -64,7 +66,7 @@ all-checks-green claim is made for any draft.
 - Impact: an incoming operator can select an incompatible rollback procedure or
   believe a non-restorable snapshot is accepted.
 - Closure basis: the English/Turkish runbooks now match the source contract.
-  Immutable Alpha51 scripts and contract tests remain binary authority.
+  Immutable Alpha52 scripts and contract tests remain binary authority.
 - Status: CLOSED ON MAIN. This is documentation closure only; live or
   disposable restore evidence remains governed by R-003 and R-007.
 
@@ -76,7 +78,7 @@ all-checks-green claim is made for any draft.
 - Impact: a team can publish integrity-only or optional artifacts while
   believing privileged update authority exists.
 - Closure basis: README and release-signing guidance now make the authority
-  boundary explicit; the Alpha51 official manifest/signature and six-asset set
+  boundary explicit; the Alpha52 official manifest/signature and six-asset set
   are verified.
 - Status: CLOSED ON MAIN. Portal/live equality remains tracked by
   R-008 and is not implied by this documentation closure.
@@ -97,16 +99,23 @@ all-checks-green claim is made for any draft.
   cryptographic identity recovery; RPO/RTO are accepted externally.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
-### R-004 — Incomplete live identity
+### R-004 — Alpha52 live promotion proven; residual acceptance must be retained
 
-- Evidence: Boston has a public HTTP 200 recovery observation and reports
-  Alpha51, but panel/agent commits, schema and rollback state are not captured.
-  Frankfurt's current version is not proven.
-- Impact: rollout can mix panel, agent, schema, UI or peer DNS generations.
-- Immediate control: no mutation based on assumed parity. Complete
-  LIVE-STATE-2026-08-29.md read-only.
-- Exit criteria: both nodes have dated panel/agent version and full commit,
-  schema, UI asset, unit, operation-idle, release-floor and v6 snapshot proof.
+- Evidence: the [Alpha52 release record](RELEASE-EVIDENCE-v0.1.0-alpha.52.md)
+  and [dated live state](LIVE-STATE-2026-08-30.md) prove terminal receipts on
+  both nodes, exact build `adb25d8ec487dcb76dd95304a551d8cb37565115`, active
+  services, idle ledgers, contiguous schema 37, floor 52, byte-equal installed
+  artifacts/served UI and verified v6 snapshot/rollback helpers.
+- Impact: this rollout no longer presents unproven live-version parity, but the
+  evidence must remain attributable and repeatable after later releases.
+- Immediate control: preserve the dated record and exact receipts; do not infer
+  future host state from a tag or portal. Keep
+  [LIVE-STATE-2026-08-29.md](LIVE-STATE-2026-08-29.md) historical.
+- Exit criteria: close only after R-016's snapshot provenance warning is fixed
+  in a later reviewed release and that fix is proven by a new normal panel
+  update without weakening the already-passed Alpha52 acceptance.
+- Status: PARTIALLY MITIGATED / REVERIFY. Alpha52 live identity is proven; the
+  residual provenance condition is tracked separately under R-016.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-005 — Environment and readiness ambiguity
@@ -150,21 +159,22 @@ all-checks-green claim is made for any draft.
   externally to the exact commit and artifact digest.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
-### R-008 — Portal and installed Alpha51 equality not fully attested
+### R-008 — Alpha52 live authority proven; post-zone DNS acceptance remains
 
-- Evidence: the [Alpha51 GitHub release](https://github.com/celikbros/celikpanel/releases/tag/v0.1.0-alpha.51),
-  tag/commit identity, tagged-release CI, exactly six immutable assets and the
-  official Ed25519 manifest/signature are verified. The manifest-authorized
-  archive is 22,644,115 bytes with SHA256
-  `57d0321a13388392872bc3aef9af62646e2d700c23a4e0305d479df1e80ff365`.
-  The Git tag itself is unsigned; it is not update authority. Portal bytes and
-  either server's installed release-sequence floor remain unproven.
-- Impact: the verified GitHub release can still differ from portal or installed
-  state.
-- Immediate control: use the official Ed25519 manifest as release authority and
-  do not call either server current from the tag or Boston version string.
-- Exit criteria: portal source/staged equality and both installed floors are
-  recorded with bounded sanitized evidence against the verified release.
+- Evidence: the [Alpha52 release record](RELEASE-EVIDENCE-v0.1.0-alpha.52.md)
+  and [dated live state](LIVE-STATE-2026-08-30.md) prove both exact installations
+  and the pre-zone pair: Frankfurt BIND primary, Boston PowerDNS secondary,
+  equal empty catalog serial `1` and source-bound AXFR in both directions.
+  Parent delegation and glue are verified, but the owner zone is absent.
+- Impact: the control-plane pair is healthy but cannot authoritatively serve
+  `celikhost.com`; a claim of public DNS readiness would be false.
+- Immediate control: preserve the verified mixed pair and create the child zone
+  only through the normal panel flow. Do not bypass the failed public checks.
+- Exit criteria: after child-zone publication, both engines prove equal catalog
+  membership/serials, source-bound AXFR and UDP/TCP AA/SOA, and independent
+  recursive resolvers stop returning `SERVFAIL`.
+- Status: PARTIALLY MITIGATED / REVERIFY. Installation and pre-zone pairing pass;
+  post-zone acceptance remains open under R-015.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-009 — External endpoint freshness
@@ -181,14 +191,14 @@ all-checks-green claim is made for any draft.
 
 ### R-010 — Documentation and onboarding drift
 
-- Evidence: `main` aligns README with Alpha51 and the signed-update path,
+- Evidence: `main` aligns README with Alpha52 and the signed-update path,
   makes Roadmap metrics generated rather than hand-maintained, describes the
   role-aware web/src/nav.ts registry in both UI architecture files, and replaces
   the generic web/README.md template with product-specific onboarding.
 - Impact: incoming engineers can select obsolete commands, misunderstand
   implemented behavior or rebuild scaffolding instead of the product.
 - Closure basis: README, Roadmap status, architecture and web onboarding are
-  reconciled with Alpha51; stale factual snapshots are dated or generated.
+  reconciled through Alpha52; stale factual snapshots are dated or generated.
 - Status: CLOSED ON MAIN. Future facts must still be updated or
   generated when their source changes.
 
@@ -240,16 +250,55 @@ all-checks-green claim is made for any draft.
 
 ### R-014 — Incident response ownership
 
-- Evidence: SECURITY.md defines private reporting and docs/AUTOPSY.md records
-  failures, but no on-call, severity, incident commander, escalation timeline
-  or postmortem action-owner process is assigned.
+- Evidence: SECURITY.md defines private reporting. The secret-free
+  [incident template](INCIDENT-TEMPLATE.md) and the
+  [August 26 incident record](INCIDENT-2026-08-26-UPDATE-DNS-RECOVERY.md) now
+  provide evidence vocabulary, timeline, recovery, corrective-action and
+  closure structure. No on-call, severity owner, incident commander,
+  escalation timeline or postmortem action owner is assigned externally.
 - Impact: a DNS, release or security incident can stall or be handled through
   unsafe ad-hoc changes.
 - Immediate control: preserve the panel-mutation and read-only SSH boundaries;
   use the external escalation channel once assigned.
 - Exit criteria: externally assigned severity model, contacts, commander,
-  communications path and postmortem/action tracking; repository contains a
-  secret-free incident template.
+  communications path and postmortem/action tracking; one drill or real incident
+  demonstrates acknowledgement, handoff and action-owner closure using the
+  repository template.
+- Status: PARTIALLY MITIGATED / OPEN. The repository template is complete, but
+  it cannot substitute for accountable external owner assignment.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-015 — Child-zone and public-authority blocker
+
+- Evidence: parent delegation and exact glue are verified externally:
+  `ns1.celikhost.com → 72.62.38.15` and `ns2.celikhost.com → 2.25.80.4`, TTL
+  `172800`; DS is absent. The [dated live state](LIVE-STATE-2026-08-30.md) records
+  that the child zone has not been created: direct UDP/TCP queries are
+  `REFUSED`, AXFR is `NOTAUTH`, and public recursive resolution is `SERVFAIL`.
+- Impact: resolvers reach the delegated servers but receive no authoritative
+  `celikhost.com` zone, so public resolution remains unavailable.
+- Immediate control: do not cut public DNS traffic over to this pair or claim
+  public authoritative availability. Do not place registrar credentials in the
+  repository.
+- Exit criteria: the child zone is published through the normal panel flow;
+  both engines prove matching post-zone catalog membership/serials,
+  source-bound AXFR and AA/SOA over UDP/TCP; independent resolvers prove public
+  answers through the already-verified delegation and glue.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-016 — Snapshot source identity is `unknown`
+
+- Evidence: both Alpha52 terminal receipts identify the expected prior Alpha51
+  commit `45d01ffb29013b9457180072c3b25ab24d5ff7bd`, while both verified v6 snapshot
+  directory identities use `from-unknown-to-adb25d8ec487-*`. Snapshot checksums,
+  target identity and rollback helpers all passed.
+- Impact: rollback material is intact, but the snapshot path alone cannot prove
+  the source build, weakening forensic provenance and automated handoff checks.
+- Immediate control: retain the terminal receipt beside snapshot evidence and
+  do not rename, rewrite or reconstruct a live snapshot.
+- Exit criteria: a reviewed release records the verified installed source
+  version/commit in the next v6 snapshot identity and a normal panel update
+  proves the corrected provenance without regression.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
