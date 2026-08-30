@@ -3,14 +3,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 )
 
 type serviceMutationFileLock struct {
-	path string
-	file *os.File
+	path        string
+	file        *os.File
+	publication *serviceMutationFileLock
 }
 
 func acquireExistingServiceMutationFileLock(string) (*serviceMutationFileLock, error) {
@@ -31,7 +33,7 @@ func acquireServiceMutationFileLock(path string) (*serviceMutationFileLock, erro
 	return &serviceMutationFileLock{path: path, file: file}, nil
 }
 
-func (l *serviceMutationFileLock) Close() error {
+func (l *serviceMutationFileLock) closeOwn() error {
 	if l == nil {
 		return nil
 	}
@@ -47,6 +49,31 @@ func (l *serviceMutationFileLock) Close() error {
 		l.path = ""
 	}
 	return nil
+}
+
+func (l *serviceMutationFileLock) closeHostRetainingPublication() (
+	*serviceMutationFileLock,
+	error,
+) {
+	if l == nil {
+		return nil, nil
+	}
+	publication := l.publication
+	l.publication = nil
+	return publication, l.closeOwn()
+}
+
+func (l *serviceMutationFileLock) Close() error {
+	if l == nil {
+		return nil
+	}
+	hostErr := l.closeOwn()
+	publication := l.publication
+	l.publication = nil
+	if publication == nil {
+		return hostErr
+	}
+	return errors.Join(hostErr, publication.Close())
 }
 
 func probeServiceMutationFileLockIdle(path string) error {

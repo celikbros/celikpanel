@@ -923,6 +923,7 @@ func main() {
 	http.HandleFunc("/api/v1/panel/version", panel.handleVersion)
 	http.HandleFunc(panelUpdateCheckPath, panel.handlePanelUpdateCheck)
 	http.HandleFunc(panelUpdateStartPath, panel.handlePanelUpdateStart)
+	http.HandleFunc(panelUpdateAbandonPath, panel.handlePanelUpdateAbandon)
 	http.HandleFunc(panelUpdateStatusPath, panel.handlePanelUpdateStatus)
 	http.HandleFunc("/api/v1/service/status", panel.handleServiceStatus)
 	http.HandleFunc("/api/v1/service/install", panel.handleServiceInstall)

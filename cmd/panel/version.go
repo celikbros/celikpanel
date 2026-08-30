@@ -97,6 +97,7 @@ func requireKnownAgentCapabilities(capabilities []string, required ...string) er
 		transport.AgentCapabilityDNSEngineSwitchV1:       {},
 		transport.AgentCapabilityMailTLSSyncV2:           {},
 		transport.AgentCapabilitySystemUpdateV1:          {},
+		transport.AgentCapabilitySystemUpdateAbandonV1:   {},
 		transport.AgentCapabilitySecurityAuditV1:         {},
 	}
 	seen := make(map[string]struct{}, len(capabilities))

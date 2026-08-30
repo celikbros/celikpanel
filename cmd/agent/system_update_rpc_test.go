@@ -33,16 +33,22 @@ func (fake *fakeSystemUpdateFetcher) Fetch(_ context.Context, version, platformO
 }
 
 type fakeSystemUpdateBackend struct {
-	floor     *systemUpdateFloor
-	floorErr  error
-	queued    *systemUpdateState
-	queueErr  error
-	status    *systemUpdateState
-	statusErr error
+	floor      *systemUpdateFloor
+	floorErr   error
+	queued     *systemUpdateState
+	queueErr   error
+	status     *systemUpdateState
+	statusErr  error
+	abandoned  *systemUpdateState
+	abandonErr error
 }
 
 func (fake *fakeSystemUpdateBackend) ReadFloor() (*systemUpdateFloor, error) {
 	return fake.floor, fake.floorErr
+}
+func (fake *fakeSystemUpdateBackend) Abandon(_ context.Context, state *systemUpdateState) (*systemUpdateState, error) {
+	fake.abandoned = state
+	return state, fake.abandonErr
 }
 func (fake *fakeSystemUpdateBackend) QueueAndLaunch(_ context.Context, state *systemUpdateState) (*systemUpdateState, error) {
 	fake.queued = state
@@ -101,6 +107,38 @@ func TestSystemUpdateCheckAndStartBindFreshSignedTarget(t *testing.T) {
 	request.TargetCommit = strings.Repeat("d", 40)
 	if _, err := service.start(context.Background(), &request); err == nil {
 		t.Fatal("manifest mismatch accepted")
+	}
+}
+
+func TestSystemUpdateAbandonPublishesExactReceiptAndRejectsLateStart(t *testing.T) {
+	currentCommit := strings.Repeat("c", 40)
+	withSystemUpdateBuild(t, "v1.2.3-alpha.9", currentCommit)
+	manifest := testSystemUpdateManifest()
+	fetcher := &fakeSystemUpdateFetcher{version: manifest.Version, manifest: manifest}
+	backend := &fakeSystemUpdateBackend{floor: &systemUpdateFloor{Sequence: "41", Version: "v1.2.3-alpha.9"}}
+	service := newSystemUpdateService(fetcher, backend, "linux", "amd64")
+	service.now = func() time.Time { return time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC) }
+	request := testSystemUpdateStartRequest(manifest, buildVersion, buildCommit)
+
+	receipt, err := service.abandon(context.Background(), &request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !receipt.Found || receipt.Status != systemUpdateFailed || receipt.RequestID != request.RequestID ||
+		receipt.Error != systemUpdateAbandonedError || backend.abandoned == nil {
+		t.Fatalf("abandon receipt = %#v, state=%#v", receipt, backend.abandoned)
+	}
+	if fetcher.fetchCalls != 0 || backend.queued != nil {
+		t.Fatal("negative receipt fetched or queued release bytes")
+	}
+
+	backend.status = backend.abandoned
+	response, err := service.start(context.Background(), &request)
+	if err == nil || response.Accepted || response.Status != systemUpdateFailed {
+		t.Fatalf("late start response=%#v err=%v", response, err)
+	}
+	if fetcher.fetchCalls != 0 || backend.queued != nil {
+		t.Fatal("late start crossed the durable negative receipt")
 	}
 }
 

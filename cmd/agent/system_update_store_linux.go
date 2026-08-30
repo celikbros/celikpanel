@@ -178,16 +178,17 @@ func newLinuxSystemUpdateBackend() *linuxSystemUpdateBackend {
 }
 
 // acquireSystemUpdateServiceMutationIdleLock closes the check-then-launch
-// race: it owns the same cross-process flock as every service mutation while
-// validating the canonical ledger and package-manager state. The caller keeps
-// the returned lock until systemd has accepted the transient worker.
+// race: it owns the same host -> ledger-publication composite lease as every
+// service mutation while validating the canonical ledger and package-manager
+// state. The caller keeps the returned lock until systemd has accepted the
+// transient worker.
 func acquireSystemUpdateServiceMutationIdleLock() (*serviceMutationFileLock, error) {
 	stateDir := filepath.Clean(serviceMutationStateDirectory())
 	lockPath := filepath.Clean(serviceMutationLockFile())
 	if !filepath.IsAbs(stateDir) || !filepath.IsAbs(lockPath) {
 		return nil, errors.New("service mutation paths are not absolute")
 	}
-	lock, err := acquireServiceMutationFileLock(lockPath)
+	lock, err := acquireServiceMutationHostAndPublicationLocks(lockPath)
 	if err != nil {
 		return nil, fmt.Errorf("acquire global service mutation lock: %w", err)
 	}
@@ -643,6 +644,36 @@ func (backend *linuxSystemUpdateBackend) ReadFloor() (*systemUpdateFloor, error)
 	return &floor, nil
 }
 
+func (backend *linuxSystemUpdateBackend) Abandon(ctx context.Context, state *systemUpdateState) (*systemUpdateState, error) {
+	backend.mu.Lock()
+	defer backend.mu.Unlock()
+	stateLock, err := acquireSystemUpdateStateLock(ctx, backend.stateRoot)
+	if err != nil {
+		return nil, err
+	}
+	defer stateLock.Close()
+	if err := validateSystemUpdateState(state); err != nil {
+		return nil, err
+	}
+	if !systemUpdateStateIsAbandonReceipt(state) {
+		return nil, errors.New("system update abandon receipt is invalid")
+	}
+	existing, err := readSystemUpdateState(backend.stateRoot, state.RequestID)
+	if err == nil {
+		if !stateIdentityMatches(existing, state) {
+			return nil, errors.New("request_id belongs to another system update")
+		}
+		return existing, nil
+	}
+	if !errors.Is(err, errSystemUpdateNotFound) {
+		return nil, err
+	}
+	if err := writeSystemUpdateState(backend.stateRoot, state, backend.writeFault); err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
 func stateIdentityMatches(left, right *systemUpdateState) bool {
 	return left != nil && right != nil && left.RequestID == right.RequestID && left.TargetVersion == right.TargetVersion &&
 		left.TargetCommit == right.TargetCommit && left.TargetSequence == right.TargetSequence && left.TargetOS == right.TargetOS &&
@@ -713,6 +744,9 @@ func (backend *linuxSystemUpdateBackend) QueueAndLaunch(ctx context.Context, sta
 		}
 	}
 	if existingForRequest != nil {
+		if systemUpdateStateIsAbandonReceipt(existingForRequest) {
+			return existingForRequest, errors.New(systemUpdateAbandonedError)
+		}
 		return existingForRequest, errors.New("system update request_id was already consumed")
 	}
 	// The strict idle proof runs immediately before durable queue publication.
@@ -884,6 +918,9 @@ func systemUpdateRootExistsForReconcile(root string) (bool, error) {
 }
 
 func (backend *linuxSystemUpdateBackend) reconcileStateLocked(ctx context.Context, state *systemUpdateState) (*systemUpdateState, error) {
+	if systemUpdateStateIsAbandonReceipt(state) {
+		return state, nil
+	}
 	if backend.unitState == nil {
 		return state, nil
 	}

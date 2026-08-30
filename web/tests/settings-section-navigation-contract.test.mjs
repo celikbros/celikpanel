@@ -57,7 +57,7 @@ test('operational Settings components mount only while their URL section is acti
 
   assert.match(
     updates,
-    /hidden=\{activeID !== 'updates'\}[\s\S]*\{activeID === 'updates' && <PanelUpdateCard \/>\}/,
+    /hidden=\{activeID !== 'updates'\}[\s\S]*\{activeID === 'updates' && <Suspense[^>]*><PanelUpdateCard \/><\/Suspense>\}/,
   );
   assert.match(
     dns,

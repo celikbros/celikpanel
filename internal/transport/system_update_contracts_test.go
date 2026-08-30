@@ -21,4 +21,7 @@ func TestSystemUpdateSecurityIntegersRemainJSONStrings(t *testing.T) {
 	if AgentCapabilitySystemUpdateV1 != "system_update_v1" {
 		t.Fatalf("capability = %q", AgentCapabilitySystemUpdateV1)
 	}
+	if AgentCapabilitySystemUpdateAbandonV1 != "system_update_abandon_v1" {
+		t.Fatalf("abandon capability = %q", AgentCapabilitySystemUpdateAbandonV1)
+	}
 }

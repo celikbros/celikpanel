@@ -205,7 +205,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.ReleaseSystemSQLiteSnapshot
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilitySystemUpdate, `
-		Agent.StartSystemUpdate
+		Agent.AbandonSystemUpdate Agent.StartSystemUpdate
 	`),
 }
 
@@ -376,6 +376,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.InstallRoundcube":            agentRPCDeploymentTimeout,
 	"Agent.InstallService":              agentRPCDeploymentTimeout,
 	"Agent.StartSystemUpdate":           agentRPCDeploymentTimeout,
+	"Agent.AbandonSystemUpdate":         agentRPCMutationTimeout,
 	"Agent.InstallWordPress":            agentRPCDeploymentTimeout,
 	"Agent.IssueLetsEncryptCertificate": agentRPCDeploymentTimeout,
 	"Agent.IssuePanelCertificateV2":     agentRPCDeploymentTimeout,

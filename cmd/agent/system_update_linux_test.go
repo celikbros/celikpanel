@@ -59,6 +59,76 @@ type testSystemUpdateIdleLease struct{ closed bool }
 
 func (lease *testSystemUpdateIdleLease) Close() error { lease.closed = true; return nil }
 
+func TestSystemUpdateAdmissionFailsClosedDuringDNSPublicationWindow(t *testing.T) {
+	root := mutationTestRoot(t)
+	stateDir := filepath.Join(root, "state")
+	lockPath := filepath.Join(root, "service-mutation.lock")
+	if err := initializeServiceMutationLedger(stateDir, lockPath); err != nil {
+		t.Fatalf("initialize service mutation ledger: %v", err)
+	}
+	t.Setenv("CELIKPANEL_AGENT_STATE_DIR", stateDir)
+	t.Setenv("CELIKPANEL_MUTATION_LOCK", lockPath)
+
+	dnsLock, err := acquireServiceMutationHostAndPublicationLocks(lockPath)
+	if err != nil {
+		t.Fatalf("acquire DNS composite lock: %v", err)
+	}
+	publicationLock, err := dnsLock.closeHostRetainingPublication()
+	if err != nil {
+		t.Fatalf("release DNS host lock: %v", err)
+	}
+	if publicationLock == nil {
+		t.Fatal("DNS publication lock was not retained")
+	}
+	defer func() { _ = publicationLock.Close() }()
+
+	type admissionResult struct {
+		lock *serviceMutationFileLock
+		err  error
+	}
+	started := make(chan struct{})
+	result := make(chan admissionResult, 1)
+	go func() {
+		close(started)
+		lock, acquireErr := acquireSystemUpdateServiceMutationIdleLock()
+		result <- admissionResult{lock: lock, err: acquireErr}
+	}()
+	<-started
+
+	var admission admissionResult
+	select {
+	case admission = <-result:
+	case <-time.After(2 * time.Second):
+		t.Fatal("self-update admission did not resolve while DNS retained publication")
+	}
+	if admission.lock != nil {
+		_ = admission.lock.Close()
+		t.Fatal("self-update acquired the mutation lease during DNS terminal publication")
+	}
+	if !errors.Is(admission.err, errServiceMutationHostBusy) {
+		t.Fatalf("self-update admission error = %v, want publication busy", admission.err)
+	}
+
+	hostProbe, err := acquireServiceMutationFileLock(lockPath)
+	if err != nil {
+		t.Fatalf("failed self-update admission retained the host lock: %v", err)
+	}
+	if err := hostProbe.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := publicationLock.Close(); err != nil {
+		t.Fatalf("release DNS publication lock: %v", err)
+	}
+
+	admitted, err := acquireSystemUpdateServiceMutationIdleLock()
+	if err != nil {
+		t.Fatalf("self-update remained blocked after DNS publication: %v", err)
+	}
+	if err := admitted.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSystemUpdateStateCanonicalAtomicAndRejectsSymlinkHardlink(t *testing.T) {
 	root := linuxSystemUpdateTestRoot(t)
 	state := linuxSystemUpdateTestState(strings.Repeat("1", 32))
@@ -437,6 +507,61 @@ func TestSystemUpdateQueueRejectsConcurrentAndLaunchFailureIsDurable(t *testing.
 	if loaded.Status != systemUpdateFailed || !strings.Contains(loaded.Error, "systemd unavailable") {
 		t.Fatalf("failed state = %#v", loaded)
 	}
+}
+
+func TestSystemUpdateAbandonAndQueueAreAtomicallyOrdered(t *testing.T) {
+	t.Run("abandon wins before delayed start", func(t *testing.T) {
+		root := linuxSystemUpdateTestRoot(t)
+		backend := newLinuxSystemUpdateBackend()
+		backend.stateRoot = root
+		launched := 0
+		backend.acquireIdle = func() (systemUpdateIdleLease, error) {
+			return &testSystemUpdateIdleLease{}, nil
+		}
+		backend.launch = func(context.Context, string) error {
+			launched++
+			return nil
+		}
+		queued := linuxSystemUpdateTestState(strings.Repeat("a", 32))
+		receipt := *queued
+		receipt.Status = systemUpdateFailed
+		receipt.Error = systemUpdateAbandonedError
+		if got, err := backend.Abandon(context.Background(), &receipt); err != nil ||
+			!systemUpdateStateIsAbandonReceipt(got) {
+			t.Fatalf("abandon=%#v err=%v", got, err)
+		}
+		if got, err := backend.QueueAndLaunch(context.Background(), queued); err == nil ||
+			!systemUpdateStateIsAbandonReceipt(got) {
+			t.Fatalf("delayed queue=%#v err=%v", got, err)
+		}
+		if launched != 0 {
+			t.Fatalf("delayed start launched %d workers after abandon receipt", launched)
+		}
+	})
+
+	t.Run("start wins before abandon", func(t *testing.T) {
+		root := linuxSystemUpdateTestRoot(t)
+		backend := newLinuxSystemUpdateBackend()
+		backend.stateRoot = root
+		backend.acquireIdle = func() (systemUpdateIdleLease, error) {
+			return &testSystemUpdateIdleLease{}, nil
+		}
+		backend.launch = func(context.Context, string) error { return nil }
+		queued := linuxSystemUpdateTestState(strings.Repeat("b", 32))
+		if _, err := backend.QueueAndLaunch(context.Background(), queued); err != nil {
+			t.Fatal(err)
+		}
+		receipt := *queued
+		receipt.Status = systemUpdateFailed
+		receipt.Error = systemUpdateAbandonedError
+		got, err := backend.Abandon(context.Background(), &receipt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Status != systemUpdateQueued || systemUpdateStateIsAbandonReceipt(got) {
+			t.Fatalf("abandon overwrote accepted start: %#v", got)
+		}
+	})
 }
 
 func TestSystemUpdateQueueReconcilesDeadActiveRequestBeforeNewStart(t *testing.T) {

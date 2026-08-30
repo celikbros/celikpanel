@@ -131,6 +131,63 @@ func TestInitializeServiceMutationLedgerRequiresSharedHostLock(t *testing.T) {
 	}
 }
 
+func TestServiceMutationPublicationLockSerializesHostReleaseWindow(t *testing.T) {
+	root := mutationTestRoot(t)
+	hostLockPath := filepath.Join(root, "service-mutation.lock")
+	composite, err := acquireServiceMutationHostAndPublicationLocks(hostLockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := composite.closeHostRetainingPublication()
+	if err != nil {
+		t.Fatalf("release host while retaining publication: %v", err)
+	}
+	if publication == nil {
+		t.Fatal("composite lock lost its publication lease")
+	}
+
+	hostProbe, err := acquireServiceMutationFileLock(hostLockPath)
+	if err != nil {
+		t.Fatalf("host lock was not released for final receipt publication: %v", err)
+	}
+	if err := hostProbe.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if competing, err := acquireServiceMutationHostAndPublicationLocks(hostLockPath); !errors.Is(
+		err, errServiceMutationHostBusy,
+	) {
+		if competing != nil {
+			_ = competing.Close()
+		}
+		t.Fatalf("competing composite lease entered publication window: %v", err)
+	}
+	hostProbe, err = acquireServiceMutationFileLock(hostLockPath)
+	if err != nil {
+		t.Fatalf("failed composite acquisition retained the host lock: %v", err)
+	}
+	if err := hostProbe.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if publicationProbe, err := acquireServiceMutationFileLock(
+		serviceMutationLedgerPublicationLockFile(hostLockPath),
+	); !errors.Is(err, errServiceMutationHostBusy) {
+		if publicationProbe != nil {
+			_ = publicationProbe.Close()
+		}
+		t.Fatalf("publication lock was not retained after host release: %v", err)
+	}
+	if err := publication.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reacquired, err := acquireServiceMutationHostAndPublicationLocks(hostLockPath)
+	if err != nil {
+		t.Fatalf("composite lease did not reopen after publication: %v", err)
+	}
+	if err := reacquired.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestInitializeServiceMutationLedgerIsCrashAtomicAndNoReplace(t *testing.T) {
 	t.Run("existing final survives", func(t *testing.T) {
 		root := mutationTestRoot(t)

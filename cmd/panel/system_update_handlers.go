@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	panelUpdateCheckPath  = "/api/v1/panel/update/check"
-	panelUpdateStartPath  = "/api/v1/panel/update/start"
-	panelUpdateStatusPath = "/api/v1/panel/update/status"
+	panelUpdateCheckPath   = "/api/v1/panel/update/check"
+	panelUpdateStartPath   = "/api/v1/panel/update/start"
+	panelUpdateAbandonPath = "/api/v1/panel/update/abandon"
+	panelUpdateStatusPath  = "/api/v1/panel/update/status"
 )
 
 var (
@@ -98,7 +99,11 @@ func (p *Panel) requireSystemUpdateAgent(ctx context.Context) error {
 	if strings.TrimSpace(agent.Version) != panelVersion || strings.TrimSpace(agent.Commit) != panelCommit {
 		return errors.New("panel and agent build identities do not match")
 	}
-	if err := requireKnownAgentCapabilities(agent.Capabilities, transport.AgentCapabilitySystemUpdateV1); err != nil {
+	if err := requireKnownAgentCapabilities(
+		agent.Capabilities,
+		transport.AgentCapabilitySystemUpdateV1,
+		transport.AgentCapabilitySystemUpdateAbandonV1,
+	); err != nil {
 		return fmt.Errorf("verify system updater capability: %w", err)
 	}
 	return nil
@@ -340,6 +345,10 @@ func (p *Panel) handlePanelUpdateStart(w http.ResponseWriter, r *http.Request) {
 			writeCodedError(w, http.StatusConflict, "PANEL_UPDATE_REQUEST_CONFLICT", "request_id belongs to a different update", "")
 			return
 		}
+		if existing.Status == "failed" {
+			writeCodedError(w, http.StatusConflict, "PANEL_UPDATE_START_REFUSED", "the update service did not accept this request", "")
+			return
+		}
 		status := http.StatusOK
 		if existing.Status == "queued" || existing.Status == "running" {
 			status = http.StatusAccepted
@@ -404,6 +413,67 @@ func (p *Panel) handlePanelUpdateStart(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 	_ = json.NewEncoder(w).Encode(panelUpdateStartResponse{
 		Accepted: true, RequestID: request.RequestID, Status: reply.Status, Target: request.panelUpdateTarget,
+	})
+}
+
+func (p *Panel) handlePanelUpdateAbandon(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	if r.Method != http.MethodPost {
+		rejectRouteMethod(w, []string{http.MethodPost})
+		return
+	}
+	if !requirePanelUpdateAdmin(w, r) {
+		return
+	}
+	var request panelUpdateStartRequest
+	if err := decodeServiceOperationJSON(w, r, &request); err != nil {
+		writeCodedError(w, http.StatusBadRequest, "PANEL_UPDATE_INVALID_REQUEST", "invalid update abandonment", "")
+		return
+	}
+	if !request.Confirmed || !panelUpdateRequestIDPattern.MatchString(request.RequestID) ||
+		!validPanelUpdateVersion(request.CurrentVersion) ||
+		!panelUpdateCommitPattern.MatchString(request.CurrentCommit) ||
+		!validPanelUpdateTarget(request.panelUpdateTarget) {
+		writeCodedError(w, http.StatusBadRequest, "PANEL_UPDATE_INVALID_CONFIRMATION", "the exact discovered update must be confirmed", "")
+		return
+	}
+	if err := p.requireSystemUpdateAgent(r.Context()); err != nil {
+		writePanelUpdateUnavailable(w, err)
+		return
+	}
+	if !p.serviceMutationMu.TryLock() {
+		writeCodedError(w, http.StatusConflict, "PANEL_UPDATE_BUSY", "another server operation is active", "")
+		return
+	}
+	defer p.serviceMutationMu.Unlock()
+	agentRequest := transport.SystemUpdateAbandonRequest{
+		RequestID:     request.RequestID,
+		TargetVersion: request.Version, TargetCommit: request.Commit,
+		TargetSequence: request.Sequence, TargetOS: request.OS, TargetArch: request.Arch,
+		TargetArchiveSHA256: request.ArchiveSHA256, TargetArchiveSize: request.ArchiveSize,
+		ExpectedCurrentVersion: request.CurrentVersion, ExpectedCurrentCommit: request.CurrentCommit,
+	}
+	var reply transport.SystemUpdateStatusResponse
+	if err := p.callAgentContext(r.Context(), "Agent.AbandonSystemUpdate", &agentRequest, &reply); err != nil {
+		writePanelUpdateAgentFailure(w, err)
+		return
+	}
+	if strings.TrimSpace(reply.Error) != "" && (!reply.Found || reply.Status != "failed") {
+		log.Printf("[panel-update] abandon failed: %s", sanitizePanelUpdateSummary(reply.Error))
+		writeCodedError(w, http.StatusServiceUnavailable, "PANEL_UPDATE_STATUS_UNAVAILABLE", "the update abandonment could not be verified", "")
+		return
+	}
+	target := panelUpdateTargetFromStatus(reply)
+	if !reply.Found || reply.RequestID != request.RequestID || !validPanelUpdateStatus(reply.Status) ||
+		!validPanelUpdateTarget(target) || !samePanelUpdateTarget(request.panelUpdateTarget, target) {
+		writePanelUpdateAgentFailure(w, errors.New("agent returned invalid update abandonment receipt"))
+		return
+	}
+	_ = json.NewEncoder(w).Encode(panelUpdateStatusResponse{
+		Found: true, RequestID: request.RequestID, Status: reply.Status, Target: &target,
+		CreatedAt: reply.CreatedAt, UpdatedAt: reply.UpdatedAt,
+		Summary: sanitizePanelUpdateSummary(reply.Error),
 	})
 }
 

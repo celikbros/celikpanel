@@ -1,10 +1,14 @@
 package transport
 
-const AgentCapabilitySystemUpdateV1 = "system_update_v1"
+const (
+	AgentCapabilitySystemUpdateV1        = "system_update_v1"
+	AgentCapabilitySystemUpdateAbandonV1 = "system_update_abandon_v1"
+)
 
-// V1 is exposed only through Agent.CheckSystemUpdate,
-// Agent.StartSystemUpdate, and Agent.SystemUpdateStatus.
-// There is intentionally no generic download or command RPC.
+// The base V1 capability is exposed only through Agent.CheckSystemUpdate,
+// Agent.StartSystemUpdate, and Agent.SystemUpdateStatus. The independently
+// negotiated abandon capability adds Agent.AbandonSystemUpdate. There is
+// intentionally no generic download or command RPC.
 //
 // Security-sensitive integers stay canonical decimal strings so browser
 // clients never round them through IEEE-754 numbers.
@@ -44,6 +48,11 @@ type SystemUpdateStartResponse struct {
 	Status   string `json:"status,omitempty"`
 	Error    string `json:"error,omitempty"`
 }
+
+// Abandon carries the exact same immutable identity as Start. The agent uses
+// it to publish a durable negative receipt before the browser may conclude
+// that an authorized start was never accepted.
+type SystemUpdateAbandonRequest = SystemUpdateStartRequest
 
 type SystemUpdateStatusRequest struct {
 	RequestID string `json:"request_id"`

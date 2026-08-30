@@ -1945,12 +1945,22 @@ func (p *Panel) enrichAttachedDNSEngineOperation(
 	}
 	job, err := p.statusAgentMutation(ctx, persisted.RequestID)
 	if err != nil || job == nil || !identity.matches(job) ||
-		job.Status != agentMutationFailed ||
 		(operation.Status != "running" && operation.Status != "rolling_back") {
 		return
 	}
-	operation.Status = "recovery_required"
-	operation.LastError = safeDNSEngineOperationReceiptMessage(job.ErrorMessage)
+	switch job.Status {
+	case agentMutationFailed:
+		operation.Status = "recovery_required"
+		operation.LastError = safeDNSEngineOperationReceiptMessage(job.ErrorMessage)
+	case agentMutationSucceeded:
+		if errors.Is(
+			validateAgentMutationSucceededReceipt(job, identity),
+			errAgentMutationRecoveryRequired,
+		) {
+			operation.Status = "recovery_required"
+			operation.LastError = "The DNS engine switch is waiting for privileged recovery finalization."
+		}
+	}
 }
 
 func safeDNSEngineOperationReceiptMessage(message string) string {

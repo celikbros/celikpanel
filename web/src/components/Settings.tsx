@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from '../router';
 import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network, ScanSearch, DownloadCloud } from 'lucide-react';
 import { showToast } from './Toast';
@@ -8,8 +8,9 @@ import { Button, inputClass } from './ui';
 import { PageHeader } from './PageHeader';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { DNSServerSettings } from './DNSServerSettings';
-import { PanelUpdateCard } from './PanelUpdateCard';
 import { SecurityAuditCard } from './SecurityAuditCard';
+
+const PanelUpdateCard = lazy(() => import('./PanelUpdateCard').then((module) => ({ default: module.PanelUpdateCard })));
 
 type SettingsSectionID = 'account' | 'panel' | 'updates' | 'security' | 'dns';
 type SettingsSection = {
@@ -152,7 +153,7 @@ function SettingsWorkspace({
                             <PanelCertificatePanel />
                         </div>
                         <div id="settings-updates-panel" role="tabpanel" aria-labelledby="settings-updates-tab" hidden={activeID !== 'updates'}>
-                            {activeID === 'updates' && <PanelUpdateCard />}
+                            {activeID === 'updates' && <Suspense fallback={null}><PanelUpdateCard /></Suspense>}
                         </div>
                         <div id="settings-security-panel" role="tabpanel" aria-labelledby="settings-security-tab" hidden={activeID !== 'security'}>
                             {activeID === 'security' && <SecurityAuditCard />}

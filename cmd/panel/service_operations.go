@@ -1587,6 +1587,13 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 		recoveryCtx, globalJob,
 	); handled || engineErr != nil {
 		if engineErr != nil {
+			if errors.Is(engineErr, errAgentMutationRecoveryRequired) {
+				log.Printf(
+					"DNS engine startup recovery remains operator-gated: %v",
+					engineErr,
+				)
+				return 0, nil
+			}
 			return 0, engineErr
 		}
 		return 0, nil

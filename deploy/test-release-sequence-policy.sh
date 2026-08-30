@@ -115,6 +115,14 @@ assert_exact_assignment() {
   grep -Fxq "${name}=${value}" "$file" || die "$name does not match the tracked policy"
 }
 
+assert_exact_line() {
+  local file=$1 value=$2 count
+
+  [[ -f "$file" && ! -L "$file" ]] || die "unsafe or missing documentation file: $file"
+  count=$(grep -Fxc -- "$value" "$file" || true)
+  [[ "$count" == 1 ]] || die "expected exactly one documented command in $file: $value"
+}
+
 check_ci_identity() {
   local policy_version=$1 policy_current=$2
   local ref_type=${CELIKPANEL_CI_REF_TYPE-}
@@ -144,6 +152,8 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 repo_root=$(cd -- "$script_dir/.." && pwd -P)
 policy_file="$script_dir/release-sequence-policy"
 bootstrap_file="$repo_root/download-portal/get.sh"
+readme_file="$repo_root/README.md"
+readme_tr_file="$repo_root/README.tr.md"
 
 canonical_positive_int64 1 || die 'positive INT64 minimum was rejected'
 canonical_positive_int64 9223372036854775807 || die 'INT64 maximum was rejected'
@@ -168,12 +178,12 @@ policy_previous=$POLICY_PREVIOUS
 policy_previous_version=$POLICY_PREVIOUS_VERSION
 policy_previous_commit=$POLICY_PREVIOUS_COMMIT
 
-[[ "$policy_version" == v0.1.0-alpha.51 ]] || die 'tracked version must be v0.1.0-alpha.51'
-[[ "$policy_current" == 51 ]] || die 'tracked current sequence must be 51'
-[[ "$policy_previous" == 50 ]] || die 'tracked previous sequence must be 50'
-[[ "$policy_previous_version" == v0.1.0-alpha.50 ]] || die 'tracked previous version must be v0.1.0-alpha.50'
-[[ "$policy_previous_commit" == fe0f6282d7509f9ae4ed874928f148753086706b ]] \
-  || die 'tracked previous commit must be the immutable Alpha50 release commit'
+[[ "$policy_version" == v0.1.0-alpha.52 ]] || die 'tracked version must be v0.1.0-alpha.52'
+[[ "$policy_current" == 52 ]] || die 'tracked current sequence must be 52'
+[[ "$policy_previous" == 51 ]] || die 'tracked previous sequence must be 51'
+[[ "$policy_previous_version" == v0.1.0-alpha.51 ]] || die 'tracked previous version must be v0.1.0-alpha.51'
+[[ "$policy_previous_commit" == 45d01ffb29013b9457180072c3b25ab24d5ff7bd ]] \
+  || die 'tracked previous commit must be the immutable Alpha51 release commit'
 
 fixture_dir=$(mktemp -d "${TMPDIR:-/tmp}/celikpanel-release-policy.XXXXXXXX")
 cleanup() {
@@ -181,11 +191,11 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
-sed 's/^current=51$/current=051/' "$policy_file" > "$fixture_dir/noncanonical"
+sed 's/^current=52$/current=052/' "$policy_file" > "$fixture_dir/noncanonical"
 expect_rejected validate_policy_file "$fixture_dir/noncanonical"
-sed 's/^current=51$/current=50/' "$policy_file" > "$fixture_dir/not-increasing"
+sed 's/^current=52$/current=51/' "$policy_file" > "$fixture_dir/not-increasing"
 expect_rejected validate_policy_file "$fixture_dir/not-increasing"
-sed 's/^current=51$/current=9223372036854775808/' "$policy_file" > "$fixture_dir/overflow"
+sed 's/^current=52$/current=9223372036854775808/' "$policy_file" > "$fixture_dir/overflow"
 expect_rejected validate_policy_file "$fixture_dir/overflow"
 cp -- "$policy_file" "$fixture_dir/extra-field"
 printf '%s\n' 'unexpected=true' >> "$fixture_dir/extra-field"
@@ -193,6 +203,12 @@ expect_rejected validate_policy_file "$fixture_dir/extra-field"
 
 assert_exact_assignment "$bootstrap_file" bootstrap_release_version "$policy_version"
 assert_exact_assignment "$bootstrap_file" bootstrap_release_sequence "$policy_current"
+assert_exact_line "$readme_file" "sh /tmp/celikpanel-get.sh --version $policy_version"
+assert_exact_line "$readme_tr_file" "sh /tmp/celikpanel-get.sh --version $policy_version"
+assert_exact_line "$readme_file" "make dist-sign VERSION=$policy_version SIGNING_KEY=<full-key-fingerprint>"
+assert_exact_line "$readme_tr_file" "make dist-sign VERSION=$policy_version SIGNING_KEY=<tam-anahtar-parmak-izi>"
+assert_exact_line "$readme_file" "gpg --verify dist/celikpanel-$policy_version.tar.gz.asc dist/celikpanel-$policy_version.tar.gz"
+assert_exact_line "$readme_tr_file" "gpg --verify dist/celikpanel-$policy_version.tar.gz.asc dist/celikpanel-$policy_version.tar.gz"
 check_ci_identity "$policy_version" "$policy_current"
 
 git -C "$repo_root" rev-parse --verify --quiet \

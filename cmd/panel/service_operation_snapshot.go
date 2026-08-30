@@ -323,7 +323,7 @@ func canonicalizeKnownLegacySnapshotSchemaMigrations(
 		return nil
 	}
 	if compactSQLiteSchemaWhitespace(actualObjects[legacyIndex].SQL) !=
-		compactSQLiteSchemaWhitespace(canonicalSQL) {
+		compactSQLiteSchemaWhitespace(knownLegacySchemaMigrationsSQL) {
 		return nil
 	}
 

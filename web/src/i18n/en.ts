@@ -311,7 +311,7 @@ export const en = {
     'panelUpdate.accepted': 'The request was accepted; secure status tracking started.',
     'panelUpdate.watch': 'Navigate; updates locked.',
     'panelUpdate.canonicalChecking': 'Checking unfinished updates...',
-    'panelUpdate.interactionLocked': 'Navigation is locked until this update is verified.',
+    'panelUpdate.interactionLocked': 'Navigation is temporarily locked while this update is checked. It unlocks automatically after two minutes; tracking continues.',
     'panelUpdate.ambiguous': 'The start response is uncertain. This request will not be repeated; its exact server status will be tracked.',
     'settings.2fa.title': 'Two-factor authentication',
     'settings.2fa.on': 'On',

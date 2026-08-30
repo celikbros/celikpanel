@@ -4,6 +4,12 @@ import { Button } from './ui';
 import { useI18n } from '../i18n';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import {
+    fetchHostMutationReadiness,
+    runHostMutationAdmission,
+    unverifiedHostMutationReadiness,
+    type HostMutationReadiness,
+} from '../lib/panelUpdateAdmission';
+import {
     createSystemUpdateRequestID,
     systemUpdateResponseHint,
     useSystemUpdateOperation,
@@ -26,6 +32,14 @@ type UpdateCheck = {
 type PanelBuild = {
     version: string;
     commit: string;
+};
+
+export const PANEL_UPDATE_CHECK_TIMEOUT_MS = 8000;
+
+export type PanelUpdateCheckRuntime = {
+    fetch: typeof fetch;
+    setTimeout: (callback: () => void, delay: number) => ReturnType<typeof globalThis.setTimeout>;
+    clearTimeout: (timer: ReturnType<typeof globalThis.setTimeout>) => void;
 };
 
 const commitPattern = /^[a-f0-9]{40}$/;
@@ -59,15 +73,64 @@ async function codedResponseHint(response: Response, t: Translate): Promise<{ co
     };
 }
 
+export async function fetchPanelUpdateCheck(
+    t: Translate,
+    runtime: PanelUpdateCheckRuntime = {
+        fetch: (...args) => fetch(...args),
+        setTimeout: (callback, delay) => globalThis.setTimeout(callback, delay),
+        clearTimeout: (timer) => globalThis.clearTimeout(timer),
+    },
+    externalSignal?: AbortSignal,
+): Promise<UpdateCheck> {
+    const controller = new AbortController();
+    let rejectDeadline: (reason: Error) => void = () => undefined;
+    const deadline = new Promise<never>((_resolve, reject) => { rejectDeadline = reject; });
+    const abortAndReject = () => {
+        controller.abort();
+        rejectDeadline(new Error(t('panelUpdate.checkFailed')));
+    };
+    const timer = runtime.setTimeout(abortAndReject, PANEL_UPDATE_CHECK_TIMEOUT_MS);
+    externalSignal?.addEventListener('abort', abortAndReject, { once: true });
+    if (externalSignal?.aborted) abortAndReject();
+    const requestAndDecode = (async () => {
+        const response = await runtime.fetch('/api/v1/panel/update/check', {
+            cache: 'no-store', credentials: 'same-origin', signal: controller.signal,
+        });
+        if (!response.ok) throw new Error((await codedResponseHint(response, t)).message);
+        const payload = decodeUpdateCheck(await response.json());
+        if (!payload) throw new Error(t('panelUpdate.unsupported'));
+        return payload;
+    })();
+    try {
+        return await Promise.race([requestAndDecode, deadline]);
+    } finally {
+        runtime.clearTimeout(timer);
+        externalSignal?.removeEventListener('abort', abortAndReject);
+    }
+}
+
 export function PanelUpdateCard() {
     const { t } = useI18n();
     const systemUpdate = useSystemUpdateOperation();
     const [currentBuild, setCurrentBuild] = useState<PanelBuild | null>(null);
     const [check, setCheck] = useState<UpdateCheck | null>(null);
     const [checking, setChecking] = useState(false);
+    const [readinessChecking, setReadinessChecking] = useState(false);
+    const [readiness, setReadiness] = useState<HostMutationReadiness | null>(null);
     const [starting, setStarting] = useState(false);
     const [message, setMessage] = useState('');
     const actionInFlight = useRef(false);
+    const lifecycleGeneration = useRef(0);
+    const readinessAbort = useRef<AbortController | null>(null);
+    const updateCheckAbort = useRef<AbortController | null>(null);
+
+    useEffect(() => () => {
+        lifecycleGeneration.current += 1;
+        readinessAbort.current?.abort();
+        readinessAbort.current = null;
+        updateCheckAbort.current?.abort();
+        updateCheckAbort.current = null;
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -84,28 +147,65 @@ export function PanelUpdateCard() {
         return () => { cancelled = true; };
     }, []);
 
+    async function refreshHostMutationReadiness(): Promise<HostMutationReadiness> {
+        const generation = lifecycleGeneration.current;
+        readinessAbort.current?.abort();
+        const controller = new AbortController();
+        readinessAbort.current = controller;
+        setReadinessChecking(true);
+        try {
+            const next = await fetchHostMutationReadiness(undefined, controller.signal);
+            if (lifecycleGeneration.current === generation && !controller.signal.aborted) {
+                setReadiness(next);
+            }
+            return next;
+        } catch {
+            const next = unverifiedHostMutationReadiness();
+            if (lifecycleGeneration.current === generation && !controller.signal.aborted) {
+                setReadiness(next);
+            }
+            return next;
+        } finally {
+            if (readinessAbort.current === controller) readinessAbort.current = null;
+            if (lifecycleGeneration.current === generation) setReadinessChecking(false);
+        }
+    }
+
+    async function retryHostMutationReadiness() {
+        if (actionInFlight.current || systemUpdate.active) return;
+        actionInFlight.current = true;
+        try {
+            await refreshHostMutationReadiness();
+        } finally {
+            actionInFlight.current = false;
+        }
+    }
+
     async function checkForUpdate() {
         if (actionInFlight.current || systemUpdate.active) return;
+        const generation = lifecycleGeneration.current;
+        updateCheckAbort.current?.abort();
+        const controller = new AbortController();
+        updateCheckAbort.current = controller;
         actionInFlight.current = true;
         setChecking(true);
         setMessage('');
         setCheck(null);
+        setReadiness(null);
         try {
-            const response = await fetch('/api/v1/panel/update/check', { cache: 'no-store', credentials: 'same-origin' });
-            if (!response.ok) {
-                throw new Error((await codedResponseHint(response, t)).message);
-            }
-            const payload = decodeUpdateCheck(await response.json());
-            if (!payload) {
-                throw new Error(t('panelUpdate.unsupported'));
-            }
+            const payload = await fetchPanelUpdateCheck(t, undefined, controller.signal);
+            if (lifecycleGeneration.current !== generation || controller.signal.aborted) return;
             setCheck(payload);
             setCurrentBuild({ version: payload.current_version, commit: payload.current_commit });
             setMessage(payload.available ? t('panelUpdate.available') : t('panelUpdate.none'));
+            if (payload.available) await refreshHostMutationReadiness();
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : t('panelUpdate.checkFailed'));
+            if (lifecycleGeneration.current === generation && !controller.signal.aborted) {
+                setMessage(error instanceof Error ? error.message : t('panelUpdate.checkFailed'));
+            }
         } finally {
-            setChecking(false);
+            if (updateCheckAbort.current === controller) updateCheckAbort.current = null;
+            if (lifecycleGeneration.current === generation) setChecking(false);
             actionInFlight.current = false;
         }
     }
@@ -113,30 +213,43 @@ export function PanelUpdateCard() {
     async function startUpdate() {
         const target = check?.target;
         if (actionInFlight.current || systemUpdate.active || !check?.available || !target) return;
-        const requestID = createSystemUpdateRequestID();
-        if (!requestID) {
-            setMessage(t('panelUpdate.randomFailed'));
-            return;
-        }
-        const exactMarker: UpdateMarker = {
-            marker_version: 1,
-            request_id: requestID,
-            current_version: check.current_version,
-            current_commit: check.current_commit,
-            target,
-            created_at: Date.now(),
-        };
-        // The provider durably stores the exact request before this component
-        // is allowed to send the only start POST. Its overlay is mounted above
-        // routing, so navigation cannot unmount the tracker.
+        const generation = lifecycleGeneration.current;
         actionInFlight.current = true;
         setStarting(true);
         setMessage('');
         try {
-            const result = await systemUpdate.start(exactMarker);
-            if (result.kind === 'failed') setMessage(result.message);
+            // This snapshot is advisory and intentionally has a bounded wait.
+            // The backend remains the authoritative admission boundary, so a
+            // fresh check is required even when the earlier UI snapshot was ready.
+            await runHostMutationAdmission(refreshHostMutationReadiness, async () => {
+                // Route changes unmount this card. A readiness response from the
+                // abandoned generation must never create a marker or send POST.
+                if (lifecycleGeneration.current !== generation) return;
+                // Do not create a durable browser marker (and therefore do not mount
+                // the full-page tracker) until the bounded preflight proves idle.
+                const requestID = createSystemUpdateRequestID();
+                if (!requestID) {
+                    setMessage(t('panelUpdate.randomFailed'));
+                    return;
+                }
+                const exactMarker: UpdateMarker = {
+                    marker_version: 1,
+                    request_id: requestID,
+                    current_version: check.current_version,
+                    current_commit: check.current_commit,
+                    target,
+                    created_at: Date.now(),
+                };
+                // The provider durably stores the exact request before this component
+                // is allowed to send the only start POST. Its overlay is mounted above
+                // routing, so navigation cannot unmount the tracker.
+                const result = await systemUpdate.start(exactMarker);
+                if (lifecycleGeneration.current === generation && result.kind === 'failed') {
+                    setMessage(result.message);
+                }
+            });
         } finally {
-            setStarting(false);
+            if (lifecycleGeneration.current === generation) setStarting(false);
             actionInFlight.current = false;
         }
     }
@@ -145,6 +258,14 @@ export function PanelUpdateCard() {
     const active = systemUpdate.active;
     const currentVersion = check?.current_version ?? currentBuild?.version;
     const currentCommit = check?.current_commit ?? currentBuild?.commit;
+    const readinessReason = readiness?.ready === false
+        ? t(`services.mutationReadiness.${readiness.reason}`)
+        : '';
+    const readinessTitle = readinessChecking
+        ? t('services.mutationReadiness.checking')
+        : readiness?.ready === true
+            ? t('panelUpdate.available')
+            : t('services.mutationReadiness.title');
     return (
         <section className="rounded-xl border border-border bg-surface p-5 shadow-card" aria-labelledby="panel-update-title">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -157,7 +278,7 @@ export function PanelUpdateCard() {
                         <p className="mt-1 text-sm text-fg-muted">{t('panelUpdate.description')}</p>
                     </div>
                 </div>
-                <Button type="button" onClick={() => void checkForUpdate()} disabled={checking || active || starting}>
+                <Button type="button" onClick={() => void checkForUpdate()} disabled={checking || active || starting || readinessChecking}>
                     {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     {checking ? t('panelUpdate.checking') : t('panelUpdate.check')}
                 </Button>
@@ -184,8 +305,45 @@ export function PanelUpdateCard() {
             )}
 
             {target && check?.available && !active && (
-                <div className="mt-4">
-                    <Button id="panel-update-start-button" type="button" onClick={() => void startUpdate()} disabled={starting}>
+                <div className="mt-4 space-y-3">
+                    <div
+                        className={`rounded-lg border p-3 text-sm ${readiness?.ready === true
+                            ? 'border-emerald-400/40 bg-emerald-400/10'
+                            : 'border-amber-400/40 bg-amber-400/10'}`}
+                        role="status"
+                        aria-live="polite"
+                    >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex items-start gap-2">
+                                {readinessChecking
+                                    ? <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
+                                    : readiness?.ready === false
+                                        ? <AlertTriangle className="h-4 w-4 text-amber-500" aria-hidden="true" />
+                                        : null}
+                                <div>
+                                    <p className="font-semibold text-fg">{readinessTitle}</p>
+                                    {!readinessChecking && readinessReason && <p className="mt-1 text-fg-muted">{readinessReason}</p>}
+                                </div>
+                            </div>
+                            {readiness?.ready === false && !readinessChecking && (
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => void retryHostMutationReadiness()}
+                                    disabled={starting || readinessChecking}
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                    {t('common.retry')}
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                    <Button
+                        id="panel-update-start-button"
+                        type="button"
+                        onClick={() => void startUpdate()}
+                        disabled={starting || readinessChecking || readiness?.ready !== true}
+                    >
                         {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />}
                         {starting ? t('panelUpdate.starting') : t('panelUpdate.start', { version: target.version })}
                     </Button>

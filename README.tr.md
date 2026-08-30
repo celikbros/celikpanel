@@ -112,10 +112,12 @@ arşivde bulunduğu için hedef sunucuda Go, Node veya Git gerekmez.
 Mevcut alpha arşivi Linux x86_64/amd64 içindir.
 
 Yayımlanan sürümler `https://celikpanel.net` adresindeki herkese açık CelikPanel
-indirme kanalından dağıtılır. Bootstrap betiğini temiz ve desteklenen sunucuda
-root olarak çalıştırın. Betik seçilen değişmez arşivi ve sağlama toplamını HTTPS
-üzerinden indirir; SHA-256 özetini ve arşiv yollarını doğruladıktan sonra
-paketteki kurucuyu çalıştırır.
+indirme kanalından dağıtılır. Herkese açık `get.sh` bootstrap betiği yalnız temiz
+ilk kurulum için desteklenir. Betiği temiz ve desteklenen bir sunucuda root olarak
+çalıştırın. Betik tek bir imzalı sürüme sabitlenmiştir; portal güven kökünü,
+Ed25519 manifestini ve imzasını, tam arşiv boyutunu ve SHA-256 özetini, iç
+sağlama toplamlarını, platformu, commit'i ve arşiv yollarını doğrular ve ancak
+ondan sonra kurucuyu çalıştırır.
 
 ```bash
 # Yayımlanan son sürüm
@@ -124,18 +126,34 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 \
 sh /tmp/celikpanel-get.sh
 
 # Veya tam bir değişmez sürümü sabitleyin
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.1
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.52
 ```
 
+Herkese açık bootstrap betiğini mevcut bir kurulumda indirip çalıştırmayın.
+Mevcut kurulumlar paneldeki kimliği doğrulanmış **İmzalı güncelleme** ekranından
+güncellenir. Bu ekran güvenilir kontrol yolundan tek ve tam bir imzalı sürüm
+kimliği alır; ürün daha önce kurulmuş `/usr/libexec/celikpanel/get.sh` betiğini
+içeriden başlatır.
+
+Ürün denetimindeki worker tek normal istisnadır: kurulu güncelleyiciyi
+`--update --version <tam-sürüm>`, `--require-signed-manifest` ve tam beklenen
+sıra, mevcut taban, commit, arşiv özeti ve boyut ile çağırır. Bu bayraklar dahili
+bir güven sözleşmesidir; operatör tarifi veya rastgele URL, yol ya da sürüm seçme
+yöntemi değildir. Kısmi, belirsiz veya kesilmiş kurulumlarda
+[operasyon kılavuzundaki](docs/OPERATIONS.tr.md) açık kurtarma yordamını izleyin;
+herkese açık bootstrap bir onarım anahtarı değildir.
+
 Kurucu ilk yöneticiyi etkileşimli olarak oluşturur. Yönetici parolasını shell
-geçmişine, dağıtım betiklerine veya sürüm dosyalarına koymayın. Sağlama toplamı
-değişen baytları saptar fakat yayıncı kimliğini kanıtlamaz. Sürüm arşivleri ve
-makinece okunabilir manifestler `https://celikpanel.net/releases/` altında
-kalıcıdır; aşağıdaki imzalama sınırına da bakın.
+geçmişine, dağıtım betiklerine veya sürüm dosyalarına koymayın. Sürüm arşivleri
+ve makinece okunabilir manifestler `https://celikpanel.net/releases/` altında
+kalıcıdır. Her arşiv tam bir dahili `SHA256SUMS` manifesti ve commit/tree
+kökenini de taşır. Yayıncı kimliği ve geri alma önleme yetkisi yalnız HTTPS veya
+yanındaki bir sağlama toplamından değil, aşağıdaki imzalı manifest sözleşmesinden
+gelir.
 
 ## Kaynaktan derleme
 
-Gereksinimler: tam Go 1.26.5, Node ≥ 20. Make kapısı derleyicinin tam sürümünü
+Gereksinimler: tam Go 1.26.5 ve incelenmiş CI/sürüm Node sürümü 24.18.0. Make kapısı derleyicinin tam sürümünü
 doğrular, temiz bir `GOTOOLCHAIN=local` ortamı kullanır ve başka bir Go araç
 zincirini sessizce indirmez.
 
@@ -168,17 +186,26 @@ make dist VERSION=v0.3.0
 sha256sum -c dist/celikpanel-v0.3.0.tar.gz.sha256
 ```
 
-Sürüm operatörü korumalı bir GPG imzalama anahtarını hazırladıktan sonra,
-ayrık imzayı şu şekilde oluşturup doğrular:
+Herkese açık etiketli sürümün kanonik yolu,
+[docs/release-signing.md](docs/release-signing.md) belgesindeki Ed25519 imzalı
+manifest v2 sözleşmesidir. Etiketli CI tam altı değişmez ürün yayımlar: genel
+arşiv ve sağlama toplamı, Linux/amd64 arşivi ve sağlama toplamı, kanonik manifest
+ve onun ham ayrık Ed25519 imzası. Sürüm sırası, sürüme sabitlenmiş bootstrap ve
+imzalı manifest birbiriyle aynı olmalıdır. Korumalı Ed25519 özel anahtarı yalnız
+yetkili imzalama ortamında bulunur; açık doğrulama anahtarı ürün tarafından
+izlenir ve sabitlenir.
+
+`make dist-sign` yalnız isteğe bağlı yerel GPG ürün akışı için kullanılabilir:
 
 ```bash
-make dist-sign VERSION=v0.3.0 SIGNING_KEY=<tam-anahtar-parmak-izi>
-gpg --verify dist/celikpanel-v0.3.0.tar.gz.asc dist/celikpanel-v0.3.0.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.52 SIGNING_KEY=<tam-anahtar-parmak-izi>
+gpg --verify dist/celikpanel-v0.1.0-alpha.52.tar.gz.asc dist/celikpanel-v0.1.0-alpha.52.tar.gz
 ```
 
-Sağlama toplamı bayt bütünlüğünü kanıtlar; yayıncı kimliğini kanıtlamaz.
-Sürüm sahibi CI imzalama kimliğini hazırlayıp doğrulama anahtarını
-yayımlamadan açık veya ticari bir sürüm, imzalı kaynak iddiasında bulunmamalıdır.
+İsteğe bağlı `.asc` dosyası altı kanonik herkese açık üründen biri değildir;
+güncelleme yetkisi vermez, sürüm tabanını ilerletmez ve Ed25519
+manifest/imzasının yerini tutmaz. Sağlama toplamı da bayt bütünlüğünü kanıtlar,
+yayıncı kimliğini değil.
 
 ## Belgeler
 
