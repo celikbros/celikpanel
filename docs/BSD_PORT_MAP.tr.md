@@ -5,7 +5,8 @@
 "FreeBSD portu gerçekte ne kadar iş?" sorusunun somut cevabı — agent'ın OS'e
 dokunan her noktası, FreeBSD karşılığı ve dürüst bir tahmin. Bunu üretmek
 için tek satır kod değiştirilmedi; herhangi bir yatırımdan önce riski ölçer.
-Desteklediği karar için bkz. [DECISIONS.tr.md](DECISIONS.tr.md#d-004).
+Desteklediği karar için bkz.
+[DECISIONS.tr.md](DECISIONS.tr.md#d-004--i̇şletim-sistemi-önce-ubuntu-lts-bsd-seçeneği-korunur-asla-fork).
 
 ## Bugün kanıtlı
 
@@ -88,4 +89,5 @@ Seçeneği koru, henüz harcama. Yukarıdaki dikişleri agent geliştikçe
 **fırsatçı** ayıklamaya değer (OS'e dokunan her yeni özellik ham `exec` değil
 bir helper'dan geçmeli — zaten evin tarzı), ki gerçek bir BSD talebi
 doğduğunda port haftalık bir arka-uç-doldurma işi olsun, asla fork.
-Tam yürütme gerçek talebi bekler — [DECISIONS.tr.md D-004](DECISIONS.tr.md#d-004).
+Tam yürütme gerçek talebi bekler —
+[DECISIONS.tr.md D-004](DECISIONS.tr.md#d-004--i̇şletim-sistemi-önce-ubuntu-lts-bsd-seçeneği-korunur-asla-fork).

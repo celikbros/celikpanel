@@ -1,11 +1,19 @@
 # İşletim El Kitabı (Runbook)
 
-*Son güncelleme: 28 Temmuz 2026 · [English](OPERATIONS.md)*
+*Son güncelleme: 30 Ağustos 2026 · [English](OPERATIONS.md)*
 
 Bu belge CelikPanel sürüm dağıtımı ve geri alma işlemlerinin operasyonel tek
 doğruluk kaynağıdır. Strateji [ROADMAP](../ROADMAP.tr.md)'te, mimari kararlar
 [DECISIONS](DECISIONS.tr.md)'ta, katkı kuralları
 [CONVENTIONS](CONVENTIONS.tr.md)'ta bulunur.
+
+Güncel ürün sürümü Alpha52'dir. İncelenmiş kaynak, imzalı ürünler ve portal
+yayını [RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md](RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md)
+içinde doğrulanmıştır. Ayrı [tarihli canlı durum kaydı](LIVE-STATE-2026-08-30.tr.md),
+iki Alpha52 kurulumunu ve zone öncesi karma DNS çiftini kanıtlar. Tarihsel
+[LIVE-STATE-2026-08-29.tr.md](LIVE-STATE-2026-08-29.tr.md) kaydını koruyun.
+Hatalarda [26 Ağustos olay runbook'unu](INCIDENT-2026-08-26-UPDATE-DNS-RECOVERY.tr.md)
+ve [olay şablonunu](INCIDENT-TEMPLATE.tr.md) kullanın.
 
 ---
 
@@ -115,8 +123,11 @@ olmadan üretim dağıtımı başlatılamaz.
 ### Herkese açık hazır paket yolu (normal kullanıcılar)
 
 Desteklenen etiketli bir sürümde normal kullanıcı Git checkout hazırlamaz ve
-sunucuda derleme yapmaz. `https://celikpanel.net/get.sh` dosyasını HTTPS ile
-indirip root olarak çalıştırır. Betik, mod seçeneği verilmediğinde temiz sunucu
+sunucuda derleme yapmaz. Yeni müşteri temiz sunucuda public
+`https://celikpanel.net/get.sh` bootstrap'ını kullanır. Tamamlanmış kurulumu olan
+müşteri yalnız **Ayarlar → CelikPanel güncellemeleri** üzerinden update yapar;
+bootstrap ve SSH updater mevcut kurulumun rutin yolu değildir. Betik, mod
+seçeneği verilmediğinde temiz sunucu
 ile tamamlanmış CelikPanel kurulumunu ayırır. Yarım veya belirsiz yerleşimler,
 bilerek dar tutulan tek istisna dışında, fail-closed biçimde durmaya devam eder:
 `v0.1.0-alpha.4` panel TLS uyumluluk snapshot kusuruyla kesilmiş güncelleme.
@@ -287,6 +298,25 @@ panel/agent/web/veritabanı durumu, saklama ve geri yükleme sırası scriptleri
 sorumluluğundadır.
 
 ## 5. İki sunuculu dağıtım ve doğrulama
+
+Alpha51→Alpha52 promosyonu normal müşteri panel akışıyla önce Boston, sonra
+Frankfurt sırasıyla tamamlandı. İki terminal receipt, exact build
+`adb25d8ec487dcb76dd95304a551d8cb37565115`, şema 37, floor 52, idle ledger'lar,
+byte-equal kurulu/sunulan sürüm ürünleri ve v6 rollback malzemesi geçti. Buna
+karşın iki snapshot dizin kimliği `from-unknown` içerir; receipt ile kanıtlanan
+önceki Alpha51 kimliğini snapshot kanıtıyla birlikte koruyun ve provenance
+uyarısını R-016 altında izleyin. Sonraki promosyonlarda restart boyunca işlem
+izleyicisini bağlı tutun ve yalnız exact sunucu-otoriteli terminal receipt'i kabul
+edin. İsteği değiştirmeyin, marker düzenlemeyin veya SSH'den yinelemeyin.
+
+Kararlı DNS çifti kasıtlı olarak karmadır: Frankfurt BIND birincil, Boston
+PowerDNS ikincildir. Zone öncesi katalog serisi `1`, boş üyelik ve iki yönde
+source-bound AXFR doğrulandı. Parent delegation ile glue (`ns1` → `72.62.38.15`,
+`ns2` → `2.25.80.4`, TTL `172800`) doğrulandı; DS yoktur. `celikhost.com` child
+zone oluşturulmamıştır: UDP/TCP sorguları `REFUSED`, AXFR `NOTAUTH`, açık
+recursive sorgular `SERVFAIL` döndürür. Child zone'u panelden yayımladıktan sonra
+zone sonrası AXFR, UDP/TCP AA/SOA, PairReady ve açık-recursive matrisini bütünüyle
+çalıştırıp kaydedin.
 
 Önce **Boston**'a dağıtın. Aşağıdaki Boston kontrollerinin tamamı geçmeden
 Frankfurt'a dokunmayın:

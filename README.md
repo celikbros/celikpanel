@@ -218,8 +218,13 @@ integrity, not publisher identity.
 ## Documentation
 
 - [Engineering Handoff](docs/HANDOFF.md) — frozen source baseline, authority order and incoming-team checklist
-- [Dated Live State](docs/LIVE-STATE-2026-08-29.md) — verified, declared and unknown server facts kept separate
+- [Alpha52 Release Evidence](docs/RELEASE-EVIDENCE-v0.1.0-alpha.52.md) — source, tag, CI, signed-manifest, asset and portal proof; live acceptance remains explicit
+- [Current Dated Live State](docs/LIVE-STATE-2026-08-30.md) — bounded Alpha52 live-install and pre-zone DNS evidence, with remaining blockers kept explicit
+- [Historical Dated Live State](docs/LIVE-STATE-2026-08-29.md) — historical pre-Alpha52 snapshot that keeps verified, declared and unknown server facts separate
 - [Risk Register](docs/RISK-REGISTER.md) — explicit engineering and operations risks with exit criteria
+- [August 26 Update/DNS Recovery Incident](docs/INCIDENT-2026-08-26-UPDATE-DNS-RECOVERY.md) — evidence-bounded incident history, causes, remediation and open live acceptance
+- [Incident Template](docs/INCIDENT-TEMPLATE.md) — secret-free UTC timeline, impact, evidence and corrective-action structure
+- [Signed Release Contract](docs/release-signing.md) — Ed25519 manifest, publication, enrollment and anti-rollback authority
 - [CelikPanel AI Agent](docs/CELIKPANEL-AI-AGENT.md) — panel-only scope, confirmation, audit and subscription-gating plan
 - [Component Manifest V2](docs/COMPONENT-MANIFEST-V2.md) — signed SQLite/JSON recipes and platform-adapter boundary
 - [Store](docs/STORE.md) — offering catalogue, entitlement boundary and operator workflow
