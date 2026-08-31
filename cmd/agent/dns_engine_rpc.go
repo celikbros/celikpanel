@@ -1471,18 +1471,73 @@ func exactActiveDNSEngineSwitchRuntimeLocked(
 	qualifier string,
 	binding transport.ServiceMutationBinding,
 ) error {
+	return exactDNSEngineSwitchRuntimeLocked(m, runtime, target, qualifier, binding, false)
+}
+
+// exactGuardedDNSEngineSwitchRuntimeLocked is the proof used ONLY while the
+// finalizing guard is already held. It differs from the strict proof in one
+// way: the owning mutation's registered package worker is an acceptable ledger
+// shape. Admission, abort reproof, and terminal publication keep the strict
+// worker-free proof — a worker at those boundaries is genuinely wrong.
+//
+// This exists because the entire backend switch runs inside the finalizing
+// interval, and installing packages there durably registers apt-get/pacman as
+// the job's sole worker. The strict proof read that legal, expected state as a
+// competing mutation, so an ordinary five-second panel heartbeat landing during
+// the install poisoned the manager and cancelled the switch (kill-matrix run 8,
+// risk R-017).
+//
+// exactGuardedDNSEngineSwitchRuntimeLocked, YALNIZCA sonlanma nöbeti zaten
+// tutulurken kullanılan kanıttır. Katı kanıttan tek farkı: sahibi olan
+// mutasyonun kayıtlı paket işçisi kabul edilebilir bir defter biçimidir.
+// Kabul, iptal yeniden-kanıtı ve uç yayın, katı işçisiz kanıtı korur — o
+// sınırlarda bir işçi gerçekten yanlıştır.
+//
+// Bunun var olma sebebi: arka uç geçişinin tamamı sonlanma aralığında koşar ve
+// orada paket kurmak apt-get/pacman'i işin tek işçisi olarak kalıcı kaydeder.
+// Katı kanıt bu meşru, beklenen durumu rakip bir mutasyon olarak okudu; bu
+// yüzden kurulum sırasında gelen sıradan beş saniyelik panel kalp atışı
+// yöneticiyi zehirleyip geçişi iptal etti (kill-matrix koşu 8, risk R-017).
+func exactGuardedDNSEngineSwitchRuntimeLocked(
+	m *serviceMutationManager,
+	runtime *serviceMutationRuntime,
+	target transport.DNSEngine,
+	qualifier string,
+	binding transport.ServiceMutationBinding,
+) error {
+	return exactDNSEngineSwitchRuntimeLocked(m, runtime, target, qualifier, binding, true)
+}
+
+func exactDNSEngineSwitchRuntimeLocked(
+	m *serviceMutationManager,
+	runtime *serviceMutationRuntime,
+	target transport.DNSEngine,
+	qualifier string,
+	binding transport.ServiceMutationBinding,
+	acceptRegisteredWorker bool,
+) error {
 	if m.active != runtime || runtime.steps != 1 || runtime.lock == nil ||
 		runtime.lock.publication == nil || runtime.job == nil {
 		return errors.New("DNS engine switch lost its exact active runtime ownership")
 	}
 	job := runtime.job
-	if !exactActiveDNSEngineSwitchJob(
+	jobMatches := exactActiveDNSEngineSwitchJob(
 		job,
 		binding.MutationRequestID,
 		binding.MutationOwnerID,
 		target,
 		qualifier,
-	) ||
+	)
+	if !jobMatches && acceptRegisteredWorker {
+		jobMatches = exactActiveDNSEngineSwitchJobWithRegisteredWorker(
+			job,
+			binding.MutationRequestID,
+			binding.MutationOwnerID,
+			target,
+			qualifier,
+		)
+	}
+	if !jobMatches ||
 		m.ledger.ActiveRequestID != job.RequestID ||
 		m.ledger.Jobs[job.RequestID] != job {
 		return errors.New("DNS engine switch lost its exact active ledger identity")
@@ -1612,7 +1667,7 @@ func (m *serviceMutationManager) protectCommittedDNSEngineSwitchFinalizationLock
 		MutationOwnerID:   job.OwnerID,
 	}
 	if runtime.dnsEngineSwitchFinalizing {
-		if err := exactActiveDNSEngineSwitchRuntimeLocked(
+		if err := exactGuardedDNSEngineSwitchRuntimeLocked(
 			m, runtime, target, job.PackageName, binding,
 		); err != nil {
 			return false, err
@@ -1636,7 +1691,7 @@ func (m *serviceMutationManager) protectCommittedDNSEngineSwitchFinalizationLock
 			"committed DNS engine journal differs from the active mutation",
 		)
 	}
-	if err := exactActiveDNSEngineSwitchRuntimeLocked(
+	if err := exactGuardedDNSEngineSwitchRuntimeLocked(
 		m, runtime, target, job.PackageName, binding,
 	); err != nil {
 		return false, err
@@ -1673,6 +1728,63 @@ func exactActiveDNSEngineSwitchJob(
 		strings.TrimSpace(job.WorkerCommand) == "" &&
 		strings.TrimSpace(job.ErrorCode) == "" &&
 		strings.TrimSpace(job.ErrorMessage) == ""
+}
+
+// exactActiveDNSEngineSwitchJobWithRegisteredWorker accepts the owning job's
+// registered worker by SHAPE alone: positive PID, canonical trimmed
+// basename-only command of at most 64 bytes, non-empty start token, and — with
+// the three worker fields cleared — exactly the strict job shape.
+//
+// Deliberately NO liveness probe. Registration can only ever write this sole
+// worker slot while this same runtime is active with one authorized step, so
+// the fields are attributable to this mutation by construction; whether the
+// process still runs is not this proof's question. Probing /proc here would
+// reintroduce the reap window — cmd.Wait() reaps the child before
+// tracker.clear() removes the durable identity, and a guard landing between
+// the two would see a correctly dead worker and poison a healthy switch. A
+// dead-but-registered worker is a legal instant of the ledger's lifecycle;
+// clear() removes it on the very next transition.
+//
+// exactActiveDNSEngineSwitchJobWithRegisteredWorker, sahibi olan işin kayıtlı
+// işçisini YALNIZCA biçimiyle kabul eder: pozitif PID, kırpılmış ve yalnız
+// taban addan oluşan en çok 64 baytlık komut, boş olmayan başlangıç belirteci
+// ve — üç işçi alanı temizlendiğinde — tam olarak katı iş biçimi.
+//
+// Bilerek canlılık sondası YOK. Kayıt, bu tek işçi yuvasını ancak aynı çalışma
+// zamanı tek yetkili adımla etkinken yazabilir; dolayısıyla alanlar yapısal
+// olarak bu mutasyona aittir ve sürecin hâlâ koşup koşmadığı bu kanıtın sorusu
+// değildir. Burada /proc'u yoklamak toplama penceresini geri getirirdi:
+// cmd.Wait() çocuğu, tracker.clear() kalıcı kimliği silmeden önce toplar ve
+// ikisinin arasına düşen bir bekçi, doğru biçimde ölmüş bir işçiyi görüp
+// sağlıklı bir geçişi zehirlerdi. Ölü-ama-kayıtlı işçi, defterin yaşam
+// döngüsünün meşru bir ânıdır; clear() onu bir sonraki geçişte kaldırır.
+func exactActiveDNSEngineSwitchJobWithRegisteredWorker(
+	job *ServiceMutationJob,
+	requestID, ownerID string,
+	target transport.DNSEngine,
+	qualifier string,
+) bool {
+	if job == nil || job.WorkerPID <= 0 {
+		return false
+	}
+	started := strings.TrimSpace(job.WorkerStarted)
+	command := strings.TrimSpace(job.WorkerCommand)
+	if started == "" || job.WorkerStarted != started ||
+		command == "" || job.WorkerCommand != command ||
+		len(command) > 64 || filepath.Base(command) != command {
+		return false
+	}
+	workerFree := cloneServiceMutationJob(job)
+	workerFree.WorkerPID = 0
+	workerFree.WorkerStarted = ""
+	workerFree.WorkerCommand = ""
+	return exactActiveDNSEngineSwitchJob(
+		workerFree,
+		requestID,
+		ownerID,
+		target,
+		qualifier,
+	)
 }
 
 func exactExpiredCancellingDNSEngineSwitchJob(

@@ -1554,6 +1554,31 @@ func (m *serviceMutationManager) heartbeat(
 			"protect committed DNS engine switch from heartbeat mutation: %w", err,
 		))
 	} else if protected {
+		// A protected heartbeat still renews the lease. The heartbeat exists to
+		// prove the panel is alive, and the finalizing interval does not change
+		// that; what it must not do is touch the phase or race the journal, and
+		// it does neither here. Returning without renewal let any package
+		// install longer than the 20-second lease expire mid-switch, after
+		// which the worker-clear write advanced UpdatedAt past LeaseExpiresAt
+		// and the next strict proof poisoned the manager (risk R-017).
+		// Korumalı kalp atışı da kiralamayı yeniler. Kalp atışı panelin canlı
+		// olduğunu kanıtlamak için vardır ve sonlanma aralığı bunu değiştirmez;
+		// yapmaması gereken, faza dokunmak ya da günlükle yarışmaktır — burada
+		// ikisini de yapmaz. Yenilemeden dönmek, 20 saniyelik kiralamadan uzun
+		// süren her paket kurulumunun geçişin ortasında kiralamayı düşürmesine
+		// izin veriyordu; ardından işçi temizliği UpdatedAt değerini
+		// LeaseExpiresAt ötesine taşıyor ve bir sonraki katı kanıt yöneticiyi
+		// zehirliyordu (risk R-017).
+		before := cloneServiceMutationLedger(m.ledger)
+		now := m.now()
+		if !now.Before(runtime.job.DeadlineAt) {
+			return cloneServiceMutationJob(runtime.job), errors.New("service mutation deadline has expired")
+		}
+		runtime.job.UpdatedAt = now
+		runtime.job.LeaseExpiresAt = minMutationTime(now.Add(m.leaseDuration), runtime.job.DeadlineAt)
+		if err := m.persistLedgerMutationLocked(before); err != nil {
+			return cloneServiceMutationJob(runtime.job), err
+		}
 		return cloneServiceMutationJob(runtime.job), nil
 	}
 	if runtime.vpnPeerSyncPublishedPhase != "" {

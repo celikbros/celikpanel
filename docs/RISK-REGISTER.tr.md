@@ -348,6 +348,18 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   Ne kiralamadan uzun süren canlı bir paket kurulumu ne de belirlenimci bir
   toplama-temizleme testi koşuldu. Yama HEAD'de değildir ve bu hâliyle land
   edilmemelidir.
+- Düzeltme uygulandı (31 Ağustos 2026, `fix/alpha52-handoff-acceptance` dalı):
+  sonlanma aralığı kanıtı artık sahibi olan mutasyonun kayıtlı işçisini
+  biçimiyle kabul ediyor — bilerek canlılık sondası olmadan; bu,
+  toplama-temizleme penceresini hoş görmek yerine kökten kaldırıyor. Korumalı
+  kalp atışı erken dönmek yerine kiralamayı yeniliyor ve iki kalıcı işçi
+  geçişi de kiralamayı yalnız iş Running durumundayken yeniliyor; böylece
+  süresi-dolmuş-iptal kanıtının sıralaması korunuyor. Birim ve linux
+  bütünleşme testleri koşu-8 defter biçimini (kayıtlı apt-get, duraklamış
+  kiralama, kalp atışı, süre dolumu, iptal, temizleme) yeniden üretiyor ve
+  geçiyor. Canlı kanıt — gerçek bir düzenekte, üretim temposundaki beş
+  saniyelik kalp atışları altında paket kuran bir geçiş — hâlâ bekliyor ve bu
+  kaydı AÇIK tutuyor.
 
 ### R-018 - BIND ön denetimi standart Arch kök dizinini reddediyor
 

@@ -346,6 +346,17 @@ or executed as-is. There are no open pull requests at this baseline.
   a correctly dead worker and still rejects. Neither a live package install
   longer than the lease nor a deterministic reap-to-clear test has been run.
   The patch is not in HEAD and must not be landed as it stands.
+- Fix implemented (31 August 2026, branch `fix/alpha52-handoff-acceptance`):
+  the finalizing-interval proof now accepts the owning mutation's registered
+  worker by shape — deliberately without a liveness probe, which removes the
+  reap-to-clear window outright rather than tolerating it; a protected
+  heartbeat renews the lease instead of returning early; and both durable
+  worker transitions renew the lease as well, only while the job is Running,
+  so the expired-cancelling proof keeps its ordering. Unit and linux
+  integration tests reproduce the run-8 ledger shape (registered apt-get,
+  stalled lease, heartbeat, expiry, cancellation, clear) and pass. The live
+  proof — a package-installing switch under production five-second heartbeats
+  on a real fixture — remains outstanding and keeps this entry OPEN.
 
 ### R-018 - BIND preflight rejects a stock Arch root directory
 
