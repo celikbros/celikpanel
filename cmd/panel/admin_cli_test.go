@@ -112,12 +112,12 @@ func TestReadAndConfirmPasswordStopsOnInputError(t *testing.T) {
 	}
 }
 
-func TestReadAutomatedPasswordRemainsSingleLine(t *testing.T) {
-	password, err := readAutomatedPassword(bufio.NewReader(strings.NewReader("automated-password\n")))
-	if err != nil {
-		t.Fatalf("readAutomatedPassword returned an error: %v", err)
+func TestRequireInteractiveAdminTerminal(t *testing.T) {
+	if err := requireInteractiveAdminTerminal(true); err != nil {
+		t.Fatalf("terminal input was rejected: %v", err)
 	}
-	if password != "automated-password" {
-		t.Fatalf("password = %q, want automated-password", password)
+	if err := requireInteractiveAdminTerminal(false); err == nil ||
+		!strings.Contains(err.Error(), "requires a terminal") {
+		t.Fatalf("non-terminal error = %v, want explicit refusal", err)
 	}
 }

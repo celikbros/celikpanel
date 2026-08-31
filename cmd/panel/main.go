@@ -455,9 +455,14 @@ func main() {
 	checkWALAwareServiceOperationsIdleFlag := flag.Bool("check-service-operations-idle-wal-aware", false, "Prove that the service operation queue is idle in a running database or a stopped database with a WAL, then exit")
 	checkWALAwarePreLedgerServiceOperationsIdleFlag := flag.Bool("check-pre-ledger-service-operations-idle-wal-aware", false, "Prove that a running pre-ledger database or a stopped pre-ledger database with a WAL is safe to migrate, then exit")
 	createAdmin := flag.Bool("create-admin", false, "Create or update an administrator, then exit / Bir yönetici oluştur ya da güncelle, sonra çık")
+	var adminCredentialsFileFlag inheritedAdminCredentialsFileFlag
+	flag.Var(&adminCredentialsFileFlag, "admin-credentials-file", "Read strict admin credentials JSON from bounded stdin; exact value must be -")
+	var validateAdminCredentialsFileFlag inheritedAdminCredentialsFileFlag
+	flag.Var(&validateAdminCredentialsFileFlag, "validate-admin-credentials-file", "Validate strict admin credentials JSON from bounded stdin without changing panel state; exact value must be -")
 	insecureCookies := flag.Bool("insecure-cookies", false, "Send session cookies without the Secure flag (HTTP-only local dev) / Oturum çerezlerini Secure bayrağı olmadan gönder (yalnızca HTTP yerel geliştirme)")
 	demo := flag.Bool("demo", false, "Development only: seed one account per role and show quick-login credentials on the login screen / Yalnızca geliştirme: her rol için hesap oluştur ve giriş ekranında hızlı-giriş bilgilerini göster")
 	countUsersFlag := flag.Bool("count-users", false, "Print the number of users and exit (used by install.sh) / Kullanıcı sayısını yazıp çık (install.sh kullanır)")
+	countUsersReadOnlyWALAwareFlag := flag.Bool("count-users-read-only-wal-aware", false, "Print the number of usable users from a read-only WAL-aware private snapshot, then exit")
 	checkServiceOperationsIdleFlag := flag.Bool("check-service-operations-idle", false, "Exit successfully only when no queued or running service operation exists / Yalnızca sırada veya çalışan servis işlemi yoksa başarıyla çık")
 	checkPreLedgerServiceOperationsIdleFlag := flag.Bool("check-pre-ledger-service-operations-idle", false, "Verify migration history through version 20 and reject partial service queue objects, then exit / 20. sürüme kadarki migration geçmişini doğrula ve yarım servis kuyruğu nesnelerini reddet, sonra çık")
 	createServiceOperationSnapshotFlag := flag.String("create-service-operation-snapshot", "", "Create a transaction-consistent standalone panel database snapshot at this absolute path, then exit / Bu mutlak yolda işlem tutarlı bağımsız panel veritabanı anlık görüntüsü oluştur, sonra çık")
@@ -470,9 +475,18 @@ func main() {
 	releaseTransactionSnapshotFlag := flag.String("release-transaction-snapshot", "", "Safe snapshot basename recorded by the release transaction / Yayın işleminin kaydettiği güvenli anlık görüntü temel adı")
 	serviceOperationSnapshotSchemaFlag := flag.String("snapshot-schema", "", "Snapshot schema contract: normal or pre-ledger / Anlık görüntü şema sözleşmesi: normal veya pre-ledger")
 	migrateOnlyFlag := flag.Bool("migrate-only", false, "Open the canonical database, apply embedded migrations, and exit before agent or HTTP startup / Kanonik veritabanını aç, gömülü migration'ları uygula ve agent ya da HTTP başlamadan çık")
+	if err := validateAdminCredentialsFileArgumentSpellings(os.Args[1:]); err != nil {
+		log.Fatalf("Invalid admin credentials file argument: %v", err)
+	}
 	flag.Parse()
+	if err := validateAdminCredentialsFileFlags(
+		*createAdmin,
+		adminCredentialsFileFlag,
+		validateAdminCredentialsFileFlag,
+	); err != nil {
+		log.Fatalf("Invalid admin credentials file flags: %v", err)
+	}
 
-	log.Println("Starting CelikPanel Backend...")
 	releaseTransaction := serviceOperationReleaseTransaction{
 		fd:        *releaseTransactionFDFlag,
 		token:     *releaseTransactionTokenFlag,
@@ -498,7 +512,9 @@ func main() {
 			transactionMetadataRequestedByFlags)
 	if err := validatePanelCommandModes(panelCommandModes{
 		createAdmin:                *createAdmin,
+		validateAdminCredentials:   validateAdminCredentialsFileFlag.set,
 		countUsers:                 *countUsersFlag,
+		countUsersReadOnlyWALAware: *countUsersReadOnlyWALAwareFlag,
 		checkIdle:                  *checkServiceOperationsIdleFlag,
 		checkPreLedgerIdle:         *checkPreLedgerServiceOperationsIdleFlag,
 		checkWALAwareIdle:          *checkWALAwareServiceOperationsIdleFlag,
@@ -511,6 +527,21 @@ func main() {
 		insecureCookies:            *insecureCookies,
 	}); err != nil {
 		log.Fatalf("Invalid panel command mode: %v", err)
+	}
+	if validateAdminCredentialsFileFlag.set {
+		if err := validateAdminCredentialsFile(os.Stdin); err != nil {
+			log.Fatalf("Admin credentials file validation failed: %v", err)
+		}
+		return
+	}
+	log.Println("Starting CelikPanel Backend...")
+	if *countUsersReadOnlyWALAwareFlag {
+		count, err := countUsableUsersReadOnlyWALAware(databaseFile())
+		if err != nil {
+			log.Fatalf("count-users-read-only-wal-aware failed: %v", err)
+		}
+		fmt.Println(count)
+		return
 	}
 	if proveSnapshotEquivalenceRequestedByFlags {
 		_, err := validatePreLedgerSnapshotEquivalenceRequest(
@@ -654,7 +685,13 @@ func main() {
 		return
 	}
 	if *createAdmin {
-		if err := runCreateAdmin(database); err != nil {
+		var err error
+		if adminCredentialsFileFlag.set {
+			err = runCreateAdminFromCredentialsFile(database, os.Stdin, os.Stdout)
+		} else {
+			err = runCreateAdmin(database)
+		}
+		if err != nil {
 			log.Fatalf("create-admin failed: %v", err)
 		}
 		return

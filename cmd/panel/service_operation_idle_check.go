@@ -519,7 +519,7 @@ type pinnedSQLiteSidecar struct {
 }
 
 func pinPanelDatabase(databasePath string) (*pinnedPanelDatabase, error) {
-	return pinPanelDatabaseWithWALPolicy(databasePath, false)
+	return pinPanelDatabaseWithWALPolicy(databasePath, false, false)
 }
 
 func pinWALAwarePanelDatabase(databasePath string) (*pinnedPanelDatabase, error) {
@@ -529,10 +529,24 @@ func pinWALAwarePanelDatabase(databasePath string) (*pinnedPanelDatabase, error)
 			errServiceOperationsNotIdle,
 		)
 	}
-	return pinPanelDatabaseWithWALPolicy(databasePath, true)
+	return pinPanelDatabaseWithWALPolicy(databasePath, true, false)
 }
 
-func pinPanelDatabaseWithWALPolicy(databasePath string, allowNonEmptyWAL bool) (*pinnedPanelDatabase, error) {
+func pinNoAtimeWALAwarePanelDatabase(databasePath string) (*pinnedPanelDatabase, error) {
+	if isLinuxProcSelfFDPath(databasePath) {
+		return nil, fmt.Errorf(
+			"%w: WAL-aware panel database proof requires a canonical database path",
+			errServiceOperationsNotIdle,
+		)
+	}
+	return pinPanelDatabaseWithWALPolicy(databasePath, true, true)
+}
+
+func pinPanelDatabaseWithWALPolicy(
+	databasePath string,
+	allowNonEmptyWAL bool,
+	preserveAccessTime bool,
+) (*pinnedPanelDatabase, error) {
 	if isLinuxProcSelfFDPath(databasePath) {
 		return pinPanelDatabaseDescriptor(databasePath)
 	}
@@ -583,7 +597,11 @@ func pinPanelDatabaseWithWALPolicy(databasePath string, allowNonEmptyWAL bool) (
 		pinned.close()
 		return nil, fmt.Errorf("%w: panel database must be a regular file", errServiceOperationsNotIdle)
 	}
-	pinned.file, err = os.Open(pinned.databaseEntryPath())
+	if preserveAccessTime {
+		pinned.file, err = openReadOnlyNoAtime(pinned.databaseEntryPath())
+	} else {
+		pinned.file, err = os.Open(pinned.databaseEntryPath())
+	}
 	if err != nil {
 		pinned.close()
 		return nil, fmt.Errorf("%w: pin panel database: %v", errServiceOperationsNotIdle, err)
@@ -597,7 +615,7 @@ func pinPanelDatabaseWithWALPolicy(databasePath string, allowNonEmptyWAL bool) (
 		pinned.close()
 		return nil, fmt.Errorf("%w: panel database path changed while it was pinned", errServiceOperationsNotIdle)
 	}
-	if err := pinned.pinSidecars(allowNonEmptyWAL); err != nil {
+	if err := pinned.pinSidecars(allowNonEmptyWAL, preserveAccessTime); err != nil {
 		pinned.close()
 		return nil, err
 	}
@@ -696,7 +714,7 @@ func (p *pinnedPanelDatabase) siblingPath(suffix string) string {
 	return p.path + suffix
 }
 
-func (p *pinnedPanelDatabase) pinSidecars(allowNonEmptyWAL bool) error {
+func (p *pinnedPanelDatabase) pinSidecars(allowNonEmptyWAL, preserveAccessTime bool) error {
 	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
 		pathInfo, err := os.Lstat(p.siblingPath(suffix))
 		if errors.Is(err, os.ErrNotExist) {
@@ -710,7 +728,12 @@ func (p *pinnedPanelDatabase) pinSidecars(allowNonEmptyWAL bool) error {
 			return fmt.Errorf("%w: SQLite sidecar %s must be a regular file", errServiceOperationsNotIdle, suffix)
 		}
 
-		file, err := os.Open(p.siblingPath(suffix))
+		var file *os.File
+		if preserveAccessTime {
+			file, err = openReadOnlyNoAtime(p.siblingPath(suffix))
+		} else {
+			file, err = os.Open(p.siblingPath(suffix))
+		}
 		if err != nil {
 			return fmt.Errorf("%w: pin SQLite sidecar %s: %v", errServiceOperationsNotIdle, suffix, err)
 		}
