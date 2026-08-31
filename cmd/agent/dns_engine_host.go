@@ -1383,6 +1383,16 @@ func (hostDNSEngineBackend) Switch(
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	writeJournal := func(journal dnsEngineSwitchJournal) error {
+		return writeDNSEngineSwitchJournalForFaultDriver(
+			dnsEngineSwitchFaultDriverBIND, journal,
+		)
+	}
+	if err := runDNSEngineSwitchPreIntentFaultHook(
+		dnsEngineSwitchFaultDriverBIND, manifest, binding,
+	); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	transferPeer := ""
 	if manifest.Topology == transport.DNSTopologyPaired &&
 		manifest.PairRole == transport.DNSPairRoleSecondary {
@@ -1444,12 +1454,12 @@ func (hostDNSEngineBackend) Switch(
 	if err := verifyBINDConfigMutationPreimage(ctx, configs); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollbackAndJournal := func(rollbackCtx context.Context) error {
 		return runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
-			write: writeDNSEngineSwitchJournal,
+			write: writeJournal,
 			rollback: func() error {
 				return rollbackBINDActivation(
 					rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
@@ -1482,7 +1492,7 @@ func (hostDNSEngineBackend) Switch(
 			return err
 		}
 		journal.Phase = dnsSwitchPhaseTargetStaged
-		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+		if err := writeJournal(journal); err != nil {
 			return err
 		}
 		if manifest.SourceEngine == transport.DNSEnginePowerDNS {
@@ -1501,7 +1511,7 @@ func (hostDNSEngineBackend) Switch(
 			}
 		}
 		journal.Phase = dnsSwitchPhaseSourceStopped
-		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+		if err := writeJournal(journal); err != nil {
 			return err
 		}
 		if err := activateBINDTargetWithVerifiedIdentity(
@@ -1510,7 +1520,7 @@ func (hostDNSEngineBackend) Switch(
 			return err
 		}
 		journal.Phase = dnsSwitchPhaseTargetStarted
-		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+		if err := writeJournal(journal); err != nil {
 			return err
 		}
 		if err := verifyOnlyBINDActive(applyCtx, profile, systemctl); err != nil {
@@ -1549,7 +1559,7 @@ func (hostDNSEngineBackend) Switch(
 			return fmt.Errorf("publish active DNS engine state: %w", err)
 		}
 		journal.Phase = dnsSwitchPhaseTargetVerified
-		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+		if err := writeJournal(journal); err != nil {
 			return err
 		}
 		return nil
@@ -1577,7 +1587,7 @@ func (hostDNSEngineBackend) Switch(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	journal.Phase = dnsSwitchPhaseCommitted
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	return transport.SwitchDNSEngineV1Response{

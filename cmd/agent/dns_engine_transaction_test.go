@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -408,5 +409,280 @@ func TestPDNSAdoptionJournalBindsReadOnlyRuntimeEvidence(t *testing.T) {
 	journal.TargetUnitsBefore[1].ActiveState = "active"
 	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {
 		t.Fatal("adoption journal accepted another active DNS engine")
+	}
+}
+
+func TestDNSEngineSwitchJournalFaultHookBracketsDurableWrite(t *testing.T) {
+	journal := testBINDSwitchJournal(t)
+	var events []string
+	var durable dnsEngineSwitchJournal
+	exists := false
+	err := writeDNSEngineSwitchJournalWithOps(
+		journal,
+		func(encoded []byte) error {
+			events = append(events, "persist")
+			decoded, err := decodeDNSEngineSwitchJournal(encoded)
+			if err != nil {
+				return err
+			}
+			durable, exists = decoded, true
+			return nil
+		},
+		func() (dnsEngineSwitchJournal, bool, error) {
+			events = append(events, "read")
+			return durable, exists, nil
+		},
+		func(point string, got dnsEngineSwitchJournal) error {
+			events = append(events, point)
+			if got.Phase != journal.Phase ||
+				got.MutationRequestID != journal.MutationRequestID ||
+				got.TargetEngine != journal.TargetEngine {
+				t.Fatalf("fault-hook context = %+v, want phase/request/target from %+v", got, journal)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(events, ",")
+	want := strings.Join([]string{
+		dnsEngineSwitchJournalFaultBeforeWrite,
+		"persist",
+		dnsEngineSwitchJournalFaultAfterWrite,
+		"read",
+	}, ",")
+	if got != want {
+		t.Fatalf("journal fault-hook events = %q, want %q", got, want)
+	}
+}
+
+func TestDNSEngineSwitchJournalFaultHookBracketsAcceptedPersistError(t *testing.T) {
+	journal := testBINDSwitchJournal(t)
+	persistErr := errors.New("directory fsync failed after journal rename")
+	var events []string
+	var durable dnsEngineSwitchJournal
+	readCalls := 0
+	err := writeDNSEngineSwitchJournalWithOps(
+		journal,
+		func(encoded []byte) error {
+			events = append(events, "persist")
+			decoded, err := decodeDNSEngineSwitchJournal(encoded)
+			if err != nil {
+				return err
+			}
+			durable = decoded
+			return persistErr
+		},
+		func() (dnsEngineSwitchJournal, bool, error) {
+			readCalls++
+			events = append(events, "read")
+			return durable, true, nil
+		},
+		func(point string, _ dnsEngineSwitchJournal) error {
+			events = append(events, point)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("verified persist error was not accepted: %v", err)
+	}
+	got := strings.Join(events, ",")
+	want := strings.Join([]string{
+		dnsEngineSwitchJournalFaultBeforeWrite,
+		"persist",
+		"read",
+		dnsEngineSwitchJournalFaultAfterWrite,
+	}, ",")
+	if got != want || readCalls != 1 {
+		t.Fatalf("accepted persist-error events = %q reads=%d, want %q/1", got, readCalls, want)
+	}
+}
+
+func TestDNSEngineSwitchJournalFaultHookRejectsPersistErrorMismatch(t *testing.T) {
+	journal := testBINDSwitchJournal(t)
+	mismatch := journal
+	mismatch.Phase = dnsSwitchPhaseSourceStopped
+	persistErr := errors.New("journal persist failed before publication")
+	var events []string
+	err := writeDNSEngineSwitchJournalWithOps(
+		journal,
+		func([]byte) error {
+			events = append(events, "persist")
+			return persistErr
+		},
+		func() (dnsEngineSwitchJournal, bool, error) {
+			events = append(events, "read")
+			return mismatch, true, nil
+		},
+		func(point string, _ dnsEngineSwitchJournal) error {
+			events = append(events, point)
+			return nil
+		},
+	)
+	if !errors.Is(err, persistErr) {
+		t.Fatalf("mismatched persist error = %v, want persist sentinel", err)
+	}
+	got := strings.Join(events, ",")
+	want := strings.Join([]string{
+		dnsEngineSwitchJournalFaultBeforeWrite,
+		"persist",
+		"read",
+	}, ",")
+	if got != want {
+		t.Fatalf("mismatched persist-error events = %q, want %q", got, want)
+	}
+}
+
+func TestDNSEngineSwitchJournalFaultHookFailureOrdering(t *testing.T) {
+	for _, point := range []string{
+		dnsEngineSwitchJournalFaultBeforeWrite,
+		dnsEngineSwitchJournalFaultAfterWrite,
+	} {
+		t.Run(point, func(t *testing.T) {
+			journal := testBINDSwitchJournal(t)
+			injected := errors.New("injected journal boundary failure")
+			persistCalls, readCalls := 0, 0
+			var durable dnsEngineSwitchJournal
+			exists := false
+			err := writeDNSEngineSwitchJournalWithOps(
+				journal,
+				func(encoded []byte) error {
+					persistCalls++
+					decoded, err := decodeDNSEngineSwitchJournal(encoded)
+					if err != nil {
+						return err
+					}
+					durable, exists = decoded, true
+					return nil
+				},
+				func() (dnsEngineSwitchJournal, bool, error) {
+					readCalls++
+					return durable, exists, nil
+				},
+				func(actual string, _ dnsEngineSwitchJournal) error {
+					if actual == point {
+						return injected
+					}
+					return nil
+				},
+			)
+			if !errors.Is(err, injected) {
+				t.Fatalf("journal boundary error = %v, want injected sentinel", err)
+			}
+			wantPersist, wantExists := 0, false
+			if point == dnsEngineSwitchJournalFaultAfterWrite {
+				wantPersist, wantExists = 1, true
+			}
+			if persistCalls != wantPersist || readCalls != 0 || exists != wantExists {
+				t.Fatalf(
+					"boundary %s left persist=%d read=%d exists=%v, want %d/0/%v",
+					point, persistCalls, readCalls, exists, wantPersist, wantExists,
+				)
+			}
+		})
+	}
+}
+
+func TestDNSEngineSwitchJournalAfterWritePreservesRollbackPrecursorSentinel(
+	t *testing.T,
+) {
+	journal := testBINDSwitchJournal(t)
+	persisted := false
+	err := writeDNSEngineSwitchJournalWithOps(
+		journal,
+		func([]byte) error {
+			persisted = true
+			return nil
+		},
+		func() (dnsEngineSwitchJournal, bool, error) {
+			t.Fatal("after-write injection must return before journal readback")
+			return dnsEngineSwitchJournal{}, false, nil
+		},
+		func(point string, _ dnsEngineSwitchJournal) error {
+			if point == dnsEngineSwitchJournalFaultAfterWrite {
+				return fmt.Errorf(
+					"tagged rollback precursor: %w",
+					dnsEngineSwitchRollbackPrecursorError,
+				)
+			}
+			return nil
+		},
+	)
+	if !persisted || !errors.Is(err, dnsEngineSwitchRollbackPrecursorError) {
+		t.Fatalf("persisted=%v error=%v, want durable sentinel", persisted, err)
+	}
+}
+
+func TestDNSEngineSwitchJournalProductionWrapperUsesFaultHook(t *testing.T) {
+	journal := testBINDSwitchJournal(t)
+	injected := errors.New("production wrapper boundary")
+	previous := dnsEngineSwitchJournalFaultHook
+	t.Cleanup(func() { dnsEngineSwitchJournalFaultHook = previous })
+	var seen string
+	dnsEngineSwitchJournalFaultHook = func(
+		driver string,
+		point string,
+		got dnsEngineSwitchJournal,
+	) error {
+		if driver != dnsEngineSwitchFaultDriverBIND {
+			t.Fatalf("production fault-hook driver = %q", driver)
+		}
+		seen = point
+		if got.Phase != journal.Phase ||
+			got.MutationRequestID != journal.MutationRequestID {
+			t.Fatalf("production fault-hook context = %+v", got)
+		}
+		return injected
+	}
+	err := writeDNSEngineSwitchJournalForFaultDriver(
+		dnsEngineSwitchFaultDriverBIND, journal,
+	)
+	if !errors.Is(err, injected) ||
+		seen != dnsEngineSwitchJournalFaultBeforeWrite {
+		t.Fatalf("production wrapper error=%v point=%q", err, seen)
+	}
+}
+
+func TestDNSEngineSwitchPreIntentFaultHookCarriesExactIdentity(t *testing.T) {
+	journal := testBINDSwitchJournal(t)
+	manifest, err := switchJournalManifest(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding := switchJournalBinding(journal)
+	injected := errors.New("pre-intent boundary")
+	previous := dnsEngineSwitchJournalFaultHook
+	t.Cleanup(func() { dnsEngineSwitchJournalFaultHook = previous })
+	var seen dnsEngineSwitchJournal
+	dnsEngineSwitchJournalFaultHook = func(
+		driver string,
+		point string,
+		got dnsEngineSwitchJournal,
+	) error {
+		if driver != dnsEngineSwitchFaultDriverBIND {
+			t.Fatalf("pre-intent driver = %q", driver)
+		}
+		if point != dnsEngineSwitchJournalFaultPreIntent {
+			t.Fatalf("pre-intent point = %q", point)
+		}
+		seen = got
+		return injected
+	}
+	err = runDNSEngineSwitchPreIntentFaultHook(
+		dnsEngineSwitchFaultDriverBIND, manifest, binding,
+	)
+	if !errors.Is(err, injected) {
+		t.Fatalf("pre-intent error = %v, want injected sentinel", err)
+	}
+	if seen.Phase != "pre-intent" ||
+		seen.MutationRequestID != binding.MutationRequestID ||
+		seen.MutationOwnerID != binding.MutationOwnerID ||
+		seen.ManifestQualifier != manifest.Qualifier ||
+		seen.SourceEngine != manifest.SourceEngine ||
+		seen.TargetEngine != manifest.TargetEngine ||
+		seen.Topology != manifest.Topology ||
+		seen.PairRole != manifest.PairRole {
+		t.Fatalf("pre-intent identity = %+v", seen)
 	}
 }
