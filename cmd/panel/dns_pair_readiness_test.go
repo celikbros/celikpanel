@@ -17,11 +17,11 @@ func TestValidateDNSBackendReadinessRejectsPairReadyWithoutManagedRuntime(t *tes
 			Running: true, PairReady: true, Unit: "named.service",
 		},
 	}}
-	if _, _, err := validateDNSBackendReadiness(response); err == nil {
+	if _, _, _, err := validateDNSBackendReadiness(response); err == nil {
 		t.Fatal("PairReady without exact managed runtime was accepted")
 	}
 	response.Engines[1].Managed = true
-	if _, _, err := validateDNSBackendReadiness(response); err != nil {
+	if _, _, _, err := validateDNSBackendReadiness(response); err != nil {
 		t.Fatalf("exact managed PairReady runtime rejected: %v", err)
 	}
 }

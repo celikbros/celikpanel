@@ -740,6 +740,40 @@ func (m *serviceMutationManager) healthErrorLocked() error {
 	return errors.Join(errServiceMutationManagerPoisoned, m.poisoned)
 }
 
+// agentMutationHold reports, as a stable code, why durable mutations are being
+// refused right now — or "" when they are accepted. It is the read-only view a
+// status probe needs, and it deliberately returns a code rather than the
+// underlying error: the cause names files, request identities and host state,
+// and none of that belongs on a wire the panel renders.
+//
+// A manager that could not be constructed at all and one that was poisoned mid
+// flight are different diagnoses. The first means nothing was ever recorded;
+// the second means something may have been published and cannot be proven, which
+// is the state a half-finished handover leaves.
+//
+// agentMutationHold, kalıcı mutasyonların şu anda neden reddedildiğini kararlı
+// bir kodla bildirir; kabul ediliyorsa "" döner. Bir durum yoklamasının ihtiyaç
+// duyduğu salt-okuma görünümüdür ve bilerek altta yatan hatayı değil bir kod
+// döndürür: sebep dosya adları, istek kimlikleri ve host durumu içerir; bunların
+// hiçbiri panelin gösterdiği bir telde yeri olmayan şeylerdir.
+//
+// Hiç kurulamamış bir yönetici ile uçuş sırasında zehirlenmiş bir yönetici
+// farklı teşhislerdir. Birincisi hiçbir şeyin kaydedilmediği, ikincisi bir şeyin
+// yayımlanmış olabileceği ve kanıtlanamadığı anlamına gelir — yarım kalmış bir
+// devralmanın bıraktığı durum budur.
+func agentMutationHold() string {
+	manager := loadedAgentServiceMutationManager()
+	if manager == nil {
+		return transport.MutationHoldLedgerUnavailable
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if manager.healthErrorLocked() != nil {
+		return transport.MutationHoldLedgerAmbiguous
+	}
+	return ""
+}
+
 // Once publication may have happened, memory can no longer be rolled back to
 // a provably matching state. Cancel execution but deliberately retain the host
 // lock and active runtime so no second mutation can begin in this process.

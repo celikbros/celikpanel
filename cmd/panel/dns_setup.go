@@ -912,7 +912,7 @@ func (p *Panel) stageDNSIdentityLocked(
 		writeServerError(w, fmt.Errorf("recheck DNS staging zone count: %w", err))
 		return
 	}
-	runtimes, port53Conflict, err := p.readDNSBackendRuntime(r.Context())
+	runtimes, port53Conflict, _, err := p.readDNSBackendRuntime(r.Context())
 	if err != nil {
 		writeDNSEngineWorkflowRequired(w)
 		return
@@ -1123,7 +1123,7 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if exactUnresolvedDNSEngineState(engineState) {
-		runtimes, port53Conflict, err := p.readDNSBackendRuntime(r.Context())
+		runtimes, port53Conflict, _, err := p.readDNSBackendRuntime(r.Context())
 		if err != nil {
 			writeDNSEngineWorkflowRequired(w)
 			return

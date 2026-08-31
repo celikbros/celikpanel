@@ -201,10 +201,58 @@ type DNSBackendRuntimeState struct {
 	Unit      string    `json:"unit"`
 }
 
+// MutationHold codes. Empty means the agent is accepting durable mutations.
+// These are stable machine codes, never operator text and never an internal
+// error string: the panel maps them to its own wording.
+// MutationHold kodları. Boş değer, agent'ın kalıcı mutasyonları kabul ettiğini
+// bildirir. Bunlar kararlı makine kodlarıdır; asla operatör metni ya da bir iç
+// hata dizesi değildir — panel bunları kendi ifadesine eşler.
+const (
+	// MutationHoldLedgerUnavailable: the durable mutation ledger could not be
+	// brought up at all, so nothing can be recorded and nothing may run.
+	MutationHoldLedgerUnavailable = "ledger_unavailable"
+	// MutationHoldLedgerAmbiguous: a ledger write may or may not have been
+	// published, so the agent refuses every further mutation rather than build
+	// on a state it cannot prove. This is the state a half-finished DNS engine
+	// handover leaves behind.
+	MutationHoldLedgerAmbiguous = "ledger_ambiguous"
+)
+
 type DNSBackendReadinessResponse struct {
 	Engines        []DNSBackendRuntimeState `json:"engines"`
 	Port53Conflict bool                     `json:"port_53_conflict"`
-	Error          string                   `json:"error,omitempty"`
+	// MutationHold names why the agent is refusing durable mutations, or is
+	// empty when it is accepting them.
+	//
+	// It sits on the response rather than on each engine because the hold is
+	// currently process-wide: one ledger and one poison field cover every
+	// mutation kind (vpn_peer_sync, firewall_apply, mail_tls_sync,
+	// panel_certificate_issue, dns_*), so an ambiguous write to that shared
+	// ledger cannot be attributed to one engine. Claiming per-engine isolation
+	// here would promise a containment the agent does not have. Narrowing the
+	// hold to a single slot is D-021 work and depends on the ledger structure,
+	// not on this field.
+	//
+	// Its purpose is to stop the panel misreporting a stuck transaction as a
+	// foreign DNS server: "the panel's own change system is held" and "someone
+	// else installed a DNS server" are opposite diagnoses with opposite fixes.
+	//
+	// MutationHold, agent'ın kalıcı mutasyonları neden reddettiğini adlandırır;
+	// kabul ediyorsa boştur.
+	//
+	// Motor başına değil yanıt üzerinde durur, çünkü tutma şu an süreç
+	// genelindedir: tek bir defter ve tek bir zehir alanı bütün mutasyon
+	// türlerini kapsar, dolayısıyla o ortak deftere yapılan belirsiz bir yazım
+	// tek bir motora atfedilemez. Burada motor başına izolasyon iddia etmek,
+	// agent'ın sahip olmadığı bir sınırlamayı vaat etmek olurdu. Tutmayı tek bir
+	// yuvaya daraltmak D-021 işidir ve bu alana değil defterin yapısına bağlıdır.
+	//
+	// Amacı, panelin takılmış bir işlemi yabancı bir DNS sunucusu diye
+	// bildirmesini engellemektir: "panelin kendi değişiklik sistemi tutuluyor"
+	// ile "başkası bir DNS sunucusu kurmuş" zıt teşhislerdir ve zıt çözümleri
+	// vardır.
+	MutationHold string `json:"mutation_hold,omitempty"`
+	Error        string `json:"error,omitempty"`
 }
 
 type DNSSECRequest struct {

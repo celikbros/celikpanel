@@ -2181,7 +2181,7 @@ func TestDNSEngineUnresolvedRuntimePresentationRequiresExplicitAdopt(t *testing.
 		transport.DNSEnginePowerDNS: {Engine: transport.DNSEnginePowerDNS},
 		transport.DNSEngineBIND:     {Engine: transport.DNSEngineBIND},
 	}
-	status, entries := deriveDNSEnginePresentation(state, fresh, nil)
+	status, entries := deriveDNSEnginePresentation(state, fresh, nil, "")
 	if status != dnsEngineStateUnconfigured || entries[0].Status != "available" {
 		t.Fatalf("fresh presentation=%s %+v", status, entries)
 	}
@@ -2190,7 +2190,7 @@ func TestDNSEngineUnresolvedRuntimePresentationRequiresExplicitAdopt(t *testing.
 		Engine:    transport.DNSEnginePowerDNS,
 		Installed: true, Running: true, Managed: true,
 	}
-	status, entries = deriveDNSEnginePresentation(state, pdnsManaged, nil)
+	status, entries = deriveDNSEnginePresentation(state, pdnsManaged, nil, "")
 	if status != dnsEngineStateUnmanaged ||
 		entries[0].Status != "unmanaged" {
 		t.Fatalf("legacy managed PDNS was implicitly adopted: %s %+v", status, entries)
@@ -2206,7 +2206,7 @@ func TestDNSEngineUnresolvedRuntimePresentationRequiresExplicitAdopt(t *testing.
 			Installed: true, Running: true, Managed: false,
 		},
 	}
-	status, _ = deriveDNSEnginePresentation(state, both, nil)
+	status, _ = deriveDNSEnginePresentation(state, both, nil, "")
 	if status != dnsEngineStateConflict {
 		t.Fatalf("two running backends state=%s", status)
 	}

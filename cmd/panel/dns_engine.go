@@ -241,46 +241,52 @@ func readDNSEngineDBState(ctx context.Context, query dnsZoneStateQuery) (dnsEngi
 	return state, nil
 }
 
+// The mutation hold travels with readiness rather than through a second probe:
+// two round trips can disagree, and a presentation built from a disagreeing pair
+// is exactly the class of bug this file keeps producing.
+// Mutasyon tutması ikinci bir yoklamayla değil hazırlıkla birlikte gelir: iki
+// tur birbiriyle çelişebilir ve çelişen bir çiftten kurulan bir sunum, tam da bu
+// dosyanın üretmeye devam ettiği hata sınıfıdır.
 func validateDNSBackendReadiness(
 	response transport.DNSBackendReadinessResponse,
-) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, error) {
+) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, string, error) {
 	if response.Error != "" || len(response.Engines) != 2 {
-		return nil, false, errors.New("DNS backend readiness is unavailable")
+		return nil, false, "", errors.New("DNS backend readiness is unavailable")
 	}
 	result := make(map[transport.DNSEngine]transport.DNSBackendRuntimeState, 2)
 	for _, runtime := range response.Engines {
 		if !transport.ValidDNSEngine(runtime.Engine) {
-			return nil, false, errors.New("DNS backend readiness contains an unknown engine")
+			return nil, false, "", errors.New("DNS backend readiness contains an unknown engine")
 		}
 		if _, duplicate := result[runtime.Engine]; duplicate {
-			return nil, false, errors.New("DNS backend readiness contains a duplicate engine")
+			return nil, false, "", errors.New("DNS backend readiness contains a duplicate engine")
 		}
 		if runtime.Running && !runtime.Installed ||
 			runtime.Managed && !runtime.Installed ||
 			runtime.PairReady && (!runtime.Installed || !runtime.Running || !runtime.Managed) ||
 			len(runtime.Unit) > 128 ||
 			strings.ContainsAny(runtime.Unit, "\r\n\x00") {
-			return nil, false, errors.New("DNS backend readiness is internally inconsistent")
+			return nil, false, "", errors.New("DNS backend readiness is internally inconsistent")
 		}
 		result[runtime.Engine] = runtime
 	}
 	if _, ok := result[transport.DNSEnginePowerDNS]; !ok {
-		return nil, false, errors.New("PowerDNS readiness is missing")
+		return nil, false, "", errors.New("PowerDNS readiness is missing")
 	}
 	if _, ok := result[transport.DNSEngineBIND]; !ok {
-		return nil, false, errors.New("BIND readiness is missing")
+		return nil, false, "", errors.New("BIND readiness is missing")
 	}
-	return result, response.Port53Conflict, nil
+	return result, response.Port53Conflict, response.MutationHold, nil
 }
 
 func (p *Panel) readDNSBackendRuntime(
 	ctx context.Context,
-) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, error) {
+) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, string, error) {
 	var response transport.DNSBackendReadinessResponse
 	if err := p.callAgentContext(
 		ctx, "Agent.DNSBackendReadiness", &transport.Empty{}, &response,
 	); err != nil {
-		return nil, false, fmt.Errorf("read DNS backend readiness: %w", err)
+		return nil, false, "", fmt.Errorf("read DNS backend readiness: %w", err)
 	}
 	return validateDNSBackendReadiness(response)
 }
@@ -402,11 +408,40 @@ func (p *Panel) dnsEngineDNSSECCount(
 	return count, joined
 }
 
+// mutationHold carries the agent's reason for refusing durable mutations, or ""
+// when it accepts them. It changes one thing here and it is the thing that
+// matters: an engine the panel installed reads as Managed=false while the
+// transaction that would have claimed it is stuck, and without this the screen
+// reports a foreign DNS server. "Our own change system is held" and "someone
+// else installed a DNS server" are opposite diagnoses with opposite fixes, and
+// sending an operator after the second when the first is true is how an
+// afternoon disappears.
+//
+// The status stays inside the existing closed set; only the detail code, which
+// is free-form by contract, carries the correction. Inventing a status here
+// would be rejected by the frontend validator.
+//
+// mutationHold, agent'ın kalıcı mutasyonları reddetme sebebini taşır; kabul
+// ediyorsa "" olur. Burada tek bir şeyi değiştirir ve önemli olan da odur:
+// panelin kurduğu bir motor, onu sahiplenecek işlem takılıyken Managed=false
+// görünür ve bu olmadan ekran yabancı bir DNS sunucusu bildirir. "Kendi
+// değişiklik sistemimiz tutuluyor" ile "başkası bir DNS sunucusu kurmuş" zıt
+// teşhislerdir; birincisi doğruyken operatörü ikincisinin peşine göndermek bir
+// öğleden sonrayı yok eder.
+//
+// Durum mevcut kapalı kümenin içinde kalır; düzeltmeyi, sözleşme gereği serbest
+// biçimli olan detay kodu taşır. Burada yeni bir durum uydurmak, arayüz
+// doğrulayıcısı tarafından reddedilirdi.
 func deriveDNSEnginePresentation(
 	state dnsEngineDBState,
 	runtimes map[transport.DNSEngine]transport.DNSBackendRuntimeState,
 	runtimeErr error,
+	mutationHold string,
 ) (string, []dnsEngineEntry) {
+	unmanagedCode := "unmanaged_dns_detected"
+	if mutationHold != "" {
+		unmanagedCode = "mutations_held"
+	}
 	ids := []transport.DNSEngine{
 		transport.DNSEnginePowerDNS,
 		transport.DNSEngineBIND,
@@ -444,7 +479,7 @@ func deriveDNSEnginePresentation(
 		case runtime.Running:
 			if state.ActiveEngine == "" || !runtime.Managed {
 				entry.Status = "unmanaged"
-				entry.DetailCode = "unmanaged_dns_detected"
+				entry.DetailCode = unmanagedCode
 			} else {
 				entry.Status = "conflict"
 				entry.DetailCode = "active_engine_mismatch"
@@ -452,7 +487,7 @@ func deriveDNSEnginePresentation(
 		case runtime.Installed:
 			if !runtime.Managed {
 				entry.Status = "unmanaged"
-				entry.DetailCode = "unmanaged_dns_detected"
+				entry.DetailCode = unmanagedCode
 			} else {
 				entry.Status = "installed_standby"
 			}
@@ -499,7 +534,7 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	if err != nil {
 		return dnsEngineSnapshot{}, fmt.Errorf("read DNS engine zone counts: %w", err)
 	}
-	runtimes, port53Conflict, runtimeErr := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, mutationHold, runtimeErr := p.readDNSBackendRuntime(ctx)
 	dnssecCount := 0
 	var dnssecErr error
 	// BIND is currently activated only by an exact unsigned-zone switch
@@ -510,7 +545,7 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 		dnssecCount, dnssecErr = p.dnsEngineDNSSECCount(ctx, zones)
 	}
 	presentationState, entries := deriveDNSEnginePresentation(
-		state, runtimes, runtimeErr,
+		state, runtimes, runtimeErr, mutationHold,
 	)
 	if dnssecErr != nil && presentationState != dnsEngineStateSwitching {
 		presentationState = dnsEngineStateDegraded
@@ -599,7 +634,7 @@ func (p *Panel) activeDNSPublisher(
 	if state.ActiveEngine == "" || state.CurrentSwitchID != "" {
 		return dnsPublisherIdentity{}, false, nil
 	}
-	runtimes, port53Conflict, err := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, _, err := p.readDNSBackendRuntime(ctx)
 	if err != nil {
 		return dnsPublisherIdentity{}, false, err
 	}
@@ -2168,7 +2203,7 @@ func (p *Panel) verifyDNSEngineRuntimeTarget(
 	ctx context.Context,
 	target transport.DNSEngine,
 ) error {
-	runtimes, port53Conflict, err := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, _, err := p.readDNSBackendRuntime(ctx)
 	if err != nil {
 		return err
 	}
@@ -2639,7 +2674,7 @@ func (p *Panel) verifyDNSEngineRollbackRuntime(
 	ctx context.Context,
 	persisted persistedDNSEngineSwitch,
 ) error {
-	runtimes, port53Conflict, err := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, _, err := p.readDNSBackendRuntime(ctx)
 	if err != nil {
 		return err
 	}
@@ -2966,6 +3001,15 @@ func (p *Panel) handleDNSEngineSwitch(
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodPost {
 		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	// If startup could not reconcile interrupted service operations, the durable
+	// state this switch would build on is unknown. Refuse with the stored cause
+	// rather than starting a second transaction on top of an unresolved one.
+	// Açılış yarım kalmış servis işlemlerini uzlaştıramadıysa, bu geçişin
+	// üzerine kuracağı kalıcı durum bilinmiyor. Çözülmemiş bir işlemin üstüne
+	// ikincisini başlatmak yerine saklanan sebeple reddet.
+	if !p.requireSubsystemOperational(w, degradedSubsystemServiceOperations) {
 		return
 	}
 	var request dnsEngineSwitchRequest

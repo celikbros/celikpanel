@@ -128,6 +128,18 @@ func (a *Agent) DNSBackendReadiness(_ *transport.Empty, response *DNSBackendRead
 		return nil
 	}
 	readiness.Error = ""
+	// A readiness probe that reports engine state but hides that every mutation
+	// is being refused lets the panel diagnose the wrong thing: an engine the
+	// panel installed reads as Managed=false while the transaction that would
+	// have claimed it is stuck, and the screen says a foreign DNS server was
+	// found. Carry the hold so the panel can tell a stuck transaction from an
+	// intruder.
+	// Motor durumunu bildirip her mutasyonun reddedildiğini gizleyen bir hazırlık
+	// yoklaması, panelin yanlış teşhis koymasına yol açar: panelin kurduğu bir
+	// motor, onu sahiplenecek işlem takılıyken Managed=false görünür ve ekran
+	// yabancı bir DNS sunucusu bulunduğunu söyler. Tutmayı taşı ki panel takılmış
+	// bir işlemi davetsiz bir misafirden ayırabilsin.
+	readiness.MutationHold = agentMutationHold()
 	*response = readiness
 	return nil
 }
