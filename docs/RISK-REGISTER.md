@@ -54,6 +54,15 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-014 | Medium | PARTIALLY MITIGATED / OPEN | Incident template and first incident record exist; external response ownership is not assigned |
 | R-015 | High | OPEN / BLOCKER FOR PUBLIC DNS CUTOVER | Parent delegation and glue are verified; the `celikhost.com` child zone and public authority are absent |
 | R-016 | Medium | OPEN / PROVENANCE WARNING | Both valid v6 snapshots encode an `unknown` source identity although terminal receipts prove the prior Alpha51 commit |
+| R-017 | High | OPEN | A production panel heartbeat deterministically poisons a DNS engine switch that installs packages |
+| R-018 | Medium | OPEN | BIND mask preflight rejects a stock Arch root directory, so BIND cannot be reached on that image |
+| R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
+| R-020 | Low | OPEN | The `cmd/panel` race suite consumes 87 percent of its explicit 30-minute ceiling |
+| R-021 | High | OPEN / BLOCKER FOR ANY DEPLOYMENT | Both deployment hosts present an unrecognised SSH host key and an operating system the inventory does not record |
+| R-022 | Critical | OPEN / BLOCKER FOR EVERY FRESH INSTALL | `install.sh` sources the release transaction guard before any trusted release root exists, so a clean installation exits before it begins |
+| R-023 | High | OPEN / BLOCKER FOR EVERY NON-INTERACTIVE FRESH INSTALL | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
+| R-024 | Medium | OPEN | The installer discards `systemctl enable` failures and never syncs the enable links, so a fresh host can reboot with both units disabled |
+| R-025 | Low | OPEN | The documented `git clone && sudo ./install.sh` journey contradicts the recovery foundation's refusal of user-owned ancestor directories |
 
 ## Detailed risks
 
@@ -299,6 +308,256 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: a reviewed release records the verified installed source
   version/commit in the next v6 snapshot identity and a normal panel update
   proves the corrected provenance without regression.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-017 - A panel heartbeat cancels a package-installing DNS switch
+
+- Evidence: S-1 kill-matrix run 8 (interim report SHA-256
+  `85bde76952fe05ee7a7a47730b8242406bb5e0924aab739a1e8ea091b2798724`).
+  `cmd/agent/dns_engine_rpc.go:1339-1361` marks the mutation finalizing before
+  backend work, while the finalizing predicate at `:1597-1620,1648-1675`
+  requires `WorkerPID == 0` and an empty worker identity.
+  `cmd/agent/service_mutation_worker.go:120-154,202-244` durably registers the
+  package worker, and `cmd/panel/service_mutation_agent.go:28,793-804`
+  heartbeats every five seconds. A heartbeat landing inside that valid
+  registered interval fails the predicate, poisons the manager, cancels the
+  operation, and then denies rollback worker registration.
+- Impact: a DNS engine switch that has to install packages - the ordinary case
+  on a fresh host - can be cancelled by the panel's own liveness check.
+  Conditioned on the overlap the rejection is deterministic, not intermittent.
+  Run 8 left an install-ownership receipt and a leased worker identity with no
+  DNS state and no journal: residue that is invisible to every existing check.
+- Immediate control: none available in the product. Suppressing or delaying the
+  heartbeat is not a control - the twenty-second lease
+  (`cmd/agent/service_mutation_rpc.go:39`) expires through the same guard
+  (`:1424-1443`), so the failure simply moves to lease expiry.
+- Exit criteria: the finalizing predicate distinguishes a competing mutation
+  from the owning mutation's own registered worker, a bounded worker-aware
+  guard passes review, and a package-installing switch completes under a
+  production-cadence heartbeat on a live fixture.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+- S-2 update: a review-only worker-aware guard was written and tested
+  (`artifacts/s2-vm-acceptance/p1/`), then rejected by its own author as unsafe
+  to land. Two ordering defects remain underneath it: a protected heartbeat
+  returns before generic lease renewal, so a worker clear can advance
+  `UpdatedAt` past the original twenty-second lease and leave
+  `LeaseExpiresAt < UpdatedAt`; and `cmd.Wait()` reaps the child before
+  `tracker.clear()` removes the durable worker, so a guard in that window sees
+  a correctly dead worker and still rejects. Neither a live package install
+  longer than the lease nor a deterministic reap-to-clear test has been run.
+  The patch is not in HEAD and must not be landed as it stands.
+
+### R-018 - BIND preflight rejects a stock Arch root directory
+
+- Evidence: S-1 kill-matrix run 6. `cmd/agent/dns_engine_bind_mask_linux.go`
+  applies the exact `bindManagedRootMode` expectation 0755 while walking the
+  mask parent chain, including `/`; the official Arch image presents `/` as
+  0555. The request cannot reach even the intent journal write. Other relevant
+  parents were 0755, so this is a single specific expectation rather than broad
+  fixture corruption.
+- Impact: the BIND engine is unreachable on a stock Arch installation. Arch is a
+  required acceptance distribution under OPERATIONS.md section 3, so this also
+  blocks part of the release matrix.
+- Immediate control: do not `chmod` the root directory to obtain a passing run.
+  Doing so conceals the rejection and makes the fixture unrepresentative.
+- Exit criteria: a written determination of whether 0755 on `/` is load-bearing
+  for the mask policy or an expectation that is simply wrong for a normal Linux
+  root, followed by the corresponding fix or documented distribution limit.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+- S-2 determination: `0755` on `/` is **not** load-bearing for this operation.
+  The mutation descends to a verified `/etc/systemd/system` and calls
+  `systemctl mask`; it never creates, renames or removes an entry directly
+  under `/`. The properties actually needed - root ownership, no unsafe ACL or
+  symlink escape, search permission, no group/other write - hold at `0555` as
+  well as `0755`. The defect is policy conflation: `bindManagedRootMode` serves
+  both managed directories and pre-existing filesystem trust anchors. A fix
+  should give ancestor trust anchors their own policy rather than loosen the
+  managed-root constant. Existing tests force their synthetic mask parent to
+  0755 and only assert rejection of 0700, so the stock Arch shape is uncovered.
+
+### R-019 - An adopted PowerDNS is not a switch-ready BIND source
+
+- Evidence: S-1 kill-matrix run 5. Production `pdns-adopt` is deliberately
+  read-only and therefore does not create CelikPanel's private synchronization
+  tables, while the immediate BIND handoff verifies its source through
+  `celikpanel_dns_zone_sync_v3_receipts`. The handoff failed because that table
+  did not exist.
+- Impact: an operator who adopts an existing external PowerDNS and later
+  switches to BIND through the panel may be unable to complete that switch. The
+  customer-facing consequence is not yet confirmed and is the first thing to
+  establish.
+- Immediate control: none. Do not hand-write the private tables; that would
+  invalidate any baseline built on top of them.
+- Exit criteria: the customer-facing consequence is established in writing;
+  if reachable through the panel, adoption either produces a switch-ready
+  source through unchanged `Agent.ConfigurePowerDNSSQLite` and
+  `Agent.SyncDNSZoneV3`, or the handoff stops requiring what adoption cannot
+  provide.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+- S-2 determination: the consequence is customer-facing and confirmed. An
+  administrator can adopt a valid existing PowerDNS, see it become the managed
+  active engine, and then be permanently unable to switch it to BIND; every
+  unchanged retry fails before the intent journal while PowerDNS keeps serving.
+  Fail-closed, no outage, but the advertised engine-handover operation is
+  unavailable and the customer is stranded on PowerDNS. A later single-zone
+  mutation can lazily create the schema and one receipt but cannot reliably
+  repair every adopted zone. Adoption tests mask this because their "external"
+  fixture calls the normal initializer and pre-creates the private receipt
+  schema. Warrants an engineering defect and a support known-issue entry.
+
+### R-020 - The panel race suite is close to its timeout ceiling
+
+- Evidence: `go test ./cmd/panel/ -race -count=1 -timeout 30m` returned `ok` in
+  1574.958s of an 1800s ceiling on Debian 13 WSL2 at commit
+  `f243304d1aadc94c0f26342d2d3270902ad43d4b`, leaving 225.042s of margin.
+- Impact: on a slower host the suite exceeds the ceiling and fails as a timeout
+  rather than as a test failure, which reads as a hang and costs disproportionate
+  investigation time.
+- Immediate control: keep the explicit `-timeout 30m`; the default would be
+  worse. Report the elapsed time in every acceptance run so the trend is visible.
+- Exit criteria: either the suite's runtime is reduced, or the ceiling is raised
+  with a recorded rationale and a measured margin on the slowest supported
+  acceptance host.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-021 - Deployment host identity does not match the inventory
+
+- Evidence: on 31 August 2026 both deployment targets presented an SSH host key
+  that differs from the recorded one, and an SSH banner naming an operating
+  system the inventory does not record: `2.25.80.4` is recorded as Debian 13 and
+  reports Ubuntu, `72.62.38.15` is recorded as Arch and reports Debian 13. No
+  Arch host is currently visible. The observed fingerprints are held by the
+  operator and are deliberately not recorded here, because an unverified
+  fingerprint written into this register would later be mistaken for a trusted
+  baseline.
+- Impact: the identity of both production-shaped hosts is unestablished. A host
+  key change is consistent with a rebuild, but an operating system change is
+  not explained by the clean-server rule alone, and the alternative explanation
+  is that the addresses now resolve to different machines. Separately, the
+  required Arch acceptance host is unaccounted for.
+- Immediate control: no deployment, no update and no configuration change on
+  either address. Read-only diagnosis only, and only after the operator has
+  confirmed the presented host keys out of band. Acceptance VMs must be
+  disposable machines under the team's own control.
+- Exit criteria: the operator confirms each host key against provider console
+  or on-host evidence, the recorded operating system for each address is
+  corrected or the address is retired, and an Arch acceptance host exists.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-022 - Fresh installation cannot start
+
+- Evidence: S-2 acceptance, disposable Debian 13 and Arch VMs, commit
+  `f243304d1aadc94c0f26342d2d3270902ad43d4b`. Both exited 1 with the single
+  error `trusted release root is missing while sourcing release guard`, and
+  `/opt/celikpanel`, `/var/lib/celikpanel`, `/etc/celikpanel` and both unit
+  files remained absent. Acceptance report SHA-256
+  `7126f122e815ddda59ba7d8dd060b74c937c0bb7ab61d9a18ec93734d9a46eb3`.
+  `install.sh:128` computes `SRC` and `:131` sources
+  `deploy/release-transaction-guard.sh`, whose check at `:16-20` accepts only
+  `TRUSTED_RELEASE_ROOT` or `CELIKPANEL_TRUSTED_RELEASE_ROOT`. The fresh path
+  first assigns `TRUSTED_RELEASE_ROOT=$SRC` at `install.sh:519`, inside
+  `prepare_fresh_release_transaction_foundation()`, which is reached far later.
+  `set -euo pipefail` at `:23` turns the guard's `return 1` into an exit.
+  `download-portal/get.sh:1057-1063` hands the installer six
+  `CELIKPANEL_FIRST_INSTALL_*` values and neither root variable; the file
+  contains no reference to either.
+- Scope: not introduced by the Alpha53 candidate. Base commit `0a5e849` carries
+  the identical ordering at the same line numbers, and the ordering dates to
+  `45d01ff` (Alpha51 recovery hardening, 28 August 2026). The three files are
+  byte-unchanged across the candidate branch.
+- Impact: no new customer can install the product by any documented route -
+  neither the public `get.sh` journey nor the direct `install.sh` invocation.
+  It went unnoticed because both live hosts reached Alpha52 through an
+  Alpha51 update; the existing Alpha52 evidence covers updates, not a clean
+  installation. Update and rollback paths are unaffected: they export
+  `CELIKPANEL_TRUSTED_RELEASE_ROOT` before invoking the installer
+  (`bootstrap-update.sh:389`).
+- Immediate control: none. Do not instruct anyone to export a trusted-root
+  variable by hand as a workaround; the guard exists to reject a root the
+  caller has not verified, and hand-setting it defeats exactly the property it
+  protects.
+- Exit criteria: a fresh installation completes on Debian 13, Ubuntu 24.04 and
+  current Arch from both the public signed `get.sh` journey and the documented
+  direct invocation, with the guard still rejecting a release root the caller
+  has not verified; and an acceptance test covers the bootstrap-to-installer
+  entry boundary, which static and extracted-function tests did not reach.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+- S-3 update: the entry-boundary defect itself is repaired and proven on local
+  branch `fix/r-022-fresh-install` (commit `7fd5b30b`, parent exactly
+  `0a5e8495…`): the signed journey now passes the verified extraction root
+  from `get.sh`, a direct non-apply invocation falls back to its canonical
+  installer directory, apply-only still refuses a missing inherited root, and
+  the guard file is byte-identical at base and candidate. A new cross-script
+  entry-boundary contract test fails on the base and passes with the fix, and
+  runs in CI. The branch is unpushed and awaits operator review. Fresh install
+  as a whole remains broken behind it - see R-023 - so this entry stays OPEN
+  until the fix lands on `main` and a complete green install exists.
+
+### R-023 - A skipped first admin turns into a panel restart loop
+
+- Evidence: S-3 acceptance, six valid fresh-install journeys on disposable
+  Debian 13, Ubuntu 24.04 and Arch VMs (report SHA-256
+  `7126…` superseded; S-3 manifest
+  `815bf4adbf71c89f505d09293d3020b1964171485f900ab20e28089ec33eec09`). All six
+  failed with one deterministic chain: `install.sh:1403` returns from
+  `ensure_first_administrator` immediately under `SKIP_ADMIN=1`; migration
+  `006_drop_placeholder_admin.sql` removes the placeholder administrator; the
+  panel counts zero users and refuses to serve wide open
+  (`cmd/panel/main.go` zero-user gate); `Restart=on-failure` turns that refusal
+  into a restart loop; the installer exits before writing
+  `/etc/celikpanel/install.complete`.
+- Scope: pre-existing on `main`; present since the zero-user gate (3 July 2026)
+  and migration 006 coexist with `SKIP_ADMIN`. Not introduced by any candidate
+  branch. The zero-user refusal itself is correct and must stay: a panel with
+  no users must not serve.
+- Impact: there is no working non-interactive fresh installation. `SKIP_ADMIN=1`
+  is a documented installer option, the apply-only contract requires it
+  (`install.sh` apply-only validation), and the historical deployment recipe
+  used it. The interactive journey depends on `--create-admin`, which reads the
+  terminal (`cmd/panel/admin_cli.go:27,133`) and has no non-interactive mode,
+  so automation cannot create the first administrator at all. The interactive
+  TTY journey is unproven.
+- Immediate control: do not use `SKIP_ADMIN=1` for a fresh installation. After
+  an affected install, run `--create-admin` as the service user and restart the
+  panel; the loop clears once one user exists.
+- Exit criteria: a fresh install with `SKIP_ADMIN=1` refuses early - before any
+  host mutation - with a clear message instead of ending in a restart loop; a
+  documented, safe non-interactive first-administrator mechanism exists for
+  automation; the interactive journey is proven on a real TTY; and the six S-3
+  journeys pass end to end.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-024 - Unit enablement is fail-open and unsynced
+
+- Evidence: S-3, Arch signed-public journey. After a diagnostic reboot both
+  units were disabled and inactive, while Debian and Ubuntu brought the agent
+  back. `install.sh` discards errors from both `systemctl enable` calls
+  (`>/dev/null 2>&1 || true`) and proves only same-boot activity; the enable
+  links are never explicitly synced before the panel failure, and the harness
+  stopped the VM abruptly. The evidence proves persistence loss and fail-open
+  enable handling; it cannot distinguish a failed enable from an unsynced link.
+- Impact: a fresh host can reboot into nothing serving, with the installer
+  having reported the services as running.
+- Immediate control: after any install, verify `systemctl is-enabled` for both
+  units before trusting a reboot.
+- Exit criteria: enable failures are fatal to the installer, the links are
+  durably synced before success is reported, and a reboot test proves both
+  units return on every supported distribution.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-025 - The clone-and-install claim contradicts the root-chain policy
+
+- Evidence: S-3. `install.sh:1715-1721` documents that
+  `git clone && sudo ./install.sh` works on a stock system, while the release
+  recovery foundation rejects a release below a user-owned ancestor - which is
+  exactly what a clone under `/home/<user>` is. The S-3 harness hit this
+  refusal and had to restage under root-owned protected storage.
+- Impact: the documented developer journey fails on the policy the product
+  itself enforces. Whichever is right, the other must change.
+- Immediate control: stage direct installs below a root-owned directory.
+- Exit criteria: either the documentation drops the home-directory claim and
+  states the staging requirement, or the policy deliberately admits a defined
+  fresh-install staging shape; decided in writing, not by drift.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
