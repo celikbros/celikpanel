@@ -82,6 +82,7 @@ jobs:
           [void][scriptblock]::Create((Get-Content -LiteralPath deploy/publish-download-portal.ps1 -Raw))
       - run: sudo env PATH=$PATH GOTOOLCHAIN=local bash deploy/test-signed-release-manifest-contract.sh
       - run: bash deploy/test-first-install-signed-trust-contract.sh
+      - run: sudo bash deploy/test-fresh-install-entry-boundary-contract.sh
       - run: sudo bash deploy/test-release-foundation-root-contract.sh
       - run: sudo bash deploy/test-signed-release-enrollment-contract.sh
       - run: bash deploy/test-release-updater-rollback-contract.sh

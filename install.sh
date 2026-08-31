@@ -127,6 +127,14 @@ esac
 
 SRC="$(cd "$(/usr/bin/dirname "$(/usr/bin/readlink -f "$0")")" && pwd -P)"
 PANEL_TLS_DIR="$DATA_DIR/tls"
+# Keep inherited release authority byte-for-byte so the guard can reject an
+# alias or sibling. A direct fresh install has no earlier verifier, so its
+# canonical installer directory is the first authority. Apply-only must still
+# require the update caller's inherited root and never take this fallback.
+TRUSTED_RELEASE_ROOT=${TRUSTED_RELEASE_ROOT:-${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}}
+if [[ -z "$TRUSTED_RELEASE_ROOT" && "$APPLY_ONLY" -eq 0 ]]; then
+    TRUSTED_RELEASE_ROOT=$SRC
+fi
 # shellcheck source=deploy/release-transaction-guard.sh
 source "$SRC/deploy/release-transaction-guard.sh"
 # shellcheck source=deploy/release-recovery-foundation.sh

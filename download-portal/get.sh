@@ -1054,7 +1054,8 @@ if [ "$operation" = install ]; then
     "Installing CelikPanel $version from verified archive $archive" \
     "CelikPanel $version doğrulanmış $archive arşivinden kuruluyor"
   cd "$extracted_root"
-  CELIKPANEL_FIRST_INSTALL_TRUST=1 \
+  CELIKPANEL_TRUSTED_RELEASE_ROOT="$extracted_root" \
+    CELIKPANEL_FIRST_INSTALL_TRUST=1 \
     CELIKPANEL_FIRST_INSTALL_PUBLIC_KEY_FILE="$signed_public_key_path" \
     CELIKPANEL_FIRST_INSTALL_SEQUENCE="$signed_release_sequence" \
     CELIKPANEL_FIRST_INSTALL_VERSION="$version" \
