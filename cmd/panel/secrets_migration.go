@@ -2,11 +2,40 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
 	"github.com/alicelik/celikpanel/internal/auth"
 	"github.com/alicelik/celikpanel/internal/secrets"
+)
+
+// errSealedSecretUnreadable marks the one migration failure that is a property
+// of the *pair* (this database, this secret.key) rather than of the data: an
+// already-sealed value that will not open. Decrypt returns unprefixed legacy
+// plaintext unchanged, so this can only mean the key does not belong to these
+// rows — the shape a restore without its secret.key takes.
+//
+// It stays an error, and the migration still commits nothing: sealing the
+// remaining plaintext rows under a key that cannot read the existing ones is
+// exactly the half-and-half state this file exists to prevent. What changes is
+// the caller's response — startup degrades the subsystem instead of exiting,
+// because a panel that cannot boot cannot be used to re-enter the credentials
+// it is complaining about.
+//
+// errSealedSecretUnreadable, veriye değil *çifte* (bu veritabanı, bu
+// secret.key) ait olan tek göç hatasını işaretler: açılmayan, zaten mühürlü bir
+// değer. Decrypt öneksiz eski düz metni olduğu gibi döndürdüğü için bu yalnızca
+// anahtarın bu satırlara ait olmadığı anlamına gelir — secret.key'siz bir geri
+// yüklemenin aldığı biçim.
+//
+// Hata olarak kalır ve göç yine hiçbir şeyi commit etmez: mevcutları okuyamayan
+// bir anahtarla kalan düz metin satırları mühürlemek, tam da bu dosyanın
+// engellemek için var olduğu yarı-yarıya durumdur. Değişen, çağıranın yanıtı —
+// açılış, süreçten çıkmak yerine alt sistemi kısıtlar; çünkü açılamayan bir
+// panel, şikâyet ettiği kimlik bilgilerini yeniden girmek için kullanılamaz.
+var errSealedSecretUnreadable = errors.New(
+	"a sealed secret could not be opened with the current key",
 )
 
 // encryptLegacyDBPasswords seals legacy database-server root passwords and
@@ -57,7 +86,10 @@ func (p *Panel) encryptLegacyDBPasswords(ctx context.Context) error {
 		plain, err := p.secrets.Decrypt(stored)
 		if err != nil {
 			rows.Close()
-			return fmt.Errorf(`validate database %s credential %d: %w`, kind, id, err)
+			return fmt.Errorf(
+				`validate database %s credential %d: %w: %w`,
+				kind, id, errSealedSecretUnreadable, err,
+			)
 		}
 		if len(plain) == 0 {
 			rows.Close()
@@ -152,7 +184,10 @@ func (p *Panel) encryptLegacyTOTPSecrets(ctx context.Context) error {
 		plain, err := p.secrets.Decrypt(*stored)
 		if err != nil {
 			rows.Close()
-			return fmt.Errorf("migrate TOTP secret for user %d: %w", id, err)
+			return fmt.Errorf(
+				"migrate TOTP secret for user %d: %w: %w",
+				id, errSealedSecretUnreadable, err,
+			)
 		}
 		if !auth.ValidateTOTPSecret(plain) {
 			rows.Close()
@@ -234,7 +269,10 @@ func (p *Panel) encryptLegacyVPNPresharedKeys(ctx context.Context) error {
 		plain, err := p.secrets.Decrypt(stored)
 		if err != nil {
 			rows.Close()
-			return fmt.Errorf(`validate VPN preshared key %d: %w`, id, err)
+			return fmt.Errorf(
+				`validate VPN preshared key %d: %w: %w`,
+				id, errSealedSecretUnreadable, err,
+			)
 		}
 		if len(plain) == 0 {
 			rows.Close()

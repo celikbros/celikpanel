@@ -128,6 +128,14 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	// A new install must not stack on top of an interrupted operation that
+	// startup could not resolve; the refusal carries the reason so the screen
+	// can say it instead of spinning.
+	// Yeni bir kurulum, açılışın çözemediği yarım kalmış bir işlemin üstüne
+	// binmemeli; ret, sebebi taşır ki ekran dönmek yerine onu söyleyebilsin.
+	if !p.requireSubsystemOperational(w, degradedSubsystemServiceOperations) {
+		return
+	}
 	var req serviceInstallRequest
 	if err := decodeServiceOperationJSON(w, r, &req); err != nil {
 		writeClientError(w, http.StatusBadRequest, "invalid request body")

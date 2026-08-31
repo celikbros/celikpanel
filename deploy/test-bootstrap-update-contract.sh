@@ -209,6 +209,24 @@ reject_literal "$PANEL_UNIT" 'Requires=celikpanel-agent.service'
 require_literal "$PANEL_UNIT" 'EnvironmentFile=-/etc/celikpanel/panel.env'
 require_literal "$PANEL_UNIT" 'ExecStart=/opt/celikpanel/bin/panel $CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG $CELIKPANEL_PANEL_DEMO_FLAG'
 require_literal "$AGENT_UNIT" 'RuntimeDirectoryPreserve=yes'
+
+# Restart policy is part of the unit contract. A fixed RestartSec with no
+# escalation sits permanently under systemd's default 5-starts-per-10s limiter,
+# so a boot-time failure flaps forever without ever reaching failed state — the
+# amplifier behind A17. Pin the backoff so a later edit cannot quietly drop it.
+# Yeniden başlatma politikası birim sözleşmesinin parçasıdır. Artan bekleme
+# olmadan sabit bir RestartSec, systemd'nin varsayılan 10sn'de 5 freninin
+# kalıcı olarak altında kalır; açılış hatası "failed" durumuna hiç ulaşmadan
+# sonsuza kadar çırpınır — A17'nin çarpanı budur. Sonraki bir düzenlemenin
+# sessizce kaldıramaması için artan beklemeyi çivile.
+for restart_unit in "$PANEL_UNIT" "$AGENT_UNIT"; do
+    require_literal "$restart_unit" 'Restart=on-failure'
+    require_literal "$restart_unit" 'RestartSec=3'
+    require_literal "$restart_unit" 'RestartSteps=6'
+    require_literal "$restart_unit" 'RestartMaxDelaySec=120'
+    require_literal "$restart_unit" 'StartLimitIntervalSec=3600'
+    require_literal "$restart_unit" 'StartLimitBurst=30'
+done
 require_literal "$INSTALL" 'SETPRIV_BIN=/usr/bin/setpriv'
 require_literal "$INSTALL" 'run_panel_as_service_user_with_private_umask() {'
 require_literal "$INSTALL" '/bin/sh -c '\''umask 077; exec "$@"'\'' celikpanel-install "$PREFIX/bin/panel" "$@"'

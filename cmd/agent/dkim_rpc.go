@@ -31,15 +31,19 @@ import (
 // raporlanır: anahtar + DNS kaydı gerekli başlangıçtır, imzalama entegrasyonu
 // kendi adımıdır.
 
-// dkimBaseDir: production default /etc/celikpanel/dkim (root agent);
-// CELIKPANEL_DKIM_DIR overrides for non-root development.
-// dkimBaseDir: üretim varsayılanı /etc/celikpanel/dkim (root agent);
-// CELIKPANEL_DKIM_DIR root olmayan geliştirme için geçersiz kılar.
+// dkimBaseDir: production default /var/lib/celikpanel-dkim/keys (root agent);
+// CELIKPANEL_DKIM_DIR overrides for non-root development. It is deliberately
+// NOT under /etc/celikpanel — see dkim_storage_migration.go for why that move
+// matters and how an existing store is carried over.
+// dkimBaseDir: üretim varsayılanı /var/lib/celikpanel-dkim/keys (root agent);
+// CELIKPANEL_DKIM_DIR root olmayan geliştirme için geçersiz kılar. Bilerek
+// /etc/celikpanel altında DEĞİLDİR — bu taşımanın neden önemli olduğu ve mevcut
+// bir deponun nasıl aktarıldığı için bkz. dkim_storage_migration.go.
 var dkimBaseDir = func() string {
 	if d := os.Getenv("CELIKPANEL_DKIM_DIR"); d != "" {
 		return d
 	}
-	return "/etc/celikpanel/dkim"
+	return productionDKIMKeyDir
 }()
 
 var (
@@ -113,6 +117,16 @@ func (a *Agent) GetDKIMStatus(req *DKIMStatusRequest, resp *DKIMStatusResponse) 
 		resp.Error = "DKIM status request is required"
 		return nil
 	}
+	// Read the store only after it is where this binary believes it is.
+	// Skipping this would answer "no key for this domain" while the key sits
+	// in the old directory — and the panel would offer to mint a second one.
+	// Depo, ancak bu ikilinin sandığı yerde olduktan sonra okunur. Bunu
+	// atlamak, anahtar eski dizinde dururken "bu alan adı için anahtar yok"
+	// yanıtını verirdi — ve panel ikinci bir anahtar üretmeyi önerirdi.
+	if err := ensureDKIMStorageMigrated(); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
 
 	path, err := dkimKeyPath(req.Domain, req.Selector)
 	if err != nil {
@@ -156,6 +170,17 @@ func (a *Agent) EnsureDKIMKey(req *DKIMEnsureRequest, resp *DKIMEnsureResponse) 
 
 	dkimKeyMu.Lock()
 	defer dkimKeyMu.Unlock()
+
+	// Same reason as GetDKIMStatus, with a sharper consequence: generating a
+	// key here while the real one is still in the old directory would replace
+	// a published DNS record's key and break signing for that domain.
+	// GetDKIMStatus ile aynı sebep, sonucu daha keskin: gerçek anahtar hâlâ
+	// eski dizindeyken burada anahtar üretmek, yayımlanmış bir DNS kaydının
+	// anahtarını değiştirir ve o alan adı için imzalamayı bozardı.
+	if err := ensureDKIMStorageMigrated(); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
 
 	if key, err := readDKIMKey(path); err == nil {
 		if err := secureChmodMailFile(path, 0o600); err != nil {

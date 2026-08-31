@@ -34,7 +34,7 @@ const signingSelector = "celik"
 
 const (
 	opendkimConfPath  = "/etc/opendkim.conf"
-	opendkimTablesDir = "/etc/celikpanel/dkim-tables"
+	opendkimTablesDir = dkimStoreRoot + "/tables"
 	opendkimSocket    = "inet:8891@localhost"
 	opendkimMilter    = "inet:localhost:8891"
 )
@@ -139,6 +139,9 @@ TrustAnchorFile		/usr/share/dns/root.key
 // dkimSignedDomains lists the domains that have a private key on disk.
 // dkimSignedDomains, diskte özel anahtarı olan domain'leri listeler.
 func dkimSignedDomains() ([]string, error) {
+	if err := ensureDKIMStorageMigrated(); err != nil {
+		return nil, err
+	}
 	base := dkimBaseDir
 	entries, err := os.ReadDir(base)
 	if err != nil {
@@ -173,23 +176,29 @@ func dkimSignedDomains() ([]string, error) {
 // writeDKIMTables, OpenDKIM anahtar/imzalama/güven tablolarını üretir ve
 // özel anahtarları opendkim grubunca okunur yapar (sahiplik root'ta kalır).
 func writeDKIMTables(ctx context.Context, domains []string, conf string) error {
-	if err := secureMkdirAll(opendkimTablesDir, 0o755); err != nil {
+	if err := ensureDKIMStorageMigrated(); err != nil {
+		return err
+	}
+	if err := secureMkdirAll(dkimStoreRoot, 0o750); err != nil {
+		return fmt.Errorf("create DKIM store: %w", err)
+	}
+	if err := secureMkdirAll(opendkimTablesDir, 0o750); err != nil {
 		return fmt.Errorf("create OpenDKIM table directory: %w", err)
 	}
 	if err := secureMkdirAll(dkimBaseDir, 0o750); err != nil {
 		return fmt.Errorf("create DKIM key directory: %w", err)
 	}
-	// The whole directory chain must be traversable by opendkim, not just
-	// the key file — a 0700 parent blocks the key silently. /etc/celikpanel
-	// itself is root:celikpanel 0750, so opendkim joins that group instead
-	// of us loosening the token directory.
-	// Tüm dizin zinciri opendkim'ce geçilebilir olmalı, yalnız anahtar
-	// dosyası değil — 0700 bir üst dizin anahtarı sessizce keser.
-	// /etc/celikpanel'in kendisi root:celikpanel 0750; token dizinini
-	// gevşetmek yerine opendkim o gruba katılır.
-	if out, err := serviceMutationCommand(ctx, "usermod", "-aG", "celikpanel", "opendkim").CombinedOutput(); err != nil {
-		return fmt.Errorf("add opendkim to celikpanel group: %w: %s", err, firstLine(string(out)))
-	}
+	// The whole directory chain must be traversable by opendkim, not just the
+	// key file — a parent it cannot enter blocks the key silently. The store
+	// root is root:opendkim, and everything above it (/var, /var/lib) is
+	// world-traversable, so opendkim gets there through its own group and the
+	// celikpanel group membership the old layout required is now removed.
+	// Tüm dizin zinciri opendkim'ce geçilebilir olmalı, yalnız anahtar dosyası
+	// değil — giremediği bir üst dizin anahtarı sessizce keser. Depo kökü
+	// root:opendkim'dir ve üstündeki her şey (/var, /var/lib) herkesçe
+	// geçilebilirdir; dolayısıyla opendkim oraya kendi grubu üzerinden ulaşır ve
+	// eski düzenin gerektirdiği celikpanel grup üyeliği artık kaldırılır.
+	dropOpenDKIMFromPanelGroup(ctx)
 	opendkimGroup, err := user.LookupGroup("opendkim")
 	if err != nil {
 		return fmt.Errorf("look up opendkim group: %w", err)
@@ -198,11 +207,20 @@ func writeDKIMTables(ctx context.Context, domains []string, conf string) error {
 	if err != nil {
 		return fmt.Errorf("parse opendkim group id %q: %w", opendkimGroup.Gid, err)
 	}
-	base := dkimBaseDir
-	if err := secureSetMailDirectoryMetadata(base, 0o750, 0, opendkimGID); err != nil {
+	if err := secureSetMailDirectoryMetadata(dkimStoreRoot, 0o750, 0, opendkimGID); err != nil {
 		return err
 	}
-	if err := secureSetMailDirectoryMetadata(opendkimTablesDir, 0o755, 0, 0); err != nil {
+	if err := secureSetMailDirectoryMetadata(dkimBaseDir, 0o750, 0, opendkimGID); err != nil {
+		return err
+	}
+	// The tables name every key path and every signing domain. They are not
+	// secrets, but they are not the world's business either, and the store root
+	// is already group-scoped — so they follow the same rule rather than
+	// staying 0755 out of habit.
+	// Tablolar her anahtar yolunu ve her imzalama alan adını adlandırır. Sır
+	// değildirler ama herkesin işi de değildir; depo kökü zaten grup kapsamlıdır
+	// — bu yüzden alışkanlıktan 0755 kalmak yerine aynı kurala uyarlar.
+	if err := secureSetMailDirectoryMetadata(opendkimTablesDir, 0o750, 0, opendkimGID); err != nil {
 		return err
 	}
 	var kt, st strings.Builder
@@ -224,9 +242,9 @@ func writeDKIMTables(ctx context.Context, domains []string, conf string) error {
 	}
 	trusted := "127.0.0.1\n::1\nlocalhost\n"
 	return applyMailFileMutation(ctx, []mailFileWrite{
-		{path: filepath.Join(opendkimTablesDir, "keytable"), content: []byte(kt.String()), mode: 0o644},
-		{path: filepath.Join(opendkimTablesDir, "signingtable"), content: []byte(st.String()), mode: 0o644},
-		{path: filepath.Join(opendkimTablesDir, "trustedhosts"), content: []byte(trusted), mode: 0o644},
+		{path: filepath.Join(opendkimTablesDir, "keytable"), content: []byte(kt.String()), mode: 0o640},
+		{path: filepath.Join(opendkimTablesDir, "signingtable"), content: []byte(st.String()), mode: 0o640},
+		{path: filepath.Join(opendkimTablesDir, "trustedhosts"), content: []byte(trusted), mode: 0o640},
 		{path: opendkimConfPath, content: []byte(conf), mode: 0o644},
 	}, nil, nil)
 }
