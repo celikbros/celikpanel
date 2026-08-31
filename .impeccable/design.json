@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-30T00:00:00Z",
+  "title": "Design System: CelikPanel",
+  "extensions": {
+    "colorMeta": {
+      "bg": { "role": "neutral", "displayName": "Cold Paper", "canonical": "rgb(248 250 252)", "tonalRamp": ["#F8FAFC", "#F1F5F9", "#E2E8F0"] },
+      "surface": { "role": "neutral", "displayName": "Panel White", "canonical": "rgb(255 255 255)" },
+      "surface-2": { "role": "neutral", "displayName": "Recess", "canonical": "rgb(241 245 249)" },
+      "surface-3": { "role": "neutral", "displayName": "Deep Recess", "canonical": "rgb(226 232 240)" },
+      "border": { "role": "neutral", "displayName": "Hairline", "canonical": "rgb(226 232 240)" },
+      "border-strong": { "role": "neutral", "displayName": "Interactive Edge", "canonical": "rgb(203 213 225)" },
+      "fg": { "role": "neutral", "displayName": "Ink Slate", "canonical": "rgb(15 23 42)" },
+      "fg-muted": { "role": "neutral", "displayName": "Second Voice", "canonical": "rgb(71 85 105)" },
+      "fg-subtle": { "role": "neutral", "displayName": "Placeholder Grey", "canonical": "rgb(148 163 184)" },
+      "primary": { "role": "primary", "displayName": "Signal Blue", "canonical": "rgb(37 99 235)", "tonalRamp": ["#2563EB", "#1D4ED8", "#3B82F6", "#60A5FA"] },
+      "success": { "role": "tertiary", "displayName": "Running Green", "canonical": "rgb(22 163 74)" },
+      "warning": { "role": "tertiary", "displayName": "Attention Amber", "canonical": "rgb(202 138 4)" },
+      "danger": { "role": "tertiary", "displayName": "Fault Red", "canonical": "rgb(220 38 38)" },
+      "sidebar-bg": { "role": "secondary", "displayName": "Tower Slate", "canonical": "rgb(30 41 59)", "tonalRamp": ["#1E293B", "#334155", "#0F172A"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Rare. Page-level identity and empty-state headlines only." },
+      "headline": { "displayName": "Headline", "purpose": "Page titles and primary metric values." },
+      "title": { "displayName": "Title", "purpose": "Section and card titles." },
+      "body": { "displayName": "Body", "purpose": "The default for everything meant to be read." },
+      "label": { "displayName": "Label", "purpose": "Field labels, table cells, badges, metadata, navigation. The dominant size in this interface." }
+    },
+    "shadows": [
+      { "name": "flat", "value": "none", "purpose": "Step 0. Page ground, rows, inline groups, table headers. The default." },
+      { "name": "card", "value": "0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06)", "purpose": "Step 1. A card resting on the page. The only shadow implemented today." },
+      { "name": "popover", "value": "0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.06)", "purpose": "Step 2. Dropdowns, menus, tooltips." },
+      { "name": "modal", "value": "0 20px 25px -5px rgb(0 0 0 / 0.10), 0 8px 10px -6px rgb(0 0 0 / 0.08)", "purpose": "Step 3. Dialogs and the operation overlay. There is no step 4." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for colour and state transitions." },
+      { "name": "duration-fast", "value": "150ms", "purpose": "Hover and focus feedback on controls." },
+      { "name": "duration-base", "value": "200ms", "purpose": "Usage-bar fills, disclosure, tab changes." },
+      { "name": "no-bounce", "value": "forbidden", "purpose": "Bounce and elastic easing are banned; this is instrumentation, not a toy." },
+      { "name": "no-pulse", "value": "forbidden", "purpose": "A pulse implies live data. Static status must never pretend to be live." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single call to action on a view. Everything else is secondary or danger.",
+      "html": "<button class=\"ds-btn-primary\">Install</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 0.375rem; background: rgb(var(--primary)); color: rgb(var(--primary-fg)); border: 1px solid transparent; border-radius: var(--radius-lg); padding: 0.375rem 0.75rem; font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: rgb(var(--primary-hover)); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px rgb(var(--primary) / 0.3); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The default button. Any action that is not the one primary action.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 0.375rem; background: rgb(var(--surface)); color: rgb(var(--fg)); border: 1px solid rgb(var(--border-strong)); border-radius: var(--radius-lg); padding: 0.375rem 0.75rem; font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-secondary:hover { background: rgb(var(--surface-2)); }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive actions. Serious, not shouting: outlined rather than a filled red block, so it reads as consequential only once considered.",
+      "html": "<button class=\"ds-btn-danger\">Delete domain</button>",
+      "css": ".ds-btn-danger { display: inline-flex; align-items: center; gap: 0.375rem; background: rgb(var(--surface)); color: rgb(var(--danger)); border: 1px solid rgb(var(--border-strong)); border-radius: var(--radius-lg); padding: 0.375rem 0.75rem; font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background-color 150ms, border-color 150ms; } .ds-btn-danger:hover { background: rgb(var(--danger) / 0.1); border-color: rgb(var(--danger) / 0.4); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The unit of page composition. One subject per card. Cards never nest; internal grouping uses a hairline row.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\">Nginx</div><div class=\"ds-card-body\">Running · 1.27.4</div></div>",
+      "css": ".ds-card { background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); border-radius: var(--radius-xl); box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06); } .ds-card-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgb(var(--border)); padding: 0.75rem 1rem; font-family: var(--font-sans); font-size: 0.875rem; font-weight: 600; color: rgb(var(--fg)); } .ds-card-body { padding: 1rem; font-family: var(--font-sans); font-size: 0.875rem; color: rgb(var(--fg-muted)); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Focus is border plus a 2px ring. The ring is the accessible focus indicator and must never be removed.",
+      "html": "<input class=\"ds-input\" placeholder=\"example.com\" />",
+      "css": ".ds-input { width: 100%; background: rgb(var(--surface)); color: rgb(var(--fg)); border: 1px solid rgb(var(--border-strong)); border-radius: var(--radius-lg); padding: 0.375rem 0.75rem; font-family: var(--font-sans); font-size: 0.875rem; line-height: 1.25rem; outline: none; } .ds-input::placeholder { color: rgb(var(--fg-subtle)); } .ds-input:focus { border-color: rgb(var(--primary)); box-shadow: 0 0 0 2px rgb(var(--primary) / 0.3); }"
+    },
+    {
+      "name": "Status Dot",
+      "kind": "chip",
+      "refersTo": "status-dot",
+      "description": "Healthy is green; inactive is subtle grey. Never red for merely 'off' — a service that is supposed to be stopped is not a fault. Never animated.",
+      "html": "<span class=\"ds-dot ds-dot-ok\"></span><span class=\"ds-dot ds-dot-off\"></span>",
+      "css": ".ds-dot { display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 9999px; } .ds-dot-ok { background: rgb(var(--success)); } .ds-dot-off { background: rgb(var(--fg-subtle)); }"
+    },
+    {
+      "name": "Usage Bar",
+      "kind": "custom",
+      "refersTo": "usage-bar",
+      "description": "Crosses from primary to warning at 75% and to danger at 90%. The thresholds are part of the component's meaning, not a per-instance choice.",
+      "html": "<div class=\"ds-usage\"><div class=\"ds-usage-fill\" style=\"width:82%\"></div></div>",
+      "css": ".ds-usage { height: 0.5rem; width: 100%; overflow: hidden; border-radius: 9999px; background: rgb(var(--surface-2)); } .ds-usage-fill { height: 100%; border-radius: 9999px; background: rgb(var(--warning)); transition: width 200ms cubic-bezier(0.4,0,0.2,1); }"
+    },
+    {
+      "name": "Sidebar Item",
+      "kind": "nav",
+      "refersTo": "sidebar-item",
+      "description": "The rail is a dark slate in both themes; navigation is chrome and the content area is the work.",
+      "html": "<a class=\"ds-nav-item ds-nav-active\">Domains</a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 0.5rem; color: rgb(var(--sidebar-fg)); border-radius: var(--radius-lg); padding: 0.5rem 0.75rem; font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; text-decoration: none; } .ds-nav-item:hover { background: rgb(var(--sidebar-hover)); } .ds-nav-active { background: rgb(var(--sidebar-active)); color: rgb(var(--sidebar-active-fg)); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Control Tower",
+    "overview": "A control tower is quiet most of the night. Its whole design exists so that when something does happen, nobody has to look for it. That ordering governs every conflict in this system: at rest be calm, in use be dense and exact, on exception be unmissable. Calm is not decoration — it is what makes an alarm legible. If everything is loud, nothing is.\n\nThis is a professional tool operated in long sessions on wide screens. Information density outranks whitespace, and restraint in components buys room for data. The panel is instrumentation, not furniture and not a brochure.\n\nThe third rule is the one that earns the metaphor. This product's documented history is of operations that stop halfway and interfaces that cannot say so. A design that cannot express 'this is stuck, here is why, here is your way out' is not finished, however elegant its steady state.",
+    "keyCharacteristics": [
+      "Quiet at rest, dense in use, unmissable on exception",
+      "A 12-14px interface: 854 of 929 size declarations are label or body",
+      "Semantic colour is reserved for system state and never used decoratively",
+      "Depth is tonal first, shadow second; four elevation steps and no more",
+      "One shell for four roles, rendered from capabilities rather than per-role layouts",
+      "A service that is not installed is invisible: no empty screens, no disabled menus"
+    ],
+    "rules": [
+      { "name": "Semantic colour means something", "body": "success, warning and danger carry meaning and must never be used decoratively. When they appear, the operator is entitled to conclude something is true about the system.", "section": "colors" },
+      { "name": "Twelve is the floor", "body": "12px is the smallest step and nothing goes below it. The next request for 'one size smaller' is answered with weight, colour, or spacing instead.", "section": "typography" },
+      { "name": "Weight carries hierarchy, size does not", "body": "Because the size range is deliberately narrow, weight and colour do the hierarchical work. A screen that needs a new size step almost always needs better grouping.", "section": "typography" },
+      { "name": "Tonal before shadow", "body": "Depth comes from surface, surface-2, surface-3 and borders. Shadow marks only what genuinely floats. In dark mode shadows barely read: step up a surface tone rather than increasing opacity.", "section": "elevation" },
+      { "name": "Concentric corners", "body": "The bigger the box, the rounder the corner: lg for controls, xl for the card holding them, 2xl for the dialog holding the card.", "section": "shapes" },
+      { "name": "Operation states are designed, not incidental", "body": "Every privileged operation renders stage, elapsed time, request id, and on failure the exact error code plus one action. Four designed states are required: running, succeeded, failed-with-cause, unreachable-backend. The last is not a spinner.", "section": "components" },
+      { "name": "Contrast is a requirement", "body": "WCAG 2.1 AA is the target. fg-subtle is a placeholder and disabled colour only, never the colour of information.", "section": "colors" }
+    ],
+    "dos": [
+      "Do reference semantic tokens (bg-surface, text-fg-muted, border-border) and let theme and skin layers resolve them.",
+      "Do reserve success / warning / danger for actual system state.",
+      "Do use weight and colour before reaching for a new size step.",
+      "Do give every long-running operation a terminal state and an exit.",
+      "Do set tabular-nums on digits that align in a column.",
+      "Do keep the whole page keyboard-operable with a visible focus ring."
+    ],
+    "donts": [
+      "Don't hard-code a hex colour, font family, or radius.",
+      "Don't put a thick or one-sided accent border on a card.",
+      "Don't nest a card inside a card.",
+      "Don't introduce a size step below 12px or a fifth elevation step.",
+      "Don't use a coloured glow, a gradient background, or a pulsing dot.",
+      "Don't use danger to mean 'off', or fg-subtle to carry information.",
+      "Don't add a decorative icon tile above a heading or an uppercase eyebrow above every card title.",
+      "Don't design for or against the competitor skins while that decision is open."
+    ]
+  }
+}
