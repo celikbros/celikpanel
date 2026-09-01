@@ -58,7 +58,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-018 | Medium | OPEN | BIND mask preflight rejects a stock Arch root directory, so BIND cannot be reached on that image |
 | R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
 | R-020 | Low | OPEN | The `cmd/panel` race suite consumes 87 percent of its explicit 30-minute ceiling |
-| R-021 | High | OPEN / BLOCKER FOR ANY DEPLOYMENT | Both deployment hosts present an unrecognised SSH host key and an operating system the inventory does not record |
+| R-021 | Low | RESOLVED / INVENTORY CORRECTED | Both hosts were rebuilt; identity is confirmed and the inventory now records Ubuntu and Debian 13. No Arch host remains in our inventory |
 | R-022 | Critical | OPEN / BLOCKER FOR EVERY FRESH INSTALL | `install.sh` sources the release transaction guard before any trusted release root exists, so a clean installation exits before it begins |
 | R-023 | High | OPEN / BLOCKER FOR EVERY NON-INTERACTIVE FRESH INSTALL | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
 | R-024 | Medium | OPEN | The installer discards `systemctl enable` failures and never syncs the enable links, so a fresh host can reboot with both units disabled |
@@ -516,6 +516,30 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: the operator confirms each host key against provider console
   or on-host evidence, the recorded operating system for each address is
   corrected or the address is retired, and an Arch acceptance host exists.
+- Resolution (1 September 2026): the operator confirmed both hosts were rebuilt,
+  which explains all three changes at once — new SSH host keys, new operating
+  systems, and new provider-injected login keys. Identity is now established on
+  evidence rather than assumption: the operator re-added the deploy key through
+  the provider console, which binds to the real machine, and the host key each
+  server reports from inside
+  (`/etc/ssh/ssh_host_ed25519_key.pub`) matches the key presented on the wire
+  exactly — `SHA256:8Zje…` for `2.25.80.4` (hostname `boston`, Ubuntu 24.04.4)
+  and `SHA256:DV/e…` for `72.62.38.15` (hostname `frankfurt`, Debian 13).
+- Corrected inventory: `2.25.80.4` is boston, Ubuntu 24.04.4, PowerDNS
+  secondary. `72.62.38.15` is frankfurt, Debian 13, BIND primary. The recorded
+  mixed-engine pair survived the rebuild and matches the durable state receipts
+  on both hosts.
+- Health at resolution: CelikPanel installed and complete on both
+  (`/etc/celikpanel/install.complete`, binaries dated 30 August), panel and
+  agent active, no active mutation request, no DEGRADED or fail-closed entry in
+  fourteen days, and zero restarts on all four units. Boston's former unbounded
+  restart loop did not survive the rebuild.
+- Remaining, tracked here rather than as a blocker: our inventory no longer
+  contains an Arch host. That does not block the OPERATIONS.md section 3 matrix,
+  which runs on disposable QEMU/KVM guests built from an official Arch cloud
+  image, not on these two servers. It does mean there is no long-lived Arch
+  host to observe, and the R-018 inherited-anchor fix has still never met a real
+  Arch machine outside that disposable matrix.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-022 - Fresh installation cannot start

@@ -59,7 +59,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-018 | Orta | AÇIK | BIND mask ön denetimi, standart bir Arch kök dizinini reddeder; o imajda BIND'a ulaşılamaz |
 | R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
 | R-020 | Düşük | AÇIK | `cmd/panel` race paketi, açıkça verilmiş 30 dakikalık tavanın yüzde 87'sini tüketir |
-| R-021 | Yüksek | AÇIK / HER KURULUM İÇİN ENGEL | İki kurulum sunucusu da tanınmayan bir SSH sunucu anahtarı ve envanterde kayıtlı olmayan bir işletim sistemi sunuyor |
+| R-021 | Düşük | ÇÖZÜLDÜ / ENVANTER DÜZELTİLDİ | İki sunucu da yeniden kuruldu; kimlik doğrulandı ve envanter artık Ubuntu ile Debian 13 yazıyor. Envanterimizde Arch sunucu kalmadı |
 | R-022 | Kritik | AÇIK / HER TEMİZ KURULUM İÇİN ENGEL | `install.sh`, güvenilen sürüm kökü var olmadan sürüm işlem korumasını source ediyor; temiz kurulum başlamadan çıkıyor |
 | R-023 | Yüksek | AÇIK / ETKİLEŞİMSİZ HER TEMİZ KURULUM İÇİN ENGEL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
 | R-024 | Orta | AÇIK | Kurulum `systemctl enable` hatalarını yutar ve enable bağlarını hiç eşitlemez; taze bir sunucu iki birimi de devre dışı hâlde yeniden başlayabilir |
@@ -519,6 +519,30 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: Operatör her sunucu anahtarını sağlayıcı konsolu ya da sunucu
   üstü kanıtla doğrular; her adres için kayıtlı işletim sistemi düzeltilir ya da
   adres emekliye ayrılır; ve bir Arch kabul sunucusu var olur.
+- Çözüm (1 Eylül 2026): Operatör iki sunucunun da yeniden kurulduğunu teyit
+  etti; bu, üç değişikliği birden açıklar — yeni SSH sunucu anahtarları, yeni
+  işletim sistemleri ve sağlayıcının enjekte ettiği yeni giriş anahtarları.
+  Kimlik artık varsayımla değil kanıtla saptanmıştır: operatör dağıtım
+  anahtarını sağlayıcı konsolundan yeniden ekledi (bu, gerçek makineye
+  bağlanır) ve her sunucunun içeriden bildirdiği sunucu anahtarı
+  (`/etc/ssh/ssh_host_ed25519_key.pub`) hat üzerinde sunulanla birebir tuttu —
+  `2.25.80.4` için `SHA256:8Zje…` (hostname `boston`, Ubuntu 24.04.4) ve
+  `72.62.38.15` için `SHA256:DV/e…` (hostname `frankfurt`, Debian 13).
+- Düzeltilmiş envanter: `2.25.80.4` boston, Ubuntu 24.04.4, PowerDNS ikincil.
+  `72.62.38.15` frankfurt, Debian 13, BIND birincil. Kayıtlı karma-motor ikilisi
+  yeniden kurulumdan sağ çıktı ve iki sunucudaki kalıcı durum makbuzlarıyla
+  uyuşuyor.
+- Çözüm anındaki sağlık: CelikPanel iki sunucuda da kurulu ve tamamlanmış
+  (`/etc/celikpanel/install.complete`, ikililer 30 Ağustos tarihli), panel ve
+  agent aktif, aktif mutasyon isteği yok, on dört günde DEGRADED ya da kapalı
+  arıza kaydı yok ve dört birimin hepsinde sıfır yeniden başlatma. Boston'ın
+  eski sınırsız yeniden başlatma döngüsü yeniden kurulumdan sağ çıkmadı.
+- Kalan, engel olarak değil burada izlenen konu: envanterimizde artık Arch
+  sunucu yok. Bu, OPERATIONS.md 3. bölüm matrisini engellemez; o matris bu iki
+  sunucuda değil, resmi Arch bulut imajından kurulan atılabilir QEMU/KVM
+  konuklarında koşar. Ancak gözlenebilecek uzun ömürlü bir Arch makinesi
+  bulunmadığı ve R-018 çıpa düzeltmesinin o atılabilir matris dışında gerçek bir
+  Arch makinesiyle hâlâ karşılaşmadığı anlamına gelir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-022 - Temiz kurulum başlayamıyor
