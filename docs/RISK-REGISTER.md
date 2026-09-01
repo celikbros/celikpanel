@@ -464,6 +464,20 @@ or executed as-is. There are no open pull requests at this baseline.
   Each fix has a test that reproduces the incident's exact error string on the
   unfixed tree. Full and tagged agent suites pass on Debian 13 (WSL2). R-019
   stays OPEN until a live adoption-to-BIND switch completes on a real VM.
+- Residual, deliberately not changed (1 September 2026):
+  `validateDNSEngineStateSnapshot` judges a persisted journal snapshot's
+  recorded GID against `serviceMutationRequiredOwnerGID`, which is re-derived
+  from `/etc/group` once per process. A durable record judged against a
+  runtime-derived expectation is the same shape as cause 3 above, and a
+  celikpanel GID renumber between journal write and validation would invalidate
+  every persisted journal at once. Decoupling it was attempted and reverted:
+  `TestDNSEngineSwitchJournalRequiresExactServiceOwnerForState` caught that the
+  check also rejects a snapshot taken from a state file whose ownership was
+  wrong at capture time, which is worth keeping, and the brick scenario needs
+  both a long-stuck journal and a GID renumber — and stuck journals are what
+  cause 3's fix removes. The clean repair is to record the expected GID in the
+  journal and validate against that, which is a durable-schema change with
+  migration consequences and is not urgent.
 
 ### R-020 - The panel race suite is close to its timeout ceiling
 

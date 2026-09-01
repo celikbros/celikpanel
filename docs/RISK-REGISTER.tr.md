@@ -466,6 +466,22 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   Her düzeltmenin, düzeltilmemiş ağaçta olayın hata metnini birebir üreten bir
   testi var. Tam ve etiketli agent paketleri Debian 13 (WSL2) üzerinde geçiyor.
   Gerçek bir VM'de devralmadan BIND'a geçiş tamamlanana kadar R-019 AÇIK kalır.
+- Kalıntı, bilerek değiştirilmedi (1 Eylül 2026):
+  `validateDNSEngineStateSnapshot`, kalıcı bir günlük anlık görüntüsünün
+  kaydedilmiş GID'sini `serviceMutationRequiredOwnerGID` ile karşılaştırır; o
+  değer ise süreç başına bir kez `/etc/group`'tan yeniden türetilir. Kalıcı bir
+  kaydın çalışma anında türetilen bir beklentiye göre yargılanması, yukarıdaki
+  3. sebebin aynı biçimidir; günlük yazımı ile doğrulama arasında bir celikpanel
+  GID yeniden numaralandırması bütün kalıcı günlükleri bir anda geçersiz
+  kılardı. Bağı koparmak denendi ve geri alındı:
+  `TestDNSEngineSwitchJournalRequiresExactServiceOwnerForState`, denetimin aynı
+  zamanda yakalama anında sahipliği yanlış olan bir durum dosyasından alınmış
+  anlık görüntüyü de reddettiğini gösterdi; bu korunmaya değer ve tuğlalaşma
+  senaryosu hem uzun süre takılı kalmış bir günlük hem de GID yeniden
+  numaralandırması gerektiriyor — takılı günlükleri ise 3. sebebin düzeltmesi
+  ortadan kaldırıyor. Temiz onarım, beklenen GID'yi günlüğe kaydedip ona göre
+  doğrulamaktır; bu, göç sonuçları olan kalıcı bir şema değişikliğidir ve acil
+  değildir.
 
 ### R-020 - Panel race paketi zaman aşımı tavanına yakın
 
