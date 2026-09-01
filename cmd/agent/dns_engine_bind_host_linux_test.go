@@ -799,8 +799,16 @@ func TestVerifyBINDMaskParentMetadataAtRejects0700WithoutChmod(t *testing.T) {
 	if err := os.Chmod(directory, 0o700); err != nil {
 		t.Fatal(err)
 	}
+	// The rejection reason changed with the inherited-anchor policy (R-018):
+	// a mask parent is refused for not being world-traversable rather than for
+	// differing from an exact 0755. The refusal itself is what this test pins,
+	// and it must stay a refusal.
+	// Ret sebebi devralınan-çıpa politikasıyla değişti (R-018): bir mask üst
+	// dizini, tam 0755'ten farklı olduğu için değil, herkesçe geçilebilir
+	// olmadığı için reddedilir. Bu testin sabitlediği şey reddin kendisidir ve
+	// ret olarak kalmalıdır.
 	err := verifyBINDMaskParentMetadataAt(fd)
-	if err == nil || !strings.Contains(err.Error(), "mode 0700, want 0755") {
+	if err == nil || !strings.Contains(err.Error(), "not world-traversable") {
 		t.Fatalf("mode 0700 error=%v", err)
 	}
 	info, statErr := os.Stat(directory)

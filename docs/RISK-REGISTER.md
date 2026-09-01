@@ -385,6 +385,22 @@ or executed as-is. There are no open pull requests at this baseline.
   should give ancestor trust anchors their own policy rather than loosen the
   managed-root constant. Existing tests force their synthetic mask parent to
   0755 and only assert rejection of 0700, so the stock Arch shape is uncovered.
+- Fix implemented (1 September 2026, branch `fix/alpha52-handoff-acceptance`):
+  pre-existing filesystem ancestors now have their own policy,
+  `validateInheritedBINDAnchorFD`, separate from the exact-mode assertion used
+  for directories this product creates. An inherited anchor must be a
+  root-owned directory, free of group and other write, free of
+  setuid/setgid/sticky, ACL-clean, and world-traversable. That accepts stock
+  Arch's 0555 root and ordinary 0755 while still refusing every writable,
+  special-bit, foreign-owned or non-traversable shape - including 0700, which
+  an existing test already pinned as a refusal and which the first draft of
+  this policy wrongly accepted until that test caught it. `/var/cache/bind/celikpanel`
+  and every other directory the product creates keep exact 0755. Applied to all
+  four ancestor walkers (mask parent, two managed-root walks, vendor unit
+  path), which matters because the mask-parent proof is shared by the PowerDNS
+  path too, so the Arch block was never BIND-only. Full and tagged agent suites
+  pass on Debian 13 (WSL2). The live proof on a real stock Arch host remains
+  outstanding and keeps this entry OPEN.
 
 ### R-019 - An adopted PowerDNS is not a switch-ready BIND source
 

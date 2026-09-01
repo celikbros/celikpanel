@@ -388,6 +388,22 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   sabitini gevşetmek yerine üst güven çıpalarına kendi politikasını vermelidir.
   Mevcut testler sentetik mask üst dizinini zorla 0755 yapıp yalnız 0700 reddini
   sınıyor; standart Arch biçimi kapsanmıyor.
+- Düzeltme uygulandı (1 Eylül 2026, `fix/alpha52-handoff-acceptance` dalı):
+  önceden var olan dosya sistemi üst dizinlerinin artık kendi politikası var,
+  `validateInheritedBINDAnchorFD`; bu ürünün oluşturduğu dizinler için
+  kullanılan tam-kip dayatmasından ayrı. Devralınan bir çıpa; root'a ait bir
+  dizin olmalı, grup ve diğer yazma izni bulunmamalı, setuid/setgid/sticky
+  taşımamalı, ACL'siz olmalı ve herkesçe geçilebilmelidir. Bu, standart Arch'ın
+  0555 kökünü ve olağan 0755'i kabul ederken yazılabilir, özel-bitli, yabancı
+  sahipli ya da geçilemez her biçimi reddetmeyi sürdürür - 0700 dahil; mevcut
+  bir test onu zaten ret olarak sabitlemişti ve bu politikanın ilk taslağı onu
+  yanlışlıkla kabul ediyordu, test yakaladı. `/var/cache/bind/celikpanel` ve
+  ürünün oluşturduğu diğer her dizin tam 0755 olarak kalır. Dört üst dizin
+  yürüyücüsünün hepsine uygulandı (mask üst dizini, iki yönetilen kök yürüyüşü,
+  satıcı unit yolu); bu önemlidir, çünkü mask üst dizini kanıtını PowerDNS yolu
+  da paylaşır, yani Arch engeli hiçbir zaman yalnız BIND'a özgü değildi. Tam ve
+  etiketli agent paketleri Debian 13 (WSL2) üzerinde geçiyor. Gerçek bir
+  standart Arch sunucusundaki canlı kanıt hâlâ bekliyor ve bu kaydı AÇIK tutuyor.
 
 ### R-019 - Devralınmış PowerDNS, geçişe hazır bir BIND kaynağı değil
 
