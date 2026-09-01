@@ -1,11 +1,17 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
+	"os/user"
+	"path"
 	"regexp"
+	"strconv"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -29,9 +35,14 @@ type DeleteCronJobRequest = transport.DeleteCronJobRequest
 
 // ListCronJobs lists all cron jobs for a user
 func (a *Agent) ListCronJobs(req *ListCronJobsRequest, resp *ListCronJobsResponse) error {
-	username := req.Username
-	if username == "" {
-		username = "www-data"
+	// Reads are proved too: `crontab -u root -l` is a disclosure, not a
+	// mutation, and an unproved name here would leak any account's schedule.
+	// Okumalar da kanıtlanır: `crontab -u root -l` bir değişiklik değil bir
+	// ifşadır ve burada kanıtlanmamış bir ad, herhangi bir hesabın zamanlamasını
+	// sızdırır.
+	username, err := cronTenantUser(req.CronTenant)
+	if err != nil {
+		return err
 	}
 
 	// Read crontab for user
@@ -53,9 +64,16 @@ func (a *Agent) ListCronJobs(req *ListCronJobsRequest, resp *ListCronJobsRespons
 
 // AddCronJob adds a new cron job
 func (a *Agent) AddCronJob(req *AddCronJobRequest, resp *bool) error {
-	username := req.Username
-	if username == "" {
-		username = "www-data"
+	username, err := cronTenantUser(req.CronTenant)
+	if err != nil {
+		return err
+	}
+	if err := rejectCrontabInjection(map[string]string{
+		"schedule": req.Schedule,
+		"command":  req.Command,
+		"comment":  req.Comment,
+	}); err != nil {
+		return err
 	}
 
 	// Validate schedule
@@ -92,9 +110,16 @@ func (a *Agent) AddCronJob(req *AddCronJobRequest, resp *bool) error {
 
 // UpdateCronJob updates an existing cron job
 func (a *Agent) UpdateCronJob(req *UpdateCronJobRequest, resp *bool) error {
-	username := req.Username
-	if username == "" {
-		username = "www-data"
+	username, err := cronTenantUser(req.CronTenant)
+	if err != nil {
+		return err
+	}
+	if err := rejectCrontabInjection(map[string]string{
+		"schedule": req.Schedule,
+		"command":  req.Command,
+		"comment":  req.Comment,
+	}); err != nil {
+		return err
 	}
 
 	// Validate schedule
@@ -153,9 +178,9 @@ func (a *Agent) UpdateCronJob(req *UpdateCronJobRequest, resp *bool) error {
 
 // DeleteCronJob deletes a cron job
 func (a *Agent) DeleteCronJob(req *DeleteCronJobRequest, resp *bool) error {
-	username := req.Username
-	if username == "" {
-		username = "www-data"
+	username, err := cronTenantUser(req.CronTenant)
+	if err != nil {
+		return err
 	}
 
 	// Get existing crontab
@@ -285,6 +310,102 @@ func generateCronID(line string) string {
 		hash = hash*31 + uint32(c)
 	}
 	return fmt.Sprintf("%08x", hash)
+}
+
+var cronUsernameRe = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)
+
+// cronTenantUser proves WHOSE crontab the agent is about to open before it runs
+// `crontab -u <name>` as root, and returns the only name it will accept.
+//
+// Two proofs, because one is not enough:
+//
+//  1. The username is re-derived here from the domain rather than taken from the
+//     request. The panel is a courier; the agent re-derives every fact it acts
+//     on. This is the same rule site creation already applies at
+//     site_rpc.go:198.
+//
+//  2. The account's home directory must equal the home derived from the
+//     subscription and domain identities. This is the proof that actually binds
+//     the operation to a tenant, because SiteUsername is NOT injective: it maps
+//     "." and "-" to "_" and truncates at 32, so "my-shop.com" and "my.shop.com"
+//     collapse to one account name. Without the home check, owning either domain
+//     would reach the other's jobs — the panel's ownership guard would pass, and
+//     the crontab opened would belong to someone else. Homes come from integer
+//     identities and cannot collide.
+//
+// The account must also be a real tenant account: a uid below 1000 is a system
+// account, and root is the one this whole check exists to keep out.
+//
+// cronTenantUser, agent `crontab -u <ad>` komutunu root olarak çalıştırmadan
+// önce KİMİN crontab'ını açacağını kanıtlar ve kabul edeceği tek adı döndürür.
+//
+// İki kanıt, çünkü biri yetmez:
+//
+//  1. Kullanıcı adı istekten alınmaz, burada alan adından yeniden türetilir.
+//     Panel bir kuryedir; agent eylediği her olguyu yeniden türetir. Site
+//     oluşturmanın site_rpc.go:198'de zaten uyguladığı kuralın aynısı.
+//
+//  2. Hesabın ev dizini, abonelik ve alan adı kimliklerinden türetilen ev
+//     dizinine eşit olmalıdır. İşlemi bir kiracıya gerçekten bağlayan kanıt
+//     budur, çünkü SiteUsername TEK YÖNLÜ DEĞİLDİR: "." ve "-" karakterlerini
+//     "_" yapar ve 32'de keser; "my-shop.com" ile "my.shop.com" tek bir hesap
+//     adına iner. Ev dizini denetimi olmadan, ikisinden birine sahip olmak
+//     diğerinin görevlerine ulaşırdı — panelin sahiplik koruması geçerdi ve
+//     açılan crontab başkasına ait olurdu. Ev dizinleri tam sayı kimliklerden
+//     gelir ve çakışamaz.
+func cronTenantUser(tenant transport.CronTenant) (string, error) {
+	expectedHome, err := hostingpath.SiteHome(tenant.SubscriptionID, tenant.DomainID)
+	if err != nil {
+		return "", fmt.Errorf("refusing cron request without a tenant identity: %w", err)
+	}
+	domain := strings.TrimSpace(tenant.Domain)
+	if domain == "" {
+		return "", errors.New("refusing cron request without a domain")
+	}
+	username := services.SiteUsername(domain)
+	if !cronUsernameRe.MatchString(username) {
+		return "", fmt.Errorf("refusing cron user %q: not a site account name", username)
+	}
+	account, err := user.Lookup(username)
+	if err != nil {
+		return "", fmt.Errorf("look up cron user %q: %w", username, err)
+	}
+	uid, err := strconv.Atoi(account.Uid)
+	if err != nil || uid < 1000 {
+		return "", fmt.Errorf("refusing cron user %q: not a tenant uid", username)
+	}
+	if path.Clean(account.HomeDir) != expectedHome {
+		// The account exists and is a tenant account — but not THIS tenant's.
+		// This is the collision case, and it is a cross-tenant boundary, so the
+		// refusal names no other tenant's identity.
+		// Hesap var ve bir kiracı hesabı — ama BU kiracının değil. Çakışma
+		// durumu budur ve bir kiracılar arası sınırdır; bu yüzden ret, başka bir
+		// kiracının kimliğini adlandırmaz.
+		return "", fmt.Errorf(
+			"refusing cron user %q: it does not belong to this domain", username,
+		)
+	}
+	return username, nil
+}
+
+// rejectCrontabInjection refuses text that would not stay on the line it is
+// written to. Schedule, command and comment are formatted into a crontab with
+// Sprintf, so a newline in any of them appends attacker-chosen crontab lines —
+// a second schedule, running as that user, that nothing in the panel displays.
+// A carriage return and a NUL are refused for the same reason.
+//
+// rejectCrontabInjection, yazıldığı satırda kalmayacak metni reddeder.
+// Zamanlama, komut ve yorum crontab'a Sprintf ile yazıldığı için herhangi
+// birindeki satır sonu, saldırganın seçtiği crontab satırlarını ekler — o
+// kullanıcı olarak çalışan ve panelin hiçbir yerde göstermediği ikinci bir
+// zamanlama. Satır başı ve NUL aynı sebeple reddedilir.
+func rejectCrontabInjection(fields map[string]string) error {
+	for name, value := range fields {
+		if strings.ContainsAny(value, "\n\r\x00") {
+			return fmt.Errorf("cron %s must not contain line breaks", name)
+		}
+	}
+	return nil
 }
 
 func isValidCronSchedule(schedule string) bool {

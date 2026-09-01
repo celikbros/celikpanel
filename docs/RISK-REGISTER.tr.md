@@ -55,6 +55,15 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-014 | Orta | KISMEN AZALTILDI / AÇIK | Olay şablonu ve ilk olay kaydı var; harici müdahale sahipliği atanmadı |
 | R-015 | Yüksek | AÇIK / AÇIK DNS GEÇİŞİ İÇİN ENGELLEYİCİ | Parent delegation ve glue doğrulandı; `celikhost.com` child zone ve açık otorite yok |
 | R-016 | Orta | AÇIK / PROVENANCE UYARISI | İki geçerli v6 snapshot kaynak kimliğini `unknown` yazar; terminal receipt'ler önceki Alpha51 commit'ini kanıtlar |
+| R-017 | Yüksek | AÇIK | Üretim panelinin kalp atışı, paket kuran bir DNS motoru geçişini belirlenimci biçimde zehirler |
+| R-018 | Orta | AÇIK | BIND mask ön denetimi, standart bir Arch kök dizinini reddeder; o imajda BIND'a ulaşılamaz |
+| R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
+| R-020 | Düşük | AÇIK | `cmd/panel` race paketi, açıkça verilmiş 30 dakikalık tavanın yüzde 87'sini tüketir |
+| R-021 | Yüksek | AÇIK / HER KURULUM İÇİN ENGEL | İki kurulum sunucusu da tanınmayan bir SSH sunucu anahtarı ve envanterde kayıtlı olmayan bir işletim sistemi sunuyor |
+| R-022 | Kritik | AÇIK / HER TEMİZ KURULUM İÇİN ENGEL | `install.sh`, güvenilen sürüm kökü var olmadan sürüm işlem korumasını source ediyor; temiz kurulum başlamadan çıkıyor |
+| R-023 | Yüksek | AÇIK / ETKİLEŞİMSİZ HER TEMİZ KURULUM İÇİN ENGEL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
+| R-024 | Orta | AÇIK | Kurulum `systemctl enable` hatalarını yutar ve enable bağlarını hiç eşitlemez; taze bir sunucu iki birimi de devre dışı hâlde yeniden başlayabilir |
+| R-025 | Düşük | AÇIK | Belgelenen `git clone && sudo ./install.sh` yolculuğu, kurtarma temelinin kullanıcıya ait üst dizinleri reddetmesiyle çelişir |
 
 ## Ayrıntılı riskler
 
@@ -300,6 +309,283 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: İncelenmiş bir sürüm sonraki v6 snapshot kimliğine doğrulanmış
   kurulu kaynak version/commit'ini yazar ve normal panel update'i düzeltmeyi
   regresyonsuz kanıtlar.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-017 - Panel kalp atışı, paket kuran DNS geçişini iptal ediyor
+
+- Kanıt: S-1 kill-matrix run 8 (ara rapor SHA-256
+  `85bde76952fe05ee7a7a47730b8242406bb5e0924aab739a1e8ea091b2798724`).
+  `cmd/agent/dns_engine_rpc.go:1339-1361` mutasyonu arka uç işinden önce
+  "sonlanıyor" olarak işaretler; oysa `:1597-1620,1648-1675` konumundaki
+  sonlanma yüklemi `WorkerPID == 0` ve boş işçi kimliği şart koşar.
+  `cmd/agent/service_mutation_worker.go:120-154,202-244` paket işçisini kalıcı
+  olarak kaydeder ve `cmd/panel/service_mutation_agent.go:28,793-804` her beş
+  saniyede kalp atışı gönderir. O geçerli kayıtlı aralığa denk gelen bir kalp
+  atışı yüklemi düşürür, yöneticiyi zehirler, işlemi iptal eder ve ardından
+  rollback işçi kaydını reddeder.
+- Etki: Paket kurmak zorunda olan bir DNS motoru geçişi - yeni bir sunucuda
+  olağan durum - panelin kendi canlılık denetimince iptal edilebilir. O çakışma
+  koşuluyla ret belirlenimcidir, aralıklı değil. Run 8 geride kurulum sahiplik
+  makbuzu ile kiralanmış işçi kimliği bıraktı; DNS durumu ve günlük yok. Bu
+  kalıntı mevcut hiçbir denetime görünmez.
+- Acil kontrol: Üründe kullanılabilir kontrol yok. Kalp atışını bastırmak ya da
+  ertelemek bir kontrol değildir: yirmi saniyelik kiralama
+  (`cmd/agent/service_mutation_rpc.go:39`) aynı bekçiden geçerek sona erer
+  (`:1424-1443`), yani arıza yalnızca kiralama sonuna kayar.
+- Çıkış ölçütü: Sonlanma yüklemi, rakip bir mutasyon ile sahip mutasyonun kendi
+  kayıtlı işçisini birbirinden ayırır; sınırlı, işçiden haberdar bir bekçi
+  incelemeyi geçer; ve paket kuran bir geçiş, üretim temposunda kalp atışı
+  altında canlı bir düzenekte tamamlanır.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+- S-2 güncellemesi: Yalnız inceleme amaçlı, işçiden haberdar bir bekçi yazılıp
+  test edildi (`artifacts/s2-vm-acceptance/p1/`), ardından yazarı tarafından
+  land edilmesi güvenli bulunmadı. Altında iki sıralama kusuru duruyor:
+  korunan kalp atışı genel kiralama yenilemesinden önce dönüyor, bu yüzden bir
+  işçi temizliği `UpdatedAt` değerini özgün yirmi saniyelik kiralamanın ötesine
+  taşıyıp `LeaseExpiresAt < UpdatedAt` bırakabiliyor; ve `cmd.Wait()` çocuğu
+  `tracker.clear()` kalıcı işçiyi silmeden önce topluyor, dolayısıyla o
+  aralıktaki bir bekçi doğru biçimde ölmüş bir işçiyi görüp yine de reddediyor.
+  Ne kiralamadan uzun süren canlı bir paket kurulumu ne de belirlenimci bir
+  toplama-temizleme testi koşuldu. Yama HEAD'de değildir ve bu hâliyle land
+  edilmemelidir.
+- Düzeltme uygulandı (31 Ağustos 2026, `fix/alpha52-handoff-acceptance` dalı):
+  sonlanma aralığı kanıtı artık sahibi olan mutasyonun kayıtlı işçisini
+  biçimiyle kabul ediyor — bilerek canlılık sondası olmadan; bu,
+  toplama-temizleme penceresini hoş görmek yerine kökten kaldırıyor. Korumalı
+  kalp atışı erken dönmek yerine kiralamayı yeniliyor ve iki kalıcı işçi
+  geçişi de kiralamayı yalnız iş Running durumundayken yeniliyor; böylece
+  süresi-dolmuş-iptal kanıtının sıralaması korunuyor. Birim ve linux
+  bütünleşme testleri koşu-8 defter biçimini (kayıtlı apt-get, duraklamış
+  kiralama, kalp atışı, süre dolumu, iptal, temizleme) yeniden üretiyor ve
+  geçiyor. Canlı kanıt — gerçek bir düzenekte, üretim temposundaki beş
+  saniyelik kalp atışları altında paket kuran bir geçiş — hâlâ bekliyor ve bu
+  kaydı AÇIK tutuyor.
+
+### R-018 - BIND ön denetimi standart Arch kök dizinini reddediyor
+
+- Kanıt: S-1 kill-matrix run 6. `cmd/agent/dns_engine_bind_mask_linux.go`, mask
+  üst dizin zincirini yürürken `/` dahil olmak üzere tam `bindManagedRootMode`
+  0755 beklentisini uygular; resmi Arch imajı `/` dizinini 0555 sunar. İstek
+  intent günlük yazımına bile ulaşamaz. İlgili diğer üst dizinler 0755'ti, yani
+  bu geniş bir düzenek bozulması değil tek ve belirli bir beklentidir.
+- Etki: Standart bir Arch kurulumunda BIND motoruna ulaşılamaz. Arch,
+  OPERATIONS.md 3. bölüm uyarınca zorunlu bir kabul dağıtımıdır; dolayısıyla bu
+  aynı zamanda sürüm matrisinin bir bölümünü de engeller.
+- Acil kontrol: Geçen bir koşu elde etmek için kök dizine `chmod` uygulamayın.
+  Bu, reddi gizler ve düzeneği temsil edici olmaktan çıkarır.
+- Çıkış ölçütü: `/` üzerindeki 0755'in mask politikası için taşıyıcı mı yoksa
+  normal bir Linux kökü için baştan yanlış bir beklenti mi olduğuna dair yazılı
+  bir karar ve buna karşılık gelen düzeltme ya da belgelenmiş dağıtım sınırı.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+- S-2 kararı: `/` üzerindeki `0755` bu işlem için taşıyıcı **değildir**.
+  Mutasyon doğrulanmış `/etc/systemd/system` dizinine iner ve `systemctl mask`
+  çağırır; doğrudan `/` altında hiçbir girdi oluşturmaz, yeniden adlandırmaz ya
+  da silmez. Gerçekten gereken özellikler - root sahipliği, güvensiz ACL veya
+  sembolik bağ kaçışı olmaması, geçiş izni, grup/diğer yazma izni olmaması -
+  `0555` altında da `0755` altında da sağlanır. Kusur politika
+  karıştırmasıdır: `bindManagedRootMode` hem yönetilen dizinlere hem de var
+  olan dosya sistemi güven çıpalarına hizmet ediyor. Düzeltme, yönetilen kök
+  sabitini gevşetmek yerine üst güven çıpalarına kendi politikasını vermelidir.
+  Mevcut testler sentetik mask üst dizinini zorla 0755 yapıp yalnız 0700 reddini
+  sınıyor; standart Arch biçimi kapsanmıyor.
+- Düzeltme uygulandı (1 Eylül 2026, `fix/alpha52-handoff-acceptance` dalı):
+  önceden var olan dosya sistemi üst dizinlerinin artık kendi politikası var,
+  `validateInheritedBINDAnchorFD`; bu ürünün oluşturduğu dizinler için
+  kullanılan tam-kip dayatmasından ayrı. Devralınan bir çıpa; root'a ait bir
+  dizin olmalı, grup ve diğer yazma izni bulunmamalı, setuid/setgid/sticky
+  taşımamalı, ACL'siz olmalı ve herkesçe geçilebilmelidir. Bu, standart Arch'ın
+  0555 kökünü ve olağan 0755'i kabul ederken yazılabilir, özel-bitli, yabancı
+  sahipli ya da geçilemez her biçimi reddetmeyi sürdürür - 0700 dahil; mevcut
+  bir test onu zaten ret olarak sabitlemişti ve bu politikanın ilk taslağı onu
+  yanlışlıkla kabul ediyordu, test yakaladı. `/var/cache/bind/celikpanel` ve
+  ürünün oluşturduğu diğer her dizin tam 0755 olarak kalır. Dört üst dizin
+  yürüyücüsünün hepsine uygulandı (mask üst dizini, iki yönetilen kök yürüyüşü,
+  satıcı unit yolu); bu önemlidir, çünkü mask üst dizini kanıtını PowerDNS yolu
+  da paylaşır, yani Arch engeli hiçbir zaman yalnız BIND'a özgü değildi. Tam ve
+  etiketli agent paketleri Debian 13 (WSL2) üzerinde geçiyor. Gerçek bir
+  standart Arch sunucusundaki canlı kanıt hâlâ bekliyor ve bu kaydı AÇIK tutuyor.
+
+### R-019 - Devralınmış PowerDNS, geçişe hazır bir BIND kaynağı değil
+
+- Kanıt: S-1 kill-matrix run 5. Üretimdeki `pdns-adopt` bilerek salt-okunurdur
+  ve bu yüzden CelikPanel'in özel eşitleme tablolarını oluşturmaz; oysa hemen
+  ardından gelen BIND devri kaynağını `celikpanel_dns_zone_sync_v3_receipts`
+  üzerinden doğrular. Tablo bulunmadığı için devir başarısız oldu.
+- Etki: Mevcut bir dış PowerDNS'i devralıp sonra panel üzerinden BIND'a geçmek
+  isteyen bir operatör bu geçişi tamamlayamayabilir. Müşteriye yansıyan sonuç
+  henüz doğrulanmadı ve ilk saptanması gereken şey budur.
+- Acil kontrol: Yok. Özel tabloları elle yazmayın; bu, üzerine kurulan her
+  temeli geçersiz kılar.
+- Çıkış ölçütü: Müşteriye yansıyan sonuç yazılı olarak saptanır; panel üzerinden
+  ulaşılabiliyorsa devralma ya değiştirilmemiş
+  `Agent.ConfigurePowerDNSSQLite` ve `Agent.SyncDNSZoneV3` yoluyla geçişe hazır
+  bir kaynak üretir ya da devir, devralmanın sağlayamadığı şeyi şart koşmaktan
+  vazgeçer.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+- S-2 kararı: Sonuç müşteriye yansıyor ve doğrulandı. Bir yönetici geçerli bir
+  mevcut PowerDNS'i devralabilir, onun yönetilen aktif motor olduğunu görebilir
+  ve sonra onu kalıcı olarak BIND'a geçiremez; değiştirilmemiş her yeniden
+  deneme, PowerDNS hizmet vermeye devam ederken intent günlüğünden önce
+  başarısız olur. Kapalı arıza, kesinti yok; ama duyurulan motor devri işlemi
+  kullanılamıyor ve müşteri PowerDNS'te mahsur kalıyor. Sonraki tek bölgelik
+  bir mutasyon şemayı ve tek bir makbuzu tembelce oluşturabilir ama devralınan
+  her bölgeyi güvenilir biçimde onaramaz. Devralma testleri bunu gizliyor,
+  çünkü "dış" düzenekleri normal başlatıcıyı çağırıp özel makbuz şemasını
+  önceden oluşturuyor. Bir mühendislik kusuru ve bir destek bilinen-sorun kaydı
+  gerektirir.
+
+### R-020 - Panel race paketi zaman aşımı tavanına yakın
+
+- Kanıt: `go test ./cmd/panel/ -race -count=1 -timeout 30m`, Debian 13 WSL2
+  üzerinde `f243304d1aadc94c0f26342d2d3270902ad43d4b` commit'inde 1800 saniyelik
+  tavanın 1574.958 saniyesini kullanarak `ok` döndü; 225.042 saniye pay kaldı.
+- Etki: Daha yavaş bir makinede paket tavanı aşar ve test hatası olarak değil
+  zaman aşımı olarak düşer; bu "takıldı" gibi okunur ve orantısız inceleme
+  süresine mal olur.
+- Acil kontrol: Açık `-timeout 30m` korunsun; varsayılan daha kötü olurdu.
+  Eğilim görünür kalsın diye her kabul koşusunda geçen süre raporlansın.
+- Çıkış ölçütü: Ya paketin çalışma süresi düşürülür ya da tavan, gerekçesi
+  kaydedilerek ve desteklenen en yavaş kabul makinesinde ölçülmüş bir payla
+  yükseltilir.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-021 - Kurulum sunucusu kimliği envanterle uyuşmuyor
+
+- Kanıt: 31 Ağustos 2026'da iki kurulum hedefi de kayıtlı olandan farklı bir SSH
+  sunucu anahtarı ve envanterde bulunmayan bir işletim sistemi adı taşıyan bir
+  SSH afişi sundu: `2.25.80.4` Debian 13 olarak kayıtlı, Ubuntu bildiriyor;
+  `72.62.38.15` Arch olarak kayıtlı, Debian 13 bildiriyor. Şu an görünür bir
+  Arch sunucusu yok. Gözlenen parmak izleri operatörde tutulmaktadır ve bilerek
+  buraya yazılmamıştır: doğrulanmamış bir parmak izi bu deftere girerse sonradan
+  güvenilir bir temel sanılır.
+- Etki: Üretim biçimli iki sunucunun da kimliği saptanmamıştır. Anahtar
+  değişimi yeniden kurulumla tutarlıdır, ancak işletim sistemi değişimi tek
+  başına temiz sunucu kuralıyla açıklanmaz; diğer açıklama, adreslerin artık
+  başka makinelere çözümlendiğidir. Ayrıca zorunlu Arch kabul sunucusu ortada
+  yoktur.
+- Acil kontrol: Her iki adreste de kurulum, güncelleme ve yapılandırma değişimi
+  yasak. Yalnızca salt-okunur teşhis, o da operatör sunulan anahtarları bant
+  dışı doğruladıktan sonra. Kabul sanal makineleri, ekibin kendi denetimindeki
+  atılabilir makineler olmalıdır.
+- Çıkış ölçütü: Operatör her sunucu anahtarını sağlayıcı konsolu ya da sunucu
+  üstü kanıtla doğrular; her adres için kayıtlı işletim sistemi düzeltilir ya da
+  adres emekliye ayrılır; ve bir Arch kabul sunucusu var olur.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-022 - Temiz kurulum başlayamıyor
+
+- Kanıt: S-2 kabul koşusu, atılabilir Debian 13 ve Arch sanal makineleri,
+  `f243304d1aadc94c0f26342d2d3270902ad43d4b` commit'i. İkisi de tek bir hatayla
+  1 döndü: `trusted release root is missing while sourcing release guard`;
+  `/opt/celikpanel`, `/var/lib/celikpanel`, `/etc/celikpanel` ve her iki unit
+  dosyası da oluşmadı. Kabul raporu SHA-256
+  `7126f122e815ddda59ba7d8dd060b74c937c0bb7ab61d9a18ec93734d9a46eb3`.
+  `install.sh:128` `SRC` değerini hesaplar, `:131`
+  `deploy/release-transaction-guard.sh` dosyasını source eder; oradaki
+  `:16-20` denetimi yalnız `TRUSTED_RELEASE_ROOT` ya da
+  `CELIKPANEL_TRUSTED_RELEASE_ROOT` kabul eder. Temiz kurulum yolu
+  `TRUSTED_RELEASE_ROOT=$SRC` atamasını ilk kez `install.sh:519` satırında,
+  çok daha sonra ulaşılan `prepare_fresh_release_transaction_foundation()`
+  içinde yapar. `:23` satırındaki `set -euo pipefail`, korumanın `return 1`
+  değerini çıkışa çevirir. `download-portal/get.sh:1057-1063` kuruluma altı
+  `CELIKPANEL_FIRST_INSTALL_*` değeri geçirir, iki kök değişkenini de geçirmez;
+  dosyada ikisine de hiçbir atıf yoktur.
+- Kapsam: Alpha53 adayının getirdiği bir hata değildir. Temel commit `0a5e849`
+  aynı satır numaralarında aynı sırayı taşır ve sıra `45d01ff` (Alpha51
+  kurtarma sağlamlaştırması, 28 Ağustos 2026) tarihine dayanır. Üç dosya aday
+  dal boyunca bayt bayt değişmemiştir.
+- Etki: Yeni hiçbir müşteri ürünü belgelenmiş hiçbir yoldan kuramaz - ne genel
+  `get.sh` akışıyla ne de doğrudan `install.sh` çağrısıyla. Fark edilmemesinin
+  sebebi, iki canlı sunucunun da Alpha52'ye bir Alpha51 güncellemesiyle
+  ulaşmasıdır; eldeki Alpha52 kanıtı güncellemeyi kapsar, temiz kurulumu değil.
+  Güncelleme ve geri alma yolları etkilenmez: kuruluma girmeden önce
+  `CELIKPANEL_TRUSTED_RELEASE_ROOT` değişkenini verirler
+  (`bootstrap-update.sh:389`).
+- Acil kontrol: Yok. Geçici çözüm diye kimseye elle güvenilen kök değişkeni
+  vermesini söylemeyin; koruma tam da çağıranın doğrulamadığı bir kökü
+  reddetmek için vardır ve elle atamak koruduğu özelliği ortadan kaldırır.
+- Çıkış ölçütü: Debian 13, Ubuntu 24.04 ve güncel Arch üzerinde hem genel
+  imzalı `get.sh` akışından hem de belgelenmiş doğrudan çağrıdan temiz kurulum
+  tamamlanır; koruma, çağıranın doğrulamadığı bir sürüm kökünü hâlâ reddeder;
+  ve statik testlerle çıkarılmış-fonksiyon testlerinin ulaşamadığı
+  bootstrap-kurulum giriş sınırını bir kabul testi kapsar.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+- S-3 güncellemesi: Giriş sınırı kusurunun kendisi yerel
+  `fix/r-022-fresh-install` dalında onarıldı ve kanıtlandı (`7fd5b30b`
+  commit'i, üst commit tam olarak `0a5e8495…`): imzalı yolculuk artık `get.sh`
+  içinden doğrulanmış çıkarma kökünü geçirir, apply-only olmayan doğrudan
+  çağrı kendi kanonik kurulum dizinine düşer, apply-only eksik miras kökü hâlâ
+  reddeder ve koruma dosyası tabanda ve adayda bayt bayt aynıdır. Yeni bir
+  betikler-arası giriş-sınırı sözleşme testi tabanda düşer, düzeltmeyle geçer
+  ve CI'da koşar. Dal itilmedi, operatör incelemesini bekliyor. Temiz kurulum
+  bir bütün olarak arkasında kırık kalmaya devam ediyor - bkz. R-023 - bu
+  yüzden düzeltme `main`'e inip eksiksiz yeşil bir kurulum var olana dek bu
+  kayıt AÇIK kalır.
+
+### R-023 - Atlanan ilk yönetici, panel yeniden başlatma döngüsüne dönüşüyor
+
+- Kanıt: S-3 kabul koşusu; atılabilir Debian 13, Ubuntu 24.04 ve Arch sanal
+  makinelerinde altı geçerli temiz kurulum yolculuğu (S-3 manifesti
+  `815bf4adbf71c89f505d09293d3020b1964171485f900ab20e28089ec33eec09`). Altısı
+  da tek ve belirlenimci bir zincirle düştü: `install.sh:1403`,
+  `SKIP_ADMIN=1` altında `ensure_first_administrator` işlevinden hemen döner;
+  `006_drop_placeholder_admin.sql` geçişi yer tutucu yöneticiyi siler; panel
+  sıfır kullanıcı sayar ve ardına kadar açık hizmet vermeyi reddeder
+  (`cmd/panel/main.go` sıfır-kullanıcı kapısı); `Restart=on-failure` bu reddi
+  yeniden başlatma döngüsüne çevirir; kurulum
+  `/etc/celikpanel/install.complete` yazılmadan çıkar.
+- Kapsam: `main` üzerinde önceden var; sıfır-kullanıcı kapısı (3 Temmuz 2026)
+  ile 006 geçişi `SKIP_ADMIN` ile birlikte yaşadığından beri. Hiçbir aday dalın
+  getirdiği bir şey değil. Sıfır-kullanıcı reddi doğrudur ve kalmalıdır:
+  kullanıcısı olmayan panel hizmet vermemelidir.
+- Etki: Çalışan etkileşimsiz temiz kurulum yok. `SKIP_ADMIN=1` belgelenmiş bir
+  kurulum seçeneğidir, apply-only sözleşmesi onu şart koşar ve tarihsel dağıtım
+  reçetesi onu kullanıyordu. Etkileşimli yolculuk `--create-admin` komutuna
+  dayanır; o da terminalden okur (`cmd/panel/admin_cli.go:27,133`) ve
+  etkileşimsiz kipi yoktur - otomasyon ilk yöneticiyi hiç oluşturamaz.
+  Etkileşimli TTY yolculuğu kanıtlanmadı.
+- Acil kontrol: Temiz kurulumda `SKIP_ADMIN=1` kullanmayın. Etkilenmiş bir
+  kurulumdan sonra servis kullanıcısıyla `--create-admin` çalıştırıp paneli
+  yeniden başlatın; bir kullanıcı oluşunca döngü durur.
+- Çıkış ölçütü: `SKIP_ADMIN=1` ile temiz kurulum, herhangi bir sunucu
+  değişikliğinden ÖNCE açık bir mesajla erken reddeder, döngüyle bitmez;
+  otomasyon için belgelenmiş, güvenli bir etkileşimsiz ilk-yönetici mekanizması
+  vardır; etkileşimli yolculuk gerçek bir TTY'de kanıtlanır; ve altı S-3
+  yolculuğu uçtan uca geçer.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-024 - Birim etkinleştirme açık-arızalı ve eşitlenmemiş
+
+- Kanıt: S-3, Arch imzalı-genel yolculuğu. Tanı amaçlı yeniden başlatmadan
+  sonra iki birim de devre dışı ve pasifti; Debian ile Ubuntu agent'ı geri
+  getirdi. `install.sh` her iki `systemctl enable` çağrısının hatasını yutar
+  (`>/dev/null 2>&1 || true`) ve yalnız aynı açılıştaki etkinliği kanıtlar;
+  enable bağları panel arızasından önce hiç eşitlenmez ve düzenek sanal
+  makineyi ani durdurdu. Kanıt, kalıcılık kaybını ve açık-arızalı
+  etkinleştirmeyi kanıtlar; başarısız enable ile eşitlenmemiş bağı ayırt
+  edemez.
+- Etki: Taze bir sunucu, kurulum servisleri çalışıyor diye raporlamışken hiçbir
+  şey hizmet vermeden yeniden başlayabilir.
+- Acil kontrol: Her kurulumdan sonra, yeniden başlatmaya güvenmeden önce iki
+  birim için `systemctl is-enabled` doğrulayın.
+- Çıkış ölçütü: enable hataları kurulum için ölümcül olur, bağlar başarı
+  raporlanmadan önce kalıcı eşitlenir ve bir yeniden başlatma testi iki birimin
+  desteklenen her dağıtımda geri geldiğini kanıtlar.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-025 - Klonla-kur iddiası kök zinciri politikasıyla çelişiyor
+
+- Kanıt: S-3. `install.sh:1715-1721`, stok bir sistemde
+  `git clone && sudo ./install.sh` çalışır diye belgeler; oysa sürüm kurtarma
+  temeli, kullanıcıya ait bir üst dizinin altındaki sürümü reddeder - ki
+  `/home/<kullanıcı>` altındaki bir klon tam olarak budur. S-3 düzeneği bu
+  redde çarptı ve root'a ait korumalı depolamaya yeniden taşımak zorunda kaldı.
+- Etki: Belgelenen geliştirici yolculuğu, ürünün kendi uyguladığı politikada
+  düşer. Hangisi doğruysa öbürü değişmeli.
+- Acil kontrol: Doğrudan kurulumları root'a ait bir dizin altına taşıyın.
+- Çıkış ölçütü: Ya belge ev-dizini iddiasını bırakıp taşıma şartını yazar ya da
+  politika bilinçli olarak tanımlı bir temiz-kurulum taşıma biçimini kabul
+  eder; karar sürüklenmeyle değil yazılı verilir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

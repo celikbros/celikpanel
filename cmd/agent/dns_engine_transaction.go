@@ -35,7 +35,70 @@ const (
 	dnsSwitchPhaseCommitted      = "committed"
 	dnsSwitchPhaseRollingBack    = "rolling-back"
 	dnsSwitchPhaseRolledBack     = "rolled-back"
+
+	dnsEngineSwitchJournalFaultPreIntent   = "pre_intent"
+	dnsEngineSwitchJournalFaultBeforeWrite = "before_write"
+	dnsEngineSwitchJournalFaultAfterWrite  = "after_write"
+
+	dnsEngineSwitchFaultDriverBIND                     = "bind"
+	dnsEngineSwitchFaultDriverPDNSSwitch               = "pdns-switch"
+	dnsEngineSwitchFaultDriverPDNSAdopt                = "pdns-adopt"
+	dnsEngineSwitchFaultDriverPDNSSecondaryReconfigure = "pdns-secondary-reconfigure"
+	dnsEngineSwitchFaultDriverSignedUpdateFinalize     = "signed-update-finalize"
 )
+
+// Assigned only by focused crash-recovery tests or the linux && dns_kill_matrix
+// tagged runtime. Standard untagged production builds never assign this hook,
+// so their journal publication has no fault-injection behavior.
+var dnsEngineSwitchJournalFaultHook func(string, string, dnsEngineSwitchJournal) error
+
+// Returned only by the linux && dns_kill_matrix tagged runtime after a
+// durably published forward journal has been selected as the deterministic
+// precursor for a rollback cell. Ordinary builds leave the hook above nil and
+// therefore cannot produce this sentinel.
+var dnsEngineSwitchRollbackPrecursorError = errors.New(
+	"DNS kill-matrix rollback precursor injected",
+)
+
+func runDNSEngineSwitchPreIntentFaultHook(
+	driver string,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+) error {
+	if dnsEngineSwitchJournalFaultHook == nil {
+		return nil
+	}
+	point := dnsEngineSwitchJournal{
+		Schema:            dnsEngineSwitchJournalSchema,
+		Phase:             "pre-intent",
+		Mode:              manifest.Mode,
+		MutationRequestID: binding.MutationRequestID,
+		MutationOwnerID:   binding.MutationOwnerID,
+		ManifestQualifier: manifest.Qualifier,
+		SourceEngine:      manifest.SourceEngine,
+		TargetEngine:      manifest.TargetEngine,
+		SourceEpoch:       manifest.SourceEpoch,
+		TargetEpoch:       manifest.TargetEpoch,
+		SourceRevision:    manifest.SourceRevision,
+		Topology:          manifest.Topology,
+		PairRole:          manifest.PairRole,
+		LocalIP:           manifest.LocalIP,
+		LocalNS:           manifest.LocalNS,
+		PeerIP:            manifest.PeerIP,
+		PeerNS:            manifest.PeerNS,
+		SnapshotBytes:     manifest.SnapshotBytes,
+		Zones:             manifest.Zones,
+	}
+	if err := dnsEngineSwitchJournalFaultHook(
+		driver, dnsEngineSwitchJournalFaultPreIntent, point,
+	); err != nil {
+		return fmt.Errorf(
+			"injected failure in DNS engine switch pre-intent window: %w",
+			err,
+		)
+	}
+	return nil
+}
 
 func newDNSEngineRollbackContext(
 	parent context.Context,
@@ -491,19 +554,51 @@ func readDNSEngineSwitchJournalAt(path string) (dnsEngineSwitchJournal, bool, er
 	return journal, err == nil, err
 }
 
-func writeDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
+func writeDNSEngineSwitchJournalWithOps(
+	journal dnsEngineSwitchJournal,
+	persist func([]byte) error,
+	read func() (dnsEngineSwitchJournal, bool, error),
+	faultHook func(string, dnsEngineSwitchJournal) error,
+) error {
+	if persist == nil || read == nil {
+		return errors.New("DNS engine switch journal writer is incomplete")
+	}
 	encoded, err := encodeDNSEngineSwitchJournal(journal)
 	if err != nil {
 		return err
 	}
-	if err := secureWriteConfig(dnsEngineSwitchJournalPath(), encoded, 0o600); err != nil {
-		verified, exists, readErr := readDNSEngineSwitchJournal()
+	if faultHook != nil {
+		if err := faultHook(dnsEngineSwitchJournalFaultBeforeWrite, journal); err != nil {
+			return fmt.Errorf(
+				"injected failure before DNS engine switch journal write for phase %q: %w",
+				journal.Phase, err,
+			)
+		}
+	}
+	if err := persist(encoded); err != nil {
+		verified, exists, readErr := read()
 		if readErr == nil && exists && reflect.DeepEqual(verified, journal) {
+			if faultHook != nil {
+				if hookErr := faultHook(dnsEngineSwitchJournalFaultAfterWrite, journal); hookErr != nil {
+					return fmt.Errorf(
+						"injected failure after DNS engine switch journal write for phase %q: %w",
+						journal.Phase, hookErr,
+					)
+				}
+			}
 			return nil
 		}
 		return errors.Join(err, readErr)
 	}
-	verified, exists, err := readDNSEngineSwitchJournal()
+	if faultHook != nil {
+		if err := faultHook(dnsEngineSwitchJournalFaultAfterWrite, journal); err != nil {
+			return fmt.Errorf(
+				"injected failure after DNS engine switch journal write for phase %q: %w",
+				journal.Phase, err,
+			)
+		}
+	}
+	verified, exists, err := read()
 	if err != nil || !exists || !reflect.DeepEqual(verified, journal) {
 		if err == nil {
 			err = errors.New("DNS engine switch journal readback mismatch")
@@ -511,6 +606,31 @@ func writeDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 		return err
 	}
 	return nil
+}
+
+func writeDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
+	return writeDNSEngineSwitchJournalForFaultDriver("", journal)
+}
+
+func writeDNSEngineSwitchJournalForFaultDriver(
+	driver string,
+	journal dnsEngineSwitchJournal,
+) error {
+	globalFaultHook := dnsEngineSwitchJournalFaultHook
+	var faultHook func(string, dnsEngineSwitchJournal) error
+	if globalFaultHook != nil {
+		faultHook = func(point string, observed dnsEngineSwitchJournal) error {
+			return globalFaultHook(driver, point, observed)
+		}
+	}
+	return writeDNSEngineSwitchJournalWithOps(
+		journal,
+		func(encoded []byte) error {
+			return secureWriteConfig(dnsEngineSwitchJournalPath(), encoded, 0o600)
+		},
+		readDNSEngineSwitchJournal,
+		faultHook,
+	)
 }
 
 func removeDNSEngineSwitchJournal() error {

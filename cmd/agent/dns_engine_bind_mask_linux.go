@@ -56,20 +56,20 @@ func openExactBINDMaskParent() (int, error) {
 		return -1, fmt.Errorf("open filesystem root for BIND mask proof: %w", err)
 	}
 	defer unix.Close(rootFD)
-	if _, err := validateExactBINDDirectoryFD(
-		rootFD, 0, 0, bindManagedRootMode, "BIND mask filesystem root",
+	if _, err := validateInheritedBINDAnchorFD(
+		rootFD, "BIND mask filesystem root",
 	); err != nil {
 		return -1, err
 	}
-	etcFD, _, err := openExactBINDDirectoryAt(
-		rootFD, "etc", 0, 0, bindManagedRootMode, "/etc",
+	etcFD, _, err := openInheritedBINDAnchorAt(
+		rootFD, "etc", "/etc",
 	)
 	if err != nil {
 		return -1, err
 	}
 	defer unix.Close(etcFD)
-	systemdFD, _, err := openExactBINDDirectoryAt(
-		etcFD, "systemd", 0, 0, bindManagedRootMode, "/etc/systemd",
+	systemdFD, _, err := openInheritedBINDAnchorAt(
+		etcFD, "systemd", "/etc/systemd",
 	)
 	if err != nil {
 		return -1, err
@@ -89,8 +89,11 @@ func openExactBINDMaskParent() (int, error) {
 }
 
 func verifyBINDMaskParentMetadataAt(systemDirectoryFD int) error {
-	_, err := validateExactBINDDirectoryFD(
-		systemDirectoryFD, 0, 0, bindManagedRootMode, "/etc/systemd/system",
+	// systemd owns this directory, not us; we only place mask symlinks in it.
+	// Bu dizinin sahibi systemd'dir, biz değiliz; içine yalnız mask sembolik
+	// bağları koyarız.
+	_, err := validateInheritedBINDAnchorFD(
+		systemDirectoryFD, "/etc/systemd/system",
 	)
 	return err
 }

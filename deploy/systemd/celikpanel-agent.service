@@ -9,6 +9,30 @@
 Description=CelikPanel privileged agent
 After=network.target
 Before=celikpanel-panel.service
+# No hard stop: the panel cannot work without this unit, so parking it in
+# failed state takes the whole control plane down with it. The brake is the
+# escalating backoff below.
+# Sert durdurma yok: panel bu birim olmadan çalışamaz, dolayısıyla onu "failed"
+# durumunda park etmek bütün kontrol düzlemini beraberinde götürür. Fren,
+# aşağıdaki artan beklemedir.
+# A limit that actually trips on EVERY supported systemd. RestartSteps and
+# RestartMaxDelaySec arrived in systemd 254; older builds (RHEL 9 ships the 252
+# family) load the unit and ignore them with a warning, so the backoff below
+# simply does not exist there. Disabling the limiter would then leave that
+# platform with an unbounded 3s flap - A17 unfixed exactly where it is hardest
+# to see. 30 starts per hour is the floor: on old systemd it stops the flap
+# after ~90s; on 254+ the backoff stretches those 30 attempts over hours, so it
+# is a last resort rather than the brake.
+# HER desteklenen systemd surumunde gercekten devreye giren bir sinir.
+# RestartSteps ve RestartMaxDelaySec systemd 254 ile geldi; daha eski surumler
+# (RHEL 9, 252 ailesi) birimi yukleyip bunlari uyariyla yok sayar, yani
+# asagidaki artan bekleme orada hic yoktur. Sinirlayiciyi kapatmak o platformu
+# sinirsiz 3sn cirpinmayla birakirdi - A17 en gorunmez oldugu yerde acik
+# kalirdi. Saatte 30 baslatma taban: eski systemd'de cirpinmayi ~90 saniyede
+# durdurur; 254+ uzerinde artan bekleme o 30 denemeyi saatlere yaydigi icin
+# fren degil son caredir.
+StartLimitIntervalSec=3600
+StartLimitBurst=30
 
 [Service]
 Type=simple
@@ -34,7 +58,6 @@ StateDirectoryMode=0700
 
 Environment=CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock
 Environment=CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token
-Environment=CELIKPANEL_DKIM_DIR=/etc/celikpanel/dkim
 Environment=CELIKPANEL_RUNTIMES_DIR=/opt/celikpanel/runtimes
 Environment=CELIKPANEL_AGENT_STATE_DIR=/var/lib/celikpanel-agent-private
 Environment=CELIKPANEL_MUTATION_LOCK=/run/celikpanel/service-mutation.lock
@@ -42,6 +65,14 @@ Environment=CELIKPANEL_MUTATION_LOCK=/run/celikpanel/service-mutation.lock
 ExecStart=/opt/celikpanel/bin/agent
 Restart=on-failure
 RestartSec=3
+# Same arithmetic as the panel unit: a fixed 3s retry sits permanently under
+# systemd's default 5-per-10s limiter, so it never trips and the flap is
+# unbounded. Escalate 3s -> 120s.
+# Panel birimiyle aynı aritmetik: sabit 3sn'lik yeniden deneme systemd'nin
+# varsayılan 10sn'de 5 freninin kalıcı olarak altında kalır, yani hiç devreye
+# girmez ve çırpınma sınırsız olur. 3sn -> 120sn artır.
+RestartSteps=6
+RestartMaxDelaySec=120
 KillMode=control-group
 SendSIGKILL=yes
 TimeoutStopSec=30s

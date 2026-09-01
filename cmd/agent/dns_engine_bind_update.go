@@ -70,8 +70,12 @@ func prepareBINDGenerationRootForSignedUpdateUnderExternalLock(
 			rollbackJournal: rollbackInitialBINDJournalForSignedUpdate,
 			verifyRestored:  verifyInitialBINDRollbackForSignedUpdate,
 			verifyTarget:    verifyDNSSwitchJournalTarget,
-			writeJournal:    writeDNSEngineSwitchJournal,
-			removeJournal:   removeDNSEngineSwitchJournal,
+			writeJournal: func(journal dnsEngineSwitchJournal) error {
+				return writeDNSEngineSwitchJournalForFaultDriver(
+					dnsEngineSwitchFaultDriverSignedUpdateFinalize, journal,
+				)
+			},
+			removeJournal: removeDNSEngineSwitchJournal,
 			readInstall: func() (dnsEngineInstallOwnershipReceipt, bool, error) {
 				return readDNSEngineInstallOwnership(transport.DNSEngineBIND)
 			},
@@ -455,10 +459,18 @@ func exactCommittedDNSEngineSignedUpdateProvenance(
 		return dnsEngineStateReceipt{}, false, false,
 			fmt.Errorf("read committed DNS engine ownership: %w", err)
 	}
-	if ownershipExists &&
-		(validateDNSEngineState(ownership) != nil || ownership != state) {
-		return dnsEngineStateReceipt{}, false, false,
-			errors.New("committed DNS engine ownership differs from its exact active state")
+	// Same rule as the host path, from the same function. A receipt left at an
+	// older epoch of the same engine — what returning to a previously used
+	// engine always leaves behind — is provenance, not a contradiction, and the
+	// publish a few steps later refreshes it.
+	// Host yolundaki kuralın aynısı, aynı fonksiyondan. Aynı motorun daha eski
+	// bir çağında kalmış makbuz — daha önce kullanılmış bir motora dönmenin her
+	// zaman geride bıraktığı şey — bir çelişki değil köken kanıtıdır ve birkaç
+	// adım sonraki yayım onu tazeler.
+	if ownershipExists {
+		if err := acceptableCommittedDNSEngineOwnership(ownership, state); err != nil {
+			return dnsEngineStateReceipt{}, false, false, err
+		}
 	}
 	if journal.Mode != transport.DNSEngineSwitchModeAdopt {
 		if !installExists {
@@ -518,7 +530,16 @@ func recoverCommittedDNSEngineSwitchJournalForSignedUpdate(
 	if err != nil {
 		return false, fmt.Errorf("reinspect committed DNS engine ownership: %w", err)
 	}
-	if !ownershipExists {
+	// This is the publish point, so a superseded receipt is overwritten rather
+	// than merely tolerated: an absent receipt and one left at an older epoch of
+	// the same engine both mean "the current state has not been published yet".
+	// Anything else that differs is a genuine change under our feet and refuses.
+	// Burası yayım noktası; dolayısıyla aşılmış bir makbuz yalnızca hoş
+	// görülmez, üzerine yazılır: olmayan bir makbuz da aynı motorun daha eski bir
+	// çağında kalmış bir makbuz da "güncel durum henüz yayımlanmadı" demektir.
+	// Bundan farklı olan her şey ayağımızın altında gerçek bir değişikliktir ve
+	// reddedilir.
+	if !ownershipExists || supersededDNSEngineOwnership(ownership, state) {
 		if err := ops.writeOwnership(state); err != nil {
 			return false, fmt.Errorf("publish committed DNS engine ownership: %w", err)
 		}

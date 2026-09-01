@@ -216,14 +216,45 @@ func (t *serviceMutationExecutionTracker) register(pid int, started, command str
 		return errors.New("service mutation cannot register this privileged worker")
 	}
 	before := cloneServiceMutationLedger(m.ledger)
+	now := m.now()
 	t.runtime.job.WorkerPID = pid
 	t.runtime.job.WorkerStarted = started
 	t.runtime.job.WorkerCommand = command
-	t.runtime.job.UpdatedAt = m.now()
+	t.runtime.job.UpdatedAt = now
+	extendWorkerTransitionLease(t.runtime.job, m, now)
 	if err := m.persistLedgerMutationLocked(before); err != nil {
 		return err
 	}
 	return nil
+}
+
+// extendWorkerTransitionLease keeps the ledger's exact-shape invariant
+// (LeaseExpiresAt never before UpdatedAt) true through the two durable worker
+// transitions. Registering and clearing a worker are progress made by the
+// owning flow itself — as strong a liveness proof as any heartbeat — so they
+// renew the lease rather than merely advancing UpdatedAt, which silently broke
+// the invariant whenever panel renewal stalled longer than the lease
+// (risk R-017). Only a Running job renews: a worker registered during
+// cancelling recovery must not resurrect an expired lease, and the
+// expired-cancelling proof explicitly requires UpdatedAt at or past
+// LeaseExpiresAt.
+// extendWorkerTransitionLease, defterin tam-biçim değişmezini (LeaseExpiresAt
+// asla UpdatedAt'ten önce olamaz) iki kalıcı işçi geçişi boyunca doğru tutar.
+// İşçi kaydetmek ve temizlemek, sahibi olan akışın kendi ilerlemesidir — her
+// kalp atışı kadar güçlü bir canlılık kanıtı — bu yüzden yalnız UpdatedAt'i
+// ilerletmek yerine kiralamayı da yenilerler; eskisi, panel yenilemesi
+// kiralamadan uzun süre durduğunda değişmezi sessizce bozuyordu (risk R-017).
+// Yalnız Running durumundaki iş yeniler: iptal kurtarması sırasında kaydedilen
+// bir işçi süresi dolmuş kiralamayı diriltmemelidir ve süresi-dolmuş-iptal
+// kanıtı, UpdatedAt'in LeaseExpiresAt'e eşit ya da ötesinde olmasını açıkça
+// şart koşar.
+func extendWorkerTransitionLease(
+	job *ServiceMutationJob, m *serviceMutationManager, now time.Time,
+) {
+	if job.Status != serviceMutationStatusRunning {
+		return
+	}
+	job.LeaseExpiresAt = minMutationTime(now.Add(m.leaseDuration), job.DeadlineAt)
 }
 
 func (t *serviceMutationExecutionTracker) clear(pid int) error {
@@ -237,9 +268,11 @@ func (t *serviceMutationExecutionTracker) clear(pid int) error {
 		return errors.New("privileged worker identity changed before completion")
 	}
 	before := cloneServiceMutationLedger(m.ledger)
+	now := m.now()
 	t.runtime.job.WorkerPID = 0
 	t.runtime.job.WorkerStarted = ""
 	t.runtime.job.WorkerCommand = ""
-	t.runtime.job.UpdatedAt = m.now()
+	t.runtime.job.UpdatedAt = now
+	extendWorkerTransitionLease(t.runtime.job, m, now)
 	return m.persistLedgerMutationLocked(before)
 }

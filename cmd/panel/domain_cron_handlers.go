@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/repositories"
-	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -43,47 +43,54 @@ func (p *Panel) handleDomainCronJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var domainName string
-	for _, d := range domains {
-		if d.ID == domainID {
-			domainName = d.Name
+	var domain *core.Domain
+	for i := range domains {
+		if domains[i].ID == domainID {
+			domain = domains[i]
 			break
 		}
 	}
 
-	if domainName == "" {
+	if domain == nil {
 		http.Error(w, "Domain not found", http.StatusNotFound)
 		return
 	}
 
-	// Cron runs as the site's own system user, not www-data — the same
-	// identity that owns the site files, so a job can read and write them
-	// (Plesk/cPanel do the same). www-data would run every site's jobs as
-	// one shared user with no access to the site's private files.
-	// Cron, www-data değil sitenin kendi sistem kullanıcısı olarak çalışır —
-	// site dosyalarının sahibi olan kimlik; böylece bir iş onları okuyup
-	// yazabilir (Plesk/cPanel de böyle yapar). www-data her sitenin işini
-	// tek paylaşımlı kullanıcıyla çalıştırırdı.
-	username := services.SiteUsername(domainName)
+	// The tenant identity travels, not a username. Cron runs as the site's own
+	// system user — the identity that owns the site files, so a job can read and
+	// write them (Plesk/cPanel do the same) — but WHICH user that is must be
+	// re-derived and proven by the agent, not asserted here. SiteUsername is not
+	// injective, so a username alone cannot say which tenant it means.
+	// Kullanıcı adı değil kiracı kimliği yolculuk eder. Cron, sitenin kendi
+	// sistem kullanıcısı olarak çalışır — site dosyalarının sahibi olan kimlik,
+	// böylece bir iş onları okuyup yazabilir — ama bunun HANGİ kullanıcı olduğu
+	// burada iddia edilmez, agent tarafından yeniden türetilip kanıtlanır.
+	// SiteUsername tek yönlü değildir; tek başına bir kullanıcı adı hangi
+	// kiracıyı kastettiğini söyleyemez.
+	tenant := transport.CronTenant{
+		SubscriptionID: domain.SubscriptionID,
+		DomainID:       domain.ID,
+		Domain:         domain.Name,
+	}
 
 	switch r.Method {
 	case "GET":
-		p.handleListCronJobs(w, username)
+		p.handleListCronJobs(w, tenant)
 	case "POST":
-		p.handleAddCronJob(w, r, username)
+		p.handleAddCronJob(w, r, tenant)
 	case "PUT":
-		p.handleUpdateCronJob(w, r, username)
+		p.handleUpdateCronJob(w, r, tenant)
 	case "DELETE":
-		p.handleDeleteCronJob(w, r, username)
+		p.handleDeleteCronJob(w, r, tenant)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (p *Panel) handleListCronJobs(w http.ResponseWriter, username string) {
+func (p *Panel) handleListCronJobs(w http.ResponseWriter, tenant transport.CronTenant) {
 	var resp transport.ListCronJobsResponse
 
-	err := p.callAgent("Agent.ListCronJobs", &transport.ListCronJobsRequest{Username: username}, &resp)
+	err := p.callAgent("Agent.ListCronJobs", &transport.ListCronJobsRequest{CronTenant: tenant}, &resp)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -92,7 +99,7 @@ func (p *Panel) handleListCronJobs(w http.ResponseWriter, username string) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, username string) {
+func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, tenant transport.CronTenant) {
 	var req struct {
 		Schedule string `json:"schedule"`
 		Command  string `json:"command"`
@@ -106,10 +113,10 @@ func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, usernam
 
 	var success bool
 	err := p.callAgentContext(r.Context(), "Agent.AddCronJob", &transport.AddCronJobRequest{
-		Username: username,
-		Schedule: req.Schedule,
-		Command:  req.Command,
-		Comment:  req.Comment,
+		CronTenant: tenant,
+		Schedule:   req.Schedule,
+		Command:    req.Command,
+		Comment:    req.Comment,
 	}, &success)
 
 	if err != nil {
@@ -124,7 +131,7 @@ func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, usernam
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
-func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, username string) {
+func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, tenant transport.CronTenant) {
 	var req struct {
 		ID       string `json:"id"`
 		Schedule string `json:"schedule"`
@@ -140,12 +147,12 @@ func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, user
 
 	var success bool
 	err := p.callAgentContext(r.Context(), "Agent.UpdateCronJob", &transport.UpdateCronJobRequest{
-		Username: username,
-		ID:       req.ID,
-		Schedule: req.Schedule,
-		Command:  req.Command,
-		Enabled:  req.Enabled,
-		Comment:  req.Comment,
+		CronTenant: tenant,
+		ID:         req.ID,
+		Schedule:   req.Schedule,
+		Command:    req.Command,
+		Enabled:    req.Enabled,
+		Comment:    req.Comment,
 	}, &success)
 
 	if err != nil {
@@ -160,7 +167,7 @@ func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, user
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
-func (p *Panel) handleDeleteCronJob(w http.ResponseWriter, r *http.Request, username string) {
+func (p *Panel) handleDeleteCronJob(w http.ResponseWriter, r *http.Request, tenant transport.CronTenant) {
 	jobID := r.URL.Query().Get("id")
 	if jobID == "" {
 		http.Error(w, "Job ID required", http.StatusBadRequest)
@@ -169,8 +176,8 @@ func (p *Panel) handleDeleteCronJob(w http.ResponseWriter, r *http.Request, user
 
 	var success bool
 	err := p.callAgentContext(r.Context(), "Agent.DeleteCronJob", &transport.DeleteCronJobRequest{
-		Username: username,
-		ID:       jobID,
+		CronTenant: tenant,
+		ID:         jobID,
 	}, &success)
 
 	if err != nil {

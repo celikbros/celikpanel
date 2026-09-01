@@ -1,0 +1,29 @@
+{
+  "images": {
+    "arch": {
+      "architecture": "x86_64",
+      "bytes": 556609024,
+      "digest": {
+        "algorithm": "sha256",
+        "value": "5d8be8d28cfd290f051b0f67df0a6874596ad23de3f3f18b90c91aeb758eb878"
+      },
+      "distribution": "Arch Linux",
+      "filename": "Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+      "release": "rolling",
+      "url": "https://geo.mirror.pkgbuild.com/images/v20260815.573966/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2"
+    },
+    "debian13": {
+      "architecture": "x86_64",
+      "bytes": 340262912,
+      "digest": {
+        "algorithm": "sha512",
+        "value": "184761b0dad0f9ace02f9298050ca96ce3caa39a461a47706d47ff9698b59933918b91b40177fbd4d392f6446af8b4d18ecb94caca988169b19641606bf34003"
+      },
+      "distribution": "Debian",
+      "filename": "debian-13-genericcloud-amd64-20260826-2582.qcow2",
+      "release": "13",
+      "url": "https://cloud.debian.org/images/cloud/trixie/20260826-2582/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+    }
+  },
+  "schema": "celikpanel/dns-kill-image-lock/v1"
+}

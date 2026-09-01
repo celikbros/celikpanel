@@ -1471,6 +1471,13 @@ func switchToPDNSOnCertifiedProfile(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	reconfigureSecondary := sourceProof.PDNSPairSecondaryReconfigure
+	faultDriver := dnsEngineSwitchFaultDriverPDNSSwitch
+	if reconfigureSecondary {
+		faultDriver = dnsEngineSwitchFaultDriverPDNSSecondaryReconfigure
+	}
+	writeJournal := func(journal dnsEngineSwitchJournal) error {
+		return writeDNSEngineSwitchJournalForFaultDriver(faultDriver, journal)
+	}
 	primaryCatalogSerial, err := primaryCatalogSerialFromSource(
 		ctx, profile, manifest, state, stateExists,
 	)
@@ -1520,6 +1527,30 @@ func switchToPDNSOnCertifiedProfile(
 	if err := validatePDNSSwitchPackagePolicy(sourceProof, len(missing)); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	// An earlier attempt that reached package install and was then rolled back
+	// leaves its install receipt bound to a dead request id: the rollback
+	// restores config, state and units but touches neither the packages nor the
+	// receipt. On the retry nothing is missing, so the branch below never runs
+	// and the surviving receipt's identity can no longer match this transaction
+	// — finalize then poisons the operation, and the poison outlives restarts.
+	// Rebinding it to the new identity is the same repair BIND already performs
+	// in hostDNSEngineBackend.Switch; the PowerDNS path never received it.
+	//
+	// Paket kurulumuna ulaşıp sonra geri alınmış bir önceki deneme, kurulum
+	// makbuzunu ölü bir istek kimliğine bağlı bırakır: geri alma yapılandırmayı,
+	// durumu ve unit'leri onarır ama ne paketlere ne makbuza dokunur. Yeniden
+	// denemede eksik paket kalmadığı için aşağıdaki dal hiç çalışmaz ve hayatta
+	// kalan makbuzun kimliği artık bu işlemle eşleşemez — sonlandırma işlemi
+	// zehirler ve zehir yeniden başlatmaları aşar. Makbuzu yeni kimliğe yeniden
+	// bağlamak, BIND'in Switch içinde zaten yaptığı onarımın aynısıdır.
+	if len(missing) == 0 {
+		if err := handoffExistingDNSEngineInstallOwnership(
+			transport.DNSEnginePowerDNS, profile.PackageManager,
+			packages, manifest, binding,
+		); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+	}
 	if len(missing) != 0 {
 		installReceipt, receiptErr := newDNSEngineInstallOwnership(
 			transport.DNSEnginePowerDNS, profile.PackageManager,
@@ -1547,6 +1578,11 @@ func switchToPDNSOnCertifiedProfile(
 	if err := verifyBINDMaskParentMetadata(); err != nil {
 		return transport.SwitchDNSEngineV1Response{},
 			fmt.Errorf("verify DNS systemd parent after package preparation: %w", err)
+	}
+	if err := runDNSEngineSwitchPreIntentFaultHook(
+		faultDriver, manifest, binding,
+	); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	configs, err := preparePDNSConfigMutation(ctx, manifest, managedConfig)
 	if err != nil {
@@ -1650,7 +1686,7 @@ func switchToPDNSOnCertifiedProfile(
 		if err := configs.verifyOwnerAwarePreimage(ctx); err != nil {
 			return err
 		}
-		return writeDNSEngineSwitchJournal(journal)
+		return writeJournal(journal)
 	}
 	if len(missing) == 0 {
 		if err := runDNSPort53PreMutationGuard(
@@ -1666,7 +1702,7 @@ func switchToPDNSOnCertifiedProfile(
 	}
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
 		journal.Phase = dnsSwitchPhaseRollingBack
-		journalErr := writeDNSEngineSwitchJournal(journal)
+		journalErr := writeJournal(journal)
 		recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
 		rollbackErr := contextErr
 		if contextErr == nil {
@@ -1690,7 +1726,7 @@ func switchToPDNSOnCertifiedProfile(
 				journalErr,
 				finishDNSSwitchRollbackJournal(
 					&journal,
-					writeDNSEngineSwitchJournal,
+					writeJournal,
 					removeDNSEngineSwitchJournal,
 				),
 			)
@@ -1731,7 +1767,7 @@ func switchToPDNSOnCertifiedProfile(
 		))
 	}
 	journal.Phase = dnsSwitchPhaseTargetStaged
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return rollback(err)
 	}
 	if err := runDNSMutationWithSystemdParentProof(
@@ -1743,7 +1779,7 @@ func switchToPDNSOnCertifiedProfile(
 		return rollback(err)
 	}
 	journal.Phase = dnsSwitchPhaseSourceStopped
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return rollback(err)
 	}
 	if err := runDNSMutationWithSystemdParentProof(
@@ -1762,7 +1798,7 @@ func switchToPDNSOnCertifiedProfile(
 		}
 	}
 	journal.Phase = dnsSwitchPhaseTargetStarted
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return rollback(err)
 	}
 	if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
@@ -1802,11 +1838,11 @@ func switchToPDNSOnCertifiedProfile(
 		}
 	}
 	journal.Phase = dnsSwitchPhaseTargetVerified
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	journal.Phase = dnsSwitchPhaseCommitted
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	return transport.SwitchDNSEngineV1Response{

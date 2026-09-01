@@ -53,6 +53,10 @@ type apiErrorBody struct {
 // Sabit ret kodları. Birini yeniden adlandırmak API kırılmasıdır — yapma.
 const (
 	errCodeInternal                      = "INTERNAL"
+	errCodeSubsystemDegraded             = "SUBSYSTEM_DEGRADED"
+	errCodeStartupRecoveryFailed         = "STARTUP_RECOVERY_FAILED"
+	errCodeSealedSecretUnreadable        = "SEALED_SECRET_UNREADABLE"
+	errCodeMutationsHeld                 = "MUTATIONS_HELD"
 	errCodeHostMutationBusy              = transport.HostMutationBusy
 	errCodePlatformCapabilityUnavailable = "PLATFORM_CAPABILITY_UNAVAILABLE"
 	errCodePlatformIdentityUnavailable   = "PLATFORM_IDENTITY_UNAVAILABLE"

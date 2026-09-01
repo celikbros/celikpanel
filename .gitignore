@@ -47,3 +47,21 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# Kill-matrix run evidence: serial console captures, journal dumps and state
+# snapshots produced by deploy/e2e/dns-kill-matrix. It is the record of a run,
+# not source, it is tens of megabytes per campaign, and it contains host keys
+# and machine state that has no business in a source history.
+# Kill-matrix koşu kanıtı: deploy/e2e/dns-kill-matrix'in ürettiği seri konsol
+# kayıtları, günlük dökümleri ve durum anlık görüntüleri. Bir koşunun kaydıdır,
+# kaynak değil; kampanya başına onlarca megabayttır ve bir kaynak geçmişinde
+# işi olmayan sunucu anahtarları ile makine durumu içerir.
+/artifacts/
+
+# Locally built helper binaries.
+# Yerel olarak derlenen yardımcı ikililer.
+/dns-kill-matrix-trigger
+
+# Per-developer consent for the design linter; the shared config is committed.
+# Tasarım denetleyicisi için geliştirici başına onay; paylaşılan yapılandırma commit edilir.
+.impeccable/config.local.json

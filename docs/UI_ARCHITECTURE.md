@@ -74,7 +74,7 @@ Four parallel layouts (AdminLayout, ResellerLayout, CustomerLayout, UserLayout) 
 
 ## Theming (decided)
 
-The panel supports **both light and dark themes**, user-switchable via a theme toggle. The default follows the operating system preference (`prefers-color-scheme`), falling back to light. Mechanically: the existing `web/src/theme.ts` tokens are wired to CSS custom properties, and both themes are two value sets of the *same* variables — components reference the variables, never hardcoded colors. This is skin over the shell; it changes no structure.
+The panel supports **both light and dark themes**, user-switchable via a theme toggle. The default follows the operating system preference (`prefers-color-scheme`), falling back to light. Mechanically: the tokens live as CSS custom properties in `web/src/index.css`, `web/tailwind.config.js` binds each semantic Tailwind name to one of them, and `web/src/theme/ThemeProvider.tsx` toggles `.dark` (and the skin's `data-theme`) on `<html>`. Both themes are two value sets of the *same* variables — components reference the variables, never hardcoded colors. The documented system is [DESIGN.md](../DESIGN.md). This is skin over the shell; it changes no structure.
 
 ## Scope boundary
 

@@ -613,3 +613,47 @@ func TestPDNSAdoptionRollbackNeverOverwritesDifferentJournal(t *testing.T) {
 		t.Fatalf("exact rollback transition failed: next=%+v writes=%d err=%v", next, writes, err)
 	}
 }
+
+func TestPDNSAdoptionIntentJournalErrorRoutesOnlyTaggedPrecursorToRollback(
+	t *testing.T,
+) {
+	ordinary := errors.New("ordinary journal write failure")
+	rollbackCalls := 0
+	response, err := handlePDNSAdoptionIntentJournalWriteError(
+		ordinary,
+		func(error) (transport.SwitchDNSEngineV1Response, error) {
+			rollbackCalls++
+			return transport.SwitchDNSEngineV1Response{Applied: true}, nil
+		},
+	)
+	if !errors.Is(err, ordinary) || response.Applied || rollbackCalls != 0 {
+		t.Fatalf(
+			"ordinary failure response=%+v rollback_calls=%d err=%v",
+			response, rollbackCalls, err,
+		)
+	}
+
+	rollbackFailure := errors.New("rollback failed")
+	precursor := fmt.Errorf(
+		"wrapped tagged precursor: %w", dnsEngineSwitchRollbackPrecursorError,
+	)
+	response, err = handlePDNSAdoptionIntentJournalWriteError(
+		precursor,
+		func(cause error) (transport.SwitchDNSEngineV1Response, error) {
+			rollbackCalls++
+			if !errors.Is(cause, dnsEngineSwitchRollbackPrecursorError) {
+				t.Fatalf("rollback cause = %v", cause)
+			}
+			return transport.SwitchDNSEngineV1Response{Applied: true},
+				errors.Join(cause, rollbackFailure)
+		},
+	)
+	if !response.Applied || rollbackCalls != 1 ||
+		!errors.Is(err, dnsEngineSwitchRollbackPrecursorError) ||
+		!errors.Is(err, rollbackFailure) {
+		t.Fatalf(
+			"precursor response=%+v rollback_calls=%d err=%v",
+			response, rollbackCalls, err,
+		)
+	}
+}

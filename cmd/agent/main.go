@@ -494,9 +494,40 @@ func main() {
 		return
 	}
 
+	// A ledger that cannot be brought up is a reason to refuse mutations, not a
+	// reason to leave the host without an agent. Exiting here is what turned a
+	// single poisoned DNS transaction into a total outage: the agent dies, the
+	// panel cannot dial it and dies too, systemd restarts both, the same durable
+	// state fails the same way, and the only route back in is SSH — which the
+	// product's own operating rules forbid for anything but diagnosis.
+	//
+	// Refusal is already implemented and does not depend on this exit. A poisoned
+	// manager is returned non-nil with its retained host lock precisely so
+	// fail-closed state survives (service_mutation_rpc.go), and every mutation
+	// path either re-reads the manager and handles its error or goes through
+	// requiredServiceMutationStep, which refuses a nil manager on its own. So the
+	// safety this exit appears to provide is provided by the code underneath it;
+	// what the exit adds is the outage.
+	//
+	// Ayağa kaldırılamayan bir defter, mutasyonları reddetmek için sebeptir;
+	// sunucuyu agent'sız bırakmak için değil. Buradan çıkmak, tek bir zehirlenmiş
+	// DNS işlemini tam kesintiye çeviren şeydi: agent ölür, panel ona bağlanamayıp
+	// o da ölür, systemd ikisini de yeniden başlatır, aynı kalıcı durum aynı
+	// şekilde başarısız olur ve geri dönüş yolu yalnız SSH'tır — ki ürünün kendi
+	// işletim kuralları bunu teşhis dışında yasaklar.
+	//
+	// Reddetme zaten uygulanmış ve bu çıkışa bağlı değil: zehirlenmiş yönetici,
+	// fail-closed durumu tam da hayatta kalsın diye tuttuğu kilitle birlikte
+	// nil olmayan biçimde dönüyor ve her mutasyon yolu ya yöneticiyi yeniden okuyup
+	// hatasını ele alıyor ya da nil yöneticiyi kendisi reddeden
+	// requiredServiceMutationStep'ten geçiyor.
 	mutationManager, err := agentServiceMutationManager()
 	if err != nil {
-		log.Fatalf("Failed to initialize service mutation ledger: %v", err)
+		log.Printf(
+			"DEGRADED service-mutations: the durable mutation ledger is unavailable; "+
+				"the agent is serving and will refuse every mutation until this clears: %v",
+			err,
+		)
 	}
 	if err := reconcileSystemUpdatesAtStartup(); err != nil {
 		log.Fatalf("Failed to reconcile system update state: %v", err)

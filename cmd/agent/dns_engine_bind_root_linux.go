@@ -353,20 +353,20 @@ func ensureAPTBindGenerationRootAtWithMode(
 	if bindGID == 0 || proveDurability == nil {
 		return errors.New("BIND service group must not be root")
 	}
-	if _, err := validateExactBINDDirectoryFD(
-		rootFD, 0, 0, bindManagedRootMode, "BIND filesystem root",
+	if _, err := validateInheritedBINDAnchorFD(
+		rootFD, "BIND filesystem root",
 	); err != nil {
 		return err
 	}
-	varFD, varIdentity, err := openExactBINDDirectoryAt(
-		rootFD, "var", 0, 0, bindManagedRootMode, "/var",
+	varFD, varIdentity, err := openInheritedBINDAnchorAt(
+		rootFD, "var", "/var",
 	)
 	if err != nil {
 		return err
 	}
 	defer unix.Close(varFD)
-	cacheFD, cacheIdentity, err := openExactBINDDirectoryAt(
-		varFD, "cache", 0, 0, bindManagedRootMode, "/var/cache",
+	cacheFD, cacheIdentity, err := openInheritedBINDAnchorAt(
+		varFD, "cache", "/var/cache",
 	)
 	if err != nil {
 		return err
@@ -537,20 +537,20 @@ func reverifyAPTBindGenerationRootAt(
 	if proveDurability == nil {
 		return errors.New("APT BIND parent durability proof is required")
 	}
-	if _, err := validateExactBINDDirectoryFD(
-		rootFD, 0, 0, bindManagedRootMode, "BIND filesystem root",
+	if _, err := validateInheritedBINDAnchorFD(
+		rootFD, "BIND filesystem root",
 	); err != nil {
 		return err
 	}
-	varFD, varIdentity, err := openExactBINDDirectoryAt(
-		rootFD, "var", 0, 0, bindManagedRootMode, "/var",
+	varFD, varIdentity, err := openInheritedBINDAnchorAt(
+		rootFD, "var", "/var",
 	)
 	if err != nil {
 		return err
 	}
 	defer unix.Close(varFD)
-	cacheFD, cacheIdentity, err := openExactBINDDirectoryAt(
-		varFD, "cache", 0, 0, bindManagedRootMode, "/var/cache",
+	cacheFD, cacheIdentity, err := openInheritedBINDAnchorAt(
+		varFD, "cache", "/var/cache",
 	)
 	if err != nil {
 		return err
@@ -580,6 +580,107 @@ func reverifyAPTBindGenerationRootAt(
 		return errors.New("managed BIND directory chain changed during verification")
 	}
 	return nil
+}
+
+// A pre-existing filesystem ancestor is not a directory this product created,
+// and demanding an exact mode from one is asking the wrong question.
+//
+// What these walks actually need from `/`, `/etc`, `/var` and friends is that
+// nobody but root can substitute an entry along the path: root ownership, no
+// group or other write, and no setuid/setgid/sticky surprise. Owner write on
+// `/` is not part of that: removing it is strictly less power, not more, and a
+// root filesystem is equally safe from non-root mutation at 0555 as at 0755.
+//
+// The official Arch image ships `/` as 0555, so the exact-0755 expectation
+// rejected a legitimate supported host before the DNS engine could reach even
+// its intent journal — on the BIND path and, because every engine shares this
+// mask-parent proof, on the PowerDNS path too (risk R-018).
+//
+// Directories this product creates and owns keep validateExactBINDDirectoryFD
+// with an exact mode. That distinction is the whole point: assert exactly what
+// we built, and assert only what matters about what we inherited.
+//
+// Önceden var olan bir dosya sistemi üst dizini, bu ürünün oluşturduğu bir
+// dizin değildir; ondan tam bir kip istemek yanlış soruyu sormaktır.
+//
+// Bu yürüyüşlerin `/`, `/etc`, `/var` ve benzerlerinden gerçekten ihtiyacı
+// olan şey, yol üzerindeki bir girdiyi root'tan başkasının değiştirememesidir:
+// root sahipliği, grup ya da diğer yazma izni olmaması ve setuid/setgid/sticky
+// sürprizi bulunmaması. `/` üzerindeki sahip yazma izni bunun parçası
+// değildir: onu kaldırmak daha az yetkidir, daha çok değil; bir kök dosya
+// sistemi root olmayan değişimden 0555'te de 0755'teki kadar korunaklıdır.
+//
+// Resmi Arch imajı `/` dizinini 0555 olarak sunar; bu yüzden tam-0755
+// beklentisi, DNS motoru intent günlüğüne bile ulaşamadan meşru ve desteklenen
+// bir sunucuyu reddediyordu — BIND yolunda ve, bu mask üst dizin kanıtını her
+// motor paylaştığı için, PowerDNS yolunda da (risk R-018).
+//
+// Bu ürünün oluşturup sahiplendiği dizinler tam kiple
+// validateExactBINDDirectoryFD kullanmayı sürdürür. Ayrım tam da budur:
+// kurduğumuz şeyi birebir doğrula, devraldığımız şeyde yalnız önemli olanı.
+func validateInheritedBINDAnchorFD(fd int, label string) (bindDirectoryIdentity, error) {
+	var stat unix.Stat_t
+	if err := unix.Fstat(fd, &stat); err != nil {
+		return bindDirectoryIdentity{}, fmt.Errorf("stat %s: %w", label, err)
+	}
+	if stat.Mode&unix.S_IFMT != unix.S_IFDIR {
+		return bindDirectoryIdentity{}, fmt.Errorf("%s is not a directory", label)
+	}
+	if stat.Uid != 0 || stat.Gid != 0 {
+		return bindDirectoryIdentity{}, fmt.Errorf(
+			"%s has uid:gid %d:%d, want 0:0", label, stat.Uid, stat.Gid,
+		)
+	}
+	permissions := stat.Mode & 0o7777
+	if permissions&0o022 != 0 {
+		return bindDirectoryIdentity{}, fmt.Errorf(
+			"%s has mode %04o and is group- or world-writable", label, permissions,
+		)
+	}
+	// These ancestors are shared system directories: the unprivileged services
+	// that live below them have to traverse them. A parent that is not
+	// world-traversable is not a stricter variant of a normal system path, it
+	// is an anomaly, and this policy deliberately keeps refusing it rather than
+	// widening into "anything root owns".
+	// Bu üst dizinler paylaşılan sistem dizinleridir: altlarında yaşayan
+	// yetkisiz servislerin onları geçmesi gerekir. Herkesçe geçilemeyen bir üst
+	// dizin, normal bir sistem yolunun daha katı bir çeşidi değil bir
+	// anormalliktir; bu politika "root neye sahipse kabul" noktasına genişlemek
+	// yerine onu reddetmeyi bilerek sürdürür.
+	if permissions&0o001 == 0 {
+		return bindDirectoryIdentity{}, fmt.Errorf(
+			"%s has mode %04o and is not world-traversable", label, permissions,
+		)
+	}
+	if special := stat.Mode & uint32(unix.S_ISUID|unix.S_ISGID|unix.S_ISVTX); special != 0 {
+		return bindDirectoryIdentity{}, fmt.Errorf(
+			"%s carries setuid, setgid or sticky bits", label,
+		)
+	}
+	if err := rejectBINDDirectoryACL(fd, label); err != nil {
+		return bindDirectoryIdentity{}, err
+	}
+	return bindDirectoryIdentity{
+		Device: uint64(stat.Dev),
+		Inode:  stat.Ino,
+	}, nil
+}
+
+func openInheritedBINDAnchorAt(
+	parentFD int,
+	name string,
+	label string,
+) (int, bindDirectoryIdentity, error) {
+	fd, err := openBINDDirectoryAt(parentFD, name, label)
+	if err != nil {
+		return -1, bindDirectoryIdentity{}, err
+	}
+	identity, err := validateInheritedBINDAnchorFD(fd, label)
+	if err != nil {
+		unix.Close(fd)
+		return -1, bindDirectoryIdentity{}, err
+	}
+	return fd, identity, nil
 }
 
 func openExactBINDDirectoryAt(
