@@ -59,11 +59,14 @@ panel_install=$(line_of 'install -m 0755 "$SRC/bin/panel"' "$installer")
 agent_install=$(line_of 'install -m 0755 "$SRC/bin/agent"' "$installer")
 lock_verify=$(line_of 'acquire_first_install_signed_update_lock' "$installer")
 trust_preflight=$(line_of 'preflight_first_install_signed_release_trust' "$installer")
+admin_admission=$(line_of 'preflight_first_administrator_admission' "$installer")
 updater_install=$(line_of 'install_reviewed_release_updater' "$installer")
 trust_enroll=$(line_of 'enroll_first_install_signed_release_trust' "$installer")
 agent_start=$(line_of 'step "Starting the agent"' "$installer")
 complete_publish=$(line_of 'install -m 0600 -o root -g root /dev/null "$INSTALL_COMPLETE"' "$installer")
 [[ "$lock_verify" -lt "$trust_preflight" &&
+   "$trust_preflight" -lt "$admin_admission" &&
+   "$admin_admission" -lt "$panel_install" &&
    "$trust_preflight" -lt "$panel_install" &&
    "$trust_preflight" -lt "$agent_install" &&
    "$panel_install" -lt "$updater_install" &&

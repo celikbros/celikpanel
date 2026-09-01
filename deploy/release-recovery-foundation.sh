@@ -37,7 +37,7 @@ release_recovery_validate_root_chain() {
         read -r owner group mode < <(stat -Lc '%u %g %a' -- "$current") || return 1
         permissions=$((8#$mode))
         [[ $owner == 0 && $group == 0 ]] && (( (permissions & 0022) == 0 )) ||
-            { release_recovery_foundation_fail "trusted directory metadata is unsafe: $current"; return 1; }
+            { release_recovery_foundation_fail "trusted directory metadata is unsafe: $current; stage the verified release below /var/backups/celikpanel in a canonical root-owned, non-group/other-writable directory"; return 1; }
         [[ $current == / ]] && break
         current=$(dirname -- "$current")
     done

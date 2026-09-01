@@ -29,6 +29,13 @@ const (
 	argonThreads = 2
 	argonKeyLen  = 32
 	argonSaltLen = 16
+
+	maxEncodedPasswordHashBytes = 4096
+	maxArgonMemory              = 256 * 1024 // KiB
+	maxArgonTime                = 10
+	maxArgonThreads             = 16
+	maxArgonSaltLen             = 1024
+	maxArgonKeyLen              = 1024
 )
 
 // ErrInvalidHash is returned when a stored hash cannot be parsed.
@@ -75,6 +82,27 @@ func VerifyPassword(password, encodedHash string) (bool, error) {
 	return false, nil
 }
 
+// ValidatePasswordHash parses and bounds a stored hash without running
+// Argon2. Admission probes use it to reject credentials that the login path
+// cannot safely verify without learning or testing a password.
+func ValidatePasswordHash(encodedHash string) error {
+	if len(encodedHash) == 0 || len(encodedHash) > maxEncodedPasswordHashBytes {
+		return ErrInvalidHash
+	}
+	memory, time, threads, salt, key, err := decodeHash(encodedHash)
+	if err != nil {
+		return err
+	}
+	if memory == 0 || memory > maxArgonMemory ||
+		time == 0 || time > maxArgonTime ||
+		threads == 0 || threads > maxArgonThreads ||
+		len(salt) == 0 || len(salt) > maxArgonSaltLen ||
+		len(key) == 0 || len(key) > maxArgonKeyLen {
+		return ErrInvalidHash
+	}
+	return nil
+}
+
 func decodeHash(encodedHash string) (memory, time uint32, threads uint8, salt, key []byte, err error) {
 	parts := strings.Split(encodedHash, "$")
 	if len(parts) != 6 || parts[1] != "argon2id" {
@@ -92,7 +120,6 @@ func decodeHash(encodedHash string) (memory, time uint32, threads uint8, salt, k
 	if _, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &time, &threads); err != nil {
 		return 0, 0, 0, nil, nil, ErrInvalidHash
 	}
-
 	salt, err = base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
 		return 0, 0, 0, nil, nil, ErrInvalidHash
@@ -105,7 +132,7 @@ func decodeHash(encodedHash string) (memory, time uint32, threads uint8, salt, k
 	// the later uint32(len(key)) conversion provably in range.
 	// Anahtar uzunluğunu sınırla: gerçek argon2id anahtarları küçüktür ve
 	// bu, sonraki uint32(len(key)) dönüşümünün aralıkta olduğunu kanıtlar.
-	if len(key) == 0 || len(key) > 1024 {
+	if len(key) == 0 || len(key) > maxArgonKeyLen {
 		return 0, 0, 0, nil, nil, ErrInvalidHash
 	}
 

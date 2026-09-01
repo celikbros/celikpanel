@@ -2,12 +2,16 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"syscall"
+	"unicode/utf8"
 
 	"github.com/alicelik/celikpanel/internal/auth"
 	"github.com/alicelik/celikpanel/internal/core"
@@ -15,6 +19,14 @@ import (
 	"github.com/alicelik/celikpanel/internal/repositories"
 	"golang.org/x/term"
 )
+
+const minimumAdminPasswordBytes = 8
+
+type adminCredentials struct {
+	username string
+	email    string
+	password string
+}
 
 // runCreateAdmin creates (or updates) an administrator from the terminal.
 // This is the bootstrap path until the Phase 2 first-run wizard exists:
@@ -25,52 +37,147 @@ import (
 // binary'yi çalıştırabilen, ilk yöneticiyi oluşturabilir.
 func runCreateAdmin(database *db.SQLiteDB) error {
 	reader := bufio.NewReader(os.Stdin)
-
-	username, err := promptAdminUsername(reader, os.Stdout)
+	credentials, err := readInteractiveAdminCredentials(reader, os.Stdout)
 	if err != nil {
 		return err
 	}
+	return createOrUpdateAdmin(database, credentials, os.Stdout)
+}
 
-	email, err := promptAdminEmail(reader, os.Stdout)
+func readInteractiveAdminCredentials(reader *bufio.Reader, out io.Writer) (adminCredentials, error) {
+	username, err := promptAdminUsername(reader, out)
+	if err != nil {
+		return adminCredentials{}, err
+	}
+
+	email, err := promptAdminEmail(reader, out)
+	if err != nil {
+		return adminCredentials{}, err
+	}
+
+	password, err := readPasswordTwice(reader, out)
+	if err != nil {
+		return adminCredentials{}, err
+	}
+	credentials := adminCredentials{username: username, email: email, password: password}
+	if err := validateAdminCredentials(credentials); err != nil {
+		return adminCredentials{}, err
+	}
+	return credentials, nil
+}
+
+func runCreateAdminFromCredentialsFile(database *db.SQLiteDB, file *os.File, out io.Writer) error {
+	credentials, err := readAdminCredentialsFile(file)
 	if err != nil {
 		return err
 	}
+	return createOrUpdateAdmin(database, credentials, out)
+}
 
-	password, err := readPasswordTwice(reader)
-	if err != nil {
+func validateAdminCredentialsFile(file *os.File) error {
+	_, err := readAdminCredentialsFile(file)
+	return err
+}
+
+func createOrUpdateAdmin(database *db.SQLiteDB, credentials adminCredentials, out io.Writer) error {
+	if err := validateAdminCredentials(credentials); err != nil {
 		return err
 	}
 
-	hash, err := auth.HashPassword(password)
+	hash, err := auth.HashPassword(credentials.password)
 	if err != nil {
-		return err
+		return errors.New("failed to hash admin password")
 	}
 
 	ctx := context.Background()
 	repo := repositories.NewPostgresUserRepository(database.GetDB())
 
-	if existing, err := repo.GetByUsername(ctx, username); err == nil {
+	if existing, err := repo.GetByUsername(ctx, credentials.username); err == nil {
 		existing.PasswordHash = hash
-		existing.Email = email
+		existing.Email = credentials.email
 		existing.Role = "admin"
 		if err := repo.UpdateAndRevokeSessions(ctx, existing); err != nil {
 			return fmt.Errorf("failed to update admin: %w", err)
 		}
 		revokePendingLogins(existing.ID)
-		fmt.Printf("Updated existing admin %q / Mevcut yönetici %q güncellendi.\n", username, username)
+		fmt.Fprintln(out, "Updated existing administrator / Mevcut yönetici güncellendi.")
 		return nil
 	}
 
 	user := &core.User{
-		Username:     username,
+		Username:     credentials.username,
 		PasswordHash: hash,
-		Email:        email,
+		Email:        credentials.email,
 		Role:         "admin",
 	}
 	if err := repo.Create(ctx, user); err != nil {
 		return fmt.Errorf("failed to create admin: %w", err)
 	}
-	fmt.Printf("Created admin %q / Yönetici %q oluşturuldu.\n", username, username)
+	fmt.Fprintln(out, "Created administrator / Yönetici oluşturuldu.")
+	return nil
+}
+
+func parseAdminCredentialsJSON(content []byte) (adminCredentials, error) {
+	if !utf8.Valid(content) {
+		return adminCredentials{}, errors.New("admin credentials file is invalid")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(content))
+	opening, err := decoder.Token()
+	if err != nil || opening != json.Delim('{') {
+		return adminCredentials{}, errors.New("admin credentials file is invalid")
+	}
+
+	values := make(map[string]string, 3)
+	for decoder.More() {
+		token, err := decoder.Token()
+		if err != nil {
+			return adminCredentials{}, errors.New("admin credentials file is invalid")
+		}
+		key, ok := token.(string)
+		if !ok || (key != "username" && key != "email" && key != "password") {
+			return adminCredentials{}, errors.New("admin credentials file is invalid")
+		}
+		if _, duplicate := values[key]; duplicate {
+			return adminCredentials{}, errors.New("admin credentials file is invalid")
+		}
+		var value string
+		if err := decoder.Decode(&value); err != nil {
+			return adminCredentials{}, errors.New("admin credentials file is invalid")
+		}
+		values[key] = value
+	}
+	closing, err := decoder.Token()
+	if err != nil || closing != json.Delim('}') {
+		return adminCredentials{}, errors.New("admin credentials file is invalid")
+	}
+	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
+		return adminCredentials{}, errors.New("admin credentials file is invalid")
+	}
+	if len(values) != 3 {
+		return adminCredentials{}, errors.New("admin credentials file is invalid")
+	}
+
+	credentials := adminCredentials{
+		username: values["username"],
+		email:    values["email"],
+		password: values["password"],
+	}
+	if err := validateAdminCredentials(credentials); err != nil {
+		return adminCredentials{}, err
+	}
+	return credentials, nil
+}
+
+func validateAdminCredentials(credentials adminCredentials) error {
+	if strings.TrimSpace(credentials.username) != credentials.username ||
+		strings.TrimSpace(credentials.email) != credentials.email ||
+		credentials.username == "" || credentials.email == "" ||
+		len(credentials.password) < minimumAdminPasswordBytes {
+		return errors.New("admin credentials are invalid")
+	}
+	if err := auth.ValidateUsername(credentials.username); err != nil {
+		return errors.New("admin credentials are invalid")
+	}
 	return nil
 }
 
@@ -104,34 +211,34 @@ func promptAdminEmail(reader *bufio.Reader, out io.Writer) (string, error) {
 	}
 }
 
-// readPasswordTwice reads a password without echo on a terminal and
-// confirms it. When stdin is not a terminal (scripted setup, tests), it
-// reads a single line so the command stays automatable.
+// readPasswordTwice reads a password without echo on a terminal and confirms
+// it. Non-interactive callers must use the explicit inherited credentials-file
+// mode so a password cannot enter through an ambiguous stdin contract.
 //
-// readPasswordTwice, bir terminalde parolayı ekranda göstermeden okur ve
-// doğrular. stdin bir terminal değilse (scriptli kurulum, testler), komut
-// otomatik kalabilsin diye tek satır okur.
-func readPasswordTwice(reader *bufio.Reader) (string, error) {
-	if !term.IsTerminal(int(syscall.Stdin)) {
-		return readAutomatedPassword(reader)
+// readPasswordTwice, parolayı terminalde ekranda göstermeden okur ve doğrular.
+// Etkileşimsiz çağıranlar, parolanın belirsiz bir stdin sözleşmesine girmemesi
+// için açık devralınmış kimlik-dosyası modunu kullanmalıdır.
+func readPasswordTwice(reader *bufio.Reader, out io.Writer) (string, error) {
+	if err := requireInteractiveAdminTerminal(term.IsTerminal(int(syscall.Stdin))); err != nil {
+		return "", err
 	}
 
-	visible, err := promptPasswordVisibility(reader, os.Stdout)
+	visible, err := promptPasswordVisibility(reader, out)
 	if err != nil {
 		return "", err
 	}
 
 	var read passwordValueReader
 	if visible {
-		fmt.Fprintln(os.Stdout, "Warning: password characters will be visible. / Uyarı: parola karakterleri görünecek.")
+		fmt.Fprintln(out, "Warning: password characters will be visible. / Uyarı: parola karakterleri görünecek.")
 		read = func(prompt string) (string, error) {
-			return promptLine(reader, os.Stdout, prompt)
+			return promptLine(reader, out, prompt)
 		}
 	} else {
 		read = func(prompt string) (string, error) {
-			fmt.Fprint(os.Stdout, prompt)
+			fmt.Fprint(out, prompt)
 			value, readErr := term.ReadPassword(int(syscall.Stdin))
-			fmt.Fprintln(os.Stdout)
+			fmt.Fprintln(out)
 			if readErr != nil {
 				return "", readErr
 			}
@@ -139,22 +246,17 @@ func readPasswordTwice(reader *bufio.Reader) (string, error) {
 		}
 	}
 
-	return readAndConfirmPassword(read, os.Stdout)
+	return readAndConfirmPassword(read, out)
+}
+
+func requireInteractiveAdminTerminal(isTerminal bool) error {
+	if !isTerminal {
+		return errors.New("interactive create-admin requires a terminal")
+	}
+	return nil
 }
 
 type passwordValueReader func(prompt string) (string, error)
-
-func readAutomatedPassword(reader *bufio.Reader) (string, error) {
-	line, err := reader.ReadString('\n')
-	if err != nil {
-		return "", fmt.Errorf("failed to read password: %w", err)
-	}
-	password := strings.TrimRight(line, "\r\n")
-	if len(password) < 8 {
-		return "", fmt.Errorf("password must be at least 8 characters")
-	}
-	return password, nil
-}
 
 func promptPasswordVisibility(reader *bufio.Reader, out io.Writer) (bool, error) {
 	for {
@@ -193,7 +295,7 @@ func readAndConfirmPassword(read passwordValueReader, out io.Writer) (string, er
 		if err != nil {
 			return "", fmt.Errorf("failed to read password: %w", err)
 		}
-		if len(first) < 8 {
+		if len(first) < minimumAdminPasswordBytes {
 			fmt.Fprintln(out, "Password must be at least 8 characters. Please try again. / Parola en az 8 karakter olmalı. Lütfen yeniden deneyin.")
 			continue
 		}

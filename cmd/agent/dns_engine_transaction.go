@@ -224,6 +224,27 @@ func validateDNSFileSnapshotIntegrity(snapshot dnsFileSnapshot) error {
 }
 
 func validateDNSFileSnapshot(snapshot dnsFileSnapshot) error {
+	return validateDNSFileSnapshotForOwnerContract(
+		snapshot, 0, 0,
+		"DNS switch file snapshot is not root-owned",
+	)
+}
+
+func validateDNSFileSnapshotForOwner(
+	snapshot dnsFileSnapshot,
+	requiredUID, requiredGID uint32,
+) error {
+	return validateDNSFileSnapshotForOwnerContract(
+		snapshot, requiredUID, requiredGID,
+		"DNS switch file snapshot ownership differs from the managed contract",
+	)
+}
+
+func validateDNSFileSnapshotForOwnerContract(
+	snapshot dnsFileSnapshot,
+	requiredUID, requiredGID uint32,
+	ownerError string,
+) error {
 	if err := validateDNSFileSnapshotIntegrity(snapshot); err != nil {
 		return err
 	}
@@ -233,9 +254,25 @@ func validateDNSFileSnapshot(snapshot dnsFileSnapshot) error {
 	if dnsSnapshotOwnerRequired() && !snapshot.OwnerKnown {
 		return errors.New("DNS switch file snapshot is missing required ownership metadata")
 	}
-	if (snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID != 0)) ||
+	if (snapshot.OwnerKnown &&
+		(snapshot.UID != requiredUID || snapshot.GID != requiredGID)) ||
 		(!snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID != 0)) {
-		return errors.New("DNS switch file snapshot is not root-owned")
+		return errors.New(ownerError)
+	}
+	return nil
+}
+
+func validateDNSEngineStateSnapshot(snapshot dnsFileSnapshot) error {
+	if err := validateDNSFileSnapshotForOwner(
+		snapshot,
+		serviceMutationRequiredOwnerUID,
+		serviceMutationRequiredOwnerGID,
+	); err != nil {
+		return err
+	}
+	if snapshot.Path != filepath.Clean(dnsEngineStatePath()) ||
+		(snapshot.Exists && snapshot.Mode != 0o600) {
+		return errors.New("DNS engine switch journal state snapshot path is invalid")
 	}
 	return nil
 }
@@ -292,12 +329,8 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 	if err := validatePrimaryCatalogSerialContract(commitment, journal.PrimaryCatalogSerial); err != nil {
 		return err
 	}
-	if err := validateDNSFileSnapshot(journal.StateBefore); err != nil {
+	if err := validateDNSEngineStateSnapshot(journal.StateBefore); err != nil {
 		return err
-	}
-	if journal.StateBefore.Path != filepath.Clean(dnsEngineStatePath()) ||
-		(journal.StateBefore.Exists && journal.StateBefore.Mode != 0o600) {
-		return errors.New("DNS engine switch journal state snapshot path is invalid")
 	}
 	sourceState, sourceExists, err := sourceStateFromDNSSwitchJournal(journal)
 	if err != nil {
@@ -669,6 +702,14 @@ func captureDNSFileSnapshotForOwner(
 	)
 }
 
+func captureDNSEngineStateSnapshot(allowAbsent bool) (dnsFileSnapshot, error) {
+	return captureDNSFileSnapshotForOwner(
+		dnsEngineStatePath(), 0o600, allowAbsent,
+		serviceMutationRequiredOwnerUID,
+		serviceMutationRequiredOwnerGID,
+	)
+}
+
 func captureDNSFileSnapshotForOwnerContract(
 	path string,
 	mode os.FileMode,
@@ -760,6 +801,47 @@ func verifyDNSFileSnapshotsExactForOwner(
 		}
 	}
 	return nil
+}
+
+func verifyDNSEngineStateSnapshotExact(expected dnsFileSnapshot) error {
+	if err := validateDNSEngineStateSnapshot(expected); err != nil {
+		return err
+	}
+	actual, err := captureDNSEngineStateSnapshot(true)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		return errors.New("DNS engine state changed during exact verification")
+	}
+	return nil
+}
+
+func restoreDNSEngineStateSnapshot(snapshot dnsFileSnapshot) error {
+	if err := validateDNSEngineStateSnapshot(snapshot); err != nil {
+		return err
+	}
+	current, err := captureDNSEngineStateSnapshot(true)
+	if err != nil {
+		return err
+	}
+	switch {
+	case snapshot.Exists:
+		err = secureWriteConfigReplacingSnapshotWithOwner(
+			snapshot.Path,
+			snapshot.Data,
+			0o600,
+			&current,
+			serviceMutationRequiredOwnerUID,
+			serviceMutationRequiredOwnerGID,
+		)
+	case current.Exists:
+		err = secureRemoveConfig(snapshot.Path)
+	}
+	if err != nil {
+		return err
+	}
+	return verifyDNSEngineStateSnapshotExact(snapshot)
 }
 
 func restoreDNSFileSnapshot(snapshot dnsFileSnapshot) error {

@@ -60,11 +60,13 @@ FIRST_INSTALL_RELEASE_SEQUENCE=${CELIKPANEL_FIRST_INSTALL_SEQUENCE:-}
 FIRST_INSTALL_RELEASE_VERSION=${CELIKPANEL_FIRST_INSTALL_VERSION:-}
 FIRST_INSTALL_RELEASE_COMMIT=${CELIKPANEL_FIRST_INSTALL_COMMIT:-}
 FIRST_INSTALL_INHERITED_LOCK_FD=${CELIKPANEL_FIRST_INSTALL_LOCK_FD:-}
+ADMIN_CREDENTIALS_PATH=${CELIKPANEL_ADMIN_CREDENTIALS_FILE:-}
 FIRST_INSTALL_LOCK_FD=9
 FIRST_INSTALL_LOCK_HELD=0
 unset CELIKPANEL_FIRST_INSTALL_TRUST CELIKPANEL_FIRST_INSTALL_PUBLIC_KEY_FILE \
     CELIKPANEL_FIRST_INSTALL_SEQUENCE CELIKPANEL_FIRST_INSTALL_VERSION \
-    CELIKPANEL_FIRST_INSTALL_COMMIT CELIKPANEL_FIRST_INSTALL_LOCK_FD
+    CELIKPANEL_FIRST_INSTALL_COMMIT CELIKPANEL_FIRST_INSTALL_LOCK_FD \
+    CELIKPANEL_ADMIN_CREDENTIALS_FILE
 readonly PREFIX DATA_DIR IMPORT_DIR CONF_DIR UNIT_DIR PANEL_CERT_HOOK \
     AGENT_STATE_DIR RUNTIME_DIR BACKUP_ROOT RELEASE_TRANSACTION_ROOT \
     RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR \
@@ -75,7 +77,7 @@ readonly PREFIX DATA_DIR IMPORT_DIR CONF_DIR UNIT_DIR PANEL_CERT_HOOK \
     FIRST_INSTALL_TRUST_REQUESTED FIRST_INSTALL_PUBLIC_KEY_FILE \
     FIRST_INSTALL_RELEASE_SEQUENCE FIRST_INSTALL_RELEASE_VERSION \
     FIRST_INSTALL_RELEASE_COMMIT FIRST_INSTALL_INHERITED_LOCK_FD \
-    FIRST_INSTALL_LOCK_FD
+    FIRST_INSTALL_LOCK_FD ADMIN_CREDENTIALS_PATH
 SELINUX_OS_RELEASE=/etc/os-release
 SELINUX_ENFORCE_FILE=/sys/fs/selinux/enforce
 RHEL_DNF_BIN=/usr/bin/dnf
@@ -98,6 +100,7 @@ UNAME_BIN=/usr/bin/uname
 VENDOR_READLINK_BIN=/usr/bin/readlink
 VENDOR_STAT_BIN=/usr/bin/stat
 VENDOR_DIRNAME_BIN=/usr/bin/dirname
+VENDOR_DD_BIN=/usr/bin/dd
 SYSTEMCTL_BIN=/usr/bin/systemctl
 SYSTEMD_RUNTIME_DIR=/run/systemd
 SYSTEMD_PRIVATE_SOCKET=/run/systemd/private
@@ -108,7 +111,7 @@ readonly SELINUX_OS_RELEASE SELINUX_ENFORCE_FILE RHEL_DNF_BIN \
     RHEL_DNF_CANONICAL_ALT RHEL_RPM_BIN APT_GET_BIN APT_CACHE_BIN \
     DPKG_QUERY_BIN PACMAN_BIN TIMEOUT_BIN SETPRIV_BIN SELINUX_RESTORECON_BIN \
     SELINUX_MATCHPATHCON_BIN SELINUX_GETENFORCE_BIN UNAME_BIN VENDOR_READLINK_BIN \
-    VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN SYSTEMD_RUNTIME_DIR \
+    VENDOR_STAT_BIN VENDOR_DIRNAME_BIN VENDOR_DD_BIN SYSTEMCTL_BIN SYSTEMD_RUNTIME_DIR \
     SYSTEMD_PRIVATE_SOCKET VENDOR_TRUST_ANCHOR \
     VENDOR_EXPECTED_UID VENDOR_EXPECTED_GID
 SELINUX_PLATFORM_MODE=unverified
@@ -120,6 +123,11 @@ case "${CELIKPANEL_APPLY_ONLY:-0}" in
     *) printf '%s\n' "ERROR / HATA: CELIKPANEL_APPLY_ONLY must be 0 or 1 / yalnız 0 veya 1 olabilir" >&2; exit 1 ;;
 esac
 APPLY_ONLY=${CELIKPANEL_APPLY_ONLY:-0}
+case "${SKIP_ADMIN:-0}" in
+    0|1) ;;
+    *) printf '%s\n' "ERROR / HATA: SKIP_ADMIN must be 0 or 1 / only 0 or 1" >&2; exit 1 ;;
+esac
+SKIP_ADMIN=${SKIP_ADMIN:-0}
 case "${DEMO:-0}" in
     0|1) ;;
     *) printf '%s\n' "ERROR / HATA: DEMO must be 0 or 1 / yalnız 0 veya 1 olabilir" >&2; exit 1 ;;
@@ -127,6 +135,14 @@ esac
 
 SRC="$(cd "$(/usr/bin/dirname "$(/usr/bin/readlink -f "$0")")" && pwd -P)"
 PANEL_TLS_DIR="$DATA_DIR/tls"
+# Keep inherited release authority byte-for-byte so the guard can reject an
+# alias or sibling. A direct fresh install has no earlier verifier, so its
+# canonical installer directory is the first authority. Apply-only must still
+# require the update caller's inherited root and never take this fallback.
+TRUSTED_RELEASE_ROOT=${TRUSTED_RELEASE_ROOT:-${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}}
+if [[ -z "$TRUSTED_RELEASE_ROOT" && "$APPLY_ONLY" -eq 0 ]]; then
+    TRUSTED_RELEASE_ROOT=$SRC
+fi
 # shellcheck source=deploy/release-transaction-guard.sh
 source "$SRC/deploy/release-transaction-guard.sh"
 # shellcheck source=deploy/release-recovery-foundation.sh
@@ -743,6 +759,7 @@ vendor_tool_path() {
         systemctl) VENDOR_TOOL_PATH=$SYSTEMCTL_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
         timeout) VENDOR_TOOL_PATH=$TIMEOUT_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
         setpriv) VENDOR_TOOL_PATH=$SETPRIV_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        dd) VENDOR_TOOL_PATH=$VENDOR_DD_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
         apt-get) VENDOR_TOOL_PATH=$APT_GET_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
         apt-cache) VENDOR_TOOL_PATH=$APT_CACHE_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
         dpkg-query) VENDOR_TOOL_PATH=$DPKG_QUERY_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
@@ -843,8 +860,9 @@ validate_rhel_vendor_tool() {
 
 validate_present_platform_tools() {
     local role
-    validate_systemd_runtime
-    validate_vendor_tool setpriv
+	validate_systemd_runtime
+	validate_vendor_tool setpriv
+	validate_vendor_tool dd
     for role in apt-get apt-cache dpkg-query pacman dnf rpm; do
         if vendor_tool_present "$role"; then
             validate_vendor_tool "$role"
@@ -1384,6 +1402,245 @@ service_user_id() {
     printf '%s\n' "$user_id"
 }
 
+ADMIN_CREDENTIALS_IDENTITY=
+ADMIN_CREDENTIALS_FD=
+ADMIN_CREDENTIALS_ARMED=0
+ADMIN_CREDENTIALS_CONTENT=
+export -n ADMIN_CREDENTIALS_CONTENT
+
+close_admin_credentials_fd() {
+    if [[ "${ADMIN_CREDENTIALS_FD:-}" =~ ^[0-9]+$ ]]; then
+        exec {ADMIN_CREDENTIALS_FD}<&-
+    fi
+    ADMIN_CREDENTIALS_FD=
+}
+
+clear_admin_credentials_content() {
+    ADMIN_CREDENTIALS_CONTENT=
+    export -n ADMIN_CREDENTIALS_CONTENT
+}
+
+load_admin_credentials_content() {
+    local expected_identity=$1 found_nul=0 valid=1 xtrace_was_on=0 \
+        descriptor_path stream_fd stream_pid
+    clear_admin_credentials_content
+    open_admin_credentials_same_inode "$expected_identity" || return 1
+    case $- in
+        *x*) xtrace_was_on=1; set +x ;;
+    esac
+    # Bash cannot add O_NOATIME to its own redirection. Reopen the already
+    # identity-pinned descriptor through fixed GNU dd with iflag=noatime, then
+    # read only that private pipe. This keeps rejected input metadata unchanged.
+    descriptor_path="/proc/$BASHPID/fd/$ADMIN_CREDENTIALS_FD"
+    exec {stream_fd}< <(
+        "$VENDOR_DD_BIN" if="$descriptor_path" iflag=noatime status=none
+    )
+    stream_pid=$!
+    # Bash variables cannot contain NUL. read -d '' returns success only when
+    # it encounters one, so reject that byte rather than silently dropping it.
+    if IFS= read -r -d '' ADMIN_CREDENTIALS_CONTENT <&"$stream_fd"; then
+        found_nul=1
+    fi
+    exec {stream_fd}<&-
+    if ! wait "$stream_pid"; then
+        clear_admin_credentials_content
+        valid=0
+    fi
+    close_admin_credentials_fd
+    if (( found_nul != 0 )) || [[ -z "$ADMIN_CREDENTIALS_CONTENT" ]]; then
+        clear_admin_credentials_content
+        valid=0
+    fi
+    (( xtrace_was_on == 0 )) || set -x
+    (( valid != 0 ))
+}
+
+run_with_admin_credentials_stdin() {
+    local status xtrace_was_on=0
+    case $- in
+        *x*) xtrace_was_on=1; set +x ;;
+    esac
+    export -n ADMIN_CREDENTIALS_CONTENT
+    if [[ -z "$ADMIN_CREDENTIALS_CONTENT" ]]; then
+        status=1
+    elif printf '%s' "$ADMIN_CREDENTIALS_CONTENT" | "$@"; then
+        status=0
+    else
+        status=$?
+    fi
+    (( xtrace_was_on == 0 )) || set -x
+    return "$status"
+}
+
+validate_admin_credentials_path() {
+    local path=$1 canonical parent owner group mode links size permissions
+    [[ "$path" == /* && -f "$path" && ! -L "$path" ]] || return 1
+    canonical=$($VENDOR_READLINK_BIN -e -- "$path") || return 1
+    [[ "$canonical" == "$path" ]] || return 1
+    parent=$($VENDOR_DIRNAME_BIN -- "$path") || return 1
+    release_recovery_validate_root_chain "$parent" || return 1
+    read -r owner group mode links size < <(
+        $VENDOR_STAT_BIN -Lc '%u %g %a %h %s' -- "$path"
+    ) || return 1
+    permissions=$((8#$mode))
+    [[ "$owner" == 0 && "$group" == 0 && "$mode" == 600 &&
+       "$links" == 1 && "$size" =~ ^[0-9]+$ ]] || return 1
+    (( size >= 1 && size <= 4096 && (permissions & 0177) == 0 )) || return 1
+    $VENDOR_STAT_BIN -Lc '%d:%i' -- "$path"
+}
+
+open_admin_credentials_same_inode() {
+    local expected_identity=$1 path_identity fd_identity
+    close_admin_credentials_fd
+    exec {ADMIN_CREDENTIALS_FD}<"$ADMIN_CREDENTIALS_PATH" || return 1
+    path_identity=$(validate_admin_credentials_path "$ADMIN_CREDENTIALS_PATH") || {
+        close_admin_credentials_fd
+        return 1
+    }
+    fd_identity=$($VENDOR_STAT_BIN -Lc '%d:%i' \
+        -- "/proc/$BASHPID/fd/$ADMIN_CREDENTIALS_FD") || {
+        close_admin_credentials_fd
+        return 1
+    }
+    [[ "$path_identity" == "$fd_identity" &&
+       ( -z "$expected_identity" || "$fd_identity" == "$expected_identity" ) ]] || {
+        close_admin_credentials_fd
+        return 1
+    }
+}
+
+admin_credentials_path_matches_identity() {
+    local identity
+    [[ "$ADMIN_CREDENTIALS_ARMED" == 1 ]] || return 1
+    identity=$(validate_admin_credentials_path "$ADMIN_CREDENTIALS_PATH") || return 1
+    [[ "$identity" == "$ADMIN_CREDENTIALS_IDENTITY" ]]
+}
+
+consume_admin_credentials_file() {
+    local parent
+    [[ "$ADMIN_CREDENTIALS_ARMED" == 1 ]] || return 0
+    close_admin_credentials_fd
+    admin_credentials_path_matches_identity || return 1
+    parent=$($VENDOR_DIRNAME_BIN -- "$ADMIN_CREDENTIALS_PATH") || return 1
+    rm -- "$ADMIN_CREDENTIALS_PATH" || return 1
+    sync -f -- "$parent" || return 1
+    ADMIN_CREDENTIALS_ARMED=0
+    ADMIN_CREDENTIALS_IDENTITY=
+    clear_admin_credentials_content
+    trap - EXIT HUP INT TERM
+}
+
+cleanup_admin_credentials_on_exit() {
+    local status=$?
+    trap - EXIT HUP INT TERM
+    if [[ "$ADMIN_CREDENTIALS_ARMED" == 1 ]]; then
+        consume_admin_credentials_file || true
+    else
+        close_admin_credentials_fd
+    fi
+    clear_admin_credentials_content
+    exit "$status"
+}
+
+arm_admin_credentials_cleanup() {
+    ADMIN_CREDENTIALS_ARMED=1
+    trap cleanup_admin_credentials_on_exit EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+}
+
+validate_trusted_candidate_panel() {
+    [[ -x "$SRC/bin/panel" && -f "$SRC/bin/panel" && ! -L "$SRC/bin/panel" ]] || return 1
+    release_recovery_validate_root_chain "$SRC" || return 1
+    release_recovery_validate_source_file "$SRC/bin/panel"
+}
+
+validate_existing_admin_database() {
+    local user_id=$1 group_id=$2 canonical owner group mode links
+    [[ -d "$DATA_DIR" && ! -L "$DATA_DIR" &&
+       -f "$DATA_DIR/celikpanel.db" && ! -L "$DATA_DIR/celikpanel.db" ]] || return 1
+    canonical=$($VENDOR_READLINK_BIN -e -- "$DATA_DIR") || return 1
+    [[ "$canonical" == "$DATA_DIR" ]] || return 1
+    [[ "$($VENDOR_STAT_BIN -Lc '%u:%g:%a' -- "$DATA_DIR")" == \
+       "$user_id:$group_id:750" ]] || return 1
+    canonical=$($VENDOR_READLINK_BIN -e -- "$DATA_DIR/celikpanel.db") || return 1
+    [[ "$canonical" == "$DATA_DIR/celikpanel.db" ]] || return 1
+    read -r owner group mode links < <(
+        $VENDOR_STAT_BIN -Lc '%u %g %a %h' -- "$DATA_DIR/celikpanel.db"
+    ) || return 1
+    [[ "$owner" == "$user_id" && "$group" == "$group_id" &&
+       "$mode" == 600 && "$links" == 1 ]]
+}
+
+preflight_first_administrator_admission() {
+    local identity admin_count passwd_group
+    [[ "$APPLY_ONLY" -eq 0 ]] || return 0
+    if [[ -n "$ADMIN_CREDENTIALS_PATH" ]]; then
+        identity=$(validate_admin_credentials_path "$ADMIN_CREDENTIALS_PATH") || die \
+            "Administrator credentials file must be an absolute canonical root:root mode 0600 regular file (1-4096 bytes) beneath root-owned non-writable ancestors" \
+            "Yönetici kimlik bilgisi dosyası root sahipli güvenli dizinler altında mutlak, kanonik, root:root, 0600 ve 1-4096 bayt normal dosya olmalı"
+        validate_trusted_candidate_panel || die \
+            "The trusted candidate panel binary is unavailable or unsafe" \
+            "Güvenilir aday panel ikilisi yok veya güvensiz"
+        load_admin_credentials_content "$identity" || die \
+            "Administrator credentials file changed, was empty, or contained an invalid NUL byte" \
+            "Yönetici kimlik bilgisi dosyası değişti, boştu veya geçersiz NUL baytı içeriyordu"
+        if ! run_with_admin_credentials_stdin \
+            "$TIMEOUT_BIN" --signal=TERM --kill-after=1s 10s \
+            "$SRC/bin/panel" --validate-admin-credentials-file=- \
+            >/dev/null 2>&1; then
+            clear_admin_credentials_content
+            die "Administrator credentials are invalid; the input file was left untouched" \
+                "Yönetici kimlik bilgileri geçersiz; girdi dosyasına dokunulmadı"
+        fi
+        ADMIN_CREDENTIALS_IDENTITY=$identity
+        arm_admin_credentials_cleanup
+        return 0
+    fi
+    [[ "$SKIP_ADMIN" == 1 || -t 0 ]] || die \
+        "Non-interactive installation requires a terminal before host mutation; rerun with a terminal or provide CELIKPANEL_ADMIN_CREDENTIALS_FILE=/absolute/root-only/file (forwarded internally to panel --admin-credentials-file=-)" \
+        "Etkileşimsiz kurulum host değişikliğinden önce terminal gerektirir; terminalle yeniden çalıştırın veya CELIKPANEL_ADMIN_CREDENTIALS_FILE=/mutlak/root-sahipli/dosya sağlayın (kurucu bunu panel --admin-credentials-file=- olarak içeride aktarır)"
+    [[ "$SKIP_ADMIN" == 1 ]] || return 0
+    [[ -f "$DATA_DIR/celikpanel.db" && ! -L "$DATA_DIR/celikpanel.db" ]] || die \
+        "A fresh installation cannot use SKIP_ADMIN=1 without credentials; set SKIP_ADMIN=0 for the terminal prompt or provide CELIKPANEL_ADMIN_CREDENTIALS_FILE=/absolute/root-only/file (forwarded internally to panel --admin-credentials-file=-)" \
+        "Yeni kurulum kimlik bilgileri olmadan SKIP_ADMIN=1 kullanamaz; terminal istemi için SKIP_ADMIN=0 ayarlayın veya CELIKPANEL_ADMIN_CREDENTIALS_FILE=/mutlak/root-sahipli/dosya sağlayın (kurucu bunu panel --admin-credentials-file=- olarak içeride aktarır)"
+    validate_trusted_candidate_panel || die \
+        "Cannot prove an existing administrator without the trusted candidate panel binary" \
+        "Güvenilir aday panel ikilisi olmadan mevcut yönetici kanıtlanamaz"
+    SVC_GROUP_ID=$(service_group_id) || die \
+        "SKIP_ADMIN=1 cannot prove an existing administrator; set SKIP_ADMIN=0 or provide CELIKPANEL_ADMIN_CREDENTIALS_FILE" \
+        "SKIP_ADMIN=1 mevcut yöneticiyi kanıtlayamıyor; SKIP_ADMIN=0 ayarlayın veya CELIKPANEL_ADMIN_CREDENTIALS_FILE sağlayın"
+    SVC_USER_ID=$(service_user_id) || die \
+        "SKIP_ADMIN=1 cannot prove an existing administrator; set SKIP_ADMIN=0 or provide CELIKPANEL_ADMIN_CREDENTIALS_FILE" \
+        "SKIP_ADMIN=1 mevcut yöneticiyi kanıtlayamıyor; SKIP_ADMIN=0 ayarlayın veya CELIKPANEL_ADMIN_CREDENTIALS_FILE sağlayın"
+    [[ "$SVC_USER_ID" != 0 && "$SVC_GROUP_ID" != 0 ]] || die \
+        "SKIP_ADMIN=1 refuses a root service identity" \
+        "SKIP_ADMIN=1 root servis kimliğini reddeder"
+    passwd_group=$(getent passwd "$SVC_USER" | cut -d: -f4) || die \
+        "Cannot inspect the existing service user's primary group" \
+        "Mevcut servis kullanıcısının birincil grubu incelenemedi"
+    [[ "$passwd_group" == "$SVC_GROUP_ID" ]] || die \
+        "The existing service user/group identity is inconsistent" \
+        "Mevcut servis kullanıcı/grup kimliği tutarsız"
+    validate_existing_admin_database "$SVC_USER_ID" "$SVC_GROUP_ID" || die \
+        "SKIP_ADMIN=1 without a credentials file is refused unless the exact existing database is proven" \
+        "Kimlik bilgisi dosyası olmadan SKIP_ADMIN=1 yalnız tam mevcut veritabanı kanıtlanırsa kabul edilir"
+    # The verified release root is deliberately root-only. Run this narrowly
+    # read-only candidate mode as root so it can execute in place; the mode
+    # pins the service-owned database and WAL, reconstructs the last commit in
+    # memory, and never creates or changes a host file.
+    if ! admin_count=$(CELIKPANEL_DATA_DIR="$DATA_DIR" \
+        "$TIMEOUT_BIN" --signal=TERM --kill-after=1s 10s \
+        "$SRC/bin/panel" --count-users-read-only-wal-aware 2>/dev/null); then
+        die "SKIP_ADMIN=1 could not prove existing users without modifying the database" \
+            "SKIP_ADMIN=1 veritabanını değiştirmeden mevcut kullanıcıları kanıtlayamadı"
+    fi
+    [[ "$admin_count" =~ ^[1-9][0-9]*$ ]] || die \
+        "SKIP_ADMIN=1 is refused because no usable existing user was proven" \
+        "Kullanılabilir mevcut kullanıcı kanıtlanamadığı için SKIP_ADMIN=1 reddedildi"
+}
+
 # Revalidate the fixed util-linux identity switch immediately before every
 # panel bootstrap command. Numeric identities and an empty supplementary-group
 # set avoid NSS-dependent identity changes and inherited root groups.
@@ -1400,7 +1657,9 @@ run_panel_as_service_user_with_private_umask() {
 
 ensure_first_administrator() {
     local admin_count
-    [[ "${SKIP_ADMIN:-0}" != 1 ]] || return 0
+    if [[ "$ADMIN_CREDENTIALS_ARMED" != 1 && "$SKIP_ADMIN" == 1 ]]; then
+        return 0
+    fi
     if ! admin_count=$(run_panel_as_service_user_with_private_umask --count-users); then
         die "Administrator count failed" "Yönetici sayısı alınamadı"
     fi
@@ -1408,11 +1667,25 @@ ensure_first_administrator() {
         || die "Administrator count returned invalid data" "Yönetici sayısı geçersiz veri döndürdü"
     if [[ "$admin_count" == 0 ]]; then
         step "Creating the first administrator" "İlk yönetici oluşturuluyor"
-        run_panel_as_service_user_with_private_umask --create-admin || \
-            die "Administrator creation failed" "Yönetici oluşturma başarısız"
+        if [[ "$ADMIN_CREDENTIALS_ARMED" == 1 ]]; then
+            if ! run_with_admin_credentials_stdin \
+                run_panel_as_service_user_with_private_umask \
+                --create-admin --admin-credentials-file=-; then
+                die "Administrator creation failed" "Yönetici oluşturma başarısız"
+            fi
+        else
+            run_panel_as_service_user_with_private_umask --create-admin || \
+                die "Administrator creation failed" "Yönetici oluşturma başarısız"
+        fi
+        consume_admin_credentials_file || die \
+            "Administrator was created but the credentials file could not be safely removed" \
+            "Yönetici oluşturuldu ancak kimlik bilgisi dosyası güvenle silinemedi"
         ok "administrator is ready" "yönetici hazır"
         return 0
     fi
+    consume_admin_credentials_file || die \
+        "Existing administrator was proven but the credentials file could not be safely removed" \
+        "Mevcut yönetici kanıtlandı ancak kimlik bilgisi dosyası güvenle silinemedi"
     ok "An administrator already exists — skipped" \
         "Yönetici zaten var — atlandı"
 }
@@ -1426,11 +1699,13 @@ for installer_command in chown chmod cmp cp flock install mktemp mv stat sync; d
 done
 if [[ "$FIRST_INSTALL_TRUST_REQUESTED" == 1 ]]; then
     # The authenticated bootstrap owns FD 9 before archive download. Prove the
-    # same open-file-description here, then keep it through every package,
-    # product, trust and service mutation in this installation.
+    # same open-file-description and signed trust state before executing even
+    # a read-only mode of the candidate panel. Keep the lock through every
+    # later package, product, trust and service mutation in this installation.
     acquire_first_install_signed_update_lock
     preflight_first_install_signed_release_trust
 fi
+preflight_first_administrator_admission
 
 # Apply-only is accepted solely from a completely verified immutable release
 # while the inherited persistent lock and exact active update marker are live.
@@ -2311,7 +2586,18 @@ read -r ledger_owner ledger_group ledger_mode < <(stat -Lc '%u %g %a' -- "$AGENT
 # hiçbir etkinleştirme bağlantısı oluşturulmaz.
 /bin/bash "$SRC/deploy/systemd/enable-firewall-restore-if-saved.sh" "$CONF_DIR/firewall.nft" || \
     die "firewall restore unit could not be reconciled"
-"$SYSTEMCTL_BIN" enable celikpanel-agent.service >/dev/null 2>&1 || true
+"$SYSTEMCTL_BIN" enable celikpanel-agent.service >/dev/null 2>&1 || \
+    die "The agent service could not be enabled for reboot" \
+        "Agent servisi yeniden başlatma için etkinleştirilemedi"
+agent_enabled_state=$("$SYSTEMCTL_BIN" is-enabled celikpanel-agent.service) || \
+    die "The agent service enablement state could not be verified" \
+        "Agent servisi etkinleştirme durumu doğrulanamadı"
+[[ "$agent_enabled_state" == enabled ]] || die \
+    "The agent service is not exactly enabled for reboot" \
+    "Agent servisi yeniden başlatma için tam olarak etkin değil"
+sync -f -- "$UNIT_DIR" "$UNIT_DIR/multi-user.target.wants" || die \
+    "The agent service enablement could not be made durable" \
+    "Agent servisi etkinleştirmesi kalıcılaştırılamadı"
 "$SYSTEMCTL_BIN" restart celikpanel-agent.service || \
     die "The agent could not be restarted — inspect 'journalctl -u celikpanel-agent'" \
         "Agent yeniden başlatılamadı — 'journalctl -u celikpanel-agent' inceleyin"
@@ -2332,7 +2618,18 @@ ensure_first_administrator
 
 # 9. Start the panel ---------------------------------------------------------
 step "Starting the panel" "Panel başlatılıyor"
-"$SYSTEMCTL_BIN" enable celikpanel-panel.service >/dev/null 2>&1 || true
+"$SYSTEMCTL_BIN" enable celikpanel-panel.service >/dev/null 2>&1 || \
+    die "The panel service could not be enabled for reboot" \
+        "Panel servisi yeniden başlatma için etkinleştirilemedi"
+panel_enabled_state=$("$SYSTEMCTL_BIN" is-enabled celikpanel-panel.service) || \
+    die "The panel service enablement state could not be verified" \
+        "Panel servisi etkinleştirme durumu doğrulanamadı"
+[[ "$panel_enabled_state" == enabled ]] || die \
+    "The panel service is not exactly enabled for reboot" \
+    "Panel servisi yeniden başlatma için tam olarak etkin değil"
+sync -f -- "$UNIT_DIR" "$UNIT_DIR/multi-user.target.wants" || die \
+    "The panel service enablement could not be made durable" \
+    "Panel servisi etkinleştirmesi kalıcılaştırılamadı"
 "$SYSTEMCTL_BIN" restart celikpanel-panel.service || \
     die "The panel could not be restarted — inspect 'journalctl -u celikpanel-panel'" \
         "Panel yeniden başlatılamadı — 'journalctl -u celikpanel-panel' inceleyin"

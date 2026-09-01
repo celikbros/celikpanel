@@ -57,7 +57,9 @@ type serviceOperationReleaseTransaction struct {
 
 type panelCommandModes struct {
 	createAdmin                bool
+	validateAdminCredentials   bool
 	countUsers                 bool
+	countUsersReadOnlyWALAware bool
 	checkIdle                  bool
 	checkPreLedgerIdle         bool
 	checkWALAwareIdle          bool
@@ -408,13 +410,15 @@ func validateMigrateOnlyRequest(enabled bool, conflictingMode bool) error {
 }
 
 func validatePanelCommandModes(modes panelCommandModes) error {
-	oneShotModes := make([]string, 0, 10)
+	oneShotModes := make([]string, 0, 12)
 	for _, mode := range []struct {
 		name    string
 		enabled bool
 	}{
 		{name: "create-admin", enabled: modes.createAdmin},
+		{name: "validate-admin-credentials-file", enabled: modes.validateAdminCredentials},
 		{name: "count-users", enabled: modes.countUsers},
+		{name: "count-users-read-only-wal-aware", enabled: modes.countUsersReadOnlyWALAware},
 		{name: "check-service-operations-idle", enabled: modes.checkIdle},
 		{name: "check-pre-ledger-service-operations-idle", enabled: modes.checkPreLedgerIdle},
 		{name: "check-service-operations-idle-wal-aware", enabled: modes.checkWALAwareIdle},

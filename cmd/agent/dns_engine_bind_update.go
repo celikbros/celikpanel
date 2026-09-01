@@ -292,7 +292,7 @@ func verifyInitialBINDRollbackPreimageForSignedUpdate(
 		(journal.HadPrevious && current != journal.PreviousGeneration) {
 		return errors.New("restored BIND generation pointer differs from the journal preimage")
 	}
-	if err := verifyDNSFileSnapshotsExact([]dnsFileSnapshot{journal.StateBefore}); err != nil {
+	if err := verifyDNSEngineStateSnapshotExact(journal.StateBefore); err != nil {
 		return fmt.Errorf("verify restored DNS state preimage: %w", err)
 	}
 	guard := dnsSystemdStateGuard(systemctl)

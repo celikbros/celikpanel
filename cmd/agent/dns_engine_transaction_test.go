@@ -49,6 +49,19 @@ func testBINDSwitchJournal(t *testing.T) dnsEngineSwitchJournal {
 	}
 }
 
+func testDNSEngineStateSnapshot(path string, data []byte) dnsFileSnapshot {
+	snapshot := dnsFileSnapshot{
+		Path: filepath.Clean(path), Exists: true, Mode: 0o600,
+		SHA256: digestDNSBytes(data), Data: append([]byte(nil), data...),
+	}
+	if dnsSnapshotOwnerRequired() {
+		snapshot.OwnerKnown = true
+		snapshot.UID = serviceMutationRequiredOwnerUID
+		snapshot.GID = serviceMutationRequiredOwnerGID
+	}
+	return snapshot
+}
+
 func TestDNSEngineSwitchJournalCanonicalRoundTrip(t *testing.T) {
 	journal := testBINDSwitchJournal(t)
 	encoded, err := encodeDNSEngineSwitchJournal(journal)
@@ -79,6 +92,94 @@ func TestDNSEngineSwitchJournalCanonicalRoundTrip(t *testing.T) {
 	journal.ConfigBefore[0].Path = "/tmp/attacker.conf"
 	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {
 		t.Fatal("unmanaged BIND config snapshot was accepted")
+	}
+}
+
+func TestDNSEngineSwitchJournalRequiresExactServiceOwnerForState(t *testing.T) {
+	if !dnsSnapshotOwnerRequired() {
+		t.Skip("exact DNS state ownership metadata is Linux-only")
+	}
+	previousUID := serviceMutationRequiredOwnerUID
+	previousGID := serviceMutationRequiredOwnerGID
+	serviceMutationRequiredOwnerUID = 0
+	serviceMutationRequiredOwnerGID = 4242
+	t.Cleanup(func() {
+		serviceMutationRequiredOwnerUID = previousUID
+		serviceMutationRequiredOwnerGID = previousGID
+	})
+
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeSwitch,
+		transport.DNSEnginePowerDNS, transport.DNSEngineBIND, 3, 4, 5,
+		transport.DNSTopologyStandalone, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := legacyDurableDNSState(transport.DNSEnginePowerDNS)
+	source.EngineEpoch = manifest.SourceEpoch
+	sourceBytes, err := encodeDNSEngineState(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal := testBINDSwitchJournal(t)
+	journal.ManifestQualifier = manifest.Qualifier
+	journal.SourceEngine = manifest.SourceEngine
+	journal.TargetEngine = manifest.TargetEngine
+	journal.SourceEpoch = manifest.SourceEpoch
+	journal.TargetEpoch = manifest.TargetEpoch
+	journal.SourceRevision = manifest.SourceRevision
+	journal.Topology = manifest.Topology
+	journal.SnapshotBytes = manifest.SnapshotBytes
+	journal.Zones = manifest.Zones
+	journal.StateBefore = testDNSEngineStateSnapshot(
+		dnsEngineStatePath(), sourceBytes,
+	)
+	journal.SourceUnitsBefore = []dnsUnitSnapshot{{
+		Name: "pdns.service", LoadState: "loaded",
+		ActiveState: "active", UnitFileState: "enabled",
+	}}
+	if _, err := encodeDNSEngineSwitchJournal(journal); err != nil {
+		t.Fatalf("service-group-owned DNS engine state was rejected: %v", err)
+	}
+
+	rootOwned := journal.StateBefore
+	rootOwned.GID = 0
+	if err := validateDNSFileSnapshot(rootOwned); err != nil {
+		t.Fatalf("generic root:root snapshot contract changed: %v", err)
+	}
+	if err := validateDNSFileSnapshot(journal.StateBefore); err == nil {
+		t.Fatal("generic root:root validator accepted service-group ownership")
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*dnsFileSnapshot)
+	}{
+		{name: "foreign-group", mutate: func(snapshot *dnsFileSnapshot) {
+			snapshot.GID++
+		}},
+		{name: "root-root", mutate: func(snapshot *dnsFileSnapshot) {
+			snapshot.GID = 0
+		}},
+		{name: "foreign-user", mutate: func(snapshot *dnsFileSnapshot) {
+			snapshot.UID++
+		}},
+		{name: "missing-owner", mutate: func(snapshot *dnsFileSnapshot) {
+			snapshot.OwnerKnown = false
+			snapshot.UID = 0
+			snapshot.GID = 0
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			invalid := journal
+			invalid.StateBefore = journal.StateBefore
+			test.mutate(&invalid.StateBefore)
+			if _, err := encodeDNSEngineSwitchJournal(invalid); err == nil {
+				t.Fatal("journal accepted a DNS state snapshot outside the exact service owner contract")
+			}
+		})
 	}
 }
 
@@ -176,13 +277,9 @@ func TestPairedPrimarySwitchJournalAcceptsVerifiedLegacySourceReceipt(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	journal.StateBefore = dnsFileSnapshot{
-		Path: dnsEngineStatePath(), Exists: true, Mode: 0o600,
-		SHA256: digestDNSBytes(legacyBytes), Data: legacyBytes,
-	}
-	if dnsSnapshotOwnerRequired() {
-		journal.StateBefore.OwnerKnown = true
-	}
+	journal.StateBefore = testDNSEngineStateSnapshot(
+		dnsEngineStatePath(), legacyBytes,
+	)
 	journal.ManifestQualifier = manifest.Qualifier
 	journal.SourceEngine = manifest.SourceEngine
 	journal.TargetEngine = manifest.TargetEngine
@@ -219,13 +316,9 @@ func TestPairedPrimarySwitchJournalAcceptsVerifiedLegacySourceReceipt(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	journal.StateBefore = dnsFileSnapshot{
-		Path: dnsEngineStatePath(), Exists: true, Mode: 0o600,
-		SHA256: digestDNSBytes(boundBytes), Data: boundBytes,
-	}
-	if dnsSnapshotOwnerRequired() {
-		journal.StateBefore.OwnerKnown = true
-	}
+	journal.StateBefore = testDNSEngineStateSnapshot(
+		dnsEngineStatePath(), boundBytes,
+	)
 	journal.PrimaryCatalogSerial = 41
 	if _, err := encodeDNSEngineSwitchJournal(journal); err != nil {
 		t.Fatalf("advanced durable serial was not accepted above its source anchor: %v", err)
@@ -276,14 +369,9 @@ func TestPDNSSwitchJournalRejectsUnmanagedPaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stateBefore := dnsFileSnapshot{
-		Path:   filepath.Join(root, "dns-engine-state.json"),
-		Exists: true, Mode: 0o600,
-		SHA256: digestDNSBytes(sourceStateBytes), Data: sourceStateBytes,
-	}
-	if dnsSnapshotOwnerRequired() {
-		stateBefore.OwnerKnown = true
-	}
+	stateBefore := testDNSEngineStateSnapshot(
+		filepath.Join(root, "dns-engine-state.json"), sourceStateBytes,
+	)
 	journal := dnsEngineSwitchJournal{
 		Schema: dnsEngineSwitchJournalSchema, Phase: dnsSwitchPhaseIntent,
 		Mode:              transport.DNSEngineSwitchModeSwitch,
