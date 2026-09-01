@@ -265,7 +265,51 @@ func removeLegacyDKIMTables() error {
 // başarısız olması başarıdır. Gerçek bir arıza, ret olarak değil uyarı olarak
 // bildirilir: DKIM imzalama üyelik olmadan çalışır, bütün mesele budur; burada
 // reddetmek, bizden önce gelen bir durumu cezalandırmak için postayı bozardı.
+// openDKIMPanelGroupIsRedundant answers the one question that decides whether
+// the celikpanel group may be taken away from opendkim: are the keys somewhere
+// opendkim can reach without it? Only the production store is.
+// openDKIMPanelGroupIsRedundant, celikpanel grubunun opendkim'den alınıp
+// alınamayacağına karar veren tek soruyu yanıtlar: anahtarlar, opendkim'in o
+// grup olmadan ulaşabileceği bir yerde mi? Yalnız üretim deposu öyledir.
+func openDKIMPanelGroupIsRedundant() bool {
+	return dkimBaseDir == productionDKIMKeyDir
+}
+
 func dropOpenDKIMFromPanelGroup(ctx context.Context) {
+	// Never drop the membership while the keys still need it.
+	//
+	// The group is only redundant once the store actually lives at
+	// productionDKIMKeyDir. If the store is still under /etc/celikpanel — an
+	// operator override, or an agent whose unit file has not been replaced yet
+	// — then removing opendkim from the celikpanel group takes away the only
+	// way it can traverse /etc/celikpanel (root:celikpanel 0750) and reach its
+	// own keys. Signing would stop for every domain while the DNS records keep
+	// advertising the public halves, which is the loudest possible way to
+	// break mail with a change meant to harden it.
+	//
+	// This is not hypothetical: the shipped agent unit pinned
+	// CELIKPANEL_DKIM_DIR to the legacy path, so the migration stood down while
+	// this ran unconditionally. The unit no longer pins it, and this guard
+	// makes the two impossible to separate again.
+	//
+	// Anahtarlar hâlâ ona muhtaçken üyeliği asla düşürme.
+	//
+	// Grup, ancak depo gerçekten productionDKIMKeyDir altında yaşadığında
+	// gereksizdir. Depo hâlâ /etc/celikpanel altındaysa — bir operatör
+	// geçersiz kılması ya da unit dosyası henüz değiştirilmemiş bir agent —
+	// opendkim'i celikpanel grubundan çıkarmak, onun /etc/celikpanel'i
+	// (root:celikpanel 0750) geçip kendi anahtarlarına ulaşabildiği tek yolu
+	// elinden alır. DNS kayıtları genel yarıları duyurmaya devam ederken her
+	// alan adı için imzalama dururdu; postayı sertleştirmesi gereken bir
+	// değişiklikle bozmanın en gürültülü yolu budur.
+	//
+	// Bu varsayımsal değildir: sevk edilen agent unit'i CELIKPANEL_DKIM_DIR'i
+	// eski yola sabitliyordu, dolayısıyla taşıma devre dışı kalırken bu kod
+	// koşulsuz çalışıyordu. Unit artık onu sabitlemiyor ve bu nöbet ikisinin
+	// yeniden ayrılmasını imkânsız kılıyor.
+	if !openDKIMPanelGroupIsRedundant() {
+		return
+	}
 	out, err := serviceMutationCommand(ctx, "gpasswd", "-d", "opendkim", "celikpanel").CombinedOutput()
 	if err == nil {
 		log.Printf("DKIM: removed opendkim from the celikpanel group; it no longer reads the agent token")

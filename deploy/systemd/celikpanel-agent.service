@@ -58,7 +58,6 @@ StateDirectoryMode=0700
 
 Environment=CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock
 Environment=CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token
-Environment=CELIKPANEL_DKIM_DIR=/etc/celikpanel/dkim
 Environment=CELIKPANEL_RUNTIMES_DIR=/opt/celikpanel/runtimes
 Environment=CELIKPANEL_AGENT_STATE_DIR=/var/lib/celikpanel-agent-private
 Environment=CELIKPANEL_MUTATION_LOCK=/run/celikpanel/service-mutation.lock

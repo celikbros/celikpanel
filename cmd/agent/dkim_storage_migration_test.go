@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -207,5 +208,69 @@ func TestShippedDKIMStoreIsTheProductionPath(t *testing.T) {
 	}
 	if dkimBaseDir != productionDKIMKeyDir {
 		t.Fatalf("dkimBaseDir = %q, want %q", dkimBaseDir, productionDKIMKeyDir)
+	}
+}
+
+// The bug this pins: the shipped agent unit set
+// CELIKPANEL_DKIM_DIR=/etc/celikpanel/dkim, so on every real server the store
+// path was the legacy one and the migration stood down — while the group drop
+// ran anyway. opendkim would lose its only route into /etc/celikpanel
+// (root:celikpanel 0750) while its keys were still there, and signing would
+// stop for every domain while DNS kept advertising the public halves.
+//
+// The two must never separate again: the group is redundant only once the
+// store has actually moved.
+//
+// Sabitlenen hata: sevk edilen agent unit'i
+// CELIKPANEL_DKIM_DIR=/etc/celikpanel/dkim ayarlıyordu; dolayısıyla her gerçek
+// sunucuda depo yolu eski olan yoldu ve taşıma devre dışı kalıyordu — grup
+// düşürme ise yine de çalışıyordu. opendkim, anahtarları hâlâ oradayken
+// /etc/celikpanel'e (root:celikpanel 0750) giden tek yolunu kaybederdi; DNS
+// genel yarıları duyurmayı sürdürürken her alan adı için imzalama dururdu.
+//
+// İkisi bir daha asla ayrılmamalı: grup, ancak depo gerçekten taşındıktan
+// sonra gereksizdir.
+func TestOpenDKIMGroupIsRedundantOnlyAfterTheStoreMoved(t *testing.T) {
+	previous := dkimBaseDir
+	t.Cleanup(func() { dkimBaseDir = previous })
+
+	for name, store := range map[string]string{
+		"legacy store":     legacyDKIMKeyDir,
+		"developer store":  filepath.Join(t.TempDir(), "keys"),
+		"empty store":      "",
+		"near miss suffix": productionDKIMKeyDir + "-old",
+	} {
+		t.Run(name, func(t *testing.T) {
+			dkimBaseDir = store
+			if openDKIMPanelGroupIsRedundant() {
+				t.Fatalf("the celikpanel group must not be dropped while the store is %q", store)
+			}
+		})
+	}
+
+	dkimBaseDir = productionDKIMKeyDir
+	if !openDKIMPanelGroupIsRedundant() {
+		t.Fatal("once the store is the production one the group is genuinely redundant")
+	}
+}
+
+// The shipped unit must not pin the store away from the production path. If it
+// does, the migration silently never runs on any real server — which is
+// exactly how this defect survived into a release.
+// Sevk edilen unit, depoyu üretim yolundan uzağa sabitlememelidir. Sabitlerse
+// taşıma hiçbir gerçek sunucuda sessizce çalışmaz — bu kusur zaten tam olarak
+// böyle bir sürüme kadar geldi.
+func TestShippedAgentUnitDoesNotPinTheDKIMStore(t *testing.T) {
+	unit, err := os.ReadFile(
+		filepath.Join("..", "..", "deploy", "systemd", "celikpanel-agent.service"),
+	)
+	if err != nil {
+		t.Fatalf("read agent unit: %v", err)
+	}
+	if strings.Contains(string(unit), "CELIKPANEL_DKIM_DIR") {
+		t.Fatal(
+			"the agent unit must not set CELIKPANEL_DKIM_DIR; " +
+				"the binary's default is already the production store",
+		)
 	}
 }
