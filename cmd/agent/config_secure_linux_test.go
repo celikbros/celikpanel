@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestSecureConfigRegularFileLifecycle(t *testing.T) {
@@ -53,6 +55,60 @@ func TestSecureConfigRegularFileLifecycle(t *testing.T) {
 	}
 	if _, err := os.Lstat(path); !os.IsNotExist(err) {
 		t.Fatalf("removed path still exists: %v", err)
+	}
+}
+
+func TestSecureConfigOwnerWriterAbsentPreimageDoesNotReplaceInterloper(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "service.conf")
+	expected := dnsFileSnapshot{Path: filepath.Clean(path)}
+	interloper := []byte("interloper\n")
+	var interloperInfo os.FileInfo
+
+	err := secureWriteConfigReplacingSnapshotWithOwnerAndHook(
+		path,
+		[]byte("managed\n"),
+		0o600,
+		&expected,
+		uint32(os.Geteuid()),
+		uint32(os.Getegid()),
+		func() {
+			if writeErr := os.WriteFile(path, interloper, 0o640); writeErr != nil {
+				t.Fatal(writeErr)
+			}
+			if chmodErr := os.Chmod(path, 0o640); chmodErr != nil {
+				t.Fatal(chmodErr)
+			}
+			var statErr error
+			interloperInfo, statErr = os.Lstat(path)
+			if statErr != nil {
+				t.Fatal(statErr)
+			}
+		},
+	)
+	if !errors.Is(err, unix.EEXIST) {
+		t.Fatalf("absent-preimage publication error = %v, want EEXIST", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != string(interloper) {
+		t.Fatalf("interloper content changed to %q", data)
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !os.SameFile(interloperInfo, info) || info.Mode().Perm() != 0o640 {
+		t.Fatalf("interloper identity or mode changed: %+v", info)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != filepath.Base(path) {
+		t.Fatalf("failed no-replace publication left staging entries: %v", entries)
 	}
 }
 

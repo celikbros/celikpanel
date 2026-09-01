@@ -24,6 +24,16 @@ func secureWriteConfigReplacingSnapshot(
 	return fmt.Errorf("secure managed configuration access is unavailable on this operating system: %s", path)
 }
 
+func secureWriteConfigReplacingSnapshotWithOwner(
+	path string,
+	_ []byte,
+	_ os.FileMode,
+	_ *dnsFileSnapshot,
+	_, _ uint32,
+) error {
+	return fmt.Errorf("secure managed configuration access is unavailable on this operating system: %s", path)
+}
+
 func secureWriteBINDConfigReplacingSnapshot(
 	path string,
 	_ []byte,

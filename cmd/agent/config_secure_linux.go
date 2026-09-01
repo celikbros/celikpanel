@@ -93,6 +93,17 @@ func secureWriteConfig(path string, content []byte, mode os.FileMode) error {
 	return secureWriteConfigReplacingSnapshot(path, content, mode, nil)
 }
 
+type secureConfigOwner struct {
+	uid uint32
+	gid uint32
+}
+
+type secureConfigWriteOptions struct {
+	parentPolicy           *bindConfigOwnerPolicy
+	requiredOwner          *secureConfigOwner
+	beforeFinalParentProof func()
+}
+
 func sameSecureConfigStat(left, right unix.Stat_t) bool {
 	return left.Dev == right.Dev && left.Ino == right.Ino &&
 		left.Mode == right.Mode && left.Uid == right.Uid && left.Gid == right.Gid &&
@@ -170,6 +181,38 @@ func secureWriteConfigReplacingSnapshot(
 	)
 }
 
+func secureWriteConfigReplacingSnapshotWithOwner(
+	path string,
+	content []byte,
+	mode os.FileMode,
+	expected *dnsFileSnapshot,
+	requiredUID, requiredGID uint32,
+) error {
+	return secureWriteConfigReplacingSnapshotWithOwnerAndHook(
+		path, content, mode, expected, requiredUID, requiredGID, nil,
+	)
+}
+
+func secureWriteConfigReplacingSnapshotWithOwnerAndHook(
+	path string,
+	content []byte,
+	mode os.FileMode,
+	expected *dnsFileSnapshot,
+	requiredUID, requiredGID uint32,
+	beforeFinalParentProof func(),
+) error {
+	return secureWriteConfigReplacingSnapshotWithOptions(
+		path,
+		content,
+		mode,
+		expected,
+		secureConfigWriteOptions{
+			requiredOwner:          &secureConfigOwner{uid: requiredUID, gid: requiredGID},
+			beforeFinalParentProof: beforeFinalParentProof,
+		},
+	)
+}
+
 func secureWriteBINDConfigReplacingSnapshot(
 	path string,
 	content []byte,
@@ -202,13 +245,42 @@ func secureWriteConfigReplacingSnapshotWithBINDParentAndHook(
 	parentPolicy *bindConfigOwnerPolicy,
 	beforeFinalParentProof func(),
 ) error {
+	return secureWriteConfigReplacingSnapshotWithOptions(
+		path,
+		content,
+		mode,
+		expected,
+		secureConfigWriteOptions{
+			parentPolicy:           parentPolicy,
+			beforeFinalParentProof: beforeFinalParentProof,
+		},
+	)
+}
+
+func secureWriteConfigReplacingSnapshotWithOptions(
+	path string,
+	content []byte,
+	mode os.FileMode,
+	expected *dnsFileSnapshot,
+	options secureConfigWriteOptions,
+) error {
+	requiredOwner := options.requiredOwner
+	if requiredOwner != nil && expected == nil {
+		return errors.New("managed configuration owner-controlled replacement requires an exact preimage")
+	}
 	if expected != nil {
 		if err := validateDNSFileSnapshotIntegrity(*expected); err != nil {
 			return err
 		}
-		if !expected.Exists || expected.Path != filepath.Clean(path) ||
-			expected.Mode != uint32(mode.Perm()) || !expected.OwnerKnown {
+		if expected.Path != filepath.Clean(path) ||
+			(expected.Exists &&
+				(expected.Mode != uint32(mode.Perm()) || !expected.OwnerKnown)) ||
+			(!expected.Exists && requiredOwner == nil) {
 			return errors.New("managed configuration replacement preimage is invalid")
+		}
+		if requiredOwner != nil && expected.Exists &&
+			(expected.UID != requiredOwner.uid || expected.GID != requiredOwner.gid) {
+			return errors.New("managed configuration replacement preimage owner differs from the required contract")
 		}
 	}
 	relative, err := secureConfigRelativePath(path)
@@ -231,6 +303,7 @@ func secureWriteConfigReplacingSnapshotWithBINDParentAndHook(
 		return secureConfigOpenError("write managed configuration", path, err)
 	}
 	defer unix.Close(parentFD)
+	parentPolicy := options.parentPolicy
 	var parentBefore unix.Stat_t
 	if parentPolicy != nil {
 		parentBefore, err = inspectBINDConfigParentFD(parentFD, *parentPolicy)
@@ -256,6 +329,10 @@ func secureWriteConfigReplacingSnapshotWithBINDParentAndHook(
 			(expected != nil && existingStat.Nlink != 1) {
 			unix.Close(existingFD)
 			return configPathRefusal("write managed configuration refused for non-regular file: %s", path)
+		}
+		if expected != nil && !expected.Exists {
+			unix.Close(existingFD)
+			return errors.New("managed configuration replacement preimage appeared")
 		}
 		existingExists = true
 		fileMode = existingStat.Mode & 0o777
@@ -288,8 +365,12 @@ func secureWriteConfigReplacingSnapshotWithBINDParentAndHook(
 		}
 	} else if !errors.Is(err, unix.ENOENT) {
 		return secureConfigOpenError("inspect managed configuration", path, err)
-	} else if expected != nil {
+	} else if expected != nil && expected.Exists {
 		return errors.New("managed configuration replacement preimage disappeared")
+	}
+	if requiredOwner != nil {
+		ownerUID = int(requiredOwner.uid)
+		ownerGID = int(requiredOwner.gid)
 	}
 
 	var tempName string
@@ -378,8 +459,8 @@ func secureWriteConfigReplacingSnapshotWithBINDParentAndHook(
 			return errors.New("managed configuration changed before atomic replacement")
 		}
 	}
-	if beforeFinalParentProof != nil {
-		beforeFinalParentProof()
+	if options.beforeFinalParentProof != nil {
+		options.beforeFinalParentProof()
 	}
 	if parentPolicy != nil {
 		parentAfter, err := inspectBINDConfigParentFD(parentFD, *parentPolicy)
@@ -409,7 +490,14 @@ func secureWriteConfigReplacingSnapshotWithBINDParentAndHook(
 			return errors.New("BIND config parent path changed before atomic replacement")
 		}
 	}
-	if err := unix.Renameat(parentFD, tempName, parentFD, base); err != nil {
+	if expected != nil && !expected.Exists {
+		err = unix.Renameat2(
+			parentFD, tempName, parentFD, base, unix.RENAME_NOREPLACE,
+		)
+	} else {
+		err = unix.Renameat(parentFD, tempName, parentFD, base)
+	}
+	if err != nil {
 		return secureConfigOpenError("publish atomic managed configuration", path, err)
 	}
 	published = true

@@ -355,12 +355,35 @@ func readDNSEngineState() (dnsEngineStateReceipt, bool, error) {
 	return state, err == nil, err
 }
 
+func readExactDNSEngineState() (dnsEngineStateReceipt, bool, error) {
+	snapshot, err := captureDNSEngineStateSnapshot(true)
+	if err != nil {
+		return dnsEngineStateReceipt{}, false, err
+	}
+	if !snapshot.Exists {
+		return dnsEngineStateReceipt{}, false, nil
+	}
+	state, err := decodeDNSEngineState(snapshot.Data)
+	return state, err == nil, err
+}
+
 func writeDNSEngineState(state dnsEngineStateReceipt) error {
 	data, err := encodeDNSEngineState(state)
 	if err != nil {
 		return err
 	}
-	return secureWriteConfig(dnsEngineStatePath(), data, 0o600)
+	before, err := captureDNSEngineStateSnapshot(true)
+	if err != nil {
+		return err
+	}
+	return secureWriteConfigReplacingSnapshotWithOwner(
+		before.Path,
+		data,
+		0o600,
+		&before,
+		serviceMutationRequiredOwnerUID,
+		serviceMutationRequiredOwnerGID,
+	)
 }
 
 type dnsEngineStateWriter func(dnsEngineStateReceipt) error
@@ -387,7 +410,7 @@ func persistExactDNSEngineStateAt(
 
 func persistExactDNSEngineState(state dnsEngineStateReceipt) error {
 	return persistExactDNSEngineStateAt(
-		state, writeDNSEngineState, readDNSEngineState,
+		state, writeDNSEngineState, readExactDNSEngineState,
 	)
 }
 

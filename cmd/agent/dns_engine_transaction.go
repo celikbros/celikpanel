@@ -826,12 +826,15 @@ func restoreDNSEngineStateSnapshot(snapshot dnsFileSnapshot) error {
 		return err
 	}
 	switch {
-	case snapshot.Exists && current.Exists:
-		err = secureWriteConfigReplacingSnapshot(
-			snapshot.Path, snapshot.Data, 0o600, &current,
-		)
 	case snapshot.Exists:
-		err = secureWriteConfig(snapshot.Path, snapshot.Data, 0o600)
+		err = secureWriteConfigReplacingSnapshotWithOwner(
+			snapshot.Path,
+			snapshot.Data,
+			0o600,
+			&current,
+			serviceMutationRequiredOwnerUID,
+			serviceMutationRequiredOwnerGID,
+		)
 	case current.Exists:
 		err = secureRemoveConfig(snapshot.Path)
 	}
