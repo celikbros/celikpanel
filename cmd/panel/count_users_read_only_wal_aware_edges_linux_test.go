@@ -86,8 +86,8 @@ func TestCountUsableUsersReadOnlyWALAwareExcludesChecksumValidUncommittedTail(t 
 	database := openWALAwareTestDatabase(t, source)
 	if _, err := database.GetDB().Exec(`
 		INSERT INTO users (username, password_hash, email, role)
-		VALUES ('committed-admin', 'committed-hash', 'committed@example.test', 'admin')
-	`); err != nil {
+		VALUES ('committed-admin', ?, 'committed@example.test', 'admin')
+	`, mustAdmissionPasswordHash(t)); err != nil {
 		database.Close()
 		t.Fatal(err)
 	}
@@ -136,13 +136,28 @@ func TestCountUsableUsersReadOnlyWALAwareExcludesChecksumValidUncommittedTail(t 
 func TestCountUsableUsersReadOnlyWALAwareAppliesRepeatedPagesAcrossCommits(t *testing.T) {
 	source := filepath.Join(t.TempDir(), "source.sqlite")
 	database := openWALAwareTestDatabase(t, source)
-	statements := []string{
-		`INSERT INTO users (username, password_hash, email, role) VALUES ('first-admin', 'hash-one', 'first@example.test', 'admin')`,
-		`UPDATE users SET email = 'updated@example.test' WHERE username = 'first-admin'`,
-		`INSERT INTO users (username, password_hash, email, role) VALUES ('second-admin', 'hash-two', 'second@example.test', 'admin')`,
+	validHash := mustAdmissionPasswordHash(t)
+	statements := []struct {
+		query string
+		args  []any
+	}{
+		{
+			query: `INSERT INTO users (username, password_hash, email, role)
+				VALUES ('first-admin', ?, 'first@example.test', 'admin')`,
+			args: []any{validHash},
+		},
+		{
+			query: `UPDATE users SET email = 'updated@example.test'
+				WHERE username = 'first-admin'`,
+		},
+		{
+			query: `INSERT INTO users (username, password_hash, email, role)
+				VALUES ('second-admin', ?, 'second@example.test', 'admin')`,
+			args: []any{validHash},
+		},
 	}
 	for _, statement := range statements {
-		if _, err := database.GetDB().Exec(statement); err != nil {
+		if _, err := database.GetDB().Exec(statement.query, statement.args...); err != nil {
 			database.Close()
 			t.Fatal(err)
 		}
@@ -192,8 +207,8 @@ func TestCountUsableUsersReadOnlyWALAwareAppliesFinalCommitShrink(t *testing.T) 
 	database := openWALAwareTestDatabase(t, source)
 	if _, err := database.GetDB().Exec(`
 		INSERT INTO users (username, password_hash, email, role)
-		VALUES ('shrink-admin', 'shrink-hash', 'shrink@example.test', 'admin')
-	`); err != nil {
+		VALUES ('shrink-admin', ?, 'shrink@example.test', 'admin')
+	`, mustAdmissionPasswordHash(t)); err != nil {
 		database.Close()
 		t.Fatal(err)
 	}
@@ -276,8 +291,8 @@ func TestCountUsableUsersReadOnlyWALAwarePreservesAccessTimes(t *testing.T) {
 	database := openWALAwareTestDatabase(t, source)
 	if _, err := database.GetDB().Exec(`
 		INSERT INTO users (username, password_hash, email, role)
-		VALUES ('atime-admin', 'atime-hash', 'atime@example.test', 'admin')
-	`); err != nil {
+		VALUES ('atime-admin', ?, 'atime@example.test', 'admin')
+	`, mustAdmissionPasswordHash(t)); err != nil {
 		database.Close()
 		t.Fatal(err)
 	}

@@ -15,7 +15,21 @@ const deadPlaceholderAdminPasswordHash = "$2a$10$rVQ8K5h6Z.Zg0qX7J3K3KuF7pB3vZ8m
 // the installer is allowed to mutate the host.
 const maxReadOnlyAdmissionDatabaseBytes = int64(256 << 20)
 
+const maxReadOnlyWALAwareUserCountAttempts = 3
+
 func countUsableUsersReadOnlyWALAware(databasePath string) (int, error) {
+	return countUsableUsersReadOnlyWALAwareWithAttemptHook(databasePath, nil)
+}
+
+// readOnlyWALAwareUserCountAttemptHook is a package-private deterministic test
+// seam. Production callers always pass nil; the hook cannot be selected by a
+// flag, environment variable, or external package.
+type readOnlyWALAwareUserCountAttemptHook func(attempt int) error
+
+func countUsableUsersReadOnlyWALAwareWithAttemptHook(
+	databasePath string,
+	afterPin readOnlyWALAwareUserCountAttemptHook,
+) (int, error) {
 	databasePath = filepath.Clean(databasePath)
 	if !filepath.IsAbs(databasePath) {
 		absolutePath, err := filepath.Abs(databasePath)
@@ -24,7 +38,26 @@ func countUsableUsersReadOnlyWALAware(databasePath string) (int, error) {
 		}
 		databasePath = absolutePath
 	}
+	var lastErr error
+	for attempt := 1; attempt <= maxReadOnlyWALAwareUserCountAttempts; attempt++ {
+		count, err := countUsableUsersReadOnlyWALAwareAttempt(databasePath, attempt, afterPin)
+		if err == nil {
+			return count, nil
+		}
+		lastErr = err
+	}
+	return 0, fmt.Errorf(
+		"count login-capable administrators from a coherent read-only SQLite snapshot after %d attempts: %w",
+		maxReadOnlyWALAwareUserCountAttempts,
+		lastErr,
+	)
+}
 
+func countUsableUsersReadOnlyWALAwareAttempt(
+	databasePath string,
+	attempt int,
+	afterPin readOnlyWALAwareUserCountAttemptHook,
+) (int, error) {
 	// Admission must not create even a private on-disk snapshot: this mode runs
 	// before the installer is allowed to mutate the host. Pin the database and
 	// all SQLite sidecars, recover the last committed WAL frame into memory, and
@@ -34,6 +67,11 @@ func countUsableUsersReadOnlyWALAware(databasePath string) (int, error) {
 		return 0, fmt.Errorf("pin WAL-aware panel database for user count: %w", err)
 	}
 	defer pinned.close()
+	if afterPin != nil {
+		if err := afterPin(attempt); err != nil {
+			return 0, fmt.Errorf("run read-only user-count attempt hook: %w", err)
+		}
+	}
 
 	serialized, err := materializePinnedSQLiteDatabaseInMemory(pinned)
 	if err != nil {

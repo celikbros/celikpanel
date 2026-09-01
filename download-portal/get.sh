@@ -766,6 +766,166 @@ prepare_release_storage() {
     "Sürüm deposu root:root 0700 kipinde olmalı."
 }
 
+validate_admin_credentials_path_metadata() {
+  admin_metadata_path=$1
+  case "$admin_metadata_path" in
+    /*) ;;
+    *) return 1 ;;
+  esac
+  [ -f "$admin_metadata_path" ] && [ ! -L "$admin_metadata_path" ] || return 1
+  admin_metadata_canonical=$(readlink -e -- "$admin_metadata_path") || return 1
+  [ "$admin_metadata_canonical" = "$admin_metadata_path" ] || return 1
+
+  admin_metadata_current=$(dirname -- "$admin_metadata_path") || return 1
+  while :; do
+    [ -d "$admin_metadata_current" ] && [ ! -L "$admin_metadata_current" ] || return 1
+    admin_metadata_canonical=$(readlink -e -- "$admin_metadata_current") || return 1
+    [ "$admin_metadata_canonical" = "$admin_metadata_current" ] || return 1
+    admin_metadata_stat=$(stat -Lc '%u %g %a' -- "$admin_metadata_current") || return 1
+    set -- $admin_metadata_stat
+    [ "$#" -eq 3 ] || return 1
+    admin_metadata_mode=$3
+    admin_metadata_permissions=$((0$admin_metadata_mode))
+    [ "$1:$2" = 0:0 ] || return 1
+    [ $((admin_metadata_permissions & 0022)) -eq 0 ] || return 1
+    [ "$admin_metadata_current" = / ] && break
+    admin_metadata_current=$(dirname -- "$admin_metadata_current") || return 1
+  done
+
+  admin_metadata_stat=$(stat -Lc '%u %g %a %h %s' -- "$admin_metadata_path") || return 1
+  set -- $admin_metadata_stat
+  [ "$#" -eq 5 ] || return 1
+  [ "$1:$2:$3:$4" = 0:0:600:1 ] || return 1
+  case "$5" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  [ "$5" -ge 1 ] && [ "$5" -le 4096 ]
+}
+
+admin_credentials_file_identity() {
+  stat -Lc '%d:%i:%u:%g:%f:%h:%s:%y:%z' -- "$1"
+}
+
+# This is intentionally a strict subset of the candidate panel's canonical
+# JSON parser: one line, fixed field order, no JSON escapes, ASCII-only values,
+# the shared username grammar, a non-empty trim-safe email, and an 8-byte
+# minimum password. The secret is read on stdin by awk and is never placed in
+# argv, the environment, or output. The downloaded candidate validates the
+# same file again with --validate-admin-credentials-file=- before host setup.
+validate_admin_credentials_content_subset() {
+  admin_subset_path=$1
+  LC_ALL=C awk '
+    BEGIN {
+      seen = 0
+      valid = 0
+      quote = sprintf("%c", 34)
+      backslash = sprintf("%c", 92)
+      username_prefix = "{" quote "username" quote ":" quote
+      email_separator = quote "," quote "email" quote ":" quote
+      password_separator = quote "," quote "password" quote ":" quote
+      object_suffix = quote "}"
+    }
+    NR != 1 { exit 1 }
+    {
+      seen = 1
+      line = $0
+      if (substr(line, 1, length(username_prefix)) != username_prefix) {
+        exit 1
+      }
+      remainder = substr(line, length(username_prefix) + 1)
+      separator = index(remainder, email_separator)
+      if (separator < 2) {
+        exit 1
+      }
+      username = substr(remainder, 1, separator - 1)
+      remainder = substr(remainder, separator + length(email_separator))
+      separator = index(remainder, password_separator)
+      if (separator < 2) {
+        exit 1
+      }
+      email = substr(remainder, 1, separator - 1)
+      remainder = substr(remainder, separator + length(password_separator))
+      if (length(remainder) < length(object_suffix) ||
+          substr(remainder, length(remainder) - length(object_suffix) + 1) != object_suffix) {
+        exit 1
+      }
+      password = substr(remainder, 1, length(remainder) - length(object_suffix))
+
+      if (length(username) < 3 || length(username) > 32 ||
+          username !~ /^[A-Za-z0-9][A-Za-z0-9_.-]*$/) {
+        exit 1
+      }
+      if (email !~ /^[ -~]+$/ || index(email, quote) != 0 ||
+          index(email, backslash) != 0 ||
+          substr(email, 1, 1) == " " ||
+          substr(email, length(email), 1) == " ") {
+        exit 1
+      }
+      if (length(password) < 8 || password !~ /^[ -~]+$/ ||
+          index(password, quote) != 0 || index(password, backslash) != 0) {
+        exit 1
+      }
+      valid = 1
+    }
+    END {
+      if (seen != 1 || valid != 1) {
+        exit 1
+      }
+    }
+  ' < "$admin_subset_path"
+}
+
+preflight_first_administrator_download_admission() {
+  admission_operation=$1
+  admission_any_install=$2
+  [ "$admission_operation" = install ] || return 0
+
+  case "${SKIP_ADMIN:-0}" in
+    0|1) admission_skip_admin=${SKIP_ADMIN:-0} ;;
+    *) fail \
+      "SKIP_ADMIN must be 0 or 1." \
+      "SKIP_ADMIN yalnızca 0 veya 1 olmalı." ;;
+  esac
+
+  admission_credentials_path=${CELIKPANEL_ADMIN_CREDENTIALS_FILE:-}
+  if [ -n "$admission_credentials_path" ]; then
+    validate_admin_credentials_path_metadata "$admission_credentials_path" || fail \
+      "Administrator credentials file must be an absolute canonical root:root mode 0600 regular file (1-4096 bytes) beneath root-owned non-writable ancestors; for a verified release's direct install.sh, set CELIKPANEL_ADMIN_CREDENTIALS_FILE=/absolute/root-only/file (forwarded internally to panel --admin-credentials-file=-)." \
+      "Yönetici kimlik bilgisi dosyası root sahipli yazılamaz dizinler altında mutlak, kanonik, root:root, 0600 ve 1-4096 bayt normal dosya olmalı; doğrulanmış sürümün doğrudan install.sh komutu için CELIKPANEL_ADMIN_CREDENTIALS_FILE=/mutlak/root-sahipli/dosya sağlayın (kurucu bunu panel --admin-credentials-file=- olarak içeride aktarır)."
+    admission_credentials_identity_before=$(admin_credentials_file_identity "$admission_credentials_path") || fail \
+      "Administrator credentials file changed before validation; CELIKPANEL_ADMIN_CREDENTIALS_FILE was not admitted (the candidate later receives it on panel --admin-credentials-file=-)." \
+      "Yönetici kimlik bilgisi dosyası doğrulamadan önce değişti; CELIKPANEL_ADMIN_CREDENTIALS_FILE kabul edilmedi (aday daha sonra bunu panel --admin-credentials-file=- üzerinden alır)."
+    validate_admin_credentials_content_subset "$admission_credentials_path" || fail \
+      "CELIKPANEL_ADMIN_CREDENTIALS_FILE does not match the signed entry's restricted first-write-safe JSON form (one line; username,email,password order; ASCII without quote/backslash escapes); other candidate-valid JSON forms are intentionally not accepted here and remain available through the verified release's direct install.sh (forwarded internally to panel --admin-credentials-file=-)." \
+      "CELIKPANEL_ADMIN_CREDENTIALS_FILE imzalı girişin dar ilk-yazım-güvenli JSON biçimine uymuyor (tek satır; username,email,password sırası; tırnak/ters eğik çizgi kaçışı olmayan ASCII); adayın kabul edebileceği diğer JSON biçimleri burada bilinçli olarak kabul edilmez ve doğrulanmış sürümün doğrudan install.sh yolunda kullanılabilir (kurucu bunu panel --admin-credentials-file=- olarak içeride aktarır)."
+    validate_admin_credentials_path_metadata "$admission_credentials_path" || fail \
+      "Administrator credentials file changed during validation; CELIKPANEL_ADMIN_CREDENTIALS_FILE was not admitted (the candidate later receives it on panel --admin-credentials-file=-)." \
+      "Yönetici kimlik bilgisi dosyası doğrulama sırasında değişti; CELIKPANEL_ADMIN_CREDENTIALS_FILE kabul edilmedi (aday daha sonra bunu panel --admin-credentials-file=- üzerinden alır)."
+    admission_credentials_identity_after=$(admin_credentials_file_identity "$admission_credentials_path") || fail \
+      "Administrator credentials file changed during validation; CELIKPANEL_ADMIN_CREDENTIALS_FILE was not admitted (the candidate later receives it on panel --admin-credentials-file=-)." \
+      "Yönetici kimlik bilgisi dosyası doğrulama sırasında değişti; CELIKPANEL_ADMIN_CREDENTIALS_FILE kabul edilmedi (aday daha sonra bunu panel --admin-credentials-file=- üzerinden alır)."
+    [ "$admission_credentials_identity_before" = "$admission_credentials_identity_after" ] || fail \
+      "Administrator credentials file changed during validation; CELIKPANEL_ADMIN_CREDENTIALS_FILE was not admitted (the candidate later receives it on panel --admin-credentials-file=-)." \
+      "Yönetici kimlik bilgisi dosyası doğrulama sırasında değişti; CELIKPANEL_ADMIN_CREDENTIALS_FILE kabul edilmedi (aday daha sonra bunu panel --admin-credentials-file=- üzerinden alır)."
+    return 0
+  fi
+
+  if [ "$admission_skip_admin" -eq 1 ]; then
+    if [ "$admission_any_install" -ne 0 ]; then
+      fail \
+        "Non-interactive explicit --install repair with SKIP_ADMIN=1 is refused before host mutation because the public entry cannot prove a login-capable existing administrator; rerun with a terminal and SKIP_ADMIN=0, or run the verified release's install.sh directly with CELIKPANEL_ADMIN_CREDENTIALS_FILE=/absolute/root-only/file (forwarded internally to panel --admin-credentials-file=-)." \
+        "Genel giriş oturum açabilen mevcut yöneticiyi kanıtlayamadığı için SKIP_ADMIN=1 kullanan etkileşimsiz açık --install onarımı host değişikliğinden önce reddedilir; terminal ve SKIP_ADMIN=0 ile yeniden çalıştırın veya doğrulanmış sürümün install.sh komutunu CELIKPANEL_ADMIN_CREDENTIALS_FILE=/mutlak/root-sahipli/dosya ile doğrudan çalıştırın (kurucu bunu panel --admin-credentials-file=- olarak içeride aktarır)."
+    fi
+    fail \
+      "A fresh signed public installation cannot use SKIP_ADMIN=1 without credentials; rerun with a terminal and SKIP_ADMIN=0, or run the verified release's install.sh directly with CELIKPANEL_ADMIN_CREDENTIALS_FILE=/absolute/root-only/file (forwarded internally to panel --admin-credentials-file=-)." \
+      "Yeni imzalı genel kurulum kimlik bilgileri olmadan SKIP_ADMIN=1 kullanamaz; terminal ve SKIP_ADMIN=0 ile yeniden çalıştırın veya doğrulanmış sürümün install.sh komutunu CELIKPANEL_ADMIN_CREDENTIALS_FILE=/mutlak/root-sahipli/dosya ile doğrudan çalıştırın (kurucu bunu panel --admin-credentials-file=- olarak içeride aktarır)."
+  fi
+
+  [ -t 0 ] || fail \
+    "Non-interactive signed public installation requires a terminal before host mutation; rerun with a terminal, or run the verified release's install.sh directly with CELIKPANEL_ADMIN_CREDENTIALS_FILE=/absolute/root-only/file (forwarded internally to panel --admin-credentials-file=-)." \
+    "Etkileşimsiz imzalı genel kurulum host değişikliğinden önce terminal gerektirir; terminalle yeniden çalıştırın veya doğrulanmış sürümün install.sh komutunu CELIKPANEL_ADMIN_CREDENTIALS_FILE=/mutlak/root-sahipli/dosya ile doğrudan çalıştırın (kurucu bunu panel --admin-credentials-file=- olarak içeride aktarır)."
+}
+
 marker_state=absent
 if [ -e /etc/celikpanel/install.complete ] || [ -L /etc/celikpanel/install.complete ]; then
   marker_state=invalid
@@ -836,6 +996,7 @@ else
   fi
 fi
 
+preflight_first_administrator_download_admission "$operation" "$any_install"
 prepare_release_storage
 workdir=$(mktemp -d "$releases_root/.download.XXXXXXXX")
 chmod 0700 "$workdir"

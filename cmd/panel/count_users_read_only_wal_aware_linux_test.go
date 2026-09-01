@@ -18,11 +18,12 @@ func TestCountUsableUsersReadOnlyWALAwareIncludesCommittedWALWithoutChangingSour
 	path := filepath.Join(t.TempDir(), "panel.sqlite")
 	database := openWALAwareTestDatabase(t, path)
 	defer database.Close()
+	validHash := mustAdmissionPasswordHash(t)
 	if _, err := database.GetDB().Exec(`
 		INSERT INTO users (username, password_hash, email, role)
-		VALUES ('real-admin', 'real-password-hash', 'real@example.test', 'admin'),
+		VALUES ('real-admin', ?, 'real@example.test', 'admin'),
 		       ('admin', ?, 'placeholder@example.test', 'admin')
-	`, deadPlaceholderAdminPasswordHash); err != nil {
+	`, validHash, deadPlaceholderAdminPasswordHash); err != nil {
 		t.Fatalf("write WAL-only users: %v", err)
 	}
 	requireNonEmptyWAL(t, path)
@@ -38,6 +39,92 @@ func TestCountUsableUsersReadOnlyWALAwareIncludesCommittedWALWithoutChangingSour
 		t.Fatalf("usable user count = %d, want 1", count)
 	}
 	assertSQLiteSourceStatesUnchanged(t, path, before)
+}
+
+func TestCountUsableUsersReadOnlyWALAwareAcceptsLoginCapableLegacyAdministrator(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "legacy.sqlite")
+	database, err := sql.Open(
+		"sqlite",
+		fmt.Sprintf("%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	if _, err := database.Exec(`
+		CREATE TABLE users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL,
+			email TEXT NOT NULL,
+			role TEXT NOT NULL CHECK(role IN ('admin', 'reseller', 'customer')),
+			created_at TEXT DEFAULT (datetime('now')),
+			updated_at TEXT DEFAULT (datetime('now'))
+		)
+	`); err != nil {
+		t.Fatalf("create legacy users table: %v", err)
+	}
+	prepareWALAwareConnection(t, database)
+	if _, err := database.Exec(`
+		INSERT INTO users (username, password_hash, email, role)
+		VALUES ('legacy-admin', ?, 'legacy-admin@example.test', 'admin')
+	`, mustAdmissionPasswordHash(t)); err != nil {
+		t.Fatalf("write legacy administrator: %v", err)
+	}
+	requireNonEmptyWAL(t, path)
+	count, err := countUsableUsersReadOnlyWALAware(path)
+	if err != nil {
+		t.Fatalf("count legacy administrator: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("login-capable administrator count = %d, want 1", count)
+	}
+}
+
+func TestCountUsableUsersReadOnlyWALAwareMatchesLoginStatusAndLegacyAccountMarkers(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "legacy-marker.sqlite")
+	database, err := sql.Open(
+		"sqlite",
+		fmt.Sprintf("%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	if _, err := database.Exec(`
+		CREATE TABLE users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL,
+			email TEXT NOT NULL,
+			role TEXT NOT NULL CHECK(role IN ('admin', 'reseller', 'customer')),
+			created_at TEXT DEFAULT (datetime('now')),
+			updated_at TEXT DEFAULT (datetime('now')),
+			account_type TEXT,
+			status TEXT
+		)
+	`); err != nil {
+		t.Fatalf("create legacy-marker users table: %v", err)
+	}
+	prepareWALAwareConnection(t, database)
+	validHash := mustAdmissionPasswordHash(t)
+	if _, err := database.Exec(`
+		INSERT INTO users (username, password_hash, email, role, account_type, status)
+		VALUES
+			('legacy-empty-account', ?, 'legacy-empty-account@example.test', 'admin', '', NULL),
+			('legacy-null-account', ?, 'legacy-null-account@example.test', 'admin', NULL, NULL),
+			('login-permitted-empty-status', ?, 'login-permitted-empty-status@example.test', 'admin', '', '')
+	`, validHash, validHash, validHash); err != nil {
+		t.Fatalf("write explicit legacy identity-marker administrators: %v", err)
+	}
+	requireNonEmptyWAL(t, path)
+	count, err := countUsableUsersReadOnlyWALAware(path)
+	if err != nil {
+		t.Fatalf("count explicit legacy identity markers: %v", err)
+	}
+	if count != 3 {
+		t.Fatalf("login-capable administrator count = %d, want 3", count)
+	}
 }
 
 func watchForNamedAdmissionWorkspaces(t *testing.T) func() {
@@ -167,12 +254,13 @@ func TestCountUsableUsersReadOnlyWALAwareKeepsForcedTemporaryStateInMemory(t *te
 		t.Fatal(err)
 	}
 	padding := strings.Repeat("x", 1024)
+	validHash := mustAdmissionPasswordHash(t)
 	const rows = 4096
 	for index := 0; index < rows; index++ {
 		if _, err := statement.Exec(
 			fmt.Sprintf("admin-%06d", index),
-			padding,
-			fmt.Sprintf("admin-%06d@example.test", rows-index),
+			validHash,
+			fmt.Sprintf("admin-%06d-%s@example.test", rows-index, padding),
 		); err != nil {
 			_ = statement.Close()
 			_ = transaction.Rollback()

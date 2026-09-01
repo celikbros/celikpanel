@@ -1543,7 +1543,9 @@ func (p *Panel) reconcileDNSEngineSwitchLocked(
 				return detached, false, markerErr
 			}
 		}
-		recovered, recoverErr := p.recoverDNSEngineSwitchLocked(ctx, nil)
+		recovered, recoverErr := p.recoverDNSEngineSwitchWithPostCommitLocksLocked(
+			ctx, nil,
+		)
 		if recoverErr != nil {
 			return detached, recovered, recoverErr
 		}
@@ -1627,8 +1629,9 @@ func (p *Panel) reconcileDNSEngineSwitchLocked(
 		result := p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
 		if result.failed() {
 			log.Printf(
-				"reconciled DNS engine switch %s has pending follow-up: firewall=%v scan=%v",
-				persisted.SwitchID, result.FirewallErr, result.ScanErr,
+				"reconciled DNS engine switch %s has pending follow-up: normalization=%v firewall=%v scan=%v",
+				persisted.SwitchID, result.NormalizationErr,
+				result.FirewallErr, result.ScanErr,
 			)
 			return persisted, true, &dnsEngineReconcilePostCommitError{Result: result}
 		}
@@ -3068,8 +3071,9 @@ func (p *Panel) handleDNSEngineSwitch(
 			)
 			if result.failed() {
 				log.Printf(
-					"DNS engine replay post-commit %s: firewall=%v scan=%v",
-					persisted.SwitchID, result.FirewallErr, result.ScanErr,
+					"DNS engine replay post-commit %s: normalization=%v firewall=%v scan=%v",
+					persisted.SwitchID, result.NormalizationErr,
+					result.FirewallErr, result.ScanErr,
 				)
 				p.auditDNSEngineBounded(actor, "post_commit.pending", persisted)
 				writeDNSEnginePostCommitFailed(w, result)
@@ -3219,8 +3223,9 @@ func (p *Panel) handleDNSEngineSwitch(
 	postCommit := p.reconcileDNSEnginePostCommitLocked(workerCtx, persisted)
 	if postCommit.failed() {
 		log.Printf(
-			"DNS engine switch %s committed with pending follow-up: firewall=%v scan=%v",
-			persisted.SwitchID, postCommit.FirewallErr, postCommit.ScanErr,
+			"DNS engine switch %s committed with pending follow-up: normalization=%v firewall=%v scan=%v",
+			persisted.SwitchID, postCommit.NormalizationErr,
+			postCommit.FirewallErr, postCommit.ScanErr,
 		)
 		p.auditDNSEngineBounded(actor, "post_commit.pending", persisted)
 		writeDNSEnginePostCommitFailed(w, postCommit)
@@ -3245,11 +3250,60 @@ func validDirectDNSEngineSwitch(job *agentMutationJob) bool {
 		mutationpayload.ValidDNSEngineSwitchQualifier(job.PackageName)
 }
 
+func adoptionConfigureIdentityFromMarker(
+	marker *dnsEngineOperationMarker,
+) (agentMutationIdentity, bool) {
+	if marker == nil || marker.Action != "adopt" ||
+		marker.Phase != dnsEngineOperationPostCommit ||
+		marker.TargetEngine != transport.DNSEnginePowerDNS ||
+		!validServiceOperationID(marker.ConfigurePDNSRequestID) ||
+		!validServiceOperationID(marker.ConfigurePDNSOwnerID) {
+		return agentMutationIdentity{}, false
+	}
+	return agentMutationIdentity{
+		RequestID: marker.ConfigurePDNSRequestID,
+		OwnerID:   marker.ConfigurePDNSOwnerID,
+		Kind:      "pdns_configure",
+		Target:    "pdns",
+	}, true
+}
+
+// reconcileDNSEnginePostCommitAfterRestartLocked enters the same process-lock
+// order as the HTTP switch path. Startup already owns serviceMutationMu.
+func (p *Panel) reconcileDNSEnginePostCommitAfterRestartLocked(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+) dnsEnginePostCommitResult {
+	p.dnsTopologyMu.Lock()
+	defer p.dnsTopologyMu.Unlock()
+	dnsPublicationMu.Lock()
+	defer dnsPublicationMu.Unlock()
+	return p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+}
+
 // recoverDNSEngineSwitchLocked reconciles the snapshot committed before
 // BeginServiceMutation. The caller holds serviceMutationMu during startup.
 func (p *Panel) recoverDNSEngineSwitchLocked(
 	ctx context.Context,
 	globalJob *agentMutationJob,
+) (bool, error) {
+	return p.recoverDNSEngineSwitchLockedMode(ctx, globalJob, false)
+}
+
+// recoverDNSEngineSwitchWithPostCommitLocksLocked is the manual-reconcile
+// entry point. Its caller already owns serviceMutationMu, dnsTopologyMu, and
+// dnsPublicationMu in that order.
+func (p *Panel) recoverDNSEngineSwitchWithPostCommitLocksLocked(
+	ctx context.Context,
+	globalJob *agentMutationJob,
+) (bool, error) {
+	return p.recoverDNSEngineSwitchLockedMode(ctx, globalJob, true)
+}
+
+func (p *Panel) recoverDNSEngineSwitchLockedMode(
+	ctx context.Context,
+	globalJob *agentMutationJob,
+	postCommitLocksHeld bool,
 ) (bool, error) {
 	state, err := readDNSEngineDBState(ctx, p.db.GetDB())
 	if err != nil {
@@ -3289,24 +3343,55 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 				)
 			}
 			if globalJob != nil && agentMutationActive(globalJob.Status) {
-				if !validDirectFirewallMutation(globalJob) {
+				configureIdentity, hasConfigureIdentity :=
+					adoptionConfigureIdentityFromMarker(marker)
+				switch {
+				case hasConfigureIdentity &&
+					configureIdentity.matches(globalJob):
+					// The post-commit reconciler waits for this exact child and
+					// either validates its success receipt or resumes its failed
+					// identity. The marker was durable before BeginServiceMutation.
+				case marker.Action == "adopt" &&
+					marker.ConfigurePDNSComplete &&
+					validDirectDNSZoneSyncV3(globalJob):
+					p.dnsTopologyMu.Lock()
+					recoverErr := p.recoverDirectDNSZoneSyncV3Locked(
+						ctx, globalJob,
+					)
+					p.dnsTopologyMu.Unlock()
+					if recoverErr != nil {
+						p.auditDNSEngineSystem(
+							ctx, "recovered.uncertain", persisted,
+						)
+						return true, recoverErr
+					}
+				case validDirectFirewallMutation(globalJob):
+					if err := p.terminalizeInterruptedFirewallMutation(
+						ctx, globalJob,
+					); err != nil {
+						p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
+						return true, err
+					}
+				default:
 					p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
 					return true, errors.New(
 						"active mutation does not match DNS engine post-commit recovery",
 					)
 				}
-				if err := p.terminalizeInterruptedFirewallMutation(
-					ctx, globalJob,
-				); err != nil {
-					p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
-					return true, err
-				}
 			}
-			result := p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+			var result dnsEnginePostCommitResult
+			if postCommitLocksHeld {
+				result = p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+			} else {
+				result = p.reconcileDNSEnginePostCommitAfterRestartLocked(
+					ctx, persisted,
+				)
+			}
 			if result.failed() {
 				log.Printf(
-					"DNS engine startup post-commit %s remains pending: firewall=%v scan=%v",
-					persisted.SwitchID, result.FirewallErr, result.ScanErr,
+					"DNS engine startup post-commit %s remains pending: normalization=%v firewall=%v scan=%v",
+					persisted.SwitchID, result.NormalizationErr,
+					result.FirewallErr, result.ScanErr,
 				)
 				p.auditDNSEngineSystem(
 					ctx, "recovered.post_commit.pending", persisted,
@@ -3388,11 +3473,19 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 			return true, fmt.Errorf("finalize recovered DNS engine switch: %w", err)
 		}
 		p.auditDNSEngineSystem(ctx, "recovered.succeeded", persisted)
-		result := p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+		var result dnsEnginePostCommitResult
+		if postCommitLocksHeld {
+			result = p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+		} else {
+			result = p.reconcileDNSEnginePostCommitAfterRestartLocked(
+				ctx, persisted,
+			)
+		}
 		if result.failed() {
 			log.Printf(
-				"recovered DNS engine switch %s has pending follow-up: firewall=%v scan=%v",
-				persisted.SwitchID, result.FirewallErr, result.ScanErr,
+				"recovered DNS engine switch %s has pending follow-up: normalization=%v firewall=%v scan=%v",
+				persisted.SwitchID, result.NormalizationErr,
+				result.FirewallErr, result.ScanErr,
 			)
 			p.auditDNSEngineSystem(
 				ctx, "recovered.post_commit.pending", persisted,

@@ -243,6 +243,8 @@ require_function_sequence "$INSTALL" preflight_first_administrator_admission \
     'load_admin_credentials_content "$identity"' \
     'run_with_admin_credentials_stdin' \
     '--validate-admin-credentials-file=-' \
+    '[[ "$SKIP_ADMIN" == 1 || -t 0 ]]' \
+    'Non-interactive installation requires a terminal before host mutation;' \
     '[[ "$SKIP_ADMIN" == 1 ]] || return 0' \
     'A fresh installation cannot use SKIP_ADMIN=1 without credentials;' \
     '--count-users-read-only-wal-aware' \
@@ -1735,6 +1737,8 @@ first_admin_existing_db=$first_admin_existing_data/celikpanel.db
 first_admin_admission_complete=$platform_tmp/first-admin-admission-complete
 first_admin_fresh_complete=$platform_tmp/first-admin-fresh-complete
 first_admin_apply_complete=$platform_tmp/first-admin-apply-complete
+first_admin_non_tty_complete=$platform_tmp/first-admin-non-tty-complete
+first_admin_tty_complete=$platform_tmp/first-admin-tty-complete
 admission_uid=$(id -u)
 admission_gid=$(id -g)
 if [[ "$admission_uid" == 0 ]]; then
@@ -1787,6 +1791,14 @@ run_admin_admission_contract() (
     case "$mode" in
         existing) ;;
         fresh) DATA_DIR=$first_admin_root/absent-data ;;
+        non-tty-default)
+            SKIP_ADMIN=0
+            DATA_DIR=$first_admin_root/absent-data
+            ;;
+        tty-default)
+            SKIP_ADMIN=0
+            DATA_DIR=$first_admin_root/absent-data
+            ;;
         apply-only)
             APPLY_ONLY=1
             ADMIN_CREDENTIALS_PATH=relative-unsafe-path
@@ -1798,12 +1810,15 @@ run_admin_admission_contract() (
     case "$mode" in
         existing) : > "$first_admin_admission_complete" ;;
         fresh) : > "$first_admin_fresh_complete" ;;
+        non-tty-default) : > "$first_admin_non_tty_complete" ;;
+        tty-default) : > "$first_admin_tty_complete" ;;
         apply-only) : > "$first_admin_apply_complete" ;;
     esac
 )
 
 rm -f -- "$first_admin_setpriv_trace" "$first_admin_admission_complete" \
-    "$first_admin_fresh_complete" "$first_admin_apply_complete"
+    "$first_admin_fresh_complete" "$first_admin_apply_complete" \
+    "$first_admin_non_tty_complete" "$first_admin_tty_complete"
 run_admin_admission_contract existing \
     || die 'exact existing first-admin admission fixture failed'
 [[ -e "$first_admin_admission_complete" ]] \
@@ -1821,10 +1836,43 @@ if fresh_admission_output=$(run_admin_admission_contract fresh 2>&1); then
 fi
 [[ "$fresh_admission_output" == *'set SKIP_ADMIN=0'* &&
    "$fresh_admission_output" == *'CELIKPANEL_ADMIN_CREDENTIALS_FILE'* &&
+   "$fresh_admission_output" == *'--admin-credentials-file=-'* &&
    "$fresh_admission_output" == *'Yeni kurulum'* ]] \
     || die 'fresh SKIP_ADMIN=1 refusal was not actionable and bilingual'
 [[ ! -e "$first_admin_fresh_complete" && ! -e "$first_admin_setpriv_trace" ]] \
     || die 'fresh SKIP_ADMIN=1 refusal dispatched a candidate or mutation command'
+
+rm -f -- "$first_admin_non_tty_complete" "$first_admin_setpriv_trace"
+if non_tty_admission_output=$(run_admin_admission_contract non-tty-default \
+        </dev/null 2>&1); then
+    die 'default non-TTY first-admin admission unexpectedly reached mutation dispatch'
+fi
+[[ "$non_tty_admission_output" == *'requires a terminal'* &&
+   "$non_tty_admission_output" == *'CELIKPANEL_ADMIN_CREDENTIALS_FILE'* &&
+   "$non_tty_admission_output" == *'--admin-credentials-file=-'* &&
+   "$non_tty_admission_output" == *'Etkileşimsiz'* ]] \
+    || die 'default non-TTY first-admin refusal was not actionable and bilingual'
+[[ ! -e "$first_admin_non_tty_complete" && ! -e "$first_admin_setpriv_trace" ]] \
+    || die 'default non-TTY first-admin refusal dispatched a candidate or mutation command'
+
+command -v script >/dev/null 2>&1 || die 'script is required for the direct TTY admission contract'
+first_admin_tty_runner=$platform_tmp/first-admin-tty-runner.sh
+{
+    declare -p admin_admission_defs first_admin_prefix first_admin_setpriv \
+        first_admin_setpriv_trace first_admin_root first_admin_existing_data \
+        first_admin_admission_complete first_admin_fresh_complete \
+        first_admin_apply_complete first_admin_non_tty_complete \
+        first_admin_tty_complete admission_uid admission_gid
+    declare -f run_admin_admission_contract
+    printf '%s\n' 'run_admin_admission_contract tty-default'
+} > "$first_admin_tty_runner"
+chmod 0700 "$first_admin_tty_runner"
+printf -v first_admin_tty_command '%q ' /bin/bash "$first_admin_tty_runner"
+/usr/bin/script -qefc "$first_admin_tty_command" /dev/null \
+    >"$platform_tmp/first-admin-tty.log" 2>&1 \
+    || die 'default TTY first-admin admission was refused'
+[[ -e "$first_admin_tty_complete" && ! -e "$first_admin_setpriv_trace" ]] \
+    || die 'default TTY first-admin admission did not reach mutation dispatch cleanly'
 
 run_admin_admission_contract apply-only \
     || die 'apply-only did not bypass first-admin admission probes'

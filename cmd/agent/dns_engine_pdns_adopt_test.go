@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"os"
@@ -20,6 +21,11 @@ const (
 	testPDNSAdoptionPeerNS = "ns2.example.test"
 )
 
+type testPDNSAdoptionZone struct {
+	domain  string
+	records []transport.ZoneRecord
+}
+
 func testPDNSAdoptionManifest(
 	t *testing.T,
 	topology string,
@@ -27,11 +33,32 @@ func testPDNSAdoptionManifest(
 	records []transport.ZoneRecord,
 ) mutationpayload.DNSEngineSwitchManifestCommitment {
 	t.Helper()
-	zone, err := mutationpayload.CanonicalDNSZoneSyncV3(
-		transport.DNSEnginePowerDNS, 1, 9, domain, false, "NATIVE", records,
+	return testPDNSAdoptionManifestZones(
+		t, topology, []testPDNSAdoptionZone{{domain: domain, records: records}},
 	)
-	if err != nil {
-		t.Fatal(err)
+}
+
+func testPDNSAdoptionManifestZones(
+	t *testing.T,
+	topology string,
+	zones []testPDNSAdoptionZone,
+) mutationpayload.DNSEngineSwitchManifestCommitment {
+	t.Helper()
+	snapshots := make(
+		[]transport.DNSEngineSwitchZoneSnapshot, 0, len(zones),
+	)
+	for _, candidate := range zones {
+		zone, err := mutationpayload.CanonicalDNSZoneSyncV3(
+			transport.DNSEnginePowerDNS, 1, 9, candidate.domain,
+			false, "NATIVE", candidate.records,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		snapshots = append(snapshots, transport.DNSEngineSwitchZoneSnapshot{
+			Domain: candidate.domain, DesiredGeneration: 9, ZoneType: "NATIVE",
+			Records: zone.Records, ZoneQualifier: zone.Qualifier,
+		})
 	}
 	peerIP, peerNS := "", ""
 	if topology == transport.DNSTopologyPaired {
@@ -40,11 +67,7 @@ func testPDNSAdoptionManifest(
 	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
 		transport.DNSEngineSwitchModeAdopt,
 		"", transport.DNSEnginePowerDNS, 0, 1, 17, topology,
-		peerIP, peerNS,
-		[]transport.DNSEngineSwitchZoneSnapshot{{
-			Domain: domain, DesiredGeneration: 9, ZoneType: "NATIVE",
-			Records: zone.Records, ZoneQualifier: zone.Qualifier,
-		}},
+		peerIP, peerNS, snapshots,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -52,18 +75,16 @@ func testPDNSAdoptionManifest(
 	return manifest
 }
 
-func createPDNSAdoptionDatabase(
+func insertExternalPDNSAdoptionZone(
 	t *testing.T,
-	path, domain string,
+	db *sql.DB,
+	domain string,
 	records []transport.ZoneRecord,
-	paired, signed bool,
-) {
+) int64 {
 	t.Helper()
-	db, err := initializePDNSEngineDB(context.Background(), path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	result, err := db.Exec(`INSERT INTO domains (name, type) VALUES (?, 'NATIVE')`, domain)
+	result, err := db.Exec(
+		`INSERT INTO domains (name, type) VALUES (?, 'NATIVE')`, domain,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,6 +106,50 @@ func createPDNSAdoptionDatabase(
 			t.Fatal(err)
 		}
 	}
+	return domainID
+}
+
+func createPDNSAdoptionDatabase(
+	t *testing.T,
+	path, domain string,
+	records []transport.ZoneRecord,
+	paired, signed bool,
+) {
+	t.Helper()
+	// An adoption candidate is owned by an external PowerDNS installation.
+	// Build only the upstream gsqlite3 tables: initializing through
+	// initializePDNSEngineDB would pre-create celikpanel's private V3 receipt
+	// schema and turn this fixture into a managed database before the test even
+	// starts.
+	privateSchema := strings.Index(
+		pdnsSchema, "CREATE TABLE IF NOT EXISTS celikpanel_",
+	)
+	if privateSchema <= 0 {
+		t.Fatal("PowerDNS schema fixture cannot isolate the upstream schema")
+	}
+	db, err := openPDNSEngineDB(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(
+		context.Background(), pdnsSchema[:privateSchema],
+	); err != nil {
+		db.Close()
+		t.Fatalf("initialize external PowerDNS schema: %v", err)
+	}
+	var privateTables int
+	if err := db.QueryRow(`
+		SELECT count(*) FROM sqlite_schema
+		WHERE type = 'table' AND name LIKE 'celikpanel_%'
+	`).Scan(&privateTables); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if privateTables != 0 {
+		db.Close()
+		t.Fatalf("external PowerDNS fixture has %d private table(s)", privateTables)
+	}
+	domainID := insertExternalPDNSAdoptionZone(t, db, domain, records)
 	if signed {
 		for _, statement := range []string{
 			`INSERT INTO domainmetadata (domain_id, kind, content) VALUES (?, 'PRESIGNED', '1')`,
@@ -111,6 +176,62 @@ func createPDNSAdoptionDatabase(
 	}
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestVerifyPDNSAdoptionAcceptsGenuineExternalThreeZoneDatabase(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pdns.sqlite3")
+	zones := []testPDNSAdoptionZone{
+		{domain: "alpha.test", records: testPDNSEngineRecords("alpha.test")},
+		{domain: "middle.test", records: testPDNSEngineRecords("middle.test")},
+		{domain: "zeta.test", records: testPDNSEngineRecords("zeta.test")},
+	}
+	createPDNSAdoptionDatabase(
+		t, path, zones[0].domain, zones[0].records, false, false,
+	)
+	db, err := openPDNSEngineDB(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, zone := range zones[1:] {
+		insertExternalPDNSAdoptionZone(t, db, zone.domain, zone.records)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := testPDNSAdoptionManifestZones(
+		t, transport.DNSTopologyStandalone, zones,
+	)
+	if err := verifyPDNSAdoptionDatabase(
+		context.Background(), path, manifest,
+	); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("read-only adoption changed the genuine external three-zone database")
+	}
+	db, err = openPDNSEngineDB(path, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var privateTables int
+	if err := db.QueryRow(`
+		SELECT count(*) FROM sqlite_schema
+		WHERE type = 'table' AND name LIKE 'celikpanel_%'
+	`).Scan(&privateTables); err != nil {
+		t.Fatal(err)
+	}
+	if privateTables != 0 {
+		t.Fatalf("genuine external database has %d private table(s)", privateTables)
 	}
 }
 

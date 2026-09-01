@@ -6,7 +6,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/auth"
 )
 
 type sqliteDeserializer interface {
@@ -74,21 +77,93 @@ func countUsableUsersInSerializedSQLiteDatabase(serialized []byte) (int, error) 
 		return 0, fmt.Errorf("in-memory SQLite database quick check failed")
 	}
 
-	var count int
-	if err := connection.QueryRowContext(ctx, `
-		SELECT COUNT(*) - COALESCE(SUM(CASE
-			WHEN username = 'admin'
-			 AND role = 'admin'
-			 AND password_hash = ?
-			THEN 1
-			ELSE 0
-		END), 0)
-		FROM users
-	`, deadPlaceholderAdminPasswordHash).Scan(&count); err != nil {
-		return 0, fmt.Errorf("count usable users in in-memory SQLite database: %w", err)
+	userColumns, err := readOnlyAdmissionUserColumns(ctx, connection)
+	if err != nil {
+		return 0, err
+	}
+	for _, required := range []string{"username", "password_hash", "email", "role"} {
+		if !userColumns[required] {
+			return 0, fmt.Errorf("in-memory SQLite users schema has no %s column", required)
+		}
+	}
+	predicates := []string{"role = 'admin'"}
+	if userColumns["status"] {
+		// Migration 004 documents active/suspended but deliberately leaves
+		// enforcement to code. Match the login/session gate exactly: NULL is
+		// legacy-active and only suspended is denied. A stricter active-only
+		// probe would refuse rows that the current authentication path accepts.
+		predicates = append(predicates, "COALESCE(status, 'active') != 'suspended'")
+	}
+	if userColumns["account_type"] {
+		// Empty/NULL is the repository's explicit pre-migration legacy account
+		// representation. Any persisted non-account marker fails closed.
+		predicates = append(predicates,
+			"(account_type = 'account' OR account_type = '' OR account_type IS NULL)")
+	}
+	rows, err := connection.QueryContext(ctx,
+		"SELECT password_hash FROM users WHERE "+strings.Join(predicates, " AND "))
+	if err != nil {
+		return 0, fmt.Errorf("select administrator credentials in in-memory SQLite database: %w", err)
+	}
+	// TOTP state is intentionally not part of this row-level admission count.
+	// A parseable password hash proves eligibility for the first login step;
+	// neither possession of a current TOTP code nor a usable secret can be
+	// established by a read-only database probe.
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		var passwordHash string
+		if err := rows.Scan(&passwordHash); err != nil {
+			return 0, fmt.Errorf("read administrator credential in in-memory SQLite database: %w", err)
+		}
+		if auth.ValidatePasswordHash(passwordHash) == nil {
+			count++
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("iterate administrator credentials in in-memory SQLite database: %w", err)
 	}
 	if count < 0 {
 		return 0, fmt.Errorf("in-memory SQLite database returned an invalid user count")
 	}
 	return count, nil
+}
+
+func readOnlyAdmissionUserColumns(
+	ctx context.Context,
+	connection *sql.Conn,
+) (map[string]bool, error) {
+	rows, err := connection.QueryContext(ctx, `PRAGMA table_xinfo('users')`)
+	if err != nil {
+		return nil, fmt.Errorf("inspect in-memory SQLite users schema: %w", err)
+	}
+	defer rows.Close()
+	columns := make(map[string]bool)
+	for rows.Next() {
+		var (
+			columnID     int
+			name         string
+			columnType   string
+			notNull      int
+			defaultValue sql.NullString
+			primaryKey   int
+			hidden       int
+		)
+		if err := rows.Scan(
+			&columnID,
+			&name,
+			&columnType,
+			&notNull,
+			&defaultValue,
+			&primaryKey,
+			&hidden,
+		); err != nil {
+			return nil, fmt.Errorf("read in-memory SQLite users schema: %w", err)
+		}
+		columns[name] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate in-memory SQLite users schema: %w", err)
+	}
+	return columns, nil
 }

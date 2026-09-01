@@ -13,7 +13,7 @@ fail() {
 
 [[ $(id -u) -eq 0 ]] || fail "run this test as root"
 for required in awk bash cp curl dirname env find grep id mktemp openssl \
-    readlink sed sha256sum sort stat tar uname xargs; do
+    python3 readlink script sed sha256sum sort stat tar uname xargs; do
     command -v "$required" >/dev/null 2>&1 || fail "$required is required"
 done
 
@@ -150,6 +150,9 @@ mkdir "$fake_bin"
 cat > "$fake_bin/curl" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ -n ${S5_ADMISSION_CURL_TRACE:-} ]]; then
+    : > "$S5_ADMISSION_CURL_TRACE"
+fi
 output=
 url=
 write_status=0
@@ -189,6 +192,58 @@ EOF
 chmod 0755 "$fake_bin/curl"
 
 failures=0
+reset_signed_admission_targets() {
+    local target
+    for target in "$tmp/releases" "$tmp/release-state" \
+        "$tmp/signed-admission-curl.trace"; do
+        case "$target" in
+            "$tmp"/*) ;;
+            *) fail "refusing to reset an admission target outside the fixture" ;;
+        esac
+        rm -rf -- "$target"
+    done
+}
+
+expect_signed_admission_refusal() {
+    local label=$1 expected=$2 expected_tr=$3 log=$4
+    shift 4
+    local status target
+    reset_signed_admission_targets
+    set +e
+    "$@" </dev/null >"$log" 2>&1
+    status=$?
+    set -e
+    if [[ $status -ne 0 && $status -ne 86 ]] &&
+       grep -Fq -- "$expected" "$log" &&
+       grep -Fq -- "$expected_tr" "$log" &&
+       grep -Fq 'CELIKPANEL_ADMIN_CREDENTIALS_FILE' "$log" &&
+       grep -Fq -- '--admin-credentials-file=-' "$log"; then
+        for target in "$tmp/releases" "$tmp/release-state" \
+            "$tmp/signed-admission-curl.trace"; do
+            if [[ -e $target || -L $target ]]; then
+                printf 'ADMISSION_REFUSAL_FAIL label=%s mutated=%s\n' \
+                    "$label" "$target" >&2
+                failures=$((failures + 1))
+                reset_signed_admission_targets
+                return
+            fi
+        done
+        printf 'ADMISSION_REFUSAL_PASS label=%s exit=%s\n' "$label" "$status"
+    else
+        printf 'ADMISSION_REFUSAL_FAIL label=%s exit=%s expected=%s\n' \
+            "$label" "$status" "$expected" >&2
+        sed 's/^/  | /' "$log" >&2
+        for target in "$tmp/releases" "$tmp/release-state" \
+            "$tmp/signed-admission-curl.trace"; do
+            if [[ -e $target || -L $target ]]; then
+                printf '  | MUTATED=%s\n' "$target" >&2
+            fi
+        done
+        failures=$((failures + 1))
+    fi
+    reset_signed_admission_targets
+}
+
 expect_entry_reached() {
     local label=$1 expected_mode=$2 log=$3
     shift 3
@@ -229,18 +284,161 @@ expect_guard_refusal() {
 }
 
 clean_path=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+signed_narrow_credentials=$tmp/signed-narrow-admin.credentials
+signed_invalid_secure_credentials=$tmp/signed-invalid-secure-admin.credentials
+signed_reordered_credentials=$tmp/signed-reordered-admin.credentials
+signed_public_credentials=$tmp/signed-public-admin.credentials
+printf '%s\n' \
+    '{"username":"first-admin","email":"admin@example.test","password":"never-print-this-password"}' \
+    > "$signed_narrow_credentials"
+printf '%s\n' '{"username":"first-admin"' > "$signed_invalid_secure_credentials"
+printf '%s\n' \
+    '{"email":"admin@example.test","username":"first-admin","password":"never-print-this-password"}' \
+    > "$signed_reordered_credentials"
+cp -- "$signed_narrow_credentials" "$signed_public_credentials"
+chmod 0600 "$signed_narrow_credentials" "$signed_invalid_secure_credentials" \
+    "$signed_reordered_credentials"
+chmod 0644 "$signed_public_credentials"
+
+partial_zero_admin_db=$tmp/partial-zero-admin.db
+partial_usable_admin_db=$tmp/partial-usable-admin.db
+/usr/bin/python3 - "$partial_zero_admin_db" "$partial_usable_admin_db" <<'PY'
+import sqlite3
+import sys
+
+schema = """
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL,
+    account_type TEXT,
+    status TEXT
+)
+"""
+for database_path in sys.argv[1:]:
+    connection = sqlite3.connect(database_path)
+    connection.execute(schema)
+    connection.commit()
+    connection.close()
+
+connection = sqlite3.connect(sys.argv[2])
+connection.execute(
+    """
+    INSERT INTO users
+        (username, password_hash, email, role, account_type, status)
+    VALUES
+        ('existing-admin',
+         '$argon2id$v=19$m=65536,t=3,p=2$c2FsdA$a2V5',
+         'existing-admin@example.test', 'admin', 'account', 'active')
+    """
+)
+connection.commit()
+connection.close()
+PY
+chmod 0600 "$partial_zero_admin_db" "$partial_usable_admin_db"
+chown root:root "$partial_zero_admin_db" "$partial_usable_admin_db"
+
+make_partial_state_bootstrap() {
+    local database_path=$1 output_path=$2
+    cp -- "$test_bootstrap" "$output_path"
+    sed -i "s|/var/lib/celikpanel/celikpanel.db|$database_path|g" "$output_path"
+    [[ $(grep -Fc "$database_path" "$output_path") -eq 2 &&
+       $(grep -Fc '/var/lib/celikpanel/celikpanel.db' "$output_path") -eq 0 ]] \
+        || fail "partial-state bootstrap did not isolate the database path exactly"
+}
+partial_zero_admin_bootstrap=$tmp/get-partial-zero-admin.sh
+partial_usable_admin_bootstrap=$tmp/get-partial-usable-admin.sh
+make_partial_state_bootstrap "$partial_zero_admin_db" "$partial_zero_admin_bootstrap"
+make_partial_state_bootstrap "$partial_usable_admin_db" "$partial_usable_admin_bootstrap"
+
+expect_signed_admission_refusal signed-default-non-tty \
+    'requires a terminal' 'Etkileşimsiz' "$tmp/signed-default-non-tty.log" \
+    /usr/bin/env -i PATH="$fake_bin:$clean_path" HOME=/root \
+    S3_ENTRY_SITE_ROOT="$site" \
+    S5_ADMISSION_CURL_TRACE="$tmp/signed-admission-curl.trace" \
+    /bin/sh "$test_bootstrap" --install
+expect_signed_admission_refusal signed-fresh-skip-admin \
+    'A fresh signed public installation cannot use SKIP_ADMIN=1 without credentials' \
+    'Yeni imzalı genel kurulum' "$tmp/signed-fresh-skip-admin.log" \
+    /usr/bin/env -i PATH="$fake_bin:$clean_path" HOME=/root SKIP_ADMIN=1 \
+    S3_ENTRY_SITE_ROOT="$site" \
+    S5_ADMISSION_CURL_TRACE="$tmp/signed-admission-curl.trace" \
+    /bin/sh "$test_bootstrap" --install
+
+expect_signed_admission_refusal signed-relative-credentials \
+    'must be an absolute canonical root:root mode 0600 regular file' \
+    'Yönetici kimlik bilgisi dosyası' "$tmp/signed-relative-credentials.log" \
+    /usr/bin/env -i PATH="$fake_bin:$clean_path" HOME=/root \
+    CELIKPANEL_ADMIN_CREDENTIALS_FILE=relative-admin.credentials \
+    S3_ENTRY_SITE_ROOT="$site" \
+    S5_ADMISSION_CURL_TRACE="$tmp/signed-admission-curl.trace" \
+    /bin/sh "$test_bootstrap" --install
+expect_signed_admission_refusal signed-public-credentials \
+    'must be an absolute canonical root:root mode 0600 regular file' \
+    'Yönetici kimlik bilgisi dosyası' "$tmp/signed-public-credentials.log" \
+    /usr/bin/env -i PATH="$fake_bin:$clean_path" HOME=/root \
+    CELIKPANEL_ADMIN_CREDENTIALS_FILE="$signed_public_credentials" \
+    S3_ENTRY_SITE_ROOT="$site" \
+    S5_ADMISSION_CURL_TRACE="$tmp/signed-admission-curl.trace" \
+    /bin/sh "$test_bootstrap" --install
+
+expect_signed_admission_refusal signed-invalid-secure-credentials \
+    "does not match the signed entry's restricted first-write-safe JSON form" \
+    'dar ilk-yazım-güvenli JSON biçimine uymuyor' \
+    "$tmp/signed-invalid-secure-credentials.log" \
+    /usr/bin/env -i PATH="$fake_bin:$clean_path" HOME=/root \
+    CELIKPANEL_ADMIN_CREDENTIALS_FILE="$signed_invalid_secure_credentials" \
+    S3_ENTRY_SITE_ROOT="$site" \
+    S5_ADMISSION_CURL_TRACE="$tmp/signed-admission-curl.trace" \
+    /bin/sh "$test_bootstrap" --install
+expect_signed_admission_refusal signed-reordered-valid-credentials-narrowing \
+    'other candidate-valid JSON forms are intentionally not accepted here' \
+    'diğer JSON biçimleri burada bilinçli olarak kabul edilmez' \
+    "$tmp/signed-reordered-valid-credentials-narrowing.log" \
+    /usr/bin/env -i PATH="$fake_bin:$clean_path" HOME=/root \
+    CELIKPANEL_ADMIN_CREDENTIALS_FILE="$signed_reordered_credentials" \
+    S3_ENTRY_SITE_ROOT="$site" \
+    S5_ADMISSION_CURL_TRACE="$tmp/signed-admission-curl.trace" \
+    /bin/sh "$test_bootstrap" --install
+
 expect_entry_reached direct direct "$tmp/direct.log" \
     /usr/bin/env -i PATH="$clean_path" HOME=/root \
     CELIKPANEL_ENTRY_BOUNDARY_EXPECT_MODE=direct \
     CELIKPANEL_ENTRY_BOUNDARY_EXPECT_ROOT="$release_root" \
     /bin/bash "$release_root/install.sh"
 
-expect_entry_reached signed-public signed "$tmp/signed-public.log" \
+expect_signed_admission_refusal signed-explicit-repair-zero-admin \
+    'cannot prove a login-capable existing administrator' \
+    'oturum açabilen mevcut yöneticiyi kanıtlayamadığı' \
+    "$tmp/signed-explicit-repair-zero-admin.log" \
+    /usr/bin/env -i PATH="$fake_bin:$clean_path" HOME=/root SKIP_ADMIN=1 \
+    S3_ENTRY_SITE_ROOT="$site" \
+    S5_ADMISSION_CURL_TRACE="$tmp/signed-admission-curl.trace" \
+    /bin/sh "$partial_zero_admin_bootstrap" --install
+expect_signed_admission_refusal signed-explicit-repair-usable-admin-narrowing \
+    'cannot prove a login-capable existing administrator' \
+    'oturum açabilen mevcut yöneticiyi kanıtlayamadığı' \
+    "$tmp/signed-explicit-repair-usable-admin-narrowing.log" \
+    /usr/bin/env -i PATH="$fake_bin:$clean_path" HOME=/root SKIP_ADMIN=1 \
+    S3_ENTRY_SITE_ROOT="$site" \
+    S5_ADMISSION_CURL_TRACE="$tmp/signed-admission-curl.trace" \
+    /bin/sh "$partial_usable_admin_bootstrap" --install
+
+expect_entry_reached signed-public-narrow-credentials signed \
+    "$tmp/signed-public-narrow-credentials.log" \
     /usr/bin/env -i PATH="$fake_bin:$clean_path" HOME=/root \
+    CELIKPANEL_ADMIN_CREDENTIALS_FILE="$signed_narrow_credentials" \
     S3_ENTRY_SITE_ROOT="$site" \
     CELIKPANEL_ENTRY_BOUNDARY_EXPECT_MODE=signed \
     CELIKPANEL_ENTRY_BOUNDARY_EXPECT_PREFIX="$tmp/releases" \
-    /bin/sh "$test_bootstrap" --install
+    /bin/sh "$test_bootstrap" --install </dev/null
+
+expect_entry_reached signed-public-tty signed "$tmp/signed-public-tty.log" \
+    /usr/bin/script -qefc \
+    "/usr/bin/env -i PATH=$fake_bin:$clean_path HOME=/root S3_ENTRY_SITE_ROOT=$site CELIKPANEL_ENTRY_BOUNDARY_EXPECT_MODE=signed CELIKPANEL_ENTRY_BOUNDARY_EXPECT_PREFIX=$tmp/releases /bin/sh $test_bootstrap --install" \
+    /dev/null
 
 foreign_root=$tmp/foreign-root
 mkdir "$foreign_root"

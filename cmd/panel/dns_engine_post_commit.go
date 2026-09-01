@@ -25,13 +25,16 @@ const (
 )
 
 type dnsEngineOperationMarker struct {
-	Version      int                 `json:"version"`
-	RequestID    string              `json:"request_id"`
-	SwitchID     string              `json:"switch_id"`
-	SourceEngine transport.DNSEngine `json:"source_engine,omitempty"`
-	TargetEngine transport.DNSEngine `json:"target_engine"`
-	Action       string              `json:"action"`
-	Phase        string              `json:"phase"`
+	Version                int                 `json:"version"`
+	RequestID              string              `json:"request_id"`
+	SwitchID               string              `json:"switch_id"`
+	SourceEngine           transport.DNSEngine `json:"source_engine,omitempty"`
+	TargetEngine           transport.DNSEngine `json:"target_engine"`
+	Action                 string              `json:"action"`
+	Phase                  string              `json:"phase"`
+	ConfigurePDNSRequestID string              `json:"configure_pdns_request_id,omitempty"`
+	ConfigurePDNSOwnerID   string              `json:"configure_pdns_owner_id,omitempty"`
+	ConfigurePDNSComplete  bool                `json:"configure_pdns_complete,omitempty"`
 }
 
 func validDNSEngineSwitchAction(action string) bool {
@@ -69,6 +72,22 @@ func validateDNSEngineOperationMarker(marker dnsEngineOperationMarker) error {
 		(marker.SourceEngine != "" ||
 			marker.TargetEngine != transport.DNSEnginePowerDNS) {
 		return errors.New("DNS engine reconfigure marker has invalid identity")
+	}
+	hasConfigureRequest := marker.ConfigurePDNSRequestID != ""
+	hasConfigureOwner := marker.ConfigurePDNSOwnerID != ""
+	if hasConfigureRequest != hasConfigureOwner {
+		return errors.New("DNS engine operation marker has incomplete configure identity")
+	}
+	if hasConfigureRequest &&
+		(!validServiceOperationID(marker.ConfigurePDNSRequestID) ||
+			!validServiceOperationID(marker.ConfigurePDNSOwnerID) ||
+			marker.Action != "adopt" ||
+			marker.TargetEngine != transport.DNSEnginePowerDNS ||
+			marker.Phase != dnsEngineOperationPostCommit) {
+		return errors.New("DNS engine operation marker has invalid configure identity")
+	}
+	if marker.ConfigurePDNSComplete && !hasConfigureRequest {
+		return errors.New("DNS engine operation marker completed an absent configure child")
 	}
 	return nil
 }
@@ -237,6 +256,125 @@ func (p *Panel) clearDNSEnginePostCommitMarker(
 	return tx.Commit()
 }
 
+func exactDNSEnginePostCommitMarker(
+	marker *dnsEngineOperationMarker,
+	persisted persistedDNSEngineSwitch,
+) bool {
+	return marker != nil &&
+		marker.RequestID == persisted.RequestID &&
+		marker.SwitchID == persisted.SwitchID &&
+		marker.SourceEngine == persisted.SourceEngine &&
+		marker.TargetEngine == persisted.TargetEngine &&
+		marker.Action == persisted.Action &&
+		marker.Phase == dnsEngineOperationPostCommit
+}
+
+func (p *Panel) updateDNSEnginePostCommitMarker(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+	mutate func(*dnsEngineOperationMarker) error,
+) (dnsEngineOperationMarker, error) {
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	defer tx.Rollback()
+	marker, err := readDNSEngineOperationMarker(ctx, tx)
+	if err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	if !exactDNSEnginePostCommitMarker(marker, persisted) {
+		return dnsEngineOperationMarker{}, errors.New(
+			"DNS engine post-commit marker lost its exact identity",
+		)
+	}
+	before, err := encodeDNSEngineOperationMarker(*marker)
+	if err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	if err := mutate(marker); err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	after, err := encodeDNSEngineOperationMarker(*marker)
+	if err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	result, err := tx.ExecContext(ctx, `
+		UPDATE panel_settings
+		SET value = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE key = ? AND value = ?`,
+		after, dnsEngineOperationSetting, before,
+	)
+	if err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	if err := requireExactRows(
+		result, 1, "DNS engine post-commit marker update lost its exact CAS",
+	); err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	return *marker, nil
+}
+
+func (p *Panel) ensureAdoptionConfigureIdentity(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+) (dnsEngineOperationMarker, error) {
+	marker, err := readDNSEngineOperationMarker(ctx, p.db.GetDB())
+	if err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	if !exactDNSEnginePostCommitMarker(marker, persisted) {
+		return dnsEngineOperationMarker{}, errors.New(
+			"adopted PowerDNS has no exact post-commit marker",
+		)
+	}
+	if marker.ConfigurePDNSRequestID != "" {
+		return *marker, nil
+	}
+	requestID, err := newServiceOperationID()
+	if err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	ownerID, err := newServiceOperationID()
+	if err != nil {
+		return dnsEngineOperationMarker{}, err
+	}
+	return p.updateDNSEnginePostCommitMarker(
+		ctx, persisted, func(current *dnsEngineOperationMarker) error {
+			if current.ConfigurePDNSRequestID != "" ||
+				current.ConfigurePDNSOwnerID != "" ||
+				current.ConfigurePDNSComplete {
+				return errors.New("PowerDNS configure child identity changed before persistence")
+			}
+			current.ConfigurePDNSRequestID = requestID
+			current.ConfigurePDNSOwnerID = ownerID
+			return nil
+		},
+	)
+}
+
+func (p *Panel) markAdoptionConfigureComplete(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+	requestID, ownerID string,
+) error {
+	_, err := p.updateDNSEnginePostCommitMarker(
+		ctx, persisted, func(marker *dnsEngineOperationMarker) error {
+			if marker.ConfigurePDNSRequestID != requestID ||
+				marker.ConfigurePDNSOwnerID != ownerID {
+				return errors.New("PowerDNS configure completion lost its exact child identity")
+			}
+			marker.ConfigurePDNSComplete = true
+			return nil
+		},
+	)
+	return err
+}
+
 func attachDNSEngineOperationAction(
 	ctx context.Context,
 	query dnsZoneStateQuery,
@@ -261,12 +399,141 @@ func attachDNSEngineOperationAction(
 }
 
 type dnsEnginePostCommitResult struct {
-	FirewallErr error
-	ScanErr     error
+	NormalizationErr error
+	FirewallErr      error
+	ScanErr          error
 }
 
 func (result dnsEnginePostCommitResult) failed() bool {
-	return result.FirewallErr != nil || result.ScanErr != nil
+	return result.NormalizationErr != nil ||
+		result.FirewallErr != nil || result.ScanErr != nil
+}
+
+func (p *Panel) configureAdoptedPowerDNSLocked(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+) error {
+	marker, err := p.ensureAdoptionConfigureIdentity(ctx, persisted)
+	if err != nil {
+		return err
+	}
+	if marker.ConfigurePDNSComplete {
+		return nil
+	}
+	op := serviceOperation{
+		RequestID: marker.ConfigurePDNSRequestID,
+		Kind:      "pdns_configure",
+		ServiceID: "pdns",
+	}
+	identity := agentMutationIdentityForOperation(
+		op, marker.ConfigurePDNSOwnerID,
+	)
+	job, err := p.statusAgentMutation(ctx, op.RequestID)
+	if err != nil {
+		return fmt.Errorf("read adopted PowerDNS configure child: %w", err)
+	}
+	if job != nil {
+		if err := validateAgentMutationIdentity(job, identity); err != nil {
+			return err
+		}
+		if agentMutationActive(job.Status) {
+			job, err = p.waitExpectedAgentMutationTerminal(ctx, identity)
+			if err != nil && (job == nil || agentMutationActive(job.Status)) {
+				return fmt.Errorf("wait for adopted PowerDNS configure child: %w", err)
+			}
+		}
+		if job != nil && job.Status == agentMutationSucceeded {
+			if err := validateAgentMutationSucceededReceipt(job, identity); err != nil {
+				return err
+			}
+			return p.markAdoptionConfigureComplete(
+				ctx, persisted, op.RequestID, marker.ConfigurePDNSOwnerID,
+			)
+		}
+	}
+
+	var response transport.SyncDNSZoneResponse
+	call := func(
+		callCtx context.Context,
+		binding agentMutationBinding,
+	) error {
+		request := transport.ServiceMutationRequest{
+			ServiceMutationBinding: binding,
+		}
+		if err := p.callAgentContext(
+			callCtx, "Agent.ConfigurePowerDNSSQLite", &request, &response,
+		); err != nil {
+			return err
+		}
+		if response.Error != "" {
+			log.Printf(
+				"PowerDNS adoption configure agent detail: %s",
+				boundedAgentDiagnostic(response.Error),
+			)
+			return errors.New("agent did not confirm PowerDNS configuration")
+		}
+		if !response.Synced {
+			return errors.New("agent did not confirm PowerDNS configuration")
+		}
+		return nil
+	}
+	if job != nil {
+		err = p.withResumedStandaloneAgentMutationIdentity(
+			ctx, op, marker.ConfigurePDNSOwnerID, call,
+		)
+	} else {
+		err = p.withStandaloneAgentMutationIdentity(
+			ctx, op, marker.ConfigurePDNSOwnerID, call,
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("configure adopted PowerDNS: %w", err)
+	}
+	return p.markAdoptionConfigureComplete(
+		ctx, persisted, op.RequestID, marker.ConfigurePDNSOwnerID,
+	)
+}
+
+// normalizeAdoptedPowerDNSLocked requires serviceMutationMu, dnsTopologyMu,
+// and dnsPublicationMu in that order. Configure's child identity is committed
+// to the post-commit marker before BeginServiceMutation; every V3 zone child
+// is independently committed in dns_zone_engine_leases before its begin.
+func (p *Panel) normalizeAdoptedPowerDNSLocked(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+) error {
+	if legacyNonDirectionalPairedAdoption(persisted) {
+		return errors.New(
+			"legacy paired PowerDNS adoption has no directional catalog authority",
+		)
+	}
+	if persisted.TargetEngine != transport.DNSEnginePowerDNS {
+		return errors.New("adoption normalization target is not PowerDNS")
+	}
+	if err := p.requireDNSZoneSyncV3Agent(ctx); err != nil {
+		return fmt.Errorf("verify adopted PowerDNS normalization capability: %w", err)
+	}
+	if err := p.requireActivePowerDNSPublisher(ctx); err != nil {
+		return err
+	}
+	if err := p.configureAdoptedPowerDNSLocked(ctx, persisted); err != nil {
+		return err
+	}
+	result, err := p.syncAllZonesLocked(ctx)
+	if err != nil {
+		return fmt.Errorf(
+			"publish all adopted PowerDNS zones (%d/%d): %w",
+			result.Synced, result.Attempted, err,
+		)
+	}
+	return nil
+}
+
+func legacyNonDirectionalPairedAdoption(
+	persisted persistedDNSEngineSwitch,
+) bool {
+	return persisted.Topology == transport.DNSTopologyPaired &&
+		persisted.PairRole == ""
 }
 
 // reconcileDNSEnginePostCommitLocked performs independent, idempotent
@@ -278,8 +545,11 @@ func (p *Panel) reconcileDNSEnginePostCommitLocked(
 ) dnsEnginePostCommitResult {
 	result := dnsEnginePostCommitResult{}
 	// Registration-only adoption proves and records an already-running
-	// panel-managed PowerDNS authority. It must not alter host firewall state.
-	if persisted.Action != "adopt" {
+	// panel-managed PowerDNS authority. Normalize that external database via
+	// the reviewed agent APIs, but do not alter host firewall state.
+	if persisted.Action == "adopt" {
+		result.NormalizationErr = p.normalizeAdoptedPowerDNSLocked(ctx, persisted)
+	} else {
 		result.FirewallErr = p.syncFirewallLocked(ctx)
 	}
 	if _, err := p.scanManagedServices(ctx); err != nil {
@@ -302,7 +572,13 @@ func writeDNSEnginePostCommitFailed(
 ) {
 	code := errCodeServiceStateRefreshFailed
 	message := "DNS engine change completed, but component state could not be refreshed"
-	if result.FirewallErr != nil {
+	if result.NormalizationErr != nil {
+		code = errCodeDNSPublicationFailed
+		message = "PowerDNS adoption completed, but its external zone database could not be normalized"
+		if result.ScanErr != nil {
+			message = "PowerDNS adoption completed, but DNS normalization and component state follow-up need attention"
+		}
+	} else if result.FirewallErr != nil {
 		code = errCodeFirewallSyncFailed
 		message = "DNS engine change completed, but the active firewall policy could not be synchronized"
 		if result.ScanErr != nil {

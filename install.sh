@@ -1598,10 +1598,13 @@ preflight_first_administrator_admission() {
         arm_admin_credentials_cleanup
         return 0
     fi
+    [[ "$SKIP_ADMIN" == 1 || -t 0 ]] || die \
+        "Non-interactive installation requires a terminal before host mutation; rerun with a terminal or provide CELIKPANEL_ADMIN_CREDENTIALS_FILE=/absolute/root-only/file (forwarded internally to panel --admin-credentials-file=-)" \
+        "Etkileşimsiz kurulum host değişikliğinden önce terminal gerektirir; terminalle yeniden çalıştırın veya CELIKPANEL_ADMIN_CREDENTIALS_FILE=/mutlak/root-sahipli/dosya sağlayın (kurucu bunu panel --admin-credentials-file=- olarak içeride aktarır)"
     [[ "$SKIP_ADMIN" == 1 ]] || return 0
     [[ -f "$DATA_DIR/celikpanel.db" && ! -L "$DATA_DIR/celikpanel.db" ]] || die \
-        "A fresh installation cannot use SKIP_ADMIN=1 without credentials; set SKIP_ADMIN=0 for the prompt or provide CELIKPANEL_ADMIN_CREDENTIALS_FILE" \
-        "Yeni kurulum kimlik bilgileri olmadan SKIP_ADMIN=1 kullanamaz; istem için SKIP_ADMIN=0 ayarlayın veya CELIKPANEL_ADMIN_CREDENTIALS_FILE sağlayın"
+        "A fresh installation cannot use SKIP_ADMIN=1 without credentials; set SKIP_ADMIN=0 for the terminal prompt or provide CELIKPANEL_ADMIN_CREDENTIALS_FILE=/absolute/root-only/file (forwarded internally to panel --admin-credentials-file=-)" \
+        "Yeni kurulum kimlik bilgileri olmadan SKIP_ADMIN=1 kullanamaz; terminal istemi için SKIP_ADMIN=0 ayarlayın veya CELIKPANEL_ADMIN_CREDENTIALS_FILE=/mutlak/root-sahipli/dosya sağlayın (kurucu bunu panel --admin-credentials-file=- olarak içeride aktarır)"
     validate_trusted_candidate_panel || die \
         "Cannot prove an existing administrator without the trusted candidate panel binary" \
         "Güvenilir aday panel ikilisi olmadan mevcut yönetici kanıtlanamaz"
