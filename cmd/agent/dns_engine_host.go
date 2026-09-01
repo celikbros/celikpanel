@@ -879,7 +879,7 @@ func (hostDNSEngineBackend) Sync(
 	if err != nil {
 		return "", err
 	}
-	stateBefore, err := captureDNSFileSnapshot(dnsEngineStatePath(), 0o600, false)
+	stateBefore, err := captureDNSEngineStateSnapshot(false)
 	if err != nil {
 		return "", err
 	}
@@ -925,7 +925,7 @@ func (hostDNSEngineBackend) Sync(
 				}
 				return nil
 			},
-			func() error { return restoreDNSFileSnapshot(stateBefore) },
+			func() error { return restoreDNSEngineStateSnapshot(stateBefore) },
 		)
 	}
 	recoverEmpty := func(recoveryCtx context.Context) error {
@@ -935,7 +935,7 @@ func (hostDNSEngineBackend) Sync(
 		}
 		return errors.Join(
 			stopBINDUnitsFailClosed(recoveryCtx, systemctl),
-			restoreDNSFileSnapshot(stateBefore),
+			restoreDNSEngineStateSnapshot(stateBefore),
 			configErr,
 		)
 	}
@@ -1402,7 +1402,7 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	stateBefore, err := captureDNSFileSnapshot(dnsEngineStatePath(), 0o600, true)
+	stateBefore, err := captureDNSEngineStateSnapshot(true)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -2252,7 +2252,7 @@ func rollbackBINDActivation(
 			)
 		},
 		restoreState: func() error {
-			return restoreDNSFileSnapshot(stateBefore)
+			return restoreDNSEngineStateSnapshot(stateBefore)
 		},
 		restoreSource: func(commandCtx context.Context) error {
 			return restoreDNSUnitStates(

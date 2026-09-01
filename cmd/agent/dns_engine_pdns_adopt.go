@@ -643,7 +643,7 @@ func rollbackPDNSAdoptionOnCertifiedProfile(
 			return rollbackPDNSAdoptionWithOps(
 				ctx,
 				func() error {
-					return restoreDNSFileSnapshot(journal.StateBefore)
+					return restoreDNSEngineStateSnapshot(journal.StateBefore)
 				},
 				func(verifyCtx context.Context) error {
 					return verifyPDNSAdoptionEvidenceOnCertifiedProfile(
@@ -772,7 +772,7 @@ func adoptPDNSOnCertifiedProfile(
 	if err := validatePDNSAdoptionUnitEvidence(units); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	stateBefore, err := captureDNSFileSnapshot(dnsEngineStatePath(), 0o600, true)
+	stateBefore, err := captureDNSEngineStateSnapshot(true)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}

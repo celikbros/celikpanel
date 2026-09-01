@@ -1333,7 +1333,7 @@ func rollbackPDNSSwitch(
 					return configs.restoreOwnerAware(ctx)
 				},
 				restoreState: func() error {
-					return restoreDNSFileSnapshot(journal.StateBefore)
+					return restoreDNSEngineStateSnapshot(journal.StateBefore)
 				},
 				restoreTarget: func(commandCtx context.Context) error {
 					return restoreDNSUnitSnapshots(
@@ -1588,7 +1588,7 @@ func switchToPDNSOnCertifiedProfile(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	stateBefore, err := captureDNSFileSnapshot(dnsEngineStatePath(), 0o600, true)
+	stateBefore, err := captureDNSEngineStateSnapshot(true)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
