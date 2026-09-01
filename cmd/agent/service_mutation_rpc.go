@@ -2352,6 +2352,13 @@ func (a *Agent) ServiceMutationStatus(
 		return managerErr
 	}
 	response.Job = manager.status(strings.TrimSpace(request.RequestID))
+	// Report the hold with the job. status() deliberately does not fail on a
+	// held manager — a caller still deserves to see the job — but it must not
+	// let that caller mistake a frozen job for a live one.
+	// Tutulmayı işle birlikte bildir. status(), tutulan bir yöneticide bilerek
+	// hata vermez — çağıran işi yine de görmeyi hak eder — ama o çağıranın
+	// donmuş bir işi canlı sanmasına da izin vermemelidir.
+	response.MutationHold = agentMutationHold()
 	return nil
 }
 

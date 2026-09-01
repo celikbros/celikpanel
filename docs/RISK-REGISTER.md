@@ -431,6 +431,39 @@ or executed as-is. There are no open pull requests at this baseline.
   repair every adopted zone. Adoption tests mask this because their "external"
   fixture calls the normal initializer and pre-creates the private receipt
   schema. Warrants an engineering defect and a support known-issue entry.
+- Diagnosis and fix (1 September 2026, branch `fix/alpha52-handoff-acceptance`).
+  S-5 attempt 7 proved the adoption half works and the BIND switch does not.
+  A five-lens adversarial investigation established three independent causes,
+  all now fixed:
+  (1) **Masked BIND is not "stopped".** The product masks named.service and
+  bind9.service so a package manager cannot start BIND behind its back, then
+  its own PowerDNS-active proof accepted only "not-found" or
+  "loaded"+"disabled" — never "masked". A switch on any host where BIND had
+  been installed could not establish its own source, and the same predicate
+  gates PowerDNS zone writes, so the residue blocked those too. A masked and
+  inactive unit now counts as stopped; masked is stronger than disabled, not
+  weaker.
+  (2) **A five-second failure became a thirty-minute silence.** After the agent
+  failed and poisoned itself, the panel entered a terminal reconcile whose
+  budget for a DNS engine switch is thirty minutes on a context deliberately
+  detached from the caller, polling every 250 ms. `Agent.ServiceMutationStatus`
+  was the one manager entry point that never consulted the health guard, so it
+  kept truthfully reporting the frozen job as running. The status response now
+  carries the stable `MutationHold` code and the wait stops the moment the
+  agent says it is held.
+  (3) **The wedge was permanent.** A switch that installed packages and failed
+  before writing any journal left an install receipt whose only classification
+  was "error". Startup recovery turned that into a poisoned mutation manager,
+  and because the poison is recomputed from durable state nothing ever changes,
+  every boot reproduced it: DNS served, the panel answered, and the host could
+  never accept another mutation. Where the active state and its own ownership
+  receipt agree and the target owns nothing, authority provably never moved;
+  that is now classified as recoverable and the ledger job fails cleanly. A
+  target that owns authority while another engine is active — the Boston shape
+  — still fails closed.
+  Each fix has a test that reproduces the incident's exact error string on the
+  unfixed tree. Full and tagged agent suites pass on Debian 13 (WSL2). R-019
+  stays OPEN until a live adoption-to-BIND switch completes on a real VM.
 
 ### R-020 - The panel race suite is close to its timeout ceiling
 

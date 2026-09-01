@@ -2756,10 +2756,46 @@ func inspectVerifiedPDNSRuntimeTopologyWithOps(
 func verifyExactPDNSRuntimeUnitStates(
 	named, alias, pdns bindInstallUnitState,
 ) error {
+	// A masked BIND unit counts as stopped, and this product is the thing that
+	// masked it.
+	//
+	// bind_install_guard.go masks named.service and bind9.service so a package
+	// manager cannot start BIND behind our back, and there is a whole proof
+	// (verifyBINDPersistentMaskFiles) that those masks point at /dev/null. A
+	// masked unit reports loadState "masked" and unitFileState "masked" or
+	// "masked-runtime", so it matched neither branch below: not "not-found",
+	// not "loaded"+"disabled". The proof therefore refused the exact state the
+	// product creates for itself, and a PowerDNS-to-BIND switch on a host where
+	// BIND had ever been installed could not establish its own source
+	// (risk R-019).
+	//
+	// Masked is stronger than disabled, not weaker: a disabled unit can still
+	// be started by name or pulled in by a dependency, while a masked one
+	// cannot be started at all. It is accepted only together with the same
+	// inactive requirement the other branches carry.
+	//
+	// Maskelenmiş bir BIND birimi durdurulmuş sayılır ve onu maskeleyen zaten
+	// bu üründür.
+	//
+	// bind_install_guard.go, bir paket yöneticisi arkamızdan BIND'ı
+	// başlatmasın diye named.service ve bind9.service birimlerini maskeler; o
+	// maskelerin /dev/null'a baktığını kanıtlayan ayrı bir mekanizma da vardır
+	// (verifyBINDPersistentMaskFiles). Maskeli bir birim loadState "masked" ve
+	// unitFileState "masked" ya da "masked-runtime" bildirir; dolayısıyla
+	// aşağıdaki iki dalın hiçbirine uymuyordu: ne "not-found" ne
+	// "loaded"+"disabled". Kanıt böylece ürünün kendisi için yarattığı durumu
+	// reddediyordu ve BIND'ın bir kez kurulmuş olduğu bir sunucuda
+	// PowerDNS'ten BIND'a geçiş kendi kaynağını kuramıyordu (risk R-019).
+	//
+	// Maskeli olmak devre dışı olmaktan zayıf değil güçlüdür: devre dışı bir
+	// birim adıyla başlatılabilir ya da bir bağımlılıkla çekilebilir, maskeli
+	// bir birim hiç başlatılamaz. Yalnızca diğer dalların taşıdığı aynı
+	// "inactive" şartıyla birlikte kabul edilir.
 	exactStoppedBIND := func(state bindInstallUnitState) bool {
 		return exactAbsentInactiveBINDUnit(state) ||
 			(state.loadState == "loaded" && state.activeState == "inactive" &&
-				state.unitFileState == "disabled")
+				state.unitFileState == "disabled") ||
+			(state.masked() && state.activeState == "inactive")
 	}
 	if !exactStoppedBIND(named) || !exactStoppedBIND(alias) {
 		return errors.New("BIND is not exactly absent or loaded, inactive, and disabled")

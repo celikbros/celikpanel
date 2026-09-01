@@ -717,6 +717,46 @@ func exactFinalizedDNSEngineSwitchProvenanceOnHost(
 			)
 		}
 		if installExists {
+			// An install receipt on a target that owns nothing is residue, not
+			// ambiguity.
+			//
+			// Everything above has already proven the source side intact: a
+			// valid active state, an ownership receipt for the ACTIVE engine,
+			// and the two exactly equal. If the target additionally holds no
+			// ownership receipt of its own, then the interrupted switch got as
+			// far as installing packages and no further — authority never
+			// moved, and there is nothing to roll back. Reporting that as an
+			// error made startup recovery poison the mutation manager, and
+			// because the poison is recomputed from unchanged durable state,
+			// every subsequent boot reproduced it: a host that could serve DNS
+			// perfectly well but could never accept another mutation, with no
+			// path out short of a rebuild (risk R-019).
+			//
+			// A target that DOES hold an ownership receipt while a different
+			// engine is active is the genuinely ambiguous half-finished
+			// handover — the Boston shape — and keeps failing closed.
+			//
+			// Sahibi olmadığı hâlde hedefte duran bir kurulum makbuzu
+			// belirsizlik değil kalıntıdır.
+			//
+			// Yukarıdaki her şey kaynak tarafın sağlam olduğunu zaten
+			// kanıtladı: geçerli bir aktif durum, AKTİF motor için bir sahiplik
+			// makbuzu ve ikisinin birebir eşitliği. Hedefin ayrıca kendine ait
+			// bir sahiplik makbuzu yoksa, kesintiye uğrayan geçiş yalnızca
+			// paketleri kurmaya kadar gelmiştir — yetki hiç el değiştirmemiştir
+			// ve geri alınacak bir şey yoktur. Bunu hata olarak bildirmek,
+			// başlangıç kurtarmasının mutasyon yöneticisini zehirlemesine yol
+			// açıyordu; zehir değişmemiş kalıcı durumdan yeniden hesaplandığı
+			// için de sonraki her açılış onu yeniden üretiyordu: DNS'i gayet iyi
+			// sunabilen ama bir daha hiçbir mutasyonu kabul edemeyen, yeniden
+			// kurmaktan başka çıkışı olmayan bir sunucu (risk R-019).
+			//
+			// Başka bir motor etkinken hedefin sahiplik makbuzu DA taşıması,
+			// gerçekten belirsiz olan yarım kalmış devirdir — Boston biçimi — ve
+			// kapalı arıza vermeyi sürdürür.
+			if state.Engine != target && !ownershipExists {
+				return false, nil
+			}
 			return false, errors.New(
 				"journal-free DNS engine target retains transitional install ownership",
 			)

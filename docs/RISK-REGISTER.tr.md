@@ -433,6 +433,39 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   çünkü "dış" düzenekleri normal başlatıcıyı çağırıp özel makbuz şemasını
   önceden oluşturuyor. Bir mühendislik kusuru ve bir destek bilinen-sorun kaydı
   gerektirir.
+- Teşhis ve düzeltme (1 Eylül 2026, `fix/alpha52-handoff-acceptance` dalı).
+  S-5 7. deneme, devralma yarısının çalıştığını ve BIND geçişinin çalışmadığını
+  kanıtladı. Beş mercekli düşman soruşturması üç bağımsız sebep saptadı, üçü de
+  düzeltildi:
+  (1) **Maskeli BIND "durdurulmuş" sayılmıyordu.** Ürün, bir paket yöneticisi
+  arkasından BIND'ı başlatmasın diye named.service ve bind9.service birimlerini
+  maskeler; sonra kendi PowerDNS-etkin kanıtı yalnız "not-found" ya da
+  "loaded"+"disabled" kabul ediyordu, "masked" asla. BIND'ın kurulmuş olduğu
+  hiçbir sunucuda geçiş kendi kaynağını kuramıyordu; aynı yüklem PowerDNS bölge
+  yazımlarını da kapıya aldığı için kalıntı onları da engelliyordu. Maskeli ve
+  etkin olmayan bir birim artık durdurulmuş sayılır; maskeli olmak devre dışı
+  olmaktan zayıf değil güçlüdür.
+  (2) **Beş saniyelik arıza otuz dakikalık sessizliğe dönüşüyordu.** Agent düşüp
+  kendini zehirledikten sonra panel, DNS motoru geçişi için bütçesi otuz dakika
+  olan ve bağlamı bilerek çağırandan koparılmış bir uç uzlaştırmaya girip her
+  250 ms'de yokluyordu. `Agent.ServiceMutationStatus`, sağlık nöbetine hiç
+  danışmayan tek giriş noktasıydı; bu yüzden donmuş işi doğru biçimde
+  "çalışıyor" diye bildirmeye devam ediyordu. Durum yanıtı artık kararlı
+  `MutationHold` kodunu taşıyor ve bekleyiş, agent tutulduğunu söylediği anda
+  duruyor.
+  (3) **Tıkanma kalıcıydı.** Paket kurup hiçbir günlük yazmadan düşen bir geçiş,
+  tek sınıflandırması "hata" olan bir kurulum makbuzu bırakıyordu. Başlangıç
+  kurtarması bunu zehirlenmiş bir mutasyon yöneticisine çeviriyordu ve zehir hiç
+  değişmeyen kalıcı durumdan yeniden hesaplandığı için her açılış onu yeniden
+  üretiyordu: DNS hizmet veriyor, panel cevap veriyor, ama sunucu bir daha
+  hiçbir mutasyonu kabul edemiyordu. Aktif durum ile kendi sahiplik makbuzu
+  uyuşuyorsa ve hedef hiçbir şeye sahip değilse yetki kanıtlanabilir biçimde hiç
+  el değiştirmemiştir; bu artık kurtarılabilir sayılıyor ve defter işi temizce
+  düşüyor. Başka bir motor etkinken yetkiye sahip olan bir hedef — Boston biçimi
+  — kapalı arıza vermeyi sürdürüyor.
+  Her düzeltmenin, düzeltilmemiş ağaçta olayın hata metnini birebir üreten bir
+  testi var. Tam ve etiketli agent paketleri Debian 13 (WSL2) üzerinde geçiyor.
+  Gerçek bir VM'de devralmadan BIND'a geçiş tamamlanana kadar R-019 AÇIK kalır.
 
 ### R-020 - Panel race paketi zaman aşımı tavanına yakın
 
