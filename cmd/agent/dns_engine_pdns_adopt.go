@@ -854,7 +854,19 @@ func adoptPDNSOnCertifiedProfile(
 		ctx, profile, manifest, configs,
 		func() error { return writeDNSEngineState(exactState) },
 	); err != nil {
-		actual, exists, readErr := readDNSEngineState()
+		// Prove owner and mode, not just bytes. A write that reported an
+		// error may still have landed, and this readback is what promotes
+		// it to "durable" — so it must check the same contract
+		// persistExactDNSEngineState enforces. The loose reader compares
+		// content alone, which would accept a file whose ownership or mode
+		// drifted and then continue into the committed phase.
+		// Yalnız baytları değil sahipliği ve kipi de kanıtla. Hata bildiren
+		// bir yazma yine de diske inmiş olabilir ve onu "kalıcı" ilan eden
+		// şey bu geri okumadır; bu yüzden persistExactDNSEngineState'in
+		// dayattığı sözleşmenin aynısını denetlemelidir. Gevşek okuyucu
+		// yalnız içeriği karşılaştırır; sahipliği ya da kipi kaymış bir
+		// dosyayı kabul edip commit aşamasına devam ederdi.
+		actual, exists, readErr := readExactDNSEngineState()
 		if readErr != nil || !exists || actual != exactState {
 			return rollback(errors.Join(err, readErr))
 		}

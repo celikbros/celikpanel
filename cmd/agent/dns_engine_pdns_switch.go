@@ -1833,7 +1833,19 @@ func switchToPDNSOnCertifiedProfile(
 		return rollback(err)
 	}
 	if err := writeDNSEngineState(nextState); err != nil {
-		if actual, exists, readErr := readDNSEngineState(); readErr != nil || !exists || actual != nextState {
+		// Prove owner and mode, not just bytes. A write that reported an
+		// error may still have landed, and this readback is what promotes
+		// it to "durable" — so it must check the same contract
+		// persistExactDNSEngineState enforces. The loose reader compares
+		// content alone, which would accept a file whose ownership or mode
+		// drifted and then continue into the committed phase.
+		// Yalnız baytları değil sahipliği ve kipi de kanıtla. Hata bildiren
+		// bir yazma yine de diske inmiş olabilir ve onu "kalıcı" ilan eden
+		// şey bu geri okumadır; bu yüzden persistExactDNSEngineState'in
+		// dayattığı sözleşmenin aynısını denetlemelidir. Gevşek okuyucu
+		// yalnız içeriği karşılaştırır; sahipliği ya da kipi kaymış bir
+		// dosyayı kabul edip commit aşamasına devam ederdi.
+		if actual, exists, readErr := readExactDNSEngineState(); readErr != nil || !exists || actual != nextState {
 			return rollback(errors.Join(err, readErr))
 		}
 	}
