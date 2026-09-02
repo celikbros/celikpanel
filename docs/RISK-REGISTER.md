@@ -59,10 +59,10 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
 | R-020 | Low | OPEN | The `cmd/panel` race suite consumes 87 percent of its explicit 30-minute ceiling |
 | R-021 | Low | RESOLVED / INVENTORY CORRECTED | Both hosts were rebuilt; identity is confirmed and the inventory now records Ubuntu and Debian 13. No Arch host remains in our inventory |
-| R-022 | Critical | OPEN / BLOCKER FOR EVERY FRESH INSTALL | `install.sh` sources the release transaction guard before any trusted release root exists, so a clean installation exits before it begins |
-| R-023 | High | OPEN / BLOCKER FOR EVERY NON-INTERACTIVE FRESH INSTALL | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
-| R-024 | Medium | OPEN | The installer discards `systemctl enable` failures and never syncs the enable links, so a fresh host can reboot with both units disabled |
-| R-025 | Low | OPEN | The documented `git clone && sudo ./install.sh` journey contradicts the recovery foundation's refusal of user-owned ancestor directories |
+| R-022 | Critical | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `install.sh` sources the release transaction guard before any trusted release root exists, so a clean installation exits before it begins |
+| R-023 | High | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
+| R-024 | Medium | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | The installer discards `systemctl enable` failures and never syncs the enable links, so a fresh host can reboot with both units disabled |
+| R-025 | Low | DECIDED / DOCUMENTATION CORRECTED ON BRANCH | The documented `git clone && sudo ./install.sh` journey contradicts the recovery foundation's refusal of user-owned ancestor directories |
 | R-026 | High | OPEN / FIXED ON BRANCH, LIVE PROOF PENDING | PowerDNS switch rollback restored the backup main file underneath the discarded generation's WAL/SHM, leaving a malformed live database |
 | R-027 | Low | DOCUMENTED LIMITATION | PowerDNS authority is certified for APT/Debian/systemd only, so Arch cannot adopt or switch to PowerDNS; Arch proofs must use BIND-only journeys |
 
@@ -609,6 +609,12 @@ or executed as-is. There are no open pull requests at this baseline.
   as a whole remains broken behind it - see R-023 - so this entry stays OPEN
   until the fix lands on `main` and a complete green install exists.
 
+- Status (2 September 2026): the entry-boundary fix (`7fd5b30b`) is on the
+  integration branch `fix/alpha52-handoff-acceptance`. Proven on disposable
+  Debian 13, Ubuntu 24.04 and Arch guests in S-4 and S-5 (both entry paths, the
+  R-022 contract test red on base and green with the fix, and running in CI).
+  Not on `main`; the blocker ends when the branch lands.
+
 ### R-023 - A skipped first admin turns into a panel restart loop
 
 - Evidence: S-3 acceptance, six valid fresh-install journeys on disposable
@@ -643,6 +649,13 @@ or executed as-is. There are no open pull requests at this baseline.
   journeys pass end to end.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
+- Status (2 September 2026): the admission property (no host mutation unless a
+  usable administrator is guaranteed), the credentials-over-stdin path and the
+  live-WAL-tolerant probe (`7fbc4149`, S-5 `975a5e26`) are on the integration
+  branch. Proven in S-5 on disposable VMs: 15/15 admission journeys, 45/45
+  refusal cells, 72/72 coverage records, and the interactive TTY path on all
+  three distributions. Not on `main`.
+
 ### R-024 - Unit enablement is fail-open and unsynced
 
 - Evidence: S-3, Arch signed-public journey. After a diagnostic reboot both
@@ -660,6 +673,11 @@ or executed as-is. There are no open pull requests at this baseline.
   durably synced before success is reported, and a reboot test proves both
   units return on every supported distribution.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+- Status (2 September 2026): `systemctl enable` failures are fatal and the
+  enable state is synced before success is reported (S-4, `7fbc4149`), proven
+  by 3/3 reboots on Debian 13, Ubuntu 24.04 and Arch in S-4 and 0/3 again in
+  S-5 and S-6. On the integration branch; not on `main`.
 
 ### R-025 - The clone-and-install claim contradicts the root-chain policy
 
@@ -722,6 +740,14 @@ or executed as-is. There are no open pull requests at this baseline.
   provenance guarantees, or the limitation stated in customer-facing
   documentation. Either is acceptable; silence is not.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+- Decision (2 September 2026): the root-chain policy stays. A release below a
+  user-owned ancestor is exactly the thing the recovery foundation exists to
+  refuse, and no documentation claim outranks that. The installer comment that
+  promised `git clone && sudo ./install.sh` from a stock system now states the
+  real requirement - stage the checkout below a root-owned directory - and the
+  recovery foundation's refusal already names where to stage (S-4). A raw
+  checkout still lacks `bin/panel` and builds from source; that is unchanged.
 
 ## Acceptance rule
 

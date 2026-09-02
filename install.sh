@@ -1987,13 +1987,27 @@ ok "ready" "hazır"
 # 3. Build if artifacts are missing ------------------------------------------
 # A prebuilt release tarball already contains bin/ and web/dist, so this whole
 # step is skipped there. From a bare git checkout we build from source,
-# bootstrapping the Go and Node toolchains if the system lacks them — so
-# "git clone && sudo ./install.sh" works on a stock Ubuntu with nothing else.
+# bootstrapping the Go and Node toolchains if the system lacks them.
+#
+# One requirement on that checkout, and it is not negotiable: it must live
+# below a root-owned directory that no group or other user can write, for
+# example /var/backups/celikpanel or /root. A clone in a user's home is refused
+# by the release recovery foundation before anything is mutated, and the
+# refusal names where to stage. That policy is the thing that stops a
+# post-privilege swap of the release for a mutable checkout, so no "clone and
+# run from anywhere" promise outranks it (risk R-025).
 #
 # Önceden derlenmiş bir release tarball zaten bin/ ve web/dist içerir; orada bu
 # adım tümüyle atlanır. Çıplak bir git checkout'tan kaynaktan derleriz;
-# sistemde yoksa Go ve Node araç zincirlerini indiririz — böylece stok bir
-# Ubuntu'da başka hiçbir şey olmadan "git clone && sudo ./install.sh" çalışır.
+# sistemde yoksa Go ve Node araç zincirlerini indiririz.
+#
+# O checkout için tek ve pazarlıksız bir şart var: hiçbir grubun ya da başka
+# kullanıcının yazamadığı, root'a ait bir dizinin altında durmalı; örneğin
+# /var/backups/celikpanel ya da /root. Bir kullanıcının ev dizinindeki klon,
+# daha hiçbir şey değişmeden sürüm kurtarma temeli tarafından reddedilir ve
+# ret, nereye konulacağını söyler. Yetki alındıktan sonra sürümün değişebilir
+# bir checkout ile değiştirilmesini durduran şey bu politikadır; hiçbir
+# "klonla, istediğin yerden çalıştır" vaadi onun üstüne çıkamaz (risk R-025).
 GO_VERSION=1.26.5
 NODE_VERSION=24.18.0
 TOOLCHAIN=/opt/celikpanel/.toolchain

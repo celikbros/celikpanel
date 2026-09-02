@@ -60,10 +60,10 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
 | R-020 | Düşük | AÇIK | `cmd/panel` race paketi, açıkça verilmiş 30 dakikalık tavanın yüzde 87'sini tüketir |
 | R-021 | Düşük | ÇÖZÜLDÜ / ENVANTER DÜZELTİLDİ | İki sunucu da yeniden kuruldu; kimlik doğrulandı ve envanter artık Ubuntu ile Debian 13 yazıyor. Envanterimizde Arch sunucu kalmadı |
-| R-022 | Kritik | AÇIK / HER TEMİZ KURULUM İÇİN ENGEL | `install.sh`, güvenilen sürüm kökü var olmadan sürüm işlem korumasını source ediyor; temiz kurulum başlamadan çıkıyor |
-| R-023 | Yüksek | AÇIK / ETKİLEŞİMSİZ HER TEMİZ KURULUM İÇİN ENGEL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
-| R-024 | Orta | AÇIK | Kurulum `systemctl enable` hatalarını yutar ve enable bağlarını hiç eşitlemez; taze bir sunucu iki birimi de devre dışı hâlde yeniden başlayabilir |
-| R-025 | Düşük | AÇIK | Belgelenen `git clone && sudo ./install.sh` yolculuğu, kurtarma temelinin kullanıcıya ait üst dizinleri reddetmesiyle çelişir |
+| R-022 | Kritik | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | `install.sh`, güvenilen sürüm kökü var olmadan sürüm işlem korumasını source ediyor; temiz kurulum başlamadan çıkıyor |
+| R-023 | Yüksek | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
+| R-024 | Orta | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Kurulum `systemctl enable` hatalarını yutar ve enable bağlarını hiç eşitlemez; taze bir sunucu iki birimi de devre dışı hâlde yeniden başlayabilir |
+| R-025 | Düşük | KARAR VERİLDİ / BELGE DALDA DÜZELTİLDİ | Belgelenen `git clone && sudo ./install.sh` yolculuğu, kurtarma temelinin kullanıcıya ait üst dizinleri reddetmesiyle çelişir |
 | R-026 | Yüksek | AÇIK / DALDA DÜZELTİLDİ, CANLI KANIT BEKLİYOR | PowerDNS geçiş geri alması yedek ana dosyayı atılan neslin WAL/SHM dosyalarının altına koydu ve canlı veritabanı bozuk kaldı |
 | R-027 | Düşük | BELGELENMİŞ SINIR | PowerDNS yetkisi yalnız APT/Debian/systemd için onaylıdır; Arch PowerDNS'i devralamaz ya da ona geçemez; Arch kanıtları yalnız-BIND yolculukları kullanmalıdır |
 
@@ -614,6 +614,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   yüzden düzeltme `main`'e inip eksiksiz yeşil bir kurulum var olana dek bu
   kayıt AÇIK kalır.
 
+- Durum (2 Eylül 2026): giriş-sınırı düzeltmesi (`7fd5b30b`) entegrasyon dalı
+  `fix/alpha52-handoff-acceptance` üzerinde. S-4 ve S-5'te atılabilir Debian
+  13, Ubuntu 24.04 ve Arch konuklarında kanıtlandı (iki giriş yolu, R-022
+  sözleşme testi tabanda kırmızı düzeltmeyle yeşil, CI'da koşuyor). `main`'de
+  değil; engel dal indiğinde biter.
+
 ### R-023 - Atlanan ilk yönetici, panel yeniden başlatma döngüsüne dönüşüyor
 
 - Kanıt: S-3 kabul koşusu; atılabilir Debian 13, Ubuntu 24.04 ve Arch sanal
@@ -646,6 +652,13 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   yolculuğu uçtan uca geçer.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
+- Durum (2 Eylül 2026): kabul özelliği (kullanılabilir bir yönetici garanti
+  edilmeden hiçbir sunucu değişikliği yok), stdin üzerinden kimlik yolu ve
+  canlı-WAL toleranslı sonda (`7fbc4149`, S-5 `975a5e26`) entegrasyon dalında.
+  S-5'te atılabilir VM'lerde kanıtlandı: 15/15 kabul yolculuğu, 45/45 ret
+  hücresi, 72/72 kapsama kaydı ve üç dağıtımda etkileşimli TTY yolu. `main`'de
+  değil.
+
 ### R-024 - Birim etkinleştirme açık-arızalı ve eşitlenmemiş
 
 - Kanıt: S-3, Arch imzalı-genel yolculuğu. Tanı amaçlı yeniden başlatmadan
@@ -664,6 +677,11 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   raporlanmadan önce kalıcı eşitlenir ve bir yeniden başlatma testi iki birimin
   desteklenen her dağıtımda geri geldiğini kanıtlar.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+- Durum (2 Eylül 2026): `systemctl enable` hataları ölümcül ve enable durumu
+  başarı raporlanmadan önce eşitleniyor (S-4, `7fbc4149`); S-4'te Debian 13,
+  Ubuntu 24.04 ve Arch'ta 3/3 yeniden başlatmayla, S-5 ve S-6'da yine 0/3
+  hatayla kanıtlandı. Entegrasyon dalında; `main`'de değil.
 
 ### R-025 - Klonla-kur iddiası kök zinciri politikasıyla çelişiyor
 
@@ -722,6 +740,14 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   profili ya da müşteriye dönük belgede yazılı sınır. İkisi de kabul edilir;
   sessizlik edilmez.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+- Karar (2 Eylül 2026): kök zinciri politikası kalıyor. Kullanıcıya ait bir üst
+  dizinin altındaki sürüm, kurtarma temelinin tam da reddetmek için var olduğu
+  şeydir ve hiçbir belge iddiası bunun üstüne çıkamaz. Stok bir sistemde
+  `git clone && sudo ./install.sh` vaat eden kurulum yorumu artık gerçek şartı
+  söylüyor - checkout root'a ait bir dizinin altına konur - ve kurtarma
+  temelinin reddi nereye konulacağını zaten adlandırıyor (S-4). Ham checkout'un
+  `bin/panel` içermeyip kaynaktan derlenmesi değişmedi.
 
 ## Kabul kuralı
 
