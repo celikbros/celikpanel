@@ -2345,13 +2345,30 @@ func (a *Agent) ServiceMutationStatus(
 	response *ServiceMutationResponse,
 ) error {
 	manager, managerErr := agentServiceMutationManager()
-	if managerErr != nil {
-		if setHostMutationBusyResponse(response, managerErr) {
-			return nil
-		}
-		return managerErr
+	if managerErr != nil && setHostMutationBusyResponse(response, managerErr) {
+		return nil
 	}
-	response.Job = manager.status(strings.TrimSpace(request.RequestID))
+	// A status probe is read-only and must answer even when the ledger could
+	// not be brought up or was poisoned at startup. Failing the RPC here
+	// turned every such probe into "agent status RPC failed" with nothing to
+	// read (S-7 T5): the caller could not tell a dead agent from one that is
+	// serving and refusing. The hold code is exactly the read-only view that
+	// caller needs, and it names files and request identities to nobody.
+	// A manager that came up poisoned still reports its job; a manager that
+	// never came up reports no job and the ledger_unavailable hold.
+	//
+	// Durum sondası salt-okunurdur ve defter ayağa kalkamadığında ya da
+	// başlangıçta zehirlendiğinde de yanıt vermelidir. RPC'yi burada
+	// düşürmek, her böyle sondayı okunacak hiçbir şeyi olmayan "agent status
+	// RPC failed" hatasına çeviriyordu (S-7 T5): çağıran, ölü bir agent ile
+	// hizmet verip reddeden bir agent'ı ayırt edemiyordu. Tutulma kodu tam da
+	// o çağıranın ihtiyaç duyduğu salt-okunur görünümdür ve kimseye dosya ya
+	// da istek kimliği söylemez. Zehirli kalkan yönetici işini yine bildirir;
+	// hiç kalkamayan yönetici iş bildirmez ve ledger_unavailable tutulmasını
+	// döner.
+	if manager != nil {
+		response.Job = manager.status(strings.TrimSpace(request.RequestID))
+	}
 	// Report the hold with the job. status() deliberately does not fail on a
 	// held manager — a caller still deserves to see the job — but it must not
 	// let that caller mistake a frozen job for a live one.
