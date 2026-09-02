@@ -869,7 +869,25 @@ func dnsEnginePreviewBlockers(
 	// Registration-only adoption verifies the exact full runtime zone set and
 	// may therefore reconcile legacy pending generations without publishing.
 	// A live lease is still rejected by buildDNSEngineManifest.
-	if action != "adopt" && snapshot.PendingZoneCount > 0 {
+	//
+	// A first install has no source engine, so its zones are pending by
+	// construction: nothing exists that could have applied them, and the
+	// install itself publishes every zone at its desired generation and marks
+	// it applied on commit. Treating that as a blocker made the first engine
+	// install unreachable on any host where a domain existed first (S-7 T1,
+	// register R-029). With a source engine active the blocker stays: pending
+	// there means the source has not caught up, and a switch must not copy an
+	// unsettled zone set.
+	//
+	// İlk kurulumun kaynak motoru yoktur; bölgeleri yapısı gereği bekler:
+	// onları uygulamış olabilecek hiçbir şey yoktur ve kurulumun kendisi her
+	// bölgeyi istenen neslinde yayımlayıp commit'te uygulandı işaretler. Bunu
+	// engelleyici saymak, önce alan adı eklenmiş her sunucuda ilk motor
+	// kurulumunu ulaşılamaz kılıyordu (S-7 T1, defter R-029). Kaynak motor
+	// etkinken engelleyici kalır: orada bekleme, kaynağın yetişmediği
+	// anlamına gelir ve geçiş oturmamış bir bölge kümesini kopyalamamalıdır.
+	if action != "adopt" && snapshot.ActiveEngine != nil &&
+		snapshot.PendingZoneCount > 0 {
 		blockers = addDNSEngineBlocker(blockers, "pending_zone_sync")
 	}
 	if action != "adopt" &&

@@ -65,6 +65,9 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-025 | Low | DECIDED / DOCUMENTATION CORRECTED ON BRANCH | The documented `git clone && sudo ./install.sh` journey contradicts the recovery foundation's refusal of user-owned ancestor directories |
 | R-026 | High | OPEN / FIXED ON BRANCH, LIVE PROOF PENDING | PowerDNS switch rollback restored the backup main file underneath the discarded generation's WAL/SHM, leaving a malformed live database |
 | R-027 | Low | DOCUMENTED LIMITATION | PowerDNS authority is certified for APT/Debian/systemd only, so Arch cannot adopt or switch to PowerDNS; Arch proofs must use BIND-only journeys |
+| R-028 | High | FIXED ON BRANCH / LIVE PROOF PENDING | The active-BIND proof inside a BIND-to-PowerDNS switch refused the pdns.service mask the switch's own install guard had just created, so every switch that had to install PowerDNS failed at its source proof |
+| R-029 | High | FIXED ON BRANCH / LIVE PROOF PENDING | DNS identity staging on a host that has never run an engine refused because zones were pending, which every zone on such a host is by construction; adding a domain before setting up DNS made the first engine install unreachable |
+| R-030 | Medium | FIXED ON BRANCH | A read-only mutation status RPC failed outright when the agent's ledger could not be brought up or was poisoned at startup, so a probe could not tell a dead agent from one that is serving and refusing |
 
 ## Detailed risks
 
@@ -482,6 +485,15 @@ or executed as-is. There are no open pull requests at this baseline.
   measured cell, one of them exposing R-026) and Arch, which cannot enter the
   journey at all (R-027). R-019 stays OPEN for the Boston negative and a
   clean-caller retry on a real host.
+- S-7 live proof (2 September 2026, manifest
+  `413d67aa28cca17c7e67912f5e911a3a24481b70b388c3e0e74659706b31c283`): the
+  worker-bearing heartbeat fix held - the pre-intent wedge cell passed with the
+  first same-identity retry returning 0 in 14 s and the host converging; the
+  public hold contract held - the fsync-EIO cell returned 503
+  `DNS_ENGINE_MUTATIONS_HELD` with details `["ledger_ambiguous"]` in 8 s with
+  no internal text; the Debian adoption-to-BIND journey and the full S-5 matrix
+  stayed green. Still unmeasured: the Boston negative, whose setup chain hit
+  R-028 at the BIND-to-PowerDNS step. R-019 stays OPEN for that one cell.
 - Residual, deliberately not changed (1 September 2026):
   `validateDNSEngineStateSnapshot` judges a persisted journal snapshot's
   recorded GID against `serviceMutationRequiredOwnerGID`, which is re-derived
@@ -746,6 +758,16 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: a deliberately failed BIND-to-PowerDNS switch on a real VM
   rolls back to a database that opens cleanly, the ledger job fails cleanly,
   and a subsequent switch is accepted.
+- S-7 live evidence (2 September 2026): the deliberate target-started failure
+  proved the fix's cleanup on a real host - after rollback the live PowerDNS
+  database was the exact preimage with `integrity_check` ok and no WAL, SHM,
+  candidate or staging file beside it, and the job ended failed/interrupted
+  with `dns_engine_switch_rolled_back_after_restart`. Two things stop this from
+  closing: the ordered cell's first status probe after the ordinary restart
+  failed with an RPC error the harness discarded, and the converged state was
+  observed only in a non-counting diagnostic, so "the next switch is accepted"
+  is still unproven. The probe failure led to the status RPC change recorded
+  under R-030.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-027 - PowerDNS authority is APT-only by design
@@ -774,6 +796,108 @@ or executed as-is. There are no open pull requests at this baseline.
   real requirement - stage the checkout below a root-owned directory - and the
   recovery foundation's refusal already names where to stage (S-4). A raw
   checkout still lacks `bin/panel` and builds from source; that is unchanged.
+
+### R-028 - The BIND-to-PowerDNS switch refuses the mask it created
+
+- Evidence: S-7, Boston negative attempt 1 (manifest SHA-256
+  `413d67aa28cca17c7e67912f5e911a3a24481b70b388c3e0e74659706b31c283`). The
+  fresh chain completed empty-to-BIND with rc 0; the production BIND-to-PowerDNS
+  setup then returned rc 1 after 27 s. The bounded agent journal shows the
+  PowerDNS packages being installed at 10:01:37 and, two seconds later,
+  `DNS engine switch to pdns at epoch 2 failed: pdns.service is not exactly
+  absent or loaded, inactive, and disabled`; the host shape capture shows
+  `pdns.service LoadState=masked ActiveState=inactive`. The switch installs
+  PowerDNS under a persistent mask (`dns_engine_pdns_install.go`) precisely so
+  the package manager cannot start it early, then proves its active BIND source
+  with `verifyExactActiveBINDUnitStates`, whose PowerDNS clause accepted only
+  absent or loaded+inactive+disabled. The product refused the state it had just
+  created - the mirror image of R-019's second cause.
+- Impact: on any host where PowerDNS is not already installed, a switch from
+  BIND to PowerDNS cannot pass its own source proof. The Boston negative, the
+  safety-critical half of R-019's cause 3, could not be measured because its
+  setup chain runs exactly this switch.
+- Fix on branch (2 September 2026): the PowerDNS clause of
+  `verifyExactActiveBINDUnitStates` accepts masked-and-inactive, the same
+  relaxation `exactStoppedBIND` received for R-019; a masked-but-active or
+  masked-but-activating PowerDNS is still refused. A test reproduces the S-7
+  error string verbatim on the unfixed tree.
+- Exit criteria: the Boston setup chain (empty, BIND epoch 1, PowerDNS epoch 2)
+  returns 0 at every step on a real VM and the measured negative cell runs.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-029 - Fresh-host identity staging is deadlocked by its own pending zones
+
+- Evidence: S-7, T1 Arch BIND-only attempt 1 (same manifest). A fresh Arch
+  guest at epoch 0 with one seeded zone (`status=pending`, generation 4) and
+  no engine installed sent `PUT /api/v1/settings/dns-setup` with a standalone
+  identity and received `409 DNS_ENGINE_WORKFLOW_REQUIRED`; no switch was
+  attempted. The refusal is `stageDNSIdentityLocked`'s publication gate
+  (`hasDNSPublicationPending`), which counts every zone whose applied
+  generation lags its desired one. On a host that has never run an engine that
+  is every zone: nothing exists that could apply them. The first engine install
+  requires staged identity (`TestDNSEngineFirstInstallRequiresStagedDNSIdentity`),
+  so the ordinary order - add a domain, then set up DNS - could not reach the
+  install at all. The same gate is repeated inside the staging transaction.
+- Impact: any fresh install where a domain exists before DNS is set up cannot
+  install its first DNS engine through the panel. The only way out was deleting
+  the zones. Not Arch-specific: the same path refuses on every distribution.
+  Note that this is not the R-018 proof: the inherited-anchor walk on Arch was
+  never reached, so R-018 stays unproven on a real Arch `/`.
+- Fix on branch (2 September 2026): for the `fresh` staging kind (no engine has
+  ever run, neither engine running) the gate checks only publications in
+  flight - zone rows carrying a live publication lease or rows in
+  `dns_zone_engine_leases` - and no longer counts zones that are pending
+  because nothing could apply them. Adoption kinds keep the stricter gate. The
+  staging transaction receives the kind and applies the same rule. Tests cover
+  the fresh path through to a first-install preview with zero blockers, the
+  in-flight refusal, and the unchanged adoption refusal; the fresh test is red
+  on the unfixed tree with the S-7 status and code.
+- Second layer, same defect: the engine-switch preview added the blocker
+  `pending_zone_sync` whenever pending zones existed and the action was not
+  an adoption, so after staging the T1 harness would have been refused at
+  preview with `blockers == [pending_zone_sync]`. The manifest already
+  publishes every zone at its desired generation and the commit marks them
+  applied, so on a source-less first install the blocker protected nothing.
+  It now applies only when a source engine is active, where pending means
+  the source has not caught up. The fresh test walks staging through to a
+  first-install preview with zero blockers.
+- Exit criteria: T1 re-run on current Arch reaches the BIND switch commit, and
+  the reboot postcondition holds; that run is also the first live R-018 proof.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-030 - A status probe cannot see an agent whose ledger never came up
+
+- Evidence: S-7, T5 attempt 3 (same manifest). After the target-started
+  SIGKILL the ordinary agent started, its socket accepted a connection, and the
+  first `Agent.ServiceMutationStatus` call returned an RPC error; the harness
+  probe printed only `agent status RPC failed` and discarded the error, and the
+  post-failure diagnostic captured only the following boot's journal, so the
+  ordered failure's cause is not in the evidence. The following boot is
+  explained: the fixture's mutation lock lived under `/run/celikpanel-s7-t5`,
+  which nothing recreates after a reboot, and the agent logged
+  `DEGRADED service-mutations: ... lstat /run/celikpanel-s7-t5: no such file or
+  directory` and served. Production is not exposed to that trap: the shipped
+  unit declares `RuntimeDirectory=celikpanel` and the lock lives beneath it.
+  What the product did wrong in both boots is the same: `ServiceMutationStatus`
+  returned the cached bring-up error instead of answering, so the only
+  read-only view of the agent's state was an opaque failure.
+- Impact: any caller - the panel, an operator probe, an acceptance harness -
+  gets "RPC failed" from an agent that is alive and refusing by design, and
+  cannot distinguish it from a crash. Every mutation is already refused in
+  that state; the defect is only in what the status call says.
+- Fix on branch (2 September 2026): `ServiceMutationStatus` answers with the
+  hold code when the manager is unavailable (`ledger_unavailable`) or came up
+  poisoned (`ledger_ambiguous`, with its job when there is one); host-busy is
+  still reported as busy. No internal text crosses the socket. Tests cover all
+  three shapes.
+- Residual, recorded not fixed: a non-transient bring-up failure is cached for
+  the life of the process, so the DEGRADED state clears only on restart even
+  after its cause is repaired; whether startup recovery should be retried on a
+  later RPC is a design decision for the ledger, not a patch.
+- Exit criteria: T5 re-run with a probe that prints the RPC error or the hold,
+  the ordered run's agent journal captured beside it, and the required next
+  switch accepted.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
 

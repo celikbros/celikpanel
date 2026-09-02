@@ -66,6 +66,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-025 | Düşük | KARAR VERİLDİ / BELGE DALDA DÜZELTİLDİ | Belgelenen `git clone && sudo ./install.sh` yolculuğu, kurtarma temelinin kullanıcıya ait üst dizinleri reddetmesiyle çelişir |
 | R-026 | Yüksek | AÇIK / DALDA DÜZELTİLDİ, CANLI KANIT BEKLİYOR | PowerDNS geçiş geri alması yedek ana dosyayı atılan neslin WAL/SHM dosyalarının altına koydu ve canlı veritabanı bozuk kaldı |
 | R-027 | Düşük | BELGELENMİŞ SINIR | PowerDNS yetkisi yalnız APT/Debian/systemd için onaylıdır; Arch PowerDNS'i devralamaz ya da ona geçemez; Arch kanıtları yalnız-BIND yolculukları kullanmalıdır |
+| R-028 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin içindeki etkin-BIND kanıtı, geçişin kendi kurulum korumasının az önce yarattığı pdns.service maskesini reddetti; PowerDNS kurması gereken her geçiş kaynak kanıtında düştü |
+| R-029 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Hiç motor çalıştırmamış sunucuda DNS kimlik hazırlama, bölgeler beklediği için reddetti; oysa böyle bir sunucuda her bölge yapısı gereği bekler; DNS'i kurmadan önce alan adı eklemek ilk motor kurulumunu ulaşılamaz kılıyordu |
+| R-030 | Orta | DALDA DÜZELTİLDİ | Agent'ın defteri ayağa kalkamadığında ya da başlangıçta zehirlendiğinde salt-okunur mutasyon durum RPC'si düpedüz düşüyordu; sonda ölü agent ile hizmet verip reddeden agent'ı ayırt edemiyordu |
 
 ## Ayrıntılı riskler
 
@@ -485,6 +488,15 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   R-026'yı açığa çıkardı) ve yolculuğa hiç giremeyen Arch (R-027). R-019,
   Boston negatifi ve gerçek sunucuda temiz-çağıranlı bir yeniden deneme için
   AÇIK kalır.
+- S-7 canlı kanıt (2 Eylül 2026, manifest
+  `413d67aa28cca17c7e67912f5e911a3a24481b70b388c3e0e74659706b31c283`):
+  worker taşıyan kalp atışı düzeltmesi tuttu - intent-öncesi tıkanma hücresi,
+  aynı kimlikli ilk yeniden deneme 14 saniyede 0 dönüp sunucu yakınsayarak
+  geçti; halka açık tutulma sözleşmesi tuttu - fsync-EIO hücresi 8 saniyede,
+  iç metin olmadan `["ledger_ambiguous"]` ayrıntılı 503
+  `DNS_ENGINE_MUTATIONS_HELD` döndü; Debian devralmadan BIND'a yolculuğu ve tam
+  S-5 matrisi yeşil kaldı. Hâlâ ölçülmemiş: kurulum zinciri BIND'dan PowerDNS'e
+  adımında R-028'e takılan Boston negatifi. R-019 o tek hücre için AÇIK kalır.
 - Kalıntı, bilerek değiştirilmedi (1 Eylül 2026):
   `validateDNSEngineStateSnapshot`, kalıcı bir günlük anlık görüntüsünün
   kaydedilmiş GID'sini `serviceMutationRequiredOwnerGID` ile karşılaştırır; o
@@ -745,6 +757,16 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: Gerçek bir VM'de kasten düşürülen BIND'dan PowerDNS'e geçiş,
   temiz açılan bir veritabanına geri alınır, defter işi temizce düşer ve sonraki
   geçiş kabul edilir.
+- S-7 canlı kanıt (2 Eylül 2026): kasıtlı hedef-başlamış düşüş, düzeltmenin
+  temizliğini gerçek sunucuda kanıtladı - geri almadan sonra canlı PowerDNS
+  veritabanı `integrity_check` ok olan tam ön görüntüydü, yanında WAL, SHM,
+  aday ya da hazırlık dosyası yoktu ve iş
+  `dns_engine_switch_rolled_back_after_restart` ile failed/interrupted bitti.
+  Kapanmayı iki şey engelliyor: sıralı hücrenin sıradan yeniden başlatma
+  sonrası ilk durum sondası, harness'ın attığı bir RPC hatasıyla düştü ve
+  yakınsamış durum yalnız sayılmayan bir teşhiste gözlendi; "sonraki geçiş
+  kabul edilir" hâlâ kanıtsız. Sonda hatası R-030'da kayıtlı durum RPC
+  değişikliğine yol açtı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-027 - PowerDNS yetkisi tasarım gereği yalnız APT
@@ -772,6 +794,102 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   söylüyor - checkout root'a ait bir dizinin altına konur - ve kurtarma
   temelinin reddi nereye konulacağını zaten adlandırıyor (S-4). Ham checkout'un
   `bin/panel` içermeyip kaynaktan derlenmesi değişmedi.
+
+### R-028 - BIND'dan PowerDNS'e geçiş kendi yarattığı maskeyi reddediyor
+
+- Kanıt: S-7, Boston negatifi 1. deneme (manifest SHA-256
+  `413d67aa28cca17c7e67912f5e911a3a24481b70b388c3e0e74659706b31c283`). Taze
+  zincir boştan BIND'a rc 0 ile tamamlandı; ardından üretim BIND'dan PowerDNS'e
+  kurulumu 27 saniye sonra rc 1 döndü. Sınırlı agent günlüğü PowerDNS
+  paketlerinin 10:01:37'de kurulduğunu ve iki saniye sonra `DNS engine switch
+  to pdns at epoch 2 failed: pdns.service is not exactly absent or loaded,
+  inactive, and disabled` yazıldığını gösteriyor; sunucu biçimi yakalaması
+  `pdns.service LoadState=masked ActiveState=inactive` diyor. Geçiş, paket
+  yöneticisi erken başlatmasın diye PowerDNS'i kalıcı bir maske altında kurar
+  (`dns_engine_pdns_install.go`), sonra etkin BIND kaynağını
+  `verifyExactActiveBINDUnitStates` ile kanıtlar; onun PowerDNS dalı yalnız
+  yok ya da yüklü+etkin değil+devre dışı durumunu kabul ediyordu. Ürün az önce
+  yarattığı durumu reddetti - R-019'un ikinci sebebinin ayna görüntüsü.
+- Etki: PowerDNS'in zaten kurulu olmadığı her sunucuda BIND'dan PowerDNS'e
+  geçiş kendi kaynak kanıtını geçemez. R-019'un 3. sebebinin güvenlik-kritik
+  yarısı olan Boston negatifi ölçülemedi; kurulum zinciri tam bu geçişi koşar.
+- Daldaki düzeltme (2 Eylül 2026): `verifyExactActiveBINDUnitStates`'in
+  PowerDNS dalı maskeli-ve-etkin-değil durumunu kabul ediyor; R-019 için
+  `exactStoppedBIND`'e verilen gevşetmenin aynısı. Maskeli ama etkin ya da
+  başlatılmakta olan PowerDNS yine reddedilir. Bir test S-7 hata metnini
+  düzeltilmemiş ağaçta birebir üretiyor.
+- Çıkış ölçütü: Boston kurulum zinciri (boş, BIND epoch 1, PowerDNS epoch 2)
+  gerçek VM'de her adımda 0 döner ve ölçülen negatif hücre koşar.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-029 - Taze sunucuda kimlik hazırlama kendi bekleyen bölgeleriyle kilitleniyor
+
+- Kanıt: S-7, T1 Arch yalnız-BIND 1. deneme (aynı manifest). Epoch 0'daki taze
+  Arch konuğu, tohumlanmış bir bölge (`status=pending`, nesil 4) ve hiç motor
+  kurulu değilken `PUT /api/v1/settings/dns-setup`'a tek başına kimlik gönderdi
+  ve `409 DNS_ENGINE_WORKFLOW_REQUIRED` aldı; hiçbir geçiş denenmedi. Ret,
+  `stageDNSIdentityLocked`'ın yayın kapısı (`hasDNSPublicationPending`): uygulanan
+  nesli istenenin gerisinde kalan her bölgeyi sayar. Hiç motor çalıştırmamış
+  sunucuda bu her bölgedir: onları uygulayabilecek hiçbir şey yoktur. İlk motor
+  kurulumu hazırlanmış kimlik ister
+  (`TestDNSEngineFirstInstallRequiresStagedDNSIdentity`); dolayısıyla sıradan
+  sıra - önce alan adı ekle, sonra DNS'i kur - kuruluma hiç ulaşamıyordu. Aynı
+  kapı hazırlama işleminin içinde de tekrarlanıyor.
+- Etki: DNS kurulmadan önce alan adı bulunan her taze kurulum, ilk DNS motorunu
+  panelden kuramaz. Tek çıkış bölgeleri silmekti. Arch'a özgü değil: aynı yol her
+  dağıtımda reddeder. Bu R-018 kanıtı değildir: Arch'taki miras çıpa yürüyüşüne
+  hiç ulaşılmadı; R-018 gerçek bir Arch `/` üzerinde kanıtsız kalır.
+- Daldaki düzeltme (2 Eylül 2026): `fresh` hazırlama türünde (hiç motor
+  çalışmamış, ikisi de çalışmıyor) kapı yalnız uçuştaki yayınlara bakar - canlı
+  yayın kirası taşıyan bölge satırları ya da `dns_zone_engine_leases`
+  satırları - ve uygulayacak bir şey olmadığı için bekleyen bölgeleri artık
+  saymaz. Devralma türleri daha sıkı kapıyı korur. Hazırlama işlemi türü alır
+  ve aynı kuralı uygular. Testler taze yolu sıfır engelli ilk kurulum
+  önizlemesine kadar, uçuştaki reddi ve değişmeyen devralma reddini kapsar;
+  taze test düzeltilmemiş ağaçta S-7'nin durum ve koduyla kırmızı.
+- İkinci kat, aynı kusur: motor geçiş önizlemesi, bekleyen bölge varken ve
+  eylem devralma değilken `pending_zone_sync` engelleyicisini ekliyordu;
+  hazırlamadan sonra T1 harness'ı önizlemede `blockers ==
+  [pending_zone_sync]` ile reddedilecekti. Manifest her bölgeyi zaten istenen
+  neslinde yayımlıyor ve commit onları uygulandı işaretliyor; kaynaksız ilk
+  kurulumda engelleyici hiçbir şeyi korumuyordu. Artık yalnız kaynak motor
+  etkinken uygulanır; orada bekleme kaynağın yetişmediği anlamına gelir.
+  Taze test hazırlamayı sıfır engelli ilk kurulum önizlemesine kadar yürütür.
+- Çıkış ölçütü: T1, güncel Arch'ta BIND geçiş commit'ine ulaşır ve yeniden
+  başlatma son koşulu tutar; o koşu aynı zamanda ilk canlı R-018 kanıtıdır.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-030 - Durum sondası defteri hiç kalkmamış agent'ı göremiyor
+
+- Kanıt: S-7, T5 3. deneme (aynı manifest). Hedef-başlamış SIGKILL'den sonra
+  sıradan agent başladı, soketi bağlantı kabul etti ve ilk
+  `Agent.ServiceMutationStatus` çağrısı RPC hatası döndü; harness sondası yalnız
+  `agent status RPC failed` bastı ve hatayı attı, düşüş sonrası teşhis ise
+  yalnız sonraki açılışın günlüğünü topladı; sıralı düşüşün sebebi kanıtta yok.
+  Sonraki açılış açıklanabiliyor: fikstürün mutasyon kilidi, yeniden
+  başlatmadan sonra hiçbir şeyin yeniden yaratmadığı `/run/celikpanel-s7-t5`
+  altındaydı; agent `DEGRADED service-mutations: ... lstat
+  /run/celikpanel-s7-t5: no such file or directory` yazıp hizmet verdi. Üretim
+  bu tuzağa açık değil: dağıtılan birim `RuntimeDirectory=celikpanel` bildirir
+  ve kilit onun altında yaşar. Ürünün iki açılışta da yanlış yaptığı şey aynı:
+  `ServiceMutationStatus` yanıt vermek yerine önbelleklenmiş kaldırma hatasını
+  döndürdü; agent durumunun tek salt-okunur görünümü opak bir hataydı.
+- Etki: Her çağıran - panel, operatör sondası, kabul harness'ı - tasarımı
+  gereği canlı olup reddeden agent'tan "RPC failed" alır ve bunu çökmeden ayırt
+  edemez. O durumda her mutasyon zaten reddedilir; kusur yalnız durum
+  çağrısının söylediğindedir.
+- Daldaki düzeltme (2 Eylül 2026): `ServiceMutationStatus`, yönetici yokken
+  (`ledger_unavailable`) ya da zehirli kalktığında (`ledger_ambiguous`, varsa
+  işiyle) tutulma koduyla yanıt verir; host-meşgul yine meşgul olarak bildirilir.
+  Soketten iç metin geçmez. Testler üç biçimi de kapsar.
+- Kalan, düzeltilmedi ama kaydedildi: geçici olmayan bir kaldırma hatası süreç
+  ömrü boyunca önbelleklenir; DEGRADED durumu sebebi onarılsa bile yalnız
+  yeniden başlatmayla temizlenir. Başlangıç kurtarmasının sonraki bir RPC'de
+  yeniden denenip denenmeyeceği yama değil defter için bir tasarım kararıdır.
+- Çıkış ölçütü: T5, RPC hatasını ya da tutulmayı basan bir sondayla yeniden
+  koşar, sıralı koşunun agent günlüğü yanında toplanır ve gereken sonraki geçiş
+  kabul edilir.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
 

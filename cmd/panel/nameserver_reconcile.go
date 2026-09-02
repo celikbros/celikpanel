@@ -348,6 +348,7 @@ func saveDNSClusterSettingsAndReconcileTx(
 func (p *Panel) stageDNSClusterSettingsAndReconcile(
 	ctx context.Context,
 	expected dnsEngineDBState,
+	stagingKind string,
 	role, peerIP, peerNS, ns1, ns2, localIPv4 string,
 ) (bool, error) {
 	tx, err := p.db.GetDB().BeginTx(ctx, nil)
@@ -384,7 +385,11 @@ func (p *Panel) stageDNSClusterSettingsAndReconcile(
 	if rawSaga != "" {
 		return false, fmt.Errorf("%w: topology operation is pending", errDNSIdentityStagingConflict)
 	}
-	pendingPublication, err := hasDNSPublicationPending(ctx, tx)
+	// Same gate as the handler's pre-check, re-evaluated inside the
+	// transaction; see dnsIdentityStagingPublicationBlocked (R-029).
+	// İşleyicinin ön kontrolüyle aynı kapı, işlemin içinde yeniden
+	// değerlendirilir; bkz. dnsIdentityStagingPublicationBlocked (R-029).
+	pendingPublication, err := dnsIdentityStagingPublicationBlocked(ctx, tx, stagingKind)
 	if err != nil {
 		return false, fmt.Errorf("read DNS publication state: %w", err)
 	}

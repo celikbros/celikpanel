@@ -581,13 +581,26 @@ func TestDNSSetupStagingRejectsDurableDNSAmbiguity(t *testing.T) {
 			},
 		},
 		{
-			name: "pending publication",
+			// A zone that is merely pending on a fresh host is no longer an
+			// ambiguity (R-029): nothing could have applied it. The ambiguity
+			// is a publication in flight, so this row carries a live lease.
+			// Taze sunucuda yalnızca bekleyen bölge artık belirsizlik değildir
+			// (R-029): onu uygulamış olabilecek hiçbir şey yoktu. Belirsizlik
+			// uçuştaki bir yayındır; bu satır bu yüzden canlı bir kira taşır.
+			name: "publication in flight",
 			prepare: func(t *testing.T, p *Panel) {
 				if _, err := p.db.GetDB().Exec(`
 					INSERT INTO dns_zone_sync_state (
 					  zone_name, desired_generation, applied_generation,
-					  desired_action, desired_zone_type, status
-					) VALUES ('pending.example', 1, 0, 'delete', 'NATIVE', 'pending')
+					  desired_action, desired_zone_type, status,
+					  lease_request_id, lease_owner_id, lease_generation,
+					  lease_action, lease_zone_type, lease_qualifier, lease_expires_at
+					) VALUES ('pending.example', 1, 0, 'delete', 'NATIVE', 'pending',
+					          '11111111111111111111111111111111',
+					          '22222222222222222222222222222222', 1,
+					          'delete', 'NATIVE',
+					          'dns-zone-sync/v1:sha256:' || lower(hex(zeroblob(32))),
+					          datetime('now', '+20 seconds'))
 				`); err != nil {
 					t.Fatal(err)
 				}
