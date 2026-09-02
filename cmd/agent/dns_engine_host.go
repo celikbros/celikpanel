@@ -2440,10 +2440,38 @@ func verifyExactActiveBINDUnitStates(
 	default:
 		return errors.New("active BIND proof is unsupported on this package manager")
 	}
+	// A masked PowerDNS counts as stopped, and the product is what masked it.
+	//
+	// A BIND-to-PowerDNS switch installs the PowerDNS packages under a
+	// persistent mask (dns_engine_pdns_install.go) so the package manager
+	// cannot start the target behind the transaction's back, and only the
+	// activation step may unmask it. This proof of the active BIND source runs
+	// after that install, so on every host where PowerDNS had to be installed
+	// it met exactly the state the product had just created - loadState
+	// "masked", neither "not-found" nor "loaded"+"disabled" - and refused its
+	// own source (S-7 Boston negative, register R-028). This is the mirror
+	// image of R-019's second cause on the BIND side, and the relaxation is
+	// the same one: masked is stronger than disabled, and it is accepted only
+	// together with the inactive requirement the other branches carry.
+	//
+	// Maskeli PowerDNS durdurulmuş sayılır; onu maskeleyen de bu üründür.
+	//
+	// BIND'dan PowerDNS'e geçiş, paket yöneticisi hedefi işlemin arkasından
+	// başlatmasın diye PowerDNS paketlerini kalıcı bir maske altında kurar
+	// (dns_engine_pdns_install.go) ve maskeyi yalnız etkinleştirme adımı
+	// kaldırabilir. Etkin BIND kaynağının bu kanıtı o kurulumdan sonra koşar;
+	// dolayısıyla PowerDNS'in kurulması gereken her sunucuda tam da ürünün az
+	// önce yarattığı durumla - loadState "masked", ne "not-found" ne
+	// "loaded"+"disabled" - karşılaştı ve kendi kaynağını reddetti (S-7 Boston
+	// negatifi, defter R-028). Bu, R-019'un ikinci sebebinin BIND tarafındaki
+	// ayna görüntüsüdür ve gevşetme aynıdır: maskeli olmak devre dışı olmaktan
+	// güçlüdür ve yalnız diğer dalların taşıdığı "inactive" şartıyla birlikte
+	// kabul edilir.
 	exactPowerDNSInactive := exactAbsentInactiveBINDUnit(pdns) ||
 		(pdns.loadState == "loaded" &&
 			pdns.activeState == "inactive" &&
-			pdns.unitFileState == "disabled")
+			pdns.unitFileState == "disabled") ||
+		(pdns.masked() && pdns.activeState == "inactive")
 	if !exactPowerDNSInactive {
 		return errors.New("pdns.service is not exactly absent or loaded, inactive, and disabled")
 	}
