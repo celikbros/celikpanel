@@ -124,18 +124,34 @@ jobs:
         include:
           - shard: A through C, exact and non-uppercase
             pattern: '^Test($|[A-C]|[^A-Z])'
-          - shard: D
+            skip: ''
+          - shard: D, except the DNS engine and zone tests
             pattern: '^TestD'
-          - shard: E through G
-            pattern: '^Test[E-G]'
-          - shard: H through M
-            pattern: '^Test[H-M]'
-          - shard: N through R
-            pattern: '^Test[N-R]'
-          - shard: S
+            skip: '^TestDNS(Engine|Zone)'
+          - shard: DNS engine and zone
+            pattern: '^TestDNS(Engine|Zone)'
+            skip: ''
+          - shard: E through K
+            pattern: '^Test[E-K]'
+            skip: ''
+          - shard: L through M
+            pattern: '^Test[L-M]'
+            skip: ''
+          - shard: N through Q
+            pattern: '^Test[N-Q]'
+            skip: ''
+          - shard: R
+            pattern: '^TestR'
+            skip: ''
+          - shard: S, except the service tests
             pattern: '^TestS'
+            skip: '^TestService'
+          - shard: Service
+            pattern: '^TestService'
+            skip: ''
           - shard: T through Z
             pattern: '^Test[T-Z]'
+            skip: ''
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
@@ -144,13 +160,23 @@ jobs:
           cache: true
       - name: Verify exact Go toolchain
         run: test "$(go env GOVERSION)" = go1.26.5
-      # cmd/panel has hundreds of SQLite-backed tests. These seven matrix
-      # entries run concurrently, are disjoint and cover every valid Test*
-      # suffix, including a future exact `Test` name or non-uppercase suffix.
+      # cmd/panel has hundreds of SQLite-backed tests that run serially under
+      # the race detector. These ten matrix entries run concurrently, are
+      # disjoint and cover every valid Test* suffix, including a future exact
+      # `Test` name or non-uppercase suffix. Two letter groups are split from
+      # within: the complement shard keeps the letter pattern and -skips the
+      # carved-out prefix, so each pair is exhaustive by construction. An
+      # empty -skip '' skips nothing (verified on go1.26.5).
+      #
+      # Balance rule (R-020): the "Race-test panel boundaries" step of every
+      # shard stays under half of the 8-minute ceiling as measured on the
+      # hosted runner. Before this split the D shard ran 421 s, 88 percent of
+      # the ceiling, on main. The ceiling is a hang detector, not a budget:
+      # split the shard, do not raise the ceiling.
       - name: Race-test panel boundaries
         run: >-
           go test -race -count=1 -timeout=8m ./cmd/panel
-          -run '${{ matrix.pattern }}'
+          -run '${{ matrix.pattern }}' -skip '${{ matrix.skip }}'
 
   linux-arm64-compile:
     name: Platform portability - Linux arm64 compile only

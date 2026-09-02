@@ -57,7 +57,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-017 | High | OPEN | A production panel heartbeat deterministically poisons a DNS engine switch that installs packages |
 | R-018 | Medium | OPEN | BIND mask preflight rejects a stock Arch root directory, so BIND cannot be reached on that image |
 | R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
-| R-020 | Low | OPEN | The `cmd/panel` race suite consumes 87 percent of its explicit 30-minute ceiling |
+| R-020 | Low | REBALANCED ON BRANCH / CI PROOF PENDING PUSH | The CI race shard for `D` ran at 88 percent of its 8-minute ceiling on `main`; the local 30-minute single-process run sits at 80 percent |
 | R-021 | Low | RESOLVED / INVENTORY CORRECTED | Both hosts were rebuilt; identity is confirmed and the inventory now records Ubuntu and Debian 13. No Arch host remains in our inventory |
 | R-022 | Critical | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `install.sh` sources the release transaction guard before any trusted release root exists, so a clean installation exits before it begins |
 | R-023 | High | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
@@ -511,6 +511,32 @@ or executed as-is. There are no open pull requests at this baseline.
   with a recorded rationale and a measured margin on the slowest supported
   acceptance host.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+- Measured again (2 September 2026): the single-process run took 1448 s of
+  1800 s (80 percent) on a 16-core Debian 13 WSL2 guest on its own ext4 at
+  `e8c73f16`; 998 top-level tests, none using `t.Parallel`, so the package is
+  serial and bound by fsync and the race detector, not by cores. The real
+  exposure was in CI, not locally: the `panel-race` job is sharded seven ways
+  with `-timeout=8m` per shard, and on `main` run 33297192912 the `D` shard's
+  test step took 421 s, 88 percent of the ceiling (430-435 s job time in two
+  consecutive runs). `N-R` ran 328 s, `H-M` 308 s, `S` 248 s. Per-test timings
+  from the same tree put 77 percent of `D` in `TestDNS*`.
+- Fix on branch: ten shards instead of seven. `D` is split into
+  `^TestDNS(Engine|Zone)` and the rest of `D`
+  (`-run '^TestD' -skip '^TestDNS(Engine|Zone)'`), `S` into `^TestService` and
+  the rest, `E-G` and `H-M` regrouped as `E-K` and `L-M`, `N-R` as `N-Q` and
+  `R`. A pair keeps the letter pattern on the complement and skips the
+  carved-out prefix, so coverage is exhaustive by construction: every one of
+  the 998 measured names lands in exactly one shard, an empty `-skip ''` skips
+  nothing (verified on go1.26.5), and `deploy/test-go-toolchain-contract.sh`
+  pins all ten patterns and skips. Projected worst shard about 220 s, 46
+  percent, using the per-letter CI/WSL ratios measured on that run. The ceiling
+  stays at 8 minutes: it is a hang detector, not a budget, and the rule now
+  written into the workflow is to split any shard whose measured step exceeds
+  half of it.
+- Exit criteria (updated): the branch's first CI run shows every
+  `Race-test panel boundaries` step under 240 s. The local single-process
+  ceiling stays at 30 minutes with the elapsed time reported per acceptance
+  run.
 
 ### R-021 - Deployment host identity does not match the inventory
 

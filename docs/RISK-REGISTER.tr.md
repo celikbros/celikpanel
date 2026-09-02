@@ -58,7 +58,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-017 | Yüksek | AÇIK | Üretim panelinin kalp atışı, paket kuran bir DNS motoru geçişini belirlenimci biçimde zehirler |
 | R-018 | Orta | AÇIK | BIND mask ön denetimi, standart bir Arch kök dizinini reddeder; o imajda BIND'a ulaşılamaz |
 | R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
-| R-020 | Düşük | AÇIK | `cmd/panel` race paketi, açıkça verilmiş 30 dakikalık tavanın yüzde 87'sini tüketir |
+| R-020 | Düşük | DALDA YENİDEN DENGELENDİ / CI KANITI İTMEYİ BEKLİYOR | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
 | R-021 | Düşük | ÇÖZÜLDÜ / ENVANTER DÜZELTİLDİ | İki sunucu da yeniden kuruldu; kimlik doğrulandı ve envanter artık Ubuntu ile Debian 13 yazıyor. Envanterimizde Arch sunucu kalmadı |
 | R-022 | Kritik | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | `install.sh`, güvenilen sürüm kökü var olmadan sürüm işlem korumasını source ediyor; temiz kurulum başlamadan çıkıyor |
 | R-023 | Yüksek | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
@@ -516,6 +516,30 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   kaydedilerek ve desteklenen en yavaş kabul makinesinde ölçülmüş bir payla
   yükseltilir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+- Yeniden ölçüldü (2 Eylül 2026): tek süreçli koşu, 16 çekirdekli Debian 13
+  WSL2 konuğunda kendi ext4'ünde `e8c73f16` ağacında 1800 saniyenin 1448'ini
+  (yüzde 80) aldı; 998 üst düzey test, hiçbiri `t.Parallel` kullanmıyor, yani
+  paket sıralı ve çekirdeğe değil fsync ile race dedektörüne bağlı. Asıl
+  tehlike yerelde değil CI'daydı: `panel-race` işi parça başına `-timeout=8m`
+  ile yedi parçaya bölünmüş durumda ve `main`'deki 33297192912 koşusunda `D`
+  parçasının test adımı 421 saniye, tavanın yüzde 88'i sürdü (art arda iki
+  koşuda 430-435 s iş süresi). `N-R` 328 s, `H-M` 308 s, `S` 248 s koştu. Aynı
+  ağaçtan test başına süreler `D`'nin yüzde 77'sini `TestDNS*`'e koyuyor.
+- Daldaki düzeltme: yedi yerine on parça. `D`, `^TestDNS(Engine|Zone)` ile
+  `D`'nin geri kalanına (`-run '^TestD' -skip '^TestDNS(Engine|Zone)'`), `S`
+  ise `^TestService` ile geri kalanına bölündü; `E-G` ve `H-M`, `E-K` ve `L-M`
+  olarak, `N-R` ise `N-Q` ve `R` olarak yeniden gruplandı. Bir çift, harf
+  desenini tümleyen parçada tutup oyulan öneki atlar; kapsama yapısı gereği
+  eksiksizdir: ölçülen 998 adın her biri tam bir parçaya düşer, boş `-skip ''`
+  hiçbir şeyi atlamaz (go1.26.5 üzerinde doğrulandı) ve
+  `deploy/test-go-toolchain-contract.sh` on desenle atlamaların hepsini
+  sabitler. O koşuda ölçülen harf başına CI/WSL oranlarıyla öngörülen en kötü
+  parça yaklaşık 220 saniye, yüzde 46. Tavan 8 dakikada kalıyor: bütçe değil
+  takılma dedektörüdür ve iş akışına yazılan kural, ölçülen adımı yarısını
+  aşan her parçayı bölmektir.
+- Çıkış ölçütü (güncellendi): dalın ilk CI koşusunda her
+  `Race-test panel boundaries` adımı 240 saniyenin altında kalır. Yerel tek
+  süreçli tavan 30 dakikada kalır ve geçen süre her kabul koşusunda raporlanır.
 
 ### R-021 - Kurulum sunucusu kimliği envanterle uyuşmuyor
 
