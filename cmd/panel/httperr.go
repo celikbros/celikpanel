@@ -76,6 +76,7 @@ const (
 	errCodeDNSEnginePlanRejected         = "DNS_ENGINE_PLAN_REJECTED"
 	errCodeDNSEngineChangeNotCommitted   = "DNS_ENGINE_CHANGE_NOT_COMMITTED"
 	errCodeDNSEngineStateUnverified      = "DNS_ENGINE_STATE_UNVERIFIED"
+	errCodeDNSEngineMutationsHeld        = "DNS_ENGINE_MUTATIONS_HELD"
 	errCodeDNSEngineChangeAppliedRefresh = "DNS_ENGINE_CHANGE_APPLIED_REFRESH_REQUIRED"
 	errCodeDNSSECEngineUnsupported       = "DNSSEC_ENGINE_UNSUPPORTED"
 	errCodeDNSSECStatusUnavailable       = "DNSSEC_STATUS_UNAVAILABLE"

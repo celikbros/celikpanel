@@ -2957,6 +2957,31 @@ func writeDNSEngineChangeNotCommitted(w http.ResponseWriter, switchErr error) {
 	)
 }
 
+// writeDNSEngineMutationsHeld names the hold. Everything else about a held
+// agent is already true of an unverified outcome — the change did not complete
+// and state must be refreshed — but the operator's next action is different:
+// nothing will retry on its own, the agent's health is the problem, and the
+// hold code says which health problem. The message is fixed English and the
+// code is one of the stable MutationHold* values; no internal error text is
+// forwarded.
+// writeDNSEngineMutationsHeld tutulmayı adlandırır. Tutulan bir agent hakkında
+// geri kalan her şey doğrulanmamış bir sonuç için zaten geçerlidir — değişiklik
+// tamamlanmadı ve durum yenilenmeli — ama operatörün bir sonraki adımı
+// farklıdır: hiçbir şey kendiliğinden yeniden denemeyecek, sorun agent'ın
+// sağlığıdır ve tutulma kodu hangi sağlık sorunu olduğunu söyler. Mesaj sabit
+// İngilizcedir, kod kararlı MutationHold* değerlerinden biridir; hiçbir iç hata
+// metni iletilmez.
+func writeDNSEngineMutationsHeld(w http.ResponseWriter, hold string) {
+	writeCodedErrorDetails(
+		w,
+		http.StatusServiceUnavailable,
+		errCodeDNSEngineMutationsHeld,
+		"The agent is refusing durable mutations, so this DNS engine change did not complete and will not retry on its own. Refresh state and review the agent's health before requesting another change",
+		"",
+		[]string{hold},
+	)
+}
+
 func writeDNSEngineStateUnverified(w http.ResponseWriter) {
 	writeCodedError(
 		w,
@@ -3209,7 +3234,10 @@ func (p *Panel) handleDNSEngineSwitch(
 		}
 		logDNSEngineAgentRejection(persisted.SwitchID, err)
 		log.Printf("DNS engine switch %s did not finalize: %v", persisted.SwitchID, err)
+		var held *agentMutationHeldError
 		switch {
+		case errors.As(err, &held):
+			writeDNSEngineMutationsHeld(w, held.Hold)
 		case changeNotCommitted:
 			writeDNSEngineChangeNotCommitted(w, err)
 		case mutationApplied:

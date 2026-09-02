@@ -64,6 +64,8 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-023 | Yüksek | AÇIK / ETKİLEŞİMSİZ HER TEMİZ KURULUM İÇİN ENGEL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
 | R-024 | Orta | AÇIK | Kurulum `systemctl enable` hatalarını yutar ve enable bağlarını hiç eşitlemez; taze bir sunucu iki birimi de devre dışı hâlde yeniden başlayabilir |
 | R-025 | Düşük | AÇIK | Belgelenen `git clone && sudo ./install.sh` yolculuğu, kurtarma temelinin kullanıcıya ait üst dizinleri reddetmesiyle çelişir |
+| R-026 | Yüksek | AÇIK / DALDA DÜZELTİLDİ, CANLI KANIT BEKLİYOR | PowerDNS geçiş geri alması yedek ana dosyayı atılan neslin WAL/SHM dosyalarının altına koydu ve canlı veritabanı bozuk kaldı |
+| R-027 | Düşük | BELGELENMİŞ SINIR | PowerDNS yetkisi yalnız APT/Debian/systemd için onaylıdır; Arch PowerDNS'i devralamaz ya da ona geçemez; Arch kanıtları yalnız-BIND yolculukları kullanmalıdır |
 
 ## Ayrıntılı riskler
 
@@ -466,6 +468,23 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   Her düzeltmenin, düzeltilmemiş ağaçta olayın hata metnini birebir üreten bir
   testi var. Tam ve etiketli agent paketleri Debian 13 (WSL2) üzerinde geçiyor.
   Gerçek bir VM'de devralmadan BIND'a geçiş tamamlanana kadar R-019 AÇIK kalır.
+- S-6 canlı kanıt (2 Eylül 2026): üç-sebep düzeltmesi gerçek makinelerle
+  karşılaştı. 1. sebep tamamen tuttu - Debian 13 dış-PowerDNS devralmadan
+  BIND'a yolculuğu sekiz denemede ilk kez uçtan uca geçti. 3. sebep özünde
+  tuttu - intent-öncesi tıkanma artık zehirlemiyor, iş
+  `agent_restarted_before_dns_engine_switch_commit` ile temizce düşüyor,
+  yeniden başlatma hiçbir şeyi değiştirmiyor ve yeniden deneme sunucuyu
+  yakınsatıyor - ama ilk yeniden denemenin çağıranına 75 dendi; bu, kill-matrix
+  tetikleyicisinin kalp atışı sözleşmesinin geçiş ortasında `WorkerPID == 0`
+  dayatmasına çıktı, R-017 öncesi hatanın harness'a taşınmış hâli; düzeltildi,
+  S-6 hata metnini birebir üreten bir testle. 2. sebep gecikmede tuttu (30
+  dakikadan 5,5 saniyeye, agent hatasından ilk bayta 9,8 ms) ama halka açık
+  gövde tutulmayı adlandırmıyordu; artık tutulma kodunu ayrıntı olarak taşıyan
+  `DNS_ENGINE_MUTATIONS_HELD` dönüyor. Hâlâ kanıtlanmamış olanlar: Boston
+  negatifi (iki üretim kurulum zinciri de ölçülen hücreden önce düştü, biri
+  R-026'yı açığa çıkardı) ve yolculuğa hiç giremeyen Arch (R-027). R-019,
+  Boston negatifi ve gerçek sunucuda temiz-çağıranlı bir yeniden deneme için
+  AÇIK kalır.
 - Kalıntı, bilerek değiştirilmedi (1 Eylül 2026):
   `validateDNSEngineStateSnapshot`, kalıcı bir günlük anlık görüntüsünün
   kaydedilmiş GID'sini `serviceMutationRequiredOwnerGID` ile karşılaştırır; o
@@ -659,6 +678,49 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: Ya belge ev-dizini iddiasını bırakıp taşıma şartını yazar ya da
   politika bilinçli olarak tanımlı bir temiz-kurulum taşıma biçimini kabul
   eder; karar sürüklenmeyle değil yazılı verilir.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-026 - PowerDNS geri alması veritabanı nesillerini karıştırıyor
+
+- Kanıt: S-6, Boston negatif 2. deneme (S-6 manifesti
+  `b5105623daa3fcebe444b3e6e293a0f6e9a5b3e7431ad0df35479d619d7e1701`).
+  BIND'dan PowerDNS'e geçişin üretim geri alması PowerDNS'i durdurdu, canlı ana
+  dosyayı sildi ve yedeği yerine taşıdı; ama hedefin aday veritabanına karşı
+  oluşturduğu `-wal` ve `-shm` dosyalarına hiç dokunmadı. SQLite ardından başka
+  bir neslin WAL'ını geri yüklenen ana dosyaya yeniden oynattı; özet
+  `live_database_generation_mixed_with_retained_wal: true` ve
+  `malformed_database: true` kaydediyor, kurulum işi `rolling-back` günlüğüyle
+  `running`/`leased` kaldı ve mutasyon yöneticisi zehirlendi. İleri yol yan
+  dosyaları hazırlıkta zaten reddediyor (`requireNoPDNSDatabaseSidecars`); geri
+  almanın karşılığı yoktu.
+- Etki: PowerDNS'e geri alınan her geçiş, sunucuyu bozuk bir canlı veritabanı ve
+  tıkanmış bir defterle bırakabilir - R-019 biçimine öbür taraftan girilmesi.
+- Daldaki düzeltme (2 Eylül 2026, `fix/alpha52-handoff-acceptance`):
+  `restorePDNSDatabase` artık yedek yerine taşınmadan önce atılan neslin
+  `-journal`, `-wal` ve `-shm` dosyalarını kaldırıyor; zaten-geri-yüklenmiş
+  dalında da. Bir test, olayın reddini (`PowerDNS database has an unresolved
+  SQLite sidecar`) düzeltilmemiş ağaçta birebir üretiyor.
+- Çıkış ölçütü: Gerçek bir VM'de kasten düşürülen BIND'dan PowerDNS'e geçiş,
+  temiz açılan bir veritabanına geri alınır, defter işi temizce düşer ve sonraki
+  geçiş kabul edilir.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-027 - PowerDNS yetkisi tasarım gereği yalnız APT
+
+- Kanıt: `certifyAPTPDNSCapabilities` (`cmd/agent/dns_engine_pdns_unit.go`)
+  `PackageManager == APT`, `DistroFamily == Debian` ve systemd şart koşar;
+  `docs/DISTRO-SUPPORT.md` PowerDNS için pacman eşlemesi listelemez. S-6 Arch
+  2. deneme sonucu doğruladı: üç bölge sunan depo paketi PowerDNS "yönetilmiyor"
+  sınıflandı ve devralma `DNS_ENGINE_WORKFLOW_REQUIRED` döndürdü.
+- Etki: Kusur değil, sınır. R-019 devralma yolculuğunun Arch'ta hiç
+  koşamayacağı ve R-018 çıpa düzeltmesinin Arch'ta yalnız yalnız-BIND bir
+  yolculukla (taze sunucudan BIND'a) kanıtlanabileceği, PowerDNS devralmasıyla
+  asla kanıtlanamayacağı anlamına gelir.
+- Acil kontrol: Gerekmez. APT'dekine eşdeğer bir pacman köken modeli olmadan
+  onayı gevşetmeye kalkmayın.
+- Çıkış ölçütü: Ya aynı köken güvencelerine sahip onaylı bir pacman PowerDNS
+  profili ya da müşteriye dönük belgede yazılı sınır. İkisi de kabul edilir;
+  sessizlik edilmez.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

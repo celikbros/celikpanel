@@ -160,6 +160,49 @@ func requireNoPDNSDatabaseSidecars(path string) error {
 	return nil
 }
 
+// removePDNSDatabaseSidecars discards the -journal, -wal and -shm files that
+// belong to whatever database generation is being replaced at this path.
+//
+// A SQLite WAL is bound to exactly one main file. When a switch is rolled
+// back, the target PowerDNS has usually already run against the candidate
+// database and left that candidate's WAL and SHM beside it. Restoring the
+// backup main file underneath those sidecars hands SQLite a WAL from a
+// different generation, and it replays it: the live database came back
+// "malformed" in the S-6 Boston setup, the setup job stayed leased with a
+// rolling-back journal, and the negative half of the R-019 proof could not be
+// built. The forward path already refuses sidecars at staging
+// (requireNoPDNSDatabaseSidecars); rollback must actively clear the ones the
+// discarded generation left behind.
+//
+// Callers must have stopped PowerDNS first. A running process keeps its open
+// inode regardless of what happens at the pathname, so this cannot corrupt a
+// live server, but it can only make the path coherent if nothing is writing.
+//
+// removePDNSDatabaseSidecars, bu yoldaki hangi veritabanı nesli
+// değiştiriliyorsa ona ait -journal, -wal ve -shm dosyalarını atar.
+//
+// Bir SQLite WAL'ı tam olarak tek bir ana dosyaya bağlıdır. Bir geçiş geri
+// alındığında hedef PowerDNS genellikle aday veritabanına karşı çoktan koşmuş
+// ve o adayın WAL ile SHM dosyalarını yanında bırakmıştır. Yedek ana dosyayı
+// o yan dosyaların altına geri koymak SQLite'a başka bir neslin WAL'ını verir
+// ve SQLite onu yeniden oynatır: S-6 Boston kurulumunda canlı veritabanı
+// "bozuk" döndü, kurulum işi geri-alınıyor günlüğüyle kiralı kaldı ve R-019
+// kanıtının negatif yarısı kurulamadı. İleri yol yan dosyaları daha
+// hazırlıkta reddediyor (requireNoPDNSDatabaseSidecars); geri alma, atılan
+// neslin bıraktıklarını etkin biçimde temizlemelidir.
+//
+// Çağıranlar PowerDNS'i önce durdurmuş olmalıdır. Çalışan bir süreç, yol adında
+// ne olursa olsun açık inode'unu tutar; dolayısıyla bu canlı bir sunucuyu
+// bozamaz ama yolu ancak hiçbir şey yazmıyorsa tutarlı kılabilir.
+func removePDNSDatabaseSidecars(path string) error {
+	for _, suffix := range []string{"-journal", "-wal", "-shm"} {
+		if err := os.Remove(path + suffix); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("remove stale PowerDNS sidecar %s: %w", suffix, err)
+		}
+	}
+	return nil
+}
+
 func verifyPDNSReplacementDatabaseEnvelope(ctx context.Context, path string) error {
 	if _, _, _, err := inspectPDNSDatabaseFile(path, false); err != nil {
 		return err
@@ -1095,6 +1138,13 @@ func restorePDNSDatabase(journal dnsEngineSwitchJournal) error {
 			if err := os.Remove(journal.PDNSCandidatePath); err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
+			// The backup is already the live main file; the candidate
+			// generation's sidecars may still be sitting beside it.
+			// Yedek zaten canlı ana dosya; aday neslin yan dosyaları hâlâ
+			// yanında duruyor olabilir.
+			if err := removePDNSDatabaseSidecars(live); err != nil {
+				return err
+			}
 			return syncAtomicParentDirectory(filepath.Dir(live))
 		}
 		if backupSize != journal.PDNSBackupSize || backupHash != journal.PDNSBackupSHA256 {
@@ -1122,6 +1172,9 @@ func restorePDNSDatabase(journal dnsEngineSwitchJournal) error {
 		}
 	}
 	if err := os.Remove(live); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := removePDNSDatabaseSidecars(live); err != nil {
 		return err
 	}
 	if journal.PDNSBackupSHA256 != "" {

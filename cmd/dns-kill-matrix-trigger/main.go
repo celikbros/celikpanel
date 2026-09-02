@@ -1098,7 +1098,7 @@ func runRPCSwitch(
 				return triggerResult{}, fmt.Errorf("validate retry failed receipt: %w", err)
 			}
 		case mutationRunning:
-			if err := validateRunningJob(statusResponse.Job, begin, false); err != nil {
+			if err := validateRunningJobDuringSwitch(statusResponse.Job, begin); err != nil {
 				return triggerResult{}, fmt.Errorf("validate retry running lease: %w", err)
 			}
 		default:
@@ -1397,7 +1397,7 @@ func startHeartbeat(
 				result.terminal = cloneJob(response.Job)
 				return
 			}
-			if err := validateRunningJob(response.Job, identity, false); err != nil {
+			if err := validateRunningJobDuringSwitch(response.Job, identity); err != nil {
 				result.err = err
 				return
 			}
@@ -1436,6 +1436,64 @@ func finishMutationWithResponse(
 		return response.Job, errors.New("agent returned another terminal mutation identity")
 	}
 	return response.Job, nil
+}
+
+// validateRunningJobDuringSwitch is the shape a heartbeat or status poll may
+// see while the switch is executing. It differs from validateRunningJob in one
+// way: the owning mutation's registered package worker is an acceptable ledger
+// shape. A BIND or PowerDNS switch installs packages, and package installation
+// durably registers apt-get/pacman as the job's sole worker for the duration.
+// Reading that as "not the exact in-process DNS lease" made the trigger declare
+// every package-installing switch uncertain (exit 75) even though the agent
+// completed it — four times in one campaign, and twice it aborted the Boston
+// negative before its measured cell. That is the same mistake the agent's own
+// finalization guard made before R-017, transplanted into the harness.
+//
+// Begin keeps the strict shape: a job that already carries a worker the moment
+// it is created belongs to somebody else. The relaxation is exactly the
+// canonical worker: positive PID, non-empty trimmed start token, non-empty
+// trimmed basename-only command of at most 64 bytes, and — with the three
+// worker fields cleared — exactly the strict running lease.
+//
+// validateRunningJobDuringSwitch, geçiş yürürken bir kalp atışının ya da durum
+// yoklamasının görebileceği biçimdir. validateRunningJob'dan tek farkı: sahibi
+// olan mutasyonun kayıtlı paket işçisi kabul edilebilir bir defter biçimidir.
+// BIND ya da PowerDNS geçişi paket kurar ve paket kurulumu apt-get/pacman'i o
+// süre boyunca işin tek işçisi olarak kalıcı kaydeder. Bunu "tam süreç-içi DNS
+// kirası değil" diye okumak, agent geçişi tamamlamış olsa bile tetikleyicinin
+// paket kuran her geçişi belirsiz (çıkış 75) ilan etmesine yol açtı — tek
+// kampanyada dört kez, ve iki kez Boston negatifini ölçülen hücresinden önce
+// kesti. Bu, agent'ın kendi sonlanma nöbetinin R-017'den önce yaptığı hatanın
+// harness'a taşınmış hâlidir.
+//
+// Begin katı biçimi korur: yaratıldığı anda işçi taşıyan bir iş başkasınındır.
+// Gevşetme tam olarak kanonik işçidir: pozitif PID, boş olmayan kırpılmış
+// başlangıç belirteci, en çok 64 baytlık, yalnız taban addan oluşan boş olmayan
+// kırpılmış komut ve — üç işçi alanı temizlendiğinde — tam olarak katı çalışan
+// kira.
+func validateRunningJobDuringSwitch(
+	job *transport.ServiceMutationJob,
+	identity transport.ServiceMutationBeginRequest,
+) error {
+	if job != nil && exactRegisteredWorkerShape(job) {
+		workerFree := *job
+		workerFree.WorkerPID = 0
+		workerFree.WorkerStarted = ""
+		workerFree.WorkerCommand = ""
+		return validateRunningJob(&workerFree, identity, false)
+	}
+	return validateRunningJob(job, identity, false)
+}
+
+func exactRegisteredWorkerShape(job *transport.ServiceMutationJob) bool {
+	if job == nil || job.WorkerPID <= 0 {
+		return false
+	}
+	started := strings.TrimSpace(job.WorkerStarted)
+	command := strings.TrimSpace(job.WorkerCommand)
+	return started != "" && job.WorkerStarted == started &&
+		command != "" && job.WorkerCommand == command &&
+		len(command) <= 64 && !strings.ContainsAny(command, "/\\")
 }
 
 func validateRunningJob(

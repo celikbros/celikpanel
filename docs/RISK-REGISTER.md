@@ -63,6 +63,8 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-023 | High | OPEN / BLOCKER FOR EVERY NON-INTERACTIVE FRESH INSTALL | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
 | R-024 | Medium | OPEN | The installer discards `systemctl enable` failures and never syncs the enable links, so a fresh host can reboot with both units disabled |
 | R-025 | Low | OPEN | The documented `git clone && sudo ./install.sh` journey contradicts the recovery foundation's refusal of user-owned ancestor directories |
+| R-026 | High | OPEN / FIXED ON BRANCH, LIVE PROOF PENDING | PowerDNS switch rollback restored the backup main file underneath the discarded generation's WAL/SHM, leaving a malformed live database |
+| R-027 | Low | DOCUMENTED LIMITATION | PowerDNS authority is certified for APT/Debian/systemd only, so Arch cannot adopt or switch to PowerDNS; Arch proofs must use BIND-only journeys |
 
 ## Detailed risks
 
@@ -464,6 +466,22 @@ or executed as-is. There are no open pull requests at this baseline.
   Each fix has a test that reproduces the incident's exact error string on the
   unfixed tree. Full and tagged agent suites pass on Debian 13 (WSL2). R-019
   stays OPEN until a live adoption-to-BIND switch completes on a real VM.
+- S-6 live proof (2 September 2026): the three-cause fix met real machines.
+  Cause 1 held completely - the Debian 13 external-PowerDNS adoption-to-BIND
+  journey passed end to end for the first time in eight attempts. Cause 3 held
+  in substance - the pre-intent wedge no longer poisons, the job fails cleanly
+  with `agent_restarted_before_dns_engine_switch_commit`, a reboot changes
+  nothing, and the retry converges the host - but the first retry's caller was
+  told 75, which traced to the kill-matrix trigger's heartbeat contract
+  demanding `WorkerPID == 0` mid-switch, the pre-R-017 mistake transplanted
+  into the harness; fixed, with a test reproducing the exact S-6 error string.
+  Cause 2 held on latency (30 minutes to 5.5 seconds, agent-error-to-first-byte
+  9.8 ms) but the public body did not name the hold; it now returns
+  `DNS_ENGINE_MUTATIONS_HELD` with the hold code as its detail. Still
+  unproven: the Boston negative (both production setup chains failed before the
+  measured cell, one of them exposing R-026) and Arch, which cannot enter the
+  journey at all (R-027). R-019 stays OPEN for the Boston negative and a
+  clean-caller retry on a real host.
 - Residual, deliberately not changed (1 September 2026):
   `validateDNSEngineStateSnapshot` judges a persisted journal snapshot's
   recorded GID against `serviceMutationRequiredOwnerGID`, which is re-derived
@@ -656,6 +674,53 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: either the documentation drops the home-directory claim and
   states the staging requirement, or the policy deliberately admits a defined
   fresh-install staging shape; decided in writing, not by drift.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-026 - PowerDNS rollback mixes database generations
+
+- Evidence: S-6, Boston negative attempt 2 (report SHA-256
+  `d15ab8ac…` superseded by the S-6 manifest
+  `b5105623daa3fcebe444b3e6e293a0f6e9a5b3e7431ad0df35479d619d7e1701`).
+  The production rollback of a BIND-to-PowerDNS switch stopped PowerDNS,
+  removed the live main file and renamed the backup into place, but never
+  touched the `-wal` and `-shm` files the target had created against the
+  candidate database. SQLite then replayed a WAL from a different generation
+  into the restored main file; the summary records
+  `live_database_generation_mixed_with_retained_wal: true` and
+  `malformed_database: true`, the setup job stayed `running`/`leased` with a
+  `rolling-back` journal, and the mutation manager poisoned. The forward path
+  already refuses sidecars at staging (`requireNoPDNSDatabaseSidecars`);
+  rollback had no counterpart.
+- Impact: any rolled-back switch into PowerDNS can leave the host with a
+  malformed live database and a wedged ledger - the R-019 shape entered from
+  the other side.
+- Fix on branch (2 September 2026, `fix/alpha52-handoff-acceptance`):
+  `restorePDNSDatabase` now removes the discarded generation's `-journal`,
+  `-wal` and `-shm` before the backup is renamed in, and also in the
+  already-restored branch. A test reproduces the incident's exact refusal
+  (`PowerDNS database has an unresolved SQLite sidecar`) on the unfixed tree.
+- Exit criteria: a deliberately failed BIND-to-PowerDNS switch on a real VM
+  rolls back to a database that opens cleanly, the ledger job fails cleanly,
+  and a subsequent switch is accepted.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-027 - PowerDNS authority is APT-only by design
+
+- Evidence: `certifyAPTPDNSCapabilities` (`cmd/agent/dns_engine_pdns_unit.go`)
+  requires `PackageManager == APT`, `DistroFamily == Debian` and systemd, and
+  `docs/DISTRO-SUPPORT.md` lists no pacman mapping for PowerDNS. S-6 Arch
+  attempt 2 confirmed the consequence: a stock repository PowerDNS serving
+  three zones was classified unmanaged and adoption returned
+  `DNS_ENGINE_WORKFLOW_REQUIRED`.
+- Impact: not a defect, a boundary. It means the R-019 adoption journey cannot
+  run on Arch at all, and the R-018 inherited-anchor fix can only be proven on
+  Arch through a BIND-only journey (fresh host to BIND), never through
+  PowerDNS adoption.
+- Immediate control: none needed. Do not attempt to relax the certification
+  without a pacman provenance model equivalent to the APT one.
+- Exit criteria: either a certified pacman PowerDNS profile with the same
+  provenance guarantees, or the limitation stated in customer-facing
+  documentation. Either is acceptable; silence is not.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
