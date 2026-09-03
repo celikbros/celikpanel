@@ -21,6 +21,7 @@ func testPDNSReconfigureRecoveryJournal(
 		t, "2: eth0 inet 192.0.2.10/24 scope global eth0\n",
 	)
 	useTestPDNSConfigPaths(t)
+	useTestServiceMutationOwner(t)
 	root := t.TempDir()
 	t.Setenv("CELIKPANEL_AGENT_STATE_DIR", filepath.Join(root, "state"))
 	t.Setenv("CELIKPANEL_PDNS_DB", filepath.Join(root, "pdns.sqlite3"))

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -12,6 +13,35 @@ import (
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+// useTestServiceMutationOwner points the service mutation ownership contract at
+// the user running the tests. The product now writes the durable DNS engine
+// state through its own owner-enforcing writer, which chowns the file to
+// root:celikpanel, so a test that stages that state cannot do it unprivileged
+// unless the contract names the running user. mutationTestRoot already does
+// exactly this for every test that builds a mutation manager; only the fixtures
+// that redirect CELIKPANEL_AGENT_STATE_DIR on their own were left without it.
+// The production default is untouched and is restored on cleanup.
+//
+// useTestServiceMutationOwner, hizmet mutasyonu sahiplik sözleşmesini testleri
+// çalıştıran kullanıcıya yöneltir. Ürün artık kalıcı DNS motoru durumunu,
+// dosyayı root:celikpanel'e chown eden kendi sahiplik dayatan yazıcısıyla
+// yazıyor; sözleşme çalıştıran kullanıcıyı göstermedikçe bu durumu kuran bir
+// test bunu ayrıcalıksız yapamaz. mutationTestRoot, mutasyon yöneticisi kuran
+// her test için bunu zaten yapıyor; yalnız CELIKPANEL_AGENT_STATE_DIR'i kendi
+// başına yönlendiren hazırlıklar bundan yoksun kalmıştı. Üretimdeki varsayılan
+// değişmez ve temizlikte geri konur.
+func useTestServiceMutationOwner(t *testing.T) {
+	t.Helper()
+	previousUID := serviceMutationRequiredOwnerUID
+	previousGID := serviceMutationRequiredOwnerGID
+	serviceMutationRequiredOwnerUID = uint32(os.Getuid())
+	serviceMutationRequiredOwnerGID = uint32(os.Getgid())
+	t.Cleanup(func() {
+		serviceMutationRequiredOwnerUID = previousUID
+		serviceMutationRequiredOwnerGID = previousGID
+	})
+}
 
 func testBINDSwitchJournal(t *testing.T) dnsEngineSwitchJournal {
 	t.Helper()
