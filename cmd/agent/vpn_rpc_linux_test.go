@@ -191,11 +191,18 @@ case "$command_name" in
     ;;
   wg-quick)
     if [ "$1" = "strip" ]; then
+      case "${2##*/}" in
+        wg0.conf) ;;
+        *)
+          echo 'wg-quick: The config file must be a valid interface name, followed by .conf' >&2
+          exit 1
+          ;;
+      esac
       /bin/cat "$2"
-	  if [ -n "${VPN_TEST_REMOVE_STRIP_SOURCE_ONCE_MARKER:-}" ] &&
-	     [ ! -e "$VPN_TEST_REMOVE_STRIP_SOURCE_ONCE_MARKER" ]; then
-	    printf '%s\n' removed > "$VPN_TEST_REMOVE_STRIP_SOURCE_ONCE_MARKER"
-	    /bin/rm "$2"
+	  if [ -n "${VPN_TEST_REMOVE_STAGE_ONCE_MARKER:-}" ] &&
+	     [ ! -e "$VPN_TEST_REMOVE_STAGE_ONCE_MARKER" ]; then
+	    printf '%s\n' removed > "$VPN_TEST_REMOVE_STAGE_ONCE_MARKER"
+	    /bin/rm -f "$VPN_TEST_CONFIG_DIR"/.wg0.conf.tmp-*.conf
 	  fi
     fi
     ;;
@@ -223,6 +230,7 @@ esac
 	t.Setenv("VPN_TEST_INTERFACE", host.interfacePath)
 	t.Setenv("VPN_TEST_ENABLED", host.enabledPath)
 	t.Setenv("VPN_TEST_LIVE_CONFIG", host.liveConfigPath)
+	t.Setenv("VPN_TEST_CONFIG_DIR", configDirectory)
 	return host
 }
 
@@ -1519,7 +1527,7 @@ func TestSyncVPNPeersV2CommitRollbackFailurePoisonsAndRetainsLock(t *testing.T) 
 		t.Fatal(err)
 	}
 	state := t.TempDir()
-	t.Setenv("VPN_TEST_REMOVE_STRIP_SOURCE_ONCE_MARKER", filepath.Join(state, "source.removed"))
+	t.Setenv("VPN_TEST_REMOVE_STAGE_ONCE_MARKER", filepath.Join(state, "stage.removed"))
 	t.Setenv("VPN_TEST_SYNCCONF_FAIL_AFTER_FIRST_MARKER", filepath.Join(state, "first.applied"))
 	peers, commitment := vpnPeerSyncRecoveryPayload(t, 50)
 	binding, manager := beginVPNRPCTestMutationWithManager(

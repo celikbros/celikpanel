@@ -984,10 +984,59 @@ func applyWireGuardBytes(ctx context.Context, config []byte) error {
 	return applyWireGuardConfig(ctx, staged)
 }
 
+// wg-quick derives the interface name from the configuration basename: the
+// part before ".conf" must be a valid interface name of at most 15 characters.
+// A staged file is deliberately named ".wg0.conf.tmp-1234567890.conf", so it
+// can never be handed to wg-quick directly. stageWireGuardStripSource copies
+// the already-persisted bytes into a private 0700 directory under the only
+// basename wg-quick accepts here, "wg0.conf"; the caller removes the directory.
+//
+// wg-quick, arayüz adını yapılandırma dosyasının adından türetir: ".conf"
+// öncesindeki kısım en çok 15 karakterlik geçerli bir arayüz adı olmalıdır.
+// Sahnelenen dosya bilerek ".wg0.conf.tmp-1234567890.conf" adını taşır; bu
+// yüzden wg-quick'e doğrudan verilemez. stageWireGuardStripSource, kalıcı
+// yazılmış baytları özel 0700 bir dizine wg-quick'in burada kabul ettiği tek
+// ad olan "wg0.conf" ile kopyalar; dizini çağıran siler.
+func stageWireGuardStripSource(configPath string) (directory, source string, err error) {
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return "", "", err
+	}
+	directory, err = os.MkdirTemp("", "celikpanel-wg-strip-*")
+	if err != nil {
+		return "", "", err
+	}
+	if err := os.Chmod(directory, 0o700); err != nil {
+		_ = os.RemoveAll(directory)
+		return "", "", err
+	}
+	source = filepath.Join(directory, wgIface+".conf")
+	if err := os.WriteFile(source, content, 0o600); err != nil {
+		_ = os.RemoveAll(directory)
+		return "", "", err
+	}
+	if err := os.Chmod(source, 0o600); err != nil {
+		_ = os.RemoveAll(directory)
+		return "", "", err
+	}
+	return directory, source, nil
+}
+
+// runWireGuardStrip is replaceable only by focused VPN tests; release code
+// always runs the host wg-quick through the tracked mutation runner.
+// runWireGuardStrip yalnız odaklı VPN testlerinde değiştirilir; yayın kodu
+// wg-quick'i daima izlenen mutation koşucusuyla çalıştırır.
+var runWireGuardStrip = func(ctx context.Context, source string) ([]byte, error) {
+	return serviceMutationCommand(ctx, "wg-quick", "strip", source).Output()
+}
+
 func applyWireGuardConfig(ctx context.Context, configPath string) error {
-	stripped, err := serviceMutationCommand(
-		ctx, "wg-quick", "strip", configPath,
-	).Output()
+	stripDirectory, stripSource, err := stageWireGuardStripSource(configPath)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(stripDirectory)
+	stripped, err := runWireGuardStrip(ctx, stripSource)
 	if err != nil {
 		return errors.New("wg-quick strip failed")
 	}
