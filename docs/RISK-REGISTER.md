@@ -74,7 +74,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-034 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Every WireGuard config apply fails because the staged file name is not a valid interface name for `wg-quick strip`; the failed rollback then poisons the host's mutation manager with no API way out |
 | R-035 | Medium | OPEN / DESIGN | The firewall cannot be enabled on a host without a discoverable sshd, and the product cannot install one; such hosts never get `firewall.nft` |
 | R-036 | Medium | OPEN / DESIGN | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
-| R-037 | Medium | FOUND / WORKING COPY REPAIRED / GUARD PENDING | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
+| R-037 | Medium | GUARDED ON BRANCH / A SECOND EMBED WAS AFFECTED AND IS FIXED | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
 | R-038 | Critical | FOUND / FIXED ON BRANCH / LIVE PROOF PENDING | A host whose DNS engine packages were already present could never activate that engine: the switch installed nothing, wrote no provenance, and finalization refused it |
 
 ## Detailed risks
@@ -1253,6 +1253,23 @@ or executed as-is. There are no open pull requests at this baseline.
 - Guard pending: the release job, or a cheap contract test, should fail when
   an embedded migration's bytes differ from the tracked bytes, so this can
   never be diagnosed as a database problem again.
+- Guarded on branch (3 September 2026): two tests walk the real embedded
+  content and refuse a carriage return, naming the file, the offset and the
+  repair; they run wherever `go test ./...` runs, including on the machine
+  that can produce the defect, which a Linux-only CI check never could. The
+  runtime mismatch message now carries the same diagnosis when it fires. The
+  repair it prints is verified: `git checkout --` and `git checkout-index -f`
+  are both no-ops here because git believes the file is unmodified, so the
+  index entry has to be dropped first.
+- The guard found a second, live case on its first run: `.gitattributes`
+  pinned `*.sql` but never `*.tmpl`, so **every** Windows checkout - not only
+  ones predating the file - embedded the nginx vhost template with CRLF and
+  wrote vhost files that differ byte for byte from a released panel's. The
+  attribute is added and the working copy renormalized; tracked bytes never
+  changed. Those two embeds are the only `go:embed` sites in the product.
+- Note until this branch merges: a fresh Windows clone of `main` still gets a
+  CRLF template and the new test fails there. That is the guard working, not
+  a new defect.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-038 - A pre-installed DNS engine could never be activated

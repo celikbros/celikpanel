@@ -75,7 +75,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-034 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Her WireGuard yapılandırma uygulaması düşüyor: hazırlanan dosya adı `wg-quick strip` için geçerli bir arayüz adı değil; düşen geri alma sonra sunucunun işlem yöneticisini zehirliyor ve API'den çıkış yolu yok |
 | R-035 | Orta | AÇIK / TASARIM | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
 | R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
-| R-037 | Orta | BULUNDU / ÇALIŞMA KOPYASI ONARILDI / KORUMA BEKLİYOR | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
+| R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
 | R-038 | Kritik | BULUNDU / DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | DNS motoru paketleri zaten kurulu olan sunucuda o motor hiç etkinleştirilemiyordu: geçiş hiçbir şey kurmuyor, kaynak kaydı yazmıyor ve tamamlama reddediyordu |
 
 ## Ayrıntılı riskler
@@ -1239,6 +1239,23 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Koruma bekliyor: sürüm işi ya da ucuz bir sözleşme testi, gömülü bir göçün
   baytları izlenen baytlardan farklıysa düşmeli; böylece bu bir daha
   veritabanı sorunu diye teşhis edilmesin.
+- Dalda korumaya alındı (3 Eylül 2026): iki test gerçek gömülü içeriği
+  gezip satır başı baytını reddediyor; dosyayı, konumu ve onarımı adıyla
+  söylüyor. `go test ./...` nerede koşuyorsa orada koşuyorlar - kusuru
+  üretebilen makinede de; yalnız Linux'ta koşan bir CI kontrolü bunu asla
+  yakalayamazdı. Çalışma anındaki uyuşmazlık mesajı da artık aynı teşhisi
+  taşıyor. Yazdığı onarım komutu doğrulandı: `git checkout --` ve
+  `git checkout-index -f` burada hiçbir şey yapmıyor, çünkü git dosyayı
+  değişmemiş sayıyor; önce index kaydı düşmeli.
+- Koruma ilk koşusunda ikinci ve canlı bir örneği yakaladı:
+  `.gitattributes` `*.sql` için kural koymuş ama `*.tmpl` için hiç
+  koymamış; bu yüzden **her** Windows kopyası - yalnız eskiler değil - nginx
+  vhost şablonunu CRLF ile gömüyor ve yayınlanmış panelden bayt bayt farklı
+  vhost dosyaları yazıyordu. Kural eklendi, çalışma kopyası düzeltildi;
+  izlenen baytlar hiç değişmedi. Üründeki tek iki gömme yeri bunlar.
+- Bu dal birleşene kadar: `main`'in taze bir Windows kopyası hâlâ CRLF şablon
+  alır ve yeni test orada düşer. Bu, korumanın çalışması demektir, yeni bir
+  bozulma değil.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-038 - Önceden kurulu bir DNS motoru hiç etkinleştirilemiyordu
