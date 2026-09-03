@@ -56,7 +56,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-015 | Yüksek | AÇIK / AÇIK DNS GEÇİŞİ İÇİN ENGELLEYİCİ | Parent delegation ve glue doğrulandı; `celikhost.com` child zone ve açık otorite yok |
 | R-016 | Orta | AÇIK / PROVENANCE UYARISI | İki geçerli v6 snapshot kaynak kimliğini `unknown` yazar; terminal receipt'ler önceki Alpha51 commit'ini kanıtlar |
 | R-017 | Yüksek | AÇIK | Üretim panelinin kalp atışı, paket kuran bir DNS motoru geçişini belirlenimci biçimde zehirler |
-| R-018 | Orta | DALDA DÜZELTİLDİ / ARCH KONUĞUNDA KANITLANDI / GERÇEK VM BEKLİYOR | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
+| R-018 | Orta | DALDA DÜZELTİLDİ (DÖRT KAT) / GERÇEK ARCH VM'DE BEŞİNCİ KAT BULUNDU / DÜZELTME BEKLİYOR | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
 | R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
 | R-020 | Düşük | DALDA YENİDEN DENGELENDİ / CI ÖLÇÜLDÜ / İKİ PARÇA ÇİZGİNİN ÜSTÜNDE | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
 | R-021 | Düşük | ÇÖZÜLDÜ / ENVANTER DÜZELTİLDİ | İki sunucu da yeniden kuruldu; kimlik doğrulandı ve envanter artık Ubuntu ile Debian 13 yazıyor. Envanterimizde Arch sunucu kalmadı |
@@ -64,7 +64,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-023 | Yüksek | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
 | R-024 | Orta | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Kurulum `systemctl enable` hatalarını yutar ve enable bağlarını hiç eşitlemez; taze bir sunucu iki birimi de devre dışı hâlde yeniden başlayabilir |
 | R-025 | Düşük | KARAR VERİLDİ / BELGE DALDA DÜZELTİLDİ | Belgelenen `git clone && sudo ./install.sh` yolculuğu, kurtarma temelinin kullanıcıya ait üst dizinleri reddetmesiyle çelişir |
-| R-026 | Yüksek | AÇIK / DALDA DÜZELTİLDİ, CANLI KANIT BEKLİYOR | PowerDNS geçiş geri alması yedek ana dosyayı atılan neslin WAL/SHM dosyalarının altına koydu ve canlı veritabanı bozuk kaldı |
+| R-026 | Yüksek | AÇIK / S-9 T5 CANLIDA DÜŞTÜ / DÜZELTME BEKLİYOR | PowerDNS geçiş geri alması yedek ana dosyayı atılan neslin WAL/SHM dosyalarının altına koydu ve canlı veritabanı bozuk kaldı |
 | R-027 | Düşük | BELGELENMİŞ SINIR | PowerDNS yetkisi yalnız APT/Debian/systemd için onaylıdır; Arch PowerDNS'i devralamaz ya da ona geçemez; Arch kanıtları yalnız-BIND yolculukları kullanmalıdır |
 | R-028 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin içindeki etkin-BIND kanıtı, geçişin kendi kurulum korumasının az önce yarattığı pdns.service maskesini reddetti; PowerDNS kurması gereken her geçiş kaynak kanıtında düştü |
 | R-029 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Hiç motor çalıştırmamış sunucuda DNS kimlik hazırlama, bölgeler beklediği için reddetti; oysa böyle bir sunucuda her bölge yapısı gereği bekler; DNS'i kurmadan önce alan adı eklemek ilk motor kurulumunu ulaşılamaz kılıyordu |
@@ -408,6 +408,17 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: `/` üzerindeki 0755'in mask politikası için taşıyıcı mı yoksa
   normal bir Linux kökü için baştan yanlış bir beklenti mi olduğuna dair yazılı
   bir karar ve buna karşılık gelen düzeltme ya da belgelenmiş dağıtım sınırı.
+- S-9 T1 (3 Eylül 2026, KVM altında gerçek Arch bulut VM'i, kök `/` 0555,
+  aday fe6c2c9): kimlik 200, önizleme 200 `action=install`, `blockers=[]`,
+  `pending_zone_count=1`; commit BIND'i pacman ile kurdu, `/var/named/celikpanel`
+  altında üretimi kurdu, birimi etkinleştirip başlattı, sonra `verify started
+  BIND vendor unit: ss returned a non-canonical DNS listener peer endpoint`
+  (`parseCanonicalDNSPort53ListenerRow`, `dns_engine_legacy_guard.go`) ile
+  düştü ve temiz geri aldı (`DNS_ENGINE_CHANGE_NOT_COMMITTED`, tutma yok).
+  Önceki dört kat gerçek VM'de kanıtlandı; devralınan çıpa yürüyüşü geçildi
+  (harness o alanı yalnız tam geçişte yazdığı için `null` kaydetti). Beşinci
+  kat: dinleyici doğrulayıcı, Arch'ın iproute2 `ss` çıktısındaki eş sütunu
+  biçimini reddediyor. Düzeltme, yakalanan çıktıdan yapılacak.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 - S-2 kararı: `/` üzerindeki `0755` bu işlem için taşıyıcı **değildir**.
   Mutasyon doğrulanmış `/etc/systemd/system` dizinine iner ve `systemctl mask`
@@ -473,6 +484,14 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   `Agent.ConfigurePowerDNSSQLite` ve `Agent.SyncDNSZoneV3` yoluyla geçişe hazır
   bir kaynak üretir ya da devir, devralmanın sağlayamadığı şeyi şart koşmaktan
   vazgeçer.
+- S-9 T2 pozitif (3 Eylül 2026): niyet öncesi öldürme isabet etti
+  (`kill_proven=true`, çıkış 137), olağan agent geri geldi; ilk durum sondası
+  sipariş edilen yanıtı verdi (`agent_restarted_before_dns_engine_switch_commit`),
+  sonra sürücü 120 saniyelik panel hazırlık döngüsünde zaman aşımına uğrayıp
+  ham gövdeleri almadan durdu. Kampanyanın kendi kuralıyla DOĞRULANMAMIŞ;
+  hücre, gövdeler değerlendirmeden önce alınarak yeniden koşulur. Aynı adayda
+  R-019 dış-PowerDNS'ten-BIND'e hücresi ve T4 matrisi (15 yolculuk, 3 yeniden
+  başlatma yolculuğu, 0 hata) geçti.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 - S-2 kararı: Sonuç müşteriye yansıyor ve doğrulandı. Bir yönetici geçerli bir
   mevcut PowerDNS'i devralabilir, onun yönetilen aktif motor olduğunu görebilir
@@ -830,6 +849,20 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - S-8 (3 Eylül 2026): sonda konuştu (R-030) ve sıralı düşüşün adı kondu:
   geri alma kurtarması kaynak BIND'ı yeniden etkinleştirirken düştü (R-031).
   Veritabanı temizliği yine tuttu. R-026, R-031'den sonra T5 ile kapanır.
+- S-9 T5 (3 Eylül 2026, Debian 13 VM, aday fe6c2c9, agent kodu şimdiki dalla
+  birebir): öldürülen geçiş temiz geri alındı (R-031 kanıtlandı:
+  `bind9.service` takma adlı `named.service` etkin ve aktif, PowerDNS durmuş,
+  özel anlık görüntü bayt bayt geri gelmiş, kalıntı yok, tutma yok). Hemen
+  ardından ilk geçiş `agent rejection "DNS engine switch reached its verified
+  target but finalization did not complete"` ile bitti ve tutma `finalize
+  active DNS engine switch: committed DNS engine switch has no exact install
+  or active ownership provenance` (`exactCommittedDNSEngineProvenanceOnHost`)
+  oldu. Sebep: geri alma hedefin makbuzlarını sildi ama paketlerini bıraktı;
+  yeniden deneme hiçbir şey kurmadı, kurulum sahiplik makbuzu yazmadı, etkin
+  makbuzu da yoktu. Düzeltme bekliyor: zaten kurulu hedef paketlerini
+  benimseyen geçiş, bu benimsemeyi kurulum gibi kaynak kaydı olarak yazmalı.
+  Harness paketleri önceden kurmuştu; bu, zaten kurulu her sunucunun
+  sunduğu durumun aynısı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-027 - PowerDNS yetkisi tasarım gereği yalnız APT
@@ -1055,6 +1088,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   öldürülen BIND geçişi) temiz düşen iş ve yakınsayan yeniden denemeyle
   kurtarılır; aynı sunucu hedef-çağlı yerleştirilmiş makbuzla
   `ledger_ambiguous` ile kapalı arıza verir.
+- S-9 Boston (3 Eylül 2026): dört prova denemesi, hiçbiri ürüne ulaşmadı;
+  sürücü kendi açılışında (6'ya 5 açma hatası), bayat agent soketinde ve son
+  olarak ek-2'nin getirdiği tarihsel/yabancı kipleri reddeden hücre
+  korumasında düştü. Tarihsel sahiplik düzeltmesinin canlı kanıtı henüz yok;
+  yabancı makbuz negatifi hiç denenmedi. Sırada harness onarımı ve iki kipin
+  koşusu var.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-033 - Düşen ilk kurulum taze sunucuyu zehirliyor

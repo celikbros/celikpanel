@@ -55,7 +55,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-015 | High | OPEN / BLOCKER FOR PUBLIC DNS CUTOVER | Parent delegation and glue are verified; the `celikhost.com` child zone and public authority are absent |
 | R-016 | Medium | OPEN / PROVENANCE WARNING | Both valid v6 snapshots encode an `unknown` source identity although terminal receipts prove the prior Alpha51 commit |
 | R-017 | High | OPEN | A production panel heartbeat deterministically poisons a DNS engine switch that installs packages |
-| R-018 | Medium | FIXED ON BRANCH / PROVEN ON AN ARCH GUEST / REAL VM PENDING | The Arch BIND path was never wired end to end: root-anchor rule, managed root, config ownership, stock options and journal shape each assumed Debian; all five now follow the pacman package and a fresh Arch host reaches a serving BIND |
+| R-018 | Medium | FIXED ON BRANCH (FOUR LAYERS) / FIFTH LAYER FOUND ON THE REAL ARCH VM / FIX PENDING | The Arch BIND path was never wired end to end: root-anchor rule, managed root, config ownership, stock options and journal shape each assumed Debian; all five now follow the pacman package and a fresh Arch host reaches a serving BIND |
 | R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
 | R-020 | Low | REBALANCED ON BRANCH / CI MEASURED / TWO SHARDS OVER THE LINE | The CI race shard for `D` ran at 88 percent of its 8-minute ceiling on `main`; the local 30-minute single-process run sits at 80 percent |
 | R-021 | Low | RESOLVED / INVENTORY CORRECTED | Both hosts were rebuilt; identity is confirmed and the inventory now records Ubuntu and Debian 13. No Arch host remains in our inventory |
@@ -63,7 +63,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-023 | High | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
 | R-024 | Medium | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | The installer discards `systemctl enable` failures and never syncs the enable links, so a fresh host can reboot with both units disabled |
 | R-025 | Low | DECIDED / DOCUMENTATION CORRECTED ON BRANCH | The documented `git clone && sudo ./install.sh` journey contradicts the recovery foundation's refusal of user-owned ancestor directories |
-| R-026 | High | OPEN / FIXED ON BRANCH, LIVE PROOF PENDING | PowerDNS switch rollback restored the backup main file underneath the discarded generation's WAL/SHM, leaving a malformed live database |
+| R-026 | High | OPEN / FAILED LIVE ON S-9 T5 / FIX PENDING | PowerDNS switch rollback restored the backup main file underneath the discarded generation's WAL/SHM, leaving a malformed live database |
 | R-027 | Low | DOCUMENTED LIMITATION | PowerDNS authority is certified for APT/Debian/systemd only, so Arch cannot adopt or switch to PowerDNS; Arch proofs must use BIND-only journeys |
 | R-028 | High | FIXED ON BRANCH / LIVE PROOF PENDING | The active-BIND proof inside a BIND-to-PowerDNS switch refused the pdns.service mask the switch's own install guard had just created, so every switch that had to install PowerDNS failed at its source proof |
 | R-029 | High | FIXED ON BRANCH / LIVE PROOF PENDING | DNS identity staging on a host that has never run an engine refused because zones were pending, which every zone on such a host is by construction; adding a domain before setting up DNS made the first engine install unreachable |
@@ -406,6 +406,18 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: a written determination of whether 0755 on `/` is load-bearing
   for the mask policy or an expectation that is simply wrong for a normal Linux
   root, followed by the corresponding fix or documented distribution limit.
+- S-9 T1 (3 September 2026, real Arch cloud VM under KVM, root `/` 0555,
+  candidate fe6c2c9): identity staged 200, preview 200 with `action=install`,
+  `blockers=[]`, `pending_zone_count=1`; the commit installed BIND through
+  pacman, built the generation under `/var/named/celikpanel`, enabled and
+  started the unit, then failed at `verify started BIND vendor unit: ss
+  returned a non-canonical DNS listener peer endpoint`
+  (`parseCanonicalDNSPort53ListenerRow`, `dns_engine_legacy_guard.go`), rolled
+  back cleanly (`DNS_ENGINE_CHANGE_NOT_COMMITTED`, no hold). The four earlier
+  layers are proven on the real VM; the inherited-anchor walk was traversed
+  (the harness recorded `null` only because it asserts that field on a full
+  pass). Fifth layer: the listener verifier rejects the peer column shape of
+  Arch's iproute2 `ss` output. Fix pending, from the captured output.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 - S-2 determination: `0755` on `/` is **not** load-bearing for this operation.
   The mutation descends to a verified `/etc/systemd/system` and calls
@@ -472,6 +484,15 @@ or executed as-is. There are no open pull requests at this baseline.
   source through unchanged `Agent.ConfigurePowerDNSSQLite` and
   `Agent.SyncDNSZoneV3`, or the handoff stops requiring what adoption cannot
   provide.
+- S-9 T2 positive (3 September 2026): the pre-intent kill landed
+  (`kill_proven=true`, exit 137) and the ordinary agent returned; the first
+  status probe matched the ordered answer
+  (`agent_restarted_before_dns_engine_switch_commit`), then the driver timed
+  out in its 120 s panel-readiness loop and aborted before retrieving the raw
+  bodies. UNVERIFIED by the campaign's own rule; the cell is rerun with the
+  bodies captured before evaluation. The R-019 external-PowerDNS-to-BIND
+  cell and the T4 matrix (15 journeys, 3 reboot journeys, 0 failures) passed
+  on the same candidate.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 - S-2 determination: the consequence is customer-facing and confirmed. An
   administrator can adopt a valid existing PowerDNS, see it become the managed
@@ -831,6 +852,21 @@ or executed as-is. There are no open pull requests at this baseline.
 - S-8 (3 September 2026): the probe spoke (R-030) and the ordered failure
   is now named: rollback recovery failed re-enabling the source BIND (R-031).
   The database cleanup held again. R-026 closes with T5 after R-031.
+- S-9 T5 (3 September 2026, Debian 13 VM, candidate fe6c2c9, agent code
+  identical to the current branch): the killed switch rolled back cleanly
+  (R-031 proven: `named.service` with the `bind9.service` alias active and
+  enabled, PowerDNS stopped, the private snapshot restored byte-equal, no
+  residue, no hold). The first subsequent switch then ended with `agent
+  rejection "DNS engine switch reached its verified target but finalization
+  did not complete"` and the hold `finalize active DNS engine switch:
+  committed DNS engine switch has no exact install or active ownership
+  provenance` (`exactCommittedDNSEngineProvenanceOnHost`). Cause: the
+  rollback removed the target's receipts but left its packages installed, so
+  the retry installed nothing, wrote no install-ownership receipt, and had no
+  active receipt either. Fix pending: a switch that adopts already-present
+  target packages must record that adoption as provenance exactly as an
+  install does. The harness preinstalled the packages, which is the same
+  condition any already-installed host presents.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-027 - PowerDNS authority is APT-only by design
@@ -1066,6 +1102,12 @@ or executed as-is. There are no open pull requests at this baseline.
   killed pre-intent) recovers with a clean failed job and a converging retry;
   the same host with a planted target-epoch receipt fails closed with
   `ledger_ambiguous`.
+- S-9 Boston (3 September 2026): four rehearsal attempts, none reached the
+  product; the driver failed in its own bootstrap (a 6-vs-5 unpack), on stale
+  agent-socket handling, and finally in a cell-tuple guard that rejects the
+  historical and foreign modes addendum 2 introduced. No live proof of the
+  historical-ownership fix exists yet; the foreign-receipt negative has never
+  been attempted. The harness is repaired next and both modes run.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-033 - A failed first install poisons a fresh host
