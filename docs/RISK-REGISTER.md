@@ -63,7 +63,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-023 | High | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
 | R-024 | Medium | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | The installer discards `systemctl enable` failures and never syncs the enable links, so a fresh host can reboot with both units disabled |
 | R-025 | Low | DECIDED / DOCUMENTATION CORRECTED ON BRANCH | The documented `git clone && sudo ./install.sh` journey contradicts the recovery foundation's refusal of user-owned ancestor directories |
-| R-026 | High | OPEN / FAILED LIVE ON S-9 T5 / FIX PENDING | PowerDNS switch rollback restored the backup main file underneath the discarded generation's WAL/SHM, leaving a malformed live database |
+| R-026 | High | FIXED ON BRANCH / LIVE PROOF PENDING | PowerDNS switch rollback restored the backup main file underneath the discarded generation's WAL/SHM, leaving a malformed live database |
 | R-027 | Low | DOCUMENTED LIMITATION | PowerDNS authority is certified for APT/Debian/systemd only, so Arch cannot adopt or switch to PowerDNS; Arch proofs must use BIND-only journeys |
 | R-028 | High | FIXED ON BRANCH / LIVE PROOF PENDING | The active-BIND proof inside a BIND-to-PowerDNS switch refused the pdns.service mask the switch's own install guard had just created, so every switch that had to install PowerDNS failed at its source proof |
 | R-029 | High | FIXED ON BRANCH / LIVE PROOF PENDING | DNS identity staging on a host that has never run an engine refused because zones were pending, which every zone on such a host is by construction; adding a domain before setting up DNS made the first engine install unreachable |
@@ -75,6 +75,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-035 | Medium | OPEN / DESIGN | The firewall cannot be enabled on a host without a discoverable sshd, and the product cannot install one; such hosts never get `firewall.nft` |
 | R-036 | Medium | OPEN / DESIGN | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
 | R-037 | Medium | FOUND / WORKING COPY REPAIRED / GUARD PENDING | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
+| R-038 | Critical | FOUND / FIXED ON BRANCH / LIVE PROOF PENDING | A host whose DNS engine packages were already present could never activate that engine: the switch installed nothing, wrote no provenance, and finalization refused it |
 
 ## Detailed risks
 
@@ -885,6 +886,15 @@ or executed as-is. There are no open pull requests at this baseline.
   target packages must record that adoption as provenance exactly as an
   install does. The harness preinstalled the packages, which is the same
   condition any already-installed host presents.
+- Correction to what the T5 note said (3 September 2026): the rollback did
+  not remove the target's receipts. The evidence
+  (`t5-proof.json`, `pdns_preinstall`) shows the harness had installed the
+  target packages before the measured switch, so the first switch already
+  found nothing missing and never wrote a receipt. The defect is therefore
+  not retry-specific and R-038 records its real scope.
+- Fixed on branch (3 September 2026) together with R-038: an adoption is an
+  installation with an empty missing set, recorded by the same constructor in
+  the same receipt with this mutation's identity.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-027 - PowerDNS authority is APT-only by design
@@ -1243,6 +1253,37 @@ or executed as-is. There are no open pull requests at this baseline.
 - Guard pending: the release job, or a cheap contract test, should fail when
   an embedded migration's bytes differ from the tracked bytes, so this can
   never be diagnosed as a database problem again.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-038 - A pre-installed DNS engine could never be activated
+
+- Evidence: the S-9 T5 cell, 3 September 2026, and the code path behind it.
+  Each switch builds the set of missing packages and branches on it. The
+  install branch writes an install-ownership receipt before installing; the
+  skip branch called a handoff helper written for R-028/R-029 that rebinds an
+  existing receipt and returned success without writing anything when there
+  was none (`cmd/agent/dns_engine_ownership.go`). Finalization then refused
+  with `committed DNS engine switch has no exact install or active ownership
+  provenance`, and the mutation manager failed closed. The receipt could not
+  even be expressed: the constructor and the validator both required a
+  non-empty missing set.
+- Impact: any host that already carries the target's packages - a provider
+  image with bind9, a rebuilt host, an operator who installed a package by
+  hand, a rolled-back attempt - can never activate that engine through the
+  panel, and the failure wedges the host's mutations rather than explaining
+  itself. This is the first-install path on a very ordinary rented server,
+  not an edge case; the acceptance campaign found it only because its
+  fixture preinstalled the packages.
+- Fix on branch (3 September 2026): adopting already-present packages is
+  recorded as provenance by the same constructor and receipt as an install,
+  with this mutation's manifest qualifier, request id and owner id; the kind
+  is derived from the missing set and validation refuses the two disagreeing
+  in either direction. No finalization rule was relaxed: a foreign or stale
+  receipt is still refused and a missing receipt is still unacceptable. An
+  install receipt still encodes to the bytes a released agent wrote.
+- Exit criteria: on a real VM whose target packages are preinstalled, the
+  first switch to that engine finalizes through the panel and the host stays
+  mutable; the rolled-back retry from the T5 cell converges.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

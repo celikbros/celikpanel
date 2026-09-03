@@ -64,7 +64,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-023 | Yüksek | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
 | R-024 | Orta | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Kurulum `systemctl enable` hatalarını yutar ve enable bağlarını hiç eşitlemez; taze bir sunucu iki birimi de devre dışı hâlde yeniden başlayabilir |
 | R-025 | Düşük | KARAR VERİLDİ / BELGE DALDA DÜZELTİLDİ | Belgelenen `git clone && sudo ./install.sh` yolculuğu, kurtarma temelinin kullanıcıya ait üst dizinleri reddetmesiyle çelişir |
-| R-026 | Yüksek | AÇIK / S-9 T5 CANLIDA DÜŞTÜ / DÜZELTME BEKLİYOR | PowerDNS geçiş geri alması yedek ana dosyayı atılan neslin WAL/SHM dosyalarının altına koydu ve canlı veritabanı bozuk kaldı |
+| R-026 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | PowerDNS geçiş geri alması yedek ana dosyayı atılan neslin WAL/SHM dosyalarının altına koydu ve canlı veritabanı bozuk kaldı |
 | R-027 | Düşük | BELGELENMİŞ SINIR | PowerDNS yetkisi yalnız APT/Debian/systemd için onaylıdır; Arch PowerDNS'i devralamaz ya da ona geçemez; Arch kanıtları yalnız-BIND yolculukları kullanmalıdır |
 | R-028 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin içindeki etkin-BIND kanıtı, geçişin kendi kurulum korumasının az önce yarattığı pdns.service maskesini reddetti; PowerDNS kurması gereken her geçiş kaynak kanıtında düştü |
 | R-029 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Hiç motor çalıştırmamış sunucuda DNS kimlik hazırlama, bölgeler beklediği için reddetti; oysa böyle bir sunucuda her bölge yapısı gereği bekler; DNS'i kurmadan önce alan adı eklemek ilk motor kurulumunu ulaşılamaz kılıyordu |
@@ -76,6 +76,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-035 | Orta | AÇIK / TASARIM | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
 | R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
 | R-037 | Orta | BULUNDU / ÇALIŞMA KOPYASI ONARILDI / KORUMA BEKLİYOR | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
+| R-038 | Kritik | BULUNDU / DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | DNS motoru paketleri zaten kurulu olan sunucuda o motor hiç etkinleştirilemiyordu: geçiş hiçbir şey kurmuyor, kaynak kaydı yazmıyor ve tamamlama reddediyordu |
 
 ## Ayrıntılı riskler
 
@@ -882,6 +883,13 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   benimseyen geçiş, bu benimsemeyi kurulum gibi kaynak kaydı olarak yazmalı.
   Harness paketleri önceden kurmuştu; bu, zaten kurulu her sunucunun
   sunduğu durumun aynısı.
+- T5 notunun düzeltmesi (3 Eylül 2026): geri alma hedefin makbuzlarını
+  silmedi. Kanıt (`t5-proof.json`, `pdns_preinstall`) harness'in hedef
+  paketleri ölçülen geçişten önce kurduğunu gösteriyor; yani ilk geçiş de
+  eksik paket bulamadı ve hiç makbuz yazmadı. Kusur bu yüzden yeniden
+  denemeye özgü değil ve gerçek kapsamı R-038'de kayıtlı.
+- Dalda düzeltildi (3 Eylül 2026), R-038 ile birlikte: benimseme, eksik
+  kümesi boş bir kurulumdur; aynı yapıcı, aynı makbuz, bu işlemin kimliği.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-027 - PowerDNS yetkisi tasarım gereği yalnız APT
@@ -1231,6 +1239,37 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Koruma bekliyor: sürüm işi ya da ucuz bir sözleşme testi, gömülü bir göçün
   baytları izlenen baytlardan farklıysa düşmeli; böylece bu bir daha
   veritabanı sorunu diye teşhis edilmesin.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-038 - Önceden kurulu bir DNS motoru hiç etkinleştirilemiyordu
+
+- Kanıt: S-9 T5 hücresi, 3 Eylül 2026, ve arkasındaki kod yolu. Her geçiş
+  eksik paket kümesini kurar ve ona göre dallanır. Kurulum dalı, kurulumdan
+  önce bir kurulum sahiplik makbuzu yazar; atlama dalı ise R-028/R-029 için
+  yazılmış, var olan makbuzu yeniden bağlayan bir yardımcıyı çağırıyor ve
+  ortada makbuz yoksa hiçbir şey yazmadan başarı dönüyordu
+  (`cmd/agent/dns_engine_ownership.go`). Tamamlama sonra `committed DNS
+  engine switch has no exact install or active ownership provenance` ile
+  reddediyor ve işlem yöneticisi kapalı hataya düşüyordu. Makbuz zaten
+  ifade edilemiyordu: hem yapıcı hem doğrulayıcı boş olmayan bir eksik kümesi
+  istiyordu.
+- Etki: hedefin paketlerini zaten taşıyan her sunucu - bind9 içeren bir
+  sağlayıcı imajı, yeniden kurulmuş bir makine, paketi elle kuran bir
+  operatör, geri alınmış bir deneme - o motoru panelden hiç
+  etkinleştiremiyor ve hata kendini açıklamak yerine sunucunun işlemlerini
+  kilitliyor. Bu, sıradan bir kiralık sunucuda ilk kurulum yolu; uç durum
+  değil. Kabul kampanyası bunu yalnız fikstürü paketleri önceden kurduğu
+  için buldu.
+- Dalda düzeltme (3 Eylül 2026): zaten kurulu paketleri yönetime almak,
+  kurulumla aynı yapıcı ve aynı makbuzla, bu işlemin manifest niteleyicisi,
+  istek ve sahip kimliğiyle kaynak kaydı olarak yazılıyor; tür eksik
+  kümesinden türetiliyor ve doğrulama ikisinin her iki yönde de
+  uyuşmamasını reddediyor. Tamamlama kuralları gevşetilmedi: yabancı ya da
+  bayat makbuz hâlâ reddediliyor, eksik makbuz hâlâ kabul edilmiyor. Kurulum
+  makbuzu hâlâ yayınlanmış bir agent'ın yazdığı baytlara kodlanıyor.
+- Çıkış ölçütü: hedef paketleri önceden kurulu gerçek bir VM'de o motora ilk
+  geçiş panelden tamamlanıyor ve sunucu işlem yapabilir kalıyor; T5
+  hücresindeki geri alınmış yeniden deneme sonuçlanıyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
