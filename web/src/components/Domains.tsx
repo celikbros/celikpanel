@@ -98,9 +98,22 @@ export function Domains() {
     }, [isTeamMember]);
     const dnsReadinessKnown = dnsServer !== null && dnsIdentityReady !== null;
     const dnsMissing = !dnsReadinessKnown || dnsServer === '' || dnsIdentityReady !== true;
-    const openDNSRequirement = () => navigate(
-        dnsServer === '' ? '/services' : '/settings?section=dns',
-    );
+    // Whether an engine is missing or only its identity is, the DNS
+    // infrastructure section is where it gets fixed; the Services page can no
+    // longer install a DNS engine (DNS_ENGINE_WORKFLOW_REQUIRED), so a fresh
+    // host sent there had nowhere to go (R-029, screen side).
+    // Motor mu eksik yoksa yalnız kimliği mi, düzelten yer DNS altyapısı
+    // bölümüdür; Servisler sayfası artık DNS motoru kuramaz
+    // (DNS_ENGINE_WORKFLOW_REQUIRED), oraya gönderilen taze sunucunun gidecek
+    // yeri yoktu (R-029, ekran tarafı).
+    const openDNSRequirement = () => navigate('/settings?section=dns');
+    // Name the half that is missing: no engine at all, or an engine whose
+    // identity is not staged yet. The same key feeds the button label.
+    // Eksik yarıyı adlandır: hiç motor yok ya da kimliği henüz hazırlanmamış
+    // bir motor var. Aynı anahtar düğme etiketini de besler.
+    const dnsRequirementText = dnsServer === ''
+        ? t('domains.add.needsDns')
+        : t('err.DNS_SETTINGS_REQUIRED');
 
     useEffect(() => {
         loadDomains();
@@ -177,7 +190,7 @@ export function Domains() {
                 subtitle={accessError || t('domains.subtitle')}
                 breadcrumb={[t('common.home'), t('nav.domains')]}
                 actions={!isTeamMember && (
-                    <span title={dnsMissing ? t('domains.add.needsDns') : undefined}>
+                    <span title={dnsMissing ? dnsRequirementText : undefined}>
                         <Button variant="primary" icon={Plus} disabled={dnsMissing} onClick={() => setShowAddModal(true)}>
                             {t('domains.add')}
                         </Button>
@@ -193,7 +206,7 @@ export function Domains() {
                 <EmptyState
                     icon={Globe}
                     title={t('domains.empty')}
-                    hint={dnsMissing ? t('domains.add.needsDns') : t('domains.emptyHint')}
+                    hint={dnsMissing ? dnsRequirementText : t('domains.emptyHint')}
                     action={!isTeamMember && dnsReadinessKnown && (
                         dnsMissing ? (
                             // The honest next step is not a dead Add button but
@@ -202,7 +215,7 @@ export function Domains() {
                             // gereksinimin karşılandığı sayfadır.
                             <Button variant="primary" icon={Settings} onClick={openDNSRequirement}>
                                 {dnsServer === ''
-                                    ? t('domains.goServices')
+                                    ? t('err.DNS_SERVER_REQUIRED.action')
                                     : t('err.DNS_SETTINGS_REQUIRED.action')}
                             </Button>
                         ) : (
@@ -296,7 +309,7 @@ export function Domains() {
                                                     {d.domain_name}
                                                 </button>
                                                 {d.parent_id ? (
-                                                    <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-fg-subtle">
+                                                    <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-fg-subtle">
                                                         {t('domains.subdomain')}
                                                     </span>
                                                 ) : null}

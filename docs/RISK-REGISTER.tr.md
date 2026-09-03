@@ -916,6 +916,13 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   bu, agent'ın DNS arka uç hazırlık RPC'si düştüğünde panelin ürettiği
   biçimdir; ham gövde ve Arch agent günlüğü saklanmadı, sebep bilinmiyor ve
   ikinci kat kanıtsız. Sonraki koşu önizleme anında agent günlüğünü toplamalı.
+- Ekran tarafı (3 Eylül 2026): alan adı ekleme penceresi ve boş alan adı
+  listesi taze sunucuya "Ayarlar'da BIND ya da PowerDNS seçip etkinleştirin"
+  deyip onu Servisler sayfasına gönderiyordu; o sayfa DNS motoru kurmayı
+  reddeder (`DNS_ENGINE_WORKFLOW_REQUIRED`). İkisi de artık DNS altyapısı
+  bölümünü açıyor ve hangi yarının eksik olduğunu söylüyor: motor yok ("DNS
+  motoru seç") ya da kimliği hazırlanmamış motor ("DNS çiftini yapılandır");
+  ikisi için tek cümle yerine.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-030 - Durum sondası defteri hiç kalkmamış agent'ı göremiyor

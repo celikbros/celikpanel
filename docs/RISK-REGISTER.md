@@ -924,6 +924,13 @@ or executed as-is. There are no open pull requests at this baseline.
   readiness RPC fails; the raw body and the Arch agent journal were not
   retained, so the cause is unknown and the second layer is unproven. The
   next run must capture the agent journal at preview time.
+- Screen side (3 September 2026): the add-domain dialog and the empty domain
+  list told a fresh host to "choose and activate BIND or PowerDNS in Settings"
+  and then sent it to the Services page, which refuses to install a DNS
+  engine (`DNS_ENGINE_WORKFLOW_REQUIRED`). Both now open the DNS
+  infrastructure section, and both say which half is missing: no engine
+  ("Choose a DNS engine") or an engine without staged identity ("Configure
+  the DNS pair"), instead of one sentence for both.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-030 - A status probe cannot see an agent whose ledger never came up
