@@ -61,8 +61,14 @@ detected and the archive is retried, not shipped.
   once when the feature is enabled, shown to the operator once, never stored on
   the host in plaintext, and never written to the database. The screen says in
   plain words: "Without this key the archive cannot be opened, by us or by
-  anyone." Envelope: age-style X25519 recipient or a passphrase-derived key
-  (scrypt); the decision is recorded in D-023 before implementation.
+  anyone." Envelope (D-023, decided 3 September 2026): the product generates
+  a random 256-bit key and prints it once as `cpk1-…` (Crockford base32 in
+  4-character groups); the archive key is derived from it with argon2id
+  (parameters in the archive header, random 16-byte salt) and the payload is
+  AES-256-GCM in 64 KiB chunks with the age STREAM nonce scheme, the header
+  as associated data. argon2id and AES-GCM are already in the product; no
+  new dependency. A wrong key or a flipped bit fails before any member is
+  placed.
 - Written under `/var/backups/celikpanel/control-plane/` as root 0600, fsynced,
   then optionally pushed to the same remote target and retention as domain
   backups (v2; see §7).
@@ -73,7 +79,13 @@ Restore is a fresh-host operation and nothing else. It runs before the panel
 has any state of its own, so there is never a merge and never a second identity.
 
 1. Install the same or a newer release on a clean host through `install.sh`.
-2. Provide the archive and the backup key at first run: the install script
+2. Slice 1 (on the branch): three one-shot modes of the panel binary, run as
+   root: `--generate-control-plane-key`,
+   `--create-control-plane-archive=<path> --control-plane-key-file=-` and
+   `--restore-control-plane-archive=<path> --control-plane-key-file=-`. The
+   key arrives on stdin with the same discipline as the first-administrator
+   credentials (root-only regular file or a bounded pipe).
+   Slice 2 provides the archive and the backup key at first run: the install script
    accepts `CELIKPANEL_RESTORE_ARCHIVE=/absolute/root-only/file` and reads the
    key the same way it reads the first-administrator credentials today
    (root-only file, inherited on stdin, consumed); the panel's first-run screen
@@ -119,8 +131,7 @@ Each is a register entry of its own when it starts.
 
 ## 8. Open decisions
 
-- D-023: archive envelope (X25519 recipient vs passphrase). Recommendation:
-  passphrase with scrypt, because the operator must be able to type it into a
-  fresh host with nothing else at hand.
+- D-023 is settled (see §4); the generated key is typed or pasted into the
+  fresh host, nothing else is needed.
 - Whether the pre-update release snapshot should simply become a control-plane
   archive, retiring one of two mechanisms.

@@ -57,7 +57,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-017 | High | OPEN | A production panel heartbeat deterministically poisons a DNS engine switch that installs packages |
 | R-018 | Medium | FIXED ON BRANCH / PROVEN ON AN ARCH GUEST / REAL VM PENDING | The Arch BIND path was never wired end to end: root-anchor rule, managed root, config ownership, stock options and journal shape each assumed Debian; all five now follow the pacman package and a fresh Arch host reaches a serving BIND |
 | R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
-| R-020 | Low | REBALANCED ON BRANCH / CI PROOF PENDING PUSH | The CI race shard for `D` ran at 88 percent of its 8-minute ceiling on `main`; the local 30-minute single-process run sits at 80 percent |
+| R-020 | Low | REBALANCED ON BRANCH / CI MEASURED / TWO SHARDS OVER THE LINE | The CI race shard for `D` ran at 88 percent of its 8-minute ceiling on `main`; the local 30-minute single-process run sits at 80 percent |
 | R-021 | Low | RESOLVED / INVENTORY CORRECTED | Both hosts were rebuilt; identity is confirmed and the inventory now records Ubuntu and Debian 13. No Arch host remains in our inventory |
 | R-022 | Critical | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `install.sh` sources the release transaction guard before any trusted release root exists, so a clean installation exits before it begins |
 | R-023 | High | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
@@ -587,6 +587,12 @@ or executed as-is. There are no open pull requests at this baseline.
   `Race-test panel boundaries` step under 240 s. The local single-process
   ceiling stays at 30 minutes with the elapsed time reported per acceptance
   run.
+- Measured (3 September 2026, PR #78, run 33733419870): all ten shards
+  green; `Race-test panel boundaries` step times were D-except-DNS 257 s,
+  DNS engine and zone 248 s, N-Q 226 s, L-M 208 s, E-K 206 s, S-except-service
+  201 s, A-C 191 s, T-Z 190 s, R 151 s, Service 97 s. Two shards sit above the
+  240 s exit line by seconds. The rule stands: those two are split next, the
+  ceiling is not raised. Not a merge blocker for PR #78.
 
 ### R-021 - Deployment host identity does not match the inventory
 

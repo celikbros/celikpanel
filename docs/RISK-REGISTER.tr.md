@@ -58,7 +58,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-017 | Yüksek | AÇIK | Üretim panelinin kalp atışı, paket kuran bir DNS motoru geçişini belirlenimci biçimde zehirler |
 | R-018 | Orta | DALDA DÜZELTİLDİ / ARCH KONUĞUNDA KANITLANDI / GERÇEK VM BEKLİYOR | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
 | R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
-| R-020 | Düşük | DALDA YENİDEN DENGELENDİ / CI KANITI İTMEYİ BEKLİYOR | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
+| R-020 | Düşük | DALDA YENİDEN DENGELENDİ / CI ÖLÇÜLDÜ / İKİ PARÇA ÇİZGİNİN ÜSTÜNDE | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
 | R-021 | Düşük | ÇÖZÜLDÜ / ENVANTER DÜZELTİLDİ | İki sunucu da yeniden kuruldu; kimlik doğrulandı ve envanter artık Ubuntu ile Debian 13 yazıyor. Envanterimizde Arch sunucu kalmadı |
 | R-022 | Kritik | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | `install.sh`, güvenilen sürüm kökü var olmadan sürüm işlem korumasını source ediyor; temiz kurulum başlamadan çıkıyor |
 | R-023 | Yüksek | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
@@ -590,6 +590,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü (güncellendi): dalın ilk CI koşusunda her
   `Race-test panel boundaries` adımı 240 saniyenin altında kalır. Yerel tek
   süreçli tavan 30 dakikada kalır ve geçen süre her kabul koşusunda raporlanır.
+- Ölçüm (3 Eylül 2026, PR #78, koşu 33733419870): on parçanın hepsi yeşil;
+  `Race-test panel boundaries` adım süreleri D-DNS-hariç 257 sn, DNS motoru ve
+  bölge 248 sn, N-Q 226 sn, L-M 208 sn, E-K 206 sn, S-servis-hariç 201 sn,
+  A-C 191 sn, T-Z 190 sn, R 151 sn, Servis 97 sn. İki parça 240 sn çıkış
+  çizgisinin saniyelerle üstünde. Kural geçerli: bu ikisi sırada bölünür, tavan
+  yükseltilmez. PR #78 için birleştirme engeli değil.
 
 ### R-021 - Kurulum sunucusu kimliği envanterle uyuşmuyor
 
