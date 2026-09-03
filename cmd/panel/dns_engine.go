@@ -134,6 +134,7 @@ type dnsEngineSwitchPreview struct {
 	DNSSECZoneCount                 int                       `json:"dnssec_zone_count"`
 	EstimatedDowntimeSeconds        int                       `json:"estimated_downtime_seconds"`
 	RequiresDowntimeAcknowledgement bool                      `json:"requires_downtime_acknowledgement"`
+	RequiresAdoptionAcknowledgement bool                      `json:"requires_adoption_acknowledgement"`
 	Blockers                        []dnsEnginePreviewBlocker `json:"blockers"`
 	Impacts                         []string                  `json:"impacts"`
 }
@@ -151,6 +152,19 @@ type dnsEngineSwitchRequest struct {
 	ExpectedRevision     int64               `json:"expected_revision"`
 	PreviewToken         string              `json:"preview_token"`
 	DowntimeAcknowledged bool                `json:"downtime_acknowledged"`
+	// AdoptionAcknowledged is deliberately not DowntimeAcknowledged under
+	// another name. Downtime says "answers may stop for a moment"; this says
+	// "a DNS server you did not set up here is about to be reconfigured, and
+	// it will stop serving whatever the panel does not know about". Folding
+	// the two together would let a click meant for the first stand in for the
+	// second.
+	//
+	// AdoptionAcknowledged, DowntimeAcknowledged'in başka adı değildir. Kesinti
+	// "yanıtlar bir an duraklayabilir" der; bu ise "burada sizin kurmadığınız
+	// bir DNS sunucusu yeniden yapılandırılacak ve panelin bilmediği ne varsa
+	// sunmayı bırakacak" der. İkisini birleştirmek, birincisi için yapılan bir
+	// tıklamanın ikincisinin yerine geçmesine izin verirdi.
+	AdoptionAcknowledged bool `json:"adoption_acknowledged"`
 }
 
 type dnsEnginePreviewAuthority struct {
@@ -845,6 +859,109 @@ func reinstallableActiveDNSEngine(
 		snapshot.PairRole == "" && !runtime.Running
 }
 
+// dnsEngineActionAdoptUnmanaged names the explicit, informed takeover of a DNS
+// server CelikPanel did not install. The host shape is ordinary and was, until
+// now, a dead end: a provider image or an operator put the engine's packages on
+// disk, nothing was ever configured, nothing is serving, and the panel has no
+// ledger entry naming it. The preview called that "switch" and then refused it
+// with target_unavailable and unmanaged_dns_detected, the service screens sent
+// the operator back to the screen that refuses, and the only way out was to
+// purge the package over SSH — which the product forbids (register R-038).
+//
+// The refusal had the facts right and the conclusion wrong. What is missing is
+// not a proof, it is consent: adopting replaces that server's configuration
+// with the panel's, and anything it serves today which the panel does not know
+// about stops being served. So the panel names the takeover, says that in plain
+// words and asks for its own acknowledgement, separate from the downtime one
+// because the operator is agreeing to a different thing. Nothing else moves:
+// the commit runs the ordinary first-install transaction, and the agent still
+// proves independently that the target is not serving and that it owns every
+// byte it writes.
+//
+// dnsEngineActionAdoptUnmanaged, CelikPanel'in kurmadığı bir DNS sunucusunun
+// açık ve bilgilendirilmiş devralınmasını adlandırır. Sunucu biçimi sıradandır
+// ve bugüne kadar çıkmazdı: bir sağlayıcı imajı ya da bir operatör motorun
+// paketlerini diske koymuştur, hiçbir şey yapılandırılmamıştır, hiçbir şey
+// hizmet vermemektedir ve panelin defterinde onu adlandıran bir kayıt yoktur.
+// Önizleme buna "switch" deyip target_unavailable ve unmanaged_dns_detected ile
+// reddediyor, servis ekranları operatörü reddeden ekrana geri gönderiyor ve tek
+// çıkış paketi SSH ile kaldırmak oluyordu — ürünün yasakladığı şey (defter
+// R-038).
+//
+// Ret, olguları doğru, sonucu yanlış kuruyordu. Eksik olan bir kanıt değil,
+// rızadır: devralma o sunucunun yapılandırmasını panelinkiyle değiştirir ve
+// bugün sunduğu, panelin bilmediği her şey sunulmaz olur. Bu yüzden panel
+// devralmayı adıyla anar, bunu düz sözlerle söyler ve kesinti onayından ayrı
+// kendi onayını ister; çünkü operatör başka bir şeye rıza göstermektedir. Başka
+// hiçbir şey gevşemez: commit sıradan ilk kurulum işlemini çalıştırır ve agent,
+// hedefin hizmet vermediğini ve yazdığı her baytın sahibi olduğunu bağımsız
+// olarak yine kanıtlar.
+const dnsEngineActionAdoptUnmanaged = "adopt_unmanaged"
+
+// adoptableUnmanagedDNSEngine is the exact host shape the takeover answers, and
+// it is deliberately the shape the agent already accepts without a single
+// change: BIND on disk, its units in the stock shape apt leaves behind, nothing
+// listening, no durable authority recorded, and a saved standalone identity to
+// publish. A running unmanaged engine is NOT this shape and must not be offered
+// here — stopping a server that is answering queries right now is a different
+// operation with a different proof, and a preview must never offer an adoption
+// the agent will refuse.
+//
+// The distinguishing fact is Running, and it is trustworthy because the agent's
+// readiness probe refuses to answer at all for a BIND whose unit topology is
+// mixed, masked-but-unsealed or failed; a runtime error becomes
+// target_unavailable a few lines below. So "the probe answered, the target is
+// installed, unmanaged and not running" is exactly "the agent's not-serving
+// proof will pass".
+//
+// adoptableUnmanagedDNSEngine, devralmanın yanıtladığı kesin sunucu biçimidir
+// ve bilerek agent'ın tek bir değişiklik olmadan zaten kabul ettiği biçimdir:
+// diskte BIND, birimleri apt'nin bıraktığı stok biçimde, dinleyen bir şey yok,
+// kayıtlı kalıcı yetki yok ve yayımlanacak kayıtlı tek sunucu kimliği var.
+// Çalışan bir panel dışı motor bu biçim DEĞİLDİR ve burada sunulmamalıdır: şu
+// anda sorgu yanıtlayan bir sunucuyu durdurmak, başka kanıtı olan başka bir
+// işlemdir ve bir önizleme, agent'ın reddedeceği bir devralmayı asla sunmamalı.
+//
+// Ayırt eden olgu Running'dir ve güvenilirdir; çünkü agent'ın hazırlık yoklaması
+// birim topolojisi karışık, mühürsüz maskeli ya da düşmüş bir BIND için hiç
+// cevap vermez; çalışma zamanı hatası birkaç satır aşağıda target_unavailable
+// olur. Dolayısıyla "yoklama cevapladı, hedef kurulu, panel dışı ve çalışmıyor",
+// tam olarak "agent'ın hizmet-vermiyor kanıtı geçecek" demektir.
+func adoptableUnmanagedDNSEngine(
+	snapshot dnsEngineSnapshot,
+	target transport.DNSEngine,
+) bool {
+	if target != transport.DNSEngineBIND {
+		return false
+	}
+	if snapshot.runtimeErr != nil || snapshot.port53Conflict {
+		return false
+	}
+	if snapshot.ActiveEngine != nil || snapshot.EngineEpoch != 0 ||
+		snapshot.State != dnsEngineStateUnconfigured {
+		return false
+	}
+	if snapshot.Topology != transport.DNSTopologyStandalone ||
+		snapshot.PairRole != "" {
+		return false
+	}
+	runtime := snapshot.runtime[target]
+	if !runtime.Installed || runtime.Running || runtime.Managed {
+		return false
+	}
+	// "No engine is active" is the register's own wording and is proven here
+	// directly rather than inferred from the presentation string.
+	//
+	// "Hiçbir motor etkin değil", defterin kendi ifadesidir ve burada sunum
+	// dizesinden çıkarsanmak yerine doğrudan kanıtlanır.
+	for engine, other := range snapshot.runtime {
+		if engine != target && other.Running {
+			return false
+		}
+	}
+	return true
+}
+
 func dnsEngineAction(
 	snapshot dnsEngineSnapshot,
 	target transport.DNSEngine,
@@ -865,6 +982,9 @@ func dnsEngineAction(
 		target == transport.DNSEngineBIND &&
 		!runtime.Running && runtime.Managed {
 		return "install"
+	}
+	if adoptableUnmanagedDNSEngine(snapshot, target) {
+		return dnsEngineActionAdoptUnmanaged
 	}
 	if snapshot.ActiveEngine == nil &&
 		target == transport.DNSEnginePowerDNS &&
@@ -890,6 +1010,21 @@ func dnsEngineAction(
 func dnsEngineImpacts(action string, hasSource bool) []string {
 	if action == "adopt" {
 		return []string{"validate_target", "adopt_existing"}
+	}
+	// The takeover installs nothing and stops nothing, so it lists neither.
+	// What it does list is the part the operator is actually consenting to:
+	// the existing configuration is replaced, and whatever that server answers
+	// today which the panel does not know about stops being answered.
+	//
+	// Devralma hiçbir şey kurmaz ve hiçbir şey durdurmaz; ikisini de saymaz.
+	// Saydığı şey, operatörün gerçekten rıza gösterdiği kısımdır: mevcut
+	// yapılandırma değiştirilir ve o sunucunun bugün yanıtladığı, panelin
+	// bilmediği ne varsa yanıtlanmaz olur.
+	if action == dnsEngineActionAdoptUnmanaged {
+		return []string{
+			"replace_foreign_config", "validate_target", "publish_zones",
+			"start_target", "drop_unknown_zones",
+		}
 	}
 	// Nothing is serving, so nothing stops and nothing is interrupted. Listing
 	// stop_source or brief_dns_interruption here would promise a cost that
@@ -1029,6 +1164,7 @@ func dnsEnginePreviewBlockers(
 	// runtime state proves the server is not unconfigured, must stop at preview.
 	if snapshot.ActiveEngine == nil &&
 		action != "adopt" && action != "reconfigure" &&
+		action != dnsEngineActionAdoptUnmanaged &&
 		(action == "switch" || snapshot.State != dnsEngineStateUnconfigured) {
 		blockers = addDNSEngineBlocker(blockers, "target_unavailable")
 	}
@@ -1047,7 +1183,15 @@ func dnsEnginePreviewBlockers(
 	// sahibi olduğu sunucunun durdurulmuş bir kopyasıdır; her ikisinde de onarım
 	// yeniden kurulumdur. Agent, hiçbir şeye dokunmadan önce etkin çağdaki
 	// sahipliği yine de kanıtlar; burada hiçbir şey güvene bırakılmaz.
-	if !reinstall && targetRuntime.Installed && !targetRuntime.Managed {
+	// The takeover is the answer to unmanaged_dns_detected, not something the
+	// blocker may refuse: adoptableUnmanagedDNSEngine has already proven the
+	// exact shape, and the action itself carries the operator's consent to it.
+	//
+	// Devralma, unmanaged_dns_detected'in cevabıdır; engelleyicinin
+	// reddedebileceği bir şey değil: adoptableUnmanagedDNSEngine kesin biçimi
+	// çoktan kanıtlamıştır ve eylemin kendisi operatörün buna rızasını taşır.
+	if !reinstall && action != dnsEngineActionAdoptUnmanaged &&
+		targetRuntime.Installed && !targetRuntime.Managed {
 		blockers = addDNSEngineBlocker(blockers, "unmanaged_dns_detected")
 	}
 	if action == "adopt" &&
@@ -1450,6 +1594,7 @@ func (p *Panel) makeDNSEnginePreview(
 		PendingZoneCount:                snapshot.PendingZoneCount,
 		DNSSECZoneCount:                 snapshot.DNSSECZoneCount,
 		RequiresDowntimeAcknowledgement: requiresAck,
+		RequiresAdoptionAcknowledgement: action == dnsEngineActionAdoptUnmanaged,
 		Blockers:                        blockers, Impacts: dnsEngineImpacts(action, hasSource),
 	}
 	if requiresAck {
@@ -1555,8 +1700,18 @@ func validateInitialBINDInstallReconcileScope(
 			persisted.LocalIP != "" && persisted.LocalNS != "" &&
 			persisted.PeerIP != "" && persisted.PeerNS != ""
 	}
+	// A takeover is a first install whose packages happened to be there
+	// already: same mode, same absent source, same epoch 0 to 1, same target.
+	// Leaving it outside this scope would give the one shape R-038 exists for
+	// a failure with no repair, which is the wedge, not the fix.
+	//
+	// Devralma, paketleri zaten orada olan bir ilk kurulumdur: aynı kip, aynı
+	// yok kaynak, aynı 0'dan 1'e çağ, aynı hedef. Onu bu kapsamın dışında
+	// bırakmak, R-038'in var olma sebebi olan biçime onarımsız bir
+	// başarısızlık verirdi; bu düzeltme değil, tam da o çıkmazdır.
 	if persisted.Mode != transport.DNSEngineSwitchModeSwitch ||
-		persisted.Action != "install" ||
+		(persisted.Action != "install" &&
+			persisted.Action != dnsEngineActionAdoptUnmanaged) ||
 		persisted.SourceEngine != "" ||
 		persisted.SourceEpoch != 0 ||
 		persisted.TargetEngine != transport.DNSEngineBIND ||
@@ -3409,6 +3564,12 @@ func (p *Panel) handleDNSEngineSwitch(
 		action != dnsEngineActionReinstall && !request.DowntimeAcknowledged {
 		writeClientError(w, http.StatusBadRequest,
 			"downtime acknowledgement is required")
+		return
+	}
+	if action == dnsEngineActionAdoptUnmanaged &&
+		!request.AdoptionAcknowledged {
+		writeClientError(w, http.StatusBadRequest,
+			"adoption acknowledgement is required")
 		return
 	}
 	state, err := readDNSEngineDBState(r.Context(), p.db.GetDB())
