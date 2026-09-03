@@ -77,6 +77,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
 | R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
 | R-038 | Kritik | AÇIK / AGENT YARISI DÜZELTİLDİ / PANEL O KATMANA VARMADAN REDDEDİYOR / CANLI KANITLI | DNS motorunun paketlerini zaten taşıyan sunucu o motoru hiç etkinleştiremiyor: panel onu yönetilmeyen sayıp reddediyor ve ileri giden bir yol sunmuyor; servis ekranları da operatörü reddeden ekrana geri yolluyor |
+| R-039 | Yüksek | AÇIK / TASARIM BELİRLENDİ | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
+| R-040 | Yüksek | BULUNDU / DÜZELTME SÜRÜYOR | Servis listesi, hiç taramadığı sunucu için "kurulu değil" diyor: gözlem yokluğu ile servis yokluğu aynı cevaba düşüyor |
+| R-041 | Orta | BULUNDU / DÜZELTME SÜRÜYOR | Web sözleşmesi, panelin zaten döndürdüğü `reinstall_active` eylemini çözemiyor; geri yüklenen sunucunun ihtiyaç duyduğu yeniden kurulum tarayıcıda geçersiz önizleme olarak görünüyor |
 
 ## Ayrıntılı riskler
 
@@ -1331,6 +1334,69 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   durdurulmuş halde, operatör BIND'i yalnız panelden etkinleştiriyor, bölge
   cevap veriyor ve geri alma sunucunun önceki yapılandırmasını geri
   getiriyor. Gerçek VM'de kanıtlı.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-039 - Çalışan bir DNS sunucusunu devralmak kalıcı ön-niyet kaydı ister
+
+- Kanıt: 3 Eylül 2026, R-038'in devralmasını uygularken koddan saptandı.
+  Yönetilmeyen motor durmuş ve devre dışıysa agent devralmayı uçtan uca zaten
+  kabul ediyor ve değişiklik gerekmiyor. Çalışıyorsa,
+  `proveBINDTargetNotServing`ın etkin birim için kabul eden bir dalı yok ve
+  53 numaralı bağlantı noktası ön-işlem koruması yabancı dinleyiciyi
+  reddediyor. İkisi de doğru ve dokunulmaz.
+- Neden küçük bir değişiklik değil: çalışan hali desteklemek, agent'ın
+  panelin sahibi olmadığı birimleri durdurup mühürlemesi ve bunu o kanıtlar
+  koşmadan önce yapması demek. Bugün en erken kalıcı kayıt olan geçiş
+  niyeti, kurulum ve mühürleme adımından epey sonra yazılıyor; kurulum
+  koruması önceki durumu yalnız bellekte tutuyor. Bugün o aralıktaki çökme
+  zararsız, çünkü hiçbir şey hizmet vermiyordu. Devralma sırasında ise
+  operatörün DNS'ini durdurulmuş ve mühürlenmiş, kurtarma kaydı olmadan
+  bırakır: tam da böyle bir boşluk olmasın diye yazılmış kodda yeni bir
+  kapalı-hata boşluğu.
+- Gerekenler: kendi kurtarma işlemesi olan kalıcı bir ön-niyet günlük evresi
+  ve yönetilmeyen bir motoru mühürleme yetkisinin işlem manifestosuna kendi
+  kipi olarak bağlanması, ki başka hiçbir işlem tarafından harcanamasın. Bu,
+  agent ve panelde yaklaşık on iki kip kontrolüne dokunur.
+- O zamana kadar: ürün, reddedip sebebini söylememek yerine, bu sunucuda
+  çalışan DNS sunucusunun devralınabilmesi için önce durdurulması gerektiğini
+  operatöre açıkça söyler. Durmuş hali R-038 kapsıyor.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-040 - "Hiç bakmadım", "kurulu değil" diye raporlanıyor
+
+- Kanıt: 3 Eylül 2026, R-038 konuğunda canlı. Aynı sunucuda aynı anda
+  `GET /api/v1/dns/engine` bind için `installed: true` derken
+  `GET /api/v1/managed-services` `is_installed: false`,
+  `status: "not_installed"`, `scanned_at: null` dedi. Kök neden: yönetilen
+  servisler işleyicisi hiç sonda atmıyor; bileşen tarama önbelleğini okuyor
+  ve satır yoksa kataloğu boş bir gözlemden kurup yine gönderiyor, böylece
+  her servis kurulu değil olarak kodlanıyor. DNS motoru yüzeyi ise her
+  istekte sunucuyu canlı yokluyor.
+- Etki: insanın "sunucumda ne var" diye açtığı ekran, ürünün hiç
+  bakmadığı bir şeyi olgu gibi söylüyor ve aynı oturumdaki başka bir ekranla
+  çelişiyor. Geri yüklenmiş ya da yeni kurulmuş sunucuda, henüz tarama
+  olmadığı için her şey yok görünüyor.
+- Birlikte çözülecek ikinci gerçek ayrışma: tarama taze olsa bile iki yüzey
+  farklı soru soruyor - bileşen taraması systemd birimlerinden, DNS motoru
+  yüzeyi paket veritabanından karar veriyor. DNS akışının bilerek yarattığı
+  mühürlü bir motor, ikisinde haklı olarak farklı okunabilir.
+- Düzeltme: tel üzerinde "gözlenmedi" ile "kurulu değil" ayrılmalı; ekran
+  "henüz denetlenmedi" deyip denetimi önermeli. Kataloğun boş tarama
+  zamanıyla sunulduğunu doğrulayan mevcut test şu an kusuru kutsuyor ve
+  onunla birlikte değişmeli.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-041 - Tarayıcı, API'nin zaten döndürdüğü bir eylemi çözemiyor
+
+- Kanıt: 3 Eylül 2026. Panel aynı gün gönderilen `reinstall_active` önizleme
+  eylemini döndürüyor, web sözleşmesinin eylem listesinde bu yok; önizleme
+  null'a çözülüyor ve pencere geçersiz önizleme diyor. Eylem API üzerinden
+  canlı kanıtlanmıştı, tarayıcıdan değil; bu yüzden fark edilmedi.
+- Etki: geri yüklenmiş bir sunucunun DNS sunucusunu geri getirmek için tek
+  yolu, paneli müşteri gibi kullanan hiç kimse için erişilebilir değil.
+- Düzeltme: gönderilen eylemi çöz ve eylem kümesini, API'nin döndürebildiği
+  ama tarayıcının çizemediği bir şey olduğunda düşen bir testle sabitle ki bu
+  sınıf tekrarlamasın.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

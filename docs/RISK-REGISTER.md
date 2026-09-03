@@ -76,6 +76,9 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-036 | Medium | OPEN / DESIGN | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
 | R-037 | Medium | GUARDED ON BRANCH / A SECOND EMBED WAS AFFECTED AND IS FIXED | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
 | R-038 | Critical | OPEN / AGENT HALF FIXED / PANEL REFUSES BEFORE REACHING IT / PROVEN LIVE | A host that already carries the DNS engine's packages can never activate that engine: the panel refuses it as unmanaged and offers no way forward, and the service screens send the operator back to the screen that refuses |
+| R-039 | High | OPEN / DESIGN ESTABLISHED | Adopting a DNS server that is running and unmanaged needs a durable pre-intent record: the agent must stop a service it does not own before its proofs run, and a crash in that window would leave the operator's DNS stopped with nothing to recover from |
+| R-040 | High | FOUND / FIX IN PROGRESS | The service list reports a host it has never scanned as "not installed": no observation and no service serialise to the same answer |
+| R-041 | Medium | FOUND / FIX IN PROGRESS | The web contract does not decode the `reinstall_active` action the panel already returns, so the reinstall the restored host needs shows as an invalid preview in the browser |
 
 ## Detailed risks
 
@@ -1348,6 +1351,71 @@ or executed as-is. There are no open pull requests at this baseline.
   the running and the stopped shape, the operator activates BIND through the
   panel alone, the zone answers, and a rollback restores the configuration the
   host had before. Proven on a real VM.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-039 - Adopting a running DNS server needs a durable pre-intent record
+
+- Evidence: 3 September 2026, established from the code while implementing
+  R-038's takeover. With the unmanaged engine stopped and disabled the agent
+  already accepts the adoption end to end and needs no change. With it
+  running, `proveBINDTargetNotServing` has no accepting branch for an active
+  unit and the port 53 pre-mutation guard refuses the foreign listener. Both
+  are correct and are ring-fenced.
+- Why it is not a small change: making the running shape work means the agent
+  stops and seals units the panel does not own, and it must do that before
+  those proofs run. The earliest durable record today is the switch intent,
+  written well after the install and seal step; the install guard keeps its
+  before-state in memory only. Today a crash in that window is harmless
+  because nothing was serving. During an adoption it would leave the
+  operator's DNS stopped and masked with no recovery record - a new
+  fail-closed hole, in the code whose whole purpose is not to have one.
+- What it needs: a durable pre-intent journal phase with its own recovery
+  handling, and the authority to seal an unmanaged engine bound into the
+  mutation manifest as its own mode, so it cannot be spent by any other
+  operation. That reaches roughly a dozen mode checks in the agent and the
+  panel.
+- Until then: the product tells the operator plainly that the DNS server
+  running on this host must be stopped before it can be adopted, instead of
+  refusing without saying why. R-038 covers the stopped shape.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-040 - "I have never looked" is reported as "it is not installed"
+
+- Evidence: 3 September 2026, live on the R-038 guest. For the same host at
+  the same moment `GET /api/v1/dns/engine` reported bind `installed: true`
+  while `GET /api/v1/managed-services` reported `is_installed: false`,
+  `status: "not_installed"`, `scanned_at: null`. Root cause: the managed
+  services handler never probes; it reads the component scan cache, and when
+  there is no row it still ships the catalogue built from an empty
+  observation, so every service serialises as not installed. The DNS engine
+  surface probes the host live on every request.
+- Impact: the screen a person opens to see what is on their server states as
+  fact something the product has never checked, and it contradicts another
+  screen in the same session. On a restored or freshly installed host, where
+  there is no scan yet, everything reads as absent.
+- A second, real divergence to settle with it: even with a fresh scan the two
+  surfaces ask different questions - the component scan decides from systemd
+  units, the DNS engine surface from the package database. A masked engine,
+  which the DNS workflow deliberately creates, can legitimately read
+  differently on the two.
+- Fix: the wire must distinguish "not observed" from "not installed", and the
+  screen must say "not checked yet" and offer the check. The existing test
+  that asserts the catalogue is served with a null scan time currently
+  blesses the defect and has to change with it.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-041 - The browser cannot decode an action the API already returns
+
+- Evidence: 3 September 2026. The panel returns the `reinstall_active`
+  preview action shipped the same day, and the web contract's action list
+  does not include it, so the preview decodes to null and the dialog reports
+  an invalid preview. The action was proven live through the API, not through
+  the browser, which is exactly how this survived.
+- Impact: the one path a restored host has to bring its DNS server back is
+  unreachable for anyone using the panel the way a customer does.
+- Fix: decode the shipped action, and pin the action set with a test that
+  fails when the API can return something the browser cannot render, so this
+  class cannot recur.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
