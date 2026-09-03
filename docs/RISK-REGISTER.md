@@ -70,6 +70,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-030 | Medium | FIXED ON BRANCH | A read-only mutation status RPC failed outright when the agent's ledger could not be brought up or was poisoned at startup, so a probe could not tell a dead agent from one that is serving and refusing |
 | R-031 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Rolling back a BIND-to-PowerDNS switch re-enabled the bind9.service alias before named.service, which cannot succeed on APT hosts; the source BIND never came back and the recovery poisoned the ledger |
 | R-032 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Returning to an engine the host had used before, with the switch interrupted after package install, was read as the half-finished handover shape because the former engine's stranded ownership receipt is never retired; recovery poisoned the ledger on an ordinary operator action |
+| R-033 | High | FIXED ON BRANCH / LIVE PROOF PENDING | A first DNS engine install that failed after package install on a host with no state left an install receipt the abort proof called inconsistent, so the ledger was poisoned on the very first DNS action and stayed poisoned on every boot |
 
 ## Detailed risks
 
@@ -884,6 +885,16 @@ or executed as-is. There are no open pull requests at this baseline.
   It now applies only when a source engine is active, where pending means
   the source has not caught up. The fresh test walks staging through to a
   first-install preview with zero blockers.
+- Third layer, found live on Arch and reproduced on Debian (3 September
+  2026): with a pre-existing zone and no engine, the snapshot asked the agent
+  for the zone's DNSSEC status; the agent answers "unavailable because
+  PowerDNS is not the active engine" whenever PowerDNS is not active, the
+  presentation became `degraded`, and the preview refused with
+  `dnssec_unsupported`, `target_unavailable` and `source_degraded` at once -
+  the exact trio S-8's T1 observed and could not explain. A host with no
+  PowerDNS installed is no longer probed; an installed, not-yet-adopted
+  PowerDNS still is. After this fix the Arch preview passed with zero
+  blockers on the live guest.
 - Exit criteria: T1 re-run on current Arch reaches the BIND switch commit, and
   the reboot postcondition holds; that run is also the first live R-018 proof.
 - S-8 (3 September 2026): identity staging returned 200 on a fresh Arch
@@ -998,6 +1009,35 @@ or executed as-is. There are no open pull requests at this baseline.
   killed pre-intent) recovers with a clean failed job and a converging retry;
   the same host with a planted target-epoch receipt fails closed with
   `ledger_ambiguous`.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-033 - A failed first install poisons a fresh host
+
+- Evidence: live, 3 September 2026, on a fresh Arch guest (root `/` 0555)
+  driven through the public API with the `0eaf3a5…` candidate plus the R-029
+  third-layer panel fix. Preview passed with zero blockers; the commit
+  returned `503 DNS_ENGINE_MUTATIONS_HELD` with `ledger_ambiguous` in 4 s.
+  The agent journal: `DNS engine switch failure could not prove a pre-commit
+  abort: BIND directory is unsafe: /var/named`, then `reprove DNS engine
+  switch abort: finalized DNS engine provenance is inconsistent without active
+  state`, then `service mutation manager is fail-closed after an ambiguous
+  ledger write`. The host held `dns-engine-install-ownership-bind.json` and
+  nothing else. `exactFinalizedDNSEngineSwitchProvenanceOnHost` treated any
+  receipt without an active state as a contradiction, including the install
+  receipt that every failed-after-install first switch leaves behind.
+- Impact: on any distribution, the very first DNS engine install that fails
+  after package install wedges the host: every mutation refused,
+  `ledger_ambiguous` recomputed from the same receipt on every boot, no way out
+  short of deleting a file over SSH. The R-019 wedge on a fresh host's first
+  DNS action. Debian never showed it only because its first install never
+  failed.
+- Fix on branch (3 September 2026): an ownership receipt without state is
+  still a contradiction; an install receipt alone is residue - nothing ever
+  served - and recovery fails the job cleanly so the retry adopts the installed
+  packages. Linux tests cover both; the residue case is red on the unfixed tree
+  with the exact "inconsistent without active state" line.
+- Exit criteria: on the Arch guest, restarting the fixed agent clears the hold
+  and fails the job cleanly; the retried switch proceeds to the R-018 walk.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

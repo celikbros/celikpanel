@@ -680,7 +680,26 @@ func exactFinalizedDNSEngineSwitchProvenanceOnHost(
 		return false, fmt.Errorf("read finalized DNS engine install ownership: %w", err)
 	}
 	if !stateExists {
-		if ownershipExists || installExists {
+		// An ownership receipt with no active state is a real contradiction.
+		// An install receipt alone is not: on a host that has never had an
+		// engine, a first install that failed after package install leaves
+		// exactly this behind, and nothing ever served. Calling it an error
+		// meant the abort proof failed, the ledger was poisoned, and the poison
+		// was recomputed from that same install receipt on every boot - the
+		// R-019 wedge, on a fresh host, on the very first DNS action (live on
+		// Arch, 3 September 2026; register R-033). It is residue: fail the job
+		// cleanly and let the retry adopt the installed packages.
+		//
+		// Etkin durumu olmayan sahiplik makbuzu gerçek bir çelişkidir. Tek
+		// başına kurulum makbuzu değildir: hiç motoru olmamış bir sunucuda
+		// paket kurulumundan sonra düşen ilk kurulum geride tam bunu bırakır
+		// ve hiçbir şey hizmet vermemiştir. Buna hata demek iptal kanıtını
+		// düşürüyor, defteri zehirliyor ve zehir her açılışta aynı kurulum
+		// makbuzundan yeniden hesaplanıyordu - R-019 tıkanması, taze
+		// sunucuda, ilk DNS hareketinde (3 Eylül 2026'da Arch'ta canlı; defter
+		// R-033). Bu kalıntıdır: işi temizce düşür, yeniden deneme kurulu
+		// paketleri devralsın.
+		if ownershipExists {
 			return false, errors.New(
 				"finalized DNS engine provenance is inconsistent without active state",
 			)

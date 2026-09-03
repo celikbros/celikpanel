@@ -71,6 +71,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-030 | Orta | DALDA DÜZELTİLDİ | Agent'ın defteri ayağa kalkamadığında ya da başlangıçta zehirlendiğinde salt-okunur mutasyon durum RPC'si düpedüz düşüyordu; sonda ölü agent ile hizmet verip reddeden agent'ı ayırt edemiyordu |
 | R-031 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin geri alması bind9.service takma adını named.service'ten önce etkinleştirmeye çalıştı; APT sunucularında bu başarılı olamaz; kaynak BIND geri gelmedi ve kurtarma defteri zehirledi |
 | R-032 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Sunucunun daha önce kullandığı motora dönüş, paket kurulumundan sonra kesildiğinde yarım kalmış devir biçimi sanıldı; çünkü eski motorun terk edilmiş sahiplik makbuzu hiç emekliye ayrılmaz; kurtarma sıradan bir operatör hareketinde defteri zehirledi |
+| R-033 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Durumu olmayan sunucuda paket kurulumundan sonra düşen ilk DNS motoru kurulumu, iptal kanıtının tutarsız saydığı bir kurulum makbuzu bıraktı; defter ilk DNS hareketinde zehirlendi ve her açılışta zehirli kaldı |
 
 ## Ayrıntılı riskler
 
@@ -878,6 +879,15 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   kurulumda engelleyici hiçbir şeyi korumuyordu. Artık yalnız kaynak motor
   etkinken uygulanır; orada bekleme kaynağın yetişmediği anlamına gelir.
   Taze test hazırlamayı sıfır engelli ilk kurulum önizlemesine kadar yürütür.
+- Üçüncü kat, Arch'ta canlı bulundu ve Debian'da yeniden üretildi (3 Eylül
+  2026): önceden var olan bir bölge ve hiç motor yokken anlık görüntü agent'a
+  bölgenin DNSSEC durumunu soruyordu; agent PowerDNS etkin değilken "PowerDNS
+  etkin motor olmadığı için kullanılamıyor" der, sunum `degraded` oldu ve
+  önizleme `dnssec_unsupported`, `target_unavailable` ve `source_degraded`
+  ile aynı anda reddetti - S-8 T1'in gözleyip açıklayamadığı üçlünün ta
+  kendisi. Kurulu PowerDNS'i olmayan sunucu artık sorgulanmaz; kurulu ama
+  henüz devralınmamış PowerDNS yine sorgulanır. Bu düzeltmeden sonra Arch
+  önizlemesi canlı konukta sıfır engelle geçti.
 - Çıkış ölçütü: T1, güncel Arch'ta BIND geçiş commit'ine ulaşır ve yeniden
   başlatma son koşulu tutar; o koşu aynı zamanda ilk canlı R-018 kanıtıdır.
 - S-8 (3 Eylül 2026): kimlik hazırlama, bekleyen bölgeli taze Arch konuğunda
@@ -988,6 +998,36 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   öldürülen BIND geçişi) temiz düşen iş ve yakınsayan yeniden denemeyle
   kurtarılır; aynı sunucu hedef-çağlı yerleştirilmiş makbuzla
   `ledger_ambiguous` ile kapalı arıza verir.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-033 - Düşen ilk kurulum taze sunucuyu zehirliyor
+
+- Kanıt: canlı, 3 Eylül 2026, taze bir Arch konuğunda (kök `/` 0555), halka
+  açık API üzerinden `0eaf3a5…` adayı ve R-029 üçüncü kat panel düzeltmesiyle.
+  Önizleme sıfır engelle geçti; commit 4 saniyede `ledger_ambiguous` ile
+  `503 DNS_ENGINE_MUTATIONS_HELD` döndü. Agent günlüğü: `DNS engine switch
+  failure could not prove a pre-commit abort: BIND directory is unsafe:
+  /var/named`, ardından `reprove DNS engine switch abort: finalized DNS engine
+  provenance is inconsistent without active state`, ardından `service mutation
+  manager is fail-closed after an ambiguous ledger write`. Sunucuda
+  `dns-engine-install-ownership-bind.json` ve başka hiçbir şey vardı.
+  `exactFinalizedDNSEngineSwitchProvenanceOnHost`, etkin durumu olmayan her
+  makbuzu çelişki sayıyordu; kurulumdan sonra düşen her ilk geçişin geride
+  bıraktığı kurulum makbuzu dahil.
+- Etki: her dağıtımda, paket kurulumundan sonra düşen ilk DNS motoru kurulumu
+  sunucuyu kilitler: her mutasyon reddedilir, `ledger_ambiguous` her açılışta
+  aynı makbuzdan yeniden hesaplanır, SSH ile dosya silmekten başka çıkış
+  yoktur. R-019 tıkanması, taze sunucunun ilk DNS hareketinde. Debian'da
+  görülmemesinin tek sebebi ilk kurulumun orada hiç düşmemesiydi.
+- Daldaki düzeltme (3 Eylül 2026): durumu olmayan sahiplik makbuzu yine
+  çelişkidir; tek başına kurulum makbuzu kalıntıdır - hiçbir şey hizmet
+  vermemiştir - ve kurtarma işi temizce düşürür ki yeniden deneme kurulu
+  paketleri devralsın. Linux testleri ikisini de kapsar; kalıntı durumu
+  düzeltilmemiş ağaçta tam "inconsistent without active state" satırıyla
+  kırmızı.
+- Çıkış ölçütü: Arch konuğunda düzeltilmiş agent yeniden başlatılınca tutulma
+  temizlenir ve iş temizce düşer; yeniden denenen geçiş R-018 yürüyüşüne
+  ilerler.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
