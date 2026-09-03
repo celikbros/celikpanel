@@ -120,16 +120,19 @@ has any state of its own, so there is never a merge and never a second identity.
    install. Domain content is restored from domain backups afterwards through
    the existing flow.
 
-   Found in the first drill: the screen says so but does not offer the
-   install. With `active_engine = bind` in the database and nothing on the
-   host, every preview toward BIND carries the blockers
-   `target_already_active` and `source_degraded`, and the commit answers
-   "preview expired" for a preview that was never registered. The product
-   needs one honest path: when the active engine's runtime is absent, the
-   card offers "reinstall the active DNS server", which installs the
-   packages, regenerates the configuration and zones from the database and
-   starts the engine, at the same epoch and under the same ownership. That
-   path is the R-003 exit criterion now.
+   Found in the first drill and fixed on the branch: the screen said so but
+   offered no install, because every preview toward the active engine
+   carried `target_already_active` and `source_degraded` and the commit
+   answered "preview expired" for a preview that was never registered.
+   There is now one honest path. When the active engine is BIND, standalone,
+   at epoch 1 or later and not running, the preview returns the action
+   `reinstall_active` with no blockers, and the card offers "Reinstall the
+   active DNS server". It installs the packages, regenerates the
+   configuration and the zones from the database and starts the engine at
+   the same epoch under the same ownership; it moves no authority, so it
+   writes no switch snapshot. Proven on the drill's host B: commit in 10 s,
+   the engine running, and the zone answering the same SOA and the same DKIM
+   record as the host the archive came from.
 
 ## 6. The drill (exit criteria for R-003)
 
@@ -143,11 +146,15 @@ including provisioning the new guest, 1 min 58 s. Proven on B through the
 panel: the administrator's old password, the secret key and its stored
 fingerprint, the DKIM private key and its published public key, the domain
 list, the DNS engine state at the same epoch, the served TLS certificate.
-Not proven, and the reason R-003 stays open: the restored host could not
-reinstall its DNS engine (see §5.5). VPN and firewall could not be
-exercised on this build (R-034, R-035); mail could not be installed
-(R-036); no stored database password existed, so no ciphertext was opened
-(the next run creates one first).
+Then proven, after the fix in §5.5: the restored host reinstalled its own
+DNS server through the panel and answered its zone with the same SOA and
+the same DKIM record as host A, at the same epoch.
+
+Still owed before R-003 closes: the same run on a disposable real VM; a
+stored database password created on host A so that a sealed ciphertext is
+actually opened on host B (this run had none); and the VPN and firewall
+members, which could not be exercised on this build (R-034, R-035) - mail
+could not be installed either (R-036), though the DKIM key travelled.
 
 1. Fresh host A: install, add an administrator, activate BIND, create a domain
    with mail (so DKIM keys and a sealed secret exist), enable the VPN, take a

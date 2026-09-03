@@ -40,7 +40,7 @@ or executed as-is. There are no open pull requests at this baseline.
 |---|---|---|---|
 | R-001 | Critical | CLOSED ON MAIN | Operations now documents snapshot v6, current v4/v5 rejection and the historical-release boundary |
 | R-002 | High | CLOSED ON MAIN | README now separates optional local GPG use from canonical Ed25519 update authority |
-| R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS / ARCHIVE AND RESTORE ON BRANCH / WSL DRILL: RESTORE PROVEN, ENGINE REINSTALL FAILS | The panel archives and restores its own control plane (slices 1 and 2); the first WSL drill restored a fresh host in 23 s but the restored host cannot reinstall its DNS engine |
+| R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS / ARCHIVE, RESTORE AND ENGINE REINSTALL PROVEN ON WSL / REAL VM PENDING | The panel archives and restores its own control plane (slices 1 and 2); the first WSL drill restored a fresh host in 23 s but the restored host cannot reinstall its DNS engine |
 | R-004 | High | PARTIALLY MITIGATED / REVERIFY | Both hosts run exact Alpha52 with terminal receipts and full acceptance; snapshot source provenance remains `unknown` |
 | R-005 | High | OPEN | Boston/Frankfurt environment classification conflicts with the not-production-ready policy |
 | R-006 | High | OPEN | Route/role and API-contract debt remains at a security boundary |
@@ -55,7 +55,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-015 | High | OPEN / BLOCKER FOR PUBLIC DNS CUTOVER | Parent delegation and glue are verified; the `celikhost.com` child zone and public authority are absent |
 | R-016 | Medium | OPEN / PROVENANCE WARNING | Both valid v6 snapshots encode an `unknown` source identity although terminal receipts prove the prior Alpha51 commit |
 | R-017 | High | OPEN | A production panel heartbeat deterministically poisons a DNS engine switch that installs packages |
-| R-018 | Medium | FIXED ON BRANCH (FOUR LAYERS) / FIFTH LAYER FOUND ON THE REAL ARCH VM / FIX PENDING | The Arch BIND path was never wired end to end: root-anchor rule, managed root, config ownership, stock options and journal shape each assumed Debian; all five now follow the pacman package and a fresh Arch host reaches a serving BIND |
+| R-018 | Medium | FIXED ON BRANCH (FIVE LAYERS) / LIVE PROOF OF THE FIFTH PENDING | The Arch BIND path was never wired end to end: root-anchor rule, managed root, config ownership, stock options and journal shape each assumed Debian; all five now follow the pacman package and a fresh Arch host reaches a serving BIND |
 | R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
 | R-020 | Low | REBALANCED ON BRANCH / CI MEASURED / TWO SHARDS OVER THE LINE | The CI race shard for `D` ran at 88 percent of its 8-minute ceiling on `main`; the local 30-minute single-process run sits at 80 percent |
 | R-021 | Low | RESOLVED / INVENTORY CORRECTED | Both hosts were rebuilt; identity is confirmed and the inventory now records Ubuntu and Debian 13. No Arch host remains in our inventory |
@@ -71,9 +71,10 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-031 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Rolling back a BIND-to-PowerDNS switch re-enabled the bind9.service alias before named.service, which cannot succeed on APT hosts; the source BIND never came back and the recovery poisoned the ledger |
 | R-032 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Returning to an engine the host had used before, with the switch interrupted after package install, was read as the half-finished handover shape because the former engine's stranded ownership receipt is never retired; recovery poisoned the ledger on an ordinary operator action |
 | R-033 | High | FIXED ON BRANCH / LIVE PROOF PENDING | A first DNS engine install that failed after package install on a host with no state left an install receipt the abort proof called inconsistent, so the ledger was poisoned on the very first DNS action and stayed poisoned on every boot |
-| R-034 | High | FOUND LIVE / FIX IN PROGRESS | Every WireGuard config apply fails because the staged file name is not a valid interface name for `wg-quick strip`; the failed rollback then poisons the host's mutation manager with no API way out |
+| R-034 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Every WireGuard config apply fails because the staged file name is not a valid interface name for `wg-quick strip`; the failed rollback then poisons the host's mutation manager with no API way out |
 | R-035 | Medium | OPEN / DESIGN | The firewall cannot be enabled on a host without a discoverable sshd, and the product cannot install one; such hosts never get `firewall.nft` |
 | R-036 | Medium | OPEN / DESIGN | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
+| R-037 | Medium | FOUND / WORKING COPY REPAIRED / GUARD PENDING | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
 
 ## Detailed risks
 
@@ -138,6 +139,18 @@ or executed as-is. There are no open pull requests at this baseline.
   BIND as running. Fix in progress: an honest "reinstall the active DNS
   server" path, an honest blocked-preview answer, and a scan cache that does
   not survive a restore.
+- Closed since (3 September 2026): the restored host now reinstalls the DNS
+  server it already owns, through the panel, at the same epoch and ownership
+  (`reinstall_active`); on host B the commit took 10 s and the zone answered
+  the same SOA and DKIM record as host A. The blocked-preview answer, the
+  restored component scan and the kept-configuration line are fixed with it.
+  Two agent defects the live attempt exposed are fixed and covered: the
+  journal validator demanded a second unit set for a same-engine mutation,
+  and the abort proof read the reinstall's own install receipt as a
+  contradiction and poisoned the ledger.
+- Still owed: the same run on a disposable real VM; a stored database
+  password on host A so a sealed ciphertext is actually opened on host B;
+  the VPN, firewall and mail members once R-034, R-035 and R-036 allow them.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-004 — Alpha52 live promotion proven; residual acceptance must be retained
@@ -418,6 +431,11 @@ or executed as-is. There are no open pull requests at this baseline.
   (the harness recorded `null` only because it asserts that field on a full
   pass). Fifth layer: the listener verifier rejects the peer column shape of
   Arch's iproute2 `ss` output. Fix pending, from the captured output.
+- Fifth layer fixed on branch (3 September 2026): the listener proof now
+  accepts every spelling iproute2 uses for an absent peer (`*:*`,
+  `0.0.0.0:*`, `[::]:*`) as a closed set, and refuses shapes it never emits.
+  The rejected row was not retained in the campaign evidence, so the spelling
+  is reconstructed; the Arch VM cell is rerun to prove it.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 - S-2 determination: `0755` on `/` is **not** load-bearing for this operation.
   The mutation descends to a verified `/etc/systemd/system` and calls
@@ -1166,6 +1184,12 @@ or executed as-is. There are no open pull requests at this baseline.
   required on a host poisoned before the fix.
 - Exit criteria: VPN install and one peer apply succeed through the API on a
   fresh guest; the poisoned-host recovery answer is recorded here.
+- Fixed on branch (3 September 2026): `wg-quick strip` runs on a private
+  0700 copy named `wg0.conf`; the durable stage keeps its name, its atomic
+  rename and its recovery discovery. The linux fake `wg-quick` now enforces
+  the real basename rule, so the whole VPN suite is a regression guard on the
+  exec path, and it passes on a Debian guest as root, including the commit
+  rollback poison test. Live proof on a fresh guest is still owed.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-035 - No sshd, no firewall
@@ -1197,6 +1221,28 @@ or executed as-is. There are no open pull requests at this baseline.
   Go through `/domains/{id}/mail/auth/dkim`).
 - Decision needed: derive the mail hostname from the panel's own identity
   (nameserver/host settings) or add a hostname setting; not silently.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-037 - A local build can refuse a released panel's database
+
+- Evidence: 3 September 2026, during the R-003 drill. A panel built straight
+  from this Windows checkout refused the restored database with `migration
+  integrity mismatch for version 1: ledger has .../ff31f0b6..., embedded
+  release has .../0a01e17f...`. Cause: 102 tracked files, the migrations
+  among them, were checked out before `.gitattributes` pinned `eol=lf` and
+  kept their CRLF bytes, while git tracks LF and released binaries embed
+  what git tracks. The repository content was never wrong.
+- Impact: any developer whose checkout predates the attributes file builds a
+  panel that cannot read a production database, and the failure names a
+  migration hash rather than the real cause. `gofmt -l` also reports those
+  files forever, which trains everyone to ignore it.
+- Repaired (3 September 2026): the working copy was re-checked out; nothing
+  in the repository changed. Five files remain committed with CRLF
+  (`LICENSE`, `NOTICE`, two `.gitignore`, one nginx template) and are left
+  as they are.
+- Guard pending: the release job, or a cheap contract test, should fail when
+  an embedded migration's bytes differ from the tracked bytes, so this can
+  never be diagnosed as a database problem again.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

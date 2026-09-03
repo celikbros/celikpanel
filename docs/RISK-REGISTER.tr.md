@@ -41,7 +41,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 |---|---|---|---|
 | R-001 | Kritik | MAIN ÜZERİNDE KAPALI | Operations artık snapshot v6'yı, güncel v4/v5 reddini ve tarihsel sürüm sınırını anlatıyor |
 | R-002 | Yüksek | MAIN ÜZERİNDE KAPALI | README artık isteğe bağlı yerel GPG kullanımını canonical Ed25519 update otoritesinden ayırıyor |
-| R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ / ARŞİV VE GERİ YÜKLEME DALDA / WSL TATBİKATI: GERİ YÜKLEME KANITLI, MOTOR YENİDEN KURULUMU DÜŞÜYOR | Panel kendi kontrol düzlemini arşivliyor ve geri yüklüyor (dilim 1 ve 2); ilk WSL tatbikatı taze sunucuyu 23 saniyede ayağa kaldırdı ama geri yüklenen sunucu DNS motorunu yeniden kuramıyor |
+| R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ / ARŞİV, GERİ YÜKLEME VE MOTOR YENİDEN KURULUMU WSL'DE KANITLI / GERÇEK VM BEKLİYOR | Panel kendi kontrol düzlemini arşivliyor ve geri yüklüyor (dilim 1 ve 2); ilk WSL tatbikatı taze sunucuyu 23 saniyede ayağa kaldırdı ama geri yüklenen sunucu DNS motorunu yeniden kuramıyor |
 | R-004 | Yüksek | KISMEN AZALTILDI / YENİDEN DOĞRULA | İki host exact Alpha52 ve terminal receipt ile tam kabulü geçti; snapshot kaynak provenance'ı `unknown` kaldı |
 | R-005 | Yüksek | AÇIK | Boston/Frankfurt ortam sınıfı üretime-hazır-değil politikasıyla çelişkili |
 | R-006 | Yüksek | AÇIK | Route/role ve API sözleşme borcu güvenlik sınırında sürüyor |
@@ -56,7 +56,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-015 | Yüksek | AÇIK / AÇIK DNS GEÇİŞİ İÇİN ENGELLEYİCİ | Parent delegation ve glue doğrulandı; `celikhost.com` child zone ve açık otorite yok |
 | R-016 | Orta | AÇIK / PROVENANCE UYARISI | İki geçerli v6 snapshot kaynak kimliğini `unknown` yazar; terminal receipt'ler önceki Alpha51 commit'ini kanıtlar |
 | R-017 | Yüksek | AÇIK | Üretim panelinin kalp atışı, paket kuran bir DNS motoru geçişini belirlenimci biçimde zehirler |
-| R-018 | Orta | DALDA DÜZELTİLDİ (DÖRT KAT) / GERÇEK ARCH VM'DE BEŞİNCİ KAT BULUNDU / DÜZELTME BEKLİYOR | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
+| R-018 | Orta | DALDA DÜZELTİLDİ (BEŞ KAT) / BEŞİNCİNİN CANLI KANITI BEKLİYOR | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
 | R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
 | R-020 | Düşük | DALDA YENİDEN DENGELENDİ / CI ÖLÇÜLDÜ / İKİ PARÇA ÇİZGİNİN ÜSTÜNDE | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
 | R-021 | Düşük | ÇÖZÜLDÜ / ENVANTER DÜZELTİLDİ | İki sunucu da yeniden kuruldu; kimlik doğrulandı ve envanter artık Ubuntu ile Debian 13 yazıyor. Envanterimizde Arch sunucu kalmadı |
@@ -72,9 +72,10 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-031 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin geri alması bind9.service takma adını named.service'ten önce etkinleştirmeye çalıştı; APT sunucularında bu başarılı olamaz; kaynak BIND geri gelmedi ve kurtarma defteri zehirledi |
 | R-032 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Sunucunun daha önce kullandığı motora dönüş, paket kurulumundan sonra kesildiğinde yarım kalmış devir biçimi sanıldı; çünkü eski motorun terk edilmiş sahiplik makbuzu hiç emekliye ayrılmaz; kurtarma sıradan bir operatör hareketinde defteri zehirledi |
 | R-033 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Durumu olmayan sunucuda paket kurulumundan sonra düşen ilk DNS motoru kurulumu, iptal kanıtının tutarsız saydığı bir kurulum makbuzu bıraktı; defter ilk DNS hareketinde zehirlendi ve her açılışta zehirli kaldı |
-| R-034 | Yüksek | CANLIDA BULUNDU / DÜZELTME SÜRÜYOR | Her WireGuard yapılandırma uygulaması düşüyor: hazırlanan dosya adı `wg-quick strip` için geçerli bir arayüz adı değil; düşen geri alma sonra sunucunun işlem yöneticisini zehirliyor ve API'den çıkış yolu yok |
+| R-034 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Her WireGuard yapılandırma uygulaması düşüyor: hazırlanan dosya adı `wg-quick strip` için geçerli bir arayüz adı değil; düşen geri alma sonra sunucunun işlem yöneticisini zehirliyor ve API'den çıkış yolu yok |
 | R-035 | Orta | AÇIK / TASARIM | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
 | R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
+| R-037 | Orta | BULUNDU / ÇALIŞMA KOPYASI ONARILDI / KORUMA BEKLİYOR | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
 
 ## Ayrıntılı riskler
 
@@ -140,6 +141,18 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   gösteriyor. Düzeltme sürüyor: dürüst bir "etkin DNS sunucusunu yeniden kur"
   yolu, engellenmiş önizleme için dürüst yanıt ve geri yüklemeyi atlatmayan
   bir tarama önbelleği.
+- Sonrasında kapanan (3 Eylül 2026): geri yüklenen sunucu artık zaten sahibi
+  olduğu DNS sunucusunu panelden, aynı epoch ve sahiplikle yeniden kuruyor
+  (`reinstall_active`); B sunucusunda commit 10 saniye sürdü ve bölge A ile
+  aynı SOA ve DKIM kaydını verdi. Engellenmiş önizleme yanıtı, geri yüklenen
+  bileşen taraması ve korunan yapılandırma satırı da düzeltildi. Canlı
+  denemenin ortaya çıkardığı iki agent kusuru düzeltildi ve teste bağlandı:
+  günlük doğrulayıcı aynı motorlu bir işlem için ikinci bir birim kümesi
+  istiyordu ve iptal kanıtı, yeniden kurulumun kendi kurulum makbuzunu
+  çelişki sayıp defteri zehirliyordu.
+- Hâlâ borçlu olunan: aynı koşunun atılabilir gerçek VM'de tekrarı; A'da
+  saklı bir veritabanı parolası ki B'de gerçek bir şifreli metin açılsın;
+  R-034, R-035 ve R-036 izin verdiğinde VPN, güvenlik duvarı ve posta üyeleri.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-004 — Alpha52 canlı promotion kanıtlandı; artık kabul kanıtı korunmalı
@@ -419,6 +432,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   (harness o alanı yalnız tam geçişte yazdığı için `null` kaydetti). Beşinci
   kat: dinleyici doğrulayıcı, Arch'ın iproute2 `ss` çıktısındaki eş sütunu
   biçimini reddediyor. Düzeltme, yakalanan çıktıdan yapılacak.
+- Beşinci kat dalda düzeltildi (3 Eylül 2026): dinleyici kanıtı artık
+  iproute2'nin eşi olmayan soket için kullandığı üç yazımı da (`*:*`,
+  `0.0.0.0:*`, `[::]:*`) kapalı bir küme olarak kabul ediyor ve hiç
+  üretmediği biçimleri reddediyor. Reddedilen satır kampanya kanıtlarında
+  saklanmamış, bu yüzden yazım yeniden kurgulandı; Arch VM hücresi bunu
+  kanıtlamak için yeniden koşulacak.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 - S-2 kararı: `/` üzerindeki `0755` bu işlem için taşıyıcı **değildir**.
   Mutasyon doğrulanmış `/etc/systemd/system` dizinine iner ve `systemctl mask`
@@ -1153,6 +1172,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   gerekir.
 - Çıkış ölçütü: taze konukta VPN kurulumu ve bir eş uygulaması API üzerinden
   başarılı; zehirlenmiş sunucu yanıtı burada kayıtlı.
+- Dalda düzeltildi (3 Eylül 2026): `wg-quick strip` artık adı `wg0.conf`
+  olan özel 0700 bir kopya üzerinde koşuyor; kalıcı hazırlık dosyası adını,
+  atomik yeniden adlandırmasını ve kurtarma keşfini koruyor. Linux'taki sahte
+  `wg-quick` gerçek ad kuralını uyguluyor, böylece tüm VPN takımı bu yol için
+  gerileme koruması oldu ve Debian konuğunda root olarak geçiyor (commit geri
+  alma zehir testi dahil). Taze konukta canlı kanıt hâlâ borç.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-035 - sshd yoksa güvenlik duvarı yok
@@ -1185,6 +1210,27 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Karar gerekli: posta makine adını panelin kendi kimliğinden (ad sunucusu /
   makine ayarları) türetmek ya da bir makine adı ayarı eklemek; sessizce
   değil.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-037 - Yerel derleme, yayınlanmış panelin veritabanını reddedebiliyor
+
+- Kanıt: 3 Eylül 2026, R-003 tatbikatı sırasında. Doğrudan bu Windows
+  kopyasından derlenen panel, geri yüklenen veritabanını `migration integrity
+  mismatch for version 1: ledger has .../ff31f0b6..., embedded release has
+  .../0a01e17f...` ile reddetti. Sebep: aralarında göçlerin de olduğu 102
+  izlenen dosya, `.gitattributes` satır sonunu sabitlemeden önce alınmış ve
+  CRLF baytlarını korumuş; oysa git LF izliyor ve yayınlanan ikililer git'in
+  izlediğini gömüyor. Depo içeriği hiçbir zaman yanlış değildi.
+- Etki: kopyası öznitelik dosyasından eski olan her geliştirici, üretim
+  veritabanını okuyamayan bir panel derliyor ve hata gerçek sebebi değil bir
+  göç özetini söylüyor. `gofmt -l` de o dosyaları sürekli bildiriyor, bu da
+  herkesi onu yok saymaya alıştırıyor.
+- Onarıldı (3 Eylül 2026): çalışma kopyası yeniden alındı; depoda hiçbir şey
+  değişmedi. Beş dosya CRLF olarak kayıtlı kalıyor (`LICENSE`, `NOTICE`, iki
+  `.gitignore`, bir nginx şablonu) ve olduğu gibi bırakıldı.
+- Koruma bekliyor: sürüm işi ya da ucuz bir sözleşme testi, gömülü bir göçün
+  baytları izlenen baytlardan farklıysa düşmeli; böylece bu bir daha
+  veritabanı sorunu diye teşhis edilmesin.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
