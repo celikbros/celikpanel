@@ -68,6 +68,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-028 | High | FIXED ON BRANCH / LIVE PROOF PENDING | The active-BIND proof inside a BIND-to-PowerDNS switch refused the pdns.service mask the switch's own install guard had just created, so every switch that had to install PowerDNS failed at its source proof |
 | R-029 | High | FIXED ON BRANCH / LIVE PROOF PENDING | DNS identity staging on a host that has never run an engine refused because zones were pending, which every zone on such a host is by construction; adding a domain before setting up DNS made the first engine install unreachable |
 | R-030 | Medium | FIXED ON BRANCH | A read-only mutation status RPC failed outright when the agent's ledger could not be brought up or was poisoned at startup, so a probe could not tell a dead agent from one that is serving and refusing |
+| R-031 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Rolling back a BIND-to-PowerDNS switch re-enabled the bind9.service alias before named.service, which cannot succeed on APT hosts; the source BIND never came back and the recovery poisoned the ledger |
 
 ## Detailed risks
 
@@ -494,6 +495,13 @@ or executed as-is. There are no open pull requests at this baseline.
   no internal text; the Debian adoption-to-BIND journey and the full S-5 matrix
   stayed green. Still unmeasured: the Boston negative, whose setup chain hit
   R-028 at the BIND-to-PowerDNS step. R-019 stays OPEN for that one cell.
+- S-8 (3 September 2026, manifest `746228bdc2c01ecda8fbb65067ddb29a0dea9e740694ce461ecff1c50b11c568`): the Boston setup chain passed every
+  step - empty, BIND epoch 1, PowerDNS epoch 2 in 21.5 s, 12.2 s and 2.8 s -
+  which is R-028 proven live. The measured negative cell then returned 2 with
+  a null proof from the harness controller, so the exact refusal is still
+  unmeasured. T2 positive proved the pre-intent kill and the restart, then the
+  harness stopped at its secret catalog before the retry. T3 passed again.
+  R-019 stays OPEN for the Boston negative only.
 - Residual, deliberately not changed (1 September 2026):
   `validateDNSEngineStateSnapshot` judges a persisted journal snapshot's
   recorded GID against `serviceMutationRequiredOwnerGID`, which is re-derived
@@ -768,6 +776,9 @@ or executed as-is. There are no open pull requests at this baseline.
   observed only in a non-counting diagnostic, so "the next switch is accepted"
   is still unproven. The probe failure led to the status RPC change recorded
   under R-030.
+- S-8 (3 September 2026): the probe spoke (R-030) and the ordered failure
+  is now named: rollback recovery failed re-enabling the source BIND (R-031).
+  The database cleanup held again. R-026 closes with T5 after R-031.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-027 - PowerDNS authority is APT-only by design
@@ -823,6 +834,9 @@ or executed as-is. There are no open pull requests at this baseline.
   error string verbatim on the unfixed tree.
 - Exit criteria: the Boston setup chain (empty, BIND epoch 1, PowerDNS epoch 2)
   returns 0 at every step on a real VM and the measured negative cell runs.
+- S-8 (3 September 2026): proven live - the Boston chain's epoch-2
+  BIND-to-PowerDNS setup returned 0 in 12.2 s on Debian 13. Only the measured
+  negative cell remains, and that is R-019's.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-029 - Fresh-host identity staging is deadlocked by its own pending zones
@@ -863,6 +877,13 @@ or executed as-is. There are no open pull requests at this baseline.
   first-install preview with zero blockers.
 - Exit criteria: T1 re-run on current Arch reaches the BIND switch commit, and
   the reboot postcondition holds; that run is also the first live R-018 proof.
+- S-8 (3 September 2026): identity staging returned 200 on a fresh Arch
+  guest with a pending zone - the first layer is proven live. The preview then
+  reported `dnssec_unsupported`, `target_unavailable` and `source_degraded`,
+  which is the shape the panel produces when the agent's DNS backend
+  readiness RPC fails; the raw body and the Arch agent journal were not
+  retained, so the cause is unknown and the second layer is unproven. The
+  next run must capture the agent journal at preview time.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-030 - A status probe cannot see an agent whose ledger never came up
@@ -897,6 +918,38 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: T5 re-run with a probe that prints the RPC error or the hold,
   the ordered run's agent journal captured beside it, and the required next
   switch accepted.
+- S-8 (3 September 2026): proven live - the first probe after ordinary
+  recovery returned structured JSON with `mutation_hold: ledger_ambiguous`
+  and the frozen job, which is what made R-031 diagnosable.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-031 - Rollback re-enables the BIND alias before the unit it aliases
+
+- Evidence: S-8, T5 attempt 2 (manifest SHA-256 `746228bdc2c01ecda8fbb65067ddb29a0dea9e740694ce461ecff1c50b11c568`). After the deliberate
+  target-started SIGKILL the ordinary agent restarted and its boot-0 journal
+  reads: `recover DNS engine switch host transaction: systemctl enable
+  bind9.service did not reach the required state; command: exit status 1;
+  output: Failed to enable unit: Unit bind9.service does not exist; readback:
+  load=not-found active=inactive unit-file=`. The first status probe answered
+  (R-030 held) with `mutation_hold: ledger_ambiguous` and the job still
+  `running`/`leased`. The rollback restores the source units from
+  `journal.SourceUnitsBefore`, which `dnsUnitStateMapSnapshots` writes sorted
+  by name; `bind9.service` sorts before `named.service`. On APT hosts
+  bind9.service is only an `Alias=` of named.service - the symlink exists
+  while named.service is enabled and `systemctl disable named.service`
+  removes it - so enabling the alias before the unit cannot succeed.
+- Impact: every rolled-back BIND-to-PowerDNS switch on Debian and Ubuntu ends
+  with no engine serving and a poisoned ledger. This is the failure R-026's
+  live proof ran into; the R-026 database cleanup itself worked (exact
+  preimage, `integrity_check` ok, no sidecars).
+- Fix on branch (3 September 2026): the restore orders snapshots so that the
+  alias comes after the unit it aliases; enabling the alias afterwards is an
+  exact no-op readback. A test with a Debian-faithful fake systemd (alias
+  exists only while named.service is enabled) reproduces the S-8 failure on
+  the unfixed tree and passes with the fix in both journal orders.
+- Exit criteria: T5 on a real Debian 13 host - rollback leaves BIND active and
+  enabled, the job ends failed/interrupted with a clean code, and the next
+  switch is accepted.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

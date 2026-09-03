@@ -69,6 +69,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-028 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin içindeki etkin-BIND kanıtı, geçişin kendi kurulum korumasının az önce yarattığı pdns.service maskesini reddetti; PowerDNS kurması gereken her geçiş kaynak kanıtında düştü |
 | R-029 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Hiç motor çalıştırmamış sunucuda DNS kimlik hazırlama, bölgeler beklediği için reddetti; oysa böyle bir sunucuda her bölge yapısı gereği bekler; DNS'i kurmadan önce alan adı eklemek ilk motor kurulumunu ulaşılamaz kılıyordu |
 | R-030 | Orta | DALDA DÜZELTİLDİ | Agent'ın defteri ayağa kalkamadığında ya da başlangıçta zehirlendiğinde salt-okunur mutasyon durum RPC'si düpedüz düşüyordu; sonda ölü agent ile hizmet verip reddeden agent'ı ayırt edemiyordu |
+| R-031 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin geri alması bind9.service takma adını named.service'ten önce etkinleştirmeye çalıştı; APT sunucularında bu başarılı olamaz; kaynak BIND geri gelmedi ve kurtarma defteri zehirledi |
 
 ## Ayrıntılı riskler
 
@@ -497,6 +498,13 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   `DNS_ENGINE_MUTATIONS_HELD` döndü; Debian devralmadan BIND'a yolculuğu ve tam
   S-5 matrisi yeşil kaldı. Hâlâ ölçülmemiş: kurulum zinciri BIND'dan PowerDNS'e
   adımında R-028'e takılan Boston negatifi. R-019 o tek hücre için AÇIK kalır.
+- S-8 (3 Eylül 2026, manifest `746228bdc2c01ecda8fbb65067ddb29a0dea9e740694ce461ecff1c50b11c568`): Boston kurulum zinciri her adımı geçti -
+  boş, BIND epoch 1, PowerDNS epoch 2; 21,5 s, 12,2 s ve 2,8 s - bu R-028'in
+  canlı kanıtıdır. Ölçülen negatif hücre ardından harness denetleyicisinden
+  boş kanıtla 2 döndü; kesin ret hâlâ ölçülmedi. T2 pozitif, intent-öncesi
+  öldürmeyi ve yeniden başlatmayı kanıtladı, sonra harness yeniden denemeden
+  önce gizli kataloğunda durdu. T3 yine geçti. R-019 yalnız Boston negatifi
+  için AÇIK kalır.
 - Kalıntı, bilerek değiştirilmedi (1 Eylül 2026):
   `validateDNSEngineStateSnapshot`, kalıcı bir günlük anlık görüntüsünün
   kaydedilmiş GID'sini `serviceMutationRequiredOwnerGID` ile karşılaştırır; o
@@ -767,6 +775,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   yakınsamış durum yalnız sayılmayan bir teşhiste gözlendi; "sonraki geçiş
   kabul edilir" hâlâ kanıtsız. Sonda hatası R-030'da kayıtlı durum RPC
   değişikliğine yol açtı.
+- S-8 (3 Eylül 2026): sonda konuştu (R-030) ve sıralı düşüşün adı kondu:
+  geri alma kurtarması kaynak BIND'ı yeniden etkinleştirirken düştü (R-031).
+  Veritabanı temizliği yine tuttu. R-026, R-031'den sonra T5 ile kapanır.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-027 - PowerDNS yetkisi tasarım gereği yalnız APT
@@ -820,6 +831,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   düzeltilmemiş ağaçta birebir üretiyor.
 - Çıkış ölçütü: Boston kurulum zinciri (boş, BIND epoch 1, PowerDNS epoch 2)
   gerçek VM'de her adımda 0 döner ve ölçülen negatif hücre koşar.
+- S-8 (3 Eylül 2026): canlıda kanıtlandı - Boston zincirinin epoch-2
+  BIND'dan PowerDNS'e kurulumu Debian 13'te 12,2 saniyede 0 döndü. Yalnız
+  ölçülen negatif hücre kaldı, o da R-019'un.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-029 - Taze sunucuda kimlik hazırlama kendi bekleyen bölgeleriyle kilitleniyor
@@ -857,6 +871,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   Taze test hazırlamayı sıfır engelli ilk kurulum önizlemesine kadar yürütür.
 - Çıkış ölçütü: T1, güncel Arch'ta BIND geçiş commit'ine ulaşır ve yeniden
   başlatma son koşulu tutar; o koşu aynı zamanda ilk canlı R-018 kanıtıdır.
+- S-8 (3 Eylül 2026): kimlik hazırlama, bekleyen bölgeli taze Arch konuğunda
+  200 döndü - birinci kat canlıda kanıtlandı. Önizleme ardından
+  `dnssec_unsupported`, `target_unavailable` ve `source_degraded` bildirdi;
+  bu, agent'ın DNS arka uç hazırlık RPC'si düştüğünde panelin ürettiği
+  biçimdir; ham gövde ve Arch agent günlüğü saklanmadı, sebep bilinmiyor ve
+  ikinci kat kanıtsız. Sonraki koşu önizleme anında agent günlüğünü toplamalı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-030 - Durum sondası defteri hiç kalkmamış agent'ı göremiyor
@@ -889,6 +909,38 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: T5, RPC hatasını ya da tutulmayı basan bir sondayla yeniden
   koşar, sıralı koşunun agent günlüğü yanında toplanır ve gereken sonraki geçiş
   kabul edilir.
+- S-8 (3 Eylül 2026): canlıda kanıtlandı - sıradan kurtarmadan sonraki ilk
+  sonda `mutation_hold: ledger_ambiguous` ve donmuş işle yapılandırılmış JSON
+  döndü; R-031'i teşhis edilebilir kılan buydu.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-031 - Geri alma BIND takma adını, takma adı olduğu birimden önce etkinleştiriyor
+
+- Kanıt: S-8, T5 2. deneme (manifest SHA-256 `746228bdc2c01ecda8fbb65067ddb29a0dea9e740694ce461ecff1c50b11c568`). Kasıtlı hedef-başlamış
+  SIGKILL'den sonra sıradan agent yeniden başladı ve açılış-0 günlüğü şöyle:
+  `recover DNS engine switch host transaction: systemctl enable bind9.service
+  did not reach the required state; command: exit status 1; output: Failed to
+  enable unit: Unit bind9.service does not exist; readback: load=not-found
+  active=inactive unit-file=`. İlk durum sondası yanıt verdi (R-030 tuttu):
+  `mutation_hold: ledger_ambiguous`, iş hâlâ `running`/`leased`. Geri alma,
+  kaynak birimleri `dnsUnitStateMapSnapshots`'ın ada göre sıralı yazdığı
+  `journal.SourceUnitsBefore`'dan geri yükler; `bind9.service`,
+  `named.service`ten önce gelir. APT sunucularında bind9.service yalnız
+  named.service'in bir `Alias=`'ıdır - bağ named.service etkinken var olur ve
+  `systemctl disable named.service` onu kaldırır - dolayısıyla takma adı
+  birimden önce etkinleştirmek başarılı olamaz.
+- Etki: Debian ve Ubuntu'da geri alınan her BIND'dan PowerDNS'e geçiş, hizmet
+  veren motorsuz ve zehirli defterle biter. R-026'nın canlı kanıtının çarptığı
+  düşüş budur; R-026 veritabanı temizliğinin kendisi çalıştı (tam ön görüntü,
+  `integrity_check` ok, yan dosya yok).
+- Daldaki düzeltme (3 Eylül 2026): geri yükleme, anlık görüntüleri takma ad,
+  takma adı olduğu birimden sonra gelecek şekilde sıralar; sonrasında takma adı
+  etkinleştirmek tam bir no-op okumadır. Debian'a sadık sahte systemd ile
+  (takma ad yalnız named.service etkinken var) bir test S-8 düşüşünü
+  düzeltilmemiş ağaçta üretir ve düzeltmeyle iki günlük sırasında da geçer.
+- Çıkış ölçütü: Gerçek Debian 13'te T5 - geri alma BIND'ı etkin ve
+  etkinleştirilmiş bırakır, iş temiz kodla failed/interrupted biter ve sonraki
+  geçiş kabul edilir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

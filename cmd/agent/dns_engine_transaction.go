@@ -942,8 +942,54 @@ func dnsSystemdStateGuard(systemctl string) *bindPackageInstallGuard {
 }
 
 func restoreDNSUnitSnapshots(ctx context.Context, systemctl string, snapshots []dnsUnitSnapshot) error {
-	guard := dnsSystemdStateGuard(systemctl)
-	for _, snapshot := range snapshots {
+	return restoreDNSUnitSnapshotsWithGuard(ctx, dnsSystemdStateGuard(systemctl), snapshots)
+}
+
+// dnsUnitRestoreRank orders a restore so that a distro alias comes after the
+// unit it aliases. On APT hosts bind9.service is only an Alias= of
+// named.service: the symlink exists while named.service is enabled and is
+// removed by "systemctl disable named.service". Journals record unit
+// snapshots sorted by name, and "bind9.service" sorts before "named.service",
+// so a rollback that restored them in journal order ran
+// "systemctl enable bind9.service" while the alias did not exist and failed
+// with "Unit bind9.service does not exist" (S-8 T5, register R-031). Restoring
+// the real unit first recreates the alias; enabling the alias afterwards is
+// then an exact no-op readback.
+//
+// dnsUnitRestoreRank, geri yüklemeyi dağıtım takma adı, takma adı olduğu
+// birimden sonra gelecek şekilde sıralar. APT sunucularında bind9.service
+// yalnız named.service'in bir Alias='ıdır: sembolik bağ named.service
+// etkinleştirilmişken var olur ve "systemctl disable named.service" onu
+// kaldırır. Günlükler birim anlık görüntülerini ada göre sıralı kaydeder ve
+// "bind9.service" "named.service"ten önce gelir; dolayısıyla onları günlük
+// sırasıyla geri yükleyen bir geri alma, takma ad yokken "systemctl enable
+// bind9.service" koşturup "Unit bind9.service does not exist" ile düştü (S-8
+// T5, defter R-031). Önce gerçek birimi geri yüklemek takma adı yeniden
+// yaratır; sonra takma adı etkinleştirmek tam bir no-op okumadır.
+func dnsUnitRestoreRank(name string) int {
+	if name == "bind9.service" {
+		return 1
+	}
+	return 0
+}
+
+func orderDNSUnitSnapshotsForRestore(snapshots []dnsUnitSnapshot) []dnsUnitSnapshot {
+	ordered := append([]dnsUnitSnapshot(nil), snapshots...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		return dnsUnitRestoreRank(ordered[i].Name) < dnsUnitRestoreRank(ordered[j].Name)
+	})
+	return ordered
+}
+
+func restoreDNSUnitSnapshotsWithGuard(
+	ctx context.Context,
+	guard *bindPackageInstallGuard,
+	snapshots []dnsUnitSnapshot,
+) error {
+	if guard == nil {
+		return errors.New("DNS unit snapshot restore requires a systemd guard")
+	}
+	for _, snapshot := range orderDNSUnitSnapshotsForRestore(snapshots) {
 		if err := validateDNSUnitSnapshot(snapshot); err != nil {
 			return err
 		}
