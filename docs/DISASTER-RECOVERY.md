@@ -135,3 +135,9 @@ Each is a register entry of its own when it starts.
   fresh host, nothing else is needed.
 - Whether the pre-update release snapshot should simply become a control-plane
   archive, retiring one of two mechanisms.
+- Slice 2 must settle what restore does when the installer has already
+  written `panel.env`, `agent.token` or the firewall snapshot on the fresh
+  host: today slice 1 places the archived member over it by rename. For a
+  same-release fresh host the content is equivalent, but the rule ("the
+  archive wins" vs "the installer wins, with a warning when they differ")
+  is decided together with the install-time hook, not silently.

@@ -68,6 +68,9 @@ type panelCommandModes struct {
 	rescueSnapshot             bool
 	proveSnapshotEquivalence   bool
 	migrateOnly                bool
+	generateControlPlaneKey    bool
+	createControlPlaneArchive  bool
+	restoreControlPlaneArchive bool
 	demo                       bool
 	insecureCookies            bool
 }
@@ -410,7 +413,7 @@ func validateMigrateOnlyRequest(enabled bool, conflictingMode bool) error {
 }
 
 func validatePanelCommandModes(modes panelCommandModes) error {
-	oneShotModes := make([]string, 0, 12)
+	oneShotModes := make([]string, 0, 15)
 	for _, mode := range []struct {
 		name    string
 		enabled bool
@@ -427,6 +430,9 @@ func validatePanelCommandModes(modes panelCommandModes) error {
 		{name: "ensure-service-operation-rescue-snapshot", enabled: modes.rescueSnapshot},
 		{name: "prove-pre-ledger-snapshot-equivalence", enabled: modes.proveSnapshotEquivalence},
 		{name: "migrate-only", enabled: modes.migrateOnly},
+		{name: "generate-control-plane-key", enabled: modes.generateControlPlaneKey},
+		{name: "create-control-plane-archive", enabled: modes.createControlPlaneArchive},
+		{name: "restore-control-plane-archive", enabled: modes.restoreControlPlaneArchive},
 	} {
 		if mode.enabled {
 			oneShotModes = append(oneShotModes, mode.name)

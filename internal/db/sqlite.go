@@ -171,6 +171,25 @@ type embeddedMigration struct {
 	content  []byte
 }
 
+// HighestEmbeddedMigrationVersion returns the newest migration this build
+// ships. It reads the same embedded list RunMigrations applies at startup, so
+// the number can never drift from what the binary can actually run. A restore
+// uses it to refuse a database from a newer release before placing it.
+// HighestEmbeddedMigrationVersion, bu yapının taşıdığı en yeni migration'ı
+// döndürür. RunMigrations'ın başlangıçta uyguladığı gömülü listenin aynısını
+// okur; böylece sayı, ikili dosyanın gerçekten çalıştırabildiğinden sapamaz.
+func HighestEmbeddedMigrationVersion() (int, error) {
+	migrations, err := loadEmbeddedMigrations()
+	if err != nil {
+		return 0, err
+	}
+	if len(migrations) == 0 {
+		return 0, errors.New("this release embeds no migrations")
+	}
+	// loadEmbeddedMigrations returns them sorted ascending by version.
+	return migrations[len(migrations)-1].version, nil
+}
+
 func loadEmbeddedMigrations() ([]embeddedMigration, error) {
 	entries, err := migrationsFS.ReadDir("migrations")
 	if err != nil {
