@@ -541,7 +541,30 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	// snapshot. Do not probe the stopped PowerDNS backend as ongoing BIND
 	// health; engine-aware DNSSEC publication will replace this proof when
 	// BIND signing support is introduced.
-	if state.ActiveEngine != transport.DNSEngineBIND {
+	//
+	// A host with no active engine and no PowerDNS installed has nothing that
+	// could have signed a zone, and no backend to ask. Asking anyway turned
+	// every pre-existing zone into "DNSSEC readiness is unavailable", which
+	// the presentation then reported as degraded, and the first-install
+	// preview refused with dnssec_unsupported, target_unavailable and
+	// source_degraded at once (S-8 T1 on Arch, reproduced on the same shape
+	// on Debian; register R-029, third layer). A legacy PowerDNS that is
+	// installed but not yet adopted is still probed: its zones may well be
+	// signed, and that is exactly what the blocker exists for.
+	//
+	// Etkin motoru ve kurulu PowerDNS'i olmayan sunucuda bir bölgeyi
+	// imzalamış olabilecek hiçbir şey ve sorulacak bir arka uç yoktur. Yine
+	// de sormak, önceden var olan her bölgeyi "DNSSEC hazırlığı
+	// kullanılamıyor"a çeviriyordu; sunum bunu "degraded" bildiriyor ve ilk
+	// kurulum önizlemesi dnssec_unsupported, target_unavailable ve
+	// source_degraded ile aynı anda reddediyordu (S-8 T1 Arch'ta, aynı
+	// biçimde Debian'da yeniden üretildi; defter R-029, üçüncü kat).
+	// Kurulu ama henüz devralınmamış eski bir PowerDNS yine sorgulanır:
+	// bölgeleri pekâlâ imzalı olabilir; engelleyici tam bunun için vardır.
+	probeDNSSEC := state.ActiveEngine == transport.DNSEnginePowerDNS ||
+		(state.ActiveEngine == "" && runtimeErr == nil &&
+			runtimes[transport.DNSEnginePowerDNS].Installed)
+	if probeDNSSEC {
 		dnssecCount, dnssecErr = p.dnsEngineDNSSECCount(ctx, zones)
 	}
 	presentationState, entries := deriveDNSEnginePresentation(

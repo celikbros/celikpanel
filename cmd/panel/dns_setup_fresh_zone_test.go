@@ -180,6 +180,95 @@ func TestDNSSetupAdoptionIdentityStillRefusesPendingZones(t *testing.T) {
 	}
 }
 
+// R-029, third layer, found live on Arch and reproduced on Debian. With a
+// pre-existing zone and no engine at all, the snapshot asked the agent for the
+// zone's DNSSEC status; the real agent answers "unavailable because PowerDNS
+// is not the active engine", the presentation became degraded, and the
+// first-install preview refused with dnssec_unsupported, target_unavailable
+// and source_degraded at once. A host with no PowerDNS installed has nothing
+// that could have signed a zone and is not probed.
+//
+// R-029, üçüncü kat; Arch'ta canlı bulundu, Debian'da yeniden üretildi. Önceden
+// var olan bir bölge ve hiç motor yokken anlık görüntü agent'a bölgenin DNSSEC
+// durumunu soruyordu; gerçek agent "PowerDNS etkin motor olmadığı için
+// kullanılamıyor" der, sunum "degraded" oldu ve ilk kurulum önizlemesi
+// dnssec_unsupported, target_unavailable ve source_degraded ile aynı anda
+// reddetti. Kurulu PowerDNS'i olmayan sunucuda bir bölgeyi imzalamış
+// olabilecek hiçbir şey yoktur ve sorgulanmaz.
+func TestFirstInstallPreviewDoesNotProbeDNSSECWithoutAnyPowerDNS(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	agent.dnssecUnavailable = true
+	attachDNSEngineTestAgent(t, p, agent)
+	seedDNSSetupAuditUser(t, p)
+	seedPendingDNSZoneForTest(t, p, "legacy-arch.s9.test")
+
+	recorder := httptest.NewRecorder()
+	p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+		`{"ns1":"ns1.s9.test","ns2":"ns2.s9.test","role":"standalone","peer_ip":"","peer_ns":""}`,
+	))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("staging status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	snapshot, err := p.dnsEngineSnapshot(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.State != dnsEngineStateUnconfigured || snapshot.DNSSECZoneCount != 0 {
+		t.Fatalf("fresh host with a legacy zone must present unconfigured: state=%s dnssec=%d",
+			snapshot.State, snapshot.DNSSECZoneCount)
+	}
+	preview, previewRecorder := requestDNSEnginePreview(t, p, transport.DNSEngineBIND, nil, 1)
+	if previewRecorder.Code != http.StatusOK || preview.Action != "install" || len(preview.Blockers) != 0 {
+		t.Fatalf("first install preview=%+v status=%d body=%s",
+			preview, previewRecorder.Code, previewRecorder.Body.String())
+	}
+	agent.mu.Lock()
+	calls := agent.dnssecCalls
+	agent.mu.Unlock()
+	if calls != 0 {
+		t.Fatalf("a host with no PowerDNS was probed for DNSSEC %d times", calls)
+	}
+}
+
+// The legacy shape keeps its protection: a PowerDNS that is installed but not
+// adopted is still asked, and its answer still blocks a BIND install.
+// Eski biçim korumasını korur: kurulu ama devralınmamış PowerDNS yine sorulur
+// ve cevabı BIND kurulumunu yine engeller.
+func TestFirstInstallPreviewStillProbesAnInstalledLegacyPowerDNS(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	agent.dnssecUnavailable = true
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed = true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	attachDNSEngineTestAgent(t, p, agent)
+	seedDNSSetupAuditUser(t, p)
+	seedPendingDNSZoneForTest(t, p, "legacy-pdns.s9.test")
+	recorder := httptest.NewRecorder()
+	p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+		`{"ns1":"ns1.s9.test","ns2":"ns2.s9.test","role":"standalone","peer_ip":"","peer_ns":""}`,
+	))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("staging status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	preview, previewRecorder := requestDNSEnginePreview(t, p, transport.DNSEngineBIND, nil, 1)
+	if previewRecorder.Code != http.StatusOK {
+		t.Fatalf("preview status=%d body=%s", previewRecorder.Code, previewRecorder.Body.String())
+	}
+	found := false
+	for _, blocker := range preview.Blockers {
+		if blocker.Code == "dnssec_unsupported" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("an installed legacy PowerDNS whose DNSSEC state is unknown must still block: %+v", preview.Blockers)
+	}
+}
+
 // With a source engine active, pending zones still block a switch: pending
 // there means the source has not caught up, and the switch must not copy an
 // unsettled zone set.

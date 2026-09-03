@@ -29,6 +29,7 @@ type dnsEngineTestAgent struct {
 	onReadiness                func(int)
 	readinessAfterSwitchError  string
 	dnssec                     bool
+	dnssecUnavailable          bool
 	dnssecCalls                int
 	switchCalls                int
 	switchRequests             []transport.SwitchDNSEngineV1Request
@@ -528,6 +529,12 @@ func (agent *dnsEngineTestAgent) DNSSECStatus(
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 	agent.dnssecCalls++
+	if agent.dnssecUnavailable {
+		// The real agent's answer whenever PowerDNS is not the active engine.
+		// Gerçek agent'ın PowerDNS etkin motor olmadığında verdiği yanıt.
+		response.Error = "DNSSEC status is unavailable because PowerDNS is not the active DNS engine"
+		return nil
+	}
 	response.Secured = agent.dnssec
 	if agent.dnssec {
 		response.DS = []string{"12345 13 2 AABBCC"}
@@ -1870,6 +1877,17 @@ func TestDNSEnginePairedBINDPreviewAndDNSSECBlockerWithoutMutation(t *testing.T)
 			}
 			agent := newDNSEngineTestAgent()
 			agent.dnssec = test.dnssec
+			if test.dnssec {
+				// A signed zone can only exist where a PowerDNS that signed it
+				// exists: the legacy, not-yet-adopted shape. A host with no
+				// PowerDNS at all is not probed (R-029, third layer).
+				// İmzalı bölge ancak onu imzalayan bir PowerDNS'in olduğu yerde
+				// olabilir: eski, henüz devralınmamış biçim. Hiç PowerDNS'i
+				// olmayan sunucu sorgulanmaz (R-029, üçüncü kat).
+				pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+				pdns.Installed = true
+				agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+			}
 			attachDNSEngineTestAgent(t, panel, agent)
 			preview, recorder := requestDNSEnginePreview(
 				t, panel, transport.DNSEngineBIND, nil, 0,
