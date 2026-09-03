@@ -1340,8 +1340,16 @@ func (hostDNSEngineBackend) Switch(
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	// Nothing to install: BIND's packages are already on this host. That is
+	// still an event with provenance - this mutation takes them under
+	// management - and finalization requires it to be recorded, exactly as an
+	// installation is.
+	//
+	// Kurulacak bir şey yok: BIND'in paketleri bu sunucuda zaten var. Bu yine de
+	// kökeni olan bir olaydır - bu mutasyon onları yönetimine alır - ve
+	// sonlandırma bunun tıpkı bir kurulum gibi kaydedilmesini ister.
 	if len(missing) == 0 {
-		if err := handoffExistingDNSEngineInstallOwnership(
+		if err := assumeExistingDNSEnginePackageOwnership(
 			transport.DNSEngineBIND, profile.PackageManager,
 			layout.Packages, manifest, binding,
 		); err != nil {

@@ -1589,6 +1589,13 @@ func switchToPDNSOnCertifiedProfile(
 	// Rebinding it to the new identity is the same repair BIND already performs
 	// in hostDNSEngineBackend.Switch; the PowerDNS path never received it.
 	//
+	// The host that has no receipt at all needs the same repair for the same
+	// reason. PowerDNS packages present before the first switch — a rebuilt
+	// host, an operator's own apt install, a rolled-back attempt that itself
+	// installed nothing — mean no attempt ever writes provenance, and every one
+	// of them reaches a verified target that finalization then refuses. That is
+	// R-026's live failure on Debian 13; the fix is to record the adoption.
+	//
 	// Paket kurulumuna ulaşıp sonra geri alınmış bir önceki deneme, kurulum
 	// makbuzunu ölü bir istek kimliğine bağlı bırakır: geri alma yapılandırmayı,
 	// durumu ve unit'leri onarır ama ne paketlere ne makbuza dokunur. Yeniden
@@ -1596,8 +1603,16 @@ func switchToPDNSOnCertifiedProfile(
 	// kalan makbuzun kimliği artık bu işlemle eşleşemez — sonlandırma işlemi
 	// zehirler ve zehir yeniden başlatmaları aşar. Makbuzu yeni kimliğe yeniden
 	// bağlamak, BIND'in Switch içinde zaten yaptığı onarımın aynısıdır.
+	//
+	// Hiç makbuzu olmayan sunucunun da aynı nedenle aynı onarıma ihtiyacı
+	// vardır. İlk geçişten önce zaten kurulu PowerDNS paketleri — yeniden
+	// kurulmuş bir sunucu, operatörün kendi apt kurulumu, kendisi de hiçbir şey
+	// kurmamış geri alınmış bir deneme — hiçbir denemenin köken yazmaması
+	// demektir; her biri doğrulanmış hedefe ulaşır ve sonlandırma her birini
+	// reddeder. Debian 13'teki R-026 arızası budur; onarım devralmayı
+	// kaydetmektir.
 	if len(missing) == 0 {
-		if err := handoffExistingDNSEngineInstallOwnership(
+		if err := assumeExistingDNSEnginePackageOwnership(
 			transport.DNSEnginePowerDNS, profile.PackageManager,
 			packages, manifest, binding,
 		); err != nil {
