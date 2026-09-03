@@ -70,6 +70,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-029 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Hiç motor çalıştırmamış sunucuda DNS kimlik hazırlama, bölgeler beklediği için reddetti; oysa böyle bir sunucuda her bölge yapısı gereği bekler; DNS'i kurmadan önce alan adı eklemek ilk motor kurulumunu ulaşılamaz kılıyordu |
 | R-030 | Orta | DALDA DÜZELTİLDİ | Agent'ın defteri ayağa kalkamadığında ya da başlangıçta zehirlendiğinde salt-okunur mutasyon durum RPC'si düpedüz düşüyordu; sonda ölü agent ile hizmet verip reddeden agent'ı ayırt edemiyordu |
 | R-031 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin geri alması bind9.service takma adını named.service'ten önce etkinleştirmeye çalıştı; APT sunucularında bu başarılı olamaz; kaynak BIND geri gelmedi ve kurtarma defteri zehirledi |
+| R-032 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Sunucunun daha önce kullandığı motora dönüş, paket kurulumundan sonra kesildiğinde yarım kalmış devir biçimi sanıldı; çünkü eski motorun terk edilmiş sahiplik makbuzu hiç emekliye ayrılmaz; kurtarma sıradan bir operatör hareketinde defteri zehirledi |
 
 ## Ayrıntılı riskler
 
@@ -851,7 +852,15 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   kapı hazırlama işleminin içinde de tekrarlanıyor.
 - Etki: DNS kurulmadan önce alan adı bulunan her taze kurulum, ilk DNS motorunu
   panelden kuramaz. Tek çıkış bölgeleri silmekti. Arch'a özgü değil: aynı yol her
-  dağıtımda reddeder. Bu R-018 kanıtı değildir: Arch'taki miras çıpa yürüyüşüne
+  dağıtımda reddeder. Düzeltme (3 Eylül 2026, taze Debian 13'te ölçüldü):
+  halka açık alan adı ekleme rotasının kendisi etkin motoru olmayan sunucuda
+  reddediyor (`409 DNS_SERVER_REQUIRED`, "önce BIND ya da PowerDNS'i
+  etkinleştirin"); dolayısıyla "önce alan adı ekle, sonra DNS'i kur" taze
+  kurulumda panelden gerçekleşemez. Kilit, bölgeleri ilk motordan önce var olan
+  sunucular için gerçektir - yükseltilmiş kurulumlar, içe aktarmalar, geri
+  yüklemeler - S-8 T1'in doğrudan tohumladığı biçim budur. Düzeltme geçerlidir;
+  yukarıdaki cümle kime ulaştığını abartmıştı.
+  Bu R-018 kanıtı değildir: Arch'taki miras çıpa yürüyüşüne
   hiç ulaşılmadı; R-018 gerçek bir Arch `/` üzerinde kanıtsız kalır.
 - Daldaki düzeltme (2 Eylül 2026): `fresh` hazırlama türünde (hiç motor
   çalışmamış, ikisi de çalışmıyor) kapı yalnız uçuştaki yayınlara bakar - canlı
@@ -941,6 +950,44 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: Gerçek Debian 13'te T5 - geri alma BIND'ı etkin ve
   etkinleştirilmiş bırakır, iş temiz kodla failed/interrupted biter ve sonraki
   geçiş kabul edilir.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-032 - Eski motorun terk edilmiş sahiplik makbuzu geri dönüş geçişini zehirliyor
+
+- Kanıt: S-8, Boston 3. deneme (manifest SHA-256
+  `746228bdc2c01ecda8fbb65067ddb29a0dea9e740694ce461ecff1c50b11c568`) ve
+  ekibin S-9 ön kontrolü. Kurulum zinciri boş -> BIND epoch 1 -> PowerDNS
+  epoch 2 -> etkin olmayan BIND'ın temizliği rc 0 ile tamamlandı ve geride
+  "tarihi BIND sahipliği korunmuş" kaldı: epoch 1'den kalma
+  `dns-engine-ownership-bind.json` diskte duruyor; çünkü tasarım gereği
+  sahiplik makbuzlarını hiçbir şey emekliye ayırmaz (bunu tam olarak
+  `supersededDNSEngineOwnership` belgeler). O sunucuda intent-öncesi pencerede
+  öldürülen üretim BIND geçişi, günlüksüz köken kontrolüne kurulum makbuzu VE
+  hedef sahiplik makbuzu birlikte varken gelir; R-019'un gevşetmesi bunu
+  bilerek "Boston biçimi" olarak kapalı tutmuştu. Sonuç yine R-019
+  tıkanması: `ledger_ambiguous`, iş `running`/`leased`, her açılışta kalıcı
+  durumdan yeniden hesaplanır.
+- Etki: bir zamanlar A motorunu çalıştırmış, B'ye geçmiş ve A'ya dönüşü paket
+  kurulumundan sonra kesilen her sunucu, biri SSH ile bir JSON dosyasını
+  silene kadar kilitlenir. Bu sıradan bir operatör yoludur (PowerDNS'i dene,
+  BIND'a dön), saldırı biçimi değil.
+- Daldaki düzeltme (3 Eylül 2026): çağ iki durumu yapı gereği ayırır. Etkin
+  durumdan ESKİ bir hedef sahiplik makbuzu tarihtir ve yok sayılır (temiz
+  düşüş, yeniden deneme yakınsar); aynı ya da daha yeni çağdaki makbuz
+  committed durumun ilerisinden gelir ve kapalı arıza vermeye devam eder.
+  Linux testleri BIND(1) -> PowerDNS(2) -> BIND sunucusunu kurar ve kanıtlar:
+  eski makbuz kurtarılabilir, eşit ve yeni makbuzlar reddedilir; kurtarılabilir
+  durum düzeltilmemiş ağaçta `journal-free DNS engine target retains
+  transitional install ownership` ile düşer.
+- Boston negatifi için sonuç: S-7/S-8/S-9'da emredilen hücre (epoch-1
+  makbuzunu yerleştir) artık kalıntı olarak geçer, ki doğrusu budur.
+  Güvenlik-kritik negatif, hedefin çağında (durum çağı + 1) bir makbuz
+  yerleştirmelidir; pozitif yarı ise tarihi makbuzun yakınsadığını
+  göstermelidir. S-9 ek 2 hücreyi buna göre yeniden tanımlar.
+- Çıkış ölçütü: gerçek Debian 13'te BIND -> PowerDNS -> (intent-öncesi
+  öldürülen BIND geçişi) temiz düşen iş ve yakınsayan yeniden denemeyle
+  kurtarılır; aynı sunucu hedef-çağlı yerleştirilmiş makbuzla
+  `ledger_ambiguous` ile kapalı arıza verir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

@@ -754,7 +754,36 @@ func exactFinalizedDNSEngineSwitchProvenanceOnHost(
 			// Başka bir motor etkinken hedefin sahiplik makbuzu DA taşıması,
 			// gerçekten belirsiz olan yarım kalmış devirdir — Boston biçimi — ve
 			// kapalı arıza vermeyi sürdürür.
-			if state.Engine != target && !ownershipExists {
+			//
+			// One more distinction, learned on the same host shape (S-8
+			// Boston, register R-032). Ownership receipts are per-engine
+			// files and nothing retires them (see
+			// supersededDNSEngineOwnership): a host that ever ran the target
+			// engine still holds its receipt from that older epoch. On the
+			// BIND -> PowerDNS -> BIND path that stranded receipt sat beside
+			// the fresh install receipt and was read as the Boston shape, so
+			// an interrupted switch back to an engine the host had used before
+			// poisoned the ledger on an ordinary operator action. The epoch
+			// tells the two apart by construction: a target receipt OLDER than
+			// the active state is history; a receipt at the same or a newer
+			// epoch is a receipt from ahead of the committed state and stays
+			// ambiguous.
+			//
+			// Aynı sunucu biçiminde öğrenilen bir ayrım daha (S-8 Boston,
+			// defter R-032). Sahiplik makbuzları motor başına dosyalardır ve
+			// hiçbir şey onları emekliye ayırmaz (bkz.
+			// supersededDNSEngineOwnership): hedef motoru bir zamanlar
+			// çalıştırmış bir sunucu, onun o eski çağdan makbuzunu hâlâ tutar.
+			// BIND -> PowerDNS -> BIND yolunda o terk edilmiş makbuz taze
+			// kurulum makbuzunun yanında durdu ve Boston biçimi sanıldı;
+			// böylece daha önce kullanılmış bir motora geri dönen kesintili
+			// geçiş, sıradan bir operatör hareketinde defteri zehirledi. Çağ
+			// ikisini yapı gereği ayırır: etkin durumdan ESKİ bir hedef makbuzu
+			// tarihtir; aynı ya da daha yeni çağdaki makbuz committed durumun
+			// ilerisinden gelen bir makbuzdur ve belirsiz kalır.
+			historicalOwnership := ownershipExists &&
+				ownership.EngineEpoch < state.EngineEpoch
+			if state.Engine != target && (!ownershipExists || historicalOwnership) {
 				return false, nil
 			}
 			return false, errors.New(

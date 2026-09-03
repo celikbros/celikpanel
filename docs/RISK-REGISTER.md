@@ -69,6 +69,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-029 | High | FIXED ON BRANCH / LIVE PROOF PENDING | DNS identity staging on a host that has never run an engine refused because zones were pending, which every zone on such a host is by construction; adding a domain before setting up DNS made the first engine install unreachable |
 | R-030 | Medium | FIXED ON BRANCH | A read-only mutation status RPC failed outright when the agent's ledger could not be brought up or was poisoned at startup, so a probe could not tell a dead agent from one that is serving and refusing |
 | R-031 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Rolling back a BIND-to-PowerDNS switch re-enabled the bind9.service alias before named.service, which cannot succeed on APT hosts; the source BIND never came back and the recovery poisoned the ledger |
+| R-032 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Returning to an engine the host had used before, with the switch interrupted after package install, was read as the half-finished handover shape because the former engine's stranded ownership receipt is never retired; recovery poisoned the ledger on an ordinary operator action |
 
 ## Detailed risks
 
@@ -855,6 +856,14 @@ or executed as-is. There are no open pull requests at this baseline.
 - Impact: any fresh install where a domain exists before DNS is set up cannot
   install its first DNS engine through the panel. The only way out was deleting
   the zones. Not Arch-specific: the same path refuses on every distribution.
+  Correction (3 September 2026, measured on a fresh Debian 13 host): the
+  public domain-create route itself refuses on a host with no active engine
+  (`409 DNS_SERVER_REQUIRED`, "choose and activate BIND or PowerDNS first"),
+  so "add a domain, then set up DNS" cannot happen through the panel on a
+  fresh install. The deadlock is real for hosts whose zones predate the first
+  engine - upgraded installs, imports, restores - which is the shape S-8's T1
+  seeded directly. The fix stands; the sentence above overstated who reaches
+  it.
   Note that this is not the R-018 proof: the inherited-anchor walk on Arch was
   never reached, so R-018 stays unproven on a real Arch `/`.
 - Fix on branch (2 September 2026): for the `fresh` staging kind (no engine has
@@ -950,6 +959,45 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: T5 on a real Debian 13 host - rollback leaves BIND active and
   enabled, the job ends failed/interrupted with a clean code, and the next
   switch is accepted.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-032 - A former engine's stranded ownership receipt poisons the switch back
+
+- Evidence: S-8, Boston attempt 3 (manifest SHA-256
+  `746228bdc2c01ecda8fbb65067ddb29a0dea9e740694ce461ecff1c50b11c568`) and
+  the team's S-9 preflight. The setup chain empty -> BIND epoch 1 -> PowerDNS
+  epoch 2 -> purge inactive BIND completed with rc 0 and left "historical BIND
+  ownership retained": `dns-engine-ownership-bind.json` from epoch 1 stays on
+  disk because, by design, nothing retires ownership receipts
+  (`supersededDNSEngineOwnership` documents exactly this). A production BIND
+  switch killed at the pre-intent window on that host then meets the
+  journal-free provenance check with an install receipt AND a target
+  ownership receipt present, which R-019's relaxation deliberately kept
+  fail-closed as "the Boston shape". The result is the R-019 wedge again:
+  `ledger_ambiguous`, job `running`/`leased`, recomputed from durable state on
+  every boot.
+- Impact: any host that ever ran engine A, moved to engine B, and has a switch
+  back to A interrupted after package install is wedged until someone deletes
+  a JSON file over SSH. That is an ordinary operator path (try PowerDNS, go
+  back to BIND), not an attack shape.
+- Fix on branch (3 September 2026): the epoch tells the two cases apart by
+  construction. A target ownership receipt OLDER than the active state is
+  history and is treated like an absent receipt (clean failure, retry
+  converges); a receipt at the same or a newer epoch is a receipt from ahead of
+  the committed state and still fails closed. Linux tests stage the
+  BIND(1) -> PowerDNS(2) -> BIND host and prove: older receipt recoverable,
+  equal and newer receipts refused; the recoverable case fails on the unfixed
+  tree with `journal-free DNS engine target retains transitional install
+  ownership`.
+- Consequence for the Boston negative: the cell as ordered in S-7/S-8/S-9
+  (plant the epoch-1 receipt) would now pass through as residue, which is
+  correct. The safety-critical negative must plant a receipt at the target's
+  epoch (state epoch + 1); the positive half must show the historical receipt
+  converging. S-9 addendum 2 redefines the cell accordingly.
+- Exit criteria: on a real Debian 13 host, BIND -> PowerDNS -> (BIND switch
+  killed pre-intent) recovers with a clean failed job and a converging retry;
+  the same host with a planted target-epoch receipt fails closed with
+  `ledger_ambiguous`.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
