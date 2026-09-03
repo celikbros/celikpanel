@@ -76,10 +76,10 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-035 | Orta | AÇIK / TASARIM | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
 | R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
 | R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
-| R-038 | Kritik | AÇIK / AGENT YARISI DÜZELTİLDİ / PANEL O KATMANA VARMADAN REDDEDİYOR / CANLI KANITLI | DNS motorunun paketlerini zaten taşıyan sunucu o motoru hiç etkinleştiremiyor: panel onu yönetilmeyen sayıp reddediyor ve ileri giden bir yol sunmuyor; servis ekranları da operatörü reddeden ekrana geri yolluyor |
+| R-038 | Kritik | DURMUŞ HALİ DÜZELTİLDİ VE CANLI KANITLANDI / ÇALIŞIR HALİ R-039 / GERİ ALMA KANITI BORÇ | DNS motorunun paketlerini zaten taşıyan sunucu, motor durmuşken artık panelden açık onayla devralabiliyor; çalışan yönetilmeyen motor hâlâ reddediliyor ve R-039 olarak izleniyor |
 | R-039 | Yüksek | AÇIK / TASARIM BELİRLENDİ | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
 | R-040 | Yüksek | BULUNDU / DÜZELTME SÜRÜYOR | Servis listesi, hiç taramadığı sunucu için "kurulu değil" diyor: gözlem yokluğu ile servis yokluğu aynı cevaba düşüyor |
-| R-041 | Orta | BULUNDU / DÜZELTME SÜRÜYOR | Web sözleşmesi, panelin zaten döndürdüğü `reinstall_active` eylemini çözemiyor; geri yüklenen sunucunun ihtiyaç duyduğu yeniden kurulum tarayıcıda geçersiz önizleme olarak görünüyor |
+| R-041 | Orta | DALDA DÜZELTİLDİ / KORUMAYA ALINDI | Web sözleşmesi, panelin zaten döndürdüğü `reinstall_active` eylemini çözemiyor; geri yüklenen sunucunun ihtiyaç duyduğu yeniden kurulum tarayıcıda geçersiz önizleme olarak görünüyor |
 
 ## Ayrıntılı riskler
 
@@ -1334,6 +1334,24 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   durdurulmuş halde, operatör BIND'i yalnız panelden etkinleştiriyor, bölge
   cevap veriyor ve geri alma sunucunun önceki yapılandırmasını geri
   getiriyor. Gerçek VM'de kanıtlı.
+- Durmuş hali için düzeltildi ve canlı kanıtlandı (3 Eylül 2026, Debian 13
+  konuğu, bind9 1:9.20.26 önceden kurulu, named durdurulmuş ve devre dışı):
+  önizleme engelsiz `adopt_unmanaged` ve kendi onayını döndürüyor; commit
+  onaysız reddediliyor (`400 adoption acknowledgement is required`, hiçbir
+  şey değişmiyor), onayla 10 saniyede kabul ediliyor; BIND etkin, 53 numaralı
+  bağlantı noktasının sahibi, epoch 1, durum hazır, sunucu işlem yapabilir,
+  kalıcı sahiplik makbuzu o işlemi adlandırıyor, paket yöneticisi günlüğü
+  hiçbir kurulum yapılmadığını gösteriyor ve yeni bir alan adının bölgesi SOA
+  kaydını yetkili olarak yanıtlıyor. Devralma, ilk kurulum işlemini
+  değiştirmeden kullanıyor; manifest, anlık görüntü satırı ve agent gönderimi
+  ilk kurulumla birebir aynı. Kimlik hazırlama değişmedi: durmuş hal zaten
+  taze sayılıyordu.
+- Burada hâlâ borç: geri alma kanıtı - düşen bir devralmanın sunucunun
+  önceki yapılandırmasını geri getirmesi. Anlık görüntü mekanizması bunu
+  zaten alıyor (içerik temelli olduğu için panelin hiç yazmadığı bir satıcı
+  yapılandırmasını da kapsıyor) ama geri yükleme bu yolda denenmedi.
+- Çalışan hal artık bu kayıt değil; R-039'da ve reddi bir testle sabitlendi
+  ki yanlışlıkla o yola girilemesin.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-039 - Çalışan bir DNS sunucusunu devralmak kalıcı ön-niyet kaydı ister
@@ -1397,6 +1415,15 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Düzeltme: gönderilen eylemi çöz ve eylem kümesini, API'nin döndürebildiği
   ama tarayıcının çizemediği bir şey olduğunda düşen bir testle sabitle ki bu
   sınıf tekrarlamasın.
+- Düzeltildi (3 Eylül 2026): önizleme eylem listesi, türün kendisinden
+  türediği tek bir dışa aktarılmış liste oldu; birlik ile çalışma anındaki
+  kontrol artık ayrışamaz. Bir test panelin kendi eylem işlevini okuyor ve
+  API'nin döndürebildiği bir eylemi tarayıcı çözemiyorsa yapıyı düşürüyor.
+  Eylemi listeye eklemek tek başına yetmedi: çözücü onayı bir kaynağın
+  varlığına bağlıyordu, yeniden kurulumun ise kaynağı var; yine düşerdi.
+- Kaydedilen ders, tekrar edeceği için: API kanıtı ürün kanıtı değildir.
+  Yeniden kurulum aynı sabah API'den denenmişti ve tarayıcıya geçersiz
+  önizleme olarak ulaştı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

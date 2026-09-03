@@ -75,10 +75,10 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-035 | Medium | OPEN / DESIGN | The firewall cannot be enabled on a host without a discoverable sshd, and the product cannot install one; such hosts never get `firewall.nft` |
 | R-036 | Medium | OPEN / DESIGN | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
 | R-037 | Medium | GUARDED ON BRANCH / A SECOND EMBED WAS AFFECTED AND IS FIXED | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
-| R-038 | Critical | OPEN / AGENT HALF FIXED / PANEL REFUSES BEFORE REACHING IT / PROVEN LIVE | A host that already carries the DNS engine's packages can never activate that engine: the panel refuses it as unmanaged and offers no way forward, and the service screens send the operator back to the screen that refuses |
+| R-038 | Critical | STOPPED SHAPE FIXED AND PROVEN LIVE / RUNNING SHAPE IS R-039 / ROLLBACK PROOF OWED | A host that already carries the DNS engine's packages can now adopt that engine through the panel with an explicit acknowledgement, when the engine is stopped; a running unmanaged engine is still refused and is tracked as R-039 |
 | R-039 | High | OPEN / DESIGN ESTABLISHED | Adopting a DNS server that is running and unmanaged needs a durable pre-intent record: the agent must stop a service it does not own before its proofs run, and a crash in that window would leave the operator's DNS stopped with nothing to recover from |
 | R-040 | High | FOUND / FIX IN PROGRESS | The service list reports a host it has never scanned as "not installed": no observation and no service serialise to the same answer |
-| R-041 | Medium | FOUND / FIX IN PROGRESS | The web contract does not decode the `reinstall_active` action the panel already returns, so the reinstall the restored host needs shows as an invalid preview in the browser |
+| R-041 | Medium | FIXED ON BRANCH / GUARDED | The web contract does not decode the `reinstall_active` action the panel already returns, so the reinstall the restored host needs shows as an invalid preview in the browser |
 
 ## Detailed risks
 
@@ -1351,6 +1351,24 @@ or executed as-is. There are no open pull requests at this baseline.
   the running and the stopped shape, the operator activates BIND through the
   panel alone, the zone answers, and a rollback restores the configuration the
   host had before. Proven on a real VM.
+- Fixed and proven live for the stopped shape (3 September 2026, Debian 13
+  guest, bind9 1:9.20.26 preinstalled, named stopped and disabled): the
+  preview returns `adopt_unmanaged` with no blockers and its own
+  acknowledgement; the commit is refused without it (`400 adoption
+  acknowledgement is required`, nothing changed) and accepted with it in 10 s;
+  BIND ends active and owning port 53 at epoch 1, state ready, the host still
+  mutable, the durable ownership receipt naming that mutation, the package
+  manager log showing nothing was installed, and a new domain's zone
+  answering its SOA authoritatively. The takeover reuses the first-install
+  transaction unchanged, so the manifest, the snapshot row and the agent
+  dispatch are identical to a first install. Identity staging needed no
+  change: the stopped shape already qualified as fresh.
+- Still owed here: the rollback proof - that a takeover which fails restores
+  the configuration the host had before it. The snapshot machinery already
+  captures it (it is content-based, so it covers a vendor config the panel
+  never wrote), but the restore has not been exercised on this path.
+- The running shape is not this entry any more; it is R-039, and a test pins
+  the refusal so it cannot be reached by accident.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-039 - Adopting a running DNS server needs a durable pre-intent record
@@ -1416,6 +1434,15 @@ or executed as-is. There are no open pull requests at this baseline.
 - Fix: decode the shipped action, and pin the action set with a test that
   fails when the API can return something the browser cannot render, so this
   class cannot recur.
+- Fixed (3 September 2026): the preview action list is one exported list the
+  type derives from, so the union and the runtime check cannot drift, and a
+  test parses the panel's own action function and fails the build when the
+  API can return an action the browser cannot decode. Listing the action was
+  not enough on its own: the decoder also tied the acknowledgement to the
+  presence of a source, which a reinstall has, so it would still have failed.
+- The lesson, recorded because it will recur: an API proof is not a product
+  proof. The reinstall was exercised through the API the same morning and
+  reached the browser as an invalid preview.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
