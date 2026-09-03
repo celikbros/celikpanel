@@ -337,6 +337,13 @@ func TestDNSEngineReinstallOwnershipIsProvenanceAtTheSameEpoch(t *testing.T) {
 // makbuz, sunucunun kaybettiğinden ayırt edilemez olmalıdır. Oraya işlemin
 // kendi kipini yazmak, dönemi kazayla damgalardı.
 func TestDNSEngineReinstallLeavesASwitchTenureReceipt(t *testing.T) {
+	// reinstallJournalForTest stages a real state receipt, so this test needs
+	// the private agent state directory and the ownership contract every other
+	// receipt-writing test in this package uses.
+	// reinstallJournalForTest gerçek bir durum makbuzu yazar; bu test de
+	// paketteki diğer makbuz yazan testlerin kullandığı özel agent state
+	// dizinine ve sahiplik sözleşmesine ihtiyaç duyar.
+	prepareDNSEngineOwnershipTest(t)
 	manifest := reinstallManifestForTest(t, 1)
 	if got := dnsEngineTenureModeForManifest(manifest); got != transport.DNSEngineSwitchModeSwitch {
 		t.Fatalf("reinstall tenure mode = %q, want %q",
