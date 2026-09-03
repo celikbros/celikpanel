@@ -41,7 +41,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 |---|---|---|---|
 | R-001 | Kritik | MAIN ÜZERİNDE KAPALI | Operations artık snapshot v6'yı, güncel v4/v5 reddini ve tarihsel sürüm sınırını anlatıyor |
 | R-002 | Yüksek | MAIN ÜZERİNDE KAPALI | README artık isteğe bağlı yerel GPG kullanımını canonical Ed25519 update otoritesinden ayırıyor |
-| R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ | Tam kontrol düzlemi disaster backup ve restore tatbikatı kanıtlanmadı |
+| R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ / TASARIM DALDA | Kontrol düzlemi felaket yedeği henüz yok; tasarım, envanter ve tatbikat planı `docs/DISASTER-RECOVERY.md`'de |
 | R-004 | Yüksek | KISMEN AZALTILDI / YENİDEN DOĞRULA | İki host exact Alpha52 ve terminal receipt ile tam kabulü geçti; snapshot kaynak provenance'ı `unknown` kaldı |
 | R-005 | Yüksek | AÇIK | Boston/Frankfurt ortam sınıfı üretime-hazır-değil politikasıyla çelişkili |
 | R-006 | Yüksek | AÇIK | Route/role ve API sözleşme borcu güvenlik sınırında sürüyor |
@@ -116,6 +116,14 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   kontrol düzlemi anahtarları ve sertifikaları içerir; retention ve off-host
   saklama tanımlıdır; temiz host restore tatbikatı servis ve kriptografik kimlik
   kurtarmayı kanıtlar; RPO/RTO repo dışında kabul edilir.
+- Durum (3 Eylül 2026): entegrasyon dalında kapsamlandı. Bugün yalnız alan adı
+  başına yedek var; panelin kendi durumunu (SQLite, `secret.key`, agent özel
+  durumu, DKIM ve WireGuard anahtarları, panel TLS, güvenlik duvarı anlık
+  görüntüsü) hiçbir şey almıyor. `docs/DISASTER-RECOVERY.md` tam envanteri,
+  tutarlılık mekanizmasını (güncelleme yolunun çevrimiçi, WAL'a duyarlı SQLite
+  kopyası), anahtar kuralını (yedek anahtarı `secret.key`'den ayrı, bir kez
+  gösterilir), geri yükleme giriş noktasını ve tatbikatı kaydeder. Uygulama bu
+  sırayla gelir; WSL tatbikatı gerçek VM tatbikatından önce.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-004 — Alpha52 canlı promotion kanıtlandı; artık kabul kanıtı korunmalı

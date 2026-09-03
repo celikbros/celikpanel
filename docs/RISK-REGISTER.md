@@ -40,7 +40,7 @@ or executed as-is. There are no open pull requests at this baseline.
 |---|---|---|---|
 | R-001 | Critical | CLOSED ON MAIN | Operations now documents snapshot v6, current v4/v5 rejection and the historical-release boundary |
 | R-002 | High | CLOSED ON MAIN | README now separates optional local GPG use from canonical Ed25519 update authority |
-| R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS | No proven full control-plane disaster backup and restore drill |
+| R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS / DESIGN ON BRANCH | No control-plane disaster backup exists yet; the design, inventory and drill plan are in `docs/DISASTER-RECOVERY.md` |
 | R-004 | High | PARTIALLY MITIGATED / REVERIFY | Both hosts run exact Alpha52 with terminal receipts and full acceptance; snapshot source provenance remains `unknown` |
 | R-005 | High | OPEN | Boston/Frankfurt environment classification conflicts with the not-production-ready policy |
 | R-006 | High | OPEN | Route/role and API-contract debt remains at a security boundary |
@@ -114,6 +114,14 @@ or executed as-is. There are no open pull requests at this baseline.
   secret.key, relevant control-plane keys and certificates; retention and
   off-host storage are defined; a clean-host restore drill proves service and
   cryptographic identity recovery; RPO/RTO are accepted externally.
+- Status (3 September 2026): scoped on the integration branch. Today only
+  per-domain backups exist; nothing captures the panel's own state (SQLite,
+  `secret.key`, agent private state, DKIM and WireGuard keys, panel TLS,
+  firewall snapshot). `docs/DISASTER-RECOVERY.md` records the exact inventory,
+  the consistency mechanism (the update path's online WAL-aware SQLite copy),
+  the key rule (backup key separate from `secret.key`, shown once), the restore
+  entry point and the drill. Implementation follows in that order; the WSL
+  drill precedes the real-VM drill.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-004 — Alpha52 live promotion proven; residual acceptance must be retained
