@@ -247,8 +247,7 @@ func parseCanonicalDNSPort53ListenerRow(
 		return canonicalDNSPort53ListenerRow{},
 			errors.New("ss returned a non-canonical public DNS listener endpoint")
 	}
-	_, peerPort, ok := parseCanonicalSSHostPort(fields[5], false)
-	if !ok || peerPort != "*" {
+	if !canonicalSSWildcardPeerEndpoint(fields[5]) {
 		return canonicalDNSPort53ListenerRow{},
 			errors.New("ss returned a non-canonical DNS listener peer endpoint")
 	}
@@ -259,6 +258,25 @@ func parseCanonicalDNSPort53ListenerRow(
 	return canonicalDNSPort53ListenerRow{
 		protocol: protocol, address: address, process: process, pid: pid,
 	}, nil
+}
+
+// canonicalSSWildcardPeerEndpoint reports whether ss rendered the peer column
+// of a listening socket, which is the only thing this proof accepts: a
+// listener has no peer, a connected socket does. iproute2 renders that empty
+// peer with the same formatter it uses for the local address, so its spelling
+// follows the socket family and the IPV6_V6ONLY flag the kernel reports
+// through INET_DIAG_SKV6ONLY. An IPv4 socket prints "0.0.0.0:*", an
+// IPv6-only socket prints "[::]:*", and an IPv6 socket that also accepts IPv4
+// - or one whose v6only flag the kernel does not report - prints "*:*". All
+// three mean "no peer" and are equally canonical; every other spelling,
+// including a real remote address such as "192.0.2.7:53535", is refused.
+func canonicalSSWildcardPeerEndpoint(endpoint string) bool {
+	switch endpoint {
+	case "*:*", "0.0.0.0:*", "[::]:*":
+		return true
+	default:
+		return false
+	}
 }
 
 func parseCanonicalSSHostPort(
