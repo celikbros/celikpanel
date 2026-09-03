@@ -41,7 +41,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 |---|---|---|---|
 | R-001 | Kritik | MAIN ÜZERİNDE KAPALI | Operations artık snapshot v6'yı, güncel v4/v5 reddini ve tarihsel sürüm sınırını anlatıyor |
 | R-002 | Yüksek | MAIN ÜZERİNDE KAPALI | README artık isteğe bağlı yerel GPG kullanımını canonical Ed25519 update otoritesinden ayırıyor |
-| R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ / TASARIM DALDA | Kontrol düzlemi felaket yedeği henüz yok; tasarım, envanter ve tatbikat planı `docs/DISASTER-RECOVERY.md`'de |
+| R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ / ARŞİV VE GERİ YÜKLEME DALDA / WSL TATBİKATI: GERİ YÜKLEME KANITLI, MOTOR YENİDEN KURULUMU DÜŞÜYOR | Panel kendi kontrol düzlemini arşivliyor ve geri yüklüyor (dilim 1 ve 2); ilk WSL tatbikatı taze sunucuyu 23 saniyede ayağa kaldırdı ama geri yüklenen sunucu DNS motorunu yeniden kuramıyor |
 | R-004 | Yüksek | KISMEN AZALTILDI / YENİDEN DOĞRULA | İki host exact Alpha52 ve terminal receipt ile tam kabulü geçti; snapshot kaynak provenance'ı `unknown` kaldı |
 | R-005 | Yüksek | AÇIK | Boston/Frankfurt ortam sınıfı üretime-hazır-değil politikasıyla çelişkili |
 | R-006 | Yüksek | AÇIK | Route/role ve API sözleşme borcu güvenlik sınırında sürüyor |
@@ -127,6 +127,19 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   kopyası), anahtar kuralını (yedek anahtarı `secret.key`'den ayrı, bir kez
   gösterilir), geri yükleme giriş noktasını ve tatbikatı kaydeder. Uygulama bu
   sırayla gelir; WSL tatbikatı gerçek VM tatbikatından önce.
+- Tatbikat (3 Eylül 2026, WSL, `docs/DISASTER-RECOVERY.md` §6): A sunucusu
+  68b83cc'den yeniden kuruldu, servisler çalışırken 10 üyeli arşiv alındı; B
+  sıfırdan yeni bir konuk olarak kurulum kancasıyla 23 saniyede geri yüklendi
+  (felaketten servise 1 dk 58 sn, arşiv yaşı 5 dk 30 sn, kayıp yok). B'de
+  panelden kanıtlandı: eski yönetici parolası, gizli anahtar ve parmak izi,
+  DKIM özel ve açık anahtarı, alan adı listesi, aynı epoch'ta motor durumu,
+  sunulan TLS sertifikası. Düşen: DNS altyapı ekranı BIND'i etkin ve bozuk
+  gösterip kurulumu reddediyor (`target_already_active`, `source_degraded`),
+  commit hiç kaydedilmemiş bir önizleme için "önizleme süresi doldu" diyor ve
+  geri yüklenen servis tarama önbelleği A sunucusunun BIND'ini çalışıyor
+  gösteriyor. Düzeltme sürüyor: dürüst bir "etkin DNS sunucusunu yeniden kur"
+  yolu, engellenmiş önizleme için dürüst yanıt ve geri yüklemeyi atlatmayan
+  bir tarama önbelleği.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-004 — Alpha52 canlı promotion kanıtlandı; artık kabul kanıtı korunmalı
@@ -1093,8 +1106,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   yolundan ulaşılan R-019 kilidi.
 - Düzeltme (dalda sürüyor): `wg-quick` yalnız adı `wg0.conf` olan bir dosya
   görür; doğrulama kopyası rastgele eki adında taşımak yerine özel bir dizinde
-  durur. Zaten zehirlenmiş sunucunun kurtarılması ayrı sorudur ve düzeltme
-  commit'inde yanıtlanır.
+  durur. Zaten zehirlenmiş sunucunun kurtarılması: zehir, işlem yöneticisinin
+  bellekteki bir alanı, hiç kalıcılaştırılmıyor; yeniden başlatma yöneticiyi
+  yeniden kurar, kalıcı VPN işini aynı uygulama yolundan yeniden oynatır ve
+  düzeltilmiş strip ile bu oynatma artık yeniden zehirlemek yerine biter.
+  Düzeltmeden önce zehirlenmiş sunucuda bir kez agent yeniden başlatmak
+  gerekir.
 - Çıkış ölçütü: taze konukta VPN kurulumu ve bir eş uygulaması API üzerinden
   başarılı; zehirlenmiş sunucu yanıtı burada kayıtlı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.

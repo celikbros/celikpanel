@@ -23,12 +23,12 @@ host is control-plane state.
 | --- | --- | --- | --- |
 | Panel database | `/var/lib/celikpanel/celikpanel.db` (+ `-wal`, `-shm` while running) | celikpanel:celikpanel 0600 | Every domain, user, plan, zone, certificate record, audit log |
 | Secret key | `/var/lib/celikpanel/secret.key` | celikpanel:celikpanel 0600 | Seals every secret stored in the database; lost key = unreadable secrets |
-| Panel configuration | `/etc/celikpanel/panel.env` | root:celikpanel 0640 | Listen address, data directory, feature switches |
+| Panel configuration | `/etc/celikpanel/panel.env` | root:root 0600 | Listen address, data directory, feature switches |
 | Agent token | `/etc/celikpanel/agent.token` | root:celikpanel 0640 | Panel-to-agent authentication |
 | Agent private state | `/var/lib/celikpanel-agent-private/` (ledger `service-mutations.json`, `dns-engine-state.json`, `dns-engine-ownership-*.json`, `dns-engine-install-ownership-*.json`, firewall and mail journals, panel-certificate activation state) | root:celikpanel 0700 dir, 0600 files | The durable truth of which DNS engine owns the host and what was mid-flight; without it the restored host cannot prove its own engine |
-| DKIM keys | `/var/lib/celikpanel-dkim/keys/` | root:opendkim 0750, keys 0640 | Published in DNS; losing them breaks every domain's mail signing |
+| DKIM keys | `/var/lib/celikpanel-dkim/keys/` | root:celikpanel 0700, keys 0600 | Published in DNS; losing them breaks every domain's mail signing |
 | WireGuard | `/etc/wireguard/` | root:root 0700 | VPN identity and peers |
-| Panel TLS | `/var/lib/celikpanel/tls/` | celikpanel:celikpanel 0700 | The panel's own certificate and key; the "protected initial certificate" |
+| Panel TLS | `/var/lib/celikpanel/tls/` | root:celikpanel 0750, files 0640 | The panel's own certificate and key; the "protected initial certificate" |
 | Firewall snapshot | `/etc/celikpanel/firewall.nft` | root:root 0600 | The exact ruleset restored on boot |
 
 Excluded on purpose: `/var/lib/celikpanel-agent-private/system-sqlite-snapshots`
@@ -98,10 +98,13 @@ has any state of its own, so there is never a merge and never a second identity.
    The panel's first-run screen is a later slice.
 
    Precedence on the fresh host, decided from what each file is (settled
-   3 September 2026): `panel.env` and `agent.token` are the installer's, so
-   the installer's copies are kept and every differing `panel.env` key is
-   reported by name only; `firewall.nft` is the only source of the operator's
-   rules, nothing regenerates it, so the archive's copy wins.
+   3 September 2026): `panel.env` is the installer's, so the installer's copy
+   is kept and every differing key is reported by name only; `agent.token` is
+   kept when the installer already wrote one, but in the install-time hook
+   the agent has not run yet, so the archive's token is placed (both units
+   read the same file; the drill confirmed this is harmless); `firewall.nft`
+   is the only source of the operator's rules, nothing regenerates it, so the
+   archive's copy wins.
 3. The panel binary performs the restore itself, as root, with both services
    stopped: verify the manifest, verify every member's digest, refuse an archive
    whose schema is newer than the binary, place each member with its recorded
@@ -117,9 +120,34 @@ has any state of its own, so there is never a merge and never a second identity.
    install. Domain content is restored from domain backups afterwards through
    the existing flow.
 
+   Found in the first drill: the screen says so but does not offer the
+   install. With `active_engine = bind` in the database and nothing on the
+   host, every preview toward BIND carries the blockers
+   `target_already_active` and `source_degraded`, and the commit answers
+   "preview expired" for a preview that was never registered. The product
+   needs one honest path: when the active engine's runtime is absent, the
+   card offers "reinstall the active DNS server", which installs the
+   packages, regenerates the configuration and zones from the database and
+   starts the engine, at the same epoch and under the same ownership. That
+   path is the R-003 exit criterion now.
+
 ## 6. The drill (exit criteria for R-003)
 
 Run first on a WSL2 guest, then on a disposable real VM by the team.
+
+First WSL run, 3 September 2026 (host A: Debian 13 guest rebuilt from
+68b83cc; host B: a brand-new `wsl --install Debian` guest, restored through
+the installer hook). Measured: archive age at the disaster 5 min 30 s, data
+lost none; installer start to panel serving 23 s; disaster to serving,
+including provisioning the new guest, 1 min 58 s. Proven on B through the
+panel: the administrator's old password, the secret key and its stored
+fingerprint, the DKIM private key and its published public key, the domain
+list, the DNS engine state at the same epoch, the served TLS certificate.
+Not proven, and the reason R-003 stays open: the restored host could not
+reinstall its DNS engine (see §5.5). VPN and firewall could not be
+exercised on this build (R-034, R-035); mail could not be installed
+(R-036); no stored database password existed, so no ciphertext was opened
+(the next run creates one first).
 
 1. Fresh host A: install, add an administrator, activate BIND, create a domain
    with mail (so DKIM keys and a sealed secret exist), enable the VPN, take a

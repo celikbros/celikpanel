@@ -40,7 +40,7 @@ or executed as-is. There are no open pull requests at this baseline.
 |---|---|---|---|
 | R-001 | Critical | CLOSED ON MAIN | Operations now documents snapshot v6, current v4/v5 rejection and the historical-release boundary |
 | R-002 | High | CLOSED ON MAIN | README now separates optional local GPG use from canonical Ed25519 update authority |
-| R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS / DESIGN ON BRANCH | No control-plane disaster backup exists yet; the design, inventory and drill plan are in `docs/DISASTER-RECOVERY.md` |
+| R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS / ARCHIVE AND RESTORE ON BRANCH / WSL DRILL: RESTORE PROVEN, ENGINE REINSTALL FAILS | The panel archives and restores its own control plane (slices 1 and 2); the first WSL drill restored a fresh host in 23 s but the restored host cannot reinstall its DNS engine |
 | R-004 | High | PARTIALLY MITIGATED / REVERIFY | Both hosts run exact Alpha52 with terminal receipts and full acceptance; snapshot source provenance remains `unknown` |
 | R-005 | High | OPEN | Boston/Frankfurt environment classification conflicts with the not-production-ready policy |
 | R-006 | High | OPEN | Route/role and API-contract debt remains at a security boundary |
@@ -125,6 +125,19 @@ or executed as-is. There are no open pull requests at this baseline.
   the key rule (backup key separate from `secret.key`, shown once), the restore
   entry point and the drill. Implementation follows in that order; the WSL
   drill precedes the real-VM drill.
+- Drill (3 September 2026, WSL, `docs/DISASTER-RECOVERY.md` §6): host A rebuilt
+  from 68b83cc, archive of 10 members taken with the services running; host B
+  a brand-new guest restored through the installer hook in 23 s (disaster to
+  serving 1 min 58 s, archive age 5 min 30 s, nothing lost). Proven through
+  the panel on B: old administrator password, secret key and fingerprint,
+  DKIM private and public key, domain list, engine state at the same epoch,
+  served TLS certificate. Failed: the DNS infrastructure screen reports BIND
+  active and degraded and refuses the install (`target_already_active`,
+  `source_degraded`), the commit answers "preview expired" for a preview that
+  was never registered, and the restored service scan cache shows host A's
+  BIND as running. Fix in progress: an honest "reinstall the active DNS
+  server" path, an honest blocked-preview answer, and a scan cache that does
+  not survive a restore.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-004 — Alpha52 live promotion proven; residual acceptance must be retained
@@ -1104,8 +1117,11 @@ or executed as-is. There are no open pull requests at this baseline.
 - Fix (in progress on the branch): `wg-quick` only ever sees a file whose
   basename is `wg0.conf`; the staged validation copy lives under a private
   directory instead of carrying the random suffix in its name. Recovery of an
-  already-poisoned host is a separate question and is answered in the fix
-  commit.
+  already-poisoned host: the poison is an in-memory field of the mutation
+  manager, never persisted; a restart rebuilds the manager, replays the
+  persisted VPN job through the same apply, and with the fixed strip that
+  replay now finishes instead of re-poisoning. One agent restart is still
+  required on a host poisoned before the fix.
 - Exit criteria: VPN install and one peer apply succeed through the API on a
   fresh guest; the poisoned-host recovery answer is recorded here.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
