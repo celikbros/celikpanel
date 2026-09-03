@@ -2,8 +2,10 @@ package main
 
 import (
 	"archive/tar"
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -13,6 +15,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	paneldb "github.com/alicelik/celikpanel/internal/db"
 )
@@ -105,9 +108,23 @@ func controlPlaneMemberPolicies() []controlPlaneMemberPolicy {
 	confDir := func(roots controlPlaneRoots) string { return roots.ConfDir }
 	return []controlPlaneMemberPolicy{
 		{
-			Basename:    "panel.env",
-			Root:        confDir,
-			Precedence:  controlPlaneInstallerWins,
+			Basename:   "panel.env",
+			Root:       confDir,
+			Precedence: controlPlaneInstallerWins,
+			// Without a sentence of its own, a panel.env whose keys happen to
+			// match the archive was counted in kept=1 and named nowhere: the
+			// summary reported that something had been kept and left the
+			// operator to guess what. The key-by-key report is an addition to
+			// this line, not a substitute for it — it says nothing at all when
+			// nothing differs.
+			//
+			// Kendine ait bir cümlesi olmadığında, anahtarları arşivle
+			// örtüşen bir panel.env kept=1 içinde sayılıp hiçbir yerde
+			// adlandırılmıyordu: özet bir şeyin korunduğunu bildirip neyin
+			// korunduğunu operatörün tahminine bırakıyordu. Anahtar anahtar
+			// rapor bu satırın yerine değil ekidir — hiçbir şey farklı
+			// değilken hiçbir şey söylemez.
+			KeptLine:    "panel.env: the installer's configuration is kept",
 			CompareKeys: true,
 		},
 		{
@@ -221,10 +238,10 @@ func reportControlPlaneKeptMember(
 	placement controlPlanePlacement,
 	report io.Writer,
 ) error {
+	if strings.TrimSpace(policy.KeptLine) != "" {
+		fmt.Fprintln(report, policy.KeptLine)
+	}
 	if !policy.CompareKeys {
-		if strings.TrimSpace(policy.KeptLine) != "" {
-			fmt.Fprintln(report, policy.KeptLine)
-		}
 		return nil
 	}
 	installer, err := parseControlPlaneConfigurationFile(placement.TargetPath)
@@ -326,6 +343,16 @@ func restoreControlPlaneArchive(
 		false,
 	); err != nil {
 		return controlPlaneRestoreResult{}, fmt.Errorf("verify the restored panel database: %w", err)
+	}
+	cleared, err := clearRestoredServiceScanCache(restoredDatabase)
+	if err != nil {
+		return controlPlaneRestoreResult{}, err
+	}
+	if cleared {
+		fmt.Fprintln(
+			report,
+			"component state: the archived scan describes the host that died and was discarded",
+		)
 	}
 
 	result := controlPlaneRestoreResult{
@@ -856,4 +883,81 @@ func placeControlPlaneFile(placement controlPlanePlacement) (returnErr error) {
 		return err
 	}
 	return controlPlaneSyncDirectory(directory)
+}
+
+// clearRestoredServiceScanCache discards the archived component scan.
+//
+// Every other row in the archive is durable authority: what the operator
+// decided, and what the panel therefore intends. The scan cache is the exact
+// opposite — an observation of ONE machine's installed packages and running
+// units at one instant, and after a restore that machine is the one that died.
+// Left in place it was served as fact: on the drill's fresh host the components
+// screen reported BIND "active (running)" with the dead host's scan time, while
+// no BIND existed at all. The panel cannot make a true statement about this
+// host's packages until it has looked at this host, and until then the honest
+// answer is that it has not looked.
+//
+// The fix is a deletion rather than a filter in the reader. A reader-side rule
+// would have to decide, on every request forever, whether the row it is holding
+// came from this machine or the last one — a question the row cannot answer
+// once the panel restarts and its boot time is no longer a usable boundary.
+// Deleting it at restore leaves nothing to be wrong about: the screen falls
+// through to its ordinary "no scan yet" path and the first scan on this host
+// fills it in.
+//
+// clearRestoredServiceScanCache, arşivlenmiş bileşen taramasını atar.
+//
+// Arşivdeki diğer her satır kalıcı yetkidir: operatörün kararı ve dolayısıyla
+// panelin niyeti. Tarama önbelleği ise tam tersidir — TEK bir makinenin bir
+// andaki kurulu paketlerinin ve çalışan birimlerinin gözlemi; geri yüklemeden
+// sonra o makine ölmüş olandır. Yerinde bırakıldığında gerçek diye sunuluyordu:
+// tatbikatın taze sunucusunda bileşenler ekranı, hiç BIND yokken, ölü sunucunun
+// tarama zamanıyla BIND'i "etkin (çalışıyor)" bildiriyordu. Panel, bu sunucuya
+// bakmadan onun paketleri hakkında doğru bir cümle kuramaz; o ana kadar dürüst
+// cevap, bakmamış olduğudur.
+//
+// Çözüm, okuyucu tarafında bir süzgeç değil bir silmedir. Okuyucu tarafındaki
+// bir kural, sonsuza dek her istekte, elindeki satırın bu makineden mi yoksa
+// öncekinden mi geldiğine karar vermek zorunda kalırdı — panel yeniden
+// başlayıp açılış zamanı kullanılabilir bir sınır olmaktan çıktığında satırın
+// cevaplayamayacağı bir soru. Geri yüklemede silmek, yanlış olunacak bir şey
+// bırakmaz: ekran olağan "henüz tarama yok" yoluna düşer ve bu sunucudaki ilk
+// tarama onu doldurur.
+func clearRestoredServiceScanCache(databasePath string) (bool, error) {
+	database, err := sql.Open("sqlite", sqliteSnapshotURI(databasePath, false))
+	if err != nil {
+		return false, fmt.Errorf("open the restored panel database: %w", err)
+	}
+	defer database.Close()
+	database.SetMaxOpenConns(1)
+	database.SetMaxIdleConns(1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	result, err := database.ExecContext(ctx, `DELETE FROM service_scan_cache`)
+	if err != nil {
+		return false, fmt.Errorf(
+			"discard the archived component scan: %w", err,
+		)
+	}
+	removed, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf(
+			"discard the archived component scan: %w", err,
+		)
+	}
+	var remaining int
+	if err := database.QueryRowContext(
+		ctx, `SELECT count(*) FROM service_scan_cache`,
+	).Scan(&remaining); err != nil {
+		return false, fmt.Errorf(
+			"verify the discarded component scan: %w", err,
+		)
+	}
+	if remaining != 0 {
+		return false, errors.New(
+			"the archived component scan survived its removal",
+		)
+	}
+	return removed > 0, nil
 }

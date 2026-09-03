@@ -308,7 +308,8 @@ func validateDNSUnitSnapshot(snapshot dnsUnitSnapshot) error {
 func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 	if journal.Schema != dnsEngineSwitchJournalSchema || !validDNSSwitchPhase(journal.Phase) ||
 		(journal.Mode != transport.DNSEngineSwitchModeSwitch &&
-			journal.Mode != transport.DNSEngineSwitchModeAdopt) ||
+			journal.Mode != transport.DNSEngineSwitchModeAdopt &&
+			journal.Mode != transport.DNSEngineSwitchModeReinstall) ||
 		!validMutationIdentity(journal.MutationRequestID) ||
 		!validMutationIdentity(journal.MutationOwnerID) ||
 		!mutationpayload.ValidDNSEngineSwitchQualifier(journal.ManifestQualifier) {
@@ -359,7 +360,8 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 	previous := ""
 	for _, snapshot := range journal.ConfigBefore {
 		validate := validateDNSFileSnapshot
-		if (journal.Mode == transport.DNSEngineSwitchModeSwitch &&
+		if ((journal.Mode == transport.DNSEngineSwitchModeSwitch ||
+			journal.Mode == transport.DNSEngineSwitchModeReinstall) &&
 			(journal.TargetEngine == transport.DNSEngineBIND ||
 				journal.TargetEngine == transport.DNSEnginePowerDNS)) ||
 			(journal.Mode == transport.DNSEngineSwitchModeAdopt &&
@@ -430,10 +432,21 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 		wantTarget = []string{"pdns.service"}
 	}
 	wantSource := []string{}
-	if journal.SourceEngine == transport.DNSEnginePowerDNS {
-		wantSource = []string{"pdns.service"}
-	} else if journal.SourceEngine == transport.DNSEngineBIND {
-		wantSource = []string{"bind9.service", "named.service"}
+	// A reinstall's source and target are one engine, so they are one unit set.
+	// The target snapshot already froze it; demanding a second copy under the
+	// source name asked the journal to record the same units twice and refused
+	// the operation after its packages were already on the host.
+	//
+	// Yeniden kurulumun kaynağı ile hedefi tek motordur; dolayısıyla tek birim
+	// kümesidir. Hedef anlık görüntüsü onu zaten dondurdu; kaynak adı altında
+	// ikinci bir kopya istemek, günlükten aynı birimleri iki kez kaydetmesini
+	// istiyor ve işlemi paketleri sunucuya çoktan indikten sonra reddediyordu.
+	if journal.Mode != transport.DNSEngineSwitchModeReinstall {
+		if journal.SourceEngine == transport.DNSEnginePowerDNS {
+			wantSource = []string{"pdns.service"}
+		} else if journal.SourceEngine == transport.DNSEngineBIND {
+			wantSource = []string{"bind9.service", "named.service"}
+		}
 	}
 	if !dnsUnitSnapshotNamesEqual(journal.TargetUnitsBefore, wantTarget) ||
 		!dnsUnitSnapshotNamesEqual(journal.SourceUnitsBefore, wantSource) {

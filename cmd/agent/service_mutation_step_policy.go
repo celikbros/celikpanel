@@ -264,9 +264,25 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 			)
 
 	case serviceMutationStepSwitchDNSEngine:
+		// A reinstall rides the same durable job kind as a switch, and nothing
+		// is lost by that: the job's package name is the manifest qualifier,
+		// and the qualifier digest commits the mode. A lease taken out for one
+		// manifest can therefore never be spent on the other, whatever the
+		// action string says. Only BIND has a reinstall transaction.
+		//
+		// Yeniden kurulum, geçişle aynı kalıcı iş türünü kullanır ve bununla
+		// kaybedilen bir şey yoktur: işin paket adı bildirge niteleyicisidir ve
+		// niteleyici özeti kipi de bağlar. Bir bildirge için alınan kira,
+		// eylem dizesi ne derse desin, diğeri için harcanamaz. Yeniden kurulum
+		// işlemi yalnız BIND'de vardır.
+		if claim.action == transport.DNSEngineSwitchModeReinstall &&
+			claim.target != "bind" {
+			return false
+		}
 		return (claim.target == "bind" || claim.target == "pdns") &&
 			(claim.action == transport.DNSEngineSwitchModeSwitch ||
-				claim.action == transport.DNSEngineSwitchModeAdopt) &&
+				claim.action == transport.DNSEngineSwitchModeAdopt ||
+				claim.action == transport.DNSEngineSwitchModeReinstall) &&
 			mutationpayload.ValidDNSEngineSwitchQualifier(claim.packageName) &&
 			serviceMutationJobMatches(
 				job, "dns_engine_switch", claim.target, claim.packageName,

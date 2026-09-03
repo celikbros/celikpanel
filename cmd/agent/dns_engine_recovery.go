@@ -70,8 +70,25 @@ func exactDNSEngineStateForJournal(
 	}
 	catalogSerialMatches := state.PrimaryCatalogSerial == journal.PrimaryCatalogSerial ||
 		(legacyTarget && state.PrimaryCatalogSerial == 0)
+	// The state receipt describes a tenure, not the operation that produced it.
+	// A reinstall produces the same tenure it repaired — same engine, same
+	// epoch, standalone — so its receipt reads "switch", exactly as the receipt
+	// the host lost did. Writing "reinstall" there would mark the tenure with
+	// the accident that interrupted it and force every later reader to learn a
+	// third mode for a state that is not different in any way.
+	//
+	// Durum makbuzu, onu üreten işlemi değil bir dönemi tarif eder. Yeniden
+	// kurulum, onardığı dönemin aynısını üretir — aynı motor, aynı çağ, tek
+	// sunucu — bu yüzden makbuzu, sunucunun kaybettiği makbuzla birebir aynı
+	// biçimde "switch" der. Oraya "reinstall" yazmak, dönemi onu kesintiye
+	// uğratan kazayla damgalar ve hiçbir bakımdan farklı olmayan bir durum
+	// için sonraki her okuyucuya üçüncü bir kip öğretmeye zorlardı.
+	journalTenureMode := journal.Mode
+	if journal.Mode == transport.DNSEngineSwitchModeReinstall {
+		journalTenureMode = transport.DNSEngineSwitchModeSwitch
+	}
 	if state.Schema != dnsEngineStateSchema || state.Engine != journal.TargetEngine ||
-		state.Mode != journal.Mode ||
+		state.Mode != journalTenureMode ||
 		state.EngineEpoch != journal.TargetEpoch || state.SourceRevision != journal.SourceRevision ||
 		state.ManifestQualifier != journal.ManifestQualifier ||
 		!pairRoleMatches || !pairAddressesMatch ||

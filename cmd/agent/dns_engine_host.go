@@ -1189,6 +1189,20 @@ func (hostDNSEngineBackend) Switch(
 	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	// Reinstalling PowerDNS is not implemented and must not be attempted
+	// through the BIND transaction below. Refusing here keeps the answer
+	// legible instead of letting a PowerDNS manifest die somewhere inside a
+	// BIND layout.
+	//
+	// PowerDNS'i yeniden kurmak uygulanmış değildir ve aşağıdaki BIND işlemi
+	// üzerinden denenmemelidir. Burada reddetmek, bir PowerDNS bildirgesinin
+	// bir BIND yerleşiminin içinde bir yerde ölmesine izin vermek yerine cevabı
+	// okunur tutar.
+	if manifest.Mode == transport.DNSEngineSwitchModeReinstall &&
+		manifest.TargetEngine != transport.DNSEngineBIND {
+		return transport.SwitchDNSEngineV1Response{},
+			errors.New("DNS engine reinstall is supported only for BIND")
+	}
 	if manifest.TargetEngine == transport.DNSEnginePowerDNS {
 		return switchToPDNS(ctx, manifest, binding)
 	}
@@ -1361,12 +1375,27 @@ func (hostDNSEngineBackend) Switch(
 			return installOwnedDNSEnginePackages(installReceipt, plainInstall)
 		}
 	}
+	// A reinstall stands where a first install stands: the ledger's engine is
+	// not on this host, so nothing of ours is serving and no managed authority
+	// exists to hand over. Both therefore take the stricter proof — prove the
+	// public port is free before touching packages, and prove nothing managed
+	// is serving before staging a generation — rather than the proof written
+	// for a live source that is about to be replaced.
+	//
+	// Yeniden kurulum, ilk kurulumun durduğu yerde durur: defterin motoru bu
+	// sunucuda yoktur, dolayısıyla bizim hiçbir şeyimiz hizmet vermiyordur ve
+	// devredilecek yönetilen bir yetki de yoktur. İkisi de bu yüzden daha katı
+	// kanıtı alır — paketlere dokunmadan önce genel bağlantı noktasının boş
+	// olduğunu, bir nesli hazırlamadan önce yönetilen hiçbir şeyin hizmet
+	// vermediğini kanıtla — değiştirilmek üzere olan canlı bir kaynak için
+	// yazılmış kanıtı değil.
+	noManagedAuthority := (!stateExists && manifest.SourceEngine == "") ||
+		mutationpayload.ReinstallsActiveDNSEngine(manifest)
 	if err := runVerifiedBINDTargetInstall(
 		targetInstallProof,
 		func() error {
 			return runDNSPort53PreMutationGuard(
-				ctx, !stateExists && manifest.SourceEngine == "",
-				installMutation,
+				ctx, noManagedAuthority, installMutation,
 			)
 		},
 	); err != nil {
@@ -1376,7 +1405,7 @@ func (hostDNSEngineBackend) Switch(
 	var validator trackedBINDValidator
 	var generation binddns.Generation
 	if err := runBINDPostInstallContinuation(
-		!stateExists && manifest.SourceEngine == "",
+		noManagedAuthority,
 		bindPostInstallProofOps{
 			verifyGeneric: func() error {
 				return verifyBINDSealedTargetNotServing(ctx, systemctl)
@@ -1564,7 +1593,7 @@ func (hostDNSEngineBackend) Switch(
 		}
 		nextState := dnsEngineStateReceipt{
 			Schema: dnsEngineStateSchema,
-			Mode:   manifest.Mode,
+			Mode:   dnsEngineTenureModeForManifest(manifest),
 			Engine: transport.DNSEngineBIND, EngineEpoch: manifest.TargetEpoch,
 			Generation: generation.ID, PairRole: pairRoleForEngineState(manifest),
 			PairLocalIP: manifest.LocalIP, PairPeerIP: manifest.PeerIP,
@@ -1801,6 +1830,12 @@ func verifyDNSEngineSwitchSourceRecordingProof(
 	if err != nil {
 		return err
 	}
+	if manifest.Mode == transport.DNSEngineSwitchModeReinstall {
+		return verifyDNSEngineReinstallSource(
+			ctx, manifest, state, stateExists,
+			bindUnit, bindAliasUnit, pdnsUnit,
+		)
+	}
 	if manifest.Mode == transport.DNSEngineSwitchModeAdopt {
 		if stateExists || manifest.SourceEngine != "" || manifest.SourceEpoch != 0 ||
 			manifest.TargetEngine != transport.DNSEnginePowerDNS ||
@@ -1915,6 +1950,107 @@ func verifyDNSEngineSwitchSourceRecordingProof(
 		}
 	default:
 		return errors.New("an unreceipted DNS source cannot be switched implicitly")
+	}
+	return nil
+}
+
+// dnsEngineTenureModeForManifest returns the mode a durable state receipt
+// records for the tenure this manifest establishes. A reinstall re-establishes
+// the tenure it repaired, so its receipt reads exactly like the one the host
+// lost; every other mode records itself.
+//
+// dnsEngineTenureModeForManifest, bu bildirgenin kurduğu dönem için kalıcı
+// durum makbuzunun kaydettiği kipi döndürür. Yeniden kurulum, onardığı dönemi
+// yeniden kurar; bu yüzden makbuzu sunucunun kaybettiğiyle birebir aynı okunur.
+// Diğer her kip kendini kaydeder.
+func dnsEngineTenureModeForManifest(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) string {
+	if manifest.Mode == transport.DNSEngineSwitchModeReinstall {
+		return transport.DNSEngineSwitchModeSwitch
+	}
+	return manifest.Mode
+}
+
+// verifyDNSEngineReinstallSource proves the one host shape a reinstall may act
+// on. Every clause is a way the operation could otherwise do harm.
+//
+// The receipt must exist and name this engine at this epoch: without it the
+// panel would be installing an engine the host never agreed to run, which is a
+// first install and has its own path. The ownership receipt must agree on
+// engine and epoch: it is the proof that WE installed this engine, so putting
+// it back is a repair rather than a takeover of somebody else's server. And
+// nothing authoritative may be listening — no BIND, no PowerDNS, no other
+// public port-53 process — because a reinstall neither stops a source nor
+// arbitrates a conflict; if something is serving, this is not the absent-engine
+// shape and the operator needs a different answer.
+//
+// It deliberately does not require the generations to match. A live BIND
+// rewrites the state receipt's generation as zones are published while the
+// ownership receipt keeps the generation of the tenure's first install, so on
+// any host that ever synchronized a zone the two differ by construction.
+//
+// verifyDNSEngineReinstallSource, yeniden kurulumun üzerinde işlem
+// yapabileceği tek sunucu biçimini kanıtlar. Her koşul, işlemin aksi hâlde
+// zarar verebileceği bir yoldur.
+//
+// Makbuz var olmalı ve bu motoru bu çağda adlandırmalıdır: o olmadan panel,
+// sunucunun çalıştırmayı hiç kabul etmediği bir motoru kuruyor olurdu; bu ilk
+// kurulumdur ve kendi yolu vardır. Sahiplik makbuzu motor ve çağ üzerinde
+// hemfikir olmalıdır: bu motoru BİZİM kurduğumuzun kanıtı odur; dolayısıyla onu
+// geri koymak, başkasının sunucusunu ele geçirmek değil bir onarımdır. Ve yetki
+// taşıyan hiçbir şey dinlemiyor olmamalıdır — ne BIND, ne PowerDNS, ne de başka
+// bir genel 53 süreci — çünkü yeniden kurulum ne bir kaynağı durdurur ne de bir
+// çakışmayı hakemler; bir şey hizmet veriyorsa bu, motoru olmayan biçim
+// değildir ve operatörün başka bir cevaba ihtiyacı vardır.
+//
+// Nesillerin eşleşmesini bilerek istemez. Canlı bir BIND, bölgeler yayımlandıkça
+// durum makbuzunun neslini yeniden yazar; sahiplik makbuzu ise dönemin ilk
+// kurulumundaki nesli saklar. Bu yüzden bir kez bölge eşitlemiş her sunucuda
+// ikisi yapı gereği farklıdır.
+func verifyDNSEngineReinstallSource(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	state dnsEngineStateReceipt,
+	stateExists bool,
+	bindUnit, bindAliasUnit, pdnsUnit dnsUnitState,
+) error {
+	if !mutationpayload.ReinstallsActiveDNSEngine(manifest) ||
+		manifest.TargetEngine != transport.DNSEngineBIND {
+		return errors.New("DNS engine reinstall manifest is not the exact reinstall identity")
+	}
+	if !stateExists {
+		return errors.New("DNS engine reinstall requires an active engine state receipt")
+	}
+	if err := validateDNSEngineState(state); err != nil {
+		return fmt.Errorf("validate DNS engine reinstall source state: %w", err)
+	}
+	if state.Engine != manifest.TargetEngine ||
+		state.EngineEpoch != manifest.TargetEpoch ||
+		state.PairRole != "" || state.PairLocalIP != "" ||
+		state.PairPeerIP != "" || state.PrimaryCatalogSerial != 0 {
+		return errors.New("DNS engine reinstall does not match the active engine receipt")
+	}
+	ownership, ownershipExists, err := readDNSEngineOwnership(manifest.TargetEngine)
+	if err != nil {
+		return fmt.Errorf("read DNS engine reinstall ownership: %w", err)
+	}
+	if !ownershipExists || validateDNSEngineState(ownership) != nil ||
+		ownership.Engine != state.Engine ||
+		ownership.EngineEpoch != state.EngineEpoch {
+		return errors.New(
+			"DNS engine reinstall requires a panel ownership receipt at the active epoch",
+		)
+	}
+	if bindUnit.active() || bindAliasUnit.active() || pdnsUnit.active() {
+		return errors.New("DNS engine reinstall requires no running authoritative DNS engine")
+	}
+	conflict, err := dnsPort53ConflictCheck(ctx, false, false)
+	if err != nil {
+		return err
+	}
+	if conflict {
+		return errors.New("DNS engine reinstall found another public port-53 authority")
 	}
 	return nil
 }

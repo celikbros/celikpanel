@@ -983,7 +983,16 @@ export function DNSEngineCard({
                                     && (engine.status === 'available'
                                         || engine.status === 'installed_standby'
                                         || engine.status === 'unmanaged');
-                                const reviewLabel = engine.status === 'available'
+                                // The panel's own record says this engine is
+                                // serving and the server has no copy of it. One
+                                // button, and it says what it does: put it back.
+                                const reinstallActive = snapshot.active_engine === id
+                                    && !engine.running
+                                    && snapshot.topology === 'standalone'
+                                    && id === 'bind';
+                                const reviewLabel = reinstallActive
+                                    ? et('dnsEngine.reviewReinstall')
+                                    : engine.status === 'available'
                                     || (engine.status === 'installed_standby'
                                         && snapshot.active_engine === null
                                         && snapshot.state === 'unconfigured'
@@ -1029,6 +1038,7 @@ export function DNSEngineCard({
                                                 <Button
                                                     variant="secondary"
                                                     icon={engine.status === 'available' ? DownloadCloud : ArrowRightLeft}
+                                                    data-testid={reinstallActive ? 'dns-engine-reinstall' : undefined}
                                                     disabled={!canReview || review !== null}
                                                     onClick={() => void requestPreview(id)}
                                                 >

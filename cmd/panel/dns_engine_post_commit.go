@@ -43,10 +43,14 @@ func validDNSEngineSwitchAction(action string) bool {
 }
 
 func dnsEngineMutationMode(action string) string {
-	if action == "adopt" {
+	switch action {
+	case "adopt":
 		return transport.DNSEngineSwitchModeAdopt
+	case dnsEngineActionReinstall:
+		return transport.DNSEngineSwitchModeReinstall
+	default:
+		return transport.DNSEngineSwitchModeSwitch
 	}
-	return transport.DNSEngineSwitchModeSwitch
 }
 
 func validateDNSEngineOperationMarker(marker dnsEngineOperationMarker) error {
@@ -633,7 +637,14 @@ func (p *Panel) auditDNSEngine(
 	outcome string,
 	persisted persistedDNSEngineSwitch,
 ) {
-	action := dnsEngineAuditAction(outcome, persisted)
+	p.auditDNSEngineAction(ctx, actor, dnsEngineAuditAction(outcome, persisted))
+}
+
+func (p *Panel) auditDNSEngineAction(
+	ctx context.Context,
+	actor dnsEngineAuditActor,
+	action string,
+) {
 	if _, err := p.db.GetDB().ExecContext(ctx, `
 		INSERT INTO audit_logs (
 		  user_id, action, resource_type, resource_id, ip_address, user_agent

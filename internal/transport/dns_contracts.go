@@ -14,6 +14,21 @@ const (
 	DNSEngineSwitchModeSwitch = "switch"
 	DNSEngineSwitchModeAdopt  = "adopt"
 
+	// DNSEngineSwitchModeReinstall reinstalls the engine that already owns the
+	// host, at the epoch it already owns. It is not a switch: no authority
+	// changes hands, no epoch advances, and there is no source to stop. It
+	// exists for the one host shape a switch cannot express — the ledger says
+	// an engine is active and the machine has no copy of it, which is what a
+	// restored control plane looks like on a fresh server.
+	//
+	// DNSEngineSwitchModeReinstall, sunucunun sahibi olan motoru zaten sahip
+	// olduğu çağda yeniden kurar. Bu bir geçiş değildir: yetki el değiştirmez,
+	// çağ ilerlemez ve durdurulacak bir kaynak yoktur. Geçişin ifade
+	// edemediği tek sunucu biçimi için vardır — defter bir motorun etkin
+	// olduğunu söylerken makinede o motorun kopyası yoktur; geri yüklenmiş bir
+	// kontrol düzleminin taze bir sunucuda göründüğü hâl budur.
+	DNSEngineSwitchModeReinstall = "reinstall"
+
 	DNSEngineSwitchPhasePlanned     = "planned"
 	DNSEngineSwitchPhaseStaging     = "staging"
 	DNSEngineSwitchPhaseStaged      = "staged"
