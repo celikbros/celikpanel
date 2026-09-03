@@ -485,18 +485,29 @@ func validBINDConfigSnapshotSet(snapshots []dnsFileSnapshot) bool {
 		if len(snapshots) != len(want) {
 			return false
 		}
+		// The vendor file mode follows the layout: Debian ships its BIND
+		// configuration 0644 root:bind, Arch ships /etc/named.conf 0640
+		// root:named (register R-018). The exact group is proven by the
+		// owner policy at capture time; here the shape must merely be the
+		// layout's, with one common bounded group across the set.
+		// Satıcı dosya kipi yerleşimi izler: Debian BIND yapılandırmasını
+		// 0644 root:bind, Arch /etc/named.conf'u 0640 root:named gönderir
+		// (defter R-018). Tam grup, yakalama anında sahiplik politikasıyla
+		// kanıtlanır; burada biçim yalnız yerleşimin biçimi olmalı ve küme
+		// boyunca tek, sınırlı bir ortak grup taşımalıdır.
+		wantMode := uint32(0o640)
+		if aptLayout {
+			wantMode = 0o644
+		}
 		var commonGID uint32
 		for index, snapshot := range snapshots {
-			if snapshot.Path != want[index] || !snapshot.Exists || snapshot.Mode != 0o644 ||
+			if snapshot.Path != want[index] || !snapshot.Exists || snapshot.Mode != wantMode ||
 				(dnsSnapshotOwnerRequired() && !snapshot.OwnerKnown) ||
 				(snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID > uint32(1<<31-1))) ||
 				(index > 0 && snapshot.OwnerKnown != snapshots[0].OwnerKnown) {
 				return false
 			}
 			if snapshot.OwnerKnown {
-				if !aptLayout && snapshot.GID != 0 {
-					return false
-				}
 				if index == 0 {
 					commonGID = snapshot.GID
 				} else if snapshot.GID != commonGID {

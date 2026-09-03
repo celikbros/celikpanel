@@ -14,7 +14,67 @@ import (
 type bindConfigOwnerPolicy struct {
 	paths   []string
 	apt     bool
+	pacman  bool
 	bindGID uint32
+	// mode is the exact vendor file mode of every path in the policy: 0644 on
+	// APT (root:bind, world-readable), 0640 on pacman (root:named, readable
+	// by the daemon's group only). Zero means the APT default so that older
+	// call sites and fixtures keep their meaning.
+	// mode, politikadaki her yolun tam satıcı dosya kipidir: APT'de 0644
+	// (root:bind, herkes okur), pacman'da 0640 (root:named, yalnız daemon'un
+	// grubu okur). Sıfır, eski çağrı yerleri ve fikstürler anlamını korusun
+	// diye APT varsayılanı demektir.
+	mode uint32
+}
+
+func (policy bindConfigOwnerPolicy) fileMode() uint32 {
+	if policy.mode == 0 {
+		return 0o644
+	}
+	return policy.mode
+}
+
+// allowsGID says which group may own the vendor configuration under this
+// policy: root on every layout; additionally the bind group on APT, where
+// Debian ships the files root:bind but world-readable; and exactly the named
+// group on pacman, where Arch ships /etc/named.conf root:named 0640 and the
+// daemon could not read a root:root file.
+// allowsGID, bu politikada satıcı yapılandırmasına hangi grubun sahip
+// olabileceğini söyler: her yerleşimde root; APT'de ayrıca bind grubu (Debian
+// dosyaları root:bind ama herkes-okur gönderir); pacman'da tam olarak named
+// grubu (Arch /etc/named.conf'u root:named 0640 gönderir ve daemon root:root
+// bir dosyayı okuyamazdı).
+func (policy bindConfigOwnerPolicy) allowsGID(gid uint32) bool {
+	if policy.pacman {
+		return gid == policy.bindGID
+	}
+	return gid == 0 || (policy.apt && gid == policy.bindGID)
+}
+
+func bindLayoutIsPacman(layout bindHostLayout) bool {
+	return reflect.DeepEqual(bindConfigPaths(layout), []string{"/etc/named.conf"})
+}
+
+// bindVendorConfigMode is the exact mode the layout's package ships its
+// vendor configuration with: 0644 on APT, 0640 on pacman.
+// bindVendorConfigMode, yerleşimin paketinin satıcı yapılandırmasını
+// gönderdiği tam kiptir: APT'de 0644, pacman'da 0640.
+func bindVendorConfigMode(layout bindHostLayout) uint32 {
+	if bindLayoutIsPacman(layout) {
+		return 0o640
+	}
+	return 0o644
+}
+
+// bindServiceGroupResolverForLayout picks the daemon group the layout's vendor
+// configuration is owned by: "bind" on APT, "named" on pacman.
+// bindServiceGroupResolverForLayout, yerleşimin satıcı yapılandırmasının sahibi
+// olan daemon grubunu seçer: APT'de "bind", pacman'da "named".
+func bindServiceGroupResolverForLayout(layout bindHostLayout) bindGroupGIDResolver {
+	if bindLayoutIsPacman(layout) {
+		return resolvePacmanBINDGroupGID
+	}
+	return resolveBINDGroupGID
 }
 
 type bindGroupGIDResolver func(context.Context) (uint32, error)
@@ -32,7 +92,9 @@ func resolveBINDConfigOwnerPolicy(
 	ctx context.Context,
 	layout bindHostLayout,
 ) (bindConfigOwnerPolicy, error) {
-	return resolveBINDConfigOwnerPolicyWithResolver(ctx, layout, resolveBINDGroupGID)
+	return resolveBINDConfigOwnerPolicyWithResolver(
+		ctx, layout, bindServiceGroupResolverForLayout(layout),
+	)
 }
 
 func resolveBINDConfigOwnerPolicyWithResolver(
@@ -58,8 +120,26 @@ func resolveBINDConfigOwnerPolicyWithResolver(
 		}
 		policy.apt = true
 		policy.bindGID = gid
+		policy.mode = 0o644
 	case reflect.DeepEqual(paths, []string{"/etc/named.conf"}):
-		// Pacman owns its single vendor configuration as exact root:root.
+		// The pacman bind package ships its single vendor configuration as
+		// root:named 0640 (measured on Arch, 3 September 2026; register
+		// R-018). An earlier contract assumed root:root 0644 and refused the
+		// real file before the first switch could begin.
+		// pacman bind paketi tek satıcı yapılandırmasını root:named 0640
+		// gönderir (3 Eylül 2026'da Arch'ta ölçüldü; defter R-018). Önceki
+		// sözleşme root:root 0644 varsayıyor ve ilk geçiş başlayamadan gerçek
+		// dosyayı reddediyordu.
+		gid, err := resolveGID(ctx)
+		if err != nil {
+			return bindConfigOwnerPolicy{}, err
+		}
+		if gid == 0 || gid > uint32(1<<31-1) {
+			return bindConfigOwnerPolicy{}, errors.New("BIND service group proof returned an unsafe identity")
+		}
+		policy.pacman = true
+		policy.bindGID = gid
+		policy.mode = 0o640
 	default:
 		return bindConfigOwnerPolicy{}, errors.New("BIND config owner proof received an unsupported layout")
 	}
@@ -75,7 +155,7 @@ func (policy bindConfigOwnerPolicy) validateSnapshots(snapshots []dnsFileSnapsho
 		if err := validateDNSFileSnapshotIntegrity(snapshot); err != nil {
 			return err
 		}
-		if snapshot.Path != policy.paths[index] || !snapshot.Exists || snapshot.Mode != 0o644 ||
+		if snapshot.Path != policy.paths[index] || !snapshot.Exists || snapshot.Mode != policy.fileMode() ||
 			!snapshot.OwnerKnown || snapshot.UID != 0 {
 			return errors.New("BIND config snapshot differs from its exact file contract")
 		}
@@ -85,12 +165,14 @@ func (policy bindConfigOwnerPolicy) validateSnapshots(snapshots []dnsFileSnapsho
 			return errors.New("BIND config snapshots do not share one exact owner")
 		}
 	}
-	if policy.apt {
-		if commonGID != 0 && commonGID != policy.bindGID {
+	if !policy.allowsGID(commonGID) {
+		if policy.pacman {
+			return errors.New("Pacman BIND config owner is not root:named")
+		}
+		if policy.apt {
 			return errors.New("APT BIND config owner is neither root nor the resolved bind group")
 		}
-	} else if commonGID != 0 {
-		return errors.New("Pacman BIND config owner is not root:root")
+		return errors.New("BIND config owner is not root:root")
 	}
 	return nil
 }
@@ -125,7 +207,7 @@ func captureBINDConfigSnapshotSet(
 		if err := verifyBINDConfigParentPath(path, policy); err != nil {
 			return nil, err
 		}
-		snapshot, err := captureBINDConfigSnapshot(path, 0o644)
+		snapshot, err := captureBINDConfigSnapshot(path, os.FileMode(policy.fileMode()))
 		if err != nil {
 			return nil, fmt.Errorf("capture BIND configuration %s: %w", path, err)
 		}
@@ -243,9 +325,8 @@ func readBackBINDConfigReplacement(
 	for _, path := range policy.paths {
 		allowedPath = allowedPath || path == after.Path
 	}
-	allowedGID := after.GID == 0 || (policy.apt && after.GID == policy.bindGID)
-	if !allowedPath || !after.Exists || after.Mode != 0o644 || !after.OwnerKnown ||
-		after.UID != 0 || !allowedGID {
+	if !allowedPath || !after.Exists || after.Mode != policy.fileMode() || !after.OwnerKnown ||
+		after.UID != 0 || !policy.allowsGID(after.GID) {
 		return dnsFileSnapshot{}, errors.New("BIND config replacement readback has unsafe metadata")
 	}
 	if !reflect.DeepEqual(after, expected) {

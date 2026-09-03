@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -89,14 +90,63 @@ func TestBINDConfigOwnerPolicyIsExactForAPTAndPacman(t *testing.T) {
 		})
 	}
 
-	pacman := bindConfigOwnerPolicy{paths: []string{"/etc/named.conf"}}
-	root := []dnsFileSnapshot{ownerPolicyTestSnapshot("/etc/named.conf", true, 0o644, 0, 0, true)}
-	if err := pacman.validateSnapshots(root); err != nil {
-		t.Fatalf("Pacman root:root rejected: %v", err)
+	// The pacman bind package ships /etc/named.conf as root:named 0640
+	// (measured on Arch; register R-018). That exact shape is the contract.
+	// pacman bind paketi /etc/named.conf'u root:named 0640 gönderir (Arch'ta
+	// ölçüldü; defter R-018). Sözleşme tam olarak bu biçimdir.
+	pacman := bindConfigOwnerPolicy{paths: []string{"/etc/named.conf"}, pacman: true, bindGID: 40, mode: 0o640}
+	vendor := []dnsFileSnapshot{ownerPolicyTestSnapshot("/etc/named.conf", true, 0o640, 0, 40, true)}
+	if err := pacman.validateSnapshots(vendor); err != nil {
+		t.Fatalf("Pacman root:named 0640 rejected: %v", err)
 	}
-	root[0].GID = 109
-	if err := pacman.validateSnapshots(root); err == nil {
-		t.Fatal("Pacman nonzero GID was accepted")
+	for name, mutate := range map[string]func(*dnsFileSnapshot){
+		"root:root":     func(s *dnsFileSnapshot) { s.GID = 0 },
+		"foreign group": func(s *dnsFileSnapshot) { s.GID = 109 },
+		"world-read":    func(s *dnsFileSnapshot) { s.Mode = 0o644 },
+		"nonroot uid":   func(s *dnsFileSnapshot) { s.UID = 1 },
+	} {
+		t.Run("pacman "+name, func(t *testing.T) {
+			value := ownerPolicyTestSnapshot("/etc/named.conf", true, 0o640, 0, 40, true)
+			mutate(&value)
+			if err := pacman.validateSnapshots([]dnsFileSnapshot{value}); err == nil {
+				t.Fatal("unsafe pacman BIND config snapshot was accepted")
+			}
+		})
+	}
+}
+
+func TestResolvedBINDConfigOwnerPolicyUsesTheLayoutsDaemonGroup(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// bindConfigPaths cleans with the host separator; the layouts are
+		// Linux paths and the product only runs there.
+		// bindConfigPaths konağın ayırıcısıyla temizler; yerleşimler Linux
+		// yoludur ve ürün yalnız orada çalışır.
+		t.Skip("Linux path layout")
+	}
+	pacmanLayout := bindHostLayout{OptionsConfig: "/etc/named.conf", AnchorConfig: "/etc/named.conf"}
+	policy, err := resolveBINDConfigOwnerPolicyWithResolver(
+		context.Background(), pacmanLayout,
+		func(context.Context) (uint32, error) { return 40, nil },
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !policy.pacman || policy.apt || policy.bindGID != 40 || policy.fileMode() != 0o640 {
+		t.Fatalf("pacman policy=%+v", policy)
+	}
+	aptLayout := bindHostLayout{OptionsConfig: "/etc/bind/named.conf.options", AnchorConfig: "/etc/bind/named.conf.local"}
+	policy, err = resolveBINDConfigOwnerPolicyWithResolver(
+		context.Background(), aptLayout,
+		func(context.Context) (uint32, error) { return 109, nil },
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !policy.apt || policy.pacman || policy.bindGID != 109 || policy.fileMode() != 0o644 {
+		t.Fatalf("apt policy=%+v", policy)
+	}
+	if bindVendorConfigMode(pacmanLayout) != 0o640 || bindVendorConfigMode(aptLayout) != 0o644 {
+		t.Fatal("vendor config mode does not follow the layout")
 	}
 }
 

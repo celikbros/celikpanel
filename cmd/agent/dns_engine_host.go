@@ -30,6 +30,7 @@ const (
 
 	aptBINDGenerationRoot          = "/var/cache/bind/celikpanel"
 	aptBINDCacheParentPath         = "/var/cache/bind"
+	pacmanBINDGenerationRoot       = "/var/named/celikpanel"
 	abandonedAPTBindGenerationRoot = "/etc/bind/celikpanel"
 	bindDaemonReloadTimeout        = 15 * time.Second
 	bindIdentityInspectionTimeout  = 15 * time.Second
@@ -193,7 +194,7 @@ func bindLayout(profile hostplatform.Profile) (bindHostLayout, error) {
 			return bindHostLayout{}, err
 		}
 		return bindHostLayout{
-			GenerationRoot: "/var/named/celikpanel",
+			GenerationRoot: pacmanBINDGenerationRoot,
 			MainConfig:     "/etc/named.conf",
 			OptionsConfig:  "/etc/named.conf",
 			AnchorConfig:   "/etc/named.conf",
@@ -1976,7 +1977,7 @@ func prepareBINDConfigMutationWithSnapshotReader(
 		layout:    layout,
 	}
 	for _, path := range paths {
-		snapshot, err := readSnapshot(path, 0o644, false)
+		snapshot, err := readSnapshot(path, os.FileMode(bindVendorConfigMode(layout)), false)
 		if err != nil {
 			return bindConfigMutation{}, fmt.Errorf("read BIND configuration %s: %w", path, err)
 		}
@@ -1985,6 +1986,12 @@ func prepareBINDConfigMutationWithSnapshotReader(
 		mutation.original[path] = append([]byte(nil), data...)
 		content := string(data)
 		if path == layout.OptionsConfig {
+			if bindLayoutIsPacman(layout) {
+				content, err = stripStockPacmanBINDOptionDirectives(content)
+				if err != nil {
+					return bindConfigMutation{}, fmt.Errorf("prepare BIND authoritative options: %w", err)
+				}
+			}
 			content, err = managedBINDOptions(content, transferPeer)
 			if err != nil {
 				return bindConfigMutation{}, fmt.Errorf("prepare BIND authoritative options: %w", err)

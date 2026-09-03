@@ -29,6 +29,10 @@ func hardenExistingHostBINDGenerationRoot(
 	return verifyHostBINDGenerationRoot(ctx, layout)
 }
 
+func resolvePacmanBINDGroupGID(_ context.Context) (uint32, error) {
+	return 0, errors.New("pacman BIND service group resolution requires Linux")
+}
+
 func verifyHostBINDGenerationRoot(
 	_ context.Context,
 	layout bindHostLayout,
@@ -36,6 +40,8 @@ func verifyHostBINDGenerationRoot(
 	switch layout.GenerationRoot {
 	case aptBINDGenerationRoot:
 		return errors.New("secure APT BIND generation root access requires Linux")
+	case pacmanBINDGenerationRoot:
+		return errors.New("secure pacman BIND generation root access requires Linux")
 	case abandonedAPTBindGenerationRoot:
 		return errBINDAbandonedGenerationRoot
 	default:

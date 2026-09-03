@@ -37,7 +37,9 @@ func testBINDSwitchJournal(t *testing.T) dnsEngineSwitchJournal {
 		TargetGeneration: strings.Repeat("c", 64),
 		StateBefore:      dnsFileSnapshot{Path: filepath.Join(root, "dns-engine-state.json")},
 		ConfigBefore: []dnsFileSnapshot{{
-			Path: "/etc/named.conf", Exists: true, Mode: 0o644,
+			// The pacman vendor shape: root:named 0640 (register R-018).
+			// pacman satıcı biçimi: root:named 0640 (defter R-018).
+			Path: "/etc/named.conf", Exists: true, Mode: 0o640,
 			OwnerKnown: dnsSnapshotOwnerRequired(),
 			SHA256:     digestDNSBytes([]byte("named")), Data: []byte("named"),
 		}},

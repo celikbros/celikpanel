@@ -82,6 +82,10 @@ func accessHostBINDGenerationRootWithMode(
 ) error {
 	switch layout.GenerationRoot {
 	case aptBINDGenerationRoot:
+	case pacmanBINDGenerationRoot:
+		return accessPacmanBindGenerationRootWithMode(
+			ctx, allowParentHardening, createChild,
+		)
 	case abandonedAPTBindGenerationRoot:
 		return errBINDAbandonedGenerationRoot
 	default:

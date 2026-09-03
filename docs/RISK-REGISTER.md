@@ -55,7 +55,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-015 | High | OPEN / BLOCKER FOR PUBLIC DNS CUTOVER | Parent delegation and glue are verified; the `celikhost.com` child zone and public authority are absent |
 | R-016 | Medium | OPEN / PROVENANCE WARNING | Both valid v6 snapshots encode an `unknown` source identity although terminal receipts prove the prior Alpha51 commit |
 | R-017 | High | OPEN | A production panel heartbeat deterministically poisons a DNS engine switch that installs packages |
-| R-018 | Medium | OPEN | BIND mask preflight rejects a stock Arch root directory, so BIND cannot be reached on that image |
+| R-018 | Medium | FIXED ON BRANCH / PROVEN ON AN ARCH GUEST / REAL VM PENDING | The Arch BIND path was never wired end to end: root-anchor rule, managed root, config ownership, stock options and journal shape each assumed Debian; all five now follow the pacman package and a fresh Arch host reaches a serving BIND |
 | R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
 | R-020 | Low | REBALANCED ON BRANCH / CI PROOF PENDING PUSH | The CI race shard for `D` ran at 88 percent of its 8-minute ceiling on `main`; the local 30-minute single-process run sits at 80 percent |
 | R-021 | Low | RESOLVED / INVENTORY CORRECTED | Both hosts were rebuilt; identity is confirmed and the inventory now records Ubuntu and Debian 13. No Arch host remains in our inventory |
@@ -409,6 +409,26 @@ or executed as-is. There are no open pull requests at this baseline.
   path too, so the Arch block was never BIND-only. Full and tagged agent suites
   pass on Debian 13 (WSL2). The live proof on a real stock Arch host remains
   outstanding and keeps this entry OPEN.
+- Live proof (3 September 2026, WSL2 Arch guest with `/` at 0555, driven
+  through the public API): after R-029's third layer and R-033 the first BIND
+  switch reached the host and exposed, one behind the other, four more
+  Debian assumptions in the pacman path. (1) The managed-root walk only knew
+  `/var/cache/bind`; nothing prepared `/var/named/celikpanel`, so the
+  publisher refused the vendor parent - now a pacman walk proves `/var/named`
+  is the bind package's root:named directory, hardens it in place to 1770 (the
+  sticky bit APT gets from dpkg-statoverride) and creates the managed root
+  root:root 0755. (2) The config owner contract assumed `/etc/named.conf` is
+  root:root 0644; Arch ships it root:named 0640 - the contract now follows the
+  layout and resolves the `named` group. (3) Arch's stock options carry
+  `allow-recursion { 127.0.0.1; ::1; }` and `allow-transfer { none; }`, which
+  the managed block refused as operator-owned; exactly those two stock lines
+  are superseded, any other value still refuses. (4) The switch journal
+  demanded 0644 root:root for the pacman single-file set; it now follows the
+  layout. Result: preview with zero blockers, commit 200 in 9 s, engine ready
+  at epoch 1, the zone authoritative over UDP and TCP, still serving after a
+  distro restart and after a full WSL VM reboot. `pacman -Qkk bind` reports
+  `/var/named (Permissions mismatch)` afterwards; that is the sticky hardening
+  and is expected. The real-VM proof (S-9 T1) remains the exit criterion.
 
 ### R-019 - An adopted PowerDNS is not a switch-ready BIND source
 

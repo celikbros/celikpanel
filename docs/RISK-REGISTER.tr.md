@@ -56,7 +56,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-015 | Yüksek | AÇIK / AÇIK DNS GEÇİŞİ İÇİN ENGELLEYİCİ | Parent delegation ve glue doğrulandı; `celikhost.com` child zone ve açık otorite yok |
 | R-016 | Orta | AÇIK / PROVENANCE UYARISI | İki geçerli v6 snapshot kaynak kimliğini `unknown` yazar; terminal receipt'ler önceki Alpha51 commit'ini kanıtlar |
 | R-017 | Yüksek | AÇIK | Üretim panelinin kalp atışı, paket kuran bir DNS motoru geçişini belirlenimci biçimde zehirler |
-| R-018 | Orta | AÇIK | BIND mask ön denetimi, standart bir Arch kök dizinini reddeder; o imajda BIND'a ulaşılamaz |
+| R-018 | Orta | DALDA DÜZELTİLDİ / ARCH KONUĞUNDA KANITLANDI / GERÇEK VM BEKLİYOR | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
 | R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
 | R-020 | Düşük | DALDA YENİDEN DENGELENDİ / CI KANITI İTMEYİ BEKLİYOR | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
 | R-021 | Düşük | ÇÖZÜLDÜ / ENVANTER DÜZELTİLDİ | İki sunucu da yeniden kuruldu; kimlik doğrulandı ve envanter artık Ubuntu ile Debian 13 yazıyor. Envanterimizde Arch sunucu kalmadı |
@@ -412,6 +412,26 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   da paylaşır, yani Arch engeli hiçbir zaman yalnız BIND'a özgü değildi. Tam ve
   etiketli agent paketleri Debian 13 (WSL2) üzerinde geçiyor. Gerçek bir
   standart Arch sunucusundaki canlı kanıt hâlâ bekliyor ve bu kaydı AÇIK tutuyor.
+- Canlı kanıt (3 Eylül 2026, kök `/` 0555 olan WSL2 Arch konuğu, halka açık
+  API üzerinden): R-029'un üçüncü katı ve R-033'ten sonra ilk BIND geçişi
+  sunucuya ulaştı ve pacman yolunda art arda dört Debian varsayımı daha açığa
+  çıkardı. (1) Yönetilen kök yürüyüşü yalnız `/var/cache/bind`'i biliyordu;
+  `/var/named/celikpanel`'i hiçbir şey hazırlamıyordu, yayıncı satıcı üst
+  dizini reddetti - artık bir pacman yürüyüşü `/var/named`'in bind paketinin
+  root:named dizini olduğunu kanıtlıyor, yerinde 1770'e sertleştiriyor (APT'nin
+  dpkg-statoverride'dan aldığı sticky biti) ve yönetilen kökü root:root 0755
+  yaratıyor. (2) Yapılandırma sahiplik sözleşmesi `/etc/named.conf`'u root:root
+  0644 varsayıyordu; Arch onu root:named 0640 gönderir - sözleşme artık
+  yerleşimi izliyor ve `named` grubunu çözüyor. (3) Arch'ın stok seçenekleri
+  `allow-recursion { 127.0.0.1; ::1; }` ve `allow-transfer { none; }` taşır;
+  yönetilen blok bunları operatöre ait diye reddediyordu; tam o iki stok satır
+  üstleniliyor, başka her değer yine reddediliyor. (4) Geçiş günlüğü pacman'ın
+  tek dosyalık kümesi için 0644 root:root istiyordu; artık yerleşimi izliyor.
+  Sonuç: sıfır engelli önizleme, 9 saniyede commit 200, epoch 1'de hazır
+  motor, UDP ve TCP'de yetkili bölge, dağıtım yeniden başlatmasından ve tam WSL
+  VM yeniden başlatmasından sonra hâlâ hizmette. Sonrasında `pacman -Qkk bind`
+  `/var/named (Permissions mismatch)` bildirir; bu sticky sertleştirmedir ve
+  beklenir. Gerçek VM kanıtı (S-9 T1) çıkış ölçütü olarak kalır.
 
 ### R-019 - Devralınmış PowerDNS, geçişe hazır bir BIND kaynağı değil
 
