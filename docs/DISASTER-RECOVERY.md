@@ -85,11 +85,23 @@ has any state of its own, so there is never a merge and never a second identity.
    `--restore-control-plane-archive=<path> --control-plane-key-file=-`. The
    key arrives on stdin with the same discipline as the first-administrator
    credentials (root-only regular file or a bounded pipe).
-   Slice 2 provides the archive and the backup key at first run: the install script
-   accepts `CELIKPANEL_RESTORE_ARCHIVE=/absolute/root-only/file` and reads the
-   key the same way it reads the first-administrator credentials today
-   (root-only file, inherited on stdin, consumed); the panel's first-run screen
-   offers the same choice for operators who install interactively.
+   Slice 2 (on the branch) provides the archive and the backup key at first
+   run: the install script accepts
+   `CELIKPANEL_RESTORE_ARCHIVE=/absolute/root-only/file` and
+   `CELIKPANEL_RESTORE_KEY_FILE=/absolute/root-only/file` (both required
+   together), verifies the archive header in preflight with
+   `--inspect-control-plane-archive`, and restores after the systemd units are
+   written and before either service is started. An armed restore replaces
+   first-administrator admission: no prompt, no credentials file (setting one
+   is a contradiction and aborts in preflight), and after the restore the
+   installer proves the restored database has at least one administrator.
+   The panel's first-run screen is a later slice.
+
+   Precedence on the fresh host, decided from what each file is (settled
+   3 September 2026): `panel.env` and `agent.token` are the installer's, so
+   the installer's copies are kept and every differing `panel.env` key is
+   reported by name only; `firewall.nft` is the only source of the operator's
+   rules, nothing regenerates it, so the archive's copy wins.
 3. The panel binary performs the restore itself, as root, with both services
    stopped: verify the manifest, verify every member's digest, refuse an archive
    whose schema is newer than the binary, place each member with its recorded
@@ -135,9 +147,3 @@ Each is a register entry of its own when it starts.
   fresh host, nothing else is needed.
 - Whether the pre-update release snapshot should simply become a control-plane
   archive, retiring one of two mechanisms.
-- Slice 2 must settle what restore does when the installer has already
-  written `panel.env`, `agent.token` or the firewall snapshot on the fresh
-  host: today slice 1 places the archived member over it by rename. For a
-  same-release fresh host the content is equivalent, but the rule ("the
-  archive wins" vs "the installer wins, with a warning when they differ")
-  is decided together with the install-time hook, not silently.

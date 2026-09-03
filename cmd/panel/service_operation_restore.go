@@ -71,6 +71,7 @@ type panelCommandModes struct {
 	generateControlPlaneKey    bool
 	createControlPlaneArchive  bool
 	restoreControlPlaneArchive bool
+	inspectControlPlaneArchive bool
 	demo                       bool
 	insecureCookies            bool
 }
@@ -413,7 +414,7 @@ func validateMigrateOnlyRequest(enabled bool, conflictingMode bool) error {
 }
 
 func validatePanelCommandModes(modes panelCommandModes) error {
-	oneShotModes := make([]string, 0, 15)
+	oneShotModes := make([]string, 0, 16)
 	for _, mode := range []struct {
 		name    string
 		enabled bool
@@ -433,6 +434,7 @@ func validatePanelCommandModes(modes panelCommandModes) error {
 		{name: "generate-control-plane-key", enabled: modes.generateControlPlaneKey},
 		{name: "create-control-plane-archive", enabled: modes.createControlPlaneArchive},
 		{name: "restore-control-plane-archive", enabled: modes.restoreControlPlaneArchive},
+		{name: "inspect-control-plane-archive", enabled: modes.inspectControlPlaneArchive},
 	} {
 		if mode.enabled {
 			oneShotModes = append(oneShotModes, mode.name)

@@ -278,6 +278,81 @@ require_sequence "$INSTALL" \
     'acquire_first_install_signed_update_lock' \
     'preflight_first_install_signed_release_trust' \
     'preflight_first_administrator_admission'
+# Control-plane restore at install time (R-003 slice 2). The archive and its key
+# are two operator paths with two rules, and the restore itself may only happen
+# in the window where the units exist but neither service has ever started.
+# Kurulum sırasında kontrol düzlemi geri yüklemesi: arşiv ve anahtarı iki ayrı
+# kurala tabidir; geri yükleme yalnız iki servis de hiç başlamadan yapılır.
+require_literal "$INSTALL" 'RESTORE_ARCHIVE_PATH=${CELIKPANEL_RESTORE_ARCHIVE:-}'
+require_literal "$INSTALL" 'RESTORE_KEY_PATH=${CELIKPANEL_RESTORE_KEY_FILE:-}'
+require_literal "$INSTALL" 'CELIKPANEL_RESTORE_ARCHIVE \'
+require_literal "$INSTALL" '    CELIKPANEL_RESTORE_KEY_FILE'
+require_literal "$INSTALL" 'export -n RESTORE_KEY_CONTENT'
+require_function_sequence "$INSTALL" validate_restore_archive_path \
+    '[[ "$path" == /* && -f "$path" && ! -L "$path" ]]' \
+    'release_recovery_validate_root_chain "$parent"' \
+    "'%u %g %a %h %s'" \
+    '"$owner" == 0 && "$group" == 0 && "$mode" == 600' \
+    'size >= 1 && size <= RESTORE_ARCHIVE_MAX_BYTES'
+require_function_sequence "$INSTALL" load_restore_key_content \
+    'open_restore_key_same_inode "$expected_identity"' \
+    'set +x' \
+    'iflag=noatime' \
+    "IFS= read -r -d '' RESTORE_KEY_CONTENT" \
+    'found_nul=1' \
+    'close_restore_key_fd' \
+    '[[ -z "$RESTORE_KEY_CONTENT" ]]' \
+    'set -x'
+require_function_sequence "$INSTALL" run_with_restore_key_stdin \
+    'set +x' \
+    'export -n RESTORE_KEY_CONTENT' \
+    'printf '\''%s'\'' "$RESTORE_KEY_CONTENT" | "$@"' \
+    'set -x'
+require_function_sequence "$INSTALL" preflight_control_plane_restore_admission \
+    '[[ -z "$RESTORE_ARCHIVE_PATH" && -z "$RESTORE_KEY_PATH" ]]' \
+    '[[ "$APPLY_ONLY" -eq 0 ]]' \
+    '[[ -n "$RESTORE_ARCHIVE_PATH" && -n "$RESTORE_KEY_PATH" ]]' \
+    'validate_restore_archive_path "$RESTORE_ARCHIVE_PATH"' \
+    'identity=$(validate_admin_credentials_path "$RESTORE_KEY_PATH")' \
+    'validate_trusted_candidate_panel' \
+    '--inspect-control-plane-archive=' \
+    'RESTORE_ARMED=1'
+# An armed restore replaces first-administrator admission entirely, so the
+# restore preflight must run BEFORE the admission preflight, admission must
+# defer to the archive without a terminal or a credentials file, refuse the
+# contradiction of both, and the restored database must be PROVEN to carry an
+# administrator afterwards.
+# Silahlanmış geri yükleme ilk yönetici kabulünün yerine geçer: sıra, devir,
+# çelişkinin reddi ve geri yüklenen veritabanının kanıtı burada sabitlenir.
+require_function_sequence "$INSTALL" preflight_first_administrator_admission \
+    '[[ "$APPLY_ONLY" -eq 0 ]] || return 0' \
+    '[[ "$RESTORE_ARMED" == 1 ]]' \
+    '[[ -z "$ADMIN_CREDENTIALS_PATH" ]]' \
+    'CELIKPANEL_ADMIN_CREDENTIALS_FILE must not be set together with CELIKPANEL_RESTORE_ARCHIVE' \
+    'first administrator: will come from the archive' \
+    'identity=$(validate_admin_credentials_path "$ADMIN_CREDENTIALS_PATH")'
+require_function_sequence "$INSTALL" ensure_first_administrator \
+    '[[ "$RESTORE_ARMED" != 1 && "$ADMIN_CREDENTIALS_ARMED" != 1 && "$SKIP_ADMIN" == 1 ]]' \
+    'admin_count=$(run_panel_as_service_user_with_private_umask --count-users)' \
+    'if [[ "$admin_count" == 0 ]]; then' \
+    '[[ "$RESTORE_ARMED" != 1 ]] || die' \
+    'the archive contains no administrator; the restore is incomplete' \
+    'consume_admin_credentials_file' \
+    'first administrator: restored from the archive'
+require_sequence "$INSTALL" \
+    '# The restore preflight runs first' \
+    'preflight_control_plane_restore_admission' \
+    'preflight_first_administrator_admission' \
+    '# 6b. Control-plane restore' \
+    'load_restore_key_content "$RESTORE_KEY_IDENTITY"' \
+    'run_with_restore_key_stdin' \
+    '--restore-control-plane-archive="$RESTORE_ARCHIVE_PATH"' \
+    '--control-plane-key-file=-' \
+    'initialize_ledger=0' \
+    '# 7. Start the agent' \
+    '# 8. First administrator'
+require_count "$INSTALL" '--restore-control-plane-archive=' 1
+reject_literal "$INSTALL" 'CELIKPANEL_RESTORE_KEY_FILE=$'
 require_literal "$INSTALL" 'run_panel_as_service_user_with_private_umask() {'
 require_literal "$INSTALL" '/bin/sh -c '\''umask 077; exec "$@"'\'' celikpanel-install "$PREFIX/bin/panel" "$@"'
 require_function_sequence "$INSTALL" run_panel_as_service_user_with_private_umask \
@@ -1658,6 +1733,9 @@ run_first_admin_contract() (
     ADMIN_CREDENTIALS_IDENTITY=
     ADMIN_CREDENTIALS_FD=
     ADMIN_CREDENTIALS_CONTENT=
+    # No control-plane archive was restored in this fixture, so the first
+    # administrator is created or proven the ordinary way.
+    RESTORE_ARMED=0
     VENDOR_READLINK_BIN=/usr/bin/readlink
     VENDOR_STAT_BIN=/usr/bin/stat
     VENDOR_DIRNAME_BIN=/usr/bin/dirname
@@ -1768,6 +1846,9 @@ run_admin_admission_contract() (
     eval "$admin_admission_defs"
     APPLY_ONLY=0
     ADMIN_CREDENTIALS_PATH=
+    # No control-plane archive is armed in this fixture, so admission runs the
+    # ordinary way instead of deferring to the archive.
+    RESTORE_ARMED=0
     SKIP_ADMIN=1
     SRC=$first_admin_prefix
     DATA_DIR=$first_admin_existing_data
@@ -1935,6 +2016,9 @@ run_credentials_contract() (
     ADMIN_CREDENTIALS_IDENTITY=
     ADMIN_CREDENTIALS_FD=
     ADMIN_CREDENTIALS_ARMED=0
+    # No control-plane archive is armed here: this fixture exercises the
+    # ordinary credentials-file admission, which an armed restore would replace.
+    RESTORE_ARMED=0
     ADMIN_CREDENTIALS_CONTENT=caller-controlled-export
     export ADMIN_CREDENTIALS_CONTENT
     export FIRST_ADMIN_UID=$SVC_USER_ID FIRST_ADMIN_GID=$SVC_GROUP_ID

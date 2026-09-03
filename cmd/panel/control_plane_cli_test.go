@@ -23,6 +23,10 @@ func TestControlPlaneModesAreMutuallyExclusive(t *testing.T) {
 			name:  "restore-control-plane-archive",
 			apply: func(modes *panelCommandModes) { modes.restoreControlPlaneArchive = true },
 		},
+		{
+			name:  "inspect-control-plane-archive",
+			apply: func(modes *panelCommandModes) { modes.inspectControlPlaneArchive = true },
+		},
 	}
 
 	// Each new mode is a valid one-shot mode on its own.
@@ -125,6 +129,7 @@ func TestControlPlaneCommandFlags(t *testing.T) {
 		generate  bool
 		create    string
 		restore   string
+		inspect   string
 		keyFile   inheritedControlPlaneKeyFileFlag
 		wantError string
 	}{
@@ -167,6 +172,27 @@ func TestControlPlaneCommandFlags(t *testing.T) {
 			keyFile:   wrongValue,
 			wantError: "inherited on stdin",
 		},
+		{name: "inspect alone", inspect: "/root/a.cpbak"},
+		{
+			name:      "inspect with create",
+			create:    "/root/a.cpbak",
+			inspect:   "/root/a.cpbak",
+			keyFile:   inherited,
+			wantError: "mutually exclusive",
+		},
+		{
+			name:      "inspect with restore",
+			restore:   "/root/a.cpbak",
+			inspect:   "/root/a.cpbak",
+			keyFile:   inherited,
+			wantError: "mutually exclusive",
+		},
+		{
+			name:      "inspect with a key",
+			inspect:   "/root/a.cpbak",
+			keyFile:   inherited,
+			wantError: "requires an archive create or restore mode",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -174,6 +200,7 @@ func TestControlPlaneCommandFlags(t *testing.T) {
 				test.generate,
 				test.create,
 				test.restore,
+				test.inspect,
 				test.keyFile,
 			)
 			if test.wantError == "" {
@@ -247,6 +274,7 @@ func TestControlPlaneCommandContractNamesEveryMode(t *testing.T) {
 		generateControlPlaneKeyArgument,
 		"--create-control-plane-archive=",
 		"--restore-control-plane-archive=",
+		"--inspect-control-plane-archive=",
 		controlPlaneKeyFileArgument,
 		"root",
 	} {

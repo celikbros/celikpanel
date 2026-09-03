@@ -19,7 +19,10 @@ import (
 
 // controlPlaneRestoreResult is the summary the caller prints.
 type controlPlaneRestoreResult struct {
-	Restored         int
+	Restored int
+	// Kept counts the members this restore deliberately did not place because
+	// the installer's copy won (see the precedence table below).
+	Kept             int
 	SchemaVersion    int
 	MigrationVersion int
 	Source           string
@@ -32,6 +35,215 @@ type controlPlaneRestoreResult struct {
 var controlPlaneFreshHostMarkers = []string{
 	"service-mutations.json",
 	"dns-engine-state.json",
+}
+
+// ---------------------------------------------------------------------------
+// Precedence: who wins when the installer has already written a member
+// ---------------------------------------------------------------------------
+//
+// docs/DISASTER-RECOVERY.md section 8 left this open for slice 2, and slice 1
+// simply renamed the archived copy over whatever was there. That is wrong for
+// exactly the members the installer writes from THIS host's answers, and right
+// for the one member that is itself the operator's rule set. The table below is
+// the whole rule; there is no second place where a member name is special.
+//
+// docs/DISASTER-RECOVERY.md 8. bölümü bu kararı dilim 2'ye bırakmıştı. Aşağıdaki
+// tablo kuralın tamamıdır; bir üye adının özel işlendiği ikinci bir yer yoktur.
+
+type controlPlaneRestorePrecedence int
+
+const (
+	// controlPlaneArchiveWins renames the archived copy over whatever the
+	// installer left, because the archived file is the only record of what the
+	// operator decided.
+	controlPlaneArchiveWins controlPlaneRestorePrecedence = iota
+	// controlPlaneInstallerWins keeps the file this installation just wrote and
+	// says so once, because that file describes THIS host while the archived one
+	// describes the host that died.
+	controlPlaneInstallerWins
+)
+
+// controlPlaneMemberPolicy is one row of the precedence table.
+type controlPlaneMemberPolicy struct {
+	Basename string
+	// Root selects the control-plane root the member lives under, so the rule
+	// follows an installation that has moved that root by environment.
+	Root       func(controlPlaneRoots) string
+	Precedence controlPlaneRestorePrecedence
+	// CompareKeys asks for a key-by-key report when the installer's file is
+	// kept: one line per key whose value differs from the archived copy. Only
+	// the KEY NAME is ever printed; see controlPlaneConfigurationDifferences.
+	CompareKeys bool
+	// KeptLine is the single sentence printed when the installer's file is kept
+	// and no key-by-key report applies.
+	KeptLine string
+	// RestoredLine is the sentence printed when the archived copy is placed for
+	// a member whose restoration the operator has to see in the summary.
+	RestoredLine string
+}
+
+// controlPlaneMemberPolicies answers, per member, from what the product
+// actually does with the file:
+//
+//   - panel.env: the INSTALLER wins. install.sh writes it from this host's own
+//     answers (CELIKPANEL_LISTEN, CELIKPANEL_TLS and the TLS paths) and a listen
+//     address inherited from the dead host would be wrong the moment it differs.
+//     The archived copy is still opened, so every key that differs is named once
+//     and the operator can reconcile it deliberately.
+//   - agent.token: the INSTALLER wins. Nothing durable references the token: it
+//     is a shared secret both units read from disk (internal/transport/socket.go,
+//     LoadOrCreateToken and ReadToken), never a database row and never part of
+//     the agent private state. In the install hook the restore runs before the
+//     agent has ever started, so the file is normally absent and the archived
+//     token is simply placed.
+//   - firewall.nft: the ARCHIVE wins. The agent never regenerates this file from
+//     panel database state. It is written only by an explicit firewall apply
+//     (cmd/agent/firewall_rpc.go) and read back at boot by
+//     celikpanel-firewall-restore.service; the file IS the operator's ruleset,
+//     so a fresh install must not be allowed to leave a restored host disarmed.
+func controlPlaneMemberPolicies() []controlPlaneMemberPolicy {
+	confDir := func(roots controlPlaneRoots) string { return roots.ConfDir }
+	return []controlPlaneMemberPolicy{
+		{
+			Basename:    "panel.env",
+			Root:        confDir,
+			Precedence:  controlPlaneInstallerWins,
+			CompareKeys: true,
+		},
+		{
+			Basename:   "agent.token",
+			Root:       confDir,
+			Precedence: controlPlaneInstallerWins,
+			KeptLine:   "agent.token: the installer's token is kept",
+		},
+		{
+			Basename:     "firewall.nft",
+			Root:         confDir,
+			Precedence:   controlPlaneArchiveWins,
+			RestoredLine: "firewall.nft: restored from the archive",
+		},
+	}
+}
+
+// controlPlaneMemberPolicyFor returns the row that governs one resolved target
+// path, or false when the member is governed by nothing but slice-1 behaviour.
+func controlPlaneMemberPolicyFor(
+	targetPath string,
+	target controlPlaneRoots,
+) (controlPlaneMemberPolicy, bool) {
+	cleaned := filepath.Clean(targetPath)
+	for _, policy := range controlPlaneMemberPolicies() {
+		root := strings.TrimSpace(policy.Root(target))
+		if root == "" {
+			continue
+		}
+		if cleaned == filepath.Join(filepath.Clean(root), policy.Basename) {
+			return policy, true
+		}
+	}
+	return controlPlaneMemberPolicy{}, false
+}
+
+// controlPlaneConfigurationMaxBytes bounds a configuration file before it is
+// parsed for the key-by-key report. panel.env is a handful of short lines.
+const controlPlaneConfigurationMaxBytes int64 = 64 * 1024
+
+// parseControlPlaneConfigurationFile reads a KEY=VALUE file exactly the way
+// install.sh validates panel.env: one assignment per line, blank and comment
+// lines ignored, the first "=" separating the name from the value. It is
+// deliberately not a shell parser; panel.env is data, never shell code.
+func parseControlPlaneConfigurationFile(path string) (map[string]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	defer file.Close()
+	content, err := io.ReadAll(io.LimitReader(file, controlPlaneConfigurationMaxBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	if int64(len(content)) > controlPlaneConfigurationMaxBytes {
+		return nil, fmt.Errorf("%s is too large to compare with the archived copy", path)
+	}
+	values := map[string]string{}
+	for _, line := range strings.Split(string(content), "\n") {
+		line = strings.TrimRight(line, "\r")
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		name, value, found := strings.Cut(line, "=")
+		name = strings.TrimSpace(name)
+		if !found || name == "" {
+			continue
+		}
+		values[name] = value
+	}
+	return values, nil
+}
+
+// controlPlaneConfigurationDifferences names every key whose value differs
+// between the file this installation wrote and the archived copy, including a
+// key that only one of the two carries: an absent key is a difference the
+// operator has to know about.
+//
+// It returns NAMES ONLY. No value of any key, sensitive or not, can reach the
+// report, because the warning line has nowhere to put one. That is stronger
+// than filtering key names for SECRET, TOKEN, KEY or PASSWORD, and unlike such
+// a filter it cannot rot as keys are added.
+//
+// Yalnızca ANAHTAR ADLARI döner; hiçbir anahtarın değeri rapora ulaşamaz.
+func controlPlaneConfigurationDifferences(installer, archived map[string]string) []string {
+	names := map[string]struct{}{}
+	for name := range installer {
+		names[name] = struct{}{}
+	}
+	for name := range archived {
+		names[name] = struct{}{}
+	}
+	differing := make([]string, 0, len(names))
+	for name := range names {
+		installerValue, installerHas := installer[name]
+		archivedValue, archivedHas := archived[name]
+		if installerHas && archivedHas && installerValue == archivedValue {
+			continue
+		}
+		differing = append(differing, name)
+	}
+	sort.Strings(differing)
+	return differing
+}
+
+// reportControlPlaneKeptMember prints why the installer's file was kept. It is
+// called only when the target file exists and its policy says so.
+func reportControlPlaneKeptMember(
+	policy controlPlaneMemberPolicy,
+	placement controlPlanePlacement,
+	report io.Writer,
+) error {
+	if !policy.CompareKeys {
+		if strings.TrimSpace(policy.KeptLine) != "" {
+			fmt.Fprintln(report, policy.KeptLine)
+		}
+		return nil
+	}
+	installer, err := parseControlPlaneConfigurationFile(placement.TargetPath)
+	if err != nil {
+		return err
+	}
+	archived, err := parseControlPlaneConfigurationFile(placement.StagedPath)
+	if err != nil {
+		return err
+	}
+	for _, name := range controlPlaneConfigurationDifferences(installer, archived) {
+		fmt.Fprintf(
+			report,
+			"%s: %s differs from the archive; the installer's value is kept\n",
+			policy.Basename,
+			name,
+		)
+	}
+	return nil
 }
 
 // restoreControlPlaneArchive places one archive onto a fresh host. Nothing is
@@ -102,7 +314,7 @@ func restoreControlPlaneArchive(
 	if err != nil {
 		return controlPlaneRestoreResult{}, err
 	}
-	restored, err := placeControlPlaneMembers(placements, report)
+	restored, kept, err := placeControlPlaneMembers(placements, report)
 	if err != nil {
 		return controlPlaneRestoreResult{}, err
 	}
@@ -118,17 +330,19 @@ func restoreControlPlaneArchive(
 
 	result := controlPlaneRestoreResult{
 		Restored:         restored,
+		Kept:             kept,
 		SchemaVersion:    manifest.SchemaVersion,
 		MigrationVersion: manifest.DatabaseMigrationVersion,
 		Source:           sourcePath,
 	}
 	fmt.Fprintf(
 		report,
-		"restored=%d schema=%d migration=%d from=%s\n",
+		"restored=%d schema=%d migration=%d from=%s kept=%d\n",
 		result.Restored,
 		result.SchemaVersion,
 		result.MigrationVersion,
 		result.Source,
+		result.Kept,
 	)
 	return result, nil
 }
@@ -363,6 +577,11 @@ type controlPlanePlacement struct {
 	Mode       os.FileMode
 	UID        int
 	GID        int
+	// Policy is the precedence row governing this member, if any. It is
+	// resolved while the target roots are in hand, so the placement loop never
+	// has to know a member's name.
+	Policy    controlPlaneMemberPolicy
+	HasPolicy bool
 }
 
 // planControlPlanePlacement rebases every recorded path from the roots the
@@ -404,6 +623,7 @@ func planControlPlanePlacement(
 				return nil, err
 			}
 			placement.StagedPath = staged[name]
+			placement.Policy, placement.HasPolicy = controlPlaneMemberPolicyFor(targetPath, target)
 		}
 		placements = append(placements, placement)
 	}
@@ -484,17 +704,26 @@ func requireControlPlaneContainment(root string, candidate string) error {
 func placeControlPlaneMembers(
 	placements []controlPlanePlacement,
 	report io.Writer,
-) (int, error) {
+) (int, int, error) {
 	restored := 0
+	kept := 0
 	for _, placement := range placements {
 		if placement.Directory {
 			if err := placeControlPlaneDirectory(placement); err != nil {
-				return 0, err
+				return 0, 0, err
 			}
 			continue
 		}
+		place, err := decideControlPlanePlacement(placement, report)
+		if err != nil {
+			return 0, 0, err
+		}
+		if !place {
+			kept++
+			continue
+		}
 		if err := placeControlPlaneFile(placement); err != nil {
-			return 0, err
+			return 0, 0, err
 		}
 		restored++
 		fmt.Fprintf(
@@ -503,8 +732,47 @@ func placeControlPlaneMembers(
 			placement.TargetPath,
 			formatControlPlaneMode(placement.Mode),
 		)
+		if placement.HasPolicy && strings.TrimSpace(placement.Policy.RestoredLine) != "" {
+			fmt.Fprintln(report, placement.Policy.RestoredLine)
+		}
 	}
-	return restored, nil
+	return restored, kept, nil
+}
+
+// decideControlPlanePlacement applies one row of the precedence table to one
+// member. A member with no row, or a member whose target does not exist yet, is
+// always placed: the fresh-host case is unchanged from slice 1.
+//
+// decideControlPlanePlacement, öncelik tablosunun bir satırını tek bir üyeye
+// uygular. Satırı olmayan ya da hedefi henüz var olmayan üye her zaman
+// yerleştirilir.
+func decideControlPlanePlacement(
+	placement controlPlanePlacement,
+	report io.Writer,
+) (bool, error) {
+	if !placement.HasPolicy {
+		return true, nil
+	}
+	info, err := os.Lstat(placement.TargetPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("inspect %s: %w", placement.TargetPath, err)
+	}
+	if placement.Policy.Precedence == controlPlaneArchiveWins {
+		return true, nil
+	}
+	// The installer wins, but only over a file. Anything else where a
+	// control-plane member belongs is a redirection attempt, not a decision
+	// this installation made, and it is never quietly honoured.
+	if !info.Mode().IsRegular() {
+		return false, fmt.Errorf(
+			"%s already exists and is not a regular file; restore refuses to reason about it",
+			placement.TargetPath,
+		)
+	}
+	return false, reportControlPlaneKeptMember(placement.Policy, placement, report)
 }
 
 func placeControlPlaneDirectory(placement controlPlanePlacement) error {

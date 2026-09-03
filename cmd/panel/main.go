@@ -485,6 +485,7 @@ func main() {
 	generateControlPlaneKeyFlag := flag.Bool("generate-control-plane-key", false, "Print one fresh control-plane backup key and exit; it is never stored on this host / Yeni bir kontrol düzlemi yedek anahtarı yazıp çık; bu makinede hiç saklanmaz")
 	createControlPlaneArchiveFlag := flag.String("create-control-plane-archive", "", "Write one sealed control-plane archive to this absolute path, then exit / Bu mutlak yola tek bir mühürlü kontrol düzlemi arşivi yaz, sonra çık")
 	restoreControlPlaneArchiveFlag := flag.String("restore-control-plane-archive", "", "Restore this sealed control-plane archive onto a fresh host, then exit / Bu mühürlü kontrol düzlemi arşivini temiz bir makineye geri yükle, sonra çık")
+	inspectControlPlaneArchiveFlag := flag.String("inspect-control-plane-archive", "", "Print the plaintext header of this control-plane archive without any key, then exit / Bu kontrol düzlemi arşivinin açık başlığını anahtarsız yazıp çık")
 	var controlPlaneKeyFileFlag inheritedControlPlaneKeyFileFlag
 	flag.Var(&controlPlaneKeyFileFlag, "control-plane-key-file", "Read the control-plane backup key from bounded stdin; exact value must be -")
 	if err := validateAdminCredentialsFileArgumentSpellings(os.Args[1:]); err != nil {
@@ -505,6 +506,7 @@ func main() {
 		*generateControlPlaneKeyFlag,
 		*createControlPlaneArchiveFlag,
 		*restoreControlPlaneArchiveFlag,
+		*inspectControlPlaneArchiveFlag,
 		controlPlaneKeyFileFlag,
 	); err != nil {
 		log.Fatalf("Invalid control-plane archive flags (%s): %v", controlPlaneCommandContract(), err)
@@ -549,6 +551,7 @@ func main() {
 		generateControlPlaneKey:    *generateControlPlaneKeyFlag,
 		createControlPlaneArchive:  strings.TrimSpace(*createControlPlaneArchiveFlag) != "",
 		restoreControlPlaneArchive: strings.TrimSpace(*restoreControlPlaneArchiveFlag) != "",
+		inspectControlPlaneArchive: strings.TrimSpace(*inspectControlPlaneArchiveFlag) != "",
 		demo:                       *demo,
 		insecureCookies:            *insecureCookies,
 	}); err != nil {
@@ -582,6 +585,15 @@ func main() {
 				controlPlaneCommandContract(),
 				err,
 			)
+		}
+		return
+	}
+	if strings.TrimSpace(*inspectControlPlaneArchiveFlag) != "" {
+		if err := runInspectControlPlaneArchive(
+			*inspectControlPlaneArchiveFlag,
+			os.Stdout,
+		); err != nil {
+			log.Fatalf("Inspect control-plane archive failed: %v", err)
 		}
 		return
 	}
