@@ -72,6 +72,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-031 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin geri alması bind9.service takma adını named.service'ten önce etkinleştirmeye çalıştı; APT sunucularında bu başarılı olamaz; kaynak BIND geri gelmedi ve kurtarma defteri zehirledi |
 | R-032 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Sunucunun daha önce kullandığı motora dönüş, paket kurulumundan sonra kesildiğinde yarım kalmış devir biçimi sanıldı; çünkü eski motorun terk edilmiş sahiplik makbuzu hiç emekliye ayrılmaz; kurtarma sıradan bir operatör hareketinde defteri zehirledi |
 | R-033 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Durumu olmayan sunucuda paket kurulumundan sonra düşen ilk DNS motoru kurulumu, iptal kanıtının tutarsız saydığı bir kurulum makbuzu bıraktı; defter ilk DNS hareketinde zehirlendi ve her açılışta zehirli kaldı |
+| R-034 | Yüksek | CANLIDA BULUNDU / DÜZELTME SÜRÜYOR | Her WireGuard yapılandırma uygulaması düşüyor: hazırlanan dosya adı `wg-quick strip` için geçerli bir arayüz adı değil; düşen geri alma sonra sunucunun işlem yöneticisini zehirliyor ve API'den çıkış yolu yok |
+| R-035 | Orta | AÇIK / TASARIM | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
+| R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
 
 ## Ayrıntılı riskler
 
@@ -1069,6 +1072,63 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: Arch konuğunda düzeltilmiş agent yeniden başlatılınca tutulma
   temizlenir ve iş temizce düşer; yeniden denenen geçiş R-018 yürüyüşüne
   ilerler.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-034 - WireGuard uygulaması hiç başaramıyor ve düşüşü sunucuyu kilitliyor
+
+- Kanıt: canlı, 3 Eylül 2026, R-003 tatbikatı A sunucusu (Debian 13 konuğu,
+  dal 68b83cc), halka açık API üzerinden. `POST /api/v1/service/install
+  {"service_id":"wireguard"}` paketleri kurdu, sonra iş `syncing` evresinde
+  `VPN peer sync rollback could not prove the previous host state: wg-quick
+  strip failed` ile düştü. Elle yeniden üretildi: `wg-quick strip` kanonik
+  `wg0.conf` yolunda 0 ile çıkıyor; hazırlanan geçici ad
+  `.wg0.conf.tmp-XXXXXXXXX.conf` ile 1 ve `The config file must be a valid
+  interface name, followed by .conf` (ad 15 karakterlik arayüz adı sınırını
+  aşıyor). Düşüşten sonra `/api/v1/host-mutation-readiness`
+  `HOST_MUTATION_BUSY` döndü, güvenlik duvarı `409 service_operation_busy`
+  aldı, agent yeniden başlatılınca açılış uzlaştırmasında aynı strip yine
+  düştü.
+- Etki: hiçbir sunucuda VPN etkinleştirilemiyor ve ilk deneme, biri SSH ile
+  dosya düzeltene kadar o sunucudaki diğer bütün işlemleri engelliyor. VPN
+  yolundan ulaşılan R-019 kilidi.
+- Düzeltme (dalda sürüyor): `wg-quick` yalnız adı `wg0.conf` olan bir dosya
+  görür; doğrulama kopyası rastgele eki adında taşımak yerine özel bir dizinde
+  durur. Zaten zehirlenmiş sunucunun kurtarılması ayrı sorudur ve düzeltme
+  commit'inde yanıtlanır.
+- Çıkış ölçütü: taze konukta VPN kurulumu ve bir eş uygulaması API üzerinden
+  başarılı; zehirlenmiş sunucu yanıtı burada kayıtlı.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-035 - sshd yoksa güvenlik duvarı yok
+
+- Kanıt: canlı, 3 Eylül 2026, tatbikat A sunucusu. `POST /api/v1/firewall
+  {"enabled":true}` `409 SSH listener discovery failed; firewall was not
+  changed: no verified listening sshd port was found` döndü. Konukta yalnız
+  `openssh-client` var; yönetilen servis kataloğunda ssh yok, panel kuramıyor,
+  `/etc/celikpanel/firewall.nft` hiç oluşmuyor.
+- Etki: kaçış kapısı kanıtı gerçek sunucu için doğru; ama sshd olmayan bir
+  sunucu (konteynerler, bazı VPS imajları, her WSL konuğu) güvenlik duvarını
+  hiç açamıyor ve ekran yalnız keşfin başarısız olduğunu söylüyor.
+- Karar gerekli: ya açık operatör onayı yolu ("bu sunucuda SSH yok; yine de
+  etkinleştir") ya da sunucunun güvenlik duvarı için desteklenmediğini söyleyen
+  düz bir ret; DECISIONS'a yazılır.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-036 - Posta profili kimsenin ayarlayamadığı tam nitelikli bir makine adı istiyor
+
+- Kanıt: canlı, 3 Eylül 2026, tatbikat A sunucusu. `POST
+  /api/v1/service/profile/install {"profile_id":"core-mail"}` kabul edildi
+  (202) ve `profile/core-mail/preflight` evresinde
+  `mail_profile_server_hostname_invalid` ile düştü; konuğun makine adı çıplak
+  bir ad. Makine adı uç noktası yok; DNS kimlik ayarları posta makine adını
+  beslemiyor.
+- Etki: işletim sistemi makine adı FQDN olmayan her sunucuda posta yığını
+  kurulamıyor ve operatöre panelden düzeltme yolu olmadan "makine adı geçersiz"
+  deniyor. DKIM anahtarları etkilenmiyor (Go içinde
+  `/domains/{id}/mail/auth/dkim` ile üretiliyor).
+- Karar gerekli: posta makine adını panelin kendi kimliğinden (ad sunucusu /
+  makine ayarları) türetmek ya da bir makine adı ayarı eklemek; sessizce
+  değil.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

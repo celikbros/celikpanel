@@ -71,6 +71,9 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-031 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Rolling back a BIND-to-PowerDNS switch re-enabled the bind9.service alias before named.service, which cannot succeed on APT hosts; the source BIND never came back and the recovery poisoned the ledger |
 | R-032 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Returning to an engine the host had used before, with the switch interrupted after package install, was read as the half-finished handover shape because the former engine's stranded ownership receipt is never retired; recovery poisoned the ledger on an ordinary operator action |
 | R-033 | High | FIXED ON BRANCH / LIVE PROOF PENDING | A first DNS engine install that failed after package install on a host with no state left an install receipt the abort proof called inconsistent, so the ledger was poisoned on the very first DNS action and stayed poisoned on every boot |
+| R-034 | High | FOUND LIVE / FIX IN PROGRESS | Every WireGuard config apply fails because the staged file name is not a valid interface name for `wg-quick strip`; the failed rollback then poisons the host's mutation manager with no API way out |
+| R-035 | Medium | OPEN / DESIGN | The firewall cannot be enabled on a host without a discoverable sshd, and the product cannot install one; such hosts never get `firewall.nft` |
+| R-036 | Medium | OPEN / DESIGN | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
 
 ## Detailed risks
 
@@ -1079,6 +1082,63 @@ or executed as-is. There are no open pull requests at this baseline.
   with the exact "inconsistent without active state" line.
 - Exit criteria: on the Arch guest, restarting the fixed agent clears the hold
   and fails the job cleanly; the retried switch proceeds to the R-018 walk.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-034 - A WireGuard apply can never succeed, and its failure wedges the host
+
+- Evidence: live, 3 September 2026, R-003 drill host A (Debian 13 guest,
+  branch 68b83cc) driven through the public API. `POST /api/v1/service/install
+  {"service_id":"wireguard"}` installed the packages, then the job failed in
+  `syncing` with `VPN peer sync rollback could not prove the previous host
+  state: wg-quick strip failed`. Reproduced by hand: `wg-quick strip` on the
+  canonical `wg0.conf` path exits 0; on the staged temp name
+  `.wg0.conf.tmp-XXXXXXXXX.conf` it exits 1 with `The config file must be a
+  valid interface name, followed by .conf` (the basename exceeds the 15
+  character interface-name limit). After the failure
+  `/api/v1/host-mutation-readiness` returned `HOST_MUTATION_BUSY`, the
+  firewall apply returned `409 service_operation_busy`, and an agent restart
+  re-hit the same strip during startup reconcile.
+- Impact: VPN cannot be enabled on any host, and the first attempt blocks
+  every other mutation on that host until someone edits files over SSH. The
+  R-019 wedge reached from the VPN path.
+- Fix (in progress on the branch): `wg-quick` only ever sees a file whose
+  basename is `wg0.conf`; the staged validation copy lives under a private
+  directory instead of carrying the random suffix in its name. Recovery of an
+  already-poisoned host is a separate question and is answered in the fix
+  commit.
+- Exit criteria: VPN install and one peer apply succeed through the API on a
+  fresh guest; the poisoned-host recovery answer is recorded here.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-035 - No sshd, no firewall
+
+- Evidence: live, 3 September 2026, drill host A. `POST /api/v1/firewall
+  {"enabled":true}` returned `409 SSH listener discovery failed; firewall was
+  not changed: no verified listening sshd port was found`. The guest has only
+  `openssh-client`; the managed-service catalog has no ssh entry, so the panel
+  cannot install one, and `/etc/celikpanel/firewall.nft` never exists.
+- Impact: the escape-hatch proof is right for a real server, but a host
+  without sshd (containers, some VPS images, every WSL guest) can never enable
+  the firewall, and the screen only says discovery failed.
+- Decision needed: either an explicit operator acknowledgement path ("this
+  host has no SSH; enable anyway") or a plain refusal that says the host is
+  unsupported for the firewall, recorded in DECISIONS.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-036 - The mail profile needs a fully qualified hostname nobody can set
+
+- Evidence: live, 3 September 2026, drill host A. `POST
+  /api/v1/service/profile/install {"profile_id":"core-mail"}` accepted (202)
+  and failed in `profile/core-mail/preflight` with
+  `mail_profile_server_hostname_invalid`; the guest's hostname is a bare
+  machine name. There is no hostname endpoint and the DNS identity settings do
+  not feed the mail hostname.
+- Impact: on any host whose OS hostname is not an FQDN the mail stack cannot
+  be installed, and the operator is told the hostname is invalid without a way
+  to fix it from the panel. DKIM keys are unaffected (they are generated in
+  Go through `/domains/{id}/mail/auth/dkim`).
+- Decision needed: derive the mail hostname from the panel's own identity
+  (nameserver/host settings) or add a hostname setting; not silently.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
