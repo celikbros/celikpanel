@@ -75,7 +75,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-035 | Medium | OPEN / DESIGN | The firewall cannot be enabled on a host without a discoverable sshd, and the product cannot install one; such hosts never get `firewall.nft` |
 | R-036 | Medium | OPEN / DESIGN | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
 | R-037 | Medium | GUARDED ON BRANCH / A SECOND EMBED WAS AFFECTED AND IS FIXED | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
-| R-038 | Critical | FOUND / FIXED ON BRANCH / LIVE PROOF PENDING | A host whose DNS engine packages were already present could never activate that engine: the switch installed nothing, wrote no provenance, and finalization refused it |
+| R-038 | Critical | OPEN / AGENT HALF FIXED / PANEL REFUSES BEFORE REACHING IT / PROVEN LIVE | A host that already carries the DNS engine's packages can never activate that engine: the panel refuses it as unmanaged and offers no way forward, and the service screens send the operator back to the screen that refuses |
 
 ## Detailed risks
 
@@ -895,6 +895,10 @@ or executed as-is. There are no open pull requests at this baseline.
 - Fixed on branch (3 September 2026) together with R-038: an adoption is an
   installation with an empty missing set, recorded by the same constructor in
   the same receipt with this mutation's identity.
+- Scope note (3 September 2026): the adoption provenance closes the agent
+  half only. The live run in R-038 shows the panel refuses a host with
+  preinstalled packages before any mutation is dispatched, so the end-to-end
+  flow is still broken and R-038 carries it.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-027 - PowerDNS authority is APT-only by design
@@ -1301,6 +1305,49 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: on a real VM whose target packages are preinstalled, the
   first switch to that engine finalizes through the panel and the host stays
   mutable; the rolled-back retry from the T5 cell converges.
+- Live proof, 3 September 2026, Debian 13 guest reset to a fresh host with
+  `bind9 1:9.20.26-1~deb13u1` preinstalled by hand, run twice: once on the
+  commit before the adoption fix and once on the branch head. **The two runs
+  are byte-identical** and neither reaches the agent. With `named` as apt
+  leaves it (running), identity staging is refused outright with
+  `409 DNS_ENGINE_WORKFLOW_REQUIRED`. With `named` stopped and disabled and
+  the packages still present, identity stages, then the preview returns
+  `action: switch` with the blockers `target_unavailable` and
+  `unmanaged_dns_detected`, and the commit answers `400 invalid DNS engine
+  switch request`. The agent journal shows no switch, no finalization and no
+  hold; no receipt is ever written, because no mutation is ever dispatched.
+  The host stays mutable, so this is a clean dead end rather than a wedge.
+- Why: for APT BIND the panel's readiness package list and the agent's
+  provenance package list are the same single list, so "the panel says
+  installed" and "the agent's missing set is empty" are one condition, and
+  the panel refuses exactly that condition. `cmd/panel/dns_engine.go` raises
+  `unmanaged_dns_detected` whenever the target is installed and not managed,
+  regardless of whether it is running, and `Managed` can never be true on a
+  host the panel has never owned; the action stays `switch` instead of
+  `install` because the target is installed. `cmd/panel/dns_setup.go`
+  additionally blocks identity staging while any engine is running.
+- There is no escape hatch: `/dns/engine/reconcile` answers
+  `{"reconciled":false}`, and both `/service/install` and `/service/uninstall`
+  for BIND answer `409 DNS_ENGINE_WORKFLOW_REQUIRED` pointing back at the DNS
+  infrastructure screen. The only way out is to purge the package over SSH,
+  which the product forbids as a matter of policy.
+- The agent-side fix (adoption provenance) is real and stays: it is the
+  second half of the answer, at a layer the panel currently never reaches.
+- What the product needs, decided 3 September 2026: an explicit, informed
+  takeover. When the target engine is installed but unmanaged and no engine
+  is active, the preview must offer `adopt_unmanaged` instead of refusing,
+  telling the operator in plain words that this server already runs a DNS
+  server the panel did not install, that adopting it replaces its
+  configuration with the panel's, and that anything it serves today which the
+  panel does not know about will stop being served. The commit proceeds only
+  with that acknowledgement, snapshots what it is replacing so a rollback
+  restores it exactly, installs nothing, and lands on the agent's adoption
+  provenance. Identity staging must be allowed while an unmanaged engine is
+  running, since it only writes settings.
+- Exit criteria: on a fresh host carrying preinstalled BIND packages, in both
+  the running and the stopped shape, the operator activates BIND through the
+  panel alone, the zone answers, and a rollback restores the configuration the
+  host had before. Proven on a real VM.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

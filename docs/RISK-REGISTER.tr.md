@@ -76,7 +76,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-035 | Orta | AÇIK / TASARIM | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
 | R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
 | R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
-| R-038 | Kritik | BULUNDU / DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | DNS motoru paketleri zaten kurulu olan sunucuda o motor hiç etkinleştirilemiyordu: geçiş hiçbir şey kurmuyor, kaynak kaydı yazmıyor ve tamamlama reddediyordu |
+| R-038 | Kritik | AÇIK / AGENT YARISI DÜZELTİLDİ / PANEL O KATMANA VARMADAN REDDEDİYOR / CANLI KANITLI | DNS motorunun paketlerini zaten taşıyan sunucu o motoru hiç etkinleştiremiyor: panel onu yönetilmeyen sayıp reddediyor ve ileri giden bir yol sunmuyor; servis ekranları da operatörü reddeden ekrana geri yolluyor |
 
 ## Ayrıntılı riskler
 
@@ -890,6 +890,10 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   denemeye özgü değil ve gerçek kapsamı R-038'de kayıtlı.
 - Dalda düzeltildi (3 Eylül 2026), R-038 ile birlikte: benimseme, eksik
   kümesi boş bir kurulumdur; aynı yapıcı, aynı makbuz, bu işlemin kimliği.
+- Kapsam notu (3 Eylül 2026): benimseme kaydı yalnız agent yarısını kapatır.
+  R-038'deki canlı koşu, panelin paketleri önceden kurulu sunucuyu hiçbir
+  işlem göndermeden reddettiğini gösteriyor; uçtan uca akış hâlâ kırık ve onu
+  R-038 taşıyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-027 - PowerDNS yetkisi tasarım gereği yalnız APT
@@ -1287,6 +1291,46 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: hedef paketleri önceden kurulu gerçek bir VM'de o motora ilk
   geçiş panelden tamamlanıyor ve sunucu işlem yapabilir kalıyor; T5
   hücresindeki geri alınmış yeniden deneme sonuçlanıyor.
+- Canlı kanıt, 3 Eylül 2026, Debian 13 konuğu taze sunucuya sıfırlanıp elle
+  `bind9 1:9.20.26-1~deb13u1` kurularak, iki kez koşuldu: bir kez benimseme
+  düzeltmesinden önceki commit'te, bir kez dal başında. **İki koşu bayt bayt
+  aynı** ve hiçbiri agent'a ulaşmıyor. `named` apt'nin bıraktığı gibi
+  (çalışır) haldeyken kimlik hazırlama doğrudan `409
+  DNS_ENGINE_WORKFLOW_REQUIRED` ile reddediliyor. `named` durdurulup devre
+  dışı bırakılıp paketler yerinde bırakılınca kimlik hazırlanıyor, sonra
+  önizleme `action: switch` ile `target_unavailable` ve
+  `unmanaged_dns_detected` engellerini döndürüyor, commit ise `400 invalid
+  DNS engine switch request` diyor. Agent günlüğünde geçiş de, tamamlama da,
+  tutma da yok; hiç makbuz yazılmıyor çünkü hiç işlem gönderilmiyor. Sunucu
+  işlem yapabilir kalıyor; yani bu bir kilit değil, temiz bir çıkmaz.
+- Nedeni: APT BIND için panelin hazırlık paket listesi ile agent'ın kaynak
+  kaydı paket listesi aynı tek listedir; "panel kurulu diyor" ile "agent'ın
+  eksik kümesi boş" aynı koşuldur ve panel tam da o koşulu reddeder.
+  `cmd/panel/dns_engine.go`, hedef kurulu ve yönetilmiyorsa -çalışıp
+  çalışmadığına bakmadan- `unmanaged_dns_detected` veriyor; panelin hiç sahip
+  olmadığı bir sunucuda `Managed` zaten hiç doğru olamaz. Hedef kurulu olduğu
+  için eylem `install` değil `switch` kalıyor. `cmd/panel/dns_setup.go` ayrıca
+  herhangi bir motor çalışırken kimlik hazırlamayı engelliyor.
+- Kaçış kapısı yok: `/dns/engine/reconcile` `{"reconciled":false}` diyor;
+  BIND için `/service/install` ve `/service/uninstall` `409
+  DNS_ENGINE_WORKFLOW_REQUIRED` ile yine reddeden ekrana yolluyor. Tek çıkış
+  paketi SSH ile kaldırmak; ürün bunu politika olarak yasaklıyor.
+- Agent tarafındaki düzeltme (benimseme kaynak kaydı) gerçek ve kalıyor:
+  cevabın ikinci yarısı, panelin şu an hiç varmadığı katmanda.
+- Ürünün ihtiyacı, 3 Eylül 2026'da karara bağlandı: açık ve bilgilendirilmiş
+  devralma. Hedef motor kurulu ama yönetilmiyorsa ve etkin motor yoksa,
+  önizleme reddetmek yerine `adopt_unmanaged` sunmalı ve operatöre düz dille
+  söylemeli: bu sunucuda panelin kurmadığı bir DNS sunucusu var; devralmak
+  onun yapılandırmasını panelinkiyle değiştirir; bugün sunduğu ve panelin
+  bilmediği ne varsa sunulmayı bırakır. Commit yalnız bu onayla ilerler,
+  değiştirdiği şeyin anlık görüntüsünü alır ki geri alma onu birebir geri
+  getirsin, hiçbir şey kurmaz ve agent'ın benimseme kaydına iner. Kimlik
+  hazırlama, yönetilmeyen bir motor çalışırken de yapılabilmeli; yalnız ayar
+  yazıyor.
+- Çıkış ölçütü: paketleri önceden kurulu taze bir sunucuda, hem çalışır hem
+  durdurulmuş halde, operatör BIND'i yalnız panelden etkinleştiriyor, bölge
+  cevap veriyor ve geri alma sunucunun önceki yapılandırmasını geri
+  getiriyor. Gerçek VM'de kanıtlı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
