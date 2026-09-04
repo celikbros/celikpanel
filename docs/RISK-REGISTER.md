@@ -81,11 +81,12 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-041 | Medium | FIXED ON BRANCH / GUARDED | The web contract does not decode the `reinstall_active` action the panel already returns, so the reinstall the restored host needs shows as an invalid preview in the browser |
 | R-042 | High | FIXED AND PROVEN LIVE / REAL VM PENDING | A hand-configured authoritative BIND is refused: the generation will not write into an options block that already sets recursion, allow-recursion, allow-query-cache or allow-transfer, and an authoritative server almost always sets the first of those |
 | R-043 | High | FIXED AND PROVEN LIVE AT TWO CRASH POINTS / A THIRD IS R-045 | A crash during a running takeover is recovered by the switch rollback, which stops units - so the recovery would stop the DNS server the takeover promised never to interrupt |
-| R-044 | Medium | FOUND / NOT YET FIXED | A BIND configured with `view` blocks is not understood by the takeover: a recursion set inside a view silently overrides the panel's options, and zones outside views fail late in the config check |
+| R-044 | Medium | REFUSED BY NAME AND PROVEN LIVE / MANAGING SUCH A HOST IS ITS OWN FEATURE | A BIND configured with `view` blocks is not understood by the takeover: a recursion set inside a view silently overrides the panel's options, and zones outside views fail late in the config check |
 | R-045 | High | CLOSED ON A REAL VM / IT WAS THE HARNESS, NOT THE PRODUCT | A takeover crashed after its target was verified but before it was finalized is neither finalized nor rolled back: the recovery cannot find the generation pointer, fails closed and holds the ledger |
 | R-046 | Critical | FIXED AND PROVEN LIVE ON THE HOST IT WEDGED | A failed mail TLS step poisons the mutation ledger and the poison survives an agent restart: startup recovery re-attempts the same committed plan, fails the same check, and the host refuses every mutation with no way out |
-| R-047 | Low | FOUND IN THE BROWSER ROUND / NOT YET FIXED | Three defects a browser found and the tests did not: a dialog whose confirm sits below the fold, a segmented control that overflows at 390px, and a firewall status that reports no UDP port when one is open |
+| R-047 | Low | FIXED AND PROVEN LIVE / IT ALSO FOUND R-049 | Three defects a browser found and the tests did not: a dialog whose confirm sits below the fold, a segmented control that overflows at 390px, and a firewall status that reports no UDP port when one is open |
 | R-048 | Critical | FIXED AND PROVEN ON A REAL VM BY CUTTING ITS POWER | After a power loss the agent starts before the host is ready, cannot run its recovery, and never tries again - so an interrupted mutation holds the ledger and every host mutation is refused until someone restarts the agent by hand |
+| R-049 | High | FOUND IN THE BROWSER ROUND / HALF FIXED | Every blocked preview decoded to null in the browser, so the refusals written for the takeover were invisible to anyone using the panel; and the running takeover has no route on the DNS screen at all |
 
 ## Detailed risks
 
@@ -1709,6 +1710,28 @@ or executed as-is. There are no open pull requests at this baseline.
   with what the operator can do, or place the panel's zones and directives
   inside the view that answers for them. The first is honest and small; the
   second is the real feature and belongs with the zone-placement work.
+- Reproduced first, then refused, 4 September 2026. On a lab VM given a view
+  containing `recursion yes;`, the unfixed panel handed out a preview token
+  with no blockers and reported recursion as **"unchanged - nothing changes"**,
+  about a setting the takeover did not control. That is the entry's claim,
+  seen rather than reasoned.
+- Views are now found before the preview and refused by name with the file and
+  the line. Detection reuses the reader the options work built - comments and
+  string bodies blanked, whole identifier tokens, statement-head positions
+  only, which is exactly right because BIND permits a view only at the top
+  level - and adds the one thing that reader never needed: it follows
+  includes, breadth-first, bounded, each file once. A view behind two includes
+  was found live. An include that cannot be followed is its own finding,
+  pointing at the include statement, because "no views found" must never be a
+  guess; a root config that cannot be read is a probe failure instead, since
+  there is no include to send the operator to.
+- Proven reversible on the same host: with the views removed the server hands
+  out a token again and a full takeover commits with its own zone still
+  answering.
+- Managing a server configured this way - placing the panel's zones and
+  directives inside the view that answers for them - is the real feature and
+  belongs with the zone-placement work. This entry covers only the honest
+  refusal.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-045 - The one crash point that is neither finished nor undone
@@ -1841,6 +1864,15 @@ or executed as-is. There are no open pull requests at this baseline.
   open, because the status parser matches only the braced form of the rule and
   a one-port rule renders without braces. The applied policy is correct; the
   report is not, which is the class R-040 exists to keep out of this product.
+- Fixed 4 September 2026, all three, each seen at 1440x900 and 390x844 in both
+  locales before and after: the mail install dialog pins its header and its
+  actions and scrolls only the plan, so the primary action is visible on open
+  instead of 43 pixels below the dialog's fold; the components toolbar no
+  longer pushes its own control off the left edge at 390 pixels; and the
+  firewall status reads a one-port rule, which nft renders without braces, so
+  an open UDP port is no longer reported as none.
+- The round found a fourth, worse than the three it was sent for, and it is
+  R-049.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-048 - A server that loses power comes back with its control plane frozen
@@ -1917,6 +1949,35 @@ or executed as-is. There are no open pull requests at this baseline.
   because that state is only reached when the boot's own queue drains.
   Ordering moves the refusal rather than removing it; the retry works on every
   distribution.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-049 - The refusals were written, and nobody could see them
+
+- Evidence: the browser round of 4 September 2026, and `main`'s own decoder run
+  over a live payload.
+- **Fixed with R-047:** the browser's preview decoder required a token
+  unconditionally, and the panel deliberately withholds the token when a
+  preview is blocked - so **every** blocked preview decoded to null and the
+  screen said "the preview could not be verified" instead of the reason. That
+  had been true since the options refusal shipped, which means the refusals
+  written the day before were invisible to anyone using the panel. The rule is
+  now stated exactly and pinned in both directions: blocked means no token,
+  unblocked means a real one, and neither may be the other. The existing test
+  payload had been asserting a shape the panel cannot produce, which is how it
+  survived.
+- **Not fixed:** the running takeover has no route on the DNS infrastructure
+  screen. With `state = unmanaged` and no active engine, the settings flow maps
+  to manual recovery and locks every action, so the operator cannot start the
+  adoption R-039 proved - it is reachable only through the API. The stopped
+  shape has its "Review adoption" route; the running shape, which is how most
+  rented servers arrive, has none.
+- The pattern, recorded because it has now happened three times: a capability
+  proved through the API and never opened in a browser is not a capability the
+  product has. R-041 was the same, and this is the rule the session adopted
+  after it - every change that touches a screen is seen at both widths before
+  it is called done.
+- Exit criteria: an operator adopts a running unmanaged DNS server from the DNS
+  infrastructure screen, in a browser, without touching the API.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

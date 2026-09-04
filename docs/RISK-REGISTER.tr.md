@@ -82,11 +82,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-041 | Orta | DALDA DÜZELTİLDİ / KORUMAYA ALINDI | Web sözleşmesi, panelin zaten döndürdüğü `reinstall_active` eylemini çözemiyor; geri yüklenen sunucunun ihtiyaç duyduğu yeniden kurulum tarayıcıda geçersiz önizleme olarak görünüyor |
 | R-042 | Yüksek | DÜZELTİLDİ VE CANLI KANITLANDI / GERÇEK VM BEKLİYOR | Elle yapılandırılmış yetkili bir BIND reddediliyor: nesil, recursion, allow-recursion, allow-query-cache ya da allow-transfer'ı zaten tanımlayan bir options bloğuna yazmıyor; yetkili sunucu ise bunlardan ilkini neredeyse her zaman tanımlar |
 | R-043 | Yüksek | DÜZELTİLDİ VE İKİ ÇÖKME NOKTASINDA CANLI KANITLANDI / ÜÇÜNCÜSÜ R-045 | Çalışan devralma sırasındaki çökme, birimleri durduran geçiş geri almasıyla kurtarılıyor; yani kurtarma, devralmanın asla kesmeyeceğine söz verdiği DNS sunucusunu durdurur |
-| R-044 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | `view` bloklarıyla yapılandırılmış bir BIND devralma tarafından anlaşılmıyor: view içindeki bir recursion panelin seçeneklerini sessizce ezer, view dışındaki bölgeler ise yapılandırma denetiminde geç düşer |
+| R-044 | Orta | ADIYLA REDDEDİLİYOR VE CANLI KANITLANDI / BÖYLE BİR SUNUCUYU YÖNETMEK AYRI BİR ÖZELLİK | `view` bloklarıyla yapılandırılmış bir BIND devralma tarafından anlaşılmıyor: view içindeki bir recursion panelin seçeneklerini sessizce ezer, view dışındaki bölgeler ise yapılandırma denetiminde geç düşer |
 | R-045 | Yüksek | GERÇEK VM'DE KAPANDI / ÜRÜN DEĞİL DÜZENEK KAYNAKLIYDI | Hedefi doğrulandıktan sonra ama tamamlanmadan çöken devralma ne tamamlanıyor ne geri alınıyor: kurtarma nesil işaretçisini bulamıyor, kapalı hata veriyor ve defteri tutuyor |
 | R-046 | Kritik | DÜZELTİLDİ VE KİLİTLEDİĞİ SUNUCUDA CANLI KANITLANDI | Düşen posta TLS adımı işlem defterini zehirliyor ve zehir agent yeniden başlatılınca da geçmiyor: açılış kurtarması aynı planı yeniden deniyor, aynı denetimde düşüyor ve sunucu her işlemi reddediyor, çıkış yolu yok |
-| R-047 | Düşük | TARAYICI TURUNDA BULUNDU / HENÜZ DÜZELTİLMEDİ | Tarayıcının görüp testlerin görmediği üç kusur: onay düğmeleri ekranın altında kalan bir pencere, 390px'te taşan bir seçim denetimi ve açık bir UDP portu varken yok diyen güvenlik duvarı durumu |
+| R-047 | Düşük | DÜZELTİLDİ VE CANLI KANITLANDI / R-049'U DA O BULDU | Tarayıcının görüp testlerin görmediği üç kusur: onay düğmeleri ekranın altında kalan bir pencere, 390px'te taşan bir seçim denetimi ve açık bir UDP portu varken yok diyen güvenlik duvarı durumu |
 | R-048 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE ELEKTRİK KESİLEREK KANITLANDI | Elektrik kesintisinden sonra agent, sunucu hazır olmadan başlıyor, kurtarmasını yapamıyor ve bir daha denemiyor; yarım kalan işlem defteri tutuyor ve biri agent'ı elle yeniden başlatana kadar her işlem reddediliyor |
+| R-049 | Yüksek | TARAYICI TURUNDA BULUNDU / YARISI DÜZELTİLDİ | Engellenmiş her önizleme tarayıcıda null'a çözülüyordu; yani devralma için yazılan retler paneli kullanan hiç kimseye görünmüyordu. Ayrıca çalışan devralmanın DNS ekranında hiç yolu yok |
 
 ## Ayrıntılı riskler
 
@@ -1688,6 +1689,27 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   yapabileceğini söyleyerek adıyla reddetmek ya da panelin bölgelerini ve
   yönergelerini onları yanıtlayan view'ın içine yerleştirmek. Birincisi
   dürüst ve küçük; ikincisi asıl özellik ve bölge yerleşimi işiyle gelir.
+- Önce yeniden üretildi, sonra reddedildi, 4 Eylül 2026. İçinde
+  `recursion yes;` olan bir view verilen laboratuvar VM'inde, düzeltilmemiş
+  panel engelsiz bir önizleme jetonu verdi ve recursion'ı **"değişmiyor -
+  hiçbir şey değişmez"** diye bildirdi; oysa devralmanın denetlemediği bir
+  ayardı. Kaydın iddiası, akıl yürütmeyle değil görülerek doğrulandı.
+- View'lar artık önizlemeden önce bulunuyor ve dosyası ile satırıyla adıyla
+  reddediliyor. Saptama, seçenek çalışmasının kurduğu okuyucuyu yeniden
+  kullanıyor - yorumlar ve dizge gövdeleri boşaltılmış, tam tanımlayıcı
+  belirteçleri, yalnız deyim başı konumları; ki BIND view'a yalnız en üst
+  düzeyde izin verdiği için bu tam da doğrusu - ve o okuyucunun hiç ihtiyaç
+  duymadığı tek şeyi ekliyor: include'ları izliyor, enine, sınırlı, her dosya
+  bir kez. İki include arkasındaki bir view canlıda bulundu. İzlenemeyen bir
+  include kendi bulgusudur ve include deyimini gösterir; çünkü "view yok"
+  asla tahmin olmamalı. Okunamayan bir kök yapılandırma ise yoklama hatasıdır,
+  zira operatörü gönderecek bir include yoktur.
+- Aynı sunucuda geri döndürülebilirliği kanıtlandı: view'lar kaldırılınca
+  sunucu yeniden jeton veriyor ve tam bir devralma, kendi bölgesi yanıt
+  vermeye devam ederken tamamlanıyor.
+- Böyle yapılandırılmış bir sunucuyu yönetmek - panelin bölgelerini ve
+  yönergelerini onları yanıtlayan view'ın içine yerleştirmek - asıl özelliktir
+  ve bölge yerleşimi işiyle gelir. Bu kayıt yalnız dürüst reddi kapsar.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-045 - Ne biten ne geri alınan tek çökme noktası
@@ -1820,6 +1842,14 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   eşleştiriyor ve tek portlu kural parantezsiz yazılıyor. Uygulanan politika
   doğru, rapor değil - ki bu, R-040'ın bu üründen uzak tutmak için var olduğu
   sınıf.
+- 4 Eylül 2026'da üçü de düzeltildi; her biri 1440x900 ve 390x844'te, iki
+  dilde, öncesi ve sonrasıyla görüldü: posta kurulum penceresi başlığını ve
+  eylemlerini sabitleyip yalnız planı kaydırıyor, böylece asıl eylem
+  pencerenin katlanma çizgisinin 43 piksel altında değil açılışta görünüyor;
+  bileşenler araç çubuğu 390 pikselde kendi denetimini sol kenardan dışarı
+  itmiyor; ve güvenlik duvarı durumu, nft'nin parantezsiz yazdığı tek portlu
+  kuralı okuyor, yani açık bir UDP portu artık yok diye bildirilmiyor.
+- Tur, gönderildiği üçünden daha kötü bir dördüncüsünü buldu: R-049.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-048 - Elektriği kesilen sunucu, kontrol düzlemi donmuş olarak geri geliyor
@@ -1896,6 +1926,32 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   içindeki bir birim, sunucuyu asla tam açılmış olarak göremez; çünkü o
   duruma ancak açılışın kendi kuyruğu boşalınca varılır. Sıralama reddi
   kaldırmaz, yerini değiştirir; yeniden deneme ise her dağıtımda çalışır.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-049 - Retler yazıldı ve kimse göremedi
+
+- Kanıt: 4 Eylül 2026 tarayıcı turu ve `main`'in kendi çözücüsünün canlı bir
+  yük üzerinde koşturulması.
+- **R-047 ile düzeltildi:** tarayıcının önizleme çözücüsü jetonu koşulsuz
+  istiyordu; panel ise bir önizleme engellendiğinde jetonu bilerek vermiyor -
+  yani **her** engellenmiş önizleme null'a çözülüyor ve ekran sebebi yerine
+  "önizleme doğrulanamadı" diyordu. Bu, seçenek reddi gönderildiğinden beri
+  böyleydi; yani bir gün önce yazılan retler paneli kullanan hiç kimseye
+  görünmüyordu. Kural artık tam olarak yazılı ve iki yönde de sabit:
+  engellenmişse jeton yok, engellenmemişse gerçek bir jeton var; ikisi
+  birbirinin yerine geçemez. Mevcut test yükü, panelin üretemeyeceği bir biçimi
+  doğruluyordu; hayatta kalma sebebi buydu.
+- **Düzeltilmedi:** çalışan devralmanın DNS altyapı ekranında hiç yolu yok.
+  `state = unmanaged` ve etkin motor yokken ayar akışı elle kurtarmaya düşüyor
+  ve bütün eylemleri kilitliyor; yani operatör, R-039'un kanıtladığı devralmayı
+  başlatamıyor - yalnız API'den erişilebiliyor. Durmuş hâlin "Devralmayı
+  incele" yolu var; kiralık sunucuların çoğunun geldiği çalışan hâlin yok.
+- Artık üç kez tekrarlandığı için kaydedilen örüntü: API'den kanıtlanmış ve
+  tarayıcıda hiç açılmamış bir yetenek, ürünün sahip olduğu bir yetenek
+  değildir. R-041 aynıydı ve oturumun ondan sonra benimsediği kural şudur:
+  ekrana dokunan her değişiklik, bitti denmeden önce iki genişlikte de görülür.
+- Çıkış ölçütü: operatör, çalışan ve yönetilmeyen bir DNS sunucusunu, API'ye
+  dokunmadan, tarayıcıda DNS altyapı ekranından devralıyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
