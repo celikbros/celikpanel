@@ -76,7 +76,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-036 | Medium | OPEN / DESIGN | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
 | R-037 | Medium | GUARDED ON BRANCH / A SECOND EMBED WAS AFFECTED AND IS FIXED | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
 | R-038 | Critical | STOPPED SHAPE FIXED AND PROVEN LIVE / RUNNING SHAPE IS R-039 / ROLLBACK PROOF OWED | A host that already carries the DNS engine's packages can now adopt that engine through the panel with an explicit acknowledgement, when the engine is stopped; a running unmanaged engine is still refused and is tracked as R-039 |
-| R-039 | High | OPEN / DESIGN ESTABLISHED | Adopting a DNS server that is running and unmanaged needs a durable pre-intent record: the agent must stop a service it does not own before its proofs run, and a crash in that window would leave the operator's DNS stopped with nothing to recover from |
+| R-039 | High | OPEN / DESIGN REVISED: ADOPT IN PLACE, NO NEW JOURNAL MACHINERY | Adopting a DNS server that is running and unmanaged needs a durable pre-intent record: the agent must stop a service it does not own before its proofs run, and a crash in that window would leave the operator's DNS stopped with nothing to recover from |
 | R-040 | High | FIXED / IN REVIEW (PR #80) / BROWSER ROUND OWED | The service list reports a host it has never scanned as "not installed": no observation and no service serialise to the same answer |
 | R-041 | Medium | FIXED ON BRANCH / GUARDED | The web contract does not decode the `reinstall_active` action the panel already returns, so the reinstall the restored host needs shows as an invalid preview in the browser |
 
@@ -1395,6 +1395,37 @@ or executed as-is. There are no open pull requests at this baseline.
 - Until then: the product tells the operator plainly that the DNS server
   running on this host must be stopped before it can be adopted, instead of
   refusing without saying why. R-038 covers the stopped shape.
+- Design corrected, 4 September 2026. The earlier analysis assumed the agent
+  would have to stop and seal an engine it does not own before its proofs
+  could run, which would need a durable pre-intent record it does not have.
+  The product already contains the better answer: PowerDNS has an adoption
+  path (`adoptPDNS`, `cmd/agent/dns_engine_pdns_adopt.go`) that never stops
+  or starts the unit. It writes its intent journal first, captures the
+  existing configuration, proves at mutation time that the configuration is
+  still exactly what it captured, and only then replaces it in place. There
+  is no window in which the host is not serving, so there is nothing for a
+  pre-intent record to recover.
+- What R-039 is, therefore: the same shape for BIND, against a configuration
+  the panel did not write. Adoption has its own evidence path, distinct from
+  the switch proofs - so `proveBINDTargetNotServing` and the port 53
+  pre-mutation guard are not relaxed and not reached; they are the wrong
+  proofs for an operation that is not a switch. The snapshot machinery is
+  content-based and already captures a vendor configuration, which the
+  stopped-shape takeover proved on 3 September.
+- What still has to be decided in the implementation: whether the running
+  engine is reloaded or restarted after its configuration is replaced
+  (reload keeps the host answering throughout and is preferred if the engine
+  supports it for the change being made), and what the product does when the
+  foreign configuration turns out to reference zone files or includes that
+  the panel's generation will orphan - refuse and name them, or take them
+  under the same acknowledgement.
+- The acknowledgement, the plain-language warning and the panel gate are the
+  ones R-038 already ships; this entry extends them to `Running == true`
+  rather than inventing a second dialogue.
+- Exit criteria unchanged: on a fresh host carrying a running, unmanaged
+  BIND, the operator adopts it through the panel alone, the zone answers
+  throughout, and a rollback restores the configuration the host had before.
+  Proven on a real VM.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-040 - "I have never looked" is reported as "it is not installed"

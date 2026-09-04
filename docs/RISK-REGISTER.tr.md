@@ -77,7 +77,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
 | R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
 | R-038 | Kritik | DURMUŞ HALİ DÜZELTİLDİ VE CANLI KANITLANDI / ÇALIŞIR HALİ R-039 / GERİ ALMA KANITI BORÇ | DNS motorunun paketlerini zaten taşıyan sunucu, motor durmuşken artık panelden açık onayla devralabiliyor; çalışan yönetilmeyen motor hâlâ reddediliyor ve R-039 olarak izleniyor |
-| R-039 | Yüksek | AÇIK / TASARIM BELİRLENDİ | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
+| R-039 | Yüksek | AÇIK / TASARIM DÜZELTİLDİ: YERİNDE DEVRAL, YENİ GÜNLÜK MEKANİZMASI YOK | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
 | R-040 | Yüksek | DÜZELTİLDİ / İNCELEMEDE (PR #80) / TARAYICI TURU BORÇ | Servis listesi, hiç taramadığı sunucu için "kurulu değil" diyor: gözlem yokluğu ile servis yokluğu aynı cevaba düşüyor |
 | R-041 | Orta | DALDA DÜZELTİLDİ / KORUMAYA ALINDI | Web sözleşmesi, panelin zaten döndürdüğü `reinstall_active` eylemini çözemiyor; geri yüklenen sunucunun ihtiyaç duyduğu yeniden kurulum tarayıcıda geçersiz önizleme olarak görünüyor |
 
@@ -1378,6 +1378,37 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - O zamana kadar: ürün, reddedip sebebini söylememek yerine, bu sunucuda
   çalışan DNS sunucusunun devralınabilmesi için önce durdurulması gerektiğini
   operatöre açıkça söyler. Durmuş hali R-038 kapsıyor.
+- Tasarım düzeltildi, 4 Eylül 2026. Önceki çözümleme, agent'ın sahibi
+  olmadığı bir motoru kanıtları koşmadan önce durdurup mühürlemek zorunda
+  kalacağını varsayıyordu; bu da elinde olmayan kalıcı bir ön-niyet kaydı
+  gerektirirdi. Ürün daha iyi cevabı zaten içeriyor: PowerDNS'in, birimi hiç
+  durdurmayan ve başlatmayan bir devralma yolu var (`adoptPDNS`,
+  `cmd/agent/dns_engine_pdns_adopt.go`). Önce niyet günlüğünü yazıyor, var
+  olan yapılandırmayı yakalıyor, değiştirme anında yapılandırmanın hâlâ
+  yakaladığının aynısı olduğunu kanıtlıyor ve ancak o zaman yerinde
+  değiştiriyor. Sunucunun hizmet vermediği bir aralık yok; dolayısıyla
+  ön-niyet kaydının kurtaracağı bir şey de yok.
+- Öyleyse R-039 şudur: aynı biçimin, panelin yazmadığı bir yapılandırma
+  üzerinde BIND için kurulması. Devralmanın kendi kanıt yolu var, geçiş
+  kanıtlarından ayrı; bu yüzden `proveBINDTargetNotServing` ve 53 numaralı
+  bağlantı noktası ön-işlem koruması ne gevşetiliyor ne de o yola giriliyor -
+  geçiş olmayan bir işlem için yanlış kanıtlar onlar. Anlık görüntü
+  mekanizması içerik temelli ve satıcı yapılandırmasını zaten yakalıyor;
+  durmuş hâlin devralınması bunu 3 Eylül'de kanıtladı.
+- Uygulamada karara bağlanacaklar: yapılandırma değiştirildikten sonra
+  çalışan motorun yeniden yüklenmesi mi yoksa yeniden başlatılması mı
+  (yeniden yükleme sunucuyu boyunca yanıt verir durumda tutar ve motor bu
+  değişiklik için destekliyorsa tercih edilir) ve yabancı yapılandırma,
+  panelin üreteceği yapılandırmanın öksüz bırakacağı bölge dosyalarına ya da
+  eklemelere işaret ediyorsa ürünün ne yapacağı - reddedip adlarını söylemek
+  mi, yoksa aynı onayla birlikte devralmak mı.
+- Onay, düz dille uyarı ve panel kapısı R-038'in gönderdikleridir; bu kayıt
+  onları ikinci bir diyalog icat etmek yerine `Running == true` hâline
+  genişletir.
+- Çıkış ölçütü aynı: çalışan ve yönetilmeyen bir BIND taşıyan taze sunucuda
+  operatör onu yalnız panelden devralıyor, bölge boyunca yanıt veriyor ve
+  geri alma sunucunun önceki yapılandırmasını geri getiriyor. Gerçek VM'de
+  kanıtlı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-040 - "Hiç bakmadım", "kurulu değil" diye raporlanıyor
