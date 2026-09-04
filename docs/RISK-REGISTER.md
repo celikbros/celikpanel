@@ -77,7 +77,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-037 | Medium | GUARDED ON BRANCH / A SECOND EMBED WAS AFFECTED AND IS FIXED | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
 | R-038 | Critical | STOPPED SHAPE FIXED AND PROVEN LIVE / RUNNING SHAPE IS R-039 / ROLLBACK PROOF OWED | A host that already carries the DNS engine's packages can now adopt that engine through the panel with an explicit acknowledgement, when the engine is stopped; a running unmanaged engine is still refused and is tracked as R-039 |
 | R-039 | High | OPEN / DESIGN ESTABLISHED | Adopting a DNS server that is running and unmanaged needs a durable pre-intent record: the agent must stop a service it does not own before its proofs run, and a crash in that window would leave the operator's DNS stopped with nothing to recover from |
-| R-040 | High | FOUND / FIX IN PROGRESS | The service list reports a host it has never scanned as "not installed": no observation and no service serialise to the same answer |
+| R-040 | High | FIXED / IN REVIEW (PR #80) / BROWSER ROUND OWED | The service list reports a host it has never scanned as "not installed": no observation and no service serialise to the same answer |
 | R-041 | Medium | FIXED ON BRANCH / GUARDED | The web contract does not decode the `reinstall_active` action the panel already returns, so the reinstall the restored host needs shows as an invalid preview in the browser |
 
 ## Detailed risks
@@ -1420,6 +1420,34 @@ or executed as-is. There are no open pull requests at this baseline.
   screen must say "not checked yet" and offer the check. The existing test
   that asserts the catalogue is served with a null scan time currently
   blesses the defect and has to change with it.
+- Fixed (4 September 2026, PR #80): `is_installed` is `true | false | null`
+  with `status: "unknown"` beside it, and unobserved rows withhold the
+  conflict and requirement claims they were reading off an installed set that
+  is unknown rather than empty. A component added to the catalogue after the
+  last scan reads unknown too - the same defect, more quietly. `null` is the
+  only shape an un-updated browser cannot misread: its decoder requires a
+  boolean, so it refuses the payload and falls into the existing fail-closed
+  state instead of rendering a fabricated inventory.
+- The screens follow: the list shows one neutral notice and no per-row
+  actions that would guess; the dashboard and sidebar show no count at all
+  for an unobserved host, and count only what is known when the host is
+  partly observed; the per-service page has three answers instead of two and
+  offers the check rather than an install, which was the worst instance -
+  a wrong action rather than a wrong number. Opening a page does not probe
+  the host.
+- Two quieter folds went with it: "running" was read off a status of
+  "unknown" and reported stopped, and the detail panels drew missing units,
+  versions and configuration files as facts about a component nobody had
+  looked at.
+- The two surfaces still answer different questions on purpose. The component
+  scan decides from systemd units and that same function feeds firewall
+  policy, so widening it to accept package presence would open ports on a
+  host whose units the panel cannot see. The payload now names which question
+  it answered instead, and the label is the agent's own branch selector, so
+  it cannot claim a probe that did not run.
+- Owed: a browser round on a real panel. No dev guest was available the day
+  this landed, so the proof is types, tests and bundle budgets, not a screen
+  someone looked at.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-041 - The browser cannot decode an action the API already returns

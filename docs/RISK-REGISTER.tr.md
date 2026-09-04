@@ -78,7 +78,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
 | R-038 | Kritik | DURMUŞ HALİ DÜZELTİLDİ VE CANLI KANITLANDI / ÇALIŞIR HALİ R-039 / GERİ ALMA KANITI BORÇ | DNS motorunun paketlerini zaten taşıyan sunucu, motor durmuşken artık panelden açık onayla devralabiliyor; çalışan yönetilmeyen motor hâlâ reddediliyor ve R-039 olarak izleniyor |
 | R-039 | Yüksek | AÇIK / TASARIM BELİRLENDİ | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
-| R-040 | Yüksek | BULUNDU / DÜZELTME SÜRÜYOR | Servis listesi, hiç taramadığı sunucu için "kurulu değil" diyor: gözlem yokluğu ile servis yokluğu aynı cevaba düşüyor |
+| R-040 | Yüksek | DÜZELTİLDİ / İNCELEMEDE (PR #80) / TARAYICI TURU BORÇ | Servis listesi, hiç taramadığı sunucu için "kurulu değil" diyor: gözlem yokluğu ile servis yokluğu aynı cevaba düşüyor |
 | R-041 | Orta | DALDA DÜZELTİLDİ / KORUMAYA ALINDI | Web sözleşmesi, panelin zaten döndürdüğü `reinstall_active` eylemini çözemiyor; geri yüklenen sunucunun ihtiyaç duyduğu yeniden kurulum tarayıcıda geçersiz önizleme olarak görünüyor |
 
 ## Ayrıntılı riskler
@@ -1402,6 +1402,33 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   "henüz denetlenmedi" deyip denetimi önermeli. Kataloğun boş tarama
   zamanıyla sunulduğunu doğrulayan mevcut test şu an kusuru kutsuyor ve
   onunla birlikte değişmeli.
+- Düzeltildi (4 Eylül 2026, PR #80): `is_installed` artık
+  `true | false | null` ve yanında `status: "unknown"` var; gözlenmemiş
+  satırlar, boş değil bilinmeyen bir kurulu kümesinden okudukları çakışma ve
+  gereksinim iddialarını da söylemiyor. Son taramadan sonra kataloğa eklenen
+  bir bileşen de bilinmeyen okunuyor - aynı kusurun daha sessiz hâli. `null`,
+  güncellenmemiş bir tarayıcının yanlış okuyamayacağı tek biçim: çözücüsü
+  boolean istediği için yükü reddediyor ve uydurma bir envanter çizmek yerine
+  mevcut kapalı-hata durumuna düşüyor.
+- Ekranlar buna uyuyor: liste tek bir sakin not gösteriyor ve tahmine dayalı
+  satır eylemi sunmuyor; gösterge panosu ve kenar çubuğu gözlenmemiş sunucuda
+  hiç sayı göstermiyor, kısmen gözlenmişte yalnız bilineni sayıyor; tek
+  servis sayfasının iki değil üç yanıtı var ve kurulum yerine kontrolü
+  öneriyor - en kötü örnek oydu, yanlış sayı değil yanlış eylem. Sayfayı
+  açmak sunucuyu yoklamıyor.
+- İki sessiz katlama da onunla gitti: "çalışıyor" bilgisi "unknown"
+  durumundan okunup durmuş diye raporlanıyordu ve alt paneller, kimsenin
+  bakmadığı bir bileşenin eksik birimlerini, sürümlerini ve yapılandırma
+  dosyalarını olgu gibi çiziyordu.
+- İki yüzey bilerek farklı soru sormaya devam ediyor. Bileşen taraması
+  systemd birimlerinden karar veriyor ve aynı işlev güvenlik duvarı
+  politikasını besliyor; paket varlığını kabul edecek şekilde genişletmek,
+  panelin birimlerini göremediği bir sunucuda kapı açardı. Bunun yerine yük
+  hangi soruyu yanıtladığını söylüyor ve etiket agent'ın kendi dal
+  seçicisidir; yapılmamış bir sondayı iddia edemez.
+- Borç: gerçek bir panelde tarayıcı turu. Bu iş girdiği gün geliştirme
+  konuğu yoktu; kanıt tipler, testler ve paket bütçeleri, birinin baktığı bir
+  ekran değil.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-041 - Tarayıcı, API'nin zaten döndürdüğü bir eylemi çözemiyor
