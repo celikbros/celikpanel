@@ -683,7 +683,7 @@ test('an unmanaged takeover decodes with its own acknowledgement and no outage',
     blockers: [],
     impacts: [
       'replace_foreign_config', 'validate_target', 'publish_zones',
-      'start_target', 'drop_unknown_zones',
+      'start_target', 'keep_unknown_zones',
     ],
   };
   const decoded = decodeDNSEngineSwitchPreview(takeover, null, 'bind', 1);
@@ -951,17 +951,108 @@ test('an unmanaged takeover asks for its own consent, not the downtime one', () 
   for (const phrase of [
     'already has a DNS server CelikPanel did not install',
     'replaces its configuration with CelikPanel',
-    'will stop being served',
+    'keep being answered',
     'kurmadığı bir DNS sunucusu zaten var',
     'yapılandırmasını CelikPanel',
-    'sunulmaz olur',
+    'yanıtlanmayı sürdürür',
   ]) {
     assert.ok(copy.includes(phrase), `takeover copy is missing: ${phrase}`);
   }
+  // The takeover's generation is additive: it adds an options block and an
+  // include, and deletes no zone declaration. Telling the operator their zones
+  // stop being answered is a loss that does not happen, and a false cost is
+  // worse than a stated one - it invites them to refuse a safe change or to
+  // rescue zones that were never at risk.
+  for (const falseClaim of ['will stop being served', 'stops being served', 'sunulmaz olur']) {
+    assert.ok(!copy.includes(falseClaim), `takeover copy claims a loss that does not happen: ${falseClaim}`);
+  }
   assert.match(copy, /'dnsEngine\.impact\.replaceForeignConfig'/);
-  assert.match(copy, /'dnsEngine\.impact\.dropUnknownZones'/);
+  assert.match(copy, /'dnsEngine\.impact\.keepUnknownZones'/);
   assert.match(card, /replace_foreign_config: 'dnsEngine\.impact\.replaceForeignConfig'/);
-  assert.match(card, /drop_unknown_zones: 'dnsEngine\.impact\.dropUnknownZones'/);
+  assert.match(card, /keep_unknown_zones: 'dnsEngine\.impact\.keepUnknownZones'/);
+  assert.ok(!card.includes('drop_unknown_zones'), 'the retired impact code is still mapped');
+});
+
+// The takeover has two shapes and they cost different things. A stopped engine
+// is started and its unknown zones were never being answered. A running engine
+// is reloaded in place - it keeps answering throughout - and the zones it
+// answers that CelikPanel does not know about keep being answered, because
+// CelikPanel's BIND generation adds an include and an options block and deletes
+// no zone declaration. The dialog must say the right one of those, in both
+// locales, off the impacts the server actually sent (register R-039).
+test('a takeover of a running DNS server says reload and keep, not start and drop', () => {
+  assert.match(card, /reload_target: 'dnsEngine\.impact\.reloadTarget'/);
+  assert.match(card, /keep_unknown_zones: 'dnsEngine\.impact\.keepUnknownZones'/);
+  assert.match(copy, /'dnsEngine\.impact\.reloadTarget'/);
+  assert.match(copy, /'dnsEngine\.impact\.keepUnknownZones'/);
+
+  const dialogStart = card.indexOf('function DNSEngineReviewDialog');
+  assert.ok(dialogStart >= 0);
+  const dialog = card.slice(dialogStart);
+  // The shape is read off the wire, never guessed from local state.
+  assert.match(dialog,
+    /const adoptingRunningEngine = preview\?\.impacts\.includes\('reload_target'\) === true/);
+  for (const key of [
+    'dnsEngine.adoption.titleRunning',
+    'dnsEngine.adoption.bodyRunning',
+    'dnsEngine.adoption.acknowledgementRunning',
+  ]) {
+    assert.ok(dialog.includes(key), `running takeover dialog is missing ${key}`);
+  }
+  // One dialogue, one checkbox: the running variant swaps the words, it does
+  // not add a second consent.
+  assert.equal(
+    (dialog.match(/onAcknowledgeAdoption\(event\.target\.checked\)/g) ?? []).length,
+    1,
+  );
+
+  for (const phrase of [
+    'is running a DNS server CelikPanel did not install',
+    'keeps answering throughout',
+    'keep being answered',
+    'will not manage them',
+    'kurmadığı bir DNS sunucusu çalışıyor',
+    'yanıt vermeyi sürdürür',
+    'yanıtlanmayı sürdürür',
+    'onları yönetmez',
+  ]) {
+    assert.ok(copy.includes(phrase), `running takeover copy is missing: ${phrase}`);
+  }
+});
+
+// Every impact code the panel can emit has to have copy, or the dialog silently
+// renders the "additional managed change" placeholder for a change the server
+// described perfectly well. Read the codes straight out of the Go source.
+test('every DNS preview impact the panel can return has copy in both locales', () => {
+  const goSource = readFileSync(
+    new URL('../../cmd/panel/dns_engine.go', import.meta.url),
+    'utf8',
+  );
+  const start = goSource.indexOf('func dnsEngineImpacts(');
+  const end = goSource.indexOf('\nfunc addDNSEngineBlocker(', start);
+  assert.ok(start >= 0 && end > start);
+  const body = goSource.slice(start, end);
+  const codes = new Set();
+  // Only the returned lists are impacts; the bare action strings this function
+  // branches on are not.
+  const lists = [
+    ...body.matchAll(/\[\]string\{([^}]*)\}/g),
+    ...body.matchAll(/append\(impacts,([^)]*)\)/g),
+  ];
+  for (const list of lists) {
+    for (const match of list[1].matchAll(/"([a-z][a-z0-9_]{2,})"/g)) codes.add(match[1]);
+  }
+  assert.ok(codes.size >= 12, `only found ${codes.size} impact codes`);
+  for (const code of codes) {
+    const mapping = new RegExp(`\\b${code}: '(dnsEngine\\.impact\\.[A-Za-z]+)'`);
+    const found = card.match(mapping);
+    assert.ok(found, `impact ${code} has no copy key in DNSEngineCard`);
+    assert.equal(
+      (copy.match(new RegExp(`'${found[1].replace(/\./g, '\\.')}':`, 'g')) ?? []).length,
+      2,
+      `${found[1]} is not translated in both locales`,
+    );
+  }
 });
 
 test('backend blocker text is discarded and paired or DNSSEC support is never invented', () => {

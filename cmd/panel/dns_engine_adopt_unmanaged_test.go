@@ -74,6 +74,40 @@ func TestDNSEngineTakeoverIsOfferedOnlyForTheStoppedUnmanagedShape(t *testing.T)
 			snapshot: stagedStandaloneSnapshot(
 				runningBIND, dnsEngineStateUnmanaged,
 			),
+			target: transport.DNSEngineBIND,
+			// R-039: the running half is the same action and the same
+			// acknowledgement; the agent adopts it in place.
+			wantAction: dnsEngineActionAdoptUnmanaged,
+		},
+		{
+			// A running engine CelikPanel owns is never a takeover. There is
+			// nothing foreign to take over and no consent to collect.
+			name: `panel-managed BIND is serving`,
+			snapshot: func() dnsEngineSnapshot {
+				runtimes := stoppedUnmanagedBINDRuntimes()
+				bind := runtimes[transport.DNSEngineBIND]
+				bind.Running, bind.Managed = true, true
+				runtimes[transport.DNSEngineBIND] = bind
+				return stagedStandaloneSnapshot(
+					runtimes, dnsEngineStateUnmanaged,
+				)
+			}(),
+			target: transport.DNSEngineBIND, wantAction: `switch`,
+		},
+		{
+			// Another engine is answering, so this is a switch with a live
+			// source, not a takeover of the target.
+			name: `another engine is serving`,
+			snapshot: func() dnsEngineSnapshot {
+				runtimes := stoppedUnmanagedBINDRuntimes()
+				runtimes[transport.DNSEnginePowerDNS] = transport.DNSBackendRuntimeState{
+					Engine: transport.DNSEnginePowerDNS, Unit: "pdns.service",
+					Installed: true, Running: true,
+				}
+				return stagedStandaloneSnapshot(
+					runtimes, dnsEngineStateUnmanaged,
+				)
+			}(),
 			target: transport.DNSEngineBIND, wantAction: `switch`,
 		},
 		{
@@ -162,30 +196,71 @@ func TestDNSEngineTakeoverIsOfferedOnlyForTheStoppedUnmanagedShape(t *testing.T)
 	}
 }
 
-func TestDNSEngineTakeoverImpactsNameTheReplacementAndTheLoss(t *testing.T) {
-	impacts := dnsEngineImpacts(dnsEngineActionAdoptUnmanaged, false)
-	for _, want := range []string{
-		"replace_foreign_config", "drop_unknown_zones",
-	} {
-		found := false
-		for _, impact := range impacts {
-			if impact == want {
-				found = true
-			}
-		}
-		if !found {
-			t.Fatalf(`impacts=%v missing %s`, impacts, want)
+func requireDNSEngineImpacts(
+	t *testing.T,
+	impacts []string,
+	want, unwanted []string,
+) {
+	t.Helper()
+	present := make(map[string]struct{}, len(impacts))
+	for _, impact := range impacts {
+		present[impact] = struct{}{}
+	}
+	for _, code := range want {
+		if _, found := present[code]; !found {
+			t.Errorf(`impacts=%v missing %s`, impacts, code)
 		}
 	}
-	for _, unwanted := range []string{
-		"install_target", "stop_source", "brief_dns_interruption",
-	} {
-		for _, impact := range impacts {
-			if impact == unwanted {
-				t.Fatalf(`impacts=%v must not promise %s`, impacts, unwanted)
-			}
+	for _, code := range unwanted {
+		if _, found := present[code]; found {
+			t.Errorf(`impacts=%v must not promise %s`, impacts, code)
 		}
 	}
+}
+
+// Both halves keep the foreign zones, for the same reason: CelikPanel's BIND
+// generation adds an options block and an include and deletes no zone
+// declaration. The stopped half starts the server rather than reloading it,
+// and that is the only difference in what it costs.
+//
+// İki yarı da yabancı bölgeleri korur, aynı nedenle: CelikPanel'in BIND nesli
+// bir seçenek bloğu ile bir include ekler, hiçbir bölge bildirimini silmez.
+// Durmuş yarı sunucuyu yeniden yüklemek yerine başlatır; bedel farkı bundan
+// ibarettir.
+func TestDNSEngineTakeoverImpactsNameTheReplacementAndWhatSurvives(t *testing.T) {
+	requireDNSEngineImpacts(t,
+		dnsEngineImpacts(dnsEngineActionAdoptUnmanaged, false, false),
+		[]string{
+			"replace_foreign_config", "validate_target", "publish_zones",
+			"start_target", "keep_unknown_zones",
+		},
+		[]string{
+			"install_target", "stop_source", "brief_dns_interruption",
+			"reload_target", "drop_unknown_zones",
+		},
+	)
+}
+
+// The running half must not borrow the stopped half's costs. It starts
+// nothing - the server is already up and is reloaded in place - and, like the
+// stopped half, it drops nothing (register R-039).
+//
+// Çalışan yarı, durmuş yarının bedellerini ödünç almamalıdır. Hiçbir şey
+// başlatmaz - sunucu zaten ayakta ve yerinde yeniden yükleniyor - ve hiçbir
+// şeyi düşürmez, çünkü CelikPanel'in BIND nesli bir include ve bir seçenek
+// bloğu ekler, hiçbir bölge bildirimini silmez (defter R-039).
+func TestDNSEngineRunningTakeoverImpactsReloadAndKeepTheForeignZones(t *testing.T) {
+	requireDNSEngineImpacts(t,
+		dnsEngineImpacts(dnsEngineActionAdoptUnmanaged, false, true),
+		[]string{
+			"replace_foreign_config", "validate_target", "publish_zones",
+			"reload_target", "keep_unknown_zones",
+		},
+		[]string{
+			"install_target", "stop_source", "brief_dns_interruption",
+			"start_target", "drop_unknown_zones",
+		},
+	)
 }
 
 func commitDNSEngineTakeover(
@@ -327,56 +402,180 @@ func TestDNSEngineTakeoverActivatesPreinstalledBIND(t *testing.T) {
 	}
 }
 
-func TestDNSEngineRunningUnmanagedBINDStaysRefused(t *testing.T) {
+func newRunningUnmanagedBINDPanel(t *testing.T) (*Panel, *dnsEngineTestAgent) {
+	t.Helper()
 	panel, agent := newStoppedUnmanagedBINDPanel(t)
 	agent.mu.Lock()
 	running := agent.runtimes[transport.DNSEngineBIND]
 	running.Running = true
 	agent.runtimes[transport.DNSEngineBIND] = running
 	agent.mu.Unlock()
+	return panel, agent
+}
 
+// The running half of the takeover: the same action, the same acknowledgement,
+// honestly different impacts, and it is still refused without the
+// acknowledgement (register R-039).
+//
+// Devralmanin calisan yarisi: ayni eylem, ayni onay, durustce farkli etkiler ve
+// onay olmadan yine reddedilir (defter R-039).
+func TestDNSEngineTakeoverAdoptsARunningUnmanagedBIND(t *testing.T) {
+	panel, agent := newRunningUnmanagedBINDPanel(t)
 	preview, recorder := requestDNSEnginePreview(
 		t, panel, transport.DNSEngineBIND, nil, 0,
 	)
 	if recorder.Code != http.StatusOK {
 		t.Fatalf(`preview status=%d body=%s`, recorder.Code, recorder.Body.String())
 	}
-	if preview.Action == dnsEngineActionAdoptUnmanaged {
-		t.Fatalf(`a serving unmanaged BIND was offered a takeover: %+v`, preview)
-	}
-	if !hasDNSEngineBlocker(preview, "unmanaged_dns_detected") ||
-		preview.PreviewToken != "" || preview.RequiresAdoptionAcknowledgement {
+	if preview.Action != dnsEngineActionAdoptUnmanaged ||
+		len(preview.Blockers) != 0 || preview.PreviewToken == "" {
 		t.Fatalf(`running-shape preview=%+v`, preview)
 	}
-	commit := commitDNSEngineTakeover(
-		t, panel, strings.Repeat("9", 32), 0, strings.Repeat("a", 32), true,
+	if !preview.RequiresAdoptionAcknowledgement ||
+		preview.RequiresDowntimeAcknowledgement ||
+		preview.EstimatedDowntimeSeconds != 0 {
+		t.Fatalf(`running takeover acknowledgement contract=%+v`, preview)
+	}
+	requireDNSEngineImpacts(t, preview.Impacts,
+		[]string{"replace_foreign_config", "reload_target", "keep_unknown_zones"},
+		[]string{"start_target", "brief_dns_interruption"},
 	)
-	if commit.Code == http.StatusOK {
-		t.Fatalf(`running-shape commit succeeded: %s`, commit.Body.String())
-	}
-	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if state.ActiveEngine != "" || state.EngineEpoch != 0 {
-		t.Fatalf(`running-shape state=%+v`, state)
+
+	refused := commitDNSEngineTakeover(
+		t, panel, strings.Repeat("9", 32), 0, preview.PreviewToken, false,
+	)
+	if refused.Code != http.StatusBadRequest ||
+		!strings.Contains(refused.Body.String(), "adoption acknowledgement") {
+		t.Fatalf(`unacknowledged running commit status=%d body=%s`,
+			refused.Code, refused.Body.String())
 	}
 	agent.mu.Lock()
 	calls := agent.switchCalls
 	agent.mu.Unlock()
 	if calls != 0 {
-		t.Fatalf(`running shape dispatched %d switches`, calls)
+		t.Fatalf(`refused running takeover dispatched %d switches`, calls)
+	}
+
+	preview, recorder = requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 {
+		t.Fatalf(`second preview status=%d body=%s`, recorder.Code, recorder.Body.String())
+	}
+	commit := commitDNSEngineTakeover(
+		t, panel, strings.Repeat("b", 32), 0, preview.PreviewToken, true,
+	)
+	if commit.Code != http.StatusOK {
+		t.Fatalf(`running takeover commit status=%d body=%s`,
+			commit.Code, commit.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != transport.DNSEngineBIND ||
+		state.EngineEpoch != 1 || state.CurrentSwitchID != "" {
+		t.Fatalf(`running takeover state=%+v`, state)
+	}
+	agent.mu.Lock()
+	requests := append(
+		[]transport.SwitchDNSEngineV1Request(nil), agent.switchRequests...,
+	)
+	agent.mu.Unlock()
+	if len(requests) != 1 ||
+		requests[0].Mode != transport.DNSEngineSwitchModeSwitch ||
+		requests[0].SourceEngine != "" ||
+		requests[0].TargetEngine != transport.DNSEngineBIND ||
+		requests[0].TargetEpoch != 1 {
+		t.Fatalf(`running takeover dispatched %+v`, requests)
 	}
 }
 
-// Identity staging is the first door of the takeover and the last door of the
-// running shape: a stopped engine only needs settings written, and a serving
-// one must still be refused there (register R-038, out-of-scope half).
+// A DNS engine CelikPanel already manages is never offered a takeover, running
+// or stopped: there is nothing foreign to take over and no consent to collect.
+// This is the half of the gate that must not move.
 //
-// Kimlik hazırlama, devralmanın ilk kapısı ve çalışan biçimin son kapısıdır:
-// durmuş bir motor için yalnız ayar yazılır, hizmet veren biri orada yine
-// reddedilmelidir (defter R-038, kapsam dışı yarı).
-func TestDNSIdentityStagingSeparatesTheStoppedShapeFromTheRunningOne(t *testing.T) {
+// CelikPanel'in zaten yonettigi bir DNS motoruna, calissin ya da dursun, asla
+// devralma sunulmaz: devralinacak yabanci bir sey ve toplanacak bir riza
+// yoktur. Kapinin kimildamamasi gereken yarisi budur.
+func TestDNSEngineManagedBINDIsNeverOfferedATakeover(t *testing.T) {
+	for _, running := range []bool{false, true} {
+		runtimes := stoppedUnmanagedBINDRuntimes()
+		bind := runtimes[transport.DNSEngineBIND]
+		bind.Managed, bind.Running = true, running
+		runtimes[transport.DNSEngineBIND] = bind
+		state := dnsEngineStateUnconfigured
+		if running {
+			state = dnsEngineStateUnmanaged
+		}
+		snapshot := stagedStandaloneSnapshot(runtimes, state)
+		if adoptableUnmanagedDNSEngine(snapshot, transport.DNSEngineBIND) {
+			t.Fatalf(`managed BIND (running=%v) was adoptable`, running)
+		}
+		if action := dnsEngineAction(
+			snapshot, transport.DNSEngineBIND,
+		); action == dnsEngineActionAdoptUnmanaged {
+			t.Fatalf(`managed BIND (running=%v) was offered a takeover`, running)
+		}
+	}
+}
+
+// The takeover's own acknowledgement is not optional in either half, and a
+// commit that arrives without it changes nothing.
+//
+// Devralmanin kendi onayi iki yarida da istege bagli degildir ve onsuz gelen
+// bir commit hicbir seyi degistirmez.
+func TestDNSEngineTakeoverAcknowledgementIsRequiredInBothShapes(t *testing.T) {
+	shapes := map[string]func(*testing.T) (*Panel, *dnsEngineTestAgent){
+		"stopped": newStoppedUnmanagedBINDPanel,
+		"running": newRunningUnmanagedBINDPanel,
+	}
+	for name, newPanel := range shapes {
+		t.Run(name, func(t *testing.T) {
+			panel, _ := newPanel(t)
+			preview, recorder := requestDNSEnginePreview(
+				t, panel, transport.DNSEngineBIND, nil, 0,
+			)
+			if recorder.Code != http.StatusOK ||
+				preview.Action != dnsEngineActionAdoptUnmanaged ||
+				!preview.RequiresAdoptionAcknowledgement {
+				t.Fatalf(`preview=%+v body=%s`, preview, recorder.Body.String())
+			}
+			commit := commitDNSEngineTakeover(
+				t, panel, strings.Repeat("c", 32), 0, preview.PreviewToken, false,
+			)
+			if commit.Code != http.StatusBadRequest ||
+				!strings.Contains(commit.Body.String(), "adoption acknowledgement") {
+				t.Fatalf(`status=%d body=%s`, commit.Code, commit.Body.String())
+			}
+			state, err := readDNSEngineDBState(
+				context.Background(), panel.db.GetDB(),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if state.ActiveEngine != "" || state.EngineEpoch != 0 ||
+				state.CurrentSwitchID != "" {
+				t.Fatalf(`refused commit changed state=%+v`, state)
+			}
+		})
+	}
+}
+
+// Identity staging is the first door of the takeover and it opens for both
+// halves: staging writes settings and nothing else - no package, no unit, no
+// configuration - so a serving unmanaged engine is no reason to refuse it
+// (register R-038, R-039). What it still refuses is a host that is not a
+// takeover host at all: an engine CelikPanel already manages, or a contested
+// port 53.
+//
+// Kimlik hazirlama devralmanin ilk kapisidir ve iki yariya da acilir: hazirlama
+// ayarlari yazar, baska bir sey yapmaz - ne paket, ne birim, ne yapilandirma -
+// dolayisiyla hizmet veren panel disi bir motor onu reddetmek icin sebep
+// degildir (defter R-038, R-039). Hala reddettigi sey, hic devralma sunucusu
+// olmayan bir sunucudur: CelikPanel'in zaten yonettigi bir motor ya da
+// cekismeli bir 53 numarali baglanti noktasi.
+func TestDNSIdentityStagingOpensForBothTakeoverShapes(t *testing.T) {
 	stopped := stoppedUnmanagedBINDRuntimes()
 	if kind := dnsIdentityStagingKind(
 		stopped, false, transport.DNSTopologyStandalone, "", 0,
@@ -389,7 +588,26 @@ func TestDNSIdentityStagingSeparatesTheStoppedShapeFromTheRunningOne(t *testing.
 	running[transport.DNSEngineBIND] = state
 	if kind := dnsIdentityStagingKind(
 		running, false, transport.DNSTopologyStandalone, "", 0,
+	); kind != dnsIdentityStagingBINDTakeover {
+		t.Fatalf(`serving unmanaged BIND staging kind=%q`, kind)
+	}
+	// A serving engine CelikPanel manages is still not a takeover host, and a
+	// contested port 53 is still refused outright.
+	//
+	// CelikPanel'in yonettigi hizmet veren bir motor yine devralma sunucusu
+	// degildir ve cekismeli bir 53 numarali baglanti noktasi yine reddedilir.
+	managed := stoppedUnmanagedBINDRuntimes()
+	bind := managed[transport.DNSEngineBIND]
+	bind.Running, bind.Managed = true, true
+	managed[transport.DNSEngineBIND] = bind
+	if kind := dnsIdentityStagingKind(
+		managed, false, transport.DNSTopologyStandalone, "", 0,
 	); kind != "" {
-		t.Fatalf(`serving unmanaged BIND staging kind=%q, want refusal`, kind)
+		t.Fatalf(`managed serving BIND staging kind=%q, want refusal`, kind)
+	}
+	if kind := dnsIdentityStagingKind(
+		running, true, transport.DNSTopologyStandalone, "", 0,
+	); kind != "" {
+		t.Fatalf(`contested port 53 staging kind=%q, want refusal`, kind)
 	}
 }
