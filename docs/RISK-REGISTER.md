@@ -82,9 +82,10 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-042 | High | FIXED AND PROVEN LIVE / REAL VM PENDING | A hand-configured authoritative BIND is refused: the generation will not write into an options block that already sets recursion, allow-recursion, allow-query-cache or allow-transfer, and an authoritative server almost always sets the first of those |
 | R-043 | High | FIXED AND PROVEN LIVE AT TWO CRASH POINTS / A THIRD IS R-045 | A crash during a running takeover is recovered by the switch rollback, which stops units - so the recovery would stop the DNS server the takeover promised never to interrupt |
 | R-044 | Medium | FOUND / NOT YET FIXED | A BIND configured with `view` blocks is not understood by the takeover: a recursion set inside a view silently overrides the panel's options, and zones outside views fail late in the config check |
-| R-045 | High | FOUND / CAUSE NOT YET DETERMINED | A takeover crashed after its target was verified but before it was finalized is neither finalized nor rolled back: the recovery cannot find the generation pointer, fails closed and holds the ledger |
+| R-045 | High | CLOSED ON A REAL VM / IT WAS THE HARNESS, NOT THE PRODUCT | A takeover crashed after its target was verified but before it was finalized is neither finalized nor rolled back: the recovery cannot find the generation pointer, fails closed and holds the ledger |
 | R-046 | Critical | FIXED AND PROVEN LIVE ON THE HOST IT WEDGED | A failed mail TLS step poisons the mutation ledger and the poison survives an agent restart: startup recovery re-attempts the same committed plan, fails the same check, and the host refuses every mutation with no way out |
 | R-047 | Low | FOUND IN THE BROWSER ROUND / NOT YET FIXED | Three defects a browser found and the tests did not: a dialog whose confirm sits below the fold, a segmented control that overflows at 390px, and a firewall status that reports no UDP port when one is open |
+| R-048 | Critical | FOUND ON A REAL VM / NOT YET FIXED | After a power loss the agent starts before the host is ready, cannot run its recovery, and never tries again - so an interrupted mutation holds the ledger and every host mutation is refused until someone restarts the agent by hand |
 
 ## Detailed risks
 
@@ -1743,6 +1744,26 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: a takeover killed at the verified boundary comes back either
   finalized or rolled back, with the server answering throughout and the
   ledger free.
+- Settled 4 September 2026 on a real virtual machine, by cutting its power.
+  Three cuts at the `target-verified` boundary with QMP `quit` - no fault
+  injection, no signal, nothing touching the agent - and all three came back
+  **finalized**, the ledger free, the zone answering, the server never
+  restarted. An offline read of the crashed disk before it was ever booted
+  showed the generation pointer present and the journal still at
+  `target-verified`: exactly what the injected runs did not show.
+- Mechanism, from the code and corroborated from a second direction: the
+  `after_write` hook makes `apply` return an error, so `publisher.Switch`
+  takes its failure branch and, for a takeover with no previous generation,
+  removes the `current` pointer - eight milliseconds after the marker, by the
+  agent's own failure path. A power loss cannot reach that code, because
+  `apply` never returns. A run whose apply failed for an unrelated reason
+  removed the pointer the same way.
+- The lesson for the harness, not only for this entry: an `after_write` fault
+  at a phase inside `publisher.Switch` cannot model a power loss, because the
+  error return is itself what changes the host. Fault injection proves what
+  the code does with an error; only a power cut proves what a power cut does.
+- The power cuts also found something the injection never could, and it is
+  the product: R-048.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-046 - A failed mail step wedges the whole host, and a restart does not clear it
@@ -1820,6 +1841,44 @@ or executed as-is. There are no open pull requests at this baseline.
   open, because the status parser matches only the braced form of the rule and
   a one-port rule renders without braces. The applied policy is correct; the
   report is not, which is the class R-040 exists to keep out of this product.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-048 - A server that loses power comes back with its control plane frozen
+
+- Evidence: live, 4 September 2026, on a real virtual machine, reproduced in
+  **five of five** power cuts. At boot the agent starts while systemd is still
+  `starting`; the host-profile probe refuses anything but `running` or
+  `degraded`, so the startup recovery cannot run at all and logs `recover DNS
+  engine switch host transaction: ... detect host platform: systemd is not
+  ready: systemd state "starting"`. It is a one-shot: in one run the journal
+  sat at its phase and the request stayed leased for four minutes with systemd
+  long since `running`, checked every fifteen seconds, with no retry.
+- Impact: `/api/v1/host-mutation-readiness` answers `HOST_MUTATION_BUSY`, so
+  **every** host mutation is refused - DNS, the firewall, sites, updates - not
+  only the one that was interrupted. The panel's own startup recovery gives up
+  on the held ledger and `reconcile` answers `{"reconciled":false}` while it is
+  held. Restarting the agent once finalizes or rolls back correctly and frees
+  everything, so the recovery's *decision* is right; it simply never gets to
+  make it. This is the R-019 family reached from an ordinary power loss, which
+  is the one case this recovery exists for.
+- What it needs, in two parts, both about when rather than what:
+  1. The recovery must treat "the host is still booting" as *not yet*, not as
+     *no*. Either order the unit after the boot transaction, or - better,
+     because it does not depend on unit ordering being right on every
+     distribution - retry the host-profile probe on a bounded schedule before
+     deciding anything, distinguishing a transient probe failure, which is
+     retried, from a durable one, which fails the plan cleanly the way R-046's
+     reconciliation now does.
+  2. Nothing may end a boot holding the ledger with no one left to release it.
+     If the recovery cannot reach a decision within its window it must release
+     the ledger with a durable reason and report it, rather than leave the
+     request leased by a mutation whose process no longer exists. A lease held
+     by a dead process id after a boot is, by construction, not live.
+- Neither part changes what the recovery decides: the same three power cuts
+  proved the decision is already correct once it runs.
+- Exit criteria: a machine whose power is cut mid-mutation comes back with the
+  mutation finalized or failed and the host mutable, without anyone touching
+  it. Proven on a real VM, at more than one boundary.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
