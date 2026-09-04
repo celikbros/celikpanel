@@ -200,6 +200,72 @@ func runningBINDAdoptionSelected(
 	return named.active() || alias.active(), nil
 }
 
+// stoppedBINDTakeoverSelected recognises the other half of the takeover: the
+// panel offered adopt_unmanaged for a BIND that is installed but not answering,
+// and that half runs the ordinary first-install transaction rather than this
+// file. The transaction cannot tell it apart from a first install by the
+// manifest alone - the two are byte-identical, deliberately - so it is told
+// apart by the same fact the panel used: this host carries no durable
+// CelikPanel authority over BIND. A first install the panel itself performed
+// has an install-ownership receipt by the time its configuration is prepared; a
+// server somebody else installed has neither receipt.
+//
+// It decides one thing only: whether the operator's own recursion,
+// allow-recursion, allow-query-cache and allow-transfer are read as part of
+// what is being replaced (register R-042) or refused. No proof branches on it.
+//
+// stoppedBINDTakeoverSelected, devralmanın öbür yarısını tanır: panel, kurulu
+// ama yanıt vermeyen bir BIND için adopt_unmanaged sunmuştur ve o yarı, bu dosya
+// yerine sıradan ilk kurulum işlemini çalıştırır. İşlem onu yalnız bildirgeye
+// bakarak ilk kurulumdan ayıramaz - ikisi bilerek birebir aynıdır - bu yüzden
+// panelin kullandığı olguyla ayırt edilir: bu sunucu BIND üzerinde kalıcı hiçbir
+// CelikPanel yetkisi taşımıyor. Panelin kendi yaptığı bir ilk kurulumun,
+// yapılandırması hazırlanırken bir kurulum-sahiplik makbuzu vardır; başkasının
+// kurduğu bir sunucunun iki makbuzu da yoktur.
+//
+// Tek bir şeye karar verir: operatörün kendi recursion, allow-recursion,
+// allow-query-cache ve allow-transfer direktiflerinin değiştirilenin parçası
+// olarak mı okunacağı (defter R-042) yoksa reddedileceği mi. Hiçbir kanıt buna
+// dallanmaz.
+func stoppedBINDTakeoverSelected(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	stateExists bool,
+) (bool, error) {
+	if !adoptableRunningBINDManifest(manifest, stateExists) {
+		return false, nil
+	}
+	if _, exists, err := readDNSEngineOwnership(
+		transport.DNSEngineBIND,
+	); err != nil || exists {
+		return false, err
+	}
+	if _, exists, err := readDNSEngineInstallOwnership(
+		transport.DNSEngineBIND,
+	); err != nil || exists {
+		return false, err
+	}
+	return true, nil
+}
+
+// bindSwitchOptionsAuthority is the one place the transaction decides whether a
+// directive the operator wrote is refused or taken over.
+//
+// bindSwitchOptionsAuthority, işlemin, operatörün yazdığı bir direktifin
+// reddedileceğine mi devralınacağına mı karar verdiği tek yerdir.
+func bindSwitchOptionsAuthority(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	stateExists bool,
+) (bindOptionsAuthority, error) {
+	takeover, err := stoppedBINDTakeoverSelected(manifest, stateExists)
+	if err != nil {
+		return bindOptionsExclusive, err
+	}
+	if takeover {
+		return bindOptionsTakeover, nil
+	}
+	return bindOptionsExclusive, nil
+}
+
 func enableAdoptedBINDUnitIfNeeded(
 	ctx context.Context,
 	systemctl string,
@@ -828,7 +894,7 @@ func adoptRunningBIND(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	configs, err := prepareBINDConfigMutation(ctx, layout, "")
+	configs, err := prepareBINDAdoptionConfigMutation(ctx, layout, "")
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}

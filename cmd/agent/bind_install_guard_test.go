@@ -638,7 +638,7 @@ func TestBINDMaskParentPreflightPrecedesNewSwitchMutations(t *testing.T) {
 		"newDNSEngineInstallOwnership(",
 		"runVerifiedBINDTargetInstall(",
 		"runBINDPostInstallContinuation(",
-		"prepareBINDConfigMutation(",
+		"prepareBINDConfigMutationWithAuthority(",
 	} {
 		position := strings.Index(body, mutation)
 		if position < 0 || preflight >= position {

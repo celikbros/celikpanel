@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
@@ -846,7 +847,18 @@ func sameDNSBackendRuntime(
 		return false
 	}
 	for engine, runtime := range left {
-		if other, ok := right[engine]; !ok || other != runtime {
+		// The comparison is deep because a runtime state now carries the
+		// directives a takeover would replace, and those are a fact about this
+		// host at this moment: if the operator rewrote the options block
+		// between the two probes, this is not the same host state and the flow
+		// must look again.
+		//
+		// Karşılaştırma derindir, çünkü bir çalışma zamanı durumu artık bir
+		// devralmanın değiştireceği direktifleri taşır ve bunlar bu sunucunun
+		// bu andaki olgularıdır: operatör iki yoklama arasında seçenek bloğunu
+		// yeniden yazdıysa bu aynı sunucu durumu değildir ve akış yeniden
+		// bakmalıdır.
+		if other, ok := right[engine]; !ok || !reflect.DeepEqual(other, runtime) {
 			return false
 		}
 	}

@@ -105,7 +105,42 @@ type bindConfigMutation struct {
 	snapshots  map[string]dnsFileSnapshot
 	layout     bindHostLayout
 	ownerAware bool
+	// adopted names the directives this mutation took over from the server's
+	// own options block: what each said, and what CelikPanel makes it say. It
+	// is empty on every path but a takeover.
+	//
+	// adopted, bu mutasyonun sunucunun kendi seçenek bloğundan devraldığı
+	// direktifleri adlandırır: her biri ne diyordu ve CelikPanel ne dedirtiyor.
+	// Devralma dışında her yolda boştur.
+	adopted []bindForeignOptionDirective
 }
+
+// bindOptionsAuthority decides what the generation does when the server's own
+// options block already defines a directive CelikPanel manages.
+//
+// bindOptionsExclusive is every path but one: refuse, because nobody consented
+// to replacing a directive an administrator wrote. bindOptionsTakeover is the
+// takeover the operator acknowledged on screen, having been shown each value
+// found and each value CelikPanel will set (register R-042). The difference is
+// consent, not safety: both prove ownership of every byte they write, and both
+// snapshot the file so a rollback restores it exactly.
+//
+// bindOptionsAuthority, sunucunun kendi seçenek bloğu CelikPanel'in yönettiği
+// bir direktifi zaten tanımlıyorsa neslin ne yapacağına karar verir.
+//
+// bindOptionsExclusive, biri dışında her yoldur: reddet; çünkü bir yöneticinin
+// yazdığı direktifin değiştirilmesine kimse rıza göstermedi.
+// bindOptionsTakeover, operatörün ekranda, bulunan her değer ile CelikPanel'in
+// koyacağı her değer gösterildikten sonra onayladığı devralmadır (defter
+// R-042). Fark güvenlik değil rızadır: ikisi de yazdığı her baytın sahipliğini
+// kanıtlar ve ikisi de dosyayı anlık görüntüler, böylece bir geri alma onu
+// birebir geri yükler.
+type bindOptionsAuthority int
+
+const (
+	bindOptionsExclusive bindOptionsAuthority = iota
+	bindOptionsTakeover
+)
 
 type bindConfigSnapshotReader func(
 	path string,
@@ -597,6 +632,29 @@ func (hostDNSEngineBackend) Readiness(
 			if err != nil {
 				log.Printf("PowerDNS primary peer readiness proof failed: %v", err)
 			}
+		}
+	}
+	// What a takeover of this BIND would replace, reported as facts so the
+	// preview can show the operator the difference before the operator agrees
+	// to it (register R-042). Only for a BIND that is here and is not ours:
+	// there is nothing to take over from a managed engine, and nothing to read
+	// from a host that has no BIND. A probe failure is logged and reported as
+	// nothing found, exactly like every other optional evidence here - it must
+	// never make readiness itself unavailable.
+	//
+	// Bu BIND'in devralınmasının neyi değiştireceği, önizlemenin operatöre o
+	// rıza göstermeden önce farkı gösterebilmesi için olgu olarak bildirilir
+	// (defter R-042). Yalnız burada olan ve bizim olmayan bir BIND için:
+	// yönetilen bir motordan devralınacak bir şey yoktur ve BIND'i olmayan bir
+	// sunucudan okunacak bir şey yoktur. Bir yoklama hatası günlüğe yazılır ve
+	// hiçbir şey bulunmamış gibi bildirilir; buradaki diğer her isteğe bağlı
+	// kanıt gibi - hazırlığın kendisini asla erişilmez kılmamalıdır.
+	if layoutErr == nil && states[0].Installed && !states[0].Managed {
+		foreignOptions, foreignErr := reportForeignBINDOptions(layout)
+		if foreignErr != nil {
+			log.Printf("BIND foreign options probe failed: %v", foreignErr)
+		} else {
+			states[0].ForeignOptions = foreignOptions
 		}
 	}
 	port53Conflict, err := dnsPort53ConflictCheck(
@@ -1282,6 +1340,19 @@ func (hostDNSEngineBackend) Switch(
 	if adopting {
 		return adoptRunningBIND(ctx, profile, layout, systemctl, manifest, binding)
 	}
+	// The stopped half of the takeover runs this transaction unchanged. The one
+	// thing it needs from it is permission to read the operator's own options
+	// directives as part of what it is replacing, and that is decided here,
+	// before any receipt of ours exists to confuse the question.
+	//
+	// Devralmanın durmuş yarısı bu işlemi değişmeden çalıştırır. Ondan
+	// istediği tek şey, operatörün kendi seçenek direktiflerini değiştirdiğinin
+	// parçası olarak okuma izniydir; buna, soruyu karıştıracak hiçbir makbuzumuz
+	// daha yokken burada karar verilir.
+	optionsAuthority, err := bindSwitchOptionsAuthority(manifest, stateExists)
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	if err := verifyDNSEngineSwitchSource(ctx, profile, manifest, state, stateExists); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1484,7 +1555,9 @@ func (hostDNSEngineBackend) Switch(
 		manifest.PairRole == transport.DNSPairRoleSecondary {
 		transferPeer = manifest.PeerIP
 	}
-	configs, err := prepareBINDConfigMutation(ctx, layout, transferPeer)
+	configs, err := prepareBINDConfigMutationWithAuthority(
+		ctx, layout, transferPeer, optionsAuthority,
+	)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -2093,6 +2166,39 @@ func prepareBINDConfigMutation(
 	layout bindHostLayout,
 	transferPeer string,
 ) (bindConfigMutation, error) {
+	return prepareBINDConfigMutationWithAuthority(
+		ctx, layout, transferPeer, bindOptionsExclusive,
+	)
+}
+
+// prepareBINDAdoptionConfigMutation is the takeover's preparation: the same
+// snapshot set, the same ownership policy, the same desired generation - and
+// the server's own recursion, allow-recursion, allow-query-cache and
+// allow-transfer read as part of what is being replaced rather than refused
+// (register R-042). It is reachable only from a takeover the operator
+// acknowledged.
+//
+// prepareBINDAdoptionConfigMutation, devralmanın hazırlığıdır: aynı anlık
+// görüntü kümesi, aynı sahiplik politikası, aynı istenen nesil - ve sunucunun
+// kendi recursion, allow-recursion, allow-query-cache ve allow-transfer
+// direktifleri reddedilmek yerine değiştirilenin parçası olarak okunur (defter
+// R-042). Yalnız operatörün onayladığı bir devralmadan ulaşılır.
+func prepareBINDAdoptionConfigMutation(
+	ctx context.Context,
+	layout bindHostLayout,
+	transferPeer string,
+) (bindConfigMutation, error) {
+	return prepareBINDConfigMutationWithAuthority(
+		ctx, layout, transferPeer, bindOptionsTakeover,
+	)
+}
+
+func prepareBINDConfigMutationWithAuthority(
+	ctx context.Context,
+	layout bindHostLayout,
+	transferPeer string,
+	authority bindOptionsAuthority,
+) (bindConfigMutation, error) {
 	policy, err := resolveBINDConfigOwnerPolicy(ctx, layout)
 	if err != nil {
 		return bindConfigMutation{}, err
@@ -2103,7 +2209,7 @@ func prepareBINDConfigMutation(
 	}
 	capturedByPath := bindConfigSnapshotMap(captured)
 	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
-		layout, transferPeer,
+		layout, transferPeer, authority,
 		func(path string, mode os.FileMode, allowAbsent bool) (dnsFileSnapshot, error) {
 			if allowAbsent {
 				return dnsFileSnapshot{}, errors.New("BIND config snapshot cannot be absent")
@@ -2129,6 +2235,7 @@ func prepareBINDConfigMutation(
 func prepareBINDConfigMutationWithSnapshotReader(
 	layout bindHostLayout,
 	transferPeer string,
+	authority bindOptionsAuthority,
 	readSnapshot bindConfigSnapshotReader,
 ) (bindConfigMutation, error) {
 	if readSnapshot == nil {
@@ -2155,6 +2262,27 @@ func prepareBINDConfigMutationWithSnapshotReader(
 		mutation.original[path] = append([]byte(nil), data...)
 		content := string(data)
 		if path == layout.OptionsConfig {
+			// The takeover reads the server's own managed directives first, so
+			// what it removes is captured with the value it had and the line it
+			// was on, before the stock-package strip or the managed block can
+			// change a single offset.
+			//
+			// Devralma önce sunucunun kendi yönetilen direktiflerini okur; böylece
+			// kaldırdığı şey, stok paket temizliği ya da yönetilen blok tek bir
+			// konumu değiştiremeden, sahip olduğu değer ve bulunduğu satırla
+			// birlikte yakalanır.
+			if authority == bindOptionsTakeover {
+				var adopted []bindForeignOptionDirective
+				content, adopted, err = adoptForeignBINDOptions(
+					content, path, transferPeer,
+				)
+				if err != nil {
+					return bindConfigMutation{}, fmt.Errorf(
+						"prepare BIND authoritative options: %w", err,
+					)
+				}
+				mutation.adopted = adopted
+			}
 			if bindLayoutIsPacman(layout) {
 				content, err = stripStockPacmanBINDOptionDirectives(content)
 				if err != nil {
@@ -2163,7 +2291,9 @@ func prepareBINDConfigMutationWithSnapshotReader(
 			}
 			content, err = managedBINDOptions(content, transferPeer)
 			if err != nil {
-				return bindConfigMutation{}, fmt.Errorf("prepare BIND authoritative options: %w", err)
+				return bindConfigMutation{}, bindManagedOptionsRefusal(
+					path, string(data), transferPeer, err,
+				)
 			}
 		}
 		if path == layout.AnchorConfig {
@@ -2195,7 +2325,7 @@ func prepareBINDLegacyConfigMutationWithSnapshotReader(
 	readSnapshot bindConfigSnapshotReader,
 ) (bindConfigMutation, error) {
 	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
-		layout, "", readSnapshot,
+		layout, "", bindOptionsExclusive, readSnapshot,
 	)
 	if err != nil {
 		return bindConfigMutation{}, err
@@ -2244,7 +2374,7 @@ func verifyManagedBINDConfigExactWithSnapshotReader(
 	readSnapshot bindConfigSnapshotReader,
 ) error {
 	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
-		layout, transferPeer, readSnapshot,
+		layout, transferPeer, bindOptionsExclusive, readSnapshot,
 	)
 	if err != nil {
 		return err

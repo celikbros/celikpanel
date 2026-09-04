@@ -79,7 +79,9 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-039 | High | FIXED AND PROVEN LIVE / REAL VM PENDING | Adopting a DNS server that is running and unmanaged needs a durable pre-intent record: the agent must stop a service it does not own before its proofs run, and a crash in that window would leave the operator's DNS stopped with nothing to recover from |
 | R-040 | High | FIXED / IN REVIEW (PR #80) / BROWSER ROUND OWED | The service list reports a host it has never scanned as "not installed": no observation and no service serialise to the same answer |
 | R-041 | Medium | FIXED ON BRANCH / GUARDED | The web contract does not decode the `reinstall_active` action the panel already returns, so the reinstall the restored host needs shows as an invalid preview in the browser |
-| R-042 | High | FOUND / NOT YET FIXED | A hand-configured authoritative BIND is refused: the generation will not write into an options block that already sets recursion, allow-recursion, allow-query-cache or allow-transfer, and an authoritative server almost always sets the first of those |
+| R-042 | High | FIXED AND PROVEN LIVE / REAL VM PENDING | A hand-configured authoritative BIND is refused: the generation will not write into an options block that already sets recursion, allow-recursion, allow-query-cache or allow-transfer, and an authoritative server almost always sets the first of those |
+| R-043 | High | FOUND / NOT YET FIXED | A crash during a running takeover is recovered by the switch rollback, which stops units - so the recovery would stop the DNS server the takeover promised never to interrupt |
+| R-044 | Medium | FOUND / NOT YET FIXED | A BIND configured with `view` blocks is not understood by the takeover: a recursion set inside a view silently overrides the panel's options, and zones outside views fail late in the config check |
 
 ## Detailed risks
 
@@ -1582,6 +1584,72 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: a host carrying an authoritative BIND with `recursion no;`
   and its own zones is adopted through the panel, its zones keep answering,
   and a rollback restores its options block exactly.
+- Fixed 4 September 2026: consent replaces the refusal, and it is shown
+  before it is asked for. The preview reports each managed directive the
+  server already sets - the value found, its file and line, and the value
+  CelikPanel will set, marked unchanged when they are the same so the screen
+  never counts a change that is not one - inside the takeover panel above the
+  acknowledgement that already exists. No second consent: this is part of the
+  same act. The value the screen promises and the value the file gets come
+  from one function, so they cannot drift, and a contract test parses the
+  agent's own directive list to fail the build on drift.
+- Only consent moved. The takeover authority is derived from the fact the
+  panel used - no durable CelikPanel authority over BIND - read before any
+  receipt of ours exists; every other path keeps the exclusive rule. Recovery
+  of a failed takeover prepares under the same authority, because otherwise
+  it would refuse itself and wedge a host whose DNS is still answering.
+  Surviving refusals name the directive, its value, the file, the line and
+  where to go; three constructs genuinely cannot be adopted and say so.
+- Proven live on a hand-written authoritative configuration (`recursion no`,
+  an `allow-transfer` to a peer, its own zone): the list named recursion
+  unchanged and allow-transfer a change, the commit was refused without the
+  acknowledgement and accepted with it in 11.3 s, and **1137 queries of the
+  operator's own zone went unanswered zero times**. A forced failure restored
+  both files at their exact digests with 1155 more queries unanswered zero
+  times; the retry committed in 9.4 s.
+- Owed: the same run on a real VM.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-043 - The recovery from a crashed takeover stops the server the takeover protects
+
+- Evidence: 4 September 2026, found while proving R-042, from the code, not
+  exercised live. The in-process rollback of a running takeover is correct
+  and was measured: a forced failure restored both files byte for byte with
+  the server answering throughout. But a crash leaves the journal to be
+  recovered at agent start, and `rollbackDNSSwitchJournal`'s BIND branch is
+  the *switch* rollback, which stops units - not the adoption rollback, which
+  does not.
+- Impact: the takeover's whole promise is that the host never stops
+  answering. A machine that loses power mid-takeover would come back with the
+  operator's DNS stopped, which is worse than the failure it is recovering
+  from, and on a host the panel does not yet own.
+- What it needs: the recovery path must dispatch on the journal's mode, as
+  the mutation paths already do, and a running takeover's journal must
+  recover through the adoption rollback. The journal already carries the mode.
+- Exit criteria: a takeover killed between its config write and its reload is
+  recovered at agent start with the server still answering, proven by the
+  same query-loop measurement the in-process rollback used.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-044 - A server configured with views is adopted without understanding it
+
+- Evidence: 4 September 2026, found while proving R-042, from the code and
+  BIND's own rules; the guest was configured without views so the main proof
+  would run.
+- What happens: the takeover reads and replaces directives in the `options {}`
+  block. BIND allows the same directives inside a `view`, where they take
+  precedence, so a `recursion yes;` in a view would silently survive a
+  takeover that reported recursion as managed. Separately, BIND requires every
+  zone to live inside a view once any view exists, so the panel's generated
+  zones fail late, in the configuration check - a restore and no outage, but a
+  refusal that arrives after the work rather than before it.
+- Impact: on a host with views the panel would either report a setting it does
+  not actually control, or refuse at the last moment without having said the
+  server was unsupported.
+- What it needs: detect views before the preview, and either refuse by name
+  with what the operator can do, or place the panel's zones and directives
+  inside the view that answers for them. The first is honest and small; the
+  second is the real feature and belongs with the zone-placement work.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

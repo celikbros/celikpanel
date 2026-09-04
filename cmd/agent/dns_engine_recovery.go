@@ -308,8 +308,23 @@ func bindConfigMutationFromJournal(
 		snapshot.Data = append([]byte(nil), snapshot.Data...)
 		snapshots[filepath.Clean(snapshot.Path)] = snapshot
 	}
+	// The journal's own bytes are what this mutation restores, and they may be
+	// the configuration a takeover found: an operator's options block with its
+	// own recursion or allow-transfer in it. Preparing that under the exclusive
+	// authority would refuse the recovery of the very operation whose rollback
+	// this is, and wedge a host whose DNS is still answering. The takeover
+	// authority reads those directives instead, which is a no-op on every
+	// journal that has none (register R-042).
+	//
+	// Günlüğün kendi baytları bu mutasyonun geri yüklediği şeydir ve bir
+	// devralmanın bulduğu yapılandırma olabilir: kendi recursion ya da
+	// allow-transfer'ını taşıyan bir operatörün seçenek bloğu. Bunu dışlayıcı
+	// yetkiyle hazırlamak, geri alması olunan işlemin kurtarılmasını reddeder ve
+	// DNS'i hâlâ yanıt veren bir sunucuyu çıkmaza sokardı. Devralma yetkisi o
+	// direktifleri okur; hiç taşımayan her günlükte bu bir işlemsizliktir
+	// (defter R-042).
 	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
-		layout, transferPeer,
+		layout, transferPeer, bindOptionsTakeover,
 		func(path string, mode os.FileMode, allowAbsent bool) (dnsFileSnapshot, error) {
 			snapshot, exists := snapshots[filepath.Clean(path)]
 			if allowAbsent || !exists || !snapshot.Exists || snapshot.Mode != uint32(mode.Perm()) {

@@ -88,6 +88,45 @@ export interface DNSEnginePreviewBlocker {
     code: string;
 }
 
+// The directives CelikPanel manages that this server already sets. The takeover
+// replaces them, and the operator sees each one - the value found and the value
+// CelikPanel will set - before agreeing to it. The directive names and the
+// refusal codes are pinned lists for the same reason the action list is: the
+// panel can only send what this file can render, and a contract test fails the
+// build when the two drift.
+//
+// CelikPanel'in yonettigi ve bu sunucunun zaten koydugu direktifler. Devralma
+// onlari degistirir ve operator, riza gostermeden once her birini - bulunan
+// degeri ve CelikPanel'in koyacagi degeri - gorur. Direktif adlari ve ret
+// kodlari, eylem listesiyle ayni sebeple sabitlenmis listelerdir: panel yalniz
+// bu dosyanin cizebildigini gonderebilir ve ikisi ayrildiginda bir sozlesme
+// testi derlemeyi dusurur.
+export const DNS_MANAGED_BIND_OPTION_DIRECTIVES = [
+    'recursion',
+    'allow-recursion',
+    'allow-query-cache',
+    'allow-transfer',
+] as const;
+export type DNSManagedBINDOptionDirective =
+    (typeof DNS_MANAGED_BIND_OPTION_DIRECTIVES)[number];
+
+export const DNS_FOREIGN_OPTION_REFUSALS = [
+    'nested_scope',
+    'not_a_statement',
+    'unterminated',
+] as const;
+export type DNSForeignOptionRefusal = (typeof DNS_FOREIGN_OPTION_REFUSALS)[number];
+
+export interface DNSEngineAdoptedDirective {
+    directive: DNSManagedBINDOptionDirective;
+    found: string;
+    replacement: string;
+    unchanged: boolean;
+    file: string;
+    line: number;
+    refusal?: DNSForeignOptionRefusal;
+}
+
 export interface DNSEngineSwitchPreview {
     preview_token: string;
     source_engine: DNSEngineID | null;
@@ -103,6 +142,7 @@ export interface DNSEngineSwitchPreview {
     requires_adoption_acknowledgement: boolean;
     blockers: DNSEnginePreviewBlocker[];
     impacts: string[];
+    adopted_directives: DNSEngineAdoptedDirective[];
 }
 
 const engineIDs = new Set<string>(DNS_ENGINE_IDS);
@@ -110,6 +150,19 @@ const engineStates = new Set<string>(DNS_ENGINE_STATES);
 const engineStatuses = new Set<string>(DNS_ENGINE_STATUSES);
 const topologies = new Set<string>(['unconfigured', 'standalone', 'paired']);
 const previewActions = new Set<string>(DNS_ENGINE_PREVIEW_ACTIONS);
+const managedDirectives = new Set<string>(DNS_MANAGED_BIND_OPTION_DIRECTIVES);
+const directiveRefusals = new Set<string>(DNS_FOREIGN_OPTION_REFUSALS);
+// A directive value is the operator's own configuration text. The agent
+// normalises it to one bounded printable line and the panel refuses anything
+// else, so a value that does not look like that here is a bug upstream, not a
+// server this page should describe.
+//
+// Bir direktif degeri, operatorun kendi yapilandirma metnidir. Agent onu tek,
+// sinirli ve yazdirilabilir bir satira normallestirir ve panel baskasini
+// reddeder; dolayisiyla burada boyle gorunmeyen bir deger, bu sayfanin
+// anlatmasi gereken bir sunucu degil, yukarida bir hatadir.
+const directiveValuePattern = /^[ -~]{1,200}$/;
+const directiveFilePattern = /^\/[ -~]{0,511}$/;
 const codePattern = /^[a-z][a-z0-9_]{0,63}$/;
 const operationIDPattern = /^[a-f0-9]{32}$/;
 const operationPhases = new Set<string>([
@@ -320,6 +373,76 @@ function decodeCodeList(value: unknown): string[] | null {
     return result;
 }
 
+// A takeover's difference list. It is decoded strictly, and a payload that
+// breaks its own rules takes the whole preview to null rather than reaching the
+// screen half-understood: this list is what the operator reads before consenting
+// to a change on a DNS server that is answering queries.
+//
+// Bir devralmanin fark listesi. Kati bicimde cozulur ve kendi kurallarini bozan
+// bir yuk, yarim anlasilmis olarak ekrana ulasmak yerine tum onizlemeyi null'a
+// goturur: bu liste, operatorun sorgu yanitlayan bir DNS sunucusundaki bir
+// degisiklige riza gostermeden once okudugu seydir.
+function decodeAdoptedDirectives(
+    value: unknown,
+    action: string,
+): DNSEngineAdoptedDirective[] | null {
+    if (value === undefined) return [];
+    if (!Array.isArray(value) || value.length > 32) return null;
+    // Only a takeover replaces a directive somebody else wrote. A list on any
+    // other action is describing a change that action does not make.
+    //
+    // Yalniz bir devralma, baskasinin yazdigi bir direktifi degistirir. Baska
+    // bir eylemde gelen liste, o eylemin yapmadigi bir degisikligi anlatiyordur.
+    if (value.length !== 0 && action !== 'adopt_unmanaged') return null;
+    const directives: DNSEngineAdoptedDirective[] = [];
+    for (const item of value) {
+        if (!isRecord(item)
+            || typeof item.directive !== 'string'
+            || !managedDirectives.has(item.directive)
+            || typeof item.replacement !== 'string'
+            || !directiveValuePattern.test(item.replacement)
+            || typeof item.file !== 'string'
+            || !directiveFilePattern.test(item.file)
+            || !Number.isSafeInteger(item.line)
+            || (item.line as number) < 1
+            || typeof item.found !== 'string'
+            || (item.refusal !== undefined
+                && (typeof item.refusal !== 'string'
+                    || !directiveRefusals.has(item.refusal)))) {
+            return null;
+        }
+        const refusal = typeof item.refusal === 'string'
+            ? item.refusal as DNSForeignOptionRefusal
+            : undefined;
+        // A directive that can be taken over has a value the operator can read
+        // and a truthful "unchanged" flag. One that cannot has neither, because
+        // the server could not read it either.
+        //
+        // Devralinabilen bir direktifin, operatorun okuyabilecegi bir degeri ve
+        // dogru bir "degismiyor" isareti vardir. Devralinamayanin ikisi de
+        // yoktur, cunku sunucu da onu okuyamamistir.
+        if (refusal === undefined) {
+            if (!directiveValuePattern.test(item.found)
+                || typeof item.unchanged !== 'boolean'
+                || item.unchanged !== (item.found === item.replacement)) {
+                return null;
+            }
+        } else if (item.found !== '' || item.unchanged === true) {
+            return null;
+        }
+        directives.push({
+            directive: item.directive as DNSManagedBINDOptionDirective,
+            found: item.found,
+            replacement: item.replacement,
+            unchanged: item.unchanged === true,
+            file: item.file,
+            line: item.line as number,
+            ...(refusal ? { refusal } : {}),
+        });
+    }
+    return directives;
+}
+
 export function decodeDNSEngineSwitchPreview(
     value: unknown,
     source: DNSEngineID | null,
@@ -383,6 +506,10 @@ export function decodeDNSEngineSwitchPreview(
     }
     const impacts = decodeCodeList(value.impacts);
     if (impacts === null || impacts.length === 0) return null;
+    const adoptedDirectives = decodeAdoptedDirectives(
+        value.adopted_directives, value.action,
+    );
+    if (adoptedDirectives === null) return null;
 
     return {
         preview_token: value.preview_token,
@@ -399,5 +526,6 @@ export function decodeDNSEngineSwitchPreview(
         requires_adoption_acknowledgement: value.requires_adoption_acknowledgement,
         blockers,
         impacts,
+        adopted_directives: adoptedDirectives,
     };
 }
