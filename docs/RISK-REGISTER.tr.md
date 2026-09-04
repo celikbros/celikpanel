@@ -74,7 +74,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-033 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Durumu olmayan sunucuda paket kurulumundan sonra düşen ilk DNS motoru kurulumu, iptal kanıtının tutarsız saydığı bir kurulum makbuzu bıraktı; defter ilk DNS hareketinde zehirlendi ve her açılışta zehirli kaldı |
 | R-034 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Her WireGuard yapılandırma uygulaması düşüyor: hazırlanan dosya adı `wg-quick strip` için geçerli bir arayüz adı değil; düşen geri alma sonra sunucunun işlem yöneticisini zehirliyor ve API'den çıkış yolu yok |
 | R-035 | Orta | DÜZELTİLDİ VE CANLI KANITLANDI | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
-| R-036 | Orta | DÜZELTİLDİ VE CANLI KANITLANDI / KURULUM SONRA R-046 İLE DÜŞÜYOR | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
+| R-036 | Orta | DÜZELTİLDİ VE CANLI KANITLANDI | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
 | R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
 | R-038 | Kritik | DURMUŞ HALİ DÜZELTİLDİ VE CANLI KANITLANDI / ÇALIŞIR HALİ R-039 / GERİ ALMA KANITI BORÇ | DNS motorunun paketlerini zaten taşıyan sunucu, motor durmuşken artık panelden açık onayla devralabiliyor; çalışan yönetilmeyen motor hâlâ reddediliyor ve R-039 olarak izleniyor |
 | R-039 | Yüksek | DÜZELTİLDİ VE CANLI KANITLANDI / GERÇEK VM BEKLİYOR | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
@@ -84,7 +84,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-043 | Yüksek | DÜZELTİLDİ VE İKİ ÇÖKME NOKTASINDA CANLI KANITLANDI / ÜÇÜNCÜSÜ R-045 | Çalışan devralma sırasındaki çökme, birimleri durduran geçiş geri almasıyla kurtarılıyor; yani kurtarma, devralmanın asla kesmeyeceğine söz verdiği DNS sunucusunu durdurur |
 | R-044 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | `view` bloklarıyla yapılandırılmış bir BIND devralma tarafından anlaşılmıyor: view içindeki bir recursion panelin seçeneklerini sessizce ezer, view dışındaki bölgeler ise yapılandırma denetiminde geç düşer |
 | R-045 | Yüksek | BULUNDU / NEDENİ HENÜZ SAPTANMADI | Hedefi doğrulandıktan sonra ama tamamlanmadan çöken devralma ne tamamlanıyor ne geri alınıyor: kurtarma nesil işaretçisini bulamıyor, kapalı hata veriyor ve defteri tutuyor |
-| R-046 | Kritik | CANLIDA BULUNDU / HENÜZ DÜZELTİLMEDİ | Düşen posta TLS adımı işlem defterini zehirliyor ve zehir agent yeniden başlatılınca da geçmiyor: açılış kurtarması aynı planı yeniden deniyor, aynı denetimde düşüyor ve sunucu her işlemi reddediyor, çıkış yolu yok |
+| R-046 | Kritik | DÜZELTİLDİ VE KİLİTLEDİĞİ SUNUCUDA CANLI KANITLANDI | Düşen posta TLS adımı işlem defterini zehirliyor ve zehir agent yeniden başlatılınca da geçmiyor: açılış kurtarması aynı planı yeniden deniyor, aynı denetimde düşüyor ve sunucu her işlemi reddediyor, çıkış yolu yok |
 | R-047 | Düşük | TARAYICI TURUNDA BULUNDU / HENÜZ DÜZELTİLMEDİ | Tarayıcının görüp testlerin görmediği üç kusur: onay düğmeleri ekranın altında kalan bir pencere, 390px'te taşan bir seçim denetimi ve açık bir UDP portu varken yok diyen güvenlik duvarı durumu |
 
 ## Ayrıntılı riskler
@@ -1750,6 +1750,39 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: tek engeli makine adı olan sunucuda posta profili kuruluyor;
   ve ayrıca, bu şekilde düşen bir adım sunucuyu işlem yapabilir bırakıyor,
   hata raporlanıyor ve defter serbest kalıyor.
+- Kök neden, 4 Eylül 2026: denetim doğruydu, yazma yanlıştı. Agent
+  celikpanel grubuyla çalışıyor; bu yüzden oluşturduğu her dosya, sahibi
+  bilerek seçilmedikçe o grubu devralıyor. Yönetilen posta TLS dizini ise
+  root:root oluşturuluyor ve geri okuma, yayımlanan sertifikanın grubunu o
+  dizininkiyle karşılaştırıyordu. Doğru kurulmuş her sunucuda celikpanel'i
+  root'la karşılaştırıp reddediyordu, sonsuza dek. Çift artık geri okumanın
+  istediği sahiplikle yayımlanıyor ve bu, yeniden adlandırmadan önce zaten
+  var olan sözleşmeyle dosya tanıtıcısı üzerinde kanıtlanıyor. Hiçbir
+  doğrulama gevşetilmedi.
+- Büyük yarısı: başarılamayan tamamlanmış bir plan her agent açılışında
+  yeniden deneniyor ve defteri zehirlenmiş bırakıyordu. Uzlaştırma artık
+  sunucuda ne bıraktığını da bildiriyor, yalnız işe yarayıp yaramadığını
+  değil; ve bir planı yalnız iki sonuç bitirebilir - hiçbir şeye
+  dokunulmadı, ya da değiştirdiği her şey geri kondu ve iki servis de
+  doğrulanıp yeniden yüklendi. Daha azı hâlâ zehirler ve kilidi tutar. Bu
+  ikisinden birine ulaşan plan, başarı yolunun tam aynasıyla başarısız olarak
+  bitirilir; sebep kalıcı yazılır, defter serbest bırakılır ve mesaj neyi geri
+  almadığını söyler: profilin bıraktığı paketler ve makine adı, kesintiye
+  uğramış bir denemeden sonra da posta TLS'inin kısmen yapılandırılmış
+  kalabileceği.
+- Bu kaydın kanıtı olarak kilitli bırakılan sunucuda kanıtlandı: her işlemi
+  reddediyordu ve kilidi yeniden başlatmayla tekrarlıyordu; düzeltilmiş
+  agent'la tek bir yeniden başlatma onu yeniden işlem yapabilir hâle getirdi
+  ve takılı plan silinmek yerine tamamlandı; temiz düşme yolu sonra engel
+  enjekte edilerek ayrıca kanıtlandı - hem canlı commit'te hem de kalıcı
+  niyet düştüğü anda agent öldürülerek; sebep bir yeniden başlatmayı daha
+  aştı; posta profili sonuna kadar kuruldu; ve meşgul diye reddedilen
+  güvenlik duvarı yeniden uygulandı.
+- Bilinen ve bilerek bırakılan: canlı commit yolunun temiz düşmesi kırmızı
+  bir birim testiyle değil canlıda kanıtlandı, çünkü onu giriş noktasından
+  geçirmek henüz olmayan bir postfix/dovecot komut düzeneği ister; ve bir
+  şekilde yanlış gruplu sertifika edinmiş bir sunucu, onu değiştirmek yerine
+  ilk incelemede kapalı hata vermeye devam eder.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-047 - Tarayıcının gördüğü, testlerin görmediği
