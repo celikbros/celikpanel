@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -827,6 +829,307 @@ func verifyRestoredRunningBINDAdoption(
 		return err
 	}
 	return evidence.verify(ctx, profile, systemctl)
+}
+
+// runningBINDAdoptionJournal answers the one question a crash recovery has to
+// settle before it touches anything: was the BIND this journal describes
+// answering queries when the mutation began? Its answer decides which rollback
+// is the right one, and getting it wrong in the safe-looking direction is the
+// defect this function exists to remove (register R-043).
+//
+// It reads two durable facts and nothing else. The first is the manifest the
+// journal reconstructs: the takeover's manifest is an initial standalone BIND
+// activation with no source engine, epoch 0 to 1, and no other operation shares
+// that shape. The second is the target unit preimage the journal froze before
+// the first byte was written. A first install and the stopped half of the
+// takeover both begin with named.service inactive - their rollback stops what
+// their mutation started, and the switch rollback is exactly right for them. A
+// running takeover begins with named.service active, because the operator's own
+// server is answering, and stopping it would be the outage the takeover
+// promised would not happen.
+//
+// Anything else is not classified. A preimage that is not the two units the
+// takeover freezes, or one that says the unit and its distribution alias
+// disagreed while both were loaded, is a state this code cannot read - and the
+// R-019 family of wedges came from guessing at exactly that kind of state - so
+// it fails closed and names what it found.
+//
+// runningBINDAdoptionJournal, bir çökme kurtarmasının herhangi bir şeye
+// dokunmadan önce çözmesi gereken tek soruyu yanıtlar: bu günlüğün tarif ettiği
+// BIND, mutasyon başladığında sorgu yanıtlıyor muydu? Cevabı hangi geri almanın
+// doğru olduğuna karar verir ve bunu güvenli görünen yönde yanlış yapmak, bu
+// işlevin ortadan kaldırmak için var olduğu kusurdur (defter R-043).
+//
+// İki kalıcı olgu okur, başka hiçbir şey değil. Birincisi günlüğün yeniden
+// kurduğu bildirgedir: devralmanın bildirgesi, kaynak motoru olmayan, 0'dan 1'e
+// çağ, tek sunuculu bir ilk BIND etkinleştirmesidir ve bu biçimi başka hiçbir
+// işlem paylaşmaz. İkincisi, günlüğün ilk bayt yazılmadan önce dondurduğu hedef
+// birim ön-görüntüsüdür. Bir ilk kurulum ve devralmanın durmuş yarısı,
+// named.service etkin değilken başlar - geri almaları, mutasyonlarının
+// başlattığı şeyi durdurur ve geçiş geri alması onlar için tam olarak doğrudur.
+// Çalışan bir devralma, named.service etkinken başlar; çünkü operatörün kendi
+// sunucusu yanıt vermektedir ve onu durdurmak, devralmanın olmayacağına söz
+// verdiği kesinti olurdu.
+//
+// Başka her şey sınıflandırılmaz. Devralmanın dondurduğu iki birim olmayan bir
+// ön-görüntü ya da birim ile dağıtım takma adının ikisi de yüklüyken
+// uyuşmadığını söyleyen bir ön-görüntü, bu kodun okuyamadığı bir durumdur - ve
+// R-019 ailesindeki çıkmazlar tam da böyle bir durumu tahmin etmekten doğdu -
+// bu yüzden kapalı düşer ve bulduğunu adlandırır.
+func runningBINDAdoptionJournal(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	journal dnsEngineSwitchJournal,
+) (bool, error) {
+	if journal.TargetEngine != transport.DNSEngineBIND ||
+		!adoptableRunningBINDManifest(manifest, false) {
+		return false, nil
+	}
+	units := make(map[string]dnsUnitSnapshot, len(journal.TargetUnitsBefore))
+	names := make([]string, 0, len(journal.TargetUnitsBefore))
+	for _, snapshot := range journal.TargetUnitsBefore {
+		if _, duplicate := units[snapshot.Name]; duplicate {
+			return false, fmt.Errorf(
+				"BIND takeover journal cannot be classified: its target unit "+
+					"preimage names %s twice", snapshot.Name,
+			)
+		}
+		units[snapshot.Name] = snapshot
+		names = append(names, snapshot.Name)
+	}
+	named, hasNamed := units["named.service"]
+	alias, hasAlias := units["bind9.service"]
+	if !hasNamed || !hasAlias || len(units) != 2 {
+		found := "nothing"
+		if len(names) != 0 {
+			found = strings.Join(names, ", ")
+		}
+		return false, fmt.Errorf(
+			"BIND takeover journal cannot be classified: its target unit "+
+				"preimage names %s, not bind9.service and named.service", found,
+		)
+	}
+	namedActive := named.ActiveState == "active"
+	aliasActive := alias.ActiveState == "active"
+	if !namedActive && !aliasActive {
+		return false, nil
+	}
+	// named.service and bind9.service are one unit and its distribution alias
+	// on every layout the product supports, so they agree unless one of them is
+	// not on this host at all. A disagreement between two loaded units is not a
+	// takeover this code can read.
+	//
+	// named.service ile bind9.service, ürünün desteklediği her yerleşimde bir
+	// birim ve onun dağıtım takma adıdır; dolayısıyla biri bu sunucuda hiç
+	// yoksa dışında uyuşurlar. Yüklü iki birim arasındaki bir uyuşmazlık, bu
+	// kodun okuyabileceği bir devralma değildir.
+	if namedActive != aliasActive {
+		quiet := named
+		if namedActive {
+			quiet = alias
+		}
+		if quiet.LoadState != "not-found" {
+			return false, fmt.Errorf(
+				"BIND takeover journal cannot be classified: named.service was "+
+					"%q and bind9.service was %q before the mutation, and %s is "+
+					"loaded on this host", named.ActiveState, alias.ActiveState,
+				quiet.Name,
+			)
+		}
+	}
+	return true, nil
+}
+
+type bindAdoptionRecoveryOps struct {
+	captureEvidence func() (bindAdoptionRuntimeEvidence, error)
+	proveCurrent    func() error
+	rollback        func(bindAdoptionRuntimeEvidence) error
+	restorePointer  func() error
+	verifyRestored  func(bindAdoptionRuntimeEvidence) error
+}
+
+// recoverRunningBINDAdoptionJournalWithOps is the order a crashed takeover is
+// put back in, and every step of it assumes the server is still answering.
+//
+// The running server is re-proved first, and it is proved fresh rather than
+// read out of the journal: a crash and a reboot give BIND a new main process,
+// and what this recovery has to hold still is the process it finds now, across
+// its own restore and reload. Then the configuration on disk is proved to be
+// either the bytes the takeover found or the bytes it wrote - anything else is
+// a third state nobody wrote, and the recovery refuses it. Then the adoption
+// rollback runs, which restores, reloads and re-proves, and stops nothing. Only
+// after the server is answering its own configuration again is the generation
+// pointer taken down, because the configuration BIND was serving until a moment
+// ago included that generation's zones.
+//
+// A crash before the configuration was written needs none of that undone, and
+// this is deliberately still the path it takes: the restore writes the bytes
+// that are already there, the reload re-reads a file that did not change, and
+// the ledger is released instead of being held for a host that has nothing
+// wrong with it. One path, no phase to guess at.
+//
+// recoverRunningBINDAdoptionJournalWithOps, çökmüş bir devralmanın geri
+// konduğu sıradır ve her adımı sunucunun hâlâ yanıt verdiğini varsayar.
+//
+// Çalışan sunucu önce yeniden kanıtlanır ve günlükten okunmak yerine taze
+// kanıtlanır: bir çökme ve bir yeniden başlatma BIND'e yeni bir ana süreç
+// verir; bu kurtarmanın sabit tutması gereken şey, kendi geri yüklemesi ve
+// yeniden yüklemesi boyunca şimdi bulduğu süreçtir. Sonra diskteki
+// yapılandırmanın ya devralmanın bulduğu baytlar ya da yazdığı baytlar olduğu
+// kanıtlanır - başka her şey kimsenin yazmadığı üçüncü bir durumdur ve kurtarma
+// onu reddeder. Sonra devralma geri alması koşar; geri yükler, yeniden yükler,
+// yeniden kanıtlar ve hiçbir şeyi durdurmaz. Nesil işaretçisi ancak sunucu
+// kendi yapılandırmasını yeniden yanıtlar hâle geldikten sonra indirilir; çünkü
+// BIND az önceye dek o neslin bölgelerini içeren yapılandırmayı sunuyordu.
+//
+// Yapılandırma yazılmadan önceki bir çökmenin geri alınacak hiçbir şeyi yoktur
+// ve bilerek yine bu yolu izler: geri yükleme zaten orada olan baytları yazar,
+// yeniden yükleme değişmemiş bir dosyayı yeniden okur ve defter, hiçbir sorunu
+// olmayan bir sunucu için tutulmak yerine bırakılır. Tek yol, tahmin edilecek
+// bir aşama yok.
+func recoverRunningBINDAdoptionJournalWithOps(
+	ops bindAdoptionRecoveryOps,
+) error {
+	if ops.captureEvidence == nil || ops.proveCurrent == nil ||
+		ops.rollback == nil || ops.restorePointer == nil ||
+		ops.verifyRestored == nil {
+		return errors.New("invalid BIND adoption recovery operations")
+	}
+	evidence, err := ops.captureEvidence()
+	if err != nil {
+		return fmt.Errorf(
+			"prove the interrupted takeover's BIND is still answering: %w", err,
+		)
+	}
+	if err := ops.proveCurrent(); err != nil {
+		return err
+	}
+	if err := ops.rollback(evidence); err != nil {
+		return err
+	}
+	if err := ops.restorePointer(); err != nil {
+		return err
+	}
+	return ops.verifyRestored(evidence)
+}
+
+func recoverRunningBINDAdoptionJournal(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	layout bindHostLayout,
+	systemctl string,
+	journal dnsEngineSwitchJournal,
+) error {
+	if ctx == nil {
+		return errors.New("recover BIND adoption requires a bounded context")
+	}
+	// The takeover's manifest is standalone, so there is no transfer peer to
+	// reconstruct; the journal's own bytes carry the rest.
+	//
+	// Devralmanın bildirgesi tek sunuculudur, dolayısıyla yeniden kurulacak bir
+	// aktarım eşi yoktur; gerisini günlüğün kendi baytları taşır.
+	configs, err := bindConfigMutationFromJournal(layout, "", journal)
+	if err != nil {
+		return err
+	}
+	publisher, _, err := newHostBINDPublisher(ctx, layout)
+	if err != nil {
+		return err
+	}
+	return recoverRunningBINDAdoptionJournalWithOps(bindAdoptionRecoveryOps{
+		captureEvidence: func() (bindAdoptionRuntimeEvidence, error) {
+			return captureBINDAdoptionRuntimeEvidence(ctx, profile, systemctl)
+		},
+		proveCurrent: func() error {
+			_, _, proofErr := configs.captureOwnerAwareCurrent(ctx, false)
+			return proofErr
+		},
+		rollback: func(evidence bindAdoptionRuntimeEvidence) error {
+			return rollbackRunningBINDAdoption(
+				ctx, profile, systemctl, configs, evidence,
+				journal.StateBefore,
+				dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
+			)
+		},
+		restorePointer: func() error {
+			return runBINDMutationWithMaskParentProof(
+				verifyBINDMaskParentMetadata,
+				func() error {
+					return publisher.RestorePointer(
+						journal.TargetGeneration, journal.PreviousGeneration,
+						journal.HadPrevious,
+					)
+				},
+			)
+		},
+		verifyRestored: func(evidence bindAdoptionRuntimeEvidence) error {
+			return verifyRestoredRunningBINDAdoption(
+				ctx, profile, systemctl, configs, evidence,
+			)
+		},
+	})
+}
+
+// verifyRestoredUnmanagedRunningBINDTarget is the takeover's answer to the
+// switch's sealed-target proof, and it is proved rather than assumed. What it
+// asserts is that CelikPanel owns nothing on this host that is live: no
+// generation pointer, no managed options block inside the server's own options,
+// no managed include inside its zone anchor - and that the thing answering is
+// the vendor's own BIND, the sole public port-53 authority here. The receipts
+// (the journal, the engine state, the engine ownership and the install
+// ownership) are proved absent or exact by the caller before this runs, so what
+// is left to prove is the configuration and the runtime.
+//
+// verifyRestoredUnmanagedRunningBINDTarget, geçişin mühürlü-hedef kanıtına
+// devralmanın cevabıdır ve varsayılmaz, kanıtlanır. İddiası şudur: CelikPanel'in
+// bu sunucuda canlı hiçbir şeyi yoktur - nesil işaretçisi yok, sunucunun kendi
+// seçenek bloğunun içinde yönetilen blok yok, bölge çıpasında yönetilen include
+// yok - ve yanıt veren şey, buradaki tek genel 53 numaralı yetke olan satıcının
+// kendi BIND'idir. Makbuzlar (günlük, motor durumu, motor sahipliği ve kurulum
+// sahipliği) bu koşmadan önce çağıran tarafından yok ya da birebir kanıtlanır;
+// geriye kanıtlanacak olan yapılandırma ile çalışma zamanıdır.
+func verifyRestoredUnmanagedRunningBINDTarget(
+	ctx context.Context,
+	systemctl string,
+) error {
+	if ctx == nil || systemctl == "" {
+		return errors.New("invalid restored unmanaged BIND proof")
+	}
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return err
+	}
+	layout, err := bindLayout(profile)
+	if err != nil {
+		return err
+	}
+	pointer := filepath.Join(layout.GenerationRoot, "current")
+	if _, err := os.Lstat(pointer); err == nil {
+		return fmt.Errorf(
+			"the restored BIND still points at a CelikPanel generation at %s",
+			pointer,
+		)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	for _, owned := range []struct {
+		path   string
+		marker string
+	}{
+		{layout.OptionsConfig, bindOptionsMarkerBegin},
+		{layout.AnchorConfig, bindZonesMarkerBegin},
+	} {
+		data, readErr := os.ReadFile(owned.path)
+		if readErr != nil {
+			return readErr
+		}
+		if strings.Contains(string(data), owned.marker) {
+			return fmt.Errorf(
+				"the restored BIND configuration %s still carries %q",
+				owned.path, owned.marker,
+			)
+		}
+	}
+	return verifyOnlyBINDActive(ctx, profile, systemctl)
 }
 
 func adoptRunningBIND(
