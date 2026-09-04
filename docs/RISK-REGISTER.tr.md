@@ -80,7 +80,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-039 | Yüksek | DÜZELTİLDİ VE CANLI KANITLANDI / GERÇEK VM BEKLİYOR | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
 | R-040 | Yüksek | DÜZELTİLDİ / İNCELEMEDE (PR #80) / TARAYICI TURU BORÇ | Servis listesi, hiç taramadığı sunucu için "kurulu değil" diyor: gözlem yokluğu ile servis yokluğu aynı cevaba düşüyor |
 | R-041 | Orta | DALDA DÜZELTİLDİ / KORUMAYA ALINDI | Web sözleşmesi, panelin zaten döndürdüğü `reinstall_active` eylemini çözemiyor; geri yüklenen sunucunun ihtiyaç duyduğu yeniden kurulum tarayıcıda geçersiz önizleme olarak görünüyor |
-| R-042 | Yüksek | BULUNDU / HENÜZ DÜZELTİLMEDİ | Elle yapılandırılmış yetkili bir BIND reddediliyor: nesil, recursion, allow-recursion, allow-query-cache ya da allow-transfer'ı zaten tanımlayan bir options bloğuna yazmıyor; yetkili sunucu ise bunlardan ilkini neredeyse her zaman tanımlar |
+| R-042 | Yüksek | DÜZELTİLDİ VE CANLI KANITLANDI / GERÇEK VM BEKLİYOR | Elle yapılandırılmış yetkili bir BIND reddediliyor: nesil, recursion, allow-recursion, allow-query-cache ya da allow-transfer'ı zaten tanımlayan bir options bloğuna yazmıyor; yetkili sunucu ise bunlardan ilkini neredeyse her zaman tanımlar |
+| R-043 | Yüksek | BULUNDU / HENÜZ DÜZELTİLMEDİ | Çalışan devralma sırasındaki çökme, birimleri durduran geçiş geri almasıyla kurtarılıyor; yani kurtarma, devralmanın asla kesmeyeceğine söz verdiği DNS sunucusunu durdurur |
+| R-044 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | `view` bloklarıyla yapılandırılmış bir BIND devralma tarafından anlaşılmıyor: view içindeki bir recursion panelin seçeneklerini sessizce ezer, view dışındaki bölgeler ise yapılandırma denetiminde geç düşer |
 
 ## Ayrıntılı riskler
 
@@ -1563,6 +1565,70 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: `recursion no;` ve kendi bölgeleriyle yetkili bir BIND
   taşıyan sunucu panelden devralınıyor, bölgeleri yanıt vermeyi sürdürüyor ve
   geri alma options bloğunu birebir geri getiriyor.
+- 4 Eylül 2026'da düzeltildi: ret yerine onay geldi ve onay istenmeden önce
+  gösteriliyor. Önizleme, sunucunun zaten koyduğu her yönetilen yönergeyi
+  bildiriyor - bulunan değer, dosyası ve satırı, ve CelikPanel'in koyacağı
+  değer; ikisi aynıysa "değişmiyor" diye işaretlenerek, böylece ekran
+  olmayan bir değişikliği saymıyor - hepsi devralma panelinin içinde, zaten
+  var olan onayın üstünde. İkinci bir onay yok: bu, aynı eylemin parçası.
+  Ekranın vaat ettiği değerle dosyaya giden değer tek bir işlevden geliyor,
+  ayrışamazlar; bir sözleşme testi de agent'ın kendi yönerge listesini okuyup
+  ayrışmada yapıyı düşürüyor.
+- Yalnız onay yer değiştirdi. Devralma yetkisi, panelin kullandığı olgudan
+  türetiliyor - BIND üzerinde kalıcı CelikPanel yetkisi yok - ve bizim hiçbir
+  makbuzumuz yazılmadan önce okunuyor; diğer bütün yollar dışlayıcı kuralı
+  koruyor. Düşen bir devralmanın kurtarılması da aynı yetkiyle hazırlanıyor;
+  yoksa kendini reddedip DNS'i hâlâ yanıt veren bir sunucuyu kilitlerdi.
+  Kalan retler neyi reddettiklerini söylüyor: yönerge, değeri, dosya, satır
+  ve nereye gidileceği; üç yapı gerçekten devralınamaz ve bunu adıyla söyler.
+- Elle yazılmış yetkili bir yapılandırmada canlı kanıtlandı (`recursion no`,
+  bir eşe `allow-transfer`, kendi bölgesi): liste recursion'ı değişmiyor,
+  allow-transfer'ı değişiyor diye adlandırdı, commit onaysız reddedildi ve
+  onayla 11,3 saniyede kabul edildi, **operatörün kendi bölgesine 1137 sorgu
+  sıfır kez yanıtsız kaldı**. Zorlanan bir hata iki dosyayı tam özetleriyle
+  geri getirdi, o sırada 1155 sorgu daha sıfır kez yanıtsız kaldı; yeniden
+  deneme 9,4 saniyede tamamlandı.
+- Borç: aynı koşunun gerçek VM'de tekrarı.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-043 - Çöken devralmanın kurtarılması, devralmanın koruduğu sunucuyu durduruyor
+
+- Kanıt: 4 Eylül 2026, R-042 kanıtlanırken koddan bulundu; canlıda
+  denenmedi. Çalışan devralmanın süreç içi geri alması doğru ve ölçüldü:
+  zorlanan bir hata iki dosyayı bayt bayt geri getirdi ve sunucu boyunca
+  yanıt verdi. Ama çökme, günlüğü agent açılışında kurtarılmaya bırakır ve
+  `rollbackDNSSwitchJournal`ın BIND dalı *geçiş* geri almasıdır; birimleri
+  durdurur - durdurmayan devralma geri alması değil.
+- Etki: devralmanın bütün vaadi, sunucunun hiç susmamasıdır. Devralma
+  ortasında elektriği kesilen bir makine, operatörün DNS'i durmuş olarak
+  geri gelir; bu, kurtardığı hatadan daha kötüdür ve panelin henüz sahibi
+  olmadığı bir sunucuda olur.
+- Gerekeni: kurtarma yolu, işlem yollarının zaten yaptığı gibi günlüğün
+  kipine göre dağıtım yapmalı ve çalışan devralmanın günlüğü devralma geri
+  almasıyla kurtarılmalı. Günlük kipi zaten taşıyor.
+- Çıkış ölçütü: yapılandırma yazımı ile yeniden yükleme arasında öldürülen
+  bir devralma, agent açılışında sunucu hâlâ yanıt verirken kurtarılıyor;
+  kanıt, süreç içi geri almanın kullandığı aynı sorgu döngüsü ölçümü.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-044 - View'larla yapılandırılmış sunucu, anlaşılmadan devralınıyor
+
+- Kanıt: 4 Eylül 2026, R-042 kanıtlanırken koddan ve BIND'in kendi
+  kurallarından bulundu; ana kanıtın koşabilmesi için konuk view'sız
+  yapılandırılmıştı.
+- Olan şu: devralma, `options {}` bloğundaki yönergeleri okuyup değiştiriyor.
+  BIND aynı yönergelere `view` içinde de izin verir ve orası önceliklidir;
+  yani bir view'daki `recursion yes;`, recursion'ı yönetiliyor diye bildiren
+  bir devralmadan sessizce sağ çıkar. Ayrıca BIND, bir view varsa her
+  bölgenin bir view içinde olmasını ister; bu yüzden panelin ürettiği
+  bölgeler geç, yapılandırma denetiminde düşer - bir geri yükleme, kesinti
+  yok, ama iş yapıldıktan sonra gelen bir ret.
+- Etki: view'lı bir sunucuda panel ya gerçekte denetlemediği bir ayarı
+  bildirir ya da sunucunun desteklenmediğini söylemeden son anda reddeder.
+- Gerekeni: view'ları önizlemeden önce saptamak ve ya operatöre ne
+  yapabileceğini söyleyerek adıyla reddetmek ya da panelin bölgelerini ve
+  yönergelerini onları yanıtlayan view'ın içine yerleştirmek. Birincisi
+  dürüst ve küçük; ikincisi asıl özellik ve bölge yerleşimi işiyle gelir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
