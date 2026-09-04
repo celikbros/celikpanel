@@ -24,7 +24,11 @@ interface LayoutProps {
     onPageChange: (id: string) => void;
 }
 
-type Counts = Partial<Record<'domains' | 'databases' | 'services', number>>;
+// null is a count this panel does not have, which is not the same as zero:
+// a host nobody has scanned answers `is_installed: null` for every component,
+// and a badge reading 0 there would report a census nobody took.
+// null, panelin sahip OLMADIĞI bir sayıdır; sıfır demek değildir.
+type Counts = Partial<Record<'domains' | 'databases' | 'services', number | null>>;
 type PanelRuntime = {
     version: string;
     commit: string;
@@ -98,10 +102,23 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                 // The badge answers "how many components are installed?".
                 // Catalogue size belongs on the Components page and made a
                 // fresh server look as though 26 services were already present.
-                .then((s) => setCounts((c) => ({
-                    ...c,
-                    services: s.filter((service) => service.is_installed).length,
-                })))
+                // A host this panel has never looked at cannot answer that
+                // question at all — every row comes back null — so the badge
+                // carries no number there. Where some rows are known and some
+                // are not, the badge counts what is known: an unchecked row
+                // joins neither side (R-040).
+                // Bu panelin hiç bakmadığı makine bu soruyu yanıtlayamaz; rozet
+                // orada sayı taşımaz. Bazı satırlar biliniyorsa rozet bilineni
+                // sayar; bakılmamış satır hiçbir yakaya katılmaz.
+                .then((s) => setCounts((c) => {
+                    const observed = s.filter((service) => service.is_installed !== null);
+                    return {
+                        ...c,
+                        services: s.length > 0 && observed.length === 0
+                            ? null
+                            : observed.filter((service) => service.is_installed).length,
+                    };
+                }))
                 .catch(() => {});
         }
     }, [role]);
@@ -286,7 +303,7 @@ function SidebarItem({
 }: {
     item: NavItem;
     active: boolean;
-    count?: number;
+    count?: number | null;
     onClick: () => void;
 }) {
     const { t } = useI18n();
@@ -302,15 +319,33 @@ function SidebarItem({
         >
             <Icon className="h-[18px] w-[18px] shrink-0" />
             <span className="flex-1 text-left">{t(item.labelKey)}</span>
-            {count !== undefined && count > 0 && (
+            {/* A dash is the honest badge for a count this panel does not
+                have — the same mark the Components page uses for a group
+                nothing is known about. It is not styled down: "not checked
+                yet" is a state the operator acts on, and the item it sits on
+                opens the page that runs the check.
+                Sahip olunmayan bir sayının dürüst rozeti tiredir — Bileşenler
+                sayfasının, hakkında hiçbir şey bilinmeyen grup için kullandığı
+                işaretin aynısı. */}
+            {count === null ? (
                 <span
+                    title={t('services.notChecked')}
                     className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
+                        active ? 'bg-white/20 text-white' : 'bg-sidebar-hover text-sidebar-muted'
+                    }`}
+                >
+                    <span aria-hidden="true">—</span>
+                    <span className="sr-only">{t('services.notChecked')}</span>
+                </span>
+            ) : count !== undefined && count > 0 ? (
+                <span
+                    className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
                         active ? 'bg-white/20 text-white' : 'bg-sidebar-hover text-sidebar-muted'
                     }`}
                 >
                     {count}
                 </span>
-            )}
+            ) : null}
         </button>
     );
 }

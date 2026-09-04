@@ -375,6 +375,15 @@ export const en = {
     'dashboard.systemServices': 'System services',
     'dashboard.statusUnknown': 'Unknown',
     'dashboard.systemServicesScanStale': 'Component status is outdated. Open Components to rescan.',
+    // A host this panel has never looked at gets no number at all: the
+    // count would be a census nobody took. Same voice as the components
+    // screen, shortened for a card.
+    'dashboard.componentsNotCheckedHint': 'Nothing on this server has been checked yet, so how many components are installed is not known.',
+    // Partly checked is not unchecked: the known count still shows, and the
+    // rows nobody has looked at are named separately instead of being folded
+    // into either side of the ratio.
+    'dashboard.componentsUncheckedOne': 'One component has not been checked yet',
+    'dashboard.componentsUnchecked': '{n} components have not been checked yet',
     'dashboard.servicesRunning': '{running} of {total} running',
     'dashboard.domains': 'Domains',
     'dashboard.databases': 'Databases',

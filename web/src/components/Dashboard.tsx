@@ -3,7 +3,7 @@ import { useNavigate } from '../router';
 import {
     Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity, Bell,
     Shield, ShieldOff, Users, Mail, Rocket, Check, ArrowRight,
-    DownloadCloud, UserPlus, Plus, Lock, Layers,
+    DownloadCloud, UserPlus, Plus, Lock, Layers, ScanSearch,
 } from 'lucide-react';
 import { api, type SystemStats } from '../lib/api';
 import { useI18n } from '../i18n';
@@ -258,6 +258,7 @@ function AdminDashboard() {
     const [fwBusy, setFwBusy] = useState(false);
     const [firewallConfirmationOpen, setFirewallConfirmationOpen] = useState(false);
     const [hostMutationReadiness, setHostMutationReadiness] = useState<HostMutationReadiness | null>(null);
+    const [componentScanBusy, setComponentScanBusy] = useState(false);
 
     useEffect(() => {
         const loadStats = () => api.getSystemStats().then(setStats).catch(() => {});
@@ -310,6 +311,61 @@ function AdminDashboard() {
 
     const serviceScanFresh = freshScanTimestamp(serviceScannedAt, freshnessNow);
 
+    // The census this panel has actually taken. `is_installed: null` is a row
+    // nobody has looked at on this host, so it belongs to NEITHER side of a
+    // count: it is not known installed, and it is not known absent. A host
+    // where no row has been observed therefore has no number to show — "0
+    // installed" there would report an inventory nobody took (R-040).
+    // Bu panelin gerçekten yaptığı sayım. `is_installed: null`, bu makinede
+    // kimsenin bakmadığı bir satırdır; sayımın HİÇBİR yakasına ait değildir.
+    // Hiçbir satırı gözlenmemiş bir makinenin gösterilecek sayısı yoktur.
+    const uncheckedServices = services.filter((s) => s.is_installed === null);
+    const hostNeverChecked = services.length > 0 && uncheckedServices.length === services.length;
+    const componentCensusComplete = uncheckedServices.length === 0;
+
+    // The same check the Components page offers, run from here instead of
+    // pointing at another page — the firewall lesson (Jul 17): an action this
+    // central acts in place. The response goes through the same fail-closed
+    // decoder as the initial load, so a payload this panel cannot read never
+    // becomes a number on this screen.
+    // Bileşenler sayfasının sunduğu kontrolün aynısı, başka sayfayı işaret
+    // etmek yerine burada koşar. Yanıt, ilk yüklemeyle aynı fail-closed
+    // çözücüden geçer; okunamayan bir yük asla bu ekranda sayıya dönüşmez.
+    const scanComponents = async () => {
+        if (componentScanBusy) return;
+        setComponentScanBusy(true);
+        try {
+            const response = await fetch('/api/v1/managed-services/scan', {
+                method: 'POST',
+                cache: 'no-store',
+            });
+            if (!response.ok) {
+                showToast('error', apiErrorText(await readApiError(response), t, 'services.scanFailed'));
+                return;
+            }
+            const snapshot = decodeDashboardServices(await response.json());
+            if (!snapshot) {
+                showToast('error', t('services.scanFailed'));
+                return;
+            }
+            setServices(snapshot.services);
+            setMailProfiles(snapshot.profiles);
+            setServiceScannedAt(snapshot.scannedAt);
+            setDNSIdentityReady(snapshot.dnsIdentityReady);
+            // Freshness is measured against a clock that ticks every 30s. A
+            // scan timestamp newer than that clock reads as "in the future"
+            // and would show Unknown for half a minute after a successful
+            // check, so move the clock with the answer.
+            // Tazelik 30 saniyede bir ilerleyen bir saate göre ölçülür; taze
+            // tarama damgası o saatten yeni olduğu için saati birlikte ilerlet.
+            setFreshnessNow(Date.now());
+        } catch {
+            showToast('error', t('services.scanFailed'));
+        } finally {
+            setComponentScanBusy(false);
+        }
+    };
+
     const serviceRunning = (id: string) => {
         if (!serviceScanFresh) return false;
         const svc = services.find((s) => s.id === id);
@@ -320,7 +376,11 @@ function AdminDashboard() {
         );
     };
 
-    const installed = services.filter((s) => s.is_installed);
+    // Known installed, explicitly: `s.is_installed` truthy already excluded
+    // the unchecked rows, and saying so keeps the next reader from "fixing"
+    // it into a null-tolerant test.
+    // Bilinen kurulular: `null` satırlar bu kümenin dışındadır.
+    const installed = services.filter((s) => s.is_installed === true);
     // A `tool` can never be "stopped" — it has no daemon of ours, so counting
     // phpMyAdmin as a dead service was a false alarm the operator could not act
     // on. Status "installed" is the same truth for a unit-less runtime (node:
@@ -487,7 +547,14 @@ function AdminDashboard() {
         {
             key: 'dashboard.step.serviceScan',
             hint: 'dashboard.step.serviceScanHint',
-            done: serviceScanFresh,
+            // Fresh is not the same as complete. Every step below this one
+            // reads its answer off the component census, so a census with
+            // rows nobody has looked at leaves this step open instead of
+            // letting the journey suggest an install against an unknown.
+            // Taze olmak, tamamlanmış olmak değildir. Aşağıdaki her adım
+            // yanıtını bileşen sayımından okur; bakılmamış satır varsa bu
+            // adım açık kalır, yolculuk bilinmeyene karşı kurulum önermez.
+            done: serviceScanFresh && componentCensusComplete,
             to: '/services',
             cta: 'dashboard.rescanComponents',
         },
@@ -567,6 +634,40 @@ function AdminDashboard() {
                     value={stats ? t('dashboard.percentValue', { n: Math.round(pct(stats.disk_used_bytes, stats.disk_total_bytes)) }) : '—'}
                     hint={stats ? `${fmtBytes(stats.disk_used_bytes)} / ${fmtBytes(stats.disk_total_bytes)}` : ''}
                 />
+                {/* A host nobody has looked at keeps its card in the strip but
+                    shows no number: "0 / 0" here was the same false claim the
+                    Components page used to make one screen over. It says what
+                    is true — nothing has been checked — and carries the check
+                    itself, because pointing at another page is how the
+                    firewall switch went unfound (Jul 17). Neutral, not
+                    warning-coloured: a server that has simply not been looked
+                    at yet is the normal first state, not a fault.
+                    Kimsenin bakmadığı bir makine şeritteki yerini korur ama
+                    sayı göstermez: buradaki "0 / 0", Bileşenler sayfasının bir
+                    ekran ötede yaptığı yanlış iddianın aynısıydı. Doğru olanı
+                    söyler ve kontrolün kendisini taşır. Nötr, uyarı renginde
+                    değil — henüz bakılmamış makine olağan ilk durumdur. */}
+                {hostNeverChecked ? (
+                    <section role="status" className="rounded-xl border border-border bg-surface p-5 text-left shadow-card">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-fg-muted">{t('dashboard.systemServices')}</span>
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <Activity className="h-4 w-4" />
+                            </span>
+                        </div>
+                        <p className="mt-2 text-lg font-semibold text-fg">{t('services.notChecked')}</p>
+                        <p className="mt-1 text-xs text-fg-muted">{t('dashboard.componentsNotCheckedHint')}</p>
+                        <button
+                            type="button"
+                            onClick={scanComponents}
+                            disabled={componentScanBusy}
+                            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
+                        >
+                            <ScanSearch className="h-3.5 w-3.5" />
+                            {componentScanBusy ? t('services.scanning') : t('services.scanNow')}
+                        </button>
+                    </section>
+                ) : (
                 <button
                     onClick={() => navigate('/services')}
                     className="rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
@@ -577,7 +678,7 @@ function AdminDashboard() {
                             <Activity className="h-4 w-4" />
                         </span>
                     </div>
-                    <p className="mt-2 text-3xl font-bold tracking-tight text-fg">
+                    <p className="mt-2 text-3xl font-bold tracking-tight text-fg tabular-nums">
                         {!serviceScanFresh
                             ? t('dashboard.statusUnknown')
                             : `${running.length} / ${systemServices.length}`}
@@ -591,7 +692,24 @@ function AdminDashboard() {
                             {systemServices.length > 0 ? t('dashboard.svcRunningHint') : t('dashboard.svcNone')}
                         </p>
                     )}
+                    {/* Partly checked is not unchecked. The ratio above counts
+                        only rows this panel has actually observed, and the
+                        rows nobody has looked at are named here rather than
+                        being folded into either side of it. fg-muted, not
+                        fg-subtle: this is information the operator acts on.
+                        Kısmen bakılmış, bakılmamış değildir. Yukarıdaki oran
+                        yalnız gerçekten gözlenmiş satırları sayar; bakılmamış
+                        satırlar oranın bir yakasına katılmak yerine burada
+                        adıyla anılır. */}
+                    {uncheckedServices.length > 0 && (
+                        <p className="mt-1 text-xs text-fg-muted">
+                            {uncheckedServices.length === 1
+                                ? t('dashboard.componentsUncheckedOne')
+                                : t('dashboard.componentsUnchecked', { n: uncheckedServices.length })}
+                        </p>
+                    )}
                 </button>
+                )}
             </div>
 
             {mailProfiles && (
