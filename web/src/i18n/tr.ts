@@ -321,6 +321,9 @@ export const tr: Record<TranslationKey, string> = {
     'dashboard.systemServices': 'Sistem servisleri',
     'dashboard.statusUnknown': 'Bilinmiyor',
     'dashboard.systemServicesScanStale': 'Bileşen durumu eski. Yeniden taramak için Bileşenleri açın.',
+    'dashboard.componentsNotCheckedHint': 'Bu sunucuda henüz hiçbir şeye bakılmadı; kaç bileşenin kurulu olduğu bilinmiyor.',
+    'dashboard.componentsUncheckedOne': 'Bir bileşene henüz bakılmadı',
+    'dashboard.componentsUnchecked': '{n} bileşene henüz bakılmadı',
     'dashboard.servicesRunning': '{total} servisin {running} tanesi çalışıyor',
     'dashboard.domains': 'Alan Adları',
     'dashboard.databases': 'Veritabanları',
@@ -599,6 +602,12 @@ export const tr: Record<TranslationKey, string> = {
     'services.neverScanned': 'Servisler henüz taranmadı',
     'services.neverScannedShort': 'Henüz taranmadı',
     'services.neverScannedHint': 'İlk ziyarette kurulu servisler otomatik algılanır. Önbellekteki sonuçlar hemen açılır ve belirli aralıklarla yenilenir.',
+    // "Henüz bakılmadı", "kurulu değil" demek değildir. Panel ikisinden
+    // hangisini kastettiğini söyler; geri yüklenmiş ya da yeni kurulmuş bir
+    // sunucunun gerçek bir kataloğu ve o katalog hakkında hiç gözlemi yoktur.
+    'services.notChecked': 'Henüz bakılmadı',
+    'services.notCheckedTitle': 'Bu sunucuya henüz bakılmadı',
+    'services.notCheckedHint': 'Aşağıdakiler bu panelin yönetebildiği bileşenlerdir. Bu sunucuda hiçbirine henüz bakılmadı; bu yüzden hangisinin kurulu, hangisinin eksik olduğu bilinmiyor. Gerçekte ne olduğunu görmek için bir kontrol çalıştırın.',
 
     'databases.subtitle': 'Tespit edilen sunucularınızdaki veritabanları ve kullanıcılar',
     'databases.noServers': 'Kurulu veritabanı motoru yok',
@@ -1012,6 +1021,7 @@ export const tr: Record<TranslationKey, string> = {
     'svc.coreService': 'Temel servis',
     'svc.notInstalled': 'Kurulu değil',
     'svc.notInstalledHint': '{name} bu sunucuda kurulu değil.',
+    'svc.notCheckedHint': '{name} bileşenine bu sunucuda henüz bakılmadı; kurulu olup olmadığı bilinmiyor. Gerçekte ne olduğunu görmek için bir kontrol çalıştırın.',
     'svc.confirmStart': '{name} başlatılsın mı?',
     'svc.confirmStop': '{name} durdurulsun mu?',
     'svc.confirmRestart': '{name} yeniden başlatılsın mı?',

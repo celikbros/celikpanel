@@ -375,6 +375,15 @@ export const en = {
     'dashboard.systemServices': 'System services',
     'dashboard.statusUnknown': 'Unknown',
     'dashboard.systemServicesScanStale': 'Component status is outdated. Open Components to rescan.',
+    // A host this panel has never looked at gets no number at all: the
+    // count would be a census nobody took. Same voice as the components
+    // screen, shortened for a card.
+    'dashboard.componentsNotCheckedHint': 'Nothing on this server has been checked yet, so how many components are installed is not known.',
+    // Partly checked is not unchecked: the known count still shows, and the
+    // rows nobody has looked at are named separately instead of being folded
+    // into either side of the ratio.
+    'dashboard.componentsUncheckedOne': 'One component has not been checked yet',
+    'dashboard.componentsUnchecked': '{n} components have not been checked yet',
     'dashboard.servicesRunning': '{running} of {total} running',
     'dashboard.domains': 'Domains',
     'dashboard.databases': 'Databases',
@@ -655,6 +664,13 @@ export const en = {
     'services.neverScanned': 'Services have not been scanned yet',
     'services.neverScannedShort': 'Not scanned yet',
     'services.neverScannedHint': 'The first visit detects installed services automatically. Cached results load immediately and refresh periodically.',
+    // "Not checked yet" is not "not installed". The panel says which of the
+    // two it means, because a restored or freshly installed server has a real
+    // catalogue and no observation of it at all.
+    // "Henüz bakılmadı", "kurulu değil" demek değildir.
+    'services.notChecked': 'Not checked yet',
+    'services.notCheckedTitle': 'This server has not been checked yet',
+    'services.notCheckedHint': 'The components below are the ones this panel can manage. Nothing here has been looked at on this server yet, so none of it is known to be installed or missing. Run a check to see what is actually there.',
 
     'databases.subtitle': 'Databases and users on your detected servers',
     'databases.noServers': 'No database engine installed',
@@ -1067,6 +1083,11 @@ export const en = {
     'svc.coreService': 'Core service',
     'svc.notInstalled': 'Not installed',
     'svc.notInstalledHint': '{name} is not installed on this server.',
+    // The list's notCheckedHint speaks about "the components below"; this page
+    // has one component, so it names it and claims nothing else.
+    // Listedeki notCheckedHint "aşağıdaki bileşenler" der; bu sayfada tek
+    // bileşen vardır, adını anar ve başka hiçbir şey iddia etmez.
+    'svc.notCheckedHint': '{name} has not been looked at on this server yet, so it is not known whether it is installed. Run a check to see what is actually there.',
     'svc.confirmStart': 'Start {name}?',
     'svc.confirmStop': 'Stop {name}?',
     'svc.confirmRestart': 'Restart {name}?',

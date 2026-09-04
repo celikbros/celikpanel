@@ -353,7 +353,7 @@ func TestInstalledRHELPreviewServiceCannotExposeRepair(t *testing.T) {
 			break
 		}
 	}
-	if nginx == nil || !nginx.IsInstalled {
+	if nginx == nil || !nginx.Installed() {
 		t.Fatalf("installed nginx observation missing from catalog: %+v", nginx)
 	}
 	if nginx.RepairAvailable || nginx.RepairPackage != "" {

@@ -2205,7 +2205,7 @@ func nodeInstallFailure(cause error) *serviceOperationFailure {
 func verifyManagedServiceInstalled(services []ManagedServiceResponse, serviceID string) bool {
 	for _, service := range services {
 		if service.ID == serviceID {
-			return service.IsInstalled
+			return service.Installed()
 		}
 	}
 	return false
@@ -2217,7 +2217,7 @@ func verifyManagedServiceReady(services []ManagedServiceResponse, serviceID stri
 		return false
 	}
 	for _, service := range services {
-		if service.ID != serviceID || !service.IsInstalled {
+		if service.ID != serviceID || !service.Installed() {
 			continue
 		}
 		if managed.Kind != core.KindService {

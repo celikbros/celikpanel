@@ -22,7 +22,9 @@ interface Component {
     kind: string;
     unit?: string;
     status: string;
-    is_installed: boolean;
+    /** null = never observed on this host, which is not the same as absent. */
+    /** null = bu makinede hiç gözlenmedi; bu, yok demek değildir. */
+    is_installed: boolean | null;
     versions: string[];
     instances?: Instance[];
     packages?: string[];
@@ -55,16 +57,41 @@ interface Component {
 // dokunulmadan çalışan bir Yönet sayfasına kavuşur.
 export function ComponentDetail({ serviceId, onBack, onSelectConfig }: { serviceId: string; onBack: () => void; onSelectConfig?: (path: string) => void }) {
     const [svc, setSvc] = useState<Component | null>(null);
+    // On an unchecked host this record carries no unit, no versions and no
+    // config files — not because there are none, but because nobody has
+    // looked. The moment the shell resolves that (the operator's check, or a
+    // finished install) this copy is stale, and a stale copy under a resolved
+    // header would state absences as facts: start/stop would target the id
+    // instead of the real unit (BIND's id is "bind", its unit "named"), and
+    // the panels would say "no configuration files". So it is reread.
+    // Bakılmamış bir makinede bu kayıtta unit, sürüm ve ayar dosyası yoktur —
+    // yok oldukları için değil, bakılmadığı için. Kabuk durumu çözdüğü anda
+    // bu kopya bayatlar ve çözülmüş bir başlığın altındaki bayat kopya
+    // yoklukları olgu diye söyler; bu yüzden yeniden okunur.
+    const [recordToken, setRecordToken] = useState(0);
 
     useEffect(() => {
+        let cancelled = false;
         fetch('/api/v1/managed-services')
             .then((r) => (r.ok ? r.json() : { services: [] }))
-            .then((d: { services: Component[] }) => setSvc((d.services || []).find((s) => s.id === serviceId) ?? null))
+            .then((d: { services: Component[] }) => {
+                if (!cancelled) setSvc((d.services || []).find((s) => s.id === serviceId) ?? null);
+            })
             .catch(() => {});
-    }, [serviceId]);
+        return () => {
+            cancelled = true;
+        };
+    }, [serviceId, recordToken]);
 
     return (
-        <ServiceShell serviceId={serviceId} unitName={svc?.unit} name={svc?.name ?? serviceId} icon={Boxes} onBack={onBack}>
+        <ServiceShell
+            serviceId={serviceId}
+            unitName={svc?.unit}
+            name={svc?.name ?? serviceId}
+            icon={Boxes}
+            onBack={onBack}
+            onServiceRefreshed={() => setRecordToken((token) => token + 1)}
+        >
             <ComponentPanels serviceId={serviceId} svc={svc} onSelectConfig={onSelectConfig} />
         </ServiceShell>
     );

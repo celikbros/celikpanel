@@ -14,6 +14,15 @@
         ],
         "createdAt": "2026-09-03T07:54:54.074Z",
         "reason": "Claude triage: line 203 is the loading spinner (rounded-full animate-spin border-b-2), a one-sided border on a circle is the spin indicator itself, not an accent border on a card; element predates this change (July 2026)"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "web/src/components/ServiceShell.tsx"
+        ],
+        "createdAt": "2026-09-04T06:12:10.350Z",
+        "reason": "Claude triage: line 348 is the loading spinner (rounded-full animate-spin border-b-2); a one-sided border on a circle is the spin arc itself, not an accent border on a card. Same false positive already sanctioned for Domains.tsx."
       }
     ]
   }
