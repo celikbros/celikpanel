@@ -25,6 +25,7 @@ const (
 	serviceMutationStepApplyFirewall            serviceMutationStepMethod = "Agent.ApplyFirewallV2"
 	serviceMutationStepInstallService           serviceMutationStepMethod = "Agent.InstallService"
 	serviceMutationStepUninstallService         serviceMutationStepMethod = "Agent.UninstallService"
+	serviceMutationStepSetServerHostname        serviceMutationStepMethod = "Agent.SetServerHostname"
 	serviceMutationStepConfigureMailStack       serviceMutationStepMethod = "Agent.ConfigureMailStack"
 	serviceMutationStepWireMailFilters          serviceMutationStepMethod = "Agent.WireMailFilters"
 	serviceMutationStepConfigureMailSubmission  serviceMutationStepMethod = "Agent.ConfigureMailSubmission"
@@ -306,6 +307,19 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 		return claim.target == "nginx" && claim.packageName == "" && claim.action == "ready" &&
 			(serviceMutationJobMatches(job, "service_install", "nginx", "") ||
 				serviceMutationMailProfileContains(job, "nginx"))
+
+	case serviceMutationStepSetServerHostname:
+		// A mail profile install is the only work that may rename this server,
+		// and only a profile that actually carries the mail stack. Nothing
+		// else in the product can reach this step.
+		// Bu sunucuyu yeniden adlandırabilecek tek iş bir posta profili
+		// kurulumudur ve yalnız posta yığınını gerçekten taşıyan bir profil.
+		// Üründe bu adıma ulaşabilecek başka hiçbir şey yoktur.
+		if claim.target != "server-hostname" || claim.packageName != "" || claim.action != "set" {
+			return false
+		}
+		return serviceMutationMailProfileContains(job, "postfix") &&
+			serviceMutationMailProfileContains(job, "dovecot")
 
 	case serviceMutationStepConfigureMailStack:
 		if claim.target != "mail-stack" || claim.packageName != "" || claim.action != "configure" {

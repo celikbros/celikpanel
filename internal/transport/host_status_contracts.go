@@ -17,8 +17,28 @@ type FirewallStatusResponse struct {
 	PersistenceState string `json:"persistence_state"`
 	PersistenceError string `json:"persistence_error,omitempty"`
 	SnapshotVersion  int    `json:"snapshot_version,omitempty"`
-	Error            string `json:"error,omitempty"`
+	// SSHDiscoveryReason names why SSHPorts is empty, so a host that has no
+	// SSH service at all is never confused with a probe that could not run.
+	// Empty means an SSH listener was proven and SSHPorts holds it.
+	// SSHDiscoveryReason, SSHPorts'un neden boş olduğunu adlandırır; böylece
+	// hiç SSH servisi olmayan bir sunucu, çalışamayan bir yoklamayla asla
+	// karıştırılmaz. Boş değer, bir SSH dinleyicisinin kanıtlandığı ve
+	// SSHPorts'un onu taşıdığı anlamına gelir.
+	SSHDiscoveryReason string `json:"ssh_discovery_reason,omitempty"`
+	Error              string `json:"error,omitempty"`
 }
+
+// The exact SSHDiscoveryReason vocabulary. Only SSHDiscoveryNoService is a
+// state an operator may knowingly accept: a host with no SSH service has no
+// door for the firewall to lock. The other two are refusals.
+// Tam SSHDiscoveryReason sözlüğü. Operatörün bilerek kabul edebileceği tek
+// durum SSHDiscoveryNoService'tir: SSH servisi olmayan bir sunucuda güvenlik
+// duvarının kilitleyeceği bir kapı yoktur. Diğer ikisi reddir.
+const (
+	SSHDiscoveryNoService    = "no_ssh_service"
+	SSHDiscoveryNotListening = "ssh_not_listening"
+	SSHDiscoveryProbeFailed  = "discovery_failed"
+)
 
 type SiteUsageRequest struct {
 	SiteHome string `json:"site_home"`

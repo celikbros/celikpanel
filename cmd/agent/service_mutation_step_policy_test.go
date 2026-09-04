@@ -403,6 +403,7 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 		"serviceMutationStepInstallRoundcube":        true,
 		"serviceMutationStepRemoveRoundcube":         true,
 		"serviceMutationStepConfigureWebmail":        true,
+		"serviceMutationStepSetServerHostname":       true,
 	}
 	seenMethods := make(map[string]string)
 	directAcquire := make(map[string][]string)
@@ -462,8 +463,8 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 		}
 	}
 
-	if len(seenMethods) != 30 {
-		t.Errorf("production requiredServiceMutationStep claim count=%d want=30", len(seenMethods))
+	if len(seenMethods) != 31 {
+		t.Errorf("production requiredServiceMutationStep claim count=%d want=31", len(seenMethods))
 	}
 	for method := range expectedMethods {
 		if seenMethods[method] == "" {

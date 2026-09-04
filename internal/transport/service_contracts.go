@@ -49,6 +49,24 @@ type ServiceMutationRequest struct {
 	ServiceMutationBinding
 }
 
+// SetServerHostnameRequest asks the privileged agent to give this server the
+// fully qualified name the mail stack will answer as. The panel sends only a
+// canonical FQDN; the agent revalidates it and refuses anything else.
+// SetServerHostnameRequest, ayrıcalıklı agent'tan bu sunucuya, posta yığınının
+// adına yanıt vereceği tam nitelikli adı vermesini ister. Panel yalnız kanonik
+// bir FQDN gönderir; agent onu yeniden doğrular ve başkasını reddeder.
+type SetServerHostnameRequest struct {
+	ServiceMutationBinding
+	Hostname string `json:"hostname"`
+}
+
+type SetServerHostnameResponse struct {
+	Hostname string `json:"hostname,omitempty"`
+	Previous string `json:"previous,omitempty"`
+	Changed  bool   `json:"changed"`
+	Error    string `json:"error,omitempty"`
+}
+
 type ServiceMutationHeartbeatRequest struct {
 	RequestID string `json:"request_id"`
 	OwnerID   string `json:"owner_id"`

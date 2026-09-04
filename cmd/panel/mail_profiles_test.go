@@ -41,6 +41,33 @@ type mailProfileTestAgent struct {
 	firewallEnabled     bool
 	firewallError       string
 	firewallCalls       int
+	hostnameError       string
+	hostnameRequests    []string
+}
+
+func (a *mailProfileTestAgent) SetServerHostname(
+	request *transport.SetServerHostnameRequest,
+	response *transport.SetServerHostnameResponse,
+) error {
+	a.record("hostname", request.Hostname, request.ServiceMutationBinding)
+	a.profileMu.Lock()
+	a.hostnameRequests = append(a.hostnameRequests, request.Hostname)
+	failure := a.hostnameError
+	a.profileMu.Unlock()
+	if failure != "" {
+		response.Error = failure
+		return nil
+	}
+	response.Hostname = request.Hostname
+	response.Changed = true
+	readMailProfileHostname = func() (string, error) { return request.Hostname, nil }
+	return nil
+}
+
+func (a *mailProfileTestAgent) hostnameRequestsSnapshot() []string {
+	a.profileMu.Lock()
+	defer a.profileMu.Unlock()
+	return append([]string(nil), a.hostnameRequests...)
 }
 
 func (a *mailProfileTestAgent) record(name, serviceID string, binding transport.ServiceMutationBinding) {
@@ -427,6 +454,28 @@ func postMailProfile(
 	return recorder, decodeServiceOperationEnvelope(t, recorder)
 }
 
+func postMailProfileWithHostname(
+	t *testing.T,
+	fixture serviceOperationTestFixture,
+	profileID, requestID, mailHostname string,
+) (*httptest.ResponseRecorder, *serviceOperation) {
+	t.Helper()
+	body, err := json.Marshal(mailProfileInstallRequest{
+		ProfileID:    profileID,
+		RequestID:    requestID,
+		Confirmed:    true,
+		MailHostname: mailHostname,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	fixture.panel.handleMailProfileInstall(recorder, serviceOperationAdminRequest(
+		t, http.MethodPost, mailProfileInstallPath, string(body), fixture.userID,
+	))
+	return recorder, decodeServiceOperationEnvelope(t, recorder)
+}
+
 func runMailProfileForTest(
 	t *testing.T,
 	fixture serviceOperationTestFixture,
@@ -544,10 +593,18 @@ func TestMailProfileWholePlanPreflightBlocksBeforeMutation(t *testing.T) {
 		setup   func(*testing.T, serviceOperationTestFixture, *mailProfileTestAgent)
 	}{
 		{
-			name:    "invalid FQDN",
+			// A bare hostname is no longer a refusal: the screen asks and the
+			// install sets it. A hostname that cannot be read at all still is,
+			// because then nothing about the name can be decided.
+			// Çıplak bir ad artık ret değildir: ekran sorar, kurulum koyar. Hiç
+			// okunamayan bir ad hâlâ rettir; çünkü o zaman ad hakkında hiçbir
+			// şeye karar verilemez.
+			name:    "unreadable server hostname",
 			profile: mailProfileDefinition{ID: "core-mail", Services: []string{"postfix", "dovecot"}},
 			setup: func(t *testing.T, _ serviceOperationTestFixture, _ *mailProfileTestAgent) {
-				readMailProfileHostname = func() (string, error) { return "localhost", nil }
+				readMailProfileHostname = func() (string, error) {
+					return "", errors.New("hostname unavailable")
+				}
 			},
 		},
 		{
@@ -593,34 +650,35 @@ func TestMailProfileWholePlanPreflightBlocksBeforeMutation(t *testing.T) {
 	}
 }
 
+// An operator-supplied mail hostname that is not a fully qualified name is
+// refused in the dialog it was typed in, with the field named, and the
+// rejected value and parser detail never travel back to the browser.
 func TestMailProfileInvalidServerHostnameIsActionableAndSanitized(t *testing.T) {
 	fixture, agent := newMailProfileTestFixture(t)
-	const rejectedHostname = "private-boston-host"
-	readMailProfileHostname = func() (string, error) { return rejectedHostname, nil }
+	const rejectedHostname = "private boston host"
+	readMailProfileHostname = func() (string, error) { return "private-boston-host", nil }
 
-	profile, _ := mailProfileByID(core.MailProfileCore)
-	if _, err := fixture.panel.preflightMailProfileInstall(
-		serviceOperationBoundContext(), profile,
-	); !errors.Is(err, errMailProfileServerHostnameInvalid) {
-		t.Fatalf("preflight error = %v, want invalid hostname category", err)
-	}
-
-	recorder, queued := postMailProfile(
-		t, fixture, core.MailProfileCore, mustServiceOperationRequestID(t),
+	recorder, queued := postMailProfileWithHostname(
+		t, fixture, core.MailProfileCore, mustServiceOperationRequestID(t), rejectedHostname,
 	)
-	if recorder.Code != http.StatusAccepted || queued == nil {
+	if recorder.Code != http.StatusBadRequest || queued != nil {
 		t.Fatalf("profile status=%d operation=%+v body=%s", recorder.Code, queued, recorder.Body.String())
 	}
-	failed, body := waitForServiceOperation(
-		t, fixture.panel, fixture.userID, queued.ID, serviceOperationFailed,
-	)
-	if failed.Error == nil ||
-		failed.Error.Code != errCodeMailProfileServerHostnameInvalid ||
-		failed.Error.Message != mailProfileServerHostnameMessage {
-		t.Fatalf("failed profile=%+v", failed)
+	body := recorder.Body.String()
+	var refusal struct {
+		Code    string `json:"code"`
+		Message string `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(body), &refusal); err != nil {
+		t.Fatalf("decode refusal %s: %v", body, err)
+	}
+	if refusal.Code != errCodeMailProfileServerHostnameInvalid ||
+		refusal.Message != mailProfileServerHostnameMessage {
+		t.Fatalf("refusal = %+v body=%s", refusal, body)
 	}
 	for _, leaked := range []string{
 		rejectedHostname,
+		"private-boston-host",
 		"invalid hostname",
 		"mail profile server hostname is not a canonical FQDN",
 	} {
@@ -630,6 +688,131 @@ func TestMailProfileInvalidServerHostnameIsActionableAndSanitized(t *testing.T) 
 	}
 	if agent.installCalls.Load() != 0 {
 		t.Fatal("invalid hostname reached InstallService")
+	}
+	if saved := fixture.panel.setting(context.Background(), settingMailHostname); saved != "" {
+		t.Fatalf("rejected hostname was saved as %q", saved)
+	}
+}
+
+// The mail hostname comes from the panel's own identity, in the order of how
+// deliberate each source is, and the refusal when there is none names a field
+// to fill rather than a fact to fix somewhere the product cannot reach.
+func TestMailProfileHostnameComesFromPanelIdentityOrTheOperator(t *testing.T) {
+	fixture, _ := newMailProfileTestFixture(t)
+	ctx := context.Background()
+
+	readMailProfileHostname = func() (string, error) { return "mail.profile.test", nil }
+	if got, err := fixture.panel.resolveMailProfileHostname(ctx); err != nil || got != "mail.profile.test" {
+		t.Fatalf("usable operating-system hostname = %q, %v", got, err)
+	}
+	identity := fixture.panel.mailHostnameIdentity(ctx)
+	if !identity.CurrentUsable || identity.WillSetHostname ||
+		identity.Source != mailHostnameSourceOS {
+		t.Fatalf("usable host identity = %+v", identity)
+	}
+
+	readMailProfileHostname = func() (string, error) { return "ALIASUSPC", nil }
+	if got, err := fixture.panel.resolveMailProfileHostname(ctx); err != nil ||
+		got != "ns1.profile.test" {
+		t.Fatalf("nameserver-derived hostname = %q, %v", got, err)
+	}
+	identity = fixture.panel.mailHostnameIdentity(ctx)
+	if identity.CurrentUsable || !identity.WillSetHostname ||
+		identity.Source != mailHostnameSourceNameserver ||
+		identity.Current != "ALIASUSPC" {
+		t.Fatalf("bare host identity = %+v", identity)
+	}
+
+	// A paired topology never offers the peer's own nameserver name.
+	for key, value := range map[string]string{
+		settingDNSRole:   "paired",
+		settingDNSPeerNS: "ns1.profile.test",
+		settingDNSPeerIP: "203.0.113.10",
+	} {
+		if err := fixture.panel.setSetting(ctx, key, value); err != nil {
+			t.Fatalf("seed paired identity %s: %v", key, err)
+		}
+	}
+	if got, err := fixture.panel.resolveMailProfileHostname(ctx); err != nil ||
+		got != "ns2.profile.test" {
+		t.Fatalf("paired nameserver hostname = %q, %v", got, err)
+	}
+
+	// What the operator saved wins over everything derived.
+	if err := fixture.panel.setSetting(ctx, settingMailHostname, "mail.s2.test"); err != nil {
+		t.Fatalf("save mail hostname: %v", err)
+	}
+	if got, err := fixture.panel.resolveMailProfileHostname(ctx); err != nil || got != "mail.s2.test" {
+		t.Fatalf("saved hostname = %q, %v", got, err)
+	}
+
+	// With nothing saved and no usable identity left, the product asks.
+	for _, key := range []string{
+		settingMailHostname, settingNS1, settingNS2, settingDNSPeerNS,
+	} {
+		if err := fixture.panel.setSetting(ctx, key, ""); err != nil {
+			t.Fatalf("clear %s: %v", key, err)
+		}
+	}
+	if _, err := fixture.panel.resolveMailProfileHostname(ctx); !errors.Is(
+		err, errMailProfileServerHostnameRequired,
+	) {
+		t.Fatalf("missing identity error = %v, want the required category", err)
+	}
+	failure := mailProfileInstallFailure(errMailProfileServerHostnameRequired)
+	if failure == nil || failure.Code != errCodeMailProfileServerHostnameRequired ||
+		failure.Message != mailProfileServerHostnameRequired {
+		t.Fatalf("required failure = %+v", failure)
+	}
+
+	readMailProfileHostname = func() (string, error) { return "", errors.New("unavailable") }
+	if _, err := fixture.panel.resolveMailProfileHostname(ctx); err == nil ||
+		errors.Is(err, errMailProfileServerHostnameRequired) {
+		t.Fatalf("unreadable hostname error = %v", err)
+	}
+}
+
+// The install gives this server the name it was told, through the agent, as a
+// normal privileged mutation inside the same lease and before anything is
+// installed - and never touches the hostname when it is already exact.
+func TestMailProfileInstallSetsTheServerHostnameThroughTheAgent(t *testing.T) {
+	fixture, agent := newMailProfileTestFixture(t)
+	readMailProfileHostname = func() (string, error) { return "ALIASUSPC", nil }
+
+	recorder, queued := postMailProfileWithHostname(
+		t, fixture, core.MailProfileCore, mustServiceOperationRequestID(t), "mail.s2.test",
+	)
+	if recorder.Code != http.StatusAccepted || queued == nil {
+		t.Fatalf("profile status=%d operation=%+v body=%s", recorder.Code, queued, recorder.Body.String())
+	}
+	waitForServiceOperation(t, fixture.panel, fixture.userID, queued.ID, serviceOperationSucceeded)
+
+	requests := agent.hostnameRequestsSnapshot()
+	if len(requests) != 1 || requests[0] != "mail.s2.test" {
+		t.Fatalf("server hostname requests = %v", requests)
+	}
+	calls := agent.callsSnapshot()
+	if len(calls) == 0 || calls[0].Name != "hostname" {
+		t.Fatalf("hostname was not the first host mutation: %+v", calls)
+	}
+	if calls[0].Binding.MutationRequestID == "" {
+		t.Fatal("hostname step ran outside the profile mutation binding")
+	}
+
+	// A second install of the same profile finds the exact name already in
+	// place and leaves the host alone.
+	agent.profileMu.Lock()
+	agent.hostnameRequests = nil
+	agent.profileMu.Unlock()
+	recorder, queued = postMailProfileWithHostname(
+		t, fixture, core.MailProfileCore, mustServiceOperationRequestID(t), "mail.s2.test",
+	)
+	if recorder.Code != http.StatusAccepted || queued == nil {
+		t.Fatalf("second profile status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	waitForServiceOperation(t, fixture.panel, fixture.userID, queued.ID, serviceOperationSucceeded)
+	if requests := agent.hostnameRequestsSnapshot(); len(requests) != 0 {
+		t.Fatalf("hostname was set again for an unchanged name: %v", requests)
 	}
 }
 
@@ -1153,13 +1336,18 @@ func TestMailProfileHostBlockedReasonIsActionable(t *testing.T) {
 	if reason := mailProfileHostBlockedReason(); reason != "" {
 		t.Fatalf("valid FQDN blocked: %q", reason)
 	}
+	// A server whose name is not fully qualified is no longer blocked out of
+	// the catalogue: the install screen asks for the mail hostname and the
+	// install gives the server that name.
+	// Adı tam nitelikli olmayan bir sunucu artık katalogdan dışlanmaz: kurulum
+	// ekranı posta ana bilgisayar adını sorar ve kurulum sunucuya o adı verir.
 	readMailProfileHostname = func() (string, error) { return "localhost", nil }
-	if reason := mailProfileHostBlockedReason(); reason != mailProfileServerHostnameMessage {
-		t.Fatalf("invalid FQDN reason = %q", reason)
+	if reason := mailProfileHostBlockedReason(); reason != "" {
+		t.Fatalf("bare hostname blocked the catalogue: %q", reason)
 	}
 	readMailProfileHostname = func() (string, error) { return "", errors.New("unavailable") }
-	if reason := mailProfileHostBlockedReason(); reason == "" {
-		t.Fatal("hostname read failure did not block profiles")
+	if reason := mailProfileHostBlockedReason(); reason != mailProfileServerHostnameUnknown {
+		t.Fatalf("hostname read failure reason = %q", reason)
 	}
 }
 

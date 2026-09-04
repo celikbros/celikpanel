@@ -33,6 +33,8 @@ type fakeFirewallCommandRunner struct {
 	configuredSSHErr      error
 	configuredSocketPorts []int
 	configuredSocketErr   error
+	sshServicePresent     bool
+	sshServicePresentErr  error
 	applyErr              error
 	systemctlErr          error
 	unitEnabled           bool
@@ -157,6 +159,13 @@ func (f *fakeFirewallCommandRunner) ConfiguredSSHPorts() ([]int, error) {
 		return []int{22}, nil
 	}
 	return append([]int(nil), f.configuredSSHPorts...), nil
+}
+
+func (f *fakeFirewallCommandRunner) SSHServicePresent() (bool, error) {
+	if f.sshServicePresentErr != nil {
+		return false, f.sshServicePresentErr
+	}
+	return f.sshServicePresent, nil
 }
 
 func (f *fakeFirewallCommandRunner) ConfiguredSSHSocketPorts() ([]int, error) {
@@ -337,7 +346,9 @@ func TestApplyFirewallFailsClosedWhenSSHDiscoveryFailsOrIsEmpty(t *testing.T) {
 		{name: "empty result", ssOut: "LISTEN 0 128 0.0.0.0:80 0.0.0.0:* users:((nginx,pid=8,fd=3))\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			runner := &fakeFirewallCommandRunner{ssOut: tc.ssOut, ssErr: tc.ssErr}
+			runner := &fakeFirewallCommandRunner{
+				ssOut: tc.ssOut, ssErr: tc.ssErr, sshServicePresent: true,
+			}
 			store := &fakeFirewallStateStore{}
 			var resp FirewallStatusResponse
 			if err := applyFirewallWithRunnerAndStore(runner, store, &ApplyFirewallRequest{Enabled: true, Persist: true}, &resp); err != nil {
@@ -670,7 +681,16 @@ func TestRestoreFirewallSnapshotUsesCurrentConfiguredSSHPort(t *testing.T) {
 
 func TestRestoreFirewallSnapshotFailsClosedBeforeMutation(t *testing.T) {
 	valid := encodeFirewallSnapshot([]int{2083}, nil, []int{22})
-	runner := &fakeFirewallCommandRunner{configuredSSHErr: errors.New("invalid sshd configuration")}
+	// An SSH service that is present but whose configuration cannot be read is
+	// not a server without SSH: the restore still refuses. Only a proven
+	// absence restores, and that is covered by its own test.
+	// Var olan ama yapılandırması okunamayan bir SSH servisi, SSH'sız bir
+	// sunucu değildir: geri yükleme yine reddeder. Yalnız kanıtlanmış bir
+	// yokluk geri yükler ve onun kendi testi vardır.
+	runner := &fakeFirewallCommandRunner{
+		configuredSSHErr:  errors.New("invalid sshd configuration"),
+		sshServicePresent: true,
+	}
 	if err := restoreFirewallSnapshotLocked(runner, &fakeFirewallStateStore{data: valid, exists: true}); err == nil {
 		t.Fatal("SSH configuration failure was accepted")
 	}

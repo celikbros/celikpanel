@@ -168,6 +168,13 @@ type managedServicesPayload struct {
 	Services         []ManagedServiceResponse `json:"services"`
 	Profiles         []MailProfileResponse    `json:"profiles"`
 	DNSIdentityReady bool                     `json:"dns_identity_ready"`
+	// MailHostname is what the mail install screen needs to know before it
+	// asks: the name this server carries now, the name the install would use,
+	// and where that name came from.
+	// MailHostname, posta kurulum ekranının sormadan önce bilmesi gerekendir:
+	// bu sunucunun şu an taşıdığı ad, kurulumun kullanacağı ad ve o adın
+	// nereden geldiği.
+	MailHostname MailHostnameIdentity `json:"mail_hostname"`
 }
 
 // serviceObservation is everything a scan can DISCOVER about this host: is the
@@ -572,6 +579,7 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 		Services:         catalogViewForHost(nil, host),
 		Profiles:         mailProfilesView(nil, false, packageFamily, mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), false, false, profileAttempts),
 		DNSIdentityReady: dnsIdentityReady,
+		MailHostname:     p.mailHostnameIdentity(r.Context()),
 	}
 
 	var data string
@@ -705,6 +713,7 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
 		Services:         services,
 		Profiles:         mailProfilesView(services, true, p.packageFamily(), mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), webmailReady, webmailProven, profileAttempts),
 		DNSIdentityReady: dnsIdentityReady,
+		MailHostname:     p.mailHostnameIdentity(r.Context()),
 	})
 }
 

@@ -7,10 +7,18 @@ import { StatusDot, EmptyState, Button, SearchInput, ErrorBanner } from './ui';
 import { PageHeader } from './PageHeader';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import {
+    canonicalMailHostname,
+    decodeMailHostnameIdentity,
     decodeManagedMailProfiles,
     useComponentOperation,
+    type MailHostnameIdentity,
     type ManagedMailProfile,
 } from './ComponentOperation';
+import {
+    FirewallNoSSHAcknowledgement,
+    FirewallSSHReasonLine,
+    readFirewallSSHReason,
+} from './FirewallSSHNotice';
 import { Link, useLocation, useNavigate } from '../router';
 import { publishComponentCensus } from '../lib/componentCensus';
 
@@ -79,6 +87,7 @@ interface ManagedServicesSnapshot {
     profiles: ManagedMailProfile[];
     scannedAt: string | null;
     dnsIdentityReady: boolean;
+    mailHostname: MailHostnameIdentity;
 }
 
 type ServiceLifecycleAction = 'start' | 'stop' | 'restart';
@@ -162,6 +171,8 @@ function parseManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot |
     }
     const profiles = decodeManagedMailProfiles(payload.profiles, serviceIDs);
     if (profiles === null) return null;
+    const mailHostname = decodeMailHostnameIdentity(payload.mail_hostname);
+    if (mailHostname === null) return null;
     if (
         typeof payload.dns_identity_ready !== 'boolean'
         ||
@@ -179,6 +190,7 @@ function parseManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot |
         profiles,
         scannedAt: typeof payload.scanned_at === 'string' ? payload.scanned_at : null,
         dnsIdentityReady: payload.dns_identity_ready,
+        mailHostname,
     };
 }
 
@@ -343,6 +355,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [profiles, setProfiles] = useState<ManagedMailProfile[]>([]);
     const [scannedAt, setScannedAt] = useState<string | null>(null);
     const [dnsIdentityReady, setDNSIdentityReady] = useState(false);
+    const [mailHostname, setMailHostname] = useState<MailHostnameIdentity | null>(null);
     const [hostMutationReadiness, setHostMutationReadiness] = useState<HostMutationReadiness | null>(null);
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(false);
@@ -415,6 +428,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         setProfiles(snapshot.profiles);
         setScannedAt(snapshot.scannedAt);
         setDNSIdentityReady(snapshot.dnsIdentityReady);
+        setMailHostname(snapshot.mailHostname);
 
         // A cached load may still be the exact pre-mutation snapshot retained
         // after an atomic scan failure. Only a fresh scan, or a load carrying
@@ -964,7 +978,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         if (stateUnverified || !profile.available) return;
         setProfileTarget(profile);
     };
-    const installProfile = async () => {
+    const installProfile = async (chosenHostname: string) => {
         const profile = profileTarget;
         if (!profile || stateUnverified || !profile.available) return;
         setProfileTarget(null);
@@ -972,6 +986,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             serviceId: profile.id,
             name: profile.name,
             operationKind: 'mail_profile_install',
+            ...(chosenHostname ? { mailHostname: chosenHostname } : {}),
         });
     };
 
@@ -1674,8 +1689,9 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     <MailProfileInstallDialog
                         profile={profileTarget}
                         services={services}
+                        mailHostname={mailHostname}
                         onCancel={() => setProfileTarget(null)}
-                        onConfirm={() => void installProfile()}
+                        onConfirm={(chosen) => void installProfile(chosen)}
                     />
                 )}
                 {uninstallTarget && (
@@ -1903,16 +1919,38 @@ function MailProfileCards({ profiles, services, disabled, dnsIdentityReady, onIn
 function MailProfileInstallDialog({
     profile,
     services,
+    mailHostname,
     onCancel,
     onConfirm,
 }: {
     profile: ManagedMailProfile;
     services: ManagedService[];
+    mailHostname: MailHostnameIdentity | null;
     onCancel: () => void;
-    onConfirm: () => void;
+    onConfirm: (mailHostname: string) => void;
 }) {
     const { t } = useI18n();
     const [acknowledged, setAcknowledged] = useState(false);
+    // The server is only asked for a name when it does not already carry a
+    // fully qualified one. A server that does is stated as a fact and left
+    // alone. / Sunucudan bir ad yalniz zaten tam nitelikli bir ad tasimiyorsa
+    // istenir. Tasiyan bir sunucu bir olgu olarak soylenir ve ona dokunulmaz.
+    const hostnameSettled = mailHostname?.current_usable === true;
+    const [hostnameDraft, setHostnameDraft] = useState(mailHostname?.hostname ?? '');
+    const [hostnameTouched, setHostnameTouched] = useState(false);
+    const canonicalHostname = canonicalMailHostname(hostnameDraft);
+    const hostnameInvalid = hostnameDraft.trim() !== '' && canonicalHostname === null;
+    const hostnameReady = hostnameSettled || canonicalHostname !== null;
+    // Only a name the panel derived is worth attributing; a name that simply
+    // came from the operating system is not a suggestion.
+    // Yalniz panelin turettigi bir ad kaynagiyla anilmaya deger; isletim
+    // sisteminden gelen bir ad bir oneri degildir.
+    const suggestionSource = mailHostname
+        && mailHostname.source !== ''
+        && mailHostname.source !== 'os_hostname'
+        ? mailHostname.source
+        : null;
+    const hostnameInputRef = useRef<HTMLInputElement>(null);
     const [candidateVersions, setCandidateVersions] = useState<Record<string, string>>({});
     const [candidatesLoading, setCandidatesLoading] = useState(true);
     const acknowledgementRef = useRef<HTMLInputElement>(null);
@@ -1930,7 +1968,12 @@ function MailProfileInstallDialog({
         .map((service) => service.name);
 
     useEffect(() => {
-        acknowledgementRef.current?.focus();
+        // The first thing to do is the first thing focused: on a server that
+        // still needs a name, that is the name field.
+        // Yapilacak ilk sey, odaklanan ilk seydir: hala bir ada ihtiyaci olan
+        // bir sunucuda bu, ad alanidir.
+        if (hostnameInputRef.current) hostnameInputRef.current.focus();
+        else acknowledgementRef.current?.focus();
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') onCancel();
         };
@@ -2053,6 +2096,79 @@ function MailProfileInstallDialog({
                     <p className='mt-1'>{t('services.mailProfiles.plan.partialProgress')}</p>
                 </div>
 
+                <section className='mb-4 rounded-lg border border-border p-3'>
+                    <p className='text-xs font-semibold text-fg'>
+                        {t('services.mailProfiles.hostname.title')}
+                    </p>
+                    {hostnameSettled ? (
+                        <p className='mt-1 text-xs leading-5 text-fg-muted'>
+                            {t('services.mailProfiles.hostname.settled', {
+                                hostname: mailHostname?.hostname ?? '',
+                            })}
+                        </p>
+                    ) : (
+                        <>
+                            <p id='mail-profile-hostname-hint' className='mt-1 text-xs leading-5 text-fg-muted'>
+                                {mailHostname?.current
+                                    ? t('services.mailProfiles.hostname.hint', {
+                                        current: mailHostname.current,
+                                    })
+                                    : t('services.mailProfiles.hostname.hintUnnamed')}
+                            </p>
+                            <label
+                                htmlFor='mail-profile-hostname'
+                                className='mt-3 block text-xs font-medium text-fg-muted'
+                            >
+                                {t('services.mailProfiles.hostname.label')}
+                            </label>
+                            <input
+                                id='mail-profile-hostname'
+                                ref={hostnameInputRef}
+                                type='text'
+                                inputMode='url'
+                                autoComplete='off'
+                                spellCheck={false}
+                                value={hostnameDraft}
+                                placeholder={t('services.mailProfiles.hostname.placeholder')}
+                                aria-describedby='mail-profile-hostname-hint mail-profile-hostname-note'
+                                aria-invalid={hostnameInvalid || undefined}
+                                onChange={(event) => {
+                                    setHostnameDraft(event.target.value);
+                                    setHostnameTouched(true);
+                                }}
+                                className={`mt-1 w-full rounded-lg border bg-surface px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                                    hostnameInvalid && hostnameTouched
+                                        ? 'border-danger focus:border-danger'
+                                        : 'border-border-strong focus:border-primary'
+                                }`}
+                            />
+                            <p
+                                id='mail-profile-hostname-note'
+                                className={`mt-1 text-xs leading-5 ${
+                                    hostnameInvalid && hostnameTouched ? 'text-danger' : 'text-fg-muted'
+                                }`}
+                            >
+                                {hostnameInvalid && hostnameTouched
+                                    ? t('services.mailProfiles.hostname.invalid')
+                                    : canonicalHostname
+                                        ? t('services.mailProfiles.hostname.rename', {
+                                            hostname: canonicalHostname,
+                                        })
+                                        : t('services.mailProfiles.hostname.invalid')}
+                            </p>
+                            {suggestionSource && canonicalHostname === mailHostname?.hostname && (
+                                // fg-subtle is the placeholder colour and carries no
+                                // meaning; where the name came from is information.
+                                // fg-subtle yer tutucu rengidir ve bir anlam taşımaz;
+                                // adın nereden geldiği ise bilgidir.
+                                <p className='mt-1 text-xs leading-5 text-fg-muted'>
+                                    {t(`services.mailProfiles.hostname.source.${suggestionSource}` as Parameters<typeof t>[0])}
+                                </p>
+                            )}
+                        </>
+                    )}
+                </section>
+
                 <label className='mb-5 flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3'>
                     <input
                         ref={acknowledgementRef}
@@ -2073,8 +2189,8 @@ function MailProfileInstallDialog({
                     <Button
                         variant='primary'
                         icon={mode === 'install' ? DownloadCloud : RotateCw}
-                        disabled={!acknowledged}
-                        onClick={onConfirm}
+                        disabled={!acknowledged || !hostnameReady}
+                        onClick={() => onConfirm(hostnameSettled ? '' : canonicalHostname ?? '')}
                     >
                         {t(`services.mailProfiles.plan.confirm.${mode}` as Parameters<typeof t>[0], { name: profile.name })}
                     </Button>
@@ -2985,11 +3101,14 @@ function FirewallBar({
         persistence_state?: string;
         persistence_error?: string;
         snapshot_version?: number;
+        ssh_discovery_reason?: string;
     };
     const [st, setSt] = useState<FirewallViewStatus | null>(null);
     const [statusError, setStatusError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [pendingAction, setPendingAction] = useState<'enable' | 'disable' | 'save' | null>(null);
+    const [noSSHAcknowledged, setNoSSHAcknowledged] = useState(false);
+    const sshReason = readFirewallSSHReason(st?.ssh_discovery_reason);
 
     // A failed status read is neither "on" nor "off". Preserve that distinction
     // so an agent/permission/network failure can never be mistaken for an open firewall.
@@ -3045,14 +3164,30 @@ function FirewallBar({
 
     const toggle = async () => {
         if (!st) return;
+        const enabling = !st.enabled;
         setBusy(true);
         try {
             const r = await fetch('/api/v1/firewall', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: !st.enabled }),
+                // The no-SSH acknowledgement is its own field and only ever
+                // travels with a request that is turning the firewall on.
+                // SSH'sız onayı kendi alanıdır ve yalnız güvenlik duvarını
+                // açan bir istekle birlikte yola çıkar.
+                body: JSON.stringify(
+                    enabling && noSSHAcknowledged
+                        ? { enabled: true, no_ssh_acknowledged: true }
+                        : { enabled: enabling },
+                ),
             });
             if (!r.ok) {
+                // A server can change between the status read and the change.
+                // Re-read it so the screen offers the same way forward it
+                // would have offered had it known.
+                // Sunucu, durum okumasıyla değişiklik arasında değişebilir.
+                // Ekranın, bilseydi sunacağı yolu yine sunması için durumu
+                // yeniden oku.
+                void load();
                 showToast('error', apiErrorText(await readApiError(r), t, 'firewall.changeFailed'));
                 return;
             }
@@ -3098,12 +3233,19 @@ function FirewallBar({
             showToast('warning', readinessMessage || t('services.mutationReadiness.checking'));
             return;
         }
+        setNoSSHAcknowledged(false);
         setPendingAction(action);
+    };
+
+    const closeAction = () => {
+        setNoSSHAcknowledged(false);
+        setPendingAction(null);
     };
 
     const confirmAction = async () => {
         const action = pendingAction;
         if (!action || readiness?.ready !== true) return;
+        if (action === 'enable' && sshReason === 'no_ssh_service' && !noSSHAcknowledged) return;
         setPendingAction(null);
         if (action === 'save') await saveForReboot();
         else await toggle();
@@ -3190,6 +3332,7 @@ function FirewallBar({
                     <p className="text-xs text-fg-muted">
                         {st.enabled ? t('firewall.onHint') : t('firewall.offHint')}
                     </p>
+                    {sshReason && <FirewallSSHReasonLine reason={sshReason} />}
                     {st.enabled && st.persistence_state === 'missing' && (
                         <p className="mt-1 text-xs text-warning">{t('firewall.persistenceMissing')}</p>
                     )}
@@ -3238,7 +3381,10 @@ function FirewallBar({
             <FirewallActionConfirmationDialog
                 action={pendingAction}
                 confirmDisabled={busy || readiness?.ready !== true}
-                onCancel={() => setPendingAction(null)}
+                noSSHService={pendingAction === 'enable' && sshReason === 'no_ssh_service'}
+                noSSHAcknowledged={noSSHAcknowledged}
+                onAcknowledgeNoSSH={setNoSSHAcknowledged}
+                onCancel={closeAction}
                 onConfirm={() => void confirmAction()}
             />
         )}
@@ -3249,11 +3395,17 @@ function FirewallBar({
 function FirewallActionConfirmationDialog({
     action,
     confirmDisabled,
+    noSSHService,
+    noSSHAcknowledged,
+    onAcknowledgeNoSSH,
     onCancel,
     onConfirm,
 }: {
     action: 'enable' | 'disable' | 'save';
     confirmDisabled: boolean;
+    noSSHService: boolean;
+    noSSHAcknowledged: boolean;
+    onAcknowledgeNoSSH: (value: boolean) => void;
     onCancel: () => void;
     onConfirm: () => void;
 }) {
@@ -3296,6 +3448,14 @@ function FirewallActionConfirmationDialog({
                         </p>
                     </div>
                 </div>
+                {noSSHService && (
+                    <FirewallNoSSHAcknowledgement
+                        id='firewall-action-no-ssh'
+                        checked={noSSHAcknowledged}
+                        disabled={confirmDisabled}
+                        onChange={onAcknowledgeNoSSH}
+                    />
+                )}
                 <div className='flex justify-end gap-2'>
                     <Button variant='secondary' autoFocus onClick={onCancel}>
                         {t('common.cancel')}
@@ -3303,10 +3463,12 @@ function FirewallActionConfirmationDialog({
                     <Button
                         variant={destructive ? 'danger' : 'primary'}
                         icon={Icon}
-                        disabled={confirmDisabled}
+                        disabled={confirmDisabled || (noSSHService && !noSSHAcknowledged)}
                         onClick={onConfirm}
                     >
-                        {t(`firewall.confirm.${action}.button` as Parameters<typeof t>[0])}
+                        {noSSHService
+                            ? t('firewall.ssh.no_ssh_service.confirm')
+                            : t(`firewall.confirm.${action}.button` as Parameters<typeof t>[0])}
                     </Button>
                 </div>
             </div>

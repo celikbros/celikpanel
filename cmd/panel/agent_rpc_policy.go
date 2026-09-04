@@ -177,7 +177,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.AddMailAccount Agent.ConfigureDKIMSigning Agent.ConfigureMailStack
 		Agent.ConfigureMailSubmission Agent.DeleteMailAccount Agent.DeleteMailDomain
 		Agent.EnsureDKIMKey Agent.ImportMailAccount Agent.PostfixQueueAction
-		Agent.SetMailPolicy Agent.SyncMailTLSV2
+		Agent.SetMailPolicy Agent.SetServerHostname Agent.SyncMailTLSV2
 		Agent.UpdateMailForwarding Agent.UpdateMailPassword Agent.UpdateMailQuota
 		Agent.WireMailFilters
 	`),
@@ -361,6 +361,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.SyncDNSZoneV3":                agentRPCDatabaseTimeout,
 	"Agent.RecoverDNSZoneV3":             agentRPCDatabaseTimeout,
 	"Agent.SyncMailTLSV2":                agentRPCMutationTimeout,
+	"Agent.SetServerHostname":            agentRPCMutationTimeout,
 	"Agent.CreateSystemSQLiteSnapshot":   agentRPCDatabaseTimeout,
 	"Agent.OptimizeSystemSQLiteDatabase": agentRPCDatabaseTimeout,
 
