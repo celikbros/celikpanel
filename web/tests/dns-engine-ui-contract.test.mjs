@@ -526,16 +526,17 @@ test('DNS settings flow separates fresh, exact legacy, active, and manual recove
 
   assert.equal(dnsEngineSettingsFlow(null), 'unavailable');
   assert.equal(dnsEngineSettingsFlow({
-    state: 'unconfigured', active_engine: null, topology: 'unconfigured', engines: availableEngines,
+    state: 'unconfigured', active_engine: null, engine_epoch: 0,
+    topology: 'unconfigured', engines: availableEngines,
   }), 'identityStaging');
   assert.equal(dnsEngineSettingsFlow({
-    state: 'ready', active_engine: 'pdns', topology: 'standalone', engines: [
+    state: 'ready', active_engine: 'pdns', engine_epoch: 2, topology: 'standalone', engines: [
       { id: 'pdns', installed: true, running: true, managed: true, status: 'active' },
       availableEngines[1],
     ],
   }), 'active');
   assert.equal(dnsEngineSettingsFlow({
-    state: 'unmanaged', active_engine: null, topology: 'paired', engines: [
+    state: 'unmanaged', active_engine: null, engine_epoch: 0, topology: 'paired', engines: [
       { ...unmanagedEngines[0], managed: true },
       unmanagedEngines[1],
     ],
@@ -543,21 +544,86 @@ test('DNS settings flow separates fresh, exact legacy, active, and manual recove
 
   for (const topology of ['unconfigured', 'standalone', 'paired']) {
     assert.equal(dnsEngineSettingsFlow({
-      state: 'unmanaged', active_engine: null, topology, engines: unmanagedEngines,
+      state: 'unmanaged', active_engine: null, engine_epoch: 0, topology, engines: unmanagedEngines,
     }), 'manualRecovery', `unverified ${topology} ownership must be manual recovery`);
   }
   assert.equal(dnsEngineSettingsFlow({
-    state: 'unmanaged', active_engine: null, topology: 'paired', engines: [
+    state: 'unmanaged', active_engine: null, engine_epoch: 0, topology: 'paired', engines: [
       { ...unmanagedEngines[0], managed: true },
       { ...unmanagedEngines[1], installed: true, running: true, status: 'unmanaged' },
     ],
   }), 'manualRecovery', 'a second running engine invalidates the managed legacy exception');
   assert.equal(dnsEngineSettingsFlow({
-    state: 'conflict', active_engine: null, topology: 'standalone', engines: unmanagedEngines,
+    state: 'conflict', active_engine: null, engine_epoch: 0, topology: 'standalone',
+    engines: unmanagedEngines,
   }), 'locked');
   assert.equal(dnsEngineSettingsFlow({
-    state: 'degraded', active_engine: 'pdns', topology: 'standalone', engines: unmanagedEngines,
+    state: 'degraded', active_engine: 'pdns', engine_epoch: 3, topology: 'standalone',
+    engines: unmanagedEngines,
   }), 'locked');
+});
+
+// The running takeover was measured end to end through the API and had no route
+// on the screen at all: with a foreign BIND answering, the settings flow mapped
+// the whole `unmanaged` state to manual recovery and locked every action, so the
+// operator could not start the adoption the product already performs. The route
+// is the stopped shape's route - stage the identity, then review and commit the
+// adoption on the engine card - and it is claimed by the same facts the panel's
+// own `adoptableUnmanagedDNSEngine` claims it by (register R-049).
+test('a running unmanaged BIND takes the adoption route and every shape the takeover refuses does not', async () => {
+  const { dnsEngineSettingsFlow } = await loadIdentityPlanRuntime();
+  const runningTakeover = (overrides = {}, engines = {}) => ({
+    state: 'unmanaged',
+    active_engine: null,
+    engine_epoch: 0,
+    topology: 'standalone',
+    engines: [
+      {
+        id: 'pdns', installed: false, running: false, managed: false, status: 'available',
+        ...(engines.pdns || {}),
+      },
+      {
+        id: 'bind', installed: true, running: true, managed: false, status: 'unmanaged',
+        ...(engines.bind || {}),
+      },
+    ],
+    ...overrides,
+  });
+
+  assert.equal(dnsEngineSettingsFlow(runningTakeover()), 'identityStaging',
+    'a running DNS server CelikPanel did not install must offer the adoption route');
+  assert.equal(dnsEngineSettingsFlow(runningTakeover({ topology: 'unconfigured' })), 'identityStaging',
+    'the identity this route saves is the first step of it, so its absence cannot lock the route');
+
+  // The screen cannot tell a server configured with views, or one whose
+  // configuration CelikPanel could not read whole, from any other running
+  // takeover: the snapshot carries neither fact. Both therefore take this same
+  // route and are refused by name in the preview, which is what R-044 wrote and
+  // R-047 made visible; that is asserted where those refusals are rendered.
+  assert.equal(dnsEngineSettingsFlow(runningTakeover({ topology: 'paired' })), 'manualRecovery',
+    'pairing is a decision about two servers and the takeover does not answer it');
+  assert.equal(
+    dnsEngineSettingsFlow(runningTakeover({}, { bind: { managed: true } })),
+    'manualRecovery',
+    'a managed engine with no recorded authority is exactly what manual recovery is for');
+  assert.equal(
+    dnsEngineSettingsFlow(runningTakeover({}, { bind: { running: false } })),
+    'manualRecovery',
+    'this branch answers the running half only; the stopped half reads unconfigured');
+  assert.equal(
+    dnsEngineSettingsFlow(runningTakeover(
+      {}, { pdns: { installed: true, running: true, status: 'unmanaged' } },
+    )),
+    'manualRecovery',
+    'no engine may be serving except the one being taken over');
+  assert.equal(dnsEngineSettingsFlow(runningTakeover({ engine_epoch: 1 })), 'manualRecovery',
+    'a recorded engine epoch means CelikPanel already owns the DNS on this host');
+  assert.equal(dnsEngineSettingsFlow(runningTakeover({ active_engine: 'bind' })), 'locked',
+    'a recorded active engine is not a takeover in any state');
+  assert.equal(
+    dnsEngineSettingsFlow(runningTakeover({}, { bind: { status: 'conflict' } })),
+    'manualRecovery',
+    'the entry status and the runtime booleans must agree before anything is offered');
 });
 
 test('DNS engine preview token and counts mirror the commit contract', async () => {

@@ -611,3 +611,94 @@ func TestDNSIdentityStagingOpensForBothTakeoverShapes(t *testing.T) {
 		t.Fatalf(`contested port 53 staging kind=%q, want refusal`, kind)
 	}
 }
+
+// The screen decides which route to offer from the snapshot this endpoint
+// hands out, and for a whole release it offered none: with a foreign BIND
+// answering, the settings flow read the `unmanaged` state as manual recovery
+// and locked every action, so the takeover this file proves was reachable only
+// through the API (register R-049). The route is now claimed by the same facts
+// adoptableUnmanagedDNSEngine claims it by, so those facts have to be on the
+// wire and have to agree with the predicate. This test is what fails if either
+// half drifts: a fact dropped from the payload, or a payload that describes a
+// host the panel would refuse.
+//
+// Ekran, hangi yolu sunacagina bu ucun verdigi anlik goruntuden karar verir ve
+// bir surum boyunca hicbirini sunmadi: yabanci bir BIND yanit verirken ayar
+// akisi `unmanaged` durumunu elle kurtarma diye okuyup her eylemi kilitliyordu;
+// dolayisiyla bu dosyanin kanitladigi devralmaya yalnizca API'den
+// ulasilabiliyordu (defter R-049). Yol artik adoptableUnmanagedDNSEngine'in
+// dayandigi olgularla aciliyor; oyleyse o olgular telde bulunmali ve yuklemle
+// ayni seyi soylemeli. Iki yarisindan biri kaysa bu test duser: yuk'ten dusen
+// bir olgu ya da panelin reddedecegi bir sunucuyu anlatan bir yuk.
+func TestDNSEngineTakeoverShapeIsOnTheWireTheScreenReads(t *testing.T) {
+	shapes := map[string]struct {
+		newPanel  func(*testing.T) (*Panel, *dnsEngineTestAgent)
+		wantState string
+		running   bool
+	}{
+		"stopped": {newStoppedUnmanagedBINDPanel, dnsEngineStateUnconfigured, false},
+		"running": {newRunningUnmanagedBINDPanel, dnsEngineStateUnmanaged, true},
+	}
+	for name, shape := range shapes {
+		t.Run(name, func(t *testing.T) {
+			panel, _ := shape.newPanel(t)
+			snapshot, err := panel.dnsEngineSnapshot(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !adoptableUnmanagedDNSEngine(snapshot, transport.DNSEngineBIND) {
+				t.Fatalf(`%s shape is not adoptable`, name)
+			}
+
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/api/v1/dns/engine", nil)
+			panel.handleDNSEngine(recorder, request)
+			if recorder.Code != http.StatusOK {
+				t.Fatalf(`GET status=%d body=%s`, recorder.Code, recorder.Body.String())
+			}
+			var wire struct {
+				EngineEpoch  int64   `json:"engine_epoch"`
+				ActiveEngine *string `json:"active_engine"`
+				State        string  `json:"state"`
+				Topology     string  `json:"topology"`
+				PairRole     string  `json:"pair_role"`
+				Engines      []struct {
+					ID        string `json:"id"`
+					Installed bool   `json:"installed"`
+					Running   bool   `json:"running"`
+					Managed   bool   `json:"managed"`
+					Status    string `json:"status"`
+				} `json:"engines"`
+			}
+			if err := json.Unmarshal(recorder.Body.Bytes(), &wire); err != nil {
+				t.Fatal(err)
+			}
+			if wire.ActiveEngine != nil || wire.EngineEpoch != 0 ||
+				wire.State != shape.wantState ||
+				wire.Topology != transport.DNSTopologyStandalone ||
+				wire.PairRole != "" {
+				t.Fatalf(`%s shape wire=%+v`, name, wire)
+			}
+			seen := map[string]bool{}
+			for _, engine := range wire.Engines {
+				seen[engine.ID] = true
+				switch engine.ID {
+				case string(transport.DNSEngineBIND):
+					if !engine.Installed || engine.Running != shape.running ||
+						engine.Managed ||
+						engine.Status != "unmanaged" {
+						t.Fatalf(`%s shape bind=%+v`, name, engine)
+					}
+				default:
+					if engine.Running {
+						t.Fatalf(`%s shape has a second engine serving: %+v`, name, engine)
+					}
+				}
+			}
+			if !seen[string(transport.DNSEngineBIND)] ||
+				!seen[string(transport.DNSEnginePowerDNS)] {
+				t.Fatalf(`%s shape engines=%+v`, name, wire.Engines)
+			}
+		})
+	}
+}
