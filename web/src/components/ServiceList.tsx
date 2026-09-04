@@ -11,7 +11,8 @@ import {
     useComponentOperation,
     type ManagedMailProfile,
 } from './ComponentOperation';
-import { useLocation, useNavigate } from '../router';
+import { Link, useLocation, useNavigate } from '../router';
+import { publishComponentCensus } from '../lib/componentCensus';
 
 // One installed copy of a runtime (B3b): php8.3-fpm is an instance, a Node
 // tree under /opt/celikpanel/runtimes is an instance. `unit` empty means the
@@ -345,6 +346,19 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [hostMutationReadiness, setHostMutationReadiness] = useState<HostMutationReadiness | null>(null);
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(false);
+    // Opening this page runs a host-wide check when the cache is missing or
+    // stale — this IS the inventory page, and looking is what it is for. But
+    // an automatic check that fails leaves the list saying "not checked yet"
+    // with no trace of the attempt, which reads as "nobody has pressed the
+    // button" rather than "the panel tried and could not reach the host".
+    // The distinction is the operator's next move, so the page keeps it.
+    // Bu sayfayı açmak, önbellek yoksa ya da bayatsa sistem geneli bir kontrol
+    // çalıştırır — burası envanter sayfasıdır, bakmak zaten işidir. Ama
+    // başarısız otomatik kontrol, listeyi denemeden hiç iz bırakmadan "henüz
+    // bakılmadı"da bırakır; bu da "kimse düğmeye basmadı" gibi okunur, oysa
+    // doğrusu "panel denedi ve makineye ulaşamadı"dır. Fark operatörün bir
+    // sonraki hamlesidir; sayfa onu saklar.
+    const [autoCheckFailed, setAutoCheckFailed] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
     const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
     const [profileTarget, setProfileTarget] = useState<ManagedMailProfile | null>(null);
@@ -390,6 +404,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             return true;
         }
         latestScannedAtRef.current = snapshot.scannedAt;
+        // The sidebar badge reads this. Publishing from the single place this
+        // page accepts a payload means the badge cannot disagree with the
+        // rows below it, and cannot lag them by a page load either.
+        // Kenar çubuğu rozeti bunu okur. Bu sayfanın yükü kabul ettiği tek
+        // yerden yayınlamak, rozetin altındaki satırlarla çelişmemesini ve
+        // onlardan bir sayfa yüklemesi geride kalmamasını sağlar.
+        publishComponentCensus(snapshot.services);
         setServices(snapshot.services);
         setProfiles(snapshot.profiles);
         setScannedAt(snapshot.scannedAt);
@@ -605,6 +626,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             // görünmesin diye ilk tarama bitene dek yükleyiciyi koru.
             if (snapshot.scannedAt !== null) setLoading(false);
             setScanning(true);
+            // A toast is the wrong home for this: it leaves the screen while
+            // the state it explains stays. The banner below outlives it.
+            // Bunun yeri bir toast değildir: açıkladığı durum kalırken kendisi
+            // ekrandan gider. Aşağıdaki şerit ondan uzun yaşar.
+            const failAutoCheck = (): false => {
+                setAutoCheckFailed(true);
+                return failVerification();
+            };
             try {
                 const scanResponse = await fetch(
                     `/api/v1/managed-services/scan?max_age_seconds=${AUTO_SCAN_MAX_AGE_SECONDS}`,
@@ -612,16 +641,16 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 );
                 if (!scanResponse.ok) {
                     showToast('error', apiErrorText(await readApiError(scanResponse), t, 'services.scanFailed'));
-                    return failVerification();
+                    return failAutoCheck();
                 }
                 const refreshed: unknown = await scanResponse.json();
                 if (!applySnapshot(refreshed, 'scan')) {
                     showToast('error', t('services.scanFailed'));
-                    return failVerification();
+                    return failAutoCheck();
                 }
             } catch {
                 showToast('error', t('services.scanFailed'));
-                return failVerification();
+                return failAutoCheck();
             } finally {
                 setScanning(false);
             }
@@ -636,6 +665,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
 
     const scan = async (): Promise<boolean> => {
         setScanning(true);
+        setAutoCheckFailed(false);
         try {
             const res = await fetch('/api/v1/managed-services/scan', {
                 method: 'POST',
@@ -1019,10 +1049,30 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     <RefreshCw className={`h-4 w-4 ${scanning ? 'animate-spin' : ''}`} />
                     {scanning ? t('services.scanning') : scannedAt ? t('services.rescan') : t('services.scanNow')}
                 </button>
-                <span className="text-xs text-fg-subtle">
-                    {scannedAt
-                        ? t('services.lastScan', { time: new Date(scannedAt).toLocaleString() })
-                        : t('services.neverScannedShort')}
+                {/* Two different sentences the operator must be able to
+                    tell apart: "I am looking at this server now" and "I am
+                    showing you what was last seen". While a check runs, the
+                    page says the first — and, when a cached snapshot is still
+                    on screen underneath, it says the second in the same
+                    breath, so the rows below are never mistaken for what the
+                    running check is about to find.
+                    Operatörün ayırt edebilmesi gereken iki ayrı cümle: "şu an
+                    bu sunucuya bakıyorum" ve "sana en son görüleni
+                    gösteriyorum". Kontrol koşarken sayfa birincisini söyler ve
+                    altta hâlâ önbellek görüntüsü duruyorsa ikincisini de aynı
+                    nefeste söyler; böylece aşağıdaki satırlar, koşan kontrolün
+                    birazdan bulacağı şeyle karıştırılmaz. */}
+                <span role="status" aria-live="polite" className="flex flex-wrap items-center gap-x-2 text-xs text-fg-subtle">
+                    {scanning ? (
+                        <>
+                            <span className="font-medium text-fg-muted">{t('services.checkingNow')}</span>
+                            {scannedAt && <span>{t('services.showingLastSeen')}</span>}
+                        </>
+                    ) : scannedAt ? (
+                        t('services.lastScan', { time: new Date(scannedAt).toLocaleString() })
+                    ) : (
+                        t('services.neverScannedShort')
+                    )}
                 </span>
                 {scannedAt && services.length > 0 && (
                     <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-x-5 gap-y-2 sm:w-auto">
@@ -1094,13 +1144,43 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             {!loading && hostNeverChecked && (
                 <section role="status" className="mb-4 flex flex-wrap items-start gap-3 rounded-xl border border-border bg-surface p-4 shadow-card">
                     <ScanSearch className="mt-0.5 h-5 w-5 shrink-0 text-fg-muted" />
-                    <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-fg">{t('services.notCheckedTitle')}</div>
+                    {/* The same rule as the setup journey's rows: `flex-1`
+                        alone bases this block at zero width, so at 390px the
+                        button kept the row on one line and squeezed the text
+                        to 122px - three lines of a title that fits on one. A
+                        real basis wraps the button onto its own line instead.
+                        Kurulum yolculuğu satırlarıyla aynı kural: tek başına
+                        `flex-1` bu bloğu sıfır genişlikte tabanlar; 390px'te
+                        düğme satırı tek satırda tutup metni 122px'e sıkıştırdı
+                        - bir satıra sığan başlık üç satır oldu. */}
+                    <div className="min-w-0 grow basis-56">
+                        {/* text-balance: at 390px this title left "yet" alone
+                            on its own line. Balanced wrapping splits it evenly
+                            instead of stranding the last word.
+                            text-balance: 390px'te bu başlık son sözcüğü tek
+                            başına alt satıra bırakıyordu. */}
+                        <div className="text-balance text-sm font-semibold text-fg">{t('services.notCheckedTitle')}</div>
                         <p className="mt-0.5 text-sm text-fg-muted">{t('services.notCheckedHint')}</p>
+                        {/* The fallback state, named. Reaching "not checked
+                            yet" because the automatic check FAILED is not the
+                            same as reaching it because no check has run, and
+                            only one of the two is fixed by pressing the button
+                            again. This is a real failure, so it may carry the
+                            warning colour the calm card around it may not.
+                            Geri düşülen durum, adıyla. "Henüz bakılmadı"ya
+                            otomatik kontrol BAŞARISIZ olduğu için gelmek, hiç
+                            kontrol koşmadığı için gelmekle aynı şey değildir.
+                            Bu gerçek bir hatadır; çevresindeki sakin kartın
+                            taşıyamayacağı uyarı rengini taşıyabilir. */}
+                        {autoCheckFailed && (
+                            <p className="mt-1.5 text-sm font-medium text-warning">{t('services.autoCheckFailed')}</p>
+                        )}
                     </div>
-                    <Button variant="primary" icon={ScanSearch} onClick={scan} disabled={pageControlsBusy}>
-                        {scanning ? t('services.scanning') : t('services.scanNow')}
-                    </Button>
+                    <div className="ml-auto shrink-0">
+                        <Button variant="primary" icon={ScanSearch} onClick={scan} disabled={pageControlsBusy}>
+                            {scanning ? t('services.scanning') : t('services.scanNow')}
+                        </Button>
+                    </div>
                 </section>
             )}
 
@@ -1201,7 +1281,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                         {group.map((s) => {
                                             const running = isRunning(s);
                                             return (
-                                                <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3.5 last:border-0 hover:bg-surface-2/40">
+                                                <li key={s.id} className="relative flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3.5 last:border-0 hover:bg-surface-2/40">
                                                     {/* Selective dimming, not block opacity: the name stays
                                                         readable in the light theme; state is carried by the
                                                         muted tone + status text + Install button.
@@ -1211,7 +1291,34 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     <div className="flex min-w-0 flex-1 basis-52 items-center gap-3">
                                                         <span className={`text-2xl leading-none ${s.is_installed ? '' : 'opacity-60 grayscale'}`}>{s.icon}</span>
                                                         <div className="min-w-0">
-                                                            <div className={`text-base font-medium ${s.is_installed ? 'text-fg' : 'text-fg-muted'}`}>{s.name}</div>
+                                                            {/* Every row is a door to its own page. Manage used
+                                                                to be the only one, and it is drawn for an
+                                                                INSTALLED non-tool alone — so on a fresh host,
+                                                                where nothing is installed and nothing has been
+                                                                checked, the page that explains each component's
+                                                                state was reachable only by typing its URL.
+                                                                The row itself is now a real link: it opens with
+                                                                a click, with the keyboard, and in a new tab on
+                                                                middle-click, and its accessible name is the
+                                                                component's. Manage stays the primary action
+                                                                where it exists — this is the row, not a second
+                                                                button competing with it.
+                                                                Her satır kendi sayfasının kapısıdır. Eskiden tek
+                                                                kapı Yönet'ti ve o yalnız KURULU, tool olmayan
+                                                                bileşene çizilir — yani hiçbir şeyin kurulu
+                                                                olmadığı, hiçbir şeye bakılmadığı taze makinede,
+                                                                her bileşenin durumunu anlatan sayfaya ancak
+                                                                adresi elle yazarak ulaşılabiliyordu. Artık
+                                                                satırın kendisi gerçek bir bağlantıdır: tıkla,
+                                                                klavyeyle ve orta tıkla yeni sekmede açılır;
+                                                                erişilebilir adı bileşenin adıdır. Yönet, var
+                                                                olduğu yerde birincil eylem olarak kalır. */}
+                                                            <Link
+                                                                to={`/services/${s.id}`}
+                                                                className={`rounded-md text-base font-medium outline-none after:absolute after:inset-0 after:content-[''] focus-visible:ring-2 focus-visible:ring-primary/40 ${s.is_installed ? 'text-fg' : 'text-fg-muted'}`}
+                                                            >
+                                                                {s.name}
+                                                            </Link>
                                                             <div className="truncate text-xs text-fg-subtle">{s.description}</div>
                                                         </div>
                                                     </div>
@@ -1275,7 +1382,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     <fieldset
                                                         disabled={mutationControlsDisabled}
                                                         aria-busy={pageControlsBusy}
-                                                        className="ml-auto flex min-w-0 items-center justify-end gap-1 border-0 p-0"
+                                                        /* relative: the row link stretches a pseudo-element
+                                                           across the whole row, so every real control has to
+                                                           sit above it or it would be unclickable.
+                                                           relative: satır bağlantısı sözde-elemanını bütün
+                                                           satıra yayar; gerçek denetimler onun üstünde
+                                                           durmalıdır, yoksa tıklanamazlar. */
+                                                        className="relative ml-auto flex min-w-0 items-center justify-end gap-1 border-0 p-0"
                                                     >
                                                     {!s.is_installed ? (
                                                     <>
@@ -2450,7 +2563,7 @@ function VersionDrawer({
         <fieldset
             disabled={mutationDisabled}
             aria-busy={mutationDisabled}
-            className="mt-1 w-full rounded-lg border border-border bg-surface-2/40 px-4 py-3"
+            className="relative mt-1 w-full rounded-lg border border-border bg-surface-2/40 px-4 py-3"
         >
             <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
                 {t('services.instancesTitle')}

@@ -5,6 +5,7 @@ import test from 'node:test';
 const dashboard = readFileSync(new URL('../src/components/Dashboard.tsx', import.meta.url), 'utf8');
 const operation = readFileSync(new URL('../src/components/ComponentOperation.tsx', import.meta.url), 'utf8');
 const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
+const census = readFileSync(new URL('../src/lib/componentCensus.ts', import.meta.url), 'utf8');
 const en = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
 const tr = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
 
@@ -32,7 +33,7 @@ test('system service truth never promotes tools into running daemons', () => {
   assert.match(dashboard, /serviceScanFresh && hostsContent && !hasClamAV/);
   assert.match(dashboard, /attention\.length > 0 && \(/);
   assert.doesNotMatch(dashboard, /t\('dashboard\.allGood'\)/);
-  assert.match(layout, /service\.is_installed\)\.length/);
+  assert.match(census, /observed\.filter\(\(row\) => row\.is_installed === true\)\.length/);
 });
 
 test('DNS and firewall journey steps use their independent backend truth axes', () => {
