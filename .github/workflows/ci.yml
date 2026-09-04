@@ -122,8 +122,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - shard: A through C, exact and non-uppercase
-            pattern: '^Test($|[A-C]|[^A-Z])'
+          - shard: A and B, exact and non-uppercase
+            pattern: '^Test($|[A-B]|[^A-Z])'
+            skip: ''
+          - shard: C, except the control-plane tests
+            pattern: '^TestC'
+            skip: '^TestControlPlane'
+          - shard: Control plane
+            pattern: '^TestControlPlane'
             skip: ''
           - shard: D, except every DNS test
             pattern: '^TestD'
@@ -167,18 +173,22 @@ jobs:
       - name: Verify exact Go toolchain
         run: test "$(go env GOVERSION)" = go1.26.5
       # cmd/panel has hundreds of SQLite-backed tests that run serially under
-      # the race detector. These ten matrix entries run concurrently, are
+      # the race detector. These fourteen matrix entries run concurrently, are
       # disjoint and cover every valid Test* suffix, including a future exact
-      # `Test` name or non-uppercase suffix. Two letter groups are split from
-      # within: the complement shard keeps the letter pattern and -skips the
-      # carved-out prefix, so each pair is exhaustive by construction. An
+      # `Test` name or non-uppercase suffix. Four groups are split from
+      # within: the complement shard keeps the broader pattern and -skips the
+      # carved-out prefix, so each set is exhaustive by construction. An
       # empty -skip '' skips nothing (verified on go1.26.5).
       #
       # Balance rule (R-020): the "Race-test panel boundaries" step of every
       # shard stays under half of the 8-minute ceiling as measured on the
-      # hosted runner. Before this split the D shard ran 421 s, 88 percent of
-      # the ceiling, on main. The ceiling is a hang detector, not a budget:
-      # split the shard, do not raise the ceiling.
+      # hosted runner. The ceiling is a hang detector, not a budget: split the
+      # shard, do not raise the ceiling. Measured history: the D shard ran
+      # 421 s before the first split; the run that measured every shard put
+      # D-except-DNS at 257 s and DNS-engine-and-zone at 248 s, and the split
+      # that answered those put A-through-C at 258 s, because the tests
+      # written that week landed there. Each split is a measurement, not a
+      # guess, and the next run measures it again.
       - name: Race-test panel boundaries
         run: >-
           go test -race -count=1 -timeout=8m ./cmd/panel
