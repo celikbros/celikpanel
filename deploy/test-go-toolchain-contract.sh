@@ -133,15 +133,27 @@ reject_literal "$CI" 'windows-portability:'
 reject_literal "$CI" 'freebsd-compile:'
 reject_literal "$CI" 'darwin-compile:'
 require_count "$CI" 'go test -race -count=1 -timeout=8m ./cmd/panel' 1
-require_count "$CI" 'pattern:' 7
+# Ten disjoint, exhaustive shards (R-020). A letter group split from within
+# keeps its pattern on the complement shard and -skips the carved-out prefix,
+# so the pair covers exactly what the single shard covered before.
+require_count "$CI" 'pattern:' 10
+require_count "$CI" 'skip:' 10
 require_literal "$CI" "pattern: '^Test($|[A-C]|[^A-Z])'"
 require_literal "$CI" "pattern: '^TestD'"
-require_literal "$CI" "pattern: '^Test[E-G]'"
-require_literal "$CI" "pattern: '^Test[H-M]'"
-require_literal "$CI" "pattern: '^Test[N-R]'"
+require_literal "$CI" "skip: '^TestDNS(Engine|Zone)'"
+require_literal "$CI" "pattern: '^TestDNS(Engine|Zone)'"
+require_literal "$CI" "pattern: '^Test[E-K]'"
+require_literal "$CI" "pattern: '^Test[L-M]'"
+require_literal "$CI" "pattern: '^Test[N-Q]'"
+require_literal "$CI" "pattern: '^TestR'"
 require_literal "$CI" "pattern: '^TestS'"
+require_literal "$CI" "skip: '^TestService'"
+require_literal "$CI" "pattern: '^TestService'"
 require_literal "$CI" "pattern: '^Test[T-Z]'"
-require_literal "$CI" "-run '\${{ matrix.pattern }}'"
+require_count "$CI" "skip: ''" 8
+require_literal "$CI" "-run '\${{ matrix.pattern }}' -skip '\${{ matrix.skip }}'"
+reject_literal "$CI" "pattern: '^Test[E-G]'"
+reject_literal "$CI" "pattern: '^Test[N-R]'"
 reject_literal "$CI" 'actions/setup-go@v5'
 reject_literal "$CI" 'go-version-file:'
 

@@ -517,6 +517,84 @@ func managedDNSEnginePackagesForProfile(
 	return packages, nil
 }
 
+// supersededDNSEngineOwnership reports whether an active ownership receipt is
+// simply an older epoch of the engine the committed state now names.
+//
+// Ownership receipts are per-engine files (dns-engine-ownership-<engine>.json)
+// and nothing retires them: publishDNSEngineSourceOwnership refreshes only the
+// engine being switched away from, so leaving an engine always strands its
+// receipt at that epoch. Returning to a previously used engine therefore always
+// finds one, and it can never equal the new state — the epoch alone differs by
+// construction.
+//
+// Such a receipt is still true provenance: this host did own this engine. The
+// committed publish that runs a few lines later overwrites it with the current
+// state, so accepting it here is the difference between "the switch completes
+// and the receipt is refreshed" and "the transaction is poisoned on an ordinary
+// operator action, on every subsequent boot, until someone deletes a JSON file
+// over SSH".
+//
+// A receipt at an equal or higher epoch is a genuine contradiction — two states
+// claiming one epoch, or a receipt from ahead of the committed journal — and
+// still refuses.
+//
+// supersededDNSEngineOwnership, bir aktif sahiplik makbuzunun yalnızca
+// committed durumun adlandırdığı motorun daha eski bir çağı olup olmadığını
+// bildirir. Makbuzlar motor başına dosyalardır ve hiçbir şey onları emekliye
+// ayırmaz: publishDNSEngineSourceOwnership yalnız ayrılınan motoru tazeler,
+// dolayısıyla bir motordan ayrılmak onun makbuzunu o çağda bırakır. Daha önce
+// kullanılmış bir motora dönmek her zaman böyle bir makbuz bulur ve bu makbuz
+// yeni durumla asla eşit olamaz — yapı gereği yalnızca çağ farklıdır.
+//
+// Böyle bir makbuz yine de gerçek bir köken kanıtıdır: bu sunucu bu motora
+// sahip olmuştu. Birkaç satır sonra çalışan committed yayım onu güncel durumla
+// üzerine yazar. Yani burada kabul etmek, "geçiş tamamlanır ve makbuz tazelenir"
+// ile "sıradan bir operatör hareketinde işlem zehirlenir ve biri SSH ile bir
+// JSON dosyasını silene kadar her açılışta yeniden zehirlenir" arasındaki
+// farktır.
+//
+// Eşit ya da daha yüksek çağdaki bir makbuz gerçek bir çelişkidir — tek çağı
+// iddia eden iki durum ya da committed günlüğün ilerisinden gelen bir makbuz —
+// ve reddedilmeye devam eder.
+func supersededDNSEngineOwnership(ownership, state dnsEngineStateReceipt) bool {
+	return ownership.Engine == state.Engine &&
+		ownership.EngineEpoch > 0 &&
+		ownership.EngineEpoch < state.EngineEpoch
+}
+
+// acceptableCommittedDNSEngineOwnership is the ONE place that decides whether an
+// existing active ownership receipt may stand for a committed transaction. Two
+// provenance checkers ask this question — the host path and the signed-update
+// path — and they must answer it identically: the signed-update walker runs on
+// every release via `agent --prepare-bind-generation-root-under-external-lock`,
+// so a rule that holds in one and not the other means an ordinary engine
+// switch-back succeeds and the host's next update dies instead.
+//
+// That divergence is the defect this project keeps reproducing: one repair
+// applied to one of two hand-written copies of the same job. Both callers go
+// through here so a third copy has nowhere to hide.
+//
+// acceptableCommittedDNSEngineOwnership, mevcut bir aktif sahiplik makbuzunun
+// committed bir işlem için geçerli sayılıp sayılmayacağına karar veren TEK
+// yerdir. Bu soruyu iki köken denetleyicisi soruyor — host yolu ve imzalı
+// güncelleme yolu — ve ikisi aynı cevabı vermek zorunda: imzalı güncelleme
+// yürüyücüsü her sürümde çalışır, dolayısıyla birinde geçerli olup diğerinde
+// olmayan bir kural, sıradan bir motor geri dönüşünün başarılı olup sunucunun
+// bir sonraki güncellemesinin ölmesi demektir.
+//
+// Bu ayrışma, bu projenin tekrar tekrar ürettiği kusurdur: aynı işin elle
+// yazılmış iki kopyasından yalnız birine uygulanan bir onarım. Her iki çağıran
+// da buradan geçer ki üçüncü bir kopyanın saklanacak yeri olmasın.
+func acceptableCommittedDNSEngineOwnership(ownership, state dnsEngineStateReceipt) error {
+	if validateDNSEngineState(ownership) != nil {
+		return errors.New("committed DNS engine ownership is malformed")
+	}
+	if ownership != state && !supersededDNSEngineOwnership(ownership, state) {
+		return errors.New("committed DNS engine ownership differs from its exact active state")
+	}
+	return nil
+}
+
 func exactCommittedDNSEngineProvenanceOnHost(
 	journal dnsEngineSwitchJournal,
 	profile hostplatform.Profile,
@@ -568,10 +646,10 @@ func exactCommittedDNSEngineProvenanceOnHost(
 		return dnsEngineStateReceipt{}, false, false,
 			fmt.Errorf("read committed DNS engine ownership: %w", err)
 	}
-	if ownershipExists &&
-		(validateDNSEngineState(ownership) != nil || ownership != state) {
-		return dnsEngineStateReceipt{}, false, false,
-			errors.New("committed DNS engine ownership differs from its exact active state")
+	if ownershipExists {
+		if err := acceptableCommittedDNSEngineOwnership(ownership, state); err != nil {
+			return dnsEngineStateReceipt{}, false, false, err
+		}
 	}
 	if journal.Mode != transport.DNSEngineSwitchModeAdopt {
 		if !installExists {
@@ -602,7 +680,26 @@ func exactFinalizedDNSEngineSwitchProvenanceOnHost(
 		return false, fmt.Errorf("read finalized DNS engine install ownership: %w", err)
 	}
 	if !stateExists {
-		if ownershipExists || installExists {
+		// An ownership receipt with no active state is a real contradiction.
+		// An install receipt alone is not: on a host that has never had an
+		// engine, a first install that failed after package install leaves
+		// exactly this behind, and nothing ever served. Calling it an error
+		// meant the abort proof failed, the ledger was poisoned, and the poison
+		// was recomputed from that same install receipt on every boot - the
+		// R-019 wedge, on a fresh host, on the very first DNS action (live on
+		// Arch, 3 September 2026; register R-033). It is residue: fail the job
+		// cleanly and let the retry adopt the installed packages.
+		//
+		// Etkin durumu olmayan sahiplik makbuzu gerçek bir çelişkidir. Tek
+		// başına kurulum makbuzu değildir: hiç motoru olmamış bir sunucuda
+		// paket kurulumundan sonra düşen ilk kurulum geride tam bunu bırakır
+		// ve hiçbir şey hizmet vermemiştir. Buna hata demek iptal kanıtını
+		// düşürüyor, defteri zehirliyor ve zehir her açılışta aynı kurulum
+		// makbuzundan yeniden hesaplanıyordu - R-019 tıkanması, taze
+		// sunucuda, ilk DNS hareketinde (3 Eylül 2026'da Arch'ta canlı; defter
+		// R-033). Bu kalıntıdır: işi temizce düşür, yeniden deneme kurulu
+		// paketleri devralsın.
+		if ownershipExists {
 			return false, errors.New(
 				"finalized DNS engine provenance is inconsistent without active state",
 			)
@@ -639,6 +736,75 @@ func exactFinalizedDNSEngineSwitchProvenanceOnHost(
 			)
 		}
 		if installExists {
+			// An install receipt on a target that owns nothing is residue, not
+			// ambiguity.
+			//
+			// Everything above has already proven the source side intact: a
+			// valid active state, an ownership receipt for the ACTIVE engine,
+			// and the two exactly equal. If the target additionally holds no
+			// ownership receipt of its own, then the interrupted switch got as
+			// far as installing packages and no further — authority never
+			// moved, and there is nothing to roll back. Reporting that as an
+			// error made startup recovery poison the mutation manager, and
+			// because the poison is recomputed from unchanged durable state,
+			// every subsequent boot reproduced it: a host that could serve DNS
+			// perfectly well but could never accept another mutation, with no
+			// path out short of a rebuild (risk R-019).
+			//
+			// A target that DOES hold an ownership receipt while a different
+			// engine is active is the genuinely ambiguous half-finished
+			// handover — the Boston shape — and keeps failing closed.
+			//
+			// Sahibi olmadığı hâlde hedefte duran bir kurulum makbuzu
+			// belirsizlik değil kalıntıdır.
+			//
+			// Yukarıdaki her şey kaynak tarafın sağlam olduğunu zaten
+			// kanıtladı: geçerli bir aktif durum, AKTİF motor için bir sahiplik
+			// makbuzu ve ikisinin birebir eşitliği. Hedefin ayrıca kendine ait
+			// bir sahiplik makbuzu yoksa, kesintiye uğrayan geçiş yalnızca
+			// paketleri kurmaya kadar gelmiştir — yetki hiç el değiştirmemiştir
+			// ve geri alınacak bir şey yoktur. Bunu hata olarak bildirmek,
+			// başlangıç kurtarmasının mutasyon yöneticisini zehirlemesine yol
+			// açıyordu; zehir değişmemiş kalıcı durumdan yeniden hesaplandığı
+			// için de sonraki her açılış onu yeniden üretiyordu: DNS'i gayet iyi
+			// sunabilen ama bir daha hiçbir mutasyonu kabul edemeyen, yeniden
+			// kurmaktan başka çıkışı olmayan bir sunucu (risk R-019).
+			//
+			// Başka bir motor etkinken hedefin sahiplik makbuzu DA taşıması,
+			// gerçekten belirsiz olan yarım kalmış devirdir — Boston biçimi — ve
+			// kapalı arıza vermeyi sürdürür.
+			//
+			// One more distinction, learned on the same host shape (S-8
+			// Boston, register R-032). Ownership receipts are per-engine
+			// files and nothing retires them (see
+			// supersededDNSEngineOwnership): a host that ever ran the target
+			// engine still holds its receipt from that older epoch. On the
+			// BIND -> PowerDNS -> BIND path that stranded receipt sat beside
+			// the fresh install receipt and was read as the Boston shape, so
+			// an interrupted switch back to an engine the host had used before
+			// poisoned the ledger on an ordinary operator action. The epoch
+			// tells the two apart by construction: a target receipt OLDER than
+			// the active state is history; a receipt at the same or a newer
+			// epoch is a receipt from ahead of the committed state and stays
+			// ambiguous.
+			//
+			// Aynı sunucu biçiminde öğrenilen bir ayrım daha (S-8 Boston,
+			// defter R-032). Sahiplik makbuzları motor başına dosyalardır ve
+			// hiçbir şey onları emekliye ayırmaz (bkz.
+			// supersededDNSEngineOwnership): hedef motoru bir zamanlar
+			// çalıştırmış bir sunucu, onun o eski çağdan makbuzunu hâlâ tutar.
+			// BIND -> PowerDNS -> BIND yolunda o terk edilmiş makbuz taze
+			// kurulum makbuzunun yanında durdu ve Boston biçimi sanıldı;
+			// böylece daha önce kullanılmış bir motora geri dönen kesintili
+			// geçiş, sıradan bir operatör hareketinde defteri zehirledi. Çağ
+			// ikisini yapı gereği ayırır: etkin durumdan ESKİ bir hedef makbuzu
+			// tarihtir; aynı ya da daha yeni çağdaki makbuz committed durumun
+			// ilerisinden gelen bir makbuzdur ve belirsiz kalır.
+			historicalOwnership := ownershipExists &&
+				ownership.EngineEpoch < state.EngineEpoch
+			if state.Engine != target && (!ownershipExists || historicalOwnership) {
+				return false, nil
+			}
 			return false, errors.New(
 				"journal-free DNS engine target retains transitional install ownership",
 			)

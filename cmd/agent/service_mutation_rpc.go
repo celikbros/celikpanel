@@ -740,6 +740,40 @@ func (m *serviceMutationManager) healthErrorLocked() error {
 	return errors.Join(errServiceMutationManagerPoisoned, m.poisoned)
 }
 
+// agentMutationHold reports, as a stable code, why durable mutations are being
+// refused right now — or "" when they are accepted. It is the read-only view a
+// status probe needs, and it deliberately returns a code rather than the
+// underlying error: the cause names files, request identities and host state,
+// and none of that belongs on a wire the panel renders.
+//
+// A manager that could not be constructed at all and one that was poisoned mid
+// flight are different diagnoses. The first means nothing was ever recorded;
+// the second means something may have been published and cannot be proven, which
+// is the state a half-finished handover leaves.
+//
+// agentMutationHold, kalıcı mutasyonların şu anda neden reddedildiğini kararlı
+// bir kodla bildirir; kabul ediliyorsa "" döner. Bir durum yoklamasının ihtiyaç
+// duyduğu salt-okuma görünümüdür ve bilerek altta yatan hatayı değil bir kod
+// döndürür: sebep dosya adları, istek kimlikleri ve host durumu içerir; bunların
+// hiçbiri panelin gösterdiği bir telde yeri olmayan şeylerdir.
+//
+// Hiç kurulamamış bir yönetici ile uçuş sırasında zehirlenmiş bir yönetici
+// farklı teşhislerdir. Birincisi hiçbir şeyin kaydedilmediği, ikincisi bir şeyin
+// yayımlanmış olabileceği ve kanıtlanamadığı anlamına gelir — yarım kalmış bir
+// devralmanın bıraktığı durum budur.
+func agentMutationHold() string {
+	manager := loadedAgentServiceMutationManager()
+	if manager == nil {
+		return transport.MutationHoldLedgerUnavailable
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if manager.healthErrorLocked() != nil {
+		return transport.MutationHoldLedgerAmbiguous
+	}
+	return ""
+}
+
 // Once publication may have happened, memory can no longer be rolled back to
 // a provably matching state. Cancel execution but deliberately retain the host
 // lock and active runtime so no second mutation can begin in this process.
@@ -1520,6 +1554,31 @@ func (m *serviceMutationManager) heartbeat(
 			"protect committed DNS engine switch from heartbeat mutation: %w", err,
 		))
 	} else if protected {
+		// A protected heartbeat still renews the lease. The heartbeat exists to
+		// prove the panel is alive, and the finalizing interval does not change
+		// that; what it must not do is touch the phase or race the journal, and
+		// it does neither here. Returning without renewal let any package
+		// install longer than the 20-second lease expire mid-switch, after
+		// which the worker-clear write advanced UpdatedAt past LeaseExpiresAt
+		// and the next strict proof poisoned the manager (risk R-017).
+		// Korumalı kalp atışı da kiralamayı yeniler. Kalp atışı panelin canlı
+		// olduğunu kanıtlamak için vardır ve sonlanma aralığı bunu değiştirmez;
+		// yapmaması gereken, faza dokunmak ya da günlükle yarışmaktır — burada
+		// ikisini de yapmaz. Yenilemeden dönmek, 20 saniyelik kiralamadan uzun
+		// süren her paket kurulumunun geçişin ortasında kiralamayı düşürmesine
+		// izin veriyordu; ardından işçi temizliği UpdatedAt değerini
+		// LeaseExpiresAt ötesine taşıyor ve bir sonraki katı kanıt yöneticiyi
+		// zehirliyordu (risk R-017).
+		before := cloneServiceMutationLedger(m.ledger)
+		now := m.now()
+		if !now.Before(runtime.job.DeadlineAt) {
+			return cloneServiceMutationJob(runtime.job), errors.New("service mutation deadline has expired")
+		}
+		runtime.job.UpdatedAt = now
+		runtime.job.LeaseExpiresAt = minMutationTime(now.Add(m.leaseDuration), runtime.job.DeadlineAt)
+		if err := m.persistLedgerMutationLocked(before); err != nil {
+			return cloneServiceMutationJob(runtime.job), err
+		}
 		return cloneServiceMutationJob(runtime.job), nil
 	}
 	if runtime.vpnPeerSyncPublishedPhase != "" {
@@ -2286,13 +2345,37 @@ func (a *Agent) ServiceMutationStatus(
 	response *ServiceMutationResponse,
 ) error {
 	manager, managerErr := agentServiceMutationManager()
-	if managerErr != nil {
-		if setHostMutationBusyResponse(response, managerErr) {
-			return nil
-		}
-		return managerErr
+	if managerErr != nil && setHostMutationBusyResponse(response, managerErr) {
+		return nil
 	}
-	response.Job = manager.status(strings.TrimSpace(request.RequestID))
+	// A status probe is read-only and must answer even when the ledger could
+	// not be brought up or was poisoned at startup. Failing the RPC here
+	// turned every such probe into "agent status RPC failed" with nothing to
+	// read (S-7 T5): the caller could not tell a dead agent from one that is
+	// serving and refusing. The hold code is exactly the read-only view that
+	// caller needs, and it names files and request identities to nobody.
+	// A manager that came up poisoned still reports its job; a manager that
+	// never came up reports no job and the ledger_unavailable hold.
+	//
+	// Durum sondası salt-okunurdur ve defter ayağa kalkamadığında ya da
+	// başlangıçta zehirlendiğinde de yanıt vermelidir. RPC'yi burada
+	// düşürmek, her böyle sondayı okunacak hiçbir şeyi olmayan "agent status
+	// RPC failed" hatasına çeviriyordu (S-7 T5): çağıran, ölü bir agent ile
+	// hizmet verip reddeden bir agent'ı ayırt edemiyordu. Tutulma kodu tam da
+	// o çağıranın ihtiyaç duyduğu salt-okunur görünümdür ve kimseye dosya ya
+	// da istek kimliği söylemez. Zehirli kalkan yönetici işini yine bildirir;
+	// hiç kalkamayan yönetici iş bildirmez ve ledger_unavailable tutulmasını
+	// döner.
+	if manager != nil {
+		response.Job = manager.status(strings.TrimSpace(request.RequestID))
+	}
+	// Report the hold with the job. status() deliberately does not fail on a
+	// held manager — a caller still deserves to see the job — but it must not
+	// let that caller mistake a frozen job for a live one.
+	// Tutulmayı işle birlikte bildir. status(), tutulan bir yöneticide bilerek
+	// hata vermez — çağıran işi yine de görmeyi hak eder — ama o çağıranın
+	// donmuş bir işi canlı sanmasına da izin vermemelidir.
+	response.MutationHold = agentMutationHold()
 	return nil
 }
 

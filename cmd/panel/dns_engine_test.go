@@ -29,6 +29,7 @@ type dnsEngineTestAgent struct {
 	onReadiness                func(int)
 	readinessAfterSwitchError  string
 	dnssec                     bool
+	dnssecUnavailable          bool
 	dnssecCalls                int
 	switchCalls                int
 	switchRequests             []transport.SwitchDNSEngineV1Request
@@ -48,6 +49,14 @@ type dnsEngineTestAgent struct {
 	rollbackEvidenceRequests   []transport.DNSEngineRollbackEvidenceRequest
 	onRollbackEvidence         func(int)
 	mutationStatusCalls        int
+	configurePDNSCalls         int
+	configurePDNSRequests      []transport.ServiceMutationRequest
+	configurePDNSError         string
+	syncV3Requests             []transport.SyncDNSZoneV3Request
+	syncV3Errors               map[string]string
+	events                     []string
+	onConfigurePDNS            func()
+	onSyncV3                   func(transport.SyncDNSZoneV3Request)
 }
 
 func TestPresentDNSEngineOperationSnapshotFieldsAndTimestamps(t *testing.T) {
@@ -520,6 +529,12 @@ func (agent *dnsEngineTestAgent) DNSSECStatus(
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 	agent.dnssecCalls++
+	if agent.dnssecUnavailable {
+		// The real agent's answer whenever PowerDNS is not the active engine.
+		// Gerçek agent'ın PowerDNS etkin motor olmadığında verdiği yanıt.
+		response.Error = "DNSSEC status is unavailable because PowerDNS is not the active DNS engine"
+		return nil
+	}
 	response.Secured = agent.dnssec
 	if agent.dnssec {
 		response.DS = []string{"12345 13 2 AABBCC"}
@@ -537,6 +552,7 @@ func (agent *dnsEngineTestAgent) SwitchDNSEngineV1(
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 	agent.switchCalls++
+	agent.events = append(agent.events, "switch")
 	copy := *request
 	copy.Zones = append([]transport.DNSEngineSwitchZoneSnapshot(nil), request.Zones...)
 	agent.switchRequests = append(agent.switchRequests, copy)
@@ -564,6 +580,59 @@ func (agent *dnsEngineTestAgent) SwitchDNSEngineV1(
 	response.ActiveEngine = request.TargetEngine
 	response.ActiveEpoch = request.TargetEpoch
 	response.AppliedZones = len(request.Zones)
+	return nil
+}
+
+func (agent *dnsEngineTestAgent) ConfigurePowerDNSSQLite(
+	request *transport.ServiceMutationRequest,
+	response *transport.SyncDNSZoneResponse,
+) error {
+	agent.mu.Lock()
+	agent.configurePDNSCalls++
+	agent.events = append(agent.events, "configure")
+	agent.configurePDNSRequests = append(
+		agent.configurePDNSRequests, *request,
+	)
+	hook := agent.onConfigurePDNS
+	if agent.configurePDNSError != "" {
+		response.Error = agent.configurePDNSError
+		agent.mu.Unlock()
+		if hook != nil {
+			hook()
+		}
+		return nil
+	}
+	response.Synced = true
+	agent.mu.Unlock()
+	if hook != nil {
+		hook()
+	}
+	return nil
+}
+
+func (agent *dnsEngineTestAgent) SyncDNSZoneV3(
+	request *transport.SyncDNSZoneV3Request,
+	response *transport.SyncDNSZoneV3Response,
+) error {
+	copy := *request
+	copy.Records = append([]transport.ZoneRecord(nil), request.Records...)
+	agent.mu.Lock()
+	agent.syncV3Requests = append(agent.syncV3Requests, copy)
+	agent.events = append(agent.events, "sync:"+request.Domain)
+	detail := agent.syncV3Errors[request.Domain]
+	hook := agent.onSyncV3
+	agent.mu.Unlock()
+	if hook != nil {
+		hook(copy)
+	}
+	if detail != "" {
+		response.Error = detail
+		return nil
+	}
+	response.Synced = true
+	response.Engine = request.Engine
+	response.EngineEpoch = request.EngineEpoch
+	response.AppliedGeneration = request.DesiredGeneration
 	return nil
 }
 
@@ -1808,6 +1877,17 @@ func TestDNSEnginePairedBINDPreviewAndDNSSECBlockerWithoutMutation(t *testing.T)
 			}
 			agent := newDNSEngineTestAgent()
 			agent.dnssec = test.dnssec
+			if test.dnssec {
+				// A signed zone can only exist where a PowerDNS that signed it
+				// exists: the legacy, not-yet-adopted shape. A host with no
+				// PowerDNS at all is not probed (R-029, third layer).
+				// İmzalı bölge ancak onu imzalayan bir PowerDNS'in olduğu yerde
+				// olabilir: eski, henüz devralınmamış biçim. Hiç PowerDNS'i
+				// olmayan sunucu sorgulanmaz (R-029, üçüncü kat).
+				pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+				pdns.Installed = true
+				agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+			}
 			attachDNSEngineTestAgent(t, panel, agent)
 			preview, recorder := requestDNSEnginePreview(
 				t, panel, transport.DNSEngineBIND, nil, 0,
@@ -2181,7 +2261,7 @@ func TestDNSEngineUnresolvedRuntimePresentationRequiresExplicitAdopt(t *testing.
 		transport.DNSEnginePowerDNS: {Engine: transport.DNSEnginePowerDNS},
 		transport.DNSEngineBIND:     {Engine: transport.DNSEngineBIND},
 	}
-	status, entries := deriveDNSEnginePresentation(state, fresh, nil)
+	status, entries := deriveDNSEnginePresentation(state, fresh, nil, "")
 	if status != dnsEngineStateUnconfigured || entries[0].Status != "available" {
 		t.Fatalf("fresh presentation=%s %+v", status, entries)
 	}
@@ -2190,7 +2270,7 @@ func TestDNSEngineUnresolvedRuntimePresentationRequiresExplicitAdopt(t *testing.
 		Engine:    transport.DNSEnginePowerDNS,
 		Installed: true, Running: true, Managed: true,
 	}
-	status, entries = deriveDNSEnginePresentation(state, pdnsManaged, nil)
+	status, entries = deriveDNSEnginePresentation(state, pdnsManaged, nil, "")
 	if status != dnsEngineStateUnmanaged ||
 		entries[0].Status != "unmanaged" {
 		t.Fatalf("legacy managed PDNS was implicitly adopted: %s %+v", status, entries)
@@ -2206,7 +2286,7 @@ func TestDNSEngineUnresolvedRuntimePresentationRequiresExplicitAdopt(t *testing.
 			Installed: true, Running: true, Managed: false,
 		},
 	}
-	status, _ = deriveDNSEnginePresentation(state, both, nil)
+	status, _ = deriveDNSEnginePresentation(state, both, nil, "")
 	if status != dnsEngineStateConflict {
 		t.Fatalf("two running backends state=%s", status)
 	}
@@ -2296,6 +2376,436 @@ func TestDNSEngineManagedPDNSRequiresAndCompletesExplicitAdopt(t *testing.T) {
 	}
 }
 
+func TestDNSEngineStandaloneAdoptionNormalizesAllExternalPDNSZones(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, transport.DNSTopologyStandalone)
+	for _, zone := range []string{
+		"alpha-external.example", "middle-external.example", "zeta-external.example",
+	} {
+		seedStrictDNSZone(t, panel, zone)
+	}
+	agent := newDNSEngineTestAgent()
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	var (
+		lockObservationMu sync.Mutex
+		unlockedStages    []string
+	)
+	observeLocks := func(stage string) {
+		lockObservationMu.Lock()
+		defer lockObservationMu.Unlock()
+		if panel.serviceMutationMu.TryLock() {
+			panel.serviceMutationMu.Unlock()
+			unlockedStages = append(unlockedStages, stage+":serviceMutation")
+		}
+		if panel.dnsTopologyMu.TryLock() {
+			panel.dnsTopologyMu.Unlock()
+			unlockedStages = append(unlockedStages, stage+":dnsTopology")
+		}
+		if dnsPublicationMu.TryLock() {
+			dnsPublicationMu.Unlock()
+			unlockedStages = append(unlockedStages, stage+":dnsPublication")
+		}
+	}
+	agent.onConfigurePDNS = func() { observeLocks("configure") }
+	agent.onSyncV3 = func(request transport.SyncDNSZoneV3Request) {
+		observeLocks("sync:" + request.Domain)
+	}
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 0,
+	)
+	if recorder.Code != http.StatusOK || preview.Action != "adopt" ||
+		preview.ZoneCount != 3 || len(preview.Blockers) != 0 {
+		t.Fatalf("external adoption preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("e", 32), transport.DNSEnginePowerDNS,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if commit.Code != http.StatusOK {
+		t.Fatalf("external adoption status=%d body=%s",
+			commit.Code, commit.Body.String())
+	}
+
+	agent.mu.Lock()
+	configureCalls := agent.configurePDNSCalls
+	configureRequests := append(
+		[]transport.ServiceMutationRequest(nil), agent.configurePDNSRequests...,
+	)
+	syncRequests := append(
+		[]transport.SyncDNSZoneV3Request(nil), agent.syncV3Requests...,
+	)
+	events := append([]string(nil), agent.events...)
+	agent.mu.Unlock()
+	if configureCalls != 1 || len(configureRequests) != 1 ||
+		!validServiceOperationID(configureRequests[0].MutationRequestID) ||
+		!validServiceOperationID(configureRequests[0].MutationOwnerID) {
+		t.Fatalf("configure calls=%d requests=%+v", configureCalls, configureRequests)
+	}
+	var domains []string
+	for _, request := range syncRequests {
+		domains = append(domains, request.Domain)
+		if request.Engine != transport.DNSEnginePowerDNS ||
+			request.EngineEpoch != 1 ||
+			!validServiceOperationID(request.MutationRequestID) ||
+			!validServiceOperationID(request.MutationOwnerID) {
+			t.Fatalf("unbound external-zone normalization request=%+v", request)
+		}
+	}
+	if want := []string{
+		"alpha-external.example", "middle-external.example", "zeta-external.example",
+	}; !slices.Equal(domains, want) {
+		t.Fatalf("normalized domains=%v, want %v", domains, want)
+	}
+	if want := []string{
+		"switch", "configure", "sync:alpha-external.example",
+		"sync:middle-external.example", "sync:zeta-external.example",
+	}; !slices.Equal(events, want) {
+		t.Fatalf("adoption call order=%v, want %v", events, want)
+	}
+	lockObservationMu.Lock()
+	defer lockObservationMu.Unlock()
+	if len(unlockedStages) != 0 {
+		t.Fatalf(
+			"serviceMutation -> dnsTopology -> dnsPublication lock set was incomplete: %v",
+			unlockedStages,
+		)
+	}
+	var applications int
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT count(*) FROM dns_zone_engine_applications
+		WHERE engine = 'pdns' AND engine_epoch = 1
+	`).Scan(&applications); err != nil {
+		t.Fatal(err)
+	}
+	if applications != 3 {
+		t.Fatalf("normalized applications=%d, want 3", applications)
+	}
+	marker, err := readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || marker != nil {
+		t.Fatalf("completed normalization marker=%+v err=%v", marker, err)
+	}
+}
+
+func TestDNSEngineAdoptionZoneFailureReplaysWithoutSecondSwitchOrConfigure(
+	t *testing.T,
+) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, transport.DNSTopologyStandalone)
+	for _, zone := range []string{
+		"alpha-replay.example", "middle-replay.example", "zeta-replay.example",
+	} {
+		seedStrictDNSZone(t, panel, zone)
+	}
+	agent := newDNSEngineTestAgent()
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	agent.syncV3Errors = map[string]string{
+		"middle-replay.example": "injected external zone normalization failure",
+	}
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 0,
+	)
+	if recorder.Code != http.StatusOK || preview.Action != "adopt" {
+		t.Fatalf("adoption preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	requestID := strings.Repeat("d", 32)
+	first := commitDNSEngineSwitch(
+		t, panel, requestID, transport.DNSEnginePowerDNS,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if first.Code != http.StatusBadGateway ||
+		!strings.Contains(first.Body.String(), errCodeDNSPublicationFailed) {
+		t.Fatalf("partial normalization status=%d body=%s",
+			first.Code, first.Body.String())
+	}
+	marker, err := readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || marker == nil ||
+		marker.Phase != dnsEngineOperationPostCommit ||
+		!marker.ConfigurePDNSComplete ||
+		!validServiceOperationID(marker.ConfigurePDNSRequestID) ||
+		!validServiceOperationID(marker.ConfigurePDNSOwnerID) {
+		t.Fatalf("partial normalization marker=%+v err=%v", marker, err)
+	}
+	agent.mu.Lock()
+	if agent.switchCalls != 1 || agent.configurePDNSCalls != 1 ||
+		len(agent.syncV3Requests) != 3 {
+		agent.mu.Unlock()
+		t.Fatalf("first attempt switch=%d configure=%d sync=%d",
+			agent.switchCalls, agent.configurePDNSCalls, len(agent.syncV3Requests))
+	}
+	delete(agent.syncV3Errors, "middle-replay.example")
+	agent.mu.Unlock()
+
+	replay := commitDNSEngineSwitch(
+		t, panel, requestID, transport.DNSEnginePowerDNS,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if replay.Code != http.StatusOK {
+		t.Fatalf("normalization replay status=%d body=%s",
+			replay.Code, replay.Body.String())
+	}
+	agent.mu.Lock()
+	switchCalls := agent.switchCalls
+	configureCalls := agent.configurePDNSCalls
+	syncCalls := len(agent.syncV3Requests)
+	agent.mu.Unlock()
+	if switchCalls != 1 || configureCalls != 1 || syncCalls != 6 {
+		t.Fatalf("replay switch=%d configure=%d sync=%d, want 1/1/6",
+			switchCalls, configureCalls, syncCalls)
+	}
+	marker, err = readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || marker != nil {
+		t.Fatalf("successful replay marker=%+v err=%v", marker, err)
+	}
+}
+
+func TestDNSEngineAdoptionRestartAcceptsOnlyExactConfigureChildReceipt(
+	t *testing.T,
+) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, transport.DNSTopologyStandalone)
+	seedStrictDNSZone(t, panel, "restart-external.example")
+	agent := newDNSEngineTestAgent()
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	ctx := context.Background()
+	state, err := readDNSEngineDBState(ctx, panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := panel.buildDNSEngineManifest(
+		ctx, state, transport.DNSEnginePowerDNS, "adopt",
+		transport.DNSTopologyStandalone,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := panel.persistDNSEngineSwitch(
+		ctx,
+		dnsEngineSwitchRequest{
+			RequestID:        strings.Repeat("a", 32),
+			TargetEngine:     transport.DNSEnginePowerDNS,
+			ExpectedSource:   nullableDNSEngine{Set: true},
+			ExpectedRevision: state.Revision,
+		},
+		strings.Repeat("b", 32), strings.Repeat("c", 32),
+		"adopt", manifest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := panel.executeDNSEngineSwitch(ctx, persisted, manifest); err != nil {
+		t.Fatal(err)
+	}
+	marker, err := panel.ensureAdoptionConfigureIdentity(ctx, persisted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if marker.ConfigurePDNSComplete ||
+		!validServiceOperationID(marker.ConfigurePDNSRequestID) ||
+		!validServiceOperationID(marker.ConfigurePDNSOwnerID) {
+		t.Fatalf("persisted configure child=%+v", marker)
+	}
+
+	wrong := &agentMutationJob{
+		RequestID: marker.ConfigurePDNSRequestID,
+		OwnerID:   strings.Repeat("f", 32),
+		Kind:      "pdns_configure", Target: "pdns",
+		Status: agentMutationSucceeded, Phase: "completed", Attempt: 1,
+	}
+	setDNSEngineMutationJobForTest(t, agent, wrong, false)
+	panel.serviceMutationMu.Lock()
+	panel.dnsTopologyMu.Lock()
+	dnsPublicationMu.Lock()
+	wrongErr := panel.configureAdoptedPowerDNSLocked(ctx, persisted)
+	dnsPublicationMu.Unlock()
+	panel.dnsTopologyMu.Unlock()
+	panel.serviceMutationMu.Unlock()
+	if !errors.Is(wrongErr, errAgentMutationIdentityMismatch) {
+		t.Fatalf("wrong configure child error=%v, want identity mismatch", wrongErr)
+	}
+	handled, err := panel.recoverDNSEngineSwitchLocked(ctx, nil)
+	if err != nil || !handled {
+		t.Fatalf("wrong-child recovery handled=%v err=%v", handled, err)
+	}
+	retained, err := readDNSEngineOperationMarker(ctx, panel.db.GetDB())
+	if err != nil || retained == nil || retained.ConfigurePDNSComplete {
+		t.Fatalf("wrong child cleared/advanced marker=%+v err=%v", retained, err)
+	}
+
+	exact := *wrong
+	exact.OwnerID = marker.ConfigurePDNSOwnerID
+	setDNSEngineMutationJobForTest(t, agent, &exact, false)
+	handled, err = panel.recoverDNSEngineSwitchLocked(ctx, nil)
+	if err != nil || !handled {
+		t.Fatalf("exact-child recovery handled=%v err=%v", handled, err)
+	}
+	finalMarker, err := readDNSEngineOperationMarker(ctx, panel.db.GetDB())
+	if err != nil || finalMarker != nil {
+		t.Fatalf("exact child did not converge marker=%+v err=%v", finalMarker, err)
+	}
+	agent.mu.Lock()
+	switchCalls := agent.switchCalls
+	configureCalls := agent.configurePDNSCalls
+	syncRequests := append(
+		[]transport.SyncDNSZoneV3Request(nil), agent.syncV3Requests...,
+	)
+	agent.mu.Unlock()
+	if switchCalls != 1 || configureCalls != 0 ||
+		len(syncRequests) != 1 ||
+		syncRequests[0].Domain != "restart-external.example" {
+		t.Fatalf("status recovery switch=%d configure=%d sync=%+v",
+			switchCalls, configureCalls, syncRequests)
+	}
+}
+
+func TestDNSEngineAdoptionRestartRecoversOnlyExactV3ZoneLease(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, transport.DNSTopologyStandalone)
+	zone := "lease-restart-external.example"
+	seedStrictDNSZone(t, panel, zone)
+	agent := newDNSEngineTestAgent()
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	ctx := context.Background()
+	state, err := readDNSEngineDBState(ctx, panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := panel.buildDNSEngineManifest(
+		ctx, state, transport.DNSEnginePowerDNS, "adopt",
+		transport.DNSTopologyStandalone,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := panel.persistDNSEngineSwitch(
+		ctx,
+		dnsEngineSwitchRequest{
+			RequestID:        strings.Repeat("1", 32),
+			TargetEngine:     transport.DNSEnginePowerDNS,
+			ExpectedSource:   nullableDNSEngine{Set: true},
+			ExpectedRevision: state.Revision,
+		},
+		strings.Repeat("2", 32), strings.Repeat("3", 32),
+		"adopt", manifest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := panel.executeDNSEngineSwitch(ctx, persisted, manifest); err != nil {
+		t.Fatal(err)
+	}
+	marker, err := panel.ensureAdoptionConfigureIdentity(ctx, persisted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := panel.markAdoptionConfigureComplete(
+		ctx, persisted,
+		marker.ConfigurePDNSRequestID, marker.ConfigurePDNSOwnerID,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	panel.serviceMutationMu.Lock()
+	panel.dnsTopologyMu.Lock()
+	dnsPublicationMu.Lock()
+	plan, err := panel.prepareDNSZoneSyncV3Plan(
+		ctx, zone, false,
+		dnsPublisherIdentity{
+			Engine: transport.DNSEnginePowerDNS,
+			Epoch:  persisted.TargetEpoch,
+		},
+	)
+	dnsPublicationMu.Unlock()
+	panel.dnsTopologyMu.Unlock()
+	panel.serviceMutationMu.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := plan.Lease.identity()
+	publishedPhase, required, err := payloadBoundMutationPublishedPhase(identity)
+	if err != nil || !required {
+		t.Fatalf("V3 published phase=%q required=%v err=%v",
+			publishedPhase, required, err)
+	}
+	terminal := &agentMutationJob{
+		RequestID: identity.RequestID, OwnerID: identity.OwnerID,
+		Kind: identity.Kind, Target: identity.Target,
+		PackageName: identity.PackageName,
+		Status:      agentMutationSucceeded, Phase: publishedPhase, Attempt: 1,
+	}
+	setDNSEngineMutationJobForTest(t, agent, terminal, false)
+
+	wrongGlobal := *terminal
+	wrongGlobal.OwnerID = strings.Repeat("f", 32)
+	wrongGlobal.Status = agentMutationRunning
+	wrongGlobal.Phase = "starting"
+	handled, err := panel.recoverDNSEngineSwitchLocked(ctx, &wrongGlobal)
+	if err == nil || !handled {
+		t.Fatalf("wrong V3 global child handled=%v err=%v", handled, err)
+	}
+	retained, err := readDNSEngineOperationMarker(ctx, panel.db.GetDB())
+	if err != nil || retained == nil || !retained.ConfigurePDNSComplete {
+		t.Fatalf("wrong V3 child changed marker=%+v err=%v", retained, err)
+	}
+	if lease, leaseErr := readDNSZoneEngineLease(
+		ctx, panel.db.GetDB(), zone,
+	); leaseErr != nil || lease != plan.Lease {
+		t.Fatalf("wrong V3 child changed exact lease=%+v err=%v", lease, leaseErr)
+	}
+
+	exactGlobal := *terminal
+	exactGlobal.Status = agentMutationRunning
+	exactGlobal.Phase = "starting"
+	handled, err = panel.recoverDNSEngineSwitchLocked(ctx, &exactGlobal)
+	if err != nil || !handled {
+		t.Fatalf("exact V3 global child handled=%v err=%v", handled, err)
+	}
+	finalMarker, err := readDNSEngineOperationMarker(ctx, panel.db.GetDB())
+	if err != nil || finalMarker != nil {
+		t.Fatalf("exact V3 child did not converge marker=%+v err=%v",
+			finalMarker, err)
+	}
+	if _, err := readDNSZoneEngineLease(
+		ctx, panel.db.GetDB(), zone,
+	); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("exact V3 lease remains after recovery: %v", err)
+	}
+	agent.mu.Lock()
+	configureCalls := agent.configurePDNSCalls
+	syncRequests := append(
+		[]transport.SyncDNSZoneV3Request(nil), agent.syncV3Requests...,
+	)
+	agent.mu.Unlock()
+	if configureCalls != 0 || len(syncRequests) != 1 ||
+		syncRequests[0].Domain != zone {
+		t.Fatalf("V3 recovery configure=%d follow-up sync=%+v",
+			configureCalls, syncRequests)
+	}
+}
+
 func TestDNSEngineManagedPDNSAdoptionRetiresAppliedDeletionMarker(t *testing.T) {
 	panel := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, panel, "standalone")
@@ -2348,7 +2858,7 @@ func TestDNSEngineManagedPDNSAdoptionRetiresAppliedDeletionMarker(t *testing.T) 
 	}
 }
 
-func TestDNSEnginePairedSignedManagedPDNSAdoptionPreservesTopology(t *testing.T) {
+func TestDNSEngineLegacyPairedAdoptionFailsClosedWithoutDirectionalRole(t *testing.T) {
 	panel := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, panel, "paired")
 	seedStrictDNSZone(t, panel, "signed-adopt.example")
@@ -2372,8 +2882,10 @@ func TestDNSEnginePairedSignedManagedPDNSAdoptionPreservesTopology(t *testing.T)
 		t, panel, strings.Repeat("6", 32), transport.DNSEnginePowerDNS,
 		nil, 0, preview.PreviewToken, false,
 	)
-	if commit.Code != http.StatusOK {
-		t.Fatalf("paired signed adoption status=%d body=%s",
+	if commit.Code != http.StatusBadGateway ||
+		!strings.Contains(commit.Body.String(), errCodeDNSPublicationFailed) ||
+		strings.Contains(commit.Body.String(), "directional catalog") {
+		t.Fatalf("legacy paired adoption status=%d body=%s",
 			commit.Code, commit.Body.String())
 	}
 	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
@@ -2389,20 +2901,36 @@ func TestDNSEnginePairedSignedManagedPDNSAdoptionPreservesTopology(t *testing.T)
 	if len(agent.switchRequests) != 1 ||
 		agent.switchRequests[0].Mode != transport.DNSEngineSwitchModeAdopt ||
 		agent.switchRequests[0].Topology != transport.DNSTopologyPaired ||
+		agent.switchRequests[0].PairRole != "" ||
 		agent.switchRequests[0].PeerIP != "2.25.80.4" ||
-		agent.switchRequests[0].PeerNS != "ns2.celikhost.com" {
+		agent.switchRequests[0].PeerNS != "ns2.celikhost.com" ||
+		agent.configurePDNSCalls != 0 || len(agent.syncV3Requests) != 0 {
 		agent.mu.Unlock()
-		t.Fatalf("paired adoption request=%+v", agent.switchRequests)
+		t.Fatalf("legacy paired adoption request=%+v configure=%d sync=%d",
+			agent.switchRequests, agent.configurePDNSCalls, len(agent.syncV3Requests))
 	}
 	agent.mu.Unlock()
+	marker, err := readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || marker == nil ||
+		marker.Phase != dnsEngineOperationPostCommit ||
+		marker.ConfigurePDNSRequestID != "" ||
+		marker.ConfigurePDNSOwnerID != "" ||
+		marker.ConfigurePDNSComplete {
+		t.Fatalf("legacy paired fail-closed marker=%+v err=%v", marker, err)
+	}
 	persisted, err := readDNSEngineSwitchByRequest(
 		context.Background(), panel.db.GetDB(), strings.Repeat("6", 32),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if persisted.PeerIP != "2.25.80.4" || persisted.PeerNS != "ns2.celikhost.com" {
-		t.Fatalf("persisted peer tuple=%q/%q", persisted.PeerIP, persisted.PeerNS)
+	if persisted.PairRole != "" ||
+		persisted.PeerIP != "2.25.80.4" ||
+		persisted.PeerNS != "ns2.celikhost.com" {
+		t.Fatalf("persisted legacy pair identity=%q %q/%q",
+			persisted.PairRole, persisted.PeerIP, persisted.PeerNS)
 	}
 	if err := panel.setSetting(
 		context.Background(), settingDNSPeerIP, "192.0.2.99",
@@ -2418,6 +2946,31 @@ func TestDNSEnginePairedSignedManagedPDNSAdoptionPreservesTopology(t *testing.T)
 	if reconstructed.PeerIP != "2.25.80.4" ||
 		reconstructed.PeerNS != "ns2.celikhost.com" {
 		t.Fatalf("recovery reread mutable settings: %+v", reconstructed)
+	}
+}
+
+func TestDNSEngineAdoptionFailClosedScopeIsOnlyLegacyPairedShape(t *testing.T) {
+	base := persistedDNSEngineSwitch{
+		Action: "adopt", TargetEngine: transport.DNSEnginePowerDNS,
+		Topology: transport.DNSTopologyStandalone,
+	}
+	if legacyNonDirectionalPairedAdoption(base) {
+		t.Fatal("standalone adoption was classified as legacy paired")
+	}
+	for _, role := range []string{
+		transport.DNSPairRolePrimary, transport.DNSPairRoleSecondary,
+	} {
+		directional := base
+		directional.Topology = transport.DNSTopologyPaired
+		directional.PairRole = role
+		if legacyNonDirectionalPairedAdoption(directional) {
+			t.Fatalf("directional paired role %q was stranded", role)
+		}
+	}
+	legacy := base
+	legacy.Topology = transport.DNSTopologyPaired
+	if !legacyNonDirectionalPairedAdoption(legacy) {
+		t.Fatal("legacy paired adoption without PairRole was not fail-closed")
 	}
 }
 

@@ -73,22 +73,53 @@ type CronJob struct {
 }
 
 type ListCronJobsRequest struct {
-	Username string `json:"username"`
+	CronTenant
 }
 
 type ListCronJobsResponse struct {
 	Jobs []CronJob `json:"jobs"`
 }
 
+// CronTenant identifies WHOSE crontab an operation targets. It carries the
+// durable identities rather than a username because the username is derived and
+// NOT injective: SiteUsername maps both "." and "-" to "_" and truncates at 32,
+// so "my-shop.com" and "my.shop.com" — which can belong to different tenants —
+// produce the same Linux account name. A request that names only a username
+// therefore cannot say which tenant it means, and ownership of one domain would
+// reach the other's jobs.
+//
+// The agent re-derives the username from Domain and then requires the account's
+// home directory to equal the home derived from SubscriptionID and DomainID.
+// That second proof is the injective one: homes come from integer identities and
+// cannot collide.
+//
+// CronTenant, bir işlemin KİMİN crontab'ını hedeflediğini tanımlar. Kullanıcı
+// adı yerine kalıcı kimlikleri taşır, çünkü kullanıcı adı türetilmiştir ve TEK
+// YÖNLÜ DEĞİLDİR: SiteUsername hem "." hem "-" karakterini "_" yapar ve 32'de
+// keser; böylece farklı kiracılara ait olabilen "my-shop.com" ile "my.shop.com"
+// aynı Linux hesap adını üretir. Yalnızca kullanıcı adı taşıyan bir istek hangi
+// kiracıyı kastettiğini söyleyemez ve bir alan adının sahipliği diğerinin
+// görevlerine uzanır.
+//
+// Agent, kullanıcı adını Domain'den yeniden türetir ve ardından hesabın ev
+// dizininin SubscriptionID ile DomainID'den türetilen ev dizinine eşit olmasını
+// şart koşar. Çakışmayan kanıt bu ikincisidir: ev dizinleri tam sayı
+// kimliklerden gelir.
+type CronTenant struct {
+	SubscriptionID int    `json:"subscription_id"`
+	DomainID       int    `json:"domain_id"`
+	Domain         string `json:"domain"`
+}
+
 type AddCronJobRequest struct {
-	Username string `json:"username"`
+	CronTenant
 	Schedule string `json:"schedule"`
 	Command  string `json:"command"`
 	Comment  string `json:"comment,omitempty"`
 }
 
 type UpdateCronJobRequest struct {
-	Username string `json:"username"`
+	CronTenant
 	ID       string `json:"id"`
 	Schedule string `json:"schedule"`
 	Command  string `json:"command"`
@@ -97,8 +128,8 @@ type UpdateCronJobRequest struct {
 }
 
 type DeleteCronJobRequest struct {
-	Username string `json:"username"`
-	ID       string `json:"id"`
+	CronTenant
+	ID string `json:"id"`
 }
 
 // File manager RPC contracts.

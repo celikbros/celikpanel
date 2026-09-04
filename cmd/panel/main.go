@@ -86,6 +86,13 @@ type Panel struct {
 	// code, but dnf alone can never qualify a preview target.
 	hostPlatformVal   transport.HostPlatformResponse
 	hostPlatformKnown bool
+	// degraded records subsystems whose startup repair failed. The panel still
+	// serves; only that subsystem's mutations are held, with the stored code.
+	// degraded, açılış onarımı başarısız olan alt sistemleri kaydeder. Panel
+	// yine hizmet verir; yalnız o alt sistemin değişiklikleri saklanan kodla
+	// birlikte tutulur.
+	degradedMu sync.RWMutex
+	degraded   map[string]degradedSubsystem
 	// serviceScanMu coalesces page-triggered service scans. A first visit,
 	// React StrictMode and multiple open tabs must not probe the host in
 	// parallel.
@@ -455,9 +462,14 @@ func main() {
 	checkWALAwareServiceOperationsIdleFlag := flag.Bool("check-service-operations-idle-wal-aware", false, "Prove that the service operation queue is idle in a running database or a stopped database with a WAL, then exit")
 	checkWALAwarePreLedgerServiceOperationsIdleFlag := flag.Bool("check-pre-ledger-service-operations-idle-wal-aware", false, "Prove that a running pre-ledger database or a stopped pre-ledger database with a WAL is safe to migrate, then exit")
 	createAdmin := flag.Bool("create-admin", false, "Create or update an administrator, then exit / Bir yönetici oluştur ya da güncelle, sonra çık")
+	var adminCredentialsFileFlag inheritedAdminCredentialsFileFlag
+	flag.Var(&adminCredentialsFileFlag, "admin-credentials-file", "Read strict admin credentials JSON from bounded stdin; exact value must be -")
+	var validateAdminCredentialsFileFlag inheritedAdminCredentialsFileFlag
+	flag.Var(&validateAdminCredentialsFileFlag, "validate-admin-credentials-file", "Validate strict admin credentials JSON from bounded stdin without changing panel state; exact value must be -")
 	insecureCookies := flag.Bool("insecure-cookies", false, "Send session cookies without the Secure flag (HTTP-only local dev) / Oturum çerezlerini Secure bayrağı olmadan gönder (yalnızca HTTP yerel geliştirme)")
 	demo := flag.Bool("demo", false, "Development only: seed one account per role and show quick-login credentials on the login screen / Yalnızca geliştirme: her rol için hesap oluştur ve giriş ekranında hızlı-giriş bilgilerini göster")
 	countUsersFlag := flag.Bool("count-users", false, "Print the number of users and exit (used by install.sh) / Kullanıcı sayısını yazıp çık (install.sh kullanır)")
+	countUsersReadOnlyWALAwareFlag := flag.Bool("count-users-read-only-wal-aware", false, "Print the number of usable users from a read-only WAL-aware private snapshot, then exit")
 	checkServiceOperationsIdleFlag := flag.Bool("check-service-operations-idle", false, "Exit successfully only when no queued or running service operation exists / Yalnızca sırada veya çalışan servis işlemi yoksa başarıyla çık")
 	checkPreLedgerServiceOperationsIdleFlag := flag.Bool("check-pre-ledger-service-operations-idle", false, "Verify migration history through version 20 and reject partial service queue objects, then exit / 20. sürüme kadarki migration geçmişini doğrula ve yarım servis kuyruğu nesnelerini reddet, sonra çık")
 	createServiceOperationSnapshotFlag := flag.String("create-service-operation-snapshot", "", "Create a transaction-consistent standalone panel database snapshot at this absolute path, then exit / Bu mutlak yolda işlem tutarlı bağımsız panel veritabanı anlık görüntüsü oluştur, sonra çık")
@@ -470,9 +482,18 @@ func main() {
 	releaseTransactionSnapshotFlag := flag.String("release-transaction-snapshot", "", "Safe snapshot basename recorded by the release transaction / Yayın işleminin kaydettiği güvenli anlık görüntü temel adı")
 	serviceOperationSnapshotSchemaFlag := flag.String("snapshot-schema", "", "Snapshot schema contract: normal or pre-ledger / Anlık görüntü şema sözleşmesi: normal veya pre-ledger")
 	migrateOnlyFlag := flag.Bool("migrate-only", false, "Open the canonical database, apply embedded migrations, and exit before agent or HTTP startup / Kanonik veritabanını aç, gömülü migration'ları uygula ve agent ya da HTTP başlamadan çık")
+	if err := validateAdminCredentialsFileArgumentSpellings(os.Args[1:]); err != nil {
+		log.Fatalf("Invalid admin credentials file argument: %v", err)
+	}
 	flag.Parse()
+	if err := validateAdminCredentialsFileFlags(
+		*createAdmin,
+		adminCredentialsFileFlag,
+		validateAdminCredentialsFileFlag,
+	); err != nil {
+		log.Fatalf("Invalid admin credentials file flags: %v", err)
+	}
 
-	log.Println("Starting CelikPanel Backend...")
 	releaseTransaction := serviceOperationReleaseTransaction{
 		fd:        *releaseTransactionFDFlag,
 		token:     *releaseTransactionTokenFlag,
@@ -498,7 +519,9 @@ func main() {
 			transactionMetadataRequestedByFlags)
 	if err := validatePanelCommandModes(panelCommandModes{
 		createAdmin:                *createAdmin,
+		validateAdminCredentials:   validateAdminCredentialsFileFlag.set,
 		countUsers:                 *countUsersFlag,
+		countUsersReadOnlyWALAware: *countUsersReadOnlyWALAwareFlag,
 		checkIdle:                  *checkServiceOperationsIdleFlag,
 		checkPreLedgerIdle:         *checkPreLedgerServiceOperationsIdleFlag,
 		checkWALAwareIdle:          *checkWALAwareServiceOperationsIdleFlag,
@@ -511,6 +534,21 @@ func main() {
 		insecureCookies:            *insecureCookies,
 	}); err != nil {
 		log.Fatalf("Invalid panel command mode: %v", err)
+	}
+	if validateAdminCredentialsFileFlag.set {
+		if err := validateAdminCredentialsFile(os.Stdin); err != nil {
+			log.Fatalf("Admin credentials file validation failed: %v", err)
+		}
+		return
+	}
+	log.Println("Starting CelikPanel Backend...")
+	if *countUsersReadOnlyWALAwareFlag {
+		count, err := countUsableUsersReadOnlyWALAware(databaseFile())
+		if err != nil {
+			log.Fatalf("count-users-read-only-wal-aware failed: %v", err)
+		}
+		fmt.Println(count)
+		return
 	}
 	if proveSnapshotEquivalenceRequestedByFlags {
 		_, err := validatePreLedgerSnapshotEquivalenceRequest(
@@ -654,7 +692,13 @@ func main() {
 		return
 	}
 	if *createAdmin {
-		if err := runCreateAdmin(database); err != nil {
+		var err error
+		if adminCredentialsFileFlag.set {
+			err = runCreateAdminFromCredentialsFile(database, os.Stdin, os.Stdout)
+		} else {
+			err = runCreateAdmin(database)
+		}
+		if err != nil {
 			log.Fatalf("create-admin failed: %v", err)
 		}
 		return
@@ -664,12 +708,20 @@ func main() {
 	// poisoned RPC streams without needing a panel restart.
 	// Agent'a bağlan. Yeniden bağlanan sarmalayıcı, panel yeniden başlatılmadan
 	// agent yeniden başlamalarını ve bozulmuş RPC akışlarını atlatır.
-	rawClient, err := transport.ConnectAgent()
+	rawClient, waited, err := connectAgentPatiently(
+		context.Background(), dialAgentOnce, nil, nil,
+	)
 	if err != nil {
-		log.Fatalf("Failed to connect to Agent: %v", err)
+		log.Fatalf(
+			"Failed to connect to Agent after waiting %s: %v", waited.Round(time.Second), err,
+		)
 	}
 	client := transport.NewReconnectingClient(rawClient)
-	log.Println("Connected to Agent RPC")
+	if waited > time.Second {
+		log.Printf("Connected to Agent RPC after waiting %s", waited.Round(time.Second))
+	} else {
+		log.Println("Connected to Agent RPC")
+	}
 
 	sessions := auth.NewSessionStore(database.GetDB())
 
@@ -752,13 +804,35 @@ func main() {
 		log.Printf("Panel startup listener active on %s (HTTP; application gated)", addr)
 	}
 
+	// A failed reconcile degrades its subsystem; it does not end the process.
+	// The durable markers stay for the next replay, the listener stays bound,
+	// and the operator gets a coded refusal instead of a flapping port (A17).
+	// Başarısız bir uzlaştırma alt sistemini kısıtlar, süreci bitirmez. Kalıcı
+	// işaretler sonraki denemeye kalır, dinleyici ayakta kalır ve operatör
+	// çırpınan bir port yerine kodlu bir ret alır (A17).
 	if recovered, err := panel.recoverInterruptedServiceOperations(context.Background()); err != nil {
-		log.Fatalf("Failed to recover interrupted service operations: %v", err)
+		panel.markSubsystemDegraded(
+			degradedSubsystemServiceOperations,
+			errCodeStartupRecoveryFailed,
+			err,
+		)
+		log.Printf(
+			"DEGRADED %s: failed to recover interrupted service operations: %v",
+			degradedSubsystemServiceOperations, err,
+		)
 	} else if recovered > 0 {
 		log.Printf("Reconciled %d interrupted service operation(s)", recovered)
 	}
 	if recovered, err := panel.recoverInterruptedAppInstallOperations(context.Background()); err != nil {
-		log.Fatalf("Failed to recover interrupted application installs: %v", err)
+		panel.markSubsystemDegraded(
+			degradedSubsystemAppInstalls,
+			errCodeStartupRecoveryFailed,
+			err,
+		)
+		log.Printf(
+			"DEGRADED %s: failed to recover interrupted application installs: %v",
+			degradedSubsystemAppInstalls, err,
+		)
 	} else if recovered > 0 {
 		log.Printf("Marked %d interrupted application install(s) for review", recovered)
 	}
@@ -769,14 +843,81 @@ func main() {
 	// A4 öncesi satırların tek seferlik onarımı: düz metin saklanmış her
 	// veritabanı root parolasını mühürle. Hata ölümcül — kimlik bilgileri
 	// yarı düz metin, yarı mühürlü açılmak, A4'ün kapattığı sorunu gizler.
-	if err := panel.encryptLegacyDBPasswords(context.Background()); err != nil {
-		log.Fatalf("Failed to encrypt legacy database passwords: %v", err)
+	// Two different failures reach here and they deserve different answers.
+	// A structural fault (bad query, write error) still exits: booting with
+	// credentials half plaintext, half sealed hides the very problem this
+	// migration closes. But a sealed value that will not open is a statement
+	// about the pair (this database, this secret.key) — the shape of a restore
+	// without its key — and exiting there is self-defeating: the panel is the
+	// only surface that could re-enter those credentials, and an unbootable
+	// panel under an automatic restart never lets the operator reach it.
+	//
+	// Buraya iki farklı hata ulaşır ve ikisi farklı yanıt hak eder. Yapısal bir
+	// arıza (bozuk sorgu, yazma hatası) hâlâ çıkışa götürür: kimlik bilgileri
+	// yarı düz metin yarı mühürlü açılmak, bu göçün kapattığı sorunu gizler.
+	// Ama açılmayan mühürlü bir değer, (bu veritabanı, bu secret.key) çifti
+	// hakkında bir ifadedir — anahtarsız bir geri yüklemenin biçimi — ve orada
+	// çıkmak kendi kendini yenilgiye uğratır: o kimlik bilgilerini yeniden
+	// girebilecek tek yüzey paneldir ve açılamayan bir panele operatör hiç
+	// ulaşamaz.
+	// Identity first, and for every family at once. Each migration commits on its
+	// own, so without a single up-front check the first family that happens to be
+	// all-plaintext gets sealed under a key that cannot open the others — one
+	// database, two keys, half of it lost, and no error at the moment of loss.
+	// Proving the pairing before any of them runs is what makes "stop on the
+	// first mismatch" mean "stop before the first write".
+	//
+	// Önce kimlik, ve bütün aileler için birden. Her göç kendi başına commit
+	// ettiğinden, tek bir ön denetim olmadan tesadüfen tamamen düz metin olan ilk
+	// aile, diğerlerini açamayan bir anahtarla mühürlenir — tek veritabanı, iki
+	// anahtar, yarısı kayıp ve kayıp anında hiçbir hata yok. Eşleşmeyi hepsinden
+	// önce kanıtlamak, "ilk uyuşmazlıkta dur"un "ilk yazımdan önce dur" anlamına
+	// gelmesini sağlayan şeydir.
+	secretsUsable := true
+	if err := panel.verifySecretKeyIdentity(context.Background()); err != nil {
+		if errors.Is(err, errSecretKeyMismatch) {
+			secretsUsable = false
+			panel.markSubsystemDegraded(
+				degradedSubsystemSealedSecrets, errCodeSealedSecretUnreadable, err,
+			)
+			log.Printf(
+				"DEGRADED %s: %v; no sealed secret will be written this boot, and the "+
+					"affected credentials can be re-entered once the correct key is restored",
+				degradedSubsystemSealedSecrets, err,
+			)
+		} else {
+			log.Fatalf("Failed to verify the secret key against this database: %v", err)
+		}
 	}
-	if err := panel.encryptLegacyTOTPSecrets(context.Background()); err != nil {
-		log.Fatalf("Failed to validate and encrypt TOTP secrets: %v", err)
-	}
-	if err := panel.encryptLegacyVPNPresharedKeys(context.Background()); err != nil {
-		log.Fatalf("Failed to encrypt legacy VPN preshared keys: %v", err)
+
+	for _, migration := range []struct {
+		name string
+		run  func(context.Context) error
+	}{
+		{"legacy database passwords", panel.encryptLegacyDBPasswords},
+		{"TOTP secrets", panel.encryptLegacyTOTPSecrets},
+		{"legacy VPN preshared keys", panel.encryptLegacyVPNPresharedKeys},
+	} {
+		if !secretsUsable {
+			continue
+		}
+		err := migration.run(context.Background())
+		switch {
+		case err == nil:
+		case errors.Is(err, errSealedSecretUnreadable):
+			panel.markSubsystemDegraded(
+				degradedSubsystemSealedSecrets,
+				errCodeSealedSecretUnreadable,
+				err,
+			)
+			log.Printf(
+				"DEGRADED %s: %s could not be opened with the current key; "+
+					"the panel is serving so the affected credentials can be re-entered: %v",
+				degradedSubsystemSealedSecrets, migration.name, err,
+			)
+		default:
+			log.Fatalf("Failed to migrate %s: %v", migration.name, err)
+		}
 	}
 
 	// Repair only derived certificate runtime state from the durable ledger.
@@ -795,10 +936,19 @@ func main() {
 	)
 	if err := panel.requireStartupAgentMutationSlot(activationCtx); err != nil {
 		activationCancel()
-		log.Fatalf("wait for startup mutation lease before certificate reconcile: %v", err)
+		panel.markSubsystemDegraded(
+			degradedSubsystemCertificates,
+			errCodeStartupRecoveryFailed,
+			err,
+		)
+		log.Printf(
+			"DEGRADED %s: no startup mutation lease for certificate reconcile: %v",
+			degradedSubsystemCertificates, err,
+		)
+	} else {
+		activationCancel()
+		panel.reconcileCertificateRuntimeAtStartup()
 	}
-	activationCancel()
-	panel.reconcileCertificateRuntimeAtStartup()
 
 	// Fail closed before accepting HTTP: a peer whose one-time private config
 	// was interrupted must not survive a process restart as ghost access.
@@ -806,27 +956,60 @@ func main() {
 		context.Background(),
 		panelMutationRecoveryTimeout,
 	)
+	// Exiting here never contained the risk it was written for: wg0 is its own
+	// service, so a dead panel leaves an interrupted peer exactly as reachable
+	// while removing the only surface that can see or revoke it. Degrading
+	// keeps that surface up and names the peer state as unresolved.
+	// Buradan çıkmak, yazıldığı riski hiçbir zaman sınırlamadı: wg0 kendi
+	// servisidir, ölü bir panel yarım kalmış bir peer'i aynı ölçüde erişilebilir
+	// bırakır ve onu görebilecek ya da iptal edebilecek tek yüzeyi ortadan
+	// kaldırır. Kısıtlamak o yüzeyi ayakta tutar ve durumu çözülmemiş olarak adlandırır.
 	if err := panel.requireStartupAgentMutationSlot(activationCtx); err != nil {
 		activationCancel()
-		log.Fatalf("wait for startup mutation lease before VPN recovery: %v", err)
-	}
-	activationCancel()
-	recoveryCtx, recoveryCancel := context.WithTimeout(context.Background(), 45*time.Second)
-	if err := panel.recoverVPNProvisioningState(recoveryCtx); err != nil {
+		panel.markSubsystemDegraded(
+			degradedSubsystemVPN,
+			errCodeStartupRecoveryFailed,
+			err,
+		)
+		log.Printf(
+			"DEGRADED %s: no startup mutation lease for VPN recovery: %v",
+			degradedSubsystemVPN, err,
+		)
+	} else {
+		activationCancel()
+		recoveryCtx, recoveryCancel := context.WithTimeout(context.Background(), 45*time.Second)
+		if err := panel.recoverVPNProvisioningState(recoveryCtx); err != nil {
+			panel.markSubsystemDegraded(
+				degradedSubsystemVPN,
+				errCodeStartupRecoveryFailed,
+				err,
+			)
+			log.Printf(
+				"DEGRADED %s: incomplete VPN provisioning not recovered: %v",
+				degradedSubsystemVPN, err,
+			)
+		}
 		recoveryCancel()
-		log.Fatalf("recover incomplete VPN provisioning: %v", err)
 	}
-	recoveryCancel()
 	activationCtx, activationCancel = context.WithTimeout(
 		context.Background(),
 		panelMutationRecoveryTimeout,
 	)
 	if err := panel.requireStartupAgentMutationSlot(activationCtx); err != nil {
 		activationCancel()
-		log.Fatalf("wait for startup mutation lease before mail repair: %v", err)
+		panel.markSubsystemDegraded(
+			degradedSubsystemMailFilters,
+			errCodeStartupRecoveryFailed,
+			err,
+		)
+		log.Printf(
+			"DEGRADED %s: no startup mutation lease for mail repair: %v",
+			degradedSubsystemMailFilters, err,
+		)
+	} else {
+		activationCancel()
+		panel.wireMailFiltersSynchronouslyAtStartup()
 	}
-	activationCancel()
-	panel.wireMailFiltersSynchronouslyAtStartup()
 
 	// Purge expired sessions on startup and then hourly.
 	// Başlangıçta ve sonra saatlik olarak süresi dolmuş oturumları temizle.

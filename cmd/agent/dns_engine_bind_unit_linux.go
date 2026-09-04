@@ -253,8 +253,8 @@ func readExactRootOwnedBINDFileAt(
 		absolutePath == "/" {
 		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s path is not canonical", label)
 	}
-	if _, err := validateExactBINDDirectoryFD(
-		rootFD, 0, 0, bindManagedRootMode, "BIND vendor filesystem root",
+	if _, err := validateInheritedBINDAnchorFD(
+		rootFD, "BIND vendor filesystem root",
 	); err != nil {
 		return nil, bindSecureFileIdentity{}, err
 	}
@@ -268,8 +268,12 @@ func readExactRootOwnedBINDFileAt(
 	}
 	defer unix.Close(currentFD)
 	for _, component := range components[:len(components)-1] {
-		nextFD, _, openErr := openExactBINDDirectoryAt(
-			currentFD, component, 0, 0, bindManagedRootMode,
+		// Vendor unit directories (/lib, /usr/lib, /etc/systemd/...) are
+		// distribution-owned ancestors, not directories this product created.
+		// Satıcı unit dizinleri (/lib, /usr/lib, /etc/systemd/...) dağıtıma ait
+		// üst dizinlerdir; bu ürünün oluşturduğu dizinler değildir.
+		nextFD, _, openErr := openInheritedBINDAnchorAt(
+			currentFD, component,
 			path.Join("/", strings.Join(components[:len(components)-1], "/")),
 		)
 		if openErr != nil {

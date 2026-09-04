@@ -424,16 +424,69 @@ func (p *Panel) statusAgentMutation(
 	ctx context.Context,
 	requestID string,
 ) (*agentMutationJob, error) {
+	job, _, err := p.statusAgentMutationWithHold(ctx, requestID)
+	return job, err
+}
+
+// statusAgentMutationWithHold also reports whether the agent is refusing every
+// durable mutation. Only a caller that loops on the status needs it; everything
+// else keeps the simpler signature.
+// statusAgentMutationWithHold, ayrıca agent'ın her kalıcı mutasyonu reddedip
+// reddetmediğini bildirir. Buna yalnız durumu döngüyle yoklayan bir çağıranın
+// ihtiyacı vardır; geri kalan her şey daha yalın imzayı korur.
+func (p *Panel) statusAgentMutationWithHold(
+	ctx context.Context,
+	requestID string,
+) (*agentMutationJob, string, error) {
 	var response agentMutationResponse
 	if err := p.callAgentContext(ctx, "Agent.ServiceMutationStatus", &transport.ServiceMutationStatusRequest{
 		RequestID: requestID,
 	}, &response); err != nil {
-		return response.Job, err
+		return response.Job, response.MutationHold, err
 	}
 	if responseErr := serviceMutationResponseError(response); responseErr != nil {
-		return response.Job, responseErr
+		return response.Job, response.MutationHold, responseErr
 	}
-	return response.Job, nil
+	return response.Job, response.MutationHold, nil
+}
+
+// errAgentMutationHeld ends a terminal wait that cannot succeed. A held agent
+// refuses heartbeat, finish and cancel alike, so the job it reports is frozen:
+// polling it until the caller's own deadline only converts a failure the agent
+// already knows about into a long silence and then a broken connection.
+// errAgentMutationHeld, başarıya ulaşamayacak bir uç bekleyişi sonlandırır.
+// Tutulan bir agent kalp atışını, bitirmeyi ve iptali aynı şekilde reddeder;
+// dolayısıyla bildirdiği iş donmuştur. Onu çağıranın kendi son tarihine kadar
+// yoklamak, agent'ın zaten bildiği bir arızayı yalnızca uzun bir sessizliğe ve
+// ardından kopmuş bir bağlantıya çevirir.
+var errAgentMutationHeld = errors.New(
+	"the agent is refusing durable mutations; this operation cannot complete",
+)
+
+// agentMutationHeldError carries the stable hold code so the HTTP layer can
+// name it. It stays errors.Is-compatible with errAgentMutationHeld. The code
+// travels as a field rather than only inside the message because a message is
+// internal text and must never reach a client (httperr.go), while the code is
+// the one thing the client is entitled to see: without it, the S-6 operator got
+// a fast but anonymous 502 and still could not tell a held agent from any other
+// unverified outcome.
+// agentMutationHeldError, HTTP katmanının adlandırabilmesi için kararlı tutulma
+// kodunu taşır. errAgentMutationHeld ile errors.Is uyumunu korur. Kod yalnız
+// mesajın içinde değil bir alan olarak yolculuk eder; çünkü mesaj iç metindir
+// ve bir istemciye asla ulaşmamalıdır (httperr.go), kod ise istemcinin görmeye
+// hakkı olan tek şeydir: onsuz S-6 operatörü hızlı ama adsız bir 502 aldı ve
+// tutulan bir agent'ı başka herhangi bir doğrulanmamış sonuçtan yine ayırt
+// edemedi.
+type agentMutationHeldError struct {
+	Hold string
+}
+
+func (e *agentMutationHeldError) Error() string {
+	return errAgentMutationHeld.Error() + " (" + e.Hold + ")"
+}
+
+func (e *agentMutationHeldError) Is(target error) bool {
+	return target == errAgentMutationHeld
 }
 
 func (p *Panel) cancelAgentMutation(
@@ -597,7 +650,15 @@ func (p *Panel) waitExpectedAgentMutationTerminal(
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		job, err := p.statusAgentMutation(ctx, identity.RequestID)
+		job, hold, err := p.statusAgentMutationWithHold(ctx, identity.RequestID)
+		if hold != "" {
+			// Stop immediately. Nothing about this job can change while the
+			// agent is held, and the operator is waiting on the other end of
+			// this request.
+			// Hemen dur. Agent tutulurken bu işle ilgili hiçbir şey
+			// değişemez ve bu isteğin öbür ucunda operatör bekliyor.
+			return job, &agentMutationHeldError{Hold: hold}
+		}
 		if job != nil {
 			if identityErr := validateAgentMutationIdentity(job, identity); identityErr != nil {
 				return job, identityErr

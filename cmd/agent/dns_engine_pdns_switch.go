@@ -160,6 +160,49 @@ func requireNoPDNSDatabaseSidecars(path string) error {
 	return nil
 }
 
+// removePDNSDatabaseSidecars discards the -journal, -wal and -shm files that
+// belong to whatever database generation is being replaced at this path.
+//
+// A SQLite WAL is bound to exactly one main file. When a switch is rolled
+// back, the target PowerDNS has usually already run against the candidate
+// database and left that candidate's WAL and SHM beside it. Restoring the
+// backup main file underneath those sidecars hands SQLite a WAL from a
+// different generation, and it replays it: the live database came back
+// "malformed" in the S-6 Boston setup, the setup job stayed leased with a
+// rolling-back journal, and the negative half of the R-019 proof could not be
+// built. The forward path already refuses sidecars at staging
+// (requireNoPDNSDatabaseSidecars); rollback must actively clear the ones the
+// discarded generation left behind.
+//
+// Callers must have stopped PowerDNS first. A running process keeps its open
+// inode regardless of what happens at the pathname, so this cannot corrupt a
+// live server, but it can only make the path coherent if nothing is writing.
+//
+// removePDNSDatabaseSidecars, bu yoldaki hangi veritabanı nesli
+// değiştiriliyorsa ona ait -journal, -wal ve -shm dosyalarını atar.
+//
+// Bir SQLite WAL'ı tam olarak tek bir ana dosyaya bağlıdır. Bir geçiş geri
+// alındığında hedef PowerDNS genellikle aday veritabanına karşı çoktan koşmuş
+// ve o adayın WAL ile SHM dosyalarını yanında bırakmıştır. Yedek ana dosyayı
+// o yan dosyaların altına geri koymak SQLite'a başka bir neslin WAL'ını verir
+// ve SQLite onu yeniden oynatır: S-6 Boston kurulumunda canlı veritabanı
+// "bozuk" döndü, kurulum işi geri-alınıyor günlüğüyle kiralı kaldı ve R-019
+// kanıtının negatif yarısı kurulamadı. İleri yol yan dosyaları daha
+// hazırlıkta reddediyor (requireNoPDNSDatabaseSidecars); geri alma, atılan
+// neslin bıraktıklarını etkin biçimde temizlemelidir.
+//
+// Çağıranlar PowerDNS'i önce durdurmuş olmalıdır. Çalışan bir süreç, yol adında
+// ne olursa olsun açık inode'unu tutar; dolayısıyla bu canlı bir sunucuyu
+// bozamaz ama yolu ancak hiçbir şey yazmıyorsa tutarlı kılabilir.
+func removePDNSDatabaseSidecars(path string) error {
+	for _, suffix := range []string{"-journal", "-wal", "-shm"} {
+		if err := os.Remove(path + suffix); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("remove stale PowerDNS sidecar %s: %w", suffix, err)
+		}
+	}
+	return nil
+}
+
 func verifyPDNSReplacementDatabaseEnvelope(ctx context.Context, path string) error {
 	if _, _, _, err := inspectPDNSDatabaseFile(path, false); err != nil {
 		return err
@@ -1095,6 +1138,13 @@ func restorePDNSDatabase(journal dnsEngineSwitchJournal) error {
 			if err := os.Remove(journal.PDNSCandidatePath); err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
+			// The backup is already the live main file; the candidate
+			// generation's sidecars may still be sitting beside it.
+			// Yedek zaten canlı ana dosya; aday neslin yan dosyaları hâlâ
+			// yanında duruyor olabilir.
+			if err := removePDNSDatabaseSidecars(live); err != nil {
+				return err
+			}
 			return syncAtomicParentDirectory(filepath.Dir(live))
 		}
 		if backupSize != journal.PDNSBackupSize || backupHash != journal.PDNSBackupSHA256 {
@@ -1122,6 +1172,9 @@ func restorePDNSDatabase(journal dnsEngineSwitchJournal) error {
 		}
 	}
 	if err := os.Remove(live); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := removePDNSDatabaseSidecars(live); err != nil {
 		return err
 	}
 	if journal.PDNSBackupSHA256 != "" {
@@ -1333,7 +1386,7 @@ func rollbackPDNSSwitch(
 					return configs.restoreOwnerAware(ctx)
 				},
 				restoreState: func() error {
-					return restoreDNSFileSnapshot(journal.StateBefore)
+					return restoreDNSEngineStateSnapshot(journal.StateBefore)
 				},
 				restoreTarget: func(commandCtx context.Context) error {
 					return restoreDNSUnitSnapshots(
@@ -1471,6 +1524,13 @@ func switchToPDNSOnCertifiedProfile(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	reconfigureSecondary := sourceProof.PDNSPairSecondaryReconfigure
+	faultDriver := dnsEngineSwitchFaultDriverPDNSSwitch
+	if reconfigureSecondary {
+		faultDriver = dnsEngineSwitchFaultDriverPDNSSecondaryReconfigure
+	}
+	writeJournal := func(journal dnsEngineSwitchJournal) error {
+		return writeDNSEngineSwitchJournalForFaultDriver(faultDriver, journal)
+	}
 	primaryCatalogSerial, err := primaryCatalogSerialFromSource(
 		ctx, profile, manifest, state, stateExists,
 	)
@@ -1520,6 +1580,30 @@ func switchToPDNSOnCertifiedProfile(
 	if err := validatePDNSSwitchPackagePolicy(sourceProof, len(missing)); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	// An earlier attempt that reached package install and was then rolled back
+	// leaves its install receipt bound to a dead request id: the rollback
+	// restores config, state and units but touches neither the packages nor the
+	// receipt. On the retry nothing is missing, so the branch below never runs
+	// and the surviving receipt's identity can no longer match this transaction
+	// — finalize then poisons the operation, and the poison outlives restarts.
+	// Rebinding it to the new identity is the same repair BIND already performs
+	// in hostDNSEngineBackend.Switch; the PowerDNS path never received it.
+	//
+	// Paket kurulumuna ulaşıp sonra geri alınmış bir önceki deneme, kurulum
+	// makbuzunu ölü bir istek kimliğine bağlı bırakır: geri alma yapılandırmayı,
+	// durumu ve unit'leri onarır ama ne paketlere ne makbuza dokunur. Yeniden
+	// denemede eksik paket kalmadığı için aşağıdaki dal hiç çalışmaz ve hayatta
+	// kalan makbuzun kimliği artık bu işlemle eşleşemez — sonlandırma işlemi
+	// zehirler ve zehir yeniden başlatmaları aşar. Makbuzu yeni kimliğe yeniden
+	// bağlamak, BIND'in Switch içinde zaten yaptığı onarımın aynısıdır.
+	if len(missing) == 0 {
+		if err := handoffExistingDNSEngineInstallOwnership(
+			transport.DNSEnginePowerDNS, profile.PackageManager,
+			packages, manifest, binding,
+		); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+	}
 	if len(missing) != 0 {
 		installReceipt, receiptErr := newDNSEngineInstallOwnership(
 			transport.DNSEnginePowerDNS, profile.PackageManager,
@@ -1548,11 +1632,16 @@ func switchToPDNSOnCertifiedProfile(
 		return transport.SwitchDNSEngineV1Response{},
 			fmt.Errorf("verify DNS systemd parent after package preparation: %w", err)
 	}
+	if err := runDNSEngineSwitchPreIntentFaultHook(
+		faultDriver, manifest, binding,
+	); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	configs, err := preparePDNSConfigMutation(ctx, manifest, managedConfig)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	stateBefore, err := captureDNSFileSnapshot(dnsEngineStatePath(), 0o600, true)
+	stateBefore, err := captureDNSEngineStateSnapshot(true)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1650,7 +1739,7 @@ func switchToPDNSOnCertifiedProfile(
 		if err := configs.verifyOwnerAwarePreimage(ctx); err != nil {
 			return err
 		}
-		return writeDNSEngineSwitchJournal(journal)
+		return writeJournal(journal)
 	}
 	if len(missing) == 0 {
 		if err := runDNSPort53PreMutationGuard(
@@ -1666,7 +1755,7 @@ func switchToPDNSOnCertifiedProfile(
 	}
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
 		journal.Phase = dnsSwitchPhaseRollingBack
-		journalErr := writeDNSEngineSwitchJournal(journal)
+		journalErr := writeJournal(journal)
 		recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
 		rollbackErr := contextErr
 		if contextErr == nil {
@@ -1690,7 +1779,7 @@ func switchToPDNSOnCertifiedProfile(
 				journalErr,
 				finishDNSSwitchRollbackJournal(
 					&journal,
-					writeDNSEngineSwitchJournal,
+					writeJournal,
 					removeDNSEngineSwitchJournal,
 				),
 			)
@@ -1731,7 +1820,7 @@ func switchToPDNSOnCertifiedProfile(
 		))
 	}
 	journal.Phase = dnsSwitchPhaseTargetStaged
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return rollback(err)
 	}
 	if err := runDNSMutationWithSystemdParentProof(
@@ -1743,7 +1832,7 @@ func switchToPDNSOnCertifiedProfile(
 		return rollback(err)
 	}
 	journal.Phase = dnsSwitchPhaseSourceStopped
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return rollback(err)
 	}
 	if err := runDNSMutationWithSystemdParentProof(
@@ -1762,7 +1851,7 @@ func switchToPDNSOnCertifiedProfile(
 		}
 	}
 	journal.Phase = dnsSwitchPhaseTargetStarted
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return rollback(err)
 	}
 	if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
@@ -1797,16 +1886,28 @@ func switchToPDNSOnCertifiedProfile(
 		return rollback(err)
 	}
 	if err := writeDNSEngineState(nextState); err != nil {
-		if actual, exists, readErr := readDNSEngineState(); readErr != nil || !exists || actual != nextState {
+		// Prove owner and mode, not just bytes. A write that reported an
+		// error may still have landed, and this readback is what promotes
+		// it to "durable" — so it must check the same contract
+		// persistExactDNSEngineState enforces. The loose reader compares
+		// content alone, which would accept a file whose ownership or mode
+		// drifted and then continue into the committed phase.
+		// Yalnız baytları değil sahipliği ve kipi de kanıtla. Hata bildiren
+		// bir yazma yine de diske inmiş olabilir ve onu "kalıcı" ilan eden
+		// şey bu geri okumadır; bu yüzden persistExactDNSEngineState'in
+		// dayattığı sözleşmenin aynısını denetlemelidir. Gevşek okuyucu
+		// yalnız içeriği karşılaştırır; sahipliği ya da kipi kaymış bir
+		// dosyayı kabul edip commit aşamasına devam ederdi.
+		if actual, exists, readErr := readExactDNSEngineState(); readErr != nil || !exists || actual != nextState {
 			return rollback(errors.Join(err, readErr))
 		}
 	}
 	journal.Phase = dnsSwitchPhaseTargetVerified
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	journal.Phase = dnsSwitchPhaseCommitted
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	return transport.SwitchDNSEngineV1Response{

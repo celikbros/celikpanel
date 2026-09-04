@@ -241,46 +241,52 @@ func readDNSEngineDBState(ctx context.Context, query dnsZoneStateQuery) (dnsEngi
 	return state, nil
 }
 
+// The mutation hold travels with readiness rather than through a second probe:
+// two round trips can disagree, and a presentation built from a disagreeing pair
+// is exactly the class of bug this file keeps producing.
+// Mutasyon tutması ikinci bir yoklamayla değil hazırlıkla birlikte gelir: iki
+// tur birbiriyle çelişebilir ve çelişen bir çiftten kurulan bir sunum, tam da bu
+// dosyanın üretmeye devam ettiği hata sınıfıdır.
 func validateDNSBackendReadiness(
 	response transport.DNSBackendReadinessResponse,
-) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, error) {
+) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, string, error) {
 	if response.Error != "" || len(response.Engines) != 2 {
-		return nil, false, errors.New("DNS backend readiness is unavailable")
+		return nil, false, "", errors.New("DNS backend readiness is unavailable")
 	}
 	result := make(map[transport.DNSEngine]transport.DNSBackendRuntimeState, 2)
 	for _, runtime := range response.Engines {
 		if !transport.ValidDNSEngine(runtime.Engine) {
-			return nil, false, errors.New("DNS backend readiness contains an unknown engine")
+			return nil, false, "", errors.New("DNS backend readiness contains an unknown engine")
 		}
 		if _, duplicate := result[runtime.Engine]; duplicate {
-			return nil, false, errors.New("DNS backend readiness contains a duplicate engine")
+			return nil, false, "", errors.New("DNS backend readiness contains a duplicate engine")
 		}
 		if runtime.Running && !runtime.Installed ||
 			runtime.Managed && !runtime.Installed ||
 			runtime.PairReady && (!runtime.Installed || !runtime.Running || !runtime.Managed) ||
 			len(runtime.Unit) > 128 ||
 			strings.ContainsAny(runtime.Unit, "\r\n\x00") {
-			return nil, false, errors.New("DNS backend readiness is internally inconsistent")
+			return nil, false, "", errors.New("DNS backend readiness is internally inconsistent")
 		}
 		result[runtime.Engine] = runtime
 	}
 	if _, ok := result[transport.DNSEnginePowerDNS]; !ok {
-		return nil, false, errors.New("PowerDNS readiness is missing")
+		return nil, false, "", errors.New("PowerDNS readiness is missing")
 	}
 	if _, ok := result[transport.DNSEngineBIND]; !ok {
-		return nil, false, errors.New("BIND readiness is missing")
+		return nil, false, "", errors.New("BIND readiness is missing")
 	}
-	return result, response.Port53Conflict, nil
+	return result, response.Port53Conflict, response.MutationHold, nil
 }
 
 func (p *Panel) readDNSBackendRuntime(
 	ctx context.Context,
-) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, error) {
+) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, string, error) {
 	var response transport.DNSBackendReadinessResponse
 	if err := p.callAgentContext(
 		ctx, "Agent.DNSBackendReadiness", &transport.Empty{}, &response,
 	); err != nil {
-		return nil, false, fmt.Errorf("read DNS backend readiness: %w", err)
+		return nil, false, "", fmt.Errorf("read DNS backend readiness: %w", err)
 	}
 	return validateDNSBackendReadiness(response)
 }
@@ -402,11 +408,40 @@ func (p *Panel) dnsEngineDNSSECCount(
 	return count, joined
 }
 
+// mutationHold carries the agent's reason for refusing durable mutations, or ""
+// when it accepts them. It changes one thing here and it is the thing that
+// matters: an engine the panel installed reads as Managed=false while the
+// transaction that would have claimed it is stuck, and without this the screen
+// reports a foreign DNS server. "Our own change system is held" and "someone
+// else installed a DNS server" are opposite diagnoses with opposite fixes, and
+// sending an operator after the second when the first is true is how an
+// afternoon disappears.
+//
+// The status stays inside the existing closed set; only the detail code, which
+// is free-form by contract, carries the correction. Inventing a status here
+// would be rejected by the frontend validator.
+//
+// mutationHold, agent'ın kalıcı mutasyonları reddetme sebebini taşır; kabul
+// ediyorsa "" olur. Burada tek bir şeyi değiştirir ve önemli olan da odur:
+// panelin kurduğu bir motor, onu sahiplenecek işlem takılıyken Managed=false
+// görünür ve bu olmadan ekran yabancı bir DNS sunucusu bildirir. "Kendi
+// değişiklik sistemimiz tutuluyor" ile "başkası bir DNS sunucusu kurmuş" zıt
+// teşhislerdir; birincisi doğruyken operatörü ikincisinin peşine göndermek bir
+// öğleden sonrayı yok eder.
+//
+// Durum mevcut kapalı kümenin içinde kalır; düzeltmeyi, sözleşme gereği serbest
+// biçimli olan detay kodu taşır. Burada yeni bir durum uydurmak, arayüz
+// doğrulayıcısı tarafından reddedilirdi.
 func deriveDNSEnginePresentation(
 	state dnsEngineDBState,
 	runtimes map[transport.DNSEngine]transport.DNSBackendRuntimeState,
 	runtimeErr error,
+	mutationHold string,
 ) (string, []dnsEngineEntry) {
+	unmanagedCode := "unmanaged_dns_detected"
+	if mutationHold != "" {
+		unmanagedCode = "mutations_held"
+	}
 	ids := []transport.DNSEngine{
 		transport.DNSEnginePowerDNS,
 		transport.DNSEngineBIND,
@@ -444,7 +479,7 @@ func deriveDNSEnginePresentation(
 		case runtime.Running:
 			if state.ActiveEngine == "" || !runtime.Managed {
 				entry.Status = "unmanaged"
-				entry.DetailCode = "unmanaged_dns_detected"
+				entry.DetailCode = unmanagedCode
 			} else {
 				entry.Status = "conflict"
 				entry.DetailCode = "active_engine_mismatch"
@@ -452,7 +487,7 @@ func deriveDNSEnginePresentation(
 		case runtime.Installed:
 			if !runtime.Managed {
 				entry.Status = "unmanaged"
-				entry.DetailCode = "unmanaged_dns_detected"
+				entry.DetailCode = unmanagedCode
 			} else {
 				entry.Status = "installed_standby"
 			}
@@ -499,18 +534,41 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	if err != nil {
 		return dnsEngineSnapshot{}, fmt.Errorf("read DNS engine zone counts: %w", err)
 	}
-	runtimes, port53Conflict, runtimeErr := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, mutationHold, runtimeErr := p.readDNSBackendRuntime(ctx)
 	dnssecCount := 0
 	var dnssecErr error
 	// BIND is currently activated only by an exact unsigned-zone switch
 	// snapshot. Do not probe the stopped PowerDNS backend as ongoing BIND
 	// health; engine-aware DNSSEC publication will replace this proof when
 	// BIND signing support is introduced.
-	if state.ActiveEngine != transport.DNSEngineBIND {
+	//
+	// A host with no active engine and no PowerDNS installed has nothing that
+	// could have signed a zone, and no backend to ask. Asking anyway turned
+	// every pre-existing zone into "DNSSEC readiness is unavailable", which
+	// the presentation then reported as degraded, and the first-install
+	// preview refused with dnssec_unsupported, target_unavailable and
+	// source_degraded at once (S-8 T1 on Arch, reproduced on the same shape
+	// on Debian; register R-029, third layer). A legacy PowerDNS that is
+	// installed but not yet adopted is still probed: its zones may well be
+	// signed, and that is exactly what the blocker exists for.
+	//
+	// Etkin motoru ve kurulu PowerDNS'i olmayan sunucuda bir bölgeyi
+	// imzalamış olabilecek hiçbir şey ve sorulacak bir arka uç yoktur. Yine
+	// de sormak, önceden var olan her bölgeyi "DNSSEC hazırlığı
+	// kullanılamıyor"a çeviriyordu; sunum bunu "degraded" bildiriyor ve ilk
+	// kurulum önizlemesi dnssec_unsupported, target_unavailable ve
+	// source_degraded ile aynı anda reddediyordu (S-8 T1 Arch'ta, aynı
+	// biçimde Debian'da yeniden üretildi; defter R-029, üçüncü kat).
+	// Kurulu ama henüz devralınmamış eski bir PowerDNS yine sorgulanır:
+	// bölgeleri pekâlâ imzalı olabilir; engelleyici tam bunun için vardır.
+	probeDNSSEC := state.ActiveEngine == transport.DNSEnginePowerDNS ||
+		(state.ActiveEngine == "" && runtimeErr == nil &&
+			runtimes[transport.DNSEnginePowerDNS].Installed)
+	if probeDNSSEC {
 		dnssecCount, dnssecErr = p.dnsEngineDNSSECCount(ctx, zones)
 	}
 	presentationState, entries := deriveDNSEnginePresentation(
-		state, runtimes, runtimeErr,
+		state, runtimes, runtimeErr, mutationHold,
 	)
 	if dnssecErr != nil && presentationState != dnsEngineStateSwitching {
 		presentationState = dnsEngineStateDegraded
@@ -599,7 +657,7 @@ func (p *Panel) activeDNSPublisher(
 	if state.ActiveEngine == "" || state.CurrentSwitchID != "" {
 		return dnsPublisherIdentity{}, false, nil
 	}
-	runtimes, port53Conflict, err := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, _, err := p.readDNSBackendRuntime(ctx)
 	if err != nil {
 		return dnsPublisherIdentity{}, false, err
 	}
@@ -834,7 +892,25 @@ func dnsEnginePreviewBlockers(
 	// Registration-only adoption verifies the exact full runtime zone set and
 	// may therefore reconcile legacy pending generations without publishing.
 	// A live lease is still rejected by buildDNSEngineManifest.
-	if action != "adopt" && snapshot.PendingZoneCount > 0 {
+	//
+	// A first install has no source engine, so its zones are pending by
+	// construction: nothing exists that could have applied them, and the
+	// install itself publishes every zone at its desired generation and marks
+	// it applied on commit. Treating that as a blocker made the first engine
+	// install unreachable on any host where a domain existed first (S-7 T1,
+	// register R-029). With a source engine active the blocker stays: pending
+	// there means the source has not caught up, and a switch must not copy an
+	// unsettled zone set.
+	//
+	// İlk kurulumun kaynak motoru yoktur; bölgeleri yapısı gereği bekler:
+	// onları uygulamış olabilecek hiçbir şey yoktur ve kurulumun kendisi her
+	// bölgeyi istenen neslinde yayımlayıp commit'te uygulandı işaretler. Bunu
+	// engelleyici saymak, önce alan adı eklenmiş her sunucuda ilk motor
+	// kurulumunu ulaşılamaz kılıyordu (S-7 T1, defter R-029). Kaynak motor
+	// etkinken engelleyici kalır: orada bekleme, kaynağın yetişmediği
+	// anlamına gelir ve geçiş oturmamış bir bölge kümesini kopyalamamalıdır.
+	if action != "adopt" && snapshot.ActiveEngine != nil &&
+		snapshot.PendingZoneCount > 0 {
 		blockers = addDNSEngineBlocker(blockers, "pending_zone_sync")
 	}
 	if action != "adopt" &&
@@ -1508,7 +1584,9 @@ func (p *Panel) reconcileDNSEngineSwitchLocked(
 				return detached, false, markerErr
 			}
 		}
-		recovered, recoverErr := p.recoverDNSEngineSwitchLocked(ctx, nil)
+		recovered, recoverErr := p.recoverDNSEngineSwitchWithPostCommitLocksLocked(
+			ctx, nil,
+		)
 		if recoverErr != nil {
 			return detached, recovered, recoverErr
 		}
@@ -1592,8 +1670,9 @@ func (p *Panel) reconcileDNSEngineSwitchLocked(
 		result := p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
 		if result.failed() {
 			log.Printf(
-				"reconciled DNS engine switch %s has pending follow-up: firewall=%v scan=%v",
-				persisted.SwitchID, result.FirewallErr, result.ScanErr,
+				"reconciled DNS engine switch %s has pending follow-up: normalization=%v firewall=%v scan=%v",
+				persisted.SwitchID, result.NormalizationErr,
+				result.FirewallErr, result.ScanErr,
 			)
 			return persisted, true, &dnsEngineReconcilePostCommitError{Result: result}
 		}
@@ -2168,7 +2247,7 @@ func (p *Panel) verifyDNSEngineRuntimeTarget(
 	ctx context.Context,
 	target transport.DNSEngine,
 ) error {
-	runtimes, port53Conflict, err := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, _, err := p.readDNSBackendRuntime(ctx)
 	if err != nil {
 		return err
 	}
@@ -2639,7 +2718,7 @@ func (p *Panel) verifyDNSEngineRollbackRuntime(
 	ctx context.Context,
 	persisted persistedDNSEngineSwitch,
 ) error {
-	runtimes, port53Conflict, err := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, _, err := p.readDNSBackendRuntime(ctx)
 	if err != nil {
 		return err
 	}
@@ -2919,6 +2998,31 @@ func writeDNSEngineChangeNotCommitted(w http.ResponseWriter, switchErr error) {
 	)
 }
 
+// writeDNSEngineMutationsHeld names the hold. Everything else about a held
+// agent is already true of an unverified outcome — the change did not complete
+// and state must be refreshed — but the operator's next action is different:
+// nothing will retry on its own, the agent's health is the problem, and the
+// hold code says which health problem. The message is fixed English and the
+// code is one of the stable MutationHold* values; no internal error text is
+// forwarded.
+// writeDNSEngineMutationsHeld tutulmayı adlandırır. Tutulan bir agent hakkında
+// geri kalan her şey doğrulanmamış bir sonuç için zaten geçerlidir — değişiklik
+// tamamlanmadı ve durum yenilenmeli — ama operatörün bir sonraki adımı
+// farklıdır: hiçbir şey kendiliğinden yeniden denemeyecek, sorun agent'ın
+// sağlığıdır ve tutulma kodu hangi sağlık sorunu olduğunu söyler. Mesaj sabit
+// İngilizcedir, kod kararlı MutationHold* değerlerinden biridir; hiçbir iç hata
+// metni iletilmez.
+func writeDNSEngineMutationsHeld(w http.ResponseWriter, hold string) {
+	writeCodedErrorDetails(
+		w,
+		http.StatusServiceUnavailable,
+		errCodeDNSEngineMutationsHeld,
+		"The agent is refusing durable mutations, so this DNS engine change did not complete and will not retry on its own. Refresh state and review the agent's health before requesting another change",
+		"",
+		[]string{hold},
+	)
+}
+
 func writeDNSEngineStateUnverified(w http.ResponseWriter) {
 	writeCodedError(
 		w,
@@ -2966,6 +3070,15 @@ func (p *Panel) handleDNSEngineSwitch(
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodPost {
 		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	// If startup could not reconcile interrupted service operations, the durable
+	// state this switch would build on is unknown. Refuse with the stored cause
+	// rather than starting a second transaction on top of an unresolved one.
+	// Açılış yarım kalmış servis işlemlerini uzlaştıramadıysa, bu geçişin
+	// üzerine kuracağı kalıcı durum bilinmiyor. Çözülmemiş bir işlemin üstüne
+	// ikincisini başlatmak yerine saklanan sebeple reddet.
+	if !p.requireSubsystemOperational(w, degradedSubsystemServiceOperations) {
 		return
 	}
 	var request dnsEngineSwitchRequest
@@ -3024,8 +3137,9 @@ func (p *Panel) handleDNSEngineSwitch(
 			)
 			if result.failed() {
 				log.Printf(
-					"DNS engine replay post-commit %s: firewall=%v scan=%v",
-					persisted.SwitchID, result.FirewallErr, result.ScanErr,
+					"DNS engine replay post-commit %s: normalization=%v firewall=%v scan=%v",
+					persisted.SwitchID, result.NormalizationErr,
+					result.FirewallErr, result.ScanErr,
 				)
 				p.auditDNSEngineBounded(actor, "post_commit.pending", persisted)
 				writeDNSEnginePostCommitFailed(w, result)
@@ -3161,7 +3275,10 @@ func (p *Panel) handleDNSEngineSwitch(
 		}
 		logDNSEngineAgentRejection(persisted.SwitchID, err)
 		log.Printf("DNS engine switch %s did not finalize: %v", persisted.SwitchID, err)
+		var held *agentMutationHeldError
 		switch {
+		case errors.As(err, &held):
+			writeDNSEngineMutationsHeld(w, held.Hold)
 		case changeNotCommitted:
 			writeDNSEngineChangeNotCommitted(w, err)
 		case mutationApplied:
@@ -3175,8 +3292,9 @@ func (p *Panel) handleDNSEngineSwitch(
 	postCommit := p.reconcileDNSEnginePostCommitLocked(workerCtx, persisted)
 	if postCommit.failed() {
 		log.Printf(
-			"DNS engine switch %s committed with pending follow-up: firewall=%v scan=%v",
-			persisted.SwitchID, postCommit.FirewallErr, postCommit.ScanErr,
+			"DNS engine switch %s committed with pending follow-up: normalization=%v firewall=%v scan=%v",
+			persisted.SwitchID, postCommit.NormalizationErr,
+			postCommit.FirewallErr, postCommit.ScanErr,
 		)
 		p.auditDNSEngineBounded(actor, "post_commit.pending", persisted)
 		writeDNSEnginePostCommitFailed(w, postCommit)
@@ -3201,11 +3319,60 @@ func validDirectDNSEngineSwitch(job *agentMutationJob) bool {
 		mutationpayload.ValidDNSEngineSwitchQualifier(job.PackageName)
 }
 
+func adoptionConfigureIdentityFromMarker(
+	marker *dnsEngineOperationMarker,
+) (agentMutationIdentity, bool) {
+	if marker == nil || marker.Action != "adopt" ||
+		marker.Phase != dnsEngineOperationPostCommit ||
+		marker.TargetEngine != transport.DNSEnginePowerDNS ||
+		!validServiceOperationID(marker.ConfigurePDNSRequestID) ||
+		!validServiceOperationID(marker.ConfigurePDNSOwnerID) {
+		return agentMutationIdentity{}, false
+	}
+	return agentMutationIdentity{
+		RequestID: marker.ConfigurePDNSRequestID,
+		OwnerID:   marker.ConfigurePDNSOwnerID,
+		Kind:      "pdns_configure",
+		Target:    "pdns",
+	}, true
+}
+
+// reconcileDNSEnginePostCommitAfterRestartLocked enters the same process-lock
+// order as the HTTP switch path. Startup already owns serviceMutationMu.
+func (p *Panel) reconcileDNSEnginePostCommitAfterRestartLocked(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+) dnsEnginePostCommitResult {
+	p.dnsTopologyMu.Lock()
+	defer p.dnsTopologyMu.Unlock()
+	dnsPublicationMu.Lock()
+	defer dnsPublicationMu.Unlock()
+	return p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+}
+
 // recoverDNSEngineSwitchLocked reconciles the snapshot committed before
 // BeginServiceMutation. The caller holds serviceMutationMu during startup.
 func (p *Panel) recoverDNSEngineSwitchLocked(
 	ctx context.Context,
 	globalJob *agentMutationJob,
+) (bool, error) {
+	return p.recoverDNSEngineSwitchLockedMode(ctx, globalJob, false)
+}
+
+// recoverDNSEngineSwitchWithPostCommitLocksLocked is the manual-reconcile
+// entry point. Its caller already owns serviceMutationMu, dnsTopologyMu, and
+// dnsPublicationMu in that order.
+func (p *Panel) recoverDNSEngineSwitchWithPostCommitLocksLocked(
+	ctx context.Context,
+	globalJob *agentMutationJob,
+) (bool, error) {
+	return p.recoverDNSEngineSwitchLockedMode(ctx, globalJob, true)
+}
+
+func (p *Panel) recoverDNSEngineSwitchLockedMode(
+	ctx context.Context,
+	globalJob *agentMutationJob,
+	postCommitLocksHeld bool,
 ) (bool, error) {
 	state, err := readDNSEngineDBState(ctx, p.db.GetDB())
 	if err != nil {
@@ -3245,24 +3412,55 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 				)
 			}
 			if globalJob != nil && agentMutationActive(globalJob.Status) {
-				if !validDirectFirewallMutation(globalJob) {
+				configureIdentity, hasConfigureIdentity :=
+					adoptionConfigureIdentityFromMarker(marker)
+				switch {
+				case hasConfigureIdentity &&
+					configureIdentity.matches(globalJob):
+					// The post-commit reconciler waits for this exact child and
+					// either validates its success receipt or resumes its failed
+					// identity. The marker was durable before BeginServiceMutation.
+				case marker.Action == "adopt" &&
+					marker.ConfigurePDNSComplete &&
+					validDirectDNSZoneSyncV3(globalJob):
+					p.dnsTopologyMu.Lock()
+					recoverErr := p.recoverDirectDNSZoneSyncV3Locked(
+						ctx, globalJob,
+					)
+					p.dnsTopologyMu.Unlock()
+					if recoverErr != nil {
+						p.auditDNSEngineSystem(
+							ctx, "recovered.uncertain", persisted,
+						)
+						return true, recoverErr
+					}
+				case validDirectFirewallMutation(globalJob):
+					if err := p.terminalizeInterruptedFirewallMutation(
+						ctx, globalJob,
+					); err != nil {
+						p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
+						return true, err
+					}
+				default:
 					p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
 					return true, errors.New(
 						"active mutation does not match DNS engine post-commit recovery",
 					)
 				}
-				if err := p.terminalizeInterruptedFirewallMutation(
-					ctx, globalJob,
-				); err != nil {
-					p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
-					return true, err
-				}
 			}
-			result := p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+			var result dnsEnginePostCommitResult
+			if postCommitLocksHeld {
+				result = p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+			} else {
+				result = p.reconcileDNSEnginePostCommitAfterRestartLocked(
+					ctx, persisted,
+				)
+			}
 			if result.failed() {
 				log.Printf(
-					"DNS engine startup post-commit %s remains pending: firewall=%v scan=%v",
-					persisted.SwitchID, result.FirewallErr, result.ScanErr,
+					"DNS engine startup post-commit %s remains pending: normalization=%v firewall=%v scan=%v",
+					persisted.SwitchID, result.NormalizationErr,
+					result.FirewallErr, result.ScanErr,
 				)
 				p.auditDNSEngineSystem(
 					ctx, "recovered.post_commit.pending", persisted,
@@ -3344,11 +3542,19 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 			return true, fmt.Errorf("finalize recovered DNS engine switch: %w", err)
 		}
 		p.auditDNSEngineSystem(ctx, "recovered.succeeded", persisted)
-		result := p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+		var result dnsEnginePostCommitResult
+		if postCommitLocksHeld {
+			result = p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+		} else {
+			result = p.reconcileDNSEnginePostCommitAfterRestartLocked(
+				ctx, persisted,
+			)
+		}
 		if result.failed() {
 			log.Printf(
-				"recovered DNS engine switch %s has pending follow-up: firewall=%v scan=%v",
-				persisted.SwitchID, result.FirewallErr, result.ScanErr,
+				"recovered DNS engine switch %s has pending follow-up: normalization=%v firewall=%v scan=%v",
+				persisted.SwitchID, result.NormalizationErr,
+				result.FirewallErr, result.ScanErr,
 			)
 			p.auditDNSEngineSystem(
 				ctx, "recovered.post_commit.pending", persisted,

@@ -11,7 +11,9 @@ func TestValidatePanelCommandModesRejectsEveryOneShotPair(t *testing.T) {
 		enable func(*panelCommandModes)
 	}{
 		{name: "create-admin", enable: func(m *panelCommandModes) { m.createAdmin = true }},
+		{name: "validate-admin-credentials-file", enable: func(m *panelCommandModes) { m.validateAdminCredentials = true }},
 		{name: "count-users", enable: func(m *panelCommandModes) { m.countUsers = true }},
+		{name: "count-users-read-only-wal-aware", enable: func(m *panelCommandModes) { m.countUsersReadOnlyWALAware = true }},
 		{name: "check-service-operations-idle", enable: func(m *panelCommandModes) { m.checkIdle = true }},
 		{name: "check-pre-ledger-service-operations-idle", enable: func(m *panelCommandModes) { m.checkPreLedgerIdle = true }},
 		{name: "check-service-operations-idle-wal-aware", enable: func(m *panelCommandModes) { m.checkWALAwareIdle = true }},
@@ -40,7 +42,9 @@ func TestValidatePanelCommandModesRejectsEveryOneShotPair(t *testing.T) {
 func TestValidatePanelCommandModesAcceptsEachOneShotAlone(t *testing.T) {
 	tests := []panelCommandModes{
 		{createAdmin: true},
+		{validateAdminCredentials: true},
 		{countUsers: true},
+		{countUsersReadOnlyWALAware: true},
 		{checkIdle: true},
 		{checkPreLedgerIdle: true},
 		{checkWALAwareIdle: true},
@@ -59,7 +63,9 @@ func TestValidatePanelCommandModesAcceptsEachOneShotAlone(t *testing.T) {
 func TestValidatePanelCommandModesRejectsRuntimeFlagsWithOneShot(t *testing.T) {
 	for _, test := range []panelCommandModes{
 		{createAdmin: true, demo: true},
+		{validateAdminCredentials: true, insecureCookies: true},
 		{countUsers: true, insecureCookies: true},
+		{countUsersReadOnlyWALAware: true, demo: true},
 		{migrateOnly: true, demo: true, insecureCookies: true},
 	} {
 		err := validatePanelCommandModes(test)

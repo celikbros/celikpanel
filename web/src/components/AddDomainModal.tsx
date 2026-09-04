@@ -248,15 +248,36 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
 
                 {dnsMissing && (
                     <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-fg">
-                        <span>{t('domains.add.needsDns')}</span>
+                        {/*
+                          Say which half is missing. An engine that is active but
+                          has no identity must not be told to "activate BIND or
+                          PowerDNS"; the button and the sentence name one fix.
+                          Hangi yarının eksik olduğunu söyle. Etkin ama kimliksiz
+                          bir motora "BIND ya da PowerDNS'i etkinleştir" denmemeli;
+                          düğme ile cümle aynı tek düzeltmeyi adlandırır.
+                        */}
+                        <span>{caps?.dns_server ? t('err.DNS_SETTINGS_REQUIRED') : t('domains.add.needsDns')}</span>
+                        {/*
+                          Both halves of "DNS is missing" are fixed in the same
+                          place: the DNS infrastructure section installs and
+                          activates an engine, and stages the identity. The
+                          Services page cannot install a DNS engine any more
+                          (DNS_ENGINE_WORKFLOW_REQUIRED), so sending a fresh
+                          host there was a dead end (R-029, screen side).
+                          "DNS eksik"in iki yarısı da aynı yerde düzelir: DNS
+                          altyapısı bölümü motoru kurup etkinleştirir ve kimliği
+                          hazırlar. Servisler sayfası artık DNS motoru kuramaz
+                          (DNS_ENGINE_WORKFLOW_REQUIRED); taze sunucuyu oraya
+                          göndermek çıkmaz sokaktı (R-029, ekran tarafı).
+                        */}
                         <button
                             type='button'
-                            onClick={() => navigate(caps?.dns_server ? '/settings?section=dns' : '/services')}
+                            onClick={() => navigate('/settings?section=dns')}
                             className='rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg'
                         >
                             {caps?.dns_server
                                 ? t('err.DNS_SETTINGS_REQUIRED.action')
-                                : t('domains.goServices')}
+                                : t('err.DNS_SERVER_REQUIRED.action')}
                         </button>
                     </div>
                 )}

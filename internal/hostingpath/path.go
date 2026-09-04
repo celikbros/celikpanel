@@ -6,6 +6,7 @@ package hostingpath
 import (
 	"fmt"
 	"path"
+	"strings"
 )
 
 const (
@@ -18,6 +19,33 @@ const (
 // ServiceMutationStateRoot, ayrıcalıklı servis işlemlerinin kullandığı yalnızca root erişimli durum dizinini döndürür.
 func ServiceMutationStateRoot() string {
 	return serviceMutationStateRoot
+}
+
+// SubscriptionsRoot returns the parent every tenant site home lives under.
+// Callers use it to prove that an account named in a request is a tenant site
+// account and not a system or administrative one, before acting as root on its
+// behalf.
+// SubscriptionsRoot, her kiracı site ev dizininin altında yaşadığı üst dizini
+// döndürür. Çağıranlar, bir istekte adı geçen hesabın sistem ya da yönetim
+// hesabı değil bir kiracı site hesabı olduğunu, onun adına root olarak işlem
+// yapmadan önce kanıtlamak için kullanır.
+func SubscriptionsRoot() string {
+	return subscriptionsRoot
+}
+
+// IsSiteHome reports whether an account home directory lies inside the hosting
+// root. It is a containment test on an already-cleaned absolute path, not a
+// permission check.
+// IsSiteHome, bir hesabın ev dizininin barındırma kökünün içinde olup
+// olmadığını bildirir. Zaten temizlenmiş mutlak bir yol üzerinde bir kapsama
+// testidir, izin denetimi değil.
+func IsSiteHome(home string) bool {
+	if home == "" {
+		return false
+	}
+	cleaned := path.Clean(home)
+	return cleaned != subscriptionsRoot &&
+		strings.HasPrefix(cleaned, subscriptionsRoot+"/")
 }
 
 func SiteHome(subscriptionID, domainID int) (string, error) {

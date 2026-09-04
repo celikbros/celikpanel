@@ -53,6 +53,10 @@ type apiErrorBody struct {
 // Sabit ret kodları. Birini yeniden adlandırmak API kırılmasıdır — yapma.
 const (
 	errCodeInternal                      = "INTERNAL"
+	errCodeSubsystemDegraded             = "SUBSYSTEM_DEGRADED"
+	errCodeStartupRecoveryFailed         = "STARTUP_RECOVERY_FAILED"
+	errCodeSealedSecretUnreadable        = "SEALED_SECRET_UNREADABLE"
+	errCodeMutationsHeld                 = "MUTATIONS_HELD"
 	errCodeHostMutationBusy              = transport.HostMutationBusy
 	errCodePlatformCapabilityUnavailable = "PLATFORM_CAPABILITY_UNAVAILABLE"
 	errCodePlatformIdentityUnavailable   = "PLATFORM_IDENTITY_UNAVAILABLE"
@@ -72,6 +76,7 @@ const (
 	errCodeDNSEnginePlanRejected         = "DNS_ENGINE_PLAN_REJECTED"
 	errCodeDNSEngineChangeNotCommitted   = "DNS_ENGINE_CHANGE_NOT_COMMITTED"
 	errCodeDNSEngineStateUnverified      = "DNS_ENGINE_STATE_UNVERIFIED"
+	errCodeDNSEngineMutationsHeld        = "DNS_ENGINE_MUTATIONS_HELD"
 	errCodeDNSEngineChangeAppliedRefresh = "DNS_ENGINE_CHANGE_APPLIED_REFRESH_REQUIRED"
 	errCodeDNSSECEngineUnsupported       = "DNSSEC_ENGINE_UNSUPPORTED"
 	errCodeDNSSECStatusUnavailable       = "DNSSEC_STATUS_UNAVAILABLE"

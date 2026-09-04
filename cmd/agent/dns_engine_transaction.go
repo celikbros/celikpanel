@@ -35,7 +35,70 @@ const (
 	dnsSwitchPhaseCommitted      = "committed"
 	dnsSwitchPhaseRollingBack    = "rolling-back"
 	dnsSwitchPhaseRolledBack     = "rolled-back"
+
+	dnsEngineSwitchJournalFaultPreIntent   = "pre_intent"
+	dnsEngineSwitchJournalFaultBeforeWrite = "before_write"
+	dnsEngineSwitchJournalFaultAfterWrite  = "after_write"
+
+	dnsEngineSwitchFaultDriverBIND                     = "bind"
+	dnsEngineSwitchFaultDriverPDNSSwitch               = "pdns-switch"
+	dnsEngineSwitchFaultDriverPDNSAdopt                = "pdns-adopt"
+	dnsEngineSwitchFaultDriverPDNSSecondaryReconfigure = "pdns-secondary-reconfigure"
+	dnsEngineSwitchFaultDriverSignedUpdateFinalize     = "signed-update-finalize"
 )
+
+// Assigned only by focused crash-recovery tests or the linux && dns_kill_matrix
+// tagged runtime. Standard untagged production builds never assign this hook,
+// so their journal publication has no fault-injection behavior.
+var dnsEngineSwitchJournalFaultHook func(string, string, dnsEngineSwitchJournal) error
+
+// Returned only by the linux && dns_kill_matrix tagged runtime after a
+// durably published forward journal has been selected as the deterministic
+// precursor for a rollback cell. Ordinary builds leave the hook above nil and
+// therefore cannot produce this sentinel.
+var dnsEngineSwitchRollbackPrecursorError = errors.New(
+	"DNS kill-matrix rollback precursor injected",
+)
+
+func runDNSEngineSwitchPreIntentFaultHook(
+	driver string,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+) error {
+	if dnsEngineSwitchJournalFaultHook == nil {
+		return nil
+	}
+	point := dnsEngineSwitchJournal{
+		Schema:            dnsEngineSwitchJournalSchema,
+		Phase:             "pre-intent",
+		Mode:              manifest.Mode,
+		MutationRequestID: binding.MutationRequestID,
+		MutationOwnerID:   binding.MutationOwnerID,
+		ManifestQualifier: manifest.Qualifier,
+		SourceEngine:      manifest.SourceEngine,
+		TargetEngine:      manifest.TargetEngine,
+		SourceEpoch:       manifest.SourceEpoch,
+		TargetEpoch:       manifest.TargetEpoch,
+		SourceRevision:    manifest.SourceRevision,
+		Topology:          manifest.Topology,
+		PairRole:          manifest.PairRole,
+		LocalIP:           manifest.LocalIP,
+		LocalNS:           manifest.LocalNS,
+		PeerIP:            manifest.PeerIP,
+		PeerNS:            manifest.PeerNS,
+		SnapshotBytes:     manifest.SnapshotBytes,
+		Zones:             manifest.Zones,
+	}
+	if err := dnsEngineSwitchJournalFaultHook(
+		driver, dnsEngineSwitchJournalFaultPreIntent, point,
+	); err != nil {
+		return fmt.Errorf(
+			"injected failure in DNS engine switch pre-intent window: %w",
+			err,
+		)
+	}
+	return nil
+}
 
 func newDNSEngineRollbackContext(
 	parent context.Context,
@@ -161,6 +224,27 @@ func validateDNSFileSnapshotIntegrity(snapshot dnsFileSnapshot) error {
 }
 
 func validateDNSFileSnapshot(snapshot dnsFileSnapshot) error {
+	return validateDNSFileSnapshotForOwnerContract(
+		snapshot, 0, 0,
+		"DNS switch file snapshot is not root-owned",
+	)
+}
+
+func validateDNSFileSnapshotForOwner(
+	snapshot dnsFileSnapshot,
+	requiredUID, requiredGID uint32,
+) error {
+	return validateDNSFileSnapshotForOwnerContract(
+		snapshot, requiredUID, requiredGID,
+		"DNS switch file snapshot ownership differs from the managed contract",
+	)
+}
+
+func validateDNSFileSnapshotForOwnerContract(
+	snapshot dnsFileSnapshot,
+	requiredUID, requiredGID uint32,
+	ownerError string,
+) error {
 	if err := validateDNSFileSnapshotIntegrity(snapshot); err != nil {
 		return err
 	}
@@ -170,9 +254,25 @@ func validateDNSFileSnapshot(snapshot dnsFileSnapshot) error {
 	if dnsSnapshotOwnerRequired() && !snapshot.OwnerKnown {
 		return errors.New("DNS switch file snapshot is missing required ownership metadata")
 	}
-	if (snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID != 0)) ||
+	if (snapshot.OwnerKnown &&
+		(snapshot.UID != requiredUID || snapshot.GID != requiredGID)) ||
 		(!snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID != 0)) {
-		return errors.New("DNS switch file snapshot is not root-owned")
+		return errors.New(ownerError)
+	}
+	return nil
+}
+
+func validateDNSEngineStateSnapshot(snapshot dnsFileSnapshot) error {
+	if err := validateDNSFileSnapshotForOwner(
+		snapshot,
+		serviceMutationRequiredOwnerUID,
+		serviceMutationRequiredOwnerGID,
+	); err != nil {
+		return err
+	}
+	if snapshot.Path != filepath.Clean(dnsEngineStatePath()) ||
+		(snapshot.Exists && snapshot.Mode != 0o600) {
+		return errors.New("DNS engine switch journal state snapshot path is invalid")
 	}
 	return nil
 }
@@ -229,12 +329,8 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 	if err := validatePrimaryCatalogSerialContract(commitment, journal.PrimaryCatalogSerial); err != nil {
 		return err
 	}
-	if err := validateDNSFileSnapshot(journal.StateBefore); err != nil {
+	if err := validateDNSEngineStateSnapshot(journal.StateBefore); err != nil {
 		return err
-	}
-	if journal.StateBefore.Path != filepath.Clean(dnsEngineStatePath()) ||
-		(journal.StateBefore.Exists && journal.StateBefore.Mode != 0o600) {
-		return errors.New("DNS engine switch journal state snapshot path is invalid")
 	}
 	sourceState, sourceExists, err := sourceStateFromDNSSwitchJournal(journal)
 	if err != nil {
@@ -389,18 +485,29 @@ func validBINDConfigSnapshotSet(snapshots []dnsFileSnapshot) bool {
 		if len(snapshots) != len(want) {
 			return false
 		}
+		// The vendor file mode follows the layout: Debian ships its BIND
+		// configuration 0644 root:bind, Arch ships /etc/named.conf 0640
+		// root:named (register R-018). The exact group is proven by the
+		// owner policy at capture time; here the shape must merely be the
+		// layout's, with one common bounded group across the set.
+		// Satıcı dosya kipi yerleşimi izler: Debian BIND yapılandırmasını
+		// 0644 root:bind, Arch /etc/named.conf'u 0640 root:named gönderir
+		// (defter R-018). Tam grup, yakalama anında sahiplik politikasıyla
+		// kanıtlanır; burada biçim yalnız yerleşimin biçimi olmalı ve küme
+		// boyunca tek, sınırlı bir ortak grup taşımalıdır.
+		wantMode := uint32(0o640)
+		if aptLayout {
+			wantMode = 0o644
+		}
 		var commonGID uint32
 		for index, snapshot := range snapshots {
-			if snapshot.Path != want[index] || !snapshot.Exists || snapshot.Mode != 0o644 ||
+			if snapshot.Path != want[index] || !snapshot.Exists || snapshot.Mode != wantMode ||
 				(dnsSnapshotOwnerRequired() && !snapshot.OwnerKnown) ||
 				(snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID > uint32(1<<31-1))) ||
 				(index > 0 && snapshot.OwnerKnown != snapshots[0].OwnerKnown) {
 				return false
 			}
 			if snapshot.OwnerKnown {
-				if !aptLayout && snapshot.GID != 0 {
-					return false
-				}
 				if index == 0 {
 					commonGID = snapshot.GID
 				} else if snapshot.GID != commonGID {
@@ -491,19 +598,51 @@ func readDNSEngineSwitchJournalAt(path string) (dnsEngineSwitchJournal, bool, er
 	return journal, err == nil, err
 }
 
-func writeDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
+func writeDNSEngineSwitchJournalWithOps(
+	journal dnsEngineSwitchJournal,
+	persist func([]byte) error,
+	read func() (dnsEngineSwitchJournal, bool, error),
+	faultHook func(string, dnsEngineSwitchJournal) error,
+) error {
+	if persist == nil || read == nil {
+		return errors.New("DNS engine switch journal writer is incomplete")
+	}
 	encoded, err := encodeDNSEngineSwitchJournal(journal)
 	if err != nil {
 		return err
 	}
-	if err := secureWriteConfig(dnsEngineSwitchJournalPath(), encoded, 0o600); err != nil {
-		verified, exists, readErr := readDNSEngineSwitchJournal()
+	if faultHook != nil {
+		if err := faultHook(dnsEngineSwitchJournalFaultBeforeWrite, journal); err != nil {
+			return fmt.Errorf(
+				"injected failure before DNS engine switch journal write for phase %q: %w",
+				journal.Phase, err,
+			)
+		}
+	}
+	if err := persist(encoded); err != nil {
+		verified, exists, readErr := read()
 		if readErr == nil && exists && reflect.DeepEqual(verified, journal) {
+			if faultHook != nil {
+				if hookErr := faultHook(dnsEngineSwitchJournalFaultAfterWrite, journal); hookErr != nil {
+					return fmt.Errorf(
+						"injected failure after DNS engine switch journal write for phase %q: %w",
+						journal.Phase, hookErr,
+					)
+				}
+			}
 			return nil
 		}
 		return errors.Join(err, readErr)
 	}
-	verified, exists, err := readDNSEngineSwitchJournal()
+	if faultHook != nil {
+		if err := faultHook(dnsEngineSwitchJournalFaultAfterWrite, journal); err != nil {
+			return fmt.Errorf(
+				"injected failure after DNS engine switch journal write for phase %q: %w",
+				journal.Phase, err,
+			)
+		}
+	}
+	verified, exists, err := read()
 	if err != nil || !exists || !reflect.DeepEqual(verified, journal) {
 		if err == nil {
 			err = errors.New("DNS engine switch journal readback mismatch")
@@ -511,6 +650,31 @@ func writeDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 		return err
 	}
 	return nil
+}
+
+func writeDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
+	return writeDNSEngineSwitchJournalForFaultDriver("", journal)
+}
+
+func writeDNSEngineSwitchJournalForFaultDriver(
+	driver string,
+	journal dnsEngineSwitchJournal,
+) error {
+	globalFaultHook := dnsEngineSwitchJournalFaultHook
+	var faultHook func(string, dnsEngineSwitchJournal) error
+	if globalFaultHook != nil {
+		faultHook = func(point string, observed dnsEngineSwitchJournal) error {
+			return globalFaultHook(driver, point, observed)
+		}
+	}
+	return writeDNSEngineSwitchJournalWithOps(
+		journal,
+		func(encoded []byte) error {
+			return secureWriteConfig(dnsEngineSwitchJournalPath(), encoded, 0o600)
+		},
+		readDNSEngineSwitchJournal,
+		faultHook,
+	)
 }
 
 func removeDNSEngineSwitchJournal() error {
@@ -546,6 +710,14 @@ func captureDNSFileSnapshotForOwner(
 	return captureDNSFileSnapshotForOwnerContract(
 		path, mode, allowAbsent, requiredUID, requiredGID,
 		"DNS switch snapshot file ownership differs from the managed contract",
+	)
+}
+
+func captureDNSEngineStateSnapshot(allowAbsent bool) (dnsFileSnapshot, error) {
+	return captureDNSFileSnapshotForOwner(
+		dnsEngineStatePath(), 0o600, allowAbsent,
+		serviceMutationRequiredOwnerUID,
+		serviceMutationRequiredOwnerGID,
 	)
 }
 
@@ -640,6 +812,47 @@ func verifyDNSFileSnapshotsExactForOwner(
 		}
 	}
 	return nil
+}
+
+func verifyDNSEngineStateSnapshotExact(expected dnsFileSnapshot) error {
+	if err := validateDNSEngineStateSnapshot(expected); err != nil {
+		return err
+	}
+	actual, err := captureDNSEngineStateSnapshot(true)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		return errors.New("DNS engine state changed during exact verification")
+	}
+	return nil
+}
+
+func restoreDNSEngineStateSnapshot(snapshot dnsFileSnapshot) error {
+	if err := validateDNSEngineStateSnapshot(snapshot); err != nil {
+		return err
+	}
+	current, err := captureDNSEngineStateSnapshot(true)
+	if err != nil {
+		return err
+	}
+	switch {
+	case snapshot.Exists:
+		err = secureWriteConfigReplacingSnapshotWithOwner(
+			snapshot.Path,
+			snapshot.Data,
+			0o600,
+			&current,
+			serviceMutationRequiredOwnerUID,
+			serviceMutationRequiredOwnerGID,
+		)
+	case current.Exists:
+		err = secureRemoveConfig(snapshot.Path)
+	}
+	if err != nil {
+		return err
+	}
+	return verifyDNSEngineStateSnapshotExact(snapshot)
 }
 
 func restoreDNSFileSnapshot(snapshot dnsFileSnapshot) error {
@@ -740,8 +953,54 @@ func dnsSystemdStateGuard(systemctl string) *bindPackageInstallGuard {
 }
 
 func restoreDNSUnitSnapshots(ctx context.Context, systemctl string, snapshots []dnsUnitSnapshot) error {
-	guard := dnsSystemdStateGuard(systemctl)
-	for _, snapshot := range snapshots {
+	return restoreDNSUnitSnapshotsWithGuard(ctx, dnsSystemdStateGuard(systemctl), snapshots)
+}
+
+// dnsUnitRestoreRank orders a restore so that a distro alias comes after the
+// unit it aliases. On APT hosts bind9.service is only an Alias= of
+// named.service: the symlink exists while named.service is enabled and is
+// removed by "systemctl disable named.service". Journals record unit
+// snapshots sorted by name, and "bind9.service" sorts before "named.service",
+// so a rollback that restored them in journal order ran
+// "systemctl enable bind9.service" while the alias did not exist and failed
+// with "Unit bind9.service does not exist" (S-8 T5, register R-031). Restoring
+// the real unit first recreates the alias; enabling the alias afterwards is
+// then an exact no-op readback.
+//
+// dnsUnitRestoreRank, geri yüklemeyi dağıtım takma adı, takma adı olduğu
+// birimden sonra gelecek şekilde sıralar. APT sunucularında bind9.service
+// yalnız named.service'in bir Alias='ıdır: sembolik bağ named.service
+// etkinleştirilmişken var olur ve "systemctl disable named.service" onu
+// kaldırır. Günlükler birim anlık görüntülerini ada göre sıralı kaydeder ve
+// "bind9.service" "named.service"ten önce gelir; dolayısıyla onları günlük
+// sırasıyla geri yükleyen bir geri alma, takma ad yokken "systemctl enable
+// bind9.service" koşturup "Unit bind9.service does not exist" ile düştü (S-8
+// T5, defter R-031). Önce gerçek birimi geri yüklemek takma adı yeniden
+// yaratır; sonra takma adı etkinleştirmek tam bir no-op okumadır.
+func dnsUnitRestoreRank(name string) int {
+	if name == "bind9.service" {
+		return 1
+	}
+	return 0
+}
+
+func orderDNSUnitSnapshotsForRestore(snapshots []dnsUnitSnapshot) []dnsUnitSnapshot {
+	ordered := append([]dnsUnitSnapshot(nil), snapshots...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		return dnsUnitRestoreRank(ordered[i].Name) < dnsUnitRestoreRank(ordered[j].Name)
+	})
+	return ordered
+}
+
+func restoreDNSUnitSnapshotsWithGuard(
+	ctx context.Context,
+	guard *bindPackageInstallGuard,
+	snapshots []dnsUnitSnapshot,
+) error {
+	if guard == nil {
+		return errors.New("DNS unit snapshot restore requires a systemd guard")
+	}
+	for _, snapshot := range orderDNSUnitSnapshotsForRestore(snapshots) {
 		if err := validateDNSUnitSnapshot(snapshot); err != nil {
 			return err
 		}

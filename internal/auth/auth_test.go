@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -42,6 +43,49 @@ func TestHashPasswordUniqueSalt(t *testing.T) {
 func TestVerifyPasswordRejectsGarbage(t *testing.T) {
 	if _, err := VerifyPassword("x", "not-a-valid-hash"); err == nil {
 		t.Fatal("VerifyPassword accepted a malformed hash")
+	}
+}
+
+func TestValidatePasswordHashAcceptsGeneratedHash(t *testing.T) {
+	hash, err := HashPassword("admission-probe-fixture")
+	if err != nil {
+		t.Fatalf("HashPassword: %v", err)
+	}
+	if err := ValidatePasswordHash(hash); err != nil {
+		t.Fatalf("ValidatePasswordHash(generated hash): %v", err)
+	}
+}
+
+func TestValidatePasswordHashRejectsMalformedOrUnsafeEncoding(t *testing.T) {
+	tests := map[string]string{
+		"malformed":         "not-a-valid-hash",
+		"oversize encoded":  strings.Repeat("x", maxEncodedPasswordHashBytes+1),
+		"empty salt":        "$argon2id$v=19$m=8,t=1,p=1$$AA",
+		"empty key":         "$argon2id$v=19$m=8,t=1,p=1$AA$",
+		"zero memory":       "$argon2id$v=19$m=0,t=1,p=1$AA$AA",
+		"excessive memory":  "$argon2id$v=19$m=262145,t=1,p=1$AA$AA",
+		"excessive time":    "$argon2id$v=19$m=8,t=11,p=1$AA$AA",
+		"zero threads":      "$argon2id$v=19$m=8,t=1,p=0$AA$AA",
+		"excessive threads": "$argon2id$v=19$m=8,t=1,p=17$AA$AA",
+	}
+	for name, hash := range tests {
+		t.Run(name, func(t *testing.T) {
+			if err := ValidatePasswordHash(hash); err == nil {
+				t.Fatal("ValidatePasswordHash accepted an unsafe or malformed encoding")
+			}
+		})
+	}
+}
+
+func TestValidatePasswordHashPolicyDoesNotNarrowVerifyPassword(t *testing.T) {
+	// The admission parser has a deliberately tighter work-factor policy than
+	// the login verifier. Keep that policy out of decodeHash/VerifyPassword.
+	hash := "$argon2id$v=19$m=8,t=11,p=1$AA$AA"
+	if err := ValidatePasswordHash(hash); err == nil {
+		t.Fatal("ValidatePasswordHash accepted an out-of-policy time cost")
+	}
+	if _, err := VerifyPassword("x", hash); err != nil {
+		t.Fatalf("VerifyPassword rejected a parseable hash because of admission policy: %v", err)
 	}
 }
 

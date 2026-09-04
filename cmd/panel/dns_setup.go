@@ -850,6 +850,64 @@ func hasDNSPublicationPending(
 	return pending != 0, nil
 }
 
+// hasDNSPublicationInFlight reports whether any zone is being published right
+// now: a zone row carrying a live publication lease, or an engine lease. It
+// deliberately ignores zones that are merely behind their desired generation.
+// hasDNSPublicationInFlight, şu anda yayımlanmakta olan bir bölge olup
+// olmadığını bildirir: canlı yayın kirası taşıyan bir bölge satırı ya da bir
+// motor kirası. İstenen neslinin yalnızca gerisinde kalan bölgeleri bilerek
+// yok sayar.
+func hasDNSPublicationInFlight(
+	ctx context.Context,
+	query dnsZoneStateQuery,
+) (bool, error) {
+	var inFlight int
+	if err := query.QueryRowContext(ctx, `
+		SELECT
+		  (SELECT count(*) FROM dns_zone_sync_state
+		   WHERE lease_request_id IS NOT NULL)
+		  + (SELECT count(*) FROM dns_zone_engine_leases)`,
+	).Scan(&inFlight); err != nil {
+		return false, err
+	}
+	return inFlight != 0, nil
+}
+
+// dnsIdentityStagingPublicationBlocked is the publication gate of identity
+// staging, chosen by staging kind.
+//
+// On a host that has never run a DNS engine every zone is pending by
+// construction: nothing exists that could apply it. Counting those zones as
+// "a publication is pending" refused identity staging on exactly the hosts
+// that need it most, and because the first engine install requires staged
+// identity, the ordinary order of operations - add a domain, then set up DNS -
+// could never reach the install (S-7 T1, register R-029). The fresh kind
+// therefore refuses only publications actually in flight. A host that already
+// runs a legacy engine is not fresh: its pending zones may be mid-publication,
+// and the stricter gate stays.
+//
+// dnsIdentityStagingPublicationBlocked, kimlik hazırlamanın hazırlama türüne
+// göre seçilen yayın kapısıdır.
+//
+// Hiç DNS motoru çalıştırmamış bir sunucuda her bölge yapısı gereği bekler:
+// onu uygulayabilecek hiçbir şey yoktur. O bölgeleri "bir yayın bekliyor"
+// diye saymak, kimlik hazırlamayı tam da ona en çok ihtiyaç duyan sunucularda
+// reddediyordu; ilk motor kurulumu hazırlanmış kimlik istediği için sıradan
+// işlem sırası - önce alan adı ekle, sonra DNS'i kur - kuruluma asla
+// ulaşamıyordu (S-7 T1, defter R-029). Taze tür bu yüzden yalnız gerçekten
+// uçuştaki yayınları reddeder. Zaten eski bir motor çalıştıran sunucu taze
+// değildir: bekleyen bölgeleri yayının ortasında olabilir; sıkı kapı kalır.
+func dnsIdentityStagingPublicationBlocked(
+	ctx context.Context,
+	query dnsZoneStateQuery,
+	stagingKind string,
+) (bool, error) {
+	if stagingKind == dnsIdentityStagingFresh {
+		return hasDNSPublicationInFlight(ctx, query)
+	}
+	return hasDNSPublicationPending(ctx, query)
+}
+
 // stageDNSIdentityLocked records the complete identity before first engine
 // selection. It performs no privileged agent mutation and no publication. The
 // caller owns the service, topology and publication locks; database guards and
@@ -896,12 +954,14 @@ func (p *Panel) stageDNSIdentityLocked(
 		writeDNSEngineWorkflowRequired(w)
 		return
 	}
-	pending, err := hasDNSPublicationPending(r.Context(), p.db.GetDB())
+	blocked, err := dnsIdentityStagingPublicationBlocked(
+		r.Context(), p.db.GetDB(), preKind,
+	)
 	if err != nil {
 		writeServerError(w, fmt.Errorf("recheck DNS publication state: %w", err))
 		return
 	}
-	if pending {
+	if blocked {
 		writeDNSEngineWorkflowRequired(w)
 		return
 	}
@@ -912,7 +972,7 @@ func (p *Panel) stageDNSIdentityLocked(
 		writeServerError(w, fmt.Errorf("recheck DNS staging zone count: %w", err))
 		return
 	}
-	runtimes, port53Conflict, err := p.readDNSBackendRuntime(r.Context())
+	runtimes, port53Conflict, _, err := p.readDNSBackendRuntime(r.Context())
 	if err != nil {
 		writeDNSEngineWorkflowRequired(w)
 		return
@@ -928,7 +988,7 @@ func (p *Panel) stageDNSIdentityLocked(
 		return
 	}
 	changed, err := p.stageDNSClusterSettingsAndReconcile(
-		r.Context(), preState, req.Role, req.PeerIP, req.PeerNS,
+		r.Context(), preState, preKind, req.Role, req.PeerIP, req.PeerNS,
 		req.NS1, req.NS2, localIPv4,
 	)
 	if err != nil {
@@ -1123,7 +1183,7 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if exactUnresolvedDNSEngineState(engineState) {
-		runtimes, port53Conflict, err := p.readDNSBackendRuntime(r.Context())
+		runtimes, port53Conflict, _, err := p.readDNSBackendRuntime(r.Context())
 		if err != nil {
 			writeDNSEngineWorkflowRequired(w)
 			return

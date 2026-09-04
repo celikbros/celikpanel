@@ -163,6 +163,7 @@ const knownBlockerKeys = {
     pending_zone_sync: 'dnsEngine.blocker.pendingZones',
     operation_running: 'dnsEngine.blocker.operationRunning',
     unmanaged_dns_detected: 'dnsEngine.blocker.unmanaged',
+    mutations_held: 'dnsEngine.blocker.mutationsHeld',
     port_53_conflict: 'dnsEngine.blocker.portConflict',
     source_degraded: 'dnsEngine.blocker.sourceDegraded',
     target_unavailable: 'dnsEngine.blocker.targetUnavailable',

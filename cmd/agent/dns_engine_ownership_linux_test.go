@@ -17,6 +17,7 @@ import (
 
 func prepareDNSEngineOwnershipTest(t *testing.T) string {
 	t.Helper()
+	useTestServiceMutationOwner(t)
 	root := t.TempDir()
 	if err := os.Chmod(root, 0o700); err != nil {
 		t.Fatal(err)

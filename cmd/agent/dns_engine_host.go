@@ -30,6 +30,7 @@ const (
 
 	aptBINDGenerationRoot          = "/var/cache/bind/celikpanel"
 	aptBINDCacheParentPath         = "/var/cache/bind"
+	pacmanBINDGenerationRoot       = "/var/named/celikpanel"
 	abandonedAPTBindGenerationRoot = "/etc/bind/celikpanel"
 	bindDaemonReloadTimeout        = 15 * time.Second
 	bindIdentityInspectionTimeout  = 15 * time.Second
@@ -193,7 +194,7 @@ func bindLayout(profile hostplatform.Profile) (bindHostLayout, error) {
 			return bindHostLayout{}, err
 		}
 		return bindHostLayout{
-			GenerationRoot: "/var/named/celikpanel",
+			GenerationRoot: pacmanBINDGenerationRoot,
 			MainConfig:     "/etc/named.conf",
 			OptionsConfig:  "/etc/named.conf",
 			AnchorConfig:   "/etc/named.conf",
@@ -355,12 +356,35 @@ func readDNSEngineState() (dnsEngineStateReceipt, bool, error) {
 	return state, err == nil, err
 }
 
+func readExactDNSEngineState() (dnsEngineStateReceipt, bool, error) {
+	snapshot, err := captureDNSEngineStateSnapshot(true)
+	if err != nil {
+		return dnsEngineStateReceipt{}, false, err
+	}
+	if !snapshot.Exists {
+		return dnsEngineStateReceipt{}, false, nil
+	}
+	state, err := decodeDNSEngineState(snapshot.Data)
+	return state, err == nil, err
+}
+
 func writeDNSEngineState(state dnsEngineStateReceipt) error {
 	data, err := encodeDNSEngineState(state)
 	if err != nil {
 		return err
 	}
-	return secureWriteConfig(dnsEngineStatePath(), data, 0o600)
+	before, err := captureDNSEngineStateSnapshot(true)
+	if err != nil {
+		return err
+	}
+	return secureWriteConfigReplacingSnapshotWithOwner(
+		before.Path,
+		data,
+		0o600,
+		&before,
+		serviceMutationRequiredOwnerUID,
+		serviceMutationRequiredOwnerGID,
+	)
 }
 
 type dnsEngineStateWriter func(dnsEngineStateReceipt) error
@@ -387,7 +411,7 @@ func persistExactDNSEngineStateAt(
 
 func persistExactDNSEngineState(state dnsEngineStateReceipt) error {
 	return persistExactDNSEngineStateAt(
-		state, writeDNSEngineState, readDNSEngineState,
+		state, writeDNSEngineState, readExactDNSEngineState,
 	)
 }
 
@@ -879,7 +903,7 @@ func (hostDNSEngineBackend) Sync(
 	if err != nil {
 		return "", err
 	}
-	stateBefore, err := captureDNSFileSnapshot(dnsEngineStatePath(), 0o600, false)
+	stateBefore, err := captureDNSEngineStateSnapshot(false)
 	if err != nil {
 		return "", err
 	}
@@ -925,7 +949,7 @@ func (hostDNSEngineBackend) Sync(
 				}
 				return nil
 			},
-			func() error { return restoreDNSFileSnapshot(stateBefore) },
+			func() error { return restoreDNSEngineStateSnapshot(stateBefore) },
 		)
 	}
 	recoverEmpty := func(recoveryCtx context.Context) error {
@@ -935,7 +959,7 @@ func (hostDNSEngineBackend) Sync(
 		}
 		return errors.Join(
 			stopBINDUnitsFailClosed(recoveryCtx, systemctl),
-			restoreDNSFileSnapshot(stateBefore),
+			restoreDNSEngineStateSnapshot(stateBefore),
 			configErr,
 		)
 	}
@@ -1383,6 +1407,16 @@ func (hostDNSEngineBackend) Switch(
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	writeJournal := func(journal dnsEngineSwitchJournal) error {
+		return writeDNSEngineSwitchJournalForFaultDriver(
+			dnsEngineSwitchFaultDriverBIND, journal,
+		)
+	}
+	if err := runDNSEngineSwitchPreIntentFaultHook(
+		dnsEngineSwitchFaultDriverBIND, manifest, binding,
+	); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	transferPeer := ""
 	if manifest.Topology == transport.DNSTopologyPaired &&
 		manifest.PairRole == transport.DNSPairRoleSecondary {
@@ -1392,7 +1426,7 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	stateBefore, err := captureDNSFileSnapshot(dnsEngineStatePath(), 0o600, true)
+	stateBefore, err := captureDNSEngineStateSnapshot(true)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1444,12 +1478,12 @@ func (hostDNSEngineBackend) Switch(
 	if err := verifyBINDConfigMutationPreimage(ctx, configs); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollbackAndJournal := func(rollbackCtx context.Context) error {
 		return runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
-			write: writeDNSEngineSwitchJournal,
+			write: writeJournal,
 			rollback: func() error {
 				return rollbackBINDActivation(
 					rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
@@ -1482,7 +1516,7 @@ func (hostDNSEngineBackend) Switch(
 			return err
 		}
 		journal.Phase = dnsSwitchPhaseTargetStaged
-		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+		if err := writeJournal(journal); err != nil {
 			return err
 		}
 		if manifest.SourceEngine == transport.DNSEnginePowerDNS {
@@ -1501,7 +1535,7 @@ func (hostDNSEngineBackend) Switch(
 			}
 		}
 		journal.Phase = dnsSwitchPhaseSourceStopped
-		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+		if err := writeJournal(journal); err != nil {
 			return err
 		}
 		if err := activateBINDTargetWithVerifiedIdentity(
@@ -1510,7 +1544,7 @@ func (hostDNSEngineBackend) Switch(
 			return err
 		}
 		journal.Phase = dnsSwitchPhaseTargetStarted
-		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+		if err := writeJournal(journal); err != nil {
 			return err
 		}
 		if err := verifyOnlyBINDActive(applyCtx, profile, systemctl); err != nil {
@@ -1549,7 +1583,7 @@ func (hostDNSEngineBackend) Switch(
 			return fmt.Errorf("publish active DNS engine state: %w", err)
 		}
 		journal.Phase = dnsSwitchPhaseTargetVerified
-		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+		if err := writeJournal(journal); err != nil {
 			return err
 		}
 		return nil
@@ -1577,7 +1611,7 @@ func (hostDNSEngineBackend) Switch(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	journal.Phase = dnsSwitchPhaseCommitted
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := writeJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	return transport.SwitchDNSEngineV1Response{
@@ -1943,7 +1977,7 @@ func prepareBINDConfigMutationWithSnapshotReader(
 		layout:    layout,
 	}
 	for _, path := range paths {
-		snapshot, err := readSnapshot(path, 0o644, false)
+		snapshot, err := readSnapshot(path, os.FileMode(bindVendorConfigMode(layout)), false)
 		if err != nil {
 			return bindConfigMutation{}, fmt.Errorf("read BIND configuration %s: %w", path, err)
 		}
@@ -1952,6 +1986,12 @@ func prepareBINDConfigMutationWithSnapshotReader(
 		mutation.original[path] = append([]byte(nil), data...)
 		content := string(data)
 		if path == layout.OptionsConfig {
+			if bindLayoutIsPacman(layout) {
+				content, err = stripStockPacmanBINDOptionDirectives(content)
+				if err != nil {
+					return bindConfigMutation{}, fmt.Errorf("prepare BIND authoritative options: %w", err)
+				}
+			}
 			content, err = managedBINDOptions(content, transferPeer)
 			if err != nil {
 				return bindConfigMutation{}, fmt.Errorf("prepare BIND authoritative options: %w", err)
@@ -2242,7 +2282,7 @@ func rollbackBINDActivation(
 			)
 		},
 		restoreState: func() error {
-			return restoreDNSFileSnapshot(stateBefore)
+			return restoreDNSEngineStateSnapshot(stateBefore)
 		},
 		restoreSource: func(commandCtx context.Context) error {
 			return restoreDNSUnitStates(
@@ -2407,10 +2447,38 @@ func verifyExactActiveBINDUnitStates(
 	default:
 		return errors.New("active BIND proof is unsupported on this package manager")
 	}
+	// A masked PowerDNS counts as stopped, and the product is what masked it.
+	//
+	// A BIND-to-PowerDNS switch installs the PowerDNS packages under a
+	// persistent mask (dns_engine_pdns_install.go) so the package manager
+	// cannot start the target behind the transaction's back, and only the
+	// activation step may unmask it. This proof of the active BIND source runs
+	// after that install, so on every host where PowerDNS had to be installed
+	// it met exactly the state the product had just created - loadState
+	// "masked", neither "not-found" nor "loaded"+"disabled" - and refused its
+	// own source (S-7 Boston negative, register R-028). This is the mirror
+	// image of R-019's second cause on the BIND side, and the relaxation is
+	// the same one: masked is stronger than disabled, and it is accepted only
+	// together with the inactive requirement the other branches carry.
+	//
+	// Maskeli PowerDNS durdurulmuş sayılır; onu maskeleyen de bu üründür.
+	//
+	// BIND'dan PowerDNS'e geçiş, paket yöneticisi hedefi işlemin arkasından
+	// başlatmasın diye PowerDNS paketlerini kalıcı bir maske altında kurar
+	// (dns_engine_pdns_install.go) ve maskeyi yalnız etkinleştirme adımı
+	// kaldırabilir. Etkin BIND kaynağının bu kanıtı o kurulumdan sonra koşar;
+	// dolayısıyla PowerDNS'in kurulması gereken her sunucuda tam da ürünün az
+	// önce yarattığı durumla - loadState "masked", ne "not-found" ne
+	// "loaded"+"disabled" - karşılaştı ve kendi kaynağını reddetti (S-7 Boston
+	// negatifi, defter R-028). Bu, R-019'un ikinci sebebinin BIND tarafındaki
+	// ayna görüntüsüdür ve gevşetme aynıdır: maskeli olmak devre dışı olmaktan
+	// güçlüdür ve yalnız diğer dalların taşıdığı "inactive" şartıyla birlikte
+	// kabul edilir.
 	exactPowerDNSInactive := exactAbsentInactiveBINDUnit(pdns) ||
 		(pdns.loadState == "loaded" &&
 			pdns.activeState == "inactive" &&
-			pdns.unitFileState == "disabled")
+			pdns.unitFileState == "disabled") ||
+		(pdns.masked() && pdns.activeState == "inactive")
 	if !exactPowerDNSInactive {
 		return errors.New("pdns.service is not exactly absent or loaded, inactive, and disabled")
 	}
@@ -2746,10 +2814,46 @@ func inspectVerifiedPDNSRuntimeTopologyWithOps(
 func verifyExactPDNSRuntimeUnitStates(
 	named, alias, pdns bindInstallUnitState,
 ) error {
+	// A masked BIND unit counts as stopped, and this product is the thing that
+	// masked it.
+	//
+	// bind_install_guard.go masks named.service and bind9.service so a package
+	// manager cannot start BIND behind our back, and there is a whole proof
+	// (verifyBINDPersistentMaskFiles) that those masks point at /dev/null. A
+	// masked unit reports loadState "masked" and unitFileState "masked" or
+	// "masked-runtime", so it matched neither branch below: not "not-found",
+	// not "loaded"+"disabled". The proof therefore refused the exact state the
+	// product creates for itself, and a PowerDNS-to-BIND switch on a host where
+	// BIND had ever been installed could not establish its own source
+	// (risk R-019).
+	//
+	// Masked is stronger than disabled, not weaker: a disabled unit can still
+	// be started by name or pulled in by a dependency, while a masked one
+	// cannot be started at all. It is accepted only together with the same
+	// inactive requirement the other branches carry.
+	//
+	// Maskelenmiş bir BIND birimi durdurulmuş sayılır ve onu maskeleyen zaten
+	// bu üründür.
+	//
+	// bind_install_guard.go, bir paket yöneticisi arkamızdan BIND'ı
+	// başlatmasın diye named.service ve bind9.service birimlerini maskeler; o
+	// maskelerin /dev/null'a baktığını kanıtlayan ayrı bir mekanizma da vardır
+	// (verifyBINDPersistentMaskFiles). Maskeli bir birim loadState "masked" ve
+	// unitFileState "masked" ya da "masked-runtime" bildirir; dolayısıyla
+	// aşağıdaki iki dalın hiçbirine uymuyordu: ne "not-found" ne
+	// "loaded"+"disabled". Kanıt böylece ürünün kendisi için yarattığı durumu
+	// reddediyordu ve BIND'ın bir kez kurulmuş olduğu bir sunucuda
+	// PowerDNS'ten BIND'a geçiş kendi kaynağını kuramıyordu (risk R-019).
+	//
+	// Maskeli olmak devre dışı olmaktan zayıf değil güçlüdür: devre dışı bir
+	// birim adıyla başlatılabilir ya da bir bağımlılıkla çekilebilir, maskeli
+	// bir birim hiç başlatılamaz. Yalnızca diğer dalların taşıdığı aynı
+	// "inactive" şartıyla birlikte kabul edilir.
 	exactStoppedBIND := func(state bindInstallUnitState) bool {
 		return exactAbsentInactiveBINDUnit(state) ||
 			(state.loadState == "loaded" && state.activeState == "inactive" &&
-				state.unitFileState == "disabled")
+				state.unitFileState == "disabled") ||
+			(state.masked() && state.activeState == "inactive")
 	}
 	if !exactStoppedBIND(named) || !exactStoppedBIND(alias) {
 		return errors.New("BIND is not exactly absent or loaded, inactive, and disabled")

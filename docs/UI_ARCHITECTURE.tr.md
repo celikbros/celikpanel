@@ -74,7 +74,7 @@ Dört paralel yerleşim (AdminLayout, ResellerLayout, CustomerLayout, UserLayout
 
 ## Tema (karar verildi)
 
-Panel **hem açık hem koyu temayı** destekler; kullanıcı bir tema değiştiriciyle seçer. Varsayılan, işletim sistemi tercihini (`prefers-color-scheme`) izler, yoksa açık temaya düşer. Mekanik olarak: mevcut `web/src/theme.ts` token'ları CSS özel değişkenlerine bağlanır ve iki tema, *aynı* değişkenlerin iki değer kümesidir — bileşenler değişkenlere başvurur, asla sabit renklere değil. Bu, kabuğun üstündeki dış görünümdür; hiçbir yapıyı değiştirmez.
+Panel **hem açık hem koyu temayı** destekler; kullanıcı bir tema değiştiriciyle seçer. Varsayılan, işletim sistemi tercihini (`prefers-color-scheme`) izler, yoksa açık temaya düşer. Mekanik olarak: token'lar `web/src/index.css` içinde CSS özel değişkenleri olarak yaşar, `web/tailwind.config.js` her semantik Tailwind ismini bunlardan birine bağlar ve `web/src/theme/ThemeProvider.tsx` `<html>` üzerinde `.dark` sınıfını (ve skin'in `data-theme` değerini) açıp kapatır. İki tema, *aynı* değişkenlerin iki değer kümesidir — bileşenler değişkenlere başvurur, asla sabit renklere değil. Belgelenmiş sistem: [DESIGN.md](../DESIGN.md). Bu, kabuğun üstündeki dış görünümdür; hiçbir yapıyı değiştirmez.
 
 ## Kapsam sınırı
 

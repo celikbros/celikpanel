@@ -135,6 +135,8 @@ require_function_sequence "$INSTALL" commit_fresh_release_recovery_foundation \
     '"$SYSTEMCTL_BIN" enable --now celikpanel-release-recovery.timer' \
     '"$SYSTEMCTL_BIN" start celikpanel-release-recovery.service' \
     'release_recovery_publish_manifest \'
+require_literal "$RELEASE_RECOVERY_FOUNDATION" \
+    'stage the verified release below /var/backups/celikpanel in a canonical root-owned, non-group/other-writable directory'
 
 require_exact_sequence() {
     local file=$1 cursor=0 literal line
@@ -209,7 +211,73 @@ reject_literal "$PANEL_UNIT" 'Requires=celikpanel-agent.service'
 require_literal "$PANEL_UNIT" 'EnvironmentFile=-/etc/celikpanel/panel.env'
 require_literal "$PANEL_UNIT" 'ExecStart=/opt/celikpanel/bin/panel $CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG $CELIKPANEL_PANEL_DEMO_FLAG'
 require_literal "$AGENT_UNIT" 'RuntimeDirectoryPreserve=yes'
+
+# Restart policy is part of the unit contract. A fixed RestartSec with no
+# escalation sits permanently under systemd's default 5-starts-per-10s limiter,
+# so a boot-time failure flaps forever without ever reaching failed state — the
+# amplifier behind A17. Pin the backoff so a later edit cannot quietly drop it.
+# Yeniden başlatma politikası birim sözleşmesinin parçasıdır. Artan bekleme
+# olmadan sabit bir RestartSec, systemd'nin varsayılan 10sn'de 5 freninin
+# kalıcı olarak altında kalır; açılış hatası "failed" durumuna hiç ulaşmadan
+# sonsuza kadar çırpınır — A17'nin çarpanı budur. Sonraki bir düzenlemenin
+# sessizce kaldıramaması için artan beklemeyi çivile.
+for restart_unit in "$PANEL_UNIT" "$AGENT_UNIT"; do
+    require_literal "$restart_unit" 'Restart=on-failure'
+    require_literal "$restart_unit" 'RestartSec=3'
+    require_literal "$restart_unit" 'RestartSteps=6'
+    require_literal "$restart_unit" 'RestartMaxDelaySec=120'
+    require_literal "$restart_unit" 'StartLimitIntervalSec=3600'
+    require_literal "$restart_unit" 'StartLimitBurst=30'
+done
 require_literal "$INSTALL" 'SETPRIV_BIN=/usr/bin/setpriv'
+require_literal "$INSTALL" 'VENDOR_DD_BIN=/usr/bin/dd'
+require_literal "$INSTALL" 'ADMIN_CREDENTIALS_PATH=${CELIKPANEL_ADMIN_CREDENTIALS_FILE:-}'
+require_literal "$INSTALL" 'CELIKPANEL_ADMIN_CREDENTIALS_FILE'
+require_literal "$INSTALL" 'export -n ADMIN_CREDENTIALS_CONTENT'
+require_literal "$INSTALL" 'case "${SKIP_ADMIN:-0}" in'
+require_literal "$INSTALL" 'preflight_first_administrator_admission() {'
+require_function_sequence "$INSTALL" preflight_first_administrator_admission \
+    '[[ "$APPLY_ONLY" -eq 0 ]] || return 0' \
+    'identity=$(validate_admin_credentials_path "$ADMIN_CREDENTIALS_PATH")' \
+    'validate_trusted_candidate_panel' \
+    'load_admin_credentials_content "$identity"' \
+    'run_with_admin_credentials_stdin' \
+    '--validate-admin-credentials-file=-' \
+    '[[ "$SKIP_ADMIN" == 1 || -t 0 ]]' \
+    'Non-interactive installation requires a terminal before host mutation;' \
+    '[[ "$SKIP_ADMIN" == 1 ]] || return 0' \
+    'A fresh installation cannot use SKIP_ADMIN=1 without credentials;' \
+    '--count-users-read-only-wal-aware' \
+    '[[ "$admin_count" =~ ^[1-9][0-9]*$ ]]'
+require_function_sequence "$INSTALL" validate_admin_credentials_path \
+    '[[ "$path" == /* && -f "$path" && ! -L "$path" ]]' \
+    'release_recovery_validate_root_chain "$parent"' \
+    "'%u %g %a %h %s'" \
+    '"$owner" == 0 && "$group" == 0 && "$mode" == 600' \
+    'size >= 1 && size <= 4096'
+require_function_sequence "$INSTALL" open_admin_credentials_same_inode \
+    'exec {ADMIN_CREDENTIALS_FD}<"$ADMIN_CREDENTIALS_PATH"' \
+    '"/proc/$BASHPID/fd/$ADMIN_CREDENTIALS_FD"' \
+    '"$path_identity" == "$fd_identity"'
+require_function_sequence "$INSTALL" load_admin_credentials_content \
+    'open_admin_credentials_same_inode "$expected_identity"' \
+    'set +x' \
+    'iflag=noatime' \
+    "IFS= read -r -d '' ADMIN_CREDENTIALS_CONTENT" \
+    'found_nul=1' \
+    'close_admin_credentials_fd' \
+    '[[ -z "$ADMIN_CREDENTIALS_CONTENT" ]]' \
+    'set -x'
+require_function_sequence "$INSTALL" run_with_admin_credentials_stdin \
+    'set +x' \
+    'export -n ADMIN_CREDENTIALS_CONTENT' \
+    'printf '\''%s'\'' "$ADMIN_CREDENTIALS_CONTENT" | "$@"' \
+    'set -x'
+require_sequence "$INSTALL" \
+    'preflight_bootstrap_platform "$SELINUX_OS_RELEASE" "$bootstrap_machine"' \
+    'acquire_first_install_signed_update_lock' \
+    'preflight_first_install_signed_release_trust' \
+    'preflight_first_administrator_admission'
 require_literal "$INSTALL" 'run_panel_as_service_user_with_private_umask() {'
 require_literal "$INSTALL" '/bin/sh -c '\''umask 077; exec "$@"'\'' celikpanel-install "$PREFIX/bin/panel" "$@"'
 require_function_sequence "$INSTALL" run_panel_as_service_user_with_private_umask \
@@ -220,7 +288,10 @@ require_function_sequence "$INSTALL" ensure_first_administrator \
     'admin_count=$(run_panel_as_service_user_with_private_umask --count-users)' \
     '[[ "$admin_count" =~ ^(0|[1-9][0-9]*)$ ]]' \
     'if [[ "$admin_count" == 0 ]]; then' \
-    'run_panel_as_service_user_with_private_umask --create-admin'
+    'run_with_admin_credentials_stdin' \
+    '--create-admin --admin-credentials-file=-' \
+    'run_panel_as_service_user_with_private_umask --create-admin' \
+    'consume_admin_credentials_file'
 require_count "$INSTALL" 'run_panel_as_service_user_with_private_umask --count-users' 1
 require_count "$INSTALL" 'run_panel_as_service_user_with_private_umask --create-admin' 1
 reject_literal "$INSTALL" 'sudo -u'
@@ -231,6 +302,19 @@ require_sequence "$INSTALL" \
     'ensure_first_administrator' \
     '# 9. Start the panel' \
     'install -m 0600 -o root -g root /dev/null "$INSTALL_COMPLETE"'
+reject_literal "$INSTALL" 'enable celikpanel-agent.service >/dev/null 2>&1 || true'
+reject_literal "$INSTALL" 'enable celikpanel-panel.service >/dev/null 2>&1 || true'
+require_sequence "$INSTALL" \
+    '"$SYSTEMCTL_BIN" enable celikpanel-agent.service' \
+    'agent_enabled_state=$("$SYSTEMCTL_BIN" is-enabled celikpanel-agent.service)' \
+    '[[ "$agent_enabled_state" == enabled ]]' \
+    'sync -f -- "$UNIT_DIR" "$UNIT_DIR/multi-user.target.wants"' \
+    '"$SYSTEMCTL_BIN" restart celikpanel-agent.service' \
+    '"$SYSTEMCTL_BIN" enable celikpanel-panel.service' \
+    'panel_enabled_state=$("$SYSTEMCTL_BIN" is-enabled celikpanel-panel.service)' \
+    '[[ "$panel_enabled_state" == enabled ]]' \
+    'sync -f -- "$UNIT_DIR" "$UNIT_DIR/multi-user.target.wants"' \
+    '"$SYSTEMCTL_BIN" restart celikpanel-panel.service'
 
 # Operator choices are durable data, not generated vendor-unit bytes. A clean
 # agent restart must not tear down the otherwise healthy web panel.
@@ -328,7 +412,7 @@ sock.bind(sys.argv[1])
 sock.close()
 PY_SYSTEMD_SOCKET
 chmod 0700 "$capability_root/run/systemd/private"
-for capability_tool in apt-get apt-cache dpkg-query pacman dnf rpm setpriv; do
+for capability_tool in apt-get apt-cache dpkg-query pacman dnf rpm setpriv dd; do
     printf '#!/bin/bash\nexit 0\n' > "$capability_root/usr/bin/$capability_tool"
     chmod 0700 "$capability_root/usr/bin/$capability_tool"
 done
@@ -365,6 +449,7 @@ configure_platform_capabilities() {
     SYSTEMCTL_BIN=$capability_root/usr/bin/systemctl
     TIMEOUT_BIN=$capability_root/usr/bin/timeout
     SETPRIV_BIN=$capability_root/usr/bin/setpriv
+    VENDOR_DD_BIN=$capability_root/usr/bin/dd
     SYSTEMD_RUNTIME_DIR=$capability_root/run/systemd
     SYSTEMD_PRIVATE_SOCKET=$capability_root/run/systemd/private
     APT_GET_BIN=$capability_root/missing/apt-get
@@ -1014,7 +1099,11 @@ for lifecycle_script in "$INSTALL" "$ROLLBACK"; do
         require_literal "$lifecycle_script" 'DPKG_QUERY_BIN PACMAN_BIN TIMEOUT_BIN SELINUX_RESTORECON_BIN \'
     fi
     require_literal "$lifecycle_script" 'SELINUX_MATCHPATHCON_BIN SELINUX_GETENFORCE_BIN UNAME_BIN VENDOR_READLINK_BIN \'
-    require_literal "$lifecycle_script" 'VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN SYSTEMD_RUNTIME_DIR \'
+    if [[ "$lifecycle_script" == "$INSTALL" ]]; then
+        require_literal "$lifecycle_script" 'VENDOR_STAT_BIN VENDOR_DIRNAME_BIN VENDOR_DD_BIN SYSTEMCTL_BIN SYSTEMD_RUNTIME_DIR \'
+    else
+        require_literal "$lifecycle_script" 'VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN SYSTEMD_RUNTIME_DIR \'
+    fi
     require_literal "$lifecycle_script" 'SYSTEMD_PRIVATE_SOCKET VENDOR_TRUST_ANCHOR \'
     require_literal "$lifecycle_script" 'VENDOR_EXPECTED_UID VENDOR_EXPECTED_GID'
     require_literal "$lifecycle_script" 'RUNTIME_DIR=/run/celikpanel'
@@ -1525,7 +1614,13 @@ FAKE_FIRST_ADMIN_SETPRIV
 cat > "$first_admin_panel" <<'FAKE_FIRST_ADMIN_PANEL'
 #!/bin/bash
 set -euo pipefail
+[[ -z ${ADMIN_CREDENTIALS_CONTENT+x} ]] || exit 74
 case "$1" in
+    --validate-admin-credentials-file=-)
+        : > "$FIRST_ADMIN_VALIDATE_TRACE"
+        IFS= read -r supplied_credential
+        [[ "$supplied_credential" == "$FIRST_ADMIN_EXPECTED_CREDENTIAL" ]]
+        ;;
     --count-users)
         case "$FIRST_ADMIN_COUNT_MODE" in
             zero) printf '0\n' ;;
@@ -1535,7 +1630,14 @@ case "$1" in
             *) exit 72 ;;
         esac
         ;;
+    --count-users-read-only-wal-aware)
+        printf '3\n'
+        ;;
     --create-admin)
+        if [[ "${2:-}" == --admin-credentials-file=- ]]; then
+            IFS= read -r supplied_credential
+            [[ "$supplied_credential" == "$FIRST_ADMIN_EXPECTED_CREDENTIAL" ]]
+        fi
         : > "$FIRST_ADMIN_CREATED"
         ;;
     *) exit 73 ;;
@@ -1552,6 +1654,10 @@ run_first_admin_contract() (
     SVC_USER_ID=21001
     SVC_GROUP_ID=21002
     SKIP_ADMIN=0
+    ADMIN_CREDENTIALS_ARMED=0
+    ADMIN_CREDENTIALS_IDENTITY=
+    ADMIN_CREDENTIALS_FD=
+    ADMIN_CREDENTIALS_CONTENT=
     VENDOR_READLINK_BIN=/usr/bin/readlink
     VENDOR_STAT_BIN=/usr/bin/stat
     VENDOR_DIRNAME_BIN=/usr/bin/dirname
@@ -1565,6 +1671,7 @@ run_first_admin_contract() (
     export FIRST_ADMIN_SETPRIV_TRACE=$first_admin_setpriv_trace
     step() { :; }
     ok() { :; }
+    consume_admin_credentials_file() { :; }
     ensure_first_administrator
     : > "$first_admin_complete"
 )
@@ -1618,6 +1725,325 @@ rm -f -- "$first_admin_setpriv"
 mv -- "$first_admin_setpriv.real" "$first_admin_setpriv"
 [[ ! -e "$first_admin_created" && ! -e "$first_admin_complete" ]] \
     || die 'first-admin mutated after unsafe setpriv rejection'
+
+# Exercise the early read-only admission gate against the exact installed
+# service-owned 0750/0600 layout. Fresh refusal must be actionable and
+# apply-only must return before credential, database, or candidate inspection.
+admin_admission_defs="$(extract_function_source \
+    "$INSTALL" validate_existing_admin_database)"$'\n'"$(extract_function_source \
+    "$INSTALL" preflight_first_administrator_admission)"
+first_admin_existing_data=$first_admin_root/existing-data
+first_admin_existing_db=$first_admin_existing_data/celikpanel.db
+first_admin_admission_complete=$platform_tmp/first-admin-admission-complete
+first_admin_fresh_complete=$platform_tmp/first-admin-fresh-complete
+first_admin_apply_complete=$platform_tmp/first-admin-apply-complete
+first_admin_non_tty_complete=$platform_tmp/first-admin-non-tty-complete
+first_admin_tty_complete=$platform_tmp/first-admin-tty-complete
+admission_uid=$(id -u)
+admission_gid=$(id -g)
+if [[ "$admission_uid" == 0 ]]; then
+    admission_uid=65534
+    admission_gid=65534
+elif [[ "$admission_gid" == 0 ]]; then
+    admission_gid=$(id -G | tr ' ' '\n' | awk '$1 != 0 { print; exit }')
+    [[ "$admission_gid" =~ ^[1-9][0-9]*$ ]] \
+        || die 'non-root admission fixture has no usable nonzero group'
+fi
+mkdir -p "$first_admin_existing_data"
+printf 'existing-database-fixture\n' > "$first_admin_existing_db"
+if [[ $(id -u) -eq 0 ]]; then
+    chown "$admission_uid:$admission_gid" \
+        "$first_admin_existing_data" "$first_admin_existing_db"
+else
+    chgrp "$admission_gid" "$first_admin_existing_data" "$first_admin_existing_db"
+fi
+chmod 0750 "$first_admin_existing_data"
+chmod 0600 "$first_admin_existing_db"
+existing_db_before=$(stat -Lc '%d:%i:%u:%g:%a:%h:%s:%Y' -- \
+    "$first_admin_existing_db")
+existing_db_sha_before=$(sha256sum "$first_admin_existing_db")
+
+run_admin_admission_contract() (
+    local mode=$1
+    eval "$admin_admission_defs"
+    APPLY_ONLY=0
+    ADMIN_CREDENTIALS_PATH=
+    SKIP_ADMIN=1
+    SRC=$first_admin_prefix
+    DATA_DIR=$first_admin_existing_data
+    TIMEOUT_BIN=/usr/bin/timeout
+    SETPRIV_BIN=$first_admin_setpriv
+    VENDOR_READLINK_BIN=/usr/bin/readlink
+    VENDOR_STAT_BIN=/usr/bin/stat
+    SVC_USER=celikpanel
+    SVC_GROUP=celikpanel
+    export FIRST_ADMIN_UID=$admission_uid FIRST_ADMIN_GID=$admission_gid
+    export FIRST_ADMIN_SETPRIV_TRACE=$first_admin_setpriv_trace
+    service_group_id() { printf '%s\n' "$admission_gid"; }
+    service_user_id() { printf '%s\n' "$admission_uid"; }
+    getent() {
+        [[ "$1" == passwd && "$2" == celikpanel ]] || return 1
+        printf 'celikpanel:x:%s:%s::/nonexistent:/usr/sbin/nologin\n' \
+            "$admission_uid" "$admission_gid"
+    }
+    validate_trusted_candidate_panel() { :; }
+    die() { printf '%s / %s\n' "$1" "${2:-}" >&2; exit 1; }
+    case "$mode" in
+        existing) ;;
+        fresh) DATA_DIR=$first_admin_root/absent-data ;;
+        non-tty-default)
+            SKIP_ADMIN=0
+            DATA_DIR=$first_admin_root/absent-data
+            ;;
+        tty-default)
+            SKIP_ADMIN=0
+            DATA_DIR=$first_admin_root/absent-data
+            ;;
+        apply-only)
+            APPLY_ONLY=1
+            ADMIN_CREDENTIALS_PATH=relative-unsafe-path
+            DATA_DIR=$first_admin_root/absent-data
+            ;;
+        *) return 97 ;;
+    esac
+    preflight_first_administrator_admission
+    case "$mode" in
+        existing) : > "$first_admin_admission_complete" ;;
+        fresh) : > "$first_admin_fresh_complete" ;;
+        non-tty-default) : > "$first_admin_non_tty_complete" ;;
+        tty-default) : > "$first_admin_tty_complete" ;;
+        apply-only) : > "$first_admin_apply_complete" ;;
+    esac
+)
+
+rm -f -- "$first_admin_setpriv_trace" "$first_admin_admission_complete" \
+    "$first_admin_fresh_complete" "$first_admin_apply_complete" \
+    "$first_admin_non_tty_complete" "$first_admin_tty_complete"
+run_admin_admission_contract existing \
+    || die 'exact existing first-admin admission fixture failed'
+[[ -e "$first_admin_admission_complete" ]] \
+    || die 'exact existing first-admin admission did not complete'
+[[ "$(stat -Lc '%d:%i:%u:%g:%a:%h:%s:%Y' -- "$first_admin_existing_db")" == \
+   "$existing_db_before" && "$(sha256sum "$first_admin_existing_db")" == \
+   "$existing_db_sha_before" ]] \
+    || die 'existing first-admin admission mutated the database fixture'
+[[ ! -e "$first_admin_setpriv_trace" ]] \
+    || die 'existing first-admin admission tried to traverse the root-only release as the service user'
+
+rm -f -- "$first_admin_setpriv_trace"
+if fresh_admission_output=$(run_admin_admission_contract fresh 2>&1); then
+    die 'fresh SKIP_ADMIN=1 admission unexpectedly succeeded without credentials'
+fi
+[[ "$fresh_admission_output" == *'set SKIP_ADMIN=0'* &&
+   "$fresh_admission_output" == *'CELIKPANEL_ADMIN_CREDENTIALS_FILE'* &&
+   "$fresh_admission_output" == *'--admin-credentials-file=-'* &&
+   "$fresh_admission_output" == *'Yeni kurulum'* ]] \
+    || die 'fresh SKIP_ADMIN=1 refusal was not actionable and bilingual'
+[[ ! -e "$first_admin_fresh_complete" && ! -e "$first_admin_setpriv_trace" ]] \
+    || die 'fresh SKIP_ADMIN=1 refusal dispatched a candidate or mutation command'
+
+rm -f -- "$first_admin_non_tty_complete" "$first_admin_setpriv_trace"
+if non_tty_admission_output=$(run_admin_admission_contract non-tty-default \
+        </dev/null 2>&1); then
+    die 'default non-TTY first-admin admission unexpectedly reached mutation dispatch'
+fi
+[[ "$non_tty_admission_output" == *'requires a terminal'* &&
+   "$non_tty_admission_output" == *'CELIKPANEL_ADMIN_CREDENTIALS_FILE'* &&
+   "$non_tty_admission_output" == *'--admin-credentials-file=-'* &&
+   "$non_tty_admission_output" == *'Etkileşimsiz'* ]] \
+    || die 'default non-TTY first-admin refusal was not actionable and bilingual'
+[[ ! -e "$first_admin_non_tty_complete" && ! -e "$first_admin_setpriv_trace" ]] \
+    || die 'default non-TTY first-admin refusal dispatched a candidate or mutation command'
+
+command -v script >/dev/null 2>&1 || die 'script is required for the direct TTY admission contract'
+first_admin_tty_runner=$platform_tmp/first-admin-tty-runner.sh
+{
+    declare -p admin_admission_defs first_admin_prefix first_admin_setpriv \
+        first_admin_setpriv_trace first_admin_root first_admin_existing_data \
+        first_admin_admission_complete first_admin_fresh_complete \
+        first_admin_apply_complete first_admin_non_tty_complete \
+        first_admin_tty_complete admission_uid admission_gid
+    declare -f run_admin_admission_contract
+    printf '%s\n' 'run_admin_admission_contract tty-default'
+} > "$first_admin_tty_runner"
+chmod 0700 "$first_admin_tty_runner"
+printf -v first_admin_tty_command '%q ' /bin/bash "$first_admin_tty_runner"
+/usr/bin/script -qefc "$first_admin_tty_command" /dev/null \
+    >"$platform_tmp/first-admin-tty.log" 2>&1 \
+    || die 'default TTY first-admin admission was refused'
+[[ -e "$first_admin_tty_complete" && ! -e "$first_admin_setpriv_trace" ]] \
+    || die 'default TTY first-admin admission did not reach mutation dispatch cleanly'
+
+run_admin_admission_contract apply-only \
+    || die 'apply-only did not bypass first-admin admission probes'
+[[ -e "$first_admin_apply_complete" && ! -e "$first_admin_setpriv_trace" ]] \
+    || die 'apply-only first-admin admission touched credentials, DB, or candidate'
+
+credential_admin_defs=$first_admin_defs
+for credential_function in close_admin_credentials_fd \
+    clear_admin_credentials_content load_admin_credentials_content \
+    run_with_admin_credentials_stdin validate_admin_credentials_path \
+    open_admin_credentials_same_inode \
+    admin_credentials_path_matches_identity consume_admin_credentials_file \
+    cleanup_admin_credentials_on_exit arm_admin_credentials_cleanup \
+    preflight_first_administrator_admission
+do
+    credential_admin_defs+=$'\n'"$(extract_function_source \
+        "$INSTALL" "$credential_function")"
+done
+first_admin_valid_credentials=$first_admin_root/valid-admin.credentials
+first_admin_invalid_credentials=$first_admin_root/invalid-admin.credentials
+first_admin_unsafe_credentials=$first_admin_root/unsafe-admin.credentials
+first_admin_failure_credentials=$first_admin_root/failure-admin.credentials
+first_admin_validate_trace=$platform_tmp/first-admin-validate-trace
+first_admin_credentials_complete=$platform_tmp/first-admin-credentials-complete
+first_admin_credential_stat=$first_admin_root/usr/bin/credential-stat
+expected_credential='valid-credential-fixture'
+cat > "$first_admin_credential_stat" <<'FAKE_CREDENTIAL_STAT'
+#!/bin/bash
+set -euo pipefail
+if [[ "$1" == -Lc && "$2" == '%u %g %a %h %s' && "$3" == -- &&
+      "$4" == "$FIRST_ADMIN_CREDENTIAL_ROOT/"*-admin.credentials ]]; then
+    read -r mode links size < <(/usr/bin/stat -Lc '%a %h %s' -- "$4")
+    printf '0 0 %s %s %s\n' "$mode" "$links" "$size"
+    exit 0
+fi
+exec /usr/bin/stat "$@"
+FAKE_CREDENTIAL_STAT
+chmod 0700 "$first_admin_credential_stat"
+
+run_credentials_contract() (
+    local mode=$1 credential_path=$2
+    eval "$credential_admin_defs"
+    PREFIX=$first_admin_prefix
+    SRC=$first_admin_prefix
+    DATA_DIR=$first_admin_data
+    TIMEOUT_BIN=/usr/bin/timeout
+    SETPRIV_BIN=$first_admin_setpriv
+    VENDOR_READLINK_BIN=/usr/bin/readlink
+    VENDOR_STAT_BIN=$first_admin_credential_stat
+    VENDOR_DIRNAME_BIN=/usr/bin/dirname
+    VENDOR_DD_BIN=/usr/bin/dd
+    VENDOR_TRUST_ANCHOR=$first_admin_root
+    VENDOR_EXPECTED_UID=$(id -u)
+    VENDOR_EXPECTED_GID=$(id -g)
+    SVC_USER_ID=21001
+    SVC_GROUP_ID=21002
+    SKIP_ADMIN=1
+    APPLY_ONLY=0
+    ADMIN_CREDENTIALS_PATH=$credential_path
+    ADMIN_CREDENTIALS_IDENTITY=
+    ADMIN_CREDENTIALS_FD=
+    ADMIN_CREDENTIALS_ARMED=0
+    ADMIN_CREDENTIALS_CONTENT=caller-controlled-export
+    export ADMIN_CREDENTIALS_CONTENT
+    export FIRST_ADMIN_UID=$SVC_USER_ID FIRST_ADMIN_GID=$SVC_GROUP_ID
+    export FIRST_ADMIN_COUNT_MODE=zero
+    export FIRST_ADMIN_CREATED=$first_admin_created
+    export FIRST_ADMIN_SETPRIV_TRACE=$first_admin_setpriv_trace
+    export FIRST_ADMIN_VALIDATE_TRACE=$first_admin_validate_trace
+    export FIRST_ADMIN_EXPECTED_CREDENTIAL=$expected_credential
+    export FIRST_ADMIN_CREDENTIAL_ROOT=$first_admin_root
+    release_recovery_validate_root_chain() { :; }
+    validate_trusted_candidate_panel() { :; }
+    step() { :; }
+    ok() { :; }
+    die() { printf '%s / %s\n' "$1" "${2:-}" >&2; exit 1; }
+    [[ "$mode" != xtrace ]] || set -x
+    preflight_first_administrator_admission
+    case "$mode" in
+        valid)
+            ensure_first_administrator
+            : > "$first_admin_credentials_complete"
+            ;;
+        drift)
+            printf 'same-inode-content-drift\n' > "$credential_path"
+            ensure_first_administrator
+            : > "$first_admin_credentials_complete"
+            ;;
+        xtrace)
+            ensure_first_administrator
+            : > "$first_admin_credentials_complete"
+            ;;
+        failure) exit 88 ;;
+        invalid|unsafe) : > "$first_admin_credentials_complete" ;;
+        *) return 97 ;;
+    esac
+)
+
+printf 'invalid-credential-fixture\n' > "$first_admin_invalid_credentials"
+chmod 0600 "$first_admin_invalid_credentials"
+invalid_credentials_sha_before=$(sha256sum "$first_admin_invalid_credentials")
+touch -a -d '@946684800' "$first_admin_invalid_credentials"
+invalid_credentials_before=$(stat -Lc '%d:%i:%u:%g:%a:%h:%s:%Y:%X' -- \
+    "$first_admin_invalid_credentials")
+rm -f -- "$first_admin_validate_trace" "$first_admin_credentials_complete"
+if run_credentials_contract invalid "$first_admin_invalid_credentials" \
+    >/dev/null 2>&1; then
+    die 'invalid administrator credentials unexpectedly passed preflight'
+fi
+[[ -f "$first_admin_invalid_credentials" &&
+   "$(stat -Lc '%d:%i:%u:%g:%a:%h:%s:%Y:%X' -- "$first_admin_invalid_credentials")" == \
+   "$invalid_credentials_before" &&
+   "$(sha256sum "$first_admin_invalid_credentials")" == \
+   "$invalid_credentials_sha_before" ]] \
+    || die 'invalid administrator credentials input was modified or removed'
+
+printf '%s\n' "$expected_credential" > "$first_admin_unsafe_credentials"
+chmod 0644 "$first_admin_unsafe_credentials"
+rm -f -- "$first_admin_validate_trace" "$first_admin_credentials_complete"
+if run_credentials_contract unsafe "$first_admin_unsafe_credentials" \
+    >/dev/null 2>&1; then
+    die 'world-readable administrator credentials unexpectedly passed preflight'
+fi
+[[ -f "$first_admin_unsafe_credentials" && ! -e "$first_admin_validate_trace" ]] \
+    || die 'unsafe credential metadata reached the candidate or changed the input'
+
+printf '%s\n' "$expected_credential" > "$first_admin_valid_credentials"
+chmod 0600 "$first_admin_valid_credentials"
+rm -f -- "$first_admin_validate_trace" "$first_admin_credentials_complete" \
+    "$first_admin_created" "$first_admin_setpriv_trace"
+run_credentials_contract valid "$first_admin_valid_credentials" \
+    || die 'valid noninteractive administrator credential fixture failed'
+[[ ! -e "$first_admin_valid_credentials" && -e "$first_admin_created" &&
+   -e "$first_admin_credentials_complete" && -e "$first_admin_validate_trace" ]] \
+    || die 'valid credentials were not validated, consumed, and completed'
+[[ "$(wc -l < "$first_admin_setpriv_trace")" == 2 ]] \
+    || die 'credential administrator creation did not use service-user count/create'
+
+printf '%s\n' "$expected_credential" > "$first_admin_valid_credentials"
+chmod 0600 "$first_admin_valid_credentials"
+rm -f -- "$first_admin_validate_trace" "$first_admin_credentials_complete" \
+    "$first_admin_created" "$first_admin_setpriv_trace"
+run_credentials_contract drift "$first_admin_valid_credentials" \
+    || die 'same-inode credential drift changed the admitted administrator bytes'
+[[ ! -e "$first_admin_valid_credentials" && -e "$first_admin_created" &&
+   -e "$first_admin_credentials_complete" && -e "$first_admin_validate_trace" ]] \
+    || die 'same-inode drift did not use the preflight bytes and consume the input'
+
+printf '%s\n' "$expected_credential" > "$first_admin_valid_credentials"
+chmod 0600 "$first_admin_valid_credentials"
+rm -f -- "$first_admin_validate_trace" "$first_admin_credentials_complete" \
+    "$first_admin_created" "$first_admin_setpriv_trace"
+if ! xtrace_output=$(run_credentials_contract xtrace \
+    "$first_admin_valid_credentials" 2>&1); then
+    die 'xtrace credential fixture failed'
+fi
+[[ "$xtrace_output" != *"$expected_credential"* &&
+   ! -e "$first_admin_valid_credentials" && -e "$first_admin_created" &&
+   -e "$first_admin_credentials_complete" && -e "$first_admin_validate_trace" ]] \
+    || die 'credential bytes escaped into xtrace or xtrace changed the result'
+
+printf '%s\n' "$expected_credential" > "$first_admin_failure_credentials"
+chmod 0600 "$first_admin_failure_credentials"
+rm -f -- "$first_admin_validate_trace" "$first_admin_credentials_complete"
+if run_credentials_contract failure "$first_admin_failure_credentials" \
+    >/dev/null 2>&1; then
+    die 'post-validation failure fixture unexpectedly succeeded'
+fi
+[[ ! -e "$first_admin_failure_credentials" &&
+   ! -e "$first_admin_credentials_complete" && -e "$first_admin_validate_trace" ]] \
+    || die 'armed EXIT cleanup did not consume valid credentials after failure'
 
 cleanup_platform_contract
 trap - EXIT

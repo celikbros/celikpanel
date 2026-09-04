@@ -16,8 +16,11 @@ package secrets
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -33,7 +36,48 @@ const keySize = 32 // AES-256
 // Box seals and opens short secret strings with a single symmetric key.
 // Box, kısa gizli dizgileri tek bir simetrik anahtarla mühürler ve açar.
 type Box struct {
-	aead cipher.AEAD
+	aead        cipher.AEAD
+	fingerprint string
+}
+
+// fingerprintLabel domain-separates the identity proof from any other use of
+// the key, so the published fingerprint can never be confused with, or reused
+// as, key material.
+// fingerprintLabel, kimlik kanıtını anahtarın başka herhangi bir kullanımından
+// alan olarak ayırır; böylece yayımlanan parmak izi asla anahtar materyaliyle
+// karıştırılamaz ya da onun yerine kullanılamaz.
+const fingerprintLabel = "celikpanel-secret-key-fingerprint/v1"
+
+// Fingerprint identifies WHICH key this box holds without revealing it: an
+// HMAC of a fixed label under the key. Storing it beside the sealed values lets
+// a later boot answer the one question the ciphertext cannot answer on its own
+// — "is this the key these rows were sealed with?" — before anything is
+// written.
+//
+// That question matters because a missing key file is silently replaced with a
+// fresh one. Without a stored identity, a database restored without its key
+// looks exactly like a first boot, and the first write under the new key
+// creates a database sealed with two keys, half of which can never be opened.
+//
+// Fingerprint, bu kutunun HANGİ anahtarı tuttuğunu onu açığa vurmadan
+// tanımlar: sabit bir etiketin anahtar altındaki HMAC'i. Mühürlü değerlerin
+// yanında saklanması, sonraki bir açılışın şifreli metnin tek başına
+// cevaplayamadığı tek soruyu — "bu satırlar bu anahtarla mı mühürlendi?" —
+// hiçbir şey yazılmadan önce cevaplamasını sağlar.
+//
+// Bu soru önemlidir çünkü eksik bir anahtar dosyası sessizce yenisiyle
+// değiştirilir. Saklanmış bir kimlik olmadan, anahtarsız geri yüklenmiş bir
+// veritabanı ilk açılıştan ayırt edilemez ve yeni anahtar altındaki ilk yazım,
+// yarısı bir daha asla açılamayacak, iki anahtarla mühürlenmiş bir veritabanı
+// yaratır.
+func (b *Box) Fingerprint() string {
+	return b.fingerprint
+}
+
+func keyFingerprint(key []byte) string {
+	mac := hmac.New(sha256.New, key)
+	mac.Write([]byte(fingerprintLabel))
+	return hex.EncodeToString(mac.Sum(nil))
 }
 
 // LoadOrCreate reads the 32-byte key at path, generating and persisting a
@@ -68,7 +112,7 @@ func LoadOrCreate(path string) (*Box, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Box{aead: aead}, nil
+	return &Box{aead: aead, fingerprint: keyFingerprint(key)}, nil
 }
 
 // Encrypt seals plain and returns the self-describing ciphertext. The empty

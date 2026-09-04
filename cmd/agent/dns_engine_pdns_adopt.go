@@ -499,6 +499,25 @@ func transitionPDNSAdoptionJournalToRollback(
 	return next, nil
 }
 
+func handlePDNSAdoptionIntentJournalWriteError(
+	cause error,
+	rollback func(error) (transport.SwitchDNSEngineV1Response, error),
+) (transport.SwitchDNSEngineV1Response, error) {
+	if cause == nil {
+		return transport.SwitchDNSEngineV1Response{},
+			errors.New("PowerDNS adoption intent journal failure is nil")
+	}
+	if !errors.Is(cause, dnsEngineSwitchRollbackPrecursorError) {
+		return transport.SwitchDNSEngineV1Response{}, cause
+	}
+	if rollback == nil {
+		return transport.SwitchDNSEngineV1Response{}, errors.Join(
+			cause, errors.New("PowerDNS adoption rollback callback is unavailable"),
+		)
+	}
+	return rollback(cause)
+}
+
 func verifyPDNSAdoptionEvidence(
 	ctx context.Context,
 	systemctl string,
@@ -624,7 +643,7 @@ func rollbackPDNSAdoptionOnCertifiedProfile(
 			return rollbackPDNSAdoptionWithOps(
 				ctx,
 				func() error {
-					return restoreDNSFileSnapshot(journal.StateBefore)
+					return restoreDNSEngineStateSnapshot(journal.StateBefore)
 				},
 				func(verifyCtx context.Context) error {
 					return verifyPDNSAdoptionEvidenceOnCertifiedProfile(
@@ -753,7 +772,7 @@ func adoptPDNSOnCertifiedProfile(
 	if err := validatePDNSAdoptionUnitEvidence(units); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	stateBefore, err := captureDNSFileSnapshot(dnsEngineStatePath(), 0o600, true)
+	stateBefore, err := captureDNSEngineStateSnapshot(true)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -788,15 +807,19 @@ func adoptPDNSOnCertifiedProfile(
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := mutatePDNSAdoptionAfterConfigProof(
-		ctx, profile, manifest, configs,
-		func() error { return writeDNSEngineSwitchJournal(journal) },
+	writeJournal := func(journal dnsEngineSwitchJournal) error {
+		return writeDNSEngineSwitchJournalForFaultDriver(
+			dnsEngineSwitchFaultDriverPDNSAdopt, journal,
+		)
+	}
+	if err := runDNSEngineSwitchPreIntentFaultHook(
+		dnsEngineSwitchFaultDriverPDNSAdopt, manifest, binding,
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
 		rollingBack, transitionErr := transitionPDNSAdoptionJournalToRollback(
-			journal, readDNSEngineSwitchJournal, writeDNSEngineSwitchJournal,
+			journal, readDNSEngineSwitchJournal, writeJournal,
 		)
 		if transitionErr != nil {
 			return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, transitionErr)
@@ -814,7 +837,7 @@ func adoptPDNSOnCertifiedProfile(
 		)
 		if rollbackErr == nil {
 			journal.Phase = dnsSwitchPhaseRolledBack
-			journalErr = writeDNSEngineSwitchJournal(journal)
+			journalErr = writeJournal(journal)
 			if journalErr == nil {
 				journalErr = removeDNSEngineSwitchJournal()
 			}
@@ -823,9 +846,27 @@ func adoptPDNSOnCertifiedProfile(
 	}
 	if err := mutatePDNSAdoptionAfterConfigProof(
 		ctx, profile, manifest, configs,
+		func() error { return writeJournal(journal) },
+	); err != nil {
+		return handlePDNSAdoptionIntentJournalWriteError(err, rollback)
+	}
+	if err := mutatePDNSAdoptionAfterConfigProof(
+		ctx, profile, manifest, configs,
 		func() error { return writeDNSEngineState(exactState) },
 	); err != nil {
-		actual, exists, readErr := readDNSEngineState()
+		// Prove owner and mode, not just bytes. A write that reported an
+		// error may still have landed, and this readback is what promotes
+		// it to "durable" — so it must check the same contract
+		// persistExactDNSEngineState enforces. The loose reader compares
+		// content alone, which would accept a file whose ownership or mode
+		// drifted and then continue into the committed phase.
+		// Yalnız baytları değil sahipliği ve kipi de kanıtla. Hata bildiren
+		// bir yazma yine de diske inmiş olabilir ve onu "kalıcı" ilan eden
+		// şey bu geri okumadır; bu yüzden persistExactDNSEngineState'in
+		// dayattığı sözleşmenin aynısını denetlemelidir. Gevşek okuyucu
+		// yalnız içeriği karşılaştırır; sahipliği ya da kipi kaymış bir
+		// dosyayı kabul edip commit aşamasına devam ederdi.
+		actual, exists, readErr := readExactDNSEngineState()
 		if readErr != nil || !exists || actual != exactState {
 			return rollback(errors.Join(err, readErr))
 		}
@@ -839,14 +880,14 @@ func adoptPDNSOnCertifiedProfile(
 	journal.Phase = dnsSwitchPhaseTargetVerified
 	if err := mutatePDNSAdoptionAfterConfigProof(
 		ctx, profile, manifest, configs,
-		func() error { return writeDNSEngineSwitchJournal(journal) },
+		func() error { return writeJournal(journal) },
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	journal.Phase = dnsSwitchPhaseCommitted
 	if err := mutatePDNSAdoptionAfterConfigProof(
 		ctx, profile, manifest, configs,
-		func() error { return writeDNSEngineSwitchJournal(journal) },
+		func() error { return writeJournal(journal) },
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}

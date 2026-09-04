@@ -7,6 +7,30 @@
 Description=CelikPanel web panel
 Wants=celikpanel-agent.service
 After=celikpanel-agent.service network.target
+# Retry without a hard stop, but see RestartSteps below: parking this unit in
+# failed state would leave the operator with no interface at all, and there is
+# no off-panel recovery surface yet. The brake is the backoff, not a cap.
+# Sert durdurma olmadan yeniden dene; ama aşağıdaki RestartSteps'e bak: bu
+# birimi "failed" durumunda park etmek operatörü hiç arayüzsüz bırakır ve
+# panel dışı bir kurtarma yüzeyi henüz yok. Fren, üst sınır değil, artan bekleme.
+# A limit that actually trips on EVERY supported systemd. RestartSteps and
+# RestartMaxDelaySec arrived in systemd 254; older builds (RHEL 9 ships the 252
+# family) load the unit and ignore them with a warning, so the backoff below
+# simply does not exist there. Disabling the limiter would then leave that
+# platform with an unbounded 3s flap - A17 unfixed exactly where it is hardest
+# to see. 30 starts per hour is the floor: on old systemd it stops the flap
+# after ~90s; on 254+ the backoff stretches those 30 attempts over hours, so it
+# is a last resort rather than the brake.
+# HER desteklenen systemd surumunde gercekten devreye giren bir sinir.
+# RestartSteps ve RestartMaxDelaySec systemd 254 ile geldi; daha eski surumler
+# (RHEL 9, 252 ailesi) birimi yukleyip bunlari uyariyla yok sayar, yani
+# asagidaki artan bekleme orada hic yoktur. Sinirlayiciyi kapatmak o platformu
+# sinirsiz 3sn cirpinmayla birakirdi - A17 en gorunmez oldugu yerde acik
+# kalirdi. Saatte 30 baslatma taban: eski systemd'de cirpinmayi ~90 saniyede
+# durdurur; 254+ uzerinde artan bekleme o 30 denemeyi saatlere yaydigi icin
+# fren degil son caredir.
+StartLimitIntervalSec=3600
+StartLimitBurst=30
 
 [Service]
 Type=simple
@@ -41,6 +65,19 @@ EnvironmentFile=-/etc/celikpanel/panel.env
 ExecStart=/opt/celikpanel/bin/panel $CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG $CELIKPANEL_PANEL_DEMO_FLAG
 Restart=on-failure
 RestartSec=3
+# A fixed 3s retry never stops. systemd's default limiter is 5 starts per 10s,
+# and a ~3.5s crash cycle admits at most 4 — permanently one under the
+# threshold — so a boot-time failure flaps until someone notices. Escalate
+# 3s -> 120s instead: a transient host fault still self-heals in seconds, while
+# a persistent one costs ~30 attempts an hour rather than ~1200.
+# Sabit 3sn'lik yeniden deneme hiç durmaz. systemd'nin varsayılan freni 10
+# saniyede 5 başlatmadır ve ~3,5sn'lik bir çökme döngüsüne en fazla 4 tanesi
+# sığar — eşiğin kalıcı olarak bir altı — yani açılış hatası biri fark edene
+# kadar çırpınır. Bunun yerine 3sn -> 120sn artır: geçici bir arıza yine
+# saniyeler içinde toparlanır, kalıcı olan ise saatte ~1200 yerine ~30 denemeye
+# mal olur.
+RestartSteps=6
+RestartMaxDelaySec=120
 KillMode=control-group
 SendSIGKILL=yes
 TimeoutStopSec=30s

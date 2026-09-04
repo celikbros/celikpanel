@@ -79,6 +79,32 @@ type ServiceMutationResponse struct {
 	Job       *ServiceMutationJob `json:"job,omitempty"`
 	ErrorCode string              `json:"error_code,omitempty"`
 	Error     string              `json:"error,omitempty"`
+
+	// MutationHold carries why the agent is refusing every durable mutation,
+	// as one of the stable MutationHold* codes, or "" when it is accepting
+	// them. It rides on the response rather than on the job because the
+	// condition is process-wide: it is a property of the agent, not of the
+	// operation being asked about.
+	//
+	// A caller that is waiting for an operation to reach a terminal state MUST
+	// stop when this is set. A held agent cannot move any job — heartbeat,
+	// finish and cancel all refuse — so the job it reports stays exactly as it
+	// is for as long as anyone is willing to poll. Without this field the only
+	// signal is the poller's own timeout, which is how a five-second failure
+	// became a thirty-minute silence.
+	//
+	// MutationHold, agent'ın her kalıcı mutasyonu neden reddettiğini kararlı
+	// MutationHold* kodlarından biriyle taşır; kabul ediyorsa "" olur. İş
+	// üzerinde değil yanıt üzerinde durur, çünkü koşul süreç geneliidir:
+	// sorulan işlemin değil agent'ın bir özelliğidir.
+	//
+	// Bir işlemin uç duruma ulaşmasını bekleyen çağıran, bu ayarlıysa
+	// DURMALIDIR. Tutulan bir agent hiçbir işi kımıldatamaz — kalp atışı,
+	// bitirme ve iptal hepsi reddeder — dolayısıyla bildirdiği iş, kim ne kadar
+	// yoklarsa yoklasın olduğu gibi kalır. Bu alan olmadan tek işaret,
+	// yoklayanın kendi zaman aşımıdır; beş saniyelik bir arızanın otuz dakikalık
+	// bir sessizliğe dönüşmesinin sebebi tam da budur.
+	MutationHold string `json:"mutation_hold,omitempty"`
 }
 
 const (

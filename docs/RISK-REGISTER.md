@@ -40,7 +40,7 @@ or executed as-is. There are no open pull requests at this baseline.
 |---|---|---|---|
 | R-001 | Critical | CLOSED ON MAIN | Operations now documents snapshot v6, current v4/v5 rejection and the historical-release boundary |
 | R-002 | High | CLOSED ON MAIN | README now separates optional local GPG use from canonical Ed25519 update authority |
-| R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS | No proven full control-plane disaster backup and restore drill |
+| R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS / DESIGN ON BRANCH | No control-plane disaster backup exists yet; the design, inventory and drill plan are in `docs/DISASTER-RECOVERY.md` |
 | R-004 | High | PARTIALLY MITIGATED / REVERIFY | Both hosts run exact Alpha52 with terminal receipts and full acceptance; snapshot source provenance remains `unknown` |
 | R-005 | High | OPEN | Boston/Frankfurt environment classification conflicts with the not-production-ready policy |
 | R-006 | High | OPEN | Route/role and API-contract debt remains at a security boundary |
@@ -54,6 +54,23 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-014 | Medium | PARTIALLY MITIGATED / OPEN | Incident template and first incident record exist; external response ownership is not assigned |
 | R-015 | High | OPEN / BLOCKER FOR PUBLIC DNS CUTOVER | Parent delegation and glue are verified; the `celikhost.com` child zone and public authority are absent |
 | R-016 | Medium | OPEN / PROVENANCE WARNING | Both valid v6 snapshots encode an `unknown` source identity although terminal receipts prove the prior Alpha51 commit |
+| R-017 | High | OPEN | A production panel heartbeat deterministically poisons a DNS engine switch that installs packages |
+| R-018 | Medium | FIXED ON BRANCH / PROVEN ON AN ARCH GUEST / REAL VM PENDING | The Arch BIND path was never wired end to end: root-anchor rule, managed root, config ownership, stock options and journal shape each assumed Debian; all five now follow the pacman package and a fresh Arch host reaches a serving BIND |
+| R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
+| R-020 | Low | REBALANCED ON BRANCH / CI PROOF PENDING PUSH | The CI race shard for `D` ran at 88 percent of its 8-minute ceiling on `main`; the local 30-minute single-process run sits at 80 percent |
+| R-021 | Low | RESOLVED / INVENTORY CORRECTED | Both hosts were rebuilt; identity is confirmed and the inventory now records Ubuntu and Debian 13. No Arch host remains in our inventory |
+| R-022 | Critical | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `install.sh` sources the release transaction guard before any trusted release root exists, so a clean installation exits before it begins |
+| R-023 | High | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
+| R-024 | Medium | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | The installer discards `systemctl enable` failures and never syncs the enable links, so a fresh host can reboot with both units disabled |
+| R-025 | Low | DECIDED / DOCUMENTATION CORRECTED ON BRANCH | The documented `git clone && sudo ./install.sh` journey contradicts the recovery foundation's refusal of user-owned ancestor directories |
+| R-026 | High | OPEN / FIXED ON BRANCH, LIVE PROOF PENDING | PowerDNS switch rollback restored the backup main file underneath the discarded generation's WAL/SHM, leaving a malformed live database |
+| R-027 | Low | DOCUMENTED LIMITATION | PowerDNS authority is certified for APT/Debian/systemd only, so Arch cannot adopt or switch to PowerDNS; Arch proofs must use BIND-only journeys |
+| R-028 | High | FIXED ON BRANCH / LIVE PROOF PENDING | The active-BIND proof inside a BIND-to-PowerDNS switch refused the pdns.service mask the switch's own install guard had just created, so every switch that had to install PowerDNS failed at its source proof |
+| R-029 | High | FIXED ON BRANCH / LIVE PROOF PENDING | DNS identity staging on a host that has never run an engine refused because zones were pending, which every zone on such a host is by construction; adding a domain before setting up DNS made the first engine install unreachable |
+| R-030 | Medium | FIXED ON BRANCH | A read-only mutation status RPC failed outright when the agent's ledger could not be brought up or was poisoned at startup, so a probe could not tell a dead agent from one that is serving and refusing |
+| R-031 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Rolling back a BIND-to-PowerDNS switch re-enabled the bind9.service alias before named.service, which cannot succeed on APT hosts; the source BIND never came back and the recovery poisoned the ledger |
+| R-032 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Returning to an engine the host had used before, with the switch interrupted after package install, was read as the half-finished handover shape because the former engine's stranded ownership receipt is never retired; recovery poisoned the ledger on an ordinary operator action |
+| R-033 | High | FIXED ON BRANCH / LIVE PROOF PENDING | A first DNS engine install that failed after package install on a host with no state left an install receipt the abort proof called inconsistent, so the ledger was poisoned on the very first DNS action and stayed poisoned on every boot |
 
 ## Detailed risks
 
@@ -97,6 +114,14 @@ or executed as-is. There are no open pull requests at this baseline.
   secret.key, relevant control-plane keys and certificates; retention and
   off-host storage are defined; a clean-host restore drill proves service and
   cryptographic identity recovery; RPO/RTO are accepted externally.
+- Status (3 September 2026): scoped on the integration branch. Today only
+  per-domain backups exist; nothing captures the panel's own state (SQLite,
+  `secret.key`, agent private state, DKIM and WireGuard keys, panel TLS,
+  firewall snapshot). `docs/DISASTER-RECOVERY.md` records the exact inventory,
+  the consistency mechanism (the update path's online WAL-aware SQLite copy),
+  the key rule (backup key separate from `secret.key`, shown once), the restore
+  entry point and the drill. Implementation follows in that order; the WSL
+  drill precedes the real-VM drill.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-004 — Alpha52 live promotion proven; residual acceptance must be retained
@@ -299,6 +324,755 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: a reviewed release records the verified installed source
   version/commit in the next v6 snapshot identity and a normal panel update
   proves the corrected provenance without regression.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-017 - A panel heartbeat cancels a package-installing DNS switch
+
+- Evidence: S-1 kill-matrix run 8 (interim report SHA-256
+  `85bde76952fe05ee7a7a47730b8242406bb5e0924aab739a1e8ea091b2798724`).
+  `cmd/agent/dns_engine_rpc.go:1339-1361` marks the mutation finalizing before
+  backend work, while the finalizing predicate at `:1597-1620,1648-1675`
+  requires `WorkerPID == 0` and an empty worker identity.
+  `cmd/agent/service_mutation_worker.go:120-154,202-244` durably registers the
+  package worker, and `cmd/panel/service_mutation_agent.go:28,793-804`
+  heartbeats every five seconds. A heartbeat landing inside that valid
+  registered interval fails the predicate, poisons the manager, cancels the
+  operation, and then denies rollback worker registration.
+- Impact: a DNS engine switch that has to install packages - the ordinary case
+  on a fresh host - can be cancelled by the panel's own liveness check.
+  Conditioned on the overlap the rejection is deterministic, not intermittent.
+  Run 8 left an install-ownership receipt and a leased worker identity with no
+  DNS state and no journal: residue that is invisible to every existing check.
+- Immediate control: none available in the product. Suppressing or delaying the
+  heartbeat is not a control - the twenty-second lease
+  (`cmd/agent/service_mutation_rpc.go:39`) expires through the same guard
+  (`:1424-1443`), so the failure simply moves to lease expiry.
+- Exit criteria: the finalizing predicate distinguishes a competing mutation
+  from the owning mutation's own registered worker, a bounded worker-aware
+  guard passes review, and a package-installing switch completes under a
+  production-cadence heartbeat on a live fixture.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+- S-2 update: a review-only worker-aware guard was written and tested
+  (`artifacts/s2-vm-acceptance/p1/`), then rejected by its own author as unsafe
+  to land. Two ordering defects remain underneath it: a protected heartbeat
+  returns before generic lease renewal, so a worker clear can advance
+  `UpdatedAt` past the original twenty-second lease and leave
+  `LeaseExpiresAt < UpdatedAt`; and `cmd.Wait()` reaps the child before
+  `tracker.clear()` removes the durable worker, so a guard in that window sees
+  a correctly dead worker and still rejects. Neither a live package install
+  longer than the lease nor a deterministic reap-to-clear test has been run.
+  The patch is not in HEAD and must not be landed as it stands.
+- Fix implemented (31 August 2026, branch `fix/alpha52-handoff-acceptance`):
+  the finalizing-interval proof now accepts the owning mutation's registered
+  worker by shape — deliberately without a liveness probe, which removes the
+  reap-to-clear window outright rather than tolerating it; a protected
+  heartbeat renews the lease instead of returning early; and both durable
+  worker transitions renew the lease as well, only while the job is Running,
+  so the expired-cancelling proof keeps its ordering. Unit and linux
+  integration tests reproduce the run-8 ledger shape (registered apt-get,
+  stalled lease, heartbeat, expiry, cancellation, clear) and pass. The live
+  proof — a package-installing switch under production five-second heartbeats
+  on a real fixture — remains outstanding and keeps this entry OPEN.
+
+### R-018 - BIND preflight rejects a stock Arch root directory
+
+- Evidence: S-1 kill-matrix run 6. `cmd/agent/dns_engine_bind_mask_linux.go`
+  applies the exact `bindManagedRootMode` expectation 0755 while walking the
+  mask parent chain, including `/`; the official Arch image presents `/` as
+  0555. The request cannot reach even the intent journal write. Other relevant
+  parents were 0755, so this is a single specific expectation rather than broad
+  fixture corruption.
+- Impact: the BIND engine is unreachable on a stock Arch installation. Arch is a
+  required acceptance distribution under OPERATIONS.md section 3, so this also
+  blocks part of the release matrix.
+- Immediate control: do not `chmod` the root directory to obtain a passing run.
+  Doing so conceals the rejection and makes the fixture unrepresentative.
+- Exit criteria: a written determination of whether 0755 on `/` is load-bearing
+  for the mask policy or an expectation that is simply wrong for a normal Linux
+  root, followed by the corresponding fix or documented distribution limit.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+- S-2 determination: `0755` on `/` is **not** load-bearing for this operation.
+  The mutation descends to a verified `/etc/systemd/system` and calls
+  `systemctl mask`; it never creates, renames or removes an entry directly
+  under `/`. The properties actually needed - root ownership, no unsafe ACL or
+  symlink escape, search permission, no group/other write - hold at `0555` as
+  well as `0755`. The defect is policy conflation: `bindManagedRootMode` serves
+  both managed directories and pre-existing filesystem trust anchors. A fix
+  should give ancestor trust anchors their own policy rather than loosen the
+  managed-root constant. Existing tests force their synthetic mask parent to
+  0755 and only assert rejection of 0700, so the stock Arch shape is uncovered.
+- Fix implemented (1 September 2026, branch `fix/alpha52-handoff-acceptance`):
+  pre-existing filesystem ancestors now have their own policy,
+  `validateInheritedBINDAnchorFD`, separate from the exact-mode assertion used
+  for directories this product creates. An inherited anchor must be a
+  root-owned directory, free of group and other write, free of
+  setuid/setgid/sticky, ACL-clean, and world-traversable. That accepts stock
+  Arch's 0555 root and ordinary 0755 while still refusing every writable,
+  special-bit, foreign-owned or non-traversable shape - including 0700, which
+  an existing test already pinned as a refusal and which the first draft of
+  this policy wrongly accepted until that test caught it. `/var/cache/bind/celikpanel`
+  and every other directory the product creates keep exact 0755. Applied to all
+  four ancestor walkers (mask parent, two managed-root walks, vendor unit
+  path), which matters because the mask-parent proof is shared by the PowerDNS
+  path too, so the Arch block was never BIND-only. Full and tagged agent suites
+  pass on Debian 13 (WSL2). The live proof on a real stock Arch host remains
+  outstanding and keeps this entry OPEN.
+- Live proof (3 September 2026, WSL2 Arch guest with `/` at 0555, driven
+  through the public API): after R-029's third layer and R-033 the first BIND
+  switch reached the host and exposed, one behind the other, four more
+  Debian assumptions in the pacman path. (1) The managed-root walk only knew
+  `/var/cache/bind`; nothing prepared `/var/named/celikpanel`, so the
+  publisher refused the vendor parent - now a pacman walk proves `/var/named`
+  is the bind package's root:named directory, hardens it in place to 1770 (the
+  sticky bit APT gets from dpkg-statoverride) and creates the managed root
+  root:root 0755. (2) The config owner contract assumed `/etc/named.conf` is
+  root:root 0644; Arch ships it root:named 0640 - the contract now follows the
+  layout and resolves the `named` group. (3) Arch's stock options carry
+  `allow-recursion { 127.0.0.1; ::1; }` and `allow-transfer { none; }`, which
+  the managed block refused as operator-owned; exactly those two stock lines
+  are superseded, any other value still refuses. (4) The switch journal
+  demanded 0644 root:root for the pacman single-file set; it now follows the
+  layout. Result: preview with zero blockers, commit 200 in 9 s, engine ready
+  at epoch 1, the zone authoritative over UDP and TCP, still serving after a
+  distro restart and after a full WSL VM reboot. `pacman -Qkk bind` reports
+  `/var/named (Permissions mismatch)` afterwards; that is the sticky hardening
+  and is expected. The real-VM proof (S-9 T1) remains the exit criterion.
+
+### R-019 - An adopted PowerDNS is not a switch-ready BIND source
+
+- Evidence: S-1 kill-matrix run 5. Production `pdns-adopt` is deliberately
+  read-only and therefore does not create CelikPanel's private synchronization
+  tables, while the immediate BIND handoff verifies its source through
+  `celikpanel_dns_zone_sync_v3_receipts`. The handoff failed because that table
+  did not exist.
+- Impact: an operator who adopts an existing external PowerDNS and later
+  switches to BIND through the panel may be unable to complete that switch. The
+  customer-facing consequence is not yet confirmed and is the first thing to
+  establish.
+- Immediate control: none. Do not hand-write the private tables; that would
+  invalidate any baseline built on top of them.
+- Exit criteria: the customer-facing consequence is established in writing;
+  if reachable through the panel, adoption either produces a switch-ready
+  source through unchanged `Agent.ConfigurePowerDNSSQLite` and
+  `Agent.SyncDNSZoneV3`, or the handoff stops requiring what adoption cannot
+  provide.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+- S-2 determination: the consequence is customer-facing and confirmed. An
+  administrator can adopt a valid existing PowerDNS, see it become the managed
+  active engine, and then be permanently unable to switch it to BIND; every
+  unchanged retry fails before the intent journal while PowerDNS keeps serving.
+  Fail-closed, no outage, but the advertised engine-handover operation is
+  unavailable and the customer is stranded on PowerDNS. A later single-zone
+  mutation can lazily create the schema and one receipt but cannot reliably
+  repair every adopted zone. Adoption tests mask this because their "external"
+  fixture calls the normal initializer and pre-creates the private receipt
+  schema. Warrants an engineering defect and a support known-issue entry.
+- Diagnosis and fix (1 September 2026, branch `fix/alpha52-handoff-acceptance`).
+  S-5 attempt 7 proved the adoption half works and the BIND switch does not.
+  A five-lens adversarial investigation established three independent causes,
+  all now fixed:
+  (1) **Masked BIND is not "stopped".** The product masks named.service and
+  bind9.service so a package manager cannot start BIND behind its back, then
+  its own PowerDNS-active proof accepted only "not-found" or
+  "loaded"+"disabled" — never "masked". A switch on any host where BIND had
+  been installed could not establish its own source, and the same predicate
+  gates PowerDNS zone writes, so the residue blocked those too. A masked and
+  inactive unit now counts as stopped; masked is stronger than disabled, not
+  weaker.
+  (2) **A five-second failure became a thirty-minute silence.** After the agent
+  failed and poisoned itself, the panel entered a terminal reconcile whose
+  budget for a DNS engine switch is thirty minutes on a context deliberately
+  detached from the caller, polling every 250 ms. `Agent.ServiceMutationStatus`
+  was the one manager entry point that never consulted the health guard, so it
+  kept truthfully reporting the frozen job as running. The status response now
+  carries the stable `MutationHold` code and the wait stops the moment the
+  agent says it is held.
+  (3) **The wedge was permanent.** A switch that installed packages and failed
+  before writing any journal left an install receipt whose only classification
+  was "error". Startup recovery turned that into a poisoned mutation manager,
+  and because the poison is recomputed from durable state nothing ever changes,
+  every boot reproduced it: DNS served, the panel answered, and the host could
+  never accept another mutation. Where the active state and its own ownership
+  receipt agree and the target owns nothing, authority provably never moved;
+  that is now classified as recoverable and the ledger job fails cleanly. A
+  target that owns authority while another engine is active — the Boston shape
+  — still fails closed.
+  Each fix has a test that reproduces the incident's exact error string on the
+  unfixed tree. Full and tagged agent suites pass on Debian 13 (WSL2). R-019
+  stays OPEN until a live adoption-to-BIND switch completes on a real VM.
+- S-6 live proof (2 September 2026): the three-cause fix met real machines.
+  Cause 1 held completely - the Debian 13 external-PowerDNS adoption-to-BIND
+  journey passed end to end for the first time in eight attempts. Cause 3 held
+  in substance - the pre-intent wedge no longer poisons, the job fails cleanly
+  with `agent_restarted_before_dns_engine_switch_commit`, a reboot changes
+  nothing, and the retry converges the host - but the first retry's caller was
+  told 75, which traced to the kill-matrix trigger's heartbeat contract
+  demanding `WorkerPID == 0` mid-switch, the pre-R-017 mistake transplanted
+  into the harness; fixed, with a test reproducing the exact S-6 error string.
+  Cause 2 held on latency (30 minutes to 5.5 seconds, agent-error-to-first-byte
+  9.8 ms) but the public body did not name the hold; it now returns
+  `DNS_ENGINE_MUTATIONS_HELD` with the hold code as its detail. Still
+  unproven: the Boston negative (both production setup chains failed before the
+  measured cell, one of them exposing R-026) and Arch, which cannot enter the
+  journey at all (R-027). R-019 stays OPEN for the Boston negative and a
+  clean-caller retry on a real host.
+- S-7 live proof (2 September 2026, manifest
+  `413d67aa28cca17c7e67912f5e911a3a24481b70b388c3e0e74659706b31c283`): the
+  worker-bearing heartbeat fix held - the pre-intent wedge cell passed with the
+  first same-identity retry returning 0 in 14 s and the host converging; the
+  public hold contract held - the fsync-EIO cell returned 503
+  `DNS_ENGINE_MUTATIONS_HELD` with details `["ledger_ambiguous"]` in 8 s with
+  no internal text; the Debian adoption-to-BIND journey and the full S-5 matrix
+  stayed green. Still unmeasured: the Boston negative, whose setup chain hit
+  R-028 at the BIND-to-PowerDNS step. R-019 stays OPEN for that one cell.
+- S-8 (3 September 2026, manifest `746228bdc2c01ecda8fbb65067ddb29a0dea9e740694ce461ecff1c50b11c568`): the Boston setup chain passed every
+  step - empty, BIND epoch 1, PowerDNS epoch 2 in 21.5 s, 12.2 s and 2.8 s -
+  which is R-028 proven live. The measured negative cell then returned 2 with
+  a null proof from the harness controller, so the exact refusal is still
+  unmeasured. T2 positive proved the pre-intent kill and the restart, then the
+  harness stopped at its secret catalog before the retry. T3 passed again.
+  R-019 stays OPEN for the Boston negative only.
+- Residual, deliberately not changed (1 September 2026):
+  `validateDNSEngineStateSnapshot` judges a persisted journal snapshot's
+  recorded GID against `serviceMutationRequiredOwnerGID`, which is re-derived
+  from `/etc/group` once per process. A durable record judged against a
+  runtime-derived expectation is the same shape as cause 3 above, and a
+  celikpanel GID renumber between journal write and validation would invalidate
+  every persisted journal at once. Decoupling it was attempted and reverted:
+  `TestDNSEngineSwitchJournalRequiresExactServiceOwnerForState` caught that the
+  check also rejects a snapshot taken from a state file whose ownership was
+  wrong at capture time, which is worth keeping, and the brick scenario needs
+  both a long-stuck journal and a GID renumber — and stuck journals are what
+  cause 3's fix removes. The clean repair is to record the expected GID in the
+  journal and validate against that, which is a durable-schema change with
+  migration consequences and is not urgent.
+
+### R-020 - The panel race suite is close to its timeout ceiling
+
+- Evidence: `go test ./cmd/panel/ -race -count=1 -timeout 30m` returned `ok` in
+  1574.958s of an 1800s ceiling on Debian 13 WSL2 at commit
+  `f243304d1aadc94c0f26342d2d3270902ad43d4b`, leaving 225.042s of margin.
+- Impact: on a slower host the suite exceeds the ceiling and fails as a timeout
+  rather than as a test failure, which reads as a hang and costs disproportionate
+  investigation time.
+- Immediate control: keep the explicit `-timeout 30m`; the default would be
+  worse. Report the elapsed time in every acceptance run so the trend is visible.
+- Exit criteria: either the suite's runtime is reduced, or the ceiling is raised
+  with a recorded rationale and a measured margin on the slowest supported
+  acceptance host.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+- Measured again (2 September 2026): the single-process run took 1448 s of
+  1800 s (80 percent) on a 16-core Debian 13 WSL2 guest on its own ext4 at
+  `e8c73f16`; 998 top-level tests, none using `t.Parallel`, so the package is
+  serial and bound by fsync and the race detector, not by cores. The real
+  exposure was in CI, not locally: the `panel-race` job is sharded seven ways
+  with `-timeout=8m` per shard, and on `main` run 33297192912 the `D` shard's
+  test step took 421 s, 88 percent of the ceiling (430-435 s job time in two
+  consecutive runs). `N-R` ran 328 s, `H-M` 308 s, `S` 248 s. Per-test timings
+  from the same tree put 77 percent of `D` in `TestDNS*`.
+- Fix on branch: ten shards instead of seven. `D` is split into
+  `^TestDNS(Engine|Zone)` and the rest of `D`
+  (`-run '^TestD' -skip '^TestDNS(Engine|Zone)'`), `S` into `^TestService` and
+  the rest, `E-G` and `H-M` regrouped as `E-K` and `L-M`, `N-R` as `N-Q` and
+  `R`. A pair keeps the letter pattern on the complement and skips the
+  carved-out prefix, so coverage is exhaustive by construction: every one of
+  the 998 measured names lands in exactly one shard, an empty `-skip ''` skips
+  nothing (verified on go1.26.5), and `deploy/test-go-toolchain-contract.sh`
+  pins all ten patterns and skips. Projected worst shard about 220 s, 46
+  percent, using the per-letter CI/WSL ratios measured on that run. The ceiling
+  stays at 8 minutes: it is a hang detector, not a budget, and the rule now
+  written into the workflow is to split any shard whose measured step exceeds
+  half of it.
+- Exit criteria (updated): the branch's first CI run shows every
+  `Race-test panel boundaries` step under 240 s. The local single-process
+  ceiling stays at 30 minutes with the elapsed time reported per acceptance
+  run.
+
+### R-021 - Deployment host identity does not match the inventory
+
+- Evidence: on 31 August 2026 both deployment targets presented an SSH host key
+  that differs from the recorded one, and an SSH banner naming an operating
+  system the inventory does not record: `2.25.80.4` is recorded as Debian 13 and
+  reports Ubuntu, `72.62.38.15` is recorded as Arch and reports Debian 13. No
+  Arch host is currently visible. The observed fingerprints are held by the
+  operator and are deliberately not recorded here, because an unverified
+  fingerprint written into this register would later be mistaken for a trusted
+  baseline.
+- Impact: the identity of both production-shaped hosts is unestablished. A host
+  key change is consistent with a rebuild, but an operating system change is
+  not explained by the clean-server rule alone, and the alternative explanation
+  is that the addresses now resolve to different machines. Separately, the
+  required Arch acceptance host is unaccounted for.
+- Immediate control: no deployment, no update and no configuration change on
+  either address. Read-only diagnosis only, and only after the operator has
+  confirmed the presented host keys out of band. Acceptance VMs must be
+  disposable machines under the team's own control.
+- Exit criteria: the operator confirms each host key against provider console
+  or on-host evidence, the recorded operating system for each address is
+  corrected or the address is retired, and an Arch acceptance host exists.
+- Resolution (1 September 2026): the operator confirmed both hosts were rebuilt,
+  which explains all three changes at once — new SSH host keys, new operating
+  systems, and new provider-injected login keys. Identity is now established on
+  evidence rather than assumption: the operator re-added the deploy key through
+  the provider console, which binds to the real machine, and the host key each
+  server reports from inside
+  (`/etc/ssh/ssh_host_ed25519_key.pub`) matches the key presented on the wire
+  exactly — `SHA256:8Zje…` for `2.25.80.4` (hostname `boston`, Ubuntu 24.04.4)
+  and `SHA256:DV/e…` for `72.62.38.15` (hostname `frankfurt`, Debian 13).
+- Corrected inventory: `2.25.80.4` is boston, Ubuntu 24.04.4, PowerDNS
+  secondary. `72.62.38.15` is frankfurt, Debian 13, BIND primary. The recorded
+  mixed-engine pair survived the rebuild and matches the durable state receipts
+  on both hosts.
+- Health at resolution: CelikPanel installed and complete on both
+  (`/etc/celikpanel/install.complete`, binaries dated 30 August), panel and
+  agent active, no active mutation request, no DEGRADED or fail-closed entry in
+  fourteen days, and zero restarts on all four units. Boston's former unbounded
+  restart loop did not survive the rebuild.
+- Remaining, tracked here rather than as a blocker: our inventory no longer
+  contains an Arch host. That does not block the OPERATIONS.md section 3 matrix,
+  which runs on disposable QEMU/KVM guests built from an official Arch cloud
+  image, not on these two servers. It does mean there is no long-lived Arch
+  host to observe, and the R-018 inherited-anchor fix has still never met a real
+  Arch machine outside that disposable matrix.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-022 - Fresh installation cannot start
+
+- Evidence: S-2 acceptance, disposable Debian 13 and Arch VMs, commit
+  `f243304d1aadc94c0f26342d2d3270902ad43d4b`. Both exited 1 with the single
+  error `trusted release root is missing while sourcing release guard`, and
+  `/opt/celikpanel`, `/var/lib/celikpanel`, `/etc/celikpanel` and both unit
+  files remained absent. Acceptance report SHA-256
+  `7126f122e815ddda59ba7d8dd060b74c937c0bb7ab61d9a18ec93734d9a46eb3`.
+  `install.sh:128` computes `SRC` and `:131` sources
+  `deploy/release-transaction-guard.sh`, whose check at `:16-20` accepts only
+  `TRUSTED_RELEASE_ROOT` or `CELIKPANEL_TRUSTED_RELEASE_ROOT`. The fresh path
+  first assigns `TRUSTED_RELEASE_ROOT=$SRC` at `install.sh:519`, inside
+  `prepare_fresh_release_transaction_foundation()`, which is reached far later.
+  `set -euo pipefail` at `:23` turns the guard's `return 1` into an exit.
+  `download-portal/get.sh:1057-1063` hands the installer six
+  `CELIKPANEL_FIRST_INSTALL_*` values and neither root variable; the file
+  contains no reference to either.
+- Scope: not introduced by the Alpha53 candidate. Base commit `0a5e849` carries
+  the identical ordering at the same line numbers, and the ordering dates to
+  `45d01ff` (Alpha51 recovery hardening, 28 August 2026). The three files are
+  byte-unchanged across the candidate branch.
+- Impact: no new customer can install the product by any documented route -
+  neither the public `get.sh` journey nor the direct `install.sh` invocation.
+  It went unnoticed because both live hosts reached Alpha52 through an
+  Alpha51 update; the existing Alpha52 evidence covers updates, not a clean
+  installation. Update and rollback paths are unaffected: they export
+  `CELIKPANEL_TRUSTED_RELEASE_ROOT` before invoking the installer
+  (`bootstrap-update.sh:389`).
+- Immediate control: none. Do not instruct anyone to export a trusted-root
+  variable by hand as a workaround; the guard exists to reject a root the
+  caller has not verified, and hand-setting it defeats exactly the property it
+  protects.
+- Exit criteria: a fresh installation completes on Debian 13, Ubuntu 24.04 and
+  current Arch from both the public signed `get.sh` journey and the documented
+  direct invocation, with the guard still rejecting a release root the caller
+  has not verified; and an acceptance test covers the bootstrap-to-installer
+  entry boundary, which static and extracted-function tests did not reach.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+- S-3 update: the entry-boundary defect itself is repaired and proven on local
+  branch `fix/r-022-fresh-install` (commit `7fd5b30b`, parent exactly
+  `0a5e8495…`): the signed journey now passes the verified extraction root
+  from `get.sh`, a direct non-apply invocation falls back to its canonical
+  installer directory, apply-only still refuses a missing inherited root, and
+  the guard file is byte-identical at base and candidate. A new cross-script
+  entry-boundary contract test fails on the base and passes with the fix, and
+  runs in CI. The branch is unpushed and awaits operator review. Fresh install
+  as a whole remains broken behind it - see R-023 - so this entry stays OPEN
+  until the fix lands on `main` and a complete green install exists.
+
+- Status (2 September 2026): the entry-boundary fix (`7fd5b30b`) is on the
+  integration branch `fix/alpha52-handoff-acceptance`. Proven on disposable
+  Debian 13, Ubuntu 24.04 and Arch guests in S-4 and S-5 (both entry paths, the
+  R-022 contract test red on base and green with the fix, and running in CI).
+  Not on `main`; the blocker ends when the branch lands.
+
+### R-023 - A skipped first admin turns into a panel restart loop
+
+- Evidence: S-3 acceptance, six valid fresh-install journeys on disposable
+  Debian 13, Ubuntu 24.04 and Arch VMs (report SHA-256
+  `7126…` superseded; S-3 manifest
+  `815bf4adbf71c89f505d09293d3020b1964171485f900ab20e28089ec33eec09`). All six
+  failed with one deterministic chain: `install.sh:1403` returns from
+  `ensure_first_administrator` immediately under `SKIP_ADMIN=1`; migration
+  `006_drop_placeholder_admin.sql` removes the placeholder administrator; the
+  panel counts zero users and refuses to serve wide open
+  (`cmd/panel/main.go` zero-user gate); `Restart=on-failure` turns that refusal
+  into a restart loop; the installer exits before writing
+  `/etc/celikpanel/install.complete`.
+- Scope: pre-existing on `main`; present since the zero-user gate (3 July 2026)
+  and migration 006 coexist with `SKIP_ADMIN`. Not introduced by any candidate
+  branch. The zero-user refusal itself is correct and must stay: a panel with
+  no users must not serve.
+- Impact: there is no working non-interactive fresh installation. `SKIP_ADMIN=1`
+  is a documented installer option, the apply-only contract requires it
+  (`install.sh` apply-only validation), and the historical deployment recipe
+  used it. The interactive journey depends on `--create-admin`, which reads the
+  terminal (`cmd/panel/admin_cli.go:27,133`) and has no non-interactive mode,
+  so automation cannot create the first administrator at all. The interactive
+  TTY journey is unproven.
+- Immediate control: do not use `SKIP_ADMIN=1` for a fresh installation. After
+  an affected install, run `--create-admin` as the service user and restart the
+  panel; the loop clears once one user exists.
+- Exit criteria: a fresh install with `SKIP_ADMIN=1` refuses early - before any
+  host mutation - with a clear message instead of ending in a restart loop; a
+  documented, safe non-interactive first-administrator mechanism exists for
+  automation; the interactive journey is proven on a real TTY; and the six S-3
+  journeys pass end to end.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+- Status (2 September 2026): the admission property (no host mutation unless a
+  usable administrator is guaranteed), the credentials-over-stdin path and the
+  live-WAL-tolerant probe (`7fbc4149`, S-5 `975a5e26`) are on the integration
+  branch. Proven in S-5 on disposable VMs: 15/15 admission journeys, 45/45
+  refusal cells, 72/72 coverage records, and the interactive TTY path on all
+  three distributions. Not on `main`.
+
+### R-024 - Unit enablement is fail-open and unsynced
+
+- Evidence: S-3, Arch signed-public journey. After a diagnostic reboot both
+  units were disabled and inactive, while Debian and Ubuntu brought the agent
+  back. `install.sh` discards errors from both `systemctl enable` calls
+  (`>/dev/null 2>&1 || true`) and proves only same-boot activity; the enable
+  links are never explicitly synced before the panel failure, and the harness
+  stopped the VM abruptly. The evidence proves persistence loss and fail-open
+  enable handling; it cannot distinguish a failed enable from an unsynced link.
+- Impact: a fresh host can reboot into nothing serving, with the installer
+  having reported the services as running.
+- Immediate control: after any install, verify `systemctl is-enabled` for both
+  units before trusting a reboot.
+- Exit criteria: enable failures are fatal to the installer, the links are
+  durably synced before success is reported, and a reboot test proves both
+  units return on every supported distribution.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+- Status (2 September 2026): `systemctl enable` failures are fatal and the
+  enable state is synced before success is reported (S-4, `7fbc4149`), proven
+  by 3/3 reboots on Debian 13, Ubuntu 24.04 and Arch in S-4 and 0/3 again in
+  S-5 and S-6. On the integration branch; not on `main`.
+
+### R-025 - The clone-and-install claim contradicts the root-chain policy
+
+- Evidence: S-3. `install.sh:1715-1721` documents that
+  `git clone && sudo ./install.sh` works on a stock system, while the release
+  recovery foundation rejects a release below a user-owned ancestor - which is
+  exactly what a clone under `/home/<user>` is. The S-3 harness hit this
+  refusal and had to restage under root-owned protected storage.
+- Impact: the documented developer journey fails on the policy the product
+  itself enforces. Whichever is right, the other must change.
+- Immediate control: stage direct installs below a root-owned directory.
+- Exit criteria: either the documentation drops the home-directory claim and
+  states the staging requirement, or the policy deliberately admits a defined
+  fresh-install staging shape; decided in writing, not by drift.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-026 - PowerDNS rollback mixes database generations
+
+- Evidence: S-6, Boston negative attempt 2 (report SHA-256
+  `d15ab8ac…` superseded by the S-6 manifest
+  `b5105623daa3fcebe444b3e6e293a0f6e9a5b3e7431ad0df35479d619d7e1701`).
+  The production rollback of a BIND-to-PowerDNS switch stopped PowerDNS,
+  removed the live main file and renamed the backup into place, but never
+  touched the `-wal` and `-shm` files the target had created against the
+  candidate database. SQLite then replayed a WAL from a different generation
+  into the restored main file; the summary records
+  `live_database_generation_mixed_with_retained_wal: true` and
+  `malformed_database: true`, the setup job stayed `running`/`leased` with a
+  `rolling-back` journal, and the mutation manager poisoned. The forward path
+  already refuses sidecars at staging (`requireNoPDNSDatabaseSidecars`);
+  rollback had no counterpart.
+- Impact: any rolled-back switch into PowerDNS can leave the host with a
+  malformed live database and a wedged ledger - the R-019 shape entered from
+  the other side.
+- Fix on branch (2 September 2026, `fix/alpha52-handoff-acceptance`):
+  `restorePDNSDatabase` now removes the discarded generation's `-journal`,
+  `-wal` and `-shm` before the backup is renamed in, and also in the
+  already-restored branch. A test reproduces the incident's exact refusal
+  (`PowerDNS database has an unresolved SQLite sidecar`) on the unfixed tree.
+- Exit criteria: a deliberately failed BIND-to-PowerDNS switch on a real VM
+  rolls back to a database that opens cleanly, the ledger job fails cleanly,
+  and a subsequent switch is accepted.
+- S-7 live evidence (2 September 2026): the deliberate target-started failure
+  proved the fix's cleanup on a real host - after rollback the live PowerDNS
+  database was the exact preimage with `integrity_check` ok and no WAL, SHM,
+  candidate or staging file beside it, and the job ended failed/interrupted
+  with `dns_engine_switch_rolled_back_after_restart`. Two things stop this from
+  closing: the ordered cell's first status probe after the ordinary restart
+  failed with an RPC error the harness discarded, and the converged state was
+  observed only in a non-counting diagnostic, so "the next switch is accepted"
+  is still unproven. The probe failure led to the status RPC change recorded
+  under R-030.
+- S-8 (3 September 2026): the probe spoke (R-030) and the ordered failure
+  is now named: rollback recovery failed re-enabling the source BIND (R-031).
+  The database cleanup held again. R-026 closes with T5 after R-031.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-027 - PowerDNS authority is APT-only by design
+
+- Evidence: `certifyAPTPDNSCapabilities` (`cmd/agent/dns_engine_pdns_unit.go`)
+  requires `PackageManager == APT`, `DistroFamily == Debian` and systemd, and
+  `docs/DISTRO-SUPPORT.md` lists no pacman mapping for PowerDNS. S-6 Arch
+  attempt 2 confirmed the consequence: a stock repository PowerDNS serving
+  three zones was classified unmanaged and adoption returned
+  `DNS_ENGINE_WORKFLOW_REQUIRED`.
+- Impact: not a defect, a boundary. It means the R-019 adoption journey cannot
+  run on Arch at all, and the R-018 inherited-anchor fix can only be proven on
+  Arch through a BIND-only journey (fresh host to BIND), never through
+  PowerDNS adoption.
+- Immediate control: none needed. Do not attempt to relax the certification
+  without a pacman provenance model equivalent to the APT one.
+- Exit criteria: either a certified pacman PowerDNS profile with the same
+  provenance guarantees, or the limitation stated in customer-facing
+  documentation. Either is acceptable; silence is not.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+- Decision (2 September 2026): the root-chain policy stays. A release below a
+  user-owned ancestor is exactly the thing the recovery foundation exists to
+  refuse, and no documentation claim outranks that. The installer comment that
+  promised `git clone && sudo ./install.sh` from a stock system now states the
+  real requirement - stage the checkout below a root-owned directory - and the
+  recovery foundation's refusal already names where to stage (S-4). A raw
+  checkout still lacks `bin/panel` and builds from source; that is unchanged.
+
+### R-028 - The BIND-to-PowerDNS switch refuses the mask it created
+
+- Evidence: S-7, Boston negative attempt 1 (manifest SHA-256
+  `413d67aa28cca17c7e67912f5e911a3a24481b70b388c3e0e74659706b31c283`). The
+  fresh chain completed empty-to-BIND with rc 0; the production BIND-to-PowerDNS
+  setup then returned rc 1 after 27 s. The bounded agent journal shows the
+  PowerDNS packages being installed at 10:01:37 and, two seconds later,
+  `DNS engine switch to pdns at epoch 2 failed: pdns.service is not exactly
+  absent or loaded, inactive, and disabled`; the host shape capture shows
+  `pdns.service LoadState=masked ActiveState=inactive`. The switch installs
+  PowerDNS under a persistent mask (`dns_engine_pdns_install.go`) precisely so
+  the package manager cannot start it early, then proves its active BIND source
+  with `verifyExactActiveBINDUnitStates`, whose PowerDNS clause accepted only
+  absent or loaded+inactive+disabled. The product refused the state it had just
+  created - the mirror image of R-019's second cause.
+- Impact: on any host where PowerDNS is not already installed, a switch from
+  BIND to PowerDNS cannot pass its own source proof. The Boston negative, the
+  safety-critical half of R-019's cause 3, could not be measured because its
+  setup chain runs exactly this switch.
+- Fix on branch (2 September 2026): the PowerDNS clause of
+  `verifyExactActiveBINDUnitStates` accepts masked-and-inactive, the same
+  relaxation `exactStoppedBIND` received for R-019; a masked-but-active or
+  masked-but-activating PowerDNS is still refused. A test reproduces the S-7
+  error string verbatim on the unfixed tree.
+- Exit criteria: the Boston setup chain (empty, BIND epoch 1, PowerDNS epoch 2)
+  returns 0 at every step on a real VM and the measured negative cell runs.
+- S-8 (3 September 2026): proven live - the Boston chain's epoch-2
+  BIND-to-PowerDNS setup returned 0 in 12.2 s on Debian 13. Only the measured
+  negative cell remains, and that is R-019's.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-029 - Fresh-host identity staging is deadlocked by its own pending zones
+
+- Evidence: S-7, T1 Arch BIND-only attempt 1 (same manifest). A fresh Arch
+  guest at epoch 0 with one seeded zone (`status=pending`, generation 4) and
+  no engine installed sent `PUT /api/v1/settings/dns-setup` with a standalone
+  identity and received `409 DNS_ENGINE_WORKFLOW_REQUIRED`; no switch was
+  attempted. The refusal is `stageDNSIdentityLocked`'s publication gate
+  (`hasDNSPublicationPending`), which counts every zone whose applied
+  generation lags its desired one. On a host that has never run an engine that
+  is every zone: nothing exists that could apply them. The first engine install
+  requires staged identity (`TestDNSEngineFirstInstallRequiresStagedDNSIdentity`),
+  so the ordinary order - add a domain, then set up DNS - could not reach the
+  install at all. The same gate is repeated inside the staging transaction.
+- Impact: any fresh install where a domain exists before DNS is set up cannot
+  install its first DNS engine through the panel. The only way out was deleting
+  the zones. Not Arch-specific: the same path refuses on every distribution.
+  Correction (3 September 2026, measured on a fresh Debian 13 host): the
+  public domain-create route itself refuses on a host with no active engine
+  (`409 DNS_SERVER_REQUIRED`, "choose and activate BIND or PowerDNS first"),
+  so "add a domain, then set up DNS" cannot happen through the panel on a
+  fresh install. The deadlock is real for hosts whose zones predate the first
+  engine - upgraded installs, imports, restores - which is the shape S-8's T1
+  seeded directly. The fix stands; the sentence above overstated who reaches
+  it.
+  Note that this is not the R-018 proof: the inherited-anchor walk on Arch was
+  never reached, so R-018 stays unproven on a real Arch `/`.
+- Fix on branch (2 September 2026): for the `fresh` staging kind (no engine has
+  ever run, neither engine running) the gate checks only publications in
+  flight - zone rows carrying a live publication lease or rows in
+  `dns_zone_engine_leases` - and no longer counts zones that are pending
+  because nothing could apply them. Adoption kinds keep the stricter gate. The
+  staging transaction receives the kind and applies the same rule. Tests cover
+  the fresh path through to a first-install preview with zero blockers, the
+  in-flight refusal, and the unchanged adoption refusal; the fresh test is red
+  on the unfixed tree with the S-7 status and code.
+- Second layer, same defect: the engine-switch preview added the blocker
+  `pending_zone_sync` whenever pending zones existed and the action was not
+  an adoption, so after staging the T1 harness would have been refused at
+  preview with `blockers == [pending_zone_sync]`. The manifest already
+  publishes every zone at its desired generation and the commit marks them
+  applied, so on a source-less first install the blocker protected nothing.
+  It now applies only when a source engine is active, where pending means
+  the source has not caught up. The fresh test walks staging through to a
+  first-install preview with zero blockers.
+- Third layer, found live on Arch and reproduced on Debian (3 September
+  2026): with a pre-existing zone and no engine, the snapshot asked the agent
+  for the zone's DNSSEC status; the agent answers "unavailable because
+  PowerDNS is not the active engine" whenever PowerDNS is not active, the
+  presentation became `degraded`, and the preview refused with
+  `dnssec_unsupported`, `target_unavailable` and `source_degraded` at once -
+  the exact trio S-8's T1 observed and could not explain. A host with no
+  PowerDNS installed is no longer probed; an installed, not-yet-adopted
+  PowerDNS still is. After this fix the Arch preview passed with zero
+  blockers on the live guest.
+- Exit criteria: T1 re-run on current Arch reaches the BIND switch commit, and
+  the reboot postcondition holds; that run is also the first live R-018 proof.
+- S-8 (3 September 2026): identity staging returned 200 on a fresh Arch
+  guest with a pending zone - the first layer is proven live. The preview then
+  reported `dnssec_unsupported`, `target_unavailable` and `source_degraded`,
+  which is the shape the panel produces when the agent's DNS backend
+  readiness RPC fails; the raw body and the Arch agent journal were not
+  retained, so the cause is unknown and the second layer is unproven. The
+  next run must capture the agent journal at preview time.
+- Screen side (3 September 2026): the add-domain dialog and the empty domain
+  list told a fresh host to "choose and activate BIND or PowerDNS in Settings"
+  and then sent it to the Services page, which refuses to install a DNS
+  engine (`DNS_ENGINE_WORKFLOW_REQUIRED`). Both now open the DNS
+  infrastructure section, and both say which half is missing: no engine
+  ("Choose a DNS engine") or an engine without staged identity ("Configure
+  the DNS pair"), instead of one sentence for both.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-030 - A status probe cannot see an agent whose ledger never came up
+
+- Evidence: S-7, T5 attempt 3 (same manifest). After the target-started
+  SIGKILL the ordinary agent started, its socket accepted a connection, and the
+  first `Agent.ServiceMutationStatus` call returned an RPC error; the harness
+  probe printed only `agent status RPC failed` and discarded the error, and the
+  post-failure diagnostic captured only the following boot's journal, so the
+  ordered failure's cause is not in the evidence. The following boot is
+  explained: the fixture's mutation lock lived under `/run/celikpanel-s7-t5`,
+  which nothing recreates after a reboot, and the agent logged
+  `DEGRADED service-mutations: ... lstat /run/celikpanel-s7-t5: no such file or
+  directory` and served. Production is not exposed to that trap: the shipped
+  unit declares `RuntimeDirectory=celikpanel` and the lock lives beneath it.
+  What the product did wrong in both boots is the same: `ServiceMutationStatus`
+  returned the cached bring-up error instead of answering, so the only
+  read-only view of the agent's state was an opaque failure.
+- Impact: any caller - the panel, an operator probe, an acceptance harness -
+  gets "RPC failed" from an agent that is alive and refusing by design, and
+  cannot distinguish it from a crash. Every mutation is already refused in
+  that state; the defect is only in what the status call says.
+- Fix on branch (2 September 2026): `ServiceMutationStatus` answers with the
+  hold code when the manager is unavailable (`ledger_unavailable`) or came up
+  poisoned (`ledger_ambiguous`, with its job when there is one); host-busy is
+  still reported as busy. No internal text crosses the socket. Tests cover all
+  three shapes.
+- Residual, recorded not fixed: a non-transient bring-up failure is cached for
+  the life of the process, so the DEGRADED state clears only on restart even
+  after its cause is repaired; whether startup recovery should be retried on a
+  later RPC is a design decision for the ledger, not a patch.
+- Exit criteria: T5 re-run with a probe that prints the RPC error or the hold,
+  the ordered run's agent journal captured beside it, and the required next
+  switch accepted.
+- S-8 (3 September 2026): proven live - the first probe after ordinary
+  recovery returned structured JSON with `mutation_hold: ledger_ambiguous`
+  and the frozen job, which is what made R-031 diagnosable.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-031 - Rollback re-enables the BIND alias before the unit it aliases
+
+- Evidence: S-8, T5 attempt 2 (manifest SHA-256 `746228bdc2c01ecda8fbb65067ddb29a0dea9e740694ce461ecff1c50b11c568`). After the deliberate
+  target-started SIGKILL the ordinary agent restarted and its boot-0 journal
+  reads: `recover DNS engine switch host transaction: systemctl enable
+  bind9.service did not reach the required state; command: exit status 1;
+  output: Failed to enable unit: Unit bind9.service does not exist; readback:
+  load=not-found active=inactive unit-file=`. The first status probe answered
+  (R-030 held) with `mutation_hold: ledger_ambiguous` and the job still
+  `running`/`leased`. The rollback restores the source units from
+  `journal.SourceUnitsBefore`, which `dnsUnitStateMapSnapshots` writes sorted
+  by name; `bind9.service` sorts before `named.service`. On APT hosts
+  bind9.service is only an `Alias=` of named.service - the symlink exists
+  while named.service is enabled and `systemctl disable named.service`
+  removes it - so enabling the alias before the unit cannot succeed.
+- Impact: every rolled-back BIND-to-PowerDNS switch on Debian and Ubuntu ends
+  with no engine serving and a poisoned ledger. This is the failure R-026's
+  live proof ran into; the R-026 database cleanup itself worked (exact
+  preimage, `integrity_check` ok, no sidecars).
+- Fix on branch (3 September 2026): the restore orders snapshots so that the
+  alias comes after the unit it aliases; enabling the alias afterwards is an
+  exact no-op readback. A test with a Debian-faithful fake systemd (alias
+  exists only while named.service is enabled) reproduces the S-8 failure on
+  the unfixed tree and passes with the fix in both journal orders.
+- Exit criteria: T5 on a real Debian 13 host - rollback leaves BIND active and
+  enabled, the job ends failed/interrupted with a clean code, and the next
+  switch is accepted.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-032 - A former engine's stranded ownership receipt poisons the switch back
+
+- Evidence: S-8, Boston attempt 3 (manifest SHA-256
+  `746228bdc2c01ecda8fbb65067ddb29a0dea9e740694ce461ecff1c50b11c568`) and
+  the team's S-9 preflight. The setup chain empty -> BIND epoch 1 -> PowerDNS
+  epoch 2 -> purge inactive BIND completed with rc 0 and left "historical BIND
+  ownership retained": `dns-engine-ownership-bind.json` from epoch 1 stays on
+  disk because, by design, nothing retires ownership receipts
+  (`supersededDNSEngineOwnership` documents exactly this). A production BIND
+  switch killed at the pre-intent window on that host then meets the
+  journal-free provenance check with an install receipt AND a target
+  ownership receipt present, which R-019's relaxation deliberately kept
+  fail-closed as "the Boston shape". The result is the R-019 wedge again:
+  `ledger_ambiguous`, job `running`/`leased`, recomputed from durable state on
+  every boot.
+- Impact: any host that ever ran engine A, moved to engine B, and has a switch
+  back to A interrupted after package install is wedged until someone deletes
+  a JSON file over SSH. That is an ordinary operator path (try PowerDNS, go
+  back to BIND), not an attack shape.
+- Fix on branch (3 September 2026): the epoch tells the two cases apart by
+  construction. A target ownership receipt OLDER than the active state is
+  history and is treated like an absent receipt (clean failure, retry
+  converges); a receipt at the same or a newer epoch is a receipt from ahead of
+  the committed state and still fails closed. Linux tests stage the
+  BIND(1) -> PowerDNS(2) -> BIND host and prove: older receipt recoverable,
+  equal and newer receipts refused; the recoverable case fails on the unfixed
+  tree with `journal-free DNS engine target retains transitional install
+  ownership`.
+- Consequence for the Boston negative: the cell as ordered in S-7/S-8/S-9
+  (plant the epoch-1 receipt) would now pass through as residue, which is
+  correct. The safety-critical negative must plant a receipt at the target's
+  epoch (state epoch + 1); the positive half must show the historical receipt
+  converging. S-9 addendum 2 redefines the cell accordingly.
+- Exit criteria: on a real Debian 13 host, BIND -> PowerDNS -> (BIND switch
+  killed pre-intent) recovers with a clean failed job and a converging retry;
+  the same host with a planted target-epoch receipt fails closed with
+  `ledger_ambiguous`.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-033 - A failed first install poisons a fresh host
+
+- Evidence: live, 3 September 2026, on a fresh Arch guest (root `/` 0555)
+  driven through the public API with the `0eaf3a5…` candidate plus the R-029
+  third-layer panel fix. Preview passed with zero blockers; the commit
+  returned `503 DNS_ENGINE_MUTATIONS_HELD` with `ledger_ambiguous` in 4 s.
+  The agent journal: `DNS engine switch failure could not prove a pre-commit
+  abort: BIND directory is unsafe: /var/named`, then `reprove DNS engine
+  switch abort: finalized DNS engine provenance is inconsistent without active
+  state`, then `service mutation manager is fail-closed after an ambiguous
+  ledger write`. The host held `dns-engine-install-ownership-bind.json` and
+  nothing else. `exactFinalizedDNSEngineSwitchProvenanceOnHost` treated any
+  receipt without an active state as a contradiction, including the install
+  receipt that every failed-after-install first switch leaves behind.
+- Impact: on any distribution, the very first DNS engine install that fails
+  after package install wedges the host: every mutation refused,
+  `ledger_ambiguous` recomputed from the same receipt on every boot, no way out
+  short of deleting a file over SSH. The R-019 wedge on a fresh host's first
+  DNS action. Debian never showed it only because its first install never
+  failed.
+- Fix on branch (3 September 2026): an ownership receipt without state is
+  still a contradiction; an install receipt alone is residue - nothing ever
+  served - and recovery fails the job cleanly so the retry adopts the installed
+  packages. Linux tests cover both; the residue case is red on the unfixed tree
+  with the exact "inconsistent without active state" line.
+- Exit criteria: on the Arch guest, restarting the fixed agent clears the hold
+  and fails the job cleanly; the retried switch proceeds to the R-018 walk.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
