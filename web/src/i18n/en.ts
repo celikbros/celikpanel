@@ -1083,6 +1083,11 @@ export const en = {
     'svc.coreService': 'Core service',
     'svc.notInstalled': 'Not installed',
     'svc.notInstalledHint': '{name} is not installed on this server.',
+    // The list's notCheckedHint speaks about "the components below"; this page
+    // has one component, so it names it and claims nothing else.
+    // Listedeki notCheckedHint "aşağıdaki bileşenler" der; bu sayfada tek
+    // bileşen vardır, adını anar ve başka hiçbir şey iddia etmez.
+    'svc.notCheckedHint': '{name} has not been looked at on this server yet, so it is not known whether it is installed. Run a check to see what is actually there.',
     'svc.confirmStart': 'Start {name}?',
     'svc.confirmStop': 'Stop {name}?',
     'svc.confirmRestart': 'Restart {name}?',

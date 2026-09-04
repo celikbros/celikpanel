@@ -216,9 +216,14 @@ export function decodeManagedMailProfiles(
 
 // A terminal operation may unlock the page only after every field consumed by
 // the Components screen has a valid shape. A bare array is not verification.
+// Exported because every screen that turns this payload into a claim about
+// the host — the components list, the dashboard, a single component's
+// management page — must refuse the same unreadable payloads (R-041).
 // Terminal işlem, sayfayı yalnız Bileşenler ekranının kullandığı her alan
 // geçerli biçimdeyse açabilir. Yalnızca bir dizi gelmesi doğrulama değildir.
-function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot | null {
+// Dışa açıktır: bu yükü makine hakkında bir iddiaya çeviren her ekran aynı
+// okunamaz yükleri reddetmelidir.
+export function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot | null {
     if (!value || typeof value !== 'object') return null;
     const payload = value as Record<string, unknown>;
     if (

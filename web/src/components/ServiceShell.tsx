@@ -1,11 +1,12 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowLeft, Play, Square, RotateCw, Download, type LucideIcon } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ArrowLeft, Play, Square, RotateCw, Download, ScanSearch, type LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
-import { EmptyState, StatusDot } from './ui';
+import { Button, EmptyState, StatusDot } from './ui';
 import { HelpButton } from './HelpDrawer';
-import { useComponentOperation } from './ComponentOperation';
+import { readApiError, apiErrorText } from '../lib/apiError';
+import { decodeManagedServicesSnapshot, useComponentOperation } from './ComponentOperation';
 
 interface ManagedService {
     id: string;
@@ -14,6 +15,34 @@ interface ManagedService {
     /** null = bu makinede hiç gözlenmedi; bu, yok demek değildir. */
     is_installed: boolean | null;
     status: string;
+}
+
+/**
+ * Three answers, not two. `present` and `absent` are things this panel has
+ * looked at and knows; `unknown` is everything else — a host nobody has
+ * scanned, a component added to the catalogue since the last scan, and a
+ * payload this page could not read. Folding `unknown` into `absent` is what
+ * put a one-click Install on a page for a component that may already be
+ * running (R-040).
+ *
+ * Üç yanıt, iki değil. `present` ve `absent` bu panelin bakıp bildiği
+ * şeylerdir; `unknown` geri kalan her şeydir. `unknown`u `absent` sayarak
+ * katlamak, zaten çalışıyor olabilecek bir bileşenin sayfasına tek tıkla
+ * "Kur" düğmesi koymaktı (R-040).
+ */
+type ObservedState = 'unknown' | 'absent' | 'present';
+
+function observedStateOf(service: ManagedService | null): ObservedState {
+    if (service === null || service.is_installed === null) return 'unknown';
+    return service.is_installed ? 'present' : 'absent';
+}
+
+function findService(
+    services: Record<string, unknown>[],
+    serviceId: string,
+): ManagedService | null {
+    const service = services.find((candidate) => candidate.id === serviceId);
+    return service ? (service as unknown as ManagedService) : null;
 }
 
 interface HostMutationReadiness {
@@ -56,18 +85,22 @@ function unverifiedHostMutationReadiness(): HostMutationReadiness {
 // One honest shell for every service-management page: a header with the
 // real status (sourced from managed-services, not the unreliable per-unit
 // status endpoint) and start/stop/restart. When a service isn't installed,
-// it says so instead of rendering empty controls over invented data.
+// it says so instead of rendering empty controls over invented data — and
+// when nobody has looked at this host for it, it says THAT instead, and
+// offers the check rather than an install.
 //
 // Her servis-yönetim sayfası için tek dürüst kabuk: gerçek durumlu bir
 // başlık (güvenilmez birim-durum uç noktasından değil, managed-services'ten)
 // ve başlat/durdur/yeniden başlat. Bir servis kurulu değilse, uydurma veri
-// üstüne boş kontroller çizmek yerine bunu söyler.
+// üstüne boş kontroller çizmek yerine bunu söyler; bu makinede ona hiç
+// bakılmamışsa BUNU söyler ve kurulum yerine kontrolü sunar.
 export function ServiceShell({
     serviceId,
     unitName,
     name,
     icon: Icon,
     onBack,
+    onServiceRefreshed,
     children,
 }: {
     serviceId: string;
@@ -75,6 +108,14 @@ export function ServiceShell({
     name: string;
     icon: LucideIcon;
     onBack: () => void;
+    /**
+     * Fired whenever a fresh, decoded catalogue record reaches this shell —
+     * after the operator's check, and after an install finishes. A page that
+     * keeps its own copy of the record (ComponentDetail) must reread it here,
+     * or it would draw the pre-check facts under a resolved header.
+     * Taze ve çözümlenmiş katalog kaydı kabuğa ulaştığında tetiklenir.
+     */
+    onServiceRefreshed?: () => void;
     children: ReactNode;
 }) {
     const { t } = useI18n();
@@ -83,26 +124,47 @@ export function ServiceShell({
     const [svc, setSvc] = useState<ManagedService | null>(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
+    const [checking, setChecking] = useState(false);
     const [installConfirmationOpen, setInstallConfirmationOpen] = useState(false);
     const [installReadiness, setInstallReadiness] = useState<HostMutationReadiness | null>(null);
     const [installReadinessLoading, setInstallReadinessLoading] = useState(false);
-
-    const load = () =>
-        fetch('/api/v1/managed-services')
-            .then((r) => (r.ok ? r.json() : { services: [] }))
-            .then((data: { services: ManagedService[] }) => setSvc((data.services || []).find((s) => s.id === serviceId) ?? null))
-            .catch(() => {})
-            .finally(() => setLoading(false));
+    const refreshedRef = useRef(onServiceRefreshed);
 
     useEffect(() => {
-        load();
+        refreshedRef.current = onServiceRefreshed;
+    });
+
+    // The cached observation only — this GET never probes the host, and
+    // opening a component page must not probe it either. A payload this page
+    // cannot decode leaves the record untouched, so an unreadable answer
+    // stays "not checked yet" instead of becoming a fabricated absence.
+    // Yalnız önbellekteki gözlem — bu GET makineyi yoklamaz ve bir bileşen
+    // sayfasını açmak da yoklamamalıdır. Çözülemeyen yük kaydı olduğu gibi
+    // bırakır; okunamayan yanıt uydurma bir yokluğa değil, "henüz bakılmadı"
+    // durumunda kalır.
+    const load = async () => {
+        try {
+            const response = await fetch('/api/v1/managed-services');
+            if (!response.ok) return;
+            const snapshot = decodeManagedServicesSnapshot(await response.json());
+            if (!snapshot) return;
+            setSvc(findService(snapshot.services, serviceId));
+        } catch {
+            // Fail closed: no answer is not an answer about this host.
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        void load();
     }, [serviceId]);
 
     useEffect(() => {
         if (!catalogSnapshot) return;
-        const services = catalogSnapshot.services as unknown as ManagedService[];
-        setSvc(services.find((service) => service.id === serviceId) ?? null);
+        setSvc(findService(catalogSnapshot.services, serviceId));
         setLoading(false);
+        refreshedRef.current?.();
     }, [catalogSnapshot, serviceId]);
 
     useEffect(() => {
@@ -135,8 +197,45 @@ export function ServiceShell({
         };
     }, [installConfirmationOpen, serviceId]);
 
-    const running = svc?.status?.includes('running') ?? false;
-    const installed = svc?.is_installed ?? false;
+    const observed = observedStateOf(svc);
+    const installed = observed === 'present';
+    const running = installed && (svc?.status?.includes('running') ?? false);
+
+    // The operator's check, never the page's. A page visit must not probe the
+    // host by itself, so nothing here runs on mount: the scan runs when it is
+    // asked for, exactly as on the components list. The answer goes through
+    // the same fail-closed decoder as the load, so a payload this panel cannot
+    // read never becomes a state claim about this component, and a successful
+    // check resolves the page to whatever it actually found — no reload.
+    // Kontrolü operatör çalıştırır, sayfa değil. Sayfayı açmak makineyi
+    // yoklamamalıdır; burada mount anında hiçbir şey koşmaz. Yanıt yüklemeyle
+    // aynı fail-closed çözücüden geçer ve başarılı kontrol, sayfayı yeniden
+    // yüklemeden gerçekte bulunan duruma çözer.
+    const runCheck = async () => {
+        if (checking) return;
+        setChecking(true);
+        try {
+            const response = await fetch('/api/v1/managed-services/scan', {
+                method: 'POST',
+                cache: 'no-store',
+            });
+            if (!response.ok) {
+                showToast('error', apiErrorText(await readApiError(response), t, 'services.scanFailed'));
+                return;
+            }
+            const snapshot = decodeManagedServicesSnapshot(await response.json());
+            if (!snapshot) {
+                showToast('error', t('services.scanFailed'));
+                return;
+            }
+            setSvc(findService(snapshot.services, serviceId));
+            refreshedRef.current?.();
+        } catch {
+            showToast('error', t('services.scanFailed'));
+        } finally {
+            setChecking(false);
+        }
+    };
 
     // One-click install of an absent service (admin only). The panel ships
     // with nothing installed; the agent apt-installs the whitelisted packages
@@ -146,12 +245,20 @@ export function ServiceShell({
     // gelmez; agent bu makine için whitelist'teki paketleri kurar ve unit'i
     // başlatır. Dürüst hatalar (root değil, dağıtım desteklenmiyor) gerçek
     // hata olarak görünür.
+    // Both halves are gated on an actual observation of absence. The unknown
+    // state renders no install button at all, and this is the second lock:
+    // installing over a component nobody has looked at is the failure this
+    // page exists to stop.
+    // Her iki yarı da gerçek bir "yok" gözlemine bağlıdır. Bilinmeyen durumda
+    // düğme zaten çizilmez; bu ikinci kilittir.
     const requestInstall = () => {
+        if (observed !== 'absent') return;
         setInstallReadiness(null);
         setInstallConfirmationOpen(true);
     };
 
     const install = async () => {
+        if (observed !== 'absent') return;
         if (installReadiness?.ready !== true) return;
         if (installLocked) return;
         setInstallConfirmationOpen(false);
@@ -195,7 +302,16 @@ export function ServiceShell({
                     <p className="flex items-center gap-1.5 text-sm text-fg-muted">
                         {loading ? (
                             t('common.loading')
-                        ) : !installed ? (
+                        ) : observed === 'unknown' ? (
+                            /* "Not checked yet" is information the operator
+                               acts on, so it takes fg-muted; fg-subtle is for
+                               placeholder and disabled text only. No dot: a
+                               status dot beside it would assert a state.
+                               "Henüz bakılmadı" operatörün eyleme dökeceği bir
+                               bilgidir; fg-muted alır. Nokta yok: yanındaki
+                               durum noktası bir durum iddia ederdi. */
+                            <span className="text-fg-muted">{t('services.notChecked')}</span>
+                        ) : observed === 'absent' ? (
                             <span className="text-fg-subtle">{t('svc.notInstalled')}</span>
                         ) : (
                             <>
@@ -231,7 +347,35 @@ export function ServiceShell({
                 <div className="flex items-center justify-center py-16">
                     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
                 </div>
-            ) : !installed ? (
+            ) : observed === 'unknown' ? (
+                /* The honest first state of a component on a host this panel
+                   has never looked at: it says so, and offers the check —
+                   never an install, which would offer to put down something
+                   that may already be running. Neutral, exactly as on the
+                   components list: a server nobody has checked yet is a
+                   normal beginning, not a warning.
+                   Panelin hiç bakmadığı bir makinedeki bileşenin dürüst ilk
+                   durumu: bunu söyler ve kontrolü sunar — zaten çalışıyor
+                   olabilecek bir şeyi kurmayı öneren düğmeyi değil. Nötr,
+                   tıpkı bileşenler listesindeki gibi. */
+                <div role="status">
+                    <EmptyState
+                        icon={ScanSearch}
+                        title={t('services.notCheckedTitle')}
+                        hint={t('svc.notCheckedHint', { name })}
+                        action={
+                            <Button
+                                variant="primary"
+                                icon={ScanSearch}
+                                disabled={checking}
+                                onClick={() => void runCheck()}
+                            >
+                                {checking ? t('services.scanning') : t('services.scanNow')}
+                            </Button>
+                        }
+                    />
+                </div>
+            ) : observed === 'absent' ? (
                 <EmptyState
                     icon={Icon}
                     title={t('svc.notInstalled')}

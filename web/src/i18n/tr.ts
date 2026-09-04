@@ -1021,6 +1021,7 @@ export const tr: Record<TranslationKey, string> = {
     'svc.coreService': 'Temel servis',
     'svc.notInstalled': 'Kurulu değil',
     'svc.notInstalledHint': '{name} bu sunucuda kurulu değil.',
+    'svc.notCheckedHint': '{name} bileşenine bu sunucuda henüz bakılmadı; kurulu olup olmadığı bilinmiyor. Gerçekte ne olduğunu görmek için bir kontrol çalıştırın.',
     'svc.confirmStart': '{name} başlatılsın mı?',
     'svc.confirmStop': '{name} durdurulsun mu?',
     'svc.confirmRestart': '{name} yeniden başlatılsın mı?',

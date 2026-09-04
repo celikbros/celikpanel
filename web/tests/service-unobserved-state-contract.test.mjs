@@ -258,3 +258,157 @@ test('the dashboard unchecked copy exists in both locales, in the components scr
     /^\{n\} bileşene henüz bakılmadı$/,
   );
 });
+
+// The same claim, one page deeper — and the worst of the three, because it
+// offered an ACTION rather than a number. A per-service management page read
+// `svc?.is_installed ?? false`, so a component nobody had looked at rendered
+// the not-installed shell with a one-click Install: an offer to put down
+// something that may already be running on that host.
+//
+// Aynı iddia, bir sayfa derinde — ve üçünün en kötüsü, çünkü sayı değil EYLEM
+// sunuyordu. Kimsenin bakmadığı bir bileşen, tek tıkla "Kur" düğmesiyle
+// çiziliyordu: o makinede zaten çalışıyor olabilecek bir şeyi kurma önerisi.
+
+const serviceShell = readFileSync(new URL('../src/components/ServiceShell.tsx', import.meta.url), 'utf8');
+const componentDetail = readFileSync(new URL('../src/components/ComponentDetail.tsx', import.meta.url), 'utf8');
+const componentOperation = readFileSync(new URL('../src/components/ComponentOperation.tsx', import.meta.url), 'utf8');
+
+test('a component page has three answers about its component, never two', () => {
+  assert.match(serviceShell, /type ObservedState = 'unknown' \| 'absent' \| 'present';/);
+  assert.match(
+    serviceShell,
+    /if \(service === null \|\| service\.is_installed === null\) return 'unknown';/,
+  );
+  assert.match(serviceShell, /const installed = observed === 'present';/);
+  // The fold itself. A default of false here is what turned "we have never
+  // looked" into "it is not there", and then into an Install button.
+  assert.doesNotMatch(serviceShell, /is_installed \?\? false/);
+  // "Running" is a claim, and only an observed-present component can carry it.
+  assert.match(
+    serviceShell,
+    /const running = installed && \(svc\?\.status\?\.includes\('running'\) \?\? false\);/,
+  );
+});
+
+test('the component page reuses the shared fail-closed decoder and never invents an absence', () => {
+  assert.match(componentOperation, /export function decodeManagedServicesSnapshot\(/);
+  assert.match(
+    serviceShell,
+    /import \{ decodeManagedServicesSnapshot, useComponentOperation \} from '\.\/ComponentOperation';/,
+  );
+
+  const load = serviceShell.slice(
+    serviceShell.indexOf('const load = async () => {'),
+    serviceShell.indexOf('        void load();'),
+  );
+  assert.ok(load.length > 0, 'the page needs the cached-observation load it opens with');
+  // Opening a page must not probe the host: the load reads the cache only.
+  assert.doesNotMatch(load, /managed-services\/scan/);
+  const decode = load.indexOf('decodeManagedServicesSnapshot(await response.json())');
+  const refuse = load.indexOf('if (!snapshot) return;');
+  const apply = load.indexOf('setSvc(');
+  assert.ok(
+    decode >= 0 && refuse > decode && apply > refuse,
+    'a payload this page cannot read must never reach state',
+  );
+});
+
+test('an unchecked component reads "not checked yet" in its header, never "not installed"', () => {
+  const headerStart = serviceShell.indexOf("t('common.loading')");
+  const header = serviceShell.slice(headerStart, serviceShell.indexOf('{/* Help is ALWAYS reachable', headerStart));
+  const uncheckedCopy = header.indexOf("t('services.notChecked')");
+  const absentCopy = header.indexOf("t('svc.notInstalled')");
+  assert.ok(uncheckedCopy >= 0, 'the unchecked state needs its own copy');
+  assert.ok(
+    absentCopy > uncheckedCopy,
+    '"not installed" must be reachable only after the unchecked state is ruled out',
+  );
+  // fg-subtle is placeholder and disabled text; this is a state the operator
+  // acts on, and it carries no status dot because a dot asserts a state.
+  assert.match(header.slice(uncheckedCopy - 60, uncheckedCopy), /text-fg-muted/);
+});
+
+test('an unchecked component page offers the check and no install, uninstall or state claim', () => {
+  const start = serviceShell.indexOf('<div role="status">');
+  const end = serviceShell.indexOf("            ) : observed === 'absent' ? (", start);
+  assert.ok(start >= 0 && end > start, 'the unchecked component needs its own branch');
+  const branch = serviceShell.slice(start, end);
+
+  assert.match(branch, /t\('services\.notCheckedTitle'\)/);
+  assert.match(branch, /t\('svc\.notCheckedHint', \{ name \}\)/);
+  // The action is the scan the components list already runs, not a new one.
+  assert.match(branch, /onClick=\{\(\) => void runCheck\(\)\}/);
+  assert.match(branch, /t\('services\.scanNow'\)/);
+  assert.match(branch, /t\('services\.scanning'\)/);
+  // Nothing here may claim anything about the component: no install, no
+  // uninstall, no version, no status pill asserting absence.
+  assert.doesNotMatch(branch, /requestInstall|startInstall|svc\.install|ninstall|StatusDot|versions/);
+  // Neutral, as on the list: an unchecked host is a normal first state.
+  assert.doesNotMatch(branch, /warning|danger/);
+});
+
+test('installing is reachable only after this host was observed to lack the component', () => {
+  const requestStart = serviceShell.indexOf('const requestInstall = () => {');
+  const request = serviceShell.slice(requestStart, serviceShell.indexOf('    };', requestStart));
+  assert.match(request, /if \(observed !== 'absent'\) return;/);
+
+  const installStart = serviceShell.indexOf('const install = async () => {');
+  const install = serviceShell.slice(installStart, serviceShell.indexOf('    };', installStart));
+  const guard = install.indexOf("if (observed !== 'absent') return;");
+  const mutation = install.indexOf('startInstall');
+  assert.ok(guard >= 0, 'the observation guard is missing from the confirmed install');
+  assert.ok(mutation > guard, 'the observation guard must run before startInstall');
+
+  // And the button that reaches them exists only in the observed-absent branch.
+  const absentStart = serviceShell.indexOf("            ) : observed === 'absent' ? (");
+  const absentBranch = serviceShell.slice(absentStart, serviceShell.indexOf('                children', absentStart));
+  assert.match(absentBranch, /t\('svc\.install', \{ name \}\)/);
+  assert.match(absentBranch, /onClick=\{requestInstall\}/);
+});
+
+test('the component check runs the same scan, fails closed, and resolves the page in place', () => {
+  const check = serviceShell.slice(
+    serviceShell.indexOf('const runCheck = async () => {'),
+    serviceShell.indexOf('// One-click install of an absent service'),
+  );
+  assert.ok(check.length > 0, 'the page needs the check it offers');
+  assert.match(check, /'\/api\/v1\/managed-services\/scan'/);
+  assert.match(check, /method: 'POST'/);
+  assert.match(check, /cache: 'no-store'/);
+  const decode = check.indexOf('decodeManagedServicesSnapshot(await response.json())');
+  const refuse = check.indexOf('if (!snapshot) {');
+  const apply = check.indexOf('setSvc(findService(snapshot.services, serviceId));');
+  assert.ok(decode >= 0 && refuse > decode && apply > refuse, 'the check must fail closed before it writes state');
+  // Resolved without a reload: the answer becomes state on this page.
+  assert.doesNotMatch(check, /location\.reload|window\.location/);
+
+  // And it is the operator who runs it. Opening the page probes nothing.
+  assert.doesNotMatch(serviceShell, /useEffect\([\s\S]{0,40}void runCheck\(\)/);
+});
+
+test('a resolved component page does not keep drawing the unchecked facts underneath', () => {
+  // The unchecked record carries no unit, no versions and no config files.
+  // Once the check resolves the page, a page holding its own copy must reread
+  // it, or start/stop targets the id instead of the real unit and the panels
+  // below report absences nobody observed.
+  assert.match(serviceShell, /onServiceRefreshed\?: \(\) => void;/);
+  assert.match(serviceShell, /refreshedRef\.current\?\.\(\);/);
+  assert.match(componentDetail, /onServiceRefreshed=\{\(\) => setRecordToken\(\(token\) => token \+ 1\)\}/);
+  assert.match(componentDetail, /\}, \[serviceId, recordToken\]\);/);
+});
+
+test('the component page unchecked copy exists in both locales, in the components screen voice', () => {
+  for (const [locale, catalogue] of [['en', english], ['tr', turkish]]) {
+    assert.match(catalogue, /'svc\.notCheckedHint': '/, `${locale} is missing svc.notCheckedHint`);
+  }
+  const englishHint = english.match(/'svc\.notCheckedHint': '([^']+)'/)?.[1] ?? '';
+  const turkishHint = turkish.match(/'svc\.notCheckedHint': '([^']+)'/)?.[1] ?? '';
+  assert.match(englishHint, /^\{name\} has not been looked at on this server yet/);
+  assert.match(englishHint, /not known whether it is installed/);
+  assert.match(englishHint, /Run a check to see what is actually there\.$/);
+  assert.match(turkishHint, /^\{name\} bileşenine bu sunucuda henüz bakılmadı/);
+  assert.match(turkishHint, /kurulu olup olmadığı bilinmiyor/);
+  // It must not restate the claim it exists to remove.
+  assert.doesNotMatch(englishHint, /is not installed/i);
+  assert.doesNotMatch(turkishHint, /kurulu değil/i);
+});
