@@ -73,8 +73,8 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-032 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Sunucunun daha önce kullandığı motora dönüş, paket kurulumundan sonra kesildiğinde yarım kalmış devir biçimi sanıldı; çünkü eski motorun terk edilmiş sahiplik makbuzu hiç emekliye ayrılmaz; kurtarma sıradan bir operatör hareketinde defteri zehirledi |
 | R-033 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Durumu olmayan sunucuda paket kurulumundan sonra düşen ilk DNS motoru kurulumu, iptal kanıtının tutarsız saydığı bir kurulum makbuzu bıraktı; defter ilk DNS hareketinde zehirlendi ve her açılışta zehirli kaldı |
 | R-034 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Her WireGuard yapılandırma uygulaması düşüyor: hazırlanan dosya adı `wg-quick strip` için geçerli bir arayüz adı değil; düşen geri alma sonra sunucunun işlem yöneticisini zehirliyor ve API'den çıkış yolu yok |
-| R-035 | Orta | AÇIK / TASARIM | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
-| R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
+| R-035 | Orta | DÜZELTİLDİ VE CANLI KANITLANDI | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
+| R-036 | Orta | DÜZELTİLDİ VE CANLI KANITLANDI / KURULUM SONRA R-046 İLE DÜŞÜYOR | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
 | R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
 | R-038 | Kritik | DURMUŞ HALİ DÜZELTİLDİ VE CANLI KANITLANDI / ÇALIŞIR HALİ R-039 / GERİ ALMA KANITI BORÇ | DNS motorunun paketlerini zaten taşıyan sunucu, motor durmuşken artık panelden açık onayla devralabiliyor; çalışan yönetilmeyen motor hâlâ reddediliyor ve R-039 olarak izleniyor |
 | R-039 | Yüksek | DÜZELTİLDİ VE CANLI KANITLANDI / GERÇEK VM BEKLİYOR | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
@@ -84,6 +84,8 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-043 | Yüksek | DÜZELTİLDİ VE İKİ ÇÖKME NOKTASINDA CANLI KANITLANDI / ÜÇÜNCÜSÜ R-045 | Çalışan devralma sırasındaki çökme, birimleri durduran geçiş geri almasıyla kurtarılıyor; yani kurtarma, devralmanın asla kesmeyeceğine söz verdiği DNS sunucusunu durdurur |
 | R-044 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | `view` bloklarıyla yapılandırılmış bir BIND devralma tarafından anlaşılmıyor: view içindeki bir recursion panelin seçeneklerini sessizce ezer, view dışındaki bölgeler ise yapılandırma denetiminde geç düşer |
 | R-045 | Yüksek | BULUNDU / NEDENİ HENÜZ SAPTANMADI | Hedefi doğrulandıktan sonra ama tamamlanmadan çöken devralma ne tamamlanıyor ne geri alınıyor: kurtarma nesil işaretçisini bulamıyor, kapalı hata veriyor ve defteri tutuyor |
+| R-046 | Kritik | CANLIDA BULUNDU / HENÜZ DÜZELTİLMEDİ | Düşen posta TLS adımı işlem defterini zehirliyor ve zehir agent yeniden başlatılınca da geçmiyor: açılış kurtarması aynı planı yeniden deniyor, aynı denetimde düşüyor ve sunucu her işlemi reddediyor, çıkış yolu yok |
+| R-047 | Düşük | TARAYICI TURUNDA BULUNDU / HENÜZ DÜZELTİLMEDİ | Tarayıcının görüp testlerin görmediği üç kusur: onay düğmeleri ekranın altında kalan bir pencere, 390px'te taşan bir seçim denetimi ve açık bir UDP portu varken yok diyen güvenlik duvarı durumu |
 
 ## Ayrıntılı riskler
 
@@ -1232,6 +1234,24 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Karar gerekli: ya açık operatör onayı yolu ("bu sunucuda SSH yok; yine de
   etkinleştir") ya da sunucunun güvenlik duvarı için desteklenmediğini söyleyen
   düz bir ret; DECISIONS'a yazılır.
+- 4 Eylül 2026'da düzeltildi. Keşif kalıyor ve artık üç durumu ayırıyor:
+  koşamayan bir yoklama bilinmezdir ve ret olarak kalır; var olan ama
+  dinlemeyen bir SSH servisi ret olarak kalır, çünkü onu onaylayıp geçmek
+  tam da kuralın önlediği kilitlenmedir; hiç SSH servisi taşımadığı
+  kanıtlanmış sunucu onaylanarak geçilebilir ve ekran bedelini söyler -
+  panel kaybedilirse geri dönüş yolu sağlayıcının konsoludur. Onay panelin
+  kendi alanıdır ve bilerek işlem özetinin parçası değildir: agent, çağıranın
+  iddiasına değil sunucu gerçeğine göre ilerler ve o kanıtı kalıcı günlüğe
+  yazar; SSH portu olmayan etkin bir güvenlik duvarını geçerli kılan tek şey
+  budur.
+- Yanındaki bir boşluk da onunla gitti: açılışta geri yükleme yolu aynı
+  şekilde reddediyordu; yani operatörün açtığı güvenlik duvarı yeniden
+  başlatmadan sonra geri gelmezdi.
+- SSH'ı olmayan konukta canlı kanıtlandı: durum, kimse tıklamadan önce
+  sebebi söylüyor; düz etkinleştirme kendi koduyla reddediliyor; onaylı
+  etkinleştirme uygulanıyor (`policy drop`, panel ve DNS portları açık);
+  sonrasında `/etc/celikpanel/firewall.nft` var - bu kaydın "hiç oluşmuyor"
+  kanıtı kapandı - ve panel boyunca erişilebilir kaldı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-036 - Posta profili kimsenin ayarlayamadığı tam nitelikli bir makine adı istiyor
@@ -1249,6 +1269,20 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Karar gerekli: posta makine adını panelin kendi kimliğinden (ad sunucusu /
   makine ayarları) türetmek ya da bir makine adı ayarı eklemek; sessizce
   değil.
+- 4 Eylül 2026'da düzeltildi. Posta ana bilgisayar adı, panelin kendi
+  kimliğinden kasıtlılık sırasıyla çözülüyor - kayıtlı ayar, zaten tam
+  nitelikli makine adı, panel sertifikası, bu sunucunun kendi ad sunucusu adı
+  - ve hiçbiri kullanılabilir değilse kurulum ekranı soruyor, tam nitelikli
+  ad olarak doğruluyor ve kurulum, sunucunun adını ilk adım olarak agent
+  üzerinden ayarlıyor; kiralama politikası buna yalnız posta profili kurulumu
+  içinde izin veriyor. Ad, iş başlamadan önce kaydediliyor; böylece kurulum
+  ortasında çökme aynı adı yeniden taşımaya gerek kalmadan çözüyor. Çıkmaz,
+  olgu yerine bir alan adlandıran bir retle değişti.
+- Adı çıplak bir makine adı olan konukta canlı kanıtlandı: katalog engellemeyi
+  bıraktı, hatalı ad hiçbir işlem oluşmadan kapıda reddedildi, doğru ad ise
+  ön denetimi geçti ve sunucunun adını değiştirdi.
+- Kurulum sonra ilgisiz bir sebeple posta TLS adımında düşüyor ve o düşüş tüm
+  sunucuyu kilitliyor: bu R-046.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-037 - Yerel derleme, yayınlanmış panelin veritabanını reddedebiliyor
@@ -1688,6 +1722,50 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: doğrulanmış sınırda öldürülen bir devralma ya tamamlanmış ya
   geri alınmış olarak geri geliyor; sunucu boyunca yanıt veriyor ve defter
   serbest.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-046 - Düşen bir posta adımı tüm sunucuyu kilitliyor ve yeniden başlatma açmıyor
+
+- Kanıt: canlı, 4 Eylül 2026, tatbikat konuğunda, R-036 önü açtıktan sonra
+  olağan posta profili kurulumuyla ulaşıldı. `profile/core-mail/mail-tls`
+  adımı `verify default mail certificate metadata:
+  /etc/ssl/celikpanel/_mail/default-cert.pem group does not match managed
+  directory group` ile düştü - dizin root:root 755 ve dosya sonrasında yok.
+  Postfix ve Dovecot kuruldu; yalnız posta TLS düştü.
+- Etki, düşüşün kendisinden kötü: işlem defteri zehirleniyor ve zehir **agent
+  yeniden başlatılınca da geçmiyor**. Açılış kurtarması aynı planı yeniden
+  deniyor, aynı denetimde düşüyor ve agent bozuk kalıyor.
+  `/api/v1/host-mutation-readiness` `{"ready":false,"code":"HOST_MUTATION_BUSY"}`
+  diyor; yani yalnız posta değil, **her** işlem engelleniyor - DNS, güvenlik
+  duvarı, siteler, güncellemeler. Bu, posta yolundan ulaşılan R-019 kilit
+  ailesi ve R-034'ünkinin aksine yeniden başlatmayla açılmıyor.
+- Konuk bilerek bu hâlde, kanıt olarak bırakıldı.
+- Gerekeni: iki ayrı şey. Sertifika üstveri denetimi ile karşılaştırdığı dizin
+  anlaşmalı - doğru kurulmuş bir sunucuda asla geçemeyen bir denetim başlı
+  başına kusurdur. Ve başarılamayan bir adım sonsuza dek yeniden
+  denenmemeli: açılış kurtarması, DNS motoru kurtarmasının artık yaptığı gibi,
+  tamamlanmış bir planı temizce düşürüp defteri serbest bırakabilmeli; böylece
+  bozuk tek bir profil adımı sunucunun tüm kontrol düzlemini yanında
+  götürmesin.
+- Çıkış ölçütü: tek engeli makine adı olan sunucuda posta profili kuruluyor;
+  ve ayrıca, bu şekilde düşen bir adım sunucuyu işlem yapabilir bırakıyor,
+  hata raporlanıyor ve defter serbest kalıyor.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-047 - Tarayıcının gördüğü, testlerin görmediği
+
+- Kanıt: 4 Eylül 2026 tarayıcı turu, 1440x900 ve 390x844, iki dilde. Üçü de
+  önceden var ve hiçbiri onları bulan değişiklikten kaynaklanmıyor.
+- Posta kurulum penceresi, 1440x900'de açıldığında onay düğmeleri ekranın
+  altında kalacak kadar uzun. Kaydırılıyor ama asıl eylem görünmüyor;
+  operatör tam da böyle "bu pencere bozuk" sonucuna varır.
+- 390px'te bileşenler sayfasının kurulu/katalog seçim denetimi sol kenardan
+  taşıyor.
+- `GET /api/v1/firewall`, açık tek bir UDP portu varken `udp_ports: null`
+  diyor; çünkü durum çözümleyicisi kuralın yalnız süslü parantezli biçimini
+  eşleştiriyor ve tek portlu kural parantezsiz yazılıyor. Uygulanan politika
+  doğru, rapor değil - ki bu, R-040'ın bu üründen uzak tutmak için var olduğu
+  sınıf.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

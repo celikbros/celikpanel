@@ -72,8 +72,8 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-032 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Returning to an engine the host had used before, with the switch interrupted after package install, was read as the half-finished handover shape because the former engine's stranded ownership receipt is never retired; recovery poisoned the ledger on an ordinary operator action |
 | R-033 | High | FIXED ON BRANCH / LIVE PROOF PENDING | A first DNS engine install that failed after package install on a host with no state left an install receipt the abort proof called inconsistent, so the ledger was poisoned on the very first DNS action and stayed poisoned on every boot |
 | R-034 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Every WireGuard config apply fails because the staged file name is not a valid interface name for `wg-quick strip`; the failed rollback then poisons the host's mutation manager with no API way out |
-| R-035 | Medium | OPEN / DESIGN | The firewall cannot be enabled on a host without a discoverable sshd, and the product cannot install one; such hosts never get `firewall.nft` |
-| R-036 | Medium | OPEN / DESIGN | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
+| R-035 | Medium | FIXED AND PROVEN LIVE | The firewall cannot be enabled on a host without a discoverable sshd, and the product cannot install one; such hosts never get `firewall.nft` |
+| R-036 | Medium | FIXED AND PROVEN LIVE / THE INSTALL THEN FAILS ON R-046 | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
 | R-037 | Medium | GUARDED ON BRANCH / A SECOND EMBED WAS AFFECTED AND IS FIXED | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
 | R-038 | Critical | STOPPED SHAPE FIXED AND PROVEN LIVE / RUNNING SHAPE IS R-039 / ROLLBACK PROOF OWED | A host that already carries the DNS engine's packages can now adopt that engine through the panel with an explicit acknowledgement, when the engine is stopped; a running unmanaged engine is still refused and is tracked as R-039 |
 | R-039 | High | FIXED AND PROVEN LIVE / REAL VM PENDING | Adopting a DNS server that is running and unmanaged needs a durable pre-intent record: the agent must stop a service it does not own before its proofs run, and a crash in that window would leave the operator's DNS stopped with nothing to recover from |
@@ -83,6 +83,8 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-043 | High | FIXED AND PROVEN LIVE AT TWO CRASH POINTS / A THIRD IS R-045 | A crash during a running takeover is recovered by the switch rollback, which stops units - so the recovery would stop the DNS server the takeover promised never to interrupt |
 | R-044 | Medium | FOUND / NOT YET FIXED | A BIND configured with `view` blocks is not understood by the takeover: a recursion set inside a view silently overrides the panel's options, and zones outside views fail late in the config check |
 | R-045 | High | FOUND / CAUSE NOT YET DETERMINED | A takeover crashed after its target was verified but before it was finalized is neither finalized nor rolled back: the recovery cannot find the generation pointer, fails closed and holds the ledger |
+| R-046 | Critical | FOUND LIVE / NOT YET FIXED | A failed mail TLS step poisons the mutation ledger and the poison survives an agent restart: startup recovery re-attempts the same committed plan, fails the same check, and the host refuses every mutation with no way out |
+| R-047 | Low | FOUND IN THE BROWSER ROUND / NOT YET FIXED | Three defects a browser found and the tests did not: a dialog whose confirm sits below the fold, a segmented control that overflows at 390px, and a firewall status that reports no UDP port when one is open |
 
 ## Detailed risks
 
@@ -1246,6 +1248,24 @@ or executed as-is. There are no open pull requests at this baseline.
 - Decision needed: either an explicit operator acknowledgement path ("this
   host has no SSH; enable anyway") or a plain refusal that says the host is
   unsupported for the firewall, recorded in DECISIONS.
+- Fixed 4 September 2026. The discovery stays and now tells three situations
+  apart: a probe that could not run is unknown and stays a refusal; an SSH
+  service present but not listening stays a refusal, because acknowledging
+  past that is exactly the lockout the rule prevents; a host proven to carry
+  no SSH service can be acknowledged past, and the screen says what it costs
+  - if the panel is lost, the provider's console is the way back. The consent
+  is the panel's own field and deliberately not part of the mutation digest:
+  the agent proceeds on host truth, never on the caller's assertion, and
+  records that proof in the durable journal, which is the only thing that
+  makes an enabled firewall with no SSH port valid.
+- An adjacent gap went with it: the boot restore path refused the same way,
+  so a firewall the operator had enabled would not have come back after a
+  reboot.
+- Proven live on the guest, which has no SSH: the status names the reason
+  before anyone clicks, the plain enable is refused with its own code, the
+  acknowledged enable applies (`policy drop`, the panel and DNS ports open),
+  `/etc/celikpanel/firewall.nft` exists afterwards - closing this entry's
+  "never exists" evidence - and the panel stayed reachable throughout.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-036 - The mail profile needs a fully qualified hostname nobody can set
@@ -1262,6 +1282,20 @@ or executed as-is. There are no open pull requests at this baseline.
   Go through `/domains/{id}/mail/auth/dkim`).
 - Decision needed: derive the mail hostname from the panel's own identity
   (nameserver/host settings) or add a hostname setting; not silently.
+- Fixed 4 September 2026. The mail hostname is resolved from the panel's own
+  identity in order of deliberateness - a saved setting, an already-qualified
+  host name, the panel certificate, this server's own nameserver name - and
+  when none is usable the install screen asks for it, validates it as a
+  fully qualified name, and the install sets the host's name as its first
+  step through the agent, admitted by the lease policy only inside a mail
+  profile install. The name is saved before the work starts, so a crash
+  mid-install resolves the same name without carrying it again. The dead end
+  is replaced by a refusal that names a field instead of a fact.
+- Proven live on the guest, whose name was a bare machine name: the catalogue
+  stopped blocking, a bad name was refused at the door before any operation
+  existed, and a good one passed the preflight and renamed the host.
+- The install then fails at its mail TLS step for an unrelated reason, and
+  that failure wedges the whole host: it is R-046.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-037 - A local build can refuse a released panel's database
@@ -1709,6 +1743,51 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: a takeover killed at the verified boundary comes back either
   finalized or rolled back, with the server answering throughout and the
   ledger free.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-046 - A failed mail step wedges the whole host, and a restart does not clear it
+
+- Evidence: live, 4 September 2026, on the drill guest, reached through the
+  ordinary mail profile install after R-036 unblocked it. The step
+  `profile/core-mail/mail-tls` failed with `verify default mail certificate
+  metadata: /etc/ssl/celikpanel/_mail/default-cert.pem group does not match
+  managed directory group` - the directory is root:root 755 and the file does
+  not exist afterwards. Postfix and Dovecot installed; only mail TLS failed.
+- Impact, which is worse than the failure: the mutation ledger is poisoned
+  and the poison **survives an agent restart**. Startup recovery re-attempts
+  the same committed plan, fails the same check, and the agent stays
+  degraded. `/api/v1/host-mutation-readiness` answers
+  `{"ready":false,"code":"HOST_MUTATION_BUSY"}`, so **every** host mutation is
+  blocked - DNS, firewall, sites, updates - not only mail. This is the R-019
+  family of wedges, reached from the mail path, and unlike R-034's it does not
+  clear on restart.
+- The guest is deliberately left in this state as evidence.
+- What it needs: two things, and they are separate. The certificate metadata
+  check and the directory it verifies against must agree - a check that can
+  never pass on a correctly installed host is a defect on its own. And a step
+  that cannot succeed must not be re-attempted forever: startup recovery has
+  to be able to fail a committed plan cleanly and release the ledger, the way
+  the DNS engine recovery now does, so one broken profile step cannot take a
+  server's whole control plane with it.
+- Exit criteria: the mail profile installs on a host whose only obstacle was
+  the hostname; and separately, a step that fails this way leaves the host
+  mutable, with the failure reported and the ledger free.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-047 - What the browser saw and the tests did not
+
+- Evidence: the browser round of 4 September 2026, at 1440x900 and 390x844,
+  in both locales. All three are pre-existing and none is caused by the change
+  that found them.
+- The mail install dialog is tall enough that its confirm buttons sit below
+  the fold at 1440x900 on open. It scrolls, but the primary action is not
+  visible, which is how an operator concludes a dialogue is broken.
+- At 390px the components page's installed/catalogue segmented control
+  overflows off the left edge.
+- `GET /api/v1/firewall` reports `udp_ports: null` while a single UDP port is
+  open, because the status parser matches only the braced form of the rule and
+  a one-port rule renders without braces. The applied policy is correct; the
+  report is not, which is the class R-040 exists to keep out of this product.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
