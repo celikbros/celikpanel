@@ -39,8 +39,24 @@ interface ManagedService {
     category: string;
     versions: string[];
     instances?: ServiceInstance[];
+    /** "unknown" until this host has actually been observed. */
+    /** Bu makine gerçekten gözlenene dek "unknown". */
     status: string;
-    is_installed: boolean;
+    /**
+     * Three answers, not two: true = observed present, false = observed
+     * absent, null = this panel has never looked at this server for this
+     * component. Null is NOT "no" — the screen must say "not checked yet" and
+     * offer the check instead of reporting an inventory nobody took.
+     *
+     * Üç yanıt, iki değil: true = gözlendi ve var, false = gözlendi ve yok,
+     * null = bu panel bu sunucuya bu bileşen için hiç bakmadı. Null "hayır"
+     * DEĞİLDİR — ekran, kimsenin yapmadığı bir envanteri bildirmek yerine
+     * "henüz bakılmadı" demeli ve bakmayı önermelidir.
+     */
+    is_installed: boolean | null;
+    /** Which question the server answered: systemd unit, package, or app files. */
+    /** Sunucunun hangi soruyu yanıtladığı: systemd unit'i, paket ya da uygulama dosyaları. */
+    installed_evidence?: 'systemd_unit' | 'package' | 'application_files';
     conflict_with?: string;
     not_offered?: boolean;
     not_offered_kind?: 'integration' | 'distribution';
@@ -109,7 +125,10 @@ function isManagedService(value: unknown): value is ManagedService {
         typeof service.icon === 'string' &&
         typeof service.category === 'string' &&
         typeof service.status === 'string' &&
-        typeof service.is_installed === 'boolean' &&
+        // Null is a first-class answer here ("never observed"), so it is
+        // accepted; anything else still fails the payload closed.
+        // Null burada birinci sınıf bir yanıttır ("hiç gözlenmedi").
+        (service.is_installed === null || typeof service.is_installed === 'boolean') &&
         Array.isArray(service.versions) &&
         service.versions.every((version) => typeof version === 'string') &&
         (service.instances === undefined ||
@@ -216,6 +235,13 @@ function persistServiceVerificationState(value: ServiceVerificationState) {
 // kurulum kutusu paket modalında değil sürüm çekmecesindedir. Veriden türer:
 // "paketi olmayan runtime" tam olarak o kümedir.
 const isTarballRuntime = (s: ManagedService) => s.kind === 'runtime' && !(s.packages && s.packages.length > 0);
+
+// "Nobody has looked" is its own row state, distinct from "we looked and it
+// is not there". It reaches the screen from a server that has never been
+// scanned — a fresh install, a restored host — and from a component this
+// panel learned about after the last scan ran.
+// "Kimse bakmadı", "baktık ve yok"tan ayrı bir satır durumudur.
+const notChecked = (s: ManagedService) => s.is_installed === null;
 
 // Requirement ROLE tokens (seat names — any member satisfies) and their
 // localized labels. Shared by the row badges and the version drawer.
@@ -508,9 +534,22 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const q = query.trim().toLowerCase();
     const filtered = services.filter(
         (s) =>
-            (!hideNotInstalled || s.is_installed) &&
+            // The installed view hides what we KNOW is absent. A component
+            // nobody has checked is not known to be absent, so hiding it here
+            // would turn "not checked" back into "not installed" — the exact
+            // claim this page must stop making.
+            // Kurulu görünümü, YOK olduğunu BİLDİĞİMİZİ gizler.
+            (!hideNotInstalled || s.is_installed !== false) &&
             (q === '' || `${s.name} ${s.description} ${s.id}`.toLowerCase().includes(q)),
     );
+
+    // A server nobody has looked at yet: every row is unknown. This is the
+    // ordinary first state of a fresh or restored host, not a fault, so it
+    // gets a plain explanation and the check itself — not an alarm.
+    // Henüz kimsenin bakmadığı sunucu: her satır bilinmiyor. Taze ya da geri
+    // yüklenmiş makinenin olağan ilk durumudur; alarm değil, düz bir açıklama
+    // ve bakma eyleminin kendisi verilir.
+    const hostNeverChecked = services.length > 0 && services.every(notChecked);
 
     const toggleGroup = (cat: string) =>
         setCollapsed((prev) => {
@@ -1042,6 +1081,29 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 </div>
             )}
 
+            {/* The honest first state of a server nobody has scanned: the
+                catalogue below is real, its installed/absent column is not
+                known yet, and the one thing that resolves that is one click
+                away. Neutral, not warning-coloured — semantic colour is
+                reserved for something actually being wrong, and a host that
+                has simply not been looked at yet is the normal beginning.
+                Hiç taranmamış bir sunucunun dürüst ilk durumu: aşağıdaki
+                katalog gerçektir, kurulu/yok sütunu ise henüz bilinmiyor ve
+                bunu çözecek tek şey bir tık ötede. Nötr, uyarı renginde değil
+                — anlam taşıyan renk gerçekten bozuk olan için ayrılmıştır. */}
+            {!loading && hostNeverChecked && (
+                <section role="status" className="mb-4 flex flex-wrap items-start gap-3 rounded-xl border border-border bg-surface p-4 shadow-card">
+                    <ScanSearch className="mt-0.5 h-5 w-5 shrink-0 text-fg-muted" />
+                    <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-fg">{t('services.notCheckedTitle')}</div>
+                        <p className="mt-0.5 text-sm text-fg-muted">{t('services.notCheckedHint')}</p>
+                    </div>
+                    <Button variant="primary" icon={ScanSearch} onClick={scan} disabled={pageControlsBusy}>
+                        {scanning ? t('services.scanning') : t('services.scanNow')}
+                    </Button>
+                </section>
+            )}
+
             {!loading && profiles.length > 0 && (
                 <MailProfileCards
                     profiles={profiles}
@@ -1111,6 +1173,10 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         const group = filtered.filter((s) => s.category === cat);
                         if (group.length === 0) return null;
                         const installedCount = group.filter((s) => s.is_installed).length;
+                        // "0/6" would be a count of a census nobody took.
+                        // A group nothing is known about shows a dash.
+                        // "0/6", kimsenin yapmadığı bir sayımın sonucu olurdu.
+                        const groupChecked = group.some((s) => !notChecked(s));
                         const isOpen = q !== '' || !collapsed.has(cat);
                         return (
                             <section key={cat} className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
@@ -1123,7 +1189,9 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                         <CatIcon className="h-5 w-5" />
                                     </span>
                                     <span className="text-lg font-semibold text-fg">{t(labelKey as Parameters<typeof t>[0])}</span>
-                                    <span className="text-sm text-fg-subtle">{installedCount}/{group.length}</span>
+                                    <span className="text-sm text-fg-subtle tabular-nums">
+                                        {groupChecked ? `${installedCount}/${group.length}` : '—'}
+                                    </span>
                                     <span className="ml-auto text-fg-subtle">
                                         {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                     </span>
@@ -1169,7 +1237,15 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         )}
                                                     </div>
                                                     <div className="w-32 shrink-0">
-                                                        <span className={`inline-flex items-center gap-1.5 text-sm ${s.is_installed ? 'text-fg-muted' : 'text-fg-subtle'}`}>
+                                                        {/* "Not checked yet" is information the operator
+                                                            acts on, so it is fg-muted like a real status —
+                                                            fg-subtle is for disabled and placeholder text
+                                                            and must not carry meaning. Only the state we
+                                                            actually verified as absent recedes.
+                                                            "Henüz bakılmadı" operatörün üzerine hareket
+                                                            ettiği bir bilgidir; bu yüzden gerçek bir durum
+                                                            gibi fg-muted'tır. */}
+                                                        <span className={`inline-flex items-center gap-1.5 text-sm ${s.is_installed === false ? 'text-fg-subtle' : 'text-fg-muted'}`}>
                                                             {/* A tool has no daemon of ours; a runtime whose
                                                                 copies have no units either (node — executed
                                                                 only by per-site apps) reports status
@@ -1184,8 +1260,10 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                                 gerçektir. php-fpm'in unit'leri VARDIR ve
                                                                 çalışıyor/durdu kalır: ölü php-fpm yine alarm
                                                                 vermelidir (D-010/B3b). */}
-                                                            <StatusDot ok={s.is_installed && (running || s.kind === 'tool' || s.status === 'installed')} />
-                                                            {!s.is_installed
+                                                            <StatusDot ok={s.is_installed === true && (running || s.kind === 'tool' || s.status === 'installed')} />
+                                                            {notChecked(s)
+                                                                ? t('services.notChecked')
+                                                                : !s.is_installed
                                                                 ? t('services.notInstalled')
                                                                 : s.kind === 'tool' || s.status === 'installed'
                                                                   ? t('services.installedLabel')
@@ -1205,7 +1283,17 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         data after the package scan says it is not installed. Keep
                                                         cleanup reachable across reloads, independently of install
                                                         and repair availability. */}
-                                                    {(s.id === 'pdns' || s.id === 'bind') ? (
+                                                    {/* Nothing to offer about a component nobody has looked
+                                        at: an Install button here would be a guess, and a
+                                        "conflicts with" or "requires" badge would be a claim
+                                        about an inventory that was never taken. The check
+                                        itself is the notice above the list, and Rescan in the
+                                        page header — one action, not thirty identical ones.
+                                        Kimsenin bakmadığı bir bileşen hakkında sunulacak bir
+                                        şey yok: buradaki Kur düğmesi tahmin, "çakışıyor" ya
+                                        da "gerekli" rozeti ise hiç yapılmamış bir envanter
+                                        hakkında iddia olurdu. */}
+                                    {notChecked(s) ? null : (s.id === 'pdns' || s.id === 'bind') ? (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => navigate('/settings?section=dns')}

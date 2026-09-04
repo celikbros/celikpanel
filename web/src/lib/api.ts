@@ -18,7 +18,9 @@ export interface Service {
     category: string;
     versions: string[];
     status: string;
-    is_installed: boolean;
+    /** null = this panel has never observed this host for this service. */
+    /** null = bu panel bu makineyi bu servis için hiç gözlemedi. */
+    is_installed: boolean | null;
     config_files: ConfigFile[];
 }
 

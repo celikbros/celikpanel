@@ -233,7 +233,7 @@ function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot 
                 && typeof service.icon === 'string'
                 && typeof service.category === 'string'
                 && typeof service.status === 'string'
-                && typeof service.is_installed === 'boolean'
+                && (service.is_installed === null || typeof service.is_installed === 'boolean')
                 && Array.isArray(service.versions)
                 && service.versions.every((version) => typeof version === 'string')
                 && (service.unit === undefined || typeof service.unit === 'string')

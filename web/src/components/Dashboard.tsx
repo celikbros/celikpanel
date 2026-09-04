@@ -37,7 +37,9 @@ interface SvcLite {
     id: string;
     name: string;
     status: string;
-    is_installed: boolean;
+    /** null = never observed on this host, which is not the same as absent. */
+    /** null = bu makinede hiç gözlenmedi; bu, yok demek değildir. */
+    is_installed: boolean | null;
     kind?: 'service' | 'runtime' | 'tool';
 }
 interface FwState {
@@ -142,7 +144,7 @@ function decodeDashboardServices(value: unknown): {
             || serviceIDs.has(service.id)
             || typeof service.name !== 'string'
             || typeof service.status !== 'string'
-            || typeof service.is_installed !== 'boolean'
+            || (service.is_installed !== null && typeof service.is_installed !== 'boolean')
             || (
                 service.kind !== undefined
                 && service.kind !== 'service'

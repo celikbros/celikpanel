@@ -495,7 +495,7 @@ func (p *Panel) preflightMailProfileInstall(
 	observed := make(map[string]bool, len(services))
 	for _, service := range services {
 		observed[service.ID] = true
-		if service.IsInstalled {
+		if service.Installed() {
 			installed[service.ID] = true
 		}
 	}
@@ -576,7 +576,7 @@ func verifyMailProfileReady(profile mailProfileDefinition, services []ManagedSer
 		}
 		ready := false
 		for _, service := range services {
-			if service.ID != serviceID || !service.IsInstalled {
+			if service.ID != serviceID || !service.Installed() {
 				continue
 			}
 			ready = managed.Kind == core.KindTool ||
@@ -661,7 +661,7 @@ func mailProfilesView(
 	installed := make(map[string]bool, len(services))
 	for _, service := range services {
 		byID[service.ID] = service
-		if service.IsInstalled {
+		if service.Installed() {
 			installed[service.ID] = true
 		}
 	}
@@ -742,7 +742,7 @@ func mailProfilesView(
 		allReady := true
 		for _, id := range definition.Services {
 			service := byID[id]
-			if service.IsInstalled {
+			if service.Installed() {
 				anyInstalled = true
 			}
 			if verifyMailProfileReady(mailProfileDefinition{Services: []string{id}}, services) != nil {

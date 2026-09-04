@@ -42,7 +42,7 @@ func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID, s
 	}
 	installed := make(map[string]bool, len(services))
 	for _, service := range services {
-		if service.IsInstalled {
+		if service.Installed() {
 			installed[service.ID] = true
 		}
 	}

@@ -206,12 +206,23 @@ func discoverInstalledServiceIDsStrict(probe strictServiceStateProbe, family str
 		svc := &core.ManagedServices[i]
 		installed := false
 
-		if svc.ID == "roundcube" {
+		// The branch taken here IS the question this scan answers about the
+		// service, and core.InstalledEvidenceFor is its single name. The panel
+		// labels every row with that same call, so `installed_evidence` on the
+		// wire can never claim a probe that did not run — which matters
+		// because the DNS engine surface asks the package database instead and
+		// may legitimately answer differently for a masked engine.
+		// Buradaki dal, taramanın servis hakkında yanıtladığı SORUnun ta
+		// kendisidir ve core.InstalledEvidenceFor onun tek adıdır. Panel her
+		// satırı aynı çağrıyla etiketler; böylece teldeki `installed_evidence`
+		// koşmamış bir yoklamayı asla iddia edemez.
+		switch core.InstalledEvidenceFor(svc, family) {
+		case core.EvidenceApplicationFiles:
 			installed, err = probe.RoundcubeInstalled()
 			if err != nil {
 				return nil, fmt.Errorf(`strict service discovery for %s: %w`, svc.ID, err)
 			}
-		} else if len(svc.SystemNames) > 0 || svc.SystemNamePattern != "" {
+		case core.EvidenceSystemdUnit:
 			for _, unit := range svc.SystemNames {
 				lookup := unit
 				if at := strings.IndexByte(unit, '@'); at >= 0 {
@@ -241,7 +252,7 @@ func discoverInstalledServiceIDsStrict(probe strictServiceStateProbe, family str
 					}
 				}
 			}
-		} else if candidates := svc.Packages[family]; len(candidates) > 0 {
+		case core.EvidencePackage:
 			if !packagesLoaded {
 				packages, err = probe.InstalledPackages(family)
 				if err != nil {
@@ -249,7 +260,7 @@ func discoverInstalledServiceIDsStrict(probe strictServiceStateProbe, family str
 				}
 				packagesLoaded = true
 			}
-			for _, candidate := range candidates {
+			for _, candidate := range svc.Packages[family] {
 				if _, ok := packages[candidate]; ok {
 					installed = true
 					break

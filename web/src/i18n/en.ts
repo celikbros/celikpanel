@@ -655,6 +655,13 @@ export const en = {
     'services.neverScanned': 'Services have not been scanned yet',
     'services.neverScannedShort': 'Not scanned yet',
     'services.neverScannedHint': 'The first visit detects installed services automatically. Cached results load immediately and refresh periodically.',
+    // "Not checked yet" is not "not installed". The panel says which of the
+    // two it means, because a restored or freshly installed server has a real
+    // catalogue and no observation of it at all.
+    // "Henüz bakılmadı", "kurulu değil" demek değildir.
+    'services.notChecked': 'Not checked yet',
+    'services.notCheckedTitle': 'This server has not been checked yet',
+    'services.notCheckedHint': 'The components below are the ones this panel can manage. Nothing here has been looked at on this server yet, so none of it is known to be installed or missing. Run a check to see what is actually there.',
 
     'databases.subtitle': 'Databases and users on your detected servers',
     'databases.noServers': 'No database engine installed',

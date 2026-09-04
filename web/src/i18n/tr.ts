@@ -599,6 +599,12 @@ export const tr: Record<TranslationKey, string> = {
     'services.neverScanned': 'Servisler henüz taranmadı',
     'services.neverScannedShort': 'Henüz taranmadı',
     'services.neverScannedHint': 'İlk ziyarette kurulu servisler otomatik algılanır. Önbellekteki sonuçlar hemen açılır ve belirli aralıklarla yenilenir.',
+    // "Henüz bakılmadı", "kurulu değil" demek değildir. Panel ikisinden
+    // hangisini kastettiğini söyler; geri yüklenmiş ya da yeni kurulmuş bir
+    // sunucunun gerçek bir kataloğu ve o katalog hakkında hiç gözlemi yoktur.
+    'services.notChecked': 'Henüz bakılmadı',
+    'services.notCheckedTitle': 'Bu sunucuya henüz bakılmadı',
+    'services.notCheckedHint': 'Aşağıdakiler bu panelin yönetebildiği bileşenlerdir. Bu sunucuda hiçbirine henüz bakılmadı; bu yüzden hangisinin kurulu, hangisinin eksik olduğu bilinmiyor. Gerçekte ne olduğunu görmek için bir kontrol çalıştırın.',
 
     'databases.subtitle': 'Tespit edilen sunucularınızdaki veritabanları ve kullanıcılar',
     'databases.noServers': 'Kurulu veritabanı motoru yok',

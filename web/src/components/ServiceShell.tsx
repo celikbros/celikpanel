@@ -10,7 +10,9 @@ import { useComponentOperation } from './ComponentOperation';
 interface ManagedService {
     id: string;
     name: string;
-    is_installed: boolean;
+    /** null = never observed on this host, which is not the same as absent. */
+    /** null = bu makinede hiç gözlenmedi; bu, yok demek değildir. */
+    is_installed: boolean | null;
     status: string;
 }
 

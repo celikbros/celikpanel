@@ -22,7 +22,9 @@ interface Component {
     kind: string;
     unit?: string;
     status: string;
-    is_installed: boolean;
+    /** null = never observed on this host, which is not the same as absent. */
+    /** null = bu makinede hiç gözlenmedi; bu, yok demek değildir. */
+    is_installed: boolean | null;
     versions: string[];
     instances?: Instance[];
     packages?: string[];

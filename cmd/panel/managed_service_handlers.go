@@ -19,15 +19,53 @@ import (
 
 // ManagedServiceResponse represents a managed service with runtime status
 type ManagedServiceResponse struct {
-	ID           string   `json:"id"`
-	Name         string   `json:"name"`
-	Description  string   `json:"description"`
-	Icon         string   `json:"icon"`
-	Category     string   `json:"category"`
-	Versions     []string `json:"versions"` // Detected versions
-	Status       string   `json:"status"`   // Overall status
-	IsInstalled  bool     `json:"is_installed"`
-	ConflictWith string   `json:"conflict_with,omitempty"` // installed member of the same conflict group
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Icon        string   `json:"icon"`
+	Category    string   `json:"category"`
+	Versions    []string `json:"versions"` // Detected versions
+	// Status is "unknown" until this host has actually been observed, and
+	// only then "not_installed", "installed", "active (running)" and friends.
+	// Status, bu makine gerçekten gözlenene dek "unknown"dır.
+	Status string `json:"status"`
+	// IsInstalled is a THREE-state answer and the pointer is the whole point
+	// (R-040): true = observed present, false = observed absent, null = this
+	// panel has never looked at this host for this service. Those are three
+	// different facts and the first two must never speak for the third.
+	//
+	// Before this, a host that had never been scanned served the whole
+	// catalogue as `is_installed: false, status: "not_installed"` — the same
+	// bytes as a host inspected and found empty. Proven live on 3 September
+	// 2026: at the same moment on the same host, /api/v1/dns/engine reported
+	// BIND installed (it probes dpkg on every request) while
+	// /api/v1/managed-services reported it absent, because no scan row
+	// existed. A restored or freshly installed server read as empty.
+	//
+	// Why a null and not an added `observed` flag: a client that has not been
+	// updated must not be able to read a false claim out of this field.
+	// `false` alongside a new flag it ignores would keep it lying; `null`
+	// fails that client's own type check, so it refuses the payload and says
+	// so instead of drawing an inventory nobody took.
+	//
+	// IsInstalled ÜÇ durumlu bir yanıttır ve işaretçi tam da bunun içindir
+	// (R-040): true = gözlendi ve var, false = gözlendi ve yok, null = bu
+	// panel bu makineye bu servis için hiç bakmadı. Üçü ayrı olgudur ve ilk
+	// ikisi üçüncünün yerine konuşamaz. Güncellenmemiş bir istemci bu alandan
+	// yanlış bir iddia okuyamamalıdır; `null` onun kendi tür denetimine
+	// takılır ve istemci, kimsenin yapmadığı bir envanteri çizmek yerine
+	// yükü reddedip bunu söyler.
+	IsInstalled *bool `json:"is_installed"`
+	// InstalledEvidence names WHICH question produced IsInstalled on this
+	// host: the systemd unit table, the package database, or the
+	// application's own files. The DNS engine surface asks the package
+	// database directly, so for a masked or sealed engine the two surfaces
+	// can honestly disagree; the payload says which one this is rather than
+	// pretending they are the same question. See
+	// internal/core/service_install_evidence.go for why they are not merged.
+	// InstalledEvidence, IsInstalled'i HANGİ sorunun ürettiğini adlandırır.
+	InstalledEvidence core.ServiceInstallEvidence `json:"installed_evidence,omitempty"`
+	ConflictWith      string                      `json:"conflict_with,omitempty"` // installed member of the same conflict group
 	// RequiresMissing: unmet requirements blocking install (service ids or
 	// group names) — the UI disables Install and says what to install first.
 	// RequiresMissing: kurulumu engelleyen karşılanmamış gereksinimler (servis
@@ -104,6 +142,22 @@ type ManagedServiceResponse struct {
 	// hangisinin kime ait olduğunu tahmin etmeden yanıtlar.
 	Ports []string `json:"ports,omitempty"`
 }
+
+// Installed answers the only question the panel's own logic may ask of a
+// three-state field: is this service KNOWN to be present. Unobserved is not
+// "absent" — it is "we have not looked" — and every internal caller that is
+// about to install, gate or count must treat it as a fact it does not have.
+// Installed, panelin kendi mantığının üç durumlu bir alana sorabileceği tek
+// soruyu yanıtlar: bu servisin var olduğu BİLİNİYOR mu? Gözlenmemiş, "yok"
+// değildir.
+func (r ManagedServiceResponse) Installed() bool {
+	return r.IsInstalled != nil && *r.IsInstalled
+}
+
+// Observed reports whether this host was ever actually asked about this
+// service. / Observed, bu makineye bu servisin gerçekten sorulup
+// sorulmadığını bildirir.
+func (r ManagedServiceResponse) Observed() bool { return r.IsInstalled != nil }
 
 // managedServicesPayload is what both endpoints return: the cached scan and
 // when it ran. A null scanned_at means no scan has ever run.
@@ -235,7 +289,7 @@ func decodeScanCacheSnapshot(data string) (decodedScanCache, error) {
 		for _, l := range legacy {
 			obs = append(obs, serviceObservation{
 				ID:          l.ID,
-				IsInstalled: l.IsInstalled,
+				IsInstalled: l.Installed(),
 				Status:      l.Status,
 				Versions:    l.Versions,
 				ConfigFiles: l.ConfigFiles,
@@ -359,7 +413,19 @@ func catalogViewForHost(obs []serviceObservation, host core.ManagedServiceHostPr
 
 	response := make([]ManagedServiceResponse, 0, len(core.ManagedServices))
 	for _, managed := range core.ManagedServices {
-		o := byID[managed.ID]
+		// `observed` is the difference between "the host answered about this
+		// service" and "nobody asked". A scan writes one observation per
+		// catalogue entry, so a missing entry means exactly one of two
+		// things, and both are honestly "not checked": no scan has ever run
+		// on this host, or this service entered the catalogue after the last
+		// scan was taken. The zero value of the map lookup used to be read as
+		// "absent", which is how R-040 turned silence into a claim.
+		// `observed`, "makine bu servis hakkında yanıt verdi" ile "kimse
+		// sormadı" arasındaki farktır. Tarama, katalog kalemi başına bir
+		// gözlem yazar; kayıt yoksa ya bu makinede hiç tarama koşmamıştır ya
+		// da servis son taramadan sonra kataloğa girmiştir — ikisi de dürüstçe
+		// "bakılmadı"dır.
+		o, observed := byID[managed.ID]
 		instances := o.Instances
 		if instances == nil {
 			instances = []core.ServiceInstance{}
@@ -411,7 +477,25 @@ func catalogViewForHost(obs []serviceObservation, host core.ManagedServiceHostPr
 		notOffered := false
 		notOfferedKind := core.ManagedServiceInstallBlockNone
 		notOfferedReason := ""
-		if !o.IsInstalled {
+		var isInstalled *bool
+		switch {
+		case !observed:
+			// Never looked. Say exactly that, in both fields that carry it:
+			// is_installed is null and status is "unknown". Conflicts and
+			// unmet requirements are withheld too — both are read off the
+			// installed set, and an empty set here means "unknown", not
+			// "nothing is installed". Not-offered stays: it is a catalogue
+			// and host-family fact that needs no observation.
+			// Hiç bakılmadı. Bunu tam olarak söyle: is_installed null,
+			// status "unknown". Çakışma ve karşılanmamış gereksinimler de
+			// söylenmez — ikisi de kurulu kümeden okunur ve buradaki boş küme
+			// "hiçbir şey kurulu değil" değil "bilinmiyor" demektir.
+			status = "unknown"
+			notOfferedKind, notOfferedReason = core.ManagedServiceInstallBlockForHost(&managed, host)
+			notOffered = notOfferedReason != ""
+		case !o.IsInstalled:
+			installedFalse := false
+			isInstalled = &installedFalse
 			status = "not_installed"
 			// Blocked only if the group's installed member is someone else.
 			// Yalnız grubun kurulu üyesi bir başkasıysa engellenir.
@@ -431,30 +515,34 @@ func catalogViewForHost(obs []serviceObservation, host core.ManagedServiceHostPr
 			// kaybolmaz. Gereksinimlerse ancak kurulum sunulduğunda anlamlıdır.
 			notOfferedKind, notOfferedReason = core.ManagedServiceInstallBlockForHost(&managed, host)
 			notOffered = notOfferedReason != ""
+		default:
+			installedTrue := true
+			isInstalled = &installedTrue
 		}
 
 		response = append(response, ManagedServiceResponse{
-			ID:               managed.ID,
-			Unit:             o.Unit,
-			Name:             managed.Name,
-			Description:      managed.Description,
-			Icon:             managed.Icon,
-			Category:         managed.Category,
-			Versions:         versions,
-			Instances:        instances,
-			Status:           status,
-			IsInstalled:      o.IsInstalled,
-			ConflictWith:     conflictWith,
-			RequiresMissing:  requiresMissing,
-			NotOffered:       notOffered,
-			NotOfferedKind:   notOfferedKind,
-			NotOfferedReason: notOfferedReason,
-			Ports:            portStrings(managed.FirewallPorts),
-			Kind:             managed.Kind,
-			Packages:         managed.Packages[pkgFamily],
-			RepairPackage:    repairPackage,
-			RepairAvailable:  repairAvailable,
-			ConfigFiles:      configFiles,
+			ID:                managed.ID,
+			Unit:              o.Unit,
+			Name:              managed.Name,
+			Description:       managed.Description,
+			Icon:              managed.Icon,
+			Category:          managed.Category,
+			Versions:          versions,
+			Instances:         instances,
+			Status:            status,
+			IsInstalled:       isInstalled,
+			InstalledEvidence: core.InstalledEvidenceFor(&managed, pkgFamily),
+			ConflictWith:      conflictWith,
+			RequiresMissing:   requiresMissing,
+			NotOffered:        notOffered,
+			NotOfferedKind:    notOfferedKind,
+			NotOfferedReason:  notOfferedReason,
+			Ports:             portStrings(managed.FirewallPorts),
+			Kind:              managed.Kind,
+			Packages:          managed.Packages[pkgFamily],
+			RepairPackage:     repairPackage,
+			RepairAvailable:   repairAvailable,
+			ConfigFiles:       configFiles,
 		})
 	}
 	return response

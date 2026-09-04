@@ -724,7 +724,7 @@ func TestUninstallFirewallFailurePublishesFreshSnapshotAsPartialSuccess(t *testi
 		t.Fatal(err)
 	}
 	for _, service := range payload.Services {
-		if service.ID == "redis" && service.IsInstalled {
+		if service.ID == "redis" && service.Installed() {
 			t.Fatalf("cached GET kept the removed redis row installed: %+v", service)
 		}
 	}

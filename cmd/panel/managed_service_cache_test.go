@@ -32,7 +32,28 @@ func newManagedServiceCachePanel(t *testing.T) *Panel {
 	return &Panel{db: database, pkgFamilyVal: "apt"}
 }
 
-func TestManagedServicesFreshDatabaseReturnsCatalogue(t *testing.T) {
+// A host this panel has never scanned still gets its whole installable
+// catalogue — but on the wire every row says "not observed", never "absent".
+//
+// This test replaces one that pinned the opposite. The old version asserted
+// the catalogue length and a null scanned_at and never looked at
+// is_installed, which is precisely how R-040 survived: with no scan row the
+// handler shipped `is_installed: false, status: "not_installed"` for every
+// service, byte-identical to a host that had been inspected and found empty.
+// On 3 September 2026 the same host answered `installed: true` for BIND on
+// /api/v1/dns/engine (it probes dpkg live) and `is_installed: false` here.
+//
+// The assertion is made against the RAW JSON on purpose. `is_installed: null`
+// is the contract a client sees; a typed decode into *bool would pass even if
+// the field vanished from the payload entirely.
+//
+// Bu panelin hiç taramadığı bir makine yine de kurulabilir kataloğunun tamamını
+// alır — ama telde her satır "gözlenmedi" der, asla "yok" demez. Bu test,
+// tersini çivileyen bir testin yerine geçer: eski sürüm katalog uzunluğuna ve
+// null scanned_at'e bakıyor, is_installed'e hiç bakmıyordu. R-040 tam da böyle
+// hayatta kaldı. İddia bilerek HAM JSON üzerinde kurulur: istemcinin gördüğü
+// sözleşme `is_installed: null`'dır.
+func TestManagedServicesUnscannedHostReportsUnknownNotAbsent(t *testing.T) {
 	panel := newManagedServiceCachePanel(t)
 	recorder := httptest.NewRecorder()
 	panel.handleManagedServices(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/managed-services", nil))
@@ -49,6 +70,42 @@ func TestManagedServicesFreshDatabaseReturnsCatalogue(t *testing.T) {
 	}
 	if len(payload.Services) != len(core.ManagedServices) {
 		t.Fatalf("fresh database returned %d services, want catalogue size %d", len(payload.Services), len(core.ManagedServices))
+	}
+
+	var wire struct {
+		Services []struct {
+			ID          string          `json:"id"`
+			Status      string          `json:"status"`
+			IsInstalled json.RawMessage `json:"is_installed"`
+			Evidence    string          `json:"installed_evidence"`
+		} `json:"services"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &wire); err != nil {
+		t.Fatal(err)
+	}
+	if len(wire.Services) == 0 {
+		t.Fatal("no services on the wire")
+	}
+	for _, service := range wire.Services {
+		if string(service.IsInstalled) != "null" {
+			t.Errorf("%s: is_installed = %s, want null — this host was never looked at",
+				service.ID, service.IsInstalled)
+		}
+		if service.Status != "unknown" {
+			t.Errorf("%s: status = %q, want %q", service.ID, service.Status, "unknown")
+		}
+	}
+	// The catalogue is still complete and still installable-shaped: an
+	// unobserved host must not become an empty Components page.
+	// Katalog yine de eksiksizdir: gözlenmemiş makine boş bir Bileşenler
+	// sayfasına dönüşmemelidir.
+	for _, service := range payload.Services {
+		if service.Observed() {
+			t.Fatalf("%s: reported as observed on a fresh database", service.ID)
+		}
+		if service.Installed() {
+			t.Fatalf("%s: reported as installed on a fresh database", service.ID)
+		}
 	}
 }
 
@@ -165,15 +222,15 @@ func TestCatalogViewIgnoresStaleCatalogueFields(t *testing.T) {
 	// Observed state, by contrast, MUST survive the round trip: it is the one
 	// thing only the scan knows. / Gözlenen durum ise round trip'ten sağ
 	// çıkmalıdır: yalnız taramanın bildiği tek şey odur.
-	if !nginx.IsInstalled || nginx.Status != "active (running)" {
-		t.Errorf("observed state lost: installed=%v status=%q", nginx.IsInstalled, nginx.Status)
+	if !nginx.Installed() || nginx.Status != "active (running)" {
+		t.Errorf("observed state lost: installed=%v status=%q", nginx.Installed(), nginx.Status)
 	}
 	// Pre-B3b versions (minus the sentinel) also survive until the next scan.
 	// B3b öncesi sürümler de (sentinel hariç) bir sonraki taramaya dek yaşar.
 	if len(nginx.Versions) != 1 || nginx.Versions[0] != "1.0" {
 		t.Errorf("legacy versions lost: %v", nginx.Versions)
 	}
-	if pma := byID["phpmyadmin"]; pma.IsInstalled {
+	if pma := byID["phpmyadmin"]; pma.Installed() {
 		t.Error("phpmyadmin should still read as not installed")
 	}
 }
@@ -228,7 +285,7 @@ func TestSentinelIsDeadAndInstancesDriveVersions(t *testing.T) {
 	if len(node.Versions) != 0 {
 		t.Errorf("node versions = %v — an unmanaged instance must not grant versions", node.Versions)
 	}
-	if node.IsInstalled {
+	if node.Installed() {
 		t.Error("a system-PATH-only node must not read as installed")
 	}
 	if len(node.Instances) != 1 || node.Instances[0].Managed {
@@ -326,11 +383,13 @@ func TestOldCacheWithoutInstalledPackageProofFailsClosed(t *testing.T) {
 
 // Every catalogue entry appears in the view even when the cache has never
 // heard of it — that is how a newly added service shows up right after deploy
-// instead of waiting for a rescan.
+// instead of waiting for a rescan. What it must NOT do is claim the service is
+// absent: nobody looked (R-040).
 // Önbellek onu hiç duymamış olsa bile her katalog kalemi görünümde yer alır —
 // yeni eklenen bir servis, taramayı beklemek yerine dağıtımdan hemen sonra
-// böyle ortaya çıkar.
-func TestCatalogViewIncludesUnscannedServices(t *testing.T) {
+// böyle ortaya çıkar. Yapmaması gereken şey, servisin yok olduğunu iddia
+// etmektir: kimse bakmadı (R-040).
+func TestCatalogViewIncludesUnscannedServicesWithoutClaimingAbsence(t *testing.T) {
 	view := catalogView(nil, "apt")
 	if len(view) != len(core.ManagedServices) {
 		t.Fatalf("empty cache produced %d rows, want %d", len(view), len(core.ManagedServices))
@@ -339,8 +398,104 @@ func TestCatalogViewIncludesUnscannedServices(t *testing.T) {
 		if s.Kind == "" {
 			t.Errorf("%s: kind is empty", s.ID)
 		}
-		if s.IsInstalled || s.Status != "not_installed" {
-			t.Errorf("%s: unscanned service must read as not installed, got %q", s.ID, s.Status)
+		if s.IsInstalled != nil {
+			t.Errorf("%s: unobserved service answered is_installed=%v, want null", s.ID, *s.IsInstalled)
+		}
+		if s.Status != "unknown" {
+			t.Errorf("%s: unobserved status = %q, want %q", s.ID, s.Status, "unknown")
+		}
+		// Conflicts and unmet requirements are read off the installed set.
+		// With nothing observed that set is unknown, not empty, so neither
+		// may be asserted — "install PHP first" is a claim about a host we
+		// have not looked at.
+		// Çakışma ve karşılanmamış gereksinim kurulu kümeden okunur; hiçbir
+		// şey gözlenmemişken o küme boş değil bilinmeyendir.
+		if s.ConflictWith != "" || len(s.RequiresMissing) > 0 {
+			t.Errorf("%s: unobserved row asserted conflict=%q requires=%v",
+				s.ID, s.ConflictWith, s.RequiresMissing)
+		}
+	}
+}
+
+// A service added to the catalogue after the last scan was taken is in exactly
+// the same position as a never-scanned host: the observation for it does not
+// exist. It must read as unknown, not as absent, until a scan actually asks
+// the host about it.
+// Son taramadan sonra kataloğa eklenen bir servis, hiç taranmamış bir makineyle
+// tam olarak aynı durumdadır: ona ait gözlem yoktur. Bir tarama makineye onu
+// gerçekten sorana dek "yok" değil "bilinmiyor" okunmalıdır.
+func TestCatalogViewLeavesServicesOutsideTheScanUnknown(t *testing.T) {
+	view := catalogView([]serviceObservation{
+		{ID: "nginx", IsInstalled: true, Status: "active (running)"},
+		{ID: "mariadb", IsInstalled: false, Status: "not_installed"},
+	}, "apt")
+
+	byID := map[string]ManagedServiceResponse{}
+	for _, s := range view {
+		byID[s.ID] = s
+	}
+	if got := byID["nginx"]; !got.Installed() || got.Status != "active (running)" {
+		t.Errorf("observed installed nginx = (%v, %q)", got.IsInstalled, got.Status)
+	}
+	// Observed and genuinely absent: false, not null. The scan asked.
+	// Gözlendi ve gerçekten yok: null değil false. Tarama sordu.
+	mariadb := byID["mariadb"]
+	if mariadb.IsInstalled == nil || *mariadb.IsInstalled {
+		t.Errorf("observed-absent mariadb = %v, want a non-null false", mariadb.IsInstalled)
+	}
+	if mariadb.Status != "not_installed" {
+		t.Errorf("observed-absent mariadb status = %q, want %q", mariadb.Status, "not_installed")
+	}
+	for _, s := range view {
+		if s.ID == "nginx" || s.ID == "mariadb" {
+			continue
+		}
+		if s.IsInstalled != nil || s.Status != "unknown" {
+			t.Errorf("%s: outside the scan it answered (%v, %q), want (null, unknown)",
+				s.ID, s.IsInstalled, s.Status)
+		}
+	}
+}
+
+// The component surface and the DNS engine surface ask different questions of
+// the host, and they are allowed to answer differently for the same service at
+// the same moment: the component scan reads the systemd unit table, the DNS
+// engine surface reads the package database. That divergence is deliberate —
+// merging them would widen the answer firewall policy consumes — so every row
+// must SAY which question produced it rather than leave the operator to guess
+// why two screens disagree about a masked BIND.
+// Bileşen yüzeyi ile DNS motoru yüzeyi makineye farklı sorular sorar ve aynı
+// servis için aynı anda farklı yanıt verebilirler. Bu ayrım bilerektir; bu
+// yüzden her satır, yanıtını hangi sorunun ürettiğini SÖYLEMELİDİR.
+func TestCatalogViewNamesWhichInstallQuestionItAnswered(t *testing.T) {
+	byID := map[string]ManagedServiceResponse{}
+	for _, s := range catalogView(nil, "apt") {
+		byID[s.ID] = s
+	}
+	for id, want := range map[string]core.ServiceInstallEvidence{
+		// BIND is decided from systemd units here; /api/v1/dns/engine decides
+		// the same engine from dpkg. A sealed engine can read differently.
+		"bind": core.EvidenceSystemdUnit,
+		"pdns": core.EvidenceSystemdUnit,
+		// A tool with no unit of ours is decided from its packages.
+		"phpmyadmin": core.EvidencePackage,
+		// Roundcube installs as a web application: neither unit nor package.
+		"roundcube": core.EvidenceApplicationFiles,
+		// A portable runtime with no package mapping cannot be asked at all.
+		"node": core.EvidenceNone,
+	} {
+		if got := byID[id].InstalledEvidence; got != want {
+			t.Errorf("%s: installed_evidence = %q, want %q", id, got, want)
+		}
+	}
+	// The label is the agent's own branch selector, not a second opinion:
+	// cmd/agent/service_state_rpc.go switches on this exact call.
+	// Etiket, agent'ın kendi dal seçicisidir, ikinci bir görüş değil.
+	for i := range core.ManagedServices {
+		managed := &core.ManagedServices[i]
+		if got, want := byID[managed.ID].InstalledEvidence,
+			core.InstalledEvidenceFor(managed, "apt"); got != want {
+			t.Errorf("%s: payload evidence %q disagrees with discovery %q", managed.ID, got, want)
 		}
 	}
 }
