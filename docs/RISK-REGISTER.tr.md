@@ -83,9 +83,10 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-042 | Yüksek | DÜZELTİLDİ VE CANLI KANITLANDI / GERÇEK VM BEKLİYOR | Elle yapılandırılmış yetkili bir BIND reddediliyor: nesil, recursion, allow-recursion, allow-query-cache ya da allow-transfer'ı zaten tanımlayan bir options bloğuna yazmıyor; yetkili sunucu ise bunlardan ilkini neredeyse her zaman tanımlar |
 | R-043 | Yüksek | DÜZELTİLDİ VE İKİ ÇÖKME NOKTASINDA CANLI KANITLANDI / ÜÇÜNCÜSÜ R-045 | Çalışan devralma sırasındaki çökme, birimleri durduran geçiş geri almasıyla kurtarılıyor; yani kurtarma, devralmanın asla kesmeyeceğine söz verdiği DNS sunucusunu durdurur |
 | R-044 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | `view` bloklarıyla yapılandırılmış bir BIND devralma tarafından anlaşılmıyor: view içindeki bir recursion panelin seçeneklerini sessizce ezer, view dışındaki bölgeler ise yapılandırma denetiminde geç düşer |
-| R-045 | Yüksek | BULUNDU / NEDENİ HENÜZ SAPTANMADI | Hedefi doğrulandıktan sonra ama tamamlanmadan çöken devralma ne tamamlanıyor ne geri alınıyor: kurtarma nesil işaretçisini bulamıyor, kapalı hata veriyor ve defteri tutuyor |
+| R-045 | Yüksek | GERÇEK VM'DE KAPANDI / ÜRÜN DEĞİL DÜZENEK KAYNAKLIYDI | Hedefi doğrulandıktan sonra ama tamamlanmadan çöken devralma ne tamamlanıyor ne geri alınıyor: kurtarma nesil işaretçisini bulamıyor, kapalı hata veriyor ve defteri tutuyor |
 | R-046 | Kritik | DÜZELTİLDİ VE KİLİTLEDİĞİ SUNUCUDA CANLI KANITLANDI | Düşen posta TLS adımı işlem defterini zehirliyor ve zehir agent yeniden başlatılınca da geçmiyor: açılış kurtarması aynı planı yeniden deniyor, aynı denetimde düşüyor ve sunucu her işlemi reddediyor, çıkış yolu yok |
 | R-047 | Düşük | TARAYICI TURUNDA BULUNDU / HENÜZ DÜZELTİLMEDİ | Tarayıcının görüp testlerin görmediği üç kusur: onay düğmeleri ekranın altında kalan bir pencere, 390px'te taşan bir seçim denetimi ve açık bir UDP portu varken yok diyen güvenlik duvarı durumu |
+| R-048 | Kritik | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Elektrik kesintisinden sonra agent, sunucu hazır olmadan başlıyor, kurtarmasını yapamıyor ve bir daha denemiyor; yarım kalan işlem defteri tutuyor ve biri agent'ı elle yeniden başlatana kadar her işlem reddediliyor |
 
 ## Ayrıntılı riskler
 
@@ -1722,6 +1723,26 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: doğrulanmış sınırda öldürülen bir devralma ya tamamlanmış ya
   geri alınmış olarak geri geliyor; sunucu boyunca yanıt veriyor ve defter
   serbest.
+- 4 Eylül 2026'da gerçek bir sanal makinede, elektriği keserek sonuçlandırıldı.
+  `target-verified` sınırında QMP `quit` ile üç kesinti - hata enjeksiyonu yok,
+  sinyal yok, agent'a dokunan hiçbir şey yok - ve üçü de **tamamlanmış**
+  olarak geri geldi; defter serbest, bölge yanıt veriyor, sunucu hiç yeniden
+  başlatılmadı. Çöken diskin hiç açılmadan önce yapılan çevrimdışı okuması,
+  nesil işaretçisinin yerinde ve günlüğün hâlâ `target-verified`'da olduğunu
+  gösterdi: enjeksiyonlu koşularda görülmeyen tam olarak buydu.
+- Mekanizma, koddan ve ikinci bir yönden doğrulanarak: `after_write` kancası
+  `apply`ın hata döndürmesine yol açıyor; bu yüzden `publisher.Switch` hata
+  dalına giriyor ve önceki nesli olmayan bir devralmada `current` işaretçisini
+  siliyor - işaretten sekiz milisaniye sonra, agent'ın kendi hata yolundan.
+  Elektrik kesintisi o koda ulaşamaz, çünkü `apply` hiç dönmez. Uygulaması
+  ilgisiz bir sebeple düşen bir koşu da işaretçiyi aynı şekilde sildi.
+- Yalnız bu kayıt için değil, düzenek için de ders: `publisher.Switch` içindeki
+  bir evrede `after_write` hatası elektrik kesintisini modelleyemez, çünkü
+  sunucuyu değiştiren şey hatanın kendisidir. Hata enjeksiyonu, kodun bir
+  hatayla ne yaptığını kanıtlar; elektrik kesintisinin ne yaptığını yalnız
+  elektrik kesintisi kanıtlar.
+- Elektrik kesintileri, enjeksiyonun asla bulamayacağı bir şeyi de buldu ve o
+  ürün kusuru: R-048.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-046 - Düşen bir posta adımı tüm sunucuyu kilitliyor ve yeniden başlatma açmıyor
@@ -1799,6 +1820,45 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   eşleştiriyor ve tek portlu kural parantezsiz yazılıyor. Uygulanan politika
   doğru, rapor değil - ki bu, R-040'ın bu üründen uzak tutmak için var olduğu
   sınıf.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-048 - Elektriği kesilen sunucu, kontrol düzlemi donmuş olarak geri geliyor
+
+- Kanıt: canlı, 4 Eylül 2026, gerçek bir sanal makinede, **beş elektrik
+  kesintisinin beşinde** tekrarlandı. Açılışta agent, systemd henüz `starting`
+  iken başlıyor; sunucu profili yoklaması `running` ya da `degraded` dışında
+  hiçbir şeyi kabul etmiyor, bu yüzden açılış kurtarması hiç koşamıyor ve
+  `recover DNS engine switch host transaction: ... detect host platform:
+  systemd is not ready: systemd state "starting"` kaydını düşürüyor. Tek
+  atımlık: bir koşuda günlük evresinde kaldı ve istek dört dakika kiralı
+  kaldı; systemd çoktan `running` olmuştu, on beş saniyede bir bakıldı, hiç
+  yeniden denenmedi.
+- Etki: `/api/v1/host-mutation-readiness` `HOST_MUTATION_BUSY` diyor; yani
+  yalnız yarım kalan işlem değil, **her** işlem reddediliyor - DNS, güvenlik
+  duvarı, siteler, güncellemeler. Panelin kendi açılış kurtarması da tutulan
+  defterde pes ediyor ve tutulduğu sürece `reconcile` `{"reconciled":false}`
+  diyor. Agent'ı bir kez yeniden başlatmak doğru şekilde tamamlıyor ya da geri
+  alıyor ve her şeyi serbest bırakıyor; yani kurtarmanın *kararı* doğru,
+  sadece o kararı verme fırsatı hiç doğmuyor. Bu, sıradan bir elektrik
+  kesintisinden ulaşılan R-019 ailesi - ki bu kurtarmanın var olma sebebi tam
+  da o durumdur.
+- Gerekeni, iki parça, ikisi de "ne" değil "ne zaman" ile ilgili:
+  1. Kurtarma, "sunucu hâlâ açılıyor"u *hayır* değil *henüz değil* saymalı.
+     Ya birim, açılış işleminden sonraya sıralanmalı ya da - her dağıtımda
+     birim sıralamasının doğru olmasına bağlı olmadığı için daha iyisi -
+     karar vermeden önce sunucu profili yoklaması sınırlı bir takvimle
+     yeniden denenmeli; geçici yoklama hatası yeniden denenir, kalıcı olanı
+     R-046'nın uzlaştırmasının artık yaptığı gibi planı temizce düşürür.
+  2. Hiçbir açılış, defteri tutan ve onu bırakacak kimsesi kalmamış hâlde
+     bitmemeli. Kurtarma penceresi içinde karara varamıyorsa, isteği süreci
+     artık var olmayan bir işleme kiralı bırakmak yerine defteri kalıcı bir
+     sebeple serbest bırakmalı ve bunu bildirmeli. Açılıştan sonra ölü bir
+     süreç kimliğinin tuttuğu kira, yapısı gereği canlı değildir.
+- İki parça da kurtarmanın kararını değiştirmiyor: aynı üç elektrik kesintisi,
+  bir kez koştuğunda kararın zaten doğru olduğunu kanıtladı.
+- Çıkış ölçütü: işlem ortasında elektriği kesilen makine, işlem tamamlanmış ya
+  da düşmüş ve sunucu işlem yapabilir hâlde geri geliyor; kimse dokunmadan.
+  Gerçek VM'de, birden fazla sınırda kanıtlı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
