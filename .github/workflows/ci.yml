@@ -125,11 +125,17 @@ jobs:
           - shard: A through C, exact and non-uppercase
             pattern: '^Test($|[A-C]|[^A-Z])'
             skip: ''
-          - shard: D, except the DNS engine and zone tests
+          - shard: D, except every DNS test
             pattern: '^TestD'
+            skip: '^TestDNS'
+          - shard: DNS, except the engine and zone tests
+            pattern: '^TestDNS'
             skip: '^TestDNS(Engine|Zone)'
-          - shard: DNS engine and zone
-            pattern: '^TestDNS(Engine|Zone)'
+          - shard: DNS engine
+            pattern: '^TestDNSEngine'
+            skip: ''
+          - shard: DNS zone
+            pattern: '^TestDNSZone'
             skip: ''
           - shard: E through K
             pattern: '^Test[E-K]'
