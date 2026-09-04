@@ -87,7 +87,8 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-046 | Kritik | DÜZELTİLDİ VE KİLİTLEDİĞİ SUNUCUDA CANLI KANITLANDI | Düşen posta TLS adımı işlem defterini zehirliyor ve zehir agent yeniden başlatılınca da geçmiyor: açılış kurtarması aynı planı yeniden deniyor, aynı denetimde düşüyor ve sunucu her işlemi reddediyor, çıkış yolu yok |
 | R-047 | Düşük | DÜZELTİLDİ VE CANLI KANITLANDI / R-049'U DA O BULDU | Tarayıcının görüp testlerin görmediği üç kusur: onay düğmeleri ekranın altında kalan bir pencere, 390px'te taşan bir seçim denetimi ve açık bir UDP portu varken yok diyen güvenlik duvarı durumu |
 | R-048 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE ELEKTRİK KESİLEREK KANITLANDI | Elektrik kesintisinden sonra agent, sunucu hazır olmadan başlıyor, kurtarmasını yapamıyor ve bir daha denemiyor; yarım kalan işlem defteri tutuyor ve biri agent'ı elle yeniden başlatana kadar her işlem reddediliyor |
-| R-049 | Yüksek | TARAYICI TURUNDA BULUNDU / YARISI DÜZELTİLDİ | Engellenmiş her önizleme tarayıcıda null'a çözülüyordu; yani devralma için yazılan retler paneli kullanan hiç kimseye görünmüyordu. Ayrıca çalışan devralmanın DNS ekranında hiç yolu yok |
+| R-049 | Yüksek | DÜZELTİLDİ VE TARAYICIDA UÇTAN UCA KANITLANDI | Engellenmiş her önizleme tarayıcıda null'a çözülüyordu; yani devralma için yazılan retler paneli kullanan hiç kimseye görünmüyordu. Ayrıca çalışan devralmanın DNS ekranında hiç yolu yok |
+| R-050 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin kurduğu bir DNS motoru, agent işlemleri tutarken "yönetilmiyor" okunuyor; bu yüzden hem API hem ekran, panelin kendi yarım kalmış kurulumunu devralmayı öneriyor |
 
 ## Ayrıntılı riskler
 
@@ -1952,6 +1953,53 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   ekrana dokunan her değişiklik, bitti denmeden önce iki genişlikte de görülür.
 - Çıkış ölçütü: operatör, çalışan ve yönetilmeyen bir DNS sunucusunu, API'ye
   dokunmadan, tarayıcıda DNS altyapı ekranından devralıyor.
+- 4 Eylül 2026'da düzeltildi. Sebep, "yönetilmiyor" durumunun tamamını
+  sahiplenip elle kurtarmaya eşleyen tek bir daldı; o da bütün eylemleri
+  kilitliyor. Devralmanın tamamı o tek `return`'ün arkasındaydı. Durmuş hâl
+  ona tesadüfen yakalanmamıştı: hiçbir şeyi çalışmayan sunucu "yönetilmiyor"
+  değil "yapılandırılmamış" olarak görünüyor. Tek kelime, iki ayrı yol.
+- Çalışan hâl artık aynı yolu kullanıyor; elle kurtarmadan, panelin kendi
+  devralınabilirlik ölçütünü yükün zaten taşıdığı olgular üzerinde yansıtan
+  bir yüklemle dışlanıyor. Yeni akış yok, ikinci pencere yok, ikinci onay yok,
+  yeni alan yok. Elle kurtarma, gerçekten insan gerektiren durumları
+  koruyor. View'lı ya da okunamayan yapılandırmalı bir sunucu anlık görüntüde
+  görünmez; bu yüzden yolu kullanır ve önizlemede adıyla reddedilir - o ret
+  oraya yazılmıştı ve R-047 onu görünür kılmıştı.
+- Tarayıcıda, iki genişlikte ve iki dilde, uçtan uca kanıtlandı:
+  düzeltilmemiş ekran, üzerinde hiçbir denetim olmayan bir "yönetilmiyor"
+  rozeti gösteriyor; düzeltilmiş olan incelemeyi sunuyor, bu sunucunun kendi
+  yönergelerini recursion "değişmiyor" ve allow-transfer "değişiyor" olarak
+  gösteriyor, onayla birlikte commit'i etkinleştiriyor ve 13 saniyede
+  tamamlıyor - **sunucunun kendi bölgesine 596 sorgu sıfır kez yanıtsız**,
+  ana süreç kimliği değişmemiş, yeniden başlatma değil yeniden yükleme ve
+  hiçbir şey kurulmamış. Engellenen hâl de adıyla reddini aynı ekrandan
+  gösteriyor.
+- Bilerek bulunduğu gibi bırakıldı: bu yoldaki kimlik paneli, devralma bir
+  benimseme olduğu hâlde hâlâ "kurulum" diyor. Bu, durmuş hâlin zaten
+  gönderdiği metin; düzeltmesi bu kayda değil, iki hâle birden aittir.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-050 - Panel, kendi bitmemiş işini devralmayı önerir
+
+- Kanıt: 4 Eylül 2026, çalışan devralmaya yolunu verirken, canlıda değil
+  koddan bulundu. Panelin kurduğu bir BIND, agent işlemleri tutarken
+  `managed: false` ve `detail_code: "mutations_held"` bildiriyor. Bu biçim,
+  hem API'de hem ekranda devralınabilirlik ölçütünü sağlıyor; yani ürün, zaten
+  sahibi olduğu ve üzerinde çalıştığı bir sunucuyu devralmayı önerirdi.
+- Etki yıkıcı değil, sınırlı: agent'ın defteri tutulu olduğu için commit
+  reddedilirdi. Ama önerinin kendisi yanlış ve bu haftaki işin düzelttiği
+  yönde yanlış - panelin, sunucu hakkında olmayan bir şeyi iddia etmesi.
+  "Bu sunucuda CelikPanel'in kurmadığı bir DNS sunucusu çalışıyor" denen
+  operatöre, CelikPanel'in kurduğu bir sunucu için yanlış söylenmiş olur.
+- Simetrik olduğu için tek tarafta daraltılmadı: zaten gönderilmiş durmuş hâl
+  aynı boşluğu taşıyor, API de öyle. Yalnız ekranı düzeltmek ikisini
+  çelişkiye düşürürdü; bu, ikisinde birden duran dürüst bir boşluktan kötüdür.
+- Gerekeni: `mutations_held`, devralınabilirliğin karara bağlandığı her yerde
+  dışlanmalı - önce panelin yüklemi, sonra onu izleyen ekran - böylece tutulu
+  bir motor yabancının değil, panelin kendi meşgul motoru olarak okunur.
+- Çıkış ölçütü: panelin kurduğu motoru tutulu olan bir sunucuda ne API ne
+  ekran devralma önerir ve ekran, motorun panele ait ve şu an meşgul
+  olduğunu söyler.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
