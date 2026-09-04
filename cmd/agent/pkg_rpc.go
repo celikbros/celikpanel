@@ -50,7 +50,9 @@ func verifiedHostProfileForAnyFamily() (hostplatform.Profile, error) {
 	case hostplatform.PackageManagerAPT, hostplatform.PackageManagerDNF, hostplatform.PackageManagerPacman:
 		return profile, nil
 	default:
-		return hostplatform.Profile{}, fmt.Errorf("unsupported package manager %q", profile.PackageManager)
+		return hostplatform.Profile{}, hostplatform.MarkUnsupported(
+			fmt.Errorf("unsupported package manager %q", profile.PackageManager),
+		)
 	}
 }
 

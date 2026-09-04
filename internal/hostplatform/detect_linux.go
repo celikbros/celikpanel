@@ -52,11 +52,17 @@ func Detect() (Profile, error) {
 		DNFSecurityReady:    verifyDNFSecurityPolicy,
 		SystemdReady: func(systemctl string) error {
 			if err := validateRootOwnedPathChain("/run/systemd"); err != nil {
-				return err
+				// A machine that is still creating its runtime tree has not
+				// refused anything yet. The same absence on a host that never
+				// had systemd is caught a moment later, when is-system-running
+				// reports offline, and that answer is durable.
+				// Calisma zamani agacini henuz olusturan bir makine hicbir sey
+				// reddetmis degildir.
+				return earlyBootAbsence(err)
 			}
 			info, err := os.Lstat("/run/systemd/private")
 			if err != nil {
-				return err
+				return earlyBootAbsence(err)
 			}
 			if info.Mode()&os.ModeSocket == 0 {
 				return fmt.Errorf("/run/systemd/private is not a socket")
@@ -72,7 +78,15 @@ func Detect() (Profile, error) {
 			defer cancel()
 			out, err := exec.CommandContext(ctx, systemctl, "is-system-running").Output()
 			if ctx.Err() != nil {
-				return fmt.Errorf("systemd readiness probe timed out: %w", ctx.Err())
+				// A boot busy enough to starve this probe is the same "not yet"
+				// the starting state reports; a manager that never answers is
+				// caught by the caller's own bounded window rather than by
+				// declaring the host unmanageable on one slow read.
+				// Bu yoklamayi ac birakacak kadar mesgul bir acilis, starting
+				// durumunun bildirdigi "henuz degil" ile aynidir.
+				return stillStarting(
+					fmt.Errorf("systemd readiness probe timed out: %w", ctx.Err()),
+				)
 			}
 			status := 0
 			if err != nil {
@@ -97,9 +111,50 @@ func validateSystemdReadinessResult(out []byte, status int) error {
 		return nil
 	case status == 1 && state == "degraded":
 		return nil
+	case systemdStateIsATransition(state):
+		// R-048: at boot the agent can start before the boot transaction ends,
+		// and this refusal is what stopped the startup recovery from running at
+		// all. The states below are ones systemd is passing through, not states
+		// it settled in: what they mean is "ask again", never "this host cannot
+		// be managed". Nothing here is accepted as ready - only classified.
+		//
+		// R-048: acilista agent, acilis islemi bitmeden baslayabilir ve bu ret,
+		// baslangic kurtarmasinin hic calismamasinin sebebiydi. Asagidaki
+		// durumlar systemd'nin icinden gectigi durumlardir; anlamlari "tekrar
+		// sor"dur, "bu makine yonetilemez" degil. Burada hicbir sey hazir
+		// sayilmaz, yalnizca siniflandirilir.
+		return stillStarting(
+			fmt.Errorf("systemd state %q exited with status %d", state, status),
+		)
 	default:
 		return fmt.Errorf("systemd state %q exited with status %d", state, status)
 	}
+}
+
+// systemdStateIsATransition names the is-system-running states the manager
+// leaves on its own. initializing and starting are the boot transaction still
+// running; stopping is the machine going down, where the honest answer is also
+// "not now" - a shutdown must never be read as a broken host and must never
+// make a recovery abandon a plan the next boot can still finish.
+//
+// Every other state is settled: maintenance, offline and unknown describe a
+// host that will not become manageable by being asked again.
+//
+// systemdStateIsATransition, yoneticinin kendiliginden terk ettigi durumlari
+// adlandirir; digerleri yerlesmis durumlardir.
+func systemdStateIsATransition(state string) bool {
+	return state == "initializing" || state == "starting" || state == "stopping"
+}
+
+// earlyBootAbsence classifies a missing systemd runtime path. Only absence is
+// the boot condition; a path that exists but fails its ownership or type
+// contract is a host property and stays durable.
+// earlyBootAbsence yalnizca yoklugu acilis durumu sayar.
+func earlyBootAbsence(err error) error {
+	if errors.Is(err, os.ErrNotExist) {
+		return stillStarting(err)
+	}
+	return err
 }
 
 func verifyDNFSecurityPolicy(getenforce string) error {
