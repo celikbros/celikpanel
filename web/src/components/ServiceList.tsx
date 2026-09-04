@@ -1090,13 +1090,27 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     )}
                 </span>
                 {scannedAt && services.length > 0 && (
-                    <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-x-5 gap-y-2 sm:w-auto">
+                    // justify-end on a row that cannot fit pushes the overflow
+                    // off the LEFT edge, where nothing can reach it: at 390px
+                    // the two view buttons were clipped by the viewport rather
+                    // than wrapped (register R-047). The row is end-aligned only
+                    // once there is room to end-align it; below that it starts
+                    // at the left margin like everything else on the page, and
+                    // the view cluster wraps instead of overflowing.
+                    // justify-end, sığmayan bir satırda taşmayı SOL kenardan
+                    // dışarı iter; orada ona kimse ulaşamaz: 390px'te iki
+                    // görünüm düğmesi sarılmak yerine görünür alan tarafından
+                    // kırpılıyordu (defter R-047). Satır ancak sağa yaslanacak
+                    // yer varken sağa yaslanır; altında, sayfadaki her şey gibi
+                    // sol kenardan başlar ve görünüm kümesi taşmak yerine alt
+                    // satıra iner.
+                    <div className="ml-auto flex w-full flex-wrap items-center justify-start gap-x-5 gap-y-2 sm:w-auto sm:justify-end">
                         <div className="w-full sm:w-56">
                             <SearchInput value={query} onChange={setQuery} placeholder={t('services.search')} />
                         </div>
                         {/* View controls kept as one tight cluster, clearly
                             separated from the search by the larger gap-x-5. */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                             {/* Two named views instead of one checkbox: each
                                 says what it shows and how many, so "where do I
                                 install from?" is answered by reading, not by
@@ -2037,15 +2051,30 @@ function MailProfileInstallDialog({
             className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
             onClick={onCancel}
         >
+            {/* The plan is long enough that the whole dialogue used to scroll,
+                which put its confirm button below the fold at 1440x900 the
+                moment it opened: an operator who cannot see the action
+                concludes the dialogue is broken (register R-047). The plan
+                scrolls now; the decision does not. The acknowledgement stays
+                with the buttons it gates, so a disabled primary always has its
+                reason on the same line of sight.
+
+                Plan, tüm diyaloğun kaydırılmasına yol açacak kadar uzundu; bu
+                da 1440x900'de daha açılır açılmaz onay düğmesini görünür alanın
+                altında bırakıyordu: eylemi göremeyen bir operatör diyaloğun
+                bozuk olduğuna karar verir (defter R-047). Artık plan kayar,
+                karar kaymaz. Onay kutusu, kilitlediği düğmelerle birlikte
+                kalır; böylece devre dışı bir birincil düğmenin sebebi hep aynı
+                bakışın içindedir. */}
             <div
                 role='dialog'
                 aria-modal='true'
                 aria-labelledby='mail-profile-confirm-title'
                 aria-describedby='mail-profile-confirm-description'
-                className='max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-xl'
+                className='flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-surface shadow-xl'
                 onClick={(event) => event.stopPropagation()}
             >
-                <div className='mb-5'>
+                <div className='shrink-0 border-b border-border px-6 pb-4 pt-6'>
                     <h3 id='mail-profile-confirm-title' className='text-lg font-semibold text-fg'>
                         {t(`services.mailProfiles.plan.title.${mode}` as Parameters<typeof t>[0], { name: profile.name })}
                     </h3>
@@ -2054,146 +2083,150 @@ function MailProfileInstallDialog({
                     </p>
                 </div>
 
-                <div className='mb-4 overflow-hidden rounded-xl border border-border'>
-                    <div className='grid grid-cols-[minmax(0,1fr)_auto] gap-3 bg-surface-2 px-4 py-2 text-xs font-semibold text-fg-subtle'>
-                        <span>{t('services.mailProfiles.plan.component')}</span>
-                        <span>{t('services.mailProfiles.plan.version')}</span>
-                    </div>
-                    {components.map((service) => (
-                        <div key={service.id} className='grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-t border-border px-4 py-3'>
-                            <div className='min-w-0'>
-                                <p className='text-sm font-medium text-fg'>{service.name}</p>
-                                <p className='break-words font-mono text-xs text-fg-subtle'>{componentPackages(service)}</p>
-                            </div>
-                            <span className='max-w-52 text-right font-mono text-xs font-medium text-fg'>
-                                {componentVersion(service)}
-                            </span>
+                <div className='min-h-0 flex-1 overflow-y-auto px-6 py-5'>
+                    <div className='mb-4 overflow-hidden rounded-xl border border-border'>
+                        <div className='grid grid-cols-[minmax(0,1fr)_auto] gap-3 bg-surface-2 px-4 py-2 text-xs font-semibold text-fg-subtle'>
+                            <span>{t('services.mailProfiles.plan.component')}</span>
+                            <span>{t('services.mailProfiles.plan.version')}</span>
                         </div>
-                    ))}
-                </div>
-
-                <div className='mb-4 grid gap-3 sm:grid-cols-2'>
-                    <div className='rounded-lg border border-border bg-surface-2/50 p-3'>
-                        <p className='text-xs font-semibold text-fg'>{t('services.mailProfiles.plan.serviceImpact')}</p>
-                        <p className='mt-1 text-xs leading-5 text-fg-muted'>
-                            {restarted.length > 0
-                                ? t('services.mailProfiles.plan.restarts', { services: restarted.join(', ') })
-                                : t('services.mailProfiles.plan.noRestarts')}
-                        </p>
+                        {components.map((service) => (
+                            <div key={service.id} className='grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-t border-border px-4 py-3'>
+                                <div className='min-w-0'>
+                                    <p className='text-sm font-medium text-fg'>{service.name}</p>
+                                    <p className='break-words font-mono text-xs text-fg-subtle'>{componentPackages(service)}</p>
+                                </div>
+                                <span className='max-w-52 text-right font-mono text-xs font-medium text-fg'>
+                                    {componentVersion(service)}
+                                </span>
+                            </div>
+                        ))}
                     </div>
-                    <div className='rounded-lg border border-border bg-surface-2/50 p-3'>
-                        <p className='text-xs font-semibold text-fg'>{t('services.mailProfiles.plan.firewallImpact')}</p>
-                        <p className='mt-1 text-xs leading-5 text-fg-muted'>
-                            {ports.length > 0
-                                ? t('services.mailProfiles.plan.ports', { ports: ports.join(', ') })
-                                : t('services.mailProfiles.plan.noPorts')}
-                        </p>
-                    </div>
-                </div>
 
-                <div className='mb-4 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs leading-5 text-fg-muted'>
-                    <p>{t('services.mailProfiles.plan.tls')}</p>
-                    <p className='mt-1'>{t('services.mailProfiles.plan.partialProgress')}</p>
-                </div>
-
-                <section className='mb-4 rounded-lg border border-border p-3'>
-                    <p className='text-xs font-semibold text-fg'>
-                        {t('services.mailProfiles.hostname.title')}
-                    </p>
-                    {hostnameSettled ? (
-                        <p className='mt-1 text-xs leading-5 text-fg-muted'>
-                            {t('services.mailProfiles.hostname.settled', {
-                                hostname: mailHostname?.hostname ?? '',
-                            })}
-                        </p>
-                    ) : (
-                        <>
-                            <p id='mail-profile-hostname-hint' className='mt-1 text-xs leading-5 text-fg-muted'>
-                                {mailHostname?.current
-                                    ? t('services.mailProfiles.hostname.hint', {
-                                        current: mailHostname.current,
-                                    })
-                                    : t('services.mailProfiles.hostname.hintUnnamed')}
+                    <div className='mb-4 grid gap-3 sm:grid-cols-2'>
+                        <div className='rounded-lg border border-border bg-surface-2/50 p-3'>
+                            <p className='text-xs font-semibold text-fg'>{t('services.mailProfiles.plan.serviceImpact')}</p>
+                            <p className='mt-1 text-xs leading-5 text-fg-muted'>
+                                {restarted.length > 0
+                                    ? t('services.mailProfiles.plan.restarts', { services: restarted.join(', ') })
+                                    : t('services.mailProfiles.plan.noRestarts')}
                             </p>
-                            <label
-                                htmlFor='mail-profile-hostname'
-                                className='mt-3 block text-xs font-medium text-fg-muted'
-                            >
-                                {t('services.mailProfiles.hostname.label')}
-                            </label>
-                            <input
-                                id='mail-profile-hostname'
-                                ref={hostnameInputRef}
-                                type='text'
-                                inputMode='url'
-                                autoComplete='off'
-                                spellCheck={false}
-                                value={hostnameDraft}
-                                placeholder={t('services.mailProfiles.hostname.placeholder')}
-                                aria-describedby='mail-profile-hostname-hint mail-profile-hostname-note'
-                                aria-invalid={hostnameInvalid || undefined}
-                                onChange={(event) => {
-                                    setHostnameDraft(event.target.value);
-                                    setHostnameTouched(true);
-                                }}
-                                className={`mt-1 w-full rounded-lg border bg-surface px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-                                    hostnameInvalid && hostnameTouched
-                                        ? 'border-danger focus:border-danger'
-                                        : 'border-border-strong focus:border-primary'
-                                }`}
-                            />
-                            <p
-                                id='mail-profile-hostname-note'
-                                className={`mt-1 text-xs leading-5 ${
-                                    hostnameInvalid && hostnameTouched ? 'text-danger' : 'text-fg-muted'
-                                }`}
-                            >
-                                {hostnameInvalid && hostnameTouched
-                                    ? t('services.mailProfiles.hostname.invalid')
-                                    : canonicalHostname
-                                        ? t('services.mailProfiles.hostname.rename', {
-                                            hostname: canonicalHostname,
+                        </div>
+                        <div className='rounded-lg border border-border bg-surface-2/50 p-3'>
+                            <p className='text-xs font-semibold text-fg'>{t('services.mailProfiles.plan.firewallImpact')}</p>
+                            <p className='mt-1 text-xs leading-5 text-fg-muted'>
+                                {ports.length > 0
+                                    ? t('services.mailProfiles.plan.ports', { ports: ports.join(', ') })
+                                    : t('services.mailProfiles.plan.noPorts')}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className='mb-4 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs leading-5 text-fg-muted'>
+                        <p>{t('services.mailProfiles.plan.tls')}</p>
+                        <p className='mt-1'>{t('services.mailProfiles.plan.partialProgress')}</p>
+                    </div>
+
+                    <section className='mb-4 rounded-lg border border-border p-3'>
+                        <p className='text-xs font-semibold text-fg'>
+                            {t('services.mailProfiles.hostname.title')}
+                        </p>
+                        {hostnameSettled ? (
+                            <p className='mt-1 text-xs leading-5 text-fg-muted'>
+                                {t('services.mailProfiles.hostname.settled', {
+                                    hostname: mailHostname?.hostname ?? '',
+                                })}
+                            </p>
+                        ) : (
+                            <>
+                                <p id='mail-profile-hostname-hint' className='mt-1 text-xs leading-5 text-fg-muted'>
+                                    {mailHostname?.current
+                                        ? t('services.mailProfiles.hostname.hint', {
+                                            current: mailHostname.current,
                                         })
-                                        : t('services.mailProfiles.hostname.invalid')}
-                            </p>
-                            {suggestionSource && canonicalHostname === mailHostname?.hostname && (
-                                // fg-subtle is the placeholder colour and carries no
-                                // meaning; where the name came from is information.
-                                // fg-subtle yer tutucu rengidir ve bir anlam taşımaz;
-                                // adın nereden geldiği ise bilgidir.
-                                <p className='mt-1 text-xs leading-5 text-fg-muted'>
-                                    {t(`services.mailProfiles.hostname.source.${suggestionSource}` as Parameters<typeof t>[0])}
+                                        : t('services.mailProfiles.hostname.hintUnnamed')}
                                 </p>
-                            )}
-                        </>
-                    )}
-                </section>
+                                <label
+                                    htmlFor='mail-profile-hostname'
+                                    className='mt-3 block text-xs font-medium text-fg-muted'
+                                >
+                                    {t('services.mailProfiles.hostname.label')}
+                                </label>
+                                <input
+                                    id='mail-profile-hostname'
+                                    ref={hostnameInputRef}
+                                    type='text'
+                                    inputMode='url'
+                                    autoComplete='off'
+                                    spellCheck={false}
+                                    value={hostnameDraft}
+                                    placeholder={t('services.mailProfiles.hostname.placeholder')}
+                                    aria-describedby='mail-profile-hostname-hint mail-profile-hostname-note'
+                                    aria-invalid={hostnameInvalid || undefined}
+                                    onChange={(event) => {
+                                        setHostnameDraft(event.target.value);
+                                        setHostnameTouched(true);
+                                    }}
+                                    className={`mt-1 w-full rounded-lg border bg-surface px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                                        hostnameInvalid && hostnameTouched
+                                            ? 'border-danger focus:border-danger'
+                                            : 'border-border-strong focus:border-primary'
+                                    }`}
+                                />
+                                <p
+                                    id='mail-profile-hostname-note'
+                                    className={`mt-1 text-xs leading-5 ${
+                                        hostnameInvalid && hostnameTouched ? 'text-danger' : 'text-fg-muted'
+                                    }`}
+                                >
+                                    {hostnameInvalid && hostnameTouched
+                                        ? t('services.mailProfiles.hostname.invalid')
+                                        : canonicalHostname
+                                            ? t('services.mailProfiles.hostname.rename', {
+                                                hostname: canonicalHostname,
+                                            })
+                                            : t('services.mailProfiles.hostname.invalid')}
+                                </p>
+                                {suggestionSource && canonicalHostname === mailHostname?.hostname && (
+                                    // fg-subtle is the placeholder colour and carries no
+                                    // meaning; where the name came from is information.
+                                    // fg-subtle yer tutucu rengidir ve bir anlam taşımaz;
+                                    // adın nereden geldiği ise bilgidir.
+                                    <p className='mt-1 text-xs leading-5 text-fg-muted'>
+                                        {t(`services.mailProfiles.hostname.source.${suggestionSource}` as Parameters<typeof t>[0])}
+                                    </p>
+                                )}
+                            </>
+                        )}
+                    </section>
+                </div>
 
-                <label className='mb-5 flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3'>
-                    <input
-                        ref={acknowledgementRef}
-                        type='checkbox'
-                        checked={acknowledged}
-                        onChange={(event) => setAcknowledged(event.target.checked)}
-                        className='mt-0.5 h-4 w-4 rounded border-border-strong text-primary'
-                    />
-                    <span className='text-sm leading-5 text-fg'>
-                        {t('services.mailProfiles.plan.acknowledgement')}
-                    </span>
-                </label>
+                <div className='shrink-0 border-t border-border px-6 pb-6 pt-4'>
+                    <label className='flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3'>
+                        <input
+                            ref={acknowledgementRef}
+                            type='checkbox'
+                            checked={acknowledged}
+                            onChange={(event) => setAcknowledged(event.target.checked)}
+                            className='mt-0.5 h-4 w-4 rounded-md border-border-strong text-primary'
+                        />
+                        <span className='text-sm leading-5 text-fg'>
+                            {t('services.mailProfiles.plan.acknowledgement')}
+                        </span>
+                    </label>
 
-                <div className='flex justify-end gap-2'>
-                    <Button variant='secondary' onClick={onCancel}>
-                        {t('common.cancel')}
-                    </Button>
-                    <Button
-                        variant='primary'
-                        icon={mode === 'install' ? DownloadCloud : RotateCw}
-                        disabled={!acknowledged || !hostnameReady}
-                        onClick={() => onConfirm(hostnameSettled ? '' : canonicalHostname ?? '')}
-                    >
-                        {t(`services.mailProfiles.plan.confirm.${mode}` as Parameters<typeof t>[0], { name: profile.name })}
-                    </Button>
+                    <div className='mt-4 flex justify-end gap-2'>
+                        <Button variant='secondary' onClick={onCancel}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button
+                            variant='primary'
+                            icon={mode === 'install' ? DownloadCloud : RotateCw}
+                            disabled={!acknowledged || !hostnameReady}
+                            onClick={() => onConfirm(hostnameSettled ? '' : canonicalHostname ?? '')}
+                        >
+                            {t(`services.mailProfiles.plan.confirm.${mode}` as Parameters<typeof t>[0], { name: profile.name })}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

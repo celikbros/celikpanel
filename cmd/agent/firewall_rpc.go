@@ -1533,21 +1533,74 @@ func prepareFirewallRestoreBatch(runner firewallCommandRunner, store firewallSta
 	return batch.String(), true, nil
 }
 
+// parsePortLine reads the ports an nft rule admits. nft renders a set of two or
+// more ports braced - `udp dport { 53, 953 } accept` - and a set of exactly one
+// without the braces: `udp dport 53 accept`. Reading only the braced form made
+// the status report `udp_ports: null` on a server with a single UDP port open,
+// while the applied policy was correct: the firewall did the right thing and
+// the panel said it had not. A report that contradicts the machine is the class
+// R-040 exists to keep out of this product, so both forms are read here and
+// both are pinned by a test (register R-047).
+//
+// parsePortLine, bir nft kuralının kabul ettiği portları okur. nft, iki ya da
+// daha çok porttan oluşan bir kümeyi süslü parantezle yazar - `udp dport
+// { 53, 953 } accept` - ve tam olarak bir portluk bir kümeyi parantezsiz:
+// `udp dport 53 accept`. Yalnız parantezli biçimi okumak, tek bir UDP portu açık
+// olan bir sunucuda durumun `udp_ports: null` demesine yol açıyordu; oysa
+// uygulanan politika doğruydu: güvenlik duvarı doğru olanı yapıyor, panel
+// yapmadığını söylüyordu. Makineyle çelişen bir bildirim, R-040'ın bu üründen
+// uzak tutmak için var olduğu sınıftır; bu yüzden iki biçim de burada okunur ve
+// ikisi de bir testle sabitlenir (defter R-047).
 func parsePortLine(line, prefix string) ([]int, bool) {
 	if !strings.HasPrefix(line, prefix) {
 		return nil, false
 	}
-	open, close := strings.IndexByte(line, '{'), strings.IndexByte(line, '}')
-	if open < 0 || close < 0 || close < open {
+	rest := line[len(prefix):]
+	// `udp dports` and `udp dport` are different rules; a prefix match alone
+	// would read the first as the second.
+	//
+	// `udp dports` ile `udp dport` ayrı kurallardır; yalnız önek eşleşmesi
+	// birincisini ikincisi diye okurdu.
+	if rest == "" || (rest[0] != ' ' && rest[0] != '	') {
 		return nil, false
 	}
+	rest = strings.TrimLeft(rest, " 	")
+	if strings.HasPrefix(rest, "{") {
+		closing := strings.IndexByte(rest, '}')
+		if closing < 0 {
+			return nil, false
+		}
+		return parseFirewallPortSet(rest[1:closing]), true
+	}
+	// The unbraced form carries exactly one port. Anything else in that
+	// position - a range, a negation, a named set - is not a port list this
+	// reader can claim to understand, and it says so by not answering rather
+	// than by answering nothing, which would erase a real rule read earlier.
+	//
+	// Parantezsiz biçim tam olarak bir port taşır. O konumdaki başka bir şey -
+	// bir aralık, bir olumsuzlama, adlandırılmış bir küme - bu okuyucunun
+	// anladığını iddia edebileceği bir port listesi değildir; bunu, daha önce
+	// okunmuş gerçek bir kuralı silecek olan "hiç" cevabını vermek yerine hiç
+	// cevap vermeyerek söyler.
+	field := rest
+	if cut := strings.IndexAny(field, " 	"); cut >= 0 {
+		field = field[:cut]
+	}
+	port, err := strconv.Atoi(field)
+	if err != nil {
+		return nil, false
+	}
+	return []int{port}, true
+}
+
+func parseFirewallPortSet(body string) []int {
 	var ports []int
-	for _, tok := range strings.Split(line[open+1:close], ",") {
-		if n, err := strconv.Atoi(strings.TrimSpace(tok)); err == nil {
-			ports = append(ports, n)
+	for _, token := range strings.Split(body, ",") {
+		if port, err := strconv.Atoi(strings.TrimSpace(token)); err == nil {
+			ports = append(ports, port)
 		}
 	}
-	return ports, true
+	return ports
 }
 
 func joinInts(ns []int) string {

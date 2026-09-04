@@ -977,3 +977,75 @@ func TestFirewallRestoreUnitHasBootOrderingAndReadOnlyPreflight(t *testing.T) {
 		t.Fatal("restore unit still has a queue JobTimeoutSec")
 	}
 }
+
+// nft renders a one-port set without braces, and the status parser only read
+// the braced form: a server with a single UDP port open reported no UDP port at
+// all, while the policy it had applied was correct (register R-047). Both
+// renderings are pinned here, because the defect was never that the firewall
+// was wrong - it was that the report was.
+//
+// nft, tek portluk bir kümeyi süslü parantezsiz yazar ve durum çözümleyicisi
+// yalnız parantezli biçimi okuyordu: tek bir UDP portu açık olan bir sunucu hiç
+// UDP portu yokmuş gibi bildiriliyordu; oysa uyguladığı politika doğruydu
+// (defter R-047). İki yazım da burada sabitlenir; çünkü kusur hiçbir zaman
+// güvenlik duvarının yanlış olması değildi - bildirimin yanlış olmasıydı.
+func TestFirewallStatusReportsASinglePortRuleNftRendersWithoutBraces(t *testing.T) {
+	firewallLastRestoreError = ""
+	single := "table inet " + fwTable + " {\n" +
+		"\tchain input {\n" +
+		"\t\ttype filter hook input priority filter; policy drop;\n" +
+		"\t\tiif \"lo\" accept\n" +
+		"\t\tct state established,related accept\n" +
+		"\t\ttcp dport 22 accept\n" +
+		"\t\tudp dport 53 accept\n" +
+		"\t}\n}\n"
+	runner := &fakeFirewallCommandRunner{tablePresent: true, oldPolicy: single}
+	var resp FirewallStatusResponse
+	if err := firewallStatusWithRunnerAndStore(runner, &fakeFirewallStateStore{}, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.UDPPorts) != 1 || resp.UDPPorts[0] != 53 {
+		t.Fatalf("udp_ports = %v, want the one open UDP port [53]", resp.UDPPorts)
+	}
+	if len(resp.TCPPorts) != 1 || resp.TCPPorts[0] != 22 {
+		t.Fatalf("tcp_ports = %v, want [22]", resp.TCPPorts)
+	}
+
+	braced := &fakeFirewallCommandRunner{
+		tablePresent: true,
+		oldPolicy:    buildFirewallRuleset(false, []int{22, 443}, []int{53, 953}),
+	}
+	var bracedResp FirewallStatusResponse
+	if err := firewallStatusWithRunnerAndStore(braced, &fakeFirewallStateStore{}, &bracedResp); err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprint(bracedResp.UDPPorts) != "[53 953]" ||
+		fmt.Sprint(bracedResp.TCPPorts) != "[22 443]" {
+		t.Fatalf("braced status = %+v, want both braced sets read", bracedResp)
+	}
+}
+
+// A rule this reader cannot claim to understand must not answer "no ports": an
+// empty answer would erase a real rule read from an earlier line, which is the
+// same lie in the other direction.
+//
+// Bu okuyucunun anladığını iddia edemeyeceği bir kural "port yok" diye
+// cevaplamamalıdır: boş bir cevap, daha önceki bir satırdan okunmuş gerçek bir
+// kuralı silerdi; bu da aynı yalanın diğer yönüdür.
+func TestParsePortLineRefusesWhatItCannotRead(t *testing.T) {
+	for _, line := range []string{
+		"udp dports 53 accept",
+		"udp dport != 53 accept",
+		"udp dport @allowed accept",
+		"udp dport 53-60 accept",
+		"udp dport",
+	} {
+		if ports, ok := parsePortLine(line, "udp dport"); ok {
+			t.Fatalf("%q parsed as %v, want a refusal to answer", line, ports)
+		}
+	}
+	if ports, ok := parsePortLine("udp dport\t53 accept", "udp dport"); !ok ||
+		len(ports) != 1 || ports[0] != 53 {
+		t.Fatalf("tab-separated rule parsed as %v (%v), want [53]", ports, ok)
+	}
+}

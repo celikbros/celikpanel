@@ -229,6 +229,19 @@ type DNSBackendRuntimeState struct {
 	// yönettiği bir motor için ve devralınacak bir şey olmayan bir motor için
 	// boştur.
 	ForeignOptions []DNSForeignEngineOption `json:"foreign_options,omitempty"`
+	// ForeignViews says whether this server's own BIND configuration declares
+	// views, and where the first one is written - or that a file it includes
+	// could not be read, which is the same answer for the operator: CelikPanel
+	// will not take over a configuration it cannot read completely. It is nil
+	// when the configuration was read whole and declares none (register R-044).
+	//
+	// ForeignViews, bu sunucunun kendi BIND yapılandırmasının view bildirip
+	// bildirmediğini ve ilkinin nerede yazılı olduğunu söyler - ya da dahil
+	// ettiği bir dosyanın okunamadığını; ki operatör için bu aynı cevaptır:
+	// CelikPanel, bütünüyle okuyamadığı bir yapılandırmayı devralmaz.
+	// Yapılandırma bütünüyle okundu ve hiçbir view bildirmiyorsa nil'dir
+	// (defter R-044).
+	ForeignViews *DNSForeignEngineViews `json:"foreign_views,omitempty"`
 }
 
 // The vocabulary of a takeover's difference list. The agent reads these
@@ -292,6 +305,66 @@ type DNSForeignEngineOption struct {
 	File        string `json:"file"`
 	Line        int    `json:"line"`
 	Refusal     string `json:"refusal,omitempty"`
+}
+
+// What a takeover found out about this server's view configuration
+// (register R-044).
+//
+// BIND lets the same directives CelikPanel manages live inside a `view`, where
+// they take precedence over the options block, and it requires every zone to
+// sit inside a view once any view exists. A takeover that read only the options
+// block would therefore report a recursion setting it does not actually
+// control, and would have its generated zones refused at the very last moment,
+// by the configuration check, after the work. Neither is honest. So the host
+// looks for views before the preview exists, and a server that has them is
+// refused by name, on the screen the operator is standing on.
+//
+// Bir devralmanın bu sunucunun view yapılandırması hakkında öğrendiği
+// (defter R-044).
+//
+// BIND, CelikPanel'in yönettiği direktiflerin bir `view` içinde yaşamasına izin
+// verir; orada seçeneklere üstün gelirler ve bir view var olduğu anda her
+// bölgenin bir view içinde olmasını şart koşar. Yalnız seçenek bloğunu okuyan
+// bir devralma bu yüzden gerçekte denetlemediği bir recursion ayarını bildirir
+// ve ürettiği bölgeler en son anda, yapılandırma denetiminde, iş bittikten
+// sonra reddedilir. İkisi de dürüst değildir. Bu yüzden sunucu, daha önizleme
+// yokken view arar ve view'i olan bir sunucu, operatörün üzerinde durduğu
+// ekranda adıyla reddedilir.
+const (
+	// DNSForeignViewDeclared: the configuration declares at least one view.
+	DNSForeignViewDeclared = "declared"
+	// DNSForeignViewUnreadable: a file the configuration includes could not be
+	// read or followed, so the absence of views cannot be proved.
+	DNSForeignViewUnreadable = "unreadable"
+)
+
+// DNSForeignViewFindings is every view finding the agent can report. It is a
+// pinned list for the reason DNSForeignOptionRefusals is: the browser has copy
+// for each one in both locales, and a contract test fails the build when the
+// two drift (the lesson of R-041).
+//
+// DNSForeignViewFindings, agent'ın bildirebileceği her view bulgusudur.
+// DNSForeignOptionRefusals ile aynı sebeple sabitlenmiş bir listedir:
+// tarayıcının her biri için iki dilde metni vardır ve ikisi ayrıldığında bir
+// sözleşme testi derlemeyi düşürür (R-041'in dersi).
+var DNSForeignViewFindings = []string{
+	DNSForeignViewDeclared,
+	DNSForeignViewUnreadable,
+}
+
+// DNSForeignEngineViews is where to look. For a declared view it is the file
+// and line of the `view` keyword itself; for an unreadable one it is the file
+// and line of the `include` statement CelikPanel could not follow, because that
+// is the statement the operator has to act on.
+//
+// DNSForeignEngineViews, nereye bakılacağıdır. Bildirilmiş bir view için
+// `view` sözcüğünün dosyası ve satırı; okunamayan biri için CelikPanel'in
+// izleyemediği `include` deyiminin dosyası ve satırıdır; çünkü operatörün
+// üzerinde işlem yapacağı deyim odur.
+type DNSForeignEngineViews struct {
+	Finding string `json:"finding"`
+	File    string `json:"file"`
+	Line    int    `json:"line"`
 }
 
 // MutationHold codes. Empty means the agent is accepting durable mutations.

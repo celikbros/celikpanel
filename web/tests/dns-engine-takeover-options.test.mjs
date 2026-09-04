@@ -146,7 +146,7 @@ test('a refused directive carries its reason and no value it could not read', as
   const { decodeDNSEngineSwitchPreview } = await loadContractRuntime();
   const refused = {
     ...takeoverPreview,
-    preview_token: 'd'.repeat(32),
+    preview_token: '',
     blockers: [{ code: 'dns_options_unadoptable' }],
     adopted_directives: [
       {
@@ -307,4 +307,177 @@ test('the takeover difference copy exists in both locales', () => {
     assert.match(refusal[1], /\{file\}/);
     assert.match(refusal[1], /\{line\}/);
   }
+});
+
+// A server configured with views cannot be taken over yet, and the browser has
+// to be able to say so - by name, with the file and the line, on the screen the
+// operator is standing on. A finding the page cannot describe takes the whole
+// preview to null instead, because "the change could not be verified" is the
+// R-041 failure and says nothing about a server that just described itself
+// perfectly well (register R-044).
+test('a view finding reaches the screen, and only in the shape the page can render', async () => {
+  const { decodeDNSEngineSwitchPreview } = await loadContractRuntime();
+  const viewed = {
+    ...takeoverPreview,
+    preview_token: '',
+    blockers: [{ code: 'dns_views_unadoptable' }],
+    adopted_directives: [],
+    view_finding: {
+      finding: 'declared',
+      file: '/etc/bind/named.conf.local',
+      line: 12,
+    },
+  };
+  const decoded = decodeDNSEngineSwitchPreview(viewed, null, 'bind', 0);
+  assert.ok(decoded, 'the view refusal did not decode');
+  assert.deepEqual(decoded.view_finding, {
+    finding: 'declared',
+    file: '/etc/bind/named.conf.local',
+    line: 12,
+  });
+
+  const absent = { ...takeoverPreview };
+  delete absent.view_finding;
+  assert.equal(decodeDNSEngineSwitchPreview(absent, null, 'bind', 0).view_finding, null);
+
+  for (const patch of [
+    { finding: 'probably' },
+    { file: 'named.conf.local' },
+    { line: 0 },
+    { line: 1.5 },
+  ]) {
+    assert.equal(
+      decodeDNSEngineSwitchPreview(
+        { ...viewed, view_finding: { ...viewed.view_finding, ...patch } },
+        null, 'bind', 0,
+      ),
+      null,
+      `${JSON.stringify(patch)} reached the screen`,
+    );
+  }
+
+  // Only a takeover reads somebody else's configuration.
+  assert.equal(
+    decodeDNSEngineSwitchPreview(
+      { ...viewed, action: 'install', requires_adoption_acknowledgement: false },
+      null, 'bind', 0,
+    ),
+    null,
+  );
+});
+
+test('every view finding the agent can report is renderable here', () => {
+  const goSource = readFileSync(
+    new URL('../../internal/transport/dns_contracts.go', import.meta.url),
+    'utf8',
+  );
+  const goConstants = new Map(
+    [...goSource.matchAll(/DNSForeignView([A-Za-z]+) = "([a-z_]+)"/g)]
+      .map((match) => [`DNSForeignView${match[1]}`, match[2]]),
+  );
+  const listMatch = goSource.match(
+    /var DNSForeignViewFindings = \[\]string\{([\s\S]*?)\}/,
+  );
+  assert.ok(listMatch, 'the view finding list is no longer pinned in Go');
+  const goFindings = [...listMatch[1].matchAll(/DNSForeignView[A-Za-z]+/g)]
+    .map((match) => {
+      const value = goConstants.get(match[0]);
+      assert.ok(value, `unresolved view finding constant ${match[0]}`);
+      return value;
+    });
+  const uiMatch = contract.match(
+    /export const DNS_FOREIGN_VIEW_FINDINGS = \[([\s\S]*?)\] as const;/,
+  );
+  assert.ok(uiMatch, 'DNS_FOREIGN_VIEW_FINDINGS is no longer a pinned UI list');
+  const uiFindings = [...uiMatch[1].matchAll(/'([a-z_]+)'/g)].map((entry) => entry[1]);
+  assert.ok(goFindings.length >= 2);
+  assert.deepEqual(uiFindings, goFindings);
+
+  // Each blocker code the panel can raise for this needs a key the card maps.
+  for (const code of ['dns_views_unadoptable', 'dns_config_unreadable']) {
+    const panelSource = readFileSync(
+      new URL('../../cmd/panel/dns_engine_adopt_views.go', import.meta.url),
+      'utf8',
+    );
+    assert.ok(panelSource.includes(`"${code}"`), `${code} is not the panel's code`);
+    assert.match(card, new RegExp(`${code}: 'dnsEngine\.blocker\.`));
+  }
+});
+
+test('the view refusal has words a person can act on, in both locales', () => {
+  for (const key of [
+    'dnsEngine.blocker.viewsUnadoptable',
+    'dnsEngine.blocker.configUnreadable',
+    'dnsEngine.adoption.viewsTitle',
+  ]) {
+    assert.equal(
+      copy.split(`'${key}'`).length - 1, 2,
+      `${key} is missing from one of the two locales`,
+    );
+  }
+  // The refusal itself has to name what the server is, that CelikPanel cannot
+  // manage it yet, and where to look. A sentence without the file and the line
+  // is the refusal that names nothing, which is the defect this work exists to
+  // avoid repeating.
+  const findings = [...copy.matchAll(/'dnsEngine\.adoption\.views\.([a-z_]+)': '([^']*)'/g)];
+  assert.equal(findings.length, 4, 'both findings must exist in both locales');
+  for (const finding of findings) {
+    assert.match(finding[2], /\{file\}/);
+    assert.match(finding[2], /\{line\}/);
+  }
+  for (const finding of ['declared', 'unreadable']) {
+    assert.equal(
+      copy.split(`'dnsEngine.adoption.views.${finding}'`).length - 1, 2,
+      `${finding} is missing from one of the two locales`,
+    );
+  }
+
+  // The refusal renders outside the takeover panel, which a blocker hides -
+  // the blocked panel is exactly where the operator needs to read it.
+  const viewsAt = card.indexOf('dnsEngine.adoption.viewsTitle');
+  const takeoverPanelAt = card.indexOf(
+    'preview.requires_adoption_acknowledgement && preview.blockers.length === 0',
+  );
+  assert.ok(viewsAt > 0 && takeoverPanelAt > 0);
+  assert.ok(
+    viewsAt < takeoverPanelAt,
+    'the view refusal must render outside the panel a blocker hides',
+  );
+});
+
+// The panel hands out no token for a blocked preview, on purpose: a token it
+// would never accept sends the operator looking for a race that never happened.
+// This page used to demand one anyway, so every blocked preview decoded to null
+// and the dialog said only that the change could not be verified - hiding the
+// named blocker the panel had just produced. Found in the browser, on a real
+// server, on the R-044 refusal; it had been hiding R-042's refusal too.
+test('a blocked preview reaches the screen without a token, and only without one', async () => {
+  const { decodeDNSEngineSwitchPreview } = await loadContractRuntime();
+  const blocked = {
+    ...takeoverPreview,
+    preview_token: '',
+    blockers: [{ code: 'dns_options_unadoptable' }],
+    adopted_directives: [],
+  };
+  const decoded = decodeDNSEngineSwitchPreview(blocked, null, 'bind', 0);
+  assert.ok(decoded, 'a blocked preview must still reach the screen');
+  assert.equal(decoded.preview_token, '');
+  assert.deepEqual(decoded.blockers, [{ code: 'dns_options_unadoptable' }]);
+
+  // A blocked preview that carries a token is not something the panel sends,
+  // and a page that accepted one would be describing a commit that cannot run.
+  assert.equal(
+    decodeDNSEngineSwitchPreview(
+      { ...blocked, preview_token: 'f'.repeat(32) }, null, 'bind', 0,
+    ),
+    null,
+  );
+  // An unblocked preview still needs a real token.
+  assert.equal(
+    decodeDNSEngineSwitchPreview(
+      { ...takeoverPreview, preview_token: '' }, null, 'bind', 0,
+    ),
+    null,
+  );
+  assert.ok(decodeDNSEngineSwitchPreview(takeoverPreview, null, 'bind', 0));
 });
