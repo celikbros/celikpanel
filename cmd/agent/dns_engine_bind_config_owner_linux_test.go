@@ -42,7 +42,7 @@ func newFrankfurtBINDConfigFixture(
 		mustChownMode(t, path, 0, int(frankfurtBINDConfigGID), 0o644)
 	}
 	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
-		layout, "",
+		layout, "", bindOptionsExclusive,
 		func(path string, mode os.FileMode, allowAbsent bool) (dnsFileSnapshot, error) {
 			if allowAbsent {
 				return dnsFileSnapshot{}, errors.New("unexpected absent BIND config")

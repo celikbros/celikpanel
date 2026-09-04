@@ -137,6 +137,16 @@ type dnsEngineSwitchPreview struct {
 	RequiresAdoptionAcknowledgement bool                      `json:"requires_adoption_acknowledgement"`
 	Blockers                        []dnsEnginePreviewBlocker `json:"blockers"`
 	Impacts                         []string                  `json:"impacts"`
+	// AdoptedDirectives is what the takeover replaces in this server's own
+	// options block, one entry per directive, each with the value found and the
+	// value CelikPanel will set. It is structured because the browser renders
+	// it as a list; a sentence could not be read as one (register R-042).
+	//
+	// AdoptedDirectives, devralmanın bu sunucunun kendi seçenek bloğunda neyi
+	// değiştirdiğidir; direktif başına bir kayıt, her birinde bulunan değer ve
+	// CelikPanel'in koyacağı değer. Yapılandırılmıştır, çünkü tarayıcı onu bir
+	// liste olarak çizer; bir cümle liste olarak okunamazdı (defter R-042).
+	AdoptedDirectives []dnsEngineAdoptedDirective `json:"adopted_directives,omitempty"`
 }
 
 type dnsEnginePreviewRequest struct {
@@ -279,7 +289,8 @@ func validateDNSBackendReadiness(
 			runtime.Managed && !runtime.Installed ||
 			runtime.PairReady && (!runtime.Installed || !runtime.Running || !runtime.Managed) ||
 			len(runtime.Unit) > 128 ||
-			strings.ContainsAny(runtime.Unit, "\r\n\x00") {
+			strings.ContainsAny(runtime.Unit, "\r\n\x00") ||
+			!validateDNSForeignEngineOptions(runtime) {
 			return nil, false, "", errors.New("DNS backend readiness is internally inconsistent")
 		}
 		result[runtime.Engine] = runtime
@@ -1648,6 +1659,28 @@ func (p *Panel) makeDNSEnginePreview(
 	if operationBusy {
 		blockers = addDNSEngineBlocker(blockers, "operation_running")
 	}
+	// What the takeover replaces in this server's own options block, and
+	// whether any of it is something the host could not read as a directive of
+	// its own. A refusal is raised here, before a token exists, so the operator
+	// gets the directive and the line on the screen they are standing on rather
+	// than a failed commit later (register R-042).
+	//
+	// Devralmanın bu sunucunun kendi seçenek bloğunda neyi değiştirdiği ve
+	// bunlardan birinin, sunucunun kendi deyimi olarak okuyamadığı bir şey olup
+	// olmadığı. Ret burada, daha bir belirteç yokken kaldırılır; böylece operatör
+	// direktifi ve satırı, sonradan düşen bir commit yerine üzerinde durduğu
+	// ekranda alır (defter R-042).
+	adoptedDirectives := []dnsEngineAdoptedDirective(nil)
+	if action == dnsEngineActionAdoptUnmanaged {
+		adoptedDirectives = dnsEngineAdoptedDirectives(
+			snapshot.runtime[request.TargetEngine],
+		)
+		if dnsEngineAdoptionRefused(adoptedDirectives) {
+			blockers = addDNSEngineBlocker(
+				blockers, dnsEngineAdoptionOptionsBlocker,
+			)
+		}
+	}
 	if !operationBusy {
 		if err := p.requireNoPendingDNSClusterSaga(ctx); err != nil {
 			blockers = addDNSEngineBlocker(blockers, "operation_running")
@@ -1686,6 +1719,7 @@ func (p *Panel) makeDNSEnginePreview(
 		Impacts: dnsEngineImpacts(
 			action, hasSource, snapshot.runtime[request.TargetEngine].Running,
 		),
+		AdoptedDirectives: adoptedDirectives,
 	}
 	if requiresAck {
 		preview.EstimatedDowntimeSeconds = dnsEngineEstimatedOutage

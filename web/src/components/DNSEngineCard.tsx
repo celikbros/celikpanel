@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
     AlertTriangle,
+    ArrowRight,
     ArrowRightLeft,
     CheckCircle2,
     Database,
@@ -22,6 +23,7 @@ import {
     type DNSEngineID,
     type DNSEngineOperation,
     type DNSEngineSnapshot,
+    type DNSEngineAdoptedDirective,
     type DNSEngineSwitchPreview,
 } from '../lib/dnsEngineContract';
 import { Button } from './ui';
@@ -173,6 +175,7 @@ const knownBlockerKeys = {
     agent_incompatible: 'dnsEngine.blocker.agentIncompatible',
     target_already_active: 'dnsEngine.blocker.alreadyActive',
     stale_revision: 'dnsEngine.blocker.staleRevision',
+    dns_options_unadoptable: 'dnsEngine.blocker.optionsUnadoptable',
 } as const;
 
 const knownImpactKeys = {
@@ -1224,6 +1227,22 @@ function DNSEngineReviewDialog({
     // CelikPanel'in bilmedigi zone'lar da yanitlanmayi surdurur - dolayisiyla
     // metin, durmus bicimin "sunulmaz olur" ifadesini ona okumamalidir.
     const adoptingRunningEngine = preview?.impacts.includes('reload_target') === true;
+    // What the takeover changes in this server's own settings, split into the
+    // part it can take over and the part it cannot. The second is why the
+    // change is blocked, so it is shown with the blockers; the first belongs
+    // under the acknowledgement, where the operator is deciding.
+    //
+    // Devralmanin bu sunucunun kendi ayarlarinda degistirdigi sey, devralabildigi
+    // ve devralamadigi diye ikiye ayrilir. Ikincisi degisikligin engellenme
+    // sebebidir ve engelleyicilerle birlikte gosterilir; birincisi, operatorun
+    // karar verdigi yerde, onayin altina aittir.
+    const adoptedDirectives = preview?.adopted_directives ?? [];
+    const takenOverDirectives = adoptedDirectives.filter(
+        (directive) => directive.refusal === undefined,
+    );
+    const refusedDirectives = adoptedDirectives.filter(
+        (directive) => directive.refusal !== undefined,
+    );
     const confirmationDisabled = review.loading
         || review.committing
         || review.requestID === null
@@ -1329,6 +1348,29 @@ function DNSEngineReviewDialog({
                             </div>
                         )}
 
+                        {refusedDirectives.length > 0 && (
+                            <div className="mt-5 rounded-xl border border-danger/35 bg-danger/5 p-4" role="alert">
+                                <h4 className="flex items-center gap-2 text-sm font-semibold text-fg">
+                                    <ShieldAlert className="h-4 w-4 text-danger" />
+                                    {et('dnsEngine.adoption.refusalTitle')}
+                                </h4>
+                                <ul className="mt-2 space-y-2 pl-6 text-sm leading-5 text-fg-muted">
+                                    {refusedDirectives.map((directive, index) => (
+                                        <li key={`${directive.directive}-${directive.line}-${index}`}>
+                                            {et(
+                                                `dnsEngine.adoption.refusal.${directive.refusal ?? 'unknown'}` as DNSEngineCopyKey,
+                                                {
+                                                    directive: directive.directive,
+                                                    file: directive.file,
+                                                    line: directive.line,
+                                                },
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
                         {preview.requires_adoption_acknowledgement && preview.blockers.length === 0 && (
                             <div className="mt-5 rounded-xl border border-danger/35 bg-danger/5 p-4">
                                 <h4
@@ -1348,6 +1390,28 @@ function DNSEngineReviewDialog({
                                         ? 'dnsEngine.adoption.bodyRunning'
                                         : 'dnsEngine.adoption.body')}
                                 </p>
+                                {takenOverDirectives.length > 0 && (
+                                    <div className="mt-4 pl-6">
+                                        <h5 className="text-xs font-semibold text-fg">
+                                            {et('dnsEngine.adoption.settingsTitle')}
+                                        </h5>
+                                        <p className="mt-1 text-xs leading-5 text-fg-muted">
+                                            {et('dnsEngine.adoption.settingsIntro', {
+                                                file: takenOverDirectives[0].file,
+                                            })}
+                                        </p>
+                                        <ul className="mt-2 divide-y divide-danger/20 border-t border-danger/20">
+                                            {takenOverDirectives.map((directive, index) => (
+                                                <AdoptedDirectiveRow
+                                                    key={`${directive.directive}-${directive.line}-${index}`}
+                                                    directive={directive}
+                                                    et={et}
+                                                />
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
                                 <label className="mt-4 flex cursor-pointer items-start gap-3 border-t border-danger/25 pt-4">
                                     <input
                                         type="checkbox"
@@ -1396,6 +1460,56 @@ function DNSEngineReviewDialog({
                 </div>
             </div>
         </div>
+    );
+}
+
+// One directive, on one row: what it is called, where it is written, what it
+// says now and what it will say. When those two are the same value the row says
+// so instead of drawing an arrow between a value and itself - a change that is
+// not a change must not look like one.
+//
+// Bir direktif, tek satirda: adi ne, nerede yazili, su anda ne diyor ve ne
+// diyecek. Bu ikisi ayni degerse satir bunu soyler, bir degerle kendisi arasina
+// ok cizmek yerine - degisiklik olmayan bir sey degisiklik gibi gorunmemeli.
+function AdoptedDirectiveRow({
+    directive,
+    et,
+}: {
+    directive: DNSEngineAdoptedDirective;
+    et: (key: DNSEngineCopyKey, vars?: Record<string, string | number>) => string;
+}) {
+    return (
+        <li className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
+            <span className="font-mono text-xs font-semibold text-fg">
+                {directive.directive}
+            </span>
+            <span className="text-xs tabular-nums text-fg-muted">
+                {et('dnsEngine.adoption.settingsLine', { line: directive.line })}
+            </span>
+            {directive.unchanged ? (
+                <span className="ml-auto flex flex-wrap items-baseline gap-x-2 text-xs text-fg-muted">
+                    <span className="font-mono text-fg">{directive.found}</span>
+                    <span>{et('dnsEngine.adoption.settingsUnchanged')}</span>
+                </span>
+            ) : (
+                <span className="ml-auto flex flex-wrap items-baseline gap-x-2 text-xs">
+                    <span className="text-fg-muted">
+                        {et('dnsEngine.adoption.settingsNow')}
+                    </span>
+                    <span className="font-mono text-fg">{directive.found}</span>
+                    <ArrowRight
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 shrink-0 translate-y-0.5 text-fg-muted"
+                    />
+                    <span className="text-fg-muted">
+                        {et('dnsEngine.adoption.settingsAfter')}
+                    </span>
+                    <span className="font-mono font-semibold text-fg">
+                        {directive.replacement}
+                    </span>
+                </span>
+            )}
+        </li>
     );
 }
 

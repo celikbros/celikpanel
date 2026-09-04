@@ -61,22 +61,34 @@ func managedBINDZoneInclude(config, includePath string) (string, error) {
 	return config + block, nil
 }
 
-func managedBINDOptions(config, transferPeer string) (string, error) {
-	transferACL := "none"
-	if transferPeer != "" {
-		peer := net.ParseIP(transferPeer)
-		if peer == nil || peer.To4() == nil || peer.To4().String() != transferPeer ||
-			!peer.IsGlobalUnicast() {
-			return "", errors.New("BIND transfer peer must be a canonical public IPv4 address")
-		}
-		transferACL = transferPeer + "/32"
+// canonicalBINDTransferACL is the one place a transfer peer becomes an address
+// match list. managedBINDOptions writes it into the file and
+// managedBINDOptionAssignments shows it to the operator; both read it here so
+// the screen and the file cannot say different things.
+//
+// canonicalBINDTransferACL, bir aktarım eşinin adres eşleşme listesine
+// dönüştüğü tek yerdir. managedBINDOptions onu dosyaya yazar,
+// managedBINDOptionAssignments onu operatöre gösterir; ikisi de buradan okur,
+// böylece ekran ile dosya farklı şeyler söyleyemez.
+func canonicalBINDTransferACL(transferPeer string) (string, error) {
+	peer := net.ParseIP(transferPeer)
+	if peer == nil || peer.To4() == nil || peer.To4().String() != transferPeer ||
+		!peer.IsGlobalUnicast() {
+		return "", errors.New("BIND transfer peer must be a canonical public IPv4 address")
 	}
-	block := "\n\t" + bindOptionsMarkerBegin +
-		"\n\trecursion no;" +
-		"\n\tallow-recursion { none; };" +
-		"\n\tallow-query-cache { none; };" +
-		"\n\tallow-transfer { " + transferACL + "; };" +
-		"\n\t" + bindOptionsMarkerEnd + "\n"
+	return transferPeer + "/32", nil
+}
+
+func managedBINDOptions(config, transferPeer string) (string, error) {
+	assignments, err := managedBINDOptionAssignments(transferPeer)
+	if err != nil {
+		return "", err
+	}
+	block := "\n\t" + bindOptionsMarkerBegin
+	for _, assignment := range assignments {
+		block += "\n\t" + assignment[0] + " " + assignment[1] + ";"
+	}
+	block += "\n\t" + bindOptionsMarkerEnd + "\n"
 	legacyBlock := "\n\t" + bindOptionsMarkerBegin +
 		"\n\trecursion no;" +
 		"\n\tallow-recursion { none; };" +
@@ -111,9 +123,7 @@ func managedBINDOptions(config, transferPeer string) (string, error) {
 		body := bindOptionsBodyWithoutManagedSpan(
 			config, open, close, start, actualEnd,
 		)
-		for _, directive := range []string{
-			"recursion", "allow-recursion", "allow-query-cache", "allow-transfer",
-		} {
+		for _, directive := range bindManagedOptionDirectives {
 			if bindContainsDirective(body, directive) {
 				return "", fmt.Errorf(
 					"BIND options already define %s outside CelikPanel ownership", directive,
@@ -126,9 +136,7 @@ func managedBINDOptions(config, transferPeer string) (string, error) {
 		return config[:start] + canonical + config[actualEnd:], nil
 	}
 	body := stripBINDCommentsAndStrings(config[open+1 : close])
-	for _, directive := range []string{
-		"recursion", "allow-recursion", "allow-query-cache", "allow-transfer",
-	} {
+	for _, directive := range bindManagedOptionDirectives {
 		if bindContainsDirective(body, directive) {
 			return "", fmt.Errorf("BIND options already define %s outside CelikPanel ownership", directive)
 		}
@@ -168,9 +176,7 @@ func exactLegacyManagedBINDOptions(config string) bool {
 		return false
 	}
 	outside := bindOptionsBodyWithoutManagedSpan(config, open, close, start, end)
-	for _, directive := range []string{
-		"recursion", "allow-recursion", "allow-query-cache", "allow-transfer",
-	} {
+	for _, directive := range bindManagedOptionDirectives {
 		if bindContainsDirective(outside, directive) {
 			return false
 		}

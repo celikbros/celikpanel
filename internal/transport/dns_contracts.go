@@ -214,6 +214,84 @@ type DNSBackendRuntimeState struct {
 	Managed   bool      `json:"managed"`
 	PairReady bool      `json:"pair_ready"`
 	Unit      string    `json:"unit"`
+	// ForeignOptions names the directives CelikPanel manages that this server's
+	// own configuration already sets, with the value it has today and the value
+	// CelikPanel would set. It is a bounded runtime fact like the others, and it
+	// exists so a takeover can show the operator the difference before the
+	// operator agrees to it (register R-042). It is empty for an engine the
+	// panel manages, and for one there is nothing to take over from.
+	//
+	// ForeignOptions, CelikPanel'in yönettiği ve bu sunucunun kendi
+	// yapılandırmasının zaten koyduğu direktifleri, bugünkü değerleri ve
+	// CelikPanel'in koyacağı değerle birlikte adlandırır. Diğerleri gibi sınırlı
+	// bir çalışma zamanı olgusudur ve bir devralmanın, operatör rıza göstermeden
+	// önce farkı ona gösterebilmesi için vardır (defter R-042). Panelin
+	// yönettiği bir motor için ve devralınacak bir şey olmayan bir motor için
+	// boştur.
+	ForeignOptions []DNSForeignEngineOption `json:"foreign_options,omitempty"`
+}
+
+// The vocabulary of a takeover's difference list. The agent reads these
+// directives out of the host's configuration, the panel puts them in the
+// preview, and the browser has copy for every one of them in both locales. One
+// list, three layers, and a contract test that fails the build when they drift
+// - the lesson of R-041, where an API could return something the browser could
+// not render.
+//
+// Bir devralmanın fark listesinin söz varlığı. Agent bu direktifleri
+// sunucunun yapılandırmasından okur, panel onları önizlemeye koyar ve tarayıcı
+// her biri için iki dilde de metne sahiptir. Tek liste, üç katman ve
+// birbirlerinden ayrıldıklarında derlemeyi düşüren bir sözleşme testi - API'nin
+// tarayıcının çizemediği bir şey döndürebildiği R-041'in dersi.
+var DNSManagedBINDOptionDirectives = []string{
+	"recursion", "allow-recursion", "allow-query-cache", "allow-transfer",
+}
+
+const (
+	// DNSForeignOptionNestedScope: the directive sits inside a block within the
+	// options block, where CelikPanel's own block does not govern it.
+	DNSForeignOptionNestedScope = "nested_scope"
+	// DNSForeignOptionNotAStatement: the name appears where the reader cannot
+	// prove it is a directive of its own.
+	DNSForeignOptionNotAStatement = "not_a_statement"
+	// DNSForeignOptionUnterminated: no terminating semicolon can be found.
+	DNSForeignOptionUnterminated = "unterminated"
+)
+
+// DNSForeignOptionRefusals is every reason a directive cannot be taken over.
+//
+// DNSForeignOptionRefusals, bir direktifin neden devralınamadığının her
+// sebebidir.
+var DNSForeignOptionRefusals = []string{
+	DNSForeignOptionNestedScope,
+	DNSForeignOptionNotAStatement,
+	DNSForeignOptionUnterminated,
+}
+
+// DNSForeignEngineOption is one directive of the operator's that a takeover
+// would replace: what it is, what it says now, what CelikPanel makes it say,
+// and where it is written. Refusal is empty when the takeover can replace it,
+// and a machine code naming why when it cannot - never operator text, because
+// the panel and the browser own the wording.
+//
+// Found is the operator's own configuration text, normalised to one bounded
+// printable line by the agent. It is displayed and never interpreted.
+//
+// DNSForeignEngineOption, bir devralmanın değiştireceği, operatöre ait tek bir
+// direktiftir: ne olduğu, şu anda ne dediği, CelikPanel'in ne dedirteceği ve
+// nerede yazılı olduğu. Devralma onu değiştirebiliyorsa Refusal boştur;
+// değiştiremiyorsa nedenini adlandıran bir makine kodudur - asla operatör metni
+// değil, çünkü sözcükler panelin ve tarayıcınındır.
+//
+// Found, operatörün kendi yapılandırma metnidir; agent tarafından tek, sınırlı ve
+// yazdırılabilir bir satıra normalleştirilir. Gösterilir, asla yorumlanmaz.
+type DNSForeignEngineOption struct {
+	Directive   string `json:"directive"`
+	Found       string `json:"found"`
+	Replacement string `json:"replacement"`
+	File        string `json:"file"`
+	Line        int    `json:"line"`
+	Refusal     string `json:"refusal,omitempty"`
 }
 
 // MutationHold codes. Empty means the agent is accepting durable mutations.
