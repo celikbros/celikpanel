@@ -133,15 +133,24 @@ reject_literal "$CI" 'windows-portability:'
 reject_literal "$CI" 'freebsd-compile:'
 reject_literal "$CI" 'darwin-compile:'
 require_count "$CI" 'go test -race -count=1 -timeout=8m ./cmd/panel' 1
-# Ten disjoint, exhaustive shards (R-020). A letter group split from within
+# Fourteen disjoint, exhaustive shards (R-020). A letter group split from within
 # keeps its pattern on the complement shard and -skips the carved-out prefix,
-# so the pair covers exactly what the single shard covered before.
-require_count "$CI" 'pattern:' 10
-require_count "$CI" 'skip:' 10
-require_literal "$CI" "pattern: '^Test($|[A-C]|[^A-Z])'"
+# so the pair covers exactly what the single shard covered before. The D group
+# is carved twice, because measurement put both of its halves within seconds
+# of the 240 s exit line: TestD minus every TestDNS, then TestDNS minus the
+# engine and zone tests, then those two on their own.
+require_count "$CI" 'pattern:' 14
+require_count "$CI" 'skip:' 14
+require_literal "$CI" "pattern: '^Test($|[A-B]|[^A-Z])'"
+require_literal "$CI" "pattern: '^TestC'"
+require_literal "$CI" "skip: '^TestControlPlane'"
+require_literal "$CI" "pattern: '^TestControlPlane'"
 require_literal "$CI" "pattern: '^TestD'"
+require_literal "$CI" "skip: '^TestDNS'"
+require_literal "$CI" "pattern: '^TestDNS'"
 require_literal "$CI" "skip: '^TestDNS(Engine|Zone)'"
-require_literal "$CI" "pattern: '^TestDNS(Engine|Zone)'"
+require_literal "$CI" "pattern: '^TestDNSEngine'"
+require_literal "$CI" "pattern: '^TestDNSZone'"
 require_literal "$CI" "pattern: '^Test[E-K]'"
 require_literal "$CI" "pattern: '^Test[L-M]'"
 require_literal "$CI" "pattern: '^Test[N-Q]'"
@@ -150,10 +159,15 @@ require_literal "$CI" "pattern: '^TestS'"
 require_literal "$CI" "skip: '^TestService'"
 require_literal "$CI" "pattern: '^TestService'"
 require_literal "$CI" "pattern: '^Test[T-Z]'"
-require_count "$CI" "skip: ''" 8
+require_count "$CI" "skip: ''" 10
 require_literal "$CI" "-run '\${{ matrix.pattern }}' -skip '\${{ matrix.skip }}'"
 reject_literal "$CI" "pattern: '^Test[E-G]'"
 reject_literal "$CI" "pattern: '^Test[N-R]'"
+# The two shards the measurement carved must not come back whole; their names
+# are unique to the layout that ran at 257 s and 248 s against a 240 s line.
+reject_literal "$CI" "shard: D, except the DNS engine and zone tests"
+reject_literal "$CI" "shard: DNS engine and zone"
+reject_literal "$CI" "shard: A through C, exact and non-uppercase"
 reject_literal "$CI" 'actions/setup-go@v5'
 reject_literal "$CI" 'go-version-file:'
 
