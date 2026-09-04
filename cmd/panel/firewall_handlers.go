@@ -28,6 +28,41 @@ var errFirewallNoEngine = errors.New("firewall engine is not installed")
 
 var errFirewallNestedMutation = errors.New("firewall apply requires a fresh direct mutation lease")
 
+// The three ways enabling the firewall can run into the SSH escape-hatch
+// proof. Only errFirewallNoSSHService can be acknowledged past: a host with no
+// SSH service has no door for the firewall to lock, so the proof is moot
+// rather than violated. The other two are refusals with no way around them,
+// because a probe that could not run is not a host without SSH.
+//
+// Güvenlik duvarını açmanın SSH kaçış-yolu kanıtıyla karşılaşabileceği üç
+// durum. Yalnız errFirewallNoSSHService onaylanarak geçilebilir: SSH servisi
+// olmayan bir sunucuda güvenlik duvarının kilitleyeceği bir kapı yoktur, bu
+// yüzden kanıt çiğnenmiş değil konusuz kalmıştır. Diğer ikisi etrafından
+// dolaşılamayan redlerdir; çünkü çalışamayan bir yoklama, SSH'ı olmayan bir
+// sunucu değildir.
+var (
+	errFirewallNoSSHService    = errors.New("this server has no SSH service")
+	errFirewallSSHNotListening = errors.New("this server has an SSH service but no listening sshd port")
+	errFirewallSSHUnprovable   = errors.New("SSH listener discovery could not be completed")
+)
+
+// firewallSSHDiscoveryError maps an agent-reported discovery reason onto the
+// panel sentinel that carries it to the HTTP boundary.
+// firewallSSHDiscoveryError, agent'ın bildirdiği keşif nedenini, onu HTTP
+// sınırına taşıyan panel işaretine eşler.
+func firewallSSHDiscoveryError(reason string) error {
+	switch reason {
+	case transport.SSHDiscoveryNoService:
+		return errFirewallNoSSHService
+	case transport.SSHDiscoveryNotListening:
+		return errFirewallSSHNotListening
+	case transport.SSHDiscoveryProbeFailed:
+		return errFirewallSSHUnprovable
+	default:
+		return nil
+	}
+}
+
 // Firewall, panel side. The panel decides policy — which ports should be open
 // — and the agent enforces it in nftables. The desired set is derived, never
 // hand-typed: the panel's own port plus the firewall ports of every installed
@@ -199,7 +234,7 @@ func (p *Panel) readFirewallStatus() (FirewallStatusResp, error) {
 // applyFirewallSetting açık operatör yoludur. persist yalnız Save for reboot
 // veya açık kapatmada doğrudur; canlı açma/arka plan eşitlemesinde asla değil.
 func (p *Panel) applyFirewallSetting(enabled, persist bool) (FirewallStatusResp, error) {
-	return p.applyFirewallSettingContext(context.Background(), enabled, persist)
+	return p.applyFirewallSettingContext(context.Background(), enabled, persist, false)
 }
 
 type firewallAgentResponseError struct {
@@ -212,19 +247,33 @@ func (e *firewallAgentResponseError) Error() string {
 
 func (p *Panel) applyFirewallSettingContext(
 	ctx context.Context,
-	enabled, persist bool,
+	enabled, persist, noSSHAcknowledged bool,
 ) (FirewallStatusResp, error) {
 	// Non-HTTP callers acquire the process-wide mutation lock here. Production
 	// HTTP admission uses beginServiceMutation and calls the locked helper below
 	// so the invariant is always serviceMutationMu -> panelFirewallMu.
 	p.serviceMutationMu.Lock()
 	defer p.serviceMutationMu.Unlock()
-	return p.applyFirewallSettingContextLocked(ctx, enabled, persist)
+	return p.applyFirewallSettingContextLocked(ctx, enabled, persist, noSSHAcknowledged)
 }
 
+// noSSHAcknowledged is the operator's own consent to enable the firewall on a
+// server the agent proved has no SSH service. It is deliberately its own
+// argument rather than a reuse of any other confirmation: a click meant for
+// "turn the firewall on" must never stand in for "I accept that this server
+// has no SSH way back in". It is read only when the agent reports exactly that
+// state, and it can never make a failed or ambiguous discovery pass.
+//
+// noSSHAcknowledged, agent'ın hiç SSH servisi olmadığını kanıtladığı bir
+// sunucuda güvenlik duvarını açmaya operatörün kendi onayıdır. Bilerek başka
+// bir onayın yeniden kullanımı değil, kendi başına bir argümandır: "güvenlik
+// duvarını aç" için yapılan bir tıklama, "bu sunucuda geri dönecek bir SSH
+// yolu olmadığını kabul ediyorum"un yerine asla geçmemelidir. Yalnız agent tam
+// olarak bu durumu bildirdiğinde okunur ve başarısız ya da belirsiz bir keşfi
+// asla geçirebilir hâle getiremez.
 func (p *Panel) applyFirewallSettingContextLocked(
 	ctx context.Context,
-	enabled, persist bool,
+	enabled, persist, noSSHAcknowledged bool,
 ) (FirewallStatusResp, error) {
 	if _, err := panelMutationBinding(ctx); err == nil {
 		return FirewallStatusResp{}, errFirewallNestedMutation
@@ -243,6 +292,11 @@ func (p *Panel) applyFirewallSettingContextLocked(
 		}
 		if !cur.EngineAvailable {
 			return FirewallStatusResp{}, errFirewallNoEngine
+		}
+		if reason := firewallSSHDiscoveryError(cur.SSHDiscoveryReason); reason != nil {
+			if !errors.Is(reason, errFirewallNoSSHService) || !noSSHAcknowledged {
+				return FirewallStatusResp{SSHDiscoveryReason: cur.SSHDiscoveryReason}, reason
+			}
 		}
 		var err error
 		tcp, udp, err = p.desiredFirewallPorts()
@@ -452,6 +506,9 @@ func (p *Panel) handleFirewall(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Action  string `json:"action"`
 			Enabled *bool  `json:"enabled"`
+			// Its own field, never folded into any other confirmation.
+			// Kendi alanı; başka hiçbir onayın içine katlanmaz.
+			NoSSHAcknowledged bool `json:"no_ssh_acknowledged"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request body")
@@ -464,6 +521,11 @@ func (p *Panel) handleFirewall(w http.ResponseWriter, r *http.Request) {
 		}
 		if !saveForReboot && req.Enabled == nil {
 			writeClientError(w, http.StatusBadRequest, "enabled is required")
+			return
+		}
+		if req.NoSSHAcknowledged && !saveForReboot && !*req.Enabled {
+			writeClientError(w, http.StatusBadRequest,
+				"no_ssh_acknowledged is only valid when the firewall is being enabled")
 			return
 		}
 		releaseMutation, busy := p.beginServiceMutation(w, r)
@@ -484,10 +546,24 @@ func (p *Panel) handleFirewall(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		persist := saveForReboot || !enabled
-		st, err := p.applyFirewallSettingContextLocked(r.Context(), enabled, persist)
+		// Save for reboot only persists a policy that is already live and was
+		// already accepted once; it can never turn anything on, so it does not
+		// ask for the no-SSH acknowledgement a second time.
+		// Save for reboot yalnız zaten canlı olan ve bir kez kabul edilmiş bir
+		// politikayı kalıcılaştırır; hiçbir şeyi açamaz, bu yüzden SSH'sız
+		// onayını ikinci kez istemez.
+		st, err := p.applyFirewallSettingContextLocked(
+			r.Context(), enabled, persist, req.NoSSHAcknowledged || saveForReboot,
+		)
 		if errors.Is(err, errFirewallNoEngine) {
 			writeCodedError(w, http.StatusConflict, errCodeFirewallNoEngine,
 				"the firewall engine (nftables) is not installed — install it from Services first", "/services")
+			return
+		}
+		if writeFirewallSSHDiscoveryError(w, err) {
+			if saveForReboot {
+				p.audit(r, "firewall.persistence.enable.failed — "+auditReason(err.Error()), "", 0)
+			}
 			return
 		}
 		if err != nil {
@@ -501,6 +577,16 @@ func (p *Panel) handleFirewall(w http.ResponseWriter, r *http.Request) {
 			if saveForReboot {
 				p.audit(r, "firewall.persistence.enable.failed — "+auditReason(st.Error), "", 0)
 			}
+			// The agent can still refuse after the panel's own check — the
+			// host may change between the two. Name the reason there too
+			// rather than forwarding one opaque agent sentence.
+			// Agent, panelin kendi kontrolünden sonra da reddedebilir; sunucu
+			// ikisinin arasında değişmiş olabilir. Kapalı tek bir agent
+			// cümlesini iletmek yerine nedeni orada da adlandır.
+			if reason := firewallSSHDiscoveryError(st.SSHDiscoveryReason); reason != nil &&
+				writeFirewallSSHDiscoveryError(w, reason) {
+				return
+			}
 			writeClientError(w, http.StatusConflict, st.Error)
 			return
 		}
@@ -509,6 +595,9 @@ func (p *Panel) handleFirewall(w http.ResponseWriter, r *http.Request) {
 			action = "firewall.persistence.enable"
 		} else if enabled {
 			action = "firewall.on"
+			if st.SSHDiscoveryReason == transport.SSHDiscoveryNoService {
+				action = "firewall.on — no SSH service on this server, acknowledged by the operator"
+			}
 		}
 		p.audit(r, action, "", 0)
 		json.NewEncoder(w).Encode(st)
@@ -516,4 +605,31 @@ func (p *Panel) handleFirewall(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// writeFirewallSSHDiscoveryError turns an SSH escape-hatch refusal into a
+// coded 4xx the browser can translate and act on. Without a code the operator
+// used to receive one untranslated agent sentence and no way forward.
+// writeFirewallSSHDiscoveryError, bir SSH kaçış-yolu reddini tarayıcının
+// çevirebileceği ve üzerine hareket edebileceği kodlu bir 4xx'e çevirir. Kod
+// olmayınca operatör, çevrilmemiş tek bir agent cümlesi alıyor ve ileri
+// gidecek bir yol bulamıyordu.
+func writeFirewallSSHDiscoveryError(w http.ResponseWriter, err error) bool {
+	switch {
+	case errors.Is(err, errFirewallNoSSHService):
+		writeCodedError(w, http.StatusConflict, errCodeFirewallNoSSHService,
+			"this server has no SSH service, so no SSH port could be proven; "+
+				"confirm you accept that before the firewall is enabled", "")
+	case errors.Is(err, errFirewallSSHNotListening):
+		writeCodedError(w, http.StatusConflict, errCodeFirewallSSHNotListening,
+			"this server has an SSH service but no listening sshd port was found; "+
+				"start SSH, or remove it, before enabling the firewall", "")
+	case errors.Is(err, errFirewallSSHUnprovable):
+		writeCodedError(w, http.StatusConflict, errCodeFirewallSSHUnprovable,
+			"whether this server has a reachable SSH port could not be determined, "+
+				"so the firewall was not changed", "")
+	default:
+		return false
+	}
+	return true
 }

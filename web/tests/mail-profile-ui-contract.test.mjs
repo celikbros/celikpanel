@@ -60,7 +60,13 @@ test('profile recovery markers are v3 kind-bound with a safe v2 migration', asyn
   assert.match(operationSource, /!isMailProfileID\(serviceID\) \|\| Boolean\(packageName \|\| runtimeVersion\)/);
   assert.match(operationSource, /'\/api\/v1\/service\/profile\/install'/);
   assert.match(operationSource, /profile_id: request\.serviceId/);
-  assert.match(operationSource, /profile_id: request\.serviceId, request_id: marker\.request_id, confirmed: true/);
+  assert.match(operationSource, /profile_id: request\.serviceId,\s+request_id: marker\.request_id,\s+confirmed: true/);
+  // R-036. The operator's mail hostname travels with the request that starts
+  // the install, and only when there is one.
+  assert.match(
+    operationSource,
+    /\.\.\.\(request\.mailHostname \? \{ mail_hostname: request\.mailHostname \} : \{\}\)/,
+  );
 
   const { createOperationRecoveryMarker, decodeOperationRecoveryMarker } = await loadMarkerRuntime();
   const requestID = 'a'.repeat(32);
@@ -125,11 +131,52 @@ test('profile cards preserve individual services and use server membership', () 
   assert.match(serviceSource, /role='dialog'/);
   assert.match(serviceSource, /aria-modal='true'/);
   assert.match(serviceSource, /type='checkbox'/);
-  assert.match(serviceSource, /disabled=\{!acknowledged\}/);
+  assert.match(serviceSource, /disabled=\{!acknowledged \|\| !hostnameReady\}/);
   assert.match(serviceSource, /\/api\/v1\/service\/candidate\?id=/);
   assert.match(serviceSource, /service\.packages/);
   assert.match(serviceSource, /service\.ports/);
   assert.match(serviceSource, /\{loading \? \(/, 'existing individual service catalogue remains rendered');
+});
+
+// R-036. A server that has no fully qualified name is asked for one here,
+// with the name the panel derived offered and attributed, and the install is
+// blocked until the name is a real FQDN. A server that already carries one is
+// told so as a fact and is never renamed.
+test('the mail install dialog asks for the mail hostname when the server has none', () => {
+  assert.match(operationSource, /export function decodeMailHostnameIdentity/);
+  assert.match(operationSource, /export function canonicalMailHostname/);
+  assert.match(operationSource, /mail_hostname: MailHostnameIdentity/);
+  assert.match(operationSource, /decodeMailHostnameIdentity\(payload\.mail_hostname\)/);
+  assert.match(serviceSource, /decodeMailHostnameIdentity\(payload\.mail_hostname\)/);
+  assert.match(serviceSource, /mailHostname\?\.current_usable === true/);
+  assert.match(serviceSource, /id='mail-profile-hostname'/);
+  assert.match(serviceSource, /aria-describedby='mail-profile-hostname-hint mail-profile-hostname-note'/);
+  assert.match(serviceSource, /aria-invalid=\{hostnameInvalid \|\| undefined\}/);
+  assert.match(serviceSource, /services\.mailProfiles\.hostname\.settled/);
+  assert.match(serviceSource, /services\.mailProfiles\.hostname\.hintUnnamed/);
+  assert.match(serviceSource, /services\.mailProfiles\.hostname\.rename/);
+  assert.match(serviceSource, /services\.mailProfiles\.hostname\.invalid/);
+  assert.match(serviceSource, /hostname\.source\.\$\{suggestionSource\}/);
+  assert.match(serviceSource, /suggestionSource && canonicalHostname === mailHostname\?\.hostname/);
+  assert.match(serviceSource, /mailHostname: chosenHostname/);
+  assert.match(serviceSource, /onConfirm\(hostnameSettled \? '' : canonicalHostname \?\? ''\)/);
+
+  for (const key of [
+    'services.mailProfiles.hostname.title',
+    'services.mailProfiles.hostname.settled',
+    'services.mailProfiles.hostname.label',
+    'services.mailProfiles.hostname.hint',
+    'services.mailProfiles.hostname.hintUnnamed',
+    'services.mailProfiles.hostname.placeholder',
+    'services.mailProfiles.hostname.invalid',
+    'services.mailProfiles.hostname.rename',
+    'services.mailProfiles.hostname.source.saved',
+    'services.mailProfiles.hostname.source.panel_certificate',
+    'services.mailProfiles.hostname.source.dns_identity',
+  ]) {
+    assert.ok(enSource.includes(`'${key}'`), `${key} missing from EN`);
+    assert.ok(trSource.includes(`'${key}'`), `${key} missing from TR`);
+  }
 });
 
 test('complete profile copy claims only component state and localizes repair guidance', () => {

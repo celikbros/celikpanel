@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net"
 	"net/http"
@@ -32,6 +33,7 @@ type firewallSyncTestAgent struct {
 	installed           []string
 	installedErr        error
 	applyResponseError  string
+	applyStatusReason   string
 	applyErr            error
 	applyCommitThenErr  error
 	applyCalls          int
@@ -130,6 +132,9 @@ func (a *firewallSyncTestAgent) ApplyFirewallV2(req *FirewallSyncApplyRequest, o
 	}
 	*out = a.status
 	out.Error = a.applyResponseError
+	if a.applyStatusReason != "" {
+		out.SSHDiscoveryReason = a.applyStatusReason
+	}
 	applyErr := a.applyErr
 	commitThenErr := a.applyCommitThenErr
 	a.mu.Unlock()
@@ -974,5 +979,201 @@ func TestFirewallPOSTHoldsGlobalMutationLockBeforeDiscovery(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("manual firewall POST deadlocked after discovery release")
+	}
+}
+
+// R-035. Enabling the firewall keeps every proven sshd listener open so the
+// operator can never be locked out of their own server. On a server that has
+// no SSH service at all there is no door to lock, so the proof is moot rather
+// than violated - and the product now says which of the three things happened
+// and offers a way forward on the only one that has one.
+func TestFirewallEnableNamesTheSSHReasonAndOffersTheOnlyWayForward(t *testing.T) {
+	tests := []struct {
+		name             string
+		reason           string
+		acknowledged     bool
+		wantStatus       int
+		wantCode         string
+		wantApplyCalls   int
+		wantAuditActions []string
+	}{
+		{
+			name:           "no SSH service refuses until it is acknowledged",
+			reason:         transport.SSHDiscoveryNoService,
+			wantStatus:     http.StatusConflict,
+			wantCode:       errCodeFirewallNoSSHService,
+			wantApplyCalls: 0,
+		},
+		{
+			name:           "no SSH service proceeds under the operator's own acknowledgement",
+			reason:         transport.SSHDiscoveryNoService,
+			acknowledged:   true,
+			wantStatus:     http.StatusOK,
+			wantApplyCalls: 1,
+			wantAuditActions: []string{
+				"firewall.on — no SSH service on this server, acknowledged by the operator",
+			},
+		},
+		{
+			name:           "an SSH service that is not listening cannot be acknowledged past",
+			reason:         transport.SSHDiscoveryNotListening,
+			acknowledged:   true,
+			wantStatus:     http.StatusConflict,
+			wantCode:       errCodeFirewallSSHNotListening,
+			wantApplyCalls: 0,
+		},
+		{
+			name:           "a probe that could not run cannot be acknowledged past",
+			reason:         transport.SSHDiscoveryProbeFailed,
+			acknowledged:   true,
+			wantStatus:     http.StatusConflict,
+			wantCode:       errCodeFirewallSSHUnprovable,
+			wantApplyCalls: 0,
+		},
+		{
+			name:             "a proven listener asks for nothing",
+			reason:           "",
+			wantStatus:       http.StatusOK,
+			wantApplyCalls:   1,
+			wantAuditActions: []string{"firewall.on"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			database, err := paneldb.NewSQLiteDB(filepath.Join(t.TempDir(), "panel.sqlite"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(database.Close)
+			result, err := database.GetDB().Exec(`
+				INSERT INTO users (username,password_hash,email,role)
+				VALUES ('firewall-ssh-admin','x','firewall-ssh@example.test','admin')`)
+			if err != nil {
+				t.Fatal(err)
+			}
+			userID, err := result.LastInsertId()
+			if err != nil {
+				t.Fatal(err)
+			}
+			agent := &firewallSyncTestAgent{
+				status: FirewallStatusResp{
+					Enabled:            false,
+					EngineAvailable:    true,
+					SSHDiscoveryReason: test.reason,
+				},
+			}
+			panel := &Panel{db: database}
+			attachFirewallSyncTestAgent(t, panel, agent)
+
+			body := `{"enabled":true}`
+			if test.acknowledged {
+				body = `{"enabled":true,"no_ssh_acknowledged":true}`
+			}
+			request := httptest.NewRequest(http.MethodPost, "/api/v1/firewall", strings.NewReader(body))
+			request = request.WithContext(context.WithValue(
+				request.Context(), callerKey, &Caller{ID: int(userID), Role: roleAdmin},
+			))
+			recorder := httptest.NewRecorder()
+			panel.handleFirewall(recorder, request)
+
+			if recorder.Code != test.wantStatus {
+				t.Fatalf("status = %d, want %d: %s", recorder.Code, test.wantStatus, recorder.Body.String())
+			}
+			if test.wantCode != "" {
+				var refusal struct {
+					Code string `json:"code"`
+				}
+				if err := json.Unmarshal(recorder.Body.Bytes(), &refusal); err != nil {
+					t.Fatalf("decode refusal %s: %v", recorder.Body.String(), err)
+				}
+				if refusal.Code != test.wantCode {
+					t.Fatalf("refusal code = %q, want %q: %s",
+						refusal.Code, test.wantCode, recorder.Body.String())
+				}
+			}
+			agent.mu.Lock()
+			applyCalls := agent.applyCalls
+			agent.mu.Unlock()
+			if applyCalls != test.wantApplyCalls {
+				t.Fatalf("ApplyFirewallV2 calls = %d, want %d", applyCalls, test.wantApplyCalls)
+			}
+			for _, action := range test.wantAuditActions {
+				var count int
+				if err := database.GetDB().QueryRow(
+					`SELECT COUNT(*) FROM audit_logs WHERE action = ?`, action,
+				).Scan(&count); err != nil {
+					t.Fatal(err)
+				}
+				if count != 1 {
+					t.Fatalf("audit rows for %q = %d, want 1", action, count)
+				}
+			}
+		})
+	}
+}
+
+// The acknowledgement is its own field and cannot be smuggled into a request
+// that is not enabling the firewall.
+func TestFirewallNoSSHAcknowledgementIsRefusedOnADisable(t *testing.T) {
+	agent := &firewallSyncTestAgent{
+		status: FirewallStatusResp{Enabled: true, EngineAvailable: true},
+	}
+	panel := &Panel{}
+	attachFirewallSyncTestAgent(t, panel, agent)
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/firewall",
+		strings.NewReader(`{"enabled":false,"no_ssh_acknowledged":true}`))
+	request = request.WithContext(context.WithValue(
+		request.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin},
+	))
+	recorder := httptest.NewRecorder()
+	panel.handleFirewall(recorder, request)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400: %s", recorder.Code, recorder.Body.String())
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if agent.applyCalls != 0 {
+		t.Fatalf("ApplyFirewallV2 called %d times for a refused request", agent.applyCalls)
+	}
+}
+
+// A host can change between the panel's own check and the agent's, so a late
+// agent refusal is named by the same codes rather than forwarded as one
+// untranslated agent sentence.
+func TestFirewallLateAgentSSHRefusalStillCarriesItsCode(t *testing.T) {
+	agent := &firewallSyncTestAgent{
+		status: FirewallStatusResp{
+			Enabled:         false,
+			EngineAvailable: true,
+		},
+		applyResponseError: "this server has an SSH service but no verified listening sshd port; firewall was not changed",
+		applyStatusReason:  transport.SSHDiscoveryNotListening,
+	}
+	database, err := paneldb.NewSQLiteDB(filepath.Join(t.TempDir(), "panel.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(database.Close)
+	panel := &Panel{db: database}
+	attachFirewallSyncTestAgent(t, panel, agent)
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/firewall",
+		strings.NewReader(`{"enabled":true}`))
+	request = request.WithContext(context.WithValue(
+		request.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin},
+	))
+	recorder := httptest.NewRecorder()
+	panel.handleFirewall(recorder, request)
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409: %s", recorder.Code, recorder.Body.String())
+	}
+	var refusal struct {
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &refusal); err != nil {
+		t.Fatalf("decode refusal %s: %v", recorder.Body.String(), err)
+	}
+	if refusal.Code != errCodeFirewallSSHNotListening {
+		t.Fatalf("late refusal code = %q: %s", refusal.Code, recorder.Body.String())
 	}
 }

@@ -946,6 +946,11 @@ func firewallStatusLocked(runner firewallCommandRunner, store firewallStateStore
 	live := firewallTablePresent(tables)
 	setFirewallPersistenceStatus(resp, snapshot, snapshotExists, snapshotLoadErr, live)
 	if !live {
+		// The reason is reported even while the firewall is off, so the panel
+		// can say what enabling it would run into before the operator asks.
+		// Neden, güvenlik duvarı kapalıyken de bildirilir; böylece panel,
+		// operatör istemeden önce açmanın neyle karşılaşacağını söyleyebilir.
+		readFirewallSSHDiscovery(runner, resp)
 		if snapshotExists {
 			resp.Error = "persistent firewall policy exists but its live nft table is absent"
 		}
@@ -973,12 +978,7 @@ func firewallStatusLocked(runner firewallCommandRunner, store firewallStateStore
 			resp.UDPPorts = p
 		}
 	}
-	sshPorts, err := detectSSHPortsWithRunner(runner)
-	if err != nil {
-		resp.Error = appendFirewallError(resp.Error, fmt.Sprintf("SSH listener discovery failed: %v", err))
-	} else {
-		resp.SSHPorts = sshPorts
-	}
+	readFirewallSSHDiscovery(runner, resp)
 	if snapshotErr != nil {
 		resp.Error = appendFirewallError(resp.Error, snapshotErr.Error())
 	}
@@ -1089,7 +1089,11 @@ func detectSSHPortsWithVerifier(runner firewallCommandRunner, verifier sshProces
 		}
 	}
 	if len(seen) == 0 {
-		return nil, fmt.Errorf("no verified listening sshd port was found")
+		// A clean probe that found nothing is its own sentinel: only this
+		// case may later be classified as a host with no SSH service.
+		// Hiçbir şey bulamayan temiz bir yoklama kendi işaretidir: yalnız bu
+		// durum sonradan SSH servisi olmayan bir sunucu diye sınıflanabilir.
+		return nil, errNoVerifiedSSHListener
 	}
 	return dedupeSorted(mapKeys(seen)), nil
 }
@@ -1489,7 +1493,22 @@ func prepareFirewallRestoreBatch(runner firewallCommandRunner, store firewallSta
 	}
 	configuredSSHPorts, err := detectConfiguredSSHPortsWithRunner(runner)
 	if err != nil {
-		return "", true, fmt.Errorf("configured SSH port discovery failed; firewall was not restored: %w", err)
+		// A firewall the operator knowingly enabled on a host with no SSH
+		// service must also come back after a reboot. Only a proven absence
+		// passes; a probe that could not run still refuses to restore.
+		// Operatörün, SSH servisi olmayan bir sunucuda bilerek açtığı bir
+		// güvenlik duvarı yeniden başlatmadan sonra da geri gelmelidir. Yalnız
+		// kanıtlanmış bir yokluk geçer; çalışamayan bir yoklama hâlâ geri
+		// yüklemeyi reddeder.
+		prober, ok := runner.(sshServicePresenceProber)
+		if !ok {
+			return "", true, fmt.Errorf("configured SSH port discovery failed; firewall was not restored: %w", err)
+		}
+		present, presentErr := prober.SSHServicePresent()
+		if presentErr != nil || present {
+			return "", true, fmt.Errorf("configured SSH port discovery failed; firewall was not restored: %w", err)
+		}
+		configuredSSHPorts = nil
 	}
 	tcp := append(append([]int{}, policy.TCPPorts...), configuredSSHPorts...)
 	if !legacy {

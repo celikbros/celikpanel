@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
@@ -54,14 +55,23 @@ var recoverFirewallApplyHost = func(
 }
 
 type firewallApplyJournal struct {
-	Version             int    `json:"version"`
-	RequestID           string `json:"request_id"`
-	Qualifier           string `json:"qualifier"`
-	Enabled             bool   `json:"enabled"`
-	Persist             bool   `json:"persist"`
-	TCPPorts            []int  `json:"tcp_ports,omitempty"`
-	UDPPorts            []int  `json:"udp_ports,omitempty"`
-	SSHPorts            []int  `json:"ssh_ports,omitempty"`
+	Version   int    `json:"version"`
+	RequestID string `json:"request_id"`
+	Qualifier string `json:"qualifier"`
+	Enabled   bool   `json:"enabled"`
+	Persist   bool   `json:"persist"`
+	TCPPorts  []int  `json:"tcp_ports,omitempty"`
+	UDPPorts  []int  `json:"udp_ports,omitempty"`
+	SSHPorts  []int  `json:"ssh_ports,omitempty"`
+	// NoSSHService records that this host was proven to carry no SSH service
+	// when the intent was written. It is the only thing that makes an enabled
+	// journal with an empty SSH port set valid, so recovery after a crash
+	// replays exactly the plan the operator accepted and nothing wider.
+	// NoSSHService, niyet yazıldığında bu sunucuda hiç SSH servisi olmadığının
+	// kanıtlandığını kaydeder. Açık bir günlüğü boş SSH port kümesiyle geçerli
+	// kılan tek şey budur; böylece bir çökme sonrası kurtarma, operatörün kabul
+	// ettiği planın tam olarak aynısını, daha genişini değil, yeniden oynatır.
+	NoSSHService        bool   `json:"no_ssh_service,omitempty"`
 	PriorSnapshotExists bool   `json:"prior_snapshot_exists"`
 	PriorSnapshot       []byte `json:"prior_snapshot,omitempty"`
 }
@@ -156,9 +166,16 @@ func validateFirewallApplyJournal(journal *firewallApplyJournal) error {
 	}
 	sshPorts, err := canonicalAgentFirewallPorts(journal.SSHPorts)
 	if err != nil || !equalFirewallPorts(sshPorts, journal.SSHPorts) ||
-		(journal.Enabled && len(sshPorts) == 0) ||
+		(journal.Enabled && len(sshPorts) == 0 && !journal.NoSSHService) ||
 		(!journal.Enabled && len(sshPorts) != 0) {
 		return errors.New("firewall apply journal SSH snapshot is invalid")
+	}
+	// The no-SSH escape is narrow on purpose: it may only stand on an enabled
+	// journal that protects no SSH port at all. It can never widen a plan.
+	// SSH'sız kaçış bilerek dardır: yalnız hiçbir SSH portunu korumayan, açık
+	// bir günlükte durabilir. Bir planı asla genişletemez.
+	if journal.NoSSHService && (!journal.Enabled || len(sshPorts) != 0) {
+		return errors.New("firewall apply journal no-SSH marker is invalid")
 	}
 	if journal.PriorSnapshotExists {
 		if len(journal.PriorSnapshot) == 0 ||
@@ -396,14 +413,29 @@ func prepareFirewallApplyJournal(
 		priorSnapshotExists = false
 	}
 	var sshPorts []int
+	noSSHService := false
 	if commitment.Enabled {
 		sshPorts, err = detectSSHPortsWithRunner(runner)
 		if err != nil {
-			return nil, fmt.Errorf("SSH listener discovery failed; firewall was not changed: %w", err)
-		}
-		sshPorts, err = canonicalAgentFirewallPorts(sshPorts)
-		if err != nil || len(sshPorts) == 0 {
-			return nil, errors.New("SSH listener discovery returned an invalid canonical snapshot")
+			// A host proven to have no SSH service has no door for this
+			// firewall to lock, so the escape-hatch proof is moot rather than
+			// violated. Every other reason — including an SSH service that is
+			// merely not listening right now — is still a refusal.
+			// Hiç SSH servisi olmadığı kanıtlanmış bir sunucuda bu güvenlik
+			// duvarının kilitleyeceği bir kapı yoktur; kaçış yolu kanıtı
+			// çiğnenmiş değil, konusuz kalmıştır. Diğer her neden — şu an
+			// dinlemeyen bir SSH servisi dâhil — hâlâ bir reddir.
+			refusal := classifySSHDiscovery(runner, err)
+			if refusal.reason != transport.SSHDiscoveryNoService {
+				return nil, refusal
+			}
+			noSSHService = true
+			sshPorts = nil
+		} else {
+			sshPorts, err = canonicalAgentFirewallPorts(sshPorts)
+			if err != nil || len(sshPorts) == 0 {
+				return nil, errors.New("SSH listener discovery returned an invalid canonical snapshot")
+			}
 		}
 	}
 	if err := ctx.Err(); err != nil {
@@ -417,6 +449,7 @@ func prepareFirewallApplyJournal(
 		TCPPorts:            append([]int(nil), commitment.TCPPorts...),
 		UDPPorts:            append([]int(nil), commitment.UDPPorts...),
 		SSHPorts:            append([]int(nil), sshPorts...),
+		NoSSHService:        noSSHService,
 		PriorSnapshotExists: priorSnapshotExists,
 		PriorSnapshot:       append([]byte(nil), priorSnapshot...),
 	}, nil
@@ -613,6 +646,15 @@ func applyStandaloneFirewallV2(
 	response.EngineAvailable = false
 	prepared, err := prepareFirewallApplyJournal(ctx, commitment, runner, store)
 	if err != nil {
+		// A refused SSH discovery names its reason so the panel can offer the
+		// operator the exact way forward instead of one opaque sentence.
+		// Reddedilen bir SSH keşfi nedenini adlandırır; böylece panel
+		// operatöre kapalı tek bir cümle yerine tam olarak izlenecek yolu
+		// sunabilir.
+		var refusal *sshDiscoveryRefusal
+		if errors.As(err, &refusal) {
+			response.SSHDiscoveryReason = refusal.reason
+		}
 		response.PersistenceState = firewallPersistenceUnverified
 		response.PersistenceError = err.Error()
 		response.Error = err.Error()
@@ -939,6 +981,14 @@ func populateFirewallApplyResponse(
 		response.TCPPorts = firewallEffectiveTCPPorts(journal)
 		response.UDPPorts = append([]int(nil), journal.UDPPorts...)
 		response.SSHPorts = append([]int(nil), journal.SSHPorts...)
+		// An applied policy that protects no SSH port must say why, or the
+		// empty port list reads as a discovery the operator never saw.
+		// Hiçbir SSH portunu korumayan, uygulanmış bir politika nedenini
+		// söylemelidir; yoksa boş port listesi, operatörün hiç görmediği bir
+		// keşif gibi okunur.
+		if journal.NoSSHService {
+			response.SSHDiscoveryReason = transport.SSHDiscoveryNoService
+		}
 	}
 	firewallLastPersistenceError = ""
 	firewallLastRestoreError = ""

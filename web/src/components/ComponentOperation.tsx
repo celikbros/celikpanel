@@ -61,6 +61,78 @@ export interface ManagedMailProfile {
     warning?: string;
 }
 
+
+// R-036. The mail server answers as one fully qualified name. Where the panel
+// already holds one - the certificate it is reached at, this server's own
+// nameserver name - it is offered; where it holds none, the install screen asks
+// and the installation gives this server the name. A name the server does not
+// carry yet is never shown as settled.
+//
+// Posta sunucusu tek bir tam nitelikli adla yanit verir. Panelin zaten bir adi
+// varsa - erisildigi sertifika, bu sunucunun kendi ad sunucusu adi - o onerilir;
+// hicbiri yoksa kurulum ekrani sorar ve kurulum bu sunucuya adi verir. Sunucunun
+// henuz tasimadigi bir ad asla yerlesmis gibi gosterilmez.
+export interface MailHostnameIdentity {
+    current: string;
+    current_usable: boolean;
+    hostname: string;
+    source: 'saved' | 'os_hostname' | 'panel_certificate' | 'dns_identity' | '';
+    will_set_hostname: boolean;
+}
+
+const MAIL_HOSTNAME_SOURCES: ReadonlySet<string> = new Set([
+    'saved', 'os_hostname', 'panel_certificate', 'dns_identity', '',
+]);
+
+export function decodeMailHostnameIdentity(value: unknown): MailHostnameIdentity | null {
+    if (!value || typeof value !== 'object') return null;
+    const payload = value as Record<string, unknown>;
+    const current = payload.current === undefined ? '' : payload.current;
+    const hostname = payload.hostname === undefined ? '' : payload.hostname;
+    const source = payload.source === undefined ? '' : payload.source;
+    if (
+        typeof current !== 'string'
+        || typeof hostname !== 'string'
+        || typeof source !== 'string'
+        || !MAIL_HOSTNAME_SOURCES.has(source)
+        || typeof payload.current_usable !== 'boolean'
+        || typeof payload.will_set_hostname !== 'boolean'
+    ) {
+        return null;
+    }
+    // A payload that claims a settled hostname while also claiming it will
+    // rename the server is describing two different servers.
+    // Yerlesmis bir ad iddia edip ayni anda sunucuyu yeniden adlandiracagini
+    // soyleyen bir yuk, iki farkli sunucuyu tarif ediyordur.
+    if (payload.current_usable && payload.will_set_hostname && hostname === current) return null;
+    if (hostname === '' && payload.will_set_hostname) return null;
+    return {
+        current,
+        current_usable: payload.current_usable,
+        hostname,
+        source: source as MailHostnameIdentity['source'],
+        will_set_hostname: payload.will_set_hostname,
+    };
+}
+
+// The client mirrors the server's own FQDN rule so the operator learns the name
+// is unusable while their cursor is still in the field. The server remains the
+// authority and revalidates every name it is sent.
+// Istemci, sunucunun kendi FQDN kuralini yansitir; boylece operator adin
+// kullanilamaz oldugunu imleci hala alandayken ogrenir. Yetki sunucudadir ve
+// gonderilen her adi yeniden dogrular.
+export function canonicalMailHostname(raw: string): string | null {
+    const value = raw.trim().toLowerCase().replace(/\.$/, '');
+    if (value === '' || value.length > 253 || !value.includes('.')) return null;
+    if (/^[0-9.]+$/.test(value)) return null;
+    for (const label of value.split('.')) {
+        if (label === '' || label.length > 63) return null;
+        if (label.startsWith('-') || label.endsWith('-')) return null;
+        if (!/^[a-z0-9-]+$/.test(label)) return null;
+    }
+    return value;
+}
+
 export interface ComponentOperation {
     id: string;
     request_id?: string;
@@ -79,6 +151,7 @@ export interface ManagedServicesSnapshot {
     services: Record<string, unknown>[];
     profiles: ManagedMailProfile[];
     dns_identity_ready: boolean;
+    mail_hostname: MailHostnameIdentity;
     scanned_at?: string | null;
 }
 
@@ -88,6 +161,14 @@ export interface InstallOperationRequest {
     operationKind?: InstallOperationKind;
     package?: string;
     version?: string;
+    // Sent once, on the request that starts a mail profile install. The server
+    // saves it as the panel's own mail hostname, so a recovered or replayed
+    // request resolves the same name without carrying it again.
+    // Bir posta profili kurulumunu baslatan istekle bir kez gonderilir. Sunucu
+    // onu panelin kendi posta ana bilgisayar adi olarak kaydeder; boylece
+    // kurtarilan ya da yeniden oynatilan bir istek, adi tekrar tasimadan ayni
+    // ada cozer.
+    mailHostname?: string;
 }
 
 export interface OperationRecoveryMarker {
@@ -298,6 +379,8 @@ export function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSn
     ) {
         return null;
     }
+    const mailHostname = decodeMailHostnameIdentity(payload.mail_hostname);
+    if (mailHostname === null) return null;
     const services = payload.services as Record<string, unknown>[];
     const serviceIDs = new Set<string>();
     for (const service of services) {
@@ -311,6 +394,7 @@ export function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSn
         services,
         profiles,
         dns_identity_ready: payload.dns_identity_ready,
+        mail_hostname: mailHostname,
         scanned_at: payload.scanned_at,
     };
 }
@@ -1317,7 +1401,12 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
         const body = marker.operation_kind === 'runtime_install'
             ? { version: request.version, request_id: marker.request_id }
             : marker.operation_kind === 'mail_profile_install'
-                ? { profile_id: request.serviceId, request_id: marker.request_id, confirmed: true }
+                ? {
+                      profile_id: request.serviceId,
+                      request_id: marker.request_id,
+                      confirmed: true,
+                      ...(request.mailHostname ? { mail_hostname: request.mailHostname } : {}),
+                  }
                 : {
                       service_id: request.serviceId,
                       ...(request.package ? { package: request.package } : {}),

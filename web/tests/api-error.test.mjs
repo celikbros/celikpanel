@@ -112,7 +112,47 @@ test('mail profile hostname refusal replaces untrusted transport text in EN and 
 
   assert.equal(english, en['err.' + code]);
   assert.equal(turkish, tr['err.' + code]);
-  assert.match(english, /fully qualified domain name \(FQDN\)/);
-  assert.match(turkish, /tam nitelikli bir alan adı \(FQDN\)/);
+  assert.match(english, /fully qualified domain name/);
+  assert.match(turkish, /tam nitelikli bir alan adı/);
   assert.ok(!english.includes(remoteText) && !turkish.includes(remoteText));
+});
+
+// R-036. The refusal that used to be a dead end now names a field to fill, and
+// it too replaces whatever the remote text was.
+test('mail profile missing-hostname refusal names the field in EN and TR', () => {
+  const translate = (catalog) => (key) => catalog[key] ?? key;
+  const code = 'mail_profile_server_hostname_required';
+  const remoteText = '/etc/private: hostname read failed with secret command output';
+
+  const english = apiErrorText({ code, message: remoteText }, translate(en));
+  const turkish = apiErrorText({ code, message: remoteText }, translate(tr));
+
+  assert.equal(english, en['err.' + code]);
+  assert.equal(turkish, tr['err.' + code]);
+  assert.match(english, /mail\.example\.com/);
+  assert.match(turkish, /mail\.example\.com/);
+  assert.ok(!english.includes(remoteText) && !turkish.includes(remoteText));
+});
+
+// R-035. Each of the three SSH outcomes is its own translated sentence, so the
+// browser never shows the agent's own English back to the operator.
+test('firewall SSH refusals are three separate translated sentences', () => {
+  const translate = (catalog) => (key) => catalog[key] ?? key;
+  const remoteText = 'ss permission denied: /usr/sbin/ss exited 1';
+  const codes = [
+    'FIREWALL_NO_SSH_SERVICE',
+    'FIREWALL_SSH_NOT_LISTENING',
+    'FIREWALL_SSH_DISCOVERY_FAILED',
+  ];
+  const seen = new Set();
+  for (const code of codes) {
+    const english = apiErrorText({ code, message: remoteText }, translate(en));
+    const turkish = apiErrorText({ code, message: remoteText }, translate(tr));
+    assert.equal(english, en['err.' + code]);
+    assert.equal(turkish, tr['err.' + code]);
+    assert.ok(english !== 'err.' + code && turkish !== 'err.' + code);
+    assert.ok(!english.includes(remoteText) && !turkish.includes(remoteText));
+    assert.ok(!seen.has(english), `${code} reuses another refusal's sentence`);
+    seen.add(english);
+  }
 });

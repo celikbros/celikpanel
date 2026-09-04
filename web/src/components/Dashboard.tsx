@@ -12,6 +12,7 @@ import type { TranslationKey } from '../i18n/en';
 import { UsageBar, Card } from './ui';
 import { PageHeader } from './PageHeader';
 import { showToast } from './Toast';
+import { FirewallNoSSHAcknowledgement, readFirewallSSHReason } from './FirewallSSHNotice';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { summarizeDashboardMailTruth } from '../lib/dashboardMailTruth';
 import { publishComponentCensus } from '../lib/componentCensus';
@@ -48,6 +49,7 @@ interface FwState {
     tcp_ports?: number[];
     udp_ports?: number[];
     persistence_state?: 'disabled' | 'missing' | 'ready' | 'stale' | 'invalid' | 'unverified';
+    ssh_discovery_reason?: string;
 }
 interface HostMutationReadiness {
     ready: boolean;
@@ -258,6 +260,7 @@ function AdminDashboard() {
     const [extras, setExtras] = useState<Extras | null>(null);
     const [fwBusy, setFwBusy] = useState(false);
     const [firewallConfirmationOpen, setFirewallConfirmationOpen] = useState(false);
+    const [noSSHAcknowledged, setNoSSHAcknowledged] = useState(false);
     const [hostMutationReadiness, setHostMutationReadiness] = useState<HostMutationReadiness | null>(null);
     const [componentScanBusy, setComponentScanBusy] = useState(false);
 
@@ -433,21 +436,39 @@ function AdminDashboard() {
         return readiness.ready;
     };
 
+    const firewallSSHReason = readFirewallSSHReason(fw?.ssh_discovery_reason);
+    const firewallNeedsNoSSHConsent = firewallSSHReason === 'no_ssh_service';
+
     const requestTurnOnFirewall = () => {
+        setNoSSHAcknowledged(false);
         setFirewallConfirmationOpen(true);
         void refreshHostMutationReadiness();
     };
 
     const turnOnFirewall = async () => {
         if (hostMutationReadiness?.ready !== true || fwBusy) return;
+        if (firewallNeedsNoSSHConsent && !noSSHAcknowledged) return;
         setFwBusy(true);
         try {
             const r = await fetch('/api/v1/firewall', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: true }),
+                // Its own field, and only on a request that turns the firewall
+                // on. / Kendi alani, ve yalniz guvenlik duvarini acan bir
+                // istekte.
+                body: JSON.stringify(
+                    noSSHAcknowledged
+                        ? { enabled: true, no_ssh_acknowledged: true }
+                        : { enabled: true },
+                ),
             });
             if (!r.ok) {
+                // The server may have changed since the status read; re-read it
+                // so the dialog can offer the same way forward.
+                fetch('/api/v1/firewall')
+                    .then((response) => (response.ok ? response.json() : null))
+                    .then(setFw)
+                    .catch(() => {});
                 showToast('error', apiErrorText(await readApiError(r), t, 'firewall.changeFailed'));
                 return;
             }
@@ -1025,8 +1046,14 @@ function AdminDashboard() {
                 <DashboardFirewallConfirmationDialog
                     readiness={hostMutationReadiness}
                     busy={fwBusy}
+                    noSSHService={firewallNeedsNoSSHConsent}
+                    noSSHAcknowledged={noSSHAcknowledged}
+                    onAcknowledgeNoSSH={setNoSSHAcknowledged}
                     onCancel={() => {
-                        if (!fwBusy) setFirewallConfirmationOpen(false);
+                        if (!fwBusy) {
+                            setNoSSHAcknowledged(false);
+                            setFirewallConfirmationOpen(false);
+                        }
                     }}
                     onConfirm={() => void turnOnFirewall()}
                 />
@@ -1038,11 +1065,17 @@ function AdminDashboard() {
 function DashboardFirewallConfirmationDialog({
     readiness,
     busy,
+    noSSHService,
+    noSSHAcknowledged,
+    onAcknowledgeNoSSH,
     onCancel,
     onConfirm,
 }: {
     readiness: HostMutationReadiness | null;
     busy: boolean;
+    noSSHService: boolean;
+    noSSHAcknowledged: boolean;
+    onAcknowledgeNoSSH: (value: boolean) => void;
     onCancel: () => void;
     onConfirm: () => void;
 }) {
@@ -1097,6 +1130,14 @@ function DashboardFirewallConfirmationDialog({
                         {readinessMessage}
                     </p>
                 )}
+                {noSSHService && (
+                    <FirewallNoSSHAcknowledgement
+                        id="dashboard-firewall-no-ssh"
+                        checked={noSSHAcknowledged}
+                        disabled={busy}
+                        onChange={onAcknowledgeNoSSH}
+                    />
+                )}
                 <div className="flex justify-end gap-2">
                     <button
                         type="button"
@@ -1109,11 +1150,13 @@ function DashboardFirewallConfirmationDialog({
                     </button>
                     <button
                         type="button"
-                        disabled={busy || readiness?.ready !== true}
+                        disabled={busy || readiness?.ready !== true || (noSSHService && !noSSHAcknowledged)}
                         onClick={onConfirm}
                         className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        {t('firewall.confirm.enable.button')}
+                        {noSSHService
+                            ? t('firewall.ssh.no_ssh_service.confirm')
+                            : t('firewall.confirm.enable.button')}
                     </button>
                 </div>
             </div>

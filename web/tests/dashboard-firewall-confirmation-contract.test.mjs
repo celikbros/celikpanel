@@ -32,7 +32,10 @@ test('dashboard firewall confirmation fails closed on host mutation readiness', 
   assert.match(dashboardSource, /HOST_MUTATION_UNAVAILABLE/);
   assert.match(dashboardSource, /reason: 'state_unverified'/);
   assert.match(dashboardSource, /if \(hostMutationReadiness\?\.ready !== true \|\| fwBusy\) return/);
-  assert.match(dashboardSource, /disabled=\{busy \|\| readiness\?\.ready !== true\}/);
+  assert.match(
+    dashboardSource,
+    /disabled=\{busy \|\| readiness\?\.ready !== true \|\| \(noSSHService && !noSSHAcknowledged\)\}/,
+  );
 });
 
 test('dashboard performs the authoritative POST only from an accessible confirmation dialog', () => {
@@ -57,4 +60,22 @@ test('dashboard performs the authoritative POST only from an accessible confirma
   assert.match(postBody, /readApiError\(r\)/);
   assert.match(postBody, /apiErrorText\(/);
   assert.doesNotMatch(postBody, /d\.error/);
+});
+
+// R-035. A server proven to have no SSH service has no door for the firewall to
+// lock, so the dashboard offers the way forward under its own acknowledgement -
+// never folded into the confirmation the operator already gave, and never
+// offered for a probe that could not run.
+test('dashboard firewall enable asks for its own no-SSH acknowledgement', () => {
+  assert.match(dashboardSource, /readFirewallSSHReason\(fw\?\.ssh_discovery_reason\)/);
+  assert.match(dashboardSource, /firewallNeedsNoSSHConsent = firewallSSHReason === 'no_ssh_service'/);
+  assert.match(dashboardSource, /<FirewallNoSSHAcknowledgement/);
+  assert.match(dashboardSource, /noSSHService=\{firewallNeedsNoSSHConsent\}/);
+  assert.match(dashboardSource, /if \(firewallNeedsNoSSHConsent && !noSSHAcknowledged\) return/);
+  assert.match(
+    dashboardSource,
+    /noSSHAcknowledged\s+\? \{ enabled: true, no_ssh_acknowledged: true \}\s+: \{ enabled: true \}/,
+  );
+  assert.match(dashboardSource, /firewall\.ssh\.no_ssh_service\.confirm/);
+  assert.match(dashboardSource, /setNoSSHAcknowledged\(false\)/);
 });

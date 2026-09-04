@@ -87,6 +87,13 @@ const (
 	errCodeQuotaDisk                     = "QUOTA_DISK_EXCEEDED"
 	errCodeEntitlement                   = "ENTITLEMENT_REQUIRED"
 	errCodeFirewallNoEngine              = "FIREWALL_ENGINE_MISSING"
+	// The three SSH escape-hatch outcomes, told apart so the screen can offer
+	// a way forward on the only one that has one.
+	// Üç SSH kaçış-yolu sonucu; yalnız birinin bir çıkışı olduğu için ekran
+	// onu sunabilsin diye birbirinden ayrılmıştır.
+	errCodeFirewallNoSSHService    = "FIREWALL_NO_SSH_SERVICE"
+	errCodeFirewallSSHNotListening = "FIREWALL_SSH_NOT_LISTENING"
+	errCodeFirewallSSHUnprovable   = "FIREWALL_SSH_DISCOVERY_FAILED"
 	// POOL_IDENTITY_FIXED: the caller tried to set who an FPM pool runs as or
 	// which socket it answers on. Those are the panel's to decide — they are
 	// the boundary between tenants, not a setting — so the attempt is refused

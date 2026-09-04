@@ -16,11 +16,12 @@ import (
 )
 
 const (
-	serviceOperationKindMailProfileInstall  = "mail_profile_install"
-	mailProfileProofVersion                 = 1
-	mailProfileInstallPath                  = "/api/v1/service/profile/install"
-	errCodeMailProfileConfirmationRequired  = "mail_profile_confirmation_required"
-	errCodeMailProfileServerHostnameInvalid = "mail_profile_server_hostname_invalid"
+	serviceOperationKindMailProfileInstall   = "mail_profile_install"
+	mailProfileProofVersion                  = 1
+	mailProfileInstallPath                   = "/api/v1/service/profile/install"
+	errCodeMailProfileConfirmationRequired   = "mail_profile_confirmation_required"
+	errCodeMailProfileServerHostnameInvalid  = "mail_profile_server_hostname_invalid"
+	errCodeMailProfileServerHostnameRequired = "mail_profile_server_hostname_required"
 
 	mailProfileStatusUnknown   = "unknown"
 	mailProfileStatusAvailable = "available"
@@ -33,12 +34,24 @@ const (
 	mailProfileAttemptSucceeded  = "succeeded"
 	mailProfileAttemptFailed     = "failed"
 
-	mailProfileFallbackWarning       = "No active trusted Secure Mail certificate was found. Mail submission is using the local self-signed fallback; activate a trusted certificate with Secure Mail enabled."
-	mailProfileReconciliationWarning = "Components are running. Run Repair to verify and reconcile the complete mail profile, including mail TLS and authenticated submission."
-	mailProfileServerHostnameMessage = "The server's operating-system hostname is not a fully qualified domain name (FQDN). Set it to a name such as server.example.com, then try again."
+	mailProfileFallbackWarning        = "No active trusted Secure Mail certificate was found. Mail submission is using the local self-signed fallback; activate a trusted certificate with Secure Mail enabled."
+	mailProfileReconciliationWarning  = "Components are running. Run Repair to verify and reconcile the complete mail profile, including mail TLS and authenticated submission."
+	mailProfileServerHostnameMessage  = "The mail hostname must be a fully qualified domain name, such as mail.example.com."
+	mailProfileServerHostnameRequired = "This server does not have a fully qualified name yet and CelikPanel has none saved for it. Enter the name the mail server should answer as, such as mail.example.com; the installation gives this server that name."
+	mailProfileServerHostnameUnknown  = "This server's own hostname could not be read, so the mail hostname cannot be decided."
 )
 
 var errMailProfileServerHostnameInvalid = errors.New("mail profile server hostname is not a canonical FQDN")
+
+// errMailProfileServerHostnameRequired is the refusal that now replaces the
+// dead end: the panel holds no fully qualified name for this server and the
+// operator was not asked for one. It names a field to fill rather than a fact
+// to fix somewhere else.
+// errMailProfileServerHostnameRequired, çıkmaz sokağın yerini alan reddir:
+// panelin bu sunucu için tam nitelikli bir adı yok ve operatöre sorulmamış.
+// Başka bir yerde düzeltilecek bir olguyu değil, doldurulacak bir alanı
+// adlandırır.
+var errMailProfileServerHostnameRequired = errors.New("mail profile server hostname was not supplied and could not be derived")
 
 // readMailProfileHostname is a test seam around the host fact used by the
 // production preflight. It always points at os.Hostname outside tests.
@@ -84,6 +97,16 @@ type mailProfileInstallRequest struct {
 	ProfileID string `json:"profile_id"`
 	RequestID string `json:"request_id"`
 	Confirmed bool   `json:"confirmed"`
+	// MailHostname is the name the operator gave on the install screen when
+	// the panel held no identity to derive one from. It is validated here and
+	// saved as the panel's own mail hostname before the operation starts, so a
+	// restart mid-install resumes with exactly the name that was confirmed.
+	// MailHostname, panelin türetecek bir kimliği olmadığında operatörün
+	// kurulum ekranında verdiği addır. Burada doğrulanır ve işlem başlamadan
+	// önce panelin kendi posta ana bilgisayar adı olarak kaydedilir; böylece
+	// kurulumun ortasında bir yeniden başlatma, tam olarak onaylanan adla
+	// devam eder.
+	MailHostname string `json:"mail_hostname"`
 }
 
 type mailProfileTLSResult struct {
@@ -258,6 +281,25 @@ func (p *Panel) handleMailProfileInstall(w http.ResponseWriter, r *http.Request)
 		writeClientError(w, http.StatusBadRequest, "invalid request_id")
 		return
 	}
+	// A supplied mail hostname is validated and saved before anything starts,
+	// so the operator learns it is unusable in the dialog they typed it in
+	// rather than from a failed operation minutes later.
+	// Verilen bir posta ana bilgisayar adı, hiçbir şey başlamadan önce
+	// doğrulanır ve kaydedilir; böylece operatör adın kullanılamaz olduğunu
+	// dakikalar sonra başarısız bir işlemden değil, yazdığı pencerede öğrenir.
+	if supplied := strings.TrimSpace(request.MailHostname); supplied != "" {
+		canonical, err := hostname.CanonicalFQDN(supplied)
+		if err != nil {
+			writeCodedError(w, http.StatusBadRequest,
+				errCodeMailProfileServerHostnameInvalid,
+				mailProfileServerHostnameMessage, "")
+			return
+		}
+		if err := p.setSetting(r.Context(), settingMailHostname, canonical); err != nil {
+			writeServerError(w, err)
+			return
+		}
+	}
 
 	existing, found, err := p.idempotentServiceOperation(
 		r.Context(), request.RequestID, serviceOperationKindMailProfileInstall, request.ProfileID, "",
@@ -362,6 +404,13 @@ func mailProfileInstallFailure(cause error) *serviceOperationFailure {
 			cause,
 		)
 	}
+	if errors.Is(cause, errMailProfileServerHostnameRequired) {
+		return operationFailure(
+			errCodeMailProfileServerHostnameRequired,
+			mailProfileServerHostnameRequired,
+			cause,
+		)
+	}
 	if errors.Is(cause, errMailProfileServerHostnameInvalid) {
 		return operationFailure(
 			errCodeMailProfileServerHostnameInvalid,
@@ -399,6 +448,50 @@ func (p *Panel) runMailProfileInstall(
 	binding, err := panelMutationBinding(ctx)
 	if err != nil {
 		return result, mailProfileInstallFailure(err)
+	}
+
+	// Give this server its fully qualified name before anything is installed.
+	// Postfix announces it and the mail certificate is issued for it, so the
+	// name has to be true on the host before the mail software reads it. When
+	// the server already carries exactly this name, nothing is touched.
+	// Herhangi bir şey kurulmadan önce bu sunucuya tam nitelikli adını ver.
+	// Postfix onu duyurur ve posta sertifikası onun için verilir; bu yüzden
+	// posta yazılımı adı okumadan önce ad sunucuda doğru olmalıdır. Sunucu
+	// zaten tam olarak bu adı taşıyorsa hiçbir şeye dokunulmaz.
+	desiredHostname, err := p.resolveMailProfileHostname(ctx)
+	if err != nil {
+		return result, mailProfileInstallFailure(err)
+	}
+	currentHostname, err := readMailProfileHostname()
+	if err != nil {
+		return result, mailProfileInstallFailure(
+			fmt.Errorf("read mail profile server hostname: %w", err))
+	}
+	canonicalCurrent, canonicalErr := hostname.CanonicalFQDN(currentHostname)
+	if canonicalErr != nil || canonicalCurrent != desiredHostname {
+		if err := advance(mailProfilePhase(profile.ID, "hostname")); err != nil {
+			return result, operationAdvanceFailure(err)
+		}
+		hostnameRequest := transport.SetServerHostnameRequest{
+			ServiceMutationBinding: binding,
+			Hostname:               desiredHostname,
+		}
+		var hostnameResponse transport.SetServerHostnameResponse
+		if err := p.callAgentContext(
+			ctx, "Agent.SetServerHostname", &hostnameRequest, &hostnameResponse,
+		); err != nil {
+			return result, mailProfileInstallFailure(
+				fmt.Errorf("set the server hostname: %w", err))
+		}
+		if hostnameResponse.Error != "" {
+			return result, mailProfileInstallFailure(
+				fmt.Errorf("set the server hostname: %s", hostnameResponse.Error))
+		}
+		if hostnameResponse.Hostname != desiredHostname {
+			return result, mailProfileInstallFailure(
+				errors.New("agent did not confirm the exact server hostname"))
+		}
+		result["server_hostname"] = desiredHostname
 	}
 
 	completed := make([]string, 0, len(profile.Services))
@@ -528,15 +621,8 @@ func (p *Panel) validateMailProfileHostAndCatalog(ctx context.Context, profile m
 	if err := p.requireMailTLSSyncV2Agent(ctx); err != nil {
 		return err
 	}
-	rawHostname, err := readMailProfileHostname()
-	if err != nil {
-		return fmt.Errorf("read mail profile server hostname: %w", err)
-	}
-	if _, err := hostname.CanonicalFQDN(rawHostname); err != nil {
-		// Keep the rejected host and parser detail in the server-only cause while
-		// exposing only the stable category and remediation through the durable
-		// operation error contract.
-		return fmt.Errorf("%w: %v", errMailProfileServerHostnameInvalid, err)
+	if _, err := p.resolveMailProfileHostname(ctx); err != nil {
+		return err
 	}
 	family := p.packageFamily()
 	for _, id := range profile.Services {
@@ -554,16 +640,38 @@ func (p *Panel) validateMailProfileHostAndCatalog(ctx context.Context, profile m
 	return nil
 }
 
-// mailProfileHostBlockedReason exposes the safe, actionable hostname gate in
-// the read-only catalogue. An invalid host must disable the action before the
-// operator can start an operation that is guaranteed to fail.
-func mailProfileHostBlockedReason() string {
-	rawHostname, err := readMailProfileHostname()
-	if err != nil {
-		return "The server hostname could not be verified."
+// resolveMailProfileHostname is the single answer to "what will the mail
+// server be called". Everything downstream — the preflight, the catalogue and
+// the install itself — asks this one function, so the screen can never promise
+// a name the install would not use.
+// resolveMailProfileHostname, "posta sunucusunun adı ne olacak" sorusunun tek
+// yanıtıdır. Aşağıdaki her şey — ön kontrol, katalog ve kurulumun kendisi — bu
+// tek işleve sorar; böylece ekran, kurulumun kullanmayacağı bir adı asla vaat
+// edemez.
+func (p *Panel) resolveMailProfileHostname(ctx context.Context) (string, error) {
+	if _, err := readMailProfileHostname(); err != nil {
+		return "", fmt.Errorf("read mail profile server hostname: %w", err)
 	}
-	if _, err := hostname.CanonicalFQDN(rawHostname); err != nil {
-		return mailProfileServerHostnameMessage
+	identity := p.mailHostnameIdentity(ctx)
+	if identity.Hostname == "" {
+		return "", errMailProfileServerHostnameRequired
+	}
+	return identity.Hostname, nil
+}
+
+// mailProfileHostBlockedReason exposes the safe, actionable hostname gate in
+// the read-only catalogue. A server without a fully qualified name is no
+// longer blocked: the install screen asks for one and the install sets it. The
+// catalogue only fails closed when this server's own hostname cannot be read
+// at all, because then nothing about the name can be decided.
+// mailProfileHostBlockedReason, salt-okunur katalogdaki güvenli ve eyleme
+// dönük ana bilgisayar adı kapısını gösterir. Tam nitelikli adı olmayan bir
+// sunucu artık engellenmez: kurulum ekranı bir ad ister, kurulum onu koyar.
+// Katalog yalnız bu sunucunun kendi adı hiç okunamadığında kapanır; çünkü o
+// zaman ad hakkında hiçbir şeye karar verilemez.
+func mailProfileHostBlockedReason() string {
+	if _, err := readMailProfileHostname(); err != nil {
+		return mailProfileServerHostnameUnknown
 	}
 	return ""
 }
