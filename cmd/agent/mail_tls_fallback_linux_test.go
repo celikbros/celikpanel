@@ -55,7 +55,7 @@ func requireDefaultMailTLSPair(t *testing.T, certPath, keyPath string) {
 func TestEnsureDefaultMailCertPairIsStableAndSecure(t *testing.T) {
 	certPath, keyPath := defaultMailTLSTestPaths(t)
 	if err := ensureDefaultMailCertPair(
-		certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig,
+		certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestEnsureDefaultMailCertPairIsStableAndSecure(t *testing.T) {
 	}
 
 	if err := ensureDefaultMailCertPair(
-		certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig,
+		certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestEnsureDefaultMailCertPairIsStableAndSecure(t *testing.T) {
 func TestEnsureDefaultMailCertPairRegeneratesForHostnameChange(t *testing.T) {
 	certPath, keyPath := defaultMailTLSTestPaths(t)
 	if err := ensureDefaultMailCertPair(
-		certPath, keyPath, "old.example.test", defaultMailTLSTestNow, secureWriteConfig,
+		certPath, keyPath, "old.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestEnsureDefaultMailCertPairRegeneratesForHostnameChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := ensureDefaultMailCertPair(
-		certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig,
+		certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -171,13 +171,13 @@ func TestEnsureDefaultMailCertPairRepairsInvalidSafePairs(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			certPath, keyPath := defaultMailTLSTestPaths(t)
 			if err := ensureDefaultMailCertPair(
-				certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig,
+				certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile,
 			); err != nil {
 				t.Fatal(err)
 			}
 			test.mutate(t, certPath, keyPath)
 			if err := ensureDefaultMailCertPair(
-				certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig,
+				certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile,
 			); err != nil {
 				t.Fatalf("repair failed: %v", err)
 			}
@@ -190,12 +190,17 @@ func TestEnsureDefaultMailCertPairConvergesAfterInterruptedPublish(t *testing.T)
 	certPath, keyPath := defaultMailTLSTestPaths(t)
 	interrupted := errors.New("simulated crash before key publish")
 	writes := 0
-	writer := func(path string, content []byte, mode os.FileMode) error {
+	writer := func(
+		path string,
+		content []byte,
+		mode os.FileMode,
+		owner mailTLSDirectoryOwner,
+	) error {
 		writes++
 		if writes == 2 {
 			return interrupted
 		}
-		return secureWriteConfig(path, content, mode)
+		return secureWriteDefaultMailTLSFile(path, content, mode, owner)
 	}
 	err := ensureDefaultMailCertPair(
 		certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, writer,
@@ -211,7 +216,7 @@ func TestEnsureDefaultMailCertPairConvergesAfterInterruptedPublish(t *testing.T)
 	}
 
 	if err := ensureDefaultMailCertPair(
-		certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig,
+		certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile,
 	); err != nil {
 		t.Fatalf("retry after interrupted publish: %v", err)
 	}
@@ -235,7 +240,7 @@ func TestEnsureDefaultMailCertPairRefusesUnsafeExistingFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 		err := ensureDefaultMailCertPair(
-			certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig,
+			certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile,
 		)
 		if err == nil || !strings.Contains(err.Error(), "not a regular file") {
 			t.Fatalf("symlink refusal error = %v", err)
@@ -262,7 +267,7 @@ func TestEnsureDefaultMailCertPairRefusesUnsafeExistingFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 		err := ensureDefaultMailCertPair(
-			certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig,
+			certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile,
 		)
 		if err == nil || !strings.Contains(err.Error(), "hard links") {
 			t.Fatalf("hard-link refusal error = %v", err)
@@ -281,7 +286,7 @@ func TestEnsureDefaultMailCertPairRefusesUnsafeExistingFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 		err := ensureDefaultMailCertPair(
-			certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig,
+			certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile,
 		)
 		if err == nil || !strings.Contains(err.Error(), "unsafe permissions") {
 			t.Fatalf("wrong-mode refusal error = %v", err)
@@ -294,14 +299,14 @@ func TestEnsureDefaultMailCertPairRefusesUnsafeDirectoryResolution(t *testing.T)
 		parent := t.TempDir()
 		certPath := parent + string(filepath.Separator) + "mail-tls" + string(filepath.Separator) + ".." + string(filepath.Separator) + "mail-tls" + string(filepath.Separator) + "default-cert.pem"
 		keyPath := filepath.Join(parent, "mail-tls", "default-key.pem")
-		err := ensureDefaultMailCertPair(certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig)
+		err := ensureDefaultMailCertPair(certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile)
 		if err == nil || !strings.Contains(err.Error(), "canonical and absolute") {
 			t.Fatalf("non-canonical path error = %v", err)
 		}
 	})
 
 	t.Run("half production pair", func(t *testing.T) {
-		err := ensureDefaultMailCertPair(defaultMailCert, filepath.Join(t.TempDir(), "default-key.pem"), "mail.example.test", defaultMailTLSTestNow, secureWriteConfig)
+		err := ensureDefaultMailCertPair(defaultMailCert, filepath.Join(t.TempDir(), "default-key.pem"), "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile)
 		if err == nil || !strings.Contains(err.Error(), "exact certificate and private-key pair") {
 			t.Fatalf("half-production path error = %v", err)
 		}
@@ -315,7 +320,7 @@ func TestEnsureDefaultMailCertPairRefusesUnsafeDirectoryResolution(t *testing.T)
 		defer os.Chmod(parent, 0o700)
 		certPath := filepath.Join(parent, "mail-tls", "default-cert.pem")
 		keyPath := filepath.Join(parent, "mail-tls", "default-key.pem")
-		err := ensureDefaultMailCertPair(certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig)
+		err := ensureDefaultMailCertPair(certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile)
 		if err == nil || !strings.Contains(err.Error(), "must not be writable") {
 			t.Fatalf("unsafe-parent error = %v", err)
 		}
@@ -331,7 +336,7 @@ func TestEnsureDefaultMailCertPairRefusesUnsafeDirectoryResolution(t *testing.T)
 		if err := os.Symlink(target, directory); err != nil {
 			t.Fatal(err)
 		}
-		err := ensureDefaultMailCertPair(filepath.Join(directory, "default-cert.pem"), filepath.Join(directory, "default-key.pem"), "mail.example.test", defaultMailTLSTestNow, secureWriteConfig)
+		err := ensureDefaultMailCertPair(filepath.Join(directory, "default-cert.pem"), filepath.Join(directory, "default-key.pem"), "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile)
 		if err == nil || (!strings.Contains(err.Error(), "symbolic link") &&
 			!strings.Contains(err.Error(), "not a directory")) {
 			t.Fatalf("symlink-directory error = %v", err)
@@ -352,7 +357,7 @@ func TestEnsureDefaultMailCertPairRefusesUnsafeDirectoryResolution(t *testing.T)
 		parent := t.TempDir()
 		certPath := filepath.Join(parent, "mail-tls", "default-cert.pem")
 		keyPath := filepath.Join(parent, "mail-tls", "default-key.pem")
-		err := ensureDefaultMailCertPair(certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteConfig)
+		err := ensureDefaultMailCertPair(certPath, keyPath, "mail.example.test", defaultMailTLSTestNow, secureWriteDefaultMailTLSFile)
 		if err == nil || !strings.Contains(err.Error(), "requires Linux openat2") || !errors.Is(err, unix.ENOSYS) {
 			t.Fatalf("ENOSYS error = %v", err)
 		}

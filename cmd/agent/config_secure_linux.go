@@ -93,14 +93,47 @@ func secureWriteConfig(path string, content []byte, mode os.FileMode) error {
 	return secureWriteConfigReplacingSnapshot(path, content, mode, nil)
 }
 
+// secureWriteConfigOwnedBy publishes a managed file that must end up owned by
+// exactly uid:gid. Everything else about the write is unchanged: no-follow
+// temporary creation beneath the parent, explicit chmod, fsync, an exact
+// metadata contract proved on the descriptor, then rename and a parent fsync.
+// secureWriteConfigOwnedBy, tam olarak uid:gid sahipli olmasi gereken bir
+// yonetilen dosyayi yayimlar. Yazmanin geri kalani aynidir.
+func secureWriteConfigOwnedBy(
+	path string,
+	content []byte,
+	mode os.FileMode,
+	uid, gid uint32,
+) error {
+	return secureWriteConfigReplacingSnapshotWithOptions(
+		path, content, mode, nil,
+		secureConfigWriteOptions{
+			publishedOwner: &secureConfigOwner{uid: uid, gid: gid},
+		},
+	)
+}
+
 type secureConfigOwner struct {
 	uid uint32
 	gid uint32
 }
 
 type secureConfigWriteOptions struct {
-	parentPolicy           *bindConfigOwnerPolicy
-	requiredOwner          *secureConfigOwner
+	parentPolicy  *bindConfigOwnerPolicy
+	requiredOwner *secureConfigOwner
+	// publishedOwner forces the published file's uid:gid instead of
+	// inheriting the agent process's own credentials. The unit runs the
+	// agent as User=root with Group=celikpanel, so anything it creates is
+	// group celikpanel unless the owner is chosen deliberately; managed TLS
+	// material has to belong to the same identity as the directory that
+	// holds it, which is what its readback verification asserts.
+	// publishedOwner, yayımlanan dosyanın uid:gid'ini agent surecinin kendi
+	// kimliginden devralmak yerine zorlar. Birim agent'i User=root ve
+	// Group=celikpanel ile calistirir; bu yuzden olusturdugu her dosya, sahibi
+	// bilerek secilmedikce celikpanel grubundadir. Yonetilen TLS malzemesi,
+	// dogrulamasinin ileri surdugu gibi, kendisini tutan dizinle ayni kimlige
+	// ait olmalidir.
+	publishedOwner         *secureConfigOwner
 	beforeFinalParentProof func()
 }
 
@@ -268,6 +301,9 @@ func secureWriteConfigReplacingSnapshotWithOptions(
 	if requiredOwner != nil && expected == nil {
 		return errors.New("managed configuration owner-controlled replacement requires an exact preimage")
 	}
+	if requiredOwner != nil && options.publishedOwner != nil {
+		return errors.New("managed configuration cannot take two conflicting owner contracts")
+	}
 	if expected != nil {
 		if err := validateDNSFileSnapshotIntegrity(*expected); err != nil {
 			return err
@@ -371,6 +407,10 @@ func secureWriteConfigReplacingSnapshotWithOptions(
 	if requiredOwner != nil {
 		ownerUID = int(requiredOwner.uid)
 		ownerGID = int(requiredOwner.gid)
+	}
+	if options.publishedOwner != nil {
+		ownerUID = int(options.publishedOwner.uid)
+		ownerGID = int(options.publishedOwner.gid)
 	}
 
 	var tempName string

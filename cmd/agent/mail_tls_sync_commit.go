@@ -31,6 +31,83 @@ const (
 
 const mailTLSSyncReceiptUnavailableError = "mail TLS host state converged but its terminal receipt is unavailable"
 
+// A committed mail TLS plan that cannot be completed ends here. The phase is
+// deliberately outside the commit-receipt namespace: the ledger invariant ties
+// an intent receipt to an active job and a published receipt to a succeeded
+// one, and this job is neither - it is finished, failed, and the host is free.
+// Tamamlanamayan, taahhut edilmis bir posta TLS plani burada biter. Asama
+// bilerek taahhut-makbuzu ad alaninin disindadir.
+const mailTLSSyncFailedPhase = "mail_tls_sync_failed"
+
+const (
+	mailTLSSyncFailedRestoredCode  = "mail_tls_sync_failed_host_restored"
+	mailTLSSyncFailedUntouchedCode = "mail_tls_sync_failed_before_host_change"
+)
+
+// What a clean failure does NOT undo, said out loud. The mail TLS step is the
+// only transactional part of a mail profile install; the packages the earlier
+// steps installed and the host name the profile set are still there, and an
+// operator reading this failure has to be told so rather than left to guess.
+// Temiz bir basarisizligin geri ALMADIGI sey, acikca soylenir.
+const mailTLSSyncResidueSentence = "Nothing else the profile did was undone: " +
+	"packages it installed and the server hostname it set are still in place."
+
+// And the one thing a recovery cannot know. Each attempt restores what it
+// itself changed; an attempt that was killed never got to. So a failure
+// reported after a restart may sit on a host an earlier attempt left half
+// configured, and it says so instead of implying the server is untouched.
+// Ve bir kurtarmanin bilemeyecegi tek sey. Her deneme yalnizca kendi
+// degistirdigini geri alir; oldurulmus bir deneme buna hic firsat bulamadi.
+const mailTLSSyncInterruptedAttemptSentence = "An earlier attempt was " +
+	"interrupted before it could undo its own work, so mail TLS may still be " +
+	"partly configured here; running the mail profile install again converges it."
+
+const mailTLSSyncFailureReasonLimit = 400
+
+// mailTLSSyncCleanFailureText names the terminal failure. afterRestart says
+// whether startup recovery is speaking, which is the only case that has to
+// warn about an interrupted predecessor it could not undo.
+// mailTLSSyncCleanFailureText, kalici basarisizligi adlandirir. afterRestart,
+// yalnizca baslangic kurtarmasinin uyarmak zorunda oldugu durumu ayirir.
+func mailTLSSyncCleanFailureText(
+	outcome mailTLSHostOutcome,
+	cause error,
+	afterRestart bool,
+) (code string, message string, clean bool) {
+	reason := "unknown"
+	if cause != nil {
+		reason = strings.TrimSpace(cause.Error())
+	}
+	if reason == "" {
+		reason = "unknown"
+	}
+	if len(reason) > mailTLSSyncFailureReasonLimit {
+		reason = reason[:mailTLSSyncFailureReasonLimit] + "..."
+	}
+	tail := ""
+	if afterRestart {
+		tail = mailTLSSyncInterruptedAttemptSentence + " "
+	}
+	tail += mailTLSSyncResidueSentence + " Reason: " + reason
+	switch outcome {
+	case mailTLSHostUntouched:
+		return mailTLSSyncFailedUntouchedCode,
+			"The committed mail TLS change was abandoned without changing " +
+				"anything on this server. " + tail,
+			true
+	case mailTLSHostRestored:
+		return mailTLSSyncFailedRestoredCode,
+			"The committed mail TLS change could not be completed. Everything " +
+				"this attempt changed - the default mail certificate and key, " +
+				"the Postfix SNI map, the managed Postfix TLS settings and the " +
+				"Dovecot TLS configuration - was put back as this attempt found " +
+				"it, and Postfix and Dovecot were validated and reloaded. " + tail,
+			true
+	default:
+		return "", "", false
+	}
+}
+
 type mailTLSSyncJournal struct {
 	Version     int                      `json:"version"`
 	RequestID   string                   `json:"request_id"`
@@ -40,7 +117,10 @@ type mailTLSSyncJournal struct {
 	SNI         []transport.MailSNIEntry `json:"sni,omitempty"`
 }
 
-var recoverMailTLSSyncHost = func(ctx context.Context, journal *mailTLSSyncJournal) error {
+var recoverMailTLSSyncHost = func(
+	ctx context.Context,
+	journal *mailTLSSyncJournal,
+) (mailTLSHostOutcome, error) {
 	mailMutex.Lock()
 	defer mailMutex.Unlock()
 	return convergeMailTLSSyncPlan(ctx, journal)
@@ -404,6 +484,47 @@ func publishStandaloneMailTLSSync(ctx context.Context, journal *mailTLSSyncJourn
 	return nil
 }
 
+// failStandaloneMailTLSSync finishes a committed plan that cannot be completed
+// as a terminal failure and releases the host mutation ledger. It is the exact
+// mirror of publishStandaloneMailTLSSync and takes the same proofs of identity:
+// the plan is only ever abandoned by the runtime that owns it, under its own
+// step, with the reason written durably before the lock is dropped.
+// failStandaloneMailTLSSync, tamamlanamayan taahhut edilmis bir plani kalici
+// bir basarisizlik olarak bitirir ve defteri serbest birakir.
+func failStandaloneMailTLSSync(
+	ctx context.Context,
+	journal *mailTLSSyncJournal,
+	code, message string,
+) error {
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
+		return errors.New("mail TLS sync failure requires a durable tracker")
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.healthErrorLocked(); err != nil {
+		return err
+	}
+	if m.active != runtime || runtime.job == nil || runtime.steps != 1 ||
+		runtime.job.WorkerPID != 0 || runtime.mailTLSSyncCommittedPhase == "" ||
+		!mailTLSSyncJobMatchesJournal(runtime.job, journal) {
+		return errors.New("mail TLS failure lost the committed mutation")
+	}
+	runtime.mailTLSSyncCommittedPhase = ""
+	if err := m.finishRuntimeTerminalLocked(
+		runtime, false, mailTLSSyncFailedPhase, code, message,
+	); err != nil {
+		if m.active == runtime {
+			return m.poisonLocked(fmt.Errorf(
+				"persist terminal mail TLS failure: %w", err,
+			))
+		}
+		return err
+	}
+	return nil
+}
+
 func publishMailTLSSyncResponse(
 	ctx context.Context,
 	journal *mailTLSSyncJournal,
@@ -438,7 +559,28 @@ func syncMailTLSV2(
 	}
 	convergenceCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), mailTLSSyncConvergenceTime)
 	defer cancel()
-	if err := convergeMailTLSSyncPlan(convergenceCtx, journal); err != nil {
+	if outcome, err := convergeMailTLSSyncPlan(convergenceCtx, journal); err != nil {
+		// A committed plan that failed with the host provably back where the
+		// step found it is finished as failed here, so one unfinishable mail
+		// step cannot hold every other mutation on this server. Anything the
+		// step may still be holding on the host stays fail-closed: the ledger
+		// is poisoned and startup recovery gets the next word.
+		// Makinenin kanitli bicimde adimin buldugu yere dondugu bir
+		// basarisizlik burada kalici olarak bitirilir; boylece bitirilemeyen
+		// tek bir posta adimi bu sunucudaki diger tum mutasyonlari tutamaz.
+		if code, message, clean := mailTLSSyncCleanFailureText(outcome, err, false); clean {
+			if failErr := failStandaloneMailTLSSync(ctx, journal, code, message); failErr != nil {
+				log.Printf(
+					"Mail TLS V2 commit could not be failed cleanly: %v; cause: %v",
+					failErr, err,
+				)
+				response.Error = "mail TLS commit requires startup recovery"
+				return nil
+			}
+			log.Printf("Mail TLS V2 commit failed cleanly and released the ledger: %v", err)
+			response.Error = message
+			return nil
+		}
 		poisonErr := poisonMailTLSSyncConvergence(ctx, err)
 		log.Printf("Mail TLS V2 convergence failed after durable intent: %v; poison: %v", err, poisonErr)
 		response.Error = "mail TLS commit requires startup recovery"
@@ -448,13 +590,23 @@ func syncMailTLSV2(
 	return nil
 }
 
-func convergeMailTLSSyncPlan(ctx context.Context, journal *mailTLSSyncJournal) error {
+// convergeMailTLSSyncPlan applies the committed plan and reports both whether
+// it succeeded and what it left on the host. Only the second answer may decide
+// whether a failure is allowed to be terminal.
+// convergeMailTLSSyncPlan taahhut edilmis plani uygular ve hem basarili olup
+// olmadigini hem de makinede ne biraktigini bildirir.
+func convergeMailTLSSyncPlan(
+	ctx context.Context,
+	journal *mailTLSSyncJournal,
+) (mailTLSHostOutcome, error) {
 	if err := validateMailTLSSyncJournal(journal); err != nil {
-		return err
+		return mailTLSHostUntouched, err
 	}
 	trustedRoot, err := configuredMailTLSManagedRoot()
 	if err != nil || trustedRoot != journal.ManagedRoot {
-		return errors.New("trusted managed certificate root does not match committed mail TLS plan")
+		return mailTLSHostUntouched, errors.New(
+			"trusted managed certificate root does not match committed mail TLS plan",
+		)
 	}
 	request := &SecureMailTLSRequest{
 		Myhostname: journal.Myhostname,
@@ -464,14 +616,30 @@ func convergeMailTLSSyncPlan(ctx context.Context, journal *mailTLSSyncJournal) e
 		return runMailTLSMutationCommand(ctx, name, args...)
 	}
 	var response SecureMailTLSResponse
-	if err := reconcileMailTLS(request, &response, runner); err != nil {
-		return err
+	outcome, err := reconcileMailTLSHost(request, &response, runner)
+	if err != nil {
+		return mailTLSHostAmbiguous, err
 	}
 	if response.Error != "" || !response.Configured ||
 		response.SNICount != len(journal.SNI) || response.DefaultCert != defaultMailCert {
-		return fmt.Errorf("mail TLS convergence did not confirm the committed plan: %s", response.Error)
+		if outcome == mailTLSHostConverged {
+			// The reconciliation reported success and the plan still does not
+			// match: the host was changed and nothing rolled it back.
+			// Uzlastirma basari bildirdi ve plan yine de tutmuyor.
+			outcome = mailTLSHostAmbiguous
+		}
+		return outcome, fmt.Errorf(
+			"mail TLS convergence did not confirm the committed plan: %s", response.Error,
+		)
 	}
-	return verifyMailTLSSyncPlan(journal, runner)
+	if err := verifyMailTLSSyncPlan(journal, runner); err != nil {
+		// The host carries the applied plan but it does not verify. Nothing
+		// restored it, so this stays fail-closed.
+		// Makine uygulanmis plani tasiyor ama dogrulanmiyor; hicbir sey geri
+		// almadi, bu yuzden kapali-basarisiz kalir.
+		return mailTLSHostAmbiguous, err
+	}
+	return mailTLSHostConverged, nil
 }
 
 func expectedPostfixSNIMap(sni []transport.MailSNIEntry) []byte {
@@ -671,7 +839,7 @@ func (m *serviceMutationManager) recoverPersistedMailTLSSyncLocked(
 	}
 	recoveryCtx := context.WithValue(recoveryBase, serviceMutationExecutionTrackerKey{}, tracker)
 	m.mu.Unlock()
-	recoveryErr := recoverMailTLSSyncHost(recoveryCtx, journal)
+	recoveryOutcome, recoveryErr := recoverMailTLSSyncHost(recoveryCtx, journal)
 	cancel()
 	m.mu.Lock()
 	runtime.steps = 0
@@ -679,6 +847,33 @@ func (m *serviceMutationManager) recoverPersistedMailTLSSyncLocked(
 	runtime.stepMu.Unlock()
 	m.mu.Lock()
 	if recoveryErr != nil {
+		// Re-attempting a plan that can never converge is how one broken
+		// profile step took a whole control plane with it (R-046): the same
+		// check failed on every boot and the ledger stayed held. A plan the
+		// recovery cannot complete, on a host the recovery proved it left
+		// where it found it, is finished as failed with its reason written
+		// durably, and the host becomes mutable again. Everything else -
+		// a rollback that could not be proved, an applied plan that does not
+		// verify - still poisons and still keeps the lock.
+		// Asla yakinsamayacak bir plani tekrar denemek, bozuk tek bir profil
+		// adiminin butun kontrol duzlemini goturme bicimiydi (R-046).
+		code, message, clean := mailTLSSyncCleanFailureText(
+			recoveryOutcome, recoveryErr, true,
+		)
+		if clean {
+			log.Printf(
+				"Committed mail TLS plan failed cleanly during startup recovery: %v",
+				recoveryErr,
+			)
+			if finishErr := m.finishRuntimeTerminalLocked(
+				runtime, false, mailTLSSyncFailedPhase, code, message,
+			); finishErr != nil {
+				return true, m.poisonLocked(fmt.Errorf(
+					"persist recovered mail TLS failure: %w", finishErr,
+				))
+			}
+			return true, nil
+		}
 		return true, m.poisonLocked(fmt.Errorf("recover committed mail TLS plan: %w", recoveryErr))
 	}
 	phase, err := formatMailTLSSyncCommitPhase(mailTLSSyncCommitPublished, job.RequestID, job.PackageName)

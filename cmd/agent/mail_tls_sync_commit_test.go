@@ -209,14 +209,17 @@ func TestMailTLSSyncLiveWorkerPreservesIntentThenRecoversForward(t *testing.T) {
 
 	previousRecovery := recoverMailTLSSyncHost
 	recoveryCalls := 0
-	recoverMailTLSSyncHost = func(ctx context.Context, got *mailTLSSyncJournal) error {
+	recoverMailTLSSyncHost = func(
+		ctx context.Context,
+		got *mailTLSSyncJournal,
+	) (mailTLSHostOutcome, error) {
 		recoveryCalls++
 		tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
 		if tracker == nil || !tracker.allowCancellingRecovery ||
 			!equalMailTLSSyncJournals(got, journal) {
-			return errors.New("recovery lost exact tracked journal")
+			return mailTLSHostAmbiguous, errors.New("recovery lost exact tracked journal")
 		}
-		return nil
+		return mailTLSHostConverged, nil
 	}
 	t.Cleanup(func() { recoverMailTLSSyncHost = previousRecovery })
 	reloaded.mu.Lock()
@@ -321,19 +324,24 @@ func TestMailTLSSyncRecoveryClearsStaleWorkerBeforeTrackedCommands(t *testing.T)
 	abandonFirewallApplyTestRuntime(t, manager)
 
 	previousRecovery := recoverMailTLSSyncHost
-	recoverMailTLSSyncHost = func(ctx context.Context, _ *mailTLSSyncJournal) error {
+	recoverMailTLSSyncHost = func(
+		ctx context.Context,
+		_ *mailTLSSyncJournal,
+	) (mailTLSHostOutcome, error) {
 		tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
 		if tracker == nil {
-			return errors.New("missing recovery tracker")
+			return mailTLSHostAmbiguous, errors.New("missing recovery tracker")
 		}
 		tracker.manager.mu.Lock()
 		defer tracker.manager.mu.Unlock()
 		job := tracker.runtime.job
 		if job.Status != serviceMutationStatusCancelling || job.WorkerPID != 0 ||
 			job.WorkerStarted != "" || job.WorkerCommand != "" {
-			return errors.New("stale worker was not durably cleared before recovery")
+			return mailTLSHostAmbiguous, errors.New(
+				"stale worker was not durably cleared before recovery",
+			)
 		}
-		return nil
+		return mailTLSHostConverged, nil
 	}
 	t.Cleanup(func() { recoverMailTLSSyncHost = previousRecovery })
 	reloaded, err := newServiceMutationManager(

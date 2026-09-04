@@ -75,7 +75,39 @@ type SecureMailTLSResponse = transport.SecureMailTLSResponse
 const mailTLSLegacyUnsupportedError = "legacy mail TLS mutation is unsupported; use Agent.SyncMailTLSV2 with a payload-bound direct mutation lease"
 
 type mailTLSCommandRunner func(name string, args ...string) ([]byte, error)
-type defaultMailTLSWriter func(path string, content []byte, mode os.FileMode) error
+
+// defaultMailTLSWriter publishes one half of the default mail certificate pair
+// with the ownership the managed directory carries. The owner is not optional:
+// the agent runs as User=root with Group=celikpanel, so a file it creates
+// inherits group celikpanel, while the managed directory is root:root - and
+// the readback below demands that the file and its directory agree.
+// defaultMailTLSWriter, varsayilan posta sertifika ciftinin bir yarisini,
+// yonetilen dizinin tasidigi sahiplikle yayimlar. Sahip istege bagli degildir:
+// agent User=root ve Group=celikpanel ile calistigi icin olusturdugu dosya
+// celikpanel grubunu devralir; oysa yonetilen dizin root:root'tur ve asagidaki
+// geri-okuma dosya ile dizininin ortusmesini sart kosar.
+type defaultMailTLSWriter func(
+	path string,
+	content []byte,
+	mode os.FileMode,
+	owner mailTLSDirectoryOwner,
+) error
+
+// secureWriteDefaultMailTLSFile is the production writer for that pair.
+// secureWriteDefaultMailTLSFile, o cift icin uretim yazicisidir.
+func secureWriteDefaultMailTLSFile(
+	path string,
+	content []byte,
+	mode os.FileMode,
+	owner mailTLSDirectoryOwner,
+) error {
+	if owner.uid != uint64(uint32(owner.uid)) || owner.gid != uint64(uint32(owner.gid)) {
+		return fmt.Errorf("managed mail TLS directory owner is out of range")
+	}
+	return secureWriteConfigOwnedBy(
+		path, content, mode, uint32(owner.uid), uint32(owner.gid),
+	)
+}
 
 type mailTLSDirectoryOwner struct {
 	uid uint64
@@ -224,59 +256,67 @@ func reconcileMailTLS(
 	resp *SecureMailTLSResponse,
 	run mailTLSCommandRunner,
 ) error {
+	_, err := reconcileMailTLSHost(req, resp, run)
+	return err
+}
+
+// reconcileMailTLSHost is reconcileMailTLS with the one fact its durable
+// callers need beside the response: what the run left on the host.
+// reconcileMailTLSHost, reconcileMailTLS'in kalici cagiranlarinin yanitin
+// yaninda ihtiyac duydugu tek olguyu da veren halidir: kosunun makinede ne
+// biraktigi.
+func reconcileMailTLSHost(
+	req *SecureMailTLSRequest,
+	resp *SecureMailTLSResponse,
+	run mailTLSCommandRunner,
+) (mailTLSHostOutcome, error) {
 
 	if os.Getenv("CELIKPANEL_MAIL_DIR") != "" {
 		resp.Error = "mail TLS is a production action; not available with CELIKPANEL_MAIL_DIR set"
-		return nil
+		return mailTLSHostUntouched, nil
 	}
 	myhostname, valid, err := validateSecureMailTLSRequest(req)
 	if err != nil {
 		resp.Error = fmt.Sprintf("mail TLS validation: %v", err)
-		return nil
+		return mailTLSHostUntouched, nil
 	}
 	preflight, err := preflightMailTLSCommands(len(valid) > 0, run)
 	if err != nil {
 		resp.Error = err.Error()
-		return nil
+		return mailTLSHostUntouched, nil
 	}
 	run = preflight.run
 
 	previous, err := snapshotMailTLSState(run)
 	if err != nil {
 		resp.Error = fmt.Sprintf("mail TLS snapshot: %v", err)
-		return nil
+		return mailTLSHostUntouched, nil
 	}
 	if err := ensureDefaultMailCert(myhostname); err != nil {
-		setMailTLSFailure(resp, "default certificate", err, previous, run)
-		return nil
+		return setMailTLSFailure(resp, "default certificate", err, previous, run), nil
 	}
 	resp.DefaultCert = defaultMailCert
 
 	if err := configurePostfixTLS(myhostname, valid, preflight.sniMapType, run); err != nil {
-		setMailTLSFailure(resp, "postfix configuration", err, previous, run)
-		return nil
+		return setMailTLSFailure(resp, "postfix configuration", err, previous, run), nil
 	}
 	if err := configureDovecotTLS(valid, run); err != nil {
-		setMailTLSFailure(resp, "dovecot configuration", err, previous, run)
-		return nil
+		return setMailTLSFailure(resp, "dovecot configuration", err, previous, run), nil
 	}
 	if err := validatePostfixTLSConfig(run); err != nil {
-		setMailTLSFailure(resp, "postfix validation", err, previous, run)
-		return nil
+		return setMailTLSFailure(resp, "postfix validation", err, previous, run), nil
 	}
 	if err := reloadMailTLSService("postfix", run); err != nil {
-		setMailTLSFailure(resp, "postfix reload", err, previous, run)
-		return nil
+		return setMailTLSFailure(resp, "postfix reload", err, previous, run), nil
 	}
 	if err := reloadMailTLSService("dovecot", run); err != nil {
-		setMailTLSFailure(resp, "dovecot reload", err, previous, run)
-		return nil
+		return setMailTLSFailure(resp, "dovecot reload", err, previous, run), nil
 	}
 
 	resp.Configured = true
 	resp.SNICount = len(valid)
 	resp.Detail = fmt.Sprintf("mail TLS active (%d SNI entries)", len(valid))
-	return nil
+	return mailTLSHostConverged, nil
 }
 
 func validateSecureMailTLSRequest(req *SecureMailTLSRequest) (string, []MailSNIEntry, error) {
@@ -782,22 +822,46 @@ func (snapshot *mailTLSStateSnapshot) rollback(run mailTLSCommandRunner) error {
 	return errors.Join(rollbackErrors...)
 }
 
+// mailTLSHostOutcome is what a reconciliation leaves behind on the host. It is
+// the fact a committed plan's failure has to be judged on: a plan that cannot
+// be completed may only be failed cleanly - and the host's mutation ledger
+// released - when the host is provably back where the step found it.
+// mailTLSHostOutcome, bir uzlastirmanin makinede biraktigi durumdur.
+// Tamamlanamayan bir plan, ancak makine kanitli bicimde adimin buldugu yere
+// geri donduyse temiz basarisiz sayilabilir ve defter serbest birakilabilir.
+type mailTLSHostOutcome int
+
+const (
+	// mailTLSHostUntouched: the failure happened before any host change.
+	mailTLSHostUntouched mailTLSHostOutcome = iota
+	// mailTLSHostRestored: the host was changed, then every managed file and
+	// postfix setting was restored, both daemon configurations validated and
+	// both daemons reloaded.
+	mailTLSHostRestored
+	// mailTLSHostConverged: the committed plan is applied.
+	mailTLSHostConverged
+	// mailTLSHostAmbiguous: the host was changed and the restoration could not
+	// be proved. This is the only outcome that may hold the ledger.
+	mailTLSHostAmbiguous
+)
+
 func setMailTLSFailure(
 	resp *SecureMailTLSResponse,
 	stage string,
 	failure error,
 	snapshot *mailTLSStateSnapshot,
 	run mailTLSCommandRunner,
-) {
+) mailTLSHostOutcome {
 	resp.Configured = false
 	resp.DefaultCert = ""
 	resp.SNICount = 0
 	resp.Error = fmt.Sprintf("%s: %v", stage, failure)
 	if rollbackErr := snapshot.rollback(run); rollbackErr != nil {
 		resp.Error += fmt.Sprintf("; rollback incomplete: %v", rollbackErr)
-		return
+		return mailTLSHostAmbiguous
 	}
 	resp.Detail = "previous mail TLS state restored, validated, and reloaded"
+	return mailTLSHostRestored
 }
 
 // ensureDefaultMailCert creates a self-signed certificate for the machine's
@@ -821,7 +885,7 @@ func ensureDefaultMailCert(host string) error {
 		defaultMailKey,
 		host,
 		time.Now(),
-		secureWriteConfig,
+		secureWriteDefaultMailTLSFile,
 	)
 }
 
@@ -888,10 +952,10 @@ func ensureDefaultMailCertPair(
 	// Each publish uses secureWriteConfig: no-follow temp creation, explicit
 	// chmod, file fsync, rename and parent-directory fsync. A crash between the
 	// two publishes leaves a detectable mismatch which the next retry replaces.
-	if err := write(certPath, certPEM, 0o644); err != nil {
+	if err := write(certPath, certPEM, 0o644, owner); err != nil {
 		return fmt.Errorf("publish default mail certificate: %w", err)
 	}
-	if err := write(keyPath, keyPEM, 0o600); err != nil {
+	if err := write(keyPath, keyPEM, 0o600, owner); err != nil {
 		return fmt.Errorf("publish default mail private key: %w", err)
 	}
 	if _, err := inspectDefaultMailTLSFile(certPath, owner, 0o644); err != nil {
