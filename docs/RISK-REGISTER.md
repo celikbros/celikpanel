@@ -57,7 +57,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-017 | High | OPEN | A production panel heartbeat deterministically poisons a DNS engine switch that installs packages |
 | R-018 | Medium | FIXED ON BRANCH (FIVE LAYERS) / LIVE PROOF OF THE FIFTH PENDING | The Arch BIND path was never wired end to end: root-anchor rule, managed root, config ownership, stock options and journal shape each assumed Debian; all five now follow the pacman package and a fresh Arch host reaches a serving BIND |
 | R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
-| R-020 | Low | REBALANCED ON BRANCH / CI MEASURED / TWO SHARDS OVER THE LINE | The CI race shard for `D` ran at 88 percent of its 8-minute ceiling on `main`; the local 30-minute single-process run sits at 80 percent |
+| R-020 | Low | CLOSED ON MAIN / EVERY SHARD MEASURED UNDER THE LINE | The CI race shard for `D` ran at 88 percent of its 8-minute ceiling on `main`; the local 30-minute single-process run sits at 80 percent |
 | R-021 | Low | RESOLVED / INVENTORY CORRECTED | Both hosts were rebuilt; identity is confirmed and the inventory now records Ubuntu and Debian 13. No Arch host remains in our inventory |
 | R-022 | Critical | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `install.sh` sources the release transaction guard before any trusted release root exists, so a clean installation exits before it begins |
 | R-023 | High | FIXED ON BRANCH / PROVEN ON DISPOSABLE VMS / NOT ON MAIN | `SKIP_ADMIN=1` on a fresh database leaves zero users, and the panel then exits by design, so the installer ends in a systemd restart loop |
@@ -619,6 +619,26 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: either the suite's runtime is reduced, or the ceiling is raised
   with a recorded rationale and a measured margin on the slowest supported
   acceptance host.
+- Closed 4 September 2026 (PR #82), by measurement twice over. The first
+  split carved the D group in two, and its run put those four shards at 202,
+  182, 115 and 113 s - and A-through-C at 258 s, which had run at 191 s
+  before. Nothing had regressed: the control-plane tests written that week
+  were 40 of that shard's 147 and they landed there. So the rule was applied
+  again, C carved twice with the control-plane tests taking their own shard,
+  which is where the next growth goes.
+- Measured on the final layout, all fourteen shards: N-Q 226, L-M 213,
+  S-except-service 209, DNS-except-engine-and-zone 197, E-K 196, T-Z 189,
+  DNS engine 176, control plane 167, R 158, C-except-control-plane 157, DNS
+  zone 115, D-except-DNS 113, service 99, A-and-B 91. Every one under the
+  240 s exit line; the highest, N-Q, is the next candidate if it grows.
+- The shards stay disjoint and exhaustive: proven against all 1058 tests the
+  toolchain discovers plus the boundary names, each falling into exactly one
+  shard. The contract test pins fourteen patterns and skips and rejects the
+  shard names of both superseded layouts, so neither can come back whole.
+- What keeps it closed: the entry's rule is that a shard over the line is
+  split and the ceiling is never raised, and the CI comment now carries the
+  measured history so the next person can see that each split answered a
+  measurement rather than a guess.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 - Measured again (2 September 2026): the single-process run took 1448 s of
   1800 s (80 percent) on a 16-core Debian 13 WSL2 guest on its own ext4 at
