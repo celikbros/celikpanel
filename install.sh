@@ -19,6 +19,18 @@
 #                   work over plain HTTP. NEVER on an internet-facing server.
 #                   AR-GE modu: giriş ekranında hızlı-giriş hesapları ve düz
 #                   HTTP'de çalışan çerezler. İnternete açık sunucuda ASLA.
+#   CELIKPANEL_RESTORE_ARCHIVE=/absolute/root-only/file
+#                   restore this control-plane archive onto this fresh host
+#                   before the services start; must be given together with
+#                   CELIKPANEL_RESTORE_KEY_FILE
+#                   bu kontrol düzlemi arşivini, servisler başlamadan önce bu
+#                   temiz makineye geri yükle; CELIKPANEL_RESTORE_KEY_FILE ile
+#                   birlikte verilmelidir
+#   CELIKPANEL_RESTORE_KEY_FILE=/absolute/root-only/file
+#                   root-only 0600 file (1-4096 bytes) holding the cpk1-… backup
+#                   key for that archive; it is read once and never stored
+#                   o arşivin cpk1-… yedek anahtarını taşıyan root-only 0600
+#                   dosya (1-4096 bayt); bir kez okunur, hiç saklanmaz
 
 set -euo pipefail
 
@@ -61,12 +73,15 @@ FIRST_INSTALL_RELEASE_VERSION=${CELIKPANEL_FIRST_INSTALL_VERSION:-}
 FIRST_INSTALL_RELEASE_COMMIT=${CELIKPANEL_FIRST_INSTALL_COMMIT:-}
 FIRST_INSTALL_INHERITED_LOCK_FD=${CELIKPANEL_FIRST_INSTALL_LOCK_FD:-}
 ADMIN_CREDENTIALS_PATH=${CELIKPANEL_ADMIN_CREDENTIALS_FILE:-}
+RESTORE_ARCHIVE_PATH=${CELIKPANEL_RESTORE_ARCHIVE:-}
+RESTORE_KEY_PATH=${CELIKPANEL_RESTORE_KEY_FILE:-}
 FIRST_INSTALL_LOCK_FD=9
 FIRST_INSTALL_LOCK_HELD=0
 unset CELIKPANEL_FIRST_INSTALL_TRUST CELIKPANEL_FIRST_INSTALL_PUBLIC_KEY_FILE \
     CELIKPANEL_FIRST_INSTALL_SEQUENCE CELIKPANEL_FIRST_INSTALL_VERSION \
     CELIKPANEL_FIRST_INSTALL_COMMIT CELIKPANEL_FIRST_INSTALL_LOCK_FD \
-    CELIKPANEL_ADMIN_CREDENTIALS_FILE
+    CELIKPANEL_ADMIN_CREDENTIALS_FILE CELIKPANEL_RESTORE_ARCHIVE \
+    CELIKPANEL_RESTORE_KEY_FILE
 readonly PREFIX DATA_DIR IMPORT_DIR CONF_DIR UNIT_DIR PANEL_CERT_HOOK \
     AGENT_STATE_DIR RUNTIME_DIR BACKUP_ROOT RELEASE_TRANSACTION_ROOT \
     RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR \
@@ -77,7 +92,8 @@ readonly PREFIX DATA_DIR IMPORT_DIR CONF_DIR UNIT_DIR PANEL_CERT_HOOK \
     FIRST_INSTALL_TRUST_REQUESTED FIRST_INSTALL_PUBLIC_KEY_FILE \
     FIRST_INSTALL_RELEASE_SEQUENCE FIRST_INSTALL_RELEASE_VERSION \
     FIRST_INSTALL_RELEASE_COMMIT FIRST_INSTALL_INHERITED_LOCK_FD \
-    FIRST_INSTALL_LOCK_FD ADMIN_CREDENTIALS_PATH
+    FIRST_INSTALL_LOCK_FD ADMIN_CREDENTIALS_PATH \
+    RESTORE_ARCHIVE_PATH RESTORE_KEY_PATH
 SELINUX_OS_RELEASE=/etc/os-release
 SELINUX_ENFORCE_FILE=/sys/fs/selinux/enforce
 RHEL_DNF_BIN=/usr/bin/dnf
@@ -1550,6 +1566,131 @@ arm_admin_credentials_cleanup() {
     trap 'exit 143' TERM
 }
 
+# --- Control-plane restore at install time (R-003 slice 2) -----------------
+# Two operator-supplied paths, two different rules. The KEY is a secret and is
+# handled exactly like the first-administrator credentials, down to reusing
+# their validator. The ARCHIVE is bulk data that may be gigabytes, so it gets
+# the same ownership, mode, link-count and ancestor-chain proof with one
+# deliberate difference: its size ceiling.
+#
+# İki operatör yolu, iki ayrı kural. ANAHTAR bir sırdır ve ilk yönetici kimlik
+# bilgileriyle aynı biçimde, aynı doğrulayıcı yeniden kullanılarak ele alınır.
+# ARŞİV yığın veridir; tek fark boyut tavanıdır.
+RESTORE_ARMED=0
+RESTORE_KEY_IDENTITY=
+RESTORE_KEY_FD=
+RESTORE_KEY_CONTENT=
+RESTORE_ARCHIVE_HEADER=
+export -n RESTORE_KEY_CONTENT
+
+# A control-plane archive is bulk data, not a credential. 4 GiB is the ceiling.
+RESTORE_ARCHIVE_MAX_BYTES=4294967296
+readonly RESTORE_ARCHIVE_MAX_BYTES
+
+close_restore_key_fd() {
+    if [[ "${RESTORE_KEY_FD:-}" =~ ^[0-9]+$ ]]; then
+        exec {RESTORE_KEY_FD}<&-
+    fi
+    RESTORE_KEY_FD=
+}
+
+clear_restore_key_content() {
+    RESTORE_KEY_CONTENT=
+    export -n RESTORE_KEY_CONTENT
+}
+
+# validate_restore_archive_path is validate_admin_credentials_path with a
+# 4 GiB ceiling instead of 4096 bytes. Everything else — absolute, canonical,
+# root:root, 0600, one link, root-owned non-writable ancestors — is identical,
+# because an archive that a non-root account can rewrite between preflight and
+# restore is exactly as dangerous as a rewritable credentials file.
+validate_restore_archive_path() {
+    local path=$1 canonical parent owner group mode links size permissions
+    [[ "$path" == /* && -f "$path" && ! -L "$path" ]] || return 1
+    canonical=$($VENDOR_READLINK_BIN -e -- "$path") || return 1
+    [[ "$canonical" == "$path" ]] || return 1
+    parent=$($VENDOR_DIRNAME_BIN -- "$path") || return 1
+    release_recovery_validate_root_chain "$parent" || return 1
+    read -r owner group mode links size < <(
+        $VENDOR_STAT_BIN -Lc '%u %g %a %h %s' -- "$path"
+    ) || return 1
+    permissions=$((8#$mode))
+    [[ "$owner" == 0 && "$group" == 0 && "$mode" == 600 &&
+       "$links" == 1 && "$size" =~ ^[0-9]+$ ]] || return 1
+    (( size >= 1 && size <= RESTORE_ARCHIVE_MAX_BYTES && (permissions & 0177) == 0 )) || return 1
+    $VENDOR_STAT_BIN -Lc '%d:%i' -- "$path"
+}
+
+open_restore_key_same_inode() {
+    local expected_identity=$1 path_identity fd_identity
+    close_restore_key_fd
+    exec {RESTORE_KEY_FD}<"$RESTORE_KEY_PATH" || return 1
+    path_identity=$(validate_admin_credentials_path "$RESTORE_KEY_PATH") || {
+        close_restore_key_fd
+        return 1
+    }
+    fd_identity=$($VENDOR_STAT_BIN -Lc '%d:%i' \
+        -- "/proc/$BASHPID/fd/$RESTORE_KEY_FD") || {
+        close_restore_key_fd
+        return 1
+    }
+    [[ "$path_identity" == "$fd_identity" &&
+       ( -z "$expected_identity" || "$fd_identity" == "$expected_identity" ) ]] || {
+        close_restore_key_fd
+        return 1
+    }
+}
+
+load_restore_key_content() {
+    local expected_identity=$1 found_nul=0 valid=1 xtrace_was_on=0 \
+        descriptor_path stream_fd stream_pid
+    clear_restore_key_content
+    open_restore_key_same_inode "$expected_identity" || return 1
+    case $- in
+        *x*) xtrace_was_on=1; set +x ;;
+    esac
+    descriptor_path="/proc/$BASHPID/fd/$RESTORE_KEY_FD"
+    exec {stream_fd}< <(
+        "$VENDOR_DD_BIN" if="$descriptor_path" iflag=noatime status=none
+    )
+    stream_pid=$!
+    if IFS= read -r -d '' RESTORE_KEY_CONTENT <&"$stream_fd"; then
+        found_nul=1
+    fi
+    exec {stream_fd}<&-
+    if ! wait "$stream_pid"; then
+        clear_restore_key_content
+        valid=0
+    fi
+    close_restore_key_fd
+    if (( found_nul != 0 )) || [[ -z "$RESTORE_KEY_CONTENT" ]]; then
+        clear_restore_key_content
+        valid=0
+    fi
+    (( xtrace_was_on == 0 )) || set -x
+    (( valid != 0 ))
+}
+
+# run_with_restore_key_stdin is the sibling of run_with_admin_credentials_stdin.
+# It exists rather than a shared helper so that the administrator path, which is
+# already reviewed and contract-tested, is not touched by this feature.
+run_with_restore_key_stdin() {
+    local status xtrace_was_on=0
+    case $- in
+        *x*) xtrace_was_on=1; set +x ;;
+    esac
+    export -n RESTORE_KEY_CONTENT
+    if [[ -z "$RESTORE_KEY_CONTENT" ]]; then
+        status=1
+    elif printf '%s' "$RESTORE_KEY_CONTENT" | "$@"; then
+        status=0
+    else
+        status=$?
+    fi
+    (( xtrace_was_on == 0 )) || set -x
+    return "$status"
+}
+
 validate_trusted_candidate_panel() {
     [[ -x "$SRC/bin/panel" && -f "$SRC/bin/panel" && ! -L "$SRC/bin/panel" ]] || return 1
     release_recovery_validate_root_chain "$SRC" || return 1
@@ -1576,6 +1717,23 @@ validate_existing_admin_database() {
 preflight_first_administrator_admission() {
     local identity admin_count passwd_group
     [[ "$APPLY_ONLY" -eq 0 ]] || return 0
+    # An armed restore replaces first-administrator admission entirely: the
+    # archive carries the administrators of the host that died, so this
+    # installation needs neither a terminal, nor a credentials file, nor
+    # SKIP_ADMIN. Asking for credentials as well is a contradiction, not a
+    # belt-and-braces, and it is refused here rather than half-applied later.
+    #
+    # Silahlanmış bir geri yükleme ilk yönetici kabulünün tamamının yerine
+    # geçer: yöneticileri arşiv getirir. Ayrıca kimlik bilgisi istemek bir
+    # çelişkidir ve burada reddedilir.
+    if [[ "$RESTORE_ARMED" == 1 ]]; then
+        [[ -z "$ADMIN_CREDENTIALS_PATH" ]] || die \
+            "A control-plane archive brings its own administrators; CELIKPANEL_ADMIN_CREDENTIALS_FILE must not be set together with CELIKPANEL_RESTORE_ARCHIVE" \
+            "Kontrol düzlemi arşivi kendi yöneticilerini getirir; CELIKPANEL_ADMIN_CREDENTIALS_FILE, CELIKPANEL_RESTORE_ARCHIVE ile birlikte verilemez"
+        ok "first administrator: will come from the archive" \
+            "ilk yönetici: arşivden gelecek"
+        return 0
+    fi
     if [[ -n "$ADMIN_CREDENTIALS_PATH" ]]; then
         identity=$(validate_admin_credentials_path "$ADMIN_CREDENTIALS_PATH") || die \
             "Administrator credentials file must be an absolute canonical root:root mode 0600 regular file (1-4096 bytes) beneath root-owned non-writable ancestors" \
@@ -1641,6 +1799,47 @@ preflight_first_administrator_admission() {
         "Kullanılabilir mevcut kullanıcı kanıtlanamadığı için SKIP_ADMIN=1 reddedildi"
 }
 
+# preflight_control_plane_restore_admission proves, before this script has
+# changed one thing on the host, that a requested restore can actually happen:
+# both variables are present, both paths are root-only files this installer is
+# willing to read, and the named file really is a control-plane archive this
+# release understands. The header check needs no backup key, so a wrong path is
+# caught here rather than after the host has been rewritten.
+#
+# preflight_control_plane_restore_admission, makinede hiçbir şey değişmeden
+# önce istenen geri yüklemenin gerçekten yapılabileceğini kanıtlar.
+preflight_control_plane_restore_admission() {
+    local identity
+    if [[ -z "$RESTORE_ARCHIVE_PATH" && -z "$RESTORE_KEY_PATH" ]]; then
+        return 0
+    fi
+    [[ "$APPLY_ONLY" -eq 0 ]] || die \
+        "An apply-only run never restores a control-plane archive" \
+        "Apply-only çalıştırma kontrol düzlemi arşivi geri yüklemez"
+    [[ -n "$RESTORE_ARCHIVE_PATH" && -n "$RESTORE_KEY_PATH" ]] || die \
+        "Restoring a control-plane archive needs both CELIKPANEL_RESTORE_ARCHIVE and CELIKPANEL_RESTORE_KEY_FILE; neither one works on its own" \
+        "Kontrol düzlemi arşivini geri yüklemek için hem CELIKPANEL_RESTORE_ARCHIVE hem CELIKPANEL_RESTORE_KEY_FILE gerekir; biri tek başına çalışmaz"
+    validate_restore_archive_path "$RESTORE_ARCHIVE_PATH" >/dev/null || die \
+        "The control-plane archive must be an absolute canonical root:root mode 0600 regular file (1 byte to 4 GiB) beneath root-owned non-writable ancestors" \
+        "Kontrol düzlemi arşivi, root sahipli güvenli dizinler altında mutlak, kanonik, root:root, 0600 ve 1 bayt ile 4 GiB arasında normal dosya olmalı"
+    identity=$(validate_admin_credentials_path "$RESTORE_KEY_PATH") || die \
+        "The control-plane backup key file must be an absolute canonical root:root mode 0600 regular file (1-4096 bytes) beneath root-owned non-writable ancestors" \
+        "Kontrol düzlemi yedek anahtar dosyası, root sahipli güvenli dizinler altında mutlak, kanonik, root:root, 0600 ve 1-4096 bayt normal dosya olmalı"
+    validate_trusted_candidate_panel || die \
+        "The trusted candidate panel binary is unavailable or unsafe" \
+        "Güvenilir aday panel ikilisi yok veya güvensiz"
+    RESTORE_ARCHIVE_HEADER=$("$TIMEOUT_BIN" --signal=TERM --kill-after=1s 30s \
+        "$SRC/bin/panel" \
+        --inspect-control-plane-archive="$RESTORE_ARCHIVE_PATH" 2>/dev/null) || die \
+        "The file named by CELIKPANEL_RESTORE_ARCHIVE is not a control-plane archive this release can read" \
+        "CELIKPANEL_RESTORE_ARCHIVE ile verilen dosya, bu sürümün okuyabileceği bir kontrol düzlemi arşivi değil"
+    [[ -n "$RESTORE_ARCHIVE_HEADER" ]] || die \
+        "The control-plane archive header could not be read" \
+        "Kontrol düzlemi arşiv başlığı okunamadı"
+    RESTORE_KEY_IDENTITY=$identity
+    RESTORE_ARMED=1
+}
+
 # Revalidate the fixed util-linux identity switch immediately before every
 # panel bootstrap command. Numeric identities and an empty supplementary-group
 # set avoid NSS-dependent identity changes and inherited root groups.
@@ -1657,7 +1856,12 @@ run_panel_as_service_user_with_private_umask() {
 
 ensure_first_administrator() {
     local admin_count
-    if [[ "$ADMIN_CREDENTIALS_ARMED" != 1 && "$SKIP_ADMIN" == 1 ]]; then
+    # A restored host is never skipped, whatever SKIP_ADMIN says: the whole
+    # point of the archive is that it brought administrators, and that claim is
+    # proven below rather than assumed.
+    # Geri yüklenen makine SKIP_ADMIN ne derse desin atlanmaz; arşivin yönetici
+    # getirdiği iddiası aşağıda kanıtlanır.
+    if [[ "$RESTORE_ARMED" != 1 && "$ADMIN_CREDENTIALS_ARMED" != 1 && "$SKIP_ADMIN" == 1 ]]; then
         return 0
     fi
     if ! admin_count=$(run_panel_as_service_user_with_private_umask --count-users); then
@@ -1666,6 +1870,14 @@ ensure_first_administrator() {
     [[ "$admin_count" =~ ^(0|[1-9][0-9]*)$ ]] \
         || die "Administrator count returned invalid data" "Yönetici sayısı geçersiz veri döndürdü"
     if [[ "$admin_count" == 0 ]]; then
+        # A restored database with no administrator cannot be logged into, and
+        # creating a fresh one here would quietly hand the operator a host that
+        # is not the host they backed up. Stop instead.
+        # Yöneticisi olmayan geri yüklenmiş veritabanına giriş yapılamaz; burada
+        # yenisini oluşturmak yedeklenen makineyi sessizce başkasına çevirir.
+        [[ "$RESTORE_ARMED" != 1 ]] || die \
+            "the archive contains no administrator; the restore is incomplete" \
+            "arşivde yönetici yok; geri yükleme eksik"
         step "Creating the first administrator" "İlk yönetici oluşturuluyor"
         if [[ "$ADMIN_CREDENTIALS_ARMED" == 1 ]]; then
             if ! run_with_admin_credentials_stdin \
@@ -1686,6 +1898,14 @@ ensure_first_administrator() {
     consume_admin_credentials_file || die \
         "Existing administrator was proven but the credentials file could not be safely removed" \
         "Mevcut yönetici kanıtlandı ancak kimlik bilgisi dosyası güvenle silinemedi"
+    # A restored host has administrators because the archive brought them, not
+    # because someone installed here before. Say which of the two it is.
+    # Geri yüklenen makinede yöneticiler arşivden gelir; hangisi olduğunu söyle.
+    if [[ "$RESTORE_ARMED" == 1 ]]; then
+        ok "first administrator: restored from the archive" \
+            "ilk yönetici: arşivden geri yüklendi"
+        return 0
+    fi
     ok "An administrator already exists — skipped" \
         "Yönetici zaten var — atlandı"
 }
@@ -1705,6 +1925,11 @@ if [[ "$FIRST_INSTALL_TRUST_REQUESTED" == 1 ]]; then
     acquire_first_install_signed_update_lock
     preflight_first_install_signed_release_trust
 fi
+# The restore preflight runs first: the administrator admission below asks
+# whether an archive will supply this host's administrators.
+# Geri yükleme ön kontrolü önce çalışır: aşağıdaki yönetici kabulü, yöneticileri
+# bir arşivin getirip getirmeyeceğini sorar.
+preflight_control_plane_restore_admission
 preflight_first_administrator_admission
 
 # Apply-only is accepted solely from a completely verified immutable release
@@ -2558,6 +2783,52 @@ if [[ $APPLY_ONLY -eq 1 ]]; then
     ok "apply-only layout completed; services were left stopped" \
         "apply-only yerleşim tamamlandı; servisler kapalı bırakıldı"
     exit 0
+fi
+
+# 6b. Control-plane restore --------------------------------------------------
+# This is the one window in which the whole control plane can be written: the
+# systemd units exist, so the layout is final, and neither service has ever been
+# started, so nothing holds the database, the ledger or the token. The panel
+# binary does the work itself and refuses anything that is not a fresh host.
+#
+# Bu, tüm kontrol düzleminin yazılabileceği tek penceredir: unitler yerinde,
+# ancak iki servis de hiç başlamadı.
+if [[ "$RESTORE_ARMED" == 1 ]]; then
+    step "Restoring the control plane from the archive" \
+        "Kontrol düzlemi arşivden geri yükleniyor"
+    echo "    $RESTORE_ARCHIVE_HEADER"
+    load_restore_key_content "$RESTORE_KEY_IDENTITY" || die \
+        "The control-plane backup key file changed, was empty, or contained an invalid NUL byte" \
+        "Kontrol düzlemi yedek anahtar dosyası değişti, boştu veya geçersiz NUL baytı içeriyordu"
+    # The agent state root is left at its production default on purpose: the
+    # archive records the roots it was taken under and the restore maps them
+    # onto this host itself.
+    # Agent state kökü bilerek üretim varsayılanında bırakılır.
+    unset CELIKPANEL_AGENT_STATE_DIR
+    # The data directory travels in a subshell environment rather than as an
+    # assignment prefix: in bash an assignment prefixed to a FUNCTION call
+    # survives the call, and this installer must not acquire a stray exported
+    # data directory for every later command.
+    if ! (
+        export CELIKPANEL_DATA_DIR="$DATA_DIR"
+        run_with_restore_key_stdin \
+            "$PREFIX/bin/panel" \
+            --restore-control-plane-archive="$RESTORE_ARCHIVE_PATH" \
+            --control-plane-key-file=-
+    ); then
+        clear_restore_key_content
+        die "The control-plane archive could not be restored; nothing further was started" \
+            "Kontrol düzlemi arşivi geri yüklenemedi; hiçbir şey başlatılmadı"
+    fi
+    clear_restore_key_content
+    # The restored archive carries the service mutation ledger. Initializing a
+    # second, empty one over it would either abort the install or erase the
+    # durable truth of what the dead host was doing.
+    # Geri yüklenen arşiv servis işlem ledgerini taşır; ikinci bir boş ledger
+    # başlatmak kurulumu durdurur ya da kalıcı gerçeği siler.
+    initialize_ledger=0
+    ok "the control plane was restored from the archive" \
+        "kontrol düzlemi arşivden geri yüklendi"
 fi
 
 # 7. Start the agent (generates the shared token on first run) ---------------

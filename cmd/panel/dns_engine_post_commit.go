@@ -39,14 +39,19 @@ type dnsEngineOperationMarker struct {
 
 func validDNSEngineSwitchAction(action string) bool {
 	return action == "install" || action == "adopt" ||
-		action == "switch" || action == "reconfigure"
+		action == "switch" || action == "reconfigure" ||
+		action == dnsEngineActionAdoptUnmanaged
 }
 
 func dnsEngineMutationMode(action string) string {
-	if action == "adopt" {
+	switch action {
+	case "adopt":
 		return transport.DNSEngineSwitchModeAdopt
+	case dnsEngineActionReinstall:
+		return transport.DNSEngineSwitchModeReinstall
+	default:
+		return transport.DNSEngineSwitchModeSwitch
 	}
-	return transport.DNSEngineSwitchModeSwitch
 }
 
 func validateDNSEngineOperationMarker(marker dnsEngineOperationMarker) error {
@@ -68,6 +73,10 @@ func validateDNSEngineOperationMarker(marker dnsEngineOperationMarker) error {
 		}
 	} else if marker.Action == "adopt" && marker.SourceEngine != "" {
 		return errors.New("DNS engine adopt marker has a source")
+	} else if marker.Action == dnsEngineActionAdoptUnmanaged &&
+		(marker.SourceEngine != "" ||
+			marker.TargetEngine != transport.DNSEngineBIND) {
+		return errors.New("DNS engine takeover marker has invalid identity")
 	} else if marker.Action == "reconfigure" &&
 		(marker.SourceEngine != "" ||
 			marker.TargetEngine != transport.DNSEnginePowerDNS) {
@@ -633,7 +642,14 @@ func (p *Panel) auditDNSEngine(
 	outcome string,
 	persisted persistedDNSEngineSwitch,
 ) {
-	action := dnsEngineAuditAction(outcome, persisted)
+	p.auditDNSEngineAction(ctx, actor, dnsEngineAuditAction(outcome, persisted))
+}
+
+func (p *Panel) auditDNSEngineAction(
+	ctx context.Context,
+	actor dnsEngineAuditActor,
+	action string,
+) {
 	if _, err := p.db.GetDB().ExecContext(ctx, `
 		INSERT INTO audit_logs (
 		  user_id, action, resource_type, resource_id, ip_address, user_agent

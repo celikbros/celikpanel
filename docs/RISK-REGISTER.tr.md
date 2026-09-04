@@ -41,7 +41,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 |---|---|---|---|
 | R-001 | Kritik | MAIN ÜZERİNDE KAPALI | Operations artık snapshot v6'yı, güncel v4/v5 reddini ve tarihsel sürüm sınırını anlatıyor |
 | R-002 | Yüksek | MAIN ÜZERİNDE KAPALI | README artık isteğe bağlı yerel GPG kullanımını canonical Ed25519 update otoritesinden ayırıyor |
-| R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ / TASARIM DALDA | Kontrol düzlemi felaket yedeği henüz yok; tasarım, envanter ve tatbikat planı `docs/DISASTER-RECOVERY.md`'de |
+| R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ / ARŞİV, GERİ YÜKLEME VE MOTOR YENİDEN KURULUMU WSL'DE KANITLI / GERÇEK VM BEKLİYOR | Panel kendi kontrol düzlemini arşivliyor ve geri yüklüyor (dilim 1 ve 2); ilk WSL tatbikatı taze sunucuyu 23 saniyede ayağa kaldırdı ama geri yüklenen sunucu DNS motorunu yeniden kuramıyor |
 | R-004 | Yüksek | KISMEN AZALTILDI / YENİDEN DOĞRULA | İki host exact Alpha52 ve terminal receipt ile tam kabulü geçti; snapshot kaynak provenance'ı `unknown` kaldı |
 | R-005 | Yüksek | AÇIK | Boston/Frankfurt ortam sınıfı üretime-hazır-değil politikasıyla çelişkili |
 | R-006 | Yüksek | AÇIK | Route/role ve API sözleşme borcu güvenlik sınırında sürüyor |
@@ -56,15 +56,15 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-015 | Yüksek | AÇIK / AÇIK DNS GEÇİŞİ İÇİN ENGELLEYİCİ | Parent delegation ve glue doğrulandı; `celikhost.com` child zone ve açık otorite yok |
 | R-016 | Orta | AÇIK / PROVENANCE UYARISI | İki geçerli v6 snapshot kaynak kimliğini `unknown` yazar; terminal receipt'ler önceki Alpha51 commit'ini kanıtlar |
 | R-017 | Yüksek | AÇIK | Üretim panelinin kalp atışı, paket kuran bir DNS motoru geçişini belirlenimci biçimde zehirler |
-| R-018 | Orta | DALDA DÜZELTİLDİ / ARCH KONUĞUNDA KANITLANDI / GERÇEK VM BEKLİYOR | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
+| R-018 | Orta | DALDA DÜZELTİLDİ (BEŞ KAT) / BEŞİNCİNİN CANLI KANITI BEKLİYOR | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
 | R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
-| R-020 | Düşük | DALDA YENİDEN DENGELENDİ / CI KANITI İTMEYİ BEKLİYOR | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
+| R-020 | Düşük | DALDA YENİDEN DENGELENDİ / CI ÖLÇÜLDÜ / İKİ PARÇA ÇİZGİNİN ÜSTÜNDE | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
 | R-021 | Düşük | ÇÖZÜLDÜ / ENVANTER DÜZELTİLDİ | İki sunucu da yeniden kuruldu; kimlik doğrulandı ve envanter artık Ubuntu ile Debian 13 yazıyor. Envanterimizde Arch sunucu kalmadı |
 | R-022 | Kritik | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | `install.sh`, güvenilen sürüm kökü var olmadan sürüm işlem korumasını source ediyor; temiz kurulum başlamadan çıkıyor |
 | R-023 | Yüksek | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
 | R-024 | Orta | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Kurulum `systemctl enable` hatalarını yutar ve enable bağlarını hiç eşitlemez; taze bir sunucu iki birimi de devre dışı hâlde yeniden başlayabilir |
 | R-025 | Düşük | KARAR VERİLDİ / BELGE DALDA DÜZELTİLDİ | Belgelenen `git clone && sudo ./install.sh` yolculuğu, kurtarma temelinin kullanıcıya ait üst dizinleri reddetmesiyle çelişir |
-| R-026 | Yüksek | AÇIK / DALDA DÜZELTİLDİ, CANLI KANIT BEKLİYOR | PowerDNS geçiş geri alması yedek ana dosyayı atılan neslin WAL/SHM dosyalarının altına koydu ve canlı veritabanı bozuk kaldı |
+| R-026 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | PowerDNS geçiş geri alması yedek ana dosyayı atılan neslin WAL/SHM dosyalarının altına koydu ve canlı veritabanı bozuk kaldı |
 | R-027 | Düşük | BELGELENMİŞ SINIR | PowerDNS yetkisi yalnız APT/Debian/systemd için onaylıdır; Arch PowerDNS'i devralamaz ya da ona geçemez; Arch kanıtları yalnız-BIND yolculukları kullanmalıdır |
 | R-028 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin içindeki etkin-BIND kanıtı, geçişin kendi kurulum korumasının az önce yarattığı pdns.service maskesini reddetti; PowerDNS kurması gereken her geçiş kaynak kanıtında düştü |
 | R-029 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Hiç motor çalıştırmamış sunucuda DNS kimlik hazırlama, bölgeler beklediği için reddetti; oysa böyle bir sunucuda her bölge yapısı gereği bekler; DNS'i kurmadan önce alan adı eklemek ilk motor kurulumunu ulaşılamaz kılıyordu |
@@ -72,6 +72,14 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-031 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin geri alması bind9.service takma adını named.service'ten önce etkinleştirmeye çalıştı; APT sunucularında bu başarılı olamaz; kaynak BIND geri gelmedi ve kurtarma defteri zehirledi |
 | R-032 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Sunucunun daha önce kullandığı motora dönüş, paket kurulumundan sonra kesildiğinde yarım kalmış devir biçimi sanıldı; çünkü eski motorun terk edilmiş sahiplik makbuzu hiç emekliye ayrılmaz; kurtarma sıradan bir operatör hareketinde defteri zehirledi |
 | R-033 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Durumu olmayan sunucuda paket kurulumundan sonra düşen ilk DNS motoru kurulumu, iptal kanıtının tutarsız saydığı bir kurulum makbuzu bıraktı; defter ilk DNS hareketinde zehirlendi ve her açılışta zehirli kaldı |
+| R-034 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Her WireGuard yapılandırma uygulaması düşüyor: hazırlanan dosya adı `wg-quick strip` için geçerli bir arayüz adı değil; düşen geri alma sonra sunucunun işlem yöneticisini zehirliyor ve API'den çıkış yolu yok |
+| R-035 | Orta | AÇIK / TASARIM | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
+| R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
+| R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
+| R-038 | Kritik | DURMUŞ HALİ DÜZELTİLDİ VE CANLI KANITLANDI / ÇALIŞIR HALİ R-039 / GERİ ALMA KANITI BORÇ | DNS motorunun paketlerini zaten taşıyan sunucu, motor durmuşken artık panelden açık onayla devralabiliyor; çalışan yönetilmeyen motor hâlâ reddediliyor ve R-039 olarak izleniyor |
+| R-039 | Yüksek | AÇIK / TASARIM BELİRLENDİ | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
+| R-040 | Yüksek | BULUNDU / DÜZELTME SÜRÜYOR | Servis listesi, hiç taramadığı sunucu için "kurulu değil" diyor: gözlem yokluğu ile servis yokluğu aynı cevaba düşüyor |
+| R-041 | Orta | DALDA DÜZELTİLDİ / KORUMAYA ALINDI | Web sözleşmesi, panelin zaten döndürdüğü `reinstall_active` eylemini çözemiyor; geri yüklenen sunucunun ihtiyaç duyduğu yeniden kurulum tarayıcıda geçersiz önizleme olarak görünüyor |
 
 ## Ayrıntılı riskler
 
@@ -124,6 +132,31 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   kopyası), anahtar kuralını (yedek anahtarı `secret.key`'den ayrı, bir kez
   gösterilir), geri yükleme giriş noktasını ve tatbikatı kaydeder. Uygulama bu
   sırayla gelir; WSL tatbikatı gerçek VM tatbikatından önce.
+- Tatbikat (3 Eylül 2026, WSL, `docs/DISASTER-RECOVERY.md` §6): A sunucusu
+  68b83cc'den yeniden kuruldu, servisler çalışırken 10 üyeli arşiv alındı; B
+  sıfırdan yeni bir konuk olarak kurulum kancasıyla 23 saniyede geri yüklendi
+  (felaketten servise 1 dk 58 sn, arşiv yaşı 5 dk 30 sn, kayıp yok). B'de
+  panelden kanıtlandı: eski yönetici parolası, gizli anahtar ve parmak izi,
+  DKIM özel ve açık anahtarı, alan adı listesi, aynı epoch'ta motor durumu,
+  sunulan TLS sertifikası. Düşen: DNS altyapı ekranı BIND'i etkin ve bozuk
+  gösterip kurulumu reddediyor (`target_already_active`, `source_degraded`),
+  commit hiç kaydedilmemiş bir önizleme için "önizleme süresi doldu" diyor ve
+  geri yüklenen servis tarama önbelleği A sunucusunun BIND'ini çalışıyor
+  gösteriyor. Düzeltme sürüyor: dürüst bir "etkin DNS sunucusunu yeniden kur"
+  yolu, engellenmiş önizleme için dürüst yanıt ve geri yüklemeyi atlatmayan
+  bir tarama önbelleği.
+- Sonrasında kapanan (3 Eylül 2026): geri yüklenen sunucu artık zaten sahibi
+  olduğu DNS sunucusunu panelden, aynı epoch ve sahiplikle yeniden kuruyor
+  (`reinstall_active`); B sunucusunda commit 10 saniye sürdü ve bölge A ile
+  aynı SOA ve DKIM kaydını verdi. Engellenmiş önizleme yanıtı, geri yüklenen
+  bileşen taraması ve korunan yapılandırma satırı da düzeltildi. Canlı
+  denemenin ortaya çıkardığı iki agent kusuru düzeltildi ve teste bağlandı:
+  günlük doğrulayıcı aynı motorlu bir işlem için ikinci bir birim kümesi
+  istiyordu ve iptal kanıtı, yeniden kurulumun kendi kurulum makbuzunu
+  çelişki sayıp defteri zehirliyordu.
+- Hâlâ borçlu olunan: aynı koşunun atılabilir gerçek VM'de tekrarı; A'da
+  saklı bir veritabanı parolası ki B'de gerçek bir şifreli metin açılsın;
+  R-034, R-035 ve R-036 izin verdiğinde VPN, güvenlik duvarı ve posta üyeleri.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-004 — Alpha52 canlı promotion kanıtlandı; artık kabul kanıtı korunmalı
@@ -392,6 +425,23 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: `/` üzerindeki 0755'in mask politikası için taşıyıcı mı yoksa
   normal bir Linux kökü için baştan yanlış bir beklenti mi olduğuna dair yazılı
   bir karar ve buna karşılık gelen düzeltme ya da belgelenmiş dağıtım sınırı.
+- S-9 T1 (3 Eylül 2026, KVM altında gerçek Arch bulut VM'i, kök `/` 0555,
+  aday fe6c2c9): kimlik 200, önizleme 200 `action=install`, `blockers=[]`,
+  `pending_zone_count=1`; commit BIND'i pacman ile kurdu, `/var/named/celikpanel`
+  altında üretimi kurdu, birimi etkinleştirip başlattı, sonra `verify started
+  BIND vendor unit: ss returned a non-canonical DNS listener peer endpoint`
+  (`parseCanonicalDNSPort53ListenerRow`, `dns_engine_legacy_guard.go`) ile
+  düştü ve temiz geri aldı (`DNS_ENGINE_CHANGE_NOT_COMMITTED`, tutma yok).
+  Önceki dört kat gerçek VM'de kanıtlandı; devralınan çıpa yürüyüşü geçildi
+  (harness o alanı yalnız tam geçişte yazdığı için `null` kaydetti). Beşinci
+  kat: dinleyici doğrulayıcı, Arch'ın iproute2 `ss` çıktısındaki eş sütunu
+  biçimini reddediyor. Düzeltme, yakalanan çıktıdan yapılacak.
+- Beşinci kat dalda düzeltildi (3 Eylül 2026): dinleyici kanıtı artık
+  iproute2'nin eşi olmayan soket için kullandığı üç yazımı da (`*:*`,
+  `0.0.0.0:*`, `[::]:*`) kapalı bir küme olarak kabul ediyor ve hiç
+  üretmediği biçimleri reddediyor. Reddedilen satır kampanya kanıtlarında
+  saklanmamış, bu yüzden yazım yeniden kurgulandı; Arch VM hücresi bunu
+  kanıtlamak için yeniden koşulacak.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 - S-2 kararı: `/` üzerindeki `0755` bu işlem için taşıyıcı **değildir**.
   Mutasyon doğrulanmış `/etc/systemd/system` dizinine iner ve `systemctl mask`
@@ -457,6 +507,14 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   `Agent.ConfigurePowerDNSSQLite` ve `Agent.SyncDNSZoneV3` yoluyla geçişe hazır
   bir kaynak üretir ya da devir, devralmanın sağlayamadığı şeyi şart koşmaktan
   vazgeçer.
+- S-9 T2 pozitif (3 Eylül 2026): niyet öncesi öldürme isabet etti
+  (`kill_proven=true`, çıkış 137), olağan agent geri geldi; ilk durum sondası
+  sipariş edilen yanıtı verdi (`agent_restarted_before_dns_engine_switch_commit`),
+  sonra sürücü 120 saniyelik panel hazırlık döngüsünde zaman aşımına uğrayıp
+  ham gövdeleri almadan durdu. Kampanyanın kendi kuralıyla DOĞRULANMAMIŞ;
+  hücre, gövdeler değerlendirmeden önce alınarak yeniden koşulur. Aynı adayda
+  R-019 dış-PowerDNS'ten-BIND'e hücresi ve T4 matrisi (15 yolculuk, 3 yeniden
+  başlatma yolculuğu, 0 hata) geçti.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 - S-2 kararı: Sonuç müşteriye yansıyor ve doğrulandı. Bir yönetici geçerli bir
   mevcut PowerDNS'i devralabilir, onun yönetilen aktif motor olduğunu görebilir
@@ -590,6 +648,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü (güncellendi): dalın ilk CI koşusunda her
   `Race-test panel boundaries` adımı 240 saniyenin altında kalır. Yerel tek
   süreçli tavan 30 dakikada kalır ve geçen süre her kabul koşusunda raporlanır.
+- Ölçüm (3 Eylül 2026, PR #78, koşu 33733419870): on parçanın hepsi yeşil;
+  `Race-test panel boundaries` adım süreleri D-DNS-hariç 257 sn, DNS motoru ve
+  bölge 248 sn, N-Q 226 sn, L-M 208 sn, E-K 206 sn, S-servis-hariç 201 sn,
+  A-C 191 sn, T-Z 190 sn, R 151 sn, Servis 97 sn. İki parça 240 sn çıkış
+  çizgisinin saniyelerle üstünde. Kural geçerli: bu ikisi sırada bölünür, tavan
+  yükseltilmez. PR #78 için birleştirme engeli değil.
 
 ### R-021 - Kurulum sunucusu kimliği envanterle uyuşmuyor
 
@@ -808,6 +872,31 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - S-8 (3 Eylül 2026): sonda konuştu (R-030) ve sıralı düşüşün adı kondu:
   geri alma kurtarması kaynak BIND'ı yeniden etkinleştirirken düştü (R-031).
   Veritabanı temizliği yine tuttu. R-026, R-031'den sonra T5 ile kapanır.
+- S-9 T5 (3 Eylül 2026, Debian 13 VM, aday fe6c2c9, agent kodu şimdiki dalla
+  birebir): öldürülen geçiş temiz geri alındı (R-031 kanıtlandı:
+  `bind9.service` takma adlı `named.service` etkin ve aktif, PowerDNS durmuş,
+  özel anlık görüntü bayt bayt geri gelmiş, kalıntı yok, tutma yok). Hemen
+  ardından ilk geçiş `agent rejection "DNS engine switch reached its verified
+  target but finalization did not complete"` ile bitti ve tutma `finalize
+  active DNS engine switch: committed DNS engine switch has no exact install
+  or active ownership provenance` (`exactCommittedDNSEngineProvenanceOnHost`)
+  oldu. Sebep: geri alma hedefin makbuzlarını sildi ama paketlerini bıraktı;
+  yeniden deneme hiçbir şey kurmadı, kurulum sahiplik makbuzu yazmadı, etkin
+  makbuzu da yoktu. Düzeltme bekliyor: zaten kurulu hedef paketlerini
+  benimseyen geçiş, bu benimsemeyi kurulum gibi kaynak kaydı olarak yazmalı.
+  Harness paketleri önceden kurmuştu; bu, zaten kurulu her sunucunun
+  sunduğu durumun aynısı.
+- T5 notunun düzeltmesi (3 Eylül 2026): geri alma hedefin makbuzlarını
+  silmedi. Kanıt (`t5-proof.json`, `pdns_preinstall`) harness'in hedef
+  paketleri ölçülen geçişten önce kurduğunu gösteriyor; yani ilk geçiş de
+  eksik paket bulamadı ve hiç makbuz yazmadı. Kusur bu yüzden yeniden
+  denemeye özgü değil ve gerçek kapsamı R-038'de kayıtlı.
+- Dalda düzeltildi (3 Eylül 2026), R-038 ile birlikte: benimseme, eksik
+  kümesi boş bir kurulumdur; aynı yapıcı, aynı makbuz, bu işlemin kimliği.
+- Kapsam notu (3 Eylül 2026): benimseme kaydı yalnız agent yarısını kapatır.
+  R-038'deki canlı koşu, panelin paketleri önceden kurulu sunucuyu hiçbir
+  işlem göndermeden reddettiğini gösteriyor; uçtan uca akış hâlâ kırık ve onu
+  R-038 taşıyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-027 - PowerDNS yetkisi tasarım gereği yalnız APT
@@ -1033,6 +1122,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   öldürülen BIND geçişi) temiz düşen iş ve yakınsayan yeniden denemeyle
   kurtarılır; aynı sunucu hedef-çağlı yerleştirilmiş makbuzla
   `ledger_ambiguous` ile kapalı arıza verir.
+- S-9 Boston (3 Eylül 2026): dört prova denemesi, hiçbiri ürüne ulaşmadı;
+  sürücü kendi açılışında (6'ya 5 açma hatası), bayat agent soketinde ve son
+  olarak ek-2'nin getirdiği tarihsel/yabancı kipleri reddeden hücre
+  korumasında düştü. Tarihsel sahiplik düzeltmesinin canlı kanıtı henüz yok;
+  yabancı makbuz negatifi hiç denenmedi. Sırada harness onarımı ve iki kipin
+  koşusu var.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-033 - Düşen ilk kurulum taze sunucuyu zehirliyor
@@ -1063,6 +1158,272 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: Arch konuğunda düzeltilmiş agent yeniden başlatılınca tutulma
   temizlenir ve iş temizce düşer; yeniden denenen geçiş R-018 yürüyüşüne
   ilerler.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-034 - WireGuard uygulaması hiç başaramıyor ve düşüşü sunucuyu kilitliyor
+
+- Kanıt: canlı, 3 Eylül 2026, R-003 tatbikatı A sunucusu (Debian 13 konuğu,
+  dal 68b83cc), halka açık API üzerinden. `POST /api/v1/service/install
+  {"service_id":"wireguard"}` paketleri kurdu, sonra iş `syncing` evresinde
+  `VPN peer sync rollback could not prove the previous host state: wg-quick
+  strip failed` ile düştü. Elle yeniden üretildi: `wg-quick strip` kanonik
+  `wg0.conf` yolunda 0 ile çıkıyor; hazırlanan geçici ad
+  `.wg0.conf.tmp-XXXXXXXXX.conf` ile 1 ve `The config file must be a valid
+  interface name, followed by .conf` (ad 15 karakterlik arayüz adı sınırını
+  aşıyor). Düşüşten sonra `/api/v1/host-mutation-readiness`
+  `HOST_MUTATION_BUSY` döndü, güvenlik duvarı `409 service_operation_busy`
+  aldı, agent yeniden başlatılınca açılış uzlaştırmasında aynı strip yine
+  düştü.
+- Etki: hiçbir sunucuda VPN etkinleştirilemiyor ve ilk deneme, biri SSH ile
+  dosya düzeltene kadar o sunucudaki diğer bütün işlemleri engelliyor. VPN
+  yolundan ulaşılan R-019 kilidi.
+- Düzeltme (dalda sürüyor): `wg-quick` yalnız adı `wg0.conf` olan bir dosya
+  görür; doğrulama kopyası rastgele eki adında taşımak yerine özel bir dizinde
+  durur. Zaten zehirlenmiş sunucunun kurtarılması: zehir, işlem yöneticisinin
+  bellekteki bir alanı, hiç kalıcılaştırılmıyor; yeniden başlatma yöneticiyi
+  yeniden kurar, kalıcı VPN işini aynı uygulama yolundan yeniden oynatır ve
+  düzeltilmiş strip ile bu oynatma artık yeniden zehirlemek yerine biter.
+  Düzeltmeden önce zehirlenmiş sunucuda bir kez agent yeniden başlatmak
+  gerekir.
+- Çıkış ölçütü: taze konukta VPN kurulumu ve bir eş uygulaması API üzerinden
+  başarılı; zehirlenmiş sunucu yanıtı burada kayıtlı.
+- Dalda düzeltildi (3 Eylül 2026): `wg-quick strip` artık adı `wg0.conf`
+  olan özel 0700 bir kopya üzerinde koşuyor; kalıcı hazırlık dosyası adını,
+  atomik yeniden adlandırmasını ve kurtarma keşfini koruyor. Linux'taki sahte
+  `wg-quick` gerçek ad kuralını uyguluyor, böylece tüm VPN takımı bu yol için
+  gerileme koruması oldu ve Debian konuğunda root olarak geçiyor (commit geri
+  alma zehir testi dahil). Taze konukta canlı kanıt hâlâ borç.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-035 - sshd yoksa güvenlik duvarı yok
+
+- Kanıt: canlı, 3 Eylül 2026, tatbikat A sunucusu. `POST /api/v1/firewall
+  {"enabled":true}` `409 SSH listener discovery failed; firewall was not
+  changed: no verified listening sshd port was found` döndü. Konukta yalnız
+  `openssh-client` var; yönetilen servis kataloğunda ssh yok, panel kuramıyor,
+  `/etc/celikpanel/firewall.nft` hiç oluşmuyor.
+- Etki: kaçış kapısı kanıtı gerçek sunucu için doğru; ama sshd olmayan bir
+  sunucu (konteynerler, bazı VPS imajları, her WSL konuğu) güvenlik duvarını
+  hiç açamıyor ve ekran yalnız keşfin başarısız olduğunu söylüyor.
+- Karar gerekli: ya açık operatör onayı yolu ("bu sunucuda SSH yok; yine de
+  etkinleştir") ya da sunucunun güvenlik duvarı için desteklenmediğini söyleyen
+  düz bir ret; DECISIONS'a yazılır.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-036 - Posta profili kimsenin ayarlayamadığı tam nitelikli bir makine adı istiyor
+
+- Kanıt: canlı, 3 Eylül 2026, tatbikat A sunucusu. `POST
+  /api/v1/service/profile/install {"profile_id":"core-mail"}` kabul edildi
+  (202) ve `profile/core-mail/preflight` evresinde
+  `mail_profile_server_hostname_invalid` ile düştü; konuğun makine adı çıplak
+  bir ad. Makine adı uç noktası yok; DNS kimlik ayarları posta makine adını
+  beslemiyor.
+- Etki: işletim sistemi makine adı FQDN olmayan her sunucuda posta yığını
+  kurulamıyor ve operatöre panelden düzeltme yolu olmadan "makine adı geçersiz"
+  deniyor. DKIM anahtarları etkilenmiyor (Go içinde
+  `/domains/{id}/mail/auth/dkim` ile üretiliyor).
+- Karar gerekli: posta makine adını panelin kendi kimliğinden (ad sunucusu /
+  makine ayarları) türetmek ya da bir makine adı ayarı eklemek; sessizce
+  değil.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-037 - Yerel derleme, yayınlanmış panelin veritabanını reddedebiliyor
+
+- Kanıt: 3 Eylül 2026, R-003 tatbikatı sırasında. Doğrudan bu Windows
+  kopyasından derlenen panel, geri yüklenen veritabanını `migration integrity
+  mismatch for version 1: ledger has .../ff31f0b6..., embedded release has
+  .../0a01e17f...` ile reddetti. Sebep: aralarında göçlerin de olduğu 102
+  izlenen dosya, `.gitattributes` satır sonunu sabitlemeden önce alınmış ve
+  CRLF baytlarını korumuş; oysa git LF izliyor ve yayınlanan ikililer git'in
+  izlediğini gömüyor. Depo içeriği hiçbir zaman yanlış değildi.
+- Etki: kopyası öznitelik dosyasından eski olan her geliştirici, üretim
+  veritabanını okuyamayan bir panel derliyor ve hata gerçek sebebi değil bir
+  göç özetini söylüyor. `gofmt -l` de o dosyaları sürekli bildiriyor, bu da
+  herkesi onu yok saymaya alıştırıyor.
+- Onarıldı (3 Eylül 2026): çalışma kopyası yeniden alındı; depoda hiçbir şey
+  değişmedi. Beş dosya CRLF olarak kayıtlı kalıyor (`LICENSE`, `NOTICE`, iki
+  `.gitignore`, bir nginx şablonu) ve olduğu gibi bırakıldı.
+- Koruma bekliyor: sürüm işi ya da ucuz bir sözleşme testi, gömülü bir göçün
+  baytları izlenen baytlardan farklıysa düşmeli; böylece bu bir daha
+  veritabanı sorunu diye teşhis edilmesin.
+- Dalda korumaya alındı (3 Eylül 2026): iki test gerçek gömülü içeriği
+  gezip satır başı baytını reddediyor; dosyayı, konumu ve onarımı adıyla
+  söylüyor. `go test ./...` nerede koşuyorsa orada koşuyorlar - kusuru
+  üretebilen makinede de; yalnız Linux'ta koşan bir CI kontrolü bunu asla
+  yakalayamazdı. Çalışma anındaki uyuşmazlık mesajı da artık aynı teşhisi
+  taşıyor. Yazdığı onarım komutu doğrulandı: `git checkout --` ve
+  `git checkout-index -f` burada hiçbir şey yapmıyor, çünkü git dosyayı
+  değişmemiş sayıyor; önce index kaydı düşmeli.
+- Koruma ilk koşusunda ikinci ve canlı bir örneği yakaladı:
+  `.gitattributes` `*.sql` için kural koymuş ama `*.tmpl` için hiç
+  koymamış; bu yüzden **her** Windows kopyası - yalnız eskiler değil - nginx
+  vhost şablonunu CRLF ile gömüyor ve yayınlanmış panelden bayt bayt farklı
+  vhost dosyaları yazıyordu. Kural eklendi, çalışma kopyası düzeltildi;
+  izlenen baytlar hiç değişmedi. Üründeki tek iki gömme yeri bunlar.
+- Bu dal birleşene kadar: `main`'in taze bir Windows kopyası hâlâ CRLF şablon
+  alır ve yeni test orada düşer. Bu, korumanın çalışması demektir, yeni bir
+  bozulma değil.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-038 - Önceden kurulu bir DNS motoru hiç etkinleştirilemiyordu
+
+- Kanıt: S-9 T5 hücresi, 3 Eylül 2026, ve arkasındaki kod yolu. Her geçiş
+  eksik paket kümesini kurar ve ona göre dallanır. Kurulum dalı, kurulumdan
+  önce bir kurulum sahiplik makbuzu yazar; atlama dalı ise R-028/R-029 için
+  yazılmış, var olan makbuzu yeniden bağlayan bir yardımcıyı çağırıyor ve
+  ortada makbuz yoksa hiçbir şey yazmadan başarı dönüyordu
+  (`cmd/agent/dns_engine_ownership.go`). Tamamlama sonra `committed DNS
+  engine switch has no exact install or active ownership provenance` ile
+  reddediyor ve işlem yöneticisi kapalı hataya düşüyordu. Makbuz zaten
+  ifade edilemiyordu: hem yapıcı hem doğrulayıcı boş olmayan bir eksik kümesi
+  istiyordu.
+- Etki: hedefin paketlerini zaten taşıyan her sunucu - bind9 içeren bir
+  sağlayıcı imajı, yeniden kurulmuş bir makine, paketi elle kuran bir
+  operatör, geri alınmış bir deneme - o motoru panelden hiç
+  etkinleştiremiyor ve hata kendini açıklamak yerine sunucunun işlemlerini
+  kilitliyor. Bu, sıradan bir kiralık sunucuda ilk kurulum yolu; uç durum
+  değil. Kabul kampanyası bunu yalnız fikstürü paketleri önceden kurduğu
+  için buldu.
+- Dalda düzeltme (3 Eylül 2026): zaten kurulu paketleri yönetime almak,
+  kurulumla aynı yapıcı ve aynı makbuzla, bu işlemin manifest niteleyicisi,
+  istek ve sahip kimliğiyle kaynak kaydı olarak yazılıyor; tür eksik
+  kümesinden türetiliyor ve doğrulama ikisinin her iki yönde de
+  uyuşmamasını reddediyor. Tamamlama kuralları gevşetilmedi: yabancı ya da
+  bayat makbuz hâlâ reddediliyor, eksik makbuz hâlâ kabul edilmiyor. Kurulum
+  makbuzu hâlâ yayınlanmış bir agent'ın yazdığı baytlara kodlanıyor.
+- Çıkış ölçütü: hedef paketleri önceden kurulu gerçek bir VM'de o motora ilk
+  geçiş panelden tamamlanıyor ve sunucu işlem yapabilir kalıyor; T5
+  hücresindeki geri alınmış yeniden deneme sonuçlanıyor.
+- Canlı kanıt, 3 Eylül 2026, Debian 13 konuğu taze sunucuya sıfırlanıp elle
+  `bind9 1:9.20.26-1~deb13u1` kurularak, iki kez koşuldu: bir kez benimseme
+  düzeltmesinden önceki commit'te, bir kez dal başında. **İki koşu bayt bayt
+  aynı** ve hiçbiri agent'a ulaşmıyor. `named` apt'nin bıraktığı gibi
+  (çalışır) haldeyken kimlik hazırlama doğrudan `409
+  DNS_ENGINE_WORKFLOW_REQUIRED` ile reddediliyor. `named` durdurulup devre
+  dışı bırakılıp paketler yerinde bırakılınca kimlik hazırlanıyor, sonra
+  önizleme `action: switch` ile `target_unavailable` ve
+  `unmanaged_dns_detected` engellerini döndürüyor, commit ise `400 invalid
+  DNS engine switch request` diyor. Agent günlüğünde geçiş de, tamamlama da,
+  tutma da yok; hiç makbuz yazılmıyor çünkü hiç işlem gönderilmiyor. Sunucu
+  işlem yapabilir kalıyor; yani bu bir kilit değil, temiz bir çıkmaz.
+- Nedeni: APT BIND için panelin hazırlık paket listesi ile agent'ın kaynak
+  kaydı paket listesi aynı tek listedir; "panel kurulu diyor" ile "agent'ın
+  eksik kümesi boş" aynı koşuldur ve panel tam da o koşulu reddeder.
+  `cmd/panel/dns_engine.go`, hedef kurulu ve yönetilmiyorsa -çalışıp
+  çalışmadığına bakmadan- `unmanaged_dns_detected` veriyor; panelin hiç sahip
+  olmadığı bir sunucuda `Managed` zaten hiç doğru olamaz. Hedef kurulu olduğu
+  için eylem `install` değil `switch` kalıyor. `cmd/panel/dns_setup.go` ayrıca
+  herhangi bir motor çalışırken kimlik hazırlamayı engelliyor.
+- Kaçış kapısı yok: `/dns/engine/reconcile` `{"reconciled":false}` diyor;
+  BIND için `/service/install` ve `/service/uninstall` `409
+  DNS_ENGINE_WORKFLOW_REQUIRED` ile yine reddeden ekrana yolluyor. Tek çıkış
+  paketi SSH ile kaldırmak; ürün bunu politika olarak yasaklıyor.
+- Agent tarafındaki düzeltme (benimseme kaynak kaydı) gerçek ve kalıyor:
+  cevabın ikinci yarısı, panelin şu an hiç varmadığı katmanda.
+- Ürünün ihtiyacı, 3 Eylül 2026'da karara bağlandı: açık ve bilgilendirilmiş
+  devralma. Hedef motor kurulu ama yönetilmiyorsa ve etkin motor yoksa,
+  önizleme reddetmek yerine `adopt_unmanaged` sunmalı ve operatöre düz dille
+  söylemeli: bu sunucuda panelin kurmadığı bir DNS sunucusu var; devralmak
+  onun yapılandırmasını panelinkiyle değiştirir; bugün sunduğu ve panelin
+  bilmediği ne varsa sunulmayı bırakır. Commit yalnız bu onayla ilerler,
+  değiştirdiği şeyin anlık görüntüsünü alır ki geri alma onu birebir geri
+  getirsin, hiçbir şey kurmaz ve agent'ın benimseme kaydına iner. Kimlik
+  hazırlama, yönetilmeyen bir motor çalışırken de yapılabilmeli; yalnız ayar
+  yazıyor.
+- Çıkış ölçütü: paketleri önceden kurulu taze bir sunucuda, hem çalışır hem
+  durdurulmuş halde, operatör BIND'i yalnız panelden etkinleştiriyor, bölge
+  cevap veriyor ve geri alma sunucunun önceki yapılandırmasını geri
+  getiriyor. Gerçek VM'de kanıtlı.
+- Durmuş hali için düzeltildi ve canlı kanıtlandı (3 Eylül 2026, Debian 13
+  konuğu, bind9 1:9.20.26 önceden kurulu, named durdurulmuş ve devre dışı):
+  önizleme engelsiz `adopt_unmanaged` ve kendi onayını döndürüyor; commit
+  onaysız reddediliyor (`400 adoption acknowledgement is required`, hiçbir
+  şey değişmiyor), onayla 10 saniyede kabul ediliyor; BIND etkin, 53 numaralı
+  bağlantı noktasının sahibi, epoch 1, durum hazır, sunucu işlem yapabilir,
+  kalıcı sahiplik makbuzu o işlemi adlandırıyor, paket yöneticisi günlüğü
+  hiçbir kurulum yapılmadığını gösteriyor ve yeni bir alan adının bölgesi SOA
+  kaydını yetkili olarak yanıtlıyor. Devralma, ilk kurulum işlemini
+  değiştirmeden kullanıyor; manifest, anlık görüntü satırı ve agent gönderimi
+  ilk kurulumla birebir aynı. Kimlik hazırlama değişmedi: durmuş hal zaten
+  taze sayılıyordu.
+- Burada hâlâ borç: geri alma kanıtı - düşen bir devralmanın sunucunun
+  önceki yapılandırmasını geri getirmesi. Anlık görüntü mekanizması bunu
+  zaten alıyor (içerik temelli olduğu için panelin hiç yazmadığı bir satıcı
+  yapılandırmasını da kapsıyor) ama geri yükleme bu yolda denenmedi.
+- Çalışan hal artık bu kayıt değil; R-039'da ve reddi bir testle sabitlendi
+  ki yanlışlıkla o yola girilemesin.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-039 - Çalışan bir DNS sunucusunu devralmak kalıcı ön-niyet kaydı ister
+
+- Kanıt: 3 Eylül 2026, R-038'in devralmasını uygularken koddan saptandı.
+  Yönetilmeyen motor durmuş ve devre dışıysa agent devralmayı uçtan uca zaten
+  kabul ediyor ve değişiklik gerekmiyor. Çalışıyorsa,
+  `proveBINDTargetNotServing`ın etkin birim için kabul eden bir dalı yok ve
+  53 numaralı bağlantı noktası ön-işlem koruması yabancı dinleyiciyi
+  reddediyor. İkisi de doğru ve dokunulmaz.
+- Neden küçük bir değişiklik değil: çalışan hali desteklemek, agent'ın
+  panelin sahibi olmadığı birimleri durdurup mühürlemesi ve bunu o kanıtlar
+  koşmadan önce yapması demek. Bugün en erken kalıcı kayıt olan geçiş
+  niyeti, kurulum ve mühürleme adımından epey sonra yazılıyor; kurulum
+  koruması önceki durumu yalnız bellekte tutuyor. Bugün o aralıktaki çökme
+  zararsız, çünkü hiçbir şey hizmet vermiyordu. Devralma sırasında ise
+  operatörün DNS'ini durdurulmuş ve mühürlenmiş, kurtarma kaydı olmadan
+  bırakır: tam da böyle bir boşluk olmasın diye yazılmış kodda yeni bir
+  kapalı-hata boşluğu.
+- Gerekenler: kendi kurtarma işlemesi olan kalıcı bir ön-niyet günlük evresi
+  ve yönetilmeyen bir motoru mühürleme yetkisinin işlem manifestosuna kendi
+  kipi olarak bağlanması, ki başka hiçbir işlem tarafından harcanamasın. Bu,
+  agent ve panelde yaklaşık on iki kip kontrolüne dokunur.
+- O zamana kadar: ürün, reddedip sebebini söylememek yerine, bu sunucuda
+  çalışan DNS sunucusunun devralınabilmesi için önce durdurulması gerektiğini
+  operatöre açıkça söyler. Durmuş hali R-038 kapsıyor.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-040 - "Hiç bakmadım", "kurulu değil" diye raporlanıyor
+
+- Kanıt: 3 Eylül 2026, R-038 konuğunda canlı. Aynı sunucuda aynı anda
+  `GET /api/v1/dns/engine` bind için `installed: true` derken
+  `GET /api/v1/managed-services` `is_installed: false`,
+  `status: "not_installed"`, `scanned_at: null` dedi. Kök neden: yönetilen
+  servisler işleyicisi hiç sonda atmıyor; bileşen tarama önbelleğini okuyor
+  ve satır yoksa kataloğu boş bir gözlemden kurup yine gönderiyor, böylece
+  her servis kurulu değil olarak kodlanıyor. DNS motoru yüzeyi ise her
+  istekte sunucuyu canlı yokluyor.
+- Etki: insanın "sunucumda ne var" diye açtığı ekran, ürünün hiç
+  bakmadığı bir şeyi olgu gibi söylüyor ve aynı oturumdaki başka bir ekranla
+  çelişiyor. Geri yüklenmiş ya da yeni kurulmuş sunucuda, henüz tarama
+  olmadığı için her şey yok görünüyor.
+- Birlikte çözülecek ikinci gerçek ayrışma: tarama taze olsa bile iki yüzey
+  farklı soru soruyor - bileşen taraması systemd birimlerinden, DNS motoru
+  yüzeyi paket veritabanından karar veriyor. DNS akışının bilerek yarattığı
+  mühürlü bir motor, ikisinde haklı olarak farklı okunabilir.
+- Düzeltme: tel üzerinde "gözlenmedi" ile "kurulu değil" ayrılmalı; ekran
+  "henüz denetlenmedi" deyip denetimi önermeli. Kataloğun boş tarama
+  zamanıyla sunulduğunu doğrulayan mevcut test şu an kusuru kutsuyor ve
+  onunla birlikte değişmeli.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-041 - Tarayıcı, API'nin zaten döndürdüğü bir eylemi çözemiyor
+
+- Kanıt: 3 Eylül 2026. Panel aynı gün gönderilen `reinstall_active` önizleme
+  eylemini döndürüyor, web sözleşmesinin eylem listesinde bu yok; önizleme
+  null'a çözülüyor ve pencere geçersiz önizleme diyor. Eylem API üzerinden
+  canlı kanıtlanmıştı, tarayıcıdan değil; bu yüzden fark edilmedi.
+- Etki: geri yüklenmiş bir sunucunun DNS sunucusunu geri getirmek için tek
+  yolu, paneli müşteri gibi kullanan hiç kimse için erişilebilir değil.
+- Düzeltme: gönderilen eylemi çöz ve eylem kümesini, API'nin döndürebildiği
+  ama tarayıcının çizemediği bir şey olduğunda düşen bir testle sabitle ki bu
+  sınıf tekrarlamasın.
+- Düzeltildi (3 Eylül 2026): önizleme eylem listesi, türün kendisinden
+  türediği tek bir dışa aktarılmış liste oldu; birlik ile çalışma anındaki
+  kontrol artık ayrışamaz. Bir test panelin kendi eylem işlevini okuyor ve
+  API'nin döndürebildiği bir eylemi tarayıcı çözemiyorsa yapıyı düşürüyor.
+  Eylemi listeye eklemek tek başına yetmedi: çözücü onayı bir kaynağın
+  varlığına bağlıyordu, yeniden kurulumun ise kaynağı var; yine düşerdi.
+- Kaydedilen ders, tekrar edeceği için: API kanıtı ürün kanıtı değildir.
+  Yeniden kurulum aynı sabah API'den denenmişti ve tarayıcıya geçersiz
+  önizleme olarak ulaştı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

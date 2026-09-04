@@ -468,7 +468,7 @@ func exactCommittedDNSEngineSignedUpdateProvenance(
 	// zaman geride bıraktığı şey — bir çelişki değil köken kanıtıdır ve birkaç
 	// adım sonraki yayım onu tazeler.
 	if ownershipExists {
-		if err := acceptableCommittedDNSEngineOwnership(ownership, state); err != nil {
+		if err := acceptableCommittedDNSEngineOwnership(ownership, state, journal); err != nil {
 			return dnsEngineStateReceipt{}, false, false, err
 		}
 	}
@@ -539,7 +539,8 @@ func recoverCommittedDNSEngineSwitchJournalForSignedUpdate(
 	// çağında kalmış bir makbuz da "güncel durum henüz yayımlanmadı" demektir.
 	// Bundan farklı olan her şey ayağımızın altında gerçek bir değişikliktir ve
 	// reddedilir.
-	if !ownershipExists || supersededDNSEngineOwnership(ownership, state) {
+	if !ownershipExists || supersededDNSEngineOwnership(ownership, state) ||
+		reinstalledDNSEngineOwnership(ownership, state, secondJournal) {
 		if err := ops.writeOwnership(state); err != nil {
 			return false, fmt.Errorf("publish committed DNS engine ownership: %w", err)
 		}

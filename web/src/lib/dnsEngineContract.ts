@@ -67,7 +67,22 @@ export interface DNSEngineSnapshot {
     engines: DNSEngineEntry[];
 }
 
-export type DNSEnginePreviewAction = 'install' | 'switch' | 'adopt' | 'reconfigure';
+// The action set is the API's, not the UI's wish list. Every action the panel
+// can return has to appear here, because an unlisted one makes the whole
+// preview decode to null and the dialog says only that it could not be
+// verified — the operator is told nothing about a change the server was
+// perfectly willing to describe. `reinstall_active` shipped without this list
+// being updated and did exactly that; the contract test below now fails the
+// build if the two ever drift again.
+export const DNS_ENGINE_PREVIEW_ACTIONS = [
+    'install',
+    'switch',
+    'adopt',
+    'adopt_unmanaged',
+    'reconfigure',
+    'reinstall_active',
+] as const;
+export type DNSEnginePreviewAction = (typeof DNS_ENGINE_PREVIEW_ACTIONS)[number];
 
 export interface DNSEnginePreviewBlocker {
     code: string;
@@ -85,6 +100,7 @@ export interface DNSEngineSwitchPreview {
     dnssec_zone_count: number;
     estimated_downtime_seconds: number;
     requires_downtime_acknowledgement: boolean;
+    requires_adoption_acknowledgement: boolean;
     blockers: DNSEnginePreviewBlocker[];
     impacts: string[];
 }
@@ -93,7 +109,7 @@ const engineIDs = new Set<string>(DNS_ENGINE_IDS);
 const engineStates = new Set<string>(DNS_ENGINE_STATES);
 const engineStatuses = new Set<string>(DNS_ENGINE_STATUSES);
 const topologies = new Set<string>(['unconfigured', 'standalone', 'paired']);
-const previewActions = new Set<string>(['install', 'switch', 'adopt', 'reconfigure']);
+const previewActions = new Set<string>(DNS_ENGINE_PREVIEW_ACTIONS);
 const codePattern = /^[a-z][a-z0-9_]{0,63}$/;
 const operationIDPattern = /^[a-f0-9]{32}$/;
 const operationPhases = new Set<string>([
@@ -311,7 +327,12 @@ export function decodeDNSEngineSwitchPreview(
     revision: number,
 ): DNSEngineSwitchPreview | null {
     const reconfigure = isRecord(value) && value.action === 'reconfigure';
-    const requiresInterruption = source !== null || reconfigure;
+    // A reinstall names the source engine because that engine owns this host,
+    // but nothing of it is running: there is no service to interrupt and so no
+    // outage to acknowledge. A takeover has no source at all.
+    const reinstall = isRecord(value) && value.action === 'reinstall_active';
+    const adoptUnmanaged = isRecord(value) && value.action === 'adopt_unmanaged';
+    const requiresInterruption = (source !== null || reconfigure) && !reinstall;
     if (!isRecord(value)
         || typeof value.preview_token !== 'string'
         || !operationIDPattern.test(value.preview_token)
@@ -329,7 +350,15 @@ export function decodeDNSEngineSwitchPreview(
         || !isNonNegativeInteger(value.estimated_downtime_seconds)
         || value.estimated_downtime_seconds > 86400
         || typeof value.requires_downtime_acknowledgement !== 'boolean'
+        || typeof value.requires_adoption_acknowledgement !== 'boolean'
         || (reconfigure && (source !== null || target !== 'pdns'))
+        || (reinstall && (source === null || source !== target))
+        || (adoptUnmanaged && (source !== null || target !== 'bind'))
+        // Taking over a DNS server the panel did not install is the one action
+        // that carries this acknowledgement, and it carries it always. A
+        // preview that claims otherwise in either direction is not describing
+        // the change the operator is about to consent to.
+        || value.requires_adoption_acknowledgement !== adoptUnmanaged
         || value.requires_downtime_acknowledgement !== requiresInterruption
         || value.estimated_downtime_seconds !== (requiresInterruption
             ? dnsEngineEstimatedDowntimeSeconds
@@ -367,6 +396,7 @@ export function decodeDNSEngineSwitchPreview(
         dnssec_zone_count: value.dnssec_zone_count,
         estimated_downtime_seconds: value.estimated_downtime_seconds,
         requires_downtime_acknowledgement: value.requires_downtime_acknowledgement,
+        requires_adoption_acknowledgement: value.requires_adoption_acknowledgement,
         blockers,
         impacts,
     };

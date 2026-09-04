@@ -24,7 +24,7 @@ func TestBothProvenanceCheckersShareTheOwnershipRule(t *testing.T) {
 			t.Fatal(err)
 		}
 		source := string(raw)
-		if !strings.Contains(source, "acceptableCommittedDNSEngineOwnership(ownership, state)") {
+		if !strings.Contains(source, "acceptableCommittedDNSEngineOwnership(ownership, state, journal)") {
 			t.Errorf(
 				"%s does not reach the ownership decision through the shared rule; "+
 					"a second copy will drift the way this one already did",
@@ -72,7 +72,7 @@ func TestSupersededOwnershipIsAcceptedAtTheGate(t *testing.T) {
 		MutationOwnerID:   "44444444444444444444444444444444",
 	}
 
-	if err := acceptableCommittedDNSEngineOwnership(stale, state); err != nil {
+	if err := acceptableCommittedDNSEngineOwnership(stale, state, dnsEngineSwitchJournal{}); err != nil {
 		t.Fatalf("an older epoch of the same engine is provenance, not a contradiction: %v", err)
 	}
 	if !supersededDNSEngineOwnership(stale, state) {
@@ -83,7 +83,7 @@ func TestSupersededOwnershipIsAcceptedAtTheGate(t *testing.T) {
 	// claiming one epoch — a real contradiction, and it still refuses.
 	conflicting := stale
 	conflicting.EngineEpoch = state.EngineEpoch
-	if err := acceptableCommittedDNSEngineOwnership(conflicting, state); err == nil {
+	if err := acceptableCommittedDNSEngineOwnership(conflicting, state, dnsEngineSwitchJournal{}); err == nil {
 		t.Fatal("an equal-epoch receipt with different content must refuse")
 	}
 	if supersededDNSEngineOwnership(conflicting, state) {
@@ -93,14 +93,14 @@ func TestSupersededOwnershipIsAcceptedAtTheGate(t *testing.T) {
 	// A receipt from ahead of the committed state is not ours to overwrite.
 	ahead := stale
 	ahead.EngineEpoch = state.EngineEpoch + 1
-	if err := acceptableCommittedDNSEngineOwnership(ahead, state); err == nil {
+	if err := acceptableCommittedDNSEngineOwnership(ahead, state, dnsEngineSwitchJournal{}); err == nil {
 		t.Fatal("a receipt ahead of the committed state must refuse")
 	}
 
 	// Another engine's receipt is never this engine's provenance.
 	other := stale
 	other.Engine = transport.DNSEnginePowerDNS
-	if err := acceptableCommittedDNSEngineOwnership(other, state); err == nil {
+	if err := acceptableCommittedDNSEngineOwnership(other, state, dnsEngineSwitchJournal{}); err == nil {
 		t.Fatal("another engine's receipt must refuse")
 	}
 }

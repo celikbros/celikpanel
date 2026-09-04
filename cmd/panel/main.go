@@ -482,8 +482,17 @@ func main() {
 	releaseTransactionSnapshotFlag := flag.String("release-transaction-snapshot", "", "Safe snapshot basename recorded by the release transaction / Yayın işleminin kaydettiği güvenli anlık görüntü temel adı")
 	serviceOperationSnapshotSchemaFlag := flag.String("snapshot-schema", "", "Snapshot schema contract: normal or pre-ledger / Anlık görüntü şema sözleşmesi: normal veya pre-ledger")
 	migrateOnlyFlag := flag.Bool("migrate-only", false, "Open the canonical database, apply embedded migrations, and exit before agent or HTTP startup / Kanonik veritabanını aç, gömülü migration'ları uygula ve agent ya da HTTP başlamadan çık")
+	generateControlPlaneKeyFlag := flag.Bool("generate-control-plane-key", false, "Print one fresh control-plane backup key and exit; it is never stored on this host / Yeni bir kontrol düzlemi yedek anahtarı yazıp çık; bu makinede hiç saklanmaz")
+	createControlPlaneArchiveFlag := flag.String("create-control-plane-archive", "", "Write one sealed control-plane archive to this absolute path, then exit / Bu mutlak yola tek bir mühürlü kontrol düzlemi arşivi yaz, sonra çık")
+	restoreControlPlaneArchiveFlag := flag.String("restore-control-plane-archive", "", "Restore this sealed control-plane archive onto a fresh host, then exit / Bu mühürlü kontrol düzlemi arşivini temiz bir makineye geri yükle, sonra çık")
+	inspectControlPlaneArchiveFlag := flag.String("inspect-control-plane-archive", "", "Print the plaintext header of this control-plane archive without any key, then exit / Bu kontrol düzlemi arşivinin açık başlığını anahtarsız yazıp çık")
+	var controlPlaneKeyFileFlag inheritedControlPlaneKeyFileFlag
+	flag.Var(&controlPlaneKeyFileFlag, "control-plane-key-file", "Read the control-plane backup key from bounded stdin; exact value must be -")
 	if err := validateAdminCredentialsFileArgumentSpellings(os.Args[1:]); err != nil {
 		log.Fatalf("Invalid admin credentials file argument: %v", err)
+	}
+	if err := validateControlPlaneKeyFileArgumentSpellings(os.Args[1:]); err != nil {
+		log.Fatalf("Invalid control-plane key file argument: %v", err)
 	}
 	flag.Parse()
 	if err := validateAdminCredentialsFileFlags(
@@ -492,6 +501,15 @@ func main() {
 		validateAdminCredentialsFileFlag,
 	); err != nil {
 		log.Fatalf("Invalid admin credentials file flags: %v", err)
+	}
+	if err := validateControlPlaneCommandFlags(
+		*generateControlPlaneKeyFlag,
+		*createControlPlaneArchiveFlag,
+		*restoreControlPlaneArchiveFlag,
+		*inspectControlPlaneArchiveFlag,
+		controlPlaneKeyFileFlag,
+	); err != nil {
+		log.Fatalf("Invalid control-plane archive flags (%s): %v", controlPlaneCommandContract(), err)
 	}
 
 	releaseTransaction := serviceOperationReleaseTransaction{
@@ -530,6 +548,10 @@ func main() {
 		rescueSnapshot:             rescueSnapshotRequestedByFlags,
 		proveSnapshotEquivalence:   proveSnapshotEquivalenceRequestedByFlags,
 		migrateOnly:                *migrateOnlyFlag,
+		generateControlPlaneKey:    *generateControlPlaneKeyFlag,
+		createControlPlaneArchive:  strings.TrimSpace(*createControlPlaneArchiveFlag) != "",
+		restoreControlPlaneArchive: strings.TrimSpace(*restoreControlPlaneArchiveFlag) != "",
+		inspectControlPlaneArchive: strings.TrimSpace(*inspectControlPlaneArchiveFlag) != "",
 		demo:                       *demo,
 		insecureCookies:            *insecureCookies,
 	}); err != nil {
@@ -538,6 +560,54 @@ func main() {
 	if validateAdminCredentialsFileFlag.set {
 		if err := validateAdminCredentialsFile(os.Stdin); err != nil {
 			log.Fatalf("Admin credentials file validation failed: %v", err)
+		}
+		return
+	}
+	// The control-plane modes run here, before the panel announces itself and
+	// before any database is opened: two of them are offline root operations on
+	// a host whose panel must not be running, and the third only prints a key.
+	// Kontrol düzlemi kipleri burada, panel kendini duyurmadan ve hiçbir
+	// veritabanı açılmadan önce çalışır.
+	if *generateControlPlaneKeyFlag {
+		if err := runGenerateControlPlaneKey(os.Stdout); err != nil {
+			log.Fatalf("Generate control-plane key failed: %v", err)
+		}
+		return
+	}
+	if strings.TrimSpace(*createControlPlaneArchiveFlag) != "" {
+		if err := runCreateControlPlaneArchive(
+			*createControlPlaneArchiveFlag,
+			os.Stdin,
+			os.Stdout,
+		); err != nil {
+			log.Fatalf(
+				"Create control-plane archive failed (%s): %v",
+				controlPlaneCommandContract(),
+				err,
+			)
+		}
+		return
+	}
+	if strings.TrimSpace(*inspectControlPlaneArchiveFlag) != "" {
+		if err := runInspectControlPlaneArchive(
+			*inspectControlPlaneArchiveFlag,
+			os.Stdout,
+		); err != nil {
+			log.Fatalf("Inspect control-plane archive failed: %v", err)
+		}
+		return
+	}
+	if strings.TrimSpace(*restoreControlPlaneArchiveFlag) != "" {
+		if err := runRestoreControlPlaneArchive(
+			*restoreControlPlaneArchiveFlag,
+			os.Stdin,
+			os.Stdout,
+		); err != nil {
+			log.Fatalf(
+				"Restore control-plane archive failed (%s): %v",
+				controlPlaneCommandContract(),
+				err,
+			)
 		}
 		return
 	}

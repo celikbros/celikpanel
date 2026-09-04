@@ -168,9 +168,10 @@ func CanonicalDNSEngineSwitchManifestWithPairIdentity(
 	topology, pairRole, localIP, localNS, peerIP, peerNS string,
 	zones []transport.DNSEngineSwitchZoneSnapshot,
 ) (DNSEngineSwitchManifestCommitment, error) {
+	reinstall := mode == transport.DNSEngineSwitchModeReinstall
 	if mode != transport.DNSEngineSwitchModeSwitch &&
-		mode != transport.DNSEngineSwitchModeAdopt {
-		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine operation mode must be switch or adopt")
+		mode != transport.DNSEngineSwitchModeAdopt && !reinstall {
+		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine operation mode must be switch, adopt or reinstall")
 	}
 	if sourceEngine == "" {
 		if sourceEpoch != 0 {
@@ -182,15 +183,32 @@ func CanonicalDNSEngineSwitchManifestWithPairIdentity(
 	if !transport.ValidDNSEngine(targetEngine) {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("target DNS engine must be pdns or bind")
 	}
-	if sourceEngine == targetEngine {
-		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine switch target must differ from source")
+	if reinstall {
+		// A reinstall is the one operation whose source and target are the same
+		// engine at the same epoch: the ledger's owner is being put back on a
+		// host that lost it. Every other shape is a switch and must differ.
+		//
+		// Yeniden kurulum, kaynağı ve hedefi aynı çağdaki aynı motor olan tek
+		// işlemdir: defterin sahibi, onu kaybetmiş bir sunucuya geri konur.
+		// Diğer her biçim geçiştir ve farklı olmak zorundadır.
+		if sourceEngine != targetEngine || sourceEpoch != targetEpoch ||
+			targetEpoch < 1 {
+			return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine reinstall must name one engine at one epoch")
+		}
+		if topology != transport.DNSTopologyStandalone {
+			return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine reinstall is supported only for a standalone topology")
+		}
+	} else {
+		if sourceEngine == targetEngine {
+			return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine switch target must differ from source")
+		}
+		if targetEpoch != sourceEpoch+1 || targetEpoch < 1 {
+			return DNSEngineSwitchManifestCommitment{}, errors.New("target DNS engine epoch must immediately follow source epoch")
+		}
 	}
 	if mode == transport.DNSEngineSwitchModeAdopt &&
 		(sourceEngine != "" || targetEngine != transport.DNSEnginePowerDNS) {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine adoption requires an unresolved PowerDNS source")
-	}
-	if targetEpoch != sourceEpoch+1 || targetEpoch < 1 {
-		return DNSEngineSwitchManifestCommitment{}, errors.New("target DNS engine epoch must immediately follow source epoch")
 	}
 	if sourceRevision < 0 {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine source revision must not be negative")
@@ -397,4 +415,27 @@ func ValidDNSZoneSyncV3Qualifier(value string) bool {
 
 func ValidDNSEngineSwitchQualifier(value string) bool {
 	return validDNSEngineQualifier(value, dnsEngineSwitchQualifierPrefix)
+}
+
+// ReinstallsActiveDNSEngine reports the one manifest shape that reinstalls the
+// engine already recorded as active instead of switching to another one: same
+// engine, same epoch, standalone. Panel, agent and journal all ask here so the
+// predicate cannot drift between the three.
+//
+// ReinstallsActiveDNSEngine, başka bir motora geçmek yerine hâlihazırda etkin
+// kayıtlı motoru yeniden kuran tek bildirge biçimini bildirir: aynı motor,
+// aynı çağ, tek sunucu. Panel, agent ve günlük bu soruyu buraya sorar ki
+// yordam üçü arasında ayrışamasın.
+func ReinstallsActiveDNSEngine(
+	commitment DNSEngineSwitchManifestCommitment,
+) bool {
+	return commitment.Mode == transport.DNSEngineSwitchModeReinstall &&
+		transport.ValidDNSEngine(commitment.TargetEngine) &&
+		commitment.SourceEngine == commitment.TargetEngine &&
+		commitment.SourceEpoch == commitment.TargetEpoch &&
+		commitment.TargetEpoch >= 1 &&
+		commitment.Topology == transport.DNSTopologyStandalone &&
+		commitment.PairRole == "" && commitment.LocalIP == "" &&
+		commitment.LocalNS == "" && commitment.PeerIP == "" &&
+		commitment.PeerNS == ""
 }

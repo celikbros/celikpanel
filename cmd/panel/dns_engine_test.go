@@ -1700,17 +1700,24 @@ func TestDNSEngineSourceFreeRuntimeAuthorityCannotStartMutation(t *testing.T) {
 			preview, recorder := requestDNSEnginePreview(
 				t, panel, transport.DNSEngineBIND, nil, snapshot.Revision,
 			)
+			// A blocked preview hands out no token at all, so there is
+			// nothing for the operator to spend and nothing the commit can
+			// mistake for a race. A commit that arrives with a well-formed
+			// token anyway is answered with the blockers by name.
 			if recorder.Code != http.StatusOK ||
 				preview.Action != test.wantAction ||
+				preview.PreviewToken != `` ||
 				!hasDNSEngineBlocker(preview, `target_unavailable`) {
 				t.Fatalf(`blocked preview=%+v status=%d body=%s`,
 					preview, recorder.Code, recorder.Body.String())
 			}
 			commit := commitDNSEngineSwitch(
 				t, panel, strings.Repeat(`8`, 32), transport.DNSEngineBIND,
-				nil, snapshot.Revision, preview.PreviewToken, false,
+				nil, snapshot.Revision, strings.Repeat(`c`, 32), false,
 			)
-			if commit.Code != http.StatusConflict {
+			if commit.Code != http.StatusConflict ||
+				!strings.Contains(commit.Body.String(), `the preview was blocked`) ||
+				!strings.Contains(commit.Body.String(), `target_unavailable`) {
 				t.Fatalf(`blocked commit status=%d body=%s`,
 					commit.Code, commit.Body.String())
 			}
@@ -1826,15 +1833,17 @@ func TestDNSEngineFirstInstallRequiresStagedDNSIdentity(t *testing.T) {
 	)
 	if recorder.Code != http.StatusOK ||
 		!hasDNSEngineBlocker(preview, "dns_identity_required") ||
-		!validServiceOperationID(preview.PreviewToken) {
+		preview.PreviewToken != "" {
 		t.Fatalf("identity blocker preview=%+v status=%d body=%s",
 			preview, recorder.Code, recorder.Body.String())
 	}
 	commit := commitDNSEngineSwitch(
 		t, panel, strings.Repeat("0", 32), transport.DNSEngineBIND,
-		nil, 0, preview.PreviewToken, false,
+		nil, 0, strings.Repeat("d", 32), false,
 	)
-	if commit.Code != http.StatusConflict {
+	if commit.Code != http.StatusConflict ||
+		!strings.Contains(commit.Body.String(), "the preview was blocked") ||
+		!strings.Contains(commit.Body.String(), "dns_identity_required") {
 		t.Fatalf("uncached blocked commit status=%d body=%s",
 			commit.Code, commit.Body.String())
 	}

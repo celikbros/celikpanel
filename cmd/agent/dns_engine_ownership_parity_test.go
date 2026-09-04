@@ -91,11 +91,16 @@ func TestSupersededDNSEngineOwnershipBoundary(t *testing.T) {
 	}
 }
 
-// Every engine switch path must rebind a surviving install receipt when no
-// package is missing. A rolled-back attempt restores config, state and units
-// but touches neither the packages nor the receipt, so the retry finds nothing
-// missing and — without this repair — carries a receipt bound to a dead request
-// id straight into finalize, which poisons the operation permanently.
+// Every engine switch path must take install ownership of the target's
+// packages when no package is missing — by rebinding a surviving receipt, or by
+// writing one for the packages it found already present. A rolled-back attempt
+// restores config, state and units but touches neither the packages nor the
+// receipt, so the retry finds nothing missing and — without this repair —
+// carries a receipt bound to a dead request id straight into finalize, which
+// poisons the operation permanently. A host whose target packages were there
+// before the first switch has no receipt to rebind at all, and without the
+// adoption every attempt reaches a verified target that finalization refuses
+// for having no provenance (R-026, live on Debian 13).
 //
 // BIND has had this branch since its own rollback bug; PowerDNS did not, and
 // the omission was invisible because each engine's switch path is hand-written.
@@ -136,10 +141,11 @@ func TestEveryDNSEngineSwitchPathRebindsSurvivingInstallOwnership(t *testing.T) 
 			if end := strings.Index(body, path.terminate); end > 0 {
 				body = body[:end]
 			}
-			if !strings.Contains(body, "handoffExistingDNSEngineInstallOwnership(") {
+			if !strings.Contains(body, "assumeExistingDNSEnginePackageOwnership(") {
 				t.Fatalf(
-					"%s does not rebind a surviving install receipt; a rolled-back "+
-						"attempt followed by a retry will poison the operation",
+					"%s does not take install ownership of already-present target "+
+						"packages; a rolled-back attempt followed by a retry, or a "+
+						"host that already had the packages, will poison the operation",
 					path.function,
 				)
 			}

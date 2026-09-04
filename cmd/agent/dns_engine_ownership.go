@@ -19,6 +19,30 @@ import (
 
 const dnsEngineInstallOwnershipSchema = "celikpanel-dns-engine-install-ownership/v1"
 
+// installingDNSEngineMutationMode names the modes that may put packages on the
+// host. Adoption never does: it registers a PowerDNS that was already there.
+//
+// installingDNSEngineMutationMode, sunucuya paket koyabilecek kipleri
+// adlandırır. Devralma bunu hiç yapmaz: zaten orada olan bir PowerDNS'i
+// kaydeder.
+func installingDNSEngineMutationMode(mode string) bool {
+	return mode == transport.DNSEngineSwitchModeSwitch ||
+		mode == transport.DNSEngineSwitchModeReinstall
+}
+
+// AdoptedPresent records the one way a mutation can take a target's packages
+// under management without installing anything: they were already on the host.
+// It is false on every receipt written before this field existed and on every
+// receipt an install writes, so `omitempty` keeps those byte-identical - the
+// receipt is compared against its own canonical re-encoding, and a field that
+// appeared out of nowhere would make every stored receipt unreadable.
+//
+// AdoptedPresent, bir mutasyonun hedefin paketlerini hiçbir şey kurmadan
+// yönetimine alabildiği tek yolu kaydeder: paketler sunucuda zaten vardı. Bu
+// alan var olmadan önce yazılmış her makbuzda ve kurulumun yazdığı her makbuzda
+// yanlıştır; `omitempty` bu yüzden onları bayt bayt aynı bırakır - makbuz kendi
+// kanonik yeniden kodlamasıyla karşılaştırılır ve birdenbire beliren bir alan
+// saklanan her makbuzu okunamaz kılardı.
 type dnsEngineInstallOwnershipReceipt struct {
 	Schema            string              `json:"schema"`
 	Engine            transport.DNSEngine `json:"engine"`
@@ -28,6 +52,7 @@ type dnsEngineInstallOwnershipReceipt struct {
 	ManifestQualifier string              `json:"manifest_qualifier"`
 	MutationRequestID string              `json:"mutation_request_id"`
 	MutationOwnerID   string              `json:"mutation_owner_id"`
+	AdoptedPresent    bool                `json:"adopted_present,omitempty"`
 }
 
 func dnsEngineOwnershipPath(engine transport.DNSEngine) (string, error) {
@@ -178,9 +203,23 @@ func validateDNSEngineInstallOwnership(
 		return errors.New("DNS engine install ownership package manager is unsupported")
 	}
 	if len(receipt.Packages) == 0 || len(receipt.Packages) > 32 ||
-		len(receipt.MissingBefore) == 0 ||
 		len(receipt.MissingBefore) > len(receipt.Packages) {
 		return errors.New("DNS engine install ownership package set is invalid")
+	}
+	// The two provenance kinds are told apart by one fact and cannot disagree
+	// about it: an installation had something to install, an adoption had
+	// nothing. A receipt claiming to be an adoption while naming packages it
+	// installed - or claiming an installation that installed nothing - is not a
+	// receipt this agent ever writes, and is refused here rather than believed
+	// by whichever reader looks at only one of the two fields.
+	//
+	// İki köken türü tek bir olguyla ayrılır ve o olgu üzerinde çelişemezler:
+	// kurulumun kuracak bir şeyi vardı, devralmanın yoktu. Kurduğu paketleri
+	// adlandırırken devralma olduğunu iddia eden - ya da hiçbir şey kurmamış bir
+	// kurulum olduğunu iddia eden - bir makbuzu bu ajan hiç yazmaz; iki alandan
+	// yalnız birine bakan bir okuyucunun ona inanması yerine burada reddedilir.
+	if receipt.AdoptedPresent != (len(receipt.MissingBefore) == 0) {
+		return errors.New("DNS engine install ownership adoption disagrees with its missing set")
 	}
 	validateSorted := func(values []string) error {
 		previous := ""
@@ -363,7 +402,27 @@ func newDNSEngineInstallOwnership(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
 ) (dnsEngineInstallOwnershipReceipt, error) {
-	if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+	// A reinstall installs the same packages the switch does, for the same
+	// engine, under the same durable lease. The receipt records who put the
+	// packages there, and that is equally true either way.
+	//
+	// Yeniden kurulum, geçişin kurduğu paketlerin aynısını, aynı motor için,
+	// aynı kalıcı kira altında kurar. Makbuz paketleri oraya kimin koyduğunu
+	// kaydeder ve bu her iki durumda da aynı ölçüde doğrudur.
+	//
+	// An empty missing set is the adoption: nothing had to be installed because
+	// the target's packages were already there. It is the same event as far as
+	// provenance is concerned - this mutation, at this manifest, took these
+	// packages under management - so it is the same constructor, and the
+	// adoption flag is derived here rather than passed in, which is why the
+	// receipt can never claim an adoption that installed something.
+	//
+	// Boş eksik kümesi devralmadır: hedefin paketleri zaten orada olduğu için
+	// kurulacak bir şey yoktu. Köken açısından bu aynı olaydır - bu mutasyon, bu
+	// manifest altında, bu paketleri yönetimine aldı - bu yüzden yapıcı da
+	// aynıdır; devralma bayrağı dışarıdan verilmez, burada türetilir. Makbuzun
+	// bir şey kurmuş bir devralmayı iddia edememesinin nedeni budur.
+	if !installingDNSEngineMutationMode(manifest.Mode) ||
 		manifest.TargetEngine != engine {
 		return dnsEngineInstallOwnershipReceipt{},
 			errors.New("DNS engine install ownership differs from its switch target")
@@ -372,10 +431,11 @@ func newDNSEngineInstallOwnership(
 		Schema: dnsEngineInstallOwnershipSchema,
 		Engine: engine, PackageManager: string(manager),
 		Packages:          append([]string(nil), packages...),
-		MissingBefore:     append([]string(nil), missing...),
+		MissingBefore:     append([]string{}, missing...),
 		ManifestQualifier: manifest.Qualifier,
 		MutationRequestID: binding.MutationRequestID,
 		MutationOwnerID:   binding.MutationOwnerID,
+		AdoptedPresent:    len(missing) == 0,
 	}
 	sort.Strings(receipt.Packages)
 	sort.Strings(receipt.MissingBefore)
@@ -395,35 +455,92 @@ func installOwnedDNSEnginePackages(
 	return install()
 }
 
-type dnsEngineInstallOwnershipHandoffOps struct {
+type dnsEngineInstallOwnershipAssumeOps struct {
 	read  func(transport.DNSEngine) (dnsEngineInstallOwnershipReceipt, bool, error)
 	write func(dnsEngineInstallOwnershipReceipt) error
 }
 
-func handoffExistingDNSEngineInstallOwnership(
+// assumeExistingDNSEnginePackageOwnership runs when the target's packages are
+// already on the host and nothing will be installed. It is the only writer of
+// provenance on that path, and it must leave exactly what an install leaves,
+// because finalization does not ask how the packages arrived - it asks whether
+// this transaction can show that it owns them.
+//
+// Two host shapes reach it. Either an earlier attempt's receipt survived, in
+// which case it is rebound to this transaction and its original missing set is
+// preserved (a rolled-back attempt restores config, state and units but touches
+// neither the packages nor the receipt, so without the rebind the retry carries
+// a receipt bound to a dead request id into finalize). Or there is no receipt at
+// all - a rebuilt host, an operator who installed the package by hand, a
+// harness that preinstalled it, or a first attempt that itself found nothing
+// missing and therefore wrote nothing - and then this mutation is the first to
+// take those packages under management, which is a real, provable event and is
+// recorded as one.
+//
+// Leaving that second case unrecorded is risk R-026's live failure: the switch
+// reached its verified target, finalization found neither an install receipt nor
+// an active ownership receipt, and the operation was held with "committed DNS
+// engine switch has no exact install or active ownership provenance" - on every
+// retry, because every retry found the packages present again.
+//
+// It cannot launder a foreign receipt. The written receipt always names THIS
+// manifest qualifier and THIS request and owner id, and finalization compares
+// all three against the journal it is finalizing; a surviving receipt is only
+// ever rebound after it has been proven to describe this engine, this package
+// manager and this exact package set on this host.
+//
+// assumeExistingDNSEnginePackageOwnership, hedefin paketleri sunucuda zaten
+// varken ve hiçbir şey kurulmayacakken çalışır. O yolda kökeni yazan tek yerdir
+// ve kurulumun bıraktığının aynısını bırakmak zorundadır; çünkü sonlandırma
+// paketlerin nasıl geldiğini sormaz - bu işlemin onlara sahip olduğunu
+// gösterip gösteremediğini sorar.
+//
+// Buraya iki sunucu biçimi ulaşır. Ya önceki bir denemenin makbuzu hayatta
+// kalmıştır; o zaman makbuz bu işleme yeniden bağlanır ve özgün eksik kümesi
+// korunur (geri alınmış bir deneme yapılandırmayı, durumu ve unit'leri onarır
+// ama ne paketlere ne makbuza dokunur; yeniden bağlama olmadan yeniden deneme,
+// ölü bir istek kimliğine bağlı makbuzu sonlandırmaya taşır). Ya da hiç makbuz
+// yoktur - yeniden kurulmuş bir sunucu, paketi elle kuran bir operatör, onu
+// önceden kuran bir koşum ya da kendisi de eksik bir şey bulamadığı için hiçbir
+// şey yazmamış bir ilk deneme - ve o zaman bu paketleri yönetimine alan ilk
+// mutasyon budur; bu gerçek ve kanıtlanabilir bir olaydır, öyle de kaydedilir.
+//
+// İkinci durumu kaydetmemek R-026'nın canlı arızasıdır: geçiş doğrulanmış
+// hedefine ulaştı, sonlandırma ne kurulum makbuzu ne de etkin sahiplik makbuzu
+// buldu ve işlem "committed DNS engine switch has no exact install or active
+// ownership provenance" ile askıya alındı - her yeniden denemede, çünkü her
+// yeniden deneme paketleri yine orada buldu.
+//
+// Yabancı bir makbuzu aklayamaz. Yazılan makbuz her zaman BU manifest
+// niteleyicisini ve BU istek ile sahip kimliğini adlandırır; sonlandırma
+// üçünü de sonlandırdığı günlükle karşılaştırır. Hayatta kalan bir makbuz ise
+// yalnızca bu motoru, bu paket yöneticisini ve bu sunucudaki tam bu paket
+// kümesini tarif ettiği kanıtlandıktan sonra yeniden bağlanır.
+func assumeExistingDNSEnginePackageOwnership(
 	engine transport.DNSEngine,
 	manager hostplatform.PackageManager,
 	packages []string,
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
 ) error {
-	return handoffExistingDNSEngineInstallOwnershipWithOps(
+	return assumeExistingDNSEnginePackageOwnershipWithOps(
 		engine, manager, packages, manifest, binding,
-		dnsEngineInstallOwnershipHandoffOps{
+		dnsEngineInstallOwnershipAssumeOps{
 			read: readDNSEngineInstallOwnership, write: writeDNSEngineInstallOwnership,
 		},
 	)
 }
 
-func handoffExistingDNSEngineInstallOwnershipWithOps(
+func assumeExistingDNSEnginePackageOwnershipWithOps(
 	engine transport.DNSEngine,
 	manager hostplatform.PackageManager,
 	packages []string,
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
-	ops dnsEngineInstallOwnershipHandoffOps,
+	ops dnsEngineInstallOwnershipAssumeOps,
 ) error {
-	if ops.read == nil || ops.write == nil || manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+	if ops.read == nil || ops.write == nil ||
+		!installingDNSEngineMutationMode(manifest.Mode) ||
 		manifest.TargetEngine != engine {
 		return errors.New("invalid DNS engine install ownership handoff")
 	}
@@ -431,16 +548,23 @@ func handoffExistingDNSEngineInstallOwnershipWithOps(
 	if err != nil {
 		return err
 	}
-	if !exists {
-		return nil
-	}
-	if !exactDNSEngineInstallOwnership(existing, true, engine, manager, packages) {
-		return errors.New("existing DNS engine install ownership differs from the retry target")
-	}
 	rebound := existing
-	rebound.ManifestQualifier = manifest.Qualifier
-	rebound.MutationRequestID = binding.MutationRequestID
-	rebound.MutationOwnerID = binding.MutationOwnerID
+	if !exists {
+		adopted, adoptedErr := newDNSEngineInstallOwnership(
+			engine, manager, packages, nil, manifest, binding,
+		)
+		if adoptedErr != nil {
+			return adoptedErr
+		}
+		rebound = adopted
+	} else {
+		if !exactDNSEngineInstallOwnership(existing, true, engine, manager, packages) {
+			return errors.New("existing DNS engine install ownership differs from the retry target")
+		}
+		rebound.ManifestQualifier = manifest.Qualifier
+		rebound.MutationRequestID = binding.MutationRequestID
+		rebound.MutationOwnerID = binding.MutationOwnerID
+	}
 	if err := validateDNSEngineInstallOwnership(rebound); err != nil {
 		return err
 	}
@@ -585,14 +709,61 @@ func supersededDNSEngineOwnership(ownership, state dnsEngineStateReceipt) bool {
 // Bu ayrışma, bu projenin tekrar tekrar ürettiği kusurdur: aynı işin elle
 // yazılmış iki kopyasından yalnız birine uygulanan bir onarım. Her iki çağıran
 // da buradan geçer ki üçüncü bir kopyanın saklanacak yeri olmasın.
-func acceptableCommittedDNSEngineOwnership(ownership, state dnsEngineStateReceipt) error {
+func acceptableCommittedDNSEngineOwnership(
+	ownership, state dnsEngineStateReceipt,
+	journal dnsEngineSwitchJournal,
+) error {
 	if validateDNSEngineState(ownership) != nil {
 		return errors.New("committed DNS engine ownership is malformed")
 	}
-	if ownership != state && !supersededDNSEngineOwnership(ownership, state) {
+	if ownership != state && !supersededDNSEngineOwnership(ownership, state) &&
+		!reinstalledDNSEngineOwnership(ownership, state, journal) {
 		return errors.New("committed DNS engine ownership differs from its exact active state")
 	}
 	return nil
+}
+
+// reinstalledDNSEngineOwnership is the third way an ownership receipt can
+// legitimately differ from the active state, and it exists only for a
+// reinstall. The epoch rule above tells history from a contradiction by
+// comparing epochs: older is history, equal-or-newer is two states claiming one
+// epoch. A reinstall breaks that arithmetic on purpose — it puts the engine
+// back at the epoch it already owns — so the receipt it replaces is at the SAME
+// epoch and differs in the generation and mutation identity the new
+// installation created. Without this the reinstall would be read as the
+// contradiction the epoch rule was written to catch, and would fail after the
+// packages were already on the host.
+//
+// It is not a loosening: the receipt must equal the exact source state the
+// journal froze before the operation began. Nothing else at an equal epoch is
+// accepted, so a genuine two-states-one-epoch conflict still refuses.
+//
+// reinstalledDNSEngineOwnership, bir sahiplik makbuzunun etkin durumdan meşru
+// biçimde farklı olabileceği üçüncü yoldur ve yalnız yeniden kurulum için
+// vardır. Yukarıdaki çağ kuralı tarihi çelişkiden çağları karşılaştırarak
+// ayırır: daha eski olan tarihtir, eşit ya da daha yeni olan tek çağı iddia
+// eden iki durumdur. Yeniden kurulum bu aritmetiği bilerek bozar — motoru
+// zaten sahip olduğu çağa geri koyar — bu yüzden yerine geçtiği makbuz AYNI
+// çağdadır ve yeni kurulumun ürettiği nesil ile mutasyon kimliğinde ayrışır.
+// Bu olmadan yeniden kurulum, çağ kuralının yakalamak için yazıldığı çelişki
+// sanılır ve paketler sunucuya çoktan indikten sonra düşerdi.
+//
+// Bu bir gevşetme değildir: makbuz, işlem başlamadan önce günlüğün dondurduğu
+// tam kaynak durumuna eşit olmak zorundadır. Eşit çağda başka hiçbir şey kabul
+// edilmez; dolayısıyla gerçek bir tek-çağ-iki-durum çelişkisi hâlâ reddedilir.
+func reinstalledDNSEngineOwnership(
+	ownership, state dnsEngineStateReceipt,
+	journal dnsEngineSwitchJournal,
+) bool {
+	if journal.Mode != transport.DNSEngineSwitchModeReinstall ||
+		journal.SourceEngine != journal.TargetEngine ||
+		journal.SourceEpoch != journal.TargetEpoch ||
+		state.Engine != journal.TargetEngine ||
+		state.EngineEpoch != journal.TargetEpoch {
+		return false
+	}
+	source, exists, err := sourceStateFromDNSSwitchJournal(journal)
+	return err == nil && exists && ownership == source
 }
 
 func exactCommittedDNSEngineProvenanceOnHost(
@@ -647,7 +818,7 @@ func exactCommittedDNSEngineProvenanceOnHost(
 			fmt.Errorf("read committed DNS engine ownership: %w", err)
 	}
 	if ownershipExists {
-		if err := acceptableCommittedDNSEngineOwnership(ownership, state); err != nil {
+		if err := acceptableCommittedDNSEngineOwnership(ownership, state, journal); err != nil {
 			return dnsEngineStateReceipt{}, false, false, err
 		}
 	}
@@ -675,7 +846,7 @@ func exactFinalizedDNSEngineSwitchProvenanceOnHost(
 	if err != nil {
 		return false, fmt.Errorf("read finalized DNS engine ownership: %w", err)
 	}
-	_, installExists, err := readDNSEngineInstallOwnership(target)
+	install, installExists, err := readDNSEngineInstallOwnership(target)
 	if err != nil {
 		return false, fmt.Errorf("read finalized DNS engine install ownership: %w", err)
 	}
@@ -803,6 +974,51 @@ func exactFinalizedDNSEngineSwitchProvenanceOnHost(
 			historicalOwnership := ownershipExists &&
 				ownership.EngineEpoch < state.EngineEpoch
 			if state.Engine != target && (!ownershipExists || historicalOwnership) {
+				return false, nil
+			}
+			// A reinstall's target IS the active engine, so the install
+			// receipt sits on the engine that already owns the host and the
+			// two clauses above cannot classify it. What settles it is whose
+			// receipt it is: this one names the exact transaction now being
+			// aborted, and everything above has already proven the source side
+			// intact — a valid active state and an ownership receipt equal to
+			// it. So the interrupted reinstall got as far as installing
+			// packages and no further. Authority never moved because a
+			// reinstall never moves it, and there is nothing to roll back.
+			//
+			// Calling that a contradiction is how the drill's first live
+			// reinstall ended: packages on the host, the abort proof failing,
+			// the ledger poisoned, and the poison recomputed from unchanged
+			// durable state on every boot — the R-019 wedge again, reached by
+			// the one path built to get a host out of trouble.
+			//
+			// An install receipt on the active engine that names some OTHER
+			// transaction is not ours to dismiss and still fails closed.
+			//
+			// Yeniden kurulumun hedefi zaten sunucunun sahibi olan motordur;
+			// bu yüzden kurulum makbuzu o motorun üzerinde durur ve yukarıdaki
+			// iki koşul onu sınıflandıramaz. Meseleyi çözen şey makbuzun kime
+			// ait olduğudur: bu makbuz, şu anda iptal edilen işlemin ta
+			// kendisini adlandırır ve yukarıdaki her şey kaynak tarafın sağlam
+			// olduğunu zaten kanıtlamıştır — geçerli bir etkin durum ve ona
+			// eşit bir sahiplik makbuzu. Demek ki kesintiye uğrayan yeniden
+			// kurulum yalnızca paketleri kurmaya kadar gelmiştir. Yetki hiç
+			// değişmemiştir, çünkü yeniden kurulum onu hiç değiştirmez; geri
+			// alınacak bir şey de yoktur.
+			//
+			// Buna çelişki demek, tatbikatın ilk canlı yeniden kurulumunun
+			// bitiş biçimidir: paketler sunucuda, iptal kanıtı düşüyor, defter
+			// zehirleniyor ve zehir her açılışta değişmemiş kalıcı durumdan
+			// yeniden hesaplanıyor — bir sunucuyu dertten çıkarmak için
+			// yapılmış tek yolla ulaşılan R-019 tıkanması.
+			//
+			// Etkin motordaki BAŞKA bir işlemi adlandıran kurulum makbuzu bizim
+			// göz ardı edeceğimiz bir şey değildir ve kapalı arıza vermeyi
+			// sürdürür.
+			if state.Engine == target &&
+				install.ManifestQualifier == qualifier &&
+				install.MutationRequestID == binding.MutationRequestID &&
+				install.MutationOwnerID == binding.MutationOwnerID {
 				return false, nil
 			}
 			return false, errors.New(

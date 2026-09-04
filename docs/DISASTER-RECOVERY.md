@@ -23,12 +23,12 @@ host is control-plane state.
 | --- | --- | --- | --- |
 | Panel database | `/var/lib/celikpanel/celikpanel.db` (+ `-wal`, `-shm` while running) | celikpanel:celikpanel 0600 | Every domain, user, plan, zone, certificate record, audit log |
 | Secret key | `/var/lib/celikpanel/secret.key` | celikpanel:celikpanel 0600 | Seals every secret stored in the database; lost key = unreadable secrets |
-| Panel configuration | `/etc/celikpanel/panel.env` | root:celikpanel 0640 | Listen address, data directory, feature switches |
+| Panel configuration | `/etc/celikpanel/panel.env` | root:root 0600 | Listen address, data directory, feature switches |
 | Agent token | `/etc/celikpanel/agent.token` | root:celikpanel 0640 | Panel-to-agent authentication |
 | Agent private state | `/var/lib/celikpanel-agent-private/` (ledger `service-mutations.json`, `dns-engine-state.json`, `dns-engine-ownership-*.json`, `dns-engine-install-ownership-*.json`, firewall and mail journals, panel-certificate activation state) | root:celikpanel 0700 dir, 0600 files | The durable truth of which DNS engine owns the host and what was mid-flight; without it the restored host cannot prove its own engine |
-| DKIM keys | `/var/lib/celikpanel-dkim/keys/` | root:opendkim 0750, keys 0640 | Published in DNS; losing them breaks every domain's mail signing |
+| DKIM keys | `/var/lib/celikpanel-dkim/keys/` | root:celikpanel 0700, keys 0600 | Published in DNS; losing them breaks every domain's mail signing |
 | WireGuard | `/etc/wireguard/` | root:root 0700 | VPN identity and peers |
-| Panel TLS | `/var/lib/celikpanel/tls/` | celikpanel:celikpanel 0700 | The panel's own certificate and key; the "protected initial certificate" |
+| Panel TLS | `/var/lib/celikpanel/tls/` | root:celikpanel 0750, files 0640 | The panel's own certificate and key; the "protected initial certificate" |
 | Firewall snapshot | `/etc/celikpanel/firewall.nft` | root:root 0600 | The exact ruleset restored on boot |
 
 Excluded on purpose: `/var/lib/celikpanel-agent-private/system-sqlite-snapshots`
@@ -61,8 +61,14 @@ detected and the archive is retried, not shipped.
   once when the feature is enabled, shown to the operator once, never stored on
   the host in plaintext, and never written to the database. The screen says in
   plain words: "Without this key the archive cannot be opened, by us or by
-  anyone." Envelope: age-style X25519 recipient or a passphrase-derived key
-  (scrypt); the decision is recorded in D-023 before implementation.
+  anyone." Envelope (D-023, decided 3 September 2026): the product generates
+  a random 256-bit key and prints it once as `cpk1-…` (Crockford base32 in
+  4-character groups); the archive key is derived from it with argon2id
+  (parameters in the archive header, random 16-byte salt) and the payload is
+  AES-256-GCM in 64 KiB chunks with the age STREAM nonce scheme, the header
+  as associated data. argon2id and AES-GCM are already in the product; no
+  new dependency. A wrong key or a flipped bit fails before any member is
+  placed.
 - Written under `/var/backups/celikpanel/control-plane/` as root 0600, fsynced,
   then optionally pushed to the same remote target and retention as domain
   backups (v2; see §7).
@@ -73,11 +79,32 @@ Restore is a fresh-host operation and nothing else. It runs before the panel
 has any state of its own, so there is never a merge and never a second identity.
 
 1. Install the same or a newer release on a clean host through `install.sh`.
-2. Provide the archive and the backup key at first run: the install script
-   accepts `CELIKPANEL_RESTORE_ARCHIVE=/absolute/root-only/file` and reads the
-   key the same way it reads the first-administrator credentials today
-   (root-only file, inherited on stdin, consumed); the panel's first-run screen
-   offers the same choice for operators who install interactively.
+2. Slice 1 (on the branch): three one-shot modes of the panel binary, run as
+   root: `--generate-control-plane-key`,
+   `--create-control-plane-archive=<path> --control-plane-key-file=-` and
+   `--restore-control-plane-archive=<path> --control-plane-key-file=-`. The
+   key arrives on stdin with the same discipline as the first-administrator
+   credentials (root-only regular file or a bounded pipe).
+   Slice 2 (on the branch) provides the archive and the backup key at first
+   run: the install script accepts
+   `CELIKPANEL_RESTORE_ARCHIVE=/absolute/root-only/file` and
+   `CELIKPANEL_RESTORE_KEY_FILE=/absolute/root-only/file` (both required
+   together), verifies the archive header in preflight with
+   `--inspect-control-plane-archive`, and restores after the systemd units are
+   written and before either service is started. An armed restore replaces
+   first-administrator admission: no prompt, no credentials file (setting one
+   is a contradiction and aborts in preflight), and after the restore the
+   installer proves the restored database has at least one administrator.
+   The panel's first-run screen is a later slice.
+
+   Precedence on the fresh host, decided from what each file is (settled
+   3 September 2026): `panel.env` is the installer's, so the installer's copy
+   is kept and every differing key is reported by name only; `agent.token` is
+   kept when the installer already wrote one, but in the install-time hook
+   the agent has not run yet, so the archive's token is placed (both units
+   read the same file; the drill confirmed this is harmless); `firewall.nft`
+   is the only source of the operator's rules, nothing regenerates it, so the
+   archive's copy wins.
 3. The panel binary performs the restore itself, as root, with both services
    stopped: verify the manifest, verify every member's digest, refuse an archive
    whose schema is newer than the binary, place each member with its recorded
@@ -93,9 +120,41 @@ has any state of its own, so there is never a merge and never a second identity.
    install. Domain content is restored from domain backups afterwards through
    the existing flow.
 
+   Found in the first drill and fixed on the branch: the screen said so but
+   offered no install, because every preview toward the active engine
+   carried `target_already_active` and `source_degraded` and the commit
+   answered "preview expired" for a preview that was never registered.
+   There is now one honest path. When the active engine is BIND, standalone,
+   at epoch 1 or later and not running, the preview returns the action
+   `reinstall_active` with no blockers, and the card offers "Reinstall the
+   active DNS server". It installs the packages, regenerates the
+   configuration and the zones from the database and starts the engine at
+   the same epoch under the same ownership; it moves no authority, so it
+   writes no switch snapshot. Proven on the drill's host B: commit in 10 s,
+   the engine running, and the zone answering the same SOA and the same DKIM
+   record as the host the archive came from.
+
 ## 6. The drill (exit criteria for R-003)
 
 Run first on a WSL2 guest, then on a disposable real VM by the team.
+
+First WSL run, 3 September 2026 (host A: Debian 13 guest rebuilt from
+68b83cc; host B: a brand-new `wsl --install Debian` guest, restored through
+the installer hook). Measured: archive age at the disaster 5 min 30 s, data
+lost none; installer start to panel serving 23 s; disaster to serving,
+including provisioning the new guest, 1 min 58 s. Proven on B through the
+panel: the administrator's old password, the secret key and its stored
+fingerprint, the DKIM private key and its published public key, the domain
+list, the DNS engine state at the same epoch, the served TLS certificate.
+Then proven, after the fix in §5.5: the restored host reinstalled its own
+DNS server through the panel and answered its zone with the same SOA and
+the same DKIM record as host A, at the same epoch.
+
+Still owed before R-003 closes: the same run on a disposable real VM; a
+stored database password created on host A so that a sealed ciphertext is
+actually opened on host B (this run had none); and the VPN and firewall
+members, which could not be exercised on this build (R-034, R-035) - mail
+could not be installed either (R-036), though the DKIM key travelled.
 
 1. Fresh host A: install, add an administrator, activate BIND, create a domain
    with mail (so DKIM keys and a sealed secret exist), enable the VPN, take a
@@ -119,8 +178,7 @@ Each is a register entry of its own when it starts.
 
 ## 8. Open decisions
 
-- D-023: archive envelope (X25519 recipient vs passphrase). Recommendation:
-  passphrase with scrypt, because the operator must be able to type it into a
-  fresh host with nothing else at hand.
+- D-023 is settled (see §4); the generated key is typed or pasted into the
+  fresh host, nothing else is needed.
 - Whether the pre-update release snapshot should simply become a control-plane
   archive, retiring one of two mechanisms.

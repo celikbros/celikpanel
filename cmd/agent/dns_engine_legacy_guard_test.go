@@ -420,3 +420,159 @@ func TestLegacyPowerDNSDurableAuthorityAllowsExactPDNSAndIntentionalLegacy(t *te
 		t.Fatalf("runtime inspections=%d want=2", runtimeCalls)
 	}
 }
+
+// TestCanonicalDNSPort53ListenerRowAcceptsEveryIProute2WildcardPeer pins the
+// R-018 fifth layer: on the S-9 T1 Arch VM the started BIND unit was refused
+// because ss spelled the empty peer of its listening socket differently than
+// the Debian fixtures do. Every spelling iproute2 uses for "no peer" must be
+// accepted; a real remote endpoint must still be refused, because the whole
+// point of the column is to prove the socket is a listener.
+func TestCanonicalDNSPort53ListenerRowAcceptsEveryIProute2WildcardPeer(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		row         string
+		wantAddress string
+		wantAccept  bool
+	}{
+		{
+			name:        "arch dual stack wildcard peer over tcp",
+			row:         `tcp LISTEN 0 4096 [2001:db8::10]:53 *:* users:(("named",pid=10,fd=1))`,
+			wantAddress: "2001:db8::10",
+			wantAccept:  true,
+		},
+		{
+			name:        "arch dual stack wildcard peer over udp",
+			row:         `udp UNCONN 0 0 192.0.2.10:53 *:* users:(("named",pid=10,fd=2))`,
+			wantAddress: "192.0.2.10",
+			wantAccept:  true,
+		},
+		{
+			name:        "debian ipv4 wildcard peer",
+			row:         `tcp LISTEN 0 4096 192.0.2.10:53 0.0.0.0:* users:(("named",pid=10,fd=3))`,
+			wantAddress: "192.0.2.10",
+			wantAccept:  true,
+		},
+		{
+			name:        "debian ipv6 only wildcard peer",
+			row:         `udp UNCONN 0 0 [2001:db8::10]:53 [::]:* users:(("named",pid=10,fd=4))`,
+			wantAddress: "2001:db8::10",
+			wantAccept:  true,
+		},
+		{
+			name: "connected ipv4 peer",
+			row:  `tcp LISTEN 0 4096 192.0.2.10:53 192.0.2.7:53535 users:(("named",pid=10,fd=5))`,
+		},
+		{
+			name: "connected ipv6 peer",
+			row:  `tcp LISTEN 0 4096 [2001:db8::10]:53 [2001:db8::7]:53535 users:(("named",pid=10,fd=6))`,
+		},
+		{
+			name: "named remote peer with wildcard port",
+			row:  `tcp LISTEN 0 4096 192.0.2.10:53 192.0.2.7:* users:(("named",pid=10,fd=7))`,
+		},
+		{
+			name: "unspecified peer with a real port",
+			row:  `tcp LISTEN 0 4096 192.0.2.10:53 0.0.0.0:53535 users:(("named",pid=10,fd=8))`,
+		},
+		{
+			name: "bare wildcard without a port",
+			row:  `tcp LISTEN 0 4096 192.0.2.10:53 * users:(("named",pid=10,fd=9))`,
+		},
+		{
+			name: "zoned link local peer",
+			row:  `tcp LISTEN 0 4096 192.0.2.10:53 [fe80::1]%eth0:* users:(("named",pid=10,fd=10))`,
+		},
+		{
+			name: "unbracketed ipv6 wildcard peer",
+			row:  `tcp LISTEN 0 4096 [2001:db8::10]:53 :::* users:(("named",pid=10,fd=11))`,
+		},
+		{
+			name: "spoofed wildcard suffix",
+			row:  `tcp LISTEN 0 4096 192.0.2.10:53 0.0.0.0:*evil users:(("named",pid=10,fd=12))`,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			row, err := parseCanonicalDNSPort53ListenerRow(test.row)
+			if !test.wantAccept {
+				if err == nil {
+					t.Fatal("a non-canonical listener peer endpoint was accepted")
+				}
+				if !strings.Contains(
+					err.Error(),
+					"non-canonical DNS listener peer endpoint",
+				) {
+					t.Fatalf("unexpected rejection reason: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("canonical listener row was rejected: %v", err)
+			}
+			if row.address.String() != test.wantAddress {
+				t.Fatalf(
+					"address=%s want=%s", row.address, test.wantAddress,
+				)
+			}
+			if row.process != "named" || row.pid != 10 {
+				t.Fatalf("owner=%s/%d want=named/10", row.process, row.pid)
+			}
+		})
+	}
+}
+
+// TestCanonicalSSWildcardPeerEndpointClosesTheListenerPeerSet
+// keeps the accepted set closed. It is deliberately an exact-string set: ss
+// has exactly three ways of printing an absent peer and nothing else may pass.
+func TestCanonicalSSWildcardPeerEndpointClosesTheListenerPeerSet(t *testing.T) {
+	for _, test := range []struct {
+		endpoint string
+		want     bool
+	}{
+		{endpoint: "*:*", want: true},
+		{endpoint: "0.0.0.0:*", want: true},
+		{endpoint: "[::]:*", want: true},
+		{endpoint: "::*"},
+		{endpoint: ":::*"},
+		{endpoint: "*"},
+		{endpoint: "*:0"},
+		{endpoint: "[::]:0"},
+		{endpoint: "0.0.0.0:53535"},
+		{endpoint: "192.0.2.7:53535"},
+		{endpoint: "192.0.2.7:*"},
+		{endpoint: "[2001:db8::7]:*"},
+		{endpoint: "[fe80::1]%eth0:*"},
+		{endpoint: "127.0.0.1%lo:*"},
+		{endpoint: "[::1]:*"},
+		{endpoint: " *:* "},
+		{endpoint: ""},
+	} {
+		t.Run(test.endpoint, func(t *testing.T) {
+			if got := canonicalSSWildcardPeerEndpoint(
+				test.endpoint,
+			); got != test.want {
+				t.Fatalf("accepted=%v want=%v", got, test.want)
+			}
+		})
+	}
+}
+
+// TestDNSPort53ConflictParserReadsArchWildcardPeerRows proves the fix reaches
+// the guard that consumes these rows, in both directions: a declared BIND
+// owner on the Arch shape is no longer a conflict, an undeclared one still is.
+func TestDNSPort53ConflictParserReadsArchWildcardPeerRows(t *testing.T) {
+	const archBIND = `tcp LISTEN 0 4096 192.0.2.10:53 *:* users:(("named",pid=10,fd=1))` +
+		"\n" +
+		`udp UNCONN 0 0 [2001:db8::10]:53 *:* users:(("named",pid=10,fd=2))`
+	if hasUnrelatedPublicDNSListener(archBIND, true, false) {
+		t.Fatal("a declared BIND owner on the Arch peer shape was refused")
+	}
+	if !hasUnrelatedPublicDNSListener(archBIND, false, false) {
+		t.Fatal("an undeclared BIND owner on the Arch peer shape was allowed")
+	}
+	if !hasUnrelatedPublicDNSListener(
+		`udp UNCONN 0 0 192.0.2.10:53 192.0.2.7:53535 users:(("named",pid=10,fd=1))`,
+		true, false,
+	) {
+		t.Fatal("a connected socket passed as a declared BIND listener")
+	}
+}

@@ -574,6 +574,7 @@ test('DNS engine preview token and counts mirror the commit contract', async () 
     dnssec_zone_count: 0,
     estimated_downtime_seconds: 15,
     requires_downtime_acknowledgement: true,
+    requires_adoption_acknowledgement: false,
     blockers: [],
     impacts: ['validate_target'],
   };
@@ -615,6 +616,150 @@ test('DNS engine preview token and counts mirror the commit contract', async () 
     action: 'reconfigure',
     requires_downtime_acknowledgement: false,
   }, null, 'pdns', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...preview, requires_adoption_acknowledgement: undefined,
+  }, 'pdns', 'bind', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...preview, requires_adoption_acknowledgement: true,
+  }, 'pdns', 'bind', 4), null);
+});
+
+// A reinstall names its source engine because that engine owns the host, yet
+// nothing of it is running, so it asks for no downtime acknowledgement. The
+// decoder used to demand one from every sourced preview and turned the shipped
+// action into previewInvalid.
+test('a reinstall of the active DNS server decodes without an outage to acknowledge', async () => {
+  const { decodeDNSEngineSwitchPreview } = await loadContractRuntime();
+  const reinstall = {
+    preview_token: 'b'.repeat(32),
+    source_engine: 'bind',
+    target_engine: 'bind',
+    expected_revision: 4,
+    action: 'reinstall_active',
+    topology: 'standalone',
+    zone_count: 1,
+    pending_zone_count: 1,
+    dnssec_zone_count: 0,
+    estimated_downtime_seconds: 0,
+    requires_downtime_acknowledgement: false,
+    requires_adoption_acknowledgement: false,
+    blockers: [],
+    impacts: ['install_target', 'validate_target', 'publish_zones', 'start_target'],
+  };
+  const decoded = decodeDNSEngineSwitchPreview(reinstall, 'bind', 'bind', 4);
+  assert.ok(decoded);
+  assert.equal(decoded.action, 'reinstall_active');
+  assert.equal(decoded.requires_downtime_acknowledgement, false);
+  // A reinstall repairs the engine the ledger already names; a source that is
+  // absent, or different from the target, is not that operation.
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...reinstall, source_engine: null,
+  }, null, 'bind', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...reinstall, source_engine: 'pdns',
+  }, 'pdns', 'bind', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...reinstall, requires_downtime_acknowledgement: true,
+  }, 'bind', 'bind', 4), null);
+});
+
+// Taking over a DNS server CelikPanel did not install is source-free, costs no
+// outage, and carries its own acknowledgement — never the downtime one.
+test('an unmanaged takeover decodes with its own acknowledgement and no outage', async () => {
+  const { decodeDNSEngineSwitchPreview } = await loadContractRuntime();
+  const takeover = {
+    preview_token: 'b'.repeat(32),
+    source_engine: null,
+    target_engine: 'bind',
+    expected_revision: 1,
+    action: 'adopt_unmanaged',
+    topology: 'standalone',
+    zone_count: 0,
+    pending_zone_count: 0,
+    dnssec_zone_count: 0,
+    estimated_downtime_seconds: 0,
+    requires_downtime_acknowledgement: false,
+    requires_adoption_acknowledgement: true,
+    blockers: [],
+    impacts: [
+      'replace_foreign_config', 'validate_target', 'publish_zones',
+      'start_target', 'drop_unknown_zones',
+    ],
+  };
+  const decoded = decodeDNSEngineSwitchPreview(takeover, null, 'bind', 1);
+  assert.ok(decoded);
+  assert.equal(decoded.requires_adoption_acknowledgement, true);
+  assert.equal(decoded.requires_downtime_acknowledgement, false);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...takeover, requires_adoption_acknowledgement: false,
+  }, null, 'bind', 1), null);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...takeover, target_engine: 'pdns',
+  }, null, 'pdns', 1), null);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...takeover, source_engine: 'pdns', expected_revision: 1,
+  }, 'pdns', 'bind', 1), null);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...takeover, estimated_downtime_seconds: 15,
+  }, null, 'bind', 1), null);
+});
+
+// The panel is the authority on which actions exist. An action it can return
+// that this decoder does not list makes the entire preview decode to null, and
+// the operator is told only that it could not be verified — which is how
+// reinstall_active shipped invisible. Read the actions straight out of the Go
+// source so drift fails the build rather than the screen.
+test('every DNS preview action the panel can return is decodable by the UI', () => {
+  const goSource = readFileSync(
+    new URL('../../cmd/panel/dns_engine.go', import.meta.url),
+    'utf8',
+  );
+  const constants = new Map();
+  for (const match of goSource.matchAll(
+    /^const (dnsEngineAction[A-Za-z]+) = "([a-z_]+)"$/gm,
+  )) {
+    constants.set(match[1], match[2]);
+  }
+  assert.ok(constants.size >= 2, 'no DNS engine action constants were found');
+
+  const start = goSource.indexOf('\nfunc dnsEngineAction(');
+  assert.ok(start >= 0);
+  const end = goSource.indexOf('\nfunc ', start + 1);
+  assert.ok(end > start);
+  const body = goSource.slice(start, end);
+
+  const panelActions = new Set();
+  for (const match of body.matchAll(/\breturn "([a-z_]+)"/g)) {
+    panelActions.add(match[1]);
+  }
+  for (const match of body.matchAll(/\breturn (dnsEngineAction[A-Za-z]+)\b/g)) {
+    const value = constants.get(match[1]);
+    assert.ok(value, `unresolved action constant ${match[1]}`);
+    panelActions.add(value);
+  }
+  assert.ok(panelActions.size >= 5,
+    `dnsEngineAction returned only ${[...panelActions].join(', ')}`);
+
+  const listed = contract.match(
+    /export const DNS_ENGINE_PREVIEW_ACTIONS = \[([\s\S]*?)\] as const;/,
+  );
+  assert.ok(listed, 'the contract no longer exports a pinned action list');
+  const uiActions = new Set(
+    [...listed[1].matchAll(/'([a-z_]+)'/g)].map((match) => match[1]),
+  );
+
+  const undecodable = [...panelActions].filter((action) => !uiActions.has(action));
+  assert.deepEqual(undecodable, [],
+    `the panel can return actions the UI cannot decode: ${undecodable.join(', ')}`);
+  const unreachable = [...uiActions].filter((action) => !panelActions.has(action));
+  assert.deepEqual(unreachable, [],
+    `the UI lists actions the panel never returns: ${unreachable.join(', ')}`);
+
+  // Each decodable action needs operator-facing copy in both locales.
+  for (const action of uiActions) {
+    assert.ok(copy.includes(`'dnsEngine.action.${action}'`),
+      `dnsEngine.action.${action} has no copy`);
+  }
 });
 
 test('first DNS engine click requests a read-only preview and cannot mutate', () => {
@@ -771,6 +916,54 @@ test('review dialog is accessible and uses a meaningful acknowledgement, not a t
   assert.doesNotMatch(card, /type="text"[\s\S]{0,200}(?:confirm|version|engine)/i);
 });
 
+// Taking over a DNS server the panel did not install is not the same promise as
+// a brief outage, so it does not reuse the same checkbox. The dialog has to say
+// what is being replaced and what stops being served, in both locales, and the
+// commit must be unreachable until that specific box is ticked.
+test('an unmanaged takeover asks for its own consent, not the downtime one', () => {
+  const commitStart = card.indexOf('const commitSwitch = async');
+  const commitEnd = card.indexOf('\n    return (', commitStart);
+  assert.ok(commitStart >= 0 && commitEnd > commitStart);
+  const commitBody = card.slice(commitStart, commitEnd);
+  assert.match(commitBody,
+    /preview\.requires_adoption_acknowledgement && !current\.adoptionAcknowledged/);
+  assert.match(commitBody, /adoption_acknowledged: current\.adoptionAcknowledged/);
+  assert.match(card, /typeof request\.adoption_acknowledged === 'boolean'/);
+
+  const dialogStart = card.indexOf('function DNSEngineReviewDialog');
+  assert.ok(dialogStart >= 0);
+  const dialog = card.slice(dialogStart);
+  assert.match(dialog,
+    /preview\?\.requires_adoption_acknowledgement === true && !review\.adoptionAcknowledged/);
+  assert.match(dialog, /preview\.requires_adoption_acknowledgement && preview\.blockers\.length === 0/);
+  assert.match(dialog, /checked=\{review\.adoptionAcknowledged\}/);
+  assert.match(dialog, /onAcknowledgeAdoption\(event\.target\.checked\)/);
+  assert.match(dialog, /dnsEngine\.adoption\.title/);
+  assert.match(dialog, /dnsEngine\.adoption\.body/);
+  assert.match(dialog, /dnsEngine\.adoption\.acknowledgement/);
+  // The two consents are separate controls, so neither can stand in for the
+  // other when both are on screen.
+  assert.notEqual(
+    dialog.indexOf('dnsEngine.adoption.acknowledgement'),
+    dialog.indexOf('dnsEngine.downtimeAcknowledgement'),
+  );
+
+  for (const phrase of [
+    'already has a DNS server CelikPanel did not install',
+    'replaces its configuration with CelikPanel',
+    'will stop being served',
+    'kurmadığı bir DNS sunucusu zaten var',
+    'yapılandırmasını CelikPanel',
+    'sunulmaz olur',
+  ]) {
+    assert.ok(copy.includes(phrase), `takeover copy is missing: ${phrase}`);
+  }
+  assert.match(copy, /'dnsEngine\.impact\.replaceForeignConfig'/);
+  assert.match(copy, /'dnsEngine\.impact\.dropUnknownZones'/);
+  assert.match(card, /replace_foreign_config: 'dnsEngine\.impact\.replaceForeignConfig'/);
+  assert.match(card, /drop_unknown_zones: 'dnsEngine\.impact\.dropUnknownZones'/);
+});
+
 test('backend blocker text is discarded and paired or DNSSEC support is never invented', () => {
   assert.match(contract, /Backend message text is deliberately discarded/);
   assert.match(contract, /blockers\.push\(\{ code: item\.code \}\)/);
@@ -811,7 +1004,7 @@ test('fresh servers stage an exact DNS identity before the first engine install'
   assert.match(copy, /reconfigure it directly as the secondary/);
   assert.match(copy, /doğrudan ikincil olarak yapılandıracak/);
   assert.match(settings, /dnsEngine\.identity\.legacyPairedDirect/);
-  assert.match(contract, /'install' \| 'switch' \| 'adopt' \| 'reconfigure'/);
+  assert.match(contract, /export type DNSEnginePreviewAction = \(typeof DNS_ENGINE_PREVIEW_ACTIONS\)\[number\]/);
   assert.match(card, /dnsEngine\.reviewReconfigure/);
   assert.match(copy, /dnsEngine\.blocker\.identityRequired/);
 });

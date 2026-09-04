@@ -44,6 +44,7 @@ interface ReviewState {
     loading: boolean;
     committing: boolean;
     acknowledged: boolean;
+    adoptionAcknowledged: boolean;
     preview: DNSEngineSwitchPreview | null;
     error: string;
 }
@@ -55,6 +56,7 @@ interface DNSEngineSwitchRequestBody {
     expected_revision: number;
     preview_token: string;
     downtime_acknowledged: boolean;
+    adoption_acknowledged: boolean;
 }
 
 type DNSEngineSwitchHTTPResult =
@@ -101,7 +103,8 @@ function validSwitchRequest(value: unknown): value is DNSEngineSwitchRequestBody
         && request.expected_revision >= 0
         && typeof request.preview_token === 'string'
         && dnsOperationIDPattern.test(request.preview_token)
-        && typeof request.downtime_acknowledged === 'boolean';
+        && typeof request.downtime_acknowledged === 'boolean'
+        && typeof request.adoption_acknowledged === 'boolean';
 }
 
 function readDNSOperationMarker(): DNSOperationRecoveryMarker | null {
@@ -184,6 +187,8 @@ const knownImpactKeys = {
     replace_existing: 'dnsEngine.impact.replaceExisting',
     restart_target: 'dnsEngine.impact.restartTarget',
     configure_secondary: 'dnsEngine.impact.configureSecondary',
+    replace_foreign_config: 'dnsEngine.impact.replaceForeignConfig',
+    drop_unknown_zones: 'dnsEngine.impact.dropUnknownZones',
 } as const;
 
 // A paired-primary snapshot can spend up to 15 seconds proving the peer
@@ -684,6 +689,7 @@ export function DNSEngineCard({
             loading: true,
             committing: false,
             acknowledged: false,
+            adoptionAcknowledged: false,
             preview: null,
             error: requestID === null ? et('dnsEngine.requestIDFailed') : '',
         });
@@ -737,6 +743,7 @@ export function DNSEngineCard({
         if (actionsLocked || !current || !preview || current.loading
             || current.committing || preview.blockers.length > 0) return;
         if (preview.requires_downtime_acknowledgement && !current.acknowledged) return;
+        if (preview.requires_adoption_acknowledgement && !current.adoptionAcknowledged) return;
         const requestID = current.requestID;
         if (requestID === null) return;
 
@@ -747,6 +754,7 @@ export function DNSEngineCard({
             expected_revision: current.base.revision,
             preview_token: preview.preview_token,
             downtime_acknowledged: current.acknowledged,
+            adoption_acknowledged: current.adoptionAcknowledged,
         };
         const startedAt = Date.now();
         if (!storeDNSOperationMarker(requestBody, startedAt)) {
@@ -983,7 +991,16 @@ export function DNSEngineCard({
                                     && (engine.status === 'available'
                                         || engine.status === 'installed_standby'
                                         || engine.status === 'unmanaged');
-                                const reviewLabel = engine.status === 'available'
+                                // The panel's own record says this engine is
+                                // serving and the server has no copy of it. One
+                                // button, and it says what it does: put it back.
+                                const reinstallActive = snapshot.active_engine === id
+                                    && !engine.running
+                                    && snapshot.topology === 'standalone'
+                                    && id === 'bind';
+                                const reviewLabel = reinstallActive
+                                    ? et('dnsEngine.reviewReinstall')
+                                    : engine.status === 'available'
                                     || (engine.status === 'installed_standby'
                                         && snapshot.active_engine === null
                                         && snapshot.state === 'unconfigured'
@@ -1029,6 +1046,7 @@ export function DNSEngineCard({
                                                 <Button
                                                     variant="secondary"
                                                     icon={engine.status === 'available' ? DownloadCloud : ArrowRightLeft}
+                                                    data-testid={reinstallActive ? 'dns-engine-reinstall' : undefined}
                                                     disabled={!canReview || review !== null}
                                                     onClick={() => void requestPreview(id)}
                                                 >
@@ -1064,6 +1082,7 @@ export function DNSEngineCard({
                 <DNSEngineReviewDialog
                     review={review}
                     onAcknowledge={(acknowledged) => setReview((current) => current ? { ...current, acknowledged } : current)}
+                    onAcknowledgeAdoption={(adoptionAcknowledged) => setReview((current) => current ? { ...current, adoptionAcknowledged } : current)}
                     onCancel={() => {
                         if (!review.committing) setReview(null);
                     }}
@@ -1176,11 +1195,13 @@ function DNSEngineOperationProgress({
 function DNSEngineReviewDialog({
     review,
     onAcknowledge,
+    onAcknowledgeAdoption,
     onCancel,
     onConfirm,
 }: {
     review: ReviewState;
     onAcknowledge: (acknowledged: boolean) => void;
+    onAcknowledgeAdoption: (acknowledged: boolean) => void;
     onCancel: () => void;
     onConfirm: () => void;
 }) {
@@ -1193,7 +1214,8 @@ function DNSEngineReviewDialog({
         || review.committing
         || review.requestID === null
         || blocked
-        || (preview?.requires_downtime_acknowledgement === true && !review.acknowledged);
+        || (preview?.requires_downtime_acknowledgement === true && !review.acknowledged)
+        || (preview?.requires_adoption_acknowledgement === true && !review.adoptionAcknowledged);
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
@@ -1290,6 +1312,35 @@ function DNSEngineReviewDialog({
                                         return <li key={`${blocker.code}-${index}`}>{et(key ?? 'dnsEngine.blocker.unknown')}</li>;
                                     })}
                                 </ul>
+                            </div>
+                        )}
+
+                        {preview.requires_adoption_acknowledgement && preview.blockers.length === 0 && (
+                            <div className="mt-5 rounded-xl border border-danger/35 bg-danger/5 p-4">
+                                <h4
+                                    id="dns-engine-adoption-title"
+                                    className="flex items-start gap-2 text-sm font-semibold text-fg"
+                                >
+                                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+                                    {et('dnsEngine.adoption.title')}
+                                </h4>
+                                <p
+                                    id="dns-engine-adoption-body"
+                                    className="mt-2 pl-6 text-sm leading-5 text-fg-muted"
+                                >
+                                    {et('dnsEngine.adoption.body')}
+                                </p>
+                                <label className="mt-4 flex cursor-pointer items-start gap-3 border-t border-danger/25 pt-4">
+                                    <input
+                                        type="checkbox"
+                                        checked={review.adoptionAcknowledged}
+                                        disabled={review.committing}
+                                        aria-describedby="dns-engine-adoption-body"
+                                        onChange={(event) => onAcknowledgeAdoption(event.target.checked)}
+                                        className="mt-0.5 h-4 w-4 accent-primary"
+                                    />
+                                    <span className="text-sm leading-5 text-fg">{et('dnsEngine.adoption.acknowledgement')}</span>
+                                </label>
                             </div>
                         )}
 

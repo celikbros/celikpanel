@@ -634,7 +634,7 @@ func TestBINDMaskParentPreflightPrecedesNewSwitchMutations(t *testing.T) {
 	}
 	for _, mutation := range []string{
 		"publishDNSEngineSourceOwnership(",
-		"handoffExistingDNSEngineInstallOwnership(",
+		"assumeExistingDNSEnginePackageOwnership(",
 		"newDNSEngineInstallOwnership(",
 		"runVerifiedBINDTargetInstall(",
 		"runBINDPostInstallContinuation(",

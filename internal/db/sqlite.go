@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -169,6 +170,25 @@ type embeddedMigration struct {
 	filename string
 	sha256   string
 	content  []byte
+}
+
+// HighestEmbeddedMigrationVersion returns the newest migration this build
+// ships. It reads the same embedded list RunMigrations applies at startup, so
+// the number can never drift from what the binary can actually run. A restore
+// uses it to refuse a database from a newer release before placing it.
+// HighestEmbeddedMigrationVersion, bu yapının taşıdığı en yeni migration'ı
+// döndürür. RunMigrations'ın başlangıçta uyguladığı gömülü listenin aynısını
+// okur; böylece sayı, ikili dosyanın gerçekten çalıştırabildiğinden sapamaz.
+func HighestEmbeddedMigrationVersion() (int, error) {
+	migrations, err := loadEmbeddedMigrations()
+	if err != nil {
+		return 0, err
+	}
+	if len(migrations) == 0 {
+		return 0, errors.New("this release embeds no migrations")
+	}
+	// loadEmbeddedMigrations returns them sorted ascending by version.
+	return migrations[len(migrations)-1].version, nil
 }
 
 func loadEmbeddedMigrations() ([]embeddedMigration, error) {
@@ -396,15 +416,43 @@ func (db *SQLiteDB) verifyOrBackfillAppliedMigration(
 	if recordedFilename.String != migration.filename ||
 		recordedSHA256.String != migration.sha256 {
 		return false, fmt.Errorf(
-			"migration integrity mismatch for version %d: ledger has %q/%s, embedded release has %q/%s",
+			"migration integrity mismatch for version %d: ledger has %q/%s, embedded release has %q/%s%s",
 			migration.version,
 			recordedFilename.String,
 			recordedSHA256.String,
 			migration.filename,
 			migration.sha256,
+			embeddedLineEndingHint(migration),
 		)
 	}
 	return true, nil
+}
+
+// embeddedLineEndingHint names the one cause of a digest mismatch a developer
+// cannot see. go:embed compiles in the bytes on disk, so a working copy
+// checked out before .gitattributes pinned the migrations to LF produces a
+// binary carrying CRLF migrations. Released binaries carry the LF bytes git
+// tracks, so the digests differ and this build refuses every database a
+// release created. Without this sentence the failure names only two hashes.
+// The scan touches content already in memory and runs only on the error path.
+// embeddedLineEndingHint, geliştiricinin göremediği tek nedeni adlandırır: bu
+// ikili dosya migration'ı CRLF satır sonlarıyla gömmüştür.
+func embeddedLineEndingHint(migration embeddedMigration) string {
+	if !bytes.Contains(migration.content, []byte("\r\n")) {
+		return ""
+	}
+	path := "internal/db/migrations/" + migration.filename
+	return fmt.Sprintf(
+		"; this build embeds %s with CRLF line endings, which no released"+
+			" binary does, so its digest can never match a ledger a release"+
+			" wrote - the working copy it was built from was checked out"+
+			" before .gitattributes pinned these files to LF; repair it from"+
+			" the repository root with \"git rm --cached %s && git checkout"+
+			" HEAD -- %s\" and rebuild",
+		migration.filename,
+		path,
+		path,
+	)
 }
 
 // GetDB returns the underlying *sql.DB for queries

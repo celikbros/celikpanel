@@ -269,7 +269,7 @@ func TestDNSEngineInstallOwnershipHandoffRebindsExactRetry(t *testing.T) {
 		MutationRequestID: strings.Repeat("3", 32),
 		MutationOwnerID:   strings.Repeat("4", 32),
 	}
-	if err := handoffExistingDNSEngineInstallOwnership(
+	if err := assumeExistingDNSEnginePackageOwnership(
 		transport.DNSEngineBIND, hostplatform.PackageManagerAPT,
 		[]string{"bind9", "bind9-utils"}, newManifest, newBinding,
 	); err != nil {
@@ -330,10 +330,10 @@ func TestDNSEngineInstallOwnershipHandoffRejectsMismatchedOrCorruptReceipt(t *te
 			existing.MissingBefore = append([]string(nil), base.MissingBefore...)
 			test.mutate(&existing)
 			writeCalls := 0
-			err := handoffExistingDNSEngineInstallOwnershipWithOps(
+			err := assumeExistingDNSEnginePackageOwnershipWithOps(
 				transport.DNSEngineBIND, hostplatform.PackageManagerAPT,
 				[]string{"bind9", "bind9-utils"}, manifest, binding,
-				dnsEngineInstallOwnershipHandoffOps{
+				dnsEngineInstallOwnershipAssumeOps{
 					read: func(transport.DNSEngine) (dnsEngineInstallOwnershipReceipt, bool, error) {
 						return existing, true, nil
 					},
@@ -364,31 +364,48 @@ func TestDNSEngineInstallOwnershipHandoffAbsentAndIOFailures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Run("absent-is-left-absent", func(t *testing.T) {
-		writeCalls := 0
-		err := handoffExistingDNSEngineInstallOwnershipWithOps(
+	// No receipt to rebind is not "nothing happened": the packages are present,
+	// this mutation is taking them under management, and finalization will ask
+	// for the proof. Leaving the host without one is R-026.
+	//
+	// Yeniden bağlanacak makbuzun olmaması "hiçbir şey olmadı" demek değildir:
+	// paketler oradadır, bu mutasyon onları yönetimine almaktadır ve sonlandırma
+	// bunun kanıtını isteyecektir. Sunucuyu kanıtsız bırakmak R-026'dır.
+	t.Run("absent-is-adopted", func(t *testing.T) {
+		written := []dnsEngineInstallOwnershipReceipt{}
+		err := assumeExistingDNSEnginePackageOwnershipWithOps(
 			transport.DNSEngineBIND, hostplatform.PackageManagerAPT,
 			[]string{"bind9"}, manifest, binding,
-			dnsEngineInstallOwnershipHandoffOps{
+			dnsEngineInstallOwnershipAssumeOps{
 				read: func(transport.DNSEngine) (dnsEngineInstallOwnershipReceipt, bool, error) {
-					return dnsEngineInstallOwnershipReceipt{}, false, nil
+					if len(written) == 0 {
+						return dnsEngineInstallOwnershipReceipt{}, false, nil
+					}
+					return written[len(written)-1], true, nil
 				},
-				write: func(dnsEngineInstallOwnershipReceipt) error {
-					writeCalls++
+				write: func(receipt dnsEngineInstallOwnershipReceipt) error {
+					written = append(written, receipt)
 					return nil
 				},
 			},
 		)
-		if err != nil || writeCalls != 0 {
-			t.Fatalf("err=%v writeCalls=%d", err, writeCalls)
+		if err != nil || len(written) != 1 {
+			t.Fatalf("err=%v writes=%d", err, len(written))
+		}
+		adopted := written[0]
+		if !adopted.AdoptedPresent || len(adopted.MissingBefore) != 0 ||
+			adopted.ManifestQualifier != manifest.Qualifier ||
+			adopted.MutationRequestID != binding.MutationRequestID ||
+			adopted.MutationOwnerID != binding.MutationOwnerID {
+			t.Fatalf("adoption receipt is not this mutation's provenance: %+v", adopted)
 		}
 	})
 	t.Run("write-failure", func(t *testing.T) {
 		injected := errors.New("injected write failure")
-		err := handoffExistingDNSEngineInstallOwnershipWithOps(
+		err := assumeExistingDNSEnginePackageOwnershipWithOps(
 			transport.DNSEngineBIND, hostplatform.PackageManagerAPT,
 			[]string{"bind9"}, manifest, binding,
-			dnsEngineInstallOwnershipHandoffOps{
+			dnsEngineInstallOwnershipAssumeOps{
 				read: func(transport.DNSEngine) (dnsEngineInstallOwnershipReceipt, bool, error) {
 					return receipt, true, nil
 				},
@@ -401,10 +418,10 @@ func TestDNSEngineInstallOwnershipHandoffAbsentAndIOFailures(t *testing.T) {
 	})
 	t.Run("readback-mismatch", func(t *testing.T) {
 		readCalls := 0
-		err := handoffExistingDNSEngineInstallOwnershipWithOps(
+		err := assumeExistingDNSEnginePackageOwnershipWithOps(
 			transport.DNSEngineBIND, hostplatform.PackageManagerAPT,
 			[]string{"bind9"}, manifest, binding,
-			dnsEngineInstallOwnershipHandoffOps{
+			dnsEngineInstallOwnershipAssumeOps{
 				read: func(transport.DNSEngine) (dnsEngineInstallOwnershipReceipt, bool, error) {
 					readCalls++
 					if readCalls == 1 {
