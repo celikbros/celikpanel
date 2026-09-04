@@ -80,8 +80,9 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-040 | High | FIXED / IN REVIEW (PR #80) / BROWSER ROUND OWED | The service list reports a host it has never scanned as "not installed": no observation and no service serialise to the same answer |
 | R-041 | Medium | FIXED ON BRANCH / GUARDED | The web contract does not decode the `reinstall_active` action the panel already returns, so the reinstall the restored host needs shows as an invalid preview in the browser |
 | R-042 | High | FIXED AND PROVEN LIVE / REAL VM PENDING | A hand-configured authoritative BIND is refused: the generation will not write into an options block that already sets recursion, allow-recursion, allow-query-cache or allow-transfer, and an authoritative server almost always sets the first of those |
-| R-043 | High | FOUND / NOT YET FIXED | A crash during a running takeover is recovered by the switch rollback, which stops units - so the recovery would stop the DNS server the takeover promised never to interrupt |
+| R-043 | High | FIXED AND PROVEN LIVE AT TWO CRASH POINTS / A THIRD IS R-045 | A crash during a running takeover is recovered by the switch rollback, which stops units - so the recovery would stop the DNS server the takeover promised never to interrupt |
 | R-044 | Medium | FOUND / NOT YET FIXED | A BIND configured with `view` blocks is not understood by the takeover: a recursion set inside a view silently overrides the panel's options, and zones outside views fail late in the config check |
+| R-045 | High | FOUND / CAUSE NOT YET DETERMINED | A takeover crashed after its target was verified but before it was finalized is neither finalized nor rolled back: the recovery cannot find the generation pointer, fails closed and holds the ledger |
 
 ## Detailed risks
 
@@ -1629,6 +1630,29 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: a takeover killed between its config write and its reload is
   recovered at agent start with the server still answering, proven by the
   same query-loop measurement the in-process rollback used.
+- Fixed 4 September 2026. The recovery classifies the journal before it acts.
+  The takeover's wire mode is a switch, so the durable fact that separates the
+  shapes is the target unit preimage the journal froze: a first install and
+  the stopped half begin with the unit inactive, a running takeover begins
+  with it active. A preimage that cannot be read fails closed naming what it
+  found. One path serves every crash point: the running server is re-proved
+  freshly, since a crash gives it a new process id; the configuration on disk
+  must be either what the takeover found or what it wrote; then the existing
+  adoption rollback restores, reloads and verifies, stopping nothing.
+- The panel held the mirror of the same defect, and it wedged live: closing a
+  rolled-back switch demanded a sealed, not-serving target, which a
+  takeover's rollback never leaves. It now accepts the sealed shape or the
+  restored takeover, proved as its own mirror, and returns both refusals when
+  neither holds.
+- Proven live at two crash points, the agent killed at an exact injected
+  boundary using the product's own kill-matrix facility: the configuration
+  restored to the digests the host had before, the ledger released, the host
+  adoptable again, and **1335, 1429 and 1321 queries of the operator's own
+  zone unanswered zero times** across the crashes and the recoveries. The
+  server's main process id never changed and it was never restarted.
+- Ten recovery sites were audited; two needed the change, one is no longer
+  reached for a takeover, and the rest already funnel through the fixed
+  dispatch. Owed: the same run on a real VM.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-044 - A server configured with views is adopted without understanding it
@@ -1650,6 +1674,41 @@ or executed as-is. There are no open pull requests at this baseline.
   with what the operator can do, or place the panel's zones and directives
   inside the view that answers for them. The first is honest and small; the
   second is the real feature and belongs with the zone-placement work.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-045 - The one crash point that is neither finished nor undone
+
+- Evidence: 4 September 2026, measured five times while proving R-043, on the
+  drill guest with the product's own fault injection. Crashing a running
+  takeover at the `target-verified` boundary - the work done, the finalization
+  not yet written - leaves the recovery logging `verified DNS engine target no
+  longer matches its journal: file does not exist` and poisoning the ledger.
+- What holds at that boundary, and matters: the recovery still never stopped
+  the server. Its main process id was unchanged, it was never restarted, and
+  1460 queries of the operator's own zone went unanswered zero times. The
+  refusal also names what it found rather than guessing. What does not hold:
+  the ledger is held, and the takeover is neither finalized nor rolled back,
+  so the operator needs a hand to get out.
+- Cause, as far as it was traced: the generation pointer the recovery reads is
+  gone by then. A millisecond watch put its creation at 14:27:03.855, the
+  reload at 14:27:05, the boundary marker at 14:27:06.958 and the pointer's
+  removal at 14:27:06.966 - eight milliseconds after the marker, by the agent
+  itself while it was being stopped, before the kill. A normal takeover creates
+  that pointer and keeps it. Whether the injection perturbs the run (at that
+  boundary the process is still alive and its own failure path can execute,
+  which a real power loss could not do) or whether this is genuine product
+  behaviour was not determined, and is not guessed at here.
+- It is not caused by the R-043 change: nothing in that change runs during a
+  takeover's apply; the dispatch, the adoption recovery and the seal proof are
+  reachable only from recovery and from the panel's evidence call.
+- What it needs: determine which of the two it is, with the injection removed
+  from the question - kill the process from outside at the same boundary, or
+  cut power to a VM. Then either the recovery finalizes a verified takeover
+  from what the journal already holds, or the apply stops removing a pointer
+  it still needs.
+- Exit criteria: a takeover killed at the verified boundary comes back either
+  finalized or rolled back, with the server answering throughout and the
+  ledger free.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

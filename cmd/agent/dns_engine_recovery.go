@@ -421,6 +421,41 @@ func rollbackDNSSwitchJournal(
 	if err != nil {
 		return err
 	}
+	// A crash is recovered by the operation the journal records, not by the
+	// operation this function is named after. The mutation paths already branch
+	// on that fact; until now the recovery path did not, and a takeover of a
+	// server that was answering would have come back through the switch
+	// rollback below - which stops units. Stopping the operator's DNS is worse
+	// than the failure being recovered from, and it would happen on a host the
+	// panel does not yet own (register R-043). The PowerDNS branch has always
+	// dispatched this way; this is the same dispatch for BIND, where the fact
+	// that separates the two shapes is the target unit preimage the journal
+	// froze rather than a distinct wire mode.
+	//
+	// Bir çökme, bu işlevin adını taşıdığı işlemle değil, günlüğün kaydettiği
+	// işlemle kurtarılır. Mutasyon yolları bu olguya zaten dallanır; kurtarma
+	// yolu şimdiye dek dallanmıyordu ve yanıt veren bir sunucunun devralması
+	// aşağıdaki geçiş geri almasından dönerdi - o da birimleri durdurur.
+	// Operatörün DNS'ini durdurmak, kurtarılan başarısızlıktan daha kötüdür ve
+	// bu, panelin henüz sahibi olmadığı bir sunucuda olurdu (defter R-043).
+	// PowerDNS dalı her zaman böyle dallandı; bu, BIND için aynı dallanmadır -
+	// iki biçimi ayıran olgu, ayrı bir tel kipi değil, günlüğün dondurduğu
+	// hedef birim ön-görüntüsüdür.
+	if journal.TargetEngine == transport.DNSEngineBIND {
+		adoption, err := runningBINDAdoptionJournal(manifest, journal)
+		if err != nil {
+			return err
+		}
+		if adoption {
+			layout, err := bindLayout(profile)
+			if err != nil {
+				return err
+			}
+			return recoverRunningBINDAdoptionJournal(
+				ctx, profile, layout, systemctl, journal,
+			)
+		}
+	}
 	rollback := func() error {
 		switch journal.TargetEngine {
 		case transport.DNSEngineBIND:

@@ -264,6 +264,64 @@ func verifiedDNSEngineRollbackTargetHost(
 	}, nil
 }
 
+type bindRollbackTargetProofOps struct {
+	sealed   func() error
+	restored func() error
+}
+
+// verifyDNSEngineRollbackTargetSealWithOps decides whether the host is in a
+// state the panel may record as rolled back, and it accepts two shapes because
+// the two operations that share this manifest end in opposite places.
+//
+// A first install's rollback ends with the target SEALED AND NOT SERVING: the
+// panel started that engine, so anything still up would be the panel's own
+// half-live BIND, and refusing is right.
+//
+// A takeover's rollback ends with the target SERVING, on purpose. It is the
+// operator's own server, it never stopped, and it is answering its own
+// configuration again. The sealed proof can never pass there, so a takeover
+// crash left the operator with a healthy host and an operation the panel would
+// not close - the wedge in the register's own R-019 family (register R-043).
+// The second proof is the same claim from the other side and is not weaker:
+// CelikPanel owns nothing that is live.
+//
+// If neither shape can be proved, both refusals are returned together, so the
+// message names what was actually found instead of a guess.
+//
+// verifyDNSEngineRollbackTargetSealWithOps, sunucunun panelin "geri alındı"
+// diye kaydedebileceği bir durumda olup olmadığına karar verir ve iki biçimi de
+// kabul eder; çünkü bu bildirgeyi paylaşan iki işlem zıt yerlerde biter.
+//
+// Bir ilk kurulumun geri alması, hedef MÜHÜRLÜ VE HİZMET VERMEZ hâlde biter:
+// o motoru panel başlatmıştı, dolayısıyla hâlâ ayakta olan bir şey panelin
+// kendi yarı-canlı BIND'i olurdu ve reddetmek doğrudur.
+//
+// Bir devralmanın geri alması ise hedef HİZMET VERİR hâlde, bilerek biter. O,
+// operatörün kendi sunucusudur, hiç durmadı ve yeniden kendi yapılandırmasını
+// yanıtlıyor. Mühürlü kanıt orada asla geçemez; bu yüzden bir devralma çökmesi
+// operatöre sağlıklı bir sunucu ve panelin kapatmadığı bir işlem bırakırdı -
+// defterin kendi R-019 ailesindeki çıkmaz (defter R-043). İkinci kanıt aynı
+// iddianın öbür yüzüdür ve daha zayıf değildir: CelikPanel'in canlı hiçbir
+// şeyi yoktur.
+//
+// Hiçbir biçim kanıtlanamazsa iki ret birlikte döner; böylece mesaj bir tahmini
+// değil, gerçekten bulunanı adlandırır.
+func verifyDNSEngineRollbackTargetSealWithOps(
+	ops bindRollbackTargetProofOps,
+) error {
+	if ops.sealed == nil || ops.restored == nil {
+		return errors.New("rollback evidence target proof operations are incomplete")
+	}
+	sealErr := ops.sealed()
+	if sealErr == nil {
+		return nil
+	}
+	if restoredErr := ops.restored(); restoredErr != nil {
+		return errors.Join(sealErr, restoredErr)
+	}
+	return nil
+}
+
 func verifyDNSEngineRollbackTargetSeal(
 	ctx context.Context,
 	target transport.DNSEngine,
@@ -273,9 +331,16 @@ func verifyDNSEngineRollbackTargetSeal(
 		host.Systemctl == "" || len(host.Packages) == 0 {
 		return errors.New("rollback evidence target host identity is invalid")
 	}
-	return verifyBINDSealedTargetNotServingWithoutManagedAuthority(
-		ctx, host.Systemctl,
-	)
+	return verifyDNSEngineRollbackTargetSealWithOps(bindRollbackTargetProofOps{
+		sealed: func() error {
+			return verifyBINDSealedTargetNotServingWithoutManagedAuthority(
+				ctx, host.Systemctl,
+			)
+		},
+		restored: func() error {
+			return verifyRestoredUnmanagedRunningBINDTarget(ctx, host.Systemctl)
+		},
+	})
 }
 
 func lockedDNSEngineRollbackEvidence(

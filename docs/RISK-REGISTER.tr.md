@@ -81,8 +81,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-040 | Yüksek | DÜZELTİLDİ / İNCELEMEDE (PR #80) / TARAYICI TURU BORÇ | Servis listesi, hiç taramadığı sunucu için "kurulu değil" diyor: gözlem yokluğu ile servis yokluğu aynı cevaba düşüyor |
 | R-041 | Orta | DALDA DÜZELTİLDİ / KORUMAYA ALINDI | Web sözleşmesi, panelin zaten döndürdüğü `reinstall_active` eylemini çözemiyor; geri yüklenen sunucunun ihtiyaç duyduğu yeniden kurulum tarayıcıda geçersiz önizleme olarak görünüyor |
 | R-042 | Yüksek | DÜZELTİLDİ VE CANLI KANITLANDI / GERÇEK VM BEKLİYOR | Elle yapılandırılmış yetkili bir BIND reddediliyor: nesil, recursion, allow-recursion, allow-query-cache ya da allow-transfer'ı zaten tanımlayan bir options bloğuna yazmıyor; yetkili sunucu ise bunlardan ilkini neredeyse her zaman tanımlar |
-| R-043 | Yüksek | BULUNDU / HENÜZ DÜZELTİLMEDİ | Çalışan devralma sırasındaki çökme, birimleri durduran geçiş geri almasıyla kurtarılıyor; yani kurtarma, devralmanın asla kesmeyeceğine söz verdiği DNS sunucusunu durdurur |
+| R-043 | Yüksek | DÜZELTİLDİ VE İKİ ÇÖKME NOKTASINDA CANLI KANITLANDI / ÜÇÜNCÜSÜ R-045 | Çalışan devralma sırasındaki çökme, birimleri durduran geçiş geri almasıyla kurtarılıyor; yani kurtarma, devralmanın asla kesmeyeceğine söz verdiği DNS sunucusunu durdurur |
 | R-044 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | `view` bloklarıyla yapılandırılmış bir BIND devralma tarafından anlaşılmıyor: view içindeki bir recursion panelin seçeneklerini sessizce ezer, view dışındaki bölgeler ise yapılandırma denetiminde geç düşer |
+| R-045 | Yüksek | BULUNDU / NEDENİ HENÜZ SAPTANMADI | Hedefi doğrulandıktan sonra ama tamamlanmadan çöken devralma ne tamamlanıyor ne geri alınıyor: kurtarma nesil işaretçisini bulamıyor, kapalı hata veriyor ve defteri tutuyor |
 
 ## Ayrıntılı riskler
 
@@ -1609,6 +1610,29 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: yapılandırma yazımı ile yeniden yükleme arasında öldürülen
   bir devralma, agent açılışında sunucu hâlâ yanıt verirken kurtarılıyor;
   kanıt, süreç içi geri almanın kullandığı aynı sorgu döngüsü ölçümü.
+- 4 Eylül 2026'da düzeltildi. Kurtarma, davranmadan önce günlüğü sınıflıyor.
+  Devralmanın tel üstündeki kipi geçiştir; bu yüzden iki hâli ayıran kalıcı
+  olgu, günlüğün dondurduğu hedef birim ön görüntüsüdür: ilk kurulum ve
+  durmuş hâl birim etkin değilken başlar, çalışan devralma etkinken başlar.
+  Okunamayan bir ön görüntü, ne bulduğunu söyleyerek kapalı hata verir. Tek
+  bir yol bütün çökme noktalarına yeter: çalışan sunucu yeniden kanıtlanır,
+  çünkü çökme ona yeni bir süreç kimliği verir; diskteki yapılandırma ya
+  devralmanın bulduğu ya da yazdığı baytlar olmalıdır; sonra mevcut devralma
+  geri alması geri yükler, yeniden yükler ve doğrular, hiçbir şeyi durdurmaz.
+- Panel aynı kusurun aynasını taşıyordu ve canlıda kilitledi: geri alınmış
+  bir geçişi kapatmak için mühürlü ve susmuş bir hedef istiyordu; devralmanın
+  geri alması bunu asla bırakmaz. Artık mühürlü hâli ya da geri yüklenmiş
+  devralmayı kabul ediyor, ikincisini kendi aynasıyla kanıtlıyor ve ikisi de
+  tutmuyorsa iki reddi birden döndürüyor.
+- İki çökme noktasında canlı kanıtlandı; agent, ürünün kendi kill-matrix
+  düzeneğiyle tam sınırda öldürüldü: yapılandırma sunucunun önceki
+  özetlerine döndü, defter serbest kaldı, sunucu yeniden devralınabilir oldu
+  ve çökmeler ile kurtarmalar boyunca **operatörün kendi bölgesine 1335, 1429
+  ve 1321 sorgu sıfır kez yanıtsız kaldı**. Sunucunun ana süreç kimliği hiç
+  değişmedi ve hiç yeniden başlatılmadı.
+- On kurtarma noktası denetlendi; ikisi değişti, biri devralma için artık hiç
+  uğranmıyor, kalanlar zaten düzeltilmiş dağıtımdan geçiyor. Borç: aynı
+  koşunun gerçek VM'de tekrarı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-044 - View'larla yapılandırılmış sunucu, anlaşılmadan devralınıyor
@@ -1629,6 +1653,41 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   yapabileceğini söyleyerek adıyla reddetmek ya da panelin bölgelerini ve
   yönergelerini onları yanıtlayan view'ın içine yerleştirmek. Birincisi
   dürüst ve küçük; ikincisi asıl özellik ve bölge yerleşimi işiyle gelir.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-045 - Ne biten ne geri alınan tek çökme noktası
+
+- Kanıt: 4 Eylül 2026, R-043 kanıtlanırken ürünün kendi hata enjeksiyonuyla
+  tatbikat konuğunda beş kez ölçüldü. Çalışan bir devralmayı
+  `target-verified` sınırında - iş bitmiş, tamamlama henüz yazılmamış -
+  çökertmek, kurtarmanın `verified DNS engine target no longer matches its
+  journal: file does not exist` kaydını düşürmesine ve defteri zehirlemesine
+  yol açıyor.
+- O sınırda tutan ve önemli olan: kurtarma yine sunucuyu hiç durdurmadı. Ana
+  süreç kimliği değişmedi, hiç yeniden başlatılmadı ve operatörün kendi
+  bölgesine 1460 sorgu sıfır kez yanıtsız kaldı. Ret de tahmin etmek yerine
+  ne bulduğunu söylüyor. Tutmayan: defter tutuluyor ve devralma ne
+  tamamlanıyor ne geri alınıyor; operatörün çıkması için el gerekiyor.
+- İzlenebildiği kadarıyla sebep: kurtarmanın okuduğu nesil işaretçisi o ana
+  kadar yok olmuş. Milisaniye çözünürlüklü bir izleme, oluşturulmasını
+  14:27:03.855'te, yeniden yüklemeyi 14:27:05'te, sınır işaretini
+  14:27:06.958'de ve işaretçinin silinmesini 14:27:06.966'da gösterdi -
+  işaretten sekiz milisaniye sonra, agent'ın kendisi tarafından, durdurulurken,
+  öldürmeden önce. Normal bir devralma o işaretçiyi oluşturur ve korur.
+  Enjeksiyonun koşuyu bozup bozmadığı (o sınırda süreç hâlâ canlıdır ve kendi
+  hata yolu çalışabilir; gerçek bir elektrik kesintisi bunu yapamaz) ya da
+  bunun gerçek ürün davranışı olup olmadığı saptanmadı ve burada tahmin
+  edilmiyor.
+- R-043 değişikliğinden kaynaklanmıyor: o değişiklikteki hiçbir şey devralma
+  uygulanırken çalışmıyor; dağıtım, devralma kurtarması ve mühür kanıtı yalnız
+  kurtarmadan ve panelin kanıt çağrısından erişilebilir.
+- Gerekeni: ikisinden hangisi olduğunu, enjeksiyonu sorudan çıkararak saptamak
+  - süreci aynı sınırda dışarıdan öldürmek ya da bir VM'in elektriğini kesmek.
+  Sonra ya kurtarma, günlüğün zaten taşıdığından doğrulanmış devralmayı
+  tamamlar ya da uygulama hâlâ ihtiyaç duyduğu bir işaretçiyi silmeyi bırakır.
+- Çıkış ölçütü: doğrulanmış sınırda öldürülen bir devralma ya tamamlanmış ya
+  geri alınmış olarak geri geliyor; sunucu boyunca yanıt veriyor ve defter
+  serbest.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
