@@ -86,7 +86,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-045 | Yüksek | GERÇEK VM'DE KAPANDI / ÜRÜN DEĞİL DÜZENEK KAYNAKLIYDI | Hedefi doğrulandıktan sonra ama tamamlanmadan çöken devralma ne tamamlanıyor ne geri alınıyor: kurtarma nesil işaretçisini bulamıyor, kapalı hata veriyor ve defteri tutuyor |
 | R-046 | Kritik | DÜZELTİLDİ VE KİLİTLEDİĞİ SUNUCUDA CANLI KANITLANDI | Düşen posta TLS adımı işlem defterini zehirliyor ve zehir agent yeniden başlatılınca da geçmiyor: açılış kurtarması aynı planı yeniden deniyor, aynı denetimde düşüyor ve sunucu her işlemi reddediyor, çıkış yolu yok |
 | R-047 | Düşük | TARAYICI TURUNDA BULUNDU / HENÜZ DÜZELTİLMEDİ | Tarayıcının görüp testlerin görmediği üç kusur: onay düğmeleri ekranın altında kalan bir pencere, 390px'te taşan bir seçim denetimi ve açık bir UDP portu varken yok diyen güvenlik duvarı durumu |
-| R-048 | Kritik | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Elektrik kesintisinden sonra agent, sunucu hazır olmadan başlıyor, kurtarmasını yapamıyor ve bir daha denemiyor; yarım kalan işlem defteri tutuyor ve biri agent'ı elle yeniden başlatana kadar her işlem reddediliyor |
+| R-048 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE ELEKTRİK KESİLEREK KANITLANDI | Elektrik kesintisinden sonra agent, sunucu hazır olmadan başlıyor, kurtarmasını yapamıyor ve bir daha denemiyor; yarım kalan işlem defteri tutuyor ve biri agent'ı elle yeniden başlatana kadar her işlem reddediliyor |
 
 ## Ayrıntılı riskler
 
@@ -1859,6 +1859,43 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: işlem ortasında elektriği kesilen makine, işlem tamamlanmış ya
   da düşmüş ve sunucu işlem yapabilir hâlde geri geliyor; kimse dokunmadan.
   Gerçek VM'de, birden fazla sınırda kanıtlı.
+- 4 Eylül 2026'da düzeltildi. Bir saptama hatası artık yalnız döndürülmüyor,
+  sınıflandırılıyor. Geçici olan dar tutuldu: sunucunun açılırken ya da
+  kapanırken geçtiği durumlar, zaman aşımına uğrayan bir yoklama ve henüz
+  var olmayan çalışma dizinleri. Kapanma bilerek o tarafta: bir kapanma asla
+  bozuk sunucu diye okunmamalı ve bir kurtarmanın, sonraki açılışın
+  bitirebileceği bir planı terk etmesine yol açmamalı. Saptayıcının karara
+  bağladığı her şey kalıcıdır. Sınıflanmamış bir hata ikisi de değildir ve
+  tam olarak eskiden gittiği yere gider; diğer platformların davranışını
+  birebir koruyan da budur.
+- Sunucu hâlâ açılırken kurtarma sınırlı bir pencerede bekler ve **deftere
+  dokunmaz**: etkin bir işin kimlik kanıtı zaten sahip olduğu biçimi ister;
+  "bekliyor" işareti yazmak, sonraki tamamlamanın kendi kanıtında düşmesine
+  yol açardı. Bu sırada soket açılır, yani panel yine doğru yanıtı alır.
+- Pencere kapandığında ya da sunucu kalıcı olarak okunamadığında yalnız
+  *kira* bırakılır ve yalnız ölü olduğu kanıtlandığında: kayıtlı işçi hem pid
+  hem süreç başlangıç kimliğiyle yok olmuştur ve bırakma, canlı bir işçinin
+  bırakamayacağı aynı sunucu kilidini tutar. İş, kodu ve neyi geri almadığını
+  söyleyen mesajıyla sonlu yazılır; işlemin kendi günlüğü olduğu yerde
+  bırakılır, böylece yarı uygulanmış bir sunucu asla temiz gibi sunulmaz.
+  Sunucuyu okuyabilen sonraki bir açılış o günlüğü uzlaştırır: tamamlananı
+  tamamlar, tamamlanmayanı geri alır.
+- Gerçek makinede elektriği kesilerek kanıtlandı: dört kesinti, her sınırda
+  ikişer; hepsi agent başladıktan sonra yedi saniye içinde, **kimse makineye
+  dokunmadan** karara vardı; defter serbest, sunucu yanıt veriyor; ikisi
+  tamamlandı, ikisi sunucunun önceki özetlerine geri alındı. Aynı kesinti,
+  düzeltilmemiş diskte izlendiği üç dakika boyunca kilitli kaldı. Gerçekten
+  desteklenemez hâle getirilen bir sunucu sebebiyle birlikte serbest bıraktı,
+  sebebi bir açılış daha korudu ve sunucu onarıldıktan sonraki açılışta
+  uzlaştırdı.
+- Birini şaşırtacağı için kayda geçiyor: karara varılamayan bir açılıştan
+  sonra serbest bırakılan işlem, sonraki bir açılış sunucuyu günlüğünden
+  tamamlasa bile **başarısız** makbuzunu korur. Sunucu uzlaştırılır;
+  operatöre çoktan verilmiş yanıt arkasından değiştirilmez.
+- Birim sıralaması değerlendirildi ve kanıtla reddedildi: ilk açılış işleminin
+  içindeki bir birim, sunucuyu asla tam açılmış olarak göremez; çünkü o
+  duruma ancak açılışın kendi kuyruğu boşalınca varılır. Sıralama reddi
+  kaldırmaz, yerini değiştirir; yeniden deneme ise her dağıtımda çalışır.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

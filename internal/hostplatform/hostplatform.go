@@ -177,6 +177,20 @@ func decodeOSReleaseValue(encoded string) (string, error) {
 // complete. Every present candidate package-manager executable is validated
 // before routing, including safe foreign tools that are ignored for selection.
 func DetectWith(data []byte, probe Probe) (Profile, error) {
+	profile, err := detectWith(data, probe)
+	if err != nil {
+		// Every refusal below is a property of the host, not of the moment,
+		// except the one the readiness probe marks as the boot condition. The
+		// tag is added here, once, so a caller can ask "not yet or no?" without
+		// this function's own messages changing.
+		// Asagidaki her ret, ana degil makineye ait bir olgudur; tek istisna
+		// hazirlik yoklamasinin acilis durumu diye isaretledigidir.
+		return Profile{}, unsupported(err)
+	}
+	return profile, nil
+}
+
+func detectWith(data []byte, probe Probe) (Profile, error) {
 	release, err := ParseOSRelease(data)
 	if err != nil {
 		return Profile{}, err

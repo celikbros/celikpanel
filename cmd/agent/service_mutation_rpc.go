@@ -144,6 +144,13 @@ type serviceMutationManager struct {
 
 	releaseTransactionPresent func() (bool, error)
 
+	// hostBootWait is the one in-flight bounded wait for a host that has not
+	// finished starting (R-048, host_boot_recovery.go). Non-nil means a waiter
+	// is running; it is closed when that waiter is done.
+	// hostBootWait, acilisini bitirmemis bir makine icin suren tek sinirli
+	// beklemedir.
+	hostBootWait chan struct{}
+
 	now             func() time.Time
 	leaseDuration   time.Duration
 	overallDuration time.Duration
@@ -886,7 +893,22 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 			"validate DNS cluster journal during startup: %w", err,
 		))
 	}
+	// R-048. Before any per-kind reconciliation is allowed to decide anything,
+	// find out whether this host can be read at all yet. A machine that is still
+	// booting gets a bounded wait on its own goroutine rather than a refusal that
+	// never retries; a machine that cannot be read at all fails the plan cleanly
+	// and gives the ledger back. Nothing about what the recovery decides changes
+	// here - only whether it is in a position to decide.
+	// R-048. Herhangi bir tur-ozel uzlastirmanin karar vermesine izin verilmeden
+	// once, bu makinenin henuz okunup okunamayacagi ogrenilir.
+	if deferred, deferErr := m.deferRecoveryUntilTheHostCanBeReadLocked(lock); deferred {
+		return deferErr
+	}
 	if m.ledger.ActiveRequestID == "" {
+		if handled, recoveryErr :=
+			m.recoverReleasedUndecidedDNSEngineSwitchLocked(lock); handled {
+			return recoveryErr
+		}
 		if handled, recoveryErr :=
 			m.recoverPersistedCommittedDNSEngineSwitchLocked(lock); handled {
 			return recoveryErr
@@ -1046,6 +1068,14 @@ func (m *serviceMutationManager) tryResolvePersistedOrphan() error {
 	job := m.ledger.Jobs[requestID]
 	if requestID == "" || job == nil || job.Status != serviceMutationStatusOrphaned {
 		return lock.Close()
+	}
+	// The same R-048 rule as at startup: an orphan is not resolved against a
+	// host that cannot be read yet, and it is never re-attempted forever
+	// against a host that can never be read.
+	// Baslangictaki ayni R-048 kurali: henuz okunamayan bir makineye karsi
+	// oksuz bir is cozulmez.
+	if deferred, deferErr := m.deferRecoveryUntilTheHostCanBeReadLocked(lock); deferred {
+		return deferErr
 	}
 	if handled, recoveryErr := m.recoverPersistedFirewallApplyLocked(job, lock); handled {
 		return recoveryErr

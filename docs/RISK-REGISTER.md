@@ -85,7 +85,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-045 | High | CLOSED ON A REAL VM / IT WAS THE HARNESS, NOT THE PRODUCT | A takeover crashed after its target was verified but before it was finalized is neither finalized nor rolled back: the recovery cannot find the generation pointer, fails closed and holds the ledger |
 | R-046 | Critical | FIXED AND PROVEN LIVE ON THE HOST IT WEDGED | A failed mail TLS step poisons the mutation ledger and the poison survives an agent restart: startup recovery re-attempts the same committed plan, fails the same check, and the host refuses every mutation with no way out |
 | R-047 | Low | FOUND IN THE BROWSER ROUND / NOT YET FIXED | Three defects a browser found and the tests did not: a dialog whose confirm sits below the fold, a segmented control that overflows at 390px, and a firewall status that reports no UDP port when one is open |
-| R-048 | Critical | FOUND ON A REAL VM / NOT YET FIXED | After a power loss the agent starts before the host is ready, cannot run its recovery, and never tries again - so an interrupted mutation holds the ledger and every host mutation is refused until someone restarts the agent by hand |
+| R-048 | Critical | FIXED AND PROVEN ON A REAL VM BY CUTTING ITS POWER | After a power loss the agent starts before the host is ready, cannot run its recovery, and never tries again - so an interrupted mutation holds the ledger and every host mutation is refused until someone restarts the agent by hand |
 
 ## Detailed risks
 
@@ -1879,6 +1879,44 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: a machine whose power is cut mid-mutation comes back with the
   mutation finalized or failed and the host mutable, without anyone touching
   it. Proven on a real VM, at more than one boundary.
+- Fixed 4 September 2026. A detection failure is now classified rather than
+  merely returned. Transient is drawn narrowly - the states the host passes
+  through while starting or stopping, a probe that times out, and the runtime
+  directories that do not exist yet. Stopping is deliberately on that side: a
+  shutdown must never be read as a broken host, nor make a recovery abandon a
+  plan the next boot can still finish. Everything the detector settles on is
+  durable. An unclassified failure is neither and goes exactly where it went
+  before, which is what keeps every other platform's behaviour identical.
+- While the host is still starting the recovery waits on a bounded window and
+  **does not touch the ledger**: an active job's identity proof requires the
+  shape it already has, so writing a "waiting" marker would have made the
+  later finalization fail its own proof. The socket opens meanwhile, so the
+  panel still gets a true answer.
+- When the window closes or the host is durably unreadable, only the *lease*
+  is released, and only when it is provably dead: the recorded worker is gone
+  by pid and by process start identity, and the release holds the same host
+  lock a live worker could not have let go of. The job is written terminal
+  with its code and a message naming what was not undone, while the mutation's
+  own journal is left where it is, so a half-applied host is never presented
+  as clean. A later boot that can read the host reconciles that journal -
+  finalizing what committed, rolling back what did not.
+- Proven on the real machine by cutting its power: four cuts, two at each
+  boundary, every one decided within seven seconds of the agent starting,
+  **with nobody touching the machine**, the ledger free and the server
+  answering; two finalized and two rolled back to the digests the host had
+  before. The same cut on the unfixed disk held for the full three minutes it
+  was watched. A host made genuinely unsupportable released with its reason,
+  kept it across another boot, and reconciled on the boot after that once the
+  host was repaired.
+- Recorded because it will surprise someone: a mutation released after an
+  undecidable boot keeps its **failed** receipt even when a later boot
+  finalizes the host from its journal. The host is reconciled; the answer the
+  operator was already given is not rewritten behind their back.
+- Unit ordering was considered and rejected with evidence: a unit inside the
+  initial boot transaction can never observe the host as fully started,
+  because that state is only reached when the boot's own queue drains.
+  Ordering moves the refusal rather than removing it; the retry works on every
+  distribution.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
