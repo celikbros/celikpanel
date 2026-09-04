@@ -76,9 +76,10 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-036 | Medium | OPEN / DESIGN | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
 | R-037 | Medium | GUARDED ON BRANCH / A SECOND EMBED WAS AFFECTED AND IS FIXED | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
 | R-038 | Critical | STOPPED SHAPE FIXED AND PROVEN LIVE / RUNNING SHAPE IS R-039 / ROLLBACK PROOF OWED | A host that already carries the DNS engine's packages can now adopt that engine through the panel with an explicit acknowledgement, when the engine is stopped; a running unmanaged engine is still refused and is tracked as R-039 |
-| R-039 | High | OPEN / DESIGN REVISED: ADOPT IN PLACE, NO NEW JOURNAL MACHINERY | Adopting a DNS server that is running and unmanaged needs a durable pre-intent record: the agent must stop a service it does not own before its proofs run, and a crash in that window would leave the operator's DNS stopped with nothing to recover from |
+| R-039 | High | FIXED AND PROVEN LIVE / REAL VM PENDING | Adopting a DNS server that is running and unmanaged needs a durable pre-intent record: the agent must stop a service it does not own before its proofs run, and a crash in that window would leave the operator's DNS stopped with nothing to recover from |
 | R-040 | High | FIXED / IN REVIEW (PR #80) / BROWSER ROUND OWED | The service list reports a host it has never scanned as "not installed": no observation and no service serialise to the same answer |
 | R-041 | Medium | FIXED ON BRANCH / GUARDED | The web contract does not decode the `reinstall_active` action the panel already returns, so the reinstall the restored host needs shows as an invalid preview in the browser |
+| R-042 | High | FOUND / NOT YET FIXED | A hand-configured authoritative BIND is refused: the generation will not write into an options block that already sets recursion, allow-recursion, allow-query-cache or allow-transfer, and an authoritative server almost always sets the first of those |
 
 ## Detailed risks
 
@@ -1369,6 +1370,12 @@ or executed as-is. There are no open pull requests at this baseline.
   never wrote), but the restore has not been exercised on this path.
 - The running shape is not this entry any more; it is R-039, and a test pins
   the refusal so it cannot be reached by accident.
+- Corrected 4 September 2026: the stopped-shape takeover also keeps the
+  zones the server already answers. The copy shipped with it said they would
+  stop being served, which is a loss that does not happen - the generation is
+  additive. A false cost is worse than a stated one: it invites the operator
+  to refuse a safe change or to rescue zones that were never at risk. Both
+  shapes now say what actually happens, and a test refuses the false claim.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-039 - Adopting a running DNS server needs a durable pre-intent record
@@ -1426,6 +1433,33 @@ or executed as-is. There are no open pull requests at this baseline.
   BIND, the operator adopts it through the panel alone, the zone answers
   throughout, and a rollback restores the configuration the host had before.
   Proven on a real VM.
+- Fixed and proven live, 4 September 2026, on a Debian 13 guest carrying a
+  hand-installed BIND that was answering a zone of its own. Through the panel
+  only: identity staged while that server was running (a refusal before this
+  change), preview `adopt_unmanaged` with no blockers and the running
+  impacts, the commit refused without its acknowledgement and accepted with
+  it in 12.3 s, BIND active and managed at epoch 1. **Measured: 2508 queries
+  of the server's own zone across the whole commit, none unanswered**, and
+  the unit's main process id unchanged - the design's claim that the host
+  never stops answering is measured, not asserted.
+- Reload, not restart: everything the panel's generation writes is re-read on
+  reload, and the reload proves it by requiring the same main process id
+  afterwards, or the adoption fails and restores.
+- The foreign zones are kept, not dropped, and this corrected what shipped
+  the day before: the generation adds an options block and an include and
+  deletes no zone declaration, so nothing is orphaned. The only case that
+  cannot survive is a name collision with a zone the panel publishes; it is
+  named before anything is touched, and one hidden behind an include is
+  caught by the config check before the reload, costing a restore and no
+  outage. Both fired live.
+- Rollback proven: a forced failure restored both configuration files at
+  their exact pre-adoption digests with the server still answering.
+- The switch proofs were neither called nor relaxed. Two other proofs gained
+  an adoption branch rather than a relaxation: the empty-source rule, and the
+  panel's post-failure runtime check, which now accepts nothing running or
+  only an unmanaged target running, and still refuses a target that came back
+  managed.
+- Owed: the same run on a real VM.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-040 - "I have never looked" is reported as "it is not installed"
@@ -1502,6 +1536,32 @@ or executed as-is. There are no open pull requests at this baseline.
 - The lesson, recorded because it will recur: an API proof is not a product
   proof. The reinstall was exercised through the API the same morning and
   reached the browser as an invalid preview.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-042 - The takeover refuses the server it was built for
+
+- Evidence: 4 September 2026, derived from `managedBINDOptions` while proving
+  R-039, not exercised live - the guest was staged with the distribution's
+  stock options so the main proof would run.
+- What happens: the panel's BIND generation refuses an `options {}` block that
+  already defines `recursion`, `allow-recursion`, `allow-query-cache` or
+  `allow-transfer` outside CelikPanel's own markers. The refusal is right in
+  principle: the product will not silently overwrite a directive the operator
+  set. But an authoritative BIND configured by hand almost always carries
+  `recursion no;`, which is exactly the server the takeover exists to adopt.
+  So the common real host is refused, with a message about ownership markers
+  that says nothing about what to do.
+- Impact: R-038 and R-039 close the takeover for a server whose options block
+  is stock, and leave it closed for one an administrator has actually
+  configured. That is the wrong half of the population.
+- What it needs: the takeover reads those directives as part of what it is
+  replacing, shows the operator the values it found and the values it will
+  set, and takes them under the same acknowledgement - the snapshot already
+  makes the rollback exact. A refusal, if any survives, must name the
+  directive and the file and say what to do.
+- Exit criteria: a host carrying an authoritative BIND with `recursion no;`
+  and its own zones is adopted through the panel, its zones keep answering,
+  and a rollback restores its options block exactly.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

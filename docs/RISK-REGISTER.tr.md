@@ -77,9 +77,10 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-036 | Orta | AÇIK / TASARIM | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
 | R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
 | R-038 | Kritik | DURMUŞ HALİ DÜZELTİLDİ VE CANLI KANITLANDI / ÇALIŞIR HALİ R-039 / GERİ ALMA KANITI BORÇ | DNS motorunun paketlerini zaten taşıyan sunucu, motor durmuşken artık panelden açık onayla devralabiliyor; çalışan yönetilmeyen motor hâlâ reddediliyor ve R-039 olarak izleniyor |
-| R-039 | Yüksek | AÇIK / TASARIM DÜZELTİLDİ: YERİNDE DEVRAL, YENİ GÜNLÜK MEKANİZMASI YOK | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
+| R-039 | Yüksek | DÜZELTİLDİ VE CANLI KANITLANDI / GERÇEK VM BEKLİYOR | Çalışan ve yönetilmeyen bir DNS sunucusunu devralmak kalıcı bir ön-niyet kaydı gerektiriyor: agent, kanıtları koşmadan önce sahibi olmadığı bir servisi durdurmak zorunda ve o aralıkta çökme, operatörün DNS'ini kurtarılacak kayıt olmadan kapalı bırakır |
 | R-040 | Yüksek | DÜZELTİLDİ / İNCELEMEDE (PR #80) / TARAYICI TURU BORÇ | Servis listesi, hiç taramadığı sunucu için "kurulu değil" diyor: gözlem yokluğu ile servis yokluğu aynı cevaba düşüyor |
 | R-041 | Orta | DALDA DÜZELTİLDİ / KORUMAYA ALINDI | Web sözleşmesi, panelin zaten döndürdüğü `reinstall_active` eylemini çözemiyor; geri yüklenen sunucunun ihtiyaç duyduğu yeniden kurulum tarayıcıda geçersiz önizleme olarak görünüyor |
+| R-042 | Yüksek | BULUNDU / HENÜZ DÜZELTİLMEDİ | Elle yapılandırılmış yetkili bir BIND reddediliyor: nesil, recursion, allow-recursion, allow-query-cache ya da allow-transfer'ı zaten tanımlayan bir options bloğuna yazmıyor; yetkili sunucu ise bunlardan ilkini neredeyse her zaman tanımlar |
 
 ## Ayrıntılı riskler
 
@@ -1352,6 +1353,13 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   yapılandırmasını da kapsıyor) ama geri yükleme bu yolda denenmedi.
 - Çalışan hal artık bu kayıt değil; R-039'da ve reddi bir testle sabitlendi
   ki yanlışlıkla o yola girilemesin.
+- 4 Eylül 2026'da düzeltildi: durmuş hâlin devralması da sunucunun zaten
+  yanıtladığı bölgeleri korur. Onunla gönderilen metin bunların sunulmaz
+  olacağını söylüyordu; oysa böyle bir kayıp yaşanmıyor - nesil ekleme yapıyor.
+  Yanlış bir bedel, söylenmiş bir bedelden kötüdür: operatörü güvenli bir
+  değişikliği reddetmeye ya da hiç tehlikede olmayan bölgeleri kurtarmaya
+  çağırır. İki hâl de artık gerçekte ne olduğunu söylüyor ve bir test yanlış
+  iddiayı reddediyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-039 - Çalışan bir DNS sunucusunu devralmak kalıcı ön-niyet kaydı ister
@@ -1409,6 +1417,34 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   operatör onu yalnız panelden devralıyor, bölge boyunca yanıt veriyor ve
   geri alma sunucunun önceki yapılandırmasını geri getiriyor. Gerçek VM'de
   kanıtlı.
+- Düzeltildi ve canlı kanıtlandı, 4 Eylül 2026, elle kurulmuş ve kendi
+  bölgesini yanıtlayan bir BIND taşıyan Debian 13 konuğunda. Yalnız panelden:
+  o sunucu çalışırken kimlik hazırlandı (bu değişiklikten önce ret alıyordu),
+  önizleme engelsiz `adopt_unmanaged` ve çalışan hâlin etkileri, commit
+  onaysız reddedildi ve onayla 12,3 saniyede kabul edildi, BIND epoch 1'de
+  etkin ve yönetiliyor. **Ölçüm: commit boyunca sunucunun kendi bölgesine
+  2508 sorgu, yanıtsız kalan yok** ve birimin ana süreç kimliği değişmedi -
+  tasarımın "sunucu bir an bile susmaz" iddiası öne sürülmedi, ölçüldü.
+- Yeniden başlatma değil yeniden yükleme: panelin neslinin yazdığı her şey
+  yeniden yüklemede yeniden okunur ve yeniden yükleme bunu, sonrasında aynı
+  ana süreç kimliğini şart koşarak kanıtlar; olmazsa devralma düşer ve geri
+  yükler.
+- Yabancı bölgeler düşürülmez, korunur; bu, bir gün önce gönderileni de
+  düzeltti: nesil bir seçenek bloğu ile bir include ekler, hiçbir bölge
+  bildirimini silmez, yani öksüz kalan olmaz. Tek yaşayamayan durum, panelin
+  yayımladığı bir bölgeyle ad çakışmasıdır; hiçbir şeye dokunulmadan önce adı
+  söylenir, include arkasına gizlenmiş olanı da yeniden yüklemeden önceki
+  yapılandırma denetimi yakalar; bedeli bir geri yükleme, kesinti yok. İkisi
+  de canlıda çalıştı.
+- Geri alma kanıtlandı: zorlanan bir hata, iki yapılandırma dosyasını
+  devralma öncesi tam özetleriyle geri getirdi ve sunucu yanıt vermeyi
+  sürdürdü.
+- Geçiş kanıtları ne çağrıldı ne gevşetildi. Başka iki kanıt gevşetilmek
+  yerine devralma dalı kazandı: boş kaynak kuralı ve panelin hata sonrası
+  çalışma zamanı denetimi; ikincisi artık hiçbir şeyin çalışmamasını ya da
+  yalnız yönetilmeyen hedefin çalışmasını kabul ediyor ve yönetilmiş olarak
+  dönen bir hedefi hâlâ reddediyor.
+- Borç: aynı koşunun gerçek VM'de tekrarı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-040 - "Hiç bakmadım", "kurulu değil" diye raporlanıyor
@@ -1482,6 +1518,31 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Kaydedilen ders, tekrar edeceği için: API kanıtı ürün kanıtı değildir.
   Yeniden kurulum aynı sabah API'den denenmişti ve tarayıcıya geçersiz
   önizleme olarak ulaştı.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-042 - Devralma, tam da kendisi için yapıldığı sunucuyu reddediyor
+
+- Kanıt: 4 Eylül 2026, R-039 kanıtlanırken `managedBINDOptions`'tan
+  çıkarıldı; canlıda denenmedi - ana kanıtın koşabilmesi için konuk,
+  dağıtımın stok seçenekleriyle hazırlanmıştı.
+- Olan şu: panelin BIND nesli, CelikPanel'in kendi işaretleri dışında
+  `recursion`, `allow-recursion`, `allow-query-cache` ya da `allow-transfer`
+  tanımlayan bir `options {}` bloğunu reddediyor. Ret ilkesel olarak doğru:
+  ürün, operatörün koyduğu bir yönergeyi sessizce ezmez. Ama elle
+  yapılandırılmış yetkili bir BIND neredeyse her zaman `recursion no;`
+  taşır - devralmanın var olma sebebi olan sunucu tam da odur. Yani sıradan
+  gerçek sunucu, ne yapılacağını söylemeyen bir sahiplik işareti mesajıyla
+  reddediliyor.
+- Etki: R-038 ve R-039 devralmayı options bloğu stok olan sunucu için açtı,
+  bir yöneticinin gerçekten yapılandırdığı sunucu için kapalı bıraktı.
+  Nüfusun yanlış yarısı.
+- Gerekeni: devralma o yönergeleri değiştirdiği şeyin parçası olarak okur,
+  bulduğu ve koyacağı değerleri operatöre gösterir ve aynı onayla devralır -
+  anlık görüntü geri almayı zaten birebir yapıyor. Bir ret kalacaksa
+  yönergeyi ve dosyayı adıyla söylemeli ve ne yapılacağını anlatmalı.
+- Çıkış ölçütü: `recursion no;` ve kendi bölgeleriyle yetkili bir BIND
+  taşıyan sunucu panelden devralınıyor, bölgeleri yanıt vermeyi sürdürüyor ve
+  geri alma options bloğunu birebir geri getiriyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
