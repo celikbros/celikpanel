@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
 import { navItemsForRole, navGroups, type NavAccessContext, type NavItem } from '../nav';
+import { publishComponentCensus, useComponentCensus } from '../lib/componentCensus';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { SkinSwitcher } from './SkinSwitcher';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -98,30 +99,41 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
         // Services are an admin-only view; only the admin sidebar shows the badge.
         // Servisler yalnızca yönetici görünümüdür; rozeti yalnızca yönetici çubuğu gösterir.
         if (role === 'admin') {
+            // The badge answers "how many components are installed?".
+            // Catalogue size belongs on the Components page and made a
+            // fresh server look as though 26 services were already present.
+            // A host this panel has never looked at cannot answer that
+            // question at all — every row comes back null — so the badge
+            // carries no number there. Where some rows are known and some
+            // are not, the badge counts what is known: an unchecked row
+            // joins neither side (R-040).
+            // Bu panelin hiç bakmadığı makine bu soruyu yanıtlayamaz; rozet
+            // orada sayı taşımaz. Bazı satırlar biliniyorsa rozet bilineni
+            // sayar; bakılmamış satır hiçbir yakaya katılmaz.
+            //
+            // This read seeds the shared census; it does not own it. The
+            // badge below renders whatever the last host-wide payload said,
+            // whichever screen received it, so a check the operator runs on
+            // the dashboard or on a component page moves the badge without a
+            // reload — and without this shell polling or asking twice.
+            // Bu okuma paylaşılan sayımı tohumlar, sahiplenmez. Rozet, hangi
+            // ekran aldıysa alsın son sistem geneli yükün söylediğini çizer;
+            // operatörün panoda ya da bileşen sayfasında çalıştırdığı kontrol
+            // rozeti yeniden yükleme olmadan oynatır.
             api.getServices()
-                // The badge answers "how many components are installed?".
-                // Catalogue size belongs on the Components page and made a
-                // fresh server look as though 26 services were already present.
-                // A host this panel has never looked at cannot answer that
-                // question at all — every row comes back null — so the badge
-                // carries no number there. Where some rows are known and some
-                // are not, the badge counts what is known: an unchecked row
-                // joins neither side (R-040).
-                // Bu panelin hiç bakmadığı makine bu soruyu yanıtlayamaz; rozet
-                // orada sayı taşımaz. Bazı satırlar biliniyorsa rozet bilineni
-                // sayar; bakılmamış satır hiçbir yakaya katılmaz.
-                .then((s) => setCounts((c) => {
-                    const observed = s.filter((service) => service.is_installed !== null);
-                    return {
-                        ...c,
-                        services: s.length > 0 && observed.length === 0
-                            ? null
-                            : observed.filter((service) => service.is_installed).length,
-                    };
-                }))
+                .then(publishComponentCensus)
                 .catch(() => {});
         }
     }, [role]);
+
+    // One number, read from where every screen publishes it. Non-admins never
+    // see this item, so they never carry its count.
+    // Tek sayı, her ekranın yayınladığı yerden okunur.
+    const serviceCensus = useComponentCensus();
+    const sidebarCounts = useMemo<Counts>(
+        () => (role === 'admin' ? { ...counts, services: serviceCensus } : counts),
+        [counts, role, serviceCensus],
+    );
 
     // The existing admin-only version request now carries the bounded machine
     // identity too. One no-store response feeds both the build stamp and every
@@ -155,7 +167,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                 <Sidebar
                     role={role}
                     access={navAccess}
-                    counts={counts}
+                    counts={sidebarCounts}
                     currentPage={currentPage}
                     onPageChange={(id) => {
                         onPageChange(id);
@@ -271,7 +283,7 @@ function Sidebar({
                 })}
             </nav>
 
-            <div className="border-t border-sidebar-border px-4 py-3 text-xs text-sidebar-muted">
+            <div className="border-t border-sidebar-border px-4 py-3 text-xs text-sidebar-muted [overflow-wrap:anywhere]">
                 {serverIdentity && (
                     <ServerIdentityLabel identity={serverIdentity} placement="sidebar" />
                 )}
@@ -523,11 +535,28 @@ function BuildStamp({ runtime }: { runtime: PanelRuntime | null }) {
     if (!runtime) return <>{t('app.name')}</>;
     const v = runtime;
 
+    // The full commit is a 40-character unbroken token. In a 256px rail with
+    // 16px of padding on each side it measured 24px WIDER than the aside it
+    // sits in, so the tail of the hash was drawn on the page background —
+    // outside the rail, at every width. A hash is identification, not prose:
+    // the leading characters are the part an operator reads and compares, so
+    // the stamp shows those and keeps the whole value one hover (or one
+    // screen reader) away instead of dropping the commit or letting it spill.
+    //
+    // Tam commit 40 karakterlik bölünmez bir belirteçtir. 256px genişliğinde,
+    // iki yanı 16px boşluklu bir rayda içinde durduğu aside'dan 24px DAHA
+    // GENİŞ ölçülüyordu; yani hash'in kuyruğu her genişlikte rayın dışına,
+    // sayfa zeminine çiziliyordu. Hash düzyazı değil kimliktir: operatörün
+    // okuyup karşılaştırdığı yer baş taraftır; damga onu gösterir, tam değeri
+    // ise commit'i atmadan ya da taşırmadan bir üşürme kadar uzakta tutar.
+    const shortCommit = v.commit.slice(0, 12);
+
     return (
         <>
             {t('app.name')} · {v.version} ·{' '}
-            <span className="font-mono" title={t('common.buildHint')}>
-                build {v.commit}
+            <span className="break-all font-mono" title={`${t('common.buildHint')} — ${v.commit}`}>
+                build <span aria-hidden="true">{shortCommit}</span>
+                <span className="sr-only">{v.commit}</span>
             </span>
             {!v.agent_matches && v.agent_commit !== '' && (
                 <span className="ml-1.5 rounded bg-warning/15 px-1.5 py-0.5 text-warning" title={t('common.agentMismatchHint', { commit: v.agent_commit })}>

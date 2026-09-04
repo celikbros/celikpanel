@@ -14,6 +14,7 @@ import { PageHeader } from './PageHeader';
 import { showToast } from './Toast';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { summarizeDashboardMailTruth } from '../lib/dashboardMailTruth';
+import { publishComponentCensus } from '../lib/componentCensus';
 import {
     decodeManagedMailProfiles,
     type ManagedMailProfile,
@@ -270,6 +271,7 @@ function AdminDashboard() {
             .then((value: unknown) => {
                 const snapshot = decodeDashboardServices(value);
                 if (!snapshot) return;
+                publishComponentCensus(snapshot.services);
                 setServices(snapshot.services);
                 setMailProfiles(snapshot.profiles);
                 setServiceScannedAt(snapshot.scannedAt);
@@ -348,6 +350,12 @@ function AdminDashboard() {
                 showToast('error', t('services.scanFailed'));
                 return;
             }
+            // The check the operator ran here answers for the whole host,
+            // so the sidebar badge takes it from here — no reload, no second
+            // request, no poll.
+            // Operatörün burada çalıştırdığı kontrol bütün makine adına cevap
+            // verir; kenar çubuğu rozeti onu buradan alır.
+            publishComponentCensus(snapshot.services);
             setServices(snapshot.services);
             setMailProfiles(snapshot.profiles);
             setServiceScannedAt(snapshot.scannedAt);
@@ -398,6 +406,15 @@ function AdminDashboard() {
     // "running services" merely to make the ratio green.
     const systemServices = serviceScanFresh
         ? installed.filter((s) => s.kind === 'service')
+        : [];
+    // What the sidebar badge counts and this ratio does not: installed
+    // components that have no systemd unit of their own — tools, and runtimes
+    // executed only by per-site apps. They are why the two numbers differ.
+    // Kenar çubuğu rozetinin sayıp bu oranın saymadığı şey: kendi systemd
+    // unit'i olmayan kurulu bileşenler — araçlar ve yalnız site başına
+    // uygulamaların çalıştırdığı runtime'lar. İki sayının farkı buradan gelir.
+    const unitlessInstalled = serviceScanFresh
+        ? installed.filter((s) => s.kind !== 'service')
         : [];
     const running = systemServices.filter((s) => serviceStatusRunning(s.status));
     const stoppedSvcs = systemServices.filter((s) => !serviceStatusRunning(s.status));
@@ -689,7 +706,26 @@ function AdminDashboard() {
                         <p className="mt-2 text-xs font-medium text-warning">{t('dashboard.svcStopped', { n: stoppedSvcs.length })}</p>
                     ) : (
                         <p className="mt-2 text-xs text-fg-subtle">
-                            {systemServices.length > 0 ? t('dashboard.svcRunningHint') : t('dashboard.svcNone')}
+                            {/* "0 / 0 · No services yet" beside a sidebar
+                                reading "Components 1" is two true statements
+                                that look like a contradiction: this card counts
+                                systemd services, and the one installed
+                                component (nftables) is a tool with no unit to
+                                run. Both numbers stay; the sentence between
+                                them is what was missing.
+                                Kenar çubuğu "Bileşenler 1" derken buradaki
+                                "0 / 0 · Henüz servis yok", çelişki gibi duran
+                                iki doğrudur: bu kart systemd servislerini
+                                sayar, kurulu tek bileşen (nftables) ise
+                                çalıştıracak unit'i olmayan bir araçtır. İki
+                                sayı da kalır; eksik olan aradaki cümleydi. */}
+                            {systemServices.length > 0
+                                ? t('dashboard.svcRunningHint')
+                                : unitlessInstalled.length === 0
+                                    ? t('dashboard.svcNone')
+                                    : unitlessInstalled.length === 1
+                                        ? t('dashboard.svcNoneUnitlessOne')
+                                        : t('dashboard.svcNoneUnitless', { n: unitlessInstalled.length })}
                         </p>
                     )}
                     {/* Partly checked is not unchecked. The ratio above counts
@@ -716,6 +752,9 @@ function AdminDashboard() {
                 <MailStackSummary
                     profiles={mailProfiles}
                     scanFresh={serviceScanFresh}
+                    hostNeverChecked={hostNeverChecked}
+                    checking={componentScanBusy}
+                    onCheck={scanComponents}
                     onOpen={() => navigate('/services#mail-stacks')}
                 />
             )}
@@ -810,26 +849,65 @@ function AdminDashboard() {
                                             {i + 1}
                                         </span>
                                     )}
-                                    <div className="min-w-0 flex-1">
+                                    {/* `flex-1` alone gives this block a base
+                                        width of zero, so the row never wrapped:
+                                        the text was squeezed to whatever the
+                                        button left over instead. On the one
+                                        step that carries a hint AND a button
+                                        that collapsed at 390px into a ~60px
+                                        ribbon of one or two words per line. A
+                                        real basis makes the row wrap the way it
+                                        was always meant to — the button drops
+                                        to its own line and the text keeps a
+                                        readable measure — and it is the shared
+                                        row that changes, so every step lays out
+                                        by the same rule.
+                                        Tek başına `flex-1` bu bloğa sıfır
+                                        genişlik tabanı verir; satır bu yüzden
+                                        hiç alt satıra taşmaz, metin düğmeden
+                                        artana sıkışırdı. Hem ipucu hem düğme
+                                        taşıyan tek adımda bu, 390px'te satır
+                                        başına bir-iki sözcüklük ~60px'lik bir
+                                        şeride dönüşüyordu. Gerçek bir taban,
+                                        satırı en baştan tasarlandığı gibi
+                                        sardırır ve değişen paylaşılan satırdır;
+                                        her adım aynı kurala göre dizilir.
+
+                                        11rem is chosen, not rounded to: at
+                                        390px it leaves a wide CTA no room and
+                                        the button wraps onto its own line,
+                                        while the short statuses on the other
+                                        steps — Done, Next, and the longer
+                                        Turkish "Tamamlandı" — still fit beside
+                                        the title and do not cost six rows an
+                                        extra line each.
+                                        11rem seçilmiştir, yuvarlanmış değil:
+                                        390px'te geniş bir CTA'ya yer bırakmaz
+                                        ve düğme kendi satırına geçer; öteki
+                                        adımların kısa durumları — Done, Next
+                                        ve daha uzun olan "Tamamlandı" — yine
+                                        başlığın yanında kalır ve altı satıra
+                                        birer satır fazladan mal olmaz. */}
+                                    <div className="min-w-0 grow basis-44">
                                         <div className={`text-base font-medium ${s.done || i === nextIdx ? 'text-fg' : 'text-fg-muted'}`}>
                                             {t(s.key)}
                                         </div>
                                         {i === nextIdx && s.hint && (
-                                            <div className="text-xs text-fg-subtle">{t(s.hint)}</div>
+                                            <div className="mt-0.5 text-xs text-fg-subtle">{t(s.hint)}</div>
                                         )}
                                     </div>
                                     {s.done ? (
-                                        <span className="text-sm text-fg-subtle">{t('dashboard.stepDone')}</span>
+                                        <span className="ml-auto shrink-0 text-sm text-fg-subtle">{t('dashboard.stepDone')}</span>
                                     ) : i === nextIdx ? (
                                         <button
                                             onClick={() => (s.onAct ? s.onAct() : navigate(s.to))}
                                             disabled={s.onAct ? fwBusy : false}
-                                            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                            className="ml-auto shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
                                         >
                                             {t(s.cta ?? 'dashboard.goServices')}
                                         </button>
                                     ) : (
-                                        <span className="text-sm text-fg-subtle">{i === nextIdx + 1 ? t('dashboard.stepNext') : ''}</span>
+                                        <span className="ml-auto shrink-0 text-sm text-fg-subtle">{i === nextIdx + 1 ? t('dashboard.stepNext') : ''}</span>
                                     )}
                                 </li>
                             ))}
@@ -1043,16 +1121,34 @@ function DashboardFirewallConfirmationDialog({
     );
 }
 
-function MailStackSummary({ profiles, scanFresh, onOpen }: {
+// A host nobody has checked and a host checked six minutes ago are not the
+// same host. This card used to fold both into "Status needs refresh" and told
+// the operator the scan was older than five minutes — on a machine where no
+// scan has ever run. That is the unknown-versus-absent fold R-040 removed on
+// the components screen and on the system-services card beside this one,
+// surviving one card over. Unknown comes first here, in the same voice and
+// with the same check, so the two cards on this row agree.
+//
+// Kimsenin bakmadığı makine ile altı dakika önce bakılmış makine aynı makine
+// değildir. Bu kart ikisini de "Durum yenilenmeli"ye katlıyor ve hiç tarama
+// koşmamış bir makinede operatöre taramanın beş dakikadan eski olduğunu
+// söylüyordu. R-040'ın bileşenler ekranında ve yanındaki sistem servisleri
+// kartında kaldırdığı bilinmeyen/yok katlaması bir kart öteye sağ kalmıştı.
+function MailStackSummary({ profiles, scanFresh, hostNeverChecked, checking, onCheck, onOpen }: {
     profiles: ManagedMailProfile[];
     scanFresh: boolean;
+    hostNeverChecked: boolean;
+    checking: boolean;
+    onCheck: () => void;
     onOpen: () => void;
 }) {
     const { t } = useI18n();
     const { complete, problem, partial, needsAttention, availableOnly } =
         summarizeDashboardMailTruth(profiles, scanFresh);
 
-    const statusKey: TranslationKey = !scanFresh
+    const statusKey: TranslationKey = hostNeverChecked
+        ? 'services.notChecked'
+        : !scanFresh
         ? 'dashboard.mailStacks.status.stale'
         : partial
             ? 'dashboard.mailStacks.status.partial'
@@ -1061,7 +1157,9 @@ function MailStackSummary({ profiles, scanFresh, onOpen }: {
             : availableOnly
                 ? 'dashboard.mailStacks.status.available'
                 : 'dashboard.mailStacks.status.ready';
-    const detail = !scanFresh
+    const detail = hostNeverChecked
+        ? t('dashboard.mailStacks.notChecked')
+        : !scanFresh
         ? t('dashboard.mailStacks.scanStale')
         : problem?.latest_attempt_error || problem?.blocked_reason || problem?.warning
             ? t('dashboard.mailStacks.reason', {
@@ -1081,9 +1179,13 @@ function MailStackSummary({ profiles, scanFresh, onOpen }: {
                                 : complete
                                     ? t('dashboard.mailStacks.completeHint')
                                     : t('dashboard.mailStacks.availableHint');
-    const statusClass = needsAttention || partial
+    // Neutral for the unknown: a machine nobody has looked at yet is the
+    // normal first state, not a fault, and semantic colour is reserved for
+    // something actually being wrong.
+    // Bilinmeyen için nötr: henüz bakılmamış makine olağan ilk durumdur.
+    const statusClass = !hostNeverChecked && (needsAttention || partial)
         ? 'bg-warning/15 text-warning'
-        : !scanFresh || availableOnly
+        : hostNeverChecked || !scanFresh || availableOnly
             ? 'bg-surface-2 text-fg-muted'
             : 'bg-success/15 text-success';
 
@@ -1101,9 +1203,27 @@ function MailStackSummary({ profiles, scanFresh, onOpen }: {
                         </div>
                         <p className='mt-1 text-sm text-fg-muted'>{detail}</p>
                     </div>
-                    <button type='button' onClick={onOpen} className='inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-fg hover:bg-primary/90'>
-                        {t(scanFresh ? 'dashboard.mailStacks.open' : 'dashboard.mailStacks.rescan')} <ArrowRight className='h-4 w-4' />
-                    </button>
+                    {/* The same check the system-services card beside it
+                        offers, run here rather than pointing at another page —
+                        the firewall lesson (Jul 17): an action this central
+                        acts in place.
+                        Yanındaki sistem servisleri kartının sunduğu kontrolün
+                        aynısı, başka sayfayı işaret etmek yerine burada koşar. */}
+                    {hostNeverChecked ? (
+                        <button
+                            type='button'
+                            onClick={onCheck}
+                            disabled={checking}
+                            className='inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50'
+                        >
+                            <ScanSearch className='h-4 w-4' />
+                            {checking ? t('services.scanning') : t('services.scanNow')}
+                        </button>
+                    ) : (
+                        <button type='button' onClick={onOpen} className='inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-fg hover:bg-primary/90'>
+                            {t(scanFresh ? 'dashboard.mailStacks.open' : 'dashboard.mailStacks.rescan')} <ArrowRight className='h-4 w-4' />
+                        </button>
+                    )}
                 </div>
             </div>
         </section>

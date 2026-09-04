@@ -21,6 +21,7 @@ const turkish = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf
 const panelHandlers = readFileSync(new URL('../../cmd/panel/managed_service_handlers.go', import.meta.url), 'utf8');
 const dashboard = readFileSync(new URL('../src/components/Dashboard.tsx', import.meta.url), 'utf8');
 const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
+const census = readFileSync(new URL('../src/lib/componentCensus.ts', import.meta.url), 'utf8');
 
 test('the API answers three states, so "never observed" cannot serialise as "absent"', () => {
   // The pointer is the contract. A plain bool here can only say yes or no,
@@ -95,8 +96,18 @@ test('the unchecked server is told so plainly, with the check one click away', (
   assert.match(notice, /onClick=\{scan\}/);
   assert.match(notice, /t\('services\.scanNow'\)/);
   // Neutral, not an alarm: a host nobody has looked at yet is the normal
-  // first state of a fresh or restored server.
-  assert.doesNotMatch(notice, /warning|danger/);
+  // first state of a fresh or restored server. The one exception is the line
+  // that only appears when the automatic check actually FAILED - that is a
+  // real failure and may say so - so the neutrality is asserted on everything
+  // before it.
+  // Notr, alarm degil. Tek istisna, otomatik kontrol GERCEKTEN basarisiz
+  // oldugunda cizilen satirdir.
+  // Comments explain the colour rule; only what is drawn is asserted on.
+  // Yorumlar kurali anlatir; iddia yalniz cizilene bakar.
+  const drawn = notice.replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+  const failureLine = drawn.indexOf('{autoCheckFailed && (');
+  assert.ok(failureLine > 0, 'the failed automatic check needs its own line');
+  assert.doesNotMatch(drawn.slice(0, failureLine), /warning|danger/);
 
   assert.match(
     serviceList,
@@ -202,9 +213,13 @@ test('the sidebar badge carries no number for a census nobody took', () => {
   assert.match(layout, /type Counts = Partial<Record<'domains' \| 'databases' \| 'services', number \| null>>;/);
   // Unobserved is null, not zero; a partly observed host still counts what
   // is known, so the unchecked rows are excluded rather than counted absent.
-  assert.match(layout, /const observed = s\.filter\(\(service\) => service\.is_installed !== null\);/);
-  assert.match(layout, /s\.length > 0 && observed\.length === 0\s*\n\s*\? null/);
-  assert.match(layout, /observed\.filter\(\(service\) => service\.is_installed\)\.length/);
+  // The rule now lives in the store every screen publishes to, which is what
+  // lets the badge follow a check run anywhere without a second fetch.
+  // Kural artik her ekranin yayinladigi depoda yasar.
+  assert.match(census, /const observed = rows\.filter\(\(row\) => typeof row\.is_installed === 'boolean'\);/);
+  assert.match(census, /rows\.length > 0 && observed\.length === 0\) return null;/);
+  assert.match(census, /observed\.filter\(\(row\) => row\.is_installed === true\)\.length/);
+  assert.match(layout, /const serviceCensus = useComponentCensus\(\);/);
 
   const nullBranch = layout.indexOf('{count === null ? (');
   assert.ok(nullBranch >= 0, 'the badge must distinguish "no answer" from "zero"');

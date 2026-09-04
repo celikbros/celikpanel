@@ -7,6 +7,7 @@ import { Button, EmptyState, StatusDot } from './ui';
 import { HelpButton } from './HelpDrawer';
 import { readApiError, apiErrorText } from '../lib/apiError';
 import { decodeManagedServicesSnapshot, useComponentOperation } from './ComponentOperation';
+import { publishComponentCensus } from '../lib/componentCensus';
 
 interface ManagedService {
     id: string;
@@ -148,6 +149,7 @@ export function ServiceShell({
             if (!response.ok) return;
             const snapshot = decodeManagedServicesSnapshot(await response.json());
             if (!snapshot) return;
+            publishComponentCensus(snapshot.services);
             setSvc(findService(snapshot.services, serviceId));
         } catch {
             // Fail closed: no answer is not an answer about this host.
@@ -162,6 +164,7 @@ export function ServiceShell({
 
     useEffect(() => {
         if (!catalogSnapshot) return;
+        publishComponentCensus(catalogSnapshot.services);
         setSvc(findService(catalogSnapshot.services, serviceId));
         setLoading(false);
         refreshedRef.current?.();
@@ -228,6 +231,12 @@ export function ServiceShell({
                 showToast('error', t('services.scanFailed'));
                 return;
             }
+            // This page's check is a host-wide answer, not a per-component
+            // one. The sidebar badge is entitled to the same payload, so it
+            // moves with the check instead of waiting for a page load.
+            // Bu sayfanın kontrolü bileşene değil sisteme ait bir cevaptır;
+            // kenar çubuğu rozeti de aynı yükü hak eder.
+            publishComponentCensus(snapshot.services);
             setSvc(findService(snapshot.services, serviceId));
             refreshedRef.current?.();
         } catch {
