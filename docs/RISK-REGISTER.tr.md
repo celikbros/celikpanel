@@ -58,7 +58,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-017 | Yüksek | AÇIK | Üretim panelinin kalp atışı, paket kuran bir DNS motoru geçişini belirlenimci biçimde zehirler |
 | R-018 | Orta | DALDA DÜZELTİLDİ (BEŞ KAT) / BEŞİNCİNİN CANLI KANITI BEKLİYOR | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
 | R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
-| R-020 | Düşük | DALDA YENİDEN DENGELENDİ / CI ÖLÇÜLDÜ / İKİ PARÇA ÇİZGİNİN ÜSTÜNDE | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
+| R-020 | Düşük | ANA HATTA KAPANDI / HER PARÇA ÖLÇÜLDÜ VE ÇİZGİNİN ALTINDA | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
 | R-021 | Düşük | ÇÖZÜLDÜ / ENVANTER DÜZELTİLDİ | İki sunucu da yeniden kuruldu; kimlik doğrulandı ve envanter artık Ubuntu ile Debian 13 yazıyor. Envanterimizde Arch sunucu kalmadı |
 | R-022 | Kritik | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | `install.sh`, güvenilen sürüm kökü var olmadan sürüm işlem korumasını source ediyor; temiz kurulum başlamadan çıkıyor |
 | R-023 | Yüksek | DALDA DÜZELTİLDİ / ATILABİLİR VM'LERDE KANITLANDI / MAIN'DE DEĞİL | Taze veritabanında `SKIP_ADMIN=1` sıfır kullanıcı bırakır; panel tasarımı gereği çıkar ve kurulum systemd yeniden başlatma döngüsüyle biter |
@@ -623,6 +623,26 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: Ya paketin çalışma süresi düşürülür ya da tavan, gerekçesi
   kaydedilerek ve desteklenen en yavaş kabul makinesinde ölçülmüş bir payla
   yükseltilir.
+- 4 Eylül 2026'da kapandı (PR #82), iki kez ölçülerek. İlk bölme D grubunu
+  ikiye ayırdı ve koşusu o dört parçayı 202, 182, 115 ve 113 saniyede
+  gösterdi - ve A-C parçasını 258 saniyede, oysa öncesinde 191 saniyeydi.
+  Bozulan bir şey yoktu: o hafta yazılan kontrol düzlemi testleri o parçanın
+  147 testinin 40'ıydı ve oraya düşmüştü. Kural yeniden uygulandı; C iki kez
+  oyuldu ve kontrol düzlemi testleri kendi parçasını aldı, sonraki büyüme de
+  oraya gidecek.
+- Son düzende ölçülen, on dört parçanın hepsi: N-Q 226, L-M 213,
+  S-servis-hariç 209, DNS-motor-ve-bölge-hariç 197, E-K 196, T-Z 189, DNS
+  motoru 176, kontrol düzlemi 167, R 158, C-kontrol-düzlemi-hariç 157, DNS
+  bölgesi 115, D-DNS-hariç 113, servis 99, A-ve-B 91. Hepsi 240 saniyelik
+  çıkış çizgisinin altında; en yükseği N-Q, büyürse sıradaki aday o.
+- Parçalar ayrık ve kapsayıcı kalıyor: araç zincirinin bulduğu 1058 testin
+  hepsinde ve sınır adlarında kanıtlandı, her biri tam olarak bir parçaya
+  düşüyor. Sözleşme testi on dört deseni ve atlamayı sabitliyor ve aşılmış
+  iki düzenin parça adlarını reddediyor; ikisi de bütün hâlde geri gelemez.
+- Kapalı kalmasını sağlayan şey: kaydın kuralı, çizgiyi aşan parçanın
+  bölünmesi ve tavanın asla yükseltilmemesidir; CI yorumu artık ölçüm
+  geçmişini taşıyor, böylece sonraki kişi her bölmenin bir tahmine değil bir
+  ölçüme cevap verdiğini görebilir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 - Yeniden ölçüldü (2 Eylül 2026): tek süreçli koşu, 16 çekirdekli Debian 13
   WSL2 konuğunda kendi ext4'ünde `e8c73f16` ağacında 1800 saniyenin 1448'ini
