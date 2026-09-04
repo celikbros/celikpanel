@@ -86,7 +86,8 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-046 | Critical | FIXED AND PROVEN LIVE ON THE HOST IT WEDGED | A failed mail TLS step poisons the mutation ledger and the poison survives an agent restart: startup recovery re-attempts the same committed plan, fails the same check, and the host refuses every mutation with no way out |
 | R-047 | Low | FIXED AND PROVEN LIVE / IT ALSO FOUND R-049 | Three defects a browser found and the tests did not: a dialog whose confirm sits below the fold, a segmented control that overflows at 390px, and a firewall status that reports no UDP port when one is open |
 | R-048 | Critical | FIXED AND PROVEN ON A REAL VM BY CUTTING ITS POWER | After a power loss the agent starts before the host is ready, cannot run its recovery, and never tries again - so an interrupted mutation holds the ledger and every host mutation is refused until someone restarts the agent by hand |
-| R-049 | High | FOUND IN THE BROWSER ROUND / HALF FIXED | Every blocked preview decoded to null in the browser, so the refusals written for the takeover were invisible to anyone using the panel; and the running takeover has no route on the DNS screen at all |
+| R-049 | High | FIXED AND PROVEN IN A BROWSER, END TO END | Every blocked preview decoded to null in the browser, so the refusals written for the takeover were invisible to anyone using the panel; and the running takeover has no route on the DNS screen at all |
+| R-050 | Medium | FOUND / NOT YET FIXED | A panel-installed DNS engine reads as unmanaged while the agent is holding mutations, so both the API and the screen would offer to take over the panel's own half-finished install |
 
 ## Detailed risks
 
@@ -1978,6 +1979,56 @@ or executed as-is. There are no open pull requests at this baseline.
   it is called done.
 - Exit criteria: an operator adopts a running unmanaged DNS server from the DNS
   infrastructure screen, in a browser, without touching the API.
+- Fixed 4 September 2026. The cause was one branch claiming the whole
+  unmanaged state and mapping it to manual recovery, which locks every action.
+  The entire adoption was behind that single return. The stopped shape escaped
+  it by accident: a server with nothing running presents as unconfigured
+  rather than unmanaged. One word, two routes.
+- The running shape now takes the same route, excluded from manual recovery by
+  a predicate mirroring the panel's own adoptable test on facts the payload
+  already carries. No new flow, no second dialogue, no second acknowledgement,
+  no new field. Manual recovery keeps the states that genuinely need a person.
+  A server with views or an unreadable configuration is invisible in the
+  snapshot, so it takes the route and is refused by name in the preview, which
+  is where that refusal was written and where R-047 made it render.
+- Proven in a browser at both widths and in both locales, end to end: the
+  unfixed screen shows an unmanaged badge with no control on it at all; the
+  fixed one offers the review, shows this host's own directives with recursion
+  marked unchanged and allow-transfer as a change, enables the commit on the
+  acknowledgement, and completes in 13 s - **596 queries of the server's own
+  zone unanswered zero times**, the main process id unchanged, a reload rather
+  than a restart, and nothing installed. The blocked shape renders its named
+  refusal from the same screen.
+- Left as it was found, on purpose: the identity panel on this route still
+  says "installation" where a takeover is an adoption. It is the copy the
+  stopped shape already ships, so correcting it belongs to both halves at
+  once, not to this entry.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-050 - The panel would offer to take over its own unfinished work
+
+- Evidence: 4 September 2026, found while giving the running takeover its
+  route, from the code rather than live. A BIND the panel installed reports
+  `managed: false` with `detail_code: "mutations_held"` while the agent is
+  holding mutations. That shape satisfies the takeover's adoptable test, on
+  both the API and the screen, so the product would offer to adopt a server
+  it already owns and is in the middle of working on.
+- Impact is bounded rather than destructive: the agent's ledger is held, so
+  the commit would be refused. But the offer itself is wrong, and it is wrong
+  in the direction this week's work has been correcting - the panel claiming
+  something about a host that is not so. An operator told "this server is
+  running a DNS server CelikPanel did not install", about a server CelikPanel
+  did install, has been told something false.
+- It is symmetric, which is why it was not narrowed on one side: the already
+  shipped stopped shape has the identical hole and so does the API. Fixing the
+  screen alone would make the two disagree, which is worse than one honest
+  hole in both.
+- What it needs: `mutations_held` excluded from adoptability wherever
+  adoptability is decided - the panel's predicate first, the screen following
+  it - so a held engine reads as the panel's own and busy, not as a stranger's.
+- Exit criteria: on a host whose panel-installed engine is held, neither the
+  API nor the screen offers a takeover, and the screen says the engine is the
+  panel's and currently busy.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

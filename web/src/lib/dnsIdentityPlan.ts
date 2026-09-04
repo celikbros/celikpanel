@@ -35,6 +35,7 @@ interface DNSEngineFlowEntryEvidence {
 
 interface DNSEngineFlowEvidence extends DNSIdentityEngineEvidence {
     state: string;
+    engine_epoch: number;
     engines: DNSEngineFlowEntryEvidence[];
 }
 
@@ -45,6 +46,39 @@ export type DNSEngineSettingsFlow =
     | 'active'
     | 'manualRecovery'
     | 'locked';
+
+// The takeover's running shape, read from the same facts the panel's own
+// `adoptableUnmanagedDNSEngine` reads it from (cmd/panel/dns_engine.go): BIND
+// on disk and answering, no durable CelikPanel authority over any of it, and
+// nothing else serving. This is a rented server that arrived with a DNS server
+// somebody else installed, and it is the ordinary way they arrive - not a host
+// whose ownership went wrong.
+//
+// Topology is the one fact read more widely here than the API reads it, and
+// deliberately. The API needs a saved standalone identity because it is about
+// to publish one; the screen is what the operator uses to save it, and a server
+// that has never been configured reports `unconfigured`. Requiring `standalone`
+// here would lock the operator out of the step that produces it. Nothing is
+// taken on trust by doing so: while the identity is unconfigured
+// `dnsEngineIdentityReviewLocked` keeps the review shut, and the preview - the
+// only authority on whether this host can actually be taken over - still
+// refuses everything it refused before, by name. `paired` is refused outright,
+// as the API refuses it: pairing is a decision about two servers, and the
+// takeover does not answer it.
+function adoptableUnmanagedDNSEngine(snapshot: DNSEngineFlowEvidence): boolean {
+    if (snapshot.state !== 'unmanaged' ||
+        snapshot.active_engine !== null ||
+        snapshot.engine_epoch !== 0 ||
+        snapshot.topology === 'paired') {
+        return false;
+    }
+    const bind = snapshot.engines.find((entry) => entry.id === 'bind');
+    if (!bind || !bind.installed || !bind.running || bind.managed ||
+        bind.status !== 'unmanaged') {
+        return false;
+    }
+    return snapshot.engines.every((entry) => entry.id === 'bind' || !entry.running);
+}
 
 // Keep rendering decisions for the no-authority states in one fail-closed
 // matrix. The legacy reconfigure exception is exact; an unmanaged service
@@ -70,6 +104,15 @@ export function dnsEngineSettingsFlow(
         return 'active';
     }
     if (snapshot.state === 'unmanaged' && snapshot.active_engine === null) {
+        // Manual recovery is for a host whose DNS ownership could not be
+        // proven, and it locks every action because there is nothing safe to
+        // offer. It used to claim this whole state, which swallowed the one
+        // shape inside it that has an answer: a running DNS server CelikPanel
+        // did not install, which the product takes over with the operator's
+        // explicit consent. That answer existed and was reachable only through
+        // the API. It is the same route the stopped shape already takes - stage
+        // the identity, then review and commit the adoption on the engine card.
+        if (adoptableUnmanagedDNSEngine(snapshot)) return 'identityStaging';
         return 'manualRecovery';
     }
     return 'locked';
