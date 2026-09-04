@@ -73,7 +73,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-033 | High | FIXED ON BRANCH / LIVE PROOF PENDING | A first DNS engine install that failed after package install on a host with no state left an install receipt the abort proof called inconsistent, so the ledger was poisoned on the very first DNS action and stayed poisoned on every boot |
 | R-034 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Every WireGuard config apply fails because the staged file name is not a valid interface name for `wg-quick strip`; the failed rollback then poisons the host's mutation manager with no API way out |
 | R-035 | Medium | FIXED AND PROVEN LIVE | The firewall cannot be enabled on a host without a discoverable sshd, and the product cannot install one; such hosts never get `firewall.nft` |
-| R-036 | Medium | FIXED AND PROVEN LIVE / THE INSTALL THEN FAILS ON R-046 | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
+| R-036 | Medium | FIXED AND PROVEN LIVE | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
 | R-037 | Medium | GUARDED ON BRANCH / A SECOND EMBED WAS AFFECTED AND IS FIXED | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
 | R-038 | Critical | STOPPED SHAPE FIXED AND PROVEN LIVE / RUNNING SHAPE IS R-039 / ROLLBACK PROOF OWED | A host that already carries the DNS engine's packages can now adopt that engine through the panel with an explicit acknowledgement, when the engine is stopped; a running unmanaged engine is still refused and is tracked as R-039 |
 | R-039 | High | FIXED AND PROVEN LIVE / REAL VM PENDING | Adopting a DNS server that is running and unmanaged needs a durable pre-intent record: the agent must stop a service it does not own before its proofs run, and a crash in that window would leave the operator's DNS stopped with nothing to recover from |
@@ -83,7 +83,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-043 | High | FIXED AND PROVEN LIVE AT TWO CRASH POINTS / A THIRD IS R-045 | A crash during a running takeover is recovered by the switch rollback, which stops units - so the recovery would stop the DNS server the takeover promised never to interrupt |
 | R-044 | Medium | FOUND / NOT YET FIXED | A BIND configured with `view` blocks is not understood by the takeover: a recursion set inside a view silently overrides the panel's options, and zones outside views fail late in the config check |
 | R-045 | High | FOUND / CAUSE NOT YET DETERMINED | A takeover crashed after its target was verified but before it was finalized is neither finalized nor rolled back: the recovery cannot find the generation pointer, fails closed and holds the ledger |
-| R-046 | Critical | FOUND LIVE / NOT YET FIXED | A failed mail TLS step poisons the mutation ledger and the poison survives an agent restart: startup recovery re-attempts the same committed plan, fails the same check, and the host refuses every mutation with no way out |
+| R-046 | Critical | FIXED AND PROVEN LIVE ON THE HOST IT WEDGED | A failed mail TLS step poisons the mutation ledger and the poison survives an agent restart: startup recovery re-attempts the same committed plan, fails the same check, and the host refuses every mutation with no way out |
 | R-047 | Low | FOUND IN THE BROWSER ROUND / NOT YET FIXED | Three defects a browser found and the tests did not: a dialog whose confirm sits below the fold, a segmented control that overflows at 390px, and a firewall status that reports no UDP port when one is open |
 
 ## Detailed risks
@@ -1772,6 +1772,38 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: the mail profile installs on a host whose only obstacle was
   the hostname; and separately, a step that fails this way leaves the host
   mutable, with the failure reported and the ledger free.
+- Root cause, 4 September 2026: the check was right and the write was wrong.
+  The agent runs with the celikpanel group, so every file it creates inherits
+  that group unless the owner is chosen deliberately; the managed mail TLS
+  directory is created root:root; and the readback compared the published
+  certificate's group against that directory's. On every correctly installed
+  host it compared celikpanel against root and refused, for ever. The pair is
+  now published with the ownership the readback demands, proved on the
+  descriptor before the rename by the contract that was already there. No
+  verification was loosened.
+- The larger half: a committed plan that could not succeed was re-attempted at
+  every agent start and left the ledger poisoned. A reconciliation now reports
+  what it left on the host, not only whether it worked, and only two outcomes
+  may end a plan - nothing was touched, or everything it changed was put back
+  and both daemons were validated and reloaded. Anything less still poisons
+  and still holds the lock. A plan that reaches one of those two is finished
+  as failed through the exact mirror of the success path, the reason recorded
+  durably, the ledger released, and the message names what it did not undo:
+  the packages and the hostname the profile left behind, and after an
+  interrupted attempt, that mail TLS may still be partly configured.
+- Proven on the host that was left wedged as this entry's evidence: it
+  refused every mutation and reproduced the wedge across a restart; with the
+  fixed agent a restart alone made it mutable again and the stuck plan
+  finished rather than being cleared; the clean-failure path was then proven
+  separately by injecting the obstacle, both in the live commit and by
+  killing the agent the moment the durable intent landed, with the reason
+  surviving a further restart; the mail profile installed to completion; and
+  the firewall, which had been refused as busy, applied again.
+- Known and deliberately left: the live commit path's clean failure is proven
+  live rather than by a red unit test, because wiring it through the sync
+  entry point needs a postfix and dovecot command harness that does not exist
+  yet; and a host that somehow acquires a wrong-group certificate still fails
+  closed on first inspection rather than replacing it.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-047 - What the browser saw and the tests did not
