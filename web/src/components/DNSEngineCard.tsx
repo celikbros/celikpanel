@@ -188,7 +188,8 @@ const knownImpactKeys = {
     restart_target: 'dnsEngine.impact.restartTarget',
     configure_secondary: 'dnsEngine.impact.configureSecondary',
     replace_foreign_config: 'dnsEngine.impact.replaceForeignConfig',
-    drop_unknown_zones: 'dnsEngine.impact.dropUnknownZones',
+    reload_target: 'dnsEngine.impact.reloadTarget',
+    keep_unknown_zones: 'dnsEngine.impact.keepUnknownZones',
 } as const;
 
 // A paired-primary snapshot can spend up to 15 seconds proving the peer
@@ -1210,6 +1211,19 @@ function DNSEngineReviewDialog({
         dnsEngineText(locale, key, vars);
     const { preview } = review;
     const blocked = !preview || preview.blockers.length > 0;
+    // The takeover is one action with one acknowledgement, but its two shapes
+    // cost different things, and the impacts the server sent are what say
+    // which shape this is. A running engine is reloaded in place and keeps
+    // answering, and the zones it answers that CelikPanel does not know about
+    // keep being answered too - so the copy must not read the stopped shape's
+    // "it stops being served" onto it.
+    //
+    // Devralma tek onayi olan tek eylemdir; ama iki biciminin bedeli farklidir
+    // ve hangi bicim oldugunu sunucunun gonderdigi etkiler soyler. Calisan bir
+    // motor yerinde yeniden yuklenir ve yanit vermeyi surdurur; yanitladigi,
+    // CelikPanel'in bilmedigi zone'lar da yanitlanmayi surdurur - dolayisiyla
+    // metin, durmus bicimin "sunulmaz olur" ifadesini ona okumamalidir.
+    const adoptingRunningEngine = preview?.impacts.includes('reload_target') === true;
     const confirmationDisabled = review.loading
         || review.committing
         || review.requestID === null
@@ -1322,13 +1336,17 @@ function DNSEngineReviewDialog({
                                     className="flex items-start gap-2 text-sm font-semibold text-fg"
                                 >
                                     <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
-                                    {et('dnsEngine.adoption.title')}
+                                    {et(adoptingRunningEngine
+                                        ? 'dnsEngine.adoption.titleRunning'
+                                        : 'dnsEngine.adoption.title')}
                                 </h4>
                                 <p
                                     id="dns-engine-adoption-body"
                                     className="mt-2 pl-6 text-sm leading-5 text-fg-muted"
                                 >
-                                    {et('dnsEngine.adoption.body')}
+                                    {et(adoptingRunningEngine
+                                        ? 'dnsEngine.adoption.bodyRunning'
+                                        : 'dnsEngine.adoption.body')}
                                 </p>
                                 <label className="mt-4 flex cursor-pointer items-start gap-3 border-t border-danger/25 pt-4">
                                     <input
@@ -1339,7 +1357,11 @@ function DNSEngineReviewDialog({
                                         onChange={(event) => onAcknowledgeAdoption(event.target.checked)}
                                         className="mt-0.5 h-4 w-4 accent-primary"
                                     />
-                                    <span className="text-sm leading-5 text-fg">{et('dnsEngine.adoption.acknowledgement')}</span>
+                                    <span className="text-sm leading-5 text-fg">
+                                        {et(adoptingRunningEngine
+                                            ? 'dnsEngine.adoption.acknowledgementRunning'
+                                            : 'dnsEngine.adoption.acknowledgement')}
+                                    </span>
                                 </label>
                             </div>
                         )}

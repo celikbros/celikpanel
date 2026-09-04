@@ -603,10 +603,11 @@ type dnsSetupRequest struct {
 }
 
 const (
-	dnsSetupResultIdentityStaged = "dns_identity_staged"
-	dnsIdentityStagingFresh      = "fresh"
-	dnsIdentityStagingPDNSAdopt  = "pdns_adoption"
-	dnsIdentityStagingPDNSPair   = "pdns_pair_secondary"
+	dnsSetupResultIdentityStaged   = "dns_identity_staged"
+	dnsIdentityStagingFresh        = "fresh"
+	dnsIdentityStagingPDNSAdopt    = "pdns_adoption"
+	dnsIdentityStagingPDNSPair     = "pdns_pair_secondary"
+	dnsIdentityStagingBINDTakeover = "bind_takeover"
 )
 
 var errDNSIdentityStagingConflict = errors.New("DNS identity staging authority changed")
@@ -679,6 +680,25 @@ func dnsIdentityStagingKind(
 	}
 	if !pdns.Running && !bind.Running {
 		return dnsIdentityStagingFresh
+	}
+	// A BIND this panel did not install, answering right now, is the R-039
+	// takeover host. Identity staging writes settings and nothing else - no
+	// package, no unit, no configuration - so refusing it here only made the
+	// takeover unreachable behind the very fact it exists to answer. The
+	// engine workflow still proves the rest: the preview offers
+	// adopt_unmanaged for exactly this shape and the agent adopts the server
+	// in place under its own evidence.
+	//
+	// Bu panelin kurmadığı, şu anda yanıt veren bir BIND, R-039 devralma
+	// sunucusudur. Kimlik hazırlama ayarları yazar, başka bir şey yapmaz - ne
+	// paket, ne birim, ne yapılandırma - dolayısıyla burada reddetmek yalnız
+	// devralmayı, var olma sebebi olan olgunun arkasında ulaşılamaz
+	// kılıyordu. Gerisini motor iş akışı yine kanıtlar: önizleme tam bu biçim
+	// için adopt_unmanaged sunar ve agent sunucuyu kendi kanıtıyla yerinde
+	// devralır.
+	if role == transport.DNSTopologyStandalone &&
+		bind.Installed && bind.Running && !bind.Managed && !pdns.Running {
+		return dnsIdentityStagingBINDTakeover
 	}
 	if role == transport.DNSTopologyStandalone &&
 		pdns.Installed && pdns.Running && pdns.Managed && !bind.Running {
@@ -902,7 +922,23 @@ func dnsIdentityStagingPublicationBlocked(
 	query dnsZoneStateQuery,
 	stagingKind string,
 ) (bool, error) {
-	if stagingKind == dnsIdentityStagingFresh {
+	// The takeover host is fresh in the only sense this gate measures: no
+	// engine this panel owns has ever run on it, so no publication of the
+	// panel's zones could have been left mid-flight. The engine answering
+	// today is not ours and has never been handed a zone of ours. Treating its
+	// pending-by-construction zones as an in-flight publication would refuse
+	// identity staging on exactly the host R-039 exists for - R-029's defect,
+	// one shape further along.
+	//
+	// Devralma sunucusu, bu kapının ölçtüğü tek anlamda tazedir: bu panelin
+	// sahip olduğu hiçbir motor onda hiç çalışmamıştır, dolayısıyla panelin
+	// bölgelerinin yayını yarıda kalmış olamaz. Bugün yanıt veren motor bizim
+	// değildir ve ona hiç bölgemiz verilmemiştir. Yapısı gereği bekleyen
+	// bölgelerini uçuştaki bir yayın saymak, kimlik hazırlamayı tam da
+	// R-039'un var olma sebebi olan sunucuda reddederdi - R-029'un kusuru, bir
+	// biçim ötede.
+	if stagingKind == dnsIdentityStagingFresh ||
+		stagingKind == dnsIdentityStagingBINDTakeover {
 		return hasDNSPublicationInFlight(ctx, query)
 	}
 	return hasDNSPublicationPending(ctx, query)

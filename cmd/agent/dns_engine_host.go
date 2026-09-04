@@ -1253,6 +1253,35 @@ func (hostDNSEngineBackend) Switch(
 		}
 		return response, nil
 	}
+	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	// A takeover of a BIND that is answering right now is not this transaction
+	// and must not borrow its proofs. It has its own file (register R-039):
+	// it never stops or starts the unit, so proveBINDTargetNotServing and the
+	// port-53 pre-mutation guard below are neither reached nor relaxed. Only
+	// the panel's takeover manifest can select it, and only when the target is
+	// actually serving; every other manifest stays here, where a running BIND
+	// is refused exactly as it always was.
+	//
+	// Şu anda yanıt veren bir BIND'in devralınması bu işlem değildir ve onun
+	// kanıtlarını ödünç almamalıdır. Kendi dosyası vardır (defter R-039):
+	// birimi hiç durdurmaz ve başlatmaz, dolayısıyla aşağıdaki
+	// proveBINDTargetNotServing ve 53 numaralı bağlantı noktası ön-mutasyon
+	// koruması ne o yola girer ne gevşetilir. Onu yalnız panelin devralma
+	// bildirgesi ve yalnız hedef gerçekten hizmet verirken seçebilir; diğer her
+	// bildirge burada kalır, orada çalışan bir BIND her zamanki gibi
+	// reddedilir.
+	adopting, err := runningBINDAdoptionSelected(
+		ctx, systemctl, manifest, stateExists,
+	)
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if adopting {
+		return adoptRunningBIND(ctx, profile, layout, systemctl, manifest, binding)
+	}
 	if err := verifyDNSEngineSwitchSource(ctx, profile, manifest, state, stateExists); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1272,10 +1301,6 @@ func (hostDNSEngineBackend) Switch(
 		if err == nil {
 			err = errors.New("a DNS engine switch recovery journal requires reconciliation")
 		}
-		return transport.SwitchDNSEngineV1Response{}, err
-	}
-	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
-	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	targetInstallProof, err := proveBINDTargetNotServing(
