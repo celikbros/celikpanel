@@ -656,6 +656,23 @@ func (hostDNSEngineBackend) Readiness(
 		} else {
 			states[0].ForeignOptions = foreignOptions
 		}
+		// Whether this server is configured with views at all, which decides
+		// whether a takeover is possible before it decides anything else
+		// (register R-044). A probe failure is reported as nothing found, like
+		// every other optional evidence here; the takeover then reads the same
+		// files for its own reasons and fails on them there.
+		//
+		// Bu sunucunun hiç view ile yapılandırılıp yapılandırılmadığı; bu, bir
+		// devralmanın mümkün olup olmadığına, başka her şeyden önce karar verir
+		// (defter R-044). Bir yoklama hatası, buradaki diğer her isteğe bağlı
+		// kanıt gibi hiçbir şey bulunmamış olarak bildirilir; devralma sonra
+		// aynı dosyaları kendi sebepleriyle okur ve orada düşer.
+		foreignViews, viewsErr := reportForeignBINDViews(layout)
+		if viewsErr != nil {
+			log.Printf("BIND view probe failed: %v", viewsErr)
+		} else {
+			states[0].ForeignViews = foreignViews
+		}
 	}
 	port53Conflict, err := dnsPort53ConflictCheck(
 		ctx, states[0].Running, states[1].Running,

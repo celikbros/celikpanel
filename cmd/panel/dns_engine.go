@@ -147,6 +147,18 @@ type dnsEngineSwitchPreview struct {
 	// CelikPanel'in koyacağı değer. Yapılandırılmıştır, çünkü tarayıcı onu bir
 	// liste olarak çizer; bir cümle liste olarak okunamazdı (defter R-042).
 	AdoptedDirectives []dnsEngineAdoptedDirective `json:"adopted_directives,omitempty"`
+	// ViewFinding is why a takeover of this server cannot happen at all: its
+	// DNS configuration declares views, or a file that configuration includes
+	// could not be read. It carries the one place to look, because a refusal
+	// the operator cannot act on is the defect the takeover work exists to fix
+	// (register R-044).
+	//
+	// ViewFinding, bu sunucunun devralınmasının neden hiç olamayacağıdır: DNS
+	// yapılandırması view bildiriyordur ya da o yapılandırmanın dahil ettiği bir
+	// dosya okunamamıştır. Bakılacak tek yeri taşır; çünkü operatörün üzerinde
+	// işlem yapamayacağı bir ret, devralma işinin düzeltmek için var olduğu
+	// kusurdur (defter R-044).
+	ViewFinding *dnsEngineViewFinding `json:"view_finding,omitempty"`
 }
 
 type dnsEnginePreviewRequest struct {
@@ -290,7 +302,8 @@ func validateDNSBackendReadiness(
 			runtime.PairReady && (!runtime.Installed || !runtime.Running || !runtime.Managed) ||
 			len(runtime.Unit) > 128 ||
 			strings.ContainsAny(runtime.Unit, "\r\n\x00") ||
-			!validateDNSForeignEngineOptions(runtime) {
+			!validateDNSForeignEngineOptions(runtime) ||
+			!validateDNSForeignEngineViews(runtime) {
 			return nil, false, "", errors.New("DNS backend readiness is internally inconsistent")
 		}
 		result[runtime.Engine] = runtime
@@ -1671,6 +1684,7 @@ func (p *Panel) makeDNSEnginePreview(
 	// direktifi ve satırı, sonradan düşen bir commit yerine üzerinde durduğu
 	// ekranda alır (defter R-042).
 	adoptedDirectives := []dnsEngineAdoptedDirective(nil)
+	viewFinding := (*dnsEngineViewFinding)(nil)
 	if action == dnsEngineActionAdoptUnmanaged {
 		adoptedDirectives = dnsEngineAdoptedDirectives(
 			snapshot.runtime[request.TargetEngine],
@@ -1679,6 +1693,21 @@ func (p *Panel) makeDNSEnginePreview(
 			blockers = addDNSEngineBlocker(
 				blockers, dnsEngineAdoptionOptionsBlocker,
 			)
+		}
+		// A server configured with views cannot be taken over at all yet, and
+		// neither can one whose configuration CelikPanel could not read whole.
+		// This is decided here, with the options list, because both refusals
+		// belong on the same screen at the same moment (register R-044).
+		//
+		// View ile yapılandırılmış bir sunucu henüz hiç devralınamaz;
+		// yapılandırması CelikPanel tarafından bütünüyle okunamayan bir sunucu
+		// da öyle. Buna, seçenek listesiyle birlikte burada karar verilir;
+		// çünkü iki ret de aynı anda aynı ekrana aittir (defter R-044).
+		viewFinding = dnsEngineViewFindingOf(
+			snapshot.runtime[request.TargetEngine],
+		)
+		if code := dnsEngineViewBlocker(viewFinding); code != "" {
+			blockers = addDNSEngineBlocker(blockers, code)
 		}
 	}
 	if !operationBusy {
@@ -1720,6 +1749,7 @@ func (p *Panel) makeDNSEnginePreview(
 			action, hasSource, snapshot.runtime[request.TargetEngine].Running,
 		),
 		AdoptedDirectives: adoptedDirectives,
+		ViewFinding:       viewFinding,
 	}
 	if requiresAck {
 		preview.EstimatedDowntimeSeconds = dnsEngineEstimatedOutage

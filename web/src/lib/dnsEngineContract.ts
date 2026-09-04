@@ -117,6 +117,24 @@ export const DNS_FOREIGN_OPTION_REFUSALS = [
 ] as const;
 export type DNSForeignOptionRefusal = (typeof DNS_FOREIGN_OPTION_REFUSALS)[number];
 
+// Why a takeover of this server cannot happen at all: its DNS configuration
+// declares views, or a file that configuration includes could not be read. BIND
+// lets a view override the settings CelikPanel manages and requires every zone
+// to live inside one, so a server with views is refused before a preview token
+// exists rather than by the configuration check after the work. Pinned for the
+// same reason the refusal list is: the panel can only send what this file can
+// render.
+//
+// Bu sunucunun devralinmasinin neden hic olamayacagi: DNS yapilandirmasi view
+// bildiriyordur ya da o yapilandirmanin dahil ettigi bir dosya okunamamistir.
+// BIND, bir view'in CelikPanel'in yonettigi ayarlari ezmesine izin verir ve bir
+// view varsa her bolgenin bir view icinde olmasini sart kosar; bu yuzden view'i
+// olan bir sunucu, isten sonraki yapilandirma denetimiyle degil, daha bir
+// onizleme belirteci yokken reddedilir. Ret listesiyle ayni sebeple
+// sabitlenmistir: panel yalniz bu dosyanin cizebildigini gonderebilir.
+export const DNS_FOREIGN_VIEW_FINDINGS = ['declared', 'unreadable'] as const;
+export type DNSForeignViewFinding = (typeof DNS_FOREIGN_VIEW_FINDINGS)[number];
+
 export interface DNSEngineAdoptedDirective {
     directive: DNSManagedBINDOptionDirective;
     found: string;
@@ -125,6 +143,19 @@ export interface DNSEngineAdoptedDirective {
     file: string;
     line: number;
     refusal?: DNSForeignOptionRefusal;
+}
+
+// Where to look. For a declared view it is the file and line of the `view`
+// itself; for an unreadable one it is the include statement CelikPanel could
+// not follow, because that is the statement the operator can act on.
+//
+// Nereye bakilacagi. Bildirilmis bir view icin `view`'in kendi dosyasi ve
+// satiri; okunamayan biri icin CelikPanel'in izleyemedigi include deyimi,
+// cunku operatorun uzerinde islem yapabilecegi deyim odur.
+export interface DNSEngineViewFinding {
+    finding: DNSForeignViewFinding;
+    file: string;
+    line: number;
 }
 
 export interface DNSEngineSwitchPreview {
@@ -143,6 +174,7 @@ export interface DNSEngineSwitchPreview {
     blockers: DNSEnginePreviewBlocker[];
     impacts: string[];
     adopted_directives: DNSEngineAdoptedDirective[];
+    view_finding: DNSEngineViewFinding | null;
 }
 
 const engineIDs = new Set<string>(DNS_ENGINE_IDS);
@@ -152,6 +184,7 @@ const topologies = new Set<string>(['unconfigured', 'standalone', 'paired']);
 const previewActions = new Set<string>(DNS_ENGINE_PREVIEW_ACTIONS);
 const managedDirectives = new Set<string>(DNS_MANAGED_BIND_OPTION_DIRECTIVES);
 const directiveRefusals = new Set<string>(DNS_FOREIGN_OPTION_REFUSALS);
+const viewFindings = new Set<string>(DNS_FOREIGN_VIEW_FINDINGS);
 // A directive value is the operator's own configuration text. The agent
 // normalises it to one bounded printable line and the panel refuses anything
 // else, so a value that does not look like that here is a bug upstream, not a
@@ -443,6 +476,43 @@ function decodeAdoptedDirectives(
     return directives;
 }
 
+// The reason a takeover is impossible, decoded as strictly as the difference
+// list beside it. `undefined` means the host found no views and read the whole
+// configuration; anything malformed takes the preview to null rather than
+// letting a refusal the page cannot describe read as "nothing is wrong".
+//
+// Bir devralmanin imkansiz olma sebebi, yanindaki fark listesi kadar kati
+// cozulur. `undefined`, sunucunun hic view bulmadigi ve yapilandirmayi
+// butunuyle okudugu anlamina gelir; bozuk olan her sey onizlemeyi null'a
+// goturur - sayfanin anlatamayacagi bir reddin "bir sey yok" diye okunmasina
+// izin vermek yerine.
+function decodeViewFinding(
+    value: unknown,
+    action: string,
+): DNSEngineViewFinding | null | undefined {
+    if (value === undefined) return null;
+    if (!isRecord(value)
+        || typeof value.finding !== 'string'
+        || !viewFindings.has(value.finding)
+        || typeof value.file !== 'string'
+        || !directiveFilePattern.test(value.file)
+        || !Number.isSafeInteger(value.line)
+        || (value.line as number) < 1
+        // Only a takeover reads somebody else's configuration. A finding on any
+        // other action is describing a server that action does not touch.
+        //
+        // Yalniz bir devralma baskasinin yapilandirmasini okur. Baska bir
+        // eylemdeki bir bulgu, o eylemin dokunmadigi bir sunucuyu anlatiyordur.
+        || action !== 'adopt_unmanaged') {
+        return undefined;
+    }
+    return {
+        finding: value.finding as DNSForeignViewFinding,
+        file: value.file,
+        line: value.line as number,
+    };
+}
+
 export function decodeDNSEngineSwitchPreview(
     value: unknown,
     source: DNSEngineID | null,
@@ -458,7 +528,6 @@ export function decodeDNSEngineSwitchPreview(
     const requiresInterruption = (source !== null || reconfigure) && !reinstall;
     if (!isRecord(value)
         || typeof value.preview_token !== 'string'
-        || !operationIDPattern.test(value.preview_token)
         || value.source_engine !== source
         || value.target_engine !== target
         || value.expected_revision !== revision
@@ -504,12 +573,36 @@ export function decodeDNSEngineSwitchPreview(
         // allow-listed code or a safe generic fallback reaches the page.
         blockers.push({ code: item.code });
     }
+    // A blocked preview carries no token, and that is the panel's own rule: a
+    // token it will never accept would send the operator looking for a race
+    // that never happened, while the named blockers are already on the screen.
+    // Requiring a token here regardless meant every blocked preview decoded to
+    // null and the dialog said only that the change could not be verified - the
+    // R-041 failure, hiding the very refusal the panel had just taken the
+    // trouble to name. So the rule is stated exactly: blocked means no token,
+    // unblocked means a real one, and neither may be the other.
+    //
+    // Engellenmis bir onizleme belirtec tasimaz ve bu, panelin kendi kuralidir:
+    // asla kabul etmeyecegi bir belirtec, operatoru hic yasanmamis bir yarisi
+    // aramaya gonderirdi; oysa adi konmus engelleyiciler zaten ekrandadir. Yine
+    // de burada belirtec sart kosmak, her engellenmis onizlemenin null'a
+    // cozulmesine ve diyalogun yalnizca degisikligin dogrulanamadigini
+    // soylemesine yol aciyordu - panelin adlandirmak icin zahmete girdigi reddi
+    // gizleyen R-041 hatasi. Kural bu yuzden tam olarak yazilir: engelli ise
+    // belirtec yok, engelsiz ise gercek bir belirtec, ve biri digeri olamaz.
+    if (blockers.length > 0
+        ? value.preview_token !== ''
+        : !operationIDPattern.test(value.preview_token)) {
+        return null;
+    }
     const impacts = decodeCodeList(value.impacts);
     if (impacts === null || impacts.length === 0) return null;
     const adoptedDirectives = decodeAdoptedDirectives(
         value.adopted_directives, value.action,
     );
     if (adoptedDirectives === null) return null;
+    const viewFinding = decodeViewFinding(value.view_finding, value.action);
+    if (viewFinding === undefined) return null;
 
     return {
         preview_token: value.preview_token,
@@ -527,5 +620,6 @@ export function decodeDNSEngineSwitchPreview(
         blockers,
         impacts,
         adopted_directives: adoptedDirectives,
+        view_finding: viewFinding,
     };
 }

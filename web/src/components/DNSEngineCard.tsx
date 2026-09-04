@@ -176,6 +176,8 @@ const knownBlockerKeys = {
     target_already_active: 'dnsEngine.blocker.alreadyActive',
     stale_revision: 'dnsEngine.blocker.staleRevision',
     dns_options_unadoptable: 'dnsEngine.blocker.optionsUnadoptable',
+    dns_views_unadoptable: 'dnsEngine.blocker.viewsUnadoptable',
+    dns_config_unreadable: 'dnsEngine.blocker.configUnreadable',
 } as const;
 
 const knownImpactKeys = {
@@ -1243,6 +1245,18 @@ function DNSEngineReviewDialog({
     const refusedDirectives = adoptedDirectives.filter(
         (directive) => directive.refusal !== undefined,
     );
+    // Why the takeover cannot happen at all on this server: views, which BIND
+    // lets override the settings CelikPanel manages, or a configuration
+    // CelikPanel could not read whole. It is shown beside the refused
+    // directives, for the same reason - a blocker hides the takeover panel, and
+    // this is the panel the operator needs to read (register R-044).
+    //
+    // Devralmanin bu sunucuda neden hic olamayacagi: BIND'in CelikPanel'in
+    // yonettigi ayarlari ezmesine izin verdigi view'ler ya da CelikPanel'in
+    // butunuyle okuyamadigi bir yapilandirma. Reddedilen direktiflerin yaninda,
+    // ayni sebeple gosterilir - bir engelleyici devralma panelini gizler ve
+    // operatorun okumasi gereken panel budur (defter R-044).
+    const viewFinding = preview?.view_finding ?? null;
     const confirmationDisabled = review.loading
         || review.committing
         || review.requestID === null
@@ -1368,6 +1382,21 @@ function DNSEngineReviewDialog({
                                         </li>
                                     ))}
                                 </ul>
+                            </div>
+                        )}
+
+                        {viewFinding !== null && (
+                            <div className="mt-5 rounded-xl border border-danger/35 bg-danger/5 p-4" role="alert">
+                                <h4 className="flex items-center gap-2 text-sm font-semibold text-fg">
+                                    <ShieldAlert className="h-4 w-4 text-danger" />
+                                    {et('dnsEngine.adoption.viewsTitle')}
+                                </h4>
+                                <p className="mt-2 pl-6 text-sm leading-5 text-fg-muted">
+                                    {et(
+                                        `dnsEngine.adoption.views.${viewFinding.finding}` as DNSEngineCopyKey,
+                                        { file: viewFinding.file, line: viewFinding.line },
+                                    )}
+                                </p>
                             </div>
                         )}
 
