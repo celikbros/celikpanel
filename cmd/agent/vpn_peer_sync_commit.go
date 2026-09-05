@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +26,215 @@ const (
 	vpnPeerSyncConfigMaxSize   = 1 << 20
 	vpnPeerSyncStageMaxCount   = 32
 )
+
+// R-055. A committed VPN peer plan that cannot be completed ends here. The
+// phase is deliberately outside the commit-receipt namespace: the ledger
+// invariant ties an intent receipt to an active job and a published receipt to
+// a succeeded one, and this job is neither - it is finished, failed, and the
+// host is free.
+// Tamamlanamayan, taahhut edilmis bir VPN peer plani burada biter. Asama
+// bilerek taahhut-makbuzu ad alaninin disindadir.
+const vpnPeerSyncFailedPhase = "vpn_peer_sync_failed"
+
+const (
+	vpnPeerSyncFailedUntouchedCode = "vpn_peer_sync_failed_before_host_change"
+	vpnPeerSyncFailedRestoredCode  = "vpn_peer_sync_failed_host_restored"
+)
+
+// What a convergence leaves behind on the host is judged by the one rule in
+// host_mutation_outcome.go. These names stay because this path's call sites
+// read in this path's vocabulary - they are the same type and the same four
+// values, not a second set.
+// Bir yakinsamanin makinede biraktigi durum, host_mutation_outcome.go'daki tek
+// kuralla yargilanir. Bu adlar bu yolun sozlugu icindir; ayni turdur.
+type vpnPeerSyncHostOutcome = hostMutationOutcome
+
+const (
+	// vpnPeerSyncHostUntouched: the failure happened before any host change.
+	vpnPeerSyncHostUntouched = hostMutationUntouched
+	// vpnPeerSyncHostRestored: the live interface was re-synchronised from
+	// the exact configuration this attempt found on disk, and that durable
+	// configuration was read back and still matches it. Both halves are read
+	// from the host; neither is assumed.
+	vpnPeerSyncHostRestored = hostMutationRestored
+	// vpnPeerSyncHostConverged: the committed peer set is published.
+	vpnPeerSyncHostConverged = hostMutationConverged
+	// vpnPeerSyncHostAmbiguous: the live interface or the durable
+	// configuration could not be proved back where this attempt found it.
+	// This is the only outcome that may hold the ledger.
+	vpnPeerSyncHostAmbiguous = hostMutationAmbiguous
+)
+
+// What a clean failure does NOT undo, said out loud. The peer set on this
+// server is the one it already had - which is not the same as saying nothing
+// is wrong with it, and an operator reading this has to be told which.
+// Temiz bir basarisizligin geri ALMADIGI sey, acikca soylenir.
+const vpnPeerSyncResidueSentence = "The VPN was not otherwise changed: this " +
+	"server keeps the peer list it already had, and the WireGuard service is " +
+	"exactly as installed, or not installed, as it was before this request."
+
+// And the one thing a recovery cannot know. Each attempt puts back only what
+// it itself changed; an attempt that was killed never got to. So a failure
+// reported after a restart may sit on a host an earlier attempt left with a
+// live interface that does not match the saved configuration.
+// Ve bir kurtarmanin bilemeyecegi tek sey.
+const vpnPeerSyncInterruptedAttemptSentence = "An earlier attempt was " +
+	"interrupted before it could put back its own work, so the peers on the " +
+	"running WireGuard interface may not match the saved VPN configuration on " +
+	"this server; applying the peer list again once this server can load " +
+	"WireGuard converges it."
+
+// vpnPeerSyncFailureVoice is this path's words for the two failures it may end
+// on. The shape and the order of the message, and the rule about which
+// outcomes are offered one at all, are shared.
+// vpnPeerSyncFailureVoice, bu yolun bitebilecegi iki basarisizlik icin kendi
+// sozleridir; bicim, sira ve kural paylasilir.
+var vpnPeerSyncFailureVoice = hostMutationFailureVoice{
+	untouchedCode: vpnPeerSyncFailedUntouchedCode,
+	restoredCode:  vpnPeerSyncFailedRestoredCode,
+	untouchedLead: "The committed VPN peer change was abandoned without changing " +
+		"anything on this server.",
+	restoredLead: "The committed VPN peer change could not be applied. Everything " +
+		"this attempt changed was put back and proved: the saved VPN " +
+		"configuration on this server was read back exactly as this attempt " +
+		"found it, and the running WireGuard interface, where one was running, " +
+		"was synchronised back to it.",
+	residue:     vpnPeerSyncResidueSentence,
+	interrupted: vpnPeerSyncInterruptedAttemptSentence,
+}
+
+// vpnPeerSyncCleanFailureText names the terminal failure. afterRestart says
+// whether startup recovery is speaking, which is the only case that has to
+// warn about an interrupted predecessor it could not undo.
+// vpnPeerSyncCleanFailureText, kalici basarisizligi adlandirir.
+func vpnPeerSyncCleanFailureText(
+	outcome vpnPeerSyncHostOutcome,
+	cause error,
+	afterRestart bool,
+) (code string, message string, clean bool) {
+	return vpnPeerSyncFailureVoice.cleanFailureText(outcome, cause, afterRestart)
+}
+
+// proveVPNPeerSyncDurableConfig is this path's evidence about the durable half
+// of the host: the configuration that is on disk right now is read back and
+// compared to the exact bytes this attempt found there. A rollback that only
+// wrote is not a rollback that is proved.
+// proveVPNPeerSyncDurableConfig, makinenin kalici yarisi hakkindaki kanittir:
+// diskteki yapilandirma geri okunur ve bu denemenin buldugu baytlarla
+// karsilastirilir.
+func proveVPNPeerSyncDurableConfig(found []byte) error {
+	actual, err := readSecureVPNConfig()
+	if err != nil {
+		return fmt.Errorf("read back the VPN configuration after rollback: %w", err)
+	}
+	if !bytes.Equal(actual, found) {
+		return errors.New(
+			"the VPN configuration on this server does not match what this attempt found",
+		)
+	}
+	return nil
+}
+
+// vpnPeerSyncRollbackOutcome judges what a failed attempt left on the host.
+// The live rollback has to have succeeded and the durable configuration has to
+// read back as this attempt found it; anything else is ambiguous and still
+// holds the ledger. hostContacted separates a plan that never reached the
+// interface at all from one that put it back.
+//
+// vpnPeerSyncRollbackOutcome, basarisiz bir denemenin makinede ne biraktigina
+// karar verir. Canli geri alma basarili olmali ve kalici yapilandirma bu
+// denemenin buldugu gibi geri okunmalidir; digeri belirsizdir.
+func vpnPeerSyncRollbackOutcome(
+	found []byte,
+	hostContacted bool,
+	rollbackErr error,
+) (vpnPeerSyncHostOutcome, error) {
+	if rollbackErr != nil {
+		return vpnPeerSyncHostAmbiguous, rollbackErr
+	}
+	if err := proveVPNPeerSyncDurableConfig(found); err != nil {
+		return vpnPeerSyncHostAmbiguous, err
+	}
+	if !hostContacted {
+		return vpnPeerSyncHostUntouched, nil
+	}
+	return vpnPeerSyncHostRestored, nil
+}
+
+// failStandaloneVPNPeerSync ends a committed plan that cannot succeed, with
+// its reason written durably and the ledger released. It is the mirror of the
+// terminal success in commitStandaloneVPNPeerSyncStep, and the only door out
+// of a failed attempt other than poison.
+// failStandaloneVPNPeerSync, basarili olamayacak bir plani nedeni kalici olarak
+// yazilmis ve defter serbest birakilmis halde bitirir.
+func failStandaloneVPNPeerSync(ctx context.Context, code, message string) error {
+	if ctx == nil {
+		return errors.New("invalid VPN peer sync failure request")
+	}
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
+		return errors.New("VPN peer sync failure requires a durable execution tracker")
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.healthErrorLocked(); err != nil {
+		return err
+	}
+	if m.active != runtime || runtime.job == nil || runtime.steps != 1 ||
+		runtime.job.WorkerPID != 0 || !activeDirectVPNPeerSyncJob(runtime.job) {
+		return errors.New("VPN peer sync failure lost the active mutation step")
+	}
+	runtime.vpnPeerSyncPublishedPhase = ""
+	if err := m.finishRuntimeTerminalLocked(
+		runtime, false, vpnPeerSyncFailedPhase, code, message,
+	); err != nil {
+		if m.active == runtime {
+			return m.poisonLocked(fmt.Errorf(
+				"persist terminal VPN peer sync failure: %w", err,
+			))
+		}
+		return err
+	}
+	return nil
+}
+
+// endVPNPeerSyncAttempt is the one door a failed live attempt goes through.
+// It asks the shared rule whether this host may be handed back, finishes the
+// plan cleanly when it may, and poisons when it may not - so a VPN request
+// this machine cannot serve cannot hold every other mutation on it, and a host
+// that may be half changed still does.
+//
+// endVPNPeerSyncAttempt, basarisiz bir canli denemenin gectigi tek kapidir.
+// Makinenin geri verilip verilemeyecegini paylasilan kurala sorar.
+func endVPNPeerSyncAttempt(
+	ctx context.Context,
+	found []byte,
+	hostContacted bool,
+	cause error,
+	rollbackErr error,
+	poisonMessage string,
+) string {
+	outcome, proofErr := vpnPeerSyncRollbackOutcome(found, hostContacted, rollbackErr)
+	reason := cause
+	if proofErr != nil {
+		reason = errors.Join(cause, proofErr)
+	}
+	if code, message, clean := vpnPeerSyncCleanFailureText(outcome, reason, false); clean {
+		if failErr := failStandaloneVPNPeerSync(ctx, code, message); failErr != nil {
+			log.Printf(
+				"VPN peer sync could not be failed cleanly: %v; cause: %v",
+				failErr, reason,
+			)
+			return poisonMessage
+		}
+		log.Printf("VPN peer sync failed cleanly and released the ledger: %v", reason)
+		return message
+	}
+	poisonErr := poisonVPNPeerSyncRollback(ctx, reason)
+	log.Printf("VPN peer sync left an ambiguous host: %v; poison: %v", reason, poisonErr)
+	return poisonMessage
+}
 
 func formatVPNPeerSyncCommitPhase(state, requestID, qualifier string) (string, error) {
 	if (state != vpnPeerSyncCommitIntent && state != vpnPeerSyncCommitPublished) ||
@@ -330,71 +541,109 @@ func removeLegacyVPNPeerSyncRecoveryStages() error {
 // reconcilePersistedVPNPeerSyncHost makes the durable wg0.conf authoritative
 // again after an agent crash. The atomic target rename is the only commit
 // point: an intent never authorizes forward publication of a leftover stage.
+// It reports what it left on the host beside whether it succeeded, because
+// only the first answer may decide whether a failure is allowed to be
+// terminal - see host_mutation_outcome.go.
+// Basarili olup olmadiginin yaninda makinede ne biraktigini da bildirir.
 func reconcilePersistedVPNPeerSyncHost(
 	ctx context.Context,
 	requestID, qualifier string,
-) (success bool, err error) {
+) (success bool, outcome vpnPeerSyncHostOutcome, err error) {
 	diskConfig, err := readSecureVPNConfig()
 	if err != nil {
-		return false, fmt.Errorf("read VPN recovery target: %w", err)
+		// The durable configuration cannot even be read, so nothing here can
+		// say what is on this host. Fail closed.
+		// Kalici yapilandirma okunamiyor; hicbir sey makinenin durumunu
+		// soyleyemez. Kapali-basarisiz.
+		return false, vpnPeerSyncHostAmbiguous, fmt.Errorf("read VPN recovery target: %w", err)
 	}
 	targetRequestID, targetQualifier, markerFound, err := parseVPNPeerSyncReceiptMarker(diskConfig)
 	if err != nil {
-		return false, err
+		return false, vpnPeerSyncHostAmbiguous, err
 	}
 	targetPublished := markerFound && targetRequestID == requestID && targetQualifier == qualifier
 	if targetPublished {
 		if err := syncAtomicParentDirectory(filepath.Dir(wgConfPath())); err != nil {
-			return false, fmt.Errorf("stabilize published VPN recovery target: %w", err)
+			return false, vpnPeerSyncHostAmbiguous, fmt.Errorf(
+				"stabilize published VPN recovery target: %w", err,
+			)
 		}
 	} else {
 		stage, err := findVPNPeerSyncRecoveryStage(requestID, qualifier)
 		if err != nil {
-			return false, err
+			return false, vpnPeerSyncHostAmbiguous, err
 		}
 		if stage != "" {
 			if removeErr := removeVPNPeerSyncRecoveryStage(stage); removeErr != nil {
-				return false, fmt.Errorf("remove uncommitted VPN peer recovery stage: %w", removeErr)
+				return false, vpnPeerSyncHostAmbiguous, fmt.Errorf(
+					"remove uncommitted VPN peer recovery stage: %w", removeErr,
+				)
 			}
 		}
 	}
 
 	interfaceUp, err := probeWireGuardInterface(ctx)
 	if err != nil {
-		return false, fmt.Errorf("probe VPN interface during recovery: %w", err)
+		// R-055. This is the whole point of classifying a recovery. Asking the
+		// host which WireGuard interfaces exist changes nothing: the durable
+		// configuration was read and not written, and an uncommitted stage
+		// that was removed was never authoritative for anything. A recovery
+		// that cannot get an answer here used to poison the ledger and be
+		// re-attempted at every agent start, which is how one VPN request took
+		// a whole control plane with it. It is now a plan that cannot be
+		// completed on a host it provably did not change.
+		// R-055. Makineye hangi WireGuard arayuzlerinin var oldugunu sormak
+		// hicbir seyi degistirmez. Burada yanit alamayan bir kurtarma eskiden
+		// defteri zehirler ve her agent baslangicinda yeniden denenirdi.
+		return false, vpnPeerSyncHostUntouched, fmt.Errorf(
+			"probe VPN interface during recovery: %w", err,
+		)
 	}
 	if interfaceUp {
 		if err := applyWireGuardBytes(ctx, diskConfig); err != nil {
-			return false, fmt.Errorf("reconcile live VPN interface from durable config: %w", err)
+			// The live interface was being synchronised to the durable
+			// configuration and could not be. It may be half applied, so it
+			// stays ambiguous and still holds the lock.
+			// Canli arayuz yarim uygulanmis olabilir; belirsiz kalir.
+			return false, vpnPeerSyncHostAmbiguous, fmt.Errorf(
+				"reconcile live VPN interface from durable config: %w", err,
+			)
 		}
 	}
-	return targetPublished, nil
+	return targetPublished, vpnPeerSyncHostConverged, nil
 }
 
-func reconcilePersistedLegacyVPNPeerSyncHost(ctx context.Context) error {
+func reconcilePersistedLegacyVPNPeerSyncHost(ctx context.Context) (
+	vpnPeerSyncHostOutcome,
+	error,
+) {
 	diskConfig, err := readSecureVPNConfig()
 	if err != nil {
-		return fmt.Errorf("read legacy VPN recovery target: %w", err)
+		return vpnPeerSyncHostAmbiguous, fmt.Errorf("read legacy VPN recovery target: %w", err)
 	}
 	// A valid receipt may belong to an earlier completed bound update, but it
 	// can never turn an unbound legacy job into success. Malformed receipts are
 	// still ambiguous and fail closed.
 	if _, _, _, err := parseVPNPeerSyncReceiptMarker(diskConfig); err != nil {
-		return err
+		return vpnPeerSyncHostAmbiguous, err
 	}
 	if err := removeLegacyVPNPeerSyncRecoveryStages(); err != nil {
-		return err
+		return vpnPeerSyncHostAmbiguous, err
 	}
 	interfaceUp, err := probeWireGuardInterface(ctx)
 	if err != nil {
-		return fmt.Errorf("probe VPN interface during legacy recovery: %w", err)
+		return vpnPeerSyncHostUntouched, fmt.Errorf(
+			"probe VPN interface during legacy recovery: %w", err,
+		)
 	}
 	if interfaceUp {
 		if err := applyWireGuardBytes(ctx, diskConfig); err != nil {
-			return fmt.Errorf("reconcile legacy live VPN interface from durable config: %w", err)
+			return vpnPeerSyncHostAmbiguous, fmt.Errorf(
+				"reconcile legacy live VPN interface from durable config: %w", err,
+			)
 		}
 	}
-	return nil
+	return vpnPeerSyncHostConverged, nil
 }
 
 // recoverPersistedVPNPeerSyncLocked handles every active direct peer-sync job
@@ -470,15 +719,16 @@ func (m *serviceMutationManager) recoverPersistedVPNPeerSyncLocked(
 	)
 	m.mu.Unlock()
 	success := false
+	recoveryOutcome := vpnPeerSyncHostConverged
 	var recoveryErr error
 	if bound {
-		success, recoveryErr = reconcilePersistedVPNPeerSyncHost(
+		success, recoveryOutcome, recoveryErr = reconcilePersistedVPNPeerSyncHost(
 			recoveryCtx,
 			runtime.job.RequestID,
 			runtime.job.PackageName,
 		)
 	} else {
-		recoveryErr = reconcilePersistedLegacyVPNPeerSyncHost(recoveryCtx)
+		recoveryOutcome, recoveryErr = reconcilePersistedLegacyVPNPeerSyncHost(recoveryCtx)
 	}
 	m.mu.Lock()
 	runtime.steps = 0
@@ -486,6 +736,36 @@ func (m *serviceMutationManager) recoverPersistedVPNPeerSyncLocked(
 	runtime.stepMu.Unlock()
 	m.mu.Lock()
 	if recoveryErr != nil {
+		// R-055. Re-attempting a plan this host cannot serve is how one
+		// unfinishable step took a whole control plane with it (R-046, then
+		// R-054, then here): the same call failed at every start and the
+		// ledger stayed held. A plan the recovery cannot complete, on a host
+		// the recovery proved it left where it found it, is finished as failed
+		// with its reason written durably, and the host becomes mutable again.
+		// Everything else - a durable configuration that cannot be read, a
+		// live interface that may be half synchronised - still poisons and
+		// still keeps the lock.
+		// R-055. Bu makinenin karsilayamayacagi bir plani tekrar denemek,
+		// bitirilemeyen tek bir adimin butun kontrol duzlemini goturme
+		// bicimiydi.
+		code, message, clean := vpnPeerSyncCleanFailureText(
+			recoveryOutcome, recoveryErr, true,
+		)
+		if clean {
+			log.Printf(
+				"Committed VPN peer plan failed cleanly during startup recovery: %v",
+				recoveryErr,
+			)
+			runtime.vpnPeerSyncPublishedPhase = ""
+			if finishErr := m.finishRuntimeTerminalLocked(
+				runtime, false, vpnPeerSyncFailedPhase, code, message,
+			); finishErr != nil {
+				return true, m.poisonLocked(fmt.Errorf(
+					"persist recovered VPN peer sync failure: %w", finishErr,
+				))
+			}
+			return true, nil
+		}
 		return true, m.poisonLocked(recoveryErr)
 	}
 	if success {

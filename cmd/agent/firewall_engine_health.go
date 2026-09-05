@@ -219,22 +219,16 @@ func describeFirewallEngineFailure(
 	err error,
 ) (firewallEngineFault, string) {
 	fault := classifyFirewallEngineFault(out, err)
-	detail := firewallCommandDiagnostic(out, err)
-	if detail == "" {
-		detail = "unknown"
-	}
 	// The operator's sentence goes first and the command's own words follow it
-	// in brackets. Order matters: this string is carried as a failure reason
-	// that is bounded before it is recorded, and nft's diagnostic is long
-	// enough to push everything after it past the limit. What may be lost is
-	// the diagnostic, never the one instruction the operator has to act on.
+	// in brackets. That ordering rule is shared, in host_mutation_outcome.go:
+	// it was learned here, and R-055 needed it a second time on the VPN path.
 	// Operatorun cumlesi once, komutun kendi sozleri parantez icinde sonra
-	// gelir. Sira onemlidir: bu dize kaydedilmeden once sinirlanir ve nft'nin
-	// teshis metni, ardindaki her seyi sinirin disina itecek kadar uzundur.
-	if sentence := firewallEngineFaultSentence(fault); sentence != "" {
-		return fault, sentence + " (" + prefix + ": " + detail + ")"
-	}
-	return fault, prefix + ": " + detail
+	// gelir. Bu sira kurali paylasilir.
+	return fault, operatorFirstFailureSentence(
+		firewallEngineFaultSentence(fault),
+		prefix,
+		firewallCommandDiagnostic(out, err),
+	)
 }
 
 // firewallEngineError is an nft failure that carries its classification, so a
