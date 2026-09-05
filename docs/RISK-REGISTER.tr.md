@@ -92,7 +92,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-051 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE KANITLANDI / SINIF KAPANDI | Kayıtlı bir sunucuda veritabanı ya da kullanıcı oluşturmak hiç başarılamıyordu; aynı kusur, rakamla başlayan alan adları için alan adı yolunda ve WordPress kurulumunda da duruyordu |
 | R-052 | Orta | DÜZELTİLDİ VE GERÇEK VM'DE KANITLANDI | Geri yüklenen sunucu yeniden başlatılana kadar güvenlik duvarsız: kural seti dosya olarak yerleştiriliyor ama onu kimse yüklemiyor ve yükleyecek birim o açılıştaki sırasını çoktan geçmiş oluyor |
 | R-053 | Düşük | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin az önce kurduğu bir motorda veritabanı sunucusu kaydı başarılamıyor: ürün kök parolasını saklıyor ama hiç ayarlamıyor; operatörün önce panel dışında parola koyması gerekiyor |
-| R-054 | Yüksek | GERÇEK ARCH VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Arch'ta kurulum çalışan çekirdeği yükseltiyor ve yeniden başlatmadan hiç söz etmiyor; bu yüzden ilk güvenlik duvarı ya da VPN işlemi modülünü yükleyemiyor - bir sunucuda o hata, makine yeniden başlatılana dek defteri zehirledi |
+| R-054 | Yüksek | DÜZELTİLDİ VE GERÇEK ARCH VM'DE KANITLANDI / VPN YOLU R-055 | Arch'ta kurulum çalışan çekirdeği yükseltiyor ve yeniden başlatmadan hiç söz etmiyor; bu yüzden ilk güvenlik duvarı ya da VPN işlemi modülünü yükleyemiyor - bir sunucuda o hata, makine yeniden başlatılana dek defteri zehirledi |
+| R-055 | Yüksek | GERÇEK ARCH VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Güvenlik duvarı yolunun az önce kurtulduğu açık VPN yolunda duruyor: yüklenemeyen bir WireGuard modülü uygulamayı düşürüyor ve sunucuyu kilitliyor; güvenlik duvarı için yazılan düzeltme oraya uygulanmadı |
+| R-056 | Düşük | GERÇEK ARCH VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Her taze Arch kurulumunda iki posta başlangıç işi, hiçbir şeyi adlandırmayan bir mesajla düşüyor |
 
 ## Ayrıntılı riskler
 
@@ -2236,6 +2238,83 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   değiştirdikten sonra sessizce bitmeyi reddediyor ya da böyle bir kurulumdan
   sonraki ilk güvenlik duvarı etkinleştirmesi, yeniden başlatmayı adlandıran
   bir cümleyle düşüyor ve sunucuyu işlem yapabilir bırakıyor.
+- 5 Eylül 2026'da iki yarı da düzeltildi.
+  - Saptama Arch'a özel bir yama değil: çalışan çekirdeğin sürümünü okuyor ve
+    onun modül ağacı diskte yokken başka bir ağacın olup olmadığını soruyor;
+    çalışan sistemin altından çekirdeğin değiştirilmesi her yerde böyle
+    görünür. Konteyner ya da modülsüz çekirdek ikisine de girmiyor, gerçek bir
+    konukta doğrulandı. Aileye özel denetimler daha yumuşak katman: modüller
+    yerinde, makine yalnızca sahip olduğundan eski.
+  - Kurulum reddetmek yerine bitiyor ve gerekçe kayıtlı: o noktada kurulum
+    tamamlanmış ve doğrudur, tamamlanma işaretini herkese açık önyükleyici
+    "bitti mi düştü mü" diye okur, kurulumu yeniden koşturmak çekirdeği geri
+    getirmez ve yeniden başlatma gerektirecek hiçbir şey açılmamıştır. Bunu üç
+    kez söylüyor: saptandığı yerde, yoksa kafa karıştırıcı biçimde düşecek
+    adımdan önce ve en son, en görünür blok olarak.
+  - Güvenlik duvarı commit yolu artık posta yoluna verilene sahip: bir planı
+    yalnız iki sonuç bitirebilir - hiçbir şeye dokunulmadı ya da değiştirdiği
+    her şey geri kondu ve kanıtlandı. Motor, kalıcı niyet oluşmadan önce
+    yoklanıyor; yani olağan ret defteri hiç almıyor. Canlı denemeden sonra bir
+    hata ancak yapısal bir kanıtla "geri yüklendi" sayılabiliyor: çalışan
+    çekirdeğin modül ağacı yok, yani çekirdek hiçbir şey kabul etmedi. nft'nin
+    çekirdek kokan bir şey söylemesi sebebi adlandırır ama hiçbir şeyi serbest
+    bırakmaz. Yarı uygulanmış kural seti, kanıtlanamayan geri yükleme ve
+    doğrulama uyuşmazlığı hâlâ zehirliyor ve kilidi tutuyor.
+  - Operatör 500 değil sebebi görüyor: sınıflandırıcı, eski çağrının attığı
+    stderr'i geri alıyor - günlüğün yalnız "exit status 1" demesinin sebebi
+    buydu - ve teknik ayrıntıdan önce ne yapılacağını yazıyor; çünkü ilk canlı
+    koşu sebebi kırpıp asıl cümleyi düşürmüştü.
+- Gerçek bir Arch makinesinde kanıtlandı: kurulum yeniden başlatma uyarısıyla
+  bitiyor; 500 dönen istek artık ne yapılacağıyla başlayan 409 dönüyor, defter
+  serbest ve sebep, agent yeniden başlatıldıktan ve ilgisiz bir işlem kirayı
+  alıp bıraktıktan sonra da yerinde; yeniden başlatmadan sonra aynı istek 200
+  dönüyor.
+- Gizlenmeyip söylenen: kalıcılığı yazdıktan sonra hataya çarpan bir kapatma
+  planı hâlâ belirsiz bitiyor ve hâlâ zehirliyor; çünkü kapatma günlüğü geri
+  yüklemeyi kanıtlayacak önceki anlık görüntüyü taşımıyor - bunu düzeltmek
+  mevcut bir kapalı-hata kuralını gevşetmek demek ve kendi başına ele
+  alınmalı. VPN yolunda aynı açık var ve o R-055.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-055 - VPN yolu hâlâ yüklenemeyen modülde kilitleniyor
+
+- Kanıt: 5 Eylül 2026, R-018 ve R-054 için kurulan Arch makinelerinde.
+  Kurulumun ön hazırlık adımının çalışan çekirdeğini değiştirdiği bir
+  sunucuda `modprobe wireguard`, tıpkı `nft` gibi düşüyor. Güvenlik duvarı
+  yoluna temiz bir düşüş ve adlandırılmış bir sebep verildi;
+  `vpn_peer_sync_commit.go`'ya dokunulmadı. Yani böyle bir sunucuda VPN
+  uygulaması, güvenlik duvarının eskiden gittiği yola gidiyor:
+  sınıflandırılamayan bir hata, kirayı tutan bir defter ve biri müdahale
+  edene kadar reddedilen her işlem.
+- Bu, ürünün artık iki kez düzelttiği aynı kusur - bir kez posta için
+  (R-046), bir kez güvenlik duvarı için (R-054) - ve üçüncü bir yolda üçüncü
+  kez bulunması açıkça şunu söylüyor: bu biçim her commit yoluna ayrı ayrı
+  değil, tek bir yere ait. Bunu düzeltecek kişi, sonuç sınıflandırmasının ve
+  temiz sonlu düşüşün üç yoldan çıkarılıp ortaklaştırılıp
+  ortaklaştırılamayacağını sormalı.
+- Gerekeni: aynı iki sonuç, bir hatanın "geri yüklendi" sayılabilmesi için
+  aynı yapısal kanıt, genel bir hata yerine operatöre ulaşan aynı sebep;
+  uyarı yarısını kurulumun yeniden başlatma bildirimi zaten karşılıyor.
+- Çıkış ölçütü: çekirdeği değiştirilmiş ve yeniden başlatılmamış bir
+  sunucuda VPN uygulaması, yeniden başlatmayı adlandıran bir cümleyle
+  düşüyor, sunucuyu işlem yapabilir bırakıyor ve sebep agent yeniden
+  başlatmayı aşıyor.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-056 - Her taze Arch kurulumunda iki posta işi düşüyor
+
+- Kanıt: 5 Eylül 2026, R-054 çalışması için yapılan her taze Arch kurulumunun
+  defterinde görünüyor: iki `mail_filter_wire` başlangıç işi
+  `The privileged host operation did not complete` ile düşüyor. Sonlular ve
+  hiçbir şey tutmuyorlar, yani sunucuyu kilitlemiyorlar - ama henüz kimsenin
+  yapılandırmadığı bir makinenin defterindeler ve mesaj ne denendiğini ne de
+  neden durduğunu söylüyor.
+- Etki: yepyeni bir sunucuya bakan operatör iki hata görüyor ve kurulumunun
+  bozuk olup olmadığını anlayamıyor. İşler zararsız olsa bile bedeli bu.
+- Gerekeni: posta kurulu olmayan bir sunucuda bu işlemin hiç koşup
+  koşmaması gerektiğini saptamak ve ya zamanlamamak ya da ne bulduğunu
+  söyletmek. Hiçbir şeyi adlandırmayan bir mesaj, işten bağımsız olarak
+  kusurdur.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

@@ -91,7 +91,9 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-051 | Critical | FIXED AND PROVEN ON A REAL VM / THE CLASS IS CLOSED | Creating a database or a database user could never succeed on a registered server, and the same fault sat on the domain path for a digit-leading domain and in the WordPress installer |
 | R-052 | Medium | FIXED AND PROVEN ON A REAL VM | A restored host is not firewalled until it reboots: the ruleset is placed as a file but nothing loads it, and the unit that would have has already passed its boot slot |
 | R-053 | Low | FOUND ON A REAL VM / NOT YET FIXED | Registering a database server cannot succeed on an engine the panel just installed: the product stores a root password but never sets one, so the operator has to set it outside the panel first |
-| R-054 | High | FOUND ON A REAL ARCH VM / NOT YET FIXED | Installing on Arch upgrades the running kernel and says nothing about a reboot, so the first firewall or VPN action fails to load its modules - and on one host that failure poisoned the ledger until the machine was rebooted |
+| R-054 | High | FIXED AND PROVEN ON A REAL ARCH VM / THE VPN PATH IS R-055 | Installing on Arch upgrades the running kernel and says nothing about a reboot, so the first firewall or VPN action fails to load its modules - and on one host that failure poisoned the ledger until the machine was rebooted |
+| R-055 | High | FOUND ON A REAL ARCH VM / NOT YET FIXED | The VPN path has the exposure the firewall path just lost: a WireGuard module that cannot load fails an apply that then wedges the host, and the fix that was written for the firewall was not applied there |
+| R-056 | Low | FOUND ON A REAL ARCH VM / NOT YET FIXED | Two mail startup jobs fail on every fresh Arch install with a message that names nothing |
 
 ## Detailed risks
 
@@ -2261,6 +2263,84 @@ or executed as-is. There are no open pull requests at this baseline.
   quietly after replacing the running kernel, or the first firewall enable
   after such an install fails with a sentence naming the reboot and leaves the
   host mutable.
+- Fixed 5 September 2026, both halves.
+  - The detection is not an Arch special case: it reads the running kernel's
+    release and asks whether its module tree is still on disk while another
+    tree is, which is what a kernel replaced underneath the running system
+    looks like anywhere. A container or a modules-less kernel classifies as
+    neither, verified on a real guest. The per-family checks are the milder
+    tier, where the modules are present and the machine is merely older than
+    what it now has.
+  - The installer finishes rather than refuses, and the argument is recorded:
+    the installation is complete and correct at that point, the completion
+    marker is what the public bootstrapper reads to tell a finished install
+    from a failed one, re-running an installer cannot put a kernel back, and
+    nothing was turned on that a restart is needed to make safe. It says so
+    three times - where it is detected, before the step that would otherwise
+    die confusingly, and as the last and most prominent block.
+  - The firewall commit path now has what the mail path was given: two
+    outcomes may end a plan, nothing touched or everything put back and
+    proved. The engine is probed before the durable intent exists, so the
+    ordinary refusal never takes the ledger at all, and after a live attempt a
+    failure may be called restored only on a structural proof - the running
+    kernel's module tree is absent, so the kernel accepted nothing. nft merely
+    saying something kernel-shaped names a reason and releases nothing. A
+    half-applied ruleset, an unprovable restoration and a verification
+    mismatch all still poison and still hold the lock.
+  - The operator gets the reason instead of a 500: the classifier recovers the
+    stderr the old call discarded, which is why the log said only "exit status
+    1", and puts the instruction before the technical detail, because the
+    first live run truncated the reason and lost the sentence that mattered.
+- Proven on a real Arch machine: the install ends with the restart notice; the
+  request that returned 500 now returns 409 leading with what to do, the
+  ledger free and the reason still there after an agent restart and after an
+  unrelated mutation took and released the lease; after the reboot the same
+  request returns 200.
+- Left, and stated rather than hidden: a disable plan that meets the fault
+  after writing persistence still ends ambiguous and still poisons, because a
+  disable journal carries no prior snapshot to prove the restoration - fixing
+  that means relaxing an existing fail-closed rule and belongs on its own. The
+  VPN path has the same exposure and is R-055.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-055 - The VPN path still wedges on a module that cannot load
+
+- Evidence: 5 September 2026, on the Arch machines built for R-018 and R-054.
+  `modprobe wireguard` fails on a host whose running kernel was replaced by
+  the installer's prerequisite step, exactly as `nft` did. The firewall path
+  was given a clean failure and a named reason; `vpn_peer_sync_commit.go` was
+  not touched, so a VPN apply on such a host takes the route the firewall used
+  to: a failure that cannot be classified, a ledger that keeps the lease, and
+  every mutation on the host refused until someone intervenes.
+- This is the same defect the product has now fixed twice - once for mail
+  (R-046), once for the firewall (R-054) - and it is worth saying plainly that
+  finding it a third time in a third path means the shape belongs in one
+  place, not in each commit path separately. Whoever fixes this should ask
+  whether the outcome classification and the clean terminal failure can be
+  lifted out of the three paths rather than written a third time.
+- What it needs: the same two outcomes, the same structural proof before a
+  failure may be called restored, the same reason reaching the operator
+  instead of a generic error, and the installer's restart notice already
+  covers the warning half.
+- Exit criteria: on a host whose kernel was replaced and not restarted, a VPN
+  apply fails with a sentence naming the restart, leaves the host mutable, and
+  the reason survives an agent restart.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-056 - Two mail jobs fail on every fresh Arch install
+
+- Evidence: 5 September 2026, visible in the ledger of every fresh Arch
+  install made for the R-054 work: two `mail_filter_wire` startup jobs end
+  failed with `The privileged host operation did not complete`. They are
+  terminal and hold nothing, so they wedge no host - but they are in the
+  ledger of a machine nobody has configured yet, and the message names
+  neither what was attempted nor why it stopped.
+- Impact: an operator who looks at a brand new server sees two failures and
+  cannot tell whether their install is broken. That is the cost even when the
+  jobs are harmless.
+- What it needs: find out whether the operation should run at all on a host
+  with no mail installed, and either not schedule it or let it say what it
+  found. A message that names nothing is the defect independent of the job.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
