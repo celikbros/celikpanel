@@ -55,7 +55,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-015 | High | OPEN / BLOCKER FOR PUBLIC DNS CUTOVER | Parent delegation and glue are verified; the `celikhost.com` child zone and public authority are absent |
 | R-016 | Medium | OPEN / PROVENANCE WARNING | Both valid v6 snapshots encode an `unknown` source identity although terminal receipts prove the prior Alpha51 commit |
 | R-017 | High | OPEN | A production panel heartbeat deterministically poisons a DNS engine switch that installs packages |
-| R-018 | Medium | FIXED ON BRANCH (FIVE LAYERS) / LIVE PROOF OF THE FIFTH PENDING | The Arch BIND path was never wired end to end: root-anchor rule, managed root, config ownership, stock options and journal shape each assumed Debian; all five now follow the pacman package and a fresh Arch host reaches a serving BIND |
+| R-018 | Medium | CLOSED / FIVE LAYERS FIXED AND PROVEN ON A REAL ARCH VM | The Arch BIND path was never wired end to end: root-anchor rule, managed root, config ownership, stock options and journal shape each assumed Debian; all five now follow the pacman package and a fresh Arch host reaches a serving BIND |
 | R-019 | Medium | OPEN | An adopted external PowerDNS is not switch-ready for the BIND handoff it is expected to feed |
 | R-020 | Low | CLOSED ON MAIN / EVERY SHARD MEASURED UNDER THE LINE | The CI race shard for `D` ran at 88 percent of its 8-minute ceiling on `main`; the local 30-minute single-process run sits at 80 percent |
 | R-021 | Low | RESOLVED / INVENTORY CORRECTED | Both hosts were rebuilt; identity is confirmed and the inventory now records Ubuntu and Debian 13. No Arch host remains in our inventory |
@@ -71,7 +71,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-031 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Rolling back a BIND-to-PowerDNS switch re-enabled the bind9.service alias before named.service, which cannot succeed on APT hosts; the source BIND never came back and the recovery poisoned the ledger |
 | R-032 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Returning to an engine the host had used before, with the switch interrupted after package install, was read as the half-finished handover shape because the former engine's stranded ownership receipt is never retired; recovery poisoned the ledger on an ordinary operator action |
 | R-033 | High | FIXED ON BRANCH / LIVE PROOF PENDING | A first DNS engine install that failed after package install on a host with no state left an install receipt the abort proof called inconsistent, so the ledger was poisoned on the very first DNS action and stayed poisoned on every boot |
-| R-034 | High | FIXED ON BRANCH / LIVE PROOF PENDING | Every WireGuard config apply fails because the staged file name is not a valid interface name for `wg-quick strip`; the failed rollback then poisons the host's mutation manager with no API way out |
+| R-034 | High | CLOSED / BOTH CLAIMS PROVEN ON REAL VMs | Every WireGuard config apply fails because the staged file name is not a valid interface name for `wg-quick strip`; the failed rollback then poisons the host's mutation manager with no API way out |
 | R-035 | Medium | FIXED AND PROVEN LIVE | The firewall cannot be enabled on a host without a discoverable sshd, and the product cannot install one; such hosts never get `firewall.nft` |
 | R-036 | Medium | FIXED AND PROVEN LIVE | The mail profile refuses a host whose OS hostname is not a fully qualified name, and nothing in the product sets or explains the hostname |
 | R-037 | Medium | GUARDED ON BRANCH / A SECOND EMBED WAS AFFECTED AND IS FIXED | A Windows working copy checked out before `.gitattributes` keeps CRLF, so a locally built panel embeds CRLF migrations and refuses every database a released panel created |
@@ -91,6 +91,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-051 | Critical | FIXED AND PROVEN ON A REAL VM / THE CLASS IS CLOSED | Creating a database or a database user could never succeed on a registered server, and the same fault sat on the domain path for a digit-leading domain and in the WordPress installer |
 | R-052 | Medium | FIXED AND PROVEN ON A REAL VM | A restored host is not firewalled until it reboots: the ruleset is placed as a file but nothing loads it, and the unit that would have has already passed its boot slot |
 | R-053 | Low | FOUND ON A REAL VM / NOT YET FIXED | Registering a database server cannot succeed on an engine the panel just installed: the product stores a root password but never sets one, so the operator has to set it outside the panel first |
+| R-054 | High | FOUND ON A REAL ARCH VM / NOT YET FIXED | Installing on Arch upgrades the running kernel and says nothing about a reboot, so the first firewall or VPN action fails to load its modules - and on one host that failure poisoned the ledger until the machine was rebooted |
 
 ## Detailed risks
 
@@ -482,6 +483,20 @@ or executed as-is. There are no open pull requests at this baseline.
   `0.0.0.0:*`, `[::]:*`) as a closed set, and refuses shapes it never emits.
   The rejected row was not retained in the campaign evidence, so the spelling
   is reconstructed; the Arch VM cell is rerun to prove it.
+- Closed 5 September 2026 on a real Arch VM, with the row this entry was
+  missing. The switch completes: preview `action=install` with no blockers,
+  commit HTTP 200 in 13 s, BIND at epoch 1, and a zone created through the
+  panel answering authoritatively over UDP and TCP.
+- **The rejected spelling is no longer a reconstruction.** Sampling the
+  product's own `ss -H -lntup 'sport = :53'` across the commit captured all
+  three spellings the fix accepts, on ordinary `named` sockets, and nothing
+  outside that set: `0.0.0.0:*` for IPv4, and both `*:*` and `[::]:*` for IPv6
+  - the first on kernel 7.1.8, the second on 7.2.3, with the same iproute2.
+- One correction to the fix's own explanation, which the capture earns: what
+  selects `*:*` over `[::]:*` is what the kernel reports for the socket's
+  v6only flag, not whether the socket is IPv6-only or dual-stack. Both appear
+  on sockets bound to specific addresses. The accepted set is right; the
+  reasoning written beside it was imprecise.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 - S-2 determination: `0755` on `/` is **not** load-bearing for this operation.
   The mutation descends to a verified `/etc/systemd/system` and calls
@@ -1269,6 +1284,19 @@ or executed as-is. There are no open pull requests at this baseline.
   the real basename rule, so the whole VPN suite is a regression guard on the
   exec path, and it passes on a Debian guest as root, including the commit
   rollback poison test. Live proof on a fresh guest is still owed.
+- Closed 5 September 2026 on real VMs, both claims.
+  - The apply succeeds: WireGuard installed through the panel in 8 s with the
+    host staying mutable throughout, a peer created through the panel, and
+    `wg show` carrying the interface, its port and the peer's allowed address.
+  - The recovery claim is proven the only honest way it could be. The old
+    failure cannot be produced on a fixed build, so a lab-only agent was built
+    from main with exactly this fix's commit reverted, and on that host the
+    entry's evidence reproduced verbatim - the strip failure, the rollback
+    that could not prove the previous state, the poisoned ledger, and every
+    mutation refused as busy. Restarting the *reverted* agent did not clear
+    it. Installing the fixed agent and restarting once did, with nothing else
+    touched: readiness back to ready across six probes, the interface up, and
+    the VPN install re-run through the panel to success.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-035 - No sshd, no firewall
@@ -1311,6 +1339,12 @@ or executed as-is. There are no open pull requests at this baseline.
   service exist - containers, minimal images, appliances - and the product now
   tells the three situations apart instead of refusing all of them alike. What
   changes is the priority this entry deserved, not its correctness.
+- A further correction, 5 September 2026: this entry's closing line said
+  `/etc/celikpanel/firewall.nft` exists after the acknowledged enable. It does
+  not, and that is deliberate - enabling alone leaves `persistence_state:
+  "missing"`, and the file is written by the separate save-for-reboot step,
+  on every distribution. The proof that closed this entry used both steps; the
+  sentence collapsed them.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-036 - The mail profile needs a fully qualified hostname nobody can set
@@ -2189,6 +2223,44 @@ or executed as-is. There are no open pull requests at this baseline.
   to the register step, or the register screen says plainly what must be done
   on the host first and why. The first is the product this panel is trying to
   be; the second is honest and small.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-054 - Installing on Arch leaves a host that cannot load a module, and says nothing
+
+- Evidence: live, 5 September 2026, on three Arch VMs built for the R-018
+  proof. `install.sh` runs `pacman -Syu` for its prerequisites, which on Arch
+  is a full system upgrade; on all three it replaced the running kernel and
+  deleted the module tree the running kernel needs. The installer printed
+  success and said nothing about a reboot.
+- What then happens, on an un-rebooted host:
+  - the DNS switch's post-commit follow-up fails - `502
+    FIREWALL_SYNC_FAILED` with `partial_success: true`, the panel logging
+    `nft table discovery failed`, and `nft list tables` answering `cache
+    initialization failed: Invalid argument`;
+  - or worse, on the host where discovery happened to work, enabling the
+    firewall returned an opaque `500 INTERNAL`, and the failed `nft apply`
+    **poisoned the ledger**: every mutation refused as busy, surviving an
+    agent restart, clearing only when the machine was rebooted - after which
+    the same request returned 200. `modprobe wireguard` fails the same way, so
+    the VPN path is equally exposed.
+- This is the R-019 wedge family entered from the firewall path, with an
+  entirely ordinary trigger: install CelikPanel on Arch, then turn on the
+  firewall. The partial-upgrade comment in the installer is right that Arch
+  forbids partial upgrades; what is missing is everything after it.
+- What it needs, in two parts:
+  1. The installer must notice that the kernel it upgraded is not the kernel
+     that is running - the module tree for `uname -r` is gone - and say so
+     plainly, as the last thing the operator reads: this host must reboot
+     before its firewall or VPN can work.
+  2. A module that cannot load must not wedge the host. The firewall commit
+     path needs what R-046 gave the mail path: a plan that cannot succeed
+     reaches a terminal failure with its reason and releases the ledger,
+     instead of being retried at every start. And the operator must get the
+     reason, not a 500.
+- Exit criteria: on a fresh Arch VM, either the installer refuses to finish
+  quietly after replacing the running kernel, or the first firewall enable
+  after such an install fails with a sentence naming the reboot and leaves the
+  host mutable.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
