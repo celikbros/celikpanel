@@ -89,8 +89,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-048 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE ELEKTRİK KESİLEREK KANITLANDI | Elektrik kesintisinden sonra agent, sunucu hazır olmadan başlıyor, kurtarmasını yapamıyor ve bir daha denemiyor; yarım kalan işlem defteri tutuyor ve biri agent'ı elle yeniden başlatana kadar her işlem reddediliyor |
 | R-049 | Yüksek | DÜZELTİLDİ VE TARAYICIDA UÇTAN UCA KANITLANDI | Engellenmiş her önizleme tarayıcıda null'a çözülüyordu; yani devralma için yazılan retler paneli kullanan hiç kimseye görünmüyordu. Ayrıca çalışan devralmanın DNS ekranında hiç yolu yok |
 | R-050 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin kurduğu bir DNS motoru, agent işlemleri tutarken "yönetilmiyor" okunuyor; bu yüzden hem API hem ekran, panelin kendi yarım kalmış kurulumunu devralmayı öneriyor |
-| R-051 | Kritik | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Kayıtlı bir sunucuda veritabanı ya da veritabanı kullanıcısı oluşturmak hiçbir zaman başarılamıyor: panel adın başına abonelik numarasını koyuyor, kendi doğrulayıcısı ise rakamla başlayan tanımlayıcıyı reddediyor |
-| R-052 | Orta | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Geri yüklenen sunucu yeniden başlatılana kadar güvenlik duvarsız: kural seti dosya olarak yerleştiriliyor ama onu kimse yüklemiyor ve yükleyecek birim o açılıştaki sırasını çoktan geçmiş oluyor |
+| R-051 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE KANITLANDI / SINIF KAPANDI | Kayıtlı bir sunucuda veritabanı ya da kullanıcı oluşturmak hiç başarılamıyordu; aynı kusur, rakamla başlayan alan adları için alan adı yolunda ve WordPress kurulumunda da duruyordu |
+| R-052 | Orta | DÜZELTİLDİ VE GERÇEK VM'DE KANITLANDI | Geri yüklenen sunucu yeniden başlatılana kadar güvenlik duvarsız: kural seti dosya olarak yerleştiriliyor ama onu kimse yüklemiyor ve yükleyecek birim o açılıştaki sırasını çoktan geçmiş oluyor |
+| R-053 | Düşük | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin az önce kurduğu bir motorda veritabanı sunucusu kaydı başarılamıyor: ürün kök parolasını saklıyor ama hiç ayarlamıyor; operatörün önce panel dışında parola koyması gerekiyor |
 
 ## Ayrıntılı riskler
 
@@ -2069,6 +2070,42 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   Düzeltmeyi yazmadan önce onu yanıtla.
 - Çıkış ölçütü: gerçek bir VM'de, kayıtlı bir sunucuda panelden veritabanı ve
   veritabanı kullanıcısı oluşturuluyor, motorda görünüyor ve kullanılabiliyor.
+- **Bu kayda düzeltme, 5 Eylül 2026:** alan adı kapsamlı yolun etkilenmediği
+  yazıyordu. Rakamla başlayan bir alan adı için bu yanlış - `1and1.com`,
+  `360.com` - ve tam da abonelik yolundaki gibi agent'ın reddettiği bir ad
+  üretiyordu. WordPress kurulumunda da ilk karakter koruması yoktu. Sınıf bir
+  değil üç kusurdu.
+- Göç sorusu varsayımla değil tarihten yanıtlandı: rakamla başlayan önek ile
+  doğrulayıcı hiçbir yayınlanmış yapıda bir arada olmadı. Doğrulayıcı, ilk
+  commit'ten 58 dakika sonra ve ilk sürüm etiketinden bir ay önce girdi,
+  bugüne dek yalnız tek bir commit ona dokundu ve bütün oluşturma yolları -
+  iki sürücü, agent'ın RPC'si, içe aktarma ve taşıma yolları - bugün
+  doğruluyor. Hiçbir kurulum böyle bir ad taşıyamaz; yani hiçbir şey göç
+  ettirilmiyor ve hiçbir şey yeniden adlandırılmıyor.
+- Düzeltme, adlandırmayı sağlaması gereken doğrulayıcının yanına koymakla
+  yapıldı. Abonelik yolu, harfle başlayan sabit bir önekle tek bir işlevden
+  geçiyor ve bir sürücüye ulaşmadan yeniden doğrulanıyor; iki temizleyici
+  kendi karakter eşlemesini koruyor ve yalnız ilk karakter kararını
+  paylaşıyor, çünkü sıradan bir ad bugün ürettiğinin tıpatıp aynısını
+  üretmeli - iki yolda da testle sabit ve canlıda var olan bir alan adında
+  doğrulandı. Uzunluk sınırları türetilmeleriyle adlandırıldı ve iki motorun
+  tabanını alıyor; çünkü bir abonelik motorlar arasında taşınabilir. Hatalı ad
+  artık motordan gelen 500 değil, kusuru adlandıran 400.
+- Onarım işareti bir kelime değil alt çizgi: `app_360_com`, `app.360.com`'un
+  zaten ürettiğinin aynısıdır; yani bir kelime, rakamla başlayan alan adının
+  sıradan bir alan adının adını sessizce almasına yol açardı. Kayıtlı hiçbir
+  alan adı alt çizgiyle başlayamaz - makine adı kuralı yasaklıyor - ve
+  doğrulayıcı bunu kabul ediyor.
+- Gerçek bir VM'de yalnız panelden, aynı makinede olumsuz kontrolle
+  kanıtlandı: düzeltme öncesi ikili 500'ü yeniden üretti ve hiçbir şey
+  oluşturmadı; düzeltilmiş ikili aynı isteğe 200 döndü; nesneler hem MariaDB
+  hem PostgreSQL'de var ve **kullanılabilir** - oluşturulan kullanıcıyla
+  bağlanıp kendi satırını yazıp okudu - ve sıradan bir alan adı hâlâ her
+  zamanki adını üretiyor.
+- Düzeltilmeyip raporlanan: alan adı kapsamlı işleyici operatörün ham adını
+  hâlâ olduğu gibi yerleştiriyor; içinde tire olan bir ad, doğrulayıcının
+  reddettiği bir tanımlayıcı oluşturuyor ve 500 olarak görünüyor. Bu, operatör
+  girdisinin doğrulanması; bu sınıftan başka bir kusur.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-052 - Geri yüklenen sunucu yeniden başlatılana kadar korumasız
@@ -2093,6 +2130,40 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: gerçek bir VM'de, güvenlik duvarı anlık görüntüsü taşıyan bir
   geri yüklemenin hemen ardından kural seti yüklü ve sunucu yeniden
   başlatılmadan korunuyor.
+- 5 Eylül 2026'da düzeltildi. Geri yükleme, anlık görüntüyü kurulum dönmeden
+  önce devreye alıyor; bu, yalnız bir geri yükleme olduğunda çalışıyor: taze
+  kurulumda anlık görüntü yoktur, yükseltmede kurallar zaten yüklüdür. Birimin
+  kendi ön denetimi önce düz bir komut olarak koşuyor, çünkü birim hata
+  durumunda acil hedefe geçiyor - açılışta doğru, operatörün SSH ile içinde
+  bulunduğu bir kurulumda felaket. Devreye alma hatası kurulumu durduruyor;
+  birimin bir açılışın açık bir sunucuya devam etmesine izin vermemesiyle aynı
+  sebeple.
+- Tatbikatın kendi arşivinden geri yüklenen gerçek bir makinede kanıtlandı:
+  kural seti kurulum çıkışında yüklüydü, makine 79 saniyelik ve tek açılış
+  kimliğiyle, arşivlenmiş anlık görüntüyle birebir aynı.
+- Onunla birlikte bulundu: bu birimin kabuk koruması ve burada eklenen bir
+  diğeri hiçbir yerde anılmıyordu ve hiç koşmamıştı. İkisi de CI'a bağlandı.
+  Kill-matrix dizinindeki beş python testi de aynı şekilde öksüz; körlemesine
+  bağlanmak yerine adları yazıldı.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-053 - Yeni kurulan motor, panelden çıkmadan kaydedilemiyor
+
+- Kanıt: 5 Eylül 2026, R-051'i kanıtlamak için kullanılan gerçek VM'de. Panel
+  MariaDB ve PostgreSQL'i kendi servis akışıyla kurdu, ama ikisi de sonra
+  veritabanı sunucusu olarak kaydedilemedi: CelikPanel bir motorun kök
+  parolasını saklıyor ve hiç ayarlamıyor; oysa Debian'ın MariaDB'si kök
+  kullanıcıyı unix soketiyle doğruluyor, PostgreSQL'i ise `postgres`'i
+  parolasız bırakıyor. Kayıt ekranının başarabilmesi için ikisine de SSH ile
+  parola verilmesi gerekti.
+- Etki: birbirini izlemesi gereken iki akış - motoru kur, sonra kaydet -
+  birbirine bağlanmıyor. Yalnız paneli izleyen operatör, başarılamayacak bir
+  ekrana varıyor ve tek çıkış yolu kabuk; ürünün kendi kuralı ise kabuğu
+  yönetim yolu olarak yasaklıyor.
+- Gerekeni: kurulum akışı ya kayıt adımına devredeceği bir kök kimlik bilgisi
+  ayarlar ya da kayıt ekranı, sunucuda önce ne yapılması gerektiğini ve nedenini
+  açıkça söyler. Birincisi bu panelin olmaya çalıştığı ürün; ikincisi dürüst ve
+  küçük.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
