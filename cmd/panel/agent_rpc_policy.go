@@ -126,7 +126,8 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.InspectInstalledCertificate Agent.InstalledRepoPackages Agent.InstalledServiceIDs
 		Agent.InstalledServiceIDsStrict Agent.ListBackups Agent.ListCronJobs Agent.ListFiles
 		Agent.ListNodeLTS Agent.ListNodeVersions Agent.ListServiceInstances
-		Agent.ListSystemSQLiteDatabases Agent.MailHealth Agent.NginxInspect Agent.PkgFamily
+		Agent.ListSystemSQLiteDatabases Agent.MailFilterWiringState Agent.MailHealth
+		Agent.NginxInspect Agent.PkgFamily
 		Agent.PostfixQueue Agent.ReadBackupChunk Agent.ReadFile
 		Agent.ReadSystemSQLiteSnapshotChunk Agent.RepoPackages Agent.ServiceCandidateVersion
 		Agent.ServiceJournal Agent.ServiceMutationReadiness Agent.SiteUsage Agent.Version Agent.VPNStatus
@@ -240,6 +241,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.GetDKIMStatus":               agentRPCQuickReadTimeout,
 	"Agent.GetExtendedPHPConfig":        agentRPCQuickReadTimeout,
 	"Agent.GetMailPolicy":               agentRPCQuickReadTimeout,
+	"Agent.MailFilterWiringState":       agentRPCQuickReadTimeout,
 	"Agent.GetMailQuotaStatus":          agentRPCQuickReadTimeout,
 	"Agent.GetMySQLConfig":              agentRPCQuickReadTimeout,
 	"Agent.GetPHPConfig":                agentRPCQuickReadTimeout,

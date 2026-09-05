@@ -383,6 +383,77 @@ func (p *Panel) heartbeatAgentMutation(
 	return response.Job, nil
 }
 
+// R-056. "The privileged host operation did not complete." is true of every
+// failed host mutation and therefore says nothing about any one of them. It is
+// the right answer when the panel genuinely does not know what happened - a
+// lost lease, an unverifiable heartbeat - and the wrong one when the host
+// already said why. A caller that has the host's own sentence attaches it with
+// namedHostOperationFailure, and the ledger records that instead. Nothing else
+// changes: the code stays the generic one, because the code is what the panel
+// branches on, and only the sentence an operator reads is replaced.
+//
+// R-056. "Ayricalikli makine islemi tamamlanmadi." her basarisiz mutasyon icin
+// dogrudur, bu yuzden hicbiri hakkinda bir sey soylemez. Makine nedenini zaten
+// soylediyse yanlis yanittir. Kodu degismez; yalnizca operatorun okudugu cumle
+// degisir.
+type namedHostOperationError struct {
+	sentence string
+	cause    error
+}
+
+func (e *namedHostOperationError) Error() string { return e.sentence }
+func (e *namedHostOperationError) Unwrap() error { return e.cause }
+
+// A sentence that ends up here is written durably into the ledger and shown to
+// an operator, and part of it is the host's own words. So it is bounded and
+// stripped of anything that could forge a line, and the order is the one R-054
+// wrote down and R-055 needed again: what the panel authored comes first, the
+// host's reason last, because truncation has to eat the tail and never the
+// sentence the operator acts on.
+//
+// Buraya gelen bir cumle deftere kalici yazilir ve operatore gosterilir; bir
+// kismi makinenin kendi sozleridir. Bu yuzden sinirlanir ve satir uydurabilecek
+// her seyden arindirilir; sira R-054'un yazdigi siradir.
+const namedHostOperationSentenceLimit = 400
+
+func boundedOperatorSentence(sentence string) string {
+	sentence = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return ' '
+		}
+		return r
+	}, sentence)
+	sentence = strings.TrimSpace(sentence)
+	runes := []rune(sentence)
+	if len(runes) > namedHostOperationSentenceLimit {
+		return string(runes[:namedHostOperationSentenceLimit]) + "..."
+	}
+	return sentence
+}
+
+// namedHostOperationFailure attaches the sentence an operator should read to a
+// failure the host explained. An empty sentence changes nothing.
+// namedHostOperationFailure, makinenin acikladigi bir basarisizliga operatorun
+// okumasi gereken cumleyi ekler.
+func namedHostOperationFailure(sentence string, cause error) error {
+	sentence = boundedOperatorSentence(sentence)
+	if sentence == "" {
+		return cause
+	}
+	return &namedHostOperationError{sentence: sentence, cause: cause}
+}
+
+// namedHostOperationSentence recovers that sentence, if the failure carries
+// one. It is bounded where it is recorded, like every other durable reason.
+// namedHostOperationSentence, varsa o cumleyi geri kazanir.
+func namedHostOperationSentence(err error) string {
+	var named *namedHostOperationError
+	if errors.As(err, &named) {
+		return named.sentence
+	}
+	return ""
+}
+
 func standaloneAgentMutationFailure(
 	callErr error,
 	heartbeatErr error,
@@ -413,11 +484,11 @@ func standaloneAgentMutationFailure(
 			cause,
 		)
 	}
-	return operationFailure(
-		errCodeServiceOperationFailed,
-		"The privileged host operation did not complete.",
-		cause,
-	)
+	message := "The privileged host operation did not complete."
+	if named := namedHostOperationSentence(callErr); named != "" {
+		message = named
+	}
+	return operationFailure(errCodeServiceOperationFailed, message, cause)
 }
 
 func (p *Panel) statusAgentMutation(

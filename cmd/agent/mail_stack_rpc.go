@@ -175,6 +175,49 @@ var postfixDomainsPath = "/etc/postfix/vmailbox_domains"
 // cevap vermeyen bir sokete bakar hâlde bırakmamalıdır.
 type WireMailFiltersResponse = transport.WireMailFiltersResponse
 
+type MailFilterWiringStateResponse = transport.MailFilterWiringStateResponse
+
+// mailFilterWiringAbsentDetail is what the host looks like when there is
+// nothing to wire, said plainly enough that an operator reading it in the log
+// of a brand new server knows their install is not broken.
+// mailFilterWiringAbsentDetail, baglanacak bir sey olmadiginda makinenin
+// nasil gorundugudur; yepyeni bir sunucunun gunlugunde bunu okuyan operator
+// kurulumunun bozuk olmadigini anlar.
+const mailFilterWiringAbsentDetail = "no mail server is installed on this " +
+	"server, so there is no Postfix milter chain to compose"
+
+const mailFilterWiringPresentDetail = "Postfix is installed on this server, " +
+	"so its milter chain can be composed"
+
+// mailServerBinaryLookup is the one host fact this probe rests on, behind a
+// narrow seam so a test can state the fact instead of installing Postfix.
+// mailServerBinaryLookup, bu yoklamanin dayandigi tek makine olgusudur.
+var mailServerBinaryLookup = exec.LookPath
+
+// MailFilterWiringState reports, read-only, whether this host has the mail
+// server whose milter chain WireMailFilters composes. R-056: WireMailFilters
+// answers the same question in its first line, but by then the caller has
+// taken the whole-host mutation lease and created a durable job, so "there is
+// no mail here" was recorded as a failed privileged host operation on every
+// start of a machine nobody had configured. Nothing here changes the host.
+//
+// MailFilterWiringState, bu makinede WireMailFilters'in besteledigi milter
+// zincirine sahip posta sunucusunun bulunup bulunmadigini salt-okunur
+// bildirir. Burada makinede hicbir sey degismez.
+func (a *Agent) MailFilterWiringState(
+	_ *transport.Empty,
+	resp *MailFilterWiringStateResponse,
+) error {
+	*resp = MailFilterWiringStateResponse{}
+	if _, err := mailServerBinaryLookup("postconf"); err != nil {
+		resp.Detail = mailFilterWiringAbsentDetail
+		return nil
+	}
+	resp.MailServerInstalled = true
+	resp.Detail = mailFilterWiringPresentDetail
+	return nil
+}
+
 func (a *Agent) WireMailFilters(req *ServiceMutationRequest, resp *WireMailFiltersResponse) error {
 	*resp = WireMailFiltersResponse{}
 	if req == nil {

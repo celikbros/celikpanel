@@ -1326,7 +1326,23 @@ func (p *Panel) countUsers() (int, error) {
 // wireMailFiltersSynchronouslyAtStartup is the bounded startup form of the
 // legacy background repair. The recovery barrier has already drained; this
 // helper owns a durable agent lease and finishes before HTTP admission.
+//
+// R-056. It asks the host one read-only question before it takes anything.
+// The repair composes Postfix's milter chain, so a server with no mail server
+// on it has nothing to repair - and finding that out from inside the lease is
+// how a machine nobody had configured came to carry two failed privileged host
+// operations in its ledger on the day it was installed. This is the shape
+// R-054 gave the firewall: probe before the durable intent exists, so an
+// ordinary "not here" never takes the ledger at all.
+//
+// R-056. Hicbir sey almadan once makineye salt-okunur tek bir soru sorar.
+// Onarim Postfix'in milter zincirini besteler; uzerinde posta sunucusu olmayan
+// bir makinede onarilacak bir sey yoktur. Bicim R-054'un guvenlik duvarina
+// verdigi bicimdir: kalici niyet var olmadan once yokla.
 func (p *Panel) wireMailFiltersSynchronouslyAtStartup() {
+	if !p.mailFilterWiringHasSubject() {
+		return
+	}
 	var response transport.WireMailFiltersResponse
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -1348,17 +1364,64 @@ func (p *Panel) wireMailFiltersSynchronouslyAtStartup() {
 				return err
 			}
 			if response.Error != "" {
-				return errors.New(response.Error)
+				// R-056. The ledger's own words for a failed host mutation say
+				// that one did not complete, which is true of every one of
+				// them and tells an operator nothing about this one. The host
+				// said why; carry it.
+				// R-056. Defterin kendi sozleri hicbir seyi adlandirmaz;
+				// makine nedenini soyledi, onu tasi.
+				return namedHostOperationFailure(
+					mailFilterWiringFailureSentence(response.Error),
+					errors.New(response.Error),
+				)
 			}
 			return nil
 		},
 	)
 	if err != nil {
+		log.Printf("milter wiring at startup: %v", err)
 		return
 	}
 	if response.Detail != "" {
 		log.Printf("milter chain: %s", response.Detail)
 	}
+}
+
+// mailFilterWiringHasSubject asks the host whether there is a mail server here
+// whose milter chain could need composing. A host that cannot be asked - no
+// agent yet, a call that failed - is not assumed to be empty: the repair runs
+// and reports for itself, exactly as it did before this check existed.
+//
+// mailFilterWiringHasSubject, makinede zincirinin bestelenmesi gerekebilecek
+// bir posta sunucusu olup olmadigini sorar. Sorulamayan bir makine bos
+// varsayilmaz.
+func (p *Panel) mailFilterWiringHasSubject() bool {
+	var state transport.MailFilterWiringStateResponse
+	if err := p.callAgent(
+		"Agent.MailFilterWiringState", &transport.Empty{}, &state,
+	); err != nil {
+		return true
+	}
+	if state.MailServerInstalled {
+		return true
+	}
+	detail := state.Detail
+	if detail == "" {
+		detail = "no mail server is installed on this server"
+	}
+	log.Printf("milter chain: nothing to wire at startup: %s", detail)
+	return false
+}
+
+// mailFilterWiringFailureSentence names what was attempted and what stopped
+// it, in that order, because those are the two things the ledger's generic
+// sentence leaves out.
+// mailFilterWiringFailureSentence, once nenin denendigini sonra neyin
+// durdurdugunu adlandirir.
+func mailFilterWiringFailureSentence(reason string) string {
+	return "Composing this server's Postfix mail filter chain did not " +
+		"finish, and nothing on this server was changed by it. Reason: " +
+		reason
 }
 
 func (p *Panel) handleServices(w http.ResponseWriter, r *http.Request) {
