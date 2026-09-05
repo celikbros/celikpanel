@@ -56,7 +56,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-015 | Yüksek | AÇIK / AÇIK DNS GEÇİŞİ İÇİN ENGELLEYİCİ | Parent delegation ve glue doğrulandı; `celikhost.com` child zone ve açık otorite yok |
 | R-016 | Orta | AÇIK / PROVENANCE UYARISI | İki geçerli v6 snapshot kaynak kimliğini `unknown` yazar; terminal receipt'ler önceki Alpha51 commit'ini kanıtlar |
 | R-017 | Yüksek | AÇIK | Üretim panelinin kalp atışı, paket kuran bir DNS motoru geçişini belirlenimci biçimde zehirler |
-| R-018 | Orta | DALDA DÜZELTİLDİ (BEŞ KAT) / BEŞİNCİNİN CANLI KANITI BEKLİYOR | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
+| R-018 | Orta | KAPANDI / BEŞ KAT DÜZELTİLDİ VE GERÇEK ARCH VM'DE KANITLANDI | Arch BIND yolu uçtan uca hiç bağlanmamıştı: kök çıpa kuralı, yönetilen kök, yapılandırma sahipliği, stok seçenekler ve günlük biçimi Debian'ı varsayıyordu; beşi de artık pacman paketini izliyor ve taze bir Arch sunucusu hizmet veren BIND'a ulaşıyor |
 | R-019 | Orta | AÇIK | Devralınmış dış PowerDNS, beslemesi beklenen BIND devri için geçişe hazır değildir |
 | R-020 | Düşük | ANA HATTA KAPANDI / HER PARÇA ÖLÇÜLDÜ VE ÇİZGİNİN ALTINDA | `main`'deki CI race parçası `D`, 8 dakikalık tavanının yüzde 88'inde koştu; yerel 30 dakikalık tek süreçli koşu yüzde 80'de |
 | R-021 | Düşük | ÇÖZÜLDÜ / ENVANTER DÜZELTİLDİ | İki sunucu da yeniden kuruldu; kimlik doğrulandı ve envanter artık Ubuntu ile Debian 13 yazıyor. Envanterimizde Arch sunucu kalmadı |
@@ -72,7 +72,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-031 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | BIND'dan PowerDNS'e geçişin geri alması bind9.service takma adını named.service'ten önce etkinleştirmeye çalıştı; APT sunucularında bu başarılı olamaz; kaynak BIND geri gelmedi ve kurtarma defteri zehirledi |
 | R-032 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Sunucunun daha önce kullandığı motora dönüş, paket kurulumundan sonra kesildiğinde yarım kalmış devir biçimi sanıldı; çünkü eski motorun terk edilmiş sahiplik makbuzu hiç emekliye ayrılmaz; kurtarma sıradan bir operatör hareketinde defteri zehirledi |
 | R-033 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Durumu olmayan sunucuda paket kurulumundan sonra düşen ilk DNS motoru kurulumu, iptal kanıtının tutarsız saydığı bir kurulum makbuzu bıraktı; defter ilk DNS hareketinde zehirlendi ve her açılışta zehirli kaldı |
-| R-034 | Yüksek | DALDA DÜZELTİLDİ / CANLI KANIT BEKLİYOR | Her WireGuard yapılandırma uygulaması düşüyor: hazırlanan dosya adı `wg-quick strip` için geçerli bir arayüz adı değil; düşen geri alma sonra sunucunun işlem yöneticisini zehirliyor ve API'den çıkış yolu yok |
+| R-034 | Yüksek | KAPANDI / İKİ İDDİA DA GERÇEK VM'LERDE KANITLANDI | Her WireGuard yapılandırma uygulaması düşüyor: hazırlanan dosya adı `wg-quick strip` için geçerli bir arayüz adı değil; düşen geri alma sonra sunucunun işlem yöneticisini zehirliyor ve API'den çıkış yolu yok |
 | R-035 | Orta | DÜZELTİLDİ VE CANLI KANITLANDI | Bulunabilir bir sshd olmayan sunucuda güvenlik duvarı etkinleştirilemiyor ve ürün sshd kuramıyor; böyle sunucularda `firewall.nft` hiç oluşmuyor |
 | R-036 | Orta | DÜZELTİLDİ VE CANLI KANITLANDI | Posta profili, işletim sistemi makine adı tam nitelikli değilse reddediyor; üründe makine adını ayarlayan ya da açıklayan bir şey yok |
 | R-037 | Orta | DALDA KORUMAYA ALINDI / ETKİLENEN İKİNCİ GÖMÜLÜ DOSYA DA DÜZELTİLDİ | `.gitattributes` öncesinde alınmış bir Windows çalışma kopyası CRLF kalıyor; yerelde derlenen panel CRLF göçler gömüyor ve yayınlanmış panelin oluşturduğu her veritabanını reddediyor |
@@ -92,6 +92,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-051 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE KANITLANDI / SINIF KAPANDI | Kayıtlı bir sunucuda veritabanı ya da kullanıcı oluşturmak hiç başarılamıyordu; aynı kusur, rakamla başlayan alan adları için alan adı yolunda ve WordPress kurulumunda da duruyordu |
 | R-052 | Orta | DÜZELTİLDİ VE GERÇEK VM'DE KANITLANDI | Geri yüklenen sunucu yeniden başlatılana kadar güvenlik duvarsız: kural seti dosya olarak yerleştiriliyor ama onu kimse yüklemiyor ve yükleyecek birim o açılıştaki sırasını çoktan geçmiş oluyor |
 | R-053 | Düşük | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin az önce kurduğu bir motorda veritabanı sunucusu kaydı başarılamıyor: ürün kök parolasını saklıyor ama hiç ayarlamıyor; operatörün önce panel dışında parola koyması gerekiyor |
+| R-054 | Yüksek | GERÇEK ARCH VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Arch'ta kurulum çalışan çekirdeği yükseltiyor ve yeniden başlatmadan hiç söz etmiyor; bu yüzden ilk güvenlik duvarı ya da VPN işlemi modülünü yükleyemiyor - bir sunucuda o hata, makine yeniden başlatılana dek defteri zehirledi |
 
 ## Ayrıntılı riskler
 
@@ -485,6 +486,21 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   üretmediği biçimleri reddediyor. Reddedilen satır kampanya kanıtlarında
   saklanmamış, bu yüzden yazım yeniden kurgulandı; Arch VM hücresi bunu
   kanıtlamak için yeniden koşulacak.
+- 5 Eylül 2026'da gerçek bir Arch VM'inde, bu kaydın eksik olan satırıyla
+  birlikte kapandı. Geçiş tamamlanıyor: önizleme engelsiz `action=install`,
+  commit 13 saniyede HTTP 200, BIND epoch 1'de ve panelden oluşturulan bölge
+  UDP ile TCP üzerinden yetkili yanıt veriyor.
+- **Reddedilen yazım artık bir yeniden kurgu değil.** Ürünün kendi
+  `ss -H -lntup 'sport = :53'` komutu commit boyunca örneklendi ve düzeltmenin
+  kabul ettiği üç yazımın üçü de sıradan `named` soketlerinde yakalandı;
+  kümenin dışında hiçbir şey yok: IPv4 için `0.0.0.0:*`, IPv6 için hem `*:*`
+  hem `[::]:*` - ilki 7.1.8 çekirdeğinde, ikincisi 7.2.3'te, aynı iproute2
+  ile.
+- Yakalamanın hak ettiği bir düzeltme, düzeltmenin kendi açıklamasına:
+  `*:*` ile `[::]:*` arasında seçimi yapan şey, soketin IPv6'ya özel mi çift
+  yığın mı olduğu değil, çekirdeğin o soketin v6only bayrağı için
+  bildirdiğidir. İkisi de belirli adreslere bağlı soketlerde görülüyor. Kabul
+  edilen küme doğru; yanına yazılan gerekçe kabaydı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 - S-2 kararı: `/` üzerindeki `0755` bu işlem için taşıyıcı **değildir**.
   Mutasyon doğrulanmış `/etc/systemd/system` dizinine iner ve `systemctl mask`
@@ -1256,6 +1272,20 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   `wg-quick` gerçek ad kuralını uyguluyor, böylece tüm VPN takımı bu yol için
   gerileme koruması oldu ve Debian konuğunda root olarak geçiyor (commit geri
   alma zehir testi dahil). Taze konukta canlı kanıt hâlâ borç.
+- 5 Eylül 2026'da gerçek VM'lerde, iki iddia da kapandı.
+  - Uygulama başarılı: WireGuard panelden 8 saniyede kuruldu, sunucu boyunca
+    işlem yapabilir kaldı, panelden bir eş oluşturuldu ve `wg show` arayüzü,
+    portunu ve eşin izinli adresini gösteriyor.
+  - Kurtarma iddiası, dürüstçe kanıtlanabilecek tek yoldan kanıtlandı. Eski
+    hata düzeltilmiş bir yapıda üretilemez; bu yüzden ana hattan, yalnız bu
+    düzeltmenin commit'i geri alınarak laboratuvara özel bir agent kuruldu ve
+    o sunucuda kaydın kanıtı birebir yeniden üretildi - strip hatası, önceki
+    durumu kanıtlayamayan geri alma, zehirlenen defter ve meşgul diye
+    reddedilen her işlem. *Geri alınmış* agent'ı yeniden başlatmak bunu
+    temizlemedi. Düzeltilmiş agent kurulup bir kez yeniden başlatılınca
+    temizlendi, başka hiçbir şeye dokunulmadan: hazırlık altı yoklamada da
+    hazır, arayüz ayakta ve VPN kurulumu panelden yeniden koşturulup başarıyla
+    bitti.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-035 - sshd yoksa güvenlik duvarı yok
@@ -1298,6 +1328,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   sunucular var - konteynerler, asgari imajlar, cihazlar - ve ürün artık üç
   durumu ayırıyor, hepsini birden reddetmiyor. Değişen, kaydın hak ettiği
   öncelik; doğruluğu değil.
+- Bir düzeltme daha, 5 Eylül 2026: bu kaydın kapanış cümlesi, onaylı
+  etkinleştirmeden sonra `/etc/celikpanel/firewall.nft` dosyasının var
+  olduğunu söylüyordu. Yok ve bu bilerek böyle - tek başına etkinleştirme
+  `persistence_state: "missing"` bırakır; dosyayı ayrı olan yeniden başlatmaya
+  kaydet adımı yazar, her dağıtımda. Bu kaydı kapatan kanıt iki adımı da
+  kullandı; cümle ikisini birbirine katmış.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-036 - Posta profili kimsenin ayarlayamadığı tam nitelikli bir makine adı istiyor
@@ -2164,6 +2200,42 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   ayarlar ya da kayıt ekranı, sunucuda önce ne yapılması gerektiğini ve nedenini
   açıkça söyler. Birincisi bu panelin olmaya çalıştığı ürün; ikincisi dürüst ve
   küçük.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-054 - Arch'ta kurulum, modül yükleyemeyen bir sunucu bırakıyor ve bunu söylemiyor
+
+- Kanıt: canlı, 5 Eylül 2026, R-018 kanıtı için kurulan üç Arch VM'inde.
+  `install.sh`, ön gereksinimleri için `pacman -Syu` çalıştırıyor; bu Arch'ta
+  tam bir sistem yükseltmesidir ve üçünde de çalışan çekirdeği değiştirip
+  çalışan çekirdeğin ihtiyaç duyduğu modül ağacını sildi. Kurulum başarı yazdı
+  ve yeniden başlatmadan hiç söz etmedi.
+- Yeniden başlatılmamış sunucuda olanlar:
+  - DNS geçişinin commit sonrası adımı düşüyor - `502 FIREWALL_SYNC_FAILED`,
+    `partial_success: true`, panel `nft table discovery failed` yazıyor ve
+    `nft list tables` `cache initialization failed: Invalid argument` diyor;
+  - ya da daha kötüsü, keşfin şans eseri çalıştığı sunucuda güvenlik duvarını
+    açmak anlaşılmaz bir `500 INTERNAL` döndürdü ve düşen `nft apply`
+    **defteri zehirledi**: her işlem meşgul diye reddedildi, agent yeniden
+    başlatmayı aştı ve ancak makine yeniden başlatılınca temizlendi - sonra
+    aynı istek 200 döndü. `modprobe wireguard` de aynı şekilde düşüyor, yani
+    VPN yolu da açıkta.
+- Bu, güvenlik duvarı yolundan girilen R-019 kilit ailesi ve tetikleyicisi
+  bütünüyle sıradan: Arch'a CelikPanel kur, sonra güvenlik duvarını aç.
+  Kurulumdaki kısmi yükseltme yorumu, Arch'ın kısmi yükseltmeyi yasakladığı
+  konusunda haklı; eksik olan, ondan sonrası.
+- Gerekeni, iki parça:
+  1. Kurulum, yükselttiği çekirdeğin çalışan çekirdek olmadığını fark
+     etmeli - `uname -r` için modül ağacı yok - ve bunu operatörün okuduğu son
+     şey olarak açıkça söylemeli: bu sunucu, güvenlik duvarı ya da VPN
+     çalışmadan önce yeniden başlatılmalı.
+  2. Yüklenemeyen bir modül sunucuyu kilitlememeli. Güvenlik duvarı commit
+     yoluna, R-046'nın posta yoluna verdiği şey gerekiyor: başarılamayan bir
+     plan, her açılışta yeniden denenmek yerine sebebiyle sonlu bir hataya
+     ulaşıp defteri serbest bırakır. Ve operatör 500 değil, sebebi görmeli.
+- Çıkış ölçütü: taze bir Arch VM'inde ya kurulum, çalışan çekirdeği
+  değiştirdikten sonra sessizce bitmeyi reddediyor ya da böyle bir kurulumdan
+  sonraki ilk güvenlik duvarı etkinleştirmesi, yeniden başlatmayı adlandıran
+  bir cümleyle düşüyor ve sunucuyu işlem yapabilir bırakıyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
