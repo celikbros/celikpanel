@@ -40,7 +40,7 @@ or executed as-is. There are no open pull requests at this baseline.
 |---|---|---|---|
 | R-001 | Critical | CLOSED ON MAIN | Operations now documents snapshot v6, current v4/v5 rejection and the historical-release boundary |
 | R-002 | High | CLOSED ON MAIN | README now separates optional local GPG use from canonical Ed25519 update authority |
-| R-003 | Critical | OPEN / BLOCKER FOR REAL TENANTS / ARCHIVE, RESTORE AND ENGINE REINSTALL PROVEN ON WSL / REAL VM PENDING | The panel archives and restores its own control plane (slices 1 and 2); the first WSL drill restored a fresh host in 23 s but the restored host cannot reinstall its DNS engine |
+| R-003 | Critical | DRILLED ON REAL VMs / PASSES / VPN AND MAIL MEMBERS WAIT ON R-034 AND R-036 | The panel archives and restores its own control plane; the drill passes on disposable real machines killed by power cut, with a sealed secret opened on the restored host |
 | R-004 | High | PARTIALLY MITIGATED / REVERIFY | Both hosts run exact Alpha52 with terminal receipts and full acceptance; snapshot source provenance remains `unknown` |
 | R-005 | High | OPEN | Boston/Frankfurt environment classification conflicts with the not-production-ready policy |
 | R-006 | High | OPEN | Route/role and API-contract debt remains at a security boundary |
@@ -88,6 +88,8 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-048 | Critical | FIXED AND PROVEN ON A REAL VM BY CUTTING ITS POWER | After a power loss the agent starts before the host is ready, cannot run its recovery, and never tries again - so an interrupted mutation holds the ledger and every host mutation is refused until someone restarts the agent by hand |
 | R-049 | High | FIXED AND PROVEN IN A BROWSER, END TO END | Every blocked preview decoded to null in the browser, so the refusals written for the takeover were invisible to anyone using the panel; and the running takeover has no route on the DNS screen at all |
 | R-050 | Medium | FOUND / NOT YET FIXED | A panel-installed DNS engine reads as unmanaged while the agent is holding mutations, so both the API and the screen would offer to take over the panel's own half-finished install |
+| R-051 | Critical | FOUND ON A REAL VM / NOT YET FIXED | Creating a database or a database user on a registered server can never succeed: the panel prefixes the name with the subscription number, and its own validator refuses an identifier that starts with a digit |
+| R-052 | Medium | FOUND ON A REAL VM / NOT YET FIXED | A restored host is not firewalled until it reboots: the ruleset is placed as a file but nothing loads it, and the unit that would have has already passed its boot slot |
 
 ## Detailed risks
 
@@ -164,6 +166,36 @@ or executed as-is. There are no open pull requests at this baseline.
 - Still owed: the same run on a disposable real VM; a stored database
   password on host A so a sealed ciphertext is actually opened on host B;
   the VPN, firewall and mail members once R-034, R-035 and R-036 allow them.
+- Drilled on disposable real virtual machines, 5 September 2026, twice (A to B,
+  then B to C), on a build of main. **Host A was killed with a power cut, not a
+  shutdown**, so the archive is proven against a machine that died. Both gaps
+  the WSL run left are closed:
+  - **A sealed ciphertext was opened on the restored host.** Host A's stored
+    TOTP secret is sealed in the database (`enc:v1:…`); a code computed from
+    its plaintext was accepted on host B, and a code from a different secret
+    was refused. The key travelling is no longer inferred from a digest.
+  - **The firewall member was carried across** in the second iteration, which a
+    WSL guest could not show: `placed path=/etc/celikpanel/firewall.nft` then
+    `firewall.nft: restored from the archive`, digest identical.
+- Measured: archive age at the kill 40.9 s with nothing written in that window,
+  so no data lost; installer start to panel serving 20.6 s; disaster to serving
+  including provisioning a new machine 105 s; the zone answering again after
+  the engine reinstall a further 15 s. Second iteration: 21.5 s, 51.6 s, 93.4 s,
+  16 s - the longer install is the distribution's own prerequisite phase, not
+  the restore, which places eleven members in about a second.
+- Proven on the restored host through the panel: the old password logs in, the
+  domain list matches field for field, the engine state file is byte-identical
+  as restored and names BIND at the same epoch, the reinstall path brings BIND
+  back and the zone answers with the same SOA and the same DKIM, SPF and DMARC
+  records, and the served TLS certificate has the same digest. A comparison of
+  21 recorded properties between the two hosts found one difference, and only
+  after the reinstall deliberately rewrote it.
+- What the restore said matched the design, with one half still unexercised:
+  `panel.env` was kept and named, but host B's installer wrote a byte-identical
+  file, so the key-by-key difference report never fired; `agent.token` was
+  placed from the archive exactly as the design says it would be.
+- Still owed, and owed to other entries rather than to this one: the VPN member
+  (R-034) and the mail stack (R-036). The DKIM key travelled regardless.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-004 — Alpha52 live promotion proven; residual acceptance must be retained
@@ -1269,6 +1301,15 @@ or executed as-is. There are no open pull requests at this baseline.
   acknowledged enable applies (`policy drop`, the panel and DNS ports open),
   `/etc/celikpanel/firewall.nft` exists afterwards - closing this entry's
   "never exists" evidence - and the panel stayed reachable throughout.
+- Correction from the real-VM drill, 5 September 2026: this entry's original
+  evidence was a WSL artefact. On a Debian 13 cloud image sshd is present and
+  listening, the panel discovers port 22, installs nftables in 2.6 s, enables
+  the firewall with no acknowledgement asked for, and writes the snapshot. The
+  blocker as described does not reproduce on an ordinary server.
+- The fix still stands and is still right: hosts genuinely without an SSH
+  service exist - containers, minimal images, appliances - and the product now
+  tells the three situations apart instead of refusing all of them alike. What
+  changes is the priority this entry deserved, not its correctness.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-036 - The mail profile needs a fully qualified hostname nobody can set
@@ -2029,6 +2070,55 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: on a host whose panel-installed engine is held, neither the
   API nor the screen offers a takeover, and the screen says the engine is the
   panel's and currently busy.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-051 - A database can never be created on a registered server
+
+- Evidence: live, 5 September 2026, on the restored host of the R-003 drill.
+  `POST` to create a database answered HTTP 500 and the panel logged `invalid
+  database name: identifier "2_r003probe" must start with a letter or
+  underscore`.
+- Cause, and it is unconditional: `cmd/panel/database_v2_handlers.go` builds the
+  name as the subscription id followed by an underscore and the operator's
+  name, so it always begins with a digit, and `internal/services/sqlsafe.go`
+  refuses an identifier that begins with a digit. The same prefix is applied to
+  database users in two more places, and the user validator in the MariaDB
+  driver refuses it the same way. Both drivers are affected, and the screens
+  reach it: the add-database and add-user dialogues.
+- Impact: two of the things a hosting panel exists to do cannot be done at all
+  on a server registered this way. The domain-scoped path is unaffected,
+  because its name begins with the sanitized domain, which is why this has
+  survived: the flow people demonstrate works, and the one beside it never has.
+- What it needs: a name the validator can accept, chosen deliberately rather
+  than by formatting - a prefix that starts with a letter, or the sanitized
+  subscription name - and the same decision applied to users. Whatever is
+  chosen must be stable for existing installations, so a migration question
+  comes with it; answer that before writing the fix.
+- Exit criteria: on a real VM, a database and a database user are created on a
+  registered server through the panel, appear in the engine, and are usable.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-052 - A restored host is not firewalled until it reboots
+
+- Evidence: live, 5 September 2026, second iteration of the R-003 drill. After
+  a successful restore that placed `/etc/celikpanel/firewall.nft`, `nft list
+  ruleset` was **empty** and `celikpanel-firewall-restore.service` was inactive
+  - enabled, but it had already passed its slot in that boot. Starting it by
+  hand loaded exactly the archived ruleset.
+- Impact: the restore's own justification for taking the firewall from the
+  archive is that a fresh install must not leave a restored host disarmed, and
+  the design calls the file "the exact ruleset restored on boot". Both are true
+  of the next boot and not of the one the operator is standing in. A server
+  restored after a disaster is unfirewalled until someone reboots it, and
+  nothing says so.
+- What it needs: the restore, having placed the snapshot, should arm it before
+  the install finishes - the same unit the boot would run, started once - or
+  the screen must say plainly that the firewall arms at the next restart.
+  Arming is better: the operator restored precisely because they wanted the
+  host back as it was.
+- Exit criteria: on a real VM, immediately after a restore that carried a
+  firewall snapshot, the ruleset is loaded and the host is protected without a
+  reboot.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

@@ -1,8 +1,11 @@
 # Control-plane disaster recovery
 
-Status: **design, 3 September 2026** (risk register R-003). Nothing described
-here ships yet; this document is the contract the implementation and the drill
-will be measured against. Engineering documents are English only (D-022).
+Status: **shipped and drilled on real machines, 5 September 2026** (risk
+register R-003). Slices 1 and 2 are on main; the drill in section 6 has been
+run on a WSL guest and then twice on disposable virtual machines killed by a
+power cut. This document remains the contract the implementation is measured
+against, and section 6 records what each run proved. Engineering documents are
+English only (D-022).
 
 ## 1. The problem in one sentence
 
@@ -29,7 +32,7 @@ host is control-plane state.
 | DKIM keys | `/var/lib/celikpanel-dkim/keys/` | root:celikpanel 0700, keys 0600 | Published in DNS; losing them breaks every domain's mail signing |
 | WireGuard | `/etc/wireguard/` | root:root 0700 | VPN identity and peers |
 | Panel TLS | `/var/lib/celikpanel/tls/` | root:celikpanel 0750, files 0640 | The panel's own certificate and key; the "protected initial certificate" |
-| Firewall snapshot | `/etc/celikpanel/firewall.nft` | root:root 0600 | The exact ruleset restored on boot |
+| Firewall snapshot | `/etc/celikpanel/firewall.nft` | root:celikpanel 0600 | The exact ruleset restored on boot |
 
 Excluded on purpose: `/var/lib/celikpanel-agent-private/system-sqlite-snapshots`
 (transient, 5-minute TTL), `/var/backups/celikpanel/update-snapshots` and
@@ -150,11 +153,18 @@ Then proven, after the fix in §5.5: the restored host reinstalled its own
 DNS server through the panel and answered its zone with the same SOA and
 the same DKIM record as host A, at the same epoch.
 
-Still owed before R-003 closes: the same run on a disposable real VM; a
-stored database password created on host A so that a sealed ciphertext is
-actually opened on host B (this run had none); and the VPN and firewall
-members, which could not be exercised on this build (R-034, R-035) - mail
-could not be installed either (R-036), though the DKIM key travelled.
+Real-VM runs, 5 September 2026, twice (A to B, then B to C), on a build of
+main, with **host A killed by a power cut rather than a shutdown**. Both gaps
+the WSL run left are closed: a sealed ciphertext was opened on the restored
+host - a code computed from host A's stored TOTP secret was accepted on host
+B and a code from a different secret refused - and the firewall member was
+carried across, which a WSL guest could not show. Measured: archive age at
+the kill 40.9 s with nothing written in that window; installer start to panel
+serving 20.6 s; disaster to serving, including provisioning a new machine,
+105 s; the zone answering again after the engine reinstall a further 15 s.
+
+Two defects the drill found are recorded as R-051 and R-052, and the VPN and
+mail members still wait on R-034 and R-036.
 
 1. Fresh host A: install, add an administrator, activate BIND, create a domain
    with mail (so DKIM keys and a sealed secret exist), enable the VPN, take a

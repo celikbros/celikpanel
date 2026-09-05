@@ -41,7 +41,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 |---|---|---|---|
 | R-001 | Kritik | MAIN ÜZERİNDE KAPALI | Operations artık snapshot v6'yı, güncel v4/v5 reddini ve tarihsel sürüm sınırını anlatıyor |
 | R-002 | Yüksek | MAIN ÜZERİNDE KAPALI | README artık isteğe bağlı yerel GPG kullanımını canonical Ed25519 update otoritesinden ayırıyor |
-| R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ / ARŞİV, GERİ YÜKLEME VE MOTOR YENİDEN KURULUMU WSL'DE KANITLI / GERÇEK VM BEKLİYOR | Panel kendi kontrol düzlemini arşivliyor ve geri yüklüyor (dilim 1 ve 2); ilk WSL tatbikatı taze sunucuyu 23 saniyede ayağa kaldırdı ama geri yüklenen sunucu DNS motorunu yeniden kuramıyor |
+| R-003 | Kritik | GERÇEK VM'LERDE TATBİKAT YAPILDI / GEÇTİ / VPN VE POSTA ÜYELERİ R-034 VE R-036'YI BEKLİYOR | Panel kendi kontrol düzlemini arşivliyor ve geri yüklüyor; tatbikat, elektriği kesilerek öldürülen atılabilir gerçek makinelerde geçti ve geri yüklenen sunucuda şifreli bir sır açıldı |
 | R-004 | Yüksek | KISMEN AZALTILDI / YENİDEN DOĞRULA | İki host exact Alpha52 ve terminal receipt ile tam kabulü geçti; snapshot kaynak provenance'ı `unknown` kaldı |
 | R-005 | Yüksek | AÇIK | Boston/Frankfurt ortam sınıfı üretime-hazır-değil politikasıyla çelişkili |
 | R-006 | Yüksek | AÇIK | Route/role ve API sözleşme borcu güvenlik sınırında sürüyor |
@@ -89,6 +89,8 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-048 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE ELEKTRİK KESİLEREK KANITLANDI | Elektrik kesintisinden sonra agent, sunucu hazır olmadan başlıyor, kurtarmasını yapamıyor ve bir daha denemiyor; yarım kalan işlem defteri tutuyor ve biri agent'ı elle yeniden başlatana kadar her işlem reddediliyor |
 | R-049 | Yüksek | DÜZELTİLDİ VE TARAYICIDA UÇTAN UCA KANITLANDI | Engellenmiş her önizleme tarayıcıda null'a çözülüyordu; yani devralma için yazılan retler paneli kullanan hiç kimseye görünmüyordu. Ayrıca çalışan devralmanın DNS ekranında hiç yolu yok |
 | R-050 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin kurduğu bir DNS motoru, agent işlemleri tutarken "yönetilmiyor" okunuyor; bu yüzden hem API hem ekran, panelin kendi yarım kalmış kurulumunu devralmayı öneriyor |
+| R-051 | Kritik | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Kayıtlı bir sunucuda veritabanı ya da veritabanı kullanıcısı oluşturmak hiçbir zaman başarılamıyor: panel adın başına abonelik numarasını koyuyor, kendi doğrulayıcısı ise rakamla başlayan tanımlayıcıyı reddediyor |
+| R-052 | Orta | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Geri yüklenen sunucu yeniden başlatılana kadar güvenlik duvarsız: kural seti dosya olarak yerleştiriliyor ama onu kimse yüklemiyor ve yükleyecek birim o açılıştaki sırasını çoktan geçmiş oluyor |
 
 ## Ayrıntılı riskler
 
@@ -166,6 +168,37 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Hâlâ borçlu olunan: aynı koşunun atılabilir gerçek VM'de tekrarı; A'da
   saklı bir veritabanı parolası ki B'de gerçek bir şifreli metin açılsın;
   R-034, R-035 ve R-036 izin verdiğinde VPN, güvenlik duvarı ve posta üyeleri.
+- 5 Eylül 2026'da atılabilir gerçek sanal makinelerde, ana hattın bir yapısıyla,
+  iki kez tatbikat yapıldı (A'dan B'ye, sonra B'den C'ye). **A sunucusu
+  kapatılmadı, elektriği kesildi**; yani arşiv, ölmüş bir makineye karşı
+  kanıtlandı. WSL koşusunun bıraktığı iki eksik de kapandı:
+  - **Geri yüklenen sunucuda şifreli bir metin açıldı.** A'nın saklı TOTP sırrı
+    veritabanında mühürlü (`enc:v1:…`); onun açık hâlinden hesaplanan bir kod
+    B'de kabul edildi, farklı bir sırdan hesaplanan kod reddedildi. Anahtarın
+    taşındığı artık bir özetten çıkarım değil.
+  - **Güvenlik duvarı üyesi taşındı**; bunu WSL konuğu gösteremezdi:
+    `placed path=/etc/celikpanel/firewall.nft` ve ardından
+    `firewall.nft: restored from the archive`, özet birebir aynı.
+- Ölçüm: öldürme anında arşivin yaşı 40,9 sn ve o aralıkta hiçbir şey
+  yazılmadı, yani kayıp yok; kurulum başlangıcından panelin hizmete girmesine
+  20,6 sn; yeni makinenin hazırlanması dahil felaketten hizmete 105 sn; motor
+  yeniden kurulumundan sonra bölgenin yeniden yanıt vermesi 15 sn daha. İkinci
+  yineleme: 21,5 sn, 51,6 sn, 93,4 sn, 16 sn - uzayan kurulum, geri yükleme
+  değil dağıtımın kendi ön hazırlık evresi; geri yükleme on bir üyeyi yaklaşık
+  bir saniyede yerleştiriyor.
+- Geri yüklenen sunucuda panelden kanıtlandı: eski parola giriş yapıyor, alan
+  adı listesi alan alan aynı, motor durum dosyası geri yüklendiği hâliyle bayt
+  bayt aynı ve BIND'i aynı epoch'ta adlandırıyor, yeniden kurulum yolu BIND'i
+  geri getiriyor ve bölge aynı SOA ile aynı DKIM, SPF ve DMARC kayıtlarını
+  veriyor, sunulan TLS sertifikasının özeti aynı. İki sunucu arasında kayıtlı
+  21 özelliğin karşılaştırması tek bir fark buldu, o da yeniden kurulum onu
+  bilerek değiştirdikten sonra.
+- Geri yüklemenin söyledikleri tasarımla uyuştu, bir yarısı hâlâ denenmemiş
+  olsa da: `panel.env` korundu ve adı söylendi, ama B'nin kurucusu bayt bayt
+  aynı dosyayı yazdığı için anahtar anahtar fark raporu hiç çalışmadı;
+  `agent.token` ise tasarımın dediği gibi arşivden yerleştirildi.
+- Hâlâ borç, ama bu kayda değil başka kayıtlara: VPN üyesi (R-034) ve posta
+  yığını (R-036). DKIM anahtarı yine de taşındı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-004 — Alpha52 canlı promotion kanıtlandı; artık kabul kanıtı korunmalı
@@ -1255,6 +1288,15 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   etkinleştirme uygulanıyor (`policy drop`, panel ve DNS portları açık);
   sonrasında `/etc/celikpanel/firewall.nft` var - bu kaydın "hiç oluşmuyor"
   kanıtı kapandı - ve panel boyunca erişilebilir kaldı.
+- Gerçek VM tatbikatından düzeltme, 5 Eylül 2026: bu kaydın ilk kanıtı bir WSL
+  yan etkisiymiş. Debian 13 bulut imajında sshd var ve dinliyor; panel 22'yi
+  buluyor, nftables'ı 2,6 saniyede kuruyor, güvenlik duvarını hiçbir onay
+  istemeden açıyor ve anlık görüntüyü yazıyor. Anlatıldığı hâliyle engel,
+  sıradan bir sunucuda yeniden üretilmiyor.
+- Düzeltme yine de geçerli ve yine de doğru: gerçekten SSH servisi olmayan
+  sunucular var - konteynerler, asgari imajlar, cihazlar - ve ürün artık üç
+  durumu ayırıyor, hepsini birden reddetmiyor. Değişen, kaydın hak ettiği
+  öncelik; doğruluğu değil.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-036 - Posta profili kimsenin ayarlayamadığı tam nitelikli bir makine adı istiyor
@@ -2000,6 +2042,57 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: panelin kurduğu motoru tutulu olan bir sunucuda ne API ne
   ekran devralma önerir ve ekran, motorun panele ait ve şu an meşgul
   olduğunu söyler.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-051 - Kayıtlı sunucuda veritabanı hiç oluşturulamıyor
+
+- Kanıt: canlı, 5 Eylül 2026, R-003 tatbikatının geri yüklenmiş sunucusunda.
+  Veritabanı oluşturma isteği HTTP 500 döndü ve panel `invalid database name:
+  identifier "2_r003probe" must start with a letter or underscore` kaydını
+  düşürdü.
+- Sebep ve koşulsuz: `cmd/panel/database_v2_handlers.go` adı, abonelik
+  numarası + alt çizgi + operatörün verdiği ad olarak kuruyor; yani hep
+  rakamla başlıyor. `internal/services/sqlsafe.go` ise rakamla başlayan
+  tanımlayıcıyı reddediyor. Aynı önek iki yerde daha veritabanı
+  kullanıcılarına uygulanıyor ve MariaDB sürücüsündeki kullanıcı doğrulayıcısı
+  onu aynı şekilde reddediyor. İki sürücü de etkileniyor ve ekranlar oraya
+  ulaşıyor: veritabanı ekleme ve kullanıcı ekleme pencereleri.
+- Etki: bir barındırma panelinin var olma sebeplerinden ikisi, bu şekilde
+  kayıtlı bir sunucuda hiç yapılamıyor. Alan adı kapsamlı yol etkilenmiyor;
+  çünkü onun adı temizlenmiş alan adıyla başlıyor. Bunun bugüne kadar
+  yaşamasının sebebi de bu: insanların gösterdiği akış çalışıyor, yanındaki
+  hiç çalışmamış.
+- Gerekeni: doğrulayıcının kabul edebileceği bir ad - biçimlendirmeyle değil
+  bilerek seçilmiş: harfle başlayan bir önek ya da temizlenmiş abonelik adı -
+  ve aynı kararın kullanıcılara da uygulanması. Seçilen ne olursa olsun mevcut
+  kurulumlar için kararlı olmalı; yani beraberinde bir göç sorusu geliyor.
+  Düzeltmeyi yazmadan önce onu yanıtla.
+- Çıkış ölçütü: gerçek bir VM'de, kayıtlı bir sunucuda panelden veritabanı ve
+  veritabanı kullanıcısı oluşturuluyor, motorda görünüyor ve kullanılabiliyor.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-052 - Geri yüklenen sunucu yeniden başlatılana kadar korumasız
+
+- Kanıt: canlı, 5 Eylül 2026, R-003 tatbikatının ikinci yinelemesi.
+  `/etc/celikpanel/firewall.nft` dosyasını yerleştiren başarılı bir geri
+  yüklemeden sonra `nft list ruleset` **boştu** ve
+  `celikpanel-firewall-restore.service` etkin değildi - etkinleştirilmiş ama o
+  açılıştaki sırasını çoktan geçmiş. Elle başlatınca tam olarak arşivlenmiş
+  kural setini yükledi.
+- Etki: geri yüklemenin güvenlik duvarını arşivden almasının gerekçesi, taze
+  bir kurulumun geri yüklenmiş sunucuyu korumasız bırakmaması; tasarım da
+  dosyayı "açılışta geri yüklenen tam kural seti" diye anıyor. İkisi de
+  sonraki açılış için doğru, operatörün içinde bulunduğu açılış için değil.
+  Felaketten sonra geri yüklenen sunucu, biri onu yeniden başlatana kadar
+  güvenlik duvarsız ve bunu söyleyen hiçbir şey yok.
+- Gerekeni: geri yükleme, anlık görüntüyü yerleştirdikten sonra kurulum
+  bitmeden onu devreye almalı - açılışın koşacağı aynı birimi bir kez
+  başlatarak - ya da ekran, güvenlik duvarının sonraki yeniden başlatmada
+  devreye gireceğini açıkça söylemeli. Devreye almak daha doğru: operatör tam
+  da sunucusunu eski hâline döndürmek istediği için geri yükledi.
+- Çıkış ölçütü: gerçek bir VM'de, güvenlik duvarı anlık görüntüsü taşıyan bir
+  geri yüklemenin hemen ardından kural seti yüklü ve sunucu yeniden
+  başlatılmadan korunuyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
