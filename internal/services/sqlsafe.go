@@ -275,3 +275,83 @@ func subscriptionScopedName(
 	}
 	return scoped, nil
 }
+
+// ---------------------------------------------------------------------------
+// Names the panel generates from a domain
+// ---------------------------------------------------------------------------
+//
+// R-051 again, on the two paths its own proof found afterwards. A generated
+// name here is composed as <fragment>_<suffix>, where the fragment is derived
+// from a name the operator chose - a domain for the domain-scoped database, a
+// site username for the WordPress installer - by dropping the characters an
+// identifier may not contain. Dropping characters cannot fix the FIRST one,
+// and ValidateSQLIdentifier refuses an identifier that begins with a digit
+// while a domain may perfectly legally begin with one: 1and1.com, 360.com,
+// 1password.com. Those domains produced 1and1_com_shop and the agent refused
+// it, exactly as the subscription-scoped path did.
+//
+// R-051's names could CHOOSE their first character, because the panel composed
+// them out of a number it owned. These cannot: the fragment is the operator's
+// name and has to stay recognisably theirs. So the repair lives here, beside
+// the validator it has to satisfy, and both call sites ask for it rather than
+// each deciding for itself - which is how the two of them drifted apart from
+// the third in the first place.
+//
+// R-051, kendi kanıtının sonradan bulduğu iki yolda. Buradaki üretilmiş ad
+// <parça>_<ek> biçiminde kurulur; parça, operatörün seçtiği bir addan
+// (domain ya da site kullanıcı adı) tanımlayıcıda bulunamayacak karakterler
+// atılarak türetilir. Karakter atmak İLK karakteri düzeltemez; doğrulayıcı
+// rakamla başlayan tanımlayıcıyı reddeder ve bir domain pekâlâ rakamla
+// başlayabilir. R-051'in adları ilk karakterini SEÇEBİLİYORDU; bunlar
+// seçemez, çünkü parça operatörün adıdır ve tanınır kalmalıdır. Bu yüzden
+// onarım, sağlaması gereken doğrulayıcının yanında, tek yerde durur.
+
+// generatedFragmentLeader is prepended to a fragment that cannot lead an
+// identifier on its own.
+//
+// The underscore is CHOSEN, for two reasons. It is a constant, so no future
+// edit to a fragment can move a digit back into the first position. And it is
+// the one leading character a fragment can never already have: hostname
+// validation admits only [a-z0-9-] in a label and refuses a label that starts
+// with a hyphen, so every domain the panel stores begins with a letter or a
+// digit and no other domain can sanitize onto a repaired name. A letter would
+// not have that property - "app_" in front of 360.com is the same fragment
+// app.360.com produces, and the operator would meet an inexplicable 409.
+//
+// Alt çizgi SEÇİLMİŞTİR: sabittir, bu yüzden ileride hiçbir düzenleme ilk
+// konuma bir rakam taşıyamaz; ve bir parçanın asla önceden sahip olamayacağı
+// tek baş karakterdir - hostname doğrulaması her etiketin harf ya da rakamla
+// başlamasını garanti eder, dolayısıyla onarılmış bir ada başka hiçbir domain
+// eşlenemez. Bir harf bunu sağlamazdı: 360.com önüne "app_" konulursa
+// app.360.com ile aynı parça olurdu.
+const generatedFragmentLeader = "_"
+
+// EnsureIdentifierLeader returns fragment with a leading character an SQL
+// identifier is allowed to start with, changing nothing else.
+//
+// It repairs ONLY the first character, and only when that character is a digit.
+// A fragment that already leads with a letter or an underscore is returned
+// byte-for-byte, because every database and every database user that exists in
+// an installation today was named from such a fragment: repairing more than the
+// defect would rename live databases.
+//
+// An empty fragment is returned empty. Emptiness is not this function's
+// decision - one caller's composed name is still valid with an empty fragment
+// and the other substitutes its own word - so the caller keeps it.
+//
+// EnsureIdentifierLeader, parçayı bir SQL tanımlayıcısının başlayabileceği bir
+// karakterle döndürür ve başka hiçbir şeyi değiştirmez. YALNIZCA ilk karakteri
+// ve yalnızca o karakter rakamsa onarır; harf ya da alt çizgiyle başlayan bir
+// parça bayt bayt aynı döner, çünkü bugün bir kurulumda var olan her
+// veritabanı böyle bir parçadan adlandırılmıştır - defekttten fazlasını
+// onarmak canlı veritabanlarını yeniden adlandırmak olurdu. Boş parça boş
+// döner; boşluk bu fonksiyonun kararı değildir.
+func EnsureIdentifierLeader(fragment string) string {
+	if fragment == "" {
+		return ""
+	}
+	if first := fragment[0]; first >= '0' && first <= '9' {
+		return generatedFragmentLeader + fragment
+	}
+	return fragment
+}

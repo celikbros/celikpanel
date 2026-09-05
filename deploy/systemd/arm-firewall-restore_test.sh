@@ -14,9 +14,16 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 helper="$root/deploy/systemd/arm-firewall-restore.sh"
 tmp="$(mktemp -d)"
-# bash lets a successful EXIT trap overwrite the status a failing test exited
-# with, which would turn every FAIL below into a silent pass. Carry it across.
-# Başarılı bir EXIT tuzağı, düşen bir testin çıkış durumunu ezebilir; taşı.
+# The cleanup must never decide what this test reports. bash does carry the
+# triggering status across a plain EXIT trap - measured on 5.2, including when
+# the cleanup command itself fails - so carrying it here is belt-and-braces:
+# it states the guarantee in the file rather than leaving a reader of a test
+# that gates a firewall to know it, and it holds whatever this trap grows into.
+# Temizlik, bu testin ne bildirdiğine karar vermemelidir. bash düz bir EXIT
+# tuzağında tetikleyen durumu zaten taşır (5.2'de ölçüldü, temizlik komutunun
+# kendisi düştüğünde bile); durumu burada açıkça taşımak ek güvencedir: bir
+# güvenlik duvarını kapıya bağlayan testte garantiyi okuyucunun bilgisine
+# bırakmaz ve bu tuzak ileride ne olursa olsun geçerli kalır.
 trap 'cleanup_status=$?; rm -rf -- "$tmp"; exit "$cleanup_status"' EXIT
 
 fail() {

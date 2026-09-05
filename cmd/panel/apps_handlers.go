@@ -542,6 +542,20 @@ func (p *Panel) recoverInterruptedAppInstallOperations(ctx context.Context) (int
 	return result.RowsAffected()
 }
 
+// sanitizeDBIdent turns a site username into the leading fragment of the
+// WordPress installer's database and account names. The character filter below
+// cannot fix the FIRST character, and a site username is derived from a domain
+// that may legally begin with a digit (1and1.com, 360.com), which the agent's
+// validator refuses - so the fragment goes through the one place that decides
+// its leading character (R-051). The repair runs before the truncation so a
+// repaired fragment obeys the same 48-character bound as every other one.
+//
+// sanitizeDBIdent bir site kullanıcı adını, WordPress kurucusunun veritabanı
+// ve hesap adlarının baştaki parçasına çevirir. Aşağıdaki karakter süzgeci İLK
+// karakteri düzeltemez; site kullanıcı adı ise rakamla başlayabilen bir
+// domain'den türer ve agent'ın doğrulayıcısı bunu reddeder. Bu yüzden parça,
+// baş karakter kararının verildiği tek yerden geçer (R-051). Onarım kısaltmadan
+// önce koşar ki onarılmış parça da aynı 48 karakter sınırına uysun.
 func sanitizeDBIdent(value string) string {
 	var builder strings.Builder
 	for _, character := range strings.ToLower(value) {
@@ -550,7 +564,7 @@ func sanitizeDBIdent(value string) string {
 			builder.WriteRune(character)
 		}
 	}
-	result := builder.String()
+	result := services.EnsureIdentifierLeader(builder.String())
 	if len(result) > 48 {
 		result = result[:48]
 	}
