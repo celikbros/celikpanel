@@ -62,7 +62,24 @@ const mailTLSSyncInterruptedAttemptSentence = "An earlier attempt was " +
 	"interrupted before it could undo its own work, so mail TLS may still be " +
 	"partly configured here; running the mail profile install again converges it."
 
-const mailTLSSyncFailureReasonLimit = 400
+// mailTLSSyncFailureVoice is this path's words for the two failures it may end
+// on. The shape and the order of the message, and the rule about which
+// outcomes are offered one at all, are shared.
+// mailTLSSyncFailureVoice, bu yolun bitebilecegi iki basarisizlik icin kendi
+// sozleridir; bicim, sira ve kural paylasilir.
+var mailTLSSyncFailureVoice = hostMutationFailureVoice{
+	untouchedCode: mailTLSSyncFailedUntouchedCode,
+	restoredCode:  mailTLSSyncFailedRestoredCode,
+	untouchedLead: "The committed mail TLS change was abandoned without changing " +
+		"anything on this server.",
+	restoredLead: "The committed mail TLS change could not be completed. Everything " +
+		"this attempt changed - the default mail certificate and key, " +
+		"the Postfix SNI map, the managed Postfix TLS settings and the " +
+		"Dovecot TLS configuration - was put back as this attempt found " +
+		"it, and Postfix and Dovecot were validated and reloaded.",
+	residue:     mailTLSSyncResidueSentence,
+	interrupted: mailTLSSyncInterruptedAttemptSentence,
+}
 
 // mailTLSSyncCleanFailureText names the terminal failure. afterRestart says
 // whether startup recovery is speaking, which is the only case that has to
@@ -74,38 +91,7 @@ func mailTLSSyncCleanFailureText(
 	cause error,
 	afterRestart bool,
 ) (code string, message string, clean bool) {
-	reason := "unknown"
-	if cause != nil {
-		reason = strings.TrimSpace(cause.Error())
-	}
-	if reason == "" {
-		reason = "unknown"
-	}
-	if len(reason) > mailTLSSyncFailureReasonLimit {
-		reason = reason[:mailTLSSyncFailureReasonLimit] + "..."
-	}
-	tail := ""
-	if afterRestart {
-		tail = mailTLSSyncInterruptedAttemptSentence + " "
-	}
-	tail += mailTLSSyncResidueSentence + " Reason: " + reason
-	switch outcome {
-	case mailTLSHostUntouched:
-		return mailTLSSyncFailedUntouchedCode,
-			"The committed mail TLS change was abandoned without changing " +
-				"anything on this server. " + tail,
-			true
-	case mailTLSHostRestored:
-		return mailTLSSyncFailedRestoredCode,
-			"The committed mail TLS change could not be completed. Everything " +
-				"this attempt changed - the default mail certificate and key, " +
-				"the Postfix SNI map, the managed Postfix TLS settings and the " +
-				"Dovecot TLS configuration - was put back as this attempt found " +
-				"it, and Postfix and Dovecot were validated and reloaded. " + tail,
-			true
-	default:
-		return "", "", false
-	}
+	return mailTLSSyncFailureVoice.cleanFailureText(outcome, cause, afterRestart)
 }
 
 type mailTLSSyncJournal struct {

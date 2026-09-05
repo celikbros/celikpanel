@@ -822,27 +822,32 @@ func (snapshot *mailTLSStateSnapshot) rollback(run mailTLSCommandRunner) error {
 	return errors.Join(rollbackErrors...)
 }
 
-// mailTLSHostOutcome is what a reconciliation leaves behind on the host. It is
-// the fact a committed plan's failure has to be judged on: a plan that cannot
-// be completed may only be failed cleanly - and the host's mutation ledger
-// released - when the host is provably back where the step found it.
-// mailTLSHostOutcome, bir uzlastirmanin makinede biraktigi durumdur.
-// Tamamlanamayan bir plan, ancak makine kanitli bicimde adimin buldugu yere
-// geri donduyse temiz basarisiz sayilabilir ve defter serbest birakilabilir.
-type mailTLSHostOutcome int
+// What a reconciliation leaves behind on the host is the fact a committed
+// plan's failure has to be judged on, and the judgement is not this path's to
+// make: it lives once, in host_mutation_outcome.go, next to the ledger it
+// protects. This path asked the question first (R-046); the firewall asked it
+// again (R-054); R-055 asked for it to stop being redrawn. These names stay
+// because this path's tests and call sites read in this path's vocabulary -
+// they are the same type and the same four values, not a second set.
+//
+// Bir uzlastirmanin makinede biraktigi durum, taahhut edilmis bir planin
+// basarisizliginin uzerinde yargilanacagi olgudur; ancak yargi bu yolun degil,
+// defterin yanindaki tek yerin isidir. Bu adlar, bu yolun testleri ve cagri
+// yerleri kendi sozlugunde okunsun diye durur; ayni tur ve ayni dort degerdir.
+type mailTLSHostOutcome = hostMutationOutcome
 
 const (
 	// mailTLSHostUntouched: the failure happened before any host change.
-	mailTLSHostUntouched mailTLSHostOutcome = iota
+	mailTLSHostUntouched = hostMutationUntouched
 	// mailTLSHostRestored: the host was changed, then every managed file and
 	// postfix setting was restored, both daemon configurations validated and
 	// both daemons reloaded.
-	mailTLSHostRestored
+	mailTLSHostRestored = hostMutationRestored
 	// mailTLSHostConverged: the committed plan is applied.
-	mailTLSHostConverged
+	mailTLSHostConverged = hostMutationConverged
 	// mailTLSHostAmbiguous: the host was changed and the restoration could not
 	// be proved. This is the only outcome that may hold the ledger.
-	mailTLSHostAmbiguous
+	mailTLSHostAmbiguous = hostMutationAmbiguous
 )
 
 func setMailTLSFailure(

@@ -422,7 +422,13 @@ type nftListDocument struct {
 func inspectVPNNFTTable(ctx context.Context) (bool, string, error) {
 	output, err := serviceMutationCommand(ctx, "nft", "-j", "list", "tables").Output()
 	if err != nil {
-		return false, "", errors.New("could not inspect nftables policies")
+		// R-055. This is the first host contact a VPN setup makes, and on a
+		// server whose running kernel's modules are gone it is the one that
+		// fails - so it is the first place the operator can be told to restart
+		// rather than be handed a sentence about a policy inventory.
+		// R-055. Bir VPN kurulumunun ilk makine temasi budur ve modulleri
+		// gitmis bir cekirdekle calisan sunucuda basarisiz olan da odur.
+		return false, "", newVPNHostError("could not inspect nftables policies", output, err)
 	}
 	var document nftListDocument
 	if err := json.Unmarshal(output, &document); err != nil {
@@ -683,6 +689,7 @@ PostDown = %s
 
 	if err := reconcileVPNNFTTable(ctx, current, interfaceRunning); err != nil {
 		response.Error = err.Error()
+		response.HostRestartRequired = vpnHostRestartRequired(err)
 		return nil
 	}
 
@@ -716,6 +723,16 @@ PostDown = %s
 	}
 	serviceAttempted = true
 	if err := enableServiceForMutationWithExecutable(ctx, systemctl, unitName, true); err != nil {
+		// R-055. wg-quick brings the interface up, which is where the kernel
+		// is asked for the WireGuard module. A server that can load no module
+		// is told to restart rather than told that wg-quick failed.
+		// R-055. wg-quick arayuzu ayaga kaldirir; cekirdekten WireGuard
+		// modulunun istendigi yer burasidir.
+		if vpnHostCannotLoadKernelModules() {
+			response.HostRestartRequired = true
+			failSetup(vpnEngineRebootSentence + " (wg-quick failed to start the VPN server)")
+			return nil
+		}
 		failSetup("wg-quick failed to start the VPN server")
 		return nil
 	}
@@ -869,6 +886,7 @@ func (a *Agent) SyncVPNPeersV2(
 	}
 	if interfaceUp {
 		if err := applyWireGuardConfig(ctx, staged); err != nil {
+			response.HostRestartRequired = vpnHostRestartRequired(err)
 			recoveryCtx, cancel, recoveryContextErr := serviceMutationCancellingRecoveryContext(ctx, 30*time.Second)
 			if recoveryContextErr != nil {
 				poisonErr := poisonVPNPeerSyncRollback(ctx, errors.Join(err, recoveryContextErr))
@@ -878,13 +896,18 @@ func (a *Agent) SyncVPNPeersV2(
 			}
 			rollbackErr := applyWireGuardBytes(recoveryCtx, current)
 			cancel()
-			if rollbackErr != nil {
-				poisonErr := poisonVPNPeerSyncRollback(ctx, errors.Join(err, rollbackErr))
-				log.Printf("VPN peer live rollback failed after sync error %v: %v; poison: %v", err, rollbackErr, poisonErr)
-				response.Error = "VPN peer synchronization failed and automatic recovery is required"
-				return nil
-			}
-			response.Error = err.Error()
+			// R-055. The live apply failed. Whether this server may be handed
+			// back is not decided here: the rollback's own evidence - the live
+			// interface re-synchronised from the exact bytes on disk, and that
+			// durable configuration read back unchanged - is handed to the one
+			// rule, which either finishes the plan cleanly with its reason
+			// written durably or poisons and keeps the lock.
+			// R-055. Canli uygulama basarisiz oldu. Makinenin geri verilip
+			// verilemeyecegine burada karar verilmez; kanit tek kurala verilir.
+			response.Error = endVPNPeerSyncAttempt(
+				ctx, current, true, err, rollbackErr,
+				"VPN peer synchronization failed and automatic recovery is required",
+			)
 			return nil
 		}
 	}
@@ -940,13 +963,14 @@ func (a *Agent) SyncVPNPeersV2(
 			func() error { return writeSecureRootFile(wgConfPath(), current, 0o600) },
 		)
 		cancel()
-		if rollbackErr != nil {
-			poisonErr := poisonVPNPeerSyncRollback(ctx, errors.Join(commitErr, rollbackErr))
-			log.Printf("VPN peer commit rollback failed after %v: %v; poison: %v", commitErr, rollbackErr, poisonErr)
-			response.Error = "persist VPN config failed and automatic recovery is required"
-			return nil
-		}
-		response.Error = "persist VPN config failed; previous state restored"
+		// The same door as the live-apply failure above, for the same reason:
+		// a rollback that only wrote is not a rollback that is proved, and the
+		// decision about the ledger is not this path's to make.
+		// Yukaridakiyle ayni kapi, ayni nedenle.
+		response.Error = endVPNPeerSyncAttempt(
+			ctx, current, true, commitErr, rollbackErr,
+			"persist VPN config failed and automatic recovery is required",
+		)
 		return nil
 	}
 	response.Applied = true
@@ -1059,7 +1083,13 @@ func applyWireGuardConfig(ctx context.Context, configPath string) error {
 	if output, err := serviceMutationCommand(
 		ctx, "wg", "syncconf", wgIface, temporary.Name(),
 	).CombinedOutput(); err != nil {
-		return fmt.Errorf("wg syncconf failed: %s", firstLine(string(output)))
+		// R-055. This is the VPN's contact with the kernel, so it is where a
+		// machine that can load no module has to be named. The failure carries
+		// the classification, so a caller far from the command can still tell
+		// a server that needs restarting from a peer set wg would not accept.
+		// R-055. Bu, VPN'in cekirdekle temasidir; hicbir modul yukleyemeyen bir
+		// makinenin adlandirilmasi gereken yer burasidir.
+		return newVPNHostError("wg syncconf failed", output, err)
 	}
 	return nil
 }

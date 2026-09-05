@@ -49,8 +49,6 @@ const (
 	firewallApplyFailedRestoredCode  = "firewall_apply_failed_host_restored"
 )
 
-const firewallApplyFailureReasonLimit = 400
-
 // The two systemd unit-file states this plan is allowed to have found the boot
 // restore unit in, and the only two it knows how to put back.
 // Bu planin acilis geri yukleme unitini bulabilecegi ve geri koyabilecegi iki
@@ -60,28 +58,34 @@ const (
 	firewallRestoreUnitDisabled = "disabled"
 )
 
-// firewallHostOutcome is what a convergence leaves behind on the host. It is
-// the fact a committed plan's failure has to be judged on: a plan that cannot
-// be completed may only be failed cleanly - and the host's mutation ledger
-// released - when the host is provably where the plan found it. R-046 drew
-// this line for the mail path; R-054 needed it here.
-// firewallHostOutcome, bir yakinsamanin makinede biraktigi durumdur.
-type firewallHostOutcome int
+// What a convergence leaves behind on the host is the fact a committed plan's
+// failure has to be judged on, and the judgement is not this path's to make:
+// it lives once, in host_mutation_outcome.go, next to the ledger it protects.
+// R-046 drew the line for the mail path, R-054 needed it here, and R-055 asked
+// for it to stop being redrawn. These names stay because this path's tests and
+// call sites read in this path's vocabulary - they are the same type and the
+// same four values, not a second set.
+//
+// Bir yakinsamanin makinede biraktigi durum, taahhut edilmis bir planin
+// basarisizliginin uzerinde yargilanacagi olgudur; ancak yargi bu yolun degil,
+// defterin yanindaki tek yerin isidir. Bu adlar, bu yolun testleri ve cagri
+// yerleri kendi sozlugunde okunsun diye durur; ayni tur ve ayni dort degerdir.
+type firewallHostOutcome = hostMutationOutcome
 
 const (
 	// firewallHostUntouched: the failure happened before any host change.
-	firewallHostUntouched firewallHostOutcome = iota
+	firewallHostUntouched = hostMutationUntouched
 	// firewallHostRestored: the durable half of the plan was written, the live
 	// ruleset provably was not, and everything written was put back and read
 	// back. This outcome may only be reached through a fault that proves the
 	// kernel accepted nothing - see convergeFirewallApplyPlan.
-	firewallHostRestored
+	firewallHostRestored = hostMutationRestored
 	// firewallHostConverged: the committed plan is applied and verified.
-	firewallHostConverged
+	firewallHostConverged = hostMutationConverged
 	// firewallHostAmbiguous: the host was changed and could not be proved put
 	// back, or a ruleset may be half applied. This is the only outcome that
 	// may hold the ledger.
-	firewallHostAmbiguous
+	firewallHostAmbiguous = hostMutationAmbiguous
 )
 
 // What a clean failure does NOT undo, said out loud. Nothing this plan did
@@ -101,6 +105,24 @@ const firewallApplyInterruptedAttemptSentence = "An earlier attempt was " +
 	"policy on this server may not match what is live; turning the firewall on " +
 	"or off again once this server can load nftables converges it."
 
+// firewallApplyFailureVoice is this path's words for the two failures it may
+// end on. The shape and the order of the message, and the rule about which
+// outcomes are offered one at all, are shared.
+// firewallApplyFailureVoice, bu yolun bitebilecegi iki basarisizlik icin kendi
+// sozleridir; bicim, sira ve kural paylasilir.
+var firewallApplyFailureVoice = hostMutationFailureVoice{
+	untouchedCode: firewallApplyFailedUntouchedCode,
+	restoredCode:  firewallApplyFailedRestoredCode,
+	untouchedLead: "The committed firewall change was abandoned without changing " +
+		"anything on this server.",
+	restoredLead: "The committed firewall change could not be applied: this server " +
+		"could not load nftables, so no rule reached the kernel. The saved " +
+		"firewall policy and the boot restore unit this attempt had already " +
+		"written were put back as this attempt found them, and read back.",
+	residue:     firewallApplyResidueSentence,
+	interrupted: firewallApplyInterruptedAttemptSentence,
+}
+
 // firewallApplyCleanFailureText names the terminal failure. afterRestart says
 // whether startup recovery is speaking, which is the only case that has to
 // warn about an interrupted predecessor it could not undo.
@@ -110,38 +132,7 @@ func firewallApplyCleanFailureText(
 	cause error,
 	afterRestart bool,
 ) (code string, message string, clean bool) {
-	reason := "unknown"
-	if cause != nil {
-		reason = strings.TrimSpace(cause.Error())
-	}
-	if reason == "" {
-		reason = "unknown"
-	}
-	if len(reason) > firewallApplyFailureReasonLimit {
-		reason = reason[:firewallApplyFailureReasonLimit] + "..."
-	}
-	tail := ""
-	if afterRestart {
-		tail = firewallApplyInterruptedAttemptSentence + " "
-	}
-	tail += firewallApplyResidueSentence + " Reason: " + reason
-	switch outcome {
-	case firewallHostUntouched:
-		return firewallApplyFailedUntouchedCode,
-			"The committed firewall change was abandoned without changing " +
-				"anything on this server. " + tail,
-			true
-	case firewallHostRestored:
-		return firewallApplyFailedRestoredCode,
-			"The committed firewall change could not be applied: this server " +
-				"could not load nftables, so no rule reached the kernel. The saved " +
-				"firewall policy and the boot restore unit this attempt had already " +
-				"written were put back as this attempt found them, and read back. " +
-				tail,
-			true
-	default:
-		return "", "", false
-	}
+	return firewallApplyFailureVoice.cleanFailureText(outcome, cause, afterRestart)
 }
 
 var firewallApplyJournalFaultHook func(string) error

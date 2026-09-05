@@ -161,6 +161,36 @@ func (p *Panel) vpnVisibleSyncSummary(
 	return active, pending, failed, nil
 }
 
+// R-055. The agent proved, structurally, that this server is running a kernel
+// whose module tree is gone: it can load no kernel module, so WireGuard cannot
+// work here until the machine is restarted. That is not an internal error and
+// it is not the operator's mistake - it is one action, and the panel says it.
+// The sentence is the panel's own; agent text is never forwarded.
+//
+// R-055. Agent, bu sunucunun modul agaci artik diskte olmayan bir cekirdekle
+// calistigini yapisal olarak kanitladi. Bu bir ic hata degildir; tek bir
+// eylemdir ve panel onu soyler. Cumle panelin kendisinindir.
+var errVPNHostRestartRequired = errors.New("this server must be restarted before WireGuard can work")
+
+const vpnHostRestartRequiredMessage = "This server is running a kernel whose modules are " +
+	"no longer on disk, so WireGuard cannot be loaded: a package upgrade replaced the " +
+	"kernel and this server has not been restarted since. Restart this server, then " +
+	"set the VPN up again."
+
+// writeVPNHostRestartRequired answers the one refusal that has a single fixed
+// remedy. It returns false when the failure is anything else, so the caller
+// falls back to its ordinary error path.
+// writeVPNHostRestartRequired, tek ve sabit bir cozumu olan tek reddi yanitlar.
+func writeVPNHostRestartRequired(w http.ResponseWriter, err error) bool {
+	if !errors.Is(err, errVPNHostRestartRequired) {
+		return false
+	}
+	log.Printf("[409][vpn] %v", err)
+	writeCodedError(w, http.StatusConflict, errCodeVPNHostRestartRequired,
+		vpnHostRestartRequiredMessage, "")
+	return true
+}
+
 // handleVPNSetup starts the fixed WireGuard service and restores the complete
 // desired peer set. The public product deliberately exposes no custom port.
 // handleVPNSetup sabit WireGuard hizmetini başlatır ve istenen peer kümesinin
@@ -198,12 +228,20 @@ func (p *Panel) handleVPNSetup(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 			if response.Error != "" {
+				if response.HostRestartRequired {
+					return fmt.Errorf(
+						"VPN setup: %s: %w", response.Error, errVPNHostRestartRequired,
+					)
+				}
 				return fmt.Errorf("VPN setup: %s", response.Error)
 			}
 			return nil
 		},
 	)
 	if err != nil {
+		if writeVPNHostRestartRequired(w, err) {
+			return
+		}
 		writeAgentError(w, err, "VPN")
 		return
 	}
@@ -212,6 +250,9 @@ func (p *Panel) handleVPNSetup(w http.ResponseWriter, r *http.Request) {
 	// Kurulum tek bir kalıcı agent mutasyonuna sahiptir. Eşitleme bu kira
 	// bırakıldıktan sonra, panel düzeyindeki VPN kilidi sıralamayı sürdürürken başlar.
 	if err := p.syncVPNPeersLocked(r.Context()); err != nil {
+		if writeVPNHostRestartRequired(w, err) {
+			return
+		}
 		writeAgentError(w, err, "VPN")
 		return
 	}
@@ -351,6 +392,11 @@ func (p *Panel) syncVPNPeersGenerationLocked(ctx context.Context, retries int) e
 				return err
 			}
 			if response.Error != "" {
+				if response.HostRestartRequired {
+					return fmt.Errorf(
+						"peer sync: %s: %w", response.Error, errVPNHostRestartRequired,
+					)
+				}
 				return fmt.Errorf("peer sync: %s", response.Error)
 			}
 			if !response.Applied {
@@ -518,6 +564,9 @@ func (p *Panel) handleVPNSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := p.syncVPNPeers(r.Context()); err != nil {
+		if writeVPNHostRestartRequired(w, err) {
+			return
+		}
 		writeAgentError(w, err, "VPN")
 		return
 	}

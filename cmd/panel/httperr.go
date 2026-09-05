@@ -87,6 +87,13 @@ const (
 	errCodeQuotaDisk                     = "QUOTA_DISK_EXCEEDED"
 	errCodeEntitlement                   = "ENTITLEMENT_REQUIRED"
 	errCodeFirewallNoEngine              = "FIREWALL_ENGINE_MISSING"
+	// R-055. This server is running a kernel whose module tree is gone, so it
+	// can load no kernel module - and therefore no WireGuard - until it is
+	// restarted. The agent proves that structurally; the panel names the one
+	// action that fixes it instead of answering with an opaque 500.
+	// R-055. Bu sunucu, modul agaci artik diskte olmayan bir cekirdekle
+	// calisiyor; yeniden baslatilana kadar hicbir cekirdek modulu yukleyemez.
+	errCodeVPNHostRestartRequired = "VPN_HOST_RESTART_REQUIRED"
 	// The three SSH escape-hatch outcomes, told apart so the screen can offer
 	// a way forward on the only one that has one.
 	// Üç SSH kaçış-yolu sonucu; yalnız birinin bir çıkışı olduğu için ekran
