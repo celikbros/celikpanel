@@ -88,8 +88,9 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-048 | Critical | FIXED AND PROVEN ON A REAL VM BY CUTTING ITS POWER | After a power loss the agent starts before the host is ready, cannot run its recovery, and never tries again - so an interrupted mutation holds the ledger and every host mutation is refused until someone restarts the agent by hand |
 | R-049 | High | FIXED AND PROVEN IN A BROWSER, END TO END | Every blocked preview decoded to null in the browser, so the refusals written for the takeover were invisible to anyone using the panel; and the running takeover has no route on the DNS screen at all |
 | R-050 | Medium | FOUND / NOT YET FIXED | A panel-installed DNS engine reads as unmanaged while the agent is holding mutations, so both the API and the screen would offer to take over the panel's own half-finished install |
-| R-051 | Critical | FOUND ON A REAL VM / NOT YET FIXED | Creating a database or a database user on a registered server can never succeed: the panel prefixes the name with the subscription number, and its own validator refuses an identifier that starts with a digit |
-| R-052 | Medium | FOUND ON A REAL VM / NOT YET FIXED | A restored host is not firewalled until it reboots: the ruleset is placed as a file but nothing loads it, and the unit that would have has already passed its boot slot |
+| R-051 | Critical | FIXED AND PROVEN ON A REAL VM / THE CLASS IS CLOSED | Creating a database or a database user could never succeed on a registered server, and the same fault sat on the domain path for a digit-leading domain and in the WordPress installer |
+| R-052 | Medium | FIXED AND PROVEN ON A REAL VM | A restored host is not firewalled until it reboots: the ruleset is placed as a file but nothing loads it, and the unit that would have has already passed its boot slot |
+| R-053 | Low | FOUND ON A REAL VM / NOT YET FIXED | Registering a database server cannot succeed on an engine the panel just installed: the product stores a root password but never sets one, so the operator has to set it outside the panel first |
 
 ## Detailed risks
 
@@ -2096,6 +2097,42 @@ or executed as-is. There are no open pull requests at this baseline.
   comes with it; answer that before writing the fix.
 - Exit criteria: on a real VM, a database and a database user are created on a
   registered server through the panel, appear in the engine, and are usable.
+- **A correction to this entry, 5 September 2026:** it said the domain-scoped
+  path was unaffected. That is wrong for a domain that begins with a digit -
+  `1and1.com`, `360.com` - which produced a name the agent refused exactly as
+  the subscription path did. The WordPress installer had no first-character
+  guard either. The class was three faults, not one.
+- The migration question is answered from the history rather than assumed: the
+  digit-leading prefix and the validator never coexisted in a shipped build.
+  The validator landed 58 minutes after the initial commit and a month before
+  the first release tag, it has been touched by exactly one commit ever, and
+  every create path - both drivers, the agent's RPC, the import and cpmove
+  paths - validates today. No installation can hold such a name, so nothing is
+  migrated and nothing is renamed.
+- Fixed by putting the naming beside the validator it has to satisfy. The
+  subscription path composes through one function with a constant letter
+  prefix, re-validated before it reaches a driver so it cannot produce
+  something a driver refuses; the two sanitizers keep their own character
+  mapping and share only the first-character decision, because an ordinary
+  name must still produce exactly what it produces today - asserted by test on
+  both paths, and confirmed live on a pre-existing domain. Length limits are
+  named with their derivation and take the floor across both engines, since a
+  subscription can move between them. A bad name is now a 400 that names the
+  fault instead of a 500 from the engine.
+- The repair token is an underscore, not a word: `app_360_com` is exactly what
+  `app.360.com` already produces, so a word would let a digit-leading domain
+  silently take an ordinary domain's name. No stored domain can begin with an
+  underscore - the hostname rule forbids it - and the validator accepts one.
+- Proven on a real VM through the panel alone, with a negative control on the
+  same machine: the pre-fix binary reproduced the 500 and created nothing; the
+  fixed binary answered 200 for the same request; the objects exist in both
+  MariaDB and PostgreSQL and are **usable** - connecting as the created user
+  wrote and read back its own row - and an ordinary domain still produces the
+  name it always has.
+- Left reported rather than fixed: the domain-scoped handler still interpolates
+  the operator's raw name, so a name containing a hyphen composes an
+  identifier the validator refuses and surfaces as a 500. That is input
+  validation on operator input, a different defect from this class.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-052 - A restored host is not firewalled until it reboots
@@ -2119,6 +2156,39 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: on a real VM, immediately after a restore that carried a
   firewall snapshot, the ruleset is loaded and the host is protected without a
   reboot.
+- Fixed 5 September 2026. The restore arms the snapshot before the installer
+  returns, gated on a restore having happened: a fresh install has no snapshot
+  and an upgrade already has its rules loaded. The unit's own preflight runs as
+  a plain command first, because the unit isolates to the emergency target on
+  failure - right at boot, catastrophic during an install someone is standing
+  in over SSH. Arming failure aborts the install, for the same reason the unit
+  refuses to let a boot continue into an open host.
+- Proven on a real machine restored from the drill's own archive: the ruleset
+  was loaded at install exit, at 79 seconds of uptime and one boot id, matching
+  the archived snapshot exactly.
+- Found with it: the shell guard for this unit, and the one added here, were
+  referenced nowhere and had never run. Both are wired into CI. Five python
+  tests under the kill-matrix directory are orphaned the same way and are
+  named rather than wired blind.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-053 - A freshly installed engine cannot be registered without leaving the panel
+
+- Evidence: 5 September 2026, on the real VM used to prove R-051. The panel
+  installed MariaDB and PostgreSQL through its own service flow, but neither
+  could then be registered as a database server: CelikPanel stores an engine's
+  root password and never sets one, while Debian's MariaDB authenticates root
+  through the unix socket and its PostgreSQL leaves `postgres` without a
+  password. Both had to be given one over SSH before the register-a-server
+  screen could succeed.
+- Impact: the two flows that are meant to follow each other - install the
+  engine, then register it - do not connect. An operator following the panel
+  alone reaches a screen that cannot succeed, and the only way forward is the
+  shell, which the product's own rule forbids as a management path.
+- What it needs: the install flow either sets a root credential it then hands
+  to the register step, or the register screen says plainly what must be done
+  on the host first and why. The first is the product this panel is trying to
+  be; the second is honest and small.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
