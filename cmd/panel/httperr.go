@@ -94,6 +94,18 @@ const (
 	// R-055. Bu sunucu, modul agaci artik diskte olmayan bir cekirdekle
 	// calisiyor; yeniden baslatilana kadar hicbir cekirdek modulu yukleyemez.
 	errCodeVPNHostRestartRequired = "VPN_HOST_RESTART_REQUIRED"
+	// R-053. A database engine this panel installed is running and reachable
+	// and will not take the credential the panel holds for it, because the
+	// panel never set one and the packaged engine has none. That is a fact
+	// about the host with one action attached, not an internal error.
+	// R-053. Panelin kurdugu bir veritabani motoru calisiyor ve ulasilabilir
+	// ama panelin tuttugu kimlik bilgisini kabul etmiyor.
+	errCodeDatabaseEngineCredentialRefused = "DATABASE_ENGINE_CREDENTIAL_REFUSED"
+	// And its neighbour, kept apart so nobody is told to change a password on
+	// a server that is simply not running.
+	// Ve komsusu; kimse calismayan bir sunucuda parola degistirmeye
+	// gonderilmesin diye ayri tutulur.
+	errCodeDatabaseEngineUnreachable = "DATABASE_ENGINE_UNREACHABLE"
 	// The three SSH escape-hatch outcomes, told apart so the screen can offer
 	// a way forward on the only one that has one.
 	// Üç SSH kaçış-yolu sonucu; yalnız birinin bir çıkışı olduğu için ekran

@@ -136,7 +136,16 @@ func (d *MariaDBDriver) runSQL(sql string) ([]byte, error) {
 		if ctx.Err() != nil {
 			return nil, fmt.Errorf(`MariaDB command timed out: %w`, ctx.Err())
 		}
-		return nil, fmt.Errorf(`MariaDB command failed: %w`, err)
+		// R-053. The client wrote why it failed and this call used to throw it
+		// away, so every layer above saw "exit status 1" and could tell an
+		// engine that refused a password from an engine that was not running
+		// only by guessing. The output is read here, where it exists, and what
+		// it means is kept - not the text, which can echo a statement.
+		// R-053. Istemci neden basarisiz oldugunu yazdi ve bu cagri onu atardi.
+		// Cikti burada okunur ve ne anlama geldigi saklanir; metin degil.
+		return nil, WrapDatabaseEngineFailure(
+			fmt.Errorf(`MariaDB command failed: %w`, err), output,
+		)
 	}
 	return output, nil
 }

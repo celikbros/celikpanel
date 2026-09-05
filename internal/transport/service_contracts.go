@@ -202,6 +202,26 @@ type WireMailFiltersResponse struct {
 	Error  string `json:"error,omitempty"`
 }
 
+// MailFilterWiringStateResponse answers, read-only, whether this host has the
+// mail server whose milter chain the panel composes. R-056: the startup repair
+// used to find that out only after it had taken the whole-host mutation lease,
+// so a machine with no mail at all recorded a failed privileged operation on
+// every panel start. The question is one lookup and belongs before the ledger,
+// not inside it.
+//
+// MailFilterWiringStateResponse, bu makinede panelin milter zincirini
+// besteledigi posta sunucusunun bulunup bulunmadigini salt-okunur yanitlar.
+// R-056: baslangic onarimi bunu ancak makinenin tamamini alan kirayi aldiktan
+// sonra ogreniyordu.
+type MailFilterWiringStateResponse struct {
+	// MailServerInstalled is true when a Postfix this panel could wire is
+	// present on the host.
+	MailServerInstalled bool `json:"mail_server_installed"`
+	// Detail says what was found, in the product's plain voice, so a caller
+	// that decides not to act can say why.
+	Detail string `json:"detail,omitempty"`
+}
+
 type ConfigureMailSubmissionResponse struct {
 	Configured bool   `json:"configured"`
 	Detail     string `json:"detail,omitempty"`

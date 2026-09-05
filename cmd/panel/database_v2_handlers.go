@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -110,6 +112,77 @@ func (p *Panel) dbDriverFor(server *core.DatabaseServer) (services.DatabaseDrive
 		RootPassword: rootPassword,
 		Type:         dbDriverTypeFor(server),
 	})
+}
+
+// R-053. Every call into an engine goes through here on the way back out.
+// Two of the ways an engine can refuse have an instruction attached, and an
+// operator who is given the instruction never has to leave the panel to work
+// out what "internal server error" meant. Everything else keeps the ordinary
+// path, so an unrecognised failure is still reported as the unknown it is.
+//
+// The engine's own words are logged and never returned: the sentence the
+// caller receives is written here, in the product's voice, from the panel's
+// own engine identifier.
+//
+// R-053. Bir motora yapilan her cagri donuste buradan gecer. Motorun reddetme
+// bicimlerinden ikisinin bir talimati vardir; talimati alan operator "internal
+// server error"in ne demek oldugunu cozmek icin panelden ayrilmak zorunda
+// kalmaz. Motorun kendi sozleri gunluge yazilir, asla dondurulmez.
+func writeDatabaseEngineError(
+	w http.ResponseWriter,
+	server *core.DatabaseServer,
+	err error,
+) {
+	refusal := services.ClassifyDatabaseEngineRefusal(err)
+	if refusal == services.DatabaseEngineRefusalNone {
+		writeServerError(w, err)
+		return
+	}
+	driverType := ""
+	if server != nil {
+		driverType = dbDriverTypeFor(server)
+	}
+	message := services.DatabaseEngineRefusalMessage(driverType, refusal)
+	if message == "" {
+		writeServerError(w, err)
+		return
+	}
+	code := errCodeDatabaseEngineUnreachable
+	if refusal == services.DatabaseEngineRefusalCredential {
+		code = errCodeDatabaseEngineCredentialRefused
+	}
+	log.Printf("[409][database] %s: %v", code, err)
+	writeCodedError(w, http.StatusConflict, code, message, "")
+}
+
+// databaseServerTypeName resolves the engine identifier the drivers switch on
+// from the type the caller registered. An unknown type resolves to the empty
+// string, which selects no driver - the registration is then recorded without
+// a live check rather than refused on a lookup failure.
+//
+// databaseServerTypeName, cagiranin kaydettigi tipten surucunun sectigi motor
+// kimligini cozer. Bilinmeyen tip bos dizeye cozulur.
+func (p *Panel) databaseServerTypeName(ctx context.Context, typeID int) string {
+	var name string
+	if err := p.db.GetDB().QueryRowContext(ctx,
+		`SELECT name FROM database_server_types WHERE id = ?`, typeID,
+	).Scan(&name); err != nil {
+		return ""
+	}
+	return name
+}
+
+// isDuplicateDatabaseServerAddress recognises the UNIQUE(subscription, host,
+// port) refusal that means this server is already registered.
+// isDuplicateDatabaseServerAddress, bu sunucunun zaten kayitli oldugu anlamina
+// gelen UNIQUE ihlalini tanir.
+func isDuplicateDatabaseServerAddress(err error) bool {
+	if err == nil {
+		return false
+	}
+	text := strings.ToLower(err.Error())
+	return strings.Contains(text, "unique constraint") ||
+		strings.Contains(text, "duplicate key")
 }
 
 // Database Server Management Endpoints
@@ -247,9 +320,40 @@ func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 		RootPasswordEncrypted: sealedPassword,
 		Status:                "active",
 	}
+	server.TypeName = p.databaseServerTypeName(ctx, req.TypeID)
+
+	// R-053. Registration is the step that decides whether this panel can use
+	// the engine, so it is the step that has to find out - before a row exists
+	// that says "active" and cannot do anything. The engine is asked one
+	// harmless question with the credential just given; if it refuses, the
+	// operator reads what the host needs and why, here, rather than meeting a
+	// connection error later on a screen about creating a database.
+	//
+	// R-053. Kayit, bu panelin motoru kullanip kullanamayacagina karar veren
+	// adimdir; dolayisiyla ogrenmesi gereken adim da odur. Motora zararsiz tek
+	// bir soru sorulur; reddederse operator makinenin neye ihtiyaci oldugunu
+	// burada okur.
+	if driver, driverErr := p.dbDriverFor(server); driverErr == nil {
+		if err := driver.TestConnection(); err != nil {
+			writeDatabaseEngineError(w, server, err)
+			return
+		}
+	}
 
 	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
 	if err := serverRepo.Create(ctx, server); err != nil {
+		// The address is the identity of a registered server, so a second
+		// registration of the same one is a plain conflict with a plain
+		// remedy - not the 500 an unread constraint error becomes.
+		// Adres, kayitli bir sunucunun kimligidir; ayni sunucunun ikinci kez
+		// kaydi acik bir cakismadir.
+		if isDuplicateDatabaseServerAddress(err) {
+			log.Printf("[409][database] duplicate database server address: %v", err)
+			writeClientError(w, http.StatusConflict,
+				"A database server is already registered at this address. "+
+					"Remove that one first, then register this server again.")
+			return
+		}
 		writeServerError(w, err)
 		return
 	}
@@ -504,7 +608,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	// Apply the complete physical mutation first. Metadata is not published
 	// until every engine operation succeeds.
 	if err := driver.CreateDatabase(dbName); err != nil {
-		writeServerError(w, err)
+		writeDatabaseEngineError(w, server, err)
 		return
 	}
 
@@ -523,7 +627,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	userCreated := false
 	if newUserSecret != "" {
 		if err := driver.CreateUser(selectedUser.Username, newUserSecret); err != nil {
-			writeServerError(w, databaseMutationError(
+			writeDatabaseEngineError(w, server, databaseMutationError(
 				fmt.Errorf("create physical database user: %w", err),
 				compensateCreatedDatabase(driver, dbName, selectedUser.Username, false, false),
 			))
@@ -547,7 +651,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	if err := driver.GrantPrivileges(dbName, selectedUser.Username, privileges); err != nil {
 		// A driver error may represent a partially-applied grant. The database
 		// was created by this request, so revoking on it is safe.
-		writeServerError(w, databaseMutationError(
+		writeDatabaseEngineError(w, server, databaseMutationError(
 			fmt.Errorf("grant physical database privileges: %w", err),
 			compensateCreatedDatabase(driver, dbName, selectedUser.Username, true, userCreated),
 		))
@@ -664,7 +768,7 @@ func (p *Panel) handleDeleteDatabaseV2(w http.ResponseWriter, r *http.Request) {
 
 	// Delete from server
 	if err := driver.DeleteDatabase(database.Name); err != nil {
-		writeServerError(w, err)
+		writeDatabaseEngineError(w, server, err)
 		return
 	}
 
@@ -826,7 +930,7 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 
 	// Create user on server
 	if err := driver.CreateUser(username, password); err != nil {
-		writeServerError(w, err)
+		writeDatabaseEngineError(w, server, err)
 		return
 	}
 
@@ -913,7 +1017,7 @@ func (p *Panel) handleDeleteDatabaseV2User(w http.ResponseWriter, r *http.Reques
 
 	// Delete from server
 	if err := driver.DeleteUser(user.Username); err != nil {
-		writeServerError(w, err)
+		writeDatabaseEngineError(w, server, err)
 		return
 	}
 
@@ -1087,7 +1191,7 @@ func (p *Panel) handleGrantDatabaseAccess(w http.ResponseWriter, r *http.Request
 
 	// Grant on server
 	if err := driver.GrantPrivileges(database.Name, user.Username, privileges); err != nil {
-		writeServerError(w, err)
+		writeDatabaseEngineError(w, server, err)
 		return
 	}
 
@@ -1186,7 +1290,9 @@ func (p *Panel) handleRevokeDatabaseAccess(w http.ResponseWriter, r *http.Reques
 
 	// Metadata remains authoritative until the physical revoke succeeds.
 	if err := driver.RevokePrivileges(database.Name, user.Username); err != nil {
-		writeServerError(w, fmt.Errorf("revoke physical database privileges: %w", err))
+		writeDatabaseEngineError(
+			w, server, fmt.Errorf("revoke physical database privileges: %w", err),
+		)
 		return
 	}
 

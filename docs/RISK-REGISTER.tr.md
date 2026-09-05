@@ -91,10 +91,12 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-050 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin kurduğu bir DNS motoru, agent işlemleri tutarken "yönetilmiyor" okunuyor; bu yüzden hem API hem ekran, panelin kendi yarım kalmış kurulumunu devralmayı öneriyor |
 | R-051 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE KANITLANDI / SINIF KAPANDI | Kayıtlı bir sunucuda veritabanı ya da kullanıcı oluşturmak hiç başarılamıyordu; aynı kusur, rakamla başlayan alan adları için alan adı yolunda ve WordPress kurulumunda da duruyordu |
 | R-052 | Orta | DÜZELTİLDİ VE GERÇEK VM'DE KANITLANDI | Geri yüklenen sunucu yeniden başlatılana kadar güvenlik duvarsız: kural seti dosya olarak yerleştiriliyor ama onu kimse yüklemiyor ve yükleyecek birim o açılıştaki sırasını çoktan geçmiş oluyor |
-| R-053 | Düşük | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin az önce kurduğu bir motorda veritabanı sunucusu kaydı başarılamıyor: ürün kök parolasını saklıyor ama hiç ayarlamıyor; operatörün önce panel dışında parola koyması gerekiyor |
+| R-053 | Düşük | DÜZELTİLDİ VE CANLI KANITLANDI / ARDINDAKİ ÜRÜN KARARI R-057 | Panelin az önce kurduğu bir motorda veritabanı sunucusu kaydı başarılamıyor: ürün kök parolasını saklıyor ama hiç ayarlamıyor; operatörün önce panel dışında parola koyması gerekiyor |
 | R-054 | Yüksek | DÜZELTİLDİ VE GERÇEK ARCH VM'DE KANITLANDI / VPN YOLU R-055 | Arch'ta kurulum çalışan çekirdeği yükseltiyor ve yeniden başlatmadan hiç söz etmiyor; bu yüzden ilk güvenlik duvarı ya da VPN işlemi modülünü yükleyemiyor - bir sunucuda o hata, makine yeniden başlatılana dek defteri zehirledi |
-| R-055 | Yüksek | GERÇEK ARCH VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Güvenlik duvarı yolunun az önce kurtulduğu açık VPN yolunda duruyor: yüklenemeyen bir WireGuard modülü uygulamayı düşürüyor ve sunucuyu kilitliyor; güvenlik duvarı için yazılan düzeltme oraya uygulanmadı |
-| R-056 | Düşük | GERÇEK ARCH VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | Her taze Arch kurulumunda iki posta başlangıç işi, hiçbir şeyi adlandırmayan bir mesajla düşüyor |
+| R-055 | Yüksek | KURAL BİRLEŞTİRİLDİ VE CANLI KANITLANDI / BU KAYIT YANLIŞ YOLU ADLANDIRMIŞ | Güvenlik duvarı yolunun az önce kurtulduğu açık VPN yolunda duruyor: yüklenemeyen bir WireGuard modülü uygulamayı düşürüyor ve sunucuyu kilitliyor; güvenlik duvarı için yazılan düzeltme oraya uygulanmadı |
+| R-056 | Düşük | DÜZELTİLDİ VE CANLI KANITLANDI | Her taze Arch kurulumunda iki posta başlangıç işi, hiçbir şeyi adlandırmayan bir mesajla düşüyor |
+| R-057 | Orta | AÇIK / ÜRÜN KARARI | Veritabanı sunucusu eklemek ya da bulunan bir sunucuya kimlik bilgisi vermek için arayüz yok; bu yüzden reddin verdiği talimat panelden yerine getirilemiyor |
+| R-058 | Orta | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | VPN'in defter satırı genel cümleyi taşıyor, sebep yalnız HTTP gövdesinde; eş eşitleme uç noktası da modülü yükleyemeyen sunucuda hâlâ anlaşılmaz bir 500 dönüyor |
 
 ## Ayrıntılı riskler
 
@@ -2202,6 +2204,26 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   ayarlar ya da kayıt ekranı, sunucuda önce ne yapılması gerektiğini ve nedenini
   açıkça söyler. Birincisi bu panelin olmaya çalıştığı ürün; ikincisi dürüst ve
   küçük.
+- Kök neden, 5 Eylül 2026, ve bu ürünün üçüncü kez öğrendiği ders: istemcinin
+  çıktısı hata durumunda atılıyordu; bu yüzden üstteki her katman yalnız
+  `exit status 1` görüyordu. Motor `Access denied for user 'root'@'localhost'
+  (using password: NO)` demişti ve kimse okuyamıyordu.
+- Düzeltme, reddi çıktının var olduğu yerde sınıflandırıp metni değil anlamı
+  korumakla yapıldı - bir istemci tanısı, düştüğü ifadeyi yankılayabilir ve
+  bir ifade parola taşıyabilir. Kayıt artık, "etkin" diyen ve çalışamayacak
+  bir satır yazmadan önce motora zararsız tek bir soru soruyor ve operatör
+  doğruyu söyleyen bir 409 alıyor: bu sunucu çalışıyor ve CelikPanel'in
+  elindeki kök parolasını reddetti, CelikPanel'in elinde parola yok çünkü bir
+  motoru kurarken kök parolası koymuyor, ve bu durumda ne yapılmalı.
+  Yinelenen adres de okunmamış bir kısıt hatası değil, düz bir 409.
+- Panelden MariaDB kurulmuş gerçek bir makinede canlı kanıtlandı: oluşturma
+  o cümleyle `409 DATABASE_ENGINE_CREDENTIAL_REFUSED` döndürüyor, parolasız
+  elle kayıt daha kayıt anında reddediliyor ve hiçbir şeyin dinlemediği bir
+  bağlantı noktası `409 DATABASE_ENGINE_UNREACHABLE` alıyor.
+- Kanıt ayrıca cümlenin işaret ettiği yolun ekrandan erişilebilir olmadığını
+  gösterdi: sunucu ekleme ya da kaldırma arayüzü hiç yok - liste otomatik
+  bulunan sunucuları gösteriyor ve onları boş kök parolasıyla ekliyor. Tam
+  cevap R-057'de.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-054 - Arch'ta kurulum, modül yükleyemeyen bir sunucu bırakıyor ve bunu söylemiyor
@@ -2299,6 +2321,30 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   sunucuda VPN uygulaması, yeniden başlatmayı adlandıran bir cümleyle
   düşüyor, sunucuyu işlem yapabilir bırakıyor ve sebep agent yeniden
   başlatmayı aşıyor.
+- Kural 5 Eylül 2026'da birleştirildi: sonuç ve onu yöneten kural artık
+  defterin yanında bir kez duruyor; güvenlik duvarı ve posta yolları, iki
+  yolun tek bir testi bile değiştirilmeden bunun üstüne taşındı - tüm agent
+  takımı ana hatta ve dalda birebir aynı sonucu veriyor; bunu yeniden yazım
+  değil taşıma yapan şey de bu.
+- **Bu kayıt yanlış yolu adlandırmış ve canlı kanıt bunu yakaladı.** Kaydın
+  anlattığı sunucuda - modülleri silinmiş bir çekirdek - VPN eş eşitleme
+  dalına hiç ulaşmıyor. Canlı uygulama yalnız arayüz ayaktayken koşuyor;
+  kurulumu hiç tamamlayamamış bir sunucuda ise arayüz hiç ayakta olamaz. Hata
+  VPN'e **kurulum** sırasında nft üzerinden ulaşıyor. Eş eşitleme yolundaki
+  ortak kural kendi başına doğru; bu kaydı kapatan şey o değil.
+- Böyle bir sunucuda yalnız panelden canlı kanıtlandı: VPN kurulumu yeniden
+  başlatmayı adlandıran `409 VPN_HOST_RESTART_REQUIRED` döndürüyor, sunucu
+  öncesinde ve sonrasında işlem yapabilir kalıyor, ilgisiz bir kurulum kirayı
+  alıp bırakıyor, iş agent yeniden başlatmayı aşarak 1. denemede sonlu
+  kalıyor ve yeniden başlatmadan sonra aynı kurulum başarılı oluyor, eş
+  `wg show`'da görünüyor. Güvenlik duvarı da aynı sunucu ve yapıda yeniden
+  kanıtlandı; yani kural tek makinede iki yol için çalışıyor.
+- Kanıtın bulduğu ve bu kaydın zaten doğru sandığı iki şey doğru değil: VPN'in
+  **defter satırı hâlâ genel cümleyi taşıyor** - adlandıran metin yalnız HTTP
+  gövdesinde ve panel günlüğünde, çünkü güvenlik duvarının aksine VPN yolu
+  düşmeden önce defteri alıyor; ve `POST /api/v1/vpn/sync` böyle bir sunucuda
+  hâlâ `500 INTERNAL` diyor, ki bu R-054'ün adlandırdığı anlaşılmaz-500
+  biçimi. İkisi de R-058 olarak kayıtlı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-056 - Her taze Arch kurulumunda iki posta işi düşüyor
@@ -2315,6 +2361,63 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   koşmaması gerektiğini saptamak ve ya zamanlamamak ya da ne bulduğunu
   söyletmek. Hiçbir şeyi adlandırmayan bir mesaj, işten bağımsız olarak
   kusurdur.
+- 5 Eylül 2026'da düzeltildi ve kaydın kendi sorusunun yanıtı hayır: bağlama
+  işi ilk satırında "Postfix gerekli" diyor, yani postası olmayan sunucuda
+  yapılacak bir şey yok - ama o noktada panel tüm sunucu kirasını almış ve
+  kalıcı bir iş oluşturmuş oluyordu; böylece "burada posta yok", kimsenin
+  yapılandırmadığı bir makinede düşmüş ayrıcalıklı işlem olarak kaydediliyordu.
+  Artık kalıcı niyet oluşmadan önce soruyor ve bağlanacak bir şey yoksa iş
+  oluşturmuyor. Sorulamayan bir sunucu boş varsayılmıyor; onarım yine koşuyor.
+- Kaydın diğer yarısı - hiçbir şeyi adlandırmayan mesaj - onunla düzeldi:
+  defter artık çerçevenin cümlesi yerine sunucunun kendi sebebini taşıyabiliyor,
+  ama yalnız işin kendisi düştüğünde. Kaybolmuş ya da doğrulanamayan bir kira,
+  genel sözleri koruyor; çünkü o durumda panel gerçekten ne olduğunu bilmiyor.
+  Sebep sınırlanıyor, denetim karakterlerinden arındırılıyor ve önce talimat
+  geliyor; böylece kırpılma kuyruğu yer, esas noktayı değil.
+- Canlı kanıt: taze bir Arch sunucusunda dört panel açılışında sıfır böyle iş -
+  ikisi kurulum sırasında, biri yeniden başlatmadan sonra, biri ikili
+  değişiminden sonra - oysa ana hat aynı sunucu biçiminde üç hata üretiyordu.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-057 - Panel, operatöre panelin yapamayacağı bir şeyi söylüyor
+
+- Kanıt: 5 Eylül 2026, R-053 kanıtlanırken bulundu. Ret artık "bu sunucuya bir
+  kök parolası verin, sonra o parolayla yeniden kaydedin" diyor - ve sunucu
+  ekleme ya da kaldırma arayüzü hiç yok. Liste otomatik bulunan sunucuları
+  gösteriyor ve onları boş kök parolasıyla ekliyor; yani talimat yalnız
+  yönetici API'siyle yerine getirilebilir. Satırı silip yeniden eklemek de
+  otomatik bulmayla yarışıyor ve parolasız olanı yeniden yaratıyor.
+- Cevap, taahhüt sırasına göre, karar sürüklenerek değil görülerek alınsın diye:
+  1. Bulunan bir sunucuya kimlik bilgisi verilebilsin - var olan satıra kök
+     parolası mühürlensin, sunucu kartında bir alanla. En küçüğü ve cümleyi
+     izlenebilir kılan.
+  2. Operatör denemeden önce durumu görsün: listede sunucu başına kimlik
+     durumu taşınsın, böylece kart "henüz kullanılamaz - kök parolası gerekiyor"
+     desin; operatör bunu veritabanı oluşturma ekranında öğrenmesin.
+  3. Ürün kararı: kurulum akışı bir kök parolası üretsin, motor hâlâ yerel
+     soket yolunu kabul ederken onu ayarlasın, mühürlesin ve kayıt adımına
+     devretsin; böylece kurulum ile kayıt kabuk olmadan birbirine bağlansın.
+     Bir kontrol panelinin olağan yaptığı budur ve gerçek bir karardır -
+     operatörün zaten sahip olabileceği bir kimliğin sahibi ürün olur; bir
+     döndürme hikâyesi ve panel dışında kurulmuş motorlar için bir cevap ister.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-058 - Sebep ekrana ulaşıyor ama kayda geçmiyor
+
+- Kanıt: 5 Eylül 2026, R-055'i kanıtlamak için kullanılan Arch sunucusunda.
+  - VPN'in kalıcı işi hâlâ çerçevenin cümlesini kaydediyor: "Ayrıcalıklı
+    sunucu işlemi tamamlanmadı"; yeniden başlatmayı adlandıran cümle ise
+    yalnız HTTP gövdesinde ve panel günlüğünde. Kalıcı niyet oluşmadan önce
+    yoklama yapan ve bu yüzden yanıltıcı satır bırakmayan güvenlik duvarının
+    aksine, VPN yolu defteri alıyor ve sonra düşüyor.
+  - `POST /api/v1/vpn/sync` böyle bir sunucuda "VPN sunucusu kurulu değil"
+    sebebiyle `500 INTERNAL` dönüyor. İş sonlu ve kira serbest, yani sunucu
+    işlem yapabilir kalıyor - ama operatör, R-054'ün başlı başına kusur diye
+    adlandırdığı anlaşılmaz 500'ü alıyor.
+- Gerekeni: operatöre ulaşan sebep, kaydın tuttuğu sebep olmalı ve neden
+  reddettiğini bilen bir uç nokta bunu söylemeli. İkisinin de mekanizması artık
+  var - R-056'nın adlandırılmış defter sebebi ve R-053'ün motor reddi
+  sınıflandırması - yani bu icat değil, bağlama işi.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

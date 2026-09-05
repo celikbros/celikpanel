@@ -90,10 +90,12 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-050 | Medium | FOUND / NOT YET FIXED | A panel-installed DNS engine reads as unmanaged while the agent is holding mutations, so both the API and the screen would offer to take over the panel's own half-finished install |
 | R-051 | Critical | FIXED AND PROVEN ON A REAL VM / THE CLASS IS CLOSED | Creating a database or a database user could never succeed on a registered server, and the same fault sat on the domain path for a digit-leading domain and in the WordPress installer |
 | R-052 | Medium | FIXED AND PROVEN ON A REAL VM | A restored host is not firewalled until it reboots: the ruleset is placed as a file but nothing loads it, and the unit that would have has already passed its boot slot |
-| R-053 | Low | FOUND ON A REAL VM / NOT YET FIXED | Registering a database server cannot succeed on an engine the panel just installed: the product stores a root password but never sets one, so the operator has to set it outside the panel first |
+| R-053 | Low | FIXED AND PROVEN LIVE / THE PRODUCT DECISION BEHIND IT IS R-057 | Registering a database server cannot succeed on an engine the panel just installed: the product stores a root password but never sets one, so the operator has to set it outside the panel first |
 | R-054 | High | FIXED AND PROVEN ON A REAL ARCH VM / THE VPN PATH IS R-055 | Installing on Arch upgrades the running kernel and says nothing about a reboot, so the first firewall or VPN action fails to load its modules - and on one host that failure poisoned the ledger until the machine was rebooted |
-| R-055 | High | FOUND ON A REAL ARCH VM / NOT YET FIXED | The VPN path has the exposure the firewall path just lost: a WireGuard module that cannot load fails an apply that then wedges the host, and the fix that was written for the firewall was not applied there |
-| R-056 | Low | FOUND ON A REAL ARCH VM / NOT YET FIXED | Two mail startup jobs fail on every fresh Arch install with a message that names nothing |
+| R-055 | High | THE RULE IS UNIFIED AND PROVEN LIVE / THIS ENTRY NAMED THE WRONG PATH | The VPN path has the exposure the firewall path just lost: a WireGuard module that cannot load fails an apply that then wedges the host, and the fix that was written for the firewall was not applied there |
+| R-056 | Low | FIXED AND PROVEN LIVE | Two mail startup jobs fail on every fresh Arch install with a message that names nothing |
+| R-057 | Medium | OPEN / PRODUCT DECISION | There is no interface for adding a database server or giving a discovered one its credential, so the instruction the refusal gives cannot be followed from the panel |
+| R-058 | Medium | FOUND ON A REAL VM / NOT YET FIXED | The VPN's ledger row carries the generic sentence while the reason exists only in the HTTP body, and the peer-sync endpoint still answers an opaque 500 on a host that cannot load the module |
 
 ## Detailed risks
 
@@ -2225,6 +2227,28 @@ or executed as-is. There are no open pull requests at this baseline.
   to the register step, or the register screen says plainly what must be done
   on the host first and why. The first is the product this panel is trying to
   be; the second is honest and small.
+- Root cause, 5 September 2026, and it is this product's lesson for the third
+  time: the client's output was discarded on failure, so every layer above saw
+  `exit status 1`. The engine had said `Access denied for user
+  'root'@'localhost' (using password: NO)` and nobody could read it.
+- Fixed by classifying the refusal where the output exists and keeping the
+  meaning rather than the text - a client diagnostic can echo the statement it
+  failed on, and a statement can carry a password. Registration now asks the
+  engine one harmless question before recording a row that claims to be active
+  and cannot work, and the operator gets a 409 saying what is true: this
+  server is running and refused the root password CelikPanel holds, CelikPanel
+  holds none because it does not set one when it installs an engine, and what
+  to do about it. A duplicate address is a plain 409 rather than an unread
+  constraint failure.
+- Proven live on a real machine with MariaDB installed through the panel:
+  the create answers `409 DATABASE_ENGINE_CREDENTIAL_REFUSED` with that
+  sentence, a hand registration with no password is refused at registration
+  time, and a port nothing listens on answers
+  `409 DATABASE_ENGINE_UNREACHABLE`.
+- The proof also found that the sentence's instruction is not reachable from
+  the screen: there is no add-a-server or remove-a-server interface at all -
+  the list shows autodiscovered servers and inserts them with an empty root
+  password. The fuller answer is R-057.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-054 - Installing on Arch leaves a host that cannot load a module, and says nothing
@@ -2325,6 +2349,31 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: on a host whose kernel was replaced and not restarted, a VPN
   apply fails with a sentence naming the restart, leaves the host mutable, and
   the reason survives an agent restart.
+- The rule was unified on 5 September 2026: the outcome and the rule that
+  governs it now live once, beside the ledger, and the firewall and mail paths
+  were moved onto it without editing a single test in either - the whole agent
+  suite fails identically on main and on the branch, which is what makes it a
+  move rather than a rewrite.
+- **This entry named the wrong path, and the live proof caught it.** On the
+  host this entry describes - a kernel whose modules were deleted - the VPN
+  never reaches the peer-sync branch. The live apply runs only when the
+  interface is up, and on a host that could never complete setup the interface
+  can never be up. The fault reaches the VPN through nft during **setup**.
+  The shared rule in the peer-sync path is right on its own merits; it is not
+  what closes this entry.
+- Proven live on such a host, through the panel alone: VPN setup answers
+  `409 VPN_HOST_RESTART_REQUIRED` naming the restart, the host stays mutable
+  before and after, an unrelated install takes and releases the lease, the
+  job stays terminal at attempt 1 across an agent restart, and after a reboot
+  the same setup succeeds with the peer in `wg show`. The firewall was
+  re-proved on the same host and build, so the rule is shown working for two
+  paths on one machine.
+- Two things the proof found that this entry implied were already true, and
+  are not: the VPN's **ledger row still carries the generic sentence** - the
+  naming text exists only in the HTTP body and the panel journal, because
+  unlike the firewall the VPN path does take the ledger before it fails; and
+  `POST /api/v1/vpn/sync` still answers `500 INTERNAL` on such a host, which
+  is the opaque-500 shape R-054 named. Both are recorded as R-058.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-056 - Two mail jobs fail on every fresh Arch install
@@ -2341,6 +2390,68 @@ or executed as-is. There are no open pull requests at this baseline.
 - What it needs: find out whether the operation should run at all on a host
   with no mail installed, and either not schedule it or let it say what it
   found. A message that names nothing is the defect independent of the job.
+- Fixed 5 September 2026, and the answer to this entry's own question is no:
+  the wiring answers "Postfix is required" in its first line, so on a host
+  with no mail there is nothing to do - but by then the panel had taken the
+  whole-host lease and created a durable job, so "there is no mail here" was
+  recorded as a failed privileged operation on a machine nobody had
+  configured. It now asks before the durable intent exists and creates no job
+  when there is nothing to wire. A host that cannot be asked is not assumed
+  empty, so the repair still runs.
+- The other half of the entry - a message that names nothing - is fixed with
+  it: the ledger can carry the host's own reason instead of the framework's
+  sentence, but only when the work itself failed. A lost or unverifiable lease
+  keeps the generic words, because then the panel genuinely does not know
+  what happened. The reason is bounded and stripped of control characters,
+  instruction first so a truncation eats the tail rather than the point.
+- Proven live: zero such jobs across four panel starts on a fresh Arch host -
+  two during the install, one after a reboot, one after a binary swap - where
+  main produced three failures on the same host shape.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-057 - The panel tells the operator to do something the panel cannot do
+
+- Evidence: 5 September 2026, found while proving R-053. The refusal now says
+  "give this server a root password, then register it again with that
+  password" - and there is no add-a-server or remove-a-server interface at
+  all. The list shows autodiscovered servers and inserts them with an empty
+  root password, so the instruction is reachable only through the admin API.
+  Deleting the row and re-adding it also races autodiscovery, which recreates
+  the password-less one.
+- The answer, in order of increasing commitment, so the decision is visible
+  rather than drifted into:
+  1. Let a discovered server be given a credential - seal a root password onto
+     an existing row, with a field on the server card. Smallest, and it makes
+     the sentence followable.
+  2. Show the state before the operator tries: carry a per-server credential
+     state on the list so the card says "not usable yet - needs a root
+     password" instead of the operator finding out on a create-database
+     screen.
+  3. The product decision: the install flow generates a root password, sets it
+     on the engine while it still admits the local socket path, seals it, and
+     hands it to the register step, after which install and register connect
+     with no shell. This is what a control panel normally does, and it is a
+     real decision - it makes the product the owner of a credential the
+     operator may already own, and it needs a rotation story and an answer for
+     engines installed outside the panel.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-058 - The reason reaches the screen but not the record
+
+- Evidence: 5 September 2026, on the Arch host used to prove R-055.
+  - The VPN's durable job still records the framework's sentence, "The
+    privileged host operation did not complete", while the sentence that names
+    the restart exists only in the HTTP body and the panel journal. Unlike the
+    firewall, which probes before the durable intent exists and so leaves no
+    misleading row, the VPN path takes the ledger and then fails.
+  - `POST /api/v1/vpn/sync` on such a host answers `500 INTERNAL` with the
+    cause "VPN server is not set up". The job is terminal and the lease is
+    released, so the host stays mutable - but the operator gets the opaque
+    500 that R-054 named as a defect in its own right.
+- What it needs: the reason that reaches the operator must be the reason the
+  record keeps, and an endpoint that knows why it refused must say so. The
+  machinery for both now exists - the named ledger reason from R-056 and the
+  engine-refusal classification from R-053 - so this is wiring, not invention.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
