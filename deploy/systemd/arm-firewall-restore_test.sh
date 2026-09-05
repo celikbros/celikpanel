@@ -137,7 +137,16 @@ arm_line=$(grep -n 'arm-firewall-restore.sh' "$root/install.sh" | head -1 | cut 
 gate_line=$(grep -n 'if \[\[ "\$RESTORE_ARMED" == 1 \]\]; then' "$root/install.sh" | tail -1 | cut -d: -f1)
 (( reconcile_line < arm_line )) || \
     fail "install.sh arms the firewall before reconciling the unit's enablement"
-(( gate_line < arm_line && arm_line - gate_line < 6 )) || \
+# The arming must sit INSIDE the restore gate, not merely near it.
+# Proximity was the original proxy and it broke the moment a comment and
+# the kernel restart notice were added between them; the block boundary is
+# the fact this contract actually cares about.
+# Devreye alma, korumanin YANINDA degil ICINDE olmali. Yakinlik ilk vekildi
+# ve araya bir aciklama ile yeniden baslatma bildirimi girer girmez bozuldu;
+# sozlesmenin gercekten onemsedigi sey blok siniri.
+gate_close_line=$(awk -v start="$gate_line" 'NR > start && $0 == "fi" { print NR; exit }' "$root/install.sh")
+[[ -n "$gate_close_line" ]] || fail "install.sh restore gate is never closed"
+(( gate_line < arm_line && arm_line < gate_close_line )) || \
     fail "install.sh does not gate the arming on a control-plane restore"
 
 bash -n "$root/install.sh" "$helper" "$0"

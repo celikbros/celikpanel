@@ -36,6 +36,114 @@ const (
 	firewallApplyJournalFaultAfterSync    = "after_directory_sync"
 )
 
+// A committed firewall plan that cannot be completed ends here. The phase is
+// deliberately outside the commit-receipt namespace: the ledger invariant ties
+// an intent receipt to an active job and a published receipt to a succeeded
+// one, and this job is neither - it is finished, failed, and the host is free.
+// Tamamlanamayan, taahhut edilmis bir guvenlik duvari plani burada biter. Asama
+// bilerek taahhut-makbuzu ad alaninin disindadir.
+const firewallApplyFailedPhase = "firewall_apply_failed"
+
+const (
+	firewallApplyFailedUntouchedCode = "firewall_apply_failed_before_host_change"
+	firewallApplyFailedRestoredCode  = "firewall_apply_failed_host_restored"
+)
+
+const firewallApplyFailureReasonLimit = 400
+
+// The two systemd unit-file states this plan is allowed to have found the boot
+// restore unit in, and the only two it knows how to put back.
+// Bu planin acilis geri yukleme unitini bulabilecegi ve geri koyabilecegi iki
+// systemd unit-dosya durumu.
+const (
+	firewallRestoreUnitEnabled  = "enabled"
+	firewallRestoreUnitDisabled = "disabled"
+)
+
+// firewallHostOutcome is what a convergence leaves behind on the host. It is
+// the fact a committed plan's failure has to be judged on: a plan that cannot
+// be completed may only be failed cleanly - and the host's mutation ledger
+// released - when the host is provably where the plan found it. R-046 drew
+// this line for the mail path; R-054 needed it here.
+// firewallHostOutcome, bir yakinsamanin makinede biraktigi durumdur.
+type firewallHostOutcome int
+
+const (
+	// firewallHostUntouched: the failure happened before any host change.
+	firewallHostUntouched firewallHostOutcome = iota
+	// firewallHostRestored: the durable half of the plan was written, the live
+	// ruleset provably was not, and everything written was put back and read
+	// back. This outcome may only be reached through a fault that proves the
+	// kernel accepted nothing - see convergeFirewallApplyPlan.
+	firewallHostRestored
+	// firewallHostConverged: the committed plan is applied and verified.
+	firewallHostConverged
+	// firewallHostAmbiguous: the host was changed and could not be proved put
+	// back, or a ruleset may be half applied. This is the only outcome that
+	// may hold the ledger.
+	firewallHostAmbiguous
+)
+
+// What a clean failure does NOT undo, said out loud. Nothing this plan did
+// survives it, but the firewall is not on either, and an operator reading this
+// has to be told that rather than left to guess.
+// Temiz bir basarisizligin geri ALMADIGI sey, acikca soylenir.
+const firewallApplyResidueSentence = "The firewall was not changed: this server " +
+	"is exactly as protected, or unprotected, as it was before this request."
+
+// And the one thing a recovery cannot know. Each attempt puts back only what
+// it itself wrote; an attempt that was killed never got to. So a failure
+// reported after a restart may sit on a host an earlier attempt left half
+// configured, and it says so instead of implying the server is untouched.
+// Ve bir kurtarmanin bilemeyecegi tek sey.
+const firewallApplyInterruptedAttemptSentence = "An earlier attempt was " +
+	"interrupted before it could put back its own work, so the saved firewall " +
+	"policy on this server may not match what is live; turning the firewall on " +
+	"or off again once this server can load nftables converges it."
+
+// firewallApplyCleanFailureText names the terminal failure. afterRestart says
+// whether startup recovery is speaking, which is the only case that has to
+// warn about an interrupted predecessor it could not undo.
+// firewallApplyCleanFailureText, kalici basarisizligi adlandirir.
+func firewallApplyCleanFailureText(
+	outcome firewallHostOutcome,
+	cause error,
+	afterRestart bool,
+) (code string, message string, clean bool) {
+	reason := "unknown"
+	if cause != nil {
+		reason = strings.TrimSpace(cause.Error())
+	}
+	if reason == "" {
+		reason = "unknown"
+	}
+	if len(reason) > firewallApplyFailureReasonLimit {
+		reason = reason[:firewallApplyFailureReasonLimit] + "..."
+	}
+	tail := ""
+	if afterRestart {
+		tail = firewallApplyInterruptedAttemptSentence + " "
+	}
+	tail += firewallApplyResidueSentence + " Reason: " + reason
+	switch outcome {
+	case firewallHostUntouched:
+		return firewallApplyFailedUntouchedCode,
+			"The committed firewall change was abandoned without changing " +
+				"anything on this server. " + tail,
+			true
+	case firewallHostRestored:
+		return firewallApplyFailedRestoredCode,
+			"The committed firewall change could not be applied: this server " +
+				"could not load nftables, so no rule reached the kernel. The saved " +
+				"firewall policy and the boot restore unit this attempt had already " +
+				"written were put back as this attempt found them, and read back. " +
+				tail,
+			true
+	default:
+		return "", "", false
+	}
+}
+
 var firewallApplyJournalFaultHook func(string) error
 
 // Replaceable only by focused startup-recovery tests. Production always uses
@@ -43,7 +151,7 @@ var firewallApplyJournalFaultHook func(string) error
 var recoverFirewallApplyHost = func(
 	ctx context.Context,
 	journal *firewallApplyJournal,
-) error {
+) (firewallHostOutcome, error) {
 	firewallMu.Lock()
 	defer firewallMu.Unlock()
 	return convergeFirewallApplyPlan(
@@ -74,6 +182,18 @@ type firewallApplyJournal struct {
 	NoSSHService        bool   `json:"no_ssh_service,omitempty"`
 	PriorSnapshotExists bool   `json:"prior_snapshot_exists"`
 	PriorSnapshot       []byte `json:"prior_snapshot,omitempty"`
+	// PriorRestoreUnit records the boot restore unit's state before this plan
+	// touched it, and exists for one reason: a persisting plan that writes the
+	// unit and then finds it cannot load nftables must be able to put the unit
+	// back and prove it, instead of leaving a machine that will turn its
+	// firewall on by itself at the next boot for a request that never
+	// succeeded. It is empty on a plan that does not persist, and empty on a
+	// journal written before this field existed, in which case the unit is
+	// simply not provable and the plan stays fail-closed.
+	// PriorRestoreUnit, bu plan dokunmadan once acilis geri yukleme unitinin
+	// durumunu kaydeder. Kalicilastiran bir plan nftables'i yukleyemedigini
+	// anlarsa uniti geri koyabilmeli ve bunu kanitlayabilmelidir.
+	PriorRestoreUnit string `json:"prior_restore_unit,omitempty"`
 }
 
 func formatFirewallApplyCommitPhase(state, requestID, qualifier string) (string, error) {
@@ -189,6 +309,21 @@ func validateFirewallApplyJournal(journal *firewallApplyJournal) error {
 		if err := validateFirewallSnapshot(journal.PriorSnapshot); err != nil {
 			return fmt.Errorf("firewall apply journal prior snapshot: %w", err)
 		}
+	}
+	// A recorded unit state is one of exactly two words, and only a persisting
+	// plan may record one. Absence is allowed and means "not provable", which
+	// is how a journal written by an older agent stays readable and stays
+	// fail-closed instead of being rejected mid-upgrade.
+	// Kaydedilmis bir unit durumu tam olarak iki kelimeden biridir ve yalnizca
+	// kalicilastiran bir plan kaydedebilir. Yokluk serbesttir.
+	switch journal.PriorRestoreUnit {
+	case "":
+	case firewallRestoreUnitEnabled, firewallRestoreUnitDisabled:
+		if !journal.Persist {
+			return errors.New("firewall apply journal records a restore unit state it never touches")
+		}
+	default:
+		return errors.New("firewall apply journal restore unit state is invalid")
 	}
 	return nil
 }
@@ -394,10 +529,30 @@ func prepareFirewallApplyJournal(
 	if _, err := runner.LookPath("nft"); err != nil {
 		return nil, errors.New("firewall engine (nftables) is not installed")
 	}
+	// R-054: having the nft binary is not having a firewall engine. On a host
+	// whose running kernel was replaced without a restart nft is present and
+	// cannot reach the kernel at all, and the old code discovered that only
+	// after the durable intent had been written - which is how one ordinary
+	// "Turn on" click poisoned a whole control plane. Ask the kernel here,
+	// before the transaction exists, so the answer is a plain refusal on a
+	// host that was never touched and never became busy.
+	// R-054: nft ikilisine sahip olmak, bir guvenlik duvari motoruna sahip
+	// olmak degildir. Cekirdegi yeniden baslatilmadan degistirilmis bir
+	// makinede nft vardir ve cekirdege hic ulasamaz. Soruyu islem var olmadan
+	// once sor.
+	if _, err := discoverFirewallTables(runner); err != nil {
+		return nil, err
+	}
+	priorRestoreUnit := ""
 	if commitment.Persist {
 		if _, err := runner.LookPath("systemctl"); err != nil {
 			return nil, errors.New("systemd client failed security validation")
 		}
+		// Read where the boot restore unit stands before anything moves it, so
+		// a plan that has to be abandoned can put it back and prove it.
+		// Hicbir sey oynatmadan once acilis geri yukleme unitinin nerede
+		// durdugunu oku.
+		priorRestoreUnit = readFirewallRestoreUnitState(runner)
 	}
 	priorSnapshot, priorSnapshotExists, err := store.Load()
 	if err != nil {
@@ -452,7 +607,34 @@ func prepareFirewallApplyJournal(
 		NoSSHService:        noSSHService,
 		PriorSnapshotExists: priorSnapshotExists,
 		PriorSnapshot:       append([]byte(nil), priorSnapshot...),
+		PriorRestoreUnit:    priorRestoreUnit,
 	}, nil
+}
+
+// readFirewallRestoreUnitState answers with one of the two words this plan can
+// put back, or with nothing at all. Nothing is a truthful answer: a unit in
+// some third state, or a systemctl that would not say, is one this plan must
+// not later claim to have restored.
+// readFirewallRestoreUnitState, bu planin geri koyabilecegi iki kelimeden
+// biriyle ya da hicbir seyle yanit verir.
+func readFirewallRestoreUnitState(runner firewallCommandRunner) string {
+	out, err := runner.Output(
+		"systemctl",
+		"show",
+		"--no-pager",
+		"--property=UnitFileState",
+		"--value",
+		firewallRestoreUnitName,
+	)
+	if err != nil {
+		return ""
+	}
+	switch state := strings.TrimSpace(string(out)); state {
+	case firewallRestoreUnitEnabled, firewallRestoreUnitDisabled:
+		return state
+	default:
+		return ""
+	}
 }
 
 func activeDirectFirewallApplyJob(job *ServiceMutationJob) bool {
@@ -565,6 +747,47 @@ func poisonFirewallApplyConvergence(ctx context.Context, cause error) error {
 	return m.poisonLocked(fmt.Errorf("firewall host convergence is ambiguous: %w", cause))
 }
 
+// failStandaloneFirewallApply ends a committed plan that cannot succeed, with
+// its reason written durably and the ledger released. It is the exact mirror
+// of publishStandaloneFirewallApply below, and the only door out of a commit
+// other than success or poison.
+// failStandaloneFirewallApply, basarili olamayacak, taahhut edilmis bir plani
+// nedeni kalici olarak yazilmis ve defter serbest birakilmis halde bitirir.
+func failStandaloneFirewallApply(
+	ctx context.Context,
+	journal *firewallApplyJournal,
+	code, message string,
+) error {
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
+		return errors.New("firewall apply failure requires a durable execution tracker")
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.healthErrorLocked(); err != nil {
+		return err
+	}
+	if m.active != runtime || runtime.job == nil || runtime.steps != 1 ||
+		runtime.job.WorkerPID != 0 ||
+		runtime.firewallApplyCommittedPhase == "" ||
+		!firewallApplyJobMatchesJournal(runtime.job, journal) {
+		return errors.New("firewall apply failure lost the committed mutation")
+	}
+	runtime.firewallApplyCommittedPhase = ""
+	if err := m.finishRuntimeTerminalLocked(
+		runtime, false, firewallApplyFailedPhase, code, message,
+	); err != nil {
+		if m.active == runtime {
+			return m.poisonLocked(fmt.Errorf(
+				"persist terminal firewall failure: %w", err,
+			))
+		}
+		return err
+	}
+	return nil
+}
+
 func publishStandaloneFirewallApply(
 	ctx context.Context,
 	journal *firewallApplyJournal,
@@ -675,11 +898,35 @@ func applyStandaloneFirewallV2(
 	)
 	defer cancel()
 	convergenceRunner := firewallRunnerWithContext(runner, convergenceCtx)
-	if err := convergeFirewallApplyPlan(convergenceCtx, journal, convergenceRunner, store); err != nil {
-		poisonErr := poisonFirewallApplyConvergence(ctx, err)
-		log.Printf("Firewall V2 convergence failed after durable intent: %v; poison: %v", err, poisonErr)
+	outcome, err := convergeFirewallApplyPlan(convergenceCtx, journal, convergenceRunner, store)
+	if err != nil {
+		// R-054. A committed plan that failed on a host provably where the
+		// plan found it is finished as failed here, so one firewall request
+		// that this machine cannot serve cannot hold every other mutation on
+		// it. Anything the plan may still be holding on the host stays
+		// fail-closed: the ledger is poisoned and startup recovery gets the
+		// next word.
+		// R-054. Kanitli bicimde planin buldugu yerde duran bir makinede
+		// basarisiz olan, taahhut edilmis bir plan burada kalici olarak
+		// bitirilir; boylece bu makinenin karsilayamadigi tek bir guvenlik
+		// duvari istegi, uzerindeki diger tum mutasyonlari tutamaz.
 		response.PersistenceState = firewallPersistenceUnverified
 		response.PersistenceError = err.Error()
+		if code, message, clean := firewallApplyCleanFailureText(outcome, err, false); clean {
+			if failErr := failStandaloneFirewallApply(ctx, journal, code, message); failErr != nil {
+				log.Printf(
+					"Firewall V2 commit could not be failed cleanly: %v; cause: %v",
+					failErr, err,
+				)
+				response.Error = "firewall commit requires startup recovery"
+				return nil
+			}
+			log.Printf("Firewall V2 commit failed cleanly and released the ledger: %v", err)
+			response.Error = message
+			return nil
+		}
+		poisonErr := poisonFirewallApplyConvergence(ctx, err)
+		log.Printf("Firewall V2 convergence failed after durable intent: %v; poison: %v", err, poisonErr)
 		response.Error = "firewall commit requires startup recovery"
 		return nil
 	}
@@ -690,51 +937,171 @@ func applyStandaloneFirewallV2(
 	return nil
 }
 
+// convergeFirewallApplyPlan applies the committed plan and reports both
+// whether it succeeded and what it left on the host. Only the second answer
+// may decide whether a failure is allowed to be terminal.
+// convergeFirewallApplyPlan taahhut edilmis plani uygular ve hem basarili olup
+// olmadigini hem de makinede ne biraktigini bildirir.
 func convergeFirewallApplyPlan(
 	ctx context.Context,
 	journal *firewallApplyJournal,
 	runner firewallCommandRunner,
 	store firewallStateStore,
-) error {
+) (firewallHostOutcome, error) {
 	if err := validateFirewallApplyJournal(journal); err != nil {
-		return err
+		return firewallHostUntouched, err
 	}
 	if err := ctx.Err(); err != nil {
-		return err
+		return firewallHostUntouched, err
 	}
+	// Ask the kernel before writing anything. The pre-commit preparation asked
+	// the same question; asking it again here is what makes a startup recovery
+	// on a host that still cannot load nftables end in a clean failure rather
+	// than in another poisoned ledger, and it costs one read.
+	// Hicbir sey yazmadan once cekirdege sor. Ayni soruyu taahhut oncesi
+	// hazirlik da sordu; burada tekrar sormak, hala nftables yukleyemeyen bir
+	// makinedeki baslangic kurtarmasinin temiz bir basarisizlikla bitmesini
+	// saglar.
+	tables, err := discoverFirewallTables(runner)
+	if err != nil {
+		return firewallHostUntouched, err
+	}
+	wroteSnapshot, wroteUnit := false, false
 	switch {
 	case journal.Enabled && journal.Persist:
 		if err := store.Save(firewallDesiredSnapshot(journal)); err != nil {
-			return fmt.Errorf("write desired firewall snapshot: %w", err)
+			return firewallHostAmbiguous, fmt.Errorf("write desired firewall snapshot: %w", err)
 		}
+		wroteSnapshot = true
 		if err := setFirewallRestoreUnitEnabled(runner, true); err != nil {
-			return err
+			return firewallHostAmbiguous, err
 		}
+		wroteUnit = true
 	case journal.Enabled && journal.PriorSnapshotExists:
 		if err := store.Save(firewallDesiredSnapshot(journal)); err != nil {
-			return fmt.Errorf("update existing firewall snapshot: %w", err)
+			return firewallHostAmbiguous, fmt.Errorf("update existing firewall snapshot: %w", err)
 		}
+		wroteSnapshot = true
 	case !journal.Enabled && journal.Persist:
 		if err := setFirewallRestoreUnitEnabled(runner, false); err != nil {
-			return err
+			return firewallHostAmbiguous, err
 		}
+		wroteUnit = true
 		if err := store.Remove(); err != nil {
-			return fmt.Errorf("remove firewall snapshot: %w", err)
+			return firewallHostAmbiguous, fmt.Errorf("remove firewall snapshot: %w", err)
 		}
+		wroteSnapshot = true
 	}
-	if err := applyFirewallLivePlan(runner, journal); err != nil {
-		return err
+	if err := applyFirewallLivePlan(runner, journal, tables); err != nil {
+		return firewallApplyLiveFailureOutcome(
+			journal, runner, store, err, wroteSnapshot, wroteUnit,
+		)
 	}
 	if err := verifyFirewallSnapshotPlan(store, journal); err != nil {
-		return err
+		return firewallHostAmbiguous, err
 	}
 	if journal.Persist {
 		if err := verifyFirewallRestoreUnitState(runner, journal.Enabled); err != nil {
-			return err
+			return firewallHostAmbiguous, err
 		}
 	}
 	if err := verifyFirewallLivePlan(runner, journal); err != nil {
-		return err
+		return firewallHostAmbiguous, err
+	}
+	return firewallHostConverged, nil
+}
+
+// firewallApplyLiveFailureOutcome decides what a failed live apply left on the
+// host. Exactly one class of failure may be called harmless: the one where
+// this machine is proven unable to load any kernel module at all, because its
+// running kernel module tree is not on disk. That proof is structural, does
+// not depend on how nft worded itself, and means the kernel accepted nothing -
+// so the live ruleset is untouched and only this attempt own durable writes
+// have to be put back. Every other failure, including an nft that merely said
+// something kernel-shaped, keeps the old behaviour: the ruleset may be half
+// applied, the host is ambiguous, and the ledger is held.
+//
+// firewallApplyLiveFailureOutcome, basarisiz bir canli uygulamanin makinede ne
+// biraktigina karar verir. Yalnizca tek bir hata sinifi zararsiz sayilabilir:
+// makinenin hicbir cekirdek modulu yukleyemedigi kanitlanan durum. Bu kanit
+// yapisaldir ve cekirdegin hicbir sey kabul etmedigi anlamina gelir. Diger her
+// hata eski davranisi korur: kural seti yarim uygulanmis olabilir.
+func firewallApplyLiveFailureOutcome(
+	journal *firewallApplyJournal,
+	runner firewallCommandRunner,
+	store firewallStateStore,
+	cause error,
+	wroteSnapshot, wroteUnit bool,
+) (firewallHostOutcome, error) {
+	if firewallEngineFaultOf(cause) != firewallEngineFaultModulesMissing {
+		return firewallHostAmbiguous, cause
+	}
+	if !wroteSnapshot && !wroteUnit {
+		return firewallHostUntouched, cause
+	}
+	if err := restoreFirewallApplyPersistence(
+		journal, runner, store, wroteSnapshot, wroteUnit,
+	); err != nil {
+		return firewallHostAmbiguous, errors.Join(cause, err)
+	}
+	return firewallHostRestored, cause
+}
+
+// restoreFirewallApplyPersistence puts back the durable half of a plan that
+// could not reach the kernel, and then reads it back. It refuses anything it
+// cannot prove: a disable plan does not carry the snapshot it removed, so that
+// snapshot cannot be restored and the host stays ambiguous rather than being
+// declared clean on an assumption.
+// restoreFirewallApplyPersistence, cekirdege ulasamayan bir planin kalici
+// yarisini geri koyar ve geri okur. Kanitlayamadigi hicbir seyi kabul etmez.
+func restoreFirewallApplyPersistence(
+	journal *firewallApplyJournal,
+	runner firewallCommandRunner,
+	store firewallStateStore,
+	wroteSnapshot, wroteUnit bool,
+) error {
+	if wroteSnapshot {
+		if !journal.Enabled {
+			return errors.New(
+				"the firewall policy this attempt removed was not recorded, so it cannot be put back",
+			)
+		}
+		if err := restoreFirewallSnapshotState(
+			store, journal.PriorSnapshot, journal.PriorSnapshotExists,
+		); err != nil {
+			return fmt.Errorf("put back the earlier firewall snapshot: %w", err)
+		}
+	}
+	if wroteUnit {
+		switch journal.PriorRestoreUnit {
+		case firewallRestoreUnitEnabled, firewallRestoreUnitDisabled:
+			if err := setFirewallRestoreUnitEnabled(
+				runner, journal.PriorRestoreUnit == firewallRestoreUnitEnabled,
+			); err != nil {
+				return fmt.Errorf("put back the firewall restore unit: %w", err)
+			}
+		default:
+			return errors.New(
+				"the earlier state of the firewall restore unit was not recorded, so it cannot be put back",
+			)
+		}
+	}
+	if wroteSnapshot {
+		actual, exists, err := store.Load()
+		if err != nil {
+			return fmt.Errorf("read back the restored firewall snapshot: %w", err)
+		}
+		if exists != journal.PriorSnapshotExists ||
+			(exists && !bytes.Equal(actual, journal.PriorSnapshot)) {
+			return errors.New("the restored firewall snapshot does not match what this attempt found")
+		}
+	}
+	if wroteUnit {
+		if err := verifyFirewallRestoreUnitState(
+			runner, journal.PriorRestoreUnit == firewallRestoreUnitEnabled,
+		); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -750,14 +1117,16 @@ func firewallEffectiveTCPPorts(journal *firewallApplyJournal) []int {
 	))
 }
 
+// applyFirewallLivePlan writes the plan into the kernel. The table list it
+// works from was read by the caller before anything on this host was changed,
+// so a kernel that cannot answer is never discovered here for the first time.
+// applyFirewallLivePlan plani cekirdege yazar. Calistigi tablo listesi,
+// makinede hicbir sey degismeden once cagiran tarafindan okunmustur.
 func applyFirewallLivePlan(
 	runner firewallCommandRunner,
 	journal *firewallApplyJournal,
+	tables []byte,
 ) error {
-	tables, err := runner.Output("nft", "list", "tables")
-	if err != nil {
-		return fmt.Errorf("nft table discovery failed: %w", err)
-	}
 	present := firewallTablePresent(tables)
 	if !journal.Enabled {
 		if !present {
@@ -769,7 +1138,7 @@ func applyFirewallLivePlan(
 			"",
 		)
 		if err != nil {
-			return errors.New(commandFailureDetail("nft disable failed", out, err))
+			return newFirewallEngineError("nft disable failed", out, err)
 		}
 		return nil
 	}
@@ -780,7 +1149,7 @@ func applyFirewallLivePlan(
 	)
 	out, err := runner.CombinedOutput("nft", []string{"-f", "-"}, rules)
 	if err != nil {
-		return errors.New(commandFailureDetail("nft apply failed", out, err))
+		return newFirewallEngineError("nft apply failed", out, err)
 	}
 	return nil
 }
@@ -1154,7 +1523,7 @@ func (m *serviceMutationManager) recoverPersistedFirewallApplyLocked(
 		tracker,
 	)
 	m.mu.Unlock()
-	recoveryErr := recoverFirewallApplyHost(recoveryCtx, journal)
+	recoveryOutcome, recoveryErr := recoverFirewallApplyHost(recoveryCtx, journal)
 	cancel()
 	m.mu.Lock()
 	runtime.steps = 0
@@ -1162,6 +1531,35 @@ func (m *serviceMutationManager) recoverPersistedFirewallApplyLocked(
 	runtime.stepMu.Unlock()
 	m.mu.Lock()
 	if recoveryErr != nil {
+		// Re-attempting a plan this host cannot serve is how an ordinary
+		// firewall click took a whole control plane with it (R-054): the same
+		// nft call failed at every start and the ledger stayed held until the
+		// machine was rebooted. A plan the recovery cannot complete, on a host
+		// the recovery proved it left where it found it, is finished as failed
+		// with its reason written durably, and the host becomes mutable again.
+		// Everything else - a restoration that could not be proved, a ruleset
+		// that may be half applied - still poisons and still keeps the lock.
+		// Bu makinenin karsilayamayacagi bir plani tekrar denemek, siradan bir
+		// guvenlik duvari tiklamasinin butun kontrol duzlemini goturme
+		// bicimiydi (R-054).
+		code, message, clean := firewallApplyCleanFailureText(
+			recoveryOutcome, recoveryErr, true,
+		)
+		if clean {
+			log.Printf(
+				"Committed firewall plan failed cleanly during startup recovery: %v",
+				recoveryErr,
+			)
+			runtime.firewallApplyCommittedPhase = ""
+			if finishErr := m.finishRuntimeTerminalLocked(
+				runtime, false, firewallApplyFailedPhase, code, message,
+			); finishErr != nil {
+				return true, m.poisonLocked(fmt.Errorf(
+					"persist recovered firewall failure: %w", finishErr,
+				))
+			}
+			return true, nil
+		}
 		return true, m.poisonLocked(fmt.Errorf(
 			"recover committed firewall plan: %w",
 			recoveryErr,
