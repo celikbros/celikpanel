@@ -2871,6 +2871,31 @@ read -r ledger_owner ledger_group ledger_mode < <(stat -Lc '%u %g %a' -- "$AGENT
 # hiçbir etkinleştirme bağlantısı oluşturulmaz.
 /bin/bash "$SRC/deploy/systemd/enable-firewall-restore-if-saved.sh" "$CONF_DIR/firewall.nft" || \
     die "firewall restore unit could not be reconciled"
+# R-052: reconciling the unit only decides the NEXT boot. A restore places the
+# archived ruleset in this boot, whose slot for that unit has already passed, so
+# without the arming below the operator walks away from a successful disaster
+# recovery onto a host with an empty `nft list ruleset`. Only a restore needs
+# it: a fresh install has no snapshot, and on an upgrade the saved ruleset is
+# already loaded, which is why the reconcile helper above still must not start
+# anything. A failure here stops the install, because the unit already declares
+# that a persistent policy which cannot be restored must not be allowed to
+# continue into an open host — and stopping the installer is by far the gentler
+# way to say it than the emergency console the boot would use.
+#
+# R-052: unit'i uzlaştırmak yalnız BİR SONRAKİ açılışa karar verir. Geri yükleme
+# kural setini bu açılışta koyar ve bu açılışın yuvası çoktan geçmiştir; aşağıdaki
+# devreye alma olmadan operatör başarılı bir felaket kurtarmadan boş bir
+# `nft list ruleset` ile ayrılır. Buna yalnız geri yükleme ihtiyaç duyar. Burada
+# bir hata kurulumu durdurur; çünkü geri yüklenemeyen kalıcı ilkenin açık bir
+# makineyle devam etmesine izin verilmemelidir.
+if [[ "$RESTORE_ARMED" == 1 ]]; then
+    step "Arming the restored firewall" "Geri yüklenen güvenlik duvarı devreye alınıyor"
+    firewall_arming_report=$(/bin/bash "$SRC/deploy/systemd/arm-firewall-restore.sh" \
+        "$CONF_DIR/firewall.nft" "$PREFIX/bin/agent") || die \
+        "The restored firewall could not be armed and this host is NOT protected — load it by hand with 'systemctl start celikpanel-firewall-restore.service' and inspect 'journalctl -u celikpanel-firewall-restore'" \
+        "Geri yüklenen güvenlik duvarı devreye alınamadı ve bu makine KORUMASIZ — 'systemctl start celikpanel-firewall-restore.service' ile elle yükleyin ve 'journalctl -u celikpanel-firewall-restore' çıktısını inceleyin"
+    echo "    $firewall_arming_report"
+fi
 "$SYSTEMCTL_BIN" enable celikpanel-agent.service >/dev/null 2>&1 || \
     die "The agent service could not be enabled for reboot" \
         "Agent servisi yeniden başlatma için etkinleştirilemedi"

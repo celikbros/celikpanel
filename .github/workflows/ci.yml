@@ -105,6 +105,17 @@ jobs:
       # Prove exact coordinator identity and crash-safe quiesce recovery.
       # Tam koordinatör kimliğini ve çökme güvenli quiesce kurtarmasını kanıtla.
       - run: bash deploy/test-update-quiesce-exit-contract.sh update.sh
+      # Keep a restored host firewalled: the unit is re-enabled only when a
+      # snapshot was actually restored, and the restore arms the ruleset before
+      # the installer returns instead of waiting for a reboot that has already
+      # happened (R-052). Both guards existed but neither ran here, so nothing
+      # was stopping a regression from merging.
+      # Geri yüklenen bir host'u güvenlik duvarı arkasında tut: unit yalnızca
+      # gerçekten bir snapshot geri yüklendiyse etkinleştirilir ve geri yükleme,
+      # kural setini kurulum dönmeden önce devreye alır (R-052). İki muhafız da
+      # vardı ama hiçbiri burada koşmuyordu.
+      - run: bash deploy/systemd/enable-firewall-restore-if-saved_test.sh
+      - run: bash deploy/systemd/arm-firewall-restore_test.sh
 
   publisher-windows:
     name: Download portal publisher - Windows PowerShell 5.1

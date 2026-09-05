@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -457,7 +458,18 @@ func (p *Panel) handleDeleteDatabase(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
-// Helper function to sanitize database names
+// sanitizeName turns a domain into the leading fragment of a generated
+// database name. Dropping and folding characters cannot fix the first one, so
+// the finished fragment goes through the one place that decides that (R-051):
+// a domain such as 1and1.com or 360.com is legal, and without this the name it
+// produced began with a digit and the agent's validator refused it, so no
+// database could be created for such a domain at all.
+//
+// sanitizeName bir domain'i üretilmiş veritabanı adının baştaki parçasına
+// çevirir. Karakter atmak ilk karakteri düzeltemez; bu yüzden tamamlanmış
+// parça, bu kararın verildiği tek yerden geçer (R-051). 1and1.com ya da
+// 360.com meşru domain'lerdir ve bu olmadan ürettikleri ad rakamla başlıyor,
+// agent'ın doğrulayıcısı reddediyordu.
 func sanitizeName(name string) string {
 	// Remove dots and hyphens, replace with underscores
 	result := ""
@@ -468,5 +480,5 @@ func sanitizeName(name string) string {
 			result += "_"
 		}
 	}
-	return result
+	return services.EnsureIdentifierLeader(result)
 }

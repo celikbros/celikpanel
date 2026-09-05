@@ -427,6 +427,19 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 
 	// Resolve every caller-supplied reference before constructing a driver or
 	// mutating the physical engine/repository.
+	//
+	// The engine-side name is resolved here too, in the same preflight, so a
+	// name no engine can hold is refused as a 400 before a driver exists and
+	// before a single row is written. services.SubscriptionDatabaseName owns
+	// the prefix decision; see its comment for why it is a letter.
+	// Motor tarafındaki ad da bu ön kontrolde çözülür; tutulamayacak bir ad,
+	// sürücü kurulmadan ve tek satır yazılmadan 400 ile reddedilir.
+	dbName, err := services.SubscriptionDatabaseName(subscriptionID, req.DatabaseName)
+	if err != nil {
+		writeClientError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	var selectedUser databaseUserReference
 	var newUserSecret string
 	var sealedNewUserSecret string
@@ -441,7 +454,13 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		}
 		selectedUser = *user
 	case req.NewUsername != ``:
-		selectedUser.Username = fmt.Sprintf(`%d_%s`, subscriptionID, req.NewUsername)
+		selectedUser.Username, err = services.SubscriptionUserName(
+			subscriptionID, req.NewUsername,
+		)
+		if err != nil {
+			writeClientError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		newUserSecret = req.NewPassword
 		if newUserSecret == `` {
 			newUserSecret, err = services.GeneratePassword(16)
@@ -481,9 +500,6 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		writeServerError(w, err)
 		return
 	}
-
-	// Add subscription prefix
-	dbName := fmt.Sprintf("%d_%s", subscriptionID, req.DatabaseName)
 
 	// Apply the complete physical mutation first. Metadata is not published
 	// until every engine operation succeeds.
@@ -778,14 +794,22 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 	}
 	subscriptionID := server.SubscriptionID
 
+	// The account name is resolved before the driver, so a name no engine can
+	// hold is refused as a 400 rather than becoming an engine-side 500.
+	// Hesap adı sürücüden önce çözülür; tutulamayacak bir ad 500 yerine 400
+	// ile reddedilir.
+	username, err := services.SubscriptionUserName(subscriptionID, req.Username)
+	if err != nil {
+		writeClientError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	driver, err := p.dbDriverFor(server)
 	if err != nil {
 		writeServerError(w, err)
 		return
 	}
 
-	// Add subscription prefix
-	username := fmt.Sprintf("%d_%s", subscriptionID, req.Username)
 	password := req.Password
 	if password == "" {
 		password, err = services.GeneratePassword(16)

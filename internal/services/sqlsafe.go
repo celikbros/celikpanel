@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -155,4 +156,202 @@ func ValidatePrivileges(privileges string) (string, error) {
 		return "", fmt.Errorf("no valid privileges given")
 	}
 	return strings.Join(normalized, ", "), nil
+}
+
+// ---------------------------------------------------------------------------
+// Names the panel generates for a subscription
+// ---------------------------------------------------------------------------
+//
+// R-051: the panel built these names with fmt.Sprintf("%d_%s", subscriptionID,
+// requested), which always begins with a digit, while ValidateSQLIdentifier
+// above refuses an identifier that begins with a digit. Every create on a
+// registered server therefore answered HTTP 500 and nothing was ever created,
+// on either engine, from either screen.
+//
+// The prefix below is CHOSEN rather than formatted. It is the literal letter
+// "s", for subscription, and it is a constant precisely so that no future edit
+// to the number can move a digit into the first position again: whatever the
+// subscription id is, the first character of the generated name is that letter.
+// One letter, not a word, because the tightest limit these names must fit is a
+// MySQL account name at 32 characters and every character spent on decoration
+// is a character the operator cannot use.
+//
+// R-051: panel bu adları fmt.Sprintf("%d_%s", ...) ile kuruyordu; ad hep bir
+// rakamla başlıyordu ve yukarıdaki doğrulayıcı rakamla başlayan tanımlayıcıyı
+// reddediyor. Bu yüzden kayıtlı bir sunucuda hiçbir veritabanı ya da kullanıcı
+// oluşturulamıyordu. Aşağıdaki önek biçimlendirilmiş değil SEÇİLMİŞTİR: "s"
+// harfi sabittir, böylece abonelik numarası ne olursa olsun adın ilk karakteri
+// bir harftir.
+const subscriptionIdentifierPrefix = "s"
+
+const (
+	// maxGeneratedDatabaseNameLen is the floor of the three limits a generated
+	// database name has to satisfy at once: PostgreSQL 63, MySQL/MariaDB 64,
+	// and ValidateSQLIdentifier's own 63.
+	// Üretilen veritabanı adının aynı anda sağlaması gereken üç sınırın en
+	// düşüğü: PostgreSQL 63, MySQL/MariaDB 64, doğrulayıcı 63.
+	maxGeneratedDatabaseNameLen = maxIdentifierLen
+
+	// maxGeneratedUserNameLen is the floor of the ACCOUNT-name limits, which
+	// are much tighter than the database-name ones: MySQL 32, MariaDB 80,
+	// PostgreSQL 63. A subscription can be moved from one engine to the other,
+	// so the panel must never mint an account name only one of them can hold;
+	// 32 governs both drivers.
+	// Hesap adı sınırlarının en düşüğü: MySQL 32, MariaDB 80, PostgreSQL 63.
+	// Bir abonelik motorlar arasında taşınabildiği için panel yalnız birinin
+	// tutabileceği bir hesap adı üretmemelidir; iki sürücüde de 32 geçerlidir.
+	maxGeneratedUserNameLen = 32
+)
+
+// SubscriptionDatabaseName returns the engine-side name for a database created
+// on a registered server, scoped to the subscription that owns the server.
+// SubscriptionDatabaseName, kayıtlı bir sunucuda oluşturulan veritabanının
+// motor tarafındaki adını, sunucunun sahibi aboneliğe göre kapsamlandırarak
+// döndürür.
+func SubscriptionDatabaseName(subscriptionID int, requested string) (string, error) {
+	return subscriptionScopedName(
+		"database name", subscriptionID, requested, maxGeneratedDatabaseNameLen,
+	)
+}
+
+// SubscriptionUserName returns the engine-side account name for a database user
+// created on a registered server. It is the same decision as
+// SubscriptionDatabaseName, deliberately sharing one implementation so the two
+// can never drift apart again.
+// SubscriptionUserName, kayıtlı bir sunucuda oluşturulan veritabanı
+// kullanıcısının motor tarafındaki hesap adını döndürür; aynı kararı paylaşır
+// ki ikisi bir daha ayrışmasın.
+func SubscriptionUserName(subscriptionID int, requested string) (string, error) {
+	return subscriptionScopedName(
+		"user name", subscriptionID, requested, maxGeneratedUserNameLen,
+	)
+}
+
+// subscriptionScopedName composes and then re-validates. The prefix already
+// guarantees the first character, but the finished name still goes through the
+// single validator every driver calls, so this function can never hand a driver
+// a name that driver will refuse - which is the whole defect it exists to end.
+//
+// Every message it returns is a fixed developer-authored sentence and embeds no
+// part of the caller's input, so a handler may pass it straight to the operator
+// as a 400 (see writeClientError's contract) instead of the 500 an engine-side
+// refusal used to produce.
+//
+// subscriptionScopedName önce birleştirir, sonra yeniden doğrular. Önek ilk
+// karakteri zaten garanti eder; yine de tamamlanmış ad her sürücünün çağırdığı
+// tek doğrulayıcıdan geçer. Döndürdüğü her mesaj sabittir ve çağıranın
+// girdisinden hiçbir parça taşımaz.
+func subscriptionScopedName(
+	kind string,
+	subscriptionID int,
+	requested string,
+	limit int,
+) (string, error) {
+	if subscriptionID <= 0 {
+		return "", fmt.Errorf("the %s cannot be built: the subscription is unknown", kind)
+	}
+	name := strings.TrimSpace(requested)
+	if name == "" {
+		return "", fmt.Errorf("the %s must not be empty", kind)
+	}
+	for _, r := range name {
+		isLetter := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+		isDigit := r >= '0' && r <= '9'
+		if !isLetter && !isDigit && r != '_' {
+			return "", fmt.Errorf(
+				"the %s may contain only letters, digits and underscores", kind,
+			)
+		}
+	}
+	scoped := subscriptionIdentifierPrefix + strconv.Itoa(subscriptionID) + "_" + name
+	if len(scoped) > limit {
+		return "", fmt.Errorf(
+			"the %s is too long: with the subscription prefix it has to fit in %d characters",
+			kind, limit,
+		)
+	}
+	if err := ValidateSQLIdentifier(scoped); err != nil {
+		return "", err
+	}
+	return scoped, nil
+}
+
+// ---------------------------------------------------------------------------
+// Names the panel generates from a domain
+// ---------------------------------------------------------------------------
+//
+// R-051 again, on the two paths its own proof found afterwards. A generated
+// name here is composed as <fragment>_<suffix>, where the fragment is derived
+// from a name the operator chose - a domain for the domain-scoped database, a
+// site username for the WordPress installer - by dropping the characters an
+// identifier may not contain. Dropping characters cannot fix the FIRST one,
+// and ValidateSQLIdentifier refuses an identifier that begins with a digit
+// while a domain may perfectly legally begin with one: 1and1.com, 360.com,
+// 1password.com. Those domains produced 1and1_com_shop and the agent refused
+// it, exactly as the subscription-scoped path did.
+//
+// R-051's names could CHOOSE their first character, because the panel composed
+// them out of a number it owned. These cannot: the fragment is the operator's
+// name and has to stay recognisably theirs. So the repair lives here, beside
+// the validator it has to satisfy, and both call sites ask for it rather than
+// each deciding for itself - which is how the two of them drifted apart from
+// the third in the first place.
+//
+// R-051, kendi kanıtının sonradan bulduğu iki yolda. Buradaki üretilmiş ad
+// <parça>_<ek> biçiminde kurulur; parça, operatörün seçtiği bir addan
+// (domain ya da site kullanıcı adı) tanımlayıcıda bulunamayacak karakterler
+// atılarak türetilir. Karakter atmak İLK karakteri düzeltemez; doğrulayıcı
+// rakamla başlayan tanımlayıcıyı reddeder ve bir domain pekâlâ rakamla
+// başlayabilir. R-051'in adları ilk karakterini SEÇEBİLİYORDU; bunlar
+// seçemez, çünkü parça operatörün adıdır ve tanınır kalmalıdır. Bu yüzden
+// onarım, sağlaması gereken doğrulayıcının yanında, tek yerde durur.
+
+// generatedFragmentLeader is prepended to a fragment that cannot lead an
+// identifier on its own.
+//
+// The underscore is CHOSEN, for two reasons. It is a constant, so no future
+// edit to a fragment can move a digit back into the first position. And it is
+// the one leading character a fragment can never already have: hostname
+// validation admits only [a-z0-9-] in a label and refuses a label that starts
+// with a hyphen, so every domain the panel stores begins with a letter or a
+// digit and no other domain can sanitize onto a repaired name. A letter would
+// not have that property - "app_" in front of 360.com is the same fragment
+// app.360.com produces, and the operator would meet an inexplicable 409.
+//
+// Alt çizgi SEÇİLMİŞTİR: sabittir, bu yüzden ileride hiçbir düzenleme ilk
+// konuma bir rakam taşıyamaz; ve bir parçanın asla önceden sahip olamayacağı
+// tek baş karakterdir - hostname doğrulaması her etiketin harf ya da rakamla
+// başlamasını garanti eder, dolayısıyla onarılmış bir ada başka hiçbir domain
+// eşlenemez. Bir harf bunu sağlamazdı: 360.com önüne "app_" konulursa
+// app.360.com ile aynı parça olurdu.
+const generatedFragmentLeader = "_"
+
+// EnsureIdentifierLeader returns fragment with a leading character an SQL
+// identifier is allowed to start with, changing nothing else.
+//
+// It repairs ONLY the first character, and only when that character is a digit.
+// A fragment that already leads with a letter or an underscore is returned
+// byte-for-byte, because every database and every database user that exists in
+// an installation today was named from such a fragment: repairing more than the
+// defect would rename live databases.
+//
+// An empty fragment is returned empty. Emptiness is not this function's
+// decision - one caller's composed name is still valid with an empty fragment
+// and the other substitutes its own word - so the caller keeps it.
+//
+// EnsureIdentifierLeader, parçayı bir SQL tanımlayıcısının başlayabileceği bir
+// karakterle döndürür ve başka hiçbir şeyi değiştirmez. YALNIZCA ilk karakteri
+// ve yalnızca o karakter rakamsa onarır; harf ya da alt çizgiyle başlayan bir
+// parça bayt bayt aynı döner, çünkü bugün bir kurulumda var olan her
+// veritabanı böyle bir parçadan adlandırılmıştır - defekttten fazlasını
+// onarmak canlı veritabanlarını yeniden adlandırmak olurdu. Boş parça boş
+// döner; boşluk bu fonksiyonun kararı değildir.
+func EnsureIdentifierLeader(fragment string) string {
+	if fragment == "" {
+		return ""
+	}
+	if first := fragment[0]; first >= '0' && first <= '9' {
+		return generatedFragmentLeader + fragment
+	}
+	return fragment
 }

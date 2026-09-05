@@ -87,8 +87,8 @@ export function AddUserModalV2({ serverId, serverName, onClose, onSuccess }: Add
                             pattern="[a-zA-Z0-9_]+"
                             title="Only letters, numbers, and underscores"
                         />
-                        <p className="text-xs text-fg-subtle mt-1">
-                            User will be created as: 1_{username}
+                        <p className="text-xs text-fg-muted mt-1">
+                            The account is created with this subscription's prefix; its full name is shown once it exists.
                         </p>
                     </div>
 
