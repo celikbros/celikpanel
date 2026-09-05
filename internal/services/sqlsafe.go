@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -155,4 +156,122 @@ func ValidatePrivileges(privileges string) (string, error) {
 		return "", fmt.Errorf("no valid privileges given")
 	}
 	return strings.Join(normalized, ", "), nil
+}
+
+// ---------------------------------------------------------------------------
+// Names the panel generates for a subscription
+// ---------------------------------------------------------------------------
+//
+// R-051: the panel built these names with fmt.Sprintf("%d_%s", subscriptionID,
+// requested), which always begins with a digit, while ValidateSQLIdentifier
+// above refuses an identifier that begins with a digit. Every create on a
+// registered server therefore answered HTTP 500 and nothing was ever created,
+// on either engine, from either screen.
+//
+// The prefix below is CHOSEN rather than formatted. It is the literal letter
+// "s", for subscription, and it is a constant precisely so that no future edit
+// to the number can move a digit into the first position again: whatever the
+// subscription id is, the first character of the generated name is that letter.
+// One letter, not a word, because the tightest limit these names must fit is a
+// MySQL account name at 32 characters and every character spent on decoration
+// is a character the operator cannot use.
+//
+// R-051: panel bu adları fmt.Sprintf("%d_%s", ...) ile kuruyordu; ad hep bir
+// rakamla başlıyordu ve yukarıdaki doğrulayıcı rakamla başlayan tanımlayıcıyı
+// reddediyor. Bu yüzden kayıtlı bir sunucuda hiçbir veritabanı ya da kullanıcı
+// oluşturulamıyordu. Aşağıdaki önek biçimlendirilmiş değil SEÇİLMİŞTİR: "s"
+// harfi sabittir, böylece abonelik numarası ne olursa olsun adın ilk karakteri
+// bir harftir.
+const subscriptionIdentifierPrefix = "s"
+
+const (
+	// maxGeneratedDatabaseNameLen is the floor of the three limits a generated
+	// database name has to satisfy at once: PostgreSQL 63, MySQL/MariaDB 64,
+	// and ValidateSQLIdentifier's own 63.
+	// Üretilen veritabanı adının aynı anda sağlaması gereken üç sınırın en
+	// düşüğü: PostgreSQL 63, MySQL/MariaDB 64, doğrulayıcı 63.
+	maxGeneratedDatabaseNameLen = maxIdentifierLen
+
+	// maxGeneratedUserNameLen is the floor of the ACCOUNT-name limits, which
+	// are much tighter than the database-name ones: MySQL 32, MariaDB 80,
+	// PostgreSQL 63. A subscription can be moved from one engine to the other,
+	// so the panel must never mint an account name only one of them can hold;
+	// 32 governs both drivers.
+	// Hesap adı sınırlarının en düşüğü: MySQL 32, MariaDB 80, PostgreSQL 63.
+	// Bir abonelik motorlar arasında taşınabildiği için panel yalnız birinin
+	// tutabileceği bir hesap adı üretmemelidir; iki sürücüde de 32 geçerlidir.
+	maxGeneratedUserNameLen = 32
+)
+
+// SubscriptionDatabaseName returns the engine-side name for a database created
+// on a registered server, scoped to the subscription that owns the server.
+// SubscriptionDatabaseName, kayıtlı bir sunucuda oluşturulan veritabanının
+// motor tarafındaki adını, sunucunun sahibi aboneliğe göre kapsamlandırarak
+// döndürür.
+func SubscriptionDatabaseName(subscriptionID int, requested string) (string, error) {
+	return subscriptionScopedName(
+		"database name", subscriptionID, requested, maxGeneratedDatabaseNameLen,
+	)
+}
+
+// SubscriptionUserName returns the engine-side account name for a database user
+// created on a registered server. It is the same decision as
+// SubscriptionDatabaseName, deliberately sharing one implementation so the two
+// can never drift apart again.
+// SubscriptionUserName, kayıtlı bir sunucuda oluşturulan veritabanı
+// kullanıcısının motor tarafındaki hesap adını döndürür; aynı kararı paylaşır
+// ki ikisi bir daha ayrışmasın.
+func SubscriptionUserName(subscriptionID int, requested string) (string, error) {
+	return subscriptionScopedName(
+		"user name", subscriptionID, requested, maxGeneratedUserNameLen,
+	)
+}
+
+// subscriptionScopedName composes and then re-validates. The prefix already
+// guarantees the first character, but the finished name still goes through the
+// single validator every driver calls, so this function can never hand a driver
+// a name that driver will refuse - which is the whole defect it exists to end.
+//
+// Every message it returns is a fixed developer-authored sentence and embeds no
+// part of the caller's input, so a handler may pass it straight to the operator
+// as a 400 (see writeClientError's contract) instead of the 500 an engine-side
+// refusal used to produce.
+//
+// subscriptionScopedName önce birleştirir, sonra yeniden doğrular. Önek ilk
+// karakteri zaten garanti eder; yine de tamamlanmış ad her sürücünün çağırdığı
+// tek doğrulayıcıdan geçer. Döndürdüğü her mesaj sabittir ve çağıranın
+// girdisinden hiçbir parça taşımaz.
+func subscriptionScopedName(
+	kind string,
+	subscriptionID int,
+	requested string,
+	limit int,
+) (string, error) {
+	if subscriptionID <= 0 {
+		return "", fmt.Errorf("the %s cannot be built: the subscription is unknown", kind)
+	}
+	name := strings.TrimSpace(requested)
+	if name == "" {
+		return "", fmt.Errorf("the %s must not be empty", kind)
+	}
+	for _, r := range name {
+		isLetter := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+		isDigit := r >= '0' && r <= '9'
+		if !isLetter && !isDigit && r != '_' {
+			return "", fmt.Errorf(
+				"the %s may contain only letters, digits and underscores", kind,
+			)
+		}
+	}
+	scoped := subscriptionIdentifierPrefix + strconv.Itoa(subscriptionID) + "_" + name
+	if len(scoped) > limit {
+		return "", fmt.Errorf(
+			"the %s is too long: with the subscription prefix it has to fit in %d characters",
+			kind, limit,
+		)
+	}
+	if err := ValidateSQLIdentifier(scoped); err != nil {
+		return "", err
+	}
+	return scoped, nil
 }

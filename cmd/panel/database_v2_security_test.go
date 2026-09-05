@@ -258,6 +258,16 @@ func requireDatabaseDriverEvents(
 	}
 }
 
+// The requested names below are plain identifiers on purpose. Since R-051 the
+// handler resolves the engine-side name before it resolves any reference, so a
+// name the engines cannot hold answers 400 on the name alone - which would stop
+// these cases testing the thing they are about. The 404 oracle is unaffected:
+// that 400 is a pure function of the caller's own string and says nothing about
+// whether a user or a domain exists.
+//
+// Aşağıdaki adlar bilerek düz tanımlayıcıdır. R-051'den beri handler, motor
+// tarafındaki adı referanslardan önce çözer; tutulamayacak bir ad yalnız ada
+// bakılarak 400 döner ve bu durumda bu vakalar konularını sınamaz olurdu.
 func TestCreateDatabaseV2RejectsForeignAndMissingReferencesBeforeSideEffects(t *testing.T) {
 	cases := []struct {
 		name string
@@ -266,18 +276,18 @@ func TestCreateDatabaseV2RejectsForeignAndMissingReferencesBeforeSideEffects(t *
 		{
 			name: `foreign user on same physical engine and different logical server`,
 			body: fmt.Sprintf(
-				`{"database_name":"blocked-user","user_id":%d}`,
+				`{"database_name":"blocked_user","user_id":%d}`,
 				dbSecurityForeignUser,
 			),
 		},
 		{
 			name: `missing user`,
-			body: `{"database_name":"blocked-user","user_id":999999}`,
+			body: `{"database_name":"blocked_user","user_id":999999}`,
 		},
 		{
 			name: `foreign domain`,
 			body: fmt.Sprintf(
-				`{"database_name":"blocked-domain","user_id":%d,"domain_id":%d}`,
+				`{"database_name":"blocked_domain","user_id":%d,"domain_id":%d}`,
 				dbSecurityUser,
 				dbSecurityForeignDomain,
 			),
@@ -285,7 +295,7 @@ func TestCreateDatabaseV2RejectsForeignAndMissingReferencesBeforeSideEffects(t *
 		{
 			name: `missing domain`,
 			body: fmt.Sprintf(
-				`{"database_name":"blocked-domain","user_id":%d,"domain_id":999999}`,
+				`{"database_name":"blocked_domain","user_id":%d,"domain_id":999999}`,
 				dbSecurityUser,
 			),
 		},
@@ -394,13 +404,13 @@ func TestCreateDatabaseV2ReturnsOnlyNewSecretAndStoresItSealed(t *testing.T) {
 	if response[`password`] != `new-clear-secret` {
 		t.Fatalf(`new secret was not returned once: %v`, response[`password`])
 	}
-	if driver.createdUser != `9201_new_user` ||
+	if driver.createdUser != `s9201_new_user` ||
 		driver.createdPassword != `new-clear-secret` {
 		t.Fatalf(`unexpected engine credential: %+v`, driver)
 	}
 	var stored string
 	if err := fixture.sql.QueryRow(
-		`SELECT password FROM database_users WHERE username = '9201_new_user'`,
+		`SELECT password FROM database_users WHERE username = 's9201_new_user'`,
 	).Scan(&stored); err != nil {
 		t.Fatal(err)
 	}
@@ -442,12 +452,12 @@ func TestCreateDatabaseV2MetadataFailureRollsBackAndCompensatesEngine(t *testing
 		t.Fatalf(`metadata transaction leaked rows: before=%v after=%v`, before, after)
 	}
 	requireDatabaseDriverEvents(t, driver,
-		`create-database:9201_tx_rollback`,
-		`create-user:9201_new_compensated`,
-		`grant:9201_tx_rollback:9201_new_compensated:ALL`,
-		`revoke:9201_tx_rollback:9201_new_compensated`,
-		`delete-user:9201_new_compensated`,
-		`delete-database:9201_tx_rollback`,
+		`create-database:s9201_tx_rollback`,
+		`create-user:s9201_new_compensated`,
+		`grant:s9201_tx_rollback:s9201_new_compensated:ALL`,
+		`revoke:s9201_tx_rollback:s9201_new_compensated`,
+		`delete-user:s9201_new_compensated`,
+		`delete-database:s9201_tx_rollback`,
 	)
 }
 
@@ -471,12 +481,12 @@ func TestCreateDatabaseV2PhysicalGrantFailureCompensatesCompletedWork(t *testing
 		t.Fatalf(`physical failure published metadata: before=%v after=%v`, before, after)
 	}
 	requireDatabaseDriverEvents(t, driver,
-		`create-database:9201_grant_failure`,
-		`create-user:9201_grant_user`,
-		`grant:9201_grant_failure:9201_grant_user:ALL`,
-		`revoke:9201_grant_failure:9201_grant_user`,
-		`delete-user:9201_grant_user`,
-		`delete-database:9201_grant_failure`,
+		`create-database:s9201_grant_failure`,
+		`create-user:s9201_grant_user`,
+		`grant:s9201_grant_failure:s9201_grant_user:ALL`,
+		`revoke:s9201_grant_failure:s9201_grant_user`,
+		`delete-user:s9201_grant_user`,
+		`delete-database:s9201_grant_failure`,
 	)
 }
 
@@ -507,8 +517,8 @@ func TestCreateDatabaseV2UserMetadataFailureDeletesPhysicalUser(t *testing.T) {
 		t.Fatalf(`failed user metadata changed rows: before=%v after=%v`, before, after)
 	}
 	requireDatabaseDriverEvents(t, driver,
-		`create-user:9201_standalone`,
-		`delete-user:9201_standalone`,
+		`create-user:s9201_standalone`,
+		`delete-user:s9201_standalone`,
 	)
 }
 
