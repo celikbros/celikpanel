@@ -542,7 +542,7 @@ func applyFirewallLocked(runner firewallCommandRunner, store firewallStateStore,
 	// yokluk sonucu gerçek işletim hatasını gizler.
 	tables, err := runner.Output("nft", "list", "tables")
 	if err != nil {
-		resp.Error = fmt.Sprintf("nft table discovery failed: %v", err)
+		resp.Error = newFirewallEngineError("nft table discovery failed", tables, err).Error()
 		return nil
 	}
 	tablePresent := firewallTablePresent(tables)
@@ -936,9 +936,16 @@ func firewallStatusLocked(runner firewallCommandRunner, store firewallStateStore
 	// `nft list table`, eksik tabloyla yetki/protokol hatasında aynı sıfır-dışı
 	// sonucu verir. Önce tüm tablolar listelenir; yalnız kanıtlı yokluk kapalı
 	// görünür, her komut arızası görünür kalır.
+	// R-054: "exit status 1" is not a reason. When nft cannot reach the kernel
+	// at all - which is what a machine whose running kernel was replaced
+	// without a restart does - say that, because the panel shows this sentence
+	// to the operator and the DNS switch follow-up reports it as a firewall
+	// sync failure with nothing else attached.
+	// R-054: "exit status 1" bir neden degildir. nft cekirdege hic
+	// ulasamadiginda bunu soyle; paneli okuyan operator bu cumleyi gorur.
 	tables, err := runner.Output("nft", "list", "tables")
 	if err != nil {
-		resp.Error = fmt.Sprintf("nft table discovery failed: %v", err)
+		resp.Error = newFirewallEngineError("nft table discovery failed", tables, err).Error()
 		resp.PersistenceState = firewallPersistenceUnverified
 		resp.PersistenceError = resp.Error
 		return nil

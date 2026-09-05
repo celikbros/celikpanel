@@ -109,6 +109,16 @@ SELINUX_RESTORECON_BIN=/usr/sbin/restorecon
 SELINUX_MATCHPATHCON_BIN=/usr/sbin/matchpathcon
 SELINUX_GETENFORCE_BIN=/usr/sbin/getenforce
 UNAME_BIN=/usr/bin/uname
+# Fixed paths the kernel-replacement check reads. R-054.
+# Cekirdek-degisimi kontrolunun okudugu sabit yollar. R-054.
+KERNEL_RELEASE_FILE=/proc/sys/kernel/osrelease
+KERNEL_MODULE_ROOT=/lib/modules
+KERNEL_REBOOT_MARKER_RUN=/run/reboot-required
+KERNEL_REBOOT_MARKER_VAR=/var/run/reboot-required
+readonly KERNEL_RELEASE_FILE KERNEL_MODULE_ROOT \
+    KERNEL_REBOOT_MARKER_RUN KERNEL_REBOOT_MARKER_VAR
+KERNEL_REBOOT_STATE=none
+KERNEL_REBOOT_RUNNING_RELEASE=
 # Bootstrap trust boundary: these fixed inspection helpers perform the first
 # metadata read, so they cannot recursively attest themselves. They are never
 # selected through PATH; replacing them already requires root-equivalent
@@ -2068,6 +2078,177 @@ case "$PKG_FAMILY" in
     *) die "internal bootstrap package-family error: $PKG_FAMILY" ;;
 esac
 
+# Kernel replacement detection -----------------------------------------------
+# R-054. A prerequisite step that upgrades packages can replace the running
+# kernel. Where a distribution installs a kernel in place - pacman does, because
+# it refuses partial upgrades, and any package manager can be configured to -
+# the module tree the running kernel needs disappears with it, and from that
+# moment the machine can load no kernel module at all. nftables and WireGuard
+# are kernel modules, so the firewall and the VPN stop working, and nothing on
+# the host says so: the installer printed success and walked away, and the
+# operator met the truth as an opaque error the first time they turned the
+# firewall on.
+#
+# The primary check is deliberately about the running kernel's own modules
+# rather than about any one distribution, because it is true wherever it is
+# true. The package manager is then asked its own question, per family, for the
+# milder case where the modules are still in place but the machine is running
+# an older kernel than it now has.
+#
+# R-054. Paketleri yukselten bir on gereksinim adimi, calisan cekirdegi
+# degistirebilir. Bir dagitim cekirdegi yerinde kurdugunda - pacman kismi
+# yukseltmeleri reddettigi icin boyle yapar - calisan cekirdegin ihtiyac
+# duydugu modul agaci onunla birlikte kaybolur ve o andan itibaren makine
+# hicbir cekirdek modulu yukleyemez. nftables ve WireGuard birer cekirdek
+# modulu oldugundan guvenlik duvari ve VPN calismaz.
+kernel_running_release() {
+    local release=
+    if [[ -r "$KERNEL_RELEASE_FILE" ]]; then
+        release=$(cat -- "$KERNEL_RELEASE_FILE" 2>/dev/null || true)
+    fi
+    if [[ -z "$release" && -x "$UNAME_BIN" ]]; then
+        release=$("$UNAME_BIN" -r 2>/dev/null || true)
+    fi
+    release=${release%%$'\n'*}
+    release=${release%%$'\r'*}
+    # A release is a path component here; anything that could escape the module
+    # root is treated as unreadable rather than followed.
+    # Surum burada bir yol bilesenidir; kacabilecek her sey okunamaz sayilir.
+    case "$release" in
+        ''|.|..|*/*) printf '%s' '' ;;
+        *) printf '%s' "$release" ;;
+    esac
+}
+
+# A directory that outlived its dependency index cannot load a module either,
+# so an empty shell counts as gone rather than as present.
+# Bagimlilik dizinini yitirmis bir dizin de modul yukleyemez.
+kernel_module_tree_usable() {
+    local tree=$1 index
+    [[ -d "$tree" ]] || return 1
+    for index in modules.dep modules.dep.bin modules.builtin; do
+        [[ -f "$tree/$index" ]] && return 0
+    done
+    return 1
+}
+
+kernel_other_module_tree_present() {
+    local running=$1 entry
+    [[ -d "$KERNEL_MODULE_ROOT" ]] || return 1
+    for entry in "$KERNEL_MODULE_ROOT"/*; do
+        [[ -d "$entry" ]] || continue
+        [[ "${entry##*/}" != "$running" ]] || continue
+        kernel_module_tree_usable "$entry" && return 0
+    done
+    return 1
+}
+
+# Prints exactly one of: none | required | recommended.
+# Tam olarak sunlardan birini yazar: none | required | recommended.
+classify_kernel_reboot_state() {
+    local family=$1 running=$2
+    if [[ -z "$running" ]]; then
+        printf '%s' none
+        return 0
+    fi
+    if ! kernel_module_tree_usable "$KERNEL_MODULE_ROOT/$running"; then
+        # Only accuse a machine that demonstrably keeps kernel module trees and
+        # keeps one that is not the running kernel's. A container or a
+        # modules-less kernel never had a tree, and telling its operator to
+        # restart would be a lie.
+        # Yalnizca kanitli bicimde modul agaci tutan ve calisan cekirdege ait
+        # olmayan bir tanesini tutan makineyi suclasin.
+        if kernel_other_module_tree_present "$running"; then
+            printf '%s' required
+        else
+            printf '%s' none
+        fi
+        return 0
+    fi
+    # The running kernel can still load modules, so nothing is broken. Ask this
+    # distribution's own package manager whether the machine is nevertheless
+    # running a kernel it no longer has, which is worth saying but is not urgent.
+    # Calisan cekirdek hala modul yukleyebiliyor; bozuk bir sey yok.
+    case "$family" in
+        apt)
+            if [[ -e "$KERNEL_REBOOT_MARKER_RUN" || -e "$KERNEL_REBOOT_MARKER_VAR" ]]; then
+                printf '%s' recommended
+                return 0
+            fi
+            ;;
+        pacman)
+            if [[ -x "$PACMAN_BIN" ]] &&
+                ! "$PACMAN_BIN" -Qqo "$KERNEL_MODULE_ROOT/$running" >/dev/null 2>&1; then
+                printf '%s' recommended
+                return 0
+            fi
+            ;;
+    esac
+    printf '%s' none
+}
+
+report_kernel_reboot_requirement() {
+    local state=$1 running=$2
+    case "$state" in
+    required)
+        warn "This server must be RESTARTED before its firewall or VPN can work: it is running kernel $running, whose modules are no longer on disk" \
+            "Guvenlik duvari veya VPN calisabilmesi icin bu sunucu YENIDEN BASLATILMALI: modulleri artik diskte olmayan $running cekirdegiyle calisiyor"
+        ;;
+    recommended)
+        warn "A restart is recommended: this server is running kernel $running while its package manager has installed a newer one" \
+            "Yeniden baslatma onerilir: bu sunucu $running cekirdegiyle calisiyor, paket yoneticisi ise daha yenisini kurdu"
+        ;;
+    esac
+}
+
+# The restart is the last and most prominent thing the operator reads, and the
+# installer still finishes. Refusing here would be a lie about what happened:
+# the panel and the agent are installed, enabled and running and the first
+# administrator exists, and the completion marker this script writes is exactly
+# what the public bootstrapper reads to tell a finished installation from a
+# failed one - marking it failed would send the operator round the loop again,
+# and re-running an installer cannot put a kernel back. Nothing was turned on
+# that a restart is needed to make safe either: the firewall is still off and
+# the VPN is not installed. The obstacle is not in CelikPanel, it is that this
+# machine is running a kernel it no longer has. So we finish, and we say the one
+# thing the operator has to do, last, where it cannot be missed.
+#
+# Yeniden baslatma, operatorun okudugu son ve en gorunur seydir; kurulum yine de
+# tamamlanir. Burada reddetmek, olan biten hakkinda bir yalan olurdu: panel ve
+# agent kurulu, etkin ve calisiyor. Engel CelikPanel'de degil; bu makinenin
+# artik sahip olmadigi bir cekirdekle calismasindadir.
+print_kernel_reboot_closing() {
+    local state=$1 running=$2
+    case "$state" in
+    required)
+        echo
+        c '1;31' "RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN"
+        echo "    This server is running kernel $running, whose modules are no longer on disk:"
+        echo "    the prerequisite step upgraded the kernel and replaced them. Until this server"
+        echo "    is restarted it cannot load nftables or WireGuard, so turning the firewall on"
+        echo "    or installing the VPN will fail. Everything else is installed and running."
+        echo "        reboot"
+        echo
+        echo "    Bu sunucu, modulleri artik diskte olmayan $running cekirdegiyle calisiyor:"
+        echo "    on gereksinim adimi cekirdegi yukseltti ve modulleri degistirdi. Sunucu"
+        echo "    yeniden baslatilana kadar nftables veya WireGuard yuklenemez; guvenlik"
+        echo "    duvarini acmak veya VPN kurmak hata verir. Geri kalan her sey kurulu."
+        echo "        reboot"
+        ;;
+    recommended)
+        echo
+        c '1;33' "A RESTART IS RECOMMENDED / YENIDEN BASLATMA ONERILIR"
+        echo "    This server is running kernel $running while its package manager has installed"
+        echo "    a newer one. Nothing is broken - the running kernel still has its modules - but"
+        echo "    a restart puts this server on the kernel it was updated to."
+        echo
+        echo "    Bu sunucu $running cekirdegiyle calisiyor; paket yoneticisi ise daha yenisini"
+        echo "    kurdu. Bozuk bir sey yok - calisan cekirdegin modulleri yerinde - ancak yeniden"
+        echo "    baslatma, sunucuyu guncellendigi cekirdege gecirir."
+        ;;
+    esac
+}
+
 # 1. Minimal prerequisites ---------------------------------------------------
 # The panel and agent are self-contained (static Go binaries + embedded
 # SQLite); we install NOTHING for hosting here. nginx / php / mariadb /
@@ -2129,6 +2310,20 @@ if [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ]; then
 else
     step "Prerequisite installation skipped (SKIP_DEPS=1)" \
         "Ön gereksinim kurulumu atlandı (SKIP_DEPS=1)"
+fi
+
+# Ask immediately after the package step, where the evidence is freshest, and
+# say it here as well as at the end: an operator watching a long install should
+# not have to wait for the summary to learn that this machine needs a restart.
+# Kanitin en taze oldugu yerde, paket adiminin hemen ardindan sor.
+step "Running kernel" "Calisan cekirdek"
+KERNEL_REBOOT_RUNNING_RELEASE=$(kernel_running_release)
+KERNEL_REBOOT_STATE=$(classify_kernel_reboot_state "$PKG_FAMILY" "$KERNEL_REBOOT_RUNNING_RELEASE")
+if [[ "$KERNEL_REBOOT_STATE" == none ]]; then
+    ok "${KERNEL_REBOOT_RUNNING_RELEASE:-unknown} can load its modules" \
+        "${KERNEL_REBOOT_RUNNING_RELEASE:-bilinmiyor} modullerini yukleyebiliyor"
+else
+    report_kernel_reboot_requirement "$KERNEL_REBOOT_STATE" "$KERNEL_REBOOT_RUNNING_RELEASE"
 fi
 
 # 1b. Automatic security patches --------------------------------------------
@@ -2890,6 +3085,12 @@ read -r ledger_owner ledger_group ledger_mode < <(stat -Lc '%u %g %a' -- "$AGENT
 # makineyle devam etmesine izin verilmemelidir.
 if [[ "$RESTORE_ARMED" == 1 ]]; then
     step "Arming the restored firewall" "Geri yüklenen güvenlik duvarı devreye alınıyor"
+    # This step loads a ruleset into the kernel, which is exactly what a machine
+    # whose modules were replaced cannot do. Say why before it fails, or the
+    # failure below reads as a broken restore rather than as a pending restart.
+    # Bu adim cekirdege bir kural seti yukler; modulleri degistirilmis bir
+    # makinenin yapamayacagi sey tam olarak budur.
+    report_kernel_reboot_requirement "$KERNEL_REBOOT_STATE" "$KERNEL_REBOOT_RUNNING_RELEASE"
     firewall_arming_report=$(/bin/bash "$SRC/deploy/systemd/arm-firewall-restore.sh" \
         "$CONF_DIR/firewall.nft" "$PREFIX/bin/agent") || die \
         "The restored firewall could not be armed and this host is NOT protected — load it by hand with 'systemctl start celikpanel-firewall-restore.service' and inspect 'journalctl -u celikpanel-firewall-restore'" \
@@ -2985,3 +3186,4 @@ c '1;32' "CelikPanel was installed successfully. / CelikPanel başarıyla kuruld
 echo "    Panel:  ${PANEL_SCHEME}://${IP:-SUNUCU_IP}:${PORT}"
 echo "    Services / Servisler: systemctl status celikpanel-agent celikpanel-panel"
 echo "    Logs / Günlükler: journalctl -u celikpanel-panel -f"
+print_kernel_reboot_closing "$KERNEL_REBOOT_STATE" "$KERNEL_REBOOT_RUNNING_RELEASE"

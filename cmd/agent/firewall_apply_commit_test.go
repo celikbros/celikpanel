@@ -409,16 +409,16 @@ func TestFirewallApplyStartupRecoveryCompletesExactIntent(t *testing.T) {
 	recoverFirewallApplyHost = func(
 		ctx context.Context,
 		got *firewallApplyJournal,
-	) error {
+	) (firewallHostOutcome, error) {
 		calls++
 		if ctx.Err() != nil || !equalFirewallApplyJournals(got, journal) {
-			return errors.New("recovery received the wrong journal")
+			return firewallHostAmbiguous, errors.New("recovery received the wrong journal")
 		}
 		tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
 		if tracker == nil || !tracker.allowCancellingRecovery {
-			return errors.New("recovery command context is not tracked")
+			return firewallHostAmbiguous, errors.New("recovery command context is not tracked")
 		}
-		return nil
+		return firewallHostConverged, nil
 	}
 	t.Cleanup(func() { recoverFirewallApplyHost = previousRecovery })
 
@@ -457,9 +457,9 @@ func TestFirewallApplyStartupPreIntentDoesNotTouchHost(t *testing.T) {
 	recoverFirewallApplyHost = func(
 		context.Context,
 		*firewallApplyJournal,
-	) error {
+	) (firewallHostOutcome, error) {
 		calls++
-		return nil
+		return firewallHostConverged, nil
 	}
 	t.Cleanup(func() { recoverFirewallApplyHost = previousRecovery })
 
