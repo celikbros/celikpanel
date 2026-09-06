@@ -88,7 +88,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-047 | Düşük | DÜZELTİLDİ VE CANLI KANITLANDI / R-049'U DA O BULDU | Tarayıcının görüp testlerin görmediği üç kusur: onay düğmeleri ekranın altında kalan bir pencere, 390px'te taşan bir seçim denetimi ve açık bir UDP portu varken yok diyen güvenlik duvarı durumu |
 | R-048 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE ELEKTRİK KESİLEREK KANITLANDI | Elektrik kesintisinden sonra agent, sunucu hazır olmadan başlıyor, kurtarmasını yapamıyor ve bir daha denemiyor; yarım kalan işlem defteri tutuyor ve biri agent'ı elle yeniden başlatana kadar her işlem reddediliyor |
 | R-049 | Yüksek | DÜZELTİLDİ VE TARAYICIDA UÇTAN UCA KANITLANDI | Engellenmiş her önizleme tarayıcıda null'a çözülüyordu; yani devralma için yazılan retler paneli kullanan hiç kimseye görünmüyordu. Ayrıca çalışan devralmanın DNS ekranında hiç yolu yok |
-| R-050 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin kurduğu bir DNS motoru, agent işlemleri tutarken "yönetilmiyor" okunuyor; bu yüzden hem API hem ekran, panelin kendi yarım kalmış kurulumunu devralmayı öneriyor |
+| R-050 | Orta | DÜZELTİLDİ / TARAYICIDA GÖRÜLDÜ | Panelin kurduğu bir DNS motoru, agent işlemleri tutarken "yönetilmiyor" okunuyor; bu yüzden hem API hem ekran, panelin kendi yarım kalmış kurulumunu devralmayı öneriyor |
 | R-051 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE KANITLANDI / SINIF KAPANDI | Kayıtlı bir sunucuda veritabanı ya da kullanıcı oluşturmak hiç başarılamıyordu; aynı kusur, rakamla başlayan alan adları için alan adı yolunda ve WordPress kurulumunda da duruyordu |
 | R-052 | Orta | DÜZELTİLDİ VE GERÇEK VM'DE KANITLANDI | Geri yüklenen sunucu yeniden başlatılana kadar güvenlik duvarsız: kural seti dosya olarak yerleştiriliyor ama onu kimse yüklemiyor ve yükleyecek birim o açılıştaki sırasını çoktan geçmiş oluyor |
 | R-053 | Düşük | DÜZELTİLDİ VE CANLI KANITLANDI / ARDINDAKİ ÜRÜN KARARI R-057 | Panelin az önce kurduğu bir motorda veritabanı sunucusu kaydı başarılamıyor: ürün kök parolasını saklıyor ama hiç ayarlamıyor; operatörün önce panel dışında parola koyması gerekiyor |
@@ -96,7 +96,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-055 | Yüksek | KURAL BİRLEŞTİRİLDİ VE CANLI KANITLANDI / BU KAYIT YANLIŞ YOLU ADLANDIRMIŞ | Güvenlik duvarı yolunun az önce kurtulduğu açık VPN yolunda duruyor: yüklenemeyen bir WireGuard modülü uygulamayı düşürüyor ve sunucuyu kilitliyor; güvenlik duvarı için yazılan düzeltme oraya uygulanmadı |
 | R-056 | Düşük | DÜZELTİLDİ VE CANLI KANITLANDI | Her taze Arch kurulumunda iki posta başlangıç işi, hiçbir şeyi adlandırmayan bir mesajla düşüyor |
 | R-057 | Orta | AÇIK / ÜRÜN KARARI | Veritabanı sunucusu eklemek ya da bulunan bir sunucuya kimlik bilgisi vermek için arayüz yok; bu yüzden reddin verdiği talimat panelden yerine getirilemiyor |
-| R-058 | Orta | GERÇEK VM'DE BULUNDU / HENÜZ DÜZELTİLMEDİ | VPN'in defter satırı genel cümleyi taşıyor, sebep yalnız HTTP gövdesinde; eş eşitleme uç noktası da modülü yükleyemeyen sunucuda hâlâ anlaşılmaz bir 500 dönüyor |
+| R-058 | Orta | DÜZELTİLDİ / İKİ YARISI DA | VPN'in defter satırı genel cümleyi taşıyor, sebep yalnız HTTP gövdesinde; eş eşitleme uç noktası da modülü yükleyemeyen sunucuda hâlâ anlaşılmaz bir 500 dönüyor |
+| R-059 | Orta | TARAYICIDA BULUNDU / HENÜZ DÜZELTİLMEDİ | DNS inceleme penceresi kendi kutusundan uzun ve en üstte açılıyor; eylemleri katlanma çizgisinin altında kalıyor - posta penceresinin kusuru, ikinci bir pencerede |
+| R-060 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Kritik açılış paketi bütçesinde 31 bayt yer kaldı; ortak bir bileşene yapılacak ilk değişiklik yapıyı düşürecek |
 
 ## Ayrıntılı riskler
 
@@ -2083,6 +2085,17 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Çıkış ölçütü: panelin kurduğu motoru tutulu olan bir sunucuda ne API ne
   ekran devralma önerir ve ekran, motorun panele ait ve şu an meşgul
   olduğunu söyler.
+- 6 Eylül 2026'da, bu kaydın istediği gibi iki tarafta birden düzeltildi:
+  tutma, hem panelin hem ekranın üzerinde reddettiği olgu oldu; böylece biri,
+  diğerinin reddedeceği bir devralmayı öneremez.
+- Öneriyi kaldırmak işin yarısıymış ve tarayıcı turu nedenini gösterdi: tutulan
+  sunucu bu kez elle kurtarmaya düşüyordu; oranın sözleri ise başkasının DNS
+  sunucusu hakkında ve operatörü CelikPanel dışında düzeltmeye yolluyor - aynı
+  yanlış iddianın başka bir cümlesi. Tutulan sunucu artık doğruyu söylüyor:
+  yarım kalmış bir değişiklik bu sunucuyu tutuyor ve tutma sürdükçe panel onu
+  sahiplenemez.
+- İki genişlikte ve iki dilde, öncesi ve sonrasıyla görüldü: düzeltilmemiş
+  ekran, panelin tuttuğu bir sunucuda "Yönetimi devralmayı incele" sunuyordu.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-051 - Kayıtlı sunucuda veritabanı hiç oluşturulamıyor
@@ -2418,6 +2431,46 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   reddettiğini bilen bir uç nokta bunu söylemeli. İkisinin de mekanizması artık
   var - R-056'nın adlandırılmış defter sebebi ve R-053'ün motor reddi
   sınıflandırması - yani bu icat değil, bağlama işi.
+- 6 Eylül 2026'da iki yarısı da düzeltildi.
+  - Defter artık yanıtın taşıdığı dizgenin aynısını tutuyor; ikisi ayrışamaz.
+    R-056'nın kuralı da yerinde: kalp atışı düşmüşse ve panel gerçekten ne
+    olduğunu bilmiyorsa, genel sözler yine kazanıyor.
+  - `/vpn/sync` artık kurulum yolunun yaptığı gibi 409 dönüyor - agent
+    yapılandırmanın dosya sisteminde yokluğunu kanıtlıyor, cümleyi panel
+    yazıyor - ve var olup okunamayan bir yapılandırma, "kurulu değil"i ödünç
+    almak yerine bunu söylüyor. Yokluk, oraya giderken bir güvenlik
+    denetiminde kayboluyordu; artık korunuyor.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-059 - Eylemleri katlanmanın altında kalan ikinci pencere
+
+- Kanıt: 6 Eylül 2026 tarayıcı turu. Tam engellenmiş bir devralma önizlemesiyle
+  DNS inceleme penceresi 1440x900'de 808'lik kutuya karşı 994, 390x844'te
+  758'e karşı 1608 ölçüyor; eylemleri görüntü alanında y=982 ve y=1555'te.
+  En üstte açılıyor; yani operatör bir ret görüyor ve pencerenin kaydığını
+  keşfetmeden onu kapatacak bir yol göremiyor.
+- Bu, R-047'nin ilk kusurunun - posta kurulum penceresi - ikinci bir pencerede
+  yeniden ortaya çıkışı ve telefonda daha kötüsü. Onu bulan değişikliğin
+  öncesinde ve sonrasında birebir aynı. R-047'nin kalanının az önce yaptığı
+  gibi çalışan denetimi öne çıkarmak, ikisini de göremeyen operatöre yaramıyor.
+- Gerekeni, posta penceresine verilenin aynısı: sınırlı ve kayan bir gövde,
+  eylemler onun dışında sabit. Üçüncü kez yazmak yerine iki pencerenin
+  paylaştığı yerde bir kez yapılmalı - işlem sonucu kuralının çözdüğü aynı
+  tartışma.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-060 - Paket bütçesi tavanında
+
+- Kanıt: 6 Eylül 2026. Kritik açılış bütçesi 361,00 KiB ham ve dal 360,97
+  ölçüyor - **31 bayt**. Ana hatta 61'di. Koruma, aşıldığında yapıyı düşürüyor;
+  yani ortak bir bileşene yapılacak ilk değişiklik buna takılacak ve takılan
+  kişi, alakasız bir şeyi düzelten biri olacak.
+- Koruma doğru ve yer açmak için yükseltilmemeli; işine gelmediğinde oynayan
+  bir bütçe, bütçe değildir. Gereken, yerin geri kazanılması: açılış parçası
+  her ekranın ihtiyaç duyduğunu taşıyor, dolayısıyla soru şu - içinde yalnız
+  bazı ekranların ihtiyaç duyduğu ne var? Bu bir ölçüm işi, tahmin değil ve
+  düşen bir yapının baskısı altında değil, ortak bileşen değişmeden önce
+  yapılmalı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

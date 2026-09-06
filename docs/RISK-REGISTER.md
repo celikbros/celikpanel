@@ -87,7 +87,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-047 | Low | FIXED AND PROVEN LIVE / IT ALSO FOUND R-049 | Three defects a browser found and the tests did not: a dialog whose confirm sits below the fold, a segmented control that overflows at 390px, and a firewall status that reports no UDP port when one is open |
 | R-048 | Critical | FIXED AND PROVEN ON A REAL VM BY CUTTING ITS POWER | After a power loss the agent starts before the host is ready, cannot run its recovery, and never tries again - so an interrupted mutation holds the ledger and every host mutation is refused until someone restarts the agent by hand |
 | R-049 | High | FIXED AND PROVEN IN A BROWSER, END TO END | Every blocked preview decoded to null in the browser, so the refusals written for the takeover were invisible to anyone using the panel; and the running takeover has no route on the DNS screen at all |
-| R-050 | Medium | FOUND / NOT YET FIXED | A panel-installed DNS engine reads as unmanaged while the agent is holding mutations, so both the API and the screen would offer to take over the panel's own half-finished install |
+| R-050 | Medium | FIXED / SEEN IN A BROWSER | A panel-installed DNS engine reads as unmanaged while the agent is holding mutations, so both the API and the screen would offer to take over the panel's own half-finished install |
 | R-051 | Critical | FIXED AND PROVEN ON A REAL VM / THE CLASS IS CLOSED | Creating a database or a database user could never succeed on a registered server, and the same fault sat on the domain path for a digit-leading domain and in the WordPress installer |
 | R-052 | Medium | FIXED AND PROVEN ON A REAL VM | A restored host is not firewalled until it reboots: the ruleset is placed as a file but nothing loads it, and the unit that would have has already passed its boot slot |
 | R-053 | Low | FIXED AND PROVEN LIVE / THE PRODUCT DECISION BEHIND IT IS R-057 | Registering a database server cannot succeed on an engine the panel just installed: the product stores a root password but never sets one, so the operator has to set it outside the panel first |
@@ -95,7 +95,9 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-055 | High | THE RULE IS UNIFIED AND PROVEN LIVE / THIS ENTRY NAMED THE WRONG PATH | The VPN path has the exposure the firewall path just lost: a WireGuard module that cannot load fails an apply that then wedges the host, and the fix that was written for the firewall was not applied there |
 | R-056 | Low | FIXED AND PROVEN LIVE | Two mail startup jobs fail on every fresh Arch install with a message that names nothing |
 | R-057 | Medium | OPEN / PRODUCT DECISION | There is no interface for adding a database server or giving a discovered one its credential, so the instruction the refusal gives cannot be followed from the panel |
-| R-058 | Medium | FOUND ON A REAL VM / NOT YET FIXED | The VPN's ledger row carries the generic sentence while the reason exists only in the HTTP body, and the peer-sync endpoint still answers an opaque 500 on a host that cannot load the module |
+| R-058 | Medium | FIXED / BOTH HALVES | The VPN's ledger row carries the generic sentence while the reason exists only in the HTTP body, and the peer-sync endpoint still answers an opaque 500 on a host that cannot load the module |
+| R-059 | Medium | FOUND IN A BROWSER / NOT YET FIXED | The DNS review dialog is taller than its own box and opens scrolled to the top, so its actions sit below its fold - the mail dialog's defect, in a second dialog |
+| R-060 | Low | FOUND / NOT YET FIXED | The critical-boot bundle budget has 31 bytes of headroom, so the next change to any shared component fails the build |
 
 ## Detailed risks
 
@@ -2109,6 +2111,17 @@ or executed as-is. There are no open pull requests at this baseline.
 - Exit criteria: on a host whose panel-installed engine is held, neither the
   API nor the screen offers a takeover, and the screen says the engine is the
   panel's and currently busy.
+- Fixed 6 September 2026, on both sides at once as this entry required: the
+  hold is the fact both the panel and the screen refuse on, so neither can
+  offer a takeover the other would refuse.
+- Removing the offer was only half of it, and the browser round showed why:
+  a held host then fell to manual recovery, whose words are about somebody
+  else's DNS server and send the operator to correct it outside CelikPanel -
+  the same false claim in a different sentence. A held host now says what is
+  true: an interrupted change is holding this server, and the panel cannot
+  claim it while the hold stands.
+- Seen before and after at both widths in both locales: the unfixed screen
+  offered "Review adoption" on a server the panel was holding.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-051 - A database can never be created on a registered server
@@ -2452,6 +2465,47 @@ or executed as-is. There are no open pull requests at this baseline.
   record keeps, and an endpoint that knows why it refused must say so. The
   machinery for both now exists - the named ledger reason from R-056 and the
   engine-refusal classification from R-053 - so this is wiring, not invention.
+- Fixed 6 September 2026, both halves.
+  - The ledger now keeps the same string the answer carries, so the two cannot
+    drift, and R-056's rule is untouched: when the heartbeat failed and the
+    panel genuinely does not know what happened, the generic words still win.
+  - `/vpn/sync` answers 409 the way the setup path does - the agent proves the
+    configuration is absent from the filesystem, the panel authors the
+    sentence - and a configuration that exists but cannot be read now says
+    that instead of borrowing "not set up". The absence was being lost in a
+    security check on the way there; it is preserved now.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-059 - The second dialog with its actions below the fold
+
+- Evidence: the browser round of 6 September 2026. With a full blocked
+  takeover preview the DNS review dialog measures 994 against a box of 808 at
+  1440x900, and 1608 against 758 at 390x844, with its actions at viewport
+  y=982 and y=1555. It opens scrolled to the top, so the operator sees a
+  refusal and no way to dismiss it without discovering that the dialog
+  scrolls.
+- This is R-047's first defect - the mail install dialog - reproduced in a
+  second dialog, and worse on a phone. It is identical before and after the
+  change that found it. Making the working control prominent, which R-047's
+  leftover just did, does not help an operator who cannot see either control.
+- What it needs is what the mail dialog got: a bounded body that scrolls with
+  the actions pinned outside it. Worth doing once, in whatever both dialogs
+  share, rather than a third time - the same argument the mutation outcome
+  rule settled.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-060 - The bundle budget is at its ceiling
+
+- Evidence: 6 September 2026. The critical-boot budget is 361.00 KiB raw and
+  the branch measures 360.97 - **31 bytes**. Main had 61. The guard fails the
+  build when it is exceeded, so the next change to any shared component trips
+  it, and the person who trips it will be someone fixing something unrelated.
+- The guard is right and should not be raised to make room; a budget that
+  moves whenever it is inconvenient is not a budget. What it needs is the
+  headroom earned back: the boot chunk carries what every screen needs, so
+  the question is what is in it that only some screens need. That is a
+  measurement, not a guess, and it should happen before the next shared
+  component changes rather than under the pressure of a failing build.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
