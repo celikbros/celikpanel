@@ -203,6 +203,7 @@ export const en = {
     'common.agentMismatchHint': 'The background service is running a different build ({commit}) from the panel. Re-run the update so both sides match — until then they may disagree about what is allowed.',
     'common.retry': 'Retry',
     'common.cancel': 'Cancel',
+    'common.close': 'Close',
     'common.back': 'Back',
     'common.itemsTotal': '{n} items total',
     'common.perPage': 'Entries per page',

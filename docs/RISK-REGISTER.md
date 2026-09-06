@@ -102,7 +102,8 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-062 | Medium | FIXED / GUARDED AT THE SHAPE | The PostgreSQL client is invoked with the password in its argument list, so it is visible to any user who can read the process table |
 | R-063 | Low | RECORDED AS DEBT / GUARDED | Thirty privileged launches still handle their own failures outside the shared reader, so their operator messages are whatever each site decided |
 | R-064 | Low | FOUND / NOT YET FIXED | The loading spinner is hand-written 61 times across 38 files, so the design hook reports it one file at a time and every visual fix to a loading state has to be made 61 times |
-| R-065 | Medium | FOUND / NOT YET FIXED | The panel's own database account exists and is reachable only through the API: the server card does not show whether the account is there, and there is nowhere to hand the panel a credential for an engine on another machine |
+| R-065 | Medium | BUILT / NOT YET SEEN IN A BROWSER | The panel's own database account exists and is reachable only through the API: the server card does not show whether the account is there, and there is nowhere to hand the panel a credential for an engine on another machine |
+| R-066 | Medium | FOUND / NOT YET FIXED | A database engine on another machine cannot be registered at all: the list is filled only by autodiscovery of this machine, and the endpoint that accepts a remote server with a credential is reachable only through the API |
 
 ## Detailed risks
 
@@ -2703,6 +2704,54 @@ or executed as-is. There are no open pull requests at this baseline.
   - removing the account, saying plainly what stops working;
   - for an engine on another machine, the credential field the registration
     endpoint already accepts, since the panel cannot open an account there.
+- Built 6 September 2026. The database server card carries the account now:
+  whether CelikPanel has one and its name, opening it, giving it a new
+  password, showing the password, and removing it. Administrator only, on the
+  screen as well as in the panel - a tenant is not even told the account's
+  name, because an account name they cannot act on is noise.
+- An engine on another machine is not offered a button that cannot work. It is
+  told what an administrator does instead, because the panel has no privileged
+  door on somebody else's machine.
+- **Not yet seen in a browser, and that is the one thing this entry still
+  owes.** No browser runs where this was written, so what is proved is what
+  can be proved without one: the types, the build, 302 web tests including
+  seven new contract tests, and the design detector clean on the new file. This
+  week's own lesson is that API proof is not product proof - so the visual
+  round belongs to the three-distribution acceptance run, at both widths in
+  both locales, before the release.
+- A defect was made and fixed while writing it, and it is recorded because
+  nothing would have caught it. Turkish text inserted through an escape
+  round-trip landed as its own UTF-8 bytes read back as Latin-1: `çalışmayacak`
+  became `Ã§alÄ±ÅŸmayacak` on disk. The build passed, the types passed, and it
+  surfaced only because a test happened to match on a Turkish word. It is
+  invisible in a diff on a console that cannot print those characters anyway,
+  and it renders as gibberish for exactly the operators the Turkish is for.
+  Every catalogue is now scanned for the sequence, in both languages, as a
+  test.
+- What is still open, and is the last of the original R-057 observation: there
+  is no way to register a database server on another machine at all. The
+  endpoint accepts a username and password for one; nothing in the product
+  reaches it. Recorded as R-066.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-066 - A database server on another machine cannot be added
+
+- Evidence: 6 September 2026, the last part of the observation that opened
+  R-057 - "there is no add-a-server or remove-a-server interface at all".
+  Removing one exists. Adding one does not. The list is filled by autodiscovery
+  of engines running on this machine, so an engine anywhere else can only be
+  registered by calling the API directly.
+- The panel is ready for it. Registration takes a host, a port, a username and
+  a password, proves the credential against the engine before writing a row
+  that says "active", and R-057 made the account the credential belongs to a
+  value rather than an assumption. What is missing is the way in.
+- Why this is not the same entry as R-065: that one is about an engine the
+  product already knows exists. This is about one it has never heard of, and
+  the two are different screens - a card that gains a section against a page
+  that gains a control.
+- Worth saying plainly: an operator who wants their databases on a separate
+  machine, which is the ordinary shape once a site is more than small, cannot
+  express that in CelikPanel today.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

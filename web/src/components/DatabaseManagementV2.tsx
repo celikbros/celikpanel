@@ -9,6 +9,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Button, EmptyState, StatusDot } from './ui';
 import { PageHeader } from './PageHeader';
 import { SystemSQLiteManager } from './SystemSQLiteManager';
+import { DatabaseAccountStrip } from './DatabaseAccountStrip';
 
 // One API surface (B1, Jul 18): the former /api/v2 lives under /api/v1 now.
 // Tek API yüzeyi (B1, 18 Tem): eski /api/v2 artık /api/v1 altında.
@@ -26,6 +27,11 @@ interface DatabaseServer {
     is_default: boolean;
     status: string;
     created_at: string;
+    // R-065. Only an administrator is told these, so only an administrator
+    // sees the account strip. Both are absent for anybody else.
+    // R-065. Bunlar yalnizca yoneticiye soylenir.
+    admin_username?: string;
+    is_local?: boolean;
 }
 
 interface DatabaseItem {
@@ -212,6 +218,14 @@ export function DatabaseManagementV2() {
                     );
                 })}
             </div>
+
+            {selectedServer && isAdmin && (
+                <DatabaseAccountStrip
+                    key={selectedServer.id}
+                    server={selectedServer}
+                    onChanged={loadServers}
+                />
+            )}
 
             {selectedServer && (
                 <div className="rounded-xl border border-border bg-surface shadow-card">

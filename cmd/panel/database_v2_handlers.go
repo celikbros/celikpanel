@@ -241,11 +241,26 @@ func (p *Panel) handleListDatabaseServers(w http.ResponseWriter, r *http.Request
 		IsDefault bool   `json:"is_default"`
 		Status    string `json:"status"`
 		CreatedAt string `json:"created_at"`
+		// R-065. What the screen needs to say whether CelikPanel has an
+		// account of its own here, and which of the two ways of getting one
+		// applies. Both are administrator business and only an administrator
+		// is told: a tenant has nothing to do with the account the panel
+		// connects as, and an account name it cannot act on is noise at best.
+		//
+		// R-065. Ekranin, CelikPanel'in burada kendi hesabi olup olmadigini ve
+		// hesap edinmenin iki yolundan hangisinin gecerli oldugunu soyleyebilmesi
+		// icin gerekenler. Ikisi de yonetici isidir ve yalnizca yoneticiye
+		// soylenir.
+		AdminUsername string `json:"admin_username,omitempty"`
+		IsLocal       bool   `json:"is_local,omitempty"`
 	}
+
+	caller := currentCaller(r)
+	administrator := caller != nil && caller.Role == roleAdmin
 
 	response := make([]ServerResponse, 0)
 	for _, server := range servers {
-		response = append(response, ServerResponse{
+		entry := ServerResponse{
 			ID:        server.ID,
 			TypeID:    server.TypeID,
 			TypeName:  server.TypeName,
@@ -257,7 +272,12 @@ func (p *Panel) handleListDatabaseServers(w http.ResponseWriter, r *http.Request
 			IsDefault: server.IsDefault,
 			Status:    server.Status,
 			CreatedAt: server.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		})
+		}
+		if administrator {
+			entry.AdminUsername = server.AdminUsername
+			entry.IsLocal = databaseEngineIsOnThisMachine(server.Host)
+		}
+		response = append(response, entry)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

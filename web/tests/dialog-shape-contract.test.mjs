@@ -161,6 +161,7 @@ test('every dialogue in the product is the shared one', () => {
     'ChangePasswordModal.tsx': 1,
     'DNSEngineCard.tsx': 1,
     'Dashboard.tsx': 1,
+    'DatabaseAccountStrip.tsx': 1,
     'DomainMailManager.tsx': 1,
     'ServiceList.tsx': 7,
     'ServiceShell.tsx': 1,

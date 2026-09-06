@@ -103,7 +103,8 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-062 | Orta | DÜZELTİLDİ / BİÇİM DÜZEYİNDE KORUNDU | PostgreSQL istemcisi parolayı argüman listesinde alıyor; yani süreç tablosunu okuyabilen herkes görebiliyor |
 | R-063 | Düşük | BORÇ OLARAK KAYITLI / KORUMAYA ALINDI | Otuz ayrıcalıklı başlatma hâlâ kendi hatasını ortak okuyucunun dışında ele alıyor; operatöre ne söyleneceği her yerin kendi kararı |
 | R-064 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Yükleniyor göstergesi 38 dosyada 61 kez elle yazılmış; tasarım kancası onu dosya dosya bildiriyor ve bir yükleme durumuna yapılacak her görsel düzeltme 61 kez yapılmak zorunda |
-| R-065 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin kendi veritabanı hesabı var ama yalnızca API'den erişilebiliyor: sunucu kartı hesabın orada olup olmadığını göstermiyor ve başka bir makinedeki motor için panele kimlik bilgisi verilecek bir yer yok |
+| R-065 | Orta | YAPILDI / HENÜZ TARAYICIDA GÖRÜLMEDİ | Panelin kendi veritabanı hesabı var ama yalnızca API'den erişilebiliyor: sunucu kartı hesabın orada olup olmadığını göstermiyor ve başka bir makinedeki motor için panele kimlik bilgisi verilecek bir yer yok |
+| R-066 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Başka bir makinedeki veritabanı motoru hiç kaydedilemiyor: liste yalnızca bu makinenin otomatik keşfiyle doluyor ve kimlik bilgisiyle uzak sunucu kabul eden uç noktaya yalnızca API'den ulaşılabiliyor |
 
 ## Ayrıntılı riskler
 
@@ -2658,6 +2659,51 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   - hesabı kaldırmak ve nelerin çalışmayacağını açıkça söylemek;
   - başka bir makinedeki motor için, kayıt uç noktasının zaten kabul ettiği
     kimlik bilgisi alanı; çünkü panel orada hesap açamaz.
+- 6 Eylül 2026'da yapıldı. Veritabanı sunucusu kartı artık hesabı taşıyor:
+  CelikPanel'in hesabı var mı ve adı ne, açmak, yeni parola vermek, parolayı
+  göstermek ve kaldırmak. Yalnızca yönetici — panelde olduğu gibi ekranda da; bir
+  kiracıya hesabın adı bile söylenmiyor, çünkü üzerinde işlem yapamayacağı bir
+  hesap adı gürültüdür.
+- Başka bir makinedeki motora, çalışamayacak bir düğme sunulmuyor. Bunun yerine
+  bir yöneticinin ne yapacağı söyleniyor; çünkü panelin başkasının makinesinde
+  ayrıcalıklı bir kapısı yok.
+- **Henüz tarayıcıda görülmedi ve bu kaydın hâlâ borçlu olduğu tek şey bu.**
+  Bunun yazıldığı yerde tarayıcı çalışmıyor; dolayısıyla tarayıcısız
+  kanıtlanabilecek olan kanıtlandı: tipler, yapı, yedisi yeni sözleşme testi
+  olmak üzere 302 web testi ve yeni dosyada temiz tasarım denetleyicisi. Bu
+  haftanın kendi dersi, API kanıtının ürün kanıtı olmadığıdır — bu yüzden görsel
+  tur, sürümden önce üç dağıtımlı kabul turuna, iki genişlikte ve iki dilde
+  aittir.
+- Yazarken bir kusur yapıldı ve düzeltildi; kaydediliyor çünkü hiçbir şey onu
+  yakalamazdı. Kaçış dizisiyle eklenen Türkçe metin, kendi UTF-8 baytları
+  Latin-1 olarak okunmuş hâlde diske düştü: `çalışmayacak`, diskte
+  `Ã§alÄ±ÅŸmayacak` oldu. Yapı geçti, tipler geçti ve yalnızca bir testin
+  Türkçe bir sözcükle eşleşmesi sayesinde ortaya çıktı. Bu karakterleri zaten
+  yazdıramayan bir konsolda fark gözükmez ve tam da Türkçenin kendisi için
+  olduğu operatörlere anlamsız harfler olarak görünür. Artık her katalog, iki
+  dilde de, bu dizi için taranıyor.
+- Açık kalan ve özgün R-057 gözleminin sonuncusu: başka bir makinedeki bir
+  veritabanı sunucusunu kaydetmenin hiçbir yolu yok. Uç nokta bunun için
+  kullanıcı adı ve parola kabul ediyor; üründe oraya ulaşan bir şey yok.
+  R-066 olarak kaydedildi.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-066 - Başka bir makinedeki veritabanı sunucusu eklenemiyor
+
+- Kanıt: 6 Eylül 2026, R-057'yi açan gözlemin son parçası — "hiçbir sunucu
+  ekleme ya da kaldırma arayüzü yok". Kaldırma var. Ekleme yok. Liste, bu
+  makinede çalışan motorların otomatik keşfiyle doluyor; dolayısıyla başka bir
+  yerdeki bir motor ancak API doğrudan çağrılarak kaydedilebiliyor.
+- Panel buna hazır. Kayıt; bir adres, bir port, bir kullanıcı adı ve bir parola
+  alıyor, "etkin" diyen bir satır yazmadan önce kimlik bilgisini motora karşı
+  kanıtlıyor ve R-057, kimlik bilgisinin ait olduğu hesabı bir varsayım değil
+  bir değer hâline getirdi. Eksik olan, oraya giden yol.
+- Bunun neden R-065 ile aynı kayıt olmadığı: o kayıt, ürünün varlığını zaten
+  bildiği bir motorla ilgili. Bu ise hiç duymadığı bir motorla ilgili ve ikisi
+  farklı ekranlar — bölüm kazanan bir kart ile denetim kazanan bir sayfa.
+- Açıkça söylemeye değer: veritabanlarını ayrı bir makinede isteyen bir
+  operatör — bir site küçüklüğü aştığında olağan olan biçim — bunu bugün
+  CelikPanel'de ifade edemiyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
