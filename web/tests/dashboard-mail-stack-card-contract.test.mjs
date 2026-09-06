@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 const dashboard = readFileSync(new URL('../src/components/Dashboard.tsx', import.meta.url), 'utf8');
 const mailTruth = readFileSync(new URL('../src/lib/dashboardMailTruth.ts', import.meta.url), 'utf8');
 const operation = readFileSync(new URL('../src/components/ComponentOperation.tsx', import.meta.url), 'utf8');
 const services = readFileSync(new URL('../src/components/ServiceList.tsx', import.meta.url), 'utf8');
-const en = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const tr = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const en = englishCatalogue;
+const tr = turkishCatalogue;
 
 test('dashboard mail card is read-only and uses the closed profile decoder', () => {
   assert.match(dashboard, /decodeManagedMailProfiles\(payload\.profiles, serviceIDs\)/);

@@ -26,7 +26,7 @@ import {
     type DNSEngineAdoptedDirective,
     type DNSEngineSwitchPreview,
 } from '../lib/dnsEngineContract';
-import { Button } from './ui';
+import { Button, Dialog } from './ui';
 import { showToast } from './Toast';
 import {
     useComponentOperation,
@@ -1280,14 +1280,6 @@ function DNSEngineReviewDialog({
         || (preview?.requires_downtime_acknowledgement === true && !review.acknowledged)
         || (preview?.requires_adoption_acknowledgement === true && !review.adoptionAcknowledged);
 
-    useEffect(() => {
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && !review.committing) onCancel();
-        };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [onCancel, review.committing]);
-
     const confirmButton = (
         <Button
             variant="primary"
@@ -1300,34 +1292,54 @@ function DNSEngineReviewDialog({
     );
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onMouseDown={(event) => {
-                if (event.currentTarget === event.target && !review.committing) onCancel();
-            }}
-        >
-            <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="dns-engine-review-title"
-                aria-describedby="dns-engine-review-description"
-                aria-busy={review.loading || review.committing}
-                className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-xl sm:p-6"
-            >
-                <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <ArrowRightLeft className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0">
-                        <h3 id="dns-engine-review-title" className="text-lg font-semibold text-fg">
-                            {et('dnsEngine.reviewTitle', { engine: engineName(review.target) })}
-                        </h3>
-                        <p id="dns-engine-review-description" className="mt-1 text-sm leading-5 text-fg-muted">
-                            {et('dnsEngine.reviewDescription')}
-                        </p>
-                    </div>
-                </div>
+        <Dialog
+            id="dns-engine-review"
+            icon={ArrowRightLeft}
+            width="xl"
+            title={et('dnsEngine.reviewTitle', { engine: engineName(review.target) })}
+            description={et('dnsEngine.reviewDescription')}
+            busy={review.loading || review.committing}
+            dismissible={!review.committing}
+            onDismiss={onCancel}
+            actions={
+                <>
+                    {/*
+                      R-047's leftover. In a refusal the change cannot be
+                      started, so the only control that does anything is the one
+                      that closes the dialog - and it was the quiet outline
+                      underneath a disabled fill that led the eye and, at 390px,
+                      sat above it. The two swap roles here: the working control
+                      takes the single call to action this view has, and the
+                      refused one steps back into the recessed disabled skin.
+                      Their order swaps with them, so the live control is first
+                      on a phone and last - rightmost - on a desktop, which is
+                      where each width expects it.
 
+                      The refused control stays. It is what names the action
+                      being refused, and a dialog that explains a refusal
+                      without showing what was refused explains half of it.
+
+                      R-047'nin artigi. Bir rette degisiklik baslatilamaz;
+                      dolayisiyla is goren tek denetim, iletisim kutusunu
+                      kapatandir - oysa gozu goturen, altindaki devre disi dolu
+                      blok idi ve 390 pikselde onun ustunde duruyordu. Ikisi rol
+                      degistirir; sirasi da onlarla birlikte degisir. Reddedilen
+                      denetim kalir: reddedilen eylemi adlandiran odur.
+                    */}
+                    {blocked && confirmButton}
+                    <Button
+                        variant={blocked ? 'primary' : 'secondary'}
+                        autoFocus
+                        disabled={review.committing}
+                        onClick={onCancel}
+                    >
+                        {t('common.cancel')}
+                    </Button>
+                    {!blocked && confirmButton}
+                </>
+            }
+        >
+            <div className="space-y-5">
                 {review.loading && (
                     <div className="my-8 flex items-center justify-center gap-2 text-sm text-fg-muted" role="status">
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -1336,7 +1348,7 @@ function DNSEngineReviewDialog({
                 )}
 
                 {review.error && (
-                    <div className="mt-4 flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
+                    <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
                         <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
                         <span>{review.error}</span>
                     </div>
@@ -1344,7 +1356,7 @@ function DNSEngineReviewDialog({
 
                 {preview && (
                     <>
-                        <dl className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                             <PreviewFact label={et('dnsEngine.preview.action')} value={et(`dnsEngine.action.${preview.action}` as DNSEngineCopyKey)} />
                             <PreviewFact label={et('dnsEngine.preview.zones')} value={String(preview.zone_count)} />
                             <PreviewFact label={et('dnsEngine.preview.pending')} value={String(preview.pending_zone_count)} warning={preview.pending_zone_count > 0} />
@@ -1359,7 +1371,7 @@ function DNSEngineReviewDialog({
                             />
                         </dl>
 
-                        <div className="mt-5">
+                        <div>
                             <h4 className="text-sm font-semibold text-fg">{et('dnsEngine.impactsTitle')}</h4>
                             <ul className="mt-2 space-y-2">
                                 {preview.impacts.map((code, index) => {
@@ -1375,7 +1387,7 @@ function DNSEngineReviewDialog({
                         </div>
 
                         {preview.blockers.length > 0 && (
-                            <div className="mt-5 rounded-xl border border-warning/35 bg-warning/10 p-4" role="alert">
+                            <div className="rounded-xl border border-warning/35 bg-warning/10 p-4" role="alert">
                                 <h4 className="flex items-center gap-2 text-sm font-semibold text-fg">
                                     <AlertTriangle className="h-4 w-4 text-warning" />
                                     {et('dnsEngine.blockersTitle')}
@@ -1390,7 +1402,7 @@ function DNSEngineReviewDialog({
                         )}
 
                         {refusedDirectives.length > 0 && (
-                            <div className="mt-5 rounded-xl border border-danger/35 bg-danger/5 p-4" role="alert">
+                            <div className="rounded-xl border border-danger/35 bg-danger/5 p-4" role="alert">
                                 <h4 className="flex items-center gap-2 text-sm font-semibold text-fg">
                                     <ShieldAlert className="h-4 w-4 text-danger" />
                                     {et('dnsEngine.adoption.refusalTitle')}
@@ -1413,7 +1425,7 @@ function DNSEngineReviewDialog({
                         )}
 
                         {viewFinding !== null && (
-                            <div className="mt-5 rounded-xl border border-danger/35 bg-danger/5 p-4" role="alert">
+                            <div className="rounded-xl border border-danger/35 bg-danger/5 p-4" role="alert">
                                 <h4 className="flex items-center gap-2 text-sm font-semibold text-fg">
                                     <ShieldAlert className="h-4 w-4 text-danger" />
                                     {et('dnsEngine.adoption.viewsTitle')}
@@ -1428,7 +1440,7 @@ function DNSEngineReviewDialog({
                         )}
 
                         {preview.requires_adoption_acknowledgement && preview.blockers.length === 0 && (
-                            <div className="mt-5 rounded-xl border border-danger/35 bg-danger/5 p-4">
+                            <div className="rounded-xl border border-danger/35 bg-danger/5 p-4">
                                 <h4
                                     id="dns-engine-adoption-title"
                                     className="flex items-start gap-2 text-sm font-semibold text-fg"
@@ -1487,7 +1499,7 @@ function DNSEngineReviewDialog({
                         )}
 
                         {preview.requires_downtime_acknowledgement && preview.blockers.length === 0 && (
-                            <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-warning/35 bg-warning/5 p-4">
+                            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-warning/35 bg-warning/5 p-4">
                                 <input
                                     type="checkbox"
                                     checked={review.acknowledged}
@@ -1500,44 +1512,8 @@ function DNSEngineReviewDialog({
                         )}
                     </>
                 )}
-
-                <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                    {/*
-                      R-047's leftover. In a refusal the change cannot be
-                      started, so the only control that does anything is the one
-                      that closes the dialog - and it was the quiet outline
-                      underneath a disabled fill that led the eye and, at 390px,
-                      sat above it. The two swap roles here: the working control
-                      takes the single call to action this view has, and the
-                      refused one steps back into the recessed disabled skin.
-                      Their order swaps with them, so the live control is first
-                      on a phone and last - rightmost - on a desktop, which is
-                      where each width expects it.
-
-                      The refused control stays. It is what names the action
-                      being refused, and a dialog that explains a refusal
-                      without showing what was refused explains half of it.
-
-                      R-047'nin artigi. Bir rette degisiklik baslatilamaz;
-                      dolayisiyla is goren tek denetim, iletisim kutusunu
-                      kapatandir - oysa gozu goturen, altindaki devre disi dolu
-                      blok idi ve 390 pikselde onun ustunde duruyordu. Ikisi rol
-                      degistirir; sirasi da onlarla birlikte degisir. Reddedilen
-                      denetim kalir: reddedilen eylemi adlandiran odur.
-                    */}
-                    {blocked && confirmButton}
-                    <Button
-                        variant={blocked ? 'primary' : 'secondary'}
-                        autoFocus
-                        disabled={review.committing}
-                        onClick={onCancel}
-                    >
-                        {t('common.cancel')}
-                    </Button>
-                    {!blocked && confirmButton}
-                </div>
             </div>
-        </div>
+        </Dialog>
     );
 }
 

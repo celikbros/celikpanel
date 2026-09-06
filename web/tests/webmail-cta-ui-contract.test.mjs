@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 const mailSource = readFileSync(new URL('../src/components/DomainMailManager.tsx', import.meta.url), 'utf8');
 const accessSource = readFileSync(new URL('../src/components/WebmailAccess.tsx', import.meta.url), 'utf8');
-const enSource = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const trSource = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const enSource = englishCatalogue;
+const trSource = turkishCatalogue;
 
 test('webmail availability comes only from the tenant-scoped setup endpoint', () => {
   assert.ok(mailSource.includes(`lazy(() => import('./WebmailAccess'))`));

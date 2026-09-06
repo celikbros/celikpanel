@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Database, Key } from 'lucide-react';
+import { Database, Key } from 'lucide-react';
 import { showToast } from './Toast';
+import { Button, Dialog } from './ui';
 import { readApiError } from '../lib/apiError';
 
 interface AddDatabaseModalV2Props {
@@ -96,172 +97,156 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-md">
-                <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-2">
-                        <Database className="w-5 h-5 text-primary" />
-                        <h3 className="text-xl font-bold text-fg">Add Database</h3>
-                    </div>
-                    <button onClick={onClose} className="text-fg-muted hover:text-fg-muted">
-                        <X className="w-5 h-5" />
-                    </button>
+        <Dialog
+            id="add-database"
+            icon={Database}
+            title="Add Database"
+            description={`Server: ${serverName}`}
+            busy={loading}
+            onDismiss={onClose}
+            onSubmit={handleSubmit}
+            actions={
+                <>
+                    <Button type="button" variant="secondary" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" variant="primary" disabled={loading}>
+                        {loading ? 'Creating...' : 'Create Database'}
+                    </Button>
+                </>
+            }
+        >
+            <div className="space-y-4">
+                {/* Database Name */}
+                <div>
+                    <label className="block text-sm font-medium text-fg-muted mb-2">
+                        Database Name
+                    </label>
+                    <input
+                        type="text"
+                        value={databaseName}
+                        onChange={(e) => setDatabaseName(e.target.value)}
+                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                        placeholder="myapp_db"
+                        required
+                        pattern="[a-zA-Z0-9_]+"
+                        title="Only letters, numbers, and underscores"
+                    />
                 </div>
 
-                <div className="mb-4 p-3 bg-surface-2/50 rounded-lg">
-                    <p className="text-sm text-fg-muted">Server: <span className="text-fg">{serverName}</span></p>
+                {/* Related Site (Optional) */}
+                <div>
+                    <label className="block text-sm font-medium text-fg-muted mb-2">
+                        Related Site <span className="text-fg-subtle text-xs">(Optional)</span>
+                    </label>
+                    <select
+                        value={domainId || ''}
+                        onChange={(e) => setDomainId(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                    >
+                        <option value="">No site (standalone database)</option>
+                        {domains.map(domain => (
+                            <option key={domain.id} value={domain.id}>{domain.domain_name}</option>
+                        ))}
+                    </select>
+                    <p className="text-xs text-fg-subtle mt-1">
+                        💡 If site is deleted, this database will also be deleted
+                    </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Database Name */}
-                    <div>
-                        <label className="block text-sm font-medium text-fg-muted mb-2">
-                            Database Name
-                        </label>
-                        <input
-                            type="text"
-                            value={databaseName}
-                            onChange={(e) => setDatabaseName(e.target.value)}
-                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
-                            placeholder="myapp_db"
-                            required
-                            pattern="[a-zA-Z0-9_]+"
-                            title="Only letters, numbers, and underscores"
-                        />
-                    </div>
-
-                    {/* Related Site (Optional) */}
-                    <div>
-                        <label className="block text-sm font-medium text-fg-muted mb-2">
-                            Related Site <span className="text-fg-subtle text-xs">(Optional)</span>
-                        </label>
-                        <select
-                            value={domainId || ''}
-                            onChange={(e) => setDomainId(e.target.value ? Number(e.target.value) : null)}
-                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
-                        >
-                            <option value="">No site (standalone database)</option>
-                            {domains.map(domain => (
-                                <option key={domain.id} value={domain.id}>{domain.domain_name}</option>
-                            ))}
-                        </select>
-                        <p className="text-xs text-fg-subtle mt-1">
-                            💡 If site is deleted, this database will also be deleted
-                        </p>
-                    </div>
-
-                    {/* User Selection */}
-                    <div>
-                        <label className="block text-sm font-medium text-fg-muted mb-2">
-                            Database User
-                        </label>
-                        <div className="flex gap-2 mb-3">
-                            <button
-                                type="button"
-                                onClick={() => setUserMode('new')}
-                                className={`flex-1 px-4 py-2 rounded-lg transition-colors ${userMode === 'new'
-                                    ? 'bg-primary text-white'
-                                    : 'bg-surface-2 text-fg-muted hover:bg-surface-3'
-                                    }`}
-                            >
-                                Create New User
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setUserMode('existing')}
-                                className={`flex-1 px-4 py-2 rounded-lg transition-colors ${userMode === 'existing'
-                                    ? 'bg-primary text-white'
-                                    : 'bg-surface-2 text-fg-muted hover:bg-surface-3'
-                                    }`}
-                                disabled={existingUsers.length === 0}
-                            >
-                                Use Existing User
-                            </button>
-                        </div>
-
-                        {userMode === 'existing' ? (
-                            <select
-                                value={selectedUserId}
-                                onChange={(e) => setSelectedUserId(Number(e.target.value))}
-                                className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
-                                required
-                            >
-                                <option value={0}>Select a user...</option>
-                                {existingUsers.map(user => (
-                                    <option key={user.id} value={user.id}>{user.username}</option>
-                                ))}
-                            </select>
-                        ) : (
-                            <div className="space-y-3">
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={newUsername}
-                                        onChange={(e) => setNewUsername(e.target.value)}
-                                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
-                                        placeholder="Username"
-                                        required={userMode === 'new'}
-                                        pattern="[a-zA-Z0-9_]+"
-                                    />
-                                </div>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        className="flex-1 bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
-                                        placeholder="Password"
-                                        required={userMode === 'new'}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={generatePassword}
-                                        className="px-4 py-2 bg-surface-3 hover:bg-surface-3 text-fg rounded-lg transition-colors"
-                                        title="Generate password"
-                                    >
-                                        <Key className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Privileges */}
-                    <div>
-                        <label className="block text-sm font-medium text-fg-muted mb-2">
-                            Privileges
-                        </label>
-                        <select
-                            value={privileges}
-                            onChange={(e) => setPrivileges(e.target.value)}
-                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
-                        >
-                            <option value="ALL">ALL (Full Access)</option>
-                            <option value="SELECT">SELECT (Read Only)</option>
-                            <option value="SELECT,INSERT,UPDATE">SELECT, INSERT, UPDATE</option>
-                            <option value="SELECT,INSERT,UPDATE,DELETE">SELECT, INSERT, UPDATE, DELETE</option>
-                        </select>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-3 pt-4">
+                {/* User Selection */}
+                <div>
+                    <label className="block text-sm font-medium text-fg-muted mb-2">
+                        Database User
+                    </label>
+                    <div className="flex gap-2 mb-3">
                         <button
                             type="button"
-                            onClick={onClose}
-                            className="flex-1 px-4 py-2 bg-surface-2 hover:bg-surface-3 text-fg-muted rounded-lg transition-colors"
+                            onClick={() => setUserMode('new')}
+                            className={`flex-1 px-4 py-2 rounded-lg transition-colors ${userMode === 'new'
+                                ? 'bg-primary text-white'
+                                : 'bg-surface-2 text-fg-muted hover:bg-surface-3'
+                                }`}
                         >
-                            Cancel
+                            Create New User
                         </button>
                         <button
-                            type="submit"
-                            disabled={loading}
-                            className="flex-1 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors disabled:opacity-50"
+                            type="button"
+                            onClick={() => setUserMode('existing')}
+                            className={`flex-1 px-4 py-2 rounded-lg transition-colors ${userMode === 'existing'
+                                ? 'bg-primary text-white'
+                                : 'bg-surface-2 text-fg-muted hover:bg-surface-3'
+                                }`}
+                            disabled={existingUsers.length === 0}
                         >
-                            {loading ? 'Creating...' : 'Create Database'}
+                            Use Existing User
                         </button>
                     </div>
-                </form>
+
+                    {userMode === 'existing' ? (
+                        <select
+                            value={selectedUserId}
+                            onChange={(e) => setSelectedUserId(Number(e.target.value))}
+                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                            required
+                        >
+                            <option value={0}>Select a user...</option>
+                            {existingUsers.map(user => (
+                                <option key={user.id} value={user.id}>{user.username}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <div className="space-y-3">
+                            <div>
+                                <input
+                                    type="text"
+                                    value={newUsername}
+                                    onChange={(e) => setNewUsername(e.target.value)}
+                                    className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                                    placeholder="Username"
+                                    required={userMode === 'new'}
+                                    pattern="[a-zA-Z0-9_]+"
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="flex-1 bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                                    placeholder="Password"
+                                    required={userMode === 'new'}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={generatePassword}
+                                    className="px-4 py-2 bg-surface-3 hover:bg-surface-3 text-fg rounded-lg transition-colors"
+                                    title="Generate password"
+                                >
+                                    <Key className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Privileges */}
+                <div>
+                    <label className="block text-sm font-medium text-fg-muted mb-2">
+                        Privileges
+                    </label>
+                    <select
+                        value={privileges}
+                        onChange={(e) => setPrivileges(e.target.value)}
+                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                    >
+                        <option value="ALL">ALL (Full Access)</option>
+                        <option value="SELECT">SELECT (Read Only)</option>
+                        <option value="SELECT,INSERT,UPDATE">SELECT, INSERT, UPDATE</option>
+                        <option value="SELECT,INSERT,UPDATE,DELETE">SELECT, INSERT, UPDATE, DELETE</option>
+                    </select>
+                </div>
             </div>
-        </div>
+        </Dialog>
     );
 }

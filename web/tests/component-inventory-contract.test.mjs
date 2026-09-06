@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 // The browser round of 4 September 2026, run against a real panel on a host
 // this project had never scanned, found four things no test could see. This
@@ -29,8 +30,8 @@ const layout = read('components/Layout.tsx');
 const componentDetail = read('components/ComponentDetail.tsx');
 const componentOperation = read('components/ComponentOperation.tsx');
 const census = read('lib/componentCensus.ts');
-const english = read('i18n/en.ts');
-const turkish = read('i18n/tr.ts');
+const english = englishCatalogue;
+const turkish = turkishCatalogue;
 
 const SCAN = '/api/v1/managed-services/scan';
 

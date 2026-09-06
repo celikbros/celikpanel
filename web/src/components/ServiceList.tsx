@@ -3,7 +3,7 @@ import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud,
 import type { LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { StatusDot, EmptyState, Button, SearchInput, ErrorBanner } from './ui';
+import { StatusDot, EmptyState, Button, Dialog, SearchInput, ErrorBanner } from './ui';
 import { PageHeader } from './PageHeader';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import {
@@ -1771,44 +1771,21 @@ function ComponentActionConfirmationDialog({
                 : RotateCw;
     const Icon = icon;
 
-    useEffect(() => {
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onCancel();
-        };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [onCancel]);
-
     return (
-        <div
-            className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
-            onMouseDown={(event) => {
-                if (event.currentTarget === event.target) onCancel();
-            }}
-        >
-            <div
-                role='dialog'
-                aria-modal='true'
-                aria-labelledby='component-action-confirm-title'
-                aria-describedby='component-action-confirm-description'
-                className='w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl'
-            >
-                <div className='mb-4 flex items-start gap-3'>
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                        actionName === 'stop' ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'
-                    }`}>
-                        <Icon className='h-5 w-5' fill={actionName === 'start' || actionName === 'stop' ? 'currentColor' : 'none'} />
-                    </span>
-                    <div className='min-w-0'>
-                        <h3 id='component-action-confirm-title' className='text-lg font-semibold text-fg'>
-                            {t(`services.confirm.${actionName}.title` as Parameters<typeof t>[0], { name: targetName })}
-                        </h3>
-                        <p id='component-action-confirm-description' className='mt-1 text-sm leading-5 text-fg-muted'>
-                            {t(`services.confirm.${actionName}.description` as Parameters<typeof t>[0], { name: targetName })}
-                        </p>
-                    </div>
-                </div>
-                <div className='flex justify-end gap-2'>
+        <Dialog
+            id='component-action-confirm'
+            iconSlot={
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                    actionName === 'stop' ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'
+                }`}>
+                    <Icon className='h-5 w-5' fill={actionName === 'start' || actionName === 'stop' ? 'currentColor' : 'none'} />
+                </span>
+            }
+            title={t(`services.confirm.${actionName}.title` as Parameters<typeof t>[0], { name: targetName })}
+            description={t(`services.confirm.${actionName}.description` as Parameters<typeof t>[0], { name: targetName })}
+            onDismiss={onCancel}
+            actions={
+                <>
                     <Button variant='secondary' autoFocus onClick={onCancel}>
                         {t('common.cancel')}
                     </Button>
@@ -1820,9 +1797,9 @@ function ComponentActionConfirmationDialog({
                     >
                         {t(`services.confirm.${actionName}.button` as Parameters<typeof t>[0], { name: targetName })}
                     </Button>
-                </div>
-            </div>
-        </div>
+                </>
+            }
+        />
     );
 }
 
@@ -1986,14 +1963,11 @@ function MailProfileInstallDialog({
         // still needs a name, that is the name field.
         // Yapilacak ilk sey, odaklanan ilk seydir: hala bir ada ihtiyaci olan
         // bir sunucuda bu, ad alanidir.
+        // Escape belongs to the shared dialogue now, so it is not repeated here.
+        // Escape artik paylasilan diyaloga aittir; burada tekrarlanmaz.
         if (hostnameInputRef.current) hostnameInputRef.current.focus();
         else acknowledgementRef.current?.focus();
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onCancel();
-        };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [onCancel]);
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -2047,43 +2021,42 @@ function MailProfileInstallDialog({
     };
 
     return (
-        <div
-            className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
-            onClick={onCancel}
+        <Dialog
+            id='mail-profile-confirm'
+            width='xl'
+            title={t(`services.mailProfiles.plan.title.${mode}` as Parameters<typeof t>[0], { name: profile.name })}
+            description={t('services.mailProfiles.plan.description')}
+            onDismiss={onCancel}
+            footerLead={
+                <label className='flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3'>
+                    <input
+                        ref={acknowledgementRef}
+                        type='checkbox'
+                        checked={acknowledged}
+                        onChange={(event) => setAcknowledged(event.target.checked)}
+                        className='mt-0.5 h-4 w-4 rounded-md border-border-strong text-primary'
+                    />
+                    <span className='text-sm leading-5 text-fg'>
+                        {t('services.mailProfiles.plan.acknowledgement')}
+                    </span>
+                </label>
+            }
+            actions={
+                <>
+                    <Button variant='secondary' onClick={onCancel}>
+                        {t('common.cancel')}
+                    </Button>
+                    <Button
+                        variant='primary'
+                        icon={mode === 'install' ? DownloadCloud : RotateCw}
+                        disabled={!acknowledged || !hostnameReady}
+                        onClick={() => onConfirm(hostnameSettled ? '' : canonicalHostname ?? '')}
+                    >
+                        {t(`services.mailProfiles.plan.confirm.${mode}` as Parameters<typeof t>[0], { name: profile.name })}
+                    </Button>
+                </>
+            }
         >
-            {/* The plan is long enough that the whole dialogue used to scroll,
-                which put its confirm button below the fold at 1440x900 the
-                moment it opened: an operator who cannot see the action
-                concludes the dialogue is broken (register R-047). The plan
-                scrolls now; the decision does not. The acknowledgement stays
-                with the buttons it gates, so a disabled primary always has its
-                reason on the same line of sight.
-
-                Plan, tüm diyaloğun kaydırılmasına yol açacak kadar uzundu; bu
-                da 1440x900'de daha açılır açılmaz onay düğmesini görünür alanın
-                altında bırakıyordu: eylemi göremeyen bir operatör diyaloğun
-                bozuk olduğuna karar verir (defter R-047). Artık plan kayar,
-                karar kaymaz. Onay kutusu, kilitlediği düğmelerle birlikte
-                kalır; böylece devre dışı bir birincil düğmenin sebebi hep aynı
-                bakışın içindedir. */}
-            <div
-                role='dialog'
-                aria-modal='true'
-                aria-labelledby='mail-profile-confirm-title'
-                aria-describedby='mail-profile-confirm-description'
-                className='flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-surface shadow-xl'
-                onClick={(event) => event.stopPropagation()}
-            >
-                <div className='shrink-0 border-b border-border px-6 pb-4 pt-6'>
-                    <h3 id='mail-profile-confirm-title' className='text-lg font-semibold text-fg'>
-                        {t(`services.mailProfiles.plan.title.${mode}` as Parameters<typeof t>[0], { name: profile.name })}
-                    </h3>
-                    <p id='mail-profile-confirm-description' className='mt-1 text-sm text-fg-muted'>
-                        {t('services.mailProfiles.plan.description')}
-                    </p>
-                </div>
-
-                <div className='min-h-0 flex-1 overflow-y-auto px-6 py-5'>
                     <div className='mb-4 overflow-hidden rounded-xl border border-border'>
                         <div className='grid grid-cols-[minmax(0,1fr)_auto] gap-3 bg-surface-2 px-4 py-2 text-xs font-semibold text-fg-subtle'>
                             <span>{t('services.mailProfiles.plan.component')}</span>
@@ -2198,38 +2171,7 @@ function MailProfileInstallDialog({
                             </>
                         )}
                     </section>
-                </div>
-
-                <div className='shrink-0 border-t border-border px-6 pb-6 pt-4'>
-                    <label className='flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3'>
-                        <input
-                            ref={acknowledgementRef}
-                            type='checkbox'
-                            checked={acknowledged}
-                            onChange={(event) => setAcknowledged(event.target.checked)}
-                            className='mt-0.5 h-4 w-4 rounded-md border-border-strong text-primary'
-                        />
-                        <span className='text-sm leading-5 text-fg'>
-                            {t('services.mailProfiles.plan.acknowledgement')}
-                        </span>
-                    </label>
-
-                    <div className='mt-4 flex justify-end gap-2'>
-                        <Button variant='secondary' onClick={onCancel}>
-                            {t('common.cancel')}
-                        </Button>
-                        <Button
-                            variant='primary'
-                            icon={mode === 'install' ? DownloadCloud : RotateCw}
-                            disabled={!acknowledged || !hostnameReady}
-                            onClick={() => onConfirm(hostnameSettled ? '' : canonicalHostname ?? '')}
-                        >
-                            {t(`services.mailProfiles.plan.confirm.${mode}` as Parameters<typeof t>[0], { name: profile.name })}
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </Dialog>
     );
 }
 
@@ -2312,25 +2254,28 @@ function InstallServiceDialog({
           : [service.id];
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() => {
-                if (!busy && !repoBusy) onCancel();
-            }}
-        >
-            <div
-                className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-                aria-busy={busy || repoBusy}
+        <>
+            <Dialog
+                id="service-install"
+                iconSlot={<span className="text-3xl leading-none">{service.icon}</span>}
+                title={t('services.installTitle', { name: service.name })}
+                description={service.description}
+                busy={busy || repoBusy}
+                onDismiss={onCancel}
+                actions={
+                    <>
+                        <Button variant="secondary" onClick={onCancel} disabled={busy || repoBusy}>{t('common.cancel')}</Button>
+                        <Button
+                            variant="primary"
+                            onClick={() => onConfirm(selectedPkg || undefined)}
+                            disabled={busy || repoBusy || Boolean(repo?.required && (repo.error_code || !repo.enabled))}
+                            icon={DownloadCloud}
+                        >
+                            {busy ? t('services.installing') : t('services.install')}
+                        </Button>
+                    </>
+                }
             >
-                <div className="mb-4 flex items-start gap-3">
-                    <span className="text-3xl leading-none">{service.icon}</span>
-                    <div className="min-w-0">
-                        <h3 className="text-lg font-semibold text-fg">{t('services.installTitle', { name: service.name })}</h3>
-                        <p className="text-sm text-fg-muted">{service.description}</p>
-                    </div>
-                </div>
-
                 <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-3">
                     <div className="mb-2 flex items-center justify-between">
                         <span className="text-xs font-medium text-fg-subtle">{t('services.versionToInstall')}</span>
@@ -2426,19 +2371,7 @@ function InstallServiceDialog({
                         )}
                     </div>
                 )}
-
-                <div className="flex justify-end gap-2">
-                    <Button variant="secondary" onClick={onCancel} disabled={busy || repoBusy}>{t('common.cancel')}</Button>
-                    <Button
-                        variant="primary"
-                        onClick={() => onConfirm(selectedPkg || undefined)}
-                        disabled={busy || repoBusy || Boolean(repo?.required && (repo.error_code || !repo.enabled))}
-                        icon={DownloadCloud}
-                    >
-                        {busy ? t('services.installing') : t('services.install')}
-                    </Button>
-                </div>
-            </div>
+            </Dialog>
             {repoAction && repo && (
                 <RepositoryActionConfirmationDialog
                     action={repoAction}
@@ -2452,7 +2385,7 @@ function InstallServiceDialog({
                     }}
                 />
             )}
-        </div>
+        </>
     );
 }
 
@@ -2936,34 +2869,31 @@ function VersionDrawer({
                     diyalogu arka plan kapatmasını korur: kurulum istemini
                     düşürmenin bedeli yok. */}
             {removeTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-md rounded-2xl border border-danger/40 bg-surface p-6 shadow-xl">
-                        <div className="mb-4 flex items-start gap-3">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
-                                <Trash2 className="h-5 w-5" />
-                            </span>
-                            <div className="min-w-0">
-                                <h3 className="text-lg font-semibold text-fg">
-                                    {t('services.removeVersionTitle', { name: service.name, version: removeTarget.version })}
-                                </h3>
-                                <p className="text-sm text-fg-muted">{t('services.removeVersionWarn')}</p>
-                            </div>
-                        </div>
-                        {/* The refusal's evidence — the blocking sites — lands
-                            here, in the confirm dialog (B3d).
-                            Retin kanıtı — engelleyen siteler — buraya, onay
-                            penceresine düşer (B3d). */}
-                        <ErrorBanner error={removeError} className="mb-4" />
-                        <div className="flex justify-end gap-2">
+                <Dialog
+                    id="service-remove-version"
+                    tone="danger"
+                    icon={Trash2}
+                    dismissible={false}
+                    busy={removing}
+                    title={t('services.removeVersionTitle', { name: service.name, version: removeTarget.version })}
+                    description={t('services.removeVersionWarn')}
+                    actions={
+                        <>
                             <Button variant="secondary" onClick={() => setRemoveTarget(null)} disabled={removing}>
                                 {t('common.cancel')}
                             </Button>
                             <Button variant="danger" onClick={() => removeVersion(removeTarget)} disabled={removing} icon={Trash2}>
                                 {removing ? t('services.uninstalling') : t('services.removeVersion')}
                             </Button>
-                        </div>
-                    </div>
-                </div>
+                        </>
+                    }
+                >
+                    {/* The refusal's evidence — the blocking sites — lands
+                        here, in the confirm dialog (B3d).
+                        Retin kanıtı — engelleyen siteler — buraya, onay
+                        penceresine düşer (B3d). */}
+                    <ErrorBanner error={removeError} />
+                </Dialog>
             )}
         </fieldset>
     );
@@ -2986,34 +2916,19 @@ function RepositoryActionConfirmationDialog({
     const key = (suffix: 'title' | 'description' | 'button') => (
         ('services.repo.confirm.' + action + '.' + suffix) as Parameters<typeof t>[0]
     );
-    useEffect(() => {
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onCancel();
-        };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [onCancel]);
+    // Opened from inside the install dialogue, so it stacks above it and takes
+    // Escape while it is there.
+    // Kurulum diyalogunun icinden acilir; onun ustunde durur ve oradayken
+    // Escape'i o alir.
     return (
-        <div
-            className='fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4'
-            onMouseDown={(event) => {
-                if (event.currentTarget === event.target) onCancel();
-            }}
-        >
-            <div
-                role='dialog'
-                aria-modal='true'
-                aria-labelledby='repository-action-confirm-title'
-                aria-describedby='repository-action-confirm-description'
-                className='w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl'
-            >
-                <h3 id='repository-action-confirm-title' className='text-lg font-semibold text-fg'>
-                    {t(key('title'), { name: repositoryName })}
-                </h3>
-                <p id='repository-action-confirm-description' className='mt-2 text-sm leading-5 text-fg-muted'>
-                    {t(key('description'), { name: repositoryName })}
-                </p>
-                <div className='mt-5 flex justify-end gap-2'>
+        <Dialog
+            id='repository-action-confirm'
+            stacked
+            title={t(key('title'), { name: repositoryName })}
+            description={t(key('description'), { name: repositoryName })}
+            onDismiss={onCancel}
+            actions={
+                <>
                     <Button variant='secondary' autoFocus onClick={onCancel}>
                         {t('common.cancel')}
                     </Button>
@@ -3025,9 +2940,9 @@ function RepositoryActionConfirmationDialog({
                     >
                         {t(key('button'))}
                     </Button>
-                </div>
-            </div>
-        </div>
+                </>
+            }
+        />
     );
 }
 
@@ -3055,25 +2970,35 @@ function UninstallServiceDialog({
     onConfirm: () => void;
 }) {
     const { t } = useI18n();
-    // Destructive: no backdrop dismissal — see the note on the version-removal
-    // dialog. / Yıkıcı: arka plana tıklayarak kapatma yok — sürüm kaldırma
-    // diyalogundaki nota bakın.
+    // Destructive: no silent exit — see the note on the version-removal dialog.
+    // dismissible={false} takes the backdrop and Escape away together.
+    // Yıkıcı: sessiz çıkış yok — sürüm kaldırma diyalogundaki nota bakın.
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-2xl border border-danger/40 bg-surface p-6 shadow-xl">
-                <div className="mb-4 flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
-                        <Trash2 className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0">
-                        <h3 className="text-lg font-semibold text-fg">
-                            {retryCleanup
-                                ? t('services.cleanupWebmailTitle')
-                                : t('services.uninstallTitle', { name: service.name })}
-                        </h3>
-                        <p className="text-sm text-fg-muted">{service.description}</p>
-                    </div>
-                </div>
+        <Dialog
+            id="service-uninstall"
+            tone="danger"
+            icon={Trash2}
+            dismissible={false}
+            busy={busy}
+            title={retryCleanup
+                ? t('services.cleanupWebmailTitle')
+                : t('services.uninstallTitle', { name: service.name })}
+            description={service.description}
+            actions={
+                <>
+                    <Button variant="secondary" onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
+                    <Button variant="danger" onClick={onConfirm} disabled={busy} icon={Trash2}>
+                        {busy
+                            ? t(retryCleanup
+                                ? (cleanupAttempt === 'retry' ? 'services.retryingWebmailCleanup' : 'services.cleaningWebmail')
+                                : 'services.uninstalling')
+                            : t(retryCleanup
+                                ? (error ? 'services.retryWebmailCleanup' : 'services.cleanupWebmail')
+                                : 'services.uninstall')}
+                    </Button>
+                </>
+            }
+        >
                 <div className="mb-4 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-fg-muted">
                     <p className={retryCleanup ? '' : 'mb-2'}>
                         {t(retryCleanup ? 'services.cleanupWebmailWarn' : 'services.uninstallWarn')}
@@ -3090,21 +3015,8 @@ function UninstallServiceDialog({
                     made — who blocks, line by line (B3d).
                     Ret, kanıtını kararın verildiği yerde gösterir — kimin
                     engellediği, satır satır (B3d). */}
-                <ErrorBanner error={error} className="mb-4" />
-                <div className="flex justify-end gap-2">
-                    <Button variant="secondary" onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
-                    <Button variant="danger" onClick={onConfirm} disabled={busy} icon={Trash2}>
-                        {busy
-                            ? t(retryCleanup
-                                ? (cleanupAttempt === 'retry' ? 'services.retryingWebmailCleanup' : 'services.cleaningWebmail')
-                                : 'services.uninstalling')
-                            : t(retryCleanup
-                                ? (error ? 'services.retryWebmailCleanup' : 'services.cleanupWebmail')
-                                : 'services.uninstall')}
-                    </Button>
-                </div>
-            </div>
-        </div>
+                <ErrorBanner error={error} />
+        </Dialog>
     );
 }
 
@@ -3445,51 +3357,24 @@ function FirewallActionConfirmationDialog({
     const { t } = useI18n();
     const destructive = action === 'disable';
     const Icon = action === 'enable' ? ShieldCheck : action === 'disable' ? ShieldOff : DownloadCloud;
-    useEffect(() => {
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onCancel();
-        };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [onCancel]);
     return (
-        <div
-            className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
-            onMouseDown={(event) => {
-                if (event.currentTarget === event.target) onCancel();
-            }}
-        >
-            <div
-                role='dialog'
-                aria-modal='true'
-                aria-labelledby='firewall-action-confirm-title'
-                aria-describedby='firewall-action-confirm-description'
-                className='w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl'
-            >
-                <div className='mb-4 flex items-start gap-3'>
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                        destructive ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'
-                    }`}>
-                        <Icon className='h-5 w-5' />
-                    </span>
-                    <div className='min-w-0'>
-                        <h3 id='firewall-action-confirm-title' className='text-lg font-semibold text-fg'>
-                            {t(`firewall.confirm.${action}.title` as Parameters<typeof t>[0])}
-                        </h3>
-                        <p id='firewall-action-confirm-description' className='mt-1 text-sm leading-5 text-fg-muted'>
-                            {t(`firewall.confirm.${action}.description` as Parameters<typeof t>[0])}
-                        </p>
-                    </div>
-                </div>
-                {noSSHService && (
-                    <FirewallNoSSHAcknowledgement
-                        id='firewall-action-no-ssh'
-                        checked={noSSHAcknowledged}
-                        disabled={confirmDisabled}
-                        onChange={onAcknowledgeNoSSH}
-                    />
-                )}
-                <div className='flex justify-end gap-2'>
+        <Dialog
+            id='firewall-action-confirm'
+            tone={destructive ? 'danger' : 'default'}
+            icon={Icon}
+            title={t(`firewall.confirm.${action}.title` as Parameters<typeof t>[0])}
+            description={t(`firewall.confirm.${action}.description` as Parameters<typeof t>[0])}
+            onDismiss={onCancel}
+            footerLead={noSSHService ? (
+                <FirewallNoSSHAcknowledgement
+                    id='firewall-action-no-ssh'
+                    checked={noSSHAcknowledged}
+                    disabled={confirmDisabled}
+                    onChange={onAcknowledgeNoSSH}
+                />
+            ) : undefined}
+            actions={
+                <>
                     <Button variant='secondary' autoFocus onClick={onCancel}>
                         {t('common.cancel')}
                     </Button>
@@ -3503,8 +3388,8 @@ function FirewallActionConfirmationDialog({
                             ? t('firewall.ssh.no_ssh_service.confirm')
                             : t(`firewall.confirm.${action}.button` as Parameters<typeof t>[0])}
                     </Button>
-                </div>
-            </div>
-        </div>
+                </>
+            }
+        />
     );
 }

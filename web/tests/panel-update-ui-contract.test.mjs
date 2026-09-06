@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 const card = readFileSync(new URL('../src/components/PanelUpdateCard.tsx', import.meta.url), 'utf8');
 const tracker = readFileSync(new URL('../src/components/SystemUpdateOperation.tsx', import.meta.url), 'utf8');
@@ -10,8 +11,8 @@ const watchdog = readFileSync(new URL('../src/lib/systemUpdateWatchdog.ts', impo
 const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
 const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
 const settings = readFileSync(new URL('../src/components/Settings.tsx', import.meta.url), 'utf8');
-const tr = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
-const en = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
+const tr = turkishCatalogue;
+const en = englishCatalogue;
 const updateSources = card + tracker;
 
 test('update card is reachable only through the admin settings panel', () => {

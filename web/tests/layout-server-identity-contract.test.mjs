@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
-const en = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const tr = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const en = englishCatalogue;
+const tr = turkishCatalogue;
 
 test('the admin shell reuses one bounded no-store runtime response', () => {
   assert.equal(

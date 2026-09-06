@@ -13,7 +13,7 @@ const source = readFileSync(
 );
 
 function mailProfileDialog() {
-  const start = source.indexOf("aria-labelledby='mail-profile-confirm-title'");
+  const start = source.indexOf("id='mail-profile-confirm'");
   assert.ok(start > 0, 'the mail install dialogue is no longer identifiable');
   const end = source.indexOf('function InstallServiceDialog', start);
   assert.ok(end > start);
@@ -23,32 +23,47 @@ function mailProfileDialog() {
 // The plan is long. When the whole dialogue scrolled, its confirm button sat
 // below the fold at 1440x900 the moment it opened, and an operator who cannot
 // see the action concludes the dialogue is broken.
+//
+// The shape that fixes it is no longer written here: it is the shared Dialog,
+// where R-059 moved it after the same defect turned up in the DNS review
+// dialogue. What this file still owns is that THIS dialogue uses it, and which
+// of its parts go where — the plan in the body that scrolls, the
+// acknowledgement beside the primary it gates. The shape itself is pinned in
+// dialog-shape-contract.test.mjs.
+//
+// Bu kusuru gideren biçim artık burada yazılı değil: paylaşılan Dialog'dur.
+// Burada kalan, bu diyaloğun onu kullandığı ve hangi parçasının nereye
+// gittiğidir.
 test('the mail install dialogue keeps its actions out of the part that scrolls', () => {
   const dialog = mailProfileDialog();
 
-  // The dialogue is a bounded column, not one scrolling box.
-  assert.match(dialog, /className='flex max-h-\[90vh\] w-full max-w-2xl flex-col/);
-  assert.doesNotMatch(
-    dialog.slice(0, dialog.indexOf('>')),
-    /overflow-y-auto/,
-    'the dialogue itself must not be the scroller',
-  );
-
-  const scrollerAt = dialog.indexOf("className='min-h-0 flex-1 overflow-y-auto");
-  assert.ok(scrollerAt > 0, 'the plan is not in a scrollable body of its own');
-  const footerAt = dialog.indexOf("className='shrink-0 border-t border-border");
-  assert.ok(footerAt > scrollerAt, 'the actions are not in a footer of their own');
-
-  // The confirm button, and the acknowledgement that gates it, are after the
-  // scroller closes: a disabled primary always has its reason beside it.
-  const confirmAt = dialog.indexOf('services.mailProfiles.plan.confirm.');
-  const acknowledgementAt = dialog.indexOf('services.mailProfiles.plan.acknowledgement');
+  // It is the shared dialogue, so it is a bounded column and not one scrolling
+  // box — and it cannot quietly stop being one.
+  const openTagEnd = dialog.indexOf('\n        >');
+  assert.ok(openTagEnd > 0, 'the mail dialogue no longer opens a Dialog');
   assert.ok(
-    acknowledgementAt > footerAt && confirmAt > footerAt,
-    'the acknowledgement and the confirm must live in the fixed footer',
+    source.lastIndexOf('<Dialog', source.indexOf("id='mail-profile-confirm'")) > 0,
+    'the plan is not rendered by the shared Dialog',
   );
+  assert.doesNotMatch(dialog, /fixed inset-0/, 'the dialogue must not build its own overlay again');
+  assert.doesNotMatch(dialog, /max-h-\[90vh\]/, 'the bound belongs to the shared dialogue, not here');
 
-  // The plan itself is still all there: nothing was shrunk to make room.
+  // The acknowledgement is in the footer slot, beside the primary it gates: a
+  // disabled primary always has its reason on the same line of sight.
+  const footerLeadAt = dialog.indexOf('footerLead={');
+  const actionsAt = dialog.indexOf('actions={');
+  const bodyAt = openTagEnd;
+  assert.ok(footerLeadAt > 0 && actionsAt > footerLeadAt && bodyAt > actionsAt);
+  const acknowledgementAt = dialog.indexOf('services.mailProfiles.plan.acknowledgement');
+  const confirmAt = dialog.indexOf('services.mailProfiles.plan.confirm.');
+  assert.ok(
+    acknowledgementAt > footerLeadAt && acknowledgementAt < actionsAt,
+    'the acknowledgement must be in the pinned footer',
+  );
+  assert.ok(confirmAt > actionsAt && confirmAt < bodyAt, 'the confirm must be in the action row');
+
+  // The plan itself is still all there, in the body that scrolls: nothing was
+  // shrunk to make room.
   for (const key of [
     'services.mailProfiles.plan.component',
     'services.mailProfiles.plan.serviceImpact',
@@ -56,8 +71,7 @@ test('the mail install dialogue keeps its actions out of the part that scrolls',
     'services.mailProfiles.plan.tls',
     'services.mailProfiles.hostname.title',
   ]) {
-    const at = dialog.indexOf(key);
-    assert.ok(at > scrollerAt && at < footerAt, `${key} left the plan`);
+    assert.ok(dialog.indexOf(key) > bodyAt, `${key} left the plan`);
   }
 });
 

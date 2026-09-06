@@ -3,7 +3,7 @@ import { ArrowLeft, Play, Square, RotateCw, Download, ScanSearch, type LucideIco
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
-import { Button, EmptyState, StatusDot } from './ui';
+import { Button, Dialog, EmptyState, StatusDot } from './ui';
 import { HelpButton } from './HelpDrawer';
 import { readApiError, apiErrorText } from '../lib/apiError';
 import { decodeManagedServicesSnapshot, useComponentOperation } from './ComponentOperation';
@@ -449,76 +449,49 @@ function ServiceInstallConfirmationDialog({
                     `services.mutationReadiness.${readiness.reason ?? 'state_unverified'}` as Parameters<typeof t>[0],
                 );
 
-    useEffect(() => {
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onCancel();
-        };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [onCancel]);
-
+    // The two controls are the shared Button now. They were hand-rolled markup
+    // that missed R-047's disabled-contrast fix and hovered on a token that
+    // does not exist (`surface-subtle`), which is what a second copy of a
+    // control always costs eventually.
+    // Iki denetim artik paylasilan Button'dir. Elle yazilmis isaretleme,
+    // R-047'nin devre disi kontrast duzeltmesini kaciriyor ve var olmayan bir
+    // token uzerinde hover ediyordu.
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onMouseDown={(event) => {
-                if (event.currentTarget === event.target) onCancel();
-            }}
-        >
-            <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="service-install-confirm-title"
-                aria-describedby="service-install-confirm-description"
-                className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
-            >
-                <div className="mb-4 flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Download className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0">
-                        <h3 id="service-install-confirm-title" className="text-lg font-semibold text-fg">
-                            {t('services.confirm.install.title', { name })}
-                        </h3>
-                        <p id="service-install-confirm-description" className="mt-1 text-sm leading-5 text-fg-muted">
-                            {t('services.confirm.install.description', { name })}
-                        </p>
-                    </div>
-                </div>
-
-                {readinessMessage && (
-                    <div
-                        role="status"
-                        aria-live="polite"
-                        className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning"
-                    >
-                        {readiness?.ready === false && (
-                            <span className="font-semibold">{t('services.mutationReadiness.title')} </span>
-                        )}
-                        {readinessMessage}
-                    </div>
-                )}
-
-                <div className="flex justify-end gap-2">
-                    <button
-                        type="button"
-                        autoFocus
-                        onClick={onCancel}
-                        className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-fg hover:bg-surface-subtle"
-                    >
+        <Dialog
+            id="service-install-confirm"
+            icon={Download}
+            title={t('services.confirm.install.title', { name })}
+            description={t('services.confirm.install.description', { name })}
+            onDismiss={onCancel}
+            actions={
+                <>
+                    <Button variant="secondary" autoFocus onClick={onCancel}>
                         {t('common.cancel')}
-                    </button>
-                    <button
-                        type="button"
+                    </Button>
+                    <Button
+                        variant="primary"
+                        icon={Download}
                         disabled={confirmDisabled}
                         onClick={onConfirm}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                        <Download className="h-4 w-4" />
                         {t('services.confirm.install.button', { name })}
-                    </button>
+                    </Button>
+                </>
+            }
+        >
+            {readinessMessage && (
+                <div
+                    role="status"
+                    aria-live="polite"
+                    className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning"
+                >
+                    {readiness?.ready === false && (
+                        <span className="font-semibold">{t('services.mutationReadiness.title')} </span>
+                    )}
+                    {readinessMessage}
                 </div>
-            </div>
-        </div>
+            )}
+        </Dialog>
     );
 }
 

@@ -324,9 +324,44 @@ function PageWithLayout({ children }: { children: ReactNode }) {
   return (
     <MainLayout currentPath={currentPath}>
       <RouteLoadBoundary key={currentPath}>
-        <Suspense fallback={<PageLoading />}>{children}</Suspense>
+        <Suspense fallback={<PageLoading />}>
+          <ScreenCopyGate>{children}</ScreenCopyGate>
+        </Suspense>
       </RouteLoadBoundary>
     </MainLayout>
+  );
+}
+
+// A page waits for its own copy the same way it waits for its own bundle.
+// The shell's strings ship with the boot payload; every screen's strings are
+// fetched beside the screen (register R-060), so a route must not paint until
+// they are here — a key rendering as its own name is worse than a spinner that
+// lasts as long as the bundle fetch beside it. The shell around this gate —
+// the rail, the identity, the profile menu — is already drawn.
+//
+// Bir sayfa, kendi paketini beklediği gibi kendi metnini de bekler. Kabuğun
+// metni açılış yüküyle gelir; her ekranın metni o ekranın yanında getirilir
+// (defter R-060). Anahtarın kendi adıyla çizilmesi, yanındaki paket kadar süren
+// bir bekleme göstergesinden kötüdür.
+function ScreenCopyGate({ children }: { children: ReactNode }) {
+  const { screensReady, screensFailed, t } = useI18n();
+  if (screensFailed) return <PageLoadFailed message={t('app.pageLoadFailed')} reloadLabel={t('app.reload')} />;
+  if (!screensReady) return <PageLoading />;
+  return <>{children}</>;
+}
+
+function PageLoadFailed({ message, reloadLabel }: { message: string; reloadLabel: string }) {
+  return (
+    <div className="mx-auto flex min-h-64 max-w-lg flex-col items-center justify-center gap-4 rounded-xl border border-border bg-surface p-8 text-center">
+      <p className="text-sm text-fg-muted">{message}</p>
+      <button
+        type="button"
+        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
+        onClick={() => window.location.reload()}
+      >
+        {reloadLabel}
+      </button>
+    </div>
   );
 }
 
@@ -363,18 +398,7 @@ class RouteLoadErrorBoundary extends Component<RouteLoadErrorBoundaryProps, Rout
   render() {
     if (!this.state.failed) return this.props.children;
 
-    return (
-      <div className="mx-auto flex min-h-64 max-w-lg flex-col items-center justify-center gap-4 rounded-xl border border-border bg-surface p-8 text-center">
-        <p className="text-sm text-fg-muted">{this.props.message}</p>
-        <button
-          type="button"
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
-          onClick={() => window.location.reload()}
-        >
-          {this.props.reloadLabel}
-        </button>
-      </div>
-    );
+    return <PageLoadFailed message={this.props.message} reloadLabel={this.props.reloadLabel} />;
   }
 }
 
