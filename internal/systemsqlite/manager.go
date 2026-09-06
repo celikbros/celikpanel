@@ -987,6 +987,7 @@ func inspectDefinition(
 		}
 		result.JournalMode = inspection.JournalMode
 		result.UserVersion = inspection.UserVersion
+		result.SchemaVersion = productSchemaVersion(ctx, definition, source.databasePath(), inspection.UserVersion)
 		result.Actions = databaseActions(definition)
 		return result
 	}
@@ -1008,8 +1009,58 @@ func inspectDefinition(
 		result.StatusMessage = publicDatabaseError(err).Error()
 		return result
 	}
+	result.SchemaVersion = productSchemaVersion(ctx, definition, source.databasePath(), result.UserVersion)
 	result.Actions = databaseActions(definition)
 	return result
+}
+
+// productSchemaVersion answers what CelikPanel means by a database's schema
+// version, which differs by database because the databases differ.
+//
+//   - The panel's own database keeps its version in the schema_migrations
+//     table, which is what every other part of the product reports. Its
+//     `PRAGMA user_version` is nothing, because nothing sets it - so reading
+//     the pragma there and calling it the schema version showed 0 for a
+//     database at 38.
+//   - The component catalogue really does set the pragma, so there it is the
+//     answer.
+//   - For anything else the product has no version of its own to give, and nil
+//     is the honest reply. A screen shows nothing for it; it must not print a
+//     zero, because a zero reads as an answer.
+//
+// A read that fails is nil, not an error: this is one line of description on a
+// maintenance screen, and failing the whole listing because a version could not
+// be read would be losing the useful part to protect the decorative one.
+//
+// productSchemaVersion, CelikPanel'in bir veritabaninin sema surumu derken ne
+// kastettigini yanitlar; veritabanlari farkli oldugu icin yanit da farklidir.
+// Okunamayan bir deger hata degil nil'dir: bu, bakim ekranindaki tek bir
+// aciklama satiridir.
+func productSchemaVersion(
+	ctx context.Context, definition Definition, path string, userVersion int,
+) *int {
+	switch definition.ID {
+	case DatabasePanel:
+		database, err := openSQLite(ctx, path, "ro")
+		if err != nil {
+			return nil
+		}
+		defer database.Close()
+		var version int
+		if err := database.QueryRowContext(
+			ctx, `SELECT COALESCE(MAX(version), 0) FROM schema_migrations`,
+		).Scan(&version); err != nil {
+			return nil
+		}
+		return &version
+	case DatabaseComponentCatalog:
+		if userVersion == 0 {
+			return nil
+		}
+		return &userVersion
+	default:
+		return nil
+	}
 }
 
 func databaseActions(definition Definition) []string {

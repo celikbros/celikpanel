@@ -106,6 +106,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-066 | Medium | FOUND / NOT YET FIXED | A database engine on another machine cannot be registered at all: the list is filled only by autodiscovery of this machine, and the endpoint that accepts a remote server with a credential is reachable only through the API |
 | R-067 | High | FOUND ON A REAL MACHINE AND FIXED | On a freshly installed server the whole database chapter was unreachable: the panel installed MariaDB, saw it running, and then told the administrator no database engine was installed |
 | R-068 | Low | FOUND / NOT YET FIXED | The agent works out exactly why a host change cannot start - the package manager, another change, or a held lock - and the operator is told one sentence that covers all three |
+| R-069 | Medium | FOUND BY THE OPERATOR AND FIXED | Three places where a screen printed something the product knew better: a schema version of 0 for a database at 38, "unknown" beside an engine the panel had installed and was connected to, and three yellow warnings on a healthy new server |
 
 ## Detailed risks
 
@@ -2838,6 +2839,49 @@ or executed as-is. There are no open pull requests at this baseline.
   Low rather than High because the discarded reason here is one of three named
   possibilities rather than an engine's own words, and the fallback sentence is
   at least true.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-069 - Screens that printed what the product knew better
+
+- Evidence: 6 September 2026, from the operator's own browser after the
+  acceptance run - the first time a person looked at these screens. Three
+  findings, one family: in each, the answer existed inside the product and the
+  screen showed something else.
+- **A schema version of 0 for a database at 38.** The System SQLite screen
+  labelled a field "Schema version" and filled it from SQLite's
+  `PRAGMA user_version`. Nothing in this product sets that pragma on the panel
+  database; its version lives in the `schema_migrations` table, and
+  `/api/v1/panel/version` was reporting **38** at the same moment the screen
+  showed **0**. Two different numbers with one name, and the screen had the
+  meaningless one. Worse than blank: a zero reads as an answer.
+  - Fixed by having the backend decide what a schema version means per
+    database - the migration table for the panel, the pragma for the component
+    catalogue which really does set it, and nothing at all elsewhere - and by
+    the screen printing nothing rather than `?? 0`.
+- **"unknown" beside an engine the panel installed.** The version on a
+  registered database server came from the service scan, which reports
+  "unknown" for an engine it can see running. The panel had installed that
+  MariaDB, had an account on it, and was talking to it.
+  - Fixed by asking. The driver interface gained `ServerVersion()`, and the
+    panel asks when it opens its own account. This is only possible because of
+    R-057: before it, the panel had no credential to ask with. Best-effort on
+    purpose - an account was just opened on a host, and refusing to record that
+    because a version string could not be read would trade the important half
+    for the cosmetic one.
+- **Three yellow warnings on a server with nothing wrong.** On a fresh install
+  the PowerDNS, Roundcube and component-catalogue database files legitimately
+  do not exist, and each drew a warning box saying so. A warning for an
+  expected absence teaches an operator to stop reading warnings, which is the
+  one habit a warning cannot afford to teach.
+  - Fixed by stating those absences as plain facts. The panel's own database
+    stays a warning: if that one is missing, something is wrong.
+- **Left open, because it is the operator's call.** The System SQLite tab sits
+  on the Databases page, beside the customers' databases. The product's own
+  navigation already separates HOSTING from SERVER, and the panel's own
+  machinery is a server concern. Showing it at all is right - being able to
+  check the integrity of the control-plane database without a shell is real,
+  and the worst failure mode this product has is that file - but the page it
+  is on is a hosting page. Not moved; the operator has not decided.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

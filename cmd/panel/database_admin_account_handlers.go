@@ -193,6 +193,7 @@ func (p *Panel) handleProvisionDatabaseAdminAccount(w http.ResponseWriter, r *ht
 	// olusturmaktir.
 	server.AdminUsername = resp.Username
 	server.AdminPasswordEncrypted = sealed
+	p.recordEngineVersion(server)
 	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
 	if err := serverRepo.Update(r.Context(), server); err != nil {
 		writeServerError(w, err)
@@ -298,6 +299,41 @@ func (p *Panel) handleRemoveDatabaseAdminAccount(w http.ResponseWriter, r *http.
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "removed"})
 }
 
+// recordEngineVersion asks the engine what it is, now that the panel has an
+// account on it that works.
+//
+// The version on a registered server came from the service scan, which reports
+// "unknown" for an engine it can see running - so the databases screen said
+// "unknown" beside a MariaDB the panel had installed itself and was connected
+// to. The panel could always have asked; until R-057 it had no credential to
+// ask with.
+//
+// Deliberately best-effort, and deliberately not allowed to fail the thing it
+// decorates: an account was just opened on a host, and refusing to record that
+// because a version string could not be read would trade the important half
+// for the cosmetic one. A version that cannot be read stays as it was.
+//
+// recordEngineVersion, panelin artik calisan bir hesabi oldugu icin motora ne
+// oldugunu sorar. Bilerek en-iyi-caba ve bilerek susledigi seyi dusurmesine
+// izin verilmez.
+func (p *Panel) recordEngineVersion(server *core.DatabaseServer) {
+	current := strings.ToLower(strings.TrimSpace(server.Version))
+	if current != "" && current != "unknown" {
+		return
+	}
+	driver, err := p.dbDriverFor(server)
+	if err != nil {
+		return
+	}
+	version, err := driver.ServerVersion()
+	if err != nil {
+		return
+	}
+	if version = strings.TrimSpace(version); version != "" {
+		server.Version = version
+	}
+}
+
 // provisionDatabaseAdminAccountsFor opens the panel's account on engines
 // autodiscovery has just registered. It is deliberately the same work as the
 // handler above, done without a request behind it, so an engine the panel
@@ -342,6 +378,7 @@ func (p *Panel) provisionDatabaseAdminAccountsFor(
 			}
 			server.AdminUsername = resp.Username
 			server.AdminPasswordEncrypted = sealed
+			p.recordEngineVersion(server)
 			if err := serverRepo.Update(ctx, server); err != nil {
 				return err
 			}
