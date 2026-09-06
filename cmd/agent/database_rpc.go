@@ -3,10 +3,12 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/hostcmd"
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -264,6 +266,49 @@ func (a *Agent) deleteMySQLDatabase(req DeleteDatabaseRequest, resp *DeleteDatab
 	return nil
 }
 
+// R-053 stood the other way round from here. There, a client diagnostic was
+// discarded and the panel could not say why an engine refused it. Here the
+// diagnostic was forwarded whole - the error plus the command output -
+// straight into the RPC response the browser renders, and the statement psql
+// was running is
+//
+//	CREATE USER "name" WITH PASSWORD 'the password'
+//
+// which psql quotes back when it will not accept it. The output is still
+// read, because "already exists" is decided from it and because a failure
+// with no reason helps nobody; only what it meant travels.
+//
+// R-053 buradan bakildiginda tersine duruyordu. Orada bir istemcinin teshis
+// metni atilmisti; burada ise tarayicinin gosterdigi RPC yanitina oldugu gibi
+// aktariliyordu - ve psql-in calistirdigi ifade parolayi tasir. Cikti hala
+// okunur; yalnizca ne anlama geldigi tasinir.
+func databaseClientMeaning(text string) string {
+	switch services.ClassifyDatabaseEngineRefusal(errors.New(text)) {
+	case services.DatabaseEngineRefusalCredential:
+		return "this server's database engine refused the credential CelikPanel presented"
+	case services.DatabaseEngineRefusalUnreachable:
+		return "nothing answered at this server's database engine"
+	}
+	lowered := strings.ToLower(text)
+	switch {
+	case strings.Contains(lowered, "already exists"):
+		return "the database or the role this change names is already there"
+	case strings.Contains(lowered, "does not exist"):
+		return "the database or the role this change names is not on this server"
+	case strings.Contains(lowered, "permission denied"),
+		strings.Contains(lowered, "must be superuser"),
+		strings.Contains(lowered, "must be owner"):
+		return "the database engine would not let the account CelikPanel uses make this change"
+	case strings.Contains(lowered, "syntax error"),
+		strings.Contains(lowered, "invalid"):
+		return "the database engine rejected the statement CelikPanel composed"
+	case strings.Contains(lowered, "is being accessed by other users"):
+		return "the database is still in use, so it could not be dropped"
+	default:
+		return ""
+	}
+}
+
 // createPostgreSQLDatabase creates a PostgreSQL database and user
 func (a *Agent) createPostgreSQLDatabase(req CreateDatabaseRequest, resp *CreateDatabaseResponse) error {
 	userIdent, err := services.QuotePGIdentifier(req.User)
@@ -288,7 +333,7 @@ func (a *Agent) createPostgreSQLDatabase(req CreateDatabaseRequest, resp *Create
 	output, err := cmd.CombinedOutput()
 	if err != nil && !strings.Contains(string(output), "already exists") {
 		resp.Success = false
-		resp.Error = fmt.Sprintf("failed to create user: %v\nOutput: %s", err, string(output))
+		resp.Error = hostcmd.Fail("failed to create user", output, err, databaseClientMeaning).Error()
 		return nil
 	}
 
@@ -298,7 +343,7 @@ func (a *Agent) createPostgreSQLDatabase(req CreateDatabaseRequest, resp *Create
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		resp.Success = false
-		resp.Error = fmt.Sprintf("failed to create database: %v\nOutput: %s", err, string(output))
+		resp.Error = hostcmd.Fail("failed to create database", output, err, databaseClientMeaning).Error()
 		return nil
 	}
 
@@ -320,7 +365,7 @@ func (a *Agent) deletePostgreSQLDatabase(req DeleteDatabaseRequest, resp *Delete
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		resp.Success = false
-		resp.Error = fmt.Sprintf("failed to drop database: %v\nOutput: %s", err, string(output))
+		resp.Error = hostcmd.Fail("failed to drop database", output, err, databaseClientMeaning).Error()
 		return nil
 	}
 

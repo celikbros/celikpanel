@@ -1,6 +1,6 @@
 package main
 
-import "strings"
+import "github.com/alicelik/celikpanel/internal/hostcmd"
 
 // One rule, in one place, next to the ledger it protects.
 //
@@ -100,15 +100,9 @@ const hostMutationFailureReasonLimit = 400
 func boundedHostMutationReason(cause error) string {
 	reason := ""
 	if cause != nil {
-		reason = strings.TrimSpace(cause.Error())
+		reason = cause.Error()
 	}
-	if reason == "" {
-		return "unknown"
-	}
-	if len(reason) > hostMutationFailureReasonLimit {
-		return reason[:hostMutationFailureReasonLimit] + "..."
-	}
-	return reason
+	return hostcmd.Bounded(reason, hostMutationFailureReasonLimit)
 }
 
 // hostMutationFailureVoice is one path's words for the two failures it is
@@ -162,24 +156,15 @@ func (voice hostMutationFailureVoice) cleanFailureText(
 	return voice.restoredCode, voice.restoredLead + " " + tail, true
 }
 
-// operatorFirstFailureSentence puts the instruction the operator has to act on
-// in front, and the command's own words behind it in brackets. The order is
-// the lesson, not the punctuation: this string is carried as a failure reason
-// that is bounded before it is recorded, and a tool's diagnostic is long
-// enough to push everything after it past the limit. The first live R-054 run
-// truncated exactly the sentence that mattered, which is how the rule got
-// written down; R-055 needed it a second time, which is why it is here.
+// operatorFirstFailureSentence is this package's name for the shared rule:
+// instruction first, the command's own words after. R-054 learned it, R-055
+// needed it a second time, and internal/services needed it a third - so the
+// rule itself now lives in internal/hostcmd, where the database refusal can
+// reach it too, and this stays as the agent's name for it.
 //
-// operatorFirstFailureSentence, operatorun uygulamasi gereken talimati one,
-// komutun kendi sozlerini parantez icinde arkaya koyar. Ders noktalama degil
-// siradir: bu dize kaydedilmeden once sinirlanir ve bir aracin teshis metni
-// ardindaki her seyi sinirin disina itecek kadar uzundur.
+// operatorFirstFailureSentence, paylasilan kuralin bu paketteki adidir: once
+// talimat, sonra komutun kendi sozleri. Kural artik internal/hostcmd icinde
+// yasar; burasi yalnizca agent'in ona verdigi addir.
 func operatorFirstFailureSentence(instruction, prefix, detail string) string {
-	if detail == "" {
-		detail = "unknown"
-	}
-	if instruction == "" {
-		return prefix + ": " + detail
-	}
-	return instruction + " (" + prefix + ": " + detail + ")"
+	return hostcmd.OperatorFirst(instruction, prefix, detail)
 }
