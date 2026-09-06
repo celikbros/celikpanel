@@ -107,10 +107,10 @@ func (p *Panel) dbDriverFor(server *core.DatabaseServer) (services.DatabaseDrive
 		return nil, fmt.Errorf("database server %d root password: %w", server.ID, err)
 	}
 	return newDatabaseDriver(services.DriverConfig{
-		Host:         server.Host,
-		Port:         server.Port,
-		RootPassword: rootPassword,
-		Type:         dbDriverTypeFor(server),
+		Host:     server.Host,
+		Port:     server.Port,
+		Password: rootPassword,
+		Type:     dbDriverTypeFor(server),
 	})
 }
 

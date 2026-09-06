@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 )
 
 // DatabaseDriver interface for different database types
@@ -28,10 +29,35 @@ type DatabaseDriver interface {
 
 // DriverConfig holds configuration for database drivers
 type DriverConfig struct {
-	Host         string
-	Port         int
-	RootPassword string
-	Type         string // "postgresql", "mariadb"
+	Host string
+	Port int
+	// Username is the account the panel connects as. R-057 gave the panel an
+	// account of its own, so the account can no longer be assumed from the
+	// engine type. Empty still means the engine's own superuser, which is what
+	// every credential stored before R-057 is.
+	//
+	// Username, panelin baglandigi hesaptir. R-057 panele kendi hesabini
+	// verdi; artik hesap motor tipinden varsayilamaz. Bos deger hala motorun
+	// kendi ust yetkili hesabi demektir.
+	Username string
+	Password string
+	Type     string // "postgresql", "mariadb"
+}
+
+// driverUsername resolves the account to connect as. A stored credential with
+// no username was recorded before the panel could own an account, and every
+// one of those is the engine's own superuser - so an empty username keeps
+// meaning exactly what it always meant, decided here rather than at each
+// driver.
+//
+// driverUsername, baglanilacak hesabi belirler. Kullanici adi olmayan kayitli
+// bir kimlik bilgisi, panel kendi hesabina sahip olamadan once kaydedilmistir
+// ve hepsi motorun kendi ust yetkili hesabidir.
+func driverUsername(configured, engineSuperuser string) string {
+	if trimmed := strings.TrimSpace(configured); trimmed != `` {
+		return trimmed
+	}
+	return engineSuperuser
 }
 
 // NewDatabaseDriver creates a new database driver based on type

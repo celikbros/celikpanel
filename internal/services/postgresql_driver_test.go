@@ -151,9 +151,9 @@ func (r *postgreSQLBoolRows) Next(values []driver.Value) error {
 
 func newScriptedPostgreSQLDriver(state *postgreSQLScript) *PostgreSQLDriver {
 	driver := NewPostgreSQLDriver(DriverConfig{
-		Host:         "127.0.0.1",
-		Port:         5432,
-		RootPassword: "test-secret",
+		Host:     "127.0.0.1",
+		Port:     5432,
+		Password: "test-secret",
 	})
 	driver.openDB = func(string) (*sql.DB, error) {
 		return sql.OpenDB(&postgreSQLScriptConnector{state: state}), nil
@@ -162,10 +162,16 @@ func newScriptedPostgreSQLDriver(state *postgreSQLScript) *PostgreSQLDriver {
 }
 
 func TestPostgreSQLDSNEscapesCredentialsHostAndDatabase(t *testing.T) {
-	dsn := postgreSQLDSN("2001:db8::42", 5544, "tenant/database", "p@ss:/?#[]")
+	dsn := postgreSQLDSN("2001:db8::42", 5544, "tenant/database", "odd/user:name", "p@ss:/?#[]")
 	parsed, err := url.Parse(dsn)
 	if err != nil {
 		t.Fatal(err)
+	}
+	// The username is escaped on the same terms as the password. R-057 made it
+	// a value rather than the constant "postgres", so it has to survive the
+	// same characters the password already does.
+	if parsed.User.Username() != "odd/user:name" {
+		t.Fatalf("username round trip failed: username=%q dsn=%s", parsed.User.Username(), dsn)
 	}
 	password, ok := parsed.User.Password()
 	if !ok || password != "p@ss:/?#[]" {
@@ -303,6 +309,32 @@ func TestPostgreSQLRevokePrivilegesPropagatesCommitFailure(t *testing.T) {
 }
 
 func Example_postgreSQLDSN() {
-	fmt.Println(postgreSQLDSN("127.0.0.1", 5432, "postgres", "secret"))
+	fmt.Println(postgreSQLDSN("127.0.0.1", 5432, "postgres", "postgres", "secret"))
 	// Output: postgres://postgres:secret@127.0.0.1:5432/postgres?sslmode=disable
+}
+
+// R-057. Companion to TestMariaDBConnectsAsTheConfiguredAccount: the role the
+// panel connects as is a value now, and an empty one still means postgres.
+// R-057. Panelin baglandigi rol artik bir degerdir; bos olan hala postgres.
+func TestPostgreSQLConnectsAsTheConfiguredRole(t *testing.T) {
+	configured := NewPostgreSQLDriver(DriverConfig{
+		Host:     "127.0.0.1",
+		Port:     5432,
+		Username: "celikpanel_admin",
+		Password: "admin-secret",
+	})
+	dsn := postgreSQLDSN(configured.host, configured.port, "postgres",
+		driverUsername(configured.username, postgreSQLSuperuser), configured.password)
+	parsed, err := url.Parse(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.User.Username() != "celikpanel_admin" {
+		t.Fatalf("connected as %q, want celikpanel_admin", parsed.User.Username())
+	}
+
+	inherited := NewPostgreSQLDriver(DriverConfig{Host: "127.0.0.1", Port: 5432, Password: "legacy"})
+	if got := driverUsername(inherited.username, postgreSQLSuperuser); got != "postgres" {
+		t.Fatalf("a credential with no role connected as %q, want postgres", got)
+	}
 }
