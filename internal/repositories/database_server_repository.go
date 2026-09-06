@@ -31,8 +31,8 @@ func (r *PostgresDatabaseServerRepository) Create(ctx context.Context, server *c
 	}
 
 	query := `
-		INSERT INTO database_servers (subscription_id, type_id, name, version, host, port, is_default, root_password_encrypted, connection_params, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO database_servers (subscription_id, type_id, name, version, host, port, is_default, root_password_encrypted, admin_username, connection_params, status)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	result, err := r.db.ExecContext(ctx, query,
@@ -43,7 +43,8 @@ func (r *PostgresDatabaseServerRepository) Create(ctx context.Context, server *c
 		server.Host,
 		server.Port,
 		server.IsDefault,
-		server.RootPasswordEncrypted,
+		server.AdminPasswordEncrypted,
+		server.AdminUsername,
 		paramsJSON,
 		server.Status,
 	)
@@ -70,7 +71,7 @@ func (r *PostgresDatabaseServerRepository) GetByID(ctx context.Context, id int) 
 	// katmanının tükettiği değer budur. List* metotları insan-yüzlü
 	// display_name doldurur; ikisini karıştırmayın.
 	query := `
-		SELECT ds.id, ds.subscription_id, ds.type_id, dst.name, ds.name, ds.version, ds.host, ds.port, ds.is_default, ds.root_password_encrypted, ds.connection_params, ds.status, ds.created_at, ds.updated_at
+		SELECT ds.id, ds.subscription_id, ds.type_id, dst.name, ds.name, ds.version, ds.host, ds.port, ds.is_default, ds.root_password_encrypted, ds.admin_username, ds.connection_params, ds.status, ds.created_at, ds.updated_at
 		FROM database_servers ds
 		JOIN database_server_types dst ON dst.id = ds.type_id
 		WHERE ds.id = ?
@@ -79,6 +80,7 @@ func (r *PostgresDatabaseServerRepository) GetByID(ctx context.Context, id int) 
 	server := &core.DatabaseServer{}
 	var paramsJSON []byte
 	var rootPassword sql.NullString
+	var adminUsername sql.NullString
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&server.ID,
@@ -91,6 +93,7 @@ func (r *PostgresDatabaseServerRepository) GetByID(ctx context.Context, id int) 
 		&server.Port,
 		&server.IsDefault,
 		&rootPassword,
+		&adminUsername,
 		&paramsJSON,
 		&server.Status,
 		scanTime(&server.CreatedAt),
@@ -105,7 +108,10 @@ func (r *PostgresDatabaseServerRepository) GetByID(ctx context.Context, id int) 
 	}
 
 	if rootPassword.Valid {
-		server.RootPasswordEncrypted = rootPassword.String
+		server.AdminPasswordEncrypted = rootPassword.String
+	}
+	if adminUsername.Valid {
+		server.AdminUsername = adminUsername.String
 	}
 
 	if len(paramsJSON) > 0 {
@@ -120,7 +126,7 @@ func (r *PostgresDatabaseServerRepository) GetByID(ctx context.Context, id int) 
 // ListBySubscription retrieves all database servers for a subscription
 func (r *PostgresDatabaseServerRepository) ListBySubscription(ctx context.Context, subscriptionID int) ([]*core.DatabaseServer, error) {
 	query := `
-		SELECT ds.id, ds.subscription_id, ds.type_id, dst.display_name, dst.icon, ds.name, ds.version, ds.host, ds.port, ds.is_default, ds.root_password_encrypted, ds.connection_params, ds.status, ds.created_at, ds.updated_at
+		SELECT ds.id, ds.subscription_id, ds.type_id, dst.display_name, dst.icon, ds.name, ds.version, ds.host, ds.port, ds.is_default, ds.root_password_encrypted, ds.admin_username, ds.connection_params, ds.status, ds.created_at, ds.updated_at
 		FROM database_servers ds
 		JOIN database_server_types dst ON ds.type_id = dst.id
 		WHERE ds.subscription_id = ?
@@ -138,6 +144,7 @@ func (r *PostgresDatabaseServerRepository) ListBySubscription(ctx context.Contex
 		server := &core.DatabaseServer{}
 		var paramsJSON []byte
 		var rootPassword sql.NullString
+		var adminUsername sql.NullString
 
 		err := rows.Scan(
 			&server.ID,
@@ -151,6 +158,7 @@ func (r *PostgresDatabaseServerRepository) ListBySubscription(ctx context.Contex
 			&server.Port,
 			&server.IsDefault,
 			&rootPassword,
+			&adminUsername,
 			&paramsJSON,
 			&server.Status,
 			scanTime(&server.CreatedAt),
@@ -162,7 +170,10 @@ func (r *PostgresDatabaseServerRepository) ListBySubscription(ctx context.Contex
 		}
 
 		if rootPassword.Valid {
-			server.RootPasswordEncrypted = rootPassword.String
+			server.AdminPasswordEncrypted = rootPassword.String
+		}
+		if adminUsername.Valid {
+			server.AdminUsername = adminUsername.String
 		}
 
 		if len(paramsJSON) > 0 {
@@ -177,10 +188,21 @@ func (r *PostgresDatabaseServerRepository) ListBySubscription(ctx context.Contex
 	return servers, nil
 }
 
-// ListByType retrieves database servers by type for a subscription
+// ListByType retrieves database servers by type for a subscription.
+//
+// TypeName carries the CANONICAL engine name here, as GetByID does and unlike
+// ListBySubscription, which fills the human display_name. It used to carry
+// nothing at all: the query selected the server's own name into the column
+// before it and left TypeName empty, so a caller who filtered by type got rows
+// that could not say what type they were. Filling it is the reading a caller
+// of this method obviously expects.
+//
+// TypeName burada KANONIK motor adini tasir; GetByID gibi, ListBySubscription
+// gibi degil. Eskiden hicbir sey tasimiyordu: tipe gore suzen bir cagiran,
+// tipini soyleyemeyen satirlar aliyordu.
 func (r *PostgresDatabaseServerRepository) ListByType(ctx context.Context, subscriptionID int, serverType string) ([]*core.DatabaseServer, error) {
 	query := `
-		SELECT ds.id, ds.subscription_id, ds.type_id, ds.name, ds.version, ds.host, ds.port, ds.is_default, ds.root_password_encrypted, ds.connection_params, ds.status, ds.created_at, ds.updated_at
+		SELECT ds.id, ds.subscription_id, ds.type_id, dst.name, ds.name, ds.version, ds.host, ds.port, ds.is_default, ds.root_password_encrypted, ds.admin_username, ds.connection_params, ds.status, ds.created_at, ds.updated_at
 		FROM database_servers ds
 		JOIN database_server_types dst ON ds.type_id = dst.id
 		WHERE ds.subscription_id = ? AND dst.name = ?
@@ -198,17 +220,20 @@ func (r *PostgresDatabaseServerRepository) ListByType(ctx context.Context, subsc
 		server := &core.DatabaseServer{}
 		var paramsJSON []byte
 		var rootPassword sql.NullString
+		var adminUsername sql.NullString
 
 		err := rows.Scan(
 			&server.ID,
 			&server.SubscriptionID,
 			&server.TypeID,
+			&server.TypeName,
 			&server.Name,
 			&server.Version,
 			&server.Host,
 			&server.Port,
 			&server.IsDefault,
 			&rootPassword,
+			&adminUsername,
 			&paramsJSON,
 			&server.Status,
 			scanTime(&server.CreatedAt),
@@ -220,7 +245,10 @@ func (r *PostgresDatabaseServerRepository) ListByType(ctx context.Context, subsc
 		}
 
 		if rootPassword.Valid {
-			server.RootPasswordEncrypted = rootPassword.String
+			server.AdminPasswordEncrypted = rootPassword.String
+		}
+		if adminUsername.Valid {
+			server.AdminUsername = adminUsername.String
 		}
 
 		if len(paramsJSON) > 0 {
@@ -248,7 +276,7 @@ func (r *PostgresDatabaseServerRepository) Update(ctx context.Context, server *c
 
 	query := `
 		UPDATE database_servers
-		SET type_id = ?, name = ?, version = ?, host = ?, port = ?, is_default = ?, root_password_encrypted = ?, connection_params = ?, status = ?, updated_at = datetime('now')
+		SET type_id = ?, name = ?, version = ?, host = ?, port = ?, is_default = ?, root_password_encrypted = ?, admin_username = ?, connection_params = ?, status = ?, updated_at = datetime('now')
 		WHERE id = ?
 	`
 
@@ -259,7 +287,8 @@ func (r *PostgresDatabaseServerRepository) Update(ctx context.Context, server *c
 		server.Host,
 		server.Port,
 		server.IsDefault,
-		server.RootPasswordEncrypted,
+		server.AdminPasswordEncrypted,
+		server.AdminUsername,
 		paramsJSON,
 		server.Status,
 		server.ID,

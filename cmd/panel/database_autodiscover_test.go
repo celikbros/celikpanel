@@ -146,7 +146,7 @@ func TestReconcileInstalledDBServersIsIdempotentAndSelectsOneDefault(t *testing.
 	_, database := newDatabaseAutodiscoverFixture(t)
 
 	for attempt := 0; attempt < 2; attempt++ {
-		if err := reconcileInstalledDBServers(
+		if _, err := reconcileInstalledDBServers(
 			context.Background(), database, autodiscoverSubscriptionID, autodiscoverServices(),
 		); err != nil {
 			t.Fatalf("attempt %d: %v", attempt+1, err)
@@ -196,7 +196,7 @@ func TestReconcileInstalledDBServersRollsBackOnExistingQueryFailure(t *testing.T
 		t.Fatal(err)
 	}
 
-	err := reconcileInstalledDBServers(
+	_, err := reconcileInstalledDBServers(
 		context.Background(), database, autodiscoverSubscriptionID, autodiscoverServices(),
 	)
 	if err == nil || !strings.Contains(err.Error(), "list registered engines") {
@@ -219,7 +219,7 @@ func TestReconcileInstalledDBServersRollsBackOnScanFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := reconcileInstalledDBServers(
+	_, err := reconcileInstalledDBServers(
 		context.Background(), database, autodiscoverSubscriptionID, autodiscoverServices(),
 	)
 	if err == nil || !strings.Contains(err.Error(), "read registered engine") {
@@ -246,7 +246,7 @@ func TestReconcileInstalledDBServersRollsBackOnInsertFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := reconcileInstalledDBServers(
+	_, err := reconcileInstalledDBServers(
 		context.Background(), database, autodiscoverSubscriptionID,
 		[]core.Service{{Name: "mariadb.service", Version: "11.4"}},
 	)
@@ -272,7 +272,7 @@ func TestReconcileInstalledDBServersRejectsIgnoredInsertConflict(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := reconcileInstalledDBServers(
+	_, err := reconcileInstalledDBServers(
 		context.Background(), database, autodiscoverSubscriptionID,
 		[]core.Service{{Name: "mariadb.service", Version: "11.4"}},
 	)
@@ -304,7 +304,7 @@ func TestReconcileInstalledDBServersRollsBackOnDefaultUpdateFailure(t *testing.T
 		t.Fatal(err)
 	}
 
-	err := reconcileInstalledDBServers(
+	_, err := reconcileInstalledDBServers(
 		context.Background(), database, autodiscoverSubscriptionID,
 		[]core.Service{{Name: "mariadb.service", Version: "11.4"}},
 	)

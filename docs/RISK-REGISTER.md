@@ -94,7 +94,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-054 | High | FIXED AND PROVEN ON A REAL ARCH VM / THE VPN PATH IS R-055 | Installing on Arch upgrades the running kernel and says nothing about a reboot, so the first firewall or VPN action fails to load its modules - and on one host that failure poisoned the ledger until the machine was rebooted |
 | R-055 | High | THE RULE IS UNIFIED AND PROVEN LIVE / THIS ENTRY NAMED THE WRONG PATH | The VPN path has the exposure the firewall path just lost: a WireGuard module that cannot load fails an apply that then wedges the host, and the fix that was written for the firewall was not applied there |
 | R-056 | Low | FIXED AND PROVEN LIVE | Two mail startup jobs fail on every fresh Arch install with a message that names nothing |
-| R-057 | Medium | OPEN / PRODUCT DECISION | There is no interface for adding a database server or giving a discovered one its credential, so the instruction the refusal gives cannot be followed from the panel |
+| R-057 | Medium | FIXED / THE PANEL OPENS AN ACCOUNT OF ITS OWN | There is no interface for adding a database server or giving a discovered one its credential, so the instruction the refusal gives cannot be followed from the panel |
 | R-058 | Medium | FIXED / BOTH HALVES | The VPN's ledger row carries the generic sentence while the reason exists only in the HTTP body, and the peer-sync endpoint still answers an opaque 500 on a host that cannot load the module |
 | R-059 | Medium | FIXED ONCE, FOR EVERY DIALOGUE IN THE PRODUCT | The DNS review dialog is taller than its own box and opens scrolled to the top, so its actions sit below its fold - the mail dialog's defect, in a second dialog |
 | R-060 | Low | FIXED BY MEASUREMENT / HEADROOM 31 BYTES TO 115 KiB | The critical-boot bundle budget has 31 bytes of headroom, so the next change to any shared component fails the build |
@@ -102,6 +102,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-062 | Medium | FIXED / GUARDED AT THE SHAPE | The PostgreSQL client is invoked with the password in its argument list, so it is visible to any user who can read the process table |
 | R-063 | Low | RECORDED AS DEBT / GUARDED | Thirty privileged launches still handle their own failures outside the shared reader, so their operator messages are whatever each site decided |
 | R-064 | Low | FOUND / NOT YET FIXED | The loading spinner is hand-written 61 times across 38 files, so the design hook reports it one file at a time and every visual fix to a loading state has to be made 61 times |
+| R-065 | Medium | FOUND / NOT YET FIXED | The panel's own database account exists and is reachable only through the API: the server card does not show whether the account is there, and there is nowhere to hand the panel a credential for an engine on another machine |
 
 ## Detailed risks
 
@@ -2454,6 +2455,43 @@ or executed as-is. There are no open pull requests at this baseline.
      real decision - it makes the product the owner of a credential the
      operator may already own, and it needs a rotation story and an answer for
      engines installed outside the panel.
+- Answered 6 September 2026, with the third option above and the decision it
+  needed. docs/DATABASE-ADMIN-ACCOUNT.md records it: the panel opens an account
+  of its own, `celikpanel_admin`, and never touches the operator's root. The
+  operator's own way into the engine is exactly as it was before CelikPanel
+  arrived and exactly as it will be after CelikPanel is removed.
+- The door the panel goes through is not new and is not a trick. The agent runs
+  as root, so `mysql` reaches a packaged MariaDB over the machine's unix socket
+  and `psql` reaches a packaged PostgreSQL through peer authentication - what a
+  person administering that machine would type. What matters is the next step:
+  having gone through, the panel creates a **new** identity and uses that. It
+  does not set a root password, does not change one, does not record one.
+- The grant is stated rather than dressed up. PostgreSQL gets LOGIN CREATEDB
+  CREATEROLE and not SUPERUSER, which is genuinely less. MariaDB gets ALL
+  PRIVILEGES ON \*.\* WITH GRANT OPTION, because MariaDB has no smaller shape
+  that still creates databases, creates users, and grants them rights - that is
+  root-equivalent in power and the entry says so. What it buys anyway is a
+  separate identity, revocable in one statement, beside an operator's root that
+  keeps working.
+- Opened when the panel first claims the engine - the moment autodiscovery
+  inserts the row - and only then. Not on every listing: an engine whose local
+  doors were closed on purpose would otherwise be asked again every time
+  somebody opens the page. A failure does not fail autodiscovery; the row is
+  correct and the engine is installed either way.
+- An administrator can read the password, change it, or remove the account.
+  Reading is audited exactly like changing, because a credential that can be
+  read without a trace is one nobody can account for. Removing forgets the
+  credential too.
+- The sentence that opened this entry is gone. It used to end "register the
+  server in CelikPanel again with that password", and a test required that
+  exact phrase - so the dead end was pinned in place by the thing that was
+  supposed to protect it. The test now requires the opposite: every credential
+  sentence names an action inside the product, and none of the four old
+  dead-end phrases may appear.
+- What is still open: an engine on another machine cannot be given an account
+  this way and should not be, so it takes an administrator-supplied username
+  and password. The registration endpoint accepts one; the screen that offers
+  it is the remaining work and is R-065.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-058 - The reason reaches the screen but not the record
@@ -2641,6 +2679,30 @@ or executed as-is. There are no open pull requests at this baseline.
   than fixed today because it is not a defect the operator can see and the
   release path has R-057 in front of it; the four ignore entries collapse into
   one the day the spinner becomes one component.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-065 - The account has no screen
+
+- Evidence: 6 September 2026, the half of R-057 that was deliberately not done
+  in the same change. The panel now opens an account of its own, reads it,
+  rotates it and removes it - and every one of those is an API call with no
+  control behind it. The server card says nothing about whether CelikPanel has
+  an account on that engine.
+- This is the same shape as the entry it comes from, one layer up. R-057 was
+  "the panel tells the operator to do something the panel cannot do"; without a
+  screen this becomes "the panel can do it and does not say so", and an
+  administrator who reads the refusal is sent to a page that does not offer
+  what the refusal names. The refusal sentence says "on this server's page" -
+  so the page has to have it.
+- What it needs, on the database server card:
+  - whether CelikPanel has an account of its own here, and its name;
+  - opening it when it is missing, and giving it a new password when it is not,
+    on an engine on this machine;
+  - showing the password on request - and saying that asking is recorded,
+    because it is;
+  - removing the account, saying plainly what stops working;
+  - for an engine on another machine, the credential field the registration
+    endpoint already accepts, since the panel cannot open an account there.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

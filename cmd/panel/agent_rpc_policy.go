@@ -200,6 +200,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityDatabase, `
 		Agent.CreateDatabase Agent.DeleteDatabase Agent.ImportCpmoveDatabase
+		Agent.ProvisionDatabaseAdminAccount Agent.RemoveDatabaseAdminAccount
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilitySystemSQLite, `
 		Agent.CreateSystemSQLiteSnapshot Agent.OptimizeSystemSQLiteDatabase
@@ -349,23 +350,25 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.EnableRepo":  agentRPCDeploymentTimeout,
 
 	// Database and site lifecycle operations.
-	"Agent.ApplyAppUnit":                 agentRPCDatabaseTimeout,
-	"Agent.ControlAppUnit":               agentRPCDatabaseTimeout,
-	"Agent.CreateDatabase":               agentRPCDatabaseTimeout,
-	"Agent.CreateSite":                   agentRPCDatabaseTimeout,
-	"Agent.DeleteDatabase":               agentRPCDatabaseTimeout,
-	"Agent.DeleteSite":                   agentRPCDatabaseTimeout,
-	"Agent.EnsureDKIMKey":                agentRPCDatabaseTimeout,
-	"Agent.ImportMailAccount":            agentRPCDatabaseTimeout,
-	"Agent.MigratePHPPool":               agentRPCDatabaseTimeout,
-	"Agent.SecureDNSZoneV2":              agentRPCDatabaseTimeout,
-	"Agent.SyncDNSZoneV2":                agentRPCDatabaseTimeout,
-	"Agent.SyncDNSZoneV3":                agentRPCDatabaseTimeout,
-	"Agent.RecoverDNSZoneV3":             agentRPCDatabaseTimeout,
-	"Agent.SyncMailTLSV2":                agentRPCMutationTimeout,
-	"Agent.SetServerHostname":            agentRPCMutationTimeout,
-	"Agent.CreateSystemSQLiteSnapshot":   agentRPCDatabaseTimeout,
-	"Agent.OptimizeSystemSQLiteDatabase": agentRPCDatabaseTimeout,
+	"Agent.ApplyAppUnit":                  agentRPCDatabaseTimeout,
+	"Agent.ControlAppUnit":                agentRPCDatabaseTimeout,
+	"Agent.CreateDatabase":                agentRPCDatabaseTimeout,
+	"Agent.CreateSite":                    agentRPCDatabaseTimeout,
+	"Agent.DeleteDatabase":                agentRPCDatabaseTimeout,
+	"Agent.ProvisionDatabaseAdminAccount": agentRPCDatabaseTimeout,
+	"Agent.RemoveDatabaseAdminAccount":    agentRPCDatabaseTimeout,
+	"Agent.DeleteSite":                    agentRPCDatabaseTimeout,
+	"Agent.EnsureDKIMKey":                 agentRPCDatabaseTimeout,
+	"Agent.ImportMailAccount":             agentRPCDatabaseTimeout,
+	"Agent.MigratePHPPool":                agentRPCDatabaseTimeout,
+	"Agent.SecureDNSZoneV2":               agentRPCDatabaseTimeout,
+	"Agent.SyncDNSZoneV2":                 agentRPCDatabaseTimeout,
+	"Agent.SyncDNSZoneV3":                 agentRPCDatabaseTimeout,
+	"Agent.RecoverDNSZoneV3":              agentRPCDatabaseTimeout,
+	"Agent.SyncMailTLSV2":                 agentRPCMutationTimeout,
+	"Agent.SetServerHostname":             agentRPCMutationTimeout,
+	"Agent.CreateSystemSQLiteSnapshot":    agentRPCDatabaseTimeout,
+	"Agent.OptimizeSystemSQLiteDatabase":  agentRPCDatabaseTimeout,
 
 	// Operations that legitimately run package/application installers.
 	"Agent.ApplyVhosts":                 agentRPCDeploymentTimeout,

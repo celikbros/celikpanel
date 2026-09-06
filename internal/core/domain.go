@@ -229,21 +229,34 @@ type DatabaseServerType struct {
 
 // DatabaseServer represents a database server instance
 type DatabaseServer struct {
-	ID                    int
-	SubscriptionID        int
-	TypeID                int
-	TypeName              string // "PostgreSQL", "MariaDB"
-	TypeIcon              string // "🐘", "🐬"
-	Name                  string // "PostgreSQL 14 Production"
-	Version               string // "14.5"
-	Host                  string
-	Port                  int
-	IsDefault             bool
-	RootPasswordEncrypted string
-	ConnectionParams      map[string]interface{} // JSONB
-	Status                string                 // active, inactive, error
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID             int
+	SubscriptionID int
+	TypeID         int
+	TypeName       string // "PostgreSQL", "MariaDB"
+	TypeIcon       string // "🐘", "🐬"
+	Name           string // "PostgreSQL 14 Production"
+	Version        string // "14.5"
+	Host           string
+	Port           int
+	IsDefault      bool
+	// AdminUsername is the account the panel connects as. Empty means the
+	// engine's own superuser - root on MariaDB, postgres on PostgreSQL - which
+	// is what every server registered before R-057 is. It is set only when the
+	// panel has opened an account of its own on that engine.
+	//
+	// AdminUsername, panelin baglandigi hesaptir. Bos deger motorun kendi ust
+	// yetkili hesabi demektir.
+	AdminUsername string
+	// AdminPasswordEncrypted is the sealed credential for AdminUsername. The
+	// column behind it is still called root_password_encrypted: see
+	// migration 038 for why the column keeps its released name.
+	//
+	// AdminPasswordEncrypted, AdminUsername icin muhurlu kimlik bilgisidir.
+	AdminPasswordEncrypted string
+	ConnectionParams       map[string]interface{} // JSONB
+	Status                 string                 // active, inactive, error
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
 }
 
 // DatabaseUser represents a database user (per server)

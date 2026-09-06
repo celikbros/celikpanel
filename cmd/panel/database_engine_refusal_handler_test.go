@@ -27,12 +27,20 @@ func TestWriteDatabaseEngineError(t *testing.T) {
 		wantGeneric bool
 	}{
 		{
-			name:       "MariaDB refusing the panel's empty root password",
+			// R-057 rewrote this sentence. It used to explain the unix socket,
+			// because the operator had to go to the machine and do something
+			// about it; now they open CelikPanel's own account from the
+			// server's page and the mechanism is not theirs to act on. What
+			// the sentence still owes them is what the panel will not touch.
+			// R-057 bu cumleyi yeniden yazdi. Eskiden unix soketini
+			// acikliyordu, cunku operatorun makineye gidip bir sey yapmasi
+			// gerekiyordu.
+			name:       "MariaDB refusing the credential the panel holds",
 			server:     &core.DatabaseServer{TypeName: "MariaDB"},
 			err:        errors.New(`MariaDB connection failed: ERROR 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)`),
 			wantStatus: http.StatusConflict,
 			wantCode:   errCodeDatabaseEngineCredentialRefused,
-			wantSubstr: "unix socket",
+			wantSubstr: "leaves your root password alone",
 			wantNoLeak: "1045",
 		},
 		{

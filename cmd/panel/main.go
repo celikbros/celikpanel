@@ -382,6 +382,13 @@ func matchDatabaseSubroute(r *http.Request, prefix string) (databaseSubroute, bo
 			match.kind, match.methods = "server-databases", []string{http.MethodGet, http.MethodPost}
 		case len(segments) == 2 && segments[1] == "users":
 			match.kind, match.methods = "server-users", []string{http.MethodGet, http.MethodPost}
+		// R-057. The panel's own account on this engine: read the password,
+		// open the account or give it a new one, or take it away. Every one of
+		// the three is administrator work and every one leaves an audit entry.
+		// R-057. Panelin bu motordaki kendi hesabi.
+		case len(segments) == 2 && segments[1] == "admin-account":
+			match.kind, match.methods = "server-admin-account",
+				[]string{http.MethodGet, http.MethodPost, http.MethodDelete}
 		default:
 			return databaseSubroute{}, false
 		}
@@ -434,6 +441,15 @@ func (p *Panel) handleDatabaseSubroute(w http.ResponseWriter, r *http.Request, p
 			p.handleListDatabaseUsers(w, r)
 		} else {
 			p.handleCreateDatabaseV2User(w, r)
+		}
+	case "server-admin-account":
+		switch r.Method {
+		case http.MethodGet:
+			p.handleRevealDatabaseAdminAccountPassword(w, r)
+		case http.MethodPost:
+			p.handleProvisionDatabaseAdminAccount(w, r)
+		default:
+			p.handleRemoveDatabaseAdminAccount(w, r)
 		}
 	case "database-delete":
 		p.handleDeleteDatabaseV2(w, r)

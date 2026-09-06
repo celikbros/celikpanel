@@ -102,14 +102,20 @@ func getDatabaseIDFromPath(path string) (int, error) {
 // root parolasını açar. Motorla konuşan her handler buradan geçer; böylece
 // çözme işlemi tek bir çağrı yerinde bile unutulamaz.
 func (p *Panel) dbDriverFor(server *core.DatabaseServer) (services.DatabaseDriver, error) {
-	rootPassword, err := p.secrets.Decrypt(server.RootPasswordEncrypted)
+	password, err := p.secrets.Decrypt(server.AdminPasswordEncrypted)
 	if err != nil {
-		return nil, fmt.Errorf("database server %d root password: %w", server.ID, err)
+		return nil, fmt.Errorf("database server %d credential: %w", server.ID, err)
 	}
+	// R-057. The account travels with the password now. Empty means the
+	// engine's own superuser, which is what every server registered before
+	// R-057 is, so nothing about those changes here.
+	// R-057. Hesap artik parolayla birlikte gelir. Bos deger motorun kendi ust
+	// yetkili hesabi demektir.
 	return newDatabaseDriver(services.DriverConfig{
 		Host:     server.Host,
 		Port:     server.Port,
-		Password: rootPassword,
+		Username: server.AdminUsername,
+		Password: password,
 		Type:     dbDriverTypeFor(server),
 	})
 }
@@ -285,6 +291,14 @@ func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 		Port         int    `json:"port"`
 		IsDefault    bool   `json:"is_default"`
 		RootPassword string `json:"root_password"`
+		// R-057. An engine the panel did not install cannot be given an
+		// account by the panel - its local privileged door is on somebody
+		// else's machine - so an administrator names the account here. Left
+		// out, this stays the engine's own superuser, which is what this
+		// endpoint has always meant.
+		// R-057. Panelin kurmadigi bir motora panel hesap acamaz; hesabi
+		// burada bir yonetici adlandirir.
+		AdminUsername string `json:"admin_username"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -298,9 +312,9 @@ func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Seal the root password before it touches the database (A4: no plaintext
+	// Seal the password before it touches the database (A4: no plaintext
 	// credentials at rest).
-	// Root parolasını veritabanına değmeden mühürle (A4: bekleyen veride düz
+	// Parolayı veritabanına değmeden mühürle (A4: bekleyen veride düz
 	// metin kimlik bilgisi yok).
 	sealedPassword, err := p.secrets.Encrypt(req.RootPassword)
 	if err != nil {
@@ -310,15 +324,16 @@ func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 
 	// Create server
 	server := &core.DatabaseServer{
-		SubscriptionID:        subscriptionID,
-		TypeID:                req.TypeID,
-		Name:                  req.Name,
-		Version:               req.Version,
-		Host:                  req.Host,
-		Port:                  req.Port,
-		IsDefault:             req.IsDefault,
-		RootPasswordEncrypted: sealedPassword,
-		Status:                "active",
+		SubscriptionID:         subscriptionID,
+		TypeID:                 req.TypeID,
+		Name:                   req.Name,
+		Version:                req.Version,
+		Host:                   req.Host,
+		Port:                   req.Port,
+		IsDefault:              req.IsDefault,
+		AdminUsername:          strings.TrimSpace(req.AdminUsername),
+		AdminPasswordEncrypted: sealedPassword,
+		Status:                 "active",
 	}
 	server.TypeName = p.databaseServerTypeName(ctx, req.TypeID)
 

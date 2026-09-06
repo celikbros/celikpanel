@@ -95,7 +95,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-054 | Yüksek | DÜZELTİLDİ VE GERÇEK ARCH VM'DE KANITLANDI / VPN YOLU R-055 | Arch'ta kurulum çalışan çekirdeği yükseltiyor ve yeniden başlatmadan hiç söz etmiyor; bu yüzden ilk güvenlik duvarı ya da VPN işlemi modülünü yükleyemiyor - bir sunucuda o hata, makine yeniden başlatılana dek defteri zehirledi |
 | R-055 | Yüksek | KURAL BİRLEŞTİRİLDİ VE CANLI KANITLANDI / BU KAYIT YANLIŞ YOLU ADLANDIRMIŞ | Güvenlik duvarı yolunun az önce kurtulduğu açık VPN yolunda duruyor: yüklenemeyen bir WireGuard modülü uygulamayı düşürüyor ve sunucuyu kilitliyor; güvenlik duvarı için yazılan düzeltme oraya uygulanmadı |
 | R-056 | Düşük | DÜZELTİLDİ VE CANLI KANITLANDI | Her taze Arch kurulumunda iki posta başlangıç işi, hiçbir şeyi adlandırmayan bir mesajla düşüyor |
-| R-057 | Orta | AÇIK / ÜRÜN KARARI | Veritabanı sunucusu eklemek ya da bulunan bir sunucuya kimlik bilgisi vermek için arayüz yok; bu yüzden reddin verdiği talimat panelden yerine getirilemiyor |
+| R-057 | Orta | DÜZELTİLDİ / PANEL KENDİ HESABINI AÇIYOR | Veritabanı sunucusu eklemek ya da bulunan bir sunucuya kimlik bilgisi vermek için arayüz yok; bu yüzden reddin verdiği talimat panelden yerine getirilemiyor |
 | R-058 | Orta | DÜZELTİLDİ / İKİ YARISI DA | VPN'in defter satırı genel cümleyi taşıyor, sebep yalnız HTTP gövdesinde; eş eşitleme uç noktası da modülü yükleyemeyen sunucuda hâlâ anlaşılmaz bir 500 dönüyor |
 | R-059 | Orta | ÜRÜNDEKİ HER PENCERE İÇİN BİR KEZ DÜZELTİLDİ | DNS inceleme penceresi kendi kutusundan uzun ve en üstte açılıyor; eylemleri katlanma çizgisinin altında kalıyor - posta penceresinin kusuru, ikinci bir pencerede |
 | R-060 | Düşük | ÖLÇÜMLE DÜZELTİLDİ / PAY 31 BAYTTAN 115 KiB'YE | Kritik açılış paketi bütçesinde 31 bayt yer kaldı; ortak bir bileşene yapılacak ilk değişiklik yapıyı düşürecek |
@@ -103,6 +103,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-062 | Orta | DÜZELTİLDİ / BİÇİM DÜZEYİNDE KORUNDU | PostgreSQL istemcisi parolayı argüman listesinde alıyor; yani süreç tablosunu okuyabilen herkes görebiliyor |
 | R-063 | Düşük | BORÇ OLARAK KAYITLI / KORUMAYA ALINDI | Otuz ayrıcalıklı başlatma hâlâ kendi hatasını ortak okuyucunun dışında ele alıyor; operatöre ne söyleneceği her yerin kendi kararı |
 | R-064 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Yükleniyor göstergesi 38 dosyada 61 kez elle yazılmış; tasarım kancası onu dosya dosya bildiriyor ve bir yükleme durumuna yapılacak her görsel düzeltme 61 kez yapılmak zorunda |
+| R-065 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Panelin kendi veritabanı hesabı var ama yalnızca API'den erişilebiliyor: sunucu kartı hesabın orada olup olmadığını göstermiyor ve başka bir makinedeki motor için panele kimlik bilgisi verilecek bir yer yok |
 
 ## Ayrıntılı riskler
 
@@ -2420,6 +2421,41 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
      Bir kontrol panelinin olağan yaptığı budur ve gerçek bir karardır -
      operatörün zaten sahip olabileceği bir kimliğin sahibi ürün olur; bir
      döndürme hikâyesi ve panel dışında kurulmuş motorlar için bir cevap ister.
+- 6 Eylül 2026'da, yukarıdaki üçüncü seçenekle ve gerektirdiği kararla
+  yanıtlandı. docs/DATABASE-ADMIN-ACCOUNT.md bunu kaydeder: panel kendi
+  hesabını açar, `celikpanel_admin`, ve operatörün kök hesabına hiç dokunmaz.
+  Operatörün motora kendi giriş yolu, CelikPanel gelmeden önce nasılsa öyle ve
+  CelikPanel kaldırıldıktan sonra da öyle kalır.
+- Panelin geçtiği kapı yeni değil ve bir hile değil. Agent kök olarak çalışır;
+  `mysql` paketlenmiş bir MariaDB'ye makinenin unix soketi üzerinden, `psql`
+  paketlenmiş bir PostgreSQL'e peer doğrulamasıyla ulaşır - o makineyi yöneten
+  bir kişinin yazacağının aynısı. Önemli olan sonraki adım: panel geçtikten
+  sonra kendine YENİ bir kimlik oluşturur ve onu kullanır. Kök parolası ne
+  belirler, ne değiştirir, ne de kaydeder.
+- Yetki olduğu gibi söylenir, süslenmez. PostgreSQL LOGIN CREATEDB CREATEROLE
+  alır, SUPERUSER almaz; bu gerçekten daha azdır. MariaDB ALL PRIVILEGES ON
+  \*.\* WITH GRANT OPTION alır, çünkü MariaDB'de veritabanı oluşturup kullanıcı
+  açan ve onlara yetki verebilen daha küçük bir biçim yoktur - bu güç
+  bakımından kök eşdeğeridir ve kayıt bunu söyler. Yine de kazandırdığı şey:
+  tek bir ifadeyle geri alınabilen ayrı bir kimlik ve çalışmaya devam eden bir
+  operatör kökü.
+- Panel motoru ilk kez sahiplendiği anda açılır - autodiscovery satırı eklediği
+  anda - ve yalnızca o an. Her listelemede değil: yerel kapıları bilerek
+  kapatılmış bir motor, aksi halde sayfayı her açan için yeniden sorulurdu.
+  Bir başarısızlık autodiscovery'yi düşürmez; satır doğrudur ve motor kuruludur.
+- Bir yönetici parolayı okuyabilir, değiştirebilir ya da hesabı kaldırabilir.
+  Okumak da değiştirmek gibi denetim kaydına yazılır; çünkü iz bırakmadan
+  okunabilen bir kimlik bilgisinin hesabını kimse veremez. Kaldırmak kimlik
+  bilgisini de unutur.
+- Bu kaydı açan cümle gitti. Eskiden "sunucuyu CelikPanel'de o parolayla
+  yeniden kaydedin" diye bitiyordu ve bir test tam olarak o ifadeyi zorunlu
+  tutuyordu - yani çıkmaz, onu korumak için var olan şey tarafından yerine
+  çivilenmişti. Test artık tersini istiyor: her kimlik cümlesi ürünün içinde
+  bir eylem adlandırır ve eski dört çıkmaz ifadesinden hiçbiri geçemez.
+- Açık kalan: başka bir makinedeki motora bu yolla hesap açılamaz ve
+  açılmamalıdır; o motor yöneticinin verdiği bir kullanıcı adı ve parolayı
+  alır. Kayıt uç noktası bunu kabul ediyor; onu sunan ekran kalan iştir ve
+  R-065'tir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-058 - Sebep ekrana ulaşıyor ama kayda geçmiyor
@@ -2600,6 +2636,28 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   Bugün düzeltilmek yerine kaydedildi; çünkü operatörün görebileceği bir kusur
   değil ve sürüm yolunda önünde R-057 var. Dört istisna kaydı, gösterge tek bir
   bileşen olduğu gün tek kayda iner.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-065 - Hesabın ekranı yok
+
+- Kanıt: 6 Eylül 2026, R-057'nin aynı değişiklikte bilerek yapılmayan yarısı.
+  Panel artık kendi hesabını açıyor, okuyor, parolasını değiştiriyor ve
+  kaldırıyor - ve bunların her biri arkasında hiçbir denetim olmayan bir API
+  çağrısı. Sunucu kartı, CelikPanel'in o motorda hesabı olup olmadığı hakkında
+  hiçbir şey söylemiyor.
+- Bu, geldiği kaydın bir katman yukarıdaki hâli. R-057 "panel, operatöre
+  panelin yapamayacağı bir şeyi söylüyor" idi; ekran olmadan bu, "panel
+  yapabiliyor ama söylemiyor"a dönüşür ve reddi okuyan yönetici, reddin
+  adlandırdığı şeyi sunmayan bir sayfaya yollanır. Ret cümlesi "bu sunucunun
+  sayfasında" diyor - o hâlde sayfada olmalı.
+- Veritabanı sunucusu kartında gerekenler:
+  - CelikPanel'in burada kendi hesabı var mı ve adı ne;
+  - yoksa açmak, varsa yeni bir parola vermek (bu makinedeki bir motorda);
+  - istendiğinde parolayı göstermek - ve istemenin kayda geçtiğini söylemek,
+    çünkü geçiyor;
+  - hesabı kaldırmak ve nelerin çalışmayacağını açıkça söylemek;
+  - başka bir makinedeki motor için, kayıt uç noktasının zaten kabul ettiği
+    kimlik bilgisi alanı; çünkü panel orada hesap açamaz.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
