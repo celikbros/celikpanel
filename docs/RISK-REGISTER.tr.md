@@ -99,6 +99,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-058 | Orta | DÜZELTİLDİ / İKİ YARISI DA | VPN'in defter satırı genel cümleyi taşıyor, sebep yalnız HTTP gövdesinde; eş eşitleme uç noktası da modülü yükleyemeyen sunucuda hâlâ anlaşılmaz bir 500 dönüyor |
 | R-059 | Orta | TARAYICIDA BULUNDU / HENÜZ DÜZELTİLMEDİ | DNS inceleme penceresi kendi kutusundan uzun ve en üstte açılıyor; eylemleri katlanma çizgisinin altında kalıyor - posta penceresinin kusuru, ikinci bir pencerede |
 | R-060 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Kritik açılış paketi bütçesinde 31 bayt yer kaldı; ortak bir bileşene yapılacak ilk değişiklik yapıyı düşürecek |
+| R-061 | Yüksek | BULUNDU VE DÜZELTİLDİ / GÜVENLİK | İki yol, kendisine bir sır verilmiş bir komutun çıktısını olduğu gibi tekrarlıyordu: veritabanı istemcisi CREATE USER ifadesini tarayıcının çizdiği yanıta geri yazıyordu, wg ise arayüzün özel anahtarını içeren yapılandırmayı alıntılıyordu |
+| R-062 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ / GÜVENLİK | PostgreSQL istemcisi parolayı argüman listesinde alıyor; yani süreç tablosunu okuyabilen herkes görebiliyor |
+| R-063 | Düşük | BORÇ OLARAK KAYITLI / KORUMAYA ALINDI | Otuz ayrıcalıklı başlatma hâlâ kendi hatasını ortak okuyucunun dışında ele alıyor; operatöre ne söyleneceği her yerin kendi kararı |
 
 ## Ayrıntılı riskler
 
@@ -2471,6 +2474,67 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   bazı ekranların ihtiyaç duyduğu ne var? Bu bir ölçüm işi, tahmin değil ve
   düşen bir yapının baskısı altında değil, ortak bileşen değişmeden önce
   yapılmalı.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-061 - Düşen bir komutun kendi sözleri sırrı tarayıcıya taşıdı
+
+- Kanıt: 6 Eylül 2026, haftanın üç kez düzelttiği "çıktıyı atma" kusuru
+  ortaklaştırılırken bulundu. İki yol, kendisine bir kimlik bilgisi verilmiş
+  bir komutun çıktısını olduğu gibi iletiyordu:
+  - veritabanı yolu, `CREATE USER "x" WITH PASSWORD '...'` çalıştırırken
+    istemcinin çıktısını tarayıcının çizdiği RPC yanıtına yapıştırıyordu -
+    istemci reddettiğinde o ifadeyi geri yazar;
+  - VPN yolu, `wg syncconf`ın arayüzün kendi özel anahtarını içeren bir
+    yapılandırma hakkında söylediklerini iletiyordu; wg kabul etmediği satırı
+    alıntılayarak bildirir.
+  İkisi de varsayım değil: her iki komuta da sır tasarım gereği veriliyor ve
+  her iki istemci de kendisine verileni tekrarlayarak yanıtlıyor.
+- Aynı gün düzeltildi. Bir komutun kendi sözlerini tekrarlamak artık ayrıca
+  istenmesi gereken bir yol; gerekçe çağrı yerinde argüman olarak veriliyor ve
+  boş bir gerekçe, sözleri sızdırmak yerine düşürüyor. Olağan çağrı,
+  geliştirici tarafından yazılmış bir etiket taşıyor ve sunucudan hiçbir şey
+  taşımıyor. Yukarıdaki iki yer artık sınıflandırıyor. Özgün kusurun üçüncü
+  örneği de - boş çıktıdan doğrudan hata dizgesine düşen ve on altı çağrı
+  yerini etkileyen bir yardımcı - onlarla birlikte bulunup düzeltildi.
+- Bunu koruyan şey: gizli stderr alanının tam olarak iki okuyucusu var, onu
+  dolduran ve onu okuyan; ve hiçbir açıklama boş ya da hesaplanmış bir gerekçe
+  geçiremiyor. İkisi de CI adımı.
+- Bunun ilk üç düzeltme hakkında söylediği şey: doğrudurlar, ama çıktıyı
+  okumak kuralın tamamı değil. Kural şu: bir sebep asla atılmaz **ve** asla
+  körü körüne tekrarlanmaz; ikinci yarısı tek bir hatanın içinden görünmez.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-062 - Veritabanı parolası süreç tablosunda görünüyor
+
+- Kanıt: 6 Eylül 2026, R-061 ile birlikte. PostgreSQL istemcisi
+  `sudo -u postgres psql` olarak, parola argüman listesinde çağrılıyor; yani
+  komut çalıştığı sürece süreç tablosunu görebilen herkes okuyabiliyor.
+  MariaDB yolu bundan zaten kaçınıyor - parolanın argümanlara hiç ulaşmaması
+  için 0600 kipinde bir varsayılanlar dosyası yazıyor - yani ürün cevabı
+  biliyor ve bir yerde uygulayıp diğerinde uygulamıyor.
+- Etki, o sunucuda `/proc` okuyabilenlerle sınırlı; tek kiracılı bir sunucuda
+  bu kök kullanıcı ve panelin kendi kullanıcısı. Başka hesapların olduğu bir
+  sunucuda sınırlı değil ve bir barındırma panelinin bütün varlık sebebi
+  başka hesaplar.
+- Gerekeni: MariaDB'nin zaten sahip olduğu muamele - kimlik bilgisi istemciye
+  bir dosya ya da ortam üzerinden ulaşır, argüman listesinden asla. Biçim
+  mevcut; bu, onu uygulamak.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-063 - Otuz başlatma hâlâ kendi adına cevap veriyor
+
+- Kanıt: 6 Eylül 2026'da yazılan izin listesi, ayrıcalıklı süreç başlatan
+  altmış dört yeri adlandırıyor. On biri, diğerlerinin paylaşmadığı bir
+  gerekçesi olan başlatıcılar; yirmi üçü salt okunur yoklamalar; **otuzu borç
+  olarak işaretli**: kendi hatalarını ortak okuyucunun dışında ele alıyorlar,
+  yani operatöre ne söyleneceği her yerin kendi kararı.
+- Düzeltilmek yerine kaydedildi, çünkü hepsini okuyucudan geçirmek onlarca
+  operatör mesajını yeniden yazardı ve ortaklaştırmanın güvenlik argümanı
+  "hiçbir mevcut test değişmiyor" idi. İkisini aynı anda yapmak, o
+  ortaklaştırmayı güvenilir kılan argümanı yok ederdi.
+- İzin listesi, iş listesidir. Her girdisi bir gerekçe taşıyor ve muhafız
+  bayat bir girdide düşüyor; yani borç ne sessizce büyüyebilir ne sessizce
+  yok olabilir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

@@ -98,6 +98,9 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-058 | Medium | FIXED / BOTH HALVES | The VPN's ledger row carries the generic sentence while the reason exists only in the HTTP body, and the peer-sync endpoint still answers an opaque 500 on a host that cannot load the module |
 | R-059 | Medium | FOUND IN A BROWSER / NOT YET FIXED | The DNS review dialog is taller than its own box and opens scrolled to the top, so its actions sit below its fold - the mail dialog's defect, in a second dialog |
 | R-060 | Low | FOUND / NOT YET FIXED | The critical-boot bundle budget has 31 bytes of headroom, so the next change to any shared component fails the build |
+| R-061 | High | FOUND AND FIXED / SECURITY | Two paths repeated a failed command's own output while that command had been handed a secret: the database client quoting back a CREATE USER statement into the response the browser renders, and wg quoting back a configuration containing the interface private key |
+| R-062 | Medium | FOUND / NOT YET FIXED / SECURITY | The PostgreSQL client is invoked with the password in its argument list, so it is visible to any user who can read the process table |
+| R-063 | Low | RECORDED AS DEBT / GUARDED | Thirty privileged launches still handle their own failures outside the shared reader, so their operator messages are whatever each site decided |
 
 ## Detailed risks
 
@@ -2506,6 +2509,69 @@ or executed as-is. There are no open pull requests at this baseline.
   the question is what is in it that only some screens need. That is a
   measurement, not a guess, and it should happen before the next shared
   component changes rather than under the pressure of a failing build.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-061 - A failed command's own words carried a secret to the browser
+
+- Evidence: 6 September 2026, found while unifying the discarded-output defect
+  the week had already fixed three times. Two paths forwarded a failed
+  command's output verbatim while that command had been handed a credential:
+  - the database path pasted the client's output into the RPC response the
+    browser renders, while running `CREATE USER "x" WITH PASSWORD '...'` -
+    which the client quotes back when it refuses;
+  - the VPN path forwarded what `wg syncconf` said about a configuration
+    containing the interface's own private key, which wg reports by quoting
+    the line it would not accept.
+  Neither is a hypothetical: both commands are fed the secret by design, and
+  both clients answer by repeating what they were given.
+- Fixed the same day. Repeating a command's own words is now a path that must
+  be asked for, with the reason given as an argument at the call site; an
+  empty reason drops the words rather than leaking them. The ordinary call
+  carries a developer-authored label and nothing from the host. Both sites
+  above now classify. A third instance of the original defect - a helper that
+  fell from an empty output straight to the error string, on sixteen call
+  sites - was found and fixed with them.
+- The guard that keeps it: the hidden stderr field has exactly two readers,
+  the one that fills it and the one that reads it, and no disclosure may pass
+  an empty or computed reason. Both are CI steps.
+- What this says about the original three fixes: they were right, and reading
+  the output is not the whole rule. The rule is that a reason is never
+  discarded **and** never repeated blindly, and only the second half is
+  visible from inside a single bug.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-062 - The database password is visible in the process table
+
+- Evidence: 6 September 2026, alongside R-061. The PostgreSQL client is
+  invoked as `sudo -u postgres psql` with the password in its argument list,
+  so it is readable by any user who can see the process table for as long as
+  the command runs. The MariaDB path already avoids this - it writes a mode
+  0600 defaults file precisely so the password never reaches the arguments -
+  so the product knows the answer and applies it in one place and not the
+  other.
+- Impact is bounded by who can read `/proc` on that host, which on a
+  single-tenant server is root and the panel's own user. It is not bounded on
+  a host with other accounts, and a hosting panel's whole premise is other
+  accounts.
+- What it needs: the treatment MariaDB already has - the credential reaches
+  the client through a file or the environment, never the argument list. The
+  shape exists; this is applying it.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-063 - Thirty launches still answer for themselves
+
+- Evidence: the allowlist written on 6 September 2026 names sixty-four places
+  that launch a privileged process. Eleven are launchers with a reason the
+  others do not share, twenty-three are read-only probes, and **thirty are
+  marked debt**: they handle their own failures outside the shared reader, so
+  what the operator is told depends on what each site decided.
+- This is recorded rather than fixed because routing them through the reader
+  would rewrite dozens of operator messages, and the refactor's safety
+  argument was that no existing test changes. Doing both at once would have
+  destroyed the argument that made the refactor trustworthy.
+- The allowlist is the worklist. Its entries carry a reason each, and the
+  guard fails on a stale one, so the debt cannot quietly grow or quietly
+  disappear.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
