@@ -84,7 +84,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-044 | Medium | REFUSED BY NAME AND PROVEN LIVE / MANAGING SUCH A HOST IS ITS OWN FEATURE | A BIND configured with `view` blocks is not understood by the takeover: a recursion set inside a view silently overrides the panel's options, and zones outside views fail late in the config check |
 | R-045 | High | CLOSED ON A REAL VM / IT WAS THE HARNESS, NOT THE PRODUCT | A takeover crashed after its target was verified but before it was finalized is neither finalized nor rolled back: the recovery cannot find the generation pointer, fails closed and holds the ledger |
 | R-046 | Critical | FIXED AND PROVEN LIVE ON THE HOST IT WEDGED | A failed mail TLS step poisons the mutation ledger and the poison survives an agent restart: startup recovery re-attempts the same committed plan, fails the same check, and the host refuses every mutation with no way out |
-| R-047 | Low | FIXED AND PROVEN LIVE / IT ALSO FOUND R-049 | Three defects a browser found and the tests did not: a dialog whose confirm sits below the fold, a segmented control that overflows at 390px, and a firewall status that reports no UDP port when one is open |
+| R-047 | Low | CLOSED / ITS LAST INSTANCE IS R-059 | Three defects a browser found and the tests did not: a dialog whose confirm sits below the fold, a segmented control that overflows at 390px, and a firewall status that reports no UDP port when one is open |
 | R-048 | Critical | FIXED AND PROVEN ON A REAL VM BY CUTTING ITS POWER | After a power loss the agent starts before the host is ready, cannot run its recovery, and never tries again - so an interrupted mutation holds the ledger and every host mutation is refused until someone restarts the agent by hand |
 | R-049 | High | FIXED AND PROVEN IN A BROWSER, END TO END | Every blocked preview decoded to null in the browser, so the refusals written for the takeover were invisible to anyone using the panel; and the running takeover has no route on the DNS screen at all |
 | R-050 | Medium | FIXED / SEEN IN A BROWSER | A panel-installed DNS engine reads as unmanaged while the agent is holding mutations, so both the API and the screen would offer to take over the panel's own half-finished install |
@@ -96,8 +96,8 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-056 | Low | FIXED AND PROVEN LIVE | Two mail startup jobs fail on every fresh Arch install with a message that names nothing |
 | R-057 | Medium | OPEN / PRODUCT DECISION | There is no interface for adding a database server or giving a discovered one its credential, so the instruction the refusal gives cannot be followed from the panel |
 | R-058 | Medium | FIXED / BOTH HALVES | The VPN's ledger row carries the generic sentence while the reason exists only in the HTTP body, and the peer-sync endpoint still answers an opaque 500 on a host that cannot load the module |
-| R-059 | Medium | FOUND IN A BROWSER / NOT YET FIXED | The DNS review dialog is taller than its own box and opens scrolled to the top, so its actions sit below its fold - the mail dialog's defect, in a second dialog |
-| R-060 | Low | FOUND / NOT YET FIXED | The critical-boot bundle budget has 31 bytes of headroom, so the next change to any shared component fails the build |
+| R-059 | Medium | FIXED ONCE, FOR EVERY DIALOGUE IN THE PRODUCT | The DNS review dialog is taller than its own box and opens scrolled to the top, so its actions sit below its fold - the mail dialog's defect, in a second dialog |
+| R-060 | Low | FIXED BY MEASUREMENT / HEADROOM 31 BYTES TO 115 KiB | The critical-boot bundle budget has 31 bytes of headroom, so the next change to any shared component fails the build |
 | R-061 | High | FOUND AND FIXED / SECURITY | Two paths repeated a failed command's own output while that command had been handed a secret: the database client quoting back a CREATE USER statement into the response the browser renders, and wg quoting back a configuration containing the interface private key |
 | R-062 | Medium | FOUND / NOT YET FIXED / SECURITY | The PostgreSQL client is invoked with the password in its argument list, so it is visible to any user who can read the process table |
 | R-063 | Low | RECORDED AS DEBT / GUARDED | Thirty privileged launches still handle their own failures outside the shared reader, so their operator messages are whatever each site decided |
@@ -1959,6 +1959,9 @@ or executed as-is. There are no open pull requests at this baseline.
   an open UDP port is no longer reported as none.
 - The round found a fourth, worse than the three it was sent for, and it is
   R-049.
+- Closed 6 September 2026. Its first defect - a dialogue whose actions sat
+  below its own fold - turned out to be a property of the product rather than
+  of that dialogue, and is now fixed once for every dialogue (R-059).
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-048 - A server that loses power comes back with its control plane frozen
@@ -2495,6 +2498,18 @@ or executed as-is. There are no open pull requests at this baseline.
   the actions pinned outside it. Worth doing once, in whatever both dialogs
   share, rather than a third time - the same argument the mutation outcome
   rule settled.
+- Fixed 6 September 2026, and the reason it needed fixing twice is the
+  finding: the two dialogues **shared nothing**. Nine screens each built their
+  own modal, so fixing one could never fix another, and the same defect was
+  found twice and would have been found a third time.
+- There is now one dialogue for the product: a bounded column whose actions
+  sit outside the scroller, whose action row reverses on a phone so the
+  working control comes first, and which owns dismissal and the escape key in
+  one place instead of nine. Every screen uses it, and a test refuses a screen
+  that builds its own - so the third instance cannot be written.
+- This is the same argument the mutation outcome rule settled, in a different
+  layer: a defect found twice in two copies is a statement about where the
+  code lives, not about either copy.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-060 - The bundle budget is at its ceiling
@@ -2509,6 +2524,18 @@ or executed as-is. There are no open pull requests at this baseline.
   the question is what is in it that only some screens need. That is a
   measurement, not a guess, and it should happen before the next shared
   component changes rather than under the pressure of a failing build.
+- Fixed 6 September 2026 by measurement, not by moving the line. The boot
+  chunk was carrying the entire translation catalogue for every screen in the
+  product: a person opening the dashboard downloaded the words for mail, DNS,
+  databases and the store before seeing anything. The catalogue is now per
+  screen and loads with the screen that needs it.
+- Measured against the same 361.00 KiB limit: critical boot **360.97 KiB to
+  245.45 KiB**, and 109.11 KiB gzip to 76.84. The headroom is 115 KiB where it
+  was 31 bytes.
+- The entry's rule held: the budget was not raised. What made that possible
+  was that the measurement found something genuinely misplaced rather than
+  merely large - which is the difference between earning headroom and
+  redefining it.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-061 - A failed command's own words carried a secret to the browser

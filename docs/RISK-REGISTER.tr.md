@@ -85,7 +85,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-044 | Orta | ADIYLA REDDEDİLİYOR VE CANLI KANITLANDI / BÖYLE BİR SUNUCUYU YÖNETMEK AYRI BİR ÖZELLİK | `view` bloklarıyla yapılandırılmış bir BIND devralma tarafından anlaşılmıyor: view içindeki bir recursion panelin seçeneklerini sessizce ezer, view dışındaki bölgeler ise yapılandırma denetiminde geç düşer |
 | R-045 | Yüksek | GERÇEK VM'DE KAPANDI / ÜRÜN DEĞİL DÜZENEK KAYNAKLIYDI | Hedefi doğrulandıktan sonra ama tamamlanmadan çöken devralma ne tamamlanıyor ne geri alınıyor: kurtarma nesil işaretçisini bulamıyor, kapalı hata veriyor ve defteri tutuyor |
 | R-046 | Kritik | DÜZELTİLDİ VE KİLİTLEDİĞİ SUNUCUDA CANLI KANITLANDI | Düşen posta TLS adımı işlem defterini zehirliyor ve zehir agent yeniden başlatılınca da geçmiyor: açılış kurtarması aynı planı yeniden deniyor, aynı denetimde düşüyor ve sunucu her işlemi reddediyor, çıkış yolu yok |
-| R-047 | Düşük | DÜZELTİLDİ VE CANLI KANITLANDI / R-049'U DA O BULDU | Tarayıcının görüp testlerin görmediği üç kusur: onay düğmeleri ekranın altında kalan bir pencere, 390px'te taşan bir seçim denetimi ve açık bir UDP portu varken yok diyen güvenlik duvarı durumu |
+| R-047 | Düşük | KAPANDI / SON ÖRNEĞİ R-059 | Tarayıcının görüp testlerin görmediği üç kusur: onay düğmeleri ekranın altında kalan bir pencere, 390px'te taşan bir seçim denetimi ve açık bir UDP portu varken yok diyen güvenlik duvarı durumu |
 | R-048 | Kritik | DÜZELTİLDİ VE GERÇEK VM'DE ELEKTRİK KESİLEREK KANITLANDI | Elektrik kesintisinden sonra agent, sunucu hazır olmadan başlıyor, kurtarmasını yapamıyor ve bir daha denemiyor; yarım kalan işlem defteri tutuyor ve biri agent'ı elle yeniden başlatana kadar her işlem reddediliyor |
 | R-049 | Yüksek | DÜZELTİLDİ VE TARAYICIDA UÇTAN UCA KANITLANDI | Engellenmiş her önizleme tarayıcıda null'a çözülüyordu; yani devralma için yazılan retler paneli kullanan hiç kimseye görünmüyordu. Ayrıca çalışan devralmanın DNS ekranında hiç yolu yok |
 | R-050 | Orta | DÜZELTİLDİ / TARAYICIDA GÖRÜLDÜ | Panelin kurduğu bir DNS motoru, agent işlemleri tutarken "yönetilmiyor" okunuyor; bu yüzden hem API hem ekran, panelin kendi yarım kalmış kurulumunu devralmayı öneriyor |
@@ -97,8 +97,8 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-056 | Düşük | DÜZELTİLDİ VE CANLI KANITLANDI | Her taze Arch kurulumunda iki posta başlangıç işi, hiçbir şeyi adlandırmayan bir mesajla düşüyor |
 | R-057 | Orta | AÇIK / ÜRÜN KARARI | Veritabanı sunucusu eklemek ya da bulunan bir sunucuya kimlik bilgisi vermek için arayüz yok; bu yüzden reddin verdiği talimat panelden yerine getirilemiyor |
 | R-058 | Orta | DÜZELTİLDİ / İKİ YARISI DA | VPN'in defter satırı genel cümleyi taşıyor, sebep yalnız HTTP gövdesinde; eş eşitleme uç noktası da modülü yükleyemeyen sunucuda hâlâ anlaşılmaz bir 500 dönüyor |
-| R-059 | Orta | TARAYICIDA BULUNDU / HENÜZ DÜZELTİLMEDİ | DNS inceleme penceresi kendi kutusundan uzun ve en üstte açılıyor; eylemleri katlanma çizgisinin altında kalıyor - posta penceresinin kusuru, ikinci bir pencerede |
-| R-060 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Kritik açılış paketi bütçesinde 31 bayt yer kaldı; ortak bir bileşene yapılacak ilk değişiklik yapıyı düşürecek |
+| R-059 | Orta | ÜRÜNDEKİ HER PENCERE İÇİN BİR KEZ DÜZELTİLDİ | DNS inceleme penceresi kendi kutusundan uzun ve en üstte açılıyor; eylemleri katlanma çizgisinin altında kalıyor - posta penceresinin kusuru, ikinci bir pencerede |
+| R-060 | Düşük | ÖLÇÜMLE DÜZELTİLDİ / PAY 31 BAYTTAN 115 KiB'YE | Kritik açılış paketi bütçesinde 31 bayt yer kaldı; ortak bir bileşene yapılacak ilk değişiklik yapıyı düşürecek |
 | R-061 | Yüksek | BULUNDU VE DÜZELTİLDİ / GÜVENLİK | İki yol, kendisine bir sır verilmiş bir komutun çıktısını olduğu gibi tekrarlıyordu: veritabanı istemcisi CREATE USER ifadesini tarayıcının çizdiği yanıta geri yazıyordu, wg ise arayüzün özel anahtarını içeren yapılandırmayı alıntılıyordu |
 | R-062 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ / GÜVENLİK | PostgreSQL istemcisi parolayı argüman listesinde alıyor; yani süreç tablosunu okuyabilen herkes görebiliyor |
 | R-063 | Düşük | BORÇ OLARAK KAYITLI / KORUMAYA ALINDI | Otuz ayrıcalıklı başlatma hâlâ kendi hatasını ortak okuyucunun dışında ele alıyor; operatöre ne söyleneceği her yerin kendi kararı |
@@ -1939,6 +1939,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   itmiyor; ve güvenlik duvarı durumu, nft'nin parantezsiz yazdığı tek portlu
   kuralı okuyor, yani açık bir UDP portu artık yok diye bildirilmiyor.
 - Tur, gönderildiği üçünden daha kötü bir dördüncüsünü buldu: R-049.
+- 6 Eylül 2026'da kapandı. İlk kusuru - eylemleri kendi katlanma çizgisinin
+  altında kalan bir pencere - o pencerenin değil ürünün bir özelliği çıktı ve
+  artık her pencere için bir kez düzeltildi (R-059).
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-048 - Elektriği kesilen sunucu, kontrol düzlemi donmuş olarak geri geliyor
@@ -2460,6 +2463,18 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   eylemler onun dışında sabit. Üçüncü kez yazmak yerine iki pencerenin
   paylaştığı yerde bir kez yapılmalı - işlem sonucu kuralının çözdüğü aynı
   tartışma.
+- 6 Eylül 2026'da düzeltildi ve iki kez düzeltilmek zorunda kalmasının sebebi
+  asıl bulgu: iki pencere **hiçbir şey paylaşmıyordu**. Dokuz ekranın her biri
+  kendi penceresini kurmuştu; yani birini düzeltmek diğerini hiçbir zaman
+  düzeltemezdi, aynı kusur iki kez bulundu ve üçüncü kez de bulunacaktı.
+- Artık ürünün tek bir penceresi var: eylemleri kaydırıcının dışında duran
+  sınırlı bir sütun; eylem satırı telefonda ters çevriliyor, böylece çalışan
+  denetim önce geliyor; kapatma ve kaçış tuşu dokuz yerde değil tek yerde.
+  Her ekran onu kullanıyor ve bir test, kendi penceresini kuran ekranı
+  reddediyor - yani üçüncü örnek yazılamaz.
+- Bu, işlem sonucu kuralının çözdüğü aynı tartışmanın başka bir katmandaki
+  hâli: iki kopyada iki kez bulunan bir kusur, kopyalar hakkında değil kodun
+  nerede durduğu hakkında bir ifadedir.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-060 - Paket bütçesi tavanında
@@ -2474,6 +2489,16 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   bazı ekranların ihtiyaç duyduğu ne var? Bu bir ölçüm işi, tahmin değil ve
   düşen bir yapının baskısı altında değil, ortak bileşen değişmeden önce
   yapılmalı.
+- 6 Eylül 2026'da, çizgiyi kaydırarak değil ölçerek düzeltildi. Açılış paketi
+  üründeki her ekranın tüm çeviri kataloğunu taşıyordu: gösterge panosunu açan
+  biri, hiçbir şey görmeden önce postanın, DNS'in, veritabanlarının ve
+  mağazanın sözcüklerini indiriyordu. Katalog artık ekran başına ve ihtiyaç
+  duyan ekranla birlikte yükleniyor.
+- Aynı 361,00 KiB sınırına karşı ölçüldü: kritik açılış **360,97 KiB'den
+  245,45 KiB'ye**, gzip 109,11'den 76,84'e. Pay, 31 bayt iken 115 KiB.
+- Kaydın kuralı tuttu: bütçe yükseltilmedi. Bunu mümkün kılan şey, ölçümün
+  yalnızca büyük değil gerçekten yanlış yerde duran bir şey bulmasıydı - payı
+  kazanmakla payı yeniden tanımlamak arasındaki fark da budur.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-061 - Düşen bir komutun kendi sözleri sırrı tarayıcıya taşıdı
