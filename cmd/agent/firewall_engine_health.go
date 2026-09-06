@@ -3,9 +3,10 @@ package main
 import (
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/hostcmd"
 )
 
 // R-054. `nft` is a userspace client for a kernel subsystem. When the kernel
@@ -96,34 +97,6 @@ var firewallKernelUnreachableSignatures = []string{
 	"module is not loaded",
 }
 
-// firewallCommandDiagnostic collects everything a failed command said. A
-// non-combined Output() call keeps stderr inside the exit error, which is
-// exactly where nft writes the sentence that explains itself.
-// firewallCommandDiagnostic, basarisiz bir komutun soyledigi her seyi toplar.
-func firewallCommandDiagnostic(out []byte, err error) string {
-	var parts []string
-	if trimmed := strings.TrimSpace(string(out)); trimmed != "" {
-		parts = append(parts, trimmed)
-	}
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		if trimmed := strings.TrimSpace(string(exitErr.Stderr)); trimmed != "" {
-			parts = append(parts, trimmed)
-		}
-	}
-	if err != nil {
-		if trimmed := strings.TrimSpace(err.Error()); trimmed != "" {
-			parts = append(parts, trimmed)
-		}
-	}
-	// nft points at the offending line with its own newlines and carets. That
-	// is a diagnostic, and it ends up inside a JSON error the browser shows, so
-	// it is flattened to one line here rather than pasted into a dialog.
-	// nft, hatali satiri kendi satir sonlari ve isaretleriyle gosterir; bu bir
-	// teshis metnidir ve tarayicinin gosterdigi bir JSON hatasina girer.
-	return strings.Join(strings.Fields(strings.Join(parts, "; ")), " ")
-}
-
 func runningKernelRelease() string {
 	raw, err := os.ReadFile(firewallKernelReleasePath)
 	if err != nil {
@@ -199,7 +172,7 @@ func classifyFirewallEngineFault(out []byte, err error) firewallEngineFault {
 	if runningKernelModulesMissing() {
 		return firewallEngineFaultModulesMissing
 	}
-	diagnostic := strings.ToLower(firewallCommandDiagnostic(out, err))
+	diagnostic := strings.ToLower(hostcmd.Diagnostic(out, err))
 	for _, signature := range firewallKernelUnreachableSignatures {
 		if strings.Contains(diagnostic, signature) {
 			return firewallEngineFaultKernelUnreachable
@@ -207,6 +180,22 @@ func classifyFirewallEngineFault(out []byte, err error) firewallEngineFault {
 	}
 	return firewallEngineFaultNone
 }
+
+// Why nft's own words may be repeated to an operator. Repeating a command's
+// output is the path that has to be asked for, and this is the asking: the
+// ruleset nft is complaining about is composed in this package from the
+// panel's own port lists and its own table name. No credential, key or
+// operator-supplied string is ever assembled into it, so there is nothing in
+// nft's diagnostic that an operator may not read - and R-054 proved the
+// diagnostic is the only thing that names the fault.
+//
+// nft'nin kendi sozlerinin operatore neden tekrarlanabilecegi. Bir komutun
+// ciktisini tekrarlamak istenmesi gereken yoldur; burasi da o istektir:
+// nft'nin sikayet ettigi kural seti bu pakette panelin kendi port
+// listelerinden olusturulur, icine hicbir kimlik bilgisi veya anahtar girmez.
+const firewallDiagnosticIsRepeatable = "nft's diagnostic describes a ruleset " +
+	"this agent composed from the panel's own port lists; no credential or key " +
+	"is ever assembled into it"
 
 // describeFirewallEngineFailure turns a failed nft invocation into the
 // sentence the operator reads. It always carries what the command actually
@@ -220,14 +209,14 @@ func describeFirewallEngineFailure(
 ) (firewallEngineFault, string) {
 	fault := classifyFirewallEngineFault(out, err)
 	// The operator's sentence goes first and the command's own words follow it
-	// in brackets. That ordering rule is shared, in host_mutation_outcome.go:
-	// it was learned here, and R-055 needed it a second time on the VPN path.
+	// in brackets. That ordering rule is shared, in internal/hostcmd: it was
+	// learned here, and R-055 needed it a second time on the VPN path.
 	// Operatorun cumlesi once, komutun kendi sozleri parantez icinde sonra
 	// gelir. Bu sira kurali paylasilir.
 	return fault, operatorFirstFailureSentence(
 		firewallEngineFaultSentence(fault),
 		prefix,
-		firewallCommandDiagnostic(out, err),
+		hostcmd.Verbatim(out, err, firewallDiagnosticIsRepeatable),
 	)
 }
 

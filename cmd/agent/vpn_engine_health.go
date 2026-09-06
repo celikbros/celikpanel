@@ -3,6 +3,9 @@ package main
 import (
 	"errors"
 	"io/fs"
+	"strings"
+
+	"github.com/alicelik/celikpanel/internal/hostcmd"
 )
 
 // R-055. WireGuard is a kernel module with a userspace client, so the VPN
@@ -42,16 +45,60 @@ const vpnEngineRebootSentence = "This server is running a kernel whose modules a
 	"kernel and this server has not been restarted since. Restart this server, then " +
 	"set the VPN up again."
 
+// Why nft's words may be repeated on the VPN path too, and why WireGuard's may
+// not. The VPN asks nft about a policy inventory the agent composed itself, so
+// nft's diagnostic holds nothing an operator may not read. `wg` is different,
+// and the difference is not cosmetic: `wg syncconf` is handed the stripped
+// interface configuration, which contains the interface's PrivateKey, and wg
+// reports a configuration it will not accept by quoting the line it choked on.
+// Repeating that output verbatim can hand the server's WireGuard private key
+// to whoever is looking at the panel. So the wg paths read their output here,
+// where it exists, and only what it meant travels.
+//
+// nft'nin sozlerinin VPN yolunda da neden tekrarlanabildigi ve WireGuard'in
+// sozlerinin neden tekrarlanamadigi. `wg syncconf`, icinde arayuzun
+// PrivateKey'i bulunan yapilandirmayi alir ve kabul etmedigi bir yapilandirmayi
+// takildigi satiri alintilayarak bildirir. Bu ciktiyi oldugu gibi tekrarlamak,
+// sunucunun WireGuard ozel anahtarini panele bakan kisiye verebilir.
+const vpnNFTDiagnosticIsRepeatable = "nft's diagnostic describes a policy " +
+	"inventory this agent composed itself; no key or credential is assembled " +
+	"into it"
+
+// wireGuardMeaning names what wg said, without saying it. Anything it does not
+// recognise is reported as unrecognised rather than mislabelled, and is still
+// never repeated - the same trade internal/services made for the mysql client.
+//
+// wireGuardMeaning, wg'nin ne soyledigini, soylemeden adlandirir. Tanimadigi
+// her sey yanlis etiketlenmek yerine taninmamis olarak bildirilir.
+func wireGuardMeaning(text string) string {
+	lowered := strings.ToLower(text)
+	switch {
+	case strings.Contains(lowered, "line unrecognized"),
+		strings.Contains(lowered, "configuration parsing error"),
+		strings.Contains(lowered, "invalid"):
+		return "WireGuard would not accept the configuration this panel wrote"
+	case strings.Contains(lowered, "no such device"),
+		strings.Contains(lowered, "unable to access interface"),
+		strings.Contains(lowered, "cannot find device"):
+		return "the WireGuard interface this panel manages is not present on this server"
+	case strings.Contains(lowered, "operation not permitted"),
+		strings.Contains(lowered, "permission denied"):
+		return "this server refused the change: WireGuard reported that the operation is not permitted"
+	default:
+		return ""
+	}
+}
+
 // describeVPNHostFailure turns a failed VPN host command into the sentence the
-// operator reads. It always carries what the command actually said, and adds
-// the machine's own reason when there is one to add. The order - instruction
-// first, technical detail after - is the shared one, for the shared reason:
-// this string is bounded before it is recorded.
+// operator reads. The detail is decided by the caller, because only the caller
+// knows what the command was holding, and it arrives already read. The order -
+// instruction first, technical detail after - is the shared one, for the
+// shared reason: this string is bounded before it is recorded.
 //
 // describeVPNHostFailure, basarisiz bir VPN makine komutunu operatorun okudugu
-// cumleye cevirir. Sira - once talimat, sonra teknik ayrinti - paylasilan
-// siradir ve nedeni de paylasilir: bu dize kaydedilmeden once sinirlanir.
-func describeVPNHostFailure(prefix string, out []byte, err error) (
+// cumleye cevirir. Ayrintiya cagiran karar verir; cunku komutun neyi tuttugunu
+// yalnizca cagiran bilir.
+func describeVPNHostFailure(prefix, detail string, err error) (
 	restartRequired bool,
 	message string,
 ) {
@@ -60,15 +107,7 @@ func describeVPNHostFailure(prefix string, out []byte, err error) (
 		instruction = vpnEngineRebootSentence
 		restartRequired = true
 	}
-	// firewallCommandDiagnostic recovers what a failed command wrote to
-	// stderr, which is where both nft and wg write the sentence that explains
-	// them; it is about a failed command, not about the firewall, and is read
-	// from here for the same reason the module-tree probe is.
-	// firewallCommandDiagnostic, basarisiz bir komutun stderr'e yazdigini geri
-	// kazanir; guvenlik duvarina degil, basarisiz bir komuta dairdir.
-	return restartRequired, operatorFirstFailureSentence(
-		instruction, prefix, firewallCommandDiagnostic(out, err),
-	)
+	return restartRequired, operatorFirstFailureSentence(instruction, prefix, detail)
 }
 
 // vpnHostError is a VPN host-command failure that carries whether this machine
@@ -83,8 +122,26 @@ type vpnHostError struct {
 
 func (e *vpnHostError) Error() string { return e.message }
 
+// newVPNHostError is the nft path: the command's own words go out with the
+// error, because they hold nothing an operator may not read.
+// newVPNHostError, nft yoludur: komutun kendi sozleri hatayla birlikte gider.
 func newVPNHostError(prefix string, out []byte, err error) *vpnHostError {
-	restartRequired, message := describeVPNHostFailure(prefix, out, err)
+	restartRequired, message := describeVPNHostFailure(
+		prefix, hostcmd.Verbatim(out, err, vpnNFTDiagnosticIsRepeatable), err,
+	)
+	return &vpnHostError{restartRequired: restartRequired, message: message}
+}
+
+// newVPNKeyBearingHostError is the wg path: the output is read where it
+// exists, and only what it meant leaves this function, because the words can
+// quote a line of a configuration that carries the interface's private key.
+//
+// newVPNKeyBearingHostError, wg yoludur: cikti var oldugu yerde okunur ve bu
+// fonksiyondan yalnizca ne anlama geldigi cikar.
+func newVPNKeyBearingHostError(prefix string, out []byte, err error) *vpnHostError {
+	restartRequired, message := describeVPNHostFailure(
+		prefix, hostcmd.Classified(out, err, wireGuardMeaning), err,
+	)
 	return &vpnHostError{restartRequired: restartRequired, message: message}
 }
 

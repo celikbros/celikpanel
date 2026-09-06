@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/hostcmd"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -879,12 +880,23 @@ func validateFirewallSnapshot(data []byte) error {
 	return err
 }
 
+// commandFailureDetail is the agent's short reading of a failed host command,
+// used by the sixteen call sites that already print a prefix of their own.
+//
+// It used to fall straight from an empty output to err.Error(), which is
+// "exit status 1" - and every one of its callers that runs Output() rather
+// than CombinedOutput() lands exactly there, because os/exec puts stderr
+// inside the exit error and this function never looked. That is the R-054
+// defect, still live in this helper after R-054 was closed in the one place it
+// was found. hostcmd.Reason looks.
+//
+// commandFailureDetail, basarisiz bir makine komutunun agent tarafindaki kisa
+// okumasidir. Bos bir ciktidan dogruca "exit status 1"e duserdi ve
+// CombinedOutput yerine Output calistiran her cagiran tam oraya inerdi; cunku
+// os/exec stderr'i cikis hatasinin icine koyar ve bu fonksiyon oraya hic
+// bakmazdi. hostcmd.Reason bakar.
 func commandFailureDetail(prefix string, out []byte, err error) string {
-	detail := strings.TrimSpace(string(out))
-	if detail == "" {
-		detail = err.Error()
-	}
-	return fmt.Sprintf("%s: %s", prefix, detail)
+	return fmt.Sprintf("%s: %s", prefix, hostcmd.Reason(out, err))
 }
 
 func firewallTablePresent(out []byte) bool {

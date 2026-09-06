@@ -44,6 +44,21 @@ jobs:
           }
       - run: go build ./...
       - run: go vet ./...
+      # A helper is only advice; this step is the part that is not. The same
+      # defect - a privileged command fails, its output is discarded, the
+      # operator is handed "exit status 1" - was found on three real machines
+      # in one week (R-046, R-053, R-054) and fixed three times. The guard
+      # names every place that launches a privileged process, with a reason
+      # per entry, so a fourth path has to say what it is for before it merges.
+      # It runs before the suite because its failure message is an instruction.
+      #
+      # Bir yardimci yalnizca ogutur; bu adim ogut olmayan kisimdir. Ayni kusur
+      # bir hafta icinde uc gercek makinede bulundu ve uc kez duzeltildi.
+      # Muhafiz, ayricalikli bir surec baslatan her yeri gerekcesiyle adlandirir.
+      - name: Verify every privileged launch is named, and its failure readable
+        run: >-
+          go test ./internal/hostcmd -count=1 -v
+          -run 'TestEveryPrivilegedLaunchIsNamedAndJustified|TestTheHiddenStderrIsReadInOnePlace|TestRepeatingACommandsOwnWordsAlwaysStatesWhy'
       - run: go test ./... -count=1
       - name: Race-test security and persistence boundaries
         run: >-

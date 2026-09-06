@@ -3,6 +3,8 @@ package services
 import (
 	"errors"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/hostcmd"
 )
 
 // R-053. The panel installs MariaDB or PostgreSQL through its own service
@@ -124,13 +126,20 @@ func (e *DatabaseEngineRefusalError) Unwrap() error { return e.cause }
 // what it means. An output that says nothing recognisable is returned
 // unwrapped, so nothing is claimed that was not read.
 //
+// It reads through hostcmd.Diagnostic rather than off the output slice alone,
+// because the output slice is not the whole of what the command said: a driver
+// that calls Output() instead of CombinedOutput() leaves the engine's sentence
+// inside *exec.ExitError, where this used to miss it. That is the same reading
+// R-054 needed, and it now happens in one place for both.
+//
 // WrapDatabaseEngineFailure, bir komutun kendi ciktisini bir kez okur ve
-// yalnizca ne anlama geldigini saklar.
+// yalnizca ne anlama geldigini saklar. Okumayi hostcmd.Diagnostic uzerinden
+// yapar; cunku cikti dilimi komutun soyledigi her sey degildir.
 func WrapDatabaseEngineFailure(cause error, output []byte) error {
 	if cause == nil {
 		return nil
 	}
-	refusal := classifyDatabaseEngineText(string(output))
+	refusal := classifyDatabaseEngineText(hostcmd.Diagnostic(output, cause))
 	if refusal == DatabaseEngineRefusalNone {
 		return cause
 	}

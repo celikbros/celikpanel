@@ -1093,7 +1093,15 @@ func applyWireGuardConfig(ctx context.Context, configPath string) error {
 	defer os.RemoveAll(stripDirectory)
 	stripped, err := runWireGuardStrip(ctx, stripSource)
 	if err != nil {
-		return errors.New("wg-quick strip failed")
+		// This used to discard the reason outright, which is the pattern
+		// R-046, R-053 and R-054 each found somewhere else. It is read now -
+		// but wg-quick's stdout here IS the interface configuration and its
+		// stderr quotes the line it stumbled on, so what leaves is what the
+		// failure meant, never what it said.
+		// Burasi nedeni tumuyle atardi. Artik okunuyor; ancak wg-quick'in
+		// buradaki ciktisi arayuz yapilandirmasinin kendisidir, bu yuzden
+		// disari cikan sey basarisizligin anlamidir, sozleri degil.
+		return newVPNKeyBearingHostError("wg-quick strip failed", stripped, err)
 	}
 	temporary, err := os.CreateTemp("", "celikpanel-wg-*.conf")
 	if err != nil {
@@ -1120,7 +1128,13 @@ func applyWireGuardConfig(ctx context.Context, configPath string) error {
 		// a server that needs restarting from a peer set wg would not accept.
 		// R-055. Bu, VPN'in cekirdekle temasidir; hicbir modul yukleyemeyen bir
 		// makinenin adlandirilmasi gereken yer burasidir.
-		return newVPNHostError("wg syncconf failed", output, err)
+		// The output is read, and only its meaning leaves: wg quotes the
+		// configuration line it would not accept, and this configuration
+		// carries the interface's PrivateKey.
+		// Cikti okunur ve yalnizca anlami cikar: wg kabul etmedigi
+		// yapilandirma satirini alintilar ve bu yapilandirma arayuzun
+		// PrivateKey'ini tasir.
+		return newVPNKeyBearingHostError("wg syncconf failed", output, err)
 	}
 	return nil
 }
