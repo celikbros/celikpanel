@@ -102,7 +102,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-061 | Yüksek | BULUNDU VE DÜZELTİLDİ / GÜVENLİK | İki yol, kendisine bir sır verilmiş bir komutun çıktısını olduğu gibi tekrarlıyordu: veritabanı istemcisi CREATE USER ifadesini tarayıcının çizdiği yanıta geri yazıyordu, wg ise arayüzün özel anahtarını içeren yapılandırmayı alıntılıyordu |
 | R-062 | Orta | DÜZELTİLDİ / BİÇİM DÜZEYİNDE KORUNDU | PostgreSQL istemcisi parolayı argüman listesinde alıyor; yani süreç tablosunu okuyabilen herkes görebiliyor |
 | R-063 | Düşük | BORÇ OLARAK KAYITLI / KORUMAYA ALINDI | Otuz ayrıcalıklı başlatma hâlâ kendi hatasını ortak okuyucunun dışında ele alıyor; operatöre ne söyleneceği her yerin kendi kararı |
-| R-064 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Yükleniyor göstergesi 38 dosyada 61 kez elle yazılmış; tasarım kancası onu dosya dosya bildiriyor ve bir yükleme durumuna yapılacak her görsel düzeltme 61 kez yapılmak zorunda |
+| R-064 | Düşük | DÜZELTİLDİ / YİRMİ YEDİ KOPYA BİRE İNDİ | Yükleniyor göstergesi 38 dosyada 61 kez elle yazılmış; tasarım kancası onu dosya dosya bildiriyor ve bir yükleme durumuna yapılacak her görsel düzeltme 61 kez yapılmak zorunda |
 | R-065 | Orta | YAPILDI / HENÜZ TARAYICIDA GÖRÜLMEDİ | Panelin kendi veritabanı hesabı var ama yalnızca API'den erişilebiliyor: sunucu kartı hesabın orada olup olmadığını göstermiyor ve başka bir makinedeki motor için panele kimlik bilgisi verilecek bir yer yok |
 | R-066 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Başka bir makinedeki veritabanı motoru hiç kaydedilemiyor: liste yalnızca bu makinenin otomatik keşfiyle doluyor ve kimlik bilgisiyle uzak sunucu kabul eden uç noktaya yalnızca API'den ulaşılabiliyor |
 | R-067 | Yüksek | GERÇEK MAKİNEDE BULUNDU VE DÜZELTİLDİ | Yeni kurulmuş bir sunucuda veritabanı bölümünün tamamı erişilemezdi: panel MariaDB'yi kurdu, çalıştığını gördü ve sonra yöneticiye hiçbir veritabanı motoru kurulu olmadığını söyledi |
@@ -2638,6 +2638,25 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   Bugün düzeltilmek yerine kaydedildi; çünkü operatörün görebileceği bir kusur
   değil ve sürüm yolunda önünde R-057 var. Dört istisna kaydı, gösterge tek bir
   bileşen olduğu gün tek kayda iner.
+- 6 Eylül 2026'da düzeltildi. Yirmi sekizin yirmi yedisi artık ui.tsx içindeki
+  tek bir paylaşılan `Spinner`; yirmi sekizin taşıdığı altı sınıfın aynısıyla -
+  bilerek, çünkü bu bir taşıma ve görünüşü de değiştiren bir taşıma aynı anda
+  iki şey olurdu.
+- Eklediği tek şey bir ad. Kopyaların yirmi dördü `role="status"` ve etiketi
+  olan bir sarmalayıcının içindeydi; geri kalanı, ekran okuyucunun hiç
+  duyurmadığı çıplak bir dönen div'di. Artık hepsi ne olduğunu söylüyor.
+- Yirmi sekizincisi elle yazılmış kalıyor ve asıl ilginç kısmı sebebi:
+  i18n/index.tsx içindeki açılış göstergesi, I18nProvider'ın bir değeri
+  olmadan **önce** çiziliyor ve paylaşılan bileşen erişilebilir adını
+  `useI18n`'den okuyor; o da sağlayıcının dışında hata fırlatıyor. Mekanik bir
+  süpürme onu da değiştirir ve panelin ilk açılışını beyaz bir ekrana
+  çevirirdi - yapı da tip denetimi de geçerdi. Artık bir test istisnanın
+  sebebini kaydediyor; böylece bir sonraki süpürme gerekçeyi geri almıyor.
+- İstisna listesi ölçümün kendisiydi ve kodla birlikte çöktü: beş dosya
+  kapsamlı kayıt, bir göstergenin meşru olarak yaşadığı iki dosyayı adlandıran
+  tek kayda indi.
+- Dört test bunu tutuyor ve ilki kusura karşı sınandı: bir ekrana geri konan
+  elle yazılmış bir gösterge, testi adıyla düşürüyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-065 - Hesabın ekranı yok

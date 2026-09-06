@@ -20,6 +20,7 @@ import { navItems, canAccessPath, type NavAccessContext } from './nav';
 import { Layout } from './components/Layout';
 import { ComponentOperationProvider } from './components/ComponentOperation';
 import { useI18n } from './i18n';
+import { Spinner } from './components/ui';
 import {
   publishSystemUpdateAuthentication,
   shouldApplyUnauthorizedResponse,
@@ -122,7 +123,7 @@ function DomainDetailPage() {
     return (
       <PageWithLayout>
         <div className="flex items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <Spinner />
         </div>
       </PageWithLayout>
     );
@@ -229,7 +230,7 @@ function ServiceManagementPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Spinner />
       </div>
     );
   }
@@ -366,10 +367,9 @@ function PageLoadFailed({ message, reloadLabel }: { message: string; reloadLabel
 }
 
 function PageLoading() {
-  const { t } = useI18n();
   return (
-    <div className="flex min-h-64 items-center justify-center" role="status" aria-label={t('common.loading')}>
-      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+    <div className="flex min-h-64 items-center justify-center">
+      <Spinner />
     </div>
   );
 }
@@ -503,7 +503,7 @@ function AuthGate() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Spinner />
       </div>
     );
   }

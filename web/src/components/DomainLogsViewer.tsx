@@ -9,7 +9,7 @@ import {
     type DomainLogsResponse,
     type LogTimeRangeError,
 } from '../lib/domainLogs';
-import { EmptyState, inputClass } from './ui';
+import { EmptyState, Spinner, inputClass } from './ui';
 
 interface DomainLogsViewerProps {
     domainId: number;
@@ -363,7 +363,7 @@ export function DomainLogsViewer({ domainId, domainName, readOnly = false }: Dom
 
                 {loading ? (
                     <div className="flex h-64 items-center justify-center">
-                        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                        <Spinner />
                     </div>
                 ) : logs.length === 0 ? (
                     <div className="py-6">

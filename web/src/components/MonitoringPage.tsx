@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Activity } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { PageHeader } from './PageHeader';
+import { Spinner } from './ui';
 
 // Server monitoring (operator request, 23 Jul: "we should have a monitoring
 // page"). The dashboard strip answers "how is it NOW"; this page answers
@@ -87,7 +88,7 @@ export function MonitoringPage() {
 
             {loading ? (
                 <div className="flex items-center justify-center py-16">
-                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                    <Spinner />
                 </div>
             ) : samples.length < 2 ? (
                 <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-10 text-center shadow-card">

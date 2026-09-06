@@ -6,7 +6,7 @@ import { AddDatabaseModalV2 } from './AddDatabaseModalV2';
 import { AddUserModalV2 } from './AddUserModalV2';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
-import { Button, EmptyState, StatusDot } from './ui';
+import { Button, EmptyState, Spinner, StatusDot } from './ui';
 import { PageHeader } from './PageHeader';
 import { SystemSQLiteManager } from './SystemSQLiteManager';
 import { DatabaseAccountStrip } from './DatabaseAccountStrip';
@@ -264,7 +264,7 @@ export function DatabaseManagementV2() {
 
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
-                            <div className="h-7 w-7 animate-spin rounded-full border-b-2 border-primary" />
+                            <Spinner size="sm" />
                         </div>
                     ) : activeTab === 'databases' ? (
                         databases.length === 0 ? (

@@ -3,7 +3,7 @@ import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud,
 import type { LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { StatusDot, EmptyState, Button, Dialog, SearchInput, ErrorBanner } from './ui';
+import { Button, Dialog, EmptyState, ErrorBanner, SearchInput, Spinner, StatusDot } from './ui';
 import { PageHeader } from './PageHeader';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import {
@@ -1225,7 +1225,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-fg-muted">
-                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                    <Spinner />
                     {scanning && <span>{t('services.autoScanning')}</span>}
                 </div>
             ) : !scannedAt && services.length === 0 ? (

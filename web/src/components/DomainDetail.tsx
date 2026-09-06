@@ -19,7 +19,7 @@ import { DomainDNSManager } from './DomainDNSManager';
 import { HostingTypePanel } from './HostingTypePanel';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { StatusDot } from './ui';
+import { Spinner, StatusDot } from './ui';
 import { useAuth } from '../auth/AuthContext';
 import {
     hasAnyDomainAccess,
@@ -190,7 +190,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                <Spinner />
             </div>
         );
     }
@@ -435,7 +435,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                     )}
 
                     <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
-                        <Suspense fallback={<div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />}>
+                        <Suspense fallback={<Spinner />}>
                             {current.id === 'overview' ? (
                                 <Overview
                                     domainId={domain.id}

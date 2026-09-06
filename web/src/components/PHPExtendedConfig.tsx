@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Save, RefreshCw } from 'lucide-react';
+import { Spinner } from './ui';
 
 interface ExtendedPHPConfig {
     // Performance & Security
@@ -89,7 +90,7 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <Spinner />
             </div>
         );
     }

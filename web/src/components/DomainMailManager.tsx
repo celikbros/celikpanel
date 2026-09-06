@@ -3,7 +3,7 @@ import { Mail, Plus, Trash2, ArrowRight, AtSign, Pencil, Info, KeyRound } from '
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { apiErrorText, readApiError } from '../lib/apiError';
-import { Button, Dialog, EmptyState, UsageBar, inputClass } from './ui';
+import { Button, Dialog, EmptyState, Spinner, UsageBar, inputClass } from './ui';
 import { MailAuthPanel } from './MailAuthPanel';
 import { MailSettingsPanel } from './MailSettingsPanel';
 
@@ -333,7 +333,7 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
 
             {loading ? (
                 <div className="flex items-center justify-center py-12">
-                    <div className="h-7 w-7 animate-spin rounded-full border-b-2 border-primary" />
+                    <Spinner size="sm" />
                 </div>
             ) : activeTab === 'accounts' ? (
                 accounts.length === 0 ? (

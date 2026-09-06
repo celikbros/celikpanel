@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, Globe } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { FormSection, ToggleRow, FormActions, Button, inputClass } from './ui';
+import { Button, FormActions, FormSection, Spinner, ToggleRow, inputClass } from './ui';
 import { apiErrorText, readApiError } from '../lib/apiError';
 
 interface DomainGeneralSettingsProps {
@@ -140,7 +140,7 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
     if (loading) {
         return (
             <div className="flex items-center justify-center py-16">
-                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                <Spinner />
             </div>
         );
     }

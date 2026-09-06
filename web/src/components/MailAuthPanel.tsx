@@ -3,7 +3,7 @@ import { ShieldCheck, KeyRound, FileCheck2, Copy, Plus, Info, type LucideIcon } 
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { Button, StatusDot, inputClass } from './ui';
+import { Button, Spinner, StatusDot, inputClass } from './ui';
 
 interface AuthRecord {
     name: string;
@@ -103,7 +103,7 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
     if (loading || !status) {
         return (
             <div className="flex items-center justify-center py-12">
-                <div className="h-7 w-7 animate-spin rounded-full border-b-2 border-primary" />
+                <Spinner size="sm" />
             </div>
         );
     }

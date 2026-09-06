@@ -6,7 +6,7 @@ import {
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { Button, EmptyState, inputClass } from './ui';
+import { Button, EmptyState, Spinner, inputClass } from './ui';
 
 interface CronJob {
     id: string;
@@ -252,7 +252,7 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
 
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                        <Spinner />
                     </div>
                 ) : jobs.length === 0 ? (
                     <EmptyState icon={Clock} title={t('cron.empty')} hint={t('cron.emptyHint')} />

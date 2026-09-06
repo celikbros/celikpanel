@@ -3,7 +3,7 @@ import { FileCode, Files, Hexagon, ArrowLeftRight, ExternalLink, Play, Square, R
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { Button, StatusDot, inputClass } from './ui';
+import { Button, Spinner, StatusDot, inputClass } from './ui';
 import { readApiError, apiErrorText } from '../lib/apiError';
 
 // Hosting type for a domain (roadmap 3A): pick what the site IS, fill the
@@ -96,7 +96,7 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
     if (!state) {
         return (
             <div className="flex items-center justify-center py-12">
-                <div className="h-7 w-7 animate-spin rounded-full border-b-2 border-primary" />
+                <Spinner size="sm" />
             </div>
         );
     }
