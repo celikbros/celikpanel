@@ -7,7 +7,7 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { apiErrorText, readApiError } from '../lib/apiError';
-import { EmptyState, Button, inputClass } from './ui';
+import { Button, EmptyState, Spinner, inputClass } from './ui';
 
 interface BackupItem {
     name: string;
@@ -337,8 +337,7 @@ export function DomainBackupManager({ domainId, domainName, readOnly = false }: 
 
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" aria-hidden="true" />
-                        <span className="sr-only" role="status" aria-live="polite">{t('common.loading')}</span>
+                        <Spinner />
                     </div>
                 ) : backups.length === 0 ? (
                     <EmptyState icon={Archive} title={t('backup.empty')} hint={t('backup.emptyHint')} />

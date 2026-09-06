@@ -3,7 +3,7 @@ import { ArrowLeft, Play, Square, RotateCw, Download, ScanSearch, type LucideIco
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
-import { Button, Dialog, EmptyState, StatusDot } from './ui';
+import { Button, Dialog, EmptyState, Spinner, StatusDot } from './ui';
 import { HelpButton } from './HelpDrawer';
 import { readApiError, apiErrorText } from '../lib/apiError';
 import { decodeManagedServicesSnapshot, useComponentOperation } from './ComponentOperation';
@@ -354,7 +354,7 @@ export function ServiceShell({
 
             {loading ? (
                 <div className="flex items-center justify-center py-16">
-                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                    <Spinner />
                 </div>
             ) : observed === 'unknown' ? (
                 /* The honest first state of a component on a host this panel

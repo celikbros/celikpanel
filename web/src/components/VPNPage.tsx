@@ -19,7 +19,7 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
-import { Button, EmptyState, ErrorBanner, StatusDot, inputClass } from './ui';
+import { Button, EmptyState, ErrorBanner, Spinner, StatusDot, inputClass } from './ui';
 import { PageHeader } from './PageHeader';
 import { HelpButton } from './HelpDrawer';
 
@@ -396,7 +396,7 @@ export function VPNPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center p-4 py-20 sm:p-6 md:p-8">
-                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                <Spinner />
             </div>
         );
     }

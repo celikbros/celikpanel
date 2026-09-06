@@ -55,6 +55,49 @@ export function UsageBar({ percent }: { percent: number }) {
     );
 }
 
+// R-064. This spinner was written twenty-eight times across the product, in
+// three spellings of the same six classes, and the design hook reported it once
+// per file as an accent border on a rounded card. The false positive was
+// sanctioned file by file, and the ignore list grew an entry every time
+// somebody edited another screen - so the list was the measurement: a thing
+// copied one file at a time.
+//
+// One component, so a change to a loading state is made once. The classes are
+// exactly what the twenty-eight were, deliberately: this is a move, and a move
+// that also changed how it looks would be two things at once.
+//
+// The one thing it adds is a name. Twenty-four of the copies sat inside a
+// wrapper with role="status" and an accessible label; the rest were a bare
+// spinning div, which a screen reader announces as nothing at all. Now every
+// one of them says what it is.
+//
+// R-064. Bu gosterge urun genelinde yirmi sekiz kez, ayni alti sinifin uc ayri
+// yazimiyla yazilmisti. Tasarim kancasi onu dosya basina bir kez bildiriyordu
+// ve istisna listesi, biri baska bir ekrani her duzenlediginde bir kayit
+// buyuyordu; yani liste olcumun kendisiydi. Siniflar bilerek yirmi sekizinin
+// tasidiginin aynisi: bu bir tasima. Ekledigi tek sey bir ad.
+export function Spinner({
+    size = 'md',
+    label,
+    className,
+}: {
+    /** md is the size twenty-four of the copies used; sm is the other four. */
+    size?: 'md' | 'sm';
+    /** Overrides the default "Loading" for a wait that is about one thing. */
+    label?: string;
+    className?: string;
+}) {
+    const { t } = useI18n();
+    const box = size === 'sm' ? 'h-7 w-7' : 'h-8 w-8';
+    return (
+        <div
+            role="status"
+            aria-label={label ?? t('common.loading')}
+            className={`${box} animate-spin rounded-full border-b-2 border-primary ${className ?? ''}`}
+        />
+    );
+}
+
 export function StatusDot({ ok }: { ok: boolean }) {
     return <span className={`inline-block h-2 w-2 rounded-full ${ok ? 'bg-success' : 'bg-fg-subtle'}`} />;
 }

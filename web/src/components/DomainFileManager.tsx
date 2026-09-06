@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, EmptyState, inputClass } from './ui';
+import { Button, EmptyState, Spinner, inputClass } from './ui';
 
 interface FileItem {
     name: string;
@@ -294,7 +294,7 @@ export function DomainFileManager({ domainId, readOnly = false }: DomainFileMana
             {/* File table */}
             {loading ? (
                 <div className="flex items-center justify-center py-16">
-                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                    <Spinner />
                 </div>
             ) : files.length === 0 ? (
                 <EmptyState icon={Folder} title={t('files.empty')} />

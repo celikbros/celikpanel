@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ScrollText } from 'lucide-react';
 import { useI18n } from '../i18n';
-import { EmptyState } from './ui';
+import { EmptyState, Spinner } from './ui';
 import { PageHeader } from './PageHeader';
 
 interface AuditEntry {
@@ -50,7 +50,7 @@ export function AuditLogPage() {
 
             {loading ? (
                 <div className="flex items-center justify-center py-16">
-                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                    <Spinner />
                 </div>
             ) : entries.length === 0 ? (
                 <EmptyState icon={ScrollText} title={t('audit.empty')} />

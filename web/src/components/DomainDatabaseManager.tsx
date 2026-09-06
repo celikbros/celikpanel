@@ -3,6 +3,7 @@ import { Database, Plus, Trash2, RefreshCw, ExternalLink } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { readApiError } from '../lib/apiError';
+import { Spinner } from './ui';
 
 interface DomainDatabaseManagerProps {
     domainId: number;
@@ -360,7 +361,7 @@ export function DomainDatabaseManager({
                 <div className="p-4">
                     {loading ? (
                         <div className="flex items-center justify-center h-32">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                            <Spinner />
                         </div>
                     ) : databases.length === 0 ? (
                         <div className="text-center text-fg-subtle py-12">

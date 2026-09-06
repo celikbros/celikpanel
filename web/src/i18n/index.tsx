@@ -191,6 +191,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         }
 
         return (
+            // The one spinner in the product that is NOT the shared one, and
+            // it cannot be: this renders before I18nProvider has a value, and
+            // the shared Spinner reads its accessible name from useI18n, which
+            // throws outside the provider. A white screen on first load is a
+            // high price for one fewer copy. The boot strings come from `boot`
+            // for the same reason.
+            // Uruedeki paylasilan olmayan tek gosterge, ve olamaz: bu,
+            // I18nProvider'in bir degeri olmadan once cizilir.
             <div className="flex min-h-screen items-center justify-center bg-bg" role="status" aria-label={boot.loading}>
                 <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
             </div>

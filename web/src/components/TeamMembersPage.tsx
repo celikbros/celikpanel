@@ -30,13 +30,7 @@ import {
 } from '../lib/api';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
 import { showToast } from './Toast';
-import {
-    Button,
-    EmptyState,
-    ErrorBanner,
-    StatusDot,
-    inputClass,
-} from './ui';
+import { Button, EmptyState, ErrorBanner, Spinner, StatusDot, inputClass } from './ui';
 import { PageHeader } from './PageHeader';
 
 type ScopeKind = 'subscription' | 'domain';
@@ -315,8 +309,8 @@ export function TeamMembersPage() {
             )}
 
             {loading ? (
-                <div className='flex items-center justify-center py-16' role='status' aria-label={t('common.loading')}>
-                    <div className='h-8 w-8 animate-spin rounded-full border-b-2 border-primary' />
+                <div className='flex items-center justify-center py-16'>
+                    <Spinner />
                 </div>
             ) : loadError ? null : members.length === 0 ? (
                 <EmptyState

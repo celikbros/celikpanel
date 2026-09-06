@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Shield, CheckCircle, AlertTriangle, XCircle, Lock, Upload, Unlink, RefreshCw } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { FormSection, Field, FormActions, Button, inputClass } from './ui';
+import { Button, Field, FormActions, FormSection, Spinner, inputClass } from './ui';
 import type { TranslationKey } from '../i18n/en';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { sslTier, sslTierLabel } from '../lib/sslTier';
@@ -542,7 +542,7 @@ export function DomainSSLSettings({
     if (loading) {
         return (
             <div className="flex items-center justify-center py-16">
-                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                <Spinner />
             </div>
         );
     }

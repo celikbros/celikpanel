@@ -101,7 +101,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-061 | High | FOUND AND FIXED / SECURITY | Two paths repeated a failed command's own output while that command had been handed a secret: the database client quoting back a CREATE USER statement into the response the browser renders, and wg quoting back a configuration containing the interface private key |
 | R-062 | Medium | FIXED / GUARDED AT THE SHAPE | The PostgreSQL client is invoked with the password in its argument list, so it is visible to any user who can read the process table |
 | R-063 | Low | RECORDED AS DEBT / GUARDED | Thirty privileged launches still handle their own failures outside the shared reader, so their operator messages are whatever each site decided |
-| R-064 | Low | FOUND / NOT YET FIXED | The loading spinner is hand-written 61 times across 38 files, so the design hook reports it one file at a time and every visual fix to a loading state has to be made 61 times |
+| R-064 | Low | FIXED / TWENTY-SEVEN COPIES BECAME ONE | The loading spinner is hand-written 61 times across 38 files, so the design hook reports it one file at a time and every visual fix to a loading state has to be made 61 times |
 | R-065 | Medium | BUILT / NOT YET SEEN IN A BROWSER | The panel's own database account exists and is reachable only through the API: the server card does not show whether the account is there, and there is nowhere to hand the panel a credential for an engine on another machine |
 | R-066 | Medium | FOUND / NOT YET FIXED | A database engine on another machine cannot be registered at all: the list is filled only by autodiscovery of this machine, and the endpoint that accepts a remote server with a credential is reachable only through the API |
 | R-067 | High | FOUND ON A REAL MACHINE AND FIXED | On a freshly installed server the whole database chapter was unreachable: the panel installed MariaDB, saw it running, and then told the administrator no database engine was installed |
@@ -2681,6 +2681,25 @@ or executed as-is. There are no open pull requests at this baseline.
   than fixed today because it is not a defect the operator can see and the
   release path has R-057 in front of it; the four ignore entries collapse into
   one the day the spinner becomes one component.
+- Fixed 6 September 2026. Twenty-seven of the twenty-eight are now one shared
+  `Spinner` in ui.tsx, with the same six classes the twenty-eight carried -
+  deliberately, because this is a move, and a move that also changed how it
+  looks would be two things at once.
+- The one it adds is a name. Twenty-four of the copies sat inside a wrapper
+  with `role="status"` and a label; the rest were a bare spinning div, which a
+  screen reader announces as nothing at all. All of them say what they are now.
+- The twenty-eighth stays hand-written, and the reason is the interesting part:
+  the boot spinner in i18n/index.tsx renders **before** I18nProvider has a
+  value, and the shared component reads its accessible name from `useI18n`,
+  which throws outside the provider. A mechanical sweep would have replaced it
+  and turned the first load of the panel into a white screen - the build and
+  the type-check would both have passed. A test now records why it is the
+  exception, so the next sweep does not undo the reasoning.
+- The sanctioned-exception list is the measurement, and it collapsed with the
+  code: five file-scoped entries became one naming the two files where a
+  spinner legitimately lives.
+- Four tests hold it, and the first was checked against the defect: a
+  hand-written spinner put back into one screen fails it by name.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-065 - The account has no screen
