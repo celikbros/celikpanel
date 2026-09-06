@@ -941,14 +941,22 @@ func TestDNSPairIdentityMigration037UpgradesReleasedAlpha27Schema(t *testing.T) 
 		t.Fatalf("upgrade released alpha.27 schema: %v", err)
 	}
 
-	var version int
+	// What this asserts is that migration 037 reached a released alpha.27
+	// schema, not that 037 is the last migration there will ever be. It used
+	// to compare max(version) against 37, which made every later migration
+	// fail a test about this one - the same mistake as measuring a distance
+	// when what you mean is containment.
+	//
+	// Burada dogrulanan sey, 037'nin yayinlanmis bir alpha.27 semasina
+	// ulastigidir; 037'nin son goc olacagi degil.
+	var applied int
 	if err := database.db.QueryRow(
-		`SELECT max(version) FROM schema_migrations`,
-	).Scan(&version); err != nil {
+		`SELECT count(*) FROM schema_migrations WHERE version = 37`,
+	).Scan(&applied); err != nil {
 		t.Fatal(err)
 	}
-	if version != 37 {
-		t.Fatalf("upgraded schema version=%d, want 37", version)
+	if applied != 1 {
+		t.Fatal("migration 037 did not reach a released alpha.27 schema")
 	}
 
 	for _, trigger := range []string{

@@ -184,37 +184,41 @@ func classifyDatabaseEngineText(raw string) DatabaseEngineRefusal {
 	return DatabaseEngineRefusalNone
 }
 
-// The sentences. Each names what is true of the host, why it is true of a
-// server this panel installed, and the one thing to do about it - and each
-// says plainly that the panel will not set the engine's root password itself,
-// because an operator who is told to go and set one deserves to know that is
-// the product's position and not an omission they should wait out.
+// The sentences. Each names what is true of the host and the one thing to do
+// about it, and each names somewhere in CelikPanel to do it.
+//
+// R-057 rewrote these. They used to say "give this server a root password,
+// then have an administrator register the server in CelikPanel again with that
+// password" - which was honest about the panel's position and useless as an
+// instruction, because the server list is filled by autodiscovery and there
+// was no register-a-server screen to follow it to. An instruction with nowhere
+// to be carried out is worse than none. The panel now opens an account of its
+// own instead, and these sentences point at the place that does it.
+//
+// They still say what the panel will not do - it does not touch the operator's
+// root - because that is the reason there is a separate account at all.
 //
 // Cumleler. Her biri makine icin neyin dogru oldugunu, panelin kurdugu bir
 // sunucuda bunun neden dogru oldugunu ve yapilacak tek seyi adlandirir.
 const (
 	mariaDBCredentialRefusedMessage = "This MariaDB server is running and " +
-		"answering, but it refused the root password CelikPanel holds for it. " +
-		"CelikPanel holds none: it does not set an engine's root password when " +
-		"it installs one, and a packaged MariaDB arrives without one either - " +
-		"it admits root only through the server's own unix socket, which this " +
-		"panel does not use. Give this server a root password, then have an " +
-		"administrator register the server in CelikPanel again with that " +
-		"password."
+		"answering, but it refused the credential CelikPanel holds for it. On " +
+		"this server's page, have an administrator open CelikPanel's own " +
+		"account on it - CelikPanel creates an account for itself and leaves " +
+		"your root password alone - or, if this engine is on another machine, " +
+		"give CelikPanel a username and password for it there."
 
 	postgreSQLCredentialRefusedMessage = "This PostgreSQL server is running " +
-		"and answering, but it refused the root password CelikPanel holds for " +
-		"it. CelikPanel holds none: it does not set an engine's root password " +
-		"when it installs one, and a packaged PostgreSQL arrives with the " +
-		"postgres role having none either - it accepts only local peer " +
-		"authentication, which this panel does not use. Give the postgres role " +
-		"a password, then have an administrator register the server in " +
-		"CelikPanel again with that password."
+		"and answering, but it refused the credential CelikPanel holds for it. " +
+		"On this server's page, have an administrator open CelikPanel's own " +
+		"account on it - CelikPanel creates a role for itself and leaves the " +
+		"postgres role alone - or, if this engine is on another machine, give " +
+		"CelikPanel a username and password for it there."
 
 	genericCredentialRefusedMessage = "This database server is running and " +
-		"answering, but it refused the root password CelikPanel holds for it. " +
-		"Give the server a root password, then have an administrator register " +
-		"the server in CelikPanel again with that password."
+		"answering, but it refused the credential CelikPanel holds for it. On " +
+		"this server's page, have an administrator open CelikPanel's own " +
+		"account on it, or give CelikPanel a username and password for it."
 
 	databaseUnreachableMessage = "Nothing answered at the address recorded " +
 		"for this database server. Start the engine on that server, or " +

@@ -81,9 +81,9 @@ func TestDatabaseEngineRefusalMessage(t *testing.T) {
 		refusal    DatabaseEngineRefusal
 		wantSubstr string
 	}{
-		{"MariaDB names its unix socket", "mariadb", DatabaseEngineRefusalCredential, "unix socket"},
+		{"MariaDB says the operator's root is left alone", "mariadb", DatabaseEngineRefusalCredential, "root password alone"},
 		{"PostgreSQL names its postgres role", "postgresql", DatabaseEngineRefusalCredential, "postgres role"},
-		{"an unknown engine still gets an instruction", "mongodb", DatabaseEngineRefusalCredential, "root password"},
+		{"an unknown engine still gets an instruction", "mongodb", DatabaseEngineRefusalCredential, "CelikPanel's own account"},
 		{"an unreachable engine is told to start", "mariadb", DatabaseEngineRefusalUnreachable, "Start the engine"},
 		{"an unnamed refusal has no sentence", "mariadb", DatabaseEngineRefusalNone, ""},
 	}
@@ -103,17 +103,38 @@ func TestDatabaseEngineRefusalMessage(t *testing.T) {
 	}
 }
 
-// The product's position is stated where the operator reads it, not only in a
-// design note: every credential sentence says the panel does not set the
-// engine's root password, and every one of them names an action.
-func TestDatabaseCredentialMessagesStateThePosition(t *testing.T) {
+// R-057. These sentences used to end with "register the server in CelikPanel
+// again with that password", and this test used to require exactly that
+// phrase. It was an instruction with nowhere to be carried out: the server
+// list is filled by autodiscovery and there is no register-a-server screen.
+// What the sentences must do now is name an action the operator can actually
+// take, in CelikPanel, and none of them may send the operator off to set a
+// root password again.
+//
+// R-057. Bu cumleler eskiden "sunucuyu CelikPanel'de o parolayla yeniden
+// kaydedin" diye bitiyordu ve bu test tam olarak o ifadeyi zorunlu tutuyordu.
+// Yerine getirilecek yeri olmayan bir talimatti. Cumleler artik operatorun
+// gercekten yapabilecegi bir eylemi adlandirmalidir.
+func TestDatabaseCredentialMessagesNameAnActionInsideTheProduct(t *testing.T) {
 	for _, driverType := range []string{"mariadb", "postgresql", "mongodb"} {
 		message := DatabaseEngineRefusalMessage(driverType, DatabaseEngineRefusalCredential)
-		if !strings.Contains(message, "root password") {
-			t.Fatalf("%s message does not name the root password: %q", driverType, message)
+		if !strings.Contains(message, "CelikPanel's own account") {
+			t.Fatalf("%s message does not offer the panel's own account: %q", driverType, message)
 		}
-		if !strings.Contains(message, "register the server in CelikPanel again") {
-			t.Fatalf("%s message does not say what to do: %q", driverType, message)
+		if !strings.Contains(message, "username and password") {
+			t.Fatalf("%s message does not offer the other way in: %q", driverType, message)
+		}
+		// The dead end this entry exists to remove.
+		// Bu kaydin ortadan kaldirmak icin var oldugu cikmaz.
+		for _, gone := range []string{
+			"register the server in CelikPanel again",
+			"Give this server a root password",
+			"Give the postgres role a password",
+			"Give the server a root password",
+		} {
+			if strings.Contains(message, gone) {
+				t.Fatalf("%s message still sends the operator nowhere: %q", driverType, message)
+			}
 		}
 	}
 }

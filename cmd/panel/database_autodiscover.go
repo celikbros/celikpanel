@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 
@@ -33,17 +34,58 @@ func (p *Panel) ensureInstalledDBServers(ctx context.Context, subscriptionID int
 	if err := p.callAgentContext(ctx, "Agent.GetServices", &transport.Empty{}, &allServices); err != nil {
 		return fmt.Errorf("database server autodiscovery: list installed services: %w", err)
 	}
-	return reconcileInstalledDBServers(ctx, p.db.GetDB(), subscriptionID, allServices)
+	claimed, err := reconcileInstalledDBServers(ctx, p.db.GetDB(), subscriptionID, allServices)
+	if err != nil {
+		return err
+	}
+
+	// R-057. A row this function has just inserted is the panel claiming it
+	// can manage that engine - and until now the claim was false, because the
+	// row was born with no credential and a packaged engine refuses the empty
+	// one. So the moment the claim is made is the moment to make it true: the
+	// panel opens an account of its own on the engine, here, once.
+	//
+	// Once, and only for a row that did not exist a moment ago. Retrying on
+	// every listing would mean an engine that cannot be provisioned - one
+	// whose local door has been closed on purpose - being asked again every
+	// time anybody opens the page. An administrator can ask again explicitly,
+	// and the screen offers it; nothing has to nag.
+	//
+	// A failure here does not fail autodiscovery. The engine is installed and
+	// the row is correct either way, and a list that will not render because
+	// of a credential would be a worse thing to do than a card that says the
+	// account is not there yet.
+	//
+	// R-057. Bu islevin az once ekledigi bir satir, panelin o motoru
+	// yonetebilecegi iddiasidir - ve simdiye kadar bu iddia yanlisti. Iddianin
+	// kuruldugu an, onu dogru kilma anidir: panel motorda kendi hesabini acar,
+	// burada, bir kez. Buradaki bir basarisizlik autodiscovery'yi dusurmez.
+	if len(claimed) > 0 {
+		if err := p.provisionDatabaseAdminAccountsFor(ctx, subscriptionID, claimed); err != nil {
+			log.Printf(
+				"database server autodiscovery: could not open CelikPanel's own account on %s: %v",
+				strings.Join(claimed, ", "), err,
+			)
+		}
+	}
+	return nil
 }
 
+// reconcileInstalledDBServers returns the canonical names of the engines it
+// registered on this call - the rows that did not exist a moment ago. R-057
+// uses that to open the panel's own account exactly when the panel first
+// claims an engine, rather than on every listing.
+//
+// reconcileInstalledDBServers, bu cagride kaydettigi motorlarin kanonik
+// adlarini dondurur: bir an once var olmayan satirlari.
 func reconcileInstalledDBServers(
 	ctx context.Context,
 	db *sql.DB,
 	subscriptionID int,
 	allServices []core.Service,
-) error {
+) ([]string, error) {
 	if db == nil {
-		return fmt.Errorf("database server autodiscovery: database is unavailable")
+		return nil, fmt.Errorf("database server autodiscovery: database is unavailable")
 	}
 
 	// Map an installed engine's type name to its detected systemd unit.
@@ -63,12 +105,12 @@ func reconcileInstalledDBServers(
 		}
 	}
 	if len(detected) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("database server autodiscovery: begin reconciliation: %w", err)
+		return nil, fmt.Errorf("database server autodiscovery: begin reconciliation: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
 
@@ -80,22 +122,22 @@ func reconcileInstalledDBServers(
 		 JOIN database_server_types dst ON ds.type_id = dst.id
 		 WHERE ds.subscription_id = ?`, subscriptionID)
 	if err != nil {
-		return fmt.Errorf("database server autodiscovery: list registered engines: %w", err)
+		return nil, fmt.Errorf("database server autodiscovery: list registered engines: %w", err)
 	}
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
 			_ = rows.Close()
-			return fmt.Errorf("database server autodiscovery: read registered engine: %w", err)
+			return nil, fmt.Errorf("database server autodiscovery: read registered engine: %w", err)
 		}
 		existing[strings.ToLower(strings.TrimSpace(name))] = true
 	}
 	if err := rows.Err(); err != nil {
 		_ = rows.Close()
-		return fmt.Errorf("database server autodiscovery: iterate registered engines: %w", err)
+		return nil, fmt.Errorf("database server autodiscovery: iterate registered engines: %w", err)
 	}
 	if err := rows.Close(); err != nil {
-		return fmt.Errorf("database server autodiscovery: close registered engine rows: %w", err)
+		return nil, fmt.Errorf("database server autodiscovery: close registered engine rows: %w", err)
 	}
 
 	typeNames := make([]string, 0, len(detected))
@@ -104,6 +146,9 @@ func reconcileInstalledDBServers(
 	}
 	sort.Strings(typeNames)
 
+	// The engines this call registers, in the order they were registered.
+	// Bu cagride kaydedilen motorlar.
+	claimed := []string{}
 	for _, typeName := range typeNames {
 		svc := detected[typeName]
 		if existing[typeName] {
@@ -114,7 +159,7 @@ func reconcileInstalledDBServers(
 		if err := tx.QueryRowContext(ctx,
 			`SELECT id, display_name, default_port FROM database_server_types WHERE name = ?`, typeName,
 		).Scan(&typeID, &displayName, &port); err != nil {
-			return fmt.Errorf("database server autodiscovery: load %s engine metadata: %w", typeName, err)
+			return nil, fmt.Errorf("database server autodiscovery: load %s engine metadata: %w", typeName, err)
 		}
 		result, err := tx.ExecContext(ctx,
 			`INSERT OR IGNORE INTO database_servers
@@ -122,11 +167,14 @@ func reconcileInstalledDBServers(
 			 VALUES (?, ?, ?, ?, 'localhost', ?, 0, 'active')`,
 			subscriptionID, typeID, displayName, svc.Version, port)
 		if err != nil {
-			return fmt.Errorf("database server autodiscovery: register %s engine: %w", typeName, err)
+			return nil, fmt.Errorf("database server autodiscovery: register %s engine: %w", typeName, err)
 		}
 		affected, err := result.RowsAffected()
 		if err != nil {
-			return fmt.Errorf("database server autodiscovery: verify %s registration: %w", typeName, err)
+			return nil, fmt.Errorf("database server autodiscovery: verify %s registration: %w", typeName, err)
+		}
+		if affected == 1 {
+			claimed = append(claimed, typeName)
 		}
 		if affected == 0 {
 			var registered bool
@@ -137,10 +185,10 @@ func reconcileInstalledDBServers(
 					JOIN database_server_types dst ON dst.id = ds.type_id
 					WHERE ds.subscription_id = ? AND dst.name = ?
 				)`, subscriptionID, typeName).Scan(&registered); err != nil {
-				return fmt.Errorf("database server autodiscovery: verify ignored %s registration: %w", typeName, err)
+				return nil, fmt.Errorf("database server autodiscovery: verify ignored %s registration: %w", typeName, err)
 			}
 			if !registered {
-				return fmt.Errorf(
+				return nil, fmt.Errorf(
 					"database server autodiscovery: %s conflicts with existing localhost:%d metadata",
 					typeName,
 					port,
@@ -159,7 +207,7 @@ func reconcileInstalledDBServers(
 		   AND id = (SELECT MIN(id) FROM database_servers WHERE subscription_id = ?)
 		   AND NOT EXISTS (SELECT 1 FROM database_servers WHERE subscription_id = ? AND is_default = 1)`,
 		subscriptionID, subscriptionID, subscriptionID); err != nil {
-		return fmt.Errorf("database server autodiscovery: select default engine: %w", err)
+		return nil, fmt.Errorf("database server autodiscovery: select default engine: %w", err)
 	}
 
 	var defaultCount int
@@ -167,10 +215,10 @@ func reconcileInstalledDBServers(
 		`SELECT COUNT(*) FROM database_servers WHERE subscription_id = ? AND is_default = 1`,
 		subscriptionID,
 	).Scan(&defaultCount); err != nil {
-		return fmt.Errorf("database server autodiscovery: verify default engine: %w", err)
+		return nil, fmt.Errorf("database server autodiscovery: verify default engine: %w", err)
 	}
 	if defaultCount != 1 {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"database server autodiscovery: subscription %d has %d default engines; expected exactly one",
 			subscriptionID,
 			defaultCount,
@@ -178,7 +226,7 @@ func reconcileInstalledDBServers(
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("database server autodiscovery: commit reconciliation: %w", err)
+		return nil, fmt.Errorf("database server autodiscovery: commit reconciliation: %w", err)
 	}
-	return nil
+	return claimed, nil
 }
