@@ -13,7 +13,7 @@
           "web/src/components/Domains.tsx"
         ],
         "createdAt": "2026-09-03T07:54:54.074Z",
-        "reason": "Claude triage: line 203 is the loading spinner (rounded-full animate-spin border-b-2), a one-sided border on a circle is the spin indicator itself, not an accent border on a card; element predates this change (July 2026)"
+        "reason": "Claude triage: a one-sided border on a rounded-full element is the spin arc itself, not an accent border on a card - `animate-spin rounded-full border-b-2` is the loading indicator. Scoped per file and wildcarded because border-accent-on-rounded extracts no value, so a value-scoped ignore cannot match it. The product hand-rolls this same spinner 61 times across 38 files, which is why the entry list grows one file at a time; recorded as R-064. When the spinner becomes one component these entries collapse into one."
       },
       {
         "rule": "border-accent-on-rounded",
@@ -22,7 +22,34 @@
           "web/src/components/ServiceShell.tsx"
         ],
         "createdAt": "2026-09-04T06:12:10.350Z",
-        "reason": "Claude triage: line 348 is the loading spinner (rounded-full animate-spin border-b-2); a one-sided border on a circle is the spin arc itself, not an accent border on a card. Same false positive already sanctioned for Domains.tsx."
+        "reason": "Claude triage: a one-sided border on a rounded-full element is the spin arc itself, not an accent border on a card - `animate-spin rounded-full border-b-2` is the loading indicator. Scoped per file and wildcarded because border-accent-on-rounded extracts no value, so a value-scoped ignore cannot match it. The product hand-rolls this same spinner 61 times across 38 files, which is why the entry list grows one file at a time; recorded as R-064. When the spinner becomes one component these entries collapse into one."
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "web/src/App.tsx"
+        ],
+        "createdAt": "2026-09-06T12:02:17.902Z",
+        "reason": "Claude triage: a one-sided border on a rounded-full element is the spin arc itself, not an accent border on a card - `animate-spin rounded-full border-b-2` is the loading indicator. Scoped per file and wildcarded because border-accent-on-rounded extracts no value, so a value-scoped ignore cannot match it. The product hand-rolls this same spinner 61 times across 38 files, which is why the entry list grows one file at a time; recorded as R-064. When the spinner becomes one component these entries collapse into one."
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "web/src/i18n/index.tsx"
+        ],
+        "createdAt": "2026-09-06T12:02:17.902Z",
+        "reason": "Claude triage: a one-sided border on a rounded-full element is the spin arc itself, not an accent border on a card - `animate-spin rounded-full border-b-2` is the loading indicator. Scoped per file and wildcarded because border-accent-on-rounded extracts no value, so a value-scoped ignore cannot match it. The product hand-rolls this same spinner 61 times across 38 files, which is why the entry list grows one file at a time; recorded as R-064. When the spinner becomes one component these entries collapse into one."
+      },
+      {
+        "rule": "overused-font",
+        "value": "Open Sans",
+        "files": [
+          "web/src/index.css"
+        ],
+        "createdAt": "2026-09-06T12:10:00.000Z",
+        "reason": "Claude triage, sanctioned exception: the two Open Sans @font-face rules are the cPanel skin, where matching that product's face is the point, and they are split into latin / latin-ext subsets precisely so Turkish characters render without pulling the whole face. Self-hosted so the panel renders offline. Scoped to index.css: a new overused face anywhere else still reports. Inter is deliberately NOT ignored - that one is a live question about the panel's own face, not a false positive."
       }
     ]
   }
