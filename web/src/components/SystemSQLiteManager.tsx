@@ -18,6 +18,12 @@ interface SystemDatabase {
     modified_at: string;
     journal_mode: string;
     user_version: number;
+    // What THIS PRODUCT means by a schema version, which is not user_version:
+    // the panel's own database keeps its version in a table, and its pragma is
+    // nothing because nothing sets it. Absent when the product has no version
+    // of its own to give.
+    // Bu URUNUN sema surumu derken kastettigi sey; user_version degil.
+    schema_version?: number;
     status: string;
     status_message: string;
     actions: string[];
@@ -238,11 +244,37 @@ export function SystemSQLiteManager() {
                                         </span>
                                     </div>
 
+                                    {/* A file that is not there because the thing that
+                                        writes it was never installed is not a warning.
+                                        On a healthy new server three of these four
+                                        databases legitimately do not exist, and drawing
+                                        three yellow warning boxes on a server with
+                                        nothing wrong teaches an operator to stop reading
+                                        yellow boxes - which is the one habit a warning
+                                        cannot afford to teach.
+
+                                        The panel's own database is the exception: if
+                                        that one is missing, something is wrong, and the
+                                        operator is looking at a screen the panel drew
+                                        from it.
+
+                                        Yazicisi hic kurulmadigi icin var olmayan bir
+                                        dosya bir uyari degildir. Saglikli yeni bir
+                                        sunucuda bu dortten ucu mesru sekilde yoktur ve
+                                        hicbir sorunu olmayan bir sunucuda uc sari kutu
+                                        cizmek, operatore sari kutulari okumamayi
+                                        ogretir. Panelin kendi veritabani istisnadir. */}
                                     {!database.available && (
-                                        <div className={'mt-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning'}>
-                                            <AlertTriangle className={'mt-0.5 h-4 w-4 shrink-0'} />
-                                            <span>{localizedStatusMessage || t('systemDb.unavailable')}</span>
-                                        </div>
+                                        database.id === 'panel' ? (
+                                            <div className={'mt-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning'}>
+                                                <AlertTriangle className={'mt-0.5 h-4 w-4 shrink-0'} />
+                                                <span>{localizedStatusMessage || t('systemDb.unavailable')}</span>
+                                            </div>
+                                        ) : (
+                                            <p className={'mt-4 text-sm text-fg-muted'}>
+                                                {localizedStatusMessage || t('systemDb.unavailable')}
+                                            </p>
+                                        )
                                     )}
 
                                     {database.available && localizedStatusMessage && (
@@ -254,7 +286,13 @@ export function SystemSQLiteManager() {
                                         <Metadata label={t('systemDb.size')} value={formatBytes(database.size_bytes, t('systemDb.unknown'))} />
                                         <Metadata label={t('systemDb.modified')} value={formatDate(database.modified_at, locale, t('systemDb.unknown'))} />
                                         <Metadata label={t('systemDb.journalMode')} value={database.journal_mode || t('systemDb.unknown')} mono />
-                                        <Metadata label={t('systemDb.userVersion')} value={String(database.user_version ?? 0)} mono />
+                                        <Metadata
+                                            label={t('systemDb.userVersion')}
+                                            value={database.schema_version === undefined
+                                                ? t('systemDb.unknown')
+                                                : String(database.schema_version)}
+                                            mono
+                                        />
                                         <Metadata label={t('systemDb.kind')} value={localizedKind} />
                                     </dl>
 

@@ -166,6 +166,27 @@ func (d *MariaDBDriver) TestConnection() error {
 	return nil
 }
 
+// ServerVersion asks MariaDB what it is. The client prints a header line
+// before the value in batch mode, which is why the answer is the first
+// non-empty line after it rather than the first line.
+// ServerVersion, MariaDB'ye ne oldugunu sorar.
+func (d *MariaDBDriver) ServerVersion() (string, error) {
+	output, err := d.runSQL(`SELECT VERSION();`)
+	if err != nil {
+		return ``, err
+	}
+	lines := strings.Split(string(output), "\n")
+	for i, line := range lines {
+		if i == 0 {
+			continue // the column name
+		}
+		if trimmed := strings.TrimSpace(line); trimmed != `` {
+			return trimmed, nil
+		}
+	}
+	return ``, fmt.Errorf(`MariaDB reported no version`)
+}
+
 // CreateDatabase creates a MariaDB database
 func (d *MariaDBDriver) CreateDatabase(name string) error {
 	ident, err := QuoteMySQLIdentifier(name)

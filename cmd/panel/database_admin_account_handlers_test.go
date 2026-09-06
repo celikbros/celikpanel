@@ -17,6 +17,7 @@ import (
 	paneldb "github.com/alicelik/celikpanel/internal/db"
 	"github.com/alicelik/celikpanel/internal/repositories"
 	"github.com/alicelik/celikpanel/internal/secrets"
+	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -560,3 +561,74 @@ func TestACustomerWithNoSubscriptionIsNotGivenOne(t *testing.T) {
 		t.Fatalf("a customer's listing created %d subscriptions", count)
 	}
 }
+
+// R-069. The databases screen said "unknown" beside a MariaDB the panel had
+// installed itself and was connected to. The version came from the service
+// scan, which reports "unknown" for an engine it can see running; the panel
+// could always have asked the engine, and since R-057 it has an account to ask
+// with.
+//
+// R-069. Veritabanlari ekrani, panelin kendi kurdugu ve bagli oldugu bir
+// MariaDB'nin yaninda "unknown" yaziyordu.
+func TestThePanelAsksTheEngineWhatItIsInsteadOfSayingUnknown(t *testing.T) {
+	agent := &databaseAdminAccountAgent{services: []core.Service{
+		// What the scan actually reports for a running engine.
+		// Taramanin calisan bir motor icin gercekten bildirdigi sey.
+		{Name: "mariadb.service", Version: "unknown", Status: "running"},
+	}}
+	panel, _ := newDatabaseAdminAccountFixture(t, agent)
+
+	previous := newDatabaseDriver
+	newDatabaseDriver = func(services.DriverConfig) (services.DatabaseDriver, error) {
+		return &versionAnsweringDriver{version: "11.8.6-MariaDB-0+deb13u1"}, nil
+	}
+	t.Cleanup(func() { newDatabaseDriver = previous })
+
+	if err := panel.ensureInstalledDBServers(
+		context.Background(), adminAccountSubscriptionID); err != nil {
+		t.Fatal(err)
+	}
+	if got := onlyDatabaseServer(t, panel).Version; got != "11.8.6-MariaDB-0+deb13u1" {
+		t.Fatalf("recorded version %q, want what the engine answered", got)
+	}
+}
+
+// An engine that will not say is left as it was. A version is a decoration on
+// a screen; the account beside it is not, and one must not cost the other.
+// Soylemeyen bir motor oldugu gibi birakilir.
+func TestAnEngineThatWillNotSayItsVersionCostsNothingElse(t *testing.T) {
+	agent := &databaseAdminAccountAgent{services: adminAccountServices()}
+	panel, _ := newDatabaseAdminAccountFixture(t, agent)
+
+	previous := newDatabaseDriver
+	newDatabaseDriver = func(services.DriverConfig) (services.DatabaseDriver, error) {
+		return &versionAnsweringDriver{err: errors.New("the engine would not say")}, nil
+	}
+	t.Cleanup(func() { newDatabaseDriver = previous })
+
+	if err := panel.ensureInstalledDBServers(
+		context.Background(), adminAccountSubscriptionID); err != nil {
+		t.Fatalf("a silent version failed the provisioning it decorates: %v", err)
+	}
+	server := onlyDatabaseServer(t, panel)
+	if server.AdminUsername != transport.DatabaseAdminAccountName {
+		t.Fatal("the account was lost because a version could not be read")
+	}
+}
+
+type versionAnsweringDriver struct {
+	version string
+	err     error
+}
+
+func (d *versionAnsweringDriver) ServerVersion() (string, error)               { return d.version, d.err }
+func (d *versionAnsweringDriver) TestConnection() error                        { return nil }
+func (d *versionAnsweringDriver) CreateDatabase(string) error                  { return nil }
+func (d *versionAnsweringDriver) DeleteDatabase(string) error                  { return nil }
+func (d *versionAnsweringDriver) ListDatabases() ([]string, error)             { return nil, nil }
+func (d *versionAnsweringDriver) CreateUser(string, string) error              { return nil }
+func (d *versionAnsweringDriver) DeleteUser(string) error                      { return nil }
+func (d *versionAnsweringDriver) ChangePassword(string, string) error          { return nil }
+func (d *versionAnsweringDriver) ListUsers() ([]string, error)                 { return nil, nil }
+func (d *versionAnsweringDriver) GrantPrivileges(string, string, string) error { return nil }
+func (d *versionAnsweringDriver) RevokePrivileges(string, string) error        { return nil }

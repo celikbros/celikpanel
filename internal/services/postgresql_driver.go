@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -68,6 +69,22 @@ func (d *PostgreSQLDriver) TestConnection() error {
 		return fmt.Errorf("PostgreSQL connection failed: %w", err)
 	}
 	return nil
+}
+
+// ServerVersion asks PostgreSQL what it is. `SHOW server_version` gives the
+// number alone; `SELECT version()` would give a sentence about the compiler.
+// ServerVersion, PostgreSQL'e ne oldugunu sorar.
+func (d *PostgreSQLDriver) ServerVersion() (string, error) {
+	db, err := d.getDB("postgres")
+	if err != nil {
+		return "", fmt.Errorf("open PostgreSQL control database for version: %w", err)
+	}
+	defer db.Close()
+	var version string
+	if err := db.QueryRow("SHOW server_version").Scan(&version); err != nil {
+		return "", fmt.Errorf("read PostgreSQL version: %w", err)
+	}
+	return strings.TrimSpace(version), nil
 }
 
 // CreateDatabase creates a PostgreSQL database

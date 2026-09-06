@@ -107,6 +107,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-066 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Başka bir makinedeki veritabanı motoru hiç kaydedilemiyor: liste yalnızca bu makinenin otomatik keşfiyle doluyor ve kimlik bilgisiyle uzak sunucu kabul eden uç noktaya yalnızca API'den ulaşılabiliyor |
 | R-067 | Yüksek | GERÇEK MAKİNEDE BULUNDU VE DÜZELTİLDİ | Yeni kurulmuş bir sunucuda veritabanı bölümünün tamamı erişilemezdi: panel MariaDB'yi kurdu, çalıştığını gördü ve sonra yöneticiye hiçbir veritabanı motoru kurulu olmadığını söyledi |
 | R-068 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Agent, bir makine değişikliğinin neden başlayamadığını tam olarak biliyor - paket yöneticisi, başka bir değişiklik ya da tutulan bir kilit - ve operatöre üçünü birden kapsayan tek bir cümle söyleniyor |
+| R-069 | Orta | OPERATÖR BULDU VE DÜZELTİLDİ | Ekranın, ürünün daha iyi bildiği bir şeyi yazdığı üç yer: 38'de olan bir veritabanı için 0 şema sürümü, panelin kurduğu ve bağlı olduğu bir motorun yanında "unknown", ve sağlıklı yeni bir sunucuda üç sarı uyarı |
 
 ## Ayrıntılı riskler
 
@@ -2788,6 +2789,43 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   hesaplanıyor ve ona ihtiyacı olan kişiye giderken atılıyor. Yüksek değil
   Düşük; çünkü burada atılan sebep, motorun kendi sözleri değil adlandırılmış
   üç olasılıktan biri ve yedek cümle en azından doğru.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-069 - Ürünün daha iyi bildiğini yazan ekranlar
+
+- Kanıt: 6 Eylül 2026, kabul turundan sonra operatörün kendi tarayıcısı — bu
+  ekranlara bir insanın ilk kez baktığı an. Üç bulgu, tek aile: her birinde
+  yanıt ürünün içinde vardı ve ekran başka bir şey gösteriyordu.
+- **38'de olan bir veritabanı için 0 şema sürümü.** Sistem SQLite ekranı bir
+  alanı "Şema sürümü" diye etiketleyip SQLite'ın `PRAGMA user_version`
+  değerinden dolduruyordu. Bu üründe hiçbir şey o pragma'yı panel veritabanında
+  belirlemiyor; sürüm `schema_migrations` tablosunda duruyor ve
+  `/api/v1/panel/version` tam o anda **38** bildiriyordu. Aynı ada sahip iki
+  farklı sayı ve ekranda anlamsız olanı. Boştan da kötü: sıfır, bir cevap gibi
+  okunur.
+- **Panelin kurduğu bir motorun yanında "unknown".** Kayıtlı bir veritabanı
+  sunucusunun sürümü servis taramasından geliyordu; o da çalıştığını gördüğü
+  bir motor için "unknown" bildiriyor. Panel o MariaDB'yi kendi kurmuştu,
+  üzerinde hesabı vardı ve onunla konuşuyordu.
+  - Sorarak düzeltildi. Sürücü arayüzü `ServerVersion()` kazandı ve panel kendi
+    hesabını açarken soruyor. Bu ancak R-057 sayesinde mümkün: ondan önce
+    panelin soracak bir kimlik bilgisi yoktu. Bilerek en-iyi-çaba: az önce bir
+    makinede hesap açıldı ve bunu bir sürüm dizgesi okunamadı diye
+    kaydetmemek, önemli yarısını süslü yarısı için vermek olurdu.
+- **Hiçbir sorunu olmayan bir sunucuda üç sarı uyarı.** Taze bir kurulumda
+  PowerDNS, Roundcube ve bileşen kataloğu dosyaları meşru olarak yoktur ve her
+  biri bunu söyleyen bir uyarı kutusu çiziyordu. Beklenen bir yokluğa uyarı
+  vermek, operatöre uyarıları okumamayı öğretir; bu da bir uyarının göze
+  alamayacağı tek alışkanlıktır.
+  - O yoklukları düz bir olgu olarak söyleyerek düzeltildi. Panelin kendi
+    veritabanı uyarı olarak kalıyor: o yoksa bir şey yanlıştır.
+- **Açık bırakıldı, çünkü kararı operatörün.** Sistem SQLite sekmesi,
+  müşterilerin veritabanlarının yanında, Veritabanları sayfasında duruyor.
+  Ürünün kendi menüsü zaten HOSTING ve SERVER diye ayrılmış ve panelin kendi
+  makinesi sunucu tarafının işi. Göstermek doğru — kontrol düzlemi
+  veritabanının bütünlüğünü kabuk açmadan denetleyebilmek gerçek bir ihtiyaç ve
+  bu ürünün en kötü arıza türü tam olarak o dosyadır — ama bulunduğu sayfa bir
+  barındırma sayfası. Taşınmadı; operatör karar vermedi.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

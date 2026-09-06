@@ -39,20 +39,39 @@ type DatabaseRequest struct {
 }
 
 type DatabaseInfo struct {
-	ID            string     `json:"id"`
-	Name          string     `json:"name"`
-	Purpose       string     `json:"purpose"`
-	Kind          string     `json:"kind"`
-	Mutable       bool       `json:"mutable"`
-	Available     bool       `json:"available"`
-	PathHint      string     `json:"path_hint"`
-	SizeBytes     int64      `json:"size_bytes,omitempty"`
-	ModifiedAt    *time.Time `json:"modified_at,omitempty"`
-	JournalMode   string     `json:"journal_mode,omitempty"`
-	UserVersion   int        `json:"user_version"`
-	Status        string     `json:"status"`
-	StatusMessage string     `json:"status_message,omitempty"`
-	Actions       []string   `json:"actions"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Purpose     string     `json:"purpose"`
+	Kind        string     `json:"kind"`
+	Mutable     bool       `json:"mutable"`
+	Available   bool       `json:"available"`
+	PathHint    string     `json:"path_hint"`
+	SizeBytes   int64      `json:"size_bytes,omitempty"`
+	ModifiedAt  *time.Time `json:"modified_at,omitempty"`
+	JournalMode string     `json:"journal_mode,omitempty"`
+	UserVersion int        `json:"user_version"`
+	// SchemaVersion is the version THIS PRODUCT means when it says schema
+	// version, which is not the same number as UserVersion above.
+	//
+	// UserVersion is SQLite's own `PRAGMA user_version`: an integer a program
+	// may set in the file, and which CelikPanel sets only on the component
+	// catalogue. The panel's own database keeps its version in the
+	// schema_migrations table instead - it was 38 while the screen, reading
+	// the pragma nobody had set, showed 0 under the words "Schema version".
+	//
+	// So this field carries the number the product actually has, and is nil
+	// where there is none. A screen must show nothing rather than a zero: a
+	// zero looks like an answer.
+	//
+	// SchemaVersion, BU URUNUN sema surumu derken kastettigi sayidir ve
+	// yukaridaki UserVersion ile ayni sayi degildir. Panelin kendi veritabani
+	// surumunu schema_migrations tablosunda tutar; ekran ise kimsenin
+	// belirlemedigi pragma'yi okuyup "Sema surumu" yazisinin altinda 0
+	// gosteriyordu. Deger yoksa nil kalir: sifir, bir cevap gibi gorunur.
+	SchemaVersion *int     `json:"schema_version,omitempty"`
+	Status        string   `json:"status"`
+	StatusMessage string   `json:"status_message,omitempty"`
+	Actions       []string `json:"actions"`
 }
 
 type ListResponse struct {

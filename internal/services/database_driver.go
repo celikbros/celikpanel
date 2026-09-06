@@ -11,6 +11,18 @@ type DatabaseDriver interface {
 	// Connection
 	TestConnection() error
 
+	// ServerVersion asks the engine what it is. The panel used to take this
+	// from the service scan, which reports "unknown" for an engine it can see
+	// running - so the databases screen said "unknown" beside a MariaDB the
+	// panel had installed and was connected to. Now that the panel has an
+	// account on the engine (R-057), it can ask instead of guessing.
+	//
+	// ServerVersion, motora ne oldugunu sorar. Panel bunu servis taramasindan
+	// aliyordu; o da calistigini gordugu bir motor icin "unknown" bildiriyordu.
+	// Panelin artik motorda bir hesabi oldugu icin tahmin etmek yerine
+	// sorabilir.
+	ServerVersion() (string, error)
+
 	// Database operations
 	CreateDatabase(name string) error
 	DeleteDatabase(name string) error

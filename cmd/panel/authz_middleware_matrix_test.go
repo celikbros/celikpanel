@@ -39,6 +39,7 @@ type authzGrantIsolationDriver struct {
 }
 
 func (d *authzGrantIsolationDriver) TestConnection() error                 { return nil }
+func (d *authzGrantIsolationDriver) ServerVersion() (string, error)        { return "", nil }
 func (d *authzGrantIsolationDriver) CreateDatabase(string) error           { return nil }
 func (d *authzGrantIsolationDriver) DeleteDatabase(string) error           { return nil }
 func (d *authzGrantIsolationDriver) ListDatabases() ([]string, error)      { return nil, nil }

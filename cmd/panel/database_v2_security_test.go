@@ -49,7 +49,8 @@ type recordingDatabaseDriver struct {
 	revokeErr           error
 }
 
-func (d *recordingDatabaseDriver) TestConnection() error { return nil }
+func (d *recordingDatabaseDriver) TestConnection() error          { return nil }
+func (d *recordingDatabaseDriver) ServerVersion() (string, error) { return "", nil }
 func (d *recordingDatabaseDriver) CreateDatabase(name string) error {
 	d.createDatabaseCalls++
 	d.events = append(d.events, "create-database:"+name)
