@@ -177,6 +177,41 @@ const vpnHostRestartRequiredMessage = "This server is running a kernel whose mod
 	"kernel and this server has not been restarted since. Restart this server, then " +
 	"set the VPN up again."
 
+// R-058. The reason an operator is given must be the reason the record keeps.
+// The restart sentence reached the HTTP body and the panel journal while the
+// durable job kept "The privileged host operation did not complete." - the
+// framework's own words, true of every failed host mutation and therefore
+// silent about this one. R-056 built the way to say otherwise; this attaches
+// it. The sentence is the panel's own, the same one the 409 carries, so the
+// ledger and the answer cannot drift apart. R-056's rule is untouched: a lost
+// or unverifiable lease still keeps the generic words, because then the panel
+// genuinely does not know whether the work ran.
+//
+// R-058. Operatore verilen sebep, kaydin tuttugu sebep olmalidir. Yeniden
+// baslatma cumlesi HTTP govdesine ve panel gunlugune ulasiyordu; kalici is ise
+// "Ayricalikli makine islemi tamamlanmadi" tutuyordu - her basarisiz mutasyon
+// icin dogru, dolayisiyla bu is hakkinda sessiz. Cumle panelin kendisinindir ve
+// 409'un tasidigi cumleyle aynidir; boylece defter ile yanit ayrisamaz.
+func namedVPNHostRestartFailure(cause error) error {
+	return namedHostOperationFailure(vpnHostRestartRequiredMessage, cause)
+}
+
+// R-058, the other half. `POST /api/v1/vpn/sync` answered 500 INTERNAL on a
+// host where the VPN was never set up - the opaque shape R-054 named as a
+// defect in its own right. The endpoint knows why it refused, so it says so,
+// with the treatment the setup path already has: the agent proves the
+// structural fact, the panel authors the sentence, and the answer names both
+// what is wrong and what to do about it.
+//
+// R-058'in diger yarisi. VPN hic kurulmamis bir makinede `/vpn/sync` opak bir
+// 500 donuyordu. Uc, neden reddettigini biliyor; kurulum yolunun zaten sahip
+// oldugu davranisla soyluyor: yapisal olguyu agent kanitlar, cumleyi panel
+// yazar, yanit neyin yanlis oldugunu ve ne yapilacagini birlikte adlandirir.
+var errVPNNotSetUp = errors.New("this server has no VPN server to synchronize")
+
+const vpnNotSetUpMessage = "This server has no VPN server yet, so there are no " +
+	"peers to synchronize. Set the VPN up first, then synchronize the peers."
+
 // writeVPNHostRestartRequired answers the one refusal that has a single fixed
 // remedy. It returns false when the failure is anything else, so the caller
 // falls back to its ordinary error path.
@@ -189,6 +224,29 @@ func writeVPNHostRestartRequired(w http.ResponseWriter, err error) bool {
 	writeCodedError(w, http.StatusConflict, errCodeVPNHostRestartRequired,
 		vpnHostRestartRequiredMessage, "")
 	return true
+}
+
+// writeVPNNotSetUp answers a peer synchronization asked of a server that has no
+// VPN server on it. Like the restart refusal it is a state conflict, not an
+// internal error, and it names the step that comes first.
+// writeVPNNotSetUp, uzerinde VPN sunucusu olmayan bir sunucudan istenen peer
+// esitlemesini yanitlar. Ic hata degil, bir durum catismasidir.
+func writeVPNNotSetUp(w http.ResponseWriter, err error) bool {
+	if !errors.Is(err, errVPNNotSetUp) {
+		return false
+	}
+	log.Printf("[409][vpn] %v", err)
+	writeCodedError(w, http.StatusConflict, errCodeVPNNotSetUp,
+		vpnNotSetUpMessage, "")
+	return true
+}
+
+// writeVPNRefusal answers every VPN refusal the panel can name, so no caller
+// has to remember the list. False means the failure has no name yet and the
+// caller's ordinary error path is still the right one.
+// writeVPNRefusal, panelin adlandirabildigi her VPN reddini yanitlar.
+func writeVPNRefusal(w http.ResponseWriter, err error) bool {
+	return writeVPNHostRestartRequired(w, err) || writeVPNNotSetUp(w, err)
 }
 
 // handleVPNSetup starts the fixed WireGuard service and restores the complete
@@ -229,9 +287,9 @@ func (p *Panel) handleVPNSetup(w http.ResponseWriter, r *http.Request) {
 			}
 			if response.Error != "" {
 				if response.HostRestartRequired {
-					return fmt.Errorf(
+					return namedVPNHostRestartFailure(fmt.Errorf(
 						"VPN setup: %s: %w", response.Error, errVPNHostRestartRequired,
-					)
+					))
 				}
 				return fmt.Errorf("VPN setup: %s", response.Error)
 			}
@@ -239,7 +297,7 @@ func (p *Panel) handleVPNSetup(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
-		if writeVPNHostRestartRequired(w, err) {
+		if writeVPNRefusal(w, err) {
 			return
 		}
 		writeAgentError(w, err, "VPN")
@@ -250,7 +308,7 @@ func (p *Panel) handleVPNSetup(w http.ResponseWriter, r *http.Request) {
 	// Kurulum tek bir kalıcı agent mutasyonuna sahiptir. Eşitleme bu kira
 	// bırakıldıktan sonra, panel düzeyindeki VPN kilidi sıralamayı sürdürürken başlar.
 	if err := p.syncVPNPeersLocked(r.Context()); err != nil {
-		if writeVPNHostRestartRequired(w, err) {
+		if writeVPNRefusal(w, err) {
 			return
 		}
 		writeAgentError(w, err, "VPN")
@@ -393,8 +451,13 @@ func (p *Panel) syncVPNPeersGenerationLocked(ctx context.Context, retries int) e
 			}
 			if response.Error != "" {
 				if response.HostRestartRequired {
-					return fmt.Errorf(
+					return namedVPNHostRestartFailure(fmt.Errorf(
 						"peer sync: %s: %w", response.Error, errVPNHostRestartRequired,
+					))
+				}
+				if response.NotConfigured {
+					return fmt.Errorf(
+						"peer sync: %s: %w", response.Error, errVPNNotSetUp,
 					)
 				}
 				return fmt.Errorf("peer sync: %s", response.Error)
@@ -564,7 +627,7 @@ func (p *Panel) handleVPNSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := p.syncVPNPeers(r.Context()); err != nil {
-		if writeVPNHostRestartRequired(w, err) {
+		if writeVPNRefusal(w, err) {
 			return
 		}
 		writeAgentError(w, err, "VPN")

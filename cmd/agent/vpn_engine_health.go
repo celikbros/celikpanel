@@ -1,6 +1,9 @@
 package main
 
-import "errors"
+import (
+	"errors"
+	"io/fs"
+)
 
 // R-055. WireGuard is a kernel module with a userspace client, so the VPN
 // meets the same machine fault the firewall met in R-054: an install's
@@ -96,4 +99,20 @@ func vpnHostRestartRequired(err error) bool {
 		return hostErr.restartRequired
 	}
 	return false
+}
+
+// R-058. There being no VPN server on this host is a fact about the filesystem
+// - the configuration the sync would amend is not there - and it is read that
+// way rather than from a message. A configuration that exists and cannot be
+// read is a different fault: a directory whose permissions are wrong, a file
+// that failed its security validation, a read that raced a writer. Those must
+// not be reported as "not set up", because the answer to them is not "set the
+// VPN up".
+//
+// R-058. Bu makinede VPN sunucusu olmamasi dosya sistemine dair bir olgudur -
+// esitlemenin degistirecegi yapilandirma orada degildir - ve bir mesajdan degil
+// bu yoldan okunur. Var olup okunamayan bir yapilandirma baska bir arizadir ve
+// "kurulu degil" diye bildirilmemelidir; cunku cozumu "VPN'i kurun" degildir.
+func vpnConfigurationAbsent(err error) bool {
+	return errors.Is(err, fs.ErrNotExist)
 }

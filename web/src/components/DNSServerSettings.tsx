@@ -7,7 +7,12 @@ import { dnsEngineText } from '../i18n/dnsEngine';
 import { Button, ErrorBanner, Field, inputClass, StatusDot } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import type { DNSEngineSnapshot } from '../lib/dnsEngineContract';
-import { dnsEngineSettingsFlow, exactStagedIdentityIsCurrent } from '../lib/dnsIdentityPlan';
+import {
+    dnsEngineIdentityStagesATakeover,
+    dnsEngineMutationsHeld,
+    dnsEngineSettingsFlow,
+    exactStagedIdentityIsCurrent,
+} from '../lib/dnsIdentityPlan';
 import { HelpButton } from './HelpDrawer';
 import { DNSEngineCard } from './DNSEngineCard';
 
@@ -180,6 +185,28 @@ export function DNSServerSettings() {
         : null;
     const legacyPowerDNSReconfigureStaging = settingsFlow === 'legacyPowerDNSReconfigure';
     const identityStaging = settingsFlow === 'identityStaging' || legacyPowerDNSReconfigureStaging;
+    // R-049's leftover: on the takeover route the step after this panel adopts
+    // a DNS server that is already here and installs nothing, so the panel must
+    // not call it an installation. One fact, read from the snapshot the screen
+    // already has, threaded into the component that renders the sentence.
+    //
+    // R-049'un artigi: devralma yolunda bu panelden sonraki adim, burada zaten
+    // var olan bir DNS sunucusunu devralir ve hicbir sey kurmaz.
+    const identityStagesATakeover = dnsEngineIdentityStagesATakeover(engine);
+    // R-050, the sentence half. A held host reaches manual recovery honestly -
+    // there is nothing to offer while every change is refused - but manual
+    // recovery's own words are about a DNS server somebody else configured, and
+    // they send the operator to correct it outside CelikPanel. On a host whose
+    // engine reads unmanaged only because the panel's change system is held,
+    // that is the wrong diagnosis with the wrong remedy attached, and it is the
+    // same false claim the takeover offer was making. The hold names itself.
+    //
+    // R-050'nin cumle yarisi. Tutulan bir makine manuel kurtarmaya durustce
+    // ulasir - her degisiklik reddedilirken sunulacak bir sey yoktur - ama
+    // manuel kurtarmanin sozleri baskasinin yapilandirdigi bir DNS sunucusuna
+    // dairdir ve operatoru onu CelikPanel disinda duzeltmeye yollar. Tutma
+    // kendini adlandirir.
+    const mutationsHeld = dnsEngineMutationsHeld(engine);
     const manualRecovery = settingsFlow === 'manualRecovery';
     const actionsLocked = settingsFlow === 'unavailable' || manualRecovery || settingsFlow === 'locked';
     const identityPlanScope = identityStaging && engine
@@ -204,6 +231,7 @@ export function DNSServerSettings() {
                         activeEngine={activeEngine}
                         stagingOnly
                         legacyPowerDNSReconfigure={legacyPowerDNSReconfigureStaging}
+                        takeover={identityStagesATakeover}
                         pairRole={engine?.pair_role}
                         onIdentityStaged={() => setEngineRefreshKey((current) => current + 1)}
                         onIdentityPlanCurrentChange={handleIdentityPlanCurrentChange}
@@ -229,7 +257,9 @@ export function DNSServerSettings() {
             ) : (
                 <section
                     className="rounded-xl border border-border bg-surface p-4 sm:p-6"
-                    data-testid={manualRecovery ? 'dns-manual-recovery' : undefined}
+                    data-testid={manualRecovery
+                        ? (mutationsHeld ? 'dns-mutations-held' : 'dns-manual-recovery')
+                        : undefined}
                 >
                     <div className="flex items-start gap-3">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
@@ -238,12 +268,16 @@ export function DNSServerSettings() {
                         <div className="min-w-0">
                             <h2 className="text-base font-semibold text-fg">
                                 {manualRecovery
-                                    ? et('dnsEngine.manualRecoveryTitle')
+                                    ? mutationsHeld
+                                        ? et('dnsEngine.heldTitle')
+                                        : et('dnsEngine.manualRecoveryTitle')
                                     : et('dnsEngine.topologyEditorTitle')}
                             </h2>
                             <p className="mt-1 text-sm leading-relaxed text-fg-muted">
                                 {manualRecovery
-                                    ? et('dnsEngine.manualRecoveryDescription')
+                                    ? mutationsHeld
+                                        ? et('dnsEngine.blocker.mutationsHeld')
+                                        : et('dnsEngine.manualRecoveryDescription')
                                     : engine?.active_engine === 'bind'
                                     ? et('dnsEngine.topologyEditorBind')
                                     : engine?.state === 'switching'
@@ -264,6 +298,7 @@ function DNSInfrastructureSettings({
 	activeEngine,
 	stagingOnly,
 	legacyPowerDNSReconfigure,
+	takeover = false,
 	pairRole,
 	onIdentityStaged,
 	onIdentityPlanCurrentChange,
@@ -271,6 +306,12 @@ function DNSInfrastructureSettings({
 	activeEngine: ActiveDNSEngine | null;
 	stagingOnly: boolean;
 	legacyPowerDNSReconfigure: boolean;
+	// takeover: the operation this identity is being staged for adopts a DNS
+	// server already on this host instead of installing one. It changes what
+	// this panel says and nothing else.
+	// takeover: bu kimligin hazirlandigi islem, bir sunucu kurmak yerine bu
+	// makinede zaten var olan bir DNS sunucusunu devralir.
+	takeover?: boolean;
 	pairRole?: 'primary' | 'secondary';
 	onIdentityStaged: () => void;
 	onIdentityPlanCurrentChange: (current: boolean) => void;
@@ -703,12 +744,16 @@ function DNSInfrastructureSettings({
                     <p className="text-sm font-semibold text-fg">
                         {legacyPowerDNSReconfigure
                             ? et('dnsEngine.identity.legacyReconfigureTitle')
-                            : et('dnsEngine.identity.stageTitle')}
+                            : takeover
+                              ? et('dnsEngine.identity.takeoverStageTitle')
+                              : et('dnsEngine.identity.stageTitle')}
                     </p>
                     <p className="mt-1 text-xs leading-relaxed text-fg-muted">
                         {legacyPowerDNSReconfigure
                             ? et('dnsEngine.identity.legacyReconfigureDescription')
-                            : et('dnsEngine.identity.stageDescription')}
+                            : takeover
+                              ? et('dnsEngine.identity.takeoverStageDescription')
+                              : et('dnsEngine.identity.stageDescription')}
                     </p>
                 </div>
             )}

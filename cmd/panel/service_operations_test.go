@@ -132,6 +132,10 @@ type ServiceOperationVPNResponse struct {
 	Created bool
 	Detail  string
 	Error   string
+	// HostRestartRequired mirrors transport.SetupVPNResponse so a test agent
+	// can produce the structural proof R-055 defined. R-058 asserts what the
+	// panel does with it.
+	HostRestartRequired bool
 }
 
 type ServiceOperationPeerSpec struct {
@@ -149,6 +153,9 @@ type ServiceOperationPeerResponse struct {
 	Applied           bool
 	AppliedGeneration int64
 	Error             string
+	// NotConfigured mirrors transport.SyncVPNPeersResponse: there is no VPN
+	// server on this host at all. R-058.
+	NotConfigured bool
 }
 
 type serviceOperationTestAgent struct {

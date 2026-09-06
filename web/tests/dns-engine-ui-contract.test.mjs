@@ -976,7 +976,10 @@ test('review dialog is accessible and uses a meaningful acknowledgement, not a t
   assert.match(card, /aria-labelledby="dns-engine-review-title"/);
   assert.match(card, /aria-describedby="dns-engine-review-description"/);
   assert.match(card, /if \(event\.key === 'Escape' && !review\.committing\) onCancel\(\)/);
-  assert.match(card, /variant="secondary" autoFocus/);
+  // The dismissing control is the one that takes focus on open, in both states.
+  // Which of the two looks like the call to action depends on whether the
+  // change is refused, and that is asserted with the refusal below.
+  assert.match(card, /variant=\{blocked \? 'primary' : 'secondary'\}\s+autoFocus/);
   assert.match(card, /type="checkbox"/);
   assert.match(card, /dnsEngine\.downtimeAcknowledgement/);
   assert.doesNotMatch(card, /type="text"[\s\S]{0,200}(?:confirm|version|engine)/i);
@@ -1232,7 +1235,10 @@ test('manual recovery and unsafe transitions expose Refresh only and invalidate 
   assert.match(settings, /const manualRecovery = settingsFlow === 'manualRecovery'/);
   assert.match(settings, /const actionsLocked = settingsFlow === 'unavailable' \|\| manualRecovery \|\| settingsFlow === 'locked'/);
   assert.match(settings, /actionsLocked=\{actionsLocked\}/);
-  assert.match(settings, /data-testid=\{manualRecovery \? 'dns-manual-recovery' : undefined\}/);
+  // Manual recovery still owns this panel; a held host takes its own heading
+  // inside it, which is asserted with R-050 below.
+  assert.match(settings, /data-testid=\{manualRecovery[\s\S]{0,120}?: undefined\}/);
+  assert.match(settings, /mutationsHeld \? 'dns-mutations-held' : 'dns-manual-recovery'/);
   assert.match(settings, /dnsEngine\.manualRecoveryTitle/);
   assert.match(settings, /dnsEngine\.manualRecoveryDescription/);
   assert.match(card, /if \(actionsLocked\) setReview\(null\)/,
@@ -1260,4 +1266,135 @@ test('DNS engine copy has English and Turkish key parity', () => {
   assert.deepEqual([...keys(turkish)].sort(), [...keys(english)].sort());
   assert.match(copy, /dnsEngineTr: Record<DNSEngineCopyKey, string>/);
   assert.ok(keys(english).size >= 50, 'the full status, preview, impact, blocker, and safety copy must be localized');
+});
+
+// R-050. A BIND the panel installed reads unmanaged while the agent is holding
+// mutations, and every other fact about it is the takeover's shape - so the
+// screen would offer to adopt a server CelikPanel already owns and is in the
+// middle of working on. The detail code is the fact the payload carries, and it
+// is the same fact the panel's own predicate excludes the same host by; a
+// one-sided narrowing would make the API and the screen disagree, which is
+// worse than one honest hole in both.
+test('a held engine is the panel\u2019s own busy work, not a stranger\u2019s server to adopt', async () => {
+  const { dnsEngineSettingsFlow, dnsEngineIdentityStagesATakeover, dnsEngineMutationsHeld } =
+    await loadIdentityPlanRuntime();
+  const takeover = (state, bind = {}) => ({
+    state,
+    active_engine: null,
+    engine_epoch: 0,
+    topology: 'standalone',
+    engines: [
+      { id: 'pdns', installed: false, running: false, managed: false, status: 'available' },
+      {
+        id: 'bind', installed: true, running: state === 'unmanaged', managed: false,
+        status: 'unmanaged', detail_code: 'unmanaged_dns_detected', ...bind,
+      },
+    ],
+  });
+
+  // The same two hosts with no hold are the takeover, which is what makes the
+  // hold the only difference between each pair of assertions.
+  assert.equal(dnsEngineSettingsFlow(takeover('unmanaged')), 'identityStaging');
+  assert.equal(dnsEngineIdentityStagesATakeover(takeover('unmanaged')), true);
+  assert.equal(dnsEngineIdentityStagesATakeover(takeover('unconfigured')), true);
+
+  const heldRunning = takeover('unmanaged', { detail_code: 'mutations_held' });
+  const heldStopped = takeover('unconfigured', { detail_code: 'mutations_held' });
+  assert.notEqual(dnsEngineSettingsFlow(heldRunning), 'identityStaging',
+    'a running engine the panel is holding must not be offered a takeover');
+  assert.equal(dnsEngineIdentityStagesATakeover(heldRunning), false);
+  assert.equal(dnsEngineIdentityStagesATakeover(heldStopped), false,
+    'the stopped half has the identical hole and is closed with it');
+
+  assert.equal(dnsEngineMutationsHeld(heldRunning), true);
+  assert.equal(dnsEngineMutationsHeld(heldStopped), true);
+  assert.equal(dnsEngineMutationsHeld(takeover('unmanaged')), false);
+
+  // Not offering the takeover is half the fix. The other half is what the
+  // screen says instead: manual recovery's words are about a DNS server
+  // somebody else configured and send the operator to correct it outside
+  // CelikPanel, which is the wrong remedy for the panel's own unfinished work.
+  // A held host takes its own heading and the blocker sentence that already
+  // says the engine may be fine and the panel cannot claim it while the hold
+  // stands.
+  assert.match(settings, /mutationsHeld \? 'dns-mutations-held' : 'dns-manual-recovery'/);
+  assert.match(settings, /mutationsHeld[\s\S]{0,80}?et\('dnsEngine\.heldTitle'\)/);
+  assert.match(settings, /mutationsHeld[\s\S]{0,80}?et\('dnsEngine\.blocker\.mutationsHeld'\)/);
+  assert.match(card, /mutations_held: 'dnsEngine\.blocker\.mutationsHeld'/);
+  // The state badge is the compact form of the same claim, so it names the hold
+  // too rather than repeating "unmanaged DNS detected" above the correction.
+  assert.match(card, /dnsEngineMutationsHeld\(snapshot\)[\s\S]{0,60}?et\('dnsEngine\.stateHeld'\)/);
+  assert.equal(copy.split(`'dnsEngine.stateHeld'`).length - 1, 2);
+  assert.match(copy, /'dnsEngine\.stateHeld': 'Changes held'/);
+  for (const key of ['dnsEngine.heldTitle', 'dnsEngine.blocker.mutationsHeld']) {
+    assert.equal(copy.split(`'${key}'`).length - 1, 2, `${key} must exist in both locales`);
+  }
+  assert.match(copy, /An interrupted change is holding this server/);
+  assert.match(copy, /Yar\u0131m kalm\u0131\u015f bir de\u011fi\u015fiklik bu sunucuyu tutuyor/);
+});
+
+// R-049's leftover. On the takeover route the step after the identity panel
+// adopts a DNS server that is already on this host and installs nothing, so the
+// panel must not call it an installation. It is the copy both takeover shapes
+// ship, and it is corrected for both at once, in both locales.
+test('the identity panel says adoption on the takeover route and installation on a fresh server', () => {
+  // The fact is threaded from the snapshot the screen already has, through the
+  // one component that renders the sentence.
+  assert.match(settings, /const identityStagesATakeover = dnsEngineIdentityStagesATakeover\(engine\)/);
+  assert.match(settings, /takeover=\{identityStagesATakeover\}/);
+  assert.match(settings, /takeover = false,/);
+
+  assert.match(settings,
+    /takeover\s*\n\s*\?\s*et\('dnsEngine\.identity\.takeoverStageTitle'\)\s*\n\s*:\s*et\('dnsEngine\.identity\.stageTitle'\)/);
+  assert.match(settings,
+    /takeover\s*\n\s*\?\s*et\('dnsEngine\.identity\.takeoverStageDescription'\)\s*\n\s*:\s*et\('dnsEngine\.identity\.stageDescription'\)/);
+
+  for (const key of [
+    'dnsEngine.identity.takeoverStageTitle',
+    'dnsEngine.identity.takeoverStageDescription',
+  ]) {
+    const occurrences = copy.split(`'${key}'`).length - 1;
+    assert.equal(occurrences, 2, `${key} must exist in both locales`);
+  }
+
+  // The takeover copy is an adoption's copy: it never calls the operation an
+  // installation, in either language.
+  const takeoverLines = copy.split('\n').filter((line) => line.includes('takeoverStage'));
+  assert.equal(takeoverLines.length, 4);
+  for (const line of takeoverLines) {
+    assert.doesNotMatch(line, /installation|kurulum/i,
+      `takeover copy still calls an adoption an installation: ${line.trim()}`);
+  }
+  assert.ok(takeoverLines.some((line) => /adopting this DNS server/.test(line)));
+  assert.ok(takeoverLines.some((line) => /devralmadan/.test(line)));
+});
+
+// R-047's leftover. In the refusal state the change cannot be started, so the
+// only control that does anything is the one that closes the dialog. It was the
+// quiet outline under a disabled fill that led the eye, and at 390px it sat
+// beneath it. The two swap roles and order; the refused control stays, because
+// it is what names the action being refused.
+test('a refused preview makes the working control the prominent one, above the refused one on a phone', () => {
+  const dialogStart = card.indexOf('function DNSEngineReviewDialog');
+  assert.ok(dialogStart >= 0);
+  const dialog = card.slice(dialogStart);
+  const actionsStart = dialog.indexOf('className="mt-6 flex flex-col-reverse');
+  assert.ok(actionsStart >= 0, 'the dialog still ends in a reversed action row');
+  const actions = dialog.slice(actionsStart, dialog.indexOf('</div>', actionsStart));
+
+  // A reversed column puts the last child on top at 390px and the row keeps the
+  // last child rightmost, so the refused control leading the DOM in the blocked
+  // state is exactly what puts the working one first on a phone and last on a
+  // desktop.
+  assert.match(actions, /flex-col-reverse[\s\S]*sm:flex-row sm:justify-end/);
+  const refusedFirst = actions.indexOf('{blocked && confirmButton}');
+  const cancel = actions.indexOf("variant={blocked ? 'primary' : 'secondary'}");
+  const confirmLast = actions.indexOf('{!blocked && confirmButton}');
+  assert.ok(refusedFirst >= 0 && cancel > refusedFirst && confirmLast > cancel,
+    'the refused control leads and the working one follows it');
+
+  // The refused control is still rendered, and still disabled.
+  assert.match(card, /const confirmButton = \(/);
+  assert.match(card, /disabled=\{confirmationDisabled\}/);
+  assert.match(card, /const blocked = !preview \|\| preview\.blockers\.length > 0/);
 });

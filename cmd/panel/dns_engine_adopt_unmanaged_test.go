@@ -702,3 +702,70 @@ func TestDNSEngineTakeoverShapeIsOnTheWireTheScreenReads(t *testing.T) {
 		})
 	}
 }
+
+// R-050. While the agent refuses durable mutations, a BIND the panel installed
+// reads Managed=false, which is exactly the takeover's shape - so the product
+// would offer to adopt a server it already owns and is in the middle of working
+// on. The commit would be refused, so the harm is bounded; the offer is what is
+// false. Both halves are asserted, because the hole is in both, and the detail
+// code the screen reads is asserted beside them so the two cannot drift.
+//
+// R-050. Agent kalici mutasyonlari reddederken, panelin kurdugu bir BIND
+// Managed=false okunur; bu tam olarak devralmanin biçimidir. Boylece urun,
+// zaten sahibi oldugu ve uzerinde calistigi bir sunucuyu devralmayi onerirdi.
+// Iki yari da dogrulanir, cunku delik ikisinde de vardi.
+func TestDNSEngineHeldMutationsAreNeverOfferedATakeover(t *testing.T) {
+	for _, running := range []bool{false, true} {
+		runtimes := stoppedUnmanagedBINDRuntimes()
+		bind := runtimes[transport.DNSEngineBIND]
+		bind.Running = running
+		runtimes[transport.DNSEngineBIND] = bind
+		state := dnsEngineStateUnconfigured
+		if running {
+			state = dnsEngineStateUnmanaged
+		}
+
+		// The same host with no hold is the takeover's shape, which is what
+		// makes the hold the only difference between the two assertions.
+		// Tutmasi olmayan ayni sunucu devralmanin biçimidir.
+		free := stagedStandaloneSnapshot(runtimes, state)
+		if !adoptableUnmanagedDNSEngine(free, transport.DNSEngineBIND) {
+			t.Fatalf(`unheld BIND (running=%v) is not the takeover shape`, running)
+		}
+
+		held := stagedStandaloneSnapshot(runtimes, state)
+		held.mutationHold = "an interrupted operation is still being resolved"
+		if adoptableUnmanagedDNSEngine(held, transport.DNSEngineBIND) {
+			t.Fatalf(`held BIND (running=%v) was adoptable`, running)
+		}
+		if action := dnsEngineAction(
+			held, transport.DNSEngineBIND,
+		); action == dnsEngineActionAdoptUnmanaged {
+			t.Fatalf(`held BIND (running=%v) was offered a takeover`, running)
+		}
+
+		// The screen decides adoptability from the detail code, so the code
+		// the panel publishes for this very host has to be the one the screen
+		// excludes. This is the join between the two sides of the fix.
+		// Ekran, devralinabilirligi detay kodundan karara baglar.
+		_, entries := deriveDNSEnginePresentation(
+			dnsEngineDBState{}, runtimes, nil, held.mutationHold,
+		)
+		found := false
+		for _, entry := range entries {
+			if entry.ID != transport.DNSEngineBIND {
+				continue
+			}
+			found = true
+			if entry.Status != "unmanaged" || entry.DetailCode != "mutations_held" {
+				t.Fatalf(
+					`held BIND (running=%v) published status=%q detail=%q`,
+					running, entry.Status, entry.DetailCode,
+				)
+			}
+		}
+		if !found {
+			t.Fatalf(`no BIND entry was published (running=%v)`, running)
+		}
+	}
+}

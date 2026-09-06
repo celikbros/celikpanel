@@ -94,6 +94,14 @@ const (
 	// R-055. Bu sunucu, modul agaci artik diskte olmayan bir cekirdekle
 	// calisiyor; yeniden baslatilana kadar hicbir cekirdek modulu yukleyemez.
 	errCodeVPNHostRestartRequired = "VPN_HOST_RESTART_REQUIRED"
+	// R-058. Peer synchronization was asked of a server that has no VPN server
+	// on it, which the agent proves by the absence of the configuration rather
+	// than by reading a message. It is a state conflict with an obvious first
+	// step, so it says both instead of answering with an opaque 500.
+	// R-058. Uzerinde VPN sunucusu olmayan bir sunucudan peer esitlemesi
+	// istendi; agent bunu yapilandirmanin yoklugu ile kanitlar. Opak bir 500
+	// yerine neyin yanlis oldugu ve once ne yapilacagi soylenir.
+	errCodeVPNNotSetUp = "VPN_NOT_SET_UP"
 	// R-053. A database engine this panel installed is running and reachable
 	// and will not take the credential the panel holds for it, because the
 	// panel never set one and the packaged engine has none. That is a fact

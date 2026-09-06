@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -243,6 +244,20 @@ func validateRootOwnedDirectory(path string) error {
 
 func validateVPNDirectory(path string) error {
 	if err := rejectSymlinkPath(path); err != nil {
+		// R-058. A directory that is not there has not failed a security
+		// check; it is simply absent, and that is the fact a caller needs to
+		// tell "there is no VPN server here" from "this server's VPN
+		// configuration cannot be trusted". Everything else keeps the opaque
+		// sentence, which is deliberate: a failed path check must not describe
+		// the filesystem it just refused to walk.
+		//
+		// R-058. Var olmayan bir dizin bir guvenlik denetiminden kalmis
+		// degildir; yalnizca yoktur. Cagiran, "burada VPN sunucusu yok" ile
+		// "bu sunucunun VPN yapilandirmasina guvenilemez"i bu olguyla ayirir.
+		// Geri kalan her sey opak cumleyi korur; bu bilinclidir.
+		if errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
 		return errors.New("VPN configuration directory failed security validation")
 	}
 	info, err := os.Lstat(path)
@@ -836,7 +851,23 @@ func (a *Agent) SyncVPNPeersV2(
 
 	current, err := readSecureVPNConfig()
 	if err != nil {
-		response.Error = "VPN server is not set up"
+		// R-058. "VPN server is not set up" was said of every read failure,
+		// including one where the configuration is there and could not be
+		// read, and it reached the operator as an opaque 500. The absence of
+		// the file is a structural fact and is reported as one, so the panel
+		// can name the first step; anything else is a different fault and now
+		// says so rather than borrowing this one's words.
+		//
+		// R-058. "VPN sunucusu kurulu degil" her okuma hatasi icin
+		// soyleniyordu; yapilandirma yerinde olup okunamadiginda bile.
+		// Dosyanin yoklugu yapisal bir olgudur ve oyle bildirilir; baska her
+		// ariza artik kendi adiyla konusur.
+		if vpnConfigurationAbsent(err) {
+			response.NotConfigured = true
+			response.Error = "VPN server is not set up"
+			return nil
+		}
+		response.Error = "the VPN server configuration could not be read"
 		return nil
 	}
 	requestID, err := vpnPeerSyncCommitIdentity(ctx, commitment.Qualifier)

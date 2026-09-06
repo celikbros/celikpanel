@@ -23,6 +23,7 @@ export const dnsEngineEn = {
     'dnsEngine.state.unconfigured': 'Not configured',
     'dnsEngine.state.ready': 'Ready',
     'dnsEngine.state.unmanaged': 'Unmanaged DNS detected',
+    'dnsEngine.stateHeld': 'Changes held',
     'dnsEngine.state.conflict': 'DNS conflict',
     'dnsEngine.state.switching': 'Change in progress',
     'dnsEngine.state.degraded': 'Needs attention',
@@ -53,8 +54,20 @@ export const dnsEngineEn = {
     'dnsEngine.topologyEditorUnconfigured': 'A saved DNS identity is required before the first BIND or PowerDNS installation can be reviewed.',
     'dnsEngine.manualRecoveryTitle': 'DNS ownership could not be verified',
     'dnsEngine.manualRecoveryDescription': 'CelikPanel detected DNS on this server but could not prove that its active configuration is panel-managed. Review and correct the existing DNS service outside CelikPanel, then use Refresh state. DNS identity and every install, adoption, reconfiguration, or switch action remain locked until ownership is verified.',
+    // R-050. A DNS server the panel installed reads as nobody's while the agent
+    // is refusing durable mutations, and manual recovery's words - go correct
+    // this outside CelikPanel - are the wrong remedy for the panel's own
+    // unfinished work. The hold gets its own heading; its body is the blocker
+    // sentence the engine card already uses, so the screen says one thing.
+    'dnsEngine.heldTitle': 'An interrupted change is holding this server',
     'dnsEngine.identity.stageTitle': 'Prepare DNS identity before installation',
     'dnsEngine.identity.stageDescription': 'Save the nameserver pair, this server’s role, and the peer assignment first. This step does not install, start, or publish a DNS server. The BIND or PowerDNS installation below will apply and verify the exact saved plan.',
+    // R-049's leftover. On the takeover route this panel is the first step of an
+    // adoption, not of an installation: the DNS server is already on this host
+    // and nothing is installed. It is the copy both takeover shapes ship, so it
+    // is corrected for both at once, in the voice `dnsEngine.adoption.*` uses.
+    'dnsEngine.identity.takeoverStageTitle': 'Prepare DNS identity before adopting this DNS server',
+    'dnsEngine.identity.takeoverStageDescription': 'Save the nameserver pair, this server’s role, and the peer assignment first. This step does not adopt, start, or change the DNS server already on this server. The adoption below will apply and verify the exact saved plan.',
     'dnsEngine.identity.legacyReconfigureTitle': 'Prepare the existing PowerDNS as a directional secondary',
     'dnsEngine.identity.legacyReconfigureDescription': 'Save the exact paired identity first. The following reviewed operation will snapshot the existing empty PowerDNS database and configuration, reconfigure it directly as the secondary, restart it, and prove the primary catalog. No temporary DNS engine is used.',
     'dnsEngine.identity.legacyPairedDirect': 'Configure this existing PowerDNS directly as the read-only secondary. Its database and configuration are protected by an exact rollback snapshot.',
@@ -212,6 +225,7 @@ export const dnsEngineTr: Record<DNSEngineCopyKey, string> = {
     'dnsEngine.state.unconfigured': 'Yapılandırılmadı',
     'dnsEngine.state.ready': 'Hazır',
     'dnsEngine.state.unmanaged': 'Panel dışı DNS algılandı',
+    'dnsEngine.stateHeld': 'Değişiklikler tutuluyor',
     'dnsEngine.state.conflict': 'DNS çakışması',
     'dnsEngine.state.switching': 'Değişiklik sürüyor',
     'dnsEngine.state.degraded': 'İlgi gerekiyor',
@@ -242,8 +256,11 @@ export const dnsEngineTr: Record<DNSEngineCopyKey, string> = {
     'dnsEngine.topologyEditorUnconfigured': 'İlk BIND veya PowerDNS kurulumu incelenmeden önce DNS kimlik planı kaydedilmelidir.',
     'dnsEngine.manualRecoveryTitle': 'DNS sahipliği doğrulanamadı',
     'dnsEngine.manualRecoveryDescription': 'CelikPanel bu sunucuda DNS algıladı ancak etkin yapılandırmanın panel tarafından yönetildiğini kanıtlayamadı. Mevcut DNS servisini CelikPanel dışında inceleyip düzeltin, ardından Durumu yenile düğmesini kullanın. Sahiplik doğrulanana kadar DNS kimliği ile tüm kurulum, devralma, yeniden yapılandırma ve değiştirme işlemleri kilitli kalır.',
+    'dnsEngine.heldTitle': 'Yarım kalmış bir değişiklik bu sunucuyu tutuyor',
     'dnsEngine.identity.stageTitle': 'Kurulumdan önce DNS kimliğini hazırlayın',
     'dnsEngine.identity.stageDescription': 'Önce ad sunucusu çiftini, bu sunucunun rolünü ve eş sunucu atamasını kaydedin. Bu adım DNS sunucusu kurmaz, başlatmaz veya yayın yapmaz. Aşağıdaki BIND ya da PowerDNS kurulumu kaydedilen planın aynısını uygulayıp doğrular.',
+    'dnsEngine.identity.takeoverStageTitle': 'Bu DNS sunucusunu devralmadan önce DNS kimliğini hazırlayın',
+    'dnsEngine.identity.takeoverStageDescription': 'Önce ad sunucusu çiftini, bu sunucunun rolünü ve eş sunucu atamasını kaydedin. Bu adım, bu sunucuda halihazırda bulunan DNS sunucusunu devralmaz, başlatmaz ve değiştirmez. Aşağıdaki devralma, kaydedilen planın aynısını uygulayıp doğrular.',
     'dnsEngine.identity.legacyReconfigureTitle': 'Mevcut PowerDNS’i yönlü ikincil olarak hazırlayın',
     'dnsEngine.identity.legacyReconfigureDescription': 'Önce kesin eşli kimliği kaydedin. Sonraki incelenmiş işlem mevcut boş PowerDNS veritabanı ve yapılandırmasının snapshot’ını alacak, onu doğrudan ikincil olarak yapılandıracak, yeniden başlatacak ve birincil kataloğu kanıtlayacaktır. Geçici DNS motoru kullanılmaz.',
     'dnsEngine.identity.legacyPairedDirect': 'Bu mevcut PowerDNS’i doğrudan salt-okunur ikincil olarak yapılandırın. Veritabanı ve yapılandırması kesin bir geri dönüş snapshot’ıyla korunur.',

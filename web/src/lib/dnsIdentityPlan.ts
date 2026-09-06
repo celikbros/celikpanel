@@ -31,6 +31,7 @@ interface DNSEngineFlowEntryEvidence {
     running: boolean;
     managed: boolean;
     status: string;
+    detail_code?: string;
 }
 
 interface DNSEngineFlowEvidence extends DNSIdentityEngineEvidence {
@@ -47,12 +48,19 @@ export type DNSEngineSettingsFlow =
     | 'manualRecovery'
     | 'locked';
 
-// The takeover's running shape, read from the same facts the panel's own
+// The takeover's shape, read from the same facts the panel's own
 // `adoptableUnmanagedDNSEngine` reads it from (cmd/panel/dns_engine.go): BIND
-// on disk and answering, no durable CelikPanel authority over any of it, and
-// nothing else serving. This is a rented server that arrived with a DNS server
-// somebody else installed, and it is the ordinary way they arrive - not a host
-// whose ownership went wrong.
+// on disk, no durable CelikPanel authority over any of it, and nothing else
+// serving. This is a rented server that arrived with a DNS server somebody else
+// installed, and it is the ordinary way they arrive - not a host whose
+// ownership went wrong.
+//
+// Both halves are claimed here, answering and stopped, as the panel claims
+// both. Only the running half changes what the settings flow returns - the
+// stopped half reads `unconfigured` and reaches identity staging one branch
+// earlier - but the shape is what the identity panel asks when it needs to know
+// whether the step after it is an adoption or an installation, and that
+// question has the same answer for both.
 //
 // Topology is the one fact read more widely here than the API reads it, and
 // deliberately. The API needs a saved standalone identity because it is about
@@ -66,18 +74,89 @@ export type DNSEngineSettingsFlow =
 // as the API refuses it: pairing is a decision about two servers, and the
 // takeover does not answer it.
 function adoptableUnmanagedDNSEngine(snapshot: DNSEngineFlowEvidence): boolean {
-    if (snapshot.state !== 'unmanaged' ||
-        snapshot.active_engine !== null ||
+    if (snapshot.active_engine !== null ||
         snapshot.engine_epoch !== 0 ||
         snapshot.topology === 'paired') {
         return false;
     }
     const bind = snapshot.engines.find((entry) => entry.id === 'bind');
-    if (!bind || !bind.installed || !bind.running || bind.managed ||
-        bind.status !== 'unmanaged') {
+    if (!bind || !bind.installed || bind.managed || bind.status !== 'unmanaged') {
+        return false;
+    }
+    // R-050. `mutations_held` is the panel saying, about its own work, that a
+    // BIND it installed reads unmanaged only because the transaction that
+    // would have claimed it is held. Everything else here still matches the
+    // takeover's shape, so without this the screen would offer to adopt a
+    // server CelikPanel already owns and is in the middle of working on. The
+    // panel's own predicate excludes the same host from the same fact, and
+    // deliberately: one side narrowing alone would make the API and the screen
+    // disagree, which is worse than one honest hole in both. While the hold
+    // stands the engine card says what is true - this engine is the panel's and
+    // busy - instead of calling it a stranger's.
+    //
+    // R-050. `mutations_held`, panelin kendi isi hakkinda soyledigi seydir:
+    // kurdugu bir BIND, yalnizca onu sahiplenecek islem tutuldugu icin
+    // yonetilmiyor okunur. Bu olmadan ekran, CelikPanel'in zaten sahibi oldugu
+    // ve uzerinde calistigi bir sunucuyu devralmayi onerirdi. Panelin kendi
+    // yuklemi ayni sunucuyu ayni olguyla disarida birakir; tek tarafli bir
+    // daraltma ikisini birbirinden ayirirdi.
+    if (bind.detail_code === 'mutations_held') {
+        return false;
+    }
+    // The presentation state derives a different word for the same host on
+    // nothing but Running: a stopped unmanaged BIND with no recorded authority
+    // reads `unconfigured`, a running one reads `unmanaged`. Both are the
+    // takeover's shape, exactly as the panel's predicate accepts both, and
+    // `unmanaged` only when it is this engine that is running - otherwise the
+    // word is describing some other engine.
+    //
+    // Sunum durumu ayni sunucu icin yalnizca Running'e bakarak farkli bir
+    // kelime turetir: durmus panel disi bir BIND `unconfigured`, calisani
+    // `unmanaged` okunur. Ikisi de devralmanin bicimidir.
+    if (snapshot.state === 'unmanaged') {
+        if (!bind.running) return false;
+    } else if (snapshot.state !== 'unconfigured') {
         return false;
     }
     return snapshot.engines.every((entry) => entry.id === 'bind' || !entry.running);
+}
+
+// Whether the identity being staged belongs to a takeover rather than to a
+// first installation. Both takeover shapes reach identity staging - the stopped
+// one through `unconfigured`, the running one through the branch below - and on
+// that route the step that follows adopts a DNS server that is already on this
+// host. It installs nothing, so the panel must not call it an installation.
+//
+// It is deliberately the same predicate the route itself is claimed by, so the
+// copy cannot describe a route the screen did not take.
+//
+// Hazirlanan kimligin ilk kuruluma mi yoksa bir devralmaya mi ait oldugu. Iki
+// devralma bicimi de kimlik hazirlamaya ulasir ve o yolda ardindan gelen adim,
+// bu makinede zaten var olan bir DNS sunucusunu devralir. Hicbir sey kurmaz;
+// panel ona kurulum dememelidir.
+export function dnsEngineIdentityStagesATakeover(
+    snapshot: DNSEngineFlowEvidence | null,
+): boolean {
+    return snapshot !== null &&
+        dnsEngineSettingsFlow(snapshot) === 'identityStaging' &&
+        adoptableUnmanagedDNSEngine(snapshot);
+}
+
+// Whether the agent is refusing every durable mutation on this host, which is
+// the one thing that makes a panel-installed engine read as nobody's. The panel
+// publishes it as a detail code on the engine it changes the reading of, and it
+// is the same fact `adoptableUnmanagedDNSEngine` refuses on: while the hold
+// stands this server is CelikPanel's own unfinished work, and the screen must
+// say that rather than send an operator to repair a stranger's DNS server.
+//
+// Agent'in bu makinede her kalici mutasyonu reddedip reddetmedigi - panelin
+// kurdugu bir motorun kimsenin degilmis gibi okunmasina yol acan tek sey. Panel
+// bunu, okunusunu degistirdigi motorun detay kodu olarak yayimlar.
+export function dnsEngineMutationsHeld(
+    snapshot: DNSEngineFlowEvidence | null,
+): boolean {
+    return snapshot !== null &&
+        snapshot.engines.some((entry) => entry.detail_code === 'mutations_held');
 }
 
 // Keep rendering decisions for the no-authority states in one fail-closed
