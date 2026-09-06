@@ -105,6 +105,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-065 | Medium | BUILT / NOT YET SEEN IN A BROWSER | The panel's own database account exists and is reachable only through the API: the server card does not show whether the account is there, and there is nowhere to hand the panel a credential for an engine on another machine |
 | R-066 | Medium | FOUND / NOT YET FIXED | A database engine on another machine cannot be registered at all: the list is filled only by autodiscovery of this machine, and the endpoint that accepts a remote server with a credential is reachable only through the API |
 | R-067 | High | FOUND ON A REAL MACHINE AND FIXED | On a freshly installed server the whole database chapter was unreachable: the panel installed MariaDB, saw it running, and then told the administrator no database engine was installed |
+| R-068 | Low | FOUND / NOT YET FIXED | The agent works out exactly why a host change cannot start - the package manager, another change, or a held lock - and the operator is told one sentence that covers all three |
 
 ## Detailed risks
 
@@ -2809,6 +2810,34 @@ or executed as-is. There are no open pull requests at this baseline.
   R-053, R-057 - was real, and all of them were behind a door that a new
   operator could not open. None of the unit tests could see it, because they
   all began with a subscription that a real machine does not have.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-068 - The refusal knows which of three it is and says all three
+
+- Evidence: 6 September 2026, the Ubuntu machine in the acceptance run. Two
+  installs through the panel were refused ten milliseconds apart with
+  `HOST_MUTATION_BUSY`, and both said the same thing: "another server change or
+  package-manager task is still running; wait and try again". A sampler running
+  at 150 ms intervals during a later attempt showed what it actually was -
+  `apt-get` and `packagekitd`, which Ubuntu starts on its own in the first
+  minutes after boot.
+- The refusal was correct. A panel that fought apt for the dpkg lock would be a
+  worse product than one that waits, and "wait and try again" is followable.
+  This entry is not about the decision; it is about the sentence.
+- The agent already computes which of three it is - `package_manager_active`,
+  `agent_mutation_active`, `host_lock_busy` - and carries the reason in its
+  response. The panel maps all three onto one message. So the operator is told
+  a disjunction the product does not need to make: it knows.
+- The three want different things. Somebody else's package manager is a wait of
+  a minute or two. Another CelikPanel change is a wait for that change. A held
+  lock after a crash is neither - it is something to look at. Telling an
+  operator to "wait and try again" for the third is telling them to wait for
+  something that will not end.
+- This is the same rule as R-053 and R-054 in a smaller place: a reason is
+  computed, and then discarded on the way to the person who needed it. It is
+  Low rather than High because the discarded reason here is one of three named
+  possibilities rather than an engine's own words, and the fallback sentence is
+  at least true.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
