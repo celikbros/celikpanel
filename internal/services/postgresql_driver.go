@@ -13,18 +13,25 @@ import (
 
 // PostgreSQLDriver implements DatabaseDriver for PostgreSQL
 type PostgreSQLDriver struct {
-	host         string
-	port         int
-	rootPassword string
-	openDB       func(string) (*sql.DB, error)
+	host     string
+	port     int
+	username string
+	password string
+	openDB   func(string) (*sql.DB, error)
 }
+
+// postgreSQLSuperuser is the role a PostgreSQL arrives with, and the one every
+// credential stored before R-057 belongs to.
+// postgreSQLSuperuser, bir PostgreSQL'in birlikte geldigi roldur.
+const postgreSQLSuperuser = "postgres"
 
 // NewPostgreSQLDriver creates a new PostgreSQL driver
 func NewPostgreSQLDriver(config DriverConfig) *PostgreSQLDriver {
 	return &PostgreSQLDriver{
-		host:         config.Host,
-		port:         config.Port,
-		rootPassword: config.RootPassword,
+		host:     config.Host,
+		port:     config.Port,
+		username: config.Username,
+		password: config.Password,
 	}
 }
 
@@ -33,16 +40,16 @@ func (d *PostgreSQLDriver) getDB(dbname string) (*sql.DB, error) {
 	if d.openDB != nil {
 		return d.openDB(dbname)
 	}
-	dsn := postgreSQLDSN(d.host, d.port, dbname, d.rootPassword)
+	dsn := postgreSQLDSN(d.host, d.port, dbname, driverUsername(d.username, postgreSQLSuperuser), d.password)
 	return sql.Open("pgx", dsn)
 }
 
-func postgreSQLDSN(host string, port int, dbname, password string) string {
+func postgreSQLDSN(host string, port int, dbname, username, password string) string {
 	query := url.Values{}
 	query.Set("sslmode", "disable")
 	return (&url.URL{
 		Scheme:   "postgres",
-		User:     url.UserPassword("postgres", password),
+		User:     url.UserPassword(username, password),
 		Host:     net.JoinHostPort(host, strconv.Itoa(port)),
 		Path:     "/" + dbname,
 		RawQuery: query.Encode(),

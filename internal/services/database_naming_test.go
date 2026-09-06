@@ -220,7 +220,7 @@ func TestMariaDBDriverAcceptsTheScopedNames(t *testing.T) {
 
 	// Port 1 on the loopback refuses immediately, so nothing is ever created
 	// anywhere, on any machine this test runs on.
-	driver := &MariaDBDriver{host: "127.0.0.1", port: 1, rootPassword: "unused"}
+	driver := &MariaDBDriver{host: "127.0.0.1", port: 1, password: "unused"}
 
 	if err := driver.CreateDatabase(dbName); err == nil {
 		t.Fatalf("CreateDatabase(%q) reached an engine that should not exist", dbName)

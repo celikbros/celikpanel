@@ -12,10 +12,16 @@ import (
 
 // MariaDBDriver implements DatabaseDriver for MariaDB
 type MariaDBDriver struct {
-	host         string
-	port         int
-	rootPassword string
+	host     string
+	port     int
+	username string
+	password string
 }
+
+// mariaDBSuperuser is the account a MariaDB arrives with, and the one every
+// credential stored before R-057 belongs to.
+// mariaDBSuperuser, bir MariaDB'nin birlikte geldigi hesaptir.
+const mariaDBSuperuser = `root`
 
 const mariaDBCommandTimeout = 30 * time.Second
 
@@ -59,11 +65,11 @@ func (d *MariaDBDriver) writeMySQLClientFile() (string, func(), error) {
 		_, err = fmt.Fprintln(file, key+`=`+quoted)
 		return err
 	}
-	if err := writeOption(`user`, `root`); err != nil {
+	if err := writeOption(`user`, driverUsername(d.username, mariaDBSuperuser)); err != nil {
 		return fail(fmt.Errorf(`write MySQL client user: %w`, err))
 	}
-	if d.rootPassword != `` {
-		if err := writeOption(`password`, d.rootPassword); err != nil {
+	if d.password != `` {
+		if err := writeOption(`password`, d.password); err != nil {
 			return fail(fmt.Errorf(`write MySQL client password: %w`, err))
 		}
 	}
@@ -101,9 +107,10 @@ func (d *MariaDBDriver) writeMySQLClientFile() (string, func(), error) {
 // NewMariaDBDriver creates a new MariaDB driver
 func NewMariaDBDriver(config DriverConfig) *MariaDBDriver {
 	return &MariaDBDriver{
-		host:         config.Host,
-		port:         config.Port,
-		rootPassword: config.RootPassword,
+		host:     config.Host,
+		port:     config.Port,
+		username: config.Username,
+		password: config.Password,
 	}
 }
 
