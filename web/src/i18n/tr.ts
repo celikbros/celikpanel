@@ -149,6 +149,7 @@ export const tr: Record<ShellKey, string> = {
     'common.agentMismatchHint': 'Arka plan servisi panelden farklı bir yapı ({commit}) koşuyor. İki taraf eşleşsin diye güncellemeyi yeniden çalıştırın — o zamana dek neye izin verildiği konusunda ayrışabilirler.',
     'common.retry': 'Tekrar dene',
     'common.cancel': 'İptal',
+    'common.close': 'Kapat',
     'common.back': 'Geri',
     'common.itemsTotal': 'Toplam {n} öğe',
     'common.perPage': 'Sayfa başına',

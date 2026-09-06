@@ -43,6 +43,15 @@
         "reason": "Claude triage: a one-sided border on a rounded-full element is the spin arc itself, not an accent border on a card - `animate-spin rounded-full border-b-2` is the loading indicator. Scoped per file and wildcarded because border-accent-on-rounded extracts no value, so a value-scoped ignore cannot match it. The product hand-rolls this same spinner 61 times across 38 files, which is why the entry list grows one file at a time; recorded as R-064. When the spinner becomes one component these entries collapse into one."
       },
       {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "web/src/components/DatabaseManagementV2.tsx"
+        ],
+        "createdAt": "2026-09-06T17:10:00.000Z",
+        "reason": "Claude triage: a one-sided border on a rounded-full element is the spin arc itself, not an accent border on a card - `animate-spin rounded-full border-b-2` is the loading indicator. Scoped per file and wildcarded because border-accent-on-rounded extracts no value, so a value-scoped ignore cannot match it. The product hand-rolls this same spinner 61 times across 38 files, which is why the entry list grows one file at a time; recorded as R-064. When the spinner becomes one component these entries collapse into one."
+      },
+      {
         "rule": "overused-font",
         "value": "Open Sans",
         "files": [
