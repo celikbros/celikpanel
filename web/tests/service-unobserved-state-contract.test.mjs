@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 // R-040. The components screen used to state, as fact, something the product
 // had never checked: on a host with no scan row the API served the whole
@@ -16,8 +17,8 @@ import test from 'node:test';
 // söylüyordu. Bu testler düzeltmeyi telin iki yakasında da çivilerler.
 
 const serviceList = readFileSync(new URL('../src/components/ServiceList.tsx', import.meta.url), 'utf8');
-const english = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const turkish = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const english = englishCatalogue;
+const turkish = turkishCatalogue;
 const panelHandlers = readFileSync(new URL('../../cmd/panel/managed_service_handlers.go', import.meta.url), 'utf8');
 const dashboard = readFileSync(new URL('../src/components/Dashboard.tsx', import.meta.url), 'utf8');
 const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');

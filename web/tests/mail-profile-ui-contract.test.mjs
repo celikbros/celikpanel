@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 const operationSource = readFileSync(
   new URL('../src/components/ComponentOperation.tsx', import.meta.url),
@@ -15,8 +16,8 @@ const serviceSource = readFileSync(
   new URL('../src/components/ServiceList.tsx', import.meta.url),
   'utf8',
 );
-const enSource = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const trSource = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const enSource = englishCatalogue;
+const trSource = turkishCatalogue;
 
 async function loadMarkerRuntime() {
   const versionStart = operationSource.indexOf('const OPERATION_RECOVERY_VERSION');
@@ -128,8 +129,9 @@ test('profile cards preserve individual services and use server membership', () 
   assert.match(serviceSource, /profile\.status === 'complete' && profile\.warning/);
   assert.match(serviceSource, /services\.mailProfiles\.profileComponentsNeedRepair/);
   assert.match(serviceSource, /setProfileTarget\(profile\)/);
-  assert.match(serviceSource, /role='dialog'/);
-  assert.match(serviceSource, /aria-modal='true'/);
+  // Role and modality are the shared Dialog's since R-059, pinned in
+  // dialog-shape-contract.test.mjs. / Rol ve kiplik paylasilan Dialog'undur.
+  assert.match(serviceSource, /<Dialog\s+id='mail-profile-confirm'/);
   assert.match(serviceSource, /type='checkbox'/);
   assert.match(serviceSource, /disabled=\{!acknowledged \|\| !hostnameReady\}/);
   assert.match(serviceSource, /\/api\/v1\/service\/candidate\?id=/);

@@ -41,12 +41,17 @@ test('dashboard firewall confirmation fails closed on host mutation readiness', 
 test('dashboard performs the authoritative POST only from an accessible confirmation dialog', () => {
   assert.match(dashboardSource, /<DashboardFirewallConfirmationDialog/);
   assert.match(dashboardSource, /onConfirm=\{\(\) => void turnOnFirewall\(\)\}/);
-  assert.match(dashboardSource, /role="dialog"/);
-  assert.match(dashboardSource, /aria-modal="true"/);
-  assert.match(dashboardSource, /aria-labelledby="dashboard-firewall-confirm-title"/);
-  assert.match(dashboardSource, /aria-describedby="dashboard-firewall-confirm-description"/);
+  // Role, modality, the title and description ids and Escape are the shared
+  // Dialog's since R-059, and are pinned in dialog-shape-contract.test.mjs.
+  // Naming the dialogue is what still gives it those ids, and a POST already in
+  // flight must not be dismissable out from under the operator.
+  //
+  // Rol, kiplik, baslik/aciklama kimlikleri ve Escape R-059'dan beri paylasilan
+  // Dialog'undur; diyalogu adlandirmak ona o kimlikleri verir.
+  assert.match(dashboardSource, /<Dialog\s+id="dashboard-firewall-confirm"/);
+  assert.match(dashboardSource, /onDismiss=\{onCancel\}/);
+  assert.match(dashboardSource, /busy=\{busy\}/);
   assert.match(dashboardSource, /autoFocus/);
-  assert.match(dashboardSource, /if \(event\.key === 'Escape' && !busy\) onCancel\(\)/);
   assert.match(dashboardSource, /t\('firewall\.confirm\.enable\.title'\)/);
   assert.match(dashboardSource, /t\('firewall\.confirm\.enable\.description'\)/);
   assert.match(dashboardSource, /t\('services\.mutationReadiness\.title'\)/);

@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 const card = readFileSync(new URL('../src/components/SecurityAuditCard.tsx', import.meta.url), 'utf8');
 const settings = readFileSync(new URL('../src/components/Settings.tsx', import.meta.url), 'utf8');
-const english = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const turkish = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const english = englishCatalogue;
+const turkish = turkishCatalogue;
 
 async function loadSecurityAuditDecoder() {
     const start = card.indexOf('type AuditStatus');

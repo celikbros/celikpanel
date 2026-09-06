@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { KeyRound, X } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { readApiError, apiErrorText } from '../lib/apiError';
-import { Button, inputClass } from './ui';
+import { Button, Dialog, inputClass } from './ui';
 
 // Self-service password change for the signed-in user; the current password
 // must be proven (the API enforces it too).
@@ -46,21 +46,22 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-            <div
-                className="w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-lg"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="mb-4 flex items-center justify-between">
-                    <h3 className="flex items-center gap-2 text-sm font-semibold text-fg">
-                        <KeyRound className="h-4 w-4 text-primary" />
+        <Dialog
+            id="change-password"
+            icon={KeyRound}
+            width="sm"
+            title={t('profile.changePassword')}
+            busy={saving}
+            onDismiss={onClose}
+            actions={
+                <>
+                    <Button onClick={onClose}>{t('users.cancel')}</Button>
+                    <Button variant="primary" onClick={submit} disabled={saving || !current || next.length < 8}>
                         {t('profile.changePassword')}
-                    </h3>
-                    <button onClick={onClose} className="rounded-md p-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
-                        <X className="h-4 w-4" />
-                    </button>
-                </div>
-
+                    </Button>
+                </>
+            }
+        >
                 <div className="space-y-3">
                     <label className="block">
                         <span className="mb-1 block text-xs text-fg-muted">{t('profile.current')}</span>
@@ -81,14 +82,6 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
                         />
                     </label>
                 </div>
-
-                <div className="mt-4 flex justify-end gap-2">
-                    <Button onClick={onClose}>{t('users.cancel')}</Button>
-                    <Button variant="primary" onClick={submit} disabled={saving || !current || next.length < 8}>
-                        {t('profile.changePassword')}
-                    </Button>
-                </div>
-            </div>
-        </div>
+        </Dialog>
     );
 }

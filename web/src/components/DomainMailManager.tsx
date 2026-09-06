@@ -1,9 +1,9 @@
 import { lazy, useState, useEffect, useRef } from 'react';
-import { Mail, Plus, Trash2, ArrowRight, AtSign, Pencil, Info, KeyRound, X } from 'lucide-react';
+import { Mail, Plus, Trash2, ArrowRight, AtSign, Pencil, Info, KeyRound } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { apiErrorText, readApiError } from '../lib/apiError';
-import { Button, EmptyState, UsageBar, inputClass } from './ui';
+import { Button, Dialog, EmptyState, UsageBar, inputClass } from './ui';
 import { MailAuthPanel } from './MailAuthPanel';
 import { MailSettingsPanel } from './MailSettingsPanel';
 
@@ -476,111 +476,92 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
             )}
 
             {passwordAccount && !readOnly && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-                    onClick={(event) => event.target === event.currentTarget && closePasswordDialog()}
-                >
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="mail-password-dialog-title"
-                        aria-describedby="mail-password-dialog-account mail-password-session-warning"
-                        aria-busy={passwordSaving}
-                        className="w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-lg"
-                        onKeyDown={(event) => event.key === 'Escape' && closePasswordDialog()}
-                    >
-                        <div className="mb-4 flex items-start justify-between gap-3">
-                            <div>
-                                <h3 id="mail-password-dialog-title" className="flex items-center gap-2 text-sm font-semibold text-fg">
-                                    <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
-                                    {t('mail.passwordDialog.title')}
-                                </h3>
-                                <p id="mail-password-dialog-account" className="mt-1 break-all text-xs text-fg-muted">
-                                    {t('mail.passwordDialog.account')}: <strong className="font-medium text-fg">{passwordAccount.address}</strong>
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={closePasswordDialog}
-                                disabled={passwordSaving}
-                                aria-label={t('mail.passwordDialog.close')}
-                                className="rounded-md p-1 text-fg-muted hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+                <Dialog
+                    id="mail-password-dialog"
+                    icon={KeyRound}
+                    width="sm"
+                    busy={passwordSaving}
+                    onDismiss={closePasswordDialog}
+                    noValidate
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        void rotateAccountPassword();
+                    }}
+                    title={t('mail.passwordDialog.title')}
+                    description={
+                        <>
+                            {t('mail.passwordDialog.account')}: <strong className="break-all font-medium text-fg">{passwordAccount.address}</strong>
+                        </>
+                    }
+                    // The session warning describes the dialogue as much as the
+                    // account does, so it is announced with it.
+                    // Oturum uyarisi, hesap kadar bu diyalogu tanimlar.
+                    extraDescribedBy="mail-password-session-warning"
+                    actions={
+                        <>
+
+                            <Button type="button" onClick={closePasswordDialog} disabled={passwordSaving}>
+                                {t('common.cancel')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                icon={KeyRound}
+                                disabled={readOnly || passwordSaving || !passwordInRange || !passwordMatches}
                             >
-                                <X className="h-4 w-4" aria-hidden="true" />
-                            </button>
-                        </div>
-
-                        <form
-                            noValidate
-                            onSubmit={(event) => {
-                                event.preventDefault();
-                                void rotateAccountPassword();
-                            }}
-                        >
-                            <div className="space-y-3">
-                                <label className="block">
-                                    <span className="mb-1 block text-xs text-fg-muted">{t('mail.passwordDialog.new')}</span>
-                                    <input
-                                        type="password"
-                                        value={newPassword}
-                                        onChange={(event) => setNewPassword(event.target.value)}
-                                        minLength={8}
-                                        maxLength={1024}
-                                        autoComplete="new-password"
-                                        required
-                                        autoFocus
-                                        disabled={passwordSaving}
-                                        aria-invalid={newPassword.length > 0 && !passwordInRange}
-                                        aria-describedby="mail-password-requirements"
-                                        className={inputClass}
-                                    />
-                                </label>
-                                <label className="block">
-                                    <span className="mb-1 block text-xs text-fg-muted">{t('mail.passwordDialog.confirm')}</span>
-                                    <input
-                                        type="password"
-                                        value={passwordConfirmation}
-                                        onChange={(event) => setPasswordConfirmation(event.target.value)}
-                                        minLength={8}
-                                        maxLength={1024}
-                                        autoComplete="new-password"
-                                        required
-                                        disabled={passwordSaving}
-                                        aria-invalid={passwordConfirmation.length > 0 && !passwordMatches}
-                                        aria-describedby={passwordConfirmation.length > 0 && !passwordMatches ? 'mail-password-mismatch' : undefined}
-                                        className={inputClass}
-                                    />
-                                </label>
-                                <p id="mail-password-requirements" className={`text-xs ${newPassword.length > 0 && !passwordInRange ? 'text-danger' : 'text-fg-subtle'}`}>
-                                    {t('mail.passwordDialog.requirements')}
-                                </p>
-                                {passwordConfirmation.length > 0 && !passwordMatches && (
-                                    <p id="mail-password-mismatch" role="alert" className="text-xs text-danger">
-                                        {t('mail.passwordDialog.mismatch')}
-                                    </p>
-                                )}
-                                <p id="mail-password-session-warning" className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-fg-muted">
-                                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden="true" />
-                                    {t('mail.passwordDialog.sessionWarning')}
-                                </p>
-                            </div>
-
-                            <div className="mt-4 flex justify-end gap-2">
-                                <Button type="button" onClick={closePasswordDialog} disabled={passwordSaving}>
-                                    {t('common.cancel')}
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    variant="primary"
-                                    icon={KeyRound}
-                                    disabled={readOnly || passwordSaving || !passwordInRange || !passwordMatches}
-                                >
-                                    {passwordSaving ? t('mail.passwordDialog.saving') : t('mail.passwordDialog.submit')}
-                                </Button>
-                            </div>
-                        </form>
+                                {passwordSaving ? t('mail.passwordDialog.saving') : t('mail.passwordDialog.submit')}
+                            </Button>
+                        </>
+                    }
+                >
+                    <div className="space-y-3">
+                        <label className="block">
+                            <span className="mb-1 block text-xs text-fg-muted">{t('mail.passwordDialog.new')}</span>
+                            <input
+                                type="password"
+                                value={newPassword}
+                                onChange={(event) => setNewPassword(event.target.value)}
+                                minLength={8}
+                                maxLength={1024}
+                                autoComplete="new-password"
+                                required
+                                autoFocus
+                                disabled={passwordSaving}
+                                aria-invalid={newPassword.length > 0 && !passwordInRange}
+                                aria-describedby="mail-password-requirements"
+                                className={inputClass}
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="mb-1 block text-xs text-fg-muted">{t('mail.passwordDialog.confirm')}</span>
+                            <input
+                                type="password"
+                                value={passwordConfirmation}
+                                onChange={(event) => setPasswordConfirmation(event.target.value)}
+                                minLength={8}
+                                maxLength={1024}
+                                autoComplete="new-password"
+                                required
+                                disabled={passwordSaving}
+                                aria-invalid={passwordConfirmation.length > 0 && !passwordMatches}
+                                aria-describedby={passwordConfirmation.length > 0 && !passwordMatches ? 'mail-password-mismatch' : undefined}
+                                className={inputClass}
+                            />
+                        </label>
+                        <p id="mail-password-requirements" className={`text-xs ${newPassword.length > 0 && !passwordInRange ? 'text-danger' : 'text-fg-subtle'}`}>
+                            {t('mail.passwordDialog.requirements')}
+                        </p>
+                        {passwordConfirmation.length > 0 && !passwordMatches && (
+                            <p id="mail-password-mismatch" role="alert" className="text-xs text-danger">
+                                {t('mail.passwordDialog.mismatch')}
+                            </p>
+                        )}
+                        <p id="mail-password-session-warning" className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-fg-muted">
+                            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden="true" />
+                            {t('mail.passwordDialog.sessionWarning')}
+                        </p>
                     </div>
-                </div>
+                </Dialog>
             )}
         </div>
     );

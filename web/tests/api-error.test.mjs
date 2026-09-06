@@ -2,8 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { apiErrorText, readApiError } from '../src/lib/apiError.ts';
-import { en } from '../src/i18n/en.ts';
-import { tr } from '../src/i18n/tr.ts';
+import { en as enShell } from '../src/i18n/en.ts';
+import { tr as trShell } from '../src/i18n/tr.ts';
+import { enScreens } from '../src/i18n/screens/en.ts';
+import { trScreens } from '../src/i18n/screens/tr.ts';
+
+// One catalogue per locale, assembled from the two halves it now ships in
+// (register R-060). What the running panel looks a key up in is this union.
+// Dil basina tek katalog, artik geldigi iki yaridan birlestirilir (R-060).
+const en = { ...enShell, ...enScreens };
+const tr = { ...trShell, ...trScreens };
 
 test('readApiError keeps only string detail lines from JSON errors', async () => {
   const response = new Response(JSON.stringify({

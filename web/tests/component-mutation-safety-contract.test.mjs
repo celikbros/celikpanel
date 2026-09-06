@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 const serviceSource = readFileSync(
   new URL('../src/components/ServiceList.tsx', import.meta.url),
@@ -10,8 +11,8 @@ const operationSource = readFileSync(
   new URL('../src/components/ComponentOperation.tsx', import.meta.url),
   'utf8',
 );
-const enSource = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const trSource = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const enSource = englishCatalogue;
+const trSource = turkishCatalogue;
 
 function sourceSection(source, start, end) {
   const startIndex = source.indexOf(start);
@@ -87,10 +88,15 @@ test('lifecycle, repair, runtime install and firewall actions require an explici
   assert.match(serviceSource, /requestComponentAction\(\{ kind: 'install-package'/);
   assert.match(serviceSource, /requestComponentAction\(\{ kind: 'install-node'/);
   assert.match(serviceSource, /<ComponentActionConfirmationDialog/);
-  assert.match(serviceSource, /role='dialog'/);
-  assert.match(serviceSource, /aria-modal='true'/);
+  // The dialogue's role, modality, labelling and Escape are the shared
+  // Dialog's, where R-059 moved them; they are pinned in
+  // dialog-shape-contract.test.mjs. What this contract still owns is that the
+  // action is confirmed by a dialogue at all, and that the way out is focused.
+  //
+  // Rol, kiplik, etiketleme ve Escape artik paylasilan Dialog'a aittir.
+  assert.match(serviceSource, /<Dialog\s+id='component-action-confirm'/);
+  assert.match(serviceSource, /onDismiss=\{onCancel\}/);
   assert.match(serviceSource, /autoFocus onClick=\{onCancel\}/);
-  assert.match(serviceSource, /if \(event\.key === 'Escape'\) onCancel\(\)/);
 
   assert.match(serviceSource, /requestAction\('save'\)/);
   assert.match(serviceSource, /requestAction\(st\.enabled \? 'disable' : 'enable'\)/);

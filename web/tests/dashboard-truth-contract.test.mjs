@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 const dashboard = readFileSync(new URL('../src/components/Dashboard.tsx', import.meta.url), 'utf8');
 const operation = readFileSync(new URL('../src/components/ComponentOperation.tsx', import.meta.url), 'utf8');
 const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
 const census = readFileSync(new URL('../src/lib/componentCensus.ts', import.meta.url), 'utf8');
-const en = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const tr = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const en = englishCatalogue;
+const tr = turkishCatalogue;
 
 test('mail journey requires fresh runtime state and completed profile reconciliation', () => {
   assert.match(operation, /typeof profile\.verified !== 'boolean'/);

@@ -9,7 +9,7 @@ import { api, type SystemStats } from '../lib/api';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import type { TranslationKey } from '../i18n/en';
-import { UsageBar, Card } from './ui';
+import { Button, Dialog, UsageBar, Card } from './ui';
 import { PageHeader } from './PageHeader';
 import { showToast } from './Toast';
 import { FirewallNoSSHAcknowledgement, readFirewallSSHReason } from './FirewallSSHNotice';
@@ -1088,79 +1088,51 @@ function DashboardFirewallConfirmationDialog({
                 `services.mutationReadiness.${readiness.reason ?? 'state_unverified'}` as Parameters<typeof t>[0],
             );
 
-    useEffect(() => {
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && !busy) onCancel();
-        };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [busy, onCancel]);
-
+    // The controls are the shared Button now; the hand-rolled pair here carried
+    // its own disabled skin and missed R-047's contrast fix.
+    // Denetimler artik paylasilan Button'dir; buradaki elle yazilmis cift kendi
+    // devre disi gorunumunu tasiyor ve R-047'nin kontrast duzeltmesini
+    // kaciriyordu.
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onMouseDown={(event) => {
-                if (event.currentTarget === event.target && !busy) onCancel();
-            }}
-        >
-            <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="dashboard-firewall-confirm-title"
-                aria-describedby="dashboard-firewall-confirm-description"
-                aria-busy={busy}
-                className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
-            >
-                <div className="mb-4 flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Shield className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0">
-                        <h3 id="dashboard-firewall-confirm-title" className="text-lg font-semibold text-fg">
-                            {t('firewall.confirm.enable.title')}
-                        </h3>
-                        <p id="dashboard-firewall-confirm-description" className="mt-1 text-sm leading-5 text-fg-muted">
-                            {t('firewall.confirm.enable.description')}
-                        </p>
-                    </div>
-                </div>
-                {readiness?.ready !== true && (
-                    <p role="status" className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-fg">
-                        <span className="font-semibold">{t('services.mutationReadiness.title')}</span>{' '}
-                        {readinessMessage}
-                    </p>
-                )}
-                {noSSHService && (
-                    <FirewallNoSSHAcknowledgement
-                        id="dashboard-firewall-no-ssh"
-                        checked={noSSHAcknowledged}
-                        disabled={busy}
-                        onChange={onAcknowledgeNoSSH}
-                    />
-                )}
-                <div className="flex justify-end gap-2">
-                    <button
-                        type="button"
-                        autoFocus
-                        disabled={busy}
-                        onClick={onCancel}
-                        className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-fg hover:bg-surface-2 disabled:opacity-50"
-                    >
+        <Dialog
+            id="dashboard-firewall-confirm"
+            icon={Shield}
+            title={t('firewall.confirm.enable.title')}
+            description={t('firewall.confirm.enable.description')}
+            busy={busy}
+            onDismiss={onCancel}
+            footerLead={noSSHService ? (
+                <FirewallNoSSHAcknowledgement
+                    id="dashboard-firewall-no-ssh"
+                    checked={noSSHAcknowledged}
+                    disabled={busy}
+                    onChange={onAcknowledgeNoSSH}
+                />
+            ) : undefined}
+            actions={
+                <>
+                    <Button variant="secondary" autoFocus disabled={busy} onClick={onCancel}>
                         {t('common.cancel')}
-                    </button>
-                    <button
-                        type="button"
+                    </Button>
+                    <Button
+                        variant="primary"
                         disabled={busy || readiness?.ready !== true || (noSSHService && !noSSHAcknowledged)}
                         onClick={onConfirm}
-                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {noSSHService
                             ? t('firewall.ssh.no_ssh_service.confirm')
                             : t('firewall.confirm.enable.button')}
-                    </button>
-                </div>
-            </div>
-        </div>
+                    </Button>
+                </>
+            }
+        >
+            {readiness?.ready !== true && (
+                <p role="status" className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-fg">
+                    <span className="font-semibold">{t('services.mutationReadiness.title')}</span>{' '}
+                    {readinessMessage}
+                </p>
+            )}
+        </Dialog>
     );
 }
 

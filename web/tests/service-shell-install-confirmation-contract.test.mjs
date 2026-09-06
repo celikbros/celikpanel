@@ -43,11 +43,15 @@ test('install confirmation readiness is fetched without cache and fails closed',
 });
 
 test('install confirmation is accessible, cancel-focused and uses shared localized copy', () => {
-  assert.ok(source.includes('role="dialog"'));
-  assert.ok(source.includes('aria-modal="true"'));
-  assert.ok(source.includes('aria-labelledby="service-install-confirm-title"'));
-  assert.ok(source.includes('aria-describedby="service-install-confirm-description"'));
-  assert.ok(source.includes("if (event.key === 'Escape') onCancel()"));
+  // Role, modality, the title and description ids and Escape are the shared
+  // Dialog's since R-059, and are pinned in dialog-shape-contract.test.mjs.
+  // Naming the dialogue 'service-install-confirm' is what gives it those ids.
+  //
+  // Rol, kiplik, baslik/aciklama kimlikleri ve Escape R-059'dan beri paylasilan
+  // Dialog'a aittir; diyalogu adlandirmak ona o kimlikleri verir.
+  assert.ok(source.includes('<Dialog'));
+  assert.ok(source.includes('id="service-install-confirm"'));
+  assert.ok(source.includes('onDismiss={onCancel}'));
   assert.ok(source.includes('autoFocus'));
   assert.ok(source.includes('onClick={onCancel}'));
   assert.ok(source.includes('disabled={confirmDisabled}'));

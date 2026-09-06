@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 const serviceList = readFileSync(new URL('../src/components/ServiceList.tsx', import.meta.url), 'utf8');
-const english = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const turkish = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const english = englishCatalogue;
+const turkish = turkishCatalogue;
 
 test('installed conflicts take precedence over install availability badges', () => {
   const branch = serviceList.slice(

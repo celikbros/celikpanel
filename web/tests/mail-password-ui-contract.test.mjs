@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 const mailSource = readFileSync(new URL('../src/components/DomainMailManager.tsx', import.meta.url), 'utf8');
 const detailSource = readFileSync(new URL('../src/components/DomainDetail.tsx', import.meta.url), 'utf8');
-const enSource = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const trSource = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const enSource = englishCatalogue;
+const trSource = turkishCatalogue;
 
 function sourceBetween(source, startNeedle, endNeedle) {
   const start = source.indexOf(startNeedle);
@@ -131,12 +132,21 @@ test('submitted mailbox secrets are cleared after every outcome and never echoed
 });
 
 test('password dialog is accessible, identifies the mailbox, and warns about live sessions', () => {
-  assert.ok(dialogSource.includes('role="dialog"'));
-  assert.ok(dialogSource.includes('aria-modal="true"'));
-  assert.ok(dialogSource.includes('aria-labelledby="mail-password-dialog-title"'));
+  // Role, modality and the title id come from the shared Dialog since R-059
+  // (pinned in dialog-shape-contract.test.mjs); naming this dialogue
+  // 'mail-password-dialog' is what makes its title id the one below.
+  //
+  // Rol, kiplik ve baslik kimligi R-059'dan beri paylasilan Dialog'dan gelir;
+  // bu diyalogu adlandirmak, asagidaki baslik kimligini veren seydir.
+  assert.ok(dialogSource.includes('<Dialog'));
+  assert.ok(dialogSource.includes('id="mail-password-dialog"'));
+  assert.ok(dialogSource.includes('onDismiss={closePasswordDialog}'));
+  // Which mailbox is being changed, and that live sessions end, are both
+  // announced with the title rather than left to be found in the body.
   assert.ok(dialogSource.includes('passwordAccount.address'));
   assert.ok(dialogSource.includes("t('mail.passwordDialog.sessionWarning')"));
-  assert.ok(dialogSource.includes("aria-label={t('mail.passwordDialog.close')}"));
+  assert.ok(dialogSource.includes('extraDescribedBy="mail-password-session-warning"'));
+  assert.ok(dialogSource.includes('id="mail-password-session-warning"'));
 });
 
 test('mailbox password and deletion-pending messages stay in EN/TR parity', () => {
@@ -145,7 +155,6 @@ test('mailbox password and deletion-pending messages stay in EN/TR parity', () =
     'mail.changePasswordFor',
     'mail.passwordDialog.title',
     'mail.passwordDialog.account',
-    'mail.passwordDialog.close',
     'mail.passwordDialog.new',
     'mail.passwordDialog.confirm',
     'mail.passwordDialog.requirements',

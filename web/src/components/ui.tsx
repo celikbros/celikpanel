@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type FormEvent, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from '../router';
 import { useI18n } from '../i18n';
@@ -108,6 +108,214 @@ export function Button({
             {Icon && <Icon className="h-4 w-4" />}
             {children}
         </button>
+    );
+}
+
+// Dialog: the one modal shape in the product.
+//
+// Register R-047 found the mail install dialogue with its confirm button below
+// the fold at 1440x900 the moment it opened, and fixed it there. R-059 found
+// the identical defect in the DNS review dialogue - 994 tall inside a box of
+// 808 at 1440x900, 1608 inside 758 at 390x844, opening scrolled to the top, so
+// an operator saw a refusal and no way to dismiss it. The two dialogues shared
+// nothing: they were two hand-built overlays, and the product had thirteen more
+// of them. Fixing it a third time in a third place is how a defect becomes a
+// habit, so the shape lives here now and the dialogues call it.
+//
+// The shape is a bounded column, never one scrolling box:
+//   - a header that names the dialogue and does not move,
+//   - a body that scrolls and holds everything that can grow,
+//   - an action row outside the scroller, so the decision is always on screen.
+// A dialogue's height is therefore its content's, capped at 90vh, and its
+// actions are visible on open at every viewport this product supports.
+//
+// Dismissal is a property of the dialogue, not a house style: a destructive
+// confirmation passes dismissible={false} and then the backdrop, Escape and
+// every other silent exit are gone together, because a dialogue that vanishes
+// without a trace reads exactly like a button that did not work.
+//
+// Dialog: üründeki tek diyalog biçimi.
+//
+// R-047 defteri, posta kurulum diyaloğunun onay düğmesini 1440x900'de daha
+// açılır açılmaz görünür alanın altında buldu ve orada düzeltti. R-059 aynı
+// kusuru DNS inceleme diyaloğunda buldu. İkisi hiçbir şey paylaşmıyordu: elle
+// kurulmuş iki ayrı kaplamaydılar ve üründe on üç tane daha vardı. Üçüncü kez
+// üçüncü bir yerde düzeltmek, kusurun alışkanlığa dönüşme yoludur; bu yüzden
+// biçim artık burada yaşar ve diyaloglar onu çağırır.
+//
+// Biçim, tek bir kayan kutu değil, sınırlı bir sütundur: kaymayan bir başlık,
+// büyüyebilen her şeyi tutan kayan bir gövde ve kaydırıcının dışında duran bir
+// eylem satırı. Kapatılabilirlik ise diyaloğun bir özelliğidir: yıkıcı bir onay
+// dismissible={false} geçer ve sessiz çıkışların tamamı birlikte kalkar.
+const dialogWidths = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-2xl',
+} as const;
+
+// A dialogue can open another one - the install dialogue asks a second time
+// before it enables a vendor repository - and Escape belongs to whichever is on
+// top. Without this, one keypress closes both and the operator loses the
+// dialogue they were reading as well as the one they answered.
+//
+// Bir diyalog baska bir diyalog acabilir ve Escape en usttekine aittir. Bu
+// olmadan tek tusa basmak ikisini birden kapatir.
+const openDialogs: symbol[] = [];
+
+export function Dialog({
+    id,
+    title,
+    description,
+    icon: Icon,
+    iconSlot,
+    tone = 'default',
+    width = 'md',
+    busy = false,
+    dismissible = true,
+    stacked = false,
+    extraDescribedBy,
+    onDismiss,
+    onSubmit,
+    noValidate = false,
+    footerLead,
+    actions,
+    children,
+}: {
+    /** Root for the dialogue's own ids: `${id}-title`, `${id}-description`. */
+    id: string;
+    title: ReactNode;
+    description?: ReactNode;
+    icon?: LucideIcon;
+    /** For a dialogue whose header mark is content rather than an icon. */
+    iconSlot?: ReactNode;
+    tone?: 'default' | 'danger';
+    width?: keyof typeof dialogWidths;
+    busy?: boolean;
+    /** false removes the backdrop, Escape and every other silent exit at once. */
+    dismissible?: boolean;
+    /** A dialogue opened from inside another one. */
+    stacked?: boolean;
+    /** Ids of anything else that describes this dialogue - a warning in the
+        body that an assistive reader should hear with the title. */
+    extraDescribedBy?: string;
+    onDismiss?: () => void;
+    onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
+    /** Leave validation to the dialogue rather than the browser: a form that
+        shows its own messages must not also raise a native bubble. */
+    noValidate?: boolean;
+    /** Sits in the fixed footer above the actions - an acknowledgement that
+        gates the primary belongs here, beside the control it gates. */
+    footerLead?: ReactNode;
+    actions: ReactNode;
+    /** The scrolling body. A dialogue that is only a question has none, and
+        then the body takes no room at all. */
+    children?: ReactNode;
+}) {
+    const canDismiss = dismissible && !busy && onDismiss !== undefined;
+    const tokenRef = useRef<symbol>();
+    if (tokenRef.current === undefined) tokenRef.current = Symbol('dialog');
+
+    useEffect(() => {
+        const token = tokenRef.current!;
+        openDialogs.push(token);
+        return () => {
+            const at = openDialogs.lastIndexOf(token);
+            if (at >= 0) openDialogs.splice(at, 1);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!canDismiss) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            if (openDialogs[openDialogs.length - 1] !== tokenRef.current) return;
+            onDismiss!();
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [canDismiss, onDismiss]);
+
+    const panelProps = {
+        role: 'dialog',
+        'aria-modal': true,
+        'aria-labelledby': `${id}-title`,
+        'aria-describedby': [description === undefined ? null : `${id}-description`, extraDescribedBy]
+            .filter((part) => part !== null && part !== undefined)
+            .join(' ') || undefined,
+        'aria-busy': busy || undefined,
+        className:
+            `flex max-h-[90vh] w-full ${dialogWidths[width]} flex-col rounded-2xl border ` +
+            `${tone === 'danger' ? 'border-danger/40' : 'border-border'} bg-surface shadow-xl`,
+    } as const;
+
+    const inner = (
+        <>
+            <div className="shrink-0 border-b border-border px-6 pb-4 pt-6">
+                <div className="flex items-start gap-3">
+                    {iconSlot ??
+                        (Icon && (
+                            <span
+                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                                    tone === 'danger' ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'
+                                }`}
+                            >
+                                <Icon className="h-5 w-5" />
+                            </span>
+                        ))}
+                    <div className="min-w-0">
+                        <h3 id={`${id}-title`} className="text-lg font-semibold text-fg">
+                            {title}
+                        </h3>
+                        {description !== undefined && (
+                            <p id={`${id}-description`} className="mt-1 text-sm leading-5 text-fg-muted">
+                                {description}
+                            </p>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* A body that renders nothing this time - a refusal banner with no
+                refusal to show - takes no room and leaves no second hairline
+                against the footer's.
+                Bu sefer hicbir sey cizmeyen bir govde yer kaplamaz ve altbilgi
+                cizgisinin yaninda ikinci bir cizgi birakmaz. */}
+            <div className="peer min-h-0 flex-1 overflow-y-auto px-6 py-5 empty:hidden">{children}</div>
+
+            <div className="shrink-0 border-t border-border px-6 pb-6 pt-4 peer-empty:border-t-0">
+                {footerLead}
+                {/* Column-reverse below sm so the primary is the first control a
+                    thumb reaches, row-end above it. The caller's DOM order
+                    decides which control leads, at both widths at once.
+                    sm altında ters sütun: birincil denetim, parmağın ulaştığı
+                    ilk denetimdir; üstünde satır sonu hizası. */}
+                <div
+                    className={`flex flex-col-reverse gap-2 sm:flex-row sm:justify-end ${
+                        footerLead === undefined ? '' : 'mt-4'
+                    }`}
+                >
+                    {actions}
+                </div>
+            </div>
+        </>
+    );
+
+    return (
+        <div
+            className={`fixed inset-0 ${stacked ? 'z-[60]' : 'z-50'} flex items-center justify-center bg-black/50 p-4`}
+            onMouseDown={(event) => {
+                if (canDismiss && event.currentTarget === event.target) onDismiss!();
+            }}
+        >
+            {onSubmit === undefined ? (
+                <div {...panelProps}>{inner}</div>
+            ) : (
+                <form {...panelProps} noValidate={noValidate} onSubmit={onSubmit}>
+                    {inner}
+                </form>
+            )}
+        </div>
     );
 }
 

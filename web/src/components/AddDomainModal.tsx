@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from '../router';
-import { Globe, X, Lock, Server, Network } from 'lucide-react';
+import { Globe, Lock, Server, Network } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { ErrorBanner } from './ui';
+import { Button, Dialog, ErrorBanner } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 
 interface AddDomainModalProps {
@@ -227,27 +227,31 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-surface border border-border rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                            <Globe className="w-6 h-6 text-primary" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-fg">{t('domains.add.title')}</h2>
-                            <p className="text-sm text-fg-subtle">{t('domains.add.subtitle')}</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-surface-2 rounded-lg transition-colors">
-                        <X className="w-5 h-5 text-fg-muted" />
-                    </button>
-                </div>
-
-                <ErrorBanner error={error} className="mb-6" />
+        <Dialog
+            id="add-domain"
+            icon={Globe}
+            width="xl"
+            title={t('domains.add.title')}
+            description={t('domains.add.subtitle')}
+            busy={loading}
+            onDismiss={onClose}
+            onSubmit={handleSubmit}
+            actions={
+                <>
+                    <Button type="button" variant="secondary" onClick={onClose}>
+                        {t('common.cancel')}
+                    </Button>
+                    <Button type="submit" variant="primary" disabled={loading || dnsMissing}>
+                        {loading ? t('domains.add.creating') : t('domains.add.create')}
+                    </Button>
+                </>
+            }
+        >
+            <div className="space-y-4">
+                <ErrorBanner error={error} />
 
                 {dnsMissing && (
-                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-fg">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-fg">
                         {/*
                           Say which half is missing. An engine that is active but
                           has no identity must not be told to "activate BIND or
@@ -281,111 +285,91 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                         </button>
                     </div>
                 )}
+                <div>
+                    <label className="block text-sm font-medium text-fg-muted mb-2">
+                        {t('domains.add.domainName')}
+                    </label>
+                    <input
+                        type="text"
+                        value={domainName}
+                        onChange={(e) => setDomainName(e.target.value)}
+                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-fg focus:outline-none focus:border-primary"
+                        placeholder="example.com"
+                        required
+                    />
+                    <p className="text-xs text-fg-subtle mt-1">{t('domains.add.domainHint')}</p>
+                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-fg-muted mb-2">
-                            {t('domains.add.domainName')}
-                        </label>
+                <div>
+                    <label className="block text-sm font-medium text-fg-muted mb-2">
+                        {t('domains.add.purpose')}
+                    </label>
+                    <div className="grid gap-2">
+                        {purposeOptions.map(({ id, icon: Icon, available, requirement }) => (
+                            <label
+                                key={id}
+                                className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
+                                    purpose === id
+                                        ? 'border-primary bg-primary/5'
+                                        : 'border-border bg-surface-2/50'
+                                } ${available ? 'cursor-pointer hover:border-primary/50' : 'opacity-60'}`}
+                            >
+                                <input
+                                    type="radio"
+                                    name="purpose"
+                                    checked={purpose === id}
+                                    disabled={!available}
+                                    onChange={() => setPurpose(id)}
+                                    className="mt-1"
+                                />
+                                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
+                                <div className="min-w-0">
+                                    <div className="text-sm font-medium text-fg">{t(`domains.add.purpose.${id}` as Parameters<typeof t>[0])}</div>
+                                    <p className="text-xs text-fg-subtle">{t(`domains.add.purpose.${id}.desc` as Parameters<typeof t>[0])}</p>
+                                    {requirement && (
+                                        <p className="mt-1 text-xs font-medium text-warning">{requirement}</p>
+                                    )}
+                                </div>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+
+                {/* The PHP version picker used to live here. It moved to the
+                    site's own settings (D-013): choosing an interpreter is
+                    not part of adding a domain, and advertising PHP on a
+                    server that has none contradicted "what isn't installed
+                    is invisible".
+                    PHP sürüm seçici burada dururdu. Sitenin kendi ayarlarına
+                    taşındı (D-013): yorumlayıcı seçmek domain eklemenin
+                    parçası değildir ve PHP'si olmayan bir sunucuda PHP'yi
+                    reklam etmek "kurulu olmayan görünmez" ilkesine aykırıydı. */}
+
+                {purpose !== 'dnsonly' && (
+                    <div className="flex items-start gap-3 p-4 bg-surface-2/50 rounded-lg">
                         <input
-                            type="text"
-                            value={domainName}
-                            onChange={(e) => setDomainName(e.target.value)}
-                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-fg focus:outline-none focus:border-primary"
-                            placeholder="example.com"
-                            required
+                            type="checkbox"
+                            id="ssl"
+                            checked={sslEnabled}
+                            onChange={(e) => setSSLEnabled(e.target.checked)}
+                            className="mt-1"
                         />
-                        <p className="text-xs text-fg-subtle mt-1">{t('domains.add.domainHint')}</p>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-fg-muted mb-2">
-                            {t('domains.add.purpose')}
-                        </label>
-                        <div className="grid gap-2">
-                            {purposeOptions.map(({ id, icon: Icon, available, requirement }) => (
-                                <label
-                                    key={id}
-                                    className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                                        purpose === id
-                                            ? 'border-primary bg-primary/5'
-                                            : 'border-border bg-surface-2/50'
-                                    } ${available ? 'cursor-pointer hover:border-primary/50' : 'opacity-60'}`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="purpose"
-                                        checked={purpose === id}
-                                        disabled={!available}
-                                        onChange={() => setPurpose(id)}
-                                        className="mt-1"
-                                    />
-                                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
-                                    <div className="min-w-0">
-                                        <div className="text-sm font-medium text-fg">{t(`domains.add.purpose.${id}` as Parameters<typeof t>[0])}</div>
-                                        <p className="text-xs text-fg-subtle">{t(`domains.add.purpose.${id}.desc` as Parameters<typeof t>[0])}</p>
-                                        {requirement && (
-                                            <p className="mt-1 text-xs font-medium text-warning">{requirement}</p>
-                                        )}
-                                    </div>
-                                </label>
-                            ))}
+                        <div className="flex-1">
+                            <label htmlFor="ssl" className="flex items-center gap-2 text-sm font-medium text-fg-muted cursor-pointer">
+                                <Lock className="w-4 h-4" />
+                                {t('domains.add.ssl')}
+                            </label>
+                            <p className="text-xs text-fg-subtle mt-1">{t('domains.add.sslHint')}</p>
                         </div>
                     </div>
+                )}
 
-                    {/* The PHP version picker used to live here. It moved to the
-                        site's own settings (D-013): choosing an interpreter is
-                        not part of adding a domain, and advertising PHP on a
-                        server that has none contradicted "what isn't installed
-                        is invisible".
-                        PHP sürüm seçici burada dururdu. Sitenin kendi ayarlarına
-                        taşındı (D-013): yorumlayıcı seçmek domain eklemenin
-                        parçası değildir ve PHP'si olmayan bir sunucuda PHP'yi
-                        reklam etmek "kurulu olmayan görünmez" ilkesine aykırıydı. */}
-
-                    {purpose !== 'dnsonly' && (
-                        <div className="flex items-start gap-3 p-4 bg-surface-2/50 rounded-lg">
-                            <input
-                                type="checkbox"
-                                id="ssl"
-                                checked={sslEnabled}
-                                onChange={(e) => setSSLEnabled(e.target.checked)}
-                                className="mt-1"
-                            />
-                            <div className="flex-1">
-                                <label htmlFor="ssl" className="flex items-center gap-2 text-sm font-medium text-fg-muted cursor-pointer">
-                                    <Lock className="w-4 h-4" />
-                                    {t('domains.add.ssl')}
-                                </label>
-                                <p className="text-xs text-fg-subtle mt-1">{t('domains.add.sslHint')}</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {caps && caps.dns_server !== '' && (
-                        <p className="text-xs text-fg-subtle">
-                            {t('domains.add.dnsServed', { server: caps.dns_server })}
-                        </p>
-                    )}
-
-                    <div className="flex gap-3 pt-4">
-                        <button
-                            type="submit"
-                            disabled={loading || dnsMissing}
-                            className="flex-1 bg-primary hover:bg-primary-hover disabled:bg-surface-3 text-white px-6 py-3 rounded-lg transition-colors font-medium"
-                        >
-                            {loading ? t('domains.add.creating') : t('domains.add.create')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-6 py-3 bg-surface-2 hover:bg-surface-3 text-fg-muted rounded-lg transition-colors"
-                        >
-                            {t('common.cancel')}
-                        </button>
-                    </div>
-                </form>
+                {caps && caps.dns_server !== '' && (
+                    <p className="text-xs text-fg-subtle">
+                        {t('domains.add.dnsServed', { server: caps.dns_server })}
+                    </p>
+                )}
             </div>
-        </div>
+        </Dialog>
     );
 }

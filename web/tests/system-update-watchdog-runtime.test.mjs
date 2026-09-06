@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
 
 async function importTypeScript(relativePath) {
     const source = readFileSync(new URL(relativePath, import.meta.url), 'utf8');
@@ -20,8 +21,8 @@ const component = readFileSync(
     new URL('../src/components/SystemUpdateOperation.tsx', import.meta.url),
     'utf8',
 );
-const en = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
-const tr = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+const en = englishCatalogue;
+const tr = turkishCatalogue;
 
 test('global navigation lock has an exact two-minute deadline', () => {
     const started = 1_000_000;

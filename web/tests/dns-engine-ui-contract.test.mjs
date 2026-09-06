@@ -970,12 +970,24 @@ test('DNS actions lock while state is loading and an independent full-page guard
     'parent fail-closed state must not accidentally unmount an in-flight outcome guard');
 });
 
+// R-059: this dialogue measured 994 tall inside a box of 808 at 1440x900 and
+// 1608 inside 758 at 390x844, and opened scrolled to the top — so an operator
+// saw a refusal with no way out of it. It is the shared Dialog now, which is
+// where the bounded body and the pinned action row live and where they are
+// pinned (dialog-shape-contract.test.mjs). What stays asserted here is that
+// this dialogue takes that shape, names itself for an assistive reader, and
+// cannot be dismissed out from under a commit that is already running.
+//
+// R-059: bu diyalog 1440x900'de 808'lik kutunun içinde 994, 390x844'te 758'in
+// içinde 1608 ölçüldü ve en üstte açılıyordu. Artık paylaşılan Dialog'dur.
 test('review dialog is accessible and uses a meaningful acknowledgement, not a typed phrase', () => {
-  assert.match(card, /role="dialog"/);
-  assert.match(card, /aria-modal="true"/);
-  assert.match(card, /aria-labelledby="dns-engine-review-title"/);
-  assert.match(card, /aria-describedby="dns-engine-review-description"/);
-  assert.match(card, /if \(event\.key === 'Escape' && !review\.committing\) onCancel\(\)/);
+  assert.match(card, /<Dialog\s+id="dns-engine-review"/);
+  assert.match(card, /dismissible=\{!review\.committing\}/,
+    'a commit in flight must not be dismissable from under the operator');
+  assert.match(card, /onDismiss=\{onCancel\}/);
+  assert.match(card, /busy=\{review\.loading \|\| review\.committing\}/);
+  assert.doesNotMatch(card, /fixed inset-0/, 'the dialogue must not build its own overlay again');
+  assert.doesNotMatch(card, /max-h-\[90vh\]/, 'the bound belongs to the shared dialogue, not here');
   // The dismissing control is the one that takes focus on open, in both states.
   // Which of the two looks like the call to action depends on whether the
   // change is refused, and that is asserted with the refusal below.
@@ -1378,15 +1390,21 @@ test('a refused preview makes the working control the prominent one, above the r
   const dialogStart = card.indexOf('function DNSEngineReviewDialog');
   assert.ok(dialogStart >= 0);
   const dialog = card.slice(dialogStart);
-  const actionsStart = dialog.indexOf('className="mt-6 flex flex-col-reverse');
-  assert.ok(actionsStart >= 0, 'the dialog still ends in a reversed action row');
-  const actions = dialog.slice(actionsStart, dialog.indexOf('</div>', actionsStart));
+  const actionsStart = dialog.indexOf('actions={');
+  assert.ok(actionsStart >= 0, 'the dialog no longer hands its actions to the shared footer');
+  const actions = dialog.slice(actionsStart, dialog.indexOf('\n        >', actionsStart));
 
   // A reversed column puts the last child on top at 390px and the row keeps the
   // last child rightmost, so the refused control leading the DOM in the blocked
   // state is exactly what puts the working one first on a phone and last on a
-  // desktop.
-  assert.match(actions, /flex-col-reverse[\s\S]*sm:flex-row sm:justify-end/);
+  // desktop. The reversal itself belongs to the shared dialogue now — it is the
+  // same answer at every width for every dialogue — and is pinned there; the
+  // DOM order that uses it is this dialogue's own decision and stays here.
+  //
+  // Ters sütunun kendisi artık paylaşılan diyaloğa aittir ve orada sabitlenir;
+  // onu kullanan DOM sırası bu diyaloğun kendi kararıdır ve burada kalır.
+  const ui = readFileSync(new URL('../src/components/ui.tsx', import.meta.url), 'utf8');
+  assert.match(ui, /flex flex-col-reverse gap-2 sm:flex-row sm:justify-end/);
   const refusedFirst = actions.indexOf('{blocked && confirmButton}');
   const cancel = actions.indexOf("variant={blocked ? 'primary' : 'secondary'}");
   const confirmLast = actions.indexOf('{!blocked && confirmButton}');
