@@ -48,6 +48,17 @@ type SyncVPNPeersResponse struct {
 	// HostRestartRequired, yukaridaki kurulum yanitiyla ayni yapisal kaniti
 	// tasir. R-055.
 	HostRestartRequired bool `json:"host_restart_required,omitempty"`
+	// NotConfigured is set only on the agent's structural proof that there is
+	// no VPN server on this host at all: the configuration the sync would
+	// amend does not exist. It is not set for a configuration that exists and
+	// could not be read, which is a different fault with a different answer.
+	// It exists so the panel can say what is wrong and what to do first
+	// instead of answering with an opaque 500. R-058.
+	// NotConfigured yalnizca, bu makinede hic VPN sunucusu olmadiginin yapisal
+	// kaniti uzerine ayarlanir: esitlemenin degistirecegi yapilandirma yoktur.
+	// Var olup okunamayan bir yapilandirma icin ayarlanmaz; o baska bir
+	// arizadir ve baska bir yaniti vardir. R-058.
+	NotConfigured bool `json:"not_configured,omitempty"`
 }
 
 type VPNPeerStat struct {

@@ -72,6 +72,29 @@ export function Button({
     variant?: 'primary' | 'secondary' | 'danger';
     icon?: LucideIcon;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+    // R-047's leftover, fixed in the one place it is decided. A disabled button
+    // used to be its own enabled skin behind a 50% wash, which is the cheapest
+    // possible answer and the least legible one: a disabled primary's label
+    // read 2.1:1 against its own fill in light and 2.4:1 in dark, and a
+    // disabled danger fared no better. That matters most exactly where the
+    // wash was doing the most work - a refusal, where the unavailable control
+    // is what names the action being refused, and a control an operator cannot
+    // read explains nothing.
+    //
+    // Every variant now steps down to the same recessed pairing instead, which
+    // clears AA in both themes and in every skin, says "unavailable" once
+    // rather than three different ways, and is one rule where there were three.
+    // Pointer events go with it: a disabled fill must not light up under the
+    // cursor, and switching them off is what makes that true for the hover
+    // colour of every variant at once, present and future.
+    //
+    // R-047'nin artigi, karara varildigi tek yerde giderildi. Devre disi bir
+    // buton, kendi etkin gorunumunun %50 saydami idi; bu en ucuz ve en az
+    // okunur cevaptir: devre disi bir birincil butonun etiketi kendi dolgusuna
+    // karsi acikta 2.1:1, koyuda 2.4:1 okunuyordu. Bu, en cok bir rette onem
+    // tasir: orada kullanilamayan denetim, reddedilen eylemi adlandiran seydir.
+    // Artik her varyant ayni cukur eslesmeye iner; her temada ve her skin'de AA
+    // gecer ve uc kural yerine tek kural olur.
     const styles = {
         primary: 'bg-primary text-primary-fg hover:bg-primary-hover border-transparent',
         secondary: 'bg-surface text-fg border-border-strong hover:bg-surface-2',
@@ -80,7 +103,7 @@ export function Button({
     return (
         <button
             {...props}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${props.className ?? ''}`}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:bg-surface-2 disabled:text-fg-muted ${styles} ${props.className ?? ''}`}
         >
             {Icon && <Icon className="h-4 w-4" />}
             {children}

@@ -116,6 +116,18 @@ type dnsEngineSnapshot struct {
 	runtimeErr       error
 	dnssecErr        error
 	pairIdentityErr  error
+	// mutationHold is the agent's reason for refusing durable mutations, or
+	// "" when it accepts them. It is already what turns an engine's detail
+	// code into "mutations_held" in the presentation; it is carried on the
+	// snapshot so the gates that decide what may be offered can read the fact
+	// itself rather than the word derived from it. R-050.
+	//
+	// mutationHold, agent'ın kalıcı mutasyonları reddetme sebebidir; kabul
+	// ediyorsa "" olur. Sunumda bir motorun detay kodunu zaten
+	// "mutations_held" yapan şey odur; neyin önerilebileceğine karar veren
+	// kapılar ondan türetilen kelimeyi değil olgunun kendisini okusun diye
+	// anlık görüntüde taşınır. R-050.
+	mutationHold string
 }
 
 type dnsEnginePreviewBlocker struct {
@@ -649,6 +661,7 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 		runtimeErr:      runtimeErr,
 		dnssecErr:       dnssecErr,
 		pairIdentityErr: pairIdentityErr,
+		mutationHold:    mutationHold,
 	}, nil
 }
 
@@ -976,6 +989,25 @@ func adoptableUnmanagedDNSEngine(
 		return false
 	}
 	if snapshot.runtimeErr != nil || snapshot.port53Conflict {
+		return false
+	}
+	// R-050. A BIND the panel installed reads Managed=false while the
+	// transaction that would have claimed it is held, which is exactly the
+	// shape below this line: installed, unmanaged, nothing else serving. The
+	// takeover would then be offered for the panel's own unfinished work, and
+	// the sentence the operator reads - "a DNS server CelikPanel did not
+	// install" - would be false about a server CelikPanel did install. The
+	// commit would be refused anyway; the offer is the defect. While the hold
+	// stands this host is the panel's and busy, which is what the engine
+	// card's mutations_held blocker already says.
+	//
+	// R-050. Panelin kurduğu bir BIND, onu sahiplenecek işlem tutulurken
+	// Managed=false okunur; bu da tam olarak aşağıdaki biçimdir. O hâlde
+	// devralma, panelin kendi yarım işi için önerilirdi ve operatörün okuduğu
+	// cümle - "CelikPanel'in kurmadığı bir DNS sunucusu" - panelin kurduğu bir
+	// sunucu hakkında yanlış olurdu. Commit zaten reddedilirdi; kusur olan
+	// tekliftir. Tutma sürdükçe bu sunucu panelindir ve meşguldür.
+	if snapshot.mutationHold != "" {
 		return false
 	}
 	if snapshot.ActiveEngine != nil || snapshot.EngineEpoch != 0 {

@@ -59,7 +59,16 @@ func TestDNSSettingsGuidedPairingContract(t *testing.T) {
 		`actionsLocked={actionsLocked}`,
 		`onIdentityPlanCurrentChange={handleIdentityPlanCurrentChange}`,
 		`activeEngine: ActiveDNSEngine | null;`,
-		`data-testid={manualRecovery ? 'dns-manual-recovery' : undefined}`,
+		// R-050. Manual recovery still owns this panel; a held host takes its
+		// own heading inside it, because manual recovery's words are about a
+		// DNS server somebody else configured and send the operator to correct
+		// it outside CelikPanel - the wrong remedy for the panel's own
+		// unfinished work.
+		// R-050. Manuel kurtarma bu paneli hala sahiplenir; tutulan bir makine
+		// onun icinde kendi basligini alir.
+		`mutationsHeld ? 'dns-mutations-held' : 'dns-manual-recovery'`,
+		`const mutationsHeld = dnsEngineMutationsHeld(engine);`,
+		`et('dnsEngine.heldTitle')`,
 		`et('dnsEngine.manualRecoveryTitle')`,
 		`et('dnsEngine.manualRecoveryDescription')`,
 		`data-testid="dns-identity-staging-note"`,

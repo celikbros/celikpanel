@@ -14,7 +14,7 @@ import {
 import { useI18n } from '../i18n';
 import { dnsEngineText, type DNSEngineCopyKey } from '../i18n/dnsEngine';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
-import { dnsEngineIdentityReviewLocked } from '../lib/dnsIdentityPlan';
+import { dnsEngineIdentityReviewLocked, dnsEngineMutationsHeld } from '../lib/dnsIdentityPlan';
 import {
     DNS_ENGINE_IDS,
     decodeDNSEngineSnapshot,
@@ -945,7 +945,23 @@ export function DNSEngineCard({
                                     ? 'border-success/30 bg-success/10 text-success'
                                     : 'border-warning/35 bg-warning/10 text-warning'
                             }`}>
-                                {et(`dnsEngine.state.${snapshot.state}` as DNSEngineCopyKey)}
+                                {/*
+                                  R-050. "Unmanaged DNS detected" is the compact
+                                  form of the claim this register entry exists to
+                                  stop: a DNS server CelikPanel did not install.
+                                  While the agent refuses durable mutations, an
+                                  engine the panel installed reads exactly that
+                                  way, and the badge would repeat the falsehood
+                                  above the sentence that corrects it.
+
+                                  R-050. "Panel disi DNS algilandi", bu defter
+                                  kaydinin engellemek icin var oldugu iddianin
+                                  kisa halidir. Tutma surerken panelin kurdugu
+                                  bir motor tam da oyle okunur.
+                                */}
+                                {dnsEngineMutationsHeld(snapshot)
+                                    ? et('dnsEngine.stateHeld')
+                                    : et(`dnsEngine.state.${snapshot.state}` as DNSEngineCopyKey)}
                             </span>
                             <span className="text-fg-muted">
                                 {et('dnsEngine.zoneSummary', {
@@ -1272,6 +1288,17 @@ function DNSEngineReviewDialog({
         return () => document.removeEventListener('keydown', onKeyDown);
     }, [onCancel, review.committing]);
 
+    const confirmButton = (
+        <Button
+            variant="primary"
+            icon={ArrowRightLeft}
+            disabled={confirmationDisabled}
+            onClick={onConfirm}
+        >
+            {review.committing ? et('dnsEngine.starting') : et('dnsEngine.confirm')}
+        </Button>
+    );
+
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -1475,17 +1502,39 @@ function DNSEngineReviewDialog({
                 )}
 
                 <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                    <Button variant="secondary" autoFocus disabled={review.committing} onClick={onCancel}>
+                    {/*
+                      R-047's leftover. In a refusal the change cannot be
+                      started, so the only control that does anything is the one
+                      that closes the dialog - and it was the quiet outline
+                      underneath a disabled fill that led the eye and, at 390px,
+                      sat above it. The two swap roles here: the working control
+                      takes the single call to action this view has, and the
+                      refused one steps back into the recessed disabled skin.
+                      Their order swaps with them, so the live control is first
+                      on a phone and last - rightmost - on a desktop, which is
+                      where each width expects it.
+
+                      The refused control stays. It is what names the action
+                      being refused, and a dialog that explains a refusal
+                      without showing what was refused explains half of it.
+
+                      R-047'nin artigi. Bir rette degisiklik baslatilamaz;
+                      dolayisiyla is goren tek denetim, iletisim kutusunu
+                      kapatandir - oysa gozu goturen, altindaki devre disi dolu
+                      blok idi ve 390 pikselde onun ustunde duruyordu. Ikisi rol
+                      degistirir; sirasi da onlarla birlikte degisir. Reddedilen
+                      denetim kalir: reddedilen eylemi adlandiran odur.
+                    */}
+                    {blocked && confirmButton}
+                    <Button
+                        variant={blocked ? 'primary' : 'secondary'}
+                        autoFocus
+                        disabled={review.committing}
+                        onClick={onCancel}
+                    >
                         {t('common.cancel')}
                     </Button>
-                    <Button
-                        variant="primary"
-                        icon={ArrowRightLeft}
-                        disabled={confirmationDisabled}
-                        onClick={onConfirm}
-                    >
-                        {review.committing ? et('dnsEngine.starting') : et('dnsEngine.confirm')}
-                    </Button>
+                    {!blocked && confirmButton}
                 </div>
             </div>
         </div>
