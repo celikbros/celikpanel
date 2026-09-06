@@ -27,6 +27,45 @@ func runMySQLStatement(statement string) ([]byte, error) {
 	return newMySQLStatementCommand(statement).CombinedOutput()
 }
 
+var postgreSQLExecStatement = runPostgreSQLStatement
+
+// R-062. psql took its statement in the argument list, and one of those
+// statements is CREATE USER ... WITH PASSWORD. An argument list is public:
+// every local account can read /proc/<pid>/cmdline for as long as the command
+// runs, and a hosting panel's whole premise is other local accounts. The
+// MariaDB side of this file already knew - newMySQLStatementCommand puts its
+// statement on stdin, where nothing but the process itself can see it - so
+// this is that shape, applied to the client that needed it more.
+//
+// ON_ERROR_STOP is not decoration here. With -c, psql exits non-zero when the
+// statement fails; reading a statement from stdin it does not, and every
+// caller below decides success from the exit status. Without this flag the
+// move from -c to stdin would turn every failure into a silent success.
+//
+// --no-psqlrc for the same reason in a smaller way: a start-up file on the
+// postgres account could otherwise change what this command does.
+//
+// R-062. psql ifadesini argüman listesinde alıyordu ve o ifadelerden biri
+// CREATE USER ... WITH PASSWORD. Argüman listesi herkese açıktır: komut
+// çalıştığı sürece her yerel hesap /proc/<pid>/cmdline dosyasını okuyabilir.
+// Bu dosyanın MariaDB tarafı bunu zaten biliyordu; bu, o biçimin daha çok
+// ihtiyaç duyan istemciye uygulanmasıdır. ON_ERROR_STOP süs değildir: stdin
+// okuyan psql, ifade başarısız olsa da sıfır döner ve aşağıdaki her çağrı
+// başarıyı çıkış kodundan okur.
+func newPostgreSQLStatementCommand(statement string) *exec.Cmd {
+	command := exec.Command(
+		"sudo", "-u", "postgres", "psql",
+		"--no-psqlrc",
+		"--set", "ON_ERROR_STOP=on",
+	)
+	command.Stdin = strings.NewReader(statement + "\n")
+	return command
+}
+
+func runPostgreSQLStatement(statement string) ([]byte, error) {
+	return newPostgreSQLStatementCommand(statement).CombinedOutput()
+}
+
 // Database Management RPC Methods
 
 // CreateDatabaseRequest represents a request to create a database
@@ -328,9 +367,8 @@ func (a *Agent) createPostgreSQLDatabase(req CreateDatabaseRequest, resp *Create
 	}
 
 	// Create user
-	cmd := exec.Command("sudo", "-u", "postgres", "psql", "-c",
+	output, err := postgreSQLExecStatement(
 		fmt.Sprintf("CREATE USER %s WITH PASSWORD %s;", userIdent, pwLiteral))
-	output, err := cmd.CombinedOutput()
 	if err != nil && !strings.Contains(string(output), "already exists") {
 		resp.Success = false
 		resp.Error = hostcmd.Fail("failed to create user", output, err, databaseClientMeaning).Error()
@@ -338,9 +376,8 @@ func (a *Agent) createPostgreSQLDatabase(req CreateDatabaseRequest, resp *Create
 	}
 
 	// Create database
-	cmd = exec.Command("sudo", "-u", "postgres", "psql", "-c",
+	output, err = postgreSQLExecStatement(
 		fmt.Sprintf("CREATE DATABASE %s OWNER %s;", dbIdent, userIdent))
-	output, err = cmd.CombinedOutput()
 	if err != nil {
 		resp.Success = false
 		resp.Error = hostcmd.Fail("failed to create database", output, err, databaseClientMeaning).Error()
@@ -360,9 +397,8 @@ func (a *Agent) deletePostgreSQLDatabase(req DeleteDatabaseRequest, resp *Delete
 	}
 
 	// Drop database
-	cmd := exec.Command("sudo", "-u", "postgres", "psql", "-c",
+	output, err := postgreSQLExecStatement(
 		fmt.Sprintf("DROP DATABASE IF EXISTS %s;", dbIdent))
-	output, err := cmd.CombinedOutput()
 	if err != nil {
 		resp.Success = false
 		resp.Error = hostcmd.Fail("failed to drop database", output, err, databaseClientMeaning).Error()
@@ -371,9 +407,8 @@ func (a *Agent) deletePostgreSQLDatabase(req DeleteDatabaseRequest, resp *Delete
 
 	// Drop user
 	if userIdent, err := services.QuotePGIdentifier(req.User); err == nil {
-		cmd = exec.Command("sudo", "-u", "postgres", "psql", "-c",
-			fmt.Sprintf("DROP USER IF EXISTS %s;", userIdent))
-		_, _ = cmd.CombinedOutput() // Don't fail if user doesn't exist
+		// Don't fail if user doesn't exist
+		_, _ = postgreSQLExecStatement(fmt.Sprintf("DROP USER IF EXISTS %s;", userIdent))
 	}
 
 	resp.Success = true

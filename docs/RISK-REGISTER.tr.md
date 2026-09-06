@@ -100,7 +100,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-059 | Orta | ÜRÜNDEKİ HER PENCERE İÇİN BİR KEZ DÜZELTİLDİ | DNS inceleme penceresi kendi kutusundan uzun ve en üstte açılıyor; eylemleri katlanma çizgisinin altında kalıyor - posta penceresinin kusuru, ikinci bir pencerede |
 | R-060 | Düşük | ÖLÇÜMLE DÜZELTİLDİ / PAY 31 BAYTTAN 115 KiB'YE | Kritik açılış paketi bütçesinde 31 bayt yer kaldı; ortak bir bileşene yapılacak ilk değişiklik yapıyı düşürecek |
 | R-061 | Yüksek | BULUNDU VE DÜZELTİLDİ / GÜVENLİK | İki yol, kendisine bir sır verilmiş bir komutun çıktısını olduğu gibi tekrarlıyordu: veritabanı istemcisi CREATE USER ifadesini tarayıcının çizdiği yanıta geri yazıyordu, wg ise arayüzün özel anahtarını içeren yapılandırmayı alıntılıyordu |
-| R-062 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ / GÜVENLİK | PostgreSQL istemcisi parolayı argüman listesinde alıyor; yani süreç tablosunu okuyabilen herkes görebiliyor |
+| R-062 | Orta | DÜZELTİLDİ / BİÇİM DÜZEYİNDE KORUNDU | PostgreSQL istemcisi parolayı argüman listesinde alıyor; yani süreç tablosunu okuyabilen herkes görebiliyor |
 | R-063 | Düşük | BORÇ OLARAK KAYITLI / KORUMAYA ALINDI | Otuz ayrıcalıklı başlatma hâlâ kendi hatasını ortak okuyucunun dışında ele alıyor; operatöre ne söyleneceği her yerin kendi kararı |
 
 ## Ayrıntılı riskler
@@ -2544,6 +2544,23 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Gerekeni: MariaDB'nin zaten sahip olduğu muamele - kimlik bilgisi istemciye
   bir dosya ya da ortam üzerinden ulaşır, argüman listesinden asla. Biçim
   mevcut; bu, onu uygulamak.
+- 6 Eylül 2026'da düzeltildi ve yukarıda adı geçen muamele uygulandı: ifade
+  artık psql'e stdin üzerinden ulaşıyor; orada süreçten başkası okuyamaz.
+  Aynı dosyanın MariaDB tarafı bunu zaten böyle yapıyordu.
+- Bir değil dört çağrı yeri taşındı. Yalnızca ilki parola taşıyordu, ama diğer
+  üçü, bir sonraki kez ifadeye ihtiyaç duyan kişinin kopyalayacağı biçimdi - ve
+  kusur tam olarak böyle geri gelirdi. Argüman biçimi artık bir kaynak muhafızı
+  tarafından tümden reddediliyor; kopyalanacak satır kalmadı.
+- Taşımayla birlikte iki bayrak geldi ve ikisi de süs değil. stdin okuyan psql,
+  başarısız bir ifadede sıfır döner ve buradaki her çağrı başarıyı çıkış
+  kodundan okur; `ON_ERROR_STOP=on`, değişikliğin başarısızlıkları sessiz
+  başarılara çevirmesini engelleyen şeydir. `--no-psqlrc` ise sonucu bir açılış
+  dosyasına değil ifadeye bağlar.
+- Muhafız, davranışı değil kaynağı okur ve bu bilinçlidir: testleri çalıştıran
+  makinede PostgreSQL yok, dolayısıyla psql'i çağıran bir test hiçbir şey
+  kanıtlamazdı; PostgreSQL olmadan kanıtlanabilecek şey ise hiçbir satırın
+  psql'den ifadeyi argüman olarak almasını istemediğidir. Kusurun kendisiyle
+  sınandı: geri konduğunda muhafız düşüyor ve dosyayı ve satırı adlandırıyor.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-063 - Otuz başlatma hâlâ kendi adına cevap veriyor

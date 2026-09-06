@@ -99,7 +99,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-059 | Medium | FIXED ONCE, FOR EVERY DIALOGUE IN THE PRODUCT | The DNS review dialog is taller than its own box and opens scrolled to the top, so its actions sit below its fold - the mail dialog's defect, in a second dialog |
 | R-060 | Low | FIXED BY MEASUREMENT / HEADROOM 31 BYTES TO 115 KiB | The critical-boot bundle budget has 31 bytes of headroom, so the next change to any shared component fails the build |
 | R-061 | High | FOUND AND FIXED / SECURITY | Two paths repeated a failed command's own output while that command had been handed a secret: the database client quoting back a CREATE USER statement into the response the browser renders, and wg quoting back a configuration containing the interface private key |
-| R-062 | Medium | FOUND / NOT YET FIXED / SECURITY | The PostgreSQL client is invoked with the password in its argument list, so it is visible to any user who can read the process table |
+| R-062 | Medium | FIXED / GUARDED AT THE SHAPE | The PostgreSQL client is invoked with the password in its argument list, so it is visible to any user who can read the process table |
 | R-063 | Low | RECORDED AS DEBT / GUARDED | Thirty privileged launches still handle their own failures outside the shared reader, so their operator messages are whatever each site decided |
 
 ## Detailed risks
@@ -2583,6 +2583,24 @@ or executed as-is. There are no open pull requests at this baseline.
 - What it needs: the treatment MariaDB already has - the credential reaches
   the client through a file or the environment, never the argument list. The
   shape exists; this is applying it.
+- Fixed 6 September 2026, and the treatment named above is the one it got: the
+  statement now reaches psql on stdin, where nothing but the process itself can
+  read it, exactly as the MariaDB side of the same file already did.
+- Four call sites moved, not one. Only the first carried a password, but the
+  other three were the shape somebody would copy the next time they needed a
+  statement - and copying the neighbouring line is how the defect would have
+  come back. The argument form is now refused outright by a source guard, so
+  there is no line left to copy.
+- Two flags came with the move and neither is decoration. Reading from stdin,
+  psql exits zero on a failed statement, and every caller here decides success
+  from the exit status - so `ON_ERROR_STOP=on` is what keeps the change from
+  turning failures into silent successes. `--no-psqlrc` makes the outcome
+  depend on the statement rather than on a start-up file.
+- The guard reads the source rather than the behaviour, on purpose: no
+  PostgreSQL runs on the machine that runs the tests, so a test that called
+  psql would prove nothing, while what can be proved without one is that no
+  line asks psql to take a statement as an argument. It was checked against the
+  defect itself - reintroduced, the guard fails and names the file and line.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-063 - Thirty launches still answer for themselves
