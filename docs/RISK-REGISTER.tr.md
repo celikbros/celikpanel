@@ -106,6 +106,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-065 | Orta | YAPILDI / HENÜZ TARAYICIDA GÖRÜLMEDİ | Panelin kendi veritabanı hesabı var ama yalnızca API'den erişilebiliyor: sunucu kartı hesabın orada olup olmadığını göstermiyor ve başka bir makinedeki motor için panele kimlik bilgisi verilecek bir yer yok |
 | R-066 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Başka bir makinedeki veritabanı motoru hiç kaydedilemiyor: liste yalnızca bu makinenin otomatik keşfiyle doluyor ve kimlik bilgisiyle uzak sunucu kabul eden uç noktaya yalnızca API'den ulaşılabiliyor |
 | R-067 | Yüksek | GERÇEK MAKİNEDE BULUNDU VE DÜZELTİLDİ | Yeni kurulmuş bir sunucuda veritabanı bölümünün tamamı erişilemezdi: panel MariaDB'yi kurdu, çalıştığını gördü ve sonra yöneticiye hiçbir veritabanı motoru kurulu olmadığını söyledi |
+| R-068 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Agent, bir makine değişikliğinin neden başlayamadığını tam olarak biliyor - paket yöneticisi, başka bir değişiklik ya da tutulan bir kilit - ve operatöre üçünü birden kapsayan tek bir cümle söyleniyor |
 
 ## Ayrıntılı riskler
 
@@ -2760,6 +2761,33 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   R-051, R-053, R-057 - gerçekti ve hepsi, yeni bir operatörün açamayacağı bir
   kapının arkasındaydı. Birim testlerinin hiçbiri bunu göremezdi; çünkü hepsi,
   gerçek bir makinede olmayan bir abonelikle başlıyordu.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-068 - Ret hangisi olduğunu biliyor ve üçünü birden söylüyor
+
+- Kanıt: 6 Eylül 2026, kabul turundaki Ubuntu makinesi. Panelden yapılan iki
+  kurulum on milisaniye içinde `HOST_MUTATION_BUSY` ile reddedildi ve ikisi de
+  aynı şeyi söyledi: "başka bir sunucu değişikliği veya paket yöneticisi görevi
+  hâlâ çalışıyor; bekleyip yeniden deneyin". Sonraki bir denemede 150 ms
+  aralıkla örnekleyen bir izleyici gerçekte ne olduğunu gösterdi: Ubuntu'nun
+  açılıştan sonraki ilk dakikalarda kendiliğinden başlattığı `apt-get` ve
+  `packagekitd`.
+- Ret doğruydu. dpkg kilidi için apt ile kavga eden bir panel, bekleyenden
+  daha kötü bir üründür ve "bekleyip yeniden deneyin" takip edilebilir bir
+  cümledir. Bu kayıt kararla ilgili değil; cümleyle ilgili.
+- Agent hangisi olduğunu zaten hesaplıyor - `package_manager_active`,
+  `agent_mutation_active`, `host_lock_busy` - ve gerekçeyi yanıtında taşıyor.
+  Panel üçünü tek mesaja indiriyor. Yani operatöre, ürünün yapmak zorunda
+  olmadığı bir "şunlardan biri" cümlesi söyleniyor: ürün biliyor.
+- Üçü farklı şeyler ister. Başkasının paket yöneticisi bir iki dakikalık bir
+  bekleyiştir. Başka bir CelikPanel değişikliği, o değişikliği beklemektir. Bir
+  çökmeden kalan tutulmuş kilit ise ikisi de değildir - bakılması gereken bir
+  şeydir. Üçüncüsü için operatöre "bekleyip yeniden deneyin" demek, ona
+  bitmeyecek bir şeyi beklemesini söylemektir.
+- Bu, R-053 ve R-054'ün daha küçük bir yerdeki aynı kuralı: bir sebep
+  hesaplanıyor ve ona ihtiyacı olan kişiye giderken atılıyor. Yüksek değil
+  Düşük; çünkü burada atılan sebep, motorun kendi sözleri değil adlandırılmış
+  üç olasılıktan biri ve yedek cümle en azından doğru.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
