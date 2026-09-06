@@ -469,3 +469,94 @@ func TestRemovingTheAccountForgetsTheCredential(t *testing.T) {
 		t.Fatalf("the credential survived removal: %+v", after)
 	}
 }
+
+// R-067. Found on a real machine, not in a test: install CelikPanel on a clean
+// server, install MariaDB through CelikPanel, open Databases - and the page
+// said "no database engine installed" about an engine the panel had just
+// installed and could see running.
+//
+// Nothing was broken. There was simply nowhere to put it: a fresh install has
+// no subscriptions at all, the scope for every database operation comes from
+// the caller's subscription, and the only thing that made one was adding a
+// domain - which on a fresh server needs DNS set up first. Three steps nobody
+// would guess, in front of a page that explained none of them.
+//
+// R-067. Bir testte degil gercek bir makinede bulundu: temiz bir sunucuya
+// CelikPanel kur, CelikPanel'den MariaDB kur, Veritabanlari'ni ac - ve sayfa,
+// panelin az once kurdugu ve calistigini gordugu bir motor hakkinda "veritabani
+// motoru kurulu degil" diyordu.
+func TestAFreshAdministratorSeesTheEngineTheyJustInstalled(t *testing.T) {
+	agent := &databaseAdminAccountAgent{services: adminAccountServices()}
+	panel, database := newDatabaseAdminAccountFixture(t, agent)
+
+	// The state a fresh install is actually in: an administrator, and not one
+	// subscription anywhere. Migration 006 drops the placeholder admin and its
+	// seed subscription, so this is not a contrived fixture - it is the shape
+	// of every new server.
+	// Taze bir kurulumun gercekten icinde oldugu durum.
+	if _, err := database.GetDB().Exec(`DELETE FROM subscriptions`); err != nil {
+		t.Fatal(err)
+	}
+
+	request := adminAccountRequest(http.MethodGet, "/api/v1/database-servers")
+	response := httptest.NewRecorder()
+	panel.handleListDatabaseServers(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%q", response.Code, response.Body.String())
+	}
+	var servers []map[string]any
+	if err := json.Unmarshal(response.Body.Bytes(), &servers); err != nil {
+		t.Fatalf("decode %q: %v", response.Body.String(), err)
+	}
+	if len(servers) == 0 {
+		t.Fatal("a fresh administrator was shown no database engine at all, " +
+			"while the agent reports one installed and running")
+	}
+	if got := servers[0]["admin_username"]; got != transport.DatabaseAdminAccountName {
+		t.Fatalf("the engine was listed but the panel opened no account on it: %v", got)
+	}
+
+	// The subscription was made once, and asking again does not make another.
+	// Abonelik bir kez olusturuldu; yeniden sormak bir tane daha olusturmaz.
+	second := httptest.NewRecorder()
+	panel.handleListDatabaseServers(second, adminAccountRequest(http.MethodGet, "/api/v1/database-servers"))
+	if second.Code != http.StatusOK {
+		t.Fatalf("second listing status=%d", second.Code)
+	}
+	var count int
+	if err := database.GetDB().QueryRow(`SELECT COUNT(*) FROM subscriptions`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("the administrator owns %d subscriptions, want exactly 1", count)
+	}
+}
+
+// A customer with no subscription genuinely has nothing, and an empty list is
+// the truth for them. The bootstrap is an administrator's, not everybody's.
+// Aboneligi olmayan bir musterinin gercekten hicbir seyi yoktur.
+func TestACustomerWithNoSubscriptionIsNotGivenOne(t *testing.T) {
+	agent := &databaseAdminAccountAgent{services: adminAccountServices()}
+	panel, database := newDatabaseAdminAccountFixture(t, agent)
+	if _, err := database.GetDB().Exec(`DELETE FROM subscriptions`); err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/database-servers", nil)
+	request = request.WithContext(context.WithValue(
+		request.Context(), callerKey, &Caller{ID: adminAccountUserID, Role: "user"}))
+	response := httptest.NewRecorder()
+	panel.handleListDatabaseServers(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%q", response.Code, response.Body.String())
+	}
+	var count int
+	if err := database.GetDB().QueryRow(`SELECT COUNT(*) FROM subscriptions`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("a customer's listing created %d subscriptions", count)
+	}
+}

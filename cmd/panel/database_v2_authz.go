@@ -34,9 +34,83 @@ func (p *Panel) callerSubscriptionID(r *http.Request) (int, error) {
 	err := p.db.GetDB().QueryRowContext(r.Context(),
 		`SELECT id FROM subscriptions WHERE owner_id = ? ORDER BY id LIMIT 1`, c.ID).Scan(&subID)
 	if errors.Is(err, sql.ErrNoRows) {
+		// R-067. A fresh install has no subscriptions at all - the placeholder
+		// admin and its seed subscription are dropped by migration 006 - and
+		// until now the only thing that made one was adding a domain. So an
+		// administrator who installed MariaDB through this panel, on this
+		// machine, and then opened Databases, was told "no database engine
+		// installed" about an engine the panel had just installed and could
+		// see running. Nothing was broken; there was simply nowhere to put it.
+		//
+		// The domain path already fixed exactly this, on the same golden path,
+		// and left the comment saying so. This is that fix in the second place
+		// it was always needed. Only for an administrator: a customer with no
+		// subscription genuinely has nothing, and an empty list is the truth
+		// for them.
+		//
+		// R-067. Taze bir kurulumda hic abonelik yoktur ve simdiye kadar bir
+		// tane olusturan tek sey domain eklemekti. Dolayisiyla MariaDB'yi bu
+		// panelden kuran bir yonetici, Veritabanlari'ni actiginda, panelin az
+		// once kurdugu ve calistigini gordugu bir motor hakkinda "veritabani
+		// motoru kurulu degil" cevabini aliyordu. Domain yolu ayni kusuru zaten
+		// duzeltmisti; bu, o duzeltmenin her zaman gerektigi ikinci yerdeki
+		// hali. Yalnizca yonetici icin.
+		if c.Role == roleAdmin {
+			id, created, err := p.ensureAdminSubscription(r.Context(), c.ID)
+			if err == nil && created {
+				p.audit(r, "subscription.bootstrap", "subscription", id)
+			}
+			return id, err
+		}
 		return 0, errNotFound
 	}
 	return subID, err
+}
+
+// ensureAdminSubscription finds the administrator's own subscription and
+// creates it the first time it is needed.
+//
+// It writes inside a transaction that takes the write lock before it reads,
+// so two requests arriving together cannot each decide the subscription is
+// missing and each create one. Without that the administrator would end up
+// owning two, and every later lookup takes the lowest id - which is a
+// difference nobody would notice until the wrong one had a domain in it.
+//
+// ensureAdminSubscription, yoneticinin kendi aboneligini bulur ve ilk
+// ihtiyac duyuldugunda olusturur. Okumadan once yazma kilidini alan bir islem
+// icinde yazar; boylece ayni anda gelen iki istek, aboneligin eksik olduguna
+// ayri ayri karar verip iki tane olusturamaz.
+func (p *Panel) ensureAdminSubscription(ctx context.Context, callerID int) (int, bool, error) {
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		return 0, false, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var subID int
+	err = tx.QueryRowContext(ctx,
+		`SELECT id FROM subscriptions WHERE owner_id = ? ORDER BY id LIMIT 1`, callerID).Scan(&subID)
+	if err == nil {
+		return subID, false, tx.Commit()
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return 0, false, err
+	}
+
+	result, err := tx.ExecContext(ctx,
+		`INSERT INTO subscriptions (owner_id, name, max_domains, max_databases, status)
+		 VALUES (?, 'Admin Subscription', 999, 999, 'active')`, callerID)
+	if err != nil {
+		return 0, false, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, false, err
+	}
+	return int(id), true, nil
 }
 
 // databaseUserReference deliberately excludes the stored password. Reference

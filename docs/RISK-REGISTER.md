@@ -104,6 +104,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-064 | Low | FOUND / NOT YET FIXED | The loading spinner is hand-written 61 times across 38 files, so the design hook reports it one file at a time and every visual fix to a loading state has to be made 61 times |
 | R-065 | Medium | BUILT / NOT YET SEEN IN A BROWSER | The panel's own database account exists and is reachable only through the API: the server card does not show whether the account is there, and there is nowhere to hand the panel a credential for an engine on another machine |
 | R-066 | Medium | FOUND / NOT YET FIXED | A database engine on another machine cannot be registered at all: the list is filled only by autodiscovery of this machine, and the endpoint that accepts a remote server with a credential is reachable only through the API |
+| R-067 | High | FOUND ON A REAL MACHINE AND FIXED | On a freshly installed server the whole database chapter was unreachable: the panel installed MariaDB, saw it running, and then told the administrator no database engine was installed |
 
 ## Detailed risks
 
@@ -2752,6 +2753,43 @@ or executed as-is. There are no open pull requests at this baseline.
 - Worth saying plainly: an operator who wants their databases on a separate
   machine, which is the ordinary shape once a site is more than small, cannot
   express that in CelikPanel today.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-067 - A fresh server could not reach its own databases
+
+- Evidence: 6 September 2026, the three-distribution acceptance run, found on
+  Debian 13 within minutes of the first machine coming up. Install CelikPanel
+  on a clean server, install MariaDB **through CelikPanel**, open Databases -
+  and the page says "No database engine installed". The panel's own
+  `/api/v1/managed-services` said, at the same moment,
+  `"id":"mariadb", "is_installed":true, "status":"active (running)"`.
+- Nothing was broken. There was nowhere to put it. Every database operation is
+  scoped to the caller's subscription; a fresh install has **no subscriptions
+  at all**, because migration 006 drops the placeholder admin and its seed; and
+  the only thing that created one was adding a domain - which on a fresh server
+  refuses until a DNS engine is chosen and activated. Three steps in a chain
+  nobody would guess, in front of a page that explained none of them.
+- The silence is the worst part. The listing returned `200 []`, so the screen
+  drew its empty state and said something **false**: that no engine was
+  installed. A refusal that names a reason can be followed. A page that quietly
+  says the opposite of what the product knows cannot.
+- The same defect had already been found and fixed **on the domain path**, on
+  the same golden path, and the comment left behind says so: "A fresh install
+  has NO subscriptions at all ... the old hard-coded 1 made the very first 'add
+  my domain' fail". The fix was applied where it was found and the sibling path
+  kept the defect - the shape R-047, R-059 and R-064 are all about.
+- Fixed the same day, in one place. Find-or-create for an administrator's own
+  subscription now lives in `ensureAdminSubscription`, inside a transaction
+  that takes the write lock before it reads so two first requests cannot each
+  create one, and both paths call it. Only an administrator: a customer with no
+  subscription genuinely has nothing, and an empty list is the truth for them.
+- Two tests hold it, and the first was checked against the defect: with the fix
+  removed it fails with "a fresh administrator was shown no database engine at
+  all, while the agent reports one installed and running".
+- What this says about the week: every fix in the database chapter - R-051,
+  R-053, R-057 - was real, and all of them were behind a door that a new
+  operator could not open. None of the unit tests could see it, because they
+  all began with a subscription that a real machine does not have.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule

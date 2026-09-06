@@ -309,20 +309,21 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 			// ve seed aboneliği migration 006 ile silinir); eski sabit "1",
 			// ilk "domain'imi ekle"yi "subscription not found" ile bozuyordu —
 			// Debian 13 golden path'inde canlı yakalandı.
-			err := p.db.GetDB().QueryRowContext(r.Context(),
-				`SELECT id FROM subscriptions WHERE owner_id = ? ORDER BY id LIMIT 1`,
-				caller.ID).Scan(&req.SubscriptionID)
+			// R-067 moved this to ensureAdminSubscription, because the
+			// database path needed exactly the same thing and had it in
+			// neither place. Find-or-create now happens once, inside a
+			// transaction that takes the write lock before it reads, so two
+			// first requests arriving together cannot create two.
+			// R-067 bunu ensureAdminSubscription'a tasidi; veritabani yolu da
+			// tam olarak ayni seye ihtiyac duyuyordu ve ikisinde de yoktu.
+			id, created, err := p.ensureAdminSubscription(r.Context(), caller.ID)
 			if err != nil {
-				res, ierr := p.db.GetDB().ExecContext(r.Context(),
-					`INSERT INTO subscriptions (owner_id, name, max_domains, max_databases, status)
-					 VALUES (?, 'Admin Subscription', 999, 999, 'active')`, caller.ID)
-				if ierr != nil {
-					writeServerError(w, ierr)
-					return
-				}
-				id, _ := res.LastInsertId()
-				req.SubscriptionID = int(id)
-				p.audit(r, "subscription.bootstrap", "subscription", int(id))
+				writeServerError(w, err)
+				return
+			}
+			req.SubscriptionID = id
+			if created {
+				p.audit(r, "subscription.bootstrap", "subscription", id)
 			}
 		} else if caller != nil {
 			// Smart default: fall back to the caller's own subscription so a

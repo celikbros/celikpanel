@@ -105,6 +105,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-064 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Yükleniyor göstergesi 38 dosyada 61 kez elle yazılmış; tasarım kancası onu dosya dosya bildiriyor ve bir yükleme durumuna yapılacak her görsel düzeltme 61 kez yapılmak zorunda |
 | R-065 | Orta | YAPILDI / HENÜZ TARAYICIDA GÖRÜLMEDİ | Panelin kendi veritabanı hesabı var ama yalnızca API'den erişilebiliyor: sunucu kartı hesabın orada olup olmadığını göstermiyor ve başka bir makinedeki motor için panele kimlik bilgisi verilecek bir yer yok |
 | R-066 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Başka bir makinedeki veritabanı motoru hiç kaydedilemiyor: liste yalnızca bu makinenin otomatik keşfiyle doluyor ve kimlik bilgisiyle uzak sunucu kabul eden uç noktaya yalnızca API'den ulaşılabiliyor |
+| R-067 | Yüksek | GERÇEK MAKİNEDE BULUNDU VE DÜZELTİLDİ | Yeni kurulmuş bir sunucuda veritabanı bölümünün tamamı erişilemezdi: panel MariaDB'yi kurdu, çalıştığını gördü ve sonra yöneticiye hiçbir veritabanı motoru kurulu olmadığını söyledi |
 
 ## Ayrıntılı riskler
 
@@ -2704,6 +2705,42 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - Açıkça söylemeye değer: veritabanlarını ayrı bir makinede isteyen bir
   operatör — bir site küçüklüğü aştığında olağan olan biçim — bunu bugün
   CelikPanel'de ifade edemiyor.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-067 - Taze bir sunucu kendi veritabanlarına ulaşamıyordu
+
+- Kanıt: 6 Eylül 2026, üç dağıtımlı kabul turu; ilk makine ayağa kalktıktan
+  birkaç dakika sonra Debian 13'te bulundu. Temiz bir sunucuya CelikPanel kur,
+  **CelikPanel'den** MariaDB kur, Veritabanları'nı aç - ve sayfa "Kurulu
+  veritabanı motoru yok" diyor. Panelin kendi `/api/v1/managed-services` yanıtı
+  aynı anda `"id":"mariadb", "is_installed":true, "status":"active (running)"`
+  diyordu.
+- Bozuk bir şey yoktu. Koyacak yer yoktu. Her veritabanı işlemi çağıranın
+  aboneliğine göre kapsanır; taze bir kurulumda **hiç abonelik yoktur**, çünkü
+  006 numaralı göç yer-tutucu yöneticiyi ve tohum aboneliğini siler; ve bir
+  tane oluşturan tek şey domain eklemekti - o da taze bir sunucuda, bir DNS
+  motoru seçilip etkinleştirilene kadar reddediyor. Kimsenin tahmin
+  edemeyeceği üç adımlık bir zincir ve hiçbirini açıklamayan bir sayfa.
+- En kötü yanı sessizliği. Listeleme `200 []` döndü; ekran da boş durumunu
+  çizip **yanlış** bir şey söyledi: hiçbir motorun kurulu olmadığını. Sebebini
+  adlandıran bir ret takip edilebilir. Ürünün bildiğinin tersini sessizce
+  söyleyen bir sayfa edilemez.
+- Aynı kusur **domain yolunda** zaten bulunmuş ve düzeltilmişti, hem de aynı
+  altın yolda; geride bıraktığı yorum bunu söylüyor. Düzeltme bulunduğu yere
+  uygulanmış, kardeş yol kusuru saklamıştı - R-047, R-059 ve R-064'ün hepsinin
+  anlattığı biçim.
+- Aynı gün, tek bir yerde düzeltildi. Yöneticinin kendi aboneliği için
+  bul-ya-da-oluştur artık `ensureAdminSubscription` içinde; okumadan önce yazma
+  kilidini alan bir işlemin içinde, böylece aynı anda gelen iki ilk istek ikişer
+  tane oluşturamaz. İki yol da onu çağırıyor. Yalnızca yönetici için:
+  aboneliği olmayan bir müşterinin gerçekten hiçbir şeyi yoktur.
+- İki test bunu tutuyor ve ilki kusura karşı sınandı: düzeltme kaldırıldığında
+  "taze bir yöneticiye hiçbir veritabanı motoru gösterilmedi, oysa agent birinin
+  kurulu ve çalışır olduğunu bildiriyor" diyerek düşüyor.
+- Bunun hafta hakkında söylediği şey: veritabanı bölümündeki her düzeltme -
+  R-051, R-053, R-057 - gerçekti ve hepsi, yeni bir operatörün açamayacağı bir
+  kapının arkasındaydı. Birim testlerinin hiçbiri bunu göremezdi; çünkü hepsi,
+  gerçek bir makinede olmayan bir abonelikle başlıyordu.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
