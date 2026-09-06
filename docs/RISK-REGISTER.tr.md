@@ -102,6 +102,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-061 | Yüksek | BULUNDU VE DÜZELTİLDİ / GÜVENLİK | İki yol, kendisine bir sır verilmiş bir komutun çıktısını olduğu gibi tekrarlıyordu: veritabanı istemcisi CREATE USER ifadesini tarayıcının çizdiği yanıta geri yazıyordu, wg ise arayüzün özel anahtarını içeren yapılandırmayı alıntılıyordu |
 | R-062 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ / GÜVENLİK | PostgreSQL istemcisi parolayı argüman listesinde alıyor; yani süreç tablosunu okuyabilen herkes görebiliyor |
 | R-063 | Düşük | BORÇ OLARAK KAYITLI / KORUMAYA ALINDI | Otuz ayrıcalıklı başlatma hâlâ kendi hatasını ortak okuyucunun dışında ele alıyor; operatöre ne söyleneceği her yerin kendi kararı |
+| R-064 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Yükleniyor göstergesi 38 dosyada 61 kez elle yazılmış; tasarım kancası onu dosya dosya bildiriyor ve bir yükleme durumuna yapılacak her görsel düzeltme 61 kez yapılmak zorunda |
 
 ## Ayrıntılı riskler
 
@@ -2560,6 +2561,28 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - İzin listesi, iş listesidir. Her girdisi bir gerekçe taşıyor ve muhafız
   bayat bir girdide düşüyor; yani borç ne sessizce büyüyebilir ne sessizce
   yok olabilir.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-064 - Yükleniyor göstergesi altmış bir kez yazılmış
+
+- Kanıt: 6 Eylül 2026, tasarım kancasının kendi çıktısından. Kanca,
+  `animate-spin rounded-full border-b-2` kalıbını yuvarlatılmış bir kartın
+  vurgu kenarlığı sanıyor. Bu yanlış bir alarm - bir dairenin tek kenarlığı,
+  dönen yayın kendisidir - ama kod hakkında doğru bir gözlem: `grep`, **38
+  dosyada 61 örnek** buluyor; her biri elle yazılmış.
+- Ölçüm, istisna listesinin kendisi. Kural bir değer çıkarmadığı için tek
+  istisna yolu dosya başına bir joker kayıt; liste 3 ve 4 Eylül'de iki kayıttı,
+  şimdi dört. Dosya dosya büyüyor çünkü anlattığı şey dosya dosya kopyalanıyor.
+- Sürdüğü sürece bedeli: herhangi bir yükleme durumuna yapılacak görsel bir
+  değişiklik - boyut, renk, erişilebilir etiket, hareketi azaltılmış bir
+  alternatif - ya 61 kez yapılacak ya da tutarsız yapılacak. Kaçırılanları
+  yakalayacak bir test yok, çünkü her kopya kendi içinde doğru.
+- Bu, R-047 / R-059'un üçüncü katmandaki hâli ve tartışma yine işlem sonucu
+  kuralının çözdüğü tartışma: çok sayıda kopyada tekrar tekrar bulunan bir şey,
+  herhangi bir kopya hakkında değil kodun nerede durduğu hakkında bir ifadedir.
+  Bugün düzeltilmek yerine kaydedildi; çünkü operatörün görebileceği bir kusur
+  değil ve sürüm yolunda önünde R-057 var. Dört istisna kaydı, gösterge tek bir
+  bileşen olduğu gün tek kayda iner.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

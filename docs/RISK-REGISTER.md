@@ -101,6 +101,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-061 | High | FOUND AND FIXED / SECURITY | Two paths repeated a failed command's own output while that command had been handed a secret: the database client quoting back a CREATE USER statement into the response the browser renders, and wg quoting back a configuration containing the interface private key |
 | R-062 | Medium | FOUND / NOT YET FIXED / SECURITY | The PostgreSQL client is invoked with the password in its argument list, so it is visible to any user who can read the process table |
 | R-063 | Low | RECORDED AS DEBT / GUARDED | Thirty privileged launches still handle their own failures outside the shared reader, so their operator messages are whatever each site decided |
+| R-064 | Low | FOUND / NOT YET FIXED | The loading spinner is hand-written 61 times across 38 files, so the design hook reports it one file at a time and every visual fix to a loading state has to be made 61 times |
 
 ## Detailed risks
 
@@ -2599,6 +2600,29 @@ or executed as-is. There are no open pull requests at this baseline.
 - The allowlist is the worklist. Its entries carry a reason each, and the
   guard fails on a stale one, so the debt cannot quietly grow or quietly
   disappear.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-064 - The spinner is written sixty-one times
+
+- Evidence: 6 September 2026, from the design hook's own output. The hook
+  reports `animate-spin rounded-full border-b-2` as an accent border on a
+  rounded card. It is a false positive - a one-sided border on a circle is the
+  spin arc itself - but it is a true observation about the code: `grep` finds
+  **61 occurrences across 38 files**, each hand-written.
+- The sanctioned-exception list is the measurement. The rule extracts no value,
+  so the only way to sanction it is one wildcard entry per file, and the list
+  had two entries on 3 and 4 September and has four now. It grows one file at a
+  time because the thing it describes is copied one file at a time.
+- Cost while it stands: a visual change to any loading state - size, colour,
+  the accessible label, a reduced-motion fallback - has to be made 61 times or
+  it is made inconsistently. There is no test that would catch the misses,
+  because each copy is locally correct.
+- This is R-047 / R-059 in a third layer, and the argument is the same one the
+  mutation outcome rule settled: a thing found repeatedly in many copies is a
+  statement about where the code lives, not about any copy. Recorded rather
+  than fixed today because it is not a defect the operator can see and the
+  release path has R-057 in front of it; the four ignore entries collapse into
+  one the day the spinner becomes one component.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
