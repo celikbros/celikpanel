@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -33,9 +34,14 @@ import (
 // git" düğmesi çizer. Kodsuz ret eskidir; yeni bilinçli ret kodla doğar.
 
 type apiErrorBody struct {
-	Error           string `json:"error"`
-	Code            string `json:"code,omitempty"`
-	Action          string `json:"action,omitempty"`
+	Error  string `json:"error"`
+	Code   string `json:"code,omitempty"`
+	Action string `json:"action,omitempty"`
+	// Reason refines Code. Additive: a screen that does not know a reason
+	// falls back to the sentence for the code, which is what every screen did
+	// before this existed.
+	// Reason, Code'u inceltir. Eklemelidir.
+	Reason          string `json:"reason,omitempty"`
 	PartialSuccess  bool   `json:"partial_success,omitempty"`
 	MutationApplied bool   `json:"mutation_applied,omitempty"`
 	// Details: the refusal's evidence, one line per item — for
@@ -209,6 +215,10 @@ type agentRPCPlatformErrorClassification struct {
 	Status  int
 	Code    string
 	Message string
+	// Reason refines Code for a screen that has its own words. The panel writes
+	// a sentence too, for anything that reads the API directly.
+	// Reason, kendi sozleri olan bir ekran icin Code'u inceltir.
+	Reason string
 }
 
 type singleErrorUnwrapper interface {
@@ -265,14 +275,45 @@ func classifyAgentRPCPlatformError(err error) (agentRPCPlatformErrorClassificati
 	}
 }
 
+// hostMutationBusyMessages: the sentence for each of the three, because they
+// want different things of the operator. The generic one is kept for a refusal
+// that arrives without a reason - an older agent, or a cause nothing named.
+//
+// hostMutationBusyMessages: uceun her biri icin cumle; cunku operatordan farkli
+// seyler isterler.
+var hostMutationBusyMessages = map[string]string{
+	transport.HostMutationReasonPackageManager: "This server's package manager is busy — " +
+		"something outside CelikPanel is installing or updating packages. " +
+		"Try again in a minute.",
+	transport.HostMutationReasonAgentMutation: "Another CelikPanel change is still running " +
+		"on this server. Wait for it to finish, then try again.",
+	transport.HostMutationReasonPanelOperation: "Another CelikPanel operation is still running. " +
+		"Wait for it to finish, then try again.",
+	transport.HostMutationReasonHostLock: "A change that did not finish is still holding this " +
+		"server, and it will not clear by waiting. Restarting the server releases the hold; " +
+		"if it comes back, this needs looking at.",
+}
+
+const hostMutationBusyGenericMessage = "another server change or package-manager task is still running; wait and try again"
+
 func classifyHostMutationError(err error) (agentRPCPlatformErrorClassification, bool) {
 	if !isPureWrappedError(err, errHostMutationBusy) {
 		return agentRPCPlatformErrorClassification{}, false
 	}
+	message := hostMutationBusyGenericMessage
+	reason := ""
+	var busy *hostMutationBusyError
+	if errors.As(err, &busy) {
+		reason = busy.reason
+		if named, ok := hostMutationBusyMessages[busy.reason]; ok {
+			message = named
+		}
+	}
 	return agentRPCPlatformErrorClassification{
 		Status:  http.StatusConflict,
 		Code:    errCodeHostMutationBusy,
-		Message: "another server change or package-manager task is still running; wait and try again",
+		Message: message,
+		Reason:  reason,
 	}, true
 }
 
@@ -402,13 +443,13 @@ func writeWebmailUninstallPartial(w http.ResponseWriter, mutationApplied bool) {
 func writeServerError(w http.ResponseWriter, err error) {
 	if classification, ok := classifyStableAgentError(err); ok {
 		log.Printf("[%d] %v", classification.Status, err)
-		writeCodedError(
-			w,
-			classification.Status,
-			classification.Code,
-			classification.Message,
-			"",
-		)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(classification.Status)
+		_ = json.NewEncoder(w).Encode(apiErrorBody{
+			Error:  classification.Message,
+			Code:   classification.Code,
+			Reason: classification.Reason,
+		})
 		return
 	}
 	if err != nil {

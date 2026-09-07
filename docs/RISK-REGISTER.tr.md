@@ -106,7 +106,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-065 | Orta | YAPILDI / HENÜZ TARAYICIDA GÖRÜLMEDİ | Panelin kendi veritabanı hesabı var ama yalnızca API'den erişilebiliyor: sunucu kartı hesabın orada olup olmadığını göstermiyor ve başka bir makinedeki motor için panele kimlik bilgisi verilecek bir yer yok |
 | R-066 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Başka bir makinedeki veritabanı motoru hiç kaydedilemiyor: liste yalnızca bu makinenin otomatik keşfiyle doluyor ve kimlik bilgisiyle uzak sunucu kabul eden uç noktaya yalnızca API'den ulaşılabiliyor |
 | R-067 | Yüksek | GERÇEK MAKİNEDE BULUNDU VE DÜZELTİLDİ | Yeni kurulmuş bir sunucuda veritabanı bölümünün tamamı erişilemezdi: panel MariaDB'yi kurdu, çalıştığını gördü ve sonra yöneticiye hiçbir veritabanı motoru kurulu olmadığını söyledi |
-| R-068 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Agent, bir makine değişikliğinin neden başlayamadığını tam olarak biliyor - paket yöneticisi, başka bir değişiklik ya da tutulan bir kilit - ve operatöre üçünü birden kapsayan tek bir cümle söyleniyor |
+| R-068 | Düşük | DÜZELTİLDİ / RET HANGİSİ OLDUĞUNU SÖYLÜYOR | Agent, bir makine değişikliğinin neden başlayamadığını tam olarak biliyor - paket yöneticisi, başka bir değişiklik ya da tutulan bir kilit - ve operatöre üçünü birden kapsayan tek bir cümle söyleniyor |
 | R-069 | Orta | OPERATÖR BULDU VE DÜZELTİLDİ | Ekranın, ürünün daha iyi bildiği bir şeyi yazdığı üç yer: 38'de olan bir veritabanı için 0 şema sürümü, panelin kurduğu ve bağlı olduğu bir motorun yanında "unknown", ve sağlıklı yeni bir sunucuda üç sarı uyarı |
 
 ## Ayrıntılı riskler
@@ -2789,6 +2789,20 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   hesaplanıyor ve ona ihtiyacı olan kişiye giderken atılıyor. Yüksek değil
   Düşük; çünkü burada atılan sebep, motorun kendi sözleri değil adlandırılmış
   üç olasılıktan biri ve yedek cümle en azından doğru.
+- 7 Eylül 2026'da düzeltildi. Gerekçe artık yolun tamamını gidiyor: agent zaten
+  hesapladığı kodu yanıtına koyuyor, panel onu hata kodunun yanında ret gövdesine
+  taşıyor, ekran da kodun cümlesi yerine gerekçenin cümlesini tercih ediyor.
+- Mekanizma bu rede özel değil, genel. Kodlu bir hata artık bir gerekçe
+  adlandırabilir; o gerekçe için sözü olan ekran onu kullanır, olmayan kodun
+  sözlerine döner — yani bu var olmadan önce her ekranın yaptığı şeye. Gerekçe
+  göndermeyen eski bir agent, tam olarak eskiden ürettiğini üretir.
+- İki dilde dört cümle ve önemli olan tutulmuş kilit: onun için beklemek yanlış
+  talimattır, bu yüzden "yeniden deneyin" demiyor. Bir test, operatöre beklemesini
+  söyleyen bir tutulmuş-kilit cümlesini iki dilde de reddediyor; üçünü ayırmanın
+  bütün amacı bu.
+- Ubuntu'daki kabul turunda bulundu: açılıştan sonraki ilk dakikalar, yeni bir
+  operatörün ilk servisini kurduğu ve Ubuntu'nun kendi paket işlerinin çalıştığı
+  an tam olarak aynı andır.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-069 - Ürünün daha iyi bildiğini yazan ekranlar
