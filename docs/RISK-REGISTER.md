@@ -107,6 +107,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-067 | High | FOUND ON A REAL MACHINE AND FIXED | On a freshly installed server the whole database chapter was unreachable: the panel installed MariaDB, saw it running, and then told the administrator no database engine was installed |
 | R-068 | Low | FIXED / THE REFUSAL SAYS WHICH | The agent works out exactly why a host change cannot start - the package manager, another change, or a held lock - and the operator is told one sentence that covers all three |
 | R-069 | Medium | FOUND BY THE OPERATOR AND FIXED | Three places where a screen printed something the product knew better: a schema version of 0 for a database at 38, "unknown" beside an engine the panel had installed and was connected to, and three yellow warnings on a healthy new server |
+| R-070 | Medium | ONE HALF FIXED / ONE HALF FOUND | Three release-gating tests read things they do not control: the host's readiness probe, which made them fail at random on CI, and the machine's own DNS engine state, which makes one of them fail on any server that has CelikPanel installed |
 
 ## Detailed risks
 
@@ -2903,6 +2904,52 @@ or executed as-is. There are no open pull requests at this baseline.
   rarely and it should not ride in on every visit. The Databases page is the
   customers' databases and only those; its tab strip and the two strings that
   named it are gone.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-070 - Release-gating tests that read the machine
+
+- Evidence: 7 September 2026, on a commit that changed **two Markdown files**.
+  The Go job went red on three DNS cluster startup tests; the previous run of
+  the same branch was green, and re-running the identical commit was green
+  again. Same code, red then green, which is the only proof a flake ever gives.
+- The log named the mechanism exactly:
+  `acquire service mutation reconciliation lock: inspect service mutation lock
+  directory: lstat /tmp/Test.../001: no such file or directory`.
+  The three tests reload a mutation manager and assert that startup recovery
+  has decided. That is only synchronous when the host-readiness probe answers
+  "the host can be read". When it answers "still starting", the manager does
+  the correct thing - it defers the decision to a goroutine that waits for the
+  host - the test returns, `t.TempDir()` removes the state directory underneath
+  that goroutine, and the run fails.
+- **The product was right and the tests were reading a value they did not
+  control.** They are about the decision, not about whether a machine has
+  finished booting.
+- The first fix pinned those three tests, and CI answered it by failing a
+  fourth in a different file - `TestSwitchDNSEngineReceiptWriteFailure...`,
+  same shape, `recoverCalls:0` and a job still leased. **Ten test files reload
+  a manager that way.** Pinning them one at a time would have been the mistake
+  this register keeps recording: fixing where it was found and leaving the
+  sibling. The default now lives once, in the package's TestMain, beside the
+  package-manager probe that was already pinned there for exactly this reason -
+  the pattern existed and the readiness probe had simply never been added to
+  it. host_boot_recovery_test.go, the one file that is about readiness,
+  overrides it per test and always did.
+- **What is honest about this fix:** it cannot be shown to remove the flake,
+  because the flake cannot be forced. What can be shown is that the failing
+  path no longer exists for these three tests. The evidence for the diagnosis
+  is the log line above plus the red-then-green on one commit, not a
+  reproduction.
+- **The second half, found while looking and not fixed.** Run in a guest that
+  has CelikPanel installed, `TestDNSClusterStartupRecoversCommittedJournalForward`
+  fails with "persisted DNS cluster mutation is blocked by the durable DNS
+  engine authority" - identically before and after the probe fix, so it is a
+  different fault. The test reads the machine's own DNS engine state. It passes
+  on a clean CI runner and fails on a server that has the product on it, which
+  is the wrong way round for a test that gates a release.
+- Why both halves belong in one entry: they are the same mistake at two
+  depths. A test that gates a release must depend on what it sets up and
+  nothing else, and these three depend on the machine underneath them twice
+  over.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
