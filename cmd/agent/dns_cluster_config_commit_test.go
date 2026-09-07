@@ -251,40 +251,7 @@ func TestDNSClusterCommittedLifecycleCannotReportFailure(t *testing.T) {
 	}
 }
 
-// decideStartupRecoveryNow pins the host-readiness probe to "the host can be
-// read", because these three tests are about the DECISION startup recovery
-// makes, not about whether the machine has finished booting.
-//
-// Without it they inherit the real probe, which asks the host what platform it
-// is. On a container that answer can be "still starting", and then the manager
-// does the correct thing: it defers the decision to a goroutine that waits for
-// the host. The test, meanwhile, returns - t.TempDir() removes the state
-// directory underneath the waiting goroutine, and the run fails with
-//
-//	acquire service mutation reconciliation lock: inspect service mutation
-//	lock directory: lstat /tmp/Test.../001: no such file or directory
-//
-// So the product was right and the tests were reading a value they did not
-// control. Caught on CI on 7 September 2026 by a commit that changed two
-// Markdown files: same Go code, one run green and the next red, which is the
-// only proof a flake ever gives you. The readiness behaviour itself is covered
-// by host_boot_recovery_test.go, which pins this probe to drive all three
-// answers deliberately.
-//
-// decideStartupRecoveryNow, makine-hazirlik yoklamasini "makine okunabilir"e
-// sabitler; cunku bu uc test, baslangic kurtarmasinin verdigi KARARLA ilgilidir,
-// makinenin acilisi bitip bitmedigiyle degil.
-func decideStartupRecoveryNow(t *testing.T) {
-	t.Helper()
-	previous := hostRecoveryProbe
-	hostRecoveryProbe = func() (hostRecoveryReadiness, error) {
-		return hostRecoveryDecideNow, nil
-	}
-	t.Cleanup(func() { hostRecoveryProbe = previous })
-}
-
 func TestDNSClusterStartupRecoversCommittedJournalForward(t *testing.T) {
-	decideStartupRecoveryNow(t)
 	commitment := dnsClusterConfigTestCommitment(t)
 	manager, root, ctx, finish := beginDNSClusterConfigTestStep(t, commitment)
 	if _, err := commitDNSClusterConfigIntent(ctx, commitment); err != nil {
@@ -319,7 +286,6 @@ func TestDNSClusterStartupRecoversCommittedJournalForward(t *testing.T) {
 }
 
 func TestDNSClusterStartupSecondaryAuthorityBlocksBeforeJournalAndHostRecovery(t *testing.T) {
-	decideStartupRecoveryNow(t)
 	surfaceRoot := t.TempDir()
 	oldClusterConf := dnsClusterConf
 	dnsClusterConf = filepath.Join(surfaceRoot, "celikpanel-cluster.conf")
@@ -398,7 +364,6 @@ func TestDNSClusterStartupSecondaryAuthorityBlocksBeforeJournalAndHostRecovery(t
 }
 
 func TestDNSClusterStartupJournalMismatchPoisonsAndRetainsLock(t *testing.T) {
-	decideStartupRecoveryNow(t)
 	commitment := dnsClusterConfigTestCommitment(t)
 	manager, root, ctx, finish := beginDNSClusterConfigTestStep(t, commitment)
 	if _, err := commitDNSClusterConfigIntent(ctx, commitment); err != nil {

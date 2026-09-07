@@ -2859,9 +2859,14 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   erteler — test döner, `t.TempDir()` durum dizinini o goroutine'in altından
   siler ve koşum düşer.
 - **Ürün haklıydı, testler denetlemedikleri bir değeri okuyordu.** Onlar kararla
-  ilgilidir, bir makinenin açılışının bitip bitmediğiyle değil; hazırlık
-  davranışı zaten host_boot_recovery_test.go tarafından bilerek kapsanıyor.
-  Artık üçü de yoklamayı sabitliyor.
+  ilgilidir, bir makinenin açılışının bitip bitmediğiyle değil.
+- İlk düzeltme o üç testi sabitledi ve CI buna, başka bir dosyadaki dördüncü bir
+  testi düşürerek cevap verdi — aynı biçim, `recoverCalls:0` ve hâlâ kiralı bir
+  iş. **On test dosyası yöneticiyi bu şekilde yeniden yüklüyor.** Onları tek tek
+  sabitlemek, bu kaydın sürekli not ettiği hatanın aynısı olurdu: bulunduğu yeri
+  düzeltip kardeşini bırakmak. Varsayılan artık tek bir yerde, paketin
+  TestMain'inde; tam olarak aynı sebeple oraya zaten sabitlenmiş paket yöneticisi
+  yoklamasının yanında — biçim vardı, hazırlık yoklaması eklenmemişti.
 - **Bu düzeltme hakkında dürüst olan şey:** kararsızlığı giderdiği
   gösterilemez, çünkü kararsızlık zorlanamıyor. Gösterilebilen şey, düşen yolun
   bu üç test için artık var olmadığıdır. Teşhisin kanıtı yukarıdaki günlük

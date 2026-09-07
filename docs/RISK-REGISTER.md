@@ -2918,9 +2918,17 @@ or executed as-is. There are no open pull requests at this baseline.
   that goroutine, and the run fails.
 - **The product was right and the tests were reading a value they did not
   control.** They are about the decision, not about whether a machine has
-  finished booting, and the readiness behaviour is already covered deliberately
-  by host_boot_recovery_test.go, which pins the probe to drive all three
-  answers. So the three now pin it too.
+  finished booting.
+- The first fix pinned those three tests, and CI answered it by failing a
+  fourth in a different file - `TestSwitchDNSEngineReceiptWriteFailure...`,
+  same shape, `recoverCalls:0` and a job still leased. **Ten test files reload
+  a manager that way.** Pinning them one at a time would have been the mistake
+  this register keeps recording: fixing where it was found and leaving the
+  sibling. The default now lives once, in the package's TestMain, beside the
+  package-manager probe that was already pinned there for exactly this reason -
+  the pattern existed and the readiness probe had simply never been added to
+  it. host_boot_recovery_test.go, the one file that is about readiness,
+  overrides it per test and always did.
 - **What is honest about this fix:** it cannot be shown to remove the flake,
   because the flake cannot be forced. What can be shown is that the failing
   path no longer exists for these three tests. The evidence for the diagnosis
