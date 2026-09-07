@@ -2875,8 +2875,8 @@ or executed as-is. There are no open pull requests at this baseline.
   one habit a warning cannot afford to teach.
   - Fixed by stating those absences as plain facts. The panel's own database
     stays a warning: if that one is missing, something is wrong.
-- **Left open, because it is the operator's call.** The System SQLite tab sits
-  on the Databases page, beside the customers' databases. The product's own
+- **Moved 7 September 2026, once the operator agreed.** The System SQLite tab
+  sat on the Databases page, beside the customers' databases. The product's own
   navigation already separates HOSTING from SERVER, and the panel's own
   machinery is a server concern. Showing it at all is right - being able to
   check the integrity of the control-plane database without a shell is real,
