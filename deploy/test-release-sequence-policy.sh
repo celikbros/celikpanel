@@ -178,12 +178,12 @@ policy_previous=$POLICY_PREVIOUS
 policy_previous_version=$POLICY_PREVIOUS_VERSION
 policy_previous_commit=$POLICY_PREVIOUS_COMMIT
 
-[[ "$policy_version" == v0.1.0-alpha.52 ]] || die 'tracked version must be v0.1.0-alpha.52'
-[[ "$policy_current" == 52 ]] || die 'tracked current sequence must be 52'
-[[ "$policy_previous" == 51 ]] || die 'tracked previous sequence must be 51'
-[[ "$policy_previous_version" == v0.1.0-alpha.51 ]] || die 'tracked previous version must be v0.1.0-alpha.51'
-[[ "$policy_previous_commit" == 45d01ffb29013b9457180072c3b25ab24d5ff7bd ]] \
-  || die 'tracked previous commit must be the immutable Alpha51 release commit'
+[[ "$policy_version" == v0.1.0-alpha.53 ]] || die 'tracked version must be v0.1.0-alpha.53'
+[[ "$policy_current" == 53 ]] || die 'tracked current sequence must be 53'
+[[ "$policy_previous" == 52 ]] || die 'tracked previous sequence must be 52'
+[[ "$policy_previous_version" == v0.1.0-alpha.52 ]] || die 'tracked previous version must be v0.1.0-alpha.52'
+[[ "$policy_previous_commit" == adb25d8ec487dcb76dd95304a551d8cb37565115 ]] \
+  || die 'tracked previous commit must be the immutable Alpha52 release commit'
 
 fixture_dir=$(mktemp -d "${TMPDIR:-/tmp}/celikpanel-release-policy.XXXXXXXX")
 cleanup() {
@@ -191,11 +191,14 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
-sed 's/^current=52$/current=052/' "$policy_file" > "$fixture_dir/noncanonical"
+# The negative fixtures are cut from the tracked policy by its own values, so a
+# version bump cannot leave them matching nothing and silently passing as the
+# valid file (which is exactly what the hard-coded 52 did on the alpha.53 bump).
+sed "s/^current=${policy_current}$/current=0${policy_current}/" "$policy_file" > "$fixture_dir/noncanonical"
 expect_rejected validate_policy_file "$fixture_dir/noncanonical"
-sed 's/^current=52$/current=51/' "$policy_file" > "$fixture_dir/not-increasing"
+sed "s/^current=${policy_current}$/current=${policy_previous}/" "$policy_file" > "$fixture_dir/not-increasing"
 expect_rejected validate_policy_file "$fixture_dir/not-increasing"
-sed 's/^current=52$/current=9223372036854775808/' "$policy_file" > "$fixture_dir/overflow"
+sed "s/^current=${policy_current}$/current=9223372036854775808/" "$policy_file" > "$fixture_dir/overflow"
 expect_rejected validate_policy_file "$fixture_dir/overflow"
 cp -- "$policy_file" "$fixture_dir/extra-field"
 printf '%s\n' 'unexpected=true' >> "$fixture_dir/extra-field"

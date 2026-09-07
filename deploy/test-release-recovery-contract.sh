@@ -314,7 +314,7 @@ rm -f -- "$TEST_ROOT/systemd-timer-dropin-paths"
 expect_failure wrong-sequence env CELIKPANEL_RELEASE_RECOVERY_TESTING=1 \
     CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT="$TEST_ROOT" /bin/bash "$RUNNER" \
     --verify-final-state --expected-version "$TARGET_VERSION" \
-    --expected-commit "$TARGET_COMMIT" --expected-sequence 52
+    --expected-commit "$TARGET_COMMIT" --expected-sequence 53
 install -m 0600 "$MANIFEST" "${MANIFEST}.intent"
 expect_failure pending-intent run_final_proof
 rm -f -- "${MANIFEST}.intent"
