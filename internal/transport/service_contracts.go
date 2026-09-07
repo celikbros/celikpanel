@@ -98,6 +98,24 @@ type ServiceMutationResponse struct {
 	ErrorCode string              `json:"error_code,omitempty"`
 	Error     string              `json:"error,omitempty"`
 
+	// Reason refines ErrorCode with one of the stable HostMutationReason*
+	// codes. The agent already worked out which of three things is blocking a
+	// change - somebody else's package manager, another CelikPanel change, or a
+	// lock nothing released - and used to throw that away on the way out, so
+	// the operator was told a sentence covering all three.
+	//
+	// The three want different things. Somebody else's package manager is a
+	// wait of a minute. Another CelikPanel change is a wait for that change. A
+	// lock nothing released is neither: it is something to look at, and telling
+	// an operator to wait for it is telling them to wait for something that
+	// will not end.
+	//
+	// Reason, ErrorCode'u kararli HostMutationReason* kodlarindan biriyle
+	// inceltir. Agent, bir degisikligi neyin engelledigini zaten hesapliyordu ve
+	// bunu disari cikarken atiyordu; operatore de ucunu birden kapsayan bir
+	// cumle soyleniyordu.
+	Reason string `json:"reason,omitempty"`
+
 	// MutationHold carries why the agent is refusing every durable mutation,
 	// as one of the stable MutationHold* codes, or "" when it is accepting
 	// them. It rides on the response rather than on the job because the

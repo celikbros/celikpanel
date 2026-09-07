@@ -99,10 +99,25 @@ var errHostMutationBusy = errors.New(
 	"another server change or package-manager task is still running",
 )
 
+// hostMutationBusyError is errHostMutationBusy plus the one thing the agent
+// knew and the panel used to drop: which of three is blocking the change. It
+// unwraps to the sentinel, so everything that tested for the sentinel still
+// does; the reason is read only by the classifier that writes the sentence.
+//
+// hostMutationBusyError, errHostMutationBusy'nin ustune agent'in bildigi ve
+// panelin dusurdugu tek seyi ekler: uc seyden hangisinin engelledigini.
+type hostMutationBusyError struct {
+	reason string
+}
+
+func (e *hostMutationBusyError) Error() string { return errHostMutationBusy.Error() }
+
+func (e *hostMutationBusyError) Unwrap() error { return errHostMutationBusy }
+
 func serviceMutationResponseError(response agentMutationResponse) error {
 	switch response.ErrorCode {
 	case transport.HostMutationBusy:
-		return errHostMutationBusy
+		return &hostMutationBusyError{reason: response.Reason}
 	case "":
 		if response.Error != "" {
 			return errors.New(response.Error)

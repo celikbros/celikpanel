@@ -2330,6 +2330,12 @@ func setHostMutationBusyResponse(response *ServiceMutationResponse, err error) b
 	}
 	response.ErrorCode = transport.HostMutationBusy
 	response.Error = hostMutationBusyMessage
+	// The idle check attached which of three it is; carry it out rather than
+	// leaving the caller to guess between them.
+	// Bosluk denetimi hangisi oldugunu ekledi; disari tasi.
+	if reason, ok := serviceMutationReadinessReason(err); ok {
+		response.Reason = reason
+	}
 	return true
 }
 
