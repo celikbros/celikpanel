@@ -191,11 +191,14 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
-sed 's/^current=52$/current=052/' "$policy_file" > "$fixture_dir/noncanonical"
+# The negative fixtures are cut from the tracked policy by its own values, so a
+# version bump cannot leave them matching nothing and silently passing as the
+# valid file (which is exactly what the hard-coded 52 did on the alpha.53 bump).
+sed "s/^current=${policy_current}$/current=0${policy_current}/" "$policy_file" > "$fixture_dir/noncanonical"
 expect_rejected validate_policy_file "$fixture_dir/noncanonical"
-sed 's/^current=52$/current=51/' "$policy_file" > "$fixture_dir/not-increasing"
+sed "s/^current=${policy_current}$/current=${policy_previous}/" "$policy_file" > "$fixture_dir/not-increasing"
 expect_rejected validate_policy_file "$fixture_dir/not-increasing"
-sed 's/^current=52$/current=9223372036854775808/' "$policy_file" > "$fixture_dir/overflow"
+sed "s/^current=${policy_current}$/current=9223372036854775808/" "$policy_file" > "$fixture_dir/overflow"
 expect_rejected validate_policy_file "$fixture_dir/overflow"
 cp -- "$policy_file" "$fixture_dir/extra-field"
 printf '%s\n' 'unexpected=true' >> "$fixture_dir/extra-field"
