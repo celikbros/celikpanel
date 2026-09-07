@@ -2833,13 +2833,18 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   alamayacağı tek alışkanlıktır.
   - O yoklukları düz bir olgu olarak söyleyerek düzeltildi. Panelin kendi
     veritabanı uyarı olarak kalıyor: o yoksa bir şey yanlıştır.
-- **Açık bırakıldı, çünkü kararı operatörün.** Sistem SQLite sekmesi,
-  müşterilerin veritabanlarının yanında, Veritabanları sayfasında duruyor.
+- **7 Eylül 2026'da, operatör onayladıktan sonra taşındı.** Sistem SQLite
+  sekmesi, müşterilerin veritabanlarının yanında, Veritabanları sayfasında
+  duruyordu.
   Ürünün kendi menüsü zaten HOSTING ve SERVER diye ayrılmış ve panelin kendi
   makinesi sunucu tarafının işi. Göstermek doğru — kontrol düzlemi
   veritabanının bütünlüğünü kabuk açmadan denetleyebilmek gerçek bir ihtiyaç ve
   bu ürünün en kötü arıza türü tam olarak o dosyadır — ama bulunduğu sayfa bir
-  barındırma sayfası. Taşınmadı; operatör karar vermedi.
+  barındırma sayfasıydı.
+- Artık Ayarlar'ın bir bölümü; diğer sunucu konularının yanında ve sayfayla
+  değil o bölümle birlikte yükleniyor — operatör orayı seyrek açar, her Ayarlar
+  ziyaretinde gelmemeli. Veritabanları sayfası artık yalnızca müşterilerin
+  veritabanları; sekme şeridi ve onu adlandıran iki dizge kaldırıldı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

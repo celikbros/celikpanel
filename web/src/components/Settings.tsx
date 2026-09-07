@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from '../router';
-import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network, ScanSearch, DownloadCloud } from 'lucide-react';
+import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network, ScanSearch, DownloadCloud, Database } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
@@ -11,8 +11,13 @@ import { DNSServerSettings } from './DNSServerSettings';
 import { SecurityAuditCard } from './SecurityAuditCard';
 
 const PanelUpdateCard = lazy(() => import('./PanelUpdateCard').then((module) => ({ default: module.PanelUpdateCard })));
+// R-069. Loaded with the section that asks for it, not with the page: an
+// operator opens this one rarely, and it should not ride in on every visit
+// to Settings.
+// R-069. Sayfayla degil, isteyen bolumle birlikte yuklenir.
+const SystemSQLiteManager = lazy(() => import('./SystemSQLiteManager').then((module) => ({ default: module.SystemSQLiteManager })));
 
-type SettingsSectionID = 'account' | 'panel' | 'updates' | 'security' | 'dns';
+type SettingsSectionID = 'account' | 'panel' | 'updates' | 'security' | 'dns' | 'system-databases';
 type SettingsSection = {
     id: SettingsSectionID;
     icon: React.ComponentType<{ className?: string }>;
@@ -60,6 +65,22 @@ export function Settings() {
                     icon: Network,
                     title: t('settings.section.dns'),
                     description: t('settings.section.dns.desc'),
+                },
+                // R-069. The panel's own SQLite files used to sit on the
+                // Databases page, beside the customers' databases. The product
+                // already separates HOSTING from SERVER in its own navigation,
+                // and the panel's machinery is a server concern; putting it
+                // under a hosting page invited exactly the question the
+                // operator asked - "why is this here?".
+                //
+                // R-069. Panelin kendi SQLite dosyalari, musterilerin
+                // veritabanlarinin yaninda Veritabanlari sayfasinda duruyordu.
+                // Urun HOSTING ile SERVER'i kendi menusunde zaten ayirmis.
+                {
+                    id: 'system-databases' as const,
+                    icon: Database,
+                    title: t('settings.section.systemDatabases'),
+                    description: t('settings.section.systemDatabases.desc'),
                 },
             ]
             : []),
@@ -160,6 +181,9 @@ function SettingsWorkspace({
                         </div>
                         <div id="settings-dns-panel" role="tabpanel" aria-labelledby="settings-dns-tab" hidden={activeID !== 'dns'}>
                             {activeID === 'dns' && <DNSServerSettings />}
+                            {activeID === 'system-databases' && (
+                                <Suspense fallback={null}><SystemSQLiteManager /></Suspense>
+                            )}
                         </div>
                     </>
                 )}
