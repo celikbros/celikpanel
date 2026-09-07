@@ -164,3 +164,52 @@ test('no catalogue carries text that was encoded twice', () => {
     );
   }
 });
+
+// R-068. A refusal that names which of several causes it was must reach words
+// for that cause. The mechanism is general - code, then code plus reason - so
+// what is pinned is that the refinement exists and that every reason the panel
+// sends has words in both languages.
+//
+// R-068. Hangi sebep oldugunu adlandiran bir ret, o sebebin sozlerine
+// ulasmalidir. Mekanizma geneldir; sabitlenen sey inceltmenin var oldugu ve
+// panelin gonderdigi her gerekcenin iki dilde de sozu oldugudur.
+test('a refusal that names its reason reaches words for that reason', () => {
+  const apiError = readFileSync(new URL('../src/lib/apiError.ts', import.meta.url), 'utf8');
+  assert.match(
+    apiError,
+    /if \(e\.reason\) \{[\s\S]{0,200}?'err\.' \+ e\.code \+ '\.' \+ e\.reason/,
+    'apiErrorText no longer prefers the sentence for the named reason',
+  );
+  assert.match(
+    apiError,
+    /reason: typeof d\.reason === 'string'/,
+    'the response parser drops the reason the server sent',
+  );
+
+  const enBase = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
+  const trBase = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
+  for (const reason of [
+    'package_manager_active',
+    'agent_mutation_active',
+    'panel_operation_active',
+    'host_lock_busy',
+  ]) {
+    const key = `'err.HOST_MUTATION_BUSY.${reason}'`;
+    assert.ok(enBase.includes(key), `the English catalogue has no words for ${reason}`);
+    assert.ok(trBase.includes(key), `the Turkish catalogue has no words for ${reason}`);
+  }
+
+  // The one that does not end by waiting must not be told to wait, in either
+  // language. It is the only one of the four where "try again" is wrong.
+  // Beklemekle geçmeyene beklemesi söylenmemeli.
+  for (const [name, catalogue, wrong] of [
+    ['English', enBase, /try again in a minute/i],
+    ['Turkish', trBase, /yeniden deneyin/i],
+  ]) {
+    const line = catalogue
+      .split('\n')
+      .find((l) => l.includes("'err.HOST_MUTATION_BUSY.host_lock_busy'"));
+    assert.ok(line, `${name} is missing the held-lock sentence`);
+    assert.doesNotMatch(line, wrong, `the ${name} held-lock sentence tells the operator to wait`);
+  }
+});
