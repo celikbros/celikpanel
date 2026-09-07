@@ -145,6 +145,8 @@ export const trScreens: Record<ScreenKey, string> = {
     'settings.section.security.desc': 'Dışa açık servisleri ve erişim denetimlerini salt okunur olarak tarayın.',
     'settings.section.dns': 'DNS altyapısı',
     'settings.section.dns.desc': 'Ortak ad sunucuları, düğüm kimliği ve çoğaltma düzeni.',
+    'settings.section.systemDatabases': 'Sistem veritabanları',
+    'settings.section.systemDatabases.desc': 'CelikPanel\'in ve kurulu servislerin tuttuğu SQLite dosyalarını incele ve güvenle bakımını yap.',
     'securityAudit.title': 'Güvenlik denetimi',
     'securityAudit.description': 'Salt okunur kontroller mümkün olan yerde doğrulanmış canlı durumu karşılaştırır; kanıtlanamayan canlı davranışı bilinmiyor olarak gösterir.',
     'securityAudit.readOnly': 'Salt-okunur taramadır. Hiçbir ayarı değiştirmez ve otomatik düzeltme çalıştırmaz.',
@@ -502,8 +504,6 @@ export const trScreens: Record<ScreenKey, string> = {
     'databases.account.passwordRecorded': 'Bu parolanın açılması, değiştirilmesi gibi denetim kaydına yazılır.',
     'databases.account.copy': 'Kopyala',
     'databases.account.copied': 'Kopyalandı',
-    'databases.scope.hosted': 'Barındırılan veritabanları',
-    'databases.scope.system': 'Sistem SQLite',
 
     'systemDb.title': 'Sistem SQLite veritabanları',
     'systemDb.subtitle': 'CelikPanel ve kurulu servislerin kullandığı sabit SQLite veritabanlarını denetleyin ve güvenle yönetin.',

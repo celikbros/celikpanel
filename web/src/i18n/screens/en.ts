@@ -145,6 +145,8 @@ export const enScreens = {
     'settings.section.security.desc': 'Read-only audit of exposed services and access controls.',
     'settings.section.dns': 'DNS infrastructure',
     'settings.section.dns.desc': 'Shared nameservers, node identity and replication topology.',
+    'settings.section.systemDatabases': 'System databases',
+    'settings.section.systemDatabases.desc': 'Inspect and safely maintain the SQLite files CelikPanel and installed services keep.',
     'securityAudit.title': 'Security audit',
     'securityAudit.description': 'Read-only checks compare verified live state where possible and mark unproven live behavior as unknown.',
     'securityAudit.readOnly': 'Read-only scan. It changes no setting and never runs an automatic fix.',
@@ -528,8 +530,6 @@ export const enScreens = {
     'databases.account.passwordRecorded': 'Opening this password is recorded in the audit log, the same as changing it.',
     'databases.account.copy': 'Copy',
     'databases.account.copied': 'Copied',
-    'databases.scope.hosted': 'Hosted databases',
-    'databases.scope.system': 'System SQLite',
 
     'systemDb.title': 'System SQLite databases',
     'systemDb.subtitle': 'Inspect and safely maintain the fixed SQLite databases used by CelikPanel and installed services.',
