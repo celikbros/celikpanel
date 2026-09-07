@@ -2881,7 +2881,12 @@ or executed as-is. There are no open pull requests at this baseline.
   machinery is a server concern. Showing it at all is right - being able to
   check the integrity of the control-plane database without a shell is real,
   and the worst failure mode this product has is that file - but the page it
-  is on is a hosting page. Not moved; the operator has not decided.
+  is on is a hosting page.
+- It is now a section of Settings, beside the other server concerns, and it
+  loads with that section rather than with the page - an operator opens it
+  rarely and it should not ride in on every visit. The Databases page is the
+  customers' databases and only those; its tab strip and the two strings that
+  named it are gone.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
