@@ -106,8 +106,9 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-065 | Orta | YAPILDI / HENÜZ TARAYICIDA GÖRÜLMEDİ | Panelin kendi veritabanı hesabı var ama yalnızca API'den erişilebiliyor: sunucu kartı hesabın orada olup olmadığını göstermiyor ve başka bir makinedeki motor için panele kimlik bilgisi verilecek bir yer yok |
 | R-066 | Orta | BULUNDU / HENÜZ DÜZELTİLMEDİ | Başka bir makinedeki veritabanı motoru hiç kaydedilemiyor: liste yalnızca bu makinenin otomatik keşfiyle doluyor ve kimlik bilgisiyle uzak sunucu kabul eden uç noktaya yalnızca API'den ulaşılabiliyor |
 | R-067 | Yüksek | GERÇEK MAKİNEDE BULUNDU VE DÜZELTİLDİ | Yeni kurulmuş bir sunucuda veritabanı bölümünün tamamı erişilemezdi: panel MariaDB'yi kurdu, çalıştığını gördü ve sonra yöneticiye hiçbir veritabanı motoru kurulu olmadığını söyledi |
-| R-068 | Düşük | BULUNDU / HENÜZ DÜZELTİLMEDİ | Agent, bir makine değişikliğinin neden başlayamadığını tam olarak biliyor - paket yöneticisi, başka bir değişiklik ya da tutulan bir kilit - ve operatöre üçünü birden kapsayan tek bir cümle söyleniyor |
+| R-068 | Düşük | DÜZELTİLDİ / RET HANGİSİ OLDUĞUNU SÖYLÜYOR | Agent, bir makine değişikliğinin neden başlayamadığını tam olarak biliyor - paket yöneticisi, başka bir değişiklik ya da tutulan bir kilit - ve operatöre üçünü birden kapsayan tek bir cümle söyleniyor |
 | R-069 | Orta | OPERATÖR BULDU VE DÜZELTİLDİ | Ekranın, ürünün daha iyi bildiği bir şeyi yazdığı üç yer: 38'de olan bir veritabanı için 0 şema sürümü, panelin kurduğu ve bağlı olduğu bir motorun yanında "unknown", ve sağlıklı yeni bir sunucuda üç sarı uyarı |
+| R-070 | Orta | BİR YARISI DÜZELTİLDİ / BİR YARISI BULUNDU | Sürüm kapısındaki üç test, denetlemedikleri şeyleri okuyor: makinenin hazırlık yoklaması — CI'da rastgele düşmelerinin sebebi — ve makinenin kendi DNS motoru durumu; ikincisi, CelikPanel kurulu her sunucuda birini düşürüyor |
 
 ## Ayrıntılı riskler
 
@@ -2789,6 +2790,20 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   hesaplanıyor ve ona ihtiyacı olan kişiye giderken atılıyor. Yüksek değil
   Düşük; çünkü burada atılan sebep, motorun kendi sözleri değil adlandırılmış
   üç olasılıktan biri ve yedek cümle en azından doğru.
+- 7 Eylül 2026'da düzeltildi. Gerekçe artık yolun tamamını gidiyor: agent zaten
+  hesapladığı kodu yanıtına koyuyor, panel onu hata kodunun yanında ret gövdesine
+  taşıyor, ekran da kodun cümlesi yerine gerekçenin cümlesini tercih ediyor.
+- Mekanizma bu rede özel değil, genel. Kodlu bir hata artık bir gerekçe
+  adlandırabilir; o gerekçe için sözü olan ekran onu kullanır, olmayan kodun
+  sözlerine döner — yani bu var olmadan önce her ekranın yaptığı şeye. Gerekçe
+  göndermeyen eski bir agent, tam olarak eskiden ürettiğini üretir.
+- İki dilde dört cümle ve önemli olan tutulmuş kilit: onun için beklemek yanlış
+  talimattır, bu yüzden "yeniden deneyin" demiyor. Bir test, operatöre beklemesini
+  söyleyen bir tutulmuş-kilit cümlesini iki dilde de reddediyor; üçünü ayırmanın
+  bütün amacı bu.
+- Ubuntu'daki kabul turunda bulundu: açılıştan sonraki ilk dakikalar, yeni bir
+  operatörün ilk servisini kurduğu ve Ubuntu'nun kendi paket işlerinin çalıştığı
+  an tam olarak aynı andır.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ### R-069 - Ürünün daha iyi bildiğini yazan ekranlar
@@ -2826,6 +2841,42 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
   veritabanının bütünlüğünü kabuk açmadan denetleyebilmek gerçek bir ihtiyaç ve
   bu ürünün en kötü arıza türü tam olarak o dosyadır — ama bulunduğu sayfa bir
   barındırma sayfası. Taşınmadı; operatör karar vermedi.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-070 - Sürüm kapısında makineyi okuyan testler
+
+- Kanıt: 7 Eylül 2026, **yalnızca iki Markdown dosyasını** değiştiren bir
+  commit'te. Go işi üç DNS küme başlangıç testinde kırmızıya döndü; aynı dalın
+  bir önceki koşumu yeşildi ve birebir aynı commit yeniden çalıştırılınca yine
+  yeşil oldu. Aynı kod, önce kırmızı sonra yeşil — kararsızlığın verebileceği
+  tek kanıt budur.
+- Günlük mekanizmayı tam olarak adlandırdı:
+  `acquire service mutation reconciliation lock: ... lstat /tmp/Test.../001: no
+  such file or directory`. Üç test bir mutasyon yöneticisini yeniden yükleyip
+  başlangıç kurtarmasının karar verdiğini doğruluyor. Bu, ancak makine-hazırlık
+  yoklaması "makine okunabilir" derse eşzamanlıdır. "Hâlâ açılıyor" derse
+  yönetici doğru olanı yapar — kararı, makineyi bekleyen bir goroutine'e
+  erteler — test döner, `t.TempDir()` durum dizinini o goroutine'in altından
+  siler ve koşum düşer.
+- **Ürün haklıydı, testler denetlemedikleri bir değeri okuyordu.** Onlar kararla
+  ilgilidir, bir makinenin açılışının bitip bitmediğiyle değil; hazırlık
+  davranışı zaten host_boot_recovery_test.go tarafından bilerek kapsanıyor.
+  Artık üçü de yoklamayı sabitliyor.
+- **Bu düzeltme hakkında dürüst olan şey:** kararsızlığı giderdiği
+  gösterilemez, çünkü kararsızlık zorlanamıyor. Gösterilebilen şey, düşen yolun
+  bu üç test için artık var olmadığıdır. Teşhisin kanıtı yukarıdaki günlük
+  satırı ve tek commit üzerindeki kırmızı-sonra-yeşildir; bir yeniden üretim
+  değil.
+- **İkinci yarısı, bakarken bulundu ve düzeltilmedi.** CelikPanel kurulu bir
+  konukta çalıştırıldığında `TestDNSClusterStartupRecoversCommittedJournalForward`,
+  "persisted DNS cluster mutation is blocked by the durable DNS engine
+  authority" ile düşüyor — yoklama düzeltmesinden önce ve sonra birebir aynı,
+  yani ayrı bir kusur. Test, makinenin kendi DNS motoru durumunu okuyor. Temiz
+  bir CI koşucusunda geçiyor, ürünün kurulu olduğu bir sunucuda düşüyor; sürüm
+  kapısındaki bir test için bu tam tersi olmalı.
+- İki yarının aynı kayıtta olmasının sebebi: bunlar aynı hatanın iki
+  derinlikteki hâli. Sürümü kapıya alan bir test, yalnızca kendi kurduğuna
+  bağlı olmalıdır; bu üçü altlarındaki makineye iki kez bağlı.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı

@@ -16,6 +16,13 @@ export interface ApiError {
     message: string;
     code?: string;
     action?: string;
+    // reason refines code. The server works out which of several things caused
+    // a coded refusal and says so; a screen that has words for that reason uses
+    // them, and one that does not falls back to the sentence for the code,
+    // which is what every screen did before this existed.
+    // reason, code'u inceltir. O gerekçe için sözü olan ekran onu kullanır;
+    // olmayan, kodun cümlesine döner.
+    reason?: string;
     // These flags are proof-bearing outcome fields, not synonyms. In
     // particular, partial_success alone must never be treated as proof that a
     // host mutation happened; only mutation_applied === true carries that
@@ -48,6 +55,7 @@ export async function readApiError(res: Response): Promise<ApiError> {
                     message: d.error || '',
                     code: d.code,
                     action: d.action,
+                    reason: typeof d.reason === 'string' && d.reason ? d.reason : undefined,
                     partialSuccess: d.partial_success === true ? true : undefined,
                     mutationApplied: d.mutation_applied === true ? true : undefined,
                     details: Array.isArray(d.details)
@@ -72,6 +80,18 @@ type T = (key: TranslationKey, vars?: Record<string, string | number>) => string
 // mesajına, o da yoksa genel hataya düşer.
 export function apiErrorText(e: ApiError, t: T, fallbackKey: TranslationKey = 'common.error'): string {
     if (e.code) {
+        // The refined sentence first: a refusal that named which of several
+        // causes it was deserves the words for that cause, not the words that
+        // cover all of them. R-068 is the case this was written for - "another
+        // server change or package-manager task" was one sentence for three
+        // situations, one of which does not end by waiting.
+        // Önce inceltilmiş cümle: hangi sebep olduğunu adlandıran bir ret, o
+        // sebebin sözlerini hak eder; hepsini kapsayanları değil.
+        if (e.reason) {
+            const refined = ('err.' + e.code + '.' + e.reason) as TranslationKey;
+            const named = t(refined);
+            if (named !== refined) return named;
+        }
         const key = ('err.' + e.code) as TranslationKey;
         const s = t(key);
         if (s !== key) return s;

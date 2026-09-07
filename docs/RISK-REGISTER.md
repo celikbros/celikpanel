@@ -105,8 +105,9 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-065 | Medium | BUILT / NOT YET SEEN IN A BROWSER | The panel's own database account exists and is reachable only through the API: the server card does not show whether the account is there, and there is nowhere to hand the panel a credential for an engine on another machine |
 | R-066 | Medium | FOUND / NOT YET FIXED | A database engine on another machine cannot be registered at all: the list is filled only by autodiscovery of this machine, and the endpoint that accepts a remote server with a credential is reachable only through the API |
 | R-067 | High | FOUND ON A REAL MACHINE AND FIXED | On a freshly installed server the whole database chapter was unreachable: the panel installed MariaDB, saw it running, and then told the administrator no database engine was installed |
-| R-068 | Low | FOUND / NOT YET FIXED | The agent works out exactly why a host change cannot start - the package manager, another change, or a held lock - and the operator is told one sentence that covers all three |
+| R-068 | Low | FIXED / THE REFUSAL SAYS WHICH | The agent works out exactly why a host change cannot start - the package manager, another change, or a held lock - and the operator is told one sentence that covers all three |
 | R-069 | Medium | FOUND BY THE OPERATOR AND FIXED | Three places where a screen printed something the product knew better: a schema version of 0 for a database at 38, "unknown" beside an engine the panel had installed and was connected to, and three yellow warnings on a healthy new server |
+| R-070 | Medium | ONE HALF FIXED / ONE HALF FOUND | Three release-gating tests read things they do not control: the host's readiness probe, which made them fail at random on CI, and the machine's own DNS engine state, which makes one of them fail on any server that has CelikPanel installed |
 
 ## Detailed risks
 
@@ -2839,6 +2840,22 @@ or executed as-is. There are no open pull requests at this baseline.
   Low rather than High because the discarded reason here is one of three named
   possibilities rather than an engine's own words, and the fallback sentence is
   at least true.
+- Fixed 7 September 2026. The reason now travels the whole way: the agent puts
+  the code it already computed on its answer, the panel carries it into the
+  refusal body beside the error code, and the screen prefers the sentence for
+  the reason over the sentence for the code.
+- The mechanism is general rather than a special case for this refusal. A coded
+  error may now name a reason, and a screen that has words for it uses them
+  while one that does not falls back to the words for the code - which is what
+  every screen did before this existed. So an older agent, which sends no
+  reason, produces exactly what it produced before.
+- Four sentences in both languages, and the one that matters is the held lock:
+  waiting is the wrong instruction for it, so it does not say "try again". A
+  test refuses a held-lock sentence that tells the operator to wait, in either
+  language, because that is the whole point of separating the three.
+- Found by the acceptance run on Ubuntu, where the first minutes after boot are
+  exactly when a new operator installs their first service and exactly when
+  Ubuntu's own package tasks are running.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ### R-069 - Screens that printed what the product knew better
@@ -2882,6 +2899,44 @@ or executed as-is. There are no open pull requests at this baseline.
   check the integrity of the control-plane database without a shell is real,
   and the worst failure mode this product has is that file - but the page it
   is on is a hosting page. Not moved; the operator has not decided.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-070 - Release-gating tests that read the machine
+
+- Evidence: 7 September 2026, on a commit that changed **two Markdown files**.
+  The Go job went red on three DNS cluster startup tests; the previous run of
+  the same branch was green, and re-running the identical commit was green
+  again. Same code, red then green, which is the only proof a flake ever gives.
+- The log named the mechanism exactly:
+  `acquire service mutation reconciliation lock: inspect service mutation lock
+  directory: lstat /tmp/Test.../001: no such file or directory`.
+  The three tests reload a mutation manager and assert that startup recovery
+  has decided. That is only synchronous when the host-readiness probe answers
+  "the host can be read". When it answers "still starting", the manager does
+  the correct thing - it defers the decision to a goroutine that waits for the
+  host - the test returns, `t.TempDir()` removes the state directory underneath
+  that goroutine, and the run fails.
+- **The product was right and the tests were reading a value they did not
+  control.** They are about the decision, not about whether a machine has
+  finished booting, and the readiness behaviour is already covered deliberately
+  by host_boot_recovery_test.go, which pins the probe to drive all three
+  answers. So the three now pin it too.
+- **What is honest about this fix:** it cannot be shown to remove the flake,
+  because the flake cannot be forced. What can be shown is that the failing
+  path no longer exists for these three tests. The evidence for the diagnosis
+  is the log line above plus the red-then-green on one commit, not a
+  reproduction.
+- **The second half, found while looking and not fixed.** Run in a guest that
+  has CelikPanel installed, `TestDNSClusterStartupRecoversCommittedJournalForward`
+  fails with "persisted DNS cluster mutation is blocked by the durable DNS
+  engine authority" - identically before and after the probe fix, so it is a
+  different fault. The test reads the machine's own DNS engine state. It passes
+  on a clean CI runner and fails on a server that has the product on it, which
+  is the wrong way round for a test that gates a release.
+- Why both halves belong in one entry: they are the same mistake at two
+  depths. A test that gates a release must depend on what it sets up and
+  nothing else, and these three depend on the machine underneath them twice
+  over.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
