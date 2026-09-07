@@ -388,7 +388,12 @@ cmp -s -- "$tracked_public_key" "$output/release-signing-ed25519.pem" || {
   printf 'staged release-signing public key does not match the bootstrap trust anchor\n' >&2
   exit 1
 }
-cp -- "$template/assets/site.css" "$template/assets/site.js" "$output/assets/"
+# The site self-hosts its typefaces, so the whole assets tree ships: the
+# stylesheet, the script, the favicon, and the fonts with their licences.
+# Two named files were enough while there were two.
+cp -R -- "$template/assets/." "$output/assets/"
+[[ -f "$output/assets/site.css" && -f "$output/assets/site.js" ]] \
+  || die "staged site assets are incomplete"
 cp -- "$template/security.txt" "$output/.well-known/security.txt"
 cp -- "$archive_source" "$release_dir/$expected_archive"
 cp -- "$checksum_source" "$release_dir/$expected_archive.sha256"

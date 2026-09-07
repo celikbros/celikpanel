@@ -50,251 +50,162 @@ const buildInstallCommand = (version = "") => {
 };
 // END DOWNLOAD COMMAND POLICY
 
+// Every visible Turkish string, keyed exactly as it appears in the markup
+// (whitespace normalised), with its English. The page is authored in Turkish
+// and switched in place, so the two languages can never drift apart in
+// structure - only in words.
 const englishText = new Map([
   ["Ana içeriğe geç", "Skip to main content"],
-  ["Özellikler", "Features"],
-  ["Paneli keşfet", "Explore the panel"],
+  ["Nasıl çalışır", "How it works"],
+  ["Kanıt", "Proof"],
   ["Kurulum", "Install"],
   ["Sürüm", "Release"],
   ["Destek", "Support"],
   ["Güvenlik", "Security"],
-  ["Ücretsiz kur", "Install free"],
-  [
-    "Linux sunucular için modern hosting paneli",
-    "A modern hosting panel for Linux servers",
-  ],
-  ["Hosting yönetimi", "Hosting management"],
-  ["tek ekranda kolay.", "made simple in one place."],
-  [
-    "Web siteleri, WordPress, alan adları, e-posta, DNS, veritabanları ve yedekler. CelikPanel, günlük hosting işlerini anlaşılır bir arayüzde bir araya getirir.",
-    "Websites, WordPress, domains, email, DNS, databases and backups. CelikPanel brings everyday hosting work together in one clear interface.",
-  ],
-  ["CelikPanel’i kur", "Install CelikPanel"],
-  ["Paneli incele", "See the panel"],
-  ["Ücretsiz alpha", "Free alpha"],
-  ["Tek komutla kurulum", "One-command setup"],
-  ["Türkçe arayüz", "Turkish and English"],
-  ["GENEL", "GENERAL"],
-  ["Genel bakış", "Overview"],
-  ["Siteler", "Websites"],
-  ["Uygulamalar", "Applications"],
-  ["E-posta", "Email"],
+  ["Sürümler", "Releases"],
+  ["Kurulum komutunu al", "Get the install command"],
+  ["Nasıl çalıştığını gör", "See how it works"],
+
+  // hero
+  ["Sunucunuzda ne yaptığını kanıtlayan hosting paneli.", "The hosting panel that proves what it did to your server."],
+  ["Her değişiklik önce önizlenir, sonra deftere geçer. Kanıtlayamadığı hiçbir şeyi iddia etmez. Ölen bir sunucuyu tek mühürlü dosyadan 105 saniyede hizmete döndürür.", "Every change is previewed first and written to a ledger after. It claims nothing it cannot prove. It brings a dead server back into service from one sealed file in 105 seconds."],
+  ["Dağıtımlar", "Distributions"],
+  ["Lisans", "Licence"],
+  ["Ücretsiz alfa, açık geri bildirim", "Free alpha, open feedback"],
+  ["Debian 13, Ubuntu 24.04, Arch", "Debian 13, Ubuntu 24.04, Arch"],
+  ["Dil", "Language"],
+  ["Türkçe ve İngilizce", "Turkish and English"],
+
+  // route board
+  ["sunucu-01 · rota tablosu", "server-01 · route board"],
+  ["canlı", "live"],
+  ["Posta", "Mail"],
+  ["Veritabanı (MariaDB)", "Database (MariaDB)"],
+  ["Güvenlik duvarı", "Firewall"],
+  ["açık", "clear"],
+  ["bekliyor", "waiting"],
+  ["kilitli", "locked"],
+  ["Güvenlik duvarı rotası kurulamadı.", "The firewall route could not be set."],
+  ["Bu sunucu 7.1.8 çekirdeğiyle çalışıyor ve modülleri artık diskte yok; yeniden başlatılana kadar nftables yüklenemez. Başka her şey kurulu ve çalışıyor.", "This server is running kernel 7.1.8 and its modules are no longer on disk; nftables cannot load until it restarts. Everything else is installed and running."],
+
+  // how it works
+  ["Bir sinyal kulesi gibi çalışır: rota iste, kilitlenmediğini kanıtla, sonra kur.", "It works like a signal box: request a route, prove it is not locked, then set it."],
+  ["Demiryolunda bir rota kurulunca onunla çakışan her rota fiziksel olarak kilitlenir; yanlış kolu çekemezsiniz. CelikPanel sunucunuzu aynı disiplinle yönetir.", "On a railway, setting a route physically locks every route that conflicts with it; you cannot pull the wrong lever. CelikPanel manages your server with the same discipline."],
+  ["Önizle", "Preview"],
+  ["Panel, değişikliği yapmadan önce sunucuya sorar: bu rota kurulabilir mi? Cevap ya bir engel listesi ya da tek kullanımlık bir onay jetonudur. Engel varsa hiçbir şey değişmez.", "Before changing anything, the panel asks the server: can this route be set? The answer is either a list of blockers or a single-use token. If there is a blocker, nothing changes."],
+  ["Taahhüt et", "Commit"],
+  ["Yalnızca o jetonla değişiklik yapılır. Bu sırada sunucu tek bir değişiklik kirası tutar; ikinci bir değişiklik sıraya girer, üste binmez.", "Only that token makes the change. While it does, the server holds a single change lease; a second change waits its turn instead of stacking on top."],
+  ["Deftere geç", "Record"],
+  ["Her ayrıcalıklı değişiklik, sonucuyla birlikte kalıcı bir deftere yazılır. Elektrik kesilirse panel yarım işi bulur ve bitirir ya da geri alır; yarım kalmış bir şeyi başarılı diye göstermez.", "Every privileged change is written to a durable ledger with its outcome. If the power fails, the panel finds the unfinished work and finishes or reverses it; it never shows a half-done change as a success."],
+  ["Kilitleme tablosu", "Interlocking table"],
+  ["gösterim · kurallar gerçek", "demonstration · rules are real"],
+  ["Hangi istek, sunucu hangi durumdayken reddedilir", "Which request is refused while the server is in which state"],
+  ["İstediğiniz değişiklik", "The change you ask for"],
+  ["Başka bir panel değişikliği sürüyor", "Another panel change is running"],
+  ["Paket yöneticisi meşgul", "The package manager is busy"],
+  ["Bitmemiş bir değişiklik kilidi tutuyor", "An unfinished change holds the lock"],
+  ["Önizleme engel buldu", "The preview found a blocker"],
+  ["Servis kur", "Install a service"],
+  ["DNS motorunu değiştir", "Switch the DNS engine"],
+  ["Güvenlik duvarını aç", "Turn on the firewall"],
+  ["Veritabanı oluştur", "Create a database"],
+  ["Sunucuyu oku", "Read the server"],
+  ["Kilitli", "Locked"],
+  ["Serbest", "Free"],
+  ["İstek reddedilir ve panel hangi durumun onu kilitlediğini söyler. Üç sebep üç farklı şey ister: paket yöneticisi için bir dakika beklersiniz, süren değişiklik için onun bitmesini; bitmemiş bir kilit ise beklemekle geçmez ve panel bunu açıkça söyler.", "The request is refused and the panel says which state locked it. The three reasons ask for three different things: for the package manager you wait a minute, for a running change you wait for it to finish; an unfinished lock does not clear by waiting, and the panel says so plainly."],
+  ["İstek hemen yapılır. Veritabanı oluşturmak motorun içindeki bir işlemdir, sunucu kirası gerektirmez; okumak hiçbir zaman beklemez.", "The request is done at once. Creating a database is an operation inside the engine and needs no server lease; reading never waits."],
+  ["Ne yönetir", "What it manages"],
+  ["Alan adları ve siteler", "Domains and sites"],
+  ["PHP, WordPress ve Node.js projeleri; sürüm, DNS ve TLS aynı yerden.", "PHP, WordPress and Node.js projects; runtime, DNS and TLS from one place."],
+  ["DNS", "DNS"],
+  ["BIND veya PowerDNS; iki sunuculu çift; çalışan bir sunucu hizmeti kesmeden devralınır.", "BIND or PowerDNS; a two-server pair; a running server is adopted without interrupting service."],
   ["Veritabanları", "Databases"],
-  ["Yedekler", "Backups"],
-  ["Servisler", "Services"],
-  ["Sunucu çevrimiçi", "Server online"],
-  ["12 Ağustos, Çarşamba", "Wednesday, August 12"],
-  ["Günaydın, Ali 👋", "Good morning, Ali 👋"],
-  ["Sunucunuz sağlıklı çalışıyor.", "Your server is running smoothly."],
-  ["+ Yeni site", "+ New website"],
-  ["Web siteleri", "Websites"],
-  ["5 yayında", "5 online"],
-  ["Kaynak kullanımı", "Resource usage"],
-  ["Bugün alındı", "Created today"],
-  ["Web sitelerim", "My websites"],
-  ["Son eklenen projeler", "Recently added projects"],
-  ["Tümünü gör", "View all"],
-  ["Yayında", "Online"],
-  ["Hazırlanıyor", "Preparing"],
-  ["Sunucu durumu", "Server health"],
-  ["Canlı kaynak kullanımı", "Live resource usage"],
-  ["Canlı", "Live"],
-  ["Çalışma süresi", "Uptime"],
-  ["Bellek", "Memory"],
-  ["WordPress hazır", "WordPress is ready"],
-  ["Kurulum tamamlandı", "Installation complete"],
-  ["SSL aktif", "SSL active"],
-  ["Otomatik yenilenir", "Renews automatically"],
-  ["Ajanslar için", "For agencies"],
-  ["Freelancer’lar için", "For freelancers"],
-  ["Hosting sağlayıcıları için", "For hosting providers"],
-  ["Kendi sunucusunu yönetenler için", "For server owners"],
-  ["TEK PANEL, TÜM HOSTING İŞLERİ", "ONE PANEL FOR ALL YOUR HOSTING WORK"],
-  ["Sunucunuzu yönetmek için", "Everything you need"],
-  ["ihtiyacınız olan her şey.", "to manage your server."],
-  [
-    "Dağınık araçlar ve ezberlenen komutlar yerine, günlük işlerinizi tek ve anlaşılır bir panelden yönetin.",
-    "Replace scattered tools and memorized commands with one clear panel for your daily work.",
-  ],
-  ["Web siteleri ve uygulamalar", "Websites and applications"],
-  [
-    "PHP, WordPress, Laravel ve Node.js projelerini oluşturun; alan adı, SSL ve çalışma sürümünü aynı yerden yönetin.",
-    "Create PHP, WordPress, Laravel and Node.js projects, then manage domains, SSL and runtime versions in one place.",
-  ],
-  ["Profesyonel e-posta", "Professional email"],
-  [
-    "Alan adınıza bağlı posta kutuları oluşturun; teslimat, kimlik doğrulama ve spam korumasını yönetin.",
-    "Create mailboxes for your domains and manage delivery, authentication and spam protection.",
-  ],
-  ["Aktif", "Active"],
-  [
-    "MariaDB ve PostgreSQL veritabanlarını, kullanıcılarını ve erişim izinlerini birkaç tıklamayla hazırlayın.",
-    "Set up MariaDB and PostgreSQL databases, users and access permissions in a few clicks.",
-  ],
-  ["Alan adı, DNS ve SSL", "Domains, DNS and SSL"],
-  [
-    "DNS kayıtlarını düzenleyin, ücretsiz TLS sertifikası alın ve yönlendirmeleri tek ekrandan yönetin.",
-    "Edit DNS records, issue free TLS certificates and manage redirects from one screen.",
-  ],
-  ["SSL ile korunuyor", "Protected with SSL"],
-  ["Yedekleme ve geri yükleme", "Backup and restore"],
-  [
-    "Site ve veritabanı yedeklerini planlayın. Gerektiğinde doğru noktaya güvenle geri dönün.",
-    "Schedule website and database backups, then restore the right recovery point when needed.",
-  ],
-  ["Kullanıcılar ve ekipler", "Users and teams"],
-  [
-    "Yönetici, müşteri ve ekip üyelerine yalnızca ihtiyaç duydukları alanları gösterin.",
-    "Show administrators, customers and team members only the areas they need.",
-  ],
-  ["SİTENİZİ HIZLA YAYINA ALIN", "LAUNCH YOUR WEBSITE FASTER"],
-  [
-    "Fikirden çalışan siteye, birkaç adımda.",
-    "From idea to a live website in a few steps.",
-  ],
-  [
-    "Sunucu detaylarında kaybolmadan projenize odaklanın. CelikPanel gerekli servisleri sizin seçiminize göre hazırlar.",
-    "Focus on your project instead of server details. CelikPanel prepares the services that match your choices.",
-  ],
-  ["Alan adınızı ekleyin", "Add your domain"],
-  [
-    "Yeni veya mevcut alan adınızı bağlayın.",
-    "Connect a new or existing domain.",
-  ],
-  ["Uygulamanızı seçin", "Choose your application"],
-  [
-    "WordPress, PHP veya Node.js ile başlayın.",
-    "Start with WordPress, PHP or Node.js.",
-  ],
-  ["Yayına alın", "Go live"],
-  [
-    "DNS ve SSL tamamlandığında siteniz hazır.",
-    "Your website is ready when DNS and SSL are complete.",
-  ],
-  ["Yeni web sitesi", "New website"],
-  ["Alan adı", "Domain"],
-  ["Uygulama", "Application"],
-  ["Yayınla", "Publish"],
-  ["Ne kurmak istiyorsunuz?", "What would you like to install?"],
-  ["Blog, kurumsal site veya mağaza", "Blog, business website or store"],
-  ["Özel PHP sitesi", "Custom PHP website"],
-  ["Laravel veya kendi uygulamanız", "Laravel or your own application"],
-  ["✓ Uygun", "✓ Available"],
-  ["Devam et →", "Continue →"],
-  ["HERKES İÇİN ANLAŞILIR", "CLEAR FOR EVERYONE"],
-  ["Tek ürün.", "One product."],
-  ["Farklı çalışma biçimleri.", "Different ways of working."],
-  [
-    "İster birkaç müşteri sitesi yönetin, ister büyüyen bir hosting operasyonu kurun; CelikPanel işinize uyum sağlar.",
-    "Whether you manage a few client websites or a growing hosting operation, CelikPanel adapts to your work.",
-  ],
-  ["Ajanslar ve freelancer’lar", "Agencies and freelancers"],
-  [
-    "Müşteri sitelerini, e-postaları ve yedekleri tek hesaptan izleyin.",
-    "Manage client websites, email and backups from one account.",
-  ],
-  ["Hızlı site kurulumu", "Fast website setup"],
-  ["Müşteri erişimi", "Customer access"],
-  ["Toplu sunucu görünümü", "Unified server overview"],
-  ["En popüler kullanım", "Most popular use case"],
-  ["Hosting sağlayıcıları", "Hosting providers"],
-  [
-    "Paketler, kullanıcılar ve servislerle ölçeklenebilir hosting deneyimi sunun.",
-    "Deliver a scalable hosting experience with packages, users and services.",
-  ],
-  ["Çok kullanıcılı yapı", "Multi-user architecture"],
-  ["Rol ve yetki yönetimi", "Roles and permissions"],
-  ["Modüler servis kataloğu", "Modular service catalog"],
-  ["Sunucu sahipleri", "Server owners"],
-  [
-    "Komut satırına ihtiyaç duymadan kişisel sunucunuzu düzenli tutun.",
-    "Keep your personal server organized without living in the command line.",
-  ],
-  ["Canlı kaynak takibi", "Live resource monitoring"],
-  ["Kolay servis yönetimi", "Simple service management"],
-  ["Planlı yedekler", "Scheduled backups"],
-  ["HEMEN DENEYİN", "TRY IT NOW"],
-  ["Temiz bir sunucu.", "A clean server."],
-  ["İki kısa komut.", "Two short commands."],
-  [
-    "CelikPanel, desteklenen bir Linux test sunucusuna önceden derlenmiş paket olarak kurulur. Hedefte Go, Node.js veya Git gerekmez.",
-    "CelikPanel installs as a prebuilt package on a supported Linux test server. The target does not need Go, Node.js or Git.",
-  ],
-  ["ÖNERİLEN", "RECOMMENDED"],
-  ["Güncel sürümü kur", "Install the latest release"],
-  ["Kopyala", "Copy"],
-  ["SABİT SÜRÜM", "PINNED RELEASE"],
-  ["Tekrarlanabilir kurulum", "Reproducible installation"],
-  ["Sürüm bilgisi bekleniyor…", "Waiting for release information…"],
-  [
-    "Alpha sürümü üretim ortamı için hazır değildir. Önce izole bir test sunucusunda değerlendirin.",
-    "The alpha release is not production-ready. Evaluate it on an isolated test server first.",
-  ],
-  ["ŞEFFAF SÜRÜM KANALI", "TRANSPARENT RELEASE CHANNEL"],
-  ["Ne kurduğunuzu bilin.", "Know exactly what you install."],
-  [
-    "Her CelikPanel paketi sürüm, kaynak commit ve SHA-256 özetiyle yayımlanır. İsterseniz güncel paketi, isterseniz sabit bir sürümü kullanın.",
-    "Every CelikPanel package is published with its version, source commit and SHA-256 digest. Use the latest package or pin an exact release.",
-  ],
-  ["HTTPS indirme", "HTTPS download"],
+  ["MariaDB ve PostgreSQL. Panel kendi hesabını açar; sizin kök parolanıza dokunmaz.", "MariaDB and PostgreSQL. The panel opens an account of its own; it never touches your root password."],
+  ["E-posta", "Email"],
+  ["Postfix ve Dovecot; DKIM, TLS ve spam koruması tek akışta.", "Postfix and Dovecot; DKIM, TLS and spam protection in one flow."],
+  ["TLS", "TLS"],
+  ["Let’s Encrypt sertifikaları; yenileme paneldedir.", "Let’s Encrypt certificates; renewal lives in the panel."],
+  ["Yedek ve kurtarma", "Backup and recovery"],
+  ["Planlı yedekler; kontrol düzlemi tek mühürlü arşiv olarak alınır ve temiz bir sunucuya geri yüklenir.", "Scheduled backups; the control plane is taken as one sealed archive and restored onto a clean server."],
+  ["Kullanıcılar ve roller", "Users and roles"],
+  ["Yönetici, bayi, müşteri ve ek kullanıcı; herkes yalnız kendi alanını görür.", "Administrator, reseller, customer and additional user; everyone sees only their own scope."],
+  ["Güvenlik duvarı ve VPN", "Firewall and VPN"],
+  ["nftables ile varsayılan-reddet; WireGuard eşleri panelden.", "Default-deny with nftables; WireGuard peers from the panel."],
+
+  // proof
+  ["Ölçüldü, kaydedildi, tarihlendi.", "Measured, recorded, dated."],
+  ["Bu sayfadaki her sayı gerçek bir makinede ölçüldü ve ürünün risk kaydında tarihli kanıtıyla duruyor. Hiçbiri tahmin değil, hiçbiri yuvarlanmadı.", "Every number on this page was measured on a real machine and stands in the product's risk register with dated evidence. None is an estimate; none was rounded."],
+  ["Gerçek makinelerde ölçülen değerler", "Values measured on real machines"],
+  ["Ölçüm", "Measurement"],
+  ["Değer", "Value"],
+  ["Koşul", "Condition"],
+  ["Tarih", "Date"],
+  ["Felaketten hizmete dönüş", "Disaster to back in service"],
+  ["105 sn", "105 s"],
+  ["Birinci sunucu elektrik kesintisiyle öldü; ikincisi tek mühürlü arşivden kuruldu", "The first server died in a power cut; the second was built from one sealed archive"],
+  ["6 Eyl 2026", "6 Sep 2026"],
+  ["Arşiv yaşı, kayıp yok", "Archive age, nothing lost"],
+  ["40,9 sn", "40.9 s"],
+  ["Kesinti anında arşivin gerçek yaşı; hiçbir kayıt kaybolmadı", "The archive's real age at the moment of the cut; no record was lost"],
+  ["Çalışan BIND devralınırken cevapsız sorgu", "Queries unanswered while adopting a running BIND"],
+  ["Sunucu devralma boyunca hizmet vermeyi hiç kesmedi", "The server never stopped answering during adoption"],
+  ["5 Eyl 2026", "5 Sep 2026"],
+  ["Elle kurulmuş BIND devralınırken", "Adopting a hand-configured BIND"],
+  ["Farklar gösterildi, sonra devralındı; yine sıfır kesinti", "Differences shown, then adopted; again zero interruption"],
+  ["Elektrik kesintisinden sonra karar süresi", "Time to decide after a power cut"],
+  ["≤ 7 sn", "≤ 7 s"],
+  ["Dört kesinti; her defasında panel yarım işi kimse dokunmadan çözdü", "Four cuts; each time the panel resolved the unfinished work with nobody touching the machine"],
+  ["Kabul turu", "Acceptance run"],
+  ["3 dağıtım", "3 distributions"],
+  ["Debian 13, Ubuntu 24.04, Arch: kurulum, veritabanı zinciri, yeniden başlatma", "Debian 13, Ubuntu 24.04, Arch: install, the database chain, restart"],
+  ["Risk kaydı", "Risk register"],
+  ["70 madde", "70 entries"],
+  ["Her biri ne bulunduğunu, neden olduğunu ve nasıl kapandığını tarihli kanıtla anlatır", "Each says what was found, why, and how it was closed, with dated evidence"],
+  ["sürekli", "ongoing"],
+  ["Panel, kanıtlayamadığı bir şeyi asla başarılı olarak göstermez. Bir işlem yarım kaldıysa yarım kaldığını söyler ve sunucuyu kilitli tutar; bu, sessizce yanlış görünen bir yeşilden iyidir.", "The panel never shows as successful anything it cannot prove. If an operation was left half-done it says so and keeps the server locked; that is better than a green light that is quietly wrong."],
+
+  // install
+  ["Temiz bir sunucu, tek komut.", "A clean server, one command."],
+  ["CelikPanel, desteklenen bir Linux sunucusuna imzalı ve önceden derlenmiş paket olarak kurulur. Hedefte Go, Node.js veya Git gerekmez. Kurucu paketi indirir, imzasını ve özetini doğrular, sonra kurar.", "CelikPanel installs on a supported Linux server as a signed, prebuilt package. The target needs no Go, Node.js or Git. The installer downloads the package, verifies its signature and digest, then installs."],
+  ["Debian 13, Ubuntu 24.04 LTS, Arch Linux", "Debian 13, Ubuntu 24.04 LTS, Arch Linux"],
+  ["Linux amd64", "Linux amd64"],
+  ["Alfa önizleme: önce ayrı bir test sunucusunda deneyin", "Alpha preview: try it on a separate test server first"],
+  ["Güncel sürümü kur", "Install the current release"],
+  ["Sabit sürümü kur", "Install a pinned release"],
+  ["Komut, betiği bir kez indirir ve doğrular; boru ile kabuğa akıtmaz. Tekrarlanabilir kurulum için sabit sürümü kullanın.", "The command downloads the script once and verifies it; it does not pipe it into a shell. Use the pinned release for a reproducible install."],
+
+  // release
+  ["Ne kurduğunuzu bilin.", "Know what you installed."],
+  ["Her paket sürüm numarası, kaynak commit’i ve SHA-256 özetiyle yayımlanır ve Ed25519 ile imzalanır. Kurucu bu imzayı doğrulamadan tek bir dosya yazmaz.", "Every package is published with its version, source commit and SHA-256 digest, and signed with Ed25519. The installer writes nothing until that signature verifies."],
+  ["HTTPS ile indirme", "Download over HTTPS"],
+  ["İmzalı sürüm bildirimi", "Signed release manifest"],
   ["SHA-256 doğrulama", "SHA-256 verification"],
-  ["Paket içi manifest", "In-package manifest"],
-  ["GÜNCEL ALPHA SÜRÜMÜ", "LATEST ALPHA RELEASE"],
-  ["Yükleniyor…", "Loading…"],
-  ["Manifest okunuyor", "Reading manifest"],
+  ["Geriye alınamayan sürüm sırası", "A release sequence that cannot roll back"],
+  ["Güncel alfa sürümü", "Current alpha release"],
   ["Yayın tarihi", "Published"],
   ["Kaynak commit", "Source commit"],
-  ["Paketi indir", "Download package"],
+  ["SHA-256", "SHA-256"],
+  ["Paketi indir", "Download the package"],
   ["SHA-256 dosyası", "SHA-256 file"],
-  ["GERİ BİLDİRİM VE DESTEK", "FEEDBACK AND SUPPORT"],
-  [
-    "Bir fikriniz veya karşılaştığınız bir sorun mu var?",
-    "Have an idea or found a problem?",
-  ],
-  [
-    "CelikPanel’i birlikte geliştirelim. Hataları ve özellik önerilerini herkese açık formlarla, güvenlik açıklarını ise gizli kanaldan bildirin.",
-    "Help us improve CelikPanel. Use the public forms for bugs and feature requests, and the private channel for vulnerabilities.",
-  ],
-  ["HATA BİLDİR", "REPORT A BUG"],
+
+  // support
+  ["Bir sorun ya da bir fikir", "A problem or an idea"],
+  ["Hataları ve önerileri herkese açık formlarla, güvenlik açıklarını yalnız bakım ekibinin göreceği gizli kanaldan bildirin.", "Report bugs and suggestions through the public forms, and security issues through the private channel only the maintainers can see."],
+  ["Hata", "Bug"],
   ["Bir sorun mu buldunuz?", "Found a problem?"],
-  [
-    "Sürümünüzü, yeniden üretme adımlarını ve temizlenmiş hata çıktısını paylaşın.",
-    "Share your version, reproduction steps and sanitized error output.",
-  ],
-  ["Hata formunu aç →", "Open the bug form →"],
-  ["ÖZELLİK ÖNER", "REQUEST A FEATURE"],
-  ["Paneli nasıl iyileştirebiliriz?", "How can we improve the panel?"],
-  [
-    "İhtiyacınızı ve beklediğiniz kullanıcı deneyimini kısa ve net biçimde anlatın.",
-    "Briefly describe your need and the experience you expect.",
-  ],
-  ["Öneri formunu aç →", "Open the feature form →"],
-  ["GİZLİ GÜVENLİK BİLDİRİMİ", "PRIVATE SECURITY REPORT"],
-  ["Bir güvenlik açığı mı buldunuz?", "Found a vulnerability?"],
-  [
-    "Açığı herkese açık issue olarak yazmayın. GitHub üzerinden yalnız bakım ekibinin görebileceği şekilde bildirin.",
-    "Do not post it as a public issue. Report it privately to the maintainers through GitHub.",
-  ],
-  ["Gizli bildirim aç →", "Open a private report →"],
-  [
-    "Parola, token, özel anahtar, müşteri verisi, gerçek IP adresi veya özel alan adı paylaşmayın.",
-    "Never share passwords, tokens, private keys, customer data, real IP addresses or private domains.",
-  ],
-  ["YENİ NESİL HOSTING PANELİ", "A NEW-GENERATION HOSTING PANEL"],
-  [
-    "Sunucunuzu daha kolay yönetmeye başlayın.",
-    "Start managing your server more easily.",
-  ],
-  [
-    "CelikPanel’i ücretsiz bir test sunucusunda keşfedin.",
-    "Explore CelikPanel on a free test server.",
-  ],
-  ["Kurulum komutunu al →", "Get the install command →"],
-  [
-    "Web siteleri ve sunucular için sade, modern kontrol paneli.",
-    "A simple, modern control panel for websites and servers.",
-  ],
-  ["Sürümler", "Releases"],
+  ["Sürümünüzü, yeniden üretme adımlarını ve temizlenmiş hata çıktısını paylaşın.", "Share your version, the steps to reproduce it, and the sanitised error output."],
+  ["Öneri", "Idea"],
+  ["Paneli nasıl iyileştirebiliriz?", "How could the panel be better?"],
+  ["İhtiyacınızı ve beklediğiniz davranışı kısa ve net anlatın.", "Describe what you need and the behaviour you expected, briefly and clearly."],
+  ["Bir güvenlik açığı mı buldunuz?", "Found a security issue?"],
+  ["Herkese açık issue olarak yazmayın; gizli bildirim yalnız bakım ekibine ulaşır.", "Do not write it as a public issue; a private report reaches only the maintainers."],
+  ["Parola, token, özel anahtar, müşteri verisi, gerçek IP adresi veya özel alan adı paylaşmayın.", "Do not share passwords, tokens, private keys, customer data, real IP addresses or private domain names."],
+
+  // final + footer
+  ["Bir test sunucusunda deneyin. Ne yaptığını size gösterir.", "Try it on a test server. It will show you what it did."],
+  ["Sunucunuzda ne yaptığını kanıtlayan hosting kontrol paneli.", "The hosting control panel that proves what it did to your server."],
+  ["© 2026 CelikPanel", "© 2026 CelikPanel"],
+  ["Alfa önizleme · Linux", "Alpha preview · Linux"],
 ]);
 
 const uiText = {
@@ -302,8 +213,7 @@ const uiText = {
     ready: "İndirmeye hazır",
     unavailable: "Sürüm bilgisi alınamadı",
     manifestUnavailable: "Manifest şu anda kullanılamıyor",
-    exactUnavailable:
-      "Sabit sürüm komutu için manifest bağlantısını kontrol edin.",
+    exactUnavailable: "Sabit sürüm komutu için manifest bağlantısını kontrol edin.",
     copy: "Kopyala",
     copied: "Kopyalandı",
     select: "Metni seçin",
@@ -314,8 +224,7 @@ const uiText = {
     ready: "Ready to download",
     unavailable: "Release information unavailable",
     manifestUnavailable: "The manifest is currently unavailable",
-    exactUnavailable:
-      "Check the manifest connection for the pinned release command.",
+    exactUnavailable: "Check the manifest connection for the pinned release command.",
     copy: "Copy",
     copied: "Copied",
     select: "Select text",
@@ -324,8 +233,15 @@ const uiText = {
   },
 };
 
+// Text nodes the release reader owns are never translated by the map; their
+// words come from the manifest or from uiText.
 const ignoredDynamic =
   "#release-version,#release-status,#release-date,#release-commit,#release-sha,#exact-command,[data-copy-label],#copy-status";
+
+// Bind every translatable text node once. Whitespace inside a node is
+// normalised before lookup, so a string wrapped across source lines still
+// matches its single-line key - the old walker compared raw text and quietly
+// left wrapped paragraphs untranslated.
 const localizedTextNodes = [];
 const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
 let textNode;
@@ -334,11 +250,13 @@ while ((textNode = walker.nextNode())) {
     continue;
   const raw = textNode.nodeValue || "";
   const match = raw.match(/^(\s*)([\s\S]*?)(\s*)$/);
-  const translated = match && englishText.get(match[2]);
+  if (!match) continue;
+  const key = match[2].replace(/\s+/g, " ");
+  const translated = englishText.get(key);
   if (translated)
     localizedTextNodes.push({
       node: textNode,
-      tr: match[2],
+      tr: key,
       en: translated,
       before: match[1],
       after: match[3],
@@ -346,49 +264,16 @@ while ((textNode = walker.nextNode())) {
 }
 
 const localizedAttributes = [
-  [
-    document.querySelector(".brand"),
-    "aria-label",
-    "CelikPanel ana sayfa",
-    "CelikPanel home",
-  ],
-  [
-    document.querySelector(".site-nav"),
-    "aria-label",
-    "Ana menü",
-    "Main navigation",
-  ],
-  [
-    document.querySelector(".language-switch"),
-    "aria-label",
-    "Dil seçimi",
-    "Language selection",
-  ],
-  [
-    document.querySelector(".product-stage"),
-    "aria-label",
-    "CelikPanel ürün arayüzü önizlemesi",
-    "CelikPanel product interface preview",
-  ],
-  [
-    document.querySelector('[data-copy="latest-command"]'),
-    "aria-label",
-    "Standart kurulum komutunu kopyala",
-    "Copy the standard installation command",
-  ],
-  [
-    document.querySelector('[data-copy="exact-command"]'),
-    "aria-label",
-    "Sabit sürüm kurulum komutunu kopyala",
-    "Copy the pinned release installation command",
-  ],
-  [
-    document.querySelector(".site-footer nav"),
-    "aria-label",
-    "Alt menü",
-    "Footer navigation",
-  ],
+  [document.querySelector(".brand"), "aria-label", "CelikPanel ana sayfa", "CelikPanel home"],
+  [document.querySelector(".site-nav"), "aria-label", "Ana menü", "Main navigation"],
+  [document.querySelector(".language-switch"), "aria-label", "Dil seçimi", "Language selection"],
+  [document.querySelector('[data-copy="latest-command"]'), "aria-label", "Standart kurulum komutunu kopyala", "Copy the standard installation command"],
+  [document.querySelector('[data-copy="exact-command"]'), "aria-label", "Sabit sürüm kurulum komutunu kopyala", "Copy the pinned release installation command"],
+  [document.querySelector(".site-footer nav"), "aria-label", "Alt menü", "Footer navigation"],
 ];
+
+// The interlocking marks describe themselves to a screen reader.
+const localizedMarkLabels = { kilitli: "locked", serbest: "free" };
 
 const languageButtons = {
   tr: document.querySelector('[data-language="tr"]'),
@@ -399,28 +284,15 @@ let currentLanguage = "tr";
 let releaseData = null;
 let releaseFailure = null;
 
-const storedLanguage = (() => {
-  try {
-    return window.localStorage.getItem("celikpanel-language");
-  } catch {
-    return null;
-  }
-})();
-const initialLanguage =
-  storedLanguage === "en" || storedLanguage === "tr"
-    ? storedLanguage
-    : (navigator.language || "tr").toLowerCase().startsWith("tr")
-      ? "tr"
-      : "en";
-
 const formatPublishedAt = (value) => {
-  const publishedAt = new Date(value);
-  if (Number.isNaN(publishedAt.getTime())) return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value || "—";
   return new Intl.DateTimeFormat(currentLanguage === "en" ? "en-GB" : "tr-TR", {
-    dateStyle: "long",
-    timeStyle: "short",
-    timeZone: "Europe/Istanbul",
-  }).format(publishedAt);
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 };
 
 const renderReleaseState = () => {
@@ -448,14 +320,8 @@ const renderReleaseState = () => {
     setText("exact-command", uiText[currentLanguage].exactUnavailable);
     return;
   }
-  setText(
-    "release-version",
-    currentLanguage === "en" ? "Loading…" : "Yükleniyor…",
-  );
-  setText(
-    "release-status",
-    currentLanguage === "en" ? "Reading manifest" : "Manifest okunuyor",
-  );
+  setText("release-version", currentLanguage === "en" ? "Loading…" : "Yükleniyor…");
+  setText("release-status", currentLanguage === "en" ? "Reading manifest" : "Manifest okunuyor");
 };
 
 const applyLanguage = (language) => {
@@ -463,40 +329,39 @@ const applyLanguage = (language) => {
   document.documentElement.lang = currentLanguage;
   document.title =
     currentLanguage === "en"
-      ? "CelikPanel | Simple and Modern Hosting Control Panel"
-      : "CelikPanel | Kolay ve Modern Hosting Kontrol Paneli";
+      ? "CelikPanel | The hosting control panel that proves its work"
+      : "CelikPanel | Kanıtla çalışan hosting kontrol paneli";
   const description = document.querySelector('meta[name="description"]');
   if (description)
     description.content =
       currentLanguage === "en"
-        ? "Manage websites, domains, email, databases and your server easily from one CelikPanel interface."
-        : "CelikPanel ile web sitelerinizi, alan adlarınızı, e-postalarınızı, veritabanlarınızı ve sunucunuzu tek panelden kolayca yönetin.";
+        ? "CelikPanel is the hosting control panel that proves what it did to your server: every change is previewed first, recorded after, and nothing is claimed that cannot be proved."
+        : "CelikPanel, sunucunuzda ne yaptığını kanıtlayan hosting kontrol panelidir: her değişiklik önce önizlenir, sonra deftere geçer, kanıtlanamayan hiçbir şey iddia edilmez.";
   localizedTextNodes.forEach((binding) => {
-    binding.node.nodeValue =
-      binding.before + binding[currentLanguage] + binding.after;
+    binding.node.nodeValue = binding.before + binding[currentLanguage] + binding.after;
   });
   localizedAttributes.forEach(([node, attribute, tr, en]) => {
     if (node) node.setAttribute(attribute, currentLanguage === "en" ? en : tr);
   });
-  if (languageButtons.tr)
-    languageButtons.tr.setAttribute(
+  document.querySelectorAll(".interlock-table .mark[aria-label]").forEach((mark) => {
+    const key = mark.dataset.markKey || mark.getAttribute("aria-label");
+    mark.dataset.markKey = key;
+    mark.setAttribute(
       "aria-label",
-      currentLanguage === "en" ? "Turkish" : "Türkçe",
+      currentLanguage === "en" ? localizedMarkLabels[key] || key : key,
     );
-  if (languageButtons.en)
-    languageButtons.en.setAttribute("aria-label", "English");
+  });
+  if (languageButtons.tr)
+    languageButtons.tr.setAttribute("aria-label", currentLanguage === "en" ? "Turkish" : "Türkçe");
+  if (languageButtons.en) languageButtons.en.setAttribute("aria-label", "English");
   document.querySelectorAll("[data-language]").forEach((button) => {
-    button.setAttribute(
-      "aria-pressed",
-      String(button.dataset.language === currentLanguage),
-    );
+    button.setAttribute("aria-pressed", String(button.dataset.language === currentLanguage));
   });
   document.querySelectorAll("[data-copy-label]").forEach((label) => {
     label.textContent = uiText[currentLanguage].copy;
   });
   document.querySelectorAll("[data-localized-href]").forEach((link) => {
-    const target =
-      currentLanguage === "en" ? link.dataset.hrefEn : link.dataset.hrefTr;
+    const target = currentLanguage === "en" ? link.dataset.hrefEn : link.dataset.hrefTr;
     if (target) link.setAttribute("href", target);
   });
   try {
@@ -508,9 +373,7 @@ const applyLanguage = (language) => {
 };
 
 document.querySelectorAll("[data-language]").forEach((button) => {
-  button.addEventListener("click", () =>
-    applyLanguage(button.dataset.language),
-  );
+  button.addEventListener("click", () => applyLanguage(button.dataset.language));
 });
 
 const enableReleaseLink = (id, value) => {
@@ -520,6 +383,17 @@ const enableReleaseLink = (id, value) => {
   node.removeAttribute("aria-disabled");
   node.removeAttribute("tabindex");
 };
+
+const readStoredLanguage = () => {
+  try {
+    return window.localStorage.getItem("celikpanel-language");
+  } catch {
+    return null;
+  }
+};
+const initialLanguage =
+  readStoredLanguage() ||
+  (navigator.language && navigator.language.toLowerCase().startsWith("tr") ? "tr" : "en");
 
 setText("latest-command", buildInstallCommand());
 applyLanguage(initialLanguage);

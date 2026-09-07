@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="CelikPanel">
+  <rect x="9" y="1" width="14" height="30" rx="4" fill="#0B1F17"/>
+  <circle cx="16" cy="10" r="4.2" fill="#2A3A31"/>
+  <circle cx="16" cy="22" r="4.2" fill="#2FB36B"/>
+  <circle cx="16" cy="22" r="2" fill="#DFF7E8" opacity=".9"/>
+</svg>
