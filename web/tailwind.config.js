@@ -21,6 +21,7 @@ export default {
         extend: {
             colors: {
                 bg: token('--bg'),
+                scrim: token('--scrim'),
                 surface: {
                     DEFAULT: token('--surface'),
                     2: token('--surface-2'),
@@ -61,6 +62,7 @@ export default {
             // biçimlendirebilir.
             fontFamily: {
                 sans: ['var(--font-sans)'],
+                mono: ['var(--font-mono)'],
             },
             borderRadius: {
                 md: 'var(--radius-md)',

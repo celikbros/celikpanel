@@ -282,14 +282,14 @@ const REQ_ROLE_KEYS: Record<string, string> = {
 // (D-009 — DNS yoksa domain yok), bu yüzden DNS başta; sonra barındırma
 // çekirdeği (web, veritabanı, e-posta), sonra sertleştirme ve ekstralar.
 const categoryOrder: { id: string; labelKey: string; icon: LucideIcon; tint: string }[] = [
-    { id: 'dns', labelKey: 'services.cat.dns', icon: Network, tint: 'bg-teal-500/10 text-teal-600 dark:text-teal-400' },
-    { id: 'web', labelKey: 'services.cat.web', icon: Globe, tint: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' },
-    { id: 'database', labelKey: 'services.cat.database', icon: Database, tint: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' },
-    { id: 'email', labelKey: 'services.cat.email', icon: Mail, tint: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
-    { id: 'security', labelKey: 'services.cat.security', icon: Shield, tint: 'bg-red-500/10 text-red-600 dark:text-red-400' },
-    { id: 'cache', labelKey: 'services.cat.cache', icon: Zap, tint: 'bg-orange-500/10 text-orange-600 dark:text-orange-400' },
-    { id: 'ftp', labelKey: 'services.cat.ftp', icon: FolderUp, tint: 'bg-slate-500/10 text-slate-600 dark:text-slate-400' },
-    { id: 'monitoring', labelKey: 'services.cat.monitoring', icon: Activity, tint: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+    { id: 'dns', labelKey: 'services.cat.dns', icon: Network, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'web', labelKey: 'services.cat.web', icon: Globe, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'database', labelKey: 'services.cat.database', icon: Database, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'email', labelKey: 'services.cat.email', icon: Mail, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'security', labelKey: 'services.cat.security', icon: Shield, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'cache', labelKey: 'services.cat.cache', icon: Zap, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'ftp', labelKey: 'services.cat.ftp', icon: FolderUp, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'monitoring', labelKey: 'services.cat.monitoring', icon: Activity, tint: 'bg-surface-2 text-fg-muted' },
 ];
 
 interface ServiceListProps {
@@ -335,7 +335,7 @@ function unknownCategories(list: ManagedService[]) {
     for (const s of list) {
         if (s.category && !known.has(s.category) && !extra.includes(s.category)) extra.push(s.category);
     }
-    return extra.map((id) => ({ id, labelKey: id, icon: Boxes, tint: 'bg-slate-500/10 text-slate-600 dark:text-slate-400' }));
+    return extra.map((id) => ({ id, labelKey: id, icon: Boxes, tint: 'bg-surface-2 text-fg-muted' }));
 }
 
 // Services grouped into per-category cards (Claude Design'dan uyarlandı).
@@ -1823,7 +1823,7 @@ function MailProfileCards({ profiles, services, disabled, dnsIdentityReady, onIn
     return (
         <section id='mail-stacks' tabIndex={-1} aria-labelledby='mail-profile-heading' className='mb-6 scroll-mt-24 focus:outline-none'>
             <div className='mb-3 flex items-start gap-3'>
-                <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400'>
+                <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning'>
                     <Layers className='h-5 w-5' />
                 </span>
                 <div>

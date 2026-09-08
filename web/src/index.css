@@ -16,6 +16,43 @@
     font-style: normal;
     font-display: swap;
 }
+/* Overpass and Overpass Mono carry the product's own skin. Overpass descends
+   from the FHWA road-sign alphabet: drawn to be read at speed by people who
+   are not looking at typography, which is the whole job of a control panel.
+   latin-ext carries ğ ş İ. / Overpass ve Overpass Mono ürünün kendi skin'ini
+   taşır: yol tabelası alfabesinden gelir, hızlı okunmak için çizilmiştir. */
+@font-face {
+    font-family: 'Overpass';
+    src: url('./fonts/overpass-latin-ext.woff2') format('woff2');
+    font-weight: 300 900;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Overpass';
+    src: url('./fonts/overpass-latin.woff2') format('woff2');
+    font-weight: 300 900;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Overpass Mono';
+    src: url('./fonts/overpass-mono-latin-ext.woff2') format('woff2');
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Overpass Mono';
+    src: url('./fonts/overpass-mono-latin.woff2') format('woff2');
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 /* Open Sans (cPanel skin): Google'ın latin + latin-ext alt kümeleri —
    latin-ext Türkçe karakterleri (ğ, ş, İ…) kapsar. */
 @font-face {
@@ -49,73 +86,97 @@
 :root {
     /* Shape & type tokens — skins may override these too. / Biçim ve yazı
        token'ları — skin'ler bunları da geçersiz kılabilir. */
-    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    --radius-md: 0.375rem;
-    --radius-lg: 0.5rem;
-    --radius-xl: 0.75rem;
-    --radius-2xl: 1rem;
+    --font-sans: Overpass, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'Overpass Mono', ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+    --radius-md: 0.25rem;
+    --radius-lg: 0.375rem;
+    --radius-xl: 0.375rem;
+    --radius-2xl: 0.5rem;
     --icon-stroke: 2;
 
-    --bg: 248 250 252;          /* slate-50 */
-    --surface: 255 255 255;     /* white */
-    --surface-2: 241 245 249;   /* slate-100 */
-    --surface-3: 226 232 240;   /* slate-200 */
-    --border: 226 232 240;      /* slate-200 */
-    --border-strong: 203 213 225; /* slate-300 */
-    --fg: 15 23 42;             /* slate-900 */
-    --fg-muted: 71 85 105;      /* slate-600 */
-    --fg-subtle: 148 163 184;   /* slate-400 */
-    --primary: 37 99 235;       /* blue-600 */
-    --primary-hover: 29 78 216; /* blue-700 */
-    --primary-fg: 255 255 255;
-    --success: 22 163 74;       /* green-600 */
-    --success-fg: 255 255 255;
-    --warning: 202 138 4;       /* yellow-600 */
-    --warning-fg: 2 6 23;
-    --danger: 220 38 38;        /* red-600 */
-    --danger-fg: 255 255 255;
+    /*
+      The signal box, light: printed rulebook stock, ink with a green cast,
+      hairline rules. The primary action is a lever — a dark handle, never a
+      coloured accent — because red, amber and green are reserved for state
+      and mean nothing else anywhere in the product. See DESIGN.md.
 
-    /* Sidebar is dark slate in both themes (Plesk-style: dark rail, light
-       content). Kenar çubuğu iki temada da koyu slate (Plesk tarzı). */
-    --sidebar-bg: 30 41 59;         /* slate-800 */
-    --sidebar-fg: 226 232 240;      /* slate-200 */
-    --sidebar-fg-muted: 148 163 184;/* slate-400 */
-    --sidebar-heading: 100 116 139; /* slate-500 */
-    --sidebar-hover: 51 65 85;      /* slate-700 */
-    --sidebar-active: 37 99 235;    /* blue-600 */
-    --sidebar-active-fg: 255 255 255;
-    --sidebar-border: 51 65 85;     /* slate-700 */
+      Sinyal kulesi, açık: basılı kural kitabı kağıdı, yeşile çalan mürekkep,
+      saç teli çizgiler. Birincil eylem bir koldur — koyu bir tutamak, renkli
+      bir vurgu değil — çünkü kırmızı, sarı ve yeşil yalnız durumu anlatır.
+    */
+    --bg: 238 241 236;          /* paper */
+    --surface: 246 248 244;     /* lit paper */
+    --surface-2: 227 232 225;
+    --surface-3: 214 221 212;
+    --border: 183 191 181;      /* rule */
+    --border-strong: 142 151 140;
+    --fg: 16 22 15;             /* ink */
+    --fg-muted: 58 66 58;
+    --fg-subtle: 90 101 90;
+    --primary: 16 22 15;        /* the lever */
+    --primary-hover: 34 48 42;
+    --primary-fg: 244 246 242;
+    --success: 30 111 69;       /* green ink, ≥4.5:1 on paper */
+    --success-fg: 246 248 244;
+    --warning: 122 90 8;        /* amber ink */
+    --warning-fg: 246 248 244;
+    --danger: 162 13 38;        /* red ink */
+    --danger-fg: 246 248 244;
+
+    /* The one dark object: the rail is the illuminated board, and the current
+       route is lit rather than coloured. / Tek koyu nesne: kenar çubuğu
+       aydınlatılmış panodur; açık olan rota renklenmez, aydınlanır. */
+    --scrim: 8 19 14;           /* the room dims to the board */
+    --sidebar-bg: 11 31 23;         /* board */
+    --sidebar-fg: 232 236 231;      /* track */
+    --sidebar-fg-muted: 163 184 173;
+    --sidebar-heading: 121 145 132;
+    --sidebar-hover: 18 41 31;
+    --sidebar-active: 232 236 231;
+    --sidebar-active-fg: 11 31 23;
+    --sidebar-border: 18 41 31;
 }
+
 
 .dark {
-    --bg: 2 6 23;              /* slate-950 */
-    --surface: 15 23 42;       /* slate-900 */
-    --surface-2: 30 41 59;     /* slate-800 */
-    --surface-3: 51 65 85;     /* slate-700 */
-    --border: 30 41 59;        /* slate-800 */
-    --border-strong: 51 65 85; /* slate-700 */
-    --fg: 241 245 249;         /* slate-100 */
-    --fg-muted: 148 163 184;   /* slate-400 */
-    --fg-subtle: 100 116 139;  /* slate-500 */
-    --primary: 59 130 246;     /* blue-500 */
-    --primary-hover: 96 165 250; /* blue-400 */
-    --primary-fg: 255 255 255;
-    --success: 34 197 94;      /* green-500 */
-    --success-fg: 255 255 255;
-    --warning: 234 179 8;      /* yellow-500 */
-    --warning-fg: 2 6 23;
-    --danger: 239 68 68;       /* red-500 */
-    --danger-fg: 255 255 255;
+    /*
+      The signal box after dark: the whole panel moves onto the board, and the
+      lamps take over from the inks — a lamp is drawn to be read against a
+      dark ground, which is exactly the condition here.
 
-    --sidebar-bg: 15 23 42;         /* slate-900 */
-    --sidebar-fg: 226 232 240;
-    --sidebar-fg-muted: 148 163 184;
-    --sidebar-heading: 100 116 139;
-    --sidebar-hover: 30 41 59;      /* slate-800 */
-    --sidebar-active: 37 99 235;
-    --sidebar-active-fg: 255 255 255;
-    --sidebar-border: 30 41 59;
+      Karanlıkta sinyal kulesi: panelin tamamı panoya taşınır ve mürekkeplerin
+      yerini lambalar alır; lamba zaten koyu zeminde okunmak için çizilmiştir.
+    */
+    --scrim: 2 8 5;
+    --bg: 8 19 14;
+    --surface: 11 31 23;        /* board */
+    --surface-2: 18 41 31;
+    --surface-3: 27 58 44;
+    --border: 18 41 31;
+    --border-strong: 42 58 49;
+    --fg: 232 236 231;          /* track */
+    --fg-muted: 163 184 173;
+    --fg-subtle: 121 145 132;
+    --primary: 232 236 231;     /* the lever inverts: a lit handle */
+    --primary-hover: 255 255 255;
+    --primary-fg: 11 31 23;
+    --success: 52 194 115;      /* lamp green */
+    --success-fg: 8 19 14;
+    --warning: 240 168 26;      /* lamp amber */
+    --warning-fg: 8 19 14;
+    --danger: 232 83 106;       /* lamp red, lightened to read as text */
+    --danger-fg: 8 19 14;
+
+    --sidebar-bg: 8 19 14;
+    --sidebar-fg: 232 236 231;
+    --sidebar-fg-muted: 163 184 173;
+    --sidebar-heading: 121 145 132;
+    --sidebar-hover: 18 41 31;
+    --sidebar-active: 232 236 231;
+    --sidebar-active-fg: 11 31 23;
+    --sidebar-border: 18 41 31;
 }
+
 
 /*
   Skins: alternative palettes on top of the light/dark axis. Each block only
@@ -128,6 +189,87 @@
   .dark'tan miras alır. :not(.dark) koruması, açık ve koyu varyantların
   özgüllük kavgasını önler.
 */
+
+/*
+  The three imitation skins exist so an operator arriving from another panel
+  can keep their bearings, and they were written as deltas on the old
+  slate-and-blue base. That base now lives here, under them, instead of being
+  the product's own identity.
+
+  Üç taklit skin, başka bir panelden gelen operatör yönünü kaybetmesin diye
+  var ve eski slate-mavi tabanın üzerine fark olarak yazılmıştı. O taban artık
+  ürünün kendi kimliği değil; burada, onların altında yaşıyor.
+*/
+[data-theme='plesk'],
+[data-theme='aapanel'],
+[data-theme='cpanel'] {
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
+
+    --scrim: 2 6 23;
+    --bg: 248 250 252;
+    --surface: 255 255 255;
+    --surface-2: 241 245 249;
+    --surface-3: 226 232 240;
+    --border: 226 232 240;
+    --border-strong: 203 213 225;
+    --fg: 15 23 42;
+    --fg-muted: 71 85 105;
+    --fg-subtle: 148 163 184;
+    --primary: 37 99 235;
+    --primary-hover: 29 78 216;
+    --primary-fg: 255 255 255;
+    --success: 22 163 74;
+    --success-fg: 255 255 255;
+    --warning: 202 138 4;
+    --warning-fg: 2 6 23;
+    --danger: 220 38 38;
+    --danger-fg: 255 255 255;
+
+    --sidebar-bg: 30 41 59;
+    --sidebar-fg: 226 232 240;
+    --sidebar-fg-muted: 148 163 184;
+    --sidebar-heading: 100 116 139;
+    --sidebar-hover: 51 65 85;
+    --sidebar-active: 37 99 235;
+    --sidebar-active-fg: 255 255 255;
+    --sidebar-border: 51 65 85;
+}
+.dark[data-theme='plesk'],
+.dark[data-theme='aapanel'],
+.dark[data-theme='cpanel'] {
+    --scrim: 2 6 23;
+    --bg: 2 6 23;
+    --surface: 15 23 42;
+    --surface-2: 30 41 59;
+    --surface-3: 51 65 85;
+    --border: 30 41 59;
+    --border-strong: 51 65 85;
+    --fg: 241 245 249;
+    --fg-muted: 148 163 184;
+    --fg-subtle: 100 116 139;
+    --primary: 59 130 246;
+    --primary-hover: 96 165 250;
+    --primary-fg: 255 255 255;
+    --success: 34 197 94;
+    --success-fg: 255 255 255;
+    --warning: 234 179 8;
+    --warning-fg: 2 6 23;
+    --danger: 239 68 68;
+    --danger-fg: 255 255 255;
+
+    --sidebar-bg: 15 23 42;
+    --sidebar-fg: 226 232 240;
+    --sidebar-fg-muted: 148 163 184;
+    --sidebar-heading: 100 116 139;
+    --sidebar-hover: 30 41 59;
+    --sidebar-active: 37 99 235;
+    --sidebar-active-fg: 255 255 255;
+    --sidebar-border: 30 41 59;
+}
 
 /* Shape & type per skin — independent of light/dark: a skin's corners and
    stroke weight are its identity in both modes. / Skin başına biçim ve yazı —
@@ -234,6 +376,19 @@
    çizgi kalınlığını izler. */
 svg.lucide {
     stroke-width: var(--icon-stroke);
+}
+
+/* The surfaces we did not draw still belong to the design: selection, the
+   caret, the focus ring and the scrollbar all ship with defaults that belong
+   to no design system. / Çizmediğimiz yüzeyler de tasarıma aittir. */
+::selection {
+    background-color: rgb(var(--sidebar-bg));
+    color: rgb(var(--sidebar-fg));
+}
+:root {
+    accent-color: rgb(var(--primary));
+    caret-color: rgb(var(--fg));
+    scrollbar-color: rgb(var(--border-strong)) transparent;
 }
 
 html, body, #root {

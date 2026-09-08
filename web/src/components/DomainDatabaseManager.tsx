@@ -385,7 +385,7 @@ export function DomainDatabaseManager({
                                                 <h5 className="font-mono text-fg font-semibold">{db.name}</h5>
                                                 <span className={`text-xs px-2 py-0.5 rounded ${db.type === 'mysql'
                                                         ? 'bg-primary/50 text-primary'
-                                                        : 'bg-purple-900/50 text-purple-300'
+                                                        : 'bg-surface-2 text-fg-muted'
                                                     }`}>
                                                     {db.type.toUpperCase()}
                                                 </span>

@@ -790,7 +790,7 @@ function AdminDashboard() {
                 <section className="mt-6">
                     <SectionTitle
                         icon={Bell}
-                        tint="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        tint="bg-surface-2 text-fg-muted"
                         title={t('dashboard.attention')}
                         right={
                             attention.length > 0 ? (
@@ -840,7 +840,7 @@ function AdminDashboard() {
                 <section className="mt-6">
                     <SectionTitle
                         icon={Rocket}
-                        tint="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                        tint="bg-surface-2 text-fg-muted"
                         title={t('dashboard.journey')}
                         right={
                             <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-fg-muted">
@@ -941,7 +941,7 @@ function AdminDashboard() {
             {hasContent && (
                 <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
                     <section>
-                        <SectionTitle icon={Globe} tint="bg-teal-500/10 text-teal-600 dark:text-teal-400" title={t('dashboard.hosting')} />
+                        <SectionTitle icon={Globe} tint="bg-surface-2 text-fg-muted" title={t('dashboard.hosting')} />
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                             <CountCard icon={Globe} n={domains.length} label={t('dashboard.domains')} to="/domains" />
                             <CountCard icon={Database} n={extras?.databases ?? 0} label={t('dashboard.databases')} to="/databases" />
@@ -986,7 +986,7 @@ function AdminDashboard() {
                     </section>
 
                     <section>
-                        <SectionTitle icon={Activity} tint="bg-violet-500/10 text-violet-600 dark:text-violet-400" title={t('dashboard.activity')} />
+                        <SectionTitle icon={Activity} tint="bg-surface-2 text-fg-muted" title={t('dashboard.activity')} />
                         {recentActivity.length === 0 ? (
                             <Card><p className="p-4 text-sm text-fg-subtle">—</p></Card>
                         ) : (
@@ -1208,7 +1208,7 @@ function MailStackSummary({ profiles, scanFresh, hostNeverChecked, checking, onC
         <section className='mt-6' aria-labelledby='dashboard-mail-stacks-heading'>
             <div className='rounded-xl border border-border bg-surface p-4 shadow-card sm:p-5'>
                 <div className='flex flex-col gap-4 lg:flex-row lg:items-center'>
-                    <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400'>
+                    <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning'>
                         <Layers className='h-5 w-5' />
                     </span>
                     <div className='min-w-0 flex-1'>

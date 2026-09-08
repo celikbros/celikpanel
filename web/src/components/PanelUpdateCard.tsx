@@ -284,8 +284,8 @@ export function PanelUpdateCard() {
                 </Button>
             </div>
 
-            <div className="mt-4 rounded-lg border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-fg" role="note">
-                <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
+            <div className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-fg" role="note">
+                <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
                     <p>{t('panelUpdate.alphaNotice')}</p>
                 </div>
             </div>
@@ -308,8 +308,8 @@ export function PanelUpdateCard() {
                 <div className="mt-4 space-y-3">
                     <div
                         className={`rounded-lg border p-3 text-sm ${readiness?.ready === true
-                            ? 'border-emerald-400/40 bg-emerald-400/10'
-                            : 'border-amber-400/40 bg-amber-400/10'}`}
+                            ? 'border-success/40 bg-success/10'
+                            : 'border-warning/40 bg-warning/10'}`}
                         role="status"
                         aria-live="polite"
                     >
@@ -318,7 +318,7 @@ export function PanelUpdateCard() {
                                 {readinessChecking
                                     ? <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
                                     : readiness?.ready === false
-                                        ? <AlertTriangle className="h-4 w-4 text-amber-500" aria-hidden="true" />
+                                        ? <AlertTriangle className="h-4 w-4 text-warning" aria-hidden="true" />
                                         : null}
                                 <div>
                                     <p className="font-semibold text-fg">{readinessTitle}</p>
@@ -352,7 +352,7 @@ export function PanelUpdateCard() {
 
             {message && (
                 <div className="mt-4 flex items-start gap-2 rounded-lg border border-border p-3 text-sm text-fg" role="status" aria-live="polite">
-                    <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+                    <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
                     <p>{message}</p>
                 </div>
             )}
