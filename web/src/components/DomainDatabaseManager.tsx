@@ -280,7 +280,7 @@ export function DomainDatabaseManager({
                                 value={dbName}
                                 onChange={(e) => setDbName(e.target.value)}
                                 placeholder="myapp"
-                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
+                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary"
                                 required
                             />
                             <p className="text-xs text-fg-subtle mt-1">
@@ -293,7 +293,7 @@ export function DomainDatabaseManager({
                             <select
                                 value={dbType}
                                 onChange={(e) => setDbType(e.target.value as DatabaseType)}
-                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
+                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary"
                             >
                                 {engines.map((eng) => (
                                     <option key={eng.value} value={eng.value}>{eng.label}</option>
@@ -308,7 +308,7 @@ export function DomainDatabaseManager({
                                 value={dbPassword}
                                 onChange={(e) => setDbPassword(e.target.value)}
                                 placeholder="Enter a strong password"
-                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
+                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary"
                                 required
                             />
                         </div>
@@ -385,7 +385,7 @@ export function DomainDatabaseManager({
                                                 <h5 className="font-mono text-fg font-semibold">{db.name}</h5>
                                                 <span className={`text-xs px-2 py-0.5 rounded ${db.type === 'mysql'
                                                         ? 'bg-primary/50 text-primary'
-                                                        : 'bg-purple-900/50 text-purple-300'
+                                                        : 'bg-surface-2 text-fg-muted'
                                                     }`}>
                                                     {db.type.toUpperCase()}
                                                 </span>

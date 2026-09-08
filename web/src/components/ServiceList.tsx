@@ -282,14 +282,14 @@ const REQ_ROLE_KEYS: Record<string, string> = {
 // (D-009 — DNS yoksa domain yok), bu yüzden DNS başta; sonra barındırma
 // çekirdeği (web, veritabanı, e-posta), sonra sertleştirme ve ekstralar.
 const categoryOrder: { id: string; labelKey: string; icon: LucideIcon; tint: string }[] = [
-    { id: 'dns', labelKey: 'services.cat.dns', icon: Network, tint: 'bg-teal-500/10 text-teal-600 dark:text-teal-400' },
-    { id: 'web', labelKey: 'services.cat.web', icon: Globe, tint: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' },
-    { id: 'database', labelKey: 'services.cat.database', icon: Database, tint: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' },
-    { id: 'email', labelKey: 'services.cat.email', icon: Mail, tint: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
-    { id: 'security', labelKey: 'services.cat.security', icon: Shield, tint: 'bg-red-500/10 text-red-600 dark:text-red-400' },
-    { id: 'cache', labelKey: 'services.cat.cache', icon: Zap, tint: 'bg-orange-500/10 text-orange-600 dark:text-orange-400' },
-    { id: 'ftp', labelKey: 'services.cat.ftp', icon: FolderUp, tint: 'bg-slate-500/10 text-slate-600 dark:text-slate-400' },
-    { id: 'monitoring', labelKey: 'services.cat.monitoring', icon: Activity, tint: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+    { id: 'dns', labelKey: 'services.cat.dns', icon: Network, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'web', labelKey: 'services.cat.web', icon: Globe, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'database', labelKey: 'services.cat.database', icon: Database, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'email', labelKey: 'services.cat.email', icon: Mail, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'security', labelKey: 'services.cat.security', icon: Shield, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'cache', labelKey: 'services.cat.cache', icon: Zap, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'ftp', labelKey: 'services.cat.ftp', icon: FolderUp, tint: 'bg-surface-2 text-fg-muted' },
+    { id: 'monitoring', labelKey: 'services.cat.monitoring', icon: Activity, tint: 'bg-surface-2 text-fg-muted' },
 ];
 
 interface ServiceListProps {
@@ -335,7 +335,7 @@ function unknownCategories(list: ManagedService[]) {
     for (const s of list) {
         if (s.category && !known.has(s.category) && !extra.includes(s.category)) extra.push(s.category);
     }
-    return extra.map((id) => ({ id, labelKey: id, icon: Boxes, tint: 'bg-slate-500/10 text-slate-600 dark:text-slate-400' }));
+    return extra.map((id) => ({ id, labelKey: id, icon: Boxes, tint: 'bg-surface-2 text-fg-muted' }));
 }
 
 // Services grouped into per-category cards (Claude Design'dan uyarlandı).
@@ -1171,7 +1171,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 bunu çözecek tek şey bir tık ötede. Nötr, uyarı renginde değil
                 — anlam taşıyan renk gerçekten bozuk olan için ayrılmıştır. */}
             {!loading && hostNeverChecked && (
-                <section role="status" className="mb-4 flex flex-wrap items-start gap-3 rounded-xl border border-border bg-surface p-4 shadow-card">
+                <section role="status" className="mb-4 flex flex-wrap items-start gap-3 rounded-xl border border-border bg-surface p-4">
                     <ScanSearch className="mt-0.5 h-5 w-5 shrink-0 text-fg-muted" />
                     {/* The same rule as the setup journey's rows: `flex-1`
                         alone bases this block at zero width, so at 390px the
@@ -1242,7 +1242,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         : t('services.matchCount', { shown: filtered.length, total: services.length })}
                 </p>
                 {filtered.length === 0 ? (
-                    <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-fg-muted shadow-card">
+                    <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-fg-muted">
                         {/* A fresh server's installed view is legitimately
                             empty — that is a starting point, not a failed
                             search, so it offers the next step instead of
@@ -1288,7 +1288,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         const groupChecked = group.some((s) => !notChecked(s));
                         const isOpen = q !== '' || !collapsed.has(cat);
                         return (
-                            <section key={cat} className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                            <section key={cat} className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(cat)}
@@ -1821,9 +1821,9 @@ function MailProfileCards({ profiles, services, disabled, dnsIdentityReady, onIn
     };
     const serviceName = (id: string) => services.find((service) => service.id === id)?.name ?? id;
     return (
-        <section id='mail-stacks' tabIndex={-1} aria-labelledby='mail-profile-heading' className='mb-6 scroll-mt-24 focus:outline-none'>
+        <section id='mail-stacks' tabIndex={-1} aria-labelledby='mail-profile-heading' className='mb-6 scroll-mt-24'>
             <div className='mb-3 flex items-start gap-3'>
-                <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400'>
+                <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning'>
                     <Layers className='h-5 w-5' />
                 </span>
                 <div>
@@ -1859,7 +1859,7 @@ function MailProfileCards({ profiles, services, disabled, dnsIdentityReady, onIn
                             : profile.warning;
                     const ActionIcon = profile.status === 'available' ? DownloadCloud : RotateCw;
                     return (
-                        <article key={profile.id} className='flex min-w-0 flex-col rounded-xl border border-border bg-surface p-4 shadow-card'>
+                        <article key={profile.id} className='flex min-w-0 flex-col rounded-xl border border-border bg-surface p-4'>
                             <div className='flex items-start gap-3'>
                                 <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'>
                                     {profile.id === 'protected-mail'
@@ -2139,7 +2139,7 @@ function MailProfileInstallDialog({
                                         setHostnameDraft(event.target.value);
                                         setHostnameTouched(true);
                                     }}
-                                    className={`mt-1 w-full rounded-lg border bg-surface px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                                    className={`mt-1 w-full rounded-lg border bg-surface px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle ${
                                         hostnameInvalid && hostnameTouched
                                             ? 'border-danger focus:border-danger'
                                             : 'border-border-strong focus:border-primary'

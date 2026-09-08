@@ -247,7 +247,7 @@ function StoreItemCard({ item, busy, onAction }: { item: StoreItemView; busy: bo
         item.action === 'open_domain_apps';
 
     return (
-        <article className="flex min-h-64 flex-col rounded-xl border border-border bg-surface-2/40 p-4 transition-shadow hover:shadow-card">
+        <article className="flex min-h-64 flex-col rounded-xl border border-border bg-surface-2/40 p-4 transition-colors hover:border-border-strong">
             <div className="flex items-start justify-between gap-3">
                 <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${visual.iconClass}`}>
                     <ProductIcon className="h-5 w-5" />

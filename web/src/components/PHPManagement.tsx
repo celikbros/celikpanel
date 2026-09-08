@@ -73,7 +73,7 @@ export function PHPManagement({ versions, onBack }: PHPManagementProps) {
                         <select
                             value={version}
                             onChange={(e) => setVersion(e.target.value)}
-                            className="rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium text-fg outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                            className="rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium text-fg outline-none focus:border-primary"
                         >
                             {versions.map((v) => (
                                 <option key={v} value={v}>
@@ -89,7 +89,7 @@ export function PHPManagement({ versions, onBack }: PHPManagementProps) {
                 extensions.length === 0 ? (
                     <EmptyState icon={Puzzle} title={t('php.emptyExtensions')} />
                 ) : (
-                    <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                    <div className="rounded-xl border border-border bg-surface p-5">
                         <h3 className="mb-4 text-sm font-semibold text-fg">{t('php.installedExtensions')}</h3>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                             {extensions.map((ext) => (
@@ -110,7 +110,7 @@ export function PHPManagement({ versions, onBack }: PHPManagementProps) {
                     </div>
                 )
             ) : (
-                <div className="rounded-xl border border-border bg-surface shadow-card">
+                <div className="rounded-xl border border-border-strong bg-surface">
                     <PHPExtendedConfig version={version} />
                 </div>
             )}

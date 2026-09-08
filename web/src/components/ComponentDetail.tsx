@@ -292,7 +292,7 @@ function Journal({ unit }: { unit: string }) {
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                             placeholder={t('component.logsFilter')}
-                            className="w-40 rounded-lg border border-border bg-surface-2 py-1 pl-7 pr-2 text-xs text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-1 focus:ring-primary"
+                            className="w-40 rounded-lg border border-border bg-surface-2 py-1 pl-7 pr-2 text-xs text-fg placeholder:text-fg-subtle"
                         />
                     </div>
                     <button

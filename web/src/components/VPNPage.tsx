@@ -469,7 +469,7 @@ export function VPNPage() {
 
             {view === 'overview' && (
                 <div className="space-y-5">
-                    <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                    <section className="rounded-xl border border-border bg-surface p-5">
                         <div className="flex flex-wrap items-start gap-4">
                             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                                 <Shield className="h-6 w-6" />
@@ -559,7 +559,7 @@ export function VPNPage() {
                     </section>
 
                     <div className="grid gap-4 lg:grid-cols-3">
-                        <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                        <section className="rounded-xl border border-border bg-surface p-5">
                             <Server className="h-5 w-5 text-primary" />
                             <h3 className="mt-3 font-semibold text-fg">{t('vpn.serverPolicyCard')}</h3>
                             <p className="mt-1 text-sm text-fg-muted">{t('vpn.serverPolicyHint')}</p>
@@ -571,7 +571,7 @@ export function VPNPage() {
                                 {t('vpn.viewPolicy')}
                             </button>
                         </section>
-                        <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                        <section className="rounded-xl border border-border bg-surface p-5">
                             <Laptop className="h-5 w-5 text-primary" />
                             <h3 className="mt-3 font-semibold text-fg">{t('vpn.deviceCard')}</h3>
                             <p className="mt-1 text-sm text-fg-muted">
@@ -585,7 +585,7 @@ export function VPNPage() {
                                 {t('vpn.manageDevices')}
                             </button>
                         </section>
-                        <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                        <section className="rounded-xl border border-border bg-surface p-5">
                             <KeyRound className="h-5 w-5 text-primary" />
                             <h3 className="mt-3 font-semibold text-fg">{t('vpn.keyCard')}</h3>
                             <p className="mt-1 break-all font-mono text-xs text-fg-muted">
@@ -652,7 +652,7 @@ export function VPNPage() {
                         </section>
                     )}
 
-                    <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                    <section className="rounded-xl border border-border bg-surface p-5">
                         <div className="mb-4">
                             <h3 className="font-semibold text-fg">{t('vpn.addPeer')}</h3>
                             <p className="mt-1 text-sm text-fg-muted">{t('vpn.subscriptionRequired')}</p>
@@ -731,7 +731,7 @@ export function VPNPage() {
                         {peers.length === 0 ? (
                             <EmptyState icon={Laptop} title={t('vpn.noPeers')} hint={t('vpn.noPeersHint')} />
                         ) : (
-                            <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
+                            <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b border-border text-left text-xs text-fg-muted">
@@ -815,7 +815,7 @@ export function VPNPage() {
 
             {view === 'policy' && (
                 <div className="space-y-5">
-                    <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                    <section className="rounded-xl border border-border bg-surface p-5">
                         <div className="flex flex-wrap items-start gap-3">
                             <Network className="mt-0.5 h-5 w-5 text-primary" />
                             <div className="min-w-0 flex-1">
@@ -844,7 +844,7 @@ export function VPNPage() {
                         </div>
                     </section>
 
-                    <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                    <section className="rounded-xl border border-border bg-surface p-5">
                         <h3 className="font-semibold text-fg">{t('vpn.hostRequirements')}</h3>
                         <p className="mt-1 text-sm text-fg-muted">{t('vpn.hostRequirementsHint')}</p>
                         <div className="mt-4 grid gap-3 lg:grid-cols-3">

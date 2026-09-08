@@ -233,7 +233,7 @@ export function PostgreSQLSettings({ configPath }: PostgreSQLSettingsProps) {
                         placeholder="Search settings..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full bg-surface border border-border rounded-lg py-2 pl-10 pr-4 text-fg focus:outline-none focus:border-primary text-sm"
+                        className="w-full bg-surface border border-border rounded-lg py-2 pl-10 pr-4 text-fg focus:border-primary text-sm"
                     />
                 </div>
             </div>
@@ -275,7 +275,7 @@ export function PostgreSQLSettings({ configPath }: PostgreSQLSettingsProps) {
                                                     type="text"
                                                     value={item.value}
                                                     onChange={e => updateItem(sections.findIndex(s => s.title === section.title), sections[sections.findIndex(s => s.title === section.title)].items.indexOf(item), 'value', e.target.value)}
-                                                    className="w-full bg-bg border border-border rounded px-2 py-1 text-sm text-fg-muted focus:border-primary focus:outline-none"
+                                                    className="w-full bg-bg border border-border rounded px-2 py-1 text-sm text-fg-muted focus:border-primary"
                                                     disabled={!item.enabled}
                                                 />
                                                 {item.description && <p className="text-xs text-fg-subtle">{item.description}</p>}

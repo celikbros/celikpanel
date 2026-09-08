@@ -215,7 +215,7 @@ export function DatabaseManagementV2() {
             )}
 
             {selectedServer && (
-                <div className="rounded-xl border border-border bg-surface shadow-card">
+                <div className="rounded-xl border border-border-strong bg-surface">
                     {/* Tabs */}
                     <div className="flex items-center gap-1 border-b border-border px-3 pt-2">
                         <TabButton

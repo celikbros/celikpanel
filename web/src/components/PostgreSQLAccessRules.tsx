@@ -189,7 +189,7 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
                                     <select
                                         value={rule.type}
                                         onChange={(e) => handleUpdateRule(rule.id, 'type', e.target.value)}
-                                        className="bg-transparent text-fg focus:outline-none focus:text-primary font-mono w-20 cursor-pointer"
+                                        className="bg-transparent text-fg focus:text-primary font-mono w-20 cursor-pointer"
                                     >
                                         <option value="local" className="bg-surface">local</option>
                                         <option value="host" className="bg-surface">host</option>
@@ -201,7 +201,7 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
                                         type="text"
                                         value={rule.database}
                                         onChange={(e) => handleUpdateRule(rule.id, 'database', e.target.value)}
-                                        className="bg-transparent text-fg-muted focus:outline-none focus:text-primary font-mono w-full"
+                                        className="bg-transparent text-fg-muted focus:text-primary font-mono w-full"
                                     />
                                 </td>
                                 <td className="py-2">
@@ -209,7 +209,7 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
                                         type="text"
                                         value={rule.user}
                                         onChange={(e) => handleUpdateRule(rule.id, 'user', e.target.value)}
-                                        className="bg-transparent text-fg-muted focus:outline-none focus:text-primary font-mono w-full"
+                                        className="bg-transparent text-fg-muted focus:text-primary font-mono w-full"
                                     />
                                 </td>
                                 <td className="py-2">
@@ -218,7 +218,7 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
                                             type="text"
                                             value={rule.address}
                                             onChange={(e) => handleUpdateRule(rule.id, 'address', e.target.value)}
-                                            className="bg-transparent text-fg-muted focus:outline-none focus:text-primary font-mono w-32"
+                                            className="bg-transparent text-fg-muted focus:text-primary font-mono w-32"
                                         />
                                     ) : <span className="text-fg-subtle">-</span>}
                                 </td>
@@ -226,7 +226,7 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
                                     <select
                                         value={rule.method}
                                         onChange={(e) => handleUpdateRule(rule.id, 'method', e.target.value)}
-                                        className="bg-transparent text-warning focus:outline-none focus:text-warning font-mono w-24 cursor-pointer"
+                                        className="bg-transparent text-warning focus:text-warning font-mono w-24 cursor-pointer"
                                     >
                                         <option value="md5" className="bg-surface">md5</option>
                                         <option value="scram-sha-256" className="bg-surface">scram-sha-256</option>

@@ -220,7 +220,7 @@ export function DomainFileManager({ domainId, readOnly = false }: DomainFileMana
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
                     readOnly={readOnly}
-                    className="flex-1 w-full resize-none rounded-lg border border-border bg-surface-2 p-4 font-mono text-sm text-fg outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                    className="flex-1 w-full resize-none rounded-lg border border-border bg-surface-2 p-4 font-mono text-sm text-fg outline-none focus:border-primary"
                     spellCheck={false}
                 />
             </div>

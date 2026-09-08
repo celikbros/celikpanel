@@ -81,7 +81,7 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
             aria-modal="true"
             aria-labelledby="component-operation-title"
             tabIndex={-1}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm outline-none"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-scrim/80 p-4 backdrop-blur-sm outline-none"
         >
             <div className="w-full max-w-lg rounded-2xl border border-border-strong bg-surface p-6 text-center shadow-2xl">
                 <span className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${

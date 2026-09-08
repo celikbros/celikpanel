@@ -686,7 +686,7 @@ function AdminDashboard() {
                     söyler ve kontrolün kendisini taşır. Nötr, uyarı renginde
                     değil — henüz bakılmamış makine olağan ilk durumdur. */}
                 {hostNeverChecked ? (
-                    <section role="status" className="rounded-xl border border-border bg-surface p-5 text-left shadow-card">
+                    <section role="status" className="rounded-xl border border-border bg-surface p-5 text-left">
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-fg-muted">{t('dashboard.systemServices')}</span>
                             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -708,7 +708,7 @@ function AdminDashboard() {
                 ) : (
                 <button
                     onClick={() => navigate('/services')}
-                    className="rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
+                    className="rounded-xl border border-border bg-surface p-5 text-left transition-colors hover:bg-surface-2/60"
                 >
                     <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-fg-muted">{t('dashboard.systemServices')}</span>
@@ -790,7 +790,7 @@ function AdminDashboard() {
                 <section className="mt-6">
                     <SectionTitle
                         icon={Bell}
-                        tint="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        tint="bg-surface-2 text-fg-muted"
                         title={t('dashboard.attention')}
                         right={
                             attention.length > 0 ? (
@@ -802,7 +802,7 @@ function AdminDashboard() {
                             ) : undefined
                         }
                     />
-                    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                    <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                         <ul>
                             {attention.map((a) => (
                                     <li key={a.key} className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0">
@@ -840,7 +840,7 @@ function AdminDashboard() {
                 <section className="mt-6">
                     <SectionTitle
                         icon={Rocket}
-                        tint="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                        tint="bg-surface-2 text-fg-muted"
                         title={t('dashboard.journey')}
                         right={
                             <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-fg-muted">
@@ -848,7 +848,7 @@ function AdminDashboard() {
                             </span>
                         }
                     />
-                    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                    <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                         <ul>
                             {steps.map((s, i) => (
                                 <li
@@ -941,7 +941,7 @@ function AdminDashboard() {
             {hasContent && (
                 <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
                     <section>
-                        <SectionTitle icon={Globe} tint="bg-teal-500/10 text-teal-600 dark:text-teal-400" title={t('dashboard.hosting')} />
+                        <SectionTitle icon={Globe} tint="bg-surface-2 text-fg-muted" title={t('dashboard.hosting')} />
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                             <CountCard icon={Globe} n={domains.length} label={t('dashboard.domains')} to="/domains" />
                             <CountCard icon={Database} n={extras?.databases ?? 0} label={t('dashboard.databases')} to="/databases" />
@@ -951,7 +951,7 @@ function AdminDashboard() {
                         {recentDomains.length > 0 && (
                             <>
                                 <h3 className="mb-2 mt-4 text-sm font-semibold text-fg-muted">{t('dashboard.recentDomains')}</h3>
-                                <ul className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                                <ul className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                                     {recentDomains.map((d) => (
                                         <li key={d.id} className="border-b border-border last:border-0">
                                             <button
@@ -986,11 +986,11 @@ function AdminDashboard() {
                     </section>
 
                     <section>
-                        <SectionTitle icon={Activity} tint="bg-violet-500/10 text-violet-600 dark:text-violet-400" title={t('dashboard.activity')} />
+                        <SectionTitle icon={Activity} tint="bg-surface-2 text-fg-muted" title={t('dashboard.activity')} />
                         {recentActivity.length === 0 ? (
                             <Card><p className="p-4 text-sm text-fg-subtle">—</p></Card>
                         ) : (
-                            <ul className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                            <ul className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                                 {recentActivity.map((e) => (
                                     <li key={e.id} className="flex flex-wrap items-center gap-2.5 border-b border-border px-4 py-2.5 last:border-0">
                                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-semibold uppercase text-fg-muted">
@@ -1206,9 +1206,9 @@ function MailStackSummary({ profiles, scanFresh, hostNeverChecked, checking, onC
 
     return (
         <section className='mt-6' aria-labelledby='dashboard-mail-stacks-heading'>
-            <div className='rounded-xl border border-border bg-surface p-4 shadow-card sm:p-5'>
+            <div className='rounded-xl border border-border bg-surface p-4 sm:p-5'>
                 <div className='flex flex-col gap-4 lg:flex-row lg:items-center'>
-                    <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400'>
+                    <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning'>
                         <Layers className='h-5 w-5' />
                     </span>
                     <div className='min-w-0 flex-1'>
@@ -1284,7 +1284,7 @@ function AdditionalUserDashboard() {
                 subtitle={t('nav.domains')}
             />
 
-            <section className={'max-w-4xl rounded-xl border border-border bg-surface p-6 shadow-card'}>
+            <section className={'max-w-4xl rounded-xl border border-border bg-surface p-6'}>
                 <div className={'flex items-center justify-between gap-4'}>
                     <div className={'flex items-center gap-3'}>
                         <span className={'rounded-lg bg-primary/10 p-2 text-primary'}>
@@ -1432,7 +1432,7 @@ function GaugeCard({
     hint: string;
 }) {
     return (
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="rounded-xl border border-border bg-surface p-5">
             <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-fg-muted">{label}</span>
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -1453,7 +1453,7 @@ function CountCard({ icon: Icon, n, label, to }: { icon: typeof Cpu; n: number; 
     return (
         <button
             onClick={() => navigate(to)}
-            className="rounded-xl border border-border bg-surface p-4 text-left shadow-card transition-colors hover:border-primary/40 hover:bg-surface-2/60"
+            className="rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-primary/40 hover:bg-surface-2/60"
         >
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Icon className="h-4 w-4" />
@@ -1479,7 +1479,7 @@ function QuickAction({ icon: Icon, labelKey, to }: { icon: typeof Server; labelK
     return (
         <button
             onClick={() => navigate(to)}
-            className="group flex items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition-colors hover:border-primary/40 hover:bg-surface-2"
+            className="group flex items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-primary/40 hover:bg-surface-2"
         >
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-2 text-fg-muted transition-colors group-hover:bg-primary group-hover:text-primary-fg">
                 <Icon className="h-5 w-5" />

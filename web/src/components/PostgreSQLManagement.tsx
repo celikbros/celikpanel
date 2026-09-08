@@ -50,7 +50,7 @@ export function PostgreSQLManagement({ onBack }: PostgreSQLManagementProps) {
                 <Tab active={tab === 'access'} onClick={() => setTab('access')} icon={ShieldCheck} label={t('db.tab.access')} />
             </div>
 
-            <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+            <div className="rounded-xl border border-border bg-surface p-5">
                 {tab === 'visual' ? (
                     mainConf ? (
                         <PostgreSQLSettings configPath={mainConf} />

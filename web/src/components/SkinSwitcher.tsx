@@ -38,7 +38,7 @@ export function SkinSwitcher() {
             </button>
 
             {open && (
-                <div className="absolute right-0 z-50 mt-1.5 w-44 rounded-xl border border-border bg-surface p-1.5 shadow-card">
+                <div className="absolute right-0 z-50 mt-1.5 w-44 rounded-xl border border-border bg-surface p-1.5">
                     <p className="px-2 pb-1 pt-0.5 text-xs font-semibold text-fg-subtle">{t('theme.skin')}</p>
                     {SKINS.map((sk) => {
                         const active = sk.id === skin;

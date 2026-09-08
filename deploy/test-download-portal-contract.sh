@@ -84,8 +84,14 @@ assert parser.buttons["en"]["aria-label"] == "English"
 PY
 grep -Fq 'celikpanel-language' "$tmp/site/assets/site.js" \
   || fail "language preference persistence is missing"
-grep -Fq 'Simple and Modern Hosting Control Panel' "$tmp/site/assets/site.js" \
+grep -Fq 'The hosting control panel that proves its work' "$tmp/site/assets/site.js" \
   || fail "English product copy is missing"
+[[ -f "$tmp/site/assets/fonts/overpass-latin-ext.woff2" ]] \
+  || fail "self-hosted typeface with Turkish coverage was not shipped"
+[[ -f "$tmp/site/assets/fonts/OFL-Overpass.txt" ]] \
+  || fail "typeface licence was not shipped"
+grep -Fq "font-src 'self'" "$tmp/site/.htaccess" \
+  || fail "CSP does not allow the self-hosted typefaces"
 grep -Fq 'document.documentElement.lang = currentLanguage' "$tmp/site/assets/site.js" \
   || fail "document language is not updated"
 grep -Fq 'celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml' "$tmp/site/index.html" \

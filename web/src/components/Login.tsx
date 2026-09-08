@@ -103,7 +103,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                 {pendingToken ? (
                     <form
                         onSubmit={handleTotp}
-                        className="space-y-4 rounded-2xl border border-border bg-surface p-6 shadow-card"
+                        className="space-y-4 rounded-2xl border border-border bg-surface p-6"
                     >
                         <div>
                             <label htmlFor="totp" className="mb-1.5 block text-sm font-medium text-fg-muted">
@@ -118,7 +118,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                                 value={totpCode}
                                 onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                 placeholder="000000"
-                                className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-center font-mono text-lg tracking-[0.4em] text-fg outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30"
+                                className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-center font-mono text-lg tracking-[0.4em] text-fg outline-none transition-shadow focus:border-primary"
                                 required
                             />
                             <p className="mt-1.5 text-xs text-fg-subtle">{t('login.totpHint')}</p>
@@ -141,7 +141,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                 ) : (
                 <form
                     onSubmit={handleSubmit}
-                    className="space-y-4 rounded-2xl border border-border bg-surface p-6 shadow-card"
+                    className="space-y-4 rounded-2xl border border-border bg-surface p-6"
                 >
                     <div>
                         <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-fg-muted">
@@ -154,7 +154,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                             autoComplete="username"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-fg outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-fg outline-none transition-shadow focus:border-primary"
                             required
                         />
                     </div>
@@ -170,7 +170,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                                 autoComplete="current-password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 pr-10 text-fg outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30"
+                                className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 pr-10 text-fg outline-none transition-shadow focus:border-primary"
                                 required
                             />
                             {/* tabIndex -1: the eye must not steal Tab order

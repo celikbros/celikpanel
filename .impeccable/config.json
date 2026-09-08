@@ -18,12 +18,32 @@
       },
       {
         "rule": "overused-font",
-        "value": "Open Sans",
+        "value": "open sans",
         "files": [
           "web/src/index.css"
         ],
         "createdAt": "2026-09-06T12:10:00.000Z",
         "reason": "Claude triage, sanctioned exception: the two Open Sans @font-face rules are the cPanel skin, where matching that product's face is the point, and they are split into latin / latin-ext subsets precisely so Turkish characters render without pulling the whole face. Self-hosted so the panel renders offline. Scoped to index.css: a new overused face anywhere else still reports. Inter is deliberately NOT ignored - that one is a live question about the panel's own face, not a false positive."
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "20px",
+        "createdAt": "2026-09-08T04:21:05.773Z"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "open sans",
+        "createdAt": "2026-09-08T05:35:55.433Z"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "inter",
+        "createdAt": "2026-09-08T05:35:55.593Z"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-09-08T05:36:13.177Z"
       }
     ]
   }

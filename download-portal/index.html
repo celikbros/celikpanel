@@ -3,489 +3,410 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="CelikPanel ile web sitelerinizi, alan adlarınızı, e-postalarınızı, veritabanlarınızı ve sunucunuzu tek panelden kolayca yönetin."
-    />
-    <meta name="theme-color" content="#ffffff" />
-    <title>CelikPanel | Kolay ve Modern Hosting Kontrol Paneli</title>
+    <meta name="description" content="CelikPanel; web sitelerinizi, WordPress'i, e-postayı, DNS'i, veritabanlarını ve yedekleri tek panelden yönetir. Her değişikliği önce önizler, sonra deftere yazar." />
+    <meta name="theme-color" content="#0B1F17" />
+    <title>CelikPanel | Kanıtla çalışan hosting kontrol paneli</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
     <link rel="stylesheet" href="/assets/site.css" />
   </head>
   <body>
+    <!--
+      THESIS: the signal box. A control panel that, like an interlocking
+      frame, refuses an unsafe combination and shows which set route locks
+      the one you asked for. No icon-card grid, no fake dashboard.
+      OWN-WORLD: grey-green rulebook stock, ink, hairline rules; one dark
+      illuminated route board; signal colours mean state and nothing else;
+      Overpass and its mono for anything measured.
+      STORY: this panel runs my hosting, it is safer than what I use now,
+      and I can try it with one command.
+      FIRST VIEWPORT: plain-language promise and the primary action on the
+      left; on the right the server as a route board, one route set and
+      clear, one locked with the reason written out.
+      FORM: conventional marketing page, benefit first, mechanism after the
+      comparison; seed 3b5e09e0, index 6.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with
+      the finish review, the verdict, DESIGN.md, and every shipping raster
+      carrying its provenance.
+    -->
     <a class="skip-link" href="#ana-icerik">Ana içeriğe geç</a>
+
     <header class="site-header">
       <div class="container nav-shell">
         <a class="brand" href="/" aria-label="CelikPanel ana sayfa">
-          <span class="brand-mark" aria-hidden="true">C</span>
-          <span class="brand-copy"
-            ><strong>CelikPanel</strong
-            ><small>Hosting Control Panel</small></span
-          >
+          <svg class="brand-mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true" focusable="false">
+            <rect x="9" y="1" width="14" height="30" rx="4" fill="currentColor" />
+            <circle class="lamp-off" cx="16" cy="10" r="4.2" />
+            <circle class="lamp-clear" cx="16" cy="22" r="4.2" />
+          </svg>
+          <span class="brand-name">CelikPanel</span>
         </a>
         <nav class="site-nav" aria-label="Ana menü">
-          <a href="#ozellikler">Özellikler</a><a href="#panel">Paneli keşfet</a
-          ><a href="#kurulum">Kurulum</a><a href="#surum">Sürüm</a
-          ><a href="#destek">Destek</a>
+          <a href="#ozellikler">Özellikler</a>
+          <a href="#neden">Neden CelikPanel</a>
+          <a href="#kanit">Kanıt</a>
+          <a href="#kurulum">Kurulum</a>
+          <a href="#sss">SSS</a>
+          <a href="#destek">Destek</a>
         </nav>
-        <div class="language-switch" role="group" aria-label="Dil seçimi">
-          <button
-            type="button"
-            data-language="tr"
-            lang="tr"
-            aria-label="Türkçe"
-            aria-pressed="true"
-          >
-            TR
-          </button>
-          <button
-            type="button"
-            data-language="en"
-            lang="en"
-            aria-label="English"
-            aria-pressed="false"
-          >
-            EN
-          </button>
+        <div class="nav-tools">
+          <div class="language-switch" role="group" aria-label="Dil seçimi">
+            <button type="button" data-language="tr" lang="tr" aria-label="Türkçe" aria-pressed="true">TR</button>
+            <button type="button" data-language="en" lang="en" aria-label="English" aria-pressed="false">EN</button>
+          </div>
+          <a class="button button-primary nav-cta" href="#kurulum">Ücretsiz kur</a>
         </div>
-        <a class="button button-small button-primary" href="#kurulum"
-          >Ücretsiz kur</a
-        >
       </div>
     </header>
+
     <main id="ana-icerik">
-      <section class="hero">
-        <div class="hero-blob hero-blob-one" aria-hidden="true"></div>
-        <div class="hero-blob hero-blob-two" aria-hidden="true"></div>
+      <!-- ============================================================ HERO -->
+      <section class="hero" aria-labelledby="hero-title">
         <div class="container hero-grid">
           <div class="hero-copy">
-            <div class="eyebrow">
-              <span></span> Linux sunucular için modern hosting paneli
-            </div>
-            <h1>Hosting yönetimi<br /><em>tek ekranda kolay.</em></h1>
-            <p class="hero-lede">
-              Web siteleri, WordPress, alan adları, e-posta, DNS, veritabanları
-              ve yedekler. CelikPanel, günlük hosting işlerini anlaşılır bir
-              arayüzde bir araya getirir.
-            </p>
+            <h1 id="hero-title">Web sitelerinizi, e-postanızı ve sunucunuzu tek panelden yönetin.</h1>
+            <p class="lede">CelikPanel; siteleri, WordPress'i, alan adlarını, e-postayı, DNS'i, veritabanlarını, yedekleri ve güvenlik duvarını tek ekranda toplar. Farkı şudur: her değişikliği önce önizler, sonra deftere yazar. Sunucunuzda ne olduğunu her zaman bilirsiniz.</p>
             <div class="hero-actions">
-              <a class="button button-primary" href="#kurulum"
-                >CelikPanel’i kur <span>→</span></a
-              ><a class="button button-secondary" href="#panel"
-                >Paneli incele</a
-              >
+              <a class="button button-primary button-large" href="#kurulum">Ücretsiz kur</a>
+              <a class="button button-quiet button-large" href="#ozellikler">Neler yaptığını görün</a>
             </div>
-            <div class="hero-points">
-              <span><i>✓</i> Ücretsiz alpha</span
-              ><span><i>✓</i> Tek komutla kurulum</span
-              ><span><i>✓</i> Türkçe arayüz</span>
-            </div>
+            <dl class="hero-facts">
+              <div><dt>Kurulum</dt><dd>Tek komut, birkaç dakika</dd></div>
+              <div><dt>Sunucu</dt><dd>Debian 13, Ubuntu 24.04, Arch</dd></div>
+              <div><dt>Ücret</dt><dd>Alfa boyunca ücretsiz</dd></div>
+            </dl>
           </div>
-          <div
-            class="product-stage"
-            id="panel"
-            role="img"
-            aria-label="CelikPanel ürün arayüzü önizlemesi"
-          >
-            <div class="product-window">
-              <div class="window-topbar">
-                <div class="window-dots"><i></i><i></i><i></i></div>
-                <div class="window-address">
-                  <span>●</span> panel.sunucum.com
-                </div>
-                <div class="window-avatar">AY</div>
-              </div>
-              <div class="app-shell">
-                <aside class="app-sidebar">
-                  <div class="app-logo">
-                    <span>C</span><strong>CelikPanel</strong>
-                  </div>
-                  <small>GENEL</small>
-                  <div class="app-nav active">⌂ <span>Genel bakış</span></div>
-                  <div class="app-nav">◎ <span>Siteler</span><b>6</b></div>
-                  <div class="app-nav">◇ <span>Uygulamalar</span></div>
-                  <small>HOSTING</small>
-                  <div class="app-nav">@ <span>E-posta</span></div>
-                  <div class="app-nav">▦ <span>Veritabanları</span></div>
-                  <div class="app-nav">☁ <span>Yedekler</span></div>
-                  <div class="app-nav">⚙ <span>Servisler</span></div>
-                  <div class="sidebar-server">
-                    <i></i
-                    ><span
-                      ><strong>Sunucu çevrimiçi</strong
-                      ><small>Ubuntu 24.04</small></span
-                    >
-                  </div>
-                </aside>
-                <div class="app-content">
-                  <div class="app-welcome">
-                    <div>
-                      <small>12 Ağustos, Çarşamba</small>
-                      <h2>Günaydın, Ali 👋</h2>
-                      <p>Sunucunuz sağlıklı çalışıyor.</p>
-                    </div>
-                    <span class="mock-button">+ Yeni site</span>
-                  </div>
-                  <div class="metric-grid">
-                    <div class="metric-card">
-                      <span class="metric-icon purple">◉</span>
-                      <div>
-                        <small>Web siteleri</small><strong>6</strong
-                        ><em>5 yayında</em>
-                      </div>
-                    </div>
-                    <div class="metric-card">
-                      <span class="metric-icon cyan">↯</span>
-                      <div>
-                        <small>Kaynak kullanımı</small><strong>%28</strong
-                        ><em>Normal</em>
-                      </div>
-                    </div>
-                    <div class="metric-card">
-                      <span class="metric-icon orange">▣</span>
-                      <div>
-                        <small>Yedekler</small><strong>12</strong
-                        ><em>Bugün alındı</em>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="app-main-grid">
-                    <div class="sites-card">
-                      <div class="card-title">
-                        <div>
-                          <strong>Web sitelerim</strong
-                          ><small>Son eklenen projeler</small>
-                        </div>
-                        <span class="mock-link">Tümünü gör</span>
-                      </div>
-                      <div class="site-row">
-                        <span class="site-favicon coral">W</span>
-                        <div>
-                          <strong>magazam.com</strong
-                          ><small>WordPress · PHP 8.3</small>
-                        </div>
-                        <span class="status online">Yayında</span><b>⋯</b>
-                      </div>
-                      <div class="site-row">
-                        <span class="site-favicon blue">A</span>
-                        <div>
-                          <strong>ajansim.net</strong
-                          ><small>Laravel · PHP 8.2</small>
-                        </div>
-                        <span class="status online">Yayında</span><b>⋯</b>
-                      </div>
-                      <div class="site-row">
-                        <span class="site-favicon violet">N</span>
-                        <div>
-                          <strong>nextapp.dev</strong
-                          ><small>Node.js · 22 LTS</small>
-                        </div>
-                        <span class="status draft">Hazırlanıyor</span><b>⋯</b>
-                      </div>
-                    </div>
-                    <div class="health-card">
-                      <div class="card-title">
-                        <div>
-                          <strong>Sunucu durumu</strong
-                          ><small>Canlı kaynak kullanımı</small>
-                        </div>
-                        <span class="health-live"><i></i> Canlı</span>
-                      </div>
-                      <div class="health-ring">
-                        <div>
-                          <strong>99.9%</strong><small>Çalışma süresi</small>
-                        </div>
-                      </div>
-                      <div class="health-bars">
-                        <div>
-                          <span>CPU <b>%24</b></span
-                          ><i><em style="width: 24%"></em></i>
-                        </div>
-                        <div>
-                          <span>Bellek <b>%41</b></span
-                          ><i><em style="width: 41%"></em></i>
-                        </div>
-                        <div>
-                          <span>Disk <b>%36</b></span
-                          ><i><em style="width: 36%"></em></i>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="float-card float-wordpress">
-              <span>W</span>
-              <div>
-                <strong>WordPress hazır</strong
-                ><small>Kurulum tamamlandı</small>
-              </div>
-              <i>✓</i>
-            </div>
-            <div class="float-card float-ssl">
-              <span>🔒</span>
-              <div>
-                <strong>SSL aktif</strong><small>Otomatik yenilenir</small>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="container audience-strip">
-          <span>Ajanslar için</span><i></i><span>Freelancer’lar için</span
-          ><i></i><span>Hosting sağlayıcıları için</span><i></i
-          ><span>Kendi sunucusunu yönetenler için</span>
-        </div>
-      </section>
-      <section class="feature-section" id="ozellikler">
-        <div class="container">
-          <div class="section-heading centered">
-            <span class="section-kicker">TEK PANEL, TÜM HOSTING İŞLERİ</span>
-            <h2>Sunucunuzu yönetmek için<br />ihtiyacınız olan her şey.</h2>
-            <p>
-              Dağınık araçlar ve ezberlenen komutlar yerine, günlük işlerinizi
-              tek ve anlaşılır bir panelden yönetin.
-            </p>
-          </div>
-          <div class="feature-cards">
-            <article class="feature-card">
-              <div class="feature-icon sites">◎</div>
-              <h3>Web siteleri ve uygulamalar</h3>
-              <p>
-                PHP, WordPress, Laravel ve Node.js projelerini oluşturun; alan
-                adı, SSL ve çalışma sürümünü aynı yerden yönetin.
-              </p>
-              <div class="mini-sites">
-                <span><i class="coral">W</i> WordPress</span
-                ><span><i class="blue">L</i> Laravel</span
-                ><span><i class="green">N</i> Node.js</span>
-              </div>
-            </article>
-            <article class="feature-card">
-              <div class="feature-icon mail">@</div>
-              <h3>Profesyonel e-posta</h3>
-              <p>
-                Alan adınıza bağlı posta kutuları oluşturun; teslimat, kimlik
-                doğrulama ve spam korumasını yönetin.
-              </p>
-              <div class="mail-preview">
-                <span>hello@sirketim.com</span><i>Aktif</i>
-              </div>
-            </article>
-            <article class="feature-card">
-              <div class="feature-icon db">▦</div>
-              <h3>Veritabanları</h3>
-              <p>
-                MariaDB ve PostgreSQL veritabanlarını, kullanıcılarını ve erişim
-                izinlerini birkaç tıklamayla hazırlayın.
-              </p>
-              <div class="db-chips">
-                <span>MariaDB</span><span>PostgreSQL</span
-                ><span>phpMyAdmin</span>
-              </div>
-            </article>
-            <article class="feature-card">
-              <div class="feature-icon domain">◈</div>
-              <h3>Alan adı, DNS ve SSL</h3>
-              <p>
-                DNS kayıtlarını düzenleyin, ücretsiz TLS sertifikası alın ve
-                yönlendirmeleri tek ekrandan yönetin.
-              </p>
-              <div class="domain-preview">
-                <i></i
-                ><span
-                  ><strong>celikpanel.net</strong
-                  ><small>SSL ile korunuyor</small></span
-                ><b>✓</b>
-              </div>
-            </article>
-            <article class="feature-card">
-              <div class="feature-icon backup">☁</div>
-              <h3>Yedekleme ve geri yükleme</h3>
-              <p>
-                Site ve veritabanı yedeklerini planlayın. Gerektiğinde doğru
-                noktaya güvenle geri dönün.
-              </p>
-              <div class="backup-chart">
-                <i style="height: 30%"></i><i style="height: 48%"></i
-                ><i style="height: 42%"></i><i style="height: 68%"></i
-                ><i style="height: 60%"></i><i style="height: 82%"></i
-                ><i style="height: 74%"></i>
-              </div>
-            </article>
-            <article class="feature-card">
-              <div class="feature-icon team">♙</div>
-              <h3>Kullanıcılar ve ekipler</h3>
-              <p>
-                Yönetici, müşteri ve ekip üyelerine yalnızca ihtiyaç duydukları
-                alanları gösterin.
-              </p>
-              <div class="team-faces">
-                <span>AY</span><span>MK</span><span>SE</span><i>+4</i>
-              </div>
-            </article>
-          </div>
+
+          <!-- The route board: the server drawn the way a signal box draws its
+               track. Signal colours here mean state and nowhere else on the
+               page mean anything. Every text label is a real route in the
+               product; the refusal sentence is the product's own. -->
+          <figure class="route-board" aria-labelledby="board-title" aria-describedby="board-desc">
+            <figcaption class="board-head">
+              <span class="board-name" id="board-title">sunucu-01 · rota tablosu</span>
+              <span class="board-live"><i aria-hidden="true"></i>canlı</span>
+            </figcaption>
+            <svg class="board" viewBox="0 0 640 300" role="img" aria-hidden="true" focusable="false">
+              <g class="track">
+                <path d="M24 70 H616" />
+                <path d="M24 130 H616" />
+                <path d="M24 190 H616" />
+                <path d="M24 250 H616" />
+                <path d="M300 70 L340 130" />
+                <path d="M420 130 L460 190" />
+                <path d="M272 190 L312 250" />
+              </g>
+              <g class="route route-set">
+                <path d="M24 70 H616" />
+              </g>
+              <g class="route route-locked">
+                <path d="M24 250 H272" />
+              </g>
+              <g class="lamps">
+                <circle class="lamp lamp-1 is-clear" cx="616" cy="70" r="9" />
+                <circle class="lamp lamp-2 is-caution" cx="616" cy="130" r="9" />
+                <circle class="lamp lamp-3 is-clear" cx="616" cy="190" r="9" />
+                <circle class="lamp lamp-4 is-stop" cx="616" cy="250" r="9" />
+              </g>
+              <g class="labels">
+                <text x="24" y="56">DNS (BIND)</text>
+                <text x="24" y="116">Posta</text>
+                <text x="24" y="176">Veritabanı (MariaDB)</text>
+                <text x="24" y="236">Güvenlik duvarı</text>
+              </g>
+              <g class="states">
+                <text x="596" y="56" text-anchor="end">açık</text>
+                <text x="596" y="116" text-anchor="end">bekliyor</text>
+                <text x="596" y="176" text-anchor="end">açık</text>
+                <text x="596" y="236" text-anchor="end">kilitli</text>
+              </g>
+              <g class="lock-mark" transform="translate(284 236)">
+                <g class="lock-mark-inner">
+                  <rect x="-11" y="-11" width="22" height="22" rx="3" />
+                  <path d="M-4 0 v-4 a4 4 0 0 1 8 0 v4" />
+                  <rect x="-6" y="0" width="12" height="8" rx="1.5" />
+                </g>
+              </g>
+            </svg>
+            <p class="board-refusal" id="board-desc"><strong>Panel, bozmadan önce durdu ve sebebini yazdı.</strong> Güvenlik duvarı rotası kurulamadı: bu sunucu 7.1.8 çekirdeğiyle çalışıyor ve modülleri artık diskte yok, yeniden başlatılana kadar nftables yüklenemez. Başka her şey kurulu ve çalışıyor.</p>
+          </figure>
         </div>
       </section>
 
-      <section class="workflow-section">
-        <div class="container workflow-grid">
-          <div class="workflow-copy">
-            <span class="section-kicker">SİTENİZİ HIZLA YAYINA ALIN</span>
-            <h2>Fikirden çalışan siteye, birkaç adımda.</h2>
-            <p>
-              Sunucu detaylarında kaybolmadan projenize odaklanın. CelikPanel
-              gerekli servisleri sizin seçiminize göre hazırlar.
-            </p>
-            <ol class="workflow-list">
-              <li class="active">
-                <span>1</span>
-                <div>
-                  <strong>Alan adınızı ekleyin</strong
-                  ><small>Yeni veya mevcut alan adınızı bağlayın.</small>
-                </div>
-              </li>
-              <li>
-                <span>2</span>
-                <div>
-                  <strong>Uygulamanızı seçin</strong
-                  ><small>WordPress, PHP veya Node.js ile başlayın.</small>
-                </div>
-              </li>
-              <li>
-                <span>3</span>
-                <div>
-                  <strong>Yayına alın</strong
-                  ><small>DNS ve SSL tamamlandığında siteniz hazır.</small>
-                </div>
-              </li>
-            </ol>
-          </div>
-          <div class="setup-demo">
-            <div class="setup-header">
-              <span>Yeni web sitesi</span
-              ><span class="mock-close" aria-hidden="true">×</span>
-            </div>
-            <div class="setup-progress">
-              <i class="done"></i><em></em><i class="active"></i><em></em><i></i
-              ><span>Alan adı</span><span>Uygulama</span><span>Yayınla</span>
-            </div>
-            <div class="setup-form">
-              <label>Ne kurmak istiyorsunuz?</label>
-              <div class="app-choice selected">
-                <span class="site-favicon coral">W</span>
-                <div>
-                  <strong>WordPress</strong
-                  ><small>Blog, kurumsal site veya mağaza</small>
-                </div>
-                <b>✓</b>
-              </div>
-              <div class="app-choice">
-                <span class="site-favicon blue">P</span>
-                <div>
-                  <strong>Özel PHP sitesi</strong
-                  ><small>Laravel veya kendi uygulamanız</small>
-                </div>
-              </div>
-              <label>Alan adı</label>
-              <div class="fake-input">
-                <span>www.</span><strong>yenisitem.com</strong><i>✓ Uygun</i>
-              </div>
-              <span class="setup-button">Devam et →</span>
-            </div>
-          </div>
-        </div>
-      </section>
-      <section class="roles-section">
+      <!-- ====================================================== WHAT IT DOES -->
+      <section class="features" id="ozellikler" aria-labelledby="features-title">
         <div class="container">
-          <div class="section-heading roles-heading">
+          <div class="section-head">
+            <h2 id="features-title">Bir hosting işini yürütmek için gereken her şey.</h2>
+            <p class="section-lede">Dağınık araçlar, ezberlenen komutlar ve elle düzenlenen yapılandırma dosyaları yerine tek panel. Her biri kurulumdan sonra hazır gelir.</p>
+          </div>
+          <dl class="feature-list">
             <div>
-              <span class="section-kicker">HERKES İÇİN ANLAŞILIR</span>
-              <h2>Tek ürün.<br />Farklı çalışma biçimleri.</h2>
+              <dt>Web siteleri ve WordPress</dt>
+              <dd>Alan adını bağlayın, WordPress'i tek adımda kurun ya da PHP, Laravel ve Node.js projelerinizi yayına alın. PHP sürümü, SSL ve DNS aynı ekranda.</dd>
             </div>
-            <p>
-              İster birkaç müşteri sitesi yönetin, ister büyüyen bir hosting
-              operasyonu kurun; CelikPanel işinize uyum sağlar.
-            </p>
+            <div>
+              <dt>E-posta</dt>
+              <dd>Alan adınıza posta kutuları açın. DKIM, SPF ve TLS panelden ayarlanır; spam koruması kurulumla birlikte gelir. Postfix ve Dovecot kullanır.</dd>
+            </div>
+            <div>
+              <dt>Veritabanları</dt>
+              <dd>MariaDB ve PostgreSQL veritabanı, kullanıcı ve yetki oluşturun. Panel kendi yönetici hesabını açar; sizin kök parolanıza dokunmaz, parolasını istediğinizde görürsünüz.</dd>
+            </div>
+            <div>
+              <dt>DNS</dt>
+              <dd>BIND veya PowerDNS; birincil ve ikincil iki sunuculu çift. Zaten çalışan bir DNS sunucunuz varsa hizmet kesilmeden devralınır.</dd>
+            </div>
+            <div>
+              <dt>SSL sertifikaları</dt>
+              <dd>Let's Encrypt sertifikaları otomatik alınır ve yenilenir. Yenileme unutulmaz, çünkü panelin işidir.</dd>
+            </div>
+            <div>
+              <dt>Yedekleme ve geri yükleme</dt>
+              <dd>Planlı yedekler. Sitelerinizi, veritabanlarınızı ve panelin kendi durumunu tek mühürlü arşivde alır; temiz bir sunucuya olduğu gibi geri yükler.</dd>
+            </div>
+            <div>
+              <dt>Kullanıcılar ve roller</dt>
+              <dd>Yönetici, bayi, müşteri ve ek kullanıcı hesapları. Herkes yalnız kendi sitelerini ve kutularını görür.</dd>
+            </div>
+            <div>
+              <dt>Güvenlik duvarı ve VPN</dt>
+              <dd>nftables ile varsayılan-reddet kurallar, WireGuard eşleri ve servis bazlı port açma; hepsi panelden, komut satırına inmeden.</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ========================================================= WHY BETTER -->
+      <section class="why" id="neden" aria-labelledby="why-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="why-title">Aynı işler, bambaşka bir güvenlik payı.</h2>
+            <p class="section-lede">Panellerin çoğu aynı özellik listesini sayar. Fark, bir şey ters gittiğinde ortaya çıkar. CelikPanel'i ayıran sekiz nokta:</p>
           </div>
-          <div class="role-tabs">
-            <article class="role-card">
-              <span class="role-emoji">🚀</span>
-              <h3>Ajanslar ve freelancer’lar</h3>
-              <p>
-                Müşteri sitelerini, e-postaları ve yedekleri tek hesaptan
-                izleyin.
-              </p>
-              <ul>
-                <li>Hızlı site kurulumu</li>
-                <li>Müşteri erişimi</li>
-                <li>Toplu sunucu görünümü</li>
-              </ul>
-            </article>
-            <article class="role-card highlighted">
-              <span class="popular">En popüler kullanım</span
-              ><span class="role-emoji">🏢</span>
-              <h3>Hosting sağlayıcıları</h3>
-              <p>
-                Paketler, kullanıcılar ve servislerle ölçeklenebilir hosting
-                deneyimi sunun.
-              </p>
-              <ul>
-                <li>Çok kullanıcılı yapı</li>
-                <li>Rol ve yetki yönetimi</li>
-                <li>Modüler servis kataloğu</li>
-              </ul>
-            </article>
-            <article class="role-card">
-              <span class="role-emoji">🧑‍💻</span>
-              <h3>Sunucu sahipleri</h3>
-              <p>
-                Komut satırına ihtiyaç duymadan kişisel sunucunuzu düzenli
-                tutun.
-              </p>
-              <ul>
-                <li>Canlı kaynak takibi</li>
-                <li>Kolay servis yönetimi</li>
-                <li>Planlı yedekler</li>
-              </ul>
-            </article>
+          <div class="table-scroll" tabindex="0" role="region" aria-labelledby="why-title">
+            <table class="compare">
+              <caption class="sr-only">Alışılmış yöntem ile CelikPanel'in karşılaştırması</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Durum</th>
+                  <th scope="col">Alışılmış yöntem</th>
+                  <th scope="col" class="ours">CelikPanel ile</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Bir servis kurarken</th>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Kur düğmesine basarsınız; olmazsa hata mesajını okuyup sunucuya SSH ile bakarsınız.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Panel önce sorar: bu kurulabilir mi? Engel varsa hiçbir şey değişmez ve engeli düz Türkçe söyler.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Bir şey ters gidince</th>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Neyin ne zaman değiştiğini bulmak için günlükleri elle karıştırırsınız.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Her ayrıcalıklı değişiklik, sonucuyla birlikte kalıcı bir deftere yazılır. Ne olduğu yazılıdır.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Elektrik kesilince</th>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Yarım kalan iş yarım kalır; ekran yine de yeşil görünebilir.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Panel yarım işi bulur, bitirir ya da geri alır. Dört kesintide karar süresi 7 saniyenin altında kaldı.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Sunucu tamamen ölünce</th>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Yeni sunucuyu elden kurar, yapılandırmayı yeniden yazarsınız. Saatler sürer.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Tek mühürlü arşivden temiz bir sunucuya 105 saniyede döner. 6 Eylül 2026'da ölçüldü.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Veritabanı parolanız</th>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Çoğu panel kendi erişimini kök hesabın üzerinden kurar.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Panel kendine ayrı bir yönetici hesabı açar. Kök parolanız sizde kalır.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Zaten çalışan bir DNS sunucunuz varsa</th>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Genelde sıfırdan kurup kayıtları elle taşırsınız; geçişte kesinti olur.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Çalışan BIND veya PowerDNS devralınır. Devralma boyunca 2508 sorgunun tamamı cevaplandı.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Kurulum</th>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Depo ekleyin, bağımlılık derleyin, betikleri sırayla çalıştırın.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Tek komut. İmzalı ve önceden derlenmiş paket; hedefte Go, Node.js veya Git gerekmez.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Ücret</th>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Ticari panellerde sunucu ya da hesap başına lisans.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Alfa boyunca ücretsiz, sunucu sayısı sınırsız.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="scroll-hint">Tablo yana kayar.</p>
+          <p class="why-note">Sağ sütundaki her sayı gerçek bir makinede ölçüldü. <a href="#kanit">Kanıt defterine bakın</a>.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ AUDIENCE -->
+      <section class="who" aria-labelledby="who-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="who-title">Kimler kullanıyor</h2>
+          </div>
+          <dl class="who-list">
+            <div>
+              <dt>Ajanslar ve freelancer'lar</dt>
+              <dd>Müşteri sitelerini, e-postalarını ve yedeklerini tek hesaptan izleyin. Her müşteri yalnız kendi sitesini görür; siz hepsini.</dd>
+            </div>
+            <div>
+              <dt>Hosting sağlayıcıları</dt>
+              <dd>Bayi ve müşteri rolleri, çok kullanıcılı yapı ve modüler servis kataloğuyla ölçeklenebilir bir hosting hizmeti kurun.</dd>
+            </div>
+            <div>
+              <dt>Kendi sunucusunu yönetenler</dt>
+              <dd>Komut satırına inmeden düzenli bir sunucu. Yanlış bir tıkla bozulmaz, çünkü panel yapmadan önce önizler.</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ======================================================= HOW IT WORKS -->
+      <section class="how" id="nasil" aria-labelledby="how-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="how-title">Peki bunu nasıl yapıyor?</h2>
+            <p class="section-lede">Demiryolu sinyalizasyonundan alınmış tek bir kuralla: bir rota kurulunca onunla çakışan her rota kilitlenir, yani yanlış kolu çekemezsiniz. CelikPanel sunucunuzu aynı disiplinle yönetir.</p>
+          </div>
+
+          <ol class="steps">
+            <li>
+              <h3>Önizle</h3>
+              <p>Panel, değişikliği yapmadan önce sunucuya sorar: bu rota kurulabilir mi? Cevap ya bir engel listesi ya da tek kullanımlık bir onay jetonudur. Engel varsa hiçbir şey değişmez.</p>
+            </li>
+            <li>
+              <h3>Taahhüt et</h3>
+              <p>Yalnızca o jetonla değişiklik yapılır. Bu sırada sunucuda tek bir değişiklik hakkı tutulur; ikinci bir değişiklik sıraya girer, üste binmez.</p>
+            </li>
+            <li>
+              <h3>Deftere yaz</h3>
+              <p>Her ayrıcalıklı değişiklik, sonucuyla birlikte kalıcı bir deftere yazılır. Elektrik kesilirse panel yarım işi bulur ve bitirir ya da geri alır; yarım kalmış bir şeyi başarılı diye göstermez.</p>
+            </li>
+          </ol>
+
+          <!-- The interlocking table: rows are things you can ask for, columns
+               are what may be holding the server, marks are the refusals. The
+               rules are the product's own; the layout is a demonstration. -->
+          <div class="interlock">
+            <div class="interlock-head">
+              <h3 id="interlock-title">Kilitleme tablosu</h3>
+              <span class="tag-demo">gösterim · kurallar gerçek</span>
+            </div>
+            <p class="interlock-lede">Hangi isteğin, sunucu hangi durumdayken reddedileceği baştan bellidir. Reddedilen istek sessizce beklemez; panel size hangi durumun onu kilitlediğini söyler.</p>
+            <div class="table-scroll" tabindex="0" role="region" aria-labelledby="interlock-title">
+              <table class="interlock-table">
+                <caption class="sr-only">Hangi istek, sunucu hangi durumdayken reddedilir</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">İstediğiniz değişiklik</th>
+                    <th scope="col">Başka bir panel değişikliği sürüyor</th>
+                    <th scope="col">Paket yöneticisi meşgul</th>
+                    <th scope="col">Bitmemiş bir değişiklik kilidi tutuyor</th>
+                    <th scope="col">Önizleme engel buldu</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Servis kur</th>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">DNS motorunu değiştir</th>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Güvenlik duvarını aç</th>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Veritabanı oluştur</th>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Sunucuyu oku</th>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="scroll-hint">Tablo yana kayar.</p>
+            <dl class="interlock-notes">
+              <div><dt><span class="mark mark-lock" aria-hidden="true"></span> Kilitli</dt><dd>İstek reddedilir. Panel, onu hangi durumun kilitlediğini söyler. Üç sebep üç farklı şey ister: paket yöneticisi için bir dakika beklersiniz, süren değişiklik için onun bitmesini; bitmemiş bir kilit ise beklemekle geçmez ve panel bunu açıkça söyler.</dd></div>
+              <div><dt><span class="mark mark-free" aria-hidden="true"></span> Serbest</dt><dd>İstek hemen yapılır. Veritabanı oluşturmak motorun içindeki bir işlemdir, sunucuda değişiklik hakkı gerektirmez; okumak hiçbir zaman beklemez.</dd></div>
+            </dl>
           </div>
         </div>
       </section>
 
-      <section class="install-section" id="kurulum">
-        <div class="container install-shell">
-          <div class="install-intro">
-            <span class="section-kicker">HEMEN DENEYİN</span>
-            <h2>Temiz bir sunucu.<br />İki kısa komut.</h2>
-            <p>
-              CelikPanel, desteklenen bir Linux test sunucusuna önceden
-              derlenmiş paket olarak kurulur. Hedefte Go, Node.js veya Git
-              gerekmez.
-            </p>
-            <div class="install-badges">
-              <span>Ubuntu / Debian</span><span>Linux amd64</span
-              ><span>Alpha preview</span>
-            </div>
+      <!-- ============================================================ PROOF -->
+      <section class="proof" id="kanit" aria-labelledby="proof-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="proof-title">Ölçüldü, kaydedildi, tarihlendi.</h2>
+            <p class="section-lede">Bu sayfadaki her sayı gerçek bir makinede ölçüldü ve ürünün risk kaydında tarihli kanıtıyla duruyor. Hiçbiri tahmin değil, hiçbiri yuvarlanmadı.</p>
+          </div>
+          <div class="table-scroll" tabindex="0" role="region" aria-labelledby="proof-title">
+            <table class="ledger">
+              <caption class="sr-only">Gerçek makinelerde ölçülen değerler</caption>
+              <thead>
+                <tr><th scope="col">Ölçüm</th><th scope="col" class="num">Değer</th><th scope="col">Koşul</th><th scope="col">Tarih</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Felaketten hizmete dönüş</th><td class="num">105 sn</td><td>Birinci sunucu elektrik kesintisiyle öldü; ikincisi tek mühürlü arşivden kuruldu</td><td>6 Eyl 2026</td></tr>
+                <tr><th scope="row">Arşiv yaşı, kayıp yok</th><td class="num">40,9 sn</td><td>Kesinti anında arşivin gerçek yaşı; hiçbir kayıt kaybolmadı</td><td>6 Eyl 2026</td></tr>
+                <tr><th scope="row">Çalışan BIND devralınırken cevapsız sorgu</th><td class="num">0 / 2508</td><td>Sunucu devralma boyunca hizmet vermeyi hiç kesmedi</td><td>5 Eyl 2026</td></tr>
+                <tr><th scope="row">Elle kurulmuş BIND devralınırken</th><td class="num">0 / 1137</td><td>Farklar gösterildi, sonra devralındı; yine sıfır kesinti</td><td>5 Eyl 2026</td></tr>
+                <tr><th scope="row">Elektrik kesintisinden sonra karar süresi</th><td class="num">≤ 7 sn</td><td>Dört kesinti; her defasında panel yarım işi kimse dokunmadan çözdü</td><td>5 Eyl 2026</td></tr>
+                <tr><th scope="row">Kabul turu</th><td class="num">3 dağıtım</td><td>Debian 13, Ubuntu 24.04, Arch: kurulum, veritabanı zinciri, yeniden başlatma</td><td>6 Eyl 2026</td></tr>
+                <tr><th scope="row">Risk kaydı</th><td class="num">71 madde</td><td>Her biri ne bulunduğunu, neden olduğunu ve nasıl kapandığını tarihli kanıtla anlatır</td><td>sürekli</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="scroll-hint">Tablo yana kayar.</p>
+          <p class="proof-note">Panel, kanıtlayamadığı bir şeyi asla başarılı olarak göstermez. Bir işlem yarım kaldıysa yarım kaldığını söyler ve sunucuyu kilitli tutar; bu, sessizce yanlış görünen bir yeşilden iyidir.</p>
+        </div>
+      </section>
+
+      <!-- ========================================================== INSTALL -->
+      <section class="install" id="kurulum" aria-labelledby="install-title">
+        <div class="container install-grid">
+          <div class="install-copy">
+            <h2 id="install-title">Temiz bir sunucu, tek komut.</h2>
+            <p>CelikPanel, desteklenen bir Linux sunucusuna imzalı ve önceden derlenmiş paket olarak kurulur. Hedefte Go, Node.js veya Git gerekmez. Kurucu paketi indirir, imzasını ve özetini doğrular, sonra kurar.</p>
+            <p class="install-why"><strong>Komut uzun görünüyor, çünkü tek parça.</strong> Kutunun içindekilerin hepsi tek bir komuttur: betiği indirir, kabuğa boru ile akıtmadan çalıştırır ve işi bitince arkasında dosya bırakmaz. Kopyala düğmesine basıp sunucunuza yapıştırmanız yeter.</p>
+            <ul class="plain-list">
+              <li>Debian 13, Ubuntu 24.04 LTS, Arch Linux</li>
+              <li>Linux amd64</li>
+              <li>Alfa önizleme: önce ayrı bir test sunucusunda deneyin</li>
+            </ul>
           </div>
           <div class="command-stack">
-            <article class="command-card primary">
+            <article class="command-card">
               <div class="command-head">
-                <div>
-                  <small>ÖNERİLEN</small>
-                  <h3>Güncel sürümü kur</h3>
-                </div>
-                <button
-                  class="copy-button"
-                  type="button"
-                  data-copy="latest-command"
-                  aria-label="Standart kurulum komutunu kopyala"
-                >
-                  <span data-copy-label>Kopyala</span>
-                </button>
+                <h3>Güncel sürümü kur</h3>
+                <button class="copy-button" type="button" data-copy="latest-command" aria-label="Standart kurulum komutunu kopyala"><span data-copy-label>Kopyala</span></button>
               </div>
-              <pre
-                tabindex="0"
-              ><code id="latest-command">(
+              <p class="scroll-hint">Komut yana kayar; tamamını almak için Kopyala düğmesini kullanın.</p>
+              <pre tabindex="0"><code id="latest-command">(
   set -eu
   celikpanel_get=$(mktemp)
   cleanup_celikpanel_get() {
@@ -503,205 +424,153 @@
   fi
 )</code></pre>
             </article>
-            <article class="command-card">
-              <div class="command-head">
-                <div>
-                  <small>SABİT SÜRÜM</small>
-                  <h3>Tekrarlanabilir kurulum</h3>
+            <details class="command-details">
+              <summary>Belirli bir sürümü kurmak istiyorum</summary>
+              <article class="command-card">
+                <div class="command-head">
+                  <h3>Sabit sürümü kur</h3>
+                  <button class="copy-button" id="exact-copy" type="button" data-copy="exact-command" aria-label="Sabit sürüm kurulum komutunu kopyala" disabled><span data-copy-label>Kopyala</span></button>
                 </div>
-                <button
-                  class="copy-button"
-                  id="exact-copy"
-                  type="button"
-                  data-copy="exact-command"
-                  aria-label="Sabit sürüm kurulum komutunu kopyala"
-                  disabled
-                >
-                  <span data-copy-label>Kopyala</span>
-                </button>
-              </div>
-              <pre
-                tabindex="0"
-              ><code id="exact-command">Sürüm bilgisi bekleniyor…</code></pre>
-            </article>
-            <p class="install-note">
-              <span>i</span> Alpha sürümü üretim ortamı için hazır değildir.
-              Önce izole bir test sunucusunda değerlendirin.
-            </p>
-            <p
-              class="copy-status sr-only"
-              id="copy-status"
-              aria-live="polite"
-            ></p>
+                <pre tabindex="0"><code id="exact-command">Sürüm bilgisi bekleniyor…</code></pre>
+              </article>
+            </details>
+            <p class="install-note">Komut, betiği bir kez indirir ve doğrular; boru ile kabuğa akıtmaz. Tekrarlanabilir kurulum için sabit sürümü kullanın.</p>
+            <p class="sr-only" id="copy-status" aria-live="polite"></p>
           </div>
         </div>
       </section>
-      <section class="release-section" id="surum">
-        <div class="container release-layout">
+
+      <!-- ========================================================== RELEASE -->
+      <section class="release" id="surum" aria-labelledby="release-title">
+        <div class="container release-grid">
           <div class="release-copy">
-            <span class="section-kicker">ŞEFFAF SÜRÜM KANALI</span>
-            <h2>Ne kurduğunuzu bilin.</h2>
-            <p>
-              Her CelikPanel paketi sürüm, kaynak commit ve SHA-256 özetiyle
-              yayımlanır. İsterseniz güncel paketi, isterseniz sabit bir sürümü
-              kullanın.
-            </p>
-            <div class="release-trust">
-              <span><i>✓</i> HTTPS indirme</span
-              ><span><i>✓</i> SHA-256 doğrulama</span
-              ><span><i>✓</i> Paket içi manifest</span>
-            </div>
+            <h2 id="release-title">Ne kurduğunuzu bilin.</h2>
+            <p>Her paket sürüm numarası, kaynak commit'i ve SHA-256 özetiyle yayımlanır ve Ed25519 ile imzalanır. Kurucu bu imzayı doğrulamadan tek bir dosya yazmaz.</p>
+            <ul class="plain-list">
+              <li>HTTPS ile indirme</li>
+              <li>İmzalı sürüm bildirimi</li>
+              <li>SHA-256 doğrulama</li>
+              <li>Geriye alınamayan sürüm sırası</li>
+            </ul>
           </div>
-          <aside
-            class="release-panel"
-            aria-labelledby="latest-title"
-            aria-busy="true"
-          >
+          <aside class="release-panel" aria-labelledby="latest-title" aria-busy="true">
             <div class="release-top">
               <div>
-                <span class="release-label">GÜNCEL ALPHA SÜRÜMÜ</span>
-                <h3 id="latest-title">
-                  <span id="release-version" aria-live="polite"
-                    >Yükleniyor…</span
-                  >
-                </h3>
+                <h3 id="latest-title"><span id="release-version" aria-live="polite">Yükleniyor…</span></h3>
+                <span class="release-label">Güncel alfa sürümü</span>
               </div>
-              <span class="release-ready"
-                ><i></i><span id="release-status">Manifest okunuyor</span></span
-              >
+              <span class="release-ready"><i aria-hidden="true"></i><span id="release-status">Manifest okunuyor</span></span>
             </div>
             <dl class="release-meta">
-              <div>
-                <dt>Yayın tarihi</dt>
-                <dd><time id="release-date">—</time></dd>
-              </div>
-              <div>
-                <dt>Kaynak commit</dt>
-                <dd><code id="release-commit">—</code></dd>
-              </div>
-              <div>
-                <dt>SHA-256</dt>
-                <dd><code id="release-sha">—</code></dd>
-              </div>
+              <div><dt>Yayın tarihi</dt><dd><time id="release-date">—</time></dd></div>
+              <div><dt>Kaynak commit</dt><dd><code id="release-commit">—</code></dd></div>
+              <div><dt>SHA-256</dt><dd><code id="release-sha">—</code></dd></div>
             </dl>
             <div class="release-actions">
-              <a
-                class="button button-primary"
-                id="archive-link"
-                href="/releases/"
-                aria-disabled="true"
-                tabindex="-1"
-                >Paketi indir <span>↓</span></a
-              ><a
-                id="checksum-link"
-                href="/releases/"
-                aria-disabled="true"
-                tabindex="-1"
-                >SHA-256 dosyası</a
-              >
+              <a class="button button-primary" id="archive-link" href="/releases/" aria-disabled="true" tabindex="-1">Paketi indir</a>
+              <a class="button button-quiet" id="checksum-link" href="/releases/" aria-disabled="true" tabindex="-1">SHA-256 dosyası</a>
             </div>
           </aside>
         </div>
       </section>
-      <section class="support-section" id="destek">
+
+      <!-- ============================================================== FAQ -->
+      <section class="faq" id="sss" aria-labelledby="faq-title">
         <div class="container">
-          <div class="section-heading centered">
-            <span class="section-kicker">GERİ BİLDİRİM VE DESTEK</span>
-            <h2>Bir fikriniz veya karşılaştığınız bir sorun mu var?</h2>
-            <p>
-              CelikPanel’i birlikte geliştirelim. Hataları ve özellik
-              önerilerini herkese açık formlarla, güvenlik açıklarını ise gizli
-              kanaldan bildirin.
-            </p>
+          <div class="section-head">
+            <h2 id="faq-title">Sık sorulanlar</h2>
+            <p class="section-lede">Bilmediğimiz bir şeyi bildiğimizi söylemiyoruz. Cevabı henüz olmayan sorularda da bunu açıkça yazıyoruz.</p>
           </div>
-          <div class="support-cards">
-            <a
-              class="support-card bug"
-              href="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml"
-              data-localized-href
-              data-href-tr="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml"
-              data-href-en="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_en.yml"
-            >
-              <span class="support-icon" aria-hidden="true">!</span>
-              <span class="support-eyebrow">HATA BİLDİR</span>
-              <h3>Bir sorun mu buldunuz?</h3>
-              <p>
-                Sürümünüzü, yeniden üretme adımlarını ve temizlenmiş hata
-                çıktısını paylaşın.
-              </p>
-              <span class="support-link">Hata formunu aç →</span>
-            </a>
-            <a
-              class="support-card feature"
-              href="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_tr.yml"
-              data-localized-href
-              data-href-tr="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_tr.yml"
-              data-href-en="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_en.yml"
-            >
-              <span class="support-icon" aria-hidden="true">+</span>
-              <span class="support-eyebrow">ÖZELLİK ÖNER</span>
-              <h3>Paneli nasıl iyileştirebiliriz?</h3>
-              <p>
-                İhtiyacınızı ve beklediğiniz kullanıcı deneyimini kısa ve net
-                biçimde anlatın.
-              </p>
-              <span class="support-link">Öneri formunu aç →</span>
-            </a>
-            <a
-              class="support-card security"
-              href="https://github.com/celikbros/celikpanel-feedback/security/advisories/new"
-            >
-              <span class="support-icon" aria-hidden="true">◇</span>
-              <span class="support-eyebrow">GİZLİ GÜVENLİK BİLDİRİMİ</span>
-              <h3>Bir güvenlik açığı mı buldunuz?</h3>
-              <p>
-                Açığı herkese açık issue olarak yazmayın. GitHub üzerinden
-                yalnız bakım ekibinin görebileceği şekilde bildirin.
-              </p>
-              <span class="support-link">Gizli bildirim aç →</span>
-            </a>
-          </div>
-          <p class="support-privacy">
-            Parola, token, özel anahtar, müşteri verisi, gerçek IP adresi veya
-            özel alan adı paylaşmayın.
-          </p>
+          <dl class="faq-list">
+            <div>
+              <dt>Şimdi üretimde kullanabilir miyim?</dt>
+              <dd>Hayır. CelikPanel alfa aşamasında; önce ayrı bir test sunucusunda deneyin. Üretime hazır olduğunu söyleyeceğimiz gün, dayandığı kanıtla birlikte bu sayfada yazacak.</dd>
+            </div>
+            <div>
+              <dt>Alfadan sonra ücretli mi olacak?</dt>
+              <dd>Alfa boyunca ücretsiz ve kurabileceğiniz sunucu sayısı sınırsız. 1.0 fiyatlandırması henüz açıklanmadı; açıklandığında ilk burada duyurulacak.</dd>
+            </div>
+            <div>
+              <dt>cPanel veya Plesk'ten taşıyabilir miyim?</dt>
+              <dd>Otomatik taşıma aracı henüz yok. Çalışan bir DNS sunucusu kesinti olmadan devralınabiliyor; site dosyaları ve posta kutuları şimdilik elle taşınır.</dd>
+            </div>
+            <div>
+              <dt>Hangi sunucularda çalışır?</dt>
+              <dd>Debian 13, Ubuntu 24.04 LTS ve Arch Linux üzerinde, Linux amd64 mimarisinde. Kurulum üçünde de aynı komutla yapılır; üçü birden en son 6 Eylül 2026 kabul turunda sınandı.</dd>
+            </div>
+            <div>
+              <dt>Verilerim nerede duruyor?</dt>
+              <dd>Panel de veriler de kendi sunucunuzda. Panel dışarıyla yalnız sürüm bildirimini ve kurulum paketini indirmek için konuşur.</dd>
+            </div>
+            <div>
+              <dt>Vazgeçersem kaldırabilir miyim?</dt>
+              <dd>Evet. Kurulum gibi kaldırma da panelin kendi işidir ve ne bıraktığı deftere yazılır.</dd>
+            </div>
+          </dl>
         </div>
       </section>
-      <section class="final-cta">
-        <div class="container final-cta-shell">
-          <div>
-            <span class="section-kicker">YENİ NESİL HOSTING PANELİ</span>
-            <h2>Sunucunuzu daha kolay yönetmeye başlayın.</h2>
-            <p>CelikPanel’i ücretsiz bir test sunucusunda keşfedin.</p>
+
+      <!-- ========================================================== SUPPORT -->
+      <section class="support" id="destek" aria-labelledby="support-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="support-title">Bir sorun ya da bir fikir</h2>
+            <p class="section-lede">Hataları ve önerileri herkese açık formlarla, güvenlik açıklarını yalnız bakım ekibinin göreceği gizli kanaldan bildirin.</p>
           </div>
-          <a class="button button-light" href="#kurulum"
-            >Kurulum komutunu al →</a
-          >
+          <div class="support-rows">
+            <a class="support-row" href="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml" data-localized-href data-href-tr="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml" data-href-en="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_en.yml">
+              <span class="support-kind">Hata</span>
+              <span class="support-text"><strong>Bir sorun mu buldunuz?</strong> Sürümünüzü, yeniden üretme adımlarını ve temizlenmiş hata çıktısını paylaşın.</span>
+              <span class="support-go" aria-hidden="true">→</span>
+            </a>
+            <a class="support-row" href="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_tr.yml" data-localized-href data-href-tr="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_tr.yml" data-href-en="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_en.yml">
+              <span class="support-kind">Öneri</span>
+              <span class="support-text"><strong>Paneli nasıl iyileştirebiliriz?</strong> İhtiyacınızı ve beklediğiniz davranışı kısa ve net anlatın.</span>
+              <span class="support-go" aria-hidden="true">→</span>
+            </a>
+            <a class="support-row support-row-security" href="https://github.com/celikbros/celikpanel-feedback/security/advisories/new">
+              <span class="support-kind">Güvenlik</span>
+              <span class="support-text"><strong>Bir güvenlik açığı mı buldunuz?</strong> Herkese açık issue olarak yazmayın; gizli bildirim yalnız bakım ekibine ulaşır.</span>
+              <span class="support-go" aria-hidden="true">→</span>
+            </a>
+          </div>
+          <p class="support-privacy">Parola, token, özel anahtar, müşteri verisi, gerçek IP adresi veya özel alan adı paylaşmayın.</p>
+        </div>
+      </section>
+
+      <!-- ======================================================== FINAL CALL -->
+      <section class="final" aria-labelledby="final-title">
+        <div class="container final-shell">
+          <h2 id="final-title">Bir test sunucusunda deneyin. Ne yaptığını size gösterir.</h2>
+          <a class="button button-primary button-large" href="#kurulum">Ücretsiz kur</a>
         </div>
       </section>
     </main>
+
     <footer class="site-footer">
       <div class="container footer-grid">
-        <div class="brand footer-brand">
-          <span class="brand-mark">C</span
-          ><span class="brand-copy"
-            ><strong>CelikPanel</strong
-            ><small>Hosting Control Panel</small></span
-          >
+        <div class="footer-brand">
+          <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true" focusable="false">
+            <rect x="9" y="1" width="14" height="30" rx="4" fill="currentColor" />
+            <circle class="lamp-off" cx="16" cy="10" r="4.2" />
+            <circle class="lamp-clear" cx="16" cy="22" r="4.2" />
+          </svg>
+          <span class="brand-name">CelikPanel</span>
+          <p>Sunucunuzda ne yaptığını kanıtlayan hosting kontrol paneli.</p>
         </div>
-        <p>Web siteleri ve sunucular için sade, modern kontrol paneli.</p>
         <nav aria-label="Alt menü">
-          <a href="#ozellikler">Özellikler</a><a href="#kurulum">Kurulum</a
-          ><a href="/releases/index.json">Sürümler</a
-          ><a href="#destek">Destek</a
-          ><a
-            href="https://github.com/celikbros/celikpanel-feedback/security/advisories/new"
-            >Güvenlik</a
-          >
+          <a href="#ozellikler">Özellikler</a>
+          <a href="#neden">Neden CelikPanel</a>
+          <a href="#kurulum">Kurulum</a>
+          <a href="#sss">Sık sorulanlar</a>
+          <a href="#surum">Sürümler</a>
+          <a href="#destek">Destek</a>
+          <a href="https://github.com/celikbros/celikpanel-feedback/security/advisories/new">Güvenlik</a>
         </nav>
       </div>
       <div class="container footer-bottom">
-        <span>© 2026 CelikPanel</span><span>Alpha preview · Linux</span>
+        <span>© 2026 CelikPanel</span>
+        <span>Alfa önizleme · Linux</span>
       </div>
     </footer>
     <script src="/assets/site.js" defer></script>

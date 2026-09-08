@@ -16,11 +16,17 @@ export default {
     content: [
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
+        // The design harness uses the same utilities. Without this line they
+        // are never emitted, and a screenshot of it measures a page Tailwind
+        // did not build. / Tasarim tezgahi da ayni siniflari kullanir; bu
+        // satir olmadan uretilmezler ve ekran goruntusu yanlis olur.
+        "./gallery/**/*.{ts,tsx}",
     ],
     theme: {
         extend: {
             colors: {
                 bg: token('--bg'),
+                scrim: token('--scrim'),
                 surface: {
                     DEFAULT: token('--surface'),
                     2: token('--surface-2'),
@@ -61,15 +67,13 @@ export default {
             // biçimlendirebilir.
             fontFamily: {
                 sans: ['var(--font-sans)'],
+                mono: ['var(--font-mono)'],
             },
             borderRadius: {
                 md: 'var(--radius-md)',
                 lg: 'var(--radius-lg)',
                 xl: 'var(--radius-xl)',
                 '2xl': 'var(--radius-2xl)',
-            },
-            boxShadow: {
-                card: '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06)',
             },
         },
     },

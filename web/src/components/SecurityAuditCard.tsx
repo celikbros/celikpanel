@@ -277,17 +277,17 @@ function isSecurityAuditResponse(value: unknown): value is SecurityAuditResponse
 
 function statusClasses(status: AuditStatus) {
     switch (status) {
-        case 'pass': return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
-        case 'warning': return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300';
-        case 'fail': return 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300';
+        case 'pass': return 'border-success/30 bg-success/10 text-success';
+        case 'warning': return 'border-warning/30 bg-warning/10 text-warning';
+        case 'fail': return 'border-danger/30 bg-danger/10 text-danger';
         default: return 'border-border bg-surface-subtle text-fg-muted';
     }
 }
 
 function StatusIcon({ status }: { status: AuditStatus }) {
-    if (status === 'pass') return <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-hidden="true" />;
-    if (status === 'warning') return <AlertTriangle className="h-5 w-5 text-amber-500" aria-hidden="true" />;
-    if (status === 'fail') return <XCircle className="h-5 w-5 text-red-500" aria-hidden="true" />;
+    if (status === 'pass') return <CheckCircle2 className="h-5 w-5 text-success" aria-hidden="true" />;
+    if (status === 'warning') return <AlertTriangle className="h-5 w-5 text-warning" aria-hidden="true" />;
+    if (status === 'fail') return <XCircle className="h-5 w-5 text-danger" aria-hidden="true" />;
     return <HelpCircle className="h-5 w-5 text-fg-muted" aria-hidden="true" />;
 }
 
@@ -345,7 +345,7 @@ export function SecurityAuditCard() {
     const reason = (code: string) => t(CODE_KEYS[code] ?? 'securityAudit.code.unknown');
 
     return (
-        <section className="rounded-xl border border-border bg-surface p-5 shadow-card" aria-labelledby="security-audit-title">
+        <section className="rounded-xl border border-border bg-surface p-5" aria-labelledby="security-audit-title">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -366,7 +366,7 @@ export function SecurityAuditCard() {
                 {t('securityAudit.readOnly')}
             </div>
 
-            {error && <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-300" role="alert">{error}</div>}
+            {error && <div className="mt-4 rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger" role="alert">{error}</div>}
 
             {audit && (
                 <>

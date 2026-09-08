@@ -1871,7 +1871,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
             )}
             {blocking && !exactMarker && (
                 <div ref={dialogRef} role="dialog" aria-modal="true" tabIndex={-1}
-                    className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 p-4">
+                    className="fixed inset-0 z-[110] flex items-center justify-center bg-scrim/80 p-4">
                     <div className="rounded-2xl bg-surface p-6 text-center shadow-2xl">
                         <Loader2 className="mx-auto h-7 w-7 animate-spin text-primary" />
                         <p role="status" className="mt-4 font-semibold">{t('panelUpdate.canonicalChecking')}</p>
@@ -1893,7 +1893,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                             dialogRef.current?.focus();
                         }
                     }}
-                    className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm outline-none"
+                    className="fixed inset-0 z-[110] flex items-center justify-center bg-scrim/80 p-4 backdrop-blur-sm outline-none"
                 >
                     <div className="w-full max-w-lg rounded-2xl border border-border-strong bg-surface p-6 text-center shadow-2xl">
                         <span className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${

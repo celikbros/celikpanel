@@ -91,7 +91,7 @@ export function MonitoringPage() {
                     <Spinner />
                 </div>
             ) : samples.length < 2 ? (
-                <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-10 text-center shadow-card">
+                <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-10 text-center">
                     <Activity className="h-8 w-8 text-fg-subtle" />
                     <p className="text-sm text-fg-muted">{t('monitoring.empty')}</p>
                 </div>
@@ -160,7 +160,7 @@ function MetricChart({
     const peak = Math.max(...series);
 
     return (
-        <div className="rounded-xl border border-border bg-surface p-4 shadow-card">
+        <div className="rounded-xl border border-border bg-surface p-4">
             <div className="mb-2 flex items-baseline justify-between gap-3">
                 <h3 className="text-sm font-semibold text-fg">{title}</h3>
                 <span className="font-mono text-sm text-fg-muted">{current}</span>

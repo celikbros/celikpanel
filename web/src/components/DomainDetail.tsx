@@ -434,7 +434,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                         </div>
                     )}
 
-                    <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                    <div className="rounded-xl border border-border bg-surface p-5">
                         <Suspense fallback={<Spinner />}>
                             {current.id === 'overview' ? (
                                 <Overview
