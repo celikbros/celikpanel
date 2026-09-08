@@ -131,9 +131,10 @@ package, then streams that promoter exactly once for the atomic transaction.
 
 The transaction runs one public verification pass after the live exchange and
 none after publishing the rollback backup. That pass never requests a path
-under an older release: it performs at most 15 GET requests, fetches the new
-authoritative platform archive exactly once, and permits at most that archive's
-signed size plus 1 MiB of response data. Previous releases and the rollback
+under an older release: it performs at most 23 GET requests, including the
+technical page, versioned favicon, and six Turkish/English product screenshots,
+fetches the new authoritative platform archive exactly once, and permits at most
+that archive's signed size plus 1 MiB of response data. Previous releases and the rollback
 backup are instead proved locally from their pinned inode and inventory while
 the publication lock is held. Redirects, encoded responses, missing or
 inexact `Content-Length`, changed local bytes, and either request or byte budget

@@ -25,7 +25,19 @@ tar -czf "$tmp/$archive" -C "$tmp/source" "celikpanel-$version"
 bash "$builder" "$version" "$commit" "$published_at" \
   "$tmp/$archive" "$tmp/$archive.sha256" "$tmp/site"
 
-[[ -f "$tmp/site/index.html" ]] || fail "home page was not generated"
+for page in index.html technical.html; do
+  [[ -s "$tmp/site/$page" ]] || fail "portal page was not generated: $page"
+  cmp -s -- "$repo_root/download-portal/$page" "$tmp/site/$page" \
+    || fail "portal page bytes changed: $page"
+done
+for asset in site.css site.js favicon-v2.svg \
+  product-overview-tr.webp product-overview-en.webp \
+  product-domains-tr.webp product-domains-en.webp \
+  product-databases-tr.webp product-databases-en.webp; do
+  [[ -s "$tmp/site/assets/$asset" ]] || fail "required asset was not shipped: $asset"
+  cmp -s -- "$repo_root/download-portal/assets/$asset" "$tmp/site/assets/$asset" \
+    || fail "portal asset bytes changed: $asset"
+done
 [[ -f "$tmp/site/assets/site.js" ]] || fail "home page script was not generated"
 [[ -f "$tmp/site/.well-known/security.txt" ]] || fail "security.txt was not generated"
 [[ -x "$tmp/site/get.sh" ]] || fail "bootstrap is not executable"
@@ -84,7 +96,7 @@ assert parser.buttons["en"]["aria-label"] == "English"
 PY
 grep -Fq 'celikpanel-language' "$tmp/site/assets/site.js" \
   || fail "language preference persistence is missing"
-grep -Fq 'The hosting control panel that proves its work' "$tmp/site/assets/site.js" \
+grep -Fq 'Your server. Your control.' "$tmp/site/assets/site.js" \
   || fail "English product copy is missing"
 [[ -f "$tmp/site/assets/fonts/overpass-latin-ext.woff2" ]] \
   || fail "self-hosted typeface with Turkish coverage was not shipped"

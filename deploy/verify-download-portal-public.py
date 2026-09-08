@@ -25,7 +25,9 @@ from typing import BinaryIO, Iterable
 
 
 SMALL_RESPONSE_BUDGET = 1024 * 1024
-HARD_REQUEST_LIMIT = 15
+# Fixed plan: 14 root files, three selectors, five release metadata files,
+# and exactly one authoritative archive body. No historical paths are fetched.
+HARD_REQUEST_LIMIT = 23
 MAX_ARCHIVE_SIZE = 2_147_483_648
 CHUNK_SIZE = 128 * 1024
 SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
@@ -34,8 +36,16 @@ COMMIT = re.compile(r"^[0-9a-f]{40}$")
 
 ROOT_CRITICAL = (
     "index.html",
+    "technical.html",
     "assets/site.css",
     "assets/site.js",
+    "assets/favicon-v2.svg",
+    "assets/product-overview-tr.webp",
+    "assets/product-overview-en.webp",
+    "assets/product-domains-tr.webp",
+    "assets/product-domains-en.webp",
+    "assets/product-databases-tr.webp",
+    "assets/product-databases-en.webp",
     "get.sh",
     "release-signing-ed25519.pem",
     ".well-known/security.txt",

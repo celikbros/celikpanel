@@ -1,5 +1,6 @@
+import { BrandMark } from './BrandMark';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Server, LogOut, ChevronDown, Menu, KeyRound, UserCheck } from 'lucide-react';
+import { LogOut, ChevronDown, Menu, KeyRound, UserCheck } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
@@ -251,7 +252,7 @@ function Sidebar({
                     (expandedHeader ? 'xl:h-[90px]' : '')}
             >
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-fg">
-                    <Server className="h-5 w-5" />
+                    <BrandMark className="h-5 w-5" />
                 </div>
                 <span className="text-lg font-bold text-white">{t('app.name')}</span>
             </div>

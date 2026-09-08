@@ -135,7 +135,8 @@ stream eder.
 
 Transaction, live exchange sonrasında bir public verification pass çalıştırır;
 rollback backup yayımlandıktan sonra hiçbir pass çalıştırmaz. Bu pass eski bir
-release altındaki yolu hiçbir zaman istemez: en fazla 15 GET isteği yapar, yeni
+release altındaki yolu hiçbir zaman istemez: teknik sayfa, sürümlü favicon ve
+altı Türkçe/İngilizce ürün ekran görüntüsü dahil en fazla 23 GET isteği yapar, yeni
 yetkili platform archive'ı tam bir kez getirir ve en fazla arşivin imzalı boyutu
 artı 1 MiB response data'ya izin verir. Önceki release'ler ve rollback backup,
 publication lock tutulurken pinned inode ve inventory üzerinden yerel olarak
