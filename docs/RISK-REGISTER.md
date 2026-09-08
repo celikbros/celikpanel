@@ -108,6 +108,7 @@ or executed as-is. There are no open pull requests at this baseline.
 | R-068 | Low | FIXED / THE REFUSAL SAYS WHICH | The agent works out exactly why a host change cannot start - the package manager, another change, or a held lock - and the operator is told one sentence that covers all three |
 | R-069 | Medium | FOUND BY THE OPERATOR AND FIXED | Three places where a screen printed something the product knew better: a schema version of 0 for a database at 38, "unknown" beside an engine the panel had installed and was connected to, and three yellow warnings on a healthy new server |
 | R-070 | Medium | ONE HALF FIXED / ONE HALF FOUND | Three release-gating tests read things they do not control: the host's readiness probe, which made them fail at random on CI, and the machine's own DNS engine state, which makes one of them fail on any server that has CelikPanel installed |
+| R-071 | Low | FIXED, AND ONE TEST STILL CARRIES LITERALS | A version bump is a hand edit across seven files, and the two pins it missed were inside tests: a fixture cut by a hard-coded `current=52` that silently became the valid file, and a `sequence=52` under a `version=alpha.53` line; each cost one red CI run on the release PR |
 
 ## Detailed risks
 
@@ -2950,6 +2951,36 @@ or executed as-is. There are no open pull requests at this baseline.
   depths. A test that gates a release must depend on what it sets up and
   nothing else, and these three depend on the machine underneath them twice
   over.
+- Owner / target / evidence: OUT-OF-REPO / ASSIGN.
+
+### R-071 - Pins that a version bump does not know about
+
+- Evidence: 7 September 2026, PR #115, the alpha.53 pin bump. The bump edited
+  seven tracked files by an asserted script and every asserted replacement
+  held. CI went red twice anyway, once per pin the script did not know existed.
+- First red: `deploy/test-release-sequence-policy.sh` cut its three rejected
+  fixtures with `sed 's/^current=52$/.../'`. After the bump that pattern matched
+  nothing, so the "noncanonical" fixture was byte-identical to the valid policy
+  and the contract said `unexpectedly accepted`. A negative test that cannot
+  find the line it means to break passes its own file as the counterexample.
+- Second red: `deploy/test-signed-release-manifest-contract.sh` describes its
+  release under test as two adjacent lines, `version=` and `sequence=`. The bump
+  moved the first and not the second, so the test signed a manifest for
+  alpha.53 at sequence 52 and then failed its own bootstrap-pin comparison.
+- **What was fixed, and how far.** The policy test now cuts its fixtures from
+  `$policy_current` and `$policy_previous`, values it has already read from the
+  tracked file, so no future bump can leave them matching nothing. The
+  signed-manifest test had its `sequence` corrected and its two fail messages
+  stopped naming "Alpha52"; **its version and sequence literals remain**, as do
+  the bootstrap-pin literals at its lines 682-685. The next bump must edit them
+  again. That is a known hand-step, recorded here so it is not a surprise.
+- Why this is Low and still worth an entry: nothing reached a customer, the
+  contracts did their job by going red, and the release PR merged only after
+  both were green. The cost was time and two misleading failure messages. The
+  durable lesson is the same one R-070 carries from the other side: a test that
+  gates a release should depend on what it sets up, and a pin that has to be
+  edited by hand on every release is a fixture the test should be reading, not
+  restating.
 - Owner / target / evidence: OUT-OF-REPO / ASSIGN.
 
 ## Acceptance rule
