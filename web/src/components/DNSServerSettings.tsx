@@ -161,7 +161,7 @@ function SetupStep({ number, title, description, complete = false }: {
     return (
         <div className="mb-4 flex items-start gap-3">
             <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                complete ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'
+                complete ? 'bg-success/10 text-success' : 'bg-primary/10 text-fg-muted'
             }`}>
                 {complete ? <Check className="h-4 w-4" /> : number}
             </span>
@@ -723,7 +723,7 @@ function DNSInfrastructureSettings({
     return (
         <section className="rounded-xl border border-border bg-surface p-4 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-fg-muted">
                     <Network className="h-4.5 w-4.5" />
                 </span>
                 <div className="min-w-0">
@@ -776,7 +776,7 @@ function DNSInfrastructureSettings({
                                 aria-current={activeStep === step ? 'step' : undefined}
                                 className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
                                     activeStep === step
-                                        ? 'border-primary bg-primary/5 text-primary'
+                                        ? 'border-primary bg-primary/5 text-fg-muted'
                                         : reachable
                                           ? 'border-border bg-surface text-fg hover:border-primary/40'
                                           : 'cursor-not-allowed border-border bg-surface-2/40 text-fg-subtle'
@@ -1007,7 +1007,7 @@ function DNSInfrastructureSettings({
 
                             <div className="mb-4 space-y-3">
                                 <div className="rounded-xl border border-primary/25 bg-primary/5 p-4">
-                                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-primary">
+                                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-fg-muted">
                                         {t('dnssrv.thisServer')}
                                     </p>
                                     <div className="grid gap-3 sm:grid-cols-2">
@@ -1142,7 +1142,7 @@ function DNSInfrastructureSettings({
                             />
                     {draft.role === 'standalone' && (
                         <div className="mb-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">{t('dnssrv.thisServer')}</p>
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-muted">{t('dnssrv.thisServer')}</p>
                             <p className="font-mono text-xs text-fg-muted">{saved.server_ip || '—'}</p>
                             <p className="mt-1 text-sm font-medium text-fg">{t('dnssrv.bothNames')}</p>
                         </div>

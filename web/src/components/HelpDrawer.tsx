@@ -52,7 +52,7 @@ function HelpDrawer({ name, help, onClose }: { name: string; help: NonNullable<R
                 lost, unlike the destructive dialogs. / Bilgilendirme çekmecesi:
                 arka plana tıklamak kapatabilir — yıkıcı pencerelerin aksine
                 kaybolacak bir şey yok. */}
-            <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+            <div className="absolute inset-0 bg-scrim/70" onClick={onClose} />
             <aside className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l border-border bg-surface shadow-2xl">
                 <header className="flex items-center gap-2.5 border-b border-border px-5 py-4">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">

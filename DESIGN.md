@@ -196,7 +196,9 @@ Structure is deliberately conventional and expression is subordinate to it: top 
 
 Confirmed anti-references: the gradient hero with three icon cards; the black-on-white monospace "no nonsense" page; brushed metal, industrial plate and rivets (the literal reading of "çelik"); and the discarded violet/Open Sans card-grid identity this file previously described.
 
-**Adoption status.** This system is implemented in `download-portal/` (the public site, celikpanel.net) and that is currently its only built surface. The panel application under `web/` (React + Tailwind, tokens in `web/src/index.css`) has **not** been migrated: it still carries the previous slate-and-blue look. Findings a design-system detector reports against `web/` are migration debt, not this system. Do not treat any `web/` token as normative.
+**Adoption status.** This system is implemented on both built surfaces: `download-portal/` (the public site, celikpanel.net) and the panel application under `web/`, whose default skin carries it through the token set in `web/src/index.css`. On the application the world adapts to Operate mode: the rail is the one dark object and the current item is lit rather than coloured, the primary action is the lever in ink, categories are never coloured because colour means state, and the three signal colours appear as inks on paper and as lamps on the dark theme. `web/gallery/` is a design harness for inspecting that skin without a server; it is not a product surface and never ships.
+
+The three imitation skins (`[data-theme='plesk'|'aapanel'|'cpanel']`) are deliberate impressions of other products, kept so an operator arriving from one of them keeps their bearings. They inherit a shared classic base in the same file and are **outside** this system: detector findings about their Inter and Open Sans faces are sanctioned exceptions, recorded in `.impeccable/config.json`.
 
 **Key Characteristics:**
 - Grey-green rulebook paper and green-black ink; no pure white, no pure black.

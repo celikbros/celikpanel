@@ -16,6 +16,11 @@ export default {
     content: [
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
+        // The design harness uses the same utilities. Without this line they
+        // are never emitted, and a screenshot of it measures a page Tailwind
+        // did not build. / Tasarim tezgahi da ayni siniflari kullanir; bu
+        // satir olmadan uretilmezler ve ekran goruntusu yanlis olur.
+        "./gallery/**/*.{ts,tsx}",
     ],
     theme: {
         extend: {

@@ -23,7 +23,7 @@ import '../src/index.css';
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <section className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-subtle">{title}</h2>
+            <h2 className="border-b border-border pb-2 text-base font-bold tracking-tight text-fg">{title}</h2>
             {children}
         </section>
     );
@@ -102,22 +102,22 @@ function Gallery() {
                     <Section title="Durum">
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             <Card title="Sunucu" icon={Server}>
-                                <div className="space-y-3">
+                                <div className="space-y-3 p-4">
                                     <div className="flex items-center gap-2 text-sm"><StatusDot ok /> Çalışıyor, 14 gündür açık</div>
-                                    <div><p className="mb-1 text-xs text-fg-subtle">Disk</p><UsageBar percent={36} /></div>
-                                    <div><p className="mb-1 text-xs text-fg-subtle">Bellek</p><UsageBar percent={78} /></div>
-                                    <div><p className="mb-1 text-xs text-fg-subtle">İşlemci</p><UsageBar percent={94} /></div>
+                                    <div><p className="mb-1 flex justify-between text-xs text-fg-subtle"><span>Disk</span><span className="font-mono">%36</span></p><UsageBar percent={36} /></div>
+                                    <div><p className="mb-1 flex justify-between text-xs text-fg-subtle"><span>Bellek</span><span className="font-mono">%78</span></p><UsageBar percent={78} /></div>
+                                    <div><p className="mb-1 flex justify-between text-xs text-fg-subtle"><span>İşlemci</span><span className="font-mono">%94</span></p><UsageBar percent={94} /></div>
                                 </div>
                             </Card>
                             <Card title="Son değişiklik" icon={Terminal}>
-                                <p className="text-sm text-fg-muted">
+                                <div className="p-4"><p className="text-sm text-fg-muted">
                                     Güvenlik duvarı rotası kurulamadı: bu sunucu 7.1.8 çekirdeğiyle çalışıyor ve modülleri
                                     diskte yok. Yeniden başlatılana kadar nftables yüklenemez.
                                 </p>
-                                <p className="mt-3 font-mono text-xs text-fg-subtle">12:04:31 · defter #2 481</p>
+                                <p className="mt-3 font-mono text-xs text-fg-subtle">12:04:31 · defter #2 481</p></div>
                             </Card>
                             <Card title="Hız" icon={Zap}>
-                                <dl className="space-y-2 text-sm">
+                                <dl className="space-y-2 p-4 text-sm">
                                     <div className="flex justify-between"><dt className="text-fg-muted">Felaketten dönüş</dt><dd className="font-mono">105 sn</dd></div>
                                     <div className="flex justify-between"><dt className="text-fg-muted">Arşiv yaşı</dt><dd className="font-mono">40,9 sn</dd></div>
                                     <div className="flex justify-between"><dt className="text-fg-muted">Cevapsız sorgu</dt><dd className="font-mono">0 / 2508</dd></div>
@@ -128,11 +128,11 @@ function Gallery() {
 
                     <Section title="Servisler">
                         <Card>
-                            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center justify-between gap-3 p-4">
                                 <SearchInput value={search} onChange={setSearch} placeholder="Servis ara" />
                                 <Button variant="primary">Servis kur</Button>
                             </div>
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto px-4 pb-4">
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-subtle">
@@ -147,10 +147,10 @@ function Gallery() {
                                         {SERVICES.map((s) => (
                                             <tr key={s.name} className="border-b border-border last:border-0">
                                                 <td className="py-2.5 pr-4 font-medium">{s.name}</td>
-                                                <td className="py-2.5 pr-4 text-fg-muted">{s.category}</td>
+                                                <td className="py-2.5 pr-4 font-mono text-xs uppercase tracking-[0.06em] text-fg-subtle">{s.category}</td>
                                                 <td className="py-2.5 pr-4 font-mono text-xs text-fg-muted">{s.version}</td>
                                                 <td className="py-2.5 pr-4"><StateBadge state={s.state} /></td>
-                                                <td className="py-2.5 text-right"><Button variant="ghost">Aç</Button></td>
+                                                <td className="py-2.5 text-right"><Button variant="secondary">Aç</Button></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -164,9 +164,9 @@ function Gallery() {
                             <Button variant="primary">Kaydet</Button>
                             <Button variant="secondary">Vazgeç</Button>
                             <Button variant="danger">Kaldır</Button>
-                            <Button variant="ghost">Ayrıntılar</Button>
+                            <Button variant="secondary">Ayrıntılar</Button>
                             <Button variant="primary" disabled>Kaydet</Button>
-                            <Button variant="primary" loading>Kuruluyor</Button>
+                            <Button variant="primary" disabled><Spinner />Kuruluyor</Button>
                             <Button variant="primary" onClick={() => setDialogOpen(true)}>Pencereyi aç</Button>
                             <Spinner />
                         </div>
@@ -174,7 +174,7 @@ function Gallery() {
 
                     <Section title="Form">
                         <Card>
-                            <FormSection title="Alan adı" description="Yeni alan adını panele bağlayın.">
+                            <div className="p-4"><FormSection title="Alan adı" description="Yeni alan adını panele bağlayın.">
                                 <Field label="Alan adı" hint="Örnek: magazam.com">
                                     <input className={inputClass} defaultValue="magazam.com" />
                                 </Field>
@@ -191,16 +191,16 @@ function Gallery() {
                                     <Button variant="secondary">Vazgeç</Button>
                                     <Button variant="primary">Alan adını ekle</Button>
                                 </FormActions>
-                            </FormSection>
+                            </FormSection></div>
                         </Card>
                     </Section>
 
                     <Section title="Boş durum">
-                        <Card>
+                        <Card className="border-0">
                             <EmptyState
                                 icon={Globe}
                                 title="Henüz alan adı yok"
-                                description="İlk alan adınızı ekleyin; DNS ve sertifika aynı akışta hazırlanır."
+                                hint="İlk alan adınızı ekleyin; DNS ve sertifika aynı akışta hazırlanır."
                                 action={<Button variant="primary">Alan adı ekle</Button>}
                             />
                         </Card>

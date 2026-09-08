@@ -112,7 +112,7 @@
     --border-strong: 142 151 140;
     --fg: 16 22 15;             /* ink */
     --fg-muted: 58 66 58;
-    --fg-subtle: 90 101 90;
+    --fg-subtle: 74 84 74;
     --primary: 16 22 15;        /* the lever */
     --primary-hover: 34 48 42;
     --primary-fg: 244 246 242;
@@ -152,11 +152,11 @@
     --surface: 11 31 23;        /* board */
     --surface-2: 18 41 31;
     --surface-3: 27 58 44;
-    --border: 18 41 31;
-    --border-strong: 42 58 49;
+    --border: 36 58 47;
+    --border-strong: 74 98 84;
     --fg: 232 236 231;          /* track */
     --fg-muted: 163 184 173;
-    --fg-subtle: 121 145 132;
+    --fg-subtle: 150 172 158;
     --primary: 232 236 231;     /* the lever inverts: a lit handle */
     --primary-hover: 255 255 255;
     --primary-fg: 11 31 23;
@@ -164,7 +164,7 @@
     --success-fg: 8 19 14;
     --warning: 240 168 26;      /* lamp amber */
     --warning-fg: 8 19 14;
-    --danger: 232 83 106;       /* lamp red, lightened to read as text */
+    --danger: 240 110 128;      /* lamp red, light enough to read on its own tint */
     --danger-fg: 8 19 14;
 
     --sidebar-bg: 8 19 14;
@@ -382,12 +382,28 @@ svg.lucide {
    caret, the focus ring and the scrollbar all ship with defaults that belong
    to no design system. / Çizmediğimiz yüzeyler de tasarıma aittir. */
 ::selection {
-    background-color: rgb(var(--sidebar-bg));
-    color: rgb(var(--sidebar-fg));
+    background-color: rgb(var(--surface-3));
+    color: rgb(var(--fg));
+}
+
+/* The focus ring is a drawn part of this system, not a browser default.
+   Odak halkasi bu sistemin cizdigi bir parcadir, tarayici varsayilani degil. */
+:focus-visible {
+    outline: 2px solid rgb(var(--fg));
+    outline-offset: 3px;
+    border-radius: var(--radius-md);
 }
 :root {
+    color-scheme: light;
     accent-color: rgb(var(--primary));
     caret-color: rgb(var(--fg));
+    scrollbar-color: rgb(var(--border-strong)) transparent;
+}
+
+/* Native checkboxes, selects, scrollbars and autofill follow the theme.
+   Yerlesik denetimler de temayi izler. */
+.dark {
+    color-scheme: dark;
     scrollbar-color: rgb(var(--border-strong)) transparent;
 }
 

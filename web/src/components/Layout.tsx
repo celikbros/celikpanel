@@ -299,7 +299,7 @@ function Sidebar({
             <aside className="hidden shrink-0 md:block">{content}</aside>
             {mobileOpen && (
                 <div className="fixed inset-0 z-40 md:hidden">
-                    <div className="absolute inset-0 bg-black/50" onClick={onCloseMobile} />
+                    <div className="absolute inset-0 bg-scrim/80" onClick={onCloseMobile} />
                     <div className="absolute left-0 top-0 h-full">{content}</div>
                 </div>
             )}

@@ -25,7 +25,7 @@ export function Card({
     className?: string;
 }) {
     return (
-        <div className={`rounded-xl border border-border bg-surface shadow-card ${className}`}>
+        <div className={`rounded-xl border border-border-strong bg-surface ${className}`}>
             {title && (
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
                     <div className="flex items-center gap-2 text-sm font-semibold text-fg">
@@ -47,10 +47,10 @@ export function Card({
 // anlaşılır.
 export function UsageBar({ percent }: { percent: number }) {
     const clamped = Math.max(0, Math.min(100, percent));
-    const color = clamped >= 90 ? 'bg-danger' : clamped >= 75 ? 'bg-warning' : 'bg-primary';
+    const color = clamped >= 90 ? 'bg-danger' : clamped >= 75 ? 'bg-warning' : 'bg-fg-subtle';
     return (
-        <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
-            <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${clamped}%` }} />
+        <div className="h-2 w-full overflow-hidden rounded-md bg-surface-2">
+            <div className={`h-full rounded-md ${color} transition-all`} style={{ width: `${clamped}%` }} />
         </div>
     );
 }
@@ -146,7 +146,7 @@ export function Button({
     return (
         <button
             {...props}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:bg-surface-2 disabled:text-fg-muted ${styles} ${props.className ?? ''}`}
+            className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:border-transparent disabled:bg-surface-2 disabled:text-fg-muted ${styles} ${props.className ?? ''}`}
         >
             {Icon && <Icon className="h-4 w-4" />}
             {children}
@@ -289,7 +289,7 @@ export function Dialog({
         'aria-busy': busy || undefined,
         className:
             `flex max-h-[90vh] w-full ${dialogWidths[width]} flex-col rounded-2xl border ` +
-            `${tone === 'danger' ? 'border-danger/40' : 'border-border'} bg-surface shadow-xl`,
+            `${tone === 'danger' ? 'border-danger/40' : 'border-border'} bg-surface`,
     } as const;
 
     const inner = (
@@ -346,7 +346,7 @@ export function Dialog({
 
     return (
         <div
-            className={`fixed inset-0 ${stacked ? 'z-[60]' : 'z-50'} flex items-center justify-center bg-black/50 p-4`}
+            className={`fixed inset-0 ${stacked ? 'z-[60]' : 'z-50'} flex items-center justify-center bg-scrim/80 p-4`}
             onMouseDown={(event) => {
                 if (canDismiss && event.currentTarget === event.target) onDismiss!();
             }}
@@ -497,7 +497,7 @@ export function EmptyState({
     action?: ReactNode;
 }) {
     return (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface px-6 py-16 text-center shadow-card">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-border-strong bg-surface px-6 py-16 text-center">
             <Icon className="mb-4 h-12 w-12 text-fg-subtle" />
             <h3 className="text-lg font-semibold text-fg">{title}</h3>
             {hint && <p className="mt-1 text-sm text-fg-muted">{hint}</p>}
