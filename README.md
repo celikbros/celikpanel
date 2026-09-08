@@ -130,7 +130,7 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpane
 sh /tmp/celikpanel-get.sh
 
 # Or require the exact version pinned by the downloaded bootstrap
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.53
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.54
 ```
 
 Do not download and run the public bootstrap on an existing installation.
@@ -206,8 +206,8 @@ environment; the public verification key is tracked and pinned by the product.
 workflow:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.53 SIGNING_KEY=<full-key-fingerprint>
-gpg --verify dist/celikpanel-v0.1.0-alpha.53.tar.gz.asc dist/celikpanel-v0.1.0-alpha.53.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.54 SIGNING_KEY=<full-key-fingerprint>
+gpg --verify dist/celikpanel-v0.1.0-alpha.54.tar.gz.asc dist/celikpanel-v0.1.0-alpha.54.tar.gz
 ```
 
 That optional `.asc` file is not one of the six canonical public assets, does
@@ -218,7 +218,7 @@ integrity, not publisher identity.
 ## Documentation
 
 - [Engineering Handoff](docs/HANDOFF.md) — frozen source baseline, authority order and incoming-team checklist
-- [Alpha52 Release Evidence](docs/RELEASE-EVIDENCE-v0.1.0-alpha.53.md) — source, tag, CI, signed-manifest, asset and portal proof; live acceptance remains explicit
+- [Alpha52 Release Evidence](docs/RELEASE-EVIDENCE-v0.1.0-alpha.54.md) — source, tag, CI, signed-manifest, asset and portal proof; live acceptance remains explicit
 - [Current Dated Live State](docs/LIVE-STATE-2026-08-30.md) — bounded Alpha52 live-install and pre-zone DNS evidence, with remaining blockers kept explicit
 - [Historical Dated Live State](docs/LIVE-STATE-2026-08-29.md) — historical pre-Alpha52 snapshot that keeps verified, declared and unknown server facts separate
 - [Risk Register](docs/RISK-REGISTER.md) — explicit engineering and operations risks with exit criteria
