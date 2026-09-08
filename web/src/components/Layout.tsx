@@ -326,7 +326,11 @@ function SidebarItem({
             className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active
                     ? 'bg-sidebar-active text-sidebar-active-fg'
-                    : 'text-sidebar-fg hover:bg-sidebar-hover'
+                    // The lit plate belongs to the current route, so hover cannot take
+                    // it. The ground shifts and the label goes to full white, which is
+                    // what actually carries the state. / Aydinlik zemin acik rotanindir;
+                    // fare ustunde zemin degisir ve etiket beyaza cikar.
+                    : 'text-sidebar-fg hover:bg-sidebar-hover hover:text-white'
             }`}
         >
             <Icon className="h-[18px] w-[18px] shrink-0" />
