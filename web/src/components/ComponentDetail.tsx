@@ -237,7 +237,7 @@ function ConfigFiles({ svc, onSelectConfig }: { svc: Component | null; onSelectC
                                 className="w-full rounded-lg px-2 py-1.5 text-left font-mono text-xs text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:hover:bg-transparent"
                             >
                                 {f.path}
-                                {f.is_managed && <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 font-sans text-[10px] text-primary">{t('component.managed')}</span>}
+                                {f.is_managed && <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 font-sans text-xs text-primary">{t('component.managed')}</span>}
                             </button>
                         </li>
                     ))}
@@ -313,7 +313,7 @@ function Journal({ unit }: { unit: string }) {
             ) : shown.length === 0 ? (
                 <EmptyState icon={ScrollText} title={t('component.logsEmpty')} hint={t('component.logsEmptyHint', { unit })} />
             ) : (
-                <pre className="max-h-96 overflow-auto rounded-lg bg-surface-2 p-3 font-mono text-[11px] leading-relaxed text-fg-muted">
+                <pre className="max-h-96 overflow-auto rounded-lg bg-surface-2 p-3 font-mono text-xs leading-relaxed text-fg-muted">
                     {shown.join('\n')}
                 </pre>
             )}

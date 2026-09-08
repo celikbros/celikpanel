@@ -191,7 +191,7 @@ export function DatabaseManagementV2() {
                                 <span className="flex items-center gap-2 text-base font-semibold text-fg">
                                     {s.name}
                                     {s.is_default && (
-                                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary">
+                                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold uppercase text-primary">
                                             {t('databases.default')}
                                         </span>
                                     )}
@@ -362,7 +362,7 @@ function TabButton({
         >
             <Icon className="h-4 w-4" />
             {label}
-            <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-fg-muted">{count}</span>
+            <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-xs text-fg-muted">{count}</span>
         </button>
     );
 }

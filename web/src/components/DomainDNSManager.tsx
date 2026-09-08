@@ -448,7 +448,7 @@ function DSField({ label, value, note, mono }: { label: string; value: string; n
                     <Copy className="h-3.5 w-3.5" />
                 </button>
             </div>
-            {note && <div className="mt-0.5 text-[11px] text-fg-subtle">{note}</div>}
+            {note && <div className="mt-0.5 text-xs text-fg-subtle">{note}</div>}
         </div>
     );
 }

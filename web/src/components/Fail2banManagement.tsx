@@ -144,7 +144,7 @@ function Tab({ active, onClick, icon: Icon, label, count }: { active: boolean; o
         >
             <Icon className="h-4 w-4" />
             {label}
-            {count !== undefined && <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-fg-muted">{count}</span>}
+            {count !== undefined && <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-xs text-fg-muted">{count}</span>}
         </button>
     );
 }

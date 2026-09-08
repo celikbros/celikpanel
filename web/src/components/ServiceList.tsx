@@ -1617,7 +1617,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     >
                                                         {openDrawers.has(s.id) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                                                         {t('services.versionsToggle')}
-                                                        <span className="rounded bg-surface-2 px-1 font-mono text-[10px] text-fg-subtle">{(s.instances ?? []).filter((i) => i.managed).length}</span>
+                                                        <span className="rounded bg-surface-2 px-1 font-mono text-xs text-fg-subtle">{(s.instances ?? []).filter((i) => i.managed).length}</span>
                                                     </button>
                                                     )}
                                                     {/* Manage: extensions/config pages. A tool has nothing to
@@ -1873,7 +1873,7 @@ function MailProfileCards({ profiles, services, disabled, dnsIdentityReady, onIn
                             </div>
                             <div className='mt-4 flex flex-wrap gap-1.5' aria-label={t('services.mailProfiles.includes')}>
                                 {profile.services.map((id) => (
-                                    <span key={id} className='rounded-md bg-surface-2 px-2 py-1 text-[11px] font-medium text-fg-muted'>
+                                    <span key={id} className='rounded-md bg-surface-2 px-2 py-1 text-xs font-medium text-fg-muted'>
                                         {serviceName(id)}
                                     </span>
                                 ))}
@@ -2663,7 +2663,7 @@ function VersionDrawer({
                                 {!inst.managed && (
                                     <span
                                         title={t('services.systemRuntimeHint')}
-                                        className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-subtle"
+                                        className="rounded bg-surface-2 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-fg-subtle"
                                     >
                                         {t('services.systemRuntime')}
                                     </span>
@@ -2768,7 +2768,7 @@ function VersionDrawer({
                                             <DownloadCloud className="h-3.5 w-3.5" />
                                             {installing === pkg ? t('services.installing') : `${service.name} ${v}`}
                                             {isEOL(v) && (
-                                                <span className="rounded bg-warning/15 px-1 py-0.5 text-[10px] font-bold uppercase text-warning">
+                                                <span className="rounded bg-warning/15 px-1 py-0.5 text-xs font-bold uppercase text-warning">
                                                     {t('services.eolBadge')}
                                                 </span>
                                             )}

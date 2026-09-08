@@ -252,13 +252,13 @@ function StoreItemCard({ item, busy, onAction }: { item: StoreItemView; busy: bo
                 <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${visual.iconClass}`}>
                     <ProductIcon className="h-5 w-5" />
                 </span>
-                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold ${visual.badgeClass}`}>
+                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${visual.badgeClass}`}>
                     <StateIcon className="h-3.5 w-3.5" />
                     {t(visual.labelKey)}
                 </span>
             </div>
             <div className="mt-4 min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                <p className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
                     {categoryLabel(item.category, t)}
                 </p>
                 <h3 className="mt-1 text-base font-semibold text-fg">{item.name}</h3>
@@ -266,7 +266,7 @@ function StoreItemCard({ item, busy, onAction }: { item: StoreItemView; busy: bo
                     <p className="mt-0.5 text-xs text-fg-subtle">{t('addons.vendor', { vendor: item.vendor })}</p>
                 )}
                 {entitlement && EntitlementIcon && (
-                    <span className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold ${entitlement.badgeClass}`}>
+                    <span className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${entitlement.badgeClass}`}>
                         <EntitlementIcon className="h-3.5 w-3.5" />
                         {t(entitlement.labelKey)}
                     </span>

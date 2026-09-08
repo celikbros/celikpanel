@@ -298,7 +298,7 @@ export function SystemSQLiteManager() {
 
                                     {database.path_hint && (
                                         <div className={'mt-4 rounded-lg bg-surface-2 px-3 py-2'}>
-                                            <div className={'text-[11px] font-semibold uppercase tracking-wide text-fg-subtle'}>
+                                            <div className={'text-xs font-semibold uppercase tracking-wide text-fg-subtle'}>
                                                 {t('systemDb.pathHint')}
                                             </div>
                                             <div className={'mt-1 break-all font-mono text-xs text-fg-muted'}>{database.path_hint}</div>
@@ -385,7 +385,7 @@ function StatusBadge({ status, available }: { status: string; available: boolean
             : normalized === 'error' || normalized === 'corrupt'
               ? t('systemDb.status.error')
               : t('systemDb.status.unknown');
-    return <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${variant}`}>{label}</span>;
+    return <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${variant}`}>{label}</span>;
 }
 
 function normalizeError(cause: unknown, fallback: string): ApiError {

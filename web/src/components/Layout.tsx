@@ -263,7 +263,7 @@ function Sidebar({
                     return (
                         <div key={group.id}>
                             {group.labelKey && (
-                                <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-heading">
+                                <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-sidebar-heading">
                                     {t(group.labelKey)}
                                 </p>
                             )}
@@ -346,7 +346,7 @@ function SidebarItem({
             {count === null ? (
                 <span
                     title={t('services.notChecked')}
-                    className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
+                    className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
                         active ? 'bg-white/20 text-white' : 'bg-sidebar-hover text-sidebar-muted'
                     }`}
                 >
@@ -355,7 +355,7 @@ function SidebarItem({
                 </span>
             ) : count !== undefined && count > 0 ? (
                 <span
-                    className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+                    className={`rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
                         active ? 'bg-white/20 text-white' : 'bg-sidebar-hover text-sidebar-muted'
                     }`}
                 >
@@ -390,7 +390,7 @@ function ServerIdentityLabel({ identity, placement }: {
                     <p className="truncate text-xs font-semibold text-fg">{identity.hostname}</p>
                 )}
                 {identity.ipv4 && (
-                    <p className="truncate font-mono text-[10px] text-fg-muted" dir="ltr">
+                    <p className="truncate font-mono text-xs text-fg-muted" dir="ltr">
                         {identity.ipv4}
                     </p>
                 )}
@@ -405,7 +405,7 @@ function ServerIdentityLabel({ identity, placement }: {
             aria-label={accessibleLabel}
             title={title}
         >
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-heading">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-sidebar-heading">
                 {t('dashboard.serverInfo')}
             </p>
             {identity.hostname && (
@@ -415,7 +415,7 @@ function ServerIdentityLabel({ identity, placement }: {
             )}
             {identity.ipv4 && (
                 <p
-                    className="truncate font-mono text-[11px] text-sidebar-muted"
+                    className="truncate font-mono text-xs text-sidebar-muted"
                     title={identity.ipv4}
                     dir="ltr"
                 >

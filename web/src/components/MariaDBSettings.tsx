@@ -265,7 +265,7 @@ export function MariaDBSettings({ configPath }: MariaDBSettingsProps) {
                                             <div className="flex-1 space-y-1">
                                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                                                     <label className="font-mono text-sm text-primary font-bold">{item.key}</label>
-                                                    {!item.enabled && <span className="text-[10px] bg-surface-2 text-fg-subtle px-1.5 py-0.5 rounded">Disabled</span>}
+                                                    {!item.enabled && <span className="text-xs bg-surface-2 text-fg-subtle px-1.5 py-0.5 rounded">Disabled</span>}
                                                 </div>
                                                 <input
                                                     type="text"

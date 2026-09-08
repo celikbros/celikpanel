@@ -169,7 +169,7 @@ function MetricChart({
                 <path d={area} fill={stroke} opacity="0.12" />
                 <path d={line} fill="none" stroke={stroke} strokeWidth="0.8" vectorEffect="non-scaling-stroke" />
             </svg>
-            <div className="mt-1 flex justify-between text-[10px] text-fg-subtle">
+            <div className="mt-1 flex justify-between text-xs text-fg-subtle">
                 <span>0</span>
                 <span>
                     {'max '}

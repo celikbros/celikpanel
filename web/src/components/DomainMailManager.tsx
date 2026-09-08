@@ -577,7 +577,7 @@ function Tab({ active, onClick, label, count }: { active: boolean; onClick: () =
         >
             {label}
             {count !== undefined && (
-                <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-fg-muted">{count}</span>
+                <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-xs text-fg-muted">{count}</span>
             )}
         </button>
     );

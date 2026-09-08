@@ -131,7 +131,7 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
                     </p>
                 )}
                 {operationID && (
-                    <p className="mt-3 font-mono text-[11px] text-fg-subtle">
+                    <p className="mt-3 font-mono text-xs text-fg-subtle">
                         {view?.operationID ?? t('services.operation.id', { id: operationID })}
                     </p>
                 )}

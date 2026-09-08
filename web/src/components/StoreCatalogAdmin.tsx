@@ -464,7 +464,7 @@ function ReleaseBadge({ state }: { state: ReleaseState }) {
     const { t } = useI18n();
     const label = state === 'available' ? t('addons.state.available') : state === 'coming_soon' ? t('addons.state.comingSoon') : t('addons.admin.stateRetired');
     const style = state === 'available' ? 'bg-success/10 text-success' : state === 'coming_soon' ? 'bg-warning-mark/20 text-warning' : 'bg-surface-2 text-fg-muted';
-    return <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${style}`}>{label}</span>;
+    return <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${style}`}>{label}</span>;
 }
 
 function OperationPolicyCard({ policy, components }: { policy: OperationPolicy; components: AdminComponent[] }) {
