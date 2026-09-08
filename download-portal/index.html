@@ -125,9 +125,11 @@
               </g>
               <!-- lock mark on the junction that blocks the firewall route -->
               <g class="lock-mark" transform="translate(212 236)">
-                <rect x="-11" y="-11" width="22" height="22" rx="3" />
-                <path d="M-4 0 v-4 a4 4 0 0 1 8 0 v4" />
-                <rect x="-6" y="0" width="12" height="8" rx="1.5" />
+                <g class="lock-mark-inner">
+                  <rect x="-11" y="-11" width="22" height="22" rx="3" />
+                  <path d="M-4 0 v-4 a4 4 0 0 1 8 0 v4" />
+                  <rect x="-6" y="0" width="12" height="8" rx="1.5" />
+                </g>
               </g>
             </svg>
             <p class="board-refusal" id="board-desc"><strong>Güvenlik duvarı rotası kurulamadı.</strong> Bu sunucu 7.1.8 çekirdeğiyle çalışıyor ve modülleri artık diskte yok; yeniden başlatılana kadar nftables yüklenemez. Başka her şey kurulu ve çalışıyor.</p>
@@ -217,6 +219,7 @@
                 </tbody>
               </table>
             </div>
+            <p class="scroll-hint">Tablo yana kayar.</p>
             <dl class="interlock-notes">
               <div><dt><span class="mark mark-lock" aria-hidden="true"></span> Kilitli</dt><dd>İstek reddedilir ve panel <em>hangi</em> durumun onu kilitlediğini söyler. Üç sebep üç farklı şey ister: paket yöneticisi için bir dakika beklersiniz, süren değişiklik için onun bitmesini; bitmemiş bir kilit ise beklemekle geçmez ve panel bunu açıkça söyler.</dd></div>
               <div><dt><span class="mark mark-free" aria-hidden="true"></span> Serbest</dt><dd>İstek hemen yapılır. Veritabanı oluşturmak motorun içindeki bir işlemdir, sunucu kirası gerektirmez; okumak hiçbir zaman beklemez.</dd></div>
@@ -260,10 +263,11 @@
                 <tr><th scope="row">Elle kurulmuş BIND devralınırken</th><td class="num">0 / 1137</td><td>Farklar gösterildi, sonra devralındı; yine sıfır kesinti</td><td>5 Eyl 2026</td></tr>
                 <tr><th scope="row">Elektrik kesintisinden sonra karar süresi</th><td class="num">≤ 7 sn</td><td>Dört kesinti; her defasında panel yarım işi kimse dokunmadan çözdü</td><td>5 Eyl 2026</td></tr>
                 <tr><th scope="row">Kabul turu</th><td class="num">3 dağıtım</td><td>Debian 13, Ubuntu 24.04, Arch: kurulum, veritabanı zinciri, yeniden başlatma</td><td>6 Eyl 2026</td></tr>
-                <tr><th scope="row">Risk kaydı</th><td class="num">70 madde</td><td>Her biri ne bulunduğunu, neden olduğunu ve nasıl kapandığını tarihli kanıtla anlatır</td><td>sürekli</td></tr>
+                <tr><th scope="row">Risk kaydı</th><td class="num">71 madde</td><td>Her biri ne bulunduğunu, neden olduğunu ve nasıl kapandığını tarihli kanıtla anlatır</td><td>sürekli</td></tr>
               </tbody>
             </table>
           </div>
+          <p class="scroll-hint">Tablo yana kayar.</p>
           <p class="proof-note">Panel, kanıtlayamadığı bir şeyi asla başarılı olarak göstermez. Bir işlem yarım kaldıysa yarım kaldığını söyler ve sunucuyu kilitli tutar; bu, sessizce yanlış görünen bir yeşilden iyidir.</p>
         </div>
       </section>
