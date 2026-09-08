@@ -316,8 +316,8 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
   background-image:
     linear-gradient(to right, var(--board-2) 45%, rgba(23, 53, 106, 0)),
     linear-gradient(to right, rgba(23, 53, 106, 0), var(--board-2) 55%),
-    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0)),
-    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+    radial-gradient(farthest-side at 0 50%, rgba(13, 34, 71, 0.9), rgba(13, 34, 71, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(13, 34, 71, 0.9), rgba(13, 34, 71, 0));
   background-position: 0 0, 100% 0, 0 0, 100% 0; }
 .interlock .interlock-table th, .interlock .interlock-table td { border-color: var(--track-dim); }
 .interlock .interlock-table thead th { color: var(--track-soft); }

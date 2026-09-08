@@ -6,90 +6,438 @@
     "colorMeta": {
       "paper": {
         "role": "neutral",
-        "displayName": "Rulebook Paper",
-        "canonical": "#eef1ec",
-        "tonalRamp": ["#10160f", "#232d21", "#3a423a", "#5a655a", "#8e978c", "#b7bfb5", "#d6ddd4", "#eef1ec"]
+        "displayName": "Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0e1f3d",
+          "#2f4269",
+          "#55668a",
+          "#7d8ea9",
+          "#b4c2d8",
+          "#dbe4f1",
+          "#e9eff8",
+          "#ffffff"
+        ]
       },
-      "paper-2": { "role": "neutral", "displayName": "Stock, Second Pull", "canonical": "#e3e8e1" },
-      "paper-3": { "role": "neutral", "displayName": "Stock, Third Pull", "canonical": "#d6ddd4" },
-      "paper-lit": { "role": "neutral", "displayName": "Lit Paper", "canonical": "#f6f8f4" },
-      "rule": { "role": "neutral", "displayName": "Hairline", "canonical": "#b7bfb5" },
-      "rule-strong": { "role": "neutral", "displayName": "Hairline, Strong", "canonical": "#8e978c" },
+      "paper-2": {
+        "role": "neutral",
+        "displayName": "Paper, Second Pull",
+        "canonical": "#e9eff8"
+      },
+      "paper-3": {
+        "role": "neutral",
+        "displayName": "Paper, Third Pull",
+        "canonical": "#dbe4f1"
+      },
+      "paper-lit": {
+        "role": "neutral",
+        "displayName": "Lit Paper",
+        "canonical": "#ffffff"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#b4c2d8"
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Hairline, Strong",
+        "canonical": "#7d8ea9"
+      },
       "ink": {
         "role": "neutral",
         "displayName": "Ink",
-        "canonical": "#10160f",
-        "tonalRamp": ["#10160f", "#232d21", "#3a423a", "#5a655a", "#8e978c", "#b7bfb5", "#d6ddd4", "#eef1ec"]
+        "canonical": "#0e1f3d",
+        "tonalRamp": [
+          "#050c18",
+          "#0a1730",
+          "#0e1f3d",
+          "#2f4269",
+          "#55668a",
+          "#7d8ea9",
+          "#b4c2d8",
+          "#eef3fb"
+        ]
       },
-      "ink-2": { "role": "neutral", "displayName": "Ink, Second", "canonical": "#3a423a" },
-      "ink-3": { "role": "neutral", "displayName": "Ink, Third", "canonical": "#5a655a" },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink, Second",
+        "canonical": "#2f4269"
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink, Third",
+        "canonical": "#55668a"
+      },
       "board": {
-        "role": "tertiary",
-        "displayName": "Board Green-Black",
-        "canonical": "#0b1f17",
-        "tonalRamp": ["#04100b", "#0b1f17", "#12291f", "#1d3d2e", "#2c5843", "#4f6a5c", "#a3b8ad", "#e8ece7"]
+        "role": "neutral",
+        "displayName": "Board Navy",
+        "canonical": "#0d2247",
+        "tonalRamp": [
+          "#05122a",
+          "#0a1b38",
+          "#0d2247",
+          "#17356a",
+          "#22406f",
+          "#4e74af",
+          "#b9cbe6",
+          "#eef3fb"
+        ]
       },
-      "board-2": { "role": "tertiary", "displayName": "Board Seam", "canonical": "#12291f" },
-      "track": { "role": "tertiary", "displayName": "Track", "canonical": "#e8ece7" },
-      "track-dim": { "role": "tertiary", "displayName": "Track Dim", "canonical": "#4f6a5c" },
-      "track-soft": { "role": "tertiary", "displayName": "Track Soft", "canonical": "#a3b8ad" },
-      "lamp-red": {
+      "board-2": {
+        "role": "neutral",
+        "displayName": "Board Seam",
+        "canonical": "#17356a"
+      },
+      "track": {
+        "role": "neutral",
+        "displayName": "Track",
+        "canonical": "#eef3fb"
+      },
+      "track-dim": {
+        "role": "neutral",
+        "displayName": "Track Dim",
+        "canonical": "#6787bb"
+      },
+      "track-soft": {
+        "role": "neutral",
+        "displayName": "Track Soft",
+        "canonical": "#b9cbe6"
+      },
+      "lamp-off": {
+        "role": "neutral",
+        "displayName": "Lamp Off",
+        "canonical": "#22406f"
+      },
+      "lever": {
         "role": "primary",
+        "displayName": "Lever Navy",
+        "canonical": "#123a72",
+        "tonalRamp": [
+          "#050f1f",
+          "#0a1e3c",
+          "#0d2c58",
+          "#123a72",
+          "#1e5199",
+          "#3a78c4",
+          "#8fb4e0",
+          "#dbe9f8"
+        ]
+      },
+      "lever-fg": {
+        "role": "primary",
+        "displayName": "Lever Face",
+        "canonical": "#ffffff"
+      },
+      "lever-hover": {
+        "role": "primary",
+        "displayName": "Lever Navy, Pressed",
+        "canonical": "#0d2c58"
+      },
+      "lamp-red": {
+        "role": "secondary",
         "displayName": "Signal Red / Stop",
-        "canonical": "#d0102f",
-        "tonalRamp": ["#2a0308", "#4a0611", "#6d091a", "#a20d26", "#d0102f", "#e8455f", "#f4899a", "#fbd0d7"]
+        "canonical": "#e04a3f",
+        "tonalRamp": [
+          "#3d0d0a",
+          "#6b1712",
+          "#8c1e18",
+          "#b3261e",
+          "#e04a3f",
+          "#f07a70",
+          "#ff9d94",
+          "#ffd8d3"
+        ]
+      },
+      "lamp-red-soft": {
+        "role": "secondary",
+        "displayName": "Signal Red, Soft",
+        "canonical": "#ff9d94"
       },
       "lamp-amber": {
-        "role": "primary",
-        "displayName": "Signal Amber / Caution",
-        "canonical": "#f0a81a",
-        "tonalRamp": ["#2e2004", "#4d3607", "#7a5a08", "#a8760c", "#d59413", "#f0a81a", "#f7c866", "#fdebc4"]
+        "role": "secondary",
+        "displayName": "Signal Yellow / Attention",
+        "canonical": "#f5b301",
+        "tonalRamp": [
+          "#2e2004",
+          "#4d3607",
+          "#6b4b09",
+          "#8a6100",
+          "#b88300",
+          "#f5b301",
+          "#f9cf5e",
+          "#fdeac0"
+        ]
       },
       "lamp-green": {
-        "role": "primary",
+        "role": "secondary",
         "displayName": "Signal Green / Clear",
-        "canonical": "#34c273",
-        "tonalRamp": ["#05200f", "#0a3a1e", "#12552d", "#1e6f45", "#2a9a5b", "#34c273", "#71d89e", "#bdeed3"]
+        "canonical": "#35b877",
+        "tonalRamp": [
+          "#05200f",
+          "#0a3a1e",
+          "#12552d",
+          "#1c7a45",
+          "#2a9a5b",
+          "#35b877",
+          "#71d89e",
+          "#bdeed3"
+        ]
       },
-      "lamp-off": { "role": "tertiary", "displayName": "Lamp Off", "canonical": "#2a3a31" },
-      "red-ink": { "role": "secondary", "displayName": "Red Ink", "canonical": "#a20d26" },
-      "amber-ink": { "role": "secondary", "displayName": "Amber Ink", "canonical": "#7a5a08" },
-      "green-ink": { "role": "secondary", "displayName": "Green Ink", "canonical": "#1e6f45" },
-      "lever": { "role": "neutral", "displayName": "Lever", "canonical": "#10160f" },
-      "lever-fg": { "role": "neutral", "displayName": "Lever Face", "canonical": "#f4f6f2" },
-      "lever-hover": { "role": "neutral", "displayName": "Lever Hover", "canonical": "#22302a" }
+      "red-ink": {
+        "role": "tertiary",
+        "displayName": "Red Ink",
+        "canonical": "#b3261e"
+      },
+      "amber-ink": {
+        "role": "tertiary",
+        "displayName": "Amber Ink",
+        "canonical": "#8a6100"
+      },
+      "green-ink": {
+        "role": "tertiary",
+        "displayName": "Green Ink",
+        "canonical": "#1c7a45"
+      },
+      "panel-bg": {
+        "role": "neutral",
+        "displayName": "Panel Ground",
+        "canonical": "#f3f6fb"
+      },
+      "panel-surface-2": {
+        "role": "neutral",
+        "displayName": "Panel Surface, Second",
+        "canonical": "#edf2f9"
+      },
+      "panel-surface-3": {
+        "role": "neutral",
+        "displayName": "Panel Surface, Third",
+        "canonical": "#dfe7f2"
+      },
+      "panel-surface-subtle": {
+        "role": "neutral",
+        "displayName": "Panel Surface, Subtle",
+        "canonical": "#f8fafd"
+      },
+      "panel-border": {
+        "role": "neutral",
+        "displayName": "Panel Hairline",
+        "canonical": "#ccd6e6"
+      },
+      "panel-fg-subtle": {
+        "role": "neutral",
+        "displayName": "Panel Ink, Subtle",
+        "canonical": "#4f5e7c"
+      },
+      "panel-scrim": {
+        "role": "neutral",
+        "displayName": "Scrim",
+        "canonical": "#081428"
+      },
+      "panel-warning-fg": {
+        "role": "tertiary",
+        "displayName": "Warning Face",
+        "canonical": "#140e00"
+      },
+      "panel-sidebar-heading": {
+        "role": "neutral",
+        "displayName": "Rail Heading",
+        "canonical": "#91aacd"
+      },
+      "panel-sidebar-hover": {
+        "role": "neutral",
+        "displayName": "Rail Hover",
+        "canonical": "#3064b2"
+      },
+      "panel-sidebar-border": {
+        "role": "neutral",
+        "displayName": "Rail Edge",
+        "canonical": "#4e74af"
+      },
+      "panel-dark-bg": {
+        "role": "neutral",
+        "displayName": "Panel Ground, Dark",
+        "canonical": "#060f1f"
+      },
+      "panel-dark-scrim": {
+        "role": "neutral",
+        "displayName": "Scrim, Dark",
+        "canonical": "#030a16"
+      },
+      "panel-dark-surface": {
+        "role": "neutral",
+        "displayName": "Panel Surface, Dark",
+        "canonical": "#142c54"
+      },
+      "panel-dark-surface-2": {
+        "role": "neutral",
+        "displayName": "Panel Surface Second, Dark",
+        "canonical": "#1e4078"
+      },
+      "panel-dark-surface-3": {
+        "role": "neutral",
+        "displayName": "Panel Surface Third, Dark",
+        "canonical": "#2a5391"
+      },
+      "panel-dark-surface-subtle": {
+        "role": "neutral",
+        "displayName": "Panel Surface Subtle, Dark",
+        "canonical": "#1a3764"
+      },
+      "panel-dark-border": {
+        "role": "neutral",
+        "displayName": "Panel Hairline, Dark",
+        "canonical": "#5a87cd"
+      },
+      "panel-dark-border-strong": {
+        "role": "neutral",
+        "displayName": "Panel Hairline Strong, Dark",
+        "canonical": "#7d9fd6"
+      },
+      "panel-dark-fg-subtle": {
+        "role": "neutral",
+        "displayName": "Panel Ink Subtle, Dark",
+        "canonical": "#96afd2"
+      },
+      "panel-dark-primary": {
+        "role": "primary",
+        "displayName": "Lever Inverted",
+        "canonical": "#d2e2ff"
+      },
+      "panel-dark-primary-hover": {
+        "role": "primary",
+        "displayName": "Lever Inverted, Pressed",
+        "canonical": "#ebf3ff"
+      },
+      "panel-dark-danger": {
+        "role": "secondary",
+        "displayName": "Signal Red, Dark Ground",
+        "canonical": "#f59188"
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "The page's single h1. Balanced wrap, capped at 18ch." },
-      "headline": { "displayName": "Headline", "purpose": "Section headings. Capped at 30ch." },
-      "title": { "displayName": "Title", "purpose": "Step headings, table titles, card heads." },
-      "lede": { "displayName": "Lede", "purpose": "The one sentence under a heading, in --ink-2." },
-      "body": { "displayName": "Body", "purpose": "Running text, capped at --measure (66ch)." },
-      "small": { "displayName": "Small", "purpose": "Table cells, ruled list rows, notes, nav links." },
-      "label": { "displayName": "Label", "purpose": "Uppercase sans column names: hero facts, release fields, ledger head." },
-      "label-mono": { "displayName": "Label, mono", "purpose": "Machine-ish labels: demo tag, support kinds, board states, scroll hint." },
-      "code": { "displayName": "Code", "purpose": "Install commands, hashes, commits, versions on a board ground." },
-      "figure": { "displayName": "Figure", "purpose": "Measured values in the ledger. Tabular numerals, right-aligned, never wrapped." }
+      "display": {
+        "displayName": "Display",
+        "purpose": "The page's single h1. Balanced wrap, capped at 18ch."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings. Capped at 30ch."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Step headings, table titles, card heads."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "The one sentence under a heading, in --ink-2."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text, capped at --measure (66ch)."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Table cells, ruled list rows, notes, nav links."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase sans column names: hero facts, release fields, ledger head, mobile cell labels."
+      },
+      "label-mono": {
+        "displayName": "Label, mono",
+        "purpose": "Machine-ish labels: demo tag, support kinds, board states, scroll hint."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Install commands, hashes, commits, versions on a board ground."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Measured values in the ledger, and the number that carries a meter's withheld band. Tabular numerals, right-aligned, never wrapped."
+      }
     },
     "shadows": [
-      { "name": "board-seat", "value": "0 18px 40px -22px rgba(16, 22, 15, 0.35)", "purpose": "The only shadow in the system. Seats a --board object on the paper: route board and command cards. Never under a paper surface." },
-      { "name": "sticky-column-edge", "value": "1px 0 0 var(--rule-strong)", "purpose": "Resting edge of a sticky first column in a scrollable table." },
-      { "name": "sticky-column-scrolled", "value": "1px 0 0 var(--rule-strong), 8px 0 12px -6px rgba(16, 22, 15, 0.45)", "purpose": "Applied via .is-scrolled when the region's scrollLeft > 0, so the reader can see they have moved sideways." }
+      {
+        "name": "board-seat",
+        "value": "0 18px 40px -22px rgba(14, 31, 61, 0.35)",
+        "purpose": "The only shadow in the system. Seats a --board object on the paper: route board and command cards. Never under a paper surface."
+      },
+      {
+        "name": "sticky-column-edge",
+        "value": "1px 0 0 var(--rule-strong)",
+        "purpose": "Resting edge of a sticky first column in a scrollable table on paper. On a board ground the same edge is 1px 0 0 var(--track-dim)."
+      },
+      {
+        "name": "sticky-column-scrolled",
+        "value": "1px 0 0 var(--rule-strong), 8px 0 12px -6px rgba(14, 31, 61, 0.45)",
+        "purpose": "Applied via .is-scrolled when the region's scrollLeft > 0, so the reader can see they have moved sideways."
+      },
+      {
+        "name": "scroll-edge-on-board",
+        "value": "radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0))",
+        "purpose": "The edge fade of a scrollable region on a --board ground. The system's only black, and a shade rather than a colour: a navy shade is invisible against the board. Permitted here and nowhere else."
+      },
+      {
+        "name": "live-dot-halo",
+        "value": "0 0 0 3px rgba(53, 184, 119, 0.18)",
+        "purpose": "The ring around the board's live dot. The only alpha a signal colour takes on the site."
+      }
     ],
     "motion": [
-      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "The only easing. Every transition and every keyframe uses it." },
-      { "name": "state-transition", "value": "160ms", "purpose": "Duration for background, border and colour changes on interactive elements. Never transform, never scale." },
-      { "name": "lamp-set", "value": "@keyframes lamp-set { 0% { fill: var(--lamp-off); } 45% { fill: var(--lamp-amber); } 100% { fill: var(--lamp-green); } } — 1.1s, staggered 220ms / 420ms", "purpose": "A route clearing: off, amber, green. Route board only." },
-      { "name": "route-draw", "value": "@keyframes route-draw { to { stroke-dashoffset: 0; } } — 900ms, 120ms delay, stroke-dasharray 600", "purpose": "The set route drawing itself along the track." },
-      { "name": "lamp-stop", "value": "@keyframes lamp-stop { 0% { fill: var(--lamp-off); } 100% { fill: var(--lamp-red); } } — 700ms at 900ms", "purpose": "The refused route's lamp going to stop, after the set route has drawn." },
-      { "name": "lock-land", "value": "@keyframes lock-land { 0% { opacity: 0; transform: scale(1.8); } 60% { opacity: 1; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } } — 520ms at 1250ms", "purpose": "The lock mark landing on the junction that blocks the route." },
-      { "name": "reduced-motion", "value": "All four keyframes live inside @media (prefers-reduced-motion: no-preference); scroll-behavior falls back to auto.", "purpose": "With reduced motion the board renders its end state immediately and reads in full. Any new motion must pass the same test." }
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The only easing. Every transition and every keyframe uses it."
+      },
+      {
+        "name": "state-transition",
+        "value": "160ms",
+        "purpose": "Duration for background, border and colour changes on interactive elements. Never transform, never scale."
+      },
+      {
+        "name": "lamp-set",
+        "value": "@keyframes lamp-set { 0% { fill: var(--lamp-off); } 45% { fill: var(--lamp-amber); } 100% { fill: var(--lamp-green); } } — 1.1s, staggered 220ms / 420ms",
+        "purpose": "A route clearing: off, yellow, green. Route board only. The yellow is a passing frame, never a resting state beside the red lamp."
+      },
+      {
+        "name": "route-draw",
+        "value": "@keyframes route-draw { to { stroke-dashoffset: 0; } } — 900ms, 120ms delay, stroke-dasharray 600",
+        "purpose": "The set route drawing itself along the track."
+      },
+      {
+        "name": "lamp-stop",
+        "value": "@keyframes lamp-stop { 0% { fill: var(--lamp-off); } 100% { fill: var(--lamp-red); } } — 700ms at 900ms",
+        "purpose": "The refused route's lamp going to stop, after the clearing lamps have finished passing through yellow. The delay is how the No-Adjacency Rule is kept in time."
+      },
+      {
+        "name": "lock-land",
+        "value": "@keyframes lock-land { 0% { opacity: 0; transform: scale(1.8); } 60% { opacity: 1; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } } — 520ms at 1250ms",
+        "purpose": "The lock mark landing on the junction that blocks the route."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "All four keyframes live inside @media (prefers-reduced-motion: no-preference); scroll-behavior falls back to auto.",
+        "purpose": "With reduced motion the board renders its end state immediately and reads in full. Any new motion must pass the same test."
+      }
     ],
     "breakpoints": [
-      { "name": "wide", "value": "900px" },
-      { "name": "mid", "value": "800px" },
-      { "name": "narrow", "value": "640px" },
-      { "name": "compact", "value": "560px" }
+      {
+        "name": "wide",
+        "value": "900px"
+      },
+      {
+        "name": "mid",
+        "value": "800px"
+      },
+      {
+        "name": "narrow",
+        "value": "640px"
+      },
+      {
+        "name": "compact",
+        "value": "560px"
+      }
     ]
   },
   "components": [
@@ -97,9 +445,9 @@
       "name": "Lever Button (Primary)",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The one primary action. A plain dark handle: no gradient, no glow, no icon.",
+      "description": "The one primary action. A plain navy handle: no gradient, no glow, no icon.",
       "html": "<a class=\"ds-btn-lever\" href=\"#\">Kurulum komutunu al</a>",
-      "css": ".ds-btn-lever { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.9rem 1.4rem; border-radius: var(--radius, 4px); border: 1.5px solid var(--lever, #10160f); background: var(--lever, #10160f); color: var(--lever-fg, #f4f6f2); font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); font-size: 1.0625rem; font-weight: 600; line-height: 1.2; text-decoration: none; white-space: nowrap; transition: background-color 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), border-color 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)); } .ds-btn-lever:hover { background: var(--lever-hover, #22302a); border-color: var(--lever-hover, #22302a); } .ds-btn-lever:focus-visible { outline: 2px solid var(--ink, #10160f); outline-offset: 3px; }"
+      "css": ".ds-btn-lever { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.9rem 1.4rem; border-radius: var(--radius, 4px); border: 1.5px solid var(--lever, #123a72); background: var(--lever, #123a72); color: var(--lever-fg, #ffffff); font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); font-size: 1.0625rem; font-weight: 600; line-height: 1.2; text-decoration: none; white-space: nowrap; transition: background-color 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), border-color 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)); } .ds-btn-lever:hover { background: var(--lever-hover, #0d2c58); border-color: var(--lever-hover, #0d2c58); } .ds-btn-lever:focus-visible { outline: 2px solid var(--ink, #0e1f3d); outline-offset: 3px; }"
     },
     {
       "name": "Quiet Button",
@@ -107,7 +455,7 @@
       "refersTo": "button-quiet",
       "description": "The secondary action beside the lever. Same footprint, hairline stroke instead of a fill.",
       "html": "<a class=\"ds-btn-quiet\" href=\"#\">Nasıl çalıştığını gör</a>",
-      "css": ".ds-btn-quiet { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.9rem 1.4rem; border-radius: var(--radius, 4px); border: 1.5px solid var(--rule-strong, #8e978c); background: transparent; color: var(--ink, #10160f); font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); font-size: 1.0625rem; font-weight: 600; line-height: 1.2; text-decoration: none; white-space: nowrap; transition: background-color 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)); } .ds-btn-quiet:hover { background: var(--paper-2, #e3e8e1); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--ink, #10160f); outline-offset: 3px; }"
+      "css": ".ds-btn-quiet { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.9rem 1.4rem; border-radius: var(--radius, 4px); border: 1.5px solid var(--rule-strong, #7d8ea9); background: transparent; color: var(--ink, #0e1f3d); font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); font-size: 1.0625rem; font-weight: 600; line-height: 1.2; text-decoration: none; white-space: nowrap; transition: background-color 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)); } .ds-btn-quiet:hover { background: var(--paper-2, #e9eff8); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--ink, #0e1f3d); outline-offset: 3px; }"
     },
     {
       "name": "Language Switch",
@@ -115,7 +463,7 @@
       "refersTo": "language-switch-option",
       "description": "A two-button group sharing one 4px radius. Selection is aria-pressed, and the selected side takes the lever fill.",
       "html": "<div class=\"ds-langswitch\" role=\"group\" aria-label=\"Dil seçimi\"><button type=\"button\" aria-pressed=\"true\">TR</button><button type=\"button\" aria-pressed=\"false\">EN</button></div>",
-      "css": ".ds-langswitch { display: inline-flex; border: 1px solid var(--rule-strong, #8e978c); border-radius: var(--radius, 4px); overflow: hidden; } .ds-langswitch button { appearance: none; border: 0; background: transparent; padding: 0.4rem 0.7rem; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.04em; color: var(--ink-2, #3a423a); cursor: pointer; } .ds-langswitch button + button { border-left: 1px solid var(--rule-strong, #8e978c); } .ds-langswitch button:hover { background: var(--paper-2, #e3e8e1); } .ds-langswitch button[aria-pressed=\"true\"] { background: var(--lever, #10160f); color: var(--lever-fg, #f4f6f2); } .ds-langswitch button:focus-visible { outline: 2px solid var(--ink, #10160f); outline-offset: -2px; }"
+      "css": ".ds-langswitch { display: inline-flex; border: 1px solid var(--rule-strong, #7d8ea9); border-radius: var(--radius, 4px); overflow: hidden; } .ds-langswitch button { appearance: none; border: 0; background: transparent; padding: 0.4rem 0.7rem; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.04em; color: var(--ink-2, #2f4269); cursor: pointer; } .ds-langswitch button + button { border-left: 1px solid var(--rule-strong, #7d8ea9); } .ds-langswitch button:hover { background: var(--paper-2, #e9eff8); } .ds-langswitch button[aria-pressed=\"true\"] { background: var(--lever, #123a72); color: var(--lever-fg, #ffffff); } .ds-langswitch button:focus-visible { outline: 2px solid var(--ink, #0e1f3d); outline-offset: -2px; }"
     },
     {
       "name": "Route Board",
@@ -123,81 +471,178 @@
       "refersTo": "route-board",
       "description": "The signature object: the server drawn as a signal box draws its track. One route set and clear, one refused, and the refusal written out in words.",
       "html": "<figure class=\"ds-board\"><figcaption class=\"ds-board-head\"><span>sunucu-01 · rota tablosu</span><span class=\"ds-board-live\"><i aria-hidden=\"true\"></i>canlı</span></figcaption><svg class=\"ds-board-svg\" viewBox=\"0 0 640 190\" role=\"img\" aria-label=\"Rota tablosu\"><g class=\"ds-track\"><path d=\"M24 60 H616\"/><path d=\"M24 130 H616\"/><path d=\"M200 130 L240 60\"/></g><g class=\"ds-route-set\"><path d=\"M24 60 H616\"/></g><g class=\"ds-route-locked\"><path d=\"M24 130 H200\"/></g><circle class=\"ds-lamp ds-clear\" cx=\"616\" cy=\"60\" r=\"9\"/><circle class=\"ds-lamp ds-stop\" cx=\"616\" cy=\"130\" r=\"9\"/><g class=\"ds-labels\"><text x=\"24\" y=\"46\">DNS (BIND)</text><text x=\"24\" y=\"116\">Güvenlik duvarı</text></g><g class=\"ds-states\"><text x=\"596\" y=\"46\" text-anchor=\"end\">açık</text><text x=\"596\" y=\"116\" text-anchor=\"end\">kilitli</text></g></svg><p class=\"ds-board-refusal\"><strong>Güvenlik duvarı rotası kurulamadı.</strong> Bu sunucu 7.1.8 çekirdeğiyle çalışıyor ve modülleri artık diskte yok; yeniden başlatılana kadar nftables yüklenemez.</p></figure>",
-      "css": ".ds-board { margin: 0; background: var(--board, #0b1f17); color: var(--track, #e8ece7); border: 1px solid var(--board-2, #12291f); border-radius: 6px; box-shadow: var(--shadow, 0 18px 40px -22px rgba(16,22,15,0.35)); overflow: hidden; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); } .ds-board-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--board-2, #12291f); font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 0.8125rem; } .ds-board-live { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--lamp-green, #34c273); } .ds-board-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--lamp-green, #34c273); box-shadow: 0 0 0 3px rgba(52,194,115,0.18); } .ds-board-svg { display: block; width: 100%; height: auto; padding: 0.75rem 0 0.25rem; } .ds-track path { fill: none; stroke: var(--track-dim, #4f6a5c); stroke-width: 2; stroke-linecap: round; } .ds-route-set path { fill: none; stroke: var(--track, #e8ece7); stroke-width: 4; stroke-linecap: round; } .ds-route-locked path { fill: none; stroke: var(--lamp-red, #d0102f); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 6 8; } .ds-lamp { fill: var(--lamp-off, #2a3a31); stroke: rgba(232,236,231,0.18); stroke-width: 2; } .ds-lamp.ds-clear { fill: var(--lamp-green, #34c273); } .ds-lamp.ds-stop { fill: var(--lamp-red, #d0102f); } .ds-labels text { fill: var(--track, #e8ece7); font-size: 15px; font-weight: 600; } .ds-states text { fill: var(--track-soft, #a3b8ad); font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; } .ds-board-refusal { margin: 0; padding: 0.9rem 1rem 1.1rem; font-size: 0.9375rem; line-height: 1.5; border-top: 1px solid var(--board-2, #12291f); } .ds-board-refusal strong { color: #ffd2d9; font-weight: 700; } @media (prefers-reduced-motion: no-preference) { .ds-lamp.ds-clear { animation: ds-lamp-set 1.1s var(--ease-out, cubic-bezier(0.16,1,0.3,1)) 220ms both; } .ds-route-set path { stroke-dasharray: 600; stroke-dashoffset: 600; animation: ds-route-draw 900ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)) 120ms forwards; } .ds-lamp.ds-stop { animation: ds-lamp-stop 700ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)) 900ms both; } } @keyframes ds-lamp-set { 0% { fill: var(--lamp-off, #2a3a31); } 45% { fill: var(--lamp-amber, #f0a81a); } 100% { fill: var(--lamp-green, #34c273); } } @keyframes ds-lamp-stop { 0% { fill: var(--lamp-off, #2a3a31); } 100% { fill: var(--lamp-red, #d0102f); } } @keyframes ds-route-draw { to { stroke-dashoffset: 0; } }"
+      "css": ".ds-board { margin: 0; background: var(--board, #0d2247); color: var(--track, #eef3fb); border: 1px solid var(--board-2, #17356a); border-radius: 6px; box-shadow: var(--shadow, 0 18px 40px -22px rgba(14,31,61,0.35)); overflow: hidden; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); } .ds-board-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--board-2, #17356a); font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 0.8125rem; } .ds-board-live { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--lamp-green, #35b877); } .ds-board-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--lamp-green, #35b877); box-shadow: 0 0 0 3px rgba(53,184,119,0.18); } .ds-board-svg { display: block; width: 100%; height: auto; padding: 0.75rem 0 0.25rem; } .ds-track path { fill: none; stroke: var(--track-dim, #6787bb); stroke-width: 2; stroke-linecap: round; } .ds-route-set path { fill: none; stroke: var(--track, #eef3fb); stroke-width: 4; stroke-linecap: round; } .ds-route-locked path { fill: none; stroke: var(--lamp-red, #e04a3f); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 6 8; } .ds-lamp { fill: var(--lamp-off, #22406f); stroke: rgba(238,243,251,0.18); stroke-width: 2; } .ds-lamp.ds-clear { fill: var(--lamp-green, #35b877); } .ds-lamp.ds-stop { fill: var(--lamp-red, #e04a3f); } .ds-labels text { fill: var(--track, #eef3fb); font-size: 15px; font-weight: 600; } .ds-states text { fill: var(--track-soft, #b9cbe6); font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; } .ds-board-refusal { margin: 0; padding: 0.9rem 1rem 1.1rem; font-size: 0.9375rem; line-height: 1.5; border-top: 1px solid var(--board-2, #17356a); } .ds-board-refusal strong { color: var(--lamp-red-soft, #ff9d94); font-weight: 700; } @media (prefers-reduced-motion: no-preference) { .ds-lamp.ds-clear { animation: ds-lamp-set 1.1s var(--ease-out, cubic-bezier(0.16,1,0.3,1)) 220ms both; } .ds-route-set path { stroke-dasharray: 600; stroke-dashoffset: 600; animation: ds-route-draw 900ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)) 120ms forwards; } .ds-lamp.ds-stop { animation: ds-lamp-stop 700ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)) 900ms both; } } @keyframes ds-lamp-set { 0% { fill: var(--lamp-off, #22406f); } 45% { fill: var(--lamp-amber, #f5b301); } 100% { fill: var(--lamp-green, #35b877); } } @keyframes ds-lamp-stop { 0% { fill: var(--lamp-off, #22406f); } 100% { fill: var(--lamp-red, #e04a3f); } } @keyframes ds-route-draw { to { stroke-dashoffset: 0; } }"
     },
     {
       "name": "Interlocking Table",
       "kind": "custom",
       "refersTo": "table-scroll",
-      "description": "The mutation policy as a table: requests down the side, conditions across, a red-ink mark where they lock. Scrollable region, sticky first column, marks with accessible names.",
+      "description": "The mutation policy as a table, and a dark object: a --board panel holding the table on --board-2. A lamp-red mark where a request and a condition lock. Scrollable region, sticky first column, marks with accessible names.",
       "html": "<div class=\"ds-tablewrap\"><div class=\"ds-tablescroll\" tabindex=\"0\" role=\"region\" aria-label=\"Kilitleme tablosu\"><table class=\"ds-interlock\"><thead><tr><th scope=\"col\">İstediğiniz değişiklik</th><th scope=\"col\">Başka bir panel değişikliği sürüyor</th><th scope=\"col\">Paket yöneticisi meşgul</th><th scope=\"col\">Önizleme engel buldu</th></tr></thead><tbody><tr><th scope=\"row\">Servis kur</th><td><span class=\"ds-mark ds-mark-lock\" aria-label=\"kilitli\"></span></td><td><span class=\"ds-mark ds-mark-lock\" aria-label=\"kilitli\"></span></td><td><span class=\"ds-mark ds-mark-lock\" aria-label=\"kilitli\"></span></td></tr><tr><th scope=\"row\">Veritabanı oluştur</th><td><span class=\"ds-mark ds-mark-free\" aria-label=\"serbest\"></span></td><td><span class=\"ds-mark ds-mark-free\" aria-label=\"serbest\"></span></td><td><span class=\"ds-mark ds-mark-free\" aria-label=\"serbest\"></span></td></tr></tbody></table></div><p class=\"ds-scrollhint\">Tablo yana kayar.</p></div>",
-      "css": ".ds-tablewrap { font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); color: var(--ink, #10160f); } .ds-tablescroll { overflow-x: auto; border: 1px solid var(--rule-strong, #8e978c); background-color: #f6f8f4; background-image: radial-gradient(farthest-side at 0 50%, rgba(16,22,15,0.45), rgba(16,22,15,0)), radial-gradient(farthest-side at 100% 50%, rgba(16,22,15,0.45), rgba(16,22,15,0)); background-repeat: no-repeat; background-position: 0 0, 100% 0; background-size: 20px 100%, 20px 100%; background-attachment: scroll, scroll; } .ds-tablescroll:focus-visible { outline: 2px solid var(--ink, #10160f); outline-offset: 2px; } .ds-interlock { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 560px; } .ds-interlock th, .ds-interlock td { border: 0; border-bottom: 1px solid var(--rule, #b7bfb5); border-right: 1px solid var(--rule, #b7bfb5); padding: 0.75rem 0.85rem; text-align: left; vertical-align: middle; font-size: 0.9375rem; } .ds-interlock thead th { font-weight: 700; font-size: 0.8125rem; line-height: 1.3; color: var(--ink-2, #3a423a); vertical-align: bottom; } .ds-interlock tbody th { font-weight: 600; white-space: nowrap; } .ds-interlock tbody th, .ds-interlock thead th:first-child { position: sticky; left: 0; z-index: 1; background: #f6f8f4; box-shadow: 1px 0 0 var(--rule-strong, #8e978c); } .ds-interlock td { text-align: center; } .ds-mark { display: inline-block; width: 18px; height: 18px; border-radius: 3px; vertical-align: middle; } .ds-mark-lock { background: var(--red-ink, #a20d26); } .ds-mark-free { background: transparent; border: 1.5px solid var(--rule-strong, #8e978c); } .ds-scrollhint { margin: 0.5rem 0 0; font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 0.75rem; letter-spacing: 0.04em; color: var(--ink-3, #5a655a); }"
+      "css": ".ds-tablewrap { background: var(--board, #0d2247); color: var(--track, #eef3fb); border-radius: 6px; padding: 1.5rem; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); } .ds-tablescroll { overflow-x: auto; scroll-snap-type: x proximity; border: 1px solid var(--track-dim, #6787bb); background-color: var(--board-2, #17356a); background-image: radial-gradient(farthest-side at 0 50%, rgba(0,0,0,0.55), rgba(0,0,0,0)), radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.55), rgba(0,0,0,0)); background-repeat: no-repeat; background-position: 0 0, 100% 0; background-size: 20px 100%, 20px 100%; background-attachment: scroll, scroll; } .ds-tablescroll:focus-visible { outline: 2px solid var(--track, #eef3fb); outline-offset: 2px; } .ds-interlock { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 560px; } .ds-interlock th, .ds-interlock td { border: 0; border-bottom: 1px solid var(--track-dim, #6787bb); border-right: 1px solid var(--track-dim, #6787bb); padding: 0.75rem 0.85rem; text-align: left; vertical-align: middle; font-size: 0.9375rem; scroll-snap-align: start; } .ds-interlock thead th { font-weight: 700; font-size: 0.8125rem; line-height: 1.3; color: var(--track-soft, #b9cbe6); vertical-align: bottom; } .ds-interlock tbody th { font-weight: 600; white-space: nowrap; color: var(--track, #eef3fb); } .ds-interlock tbody th, .ds-interlock thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--board-2, #17356a); box-shadow: 1px 0 0 var(--track-dim, #6787bb); } .ds-interlock td { text-align: center; } .ds-mark { display: inline-block; width: 18px; height: 18px; border-radius: 3px; vertical-align: middle; } .ds-mark-lock { background: var(--lamp-red, #e04a3f); } .ds-mark-free { background: transparent; border: 1.5px solid var(--track-dim, #6787bb); } .ds-scrollhint { margin: 0.5rem 0 0; font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 0.75rem; letter-spacing: 0.04em; color: var(--track-soft, #b9cbe6); }"
     },
     {
       "name": "Command Card",
       "kind": "card",
       "refersTo": "command-card",
-      "description": "A dark card holding a command the visitor will paste. Copy confirms in signal green for 1800ms, and failure says 'select text' rather than pretending it worked.",
-      "html": "<article class=\"ds-cmd\"><div class=\"ds-cmd-head\"><h3>Güncel sürümü kur</h3><button class=\"ds-copy\" type=\"button\">Kopyala</button></div><pre tabindex=\"0\"><code>curl --fail --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o \"$f\"</code></pre></article>",
-      "css": ".ds-cmd { background: var(--board, #0b1f17); color: var(--track, #e8ece7); border: 1px solid var(--board-2, #12291f); border-radius: 6px; box-shadow: var(--shadow, 0 18px 40px -22px rgba(16,22,15,0.35)); overflow: hidden; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); } .ds-cmd-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.8rem 1rem; border-bottom: 1px solid var(--board-2, #12291f); } .ds-cmd-head h3 { margin: 0; font-size: 0.9375rem; font-weight: 700; } .ds-cmd pre { margin: 0; padding: 1rem; overflow-x: auto; font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 0.8125rem; line-height: 1.55; } .ds-copy { appearance: none; cursor: pointer; border-radius: var(--radius, 4px); border: 1px solid rgba(232,236,231,0.35); background: transparent; color: var(--track, #e8ece7); padding: 0.35rem 0.75rem; font: inherit; font-size: 0.8125rem; font-weight: 700; transition: background-color 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), border-color 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)); } .ds-copy:hover { background: var(--board-2, #12291f); border-color: var(--track, #e8ece7); } .ds-copy:focus-visible { outline: 2px solid var(--track, #e8ece7); outline-offset: 2px; } .ds-copy.ds-copied { border-color: var(--lamp-green, #34c273); color: var(--lamp-green, #34c273); } .ds-copy:disabled { opacity: 0.45; cursor: not-allowed; }"
+      "description": "A navy card holding a command the visitor will paste. Copy confirms in signal green for 1800ms, and failure says 'select text' rather than pretending it worked.",
+      "html": "<article class=\"ds-cmd\"><div class=\"ds-cmd-head\"><h3>Güncel sürümü kur</h3><button class=\"ds-copy\" type=\"button\">Kopyala</button></div><pre tabindex=\"0\"><code>curl --fail --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o panel.sh</code></pre></article>",
+      "css": ".ds-cmd { background: var(--board, #0d2247); color: var(--track, #eef3fb); border: 1px solid var(--board-2, #17356a); border-radius: 6px; box-shadow: var(--shadow, 0 18px 40px -22px rgba(14,31,61,0.35)); overflow: hidden; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); } .ds-cmd-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.8rem 1rem; border-bottom: 1px solid var(--board-2, #17356a); } .ds-cmd-head h3 { margin: 0; font-size: 0.9375rem; font-weight: 700; } .ds-cmd pre { margin: 0; padding: 1rem; overflow-x: auto; font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 0.8125rem; line-height: 1.55; } .ds-copy { appearance: none; cursor: pointer; border-radius: var(--radius, 4px); border: 1px solid rgba(238,243,251,0.35); background: transparent; color: var(--track, #eef3fb); padding: 0.35rem 0.75rem; font: inherit; font-size: 0.8125rem; font-weight: 700; transition: background-color 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), border-color 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)); } .ds-copy:hover { background: var(--board-2, #17356a); border-color: var(--track, #eef3fb); } .ds-copy:focus-visible { outline: 2px solid var(--track, #eef3fb); outline-offset: 2px; } .ds-copy.ds-copied { border-color: var(--lamp-green, #35b877); color: var(--lamp-green, #35b877); } .ds-copy:disabled { opacity: 0.45; cursor: not-allowed; }"
     },
     {
       "name": "Release Panel",
       "kind": "card",
       "refersTo": "release-panel",
-      "description": "A paper panel whose whole state lives in one status dot and its words: amber while aria-busy, green when the manifest is verified, red on .ds-error. It never shows a green it has not verified.",
+      "description": "A paper panel whose whole state lives in one status dot and its words: amber ink while aria-busy, green ink when the manifest is verified, red ink on .ds-error. Only one of the three is ever on screen, which is why it may use yellow and red at all.",
       "html": "<aside class=\"ds-release\" aria-busy=\"false\"><div class=\"ds-release-top\"><div><span class=\"ds-release-label\">Güncel alfa sürümü</span><h3>v0.9.4-alpha</h3></div><span class=\"ds-release-ready\"><i aria-hidden=\"true\"></i>Hazır</span></div><dl class=\"ds-release-meta\"><div><dt>Yayın tarihi</dt><dd><time>6 Eylül 2026</time></dd></div><div><dt>SHA-256</dt><dd><code>9f2c…a41b</code></dd></div></dl></aside>",
-      "css": ".ds-release { display: block; background: #f6f8f4; border: 1px solid var(--rule-strong, #8e978c); border-radius: 6px; padding: 1.25rem 1.5rem 1.5rem; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); color: var(--ink, #10160f); } .ds-release-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; } .ds-release-label { display: block; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3, #5a655a); font-weight: 700; } .ds-release h3 { margin: 0.25rem 0 0; font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; } .ds-release-ready { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--green-ink, #1e6f45); } .ds-release-ready i { width: 8px; height: 8px; border-radius: 50%; background: var(--green-ink, #1e6f45); } .ds-release[aria-busy=\"true\"] .ds-release-ready { color: var(--amber-ink, #7a5a08); } .ds-release[aria-busy=\"true\"] .ds-release-ready i { background: var(--lamp-amber, #f0a81a); } .ds-release.ds-error .ds-release-ready { color: var(--red-ink, #a20d26); } .ds-release.ds-error .ds-release-ready i { background: var(--red-ink, #a20d26); } .ds-release-meta { margin: 1.25rem 0 0; border-top: 1px solid var(--rule, #b7bfb5); } .ds-release-meta > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--rule, #b7bfb5); font-size: 0.9375rem; } .ds-release-meta dt { margin: 0; color: var(--ink-3, #5a655a); font-weight: 600; } .ds-release-meta dd { margin: 0; min-width: 0; } .ds-release-meta code, .ds-release-meta time { font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 0.8125rem; word-break: break-all; }"
+      "css": ".ds-release { display: block; background: var(--paper-lit, #ffffff); border: 1px solid var(--rule-strong, #7d8ea9); border-radius: 6px; padding: 1.25rem 1.5rem 1.5rem; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); color: var(--ink, #0e1f3d); } .ds-release-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; } .ds-release-label { display: block; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3, #55668a); font-weight: 700; } .ds-release h3 { margin: 0.25rem 0 0; font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; } .ds-release-ready { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--green-ink, #1c7a45); } .ds-release-ready i { width: 8px; height: 8px; border-radius: 50%; background: var(--green-ink, #1c7a45); } .ds-release[aria-busy=\"true\"] .ds-release-ready { color: var(--amber-ink, #8a6100); } .ds-release[aria-busy=\"true\"] .ds-release-ready i { background: var(--lamp-amber, #f5b301); } .ds-release.ds-error .ds-release-ready { color: var(--red-ink, #b3261e); } .ds-release.ds-error .ds-release-ready i { background: var(--red-ink, #b3261e); } .ds-release-meta { margin: 1.25rem 0 0; border-top: 1px solid var(--rule, #b4c2d8); } .ds-release-meta > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--rule, #b4c2d8); font-size: 0.9375rem; } .ds-release-meta dt { margin: 0; color: var(--ink-3, #55668a); font-weight: 600; } .ds-release-meta dd { margin: 0; min-width: 0; } .ds-release-meta code, .ds-release-meta time { font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 0.8125rem; word-break: break-all; }"
     },
     {
       "name": "Support Row",
       "kind": "nav",
       "refersTo": "support-row",
-      "description": "The ruled-row device at its widest: a mono kind label, the text, and an affordance that slides on hover. The same pattern as the manages list and the plain lists, at a different density.",
+      "description": "The ruled-row device at its widest: a mono kind label, the text, and an affordance that slides on hover. The same pattern as the manages list, the feature list and the FAQ, at a different density.",
       "html": "<div class=\"ds-rows\"><a class=\"ds-row\" href=\"#\"><span class=\"ds-row-kind\">Hata</span><span class=\"ds-row-text\"><strong>Bir sorun mu buldunuz?</strong> Sürümünüzü, yeniden üretme adımlarını ve temizlenmiş hata çıktısını paylaşın.</span><span class=\"ds-row-go\" aria-hidden=\"true\">→</span></a><a class=\"ds-row\" href=\"#\"><span class=\"ds-row-kind\">Öneri</span><span class=\"ds-row-text\"><strong>Paneli nasıl iyileştirebiliriz?</strong> İhtiyacınızı ve beklediğiniz davranışı kısa ve net anlatın.</span><span class=\"ds-row-go\" aria-hidden=\"true\">→</span></a></div>",
-      "css": ".ds-rows { border-top: 1px solid var(--rule-strong, #8e978c); font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); } .ds-row { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) auto; align-items: center; gap: 1.25rem; padding: 1.1rem 0; border-bottom: 1px solid var(--rule, #b7bfb5); text-decoration: none; color: var(--ink, #10160f); } .ds-row:hover { background: var(--paper-2, #e3e8e1); } .ds-row:focus-visible { outline: 2px solid var(--ink, #10160f); outline-offset: 3px; } .ds-row-kind { font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3, #5a655a); font-weight: 700; } .ds-row-text { font-size: 0.9375rem; color: var(--ink-2, #3a423a); } .ds-row-text strong { color: var(--ink, #10160f); display: block; font-size: 1.0625rem; margin-bottom: 0.15rem; } .ds-row-go { font-size: 1.25rem; color: var(--ink-3, #5a655a); transition: transform 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)); } .ds-row:hover .ds-row-go { transform: translateX(4px); color: var(--ink, #10160f); }"
+      "css": ".ds-rows { border-top: 1px solid var(--rule-strong, #7d8ea9); font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); } .ds-row { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) auto; align-items: center; gap: 1.25rem; padding: 1.1rem 0; border-bottom: 1px solid var(--rule, #b4c2d8); text-decoration: none; color: var(--ink, #0e1f3d); } .ds-row:hover { background: var(--paper-2, #e9eff8); } .ds-row:focus-visible { outline: 2px solid var(--ink, #0e1f3d); outline-offset: 3px; } .ds-row-kind { font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3, #55668a); font-weight: 700; } .ds-row-text { font-size: 0.9375rem; color: var(--ink-2, #2f4269); } .ds-row-text strong { color: var(--ink, #0e1f3d); display: block; font-size: 1.0625rem; margin-bottom: 0.15rem; } .ds-row-go { font-size: 1.25rem; color: var(--ink-3, #55668a); transition: transform 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)); } .ds-row:hover .ds-row-go { transform: translateX(4px); color: var(--ink, #0e1f3d); }"
+    },
+    {
+      "name": "Usage Meter",
+      "kind": "custom",
+      "refersTo": "usage-bar-fill",
+      "description": "The canonical demonstration of The No-Adjacency Rule: a meter is navy until it is a problem, then red. There is no yellow band, and the 75-90 range is reported by the number beside the bar.",
+      "html": "<div class=\"ds-meters\"><div class=\"ds-meter-row\"><div class=\"ds-meter\"><div class=\"ds-meter-fill\" style=\"width: 82%\"></div></div><span class=\"ds-meter-num\">32.8 GB / 40 GB</span></div><div class=\"ds-meter-row\"><div class=\"ds-meter\"><div class=\"ds-meter-fill ds-alarm\" style=\"width: 96%\"></div></div><span class=\"ds-meter-num\">38.4 GB / 40 GB</span></div></div>",
+      "css": ".ds-meters { display: grid; gap: 0.75rem; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); } .ds-meter-row { display: flex; align-items: center; gap: 0.75rem; } .ds-meter { height: 0.5rem; flex: 1; overflow: hidden; border-radius: 0.25rem; background: var(--paper-2, #edf2f9); } .ds-meter-fill { height: 100%; border-radius: 0.25rem; background: var(--ink-3, #4f5e7c); transition: width 160ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)); } .ds-meter-fill.ds-alarm { background: var(--red-ink, #b3261e); } .ds-meter-num { font-family: var(--font-mono, 'Overpass Mono', Consolas, monospace); font-variant-numeric: tabular-nums; font-size: 0.75rem; white-space: nowrap; color: var(--ink-2, #2f4269); }"
+    },
+    {
+      "name": "Audit Field",
+      "kind": "card",
+      "refersTo": "audit-field-fail",
+      "description": "One row per security check. Only a failure gets a coloured field; pass and warning share the neutral field and speak through icon and words, so a red field never abuts a yellow one.",
+      "html": "<ul class=\"ds-audit\"><li class=\"ds-audit-row ds-pass\"><span class=\"ds-audit-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/></svg></span><span class=\"ds-audit-text\">Güvenlik duvarı varsayılan olarak kapalı</span></li><li class=\"ds-audit-row ds-warn\"><span class=\"ds-audit-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg></span><span class=\"ds-audit-text\">İzin verilen portta dinleyici yok</span></li><li class=\"ds-audit-row ds-fail\"><span class=\"ds-audit-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m15 9-6 6\"/><path d=\"m9 9 6 6\"/></svg></span><span class=\"ds-audit-text\">SSH parola girişi açık</span></li></ul>",
+      "css": ".ds-audit { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); } .ds-audit-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem; border-radius: 0.375rem; border: 1px solid var(--rule-strong, #7d8ea9); background: var(--paper-2, #edf2f9); color: var(--ink, #0e1f3d); font-size: 0.9375rem; } .ds-audit-icon svg { width: 1.25rem; height: 1.25rem; display: block; } .ds-audit-row.ds-pass .ds-audit-icon { color: var(--green-ink, #1c7a45); } .ds-audit-row.ds-warn .ds-audit-icon { color: var(--amber-ink, #8a6100); } .ds-audit-row.ds-fail { border-color: rgba(179,38,30,0.3); background: rgba(179,38,30,0.1); color: var(--red-ink, #b3261e); } .ds-audit-row.ds-fail .ds-audit-icon { color: var(--red-ink, #b3261e); }"
+    },
+    {
+      "name": "Attention List",
+      "kind": "custom",
+      "refersTo": "attention-row-failure",
+      "description": "The dashboard's problem list. Failures sort above warnings, severity lives in the icon colour only, and the list breaks with a 2px rule at the single index where the severity changes.",
+      "html": "<ul class=\"ds-attention\"><li class=\"ds-att-row ds-fail\"><span class=\"ds-att-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m15 9-6 6\"/><path d=\"m9 9 6 6\"/></svg></span><span class=\"ds-att-text\">Güvenlik duvarı kapalı</span><button class=\"ds-att-act\" type=\"button\">Aç</button></li><li class=\"ds-att-row ds-warn ds-break\"><span class=\"ds-att-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg></span><span class=\"ds-att-text\">Sertifika 12 gün sonra doluyor</span><button class=\"ds-att-link\" type=\"button\">Görüntüle →</button></li></ul>",
+      "css": ".ds-attention { list-style: none; margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--rule-strong, #7d8ea9); border-radius: 0.375rem; background: var(--paper, #ffffff); font-family: var(--font-sans, 'Overpass', 'Segoe UI', Arial, sans-serif); } .ds-att-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--rule, #ccd6e6); } .ds-att-row:last-child { border-bottom: 0; } .ds-att-row.ds-break { margin-top: 0.5rem; border-top: 2px solid var(--rule-strong, #7d8ea9); } .ds-att-icon svg { width: 1rem; height: 1rem; display: block; } .ds-att-row.ds-fail .ds-att-icon { color: var(--red-ink, #b3261e); } .ds-att-row.ds-warn .ds-att-icon { color: var(--amber-ink, #8a6100); } .ds-att-text { flex: 1 1 auto; min-width: 0; font-size: 0.875rem; color: var(--ink, #0e1f3d); } .ds-att-act { appearance: none; cursor: pointer; border: 0; border-radius: 0.375rem; background: var(--lever, #123a72); color: var(--lever-fg, #ffffff); padding: 0.375rem 0.75rem; font: inherit; font-size: 0.75rem; font-weight: 600; } .ds-att-act:hover { background: var(--lever-hover, #0d2c58); } .ds-att-link { appearance: none; cursor: pointer; border: 0; background: transparent; color: var(--lever, #123a72); font: inherit; font-size: 0.875rem; font-weight: 500; } .ds-att-link:hover { text-decoration: underline; } .ds-att-row :focus-visible { outline: 2px solid var(--ink, #0e1f3d); outline-offset: 3px; }"
     }
   ],
   "narrative": {
     "northStar": "The Signal Box",
-    "overview": "A railway signal box exists to refuse an unsafe combination. Ask the frame for a route and it physically locks every route that conflicts; you cannot pull the wrong lever. That is not a mood borrowed for atmosphere — it is what this product does. Preview and commit are route setting, the mutation policy is an interlocking table, and a refusal that names the blocker is the product's most convincing moment. The visual world is therefore the signal box's own materials: grey-green printed rulebook stock, dark green-black ink, hairline rules doing the work cards would do, and exactly one dark illuminated object per view where the machine speaks in lamps.\n\nThe register is serious, measured and slightly institutional — a working timetable, not a brochure. Density is moderate: generous type on a calm ground, information carried by ruled rows and real tables rather than by boxes and icons. Nothing is decorative that is not also load-bearing. The one authored moment on the page is the route board setting its routes on load; everything else is still.\n\nStructure is deliberately conventional and expression is subordinate to it: top navigation reading left to right, one primary action where a primary action always is, sections in the order a buyer expects, no interaction anyone has to discover. The world lives in the materials and in the demonstration, never in the wayfinding.\n\nConfirmed anti-references: the gradient hero with three icon cards; the black-on-white monospace \"no nonsense\" page; brushed metal, industrial plate and rivets (the literal reading of \"çelik\"); and the discarded violet/Open Sans card-grid identity this system replaced.\n\nAdoption status: this system is implemented in download-portal/ (celikpanel.net) and that is currently its only built surface. The panel application under web/ (React + Tailwind, tokens in web/src/index.css) has not been migrated and still carries the previous slate-and-blue look. Findings against web/ are migration debt, not this system.",
+    "overview": "A railway signal box exists to refuse an unsafe combination. Ask the frame for a route and it physically locks every route that conflicts; you cannot pull the wrong lever. That is not a mood borrowed for atmosphere — it is what this product does. Preview and commit are route setting, the mutation policy is an interlocking table, and a refusal that names the blocker is the product's most convincing moment. The visual world is therefore the signal box's own materials: white paper, navy ink, hairline navy rules doing the work cards would do, and exactly one dark navy object per view where the machine speaks in lamps.\n\nNavy and white carry everything. The signal colours — yellow, green, red — are held in reserve for state, and yellow is never set beside red, because two alarm colours arguing at one edge is how a reader stops trusting either. The register is serious, measured and slightly institutional: a working timetable, not a brochure. Density is moderate — generous type on a calm ground, information carried by ruled rows and real tables rather than by boxes and icons. Nothing is decorative that is not also load-bearing. The one authored moment on the page is the route board setting its routes on load; everything else is still.\n\nStructure is deliberately conventional and expression is subordinate to it: top navigation reading left to right, one primary action where a primary action always is, sections in the order a buyer expects, no interaction anyone has to discover. The world lives in the materials and in the demonstration, never in the wayfinding.\n\nConfirmed anti-references: the gradient hero with three icon cards; the black-on-white monospace \"no nonsense\" page; brushed metal, industrial plate and rivets (the literal reading of \"çelik\"); the discarded violet/Open Sans card-grid identity; and the grey-green rulebook palette (#eef1ec paper over #0b1f17 board) — rejected outright by the product owner, who set navy and white as dominant, yellow in some places, a little green and a little red, and yellow never beside red.",
     "keyCharacteristics": [
-      "Grey-green rulebook paper and green-black ink; no pure white, no pure black.",
-      "Signal red / amber / green reserved for state, on lamps, marks and status text only.",
-      "One dark illuminated object per view (route board, command card, closing band).",
+      "Navy and white dominant: white grounds, navy ink, navy hairlines, navy primary action.",
+      "One deep navy board per view (route board, interlocking table, command card, closing band, the panel's rail).",
+      "Signal yellow / green / red reserved for state — and yellow never shares an edge with red.",
+      "Two yellows: a dark amber for text, a true yellow for marks. Never interchanged.",
       "Hairline rules and real tables instead of cards, boxes and icon grids.",
       "Overpass and Overpass Mono, self-hosted; mono for anything measured.",
       "Flat by default: exactly one shadow, and only under the dark objects.",
       "One authored motion — the routes setting — and it has an end state for reduced motion."
     ],
     "rules": [
-      { "name": "The Signal Reserve Rule", "body": "Red, amber and green mean stopped, waiting and clear. They are never a category colour, never a brand accent, never a button fill, never decoration. If a colour on a surface is not reporting the state of something real, it is not a signal colour.", "section": "colors" },
-      { "name": "The Ink-On-Paper Rule", "body": "The bright lamps (--lamp-*) exist only on --board grounds. Any signal shown on paper uses the -ink variant, which clears 4.5:1 against --paper and --paper-lit. A lamp colour on paper is a bug.", "section": "colors" },
-      { "name": "The Never-Colour-Alone Rule", "body": "A signal colour is always accompanied by a word or an accessible name — 'kilitli / locked', 'açık / clear', the refusal sentence. Hue is a second channel, never the only one.", "section": "colors" },
-      { "name": "The One Dark Object Rule", "body": "A dark surface belongs to the machine: the route board, a command the visitor will paste, the closing band. Two dark objects competing in one viewport is a composition error; a dark object used as ornament is a world error.", "section": "colors" },
-      { "name": "The No Kicker Rule", "body": "Nothing sits above a heading. No eyebrow, no kicker, no small uppercase category line stacked over an h1 or h2. Labels are columns in a table, terms in a definition list, or inline beside a row — never a hat.", "section": "typography" },
-      { "name": "The Mono Means Measured Rule", "body": "Overpass Mono marks what a machine produced or owns: numbers, hashes, versions, commands, state words, step numerals, timestamps. Prose is never mono. A number a human wrote as an estimate is not set in mono, because it is not a measurement.", "section": "typography" },
-      { "name": "The Middle Dot Rule", "body": "U+00B7 renders flush against its right neighbour in Overpass (bad right side bearing). Use it only in Overpass Mono, where it is correctly spaced. In the sans face, separate with a comma or a bracket.", "section": "typography" },
-      { "name": "The Paired String Rule", "body": "The site is authored in Turkish and switched in place: every visible string has an entry in the English map in site.js, and translation happens on bound text nodes, not by swapping markup. A new string without its pair is an unfinished string. Dynamic text the release reader owns is explicitly excluded from the map and gets its words from the manifest or from uiText.", "section": "typography" },
-      { "name": "The Ruled List Rule", "body": "Grouped content is a ruled list, a definition list or a table. Not cards. A hairline top border, one hairline between rows, and the type does the rest. If a layout needs a box to be legible, the hierarchy is wrong.", "section": "layout" },
-      { "name": "The Scrollable Table Rule", "body": "A table wider than its column stays a table. It goes inside .table-scroll: focusable (tabindex=\"0\"), named (role=\"region\" with aria-labelledby), painted with left/right scroll shadows, and — below 640px — announced by a visible sentence, 'Tablo yana kayar.' / 'The table scrolls sideways.' The first column is sticky, and the table uses border-collapse: separate because sticky cells bleed through collapsed borders. A .is-scrolled class, set from the region's scrollLeft, adds a drop shadow to the pinned column so the reader can see they have moved.", "section": "layout" },
-      { "name": "The One Shadow Rule", "body": "Surfaces are flat. The only shadow is the board seat, and only a --board object may cast it. Paper panels (the release panel, table regions) get a --rule-strong border instead — never a shadow, never both.", "section": "elevation" },
-      { "name": "The One Authored Moment Rule", "body": "The page has exactly one animation, and it is the route board setting its routes on load. All four keyframes live inside @media (prefers-reduced-motion: no-preference); with reduced motion the board renders its end state immediately, fully readable. Any future motion must pass the same test: it must have an end state that is the whole message.", "section": "components" }
+      {
+        "name": "The No-Adjacency Rule",
+        "body": "Yellow and red never share an edge. Not in a meter, not in a legend, not in two rows of the same list, not in adjacent chips. Where both severities exist in one place the surface must either separate them (a rule, a gap, a break in the list), rank them (failures first, warnings after), or drop one of the two colours entirely and say that state in words. This is enforced in three built places: UsageBar (web/src/components/ui.tsx) has no yellow band at all — a meter is --fg-subtle navy until it is a problem and --danger red past 90%, and the 75–90 range is reported by the number printed beside the bar, not by a colour; SecurityAuditCard (web/src/components/SecurityAuditCard.tsx) gives a coloured field only to a failure (border-danger/30 bg-danger/10) — pass and warning sit on the same neutral bg-surface-2 field and speak through their icon, their coloured glyph and their words, so a red field never abuts a yellow one; the dashboard attention list (web/src/components/Dashboard.tsx) sorts every danger item above every warning and, at the single index where the severity changes, breaks the list with mt-2 border-t-2 border-t-border-strong. A new surface that wants both colours adopts one of those three devices; it does not invent a fourth.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Yellows Rule",
+        "body": "The system carries two yellows and they are not interchangeable. --amber-ink (#8a6100) is the yellow for text: a dark yellow-brown that clears 4.5:1 on white. --lamp-amber / --warning-mark (#f5b301) is the yellow for marks: bars, dots, icon fills, the lamp on the board. The split exists because a true yellow cannot carry text on white at an honest ratio, and darkening the mark to fix that would stop it reading as a signal lamp. Text takes the ink; marks take the lamp; a word set on a yellow mark takes --panel-warning-fg (#140e00). After dark, where the ground is navy, --warning and --warning-mark collapse to the same #f5b301, because a lamp is drawn to be read against a dark ground and that condition is finally met.",
+        "section": "colors"
+      },
+      {
+        "name": "The Signal Reserve Rule",
+        "body": "Yellow, green and red mean attention, clear and stopped. They are never a category colour, never a brand accent, never a button fill, never decoration. If a colour on a surface is not reporting the state of something real, it is not a signal colour. The comparison table is the test case: it compares two ways of working and uses no ticks and no crosses, because a comparison is not a state — the right-hand column is lit in --paper and set in --ink behind a --rule-strong edge, and that is the whole device.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink-On-Paper Rule",
+        "body": "The bright lamps (--lamp-*) exist only on --board grounds. Any signal shown on white uses the -ink variant, which clears 4.5:1 against --paper. A lamp colour on paper is a bug, and paper ink on the board is the same bug facing the other way — which is why the board's refusal sentence uses --lamp-red-soft and not --red-ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never-Colour-Alone Rule",
+        "body": "A signal colour is always accompanied by a word or an accessible name — \"kilitli / locked\", \"açık / clear\", the refusal sentence, the audit finding's own text. Hue is a second channel, never the only one. This is also what makes The No-Adjacency Rule survivable: dropping a colour costs nothing when the word was always there.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Dark Object Rule",
+        "body": "A dark surface belongs to the machine: the route board, the interlocking table, a command the visitor will paste, the closing band, the panel's rail. Two dark objects competing in one viewport is a composition error; a dark object used as ornament is a world error. The panel's dark theme is not an exception — there the whole application is the dark ground, and the rail distinguishes itself by staying --board while the surfaces around it lift to #142c54.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Kicker Rule",
+        "body": "Nothing sits above a heading. No eyebrow, no kicker, no small uppercase category line stacked over an h1 or h2. Labels are columns in a table, terms in a definition list, or inline beside a row — never a hat.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Means Measured Rule",
+        "body": "Overpass Mono marks what a machine produced or owns: numbers, hashes, versions, commands, state words, step numerals, timestamps. Prose is never mono. A number a human wrote as an estimate is not set in mono, because it is not a measurement.",
+        "section": "typography"
+      },
+      {
+        "name": "The Number Carries The Band Rule",
+        "body": "Where a colour has been withheld to keep yellow away from red, the value must be legible as text. A meter is always accompanied by its number — \"18.4 GB / 40 GB\", \"72%\" — set in mono beside or under the bar. The bar is the glance; the number is the answer.",
+        "section": "typography"
+      },
+      {
+        "name": "The Middle Dot Rule",
+        "body": "U+00B7 renders flush against its right neighbour in Overpass (bad right side bearing). Use it only in Overpass Mono, where it is correctly spaced. In the sans face, separate with a comma or a bracket.",
+        "section": "typography"
+      },
+      {
+        "name": "The Paired String Rule",
+        "body": "The site is authored in Turkish and switched in place: every visible string has an entry in the English map in site.js, and translation happens on bound text nodes, not by swapping markup. A new string without its pair is an unfinished string. Dynamic text the release reader owns is explicitly excluded from the map and gets its words from the manifest or from uiText.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ruled List Rule",
+        "body": "Grouped content is a ruled list, a definition list or a table. Not cards. A hairline top border, one hairline between rows, and the type does the rest. If a layout needs a box to be legible, the hierarchy is wrong.",
+        "section": "layout"
+      },
+      {
+        "name": "The Scrollable Table Rule",
+        "body": "A table wider than its column stays a table. It goes inside .table-scroll: focusable (tabindex=\"0\"), named (role=\"region\" with aria-labelledby), painted with left/right scroll shadows, snapping whole columns (scroll-snap-type: x proximity), and — below 640px — announced by a visible sentence, \"Tablo yana kayar.\" / \"The table scrolls sideways.\" The first column is sticky, and the table uses border-collapse: separate because sticky cells bleed through collapsed borders. A .is-scrolled class, set from the region's scrollLeft, adds a drop shadow to the pinned column so the reader can see they have moved. A table that stops being a table below 640px (the comparison) drops the region's border and hint with it, rather than leaving an empty frame.",
+        "section": "layout"
+      },
+      {
+        "name": "The One Shadow Rule",
+        "body": "Surfaces are flat. The only shadow is the board seat, and only a --board object may cast it. Paper panels (the release panel, table regions, the panel application's cards) get a --rule-strong or --border stroke instead — never a shadow, never both.",
+        "section": "elevation"
+      },
+      {
+        "name": "The One Authored Moment Rule",
+        "body": "The page has exactly one animation, and it is on the route board: on load the routes set — lamps run off → yellow → green (lamp-set, 1.1s, staggered 220ms / 420ms), the set route draws in (route-draw, 900ms via stroke-dashoffset), the stop lamp lights at 900ms (lamp-stop), and the lock mark lands at 1250ms (lock-land, scale 1.8 → 0.92 → 1). The yellow appears only as a passing frame inside lamp-set, and never at rest beside the red lamp — the sequence obeys The No-Adjacency Rule in time as well as in space, because the stop lamp does not light until the clearing lamps have finished being yellow. All four keyframes live inside @media (prefers-reduced-motion: no-preference); with reduced motion the board renders its end state immediately, fully readable. Any future motion must pass the same test: it must have an end state that is the whole message.",
+        "section": "components"
+      }
     ],
     "dos": [
+      "Do keep navy and white dominant. Colour a thing only when the thing has a state.",
+      "Do separate, rank, or drop — the three sanctioned answers when yellow and red would meet. Separate them with a rule and a gap, rank failures above warnings, or remove one colour and say that state in words.",
+      "Do use --amber-ink (#8a6100) for yellow text and --warning-mark / --lamp-amber (#f5b301) for yellow marks, and never the other way round.",
+      "Do use the -ink signal variants (--red-ink, --amber-ink, --green-ink) for any state shown on white, and the --lamp-* variants only on --board.",
+      "Do print the number beside any meter whose colour has been withheld.",
       "Do put every measured number on paper in mono with tabular figures, beside the condition it was measured under and the date it was measured (the ledger's four columns: measure, value, condition, date).",
-      "Do reach for a ruled list, a definition list or a real table before any container — the manages list, the plain lists and the support rows are all the same device at different densities.",
-      "Do use the -ink signal variants (--red-ink #a20d26, --amber-ink #7a5a08, --green-ink #1e6f45) for any state shown on paper, and the --lamp-* variants only on --board.",
+      "Do reach for a ruled list, a definition list or a real table before any container — the manages list, the feature list, the FAQ and the support rows are all the same device at different densities.",
       "Do pair every signal colour with a word or an accessible name.",
-      "Do wrap any table that can overflow in .table-scroll — focusable, named, scroll-shadowed, sticky first column, border-collapse: separate, and the visible 'Tablo yana kayar.' / 'The table scrolls sideways.' hint below 640px.",
-      "Do self-host fonts under /assets/fonts/ with unicode-range splits and ship their licences beside them; the CSP is default-src 'none' with font-src 'self'.",
+      "Do wrap any table that can overflow in .table-scroll — focusable, named, scroll-shadowed, column-snapped, sticky first column, border-collapse: separate, and the visible \"Tablo yana kayar.\" / \"The table scrolls sideways.\" hint below 640px.",
+      "Do self-host fonts under /assets/fonts/ (site) and src/fonts/ (panel) with unicode-range splits and ship their licences beside them; the site's CSP is default-src 'none' with font-src 'self', and the panel must render fully offline.",
       "Do keep structure conventional: top nav left to right, one primary action in the ordinary place, sections in the order a buyer expects. Ease of use outranks expression.",
       "Do give every new visible string its English pair in site.js, and let the text-node walker do the switching.",
       "Do give any new motion a reduced-motion end state that carries the whole message on its own."
     ],
     "donts": [
-      "Don't use red, amber or green as a category colour, a brand accent, a button fill or decoration. They report state or they do not appear.",
+      "Don't place yellow beside red — not in a meter's bands, not in adjacent list rows, not in two chips in a row, not in a legend. This is the owner's rule and it has no exceptions.",
+      "Don't set text in --lamp-amber (#f5b301) on a white ground; it cannot clear 4.5:1. Use --amber-ink.",
+      "Don't darken --warning-mark to make it \"safe for text\" — that is what --amber-ink is for, and a darkened mark stops reading as a lamp.",
+      "Don't use yellow, green or red as a category colour, a brand accent, a button fill or decoration. They report state or they do not appear.",
       "Don't put a lamp colour on paper, or paper ink on the board.",
+      "Don't reintroduce the grey-green palette, or any green as a ground, a neutral or a page tint. Green is a lamp; navy is the world.",
+      "Don't borrow anything from the three imitation skins — their neutrals, their accents, Inter or Open Sans. They exist to look like other products and are outside this system.",
       "Don't stack a kicker, eyebrow or small uppercase category line above a heading. Labels are columns or inline terms.",
       "Don't build an icon-card grid, a feature tile wall, a fake dashboard screenshot, or a gradient hero. Those are the confirmed rut.",
       "Don't invent a metric, a logo, a testimonial or a customer count. Every number on a surface is measured and dated, or it is cut.",

@@ -43,7 +43,14 @@
       {
         "rule": "overused-font",
         "value": "inter",
-        "createdAt": "2026-09-08T05:36:13.177Z"
+        "createdAt": "2026-09-08T05:36:13.177Z",
+        "reason": "Only the Plesk/aaPanel/cPanel imitation skins use it; the product's own face is Overpass."
+      },
+      {
+        "rule": "overused-font",
+        "value": "open sans",
+        "createdAt": "2026-09-08T07:04:27.377Z",
+        "reason": "Only the cPanel imitation skin uses it; being generic is that skin's purpose. DESIGN.md declares the imitation skins outside the system."
       }
     ]
   }
