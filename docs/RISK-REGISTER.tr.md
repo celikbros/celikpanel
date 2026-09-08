@@ -109,6 +109,7 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 | R-068 | Düşük | DÜZELTİLDİ / RET HANGİSİ OLDUĞUNU SÖYLÜYOR | Agent, bir makine değişikliğinin neden başlayamadığını tam olarak biliyor - paket yöneticisi, başka bir değişiklik ya da tutulan bir kilit - ve operatöre üçünü birden kapsayan tek bir cümle söyleniyor |
 | R-069 | Orta | OPERATÖR BULDU VE DÜZELTİLDİ | Ekranın, ürünün daha iyi bildiği bir şeyi yazdığı üç yer: 38'de olan bir veritabanı için 0 şema sürümü, panelin kurduğu ve bağlı olduğu bir motorun yanında "unknown", ve sağlıklı yeni bir sunucuda üç sarı uyarı |
 | R-070 | Orta | BİR YARISI DÜZELTİLDİ / BİR YARISI BULUNDU | Sürüm kapısındaki üç test, denetlemedikleri şeyleri okuyor: makinenin hazırlık yoklaması — CI'da rastgele düşmelerinin sebebi — ve makinenin kendi DNS motoru durumu; ikincisi, CelikPanel kurulu her sunucuda birini düşürüyor |
+| R-071 | Düşük | DÜZELTİLDİ, BİR TEST HÂLÂ SABİT DEĞER TAŞIYOR | Sürüm yükseltme yedi dosyada elle yapılan bir düzenlemedir ve kaçırdığı iki pin testlerin içindeydi: sabit `current=52` ile kesilen ve sessizce geçerli dosyanın kendisine dönüşen bir fikstür ile `version=alpha.53` satırının altında kalan bir `sequence=52`; her biri sürüm PR'ında bir kırmızı CI koşumuna mal oldu |
 
 ## Ayrıntılı riskler
 
@@ -2887,6 +2888,37 @@ edilmemeli veya çalıştırılmamalıdır. Bu referansta açık pull request yo
 - İki yarının aynı kayıtta olmasının sebebi: bunlar aynı hatanın iki
   derinlikteki hâli. Sürümü kapıya alan bir test, yalnızca kendi kurduğuna
   bağlı olmalıdır; bu üçü altlarındaki makineye iki kez bağlı.
+- Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
+
+### R-071 - Sürüm yükseltmenin bilmediği pinler
+
+- Kanıt: 7 Eylül 2026, PR #115, alpha.53 pin yükseltmesi. Yükseltme, her
+  değişikliği doğrulayan bir betikle yedi izlenen dosyayı düzenledi ve her
+  doğrulama tuttu. CI yine de iki kez kırmızıya döndü; betiğin varlığını
+  bilmediği her pin için bir kez.
+- İlk kırmızı: `deploy/test-release-sequence-policy.sh` üç reddedilecek
+  fikstürünü `sed 's/^current=52$/.../'` ile kesiyordu. Yükseltmeden sonra bu
+  desen hiçbir satırla eşleşmedi; "noncanonical" fikstürü geçerli politikayla
+  bayt bayt aynı oldu ve sözleşme `unexpectedly accepted` dedi. Bozmak istediği
+  satırı bulamayan bir olumsuz test, karşı örnek diye kendi dosyasını geçirir.
+- İkinci kırmızı: `deploy/test-signed-release-manifest-contract.sh` test
+  ettiği sürümü art arda iki satırla tanımlar: `version=` ve `sequence=`.
+  Yükseltme ilkini taşıdı, ikincisini değil; test alpha.53 için 52 sırasında
+  bir bildirim imzaladı ve sonra kendi önyükleme-pin karşılaştırmasında düştü.
+- **Ne düzeltildi, ne kadarı.** Politika testi fikstürlerini artık
+  `$policy_current` ve `$policy_previous`'tan, yani izlenen dosyadan zaten
+  okuduğu değerlerden kesiyor; gelecekteki hiçbir yükseltme onları boşa
+  eşleştiremez. İmzalı bildirim testinin `sequence` değeri düzeltildi ve iki
+  hata mesajı "Alpha52" adını anmayı bıraktı; **sürüm ve sıra sabitleri
+  yerinde duruyor**, 682-685. satırlardaki önyükleme-pin sabitleri de öyle. Bir
+  sonraki yükseltme onları yeniden düzenlemek zorunda. Bu bilinen bir el adımı;
+  sürpriz olmasın diye burada.
+- Neden Düşük ve yine de kayda değer: müşteriye hiçbir şey ulaşmadı,
+  sözleşmeler kırmızıya dönerek işlerini yaptı ve sürüm PR'ı ancak ikisi de
+  yeşilken birleşti. Bedeli zaman ve iki yanıltıcı hata mesajıydı. Kalıcı ders,
+  R-070'in öteki yandan taşıdığı dersin aynısı: sürümü kapıya alan bir test
+  kendi kurduğuna bağlı olmalı; her sürümde elle düzenlenmesi gereken bir pin,
+  testin yeniden söylemesi değil okuması gereken bir fikstürdür.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.
 
 ## Kabul kuralı
