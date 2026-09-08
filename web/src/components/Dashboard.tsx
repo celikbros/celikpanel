@@ -804,7 +804,7 @@ function AdminDashboard() {
                     />
                     <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                         <ul>
-                            {attention.map((a) => (
+                            {[...attention].sort((x, y) => Number(Boolean(y.danger)) - Number(Boolean(x.danger))).map((a) => (
                                     <li key={a.key} className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0">
                                         <a.icon className={`h-4 w-4 shrink-0 ${a.danger ? 'text-danger' : 'text-warning'}`} />
                                         <span className="min-w-0 flex-1 text-sm text-fg">{a.text}</span>
