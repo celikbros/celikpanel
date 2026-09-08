@@ -686,7 +686,7 @@ function AdminDashboard() {
                     söyler ve kontrolün kendisini taşır. Nötr, uyarı renginde
                     değil — henüz bakılmamış makine olağan ilk durumdur. */}
                 {hostNeverChecked ? (
-                    <section role="status" className="rounded-xl border border-border bg-surface p-5 text-left shadow-card">
+                    <section role="status" className="rounded-xl border border-border bg-surface p-5 text-left">
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-fg-muted">{t('dashboard.systemServices')}</span>
                             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -708,7 +708,7 @@ function AdminDashboard() {
                 ) : (
                 <button
                     onClick={() => navigate('/services')}
-                    className="rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
+                    className="rounded-xl border border-border bg-surface p-5 text-left transition-colors hover:bg-surface-2/60"
                 >
                     <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-fg-muted">{t('dashboard.systemServices')}</span>
@@ -802,7 +802,7 @@ function AdminDashboard() {
                             ) : undefined
                         }
                     />
-                    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                    <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                         <ul>
                             {attention.map((a) => (
                                     <li key={a.key} className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0">
@@ -848,7 +848,7 @@ function AdminDashboard() {
                             </span>
                         }
                     />
-                    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                    <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                         <ul>
                             {steps.map((s, i) => (
                                 <li
@@ -951,7 +951,7 @@ function AdminDashboard() {
                         {recentDomains.length > 0 && (
                             <>
                                 <h3 className="mb-2 mt-4 text-sm font-semibold text-fg-muted">{t('dashboard.recentDomains')}</h3>
-                                <ul className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                                <ul className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                                     {recentDomains.map((d) => (
                                         <li key={d.id} className="border-b border-border last:border-0">
                                             <button
@@ -990,7 +990,7 @@ function AdminDashboard() {
                         {recentActivity.length === 0 ? (
                             <Card><p className="p-4 text-sm text-fg-subtle">—</p></Card>
                         ) : (
-                            <ul className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                            <ul className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                                 {recentActivity.map((e) => (
                                     <li key={e.id} className="flex flex-wrap items-center gap-2.5 border-b border-border px-4 py-2.5 last:border-0">
                                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-semibold uppercase text-fg-muted">
@@ -1206,7 +1206,7 @@ function MailStackSummary({ profiles, scanFresh, hostNeverChecked, checking, onC
 
     return (
         <section className='mt-6' aria-labelledby='dashboard-mail-stacks-heading'>
-            <div className='rounded-xl border border-border bg-surface p-4 shadow-card sm:p-5'>
+            <div className='rounded-xl border border-border bg-surface p-4 sm:p-5'>
                 <div className='flex flex-col gap-4 lg:flex-row lg:items-center'>
                     <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning'>
                         <Layers className='h-5 w-5' />
@@ -1284,7 +1284,7 @@ function AdditionalUserDashboard() {
                 subtitle={t('nav.domains')}
             />
 
-            <section className={'max-w-4xl rounded-xl border border-border bg-surface p-6 shadow-card'}>
+            <section className={'max-w-4xl rounded-xl border border-border bg-surface p-6'}>
                 <div className={'flex items-center justify-between gap-4'}>
                     <div className={'flex items-center gap-3'}>
                         <span className={'rounded-lg bg-primary/10 p-2 text-primary'}>
@@ -1432,7 +1432,7 @@ function GaugeCard({
     hint: string;
 }) {
     return (
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="rounded-xl border border-border bg-surface p-5">
             <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-fg-muted">{label}</span>
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -1453,7 +1453,7 @@ function CountCard({ icon: Icon, n, label, to }: { icon: typeof Cpu; n: number; 
     return (
         <button
             onClick={() => navigate(to)}
-            className="rounded-xl border border-border bg-surface p-4 text-left shadow-card transition-colors hover:border-primary/40 hover:bg-surface-2/60"
+            className="rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-primary/40 hover:bg-surface-2/60"
         >
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Icon className="h-4 w-4" />
@@ -1479,7 +1479,7 @@ function QuickAction({ icon: Icon, labelKey, to }: { icon: typeof Server; labelK
     return (
         <button
             onClick={() => navigate(to)}
-            className="group flex items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition-colors hover:border-primary/40 hover:bg-surface-2"
+            className="group flex items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-primary/40 hover:bg-surface-2"
         >
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-2 text-fg-muted transition-colors group-hover:bg-primary group-hover:text-primary-fg">
                 <Icon className="h-5 w-5" />

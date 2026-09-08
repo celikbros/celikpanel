@@ -220,7 +220,7 @@ function SettingsSectionTabs({
     return (
         <nav
             aria-label={label}
-            className="flex gap-2 overflow-x-auto rounded-xl border border-border bg-surface p-2 shadow-card lg:sticky lg:top-6 lg:flex-col lg:overflow-visible"
+            className="flex gap-2 overflow-x-auto rounded-xl border border-border bg-surface p-2 lg:sticky lg:top-6 lg:flex-col lg:overflow-visible"
             role="tablist"
         >
             {sections.map((section, index) => {
@@ -730,7 +730,7 @@ function TwoFactorPanel() {
     };
 
     return (
-        <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+        <section className="rounded-xl border border-border bg-surface p-5">
             <div className="mb-1 flex items-center gap-2">
                 {enabled ? <ShieldCheck className="h-5 w-5 text-success" /> : <ShieldOff className="h-5 w-5 text-fg-subtle" />}
                 <h2 className="text-base font-semibold text-fg">{t('settings.2fa.title')}</h2>

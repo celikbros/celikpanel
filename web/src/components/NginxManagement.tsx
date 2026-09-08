@@ -87,7 +87,7 @@ export function NginxManagement({ onBack }: NginxManagementProps) {
                 (rate.length === 0 ? (
                     <EmptyState icon={Gauge} title={t('nginx.emptyRateLimits')} />
                 ) : (
-                    <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
+                    <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
@@ -130,7 +130,7 @@ function Tab({ active, onClick, icon: Icon, label }: { active: boolean; onClick:
 
 function Panel({ children, note }: { children: React.ReactNode; note: string }) {
     return (
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="rounded-xl border border-border bg-surface p-5">
             <dl className="divide-y divide-border text-sm">{children}</dl>
             <p className="mt-4 text-xs text-fg-subtle">{note}</p>
         </div>

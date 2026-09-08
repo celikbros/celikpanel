@@ -267,7 +267,7 @@ export function PanelUpdateCard() {
             ? t('panelUpdate.available')
             : t('services.mutationReadiness.title');
     return (
-        <section className="rounded-xl border border-border bg-surface p-5 shadow-card" aria-labelledby="panel-update-title">
+        <section className="rounded-xl border border-border bg-surface p-5" aria-labelledby="panel-update-title">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">

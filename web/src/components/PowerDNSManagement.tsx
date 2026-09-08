@@ -78,7 +78,7 @@ export function PowerDNSManagement({ onBack }: PowerDNSManagementProps) {
         <ServiceShell serviceId="pdns" name="PowerDNS" icon={Network} onBack={onBack}>
             {/* The honest answer to 'where are the settings?' / 'Ayarlar
                 nerede?' sorusunun dürüst cevabı */}
-            <section className="mb-5 rounded-xl border border-border bg-surface p-5 shadow-card">
+            <section className="mb-5 rounded-xl border border-border bg-surface p-5">
                 <div className="flex flex-wrap items-start gap-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <Info className="h-5 w-5" />
@@ -95,7 +95,7 @@ export function PowerDNSManagement({ onBack }: PowerDNSManagementProps) {
 
             {/* Actual configuration, read-only / Gerçek yapılandırma, salt-okur */}
             {configFiles.length > 0 && (
-                <section className="mb-5 overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                <section className="mb-5 overflow-hidden rounded-xl border border-border-strong bg-surface">
                     {configFiles.map((path) => (
                         <div key={path} className="border-b border-border last:border-0">
                             <button
@@ -126,7 +126,7 @@ export function PowerDNSManagement({ onBack }: PowerDNSManagementProps) {
 
             {/* Maintenance / Bakım */}
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-                <div className="rounded-xl border border-border bg-surface p-6 shadow-card lg:col-span-2">
+                <div className="rounded-xl border border-border bg-surface p-6 lg:col-span-2">
                     <div className="mb-3 flex items-center gap-2">
                         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <Wrench className="h-5 w-5" />
@@ -144,7 +144,7 @@ export function PowerDNSManagement({ onBack }: PowerDNSManagementProps) {
                     </button>
                 </div>
 
-                <div className="rounded-xl border border-border bg-surface p-6 shadow-card">
+                <div className="rounded-xl border border-border bg-surface p-6">
                     <h4 className="mb-4 text-sm font-semibold text-fg">{t('pdns.repairSteps')}</h4>
                     <ul className="space-y-3">
                         {steps.map((step) => (

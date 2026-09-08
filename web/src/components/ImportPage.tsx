@@ -124,7 +124,7 @@ export function ImportPage() {
             <Stepper stage={stage} />
 
             {stage === 'source' && (
-                <div className="mx-auto max-w-2xl rounded-xl border border-border bg-surface p-6 shadow-card">
+                <div className="mx-auto max-w-2xl rounded-xl border border-border bg-surface p-6">
                     <label className="block">
                         <span className="mb-1.5 block text-sm font-medium text-fg-muted">{t('import.pathLabel')}</span>
                         <input
@@ -148,7 +148,7 @@ export function ImportPage() {
             {stage === 'preview' && preview && (
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px]">
                     {/* Preview */}
-                    <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                    <div className="rounded-xl border border-border bg-surface p-5">
                         <h3 className="mb-4 text-base font-semibold text-fg">{t('import.previewOf')}</h3>
                         <dl className="space-y-2.5 text-sm">
                             <Row label={t('import.account')} value={preview.username || '—'} />
@@ -162,7 +162,7 @@ export function ImportPage() {
                     </div>
 
                     {/* Target + options */}
-                    <div className="space-y-4 rounded-xl border border-border bg-surface p-5 shadow-card">
+                    <div className="space-y-4 rounded-xl border border-border bg-surface p-5">
                         <h3 className="text-base font-semibold text-fg">{t('import.targetTitle')}</h3>
 
                         <label className="block">
@@ -212,7 +212,7 @@ export function ImportPage() {
             )}
 
             {stage === 'result' && (
-                <div className="mx-auto max-w-2xl rounded-xl border border-border bg-surface p-6 shadow-card">
+                <div className="mx-auto max-w-2xl rounded-xl border border-border bg-surface p-6">
                     <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-fg">
                         <DownloadCloud className="h-4 w-4 text-primary" />
                         {t('import.resultTitle')}

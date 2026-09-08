@@ -39,7 +39,7 @@ export class RootErrorBoundary extends Component<
     return (
       <main className="flex min-h-screen items-center justify-center bg-surface-2 px-6 py-12 text-fg">
         <section
-          className="w-full max-w-lg rounded-2xl border border-border bg-surface p-8 text-center shadow-card"
+          className="w-full max-w-lg rounded-2xl border border-border bg-surface p-8 text-center"
           role="alert"
           aria-live="assertive"
         >

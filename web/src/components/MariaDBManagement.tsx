@@ -63,7 +63,7 @@ export function MariaDBManagement({ onBack }: MariaDBManagementProps) {
                         </div>
                     )}
 
-                    <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                    <div className="rounded-xl border border-border bg-surface p-5">
                         {selected ? (
                             <MariaDBSettings key={selected} configPath={selected} />
                         ) : (
@@ -72,7 +72,7 @@ export function MariaDBManagement({ onBack }: MariaDBManagementProps) {
                     </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-surface p-6 shadow-card">
+                <div className="rounded-xl border border-border bg-surface p-6">
                     <div className="mb-4 flex items-center gap-2">
                         <Lightbulb className="h-5 w-5 text-warning" />
                         <h4 className="text-sm font-semibold text-fg">{t('mariadb.tips')}</h4>

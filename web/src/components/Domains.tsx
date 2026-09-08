@@ -226,7 +226,7 @@ export function Domains() {
                     )}
                 />
             ) : (
-                <div className="rounded-xl border border-border bg-surface shadow-card">
+                <div className="rounded-xl border border-border-strong bg-surface">
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3">
                         {!isTeamMember && <div className="flex items-center gap-2">
                             <span title={dnsMissing ? t('domains.add.needsDns') : undefined}>
@@ -477,7 +477,7 @@ function SubscriptionUsage() {
                 const unlimited = u.disk_limit_bytes <= 0;
                 const pct = unlimited ? 0 : Math.min(100, (u.disk_used_bytes / u.disk_limit_bytes) * 100);
                 return (
-                    <div key={s.id} className="rounded-xl border border-border bg-surface p-4 shadow-card">
+                    <div key={s.id} className="rounded-xl border border-border bg-surface p-4">
                         <div className="mb-2 flex items-center gap-2">
                             <HardDrive className="h-4 w-4 text-primary" />
                             <span className="truncate text-base font-semibold text-fg">{s.name}</span>

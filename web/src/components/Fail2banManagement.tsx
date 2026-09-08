@@ -120,7 +120,7 @@ export function Fail2banManagement({ onBack }: Fail2banManagementProps) {
                 ))}
 
             {tab === 'config' && config && (
-                <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                <div className="rounded-xl border border-border bg-surface p-5">
                     <dl className="divide-y divide-border text-sm">
                         <Row label={t('f2b.banTime')} value={config.ban_time || '—'} />
                         <Row label={t('f2b.findTime')} value={config.find_time || '—'} />
@@ -151,7 +151,7 @@ function Tab({ active, onClick, icon: Icon, label, count }: { active: boolean; o
 
 function TableWrap({ cols, children }: { cols: string[]; children: React.ReactNode }) {
     return (
-        <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
+        <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
             <table className="w-full text-sm">
                 <thead>
                     <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">

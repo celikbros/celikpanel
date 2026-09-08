@@ -73,7 +73,7 @@ export function PostfixManagement({ onBack }: PostfixManagementProps) {
             </div>
 
             {activeTab === 'logs' ? (
-                <div className="rounded-xl border border-border bg-surface p-10 text-center text-fg-subtle shadow-card">
+                <div className="rounded-xl border border-border bg-surface p-10 text-center text-fg-subtle">
                     <Activity className="mx-auto mb-3 h-10 w-10 opacity-40" />
                     <p>{t('postfix.logsSoon')}</p>
                 </div>
@@ -101,12 +101,12 @@ export function PostfixManagement({ onBack }: PostfixManagementProps) {
                     </div>
 
                     {queue.length === 0 ? (
-                        <div className="rounded-xl border border-border bg-surface p-12 text-center shadow-card">
+                        <div className="rounded-xl border border-border bg-surface p-12 text-center">
                             <Mail className="mx-auto mb-3 h-10 w-10 text-fg-subtle" />
                             <p className="text-fg-muted">{t('postfix.empty')}</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
+                        <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
@@ -170,7 +170,7 @@ function Stat({ labelKey, value, accent, danger }: { labelKey: TranslationKey; v
     const { t } = useI18n();
     const color = danger ? 'text-danger' : accent ? 'text-warning' : 'text-fg';
     return (
-        <div className="rounded-xl border border-border bg-surface p-4 shadow-card">
+        <div className="rounded-xl border border-border bg-surface p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-fg-subtle">{t(labelKey)}</p>
             <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
         </div>

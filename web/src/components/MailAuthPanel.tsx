@@ -217,7 +217,7 @@ function RecordCard({
     const showValue = record.recommended !== '';
 
     return (
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="rounded-xl border border-border bg-surface p-5">
             <div className="mb-3 flex flex-wrap items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Icon className="h-5 w-5" />

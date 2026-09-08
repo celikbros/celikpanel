@@ -148,7 +148,7 @@ export function SystemSQLiteManager() {
         }
     };
 
-    if (loading) return <div className={'rounded-xl border border-border bg-surface py-16 text-center text-sm text-fg-muted shadow-card'} role="status" aria-live="polite">{t('systemDb.loading')}</div>;
+    if (loading) return <div className={'rounded-xl border border-border bg-surface py-16 text-center text-sm text-fg-muted'} role="status" aria-live="polite">{t('systemDb.loading')}</div>;
 
     return (
         <div className={'space-y-4'}>

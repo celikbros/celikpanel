@@ -900,7 +900,7 @@ export function DNSEngineCard({
 
     return (
         <>
-            <section className="mb-4 rounded-xl border border-border bg-surface p-4 shadow-card sm:p-6">
+            <section className="mb-4 rounded-xl border border-border bg-surface p-4 sm:p-6">
                 <div className="flex flex-wrap items-start gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <ArrowRightLeft className="h-5 w-5" />

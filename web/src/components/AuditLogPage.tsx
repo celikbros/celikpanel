@@ -55,7 +55,7 @@ export function AuditLogPage() {
             ) : entries.length === 0 ? (
                 <EmptyState icon={ScrollText} title={t('audit.empty')} />
             ) : (
-                <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
+                <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">

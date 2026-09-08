@@ -103,7 +103,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                 {pendingToken ? (
                     <form
                         onSubmit={handleTotp}
-                        className="space-y-4 rounded-2xl border border-border bg-surface p-6 shadow-card"
+                        className="space-y-4 rounded-2xl border border-border bg-surface p-6"
                     >
                         <div>
                             <label htmlFor="totp" className="mb-1.5 block text-sm font-medium text-fg-muted">
@@ -141,7 +141,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                 ) : (
                 <form
                     onSubmit={handleSubmit}
-                    className="space-y-4 rounded-2xl border border-border bg-surface p-6 shadow-card"
+                    className="space-y-4 rounded-2xl border border-border bg-surface p-6"
                 >
                     <div>
                         <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-fg-muted">

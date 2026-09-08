@@ -53,7 +53,7 @@ export function DovecotManagement({ onBack, onSelectConfig }: DovecotManagementP
 
 function StatCard({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
     return (
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="rounded-xl border border-border bg-surface p-5">
             <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-fg-muted">{label}</span>
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">

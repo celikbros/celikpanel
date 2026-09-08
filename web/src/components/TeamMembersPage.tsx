@@ -351,7 +351,7 @@ function MemberTable({
 }) {
     const { t } = useI18n();
     return (
-        <div className='overflow-x-auto rounded-xl border border-border bg-surface shadow-card'>
+        <div className='overflow-x-auto rounded-xl border border-border-strong bg-surface'>
             <table className='w-full text-sm'>
                 <thead>
                     <tr className='border-b border-border text-left text-xs font-semibold text-fg-muted'>
@@ -496,7 +496,7 @@ function MemberEditor({
     };
 
     return (
-        <form onSubmit={onSubmit} className='mb-6 rounded-xl border border-border bg-surface shadow-card'>
+        <form onSubmit={onSubmit} className='mb-6 rounded-xl border border-border-strong bg-surface'>
             <div className='flex items-center justify-between border-b border-border px-4 py-3'>
                 <div className='flex items-center gap-2 text-sm font-semibold text-fg'>
                     <ShieldCheck className='h-4 w-4 text-primary' />

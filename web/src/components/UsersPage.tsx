@@ -227,7 +227,7 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
             ) : users.length === 0 ? (
                 <EmptyState icon={Users} title={t('users.empty')} hint={t('users.emptyHint')} />
             ) : (
-                <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
+                <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
@@ -395,7 +395,7 @@ function PlansTab() {
             ) : plans.length === 0 ? (
                 <EmptyState icon={Layers} title={t('plans.empty')} hint={t('plans.emptyHint')} />
             ) : (
-                <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
+                <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">

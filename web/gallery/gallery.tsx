@@ -166,7 +166,7 @@ function Gallery() {
                             <Button variant="danger">Kaldır</Button>
                             <Button variant="secondary">Ayrıntılar</Button>
                             <Button variant="primary" disabled>Kaydet</Button>
-                            <Button variant="primary" disabled><Spinner />Kuruluyor</Button>
+                            <Button variant="primary" loading>Kuruluyor</Button>
                             <Button variant="primary" onClick={() => setDialogOpen(true)}>Pencereyi aç</Button>
                             <Spinner />
                         </div>

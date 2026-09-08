@@ -1171,7 +1171,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 bunu çözecek tek şey bir tık ötede. Nötr, uyarı renginde değil
                 — anlam taşıyan renk gerçekten bozuk olan için ayrılmıştır. */}
             {!loading && hostNeverChecked && (
-                <section role="status" className="mb-4 flex flex-wrap items-start gap-3 rounded-xl border border-border bg-surface p-4 shadow-card">
+                <section role="status" className="mb-4 flex flex-wrap items-start gap-3 rounded-xl border border-border bg-surface p-4">
                     <ScanSearch className="mt-0.5 h-5 w-5 shrink-0 text-fg-muted" />
                     {/* The same rule as the setup journey's rows: `flex-1`
                         alone bases this block at zero width, so at 390px the
@@ -1242,7 +1242,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         : t('services.matchCount', { shown: filtered.length, total: services.length })}
                 </p>
                 {filtered.length === 0 ? (
-                    <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-fg-muted shadow-card">
+                    <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-fg-muted">
                         {/* A fresh server's installed view is legitimately
                             empty — that is a starting point, not a failed
                             search, so it offers the next step instead of
@@ -1288,7 +1288,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         const groupChecked = group.some((s) => !notChecked(s));
                         const isOpen = q !== '' || !collapsed.has(cat);
                         return (
-                            <section key={cat} className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                            <section key={cat} className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(cat)}
@@ -1859,7 +1859,7 @@ function MailProfileCards({ profiles, services, disabled, dnsIdentityReady, onIn
                             : profile.warning;
                     const ActionIcon = profile.status === 'available' ? DownloadCloud : RotateCw;
                     return (
-                        <article key={profile.id} className='flex min-w-0 flex-col rounded-xl border border-border bg-surface p-4 shadow-card'>
+                        <article key={profile.id} className='flex min-w-0 flex-col rounded-xl border border-border bg-surface p-4'>
                             <div className='flex items-start gap-3'>
                                 <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'>
                                     {profile.id === 'protected-mail'

@@ -78,22 +78,27 @@ export function UsageBar({ percent }: { percent: number }) {
 // tasidiginin aynisi: bu bir tasima. Ekledigi tek sey bir ad.
 export function Spinner({
     size = 'md',
+    tone = 'primary',
     label,
     className,
 }: {
-    /** md is the size twenty-four of the copies used; sm is the other four. */
-    size?: 'md' | 'sm';
+    /** current takes the colour of the text around it, for filled controls. */
+    tone?: 'primary' | 'current';
+    /** md is the size twenty-four of the copies used; sm is the other four;
+        xs sits inside a control, beside its label. */
+    size?: 'md' | 'sm' | 'xs';
     /** Overrides the default "Loading" for a wait that is about one thing. */
     label?: string;
     className?: string;
 }) {
     const { t } = useI18n();
-    const box = size === 'sm' ? 'h-7 w-7' : 'h-8 w-8';
+    const box = size === 'xs' ? 'h-4 w-4' : size === 'sm' ? 'h-7 w-7' : 'h-8 w-8';
+    const arc = tone === 'current' ? 'border-current' : 'border-primary';
     return (
         <div
             role="status"
             aria-label={label ?? t('common.loading')}
-            className={`${box} animate-spin rounded-full border-b-2 border-primary ${className ?? ''}`}
+            className={`${box} animate-spin rounded-full border-b-2 ${arc} ${className ?? ''}`}
         />
     );
 }
@@ -109,11 +114,18 @@ export function StatusDot({ ok }: { ok: boolean }) {
 export function Button({
     variant = 'secondary',
     icon: Icon,
+    loading = false,
     children,
     ...props
 }: {
     variant?: 'primary' | 'secondary' | 'danger';
     icon?: LucideIcon;
+    // A button that has started work says so in place, at the size it already
+    // is: the spinner takes the icon's slot so the control never changes
+    // height, and the button is disabled for as long as it spins.
+    // Ise baslamis bir dugme bunu yerinde soyler: donen isaret ikonun yerini
+    // alir, dugme boyu degismez ve donerken devre disidir.
+    loading?: boolean;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
     // R-047's leftover, fixed in the one place it is decided. A disabled button
     // used to be its own enabled skin behind a 50% wash, which is the cheapest
@@ -146,9 +158,11 @@ export function Button({
     return (
         <button
             {...props}
+            disabled={props.disabled || loading}
+            aria-busy={loading || undefined}
             className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:border-transparent disabled:bg-surface-2 disabled:text-fg-muted ${styles} ${props.className ?? ''}`}
         >
-            {Icon && <Icon className="h-4 w-4" />}
+            {loading ? <Spinner size="xs" tone="current" /> : Icon && <Icon className="h-4 w-4" />}
             {children}
         </button>
     );
@@ -288,8 +302,8 @@ export function Dialog({
             .join(' ') || undefined,
         'aria-busy': busy || undefined,
         className:
-            `flex max-h-[90vh] w-full ${dialogWidths[width]} flex-col rounded-2xl border ` +
-            `${tone === 'danger' ? 'border-danger/40' : 'border-border'} bg-surface`,
+            `flex max-h-[90vh] w-full ${dialogWidths[width]} flex-col rounded-xl border ` +
+            `${tone === 'danger' ? 'border-danger/40' : 'border-border-strong'} bg-surface`,
     } as const;
 
     const inner = (
@@ -379,7 +393,7 @@ export function SearchInput({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="w-56 rounded-lg border border-border bg-surface py-1.5 pl-9 pr-3 text-sm text-fg outline-none placeholder:text-fg-subtle focus:border-primary focus:ring-2 focus:ring-primary/30"
+                className="w-56 rounded-lg border border-border bg-surface py-1.5 pl-9 pr-3 text-sm text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
             />
         </div>
     );
@@ -452,7 +466,7 @@ export function Field({
 // inputClass is the shared text-input styling; spread onto <input>/<select>.
 // inputClass paylaşılan metin-girdi stilidir; <input>/<select> üzerine geçir.
 export const inputClass =
-    'w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30';
+    'w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg outline-none transition-shadow focus:border-primary';
 
 export function ToggleRow({
     label,
