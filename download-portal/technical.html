@@ -1,0 +1,155 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CelikPanel | Teknik kanıtlar</title><meta name="description" content="CelikPanel işlem modeli, tarihli test sonuçları ve sürüm doğrulaması."/>
+<meta name="theme-color" content="#0d2247"/><link rel="icon" type="image/svg+xml" href="/assets/favicon-v2.svg"/>
+<link rel="stylesheet" href="/assets/site.css"/></head><body data-page="technical">
+<!--
+THESIS: Explain the operation model and let readers inspect dated technical evidence.
+OWN-WORLD: White and navy, self-hosted Overpass, a monochrome angular C and panel mark, ruled rows and actual interface captures.
+STORY: Understand preview, commit and record; inspect dated measurements and source reports; return to installation when ready.
+FIRST VIEWPORT: A large technical-evidence headline and qualified introduction lead to in-page evidence links. Shared navigation stays fully visible on mobile.
+FORM: Code-led implementation of the user's explicitly accepted five recommendations; user-pinned direction exception, no generated comp or seed.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+-->
+<a class="skip-link" href="#ana-icerik"><span data-en="Skip to main content" >Ana içeriğe geç</span></a>
+<header class="site-header"><div class="container nav-shell">
+<a class="brand" href="/" aria-label="CelikPanel ana sayfa"><svg class="brand-mark" viewBox="0 0 32 32" width="36" height="36" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11 3H29V10H14L10 14V18L14 22H29V29H11L3 21V11Z M20 13H29V19H20Z"/></svg><span class="brand-name">Celik<span>Panel</span></span></a>
+<nav class="site-nav" aria-label="Ana menü">
+<a data-en="Explore the panel" href="/#panel">Paneli keşfet</a>
+<a data-en="Features" href="/#ozellikler">Özellikler</a>
+<a data-en="Technical evidence" href="/technical.html">Teknik kanıtlar</a>
+<a data-en="Support" href="/#destek">Destek</a></nav>
+<div class="nav-tools"><div class="language-switch" role="group" aria-label="Dil seçimi">
+<button type="button" data-language="tr" lang="tr" aria-label="Türkçe" aria-pressed="true">TR</button>
+<button type="button" data-language="en" lang="en" aria-label="English" aria-pressed="false">EN</button></div>
+<a data-en="Try it free" class="button button-primary nav-cta" href="/#kurulum">Ücretsiz dene</a></div></div></header><main id="ana-icerik" class="technical-page"><section class="technical-intro"><div class="container">
+<h1 data-en="Technical approach. Open evidence." >Teknik yaklaşım. Açık kanıtlar.</h1>
+<p data-en="CelikPanel’s operation model and dated test results. These measurements apply to the stated test conditions; they are not a performance or availability guarantee for every server." class="section-lede">CelikPanel’in işlem modeli ve tarihli test sonuçları. Bu ölçümler belirtilen test koşullarına aittir; tüm sunucular için bir performans veya kesintisizlik garantisi değildir.</p>
+<nav class="technical-nav"><a data-en="Operation model" href="#nasil">İşlem modeli</a><a data-en="Test results" href="#kanit">Test sonuçları</a><a data-en="Release and installation" href="/#kurulum">Sürüm ve kurulum</a></nav></div></section>
+<section class="how" id="nasil" aria-labelledby="how-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="how-title">Peki bunu nasıl yapıyor?</h2>
+            <p class="section-lede">Demiryolu sinyalizasyonundan alınmış tek bir kuralla: bir rota kurulunca onunla çakışan her rota kilitlenir, yani yanlış kolu çekemezsiniz. CelikPanel sunucunuzu aynı disiplinle yönetir.</p>
+          </div>
+
+          <ol class="steps">
+            <li>
+              <h3>Önizle</h3>
+              <p>Panel, değişikliği yapmadan önce sunucuya sorar: bu rota kurulabilir mi? Cevap ya bir engel listesi ya da tek kullanımlık bir onay jetonudur. Engel varsa hiçbir şey değişmez.</p>
+            </li>
+            <li>
+              <h3>Taahhüt et</h3>
+              <p>Yalnızca o jetonla değişiklik yapılır. Bu sırada sunucuda tek bir değişiklik hakkı tutulur; ikinci bir değişiklik sıraya girer, üste binmez.</p>
+            </li>
+            <li>
+              <h3>Deftere yaz</h3>
+              <p>Her ayrıcalıklı değişiklik, sonucuyla birlikte kalıcı bir deftere yazılır. Elektrik kesilirse panel yarım işi bulur ve bitirir ya da geri alır; yarım kalmış bir şeyi başarılı diye göstermez.</p>
+            </li>
+          </ol>
+
+          <!-- The interlocking table: rows are things you can ask for, columns
+               are what may be holding the server, marks are the refusals. The
+               rules are the product's own; the layout is a demonstration. -->
+          <div class="interlock">
+            <div class="interlock-head">
+              <h3 id="interlock-title">Kilitleme tablosu</h3>
+              <span class="tag-demo">gösterim · kurallar gerçek</span>
+            </div>
+            <p class="interlock-lede">Hangi isteğin, sunucu hangi durumdayken reddedileceği baştan bellidir. Reddedilen istek sessizce beklemez; panel size hangi durumun onu kilitlediğini söyler.</p>
+            <div class="table-scroll" tabindex="0" role="region" aria-labelledby="interlock-title">
+              <table class="interlock-table">
+                <caption class="sr-only">Hangi istek, sunucu hangi durumdayken reddedilir</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">İstediğiniz değişiklik</th>
+                    <th scope="col">Başka bir panel değişikliği sürüyor</th>
+                    <th scope="col">Paket yöneticisi meşgul</th>
+                    <th scope="col">Bitmemiş bir değişiklik kilidi tutuyor</th>
+                    <th scope="col">Önizleme engel buldu</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Servis kur</th>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">DNS motorunu değiştir</th>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Güvenlik duvarını aç</th>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                    <td><span class="mark mark-lock" aria-label="kilitli"></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Veritabanı oluştur</th>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Sunucuyu oku</th>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                    <td><span class="mark mark-free" aria-label="serbest"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="scroll-hint">Tablo yana kayar.</p>
+            <dl class="interlock-notes">
+              <div><dt><span class="mark mark-lock" aria-hidden="true"></span> Kilitli</dt><dd>İstek reddedilir. Panel, onu hangi durumun kilitlediğini söyler. Üç sebep üç farklı şey ister: paket yöneticisi için bir dakika beklersiniz, süren değişiklik için onun bitmesini; bitmemiş bir kilit ise beklemekle geçmez ve panel bunu açıkça söyler.</dd></div>
+              <div><dt><span class="mark mark-free" aria-hidden="true"></span> Serbest</dt><dd>İstek hemen yapılır. Veritabanı oluşturmak motorun içindeki bir işlemdir, sunucuda değişiklik hakkı gerektirmez; okumak hiçbir zaman beklemez.</dd></div>
+            </dl>
+          </div>
+        </div>
+      </section><section class="proof" id="kanit" aria-labelledby="proof-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="proof-title">Ölçüldü, kaydedildi, tarihlendi.</h2>
+            <p class="section-lede">Bu sayfadaki her sayı gerçek bir makinede ölçüldü ve ürünün risk kaydında tarihli kanıtıyla duruyor. Hiçbiri tahmin değil, hiçbiri yuvarlanmadı.</p>
+          </div>
+          <div class="table-scroll" tabindex="0" role="region" aria-labelledby="proof-title">
+            <table class="ledger">
+              <caption class="sr-only">Gerçek makinelerde ölçülen değerler</caption>
+              <thead>
+                <tr><th scope="col">Ölçüm</th><th scope="col" class="num">Değer</th><th scope="col">Koşul</th><th scope="col">Tarih</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Felaketten hizmete dönüş</th><td class="num">105 sn</td><td>Birinci sunucu elektrik kesintisiyle öldü; ikincisi tek mühürlü arşivden kuruldu</td><td>6 Eyl 2026</td></tr>
+                <tr><th scope="row">Arşiv yaşı, kayıp yok</th><td class="num">40,9 sn</td><td>Kesinti anında arşivin gerçek yaşı; hiçbir kayıt kaybolmadı</td><td>6 Eyl 2026</td></tr>
+                <tr><th scope="row">Çalışan BIND devralınırken cevapsız sorgu</th><td class="num">0 / 2508</td><td>Sunucu devralma boyunca hizmet vermeyi hiç kesmedi</td><td>5 Eyl 2026</td></tr>
+                <tr><th scope="row">Elle kurulmuş BIND devralınırken</th><td class="num">0 / 1137</td><td>Farklar gösterildi, sonra devralındı; yine sıfır kesinti</td><td>5 Eyl 2026</td></tr>
+                <tr><th scope="row">Elektrik kesintisinden sonra karar süresi</th><td class="num">≤ 7 sn</td><td>Dört kesinti; her defasında panel yarım işi kimse dokunmadan çözdü</td><td>5 Eyl 2026</td></tr>
+                <tr><th scope="row">Kabul turu</th><td class="num">3 dağıtım</td><td>Debian 13, Ubuntu 24.04, Arch: kurulum, veritabanı zinciri, yeniden başlatma</td><td>6 Eyl 2026</td></tr>
+                <tr><th scope="row">Risk kaydı</th><td class="num">71 madde</td><td>Her biri ne bulunduğunu, neden olduğunu ve nasıl kapandığını tarihli kanıtla anlatır</td><td>sürekli</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="scroll-hint">Tablo yana kayar.</p>
+          <p class="proof-note">Panel, kanıtlayamadığı bir şeyi asla başarılı olarak göstermez. Bir işlem yarım kaldıysa yarım kaldığını söyler ve sunucuyu kilitli tutar; bu, sessizce yanlış görünen bir yeşilden iyidir.</p>
+        </div>
+      </section>
+<section class="evidence-sources"><div class="container"><div class="section-intro"><h2 data-en="Follow the evidence to its source." >Kaynağına kadar inceleyin.</h2><p data-en="Test conditions, open risks and the release verification contract are recorded in the repository." >Test koşulları, açık riskler ve sürüm doğrulama sözleşmesi depoda kayıtlıdır.</p></div><div class="source-links">
+<a data-en="Risk register and test details" href="https://github.com/celikbros/celikpanel/blob/main/docs/RISK-REGISTER.tr.md" data-localized-href data-href-tr="https://github.com/celikbros/celikpanel/blob/main/docs/RISK-REGISTER.tr.md" data-href-en="https://github.com/celikbros/celikpanel/blob/main/docs/RISK-REGISTER.md">Risk kaydı ve test ayrıntıları</a>
+<a data-en="Signed release contract" href="https://github.com/celikbros/celikpanel/blob/main/docs/release-signing.tr.md" data-localized-href data-href-tr="https://github.com/celikbros/celikpanel/blob/main/docs/release-signing.tr.md" data-href-en="https://github.com/celikbros/celikpanel/blob/main/docs/release-signing.md">İmzalı sürüm sözleşmesi</a>
+<a data-en="Distribution support" href="https://github.com/celikbros/celikpanel/blob/main/docs/DISTRO-SUPPORT.tr.md" data-localized-href data-href-tr="https://github.com/celikbros/celikpanel/blob/main/docs/DISTRO-SUPPORT.tr.md" data-href-en="https://github.com/celikbros/celikpanel/blob/main/docs/DISTRO-SUPPORT.md">Dağıtım desteği</a>
+</div></div></section></main><footer class="site-footer" id="destek"><div class="container footer-main">
+<div><a class="brand" href="/" aria-label="CelikPanel"><svg class="brand-mark" viewBox="0 0 32 32" width="36" height="36" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11 3H29V10H14L10 14V18L14 22H29V29H11L3 21V11Z M20 13H29V19H20Z"/></svg><span class="brand-name">Celik<span>Panel</span></span></a><p data-en="Your server. Your control." class="footer-description">Sunucunuz sizin. Yönetimi de öyle.</p></div>
+<div class="footer-links"><nav aria-label="Alt menü"><a data-en="Installation" href="/#kurulum">Kurulum</a><a data-en="Technical evidence" href="/technical.html">Teknik kanıtlar</a><a data-en="Common questions" href="/#sss">Sık sorulanlar</a></nav>
+<nav aria-label="Destek">
+<a data-en="Report a bug" href="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml" data-localized-href data-href-tr="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml" data-href-en="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_en.yml">Hata bildir</a>
+<a data-en="Suggest a feature" href="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_tr.yml" data-localized-href data-href-tr="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_tr.yml" data-href-en="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_en.yml">Öneri gönder</a>
+<a data-en="Private security report" href="https://github.com/celikbros/celikpanel-feedback/security/advisories/new">Gizli güvenlik bildirimi</a>
+</nav></div></div><div class="container footer-bottom"><span>© 2026 CelikPanel</span><span data-en="Free during alpha · Linux amd64" >Alfa boyunca ücretsiz · Linux amd64</span></div></footer><script src="/assets/site.js" defer></script></body></html>

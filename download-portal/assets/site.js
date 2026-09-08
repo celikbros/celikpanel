@@ -370,19 +370,41 @@ const renderReleaseState = () => {
   setText("release-status", currentLanguage === "en" ? "Reading manifest" : "Manifest okunuyor");
 };
 
+const explicitTranslations = [...document.querySelectorAll('[data-en]')].map(node => ({node, tr: node.textContent, en: node.dataset.en}));
+const productViews = {
+  overview: { tr: 'Genel bakış', en: 'Overview', descriptionTr: 'Sunucunun durumunu, kaynakları ve bekleyen işleri bir arada görün.', descriptionEn: 'See server status, resources and work that needs your attention together.' },
+  domains: { tr: 'Alan adları', en: 'Domains', descriptionTr: 'Alan adlarını, site durumunu, PHP sürümlerini ve sertifikaları tek listeden takip edin.', descriptionEn: 'Track domains, site status, PHP versions and certificates in one list.' },
+  databases: { tr: 'Veritabanları', en: 'Databases', descriptionTr: 'Veritabanı sunucularını ve veritabanlarını aynı çalışma alanından yönetin.', descriptionEn: 'Manage database servers and databases from the same workspace.' },
+};
+let selectedProductView = 'overview';
+const renderProductView = () => {
+  const img = getNode('product-image');
+  if (!img) return;
+  const view = productViews[selectedProductView];
+  img.src = `/assets/product-${selectedProductView}-${currentLanguage}.webp`;
+  img.alt = currentLanguage === 'en' ? `CelikPanel ${view.en.toLowerCase()} screen, sample data` : `CelikPanel ${view.tr.toLocaleLowerCase('tr')} ekranı, örnek veriler`;
+  setText('product-description', currentLanguage === 'en' ? view.descriptionEn : view.descriptionTr);
+  document.querySelectorAll('[data-product-tab]').forEach(tab => {
+    const selected = tab.dataset.productTab === selectedProductView;
+    tab.setAttribute('aria-selected', String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+  });
+  getNode('product-panel').setAttribute('aria-labelledby', `tab-${selectedProductView}`);
+};
+
 const applyLanguage = (language) => {
   currentLanguage = language === "en" ? "en" : "tr";
   document.documentElement.lang = currentLanguage;
   document.title =
     currentLanguage === "en"
-      ? "CelikPanel | The hosting control panel that proves its work"
-      : "CelikPanel | Kanıtla çalışan hosting kontrol paneli";
+      ? "CelikPanel | Your server. Your control."
+      : "CelikPanel | Sunucunuzun kontrolü sizde";
   const description = document.querySelector('meta[name="description"]');
   if (description)
     description.content =
       currentLanguage === "en"
-        ? "CelikPanel runs your websites, WordPress, email, DNS, databases and backups from one panel, and previews every change before making it."
-        : "CelikPanel; web sitelerinizi, WordPress'i, e-postayı, DNS'i, veritabanlarını ve yedekleri tek panelden yönetir, her değişikliği yapmadan önce önizler.";
+        ? "Explore CelikPanel: a hosting control panel for websites, email, DNS, databases and backups, running on your own server."
+        : "Web siteleri, e-posta, DNS, veritabanları ve yedekler. Kendi sunucunuzda çalışan hosting kontrol paneli CelikPanel'i keşfedin.";
   localizedTextNodes.forEach((binding) => {
     binding.node.nodeValue = binding.before + binding[currentLanguage] + binding.after;
   });
@@ -415,6 +437,16 @@ const applyLanguage = (language) => {
   } catch {
     /* optional preference */
   }
+  explicitTranslations.forEach(binding => { binding.node.textContent = binding[currentLanguage]; });
+  document.querySelectorAll('[data-label-en]').forEach(node => {
+    if (!node.dataset.labelTr) node.dataset.labelTr = node.getAttribute('aria-label');
+    node.setAttribute('aria-label', currentLanguage === 'en' ? node.dataset.labelEn : node.dataset.labelTr);
+  });
+  if (document.body.dataset.page === 'technical') {
+    document.title = currentLanguage === 'en' ? 'CelikPanel | Technical evidence' : 'CelikPanel | Teknik kanıtlar';
+    if (description) description.content = currentLanguage === 'en' ? 'CelikPanel operation model, dated test results and release verification.' : 'CelikPanel işlem modeli, tarihli test sonuçları ve sürüm doğrulaması.';
+  }
+  renderProductView();
   renderReleaseState();
 };
 
@@ -452,7 +484,7 @@ const initialLanguage =
 setText("latest-command", buildInstallCommand());
 applyLanguage(initialLanguage);
 
-fetch("/releases/latest.json", { cache: "no-store", credentials: "omit" })
+if (document.querySelector(".release-panel")) fetch("/releases/latest.json", { cache: "no-store", credentials: "omit" })
   .then((response) => {
     if (!response.ok) throw new Error("HTTP " + response.status);
     return response.json();
@@ -497,3 +529,36 @@ document.addEventListener("click", async (event) => {
   }
   window.setTimeout(resetLabel, 1800);
 });
+
+
+// A short, user-controlled tour of actual product screens. No simulated actions.
+const productTabs = [...document.querySelectorAll('[data-product-tab]')];
+const selectProductTab = (tab, focus = false) => {
+  if (!productViews[tab.dataset.productTab]) return;
+  selectedProductView = tab.dataset.productTab;
+  renderProductView();
+  if (focus) tab.focus();
+};
+productTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => selectProductTab(tab));
+  tab.addEventListener('keydown', event => {
+    let next;
+    if (event.key === 'ArrowRight') next = (index + 1) % productTabs.length;
+    else if (event.key === 'ArrowLeft') next = (index + productTabs.length - 1) % productTabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = productTabs.length - 1;
+    else return;
+    event.preventDefault();
+    selectProductTab(productTabs[next], true);
+  });
+});
+const previewDialog = getNode('preview-dialog');
+document.querySelector('[data-open-preview]')?.addEventListener('click', () => {
+  const source = getNode('product-image');
+  const preview = getNode('preview-image');
+  preview.src = source.src;
+  preview.alt = source.alt;
+  previewDialog.showModal();
+});
+document.querySelector('[data-close-preview]')?.addEventListener('click', () => previewDialog.close());
+previewDialog?.addEventListener('click', event => { if (event.target === previewDialog) previewDialog.close(); });

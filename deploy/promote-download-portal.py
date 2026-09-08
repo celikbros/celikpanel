@@ -875,7 +875,7 @@ def run_transaction(args: argparse.Namespace) -> dict:
             or public_result.get("status") != "ok"
             or not isinstance(request_limit, int)
             or request_limit <= 0
-            or request_limit > 15
+            or request_limit > 23
             or not isinstance(public_result.get("requests"), int)
             or not 0 < public_result["requests"] <= request_limit
             or public_result.get("request_limit") != request_limit

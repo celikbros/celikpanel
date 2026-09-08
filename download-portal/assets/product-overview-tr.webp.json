@@ -1,0 +1,29 @@
+{
+  "prompt": "Browser screenshot of the actual CelikPanel Dashboard React screen inside its actual Layout, using the product CSS and Turkish translation catalogs. Captured in headless Chrome at 1440x950, deviceScaleFactor 1, directly to WebP quality 88. Data comes from explicit local GET API fixtures in .tmp-redesign-captures/capture.tsx, not a live installation or customer records. All example domains, database names, usage figures, service states, counts, and timestamps are illustrative. Uses example.com/org/net domains, documentation IP 192.0.2.10, and demo.celikpanel.local hostname. No UI facsimile, generated imagery, compositing, or CSS overrides. Display with caption: Actual product interface / Sample data.",
+  "createdAt": "2026-09-08T14:15:20.474Z",
+  "kind": "product-ui-screenshot",
+  "locale": "tr",
+  "width": 1440,
+  "height": 950,
+  "format": "webp",
+  "quality": 88,
+  "bytes": 69468,
+  "captured_at": "2026-09-08T14:15:20.492Z",
+  "source_components": [
+    "web/src/components/BrandMark.tsx",
+    "web/src/components/Layout.tsx",
+    "web/src/components/Dashboard.tsx",
+    "web/src/index.css",
+    "web/tailwind.config.js"
+  ],
+  "source_sha256": {
+    "web/src/components/BrandMark.tsx": "69822e82c2832b0ec1c79ca07f7fb916fd41d7069c99cc0d09c681640c331513",
+    "web/src/components/Layout.tsx": "087dce94fb3852b889d0d1c7a1e2c67f6b6b461187fecafa0a141c8efd4e4d2f",
+    "web/src/components/Dashboard.tsx": "2ae6ac7f8455486564a78e299989d211411dda6be1774633275fe98c4de5600f",
+    "web/src/index.css": "df6e4065442be2bb2d0833d0c7f2e82edb83ea1c1cac8bd0b8f4467dca66fcf1",
+    "web/tailwind.config.js": "1571a898f66a4dfdc33313d53acd7ad07505ccd0da5b0023990087ba11d0a6e2"
+  },
+  "fixture_provenance": ".tmp-redesign-captures/capture.tsx",
+  "customer_data": false,
+  "generated": false
+}

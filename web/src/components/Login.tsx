@@ -1,5 +1,6 @@
+import { BrandMark } from './BrandMark';
 import { useState, useEffect } from 'react';
-import { Server, ShieldCheck, Users, User, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, Users, User, Eye, EyeOff } from 'lucide-react';
 import { api, type CurrentUser, type DemoAccount } from '../lib/api';
 import { useI18n } from '../i18n';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -94,7 +95,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
             <div className="w-full max-w-sm">
                 <div className="mb-8 flex flex-col items-center text-center">
                     <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-fg shadow-lg">
-                        <Server className="h-7 w-7" />
+                        <BrandMark className="h-7 w-7" />
                     </div>
                     <h1 className="text-2xl font-bold tracking-tight">{t('app.name')}</h1>
                     <p className="mt-1 text-sm text-fg-muted">{t('login.subtitle')}</p>

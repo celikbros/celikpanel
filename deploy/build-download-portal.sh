@@ -366,7 +366,14 @@ if [[ "$signed_mode" == true ]]; then
   release_dir="$release_dir/$platform_os/$platform_arch"
 fi
 mkdir -p -- "$output/assets" "$release_dir" "$output/.well-known"
-cp -- "$template/index.html" "$template/.htaccess" "$template/get.sh" "$output/"
+for page in index.html technical.html; do
+  [[ -f "$template/$page" && ! -L "$template/$page" ]] \
+    || die "reviewed portal page is unavailable: $page"
+  cp -- "$template/$page" "$output/$page"
+  cmp -s -- "$template/$page" "$output/$page" \
+    || die "staged portal page bytes differ: $page"
+done
+cp -- "$template/.htaccess" "$template/get.sh" "$output/"
 cmp -s -- "$template/get.sh" "$output/get.sh" \
   || die "staged download bootstrap bytes differ"
 [[ "$(sha256sum "$template/get.sh" | awk '{print $1}')" == "$bootstrap_source_sha256" &&
@@ -388,12 +395,19 @@ cmp -s -- "$tracked_public_key" "$output/release-signing-ed25519.pem" || {
   printf 'staged release-signing public key does not match the bootstrap trust anchor\n' >&2
   exit 1
 }
-# The site self-hosts its typefaces, so the whole assets tree ships: the
-# stylesheet, the script, the favicon, and the fonts with their licences.
-# Two named files were enough while there were two.
+# Ship the self-hosted product screenshots, favicon, styles, scripts, and
+# typefaces with their licences. Required visual assets must be exact copies.
 cp -R -- "$template/assets/." "$output/assets/"
-[[ -f "$output/assets/site.css" && -f "$output/assets/site.js" ]] \
-  || die "staged site assets are incomplete"
+for asset in site.css site.js favicon-v2.svg \
+  product-overview-tr.webp product-overview-en.webp \
+  product-domains-tr.webp product-domains-en.webp \
+  product-databases-tr.webp product-databases-en.webp; do
+  [[ -f "$template/assets/$asset" && ! -L "$template/assets/$asset" &&
+     -s "$output/assets/$asset" && ! -L "$output/assets/$asset" ]] \
+    || die "required portal asset is unavailable: $asset"
+  cmp -s -- "$template/assets/$asset" "$output/assets/$asset" \
+    || die "staged portal asset bytes differ: $asset"
+done
 cp -- "$template/security.txt" "$output/.well-known/security.txt"
 cp -- "$archive_source" "$release_dir/$expected_archive"
 cp -- "$checksum_source" "$release_dir/$expected_archive.sha256"

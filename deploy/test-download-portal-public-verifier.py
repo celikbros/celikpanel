@@ -53,6 +53,8 @@ def json_bytes(value: object) -> bytes:
 def build_site(root: Path) -> tuple[int, set[str], int]:
     root_files = {
         "index.html": b"<!doctype html><title>CelikPanel</title>\n",
+        "technical.html": b"<!doctype html><title>Technical details</title>\n",
+        "assets/favicon-v2.svg": b'<svg xmlns="http://www.w3.org/2000/svg"/>\n',
         "assets/site.css": b"body { color: #10213a; }\n",
         "assets/site.js": b"document.documentElement.dataset.ready = 'true';\n",
         "get.sh": b"#!/bin/sh\nprintf 'download\\n'\n",
@@ -61,6 +63,13 @@ def build_site(root: Path) -> tuple[int, set[str], int]:
         ),
         ".well-known/security.txt": b"Contact: mailto:security@example.test\n",
     }
+    # Tiny valid WebP fixture: compare binary image bytes as well as HTML.
+    webp = bytes.fromhex(
+        "524946461e000000574542505650384c110000002f0000000007508c3a94a4ff8188e87f0000"
+    )
+    for feature in ("overview", "domains", "databases"):
+        for language in ("tr", "en"):
+            root_files[f"assets/product-{feature}-{language}.webp"] = webp
     for relative, data in root_files.items():
         write_bytes(root, relative, data)
 
@@ -272,7 +281,16 @@ class PublicPortalVerifierTests(unittest.TestCase):
         self.assertEqual(summary["status"], "ok")
         self.assertEqual(summary["policy"], "single-full-pass-after-exchange")
         self.assertEqual(summary["phase"], "full")
-        self.assertLessEqual(summary["requests"], 15)
+        self.assertEqual(summary["requests"], 23)
+        self.assertEqual(summary["request_limit"], 23)
+        expected_visual_paths = {
+            "/technical.html", "/assets/favicon-v2.svg",
+            *(f"/assets/product-{feature}-{language}.webp"
+              for feature in ("overview", "domains", "databases")
+              for language in ("tr", "en")),
+        }
+        self.assertTrue(expected_visual_paths.issubset(self.server.request_paths))
+        self.assertEqual(len(set(self.server.request_paths)), 23)
         self.assertEqual(summary["requests"], len(self.server.request_paths))
         self.assertEqual(summary["archive_gets"], 1)
         self.assertEqual(self.server.request_paths.count(ARCHIVE_PUBLIC_PATH), 1)
@@ -297,6 +315,41 @@ class PublicPortalVerifierTests(unittest.TestCase):
             self.verify()
         self.assertNotIn(ARCHIVE_PUBLIC_PATH, self.server.request_paths)
         self.assertEqual(self.server.historical_requests, [])
+
+    def test_visual_asset_tampering_fails_before_archive(self):
+        for relative in ("technical.html", "assets/favicon-v2.svg", *(
+            f"assets/product-{feature}-{language}.webp"
+            for feature in ("overview", "domains", "databases")
+            for language in ("tr", "en")
+        )):
+            with self.subTest(relative=relative):
+                self.server.request_paths.clear()
+                self.server.tamper_path = "/" + relative
+                with self.assertRaisesRegex(VERIFIER.VerificationError, "public bytes differ"):
+                    self.verify()
+                self.assertNotIn(ARCHIVE_PUBLIC_PATH, self.server.request_paths)
+
+    def test_missing_screenshot_fails_before_network(self):
+        target = self.site / "assets/product-databases-en.webp"
+        original = target.read_bytes()
+        try:
+            target.unlink()
+            with self.assertRaisesRegex(VERIFIER.VerificationError, "cannot stat"):
+                self.verify()
+            self.assertEqual(self.server.request_paths, [])
+        finally:
+            target.write_bytes(original)
+
+    def test_static_budget_overrun_fails_before_network(self):
+        target = self.site / "assets/product-overview-tr.webp"
+        original = target.read_bytes()
+        try:
+            target.write_bytes(b"x" * VERIFIER.SMALL_RESPONSE_BUDGET)
+            with self.assertRaisesRegex(VERIFIER.VerificationError, "network budget"):
+                self.verify()
+            self.assertEqual(self.server.request_paths, [])
+        finally:
+            target.write_bytes(original)
 
     def test_archive_tampering_fails_after_exactly_one_archive_get(self):
         self.server.tamper_path = ARCHIVE_PUBLIC_PATH

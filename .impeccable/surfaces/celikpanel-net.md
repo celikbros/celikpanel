@@ -2,89 +2,48 @@
 version: 1
 slug: "celikpanel-net"
 primary_target: "celikpanel.net"
-related_targets: ["download-portal/index.html"]
+related_targets: ["download-portal/index.html", "download-portal/technical.html"]
 ---
 
-# celikpanel.net — surface brief
+# celikpanel.net - surface brief
 
-**Scope and mode.** The public site. Persuade: a stranger must decide to use
-and buy CelikPanel. The panel itself is Operate and inherits the world; it is
-not this brief's subject.
+**Scope and mode.** The public homepage is Persuade: help a visitor understand the hosting panel, inspect it and choose a clean test installation. The technical route is Read: explain the operating model and dated evidence. The operating panel is outside this page brief.
 
-**Audience and job.** Someone responsible for other people's servers — an
-administrator, a small host, an agency. They evaluate a control panel the way
-they evaluate a fire door, and they have seen a hundred landing pages promising
-"easy and modern". Global market; Turkey is not the only audience.
+**Audience and job.** Administrators, hosts and agencies evaluating a control panel for their own servers. The presentation supports the global audience in both Turkish and English.
 
-**What they must believe in three seconds.** Trustworthy, serious, solid
-infrastructure, premium. Not friendly, not clever, not cheap.
+## Accepted direction: show the product
 
-**The proof that earns it.** This product measures and records, and refuses to
-claim what it cannot prove: a risk register carrying every defect with dated
-evidence, a dead server back in service in 105 seconds from one sealed file, a
-DNS engine adopted while it never stopped answering (2508 queries, 0
-unanswered), an acceptance run on three distributions. The site's job is to put
-that record in front of a stranger, not to describe it.
+The accepted redesign replaces the previous route-diagram hero while retaining navy and white, self-hosted Overpass and Overpass Mono, ruled information and state-only signal colours. The owner accepted five concrete recommendations:
 
-## Chosen direction: the signal box
+1. A stronger monochrome angular mark and differentiated Celik/Panel wordmark, shared with the application and favicon.
+2. Actual panel captures for the three selected views: Overview, Domains and Databases; selectable tabs and an enlarged inspection view. These are actual interface renders with explicitly labelled sample data, not live-server telemetry.
+3. A shorter headline: "Sunucunuz. Kontrol sizde." / "Your server. Your control."
+4. A shorter homepage, with detailed operation-model and evidence tables moved to `/technical.html`.
+5. Alpha status beside the primary action and at installation, recommending a clean test server and stating that production readiness has not been reached.
 
-The interlocking, not the track diagram. A signal box's whole purpose is to
-**refuse an unsafe combination**: request a route, and the frame physically
-locks every route that conflicts with it. You cannot pull the wrong lever.
+**First viewport.** A short offer and installation action sit beside the tabbed panel capture. The screenshot carries the proof of what the product looks like; no imagined dashboard or railway illustration substitutes for it. Mobile stacks the message and capture while keeping every navigation destination visible.
 
-This is not decoration borrowed for a mood. It is what the product is:
+**Page sequence.** Product and selected screens; compatibility; everyday hosting tasks; a navy section explaining control and verifiable changes; installation and release information; concise native FAQ disclosures; grouped support and technical links.
 
-- **Preview and commit are route setting.** The panel asks whether a change can
-  be made, answers with blockers or a token, and only then commits. That is a
-  signalman asking the frame whether a route may be set.
-- **The interlocking table is the mutation policy.** Routes down one axis,
-  conflicting routes across, a mark where they lock. The product's ledger,
-  leases and fail-closed refusals are that table.
-- **Signal colours are state, never decoration.** Red, yellow, green mean
-  stopped, caution, clear — and nothing else on the page may use them.
+**Technical route.** A concise introduction qualifies dated measurements by their stated conditions, followed by the operation model, interlocking information and test evidence. These facts retain their source links and must not become universal uptime or performance guarantees. Homepage-to-technical and technical-to-install links keep the evaluation path connected.
 
-**First viewport.** Not a headline over a button. The server as a route
-diagram: DNS, mail, database, firewall as routes. One route set and clear;
-a conflicting route locked, with the reason it is locked written out. The offer
-and the primary action live in that vocabulary.
+## Interaction and responsive contract
 
-**Memorable moment.** Requesting a route that cannot be set — and being told
-exactly which set route locks it. The refusal is the demonstration: this is the
-only panel that will tell you why it will not do something.
+- Three labelled tabs use selection state and keyboard navigation, and update the image, descriptive copy and accessible label in both languages.
+- The "Enlarge view" action opens the current capture in a native dialog with a visible close action. At mobile widths the large image can scroll so fine UI detail remains readable.
+- At 900px the navigation wraps into a full visible row; at 640px its four destinations form two columns. No destination depends on discovering a hidden horizontal scroller.
+- Installation keeps the copy action visible while offering command inspection and pinned-release details through disclosures. Release links wait for valid manifest data.
+- The screenshot caption and enlarged view identify sample data. Asset provenance belongs with the shipping captures; review images are verification artifacts, not product evidence.
 
-**Cross-surface reach.** The panel's preview screens, refusals and audit log
-are already this world; adopting it makes the product and its site the same
-object rather than a site about a product.
+## Durable constraints
 
-## Constraints
+Navy and white carry the page. Yellow, green and red mean state; yellow and red never share an edge. Navigation and installation use familiar patterns. The mark stays monochrome. No fabricated testimonials, customer logos or benchmark claims. Turkish and English stay parallel. Public assets and fonts are served locally under the site's CSP.
 
-- **Ease of use outranks expression.** The operator's words: people should feel
-  they have used it for forty years, and must never get lost. So the signal-box
-  world lives in the materials and the demonstration, and the structure is
-  deliberately conventional: top navigation that reads left to right, one
-  primary action that is where a primary action always is, sections in the
-  order a buyer expects, no interaction that has to be discovered. A visitor
-  who has never seen the page should never have to work out how it works.
+The old signal-box hero, its route-setting entrance animation, the former long homepage and hidden mobile navigation overflow are superseded for this surface. The technical page may still explain the interlocking metaphor where it clarifies the actual operation model. This page choice does not redesign the application's operating layout.
 
-- **The name's literal reading is out.** "Çelik" means steel; brushed metal,
-  industrial plate and rivets are the rut, not the idea.
-- **The category page and its opposite are out.** Gradient hero with three icon
-  cards, and the black-on-white monospace "no nonsense" page, are both the rut.
-- The register's numbers are real and must stay real on the page. No invented
-  metrics, no fictional customer logos, no fabricated testimonials.
+## Implementation and verification references
 
-## The honest risk, named at the decision
-
-Familiarity. "Serious infrastructure" is what every competitor reaches for, and
-a track diagram can read as categorical rather than distinctive. What keeps
-this specific is the **interlocking table and the refusal**, not the diagram:
-the table is an unusual artifact on the web, and no competitor's page explains
-why it will not do something.
-
-## Unresolved
-
-- Reference products the operator respects — asked, not yet answered. The most
-  valuable input still outstanding.
-- Whether the site sells directly (pricing, checkout) or routes to contact.
-- Typeface: must have a point of view and must not be Inter, which the product
-  currently uses everywhere.
+- `download-portal/index.html`, `technical.html`, `assets/site.css` and `assets/site.js` contain the accepted implementation; the later homepage rules in `site.css` take precedence over retained base rules.
+- `download-portal/assets/favicon-v2.svg` and `web/src/components/BrandMark.tsx` carry the shared mark.
+- `.impeccable/review/` holds the first review capture set; `.impeccable/review-final/` holds the final capture and interaction-check evidence. These references identify review artifacts without treating screenshot existence as an accessibility certification.
+- `DESIGN.md` records shared normative tokens; `.impeccable/design.json` extends them with renderable primitives and responsive/motion metadata.

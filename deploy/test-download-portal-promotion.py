@@ -29,7 +29,7 @@ FAKE_VERIFIER = textwrap.dedent(
     import os
     from pathlib import Path
 
-    HARD_REQUEST_LIMIT = 15
+    HARD_REQUEST_LIMIT = 23
 
     class Target:
         def __init__(self, version):
@@ -231,6 +231,22 @@ class DownloadPortalPromotionTests(unittest.TestCase):
             b"historical-bytes",
         )
         self.assertTrue(self.fixture.package.exists(), "upload evidence must be retained")
+
+    def test_verifier_cannot_raise_fixed_request_ceiling(self):
+        source = self.fixture.verifier.read_text(encoding="utf-8")
+        self.fixture.verifier.write_text(
+            source.replace("HARD_REQUEST_LIMIT = 23", "HARD_REQUEST_LIMIT = 24"),
+            encoding="utf-8",
+        )
+        self.fixture.verifier_size = self.fixture.verifier.stat().st_size
+        self.fixture.verifier_sha = sha256(self.fixture.verifier)
+        result = self.run_subprocess()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("bounded public verifier", result.stderr)
+        self.assertEqual(len(self.public_calls()), 1)
+        self.assertEqual(self.fixture.live.stat().st_ino, self.fixture.old_live_inode)
+        self.assertEqual(list(self.fixture.backups.iterdir()), [])
+        self.assertNotIn("CELIKPANEL_DOWNLOAD_PORTAL_PUBLISHED", result.stdout)
 
     def test_first_public_failure_rolls_back_and_quarantines_stage(self):
         result = self.run_subprocess(fail_public=True)
