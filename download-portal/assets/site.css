@@ -374,7 +374,7 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 .install-copy p, .release-copy p { margin-top: 1rem; color: var(--ink-2); }
 .plain-list { list-style: none; padding: 0; margin-top: 1.25rem; border-top: 1px solid var(--rule); }
 .plain-list li { padding: 0.6rem 0; border-bottom: 1px solid var(--rule); font-size: 0.9375rem; }
-.command-stack { display: grid; gap: 1.25rem; }
+.command-stack { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 1.25rem; }
 .command-card { background: var(--board); color: var(--track); border-radius: 6px; border: 1px solid var(--board-2); box-shadow: var(--shadow); overflow: hidden; }
 .command-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.8rem 1rem; border-bottom: 1px solid var(--board-2); }
 .command-head h3 { font-size: 0.9375rem; font-weight: 700; color: var(--track); }
@@ -390,7 +390,7 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 .command-card pre { margin: 0; padding: 1rem; overflow-x: auto; font-size: 0.8125rem; line-height: 1.55; color: var(--track); tab-size: 2; }
 .command-card pre:focus-visible { outline-offset: -3px; outline-color: var(--track); }
 .install-note { font-size: 0.9375rem; color: var(--ink-2); }
-@media (max-width: 900px) { .install-grid, .release-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .install-grid, .release-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* -------------------------------------------------------------- release */
 .release { border-bottom: 1px solid var(--rule); }
