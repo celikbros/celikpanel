@@ -135,12 +135,13 @@ code, pre { font-family: var(--font-mono); }
 .table-scroll {
   overflow-x: auto; -webkit-overflow-scrolling: touch;
   background:
-    linear-gradient(to right, #f6f8f4 30%, rgba(246, 248, 244, 0)),
-    linear-gradient(to right, rgba(246, 248, 244, 0), #f6f8f4 70%) 100% 0,
+    linear-gradient(to right, #f6f8f4 45%, rgba(246, 248, 244, 0)),
+    linear-gradient(to right, rgba(246, 248, 244, 0), #f6f8f4 55%) 100% 0,
     radial-gradient(farthest-side at 0 50%, rgba(16, 22, 15, 0.45), rgba(16, 22, 15, 0)),
     radial-gradient(farthest-side at 100% 50%, rgba(16, 22, 15, 0.45), rgba(16, 22, 15, 0)) 100% 0;
   background-repeat: no-repeat; background-color: #f6f8f4;
-  background-size: 48px 100%, 48px 100%, 24px 100%, 24px 100%;
+  background-size: 48px 100%, 48px 100%, 20px 100%, 20px 100%;
+  scroll-snap-type: x proximity;
   background-attachment: local, local, scroll, scroll;
   border: 1px solid var(--rule-strong);
 }
@@ -294,10 +295,11 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 .interlock-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
 .tag-demo { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); border: 1px solid var(--rule-strong); border-radius: 999px; padding: 0.2rem 0.6rem; }
 .interlock-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 720px; }
-.interlock-table th, .interlock-table td { border: 0; border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); padding: 0.75rem 0.85rem; text-align: left; vertical-align: middle; font-size: 0.9375rem; }
+.interlock-table th, .interlock-table td { scroll-snap-align: start; border: 0; border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); padding: 0.75rem 0.85rem; text-align: left; vertical-align: middle; font-size: 0.9375rem; }
 .interlock-table thead th { background: transparent; font-weight: 700; font-size: 0.8125rem; line-height: 1.3; color: var(--ink-2); vertical-align: bottom; }
 .interlock-table tbody th { font-weight: 600; white-space: nowrap; }
-.interlock-table tbody th, .interlock-table thead th:first-child { position: sticky; left: 0; z-index: 1; background: #f6f8f4; box-shadow: 1px 0 0 var(--rule-strong); }
+.interlock-table tbody th, .interlock-table thead th:first-child { position: sticky; left: 0; z-index: 1; background: #f6f8f4; box-shadow: 1px 0 0 var(--rule-strong); transition: box-shadow 160ms var(--ease-out); }
+.table-scroll.is-scrolled .interlock-table tbody th, .table-scroll.is-scrolled .interlock-table thead th:first-child { box-shadow: 1px 0 0 var(--rule-strong), 8px 0 12px -6px rgba(16, 22, 15, 0.45); }
 @media (max-width: 640px) { .interlock-table tbody th { white-space: normal; min-width: 9rem; } }
 .interlock-table td { text-align: center; }
 .mark { display: inline-block; width: 18px; height: 18px; border-radius: 3px; vertical-align: middle; }

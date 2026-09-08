@@ -377,6 +377,14 @@ document.querySelectorAll("[data-language]").forEach((button) => {
   button.addEventListener("click", () => applyLanguage(button.dataset.language));
 });
 
+// A scrolled table says so on its pinned column: the class drives a shadow
+// on the sticky cells, the only place a left-edge signal can still paint.
+document.querySelectorAll(".table-scroll").forEach((region) => {
+  const mark = () => region.classList.toggle("is-scrolled", region.scrollLeft > 0);
+  region.addEventListener("scroll", mark, { passive: true });
+  mark();
+});
+
 const enableReleaseLink = (id, value) => {
   const node = getNode(id);
   if (!node) return;
