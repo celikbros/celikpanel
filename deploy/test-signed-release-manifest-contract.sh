@@ -29,8 +29,8 @@ command -v openssl >/dev/null 2>&1 || fail "openssl is required"
 tmp=$(mktemp -d)
 trap 'rm -rf -- "$tmp"' EXIT HUP INT TERM
 
-version=v0.1.0-alpha.55
-sequence=55
+version=v0.1.0-alpha.56
+sequence=56
 commit=0123456789abcdef0123456789abcdef01234567
 tree=89abcdef0123456789abcdef0123456789abcdef
 published_at=2026-08-03T08:55:11Z
@@ -658,7 +658,7 @@ line_of() {
 manifest_fetch_line=$(line_of 'signed_fetch "$release_url/release-manifest-v2"')
 bootstrap_key_fetch_line=$(line_of 'signed_fetch "$base_url/release-signing-ed25519.pem"')
 signed_lock_line=$(line_of 'acquire_signed_update_lock || fail \')
-signature_verify_line=$(line_of 'verify_signed_release_manifest \')
+signature_verify_line=$(grep -Fn 'verify_signed_release_manifest \' "$bootstrap" | tail -n 1 | cut -d: -f1)
 archive_fetch_line=$(line_of 'signed_fetch "$release_url/$archive"')
 signed_digest_line=$(line_of 'does not match the signed release manifest.')
 archive_use_line=$(line_of 'tar -tzf "$workdir/$archive"')
@@ -679,9 +679,9 @@ grep -Fq '[ "$requested_version" != latest ]' "$bootstrap" \
   || fail "signed updates do not require an exact version"
 grep -Fq 'release_public_key=/etc/celikpanel/release-signing-ed25519.pem' "$bootstrap" \
   || fail "bootstrap does not pin the installed public-key path"
-grep -Fxq 'bootstrap_release_sequence=55' "$bootstrap" \
+grep -Fxq 'bootstrap_release_sequence=56' "$bootstrap" \
   || fail "bootstrap does not pin the tracked release sequence"
-grep -Fxq 'bootstrap_release_version=v0.1.0-alpha.55' "$bootstrap" \
+grep -Fxq 'bootstrap_release_version=v0.1.0-alpha.56' "$bootstrap" \
   || fail "bootstrap does not pin the tracked release version"
 grep -Fxq 'bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb' "$bootstrap" \
   || fail "bootstrap does not pin the reviewed public-key digest"
@@ -815,8 +815,8 @@ require_size_line=$(line_of '[ "$signed_manifest_archive_size" -le 2147483648 ]'
 grep -Fq "go version -m" "$writer" \
   || fail "signer does not inspect actual Go GOOS/GOARCH metadata"
 
-grep -Fq 'Do not download and run the public bootstrap on an existing installation.' "$readme" || fail "English README does not reserve the public bootstrap for clean installation"
-grep -Fq 'mevcut bir kurulumda indirip' "$readme_tr" || fail "Turkish README does not reserve the public bootstrap for clean installation"
+grep -Fq 'bootstrap authenticates its saved release receipt' "$readme" || fail "English README does not explain authenticated first-install recovery"
+grep -Fq 'Kurucu sakladığı imzalı sürüm kaydını doğrular' "$readme_tr" || fail "Turkish README does not explain authenticated first-install recovery"
 grep -Fq 'authenticated **Signed update** screen' "$readme" || fail "English README does not direct existing installs to the signed update screen"
 grep -Fq '/usr/libexec/celikpanel/get.sh' "$readme_tr" || fail "Turkish README does not direct existing installs to the installed signed updater"
 grep -Fq -- '--require-signed-manifest' "$readme_tr" || fail "Turkish README does not document the internal signed-update trust contract"

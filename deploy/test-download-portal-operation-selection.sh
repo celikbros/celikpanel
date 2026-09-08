@@ -79,6 +79,9 @@ expect_selection() {
 }
 
 expect_selection install auto absent 0 0 0 0 0
+expect_selection install auto absent 1 1 0 1 0 1
+expect_selection install auto absent 1 1 1 1 0 1
+expect_selection ambiguous auto invalid 1 1 0 1 0 1
 expect_selection update auto valid 1 1 0 0 0
 expect_selection update auto absent 1 1 1 1 0
 expect_selection ambiguous auto absent 0 1 0 0 0

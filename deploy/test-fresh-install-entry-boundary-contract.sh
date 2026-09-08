@@ -344,7 +344,7 @@ make_partial_state_bootstrap() {
     local database_path=$1 output_path=$2
     cp -- "$test_bootstrap" "$output_path"
     sed -i "s|/var/lib/celikpanel/celikpanel.db|$database_path|g" "$output_path"
-    [[ $(grep -Fc "$database_path" "$output_path") -eq 2 &&
+    [[ $(grep -Fc "$database_path" "$output_path") -eq 3 &&
        $(grep -Fc '/var/lib/celikpanel/celikpanel.db' "$output_path") -eq 0 ]] \
         || fail "partial-state bootstrap did not isolate the database path exactly"
 }

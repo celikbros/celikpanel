@@ -128,8 +128,11 @@ do not build on the server. A new customer uses the public
 completed installation updates only through **Settings → CelikPanel updates**;
 the bootstrap and SSH updater are not routine existing-installation paths.
 With no mode flag the bootstrap distinguishes a clean server from a
-completed CelikPanel installation. Partial or ambiguous layouts still fail
-closed, with one deliberately narrow exception: an update interrupted by the
+completed CelikPanel installation. An authenticated pending first installation
+continues the original version; the exact pre-receipt Alpha55 state also has a
+bounded compatibility path. See [first-install recovery](FIRST-INSTALL-RECOVERY.md).
+Unknown partial layouts still fail closed. Another deliberately narrow exception
+is an update interrupted by the
 `v0.1.0-alpha.4` panel TLS compatibility snapshot defect. The public no-flag
 command selects a recovery update only when the transaction records the exact
 alpha.4 target `8bbbac8b628fae4fca0e127e52c1c7835f56f8b8`, the expected

@@ -130,10 +130,14 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpane
 sh /tmp/celikpanel-get.sh
 
 # Or require the exact version pinned by the downloaded bootstrap
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.55
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.56
 ```
 
-Do not download and run the public bootstrap on an existing installation.
+If the terminal disconnects during first setup, run the same installation
+command again. The bootstrap authenticates its saved release receipt and
+completes that same version, preserving the database and any administrator
+already created. A competing installation is refused; a completed installation
+reports completion without reinstalling. No special repair flag is needed.
 Existing installations update from the authenticated **Signed update** screen
 in the panel. That screen obtains one exact signed release identity from the
 trusted check path and the product launches its already installed
@@ -144,9 +148,11 @@ installed updater with `--update --version <exact-version>`,
 `--require-signed-manifest`, and the exact expected sequence, current floor,
 commit, archive digest and size. Those flags are an internal trust contract,
 not an operator recipe or a way to choose an arbitrary URL, path or release.
-Partial, ambiguous or interrupted installations follow the explicit recovery
-procedure in the [operations runbook](docs/OPERATIONS.md); the public bootstrap
-is not a repair switch.
+Unknown partial installations without an authenticated receipt still require
+the [operations runbook](docs/OPERATIONS.md). The narrowly supported Alpha55
+transition additionally verifies the original signed binaries, release floor,
+absence of administrators and initial agent ledger before admitting recovery.
+See [first-install recovery](docs/FIRST-INSTALL-RECOVERY.md) for the exact scope.
 
 The installer interactively creates the first administrator. Do not place the
 administrator password in shell history, deployment scripts or release files.
@@ -206,8 +212,8 @@ environment; the public verification key is tracked and pinned by the product.
 workflow:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.55 SIGNING_KEY=<full-key-fingerprint>
-gpg --verify dist/celikpanel-v0.1.0-alpha.55.tar.gz.asc dist/celikpanel-v0.1.0-alpha.55.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.56 SIGNING_KEY=<full-key-fingerprint>
+gpg --verify dist/celikpanel-v0.1.0-alpha.56.tar.gz.asc dist/celikpanel-v0.1.0-alpha.56.tar.gz
 ```
 
 That optional `.asc` file is not one of the six canonical public assets, does
