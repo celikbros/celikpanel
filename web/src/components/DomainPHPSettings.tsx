@@ -196,7 +196,7 @@ export function DomainPHPSettings({
 
             <FormSection title={t('php.pool')} description={`${t('php.poolName')}: ${settings.pool_name}`}>
                 {pending ? (
-                    <div className="rounded-lg border border-warning/40 bg-warning/10 p-4">
+                    <div className="rounded-lg border border-warning-mark/60 bg-warning-mark/20 p-4">
                         <p className="text-sm font-medium text-fg">{t('php.applyFirst')}</p>
                         <p className="mt-0.5 text-xs text-fg-muted">{t('php.applyFirstHint')}</p>
                     </div>

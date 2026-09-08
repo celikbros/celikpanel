@@ -341,7 +341,7 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                 ) : (
                     <>
                         {quotaStatus && !quotaStatus.plugin_enabled && (
-                            <p className="mb-3 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-fg-muted">
+                            <p className="mb-3 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-2 text-xs text-fg-muted">
                                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
                                 {t('mail.quotaNotEnforced')}
                             </p>
@@ -556,7 +556,7 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                                 {t('mail.passwordDialog.mismatch')}
                             </p>
                         )}
-                        <p id="mail-password-session-warning" className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-fg-muted">
+                        <p id="mail-password-session-warning" className="flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-2 text-xs text-fg-muted">
                             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden="true" />
                             {t('mail.passwordDialog.sessionWarning')}
                         </p>
@@ -577,7 +577,7 @@ function Tab({ active, onClick, label, count }: { active: boolean; onClick: () =
         >
             {label}
             {count !== undefined && (
-                <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-fg-muted">{count}</span>
+                <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-xs text-fg-muted">{count}</span>
             )}
         </button>
     );
@@ -636,7 +636,7 @@ function DeliverabilityCard({ domainId }: { domainId: number }) {
                 ))}
             </div>
             {ptr && ptr.status !== 'ok' && (
-                <p className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-xs text-fg-muted">
+                <p className="mt-3 rounded-lg bg-warning-mark/20 px-3 py-2 text-xs text-fg-muted">
                     {t('mail.health.ptrFix', { ip: data.server_ip, host: data.expected_ptr })}
                 </p>
             )}

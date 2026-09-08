@@ -36,16 +36,16 @@ interface Tier {
 }
 
 const sslTierPresentation: Record<SSLTier, Omit<Tier, 'label'>> = {
-    none: { icon: AlertTriangle, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
-    pending: { icon: Clock3, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
+    none: { icon: AlertTriangle, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },
+    pending: { icon: Clock3, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },
     invalid: { icon: ShieldAlert, color: 'text-danger', surface: 'border-danger/30 bg-danger/5' },
     untrusted: { icon: ShieldAlert, color: 'text-danger', surface: 'border-danger/30 bg-danger/5' },
-    trustUnknown: { icon: ShieldAlert, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
+    trustUnknown: { icon: ShieldAlert, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },
     expired: { icon: ShieldAlert, color: 'text-danger', surface: 'border-danger/30 bg-danger/5' },
-    inactive: { icon: ShieldAlert, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
-    incomplete: { icon: ShieldAlert, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
-    expiring: { icon: Clock3, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
-    dependentsPending: { icon: Clock3, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
+    inactive: { icon: ShieldAlert, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },
+    incomplete: { icon: ShieldAlert, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },
+    expiring: { icon: Clock3, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },
+    dependentsPending: { icon: Clock3, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },
     valid: { icon: CheckCircle, color: 'text-success', surface: 'border-success/30 bg-success/5' },
 };
 
@@ -108,7 +108,7 @@ export function DomainSSLOverviewCard({
           ? {
                 icon: ShieldAlert,
                 color: 'text-warning',
-                surface: 'border-warning/30 bg-warning/5',
+                surface: 'border-border-strong bg-surface-2',
                 label: 'domain.overview.ssl.unavailable',
             }
           : {

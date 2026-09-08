@@ -266,7 +266,7 @@ export function SystemSQLiteManager() {
                                         ogretir. Panelin kendi veritabani istisnadir. */}
                                     {!database.available && (
                                         database.id === 'panel' ? (
-                                            <div className={'mt-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning'}>
+                                            <div className={'mt-4 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-2 text-sm text-warning'}>
                                                 <AlertTriangle className={'mt-0.5 h-4 w-4 shrink-0'} />
                                                 <span>{localizedStatusMessage || t('systemDb.unavailable')}</span>
                                             </div>
@@ -298,7 +298,7 @@ export function SystemSQLiteManager() {
 
                                     {database.path_hint && (
                                         <div className={'mt-4 rounded-lg bg-surface-2 px-3 py-2'}>
-                                            <div className={'text-[11px] font-semibold uppercase tracking-wide text-fg-subtle'}>
+                                            <div className={'text-xs font-semibold uppercase tracking-wide text-fg-subtle'}>
                                                 {t('systemDb.pathHint')}
                                             </div>
                                             <div className={'mt-1 break-all font-mono text-xs text-fg-muted'}>{database.path_hint}</div>
@@ -370,7 +370,7 @@ function StatusBadge({ status, available }: { status: string; available: boolean
         : normalized === 'ready' || normalized === 'healthy' || normalized === 'ok'
           ? 'border-success/30 bg-success/10 text-success'
           : normalized === 'warning' || normalized === 'degraded'
-            ? 'border-warning/30 bg-warning/10 text-warning'
+            ? 'border-warning-mark/50 bg-warning-mark/20 text-warning'
             : normalized === 'error' || normalized === 'corrupt'
               ? 'border-danger/30 bg-danger/10 text-danger'
               : 'border-border bg-surface-2 text-fg-muted';
@@ -385,7 +385,7 @@ function StatusBadge({ status, available }: { status: string; available: boolean
             : normalized === 'error' || normalized === 'corrupt'
               ? t('systemDb.status.error')
               : t('systemDb.status.unknown');
-    return <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${variant}`}>{label}</span>;
+    return <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${variant}`}>{label}</span>;
 }
 
 function normalizeError(cause: unknown, fallback: string): ApiError {

@@ -95,87 +95,93 @@
     --icon-stroke: 2;
 
     /*
-      The signal box, light: printed rulebook stock, ink with a green cast,
-      hairline rules. The primary action is a lever — a dark handle, never a
-      coloured accent — because red, amber and green are reserved for state
-      and mean nothing else anywhere in the product. See DESIGN.md.
+      Navy and white, light. White surfaces carry the work, navy carries the
+      text, the rules and the primary action, and one navy rail carries the
+      machine. The three signal colours stay rare and mean only state: yellow
+      for attention, green for clear, red for stopped. Yellow is never placed
+      beside red.
 
-      Sinyal kulesi, açık: basılı kural kitabı kağıdı, yeşile çalan mürekkep,
-      saç teli çizgiler. Birincil eylem bir koldur — koyu bir tutamak, renkli
-      bir vurgu değil — çünkü kırmızı, sarı ve yeşil yalnız durumu anlatır.
+      Lacivert ve beyaz, açık. İşi beyaz yüzeyler taşır; yazıyı, çizgileri ve
+      birincil eylemi lacivert taşır. Sinyal renkleri seyrektir ve yalnız
+      durumu anlatır; sarı ile kırmızı yan yana gelmez.
     */
-    --bg: 238 241 236;          /* paper */
-    --surface: 246 248 244;     /* lit paper */
-    --surface-2: 227 232 225;
-    --surface-3: 214 221 212;
-    --border: 183 191 181;      /* rule */
-    --border-strong: 134 143 132;
-    --fg: 16 22 15;             /* ink */
-    --fg-muted: 58 66 58;
-    --fg-subtle: 74 84 74;
-    --primary: 16 22 15;        /* the lever */
-    --primary-hover: 34 48 42;
-    --primary-fg: 244 246 242;
-    --success: 30 111 69;       /* green ink, ≥4.5:1 on paper */
-    --success-fg: 246 248 244;
-    --warning: 122 90 8;        /* amber ink */
-    --warning-fg: 246 248 244;
-    --danger: 162 13 38;        /* red ink */
-    --danger-fg: 246 248 244;
+    --scrim: 8 20 40;
+    --bg: 243 246 251;
+    --surface: 255 255 255;
+    --surface-2: 237 242 249;
+    --surface-3: 223 231 242;
+    --surface-subtle: 248 250 253;
+    --border: 204 214 230;
+    --border-strong: 125 142 169;
+    --fg: 14 31 61;
+    --fg-muted: 47 66 105;
+    --fg-subtle: 79 94 124;
+    --primary: 18 58 114;
+    --primary-hover: 13 44 88;
+    --primary-fg: 255 255 255;
+    --success: 28 122 69;
+    --success-fg: 255 255 255;
+    --warning: 138 97 0;         /* text: the readable amber */
+    --warning-mark: 245 179 1;   /* marks: the actual yellow */
+    --warning-fg: 20 14 0;
+    --danger: 179 38 30;
+    --danger-fg: 255 255 255;
 
-    /* The one dark object: the rail is the illuminated board, and the current
-       route is lit rather than coloured. / Tek koyu nesne: kenar çubuğu
-       aydınlatılmış panodur; açık olan rota renklenmez, aydınlanır. */
-    --scrim: 8 19 14;           /* the room dims to the board */
-    --sidebar-bg: 11 31 23;         /* board */
-    --sidebar-fg: 232 236 231;      /* track */
-    --sidebar-fg-muted: 163 184 173;
-    --sidebar-heading: 121 145 132;
-    --sidebar-hover: 18 41 31;
-    --sidebar-active: 232 236 231;
-    --sidebar-active-fg: 11 31 23;
-    --sidebar-border: 74 98 84;
+    /* The rail is the one dark object, and the current item is lit rather than
+       coloured. / Kenar çubuğu tek koyu nesnedir; açık olan aydınlanır. */
+    --sidebar-bg: 13 34 71;
+    --sidebar-fg: 238 243 251;
+    --sidebar-fg-muted: 185 203 230;
+    --sidebar-heading: 145 170 205;
+    --sidebar-hover: 48 100 178;
+    --sidebar-active: 255 255 255;
+    --sidebar-active-fg: 13 34 71;
+    --sidebar-border: 78 116 175;
 }
+
 
 
 .dark {
     /*
-      The signal box after dark: the whole panel moves onto the board, and the
-      lamps take over from the inks — a lamp is drawn to be read against a
-      dark ground, which is exactly the condition here.
+      After dark the whole panel moves onto the navy, and the lamps take over
+      from the inks: a lamp is drawn to be read against a dark ground, which is
+      the condition here. Yellow still never sits beside red.
 
-      Karanlıkta sinyal kulesi: panelin tamamı panoya taşınır ve mürekkeplerin
-      yerini lambalar alır; lamba zaten koyu zeminde okunmak için çizilmiştir.
+      Karanlıkta panelin tamamı laciverte taşınır ve mürekkeplerin yerini
+      lambalar alır. Sarı yine kırmızının yanına gelmez.
     */
-    --scrim: 2 8 5;
-    --bg: 8 19 14;
-    --surface: 11 31 23;        /* board */
-    --surface-2: 18 41 31;
-    --surface-3: 27 58 44;
-    --border: 36 58 47;
-    --border-strong: 84 110 95;
-    --fg: 232 236 231;          /* track */
-    --fg-muted: 163 184 173;
-    --fg-subtle: 150 172 158;
-    --primary: 232 236 231;     /* the lever inverts: a lit handle */
-    --primary-hover: 255 255 255;
-    --primary-fg: 11 31 23;
-    --success: 52 194 115;      /* lamp green */
-    --success-fg: 8 19 14;
-    --warning: 240 168 26;      /* lamp amber */
-    --warning-fg: 8 19 14;
-    --danger: 240 110 128;      /* lamp red, light enough to read on its own tint */
-    --danger-fg: 8 19 14;
+    --scrim: 3 10 22;
+    --bg: 6 15 31;
+    --surface: 20 44 84;
+    --surface-2: 30 64 120;
+    --surface-3: 42 83 145;
+    --surface-subtle: 26 55 100;
+    --border: 90 135 205;
+    --border-strong: 125 159 214;
+    --fg: 238 243 251;
+    --fg-muted: 185 203 230;
+    --fg-subtle: 150 175 210;
+    --primary: 210 226 255;
+    --primary-hover: 235 243 255;
+    --primary-fg: 13 34 71;
+    --success: 53 184 119;
+    --success-fg: 8 20 40;
+    --warning: 245 179 1;
+    --warning-mark: 245 179 1;
+    --warning-fg: 8 20 40;
+    --danger: 245 145 136;
+    --danger-fg: 8 20 40;
 
-    --sidebar-bg: 11 31 23;         /* the board stays the board */
-    --sidebar-fg: 232 236 231;
-    --sidebar-fg-muted: 163 184 173;
-    --sidebar-heading: 150 172 158;
-    --sidebar-hover: 27 58 44;
-    --sidebar-active: 232 236 231;
-    --sidebar-active-fg: 11 31 23;
-    --sidebar-border: 74 98 84;
+    --sidebar-bg: 13 34 71;
+    --sidebar-fg: 238 243 251;
+    --sidebar-fg-muted: 185 203 230;
+    --sidebar-heading: 150 175 210;
+    --sidebar-hover: 48 100 178;
+    --sidebar-active: 255 255 255;
+    --sidebar-active-fg: 13 34 71;
+    --sidebar-border: 78 116 175;
 }
+
 
 
 /*

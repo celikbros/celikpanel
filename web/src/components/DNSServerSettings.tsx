@@ -262,7 +262,7 @@ export function DNSServerSettings() {
                         : undefined}
                 >
                     <div className="flex items-start gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning-mark/20 text-warning">
                             <AlertTriangle className="h-4.5 w-4.5" />
                         </span>
                         <div className="min-w-0">
@@ -856,7 +856,7 @@ function DNSInfrastructureSettings({
                         <div className={`mt-4 rounded-xl border p-3 ${
                             dnsServiceReady
                                 ? 'border-success/25 bg-success/5'
-                                : 'border-warning/30 bg-warning/5'
+                                : 'border-warning-mark/50 bg-warning-mark/10'
                         }`}>
                             <div className="flex flex-wrap items-center gap-3">
                                 {dnsServiceReady
@@ -879,7 +879,7 @@ function DNSInfrastructureSettings({
                                 {!dnsServiceReady && (
                                     <Link
                                         to="/services"
-                                        className="rounded-lg border border-warning/40 bg-surface px-3 py-2 text-xs font-semibold text-fg hover:border-warning"
+                                        className="rounded-lg border border-warning-mark/60 bg-surface px-3 py-2 text-xs font-semibold text-fg hover:border-warning"
                                     >
                                         {t('dnssrv.requirement.openComponents')}
                                     </Link>
@@ -983,7 +983,7 @@ function DNSInfrastructureSettings({
                                 </div>
                             )}
                             {detectedAssignmentNeedsApply && (
-                                <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 p-3">
+                                <div className="mb-4 rounded-xl border border-warning-mark/50 bg-warning-mark/10 p-3">
                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div className="min-w-0 text-xs text-fg-muted">
                                             <p className="mb-1 font-semibold text-fg">{t('dnssrv.detectedAssignment')}</p>
@@ -1110,7 +1110,7 @@ function DNSInfrastructureSettings({
                                 className={`mt-4 rounded-lg border p-3 text-xs leading-relaxed ${
                                     stepTwoReady
                                         ? 'border-success/25 bg-success/5 text-success'
-                                        : 'border-warning/25 bg-warning/5 text-fg-muted'
+                                        : 'border-warning/25 bg-warning-mark/10 text-fg-muted'
                                 }`}
                             >
                                 {stepTwoBlockerText}
@@ -1166,20 +1166,20 @@ function DNSInfrastructureSettings({
                         className={`mb-3 rounded-lg border p-3 text-xs leading-relaxed ${
                             clusterBlocker === null
                                 ? 'border-success/25 bg-success/5 text-success'
-                                : 'border-warning/25 bg-warning/5 text-fg-muted'
+                                : 'border-warning/25 bg-warning-mark/10 text-fg-muted'
                         }`}
                     >
                         {blockerText}
                     </div>
                     {dnsServiceMissing && (
-                        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
+                        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning-mark/50 bg-warning-mark/10 p-3">
                             <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
                             <p className="min-w-0 flex-1 text-xs leading-relaxed text-fg-muted">
                                 {t('dnssrv.requirement.powerdnsMissing')}
                             </p>
                             <Link
                                 to="/services"
-                                className="rounded-lg border border-warning/40 bg-surface px-3 py-2 text-xs font-semibold text-fg hover:border-warning"
+                                className="rounded-lg border border-warning-mark/60 bg-surface px-3 py-2 text-xs font-semibold text-fg hover:border-warning"
                             >
                                 {t('dnssrv.requirement.openComponents')}
                             </Link>
@@ -1187,7 +1187,7 @@ function DNSInfrastructureSettings({
                     )}
                     {apiError && <ErrorBanner error={apiError} className="mb-3" />}
                     {needsClusterRetry && (
-                        <p className="mb-3 rounded-lg border border-warning/25 bg-warning/5 px-3 py-2 text-xs leading-relaxed text-fg-muted">
+                        <p className="mb-3 rounded-lg border border-warning/25 bg-warning-mark/10 px-3 py-2 text-xs leading-relaxed text-fg-muted">
                             {t('dnssrv.publicationPending')}
                         </p>
                     )}

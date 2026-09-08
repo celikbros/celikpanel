@@ -284,7 +284,7 @@ export function PanelUpdateCard() {
                 </Button>
             </div>
 
-            <div className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-fg" role="note">
+            <div className="mt-4 rounded-lg border border-warning-mark/60 bg-warning-mark/20 p-4 text-sm text-fg" role="note">
                 <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
                     <p>{t('panelUpdate.alphaNotice')}</p>
                 </div>
@@ -309,7 +309,7 @@ export function PanelUpdateCard() {
                     <div
                         className={`rounded-lg border p-3 text-sm ${readiness?.ready === true
                             ? 'border-success/40 bg-success/10'
-                            : 'border-warning/40 bg-warning/10'}`}
+                            : 'border-warning-mark/60 bg-warning-mark/20'}`}
                         role="status"
                         aria-live="polite"
                     >

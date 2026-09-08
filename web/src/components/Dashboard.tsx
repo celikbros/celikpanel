@@ -804,8 +804,15 @@ function AdminDashboard() {
                     />
                     <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
                         <ul>
-                            {attention.map((a) => (
-                                    <li key={a.key} className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0">
+                            {[...attention].sort((x, y) => Number(Boolean(y.danger)) - Number(Boolean(x.danger))).map((a, index, list) => (
+                                    <li key={a.key} className={`flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0 ${
+                                        // A failure and a warning must not share an edge: where the
+                                        // severity changes, the list breaks. / Kirmizi ile sarinin
+                                        // sinirinda liste ayrilir.
+                                        index > 0 && Boolean(list[index - 1].danger) && !a.danger
+                                            ? 'mt-2 border-t-2 border-t-border-strong'
+                                            : ''
+                                    }`}>
                                         <a.icon className={`h-4 w-4 shrink-0 ${a.danger ? 'text-danger' : 'text-warning'}`} />
                                         <span className="min-w-0 flex-1 text-sm text-fg">{a.text}</span>
                                         {/* An item with a direct action gets a REAL button — a quiet
@@ -1127,7 +1134,7 @@ function DashboardFirewallConfirmationDialog({
             }
         >
             {readiness?.ready !== true && (
-                <p role="status" className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-fg">
+                <p role="status" className="rounded-lg border border-warning-mark/60 bg-warning-mark/20 px-3 py-2 text-sm text-fg">
                     <span className="font-semibold">{t('services.mutationReadiness.title')}</span>{' '}
                     {readinessMessage}
                 </p>
@@ -1208,7 +1215,7 @@ function MailStackSummary({ profiles, scanFresh, hostNeverChecked, checking, onC
         <section className='mt-6' aria-labelledby='dashboard-mail-stacks-heading'>
             <div className='rounded-xl border border-border bg-surface p-4 sm:p-5'>
                 <div className='flex flex-col gap-4 lg:flex-row lg:items-center'>
-                    <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning'>
+                    <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning-mark/20 text-warning'>
                         <Layers className='h-5 w-5' />
                     </span>
                     <div className='min-w-0 flex-1'>

@@ -92,6 +92,8 @@ grep -Fq 'The hosting control panel that proves its work' "$tmp/site/assets/site
   || fail "typeface licence was not shipped"
 grep -Fq "font-src 'self'" "$tmp/site/.htaccess" \
   || fail "CSP does not allow the self-hosted typefaces"
+grep -Fq 'Cache-Control "no-cache, must-revalidate"' "$tmp/site/.htaccess" \
+  || fail "the page and its stylesheet may be served stale from cache"
 grep -Fq 'document.documentElement.lang = currentLanguage' "$tmp/site/assets/site.js" \
   || fail "document language is not updated"
 grep -Fq 'celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml' "$tmp/site/index.html" \

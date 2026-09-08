@@ -125,7 +125,7 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
                                 <Icon className={`h-5 w-5 ${active ? 'text-primary' : 'text-fg-muted'}`} />
                                 <span className={`text-sm font-semibold ${active ? 'text-primary' : 'text-fg'}`}>{t(labelKey)}</span>
                                 {unavailable && (
-                                    <span className="text-[11px] font-medium text-warning">{t('hosting.phpMissing')}</span>
+                                    <span className="text-xs font-medium text-warning">{t('hosting.phpMissing')}</span>
                                 )}
                             </button>
                         );

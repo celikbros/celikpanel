@@ -116,7 +116,7 @@ export function DatabaseAccountStrip({
         // Engelleyen durum. Sekmelerin altindaki her sey bu dogruyken
         // basarisiz olacak.
         return (
-            <div className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3">
+            <div className="mb-4 rounded-xl border border-warning-mark/60 bg-warning-mark/20 px-4 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
                     <div className="min-w-0 flex-1">
                         <p className="flex items-center gap-2 text-sm font-semibold text-fg">

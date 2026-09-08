@@ -251,7 +251,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                 <ErrorBanner error={error} />
 
                 {dnsMissing && (
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-fg">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-4 text-sm text-fg">
                         {/*
                           Say which half is missing. An engine that is active but
                           has no identity must not be told to "activate BIND or

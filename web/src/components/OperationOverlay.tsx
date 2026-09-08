@@ -88,7 +88,7 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
                     disconnected || !busy
                         ? severity === 'error'
                             ? 'bg-danger/10 text-danger'
-                            : 'bg-warning/10 text-warning'
+                            : 'bg-warning-mark/20 text-warning'
                         : 'bg-primary/10 text-primary'
                 }`}>
                     {disconnected
@@ -119,7 +119,7 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
                         className={`mt-4 rounded-lg border px-4 py-3 text-left text-xs leading-5 ${
                             severity === 'error'
                                 ? 'border-danger/30 bg-danger/5 text-danger'
-                                : 'border-warning/30 bg-warning/5 text-warning'
+                                : 'border-warning-mark/50 bg-warning-mark/10 text-warning'
                         }`}
                     >
                         {view.message}
@@ -131,7 +131,7 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
                     </p>
                 )}
                 {operationID && (
-                    <p className="mt-3 font-mono text-[11px] text-fg-subtle">
+                    <p className="mt-3 font-mono text-xs text-fg-subtle">
                         {view?.operationID ?? t('services.operation.id', { id: operationID })}
                     </p>
                 )}

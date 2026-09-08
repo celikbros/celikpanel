@@ -294,7 +294,7 @@ function statusStyle(status: DNSEngineEntry['status']): string {
     if (status === 'active') return 'border-success/30 bg-success/10 text-success';
     if (status === 'installed_standby') return 'border-primary/25 bg-primary/10 text-primary';
     if (status === 'available') return 'border-border bg-surface-2 text-fg-muted';
-    return 'border-warning/35 bg-warning/10 text-warning';
+    return 'border-warning-mark/60 bg-warning-mark/20 text-warning';
 }
 
 export function DNSEngineCard({
@@ -939,11 +939,11 @@ export function DNSEngineCard({
 
                 {snapshot && (
                     <>
-                        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                        <div className={`mt-4 flex-wrap items-center gap-2 text-xs ${loadError ? 'hidden' : 'flex'}`}>
                             <span className={`rounded-full border px-2.5 py-1 font-semibold ${
                                 snapshot.state === 'ready'
                                     ? 'border-success/30 bg-success/10 text-success'
-                                    : 'border-warning/35 bg-warning/10 text-warning'
+                                    : 'border-warning-mark/60 bg-warning-mark/20 text-warning'
                             }`}>
                                 {/*
                                   R-050. "Unmanaged DNS detected" is the compact
@@ -978,7 +978,7 @@ export function DNSEngineCard({
                                             ? 'border-success/30 bg-success/10 text-success'
                                             : snapshot.pair_role === 'secondary'
                                               ? 'border-primary/25 bg-primary/5 text-primary'
-                                              : 'border-warning/35 bg-warning/10 text-warning'
+                                              : 'border-warning-mark/60 bg-warning-mark/20 text-warning'
                                     }`}
                                 >
                                     {snapshot.pair_role === 'secondary'
@@ -1083,7 +1083,7 @@ export function DNSEngineCard({
 
                         {identityReviewLocked && !actionsLocked && (
                             <p
-                                className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs leading-relaxed text-fg-muted"
+                                className="mt-4 rounded-lg border border-warning-mark/50 bg-warning-mark/10 px-3 py-2 text-xs leading-relaxed text-fg-muted"
                                 data-testid="dns-engine-identity-lock"
                                 role="note"
                             >
@@ -1199,12 +1199,12 @@ function DNSEngineOperationProgress({
                         </div>
                     )}
                     {trackingError && active && (
-                        <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning" role="alert">
+                        <div className="mt-3 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-2 text-xs leading-relaxed text-warning" role="alert">
                             {trackingError}
                         </div>
                     )}
                     {trackingDelayed && active && (
-                        <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning" role="alert">
+                        <div className="mt-3 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-2 text-xs leading-relaxed text-warning" role="alert">
                             {et('dnsEngine.operation.trackingDelayed')}
                         </div>
                     )}
@@ -1387,7 +1387,7 @@ function DNSEngineReviewDialog({
                         </div>
 
                         {preview.blockers.length > 0 && (
-                            <div className="rounded-xl border border-warning/35 bg-warning/10 p-4" role="alert">
+                            <div className="rounded-xl border border-warning-mark/60 bg-warning-mark/20 p-4" role="alert">
                                 <h4 className="flex items-center gap-2 text-sm font-semibold text-fg">
                                     <AlertTriangle className="h-4 w-4 text-warning" />
                                     {et('dnsEngine.blockersTitle')}
@@ -1499,7 +1499,7 @@ function DNSEngineReviewDialog({
                         )}
 
                         {preview.requires_downtime_acknowledgement && preview.blockers.length === 0 && (
-                            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-warning/35 bg-warning/5 p-4">
+                            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-warning-mark/60 bg-warning-mark/10 p-4">
                                 <input
                                     type="checkbox"
                                     checked={review.acknowledged}

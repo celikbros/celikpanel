@@ -277,8 +277,8 @@ function isSecurityAuditResponse(value: unknown): value is SecurityAuditResponse
 
 function statusClasses(status: AuditStatus) {
     switch (status) {
-        case 'pass': return 'border-success/30 bg-success/10 text-success';
-        case 'warning': return 'border-warning/30 bg-warning/10 text-warning';
+        case 'pass': return 'border-border bg-surface text-success';
+        case 'warning': return 'border-border-strong bg-surface-2 text-warning';
         case 'fail': return 'border-danger/30 bg-danger/10 text-danger';
         default: return 'border-border bg-surface-subtle text-fg-muted';
     }

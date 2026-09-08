@@ -391,7 +391,7 @@ export function StoreCatalogAdmin({ onDirtyChange }: { onDirtyChange?: (dirty: b
                             </div>
 
                             {original.release_state === 'available' && draft.release_state !== 'available' && (
-                                <div className="flex gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-fg">
+                                <div className="flex gap-3 rounded-lg border border-warning-mark/60 bg-warning-mark/20 p-3 text-sm text-fg">
                                     <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
                                     <div>
                                         <p className="font-semibold">{t('addons.admin.lifecycleImpactTitle')}</p>
@@ -463,8 +463,8 @@ function LocalizedFields({ localeLabel, name, description, onName, onDescription
 function ReleaseBadge({ state }: { state: ReleaseState }) {
     const { t } = useI18n();
     const label = state === 'available' ? t('addons.state.available') : state === 'coming_soon' ? t('addons.state.comingSoon') : t('addons.admin.stateRetired');
-    const style = state === 'available' ? 'bg-success/10 text-success' : state === 'coming_soon' ? 'bg-warning/10 text-warning' : 'bg-surface-2 text-fg-muted';
-    return <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${style}`}>{label}</span>;
+    const style = state === 'available' ? 'bg-success/10 text-success' : state === 'coming_soon' ? 'bg-warning-mark/20 text-warning' : 'bg-surface-2 text-fg-muted';
+    return <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${style}`}>{label}</span>;
 }
 
 function OperationPolicyCard({ policy, components }: { policy: OperationPolicy; components: AdminComponent[] }) {
@@ -478,7 +478,7 @@ function OperationPolicyCard({ policy, components }: { policy: OperationPolicy; 
                     <ReadOnlyValue label={t('addons.admin.policyVerification')} value={t('addons.admin.implemented')} />
                     <ReadOnlyValue label={t('addons.admin.policyActivation')} value={t('addons.admin.pending')} />
                 </div>
-                <p className="mt-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs leading-5 text-fg-muted">{t('addons.admin.policyHint')}</p>
+                <p className="mt-4 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-xs leading-5 text-fg-muted">{t('addons.admin.policyHint')}</p>
                 <details className="mt-4">
                     <summary className="cursor-pointer text-sm font-semibold text-primary">{t('addons.admin.policyComponents', { count: components.length })}</summary>
                     <div className="mt-3 overflow-x-auto rounded-lg border border-border">

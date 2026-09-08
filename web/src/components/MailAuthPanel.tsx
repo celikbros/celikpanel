@@ -271,7 +271,7 @@ function RecordCard({
 
 function Note({ children }: { children: React.ReactNode }) {
     return (
-        <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-fg-muted">
+        <p className="flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-2 text-xs text-fg-muted">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
             {children}
         </p>

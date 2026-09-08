@@ -107,7 +107,7 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
 
     const connected = c.status === 'delegated' || c.status === 'a_record';
     const stable = connected && !c.propagation_pending;
-    const tone = stable ? 'border-success/40 bg-success/5' : 'border-warning/40 bg-warning/5';
+    const tone = stable ? 'border-success/40 bg-success/5' : 'border-warning-mark/60 bg-warning-mark/10';
 
     return (
         <section className={`rounded-xl border ${tone} p-5`}>
@@ -155,7 +155,7 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
             </div>
 
             {c.propagation_pending && c.resolver_observations?.length ? (
-                <div className="mb-4 rounded-lg border border-warning/40 bg-warning/10 p-3">
+                <div className="mb-4 rounded-lg border border-warning-mark/60 bg-warning-mark/20 p-3">
                     <p className="text-sm font-medium text-fg">{t('conn.propagation.title')}</p>
                     <p className="mt-1 text-xs leading-relaxed text-fg-muted">{t('conn.propagation.desc')}</p>
                     <ul className="mt-2 space-y-1">

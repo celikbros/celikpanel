@@ -244,7 +244,7 @@ export function DomainDNSManager({
                 söyle. DNSSEC imzalama DNS sunucusunun aracını ister; o kart
                 yalnız biri kuruluyken var olur. */}
             {dnsServer === '' && (
-                <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-fg">
+                <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm text-fg">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                     <span>{t('dns.notServed')}</span>
                 </div>
@@ -256,7 +256,7 @@ export function DomainDNSManager({
 				</div>
 			)}
 			{dnsServerError && (
-				<div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-fg">
+				<div className="mb-4 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm text-fg">
 					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
 					<span>{dnsServerError}</span>
 				</div>
@@ -448,7 +448,7 @@ function DSField({ label, value, note, mono }: { label: string; value: string; n
                     <Copy className="h-3.5 w-3.5" />
                 </button>
             </div>
-            {note && <div className="mt-0.5 text-[11px] text-fg-subtle">{note}</div>}
+            {note && <div className="mt-0.5 text-xs text-fg-subtle">{note}</div>}
         </div>
     );
 }
@@ -514,7 +514,7 @@ function DNSSECSection({ domainId, readOnly = false }: { domainId: number; domai
                 )}
             </div>
 			{statusError ? (
-				<div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-fg">
+				<div className="flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm text-fg">
 					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
 					<span>{statusError}</span>
 				</div>

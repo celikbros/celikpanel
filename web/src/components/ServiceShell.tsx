@@ -483,7 +483,7 @@ function ServiceInstallConfirmationDialog({
                 <div
                     role="status"
                     aria-live="polite"
-                    className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning"
+                    className="rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-2 text-sm text-warning"
                 >
                     {readiness?.ready === false && (
                         <span className="font-semibold">{t('services.mutationReadiness.title')} </span>
@@ -517,7 +517,7 @@ function CtrlButton({
     const tones = {
         success: 'text-success border-success/30 hover:bg-success/10',
         danger: 'text-danger border-danger/30 hover:bg-danger/10',
-        warning: 'text-warning border-warning/30 hover:bg-warning/10',
+        warning: 'text-warning border-warning-mark/50 hover:bg-warning-mark/20',
     }[tone];
     return (
         <button
