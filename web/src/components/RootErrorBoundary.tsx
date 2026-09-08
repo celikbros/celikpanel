@@ -58,7 +58,7 @@ export class RootErrorBoundary extends Component<
           </p>
           <button
             type="button"
-            className="mt-6 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            className="mt-6 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary-hover"
             onClick={this.reload}
           >
             Yeniden yükle / Reload

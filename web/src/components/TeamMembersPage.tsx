@@ -700,7 +700,7 @@ function PermissionMatrix({
                                                 capability,
                                                 event.target.value as PermissionChoice,
                                             )}
-                                            className='rounded-md border border-border bg-surface px-2 py-1 text-xs text-fg outline-none focus:border-primary focus:ring-2 focus:ring-primary/30'
+                                            className='rounded-md border border-border bg-surface px-2 py-1 text-xs text-fg outline-none focus:border-primary'
                                             aria-label={resource.label + ' — ' + t(capabilityKey(capability))}
                                         >
                                             <option value='none'>{t('team.mode.none')}</option>

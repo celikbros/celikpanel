@@ -1821,7 +1821,7 @@ function MailProfileCards({ profiles, services, disabled, dnsIdentityReady, onIn
     };
     const serviceName = (id: string) => services.find((service) => service.id === id)?.name ?? id;
     return (
-        <section id='mail-stacks' tabIndex={-1} aria-labelledby='mail-profile-heading' className='mb-6 scroll-mt-24 focus:outline-none'>
+        <section id='mail-stacks' tabIndex={-1} aria-labelledby='mail-profile-heading' className='mb-6 scroll-mt-24'>
             <div className='mb-3 flex items-start gap-3'>
                 <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning'>
                     <Layers className='h-5 w-5' />
@@ -2139,7 +2139,7 @@ function MailProfileInstallDialog({
                                         setHostnameDraft(event.target.value);
                                         setHostnameTouched(true);
                                     }}
-                                    className={`mt-1 w-full rounded-lg border bg-surface px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                                    className={`mt-1 w-full rounded-lg border bg-surface px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle ${
                                         hostnameInvalid && hostnameTouched
                                             ? 'border-danger focus:border-danger'
                                             : 'border-border-strong focus:border-primary'

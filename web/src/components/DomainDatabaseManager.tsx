@@ -280,7 +280,7 @@ export function DomainDatabaseManager({
                                 value={dbName}
                                 onChange={(e) => setDbName(e.target.value)}
                                 placeholder="myapp"
-                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
+                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary"
                                 required
                             />
                             <p className="text-xs text-fg-subtle mt-1">
@@ -293,7 +293,7 @@ export function DomainDatabaseManager({
                             <select
                                 value={dbType}
                                 onChange={(e) => setDbType(e.target.value as DatabaseType)}
-                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
+                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary"
                             >
                                 {engines.map((eng) => (
                                     <option key={eng.value} value={eng.value}>{eng.label}</option>
@@ -308,7 +308,7 @@ export function DomainDatabaseManager({
                                 value={dbPassword}
                                 onChange={(e) => setDbPassword(e.target.value)}
                                 placeholder="Enter a strong password"
-                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
+                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary"
                                 required
                             />
                         </div>

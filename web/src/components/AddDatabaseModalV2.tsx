@@ -126,7 +126,7 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                         type="text"
                         value={databaseName}
                         onChange={(e) => setDatabaseName(e.target.value)}
-                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:border-primary"
                         placeholder="myapp_db"
                         required
                         pattern="[a-zA-Z0-9_]+"
@@ -142,7 +142,7 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                     <select
                         value={domainId || ''}
                         onChange={(e) => setDomainId(e.target.value ? Number(e.target.value) : null)}
-                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:border-primary"
                     >
                         <option value="">No site (standalone database)</option>
                         {domains.map(domain => (
@@ -187,7 +187,7 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                         <select
                             value={selectedUserId}
                             onChange={(e) => setSelectedUserId(Number(e.target.value))}
-                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:border-primary"
                             required
                         >
                             <option value={0}>Select a user...</option>
@@ -202,7 +202,7 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                                     type="text"
                                     value={newUsername}
                                     onChange={(e) => setNewUsername(e.target.value)}
-                                    className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                                    className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:border-primary"
                                     placeholder="Username"
                                     required={userMode === 'new'}
                                     pattern="[a-zA-Z0-9_]+"
@@ -213,7 +213,7 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                                     type="text"
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
-                                    className="flex-1 bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                                    className="flex-1 bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:border-primary"
                                     placeholder="Password"
                                     required={userMode === 'new'}
                                 />
@@ -238,7 +238,7 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                     <select
                         value={privileges}
                         onChange={(e) => setPrivileges(e.target.value)}
-                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:border-primary"
                     >
                         <option value="ALL">ALL (Full Access)</option>
                         <option value="SELECT">SELECT (Read Only)</option>

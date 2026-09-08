@@ -293,7 +293,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                         type="text"
                         value={domainName}
                         onChange={(e) => setDomainName(e.target.value)}
-                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-fg focus:outline-none focus:border-primary"
+                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-fg focus:border-primary"
                         placeholder="example.com"
                         required
                     />

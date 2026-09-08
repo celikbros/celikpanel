@@ -62,7 +62,7 @@ export function ConfigEditor({ path, onBack }: ConfigEditorProps) {
                 <textarea
                     value={content}
                     onChange={e => setContent(e.target.value)}
-                    className="w-full h-full bg-bg text-fg-muted font-mono text-sm p-6 resize-none focus:outline-none"
+                    className="w-full h-full bg-bg text-fg-muted font-mono text-sm p-6 resize-none"
                     spellCheck={false}
                 />
             </div>

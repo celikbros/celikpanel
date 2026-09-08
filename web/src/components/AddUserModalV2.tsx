@@ -85,7 +85,7 @@ export function AddUserModalV2({ serverId, serverName, onClose, onSuccess }: Add
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:border-primary"
                         placeholder="myapp_user"
                         required
                         pattern="[a-zA-Z0-9_]+"
@@ -106,7 +106,7 @@ export function AddUserModalV2({ serverId, serverName, onClose, onSuccess }: Add
                             type="text"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="flex-1 bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
+                            className="flex-1 bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:border-primary"
                             placeholder="Password"
                             required
                         />

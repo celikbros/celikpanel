@@ -105,7 +105,7 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
                 value={config[key]}
                 onChange={e => setConfig({ ...config, [key]: e.target.value })}
                 placeholder={placeholder}
-                className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm font-mono focus:border-primary focus:outline-none"
+                className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm font-mono focus:border-primary"
             />
         </div>
     );
@@ -116,7 +116,7 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
             <select
                 value={config[key]}
                 onChange={e => setConfig({ ...config, [key]: e.target.value })}
-                className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm font-mono focus:border-primary focus:outline-none"
+                className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm font-mono focus:border-primary"
             >
                 {options.map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
@@ -197,7 +197,7 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
                         <textarea
                             value={config.additional_directives}
                             onChange={e => setConfig({ ...config, additional_directives: e.target.value })}
-                            className="w-full h-64 bg-surface border border-border rounded p-4 text-fg font-mono text-sm focus:border-primary focus:outline-none"
+                            className="w-full h-64 bg-surface border border-border rounded p-4 text-fg font-mono text-sm focus:border-primary"
                             placeholder="; Custom directives"
                         />
                     </div>

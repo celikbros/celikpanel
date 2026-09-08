@@ -52,7 +52,7 @@ export function MariaDBManagement({ onBack }: MariaDBManagementProps) {
                             <select
                                 value={selected ?? ''}
                                 onChange={(e) => setSelected(e.target.value)}
-                                className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                                className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg outline-none focus:border-primary"
                             >
                                 {files.map((f) => (
                                     <option key={f.path} value={f.path}>
