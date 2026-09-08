@@ -487,4 +487,8 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 /* The install card explains its own length, and says so before the box. */
 .install-why { margin-top: 1rem; font-size: 0.9375rem; color: var(--ink-2); }
 .install-why strong { color: var(--ink); }
-.command-card .scroll-hint { margin: 0; padding: 0 1rem 0.6rem; color: var(--track-soft); }
+/* The hint sits above the code, so it must not read as a comment line of
+   it: sans-serif, its own rule, and the card's own ground behind it. */
+.command-card .scroll-hint { margin: 0; padding: 0.6rem 1rem; color: var(--track-soft);
+  font-family: var(--font-sans); letter-spacing: 0; font-size: 0.8125rem;
+  border-bottom: 1px solid var(--board-2); }
