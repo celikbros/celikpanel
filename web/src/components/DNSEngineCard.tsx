@@ -939,7 +939,7 @@ export function DNSEngineCard({
 
                 {snapshot && (
                     <>
-                        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                        <div className={`mt-4 flex-wrap items-center gap-2 text-xs ${loadError ? 'hidden' : 'flex'}`}>
                             <span className={`rounded-full border px-2.5 py-1 font-semibold ${
                                 snapshot.state === 'ready'
                                     ? 'border-success/30 bg-success/10 text-success'

@@ -321,7 +321,8 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
   background-position: 0 0, 100% 0, 0 0, 100% 0; }
 .interlock .interlock-table th, .interlock .interlock-table td { border-color: var(--track-dim); }
 .interlock .interlock-table thead th { color: var(--track-soft); }
-.interlock .interlock-table tbody th { color: var(--track); background: var(--board-2); box-shadow: 1px 0 0 var(--track-dim); }
+.interlock .interlock-table tbody th,
+.interlock .interlock-table thead th:first-child { color: var(--track); background: var(--board-2); box-shadow: 1px 0 0 var(--track-dim); }
 .interlock .mark-free { border-color: var(--track-dim); }
 .interlock .mark-lock { background: var(--lamp-red); }
 .interlock .interlock-notes dt { color: var(--track); }
