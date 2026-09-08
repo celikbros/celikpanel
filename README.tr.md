@@ -126,7 +126,7 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 \
 sh /tmp/celikpanel-get.sh
 
 # Veya tam bir değişmez sürümü sabitleyin
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.53
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.54
 ```
 
 Herkese açık bootstrap betiğini mevcut bir kurulumda indirip çalıştırmayın.
@@ -198,8 +198,8 @@ izlenir ve sabitlenir.
 `make dist-sign` yalnız isteğe bağlı yerel GPG ürün akışı için kullanılabilir:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.53 SIGNING_KEY=<tam-anahtar-parmak-izi>
-gpg --verify dist/celikpanel-v0.1.0-alpha.53.tar.gz.asc dist/celikpanel-v0.1.0-alpha.53.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.54 SIGNING_KEY=<tam-anahtar-parmak-izi>
+gpg --verify dist/celikpanel-v0.1.0-alpha.54.tar.gz.asc dist/celikpanel-v0.1.0-alpha.54.tar.gz
 ```
 
 İsteğe bağlı `.asc` dosyası altı kanonik herkese açık üründen biri değildir;
@@ -210,7 +210,7 @@ yayıncı kimliğini değil.
 ## Belgeler
 
 - [Mühendislik Devri](docs/HANDOFF.tr.md) — dondurulmuş kaynak referansı, otorite sırası ve yeni ekip kontrol listesi
-- [Alpha52 Sürüm Kanıtı](docs/RELEASE-EVIDENCE-v0.1.0-alpha.53.tr.md) — kaynak, etiket, CI, imzalı manifest, ürün ve portal kanıtı; canlı kabul ayrıca açık tutulur
+- [Alpha52 Sürüm Kanıtı](docs/RELEASE-EVIDENCE-v0.1.0-alpha.54.tr.md) — kaynak, etiket, CI, imzalı manifest, ürün ve portal kanıtı; canlı kabul ayrıca açık tutulur
 - [Güncel Tarihli Canlı Durum](docs/LIVE-STATE-2026-08-30.tr.md) — kalan engelleri açık tutan sınırlı Alpha52 canlı kurulum ve zone öncesi DNS kanıtı
 - [Tarihsel Canlı Durum](docs/LIVE-STATE-2026-08-29.tr.md) — doğrulanmış, beyan edilmiş ve bilinmeyen sunucu bilgilerini ayıran Alpha52 öncesi tarihsel kayıt
 - [Risk Sicili](docs/RISK-REGISTER.tr.md) — çıkış ölçütleriyle açık mühendislik ve operasyon riskleri
