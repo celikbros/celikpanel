@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="CelikPanel, sunucunuzda ne yaptığını kanıtlayan hosting kontrol panelidir: her değişiklik önce önizlenir, sonra deftere geçer, kanıtlanamayan hiçbir şey iddia edilmez." />
+    <meta name="description" content="CelikPanel; web sitelerinizi, WordPress'i, e-postayı, DNS'i, veritabanlarını ve yedekleri tek panelden yönetir. Her değişikliği önce önizler, sonra deftere yazar." />
     <meta name="theme-color" content="#0B1F17" />
     <title>CelikPanel | Kanıtla çalışan hosting kontrol paneli</title>
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
@@ -17,12 +17,13 @@
       OWN-WORLD: grey-green rulebook stock, ink, hairline rules; one dark
       illuminated route board; signal colours mean state and nothing else;
       Overpass and its mono for anything measured.
-      STORY: this panel proves what it did; I can try it with one command.
-      FIRST VIEWPORT: one-line thesis and the ordinary primary action on the
+      STORY: this panel runs my hosting, it is safer than what I use now,
+      and I can try it with one command.
+      FIRST VIEWPORT: plain-language promise and the primary action on the
       left; on the right the server as a route board, one route set and
       clear, one locked with the reason written out.
-      FORM: conventional marketing page, first on the list because ease of
-      use outranks expression; seed 3b5e09e0, index 6.
+      FORM: conventional marketing page, benefit first, mechanism after the
+      comparison; seed 3b5e09e0, index 6.
       FINISH: unreviewed and undocumented is unfinished; this build ends with
       the finish review, the verdict, DESIGN.md, and every shipping raster
       carrying its provenance.
@@ -40,10 +41,10 @@
           <span class="brand-name">CelikPanel</span>
         </a>
         <nav class="site-nav" aria-label="Ana menü">
-          <a href="#nasil">Nasıl çalışır</a>
+          <a href="#ozellikler">Özellikler</a>
+          <a href="#neden">Neden CelikPanel</a>
           <a href="#kanit">Kanıt</a>
           <a href="#kurulum">Kurulum</a>
-          <a href="#surum">Sürüm</a>
           <a href="#destek">Destek</a>
         </nav>
         <div class="nav-tools">
@@ -51,7 +52,7 @@
             <button type="button" data-language="tr" lang="tr" aria-label="Türkçe" aria-pressed="true">TR</button>
             <button type="button" data-language="en" lang="en" aria-label="English" aria-pressed="false">EN</button>
           </div>
-          <a class="button button-primary nav-cta" href="#kurulum">Kurulum komutunu al</a>
+          <a class="button button-primary nav-cta" href="#kurulum">Ücretsiz kur</a>
         </div>
       </div>
     </header>
@@ -61,16 +62,16 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="container hero-grid">
           <div class="hero-copy">
-            <h1 id="hero-title">Sunucunuzda ne yaptığını kanıtlayan hosting paneli.</h1>
-            <p class="lede">Her değişiklik önce önizlenir, sonra deftere geçer. Kanıtlayamadığı hiçbir şeyi iddia etmez. Ölen bir sunucuyu tek mühürlü dosyadan 105 saniyede hizmete döndürür.</p>
+            <h1 id="hero-title">Web sitelerinizi, e-postanızı ve sunucunuzu tek panelden yönetin.</h1>
+            <p class="lede">CelikPanel; siteleri, WordPress'i, alan adlarını, e-postayı, DNS'i, veritabanlarını, yedekleri ve güvenlik duvarını tek ekranda toplar. Farkı şudur: her değişikliği önce önizler, sonra deftere yazar. Sunucunuzda ne olduğunu her zaman bilirsiniz.</p>
             <div class="hero-actions">
-              <a class="button button-primary button-large" href="#kurulum">Kurulum komutunu al</a>
-              <a class="button button-quiet button-large" href="#nasil">Nasıl çalıştığını gör</a>
+              <a class="button button-primary button-large" href="#kurulum">Ücretsiz kur</a>
+              <a class="button button-quiet button-large" href="#ozellikler">Neler yapabilir</a>
             </div>
             <dl class="hero-facts">
-              <div><dt>Dağıtımlar</dt><dd>Debian 13, Ubuntu 24.04, Arch</dd></div>
-              <div><dt>Lisans</dt><dd>Ücretsiz alfa, açık geri bildirim</dd></div>
-              <div><dt>Dil</dt><dd>Türkçe ve İngilizce</dd></div>
+              <div><dt>Kurulum</dt><dd>Tek komut, birkaç dakika</dd></div>
+              <div><dt>Sunucu</dt><dd>Debian 13, Ubuntu 24.04, Arch</dd></div>
+              <div><dt>Ücret</dt><dd>Alfa boyunca ücretsiz</dd></div>
             </dl>
           </div>
 
@@ -84,33 +85,27 @@
               <span class="board-live"><i aria-hidden="true"></i>canlı</span>
             </figcaption>
             <svg class="board" viewBox="0 0 640 300" role="img" aria-hidden="true" focusable="false">
-              <!-- track lines -->
               <g class="track">
                 <path d="M24 70 H616" />
                 <path d="M24 130 H616" />
                 <path d="M24 190 H616" />
                 <path d="M24 250 H616" />
-                <!-- junctions between routes -->
                 <path d="M300 70 L340 130" />
                 <path d="M420 130 L460 190" />
                 <path d="M200 190 L240 250" />
               </g>
-              <!-- route set and clear: DNS -->
               <g class="route route-set">
                 <path d="M24 70 H616" />
               </g>
-              <!-- route requested and locked: firewall -->
               <g class="route route-locked">
                 <path d="M24 250 H200" />
               </g>
-              <!-- lamps, one per route -->
               <g class="lamps">
                 <circle class="lamp lamp-1 is-clear" cx="616" cy="70" r="9" />
                 <circle class="lamp lamp-2 is-caution" cx="616" cy="130" r="9" />
                 <circle class="lamp lamp-3 is-clear" cx="616" cy="190" r="9" />
                 <circle class="lamp lamp-4 is-stop" cx="616" cy="250" r="9" />
               </g>
-              <!-- route labels -->
               <g class="labels">
                 <text x="24" y="56">DNS (BIND)</text>
                 <text x="24" y="116">Posta</text>
@@ -123,7 +118,6 @@
                 <text x="596" y="176" text-anchor="end">açık</text>
                 <text x="596" y="236" text-anchor="end">kilitli</text>
               </g>
-              <!-- lock mark on the junction that blocks the firewall route -->
               <g class="lock-mark" transform="translate(212 236)">
                 <g class="lock-mark-inner">
                   <rect x="-11" y="-11" width="22" height="22" rx="3" />
@@ -137,12 +131,145 @@
         </div>
       </section>
 
+      <!-- ====================================================== WHAT IT DOES -->
+      <section class="features" id="ozellikler" aria-labelledby="features-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="features-title">Bir hosting işini yürütmek için gereken her şey.</h2>
+            <p class="section-lede">Dağınık araçlar, ezberlenen komutlar ve elle düzenlenen yapılandırma dosyaları yerine tek panel. Her biri kurulumdan sonra hazır gelir.</p>
+          </div>
+          <dl class="feature-list">
+            <div>
+              <dt>Web siteleri ve WordPress</dt>
+              <dd>Alan adını bağlayın, WordPress'i tek adımda kurun ya da PHP, Laravel ve Node.js projelerinizi yayına alın. PHP sürümü, SSL ve DNS aynı ekranda.</dd>
+            </div>
+            <div>
+              <dt>E-posta</dt>
+              <dd>Alan adınıza posta kutuları açın. DKIM, SPF ve TLS panelden ayarlanır; spam koruması kurulumla birlikte gelir. Postfix ve Dovecot kullanır.</dd>
+            </div>
+            <div>
+              <dt>Veritabanları</dt>
+              <dd>MariaDB ve PostgreSQL veritabanı, kullanıcı ve yetki oluşturun. Panel kendi yönetici hesabını açar; sizin kök parolanıza dokunmaz, parolasını istediğinizde görürsünüz.</dd>
+            </div>
+            <div>
+              <dt>DNS</dt>
+              <dd>BIND veya PowerDNS; birincil ve ikincil iki sunuculu çift. Zaten çalışan bir DNS sunucunuz varsa hizmet kesilmeden devralınır.</dd>
+            </div>
+            <div>
+              <dt>SSL sertifikaları</dt>
+              <dd>Let's Encrypt sertifikaları otomatik alınır ve yenilenir. Yenileme unutulmaz, çünkü panelin işidir.</dd>
+            </div>
+            <div>
+              <dt>Yedekleme ve geri yükleme</dt>
+              <dd>Planlı yedekler. Sitelerinizi, veritabanlarınızı ve panelin kendi durumunu tek mühürlü arşivde alır; temiz bir sunucuya olduğu gibi geri yükler.</dd>
+            </div>
+            <div>
+              <dt>Kullanıcılar ve roller</dt>
+              <dd>Yönetici, bayi, müşteri ve ek kullanıcı hesapları. Herkes yalnız kendi sitelerini ve kutularını görür.</dd>
+            </div>
+            <div>
+              <dt>Güvenlik duvarı ve VPN</dt>
+              <dd>nftables ile varsayılan-reddet kurallar, WireGuard eşleri ve servis bazlı port açma; hepsi panelden, komut satırına inmeden.</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ========================================================= WHY BETTER -->
+      <section class="why" id="neden" aria-labelledby="why-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="why-title">Aynı işler, bambaşka bir güvenlik payı.</h2>
+            <p class="section-lede">Panellerin çoğu aynı özellik listesini sayar. Fark, bir şey ters gittiğinde ortaya çıkar. CelikPanel'i ayıran sekiz nokta:</p>
+          </div>
+          <div class="table-scroll" tabindex="0" role="region" aria-labelledby="why-title">
+            <table class="compare">
+              <caption class="sr-only">Alışılmış yöntem ile CelikPanel'in karşılaştırması</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Durum</th>
+                  <th scope="col">Alışılmış yöntem</th>
+                  <th scope="col" class="ours">CelikPanel ile</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Bir servis kurarken</th>
+                  <td>Kur düğmesine basarsınız; olmazsa hata mesajını okuyup sunucuya SSH ile bakarsınız.</td>
+                  <td class="ours">Panel önce sorar: bu kurulabilir mi? Engel varsa hiçbir şey değişmez ve engeli düz Türkçe söyler.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Bir şey ters gidince</th>
+                  <td>Neyin ne zaman değiştiğini bulmak için günlükleri elle karıştırırsınız.</td>
+                  <td class="ours">Her ayrıcalıklı değişiklik, sonucuyla birlikte kalıcı bir deftere yazılır. Ne olduğu yazılıdır.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Elektrik kesilince</th>
+                  <td>Yarım kalan iş yarım kalır; ekran yine de yeşil görünebilir.</td>
+                  <td class="ours">Panel yarım işi bulur, bitirir ya da geri alır. Dört kesintide karar süresi 7 saniyenin altında kaldı.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Sunucu tamamen ölünce</th>
+                  <td>Yeni sunucuyu elden kurar, yapılandırmayı yeniden yazarsınız. Saatler sürer.</td>
+                  <td class="ours">Tek mühürlü arşivden temiz bir sunucuya 105 saniyede döner. 6 Eylül 2026'da ölçüldü.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Veritabanı parolanız</th>
+                  <td>Panel kök parolayı kendi eline alır; artık sizin değildir.</td>
+                  <td class="ours">Panel kendine ayrı bir yönetici hesabı açar. Kök parolanız sizde kalır.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Zaten çalışan bir DNS sunucunuz varsa</th>
+                  <td>Genelde sıfırdan kurup kayıtları elle taşırsınız; geçişte kesinti olur.</td>
+                  <td class="ours">Çalışan BIND veya PowerDNS devralınır. Devralma boyunca 2508 sorgunun tamamı cevaplandı.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Kurulum</th>
+                  <td>Depo ekleyin, bağımlılık derleyin, betikleri sırayla çalıştırın.</td>
+                  <td class="ours">Tek komut. İmzalı ve önceden derlenmiş paket; hedefte Go, Node.js veya Git gerekmez.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Ücret</th>
+                  <td>Ticari panellerde sunucu ya da hesap başına lisans.</td>
+                  <td class="ours">Alfa boyunca ücretsiz, sunucu sayısı sınırsız.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="scroll-hint">Tablo yana kayar.</p>
+          <p class="why-note">Sağ sütundaki her sayı gerçek bir makinede ölçüldü ve <a href="#kanit">aşağıdaki kanıt defterinde</a> tarihiyle duruyor.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ AUDIENCE -->
+      <section class="who" aria-labelledby="who-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="who-title">Kimler kullanıyor</h2>
+          </div>
+          <dl class="who-list">
+            <div>
+              <dt>Ajanslar ve freelancer'lar</dt>
+              <dd>Müşteri sitelerini, e-postalarını ve yedeklerini tek hesaptan izleyin. Her müşteri yalnız kendi sitesini görür; siz hepsini.</dd>
+            </div>
+            <div>
+              <dt>Hosting sağlayıcıları</dt>
+              <dd>Bayi ve müşteri rolleri, çok kullanıcılı yapı ve modüler servis kataloğuyla ölçeklenebilir bir hosting hizmeti kurun.</dd>
+            </div>
+            <div>
+              <dt>Kendi sunucusunu yönetenler</dt>
+              <dd>Komut satırına inmeden düzenli bir sunucu. Yanlış bir tıkla bozulmaz, çünkü panel yapmadan önce önizler.</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
       <!-- ======================================================= HOW IT WORKS -->
       <section class="how" id="nasil" aria-labelledby="how-title">
         <div class="container">
           <div class="section-head">
-            <h2 id="how-title">Bir sinyal kulesi gibi çalışır: rota iste, kilitlenmediğini kanıtla, sonra kur.</h2>
-            <p class="section-lede">Demiryolunda bir rota kurulunca onunla çakışan her rota fiziksel olarak kilitlenir; yanlış kolu çekemezsiniz. CelikPanel sunucunuzu aynı disiplinle yönetir.</p>
+            <h2 id="how-title">Peki bunu nasıl yapıyor?</h2>
+            <p class="section-lede">Demiryolu sinyalizasyonundan alınmış tek bir kuralla: bir rota kurulunca onunla çakışan her rota kilitlenir, yani yanlış kolu çekemezsiniz. CelikPanel sunucunuzu aynı disiplinle yönetir.</p>
           </div>
 
           <ol class="steps">
@@ -168,6 +295,7 @@
               <h3 id="interlock-title">Kilitleme tablosu</h3>
               <span class="tag-demo">gösterim · kurallar gerçek</span>
             </div>
+            <p class="interlock-lede">Hangi isteğin, sunucu hangi durumdayken reddedileceği baştan bellidir. Reddedilen istek sessizce beklemez; panel size hangi durumun onu kilitlediğini söyler.</p>
             <div class="table-scroll" tabindex="0" role="region" aria-labelledby="interlock-title">
               <table class="interlock-table">
                 <caption class="sr-only">Hangi istek, sunucu hangi durumdayken reddedilir</caption>
@@ -223,21 +351,6 @@
             <dl class="interlock-notes">
               <div><dt><span class="mark mark-lock" aria-hidden="true"></span> Kilitli</dt><dd>İstek reddedilir ve panel <em>hangi</em> durumun onu kilitlediğini söyler. Üç sebep üç farklı şey ister: paket yöneticisi için bir dakika beklersiniz, süren değişiklik için onun bitmesini; bitmemiş bir kilit ise beklemekle geçmez ve panel bunu açıkça söyler.</dd></div>
               <div><dt><span class="mark mark-free" aria-hidden="true"></span> Serbest</dt><dd>İstek hemen yapılır. Veritabanı oluşturmak motorun içindeki bir işlemdir, sunucu kirası gerektirmez; okumak hiçbir zaman beklemez.</dd></div>
-            </dl>
-          </div>
-
-          <!-- What it manages: product truth, as a ruled list rather than a card grid. -->
-          <div class="manages" id="ozellikler">
-            <h3>Ne yönetir</h3>
-            <dl class="manage-list">
-              <div><dt>Alan adları ve siteler</dt><dd>PHP, WordPress ve Node.js projeleri; sürüm, DNS ve TLS aynı yerden.</dd></div>
-              <div><dt>DNS</dt><dd>BIND veya PowerDNS; iki sunuculu çift; çalışan bir sunucu hizmeti kesmeden devralınır.</dd></div>
-              <div><dt>Veritabanları</dt><dd>MariaDB ve PostgreSQL. Panel kendi hesabını açar; sizin kök parolanıza dokunmaz.</dd></div>
-              <div><dt>E-posta</dt><dd>Postfix ve Dovecot; DKIM, TLS ve spam koruması tek akışta.</dd></div>
-              <div><dt>TLS</dt><dd>Let’s Encrypt sertifikaları; yenileme paneldedir.</dd></div>
-              <div><dt>Yedek ve kurtarma</dt><dd>Planlı yedekler; kontrol düzlemi tek mühürlü arşiv olarak alınır ve temiz bir sunucuya geri yüklenir.</dd></div>
-              <div><dt>Kullanıcılar ve roller</dt><dd>Yönetici, bayi, müşteri ve ek kullanıcı; herkes yalnız kendi alanını görür.</dd></div>
-              <div><dt>Güvenlik duvarı ve VPN</dt><dd>nftables ile varsayılan-reddet; WireGuard eşleri panelden.</dd></div>
             </dl>
           </div>
         </div>
@@ -326,7 +439,7 @@
         <div class="container release-grid">
           <div class="release-copy">
             <h2 id="release-title">Ne kurduğunuzu bilin.</h2>
-            <p>Her paket sürüm numarası, kaynak commit’i ve SHA-256 özetiyle yayımlanır ve Ed25519 ile imzalanır. Kurucu bu imzayı doğrulamadan tek bir dosya yazmaz.</p>
+            <p>Her paket sürüm numarası, kaynak commit'i ve SHA-256 özetiyle yayımlanır ve Ed25519 ile imzalanır. Kurucu bu imzayı doğrulamadan tek bir dosya yazmaz.</p>
             <ul class="plain-list">
               <li>HTTPS ile indirme</li>
               <li>İmzalı sürüm bildirimi</li>
@@ -387,7 +500,7 @@
       <section class="final" aria-labelledby="final-title">
         <div class="container final-shell">
           <h2 id="final-title">Bir test sunucusunda deneyin. Ne yaptığını size gösterir.</h2>
-          <a class="button button-primary button-large" href="#kurulum">Kurulum komutunu al</a>
+          <a class="button button-primary button-large" href="#kurulum">Ücretsiz kur</a>
         </div>
       </section>
     </main>
@@ -404,7 +517,8 @@
           <p>Sunucunuzda ne yaptığını kanıtlayan hosting kontrol paneli.</p>
         </div>
         <nav aria-label="Alt menü">
-          <a href="#nasil">Nasıl çalışır</a>
+          <a href="#ozellikler">Özellikler</a>
+          <a href="#neden">Neden CelikPanel</a>
           <a href="#kurulum">Kurulum</a>
           <a href="/releases/index.json">Sürümler</a>
           <a href="#destek">Destek</a>

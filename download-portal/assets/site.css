@@ -322,6 +322,9 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 
 /* ---------------------------------------------------------------- proof */
 .proof { background: var(--paper-2); border-bottom: 1px solid var(--rule); }
+.features { border-bottom: 1px solid var(--rule); }
+.why { background: var(--paper-2); border-bottom: 1px solid var(--rule); }
+.who { border-bottom: 1px solid var(--rule); }
 .ledger { width: 100%; border-collapse: collapse; min-width: 760px; }
 .proof .table-scroll { margin-top: 2.5rem; }
 .ledger th, .ledger td { padding: 0.85rem 0.9rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; font-size: 0.9375rem; }
@@ -405,3 +408,38 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 .site-footer nav a { text-decoration: none; font-size: 0.9375rem; color: var(--ink-2); font-weight: 600; }
 .site-footer nav a:hover { color: var(--ink); text-decoration: underline; }
 .footer-bottom { display: flex; justify-content: space-between; gap: 1rem; padding-top: 1rem; font-size: 0.8125rem; color: var(--ink-3); font-family: var(--font-mono); }
+
+/* --------------------------------------------------------- feature list
+   Eight things the product does, in plain words. A ruled two-column list,
+   not a grid of cards with icons: the words are the product, and a card
+   around each one would only add furniture. */
+.feature-list { margin-top: 2.5rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 3rem; border-top: 1px solid var(--rule); }
+.feature-list > div { padding: 1.1rem 0; border-bottom: 1px solid var(--rule); }
+.feature-list dt { font-weight: 700; font-size: 1.0625rem; }
+.feature-list dd { margin-top: 0.3rem; color: var(--ink-2); font-size: 0.9375rem; }
+@media (max-width: 800px) { .feature-list { grid-template-columns: 1fr; gap: 0; } }
+
+/* ----------------------------------------------------------- comparison
+   Three columns: the situation, what usually happens, what happens here.
+   No ticks and no crosses - green and red mean state on this site, and a
+   comparison is not a state. The right-hand column is lit and set in ink;
+   the middle one recedes. That is the whole device. */
+.compare { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 780px; }
+.compare th, .compare td { padding: 0.9rem 1rem; text-align: left; vertical-align: top; font-size: 0.9375rem; border: 0; border-bottom: 1px solid var(--rule); }
+.compare thead th { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--rule-strong); }
+.compare tbody th { font-weight: 700; color: var(--ink); width: 15rem; position: sticky; left: 0; z-index: 1; background: var(--paper-lit); box-shadow: 1px 0 0 var(--rule-strong); transition: box-shadow 160ms var(--ease-out); }
+.table-scroll.is-scrolled .compare tbody th { box-shadow: 1px 0 0 var(--rule-strong), 8px 0 12px -6px rgba(16, 22, 15, 0.45); }
+.compare td { color: var(--ink-3); }
+.compare .ours { color: var(--ink); background: var(--paper); border-left: 2px solid var(--rule-strong); }
+.compare thead .ours { color: var(--ink); font-weight: 700; }
+.why-note { margin-top: 1.25rem; font-size: 0.9375rem; color: var(--ink-2); }
+.why-note a { color: var(--ink); }
+
+/* ------------------------------------------------------------ audiences */
+.who-list { margin-top: 1.5rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 3rem; border-top: 1px solid var(--rule); }
+.who-list > div { padding: 1.25rem 0; }
+.who-list dt { font-weight: 700; font-size: 1.0625rem; }
+.who-list dd { margin-top: 0.4rem; color: var(--ink-2); font-size: 0.9375rem; }
+@media (max-width: 800px) { .who-list { grid-template-columns: 1fr; } .who-list > div + div { border-top: 1px solid var(--rule); } }
+
+.interlock-lede { margin: 0 0 1.25rem; color: var(--ink-2); font-size: 0.9375rem; }
