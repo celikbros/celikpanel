@@ -144,6 +144,23 @@ kanıtlanır. Redirect, encoded response, eksik veya tam olmayan `Content-Length
 değişmiş yerel byte'lar ile request veya byte budget aşımı transaction'ı
 fail-closed bitirir.
 
+Yalnız sunum içeriğini güncellemek için aynı yayıncıya `-SiteContentOnly`
+verilir; iki sürüm parametresi de o anda yayımlanan sürümü belirtir. Bu kip yalnız
+`index.html`, `assets/site.css` ve `assets/site.js` dosyalarının içeriğini
+değiştirebilir. Eski sürümler korunduktan sonra yayın kilidi altında aday ile
+canlı içeriğin bütün envanteri karşılaştırılır: yollar aynı kalmalı, diğer tüm
+dosyaların baytları birebir eşleşmelidir. Kurucu, imza anahtarı, imzalı manifest,
+sürüm seçicileri ve arşivler değiştirilemez. Aynı yedekleme, canlı doğrulama ve
+geri alma kuralları uygulanır. Normal sürüm yayını yeni bir sürüm gerektirir;
+mevcut sürüm dosyaları değiştirilemez. Böylece metin veya düzen düzeltmesi için
+yeni bir yazılım sürümü oluşturmak gerekmez.
+
+Ana sayfa, `get.sh` dosyasını indirip yalnız curl başarılı olduğunda root
+terminalinde çalıştıran tek bir iki satırlık komut gösterir. İndirilen
+`celikpanel-install.sh` operatörün çalışma dizininde bırakılır. Belirli sürüme
+ihtiyaç duyan operatörler için `--version VERSION` kurucu seçeneği belgelerde
+kalır; ana kurulum akışında ikinci bir seçenek sunulmaz.
+
 ## Kurulu trust material ve anti-rollback floor
 
 Her release incelenmiş updater'ı `libexec/get.sh` olarak paketler; kurulum bu tam

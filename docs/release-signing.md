@@ -140,6 +140,24 @@ the publication lock is held. Redirects, encoded responses, missing or
 inexact `Content-Length`, changed local bytes, and either request or byte budget
 overruns fail the transaction closed.
 
+For a presentation-only update, pass `-SiteContentOnly` to the same publisher
+with both version arguments set to the currently published release. This mode
+permits byte changes only to `index.html`, `assets/site.css` and `assets/site.js`.
+After preserving historical releases, the transaction compares the complete
+candidate and live content inventories under the publication lock: all paths
+must match, and every other file must retain exactly the same bytes. Bootstrap,
+signing key, signed manifests, selectors and release archives cannot change.
+The same backup, public verification and rollback rules apply. A normal release
+publication still requires a new version; existing versioned assets cannot be
+replaced. This lets a copy or layout correction ship without inventing a new
+software release.
+
+The public homepage shows one two-line command to download `get.sh` and execute
+it in a root terminal only after curl succeeds. It deliberately leaves the
+downloaded `celikpanel-install.sh` in the operator's working directory. Explicit
+`--version VERSION` remains a documented bootstrap option for operators who
+need a pinned release, rather than a second choice in the main install flow.
+
 ## Installed trust material and anti-rollback floor
 
 Every release packages the reviewed updater as `libexec/get.sh`; installation

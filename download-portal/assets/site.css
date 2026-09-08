@@ -501,11 +501,6 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 
 /* ------------------------------------------------------------- disclosure
    The pinned-version command is for people who came looking for it. */
-.command-details { border: 1px solid var(--rule-strong); border-radius: var(--radius); background: var(--paper-lit); }
-.command-details summary { padding: 0.8rem 1rem; cursor: pointer; font-weight: 600; font-size: 0.9375rem; }
-.command-details summary:focus-visible { outline-offset: -3px; }
-.command-details[open] summary { border-bottom: 1px solid var(--rule); }
-.command-details .command-card { border-radius: 0 0 var(--radius) var(--radius); border: 0; box-shadow: none; }
 
 /* -------------------------------------------------------------------- faq */
 .faq { border-bottom: 1px solid var(--rule); }
@@ -590,11 +585,7 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 .command-card { box-shadow: none; }
 .command-head { gap: 0.75rem; padding: 0.65rem 1rem; flex-wrap: wrap; }
 .copy-button { min-width: 72px; min-height: 44px; padding: 0.4rem 0.8rem; }
-.command-disclosure summary { padding: 1rem; font-size: 0.875rem; color: var(--track-soft); cursor: pointer; }
-.command-disclosure summary:focus-visible { outline-color: var(--track); outline-offset: -4px; }
 .command-card pre { max-height: 380px; font-size: 0.75rem; }
-.command-details { border-color: var(--rule); }
-.command-details summary { min-height: 48px; font-size: 0.875rem; }
 .release-panel { margin-top: 1.75rem; border: 0; border-top: 1px solid var(--rule); border-radius: 0; padding: 1.5rem 0 0; background: transparent; box-shadow: none; }
 .release-top { gap: 1rem; }
 .release-label { font-size: 0.875rem; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--ink-3); }
@@ -693,3 +684,6 @@ dialog::backdrop { background: rgba(14, 31, 61, 0.75); }
   .technical-intro { padding: 3rem 0 2rem; }
   .evidence-sources .container { grid-template-columns: minmax(0, 1fr); gap: 2rem; }
 }
+
+.install-instruction { margin: 0; color: var(--ink-2); font-size: 0.9375rem; }
+#latest-command { white-space: pre-wrap; overflow-wrap: anywhere; }

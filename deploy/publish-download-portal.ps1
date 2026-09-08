@@ -12,6 +12,7 @@ param(
     [Parameter(Mandatory = $true)][string]$PackageSha256,
     [Parameter(Mandatory = $true)][string]$PublicBaseUrl,
     [Parameter(Mandatory = $true)][string]$RemoteRoot,
+    [switch]$SiteContentOnly,
     [string]$RemoteLive,
     [string]$RemoteBackups,
     [string]$RemoteLock,
@@ -199,7 +200,10 @@ function Show-ChildOutput($Result) {
 if ($PreviousVersion -notmatch $VersionPattern -or $TargetVersion -notmatch $VersionPattern) {
     throw 'PreviousVersion and TargetVersion must be canonical v-prefixed semantic versions.'
 }
-if ($PreviousVersion -eq $TargetVersion) { throw 'PreviousVersion and TargetVersion must differ.' }
+if ($SiteContentOnly -and $PreviousVersion -ne $TargetVersion) {
+    throw 'Site content updates must keep the current release version.'
+}
+if (-not $SiteContentOnly -and $PreviousVersion -eq $TargetVersion) { throw 'PreviousVersion and TargetVersion must differ.' }
 if ($PackageSize -le 0 -or $PackageSha256 -notmatch $ShaPattern) {
     throw 'Package size or lowercase SHA-256 pin is invalid.'
 }
@@ -405,6 +409,7 @@ $PromoterArguments = @(
     '--public-timeout', $PublicRequestTimeoutSeconds.ToString(),
     '--public-total-timeout', $PublicTotalTimeoutSeconds.ToString()
 )
+if ($SiteContentOnly) { $PromoterArguments += '--site-content-only' }
 $RemotePromotionCommand = 'python3 - ' + (($PromoterArguments | ForEach-Object { ConvertTo-BashLiteral $_ }) -join ' ')
 
 # The promoter is streamed exactly once. There is intentionally no retry loop.
