@@ -1902,7 +1902,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                                 : terminalKind === 'succeeded'
                                     ? 'bg-success/10 text-success'
                                     : disconnected
-                                        ? 'bg-warning/10 text-warning'
+                                        ? 'bg-warning-mark/20 text-warning'
                                         : 'bg-primary/10 text-primary'
                         }`}>
                             {terminalKind === 'failed' ? <XCircle className="h-7 w-7" />

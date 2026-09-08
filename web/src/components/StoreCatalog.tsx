@@ -320,8 +320,8 @@ function stateVisual(state: StoreItemState) {
         return {
             icon: Clock3,
             labelKey: 'addons.state.comingSoon' as const,
-            iconClass: 'bg-warning/10 text-warning',
-            badgeClass: 'border-warning/30 bg-warning/10 text-warning',
+            iconClass: 'bg-warning-mark/20 text-warning',
+            badgeClass: 'border-warning-mark/50 bg-warning-mark/20 text-warning',
         };
     case 'unsupported':
         return {
@@ -362,13 +362,13 @@ function entitlementVisual(state: StoreEntitlementState) {
         return {
             icon: Clock3,
             labelKey: 'addons.entitlement.expired' as const,
-            badgeClass: 'border-warning/30 bg-warning/10 text-warning',
+            badgeClass: 'border-warning-mark/50 bg-warning-mark/20 text-warning',
         };
     case 'suspended':
         return {
             icon: Ban,
             labelKey: 'addons.entitlement.suspended' as const,
-            badgeClass: 'border-warning/30 bg-warning/10 text-warning',
+            badgeClass: 'border-warning-mark/50 bg-warning-mark/20 text-warning',
         };
     default:
         return null;

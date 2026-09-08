@@ -123,7 +123,7 @@ function StateBadge({
 }) {
     const classes = {
         success: 'bg-success/10 text-success',
-        warning: 'bg-warning/10 text-warning',
+        warning: 'bg-warning-mark/20 text-warning',
         danger: 'bg-danger/10 text-danger',
         neutral: 'bg-surface-2 text-fg-muted',
     }[tone];
@@ -528,7 +528,7 @@ export function VPNPage() {
                     <section className={`rounded-xl border p-5 ${
                         syncReady
                             ? 'border-success/30 bg-success/5'
-                            : 'border-warning/40 bg-warning/5'
+                            : 'border-warning-mark/60 bg-warning-mark/10'
                     }`}>
                         <div className="flex flex-wrap items-start gap-3">
                             {syncReady
@@ -599,7 +599,7 @@ export function VPNPage() {
             {view === 'devices' && (
                 <div className="space-y-5">
                     {issued && (
-                        <section className="rounded-xl border border-warning/40 bg-warning/5 p-5">
+                        <section className="rounded-xl border border-warning-mark/60 bg-warning-mark/10 p-5">
                             <div className="flex flex-wrap gap-5">
                                 <div className="min-w-0 flex-1">
                                     <h3 className="text-base font-semibold text-fg">

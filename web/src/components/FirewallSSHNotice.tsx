@@ -74,7 +74,7 @@ export function FirewallNoSSHAcknowledgement({
 }) {
     const { t } = useI18n();
     return (
-        <section className="mb-4 rounded-lg border border-warning/40 bg-warning/10 p-3">
+        <section className="mb-4 rounded-lg border border-warning-mark/60 bg-warning-mark/20 p-3">
             <div className="flex items-start gap-2">
                 <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 <div className="min-w-0">
@@ -93,7 +93,7 @@ export function FirewallNoSSHAcknowledgement({
                 çizgisiyle ayrılarak durur; tıpkı DNS devralmasının kendi onayı
                 gibi. İç içe bir panel ikinci bir konu gibi okunurdu. */}
             <label
-                className="mt-3 flex cursor-pointer items-start gap-2 border-t border-warning/30 pt-3"
+                className="mt-3 flex cursor-pointer items-start gap-2 border-t border-warning-mark/50 pt-3"
                 htmlFor={id}
             >
                 <input

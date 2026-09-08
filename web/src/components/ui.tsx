@@ -40,14 +40,17 @@ export function Card({
     );
 }
 
-// UsageBar renders a labelled progress bar; it turns amber past 75% and red
-// past 90% so a full disk or maxed CPU reads at a glance.
-// UsageBar etiketli bir ilerleme çubuğu çizer; %75 üstünde sarıya, %90
-// üstünde kırmızıya döner; böylece dolu disk ya da zorlanan CPU tek bakışta
-// anlaşılır.
+// UsageBar renders a labelled progress bar. It is navy until it is a problem
+// and red past 90%. There is deliberately no yellow band: meters sit beside
+// each other in a grid, and a yellow bar next to a red one is the one pairing
+// this design system forbids. The 75-90 band is said in the number instead.
+//
+// UsageBar etiketli bir ilerleme çubuğu çizer. Sorun olana kadar lacivert,
+// %90 üstünde kırmızıdır. Sarı bant bilerek yok: ölçerler yan yana durur ve
+// sarı çubuğun kırmızının yanına gelmesi bu sistemde yasaktır.
 export function UsageBar({ percent }: { percent: number }) {
     const clamped = Math.max(0, Math.min(100, percent));
-    const color = clamped >= 90 ? 'bg-danger' : clamped >= 75 ? 'bg-warning' : 'bg-fg-subtle';
+    const color = clamped >= 90 ? 'bg-danger' : 'bg-fg-subtle';
     return (
         <div className="h-2 w-full overflow-hidden rounded-md bg-surface-2">
             <div className={`h-full rounded-md ${color} transition-all`} style={{ width: `${clamped}%` }} />
@@ -393,7 +396,7 @@ export function SearchInput({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="w-56 rounded-lg border border-border bg-surface py-1.5 pl-9 pr-3 text-sm text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
+                className="w-56 rounded-lg border border-border-strong bg-surface py-1.5 pl-9 pr-3 text-sm text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
             />
         </div>
     );
@@ -466,7 +469,7 @@ export function Field({
 // inputClass is the shared text-input styling; spread onto <input>/<select>.
 // inputClass paylaşılan metin-girdi stilidir; <input>/<select> üzerine geçir.
 export const inputClass =
-    'w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg outline-none transition-shadow focus:border-primary';
+    'w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm text-fg outline-none transition-shadow focus:border-primary';
 
 export function ToggleRow({
     label,

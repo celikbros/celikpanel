@@ -307,7 +307,7 @@ export function DomainLogsViewer({ domainId, domainName, readOnly = false }: Dom
                     aria-live="polite"
                     className={`rounded-xl border p-3 text-sm ${
                         resultHasWarning
-                            ? 'border-warning/40 bg-warning/10 text-fg'
+                            ? 'border-warning-mark/60 bg-warning-mark/20 text-fg'
                             : 'border-success/30 bg-success/5 text-fg'
                     }`}
                 >

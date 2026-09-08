@@ -31,6 +31,7 @@ export default {
                     DEFAULT: token('--surface'),
                     2: token('--surface-2'),
                     3: token('--surface-3'),
+                    subtle: token('--surface-subtle'),
                 },
                 border: {
                     DEFAULT: token('--border'),
@@ -47,7 +48,7 @@ export default {
                     fg: token('--primary-fg'),
                 },
                 success: { DEFAULT: token('--success'), fg: token('--success-fg') },
-                warning: { DEFAULT: token('--warning'), fg: token('--warning-fg') },
+                warning: { DEFAULT: token('--warning'), mark: token('--warning-mark'), fg: token('--warning-fg') },
                 danger: { DEFAULT: token('--danger'), fg: token('--danger-fg') },
                 sidebar: {
                     DEFAULT: token('--sidebar-bg'),

@@ -1049,7 +1049,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             />
 
             {hostMutationReadiness?.ready === false && (
-                <section role='status' className='mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-fg'>
+                <section role='status' className='mb-4 rounded-xl border border-warning-mark/60 bg-warning-mark/20 px-4 py-3 text-sm text-fg'>
                     <span className='font-semibold'>{t('services.mutationReadiness.title')}</span>{' '}
                     {readinessMessage}
                 </section>
@@ -1151,7 +1151,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             </div>
 
             {stateUnverified && (
-                <div role="alert" className="mb-4 flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/5 p-4">
+                <div role="alert" className="mb-4 flex items-start gap-3 rounded-xl border border-warning-mark/60 bg-warning-mark/10 p-4">
                     <ShieldOff className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
                     <div>
                         <div className="text-sm font-semibold text-fg">{t('services.stateUnverifiedTitle')}</div>
@@ -1598,7 +1598,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         onClick={() => requestComponentAction({ kind: 'repair', service: s })}
                                                         disabled={mutationControlsDisabled || busy === s.id || !s.repair_available}
                                                         title={s.repair_available ? t('services.repairWebmail') : t('services.repairUnavailable')}
-                                                        className={'inline-flex items-center gap-1.5 rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-xs font-semibold text-warning disabled:opacity-50'}
+                                                        className={'inline-flex items-center gap-1.5 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-2.5 py-1.5 text-xs font-semibold text-warning disabled:opacity-50'}
                                                     >
                                                         <RotateCw className={'h-3.5 w-3.5'} />
                                                         {t('services.repairWebmail')}
@@ -1823,7 +1823,7 @@ function MailProfileCards({ profiles, services, disabled, dnsIdentityReady, onIn
     return (
         <section id='mail-stacks' tabIndex={-1} aria-labelledby='mail-profile-heading' className='mb-6 scroll-mt-24'>
             <div className='mb-3 flex items-start gap-3'>
-                <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning'>
+                <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning-mark/20 text-warning'>
                     <Layers className='h-5 w-5' />
                 </span>
                 <div>
@@ -1834,7 +1834,7 @@ function MailProfileCards({ profiles, services, disabled, dnsIdentityReady, onIn
                 </div>
             </div>
             {!dnsIdentityReady && (
-                <div role='status' className='mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-warning/10 p-3'>
+                <div role='status' className='mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-warning-mark/60 bg-warning-mark/20 p-3'>
                     <p className='min-w-0 flex-1 text-sm text-fg'>
                         {t('services.mailProfiles.dnsRequired')}
                     </p>
@@ -2094,7 +2094,7 @@ function MailProfileInstallDialog({
                         </div>
                     </div>
 
-                    <div className='mb-4 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs leading-5 text-fg-muted'>
+                    <div className='mb-4 rounded-lg border border-warning-mark/60 bg-warning-mark/10 p-3 text-xs leading-5 text-fg-muted'>
                         <p>{t('services.mailProfiles.plan.tls')}</p>
                         <p className='mt-1'>{t('services.mailProfiles.plan.partialProgress')}</p>
                     </div>
@@ -2411,7 +2411,7 @@ function ActionIcon({
     const toneCls = {
         success: 'text-success hover:bg-success/10',
         danger: 'text-danger hover:bg-danger/10',
-        warning: 'text-warning hover:bg-warning/10',
+        warning: 'text-warning hover:bg-warning-mark/20',
     }[tone];
     return (
         <button
@@ -3240,7 +3240,7 @@ function FirewallBar({
     // bölümündeki nftables kartı).
     if (st.engine_available === false) {
         return (
-            <section className="mb-4 rounded-xl border border-warning/50 bg-warning/10 p-4">
+            <section className="mb-4 rounded-xl border border-warning/50 bg-warning-mark/20 p-4">
                 <div className="flex flex-wrap items-center gap-3">
                     <ShieldOff className="h-5 w-5 shrink-0 text-warning" />
                     <div className="min-w-0 flex-1">
@@ -3262,7 +3262,7 @@ function FirewallBar({
         <>
         <section
             className={`mb-4 rounded-xl border p-4 ${
-                st.enabled ? 'border-success/30 bg-success/5' : 'border-warning/50 bg-warning/10'
+                st.enabled ? 'border-success/30 bg-success/5' : 'border-warning/50 bg-warning-mark/20'
             }`}
         >
             <div className="flex flex-wrap items-center gap-3">
@@ -3292,7 +3292,7 @@ function FirewallBar({
                     <button
                         onClick={() => requestAction('save')}
                         disabled={busy || readiness?.ready !== true}
-                        className="rounded-lg border border-warning/50 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
+                        className="rounded-lg border border-warning/50 bg-warning-mark/20 px-3 py-1.5 text-xs font-semibold text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
                     >
                         {t('firewall.saveForReboot')}
                     </button>
