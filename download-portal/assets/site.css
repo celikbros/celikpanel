@@ -204,6 +204,10 @@ p, dd, li { max-width: var(--measure); }
   .nav-shell { flex-wrap: wrap; justify-content: space-between; padding-bottom: 0.25rem; }
   .site-nav { order: 3; flex-basis: 100%; margin: 0; gap: 1.25rem; overflow-x: auto; white-space: nowrap; scrollbar-width: none; padding-bottom: 0.35rem; }
   .site-nav::-webkit-scrollbar { display: none; }
+  /* A scrolling menu with no cue is a menu that lost its last item. The
+     fade is drawn in paper, over the row, and never eats a tap. */
+  .nav-shell { position: relative; }
+  .nav-shell::after { content: ""; position: absolute; right: 0; bottom: 0.35rem; width: 3rem; height: 1.9rem; pointer-events: none; background: linear-gradient(to right, transparent, var(--paper)); }
 }
 @media (max-width: 560px) {
   .nav-cta { display: none; }
@@ -386,7 +390,11 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 .support-go { font-size: 1.1875rem; color: var(--ink-3); transition: transform 160ms var(--ease-out); }
 .support-row:hover .support-go { transform: translateX(4px); color: var(--ink); }
 .support-privacy { margin-top: 1.25rem; font-size: 0.8125rem; color: var(--ink-3); }
-@media (max-width: 640px) { .support-row { grid-template-columns: 4.5rem minmax(0, 1fr) auto; gap: 0.75rem; } .support-text strong { font-size: 0.9375rem; } }
+@media (max-width: 640px) {
+  .support-row { grid-template-columns: 4rem minmax(0, 1fr); gap: 0.75rem; }
+  .support-go { display: none; }
+  .support-text strong { font-size: 0.9375rem; }
+}
 
 /* ---------------------------------------------------------------- final */
 .final { background: var(--board); color: var(--track); }
@@ -475,3 +483,8 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 .faq-list dt { font-weight: 700; font-size: 1.0625rem; }
 .faq-list dd { margin-top: 0.3rem; color: var(--ink-2); font-size: 0.9375rem; }
 @media (max-width: 800px) { .faq-list { grid-template-columns: 1fr; } }
+
+/* The install card explains its own length, and says so before the box. */
+.install-why { margin-top: 1rem; font-size: 0.9375rem; color: var(--ink-2); }
+.install-why strong { color: var(--ink); }
+.command-card .scroll-hint { margin: 0; padding: 0 1rem 0.6rem; color: var(--track-soft); }

@@ -45,6 +45,7 @@
           <a href="#neden">Neden CelikPanel</a>
           <a href="#kanit">Kanıt</a>
           <a href="#kurulum">Kurulum</a>
+          <a href="#sss">SSS</a>
           <a href="#destek">Destek</a>
         </nav>
         <div class="nav-tools">
@@ -92,13 +93,13 @@
                 <path d="M24 250 H616" />
                 <path d="M300 70 L340 130" />
                 <path d="M420 130 L460 190" />
-                <path d="M200 190 L240 250" />
+                <path d="M272 190 L312 250" />
               </g>
               <g class="route route-set">
                 <path d="M24 70 H616" />
               </g>
               <g class="route route-locked">
-                <path d="M24 250 H200" />
+                <path d="M24 250 H272" />
               </g>
               <g class="lamps">
                 <circle class="lamp lamp-1 is-clear" cx="616" cy="70" r="9" />
@@ -118,7 +119,7 @@
                 <text x="596" y="176" text-anchor="end">açık</text>
                 <text x="596" y="236" text-anchor="end">kilitli</text>
               </g>
-              <g class="lock-mark" transform="translate(212 236)">
+              <g class="lock-mark" transform="translate(284 236)">
                 <g class="lock-mark-inner">
                   <rect x="-11" y="-11" width="22" height="22" rx="3" />
                   <path d="M-4 0 v-4 a4 4 0 0 1 8 0 v4" />
@@ -391,6 +392,7 @@
           <div class="install-copy">
             <h2 id="install-title">Temiz bir sunucu, tek komut.</h2>
             <p>CelikPanel, desteklenen bir Linux sunucusuna imzalı ve önceden derlenmiş paket olarak kurulur. Hedefte Go, Node.js veya Git gerekmez. Kurucu paketi indirir, imzasını ve özetini doğrular, sonra kurar.</p>
+            <p class="install-why"><strong>Komut uzun görünüyor, çünkü tek parça.</strong> Kutunun içindekilerin hepsi tek bir komuttur: betiği indirir, kabuğa boru ile akıtmadan çalıştırır ve işi bitince arkasında dosya bırakmaz. Kopyala düğmesine basıp sunucunuza yapıştırmanız yeter.</p>
             <ul class="plain-list">
               <li>Debian 13, Ubuntu 24.04 LTS, Arch Linux</li>
               <li>Linux amd64</li>
@@ -403,6 +405,7 @@
                 <h3>Güncel sürümü kur</h3>
                 <button class="copy-button" type="button" data-copy="latest-command" aria-label="Standart kurulum komutunu kopyala"><span data-copy-label>Kopyala</span></button>
               </div>
+              <p class="scroll-hint">Komut yana kayar; tamamını almak için Kopyala düğmesini kullanın.</p>
               <pre tabindex="0"><code id="latest-command">(
   set -eu
   celikpanel_get=$(mktemp)
@@ -493,7 +496,7 @@
             </div>
             <div>
               <dt>Hangi sunucularda çalışır?</dt>
-              <dd>Debian 13, Ubuntu 24.04 LTS ve Arch Linux üzerinde, Linux amd64 mimarisinde. Kurulum üçünde de aynı komutla yapılır ve her sürüm üçünde birden sınanır.</dd>
+              <dd>Debian 13, Ubuntu 24.04 LTS ve Arch Linux üzerinde, Linux amd64 mimarisinde. Kurulum üçünde de aynı komutla yapılır; üçü birden en son 6 Eylül 2026 kabul turunda sınandı.</dd>
             </div>
             <div>
               <dt>Verilerim nerede duruyor?</dt>
@@ -559,6 +562,7 @@
           <a href="#ozellikler">Özellikler</a>
           <a href="#neden">Neden CelikPanel</a>
           <a href="#kurulum">Kurulum</a>
+          <a href="#sss">Sık sorulanlar</a>
           <a href="#surum">Sürümler</a>
           <a href="#destek">Destek</a>
           <a href="https://github.com/celikbros/celikpanel-feedback/security/advisories/new">Güvenlik</a>
