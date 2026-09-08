@@ -59,25 +59,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 <ol class="install-steps"><li><span data-en="Prepare a clean, supported Linux server." >Desteklenen, temiz bir Linux sunucusu hazırlayın.</span></li><li><span data-en="Run the command in your server terminal." >Komutu sunucunuzun terminalinde çalıştırın.</span></li><li><span data-en="Sign in at the panel address shown by the installer." >Kurucunun gösterdiği adresle panele giriş yapın.</span></li></ol>
 <p data-en="Already installed? Update from inside your panel." class="existing-install">Zaten kurulu mu? Güncellemeyi panel içinden yapın.</p>
 </div><div class="install-workspace"><div class="command-stack">
+<p class="install-instruction" data-en="Run both lines together in your server’s root terminal.">İki satırı birlikte sunucunuzun root terminalinde çalıştırın.</p>
 <article class="command-card"><div class="command-head"><h3 data-en="Installation command" >Kurulum komutu</h3><button class="copy-button" type="button" data-copy="latest-command" aria-label="Standart kurulum komutunu kopyala"><span data-copy-label>Kopyala</span></button></div>
-<details class="command-disclosure"><summary data-en="Inspect the command before running it" >Çalıştırılacak komutu incele</summary><pre tabindex="0"><code id="latest-command">(
-  set -eu
-  celikpanel_get=$(mktemp)
-  cleanup_celikpanel_get() {
-    rm -f -- "$celikpanel_get"
-  }
-  trap cleanup_celikpanel_get EXIT
-  trap 'exit 129' HUP
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
-  curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o "$celikpanel_get"
-  if [ "$(id -u)" -eq 0 ]; then
-    sh "$celikpanel_get"
-  else
-    sudo sh "$celikpanel_get"
-  fi
-)</code></pre></details></article>
-<details class="command-details"><summary data-en="Install a specific release" >Belirli bir sürümü kur</summary><article class="command-card"><div class="command-head"><h3 data-en="Pinned release" >Sabit sürüm</h3><button class="copy-button" type="button" id="exact-copy" data-copy="exact-command" aria-label="Sabit sürüm kurulum komutunu kopyala" disabled><span data-copy-label>Kopyala</span></button></div><pre tabindex="0"><code id="exact-command">Sürüm bilgisi bekleniyor…</code></pre></article></details>
+<pre tabindex="0"><code id="latest-command">curl -fL --proto '=https' -o celikpanel-install.sh https://celikpanel.net/get.sh &amp;&amp;
+sh celikpanel-install.sh</code></pre></article>
 <p class="sr-only" id="copy-status" aria-live="polite"></p>
 </div><aside class="release-panel" id="surum" aria-labelledby="latest-title" aria-busy="true"><div class="release-top"><div><p data-en="Current alpha release" class="release-label">Güncel alfa sürümü</p><h3 id="latest-title"><span id="release-version" aria-live="polite">Yükleniyor…</span></h3></div><span class="release-ready"><i aria-hidden="true"></i><span id="release-status">Manifest okunuyor</span></span></div>
 <p class="release-published"><time id="release-date">—</time> · Linux amd64</p>

@@ -232,6 +232,77 @@ class DownloadPortalPromotionTests(unittest.TestCase):
         )
         self.assertTrue(self.fixture.package.exists(), "upload evidence must be retained")
 
+    def prepare_site_content_update(self):
+        source = self.fixture.base / "site-content-source" / "portal"
+        shutil.copytree(self.fixture.live, source)
+        (source / "index.html").write_text("simplified install command\n")
+        return source
+
+    def run_site_content_update(self, source, *, enabled=True, fail_public=False):
+        with tarfile.open(self.fixture.package, "w:gz", format=tarfile.PAX_FORMAT) as archive:
+            archive.add(source, arcname="portal", recursive=True)
+        self.fixture.package_size = self.fixture.package.stat().st_size
+        self.fixture.package_sha = sha256(self.fixture.package)
+        argv = self.fixture.argv()
+        argv[argv.index("--target-version") + 1] = PREVIOUS
+        if enabled:
+            argv.append("--site-content-only")
+        return subprocess.run(
+            [sys.executable, str(PROMOTER_PATH), *argv],
+            env=self.fixture.environment(fail_public), text=True, capture_output=True,
+            timeout=30, check=False,
+        )
+
+    def test_site_content_update_preserves_release_and_backup(self):
+        source = self.prepare_site_content_update()
+        result = self.run_site_content_update(source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.fixture.live / "index.html").read_text(), "simplified install command\n")
+        self.assertEqual((self.fixture.live / "releases" / PREVIOUS / "old.bin").read_bytes(), b"historical-bytes")
+        self.assertEqual(len(self.public_calls()), 1)
+        backup = next(self.fixture.backups.iterdir())
+        self.assertEqual(backup.stat().st_ino, self.fixture.old_live_inode)
+        self.assertEqual((backup / "index.html").read_text(), "old root\n")
+
+    def test_same_version_still_requires_explicit_content_mode(self):
+        result = self.run_site_content_update(self.prepare_site_content_update(), enabled=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.fixture.live.stat().st_ino, self.fixture.old_live_inode)
+        self.assertEqual(len(self.public_calls()), 0)
+
+    def test_site_content_update_rejects_changed_release_bytes(self):
+        source = self.prepare_site_content_update()
+        (source / "releases" / PREVIOUS / "old.bin").write_bytes(b"replacement archive")
+        result = self.run_site_content_update(source)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("protected content", result.stderr)
+        self.assertEqual(self.fixture.live.stat().st_ino, self.fixture.old_live_inode)
+        self.assertEqual(len(self.public_calls()), 0)
+
+    def test_site_content_update_rejects_changed_bootstrap(self):
+        (self.fixture.live / "get.sh").write_text("original bootstrap\n")
+        source = self.prepare_site_content_update()
+        (source / "get.sh").write_text("replacement bootstrap\n")
+        result = self.run_site_content_update(source)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("protected content: get.sh", result.stderr)
+        self.assertEqual(len(self.public_calls()), 0)
+
+    def test_site_content_update_rejects_removed_or_added_paths(self):
+        source = self.prepare_site_content_update()
+        (source / "extra.sh").write_text("unexpected file\n")
+        result = self.run_site_content_update(source)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("cannot add or remove", result.stderr)
+        self.assertEqual(len(self.public_calls()), 0)
+
+    def test_site_content_public_failure_restores_previous_site(self):
+        result = self.run_site_content_update(self.prepare_site_content_update(), fail_public=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.fixture.live.stat().st_ino, self.fixture.old_live_inode)
+        self.assertEqual((self.fixture.live / "index.html").read_text(), "old root\n")
+        self.assertEqual(len(self.public_calls()), 1)
+
     def test_verifier_cannot_raise_fixed_request_ceiling(self):
         source = self.fixture.verifier.read_text(encoding="utf-8")
         self.fixture.verifier.write_text(

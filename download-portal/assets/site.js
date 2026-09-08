@@ -26,28 +26,8 @@ const isCanonicalReleaseVersion = (value) => {
     );
 };
 
-const buildInstallCommand = (version = "") => {
-  if (version !== "" && !isCanonicalReleaseVersion(version))
-    throw new Error("invalid release version");
-  const versionArgument = version === "" ? "" : ` --version "${version}"`;
-  return `(
-  set -eu
-  celikpanel_get=$(mktemp)
-  cleanup_celikpanel_get() {
-    rm -f -- "$celikpanel_get"
-  }
-  trap cleanup_celikpanel_get EXIT
-  trap 'exit 129' HUP
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
-  curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o "$celikpanel_get"
-  if [ "$(id -u)" -eq 0 ]; then
-    sh "$celikpanel_get"${versionArgument}
-  else
-    sudo sh "$celikpanel_get"${versionArgument}
-  fi
-)`;
-};
+const buildInstallCommand = () => `curl -fL --proto '=https' -o celikpanel-install.sh https://celikpanel.net/get.sh &&
+sh celikpanel-install.sh`;
 // END DOWNLOAD COMMAND POLICY
 
 // Every visible Turkish string, keyed exactly as it appears in the markup
@@ -203,7 +183,6 @@ const englishText = new Map([
   ["Linux amd64", "Linux amd64"],
   ["Alfa önizleme: önce ayrı bir test sunucusunda deneyin", "Alpha preview: try it on a separate test server first"],
   ["Güncel sürümü kur", "Install the current release"],
-  ["Belirli bir sürümü kurmak istiyorum", "I want to install a specific version"],
   ["Bilmediğimiz bir şeyi bildiğimizi söylemiyoruz. Cevabı henüz olmayan sorularda da bunu açıkça yazıyoruz.", "We do not claim to know what we do not. Where there is no answer yet, that is what it says."],
   ["Şimdi üretimde kullanabilir miyim?", "Can I use it in production today?"],
   ["Hayır. CelikPanel alfa aşamasında; önce ayrı bir test sunucusunda deneyin. Üretime hazır olduğunu söyleyeceğimiz gün, dayandığı kanıtla birlikte bu sayfada yazacak.", "No. CelikPanel is in alpha; try it on a separate test server first. The day we call it production-ready, this page will say so along with the evidence behind it."],
@@ -218,7 +197,7 @@ const englishText = new Map([
   ["Vazgeçersem kaldırabilir miyim?", "Can I remove it if I change my mind?"],
   ["Evet. Kurulum gibi kaldırma da panelin kendi işidir ve ne bıraktığı deftere yazılır.", "Yes. Removal, like installation, is the panel's own job, and what it leaves behind is written to the ledger."],
   ["Sabit sürümü kur", "Install a pinned release"],
-  ["Komut, betiği bir kez indirir ve doğrular; boru ile kabuğa akıtmaz. Tekrarlanabilir kurulum için sabit sürümü kullanın.", "The command downloads the script once and verifies it; it does not pipe it into a shell. Use the pinned release for a reproducible install."],
+
   ["Komut uzun görünüyor, çünkü tek parça.", "The command looks long because it is one piece."],
   ["Kutunun içindekilerin hepsi tek bir komuttur: betiği indirir, kabuğa boru ile akıtmadan çalıştırır ve işi bitince arkasında dosya bırakmaz. Kopyala düğmesine basıp sunucunuza yapıştırmanız yeter.", "Everything in the box is a single command: it downloads the script, runs it without piping anything into a shell, and leaves no file behind when it finishes. Press Copy and paste it on your server."],
   ["Komut yana kayar; tamamını almak için Kopyala düğmesini kullanın.", "The command scrolls sideways; use the Copy button to take all of it."],
@@ -256,8 +235,6 @@ const uiText = {
     ready: "İndirmeye hazır",
     unavailable: "Sürüm bilgisi alınamadı",
     manifestUnavailable: "Manifest şu anda kullanılamıyor",
-    exactUnavailable: "Sabit sürüm komutu için manifest bağlantısını kontrol edin.",
-    exactWaiting: "Sürüm bilgisi bekleniyor…",
     copy: "Kopyala",
     copied: "Kopyalandı",
     select: "Metni seçin",
@@ -268,8 +245,6 @@ const uiText = {
     ready: "Ready to download",
     unavailable: "Release information unavailable",
     manifestUnavailable: "The manifest is currently unavailable",
-    exactUnavailable: "Check the manifest connection for the pinned release command.",
-    exactWaiting: "Waiting for release information…",
     copy: "Copy",
     copied: "Copied",
     select: "Select text",
@@ -281,7 +256,7 @@ const uiText = {
 // Text nodes the release reader owns are never translated by the map; their
 // words come from the manifest or from uiText.
 const ignoredDynamic =
-  "#release-version,#release-status,#release-date,#release-commit,#release-sha,#exact-command,[data-copy-label],#copy-status";
+  "#release-version,#release-status,#release-date,#release-commit,#release-sha,[data-copy-label],#copy-status";
 
 // Bind every translatable text node once. Whitespace inside a node is
 // normalised before lookup, so a string wrapped across source lines still
@@ -313,7 +288,6 @@ const localizedAttributes = [
   [document.querySelector(".site-nav"), "aria-label", "Ana menü", "Main navigation"],
   [document.querySelector(".language-switch"), "aria-label", "Dil seçimi", "Language selection"],
   [document.querySelector('[data-copy="latest-command"]'), "aria-label", "Standart kurulum komutunu kopyala", "Copy the standard installation command"],
-  [document.querySelector('[data-copy="exact-command"]'), "aria-label", "Sabit sürüm kurulum komutunu kopyala", "Copy the pinned release installation command"],
   [document.querySelector(".site-footer nav"), "aria-label", "Alt menü", "Footer navigation"],
 ];
 
@@ -362,10 +336,8 @@ const renderReleaseState = () => {
     setText("release-version", uiText[currentLanguage].unavailable);
     setText("release-status", uiText[currentLanguage].manifestUnavailable);
     setText("release-date", releaseFailure.message);
-    setText("exact-command", uiText[currentLanguage].exactUnavailable);
     return;
   }
-  setText("exact-command", uiText[currentLanguage].exactWaiting);
   setText("release-version", currentLanguage === "en" ? "Loading…" : "Yükleniyor…");
   setText("release-status", currentLanguage === "en" ? "Reading manifest" : "Manifest okunuyor");
 };
@@ -495,9 +467,6 @@ if (document.querySelector(".release-panel")) fetch("/releases/latest.json", { c
     releaseData = release;
     enableReleaseLink("archive-link", release.archive_url);
     enableReleaseLink("checksum-link", release.checksum_url);
-    setText("exact-command", buildInstallCommand(release.version));
-    const exactCopy = getNode("exact-copy");
-    if (exactCopy) exactCopy.disabled = false;
     renderReleaseState();
   })
   .catch((error) => {

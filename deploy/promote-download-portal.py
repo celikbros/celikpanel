@@ -53,6 +53,7 @@ AT_FDCWD = -100
 RENAME_NOREPLACE = 1
 RENAME_EXCHANGE = 2
 SUCCESS_MARKER = "CELIKPANEL_DOWNLOAD_PORTAL_PUBLISHED"
+SITE_CONTENT_FILES = frozenset({"index.html", "assets/site.js", "assets/site.css"})
 TRANSACTION_SIGNALS = (signal.SIGHUP, signal.SIGINT, signal.SIGTERM)
 
 
@@ -579,7 +580,22 @@ def _copy_history_directory(source_fd: int, destination_fd: int, display: Path) 
             fail(f"historical release contains a link or special object: {display / name}")
 
 
-def preserve_historical_releases(live: Path, stage: Path, target_version: str) -> None:
+def verify_site_content_update(live: Path, stage: Path) -> None:
+    """Permit presentation edits only; every other path and byte stays identical."""
+    before = {entry[0]: entry[1:] for entry in content_inventory(live)}
+    after = {entry[0]: entry[1:] for entry in content_inventory(stage)}
+    if before.keys() != after.keys():
+        fail("site content update cannot add or remove portal paths")
+    for relative, entry in before.items():
+        if relative in SITE_CONTENT_FILES and entry[0] == after[relative][0] == "f":
+            continue
+        if after[relative] != entry:
+            fail(f"site content update changed protected content: {relative}")
+
+
+def preserve_historical_releases(
+    live: Path, stage: Path, target_version: str, *, site_content_only: bool = False
+) -> None:
     source = live / "releases"
     destination = stage / "releases"
     lstat_directory(source, "live releases")
@@ -587,13 +603,15 @@ def preserve_historical_releases(live: Path, stage: Path, target_version: str) -
     target = destination / target_version
     if target.is_symlink() or not target.is_dir():
         fail("candidate does not contain the target release directory")
-    if (source / target_version).exists() or (source / target_version).is_symlink():
+    if not site_content_only and ((source / target_version).exists() or (source / target_version).is_symlink()):
         fail("target release already exists in the live tree")
     for child in sorted(source.iterdir(), key=lambda item: item.name):
         value = os.lstat(child)
         if stat.S_ISDIR(value.st_mode) and not stat.S_ISLNK(value.st_mode):
             if not SAFE_SEGMENT_RE.fullmatch(child.name):
                 fail(f"unsafe historical release directory name: {child.name!r}")
+            if site_content_only and child.name == target_version:
+                continue
             target_child = destination / child.name
             if target_child.exists() or target_child.is_symlink():
                 fail(f"candidate unexpectedly contains historical release {child.name}")
@@ -813,7 +831,10 @@ def rollback_transaction(args: argparse.Namespace, state: TransactionState, old_
 def run_transaction(args: argparse.Namespace) -> dict:
     valid_version(args.previous_version, "previous version")
     valid_version(args.target_version, "target version")
-    if args.previous_version == args.target_version:
+    site_content_only = getattr(args, "site_content_only", False)
+    if site_content_only and args.previous_version != args.target_version:
+        fail("site content update must keep the current release version")
+    if not site_content_only and args.previous_version == args.target_version:
         fail("previous and target versions must differ")
     validate_layout(args)
     lock_descriptor = acquire_lock(args.lock)
@@ -844,7 +865,11 @@ def run_transaction(args: argparse.Namespace) -> dict:
         target = verifier.load_target(state.stage)
         if getattr(target, "version", None) != args.target_version:
             fail("candidate selectors do not publish the pinned target version")
-        preserve_historical_releases(args.live, state.stage, args.target_version)
+        preserve_historical_releases(
+            args.live, state.stage, args.target_version, site_content_only=site_content_only
+        )
+        if site_content_only:
+            verify_site_content_update(args.live, state.stage)
 
         # Hard-link preservation changes nlink/ctime only, which the inventory
         # deliberately excludes.  Any path/inode/size/mtime change fails here.
@@ -898,6 +923,7 @@ def run_transaction(args: argparse.Namespace) -> dict:
         reverify_pinned_path(verifier_file, "public verifier")
         result = {
             "status": "committed",
+            "site_content_only": site_content_only,
             "previous_version": args.previous_version,
             "target_version": args.target_version,
             "backup": str(state.backup),
@@ -942,6 +968,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--verifier-sha256", required=True)
     parser.add_argument("--previous-version", required=True)
     parser.add_argument("--target-version", required=True)
+    parser.add_argument("--site-content-only", action="store_true")
     parser.add_argument("--public-base-url", required=True)
     parser.add_argument("--public-timeout", type=float, default=30.0)
     parser.add_argument("--public-total-timeout", type=float, default=180.0)
