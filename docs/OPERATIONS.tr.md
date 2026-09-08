@@ -128,8 +128,10 @@ sunucuda derleme yapmaz. Yeni müşteri temiz sunucuda public
 müşteri yalnız **Ayarlar → CelikPanel güncellemeleri** üzerinden update yapar;
 bootstrap ve SSH updater mevcut kurulumun rutin yolu değildir. Betik, mod
 seçeneği verilmediğinde temiz sunucu
-ile tamamlanmış CelikPanel kurulumunu ayırır. Yarım veya belirsiz yerleşimler,
-bilerek dar tutulan tek istisna dışında, fail-closed biçimde durmaya devam eder:
+ile tamamlanmış CelikPanel kurulumunu ayırır. Doğrulanmış devam kaydı bulunan
+ilk kurulum aynı sürümle tamamlanır; kayıt öncesi tam Alpha55 durumu için de dar
+bir uyumluluk yolu vardır. Bkz. [ilk kurulum kurtarması](FIRST-INSTALL-RECOVERY.tr.md).
+Bilinmeyen kısmi yerleşimler reddedilir. Diğer dar istisna:
 `v0.1.0-alpha.4` panel TLS uyumluluk snapshot kusuruyla kesilmiş güncelleme.
 Herkese açık seçeneksiz komut; transaction kaydı kesin alpha.4 hedefi
 `8bbbac8b628fae4fca0e127e52c1c7835f56f8b8` ile beklenen sürüm, token,

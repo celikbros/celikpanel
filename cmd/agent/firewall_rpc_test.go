@@ -743,6 +743,26 @@ func TestParseSSHDConfigurationPortsIsStrict(t *testing.T) {
 	}
 }
 
+func TestParseSSHDConfigurationPortsAcceptsCanonicalKeywordCasing(t *testing.T) {
+	for _, output := range []string{
+		"Port 22\nAddressFamily any\nListenAddress [::]:22\nListenAddress 0.0.0.0:22\n",
+		"pOrT 22\nLISTENADDRESS [::]:22\n",
+	} {
+		got, err := parseSSHDConfigurationPorts([]byte(output))
+		if err != nil || fmt.Sprint(got) != "[22]" {
+			t.Fatalf("ports = %v, error = %v for %q", got, err, output)
+		}
+	}
+	for _, output := range []string{
+		"Port 0\n", "Port 65536\n", "Port invalid\n", "Port 22 extra\n",
+		"Port 22\nListenAddress [::]:0\n", "Port 22\nListenAddress host:invalid\n",
+	} {
+		if _, err := parseSSHDConfigurationPorts([]byte(output)); err == nil {
+			t.Fatalf("invalid canonical-case output %q was accepted", output)
+		}
+	}
+}
+
 func TestParseSSHDConfigurationPortsUsesListenAddressAndPortFallback(t *testing.T) {
 	out := []byte("port 22\nport 2022\nlistenaddress 0.0.0.0:2222\nlistenaddress [::]\nlistenaddress 2001:db8::1\n")
 	got, err := parseSSHDConfigurationPorts(out)

@@ -3,8 +3,8 @@ set -eu
 umask 077
 
 base_url=https://celikpanel.net
-bootstrap_release_sequence=55
-bootstrap_release_version=v0.1.0-alpha.55
+bootstrap_release_sequence=56
+bootstrap_release_version=v0.1.0-alpha.56
 bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb
 requested_version=latest
 requested_action=auto
@@ -22,6 +22,10 @@ signed_update_lock=/var/lib/celikpanel-release-state/update.lock
 releases_root=/var/backups/celikpanel/releases
 workdir=
 signed_public_key_path=
+resume_first_install=0
+legacy_first_install=0
+pending_install_identity=
+pending_install_directory=${release_sequence_floor%/*}/install.pending
 
 message() {
   printf '%s / %s\n' "$1" "$2"
@@ -124,7 +128,7 @@ else
 fi
 
 for required_command in awk bash chmod chown cmp curl dirname env find flock grep id install \
-  mkdir mktemp mv od readlink rm sha256sum sort stat sync tar tr xargs; do
+  mkdir mktemp mv od readlink rm rmdir sha256sum sort stat sync tar tr xargs; do
   command -v "$required_command" >/dev/null 2>&1 || fail \
     "$required_command is required. Install it with your operating system package manager." \
     "$required_command gereklidir. İşletim sisteminizin paket yöneticisiyle kurun."
@@ -179,7 +183,10 @@ cleanup() {
       ;;
   esac
 }
-trap cleanup EXIT HUP INT TERM
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 validate_root_directory_chain() {
   path=$1
@@ -616,10 +623,7 @@ verify_signed_release_manifest() {
   [ -z "$signed_expected_archive_size" ] ||
     [ "$signed_manifest_archive_size" = "$signed_expected_archive_size" ] || return 1
 
-  signed_manifest_canonical=$(mktemp \
-    "$(dirname -- "$signed_manifest_path")/.release-manifest-v2.canonical.XXXXXXXX") \
-    || return 1
-  if ! printf '%s\n' \
+  printf '%s\n' \
     format=celikpanel-release-manifest-v2 \
     "sequence=$signed_sequence" \
     "version=$signed_version" \
@@ -629,16 +633,7 @@ verify_signed_release_manifest() {
     "arch=$signed_arch" \
     "archive=$signed_archive" \
     "archive_sha256=$signed_manifest_archive_sha256" \
-    "archive_size=$signed_manifest_archive_size" \
-      > "$signed_manifest_canonical"; then
-    rm -f -- "$signed_manifest_canonical"
-    return 1
-  fi
-  if ! cmp -s -- "$signed_manifest_path" "$signed_manifest_canonical"; then
-    rm -f -- "$signed_manifest_canonical"
-    return 1
-  fi
-  rm -f -- "$signed_manifest_canonical"
+    "archive_size=$signed_manifest_archive_size" | cmp -s -- "$signed_manifest_path" - || return 1
 
   signed_commit=$signed_manifest_commit
   signed_release_sequence=$signed_sequence
@@ -647,6 +642,123 @@ verify_signed_release_manifest() {
 }
 
 # END SIGNED RELEASE MANIFEST POLICY
+
+# BEGIN FIRST INSTALL RESUME POLICY
+# Keep only authenticated release metadata, never administrator input. A
+# receipt is published under the update lock before any installer mutation.
+# Yalniz dogrulanmis surum metaverisini sakla, yonetici girdilerini degil.
+# Kayit, kurucu degisikliginden once guncelleme kilidi altinda yayimlanir.
+inspect_pending_first_install() (
+  pending_dir=$1
+  validate_root_directory_chain "$pending_dir"
+  [ "$(stat -Lc '%u:%g:%a' -- "$pending_dir")" = 0:0:700 ] || exit 1
+  [ "$(find "$pending_dir" -mindepth 1 -maxdepth 1 -printf x | wc -c)" -eq 3 ] || exit 1
+  for pending_name in release-manifest-v2 release-manifest-v2.sig release-signing-ed25519.pem; do
+    pending_file=$pending_dir/$pending_name
+    [ -f "$pending_file" ] && [ ! -L "$pending_file" ] || exit 1
+    [ "$(stat -Lc '%u:%g:%a:%h' -- "$pending_file")" = 0:0:600:1 ] || exit 1
+  done
+  [ "$(stat -Lc '%s' -- "$pending_dir/release-manifest-v2")" -le 4096 ] || exit 1
+  validate_bootstrap_release_public_key "$pending_dir/release-signing-ed25519.pem" || exit 1
+  pending_version=$(awk -F= '$1 == "version" { print $2 }' "$pending_dir/release-manifest-v2")
+  pending_sequence=$(awk -F= '$1 == "sequence" { print $2 }' "$pending_dir/release-manifest-v2")
+  valid_release_version "$pending_version" && valid_release_sequence "$pending_sequence" || exit 1
+  [ "$pending_sequence" -le "$bootstrap_release_sequence" ] || exit 1
+  runtime_release_identity || exit 1
+  verify_signed_release_manifest \
+    "$pending_dir/release-manifest-v2" "$pending_dir/release-manifest-v2.sig" \
+    "$pending_dir/release-signing-ed25519.pem" "$pending_version" "$pending_sequence" \
+    "$runtime_release_os" "$runtime_release_arch" \
+    "celikpanel-$pending_version-$runtime_release_os-$runtime_release_arch.tar.gz" '' '' '' || exit 1
+  inspect_release_sequence_floor || exit 1
+  if [ "$floor_present" -eq 1 ]; then
+    [ "$floor_sequence" = "$pending_sequence" ] && [ "$floor_version" = "$pending_version" ] || exit 1
+  fi
+  printf '%s %s %s %s %s %s\n' "$pending_sequence" "$pending_version" \
+    "$signed_commit" "$signed_archive_sha256" "$signed_archive_size" \
+    "$(stat -Lc '%d:%i' -- "$pending_dir")"
+)
+
+pending_first_install_is_idle() (
+  acquire_signed_update_lock || exit 1
+)
+
+publish_pending_first_install() {
+  if [ -e "$pending_install_directory" ] || [ -L "$pending_install_directory" ]; then
+    pending_locked=$(inspect_pending_first_install "$pending_install_directory") || return 1
+    set -- $pending_locked
+    [ "$1:$2:$3:$4:$5" = "$signed_release_sequence:$version:$signed_commit:$signed_archive_sha256:$signed_archive_size" ] || return 1
+    [ -z "$pending_install_identity" ] || [ "$6" = "$pending_install_identity" ] || return 1
+    cmp -s -- "$workdir/release-manifest-v2" "$pending_install_directory/release-manifest-v2" || return 1
+    cmp -s -- "$workdir/release-manifest-v2.sig" "$pending_install_directory/release-manifest-v2.sig" || return 1
+    cmp -s -- "$signed_public_key_path" "$pending_install_directory/release-signing-ed25519.pem" || return 1
+    resume_first_install=1
+    return 0
+  fi
+  [ "$resume_first_install" -eq 0 ] || [ "$legacy_first_install" -eq 1 ] || return 1
+  pending_stage=$(mktemp -d "$(dirname -- "$pending_install_directory")/.install-pending.XXXXXXXX") || return 1
+  chmod 0700 -- "$pending_stage" || return 1
+  for pending_name in release-manifest-v2 release-manifest-v2.sig; do
+    install -m 0600 -o root -g root -- "$workdir/$pending_name" "$pending_stage/$pending_name" || return 1
+    cmp -s -- "$workdir/$pending_name" "$pending_stage/$pending_name" || return 1
+  done
+  install -m 0600 -o root -g root -- "$signed_public_key_path" "$pending_stage/release-signing-ed25519.pem" || return 1
+  inspect_pending_first_install "$pending_stage" >/dev/null || return 1
+  sync -f -- "$pending_stage/release-manifest-v2" "$pending_stage/release-manifest-v2.sig" \
+    "$pending_stage/release-signing-ed25519.pem" "$pending_stage" || return 1
+  pending_stage_identity=$(stat -Lc '%d:%i' -- "$pending_stage") || return 1
+  mv -T -n -- "$pending_stage" "$pending_install_directory" || return 1
+  [ ! -e "$pending_stage" ] && \
+    [ "$(stat -Lc '%d:%i' -- "$pending_install_directory")" = "$pending_stage_identity" ] || return 1
+  sync -f -- "$(dirname -- "$pending_install_directory")" || return 1
+}
+
+finish_pending_first_install() {
+  [ -f /etc/celikpanel/install.complete ] && [ ! -L /etc/celikpanel/install.complete ] || return 1
+  [ "$(stat -Lc '%u:%g:%a:%h:%s' -- /etc/celikpanel/install.complete)" = 0:0:600:1:0 ] || return 1
+  inspect_pending_first_install "$pending_install_directory" >/dev/null || return 1
+  rm -- "$pending_install_directory/release-manifest-v2" \
+    "$pending_install_directory/release-manifest-v2.sig" \
+    "$pending_install_directory/release-signing-ed25519.pem" || return 1
+  rmdir -- "$pending_install_directory" || return 1
+  sync -f -- "$(dirname -- "$pending_install_directory")"
+}
+# Stop an unfinished installation only while the shared mutation lock is held.
+# Yarim kurulumu yalniz ortak degisiklik kilidi eldeyken durdur.
+quiesce_pending_first_install() (
+  [ "$resume_first_install" -eq 1 ] || exit 0
+  if ! systemctl is-active --quiet celikpanel-panel.service &&
+     ! systemctl is-active --quiet celikpanel-agent.service; then
+    exit 0
+  fi
+  resume_lock=/run/celikpanel/service-mutation.lock
+  validate_release_key_directory_chain /run/celikpanel || exit 1
+  resume_group=$(getent group celikpanel | cut -d: -f3)
+  [ -n "$resume_group" ] || exit 1
+  [ "$(stat -Lc '%u:%g:%a' /run/celikpanel)" = "0:$resume_group:750" ] || exit 1
+  [ -f "$resume_lock" ] && [ ! -L "$resume_lock" ] || exit 1
+  [ "$(stat -Lc '%u:%g:%a:%h:%s' "$resume_lock")" = "0:$resume_group:600:1:0" ] || exit 1
+  resume_lock_identity=$(stat -Lc '%d:%i' "$resume_lock") || exit 1
+  exec 7<>"$resume_lock" || exit 1
+  [ "$(stat -Lc '%d:%i' /proc/self/fd/7)" = "$resume_lock_identity" ] || exit 1
+  flock -n 7 || exit 1
+  [ "$(stat -Lc '%d:%i' "$resume_lock")" = "$resume_lock_identity" ] || exit 1
+  env CELIKPANEL_MUTATION_LOCK_FD=7 "$extracted_root/bin/agent" \
+    --check-service-mutation-idle-under-external-lock || exit 1
+  # A stopped panel cannot enqueue work between this proof and installation.
+  # Durmus panel bu kanit ile kurulum arasinda yeni is siraya koyamaz.
+  systemctl stop celikpanel-panel.service || exit 1
+  if systemctl is-active --quiet celikpanel-panel.service; then exit 1; fi
+  if [ -e /var/lib/celikpanel/celikpanel.db ]; then
+    env CELIKPANEL_DATA_DIR=/var/lib/celikpanel "$extracted_root/bin/panel" \
+      --check-service-operations-idle-wal-aware || exit 1
+  fi
+  systemctl stop celikpanel-agent.service || exit 1
+  if systemctl is-active --quiet celikpanel-agent.service; then exit 1; fi
+)
+
+# END FIRST INSTALL RESUME POLICY
+
 
 # BEGIN DOWNLOAD OPERATION POLICY
 interrupted_update_directory_chain_is_safe() {
@@ -728,9 +840,12 @@ select_download_operation() {
   selection_panel_active=$5
   selection_agent_active=$6
   selection_recovery_candidate=$7
+  selection_pending_install=${8:-0}
 
   if [ "$selection_requested" != auto ]; then
     printf '%s\n' "$selection_requested"
+  elif [ "$selection_pending_install" -eq 1 ] && [ "$selection_marker_state" = absent ]; then
+    printf '%s\n' install
   elif [ "$selection_full_install" -eq 1 ] && \
     { [ "$selection_marker_state" = valid ] || \
       { [ "$selection_panel_active" -eq 1 ] && [ "$selection_agent_active" -eq 1 ]; }; }; then
@@ -930,8 +1045,8 @@ marker_state=absent
 if [ -e /etc/celikpanel/install.complete ] || [ -L /etc/celikpanel/install.complete ]; then
   marker_state=invalid
   if [ -f /etc/celikpanel/install.complete ] && [ ! -L /etc/celikpanel/install.complete ]; then
-    set -- $(stat -Lc '%u %g %a %h' -- /etc/celikpanel/install.complete)
-    [ "$1:$2:$3:$4" = 0:0:600:1 ] && marker_state=valid
+    set -- $(stat -Lc '%u %g %a %h %s' -- /etc/celikpanel/install.complete)
+    [ "$1:$2:$3:$4:$5" = 0:0:600:1:0 ] && marker_state=valid
   fi
 fi
 
@@ -969,17 +1084,74 @@ if command -v systemctl >/dev/null 2>&1; then
   systemctl is-active --quiet celikpanel-agent.service 2>/dev/null && agent_active=1 || true
 fi
 
+if [ "$requested_action" = auto ] && [ "$marker_state" = valid ] && [ "$full_install" -eq 1 ]; then
+  message "CelikPanel installation is already complete. Open your panel; updates are installed from its update screen." \
+    "CelikPanel kurulumu zaten tamamlanmış. Panelinizi açın; güncellemeler panelin güncelleme ekranından yapılır."
+  exit 0
+fi
+
+if [ "$marker_state" = absent ] && \
+  { [ -e "$pending_install_directory" ] || [ -L "$pending_install_directory" ]; }; then
+  pending_install_metadata=$(inspect_pending_first_install "$pending_install_directory") || fail \
+    "The saved installation record could not be authenticated. No installation was started." \
+    "Kayıtlı kurulum bilgisi doğrulanamadı. Kurulum başlatılmadı."
+  set -- $pending_install_metadata
+  case "$requested_version" in
+    latest|"$bootstrap_release_version"|"$2") ;;
+    *) fail "An unfinished installation belongs to $2. Run the standard installation command to finish that release first." \
+      "Yarım kurulum $2 sürümüne ait. Önce o sürümü tamamlamak için standart kurulum komutunu çalıştırın." ;;
+  esac
+  [ "$requested_action" != update ] || fail \
+    "Finish the pending first installation before updating." "Güncellemeden önce yarım ilk kurulumu tamamlayın."
+  pending_first_install_is_idle || fail \
+    "Installation is already running. Wait for it to finish; this command did not start a second installation." \
+    "Kurulum hâlâ çalışıyor. Tamamlanmasını bekleyin; bu komut ikinci bir kurulum başlatmadı."
+  bootstrap_release_sequence=$1
+  bootstrap_release_version=$2
+  expected_commit=$3
+  expected_archive_sha256=$4
+  expected_archive_size=$5
+  pending_install_identity=$6
+  resume_first_install=1
+  requested_version=$2
+  message "Resuming the verified unfinished installation: $2" "Doğrulanmış yarım kurulum tamamlanıyor: $2"
+fi
+
+# Alpha55 predates pending receipts. Admit only its exact signed trust floor;
+# installed bytes and the unused administrator/ledger state are proved later.
+# Alpha55 devam kaydindan oncedir. Yalniz tam imzali guven tabanini kabul et;
+# kurulu baytlar ile kullanilmamis yonetici/ledger durumu sonra kanitlanir.
+if [ "$resume_first_install" -eq 0 ] && [ "$requested_action" = auto ] &&
+   [ "$marker_state" = absent ] && [ "$full_install" -eq 1 ] && [ "$panel_active" -eq 0 ] &&
+   inspect_release_sequence_floor && [ "$floor_present" -eq 1 ] &&
+   [ "$floor_sequence:$floor_version" = 55:v0.1.0-alpha.55 ] &&
+   validate_release_public_key "$release_public_key" &&
+   [ "$(sha256sum "$release_public_key" | awk '{print $1}')" = "$bootstrap_release_public_key_sha256" ]; then
+  case "$requested_version" in
+    latest|v0.1.0-alpha.55|"$bootstrap_release_version")
+      bootstrap_release_sequence=55
+      bootstrap_release_version=v0.1.0-alpha.55
+      requested_version=v0.1.0-alpha.55
+      expected_commit=9de8e4775c0e9ca134ba9bbef11fa6a6e6050132
+      expected_archive_sha256=7ebc94b72a7ce47f7820f766a8b2022e132db2dd8d61f6f97d9868bfbd5849ff
+      expected_archive_size=23324856
+      legacy_first_install=1
+      resume_first_install=1
+      ;;
+  esac
+fi
+
 recovery_candidate=0
 detect_known_interrupted_update_candidate && recovery_candidate=1 || true
 operation=$(select_download_operation \
   "$requested_action" "$marker_state" "$full_install" "$any_install" \
-  "$panel_active" "$agent_active" "$recovery_candidate")
+  "$panel_active" "$agent_active" "$recovery_candidate" "$resume_first_install")
 [ "$operation" != ambiguous ] || fail \
   "A partial or ambiguous CelikPanel installation was found. Retry with --install after a failed first setup, or use --update only after verifying the existing installation." \
   "Yarım veya belirsiz bir CelikPanel kurulumu bulundu. İlk kurulum başarısız olduysa --install ile yeniden deneyin; --update seçeneğini yalnız mevcut kurulumu doğruladıktan sonra kullanın."
 
 if [ "$operation" = install ]; then
-  [ "$marker_state" = absent ] && [ "$panel_active" -eq 0 ] || fail \
+  [ "$marker_state" = absent ] && { [ "$panel_active" -eq 0 ] || [ "$resume_first_install" -eq 1 ]; } || fail \
     "A completed or running CelikPanel installation already exists; use --update." \
     "Tamamlanmış veya çalışan bir CelikPanel kurulumu zaten var; --update kullanın."
 else
@@ -1087,6 +1259,18 @@ if [ "$signed_release_mode" -eq 1 ]; then
     enforce_release_sequence_floor "$signed_release_sequence" "$version" || fail \
     "The signed release sequence is stale, unexpected, or lacks a trusted rollback floor." \
     "İmzalı sürüm sırası eski, beklenmeyen veya güvenilir geri-alma tabanından yoksun."
+  fi
+  if [ "$bootstrap_signed_install" -eq 1 ]; then
+    [ ! -e /etc/celikpanel/install.complete ] && [ ! -L /etc/celikpanel/install.complete ] || fail \
+      "Installation completed while this command was waiting. Run the same command to see its status." \
+      "Bu komut beklerken kurulum tamamlandı. Durumu görmek için aynı komutu çalıştırın."
+    if [ "$legacy_first_install" -eq 0 ]; then
+      publish_pending_first_install || fail \
+      "The authenticated installation record could not be saved safely." \
+      "Doğrulanmış kurulum kaydı güvenle saklanamadı."
+    fi
+    message "Downloading and verifying CelikPanel $version. If interrupted, run the same installation command again." \
+      "CelikPanel $version indiriliyor ve doğrulanıyor. Kesilirse aynı kurulum komutunu yeniden çalıştırın."
   fi
   signed_fetch "$release_url/$archive" "$workdir/$archive" "$signed_archive_size"
   signed_fetch "$release_url/$archive.sha256" "$workdir/$archive.sha256" 256
@@ -1211,6 +1395,29 @@ if [ "$operation" = install ]; then
   validate_bootstrap_release_public_key "$signed_public_key_path" || fail \
     "The pinned first-install release key changed before installer handoff." \
     "Sabitlenmis ilk-kurulum surum anahtari installer aktarimindan once degisti."
+  if [ "$legacy_first_install" -eq 1 ]; then
+    for legacy_binary in panel agent; do
+      validate_release_key_directory_chain /opt/celikpanel/bin || fail \
+        "The existing binary directory is unsafe." "Mevcut program dizini guvenli degil."
+      [ -f "/opt/celikpanel/bin/$legacy_binary" ] && [ ! -L "/opt/celikpanel/bin/$legacy_binary" ] &&
+        [ "$(stat -Lc '%u:%g:%a:%h' "/opt/celikpanel/bin/$legacy_binary")" = 0:0:755:1 ] &&
+        cmp -s "$extracted_root/bin/$legacy_binary" "/opt/celikpanel/bin/$legacy_binary" || fail \
+        "The interrupted Alpha55 binaries differ from the signed release. Automatic recovery was refused." \
+        "Yarim Alpha55 programlari imzali surumden farkli. Otomatik tamamlama reddedildi."
+    done
+    legacy_admin_count=$(env CELIKPANEL_DATA_DIR=/var/lib/celikpanel \
+      "$extracted_root/bin/panel" --count-users-read-only-wal-aware) || fail \
+      "The existing administrator state could not be read safely." "Mevcut yonetici durumu guvenle okunamadi."
+    [ "$legacy_admin_count" = 0 ] || fail \
+      "This Alpha55 installation already has an administrator; automatic first-setup recovery was refused." \
+      "Bu Alpha55 kurulumunda yonetici var; otomatik ilk kurulum tamamlamasi reddedildi."
+    "$extracted_root/bin/agent" --check-initial-service-mutation-ledger || fail \
+      "The initial agent state could not be verified. If a package operation is active, wait for it to finish and retry the same command." \
+      "Baslangic agent durumu dogrulanamadi. Paket islemi etkinse tamamlanmasini bekleyip ayni komutu yeniden deneyin."
+    publish_pending_first_install || fail \
+      "The verified Alpha55 recovery record could not be saved." "Dogrulanmis Alpha55 tamamlama kaydi saklanamadi."
+  fi
+  quiesce_pending_first_install || fail "An active operation prevents installation recovery. Wait and retry the same command." "Etkin bir işlem kurulumun tamamlanmasını engelliyor. Bekleyip aynı komutu yeniden deneyin."
   message \
     "Installing CelikPanel $version from verified archive $archive" \
     "CelikPanel $version doğrulanmış $archive arşivinden kuruluyor"
@@ -1223,6 +1430,9 @@ if [ "$operation" = install ]; then
     CELIKPANEL_FIRST_INSTALL_COMMIT="$signed_commit" \
     CELIKPANEL_FIRST_INSTALL_LOCK_FD=9 \
     bash "$installer"
+  finish_pending_first_install || fail \
+    "The installer finished but its completion record could not be verified. Run the same command to inspect the state." \
+    "Kurucu bitti ancak tamamlanma kaydı doğrulanamadı. Durumu kontrol etmek için aynı komutu çalıştırın."
 else
   if [ "$operation" = recovery-update ]; then
     detect_known_interrupted_update_candidate || fail \

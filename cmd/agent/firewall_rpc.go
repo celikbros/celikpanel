@@ -1252,7 +1252,9 @@ func parseSSHDConfigurationPorts(out []byte) ([]int, error) {
 		if len(fields) == 0 {
 			continue
 		}
-		switch fields[0] {
+		// OpenSSH versions print either lowercase or canonical keyword casing.
+		// OpenSSH surumleri anahtarlari kucuk harfli veya ozgun buyuklukle yazdirir.
+		switch strings.ToLower(fields[0]) {
 		case "port":
 			if len(fields) != 2 {
 				return nil, fmt.Errorf("sshd -T returned a malformed port directive")

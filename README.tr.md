@@ -126,10 +126,14 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 \
 sh /tmp/celikpanel-get.sh
 
 # Veya tam bir değişmez sürümü sabitleyin
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.55
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.56
 ```
 
-Herkese açık bootstrap betiğini mevcut bir kurulumda indirip çalıştırmayın.
+İlk kurulum sırasında terminal bağlantısı kesilirse aynı kurulum komutunu
+yeniden çalıştırın. Kurucu sakladığı imzalı sürüm kaydını doğrular ve veritabanı
+ile oluşturulmuş yöneticiyi koruyarak aynı sürümü tamamlar. Eşzamanlı ikinci
+kurulum reddedilir; tamamlanmış kurulum yeniden kurulmadan bildirilir.
+Özel bir onarım bayrağı gerekmez.
 Mevcut kurulumlar paneldeki kimliği doğrulanmış **İmzalı güncelleme** ekranından
 güncellenir. Bu ekran güvenilir kontrol yolundan tek ve tam bir imzalı sürüm
 kimliği alır; ürün daha önce kurulmuş `/usr/libexec/celikpanel/get.sh` betiğini
@@ -139,9 +143,11 @@ içeriden başlatır.
 `--update --version <tam-sürüm>`, `--require-signed-manifest` ve tam beklenen
 sıra, mevcut taban, commit, arşiv özeti ve boyut ile çağırır. Bu bayraklar dahili
 bir güven sözleşmesidir; operatör tarifi veya rastgele URL, yol ya da sürüm seçme
-yöntemi değildir. Kısmi, belirsiz veya kesilmiş kurulumlarda
-[operasyon kılavuzundaki](docs/OPERATIONS.tr.md) açık kurtarma yordamını izleyin;
-herkese açık bootstrap bir onarım anahtarı değildir.
+yöntemi değildir. Doğrulanmış devam kaydı bulunmayan bilinmeyen kısmi
+kurulumlar için [operasyon kılavuzunu](docs/OPERATIONS.tr.md) izleyin. Desteklenen
+dar Alpha55 geçişi ayrıca özgün imzalı programları, sürüm tabanını, yönetici
+bulunmadığını ve başlangıç agent kaydını doğrular.
+Ayrıntılar: [ilk kurulum kurtarması](docs/FIRST-INSTALL-RECOVERY.tr.md).
 
 Kurucu ilk yöneticiyi etkileşimli olarak oluşturur. Yönetici parolasını shell
 geçmişine, dağıtım betiklerine veya sürüm dosyalarına koymayın. Sürüm arşivleri
@@ -198,8 +204,8 @@ izlenir ve sabitlenir.
 `make dist-sign` yalnız isteğe bağlı yerel GPG ürün akışı için kullanılabilir:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.55 SIGNING_KEY=<tam-anahtar-parmak-izi>
-gpg --verify dist/celikpanel-v0.1.0-alpha.55.tar.gz.asc dist/celikpanel-v0.1.0-alpha.55.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.56 SIGNING_KEY=<tam-anahtar-parmak-izi>
+gpg --verify dist/celikpanel-v0.1.0-alpha.56.tar.gz.asc dist/celikpanel-v0.1.0-alpha.56.tar.gz
 ```
 
 İsteğe bağlı `.asc` dosyası altı kanonik herkese açık üründen biri değildir;
