@@ -66,7 +66,7 @@
             <p class="lede">CelikPanel; siteleri, WordPress'i, alan adlarını, e-postayı, DNS'i, veritabanlarını, yedekleri ve güvenlik duvarını tek ekranda toplar. Farkı şudur: her değişikliği önce önizler, sonra deftere yazar. Sunucunuzda ne olduğunu her zaman bilirsiniz.</p>
             <div class="hero-actions">
               <a class="button button-primary button-large" href="#kurulum">Ücretsiz kur</a>
-              <a class="button button-quiet button-large" href="#ozellikler">Neler yapabilir</a>
+              <a class="button button-quiet button-large" href="#ozellikler">Neler yaptığını görün</a>
             </div>
             <dl class="hero-facts">
               <div><dt>Kurulum</dt><dd>Tek komut, birkaç dakika</dd></div>
@@ -126,7 +126,7 @@
                 </g>
               </g>
             </svg>
-            <p class="board-refusal" id="board-desc"><strong>Güvenlik duvarı rotası kurulamadı.</strong> Bu sunucu 7.1.8 çekirdeğiyle çalışıyor ve modülleri artık diskte yok; yeniden başlatılana kadar nftables yüklenemez. Başka her şey kurulu ve çalışıyor.</p>
+            <p class="board-refusal" id="board-desc"><strong>Panel, bozmadan önce durdu ve sebebini yazdı.</strong> Güvenlik duvarı rotası kurulamadı: bu sunucu 7.1.8 çekirdeğiyle çalışıyor ve modülleri artık diskte yok, yeniden başlatılana kadar nftables yüklenemez. Başka her şey kurulu ve çalışıyor.</p>
           </figure>
         </div>
       </section>
@@ -195,49 +195,49 @@
               <tbody>
                 <tr>
                   <th scope="row">Bir servis kurarken</th>
-                  <td>Kur düğmesine basarsınız; olmazsa hata mesajını okuyup sunucuya SSH ile bakarsınız.</td>
-                  <td class="ours">Panel önce sorar: bu kurulabilir mi? Engel varsa hiçbir şey değişmez ve engeli düz Türkçe söyler.</td>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Kur düğmesine basarsınız; olmazsa hata mesajını okuyup sunucuya SSH ile bakarsınız.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Panel önce sorar: bu kurulabilir mi? Engel varsa hiçbir şey değişmez ve engeli düz Türkçe söyler.</td>
                 </tr>
                 <tr>
                   <th scope="row">Bir şey ters gidince</th>
-                  <td>Neyin ne zaman değiştiğini bulmak için günlükleri elle karıştırırsınız.</td>
-                  <td class="ours">Her ayrıcalıklı değişiklik, sonucuyla birlikte kalıcı bir deftere yazılır. Ne olduğu yazılıdır.</td>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Neyin ne zaman değiştiğini bulmak için günlükleri elle karıştırırsınız.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Her ayrıcalıklı değişiklik, sonucuyla birlikte kalıcı bir deftere yazılır. Ne olduğu yazılıdır.</td>
                 </tr>
                 <tr>
                   <th scope="row">Elektrik kesilince</th>
-                  <td>Yarım kalan iş yarım kalır; ekran yine de yeşil görünebilir.</td>
-                  <td class="ours">Panel yarım işi bulur, bitirir ya da geri alır. Dört kesintide karar süresi 7 saniyenin altında kaldı.</td>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Yarım kalan iş yarım kalır; ekran yine de yeşil görünebilir.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Panel yarım işi bulur, bitirir ya da geri alır. Dört kesintide karar süresi 7 saniyenin altında kaldı.</td>
                 </tr>
                 <tr>
                   <th scope="row">Sunucu tamamen ölünce</th>
-                  <td>Yeni sunucuyu elden kurar, yapılandırmayı yeniden yazarsınız. Saatler sürer.</td>
-                  <td class="ours">Tek mühürlü arşivden temiz bir sunucuya 105 saniyede döner. 6 Eylül 2026'da ölçüldü.</td>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Yeni sunucuyu elden kurar, yapılandırmayı yeniden yazarsınız. Saatler sürer.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Tek mühürlü arşivden temiz bir sunucuya 105 saniyede döner. 6 Eylül 2026'da ölçüldü.</td>
                 </tr>
                 <tr>
                   <th scope="row">Veritabanı parolanız</th>
-                  <td>Panel kök parolayı kendi eline alır; artık sizin değildir.</td>
-                  <td class="ours">Panel kendine ayrı bir yönetici hesabı açar. Kök parolanız sizde kalır.</td>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Çoğu panel kendi erişimini kök hesabın üzerinden kurar.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Panel kendine ayrı bir yönetici hesabı açar. Kök parolanız sizde kalır.</td>
                 </tr>
                 <tr>
                   <th scope="row">Zaten çalışan bir DNS sunucunuz varsa</th>
-                  <td>Genelde sıfırdan kurup kayıtları elle taşırsınız; geçişte kesinti olur.</td>
-                  <td class="ours">Çalışan BIND veya PowerDNS devralınır. Devralma boyunca 2508 sorgunun tamamı cevaplandı.</td>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Genelde sıfırdan kurup kayıtları elle taşırsınız; geçişte kesinti olur.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Çalışan BIND veya PowerDNS devralınır. Devralma boyunca 2508 sorgunun tamamı cevaplandı.</td>
                 </tr>
                 <tr>
                   <th scope="row">Kurulum</th>
-                  <td>Depo ekleyin, bağımlılık derleyin, betikleri sırayla çalıştırın.</td>
-                  <td class="ours">Tek komut. İmzalı ve önceden derlenmiş paket; hedefte Go, Node.js veya Git gerekmez.</td>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Depo ekleyin, bağımlılık derleyin, betikleri sırayla çalıştırın.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Tek komut. İmzalı ve önceden derlenmiş paket; hedefte Go, Node.js veya Git gerekmez.</td>
                 </tr>
                 <tr>
                   <th scope="row">Ücret</th>
-                  <td>Ticari panellerde sunucu ya da hesap başına lisans.</td>
-                  <td class="ours">Alfa boyunca ücretsiz, sunucu sayısı sınırsız.</td>
+                  <td><span class="cell-label">Alışılmış yöntem</span>Ticari panellerde sunucu ya da hesap başına lisans.</td>
+                  <td class="ours"><span class="cell-label">CelikPanel ile</span>Alfa boyunca ücretsiz, sunucu sayısı sınırsız.</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p class="scroll-hint">Tablo yana kayar.</p>
-          <p class="why-note">Sağ sütundaki her sayı gerçek bir makinede ölçüldü ve <a href="#kanit">aşağıdaki kanıt defterinde</a> tarihiyle duruyor.</p>
+          <p class="why-note">Sağ sütundaki her sayı gerçek bir makinede ölçüldü. <a href="#kanit">Kanıt defterine bakın</a>.</p>
         </div>
       </section>
 
@@ -279,10 +279,10 @@
             </li>
             <li>
               <h3>Taahhüt et</h3>
-              <p>Yalnızca o jetonla değişiklik yapılır. Bu sırada sunucu tek bir değişiklik kirası tutar; ikinci bir değişiklik sıraya girer, üste binmez.</p>
+              <p>Yalnızca o jetonla değişiklik yapılır. Bu sırada sunucuda tek bir değişiklik hakkı tutulur; ikinci bir değişiklik sıraya girer, üste binmez.</p>
             </li>
             <li>
-              <h3>Deftere geç</h3>
+              <h3>Deftere yaz</h3>
               <p>Her ayrıcalıklı değişiklik, sonucuyla birlikte kalıcı bir deftere yazılır. Elektrik kesilirse panel yarım işi bulur ve bitirir ya da geri alır; yarım kalmış bir şeyi başarılı diye göstermez.</p>
             </li>
           </ol>
@@ -290,7 +290,7 @@
           <!-- The interlocking table: rows are things you can ask for, columns
                are what may be holding the server, marks are the refusals. The
                rules are the product's own; the layout is a demonstration. -->
-          <div class="interlock" role="region" aria-labelledby="interlock-title">
+          <div class="interlock">
             <div class="interlock-head">
               <h3 id="interlock-title">Kilitleme tablosu</h3>
               <span class="tag-demo">gösterim · kurallar gerçek</span>
@@ -349,8 +349,8 @@
             </div>
             <p class="scroll-hint">Tablo yana kayar.</p>
             <dl class="interlock-notes">
-              <div><dt><span class="mark mark-lock" aria-hidden="true"></span> Kilitli</dt><dd>İstek reddedilir ve panel <em>hangi</em> durumun onu kilitlediğini söyler. Üç sebep üç farklı şey ister: paket yöneticisi için bir dakika beklersiniz, süren değişiklik için onun bitmesini; bitmemiş bir kilit ise beklemekle geçmez ve panel bunu açıkça söyler.</dd></div>
-              <div><dt><span class="mark mark-free" aria-hidden="true"></span> Serbest</dt><dd>İstek hemen yapılır. Veritabanı oluşturmak motorun içindeki bir işlemdir, sunucu kirası gerektirmez; okumak hiçbir zaman beklemez.</dd></div>
+              <div><dt><span class="mark mark-lock" aria-hidden="true"></span> Kilitli</dt><dd>İstek reddedilir. Panel, onu hangi durumun kilitlediğini söyler. Üç sebep üç farklı şey ister: paket yöneticisi için bir dakika beklersiniz, süren değişiklik için onun bitmesini; bitmemiş bir kilit ise beklemekle geçmez ve panel bunu açıkça söyler.</dd></div>
+              <div><dt><span class="mark mark-free" aria-hidden="true"></span> Serbest</dt><dd>İstek hemen yapılır. Veritabanı oluşturmak motorun içindeki bir işlemdir, sunucuda değişiklik hakkı gerektirmez; okumak hiçbir zaman beklemez.</dd></div>
             </dl>
           </div>
         </div>
@@ -421,13 +421,16 @@
   fi
 )</code></pre>
             </article>
-            <article class="command-card">
-              <div class="command-head">
-                <h3>Sabit sürümü kur</h3>
-                <button class="copy-button" id="exact-copy" type="button" data-copy="exact-command" aria-label="Sabit sürüm kurulum komutunu kopyala" disabled><span data-copy-label>Kopyala</span></button>
-              </div>
-              <pre tabindex="0"><code id="exact-command">Sürüm bilgisi bekleniyor…</code></pre>
-            </article>
+            <details class="command-details">
+              <summary>Belirli bir sürümü kurmak istiyorum</summary>
+              <article class="command-card">
+                <div class="command-head">
+                  <h3>Sabit sürümü kur</h3>
+                  <button class="copy-button" id="exact-copy" type="button" data-copy="exact-command" aria-label="Sabit sürüm kurulum komutunu kopyala" disabled><span data-copy-label>Kopyala</span></button>
+                </div>
+                <pre tabindex="0"><code id="exact-command">Sürüm bilgisi bekleniyor…</code></pre>
+              </article>
+            </details>
             <p class="install-note">Komut, betiği bir kez indirir ve doğrular; boru ile kabuğa akıtmaz. Tekrarlanabilir kurulum için sabit sürümü kullanın.</p>
             <p class="sr-only" id="copy-status" aria-live="polite"></p>
           </div>
@@ -450,8 +453,8 @@
           <aside class="release-panel" aria-labelledby="latest-title" aria-busy="true">
             <div class="release-top">
               <div>
-                <span class="release-label">Güncel alfa sürümü</span>
                 <h3 id="latest-title"><span id="release-version" aria-live="polite">Yükleniyor…</span></h3>
+                <span class="release-label">Güncel alfa sürümü</span>
               </div>
               <span class="release-ready"><i aria-hidden="true"></i><span id="release-status">Manifest okunuyor</span></span>
             </div>
@@ -465,6 +468,42 @@
               <a class="button button-quiet" id="checksum-link" href="/releases/" aria-disabled="true" tabindex="-1">SHA-256 dosyası</a>
             </div>
           </aside>
+        </div>
+      </section>
+
+      <!-- ============================================================== FAQ -->
+      <section class="faq" id="sss" aria-labelledby="faq-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="faq-title">Sık sorulanlar</h2>
+            <p class="section-lede">Bilmediğimiz bir şeyi bildiğimizi söylemiyoruz. Cevabı henüz olmayan sorularda da bunu açıkça yazıyoruz.</p>
+          </div>
+          <dl class="faq-list">
+            <div>
+              <dt>Şimdi üretimde kullanabilir miyim?</dt>
+              <dd>Hayır. CelikPanel alfa aşamasında; önce ayrı bir test sunucusunda deneyin. Üretime hazır olduğunu söyleyeceğimiz gün, dayandığı kanıtla birlikte bu sayfada yazacak.</dd>
+            </div>
+            <div>
+              <dt>Alfadan sonra ücretli mi olacak?</dt>
+              <dd>Alfa boyunca ücretsiz ve kurabileceğiniz sunucu sayısı sınırsız. 1.0 fiyatlandırması henüz açıklanmadı; açıklandığında ilk burada duyurulacak.</dd>
+            </div>
+            <div>
+              <dt>cPanel veya Plesk'ten taşıyabilir miyim?</dt>
+              <dd>Otomatik taşıma aracı henüz yok. Çalışan bir DNS sunucusu kesinti olmadan devralınabiliyor; site dosyaları ve posta kutuları şimdilik elle taşınır.</dd>
+            </div>
+            <div>
+              <dt>Hangi sunucularda çalışır?</dt>
+              <dd>Debian 13, Ubuntu 24.04 LTS ve Arch Linux üzerinde, Linux amd64 mimarisinde. Kurulum üçünde de aynı komutla yapılır ve her sürüm üçünde birden sınanır.</dd>
+            </div>
+            <div>
+              <dt>Verilerim nerede duruyor?</dt>
+              <dd>Panel de veriler de kendi sunucunuzda. Panel dışarıyla yalnız sürüm bildirimini ve kurulum paketini indirmek için konuşur.</dd>
+            </div>
+            <div>
+              <dt>Vazgeçersem kaldırabilir miyim?</dt>
+              <dd>Evet. Kurulum gibi kaldırma da panelin kendi işidir ve ne bıraktığı deftere yazılır.</dd>
+            </div>
+          </dl>
         </div>
       </section>
 
@@ -520,7 +559,7 @@
           <a href="#ozellikler">Özellikler</a>
           <a href="#neden">Neden CelikPanel</a>
           <a href="#kurulum">Kurulum</a>
-          <a href="/releases/index.json">Sürümler</a>
+          <a href="#surum">Sürümler</a>
           <a href="#destek">Destek</a>
           <a href="https://github.com/celikbros/celikpanel-feedback/security/advisories/new">Güvenlik</a>
         </nav>

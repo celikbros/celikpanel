@@ -222,7 +222,9 @@ p, dd, li { max-width: var(--measure); }
 
 @media (max-width: 900px) {
   .hero-grid { grid-template-columns: 1fr; }
-  .hero-facts { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .hero-facts { grid-template-columns: 1fr; gap: 1rem 0; }
 }
 
 /* ------------------------------------------------------------ route board
@@ -274,6 +276,10 @@ p, dd, li { max-width: var(--measure); }
 }
 @keyframes lamp-set { 0% { fill: var(--lamp-off); } 45% { fill: var(--lamp-amber); } 100% { fill: var(--lamp-green); } }
 @keyframes lamp-stop { 0% { fill: var(--lamp-off); } 100% { fill: var(--lamp-red); } }
+@media (max-width: 640px) {
+  .board .labels text { font-size: 26px; }
+  .board .states text { font-size: 20px; }
+}
 @keyframes route-draw { to { stroke-dashoffset: 0; } }
 @keyframes lock-land { 0% { opacity: 0; transform: scale(1.8); } 60% { opacity: 1; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } }
 
@@ -312,13 +318,6 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 .interlock-notes em { font-style: italic; }
 @media (max-width: 800px) { .interlock-notes { grid-template-columns: 1fr; } }
 
-/* what it manages: a ruled definition list, two columns */
-.manages { margin-top: 3.5rem; }
-.manage-list { margin-top: 1rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 3rem; border-top: 1px solid var(--rule); }
-.manage-list > div { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 1rem; padding: 0.9rem 0; border-bottom: 1px solid var(--rule); }
-.manage-list dt { font-weight: 700; }
-.manage-list dd { color: var(--ink-2); font-size: 0.9375rem; }
-@media (max-width: 800px) { .manage-list { grid-template-columns: 1fr; } .manage-list > div { grid-template-columns: 1fr; gap: 0.2rem; } }
 
 /* ---------------------------------------------------------------- proof */
 .proof { background: var(--paper-2); border-bottom: 1px solid var(--rule); }
@@ -443,3 +442,36 @@ section { padding: clamp(3rem, 6vw, 5.5rem) 0; }
 @media (max-width: 800px) { .who-list { grid-template-columns: 1fr; } .who-list > div + div { border-top: 1px solid var(--rule); } }
 
 .interlock-lede { margin: 0 0 1.25rem; color: var(--ink-2); font-size: 0.9375rem; }
+
+/* ------------------------------------------------- comparison on a phone
+   A three-column table cannot be read through a 110px window, and a sticky
+   column only makes the window narrower. Below 640 the table stops being a
+   table: one block per situation, each answer under its own column name. */
+.cell-label { display: none; }
+@media (max-width: 640px) {
+  .why .table-scroll { border: 0; background: none; overflow: visible; }
+  .why .scroll-hint { display: none; }
+  .compare, .compare tbody, .compare tr, .compare th, .compare td { display: block; width: auto; min-width: 0; }
+  .compare thead { display: none; }
+  .compare tbody tr { padding: 1.1rem 0; border-bottom: 1px solid var(--rule); }
+  .compare tbody th { position: static; width: auto; padding: 0 0 0.5rem; background: transparent; box-shadow: none; border: 0; font-size: 1.0625rem; }
+  .compare td { border: 0; padding: 0.4rem 0 0; }
+  .compare .ours { background: transparent; border-left: 2px solid var(--rule-strong); padding-left: 0.9rem; margin-top: 0.6rem; }
+  .cell-label { display: block; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 0.15rem; }
+}
+
+/* ------------------------------------------------------------- disclosure
+   The pinned-version command is for people who came looking for it. */
+.command-details { border: 1px solid var(--rule-strong); border-radius: var(--radius); background: var(--paper-lit); }
+.command-details summary { padding: 0.8rem 1rem; cursor: pointer; font-weight: 600; font-size: 0.9375rem; }
+.command-details summary:focus-visible { outline-offset: -3px; }
+.command-details[open] summary { border-bottom: 1px solid var(--rule); }
+.command-details .command-card { border-radius: 0 0 var(--radius) var(--radius); border: 0; box-shadow: none; }
+
+/* -------------------------------------------------------------------- faq */
+.faq { border-bottom: 1px solid var(--rule); }
+.faq-list { margin-top: 2rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 3rem; border-top: 1px solid var(--rule); }
+.faq-list > div { padding: 1.1rem 0; border-bottom: 1px solid var(--rule); }
+.faq-list dt { font-weight: 700; font-size: 1.0625rem; }
+.faq-list dd { margin-top: 0.3rem; color: var(--ink-2); font-size: 0.9375rem; }
+@media (max-width: 800px) { .faq-list { grid-template-columns: 1fr; } }
