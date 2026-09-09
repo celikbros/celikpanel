@@ -155,6 +155,7 @@ function SettingsWorkspace({
     onSelect: (section: SettingsSectionID) => void;
     onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => void;
 }) {
+    const { t } = useI18n();
     return (
         <div className="grid max-w-7xl gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
             <SettingsSectionTabs
@@ -181,8 +182,10 @@ function SettingsWorkspace({
                         </div>
                         <div id="settings-dns-panel" role="tabpanel" aria-labelledby="settings-dns-tab" hidden={activeID !== 'dns'}>
                             {activeID === 'dns' && <DNSServerSettings />}
+                        </div>
+                        <div id="settings-system-databases-panel" role="tabpanel" aria-labelledby="settings-system-databases-tab" hidden={activeID !== 'system-databases'}>
                             {activeID === 'system-databases' && (
-                                <Suspense fallback={null}><SystemSQLiteManager /></Suspense>
+                                <Suspense fallback={<p role="status">{t('common.loading')}</p>}><SystemSQLiteManager /></Suspense>
                             )}
                         </div>
                     </>
@@ -567,6 +570,12 @@ function PanelCertificatePanel() {
                 <Lock className="h-5 w-5 text-fg-subtle" />
                 <h2 className="text-base font-semibold text-fg">{t('panelCert.title')}</h2>
             </div>
+
+            <ol className="mb-5 list-decimal space-y-2 pl-5 text-sm text-fg-muted">
+                <li>{t('start.panel.dns')}</li>
+                <li>{t('start.panel.check')}</li>
+                <li>{t('start.panel.issue')}</li>
+            </ol>
 
             {info && (
                 <div className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-surface-2/50 p-3 text-sm">

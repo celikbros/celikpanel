@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from '../router';
+import { useNavigate, Link } from '../router';
+import { StartGuide } from './StartGuide';
+import { accountStart, dnsStartReady, hasMailActivity, panelCertificateReady } from '../lib/startGuidance';
 import {
     Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity, Bell,
-    Shield, ShieldOff, Users, Mail, Rocket, Check, ArrowRight,
+    Shield, ShieldOff, Users, Mail, ArrowRight,
     DownloadCloud, UserPlus, Plus, Lock, Layers, ScanSearch,
 } from 'lucide-react';
 import { api, type SystemStats } from '../lib/api';
@@ -25,15 +27,14 @@ import {
 // server healthy?" and "does anything need me?". Every number is real — the
 // health strip polls system-stats, the rest reads the same endpoints the
 // dedicated pages use, plus /api/v1/dashboard for the few aggregates.
-// The setup journey renders from live state until all steps are done: a
-// fresh server shows a guided path instead of empty widgets.
+// Role-specific guidance uses live observations. DNS is the first hosting
+// prerequisite; security and optional mail are independent tasks.
 //
 // Yönetici panosu: tek bakış "sunucum sağlıklı mı?" ve "bana ihtiyaç duyan
 // bir şey var mı?" sorularını yanıtlar. Her sayı gerçek — sağlık şeridi
 // system-stats'ı yoklar, kalanı özel sayfaların kullandığı uçları okur,
-// birkaç toplam için /api/v1/dashboard eklenir. Kurulum yolculuğu tüm
-// adımlar bitene dek canlı durumdan çizilir: taze sunucu boş widget yerine
-// yol gösteren bir liste görür.
+// birkaç toplam için /api/v1/dashboard eklenir. Role göre rehberlik canlı
+// gözlemlere dayanır. DNS ilk altyapı adımıdır; güvenlik ve posta ayrıdır.
 
 interface SvcLite {
     id: string;
@@ -248,15 +249,8 @@ function AdminDashboard() {
     const [dnsIdentityReady, setDNSIdentityReady] = useState(false);
     const [serviceScannedAt, setServiceScannedAt] = useState<string | null>(null);
     const [freshnessNow, setFreshnessNow] = useState(() => Date.now());
-    // capabilities.mail_server is a BOOL in the API (dns_server is a string) —
-    // treating it like a string silently marks the step done when it is false.
-    // capabilities.mail_server API'de BOOL'dur (dns_server metindir) — metin
-    // gibi ele almak false iken adımı sessizce 'tamamlandı' işaretler.
-    // A real CA cert on the panel (self_signed === false) counts as "got an
-    // SSL certificate" — the operator did obtain one, even if no site has one.
-    // Panelde gerçek CA sertifikası (self_signed === false) "SSL aldın"
-    // sayılır — operatör gerçekten bir sertifika aldı, hiçbir sitede olmasa da.
-    const [panelSecured, setPanelSecured] = useState(false);
+    // Panel certificate evidence is independent of every hosted domain.
+    const [panelSecured, setPanelSecured] = useState<boolean | null>(null);
     const [extras, setExtras] = useState<Extras | null>(null);
     const [fwBusy, setFwBusy] = useState(false);
     const [firewallConfirmationOpen, setFirewallConfirmationOpen] = useState(false);
@@ -278,6 +272,7 @@ function AdminDashboard() {
                 setServices(snapshot.services);
                 setMailProfiles(snapshot.profiles);
                 setServiceScannedAt(snapshot.scannedAt);
+                setFreshnessNow(Date.now());
                 setDNSIdentityReady(snapshot.dnsIdentityReady);
             })
             .catch(() => {});
@@ -290,7 +285,7 @@ function AdminDashboard() {
             .then((c) => { setDnsServer(c?.dns_server ?? ''); })
             .catch(() => {});
         fetch('/api/v1/dashboard').then((r) => (r.ok ? r.json() : null)).then(setExtras).catch(() => {});
-        fetch('/api/v1/panel/certificate').then((r) => (r.ok ? r.json() : null)).then((c) => setPanelSecured(c ? c.self_signed === false : false)).catch(() => {});
+        fetch('/api/v1/panel/certificate').then((r) => (r.ok ? r.json() : null)).then((c) => setPanelSecured(panelCertificateReady(c))).catch(() => {});
 
         return () => clearInterval(timer);
     }, []);
@@ -574,61 +569,8 @@ function AdminDashboard() {
         });
     }
 
-    // Setup journey — live completion; the card disappears when all done.
-    // Kurulum yolculuğu — canlı tamamlanma; hepsi bitince kart kaybolur.
-    const steps: { key: TranslationKey; hint?: TranslationKey; done: boolean; to: string; cta?: TranslationKey; onAct?: () => void }[] = [
-        // Every CTA says what it actually does — "Go to services" on a button
-        // that opens the Domains page was a lie the operator caught (Jul 17).
-        // Her düğme gerçekten yaptığını söyler — Domains sayfasını açan
-        // düğmede "Go to services" yazması operatörün yakaladığı bir yalandı.
-        { key: 'dashboard.step.panel', done: true, to: '/' },
-        {
-            key: 'dashboard.step.serviceScan',
-            hint: 'dashboard.step.serviceScanHint',
-            // Fresh is not the same as complete. Every step below this one
-            // reads its answer off the component census, so a census with
-            // rows nobody has looked at leaves this step open instead of
-            // letting the journey suggest an install against an unknown.
-            // Taze olmak, tamamlanmış olmak değildir. Aşağıdaki her adım
-            // yanıtını bileşen sayımından okur; bakılmamış satır varsa bu
-            // adım açık kalır, yolculuk bilinmeyene karşı kurulum önermez.
-            done: serviceScanFresh && componentCensusComplete,
-            to: '/services',
-            cta: 'dashboard.rescanComponents',
-        },
-        // "Done" means WORKING, not merely present. A DNS server that is
-        // installed but not running serves no zone, so ticking that step was a
-        // lie — Hostinger's Arch image ships a disabled named.service and the
-        // journey happily said "DNS installed: Done" while the Components page
-        // showed 0/0 (Jul 16). The same honesty applies to mail: an installed
-        // Postfix that is dead delivers nothing.
-        // "Tamamlandı" ÇALIŞIYOR demektir, yalnız var demek değil. Kurulu ama
-        // koşmayan bir DNS sunucusu hiçbir zone sunmaz; o adımı işaretlemek
-        // yalandı — Hostinger'ın Arch imajı devre dışı bir named.service ile
-        // geliyor ve yolculuk keyifle "DNS kuruldu: Tamam" diyordu, Bileşenler
-        // sayfası 0/0 gösterirken (16 Tem). Aynı dürüstlük posta için de:
-        // kurulu ama ölü bir Postfix hiçbir şey teslim etmez.
-        { key: 'dashboard.step.dns', hint: 'dashboard.step.dnsHint', done: serviceScanFresh && dnsServer !== '' && serviceRunning(dnsServer), to: '/services' },
-        { key: 'dashboard.step.dnsIdentity', hint: 'dashboard.step.dnsIdentityHint', done: dnsIdentityReady, to: '/settings?section=dns', cta: 'dashboard.configureDNSIdentity' },
-        { key: 'dashboard.step.domain', done: domains.length > 0, to: '/domains', cta: 'dashboard.addDomain' },
-        { key: 'dashboard.step.ssl', hint: 'dashboard.step.sslHint', done: panelSecured || domains.some((d) => d.ssl_enabled), to: '/settings', cta: 'dashboard.goSettings' },
-        // The firewall step acts in place: the engine ships with install.sh,
-        // so "turn on" is one honest click, not a scavenger hunt.
-        // Firewall adımı yerinde eyler: motor install.sh ile gelir, "aç" tek
-        // dürüst tıktır, define avı değil.
-        {
-            key: 'dashboard.step.firewall',
-            hint: 'dashboard.step.firewallHint',
-            done: fw?.enabled === true && fw.persistence_state === 'ready',
-            to: '/services',
-            cta: fw?.enabled ? 'dashboard.saveFirewall' : 'firewall.turnOn',
-            onAct: fw?.enabled ? undefined : requestTurnOnFirewall,
-        },
-        { key: 'dashboard.step.mail', done: mailProfileVerified, to: '/services' },
-    ];
-    const doneCount = steps.filter((s) => s.done).length;
-    const journeyOpen = doneCount < steps.length;
-    const nextIdx = steps.findIndex((s) => !s.done);
+    const dnsReady = dnsStartReady(serviceScanFresh && componentCensusComplete, dnsIdentityReady, dnsServer !== '' && serviceRunning(dnsServer));
+    const firewallReady = fw === null ? null : fw.enabled === true && fw.persistence_state === 'ready';
     const hasContent = installed.length > 0 || domains.length > 0;
 
     const recentDomains = [...domains]
@@ -769,7 +711,7 @@ function AdminDashboard() {
                 )}
             </div>
 
-            {mailProfiles && (
+            {mailProfiles && hasMailActivity(mailProfiles) && (
                 <MailStackSummary
                     profiles={mailProfiles}
                     scanFresh={serviceScanFresh}
@@ -842,107 +784,12 @@ function AdminDashboard() {
                 </section>
             )}
 
-            {/* Setup journey / Kurulum yolculuğu */}
-            {journeyOpen && (
-                <section className="mt-6">
-                    <SectionTitle
-                        icon={Rocket}
-                        tint="bg-surface-2 text-fg-muted"
-                        title={t('dashboard.journey')}
-                        right={
-                            <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-fg-muted">
-                                {t('dashboard.journeyProgress', { done: doneCount, total: steps.length })}
-                            </span>
-                        }
-                    />
-                    <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
-                        <ul>
-                            {steps.map((s, i) => (
-                                <li
-                                    key={s.key}
-                                    className={`flex flex-wrap items-center gap-3 border-b border-border px-4 py-3.5 last:border-0 ${
-                                        i === nextIdx ? 'bg-primary/5' : ''
-                                    }`}
-                                >
-                                    {s.done ? (
-                                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
-                                            <Check className="h-4 w-4" />
-                                        </span>
-                                    ) : (
-                                        <span
-                                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                                                i === nextIdx ? 'bg-primary text-primary-fg' : 'bg-surface-2 text-fg-subtle'
-                                            }`}
-                                        >
-                                            {i + 1}
-                                        </span>
-                                    )}
-                                    {/* `flex-1` alone gives this block a base
-                                        width of zero, so the row never wrapped:
-                                        the text was squeezed to whatever the
-                                        button left over instead. On the one
-                                        step that carries a hint AND a button
-                                        that collapsed at 390px into a ~60px
-                                        ribbon of one or two words per line. A
-                                        real basis makes the row wrap the way it
-                                        was always meant to — the button drops
-                                        to its own line and the text keeps a
-                                        readable measure — and it is the shared
-                                        row that changes, so every step lays out
-                                        by the same rule.
-                                        Tek başına `flex-1` bu bloğa sıfır
-                                        genişlik tabanı verir; satır bu yüzden
-                                        hiç alt satıra taşmaz, metin düğmeden
-                                        artana sıkışırdı. Hem ipucu hem düğme
-                                        taşıyan tek adımda bu, 390px'te satır
-                                        başına bir-iki sözcüklük ~60px'lik bir
-                                        şeride dönüşüyordu. Gerçek bir taban,
-                                        satırı en baştan tasarlandığı gibi
-                                        sardırır ve değişen paylaşılan satırdır;
-                                        her adım aynı kurala göre dizilir.
-
-                                        11rem is chosen, not rounded to: at
-                                        390px it leaves a wide CTA no room and
-                                        the button wraps onto its own line,
-                                        while the short statuses on the other
-                                        steps — Done, Next, and the longer
-                                        Turkish "Tamamlandı" — still fit beside
-                                        the title and do not cost six rows an
-                                        extra line each.
-                                        11rem seçilmiştir, yuvarlanmış değil:
-                                        390px'te geniş bir CTA'ya yer bırakmaz
-                                        ve düğme kendi satırına geçer; öteki
-                                        adımların kısa durumları — Done, Next
-                                        ve daha uzun olan "Tamamlandı" — yine
-                                        başlığın yanında kalır ve altı satıra
-                                        birer satır fazladan mal olmaz. */}
-                                    <div className="min-w-0 grow basis-44">
-                                        <div className={`text-base font-medium ${s.done || i === nextIdx ? 'text-fg' : 'text-fg-muted'}`}>
-                                            {t(s.key)}
-                                        </div>
-                                        {i === nextIdx && s.hint && (
-                                            <div className="mt-0.5 text-xs text-fg-subtle">{t(s.hint)}</div>
-                                        )}
-                                    </div>
-                                    {s.done ? (
-                                        <span className="ml-auto shrink-0 text-sm text-fg-subtle">{t('dashboard.stepDone')}</span>
-                                    ) : i === nextIdx ? (
-                                        <button
-                                            onClick={() => (s.onAct ? s.onAct() : navigate(s.to))}
-                                            disabled={s.onAct ? fwBusy : false}
-                                            className="ml-auto shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
-                                        >
-                                            {t(s.cta ?? 'dashboard.goServices')}
-                                        </button>
-                                    ) : (
-                                        <span className="ml-auto shrink-0 text-sm text-fg-subtle">{i === nextIdx + 1 ? t('dashboard.stepNext') : ''}</span>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </section>
-            )}
+            <StartGuide
+                dnsReady={dnsReady} scanFresh={serviceScanFresh && componentCensusComplete}
+                scanning={componentScanBusy} onScan={scanComponents}
+                panelSecured={panelSecured} firewallReady={firewallReady}
+                onFirewall={fw && !fw.enabled ? requestTurnOnFirewall : undefined} firewallBusy={fwBusy}
+            />
 
             {/* Hosting + activity / Barındırma + etkinlik */}
             {hasContent && (
@@ -1288,7 +1135,7 @@ function AdditionalUserDashboard() {
         <div className={'p-6 md:p-8'}>
             <PageHeader
                 title={t('dashboard.welcome', { name: user.username })}
-                subtitle={t('nav.domains')}
+                subtitle={t('start.additional.hint')}
             />
 
             <section className={'max-w-4xl rounded-xl border border-border bg-surface p-6'}>
@@ -1314,6 +1161,7 @@ function AdditionalUserDashboard() {
                 ) : domains.length === 0 ? (
                     <div className={'mt-6 rounded-lg border border-dashed border-border p-6 text-center'}>
                         <p className={'font-semibold text-fg'}>{t('domains.empty')}</p>
+                        <p className="mt-2 text-sm text-fg-muted">{t('start.additional.empty')}</p>
                         <button
                             type={'button'}
                             onClick={() => navigate('/domains')}
@@ -1345,6 +1193,8 @@ function AdditionalUserDashboard() {
 // Non-admin account view: server gauges + facts + quick actions.
 function CustomerDashboard() {
     const { t } = useI18n();
+    const { role } = useAuth();
+    const guidance = accountStart(role);
     const [stats, setStats] = useState<SystemStats | null>(null);
 
     useEffect(() => {
@@ -1357,6 +1207,21 @@ function CustomerDashboard() {
     return (
         <div className="p-6 md:p-8">
             <PageHeader title={t('dashboard.title')} subtitle={stats?.hostname} />
+
+            {guidance && <section className="mb-6 rounded-xl border border-border-strong bg-surface p-5 sm:p-6">
+                <h2 className="text-xl font-semibold text-fg">{t(guidance.title)}</h2>
+                <p className="mt-2 max-w-3xl text-sm text-fg-muted">{t(guidance.hint)}</p>
+                <div className="mt-4 flex flex-wrap gap-4 text-sm font-semibold text-primary">
+                    <Link to={guidance.to}>{t(guidance.action)}</Link>
+                    <Link to="/settings?section=account">{t('start.account.action')}</Link>
+                </div>
+                <details className="mt-4 border-t border-border pt-4 text-sm">
+                    <summary className="cursor-pointer font-semibold text-fg">{t('start.customer.sequence')}</summary>
+                    <ol className="mt-3 list-decimal space-y-2 pl-5 text-fg-muted">
+                        <li>{t('start.customer.dns')}</li><li>{t('start.customer.publish')}</li><li>{t('start.customer.backup')}</li>
+                    </ol>
+                </details>
+            </section>}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <GaugeCard
