@@ -1942,10 +1942,8 @@ fi
 preflight_control_plane_restore_admission
 preflight_first_administrator_admission
 
-if [[ "$APPLY_ONLY" -eq 0 && -x "$SRC/bin/panel" && -z "${RESTORE_ARCHIVE_PATH:-}" ]]; then
-    CELIKPANEL_DATA_DIR="$DATA_DIR" \
-        "$SRC/bin/panel" --activate-install-license || die "License activation failed; run the same installation command again / Lisans etkinleştirilemedi; aynı kurulum komutunu yeniden çalıştırın"
-fi
+# Licensing is activated by the authenticated administrator in the web panel.
+# Installation must reach administrator creation without contacting the license service.
 
 # Apply-only is accepted solely from a completely verified immutable release
 # while the inherited persistent lock and exact active update marker are live.

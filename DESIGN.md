@@ -392,6 +392,8 @@ The summary states that a license lasts one year from creation. Each row offers 
 
 The application rail stays navy in light and dark themes; its active item is light with navy text. The shared input uses a strong border, surface background, compact padding and a primary-colour focus border.
 
+License onboarding uses these existing panel controls. The installer creates the local administrator in the terminal without requiring a license; after sign-in, a server administrator whose license is missing is directed to Settings > License. The labelled key field accepts pasted input and has an accessible show/hide control. Localized format errors and activation failures explain how to recover; successful activation clears the key field and presents an active state with Continue server setup. Explore the panel remains available before activation, with maintenance and backups available under the existing role permissions. Resellers, customers and additional users are never redirected by this onboarding. The Turkish and English flows were reviewed at desktop (1440px) and mobile (390px).
+
 UsageBar stays navy until the recorded danger threshold, with no yellow range; print the value beside it. SecurityAuditCard gives a tinted field to failure while pass and warning share neutral surfaces and distinct symbols. Dashboard attention items rank failures above warnings with a divider and gap at the severity boundary. These panel-specific implementations retain the No-Adjacency Rule without imposing the public site's composition on operating screens.
 
 ## Do's and Don'ts

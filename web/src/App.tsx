@@ -14,6 +14,7 @@ import {
   type ReactNode,
 } from 'react';
 import { Login } from './components/Login';
+import { LicenseOnboarding } from './components/LicenseOnboarding';
 import { api, type CurrentUser } from './lib/api';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { navItems, canAccessPath, type NavAccessContext } from './nav';
@@ -514,6 +515,7 @@ function AuthGate() {
 
   return (
     <AuthProvider user={user} onLogout={() => transitionAuthentication(null)}>
+      <LicenseOnboarding />
       <RouteLoadBoundary>
         <Suspense fallback={<PageLoading />}>
           <ComponentOperationProvider>

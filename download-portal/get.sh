@@ -3,8 +3,8 @@ set -eu
 umask 077
 
 base_url=https://celikpanel.net
-bootstrap_release_sequence=60
-bootstrap_release_version=v0.1.0-alpha.60
+bootstrap_release_sequence=61
+bootstrap_release_version=v0.1.0-alpha.61
 bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb
 requested_version=latest
 requested_action=auto
@@ -25,6 +25,7 @@ signed_public_key_path=
 resume_first_install=0
 legacy_first_install=0
 pending_install_identity=
+replace_pending_metadata=
 pending_install_directory=${release_sequence_floor%/*}/install.pending
 
 message() {
@@ -683,8 +684,36 @@ pending_first_install_is_idle() (
   acquire_signed_update_lock || exit 1
 )
 
+# Only pre-install licensing failures may move to the current bootstrap release.
+# Existing files, service identities, trust, or license receipts keep the old pin.
+first_install_has_not_started() (
+  for untouched_path in \
+    /opt/celikpanel /etc/celikpanel /var/lib/celikpanel \
+    /var/lib/celikpanel-agent-private /var/lib/celikpanel-imports \
+    /var/lib/celikpanel-license /var/lib/celikpanel-release-transaction \
+    /run/celikpanel /run/celikpanel-release-transaction /usr/libexec/celikpanel \
+    /etc/letsencrypt/renewal-hooks/deploy/celikpanel-panel-cert \
+    "$release_sequence_floor" "$release_public_key" \
+    /etc/systemd/system/celikpanel-* /run/systemd/system/celikpanel-* \
+    /usr/lib/systemd/system/celikpanel-* /lib/systemd/system/celikpanel-*; do
+    [ ! -e "$untouched_path" ] && [ ! -L "$untouched_path" ] || exit 1
+  done
+  for database in passwd group; do
+    if getent "$database" celikpanel >/dev/null 2>&1; then exit 1; else
+      [ "$?" -eq 2 ] || exit 1
+    fi
+  done
+  for unit in celikpanel-panel.service celikpanel-agent.service; do
+    [ "$(systemctl show --property=LoadState --value "$unit" 2>/dev/null)" = not-found ] || exit 1
+  done
+)
+
 publish_pending_first_install() {
-  if [ -e "$pending_install_directory" ] || [ -L "$pending_install_directory" ]; then
+  if [ -n "${replace_pending_metadata:-}" ]; then
+    pending_locked=$(inspect_pending_first_install "$pending_install_directory") || return 1
+    [ "$pending_locked" = "$replace_pending_metadata" ] || return 1
+    first_install_has_not_started || return 1
+  elif [ -e "$pending_install_directory" ] || [ -L "$pending_install_directory" ]; then
     pending_locked=$(inspect_pending_first_install "$pending_install_directory") || return 1
     set -- $pending_locked
     [ "$1:$2:$3:$4:$5" = "$signed_release_sequence:$version:$signed_commit:$signed_archive_sha256:$signed_archive_size" ] || return 1
@@ -707,6 +736,16 @@ publish_pending_first_install() {
   sync -f -- "$pending_stage/release-manifest-v2" "$pending_stage/release-manifest-v2.sig" \
     "$pending_stage/release-signing-ed25519.pem" "$pending_stage" || return 1
   pending_stage_identity=$(stat -Lc '%d:%i' -- "$pending_stage") || return 1
+  if [ -n "${replace_pending_metadata:-}" ]; then
+    # The caller holds the persistent update lock. Recheck before moving only
+    # authenticated metadata; no product data is removed or overwritten.
+    [ "$(inspect_pending_first_install "$pending_install_directory")" = "$replace_pending_metadata" ] || return 1
+    first_install_has_not_started || return 1
+    pending_retired=$(mktemp -d "$(dirname -- "$pending_install_directory")/.install-superseded.XXXXXXXX") || return 1
+    chmod 0700 -- "$pending_retired" || return 1
+    mv -T -- "$pending_install_directory" "$pending_retired/record" || return 1
+    sync -f -- "$pending_retired" "$(dirname -- "$pending_install_directory")" || return 1
+  fi
   mv -T -n -- "$pending_stage" "$pending_install_directory" || return 1
   [ ! -e "$pending_stage" ] && \
     [ "$(stat -Lc '%d:%i' -- "$pending_install_directory")" = "$pending_stage_identity" ] || return 1
@@ -1106,15 +1145,24 @@ if [ "$marker_state" = absent ] && \
   pending_first_install_is_idle || fail \
     "Installation is already running. Wait for it to finish; this command did not start a second installation." \
     "Kurulum hâlâ çalışıyor. Tamamlanmasını bekleyin; bu komut ikinci bir kurulum başlatmadı."
-  bootstrap_release_sequence=$1
-  bootstrap_release_version=$2
-  expected_commit=$3
-  expected_archive_sha256=$4
-  expected_archive_size=$5
-  pending_install_identity=$6
-  resume_first_install=1
-  requested_version=$2
-  message "Resuming the verified unfinished installation: $2" "Doğrulanmış yarım kurulum tamamlanıyor: $2"
+  if [ "$requested_action" = auto ] && [ "$requested_version" = latest ] &&
+     [ "$require_signed_manifest" -eq 0 ] && [ "$bootstrap_release_sequence" -gt "$1" ] &&
+     { [ "$1:$2" = 58:v0.1.0-alpha.58 ] || [ "$1:$2" = 59:v0.1.0-alpha.59 ] ||
+       [ "$1:$2" = 60:v0.1.0-alpha.60 ]; } && first_install_has_not_started; then
+    replace_pending_metadata=$pending_install_metadata
+    message "The old installation stopped before creating CelikPanel. Continuing with $bootstrap_release_version; enter your license in the panel after setup." \
+      "Eski kurulum CelikPanel oluşturulmadan durmuş. $bootstrap_release_version ile devam ediliyor; lisansınızı kurulumdan sonra panelde girin."
+  else
+    bootstrap_release_sequence=$1
+    bootstrap_release_version=$2
+    expected_commit=$3
+    expected_archive_sha256=$4
+    expected_archive_size=$5
+    pending_install_identity=$6
+    resume_first_install=1
+    requested_version=$2
+    message "Resuming the verified unfinished installation: $2" "Doğrulanmış yarım kurulum tamamlanıyor: $2"
+  fi
 fi
 
 # Alpha55 predates pending receipts. Admit only its exact signed trust floor;

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the real panel CLI through fresh and resumed installer handoffs.
+"""Verify browser-only licensing for new installs and explicit legacy handoffs.
 
 Run as root in a disposable Linux environment with a built panel argument.
 No license, account, database, service or network mutation is performed: each
@@ -20,10 +20,8 @@ for state in ("/var/lib/celikpanel", "/var/lib/celikpanel-license"):
     assert not Path(state).exists(), "refusing to inspect an existing installation"
 
 install = (repo / "install.sh").read_text()
-match = re.search(r'^if \[\[ "\$APPLY_ONLY" -eq 0 && -x "\$SRC/bin/panel".*?^fi$',
-                  install, re.M | re.S)
-assert match, "installer license admission block missing"
-entry = match.group()
+assert '--activate-install-license' not in install, "installation must not ask for a license"
+assert '--create-admin' in install, "installation must still create the administrator"
 bootstrap = (repo / "download-portal/get.sh").read_text()
 match = re.search(r'^  CELIKPANEL_TRUSTED_RELEASE_ROOT="\$extracted_root" \\\n.*?    bash "\$installer"$',
                   bootstrap, re.M | re.S)
@@ -50,7 +48,7 @@ signed_release_sequence=59
 version=v0.1.0-alpha.59
 signed_commit=5af302f29c1de5ca6524971b8e6ab2890cb2d40e
 '''
-    for name, block in (("fresh", entry), ("resume-alpha59", handoff)):
+    for name, block in (("legacy-resume-alpha59", handoff),):
         for inherited in (None, "./wrong-relative-data", str(root / "wrong-absolute-data")):
             env = os.environ.copy()
             env.pop("CELIKPANEL_DATA_DIR", None)
@@ -67,4 +65,4 @@ signed_commit=5af302f29c1de5ca6524971b8e6ab2890cb2d40e
             print(f"PASS {name}, inherited directory {inherited!r}: real CLI reached license entry")
     for state in ("/var/lib/celikpanel", "/var/lib/celikpanel-license"):
         assert not Path(state).exists(), "license entry unexpectedly wrote state"
-print("Fresh and resumed license entry passed without state mutation.")
+print("New installer has no license prompt; explicit legacy handoff remains compatible.")

@@ -47,6 +47,7 @@ const screenKeys = keysOf(screensEn);
 const eagerModules = [
   'src/main.tsx',
   'src/App.tsx',
+  'src/components/LicenseOnboarding.tsx',
   'src/router.tsx',
   'src/router-core.ts',
   'src/router-history.ts',
