@@ -111,6 +111,13 @@ değil, önceden derlenmiş sürüm arşividir. Eşleşen panel, agent ve web uy
 arşivde bulunduğu için hedef sunucuda Go, Node veya Git gerekmez.
 Mevcut alpha arşivi Linux x86_64/amd64 içindir.
 
+Kurulumdan önce [CelikPanel hesabı oluşturun](https://celikpanel.net/account/),
+e-postanızı doğrulayın ve ücretsiz yıllık sunucu lisansınızı alın. Kurucu
+istediğinde anahtarı girin; yazarken gizlenir. Her lisans bir etkin sunucu
+içindir ve bir yıllık süresi ilk etkinleştirmede başlar. Yerel panel yöneticisi
+terminalde oluşturulur. Mevcut kurulumlarda güncellemeden sonra
+**Ayarlar → Lisans** bölümünden etkinleştirme yapılabilir.
+
 Yayımlanan sürümler `https://celikpanel.net` adresindeki herkese açık CelikPanel
 indirme kanalından dağıtılır. Herkese açık `get.sh` bootstrap betiği yalnız temiz
 ilk kurulum için desteklenir. Betiği temiz ve desteklenen bir sunucuda root olarak
@@ -126,7 +133,7 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 \
 sh /tmp/celikpanel-get.sh
 
 # Veya tam bir değişmez sürümü sabitleyin
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.57
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.58
 ```
 
 İlk kurulum sırasında terminal bağlantısı kesilirse aynı kurulum komutunu
@@ -204,8 +211,8 @@ izlenir ve sabitlenir.
 `make dist-sign` yalnız isteğe bağlı yerel GPG ürün akışı için kullanılabilir:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.57 SIGNING_KEY=<tam-anahtar-parmak-izi>
-gpg --verify dist/celikpanel-v0.1.0-alpha.57.tar.gz.asc dist/celikpanel-v0.1.0-alpha.57.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.58 SIGNING_KEY=<tam-anahtar-parmak-izi>
+gpg --verify dist/celikpanel-v0.1.0-alpha.58.tar.gz.asc dist/celikpanel-v0.1.0-alpha.58.tar.gz
 ```
 
 İsteğe bağlı `.asc` dosyası altı kanonik herkese açık üründen biri değildir;
