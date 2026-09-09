@@ -63,6 +63,8 @@ test_repo="$tmp/test-repo"
 mkdir -p "$test_repo/deploy" "$test_repo/download-portal"
 cp -- "$writer_source" "$builder_source" "$test_repo/deploy/"
 cp -a -- "$repo_root/download-portal/." "$test_repo/download-portal/"
+cp -- "$repo_root/deploy/build-membership.py" "$test_repo/deploy/"
+cp -a -- "$repo_root/portal-membership" "$test_repo/"
 cp -- "$installer" "$test_repo/install.sh"
 cp -- "$tmp/public.pem" "$test_repo/deploy/release-signing-ed25519.pem"
 test_public_key_sha256=$(sha256sum "$tmp/public.pem" | awk '{print $1}')
@@ -503,6 +505,8 @@ expect_rejected "an archive containing a different installer than the reviewed s
   CELIKPANEL_RELEASE_SIGNED_SIGNATURE_FILE="$official_signature" \
   bash "$builder" "$version" "$commit" "$published_at" \
     "$archive" "$archive.sha256" "$tmp/pre-signed-wrong-installer"
+cp -- "$repo_root/deploy/build-membership.py" "$test_repo/deploy/"
+cp -a -- "$repo_root/portal-membership" "$test_repo/"
 cp -- "$installer" "$test_repo/install.sh"
 
 pre_signed_env=(
