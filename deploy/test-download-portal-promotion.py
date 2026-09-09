@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import contextlib
 import hashlib
 import importlib.util
@@ -303,10 +304,31 @@ class DownloadPortalPromotionTests(unittest.TestCase):
         self.assertEqual((self.fixture.live / "index.html").read_text(), "old root\n")
         self.assertEqual(len(self.public_calls()), 1)
 
+    def test_current_public_verifier_budget_can_commit(self):
+        # Read the shipped verifier budget so a future plan expansion cannot
+        # silently leave the production transaction on an obsolete ceiling.
+        tree = ast.parse((DEPLOY / "verify-download-portal-public.py").read_text("utf-8"))
+        budget = next(ast.literal_eval(node.value) for node in tree.body
+                      if isinstance(node, ast.Assign)
+                      and any(isinstance(name, ast.Name) and name.id == "HARD_REQUEST_LIMIT"
+                              for name in node.targets))
+        source = FAKE_VERIFIER.replace("HARD_REQUEST_LIMIT = 23", f"HARD_REQUEST_LIMIT = {budget}")
+        source = source.replace('"requests": len(paths)', '"requests": HARD_REQUEST_LIMIT')
+        self.fixture.verifier.write_text(source, encoding="utf-8")
+        self.fixture.verifier_size = self.fixture.verifier.stat().st_size
+        self.fixture.verifier_sha = sha256(self.fixture.verifier)
+        result = self.run_subprocess()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt = json.loads(result.stdout.splitlines()[0])
+        self.assertEqual(receipt["public_verification"]["requests"], budget)
+        self.assertEqual(len(self.public_calls()), 1)
+        self.assertEqual(len(list(self.fixture.backups.iterdir())), 1)
+        self.assertIn("CELIKPANEL_DOWNLOAD_PORTAL_PUBLISHED", result.stdout)
+
     def test_verifier_cannot_raise_fixed_request_ceiling(self):
         source = self.fixture.verifier.read_text(encoding="utf-8")
         self.fixture.verifier.write_text(
-            source.replace("HARD_REQUEST_LIMIT = 23", "HARD_REQUEST_LIMIT = 24"),
+            source.replace("HARD_REQUEST_LIMIT = 23", "HARD_REQUEST_LIMIT = 27"),
             encoding="utf-8",
         )
         self.fixture.verifier_size = self.fixture.verifier.stat().st_size
