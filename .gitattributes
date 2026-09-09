@@ -28,3 +28,5 @@ Makefile text eol=lf
 *.pem text eol=lf
 deploy/release-sequence-policy text eol=lf
 *.php text eol=lf
+
+portal-membership/vendor/phpmailer/LICENSE text eol=lf
