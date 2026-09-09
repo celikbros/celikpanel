@@ -205,7 +205,7 @@ func (p *Panel) allowLicensedProvisioning(w http.ResponseWriter, r *http.Request
 	if p.license == nil || !licenseProvisioningRequest(r) {
 		return true
 	}
-	if p.license.Status().CanProvision {
+	if p.license.CanProvision(r.Context()) {
 		return true
 	}
 	writeCodedError(w, http.StatusForbidden, "license_required",

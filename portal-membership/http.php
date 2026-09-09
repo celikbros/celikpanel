@@ -42,8 +42,13 @@ try {
         try { $in=json_decode($raw,true,8,JSON_THROW_ON_ERROR); } catch (\JsonException $e) { throw new Problem('invalid_request'); }
         if (!is_array($in)) { throw new Problem('invalid_request'); }
         foreach ($in as $v) { if (!is_string($v)) { throw new Problem('invalid_request'); } }
-        $result=$action==='activate'?$service->activate($in['key']??'',$in['server_id']??'',$in['hostname']??''):
-            $service->refresh($in['license_id']??'',$in['server_id']??'',$in['activation_token']??'');
+        $allowed=$action==='activate'?['key','server_id','hostname']:['license_id','server_id','activation_token'];
+        if (array_diff(array_keys($in),$allowed)) { throw new Problem('invalid_request'); }
+        // REMOTE_ADDR must be provided by the web server, never a request header.
+        $observedIP=$ip;
+        if (($config['test_mail_dir']??'')!=='' && str_starts_with($origin,'http://127.0.0.1:') && $ip==='127.0.0.1') { $observedIP='8.8.8.8'; }
+        $result=$action==='activate'?$service->activate($in['key']??'',$in['server_id']??'',$in['hostname']??'',$observedIP):
+            $service->refresh($in['license_id']??'',$in['server_id']??'',$in['activation_token']??'',$observedIP);
         echo json_encode($result,JSON_THROW_ON_ERROR); exit;
     }
     $service->limit('page:'.$ip,120,60);
@@ -80,10 +85,13 @@ try {
                     $m=$service->login($email,$password); session_regenerate_id(true);
                     $_SESSION=['member'=>$m['id'],'epoch'=>$m['epoch'],'lang'=>$lang,'created'=>time(),'csrf'=>bin2hex(random_bytes(32))]; $go='home'; break;
                 case 'logout': $_SESSION=[]; session_regenerate_id(true); break;
-                case 'issue': case 'release': case 'renew':
+                case 'issue': case 'release': case 'renew': case 'reveal': case 'remember': case 'rotate':
                     if (!$member) { throw new Problem('authentication_required'); }
                     if ($action==='issue') { $_SESSION['issued']=$service->issue((int)$member['id']); }
-                    elseif ($action==='release') { $_SESSION['issued']=$service->release((int)$member['id'],$_POST['id']??'',$password); }
+                    elseif ($action==='release') { $service->release((int)$member['id'],$_POST['id']??'',$password); $_SESSION['notice']='server_released'; }
+                    elseif ($action==='reveal') { $_SESSION['issued']=$service->reveal((int)$member['id'],$_POST['id']??'',$password); }
+                    elseif ($action==='remember') { $_SESSION['issued']=$service->remember((int)$member['id'],$_POST['id']??'',$password,$_POST['key']??''); }
+                    elseif ($action==='rotate') { $_SESSION['issued']=$service->rotate((int)$member['id'],$_POST['id']??'',$password); }
                     else { $service->renew((int)$member['id'],$_POST['id']??'',$password); $_SESSION['notice']='renewed'; }
                     $go='home'; break;
                 default: throw new Problem('invalid_request');

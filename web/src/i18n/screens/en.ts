@@ -9,7 +9,7 @@ export const enScreens = {
     "settings.section.license": "License",
     "settings.section.license.desc": "Server license, activation and annual renewal.",
     "license.title": "CelikPanel license",
-    "license.description": "Each license is for one active server. The one-year term starts on first activation.",
+    "license.description": "Each license is for one active server. The one-year term starts when the license is created.",
     "license.loadFailed": "Could not read license status. Check again.",
     "license.state.active": "License active",
     "license.state.missing": "Activate a license for this server",

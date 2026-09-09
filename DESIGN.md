@@ -382,6 +382,12 @@ The command is a navy surface with a ruled header, visible copy action and a nat
 
 Operation-model, interlock and dated evidence tables live on the technical page. Retain row/column headers, readable mono figures, conditions and dates. Restrict technical-page table density to that reading task rather than using it as homepage decoration.
 
+### Membership license controls
+
+The account surface in `portal-membership/view.php` retains the navy and white Overpass styling from `download-portal/account/member.css`. License entries are open, ruled rows with identity and status beside the UTC expiry date; action links sit below. At the existing 640px breakpoint the rows stack into one column and form buttons fill the available width. The reviewed Turkish and English views cover desktop (1440px) and mobile (390px).
+
+The summary states that a license lasts one year from creation. Each row offers password-confirmed key viewing with a copy action, or an existing-key save form for older keys that are not yet available to view. The server / IP change form explains that the same key and expiry date are preserved. Key replacement remains a separate action with its own explanation and confirmation. Keep these choices distinct in labels and form headings. Revealed keys appear in a bordered white block with wrapping mono text and a copy-result status announcement.
+
 ### Panel components (existing scope)
 
 The application rail stays navy in light and dark themes; its active item is light with navy text. The shared input uses a strong border, surface background, compact padding and a primary-colour focus border.

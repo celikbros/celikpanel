@@ -6,7 +6,7 @@ export const trScreens: Record<ScreenKey, string> = {
     "settings.section.license": "Lisans",
     "settings.section.license.desc": "Sunucu lisansı, aktivasyon ve yıllık yenileme.",
     "license.title": "CelikPanel lisansı",
-    "license.description": "Her lisans bir aktif sunucu içindir. Bir yıllık süre ilk aktivasyonda başlar.",
+    "license.description": "Her lisans bir aktif sunucu içindir. Bir yıllık süre lisans oluşturulduğunda başlar.",
     "license.loadFailed": "Lisans durumu okunamadı. Tekrar kontrol edin.",
     "license.state.active": "Lisans aktif",
     "license.state.missing": "Bu sunucu için lisans etkinleştirin",

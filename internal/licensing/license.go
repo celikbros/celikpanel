@@ -97,13 +97,14 @@ func Verify(e Envelope, key ed25519.PublicKey, server string, now time.Time) (Cl
 }
 
 type Manager struct {
-	mu       sync.Mutex
-	file     string
-	key      ed25519.PublicKey
-	server   string
-	endpoint string
-	client   *http.Client
-	clock    func() time.Time
+	mu         sync.Mutex
+	file       string
+	key        ed25519.PublicKey
+	server     string
+	endpoint   string
+	client     *http.Client
+	clock      func() time.Time
+	retryAfter time.Time
 }
 
 func New(file string, key ed25519.PublicKey, server string) (*Manager, error) {
@@ -240,6 +241,10 @@ func (m *Manager) Activate(ctx context.Context, key, hostname string) error {
 func (m *Manager) Refresh(ctx context.Context, force bool) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	return m.refreshLocked(ctx, force)
+}
+
+func (m *Manager) refreshLocked(ctx context.Context, force bool) error {
 	e, c, err := m.read()
 	if err != nil {
 		return err
@@ -247,21 +252,43 @@ func (m *Manager) Refresh(ctx context.Context, force bool) error {
 	if !force && m.clock().Unix() < c.RefreshAfter {
 		return nil
 	}
-	return m.request(ctx, "refresh", map[string]string{"license_id": c.LicenseID, "server_id": m.server, "activation_token": e.ActivationToken})
+	if !force && m.clock().Before(m.retryAfter) {
+		return errors.New("license refresh temporarily deferred after failure")
+	}
+	err = m.request(ctx, "refresh", map[string]string{"license_id": c.LicenseID, "server_id": m.server, "activation_token": e.ActivationToken})
+	if err != nil {
+		m.retryAfter = m.clock().Add(15 * time.Minute)
+	} else {
+		m.retryAfter = time.Time{}
+	}
+	return err
 }
 
-// Refresh never tears down running services and keeps the last verified receipt
-// when the central service is unavailable. No network access in request gates.
-func (m *Manager) Run(ctx context.Context) {
-	_ = m.Refresh(ctx, false)
-	ticker := time.NewTicker(time.Hour)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			_ = m.Refresh(ctx, false)
-		}
+// Activity is called only for authenticated panel/API use. It has no timer:
+// idle installations perform no central checks. All roles share one refresh.
+func (m *Manager) Activity() {
+	if !m.mu.TryLock() {
+		return
 	}
+	_, c, err := m.read()
+	if err != nil || m.clock().Unix() < c.RefreshAfter || m.clock().Before(m.retryAfter) {
+		m.mu.Unlock()
+		return
+	}
+	go func() {
+		defer m.mu.Unlock()
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		_ = m.refreshLocked(ctx, false)
+	}()
+}
+
+// CanProvision also covers authenticated automation without a browser session.
+// A stale receipt must be refreshed before admitting new resources.
+func (m *Manager) CanProvision(ctx context.Context) bool {
+	if m.Status().CanProvision {
+		return true
+	}
+	_ = m.Refresh(ctx, false)
+	return m.Status().CanProvision
 }
