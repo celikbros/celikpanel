@@ -6,6 +6,23 @@
 // Giris formu cizilmeden once degil, o ekranlarla birlikte getirilir.
 
 export const enScreens = {
+    "settings.section.license": "License",
+    "settings.section.license.desc": "Server license, activation and annual renewal.",
+    "license.title": "CelikPanel license",
+    "license.description": "Each license is for one active server. The one-year term starts on first activation.",
+    "license.loadFailed": "Could not read license status. Check again.",
+    "license.state.active": "License active",
+    "license.state.missing": "Activate a license for this server",
+    "license.state.invalid": "License could not be verified",
+    "license.state.expired": "License expired — renewal required",
+    "license.state.verification_unavailable": "License verification unavailable — check connectivity",
+    "license.expires": "Expires",
+    "license.restricted": "New resources require an active license. Existing sites and mail keep running; maintenance and backups remain available.",
+    "license.refresh": "Check again",
+    "license.manage": "My celikpanel.net account and licenses",
+    "license.key": "License key",
+    "license.keyHelp": "Get your key from your celikpanel.net account. This key is not your panel sign-in password.",
+    "license.activate": "Activate license",
     'audit.title': 'Audit log',
     'audit.subtitle': 'Who did what on this server, newest first.',
     'audit.empty': 'No activity recorded yet',

@@ -1,0 +1,7 @@
+DirectoryIndex index.php
+Options -Indexes
+<IfModule mod_headers.c>
+  Header always set Cache-Control "no-store"
+  Header always set Referrer-Policy "same-origin"
+  Header always set Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+</IfModule>

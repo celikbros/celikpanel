@@ -67,6 +67,7 @@ export const tr: Record<ShellKey, string> = {
     'common.goFix': 'Düzeltmeye git',
     'common.andMore': '+{n} tane daha',
     // API hata sözleşmesi (B1): kodlu retlerin yerelleştirilmiş metinleri.
+    'err.license_required': "Yeni kaynak oluşturmak için aktif sunucu lisansı gerekiyor. Mevcut hizmetler çalışmaya devam eder. Sunucu yöneticisi Ayarlar > Lisans bölümünden işlem yapabilir.",
     'err.AUTH_REQUIRED': 'Oturumunuz sona erdi — yeniden giriş yapın.',
     'err.ADMIN_ONLY': 'Bu işlem yönetici yetkisi gerektirir.',
     'err.ACCOUNT_SUSPENDED': 'Bu hesap askıya alınmış.',

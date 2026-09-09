@@ -124,10 +124,10 @@ require_literal "$REBUILD" 'actual_go_version=$(run_go_clean "$GO_BIN" env GOVER
 require_count "$REBUILD" 'run_go_clean "$GO_BIN" build' 2
 
 require_literal "$CI" 'GOTOOLCHAIN: local'
-require_count "$CI" 'actions/setup-go@v6' 4
-require_count "$CI" "go-version: '1.26.5'" 4
-require_count "$CI" 'test "$(go env GOVERSION)" = go1.26.5' 4
-require_literal "$CI" 'needs: [go, panel-race, web, linux-arm64-compile, publisher-windows]'
+require_count "$CI" 'actions/setup-go@v6' 5
+require_count "$CI" "go-version: '1.26.5'" 5
+require_count "$CI" 'test "$(go env GOVERSION)" = go1.26.5' 5
+require_literal "$CI" 'needs: [go, panel-race, web, linux-arm64-compile, publisher-windows, membership]'
 require_literal "$CI" 'sudo env PATH=$PATH GOTOOLCHAIN=local bash deploy/test-signed-release-manifest-contract.sh'
 reject_literal "$CI" 'windows-portability:'
 reject_literal "$CI" 'freebsd-compile:'

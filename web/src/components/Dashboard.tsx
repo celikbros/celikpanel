@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from '../router';
 import { StartGuide } from './StartGuide';
+import { LicenseNotice } from './LicenseNotice';
 import { accountStart, dnsStartReady, hasMailActivity, panelCertificateReady } from '../lib/startGuidance';
 import {
     Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity, Bell,
@@ -784,6 +785,7 @@ function AdminDashboard() {
                 </section>
             )}
 
+            <LicenseNotice />
             <StartGuide
                 dnsReady={dnsReady} scanFresh={serviceScanFresh && componentCensusComplete}
                 scanning={componentScanBusy} onScan={scanComponents}

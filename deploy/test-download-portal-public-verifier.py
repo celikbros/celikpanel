@@ -172,6 +172,18 @@ class RecordingHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
+        member_body = getattr(self.server, "membership_body", None)
+        if path == "/account/index.php" and member_body is not None:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=UTF-8")
+            self.send_header("Cache-Control", "no-store")
+            if self.server.membership_cookie:
+                self.send_header("Set-Cookie", "__Host-celikpanel_member=test; Path=/; Secure; HttpOnly; SameSite=Lax")
+            self.send_header("Content-Length", str(len(member_body)))
+            self.end_headers()
+            self.wfile.write(member_body)
+            self.server.served_bytes += len(member_body)
+            return
         relative = path.removeprefix("/")
         candidate = self.server.site.joinpath(*relative.split("/"))
         try:
@@ -276,13 +288,43 @@ class PublicPortalVerifierTests(unittest.TestCase):
             timeout=5,
         )
 
+    def membership_fixture(self, body, cookie=True):
+        self.server.membership_body = body
+        self.server.membership_cookie = cookie
+        for relative in ("account/index.php", "account/member.css", "account/member.js"):
+            write_bytes(self.site, relative, b"fixture")
+        def cleanup():
+            self.server.membership_body = None
+            for name in ("index.php", "member.css", "member.js"):
+                (self.site / "account" / name).unlink()
+            (self.site / "account").rmdir()
+        self.addCleanup(cleanup)
+
+    def test_membership_extends_one_plan_without_fetching_php_source(self):
+        self.membership_fixture(b'<body class="member-page"><input name="csrf" value="' + b'a'*64 + b'"></body>')
+        summary = self.verify()
+        self.assertEqual(summary["requests"], 26)
+        self.assertEqual(summary["archive_gets"], 1)
+        self.assertEqual(self.server.request_paths.count("/account/index.php"), 1)
+
+    def test_membership_refuses_unexecuted_php(self):
+        self.membership_fixture(b'<?php require "private-app";')
+        with self.assertRaisesRegex(VERIFIER.VerificationError, "PHP handler"):
+            self.verify()
+        self.assertNotIn(ARCHIVE_PUBLIC_PATH, self.server.request_paths)
+
+    def test_membership_refuses_insecure_session(self):
+        self.membership_fixture(b'<body class="member-page"><input name="csrf" value="' + b'a'*64 + b'"></body>', cookie=False)
+        with self.assertRaisesRegex(VERIFIER.VerificationError, "secure session"):
+            self.verify()
+
     def test_single_pass_is_bounded_and_never_requests_history(self):
         summary = self.verify()
         self.assertEqual(summary["status"], "ok")
         self.assertEqual(summary["policy"], "single-full-pass-after-exchange")
         self.assertEqual(summary["phase"], "full")
         self.assertEqual(summary["requests"], 23)
-        self.assertEqual(summary["request_limit"], 23)
+        self.assertEqual(summary["request_limit"], VERIFIER.HARD_REQUEST_LIMIT)
         expected_visual_paths = {
             "/technical.html", "/assets/favicon-v2.svg",
             *(f"/assets/product-{feature}-{language}.webp"

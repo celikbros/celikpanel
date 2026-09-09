@@ -1942,6 +1942,10 @@ fi
 preflight_control_plane_restore_admission
 preflight_first_administrator_admission
 
+if [[ "$APPLY_ONLY" -eq 0 && -x "$SRC/bin/panel" && -z "${RESTORE_ARCHIVE_PATH:-}" ]]; then
+    "$SRC/bin/panel" --activate-install-license || die "License activation failed; run the same installation command again / Lisans etkinleştirilemedi; aynı kurulum komutunu yeniden çalıştırın"
+fi
+
 # Apply-only is accepted solely from a completely verified immutable release
 # while the inherited persistent lock and exact active update marker are live.
 # Apply-only yalnız tamamen doğrulanmış değişmez sürümden, miras kalıcı kilit ve
@@ -2918,6 +2922,14 @@ ok "installed" "kuruldu"
 # 5. Data directory (SQLite lives here; StateDirectory also ensures it) ------
 step "Data directory $DATA_DIR" "Veri dizini $DATA_DIR"
 install -d -m 0750 -o "$SVC_USER" -g "$SVC_GROUP" "$DATA_DIR"
+if [[ "$APPLY_ONLY" -eq 0 && ! -e "$DATA_DIR/license.json" && -f /var/lib/celikpanel-license/install.json ]]; then
+    [[ ! -L /var/lib/celikpanel-license && ! -L /var/lib/celikpanel-license/install.json ]] || die "Unsafe license state path"
+    install -m 0600 -o "$SVC_USER" -g "$SVC_GROUP" /var/lib/celikpanel-license/install.json "$DATA_DIR/license.json"
+fi
+if [[ -f "$DATA_DIR/license.json" && ! -L "$DATA_DIR/license.json" ]]; then
+    chown "$SVC_USER:$SVC_GROUP" "$DATA_DIR/license.json"
+    chmod 0600 "$DATA_DIR/license.json"
+fi
 # Privileged imports must not live below the panel-owned data directory. The
 # root agent accepts only owner-only regular files from this root; the
 # unprivileged panel merely forwards the operator-selected path.
