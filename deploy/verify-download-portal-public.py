@@ -26,8 +26,9 @@ from typing import BinaryIO, Iterable
 
 SMALL_RESPONSE_BUDGET = 1024 * 1024
 # Fixed plan: 14 root files, three selectors, five release metadata files,
-# and exactly one authoritative archive body. No historical paths are fetched.
-HARD_REQUEST_LIMIT = 23
+# and exactly one authoritative archive body, plus three membership checks
+# when that surface exists. No historical paths are fetched.
+HARD_REQUEST_LIMIT = 26
 MAX_ARCHIVE_SIZE = 2_147_483_648
 CHUNK_SIZE = 128 * 1024
 SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
@@ -78,6 +79,7 @@ class PlannedFile:
     size: int
     identity: FileIdentity
     is_archive: bool = False
+    is_membership: bool = False
 
 
 @dataclass(frozen=True)
@@ -442,6 +444,14 @@ def load_target(site: Path) -> Target:
         planned.append(
             PlannedFile(path, pinned_path, identity.size, identity)
         )
+    member_entry = site / "account" / "index.php"
+    if member_entry.exists():
+        for relative in ("account/member.css", "account/member.js"):
+            member_asset = local_file(site, relative)
+            identity = regular_identity(member_asset)
+            planned.append(PlannedFile(relative, member_asset, identity.size, identity))
+        identity = regular_identity(local_file(site, "account/index.php"))
+        planned.append(PlannedFile("account/index.php", member_entry, 65536, identity, is_membership=True))
     archive_identity = regular_identity(archive_path)
     if archive_identity.size != archive_size:
         fail("local target archive changed before the public plan was pinned")
@@ -566,6 +576,21 @@ def verify_public_portal(
                 encodings = response.headers.get_all("Content-Encoding", [])
                 if encodings:
                     fail(f"encoded response refused for {path}")
+                if item.is_membership:
+                    body = response.read(65537)
+                    downloaded += len(body)
+                    if len(body) > 65536 or downloaded > byte_limit:
+                        fail("membership response exceeds its budget")
+                    if "text/html" not in response.headers.get("Content-Type", "") or b"<?php" in body:
+                        fail("membership PHP handler is unavailable")
+                    if b'class="member-page"' not in body or not re.search(rb'name="csrf" value="[a-f0-9]{64}"', body):
+                        fail("membership sign-in is not ready")
+                    if "no-store" not in response.headers.get("Cache-Control", ""):
+                        fail("membership must not be cached")
+                    if not any("__Host-celikpanel_member=" in value and "secure" in value.lower() and "httponly" in value.lower()
+                               for value in response.headers.get_all("Set-Cookie", [])):
+                        fail("membership secure session cookie is missing")
+                    continue
                 if response.headers.get_all("Transfer-Encoding", []):
                     fail(f"transfer-encoded response refused for {path}")
                 lengths = response.headers.get_all("Content-Length", [])

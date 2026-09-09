@@ -273,10 +273,24 @@ jobs:
       # hatası (örn. capabilities bool/string hata sınıfı) CI'ı burada düşürür.
       - run: npm run build
 
+  membership:
+    name: Membership — PHP 8.3, SQLite, HTTP and license interoperability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.5'
+          cache: true
+      - name: Install PHP SQLite support
+        run: sudo apt-get update && sudo apt-get install -y php-cli php-sqlite3
+      - name: Verify membership and server license protocol
+        run: bash deploy/test-membership.sh
+
   package:
     name: Release — reproducible archive and checksum
     runs-on: ubuntu-latest
-    needs: [go, panel-race, web, linux-arm64-compile, publisher-windows]
+    needs: [go, panel-race, web, linux-arm64-compile, publisher-windows, membership]
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
     steps:

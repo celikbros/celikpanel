@@ -1,5 +1,5 @@
 CELIKBROS COMMERCIAL LICENSE
-Version 1.0
+Version 1.1
 
 Copyright (c) 2026 CELIKBROS. All rights reserved.
 
@@ -8,11 +8,18 @@ This license applies to the CELIKBROS-owned portions of CelikPanel (the
 
 1. Permission required
 
-No right or license is granted by this document. You may use, install, run,
-copy, modify, reproduce, distribute, publish, sublicense, sell, host, offer
-as a service, or create derivative works of the Licensed Work only with prior
-written permission from CELIKBROS under a separate commercial license
-agreement.
+An active server license issued by CELIKBROS through celikpanel.net grants
+the license holder permission to install and run CelikPanel on one bound
+server for the stated license term. This includes using CelikPanel to
+provide hosting services to customers and resellers. Initially, licenses
+and renewals are offered free of charge for one calendar year from first
+activation; future purchases are subject to the terms shown at purchase.
+
+This server-use permission does not grant redistribution, sublicensing of
+the software itself, modification, or derivative-work rights. Those rights
+require separate prior written permission from CELIKBROS. Existing separate
+written license agreements retain their terms. Expiration does not authorize
+CELIKBROS to delete customer data or stop hosted websites or mail services.
 
 2. Public source availability
 

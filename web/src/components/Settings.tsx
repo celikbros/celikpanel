@@ -10,6 +10,7 @@ import { apiErrorText, readApiError } from '../lib/apiError';
 import { DNSServerSettings } from './DNSServerSettings';
 import { SecurityAuditCard } from './SecurityAuditCard';
 
+const LicensePanel = lazy(() => import('./LicensePanel').then((module) => ({ default: module.LicensePanel })));
 const PanelUpdateCard = lazy(() => import('./PanelUpdateCard').then((module) => ({ default: module.PanelUpdateCard })));
 // R-069. Loaded with the section that asks for it, not with the page: an
 // operator opens this one rarely, and it should not ride in on every visit
@@ -17,7 +18,7 @@ const PanelUpdateCard = lazy(() => import('./PanelUpdateCard').then((module) => 
 // R-069. Sayfayla degil, isteyen bolumle birlikte yuklenir.
 const SystemSQLiteManager = lazy(() => import('./SystemSQLiteManager').then((module) => ({ default: module.SystemSQLiteManager })));
 
-type SettingsSectionID = 'account' | 'panel' | 'updates' | 'security' | 'dns' | 'system-databases';
+type SettingsSectionID = 'account' | 'panel' | 'updates' | 'license' | 'security' | 'dns' | 'system-databases';
 type SettingsSection = {
     id: SettingsSectionID;
     icon: React.ComponentType<{ className?: string }>;
@@ -47,6 +48,12 @@ export function Settings() {
                     icon: Lock,
                     title: t('settings.section.panel'),
                     description: t('settings.section.panel.desc'),
+                },
+                {
+                    id: 'license' as const,
+                    icon: BadgeCheck,
+                    title: t('settings.section.license'),
+                    description: t('settings.section.license.desc'),
                 },
                 {
                     id: 'updates' as const,
@@ -173,6 +180,9 @@ function SettingsWorkspace({
                     <>
                         <div id="settings-panel-panel" role="tabpanel" aria-labelledby="settings-panel-tab" hidden={activeID !== 'panel'}>
                             <PanelCertificatePanel />
+                        </div>
+                        <div id="settings-license-panel" role="tabpanel" aria-labelledby="settings-license-tab" hidden={activeID !== 'license'}>
+                            {activeID === 'license' && <Suspense fallback={<p role="status">{t('common.loading')}</p>}><LicensePanel /></Suspense>}
                         </div>
                         <div id="settings-updates-panel" role="tabpanel" aria-labelledby="settings-updates-tab" hidden={activeID !== 'updates'}>
                             {activeID === 'updates' && <Suspense fallback={null}><PanelUpdateCard /></Suspense>}

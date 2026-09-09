@@ -27,3 +27,4 @@ Makefile text eol=lf
 *.md text eol=lf
 *.pem text eol=lf
 deploy/release-sequence-policy text eol=lf
+*.php text eol=lf

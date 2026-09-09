@@ -398,6 +398,11 @@ cmp -s -- "$tracked_public_key" "$output/release-signing-ed25519.pem" || {
 # Ship the self-hosted product screenshots, favicon, styles, scripts, and
 # typefaces with their licences. Required visual assets must be exact copies.
 cp -R -- "$template/assets/." "$output/assets/"
+mkdir -p -- "$output/account"
+cp -R -- "$template/account/." "$output/account/"
+membership_release=$(python3 "$repo_root/deploy/build-membership.py" --identity-only)
+[[ "$membership_release" =~ ^[a-f0-9]{64}$ ]] || fail "invalid membership application identity"
+sed -i "s/@MEMBERSHIP_RELEASE@/$membership_release/g" "$output/account/index.php"
 for asset in site.css site.js favicon-v2.svg \
   product-overview-tr.webp product-overview-en.webp \
   product-domains-tr.webp product-domains-en.webp \

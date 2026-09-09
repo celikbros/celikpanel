@@ -3,6 +3,23 @@
 import type { ScreenKey } from './en';
 
 export const trScreens: Record<ScreenKey, string> = {
+    "settings.section.license": "Lisans",
+    "settings.section.license.desc": "Sunucu lisansı, aktivasyon ve yıllık yenileme.",
+    "license.title": "CelikPanel lisansı",
+    "license.description": "Her lisans bir aktif sunucu içindir. Bir yıllık süre ilk aktivasyonda başlar.",
+    "license.loadFailed": "Lisans durumu okunamadı. Tekrar kontrol edin.",
+    "license.state.active": "Lisans aktif",
+    "license.state.missing": "Bu sunucu için lisans etkinleştirin",
+    "license.state.invalid": "Lisans doğrulanamadı",
+    "license.state.expired": "Lisans süresi doldu — yenileme gerekli",
+    "license.state.verification_unavailable": "Lisans kontrolü tamamlanamadı — bağlantıyı kontrol edin",
+    "license.expires": "Bitiş tarihi",
+    "license.restricted": "Yeni kaynak oluşturmak için aktif lisans gerekiyor. Mevcut site ve e-posta hizmetleri çalışmaya devam eder; bakım ve yedekleme erişilebilir.",
+    "license.refresh": "Tekrar kontrol et",
+    "license.manage": "celikpanel.net hesabım ve lisanslarım",
+    "license.key": "Lisans anahtarı",
+    "license.keyHelp": "Anahtarı celikpanel.net hesabınızdan alın. Bu anahtar panel giriş parolanız değildir.",
+    "license.activate": "Lisansı etkinleştir",
     'backup.auto.running': 'Zamanlanmış yedek şimdi çalışıyor.',
     'backup.auto.failed': 'Son zamanlanmış yedek {time} tarihinde başarısız oldu. Sunucu günlüklerini denetleyip yeniden deneyin.',
     'backup.auto.timedOut': 'Son zamanlanmış yedek {time} tarihinde zaman aşımına uğradı. Yeniden denemeden önce agent durumunu ve yedek boyutunu denetleyin.',

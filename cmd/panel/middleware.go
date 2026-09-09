@@ -145,6 +145,10 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		if !p.allowLicensedProvisioning(w, r) {
+			return
+		}
+
 		ctx := context.WithValue(r.Context(), callerKey, c)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -191,6 +195,9 @@ func isPublicPath(r *http.Request) bool {
 // (/api/v1/system/stats), kimlik doğrulama ve sahiplik-süzgeçli domain
 // rotaları bilerek listelenmemiştir.
 func isAdminOnlyPath(path string) bool {
+	if path == panelLicensePath {
+		return true
+	}
 	if path == "/api/v1/system-databases" || strings.HasPrefix(path, "/api/v1/system-databases/") {
 		return true
 	}

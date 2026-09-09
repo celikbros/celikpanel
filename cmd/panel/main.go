@@ -20,6 +20,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/auth"
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/db"
+	"github.com/alicelik/celikpanel/internal/licensing"
 	"github.com/alicelik/celikpanel/internal/repositories"
 	"github.com/alicelik/celikpanel/internal/secrets"
 	"github.com/alicelik/celikpanel/internal/services"
@@ -53,6 +54,7 @@ func emitPanelBuildIdentity(args []string, output io.Writer) bool {
 }
 
 type Panel struct {
+	license       *licensing.Manager
 	agentClient   *transport.ReconnectingClient
 	db            *db.SQLiteDB
 	orchestrator  *services.SiteOrchestrator
@@ -469,6 +471,13 @@ func (p *Panel) handleDatabaseSubroute(w http.ResponseWriter, r *http.Request, p
 }
 
 func main() {
+	if handled, err := runLicenseCLI(os.Args[1:]); handled {
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	// This hidden read-only probe exits before flag parsing, database access,
 	// RPC setup, sockets, or background work. The enrollment tool uses it to
 	// prove the installed panel and agent are the exact same trusted build.
@@ -838,6 +847,11 @@ func main() {
 		loginLimiter: newRateLimiter(10, 5*time.Minute),
 		demoMode:     *demo,
 	}
+	panel.license, err = newServerLicense(filepath.Join(dataDir(), "license.json"))
+	if err != nil {
+		log.Fatalf("Cannot configure license verification: %v", err)
+	}
+	go panel.license.Run(context.Background())
 	panel.orchestrator = services.NewSiteOrchestrator(
 		database.GetDB(),
 		panelSiteAgentClient{panel: panel},
@@ -1190,6 +1204,7 @@ func main() {
 	// Version: one truth for "which build is this server running?"
 	// Sürüm: "bu sunucu hangi yapıyı koşuyor?" sorusunun tek doğrusu.
 	http.HandleFunc("/api/v1/panel/version", panel.handleVersion)
+	http.HandleFunc(panelLicensePath, panel.handleLicense)
 	http.HandleFunc(panelUpdateCheckPath, panel.handlePanelUpdateCheck)
 	http.HandleFunc(panelUpdateStartPath, panel.handlePanelUpdateStart)
 	http.HandleFunc(panelUpdateAbandonPath, panel.handlePanelUpdateAbandon)
