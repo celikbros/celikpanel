@@ -3,8 +3,8 @@ set -eu
 umask 077
 
 base_url=https://celikpanel.net
-bootstrap_release_sequence=59
-bootstrap_release_version=v0.1.0-alpha.59
+bootstrap_release_sequence=60
+bootstrap_release_version=v0.1.0-alpha.60
 bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb
 requested_version=latest
 requested_action=auto
@@ -1423,6 +1423,7 @@ if [ "$operation" = install ]; then
     "CelikPanel $version doğrulanmış $archive arşivinden kuruluyor"
   cd "$extracted_root"
   CELIKPANEL_TRUSTED_RELEASE_ROOT="$extracted_root" \
+    CELIKPANEL_DATA_DIR=/var/lib/celikpanel \
     CELIKPANEL_FIRST_INSTALL_TRUST=1 \
     CELIKPANEL_FIRST_INSTALL_PUBLIC_KEY_FILE="$signed_public_key_path" \
     CELIKPANEL_FIRST_INSTALL_SEQUENCE="$signed_release_sequence" \

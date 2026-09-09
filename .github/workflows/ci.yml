@@ -288,6 +288,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y php-cli php-sqlite3
       - name: Verify membership and server license protocol
         run: bash deploy/test-membership.sh
+      - name: Verify fresh and resumed installer license entry with real panel
+        run: |
+          go build -o "$RUNNER_TEMP/license-entry-panel" ./cmd/panel
+          sudo python3 deploy/test-install-license-entry.py "$RUNNER_TEMP/license-entry-panel"
 
   package:
     name: Release — reproducible archive and checksum

@@ -1943,7 +1943,8 @@ preflight_control_plane_restore_admission
 preflight_first_administrator_admission
 
 if [[ "$APPLY_ONLY" -eq 0 && -x "$SRC/bin/panel" && -z "${RESTORE_ARCHIVE_PATH:-}" ]]; then
-    "$SRC/bin/panel" --activate-install-license || die "License activation failed; run the same installation command again / Lisans etkinleştirilemedi; aynı kurulum komutunu yeniden çalıştırın"
+    CELIKPANEL_DATA_DIR="$DATA_DIR" \
+        "$SRC/bin/panel" --activate-install-license || die "License activation failed; run the same installation command again / Lisans etkinleştirilemedi; aynı kurulum komutunu yeniden çalıştırın"
 fi
 
 # Apply-only is accepted solely from a completely verified immutable release
