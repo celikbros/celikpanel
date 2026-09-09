@@ -5,6 +5,7 @@ use CelikPanel\Membership\Service;
 use CelikPanel\Membership\Problem;
 
 require_once __DIR__.'/src/Service.php';
+require_once __DIR__.'/src/Mail.php';
 umask(0077);
 ini_set('display_errors','0');
 header('Cache-Control: no-store');
@@ -26,10 +27,7 @@ try {
         if (($config['test_mail_dir'] ?? '') !== '' && str_starts_with($config['origin'],'http://127.0.0.1:')) {
             file_put_contents($config['test_mail_dir'].'/'.bin2hex(random_bytes(12)).'.json',json_encode(compact('email','purpose','token'),JSON_THROW_ON_ERROR)); return;
         }
-        if (!filter_var($config['sender'],FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n]/',$config['sender'])) { throw new RuntimeException('Invalid sender'); }
-        if (!mail($email,$subject,$body,['From'=>'CelikPanel <'.$config['sender'].'>','Content-Type'=>'text/plain; charset=UTF-8'])) {
-            throw new Problem('mail_unavailable');
-        }
+        \CelikPanel\Membership\Mail::send($config,$email,$subject,$body);
     };
     $service=new Service($private.'/members.sqlite',base64_decode($config['signing_key'],true),$send);
     $ip=$_SERVER['REMOTE_ADDR'] ?? 'unknown';

@@ -3,7 +3,7 @@
 import argparse, hashlib, json, os, re, subprocess, tarfile
 from pathlib import Path
 
-FILES={'http.php','init.php','src/Service.php','terms.php','view.php'}
+FILES={'http.php','init.php','src/Service.php','terms.php','view.php','src/Mail.php','vendor/phpmailer/Exception.php','vendor/phpmailer/SMTP.php','vendor/phpmailer/PHPMailer.php','vendor/phpmailer/LICENSE','vendor/phpmailer/UPSTREAM.json'}
 def main():
     p=argparse.ArgumentParser();p.add_argument('--root',required=True,type=Path);p.add_argument('--archive',required=True,type=Path)
     p.add_argument('--sha256',required=True);p.add_argument('--release',required=True);p.add_argument('--public-key',required=True)
@@ -21,7 +21,7 @@ def main():
     identity=hashlib.sha256(json.dumps(manifest,sort_keys=True,separators=(',',':')).encode()).hexdigest()
     if identity!=a.release:raise ValueError('App release identity mismatch')
     base=a.root/'membership-app'
-    for path in [base,base/'releases',base/'releases'/identity,base/'releases'/identity/'src']:
+    for path in [base,base/'releases',base/'releases'/identity,base/'releases'/identity/'src',base/'releases'/identity/'vendor',base/'releases'/identity/'vendor'/'phpmailer']:
         if path.is_symlink():raise ValueError('Symlink refused')
         path.mkdir(mode=0o700,exist_ok=True)
         if path.stat().st_uid!=os.getuid() or path.stat().st_mode&0o022:raise ValueError('Unsafe application owner/mode')
@@ -33,7 +33,8 @@ def main():
             if target.read_bytes()!=b:raise ValueError('Immutable app differs')
         else:
             with target.open('xb') as f:f.write(b);f.flush();os.fsync(f.fileno())
-        subprocess.run([a.php,'-l',str(target)],check=True,capture_output=True,timeout=15)
+        if name.endswith('.php'):
+            subprocess.run([a.php,'-l',str(target)],check=True,capture_output=True,timeout=15)
     result=subprocess.run([a.php,str(release/'init.php'),str(a.root/'membership-private')],check=True,capture_output=True,text=True,timeout=30)
     if result.stdout.strip()!='license_public_key='+a.public_key:raise ValueError('Central signing identity mismatch')
     print(json.dumps({'status':'staged','release':identity,'path':str(release),'private_state':str(a.root/'membership-private')}))
