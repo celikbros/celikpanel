@@ -119,7 +119,7 @@ The current alpha archive targets Linux x86_64/amd64.
 Before installation, [create a CelikPanel account](https://celikpanel.net/account/),
 verify your email and obtain a free annual server license. Enter the key when
 the installer asks; it is hidden while typing. Each license covers one active
-server and its year starts on first activation. The local panel administrator
+server and its year starts when the license is created. The local panel administrator
 is still created in the terminal. Existing installations can activate their
 license in **Settings → License** after updating.
 
@@ -137,7 +137,7 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpane
 sh /tmp/celikpanel-get.sh
 
 # Or require the exact version pinned by the downloaded bootstrap
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.58
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.59
 ```
 
 If the terminal disconnects during first setup, run the same installation
@@ -219,8 +219,8 @@ environment; the public verification key is tracked and pinned by the product.
 workflow:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.58 SIGNING_KEY=<full-key-fingerprint>
-gpg --verify dist/celikpanel-v0.1.0-alpha.58.tar.gz.asc dist/celikpanel-v0.1.0-alpha.58.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.59 SIGNING_KEY=<full-key-fingerprint>
+gpg --verify dist/celikpanel-v0.1.0-alpha.59.tar.gz.asc dist/celikpanel-v0.1.0-alpha.59.tar.gz
 ```
 
 That optional `.asc` file is not one of the six canonical public assets, does

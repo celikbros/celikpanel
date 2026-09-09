@@ -851,7 +851,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Cannot configure license verification: %v", err)
 	}
-	go panel.license.Run(context.Background())
 	panel.orchestrator = services.NewSiteOrchestrator(
 		database.GetDB(),
 		panelSiteAgentClient{panel: panel},

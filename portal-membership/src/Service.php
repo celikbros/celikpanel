@@ -52,6 +52,14 @@ SQL);
         if (!in_array('accepted_terms',$columns,true)) {
             $this->db->exec("ALTER TABLE members ADD COLUMN accepted_terms TEXT NOT NULL DEFAULT '2026-09-09'");
         }
+        $this->atomic(function (): void {
+            $columns=$this->db->query('PRAGMA table_info(licenses)')->fetchAll(PDO::FETCH_COLUMN,1);
+            if (!in_array('key_encrypted',$columns,true)) { $this->db->exec('ALTER TABLE licenses ADD COLUMN key_encrypted TEXT'); }
+            if (!in_array('server_ip',$columns,true)) { $this->db->exec('ALTER TABLE licenses ADD COLUMN server_ip TEXT'); }
+            foreach ($this->db->query('SELECT id,created FROM licenses WHERE expires IS NULL')->fetchAll(PDO::FETCH_ASSOC) as $l) {
+                $this->run('UPDATE licenses SET expires=? WHERE id=?',[self::anniversary((int)$l['created']),$l['id']]);
+            }
+        });
     }
     public function now(): int { return ($this->clock)(); }
     public static function hash(string $secret): string { return hash('sha256', $secret); }
@@ -160,7 +168,7 @@ SQL);
     }
     public function licenses(int $member): array
     {
-        $s = $this->db->prepare('SELECT id,key_suffix,created,activated,expires,hostname,server_id FROM licenses WHERE member_id=? ORDER BY created DESC,id');
+        $s = $this->db->prepare('SELECT id,key_suffix,created,activated,expires,hostname,server_id,server_ip,(key_encrypted IS NOT NULL) AS key_available FROM licenses WHERE member_id=? ORDER BY created DESC,id');
         $s->execute([$member]); return $s->fetchAll(PDO::FETCH_ASSOC);
     }
     public function issue(int $member): array
@@ -170,7 +178,7 @@ SQL);
             $m=$this->one('SELECT id FROM members WHERE id=? AND verified=1',[$member]);
             if (!$m) { throw new Problem('authentication_required'); }
             $id = bin2hex(random_bytes(16)); $key = 'CPK-' . self::secret();
-            $this->run('INSERT INTO licenses(id,member_id,key_hash,key_suffix,created) VALUES(?,?,?,?,?)', [$id,$member,self::hash($key),substr($key,-8),$this->now()]);
+            $this->run('INSERT INTO licenses(id,member_id,key_hash,key_suffix,created,expires,key_encrypted) VALUES(?,?,?,?,?,?,?)', [$id,$member,self::hash($key),substr($key,-8),$this->now(),self::anniversary($this->now()),$this->encryptKey($id,$key)]);
             $this->event($member,$id,'issued');
             return ['id'=>$id,'key'=>$key];
         });
@@ -183,14 +191,60 @@ SQL);
         if (!$l) { throw new Problem('license_not_found'); }
         return $l;
     }
-    public function release(int $member, string $id, string $password): array
+    // Storage encryption is domain-separated from receipt signing. Only the
+    // private membership host holds the secret; no key material enters releases.
+    private function storageKey(): string
     {
-        $this->limit('release:' . $member, 5, 86400);
+        return sodium_crypto_generichash('celikpanel-license-key-storage-v1',substr($this->signingKey,0,32),32);
+    }
+    private function encryptKey(string $id, string $key): string
+    {
+        $nonce=random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        return base64_encode($nonce.sodium_crypto_secretbox($id.':'.$key,$nonce,$this->storageKey()));
+    }
+    public function reveal(int $member, string $id, string $password): array
+    {
+        $this->limit('key-access:'.$member,10,900);
+        $l=$this->owned($member,$id,$password);
+        if (!$l['key_encrypted']) { throw new Problem('key_not_saved'); }
+        $raw=base64_decode($l['key_encrypted'],true);
+        if ($raw===false || strlen($raw)<SODIUM_CRYPTO_SECRETBOX_NONCEBYTES+SODIUM_CRYPTO_SECRETBOX_MACBYTES) { throw new Problem('key_not_saved'); }
+        $plain=sodium_crypto_secretbox_open(substr($raw,24),substr($raw,0,24),$this->storageKey());
+        if ($plain===false || !str_starts_with($plain,$id.':')) { throw new Problem('key_not_saved'); }
+        $key=substr($plain,strlen($id)+1);
+        if (!hash_equals($l['key_hash'],self::hash($key))) { throw new Problem('key_not_saved'); }
+        $this->event($member,$id,'key_viewed');
+        return ['id'=>$id,'key'=>$key];
+    }
+    public function remember(int $member, string $id, string $password, string $key): array
+    {
+        $this->limit('key-access:'.$member,10,900);
+        return $this->atomic(function () use ($member,$id,$password,$key): array {
+            $l=$this->owned($member,$id,$password);
+            if (!preg_match('/^CPK-[a-f0-9]{64}$/D',$key) || !hash_equals($l['key_hash'],self::hash($key))) { throw new Problem('invalid_license'); }
+            $this->run('UPDATE licenses SET key_encrypted=? WHERE id=?',[$this->encryptKey($id,$key),$id]);
+            $this->event($member,$id,'key_saved');
+            return ['id'=>$id,'key'=>$key];
+        });
+    }
+
+    public function release(int $member, string $id, string $password): void
+    {
+        $this->limit('release:'.$member,5,86400);
+        $this->atomic(function () use ($member,$id,$password): void {
+            $this->owned($member,$id,$password);
+            $this->run('UPDATE licenses SET server_id=NULL,server_ip=NULL,hostname=NULL,generation=generation+1 WHERE id=?',[$id]);
+            $this->event($member,$id,'server_released');
+        });
+    }
+    public function rotate(int $member, string $id, string $password): array
+    {
+        $this->limit('rotate:' . $member, 5, 86400);
         return $this->atomic(function () use ($member,$id,$password): array {
             $this->owned($member,$id,$password);
             $key = 'CPK-' . self::secret();
-            $this->run('UPDATE licenses SET server_id=NULL,hostname=NULL,generation=generation+1,key_hash=?,key_suffix=? WHERE id=?', [self::hash($key),substr($key,-8),$id]);
-            $this->event($member,$id,'released_and_rotated');
+            $this->run('UPDATE licenses SET generation=generation+1,key_hash=?,key_suffix=?,key_encrypted=? WHERE id=?', [self::hash($key),substr($key,-8),$this->encryptKey($id,$key),$id]);
+            $this->event($member,$id,'key_rotated');
             return ['id'=>$id,'key'=>$key];
         });
     }
@@ -226,30 +280,52 @@ SQL);
         return ['payload'=>base64_encode($payload),'signature'=>base64_encode(sodium_crypto_sign_detached($payload,$this->signingKey)),
             'activation_token'=>$this->activationToken($l)];
     }
-    public function activate(string $key, string $server, string $hostname): array
+    private static function publicIP(string $ip): string
     {
+        $raw=@inet_pton($ip);
+        if ($raw===false) { throw new Problem('invalid_server_ip'); }
+        if (strlen($raw)===16 && substr($raw,0,12)===str_repeat("\0",10)."\xff\xff") { $raw=substr($raw,12); }
+        $ip=inet_ntop($raw);
+        if (!filter_var($ip,FILTER_VALIDATE_IP,FILTER_FLAG_NO_PRIV_RANGE|FILTER_FLAG_NO_RES_RANGE)) { throw new Problem('invalid_server_ip'); }
+        return $ip;
+    }
+
+    public function activate(string $key, string $server, string $hostname, string $observedIP): array
+    {
+        $ip=self::publicIP($observedIP);
         if (!preg_match('/^CPK-[a-f0-9]{64}$/D',$key) || !preg_match('/^[a-f0-9]{64}$/D',$server)
             || !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}$/D',$hostname)) { throw new Problem('invalid_activation'); }
-        return $this->atomic(function () use ($key,$server,$hostname): array {
+        return $this->atomic(function () use ($key,$server,$hostname,$ip): array {
             $l=$this->one('SELECT * FROM licenses WHERE key_hash=?',[self::hash($key)]);
             if (!$l) { throw new Problem('invalid_license'); }
-            if ($l['server_id'] !== null && !hash_equals($l['server_id'],$server)) { throw new Problem('license_in_use'); }
+            if ($l['server_ip']!==null && !hash_equals($l['server_ip'],$ip)) { throw new Problem('license_in_use'); }
+            // Legacy bindings prove the old installation once, or the owner releases them from the account.
+            if ($l['server_ip']===null && $l['server_id']!==null && !hash_equals($l['server_id'],$server)) { throw new Problem('license_in_use'); }
+            if ($l['server_id']!==null && !hash_equals($l['server_id'],$server)) { $l['generation']=(int)$l['generation']+1; }
             if ($l['expires'] !== null && (int)$l['expires']<=$this->now()) { throw new Problem('license_expired'); }
             if ($l['activated'] === null) {
-                $l['activated']=$this->now(); $l['expires']=self::anniversary($this->now());
+                $l['activated']=$this->now(); $l['expires'] ??= self::anniversary((int)$l['created']);
             }
             $first=$l['server_id']===null; $l['server_id']=$server; $l['hostname']=$hostname;
-            $this->run('UPDATE licenses SET activated=?,expires=?,server_id=?,hostname=? WHERE id=?',[$l['activated'],$l['expires'],$server,$hostname,$l['id']]);
+            $this->run('UPDATE licenses SET activated=?,expires=?,server_id=?,hostname=?,server_ip=?,generation=?,key_encrypted=? WHERE id=?',[$l['activated'],$l['expires'],$server,$hostname,$ip,$l['generation'],$this->encryptKey($l['id'],$key),$l['id']]);
             if ($first) { $this->event((int)$l['member_id'],$l['id'],'activated'); }
             return $this->entitlement($l);
         });
     }
-    public function refresh(string $id, string $server, string $token): array
+    public function refresh(string $id, string $server, string $token, string $observedIP): array
     {
-        $l=$this->one('SELECT * FROM licenses WHERE id=?',[$id]);
-        if (!$l || !$l['server_id'] || !hash_equals($l['server_id'],$server) || !hash_equals($this->activationToken($l),$token)) {
-            throw new Problem('invalid_activation');
-        }
-        return $this->entitlement($l);
+        $ip=self::publicIP($observedIP);
+        return $this->atomic(function () use ($id,$server,$token,$ip): array {
+            $l=$this->one('SELECT * FROM licenses WHERE id=?',[$id]);
+            if (!$l || !$l['server_id'] || !hash_equals($l['server_id'],$server) || !hash_equals($this->activationToken($l),$token)) {
+                throw new Problem('invalid_activation');
+            }
+            if ($l['server_ip']!==null && !hash_equals($l['server_ip'],$ip)) { throw new Problem('license_in_use'); }
+            if ($l['server_ip']===null) {
+                $this->run('UPDATE licenses SET server_ip=? WHERE id=?',[$ip,$id]);
+                $this->event((int)$l['member_id'],$id,'ip_bound');
+            }
+            return $this->entitlement($l);
+        });
     }
 }

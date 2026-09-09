@@ -51,7 +51,11 @@ class SMTPTests(unittest.TestCase):
                     with context.wrap_socket(raw, server_side=True) as client:
                         stream = client.makefile('rwb', buffering=0)
                         def reply(value): stream.write(value+b'\r\n')
-                        def read(): return stream.readline(8192).rstrip(b'\r\n')
+                        def read():
+                            line = stream.readline(8192)
+                            if not line:
+                                raise EOFError('Peer closed before an SMTP command')
+                            return line.rstrip(b'\r\n')
                         reply(b'220 localhost ESMTP test')
                         state['commands'].append(read())
                         reply(b'250-localhost\r\n250 AUTH LOGIN')
@@ -76,7 +80,7 @@ class SMTPTests(unittest.TestCase):
                         state['message'] = b'\r\n'.join(lines)
                         reply(b'250 queued')
                         if read() == b'QUIT': reply(b'221 bye')
-            except (ssl.SSLError, BrokenPipeError, ConnectionResetError):
+            except (ssl.SSLError, BrokenPipeError, ConnectionResetError, EOFError):
                 state['tls_rejected'] = True
             except Exception as problem:
                 state['error'] = type(problem).__name__
