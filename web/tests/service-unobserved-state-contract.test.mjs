@@ -232,16 +232,10 @@ test('the sidebar badge carries no number for a census nobody took', () => {
   assert.match(badge, /sr-only/);
 });
 
-test('the setup journey asks for the check before suggesting anything off the census', () => {
+test('the DNS guide requires a complete fresh census before showing completion', () => {
   assert.match(dashboard, /const componentCensusComplete = uncheckedServices\.length === 0;/);
-  assert.match(
-    dashboard,
-    /key: 'dashboard\.step\.serviceScan'[\s\S]*done: serviceScanFresh && componentCensusComplete,/,
-  );
-  // Everything the journey decides from installed state stays behind a scan
-  // it can trust: an unchecked row keeps the check step open, and only the
-  // first open step carries a call to action.
-  assert.match(dashboard, /done: serviceScanFresh && dnsServer !== '' && serviceRunning\(dnsServer\)/);
+  assert.match(dashboard, /dnsStartReady\(serviceScanFresh && componentCensusComplete, dnsIdentityReady, dnsServer !== '' && serviceRunning\(dnsServer\)\)/);
+  assert.match(dashboard, /scanFresh=\{serviceScanFresh && componentCensusComplete\}/);
   assert.match(dashboard, /if \(!serviceScanFresh\) return false/);
 });
 

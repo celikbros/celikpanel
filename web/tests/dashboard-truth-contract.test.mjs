@@ -16,7 +16,7 @@ test('mail journey requires fresh runtime state and completed profile reconcilia
   assert.match(dashboard, /const serviceScanFresh = freshScanTimestamp\(serviceScannedAt, freshnessNow\)/);
   assert.match(dashboard, /profile\.status === 'complete'[\s\S]*profile\.verified[\s\S]*!profile\.warning/);
   assert.match(dashboard, /const mailProfileVerified = verifiedMailProfiles\.length > 0/);
-  assert.match(dashboard, /key: 'dashboard\.step\.mail', done: mailProfileVerified/);
+  assert.match(dashboard, /mailProfiles && hasMailActivity\(mailProfiles\)/);
 });
 
 test('Boston rspamd tuple never produces a false SpamAssassin install alert', () => {
@@ -29,7 +29,7 @@ test('system service truth never promotes tools into running daemons', () => {
   assert.match(dashboard, /if \(!serviceScanFresh\) return false/);
   assert.match(dashboard, /const systemServices = serviceScanFresh[\s\S]*installed\.filter\(\(s\) => s\.kind === 'service'\)/);
   assert.match(dashboard, /normalized === 'running' \|\| normalized\.startsWith\('active'\)/);
-  assert.match(dashboard, /key: 'dashboard\.step\.serviceScan'[\s\S]*done: serviceScanFresh/);
+  assert.match(dashboard, /scanFresh=\{serviceScanFresh && componentCensusComplete\}/);
   assert.match(dashboard, /!serviceScanFresh[\s\S]*dashboard\.statusUnknown/);
   assert.match(dashboard, /serviceScanFresh && hostsContent && !hasClamAV/);
   assert.match(dashboard, /attention\.length > 0 && \(/);
@@ -39,8 +39,8 @@ test('system service truth never promotes tools into running daemons', () => {
 
 test('DNS and firewall journey steps use their independent backend truth axes', () => {
   assert.match(dashboard, /typeof payload\.dns_identity_ready !== 'boolean'/);
-  assert.match(dashboard, /done: dnsIdentityReady/);
-  assert.match(dashboard, /done: fw\?\.enabled === true && fw\.persistence_state === 'ready'/);
+  assert.match(dashboard, /dnsStartReady\(serviceScanFresh && componentCensusComplete, dnsIdentityReady,/);
+  assert.match(dashboard, /fw\.enabled === true && fw\.persistence_state === 'ready'/);
   assert.match(dashboard, /fw\?\.enabled && fw\.persistence_state !== 'ready'/);
 });
 
