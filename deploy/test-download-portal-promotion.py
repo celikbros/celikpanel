@@ -280,6 +280,38 @@ class DownloadPortalPromotionTests(unittest.TestCase):
         self.assertEqual(self.fixture.live.stat().st_ino, self.fixture.old_live_inode)
         self.assertEqual(len(self.public_calls()), 0)
 
+    @staticmethod
+    def membership_selector(identity):
+        return ("<?php\ndeclare(strict_types=1);\nrequire dirname(__DIR__,2)."
+                "'/membership-app/releases/" + identity + "/http.php';\n")
+
+    def test_site_content_rejects_executable_membership_selector(self):
+        account = self.fixture.live / "account"
+        account.mkdir()
+        (account / "index.php").write_text(self.membership_selector("a" * 64))
+        source = self.prepare_site_content_update()
+        (source / "account" / "index.php").write_text("<?php echo 'arbitrary script';\n")
+        result = self.run_site_content_update(source)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("membership selector", result.stderr)
+        self.assertEqual(len(self.public_calls()), 0)
+        self.assertEqual(self.fixture.live.stat().st_ino, self.fixture.old_live_inode)
+
+    def test_site_content_can_update_existing_membership_selector(self):
+        account = self.fixture.live / "account"
+        account.mkdir()
+        (account / "index.php").write_text(self.membership_selector("a" * 64))
+        source = self.prepare_site_content_update()
+        (source / "account" / "index.php").write_text(self.membership_selector("b" * 64))
+        result = self.run_site_content_update(source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.fixture.live / "account" / "index.php").read_text(),
+                         self.membership_selector("b" * 64))
+        backup = next(self.fixture.backups.iterdir())
+        self.assertEqual((backup / "account" / "index.php").read_text(),
+                         self.membership_selector("a" * 64))
+        self.assertEqual(len(self.public_calls()), 1)
+
     def test_site_content_update_rejects_changed_bootstrap(self):
         (self.fixture.live / "get.sh").write_text("original bootstrap\n")
         source = self.prepare_site_content_update()

@@ -3,7 +3,7 @@
 import argparse, hashlib, io, json, tarfile
 from pathlib import Path
 
-FILES=('http.php','init.php','src/Service.php','terms.php','view.php')
+FILES=('http.php','init.php','src/Service.php','terms.php','view.php','src/Mail.php','vendor/phpmailer/Exception.php','vendor/phpmailer/SMTP.php','vendor/phpmailer/PHPMailer.php','vendor/phpmailer/LICENSE','vendor/phpmailer/UPSTREAM.json')
 def build(source):
     content={name:(source/name).read_bytes() for name in FILES}
     manifest={name:{'sha256':hashlib.sha256(data).hexdigest(),'size':len(data)} for name,data in content.items()}

@@ -15,6 +15,7 @@ if ! php -r 'exit(extension_loaded("sodium")?0:1);'; then php_args+=(-d extensio
 while IFS= read -r file; do php "${php_args[@]}" -l "$file" >/dev/null; done < <(find portal-membership download-portal/account -name '*.php' -type f)
 export CELIKPANEL_LICENSE_INTEROP_FIXTURE="$work/interop.json"
 php "${php_args[@]}" portal-membership/tests/service.php
+python3 portal-membership/tests/smtp_test.py
 go test ./internal/licensing -count=1
 php "${php_args[@]}" portal-membership/tests/prepare.php "$work/http"
 export CELIKPANEL_MEMBERSHIP_PRIVATE="$work/http"

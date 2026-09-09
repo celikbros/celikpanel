@@ -53,7 +53,7 @@ AT_FDCWD = -100
 RENAME_NOREPLACE = 1
 RENAME_EXCHANGE = 2
 SUCCESS_MARKER = "CELIKPANEL_DOWNLOAD_PORTAL_PUBLISHED"
-SITE_CONTENT_FILES = frozenset({"index.html", "assets/site.js", "assets/site.css"})
+SITE_CONTENT_FILES = frozenset({"index.html", "assets/site.js", "assets/site.css", "account/index.php"})
 TRANSACTION_SIGNALS = (signal.SIGHUP, signal.SIGINT, signal.SIGTERM)
 
 
@@ -581,13 +581,20 @@ def _copy_history_directory(source_fd: int, destination_fd: int, display: Path) 
 
 
 def verify_site_content_update(live: Path, stage: Path) -> None:
-    """Permit presentation edits only; every other path and byte stays identical."""
+    """Permit presentation and the immutable membership app selector; protect release bytes."""
     before = {entry[0]: entry[1:] for entry in content_inventory(live)}
     after = {entry[0]: entry[1:] for entry in content_inventory(stage)}
     if before.keys() != after.keys():
         fail("site content update cannot add or remove portal paths")
     for relative, entry in before.items():
         if relative in SITE_CONTENT_FILES and entry[0] == after[relative][0] == "f":
+            if relative == "account/index.php":
+                with (stage / relative).open("rb") as selector:
+                    raw = selector.read(4097)
+                template = b"<?php\ndeclare(strict_types=1);\nrequire dirname(__DIR__,2).'/membership-app/releases/"
+                if not re.fullmatch(re.escape(template) + rb"[a-f0-9]{64}" +
+                                    re.escape(b"/http.php';\n"), raw):
+                    fail("membership selector must name one immutable app release")
             continue
         if after[relative] != entry:
             fail(f"site content update changed protected content: {relative}")
