@@ -41,7 +41,8 @@ check('Lisanslarınız' in body,'signed in')
 check(any(c.has_nonstandard_attr('HttpOnly') for c in jar),'httpOnly session')
 _,body,_=request('issue',{'csrf':csrf(body)})
 key=re.search(r'CPK-[a-f0-9]{64}',body)[0]
-check('tekrar erişebilirsiniz' in body,'repeat key access notice')
+check('tekrar görüntüleyebilirsiniz' in body,'repeat key access notice')
+check('Lisans ekranına yapıştırın' in body,'activate in panel after administrator sign-in')
 license_id=re.search(r'action=reveal&amp;id=([a-f0-9]{32})',body)[1]
 _,next_body,_=request()
 check(key not in next_body,'key hidden until authenticated reveal')

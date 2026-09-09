@@ -117,11 +117,13 @@ agent and web application, so the target server needs no Go, Node or Git.
 The current alpha archive targets Linux x86_64/amd64.
 
 Before installation, [create a CelikPanel account](https://celikpanel.net/account/),
-verify your email and obtain a free annual server license. Enter the key when
-the installer asks; it is hidden while typing. Each license covers one active
-server and its year starts when the license is created. The local panel administrator
-is still created in the terminal. Existing installations can activate their
-license in **Settings → License** after updating.
+verify your email and obtain a free annual server license. Installation creates
+your local administrator in the terminal without asking for a license key.
+After installation, sign in to the panel as administrator and paste the key
+on the License screen. Resellers and other users do not activate server licenses.
+Each license covers one active server for one year from creation. The local
+administrator password is never shared with the website. Existing installations
+can activate in **Settings → License** after updating.
 
 Published releases are distributed from the public CelikPanel download channel
 at `https://celikpanel.net`. The public `get.sh` bootstrap is supported only
@@ -137,7 +139,7 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpane
 sh /tmp/celikpanel-get.sh
 
 # Or require the exact version pinned by the downloaded bootstrap
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.60
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.61
 ```
 
 If the terminal disconnects during first setup, run the same installation
@@ -160,6 +162,11 @@ the [operations runbook](docs/OPERATIONS.md). The narrowly supported Alpha55
 transition additionally verifies the original signed binaries, release floor,
 absence of administrators and initial agent ledger before admitting recovery.
 See [first-install recovery](docs/FIRST-INSTALL-RECOVERY.md) for the exact scope.
+
+If Alpha58–60 stopped at licensing before creating any CelikPanel files,
+service accounts, or trust state, the standard command can use the current
+signed release instead. It retains the old signed receipt under the update
+lock. Once installation has started, the original release remains pinned.
 
 The installer interactively creates the first administrator. Do not place the
 administrator password in shell history, deployment scripts or release files.
@@ -219,8 +226,8 @@ environment; the public verification key is tracked and pinned by the product.
 workflow:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.60 SIGNING_KEY=<full-key-fingerprint>
-gpg --verify dist/celikpanel-v0.1.0-alpha.60.tar.gz.asc dist/celikpanel-v0.1.0-alpha.60.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.61 SIGNING_KEY=<full-key-fingerprint>
+gpg --verify dist/celikpanel-v0.1.0-alpha.61.tar.gz.asc dist/celikpanel-v0.1.0-alpha.61.tar.gz
 ```
 
 That optional `.asc` file is not one of the six canonical public assets, does

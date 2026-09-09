@@ -108,6 +108,7 @@ jobs:
       - run: bash deploy/test-release-updater-rollback-contract.sh
       - run: sudo bash deploy/test-download-portal-operation-selection.sh
       - run: sudo bash deploy/test-first-install-resume-contract.sh
+      - run: sudo python3 deploy/test-unstarted-install-transition.py
       - run: sudo bash deploy/test-prebuilt-update-contract.sh
       - run: bash deploy/test-go-toolchain-contract.sh
       - run: sudo bash deploy/test-go-toolchain-migration-contract.sh

@@ -112,11 +112,13 @@ arşivde bulunduğu için hedef sunucuda Go, Node veya Git gerekmez.
 Mevcut alpha arşivi Linux x86_64/amd64 içindir.
 
 Kurulumdan önce [CelikPanel hesabı oluşturun](https://celikpanel.net/account/),
-e-postanızı doğrulayın ve ücretsiz yıllık sunucu lisansınızı alın. Kurucu
-istediğinde anahtarı girin; yazarken gizlenir. Her lisans bir etkin sunucu
-içindir ve bir yıllık süresi lisans oluşturulduğunda başlar. Yerel panel yöneticisi
-terminalde oluşturulur. Mevcut kurulumlarda güncellemeden sonra
-**Ayarlar → Lisans** bölümünden etkinleştirme yapılabilir.
+e-postanızı doğrulayın ve ücretsiz yıllık sunucu lisansınızı alın. Kurulum
+terminalde yerel yönetici hesabınızı oluşturur; lisans anahtarı istemez.
+Kurulumdan sonra panele yönetici olarak giriş yapıp anahtarı Lisans ekranına
+yapıştırın. Bayiler ve diğer kullanıcılar sunucu lisansı etkinleştirmez.
+Her lisans oluşturulduğundan itibaren bir yıl ve bir etkin sunucu için geçerlidir.
+Yerel yönetici parolası websitesiyle paylaşılmaz. Mevcut kurulumlarda güncellemeden
+sonra **Ayarlar → Lisans** ekranını kullanabilirsiniz.
 
 Yayımlanan sürümler `https://celikpanel.net` adresindeki herkese açık CelikPanel
 indirme kanalından dağıtılır. Herkese açık `get.sh` bootstrap betiği yalnız temiz
@@ -133,7 +135,7 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 \
 sh /tmp/celikpanel-get.sh
 
 # Veya tam bir değişmez sürümü sabitleyin
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.60
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.61
 ```
 
 İlk kurulum sırasında terminal bağlantısı kesilirse aynı kurulum komutunu
@@ -155,6 +157,11 @@ kurulumlar için [operasyon kılavuzunu](docs/OPERATIONS.tr.md) izleyin. Destekl
 dar Alpha55 geçişi ayrıca özgün imzalı programları, sürüm tabanını, yönetici
 bulunmadığını ve başlangıç agent kaydını doğrular.
 Ayrıntılar: [ilk kurulum kurtarması](docs/FIRST-INSTALL-RECOVERY.tr.md).
+
+Alpha58–60 lisans aşamasında, CelikPanel dosyaları, servis hesapları veya
+güven kaydı oluşmadan durmuşsa standart komut güncel imzalı sürümle devam
+edebilir. Eski imzalı kayıt güncelleme kilidi altında korunur. Kurulum
+başlamışsa özgün sürüm sabit kalır.
 
 Kurucu ilk yöneticiyi etkileşimli olarak oluşturur. Yönetici parolasını shell
 geçmişine, dağıtım betiklerine veya sürüm dosyalarına koymayın. Sürüm arşivleri
@@ -211,8 +218,8 @@ izlenir ve sabitlenir.
 `make dist-sign` yalnız isteğe bağlı yerel GPG ürün akışı için kullanılabilir:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.60 SIGNING_KEY=<tam-anahtar-parmak-izi>
-gpg --verify dist/celikpanel-v0.1.0-alpha.60.tar.gz.asc dist/celikpanel-v0.1.0-alpha.60.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.61 SIGNING_KEY=<tam-anahtar-parmak-izi>
+gpg --verify dist/celikpanel-v0.1.0-alpha.61.tar.gz.asc dist/celikpanel-v0.1.0-alpha.61.tar.gz
 ```
 
 İsteğe bağlı `.asc` dosyası altı kanonik herkese açık üründen biri değildir;
