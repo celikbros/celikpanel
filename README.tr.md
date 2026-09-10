@@ -120,6 +120,15 @@ Her lisans oluşturulduğundan itibaren bir yıl ve bir etkin sunucu için geçe
 Yerel yönetici parolası websitesiyle paylaşılmaz. Mevcut kurulumlarda güncellemeden
 sonra **Ayarlar → Lisans** ekranını kullanabilirsiniz.
 
+Panel erişimi tüm kullanıcı rolleri için aktif lisans gerektirir. Lisans yoksa
+yönetici lisansı etkinleştirebilir veya yenileyebilir; diğer kullanıcılar
+yöneticilerine başvurur. Firewall, servis kurulumu, elle yedekleme ve salt okunur
+yönetim dahil panel ekranları ve yönetim API’si kilitlenir. Giriş, çıkış ve kendi
+parolasını kurtarma erişimi korunur. Mevcut siteler, e-posta, veritabanları ve
+zamanlanmış görevler lisans kontrolüne bağlı olmadan çalışır. Bağlantı hatasında
+son imzalı lisans kaydı yalnız çevrimdışı kullanım sınırı içinde geçerlidir;
+lisansın bitiş tarihi hiçbir durumda uzatılmaz.
+
 Yayımlanan sürümler `https://celikpanel.net` adresindeki herkese açık CelikPanel
 indirme kanalından dağıtılır. Herkese açık `get.sh` bootstrap betiği yalnız temiz
 ilk kurulum için desteklenir. Betiği temiz ve desteklenen bir sunucuda root olarak
@@ -135,7 +144,7 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 \
 sh /tmp/celikpanel-get.sh
 
 # Veya tam bir değişmez sürümü sabitleyin
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.61
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.62
 ```
 
 İlk kurulum sırasında terminal bağlantısı kesilirse aynı kurulum komutunu
@@ -218,8 +227,8 @@ izlenir ve sabitlenir.
 `make dist-sign` yalnız isteğe bağlı yerel GPG ürün akışı için kullanılabilir:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.61 SIGNING_KEY=<tam-anahtar-parmak-izi>
-gpg --verify dist/celikpanel-v0.1.0-alpha.61.tar.gz.asc dist/celikpanel-v0.1.0-alpha.61.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.62 SIGNING_KEY=<tam-anahtar-parmak-izi>
+gpg --verify dist/celikpanel-v0.1.0-alpha.62.tar.gz.asc dist/celikpanel-v0.1.0-alpha.62.tar.gz
 ```
 
 İsteğe bağlı `.asc` dosyası altı kanonik herkese açık üründen biri değildir;

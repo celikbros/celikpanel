@@ -121,7 +121,7 @@ export const en = {
     // The API error contract (B1): localized texts for coded refusals.
     // err.<CODE> overrides the server message; err.<CODE>.action labels the
     // fix-it button when the refusal carries an in-panel path.
-    'err.license_required': "New resources require an active server license. Existing services keep running. The server administrator can manage the license in Settings > License.",
+    'err.license_required': "An active server license is required to use the panel. Existing services and scheduled tasks keep running. Your server administrator must activate or renew the license.",
     'err.AUTH_REQUIRED': 'Your session has expired — sign in again.',
     'err.ADMIN_ONLY': 'This action requires an administrator.',
     'err.ACCOUNT_SUSPENDED': 'This account is suspended.',

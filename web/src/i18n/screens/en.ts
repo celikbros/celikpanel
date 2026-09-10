@@ -6,6 +6,10 @@
 // Giris formu cizilmeden once degil, o ekranlarla birlikte getirilir.
 
 export const enScreens = {
+    "license.lockError": "Panel access could not be verified. Check your connection and try again.",
+    "license.lockCheck": "Checking panel access…",
+    "license.tenantHelp": "Your server administrator must activate or renew the CelikPanel license. Contact your administrator to restore panel access.",
+    "license.tenantTitle": "Panel access is unavailable",
     "settings.section.license": "License",
     "settings.section.license.desc": "Server license, activation and annual renewal.",
     "license.inUse": "This license is linked to another server. Use the key for this server, or release the old binding with Change server / IP in your celikpanel.net account.",
@@ -22,8 +26,7 @@ export const enScreens = {
     "license.showKey": "Show key",
     "license.hideKey": "Hide key",
     "license.keyInvalid": "The key format is incorrect. Use Copy key in your celikpanel.net account.",
-    "license.continueSetup": "Continue server setup",
-    "license.explore": "Explore the panel",
+    "license.continueSetup": "Open the panel",
     "license.title": "CelikPanel license",
     "license.description": "Each license is for one active server. The one-year term starts when the license is created.",
     "license.loadFailed": "Could not read license status. Check again.",
@@ -33,7 +36,7 @@ export const enScreens = {
     "license.state.expired": "License expired — renewal required",
     "license.state.verification_unavailable": "License verification unavailable — check connectivity",
     "license.expires": "Expires",
-    "license.restricted": "New resources require an active license. Existing sites and mail keep running; maintenance and backups remain available.",
+    "license.restricted": "An active license is required to use the panel. Existing sites, mail, databases and scheduled tasks keep running.",
     "license.refresh": "Check again",
     "license.manage": "My celikpanel.net account and licenses",
     "license.key": "License key",

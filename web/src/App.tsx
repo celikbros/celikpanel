@@ -461,15 +461,17 @@ function AppRoutes() {
 function AuthGate() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [panelAccess, setPanelAccess] = useState(false);
   const authGenerationRef = useRef(0);
   const transitionAuthentication = useCallback((nextUser: CurrentUser | null) => {
     authGenerationRef.current += 1;
+    setPanelAccess(false);
     setUser(nextUser);
   }, []);
 
   useLayoutEffect(() => {
-    publishSystemUpdateAuthentication(!loading && user !== null);
-  }, [loading, user]);
+    publishSystemUpdateAuthentication(!loading && user !== null && panelAccess);
+  }, [loading, user, panelAccess]);
 
   useEffect(() => () => publishSystemUpdateAuthentication(false), []);
 
@@ -496,6 +498,15 @@ function AuthGate() {
         && shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) {
         transitionAuthentication(null);
       }
+      if (res.status === 403 && url.includes('/api/')
+        && shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) {
+        void res.clone().json().then(problem => {
+          if (problem.code === 'license_required'
+            && shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) {
+            window.dispatchEvent(new Event('celikpanel:license-locked'));
+          }
+        }).catch(() => {});
+      }
       return res;
     };
     return () => { window.fetch = originalFetch; };
@@ -515,13 +526,14 @@ function AuthGate() {
 
   return (
     <AuthProvider user={user} onLogout={() => transitionAuthentication(null)}>
-      <LicenseOnboarding />
       <RouteLoadBoundary>
+        <LicenseOnboarding onAccessChange={setPanelAccess}>
         <Suspense fallback={<PageLoading />}>
           <ComponentOperationProvider>
             <AppRoutes />
           </ComponentOperationProvider>
         </Suspense>
+        </LicenseOnboarding>
       </RouteLoadBoundary>
     </AuthProvider>
   );

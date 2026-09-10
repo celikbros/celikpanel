@@ -1441,6 +1441,9 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+        -- Reverse migration 038: this fixture represents schema version 20.
+        ALTER TABLE database_servers DROP COLUMN admin_username;
+
 		-- Reverse migration 036 before removing the engine switch ledger it
 		-- references. Migration 036 replaces the migration-034 attach trigger.
 		DROP TRIGGER dns_bind_pair_state_reject_delete;

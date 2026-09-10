@@ -8,11 +8,11 @@ import { apiErrorText, readApiError } from '../lib/apiError';
 type LicenseStatus = { state: 'active' | 'missing' | 'invalid' | 'expired' | 'verification_unavailable'; can_provision: boolean; expires_at?: number; license_id?: string };
 const states = ['active', 'missing', 'invalid', 'expired', 'verification_unavailable'] as const;
 
-export function LicensePanel() {
+export function LicensePanel({ locked = false, onContinue }: { locked?: boolean; onContinue?: () => void }) {
     const { t, locale } = useI18n();
     const [params] = useSearchParams();
     const navigate = useNavigate();
-    const setup = params.get('setup') === '1';
+    const setup = locked || params.get('setup') === '1';
     const [status, setStatus] = useState<LicenseStatus | null>(null);
     const [key, setKey] = useState('');
     const [showKey, setShowKey] = useState(false);
@@ -58,12 +58,13 @@ export function LicensePanel() {
         } finally { if (!signal?.aborted) setBusy(false); }
     }
     useEffect(() => { const controller = new AbortController(); void request(undefined, controller.signal); return () => controller.abort(); }, []);
+    const Heading = locked ? 'h1' : 'h2';
     return <section className="rounded-xl border border-border bg-surface p-5 sm:p-6" aria-labelledby="license-heading">
-        <h2 id="license-heading" className="mb-3 flex items-center gap-2 text-lg font-semibold text-fg"><BadgeCheck className="h-5 w-5 shrink-0" />{t(setup ? status?.can_provision ? 'license.readyTitle' : 'license.setupTitle' : 'license.title')}</h2>
-        <p className="mb-5 max-w-prose text-sm text-fg-muted">{t(setup && !status?.can_provision ? 'license.setupIntro' : 'license.description')}</p>
+        <Heading id="license-heading" className="mb-3 flex items-center gap-2 text-lg font-semibold text-fg"><BadgeCheck className="h-5 w-5 shrink-0" />{t(setup ? status?.can_provision ? 'license.readyTitle' : status?.state === 'expired' ? 'license.state.expired' : 'license.setupTitle' : 'license.title')}</Heading>
+        <p className="mb-5 max-w-prose text-sm text-fg-muted">{t(status?.state === 'expired' ? 'license.expiredHelp' : setup && !status?.can_provision ? 'license.setupIntro' : 'license.description')}</p>
         {error && <p role="alert" className="mb-4 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}</p>}
         {status ? <div className="mb-6 space-y-2 text-sm" role="status">
-            {!setup && <p className="font-semibold">{t(`license.state.${status.state}`)}</p>}
+            {(!setup || (!status.can_provision && status.state !== 'missing' && status.state !== 'expired')) && <p className="font-semibold">{t(`license.state.${status.state}`)}</p>}
             {status.expires_at && <p>{t('license.expires')}: {new Date(status.expires_at * 1000).toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US')}</p>}
             {!status.can_provision && <p className="max-w-prose text-fg-muted">{t('license.restricted')}</p>}
             {setup && status.can_provision && <p>{t('license.setupSuccess')}</p>}
@@ -81,8 +82,8 @@ export function LicensePanel() {
                 <a href="https://celikpanel.net/account/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline underline-offset-4">{t(status?.state === 'missing' ? 'license.getKey' : 'license.manage')}</a>
             </div>
         </form>}
-        {(setup || !status || status.state !== 'missing') && <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-5">
-            {setup && <Button variant={status?.can_provision ? 'primary' : 'secondary'} disabled={busy} onClick={() => navigate('/')}>{t(status?.can_provision ? 'license.continueSetup' : 'license.explore')}</Button>}
+        {((setup && status?.can_provision) || !status || status.state !== 'missing') && <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-5">
+            {setup && status?.can_provision && <Button disabled={busy} onClick={() => onContinue ? onContinue() : navigate('/')}>{t('license.continueSetup')}</Button>}
             {(!status || status.state !== 'missing') && <Button variant="secondary" disabled={busy} onClick={() => void request(status ? 'refresh' : undefined)}>{t('license.refresh')}</Button>}
         </div>}
     </section>;

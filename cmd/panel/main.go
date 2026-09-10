@@ -1124,6 +1124,7 @@ func main() {
 	http.HandleFunc("/api/v1/auth/login", panel.handleLogin)
 	http.HandleFunc("/api/v1/auth/logout", panel.handleLogout)
 	http.HandleFunc("/api/v1/auth/me", panel.handleMe)
+	http.HandleFunc(panelLicenseAccessPath, panel.handleLicenseAccess)
 
 	// Demo credentials (public, but empty unless --demo is set).
 	// Demo kimlik bilgileri (herkese açık, ama --demo yoksa boş).

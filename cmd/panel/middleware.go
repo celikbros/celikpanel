@@ -149,7 +149,7 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 			p.license.Activity()
 		}
 
-		if !p.allowLicensedProvisioning(w, r) {
+		if !p.allowLicensedPanel(w, r) {
 			return
 		}
 
