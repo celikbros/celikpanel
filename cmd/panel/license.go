@@ -137,6 +137,7 @@ func (p *Panel) handleLicense(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
+		_ = p.license.Refresh(r.Context(), false)
 	case http.MethodPost:
 		var input struct {
 			Action string `json:"action"`
@@ -214,6 +215,7 @@ func (p *Panel) handleLicenseAccess(w http.ResponseWriter, r *http.Request) {
 	allowed := false
 	var until int64
 	if p.license != nil {
+		_ = p.license.Refresh(r.Context(), false)
 		status := p.license.Status()
 		allowed = status.CanProvision
 		until = min(status.ExpiresAt, status.OfflineUntil)

@@ -17,10 +17,17 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 const API = "https://celikpanel.net/account/"
+
+// All authenticated users share this bounded verification window. There is no
+// offline grace period beyond it and no timer on an idle server.
+const CheckInterval = time.Minute
+const RefreshInterval = 45 * time.Second
+const RetryInterval = 30 * time.Second
 
 // Production public key is provisioned separately from the signed-release key.
 const PublicKeyHex = "aa7768257096ed17ae78077d1269b0b38f57aae9c544616ee10708d22b656f5e"
@@ -30,6 +37,8 @@ var hex32 = regexp.MustCompile(`^[a-f0-9]{32}$`)
 var keyPattern = regexp.MustCompile(`^CPK-[a-f0-9]{64}$`)
 
 type Envelope struct {
+	// Rejected is local durable state, never an entitlement from the service.
+	Rejected        bool   `json:"rejected,omitempty"`
 	Payload         string `json:"payload"`
 	Signature       string `json:"signature"`
 	ActivationToken string `json:"activation_token"`
@@ -105,6 +114,7 @@ type Manager struct {
 	client     *http.Client
 	clock      func() time.Time
 	retryAfter time.Time
+	rejected   atomic.Bool
 }
 
 func New(file string, key ed25519.PublicKey, server string) (*Manager, error) {
@@ -136,19 +146,22 @@ func (m *Manager) read() (Envelope, Claims, error) {
 	return e, c, err
 }
 func (m *Manager) Status() Status {
-	_, c, err := m.read()
+	e, c, err := m.read()
 	if err != nil {
 		if os.IsNotExist(err) {
 			return Status{State: "missing"}
 		}
 		return Status{State: "invalid"}
 	}
-	s := Status{State: "active", Product: c.Product, LicenseID: c.LicenseID, ExpiresAt: c.ExpiresAt, OfflineUntil: c.OfflineUntil, CanProvision: true}
+	s := Status{State: "active", Product: c.Product, LicenseID: c.LicenseID, ExpiresAt: c.ExpiresAt, OfflineUntil: min(c.OfflineUntil, c.IssuedAt+int64(CheckInterval/time.Second)), CanProvision: true}
 	now := m.clock().Unix()
 	if now >= c.ExpiresAt {
 		s.State = "expired"
 		s.CanProvision = false
-	} else if now >= c.OfflineUntil {
+	} else if e.Rejected || m.rejected.Load() {
+		s.State = "invalid"
+		s.CanProvision = false
+	} else if now >= s.OfflineUntil || now < c.IssuedAt {
 		s.State = "verification_unavailable"
 		s.CanProvision = false
 	}
@@ -216,7 +229,20 @@ func (m *Manager) request(ctx context.Context, action string, input map[string]s
 		}
 		_ = json.Unmarshal(b, &problem)
 		switch problem.Error {
-		case "invalid_license", "license_in_use", "license_expired", "invalid_activation", "rate_limited":
+		case "invalid_license", "license_in_use", "license_expired", "invalid_activation":
+			// Only an explicit rejection of this installation's refresh invalidates
+			// its receipt. A mistyped replacement key must not revoke a valid license.
+			if action == "refresh" && resp.StatusCode == http.StatusBadRequest {
+				m.rejected.Store(true)
+				if previous, _, readErr := m.read(); readErr == nil {
+					previous.Rejected = true
+					if saveErr := m.save(previous); saveErr != nil {
+						return errors.New("license rejected; could not persist rejection")
+					}
+				}
+			}
+			return fmt.Errorf("license: %s", problem.Error)
+		case "rate_limited":
 			return fmt.Errorf("license: %s", problem.Error)
 		}
 		return errors.New("license service unavailable; existing license retained")
@@ -228,7 +254,14 @@ func (m *Manager) request(ctx context.Context, action string, input map[string]s
 	if _, err = Verify(e, m.key, m.server, m.clock()); err != nil {
 		return err
 	}
-	return m.save(e)
+	if e.Rejected {
+		return errors.New("invalid license service response")
+	}
+	if err = m.save(e); err != nil {
+		return err
+	}
+	m.rejected.Store(false)
+	return nil
 }
 func (m *Manager) Activate(ctx context.Context, key, hostname string) error {
 	if !keyPattern.MatchString(key) {
@@ -249,7 +282,7 @@ func (m *Manager) refreshLocked(ctx context.Context, force bool) error {
 	if err != nil {
 		return err
 	}
-	if !force && m.clock().Unix() < c.RefreshAfter {
+	if !force && m.clock().Unix() < min(c.RefreshAfter, c.IssuedAt+int64(RefreshInterval/time.Second)) {
 		return nil
 	}
 	if !force && m.clock().Before(m.retryAfter) {
@@ -257,38 +290,18 @@ func (m *Manager) refreshLocked(ctx context.Context, force bool) error {
 	}
 	err = m.request(ctx, "refresh", map[string]string{"license_id": c.LicenseID, "server_id": m.server, "activation_token": e.ActivationToken})
 	if err != nil {
-		m.retryAfter = m.clock().Add(15 * time.Minute)
+		m.retryAfter = m.clock().Add(RetryInterval)
 	} else {
 		m.retryAfter = time.Time{}
 	}
 	return err
 }
 
-// Activity is called only for authenticated panel/API use. It has no timer:
-// idle installations perform no central checks. All roles share one refresh.
-func (m *Manager) Activity() {
-	if !m.mu.TryLock() {
-		return
-	}
-	_, c, err := m.read()
-	if err != nil || m.clock().Unix() < c.RefreshAfter || m.clock().Before(m.retryAfter) {
-		m.mu.Unlock()
-		return
-	}
-	go func() {
-		defer m.mu.Unlock()
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-		_ = m.refreshLocked(ctx, false)
-	}()
-}
-
 // CanProvision also covers authenticated automation without a browser session.
-// A stale receipt must be refreshed before admitting new resources.
+// A stale receipt must be refreshed synchronously before any management access.
+// Concurrent requests wait for and share the same result; there is no background
+// admission window while a refresh is pending.
 func (m *Manager) CanProvision(ctx context.Context) bool {
-	if m.Status().CanProvision {
-		return true
-	}
 	_ = m.Refresh(ctx, false)
 	return m.Status().CanProvision
 }

@@ -58,11 +58,18 @@ export function LicenseOnboarding({ children, onAccessChange }: { children?: Rea
 
     useEffect(() => {
         if (!access?.allowed) return;
+        // Refresh shortly before the server's hard deadline so normal renewals
+        // preserve the current page and form state. The deadline still locks
+        // management if verification cannot finish in time.
+        const refreshDelay = access.until * 1000 - Date.now() - 15000;
+        const refreshTimer = refreshDelay > 0 ? window.setTimeout(() => {
+            if (document.visibilityState === 'visible') void check();
+        }, Math.min(2147483647, refreshDelay)) : undefined;
         const timer = window.setTimeout(() => {
             setAccess(previous => previous ? { ...previous, allowed: false } : null);
-            void check();
+            if (document.visibilityState === 'visible') void check();
         }, Math.min(2147483647, Math.max(0, access.until * 1000 - Date.now())));
-        return () => window.clearTimeout(timer);
+        return () => { window.clearTimeout(timer); window.clearTimeout(refreshTimer); };
     }, [access, check]);
 
     const allowed = access?.owner === user.username && access.allowed;

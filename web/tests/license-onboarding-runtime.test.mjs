@@ -175,3 +175,31 @@ test('only administrators can open signed updates while activation remains mount
   } finally {await cleanup()}
  }
 });
+
+test('short verification renews before expiry without remounting management; hidden pages do not poll',async()=>{
+ fixture('admin','active');
+ const previousTimer=window.setTimeout,previousNow=Date.now;
+ const timers=[];let now=Date.now(),mounts=0;
+ Date.now=()=>now;
+ window.setTimeout=(fn,ms)=>{if(ms>15000){timers.push({fn,ms});return 0}return previousTimer(fn,ms)};
+ globalThis.fetch=async()=>{calls.push('access');return Response.json({can_use_panel:true,valid_until:Math.floor(now/1000)+60})};
+ function Management(){React.useEffect(()=>{mounts++},[]);return React.createElement('main',null,'management')}
+ try{
+  await act(async()=>{tree=Renderer.create(React.createElement(LicenseOnboarding,null,React.createElement(Management)))});
+  const early=timers.find(timer=>timer.ms>40000&&timer.ms<=45000);
+  assert.ok(early,'renew before the hard deadline');
+  now+=45000;
+  await act(async()=>early.fn());
+  assert.equal(calls.length,2);
+  assert.equal(mounts,1,'successful renewal preserves page state');
+  assert.equal(navigations.length,0);
+  document.visibilityState='hidden';
+  const lastEarly=timers.filter(timer=>timer.ms>40000&&timer.ms<=45000).at(-1);
+  await act(async()=>lastEarly.fn());
+  assert.equal(calls.length,2,'hidden page does not renew');
+  const deadline=timers.at(-1);
+  await act(async()=>deadline.fn());
+  assert.equal(calls.length,2,'expiry itself does not poll while hidden');
+  assert.equal(tree.root.findAllByType('main').length,0,'hidden expiry still locks management');
+ }finally{Date.now=previousNow;window.setTimeout=previousTimer;document.visibilityState='visible';await cleanup()}
+});

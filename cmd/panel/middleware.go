@@ -145,10 +145,6 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		if p.license != nil {
-			p.license.Activity()
-		}
-
 		// The license exception uses only this freshly validated session identity.
 		r = r.WithContext(context.WithValue(r.Context(), callerKey, c))
 		if !p.allowLicensedPanel(w, r) {

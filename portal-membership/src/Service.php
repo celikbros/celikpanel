@@ -263,8 +263,8 @@ SQL);
         $now=$this->now();
         $payload=json_encode(['format'=>'celikpanel-license-v1','product'=>'celikpanel','license_id'=>$l['id'],
             'server_id'=>$l['server_id'],'issued_at'=>$now,'activated_at'=>(int)$l['activated'],
-            'expires_at'=>(int)$l['expires'],'refresh_after'=>$now+86400,
-            'offline_until'=>min($now+7*86400,(int)$l['expires'])], JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES);
+            'expires_at'=>(int)$l['expires'],'refresh_after'=>$now+45,
+            'offline_until'=>min($now+60,(int)$l['expires'])], JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES);
         return ['payload'=>base64_encode($payload),'signature'=>base64_encode(sodium_crypto_sign_detached($payload,$this->signingKey)),
             'activation_token'=>$this->activationToken($l)];
     }

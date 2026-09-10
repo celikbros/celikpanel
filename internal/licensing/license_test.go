@@ -110,8 +110,8 @@ func TestLicenseManagerOutageExpiryAndRefresh(t *testing.T) {
 		t.Fatal("outage hidden")
 	}
 	after, _ := os.ReadFile(m.file)
-	if string(after) != string(original) || !m.Status().CanProvision {
-		t.Fatal("outage destroyed valid license")
+	if string(after) != string(original) || m.Status().CanProvision {
+		t.Fatal("outage must retain renewal credentials but deny stale access")
 	}
 	now = time.Unix(c.OfflineUntil, 0)
 	if got := m.Status(); got.State != "verification_unavailable" || got.CanProvision {
