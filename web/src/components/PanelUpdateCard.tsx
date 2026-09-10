@@ -109,7 +109,7 @@ export async function fetchPanelUpdateCheck(
     }
 }
 
-export function PanelUpdateCard() {
+export function PanelUpdateCard({ activation = false }: { activation?: boolean }) {
     const { t } = useI18n();
     const systemUpdate = useSystemUpdateOperation();
     const [currentBuild, setCurrentBuild] = useState<PanelBuild | null>(null);
@@ -275,10 +275,10 @@ export function PanelUpdateCard() {
                     </span>
                     <div>
                         <h3 id="panel-update-title" className="font-semibold text-fg">{t('panelUpdate.title')}</h3>
-                        <p className="mt-1 text-sm text-fg-muted">{t('panelUpdate.description')}</p>
+                        <p className="mt-1 text-sm text-fg-muted">{t(activation ? 'license.updateHelp' : 'panelUpdate.description')}</p>
                     </div>
                 </div>
-                <Button type="button" onClick={() => void checkForUpdate()} disabled={checking || active || starting || readinessChecking}>
+                <Button type="button" className="shrink-0" onClick={() => void checkForUpdate()} disabled={checking || active || starting || readinessChecking}>
                     {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     {checking ? t('panelUpdate.checking') : t('panelUpdate.check')}
                 </Button>

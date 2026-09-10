@@ -177,9 +177,19 @@ func (p *Panel) handleLicense(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(p.license.Status())
 }
 
-// Only identity recovery and license activation remain available while locked.
+// Identity recovery, activation and administrator-only signed updates remain available while locked.
 // This gate runs on authenticated HTTP requests, never on agents or schedulers.
 func licenseRecoveryRequest(r *http.Request) bool {
+	// Exact methods and paths only. This exception never grants tenant authority
+	// or relaxes the updater's signed-target, host admission and rollback checks.
+	if caller := currentCaller(r); caller != nil && caller.Role == roleAdmin {
+		switch r.URL.Path {
+		case panelUpdateCheckPath, panelUpdateStatusPath, "/api/v1/panel/version", hostMutationReadinessPath:
+			return r.Method == http.MethodGet
+		case panelUpdateStartPath, panelUpdateAbandonPath:
+			return r.Method == http.MethodPost
+		}
+	}
 	switch r.URL.Path {
 	case "/api/v1/auth/me", panelLicenseAccessPath:
 		return r.Method == http.MethodGet

@@ -6,6 +6,7 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { LicensePanel } from './LicensePanel';
+import { PanelUpdateCard } from './PanelUpdateCard';
 import { ToastContainer } from './Toast';
 import { Button, Spinner } from './ui';
 
@@ -13,6 +14,7 @@ export function LicenseLockScreen({ checking, failed, onCheck }: { checking: boo
     const { role, user, logout } = useAuth();
     const { t } = useI18n();
     const [password, setPassword] = useState(false);
+    const [showUpdate, setShowUpdate] = useState(false);
     const [leaving, setLeaving] = useState(false);
     const [error, setError] = useState(false);
     async function signOut() {
@@ -37,6 +39,10 @@ export function LicenseLockScreen({ checking, failed, onCheck }: { checking: boo
             {checking ? <div className="flex items-center gap-3"><Spinner /><p>{t('license.lockCheck')}</p></div>
                 : role === 'admin' ? <LicensePanel locked onContinue={onCheck} />
                     : <section className="space-y-5" aria-labelledby="license-lock-heading"><h1 id="license-lock-heading" className="text-2xl font-semibold">{t('license.tenantTitle')}</h1><p className="max-w-prose">{t('license.tenantHelp')}</p><p className="max-w-prose text-sm text-fg-muted">{t('license.restricted')}</p><Button onClick={onCheck}>{t('license.refresh')}</Button></section>}
+            {!checking && role === 'admin' && <details className="mt-8" onToggle={event => setShowUpdate(event.currentTarget.open)}>
+                <summary className="cursor-pointer rounded text-sm font-semibold text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">{t('license.updatePanel')}</summary>
+                {showUpdate && <div className="mt-4"><PanelUpdateCard activation /></div>}
+            </details>}
             <div className="mt-8"><Button variant="secondary" onClick={() => setPassword(true)}>{t('profile.changePassword')}</Button></div>
         </main>
         {password && <ChangePasswordModal onClose={() => setPassword(false)} />}

@@ -139,3 +139,90 @@ func TestLicenseAccessResponseIsMinimalAndTracksState(t *testing.T) {
 		}
 	}
 }
+
+func TestLicenseUpdateExceptionIsExactAndAdministratorOnly(t *testing.T) {
+	fixture := newAuthzMatrixFixture(t)
+	seedAdditionalUserSession(t, &fixture)
+	allowed := map[string]string{
+		panelUpdateCheckPath: "GET", panelUpdateStatusPath: "GET",
+		panelUpdateStartPath: "POST", panelUpdateAbandonPath: "POST",
+		"/api/v1/panel/version": "GET", hostMutationReadinessPath: "GET",
+	}
+	for _, state := range []string{"missing", "expired", "invalid", "verification_unavailable", "unconfigured"} {
+		fixture.panel.license = nil
+		if state != "unconfigured" {
+			fixture.panel.license = testPanelLicense(t, state)
+		}
+		reached := 0
+		handler := fixture.panel.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { reached++; w.WriteHeader(204) }))
+		for path, permitted := range allowed {
+			for _, id := range []int{authzMatrixAdminID, authzMatrixResellerID, authzMatrixCustomerID, authzMatrixAdditionalUserID} {
+				for _, method := range []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"} {
+					before := reached
+					w := requestWithToken(handler, method, path, fixture.tokens[id])
+					want := id == authzMatrixAdminID && method == permitted
+					if (reached != before) != want || (want && w.Code != 204) || (!want && w.Code != 403) {
+						t.Fatalf("%s %s %s role=%d status=%d", state, method, path, id, w.Code)
+					}
+				}
+			}
+			before := reached
+			w := requestWithToken(handler, permitted, path, "")
+			if reached != before || w.Code != 401 {
+				t.Fatalf("unauthenticated update: %s %d", path, w.Code)
+			}
+			for _, suffix := range []string{"/", "/anything"} {
+				w = requestWithToken(handler, permitted, path+suffix, fixture.tokens[authzMatrixAdminID])
+				if reached != before || w.Code != 403 {
+					t.Fatalf("update prefix bypass: %s", path+suffix)
+				}
+			}
+		}
+		w := httptest.NewRecorder()
+		fixture.panel.handleLicenseAccess(w, httptest.NewRequest("GET", panelLicenseAccessPath, nil))
+		if !strings.Contains(w.Body.String(), `"can_use_panel":false`) {
+			t.Fatal("update access unlocked license", w.Body.String())
+		}
+	}
+}
+
+func TestLicenseLockedSignedUpdatePreservesLicenseAndTargetChecks(t *testing.T) {
+	withSystemUpdateBuild(t)
+	for _, state := range []string{"missing", "expired"} {
+		t.Run(state, func(t *testing.T) {
+			fixture := newSystemUpdateTestFixture(t)
+			fixture.panel.license = testPanelLicense(t, state)
+			before := fixture.panel.license.Status()
+			invoke := func(path, body string) *httptest.ResponseRecorder {
+				r := systemUpdateRequest("POST", path, body, roleAdmin)
+				w := httptest.NewRecorder()
+				if !fixture.panel.allowLicensedPanel(w, r) {
+					t.Fatal("signed update blocked", w.Body.String())
+				}
+				csrfProtect(http.HandlerFunc(fixture.panel.handlePanelUpdateStart)).ServeHTTP(w, r)
+				return w
+			}
+			bad := strings.Replace(systemUpdateStartBody(updateTestTargetVersion), updateTestTargetSHA, strings.Repeat("f", 64), 1)
+			if w := invoke(panelUpdateStartPath, bad); w.Code < 400 {
+				t.Fatal("unverified target accepted", w.Body.String())
+			}
+			if fixture.agent.startCalls != 0 {
+				t.Fatal("bad target reached start")
+			}
+			w := invoke(panelUpdateStartPath, systemUpdateStartBody(updateTestTargetVersion))
+			if w.Code != http.StatusAccepted {
+				t.Fatalf("valid update: %d %s", w.Code, w.Body.String())
+			}
+			if fixture.agent.startCalls != 1 {
+				t.Fatal("valid target not started once")
+			}
+			if after := fixture.panel.license.Status(); after != before {
+				t.Fatal("update changed license", before, after)
+			}
+			w = httptest.NewRecorder()
+			if fixture.panel.allowLicensedPanel(w, systemUpdateRequest("POST", "/api/v1/firewall", "{}", roleAdmin)) {
+				t.Fatal("update unlocked management")
+			}
+		})
+	}
+}

@@ -125,7 +125,9 @@ Each license covers one active server for one year from creation. The local
 administrator password is never shared with the website. Existing installations
 can activate in **Settings → License** after updating.
 
-An active license is required for panel access for every account role. Without
+An active license is required for panel management for every account role.
+Administrators can install signed CelikPanel updates from the activation page
+before activation or after expiry. Updates do not activate or renew a license. Without
 one, the administrator can activate or renew the license; other users must
 contact their administrator. Management screens and APIs are locked, including
 firewall changes, service installation, manual backups and read-only management.
@@ -148,7 +150,7 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpane
 sh /tmp/celikpanel-get.sh
 
 # Or require the exact version pinned by the downloaded bootstrap
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.62
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.63
 ```
 
 If the terminal disconnects during first setup, run the same installation
@@ -235,8 +237,8 @@ environment; the public verification key is tracked and pinned by the product.
 workflow:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.62 SIGNING_KEY=<full-key-fingerprint>
-gpg --verify dist/celikpanel-v0.1.0-alpha.62.tar.gz.asc dist/celikpanel-v0.1.0-alpha.62.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.63 SIGNING_KEY=<full-key-fingerprint>
+gpg --verify dist/celikpanel-v0.1.0-alpha.63.tar.gz.asc dist/celikpanel-v0.1.0-alpha.63.tar.gz
 ```
 
 That optional `.asc` file is not one of the six canonical public assets, does
