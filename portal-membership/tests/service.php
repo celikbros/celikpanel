@@ -44,6 +44,7 @@ rejects(fn()=>$s->reveal($member['id'],$license['id'],$password),'key_not_saved'
 $s->db->prepare('UPDATE licenses SET key_encrypted=? WHERE id=?')->execute([$encrypted,$license['id']]);
 $now+=86400*10;
 $e=$s->activate($license['key'],$server,'frankfurt.example.com','8.8.8.8');$c=claims($e,$public);
+check($c['refresh_after']===$now+45 && $c['offline_until']===$now+60,'short signed verification window');
 check($c['expires_at']===(new DateTimeImmutable('2029-02-28T10:00:00Z'))->getTimestamp(),'calendar year leap date');
 $now+=3600;$retry=$s->activate($license['key'],$server,'frankfurt.example.com','8.8.8.8');$r=claims($retry,$public);
 check($c['activated_at']===$r['activated_at']&&$c['expires_at']===$r['expires_at'],'retry preserves term');

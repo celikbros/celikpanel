@@ -133,8 +133,10 @@ contact their administrator. Management screens and APIs are locked, including
 firewall changes, service installation, manual backups and read-only management.
 Sign-in, sign-out and own-password recovery remain available. Existing websites,
 mail, databases and scheduled jobs continue without a license check. A connection
-failure uses the last signed receipt only within its offline allowance and never
-beyond the license expiry date.
+failure cannot extend the 60-second verification window or the annual expiry.
+Each management request checks shared license state, renewing after 45 seconds
+of authenticated use. An explicit central rejection immediately locks access
+and persists across restart. Idle servers do not contact the license service.
 
 Published releases are distributed from the public CelikPanel download channel
 at `https://celikpanel.net`. The public `get.sh` bootstrap is supported only
@@ -150,7 +152,7 @@ curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpane
 sh /tmp/celikpanel-get.sh
 
 # Or require the exact version pinned by the downloaded bootstrap
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.63
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.64
 ```
 
 If the terminal disconnects during first setup, run the same installation
@@ -237,8 +239,8 @@ environment; the public verification key is tracked and pinned by the product.
 workflow:
 
 ```bash
-make dist-sign VERSION=v0.1.0-alpha.63 SIGNING_KEY=<full-key-fingerprint>
-gpg --verify dist/celikpanel-v0.1.0-alpha.63.tar.gz.asc dist/celikpanel-v0.1.0-alpha.63.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.64 SIGNING_KEY=<full-key-fingerprint>
+gpg --verify dist/celikpanel-v0.1.0-alpha.64.tar.gz.asc dist/celikpanel-v0.1.0-alpha.64.tar.gz
 ```
 
 That optional `.asc` file is not one of the six canonical public assets, does

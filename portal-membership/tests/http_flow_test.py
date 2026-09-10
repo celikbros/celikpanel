@@ -71,7 +71,7 @@ check('Sunucu eşlemesi kaldırıldı' in body,'server release confirmed')
 code,again=api('activate',{'key':key,'server_id':'a'*64,'hostname':'fixture.example.com'})
 check(code==200,'same key works after transfer')
 _,body,_=request('home&lang=en');check('Your licenses' in body and 'fixture.example.com' in body,'English account and binding')
-_,body,_=request('terms&lang=en');check('Terms and data notice' in body and '7 days' in body,'terms reachable')
+_,body,_=request('terms&lang=en');check('Terms and data notice' in body and '60 seconds' in body,'terms reachable')
 with sqlite3.connect(private/'members.sqlite') as db:
  db.execute('UPDATE licenses SET key_encrypted=NULL WHERE id=?',(license_id,))
 _,body,_=request('home&lang=en')

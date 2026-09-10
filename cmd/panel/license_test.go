@@ -52,6 +52,9 @@ func testPanelLicense(t *testing.T, state string) *licensing.Manager {
 	if state != "missing" {
 		payload, _ := json.Marshal(c)
 		e := licensing.Envelope{Payload: base64.StdEncoding.EncodeToString(payload), Signature: base64.StdEncoding.EncodeToString(ed25519.Sign(priv, payload)), ActivationToken: strings.Repeat("c", 64)}
+		if state == "rejected" {
+			e.Rejected = true
+		}
 		if state == "invalid" {
 			e.Signature = "invalid"
 		}
@@ -70,7 +73,7 @@ func testPanelLicense(t *testing.T, state string) *licensing.Manager {
 func TestLicensePanelGateAcrossRolesStatesAndMethods(t *testing.T) {
 	fixture := newAuthzMatrixFixture(t)
 	seedAdditionalUserSession(t, &fixture)
-	for _, state := range []string{"missing", "expired", "invalid", "verification_unavailable", "active", "unconfigured"} {
+	for _, state := range []string{"missing", "expired", "invalid", "verification_unavailable", "rejected", "active", "unconfigured"} {
 		t.Run(state, func(t *testing.T) {
 			fixture.panel.license = nil
 			if state != "unconfigured" {
@@ -126,13 +129,16 @@ func TestLicensePanelGateAcrossRolesStatesAndMethods(t *testing.T) {
 
 func TestLicenseAccessResponseIsMinimalAndTracksState(t *testing.T) {
 	p := &Panel{}
-	for _, state := range []string{"missing", "expired", "invalid", "verification_unavailable", "active"} {
+	for _, state := range []string{"missing", "expired", "invalid", "verification_unavailable", "rejected", "active"} {
 		p.license = testPanelLicense(t, state)
 		w := httptest.NewRecorder()
 		p.handleLicenseAccess(w, httptest.NewRequest("GET", panelLicenseAccessPath, nil))
 		var result map[string]any
 		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
 			t.Fatal(err)
+		}
+		if state == "active" && result["valid_until"].(float64) > float64(time.Now().Add(time.Minute).Unix()) {
+			t.Fatal("browser deadline exceeds short verification", result)
 		}
 		if len(result) != 2 || result["can_use_panel"] != (state == "active") || w.Header().Get("Cache-Control") != "no-store" {
 			t.Fatal(state, result)
@@ -148,7 +154,7 @@ func TestLicenseUpdateExceptionIsExactAndAdministratorOnly(t *testing.T) {
 		panelUpdateStartPath: "POST", panelUpdateAbandonPath: "POST",
 		"/api/v1/panel/version": "GET", hostMutationReadinessPath: "GET",
 	}
-	for _, state := range []string{"missing", "expired", "invalid", "verification_unavailable", "unconfigured"} {
+	for _, state := range []string{"missing", "expired", "invalid", "verification_unavailable", "rejected", "unconfigured"} {
 		fixture.panel.license = nil
 		if state != "unconfigured" {
 			fixture.panel.license = testPanelLicense(t, state)
