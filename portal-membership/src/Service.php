@@ -109,7 +109,7 @@ SQL);
         $email = self::email($email);
         // The owner chooses the password only after proving email ownership.
         $hash = password_hash(self::secret(), PASSWORD_ARGON2ID);
-        $this->run('INSERT INTO members(email,password,created) VALUES(?,?,?) ON CONFLICT(email) DO NOTHING', [$email, $hash, $this->now()]);
+        $this->run('INSERT INTO members(email,password,created,accepted_terms) VALUES(?,?,?,?) ON CONFLICT(email) DO NOTHING', [$email, $hash, $this->now(), '2026-09-10']);
         // Never replace the password of an unverified account on a duplicate registration.
         $this->requestToken($email, 'verify');
     }

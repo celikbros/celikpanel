@@ -94,6 +94,7 @@ func newAuthzMatrixFixture(t *testing.T) authzMatrixFixture {
 	sessions := auth.NewSessionStore(sqlDB)
 	panel := &Panel{
 		db:       database,
+		license:  testPanelLicense(t, "active"),
 		sessions: sessions,
 		users:    repositories.NewPostgresUserRepository(sqlDB),
 	}

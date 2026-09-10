@@ -177,38 +177,53 @@ func (p *Panel) handleLicense(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(p.license.Status())
 }
 
-// Maintenance stays available: certificate renewal, passwords, DNS repairs,
-// backup/restore, deletion, updates and existing workload serving are unaffected.
-func licenseProvisioningRequest(r *http.Request) bool {
-	if r.Method != http.MethodPost {
-		return false
-	}
+// Only identity recovery and license activation remain available while locked.
+// This gate runs on authenticated HTTP requests, never on agents or schedulers.
+func licenseRecoveryRequest(r *http.Request) bool {
 	switch r.URL.Path {
-	case "/api/v1/domains/create", "/api/v1/users", "/api/v1/team-members", "/api/v1/subscriptions",
-		"/api/v1/database-servers", "/api/v1/vpn/peers", "/api/v1/import/cpanel/apply":
-		return true
+	case "/api/v1/auth/me", panelLicenseAccessPath:
+		return r.Method == http.MethodGet
+	case panelLicensePath:
+		return r.Method == http.MethodGet || r.Method == http.MethodPost
+	case "/api/v1/auth/logout", "/api/v1/auth/password", "/api/v1/auth/unimpersonate":
+		return r.Method == http.MethodPost
 	}
-	if segments, ok := strictRouteSegments(r, "/api/v1/domains/"); ok && len(segments) >= 2 {
-		switch strings.Join(segments[1:], "/") {
-		case "aliases", "databases", "mail/accounts", "mail/forwardings", "apps/install":
-			return true
-		}
-	}
-	if segments, ok := strictRouteSegments(r, "/api/v1/database-servers/"); ok && len(segments) == 2 {
-		return segments[1] == "databases" || segments[1] == "users"
-	}
-	// The current Store API is read-only; it has no provisioning endpoint.
 	return false
 }
 
-func (p *Panel) allowLicensedProvisioning(w http.ResponseWriter, r *http.Request) bool {
-	if p.license == nil || !licenseProvisioningRequest(r) {
+const panelLicenseAccessPath = "/api/v1/license/access"
+
+// All authenticated roles can read access, but only admins can see or change
+// the license itself. No key, binding, or account identity is exposed here.
+func (p *Panel) handleLicenseAccess(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	allowed := false
+	var until int64
+	if p.license != nil {
+		status := p.license.Status()
+		allowed = status.CanProvision
+		until = min(status.ExpiresAt, status.OfflineUntil)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	_ = json.NewEncoder(w).Encode(struct {
+		CanUsePanel bool  `json:"can_use_panel"`
+		ValidUntil  int64 `json:"valid_until"`
+	}{allowed, until})
+}
+
+func (p *Panel) allowLicensedPanel(w http.ResponseWriter, r *http.Request) bool {
+	if licenseRecoveryRequest(r) {
 		return true
 	}
-	if p.license.CanProvision(r.Context()) {
+	if p.license != nil && p.license.CanProvision(r.Context()) {
 		return true
 	}
 	writeCodedError(w, http.StatusForbidden, "license_required",
-		"New resources require an active server license. Existing services continue. The server administrator can renew in Settings > License.", "")
+		"Panel access requires an active server license. Existing services and scheduled tasks keep running. The server administrator must activate or renew the license.", "")
 	return false
 }

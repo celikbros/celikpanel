@@ -3,6 +3,10 @@
 import type { ScreenKey } from './en';
 
 export const trScreens: Record<ScreenKey, string> = {
+    "license.lockError": "Panel erişimi doğrulanamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+    "license.lockCheck": "Panel erişimi kontrol ediliyor…",
+    "license.tenantHelp": "Sunucu yöneticiniz CelikPanel lisansını etkinleştirmeli veya yenilemeli. Panel erişimi için yöneticinize başvurun.",
+    "license.tenantTitle": "Panel erişimi kapalı",
     "settings.section.license": "Lisans",
     "settings.section.license.desc": "Sunucu lisansı, aktivasyon ve yıllık yenileme.",
     "license.inUse": "Bu lisans başka bir sunucuyla eşleşmiş. Bu sunucunun anahtarını kullanın veya celikpanel.net hesabınızdaki Sunucu / IP değiştir ile eski eşlemeyi kaldırın.",
@@ -19,8 +23,7 @@ export const trScreens: Record<ScreenKey, string> = {
     "license.showKey": "Anahtarı göster",
     "license.hideKey": "Anahtarı gizle",
     "license.keyInvalid": "Anahtar biçimi doğru değil. celikpanel.net hesabınızdaki Anahtarı kopyala düğmesini kullanın.",
-    "license.continueSetup": "Sunucuyu hazırlamaya geç",
-    "license.explore": "Paneli incele",
+    "license.continueSetup": "Paneli aç",
     "license.title": "CelikPanel lisansı",
     "license.description": "Her lisans bir aktif sunucu içindir. Bir yıllık süre lisans oluşturulduğunda başlar.",
     "license.loadFailed": "Lisans durumu okunamadı. Tekrar kontrol edin.",
@@ -30,7 +33,7 @@ export const trScreens: Record<ScreenKey, string> = {
     "license.state.expired": "Lisans süresi doldu — yenileme gerekli",
     "license.state.verification_unavailable": "Lisans kontrolü tamamlanamadı — bağlantıyı kontrol edin",
     "license.expires": "Bitiş tarihi",
-    "license.restricted": "Yeni kaynak oluşturmak için aktif lisans gerekiyor. Mevcut site ve e-posta hizmetleri çalışmaya devam eder; bakım ve yedekleme erişilebilir.",
+    "license.restricted": "Paneli kullanmak için aktif lisans gerekiyor. Mevcut siteler, e-posta, veritabanları ve zamanlanmış görevler çalışmaya devam eder.",
     "license.refresh": "Tekrar kontrol et",
     "license.manage": "celikpanel.net hesabım ve lisanslarım",
     "license.key": "Lisans anahtarı",
