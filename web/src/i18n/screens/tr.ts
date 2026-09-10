@@ -3,6 +3,8 @@
 import type { ScreenKey } from './en';
 
 export const trScreens: Record<ScreenKey, string> = {
+    'license.updatePanel': 'CelikPanel’i güncelle',
+    'license.updateHelp': 'Aktivasyondan önce veya lisans süresi dolduğunda imzalı CelikPanel güncellemelerini kurabilirsiniz. Güncelleme lisansı etkinleştirmez veya yenilemez; diğer yönetim işlemleri kilitli kalır.',
     "license.lockError": "Panel erişimi doğrulanamadı. Bağlantınızı kontrol edip tekrar deneyin.",
     "license.lockCheck": "Panel erişimi kontrol ediliyor…",
     "license.tenantHelp": "Sunucu yöneticiniz CelikPanel lisansını etkinleştirmeli veya yenilemeli. Panel erişimi için yöneticinize başvurun.",

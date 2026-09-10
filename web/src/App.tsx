@@ -461,17 +461,15 @@ function AppRoutes() {
 function AuthGate() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [panelAccess, setPanelAccess] = useState(false);
   const authGenerationRef = useRef(0);
   const transitionAuthentication = useCallback((nextUser: CurrentUser | null) => {
     authGenerationRef.current += 1;
-    setPanelAccess(false);
     setUser(nextUser);
   }, []);
 
   useLayoutEffect(() => {
-    publishSystemUpdateAuthentication(!loading && user !== null && panelAccess);
-  }, [loading, user, panelAccess]);
+    publishSystemUpdateAuthentication(!loading && user !== null && user.effective_role === 'admin');
+  }, [loading, user]);
 
   useEffect(() => () => publishSystemUpdateAuthentication(false), []);
 
@@ -527,7 +525,7 @@ function AuthGate() {
   return (
     <AuthProvider user={user} onLogout={() => transitionAuthentication(null)}>
       <RouteLoadBoundary>
-        <LicenseOnboarding onAccessChange={setPanelAccess}>
+        <LicenseOnboarding>
         <Suspense fallback={<PageLoading />}>
           <ComponentOperationProvider>
             <AppRoutes />

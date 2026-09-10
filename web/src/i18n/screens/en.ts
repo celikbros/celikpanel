@@ -6,6 +6,8 @@
 // Giris formu cizilmeden once degil, o ekranlarla birlikte getirilir.
 
 export const enScreens = {
+    'license.updatePanel': 'Update CelikPanel',
+    'license.updateHelp': 'You can install signed CelikPanel updates before activation or after your license expires. Updating does not activate or renew your license; other management actions remain locked.',
     "license.lockError": "Panel access could not be verified. Check your connection and try again.",
     "license.lockCheck": "Checking panel access…",
     "license.tenantHelp": "Your server administrator must activate or renew the CelikPanel license. Contact your administrator to restore panel access.",

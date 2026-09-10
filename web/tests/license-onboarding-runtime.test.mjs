@@ -17,6 +17,9 @@ const stub = dataModule(`
   export const useLocation = () => ({ pathname: globalThis.licenseTest.pathname || '/domains' });
   export const useSearchParams = () => [new URLSearchParams(globalThis.licenseTest.search)];
   export const useI18n = () => ({ t: key => key, locale: 'en', screensReady: true, screensFailed: false });
+ export const BrandMark = () => null, LanguageSwitcher = () => null, ThemeSwitcher = () => null, ChangePasswordModal = () => null, ToastContainer = () => null;
+ export const LicensePanel = () => React.createElement('section', null, 'activation');
+ export const PanelUpdateCard = props => React.createElement('article', props, 'signed-update');
  export const Spinner = () => React.createElement('span', null, 'loading');
  export const LicenseLockScreen = props => React.createElement('aside', props, 'locked');
   export const Button = props => React.createElement('button', props);
@@ -34,6 +37,7 @@ async function component(name) {
 }
 const LicenseOnboarding = await component('LicenseOnboarding');
 const LicensePanel = await component('LicensePanel');
+const LicenseLockScreen = await component('LicenseLockScreen');
 const originalFetch = globalThis.fetch;
 const events = new EventTarget();
 globalThis.window = Object.assign(events, { setTimeout, clearTimeout, setInterval, clearInterval });
@@ -151,4 +155,23 @@ test('an open session locks at the signed deadline and browser history cannot es
   assert.equal(navigations.at(-1)[0],'/activate');
   assert.equal(tree.root.findAllByType('main').length,0);
  }finally{window.setTimeout=previous;await cleanup()}
+});
+
+test('only administrators can open signed updates while activation remains mounted', async () => {
+ for (const role of ['admin','reseller','customer','additional_user']) {
+  fixture(role);
+  try {
+   await act(async()=>{tree=Renderer.create(React.createElement(LicenseLockScreen,{checking:false,failed:false,onCheck(){}}))});
+   const disclosure=tree.root.findAllByType('details');
+   assert.equal(disclosure.length,role==='admin'?1:0);
+   assert.equal(tree.root.findAllByType('article').length,0);
+   if(role==='admin') {
+    await act(async()=>disclosure[0].props.onToggle({currentTarget:{open:true}}));
+    assert.equal(tree.root.findByType('article').props.activation,true);
+    assert.equal(tree.root.findAllByType('section').length,1,'activation stays available');
+    await act(async()=>disclosure[0].props.onToggle({currentTarget:{open:false}}));
+    assert.equal(tree.root.findAllByType('article').length,0);
+   }
+  } finally {await cleanup()}
+ }
 });
