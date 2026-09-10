@@ -85,12 +85,11 @@ try {
                     $m=$service->login($email,$password); session_regenerate_id(true);
                     $_SESSION=['member'=>$m['id'],'epoch'=>$m['epoch'],'lang'=>$lang,'created'=>time(),'csrf'=>bin2hex(random_bytes(32))]; $go='home'; break;
                 case 'logout': $_SESSION=[]; session_regenerate_id(true); break;
-                case 'issue': case 'release': case 'renew': case 'reveal': case 'remember': case 'rotate':
+                case 'issue': case 'release': case 'renew': case 'reveal': case 'rotate':
                     if (!$member) { throw new Problem('authentication_required'); }
                     if ($action==='issue') { $_SESSION['issued']=$service->issue((int)$member['id']); }
                     elseif ($action==='release') { $service->release((int)$member['id'],$_POST['id']??'',$password); $_SESSION['notice']='server_released'; }
                     elseif ($action==='reveal') { $_SESSION['issued']=$service->reveal((int)$member['id'],$_POST['id']??'',$password); }
-                    elseif ($action==='remember') { $_SESSION['issued']=$service->remember((int)$member['id'],$_POST['id']??'',$password,$_POST['key']??''); }
                     elseif ($action==='rotate') { $_SESSION['issued']=$service->rotate((int)$member['id'],$_POST['id']??'',$password); }
                     else { $service->renew((int)$member['id'],$_POST['id']??'',$password); $_SESSION['notice']='renewed'; }
                     $go='home'; break;

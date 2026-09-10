@@ -1,5 +1,5 @@
 """Exercise real HTTP sessions/CSRF/email links and activation without sending mail."""
-import http.cookiejar, json, re, sys, urllib.request, urllib.parse, urllib.error
+import http.cookiejar, json, re, sys, urllib.request, urllib.parse, urllib.error, sqlite3
 from pathlib import Path
 base='http://127.0.0.1:8379'
 private=Path(sys.argv[1])
@@ -72,6 +72,16 @@ code,again=api('activate',{'key':key,'server_id':'a'*64,'hostname':'fixture.exam
 check(code==200,'same key works after transfer')
 _,body,_=request('home&lang=en');check('Your licenses' in body and 'fixture.example.com' in body,'English account and binding')
 _,body,_=request('terms&lang=en');check('Terms and data notice' in body and '7 days' in body,'terms reachable')
+with sqlite3.connect(private/'members.sqlite') as db:
+ db.execute('UPDATE licenses SET key_encrypted=NULL WHERE id=?',(license_id,))
+_,body,_=request('home&lang=en')
+check('This older license key cannot be displayed.' in body and 'Create replacement key' in body,'legacy key has a clear replacement path')
+check('action=remember' not in body,'no save key action')
+_,body,_=request('remember',{'csrf':csrf(body),'id':license_id,'password':password,'key':key})
+with sqlite3.connect(private/'members.sqlite') as db:
+ check(db.execute('SELECT key_encrypted FROM licenses WHERE id=?',(license_id,)).fetchone()[0] is None,'removed save endpoint cannot store a key')
+_,body,_=request('remember&id='+license_id)
+check('name="key"' not in body and 'Your licenses' in body,'old save link returns to licenses without a save form')
 _,body,_=request('forgot');_,body,_=request('forgot',{'csrf':csrf(body),'email':email})
 reset=latest('reset',email)
 _,body,_=request('reset');_,body,_=request('reset',{'csrf':csrf(body),'token':reset,'password':'replacement-password-456'})

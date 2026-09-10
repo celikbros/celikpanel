@@ -216,18 +216,6 @@ SQL);
         $this->event($member,$id,'key_viewed');
         return ['id'=>$id,'key'=>$key];
     }
-    public function remember(int $member, string $id, string $password, string $key): array
-    {
-        $this->limit('key-access:'.$member,10,900);
-        return $this->atomic(function () use ($member,$id,$password,$key): array {
-            $l=$this->owned($member,$id,$password);
-            if (!preg_match('/^CPK-[a-f0-9]{64}$/D',$key) || !hash_equals($l['key_hash'],self::hash($key))) { throw new Problem('invalid_license'); }
-            $this->run('UPDATE licenses SET key_encrypted=? WHERE id=?',[$this->encryptKey($id,$key),$id]);
-            $this->event($member,$id,'key_saved');
-            return ['id'=>$id,'key'=>$key];
-        });
-    }
-
     public function release(int $member, string $id, string $password): void
     {
         $this->limit('release:'.$member,5,86400);
