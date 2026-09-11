@@ -426,3 +426,13 @@ body {
 html {
     background-color: rgb(var(--bg));
 }
+
+/* Keep focused setup controls clear of its persistent action row. */
+.setup-workspace :is(input, select, button, a, summary) {
+    scroll-margin-block: 8rem;
+}
+
+/* Small-height windows and software keyboards need the whole form viewport. */
+@media (max-height: 36rem) {
+    .setup-actions { position: static; }
+}

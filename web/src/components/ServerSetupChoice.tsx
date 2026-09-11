@@ -7,7 +7,7 @@ import { Button } from './ui';
 
 type ChoiceProps = { snapshot: ServerSetupSnapshot; onChosen: (next: ServerSetupSnapshot) => void };
 
-function GuidanceActions({ snapshot, onChosen, manualOnly = false }: ChoiceProps & { manualOnly?: boolean }) {
+function GuidanceActions({ snapshot, onChosen, manualOnly = false, compact = false }: ChoiceProps & { manualOnly?: boolean; compact?: boolean }) {
     const { t } = useI18n();
     const setup = useServerSetup();
     const [busy, setBusy] = useState(false);
@@ -34,12 +34,12 @@ function GuidanceActions({ snapshot, onChosen, manualOnly = false }: ChoiceProps
             await setup?.reload().catch(() => {});
         } finally { window.clearTimeout(timeout); pending.current = false; setBusy(false); }
     }
-    return <div className="mt-6">
+    return <div className={compact ? "mt-4 flex flex-wrap items-start gap-x-6 gap-y-3" : "mt-6"}>
         <div className="flex flex-wrap gap-3">
             {!manualOnly && <Button variant="primary" disabled={busy} onClick={() => void choose('guided')}>{t('setup.useWizard')}</Button>}
-            <Button variant="secondary" disabled={busy} onClick={() => void choose('manual')}>{t('setup.manual')}</Button>
+            {compact ? <button type="button" disabled={busy} onClick={() => void choose('manual')} className="min-h-11 py-2 text-sm font-medium text-primary underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60">{t('setup.manual')}</button> : <Button variant="secondary" disabled={busy} onClick={() => void choose('manual')}>{t('setup.manual')}</Button>}
         </div>
-        <p className="mt-4 max-w-2xl text-sm text-fg-muted">{t('setup.manualHelp')}</p>
+        <p className={compact ? "min-w-0 flex-1 basis-80 py-2 text-sm leading-6 text-fg-muted" : "mt-4 max-w-2xl text-sm text-fg-muted"}>{t('setup.manualHelp')}</p>
         {failed && <p role="alert" className="mt-4 max-w-2xl text-sm text-danger">{t('setup.choiceFailed')}</p>}
     </div>;
 }
@@ -54,7 +54,7 @@ export function ServerSetupChoice(props: ChoiceProps) {
     </section>;
 }
 
-export function ServerSetupManualAction(props: ChoiceProps) {
+export function ServerSetupManualAction(props: ChoiceProps & { compact?: boolean }) {
     return <GuidanceActions {...props} manualOnly />;
 }
 
