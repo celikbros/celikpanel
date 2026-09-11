@@ -340,13 +340,19 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
         {completed ? <section className="mt-8 max-w-3xl space-y-6" aria-labelledby="setup-ready-title">
             <div className="flex items-start gap-3"><Check className="mt-1 h-5 w-5 shrink-0 text-success" aria-hidden="true" /><div><h2 id="setup-ready-title" className="text-lg font-semibold">{t(customized ? 'setup.purpose.custom' : `setup.purpose.${snapshot.draft.purpose}`)}</h2><p className="mt-1 text-sm text-fg-muted">{t('setup.completeServices')}</p></div></div>
             <Link to={nextPath} className="inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-fg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{t(nextLabel)}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
-        </section> : <>
-            <ol className={`my-8 grid grid-cols-2 gap-x-5 gap-y-3 border-b border-border pb-6 text-sm ${customized ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`} aria-label={t('setup.steps')}>
-                {steps.map((item, index) => <li key={item} aria-current={step === item ? 'step' : undefined} className={`flex items-center gap-2 ${index === currentStep ? 'font-semibold text-primary' : 'text-fg-muted'}`}><span className="tabular-nums">{index + 1}.</span>{t(`setup.step.${item}`)}</li>)}
-            </ol>
-            {error && <p role="alert" className="mb-5 max-w-3xl rounded-lg border border-danger/40 bg-danger/5 p-4 text-sm text-danger">{error}</p>}
+        </section> : <div className="mt-6 grid items-start gap-6 lg:grid-cols-12 lg:gap-8">
+            <nav className="lg:sticky lg:top-6 lg:col-span-2" aria-label={t('setup.steps')}>
+                <p className="mb-3 flex items-center justify-between gap-4 font-semibold lg:hidden"><span>{t(`setup.step.${step}`)}</span><span className="text-sm tabular-nums text-fg-muted">{currentStep + 1} / {steps.length}</span></p>
+                <ol className={`grid gap-2 ${customized ? 'grid-cols-5' : 'grid-cols-4'} lg:flex lg:flex-col lg:gap-1`}>
+                    {steps.map((item, index) => <li key={item} aria-current={step === item ? 'step' : undefined} className={`flex items-center justify-center gap-3 rounded-lg px-2 py-3 text-sm lg:justify-start lg:px-3 ${index === currentStep ? 'bg-surface-2 font-semibold text-primary' : 'text-fg-muted'}`}>
+                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full tabular-nums ${index === currentStep ? 'bg-primary text-primary-fg' : 'border border-border-strong'}`}>{index + 1}</span><span className="sr-only lg:not-sr-only">{t(`setup.step.${item}`)}</span>
+                    </li>)}
+                </ol>
+            </nav>
+            <div className="min-w-0 lg:col-span-10">
+            {error && <p role="alert" className="mb-5 rounded-lg border border-danger/40 bg-danger/5 p-4 text-sm text-danger">{error}</p>}
             {resolving ? <div className="flex items-center gap-3"><Spinner label={t('setup.resuming')} /><p>{t('setup.resuming')}</p></div>
-                : step === 'progress' || hasOperation ? <section className="max-w-3xl" aria-labelledby="setup-progress-title">
+                : step === 'progress' || hasOperation ? <section aria-labelledby="setup-progress-title">
                     <h2 id="setup-progress-title" className="text-xl font-semibold">{t(reconnecting ? 'setup.reconnecting' : execution?.status === 'failed' ? 'setup.operationFailed' : waitingLicense ? 'setup.licenseWaiting' : execution?.status === 'waiting' ? 'setup.waiting' : execution?.status === 'succeeded' ? 'setup.verifying' : 'setup.installing')}</h2>
                     <p className="mt-3 text-sm leading-6 text-fg-muted">{t(reconnecting ? 'setup.uncertain' : execution?.status === 'failed' ? 'setup.failedHelp' : 'setup.progressHelp')}</p>
                     <ol className="mt-6 divide-y divide-border" aria-live="polite">
@@ -364,14 +370,17 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                             : waitingVerification ? <Button variant="primary" disabled={busy} onClick={() => void verifyManual()}>{t('setup.verify')}</Button>
                                 : (reconnecting || completionFailed) && <Button variant="primary" disabled={busy} onClick={() => void (marker && !execution ? resumeUnconfirmed() : reconcile())}>{t(marker && !execution ? 'setup.resumeConfirmed' : 'setup.reconnect')}</Button>}
                     </div>
-                </section> : <form onSubmit={next} className="max-w-3xl">
+                </section> : <form onSubmit={next} className="min-w-0">
                     {step === 'purpose' && <fieldset disabled={busy}>
                         <legend className="text-xl font-semibold">{t('setup.purposeTitle')}</legend>
-                        <div className="mt-5 divide-y divide-border rounded-xl border border-border bg-surface">
-                            {setupPurposes.map(purpose => <label key={purpose} className={`flex cursor-pointer items-start gap-4 p-5 hover:bg-surface-2 ${draft.purpose === purpose ? 'bg-surface-2' : ''}`}><input type="radio" name="setup-purpose" value={purpose} checked={draft.purpose === purpose} onChange={() => { setDraft(previous => chooseSetupPurpose(previous, purpose)); setPlan(null); }} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span><span className="font-semibold">{t(`setup.purpose.${purpose}`)}{purpose === 'web' && <span className="ml-2 text-xs font-normal text-fg-muted">{t('setup.recommended')}</span>}</span><span className="mt-1 block text-sm leading-6 text-fg-muted">{t(`setup.purpose.${purpose}.help`)}</span></span></label>)}
+                        <div className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface">
+                            {setupPurposes.map(purpose => <div key={purpose} className={`first:rounded-t-xl last:rounded-b-xl ${draft.purpose === purpose ? 'bg-surface-2' : 'hover:bg-surface-subtle'}`}>
+                                <label className="flex cursor-pointer items-start gap-4 px-4 py-4 sm:px-5"><input type="radio" name="setup-purpose" value={purpose} checked={draft.purpose === purpose} onChange={() => { setDraft(previous => chooseSetupPurpose(previous, purpose)); setPlan(null); }} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span className="grid min-w-0 flex-1 gap-1 sm:grid-cols-3 sm:gap-5"><span className="font-semibold"><span id={`setup-purpose-title-${purpose}`}>{t(`setup.purpose.${purpose}`)}</span>{purpose === 'web' && <span className="mt-1 block text-xs font-normal text-fg-muted">{t('setup.recommended')}</span>}</span><span className="text-sm leading-6 text-fg-muted sm:col-span-2">{t(`setup.purpose.${purpose}.help`)}</span></span></label>
+                                {draft.purpose === purpose && purpose !== 'custom' && <button type="button" disabled={!catalog || busy} aria-describedby={`setup-purpose-title-${purpose}`} className="mb-3 ml-12 inline-flex min-h-9 items-center text-sm font-medium text-primary underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60 sm:ml-[3.25rem]" onClick={() => { if (!catalog) return; change('customization', { components: draft.customization?.components || setupPresetComponents(draft, catalog) }); setStep('components'); }}>{t('setup.components.customize')}</button>}
+                            </div>)}
                         </div>
                         <p className="mt-4 text-sm text-fg-muted">{t('setup.purposeHelp')}</p>
-                        {draft.purpose !== 'custom' && <div className="mt-5 space-y-3"><Button type="button" disabled={!catalog || busy} onClick={() => { if (!catalog) return; change('customization', { components: draft.customization?.components || setupPresetComponents(draft, catalog) }); setStep('components'); }}>{t('setup.components.customize')}</Button>{catalogFailed && <p role="alert" className="text-sm text-fg-muted">{t('setup.components.loadFailed')} <Button type="button" onClick={reloadCatalog}>{t('common.retry')}</Button></p>}</div>}
+                        {catalogFailed && <p role="alert" className="mt-3 text-sm text-fg-muted">{t('setup.components.loadFailed')} <Button type="button" onClick={reloadCatalog}>{t('common.retry')}</Button></p>}
                     </fieldset>}
                     {step === 'components' && (catalog ? <ServerSetupComponents catalog={catalog} selected={draft.customization?.components || []} disabled={busy} onChange={components => change('customization', { components })} /> : <div role={catalogFailed ? 'alert' : 'status'} className="space-y-3"><h2 className="text-xl font-semibold">{t('setup.components.title')}</h2><p className="text-sm text-fg-muted">{t(catalogFailed ? 'setup.components.loadFailed' : 'setup.components.loading')}</p>{catalogFailed && <Button type="button" onClick={reloadCatalog}>{t('common.retry')}</Button>}</div>)}
                     {step === 'components' && emptySelectionInvalid && <p role="alert" className="mt-4 text-sm text-danger">{t('setup.components.chooseRequired')}</p>}
@@ -407,13 +416,16 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         {plan.blockers.length > 0 && <div role="alert" className="mt-5 rounded-lg border border-warning-mark/40 bg-warning-mark/10 p-4"><p className="font-semibold">{t('setup.planBlocked')}</p><ul className="mt-3 list-disc space-y-2 pl-5 text-sm">{plan.blockers.map(code => <li key={code}>{failureText(code)}<details className="mt-1 text-xs text-fg-muted"><summary className="cursor-pointer">{t('setup.details')}</summary><code className="mt-1 block break-words">{code}</code></details></li>)}</ul></div>}
                         {plan.can_start && <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-6"><input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span>{t('setup.confirm')}</span></label>}
                     </section>}
-                    <div className="mt-8 flex flex-wrap items-center gap-4 border-t border-border pt-6">
+                    <div className="setup-actions sticky bottom-0 z-10 mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-bg py-4">
                         {step !== 'purpose' && <Button type="button" variant="secondary" disabled={busy} onClick={() => { setStep(steps[Math.max(0, currentStep - 1)]); setPlan(null); setAcknowledged(false); }}>{t('setup.back')}</Button>}
+                        <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
                         {step === 'review' ? <Button type="button" variant="primary" disabled={busy || !plan?.can_start || !acknowledged} onClick={() => void start()}>{t('setup.start')}</Button> : <button type="submit" disabled={busy || (step === 'components' && (!catalog || catalog.inventory_state !== 'ready' || emptySelectionInvalid)) || (step === 'access' && (!!dnsSelectionError || (draft.dns_mode === 'existing' && !remoteVerified)))} className="inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-2.5 font-semibold text-primary-fg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60">{busy ? t('common.loading') : t(step === 'purpose' || step === 'components' ? 'setup.continue' : 'setup.review')}<ArrowRight className="h-4 w-4" aria-hidden="true" /></button>}
+                        </div>
                     </div>
                 </form>}
-            {!completed && !hasOperation && <ServerSetupManualAction snapshot={snapshot} onChosen={next => { accept(next); setManualExit(true); }} />}
-        </>}
+            {!completed && !hasOperation && <ServerSetupManualAction compact snapshot={snapshot} onChosen={next => { accept(next); setManualExit(true); }} />}
+            </div>
+        </div>}
     </ServerSetupShell>;
 }
 

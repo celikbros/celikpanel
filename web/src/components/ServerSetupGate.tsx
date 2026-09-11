@@ -32,16 +32,16 @@ export function ServerSetupShell({ children }: { children: ReactNode }) {
         } catch { setLogoutError(true); } finally { setLeaving(false); }
     }
     return <div className="min-h-screen bg-bg text-fg">
-        <header className="border-b border-border bg-surface px-4 py-4 sm:px-8">
-            <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4">
+        <header className="border-b border-border bg-surface py-4">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 sm:px-8">
                 <div className="flex items-center gap-3 font-semibold"><BrandMark className="h-7 w-7 text-primary" />CelikPanel</div>
                 <div className="flex flex-wrap items-center gap-2"><LanguageSwitcher /><ThemeSwitcher /><Button variant="secondary" disabled={leaving} onClick={() => void signOut()}>{t('user.logout')}</Button></div>
             </div>
         </header>
-        <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8 sm:py-12">
+        <main className="setup-workspace mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8">
             {logoutError && <p role="alert" className="mb-4 text-danger">{t('common.error')}</p>}
             {children}
-            <details className="mt-10 border-t border-border pt-5 text-sm">
+            <details className="mt-6 border-t border-border pt-4 text-sm">
                 <summary className="cursor-pointer font-semibold text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">{t('setup.recovery')}</summary>
                 <div className="mt-4 flex flex-wrap items-center gap-5">
                     <Link to="/settings?section=panel" className="text-primary underline underline-offset-4">{t('setup.recoveryAccess')}</Link>

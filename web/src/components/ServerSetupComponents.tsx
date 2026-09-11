@@ -46,12 +46,13 @@ export function ServerSetupComponents({ catalog, selected, onChange, disabled }:
     const lookup = new Map(catalog.components.map(row => [row.id, row]));
     const grouped = [...new Set(groups.map(group => group[0].category))];
     const unknown = selected.filter(id => !lookup.has(id));
-    return <fieldset disabled={disabled} className="space-y-6">
+    return <fieldset disabled={disabled} className="space-y-4">
         <legend className="text-xl font-semibold">{t('setup.components.title')}</legend>
-        <p className="pt-3 text-sm leading-6 text-fg-muted">{t('setup.components.help')}</p>
+        <p className="pt-2 text-sm leading-6 text-fg-muted">{t('setup.components.help')}</p>
         <p className="text-sm leading-6 text-fg-muted">{t('setup.components.preserve')}</p>
         {catalog.inventory_state === 'unknown' && <p role="alert" className="text-sm text-danger">{t('setup.components.inventoryUnknown')}</p>}
         {unknown.length > 0 && <div role="alert" className="space-y-2 text-sm text-danger"><p>{t('setup.components.savedUnavailable')}</p><Button type="button" onClick={() => onChange(selected.filter(id => lookup.has(id)))}>{t('setup.components.removeUnavailable')}</Button></div>}
+        <div className="grid items-start gap-5 xl:grid-cols-2">
         {grouped.map(category => <fieldset key={category} className="rounded-lg border border-border bg-surface">
             <legend className="ml-4 px-1 text-base font-semibold">{t(categories[category] || 'setup.components.category.other')}</legend>
             <div className="divide-y divide-border">
@@ -66,7 +67,7 @@ export function ServerSetupComponents({ catalog, selected, onChange, disabled }:
                     const installed = catalog.inventory_state === 'ready' && group.every(row => row.installed);
                     const name = group.map(row => row.name).join(' + ');
                     const rowID = `setup-component-${group[0].id}`;
-                    return <div key={rowID} className="px-4 py-4 sm:px-5">
+                    return <div key={rowID} className="px-4 py-3">
                         <label htmlFor={rowID} className={`flex items-start gap-3 ${locked ? 'cursor-default' : 'cursor-pointer'}`}>
                             <input id={rowID} type="checkbox" checked={checked} disabled={locked} aria-describedby={`${rowID}-detail`}
                                 onChange={() => onChange(checked ? selected.filter(id => !groupIDs.has(id)) : [...selected, group[0].id])}
@@ -86,6 +87,7 @@ export function ServerSetupComponents({ catalog, selected, onChange, disabled }:
                 })}
             </div>
         </fieldset>)}
+        </div>
         <div className="border-t border-border pt-5 text-sm leading-6 text-fg-muted"><p className="font-semibold text-fg">{t('setup.components.accessTitle')}</p><p className="mt-2">{t('setup.components.accessHelp')}</p></div>
     </fieldset>;
 }
