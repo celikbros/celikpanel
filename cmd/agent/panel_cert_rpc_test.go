@@ -51,6 +51,28 @@ func installPanelCertificateAPTPackageFamily(t *testing.T) {
 	t.Cleanup(func() { panelCertDetectPkgFamily = originalDetect })
 }
 
+// The orchestration tests below replace all host writes. Keep ownership repair
+// inside that fixture boundary while asserting its exact managed target; real
+// metadata and root/non-root process checks exercise the production preparer.
+func installPanelCertificateSourceOwnershipFixture(t *testing.T, domain string) {
+	t.Helper()
+	original := panelCertPrepareSourceOwnership
+	calls := 0
+	panelCertPrepareSourceOwnership = func(gotDomain, lineage string) error {
+		calls++
+		if gotDomain != domain || lineage != panelCertLineageName(domain) {
+			t.Fatalf("ownership preparation target = %q %q", gotDomain, lineage)
+		}
+		return nil
+	}
+	t.Cleanup(func() {
+		panelCertPrepareSourceOwnership = original
+		if calls != 1 {
+			t.Errorf("ownership preparation calls = %d, want one", calls)
+		}
+	})
+}
+
 func bridgePanelCertificateIssueStageToLegacyPublishTest(t *testing.T) {
 	t.Helper()
 	original := panelCertStageIssue
@@ -379,6 +401,7 @@ func TestPanelCertificateChallengeRefusesInactiveNginx(t *testing.T) {
 }
 
 func TestIssuePanelCertificateDoesNotInstallHookOrPublishWithoutAutomaticRenewal(t *testing.T) {
+	installPanelCertificateSourceOwnershipFixture(t, "panel.example.test")
 	installPanelCertificateAPTPackageFamily(t)
 	store := installPanelCertificateActivationMemoryStore(t)
 	originalLookPath := panelCertLookPath
@@ -462,6 +485,7 @@ func TestIssuePanelCertificateDoesNotInstallHookOrPublishWithoutAutomaticRenewal
 }
 
 func TestIssuePanelCertificatePublishesExactMaterialAndPersistsRestartIntent(t *testing.T) {
+	installPanelCertificateSourceOwnershipFixture(t, "panel.example.test")
 	installPanelCertificateAPTPackageFamily(t)
 	store := installPanelCertificateActivationMemoryStore(t)
 	bridgePanelCertificateIssueStageToLegacyPublishTest(t)
@@ -603,6 +627,7 @@ func TestIssuePanelCertificatePublishesExactMaterialAndPersistsRestartIntent(t *
 }
 
 func TestIssuePanelCertificateCleansBoundIntentWhenDeployHookFails(t *testing.T) {
+	installPanelCertificateSourceOwnershipFixture(t, "panel.example.test")
 	installPanelCertificateAPTPackageFamily(t)
 	store := installPanelCertificateActivationMemoryStore(t)
 	originalLookPath := panelCertLookPath
@@ -673,6 +698,7 @@ func TestIssuePanelCertificateCleansBoundIntentWhenDeployHookFails(t *testing.T)
 }
 
 func TestIssuePanelCertificateCleansUnchangedIntentAfterCertbotFailure(t *testing.T) {
+	installPanelCertificateSourceOwnershipFixture(t, "panel.example.test")
 	installPanelCertificateAPTPackageFamily(t)
 	store := installPanelCertificateActivationMemoryStore(t)
 	originalLookPath := panelCertLookPath

@@ -70,11 +70,12 @@ var (
 	certificateCleanupRunCertbot      = func(args ...string) ([]byte, error) {
 		return runPanelCertCommand(panelCertCleanupTimeout, "certbot", args...)
 	}
-	panelCertLookPath             = exec.LookPath
-	panelCertRunCommand           = runPanelCertCommand
-	panelCertRunMutationCommand   = runPanelCertMutationCommand
-	panelCertPrepareChallengeRoot = preparePanelACMEChallengeRoot
-	panelCertApplyVhost           = func(
+	panelCertLookPath               = exec.LookPath
+	panelCertRunCommand             = runPanelCertCommand
+	panelCertRunMutationCommand     = runPanelCertMutationCommand
+	panelCertPrepareChallengeRoot   = preparePanelACMEChallengeRoot
+	panelCertPrepareSourceOwnership = prepareManagedCertbotSourceOwnership
+	panelCertApplyVhost             = func(
 		ctx context.Context,
 		a *Agent,
 		name, config string,
@@ -257,7 +258,7 @@ func (a *Agent) IssuePanelCertificateV2(
 		return nil
 	}
 
-	if err := prepareManagedCertbotSourceOwnership(domain, panelCertLineageName(domain)); err != nil {
+	if err := panelCertPrepareSourceOwnership(domain, panelCertLineageName(domain)); err != nil {
 		_ = panelCertWithPublishLock(func() error { return clearPanelCertificateIssuanceIntentLocked(intent) })
 		resp.Error = err.Error()
 		return nil
