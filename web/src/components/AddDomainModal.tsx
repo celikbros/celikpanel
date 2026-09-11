@@ -24,6 +24,8 @@ interface HostingCapabilities {
     php_versions: string[];
     dns_server: string;
     dns_identity_ready: boolean;
+    dns_management_mode?: 'local' | 'external' | 'existing';
+    dns_management_ready?: boolean;
     mail_server: boolean;
 }
 
@@ -138,24 +140,20 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
             .catch(() => setCaps(null));
     }, []);
 
-    // Product rule (D-009): this server serves its domains' DNS itself — with
-    // no DNS server installed, no domain of any type can be added. One clear
-    // blocker instead of a confusing "install one OR manage DNS elsewhere".
-    // caps === null covers both "still loading" and "fetch failed": either
-    // way, nothing is known to be available yet, so nothing is offered.
-    // Ürün kuralı (D-009): bu sunucu, domain'lerinin DNS'ini kendisi sunar —
-    // DNS sunucusu kurulu değilken hiçbir tipte domain eklenemez. caps ===
-    // null hem "hâlâ yükleniyor" hem "çekme başarısız oldu"yu kapsar: her iki
-    // durumda da hiçbir şeyin uygun olduğu bilinmiyordur, o yüzden hiçbiri
-    // sunulmaz.
-    const dnsMissing = !caps || caps.dns_server === '' || caps.dns_identity_ready !== true;
+    // Explicit external DNS permits websites without a local publisher. A
+    // DNS-only domain still requires a proven local authoritative service.
+    const localDNSReady = !!caps && caps.dns_server !== '' && caps.dns_identity_ready === true;
+    const externalDNSReady = caps?.dns_management_mode === 'external' && caps.dns_management_ready === true;
+    const remoteDNSReady = caps?.dns_management_mode === 'existing' && caps.dns_management_ready === true;
+    const hostingDNSReady = localDNSReady || externalDNSReady || remoteDNSReady;
+    const dnsMissing = purpose === 'dnsonly' ? !localDNSReady : !hostingDNSReady;
     // A website needs a web server — and ONLY a web server. PHP is no longer a
     // precondition here (D-013): a site is created first, its PHP switch is a
     // setting afterwards, so a server without PHP can still host websites.
     // Web sitesi bir web sunucusu ister — ve YALNIZ onu. PHP artık burada ön
     // koşul değildir (D-013): önce site oluşturulur, PHP anahtarı sonradan bir
     // ayardır; yani PHP'siz bir sunucu da web sitesi barındırabilir.
-    const websiteAvailable = !!caps && !dnsMissing && caps.web_server !== '';
+    const websiteAvailable = !!caps && hostingDNSReady && caps.web_server !== '';
 
     const purposeOptions: {
         id: Purpose;
@@ -164,7 +162,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
         requirement: string | null;
     }[] = [
         { id: 'website', icon: Server, available: websiteAvailable, requirement: !caps || dnsMissing || websiteAvailable ? null : t('domains.add.needsWebServer') },
-        { id: 'dnsonly', icon: Network, available: !dnsMissing, requirement: null },
+        { id: 'dnsonly', icon: Network, available: localDNSReady, requirement: null },
     ];
 
     const handleSubmit = async (e: React.FormEvent) => {

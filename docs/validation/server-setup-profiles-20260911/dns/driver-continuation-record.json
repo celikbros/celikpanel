@@ -1,0 +1,10 @@
+{
+  "production_source_unchanged": true,
+  "first_driver_result": "primary wizard succeeded and create succeeded; client assertion expected lowercase domain_id",
+  "exact_assertion_before": "assert created.get('domain_id',0)>0 and not created.get('dns_pending',False),created",
+  "exact_assertion_after": "assert created.get('DomainID',created.get('domain_id',0))>0 and not created.get('dns_pending',False),created",
+  "original_driver_sha256": "9777ed0c8a2e6d2931d16b1288d5d0be0c62774379d20dd028f2351609a2159c",
+  "corrected_driver_sha256": "485624125f6dde3f8082dd7b708599d723e4ee2397178a9ee968fa5f3c9b0bf2",
+  "continuation": "Read-only DNS query for already-created DomainID1; no duplicate create/start. Original failed client log retained.",
+  "continuation_log": "dnsprimary/transfer-readonly-driver.log"
+}

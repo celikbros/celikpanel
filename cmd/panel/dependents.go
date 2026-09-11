@@ -161,7 +161,13 @@ func serviceDependents(ctx context.Context, db *sql.DB, serviceID string) (int, 
 			FROM domains d
 			JOIN subscriptions sub ON d.subscription_id = sub.id
 			JOIN users u ON sub.owner_id = u.id
-			ORDER BY d.name`)
+			WHERE d.dns_management = 'local'
+            UNION ALL
+            SELECT own.zone_name, client.label || ' [remote DNS]'
+            FROM remote_dns_zone_ownership own
+            JOIN remote_dns_clients client ON client.id=own.client_id
+            WHERE own.deleted=0 OR own.applied_generation < own.generation
+			ORDER BY 1`)
 		if err != nil {
 			return 0, nil, err
 		}

@@ -469,6 +469,10 @@ func (p *Panel) planPanelCertificateFirewall(
 	if err != nil {
 		return err
 	}
+	tcp, udp, err = p.setupChildFirewallPorts(ctx, *op, status, tcp, udp)
+	if err != nil {
+		return err
+	}
 	commitment, err := mutationpayload.CanonicalFirewallApply(true, false, tcp, udp)
 	if err != nil {
 		return err

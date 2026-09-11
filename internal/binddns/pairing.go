@@ -155,6 +155,7 @@ func pairingReceipt(_ string, pairing Pairing, serial uint32, catalog []byte) Pa
 		receipt.CatalogSHA256 = sha256Hex(catalog)
 	} else {
 		receipt.InMemory = true
+		receipt.SecondaryConfigVersion = 1
 	}
 	return receipt
 }
@@ -275,11 +276,32 @@ func appendSecondaryCatalogConfig(
 	_ string,
 	pairing Pairing,
 ) {
-	config.WriteString("catalog-zones {\n\tzone \"")
+	// The catalog itself must be a normal secondary zone. The catalog-zones
+	// subscription belongs inside the host's options block and is emitted by
+	// SecondaryCatalogOptions from this same receipt-bound pairing identity.
+	config.WriteString("zone \"")
 	config.WriteString(catalogDomain(pairing.PeerIP))
-	config.WriteString("\" {\n\t\tdefault-primaries { ")
+	config.WriteString("\" {\n\ttype secondary;\n\tprimaries { ")
 	config.WriteString(pairing.PeerIP)
-	config.WriteString("; };\n\t\tin-memory yes;\n\t};\n};\n")
+	config.WriteString("; };\n};\n")
+}
+
+// SecondaryCatalogOptions returns the exact catalog subscription for insertion
+// inside a BIND options block. It does not produce a standalone configuration.
+// The caller must bind this host policy to the same verified PairingReceipt as
+// the immutable catalog zone, and must reject outside managed subscriptions.
+func SecondaryCatalogOptions(pairing Pairing) (string, error) {
+	canonical, err := canonicalPairing(pairing)
+	if err != nil {
+		return "", err
+	}
+	if canonical.Role != PairRoleSecondary {
+		return "", errors.New("BIND catalog subscription requires a secondary pairing")
+	}
+	return fmt.Sprintf(
+		"catalog-zones {\n\tzone %q default-primaries { %s; } in-memory yes;\n};\n",
+		catalogDomain(canonical.PeerIP), canonical.PeerIP,
+	), nil
 }
 
 func validatePairingReceipt(root string, receipt *PairingReceipt) error {
@@ -301,12 +323,13 @@ func validatePairingReceipt(root string, receipt *PairingReceipt) error {
 	if pairing.Role == PairRolePrimary {
 		expectedFile := path.Join("zones", zoneFileName(receipt.LocalCatalog))
 		if receipt.CatalogFile != expectedFile || !validDigest(receipt.CatalogSHA256) ||
-			receipt.InMemory {
+			(receipt.InMemory || receipt.SecondaryConfigVersion != 0) {
 			return errors.New("BIND primary catalog receipt is invalid")
 		}
 		return nil
 	}
-	if receipt.CatalogFile != "" || receipt.CatalogSHA256 != "" || !receipt.InMemory {
+	if receipt.CatalogFile != "" || receipt.CatalogSHA256 != "" || !receipt.InMemory ||
+		(receipt.SecondaryConfigVersion != 0 && receipt.SecondaryConfigVersion != 1) {
 		return errors.New("BIND secondary catalog receipt is invalid")
 	}
 	return nil

@@ -1441,6 +1441,36 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+        -- Reverse remote DNS associations before the DNS ownership column.
+        DROP TRIGGER remote_dns_domain_delete_requires_receipt;
+        DROP TRIGGER domain_dns_remote_connection_immutable;
+        DROP TRIGGER domain_dns_remote_connection_insert;
+        DROP TRIGGER domain_dns_remote_connection_parent_update;
+        DROP TRIGGER hostname_reservations_remote_insert;
+        DROP TRIGGER hostname_reservations_remote_update;
+        DROP TRIGGER pdns_remote_namespace_insert;
+        DROP TRIGGER pdns_remote_namespace_rename;
+        DROP TRIGGER remote_zone_no_tenant_claim;
+        DROP TABLE remote_dns_zones;
+        DROP TABLE remote_dns_records;
+        DROP TABLE remote_dns_zone_ownership;
+        DROP TABLE remote_dns_origin_history;
+        DROP TABLE remote_dns_connections;
+        DROP TABLE remote_dns_clients;
+        DROP TABLE remote_dns_enrollments;
+        ALTER TABLE domains DROP COLUMN dns_remote_connection_id;
+
+        -- Reverse setup migrations before restoring the historical schema.
+        DROP TABLE server_setup_executions;
+        DROP TABLE server_setup_plans;
+        DROP TABLE server_setup_state;
+        DROP TRIGGER domain_dns_management_immutable;
+        DROP TRIGGER domain_dns_management_parent;
+        DROP TRIGGER domain_dns_management_parent_update;
+        DROP TRIGGER external_domain_no_local_zone;
+        DROP TRIGGER external_domain_existing_zone;
+        ALTER TABLE domains DROP COLUMN dns_management;
+
         -- Reverse migration 038: this fixture represents schema version 20.
         ALTER TABLE database_servers DROP COLUMN admin_username;
 

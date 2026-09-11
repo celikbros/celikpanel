@@ -180,16 +180,10 @@ func verifyDNSSwitchJournalTarget(
 		}
 		legacyPairedTarget := isLegacyDNSEngineState(state) &&
 			manifest.Topology == transport.DNSTopologyPaired
-		transferPeer := ""
-		if manifest.Topology == transport.DNSTopologyPaired &&
-			manifest.PairRole == transport.DNSPairRoleSecondary {
-			transferPeer = manifest.PeerIP
-		}
-		if err := verifyManagedBINDConfigExact(
-			ctx, layout, transferPeer, legacyPairedTarget,
-		); err != nil {
+		if err := verifyManagedBINDRuntimeConfigExact(ctx, layout, receipt, legacyPairedTarget); err != nil {
 			return err
 		}
+
 		expected := binddns.Generation{ID: journal.TargetGeneration}
 		if !legacyPairedTarget {
 			plan, planErr := bindSwitchTreePlanWithPrimaryCatalogSerial(
@@ -303,6 +297,10 @@ func bindConfigMutationFromJournal(
 	transferPeer string,
 	journal dnsEngineSwitchJournal,
 ) (bindConfigMutation, error) {
+	pairing, err := bindSecondaryOptionsFromJournal(layout, journal)
+	if err != nil {
+		return bindConfigMutation{}, err
+	}
 	snapshots := make(map[string]dnsFileSnapshot, len(journal.ConfigBefore))
 	for _, snapshot := range journal.ConfigBefore {
 		snapshot.Data = append([]byte(nil), snapshot.Data...)
@@ -331,7 +329,7 @@ func bindConfigMutationFromJournal(
 				return dnsFileSnapshot{}, errors.New("BIND recovery journal config set is incomplete")
 			}
 			return snapshot, nil
-		},
+		}, pairing,
 	)
 	if err != nil {
 		return bindConfigMutation{}, err

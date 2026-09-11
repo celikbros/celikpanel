@@ -1,0 +1,8 @@
+application ('running', '01-dns', 'null')
+application ('running', '02-service', 'null')
+application ('running', '03-runtime', 'null')
+application ('running', '04-service', 'null')
+application ('running', '05-service', 'null')
+application ('running', '07-panel_certificate', 'null')
+application ('succeeded', 'complete', 'null')
+PROFILE_EXECUTION_PASSED application

@@ -1,0 +1,10 @@
+web ('running', '01-dns', 'null')
+web ('running', '02-service', 'null')
+web ('running', '03-service', 'null')
+web ('running', '04-service', 'null')
+web ('running', '05-service', 'null')
+web ('running', '06-service', 'null')
+web ('running', '08-panel_certificate', 'null')
+web ('running', '09-verify', 'null')
+web ('succeeded', 'complete', 'null')
+PROFILE_EXECUTION_PASSED web

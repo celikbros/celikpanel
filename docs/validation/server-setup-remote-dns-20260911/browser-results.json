@@ -1,0 +1,66 @@
+[
+  {
+    "lang": "tr",
+    "width": 1440,
+    "scenario": "new",
+    "setupReads": 5,
+    "startCalls": 1,
+    "pairCalls": 1,
+    "writes": [
+      "/api/v1/setup",
+      "/api/v1/dns/remote/connections",
+      "/api/v1/setup",
+      "/api/v1/setup/plan",
+      "/api/v1/setup/start"
+    ],
+    "errors": []
+  },
+  {
+    "lang": "tr",
+    "width": 390,
+    "scenario": "new",
+    "setupReads": 5,
+    "startCalls": 1,
+    "pairCalls": 1,
+    "writes": [
+      "/api/v1/setup",
+      "/api/v1/dns/remote/connections",
+      "/api/v1/setup",
+      "/api/v1/setup/plan",
+      "/api/v1/setup/start"
+    ],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "scenario": "new",
+    "setupReads": 5,
+    "startCalls": 1,
+    "pairCalls": 1,
+    "writes": [
+      "/api/v1/setup",
+      "/api/v1/dns/remote/connections",
+      "/api/v1/setup",
+      "/api/v1/setup/plan",
+      "/api/v1/setup/start"
+    ],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 390,
+    "scenario": "new",
+    "setupReads": 5,
+    "startCalls": 1,
+    "pairCalls": 1,
+    "writes": [
+      "/api/v1/setup",
+      "/api/v1/dns/remote/connections",
+      "/api/v1/setup",
+      "/api/v1/setup/plan",
+      "/api/v1/setup/start"
+    ],
+    "errors": []
+  }
+]

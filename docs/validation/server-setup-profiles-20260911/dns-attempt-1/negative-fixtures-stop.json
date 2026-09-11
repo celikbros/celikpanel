@@ -1,0 +1,16 @@
+{
+  "dnsprimary": {
+    "pid": 10891,
+    "overlay": "/var/tmp/cp-setup-dns-profile-20260911/dnsprimary/overlay.qcow2",
+    "evidence": "final-negative-evidence.json",
+    "journal": "final-negative-journal.log",
+    "qmp_stopped": true
+  },
+  "dnssecondary": {
+    "pid": 10906,
+    "overlay": "/var/tmp/cp-setup-dns-profile-20260911/dnssecondary/overlay.qcow2",
+    "evidence": "final-negative-evidence.json",
+    "journal": "final-negative-journal.log",
+    "qmp_stopped": true
+  }
+}

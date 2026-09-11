@@ -1,0 +1,6 @@
+1.1.1.1 dev lo src 192.0.2.15 uid 0 \    cache <local> 
+127.0.1.1       STREAM mail.webmail.setup.test
+127.0.1.1       DGRAM  
+127.0.1.1       RAW    
+192.0.2.15      mail.webmail.setup.test
+ISOLATED_TEST_NET_MAIL_IDENTITY_CONFIGURED

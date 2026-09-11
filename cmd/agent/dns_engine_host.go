@@ -555,6 +555,10 @@ func (hostDNSEngineBackend) Readiness(
 					if err != nil {
 						log.Printf("BIND primary peer readiness proof failed: %v", err)
 					}
+					states[0].SecondaryReady, err = bindSecondaryPairReadyForState(ctx, layout.GenerationRoot, tree, state)
+					if err != nil {
+						log.Printf("BIND secondary transfer readiness proof failed: %v", err)
+					}
 				}
 			}
 		}
@@ -631,6 +635,10 @@ func (hostDNSEngineBackend) Readiness(
 			states[1].PairReady, err = powerDNSPrimaryPairReady(ctx, state)
 			if err != nil {
 				log.Printf("PowerDNS primary peer readiness proof failed: %v", err)
+			}
+			states[1].SecondaryReady, err = powerDNSSecondaryPairReady(ctx, state)
+			if err != nil {
+				log.Printf("PowerDNS secondary transfer readiness proof failed: %v", err)
 			}
 		}
 	}
@@ -1574,6 +1582,7 @@ func (hostDNSEngineBackend) Switch(
 	}
 	configs, err := prepareBINDConfigMutationWithAuthority(
 		ctx, layout, transferPeer, optionsAuthority,
+		bindSecondaryOptionsPairing(manifest.PairRole, manifest.LocalIP, manifest.LocalNS, manifest.PeerIP, manifest.PeerNS),
 	)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
@@ -2182,9 +2191,10 @@ func prepareBINDConfigMutation(
 	ctx context.Context,
 	layout bindHostLayout,
 	transferPeer string,
+	pairing ...*binddns.Pairing,
 ) (bindConfigMutation, error) {
 	return prepareBINDConfigMutationWithAuthority(
-		ctx, layout, transferPeer, bindOptionsExclusive,
+		ctx, layout, transferPeer, bindOptionsExclusive, pairing...,
 	)
 }
 
@@ -2215,6 +2225,7 @@ func prepareBINDConfigMutationWithAuthority(
 	layout bindHostLayout,
 	transferPeer string,
 	authority bindOptionsAuthority,
+	pairing ...*binddns.Pairing,
 ) (bindConfigMutation, error) {
 	policy, err := resolveBINDConfigOwnerPolicy(ctx, layout)
 	if err != nil {
@@ -2237,7 +2248,7 @@ func prepareBINDConfigMutationWithAuthority(
 			}
 			snapshot.Data = append([]byte(nil), snapshot.Data...)
 			return snapshot, nil
-		},
+		}, pairing...,
 	)
 	if err != nil {
 		return bindConfigMutation{}, err
@@ -2254,6 +2265,7 @@ func prepareBINDConfigMutationWithSnapshotReader(
 	transferPeer string,
 	authority bindOptionsAuthority,
 	readSnapshot bindConfigSnapshotReader,
+	pairing ...*binddns.Pairing,
 ) (bindConfigMutation, error) {
 	if readSnapshot == nil {
 		return bindConfigMutation{}, errors.New("BIND config snapshot reader is required")
@@ -2306,7 +2318,7 @@ func prepareBINDConfigMutationWithSnapshotReader(
 					return bindConfigMutation{}, fmt.Errorf("prepare BIND authoritative options: %w", err)
 				}
 			}
-			content, err = managedBINDOptions(content, transferPeer)
+			content, err = managedBINDOptions(content, transferPeer, pairing...)
 			if err != nil {
 				return bindConfigMutation{}, bindManagedOptionsRefusal(
 					path, string(data), transferPeer, err,
@@ -2376,8 +2388,9 @@ func verifyManagedBINDConfigExact(
 	layout bindHostLayout,
 	transferPeer string,
 	requireLegacyOptions bool,
+	pairing ...*binddns.Pairing,
 ) error {
-	mutation, err := prepareBINDConfigMutation(ctx, layout, transferPeer)
+	mutation, err := prepareBINDConfigMutation(ctx, layout, transferPeer, pairing...)
 	if err != nil {
 		return err
 	}
@@ -2389,9 +2402,10 @@ func verifyManagedBINDConfigExactWithSnapshotReader(
 	transferPeer string,
 	requireLegacyOptions bool,
 	readSnapshot bindConfigSnapshotReader,
+	pairing ...*binddns.Pairing,
 ) error {
 	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
-		layout, transferPeer, bindOptionsExclusive, readSnapshot,
+		layout, transferPeer, bindOptionsExclusive, readSnapshot, pairing...,
 	)
 	if err != nil {
 		return err
@@ -2437,11 +2451,15 @@ func verifyManagedBINDRuntimeConfigExact(
 	allowLegacyOptions bool,
 ) error {
 	transferPeer := ""
+	pairing, err := bindSecondaryOptionsFromReceipt(receipt.Pairing)
+	if err != nil {
+		return err
+	}
 	if receipt.Pairing != nil && receipt.Pairing.Role == binddns.PairRoleSecondary {
 		transferPeer = receipt.Pairing.PeerIP
 	}
 	return verifyManagedBINDConfigExact(
-		ctx, layout, transferPeer, allowLegacyOptions,
+		ctx, layout, transferPeer, allowLegacyOptions, pairing,
 	)
 }
 
@@ -2452,11 +2470,15 @@ func verifyManagedBINDRuntimeConfigExactWithSnapshotReader(
 	readSnapshot bindConfigSnapshotReader,
 ) error {
 	transferPeer := ""
+	pairing, err := bindSecondaryOptionsFromReceipt(receipt.Pairing)
+	if err != nil {
+		return err
+	}
 	if receipt.Pairing != nil && receipt.Pairing.Role == binddns.PairRoleSecondary {
 		transferPeer = receipt.Pairing.PeerIP
 	}
 	return verifyManagedBINDConfigExactWithSnapshotReader(
-		layout, transferPeer, allowLegacyOptions, readSnapshot,
+		layout, transferPeer, allowLegacyOptions, readSnapshot, pairing,
 	)
 }
 

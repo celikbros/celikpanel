@@ -84,6 +84,9 @@ type CreateSiteRequest struct {
 	// accepted from the public HTTP request; an empty value preserves the
 	// normal active-site behaviour.
 	InitialStatus string `json:"-"`
+	// DNS ownership is selected by the server, never the public create body.
+	DNSManagement         string `json:"-"`
+	DNSRemoteConnectionID string `json:"-"`
 	// ProjectType selects what this domain does on this server: "php" or
 	// "static" (a website — needs a web server) or "dnsonly" (no web hosting
 	// at all: just the domain and its DNS zone — Plesk's "no web hosting").
@@ -141,10 +144,12 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 
 	// 1. Create domain record
 	domain := &core.Domain{
-		SubscriptionID: req.SubscriptionID,
-		Name:           req.Domain,
-		ParentDomainID: req.ParentDomainID,
-		Status:         initialStatus,
+		SubscriptionID:        req.SubscriptionID,
+		Name:                  req.Domain,
+		ParentDomainID:        req.ParentDomainID,
+		Status:                initialStatus,
+		DNSManagement:         req.DNSManagement,
+		DNSRemoteConnectionID: req.DNSRemoteConnectionID,
 	}
 	err := so.domainRepo.Create(ctx, domain)
 	if err != nil {

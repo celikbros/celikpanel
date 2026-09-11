@@ -20,6 +20,7 @@ import (
 const (
 	mailTLSSyncCommitPhasePrefix = "commit/mail-tls-sync/v1/"
 	mailTLSSyncJournalFileName   = "mail-tls-sync-journal.json"
+	mailTLSCommittedFileName     = "mail-tls-committed.json"
 	mailTLSSyncJournalVersion    = 1
 	mailTLSSyncJournalMaxSize    = 2 << 20
 	mailTLSSyncJournalStageLimit = 8
@@ -220,7 +221,7 @@ func mailTLSSyncJournalPath(manager *serviceMutationManager) string {
 }
 
 func readMailTLSSyncJournal(path string) (*mailTLSSyncJournal, bool, error) {
-	if filepath.Base(path) != mailTLSSyncJournalFileName ||
+	if (filepath.Base(path) != mailTLSSyncJournalFileName && filepath.Base(path) != mailTLSCommittedFileName) ||
 		!filepath.IsAbs(path) || filepath.Clean(path) != path {
 		return nil, false, errors.New("invalid mail TLS sync journal path")
 	}
@@ -237,7 +238,7 @@ func writeMailTLSSyncJournal(path string, journal *mailTLSSyncJournal) error {
 	if err != nil {
 		return err
 	}
-	if filepath.Base(path) != mailTLSSyncJournalFileName ||
+	if (filepath.Base(path) != mailTLSSyncJournalFileName && filepath.Base(path) != mailTLSCommittedFileName) ||
 		!filepath.IsAbs(path) || filepath.Clean(path) != path {
 		return errors.New("invalid mail TLS sync journal path")
 	}
@@ -460,6 +461,11 @@ func publishStandaloneMailTLSSync(ctx context.Context, journal *mailTLSSyncJourn
 	if err != nil {
 		return m.poisonLocked(err)
 	}
+	// Persist only a host configuration that has converged and verified. The
+	// intent journal may later describe a failed change and is not this snapshot.
+	if err := writeMailTLSSyncJournal(filepath.Join(filepath.Dir(m.ledgerPath), mailTLSCommittedFileName), journal); err != nil {
+		return m.poisonLocked(fmt.Errorf("persist committed mail TLS snapshot: %w", err))
+	}
 	runtime.mailTLSSyncCommittedPhase = phase
 	if err := m.finishRuntimeTerminalLocked(runtime, true, phase, "", ""); err != nil {
 		if m.active == runtime {
@@ -640,6 +646,10 @@ func expectedPostfixSNIMap(sni []transport.MailSNIEntry) []byte {
 }
 
 func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRunner) error {
+	certPath, keyPath, err := selectedMailHostCertificate(journal.Myhostname)
+	if err != nil {
+		return err
+	}
 	if err := validateDefaultMailCertPair(defaultMailCert, defaultMailKey, journal.Myhostname, time.Now()); err != nil {
 		return fmt.Errorf("verify default mail TLS certificate: %w", err)
 	}
@@ -661,8 +671,8 @@ func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRun
 		}
 	}
 	expectedSettings := map[string]string{
-		"smtpd_tls_cert_file":      defaultMailCert,
-		"smtpd_tls_key_file":       defaultMailKey,
+		"smtpd_tls_cert_file":      certPath,
+		"smtpd_tls_key_file":       keyPath,
 		"smtpd_tls_security_level": "may",
 		"smtp_tls_security_level":  "may",
 		"smtpd_tls_protocols":      ">=TLSv1.2",
@@ -708,7 +718,7 @@ func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRun
 		}
 	}
 	expectedDovecot := buildDovecotTLSConf(
-		dovecotIs24WithRunner(runner), defaultMailCert, defaultMailKey, journal.SNI,
+		dovecotIs24WithRunner(runner), certPath, keyPath, journal.SNI,
 	)
 	actualDovecot, err := secureReadConfig(dovecotTLSConf)
 	if err != nil || string(actualDovecot) != expectedDovecot {
@@ -865,6 +875,9 @@ func (m *serviceMutationManager) recoverPersistedMailTLSSyncLocked(
 	phase, err := formatMailTLSSyncCommitPhase(mailTLSSyncCommitPublished, job.RequestID, job.PackageName)
 	if err != nil {
 		return true, m.poisonLocked(err)
+	}
+	if err := writeMailTLSSyncJournal(filepath.Join(filepath.Dir(m.ledgerPath), mailTLSCommittedFileName), journal); err != nil {
+		return true, m.poisonLocked(fmt.Errorf("persist recovered mail TLS snapshot: %w", err))
 	}
 	runtime.mailTLSSyncCommittedPhase = phase
 	if err := m.finishRuntimeTerminalLocked(runtime, true, phase, "", ""); err != nil {

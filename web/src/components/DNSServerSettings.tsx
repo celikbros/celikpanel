@@ -15,6 +15,7 @@ import {
 } from '../lib/dnsIdentityPlan';
 import { HelpButton } from './HelpDrawer';
 import { DNSEngineCard } from './DNSEngineCard';
+import { ServerSetupDNSAccess, ServerSetupDNSManagement } from './ServerSetupDNSConnections';
 
 type DNSRole = 'standalone' | 'paired';
 type DraftDNSRole = DNSRole | '';
@@ -1244,6 +1245,8 @@ function DNSInfrastructureSettings({
                     )}
                 </div>
             </div>
+            <ServerSetupDNSManagement />
+            <ServerSetupDNSAccess />
         </section>
     );
 }

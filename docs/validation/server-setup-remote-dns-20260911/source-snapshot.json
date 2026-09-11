@@ -1,0 +1,15 @@
+{
+  "sha256": "81727ee46dda96c7b5051dc40a4dfb08fc3f2cabdfc07abef17fc9b7fba30ce7",
+  "files": 1515,
+  "archive": ".tmp-remote-dns-source.tar",
+  "go_version": "go1.26.5",
+  "command": "go test ./cmd/panel ./internal/db ./cmd/agent ./internal/hostcmd; make vet",
+  "checkout": "/var/tmp/celikpanel-remote-followup.t056OpNf",
+  "uid": 0,
+  "status": "passed",
+  "initial_snapshot": "source-snapshot-initial.json",
+  "source_changes": "source-changes.json",
+  "exit_code": 0,
+  "result": "go-followup-result.json",
+  "log": "go-followup-test-vet.log"
+}

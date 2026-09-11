@@ -1,0 +1,13 @@
+webmail ('running', '01-dns', 'null')
+webmail ('running', '02-service', 'null')
+webmail ('running', '03-service', 'null')
+webmail ('running', '04-service', 'null')
+webmail ('running', '05-mail_profile', 'null')
+webmail ('running', '06-mail_profile', 'null')
+webmail ('running', '07-service', 'null')
+webmail ('running', '08-service', 'null')
+webmail ('running', '10-panel_certificate', 'null')
+webmail ('running', '11-mail_certificate', 'null')
+webmail ('waiting', 'verification', 'null')
+webmail ('succeeded', 'complete', 'null')
+PROFILE_EXECUTION_PASSED webmail

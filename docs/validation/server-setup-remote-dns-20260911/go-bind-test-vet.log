@@ -1,0 +1,6 @@
+go test ./cmd/panel ./cmd/agent ./internal/binddns ./internal/dnswire
+ok  	github.com/alicelik/celikpanel/cmd/panel	112.673s
+ok  	github.com/alicelik/celikpanel/cmd/agent	11.566s
+ok  	github.com/alicelik/celikpanel/internal/binddns	0.054s
+ok  	github.com/alicelik/celikpanel/internal/dnswire	0.005s
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "go" vet ./...

@@ -232,11 +232,14 @@ test('the sidebar badge carries no number for a census nobody took', () => {
   assert.match(badge, /sr-only/);
 });
 
-test('the DNS guide requires a complete fresh census before showing completion', () => {
-  assert.match(dashboard, /const componentCensusComplete = uncheckedServices\.length === 0;/);
-  assert.match(dashboard, /dnsStartReady\(serviceScanFresh && componentCensusComplete, dnsIdentityReady, dnsServer !== '' && serviceRunning\(dnsServer\)\)/);
-  assert.match(dashboard, /scanFresh=\{serviceScanFresh && componentCensusComplete\}/);
+test('the dashboard keeps observed service truth and delegates setup completion to persisted setup evidence', () => {
+  assert.match(dashboard, /const uncheckedServices = services.filter/);
   assert.match(dashboard, /if \(!serviceScanFresh\) return false/);
+  assert.match(dashboard, /<ServerSetupDashboardNotice/);
+  assert.doesNotMatch(dashboard, /<StartGuide/);
+  const setupGate = readFileSync(new URL('../src/components/ServerSetupGate.tsx', import.meta.url), 'utf8');
+  assert.match(setupGate, /snapshot.status === 'ready'/);
+  assert.doesNotMatch(setupGate, /domains.length/);
 });
 
 test('the dashboard unchecked copy exists in both locales, in the components screen voice', () => {

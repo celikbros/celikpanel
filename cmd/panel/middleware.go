@@ -25,6 +25,12 @@ const callerKey contextKey = "caller"
 // herkese açıktır, böylece giriş ekranının kendisi yüklenebilir.
 func (p *Panel) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if remoteDNSMachineVerified(r) {
+			if p.allowLicensedPanel(w, r) {
+				next.ServeHTTP(w, r)
+			}
+			return
+		}
 		// API preflights never need application data. Terminate them here so an
 		// unauthenticated OPTIONS request cannot reach a handler that happens to
 		// omit its own method check and disclose the protected GET response.
@@ -196,6 +202,9 @@ func isPublicPath(r *http.Request) bool {
 // (/api/v1/system/stats), kimlik doğrulama ve sahiplik-süzgeçli domain
 // rotaları bilerek listelenmemiştir.
 func isAdminOnlyPath(path string) bool {
+	if strings.HasPrefix(path, "/api/v1/dns/remote/") {
+		return true
+	}
 	if path == panelLicensePath {
 		return true
 	}
@@ -219,6 +228,9 @@ func isAdminOnlyPath(path string) bool {
 	// kaydı kiracı self-servisi değil altyapıdır. /dbtool/ de öyle: vekile
 	// kimlikli her oturum ulaşabilir; gerçek yetki katmanı araçların kendi
 	// veritabanı-kimlik girişidir.
+	if path == serverSetupPath || strings.HasPrefix(path, serverSetupPath+"/") {
+		return true
+	}
 	adminPrefixes := []string{
 		"/api/v1/config",
 		"/api/v1/dovecot/",

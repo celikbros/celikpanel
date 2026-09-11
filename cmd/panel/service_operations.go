@@ -247,6 +247,15 @@ func writeServiceOperationRequestConflict(w http.ResponseWriter) {
 // rejectIfServiceOperationBusy gates synchronous package mutations that have
 // not yet moved to the durable job runner.
 func (p *Panel) beginServiceMutation(w http.ResponseWriter, r *http.Request) (func(), bool) {
+	// A reviewed setup owns the package/configuration sequence until it reaches
+	// a terminal state; parallel manual changes would invalidate later steps.
+	if active, err := p.serverSetupExecutionMutating(r.Context()); err != nil {
+		writeServerError(w, err)
+		return nil, true
+	} else if active {
+		writeCodedError(w, http.StatusConflict, "server_setup_busy", "Server setup is in progress. Follow its current operation.", "/setup")
+		return nil, true
+	}
 	if !p.serviceMutationMu.TryLock() {
 		writeServiceOperationBusy(w)
 		return nil, true
@@ -2100,7 +2109,14 @@ func (p *Panel) resumeInterruptedServiceOperationLocked(op serviceOperation) err
 		if !ok {
 			return errors.New("interrupted mail profile operation has an unknown profile target")
 		}
+		reviewedHostname, err := decodeServerSetupMailChild(op)
+		if err != nil {
+			return err
+		}
 		runner = func(ctx context.Context, advance func(string) error) (serviceOperationResult, *serviceOperationFailure) {
+			if reviewedHostname != "" {
+				ctx = context.WithValue(ctx, serverSetupMailHostnameKey{}, reviewedHostname)
+			}
 			return p.runMailProfileInstall(ctx, profile.ID, advance)
 		}
 		successAudit = "mail.profile.install.recovered:" + profile.ID

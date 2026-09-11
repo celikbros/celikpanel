@@ -1,0 +1,20 @@
+{
+  "dnsprimary": {
+    "pid": 25602,
+    "overlay": "/var/tmp/cp-setup-dns-profile-20260911-v2/dnsprimary/overlay.qcow2",
+    "marker_verified": true,
+    "no_installed_panel_verified": true,
+    "guest_synced": true,
+    "qmp_stopped": true,
+    "overlay_preserved": true
+  },
+  "dnssecondary": {
+    "pid": 25617,
+    "overlay": "/var/tmp/cp-setup-dns-profile-20260911-v2/dnssecondary/overlay.qcow2",
+    "marker_verified": true,
+    "no_installed_panel_verified": true,
+    "guest_synced": true,
+    "qmp_stopped": true,
+    "overlay_preserved": true
+  }
+}

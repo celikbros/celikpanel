@@ -1,0 +1,14 @@
+{
+  "files": 1519,
+  "sha256": "31b1185c9699c131f51b026eeaef4ff81d52943f64e53b008f3563f59df9fa18",
+  "go_version": "go1.26.5",
+  "command": "go test ./cmd/panel ./cmd/agent; make vet",
+  "checkout": "/var/tmp/celikpanel-setup-lifecycle.7moVy8B7",
+  "uid": 0,
+  "status": "passed",
+  "previous_snapshot": "source-snapshot.json",
+  "source_changes": "source-changes-recovery.json",
+  "exit_code": 0,
+  "log": "go-recovery-test-vet.log",
+  "result": "go-recovery-result.json"
+}

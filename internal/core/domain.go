@@ -164,17 +164,19 @@ type Subscription struct {
 
 // Domain represents a domain name
 type Domain struct {
-	ID              int
-	SubscriptionID  int
-	Name            string
-	ParentDomainID  *int
-	DNSZoneID       *int
-	Status          string // active, suspended, pending
-	IPAddressID     int
-	IsTemporary     bool
-	TemporarySuffix *string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID                    int
+	SubscriptionID        int
+	Name                  string
+	ParentDomainID        *int
+	DNSZoneID             *int
+	DNSRemoteConnectionID string
+	DNSManagement         string
+	Status                string // active, suspended, pending
+	IPAddressID           int
+	IsTemporary           bool
+	TemporarySuffix       *string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 // Site represents a web hosting site

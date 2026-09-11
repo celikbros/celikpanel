@@ -1,0 +1,36 @@
+{
+  "profile": "webmail",
+  "ready": true,
+  "unchanged_successful_children": 8,
+  "services": {
+    "nginx": {
+      "LoadState": "loaded",
+      "ActiveState": "active"
+    },
+    "php8.4-fpm": {
+      "LoadState": "loaded",
+      "ActiveState": "active"
+    },
+    "mariadb": {
+      "LoadState": "loaded",
+      "ActiveState": "active"
+    },
+    "postfix": {
+      "LoadState": "loaded",
+      "ActiveState": "active"
+    },
+    "dovecot": {
+      "LoadState": "loaded",
+      "ActiveState": "active"
+    },
+    "rspamd": {
+      "LoadState": "loaded",
+      "ActiveState": "active"
+    },
+    "certbot.timer": {
+      "LoadState": "loaded",
+      "ActiveState": "active"
+    }
+  },
+  "agent_sha256": "64ad8615424efd30f344b94c1ca6c52b71f3858a03ad32e56b7b32b6d1dfabd5"
+}

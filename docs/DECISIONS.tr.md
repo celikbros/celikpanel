@@ -8,6 +8,36 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-021 · Amaca göre, kaldığı yerden süren kurulum ve açık DNS sahipliği
+
+*10 Eylül 2026 · Onaylanan yön; [çalışma ağacındaki uygulama durumu](SERVER-SETUP-STATUS.tr.md)*
+
+**Karar.** Yeni olduğu doğrulanmış sunucu, lisans aktivasyonundan sonra yöneticiye
+özel kurulum rehberine girer. Yarım kurulum devam eder; hazırlanmış sunucu
+Dashboard'a döner. Lisans, kurulum geçmişi ve güncel sağlık bağımsızdır.
+Önerilen varsayılan web hosting'dir; posta kendiliğinden kurulmaz, açıkça seçilir.
+Diğer amaçlar web ve posta hosting, uygulama sunucusu ve DNS altyapısıdır.
+
+Hosting için yerel DNS, yetkilendirilmiş mevcut CelikPanel DNS altyapısı veya
+kayıtları elle doğrulanabilen, API otomasyonu isteğe bağlı harici DNS seçilir.
+Bu, D-009'un her durumda yerel DNS motoru gerektiren kuralının yerini alır.
+Yerel DNS sahipliği, topoloji ve kurtarma kurallarını gevşetmez; yalnız mevcut
+engeller silinerek uygulanamaz. Açık ve desteklenen bir taşıma yapılana kadar
+mevcut DNS sahipliği korunur.
+
+İlk genel kurulum panel FQDN'si, güvenilir ve yenilenebilir HTTPS ve yönetim
+erişimini koruyan güvenlik duvarı gerektirir. Diğer hazırlık koşulları ilgili
+özelliğe uygulanır. Kullanıcı somut, kalıcı planı inceleyip başlatır; salt-okur
+keşif yapılandırmayı değiştirmez. Mevcut işler korunur. Kurulu panel güncellemelerini
+kullanıcı panelin içinden başlatır.
+
+**Kapsam ve kanıt.** Onaylanan sıra, mevcut uygulama eksikleri, kabul durumları ve
+uygulama sırası [Yönlendirmeli sunucu kurulumu](SERVER-SETUP-PLAN.tr.md) belgesindedir.
+Bu karar ürün niyetini kaydeder; yeni sihirbazın veya harici DNS modunun bugün
+kullanılabildiği anlamına gelmez.
+
+---
+
 ## D-020 · Yönetilen sunucu desteği dağıtım adına değil kanıtlanmış yeteneğe bağlanır
 
 *11 Ağustos 2026*

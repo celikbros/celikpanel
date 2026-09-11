@@ -1,0 +1,8 @@
+Command (WSL Linux, UID 0):
+/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go test -race ./cmd/agent ./internal/hostcmd -run "TestCertbot|TestIssuePanel|TestPanelCert|TestMailHost|TestServiceMutationSupervisor|TestDurableMutationCallGraph" -count=1
+
+Captured exec session 10878 output (exit 0):
+ok  	github.com/alicelik/celikpanel/cmd/agent	9.947s
+ok  	github.com/alicelik/celikpanel/internal/hostcmd	1.021s [no tests to run]
+
+The hostcmd package compiled; its guard tests were not selected by this focused expression. The separate full affected-package validation runs those guards.

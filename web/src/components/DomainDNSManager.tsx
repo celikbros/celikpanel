@@ -45,6 +45,8 @@ export function DomainDNSManager({
     const { t } = useI18n();
     const [records, setRecords] = useState<DNSRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [remoteDNS, setRemoteDNS] = useState(false);
+    const [externalDNS, setExternalDNS] = useState(false);
     const [zoneExists, setZoneExists] = useState<boolean | null>(null);
 	const [zoneError, setZoneError] = useState('');
 	const [recordsError, setRecordsError] = useState('');
@@ -99,6 +101,9 @@ export function DomainDNSManager({
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/dns/zone`);
             if (res.ok) {
+                const zone = await res.json();
+                setExternalDNS(zone.type === 'EXTERNAL' && zone.management === 'external');
+                setRemoteDNS(zone.type === 'REMOTE' && zone.management === 'existing');
                 setZoneExists(true);
 				await loadRecords();
 			} else if (res.status === 404) {
@@ -134,7 +139,7 @@ export function DomainDNSManager({
     };
 
     const publishZone = async () => {
-        if (readOnly) return;
+        if (readOnly || externalDNS) return;
         setPublishing(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/dns/zone`, { method: 'POST' });
@@ -153,7 +158,7 @@ export function DomainDNSManager({
     };
 
     const addRecord = async () => {
-        if (readOnly) return;
+        if (readOnly || externalDNS) return;
         setMutatingRecord(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/dns/records`, {
@@ -176,7 +181,7 @@ export function DomainDNSManager({
     };
 
     const deleteRecord = async (id: number) => {
-        if (readOnly) return;
+        if (readOnly || externalDNS) return;
         if (!confirm(t('dns.confirmDelete'))) return;
         setMutatingRecord(true);
         try {
@@ -233,6 +238,8 @@ export function DomainDNSManager({
 
     return (
         <div>
+            {remoteDNS && <p className="mb-5 rounded-lg border border-border bg-surface-2 p-4 text-sm">{t('dns.remoteHelp')}</p>}
+            {externalDNS && <section className="mb-5 rounded-lg border border-border bg-surface-2 p-4"><h3 className="font-semibold">{t('dns.externalTitle')}</h3><p className="mt-2 max-w-3xl text-sm leading-6 text-fg-muted">{t('dns.externalHelp')}</p></section>}
             {/* Honesty first: the records below are real, editable panel data,
                 but with no DNS server installed NOTHING serves them — say so
                 loudly instead of letting 13 rows look live. DNSSEC signing
@@ -243,32 +250,32 @@ export function DomainDNSManager({
                 yayınlamaz — 13 satırı canlı gibi bırakmak yerine bunu açıkça
                 söyle. DNSSEC imzalama DNS sunucusunun aracını ister; o kart
                 yalnız biri kuruluyken var olur. */}
-            {dnsServer === '' && (
+            {!externalDNS && !remoteDNS && dnsServer === '' && (
                 <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm text-fg">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                     <span>{t('dns.notServed')}</span>
                 </div>
             )}
-			{isAdditionalUser && (
+			{isAdditionalUser && !externalDNS && !remoteDNS && (
 				<div className="mb-4 flex items-start gap-2 rounded-lg border border-info/30 bg-info/10 p-3 text-sm text-fg">
 					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-info" />
 					<span>{t('dns.teamServerStatusUnavailable')}</span>
 				</div>
 			)}
-			{dnsServerError && (
+			{!externalDNS && !remoteDNS && dnsServerError && (
 				<div className="mb-4 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm text-fg">
 					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
 					<span>{dnsServerError}</span>
 				</div>
 			)}
-            {(isAdditionalUser || (dnsServer !== null && dnsServer !== '')) && (
+            {!externalDNS && !remoteDNS && (isAdditionalUser || (dnsServer !== null && dnsServer !== '')) && (
                 <DNSSECSection domainId={domainId} domainName={domainName} readOnly={readOnly} />
             )}
 
             <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: records.length })}</span>
                 <div className="flex flex-wrap items-center gap-2">
-                    {readOnly ? (
+                    {readOnly || externalDNS ? (
                         <Button variant="secondary" icon={RefreshCw} disabled={loading} onClick={() => void loadRecords()}>
                             {t('dns.refresh')}
                         </Button>
@@ -277,7 +284,7 @@ export function DomainDNSManager({
                             <Button
                                 variant="secondary"
                                 icon={RefreshCw}
-                                disabled={publishing || dnsServer === ''}
+                                disabled={publishing || (!remoteDNS && dnsServer === '')}
                                 onClick={publishZone}
                             >
                                 {publishing ? t('dns.publishing') : t('dns.republish')}
@@ -299,7 +306,7 @@ export function DomainDNSManager({
 				</div>
 			)}
 
-            {!readOnly && showAddForm && (
+            {!readOnly && !externalDNS && showAddForm && (
                 <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-4">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
                         <label className="sm:col-span-2">
@@ -353,7 +360,7 @@ export function DomainDNSManager({
                                 <th className="px-4 py-2.5">{t('dns.name')}</th>
                                 <th className="px-4 py-2.5">{t('dns.content')}</th>
                                 <th className="px-4 py-2.5">{t('dns.ttl')}</th>
-                                {!readOnly && <th className="px-4 py-2.5" />}
+                                {!readOnly && !externalDNS && <th className="px-4 py-2.5" />}
                             </tr>
                         </thead>
                         <tbody>
@@ -372,7 +379,7 @@ export function DomainDNSManager({
                                         {rec.content}
                                     </td>
                                     <td className="px-4 py-2.5 text-fg-muted">{rec.ttl}</td>
-                                    {!readOnly && (
+                                    {!readOnly && !externalDNS && (
                                         <td className="px-4 py-2.5 text-right">
                                             <button
                                                 onClick={() => deleteRecord(rec.id)}

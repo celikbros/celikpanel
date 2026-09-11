@@ -26,20 +26,23 @@ func (r *PostgresDomainRepository) Create(ctx context.Context, domain *core.Doma
 		return err
 	}
 	domain.Name = canonical
+	if domain.DNSManagement == "" {
+		domain.DNSManagement = "local"
+	}
 
 	query := `
 		INSERT INTO domains (
 			subscription_id, name, parent_domain_id, ip_address_id,
-			is_temporary, temporary_suffix, status
+			is_temporary, temporary_suffix, status, dns_management, dns_remote_connection_id
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	var parentID any
 	if domain.ParentDomainID != nil {
 		parentID = *domain.ParentDomainID
 	}
 	result, err := r.db.ExecContext(ctx, query,
-		domain.SubscriptionID, domain.Name, parentID, 1, 0, nil, domain.Status)
+		domain.SubscriptionID, domain.Name, parentID, 1, 0, nil, domain.Status, domain.DNSManagement, domain.DNSRemoteConnectionID)
 	if err != nil {
 		return err
 	}
@@ -58,12 +61,12 @@ func (r *PostgresDomainRepository) GetByID(ctx context.Context, id int) (*core.D
 	domain := &core.Domain{}
 	query := `
 		SELECT id, subscription_id, name, parent_domain_id, dns_zone_id, status, created_at, updated_at,
-		       ip_address_id, is_temporary, temporary_suffix
+		       ip_address_id, is_temporary, temporary_suffix, dns_management, dns_remote_connection_id
 		FROM domains WHERE id = ?
 	`
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&domain.ID, &domain.SubscriptionID, &domain.Name, &domain.ParentDomainID, &domain.DNSZoneID, &domain.Status,
-		scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix,
+		scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix, &domain.DNSManagement, &domain.DNSRemoteConnectionID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("domain not found: %v", err)
@@ -79,12 +82,12 @@ func (r *PostgresDomainRepository) GetByName(ctx context.Context, name string) (
 	domain := &core.Domain{}
 	query := `
 		SELECT id, subscription_id, name, parent_domain_id, dns_zone_id, status, created_at, updated_at,
-		       ip_address_id, is_temporary, temporary_suffix
+		       ip_address_id, is_temporary, temporary_suffix, dns_management, dns_remote_connection_id
 		FROM domains WHERE name = ?
 	`
 	err = r.db.QueryRowContext(ctx, query, canonical).Scan(
 		&domain.ID, &domain.SubscriptionID, &domain.Name, &domain.ParentDomainID, &domain.DNSZoneID, &domain.Status,
-		scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix,
+		scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix, &domain.DNSManagement, &domain.DNSRemoteConnectionID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("domain not found: %v", err)
@@ -95,7 +98,7 @@ func (r *PostgresDomainRepository) GetByName(ctx context.Context, name string) (
 func (r *PostgresDomainRepository) GetBySubscriptionID(ctx context.Context, subID int) ([]*core.Domain, error) {
 	query := `
 		SELECT id, subscription_id, name, parent_domain_id, dns_zone_id, status, created_at, updated_at,
-		       ip_address_id, is_temporary, temporary_suffix
+		       ip_address_id, is_temporary, temporary_suffix, dns_management, dns_remote_connection_id
 		FROM domains WHERE subscription_id = ? ORDER BY created_at DESC
 	`
 	rows, err := r.db.QueryContext(ctx, query, subID)
@@ -108,7 +111,7 @@ func (r *PostgresDomainRepository) GetBySubscriptionID(ctx context.Context, subI
 	for rows.Next() {
 		domain := &core.Domain{}
 		err := rows.Scan(&domain.ID, &domain.SubscriptionID, &domain.Name, &domain.ParentDomainID, &domain.DNSZoneID, &domain.Status,
-			scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix)
+			scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix, &domain.DNSManagement, &domain.DNSRemoteConnectionID)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +147,7 @@ func (r *PostgresDomainRepository) Delete(ctx context.Context, id int) error {
 func (r *PostgresDomainRepository) List(ctx context.Context) ([]*core.Domain, error) {
 	query := `
 		SELECT id, subscription_id, name, parent_domain_id, dns_zone_id, status, created_at, updated_at,
-		       ip_address_id, is_temporary, temporary_suffix
+		       ip_address_id, is_temporary, temporary_suffix, dns_management, dns_remote_connection_id
 		FROM domains ORDER BY created_at DESC
 	`
 	rows, err := r.db.QueryContext(ctx, query)
@@ -157,7 +160,7 @@ func (r *PostgresDomainRepository) List(ctx context.Context) ([]*core.Domain, er
 	for rows.Next() {
 		domain := &core.Domain{}
 		err := rows.Scan(&domain.ID, &domain.SubscriptionID, &domain.Name, &domain.ParentDomainID, &domain.DNSZoneID, &domain.Status,
-			scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix)
+			scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix, &domain.DNSManagement, &domain.DNSRemoteConnectionID)
 		if err != nil {
 			return nil, err
 		}

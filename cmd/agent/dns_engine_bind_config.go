@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/binddns"
 )
 
 const (
@@ -79,7 +81,7 @@ func canonicalBINDTransferACL(transferPeer string) (string, error) {
 	return transferPeer + "/32", nil
 }
 
-func managedBINDOptions(config, transferPeer string) (string, error) {
+func managedBINDOptions(config, transferPeer string, pairing ...*binddns.Pairing) (string, error) {
 	assignments, err := managedBINDOptionAssignments(transferPeer)
 	if err != nil {
 		return "", err
@@ -87,6 +89,14 @@ func managedBINDOptions(config, transferPeer string) (string, error) {
 	block := "\n\t" + bindOptionsMarkerBegin
 	for _, assignment := range assignments {
 		block += "\n\t" + assignment[0] + " " + assignment[1] + ";"
+	}
+	baseBlock := block + "\n\t" + bindOptionsMarkerEnd + "\n"
+	catalog, err := managedBINDCatalogOptions(transferPeer, pairing)
+	if err != nil {
+		return "", err
+	}
+	if catalog != "" {
+		block += "\n\t" + strings.ReplaceAll(strings.TrimSpace(catalog), "\n", "\n\t")
 	}
 	block += "\n\t" + bindOptionsMarkerEnd + "\n"
 	legacyBlock := "\n\t" + bindOptionsMarkerBegin +
@@ -117,13 +127,14 @@ func managedBINDOptions(config, transferPeer string) (string, error) {
 		canonical := strings.TrimSuffix(strings.TrimPrefix(block, "\n\t"), "\n")
 		legacy := strings.TrimSuffix(strings.TrimPrefix(legacyBlock, "\n\t"), "\n")
 		actual := config[start:actualEnd]
-		if actual != canonical && actual != legacy {
+		base := strings.TrimSuffix(strings.TrimPrefix(baseBlock, "\n\t"), "\n")
+		if actual != canonical && actual != legacy && !(catalog != "" && actual == base) {
 			return "", errors.New("existing CelikPanel BIND options were modified")
 		}
 		body := bindOptionsBodyWithoutManagedSpan(
 			config, open, close, start, actualEnd,
 		)
-		for _, directive := range bindManagedOptionDirectives {
+		for _, directive := range append(append([]string{}, bindManagedOptionDirectives...), "catalog-zones") {
 			if bindContainsDirective(body, directive) {
 				return "", fmt.Errorf(
 					"BIND options already define %s outside CelikPanel ownership", directive,
@@ -136,7 +147,7 @@ func managedBINDOptions(config, transferPeer string) (string, error) {
 		return config[:start] + canonical + config[actualEnd:], nil
 	}
 	body := stripBINDCommentsAndStrings(config[open+1 : close])
-	for _, directive := range bindManagedOptionDirectives {
+	for _, directive := range append(append([]string{}, bindManagedOptionDirectives...), "catalog-zones") {
 		if bindContainsDirective(body, directive) {
 			return "", fmt.Errorf("BIND options already define %s outside CelikPanel ownership", directive)
 		}

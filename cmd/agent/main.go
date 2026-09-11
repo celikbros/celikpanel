@@ -388,6 +388,12 @@ func main() {
 		log.Println("Panel certificate activation reconciliation completed")
 		return
 	}
+	if len(os.Args) == 3 && os.Args[1] == "--deploy-mail-host-certificate" {
+		if err := queueMailHostCertificateRenewal(os.Args[2]); err != nil {
+			log.Fatalf("Queue host mail renewal: %v", err)
+		}
+		return
+	}
 	if len(os.Args) == 3 && os.Args[1] == "--deploy-panel-certificate" {
 		lineageName := strings.ToLower(strings.TrimSpace(os.Args[2]))
 		if !validPanelCertLineage.MatchString(lineageName) {
@@ -532,6 +538,8 @@ func main() {
 	if err := reconcileSystemUpdatesAtStartup(); err != nil {
 		log.Fatalf("Failed to reconcile system update state: %v", err)
 	}
+
+	go runMailHostCertificateRenewalWorker()
 
 	// Initialize Systemd Manager
 	sysMgr := systemd.NewManager()

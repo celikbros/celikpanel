@@ -1,0 +1,7 @@
+dnssecondary ('running', '01-dns', 'null')
+dnssecondary ('running', '02-service', 'null')
+dnssecondary ('running', '03-service', 'null')
+dnssecondary ('running', '05-panel_certificate', 'null')
+dnssecondary ('running', '06-verify', 'null')
+dnssecondary ('succeeded', 'complete', 'null')
+PROFILE_EXECUTION_PASSED dnssecondary

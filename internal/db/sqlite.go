@@ -68,6 +68,12 @@ func NewSQLiteDB(path string) (*SQLiteDB, error) {
 		return nil, closeSQLiteInitialization(db, fmt.Errorf("unable to ping database: %w", err))
 	}
 
+	// Only an empty schema proves a fresh installation, independently of
+	// user/domain counts. / Yalniz bos sema yeni kurulum kanitidir.
+	var schemaObjects int
+	if err := db.QueryRow(`SELECT count(*) FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'`).Scan(&schemaObjects); err != nil {
+		return nil, closeSQLiteInitialization(db, fmt.Errorf("inspect new database provenance: %w", err))
+	}
 	sqliteDB := &SQLiteDB{db: db}
 
 	// Run migrations
@@ -75,6 +81,11 @@ func NewSQLiteDB(path string) (*SQLiteDB, error) {
 		return nil, closeSQLiteInitialization(db, fmt.Errorf("failed to run migrations: %w", err))
 	}
 
+	if schemaObjects == 0 {
+		if _, err := db.Exec(`UPDATE server_setup_state SET origin='fresh',status='new' WHERE id=1 AND revision=0 AND status='legacy'`); err != nil {
+			return nil, closeSQLiteInitialization(db, fmt.Errorf("record fresh setup provenance: %w", err))
+		}
+	}
 	return sqliteDB, nil
 }
 

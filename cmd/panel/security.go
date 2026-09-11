@@ -48,6 +48,10 @@ func securityHeaders(secure bool, next http.Handler) http.Handler {
 // eşleşen bir Origin (ya da Referer) taşımalıdır.
 func csrfProtect(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if remoteDNSMachineVerified(r) {
+			next.ServeHTTP(w, r)
+			return
+		}
 		switch r.Method {
 		case http.MethodGet, http.MethodHead, http.MethodOptions:
 			next.ServeHTTP(w, r)

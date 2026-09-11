@@ -97,7 +97,7 @@ export const SERVICE_HELP: Record<string, LocalizedHelp> = {
             what: 'Bir alan adı, "bu adı kim yanıtlıyor?" sorusunun cevabı internette kayıtlı olmadan çalışmaz. Bu bölüm o cevabın şu an ne olduğunu canlı olarak gösterir ve doğru olması için kayıtçınızda tam olarak ne yazmanız gerektiğini söyler. Alan adını satın aldığınız firmada bir kez yapılan bir ayardır.',
             tips: [
                 'İki yol vardır ve ikisi de meşrudur: DNS yönetimini bu sunucuya vermek (A yolu) ya da DNS\'i olduğu yerde bırakıp yalnız adresi buraya yöneltmek (B yolu).',
-                'E-posta da barındıracaksanız A yolunu seçin: SPF, DKIM ve DMARC gibi posta kayıtları ancak DNS burada yönetilirken otomatik tutulabilir.',
+                "Yerel DNS kullanırken posta kayıtlarını panel yönetebilir. Harici DNS sağlayıcısında önerilen posta ve kimlik doğrulama kayıtlarını sağlayıcınıza kopyalayıp doğrulayın.",
                 'Yalnız bir web sitesi yayınlayacaksanız B yolu yeterlidir ve daha az adımdır.',
                 'Değişiklikten sonra hemen sonuç beklemeyin: DNS\'in dünyaya yayılması 15 dakikadan 24 saate kadar sürebilir. "Tekrar kontrol et" düğmesi gerçek durumu gösterir, tahmin etmez.',
                 'Bu ekrandaki her değer kopyalanabilir; kayıtçınızın formuna elle yazmanıza gerek yok.',
@@ -113,7 +113,7 @@ export const SERVICE_HELP: Record<string, LocalizedHelp> = {
             what: 'A domain does not work until the internet knows who answers for that name. This section shows what that answer is right now, live, and tells you exactly what to enter at your registrar to make it correct. It is a one-time setting at the company you bought the domain from.',
             tips: [
                 'There are two legitimate routes: hand DNS management to this server (Route A), or leave DNS where it is and simply point the address here (Route B).',
-                'Choose Route A if you will also host e-mail: mail records such as SPF, DKIM and DMARC can only be maintained automatically while DNS lives here.',
+                "With local DNS, mail records can be maintained by the panel. With an external DNS provider, copy the recommended mail and authentication records there and verify them.",
                 'If you only need a website published, Route B is enough and has fewer steps.',
                 'Do not expect an instant result: DNS changes take anywhere from 15 minutes to 24 hours to spread. The "Check again" button reports reality rather than guessing.',
                 'Every value on this screen is copyable — you never have to retype it into your registrar\'s form.',

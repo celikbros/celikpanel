@@ -8,6 +8,37 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-021 · Purpose-led, resumable server setup with explicit DNS ownership
+
+*September 10, 2026 · Approved direction; [working-tree implementation status](SERVER-SETUP-STATUS.md)*
+
+**Decision.** A confirmed new server enters an administrator-only setup guide
+following license activation. Incomplete setup resumes; prepared servers return
+to the Dashboard. Licensing, setup history and current health are independent.
+Web hosting is the recommended default, with mail explicitly selected rather
+than installed automatically. Other purposes cover web-and-mail hosting,
+application servers and DNS infrastructure.
+
+Hosting chooses local DNS, an authorized existing CelikPanel DNS infrastructure,
+or externally managed DNS with verifiable manual records and optional API
+automation. This supersedes D-009's blanket requirement for a local DNS engine.
+It does not relax local DNS ownership, topology or recovery invariants, and it
+must not be implemented by merely deleting current guards. Existing DNS ownership
+is preserved until an explicit supported migration.
+
+Initial public setup requires a panel FQDN with trusted renewable HTTPS and a
+firewall policy that preserves management access. Further readiness gates apply
+to the corresponding feature. The user reviews and starts a concrete, durable
+plan; read-only discovery performs no configuration changes. Existing workloads
+are preserved. Installed-panel updates remain user-initiated inside the panel.
+
+**Scope and proof.** The approved sequence, current implementation gaps,
+acceptance cases and implementation order are in
+[Guided server setup](SERVER-SETUP-PLAN.md). This decision records product intent,
+not a claim that the new wizard or external DNS mode is already available.
+
+---
+
 ## D-020 · Managed-server support follows proven capabilities, not distribution names
 
 *August 11, 2026*

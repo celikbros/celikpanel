@@ -107,6 +107,10 @@ func runServiceMutationSupervisor(args []string) int {
 	child.Stdout = os.Stdout
 	child.Stderr = os.Stderr
 	child.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
+	if err := configureCertbotProcessIdentity(child); err != nil {
+		fmt.Fprintf(os.Stderr, "configure supervised Certbot identity: %v\n", err)
+		return 126
+	}
 	if err := child.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "start supervised service mutation worker: %v\n", err)
 		return 126

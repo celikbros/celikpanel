@@ -311,7 +311,8 @@ func validateDNSBackendReadiness(
 		}
 		if runtime.Running && !runtime.Installed ||
 			runtime.Managed && !runtime.Installed ||
-			runtime.PairReady && (!runtime.Installed || !runtime.Running || !runtime.Managed) ||
+			(runtime.PairReady || runtime.SecondaryReady) && (!runtime.Installed || !runtime.Running || !runtime.Managed) ||
+			(runtime.PairReady && runtime.SecondaryReady) ||
 			len(runtime.Unit) > 128 ||
 			strings.ContainsAny(runtime.Unit, "\r\n\x00") ||
 			!validateDNSForeignEngineOptions(runtime) ||

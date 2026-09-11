@@ -1,0 +1,3 @@
+ok  	github.com/alicelik/celikpanel/cmd/panel	56.167s
+ok  	github.com/alicelik/celikpanel/cmd/agent	12.872s
+ok  	github.com/alicelik/celikpanel/internal/db	5.480s

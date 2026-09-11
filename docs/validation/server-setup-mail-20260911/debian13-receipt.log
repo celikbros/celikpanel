@@ -1,0 +1,4 @@
+=== RUN   TestMailHostCertificateDisposableVMRenewalReceipt
+    mail_host_certificate_vm_resume_test.go:151: exact durable renewal receipt verified; request=404c857313331b277931e62abda1fcce phase=commit/mail-host-certificate/v1/published/404c857313331b277931e62abda1fcce/mail.setup.celikpanel.test/mhc1:76574396fb650f4f3b52f94f099968bb30c79daabbcf1ff0c71a9cd0e320610b
+--- PASS: TestMailHostCertificateDisposableVMRenewalReceipt (0.09s)
+PASS

@@ -1,0 +1,45 @@
+{
+  "panel_leaf": "5710351224b10498e84a7be4b679c3ce03242695b7a9ebe89638bea834fd982f",
+  "state": {
+    "setup": [
+      "ready",
+      1,
+      "2026-09-11T01:08:01Z"
+    ],
+    "children": [
+      [
+        "30098d494fd4f01f8f35ca67d31b897e",
+        "succeeded",
+        "service_install",
+        "0ce36a3f61b8d6dbd716e63392d31970"
+      ],
+      [
+        "3b888454f3b5d9213ec40797f6f42997",
+        "succeeded",
+        "service_install",
+        "2d76dddeebdd06aaf81a9d9365822fa6"
+      ],
+      [
+        "5e106ed547c8a9031cc2a85821e004ea",
+        "succeeded",
+        "service_install",
+        "59212f43b163634cdb537c5932a13f5a"
+      ],
+      [
+        "7f686cc049f25f5b19487773ac58894b",
+        "succeeded",
+        "runtime_install",
+        "4136120ec9614211c7c8274d27c709e6"
+      ],
+      [
+        "f0bef62f4c2e4d3fd4962e5aa8bb3c7e",
+        "succeeded",
+        "panel_certificate_issue",
+        "c6d6158848e5bfdba766119941458255"
+      ]
+    ]
+  },
+  "panel_pid": "4829",
+  "timer_enabled": "enabled",
+  "timer_active": "active"
+}

@@ -1,0 +1,9 @@
+{
+  "os": "debian13",
+  "port": 2241,
+  "ssh_preserved": true,
+  "actual_reboots": 3,
+  "saved_policy_sha256": "789f4fbf006df6db821614b137c85e73541fea968ab34e0cbf8e1bb30a1d733b",
+  "candidate_agent_sha256": "e0e7304ddb2b219b23eaca8f4a988cc34ab559fe5872b1475ac853346e187045",
+  "candidate_test_sha256": "fe72be44dc0fb74ca1cdcbc9f9337e5b442c04017dc4fc130596e14bb43a01be"
+}

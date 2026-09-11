@@ -263,6 +263,13 @@ func payloadBoundMutationPublishedPhase(
 			return "", true, errAgentMutationPublishedReceiptMismatch
 		}
 		return "commit/panel-certificate-issue/v1/published/" + identity.RequestID + "/" + identity.Target + "/" + identity.PackageName, true, nil
+	case "mail_host_certificate":
+		canonicalTarget, err := hostname.CanonicalFQDN(identity.Target)
+		if err != nil || canonicalTarget != identity.Target ||
+			!mutationpayload.ValidMailHostCertificateQualifier(identity.PackageName) {
+			return "", true, errAgentMutationPublishedReceiptMismatch
+		}
+		return "commit/mail-host-certificate/v1/published/" + identity.RequestID + "/" + identity.Target + "/" + identity.PackageName, true, nil
 	default:
 		return "", false, nil
 	}

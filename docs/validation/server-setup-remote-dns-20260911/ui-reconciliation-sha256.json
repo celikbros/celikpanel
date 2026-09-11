@@ -1,0 +1,9 @@
+{
+  "scope": "Later neutral receipt-reconciliation status and local DNS ordering: 17 setup runtime tests and production build; no relabelling of earlier 352-test or four browser results.",
+  "files": {
+    "web/src/components/ServerSetup.tsx": "1ae1036de1add060b8984f256815400cad63b01c6e21f413be605e9da710562d",
+    "web/src/i18n/screens/en.ts": "4b17946e4202eb5d3672d55236496f0ff90944017db3380bb5be13d80e265c9e",
+    "web/src/i18n/screens/tr.ts": "8e62fe66e8f6313e0a4041d6951b9bf7b166062e420d31c18ea6d9f236694a9f",
+    "web/tests/server-setup-runtime.test.mjs": "3f048aa1952049500be350f5a085cea129ed6fb9860ba5957512dc1793dfad99"
+  }
+}

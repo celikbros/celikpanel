@@ -649,6 +649,15 @@ func (p *Panel) validateMailProfileHostAndCatalog(ctx context.Context, profile m
 // tek işleve sorar; böylece ekran, kurulumun kullanmayacağı bir adı asla vaat
 // edemez.
 func (p *Panel) resolveMailProfileHostname(ctx context.Context) (string, error) {
+	// Setup carries the exact reviewed identity through recovery; later settings
+	// edits cannot redirect an already authorized mail installation.
+	if reviewed, ok := ctx.Value(serverSetupMailHostnameKey{}).(string); ok {
+		canonical, err := hostname.CanonicalFQDN(reviewed)
+		if err != nil || canonical != reviewed {
+			return "", errMailProfileServerHostnameInvalid
+		}
+		return canonical, nil
+	}
 	if _, err := readMailProfileHostname(); err != nil {
 		return "", fmt.Errorf("read mail profile server hostname: %w", err)
 	}

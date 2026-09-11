@@ -1,0 +1,3 @@
+dnssecondary ('running', '01-dns', 'null')
+dnssecondary ('running', '01-dns', '{"code": "server_setup_reconciling", "message": "The previous DNS operation is being reconciled. Its exact receipt must be verified before the setup plan can change."}')
+Connection to 127.0.0.1 closed by remote host.

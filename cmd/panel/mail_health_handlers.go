@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"strings"
 
@@ -31,6 +32,10 @@ type healthCheck struct {
 // exact durable active publisher. A retained standby database must never make
 // an active BIND zone look DNSSEC-secured.
 func (p *Panel) mailDNSSECSecured(ctx context.Context, domain string) bool {
+	mode, err := p.domainDNSManagementMode(ctx, domain)
+	if err != nil || mode != setupDNSModeLocal {
+		return false
+	}
 	publisher, ready, err := p.activeDNSPublisher(ctx)
 	if err != nil || !ready || publisher.Engine != transport.DNSEnginePowerDNS ||
 		publisher.Epoch < 1 {
@@ -55,9 +60,19 @@ func (p *Panel) handleMailHealth(w http.ResponseWriter, r *http.Request, domainI
 		return
 	}
 
+	mode, err := p.domainDNSManagementMode(ctx, domain)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+
 	var checks []healthCheck
 	add := func(id, status, detail string) {
 		checks = append(checks, healthCheck{ID: id, Status: status, Detail: detail})
+	}
+
+	if mode == setupDNSModeExternal || mode == setupDNSModeExisting {
+		checks = append(checks, externalMailDNSHealth(ctx, domain, serverPrimaryIP(), serverPrimaryIPv6(), net.DefaultResolver))
 	}
 
 	// --- Server facts from the agent / Sunucu gerçekleri agent'tan
@@ -96,11 +111,24 @@ func (p *Panel) handleMailHealth(w http.ResponseWriter, r *http.Request, domainI
 	// SPF / DKIM / DMARC: dünyanın çözdüğü; kayıt bizim zone'daysa ama dünya
 	// henüz göremiyorsa (delegasyon bekliyor) bu fail değil warn'dur.
 	var zoneID int
-	_ = p.db.GetDB().QueryRowContext(ctx,
-		`SELECT id FROM pdns_domains WHERE name = ?`, domain).Scan(&zoneID)
+	var desiredRemote []DNSRecord
+	if mode == setupDNSModeLocal {
+		_ = p.db.GetDB().QueryRowContext(ctx, `SELECT id FROM pdns_domains WHERE name = ?`, domain).Scan(&zoneID)
+	} else if mode == setupDNSModeExisting {
+		var err error
+		desiredRemote, err = p.remoteDomainDNSRecords(ctx, domain)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+	}
 	checkTXT := func(id, name, prefix string) {
 		if v, ok := liveTXT(ctx, name, prefix); ok && v != "" {
 			add(id, "ok", "")
+			return
+		}
+		if remoteMailDesiredTXT(desiredRemote, name, prefix) != "" {
+			add(id, "warn", "pending")
 			return
 		}
 		if zoneID > 0 && strings.HasPrefix(p.zoneTXT(ctx, zoneID, name), prefix) {

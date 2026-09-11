@@ -10,7 +10,7 @@ import "os"
 // çalıştırılan supervisor test yardımcılarında, paket init işlevlerinden önce
 // çalıştıran kullanıcıyla eşleştirir.
 var installServiceMutationTestOwnership = func() struct{} {
-	if len(os.Args) > 1 && os.Args[1] == serviceMutationSupervisorMode {
+	if len(os.Args) > 1 && os.Args[1] == serviceMutationSupervisorMode && os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "debian13-20260911" {
 		serviceMutationRequiredOwnerUID = uint32(os.Getuid())
 		serviceMutationRequiredOwnerGID = uint32(os.Getgid())
 	}

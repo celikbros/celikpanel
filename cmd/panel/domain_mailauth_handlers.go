@@ -42,13 +42,15 @@ type mailAuthRecord struct {
 }
 
 type mailAuthStatus struct {
-	Domain           string         `json:"domain"`
-	ZoneExists       bool           `json:"zone_exists"`
-	SPF              mailAuthRecord `json:"spf"`
-	DKIM             mailAuthRecord `json:"dkim"`
-	DMARC            mailAuthRecord `json:"dmarc"`
-	DKIMSelector     string         `json:"dkim_selector"`
-	SigningInstalled bool           `json:"signing_installed"`
+	DNSManagementMode string         `json:"dns_management_mode"`
+	RequiredRecords   []DNSRecord    `json:"required_records,omitempty"`
+	Domain            string         `json:"domain"`
+	ZoneExists        bool           `json:"zone_exists"`
+	SPF               mailAuthRecord `json:"spf"`
+	DKIM              mailAuthRecord `json:"dkim"`
+	DMARC             mailAuthRecord `json:"dmarc"`
+	DKIMSelector      string         `json:"dkim_selector"`
+	SigningInstalled  bool           `json:"signing_installed"`
 }
 
 // handleMailAuth routes the /mail/auth* endpoints (called from the domain
@@ -179,12 +181,37 @@ func (p *Panel) handleMailAuthStatus(w http.ResponseWriter, r *http.Request, dom
 	ctx := r.Context()
 	w.Header().Set("Content-Type", "application/json")
 
-	st := mailAuthStatus{Domain: domain, DKIMSelector: dkimSelector}
+	mode, err := p.domainDNSManagementMode(ctx, domain)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	st := mailAuthStatus{Domain: domain, DKIMSelector: dkimSelector, DNSManagementMode: mode}
 
 	var zoneID int
-	zoneErr := p.db.GetDB().QueryRowContext(ctx,
-		`SELECT id FROM pdns_domains WHERE name = ?`, domain).Scan(&zoneID)
-	st.ZoneExists = zoneErr == nil
+	if mode == setupDNSModeLocal {
+		zoneErr := p.db.GetDB().QueryRowContext(ctx, `SELECT id FROM pdns_domains WHERE name = ?`, domain).Scan(&zoneID)
+		st.ZoneExists = zoneErr == nil
+	}
+	var remoteRecords []DNSRecord
+	if mode == setupDNSModeExisting {
+		st.ZoneExists, err = p.remoteDomainDNSExists(ctx, domain)
+		if err == nil {
+			remoteRecords, err = p.remoteDomainDNSRecords(ctx, domain)
+		}
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+	} else if mode != setupDNSModeLocal {
+		st.ZoneExists = false
+	}
+	desiredTXT := func(name, prefix string) string {
+		if mode == setupDNSModeExisting {
+			return remoteMailDesiredTXT(remoteRecords, name, prefix)
+		}
+		return p.zoneTXT(ctx, zoneID, name)
+	}
 
 	// DKIM key state from the agent (never creates a key on GET).
 	// DKIM anahtar durumu agent'tan (GET'te asla anahtar oluşturmaz).
@@ -200,7 +227,7 @@ func (p *Panel) handleMailAuthStatus(w http.ResponseWriter, r *http.Request, dom
 	st.SPF.Name = domain
 	st.SPF.Recommended = spfRecommended()
 	if st.ZoneExists {
-		st.SPF.ZoneValue = p.zoneTXT(ctx, zoneID, domain)
+		st.SPF.ZoneValue = desiredTXT(domain, "v=spf1")
 	}
 	st.SPF.DNSValue, st.SPF.Resolved = liveTXT(ctx, domain, "v=spf1")
 	st.SPF.Status = deriveStatus(st.SPF.Recommended, st.SPF.ZoneValue, st.SPF.DNSValue, st.SPF.Resolved)
@@ -211,7 +238,7 @@ func (p *Panel) handleMailAuthStatus(w http.ResponseWriter, r *http.Request, dom
 	if dkimSt.HasKey {
 		st.DKIM.Recommended = dkimRecommended(dkimSt.PublicKeyB64)
 		if st.ZoneExists {
-			st.DKIM.ZoneValue = p.zoneTXT(ctx, zoneID, dkimName)
+			st.DKIM.ZoneValue = desiredTXT(dkimName, "v=DKIM1")
 		}
 		st.DKIM.DNSValue, st.DKIM.Resolved = liveTXT(ctx, dkimName, "v=DKIM1")
 		st.DKIM.Status = deriveStatus(st.DKIM.Recommended, st.DKIM.ZoneValue, st.DKIM.DNSValue, st.DKIM.Resolved)
@@ -225,7 +252,7 @@ func (p *Panel) handleMailAuthStatus(w http.ResponseWriter, r *http.Request, dom
 	st.DMARC.Name = dmarcName
 	st.DMARC.Recommended = dmarcRecommended(domain, "none")
 	if st.ZoneExists {
-		st.DMARC.ZoneValue = p.zoneTXT(ctx, zoneID, dmarcName)
+		st.DMARC.ZoneValue = desiredTXT(dmarcName, "v=DMARC1")
 	}
 	st.DMARC.DNSValue, st.DMARC.Resolved = liveTXT(ctx, dmarcName, "v=DMARC1")
 	// Any valid DMARC record counts: the policy is the owner's choice.
@@ -239,6 +266,9 @@ func (p *Panel) handleMailAuthStatus(w http.ResponseWriter, r *http.Request, dom
 		st.DMARC.Status = "missing"
 	}
 
+	if mode == setupDNSModeExternal || mode == setupDNSModeExisting {
+		st.RequiredRecords = externalMailDNSRecords(domain, serverPrimaryIP(), serverPrimaryIPv6(), st)
+	}
 	json.NewEncoder(w).Encode(st)
 }
 
@@ -386,9 +416,20 @@ func (p *Panel) upsertTXT(ctx context.Context, zoneID int, name, value string) e
 // handleMailAuthApply writes the requested record into the zone.
 // handleMailAuthApply, istenen kaydı zone'a yazar.
 func (p *Panel) handleMailAuthApply(w http.ResponseWriter, r *http.Request, domain string) {
-	w.Header().Set("Content-Type", "application/json")
-	if _, ready := p.requireActiveDNSPublisherForMutation(w, r.Context()); !ready {
+	mode, err := p.domainDNSManagementMode(r.Context(), domain)
+	if err != nil {
+		writeServerError(w, err)
 		return
+	}
+	if mode == setupDNSModeExternal {
+		writeExternalDNSManaged(w)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if mode == setupDNSModeLocal {
+		if _, ready := p.requireActiveDNSPublisherForMutation(w, r.Context()); !ready {
+			return
+		}
 	}
 
 	var req struct {
@@ -423,6 +464,25 @@ func (p *Panel) handleMailAuthApply(w http.ResponseWriter, r *http.Request, doma
 		return
 	}
 
+	if mode == setupDNSModeExisting {
+		ipv4, ipv6 := serverPrimaryIP(), serverPrimaryIPv6()
+		if ipv4 == "" && ipv6 == "" {
+			writeCodedError(w, http.StatusConflict, "REMOTE_DNS_MAIL_ADDRESS_REQUIRED", "the mail server address must be known before publishing mail records", "")
+			return
+		}
+		records := externalMailDNSRecords(domain, ipv4, ipv6, mailAuthStatus{})
+		records = append(records, DNSRecord{Name: name, Type: "TXT", Content: value, TTL: 3600})
+		if err := p.remoteDNSMailRecords(r.Context(), domain, records); err != nil {
+			if errors.Is(err, errRemoteDNSMailConflict) {
+				writeCodedError(w, http.StatusConflict, "REMOTE_DNS_MAIL_RECORD_CONFLICT", "existing mail routing records differ; review them in DNS before enabling this mail destination", "")
+			} else {
+				writeRemoteDNSUnavailable(w)
+			}
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "name": name, "value": value})
+		return
+	}
 	zoneID, err := p.ensureZone(r.Context(), domain)
 	if err != nil {
 		writeServerError(w, err)

@@ -74,12 +74,6 @@ func (p *Panel) handleDomainDNS(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "invalid domain ID")
 		return
 	}
-	if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
-		if _, ready := p.requireActiveDNSPublisherForMutation(w, r.Context()); !ready {
-			return
-		}
-	}
-
 	domainName, err := p.domainNameForDNS(r.Context(), domainID)
 	if errors.Is(err, sql.ErrNoRows) {
 		writeClientError(w, http.StatusNotFound, "domain not found")
@@ -88,6 +82,25 @@ func (p *Panel) handleDomainDNS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeServerError(w, err)
 		return
+	}
+
+	mode, err := p.domainDNSManagementMode(r.Context(), domainName)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if mode == setupDNSModeExternal {
+		p.handleExternalDomainDNS(w, r, domainName)
+		return
+	}
+	if mode == setupDNSModeExisting {
+		p.handleRemoteDomainDNS(w, r, domainName)
+		return
+	}
+	if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
+		if _, ready := p.requireActiveDNSPublisherForMutation(w, r.Context()); !ready {
+			return
+		}
 	}
 
 	switch {

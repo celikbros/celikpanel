@@ -1,0 +1,11 @@
+local 1.1.1.1 dev lo src 192.0.2.15 uid 0 \    cache <local> 
+10.0.2.15       STREAM panel.webmail.setup.test
+10.0.2.15       DGRAM  
+10.0.2.15       RAW    
+127.0.1.1       STREAM mail.webmail.setup.test
+127.0.1.1       DGRAM  
+127.0.1.1       RAW    
+192.0.2.15      mail.webmail.setup.test
+active
+active
+ISOLATED_FIXED_RESOLVER_LISTENER_READY

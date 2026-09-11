@@ -104,6 +104,8 @@ type Panel struct {
 	// requests fail fast instead of racing between an active-operation check
 	// and the actual machine change.
 	serviceMutationMu sync.Mutex
+	serverSetupMu     sync.Mutex
+	serverSetupProbe  func(context.Context, serverSetupDraft) ([]serverSetupCheck, error)
 	// dnsTopologyMu serializes every request-time DNS identity mutation. The
 	// setup endpoint and the two legacy endpoints share agent state and one
 	// SQLite tuple; their snapshot/apply/commit/rollback sequences must never
@@ -877,9 +879,9 @@ func main() {
 	// activation restarts the panel and then verifies the published leaf over
 	// this listener; an atomic gate returns 503 for every application request
 	// until all startup recovery and route registration is complete.
-	applicationHandler := csrfProtect(
+	applicationHandler := panel.requireRemoteDNSMachineAuth(csrfProtect(
 		panel.requireAuth(http.DefaultServeMux),
-	)
+	))
 	startupGate := newPanelHTTPStartupGate(applicationHandler)
 	handler := securityHeaders(panel.secureCookies, startupGate)
 	addr := listenAddr()
@@ -1148,6 +1150,18 @@ func main() {
 	http.HandleFunc("/api/v1/admin/store-catalog/", panel.handleStoreCatalogAdmin)
 	http.HandleFunc("/api/v1/audit-logs", panel.handleAuditLogs)
 	http.HandleFunc("/api/v1/dashboard", panel.handleDashboard)
+	http.HandleFunc("/api/v1/dns/remote/enrollments", panel.handleRemoteDNSAdmin)
+	http.HandleFunc("/api/v1/dns/remote/clients", panel.handleRemoteDNSAdmin)
+	http.HandleFunc("/api/v1/dns/remote/connections", panel.handleRemoteDNSAdmin)
+	http.HandleFunc("/api/v1/dns/remote/accept", panel.handleRemoteDNSMachine)
+	http.HandleFunc("/api/v1/dns/remote/receiver/status", panel.handleRemoteDNSMachine)
+	http.HandleFunc("/api/v1/dns/remote/receiver/publish", panel.handleRemoteDNSMachine)
+	http.HandleFunc(serverSetupPath, panel.handleServerSetup)
+	http.HandleFunc(serverSetupPath+"/complete", panel.handleServerSetupComplete)
+	http.HandleFunc(serverSetupPath+"/revise", panel.handleServerSetupRevise)
+	http.HandleFunc(serverSetupPath+"/plan", panel.handleServerSetupPlan)
+	http.HandleFunc(serverSetupPath+"/start", panel.handleServerSetupStart)
+	http.HandleFunc(serverSetupPath+"/operation", panel.handleServerSetupOperation)
 	http.HandleFunc("/api/v1/auth/password", panel.handleChangeOwnPassword)
 	http.HandleFunc("/api/v1/auth/2fa/status", panel.handle2FA)
 	http.HandleFunc("/api/v1/auth/2fa/setup", panel.handle2FA)
@@ -1331,6 +1345,7 @@ func main() {
 	http.Handle("/", frontendHandler(webRoot))
 
 	startupGate.Open()
+	panel.resumeServerSetupExecutions()
 	// Immediate background host mutators are started only after recovery,
 	// route registration, and admission of normal application traffic.
 	panel.startBackupScheduler()

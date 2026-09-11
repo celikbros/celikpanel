@@ -13,6 +13,7 @@ import (
 type serviceMutationStepMethod string
 
 const (
+	serviceMutationStepIssueMailHostCertificate                           = "Agent.IssueMailHostCertificateV1"
 	serviceMutationStepConfigureDBTools         serviceMutationStepMethod = "Agent.ConfigureDBTools"
 	serviceMutationStepConfigureDKIMSigning     serviceMutationStepMethod = "Agent.ConfigureDKIMSigning"
 	serviceMutationStepSyncDNSZone              serviceMutationStepMethod = "Agent.SyncDNSZoneV2"
@@ -411,6 +412,17 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 			serviceMutationJobMatches(
 				job,
 				"panel_certificate_issue",
+				claim.target,
+				claim.packageName,
+			)
+
+	case serviceMutationStepIssueMailHostCertificate:
+		return serviceMutationCanonicalFQDN(claim.target) &&
+			mutationpayload.ValidMailHostCertificateQualifier(claim.packageName) &&
+			claim.action == "issue" &&
+			serviceMutationJobMatches(
+				job,
+				"mail_host_certificate",
 				claim.target,
 				claim.packageName,
 			)

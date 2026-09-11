@@ -1,0 +1,4 @@
+=== RUN   TestServerSetupDisposableVMFirewall
+    server_setup_vm_test.go:85: evidence baseline: {"enabled":false,"engine_available":true,"tcp_ports":null,"udp_ports":null,"ssh_ports":[22],"persistence_state":"disabled"}
+--- PASS: TestServerSetupDisposableVMFirewall (0.13s)
+PASS

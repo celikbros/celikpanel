@@ -1,0 +1,191 @@
+{
+  "web": {
+    "purpose": "web",
+    "dns_mode": "external",
+    "status": "ready",
+    "execution_id": "c605bde60e7cfe76e85d711424780c25",
+    "start_replay_same_execution": true,
+    "checks": [
+      {
+        "id": "panel_https",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "panel_renewal",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "dns",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "firewall",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "services",
+        "state": "ready",
+        "code": "ready"
+      }
+    ],
+    "real_certbot_timer_renewal": true,
+    "expired_license_preserves_workloads_and_renewal": true
+  },
+  "application": {
+    "purpose": "application",
+    "dns_mode": "external",
+    "status": "ready",
+    "execution_id": "b989a13764221dc240fa503aac23c2d3",
+    "start_replay_same_execution": true,
+    "checks": [
+      {
+        "id": "panel_https",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "panel_renewal",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "dns",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "firewall",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "services",
+        "state": "ready",
+        "code": "ready"
+      }
+    ],
+    "real_certbot_timer_renewal": true
+  },
+  "webmail": {
+    "purpose": "web_mail",
+    "dns_mode": "external",
+    "status": "ready",
+    "execution_id": "0a7357efbf8d5bbf20365fb120fdd61f",
+    "start_replay_same_execution": true,
+    "checks": [
+      {
+        "id": "panel_https",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "panel_renewal",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "dns",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "firewall",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "services",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "mail_tls",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "mail_identity",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "mail_delivery",
+        "state": "ready",
+        "code": "ready"
+      }
+    ],
+    "real_certbot_timer_renewal": true
+  },
+  "dnsprimary": {
+    "purpose": "dns",
+    "dns_mode": "local",
+    "status": "ready",
+    "execution_id": "f09cd1dd982304c0fc463d8c11b73b17",
+    "start_replay_same_execution": true,
+    "checks": [
+      {
+        "id": "panel_https",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "panel_renewal",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "dns",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "firewall",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "services",
+        "state": "ready",
+        "code": "ready"
+      }
+    ]
+  },
+  "dnssecondary": {
+    "purpose": "dns",
+    "dns_mode": "local",
+    "status": "ready",
+    "execution_id": "03074f76ffff55a02d1c643c460e426a",
+    "start_replay_same_execution": true,
+    "checks": [
+      {
+        "id": "panel_https",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "panel_renewal",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "dns",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "firewall",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "services",
+        "state": "ready",
+        "code": "ready"
+      }
+    ]
+  }
+}

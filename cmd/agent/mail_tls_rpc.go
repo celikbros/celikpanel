@@ -300,7 +300,7 @@ func reconcileMailTLSHost(
 	if err := configurePostfixTLS(myhostname, valid, preflight.sniMapType, run); err != nil {
 		return setMailTLSFailure(resp, "postfix configuration", err, previous, run), nil
 	}
-	if err := configureDovecotTLS(valid, run); err != nil {
+	if err := configureDovecotTLSForHost(myhostname, valid, run); err != nil {
 		return setMailTLSFailure(resp, "dovecot configuration", err, previous, run), nil
 	}
 	if err := validatePostfixTLSConfig(run); err != nil {
@@ -1079,9 +1079,13 @@ func configurePostfixTLS(
 	sniMapType string,
 	run mailTLSCommandRunner,
 ) error {
+	certPath, keyPath, err := selectedMailHostCertificate(myhostname)
+	if err != nil {
+		return err
+	}
 	settings := [][2]string{
-		{"smtpd_tls_cert_file", defaultMailCert},
-		{"smtpd_tls_key_file", defaultMailKey},
+		{"smtpd_tls_cert_file", certPath},
+		{"smtpd_tls_key_file", keyPath},
 		// "may" = offer TLS, accept plaintext — mandatory TLS on port 25
 		// violates RFC and loses mail from old senders.
 		// "may" = TLS öner, düz metni kabul et — 25'te zorunlu TLS RFC'ye
@@ -1162,6 +1166,13 @@ func writePostfixSNIMap(
 // configureDovecotTLS, TLS ekimizi yazar: varsayılan sertifika artı SNI adı
 // başına bir local_name bloğu; IMAP/POP istemcileri doğru zinciri alır.
 func configureDovecotTLS(sni []MailSNIEntry, run mailTLSCommandRunner) error {
+	return configureDovecotTLSForHost("", sni, run)
+}
+func configureDovecotTLSForHost(myhostname string, sni []MailSNIEntry, run mailTLSCommandRunner) error {
+	certPath, keyPath, err := selectedMailHostCertificate(myhostname)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filepath.Dir(dovecotTLSConf), 0o755); err != nil {
 		return err
 	}
@@ -1169,7 +1180,7 @@ func configureDovecotTLS(sni []MailSNIEntry, run mailTLSCommandRunner) error {
 	// validated by dovecot's parser before any restart — see dovecot_dialect.go.
 	// Lehçe-farkında (2.3 ssl_cert=< vs 2.4 ssl_server_cert_file=) ve yeniden
 	// başlatmadan önce dovecot ayrıştırıcısıyla doğrulanır.
-	conf := buildDovecotTLSConf(dovecotIs24WithRunner(run), defaultMailCert, defaultMailKey, sni)
+	conf := buildDovecotTLSConf(dovecotIs24WithRunner(run), certPath, keyPath, sni)
 	return applyDovecotTLSConf(dovecotTLSConf, conf, run)
 }
 

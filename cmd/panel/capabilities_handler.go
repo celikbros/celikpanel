@@ -25,11 +25,13 @@ import (
 // değil.
 
 type hostingCapabilities struct {
-	WebServer        string   `json:"web_server"`         // "nginx" or "" when no supported adapter is available
-	PHPVersions      []string `json:"php_versions"`       // installed FPM versions, newest first
-	DNSServer        string   `json:"dns_server"`         // proven active "pdns", "bind" or ""
-	DNSIdentityReady bool     `json:"dns_identity_ready"` // saved nameserver pair and operating mode
-	MailServer       bool     `json:"mail_server"`        // postfix present
+	DNSManagementMode  string   `json:"dns_management_mode"`
+	DNSManagementReady bool     `json:"dns_management_ready"`
+	WebServer          string   `json:"web_server"`         // "nginx" or "" when no supported adapter is available
+	PHPVersions        []string `json:"php_versions"`       // installed FPM versions, newest first
+	DNSServer          string   `json:"dns_server"`         // proven active "pdns", "bind" or ""
+	DNSIdentityReady   bool     `json:"dns_identity_ready"` // saved nameserver pair and operating mode
+	MailServer         bool     `json:"mail_server"`        // postfix present
 	// All installed database engines — a server can legitimately run both
 	// MariaDB and PostgreSQL side by side (no conflict group).
 	// Kurulu tüm veritabanı motorları — bir sunucu MariaDB ve PostgreSQL'i
@@ -97,8 +99,14 @@ func (p *Panel) hostingCaps(ctx context.Context) (hostingCapabilities, error) {
 		}
 	}
 
-	publisher, publisherReady, err := p.activeDNSPublisher(ctx)
+	mode, err := p.setupDNSManagementMode(ctx)
 	if err != nil {
+		return hostingCapabilities{}, err
+	}
+	caps.DNSManagementMode = mode
+	caps.DNSManagementReady = mode == setupDNSModeExternal
+	publisher, publisherReady, err := p.activeDNSPublisher(ctx)
+	if err != nil && mode == setupDNSModeLocal {
 		return hostingCapabilities{}, fmt.Errorf("verify active DNS publisher: %w", err)
 	}
 	if publisherReady {
@@ -108,6 +116,14 @@ func (p *Panel) hostingCaps(ctx context.Context) (hostingCapabilities, error) {
 			return hostingCapabilities{}, err
 		}
 		caps.DNSIdentityReady = identityReady
+		if mode == setupDNSModeLocal {
+			caps.DNSManagementReady = identityReady
+		}
+	}
+
+	if mode == setupDNSModeExisting {
+		_, err := p.remoteDNSConnectionForCreation(ctx, "")
+		caps.DNSManagementReady = err == nil
 	}
 
 	if phpInstalled {

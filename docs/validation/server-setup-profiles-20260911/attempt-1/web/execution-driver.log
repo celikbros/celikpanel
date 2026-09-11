@@ -1,0 +1,5 @@
+sudo: unable to resolve host profile65-web: Name or service not known
+web ('running', '01-dns', 'null')
+web ('running', '02-service', 'null')
+web ('running', '03-service', 'null')
+Connection to 127.0.0.1 closed by remote host.

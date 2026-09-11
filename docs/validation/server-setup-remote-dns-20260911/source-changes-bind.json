@@ -1,0 +1,122 @@
+[
+  {
+    "path": "cmd/agent/dns_engine_bind_catalog_options.go",
+    "before_sha256": null,
+    "after_sha256": "d9f254eb71d8904961aa3a62be0d7b18b4ef6503d64b7700b7f870e78aa93fa8"
+  },
+  {
+    "path": "cmd/agent/dns_engine_bind_catalog_options_test.go",
+    "before_sha256": null,
+    "after_sha256": "f692ad4c88232933c921fbc36cff77138c740429b92cbe4a5e5d3eb37b136e97"
+  },
+  {
+    "path": "cmd/agent/dns_engine_bind_config.go",
+    "before_sha256": "45b9ab9c41dad9a9605230cfbde311cc382d237c90acf7c204dc52fdceeb5232",
+    "after_sha256": "3404653bf5f19bf3c4033be359ce3dd0cdca126d5c076b69431975a27d8e2d92"
+  },
+  {
+    "path": "cmd/agent/dns_engine_bind_host_linux_test.go",
+    "before_sha256": "d43654e4e62fd1f3b767f5750cb4066cc878b48726f0c71fe7f0be3e252ddce9",
+    "after_sha256": "c7c0fe7cdc6e4a6dba7b3b648d0bb5e2c4edf4f16bf54306446fb2535ada146e"
+  },
+  {
+    "path": "cmd/agent/dns_engine_host.go",
+    "before_sha256": "42169f47160d61a512fee1221b25b4c6e71b88ee5811fcdc08c51b7896b77081",
+    "after_sha256": "039e073dab58084e075c98148e8fd28dfc0353d38af8a22f7feb6b2e15e37425"
+  },
+  {
+    "path": "cmd/agent/dns_engine_recovery.go",
+    "before_sha256": "0e844155ffa9019ee0c368dfb5a579e12b638aa89876be3705e934d840d491d3",
+    "after_sha256": "60feea212c15188c361065714781c8af54bac2a40a5e6a4fa656680c147513c9"
+  },
+  {
+    "path": "cmd/agent/mail_health_dns.go",
+    "before_sha256": "6477f110b9a1b99bd504ceba0a0650b0e8ba78e38edb31243c8f99e5b1698b72",
+    "after_sha256": "6af4dde1fceadb986315ee4fe58c43f595285a72cfd221679939aecf0eaa28e2"
+  },
+  {
+    "path": "cmd/panel/server_setup_dns_profile_vm_test.go",
+    "before_sha256": "518b880bca7693780e83edb42ab2eef21ba59a79026589a95aaf68109c0b6e81",
+    "after_sha256": "3452983a9d360b35cd13881156e50a75f04fabac5931656b0cc6ad1a9dc5e371"
+  },
+  {
+    "path": "cmd/panel/setup_dns_nameservers.go",
+    "before_sha256": "fceb894851768ea3ba17b4790a5dcfa5ec73ea5125616b17eb12f21a0303bad1",
+    "after_sha256": "2b0ac097af9f28241dd6b731a749cacc1aca88362b60a96717be2e3b8ac8ce38"
+  },
+  {
+    "path": "cmd/panel/setup_dns_resolver.go",
+    "before_sha256": null,
+    "after_sha256": "8ace5e564798ea9c25052db7875314bce0da29a5a3cdce4b57295835605e1bb7"
+  },
+  {
+    "path": "cmd/panel/setup_dns_resolver_test.go",
+    "before_sha256": null,
+    "after_sha256": "631d312aef87d6eed6463c5115a7d4ce74014c4e09937df69305fa8f6284d4bb"
+  },
+  {
+    "path": "docs/SERVER-SETUP-STATUS.md",
+    "before_sha256": "3011249a23ac05ee6d23a93a2a158a9d1e0b267414ee734c1be664b710bbd1d0",
+    "after_sha256": "47001499c88ed5a220c16eb51aa6661f8ca9cb0abd8fc3a7b118be4a374d62be"
+  },
+  {
+    "path": "docs/SERVER-SETUP-STATUS.tr.md",
+    "before_sha256": "e8f5a83d6a76f8738c2bfe6e4db2e6f68d2a0304dcca7b66150c23127ffd2250",
+    "after_sha256": "88c482905e76265e2340fc42f61199d61b52a54c13d267556b06b723c3f59031"
+  },
+  {
+    "path": "docs/validation/server-setup-profiles-20260911/README.md",
+    "before_sha256": null,
+    "after_sha256": "b128820bb9760982f43a4ecb381f86a84afbd968324667d5bc46a5be13893f39"
+  },
+  {
+    "path": "docs/validation/server-setup-profiles-20260911/README.tr.md",
+    "before_sha256": null,
+    "after_sha256": "c20b63c9527a0a220d819e4c7f14bd6e391e8f392870ed38346c19644763fd4e"
+  },
+  {
+    "path": "docs/validation/server-setup-remote-dns-20260911/README.md",
+    "before_sha256": "42a3f80da6afa630761276ac354cd6203b271e1109d8b715b69ba9711d0c3277",
+    "after_sha256": "22e031eddf1f6d5e78cab1de6800a45d95a62cc041f9bd95c8fc9b4406f28fd4"
+  },
+  {
+    "path": "docs/validation/server-setup-remote-dns-20260911/README.tr.md",
+    "before_sha256": "6c58323da270379b5b7361f16d852aebaa231638c4d9dcc8a79b8b80e997fb14",
+    "after_sha256": "12a01550d2c5b5062ffb0f667ceaaec5ecbce67731f2219d39bfde7d136669f3"
+  },
+  {
+    "path": "internal/binddns/pairing.go",
+    "before_sha256": "2dffbe4636639c18492552cea11d78dbb200be6188602e2b89feee5a20d61150",
+    "after_sha256": "2b8d1a30e1cbf7642940269155794850e7295e0ec202c1907d9f44fd79224af0"
+  },
+  {
+    "path": "internal/binddns/pairing_test.go",
+    "before_sha256": "0b80cbd75f5d81b18e28a5bfc8f79e64bf81e70858e6100caae24cc8abcb454c",
+    "after_sha256": "8d7da7ea7a298fbf88975c1375c84e28372c109490581fcc576e05260ebbfd68"
+  },
+  {
+    "path": "internal/binddns/secondary_config_test.go",
+    "before_sha256": null,
+    "after_sha256": "cf609f704d26e42d6b13eb9ca103c5c41a2e79a251e854ce99eb47b4340273e2"
+  },
+  {
+    "path": "internal/binddns/secondary_legacy.go",
+    "before_sha256": null,
+    "after_sha256": "14ee9946b87075312e3f42953e55a77f0d8ff156ab6c545d7501430ebe45058b"
+  },
+  {
+    "path": "internal/binddns/types.go",
+    "before_sha256": "38714f7a77afd96566a92686cd643c82bcad1f4994df89123cc704fa1670f9e0",
+    "after_sha256": "aa77763b1165832cc5fccfc0f8b377777f107debb94339b419047b61dfc2f56c"
+  },
+  {
+    "path": "internal/dnswire/query.go",
+    "before_sha256": null,
+    "after_sha256": "73b67e2d40b8db5fd416e828df4c4f96634bbefcff2c446cedc805390c801f2f"
+  },
+  {
+    "path": "internal/dnswire/query_test.go",
+    "before_sha256": null,
+    "after_sha256": "3a4f13548d4bf00033bb63c4dff9ec737a6f7d147ed5ea34f3ce926a1b80aefe"
+  }
+]

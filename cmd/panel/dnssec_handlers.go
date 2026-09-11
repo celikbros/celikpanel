@@ -115,6 +115,9 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 		return
 	}
 
+	if !p.requireLocalDomainDNS(w, r.Context(), domain) {
+		return
+	}
 	var resp dnssecAgentResponse
 	switch r.Method {
 	case http.MethodGet:

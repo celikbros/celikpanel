@@ -189,6 +189,13 @@ func (p *Panel) syncZoneToDNS(ctx context.Context, domain string, deleted bool) 
 }
 
 func (p *Panel) syncZoneToDNSLocked(ctx context.Context, domain string, deleted bool) error {
+	mode, err := p.domainDNSManagementMode(ctx, domain)
+	if err != nil {
+		return err
+	}
+	if mode != setupDNSModeLocal {
+		return errors.New("external DNS cannot be published by a local engine")
+	}
 	if err := p.requireNoPendingDNSClusterSaga(ctx); err != nil {
 		return &dnsAgentPublicationError{Err: err}
 	}

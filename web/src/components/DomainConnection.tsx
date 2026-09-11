@@ -33,6 +33,8 @@ import { HelpButton } from './HelpDrawer';
 // kayıtlarla), tek bir A kaydı ise bir web sitesi ve sertifika için yeterlidir
 // ve DNS'i olduğu yerde bırakır.
 interface Connection {
+    dns_management_mode?: 'local' | 'external' | 'existing';
+    required_records?: { name: string; type: string; content: string; ttl: number; prio?: number }[];
     domain: string;
     server_ip: string;
     server_ipv6?: string;
@@ -105,6 +107,7 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
     }
     if (!c) return null;
 
+    const externalDNS = c.dns_management_mode === 'external';
     const connected = c.status === 'delegated' || c.status === 'a_record';
     const stable = connected && !c.propagation_pending;
     const tone = stable ? 'border-success/40 bg-success/5' : 'border-warning-mark/60 bg-warning-mark/10';
@@ -191,7 +194,7 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                         sunucusu adları gerçekten bu sunucu adına cevap
                         verdiğinde sunulur. Aksi hâlde talimat alan adını
                         bozardı — ve bunu söyleyen panel olurdu. */}
-                    {!c.nameservers_usable && (
+                    {!externalDNS && !c.nameservers_usable && (
                         <div className="mb-3 rounded-xl border border-danger/40 bg-danger/5 p-4">
                             <h4 className="mb-1 text-sm font-semibold text-fg">{t('conn.nsBroken.title')}</h4>
                             <p className="text-xs leading-relaxed text-fg-muted">{t('conn.nsBroken.desc')}</p>
@@ -209,7 +212,7 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                     )}
 
                     {/* Route A — full delegation. / A yolu — tam devir. */}
-                    <div className={`mb-3 rounded-xl border border-border bg-surface p-4 ${!c.nameservers_usable ? 'opacity-50' : ''}`}>
+                    {!externalDNS && <div className={`mb-3 rounded-xl border border-border bg-surface p-4 ${!c.nameservers_usable ? 'opacity-50' : ''}`}>
                         <h4 className="mb-1 text-sm font-semibold text-fg">{t('conn.routeA.title')}</h4>
                         <p className="mb-3 text-xs leading-relaxed text-fg-muted">{t('conn.routeA.desc')}</p>
                         {/* Glue is only this domain's business when the
@@ -239,16 +242,18 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                                 <CopyField key={ns} label={t('conn.nameserverN', { n: String(i + 1) })} value={ns} />
                             ))}
                         </div>
-                    </div>
+                    </div>}
 
                     {/* Route B — just point the address. / B yolu — yalnız adresi yönelt. */}
                     <div className="rounded-xl border border-border bg-surface p-4">
-                        <h4 className="mb-1 text-sm font-semibold text-fg">{t('conn.routeB.title')}</h4>
-                        <p className="mb-3 text-xs leading-relaxed text-fg-muted">{t('conn.routeB.desc')}</p>
+                        <h4 className="mb-1 text-sm font-semibold text-fg">{t(externalDNS ? 'dns.externalTitle' : 'conn.routeB.title')}</h4>
+                        <p className="mb-3 text-xs leading-relaxed text-fg-muted">{t(externalDNS ? 'dns.externalHelp' : 'conn.routeB.desc')}</p>
                         <div className="space-y-1.5">
-                            <CopyField label={`A    @`} value={c.server_ip} />
-                            <CopyField label={`A    www`} value={c.server_ip} />
-                            {c.server_ipv6 && <CopyField label={`AAAA @`} value={c.server_ipv6} />}
+                            {externalDNS && c.required_records ? c.required_records.map((record, index) => <CopyField key={`${record.type}:${record.name}:${index}`} label={`${record.type} ${record.name}`} value={`${record.prio ? record.prio + ' ' : ''}${record.content}`} />) : <>
+                                <CopyField label={`A    @`} value={c.server_ip} />
+                                <CopyField label={`A    www`} value={c.server_ip} />
+                                {c.server_ipv6 && <CopyField label={`AAAA @`} value={c.server_ipv6} />}
+                            </>}
                         </div>
                     </div>
                 </>

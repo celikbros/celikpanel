@@ -87,6 +87,7 @@ func (p *Panel) requirePanelCertificateSagaAgentCapabilities(ctx context.Context
 
 func requireKnownAgentCapabilities(capabilities []string, required ...string) error {
 	known := map[string]struct{}{
+		transport.AgentCapabilityMailHostCertificateV1:   {},
 		transport.AgentCapabilityFirewallApplyV2:         {},
 		transport.AgentCapabilityPanelCertificateIssueV2: {},
 		transport.AgentCapabilityDNSZoneSyncV2:           {},
