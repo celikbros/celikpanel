@@ -32,6 +32,13 @@ to the corresponding feature. The user reviews and starts a concrete, durable
 plan; read-only discovery performs no configuration changes. Existing workloads
 are preserved. Installed-panel updates remain user-initiated inside the panel.
 
+**September 11 follow-up (source implementation).** On first use, fresh and
+unassessed legacy administrators explicitly choose guided or manual setup.
+The server remembers manual mode and offers re-entry under Settings → Server
+setup. This changes navigation only: readiness, license enforcement, persisted
+drafts and active-operation recovery remain independent. See
+[guidance preference](SERVER-SETUP-GUIDANCE.md).
+
 **Scope and proof.** The approved sequence, current implementation gaps,
 acceptance cases and implementation order are in
 [Guided server setup](SERVER-SETUP-PLAN.md). This decision records product intent,

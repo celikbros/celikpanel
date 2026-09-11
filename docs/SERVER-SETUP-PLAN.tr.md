@@ -9,6 +9,16 @@ bu yönü onayladı. Bu belge anlaşmayı ve uygulamanın kabul ölçütlerini k
 Asistana kurulu panel güncelleme yetkisi vermez; [AGENTS.md](../AGENTS.md) gereği
 kurulu panel güncellemelerini kullanıcı CelikPanel'in kendi arayüzünden başlatır.
 
+## 11 Eylül ek kararı: açık sihirbaz tercihi (Alpha66 sürüm kaynağı)
+
+Alpha65 sonrasında ilk yönlendirmede **Sihirbazla kur** ve **Kendim
+yapılandıracağım** seçenekleri sunulur. Tercih sunucuda saklanır. Manuel tercih
+otomatik sihirbazı ve Dashboard davetini kaldırır; **Ayarlar → Sunucu kurulumu**
+üzerinden geri dönülebilir. Güncellenen sunucu boş kabul edilmez; tamamlanmış
+ve devam eden kurulumlar korunur. Manuel tercih kurulumu tamamlamaz, güvenlik
+kontrollerini veya lisans denetimini kaldırmaz. Etkin/bekleyen işlem varken
+tercih değiştirilemez. [Uygulama ve doğrulama kaydı](SERVER-SETUP-GUIDANCE.md).
+
 ## 1. Sonuç ve hedef kullanıcı
 
 Sunucu yöneticisi bileşen kataloğunu yorumlamadan ve ilgisiz ayar sayfaları arasında

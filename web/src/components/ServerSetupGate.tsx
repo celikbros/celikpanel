@@ -106,6 +106,7 @@ export function ServerSetupDashboardNotice() {
     const { t } = useI18n();
     if (!setup?.snapshot) return null;
     const snapshot = setup.snapshot;
+    if (snapshot.guidance === 'manual' && !['running', 'waiting'].includes(snapshot.status)) return null;
     return <section className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface px-5 py-5" aria-labelledby="setup-dashboard-title">
         <div className="min-w-0 flex-1 basis-72"><h2 id="setup-dashboard-title" className="font-semibold">{t(snapshot.status === 'ready' ? 'setup.dashboardReady' : 'setup.dashboardTitle')}</h2>
             <p className="mt-1 max-w-2xl text-sm text-fg-muted">{snapshot.status === 'ready' ? t(`setup.purpose.${snapshot.draft.purpose}`) : t(snapshot.origin === 'legacy' ? 'setup.dashboardLegacy' : 'setup.dashboardResume')}</p></div>

@@ -10,6 +10,21 @@ This document records that agreement and the implementation acceptance criteria.
 It does not authorize an assistant to update any installed panel; the user starts
 every installed-panel update from CelikPanel itself, as required by [AGENTS.md](../AGENTS.md).
 
+## September 11 follow-up: explicit guidance preference (Alpha66 release source)
+
+After updating Alpha65, the operator could not find the setup entry or decline
+the wizard. On first use, an administrator with a fresh or unassessed legacy
+state now chooses **Set up with the wizard** or **I'll configure it myself**.
+This is a short choice, not a claim that an upgraded host is empty. Completed
+installations and existing in-progress operations retain their state.
+
+The choice persists for the server across sessions. Manual mode suppresses the
+automatic wizard and Dashboard invitation; **Settings → Server setup** remains
+available to reopen it. Switching the preference does not complete setup, alter
+its draft, remove readiness checks, change licensing, or run host operations.
+An accepted active/waiting execution must be resolved before changing preference.
+See [implementation and checks](SERVER-SETUP-GUIDANCE.md).
+
 ## 1. Outcome and audience
 
 A server administrator should reach a usable, secured environment without
