@@ -1,0 +1,14 @@
+{
+  "files": 1529,
+  "sha256": "a08aa34402fc576572532ca17003939c4ca7ee6a160e906dd87d8b1cc910a115",
+  "go_version": "go1.26.5",
+  "command": "go test ./cmd/panel ./cmd/agent ./internal/binddns ./internal/dnswire; make vet",
+  "checkout": "/var/tmp/celikpanel-setup-bind.ssuoKpK2",
+  "uid": 0,
+  "status": "passed",
+  "previous_snapshot": "source-snapshot-recovery.json",
+  "source_changes": "source-changes-bind.json",
+  "exit_code": 0,
+  "log": "go-bind-test-vet.log",
+  "result": "go-bind-result.json"
+}

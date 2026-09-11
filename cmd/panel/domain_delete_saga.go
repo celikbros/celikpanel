@@ -233,6 +233,18 @@ func (p *Panel) removeDomainDNSForDeletion(
 	domain string,
 	parentDomain string,
 ) error {
+	mode, err := p.domainDNSManagementMode(ctx, domain)
+	if err != nil {
+		return err
+	}
+	if mode == setupDNSModeExternal {
+		// Provider records belong to the operator. Local site removal must not
+		// publish a DNS deletion or claim that external records were removed.
+		return nil
+	}
+	if mode == setupDNSModeExisting {
+		return p.syncRemoteDomainDNS(ctx, domain, true)
+	}
 	if parentDomain != "" {
 		_, err := p.removeSubdomainFromParentZone(ctx, parentDomain, domain)
 		return err
@@ -246,7 +258,7 @@ func (p *Panel) removeDomainDNSForDeletion(
 	}
 
 	var zoneID int
-	err := p.db.GetDB().QueryRowContext(ctx,
+	err = p.db.GetDB().QueryRowContext(ctx,
 		`SELECT id FROM pdns_domains WHERE name = ?`, domain,
 	).Scan(&zoneID)
 	zoneExists := err == nil

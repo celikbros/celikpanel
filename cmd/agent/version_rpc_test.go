@@ -13,6 +13,7 @@ func TestAgentVersionPublishesClosedMutationCapabilities(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{
+		transport.AgentCapabilityMailHostCertificateV1,
 		transport.AgentCapabilityFirewallApplyV2,
 		transport.AgentCapabilityDNSZoneSyncV2,
 		transport.AgentCapabilityDNSSECSecureV2,

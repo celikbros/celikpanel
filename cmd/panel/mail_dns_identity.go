@@ -80,6 +80,17 @@ func (p *Panel) savedDNSIdentityConfiguredStrict(ctx context.Context) (bool, err
 // alone is never publication authority. Public delegation is deliberately not
 // required here; that is a later operational readiness check.
 func (p *Panel) mailProfileDNSIdentityReady(ctx context.Context) (bool, error) {
+	mode, err := p.setupDNSManagementMode(ctx)
+	if err != nil {
+		return false, err
+	}
+	if mode == setupDNSModeExternal {
+		return true, nil
+	}
+	if mode == setupDNSModeExisting {
+		_, err := p.remoteDNSConnectionForCreation(ctx, "")
+		return err == nil, err
+	}
 	_, ready, err := p.activeDNSPublisher(ctx)
 	if err != nil {
 		return false, fmt.Errorf("verify active DNS publisher: %w", err)

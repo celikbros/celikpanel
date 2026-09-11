@@ -1,0 +1,10 @@
+dnsprimary ('running', '01-dns', 'null')
+dnsprimary ('running', '02-service', 'null')
+dnsprimary ('running', '03-service', 'null')
+dnsprimary ('running', '05-panel_certificate', 'null')
+dnsprimary ('running', '06-verify', 'null')
+dnsprimary ('succeeded', 'complete', 'null')
+PROFILE_EXECUTION_PASSED dnsprimary
+Traceback (most recent call last):
+  File "<stdin>", line 69, in <module>
+AssertionError: {'DomainID': 1, 'SiteID': 1, 'Domain': 'acceptance.dnsfixture.test', 'TempDomain': '', 'DocumentRoot': '', 'ProjectType': 'dnsonly', 'FTPUser': '', 'FTPPassword': '', 'PHPVersion': ''}

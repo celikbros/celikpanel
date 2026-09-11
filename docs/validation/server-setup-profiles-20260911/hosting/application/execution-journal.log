@@ -1,0 +1,116 @@
+Sep 11 01:04:13 profile65-application systemd[1]: Started celikpanel-fixture-acme.service - Isolated ACME with real challenge verification.
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Starting Pebble ACME server
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Generated new root issuer CN=Pebble Root CA 14abcb with serial 4a57870e8b5f9f00 and SKI cc02af6ecd70a2010e50a04011a9e9cba1419089
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Generated new intermediate issuer CN=Pebble Intermediate CA 30f0fc with serial 688723af4ca8576c and SKI 0c171c9bb3a9bb6ad4fef67eb87d28f855740b3c
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Generated issuance chain: Pebble Root CA 14abcb -> Pebble Intermediate CA 30f0fc
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Loaded profile "default" with certificate validity period of 7776000 seconds (promote CN=false)
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Using custom DNS resolver for ACME challenges: 127.0.0.1:53
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Disabling random VA sleeps
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 No CAA identities configured, using default [pebble.letsencrypt.org]
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Configured to reject 0% of good nonces
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Configured to attempt authz reuse for each identifier 0% of the time
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Configured to show 3 orders per page
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Management interface listening on: 127.0.0.1:15000
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Root CA certificate available at: https://127.0.0.1:15000/roots/0
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 Listening on: 0.0.0.0:14000
+Sep 11 01:04:13 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:13 ACME directory available at: https://0.0.0.0:14000/dir
+Sep 11 01:04:15 profile65-application pebble[2240]: Pebble 2026/09/11 01:04:15 GET /dir -> calling handler()
+Sep 11 01:06:05 profile65-application systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+Sep 11 01:06:05 profile65-application agent[3504]: 2026/09/11 01:06:05 Starting CelikPanel Agent...
+Sep 11 01:06:05 profile65-application agent[3504]: 2026/09/11 01:06:05 Agent listening on unix socket /run/celikpanel/agent.sock
+Sep 11 01:06:05 profile65-application agent[3504]: 2026/09/11 01:06:05 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+Sep 11 01:06:15 profile65-application agent[3504]: 2026/09/11 01:06:15 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+Sep 11 01:06:25 profile65-application agent[3504]: 2026/09/11 01:06:25 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+Sep 11 01:06:35 profile65-application agent[3504]: 2026/09/11 01:06:35 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+Sep 11 01:06:45 profile65-application agent[3504]: 2026/09/11 01:06:45 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+Sep 11 01:06:55 profile65-application agent[3504]: 2026/09/11 01:06:55 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+Sep 11 01:07:05 profile65-application agent[3504]: 2026/09/11 01:07:05 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+Sep 11 01:07:11 profile65-application systemd[1]: Started celikpanel-panel.service - Disposable CelikPanel purpose acceptance daemon.
+Sep 11 01:07:11 profile65-application panel-test[3610]: === RUN   TestServerSetupDisposableProfileDaemon
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 001_full_schema.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 002_auth.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 003_authz.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 004_accounts.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 005_projects.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 006_drop_placeholder_admin.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 007_service_scan_cache.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 008_site_usage.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 009_mail_catch_all.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 010_subdomains.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 011_entitlements.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 012_totp.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 013_backup_schedules.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 014_vpn_peers.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 015_ssl_secure_mail.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 016_metrics.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 017_panel_settings.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 018_hostname_namespace.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 019_hsts_retirement.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 020_ssl_lineage_identity.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 021_service_operations.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 022_service_operation_request_id.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 023_store_offerings.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 024_vpn_peer_state.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 025_auth_epoch.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 026_backup_schedule_status.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 027_backup_schedule_job_key.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 028_application_install_operations.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 029_additional_users.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 030_domain_deletion_operations.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 031_service_operation_data.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 032_dns_zone_sync_state.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 033_dns_engine_state.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 034_dns_engine_publication_switch_guard.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 035_dns_zone_generation_high_water.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 036_bind_paired_engine.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 037_dns_pair_identity_immutable.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 038_database_admin_account.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 039_server_setup_state.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 040_dns_management.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 041_server_setup_execution.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Applied migration: 042_remote_dns_publish.sql
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 Successfully applied 42 migrations
+Sep 11 01:07:11 profile65-application panel-test[3610]: 2026/09/11 01:07:11 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "profile65-application": a fully qualified DNS name is required; preserve pending outbox: <nil>
+Sep 11 01:07:11 profile65-application panel-test[3610]:     server_setup_profile_vm_test.go:41: disposable profile daemon ready {"build_commit":"64a0000000000000000000000000000000000000","profile":"application","revision":0,"status":"new"}
+Sep 11 01:07:12 profile65-application systemd[1]: Stopping celikpanel-panel.service - Disposable CelikPanel purpose acceptance daemon...
+Sep 11 01:07:12 profile65-application panel-test[3610]: --- PASS: TestServerSetupDisposableProfileDaemon (0.73s)
+Sep 11 01:07:12 profile65-application panel-test[3610]: PASS
+Sep 11 01:07:12 profile65-application systemd[1]: celikpanel-panel.service: Deactivated successfully.
+Sep 11 01:07:12 profile65-application systemd[1]: Stopped celikpanel-panel.service - Disposable CelikPanel purpose acceptance daemon.
+Sep 11 01:07:12 profile65-application systemd[1]: celikpanel-panel.service: Consumed 728ms CPU time, 77.8M memory peak.
+Sep 11 01:07:12 profile65-application systemd[1]: Started celikpanel-panel.service - Disposable CelikPanel purpose acceptance daemon.
+Sep 11 01:07:12 profile65-application panel-test[3661]: === RUN   TestServerSetupDisposableProfileDaemon
+Sep 11 01:07:12 profile65-application panel-test[3661]: 2026/09/11 01:07:12 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "profile65-application": a fully qualified DNS name is required; preserve pending outbox: <nil>
+Sep 11 01:07:12 profile65-application panel-test[3661]:     server_setup_profile_vm_test.go:41: disposable profile daemon ready {"build_commit":"64a0000000000000000000000000000000000000","profile":"application","revision":0,"status":"new"}
+Sep 11 01:07:53 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:53 GET /dir -> calling handler()
+Sep 11 01:07:53 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:53 HEAD /nonce-plz -> calling handler()
+Sep 11 01:07:53 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:53 POST /sign-me-up -> calling handler()
+Sep 11 01:07:53 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:53 There are now 1 accounts in memory
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 POST /order-plz -> calling handler()
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 There are now 1 authorizations in the db
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 Added order "ngJhT-FzW2AiOtyL89yqMrUBA6o5gUoZNWaxVHuGIpk" to the db
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 There are now 1 orders in the db
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 POST /authZ/ -> calling handler()
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 POST /chalZ/ -> calling handler()
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 Pulled a task from the Tasks queue: &va.vaTask{Identifier:acme.Identifier{Type:"dns", Value:"panel.application.setup.test"}, Challenge:(*core.Challenge)(0x30ed9e759a00), Account:(*core.Account)(0x30ed9e9e6600), AccountURL:"https://acme.setup.test:14000/my-account/26c568d026b6b73a", Wildcard:false}
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 Starting 3 validations.
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 Attempting to validate w/ HTTP: http://panel.application.setup.test:80/.well-known/acme-challenge/kQYR0OltUqEo30knPA0fvYDb0EovlKsrz5w6GZPswek
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 Attempting to validate w/ HTTP: http://panel.application.setup.test:80/.well-known/acme-challenge/kQYR0OltUqEo30knPA0fvYDb0EovlKsrz5w6GZPswek
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 Attempting to validate w/ HTTP: http://panel.application.setup.test:80/.well-known/acme-challenge/kQYR0OltUqEo30knPA0fvYDb0EovlKsrz5w6GZPswek
+Sep 11 01:07:56 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:56 authz 4hFD6ybAwp4RWF2G23i6SbGa3otHjvzynrjt-wEMUdE set VALID by completed challenge qzjjP87SPdwW4OpNK5x-7Ms-_ffxxZSELn-ekWs5WC4
+Sep 11 01:07:57 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:57 POST /authZ/ -> calling handler()
+Sep 11 01:07:57 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:57 POST /finalize-order/ -> calling handler()
+Sep 11 01:07:57 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:57 Order ngJhT-FzW2AiOtyL89yqMrUBA6o5gUoZNWaxVHuGIpk is fully authorized. Processing finalization
+Sep 11 01:07:57 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:57 Issued certificate serial 64cc74e2a3a5ab25 for order ngJhT-FzW2AiOtyL89yqMrUBA6o5gUoZNWaxVHuGIpk
+Sep 11 01:07:58 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:58 POST /my-order/ -> calling handler()
+Sep 11 01:07:58 profile65-application pebble[2240]: Pebble 2026/09/11 01:07:58 POST /certZ/ -> calling handler()
+Sep 11 01:07:59 profile65-application systemd[1]: Stopping celikpanel-panel.service - Disposable CelikPanel purpose acceptance daemon...
+Sep 11 01:07:59 profile65-application panel-test[3661]: --- PASS: TestServerSetupDisposableProfileDaemon (46.58s)
+Sep 11 01:07:59 profile65-application panel-test[3661]: PASS
+Sep 11 01:07:59 profile65-application systemd[1]: celikpanel-panel.service: Deactivated successfully.
+Sep 11 01:07:59 profile65-application systemd[1]: Stopped celikpanel-panel.service - Disposable CelikPanel purpose acceptance daemon.
+Sep 11 01:07:59 profile65-application systemd[1]: celikpanel-panel.service: Consumed 684ms CPU time, 84.9M memory peak.
+Sep 11 01:07:59 profile65-application systemd[1]: Started celikpanel-panel.service - Disposable CelikPanel purpose acceptance daemon.
+Sep 11 01:07:59 profile65-application panel-test[4829]: === RUN   TestServerSetupDisposableProfileDaemon
+Sep 11 01:08:00 profile65-application panel-test[4829]: 2026/09/11 01:08:00 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "profile65-application": a fully qualified DNS name is required; preserve pending outbox: <nil>
+Sep 11 01:08:00 profile65-application panel-test[4829]:     server_setup_profile_vm_test.go:41: disposable profile daemon ready {"build_commit":"64a0000000000000000000000000000000000000","profile":"application","revision":1,"status":"running"}

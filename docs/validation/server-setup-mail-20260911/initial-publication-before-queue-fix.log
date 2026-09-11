@@ -1,0 +1,5 @@
+=== RUN   TestMailHostCertificateDisposableVMConvergenceAndRenewal
+    mail_host_certificate_vm_test.go:191: initial host publication and SMTP/IMAP system-trusted TLS passed; request=bed1f853b63c9289b6a01cc6ef06e84c leaf=7cc97b0891a373580ae2162b3a0b1766191943769d8e39d91531f68d899cbc49
+    mail_host_certificate_vm_test.go:202: /var/lib/celikpanel-agent-private/mail-host-certificate-renewal.pending must be owned by uid 0 gid 989
+--- FAIL: TestMailHostCertificateDisposableVMConvergenceAndRenewal (7.46s)
+FAIL

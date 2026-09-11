@@ -129,6 +129,8 @@ type serviceMutationRuntime struct {
 	dnsZoneSyncV3Recovery               bool
 	dnsZoneSyncV3PendingPhase           string
 	panelCertificateIssuePublishedPhase string
+	mailHostCertificatePublishedPhase   string
+	mailHostCertificateCommittedPhase   string
 }
 
 type serviceMutationManager struct {
@@ -500,6 +502,17 @@ func payloadBoundDirectMutationPublishedPhase(
 			job.Target,
 			job.PackageName,
 		)
+	case "mail_host_certificate":
+		if !serviceMutationCanonicalFQDN(job.Target) ||
+			!mutationpayload.ValidMailHostCertificateQualifier(job.PackageName) {
+			return "", true, errors.New("invalid mail host certificate publication identity")
+		}
+		phase, err = formatMailHostCertificateCommitPhase(
+			mailHostCertificateCommitPublished,
+			job.RequestID,
+			job.Target,
+			job.PackageName,
+		)
 	default:
 		return "", false, nil
 	}
@@ -660,6 +673,23 @@ func validateServiceMutationLedger(ledger *serviceMutationLedger) error {
 				(state == panelCertificateIssueCommitPublished &&
 					job.Status != serviceMutationStatusSucceeded) {
 				return errors.New("service mutation ledger panel certificate commit receipt conflicts with job status")
+			}
+		}
+		if strings.HasPrefix(job.Phase, mailHostCertificateCommitPhasePrefix) {
+			state, requestID, domain, qualifier, err :=
+				parseMailHostCertificateCommitPhase(job.Phase)
+			if err != nil || requestID != job.RequestID ||
+				domain != job.Target || qualifier != job.PackageName ||
+				job.Kind != "mail_host_certificate" ||
+				!serviceMutationCanonicalFQDN(job.Target) {
+				return errors.New("service mutation ledger has an invalid mail host certificate commit receipt")
+			}
+			if (state == mailHostCertificateCommitIntent &&
+				job.Status != serviceMutationStatusRunning &&
+				job.Status != serviceMutationStatusCancelling) ||
+				(state == mailHostCertificateCommitPublished &&
+					job.Status != serviceMutationStatusSucceeded) {
+				return errors.New("service mutation ledger mail host certificate commit receipt conflicts with job status")
 			}
 		}
 		hasWorkerPID := job.WorkerPID > 0
@@ -945,6 +975,10 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 		if handled {
 			return recoveryErr
 		}
+		handled, recoveryErr = m.recoverPersistedMailHostCertificateLocked(job, lock)
+		if handled {
+			return recoveryErr
+		}
 		handled, recoveryErr = m.recoverPersistedVPNPeerSyncLocked(job, lock)
 		if handled {
 			return recoveryErr
@@ -1101,6 +1135,9 @@ func (m *serviceMutationManager) tryResolvePersistedOrphan() error {
 	if handled, recoveryErr := m.recoverPersistedPanelCertificateIssueLocked(job, lock); handled {
 		return recoveryErr
 	}
+	if handled, recoveryErr := m.recoverPersistedMailHostCertificateLocked(job, lock); handled {
+		return recoveryErr
+	}
 	if handled, recoveryErr := m.recoverPersistedVPNPeerSyncLocked(job, lock); handled {
 		return recoveryErr
 	}
@@ -1220,6 +1257,11 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		(!serviceMutationCanonicalFQDN(request.Target) ||
 			!mutationpayload.ValidPanelCertificateIssueQualifier(request.PackageName)) {
 		return nil, errors.New("invalid panel certificate mutation payload qualifier")
+	}
+	if request.Kind == "mail_host_certificate" &&
+		(!serviceMutationCanonicalFQDN(request.Target) ||
+			!mutationpayload.ValidMailHostCertificateQualifier(request.PackageName)) {
+		return nil, errors.New("invalid mail host certificate mutation payload qualifier")
 	}
 	if request.Kind == "mail_tls_sync" &&
 		(request.Target != "mail-tls" ||
@@ -1492,11 +1534,25 @@ func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) bool {
 		m.mu.Unlock()
 		return false
 	}
+	if runtime.mailHostCertificatePublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.mailHostCertificatePublishedPhase, "", "",
+		)
+		if err != nil && m.poisoned == nil {
+			_ = m.poisonLocked(err)
+		}
+		m.mu.Unlock()
+		return false
+	}
 	if runtime.firewallApplyCommittedPhase != "" {
 		m.mu.Unlock()
 		return false
 	}
 	if runtime.mailTLSSyncCommittedPhase != "" {
+		m.mu.Unlock()
+		return false
+	}
+	if runtime.mailHostCertificateCommittedPhase != "" {
 		m.mu.Unlock()
 		return false
 	}
@@ -1522,6 +1578,7 @@ func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) bool {
 	now := m.now()
 	runtime.job.Status = serviceMutationStatusCancelling
 	if !strings.HasPrefix(runtime.job.Phase, panelCertificateIssueCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, mailHostCertificateCommitPhasePrefix) &&
 		!strings.HasPrefix(runtime.job.Phase, dnsZoneSyncV3CommitPhasePrefix) {
 		runtime.job.Phase = serviceMutationPhaseCancellingExpiredLease
 	}
@@ -1623,10 +1680,19 @@ func (m *serviceMutationManager) heartbeat(
 		)
 		return m.jobLocked(request.RequestID), err
 	}
+	if runtime.mailHostCertificatePublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.mailHostCertificatePublishedPhase, "", "",
+		)
+		return m.jobLocked(request.RequestID), err
+	}
 	if runtime.firewallApplyCommittedPhase != "" {
 		return cloneServiceMutationJob(runtime.job), nil
 	}
 	if runtime.mailTLSSyncCommittedPhase != "" {
+		return cloneServiceMutationJob(runtime.job), nil
+	}
+	if runtime.mailHostCertificateCommittedPhase != "" {
 		return cloneServiceMutationJob(runtime.job), nil
 	}
 	if runtime.dnsClusterConfigCommittedPhase != "" {
@@ -1739,12 +1805,25 @@ func (m *serviceMutationManager) cancelJob(
 		m.mu.Unlock()
 		return job, err
 	}
+	if runtime.mailHostCertificatePublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.mailHostCertificatePublishedPhase, "", "",
+		)
+		job := m.jobLocked(request.RequestID)
+		m.mu.Unlock()
+		return job, err
+	}
 	if runtime.firewallApplyCommittedPhase != "" {
 		job := cloneServiceMutationJob(runtime.job)
 		m.mu.Unlock()
 		return job, nil
 	}
 	if runtime.mailTLSSyncCommittedPhase != "" {
+		job := cloneServiceMutationJob(runtime.job)
+		m.mu.Unlock()
+		return job, nil
+	}
+	if runtime.mailHostCertificateCommittedPhase != "" {
 		job := cloneServiceMutationJob(runtime.job)
 		m.mu.Unlock()
 		return job, nil
@@ -1863,12 +1942,25 @@ func (m *serviceMutationManager) finish(
 		}
 		return m.jobLocked(request.RequestID), nil
 	}
+	if runtime.mailHostCertificatePublishedPhase != "" {
+		if err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.mailHostCertificatePublishedPhase, "", "",
+		); err != nil {
+			return cloneServiceMutationJob(runtime.job), err
+		}
+		return m.jobLocked(request.RequestID), nil
+	}
 	if runtime.firewallApplyCommittedPhase != "" {
 		return cloneServiceMutationJob(runtime.job), errors.New(
 			"committed firewall mutation is still converging",
 		)
 	}
 	if runtime.mailTLSSyncCommittedPhase != "" {
+		return cloneServiceMutationJob(runtime.job), errors.New(
+			"committed mail TLS mutation is still converging",
+		)
+	}
+	if runtime.mailHostCertificateCommittedPhase != "" {
 		return cloneServiceMutationJob(runtime.job), errors.New(
 			"committed mail TLS mutation is still converging",
 		)

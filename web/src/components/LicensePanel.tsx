@@ -53,6 +53,12 @@ export function LicensePanel({ locked = false, onContinue }: { locked?: boolean;
             }
             setStatus(result);
             if (action === 'activate') { setKey(''); setShowKey(false); }
+            // Activation must immediately recheck the shared access gate. Only
+            // that server-verified decision can mount the management pages.
+            if (setup && result.state === 'active' && result.can_provision) {
+                if (onContinue) onContinue();
+                else navigate('/', { replace: true });
+            }
         } catch (cause) {
             if (!signal?.aborted) setError(cause instanceof TypeError ? t('license.unavailable') : cause instanceof Error ? cause.message : t('license.loadFailed'));
         } finally { if (!signal?.aborted) setBusy(false); }
@@ -82,8 +88,7 @@ export function LicensePanel({ locked = false, onContinue }: { locked?: boolean;
                 <a href="https://celikpanel.net/account/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline underline-offset-4">{t(status?.state === 'missing' ? 'license.getKey' : 'license.manage')}</a>
             </div>
         </form>}
-        {((setup && status?.can_provision) || !status || status.state !== 'missing') && <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-5">
-            {setup && status?.can_provision && <Button disabled={busy} onClick={() => onContinue ? onContinue() : navigate('/')}>{t('license.continueSetup')}</Button>}
+        {!(setup && status?.can_provision) && (!status || status.state !== 'missing') && <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-5">
             {(!status || status.state !== 'missing') && <Button variant="secondary" disabled={busy} onClick={() => void request(status ? 'refresh' : undefined)}>{t('license.refresh')}</Button>}
         </div>}
     </section>;

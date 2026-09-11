@@ -1,0 +1,77 @@
+[
+  {
+    "path": "cmd/agent/certbot_process_identity_linux.go",
+    "before_sha256": null,
+    "after_sha256": "5bb541170dbd1db171688fe5a6e8e7495cd5bcbdf5b000871811ff78304f7bc6"
+  },
+  {
+    "path": "cmd/agent/certbot_process_identity_linux_test.go",
+    "before_sha256": null,
+    "after_sha256": "89edec0cb6f827d59a83cfbf4660dbd6df798bf58354fb2ca2a03b574a07fe57"
+  },
+  {
+    "path": "cmd/agent/certbot_process_identity_stub.go",
+    "before_sha256": null,
+    "after_sha256": "e52e4220e6db98a3310d856c07c8d5163d3f1bf563db93abd0d1f6774de5f190"
+  },
+  {
+    "path": "cmd/agent/certbot_source_ownership_linux.go",
+    "before_sha256": null,
+    "after_sha256": "f3a226532d42a10e4bec4f6c6e0ecea84bebd3d1790228a7102b4e738f4e317e"
+  },
+  {
+    "path": "cmd/agent/certbot_source_ownership_linux_test.go",
+    "before_sha256": null,
+    "after_sha256": "d82baff3f927915de061ea2be42268d41db41376e114827cea3a30d5c46ae9dd"
+  },
+  {
+    "path": "cmd/agent/certbot_source_ownership_stub.go",
+    "before_sha256": null,
+    "after_sha256": "38d02b945239b0b725207ec28ffc03fc1ff51e9367ff2e339ad168b918d4cf06"
+  },
+  {
+    "path": "cmd/agent/mail_host_certificate_rpc.go",
+    "before_sha256": "3f95678b8c091d7de515a772a2557906e6969168c7c5a3895febddf778cb5dd3",
+    "after_sha256": "77b2e850c0f9f1634cb9ddc20d386b0fd0cadb5bb00e0848882bc03d90550ace"
+  },
+  {
+    "path": "cmd/agent/mutation_command.go",
+    "before_sha256": "cba4226dd3accc756559d5a3475d034c097b12eb46847758c51bc0161f4d2bb4",
+    "after_sha256": "80e991e402887427dd41b98223a98d0b9e8caa584aa46d70e3d74bb3efc04354"
+  },
+  {
+    "path": "cmd/agent/panel_cert_rpc.go",
+    "before_sha256": "4d2e7b6e8ecaee4b9f78367e98a69033963c3e9c4cb03ce6efad0ed0ea478268",
+    "after_sha256": "d0888d503b1019be139b8e3bc9df5ed063ed3d32513178b45d8f952b28ae6ccc"
+  },
+  {
+    "path": "cmd/agent/service_mutation_supervisor_linux.go",
+    "before_sha256": "0b94d5ab8cdea8f13329a05c9628eabdf4f30177cc841591b9c8d5cf423e62f7",
+    "after_sha256": "7878d42e58cf562417eef52d9f197fd398b1c35f0eae76a955587b808909dd6a"
+  },
+  {
+    "path": "cmd/agent/setup_profile_source_vm_test.go",
+    "before_sha256": null,
+    "after_sha256": "748a1487a08cb6932c3c70522884780924233e17ce78f519b55d66d43754afe5"
+  },
+  {
+    "path": "cmd/panel/server_setup_dns_profile_vm_test.go",
+    "before_sha256": null,
+    "after_sha256": "518b880bca7693780e83edb42ab2eef21ba59a79026589a95aaf68109c0b6e81"
+  },
+  {
+    "path": "cmd/panel/server_setup_profile_vm_test.go",
+    "before_sha256": "e631a8f8e11ec42ce839acd7d3ed704ecf69c5d3164dad93490d8ef947742883",
+    "after_sha256": "4aea608f7977e1be66c07155f4e1956b9da8d61c4eb9573993c5b77ff7d658f9"
+  },
+  {
+    "path": "cmd/panel/setup_dns_nameservers.go",
+    "before_sha256": "61f0f96d065dbaf8ee6858001b29dfda0dbe7fe369f48815c864ac594864b657",
+    "after_sha256": "fceb894851768ea3ba17b4790a5dcfa5ec73ea5125616b17eb12f21a0303bad1"
+  },
+  {
+    "path": "internal/db/migrations/042_remote_dns_publish.sql",
+    "before_sha256": "9acef8ee8a548510864b57de169117c047b8efe089e642439581266f850522f0",
+    "after_sha256": "60b4c3ee2c0c1348072d74ef505d4f7368552f35503e90871aa7eeb4f7b9e8d5"
+  }
+]

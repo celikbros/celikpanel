@@ -1,0 +1,2 @@
+64ad8615424efd30f344b94c1ca6c52b71f3858a03ad32e56b7b32b6d1dfabd5  /var/tmp/cp-setup-profiles-20260911-v3/candidate-recovery/agent
+afe2cae97a863f2a13f2f4e0a4e1e953e752e8b0446c8a5e2b01c0c6f3cd3948  /var/tmp/cp-setup-profiles-20260911-v3/candidate-recovery/panel-test

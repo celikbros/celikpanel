@@ -1,0 +1,36 @@
+{
+  "profile": "application",
+  "ready": true,
+  "unchanged_successful_children": 5,
+  "services": {
+    "nginx": {
+      "LoadState": "loaded",
+      "ActiveState": "active"
+    },
+    "php8.4-fpm": {
+      "LoadState": "not-found",
+      "ActiveState": "inactive"
+    },
+    "mariadb": {
+      "LoadState": "not-found",
+      "ActiveState": "inactive"
+    },
+    "postfix": {
+      "LoadState": "not-found",
+      "ActiveState": "inactive"
+    },
+    "dovecot": {
+      "LoadState": "not-found",
+      "ActiveState": "inactive"
+    },
+    "rspamd": {
+      "LoadState": "not-found",
+      "ActiveState": "inactive"
+    },
+    "certbot.timer": {
+      "LoadState": "loaded",
+      "ActiveState": "active"
+    }
+  },
+  "agent_sha256": "db67d54c7b0b08ec85966f4e7e7d1fe4b6424540022aa0ecc15204b56dcea2b1"
+}

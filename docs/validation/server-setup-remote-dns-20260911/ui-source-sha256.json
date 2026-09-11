@@ -1,0 +1,673 @@
+{
+  "scope": "Current UI source and tests after fresh nameserver display and separate enrollment alongside unresolved pending connection changes; final 352-test full run, 29-test focused run and build. Browser scope is recorded separately. Not a complete backend or release snapshot.",
+  "files": [
+    {
+      "path": "web/package-lock.json",
+      "sha256": "8dab8b6b23b10757fcb399284c0510c55149c03a2edb0ed4e97a7722eeca6d26"
+    },
+    {
+      "path": "web/package.json",
+      "sha256": "9ba522c3f67ee187a79ff3700f4c84a66c77f8f969daaf98663ffb79b25d1434"
+    },
+    {
+      "path": "web/src/App.tsx",
+      "sha256": "9c0a00288bc96955f11d7da39102dba3ded057d7b0de6d29c24cd7b0f7204eeb"
+    },
+    {
+      "path": "web/src/auth/AuthContext.tsx",
+      "sha256": "7752cdbd0405995e66317e654900d875cc0e8c1c532a8d571e96d7b4b47125cd"
+    },
+    {
+      "path": "web/src/auth/domainAccess.ts",
+      "sha256": "1bccc775fa545b310a63dc7b1693667c9bd23a903174f78c34c273c9a0d79ec7"
+    },
+    {
+      "path": "web/src/components/AddDatabaseModalV2.tsx",
+      "sha256": "3c8ee56c9c915415759c94eb62700cca2f5c3732523556cd407159f41c4a2a83"
+    },
+    {
+      "path": "web/src/components/AddDomainModal.tsx",
+      "sha256": "cbf062ffee2d0638b0dd2fee477ce74cf6def5ef615584d103eb174cc33b2191"
+    },
+    {
+      "path": "web/src/components/AddonsPage.tsx",
+      "sha256": "1dc7ff4b980889966096d59cef0c45bc673f26abc7dc1dccc698424c0548c041"
+    },
+    {
+      "path": "web/src/components/AddUserModalV2.tsx",
+      "sha256": "bab1e9386bd11a76fce86a18f5c9db7018654a70d09f59d44f16a5c3b0031d65"
+    },
+    {
+      "path": "web/src/components/AuditLogPage.tsx",
+      "sha256": "df71fa4703d1c96717624092a39c9b8727a60ef225c932e169f25cdca8f7413a"
+    },
+    {
+      "path": "web/src/components/BrandMark.tsx",
+      "sha256": "69822e82c2832b0ec1c79ca07f7fb916fd41d7069c99cc0d09c681640c331513"
+    },
+    {
+      "path": "web/src/components/ChangePasswordModal.tsx",
+      "sha256": "c86f98179d3eb99a1710ead3b875355d985e0d3c36b56cd9becfb653e9b29676"
+    },
+    {
+      "path": "web/src/components/ComponentDetail.tsx",
+      "sha256": "554070954e153d07ae51b2e5d113d2c24ea11f034eee2c4c036aac2d4388c5aa"
+    },
+    {
+      "path": "web/src/components/ComponentOperation.tsx",
+      "sha256": "6586179775d0e209867002de023df9bcfbb2df0378a90a87e64fe491c78d3d9b"
+    },
+    {
+      "path": "web/src/components/ConfigEditor.tsx",
+      "sha256": "13ae00e5bbc49655d44c68d648fe5645a25154783dc8f1ffb72d371d7f91c63e"
+    },
+    {
+      "path": "web/src/components/Dashboard.tsx",
+      "sha256": "c6cbc4caf755776980d0ff40e6505e31d25b0ce1b2171c82b1599714f75bc98b"
+    },
+    {
+      "path": "web/src/components/DatabaseAccountStrip.tsx",
+      "sha256": "a2713fadc0dde419c3af5b0911c6d19288f86a39d9127eb6264885a47df11bc6"
+    },
+    {
+      "path": "web/src/components/DatabaseManagementV2.tsx",
+      "sha256": "e6ec8a960316d30a2fc0d2140fbac3e5355e67686e5a1bf0a6817527559827fc"
+    },
+    {
+      "path": "web/src/components/DNSEngineCard.tsx",
+      "sha256": "550ef119dbeeae133a8e62bd2cefc2f6a04ad517e993fd482842dbdb6acff8a4"
+    },
+    {
+      "path": "web/src/components/DNSServerSettings.tsx",
+      "sha256": "3ae71f4d8b4340e6e73ea025d023d308cc4f704a4bf82f8ad64871a26fd3f9dd"
+    },
+    {
+      "path": "web/src/components/DomainAppsPanel.tsx",
+      "sha256": "e77658fc32daa3f5a00f3d7ea8d3e3950876315521a9bd5f3e8a927c1eb68c72"
+    },
+    {
+      "path": "web/src/components/DomainBackupManager.tsx",
+      "sha256": "a9a96b32b7486aca1803096c85e58de008ff9855826d4b4ec8f763cddc2f2547"
+    },
+    {
+      "path": "web/src/components/DomainConnection.tsx",
+      "sha256": "4eaa4030ae5eac0d73a8178f4a71145e1ad4d6b86b5ff1438ee861f2d6730582"
+    },
+    {
+      "path": "web/src/components/DomainCronManager.tsx",
+      "sha256": "23e3526f6569959266167b30903c30509fe21165c9a535c1c5ec99245086ecd9"
+    },
+    {
+      "path": "web/src/components/DomainDatabaseManager.tsx",
+      "sha256": "da40f84010e6ccb5a5cf033bcd21714481374020543e74b6ebb5ea62c183e88b"
+    },
+    {
+      "path": "web/src/components/DomainDetail.tsx",
+      "sha256": "71ad59771a906ff6f6cf39665b24421c503ffc4b565cc81a1cd0b5f68de3821e"
+    },
+    {
+      "path": "web/src/components/DomainDNSManager.tsx",
+      "sha256": "efce7d1392b61d7532a85b3b54ef9d1567b0ceab5bb0bb7ea3a47b15509dc73c"
+    },
+    {
+      "path": "web/src/components/DomainFileManager.tsx",
+      "sha256": "ec0e9853184eef06ea71ad313af2a617a82cbf89a49ace1d327f9d08e4351115"
+    },
+    {
+      "path": "web/src/components/DomainGeneralSettings.tsx",
+      "sha256": "e76c5e76cf8c2a46f3ff89ba2b0fc7bde6f02550a7c070f4416e920e0e34074f"
+    },
+    {
+      "path": "web/src/components/DomainLogsViewer.tsx",
+      "sha256": "d3b8472301d158c37f84cffbbcb20869435d7007f40c754d6714b97445e6cdce"
+    },
+    {
+      "path": "web/src/components/DomainMailManager.tsx",
+      "sha256": "89b18291298a141037f86791d461c731f64ce684c6c3d089da5170fffc8a8779"
+    },
+    {
+      "path": "web/src/components/DomainPHPSettings.tsx",
+      "sha256": "339f616a5f70953350ca1f6f63f390e6f91ff27da08377d6bc77778743e957a2"
+    },
+    {
+      "path": "web/src/components/Domains.tsx",
+      "sha256": "5a647a8543d6a6c80ebde08ea284c91f2f5414c0e0fe7a31be55f71993a78c47"
+    },
+    {
+      "path": "web/src/components/DomainSSLOverviewCard.tsx",
+      "sha256": "d5c2b42cb885a6b0e6e3a636605447464edae4913882e61361ad8d4ccc725d51"
+    },
+    {
+      "path": "web/src/components/DomainSSLSettings.tsx",
+      "sha256": "677d4857ad369caa9fab3edeaa544ff1d9b4026f82dfc3ceb9258d9e02e1e7f0"
+    },
+    {
+      "path": "web/src/components/DovecotManagement.tsx",
+      "sha256": "024b1f5f099f3e10469d5d86109bafebbe6c7edfa9e10421c7cf212c17e3598b"
+    },
+    {
+      "path": "web/src/components/Fail2banManagement.tsx",
+      "sha256": "3f6c052cb47531cfa0560342cc763dd23fad22926b693f74baff1910b61a1b91"
+    },
+    {
+      "path": "web/src/components/FirewallSSHNotice.tsx",
+      "sha256": "eb247a88dc2ebf205fe06d9d774d93069ad257e6c803e0299e605fc998a42dc7"
+    },
+    {
+      "path": "web/src/components/HelpDrawer.tsx",
+      "sha256": "ec0f6aba6a8a27ecef7b373105081a322ab837753a65a18fa601b11bc8a9d7ad"
+    },
+    {
+      "path": "web/src/components/HostingTypePanel.tsx",
+      "sha256": "a56b7e43da18d1891f5d06b53e54d611cbb9bec98e8d1d704bdf80caf09e597f"
+    },
+    {
+      "path": "web/src/components/ImportPage.tsx",
+      "sha256": "95a898354e6f53e42893327deb754bf8d3b48073adffe2763adbd41ad2c9dfc7"
+    },
+    {
+      "path": "web/src/components/LanguageSwitcher.tsx",
+      "sha256": "4496415a4d1747cfcf888ea0e7ab1f78924a94ce8be8ee64d61316f7f45f96d3"
+    },
+    {
+      "path": "web/src/components/Layout.tsx",
+      "sha256": "087dce94fb3852b889d0d1c7a1e2c67f6b6b461187fecafa0a141c8efd4e4d2f"
+    },
+    {
+      "path": "web/src/components/LicenseLockScreen.tsx",
+      "sha256": "00ae03123c7eef4fd5a555722edf7cf20580b5833e9e31321daa8ed345ab6692"
+    },
+    {
+      "path": "web/src/components/LicenseNotice.tsx",
+      "sha256": "b4c4617793d11449861c8f1544d0a2f1dfb7f9807bd39251405618354e1bc29d"
+    },
+    {
+      "path": "web/src/components/LicenseOnboarding.tsx",
+      "sha256": "36276565a05bcf4ce616eaed80d609b21c6d9d3b73f3c1f5b2ba4ac2344f6284"
+    },
+    {
+      "path": "web/src/components/LicensePanel.tsx",
+      "sha256": "ea26d2dc7170382e698344a6630f013c6efe517154a348fe88e8e400cf249379"
+    },
+    {
+      "path": "web/src/components/Login.tsx",
+      "sha256": "df4952d351120e685b8969b34fdf97c6d8734c159b6dbf088e3e34b23f3b6801"
+    },
+    {
+      "path": "web/src/components/MailAuthPanel.tsx",
+      "sha256": "92090776674791a396bb623f58016bfdd7e5c6de205681991d844899c15741b8"
+    },
+    {
+      "path": "web/src/components/MailSettingsPanel.tsx",
+      "sha256": "7fd19e5ea053306170389058460678c36a776622ae06247412dd7e284f30d785"
+    },
+    {
+      "path": "web/src/components/MariaDBManagement.tsx",
+      "sha256": "40a4646c4d361dec9752c3634954e17e7495495e655099ec5ced2593e98e5b3d"
+    },
+    {
+      "path": "web/src/components/MariaDBSettings.tsx",
+      "sha256": "2724c38f6787f9bd99a8b0fe4d3f58d850f48530ef62d115931562ffc7c17f14"
+    },
+    {
+      "path": "web/src/components/MonitoringPage.tsx",
+      "sha256": "6318b31378e1dae3194e80d710238a4debcfa1574f32c310074058ae44419ddf"
+    },
+    {
+      "path": "web/src/components/NginxManagement.tsx",
+      "sha256": "29e2674a7fa5fd970d9e84260d4a1ef008670939b719e86e59d0b2e08183aa79"
+    },
+    {
+      "path": "web/src/components/OperationOverlay.tsx",
+      "sha256": "b8b4654a1a865c33a416d2bcd344df17b39f623bbf3788b4a09ca51e51b17cab"
+    },
+    {
+      "path": "web/src/components/PageHeader.tsx",
+      "sha256": "c09c8a014627d1e181498381542cb492b1aaacd3be8b1cc2f6673bbaa2975240"
+    },
+    {
+      "path": "web/src/components/pageHeaderSlot.ts",
+      "sha256": "fca92617ed1c2e314ea2d1f58ae91fe26f5cdb6781e05f8b948a5f1b506f1cf8"
+    },
+    {
+      "path": "web/src/components/PanelUpdateCard.tsx",
+      "sha256": "ab503ef50e014edc66314297fca149ee419e3bfa2c3d7264fcf22a3a29551de5"
+    },
+    {
+      "path": "web/src/components/PHPExtendedConfig.tsx",
+      "sha256": "4299fb6c01b536ac3129cdaad7b31ca0e6970bb25268374b145807d47f5072bd"
+    },
+    {
+      "path": "web/src/components/PHPManagement.tsx",
+      "sha256": "d66328424d6eb69f6307cff46373566501fa155822883cc76b434c81ef7fcecb"
+    },
+    {
+      "path": "web/src/components/PostfixManagement.tsx",
+      "sha256": "d6fe0c08dd80fe06af8879942e4f2b60fef7924998cb8803e139f12ec4c35e7b"
+    },
+    {
+      "path": "web/src/components/PostgreSQLAccessRules.tsx",
+      "sha256": "52f278d3f35ff35e018db23712ff71dac9cc82d873eeca6d53f6ea6924fa974c"
+    },
+    {
+      "path": "web/src/components/PostgreSQLManagement.tsx",
+      "sha256": "729e5a4e7ad66f5426c71c833110acfc01bc6396029f23e02cfa0400fade5733"
+    },
+    {
+      "path": "web/src/components/PostgreSQLSettings.tsx",
+      "sha256": "f9957a0a978db4451daa8389edafb1cdc33a260e6735a37a0b0fafaebdf8ac3c"
+    },
+    {
+      "path": "web/src/components/PowerDNSManagement.tsx",
+      "sha256": "0c6446f14b248a01939e9a57938af78767e6663d73757b64b67d3455b193a336"
+    },
+    {
+      "path": "web/src/components/RootErrorBoundary.tsx",
+      "sha256": "1e227a5b238e11983de0cd91266436190582da816c978e2e4caa880ab7920507"
+    },
+    {
+      "path": "web/src/components/SecurityAuditCard.tsx",
+      "sha256": "e5a8ff3d6421c7c50319270196bcef1a48857cd6ff09b77228b6cf3fd327f81c"
+    },
+    {
+      "path": "web/src/components/ServerSetup.tsx",
+      "sha256": "e6226db77d7be7156988acf680968856be41e6c96510a3a6f05d603044dd707c"
+    },
+    {
+      "path": "web/src/components/ServerSetupDNSConnections.tsx",
+      "sha256": "42b97606aee097792a4be334d02e6814724bc10117724fa8529e5912a4c05599"
+    },
+    {
+      "path": "web/src/components/ServerSetupGate.tsx",
+      "sha256": "bd28ee16236348c86c75ea48985f88e28a735d54160a129607c1dc6d7663b63a"
+    },
+    {
+      "path": "web/src/components/ServiceList.tsx",
+      "sha256": "d01796c2ac7de3734ecc1b86bb1e8d7fca7b0223a61a3ed4cb46d5e507defd3d"
+    },
+    {
+      "path": "web/src/components/ServiceShell.tsx",
+      "sha256": "0f07eab4969d59072be4d30223c43893527ad1766f2d414179327ca611021e8b"
+    },
+    {
+      "path": "web/src/components/Settings.tsx",
+      "sha256": "d926553311025b53dc4d8f977098ec854fec85c9de99ccd8b7472632e137f1ef"
+    },
+    {
+      "path": "web/src/components/SkinSwitcher.tsx",
+      "sha256": "062bc255ad1caca7aa72133a739a186495bc235fcec34662d500c0ee2ec74742"
+    },
+    {
+      "path": "web/src/components/StartGuide.tsx",
+      "sha256": "a95d012b57b6f03f454f84e767a70c019de6d9db8570152a41327981b72e60a8"
+    },
+    {
+      "path": "web/src/components/StoreCatalog.tsx",
+      "sha256": "13e92eb485662587b611bffa74cc4c37f10cd861ac38b5f44ac8af78d0bbf6ab"
+    },
+    {
+      "path": "web/src/components/StoreCatalogAdmin.tsx",
+      "sha256": "6f9260534fd78e03484f23b1fd9035fd9f211846260ac1844866e38bfb2be59a"
+    },
+    {
+      "path": "web/src/components/SystemSQLiteManager.tsx",
+      "sha256": "48c637a656892d373a60e4ee15faff47cfbf5de746ff90fe25fba0ef94bddc28"
+    },
+    {
+      "path": "web/src/components/SystemUpdateOperation.tsx",
+      "sha256": "a2e7bfa0414c40c437ae19f845b283625274f07035f162ae96eeb32650e12766"
+    },
+    {
+      "path": "web/src/components/TeamMembersPage.tsx",
+      "sha256": "d7260404c29dfc6f8262a93a5ea611282c1631c5b79866c84bca124a60f4acb8"
+    },
+    {
+      "path": "web/src/components/ThemeSwitcher.tsx",
+      "sha256": "1e4d4c6e7a3f75b2fc6e105b85e0c07cb71b13fb128417f2e8f2e8da7e96cfb9"
+    },
+    {
+      "path": "web/src/components/Toast.tsx",
+      "sha256": "4fdd7adcc9048bc2822a48a42ceb05123f2e9bcdb5c57086e5a286b9dd2f15cf"
+    },
+    {
+      "path": "web/src/components/ui.tsx",
+      "sha256": "1e78270cf22367454bd240243243fb96f8a98ca9799d3c1b1f41a7f38115b9af"
+    },
+    {
+      "path": "web/src/components/UsersPage.tsx",
+      "sha256": "7f1e2739ffb40c62c5500ec11d05c151e746027de19ba3bef3459c6c2ca1dc09"
+    },
+    {
+      "path": "web/src/components/VPNPage.tsx",
+      "sha256": "17a3f9588ca8257888feb88bf5cac309ec698d0d9adc56ed2be572a26b040562"
+    },
+    {
+      "path": "web/src/components/VsftpdManagement.tsx",
+      "sha256": "da653cf39d567530db5c07e62cb73514b86b93614bb210e1698366ead47e1213"
+    },
+    {
+      "path": "web/src/components/WebmailAccess.tsx",
+      "sha256": "35042da28c5025b1a083e18df0b53335b572c7b6dcbb5f0758c03bad6d980b70"
+    },
+    {
+      "path": "web/src/help/serviceHelp.ts",
+      "sha256": "f4d3c07eede3082f2c07e6e8c4eb33cbdecd0017fbe81fda621a6e6de18fa97f"
+    },
+    {
+      "path": "web/src/i18n/dnsEngine.ts",
+      "sha256": "30009491ff21c58e8c7ef95c9af2dced3202741dc62ba1b3a73d6f9365ad4fdb"
+    },
+    {
+      "path": "web/src/i18n/en.ts",
+      "sha256": "a6527b6e6183c581691cbd59af22174ce20af0b470aa264773dd2fb4b764b2d3"
+    },
+    {
+      "path": "web/src/i18n/index.tsx",
+      "sha256": "4e628b7e84e37f0edbdab8a797268659b66d1309eb8c0104a896f793c372ef61"
+    },
+    {
+      "path": "web/src/i18n/screens/en.ts",
+      "sha256": "1873e4482d0152ed0dbc525a41007dcdbd6b5e9899d2fac02ca3b681fdfbe754"
+    },
+    {
+      "path": "web/src/i18n/screens/tr.ts",
+      "sha256": "3608a8489953128647542166b244b6b4a53239330919ffefdf46b679135f46b4"
+    },
+    {
+      "path": "web/src/i18n/tr.ts",
+      "sha256": "0b368f903b080973d75327734bdc83f5504ff349d4d9a06e28d460f115a378fd"
+    },
+    {
+      "path": "web/src/lib/api.ts",
+      "sha256": "031be5945463c228b59421ab679b74e0e4fd51fb4a79fbb76f9ba5cf7b920e47"
+    },
+    {
+      "path": "web/src/lib/apiError.ts",
+      "sha256": "3659f71032870cdd8ddb5cf67086cef20dbe6382636ba5af46f451e78a1664fe"
+    },
+    {
+      "path": "web/src/lib/componentCensus.ts",
+      "sha256": "d5e6619f14614b49fcc1f6612c90e13f20ffbfe8335f474af332c8b0f3454fdb"
+    },
+    {
+      "path": "web/src/lib/dashboardMailTruth.ts",
+      "sha256": "f8fa9021fc2dcd58cc02658adbeeebe25164066d71a334623e9689230c3a64d8"
+    },
+    {
+      "path": "web/src/lib/dnsEngineContract.ts",
+      "sha256": "bf33e744dbb71dc0e9ba853dc0582f002b3080804ae4edcd92a9a381a4fc08eb"
+    },
+    {
+      "path": "web/src/lib/dnsIdentityPlan.ts",
+      "sha256": "8112920227694a3c1343578be643e3edc5cb28b5cee4c10d9132c2187cb89878"
+    },
+    {
+      "path": "web/src/lib/domainLogs.ts",
+      "sha256": "f4ceca130233834d620663d6681ff523aaa60171d32eaf2860c3bf2eabeb8fff"
+    },
+    {
+      "path": "web/src/lib/panelUpdateAdmission.ts",
+      "sha256": "e0f708572073733ddce50837388f901bfdd6b411a8cdebaac6596e1532d5121c"
+    },
+    {
+      "path": "web/src/lib/remoteDNS.ts",
+      "sha256": "fa9cfb7f8e9df19544af4f6f5694afe6a5906bd51fa43f82234e3d17cdfac389"
+    },
+    {
+      "path": "web/src/lib/serverSetup.ts",
+      "sha256": "67281e8f042d700e2e0675d37ab59aeca12eea9477d891fcaca5c85452aefe3d"
+    },
+    {
+      "path": "web/src/lib/serverSetupOperation.ts",
+      "sha256": "3dbc49755f248093363d20fe4fad5c93f394152c7dfb76ed3c48e170edd88ccc"
+    },
+    {
+      "path": "web/src/lib/sslTier.ts",
+      "sha256": "f0c687e44c367353e9ce3895de954a2765d19ab4d7e357f3e8e05cae19c2c18e"
+    },
+    {
+      "path": "web/src/lib/startGuidance.ts",
+      "sha256": "0e491c182b61b050c09dd3bbbe23686f19f7f4966fa60fce1b8e98cbbc09396f"
+    },
+    {
+      "path": "web/src/lib/systemUpdateAuthSignal.ts",
+      "sha256": "8678b58a0d79dc82cb1d2f58a9b21a4f9b98ab1f2a9be6d46fac47ff2c2be1d9"
+    },
+    {
+      "path": "web/src/lib/systemUpdateLease.ts",
+      "sha256": "6cf9b2179b4b50a3c9db739df7fa0215f311fee3b5ee558c498f0355d2dda8a3"
+    },
+    {
+      "path": "web/src/lib/systemUpdateWatchdog.ts",
+      "sha256": "e47253503ad3d3b3ccfdabfb8786c7e8376cc549d32d7950c6fb69476c624cbc"
+    },
+    {
+      "path": "web/src/lib/useSystemUpdateNavigationLease.ts",
+      "sha256": "252fd82f4f008afca97f859480f2e912707dfb51fa18de6745f73997f5a03ff7"
+    },
+    {
+      "path": "web/src/main.tsx",
+      "sha256": "d6a8a52af091757e2aec138d9b053186c101de068d1ece6acfbeada54d093bec"
+    },
+    {
+      "path": "web/src/nav.ts",
+      "sha256": "719fb82c9012106dd8d8cddb314d102463ca7d72ce5a8c299cc3748b358f096a"
+    },
+    {
+      "path": "web/src/router-core.ts",
+      "sha256": "832aa4530ba4273e3173521c81adcc2dcc23ffea684430d07bc430a9ccfe5a98"
+    },
+    {
+      "path": "web/src/router-history.ts",
+      "sha256": "7aed88e6027aa3e1103de371698b0bfb716ea8fb17ac5a70f8e098396a29d4b9"
+    },
+    {
+      "path": "web/src/router.tsx",
+      "sha256": "227d639790eb4c2aa6853a800f69e4534735bf95551bbdd69a57bd554325f67c"
+    },
+    {
+      "path": "web/src/theme/ThemeProvider.tsx",
+      "sha256": "a491011369ada19b7c94357facaa58432e93f04221fd70e7a7062a6dd41f74db"
+    },
+    {
+      "path": "web/src/vite-env.d.ts",
+      "sha256": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5"
+    },
+    {
+      "path": "web/tests/additional-user-dashboard-contract.test.mjs",
+      "sha256": "d2b517292a71313b666a7c2d8826b67e4d8cf34e084bc76212cd23974563be9d"
+    },
+    {
+      "path": "web/tests/additional-user-domain-ui-contract.test.mjs",
+      "sha256": "00fc3dc7774f44d4ea4ef92a4796be2bb8ee2ec42d2bd3ba5b3b05423406c4df"
+    },
+    {
+      "path": "web/tests/api-error.test.mjs",
+      "sha256": "d98a882a7c16c65778c6e7df47a38a4b057b90c98cacc936e2245770adc332bc"
+    },
+    {
+      "path": "web/tests/auth-nav-security-contract.test.mjs",
+      "sha256": "311b0414c87379ac147d791aaa512a33bdb240e586bdcb62e4e95c6316315620"
+    },
+    {
+      "path": "web/tests/boot-copy-contract.test.mjs",
+      "sha256": "d9412d7d6db1f53a5bd14ba1635075c73972d8c2ec40c8eaf79480ed47f27a6d"
+    },
+    {
+      "path": "web/tests/button-disabled-contrast-contract.test.mjs",
+      "sha256": "22d2643c7c54c58c09284ecf8fa44682bcf535c010153b705a9e10dab1e7e578"
+    },
+    {
+      "path": "web/tests/component-census-runtime.test.mjs",
+      "sha256": "d506f13cc495d483f4695a5b1a86aa7baef5317aea0af05d5bdeaf39337c0445"
+    },
+    {
+      "path": "web/tests/component-inventory-contract.test.mjs",
+      "sha256": "159f3a5ae32809e07a110dfe1d1179ef6c468ebca1c1ca6d1902f0f139edf90b"
+    },
+    {
+      "path": "web/tests/component-mutation-safety-contract.test.mjs",
+      "sha256": "3a85db83d1ed4144ad4bd7f72934901ebce1c76182dec31d944e65aebc42d045"
+    },
+    {
+      "path": "web/tests/dashboard-firewall-confirmation-contract.test.mjs",
+      "sha256": "22b5987d1be05c28f2aaa065a2b7853a7e2ac16684f276a216c993e0437b95ca"
+    },
+    {
+      "path": "web/tests/dashboard-mail-stack-card-contract.test.mjs",
+      "sha256": "a249dc8cdcfea29800a58feb6884268cfe616109d6ac761c4a478f4e62f807f8"
+    },
+    {
+      "path": "web/tests/dashboard-mail-truth-policy.test.mjs",
+      "sha256": "d86cebd9f4fbe0cba961d24fd7d66f91ef35d5f6d65b732589398b15af6569ed"
+    },
+    {
+      "path": "web/tests/dashboard-truth-contract.test.mjs",
+      "sha256": "0da613a42776545c38f6e71901f3b2a5120033637f4c09e7a84693b3fd6c1408"
+    },
+    {
+      "path": "web/tests/database-account-strip-contract.test.mjs",
+      "sha256": "111c60227701ba21d202be07e254e4bbfd78e098fc351568ccfc379fedd3d642"
+    },
+    {
+      "path": "web/tests/dialog-shape-contract.test.mjs",
+      "sha256": "148557084d901c403137e83003f1b1a97e340f8ffa531ef8fde88aa832436a82"
+    },
+    {
+      "path": "web/tests/dns-engine-takeover-options.test.mjs",
+      "sha256": "d367c9839601a1eb4f46008b60d45a2b2d7ff17d6cc15932c4602202e8066e3c"
+    },
+    {
+      "path": "web/tests/dns-engine-ui-contract.test.mjs",
+      "sha256": "6fdc8d4082924ee56efdada7d347a4a28e942c42c755bfe1287d5b439f596d3c"
+    },
+    {
+      "path": "web/tests/domain-dns-readiness-contract.test.mjs",
+      "sha256": "b6fad50b9e8201f59b9a2643a1ad350c812ef7a18938a24930653749b3d4c2e0"
+    },
+    {
+      "path": "web/tests/external-dns-ui-runtime.test.mjs",
+      "sha256": "30659c29aa457380ccd874a539e9681fd0d26a835049e4e09a8f02258aa85d1b"
+    },
+    {
+      "path": "web/tests/external-operation-lock-contract.test.mjs",
+      "sha256": "cc24caf21dcb2a1ff9347b6ccfebefdf6738d4a6ba6f09f151f07556c707632f"
+    },
+    {
+      "path": "web/tests/layout-page-header-slot-contract.test.mjs",
+      "sha256": "7d619f4ddb44d0d4d6fbfb146247deae4e63e7c2511f5dcd1504604d08a6e6dd"
+    },
+    {
+      "path": "web/tests/layout-server-identity-contract.test.mjs",
+      "sha256": "aa8e96e53b6f66515a1ba1358182a08f85aa362ce1791f70d2a3a28fb0b92629"
+    },
+    {
+      "path": "web/tests/license-onboarding-runtime.test.mjs",
+      "sha256": "55e1e31c17f19f94daaacc85efb4df7e4805c4cc43e936bf57c0d69a1ef77b9e"
+    },
+    {
+      "path": "web/tests/locale-catalogue.mjs",
+      "sha256": "a26c4e71acb19754edef6add4ba6bcb5fc8c912f47de68f6dda866ba5835d4ad"
+    },
+    {
+      "path": "web/tests/mail-password-ui-contract.test.mjs",
+      "sha256": "cfc672b2aad9576fe62f24528862f75b428d6af9749ab396c4d53e619d1af5ec"
+    },
+    {
+      "path": "web/tests/mail-profile-ui-contract.test.mjs",
+      "sha256": "8a332f536fcd4f5eeb753d4675afe4f88aaed7dfbf52d1c0dcc3b1f79522ff5d"
+    },
+    {
+      "path": "web/tests/panel-certificate-operation-contract.test.mjs",
+      "sha256": "8b8138d1b269bb8c0139ec3e8edfa8f59ac6e3c44451c255a432528be68cfda9"
+    },
+    {
+      "path": "web/tests/panel-update-admission-runtime.test.mjs",
+      "sha256": "fa784c99bb32760b24f3c9d2ef16fc408a7bd6c6b66697da0649e3c45166232d"
+    },
+    {
+      "path": "web/tests/panel-update-card-mounted.test.mjs",
+      "sha256": "28004de5489da352d6d60c243914e6e2d25b088de9df334404e16a43ca3e8a8d"
+    },
+    {
+      "path": "web/tests/panel-update-ui-contract.test.mjs",
+      "sha256": "d3dc726894e4beb546c75c5b8faaa833f2150f1b23536f934f81e599424e1744"
+    },
+    {
+      "path": "web/tests/provider-router-contract.test.mjs",
+      "sha256": "50f1d3c10f77c05f6f2eb8967a3ef13af7ba89d1a95a21198ec970c356284482"
+    },
+    {
+      "path": "web/tests/remote-dns-ui-runtime.test.mjs",
+      "sha256": "673b2ec71603c122c281356a4c17e8af375b7eb0dae7f48fc180ef55c9662182"
+    },
+    {
+      "path": "web/tests/router-core.test.mjs",
+      "sha256": "d10551c05b782ff1e52b04879fa6070ba2acb05090705c14e090a6aebcafc7ae"
+    },
+    {
+      "path": "web/tests/router-history-runtime.test.mjs",
+      "sha256": "9a5b739759da3182813cecf1cc2c5dfcfc7490fa956344efaee56f14b59833b5"
+    },
+    {
+      "path": "web/tests/security-audit-ui-contract.test.mjs",
+      "sha256": "d57abb9a529e5499a8a76255c677980e97860ec399cfa51e814854eb3db49908"
+    },
+    {
+      "path": "web/tests/server-setup-runtime.test.mjs",
+      "sha256": "29c31a68d6cb318ddeb8203d48792a064b252ddaf4e019de4969639b8088f135"
+    },
+    {
+      "path": "web/tests/service-availability-contract.test.mjs",
+      "sha256": "f3fe3b3b6f9cf56d1c1c261a5ed3562d059162282e85b56685196dce94472d67"
+    },
+    {
+      "path": "web/tests/service-list-layout-contract.test.mjs",
+      "sha256": "487d5cdaac1388c5ac5b2ffd5e263ec3f52616ac4f33cb3ca723213845ca8538"
+    },
+    {
+      "path": "web/tests/service-shell-install-confirmation-contract.test.mjs",
+      "sha256": "2d353b6aefc159b8d988d0b7916de2f4fef6bd1a6c9cbe477bf21ce919e9a608"
+    },
+    {
+      "path": "web/tests/service-unobserved-state-contract.test.mjs",
+      "sha256": "b4716f4a3e07c63e016c4d662ce216f7cbcd3020a975badc612abcb9f38d054c"
+    },
+    {
+      "path": "web/tests/settings-section-navigation-contract.test.mjs",
+      "sha256": "359efacc049015d192dd169a73c48606f4a3245d231977f162e0e482c8ac2b27"
+    },
+    {
+      "path": "web/tests/spinner-shape-contract.test.mjs",
+      "sha256": "cdbd85cbd3425968afb5d670234a236a2b1cf2ed057783bc24611d6ce16c0043"
+    },
+    {
+      "path": "web/tests/start-guidance.test.mjs",
+      "sha256": "915cbb0a0eb1d2c4d9e86468fa6bde8c20e6bdbe49e99ccb251da1cca47de079"
+    },
+    {
+      "path": "web/tests/system-update-lease-runtime.test.mjs",
+      "sha256": "505a1a844f21d40c6980accfb4957fb4b0b1f0ae16a1e6cdd9a77f65ccc9923d"
+    },
+    {
+      "path": "web/tests/system-update-navigation-lease-mounted.test.mjs",
+      "sha256": "2630668ef3605ad1e3194b6c755637ccafb26671fb5acf9a6e47ea9154f7c111"
+    },
+    {
+      "path": "web/tests/system-update-watchdog-runtime.test.mjs",
+      "sha256": "834c5ab089724d20adc5670ad1da1323947f2ee4a2a86627d1dcae4da746deb3"
+    },
+    {
+      "path": "web/tests/team-members-ui-contract.test.mjs",
+      "sha256": "2bf995c2ce94595e94bf857a2fdb6960d821a75a32ed3998c0c9338c875aec8b"
+    },
+    {
+      "path": "web/tests/toast-contrast-contract.test.mjs",
+      "sha256": "7a906b24812cdba9958cbf07c16520f1a261466529b8a09d2986e16cd4d364b9"
+    },
+    {
+      "path": "web/tests/webmail-cta-ui-contract.test.mjs",
+      "sha256": "cb402329e2e33a219f9e900dd08cca0d5c2c97e7693f800a5884cacfc54135d6"
+    }
+  ]
+}

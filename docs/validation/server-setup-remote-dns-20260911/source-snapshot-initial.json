@@ -1,0 +1,11 @@
+{
+  "sha256": "324b7b518e8b6427c2690e1c350192e58d905eee0c08f1657428abc29c675e67",
+  "files": 1507,
+  "archive": ".tmp-remote-dns-source.tar",
+  "go_version": "go1.26.5",
+  "command": "make test vet",
+  "checkout": "/var/tmp/celikpanel-remote-final.aajHEQf4",
+  "status": "failed",
+  "exit_code": 2,
+  "failure": "TestEmbeddedMigrationsHaveNoCarriageReturns: migration042 contains CRLF. make stopped before vet."
+}

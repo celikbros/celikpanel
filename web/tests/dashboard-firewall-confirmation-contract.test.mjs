@@ -20,9 +20,10 @@ test('dashboard firewall enable CTA requests confirmation and persistence stays 
     1,
     'the attention CTA must request confirmation instead of mutating directly',
   );
-  assert.match(dashboardSource, /fw\.enabled === true && fw\.persistence_state === 'ready'/);
+  assert.match(dashboardSource, /fw\?\.enabled && fw\.persistence_state !== 'ready'/);
   assert.match(dashboardSource, /action: t\('dashboard\.saveFirewall'\)/);
-  assert.match(dashboardSource, /onFirewall=\{fw && !fw\.enabled \? requestTurnOnFirewall : undefined\}/);
+  assert.doesNotMatch(dashboardSource, /<StartGuide/);
+  assert.match(dashboardSource, /<ServerSetupDashboardNotice/);
 });
 
 test('dashboard firewall confirmation fails closed on host mutation readiness', () => {

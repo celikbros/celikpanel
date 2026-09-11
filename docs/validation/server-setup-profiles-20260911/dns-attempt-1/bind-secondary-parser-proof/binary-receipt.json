@@ -1,0 +1,8 @@
+{
+  "artifact": "binddns-test",
+  "sha256": "7baf9009fb2c335b830cb810186a4ff62125711d7d41138c7b6a2268b272ae5e",
+  "size": 8536530,
+  "retained_local_path": ".tmp-release-local-evidence\\binddns-test",
+  "reproducible_source_snapshot": "a08aa34402fc576572532ca17003939c4ca7ee6a160e906dd87d8b1cc910a115",
+  "note": "Compiled test helper is retained locally; parser proof and source tests are in the repository. Its original binary predates the final snapshot; the snapshot includes the validated renderer source."
+}

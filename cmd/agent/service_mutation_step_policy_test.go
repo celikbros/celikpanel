@@ -373,37 +373,38 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 	}
 
 	expectedMethods := map[string]bool{
-		"serviceMutationStepConfigureDBTools":        true,
-		"serviceMutationStepConfigureDKIMSigning":    true,
-		"serviceMutationStepSyncDNSZone":             true,
-		"serviceMutationStepSyncDNSZoneV3":           true,
-		"serviceMutationStepRecoverDNSZoneV3":        true,
-		"serviceMutationStepSwitchDNSEngine":         true,
-		"serviceMutationStepSecureDNSZone":           true,
-		"serviceMutationStepConfigureDNSCluster":     true,
-		"serviceMutationStepConfigurePowerDNSSQLite": true,
-		"serviceMutationStepApplyFirewall":           true,
-		"serviceMutationStepInstallService":          true,
-		"serviceMutationStepUninstallService":        true,
-		"serviceMutationStepConfigureMailStack":      true,
-		"serviceMutationStepWireMailFilters":         true,
-		"serviceMutationStepConfigureMailSubmission": true,
-		"serviceMutationStepSyncMailTLS":             true,
-		"serviceMutationStepServiceAction":           true,
-		"serviceMutationStepStartService":            true,
-		"serviceMutationStepResetFailedUnit":         true,
-		"serviceMutationStepEnsureNginxReady":        true,
-		"serviceMutationStepIssuePanelCertificate":   true,
-		"serviceMutationStepEnableRepo":              true,
-		"serviceMutationStepDisableRepo":             true,
-		"serviceMutationStepInstallNodeVersion":      true,
-		"serviceMutationStepRemoveNodeVersion":       true,
-		"serviceMutationStepSetupVPN":                true,
-		"serviceMutationStepSyncVPNPeers":            true,
-		"serviceMutationStepInstallRoundcube":        true,
-		"serviceMutationStepRemoveRoundcube":         true,
-		"serviceMutationStepConfigureWebmail":        true,
-		"serviceMutationStepSetServerHostname":       true,
+		"serviceMutationStepConfigureDBTools":         true,
+		"serviceMutationStepConfigureDKIMSigning":     true,
+		"serviceMutationStepSyncDNSZone":              true,
+		"serviceMutationStepSyncDNSZoneV3":            true,
+		"serviceMutationStepRecoverDNSZoneV3":         true,
+		"serviceMutationStepSwitchDNSEngine":          true,
+		"serviceMutationStepSecureDNSZone":            true,
+		"serviceMutationStepConfigureDNSCluster":      true,
+		"serviceMutationStepConfigurePowerDNSSQLite":  true,
+		"serviceMutationStepApplyFirewall":            true,
+		"serviceMutationStepInstallService":           true,
+		"serviceMutationStepUninstallService":         true,
+		"serviceMutationStepConfigureMailStack":       true,
+		"serviceMutationStepWireMailFilters":          true,
+		"serviceMutationStepConfigureMailSubmission":  true,
+		"serviceMutationStepSyncMailTLS":              true,
+		"serviceMutationStepServiceAction":            true,
+		"serviceMutationStepStartService":             true,
+		"serviceMutationStepResetFailedUnit":          true,
+		"serviceMutationStepEnsureNginxReady":         true,
+		"serviceMutationStepIssuePanelCertificate":    true,
+		"serviceMutationStepIssueMailHostCertificate": true,
+		"serviceMutationStepEnableRepo":               true,
+		"serviceMutationStepDisableRepo":              true,
+		"serviceMutationStepInstallNodeVersion":       true,
+		"serviceMutationStepRemoveNodeVersion":        true,
+		"serviceMutationStepSetupVPN":                 true,
+		"serviceMutationStepSyncVPNPeers":             true,
+		"serviceMutationStepInstallRoundcube":         true,
+		"serviceMutationStepRemoveRoundcube":          true,
+		"serviceMutationStepConfigureWebmail":         true,
+		"serviceMutationStepSetServerHostname":        true,
 	}
 	seenMethods := make(map[string]string)
 	directAcquire := make(map[string][]string)
@@ -463,8 +464,8 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 		}
 	}
 
-	if len(seenMethods) != 31 {
-		t.Errorf("production requiredServiceMutationStep claim count=%d want=31", len(seenMethods))
+	if len(seenMethods) != 32 {
+		t.Errorf("production requiredServiceMutationStep claim count=%d want=32", len(seenMethods))
 	}
 	for method := range expectedMethods {
 		if seenMethods[method] == "" {
@@ -478,8 +479,9 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 	}
 
 	wantDirect := map[string][]string{
-		"panel_cert_reconcile.go": {"reconcilePanelCertificateActivationOnce"},
-		"service_mutation_rpc.go": {"requiredServiceMutationStep"},
+		"panel_cert_reconcile.go":          {"reconcilePanelCertificateActivationOnce"},
+		"mail_host_certificate_renewal.go": {"deployPendingMailHostCertificate"},
+		"service_mutation_rpc.go":          {"requiredServiceMutationStep"},
 	}
 	for file := range directAcquire {
 		sort.Strings(directAcquire[file])

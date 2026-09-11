@@ -1,0 +1,10 @@
+Commands (WSL Linux, UID 0):
+go test -race ./cmd/panel ./cmd/agent ./internal/dnswire -run "TestSetupDNSWire|TestSetupDNSPublic|TestMailDNS|TestAddressAnswer|TestResolverEndpoint" -count=1
+go vet ./cmd/panel ./cmd/agent ./internal/dnswire ./internal/hostcmd
+
+Captured test exec session48250, exit0:
+ok  	github.com/alicelik/celikpanel/cmd/panel	3.514s
+ok  	github.com/alicelik/celikpanel/cmd/agent	1.193s
+ok  	github.com/alicelik/celikpanel/internal/dnswire	1.018s
+
+Vet exec session9057 completed successfully without diagnostics.

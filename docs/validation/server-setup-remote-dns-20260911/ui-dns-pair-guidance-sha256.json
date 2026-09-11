@@ -1,0 +1,9 @@
+{
+  "scope": "Later local DNS ordering guidance: 16 setup runtime tests and production build; not a repeat of the earlier 352-test full suite or four remote browser paths.",
+  "files": {
+    "web/src/components/ServerSetup.tsx": "f499c329adefa37bbcb05841ea6e445799b55d1d628c25420f6415b51d48a3a3",
+    "web/src/i18n/screens/en.ts": "13ae7d349bb90cbcb3ecb4677b8efdb9a582eedb5e92e4bdac7cb85558a5349d",
+    "web/src/i18n/screens/tr.ts": "1b38aa681a4bb171bab04af08c7ac6bc25a973dbec9114b84068d4b823a2aea1",
+    "web/tests/server-setup-runtime.test.mjs": "6dad2c9d79f81e0fa53514d182c7d8d899f2a2a22dbc3ef918d4999e1558da79"
+  }
+}

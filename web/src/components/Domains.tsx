@@ -73,6 +73,7 @@ export function Domains() {
     // yükleniyor (düğmeler açık kalır; pencere ve backend zaten koruyor,
     // hiçbir şey sızamaz).
     const [dnsServer, setDnsServer] = useState<string | null>(null);
+    const [remoteOrExternalDNSReady, setRemoteOrExternalDNSReady] = useState(false);
     const [dnsIdentityReady, setDNSIdentityReady] = useState<boolean | null>(null);
     useEffect(() => {
         if (isTeamMember) return;
@@ -86,18 +87,21 @@ export function Domains() {
                 ) {
                     setDnsServer(null);
                     setDNSIdentityReady(null);
+                    setRemoteOrExternalDNSReady(false);
                     return;
                 }
                 setDnsServer(c.dns_server);
                 setDNSIdentityReady(c.dns_identity_ready);
+                setRemoteOrExternalDNSReady((c.dns_management_mode === 'external' || c.dns_management_mode === 'existing') && c.dns_management_ready === true);
             })
             .catch(() => {
                 setDnsServer(null);
                 setDNSIdentityReady(null);
+                setRemoteOrExternalDNSReady(false);
             });
     }, [isTeamMember]);
     const dnsReadinessKnown = dnsServer !== null && dnsIdentityReady !== null;
-    const dnsMissing = !dnsReadinessKnown || dnsServer === '' || dnsIdentityReady !== true;
+    const dnsMissing = !dnsReadinessKnown || (!remoteOrExternalDNSReady && (dnsServer === '' || dnsIdentityReady !== true));
     // Whether an engine is missing or only its identity is, the DNS
     // infrastructure section is where it gets fixed; the Services page can no
     // longer install a DNS engine (DNS_ENGINE_WORKFLOW_REQUIRED), so a fresh

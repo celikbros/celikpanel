@@ -1,0 +1,6 @@
+{
+  "panel_test_fixed_sha256": "afe2cae97a863f2a13f2f4e0a4e1e953e752e8b0446c8a5e2b01c0c6f3cd3948",
+  "source_binary": "/var/tmp/cp-setup-profiles-20260911-v3/candidate-recovery/panel-test",
+  "initial_proof": "source-proof.json",
+  "scope": "isolated test daemon only; no installed panel binary"
+}

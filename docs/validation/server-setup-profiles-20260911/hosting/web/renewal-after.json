@@ -1,0 +1,60 @@
+{
+  "panel_leaf": "52647574bd4eec1dc04597a486fb1cff579016119c9156bb51f44ed56cd85d99",
+  "timer_trigger": "Fri 2026-09-11 01:10:17 UTC",
+  "service_result": "success",
+  "state": {
+    "setup": [
+      "ready",
+      1,
+      "2026-09-11T01:09:12Z"
+    ],
+    "children": [
+      [
+        "15051da83fba97da9d6712dc2490a8a5",
+        "succeeded",
+        "service_install",
+        "443737379b48865b3d10899aa5997d44"
+      ],
+      [
+        "2388bb1a9ed270496603f56197ae6c2f",
+        "succeeded",
+        "service_install",
+        "3c8b86c41c608aa28508d754430e35da"
+      ],
+      [
+        "4260fb34f951a860993f28d44c08667b",
+        "succeeded",
+        "service_install",
+        "f405425acf28165ea0b8751df45dade9"
+      ],
+      [
+        "4fcb1c7202009fdf7039d62b95064dab",
+        "succeeded",
+        "panel_certificate_issue",
+        "873208d01e428eabefb6b759c1f338b1"
+      ],
+      [
+        "80ba65cee3c8418928e7fc17740054f1",
+        "succeeded",
+        "service_install",
+        "7998ed982d8962aa2bcb663f167d754a"
+      ],
+      [
+        "a1c29baedf3340877d96b5c013c729a3",
+        "succeeded",
+        "service_install",
+        "717128e2258af84e52504c765a277ccd"
+      ]
+    ]
+  },
+  "panel_pid": "12368",
+  "renewal_configs": {
+    "celikpanel-panel-c26c0963a8e8fe638a440d8e.conf": "# renew_before_expiry = 30 days\nversion = 4.0.0\narchive_dir = /etc/letsencrypt/archive/celikpanel-panel-c26c0963a8e8fe638a440d8e\ncert = /etc/letsencrypt/live/celikpanel-panel-c26c0963a8e8fe638a440d8e/cert.pem\nprivkey = /etc/letsencrypt/live/celikpanel-panel-c26c0963a8e8fe638a440d8e/privkey.pem\nchain = /etc/letsencrypt/live/celikpanel-panel-c26c0963a8e8fe638a440d8e/chain.pem\nfullchain = /etc/letsencrypt/live/celikpanel-panel-c26c0963a8e8fe638a440d8e/fullchain.pem\n\n# Options used in the renewal process\n[renewalparams]\naccount = bd0fc87352a5206e4a5d0a51e624f8a2\npref_challs = http-01,\nserver = https://acme.setup.test:14000/dir\nauthenticator = webroot\nwebroot_path = /var/lib/celikpanel-agent/acme-http-01/panel,\nkey_type = ecdsa\n[[webroot_map]]\npanel.web.setup.test = /var/lib/celikpanel-agent/acme-http-01/panel\n"
+  },
+  "active_workloads": {
+    "nginx": "active",
+    "php8.4-fpm": "active",
+    "mariadb": "active"
+  },
+  "expired_license_api": "403 license_required"
+}

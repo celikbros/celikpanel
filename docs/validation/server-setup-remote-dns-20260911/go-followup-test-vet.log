@@ -1,0 +1,6 @@
+go test ./cmd/panel ./internal/db ./cmd/agent ./internal/hostcmd
+ok  	github.com/alicelik/celikpanel/cmd/panel	138.353s
+ok  	github.com/alicelik/celikpanel/internal/db	7.246s
+ok  	github.com/alicelik/celikpanel/cmd/agent	12.850s
+ok  	github.com/alicelik/celikpanel/internal/hostcmd	1.040s
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "go" vet ./...

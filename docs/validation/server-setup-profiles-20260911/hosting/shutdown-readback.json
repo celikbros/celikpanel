@@ -1,0 +1,17 @@
+{
+  "web": {
+    "matching_qemu_process_absent": true,
+    "qemu_pidfile_absent": true,
+    "artifacts_preserved": true
+  },
+  "application": {
+    "matching_qemu_process_absent": true,
+    "qemu_pidfile_absent": true,
+    "artifacts_preserved": true
+  },
+  "webmail": {
+    "matching_qemu_process_absent": true,
+    "qemu_pidfile_absent": true,
+    "artifacts_preserved": true
+  }
+}

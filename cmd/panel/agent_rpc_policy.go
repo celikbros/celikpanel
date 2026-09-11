@@ -127,7 +127,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.InstalledServiceIDsStrict Agent.ListBackups Agent.ListCronJobs Agent.ListFiles
 		Agent.ListNodeLTS Agent.ListNodeVersions Agent.ListServiceInstances
 		Agent.ListSystemSQLiteDatabases Agent.MailFilterWiringState Agent.MailHealth
-		Agent.NginxInspect Agent.PkgFamily
+		Agent.NginxInspect Agent.PanelRenewalReadiness Agent.MailHostCertificateStatus Agent.PkgFamily
 		Agent.PostfixQueue Agent.ReadBackupChunk Agent.ReadFile
 		Agent.ReadSystemSQLiteSnapshotChunk Agent.RepoPackages Agent.ServiceCandidateVersion
 		Agent.ServiceJournal Agent.ServiceMutationReadiness Agent.SiteUsage Agent.Version Agent.VPNStatus
@@ -164,7 +164,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityCertificate, `
 		Agent.DeleteCertLineage Agent.InstallCustomCertificate Agent.IssueLetsEncryptCertificate
-		Agent.IssuePanelCertificateV2 Agent.ReconcileSiteCertLineages
+		Agent.IssuePanelCertificateV2 Agent.IssueMailHostCertificateV1 Agent.ReconcileSiteCertLineages
 		Agent.RenewLetsEncryptCertificate Agent.ValidateCertificate
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityFirewall, `
@@ -236,6 +236,8 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.DovecotStats":                agentRPCQuickReadTimeout,
 	"Agent.Fail2banConfig":              agentRPCQuickReadTimeout,
 	"Agent.Fail2banStatus":              agentRPCQuickReadTimeout,
+	"Agent.PanelRenewalReadiness":       agentRPCQuickReadTimeout,
+	"Agent.MailHostCertificateStatus":   agentRPCQuickReadTimeout,
 	"Agent.FirewallStatus":              agentRPCQuickReadTimeout,
 	"Agent.GetCertificateInfo":          agentRPCQuickReadTimeout,
 	"Agent.GetConfig":                   agentRPCQuickReadTimeout,
@@ -386,6 +388,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.InstallWordPress":            agentRPCDeploymentTimeout,
 	"Agent.IssueLetsEncryptCertificate": agentRPCDeploymentTimeout,
 	"Agent.IssuePanelCertificateV2":     agentRPCDeploymentTimeout,
+	"Agent.IssueMailHostCertificateV1":  agentRPCDeploymentTimeout,
 	"Agent.RemoveNodeVersion":           agentRPCDeploymentTimeout,
 	"Agent.RemoveRoundcube":             agentRPCDeploymentTimeout,
 	"Agent.RenewLetsEncryptCertificate": agentRPCDeploymentTimeout,

@@ -261,13 +261,55 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		writeAgentError(w, err, "hosting capabilities")
 		return
 	}
-	if caps.DNSServer == "" {
+	// A child keeps its parent's ownership even if the setup default changed.
+	// Resolve the prospective subscription read-only so denied prerequisites
+	// cannot bootstrap a stray account.
+	parentDNSDomain := ""
+	remoteConnectionID := ""
+	prospectiveSubscription := req.SubscriptionID
+	if prospectiveSubscription == 0 {
+		if caller := currentCaller(r); caller != nil {
+			err := p.db.GetDB().QueryRowContext(r.Context(), `SELECT id FROM subscriptions WHERE owner_id = ? ORDER BY id LIMIT 1`, caller.ID).Scan(&prospectiveSubscription)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				writeServerError(w, err)
+				return
+			}
+		}
+	}
+	if prospectiveSubscription != 0 {
+		_, parentName, child, err := p.resolveParentDomain(r.Context(), prospectiveSubscription, req.Domain)
+		if err != nil {
+			writeClientError(w, http.StatusConflict, "the parent domain is not available")
+			return
+		}
+		if child {
+			parentDNSDomain = parentName
+			caps.DNSManagementMode, err = p.domainDNSManagementMode(r.Context(), parentName)
+			if err != nil {
+				writeServerError(w, err)
+				return
+			}
+		}
+	}
+
+	if req.ProjectType == "dnsonly" && parentDNSDomain != "" && caps.DNSManagementMode != setupDNSModeLocal {
+		writeCodedError(w, http.StatusConflict, "DNS_ONLY_REQUIRES_LOCAL_AUTHORITY", "a DNS-only child must retain its parent's local DNS authority", "/settings?section=dns")
+		return
+	}
+	if caps.DNSManagementMode == setupDNSModeExisting && req.ProjectType != "dnsonly" {
+		remoteConnectionID, err = p.remoteDNSConnectionForCreation(r.Context(), parentDNSDomain)
+		if err != nil {
+			writeRemoteDNSUnavailable(w)
+			return
+		}
+	}
+	if (caps.DNSManagementMode == setupDNSModeLocal || req.ProjectType == "dnsonly") && caps.DNSServer == "" {
 		writeCodedError(w, http.StatusConflict, errCodeDNSServerRequired,
 			"no managed authoritative DNS engine is active; choose and activate BIND or PowerDNS first",
 			"/settings?section=dns")
 		return
 	}
-	if !caps.DNSIdentityReady {
+	if (caps.DNSManagementMode == setupDNSModeLocal || req.ProjectType == "dnsonly") && !caps.DNSIdentityReady {
 		writeCodedError(w, http.StatusConflict, errCodeDNSSettingsRequired,
 			"DNS identity is not configured — save the shared nameserver names and operating mode under Settings before adding a domain",
 			"/settings?section=dns")
@@ -410,10 +452,37 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		writeServerError(w, err)
 		return
 	}
+	req.DNSManagement = caps.DNSManagementMode
+	if req.ProjectType == "dnsonly" {
+		req.DNSManagement = setupDNSModeLocal
+	}
 	if isSubdomain {
 		req.ParentDomainID = &parentID
+		req.DNSManagement, err = p.domainDNSManagementMode(r.Context(), parentName)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+		if req.DNSManagement == setupDNSModeLocal && (caps.DNSServer == "" || !caps.DNSIdentityReady) {
+			writeCodedError(w, http.StatusConflict, errCodeDNSServerRequired, "the parent domain retains local DNS ownership; its authoritative DNS must be ready", "/settings?section=dns")
+			return
+		}
+		if req.ProjectType == "dnsonly" && req.DNSManagement != setupDNSModeLocal {
+			writeExternalDNSManaged(w)
+			return
+		}
 	}
 
+	if req.DNSManagement == setupDNSModeExisting {
+		// Capture the server-selected immutable association; public JSON cannot
+		// choose another connector or migrate an existing parent's ownership.
+		exactConnectionID, err := p.remoteDNSConnectionForCreation(r.Context(), parentName)
+		if err != nil || exactConnectionID != remoteConnectionID {
+			writeRemoteDNSUnavailable(w)
+			return
+		}
+		req.DNSRemoteConnectionID = exactConnectionID
+	}
 	createCtx, cancelCreate := context.WithTimeout(r.Context(), domainCreateTimeout)
 	result, err := p.orchestrator.CreateSite(createCtx, &req)
 	cancelCreate()
@@ -426,11 +495,26 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.audit(r, "domain.create", "domain", result.DomainID)
+	if req.DNSManagement == setupDNSModeExternal {
+		_ = json.NewEncoder(w).Encode(result)
+		return
+	}
 	dnsCtx, cancelDNS := context.WithTimeout(
 		context.WithoutCancel(r.Context()),
 		domainDNSPublicationTimeout,
 	)
 	defer cancelDNS()
+
+	if req.DNSManagement == setupDNSModeExisting {
+		if err := p.ensureRemoteDomainDNS(dnsCtx, req.Domain); err != nil {
+			log.Printf("remote DNS publication pending for %s: %v", req.Domain, err)
+			p.audit(r, "domain.create.dns_pending", "domain", result.DomainID)
+			writeDomainCreatePartialSuccess(w, result.DomainID, req.Domain, false)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(result)
+		return
+	}
 
 	if isSubdomain {
 		// Link the child to its parent and add its address record to the
@@ -487,10 +571,6 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if _, ready := p.requireActiveDNSPublisherForMutation(w, r.Context()); !ready {
-		return
-	}
-
 	// Extract domain ID from URL path
 	idStr := r.URL.Path[len("/api/v1/domains/"):]
 	domainID, err := strconv.Atoi(idStr)
@@ -508,6 +588,14 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	domain, err := domainRepo.GetByID(ctx, domainID)
 	if err != nil {
 		http.Error(w, "domain not found", http.StatusNotFound)
+		return
+	}
+	if domain.DNSManagement == setupDNSModeLocal {
+		if _, ready := p.requireActiveDNSPublisherForMutation(w, r.Context()); !ready {
+			return
+		}
+	} else if domain.DNSManagement != setupDNSModeExternal && domain.DNSManagement != setupDNSModeExisting {
+		writeServerError(w, errors.New("domain DNS ownership is invalid"))
 		return
 	}
 	if err := p.ensureHSTSAllowsHostnameRemoval(ctx, domainID); err != nil {

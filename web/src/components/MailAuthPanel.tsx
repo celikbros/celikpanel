@@ -17,6 +17,8 @@ interface AuthRecord {
 interface AuthStatus {
     domain: string;
     zone_exists: boolean;
+    dns_management_mode?: 'local' | 'external' | 'existing';
+    required_records?: { name: string; type: string; content: string; ttl: number; prio?: number }[];
     spf: AuthRecord;
     dkim: AuthRecord;
     dmarc: AuthRecord;
@@ -76,7 +78,7 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
     };
 
     const apply = async (record: 'spf' | 'dkim' | 'dmarc') => {
-        if (readOnly) return;
+        if (readOnly || status?.dns_management_mode === 'external') return;
         setBusy(record);
         try {
             const body: Record<string, string> = { record };
@@ -86,7 +88,12 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
-            if (!res.ok) throw new Error();
+            if (!res.ok) {
+                const problem = await res.json().catch(() => null);
+                const keys: Record<string, TranslationKey> = { REMOTE_DNS_MAIL_RECORD_CONFLICT: 'mailauth.remoteConflict', REMOTE_DNS_MAIL_ADDRESS_REQUIRED: 'mailauth.remoteAddressRequired', REMOTE_DNS_UNAVAILABLE: 'mailauth.remoteUnavailable' };
+                showToast('error', t(keys[problem?.code] || 'common.error'));
+                return;
+            }
             showToast('success', t('mailauth.applied'));
             await load();
         } catch {
@@ -113,6 +120,10 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
     return (
         <div className="space-y-4">
             <p className="text-sm text-fg-muted">{t('mailauth.intro')}</p>
+            {(status.dns_management_mode === 'external' || status.dns_management_mode === 'existing') && <>
+                <Note>{t(status.dns_management_mode === 'external' ? 'mailauth.externalHelp' : 'mailauth.remoteHelp')}</Note>
+                {status.required_records && <section className="rounded-xl border border-border p-4"><h3 className="font-semibold">{t('mailauth.deliveryRecords')}</h3><dl className="mt-3 divide-y divide-border">{status.required_records.filter(record => record.type !== 'TXT').map((record, index) => <div key={`${record.type}:${record.name}:${index}`} className="flex flex-wrap items-start justify-between gap-3 py-3 text-sm"><div className="min-w-0"><dt className="break-all font-medium">{record.type} {record.name}</dt><dd className="mt-1 break-all text-fg-muted">{record.prio ? `${record.prio} ` : ''}{record.content}</dd></div><Button variant="secondary" onClick={() => copy(record.content)}>{t('conn.copy')}</Button></div>)}</dl></section>}
+            </>}
 
             {!status.signing_installed && status.dkim.status !== 'no_key' && (
                 <Note>{t('mailauth.signingMissing')}</Note>
@@ -125,7 +136,7 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
                 descKey="mailauth.spfDesc"
                 record={status.spf}
                 busy={busy === 'spf'}
-                readOnly={readOnly}
+                readOnly={readOnly || status.dns_management_mode === 'external'}
                 onApply={() => apply('spf')}
                 onCopy={copy}
             />
@@ -136,7 +147,7 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
                 descKey="mailauth.dkimDesc"
                 record={status.dkim}
                 busy={busy === 'dkim'}
-                readOnly={readOnly}
+                readOnly={readOnly || status.dns_management_mode === 'external'}
                 onApply={() => apply('dkim')}
                 onCopy={copy}
                 extraAction={
@@ -154,10 +165,10 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
                 descKey="mailauth.dmarcDesc"
                 record={status.dmarc}
                 busy={busy === 'dmarc'}
-                readOnly={readOnly}
+                readOnly={readOnly || status.dns_management_mode === 'external'}
                 onApply={() => apply('dmarc')}
                 onCopy={copy}
-                extraControls={!readOnly ? (
+                extraControls={!readOnly && status.dns_management_mode !== 'external' ? (
                     <label className="flex items-center gap-2 text-sm text-fg-muted">
                         {t('mailauth.dmarcPolicy')}
                         <select

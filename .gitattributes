@@ -30,3 +30,7 @@ deploy/release-sequence-policy text eol=lf
 *.php text eol=lf
 
 portal-membership/vendor/phpmailer/LICENSE text eol=lf
+
+# Validation artifacts carry byte hashes; preserve exact recorded output.
+# Doğrulama kanıtları bayt özetleri taşır; kaydedilen çıktıyı aynen koru.
+docs/validation/** -text -whitespace

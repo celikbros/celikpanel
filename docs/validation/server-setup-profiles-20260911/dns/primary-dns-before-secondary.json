@@ -1,0 +1,59 @@
+{
+  "id": "f09cd1dd982304c0fc463d8c11b73b17",
+  "request_id": "f09cd1dd982304c0fc463d8c11b73b17",
+  "plan_id": "ce65ebaa920ebdb8b5cae6a1092f1c32",
+  "status": "running",
+  "phase": "02-service",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "target": "local",
+      "status": "succeeded",
+      "request_id": "0a7e40b93af070e2ecfe3579fb7534c0",
+      "owner_id": "a8d64a769a2ecacc066dc887e1e9b0b9"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "target": "nftables",
+      "status": "running",
+      "request_id": "8fc437f7d69a63e1e3902b83956b62b7",
+      "owner_id": "c478354b0efc52973b8ea963e02533e2",
+      "operation_id": "546da458666fdfe703736b4c46da3db2"
+    },
+    {
+      "id": "03-service",
+      "kind": "service",
+      "target": "certbot",
+      "status": "pending",
+      "request_id": "124d113252a78f2f545735bc15a3105c",
+      "owner_id": "f1f7454c32db2fb70c87916f43508f5e"
+    },
+    {
+      "id": "04-firewall",
+      "kind": "firewall",
+      "target": "enable_and_persist",
+      "status": "pending",
+      "request_id": "3900046dd54c580e7ad3613baedc1a04",
+      "owner_id": "c442741eb9b85c2240065a3c759fa035"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "target": "panel.dnsprimary.setup.test",
+      "status": "pending",
+      "request_id": "8debb3c4786290cd9c4e8c147c94a1e1",
+      "owner_id": "eb6bea78a38645c8728030ebf8a55f52"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "target": "dns",
+      "status": "pending",
+      "request_id": "d83d3735a8dc7a39ffe6859486bf813b",
+      "owner_id": "15dab9e6a5b2170422bfb4b0219e3687"
+    }
+  ],
+  "panel_url": "https://panel.dnsprimary.setup.test:2083/"
+}

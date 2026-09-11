@@ -213,7 +213,9 @@ type DNSBackendRuntimeState struct {
 	Running   bool      `json:"running"`
 	Managed   bool      `json:"managed"`
 	PairReady bool      `json:"pair_ready"`
-	Unit      string    `json:"unit"`
+	// SecondaryReady proves transfer consumption and never grants publication.
+	SecondaryReady bool   `json:"secondary_ready"`
+	Unit           string `json:"unit"`
 	// ForeignOptions names the directives CelikPanel manages that this server's
 	// own configuration already sets, with the value it has today and the value
 	// CelikPanel would set. It is a bounded runtime fact like the others, and it

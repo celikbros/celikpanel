@@ -1,0 +1,9 @@
+dnsprimary ('running', 'queued', 'null')
+dnsprimary ('running', '01-dns', 'null')
+dnsprimary ('running', '02-service', 'null')
+dnsprimary ('running', '03-service', 'null')
+dnsprimary ('running', '04-firewall', 'null')
+dnsprimary ('running', '05-panel_certificate', 'null')
+dnsprimary ('running', '06-verify', 'null')
+dnsprimary ('waiting', 'verification', 'null')
+Connection to 127.0.0.1 closed by remote host.

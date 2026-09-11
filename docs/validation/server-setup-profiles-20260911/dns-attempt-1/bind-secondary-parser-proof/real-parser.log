@@ -1,0 +1,10 @@
+9.20.26-1~deb13u1-Debian
+=== RUN   TestSecondaryCatalogNamedCheckconf
+=== RUN   TestSecondaryCatalogNamedCheckconf/zone-only-stage
+=== RUN   TestSecondaryCatalogNamedCheckconf/complete-host
+=== RUN   TestSecondaryCatalogNamedCheckconf/wrong-top-level-scope
+--- PASS: TestSecondaryCatalogNamedCheckconf (0.03s)
+    --- PASS: TestSecondaryCatalogNamedCheckconf/zone-only-stage (0.01s)
+    --- PASS: TestSecondaryCatalogNamedCheckconf/complete-host (0.01s)
+    --- PASS: TestSecondaryCatalogNamedCheckconf/wrong-top-level-scope (0.01s)
+PASS

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "revision": 1,
+  "origin": "fresh",
+  "status": "running",
+  "draft": {
+    "purpose": "web_mail",
+    "remote_dns_connection_id": "",
+    "panel_domain": "panel.webmail.setup.test",
+    "mail_hostname": "mail.webmail.setup.test",
+    "dns_mode": "external",
+    "dns_engine": "pdns",
+    "dns_role": "primary",
+    "ns1": "",
+    "ns2": "",
+    "local_ip": "",
+    "peer_ip": "",
+    "peer_ns": "",
+    "node_version": "",
+    "database": "mariadb"
+  },
+  "required": true,
+  "checks": [
+    {
+      "id": "panel_https",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "panel_renewal",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "dns",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "firewall",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "services",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "mail_tls",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "mail_identity",
+      "state": "action_required",
+      "code": "mail_identity_required"
+    },
+    {
+      "id": "mail_delivery",
+      "state": "ready",
+      "code": "ready"
+    }
+  ]
+}

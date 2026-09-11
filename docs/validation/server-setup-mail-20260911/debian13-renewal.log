@@ -1,0 +1,4 @@
+=== RUN   TestMailHostCertificateDisposableVMRenewalResume
+    mail_host_certificate_vm_resume_test.go:110: real Postfix/Dovecot renewal and exact-source replay passed without a panel/license; previous=7cc97b0891a373580ae2162b3a0b1766191943769d8e39d91531f68d899cbc49 renewed=0081841d0ec7e3d4768b96380166ab8a8e5245cac84f709ce843755ffe869a2d
+--- PASS: TestMailHostCertificateDisposableVMRenewalResume (7.00s)
+PASS

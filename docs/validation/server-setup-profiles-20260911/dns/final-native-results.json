@@ -1,0 +1,70 @@
+{
+  "dnsprimary": {
+    "status": "ready",
+    "execution_id": "f09cd1dd982304c0fc463d8c11b73b17",
+    "exact_start_replay": true,
+    "checks": [
+      {
+        "id": "panel_https",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "panel_renewal",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "dns",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "firewall",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "services",
+        "state": "ready",
+        "code": "ready"
+      }
+    ],
+    "evidence": "final-execution-evidence.json",
+    "transferred_member": "acceptance.dnsfixture.test",
+    "transfer_observations": 1
+  },
+  "dnssecondary": {
+    "status": "ready",
+    "execution_id": "03074f76ffff55a02d1c643c460e426a",
+    "exact_start_replay": true,
+    "checks": [
+      {
+        "id": "panel_https",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "panel_renewal",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "dns",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "firewall",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "services",
+        "state": "ready",
+        "code": "ready"
+      }
+    ],
+    "evidence": "execution-evidence.json"
+  }
+}

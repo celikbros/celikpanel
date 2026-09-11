@@ -120,8 +120,9 @@ test('format errors are actionable; pasted whitespace is trimmed and successful 
     await submit();
     assert.equal(tree.root.findAllByType('input').length, 0);
     assert.ok(!JSON.stringify(tree.toJSON()).includes(key));
-    await act(async () => button('license.continueSetup').props.onClick());
-    assert.equal(navigations.at(-1)[0], '/');
+    assert.equal(button('license.continueSetup'), undefined);
+    assert.equal(button('license.refresh'), undefined);
+    assert.deepEqual(navigations, [['/', { replace: true }]]);
   } finally { await cleanup(); }
 });
 test('activation rejection preserves the key and offers no exploration bypass', async () => {
@@ -202,4 +203,38 @@ test('short verification renews before expiry without remounting management; hid
   assert.equal(calls.length,2,'expiry itself does not poll while hidden');
   assert.equal(tree.root.findAllByType('main').length,0,'hidden expiry still locks management');
  }finally{Date.now=previousNow;window.setTimeout=previousTimer;document.visibilityState='visible';await cleanup()}
+});
+
+
+test('locked activation automatically rechecks access; active settings stay on their page', async () => {
+  for (const locked of [true, false]) {
+    fixture();
+    globalThis.licenseTest.search = '';
+    let accessChecks = 0;
+    try {
+      await act(async () => { tree = Renderer.create(React.createElement(LicensePanel, {
+        locked, onContinue: () => { accessChecks++; },
+      })); });
+      await enter('CPK-' + 'c'.repeat(64));
+      globalThis.fetch = async () => Response.json({ state: 'active', can_provision: true });
+      await submit();
+      assert.equal(accessChecks, locked ? 1 : 0);
+      assert.equal(navigations.length, 0, 'locked activation delegates to the verified access gate');
+      assert.equal(button('license.continueSetup'), undefined);
+      assert.equal(!!button('license.refresh'), !locked);
+    } finally { await cleanup(); }
+  }
+});
+
+test('an already active activation page automatically rechecks access', async () => {
+  fixture('admin', 'active');
+  let accessChecks = 0;
+  try {
+    await act(async () => { tree = Renderer.create(React.createElement(LicensePanel, {
+      locked: true, onContinue: () => { accessChecks++; },
+    })); });
+    assert.equal(accessChecks, 1);
+    assert.equal(button('license.continueSetup'), undefined);
+    assert.equal(button('license.refresh'), undefined);
+  } finally { await cleanup(); }
 });

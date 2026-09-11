@@ -1,0 +1,34 @@
+[
+  {
+    "name": "ns1.setup.test",
+    "type": "A",
+    "rcode": "NOERROR",
+    "answers": 1,
+    "transport": "TCP",
+    "resolver": "127.0.0.1:5353"
+  },
+  {
+    "name": "ns1.setup.test",
+    "type": "AAAA",
+    "rcode": "NOERROR",
+    "answers": 0,
+    "transport": "TCP",
+    "resolver": "127.0.0.1:5353"
+  },
+  {
+    "name": "ns2.setup.test",
+    "type": "A",
+    "rcode": "NOERROR",
+    "answers": 1,
+    "transport": "TCP",
+    "resolver": "127.0.0.1:5353"
+  },
+  {
+    "name": "ns2.setup.test",
+    "type": "AAAA",
+    "rcode": "NOERROR",
+    "answers": 0,
+    "transport": "TCP",
+    "resolver": "127.0.0.1:5353"
+  }
+]

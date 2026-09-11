@@ -29,7 +29,7 @@ test('system service truth never promotes tools into running daemons', () => {
   assert.match(dashboard, /if \(!serviceScanFresh\) return false/);
   assert.match(dashboard, /const systemServices = serviceScanFresh[\s\S]*installed\.filter\(\(s\) => s\.kind === 'service'\)/);
   assert.match(dashboard, /normalized === 'running' \|\| normalized\.startsWith\('active'\)/);
-  assert.match(dashboard, /scanFresh=\{serviceScanFresh && componentCensusComplete\}/);
+  assert.match(dashboard, /const hostNeverChecked = services\.length > 0 && uncheckedServices\.length === services\.length/);
   assert.match(dashboard, /!serviceScanFresh[\s\S]*dashboard\.statusUnknown/);
   assert.match(dashboard, /serviceScanFresh && hostsContent && !hasClamAV/);
   assert.match(dashboard, /attention\.length > 0 && \(/);
@@ -37,10 +37,11 @@ test('system service truth never promotes tools into running daemons', () => {
   assert.match(census, /observed\.filter\(\(row\) => row\.is_installed === true\)\.length/);
 });
 
-test('DNS and firewall journey steps use their independent backend truth axes', () => {
+test('dashboard preserves independent service and firewall evidence while setup has its own persisted state', () => {
   assert.match(dashboard, /typeof payload\.dns_identity_ready !== 'boolean'/);
-  assert.match(dashboard, /dnsStartReady\(serviceScanFresh && componentCensusComplete, dnsIdentityReady,/);
-  assert.match(dashboard, /fw\.enabled === true && fw\.persistence_state === 'ready'/);
+  assert.match(dashboard, /<ServerSetupDashboardNotice/);
+  assert.doesNotMatch(dashboard, /<StartGuide/);
+
   assert.match(dashboard, /fw\?\.enabled && fw\.persistence_state !== 'ready'/);
 });
 

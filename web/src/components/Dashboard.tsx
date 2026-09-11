@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from '../router';
-import { StartGuide } from './StartGuide';
+import { ServerSetupDashboardNotice } from './ServerSetupGate';
 import { LicenseNotice } from './LicenseNotice';
-import { accountStart, dnsStartReady, hasMailActivity, panelCertificateReady } from '../lib/startGuidance';
+import { accountStart, hasMailActivity } from '../lib/startGuidance';
 import {
     Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity, Bell,
     Shield, ShieldOff, Users, Mail, ArrowRight,
@@ -246,12 +246,9 @@ function AdminDashboard() {
     const [domains, setDomains] = useState<DomainLite[]>([]);
     const [audit, setAudit] = useState<AuditLite[]>([]);
     const [usersCount, setUsersCount] = useState(0);
-    const [dnsServer, setDnsServer] = useState('');
-    const [dnsIdentityReady, setDNSIdentityReady] = useState(false);
     const [serviceScannedAt, setServiceScannedAt] = useState<string | null>(null);
     const [freshnessNow, setFreshnessNow] = useState(() => Date.now());
     // Panel certificate evidence is independent of every hosted domain.
-    const [panelSecured, setPanelSecured] = useState<boolean | null>(null);
     const [extras, setExtras] = useState<Extras | null>(null);
     const [fwBusy, setFwBusy] = useState(false);
     const [firewallConfirmationOpen, setFirewallConfirmationOpen] = useState(false);
@@ -274,19 +271,13 @@ function AdminDashboard() {
                 setMailProfiles(snapshot.profiles);
                 setServiceScannedAt(snapshot.scannedAt);
                 setFreshnessNow(Date.now());
-                setDNSIdentityReady(snapshot.dnsIdentityReady);
             })
             .catch(() => {});
         fetch('/api/v1/firewall').then((r) => (r.ok ? r.json() : null)).then(setFw).catch(() => {});
         fetch('/api/v1/domains').then((r) => (r.ok ? r.json() : [])).then((d) => setDomains(d || [])).catch(() => {});
         fetch('/api/v1/audit-logs?limit=28').then((r) => (r.ok ? r.json() : null)).then((d) => setAudit(d?.entries || [])).catch(() => {});
         fetch('/api/v1/users').then((r) => (r.ok ? r.json() : null)).then((d) => setUsersCount((d?.users || []).length)).catch(() => {});
-        fetch('/api/v1/hosting/capabilities')
-            .then((r) => (r.ok ? r.json() : null))
-            .then((c) => { setDnsServer(c?.dns_server ?? ''); })
-            .catch(() => {});
         fetch('/api/v1/dashboard').then((r) => (r.ok ? r.json() : null)).then(setExtras).catch(() => {});
-        fetch('/api/v1/panel/certificate').then((r) => (r.ok ? r.json() : null)).then((c) => setPanelSecured(panelCertificateReady(c))).catch(() => {});
 
         return () => clearInterval(timer);
     }, []);
@@ -322,7 +313,6 @@ function AdminDashboard() {
     // Hiçbir satırı gözlenmemiş bir makinenin gösterilecek sayısı yoktur.
     const uncheckedServices = services.filter((s) => s.is_installed === null);
     const hostNeverChecked = services.length > 0 && uncheckedServices.length === services.length;
-    const componentCensusComplete = uncheckedServices.length === 0;
 
     // The same check the Components page offers, run from here instead of
     // pointing at another page — the firewall lesson (Jul 17): an action this
@@ -358,7 +348,6 @@ function AdminDashboard() {
             setServices(snapshot.services);
             setMailProfiles(snapshot.profiles);
             setServiceScannedAt(snapshot.scannedAt);
-            setDNSIdentityReady(snapshot.dnsIdentityReady);
             // Freshness is measured against a clock that ticks every 30s. A
             // scan timestamp newer than that clock reads as "in the future"
             // and would show Unknown for half a minute after a successful
@@ -570,8 +559,6 @@ function AdminDashboard() {
         });
     }
 
-    const dnsReady = dnsStartReady(serviceScanFresh && componentCensusComplete, dnsIdentityReady, dnsServer !== '' && serviceRunning(dnsServer));
-    const firewallReady = fw === null ? null : fw.enabled === true && fw.persistence_state === 'ready';
     const hasContent = installed.length > 0 || domains.length > 0;
 
     const recentDomains = [...domains]
@@ -786,12 +773,7 @@ function AdminDashboard() {
             )}
 
             <LicenseNotice />
-            <StartGuide
-                dnsReady={dnsReady} scanFresh={serviceScanFresh && componentCensusComplete}
-                scanning={componentScanBusy} onScan={scanComponents}
-                panelSecured={panelSecured} firewallReady={firewallReady}
-                onFirewall={fw && !fw.enabled ? requestTurnOnFirewall : undefined} firewallBusy={fwBusy}
-            />
+            <ServerSetupDashboardNotice />
 
             {/* Hosting + activity / Barındırma + etkinlik */}
             {hasContent && (

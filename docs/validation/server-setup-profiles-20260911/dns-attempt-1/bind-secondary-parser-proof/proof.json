@@ -1,0 +1,5 @@
+{
+  "scope": "scratch configuration parsing only; no service/config mutations",
+  "binary_sha256": "7baf9009fb2c335b830cb810186a4ff62125711d7d41138c7b6a2268b272ae5e",
+  "returncode": 0
+}

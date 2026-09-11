@@ -1,0 +1,112 @@
+[
+  {
+    "lang": "tr",
+    "width": 1440,
+    "scenario": "new",
+    "setupReads": 5,
+    "startCalls": 1,
+    "writes": [
+      "/api/v1/setup",
+      "/api/v1/setup",
+      "/api/v1/setup/plan",
+      "/api/v1/setup/start"
+    ],
+    "errors": []
+  },
+  {
+    "lang": "tr",
+    "width": 390,
+    "scenario": "new",
+    "setupReads": 5,
+    "startCalls": 1,
+    "writes": [
+      "/api/v1/setup",
+      "/api/v1/setup",
+      "/api/v1/setup/plan",
+      "/api/v1/setup/start"
+    ],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "scenario": "new",
+    "setupReads": 5,
+    "startCalls": 1,
+    "writes": [
+      "/api/v1/setup",
+      "/api/v1/setup",
+      "/api/v1/setup/plan",
+      "/api/v1/setup/start"
+    ],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 390,
+    "scenario": "new",
+    "setupReads": 5,
+    "startCalls": 1,
+    "writes": [
+      "/api/v1/setup",
+      "/api/v1/setup",
+      "/api/v1/setup/plan",
+      "/api/v1/setup/start"
+    ],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "scenario": "legacy",
+    "setupReads": 1,
+    "startCalls": 0,
+    "writes": [],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "scenario": "ready",
+    "setupReads": 1,
+    "startCalls": 0,
+    "writes": [],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "scenario": "waiting",
+    "setupReads": 2,
+    "startCalls": 0,
+    "writes": [],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "scenario": "unavailable",
+    "setupReads": 1,
+    "startCalls": 0,
+    "writes": [],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "scenario": "customer",
+    "setupReads": 0,
+    "startCalls": 0,
+    "writes": [],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "scenario": "locked",
+    "setupReads": 0,
+    "startCalls": 0,
+    "writes": [],
+    "errors": []
+  }
+]

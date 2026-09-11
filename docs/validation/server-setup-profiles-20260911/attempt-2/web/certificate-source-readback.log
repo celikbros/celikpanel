@@ -1,0 +1,4 @@
+=== RUN   TestSetupProfileDisposableCertificateSourceReadback
+    setup_profile_source_vm_test.go:28: open panel certificate live lineage: panel certificate source directory is not root-owned
+--- FAIL: TestSetupProfileDisposableCertificateSourceReadback (0.00s)
+FAIL

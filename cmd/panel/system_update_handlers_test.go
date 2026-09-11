@@ -239,7 +239,7 @@ func TestPanelUpdateRoutesRemainBehindAuthenticationAndCSRF(t *testing.T) {
 			t.Fatalf("update route is not registered exactly: %s", route)
 		}
 	}
-	if !strings.Contains(text, "applicationHandler := csrfProtect(\n\t\tpanel.requireAuth(http.DefaultServeMux),\n\t)") {
+	if !strings.Contains(text, "applicationHandler := panel.requireRemoteDNSMachineAuth(csrfProtect(\n\t\tpanel.requireAuth(http.DefaultServeMux),\n\t))") {
 		t.Fatal("default API mux is no longer wrapped by auth then same-origin CSRF")
 	}
 }

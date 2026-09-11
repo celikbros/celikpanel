@@ -1,0 +1,10 @@
+Commands (WSL Linux, UID 0):
+go test ./cmd/agent ./internal/binddns ./internal/hostcmd -count=1
+go vet ./cmd/agent ./internal/binddns ./internal/hostcmd
+
+Captured exec session63287, exit0:
+ok  	github.com/alicelik/celikpanel/cmd/agent	15.517s
+ok  	github.com/alicelik/celikpanel/internal/binddns	0.114s
+ok  	github.com/alicelik/celikpanel/internal/hostcmd	4.329s
+
+Vet completed successfully without diagnostics.

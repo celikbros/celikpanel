@@ -1,0 +1,7 @@
+{
+  "panel_test_sha256": "154957ef6075d54dbebf7be2f021304c51a1b681be71fec8abf93746c1f7a27a",
+  "migration042_sha256": "60b4c3ee2c0c1348072d74ef505d4f7368552f35503e90871aa7eeb4f7b9e8d5",
+  "migration042_lf_only": true,
+  "source_root": "/var/tmp/cp-setup-dns-build.PsJ9wAay",
+  "fixed_agent_sha256": "db67d54c7b0b08ec85966f4e7e7d1fe4b6424540022aa0ecc15204b56dcea2b1"
+}

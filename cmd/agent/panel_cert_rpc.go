@@ -257,6 +257,11 @@ func (a *Agent) IssuePanelCertificateV2(
 		return nil
 	}
 
+	if err := prepareManagedCertbotSourceOwnership(domain, panelCertLineageName(domain)); err != nil {
+		_ = panelCertWithPublishLock(func() error { return clearPanelCertificateIssuanceIntentLocked(intent) })
+		resp.Error = err.Error()
+		return nil
+	}
 	out, issueErr := panelCertRunMutationCommand(
 		stepCtx, panelCertIssueTimeout, "certbot", args...,
 	)

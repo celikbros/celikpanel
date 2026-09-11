@@ -1,0 +1,65 @@
+{
+  "panel_leaf": "20d3a906219f9b8cef180e4a4df69600ea19113474744d55aeb122b3e71d8a7c",
+  "state": {
+    "setup": [
+      "ready",
+      1,
+      "2026-09-11T01:28:12Z"
+    ],
+    "children": [
+      [
+        "20e3e00f0b7237a3a5db556af1ed6c92",
+        "succeeded",
+        "service_install",
+        "3acb6ca8d83a0acba99a5dc94e80d536"
+      ],
+      [
+        "4a0a370de02beee3a712d5bb6e16fede",
+        "succeeded",
+        "service_install",
+        "23d741d4e22e0a838f909b219e9944f2"
+      ],
+      [
+        "5ab1ac3320a89fbad802d908c35345c0",
+        "succeeded",
+        "mail_profile_install",
+        "8c5c305cbead7a9ebae7fb1794dc6d5e"
+      ],
+      [
+        "758a51d90fddff7de9c9e7dff5796627",
+        "succeeded",
+        "service_install",
+        "49d34f6b6abd59e48293e775a05b1e67"
+      ],
+      [
+        "cb26edefaa95a6c8c974761b9bf68fc5",
+        "succeeded",
+        "service_install",
+        "cb63dfa3b2d5513cfbed3fb6feff15bb"
+      ],
+      [
+        "cdb1251f8ea99f729572f1f4f834cc28",
+        "succeeded",
+        "service_install",
+        "939cb2cd51ff840d497639e4c5325a09"
+      ],
+      [
+        "d17189683f48146b47dba559ff8b1463",
+        "succeeded",
+        "mail_profile_install",
+        "a87445c6ecf188a6fa20698573159bad"
+      ],
+      [
+        "ead12854ae174032f8f431e451e1ec09",
+        "succeeded",
+        "panel_certificate_issue",
+        "37a662cee2fb50415be1b3cc2b20d9ef"
+      ]
+    ]
+  },
+  "panel_pid": "23145",
+  "timer_enabled": "enabled",
+  "timer_active": "active",
+  "mail_submission_leaf": "33c81139f68f018ec8d8d314f0821ba00a60315f157efe34aab0f4d0904c4cd5",
+  "mail_imaps_leaf": "33c81139f68f018ec8d8d314f0821ba00a60315f157efe34aab0f4d0904c4cd5"
+}

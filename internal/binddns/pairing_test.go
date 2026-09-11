@@ -193,10 +193,9 @@ func TestSecondaryPairingRendersCatalogSubscriptionAndRejectsOwnedZones(t *testi
 	}
 	config := string(generation.Config)
 	for _, want := range []string{
-		"catalog-zones {",
 		"zone \"catalog-c0000214.celikpanel.invalid\"",
-		"default-primaries { 192.0.2.20; };",
-		"in-memory yes;",
+		"type secondary;",
+		"primaries { 192.0.2.20; };",
 	} {
 		if !strings.Contains(config, want) {
 			t.Errorf("secondary config missing %q:\n%s", want, config)

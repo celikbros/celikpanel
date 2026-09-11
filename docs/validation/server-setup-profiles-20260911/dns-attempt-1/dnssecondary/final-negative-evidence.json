@@ -1,0 +1,901 @@
+{
+  "retry-review.json": {
+    "id": "e666a2f3ee5c78e47e3ac395394fcbc0",
+    "version": 1,
+    "revision": 2,
+    "purpose": "dns",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns"
+      }
+    ],
+    "blockers": [],
+    "can_start": true,
+    "tcp_ports": [
+      53,
+      80,
+      2083
+    ],
+    "udp_ports": [
+      53
+    ],
+    "preserve_ssh": true,
+    "persist_firewall": true,
+    "draft": {
+      "purpose": "dns",
+      "remote_dns_connection_id": "",
+      "panel_domain": "panel.dnssecondary.setup.test",
+      "mail_hostname": "",
+      "dns_mode": "local",
+      "dns_engine": "bind",
+      "dns_role": "secondary",
+      "ns1": "ns1.setup.test",
+      "ns2": "ns2.setup.test",
+      "local_ip": "192.0.2.20",
+      "peer_ip": "192.0.2.10",
+      "peer_ns": "ns1.setup.test",
+      "node_version": "",
+      "database": ""
+    },
+    "build_commit": "64a0000000000000000000000000000000000000",
+    "contact_email": "fixture@setup.test",
+    "actor": {
+      "UserID": 1,
+      "IP": "192.0.2.20",
+      "UserAgent": "Python-urllib/3.13"
+    }
+  },
+  "fixed-start.json": {
+    "id": "6de4904b480e40d5b01b31aa5a2a4fe5",
+    "request_id": "6de4904b480e40d5b01b31aa5a2a4fe5",
+    "plan_id": "565877148da91269c418ae3e9311741e",
+    "status": "running",
+    "phase": "queued",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "pending",
+        "request_id": "6ad2b87e033878462d94349bcf07e169",
+        "owner_id": "7c146aea1bb6e29641599e60779c4798"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "09ab7a0cd8bffd4024d97151e9d09501",
+        "owner_id": "e704a88e6b91344a676bc0f542a092ec"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "49fcb7c1e922152fe92f8623d330616c",
+        "owner_id": "6ffbd08571bcb88f25858d43816855ff"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "933f1d9d8dc956ebc6b598b8b92997f1",
+        "owner_id": "28ee3fdecd75afd690bc5be9d7f57a43"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test",
+        "status": "pending",
+        "request_id": "f1142341f5b067f733ba225a093c727a",
+        "owner_id": "7a548beaa325afb4d71f892270651d9a"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "d80e5852f01b7e9708cd167be50aa53b",
+        "owner_id": "392769064d0e5c72725a731256e723ac"
+      }
+    ],
+    "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+  },
+  "start-replay.json": {
+    "id": "3969b3c0beedf5852e6efa8ed715e9f4",
+    "request_id": "3969b3c0beedf5852e6efa8ed715e9f4",
+    "plan_id": "5a27339d2a9d37a7a39aedc4e6bf2899",
+    "status": "running",
+    "phase": "queued",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "pending",
+        "request_id": "5a8c8af0e94b2264914cecf8c1ce4c11",
+        "owner_id": "fe6418c749b81aba8cbb2dd825df6b82"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "7e0d853a89141041f7ad11cce74e4e14",
+        "owner_id": "a8e346b26b9250ada2ac43937a10d574"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "24c03c7a0ff36e2f9f357939feecc694",
+        "owner_id": "487ecea1484367f823e1b3d4031829f6"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "e72fb11c6aa118bc84dc24a936f31593",
+        "owner_id": "b8630630de21db4916dd2ab8e4f61aa2"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test",
+        "status": "pending",
+        "request_id": "6477d6d9b75a7c4d24e54b76618aced8",
+        "owner_id": "05031a7e72bbafe8189454638c023711"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "787a42cb00dec1c617697a830207bb7a",
+        "owner_id": "d02558e3f39e5fa22afa68ea536d0f65"
+      }
+    ],
+    "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+  },
+  "fixed-draft.json": {
+    "version": 1,
+    "revision": 3,
+    "origin": "fresh",
+    "status": "draft",
+    "draft": {
+      "purpose": "dns",
+      "remote_dns_connection_id": "",
+      "panel_domain": "panel.dnssecondary.setup.test",
+      "mail_hostname": "",
+      "dns_mode": "local",
+      "dns_engine": "bind",
+      "dns_role": "secondary",
+      "ns1": "ns1.setup.test",
+      "ns2": "ns2.setup.test",
+      "local_ip": "192.0.2.20",
+      "peer_ip": "192.0.2.10",
+      "peer_ns": "ns1.setup.test",
+      "node_version": "",
+      "database": ""
+    },
+    "required": true,
+    "checks": []
+  },
+  "fixed-review.json": {
+    "id": "565877148da91269c418ae3e9311741e",
+    "version": 1,
+    "revision": 3,
+    "purpose": "dns",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns"
+      }
+    ],
+    "blockers": [],
+    "can_start": true,
+    "tcp_ports": [
+      53,
+      80,
+      2083
+    ],
+    "udp_ports": [
+      53
+    ],
+    "preserve_ssh": true,
+    "persist_firewall": true,
+    "draft": {
+      "purpose": "dns",
+      "remote_dns_connection_id": "",
+      "panel_domain": "panel.dnssecondary.setup.test",
+      "mail_hostname": "",
+      "dns_mode": "local",
+      "dns_engine": "bind",
+      "dns_role": "secondary",
+      "ns1": "ns1.setup.test",
+      "ns2": "ns2.setup.test",
+      "local_ip": "192.0.2.20",
+      "peer_ip": "192.0.2.10",
+      "peer_ns": "ns1.setup.test",
+      "node_version": "",
+      "database": ""
+    },
+    "build_commit": "64a0000000000000000000000000000000000000",
+    "contact_email": "fixture@setup.test",
+    "actor": {
+      "UserID": 1,
+      "IP": "192.0.2.20",
+      "UserAgent": "Python-urllib/3.13"
+    }
+  },
+  "start.json": {
+    "id": "3969b3c0beedf5852e6efa8ed715e9f4",
+    "request_id": "3969b3c0beedf5852e6efa8ed715e9f4",
+    "plan_id": "5a27339d2a9d37a7a39aedc4e6bf2899",
+    "status": "running",
+    "phase": "queued",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "pending",
+        "request_id": "5a8c8af0e94b2264914cecf8c1ce4c11",
+        "owner_id": "fe6418c749b81aba8cbb2dd825df6b82"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "7e0d853a89141041f7ad11cce74e4e14",
+        "owner_id": "a8e346b26b9250ada2ac43937a10d574"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "24c03c7a0ff36e2f9f357939feecc694",
+        "owner_id": "487ecea1484367f823e1b3d4031829f6"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "e72fb11c6aa118bc84dc24a936f31593",
+        "owner_id": "b8630630de21db4916dd2ab8e4f61aa2"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test",
+        "status": "pending",
+        "request_id": "6477d6d9b75a7c4d24e54b76618aced8",
+        "owner_id": "05031a7e72bbafe8189454638c023711"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "787a42cb00dec1c617697a830207bb7a",
+        "owner_id": "d02558e3f39e5fa22afa68ea536d0f65"
+      }
+    ],
+    "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+  },
+  "retry-start-replay.json": {
+    "id": "c9a37c3c867757472503dbdeb995145c",
+    "request_id": "c9a37c3c867757472503dbdeb995145c",
+    "plan_id": "e666a2f3ee5c78e47e3ac395394fcbc0",
+    "status": "running",
+    "phase": "queued",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "pending",
+        "request_id": "b17f5bc8ba206b6b1d9a79420abcf3f9",
+        "owner_id": "a780fa07f3fb40cd8d97b20a4c9bf71b"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "2279b291b67f0d137cb3022f5f1fc44f",
+        "owner_id": "fe7151c5c66d7de146ccb1442190118e"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "6ef00ae8fe026095b7badd55a785f5a6",
+        "owner_id": "6b5ea106000dc263178d04cf1114d064"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "940caadd0bcfcf9bca2182f8aa516742",
+        "owner_id": "be312459ca6e342cb3967b653c8f5e61"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test",
+        "status": "pending",
+        "request_id": "749aa1a8b36f78b30494e4c3796a1354",
+        "owner_id": "71ba4e1a374f9b6d9de488128a712ed4"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "cf1796e41ea6395965515b2fc1924eb7",
+        "owner_id": "e054fb40c464ad0add311772a28a99bf"
+      }
+    ],
+    "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+  },
+  "review.json": {
+    "id": "5a27339d2a9d37a7a39aedc4e6bf2899",
+    "version": 1,
+    "revision": 1,
+    "purpose": "dns",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns"
+      }
+    ],
+    "blockers": [],
+    "can_start": true,
+    "tcp_ports": [
+      53,
+      80,
+      2083
+    ],
+    "udp_ports": [
+      53
+    ],
+    "preserve_ssh": true,
+    "persist_firewall": true,
+    "draft": {
+      "purpose": "dns",
+      "remote_dns_connection_id": "",
+      "panel_domain": "panel.dnssecondary.setup.test",
+      "mail_hostname": "",
+      "dns_mode": "local",
+      "dns_engine": "bind",
+      "dns_role": "secondary",
+      "ns1": "ns1.setup.test",
+      "ns2": "ns2.setup.test",
+      "local_ip": "192.0.2.20",
+      "peer_ip": "192.0.2.10",
+      "peer_ns": "ns1.setup.test",
+      "node_version": "",
+      "database": ""
+    },
+    "build_commit": "64a0000000000000000000000000000000000000",
+    "contact_email": "fixture@setup.test",
+    "actor": {
+      "UserID": 1,
+      "IP": "192.0.2.20",
+      "UserAgent": "Python-urllib/3.13"
+    }
+  },
+  "execution.json": {
+    "id": "3969b3c0beedf5852e6efa8ed715e9f4",
+    "request_id": "3969b3c0beedf5852e6efa8ed715e9f4",
+    "plan_id": "5a27339d2a9d37a7a39aedc4e6bf2899",
+    "status": "failed",
+    "phase": "01-dns",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "failed",
+        "request_id": "5a8c8af0e94b2264914cecf8c1ce4c11",
+        "owner_id": "fe6418c749b81aba8cbb2dd825df6b82"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "7e0d853a89141041f7ad11cce74e4e14",
+        "owner_id": "a8e346b26b9250ada2ac43937a10d574"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "24c03c7a0ff36e2f9f357939feecc694",
+        "owner_id": "487ecea1484367f823e1b3d4031829f6"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "e72fb11c6aa118bc84dc24a936f31593",
+        "owner_id": "b8630630de21db4916dd2ab8e4f61aa2"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test",
+        "status": "pending",
+        "request_id": "6477d6d9b75a7c4d24e54b76618aced8",
+        "owner_id": "05031a7e72bbafe8189454638c023711"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "787a42cb00dec1c617697a830207bb7a",
+        "owner_id": "d02558e3f39e5fa22afa68ea536d0f65"
+      }
+    ],
+    "error": {
+      "code": "server_setup_dns_failed",
+      "message": "DNS setup requires attention. Verify the local address, nameserver identities, independent peer and the DNS operation result."
+    },
+    "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+  },
+  "retry-start.json": {
+    "id": "c9a37c3c867757472503dbdeb995145c",
+    "request_id": "c9a37c3c867757472503dbdeb995145c",
+    "plan_id": "e666a2f3ee5c78e47e3ac395394fcbc0",
+    "status": "running",
+    "phase": "queued",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "pending",
+        "request_id": "b17f5bc8ba206b6b1d9a79420abcf3f9",
+        "owner_id": "a780fa07f3fb40cd8d97b20a4c9bf71b"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "2279b291b67f0d137cb3022f5f1fc44f",
+        "owner_id": "fe7151c5c66d7de146ccb1442190118e"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "6ef00ae8fe026095b7badd55a785f5a6",
+        "owner_id": "6b5ea106000dc263178d04cf1114d064"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "940caadd0bcfcf9bca2182f8aa516742",
+        "owner_id": "be312459ca6e342cb3967b653c8f5e61"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test",
+        "status": "pending",
+        "request_id": "749aa1a8b36f78b30494e4c3796a1354",
+        "owner_id": "71ba4e1a374f9b6d9de488128a712ed4"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "cf1796e41ea6395965515b2fc1924eb7",
+        "owner_id": "e054fb40c464ad0add311772a28a99bf"
+      }
+    ],
+    "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+  },
+  "fixed-execution.json": {
+    "id": "6de4904b480e40d5b01b31aa5a2a4fe5",
+    "request_id": "6de4904b480e40d5b01b31aa5a2a4fe5",
+    "plan_id": "565877148da91269c418ae3e9311741e",
+    "status": "running",
+    "phase": "01-dns",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "running",
+        "request_id": "6ad2b87e033878462d94349bcf07e169",
+        "owner_id": "7c146aea1bb6e29641599e60779c4798"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "09ab7a0cd8bffd4024d97151e9d09501",
+        "owner_id": "e704a88e6b91344a676bc0f542a092ec"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "49fcb7c1e922152fe92f8623d330616c",
+        "owner_id": "6ffbd08571bcb88f25858d43816855ff"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "933f1d9d8dc956ebc6b598b8b92997f1",
+        "owner_id": "28ee3fdecd75afd690bc5be9d7f57a43"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test",
+        "status": "pending",
+        "request_id": "f1142341f5b067f733ba225a093c727a",
+        "owner_id": "7a548beaa325afb4d71f892270651d9a"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "d80e5852f01b7e9708cd167be50aa53b",
+        "owner_id": "392769064d0e5c72725a731256e723ac"
+      }
+    ],
+    "error": {
+      "code": "server_setup_reconciling",
+      "message": "The previous DNS operation is being reconciled. Its exact receipt must be verified before the setup plan can change."
+    },
+    "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+  },
+  "draft.json": {
+    "version": 1,
+    "revision": 1,
+    "origin": "fresh",
+    "status": "draft",
+    "draft": {
+      "purpose": "dns",
+      "remote_dns_connection_id": "",
+      "panel_domain": "panel.dnssecondary.setup.test",
+      "mail_hostname": "",
+      "dns_mode": "local",
+      "dns_engine": "bind",
+      "dns_role": "secondary",
+      "ns1": "ns1.setup.test",
+      "ns2": "ns2.setup.test",
+      "local_ip": "192.0.2.20",
+      "peer_ip": "192.0.2.10",
+      "peer_ns": "ns1.setup.test",
+      "node_version": "",
+      "database": ""
+    },
+    "required": true,
+    "checks": []
+  },
+  "acme-directory.json": {
+    "keyChange": "https://acme.setup.test:14000/rollover-account-key",
+    "meta": {
+      "caaIdentities": [
+        "pebble.letsencrypt.org"
+      ],
+      "externalAccountRequired": false,
+      "profiles": {
+        "default": "The default profile"
+      },
+      "termsOfService": "data:text/plain,Do%20what%20thou%20wilt"
+    },
+    "newAccount": "https://acme.setup.test:14000/sign-me-up",
+    "newNonce": "https://acme.setup.test:14000/nonce-plz",
+    "newOrder": "https://acme.setup.test:14000/order-plz",
+    "renewalInfo": "https://acme.setup.test:14000/draft-ietf-acme-ari-03/renewalInfo",
+    "revokeCert": "https://acme.setup.test:14000/revoke-cert"
+  },
+  "retry-draft.json": {
+    "version": 1,
+    "revision": 2,
+    "origin": "fresh",
+    "status": "draft",
+    "draft": {
+      "purpose": "dns",
+      "remote_dns_connection_id": "",
+      "panel_domain": "panel.dnssecondary.setup.test",
+      "mail_hostname": "",
+      "dns_mode": "local",
+      "dns_engine": "bind",
+      "dns_role": "secondary",
+      "ns1": "ns1.setup.test",
+      "ns2": "ns2.setup.test",
+      "local_ip": "192.0.2.20",
+      "peer_ip": "192.0.2.10",
+      "peer_ns": "ns1.setup.test",
+      "node_version": "",
+      "database": ""
+    },
+    "required": true,
+    "checks": []
+  },
+  "retry-execution.json": {
+    "id": "c9a37c3c867757472503dbdeb995145c",
+    "request_id": "c9a37c3c867757472503dbdeb995145c",
+    "plan_id": "e666a2f3ee5c78e47e3ac395394fcbc0",
+    "status": "failed",
+    "phase": "01-dns",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "failed",
+        "request_id": "b17f5bc8ba206b6b1d9a79420abcf3f9",
+        "owner_id": "a780fa07f3fb40cd8d97b20a4c9bf71b"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "2279b291b67f0d137cb3022f5f1fc44f",
+        "owner_id": "fe7151c5c66d7de146ccb1442190118e"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "6ef00ae8fe026095b7badd55a785f5a6",
+        "owner_id": "6b5ea106000dc263178d04cf1114d064"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "940caadd0bcfcf9bca2182f8aa516742",
+        "owner_id": "be312459ca6e342cb3967b653c8f5e61"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test",
+        "status": "pending",
+        "request_id": "749aa1a8b36f78b30494e4c3796a1354",
+        "owner_id": "71ba4e1a374f9b6d9de488128a712ed4"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "cf1796e41ea6395965515b2fc1924eb7",
+        "owner_id": "e054fb40c464ad0add311772a28a99bf"
+      }
+    ],
+    "error": {
+      "code": "server_setup_dns_failed",
+      "message": "DNS setup requires attention. Verify the local address, nameserver identities, independent peer and the DNS operation result."
+    },
+    "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+  },
+  "fixed-start-replay.json": {
+    "id": "6de4904b480e40d5b01b31aa5a2a4fe5",
+    "request_id": "6de4904b480e40d5b01b31aa5a2a4fe5",
+    "plan_id": "565877148da91269c418ae3e9311741e",
+    "status": "running",
+    "phase": "01-dns",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "running",
+        "request_id": "6ad2b87e033878462d94349bcf07e169",
+        "owner_id": "7c146aea1bb6e29641599e60779c4798"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "09ab7a0cd8bffd4024d97151e9d09501",
+        "owner_id": "e704a88e6b91344a676bc0f542a092ec"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "49fcb7c1e922152fe92f8623d330616c",
+        "owner_id": "6ffbd08571bcb88f25858d43816855ff"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "933f1d9d8dc956ebc6b598b8b92997f1",
+        "owner_id": "28ee3fdecd75afd690bc5be9d7f57a43"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnssecondary.setup.test",
+        "status": "pending",
+        "request_id": "f1142341f5b067f733ba225a093c727a",
+        "owner_id": "7a548beaa325afb4d71f892270651d9a"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "d80e5852f01b7e9708cd167be50aa53b",
+        "owner_id": "392769064d0e5c72725a731256e723ac"
+      }
+    ],
+    "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+  },
+  "final-dns-engine-state.json": [
+    {
+      "singleton_id": 1,
+      "active_engine": null,
+      "active_epoch": 0,
+      "revision": 4,
+      "topology": "standalone",
+      "current_switch_id": "1cf6013d62c652605b0f74c5c7f2d4d9",
+      "created_at": "2026-09-11 01:10:28",
+      "updated_at": "2026-09-11 01:28:11"
+    }
+  ],
+  "final-dns-switches.json": [
+    {
+      "switch_id": "6fff35914f33560b71cd207970dc8e6b",
+      "request_id": "5a8c8af0e94b2264914cecf8c1ce4c11",
+      "owner_id": "9749253f8f249fc1fc524ce6b46c814d",
+      "mode": "switch",
+      "source_engine": null,
+      "target_engine": "bind",
+      "source_epoch": 0,
+      "target_epoch": 1,
+      "source_state_revision": 1,
+      "topology": "standalone",
+      "peer_ip": "",
+      "peer_ns": "",
+      "phase": "rolled_back",
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:1604ce4ae20c36e030fa527ff4e0a6a7f2f2679ba7c1023da055c14c7f27a89f",
+      "zone_count": 0,
+      "snapshot_bytes": 0,
+      "last_error": "DNS engine switch did not complete",
+      "created_at": "2026-09-11 01:10:30",
+      "updated_at": "2026-09-11 01:27:37"
+    },
+    {
+      "switch_id": "1cf6013d62c652605b0f74c5c7f2d4d9",
+      "request_id": "6ad2b87e033878462d94349bcf07e169",
+      "owner_id": "0047303a1353d3d258137426fc721582",
+      "mode": "switch",
+      "source_engine": null,
+      "target_engine": "bind",
+      "source_epoch": 0,
+      "target_epoch": 1,
+      "source_state_revision": 3,
+      "topology": "standalone",
+      "peer_ip": "",
+      "peer_ns": "",
+      "phase": "activating",
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:abbb393c5aa8702dbf1e450899143f39acb7f76ab97ef13b9b03aad9d8a94a2c",
+      "zone_count": 0,
+      "snapshot_bytes": 0,
+      "last_error": null,
+      "created_at": "2026-09-11 01:28:11",
+      "updated_at": "2026-09-11 01:28:11"
+    }
+  ]
+}

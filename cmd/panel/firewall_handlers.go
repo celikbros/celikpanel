@@ -448,6 +448,10 @@ func (p *Panel) syncFirewallForServiceOperation(
 	if err != nil {
 		return err
 	}
+	tcp, udp, err = p.setupChildFirewallPorts(ctx, op, status, tcp, udp)
+	if err != nil {
+		return err
+	}
 	commitment, err := mutationpayload.CanonicalFirewallApply(true, false, tcp, udp)
 	if err != nil {
 		return fmt.Errorf("canonicalize firewall policy: %w", err)
@@ -632,4 +636,88 @@ func writeFirewallSSHDiscoveryError(w http.ResponseWriter, err error) bool {
 		return false
 	}
 	return true
+}
+
+// setupChildFirewallPorts keeps the reviewed access policy across every setup
+// child, including a child resumed after restart. Membership is proved from the
+// durable execution and immutable plan, never from a browser flag or context.
+func (p *Panel) setupChildFirewallPorts(ctx context.Context, op serviceOperation, status FirewallStatusResp, desiredTCP, desiredUDP []int) ([]int, []int, error) {
+	rows, err := p.db.GetDB().QueryContext(ctx, `SELECT execution_json FROM server_setup_executions WHERE status IN ('running','waiting')`)
+	if err != nil {
+		return nil, nil, err
+	}
+	var saved []string
+	for rows.Next() {
+		var raw string
+		if err := rows.Scan(&raw); err != nil {
+			rows.Close()
+			return nil, nil, err
+		}
+		saved = append(saved, raw)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, raw := range saved {
+		var execution serverSetupExecution
+		if err := json.Unmarshal([]byte(raw), &execution); err != nil {
+			return nil, nil, err
+		}
+		plan, err := p.loadServerSetupPlan(ctx, execution.PlanID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if err := validateServerSetupExecution(plan, execution); err != nil {
+			return nil, nil, err
+		}
+		for _, step := range execution.Steps {
+			if step.RequestID != op.RequestID {
+				continue
+			}
+			kind, qualifier := serviceOperationKindInstall, step.Qualifier
+			switch step.Kind {
+			case "service":
+			case "mail_profile":
+				kind = serviceOperationKindMailProfileInstall
+			case "panel_certificate":
+				kind = serviceOperationKindPanelCertificate
+				certificate, err := mutationpayload.CanonicalPanelCertificateIssue(plan.Draft.PanelDomain, plan.ContactEmail, tlsDir(), plan.BuildCommit)
+				if err != nil {
+					return nil, nil, err
+				}
+				qualifier = certificate.Qualifier
+			default:
+				return nil, nil, errors.New("setup firewall child kind is invalid")
+			}
+			if !plan.CanStart || !plan.PreserveSSH || step.Status != "running" || op.Kind != kind || op.ServiceID != step.Target || op.PackageName != qualifier || (step.OperationID != "" && step.OperationID != op.ID) {
+				return nil, nil, errors.New("setup firewall child does not match the reviewed operation")
+			}
+			contains := func(ports []int, port int) bool {
+				for _, value := range ports {
+					if value == port {
+						return true
+					}
+				}
+				return false
+			}
+			for _, port := range append(append([]int(nil), desiredTCP...), status.TCPPorts...) {
+				// SSH preservation is an explicit reviewed promise, including a
+				// newly discovered management listener. Other additions need review.
+				if !contains(plan.TCPPorts, port) && !contains(status.SSHPorts, port) {
+					return nil, nil, errors.New("firewall requirements changed after setup review")
+				}
+			}
+			for _, port := range append(append([]int(nil), desiredUDP...), status.UDPPorts...) {
+				if !contains(plan.UDPPorts, port) {
+					return nil, nil, errors.New("firewall requirements changed after setup review")
+				}
+			}
+			tcp := append(append([]int(nil), plan.TCPPorts...), status.SSHPorts...)
+			udp := append([]int(nil), plan.UDPPorts...)
+			return tcp, udp, nil
+		}
+	}
+	return desiredTCP, desiredUDP, nil
 }

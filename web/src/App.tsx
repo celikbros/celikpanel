@@ -37,6 +37,8 @@ function lazyNamed<TModule, TKey extends keyof TModule>(
 }
 
 const SystemUpdateOperationProvider = lazyNamed(() => import('./components/SystemUpdateOperation'), 'SystemUpdateOperationProvider');
+const ServerSetupGate = lazyNamed(() => import('./components/ServerSetupGate'), 'ServerSetupGate');
+const ServerSetup = lazyNamed(() => import('./components/ServerSetup'), 'ServerSetup');
 const Dashboard = lazyNamed(() => import('./components/Dashboard'), 'Dashboard');
 const Domains = lazyNamed(() => import('./components/Domains'), 'Domains');
 const DomainDetail = lazyNamed(() => import('./components/DomainDetail'), 'DomainDetail');
@@ -418,6 +420,7 @@ function RouteLoadBoundary({ children }: { children: ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
+        <Route path="/setup" element={<ServerSetup />} />
         {/* Dashboard */}
         <Route path="/" element={<PageWithLayout><Dashboard /></PageWithLayout>} />
 
@@ -528,7 +531,7 @@ function AuthGate() {
         <LicenseOnboarding>
         <Suspense fallback={<PageLoading />}>
           <ComponentOperationProvider>
-            <AppRoutes />
+            <ServerSetupGate><AppRoutes /></ServerSetupGate>
           </ComponentOperationProvider>
         </Suspense>
         </LicenseOnboarding>

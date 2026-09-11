@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -29,7 +30,9 @@ func newDependentsTestDB(t *testing.T) *sql.DB {
 	schema := `
 	CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT);
 	CREATE TABLE subscriptions (id INTEGER PRIMARY KEY, owner_id INTEGER);
-	CREATE TABLE domains (id INTEGER PRIMARY KEY, subscription_id INTEGER, name TEXT);
+	CREATE TABLE domains (id INTEGER PRIMARY KEY, subscription_id INTEGER, name TEXT, dns_management TEXT NOT NULL DEFAULT 'local');
+    CREATE TABLE remote_dns_clients(id TEXT PRIMARY KEY,label TEXT,revoked INTEGER DEFAULT 0);
+    CREATE TABLE remote_dns_zone_ownership(zone_name TEXT PRIMARY KEY,client_id TEXT,generation INTEGER,applied_generation INTEGER,deleted INTEGER);
 	CREATE TABLE sites (id INTEGER PRIMARY KEY, domain_id INTEGER, project_type TEXT, php_version TEXT, runtime_version TEXT);
 	CREATE TABLE email_accounts (id INTEGER PRIMARY KEY, domain_id INTEGER, address TEXT);
 	CREATE TABLE email_forwardings (id INTEGER PRIMARY KEY, domain_id INTEGER, source TEXT);
@@ -40,7 +43,7 @@ func newDependentsTestDB(t *testing.T) *sql.DB {
 
 	INSERT INTO users VALUES (1, 'ali'), (2, 'veli');
 	INSERT INTO subscriptions VALUES (10, 1), (20, 2);
-	INSERT INTO domains VALUES
+	INSERT INTO domains (id,subscription_id,name) VALUES
 		(100, 10, 'php83.example'),
 		(101, 10, 'php84.example'),
 		(102, 20, 'static.example'),
@@ -363,5 +366,29 @@ func TestInstalledRHELPreviewServiceCannotExposeRepair(t *testing.T) {
 	kind, reason := core.ManagedServiceInstallBlockForHost(core.GetManagedServiceByID("nginx"), host)
 	if kind == core.ManagedServiceInstallBlockNone || reason != core.RHELPreviewNginxCertificationPendingReason {
 		t.Fatalf("installed observation bypassed catalog lifecycle block: kind=%q reason=%q", kind, reason)
+	}
+}
+
+func TestDNSRemovalPreservesRemoteClientZonesIncludingRevokedAndPendingDeletion(t *testing.T) {
+	db := newDependentsTestDB(t)
+	if _, err := db.Exec(`DELETE FROM domains;
+        INSERT INTO remote_dns_clients(id,label,revoked) VALUES('live','live client',0),('revoked','revoked client',1);
+        INSERT INTO remote_dns_zone_ownership VALUES
+        ('live.example','live',1,1,0),
+        ('revoked.example','revoked',3,3,0),
+        ('pending.example','live',4,3,1),
+        ('deleted.example','live',5,5,1);`); err != nil {
+		t.Fatal(err)
+	}
+	for _, engine := range []string{"bind", "pdns"} {
+		count, lines, err := serviceDependents(context.Background(), db, engine)
+		if err != nil || count != 3 {
+			t.Fatalf("%s remote blockers=%d %v %v", engine, count, lines, err)
+		}
+		for _, line := range lines {
+			if strings.Contains(line, "deleted.example") {
+				t.Fatal("exactly applied deletion still blocks DNS removal")
+			}
+		}
 	}
 }

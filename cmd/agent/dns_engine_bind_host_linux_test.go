@@ -912,13 +912,17 @@ func signedUpdateBINDRuntimeLayout(
 		OptionsConfig:  filepath.Join(directory, "named.conf.options"),
 		AnchorConfig:   filepath.Join(directory, "named.conf.local"),
 	}
+	var pairing *binddns.Pairing
+	if !legacy && receipt.Pairing != nil {
+		pairing = bindSecondaryOptionsPairing(receipt.Pairing.Role, receipt.Pairing.LocalIP, receipt.Pairing.LocalNS, receipt.Pairing.PeerIP, receipt.Pairing.PeerNS)
+	}
 	options, err := managedBINDOptions("options {\n};\n", func() string {
 		if receipt.Pairing != nil &&
 			receipt.Pairing.Role == binddns.PairRoleSecondary && !legacy {
 			return receipt.Pairing.PeerIP
 		}
 		return ""
-	}())
+	}(), pairing)
 	if err != nil {
 		t.Fatal(err)
 	}

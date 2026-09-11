@@ -22,6 +22,7 @@ func (a *Agent) Version(_ *transport.Empty, resp *AgentVersionResponse) error {
 	resp.Version = buildVersion
 	resp.Commit = buildCommit
 	resp.Capabilities = []string{
+		mailHostCertificateCapability,
 		transport.AgentCapabilityFirewallApplyV2,
 		transport.AgentCapabilityDNSZoneSyncV2,
 		transport.AgentCapabilityDNSSECSecureV2,

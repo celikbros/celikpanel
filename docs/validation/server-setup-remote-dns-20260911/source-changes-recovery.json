@@ -1,0 +1,77 @@
+[
+  {
+    "path": "cmd/agent/mail_health_dns.go",
+    "before_sha256": null,
+    "after_sha256": "6477f110b9a1b99bd504ceba0a0650b0e8ba78e38edb31243c8f99e5b1698b72"
+  },
+  {
+    "path": "cmd/agent/mail_health_dns_test.go",
+    "before_sha256": null,
+    "after_sha256": "2484483bde1e2e032a8e99706f56490a9e33d14370ae859205533211a928f295"
+  },
+  {
+    "path": "cmd/agent/mail_health_rpc.go",
+    "before_sha256": "40c1b76c81a4d4496645e6ac70b543f3c688e2a7f90e08d28ea558e5a716173f",
+    "after_sha256": "a1b49331a3fd0b80d6b5c6b881027ce93a58ad5b12205e16d286d86ed71258d0"
+  },
+  {
+    "path": "cmd/panel/server_setup_dns_reconciliation_test.go",
+    "before_sha256": null,
+    "after_sha256": "8ed5194d4641cf4be807a72c336fb677bac59e048a353373630856f7dfe0cc1f"
+  },
+  {
+    "path": "cmd/panel/server_setup_operations.go",
+    "before_sha256": "99cc4fbc904043289769c290c399acb5e2f3ee62d03c0d991f43e612be521f49",
+    "after_sha256": "a22ba6b6002d1b79ca34a70274b04a7f443d3c138932d94a6fe42d9d10e6c2b6"
+  },
+  {
+    "path": "cmd/panel/setup_dns_failure_recovery_test.go",
+    "before_sha256": null,
+    "after_sha256": "1dbde10c74cd75c6010bd2cc76c8b21bb9dc02cc4305fa628671c7424ddd6b7f"
+  },
+  {
+    "path": "cmd/panel/setup_dns_operations.go",
+    "before_sha256": "0c38e76fc1976a05f06c81fe1e51c4dda7efcea6e8de534bcd170dd5389ddde2",
+    "after_sha256": "1f9d99e1988bde15d1fb4cf72659bec5a9141c80c124341ddecb573b3178d9f5"
+  },
+  {
+    "path": "docs/SERVER-SETUP-STATUS.md",
+    "before_sha256": "f4a91acabde47061eecc6f30bfed9195db2a2b1e4116cd6d27f1417af39aaa30",
+    "after_sha256": "3011249a23ac05ee6d23a93a2a158a9d1e0b267414ee734c1be664b710bbd1d0"
+  },
+  {
+    "path": "docs/SERVER-SETUP-STATUS.tr.md",
+    "before_sha256": "2fc0c16e1128fdd6fc93b842f2ef3c73b734f78c00c9a4444c0a580d4f7f2d2b",
+    "after_sha256": "e8f5a83d6a76f8738c2bfe6e4db2e6f68d2a0304dcca7b66150c23127ffd2250"
+  },
+  {
+    "path": "docs/validation/server-setup-remote-dns-20260911/README.md",
+    "before_sha256": "93793c218c8afd3d71401624e52ef29a143308a43b2b4b68fd14e6f585cdea3c",
+    "after_sha256": "42a3f80da6afa630761276ac354cd6203b271e1109d8b715b69ba9711d0c3277"
+  },
+  {
+    "path": "docs/validation/server-setup-remote-dns-20260911/README.tr.md",
+    "before_sha256": "d62d0d4054b2e3c1a7f75fe8a03eb29855adba07f41039a8a1510a8567535282",
+    "after_sha256": "6c58323da270379b5b7361f16d852aebaa231638c4d9dcc8a79b8b80e997fb14"
+  },
+  {
+    "path": "web/src/components/ServerSetup.tsx",
+    "before_sha256": "e6226db77d7be7156988acf680968856be41e6c96510a3a6f05d603044dd707c",
+    "after_sha256": "1ae1036de1add060b8984f256815400cad63b01c6e21f413be605e9da710562d"
+  },
+  {
+    "path": "web/src/i18n/screens/en.ts",
+    "before_sha256": "1873e4482d0152ed0dbc525a41007dcdbd6b5e9899d2fac02ca3b681fdfbe754",
+    "after_sha256": "4b17946e4202eb5d3672d55236496f0ff90944017db3380bb5be13d80e265c9e"
+  },
+  {
+    "path": "web/src/i18n/screens/tr.ts",
+    "before_sha256": "3608a8489953128647542166b244b6b4a53239330919ffefdf46b679135f46b4",
+    "after_sha256": "8e62fe66e8f6313e0a4041d6951b9bf7b166062e420d31c18ea6d9f236694a9f"
+  },
+  {
+    "path": "web/tests/server-setup-runtime.test.mjs",
+    "before_sha256": "29c31a68d6cb318ddeb8203d48792a064b252ddaf4e019de4969639b8088f135",
+    "after_sha256": "3f048aa1952049500be350f5a085cea129ed6fb9860ba5957512dc1793dfad99"
+  }
+]

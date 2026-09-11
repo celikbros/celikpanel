@@ -1,0 +1,5 @@
+active
+PROFILE_AGENT_READY dnsprimary
+2026/09/11 01:52:00 Starting CelikPanel Agent...
+2026/09/11 01:52:00 Service mutation ledger initialized
+Created symlink '/etc/systemd/system/multi-user.target.wants/celikpanel-agent.service' → '/etc/systemd/system/celikpanel-agent.service'.

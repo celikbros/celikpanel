@@ -96,8 +96,14 @@ func TestDNSManagedServiceHandlersRefuseGenericMutationsBeforePersistence(t *tes
 	}
 }
 
-func TestDNSRecordMutationRequiresVerifiedActiveEngineBeforeLedgerLookup(t *testing.T) {
+func TestDNSRecordMutationRequiresVerifiedActiveEngineBeforeRecordMutation(t *testing.T) {
 	fixture := newServiceOperationTestFixture(t)
+	if _, err := fixture.database.GetDB().Exec(`INSERT INTO subscriptions(id,owner_id,name) VALUES(999,?,'Local DNS ownership')`, fixture.userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.database.GetDB().Exec(`INSERT INTO domains(id,subscription_id,name) VALUES(999,999,'local-dns.example.test')`); err != nil {
+		t.Fatal(err)
+	}
 	var before int
 	if err := fixture.database.GetDB().QueryRow(`SELECT COUNT(*) FROM pdns_records`).Scan(&before); err != nil {
 		t.Fatal(err)

@@ -1,0 +1,356 @@
+{
+  "start-replay.json": {
+    "id": "b9ce686afb2774edaaa49cb756a3fee2",
+    "request_id": "b9ce686afb2774edaaa49cb756a3fee2",
+    "plan_id": "ce65ebaa920ebdb8b5cae6a1092f1c32",
+    "status": "running",
+    "phase": "queued",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "pending",
+        "request_id": "fda1c1910f361bc701dfc28cca74c849",
+        "owner_id": "807c43fcd1b467b00991b4452a326b78"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "02639326e7d92970d51a7cad7506a963",
+        "owner_id": "184aac51acbee452aa627a5e6ffa3cd7"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "aeb41ffe4df10f6554ac5a4807526588",
+        "owner_id": "8e7fb5a6042b5e688afa82a555feface"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "6b429818518630b6d069d3e76105edc6",
+        "owner_id": "0b441602e910e368f45e0ae2a091b260"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnsprimary.setup.test",
+        "status": "pending",
+        "request_id": "8d304ae9472f4cbaa698004447a08aed",
+        "owner_id": "c7aac4751eb5e6a78491c57bfc485a14"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "7b00d94566b25f526c01c5393f154462",
+        "owner_id": "be19e6d8b7d3efcb84b9e9d1c7fd23d3"
+      }
+    ],
+    "panel_url": "https://panel.dnsprimary.setup.test:2083/"
+  },
+  "start.json": {
+    "id": "b9ce686afb2774edaaa49cb756a3fee2",
+    "request_id": "b9ce686afb2774edaaa49cb756a3fee2",
+    "plan_id": "ce65ebaa920ebdb8b5cae6a1092f1c32",
+    "status": "running",
+    "phase": "queued",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "pending",
+        "request_id": "fda1c1910f361bc701dfc28cca74c849",
+        "owner_id": "807c43fcd1b467b00991b4452a326b78"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "pending",
+        "request_id": "02639326e7d92970d51a7cad7506a963",
+        "owner_id": "184aac51acbee452aa627a5e6ffa3cd7"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "pending",
+        "request_id": "aeb41ffe4df10f6554ac5a4807526588",
+        "owner_id": "8e7fb5a6042b5e688afa82a555feface"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "pending",
+        "request_id": "6b429818518630b6d069d3e76105edc6",
+        "owner_id": "0b441602e910e368f45e0ae2a091b260"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnsprimary.setup.test",
+        "status": "pending",
+        "request_id": "8d304ae9472f4cbaa698004447a08aed",
+        "owner_id": "c7aac4751eb5e6a78491c57bfc485a14"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "pending",
+        "request_id": "7b00d94566b25f526c01c5393f154462",
+        "owner_id": "be19e6d8b7d3efcb84b9e9d1c7fd23d3"
+      }
+    ],
+    "panel_url": "https://panel.dnsprimary.setup.test:2083/"
+  },
+  "review.json": {
+    "id": "ce65ebaa920ebdb8b5cae6a1092f1c32",
+    "version": 1,
+    "revision": 1,
+    "purpose": "dns",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnsprimary.setup.test"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns"
+      }
+    ],
+    "blockers": [],
+    "can_start": true,
+    "tcp_ports": [
+      53,
+      80,
+      2083
+    ],
+    "udp_ports": [
+      53
+    ],
+    "preserve_ssh": true,
+    "persist_firewall": true,
+    "draft": {
+      "purpose": "dns",
+      "remote_dns_connection_id": "",
+      "panel_domain": "panel.dnsprimary.setup.test",
+      "mail_hostname": "",
+      "dns_mode": "local",
+      "dns_engine": "bind",
+      "dns_role": "primary",
+      "ns1": "ns1.setup.test",
+      "ns2": "ns2.setup.test",
+      "local_ip": "192.0.2.10",
+      "peer_ip": "192.0.2.20",
+      "peer_ns": "ns2.setup.test",
+      "node_version": "",
+      "database": ""
+    },
+    "build_commit": "64a0000000000000000000000000000000000000",
+    "contact_email": "fixture@setup.test",
+    "actor": {
+      "UserID": 1,
+      "IP": "192.0.2.10",
+      "UserAgent": "Python-urllib/3.13"
+    }
+  },
+  "execution.json": {
+    "id": "b9ce686afb2774edaaa49cb756a3fee2",
+    "request_id": "b9ce686afb2774edaaa49cb756a3fee2",
+    "plan_id": "ce65ebaa920ebdb8b5cae6a1092f1c32",
+    "status": "waiting",
+    "phase": "verification",
+    "steps": [
+      {
+        "id": "01-dns",
+        "kind": "dns",
+        "target": "local",
+        "status": "succeeded",
+        "request_id": "fda1c1910f361bc701dfc28cca74c849",
+        "owner_id": "807c43fcd1b467b00991b4452a326b78"
+      },
+      {
+        "id": "02-service",
+        "kind": "service",
+        "target": "nftables",
+        "status": "succeeded",
+        "request_id": "02639326e7d92970d51a7cad7506a963",
+        "owner_id": "184aac51acbee452aa627a5e6ffa3cd7",
+        "operation_id": "a05eaa96c908ee36185928b23e1f8ce8"
+      },
+      {
+        "id": "03-service",
+        "kind": "service",
+        "target": "certbot",
+        "status": "succeeded",
+        "request_id": "aeb41ffe4df10f6554ac5a4807526588",
+        "owner_id": "8e7fb5a6042b5e688afa82a555feface",
+        "operation_id": "edef1645ef36ed5197bd1d4cf5a0a449"
+      },
+      {
+        "id": "04-firewall",
+        "kind": "firewall",
+        "target": "enable_and_persist",
+        "status": "succeeded",
+        "request_id": "6b429818518630b6d069d3e76105edc6",
+        "owner_id": "0b441602e910e368f45e0ae2a091b260"
+      },
+      {
+        "id": "05-panel_certificate",
+        "kind": "panel_certificate",
+        "target": "panel.dnsprimary.setup.test",
+        "status": "succeeded",
+        "request_id": "8d304ae9472f4cbaa698004447a08aed",
+        "owner_id": "c7aac4751eb5e6a78491c57bfc485a14",
+        "operation_id": "9e44e9cdd4f71fd5e307add1306e4d66"
+      },
+      {
+        "id": "06-verify",
+        "kind": "verify",
+        "target": "dns",
+        "status": "succeeded",
+        "request_id": "7b00d94566b25f526c01c5393f154462",
+        "owner_id": "be19e6d8b7d3efcb84b9e9d1c7fd23d3"
+      }
+    ],
+    "checks": [
+      {
+        "id": "panel_https",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "panel_renewal",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "dns",
+        "state": "action_required",
+        "code": "dns_required"
+      },
+      {
+        "id": "firewall",
+        "state": "ready",
+        "code": "ready"
+      },
+      {
+        "id": "services",
+        "state": "ready",
+        "code": "ready"
+      }
+    ],
+    "panel_url": "https://panel.dnsprimary.setup.test:2083/"
+  },
+  "draft.json": {
+    "version": 1,
+    "revision": 1,
+    "origin": "fresh",
+    "status": "draft",
+    "draft": {
+      "purpose": "dns",
+      "remote_dns_connection_id": "",
+      "panel_domain": "panel.dnsprimary.setup.test",
+      "mail_hostname": "",
+      "dns_mode": "local",
+      "dns_engine": "bind",
+      "dns_role": "primary",
+      "ns1": "ns1.setup.test",
+      "ns2": "ns2.setup.test",
+      "local_ip": "192.0.2.10",
+      "peer_ip": "192.0.2.20",
+      "peer_ns": "ns2.setup.test",
+      "node_version": "",
+      "database": ""
+    },
+    "required": true,
+    "checks": []
+  },
+  "acme-directory.json": {
+    "keyChange": "https://acme.setup.test:14000/rollover-account-key",
+    "meta": {
+      "caaIdentities": [
+        "pebble.letsencrypt.org"
+      ],
+      "externalAccountRequired": false,
+      "profiles": {
+        "default": "The default profile"
+      },
+      "termsOfService": "data:text/plain,Do%20what%20thou%20wilt"
+    },
+    "newAccount": "https://acme.setup.test:14000/sign-me-up",
+    "newNonce": "https://acme.setup.test:14000/nonce-plz",
+    "newOrder": "https://acme.setup.test:14000/order-plz",
+    "renewalInfo": "https://acme.setup.test:14000/draft-ietf-acme-ari-03/renewalInfo",
+    "revokeCert": "https://acme.setup.test:14000/revoke-cert"
+  },
+  "final-dns-engine-state.json": [
+    {
+      "singleton_id": 1,
+      "active_engine": "bind",
+      "active_epoch": 1,
+      "revision": 3,
+      "topology": "standalone",
+      "current_switch_id": null,
+      "created_at": "2026-09-11 01:10:27",
+      "updated_at": "2026-09-11 01:10:49"
+    }
+  ],
+  "final-dns-switches.json": [
+    {
+      "switch_id": "7428323ee4285f5b8210731e3e8ad655",
+      "request_id": "fda1c1910f361bc701dfc28cca74c849",
+      "owner_id": "1d2be31ee3b4533033f500dcf069aa9c",
+      "mode": "switch",
+      "source_engine": null,
+      "target_engine": "bind",
+      "source_epoch": 0,
+      "target_epoch": 1,
+      "source_state_revision": 1,
+      "topology": "standalone",
+      "peer_ip": "",
+      "peer_ns": "",
+      "phase": "committed",
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:0f67bc912e7ffb9077dd61147117ee857f3c94177aeec806d7f4aaea1ca6fcfb",
+      "zone_count": 0,
+      "snapshot_bytes": 0,
+      "last_error": null,
+      "created_at": "2026-09-11 01:10:30",
+      "updated_at": "2026-09-11 01:10:49"
+    }
+  ]
+}

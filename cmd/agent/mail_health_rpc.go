@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net"
 	"os/exec"
 	"strings"
@@ -39,17 +40,9 @@ func (a *Agent) MailHealth(_ *transport.Empty, resp *MailHealthResponse) error {
 	}
 
 	if resp.ServerIP != "" {
-		if names, err := net.LookupAddr(resp.ServerIP); err == nil && len(names) > 0 {
-			resp.PTR = strings.TrimSuffix(names[0], ".")
-			resp.PTRAligned = resp.PTR != "" && strings.EqualFold(resp.PTR, resp.Myhostname)
-			if addrs, err := net.LookupHost(resp.PTR); err == nil {
-				for _, a := range addrs {
-					if a == resp.ServerIP {
-						resp.FCrDNS = true
-						break
-					}
-				}
-			}
+		ptr, aligned, forward, err := publicMailDNSIdentity(context.Background(), resp.ServerIP, resp.Myhostname)
+		if err == nil {
+			resp.PTR, resp.PTRAligned, resp.FCrDNS = ptr, aligned, forward
 		}
 	}
 

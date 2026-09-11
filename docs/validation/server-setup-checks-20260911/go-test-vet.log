@@ -1,0 +1,26 @@
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "go" test ./...
+ok  	github.com/alicelik/celikpanel/cmd/agent	14.617s
+ok  	github.com/alicelik/celikpanel/cmd/dns-kill-matrix-trigger	0.018s
+ok  	github.com/alicelik/celikpanel/cmd/panel	126.222s
+ok  	github.com/alicelik/celikpanel/deploy/schema17bridge	1.062s
+ok  	github.com/alicelik/celikpanel/internal/auth	1.221s
+ok  	github.com/alicelik/celikpanel/internal/backupspec	0.006s
+ok  	github.com/alicelik/celikpanel/internal/binddns	0.050s
+ok  	github.com/alicelik/celikpanel/internal/core	0.014s
+ok  	github.com/alicelik/celikpanel/internal/db	9.852s
+ok  	github.com/alicelik/celikpanel/internal/hostcmd	1.431s
+ok  	github.com/alicelik/celikpanel/internal/hostingpath	0.011s
+ok  	github.com/alicelik/celikpanel/internal/hostname	0.008s
+ok  	github.com/alicelik/celikpanel/internal/hostplatform	0.012s
+ok  	github.com/alicelik/celikpanel/internal/licensing	0.159s
+ok  	github.com/alicelik/celikpanel/internal/manifestv2	0.326s
+ok  	github.com/alicelik/celikpanel/internal/mutationpayload	0.024s
+?   	github.com/alicelik/celikpanel/internal/parser	[no test files]
+ok  	github.com/alicelik/celikpanel/internal/repositories	2.438s
+ok  	github.com/alicelik/celikpanel/internal/secrets	0.005s
+ok  	github.com/alicelik/celikpanel/internal/services	1.517s
+ok  	github.com/alicelik/celikpanel/internal/systemd	0.014s
+ok  	github.com/alicelik/celikpanel/internal/systemsqlite	0.229s
+ok  	github.com/alicelik/celikpanel/internal/transport	5.216s
+?   	github.com/alicelik/celikpanel/tools/gen-distro-matrix	[no test files]
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "go" vet ./...

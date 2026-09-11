@@ -109,6 +109,10 @@ type PairingReceipt struct {
 	CatalogFile   string `json:"catalog_file,omitempty"`
 	CatalogSHA256 string `json:"catalog_sha256,omitempty"`
 	InMemory      bool   `json:"in_memory,omitempty"`
+	// Version 1 binds the explicit catalog secondary zone and the matching
+	// options-scoped subscription. Zero identifies the historical renderer;
+	// it remains readable but is never accepted as current managed policy.
+	SecondaryConfigVersion int `json:"secondary_config_version,omitempty"`
 }
 
 // Generation is a fully rendered immutable tree before it is written.

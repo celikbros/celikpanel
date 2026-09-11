@@ -53,9 +53,11 @@ import (
 // kayıtçının formuna kopyalayabileceği bir değerdir.
 
 type connectionCheck struct {
-	Domain   string `json:"domain"`
-	ServerIP string `json:"server_ip"`
-	ServerV6 string `json:"server_ipv6,omitempty"`
+	DNSManagementMode string      `json:"dns_management_mode"`
+	RequiredRecords   []DNSRecord `json:"required_records,omitempty"`
+	Domain            string      `json:"domain"`
+	ServerIP          string      `json:"server_ip"`
+	ServerV6          string      `json:"server_ipv6,omitempty"`
 
 	// What the panel would have you delegate to, if you choose that route.
 	// Bu yolu seçerseniz devredeceğiniz adlar.
@@ -346,7 +348,29 @@ func (p *Panel) handleDomainConnection(w http.ResponseWriter, r *http.Request, d
 	// SUNUCUNUN çifti — zone şablonunun devrettiği adların aynısı; böylece ekran
 	// ile sunulan zone birbirine ters düşemez. ns1.<bu alan adı> değil: operatörün
 	// yakaladığı mantık hatası oydu (25 Tem).
-	if ns1, ns2 := p.serverNameservers(r.Context()); ns1 != "" && ns2 != "" {
+	mode, err := p.domainDNSManagementMode(r.Context(), name)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	out.DNSManagementMode = mode
+	if mode == setupDNSModeExternal {
+		out.RequiredRecords = externalDomainDNSRecords(name, out.ServerIP, out.ServerV6)
+	}
+
+	if mode == setupDNSModeExisting {
+		connectionID, err := p.domainRemoteDNSConnectionID(r.Context(), name)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+		authority, err := p.remoteDNSConnectionReadiness(r.Context(), connectionID)
+		if err == nil && authority.Ready {
+			out.Nameservers = append([]string(nil), authority.Nameservers...)
+			out.NameserversUsable = true
+		}
+	}
+	if ns1, ns2 := p.serverNameservers(r.Context()); mode == setupDNSModeLocal && ns1 != "" && ns2 != "" {
 		out.Nameservers = []string{ns1, ns2}
 	}
 
@@ -389,7 +413,7 @@ func (p *Panel) handleDomainConnection(w http.ResponseWriter, r *http.Request, d
 	// veriyor mu? Vermiyorsa "buraya devredin" demek, alan adını bozan bir
 	// tavsiye olurdu. Tam da bu zone'un içindeki glue adları muaftır: devir
 	// oluşmadan çözülemezler, yani yoklukları beklenen bir durumdur, arıza değil.
-	if len(out.Nameservers) == 2 {
+	if mode == setupDNSModeLocal && len(out.Nameservers) == 2 {
 		if out.GlueNeeded {
 			out.NameserversUsable = true
 		} else {

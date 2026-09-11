@@ -50,9 +50,12 @@ func readPanelCertificateSource(domain string) (
 	if domain != strings.ToLower(strings.TrimSpace(domain)) || !validPanelCertDomain.MatchString(domain) {
 		return nil, nil, nil, time.Time{}, errors.New("invalid panel certificate source domain")
 	}
-	lineage := panelCertLineageName(domain)
-	if !validPanelCertLineage.MatchString(lineage) {
-		return nil, nil, nil, time.Time{}, errors.New("invalid panel certificate source lineage")
+	return readTrustedCertbotCertificateSource(domain, panelCertLineageName(domain))
+}
+
+func readTrustedCertbotCertificateSource(domain, lineage string) (certificate, privateKey, leafDER []byte, notAfter time.Time, err error) {
+	if !validPanelCertDomain.MatchString(domain) || (lineage != panelCertLineageName(domain) && lineage != mailHostCertLineageName(domain)) {
+		return nil, nil, nil, time.Time{}, errors.New("invalid managed certificate source identity")
 	}
 
 	rootFD, err := openPanelCertificateSourceRoot()

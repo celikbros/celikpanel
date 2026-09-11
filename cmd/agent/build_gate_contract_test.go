@@ -154,6 +154,14 @@ func protectedBuildGateOperations() []buildGateOperation {
 			},
 		},
 		{
+			name: "IssueMailHostCertificateV1",
+			run: func(expected string) string {
+				var response transport.IssueMailHostCertificateResponse
+				_ = agent.IssueMailHostCertificateV1(&transport.IssueMailHostCertificateRequest{Domain: "mail.example.test", Email: "admin@example.test", ExpectedBuildCommit: expected}, &response)
+				return response.Error
+			},
+		},
+		{
 			name: "IssuePanelCertificateV2",
 			run: func(expected string) string {
 				var response IssuePanelCertV2Response

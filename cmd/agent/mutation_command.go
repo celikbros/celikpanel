@@ -41,6 +41,9 @@ func (c *serviceMutationCmd) execute(combined bool, outputLimit int) ([]byte, er
 	cmd.Dir = c.Dir
 	cmd.Stdin = c.Stdin
 	configureServiceMutationProcessGroup(cmd)
+	if err := configureCertbotProcessIdentity(cmd); err != nil {
+		return nil, err
+	}
 	if combined {
 		return runTrackedServiceMutationCommandLimited(c.ctx, cmd, c.name, outputLimit)
 	}

@@ -56,8 +56,8 @@ test('team-member DB, PHP and DNS panels avoid server-global capability calls', 
   assert.match(dnsLoadEffect, /if \(isAdditionalUser\)[\s\S]*return;[\s\S]*fetch\('\/api\/v1\/hosting\/capabilities'\)/);
   assert.match(dnsSource, /isAdditionalUser \|\| \(dnsServer !== null/);
   assert.match(dnsSource, /DNSSECSection[^>]+readOnly=\{readOnly\}/s);
-  assert.match(dnsSource, /readOnly \? \([\s\S]*loadRecords\(\)[\s\S]*\) : \(/);
-  assert.match(dnsSource, /!readOnly && showAddForm/);
+  assert.match(dnsSource, /readOnly \|\| externalDNS \? \([\s\S]*loadRecords\(\)[\s\S]*\) : \(/);
+  assert.match(dnsSource, /!readOnly && !externalDNS && showAddForm/);
 });
 
 test('redacted domain metadata stays optional and fails closed in the UI', () => {
