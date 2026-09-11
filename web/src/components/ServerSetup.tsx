@@ -3,11 +3,12 @@ import { ArrowRight, Check, Circle, Loader2 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { Link } from '../router';
+import { Link, Navigate } from '../router';
 import { chooseSetupPurpose, decodeServerSetup, setupNextPath, setupPurposes, type ServerSetupDraft, type ServerSetupSnapshot } from '../lib/serverSetup';
 import { decodeSetupExecution, decodeSetupMarker, decodeSetupPlan, newSetupRequestID, safeSetupPanelURL, type ServerSetupExecution, type ServerSetupPlan, type SetupStartMarker } from '../lib/serverSetupOperation';
 import { ServerSetupShell, useServerSetup } from './ServerSetupGate';
 import { ServerSetupDNSConnection } from './ServerSetupDNSConnections';
+import { ServerSetupChoice, ServerSetupManualAction } from './ServerSetupChoice';
 import { Button, inputClass, Spinner } from './ui';
 
 type Step = 'purpose' | 'access' | 'review' | 'progress';
@@ -90,8 +91,17 @@ const codeKey: Record<string, TranslationKey> = {
 
 export function ServerSetup() {
     const setup = useServerSetup();
+    const [chosen, setChosen] = useState<ServerSetupSnapshot | null>(null);
+    const [manual, setManual] = useState(false);
     if (!setup?.snapshot) return <ServerSetupShell><Spinner /></ServerSetupShell>;
-    return <SetupWizard initial={setup.snapshot} />;
+    if (manual) return <Navigate to="/" replace />;
+    const snapshot = chosen || setup.snapshot;
+    if (['undecided', 'manual'].includes(snapshot.guidance || '') && !['running', 'waiting', 'ready'].includes(snapshot.status)) {
+        return <ServerSetupShell><ServerSetupChoice snapshot={snapshot} onChosen={next => {
+            setup.accept(next); setChosen(next); setManual(next.guidance === 'manual');
+        }} /></ServerSetupShell>;
+    }
+    return <SetupWizard initial={snapshot} />;
 }
 
 function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
@@ -113,6 +123,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const [error, setError] = useState('');
     const [reconnecting, setReconnecting] = useState(false);
     const [completionFailed, setCompletionFailed] = useState(false);
+    const [manualExit, setManualExit] = useState(false);
     const pendingRef = useRef(false);
     const pollingRef = useRef(false);
     const pollEpoch = useRef(0);
@@ -299,6 +310,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const isMail = draft.purpose === 'web_mail';
     const progressChecks = (execution?.checks || snapshot.checks).filter(check => check.state !== 'ready');
 
+    if (manualExit) return <Navigate to="/" replace />;
     return <ServerSetupShell>
         <div className="max-w-3xl">
             <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold leading-tight outline-none focus-visible:outline-none sm:text-3xl">{t(completed ? 'setup.completeTitle' : 'setup.title')}</h1>
@@ -373,6 +385,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         {step === 'review' ? <Button type="button" variant="primary" disabled={busy || !plan?.can_start || !acknowledged} onClick={() => void start()}>{t('setup.start')}</Button> : <button type="submit" disabled={busy || (step === 'access' && draft.dns_mode === 'existing' && !remoteVerified)} className="inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-2.5 font-semibold text-primary-fg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60">{busy ? t('common.loading') : t(step === 'purpose' ? 'setup.continue' : 'setup.review')}<ArrowRight className="h-4 w-4" aria-hidden="true" /></button>}
                     </div>
                 </form>}
+            {!completed && !hasOperation && <ServerSetupManualAction snapshot={snapshot} onChosen={next => { accept(next); setManualExit(true); }} />}
         </>}
     </ServerSetupShell>;
 }

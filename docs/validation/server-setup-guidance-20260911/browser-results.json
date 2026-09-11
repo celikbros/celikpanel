@@ -1,0 +1,54 @@
+[
+  {
+    "lang": "tr",
+    "width": 1440,
+    "scenario": "legacy",
+    "setupReads": 4,
+    "startCalls": 0,
+    "pairCalls": 0,
+    "writes": [
+      "/api/v1/setup/guidance",
+      "/api/v1/setup/guidance"
+    ],
+    "errors": []
+  },
+  {
+    "lang": "tr",
+    "width": 390,
+    "scenario": "legacy",
+    "setupReads": 4,
+    "startCalls": 0,
+    "pairCalls": 0,
+    "writes": [
+      "/api/v1/setup/guidance",
+      "/api/v1/setup/guidance"
+    ],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "scenario": "legacy",
+    "setupReads": 4,
+    "startCalls": 0,
+    "pairCalls": 0,
+    "writes": [
+      "/api/v1/setup/guidance",
+      "/api/v1/setup/guidance"
+    ],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 390,
+    "scenario": "legacy",
+    "setupReads": 4,
+    "startCalls": 0,
+    "pairCalls": 0,
+    "writes": [
+      "/api/v1/setup/guidance",
+      "/api/v1/setup/guidance"
+    ],
+    "errors": []
+  }
+]

@@ -9,6 +9,7 @@ import { PageHeader } from './PageHeader';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { DNSServerSettings } from './DNSServerSettings';
 import { SecurityAuditCard } from './SecurityAuditCard';
+import { ServerSetupSettings } from './ServerSetupChoice';
 
 const LicensePanel = lazy(() => import('./LicensePanel').then((module) => ({ default: module.LicensePanel })));
 const PanelUpdateCard = lazy(() => import('./PanelUpdateCard').then((module) => ({ default: module.PanelUpdateCard })));
@@ -18,7 +19,7 @@ const PanelUpdateCard = lazy(() => import('./PanelUpdateCard').then((module) => 
 // R-069. Sayfayla degil, isteyen bolumle birlikte yuklenir.
 const SystemSQLiteManager = lazy(() => import('./SystemSQLiteManager').then((module) => ({ default: module.SystemSQLiteManager })));
 
-type SettingsSectionID = 'account' | 'panel' | 'updates' | 'license' | 'security' | 'dns' | 'system-databases';
+type SettingsSectionID = 'setup' | 'account' | 'panel' | 'updates' | 'license' | 'security' | 'dns' | 'system-databases';
 type SettingsSection = {
     id: SettingsSectionID;
     icon: React.ComponentType<{ className?: string }>;
@@ -43,6 +44,7 @@ export function Settings() {
         },
         ...(role === 'admin'
             ? [
+                { id: 'setup' as const, icon: Network, title: t('setup.settingsTitle'), description: t('setup.settingsDescription') },
                 {
                     id: 'panel' as const,
                     icon: Lock,
@@ -178,6 +180,9 @@ function SettingsWorkspace({
                 </div>
                 {role === 'admin' && (
                     <>
+                        <div id="settings-setup-panel" role="tabpanel" aria-labelledby="settings-setup-tab" hidden={activeID !== 'setup'}>
+                            {activeID === 'setup' && <ServerSetupSettings />}
+                        </div>
                         <div id="settings-panel-panel" role="tabpanel" aria-labelledby="settings-panel-tab" hidden={activeID !== 'panel'}>
                             <PanelCertificatePanel />
                         </div>

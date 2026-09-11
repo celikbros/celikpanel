@@ -33,9 +33,10 @@ export const ArrowRight=()=>null, Check=()=>null, Circle=()=>null, Loader2=()=>n
 export const ServerSetupDNSConnection=props=>React.createElement('remote-connection',props);
 export const inputClass='';
 `);
+const choiceURL = dataURL(`import React from '${reactURL}';\n` + compile('../src/components/ServerSetupChoice.tsx').replace(/from ['"]([^'"]+)['"]/g, (_, path) => `from '${path === 'react' ? reactURL : path.endsWith('/serverSetup') ? setupURL : stub}'`));
 async function loadComponent(name) {
     const source = compile(`../src/components/${name}.tsx`).replace(/from ['"]([^'"]+)['"]/g, (_, path) => {
-        const url = path === 'react' ? reactURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
+        const url = path === 'react' ? reactURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
         return `from '${url}'`;
     });
     return (await import(dataURL(`import React from '${reactURL}';\n${source}`)))[name];
@@ -270,4 +271,52 @@ test('pending receipt reconciliation is neutral progress and preserves the opera
             assert.ok(calls.every(call=>!call.options?.method||call.options.method==='GET'),'reading reconciliation cannot launch or revise any work');
         }finally{await cleanup();}
     }
+});
+
+
+test('an undecided upgraded host gets a choice, while manual and completed hosts keep access',async()=>{
+    for(const [status,guidance,redirect] of [['legacy','undecided',true],['new','manual',false],['legacy','manual',false],['ready','undecided',false],['running','manual',true]]){
+        init('admin',{status,guidance,origin:'legacy',required:!['legacy','ready'].includes(status)});
+        try {await mount(Gate);assert.equal(tree.root.findAllByType('redirect').length,redirect?1:0);assert.ok(calls.every(c=>!c.options?.method));}
+        finally {await cleanup();}
+    }
+    assert.equal(setup.decodeServerSetup({...fresh(),guidance:'skip_checks'}),null);
+});
+
+test('manual choice is persisted once before leaving and does not complete or install anything',async()=>{
+    init('admin',{status:'legacy',origin:'legacy',required:false,guidance:'undecided'});
+    const read=fetch;
+    globalThis.fetch=async(url,options)=>{
+        if(url==='/api/v1/setup/guidance'){
+            calls.push({url,options});const choice=JSON.parse(options.body);
+            assert.deepEqual(choice,{revision:1,guidance:'manual'});
+            state={...state,guidance:'manual',revision:2};return Response.json(state);
+        }
+        return read(url,options);
+    };
+    try {
+        await mount();assert.ok(findButton('setup.useWizard'));assert.ok(findButton('setup.manual'));assert.equal(calls.length,0);
+        const button=findButton('setup.manual');await act(async()=>{void button.props.onClick();void button.props.onClick();});
+        assert.equal(calls.length,1);assert.equal(tree.root.findByType('redirect').props.to,'/');
+        assert.equal(state.status,'legacy');assert.equal(state.guidance,'manual');assert.equal(store.size,0);
+    } finally {await cleanup();}
+});
+
+test('guidance failure stays visible and a guided choice can reopen a manually configured server',async()=>{
+    init('admin',{guidance:'manual'});
+    const read=fetch;let fail=true;
+    globalThis.fetch=async(url,options)=>{
+        if(url==='/api/v1/setup/guidance'){
+            if(fail)return Response.json({error:'conflict'},{status:409});
+            state={...state,guidance:'guided',revision:state.revision+1};return Response.json(state);
+        }
+        return read(url,options);
+    };
+    try {
+        await mount();await act(async()=>findButton('setup.useWizard').props.onClick());
+        assert.equal(tree.root.findAllByType('redirect').length,0);assert.ok(JSON.stringify(tree.toJSON()).includes('setup.choiceFailed'));
+        fail=false;await act(async()=>findButton('setup.useWizard').props.onClick());
+        assert.equal(tree.root.findAllByProps({name:'setup-purpose'}).length,4);
+        assert.equal(state.guidance,'guided');assert.equal(state.status,'new');
+    } finally {await cleanup();}
 });

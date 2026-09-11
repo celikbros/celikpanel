@@ -49,6 +49,7 @@ type serverSetupState struct {
 	Draft       serverSetupDraft   `json:"draft"`
 	CompletedAt string             `json:"completed_at,omitempty"`
 	Required    bool               `json:"required"`
+	Guidance    string             `json:"guidance"`
 	Checks      []serverSetupCheck `json:"checks"`
 	ServerIP    string             `json:"server_ip,omitempty"`
 }
@@ -118,7 +119,7 @@ func stringIn(value string, choices ...string) bool {
 func (p *Panel) loadServerSetup(ctx context.Context) (serverSetupState, error) {
 	var s serverSetupState
 	var raw string
-	err := p.db.GetDB().QueryRowContext(ctx, `SELECT version,revision,origin,status,draft_json,completed_at FROM server_setup_state WHERE id=1`).Scan(&s.Version, &s.Revision, &s.Origin, &s.Status, &raw, &s.CompletedAt)
+	err := p.db.GetDB().QueryRowContext(ctx, `SELECT version,revision,origin,status,draft_json,completed_at,COALESCE((SELECT value FROM panel_settings WHERE key='server_setup_guidance'),'') FROM server_setup_state WHERE id=1`).Scan(&s.Version, &s.Revision, &s.Origin, &s.Status, &raw, &s.CompletedAt, &s.Guidance)
 	if err != nil {
 		return s, fmt.Errorf("read server setup: %w", err)
 	}
@@ -134,6 +135,15 @@ func (p *Panel) loadServerSetup(ctx context.Context) (serverSetupState, error) {
 		return s, err
 	}
 	s.Required = s.Status != "legacy" && s.Status != "ready"
+	if s.Guidance == "" {
+		s.Guidance = "guided"
+		if stringIn(s.Status, "new", "legacy") {
+			s.Guidance = "undecided"
+		}
+	}
+	if !stringIn(s.Guidance, "undecided", "guided", "manual") {
+		return s, errors.New("invalid persisted setup guidance")
+	}
 	s.Checks = []serverSetupCheck{}
 	return s, nil
 }

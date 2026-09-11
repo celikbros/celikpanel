@@ -28,6 +28,7 @@ export interface ServerSetupSnapshot {
     origin: 'fresh' | 'legacy';
     status: 'new' | 'legacy' | 'draft' | 'running' | 'waiting' | 'failed' | 'ready';
     required: boolean;
+    guidance?: 'undecided' | 'guided' | 'manual';
     draft: ServerSetupDraft;
     checks: ServerSetupCheck[];
     server_ip?: string;
@@ -51,13 +52,17 @@ export function decodeServerSetup(value: unknown): ServerSetupSnapshot | null {
         || !['ready', 'action_required', 'unknown'].includes(String(check.state)) || typeof check.code !== 'string')) return null;
     if (value.server_ip !== undefined && typeof value.server_ip !== 'string') return null;
     if (value.status === 'ready' && value.required) return null;
+    if (value.guidance !== undefined && !['undecided', 'guided', 'manual'].includes(String(value.guidance))) return null;
     return value as unknown as ServerSetupSnapshot;
 }
 export function isSetupRecoveryPath(pathname: string): boolean {
     return pathname === '/settings' || pathname === '/services' || pathname.startsWith('/services/');
 }
 export function shouldOpenServerSetup(snapshot: ServerSetupSnapshot, pathname: string): boolean {
-    return snapshot.required && pathname !== '/setup' && !isSetupRecoveryPath(pathname);
+    const active = snapshot.status === 'running' || snapshot.status === 'waiting';
+    const needsChoice = snapshot.guidance === 'undecided' && snapshot.status !== 'ready';
+    return (active || needsChoice || (snapshot.required && snapshot.guidance !== 'manual'))
+        && pathname !== '/setup' && !isSetupRecoveryPath(pathname);
 }
 export function setupNextPath(purpose: SetupPurpose): string {
     return purpose === 'dns' ? '/settings?section=dns' : '/domains';
