@@ -6,6 +6,7 @@ import test from 'node:test';
 import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
 import ts from 'typescript';
+import { setupCatalogFixture } from './fixtures/server-setup-components.mjs';
 
 const require = createRequire(import.meta.url);
 const reactURL = pathToFileURL(require.resolve('react')).href;
@@ -14,6 +15,7 @@ const compile = path => ts.transpileModule(readFileSync(new URL(path, import.met
     compilerOptions: { jsx: ts.JsxEmit.React, module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2020 },
 }).outputText;
 const setupURL = dataURL(compile('../src/lib/serverSetup.ts'));
+const componentLibURL = dataURL(compile('../src/lib/serverSetupComponents.ts').replace("from './serverSetup'", `from '${setupURL}'`));
 const operationURL = dataURL(compile('../src/lib/serverSetupOperation.ts').replace("from './serverSetup'", `from '${setupURL}'`));
 const setup = await import(setupURL);
 const operations = await import(operationURL);
@@ -34,9 +36,11 @@ export const ServerSetupDNSConnection=props=>React.createElement('remote-connect
 export const inputClass='';
 `);
 const choiceURL = dataURL(`import React from '${reactURL}';\n` + compile('../src/components/ServerSetupChoice.tsx').replace(/from ['"]([^'"]+)['"]/g, (_, path) => `from '${path === 'react' ? reactURL : path.endsWith('/serverSetup') ? setupURL : stub}'`));
+const componentUIURL = dataURL(`import React from '${reactURL}';\n` + compile('../src/components/ServerSetupComponents.tsx').replace(/from ['"]([^'"]+)['"]/g, (_, path) => `from '${path === 'react' ? reactURL : path.endsWith('/serverSetupComponents') ? componentLibURL : stub}'`));
+const { ServerSetupComponents: ComponentPicker } = await import(componentUIURL);
 async function loadComponent(name) {
     const source = compile(`../src/components/${name}.tsx`).replace(/from ['"]([^'"]+)['"]/g, (_, path) => {
-        const url = path === 'react' ? reactURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
+        const url = path === 'react' ? reactURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
         return `from '${url}'`;
     });
     return (await import(dataURL(`import React from '${reactURL}';\n${source}`)))[name];
@@ -56,6 +60,7 @@ function init(role='admin', overrides={}) {
     globalThis.fetch=async(url,options)=>{
         calls.push({url,options});
         if(url.includes('/setup/operation'))return Response.json(null);
+        if(url==='/api/v1/setup/components')return Response.json(setupCatalogFixture());
         if(url==='/api/v1/setup'&&options?.method==='PUT'){
             const body=JSON.parse(options.body);assert.equal(body.revision,state.revision);
             state={...state,draft:body.draft,revision:state.revision+1,status:'draft'};return Response.json(state);
@@ -316,7 +321,305 @@ test('guidance failure stays visible and a guided choice can reopen a manually c
         await mount();await act(async()=>findButton('setup.useWizard').props.onClick());
         assert.equal(tree.root.findAllByType('redirect').length,0);assert.ok(JSON.stringify(tree.toJSON()).includes('setup.choiceFailed'));
         fail=false;await act(async()=>findButton('setup.useWizard').props.onClick());
-        assert.equal(tree.root.findAllByProps({name:'setup-purpose'}).length,4);
+        assert.equal(tree.root.findAllByProps({name:'setup-purpose'}).length,5);
         assert.equal(state.guidance,'guided');assert.equal(state.status,'new');
     } finally {await cleanup();}
+});
+
+async function mountPicker(catalog, initial = []) {
+    let last = initial;
+    function PickerHarness() {
+        const [selected, setSelected] = React.useState(initial);
+        return React.createElement(ComponentPicker, { catalog, selected, disabled: false, onChange(next) { last = next; setSelected(next); } });
+    }
+    await act(async () => { tree = Renderer.create(React.createElement(PickerHarness)); });
+    return () => last;
+}
+const component = id => tree.root.findByProps({ id: `setup-component-${id}` });
+async function toggleComponent(id) { await act(async () => component(id).props.onChange()); }
+async function choosePurpose(purpose) { await act(async () => tree.root.findByProps({ name: 'setup-purpose', value: purpose }).props.onChange()); }
+const formNext = () => tree.root.findByProps({ type: 'submit' });
+
+test('component picker can remove its paired mail choice and locks only dependencies of other choices', async () => {
+    init();
+    try {
+        const selected = await mountPicker(setupCatalogFixture());
+        assert.equal(tree.root.findAllByProps({ id: 'setup-component-dovecot' }).length, 0, 'paired services have one choice');
+        await toggleComponent('postfix');
+        assert.equal(component('postfix').props.checked, true);
+        assert.equal(component('postfix').props.disabled, false, 'a reciprocal dependency must not trap its own choice');
+        await toggleComponent('postfix');
+        assert.deepEqual(selected(), []);
+        await toggleComponent('roundcube');
+        assert.equal(component('postfix').props.checked, true);
+        assert.equal(component('postfix').props.disabled, true, 'webmail needs the mail pair');
+        assert.equal(component('nginx').props.checked, true);
+        assert.equal(component('nginx').props.disabled, true);
+        await toggleComponent('roundcube');
+        assert.equal(component('postfix').props.checked, false);
+        assert.equal(component('postfix').props.disabled, false);
+        assert.deepEqual(selected(), []);
+        assert.equal(calls.length, 0, 'component selection performs no host operation');
+    } finally { await cleanup(); }
+});
+
+test('component picker blocks conflicting and unsupported choices and preserves installed software', async () => {
+    init();const catalog = setupCatalogFixture();
+    catalog.components.find(row => row.id === 'nginx').installed = true;
+    try {
+        const selected = await mountPicker(catalog, ['nginx']);
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.components.installed'));
+        assert.equal(tree.root.findAllByProps({ id: 'setup-component-nftables' }).length, 0);
+        assert.equal(tree.root.findAllByProps({ id: 'setup-component-certbot' }).length, 0);
+        assert.equal(component('clamav').props.disabled, true);
+        await toggleComponent('redis');
+        assert.equal(component('valkey').props.disabled, true);
+        assert.equal(component('redis').props.disabled, false);
+        await toggleComponent('redis');
+        assert.equal(component('valkey').props.disabled, false);
+        await toggleComponent('nginx');
+        assert.deepEqual(selected(), []);
+        assert.equal(catalog.components.find(row => row.id === 'nginx').installed, true);
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.components.preserve'));
+        assert.equal(calls.length, 0, 'deselecting installed software cannot call removal or installation APIs');
+    } finally { await cleanup(); }
+});
+
+test('unknown inventory disables new choices without inventing installed state', async () => {
+    init();const catalog = setupCatalogFixture();catalog.inventory_state = 'unknown';
+    try {
+        await mountPicker(catalog);
+        assert.ok(tree.root.findAllByProps({ type: 'checkbox' }).every(input => input.props.disabled));
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.components.inventoryUnknown'));
+        assert.equal(JSON.stringify(tree.toJSON()).includes('setup.components.installed'), false);
+        assert.equal(calls.length, 0);
+    } finally { await cleanup(); }
+});
+
+test('default profiles keep four steps and customization is a separate explicit choice', async () => {
+    init();
+    try {
+        await mount();
+        assert.equal(tree.root.findByType('ol').findAllByType('li').length, 4);
+        assert.equal(tree.root.findAllByProps({ name: 'setup-purpose' }).length, 5);
+        assert.ok(findButton('setup.components.customize'));
+        await submit();
+        assert.equal(state.draft.customization, undefined);
+        assert.ok(tree.root.findByProps({ id: 'setup-panel_domain' }));
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
+    } finally { await cleanup(); }
+});
+
+test('profile customization starts from its defaults and saves only explicit choices', async () => {
+    init();
+    try {
+        await mount();await act(async () => findButton('setup.components.customize').props.onClick());
+        assert.equal(tree.root.findByType('ol').findAllByType('li').length, 5);
+        for (const id of ['nginx', 'php-fpm', 'mariadb']) assert.equal(component(id).props.checked, true);
+        await toggleComponent('mariadb');await toggleComponent('postgresql');await submit();
+        assert.deepEqual([...state.draft.customization.components].sort(), ['nginx', 'php-fpm', 'postgresql']);
+        assert.ok(tree.root.findByProps({ id: 'setup-panel_domain' }));
+        assert.equal(tree.root.findAllByProps({ id: 'setup-node_version' }).length, 0);
+        assert.equal(tree.root.findAllByProps({ id: 'setup-mail_hostname' }).length, 0);
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
+    } finally { await cleanup(); }
+});
+
+test('custom setup persists an explicit empty selection and restores it after reopening', async () => {
+    init();
+    try {
+        await mount();await choosePurpose('custom');await submit();
+        assert.ok(tree.root.findAllByProps({ type: 'checkbox' }).every(input => !input.props.checked));
+        await submit();
+        assert.deepEqual(state.draft.customization, { components: [] });
+        assert.equal(state.draft.purpose, 'custom');
+        await act(async () => tree.unmount());tree = null;
+        fixture.context.accept(state);await mount();
+        assert.ok(component('nginx'));
+        assert.ok(tree.root.findAllByProps({ type: 'checkbox' }).every(input => !input.props.checked));
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
+    } finally { await cleanup(); }
+});
+
+test('custom mail and runtime selections determine required access inputs', async () => {
+    init();const base = fetch;
+    globalThis.fetch = async (url, options) => url === '/api/v1/runtimes/node/lts'
+        ? Response.json({ releases: [{ version: '24.18.0', name: 'Fixture' }] }) : base(url, options);
+    try {
+        await mount();await choosePurpose('custom');await submit();
+        await toggleComponent('roundcube');await toggleComponent('node');await submit();
+        assert.ok(tree.root.findByProps({ id: 'setup-node_version' }));
+        assert.ok(tree.root.findByProps({ id: 'setup-mail_hostname' }));
+        assert.deepEqual([...state.draft.customization.components].sort(), ['node', 'roundcube']);
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
+    } finally { await cleanup(); }
+});
+
+test('catalogue failure or unknown inventory prevents advancing custom setup and offers retry', async () => {
+    for (const reply of [() => Response.json({}, { status: 503 }), () => Response.json({}), () => Response.json({ ...setupCatalogFixture(), inventory_state: 'unknown' })]) {
+        init();const base = fetch;
+        globalThis.fetch = async (url, options) => url === '/api/v1/setup/components' ? reply() : base(url, options);
+        try {
+            await mount();await choosePurpose('custom');await submit();
+            assert.equal(formNext().props.disabled, true);
+            const writes = calls.filter(call => call.options?.method === 'PUT').length;
+            await submit();
+            assert.equal(calls.filter(call => call.options?.method === 'PUT').length, writes);
+            assert.equal(tree.root.findAllByProps({ id: 'setup-panel_domain' }).length, 0);
+            assert.equal(calls.some(call => call.url === '/api/v1/setup/plan'), false);
+            assert.ok(findButton('common.retry'));
+        } finally { await cleanup(); }
+    }
+});
+
+test('editing a reviewed component selection invalidates confirmation and requires a new review', async () => {
+    init();
+    try {
+        await mount();await choosePurpose('custom');await submit();await toggleComponent('postgresql');await submit();
+        await act(async () => tree.root.findByProps({ id: 'setup-panel_domain' }).props.onChange({ target: { value: 'panel.example.com' } }));
+        await act(async () => tree.root.findByProps({ name: 'setup-dns', value: 'external' }).props.onChange());
+        await submit();
+        await act(async () => tree.root.findByProps({ type: 'checkbox' }).props.onChange({ target: { checked: true } }));
+        assert.equal(findButton('setup.start').props.disabled, false);
+        const reviewedRevision = state.revision;
+        await act(async () => findButton('setup.back').props.onClick());
+        await act(async () => findButton('setup.back').props.onClick());
+        assert.equal(findButton('setup.start'), undefined);
+        await toggleComponent('redis');await submit();await submit();
+        assert.ok(state.revision > reviewedRevision);
+        assert.equal(calls.filter(call => call.url === '/api/v1/setup/plan').length, 2);
+        assert.equal(findButton('setup.start').props.disabled, true, 'a prior acknowledgement never authorizes changed components');
+        assert.equal(tree.root.findByProps({ type: 'checkbox' }).props.checked, false);
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
+    } finally { await cleanup(); }
+});
+
+test('draft decoding distinguishes an untouched preset from explicit empty customization', () => {
+    const preset = fresh();
+    assert.equal(setup.decodeServerSetup(preset).draft.customization, undefined);
+    const custom = { ...preset, draft: { ...preset.draft, purpose: 'custom', customization: { components: [] } } };
+    assert.deepEqual(setup.decodeServerSetup(custom).draft.customization, { components: [] });
+    for (const customization of [null, {}, { components: null }, { components: [1] }, { components: ['redis', 'redis'] }]) {
+        assert.equal(setup.decodeServerSetup({ ...custom, draft: { ...custom.draft, customization } }), null);
+    }
+});
+
+test('customization review distinguishes installed software and dependencies without starting work', async () => {
+    init();const base = fetch;
+    const components = [
+        { id: 'postgresql', selected: true, required: false, installed: false },
+        { id: 'nftables', selected: false, required: true, installed: true },
+        { id: 'certbot', selected: false, required: true, installed: false },
+    ];
+    globalThis.fetch = async (url, options) => url === '/api/v1/setup/plan' ? Response.json(plan({ components })) : base(url, options);
+    try {
+        await mount();await choosePurpose('custom');await submit();await toggleComponent('postgresql');await submit();
+        await act(async () => tree.root.findByProps({ id: 'setup-panel_domain' }).props.onChange({ target: { value: 'panel.example.com' } }));
+        await act(async () => tree.root.findByProps({ name: 'setup-dns', value: 'external' }).props.onChange());
+        await submit();
+        const text = JSON.stringify(tree.toJSON());
+        for (const label of ['PostgreSQL', 'Firewall', 'Certbot', 'setup.components.toInstall', 'setup.components.keep', 'setup.components.dependency', 'setup.components.preserve']) assert.ok(text.includes(label), label);
+        assert.equal(findButton('setup.start').props.disabled, true);
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
+        for (const invalid of [null, [{ ...components[0], installed: 'yes' }], [{ ...components[0], required: undefined }]]) {
+            assert.equal(operations.decodeSetupPlan(plan({ components: invalid }), state.revision), null);
+        }
+    } finally { await cleanup(); }
+});
+
+test('a saved customized profile reopens with its exact choices instead of preset defaults', async () => {
+    init('admin', { status: 'draft', draft: { ...fresh().draft, customization: { components: ['postgresql', 'redis'] } } });
+    try {
+        await mount();
+        assert.equal(component('postgresql').props.checked, true);
+        assert.equal(component('redis').props.checked, true);
+        assert.equal(component('mariadb').props.checked, false);
+        assert.equal(component('nginx').props.checked, false);
+        assert.ok(calls.every(call => !call.options?.method || call.options.method === 'GET'));
+    } finally { await cleanup(); }
+});
+
+test('catalogue retry obtains fresh inventory before customization can continue', async () => {
+    init();const base = fetch;let healthy = false;let requests = 0;
+    globalThis.fetch = async (url, options) => {
+        if (url === '/api/v1/setup/components') { requests++;return healthy ? Response.json(setupCatalogFixture()) : Response.json({}, { status: 503 }); }
+        return base(url, options);
+    };
+    try {
+        await mount();await choosePurpose('custom');await submit();
+        assert.equal(formNext().props.disabled, true);
+        healthy = true;await act(async () => findButton('common.retry').props.onClick());
+        assert.equal(requests, 2);
+        assert.equal(formNext().props.disabled, false);
+        await toggleComponent('postgresql');await submit();
+        assert.deepEqual(state.draft.customization, { components: ['postgresql'] });
+        assert.ok(tree.root.findByProps({ id: 'setup-panel_domain' }));
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
+    } finally { await cleanup(); }
+});
+
+test('completion links and labels follow customized services instead of the original profile', async () => {
+    const scenarios = [
+        ['web', ['fail2ban'], '/services', 'setup.nextComponents'],
+        ['custom', [], '/settings?section=dns', 'setup.nextDNS'],
+        ['custom', ['nginx'], '/domains', 'setup.nextWebsite'],
+        ['web', ['node'], '/domains', 'setup.nextApplication'],
+        ['web', undefined, '/domains', 'setup.nextWebsite'],
+        ['dns', undefined, '/settings?section=dns', 'setup.nextDNS'],
+    ];
+    for (const [purpose, selected, expectedPath, label] of scenarios) {
+        const draft = { ...fresh().draft, purpose, ...(selected === undefined ? {} : { customization: { components: selected } }) };
+        init('admin', { status: 'ready', required: false, draft });
+        try {
+            await mount();
+            assert.equal(tree.root.findAllByType('a').filter(link => link.props.href === expectedPath).length, 1, `${purpose}/${selected} next action`);
+            assert.ok(JSON.stringify(tree.toJSON()).includes(label), `${purpose}/${selected} label`);
+            assert.equal(tree.root.findAllByType('form').length, 0);
+            assert.ok(calls.every(call => !call.options?.method || call.options.method === 'GET'));
+        } finally { await cleanup(); }
+    }
+});
+
+test('saved external DNS stays visible until the administrator changes an empty custom setup to local DNS', async () => {
+    init('admin', { status: 'draft', draft: { ...fresh().draft, purpose: 'custom', dns_mode: 'external', customization: { components: [] } } });
+    try {
+        await mount();await submit();
+        const external = tree.root.findByProps({ name: 'setup-dns', value: 'external' });
+        assert.equal(external.props.checked, true);
+        assert.equal(external.props.disabled, false, 'an incompatible saved value is still a visible, enabled current selection');
+        assert.equal(formNext().props.disabled, true);
+        assert.ok(tree.root.findAllByProps({ role: 'alert' }).length > 0, 'the user can discover how to correct the DNS mode');
+        const writes = calls.filter(call => call.options?.method === 'PUT').length;
+        await submit();
+        assert.equal(calls.filter(call => call.options?.method === 'PUT').length, writes, 'incompatible DNS cannot produce a saved reviewed plan');
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/plan'), false);
+        assert.equal(state.draft.dns_mode, 'external', 'choosing components never silently rewrites the saved DNS mode');
+        await act(async () => tree.root.findByProps({ name: 'setup-dns', value: 'local' }).props.onChange());
+        assert.equal(tree.root.findByProps({ name: 'setup-dns', value: 'local' }).props.checked, true);
+        assert.equal(formNext().props.disabled, false);
+        assert.equal(state.draft.dns_mode, 'external', 'changing the form does not persist before Continue');
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
+    } finally { await cleanup(); }
+});
+
+test('saved local secondary DNS requires an explicit primary selection before reviewing custom hosting', async () => {
+    init('admin', { status: 'draft', draft: { ...fresh().draft, purpose: 'custom', dns_mode: 'local', dns_role: 'secondary', customization: { components: ['nginx'] } } });
+    try {
+        await mount();await submit();
+        const selector = tree.root.findByProps({ id: 'setup-dns_role' });
+        assert.equal(selector.props.value, 'secondary');
+        assert.equal(selector.findAllByType('option').find(option => option.props.value === 'secondary').props.disabled, false, 'keep the existing role selectable while explaining the conflict');
+        assert.equal(formNext().props.disabled, true);
+        assert.ok(tree.root.findAllByProps({ role: 'alert' }).length > 0);
+        const writes = calls.filter(call => call.options?.method === 'PUT').length;
+        await submit();
+        assert.equal(calls.filter(call => call.options?.method === 'PUT').length, writes);
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/plan'), false);
+        assert.equal(state.draft.dns_role, 'secondary');
+        await act(async () => selector.props.onChange({ target: { value: 'primary' } }));
+        assert.equal(tree.root.findByProps({ id: 'setup-dns_role' }).props.value, 'primary');
+        assert.equal(formNext().props.disabled, false);
+        assert.equal(state.draft.dns_role, 'secondary', 'role changes must be explicitly saved');
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
+    } finally { await cleanup(); }
 });

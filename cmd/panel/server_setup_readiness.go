@@ -84,7 +84,7 @@ func (p *Panel) serverSetupCompletionChecks(ctx context.Context, draft serverSet
 		connectionID, modeErr = p.defaultRemoteDNSConnectionID(ctx)
 		dnsReady = modeErr == nil && connectionID == draft.RemoteDNSConnectionID
 	}
-	if dnsReady && mode == setupDNSModeLocal && draft.Purpose != "dns" {
+	if dnsReady && mode == setupDNSModeLocal && serverSetupNeedsDNSPublisher(draft) {
 		_, dnsReady, modeErr = p.activeDNSPublisher(ctx)
 	}
 	if dnsReady && mode == setupDNSModeLocal {
@@ -119,10 +119,39 @@ func (p *Panel) serverSetupCompletionChecks(ctx context.Context, draft serverSet
 	if draft.Purpose == "web_mail" {
 		required = append(required, "postfix", "dovecot", "rspamd", "roundcube")
 	}
+	if draft.Customization != nil {
+		var selectionErr error
+		required, selectionErr = serverSetupResolvedComponents(draft)
+		if selectionErr != nil {
+			return nil, selectionErr
+		}
+		// A selected Node runtime is proven by its exact version, independently
+		// of the distro package inventory.
+		withoutNode := []string{}
+		for _, id := range required {
+			if id != "node" {
+				withoutNode = append(withoutNode, id)
+			}
+		}
+		required = withoutNode
+		if draft.DNSMode == "local" {
+			required = append(required, draft.DNSEngine)
+		}
+		required = append(required, serverSetupRequiredComponents...)
+	}
 	servicesReady := installedErr == nil && unitsErr == nil && len(required) > 0
+	if draft.Customization != nil && len(draft.Customization.Components) == 0 && !(draft.DNSMode == "local" && stringIn(draft.Purpose, "dns", "custom")) {
+		servicesReady = false
+	}
 	pkgFamily := ""
+	var serviceHost core.ManagedServiceHostProfile
 	if servicesReady {
-		pkgFamily = p.managedServiceHostProfile().PackageFamily
+		serviceHost = p.managedServiceHostProfile()
+		pkgFamily = serviceHost.PackageFamily
+	}
+	installedSet := map[string]bool{}
+	for _, id := range installed {
+		installedSet[id] = true
 	}
 	for _, id := range required {
 		present := false
@@ -155,9 +184,24 @@ func (p *Panel) serverSetupCompletionChecks(ctx context.Context, draft serverSet
 				}
 			}
 		}
+		if draft.Customization != nil && managed != nil {
+			_, unsupported := core.ManagedServiceInstallBlockForHost(managed, serviceHost)
+			if unsupported != "" || len(core.RequirementsMissing(managed, installedSet)) > 0 || core.SeatTakenBy(managed, installedSet) != "" {
+				running = false
+			}
+			for _, helper := range managed.HelperUnits {
+				helperRunning := false
+				for _, unit := range units {
+					if strings.TrimSuffix(unit.Name, ".service") == strings.TrimSuffix(helper, ".service") && managedServiceUnitReady(id, pkgFamily, unit.Name, unit.Status) {
+						helperRunning = true
+					}
+				}
+				running = running && helperRunning
+			}
+		}
 		servicesReady = servicesReady && present && running
 	}
-	if draft.Purpose == "application" {
+	if (draft.Customization == nil && draft.Purpose == "application") || (draft.Customization != nil && serverSetupHasComponent(draft, "node")) {
 		var versions transport.NodeVersionsResponse
 		err := p.callAgentContext(ctx, "Agent.ListNodeVersions", &transport.Empty{}, &versions)
 		found := false
@@ -167,15 +211,22 @@ func (p *Panel) serverSetupCompletionChecks(ctx context.Context, draft serverSet
 			}
 		}
 		servicesReady = servicesReady && err == nil && found
+		if draft.Customization != nil {
+			_, unsupported := core.ManagedServiceInstallBlockForHost(core.GetManagedServiceByID("node"), serviceHost)
+			servicesReady = servicesReady && unsupported == "" && nodeSemverRe.MatchString(draft.NodeVersion)
+		}
 	}
 	serviceErr := installedErr
 	if serviceErr == nil {
 		serviceErr = unitsErr
 	}
 	checks = append(checks, setupCheck("services", servicesReady, serviceErr))
-	if draft.Purpose == "web_mail" {
+	if mailProfiles := serverSetupMailProfileIDs(draft); len(mailProfiles) > 0 {
 		proofs, proofErr := p.latestMailProfileAttemptProofs(ctx)
-		profilesReady := proofErr == nil && proofs[core.MailProfileWebmail].Verified && proofs[core.MailProfileProtected].Verified
+		profilesReady := proofErr == nil
+		for _, profileID := range mailProfiles {
+			profilesReady = profilesReady && proofs[profileID].Verified
+		}
 		// Installation receipts may truthfully report a self-signed fallback.
 		// Read the protected host certificate proof and verify the actual listeners rather
 		// than treating that historical installation result as trusted mail TLS.

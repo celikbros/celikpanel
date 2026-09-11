@@ -183,7 +183,14 @@ func (buffer *boundedSystemUpdateBuffer) String() string {
 }
 
 func reviewedUpdaterFailure(output []byte) string {
+	// New reviewed updaters place the cause and the recovery outcome last so
+	// older installed workers also retain them. Prefer this exact line over
+	// historical wrapper matching. Other failures still use the BIND inner-
+	// cause enrichment below, including when their final summary is present.
 	last := sanitizedSystemUpdateError(errors.New(string(output)))
+	if strings.HasPrefix(last, "!! CELIKPANEL_UPDATE_FAILURE code=package_manager_busy ") {
+		return last
+	}
 	const (
 		wrapper = "installed agent could not prepare the managed BIND generation root"
 		inner   = "Prepare BIND generation root under external lock:"

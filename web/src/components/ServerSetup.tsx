@@ -10,9 +10,10 @@ import { ServerSetupShell, useServerSetup } from './ServerSetupGate';
 import { ServerSetupDNSConnection } from './ServerSetupDNSConnections';
 import { ServerSetupChoice, ServerSetupManualAction } from './ServerSetupChoice';
 import { Button, inputClass, Spinner } from './ui';
+import { ServerSetupComponents, useSetupComponentCatalog } from './ServerSetupComponents';
+import { setupEffectiveComponents, setupPresetComponents } from '../lib/serverSetupComponents';
 
-type Step = 'purpose' | 'access' | 'review' | 'progress';
-const steps: Step[] = ['purpose', 'access', 'review', 'progress'];
+type Step = 'purpose' | 'components' | 'access' | 'review' | 'progress';
 const requestOptions = (body: unknown) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 async function setupFetch(url: string, options?: RequestInit) {
     const controller = new AbortController();
@@ -52,6 +53,9 @@ const codeKey: Record<string, TranslationKey> = {
     server_setup_dns_mode_unsupported: 'setup.blocker.existing',
     server_setup_dns_purpose_requires_local: 'setup.blocker.dnsIdentity',
     server_setup_service_unknown: 'setup.blocker.services',
+    server_setup_inventory_unavailable: 'setup.components.inventoryUnknown',
+    server_setup_components_required: 'setup.components.chooseRequired',
+    server_setup_customization_invalid: 'setup.components.savedUnavailable',
     server_setup_service_unsupported: 'setup.blocker.profile',
     server_setup_dependency_missing: 'setup.blocker.services',
     server_setup_service_conflict: 'setup.blocker.services',
@@ -108,9 +112,10 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const setup = useServerSetup()!;
     const { user } = useAuth();
     const { t } = useI18n();
+    const { catalog, failed: catalogFailed, reload: reloadCatalog } = useSetupComponentCatalog(!['running', 'waiting', 'ready'].includes(initial.status));
     const [snapshot, setSnapshot] = useState(initial);
     const [draft, setDraft] = useState(initial.draft);
-    const [step, setStep] = useState<Step>(initial.status === 'new' || initial.status === 'legacy' ? 'purpose' : 'access');
+    const [step, setStep] = useState<Step>(initial.status === 'new' || initial.status === 'legacy' ? 'purpose' : initial.draft.customization ? 'components' : 'access');
     const [plan, setPlan] = useState<ServerSetupPlan | null>(null);
     const [execution, setExecution] = useState<ServerSetupExecution | null>(null);
     const [marker, setMarker] = useState<SetupStartMarker | null>(() => {
@@ -208,13 +213,17 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     }
     async function next(event: FormEvent) {
         event.preventDefault();
+        if (step === 'components' && (!catalog || catalog.inventory_state !== 'ready')) { setError(t('setup.components.inventoryUnknown')); return; }
+        if (step === 'components' && emptySelectionInvalid) { setError(t('setup.components.chooseRequired')); return; }
+        if (step === 'access' && dnsSelectionError) { setError(t(dnsSelectionError)); return; }
         if (step === 'access' && draft.dns_mode === 'existing' && !remoteVerified) { setError(t('setup.remote.proof.failed')); return; }
         if (pendingRef.current) return;
         pendingRef.current = true; setBusy(true); setError('');
         try {
             const saved = await saveDraft();
             if (!alive.current) return;
-            if (step === 'purpose') { setStep('access'); return; }
+            if (step === 'purpose') { setStep(saved.draft.customization || saved.draft.purpose === 'custom' ? 'components' : 'access'); return; }
+            if (step === 'components') { setStep('access'); return; }
             const response = await setupFetch('/api/v1/setup/plan', requestOptions({ revision: saved.revision }));
             if (!response.ok) throw new Error(t('setup.planFailed'));
             const reviewed = decodeSetupPlan(await response.json(), saved.revision);
@@ -305,9 +314,21 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const hasOperation = resolving || !!execution || !!marker || reconnecting;
     const certificateReady = execution?.steps.some(item => item.kind === 'panel_certificate' && item.status === 'succeeded') || execution?.status === 'succeeded';
     const panelURL = certificateReady ? safeSetupPanelURL(execution?.panel_url, marker?.panel_domain || draft.panel_domain) : null;
+    const customized = !!draft.customization || draft.purpose === 'custom';
+    const steps: Step[] = ['purpose', ...(customized ? ['components' as const] : []), 'access', 'review', 'progress'];
     const currentStep = steps.indexOf(step);
-    const isDNS = draft.purpose === 'dns';
-    const isMail = draft.purpose === 'web_mail';
+    const selectedComponents = setupEffectiveComponents(draft, catalog);
+    const emptySelectionInvalid = customized && selectedComponents.size === 0 && !['dns', 'custom'].includes(draft.purpose);
+    const isDNS = draft.purpose === 'dns' || (draft.purpose === 'custom' && selectedComponents.size === 0);
+    const needsDNSPublisher = ['nginx', 'node', 'postfix', 'roundcube'].some(id => selectedComponents.has(id));
+    const dnsSelectionError: TranslationKey | null = isDNS && draft.dns_mode !== 'local'
+        ? 'setup.components.localDNSRequired'
+        : needsDNSPublisher && draft.dns_mode === 'local' && draft.dns_role === 'secondary'
+            ? 'setup.components.publisherRequired' : null;
+    const isMail = ['postfix', 'dovecot', 'rspamd', 'roundcube'].some(id => selectedComponents.has(id));
+    const isNode = selectedComponents.has('node');
+    const nextPath = setupNextPath(snapshot.draft.purpose, customized ? selectedComponents : undefined);
+    const nextLabel = nextPath === '/settings?section=dns' ? 'setup.nextDNS' : nextPath === '/services' ? 'setup.nextComponents' : isNode ? 'setup.nextApplication' : 'setup.nextWebsite';
     const progressChecks = (execution?.checks || snapshot.checks).filter(check => check.state !== 'ready');
 
     if (manualExit) return <Navigate to="/" replace />;
@@ -317,10 +338,10 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
             <p className="mt-3 max-w-2xl text-fg-muted">{t(completed ? 'setup.completeHelp' : 'setup.intro')}</p>
         </div>
         {completed ? <section className="mt-8 max-w-3xl space-y-6" aria-labelledby="setup-ready-title">
-            <div className="flex items-start gap-3"><Check className="mt-1 h-5 w-5 shrink-0 text-success" aria-hidden="true" /><div><h2 id="setup-ready-title" className="text-lg font-semibold">{t(`setup.purpose.${snapshot.draft.purpose}`)}</h2><p className="mt-1 text-sm text-fg-muted">{t('setup.completeServices')}</p></div></div>
-            <Link to={setupNextPath(snapshot.draft.purpose)} className="inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-fg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{t(snapshot.draft.purpose === 'dns' ? 'setup.nextDNS' : snapshot.draft.purpose === 'application' ? 'setup.nextApplication' : 'setup.nextWebsite')}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+            <div className="flex items-start gap-3"><Check className="mt-1 h-5 w-5 shrink-0 text-success" aria-hidden="true" /><div><h2 id="setup-ready-title" className="text-lg font-semibold">{t(customized ? 'setup.purpose.custom' : `setup.purpose.${snapshot.draft.purpose}`)}</h2><p className="mt-1 text-sm text-fg-muted">{t('setup.completeServices')}</p></div></div>
+            <Link to={nextPath} className="inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-fg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{t(nextLabel)}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
         </section> : <>
-            <ol className="my-8 grid grid-cols-2 gap-x-5 gap-y-3 border-b border-border pb-6 text-sm sm:grid-cols-4" aria-label={t('setup.steps')}>
+            <ol className={`my-8 grid grid-cols-2 gap-x-5 gap-y-3 border-b border-border pb-6 text-sm ${customized ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`} aria-label={t('setup.steps')}>
                 {steps.map((item, index) => <li key={item} aria-current={step === item ? 'step' : undefined} className={`flex items-center gap-2 ${index === currentStep ? 'font-semibold text-primary' : 'text-fg-muted'}`}><span className="tabular-nums">{index + 1}.</span>{t(`setup.step.${item}`)}</li>)}
             </ol>
             {error && <p role="alert" className="mb-5 max-w-3xl rounded-lg border border-danger/40 bg-danger/5 p-4 text-sm text-danger">{error}</p>}
@@ -350,7 +371,11 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                             {setupPurposes.map(purpose => <label key={purpose} className={`flex cursor-pointer items-start gap-4 p-5 hover:bg-surface-2 ${draft.purpose === purpose ? 'bg-surface-2' : ''}`}><input type="radio" name="setup-purpose" value={purpose} checked={draft.purpose === purpose} onChange={() => { setDraft(previous => chooseSetupPurpose(previous, purpose)); setPlan(null); }} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span><span className="font-semibold">{t(`setup.purpose.${purpose}`)}{purpose === 'web' && <span className="ml-2 text-xs font-normal text-fg-muted">{t('setup.recommended')}</span>}</span><span className="mt-1 block text-sm leading-6 text-fg-muted">{t(`setup.purpose.${purpose}.help`)}</span></span></label>)}
                         </div>
                         <p className="mt-4 text-sm text-fg-muted">{t('setup.purposeHelp')}</p>
+                        {draft.purpose !== 'custom' && <div className="mt-5 space-y-3"><Button type="button" disabled={!catalog || busy} onClick={() => { if (!catalog) return; change('customization', { components: draft.customization?.components || setupPresetComponents(draft, catalog) }); setStep('components'); }}>{t('setup.components.customize')}</Button>{catalogFailed && <p role="alert" className="text-sm text-fg-muted">{t('setup.components.loadFailed')} <Button type="button" onClick={reloadCatalog}>{t('common.retry')}</Button></p>}</div>}
                     </fieldset>}
+                    {step === 'components' && (catalog ? <ServerSetupComponents catalog={catalog} selected={draft.customization?.components || []} disabled={busy} onChange={components => change('customization', { components })} /> : <div role={catalogFailed ? 'alert' : 'status'} className="space-y-3"><h2 className="text-xl font-semibold">{t('setup.components.title')}</h2><p className="text-sm text-fg-muted">{t(catalogFailed ? 'setup.components.loadFailed' : 'setup.components.loading')}</p>{catalogFailed && <Button type="button" onClick={reloadCatalog}>{t('common.retry')}</Button>}</div>)}
+                    {step === 'components' && emptySelectionInvalid && <p role="alert" className="mt-4 text-sm text-danger">{t('setup.components.chooseRequired')}</p>}
+                    {step === 'components' && catalog?.inventory_state === 'unknown' && <div className="mt-4"><Button type="button" disabled={busy} onClick={reloadCatalog}>{t('common.retry')}</Button></div>}
                     {step === 'access' && <fieldset disabled={busy} className="space-y-8">
                         <legend className="mb-5 text-xl font-semibold">{t('setup.accessTitle')}</legend>
                         <div className="space-y-4"><SetupInput name="panel_domain" label={t('setup.panelDomain')} value={draft.panel_domain} onChange={value => change('panel_domain', value)} placeholder="panel.example.com" required /><p className="max-w-2xl text-sm leading-6 text-fg-muted">{t('setup.panelDomainHelp')}</p>
@@ -358,20 +383,22 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         </div>
                         {isMail && <div className="space-y-3"><SetupInput name="mail_hostname" label={t('setup.mailHostname')} value={draft.mail_hostname} onChange={value => change('mail_hostname', value)} placeholder="mail.example.com" required /><p className="text-sm leading-6 text-fg-muted">{t('setup.mailHostnameHelp')}</p></div>}
                         <fieldset><legend className="font-semibold">{t('setup.dnsTitle')}</legend><p className="mt-2 text-sm text-fg-muted">{t('setup.dnsHelp')}</p>
-                            <div className="mt-4 space-y-3">{(['local', 'external', 'existing'] as const).map(mode => <label key={mode} className={`flex items-start gap-3 rounded-lg border border-border p-4 ${isDNS && mode !== 'local' ? 'text-fg-muted' : 'cursor-pointer hover:bg-surface-2'}`}><input type="radio" name="setup-dns" value={mode} checked={draft.dns_mode === mode} disabled={isDNS && mode !== 'local'} onChange={() => change('dns_mode', mode)} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span><span className="font-medium">{t(`setup.dns.${mode}`)}</span><span className="mt-1 block text-sm leading-6 text-fg-muted">{t(`setup.dns.${mode}.help`)}</span></span></label>)}</div>
+                            <div className="mt-4 space-y-3">{(['local', 'external', 'existing'] as const).map(mode => <label key={mode} className={`flex items-start gap-3 rounded-lg border border-border p-4 ${isDNS && mode !== 'local' ? 'text-fg-muted' : 'cursor-pointer hover:bg-surface-2'}`}><input type="radio" name="setup-dns" value={mode} checked={draft.dns_mode === mode} disabled={isDNS && mode !== 'local' && draft.dns_mode !== mode} onChange={() => change('dns_mode', mode)} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span><span className="font-medium">{t(`setup.dns.${mode}`)}</span><span className="mt-1 block text-sm leading-6 text-fg-muted">{t(`setup.dns.${mode}.help`)}</span></span></label>)}</div>
                         </fieldset>
+                        {dnsSelectionError && <p role="alert" className="text-sm leading-6 text-danger">{t(dnsSelectionError)}</p>}
                         {draft.dns_mode === 'existing' && <ServerSetupDNSConnection value={draft.remote_dns_connection_id} onChange={value => change('remote_dns_connection_id', value)} onValidityChange={setRemoteVerified} />}
                         {draft.dns_mode === 'local' && <div className="space-y-5">
-                            <div className="grid gap-5 sm:grid-cols-2"><SetupSelect name="dns_engine" label={t('setup.engine')} value={draft.dns_engine} onChange={value => change('dns_engine', value as 'bind' | 'pdns')}><option value="pdns">PowerDNS</option><option value="bind">BIND</option></SetupSelect><SetupSelect name="dns_role" label={t('setup.dnsRole')} value={draft.dns_role} onChange={value => change('dns_role', value as 'primary' | 'secondary')}><option value="primary">{t('setup.primary')}</option><option value="secondary" disabled={!isDNS}>{t('setup.secondary')}</option></SetupSelect></div>
+                            <div className="grid gap-5 sm:grid-cols-2"><SetupSelect name="dns_engine" label={t('setup.engine')} value={draft.dns_engine} onChange={value => change('dns_engine', value as 'bind' | 'pdns')}><option value="pdns">PowerDNS</option><option value="bind">BIND</option></SetupSelect><SetupSelect name="dns_role" label={t('setup.dnsRole')} value={draft.dns_role} onChange={value => change('dns_role', value as 'primary' | 'secondary')}><option value="primary">{t('setup.primary')}</option><option value="secondary" disabled={needsDNSPublisher && draft.dns_role !== 'secondary'}>{t('setup.secondary')}</option></SetupSelect></div>
                             <p className="text-sm leading-6 text-fg-muted">{t(draft.dns_role === 'secondary' ? 'setup.secondaryHelp' : 'setup.primaryHelp')}</p>
                             <p className="text-sm leading-6 text-fg-muted">{t('setup.dnsPairOrder')}</p>
                             <div className="grid gap-5 sm:grid-cols-2"><SetupInput name="ns1" label={t('setup.ns1')} value={draft.ns1} onChange={value => change('ns1', value)} placeholder="ns1.example.com" required /><SetupInput name="ns2" label={t('setup.ns2')} value={draft.ns2} onChange={value => change('ns2', value)} placeholder="ns2.example.com" required /><SetupInput name="local_ip" label={t('setup.localIP')} value={draft.local_ip} onChange={value => change('local_ip', value)} placeholder={snapshot.server_ip || ''} required /><SetupInput name="peer_ip" label={t('setup.peerIP')} value={draft.peer_ip} onChange={value => change('peer_ip', value)} required /><SetupInput name="peer_ns" label={t('setup.peerNS')} value={draft.peer_ns} onChange={value => change('peer_ns', value)} required /></div>
                         </div>}
-                        {draft.purpose === 'application' && <SetupNodeVersion value={draft.node_version} onChange={value => change('node_version', value)} />}
-                        {draft.purpose === 'application' && <SetupSelect name="database" label={t('setup.database')} value={draft.database} onChange={value => change('database', value)}><option value="">{t('setup.databaseNone')}</option><option value="mariadb">MariaDB</option><option value="postgresql">PostgreSQL</option></SetupSelect>}
+                        {isNode && <SetupNodeVersion value={draft.node_version} onChange={value => change('node_version', value)} />}
+                        {draft.purpose === 'application' && !customized && <SetupSelect name="database" label={t('setup.database')} value={draft.database} onChange={value => change('database', value)}><option value="">{t('setup.databaseNone')}</option><option value="mariadb">MariaDB</option><option value="postgresql">PostgreSQL</option></SetupSelect>}
                     </fieldset>}
                     {step === 'review' && plan && <section aria-labelledby="setup-plan-title">
                         <h2 id="setup-plan-title" className="text-xl font-semibold">{t('setup.reviewTitle')}</h2><p className="mt-3 text-sm leading-6 text-fg-muted">{t('setup.reviewHelp')}</p>
+                        {plan.components && <div className="mt-5"><h3 className="font-semibold">{t('setup.components.reviewTitle')}</h3><ul className="mt-2 divide-y divide-border">{plan.components.map(item => <li key={item.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm"><span>{catalog?.components.find(row => row.id === item.id)?.name || stepTarget('service', item.id)}</span><span className="text-fg-muted">{t(item.installed ? 'setup.components.keep' : item.required ? 'setup.components.dependency' : 'setup.components.toInstall')}</span></li>)}</ul><p className="mt-3 text-sm text-fg-muted">{t('setup.components.preserve')}</p></div>}
                         <ol className="mt-5 divide-y divide-border">{plan.steps.map(item => <li key={item.id} className="py-4"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && <p className="mt-1 text-sm text-fg-muted">{item.qualifier}</p>}</li>)}</ol>
                         <dl className="mt-5 space-y-3 rounded-lg bg-surface-2 p-4 text-sm"><div><dt className="font-semibold">{t('setup.firewallReview')}</dt><dd className="mt-1 leading-6 text-fg-muted">{t('setup.firewallHelp')}</dd></div><div><dt className="font-semibold">TCP</dt><dd className="mt-1 break-words tabular-nums">{plan.tcp_ports.join(', ') || t('setup.noPorts')}</dd></div><div><dt className="font-semibold">UDP</dt><dd className="mt-1 break-words tabular-nums">{plan.udp_ports.join(', ') || t('setup.noPorts')}</dd></div><div><dt className="font-semibold">{t('setup.certificateContact')}</dt><dd className="mt-1 break-all">{plan.contact_email}</dd></div>{plan.hostname_change && <div><dt className="font-semibold">{t('setup.hostnameChange')}</dt><dd className="mt-1 break-all">{plan.hostname_change}</dd></div>}</dl>
                         {plan.remote_dns_connection && <div className="mt-5 rounded-lg border border-border p-4 text-sm"><p className="font-semibold">{t('setup.remote.reviewTitle')}</p><p className="mt-2 break-all">{plan.remote_dns_connection.endpoint}</p><p className="mt-1 break-words text-fg-muted">{plan.remote_dns_connection.nameservers.join(', ')}</p><p className="mt-2 leading-6 text-fg-muted">{t('setup.remote.reviewHelp')}</p></div>}
@@ -381,8 +408,8 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         {plan.can_start && <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-6"><input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span>{t('setup.confirm')}</span></label>}
                     </section>}
                     <div className="mt-8 flex flex-wrap items-center gap-4 border-t border-border pt-6">
-                        {step !== 'purpose' && <Button type="button" variant="secondary" disabled={busy} onClick={() => { setStep(step === 'review' ? 'access' : 'purpose'); setPlan(null); setAcknowledged(false); }}>{t('setup.back')}</Button>}
-                        {step === 'review' ? <Button type="button" variant="primary" disabled={busy || !plan?.can_start || !acknowledged} onClick={() => void start()}>{t('setup.start')}</Button> : <button type="submit" disabled={busy || (step === 'access' && draft.dns_mode === 'existing' && !remoteVerified)} className="inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-2.5 font-semibold text-primary-fg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60">{busy ? t('common.loading') : t(step === 'purpose' ? 'setup.continue' : 'setup.review')}<ArrowRight className="h-4 w-4" aria-hidden="true" /></button>}
+                        {step !== 'purpose' && <Button type="button" variant="secondary" disabled={busy} onClick={() => { setStep(steps[Math.max(0, currentStep - 1)]); setPlan(null); setAcknowledged(false); }}>{t('setup.back')}</Button>}
+                        {step === 'review' ? <Button type="button" variant="primary" disabled={busy || !plan?.can_start || !acknowledged} onClick={() => void start()}>{t('setup.start')}</Button> : <button type="submit" disabled={busy || (step === 'components' && (!catalog || catalog.inventory_state !== 'ready' || emptySelectionInvalid)) || (step === 'access' && (!!dnsSelectionError || (draft.dns_mode === 'existing' && !remoteVerified)))} className="inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-2.5 font-semibold text-primary-fg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60">{busy ? t('common.loading') : t(step === 'purpose' || step === 'components' ? 'setup.continue' : 'setup.review')}<ArrowRight className="h-4 w-4" aria-hidden="true" /></button>}
                     </div>
                 </form>}
             {!completed && !hasOperation && <ServerSetupManualAction snapshot={snapshot} onChosen={next => { accept(next); setManualExit(true); }} />}

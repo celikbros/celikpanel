@@ -1,3 +1,4 @@
+import { systemUpdateFailureMessage } from '../lib/systemUpdateFailure';
 import {
     createContext,
     useCallback,
@@ -1829,7 +1830,9 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
             : t('panelUpdate.title');
     const message = pendingReload || requiredReloadMarker
         ? t('panelUpdate.reloading', { version: (pendingReload ?? requiredReloadMarker)!.target.version })
-        : displayedTerminal?.message ?? view.message;
+        : displayedTerminal?.kind === 'failed'
+            ? systemUpdateFailureMessage(displayedTerminal.message, t)
+            : displayedTerminal?.message ?? view.message;
     const backgroundVisible = navigationLease.released && !authPaused && !blocking && exactMarker !== null
         && (provisional !== null || marker !== null || pendingReload !== null
             || requiredReloadMarker !== null || terminalBlocks);
@@ -1855,7 +1858,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                     >
                         {message}
                     </p>
-                    <p className={'mt-2 text-xs text-fg-subtle'}>{t('panelUpdate.watch')}</p>
+                    <p className={'mt-2 text-xs text-fg-subtle'}>{t(terminalKind === 'failed' ? 'panelUpdate.failureAcknowledgement' : 'panelUpdate.watch')}</p>
                     <p className={'mt-3 font-mono text-xs text-fg'}>
                         {exactMarker.target.version} · T+{formatElapsed(exactMarker.created_at, now)}
                     </p>
@@ -1863,7 +1866,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                     {displayedTerminal?.kind === 'failed' && (
                         <div className={'mt-3 flex justify-end'}>
                             <Button type={'button'} onClick={() => void dismissTerminal()}>
-                                {t('dnssrv.continue')}
+                                {t('panelUpdate.dismissFailure')}
                             </Button>
                         </div>
                     )}
@@ -1920,7 +1923,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                             {message}
                         </p>
                         <p className="mt-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-xs leading-5 text-fg-subtle">
-                            {t('panelUpdate.interactionLocked')}
+                            {t(terminalKind === 'failed' ? 'panelUpdate.failureAcknowledgement' : 'panelUpdate.interactionLocked')}
                         </p>
                         <dl className="mt-4 grid grid-cols-2 gap-3 rounded-lg border border-border bg-surface-subtle p-3 text-left text-xs">
                             <div>
@@ -1945,7 +1948,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                         {displayedTerminal?.kind === 'failed' && (
                             <div className="mt-5 flex justify-center">
                                 <Button type="button" onClick={() => void dismissTerminal()}>
-                                    {t('dnssrv.continue')}
+                                    {t('panelUpdate.dismissFailure')}
                                 </Button>
                             </div>
                         )}

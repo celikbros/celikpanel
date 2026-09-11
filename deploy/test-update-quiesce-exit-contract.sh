@@ -225,6 +225,7 @@ source <(extract_function preserve_quiesce_recovery_marker)
 source <(extract_function fail_closed_quiesce_abort)
 source <(extract_function abort_quiesce_before_active)
 source <(extract_function classify_durable_update_marker)
+source <(extract_function report_update_failure)
 source <(extract_function on_exit)
 
 declare -A saved_active_states=()

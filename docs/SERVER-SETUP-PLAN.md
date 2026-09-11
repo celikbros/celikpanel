@@ -25,6 +25,15 @@ its draft, remove readiness checks, change licensing, or run host operations.
 An accepted active/waiting execution must be resolved before changing preference.
 See [implementation and checks](SERVER-SETUP-GUIDANCE.md).
 
+## September 11 follow-up: custom component selection (Alpha67 release source)
+
+The operator approved customizing a purpose profile and a fifth **Custom setup**
+choice inside the wizard. A dedicated Components step resolves dependencies,
+explains conflicts and preserves installed software. Access, DNS, review and
+verification remain in the same guided flow. Components remains the place for
+later service administration. See the [customization contract and validation
+boundary](SERVER-SETUP-CUSTOMIZATION.md).
+
 ## 1. Outcome and audience
 
 A server administrator should reach a usable, secured environment without
