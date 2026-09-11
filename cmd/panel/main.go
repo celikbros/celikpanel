@@ -1158,6 +1158,7 @@ func main() {
 	http.HandleFunc("/api/v1/dns/remote/receiver/publish", panel.handleRemoteDNSMachine)
 	http.HandleFunc(serverSetupPath, panel.handleServerSetup)
 	http.HandleFunc(serverSetupPath+"/guidance", panel.handleServerSetupGuidance)
+	http.HandleFunc(serverSetupPath+"/components", panel.handleServerSetupComponents)
 	http.HandleFunc(serverSetupPath+"/complete", panel.handleServerSetupComplete)
 	http.HandleFunc(serverSetupPath+"/revise", panel.handleServerSetupRevise)
 	http.HandleFunc(serverSetupPath+"/plan", panel.handleServerSetupPlan)

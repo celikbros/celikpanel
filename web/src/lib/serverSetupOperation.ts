@@ -6,6 +6,7 @@ export interface ServerSetupPlan {
     steps: SetupPlanStep[]; blockers: string[]; can_start: boolean;
     tcp_ports: number[]; udp_ports: number[]; preserve_ssh: boolean;
     persist_firewall: boolean; hostname_change?: string; contact_email: string;
+    components?: { id: string; selected: boolean; required: boolean; installed: boolean }[];
     remote_dns_connection?: { id: string; endpoint: string; nameservers: string[] };
 }
 export interface ServerSetupExecution {
@@ -33,6 +34,8 @@ export function decodeSetupPlan(value: unknown, revision: number): ServerSetupPl
         || typeof value.contact_email !== 'string'
         || (value.remote_dns_connection !== undefined && (!isRecord(value.remote_dns_connection) || !identity(value.remote_dns_connection.id) || typeof value.remote_dns_connection.endpoint !== 'string' || !Array.isArray(value.remote_dns_connection.nameservers) || value.remote_dns_connection.nameservers.some(name => typeof name !== 'string')))
         || (value.hostname_change !== undefined && typeof value.hostname_change !== 'string')) return null;
+    if (value.components !== undefined && (!Array.isArray(value.components) || value.components.length > 80
+        || value.components.some(item => !isRecord(item) || typeof item.id !== 'string' || typeof item.selected !== 'boolean' || typeof item.required !== 'boolean' || typeof item.installed !== 'boolean'))) return null;
     return value as unknown as ServerSetupPlan;
 }
 export function decodeSetupExecution(value: unknown, marker?: SetupStartMarker | null): ServerSetupExecution | null {

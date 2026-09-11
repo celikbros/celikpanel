@@ -79,3 +79,31 @@ func TestRunSystemUpdateInstallerReportsTerminalFailureFromBoundedTail(t *testin
 		t.Fatalf("installer reported a stale output line: %v", err)
 	}
 }
+
+func TestReviewedUpdaterFailurePreservesCauseAndRecoverySummary(t *testing.T) {
+	for _, state := range []string{"unchanged", "recovery_required"} {
+		summary := "!! CELIKPANEL_UPDATE_FAILURE code=package_manager_busy state=" + state + " reason=agent/package state changed before freeze detail=the host package manager is active"
+		var output boundedSystemUpdateBuffer
+		_, _ = output.Write([]byte(strings.Repeat("progress\n", 1000) +
+			"!! installed agent could not prepare the managed BIND generation root\n" +
+			"!! cleanup outcome\n" + summary + "\n"))
+		// Models the previously installed worker, which keeps the last line.
+		if got := sanitizedSystemUpdateError(errors.New(string(output.raw))); got != summary {
+			t.Fatalf("legacy parser lost cause/outcome: %q", got)
+		}
+		if got := reviewedUpdaterFailure(output.raw); got != summary {
+			t.Fatalf("new parser lost cause/outcome: %q", got)
+		}
+	}
+}
+
+func TestReviewedUpdaterFailureSummaryRetainsBINDInnerCause(t *testing.T) {
+	const inner = "Prepare BIND generation root under external lock: committed BIND ownership differs from its exact active state"
+	const wrapper = "installed agent could not prepare the managed BIND generation root"
+	output := "2026/09/11 10:19:23 " + inner + "\n!! " + wrapper + "\n" +
+		"!! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=" + wrapper + " detail=\n"
+	got := reviewedUpdaterFailure([]byte(output))
+	if !strings.Contains(got, inner) || !strings.Contains(got, "state=recovery_required") {
+		t.Fatalf("BIND inner cause or recovery outcome lost: %s", got)
+	}
+}

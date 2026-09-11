@@ -55,6 +55,7 @@ type serverSetupPlan struct {
 	BuildCommit         string                          `json:"build_commit"`
 	ContactEmail        string                          `json:"contact_email"`
 	Actor               serviceOperationActor           `json:"actor"`
+	Components          []serverSetupPlanComponent      `json:"components,omitempty"`
 }
 
 type serverSetupExecutionStep struct {
@@ -246,7 +247,7 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 			if state.ActiveEngine != "" && !setupDNSDraftMatchesState(draft, request, local, state) {
 				addBlocker("server_setup_existing_dns_requires_migration")
 			}
-			if draft.Purpose != "dns" && draft.DNSRole == "secondary" {
+			if serverSetupNeedsDNSPublisher(draft) && draft.DNSRole == "secondary" {
 				addBlocker("server_setup_hosting_requires_dns_publisher")
 			}
 		}
@@ -268,6 +269,17 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 	installed := make(map[string]bool, len(installedIDs))
 	for _, id := range installedIDs {
 		installed[id] = true
+	}
+	if draft.Customization != nil && serverSetupHasComponent(draft, "node") {
+		var versions transport.NodeVersionsResponse
+		if err := p.callAgentContext(ctx, "Agent.ListNodeVersions", &transport.Empty{}, &versions); err != nil {
+			return plan, err
+		}
+		for _, version := range versions.Installed {
+			if strings.TrimPrefix(version, "v") == strings.TrimPrefix(draft.NodeVersion, "v") {
+				installed["node"] = true
+			}
+		}
 	}
 	planned := make(map[string]bool, len(installed))
 	for id := range installed {
@@ -303,44 +315,83 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 		planned[id] = true
 	}
 	addStep("dns", draft.DNSMode, "")
-	switch draft.Purpose {
-	case "web", "web_mail":
-		addService("nginx")
-		addService("php-fpm")
-		addService("mariadb")
-	case "application":
-		addService("nginx")
-		if !nodeSemverRe.MatchString(draft.NodeVersion) {
-			addBlocker("server_setup_node_version_required")
+	if draft.Customization != nil {
+		resolved, err := serverSetupResolvedComponents(draft)
+		if err != nil {
+			addBlocker("server_setup_service_unknown")
 		}
-		if managed := core.GetManagedServiceByID("node"); managed != nil {
-			if _, reason := core.ManagedServiceInstallBlockForHost(managed, host); reason != "" {
-				addBlocker("server_setup_service_unsupported:node")
+		if len(resolved) == 0 && !(draft.Purpose == "custom" && draft.DNSMode == "local") && draft.Purpose != "dns" {
+			addBlocker("server_setup_components_required")
+		}
+		for _, id := range resolved {
+			plan.Components = append(plan.Components, serverSetupPlanComponent{ID: id, Selected: slices.Contains(draft.Customization.Components, id), Required: !slices.Contains(draft.Customization.Components, id), Installed: installed[id]})
+			switch id {
+			case "postfix", "dovecot", "rspamd", "roundcube":
+				// These components are installed only by the audited mail profile.
+			case "node":
+				if !nodeSemverRe.MatchString(draft.NodeVersion) {
+					addBlocker("server_setup_node_version_required")
+				}
+				managed := core.GetManagedServiceByID(id)
+				if _, reason := core.ManagedServiceInstallBlockForHost(managed, host); reason != "" {
+					addBlocker("server_setup_service_unsupported:" + id)
+				}
+				if len(core.RequirementsMissing(managed, planned)) != 0 {
+					addBlocker("server_setup_dependency_missing:" + id)
+				}
+				addStep("runtime", "node", draft.NodeVersion)
+				planned[id] = true
+			default:
+				addService(id)
 			}
 		}
-		addStep("runtime", "node", draft.NodeVersion)
-		if draft.Database != "" && draft.Database != "none" {
-			if draft.Database != "mariadb" && draft.Database != "postgresql" {
-				addBlocker("server_setup_database_invalid")
-			} else {
-				addService(draft.Database)
-			}
+		for _, id := range serverSetupRequiredComponents {
+			plan.Components = append(plan.Components, serverSetupPlanComponent{ID: id, Required: true, Installed: installed[id]})
 		}
-	case "dns":
-	default:
-		addBlocker("server_setup_purpose_invalid")
+	} else {
+		switch draft.Purpose {
+		case "web", "web_mail":
+			addService("nginx")
+			addService("php-fpm")
+			addService("mariadb")
+		case "application":
+			addService("nginx")
+			if !nodeSemverRe.MatchString(draft.NodeVersion) {
+				addBlocker("server_setup_node_version_required")
+			}
+			if managed := core.GetManagedServiceByID("node"); managed != nil {
+				if _, reason := core.ManagedServiceInstallBlockForHost(managed, host); reason != "" {
+					addBlocker("server_setup_service_unsupported:node")
+				}
+			}
+			addStep("runtime", "node", draft.NodeVersion)
+			if draft.Database != "" && draft.Database != "none" {
+				if draft.Database != "mariadb" && draft.Database != "postgresql" {
+					addBlocker("server_setup_database_invalid")
+				} else {
+					addService(draft.Database)
+				}
+			}
+		case "dns":
+		default:
+			addBlocker("server_setup_purpose_invalid")
+		}
 	}
-	if draft.Purpose == "web_mail" {
+	mailProfiles := serverSetupMailProfileIDs(draft)
+	if len(mailProfiles) > 0 {
 		if canonical, err := hostname.CanonicalFQDN(draft.MailHostname); err != nil || canonical != draft.MailHostname {
 			addBlocker("server_setup_mail_hostname_invalid")
 		}
 		plan.HostnameChange = draft.MailHostname
-		for _, profileID := range []string{core.MailProfileWebmail, core.MailProfileProtected} {
+		for _, profileID := range mailProfiles {
 			profile, _ := mailProfileByID(profileID)
 			for _, id := range profile.Services {
 				managed := core.GetManagedServiceByID(id)
 				if _, reason := core.ManagedServiceInstallBlockForHost(managed, host); reason != "" {
 					addBlocker("server_setup_service_unsupported:" + id)
+				}
+				if draft.Customization != nil && len(core.RequirementsMissing(managed, planned)) > 0 {
+					addBlocker("server_setup_dependency_missing:" + id)
 				}
 				if taken := core.SeatTakenBy(managed, planned); taken != "" {
 					addBlocker("server_setup_service_conflict:" + id + ":" + taken)
@@ -376,7 +427,7 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 	if !cert.HTTPSEnabled || cert.SelfSigned || !slices.Contains(cert.DNSNames, draft.PanelDomain) || !cert.ExpiresAt.After(time.Now().Add(24*time.Hour)) {
 		addStep("panel_certificate", draft.PanelDomain, "")
 	}
-	if draft.Purpose == "web_mail" {
+	if len(mailProfiles) > 0 {
 		var agent transport.AgentVersionResponse
 		if err := p.callAgentContext(ctx, "Agent.Version", &transport.Empty{}, &agent); err != nil {
 			return plan, err

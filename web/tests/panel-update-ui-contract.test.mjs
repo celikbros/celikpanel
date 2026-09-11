@@ -154,7 +154,7 @@ test('terminal failure remains explicit until acknowledgement and never reloads'
     assert.doesNotMatch(failure, /schedulePostUpdateReload/);
     assert.match(tracker, /terminal\.kind === 'failed'/);
     assert.match(tracker, /onClick=\{\(\) => void dismissTerminal\(\)\}/);
-    assert.match(tracker, /t\('dnssrv\.continue'\)/);
+    assert.match(tracker, /t\('panelUpdate\.dismissFailure'\)/);
     assert.match(tracker, /outcome\.message/);
 });
 

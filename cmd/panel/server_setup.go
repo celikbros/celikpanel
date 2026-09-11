@@ -19,20 +19,21 @@ const serverSetupPath = "/api/v1/setup"
 var errServerSetupConflict = errors.New("server setup changed; reload the current plan")
 
 type serverSetupDraft struct {
-	Purpose               string `json:"purpose"`
-	RemoteDNSConnectionID string `json:"remote_dns_connection_id"`
-	PanelDomain           string `json:"panel_domain"`
-	MailHostname          string `json:"mail_hostname"`
-	DNSMode               string `json:"dns_mode"`
-	DNSEngine             string `json:"dns_engine"`
-	DNSRole               string `json:"dns_role"`
-	NS1                   string `json:"ns1"`
-	NS2                   string `json:"ns2"`
-	LocalIP               string `json:"local_ip"`
-	PeerIP                string `json:"peer_ip"`
-	PeerNS                string `json:"peer_ns"`
-	NodeVersion           string `json:"node_version"`
-	Database              string `json:"database"`
+	Purpose               string                    `json:"purpose"`
+	RemoteDNSConnectionID string                    `json:"remote_dns_connection_id"`
+	PanelDomain           string                    `json:"panel_domain"`
+	MailHostname          string                    `json:"mail_hostname"`
+	DNSMode               string                    `json:"dns_mode"`
+	DNSEngine             string                    `json:"dns_engine"`
+	DNSRole               string                    `json:"dns_role"`
+	NS1                   string                    `json:"ns1"`
+	NS2                   string                    `json:"ns2"`
+	LocalIP               string                    `json:"local_ip"`
+	PeerIP                string                    `json:"peer_ip"`
+	PeerNS                string                    `json:"peer_ns"`
+	NodeVersion           string                    `json:"node_version"`
+	Database              string                    `json:"database"`
+	Customization         *serverSetupCustomization `json:"customization,omitempty"`
 }
 
 type serverSetupCheck struct {
@@ -73,7 +74,7 @@ func canonicalServerSetupDraft(d serverSetupDraft) (serverSetupDraft, error) {
 	if d.DNSRole == "" {
 		d.DNSRole = "primary"
 	}
-	if !stringIn(d.Purpose, "web", "web_mail", "application", "dns") || !stringIn(d.DNSMode, "local", "existing", "external") || !stringIn(d.DNSEngine, "", "pdns", "bind") || !stringIn(d.DNSRole, "", "primary", "secondary") || !stringIn(d.Database, "", "mariadb", "postgresql") {
+	if !stringIn(d.Purpose, "web", "web_mail", "application", "dns", "custom") || !stringIn(d.DNSMode, "local", "existing", "external") || !stringIn(d.DNSEngine, "", "pdns", "bind") || !stringIn(d.DNSRole, "", "primary", "secondary") || !stringIn(d.Database, "", "mariadb", "postgresql") {
 		return d, errors.New("invalid setup choice")
 	}
 	for _, value := range []*string{&d.PanelDomain, &d.MailHostname, &d.NS1, &d.NS2, &d.PeerNS} {
@@ -103,6 +104,14 @@ func canonicalServerSetupDraft(d serverSetupDraft) (serverSetupDraft, error) {
 		if !(c >= '0' && c <= '9') && c != '.' && c != 'v' {
 			return d, errors.New("invalid runtime version")
 		}
+	}
+	var err error
+	d.Customization, err = canonicalServerSetupCustomization(d.Customization)
+	if err != nil {
+		return d, err
+	}
+	if d.Purpose == "custom" && d.Customization == nil {
+		d.Customization = &serverSetupCustomization{Components: []string{}}
 	}
 	return d, nil
 }

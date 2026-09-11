@@ -72,9 +72,56 @@ release_transaction_token=
 verified_snapshot=
 recovery_snapshot_dir=
 rescue_snapshot=
+# Keep the causal failure across cleanup. Installed older agents retain only
+# the final output line, so emit a bounded summary after recovery completes.
+update_failure_reason=
+update_failure_detail=
 die() {
+    [[ -n "${update_failure_reason:-}" ]] || update_failure_reason=$*
     echo "!! $*" >&2
     exit 1
+}
+
+run_update_idle_probe() {
+    local output
+    update_failure_detail=
+    if output=$("$@" 2>&1); then
+        printf '%s\n' "$output"
+        return 0
+    fi
+    update_failure_detail=$output
+    if [[ ${#output} -gt 2048 ]]; then
+        update_failure_detail=${output: -2048}
+    fi
+    printf '%s\n' "$update_failure_detail" >&2
+    return 1
+}
+
+report_update_failure() {
+    local status=$1 marker_phase=$2 state=recovery_required code=update_failed reason detail
+    [[ "$status" -ne 0 ]] || return 0
+    if [[ "$marker_phase" == none && ${mutation_started:-0} -eq 0 &&
+          ${transaction_started:-0} -eq 0 && ${quiesce_abort_failed:-0} -eq 0 &&
+          ${transaction_completion_verified:-0} -eq 0 && ${scheduler_restore_verified:-0} -eq 0 ]]; then
+        state=unchanged
+    fi
+    if [[ "${update_failure_detail:-}" == *': the host package manager is active'* ]]; then
+        code=package_manager_busy
+    fi
+    reason=${update_failure_reason:-updater command failed; inspect the update worker log}
+    detail=${update_failure_detail:-}
+    reason=${reason//$'\n'/ }; reason=${reason//$'\r'/ }
+    detail=${detail//$'\n'/ }; detail=${detail//$'\r'/ }
+    # Older panels accept only short, path-free summaries. Keep this known
+    # transient cause readable even when upgrading from those installed builds.
+    if [[ "$code" == package_manager_busy ]]; then
+        reason='the host package manager is active'
+        detail=
+    fi
+    # Preserve both cause and recovery state within the older agent's 1024-byte
+    # error limit, even after its prefix. ASCII diagnostics remain compatible.
+    LC_ALL=C printf '!! CELIKPANEL_UPDATE_FAILURE code=%s state=%s reason=%.300s detail=%.450s\n' \
+        "$code" "$state" "$reason" "$detail" >&2
 }
 
 validate_exact_systemctl() {
@@ -1925,13 +1972,13 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
 
     if [[ "$pending_snapshot_transition" == normal ]]; then
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
+            run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
             || die "pending normal update panel ledger is not idle"
     elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
         :
     elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
         :
     else
         die "pending pre-ledger update database is neither exact pre-ledger nor normal"
@@ -2262,6 +2309,7 @@ on_exit() {
         preserve_staging=1
         stop_release_coordinators_fail_closed
         echo "!! Durable update marker is ambiguous or changed; recovery state was preserved." >&2
+        report_update_failure 1 ambiguous
         exit 1
     fi
     case "$marker_phase" in
@@ -2351,6 +2399,7 @@ on_exit() {
             ;;
     esac
     cleanup_incomplete
+    report_update_failure "$final_status" "$marker_phase"
     exit "$final_status"
 }
 trap on_exit EXIT
@@ -2488,22 +2537,22 @@ if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
         "$SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
             || fail_before_active "panel is not at the exact supported schema version 17; schema17 bootstrap refused"
     elif ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
         fail_before_active "panel is not at exact pre-ledger schema version 20; bootstrap refused"
     fi
     [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
         || fail_before_active "durable agent ledger already exists; pre-ledger bootstrap refused"
     if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
-        "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle; then
+        run_update_idle_probe "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle; then
         fail_before_active "pre-ledger agent/package state is not idle; bootstrap refused"
     fi
 else
     if ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
         fail_before_active "panel service operations are not idle; update refused"
     fi
     if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
-        "$PREFLIGHT_AGENT" --check-service-mutation-idle; then
+        run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle; then
         fail_before_active "agent/package mutations are not idle; update refused"
     fi
 fi
@@ -2512,13 +2561,13 @@ acquire_release_mutation_lock
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock; then
+        run_update_idle_probe "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock; then
         fail_before_active "pre-ledger agent/package state changed before freeze"
     fi
 else
     if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock; then
+        run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock; then
         fail_before_active "agent/package state changed before freeze"
     fi
 fi
@@ -2538,24 +2587,24 @@ if [[ "$transaction_phase" == quiesce ]]; then
             "$SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
                 || fail_before_active "final frozen panel exact schema17 proof failed"
         elif ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
+            run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
             fail_before_active "final frozen panel pre-ledger idle proof failed"
         fi
         [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
             || fail_before_active "agent ledger appeared during pre-ledger freeze"
         if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
             CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-            "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock; then
+            run_update_idle_probe "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock; then
             fail_before_active "final frozen pre-ledger agent idle proof failed"
         fi
     else
         if ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
+            run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
             fail_before_active "final frozen panel idle proof failed"
         fi
         if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
             CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-            "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock; then
+            run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock; then
             fail_before_active "final frozen agent idle proof failed"
         fi
     fi
@@ -2615,11 +2664,11 @@ if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
         || die "durable agent ledger already exists after pre-ledger stop"
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
-        "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle \
+        run_update_idle_probe "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle \
         || die "pre-ledger agent/package state changed while stopping"
 else
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
-        "$PREFLIGHT_AGENT" --check-service-mutation-idle \
+        run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle \
         || die "agent/package mutations changed while stopping"
 fi
 acquire_release_mutation_lock
@@ -2629,20 +2678,20 @@ if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
             || die "stopped panel exact schema17 proof failed"
     else
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
+            run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
             || die "stopped panel pre-ledger idle proof failed"
     fi
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
+        run_update_idle_probe "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
         || die "stopped pre-ledger agent idle proof failed"
 else
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
         || die "stopped panel idle proof failed"
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock \
+        run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock \
         || die "stopped agent idle proof failed"
 fi
 
@@ -2698,18 +2747,18 @@ else
                 || die "agent ledger appeared during pre-ledger durable recovery snapshot"
             CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
                 CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-                "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
+                run_update_idle_probe "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
                 || die "pre-ledger agent/package state changed during durable recovery snapshot"
             CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-                "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
+                run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
                 || die "pre-ledger panel service-operation state changed during durable recovery snapshot"
         else
             CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
                 CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-                "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock \
+                run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock \
                 || die "agent/package mutation state changed during durable recovery snapshot"
             CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-                "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
+                run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
                 || die "panel service-operation state changed during durable recovery snapshot"
         fi
         verify_recovery_snapshot "$rescue_snapshot"
@@ -3094,11 +3143,11 @@ verify_installed_release_artifacts
 
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
         || die "pre-ledger panel database changed before the controlled start"
 else
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
         || die "installed panel durable ledger is not ready before controlled start"
 fi
 wait_for_post_apply_mutation_idle \

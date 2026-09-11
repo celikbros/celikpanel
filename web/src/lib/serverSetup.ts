@@ -1,8 +1,9 @@
-export const setupPurposes = ['web', 'web_mail', 'application', 'dns'] as const;
+export const setupPurposes = ['web', 'web_mail', 'application', 'dns', 'custom'] as const;
 export type SetupPurpose = typeof setupPurposes[number];
 export type SetupDNSMode = 'local' | 'existing' | 'external';
 export interface ServerSetupDraft {
     purpose: SetupPurpose;
+    customization?: { components: string[] };
     panel_domain: string;
     mail_hostname: string;
     dns_mode: SetupDNSMode;
@@ -48,6 +49,9 @@ export function decodeServerSetup(value: unknown): ServerSetupSnapshot | null {
         || !['bind', 'pdns'].includes(String(draft.dns_engine))
         || !['primary', 'secondary'].includes(String(draft.dns_role))
         || draftStrings.some(key => typeof draft[key] !== 'string')) return null;
+    if (draft.customization !== undefined && (!record(draft.customization) || !Array.isArray(draft.customization.components)
+        || draft.customization.components.length > 80 || draft.customization.components.some(id => typeof id !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(id))
+        || new Set(draft.customization.components).size !== draft.customization.components.length)) return null;
     if (value.checks.some(check => !record(check) || typeof check.id !== 'string'
         || !['ready', 'action_required', 'unknown'].includes(String(check.state)) || typeof check.code !== 'string')) return null;
     if (value.server_ip !== undefined && typeof value.server_ip !== 'string') return null;
@@ -64,13 +68,19 @@ export function shouldOpenServerSetup(snapshot: ServerSetupSnapshot, pathname: s
     return (active || needsChoice || (snapshot.required && snapshot.guidance !== 'manual'))
         && pathname !== '/setup' && !isSetupRecoveryPath(pathname);
 }
-export function setupNextPath(purpose: SetupPurpose): string {
-    return purpose === 'dns' ? '/settings?section=dns' : '/domains';
+export function setupNextPath(purpose: SetupPurpose, selected?: ReadonlySet<string>): string {
+    if (selected) {
+        if (['nginx', 'node', 'phpmyadmin', 'phppgadmin', 'roundcube'].some(id => selected.has(id))) return '/domains';
+        if (selected.size === 0) return '/settings?section=dns';
+        return '/services';
+    }
+    return purpose === 'dns' ? '/settings?section=dns' : purpose === 'custom' ? '/services' : '/domains';
 }
 export function chooseSetupPurpose(draft: ServerSetupDraft, purpose: SetupPurpose): ServerSetupDraft {
     return {
         ...draft, purpose,
+        customization: purpose === 'custom' ? { components: [] } : undefined,
         dns_mode: purpose === 'dns' ? 'local' : draft.dns_mode,
-        database: purpose === 'dns' ? '' : draft.database || 'mariadb',
+        database: purpose === 'dns' || purpose === 'custom' ? '' : draft.database || 'mariadb',
     };
 }

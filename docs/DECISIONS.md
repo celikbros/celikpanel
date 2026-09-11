@@ -39,6 +39,13 @@ setup. This changes navigation only: readiness, license enforcement, persisted
 drafts and active-operation recovery remain independent. See
 [guidance preference](SERVER-SETUP-GUIDANCE.md).
 
+**September 11 customization follow-up (Alpha67 release source).** Profiles can be
+customized and an explicit Custom setup choice keeps component selection inside
+the wizard. Dependencies and conflicts use the managed-service policy; clearing
+a selection never removes an installed service. The final review and readiness
+checks follow the selected components. See [scope and local
+evidence](SERVER-SETUP-CUSTOMIZATION.md).
+
 **Scope and proof.** The approved sequence, current implementation gaps,
 acceptance cases and implementation order are in
 [Guided server setup](SERVER-SETUP-PLAN.md). This decision records product intent,

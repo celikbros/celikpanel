@@ -178,12 +178,12 @@ policy_previous=$POLICY_PREVIOUS
 policy_previous_version=$POLICY_PREVIOUS_VERSION
 policy_previous_commit=$POLICY_PREVIOUS_COMMIT
 
-[[ "$policy_version" == v0.1.0-alpha.66 ]] || die 'tracked version must be v0.1.0-alpha.66'
-[[ "$policy_current" == 66 ]] || die 'tracked current sequence must be 66'
-[[ "$policy_previous" == 65 ]] || die 'tracked previous sequence must be 65'
-[[ "$policy_previous_version" == v0.1.0-alpha.65 ]] || die 'tracked previous version must be v0.1.0-alpha.65'
-[[ "$policy_previous_commit" == d6923421a7ca915b8112a19f2c07a1fdb36a96f0 ]] \
-  || die 'tracked previous commit must be the immutable Alpha65 release commit'
+[[ "$policy_version" == v0.1.0-alpha.67 ]] || die 'tracked version must be v0.1.0-alpha.67'
+[[ "$policy_current" == 67 ]] || die 'tracked current sequence must be 67'
+[[ "$policy_previous" == 66 ]] || die 'tracked previous sequence must be 66'
+[[ "$policy_previous_version" == v0.1.0-alpha.66 ]] || die 'tracked previous version must be v0.1.0-alpha.66'
+[[ "$policy_previous_commit" == e3ed58af9c9becb8bf20e6da0a4219204265a283 ]] \
+  || die 'tracked previous commit must be the immutable Alpha66 release commit'
 
 fixture_dir=$(mktemp -d "${TMPDIR:-/tmp}/celikpanel-release-policy.XXXXXXXX")
 cleanup() {
