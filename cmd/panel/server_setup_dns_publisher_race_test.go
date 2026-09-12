@@ -48,7 +48,7 @@ func TestServerSetupPublisherCannotChangeDNSDefaultAfterConcurrentRevision(t *te
 		cancel()
 		select {
 		case <-workerDone:
-		case <-time.After(5*time.Second):
+		case <-time.After(5 * time.Second):
 			t.Error("publisher worker did not stop before fixture cleanup")
 		}
 		remoteDNSExchange = baseExchange
