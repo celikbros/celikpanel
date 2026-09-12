@@ -110,7 +110,7 @@ func (p *Panel) serverSetupCompletionChecks(ctx context.Context, draft serverSet
 		required = []string{"nginx", "php-fpm", "mariadb"}
 	case "application":
 		required = []string{"nginx"}
-		if draft.Database != "" {
+		if draft.Database != "" && draft.Database != "none" {
 			required = append(required, draft.Database)
 		}
 	case "dns":

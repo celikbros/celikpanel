@@ -1926,7 +1926,7 @@ function MailProfileInstallDialog({
     // fully qualified one. A server that does is stated as a fact and left
     // alone. / Sunucudan bir ad yalniz zaten tam nitelikli bir ad tasimiyorsa
     // istenir. Tasiyan bir sunucu bir olgu olarak soylenir ve ona dokunulmaz.
-    const hostnameSettled = mailHostname?.current_usable === true;
+    const hostnameSettled = mailHostname?.source === 'saved' && canonicalMailHostname(mailHostname.hostname) !== null;
     const [hostnameDraft, setHostnameDraft] = useState(mailHostname?.hostname ?? '');
     const [hostnameTouched, setHostnameTouched] = useState(false);
     const canonicalHostname = canonicalMailHostname(hostnameDraft);

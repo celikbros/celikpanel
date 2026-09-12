@@ -310,17 +310,9 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 				serviceMutationMailProfileContains(job, "nginx"))
 
 	case serviceMutationStepSetServerHostname:
-		// A mail profile install is the only work that may rename this server,
-		// and only a profile that actually carries the mail stack. Nothing
-		// else in the product can reach this step.
-		// Bu sunucuyu yeniden adlandırabilecek tek iş bir posta profili
-		// kurulumudur ve yalnız posta yığınını gerçekten taşıyan bir profil.
-		// Üründe bu adıma ulaşabilecek başka hiçbir şey yoktur.
-		if claim.target != "server-hostname" || claim.packageName != "" || claim.action != "set" {
-			return false
-		}
-		return serviceMutationMailProfileContains(job, "postfix") &&
-			serviceMutationMailProfileContains(job, "dovecot")
+		// Mail installation has no authority to rename the operating system.
+		// Keep the old RPC recognizable, but deny it even to recovered mail jobs.
+		return false
 
 	case serviceMutationStepConfigureMailStack:
 		if claim.target != "mail-stack" || claim.packageName != "" || claim.action != "configure" {

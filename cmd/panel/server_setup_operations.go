@@ -382,7 +382,6 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 		if canonical, err := hostname.CanonicalFQDN(draft.MailHostname); err != nil || canonical != draft.MailHostname {
 			addBlocker("server_setup_mail_hostname_invalid")
 		}
-		plan.HostnameChange = draft.MailHostname
 		for _, profileID := range mailProfiles {
 			profile, _ := mailProfileByID(profileID)
 			for _, id := range profile.Services {

@@ -411,6 +411,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                                 <fieldset className="min-w-0 space-y-4">
                                     <legend className="mb-0 font-semibold">{t('setup.thisServer')}</legend>
                                     <SetupSelect name="dns_role" label={t('setup.dnsRole')} value={draft.dns_role} onChange={value => { setDraft(previous => changeSetupDNSRole(previous, value as 'primary' | 'secondary')); setPlan(null); setAcknowledged(false); setError(''); }}><option value="primary">{t('setup.primary')}</option><option value="secondary" disabled={needsDNSPublisher && draft.dns_role !== 'secondary'}>{t('setup.secondary')}</option></SetupSelect>
+                                    {needsDNSPublisher && <p className="text-sm leading-6 text-fg-muted" role="note">{t('setup.secondaryUnavailable')}</p>}
                                     <SetupInput name={dnsNames.localKey} label={t('setup.nameserverName')} value={draft[dnsNames.localKey]} onChange={value => change(dnsNames.localKey, value)} placeholder="ns1.example.com" required />
                                     <SetupInput name="local_ip" label={t('setup.publicIPv4')} value={draft.local_ip} onChange={value => change('local_ip', value)} required />
                                     {detectedIP && draft.local_ip === detectedIP && <p className="text-xs leading-5 text-fg-muted">{t('setup.detectedIPHelp')}</p>}

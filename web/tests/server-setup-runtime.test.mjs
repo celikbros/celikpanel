@@ -691,3 +691,35 @@ test('a conflicting saved peer remains visible and blocks review until explicitl
         assert.equal(calls.filter(c => c.url === '/api/v1/setup/plan').length, 1);
     } finally { await cleanup(); }
 });
+
+
+test('default web profile explains secondary restriction and DNS profile enables either engine and role', async () => {
+    init();
+    try {
+        await mount(); await submit();
+        const secondary = () => tree.root.findByProps({id:'setup-dns_role'}).findAllByType('option').find(option => option.props.value === 'secondary');
+        assert.equal(secondary().props.disabled, true);
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.secondaryUnavailable'));
+        await act(async () => findButton('setup.back').props.onClick());
+        await act(async () => tree.root.findByProps({name:'setup-purpose',value:'dns'}).props.onChange());
+        await submit();
+        assert.equal(secondary().props.disabled, false);
+        assert.equal(JSON.stringify(tree.toJSON()).includes('setup.secondaryUnavailable'), false);
+        assert.equal(tree.root.findAllByProps({id:'setup-mail_hostname'}).length, 0);
+        await act(async () => tree.root.findByProps({id:'setup-dns_role'}).props.onChange({target:{value:'secondary'}}));
+        for (const engine of ['bind','pdns']) {
+            await act(async () => tree.root.findByProps({id:'setup-dns_engine'}).props.onChange({target:{value:engine}}));
+            assert.equal(tree.root.findByProps({id:'setup-dns_role'}).props.value, 'secondary');
+        }
+        assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
+    } finally { await cleanup(); }
+});
+
+test('changing from customized mail hosting to DNS or web clears inherited mail components', () => {
+    const old = {...fresh().draft,purpose:'web_mail',customization:{components:['postfix','roundcube']},mail_hostname:'mail.example.com'};
+    for (const purpose of ['dns','web']) {
+        const draft = setup.chooseSetupPurpose(old,purpose);
+        assert.equal(draft.customization,undefined);
+        assert.equal(draft.purpose,purpose);
+    }
+});

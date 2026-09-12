@@ -263,7 +263,7 @@ func TestServerSetupCustomizationMailUsesOnlyAuditedProfiles(t *testing.T) {
 			if !slices.Equal(serverSetupMailProfileIDs(plan.Draft), test.profiles) {
 				t.Fatal("mail readiness requested different profile receipts")
 			}
-			if plan.HostnameChange != "mail.example.test" || !serverSetupHasComponent(plan.Draft, "postfix") || !serverSetupHasComponent(plan.Draft, "dovecot") {
+			if plan.HostnameChange != "" || !serverSetupHasComponent(plan.Draft, "postfix") || !serverSetupHasComponent(plan.Draft, "dovecot") {
 				t.Fatal("mail identity/core lifecycle missing")
 			}
 		})

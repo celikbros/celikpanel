@@ -150,7 +150,7 @@ test('the mail install dialog asks for the mail hostname when the server has non
   assert.match(operationSource, /mail_hostname: MailHostnameIdentity/);
   assert.match(operationSource, /decodeMailHostnameIdentity\(payload\.mail_hostname\)/);
   assert.match(serviceSource, /decodeMailHostnameIdentity\(payload\.mail_hostname\)/);
-  assert.match(serviceSource, /mailHostname\?\.current_usable === true/);
+  assert.match(serviceSource, /mailHostname\?\.source === 'saved'/);
   assert.match(serviceSource, /id='mail-profile-hostname'/);
   assert.match(serviceSource, /aria-describedby='mail-profile-hostname-hint mail-profile-hostname-note'/);
   assert.match(serviceSource, /aria-invalid=\{hostnameInvalid \|\| undefined\}/);
