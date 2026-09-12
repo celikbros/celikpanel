@@ -1,6 +1,6 @@
 import { setupPurposes, type ServerSetupCheck, type SetupPurpose } from './serverSetup';
 
-export interface SetupPlanStep { id: string; kind: 'dns' | 'service' | 'runtime' | 'mail_profile' | 'firewall' | 'panel_certificate' | 'mail_certificate' | 'verify'; target: string; qualifier?: string }
+export interface SetupPlanStep { id: string; kind: 'dns' | 'dns_publisher' | 'dns_readiness' | 'service' | 'runtime' | 'mail_profile' | 'firewall' | 'panel_certificate' | 'mail_certificate' | 'verify'; target: string; qualifier?: string }
 export interface ServerSetupPlan {
     id: string; version: number; revision: number; purpose: SetupPurpose;
     steps: SetupPlanStep[]; blockers: string[]; can_start: boolean;
@@ -15,7 +15,7 @@ export interface ServerSetupExecution {
     steps: (SetupPlanStep & { status: 'pending' | 'running' | 'failed' | 'succeeded' })[];
     error?: { code: string; message: string }; panel_url?: string; checks?: ServerSetupCheck[];
 }
-const kinds = ['dns', 'service', 'runtime', 'mail_profile', 'firewall', 'panel_certificate', 'mail_certificate', 'verify'];
+const kinds = ['dns', 'dns_publisher', 'dns_readiness', 'service', 'runtime', 'mail_profile', 'firewall', 'panel_certificate', 'mail_certificate', 'verify'];
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const identity = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
 function isStep(value: unknown): value is SetupPlanStep {

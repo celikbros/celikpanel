@@ -115,3 +115,21 @@ test('an unresolved old enrollment cannot block a separately confirmed new code'
         await act(async()=>button('setup.remote.authorize').props.onClick());assert.equal(writes().length,1);assert.equal(JSON.parse(writes()[0].options.body).enrollment_code,'one-time-secret');assert.equal(fixture.value,connection().id);assert.ok(button('setup.remote.resume'),'old durable identity is preserved for recovery');
     }finally{await clean();}
 });
+
+
+test('setup publisher pins the reviewed endpoint and cannot select another ready authority',async()=>{
+    init(); fixture.list=[connection(),connection({id:'b'.repeat(32),endpoint:'https://other.example.com:2083'})];
+    fixture.value='b'.repeat(32);
+    function Scoped(){const[value,setValue]=React.useState(fixture.value);return React.createElement(Connection,{value,requiredEndpoint:'https://dns.example.com:2083',onChange:setValue,onValidityChange:React.useCallback(next=>fixture.validity.push(next),[])});}
+    try{
+        await mount(Scoped);
+        assert.equal(tree.root.findByProps({id:'setup-remote-endpoint'}).props.readOnly,true);
+        assert.equal(tree.root.findByProps({id:'setup-remote-endpoint'}).props.value,'https://dns.example.com:2083');
+        assert.equal(fixture.validity.at(-1),false);
+        const options=tree.root.findByProps({id:'setup-remote-connection'}).findAllByType('option');
+        assert.equal(options.some(item=>item.props.value==='b'.repeat(32)&&!item.props.disabled),false);
+        assert.equal(writes().length,0);
+        await act(async()=>tree.root.findByProps({id:'setup-remote-connection'}).props.onChange({target:{value:'a'.repeat(32)}}));
+        assert.equal(fixture.validity.at(-1),true);
+    }finally{await clean();}
+});

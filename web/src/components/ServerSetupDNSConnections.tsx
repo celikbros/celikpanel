@@ -7,11 +7,11 @@ import { decodeDNSClients, decodeDNSConnection, decodeDNSConnections, remoteDNSE
 
 const remoteErrorKey = (error: unknown): TranslationKey => error instanceof RemoteDNSError && error.code === 'REMOTE_DNS_AUTHORITY_NOT_READY' ? 'setup.remote.authorityNotReady' : 'setup.remote.failed';
 
-export function ServerSetupDNSConnection({ value, onChange, onValidityChange }: { value: string; onChange: (id: string) => void; onValidityChange?: (valid: boolean) => void }) {
+export function ServerSetupDNSConnection({ value, onChange, onValidityChange, requiredEndpoint }: { value: string; onChange: (id: string) => void; onValidityChange?: (valid: boolean) => void; requiredEndpoint?: string }) {
     const { role } = useAuth();
     const { t } = useI18n();
     const [connections, setConnections] = useState<DNSConnection[] | null>(null);
-    const [endpoint, setEndpoint] = useState('');
+    const [endpoint, setEndpoint] = useState(requiredEndpoint || '');
     const [code, setCode] = useState('');
     const [confirmed, setConfirmed] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -45,11 +45,11 @@ export function ServerSetupDNSConnection({ value, onChange, onValidityChange }: 
             .then(payload => {
                 const result = payload as { connection?: unknown; verified?: unknown } | null;
                 const connection = decodeDNSConnection(result?.connection);
-                const valid = result?.verified === true && connection?.id === value && connection.status === 'ready';
+                const valid = result?.verified === true && connection?.id === value && connection.status === 'ready' && (!requiredEndpoint || connection.endpoint === requiredEndpoint);
                 if (current) { setProof(valid ? 'verified' : 'failed'); setProofNameservers(valid && connection ? connection.nameservers : []); onValidityChange?.(valid); }
             }).catch(() => { if (current) { setProof('failed'); onValidityChange?.(false); } });
         return () => { current = false; controller.abort(); };
-    }, [value, role, proofAttempt, onValidityChange]);
+    }, [value, role, proofAttempt, onValidityChange, requiredEndpoint]);
     async function connect(id?: string) {
         const target = remoteDNSEndpoint(endpoint);
         if (inFlight.current || (!id && (!target || !code.trim() || !confirmed || connections === null))) return;
@@ -82,22 +82,23 @@ export function ServerSetupDNSConnection({ value, onChange, onValidityChange }: 
         finally { inFlight.current = false; if (alive.current) setBusy(false); }
     }
     if (role !== 'admin') return null;
-    const ready = connections?.filter(item => item.status === 'ready') || [];
-    const pending = connections?.filter(item => item.status === 'pending') || [];
+    const eligible = connections?.filter(item => !requiredEndpoint || item.endpoint === requiredEndpoint);
+    const ready = eligible?.filter(item => item.status === 'ready') || [];
+    const pending = eligible?.filter(item => item.status === 'pending') || [];
     const selected = ready.find(item => item.id === value);
     const target = remoteDNSEndpoint(endpoint);
     return <fieldset className="space-y-4" disabled={busy}>
-        <legend className="mb-3 font-semibold">{t('setup.remote.title')}</legend>
-        <p className="text-sm leading-6 text-fg-muted">{t('setup.remote.help')}</p>
+        <legend className={requiredEndpoint ? "sr-only" : "mb-3 font-semibold"}>{t('setup.remote.title')}</legend>
+        {!requiredEndpoint && <p className="text-sm leading-6 text-fg-muted">{t('setup.remote.help')}</p>}
         {error && <div role="alert" className="space-y-3 text-sm text-danger"><p>{t(error)}</p><Button type="button" variant="secondary" onClick={() => void load()}>{t('common.retry')}</Button></div>}
-        <label className="block" htmlFor="setup-remote-connection"><span className="mb-2 block text-sm font-medium">{t('setup.remote.choose')}</span><select id="setup-remote-connection" className={`${inputClass} w-full`} value={value} required onChange={event => onChange(event.target.value)}><option value="">{t('setup.remote.choose')}</option>{value && !selected && <option value={value} disabled>{t('setup.remote.selectionUnavailable')}</option>}{ready.map(connection => <option key={connection.id} value={connection.id}>{connection.endpoint}</option>)}</select></label>
+        {(!requiredEndpoint || ready.length > 0 || value) && <label className="block" htmlFor="setup-remote-connection"><span className="mb-2 block text-sm font-medium">{t('setup.remote.choose')}</span><select id="setup-remote-connection" className={`${inputClass} w-full`} value={value} required onChange={event => onChange(event.target.value)}><option value="">{t('setup.remote.choose')}</option>{value && !selected && <option value={value} disabled>{t('setup.remote.selectionUnavailable')}</option>}{ready.map(connection => <option key={connection.id} value={connection.id}>{connection.endpoint}</option>)}</select></label>}
         {proof !== 'idle' && <div className="space-y-2 text-sm" role={proof === 'failed' ? 'alert' : 'status'}><p className={proof === 'failed' ? 'text-danger' : 'text-fg-muted'}>{t(`setup.remote.proof.${proof}`)}</p>{proof === 'failed' && <Button type="button" variant="secondary" onClick={() => setProofAttempt(attempt => attempt + 1)}>{t('common.retry')}</Button>}{proof === 'verified' && selected && <p className="break-words text-fg-muted">{proofNameservers.join(', ')}</p>}</div>}
         {selected && <Button type="button" variant="secondary" onClick={() => setRemove(selected)}>{t('setup.remote.disconnect')}</Button>}
         {pending.map(connection => <div key={connection.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-2 p-4"><p className="min-w-0 break-all text-sm">{connection.endpoint}<span className="mt-1 block text-fg-muted">{t('setup.remote.pending')}</span></p><div className="flex gap-2"><Button type="button" variant="secondary" onClick={() => void connect(connection.id)}>{t('setup.remote.resume')}</Button><Button type="button" variant="secondary" onClick={() => setRemove(connection)}>{t('setup.remote.disconnect')}</Button></div></div>)}
         {remove && <div className="rounded-lg border border-danger/30 p-4 text-sm" role="group" aria-label={t('setup.remote.disconnect')}><p>{t('setup.remote.disconnectConfirm', { endpoint: remove.endpoint })}</p><div className="mt-3 flex flex-wrap gap-3"><Button type="button" variant="danger" onClick={() => void disconnect()}>{t('setup.remote.disconnect')}</Button><Button type="button" variant="secondary" onClick={() => setRemove(null)}>{t('common.cancel')}</Button></div></div>}
         <details className="rounded-lg border border-border p-4" open={ready.length === 0 && pending.length === 0}>
-            <summary className="cursor-pointer text-sm font-semibold text-primary">{t('setup.remote.connect')}</summary>
-            <div className="mt-4 space-y-4"><label className="block" htmlFor="setup-remote-endpoint"><span className="mb-2 block text-sm font-medium">{t('setup.remote.endpoint')}</span><input id="setup-remote-endpoint" type="url" value={endpoint} onChange={event => { setEndpoint(event.target.value); setConfirmed(false); }} placeholder="https://dns-panel.example.com:2083" spellCheck={false} autoCapitalize="none" className={`${inputClass} w-full`} /></label>
+            <summary className="cursor-pointer text-sm font-semibold text-primary">{t(requiredEndpoint ? 'setup.remote.authorize' : 'setup.remote.connect')}</summary>
+            <div className="mt-4 space-y-4"><label className="block" htmlFor="setup-remote-endpoint"><span className="mb-2 block text-sm font-medium">{t('setup.remote.endpoint')}</span><input id="setup-remote-endpoint" type="url" value={endpoint} readOnly={!!requiredEndpoint} onChange={event => { setEndpoint(event.target.value); setConfirmed(false); }} placeholder="https://dns-panel.example.com:2083" spellCheck={false} autoCapitalize="none" className={`${inputClass} w-full`} /></label>
                 <label className="block" htmlFor="setup-remote-code"><span className="mb-2 block text-sm font-medium">{t('setup.remote.code')}</span><input id="setup-remote-code" type="password" value={code} onChange={event => { setCode(event.target.value); setConfirmed(false); }} autoComplete="off" spellCheck={false} autoCapitalize="none" className={`${inputClass} w-full`} /></label>
                 <label className="flex items-start gap-3 text-sm leading-6"><input type="checkbox" checked={confirmed} disabled={!target || !code.trim()} onChange={event => setConfirmed(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span>{t('setup.remote.connectConfirm', { endpoint: target || t('setup.remote.endpoint') })}</span></label>
                 <Button type="button" variant="secondary" disabled={busy || connections === null || !!error || !target || !code.trim() || !confirmed} onClick={() => void connect()}>{t('setup.remote.authorize')}</Button>

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "revision": 1,
+  "origin": "fresh",
+  "status": "draft",
+  "draft": {
+    "purpose": "dns",
+    "remote_dns_connection_id": "",
+    "panel_domain": "panel.dnsprimary.setup.test",
+    "mail_hostname": "",
+    "dns_mode": "local",
+    "dns_engine": "bind",
+    "dns_role": "primary",
+    "ns1": "ns1.setup.test",
+    "ns2": "ns2.setup.test",
+    "local_ip": "192.0.2.10",
+    "peer_ip": "192.0.2.20",
+    "peer_ns": "ns2.setup.test",
+    "node_version": "",
+    "database": ""
+  },
+  "required": true,
+  "guidance": "guided",
+  "checks": []
+}

@@ -32,6 +32,8 @@ type remoteDNSAuthority struct {
 	Engine      string   `json:"engine"`
 	Epoch       int64    `json:"epoch"`
 	Nameservers []string `json:"nameservers"`
+	PrimaryIP   string   `json:"primary_ip,omitempty"`
+	SecondaryIP string   `json:"secondary_ip,omitempty"`
 }
 
 type remoteDNSConnection struct {
@@ -53,7 +55,8 @@ type remoteDNSAcceptRequest struct {
 }
 
 type remoteDNSStatusRequest struct {
-	Revoke bool `json:"revoke,omitempty"`
+	Revoke              bool `json:"revoke,omitempty"`
+	IncludePairIdentity bool `json:"include_pair_identity,omitempty"`
 }
 
 type remoteDNSMachineClaim struct {
@@ -189,6 +192,10 @@ func (p *Panel) remoteDNSClientCredentialMatches(ctx context.Context, id, hash s
 
 func (p *Panel) remoteDNSLocalAuthority(ctx context.Context) (remoteDNSAuthority, error) {
 	proof := remoteDNSAuthority{Nameservers: []string{}}
+	state, err := readDNSEngineDBState(ctx, p.db.GetDB())
+	if err != nil {
+		return proof, err
+	}
 	publisher, ready, err := p.activeDNSPublisher(ctx)
 	if err != nil || !ready || publisher.PairRole != transport.DNSPairRolePrimary || publisher.Epoch < 1 {
 		return proof, errRemoteDNSNotReady
@@ -197,7 +204,18 @@ func (p *Panel) remoteDNSLocalAuthority(ctx context.Context) (remoteDNSAuthority
 		return proof, errRemoteDNSNotReady
 	}
 	ns1, ns2 := p.configuredNameservers(ctx)
-	proof = remoteDNSAuthority{Ready: true, Engine: string(publisher.Engine), Epoch: publisher.Epoch, Nameservers: []string{ns1, ns2}}
+	current, err := readDNSEngineDBState(ctx, p.db.GetDB())
+	if err != nil || current != state || state.ActiveEngine != publisher.Engine || state.EngineEpoch != publisher.Epoch ||
+		state.PairRole != transport.DNSPairRolePrimary || state.Topology != transport.DNSTopologyPaired ||
+		state.CurrentSwitchID != "" || state.LocalNS != ns1 || state.PeerNS != ns2 {
+		return proof, errRemoteDNSNotReady
+	}
+	primary, primaryValid := canonicalIPv4(state.LocalIP)
+	secondary, secondaryValid := canonicalIPv4(state.PeerIP)
+	if !primaryValid || !secondaryValid || primary == secondary {
+		return proof, errRemoteDNSNotReady
+	}
+	proof = remoteDNSAuthority{Ready: true, Engine: string(publisher.Engine), Epoch: publisher.Epoch, Nameservers: []string{ns1, ns2}, PrimaryIP: primary, SecondaryIP: secondary}
 	return proof, nil
 }
 
@@ -247,6 +265,11 @@ func (p *Panel) handleRemoteDNSMachine(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		proof.ClientID = claim.clientID
+		if claim.status == nil || !claim.status.IncludePairIdentity {
+			// Older origins reject unknown response fields. Pair identity is an
+			// explicit capability request, not an unsolicited wire extension.
+			proof.PrimaryIP, proof.SecondaryIP = "", ""
+		}
 		_ = json.NewEncoder(w).Encode(proof)
 	case "/api/v1/dns/remote/receiver/publish":
 		p.handleRemoteDNSReceivePublication(w, r, claim)
@@ -318,6 +341,7 @@ func (p *Panel) acceptRemoteDNSClient(w http.ResponseWriter, r *http.Request, cl
 		return
 	}
 	proof.ClientID = request.ClientID
+	proof.PrimaryIP, proof.SecondaryIP = "", ""
 	_ = json.NewEncoder(w).Encode(proof)
 }
 
@@ -349,6 +373,16 @@ func validateRemoteDNSAuthority(proof remoteDNSAuthority, id string) error {
 	return nil
 }
 func (p *Panel) remoteDNSConnectionReadiness(ctx context.Context, id string) (remoteDNSAuthority, error) {
+	return p.remoteDNSConnectionReadinessWithPair(ctx, id, false)
+}
+
+// The combined secondary/hosting setup binds its remote publisher to the exact
+// local DNS peer. Ordinary connectors retain their original response contract.
+func (p *Panel) remoteDNSConnectionPairReadiness(ctx context.Context, id string) (remoteDNSAuthority, error) {
+	return p.remoteDNSConnectionReadinessWithPair(ctx, id, true)
+}
+
+func (p *Panel) remoteDNSConnectionReadinessWithPair(ctx context.Context, id string, includePairIdentity bool) (remoteDNSAuthority, error) {
 	var proof remoteDNSAuthority
 	c, err := p.readRemoteDNSConnection(ctx, id)
 	if err != nil {
@@ -357,7 +391,7 @@ func (p *Panel) remoteDNSConnectionReadiness(ctx context.Context, id string) (re
 	if c.Status != "ready" || !remoteDNSValidSecret(c.credential) {
 		return proof, errRemoteDNSNotReady
 	}
-	err = remoteDNSExchange(ctx, c.Endpoint, "/api/v1/dns/remote/receiver/status", c.ID+"."+c.credential, struct{}{}, &proof)
+	err = remoteDNSExchange(ctx, c.Endpoint, "/api/v1/dns/remote/receiver/status", c.ID+"."+c.credential, remoteDNSStatusRequest{IncludePairIdentity: includePairIdentity}, &proof)
 	if err == nil {
 		err = validateRemoteDNSAuthority(proof, id)
 	}

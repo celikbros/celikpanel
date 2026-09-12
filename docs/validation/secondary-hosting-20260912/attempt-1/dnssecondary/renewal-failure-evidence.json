@@ -1,0 +1,31 @@
+{
+  "/etc/letsencrypt/renewal/celikpanel-panel-f586ff4a651a1c6d1a97c77c.conf": {
+    "mode": "0o640",
+    "uid": 0,
+    "gid": 0,
+    "settings": [
+      "server = https://acme.setup.test:14000/dir",
+      "authenticator = standalone"
+    ]
+  },
+  "systemctl is-active nginx certbot.timer": {
+    "code": 0,
+    "stdout": "active\nactive\n",
+    "stderr": ""
+  },
+  "systemctl is-enabled certbot.timer": {
+    "code": 0,
+    "stdout": "enabled\n",
+    "stderr": ""
+  },
+  "ss -lntp": {
+    "code": 0,
+    "stdout": "State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                                                                         \nLISTEN 0      128       192.0.2.20:53         0.0.0.0:*    users:((\"pdns_server\",pid=5940,fd=8))                                          \nLISTEN 0      128        10.0.2.15:53         0.0.0.0:*    users:((\"pdns_server\",pid=5940,fd=7))                                          \nLISTEN 0      4096       127.0.0.1:15000      0.0.0.0:*    users:((\"pebble\",pid=2331,fd=6))                                               \nLISTEN 0      4096      127.0.0.54:53         0.0.0.0:*    users:((\"systemd-resolve\",pid=365,fd=21))                                      \nLISTEN 0      4096         0.0.0.0:5355       0.0.0.0:*    users:((\"systemd-resolve\",pid=365,fd=12))                                      \nLISTEN 0      128          0.0.0.0:22         0.0.0.0:*    users:((\"sshd\",pid=785,fd=6))                                                  \nLISTEN 0      511          0.0.0.0:80         0.0.0.0:*    users:((\"nginx\",pid=8029,fd=5),(\"nginx\",pid=8028,fd=5),(\"nginx\",pid=8025,fd=5))\nLISTEN 0      32         127.0.0.1:5353       0.0.0.0:*    users:((\"dnsmasq\",pid=2330,fd=5))                                              \nLISTEN 0      4096   127.0.0.53%lo:53         0.0.0.0:*    users:((\"systemd-resolve\",pid=365,fd=19))                                      \nLISTEN 0      4096               *:14000            *:*    users:((\"pebble\",pid=2331,fd=5))                                               \nLISTEN 0      4096            [::]:5355          [::]:*    users:((\"systemd-resolve\",pid=365,fd=14))                                      \nLISTEN 0      128             [::]:22            [::]:*    users:((\"sshd\",pid=785,fd=7))                                                  \nLISTEN 0      4096               *:2083             *:*    users:((\"panel-test\",pid=7496,fd=9))                                           \nLISTEN 0      511             [::]:80            [::]:*    users:((\"nginx\",pid=8029,fd=6),(\"nginx\",pid=8028,fd=6),(\"nginx\",pid=8025,fd=6))\n",
+    "stderr": ""
+  },
+  "find /etc/nginx/sites-enabled -maxdepth 1 -type l -printf %f -> %l\n": {
+    "code": 0,
+    "stdout": "default -> /etc/nginx/sites-available/default\n",
+    "stderr": ""
+  }
+}

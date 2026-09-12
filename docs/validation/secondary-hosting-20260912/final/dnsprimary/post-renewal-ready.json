@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "revision": 1,
+  "origin": "fresh",
+  "status": "ready",
+  "draft": {
+    "purpose": "dns",
+    "remote_dns_connection_id": "",
+    "panel_domain": "panel.dnsprimary.setup.test",
+    "mail_hostname": "",
+    "dns_mode": "local",
+    "dns_engine": "bind",
+    "dns_role": "primary",
+    "ns1": "ns1.setup.test",
+    "ns2": "ns2.setup.test",
+    "local_ip": "192.0.2.10",
+    "peer_ip": "192.0.2.20",
+    "peer_ns": "ns2.setup.test",
+    "node_version": "",
+    "database": ""
+  },
+  "completed_at": "2026-09-12T14:11:12Z",
+  "required": false,
+  "guidance": "guided",
+  "checks": [
+    {
+      "id": "panel_https",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "panel_renewal",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "dns",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "firewall",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "services",
+      "state": "ready",
+      "code": "ready"
+    }
+  ],
+  "server_ip": "192.0.2.10"
+}

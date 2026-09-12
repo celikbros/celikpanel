@@ -1,0 +1,7 @@
+{
+  "domain": "customer.secondaryfixture.test",
+  "domain_id": 1,
+  "primary_request": "b5a9a9583c5ec6259452882e1aad4e71",
+  "secondary_request": "68a4f5ec08037ac5d8a2e11deb3e9491",
+  "secondary_execution": "68a4f5ec08037ac5d8a2e11deb3e9491"
+}

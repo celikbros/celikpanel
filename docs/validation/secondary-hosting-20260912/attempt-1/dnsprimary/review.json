@@ -1,0 +1,73 @@
+{
+  "id": "ce65ebaa920ebdb8b5cae6a1092f1c32",
+  "version": 1,
+  "revision": 1,
+  "purpose": "dns",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "target": "nftables"
+    },
+    {
+      "id": "03-service",
+      "kind": "service",
+      "target": "certbot"
+    },
+    {
+      "id": "04-firewall",
+      "kind": "firewall",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "target": "panel.dnsprimary.setup.test"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "target": "dns"
+    }
+  ],
+  "blockers": [],
+  "can_start": true,
+  "tcp_ports": [
+    53,
+    80,
+    2083
+  ],
+  "udp_ports": [
+    53
+  ],
+  "preserve_ssh": true,
+  "persist_firewall": true,
+  "draft": {
+    "purpose": "dns",
+    "remote_dns_connection_id": "",
+    "panel_domain": "panel.dnsprimary.setup.test",
+    "mail_hostname": "",
+    "dns_mode": "local",
+    "dns_engine": "bind",
+    "dns_role": "primary",
+    "ns1": "ns1.setup.test",
+    "ns2": "ns2.setup.test",
+    "local_ip": "192.0.2.10",
+    "peer_ip": "192.0.2.20",
+    "peer_ns": "ns2.setup.test",
+    "node_version": "",
+    "database": ""
+  },
+  "build_commit": "64a0000000000000000000000000000000000000",
+  "contact_email": "fixture@setup.test",
+  "actor": {
+    "UserID": 1,
+    "IP": "192.0.2.10",
+    "UserAgent": "Python-urllib/3.13"
+  }
+}

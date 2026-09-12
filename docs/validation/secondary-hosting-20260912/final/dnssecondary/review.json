@@ -1,0 +1,110 @@
+{
+  "id": "af0d6e2350362f889d8767d278f96cbd",
+  "version": 1,
+  "revision": 1,
+  "purpose": "custom",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "target": "nginx"
+    },
+    {
+      "id": "03-service",
+      "kind": "service",
+      "target": "nftables"
+    },
+    {
+      "id": "04-service",
+      "kind": "service",
+      "target": "certbot"
+    },
+    {
+      "id": "05-firewall",
+      "kind": "firewall",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "06-panel_certificate",
+      "kind": "panel_certificate",
+      "target": "panel.dnssecondary.setup.test"
+    },
+    {
+      "id": "07-dns_publisher",
+      "kind": "dns_publisher",
+      "target": "https://panel.dnsprimary.setup.test:2083"
+    },
+    {
+      "id": "08-verify",
+      "kind": "verify",
+      "target": "custom"
+    }
+  ],
+  "blockers": [],
+  "can_start": true,
+  "tcp_ports": [
+    53,
+    80,
+    443,
+    2083
+  ],
+  "udp_ports": [
+    53
+  ],
+  "preserve_ssh": true,
+  "persist_firewall": true,
+  "draft": {
+    "purpose": "custom",
+    "dns_publisher_endpoint": "https://panel.dnsprimary.setup.test:2083",
+    "remote_dns_connection_id": "",
+    "panel_domain": "panel.dnssecondary.setup.test",
+    "mail_hostname": "",
+    "dns_mode": "local",
+    "dns_engine": "pdns",
+    "dns_role": "secondary",
+    "ns1": "ns1.setup.test",
+    "ns2": "ns2.setup.test",
+    "local_ip": "192.0.2.20",
+    "peer_ip": "192.0.2.10",
+    "peer_ns": "ns1.setup.test",
+    "node_version": "",
+    "database": "",
+    "customization": {
+      "components": [
+        "nginx"
+      ]
+    }
+  },
+  "build_commit": "64a0000000000000000000000000000000000000",
+  "contact_email": "fixture@setup.test",
+  "actor": {
+    "UserID": 1,
+    "IP": "192.0.2.20",
+    "UserAgent": "Python-urllib/3.13"
+  },
+  "components": [
+    {
+      "id": "nginx",
+      "selected": true,
+      "required": false,
+      "installed": false
+    },
+    {
+      "id": "nftables",
+      "selected": false,
+      "required": true,
+      "installed": false
+    },
+    {
+      "id": "certbot",
+      "selected": false,
+      "required": true,
+      "installed": false
+    }
+  ]
+}

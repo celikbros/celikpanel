@@ -14,6 +14,7 @@ const dataURL = text => `data:text/javascript;base64,${Buffer.from(text).toStrin
 const compile = path => ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), {
     compilerOptions: { jsx: ts.JsxEmit.React, module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2020 },
 }).outputText;
+const remoteURL = dataURL(compile('../src/lib/remoteDNS.ts'));
 const setupURL = dataURL(compile('../src/lib/serverSetup.ts'));
 const componentLibURL = dataURL(compile('../src/lib/serverSetupComponents.ts').replace("from './serverSetup'", `from '${setupURL}'`));
 const operationURL = dataURL(compile('../src/lib/serverSetupOperation.ts').replace("from './serverSetup'", `from '${setupURL}'`));
@@ -40,7 +41,7 @@ const componentUIURL = dataURL(`import React from '${reactURL}';\n` + compile('.
 const { ServerSetupComponents: ComponentPicker } = await import(componentUIURL);
 async function loadComponent(name) {
     const source = compile(`../src/components/${name}.tsx`).replace(/from ['"]([^'"]+)['"]/g, (_, path) => {
-        const url = path === 'react' ? reactURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
+        const url = path === 'react' ? reactURL : path.endsWith('/remoteDNS') ? remoteURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
         return `from '${url}'`;
     });
     return (await import(dataURL(`import React from '${reactURL}';\n${source}`)))[name];
@@ -602,13 +603,13 @@ test('saved external DNS stays visible until the administrator changes an empty 
     } finally { await cleanup(); }
 });
 
-test('saved local secondary DNS requires an explicit primary selection before reviewing custom hosting', async () => {
+test('saved local secondary hosting requires a publisher address or an explicit role change', async () => {
     init('admin', { status: 'draft', draft: { ...fresh().draft, purpose: 'custom', dns_mode: 'local', dns_role: 'secondary', customization: { components: ['nginx'] } } });
     try {
         await mount();await submit();
         const selector = tree.root.findByProps({ id: 'setup-dns_role' });
         assert.equal(selector.props.value, 'secondary');
-        assert.equal(selector.findAllByType('option').find(option => option.props.value === 'secondary').props.disabled, false, 'keep the existing role selectable while explaining the conflict');
+        assert.notEqual(selector.findAllByType('option').find(option => option.props.value === 'secondary').props.disabled, true);
         assert.equal(formNext().props.disabled, true);
         assert.ok(tree.root.findAllByProps({ role: 'alert' }).length > 0);
         const writes = calls.filter(call => call.options?.method === 'PUT').length;
@@ -693,18 +694,21 @@ test('a conflicting saved peer remains visible and blocks review until explicitl
 });
 
 
-test('default web profile explains secondary restriction and DNS profile enables either engine and role', async () => {
+test('web secondary requests a publisher while DNS-only permits either engine without one', async () => {
     init();
     try {
         await mount(); await submit();
         const secondary = () => tree.root.findByProps({id:'setup-dns_role'}).findAllByType('option').find(option => option.props.value === 'secondary');
-        assert.equal(secondary().props.disabled, true);
-        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.secondaryUnavailable'));
+        assert.notEqual(secondary().props.disabled, true);
+        await act(async () => tree.root.findByProps({id:'setup-dns_role'}).props.onChange({target:{value:'secondary'}}));
+        assert.ok(tree.root.findByProps({id:'setup-dns_publisher_endpoint'}));
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.publisher.roleHelp'));
+        assert.equal(calls.some(c => c.url.includes('/dns/remote')), false);
         await act(async () => findButton('setup.back').props.onClick());
         await act(async () => tree.root.findByProps({name:'setup-purpose',value:'dns'}).props.onChange());
         await submit();
-        assert.equal(secondary().props.disabled, false);
-        assert.equal(JSON.stringify(tree.toJSON()).includes('setup.secondaryUnavailable'), false);
+        assert.notEqual(secondary().props.disabled, true);
+        assert.equal(tree.root.findAllByProps({id:'setup-dns_publisher_endpoint'}).length, 0);
         assert.equal(tree.root.findAllByProps({id:'setup-mail_hostname'}).length, 0);
         await act(async () => tree.root.findByProps({id:'setup-dns_role'}).props.onChange({target:{value:'secondary'}}));
         for (const engine of ['bind','pdns']) {
@@ -721,5 +725,62 @@ test('changing from customized mail hosting to DNS or web clears inherited mail 
         const draft = setup.chooseSetupPurpose(old,purpose);
         assert.equal(draft.customization,undefined);
         assert.equal(draft.purpose,purpose);
+    }
+});
+
+
+test('secondary hosting requires a valid reviewed primary endpoint without pairing during review', async () => {
+    init('admin', {status:'draft', draft:{...fresh().draft,purpose:'web_mail',panel_domain:'boston.example.com',mail_hostname:'mail.boston.example.com',dns_role:'secondary',ns1:'ns1.example.com',ns2:'ns2.example.com',peer_ns:'ns1.example.com',peer_ip:'192.0.2.10',local_ip:'192.0.2.20'}});
+    try {
+        await mount();
+        await submit();
+        assert.equal(calls.some(c => c.url==='/api/v1/setup/plan'),false);
+        for(const endpoint of ['http://primary.example.com','https://192.0.2.10','https://user:secret@primary.example.com','https://primary.example.com/other']) {
+            await act(async()=>tree.root.findByProps({id:'setup-dns_publisher_endpoint'}).props.onChange({target:{value:endpoint}}));
+            await submit();
+            assert.equal(calls.some(c => c.url==='/api/v1/setup/plan'),false);
+        }
+        await act(async()=>tree.root.findByProps({id:'setup-dns_publisher_endpoint'}).props.onChange({target:{value:'https://primary.example.com:2083'}}));
+        await submit();
+        assert.equal(state.draft.dns_publisher_endpoint,'https://primary.example.com:2083');
+        assert.equal(state.draft.dns_role,'secondary');
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.publisher.reviewTitle'));
+        assert.equal(calls.some(c => c.url.includes('/dns/remote') || c.url==='/api/v1/setup/start'),false);
+    } finally { await cleanup(); }
+});
+
+test('waiting secondary keeps its reviewed endpoint and binds only an explicitly verified connection',async()=>{
+    for(const lost of [false,true]) {
+        init('admin',{status:'running',draft:{...fresh().draft,purpose:'web_mail',dns_role:'secondary'}});
+        const marker={plan_id:'a'.repeat(32),request_id:'b'.repeat(32)};
+        let op={...execution(marker,'waiting'),phase:'dns_publisher',steps:[{id:'01-dns',kind:'dns',target:'local',status:'succeeded'},{id:'02-publisher',kind:'dns_publisher',target:'https://primary.example.com:2083',status:'running'},{id:'03-mail',kind:'mail_profile',target:'core',status:'pending'}]};
+        const read=fetch; let bound=false;
+        globalThis.fetch=async(url,options)=>{
+            if(url==='/api/v1/setup/operation'){calls.push({url,options});return Response.json(op);}
+            if(url==='/api/v1/setup/publisher') {
+                calls.push({url,options});
+                assert.deepEqual(JSON.parse(options.body),{execution_id:op.id,connection_id:'d'.repeat(32)});
+                bound=true;op={...op,status:'running',phase:'03-mail'};
+                if(lost)throw new Error('reply lost after binding');
+                return Response.json(op);
+            }
+            return read(url,options);
+        };
+        try {
+            await mount();
+            const picker=()=>tree.root.findByType('remote-connection');
+            assert.equal(picker().props.requiredEndpoint,'https://primary.example.com:2083');
+            assert.equal(findButton('setup.publisher.continue').props.disabled,true);
+            assert.equal(calls.some(c=>c.url==='/api/v1/setup/publisher'),false);
+            await act(async()=>picker().props.onChange('d'.repeat(32)));
+            assert.equal(findButton('setup.publisher.continue').props.disabled,true);
+            await act(async()=>picker().props.onValidityChange(true));
+            assert.equal(findButton('setup.publisher.continue').props.disabled,false);
+            await act(async()=>findButton('setup.publisher.continue').props.onClick());
+            assert.equal(bound,true);
+            assert.equal(calls.filter(c=>c.url==='/api/v1/setup/publisher').length,1);
+            assert.equal(calls.some(c=>c.url==='/api/v1/setup/start'||c.url==='/api/v1/setup/revise'),false);
+            assert.equal(tree.root.findAllByType('remote-connection').length,0);
+        } finally {await cleanup();}
     }
 });

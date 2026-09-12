@@ -76,10 +76,12 @@ func (p *Panel) serverSetupCompletionChecks(ctx context.Context, draft serverSet
 	// below; a saved enabled flag cannot prove that current workloads are reachable.
 	mode, modeErr := p.setupDNSManagementMode(ctx)
 	dnsReady := false
-	if modeErr == nil && mode == draft.DNSMode && !(draft.Purpose == "dns" && mode != "local") {
+	if serverSetupSecondaryHosting(draft) {
+		dnsReady, modeErr = p.serverSetupSecondaryHostingReadiness(ctx, draft)
+	} else if modeErr == nil && mode == draft.DNSMode && !(draft.Purpose == "dns" && mode != "local") {
 		dnsReady, modeErr = p.setupDNSModeReadiness(ctx, mode)
 	}
-	if dnsReady && mode == setupDNSModeExisting {
+	if dnsReady && mode == setupDNSModeExisting && !serverSetupSecondaryHosting(draft) {
 		var connectionID string
 		connectionID, modeErr = p.defaultRemoteDNSConnectionID(ctx)
 		dnsReady = modeErr == nil && connectionID == draft.RemoteDNSConnectionID

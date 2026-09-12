@@ -1,0 +1,387 @@
+{
+  "dnsprimary": {
+    "stage": "before",
+    "profile": "dnsprimary",
+    "domain": "probe.secondaryfixture.test",
+    "panel_zones": [
+      [
+        "probe.secondaryfixture.test",
+        "MASTER"
+      ]
+    ],
+    "hosting": [],
+    "local_writes": [
+      [
+        "probe.secondaryfixture.test"
+      ]
+    ],
+    "engine": [
+      [
+        "bind",
+        1,
+        3
+      ]
+    ],
+    "pair": [
+      [
+        "primary",
+        "192.0.2.10",
+        "ns1.setup.test",
+        "192.0.2.20",
+        "ns2.setup.test"
+      ]
+    ],
+    "wire": {
+      "192.0.2.10 +tcp probe.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 34417\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 75bae82faee29ae2010000006aa55c1d86616e69c6888021 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tSOA\tns1.setup.test. hostmaster.probe.secondaryfixture.test. 2026091204 10800 3600 604800 3600\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 27667\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: ea58b1192d4ccc1b010000006aa55c1dc66ce4256219cf99 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tA\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp probe.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 49995\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: bcf45f13aa5a62b7010000006aa55c1dde188e231f0e244f (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tMX\t10 mail.probe.secondaryfixture.test.\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 4683\n;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 0d6dc56f87c94e10010000006aa55c1df17f0ae2aca14dee (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"v=spf1 a mx ~all\"\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"secondary-hosting-validation\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp mail.probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 65063\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: a1f8d00b691ace0d010000006aa55c1d9f4ddf88ac68fb07 (good)\n;; ANSWER SECTION:\nmail.probe.secondaryfixture.test. 3600 IN A\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp _dmarc.probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 49068\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: b75754d65deda191010000006aa55c1dbf3d30738babe850 (good)\n;; ANSWER SECTION:\n_dmarc.probe.secondaryfixture.test. 3600 IN TXT\t\"v=DMARC1; p=none; rua=mailto:dmarc@probe.secondaryfixture.test\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp probe.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44922\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: ced111e2f0478a63010000006aa55c1dac6e83b8e1417de6 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tSOA\tns1.setup.test. hostmaster.probe.secondaryfixture.test. 2026091204 10800 3600 604800 3600\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 51980\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: f4c115f7882992fe010000006aa55c1d356a4193ed1b6f85 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tA\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp probe.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 53619\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 142394baa531bd71010000006aa55c1d2bb0472e9c6634e3 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tMX\t10 mail.probe.secondaryfixture.test.\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 31169\n;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: be6b139640290e2a010000006aa55c1dcb9a5f4eb6b0e6af (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"secondary-hosting-validation\"\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"v=spf1 a mx ~all\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp mail.probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 62484\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 1ccfb46ba3911c66010000006aa55c1df2adaeb375f8e4c1 (good)\n;; ANSWER SECTION:\nmail.probe.secondaryfixture.test. 3600 IN A\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp _dmarc.probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 8472\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 8d544d1d477e75ad010000006aa55c1d392dd4eb30269c0e (good)\n;; ANSWER SECTION:\n_dmarc.probe.secondaryfixture.test. 3600 IN TXT\t\"v=DMARC1; p=none; rua=mailto:dmarc@probe.secondaryfixture.test\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp probe.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 33623\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tSOA\tns1.setup.test. hostmaster.probe.secondaryfixture.test. 2026091204 10800 3600 604800 3600\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 40700\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tA\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp probe.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 23013\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tMX\t10 mail.probe.secondaryfixture.test.\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 38169\n;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"v=spf1 a mx ~all\"\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"secondary-hosting-validation\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp mail.probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 15218\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nmail.probe.secondaryfixture.test. 3600 IN A\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp _dmarc.probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 7316\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\n_dmarc.probe.secondaryfixture.test. 3600 IN TXT\t\"v=DMARC1; p=none; rua=mailto:dmarc@probe.secondaryfixture.test\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp probe.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 20335\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tSOA\tns1.setup.test. hostmaster.probe.secondaryfixture.test. 2026091204 10800 3600 604800 3600\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 31171\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tA\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp probe.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 43614\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tMX\t10 mail.probe.secondaryfixture.test.\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 31308\n;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"v=spf1 a mx ~all\"\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"secondary-hosting-validation\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp mail.probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 49732\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nmail.probe.secondaryfixture.test. 3600 IN A\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp _dmarc.probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 26170\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\n_dmarc.probe.secondaryfixture.test. 3600 IN TXT\t\"v=DMARC1; p=none; rua=mailto:dmarc@probe.secondaryfixture.test\"\n\n",
+        "stderr": ""
+      }
+    },
+    "http": {
+      "code": 0,
+      "status": "200"
+    }
+  },
+  "dnssecondary": {
+    "stage": "before",
+    "profile": "dnssecondary",
+    "domain": "probe.secondaryfixture.test",
+    "panel_zones": [],
+    "hosting": [
+      [
+        1,
+        "probe.secondaryfixture.test",
+        "existing",
+        "919f624b6382d32a61e740a528e20c37"
+      ]
+    ],
+    "local_writes": [],
+    "engine": [
+      [
+        "pdns",
+        1,
+        3
+      ]
+    ],
+    "pair": [
+      [
+        "secondary",
+        "192.0.2.20",
+        "ns2.setup.test",
+        "192.0.2.10",
+        "ns1.setup.test"
+      ]
+    ],
+    "runtime_zones": [
+      [
+        "probe.secondaryfixture.test",
+        "SLAVE",
+        "192.0.2.10"
+      ]
+    ],
+    "runtime_records": [
+      [
+        "_dmarc.probe.secondaryfixture.test",
+        "TXT",
+        "\"v=DMARC1; p=none; rua=mailto:dmarc@probe.secondaryfixture.test\""
+      ],
+      [
+        "mail.probe.secondaryfixture.test",
+        "A",
+        "192.0.2.20"
+      ],
+      [
+        "mail.probe.secondaryfixture.test",
+        "AAAA",
+        "fec0::5054:ff:fe71:2"
+      ],
+      [
+        "probe.secondaryfixture.test",
+        "A",
+        "192.0.2.20"
+      ],
+      [
+        "probe.secondaryfixture.test",
+        "AAAA",
+        "fec0::5054:ff:fe71:2"
+      ],
+      [
+        "probe.secondaryfixture.test",
+        "MX",
+        "mail.probe.secondaryfixture.test"
+      ],
+      [
+        "probe.secondaryfixture.test",
+        "NS",
+        "ns1.setup.test"
+      ],
+      [
+        "probe.secondaryfixture.test",
+        "NS",
+        "ns2.setup.test"
+      ],
+      [
+        "probe.secondaryfixture.test",
+        "SOA",
+        "ns1.setup.test hostmaster.probe.secondaryfixture.test 2026091204 10800 3600 604800 3600"
+      ],
+      [
+        "probe.secondaryfixture.test",
+        "TXT",
+        "\"secondary-hosting-validation\""
+      ],
+      [
+        "probe.secondaryfixture.test",
+        "TXT",
+        "\"v=spf1 a mx ~all\""
+      ],
+      [
+        "www.probe.secondaryfixture.test",
+        "CNAME",
+        "probe.secondaryfixture.test"
+      ]
+    ],
+    "wire": {
+      "192.0.2.10 +tcp probe.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 6179\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 09f1d3c35aeff648010000006aa55c1f2598472087516333 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tSOA\tns1.setup.test. hostmaster.probe.secondaryfixture.test. 2026091204 10800 3600 604800 3600\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 35005\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: c3379f8d557f891c010000006aa55c1f1c8c0e9dc4c06f3a (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tA\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp probe.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 39309\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 808279e28bb9457e010000006aa55c1fda042d24843b92c0 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tMX\t10 mail.probe.secondaryfixture.test.\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 40599\n;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: c79f20b864460478010000006aa55c1f6255967f08e20a19 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"secondary-hosting-validation\"\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"v=spf1 a mx ~all\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp mail.probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 61819\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 17b4caf2b627d7b7010000006aa55c1fbd5fe1c1cd0ac644 (good)\n;; ANSWER SECTION:\nmail.probe.secondaryfixture.test. 3600 IN A\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp _dmarc.probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 7338\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 7745f4d5961d9d60010000006aa55c1f6a69596f535d3a2f (good)\n;; ANSWER SECTION:\n_dmarc.probe.secondaryfixture.test. 3600 IN TXT\t\"v=DMARC1; p=none; rua=mailto:dmarc@probe.secondaryfixture.test\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp probe.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 2917\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: dbbe1173aba34bbf010000006aa55c1f5d87a5e07f637f36 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tSOA\tns1.setup.test. hostmaster.probe.secondaryfixture.test. 2026091204 10800 3600 604800 3600\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 20073\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: f2481814981b5b1f010000006aa55c1f85219eeb60bb0073 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tA\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp probe.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 40895\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: be44ac6997316a90010000006aa55c1f4bbcfb9db7309a44 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tMX\t10 mail.probe.secondaryfixture.test.\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 20963\n;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 45085be169f673c7010000006aa55c1f61b6c23b3d07ceb8 (good)\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"secondary-hosting-validation\"\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"v=spf1 a mx ~all\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp mail.probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 23108\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: bf1bcb06c2bf073f010000006aa55c1fff109a53124a2ff6 (good)\n;; ANSWER SECTION:\nmail.probe.secondaryfixture.test. 3600 IN A\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp _dmarc.probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 2117\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: b92597452e0d7c83010000006aa55c1fe7e3ccc5b97eff01 (good)\n;; ANSWER SECTION:\n_dmarc.probe.secondaryfixture.test. 3600 IN TXT\t\"v=DMARC1; p=none; rua=mailto:dmarc@probe.secondaryfixture.test\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp probe.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 13125\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tSOA\tns1.setup.test. hostmaster.probe.secondaryfixture.test. 2026091204 10800 3600 604800 3600\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54257\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tA\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp probe.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 28330\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tMX\t10 mail.probe.secondaryfixture.test.\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 22565\n;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"v=spf1 a mx ~all\"\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"secondary-hosting-validation\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp mail.probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 6276\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nmail.probe.secondaryfixture.test. 3600 IN A\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp _dmarc.probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 9203\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\n_dmarc.probe.secondaryfixture.test. 3600 IN TXT\t\"v=DMARC1; p=none; rua=mailto:dmarc@probe.secondaryfixture.test\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp probe.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 3106\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tSOA\tns1.setup.test. hostmaster.probe.secondaryfixture.test. 2026091204 10800 3600 604800 3600\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 4621\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tA\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp probe.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 10342\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 3600 IN\tMX\t10 mail.probe.secondaryfixture.test.\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 7698\n;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"v=spf1 a mx ~all\"\nprobe.secondaryfixture.test. 300 IN\tTXT\t\"secondary-hosting-validation\"\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp mail.probe.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 61070\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nmail.probe.secondaryfixture.test. 3600 IN A\t192.0.2.20\n\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp _dmarc.probe.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 37589\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\n_dmarc.probe.secondaryfixture.test. 3600 IN TXT\t\"v=DMARC1; p=none; rua=mailto:dmarc@probe.secondaryfixture.test\"\n\n",
+        "stderr": ""
+      }
+    },
+    "http": {
+      "code": 0,
+      "status": "200"
+    }
+  }
+}

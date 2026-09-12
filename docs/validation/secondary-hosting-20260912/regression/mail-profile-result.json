@@ -1,0 +1,20 @@
+{
+  "command": [
+    "wsl",
+    "-e",
+    "env",
+    "GOENV=off",
+    "GOWORK=off",
+    "GOTOOLCHAIN=local",
+    "CGO_ENABLED=1",
+    "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go",
+    "test",
+    "-race",
+    "./cmd/panel",
+    "-run",
+    "^TestSecondaryHostingBoundPublisherExecutesMailProfiles$",
+    "-count=1",
+    "-v"
+  ],
+  "exit_code": 0
+}
