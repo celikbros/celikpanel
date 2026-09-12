@@ -1,0 +1,12 @@
+{
+  "dnsprimary": {
+    "verified_pid": 242,
+    "stopped_via_qmp": true,
+    "overlay_preserved": true
+  },
+  "dnssecondary": {
+    "verified_pid": 256,
+    "stopped_via_qmp": true,
+    "overlay_preserved": true
+  }
+}

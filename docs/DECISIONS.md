@@ -8,6 +8,35 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-022 · Owner-controlled infrastructure independent of CelikPanel
+
+*September 12, 2026 · User-approved requirement; first audit recorded, removal not certified*
+
+CelikPanel is an operator acting for the server owner. Owners must be able to
+configure and operate services without it and remove it while retaining workloads.
+Service operation must not depend on panel availability, licensing, or retaining
+its management agent. Native configuration and standard protocols must support
+independent DNS, websites, mail, databases, scheduled jobs and certificate renewal.
+
+Removing management software must preserve service packages, data, identities,
+configuration and necessary renewal/scheduling mechanisms. Audit existing
+dependencies and separate them safely before claiming removal is supported.
+Direct owner administration must be accommodated: detect configuration conflicts
+and reconcile explicitly rather than silently overwrite owner changes.
+
+Standard primary/secondary DNS transfer must be configurable through the panel
+without requiring a remote CelikPanel or its HTTPS endpoint. Remote record
+creation/editing is a separate optional authorized automation feature. The current
+central publication connector is an implementation choice, not a DNS prerequisite.
+Preserve installed configurations when evolving this architecture.
+
+This direction does not authorize assistant-side live changes, panel removal or
+installed-panel updates. The user-only update rule remains binding.
+
+[Source implementation and remaining dependencies](OWNER-INDEPENDENCE.md).
+
+---
+
 ## D-021 · Purpose-led, resumable server setup with explicit DNS ownership
 
 *September 10, 2026 · Approved direction; [working-tree implementation status](SERVER-SETUP-STATUS.md)*

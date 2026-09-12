@@ -149,7 +149,7 @@ func (p *Panel) startServerSetupDNS(ctx context.Context, draft serverSetupDraft,
 		if !setupDNSDraftMatchesState(draft, request, local, state) {
 			return errors.New("DNS setup final identity does not match its reviewed plan")
 		}
-		return setupDNSReconciliationError(p.saveSetupDNSManagementMode(ctx, setupDNSModeLocal))
+		return setupDNSReconciliationError(p.saveSetupDNSManagementMode(ctx, serverSetupDomainDNSMode(draft)))
 	}
 	if !errors.Is(readErr, sql.ErrNoRows) {
 		return setupDNSReconciliationError(readErr)
@@ -162,7 +162,7 @@ func (p *Panel) startServerSetupDNS(ctx context.Context, draft serverSetupDraft,
 		if !setupDNSDraftMatchesState(draft, request, local, state) {
 			return errors.New("existing DNS ownership must be managed in DNS infrastructure; setup will not replace it")
 		}
-		return setupDNSReconciliationError(p.saveSetupDNSManagementMode(ctx, setupDNSModeLocal))
+		return setupDNSReconciliationError(p.saveSetupDNSManagementMode(ctx, serverSetupDomainDNSMode(draft)))
 	}
 	if !exactUnresolvedDNSEngineState(state) {
 		return errors.New("another DNS operation must finish before setup")
@@ -234,7 +234,7 @@ func (p *Panel) startServerSetupDNS(ctx context.Context, draft serverSetupDraft,
 		return fmt.Errorf("%w: %v", errServerSetupDNSReconciliationRequired, &dnsEngineReconcilePostCommitError{Result: result})
 	}
 	p.auditDNSEngineBounded(dnsEngineAuditActor{UserID: actor.UserID, IP: actor.IP, UserAgent: actor.UserAgent}, "setup.completed", persisted)
-	return setupDNSReconciliationError(p.saveSetupDNSManagementMode(ctx, setupDNSModeLocal))
+	return setupDNSReconciliationError(p.saveSetupDNSManagementMode(ctx, serverSetupDomainDNSMode(draft)))
 }
 
 func (p *Panel) serverSetupDNSOperationStatus(ctx context.Context, requestID string) (string, error) {

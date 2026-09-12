@@ -14,7 +14,22 @@ var errServerSetupDNSPublisherRequired = errors.New("the reviewed primary DNS pu
 var errServerSetupDNSReadinessRequired = errors.New("the reviewed DNS pair must become ready")
 
 func serverSetupSecondaryHosting(draft serverSetupDraft) bool {
-	return draft.DNSMode == setupDNSModeLocal && draft.DNSRole == "secondary" && serverSetupNeedsDNSPublisher(draft)
+	return draft.DNSMode == setupDNSModeLocal && draft.DNSRole == "secondary" && serverSetupNeedsDNSPublisher(draft) && draft.DNSHostingManagement != "manual"
+}
+
+// Empty retains the Alpha71 reviewed-plan behavior. Only an explicit manual
+// selection uses external record instructions for newly hosted domains.
+// Bos deger Alpha71 planlarini korur; yalniz acik manuel secim yeni alan
+// adlarinda harici DNS kayit yonlendirmesini kullanir.
+func serverSetupManualSecondaryHosting(draft serverSetupDraft) bool {
+	return draft.DNSMode == setupDNSModeLocal && draft.DNSRole == "secondary" && serverSetupNeedsDNSPublisher(draft) && draft.DNSHostingManagement == "manual"
+}
+
+func serverSetupDomainDNSMode(draft serverSetupDraft) string {
+	if serverSetupManualSecondaryHosting(draft) {
+		return setupDNSModeExternal
+	}
+	return draft.DNSMode
 }
 
 // DNS, the selected nginx challenge route and trusted management access
@@ -34,6 +49,9 @@ func serverSetupDNSBootstrapSteps(draft serverSetupDraft, steps []serverSetupPla
 		}
 	}
 	kind, target := "dns_readiness", "local"
+	if serverSetupManualSecondaryHosting(draft) {
+		target = "secondary"
+	}
 	if serverSetupSecondaryHosting(draft) {
 		kind, target = "dns_publisher", draft.DNSPublisherEndpoint
 	}
@@ -128,6 +146,17 @@ func (p *Panel) runServerSetupDNSPublisher(ctx context.Context, plan serverSetup
 		return false, err
 	}
 	return true, nil
+}
+
+func (p *Panel) serverSetupManualSecondaryHostingReadiness(ctx context.Context, draft serverSetupDraft) (bool, error) {
+	if !serverSetupManualSecondaryHosting(draft) {
+		return false, nil
+	}
+	mode, err := p.setupDNSManagementMode(ctx)
+	if err != nil || mode != setupDNSModeExternal {
+		return false, err
+	}
+	return p.serverSetupLocalSecondaryReadiness(ctx, draft)
 }
 
 func (p *Panel) serverSetupLocalSecondaryReadiness(ctx context.Context, draft serverSetupDraft) (bool, error) {

@@ -1,5 +1,24 @@
 # Project instructions
 
+## Owner-controlled infrastructure independent of the panel - 2026-09-12
+
+CelikPanel acts as the server owner's operator, not the owner of the services.
+The owner must be able to configure and operate infrastructure without CelikPanel.
+Panel outage, license loss, or removal of the panel and its management agent must
+not stop or remove hosted workloads, DNS, mail, databases, scheduled jobs or
+certificate renewal. Use native service configuration, standard protocols and
+independent service lifecycles. Optional panel automation is separate from service
+operation. Detect owner configuration changes rather than silently overwrite them.
+
+Do not require a remote CelikPanel or its HTTPS API merely to configure standard
+primary/secondary DNS transfer. Distinguish replication from optional authorized
+remote record-management automation. Audit and resolve existing dependencies
+before claiming safe panel removal or independent operation is implemented.
+
+This product requirement does not authorize assistant-side live configuration,
+panel removal, or bypassing user-only installed-panel updates. See D-022 in
+docs/DECISIONS.md.
+
 ## Installed panel updates — user instruction, 2026-09-10
 
 Never update an installed CelikPanel instance on the user's behalf. This applies

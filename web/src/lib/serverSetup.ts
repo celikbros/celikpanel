@@ -9,6 +9,7 @@ export interface ServerSetupDraft {
     dns_mode: SetupDNSMode;
     remote_dns_connection_id: string;
     dns_publisher_endpoint?: string;
+    dns_hosting_management?: 'manual' | 'panel';
     dns_engine: 'bind' | 'pdns';
     dns_role: 'primary' | 'secondary';
     ns1: string;
@@ -50,6 +51,7 @@ export function decodeServerSetup(value: unknown): ServerSetupSnapshot | null {
         || !['bind', 'pdns'].includes(String(draft.dns_engine))
         || !['primary', 'secondary'].includes(String(draft.dns_role))
         || draftStrings.some(key => typeof draft[key] !== 'string')) return null;
+    if (draft.dns_hosting_management !== undefined && !['manual', 'panel'].includes(String(draft.dns_hosting_management))) return null;
     if (draft.dns_publisher_endpoint !== undefined && typeof draft.dns_publisher_endpoint !== 'string') return null;
     if (draft.customization !== undefined && (!record(draft.customization) || !Array.isArray(draft.customization.components)
         || draft.customization.components.length > 80 || draft.customization.components.some(id => typeof id !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(id))
@@ -105,4 +107,30 @@ export function setupDetectedIPv4(value?: string): string {
         || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31)
         || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127)) return '';
     return value;
+}
+
+// Tab-local editing state only. Server revisions and operation admission remain
+// authoritative; neither a reviewed plan nor permission to start is stored here.
+// Yalniz sekmenin duzenleme durumu tutulur; sunucu surumu ve islem kabul
+// denetimleri gecerliligini korur. Plan veya baslatma izni burada saklanmaz.
+export type SetupEditorStep = 'purpose' | 'components' | 'access' | 'review';
+export interface SetupEditorCheckpoint {
+    version: 1;
+    revision: number;
+    step: SetupEditorStep;
+    draft: ServerSetupDraft;
+}
+export function decodeSetupEditorCheckpoint(raw: string | null, snapshot: ServerSetupSnapshot): SetupEditorCheckpoint | null {
+    try {
+        if (!['new', 'legacy', 'draft'].includes(snapshot.status)) return null;
+        const value: unknown = JSON.parse(raw || 'null');
+        if (!record(value) || value.version !== 1 || value.revision !== snapshot.revision
+            || !['purpose', 'components', 'access', 'review'].includes(String(value.step))) return null;
+        const restored = decodeServerSetup({ ...snapshot, draft: value.draft });
+        if (!restored || (value.step === 'components' && !restored.draft.customization && restored.draft.purpose !== 'custom')) return null;
+        // Review can only be recovered from exactly the server-saved inputs.
+        // Inceleme yalniz sunucuda kayitli girdilerle ayniysa geri yuklenir.
+        if (value.step === 'review' && JSON.stringify(restored.draft) !== JSON.stringify(snapshot.draft)) return null;
+        return { version: 1, revision: snapshot.revision, step: value.step as SetupEditorStep, draft: restored.draft };
+    } catch { return null; }
 }

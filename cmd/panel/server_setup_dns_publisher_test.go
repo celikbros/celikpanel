@@ -299,3 +299,68 @@ func TestServerSetupPublisherEndpointCanonicalAndRestricted(t *testing.T) {
 		}
 	}
 }
+
+func TestServerSetupManualSecondaryHostingPlansNativeReadinessWithoutPanel(t *testing.T) {
+	for _, purpose := range []string{"web", "web_mail", "application", "custom"} {
+		for _, engine := range []string{"bind", "pdns"} {
+			t.Run(purpose+"/"+engine, func(t *testing.T) {
+				f, state := setupOperationFixture(t)
+				caps := []string{transport.AgentCapabilityMailHostCertificateV1, transport.AgentCapabilityMailTLSSyncV2}
+				f.agent.versionCapabilities = &caps
+				draft := secondaryHostingDraft()
+				draft.Purpose, draft.DNSEngine = purpose, engine
+				draft.DNSHostingManagement, draft.DNSPublisherEndpoint = "manual", ""
+				draft.NodeVersion = "24.1.0"
+				if purpose == "custom" {
+					draft.Customization = &serverSetupCustomization{Components: []string{"nginx", "postfix", "dovecot"}}
+				}
+				state.Draft = draft
+				plan := saveSetupPlanForTest(t, f, state)
+				gate := -1
+				for index, step := range plan.Steps {
+					if step.Kind == "dns_publisher" {
+						t.Fatal("manual DNS requested a panel connection")
+					}
+					if step.Kind == "dns_readiness" {
+						gate = index
+						if step.Target != "secondary" {
+							t.Fatal("manual DNS requested primary authority")
+						}
+					}
+					if gate == -1 && (step.Kind == "mail_profile" || step.Kind == "runtime") {
+						t.Fatal("hosting precedes native DNS verification")
+					}
+				}
+				if gate < 1 {
+					t.Fatal("native DNS gate missing")
+				}
+				if serverSetupDomainDNSMode(draft) != setupDNSModeExternal {
+					t.Fatal("new hosted domains must use external record instructions")
+				}
+				changed := plan
+				changed.Draft.DNSHostingManagement = "panel"
+				if serverSetupPlanIdentity(changed) == plan.ID {
+					t.Fatal("changing record ownership did not invalidate review")
+				}
+				if f.agent.installCalls.Load() != 0 || len(f.agent.capturedMutationEvents()) != 0 {
+					t.Fatal("review changed host")
+				}
+			})
+		}
+	}
+}
+
+func TestServerSetupDNSManagementChoicePreservesLegacyAndDNSOnlyPlans(t *testing.T) {
+	draft := secondaryHostingDraft()
+	for _, choice := range []string{"", "panel"} {
+		draft.DNSHostingManagement = choice
+		if !serverSetupSecondaryHosting(draft) || serverSetupDomainDNSMode(draft) != setupDNSModeLocal {
+			t.Fatal("legacy publisher contract changed")
+		}
+	}
+	draft.DNSHostingManagement = "manual"
+	draft.Purpose = "dns"
+	if serverSetupManualSecondaryHosting(draft) || serverSetupDomainDNSMode(draft) != setupDNSModeLocal {
+		t.Fatal("DNS-only role changed domain ownership")
+	}
+}

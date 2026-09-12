@@ -8,6 +8,36 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-022 · CelikPanel'den bağımsız, sahibinin yönetebildiği altyapı
+
+*12 Eylül 2026 · Kullanıcının onayladığı gereksinim; ilk inceleme kaydedildi; kaldırma desteği henüz doğrulanmadı*
+
+CelikPanel sunucu sahibinin talimatlarını yerine getiren bir çalışandır.
+Sunucunun sahibi panel olmadan da hizmetleri yapılandırıp yönetebilmeli, paneli
+kaldırdığında işleri devam etmelidir. Hizmetlerin çalışması panelin erişilebilir
+olmasına, lisansına veya yönetim ajanının kurulu kalmasına bağlanamaz.
+DNS, web, e-posta, veritabanları, zamanlanmış işler ve sertifika yenilemeleri
+standart protokoller ve hizmetlerin kendi yapılandırmalarıyla bağımsız çalışmalıdır.
+
+Yönetim yazılımının kaldırılması hizmet paketlerini, verileri, kimlikleri,
+yapılandırmaları ve gerekli yenileme/zamanlama mekanizmalarını korumalıdır.
+Mevcut bağımlılıklar incelenip güvenle ayrıştırılmadan bu kaldırma davranışının
+desteklendiği söylenemez. Sahibinin doğrudan yaptığı değişiklikler algılanmalı;
+üzerlerine sessizce yazmak yerine çakışmalar açıkça çözümlenmelidir.
+
+Standart birincil/ikincil DNS aktarımı, karşı tarafta CelikPanel veya panel HTTPS
+adresi gerektirmeden panelden yapılandırılabilmelidir. Uzaktan DNS kaydı oluşturma
+ve değiştirme ayrıca yetkilendirilen, isteğe bağlı bir otomasyondur. Mevcut merkezi
+kayıt yönetimi bağlantısı DNS zorunluluğu değil, uygulama tercihidir. Mimari
+geliştirilirken mevcut kurulumlar korunmalıdır.
+
+Bu yön kararı asistana canlı sunucuyu değiştirme, paneli kaldırma veya kurulu paneli
+güncelleme izni vermez. Güncellemeyi kullanıcı panelden kendisi başlatır.
+
+[Kaynak uygulaması ve kalan bağımlılıklar](OWNER-INDEPENDENCE.tr.md).
+
+---
+
 ## D-021 · Amaca göre, kaldığı yerden süren kurulum ve açık DNS sahipliği
 
 *10 Eylül 2026 · Onaylanan yön; [çalışma ağacındaki uygulama durumu](SERVER-SETUP-STATUS.tr.md)*
