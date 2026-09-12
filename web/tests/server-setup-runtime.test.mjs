@@ -623,3 +623,71 @@ test('saved local secondary DNS requires an explicit primary selection before re
         assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
     } finally { await cleanup(); }
 });
+
+
+test('DNS role changes preserve physical server names, addresses and unrelated draft fields', () => {
+    const draft = {...fresh().draft, ns1:'ns2.example.com', ns2:'ns1.example.com', peer_ns:'ns1.example.com', local_ip:'72.62.38.15', peer_ip:'2.25.80.4'};
+    const secondary = setup.changeSetupDNSRole(draft, 'secondary');
+    assert.equal(secondary.ns2, draft.ns1);
+    assert.equal(secondary.ns1, draft.ns2);
+    assert.equal(secondary.local_ip, draft.local_ip);
+    assert.equal(secondary.peer_ip, draft.peer_ip);
+    assert.equal(secondary.peer_ns, draft.peer_ns);
+    assert.equal(setup.setupDNSNames(secondary).mismatch, false);
+    assert.deepEqual(setup.changeSetupDNSRole(secondary, 'primary'), draft);
+    assert.equal(setup.changeSetupDNSRole(draft, 'primary'), draft);
+    assert.equal(setup.setupDNSNames({...draft, peer_ns:' NS1.Example.COM. '}).mismatch, false);
+});
+
+test('only a usable server-reported IPv4 is offered for prefilling', () => {
+    for (const value of [undefined, '', '10.0.0.1', '127.0.0.1', '169.254.2.1', '172.16.0.2', '192.168.1.3', '100.64.1.1', '224.0.0.1', '0.1.2.3', '256.1.1.1', '1.2.3', '01.2.3.4', '2001:db8::1']) assert.equal(setup.setupDetectedIPv4(value), '');
+    assert.equal(setup.setupDetectedIPv4('72.62.38.15'), '72.62.38.15');
+});
+
+test('detected IP fills the field but never replaces saved or manually cleared input', async () => {
+    for (const saved of ['', '2.25.80.4']) {
+        init('admin', {status:'draft', server_ip:'72.62.38.15', draft:{...fresh().draft, local_ip:saved}});
+        try {
+            await mount();
+            assert.equal(tree.root.findByProps({id:'setup-local_ip'}).props.value, saved || '72.62.38.15');
+            assert.equal(calls.some(c => c.options?.method === 'PUT'), false);
+            await act(async () => tree.root.findByProps({id:'setup-local_ip'}).props.onChange({target:{value:''}}));
+            await act(async () => tree.root.findByProps({name:'setup-dns', value:'external'}).props.onChange());
+            await act(async () => tree.root.findByProps({name:'setup-dns', value:'local'}).props.onChange());
+            assert.equal(tree.root.findByProps({id:'setup-local_ip'}).props.value, '');
+        } finally { await cleanup(); }
+    }
+});
+
+test('local DNS edits derive the peer once and submit the same physical pairing after role change', async () => {
+    init('admin', {status:'draft', draft:{...fresh().draft, purpose:'dns', panel_domain:'panel.example.com', ns1:'ns2.example.com', ns2:'ns1.example.com', peer_ns:'ns1.example.com', local_ip:'72.62.38.15', peer_ip:'2.25.80.4'}});
+    try {
+        await mount();
+        assert.equal(tree.root.findAllByProps({id:'setup-peer_ns'}).length, 0);
+        await act(async () => tree.root.findByProps({id:'setup-dns_role'}).props.onChange({target:{value:'secondary'}}));
+        assert.equal(tree.root.findByProps({id:'setup-ns2'}).props.value, 'ns2.example.com');
+        await act(async () => tree.root.findByProps({id:'setup-ns1'}).props.onChange({target:{value:'primary.example.com'}}));
+        await submit();
+        assert.equal(state.draft.peer_ns, 'primary.example.com');
+        assert.equal(state.draft.ns1, 'primary.example.com');
+        assert.equal(state.draft.ns2, 'ns2.example.com');
+        assert.equal(state.draft.local_ip, '72.62.38.15');
+        assert.equal(state.draft.peer_ip, '2.25.80.4');
+        assert.equal(calls.some(c => c.url === '/api/v1/setup/start'), false);
+    } finally { await cleanup(); }
+});
+
+test('a conflicting saved peer remains visible and blocks review until explicitly corrected', async () => {
+    init('admin', {status:'draft', draft:{...fresh().draft, panel_domain:'panel.example.com', ns1:'primary.example.com', ns2:'secondary.example.com', peer_ns:'old.example.com'}});
+    try {
+        await mount();
+        assert.ok(JSON.stringify(tree.toJSON()).includes('old.example.com'));
+        await submit();
+        assert.equal(calls.some(c => c.url === '/api/v1/setup/plan'), false);
+        assert.equal(state.draft.peer_ns, 'old.example.com');
+        await act(async () => findButton('setup.useDisplayedPeer').props.onClick());
+        await submit();
+        assert.equal(state.draft.peer_ns, 'secondary.example.com');
+        assert.equal(calls.filter(c => c.url === '/api/v1/setup/plan').length, 1);
+    } finally { await cleanup(); }
+});
