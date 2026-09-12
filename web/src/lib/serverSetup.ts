@@ -84,3 +84,23 @@ export function chooseSetupPurpose(draft: ServerSetupDraft, purpose: SetupPurpos
         database: purpose === 'dns' || purpose === 'custom' ? '' : draft.database || 'mariadb',
     };
 }
+
+// Slot names are the setup protocol's primary/secondary order, not hostname prefixes.
+export function setupDNSNames(draft: ServerSetupDraft) {
+    const localKey = draft.dns_role === 'primary' ? 'ns1' : 'ns2';
+    const peerKey = localKey === 'ns1' ? 'ns2' : 'ns1';
+    const canonical = (value: string) => value.trim().toLowerCase().replace(/\.$/, '');
+    return { localKey, peerKey, mismatch: canonical(draft.peer_ns) !== canonical(draft[peerKey]) } as const;
+}
+export function changeSetupDNSRole(draft: ServerSetupDraft, role: ServerSetupDraft['dns_role']): ServerSetupDraft {
+    // Changing roles keeps the name and IP attached to the same physical server.
+    return role === draft.dns_role ? draft : { ...draft, dns_role: role, ns1: draft.ns2, ns2: draft.ns1 };
+}
+export function setupDetectedIPv4(value?: string): string {
+    if (!value || !/^(?:0|[1-9]\d{0,2})(?:\.(?:0|[1-9]\d{0,2})){3}$/.test(value)) return '';
+    const [a, b, ...rest] = value.split('.').map(Number);
+    if ([a, b, ...rest].some(n => n > 255) || a === 0 || a === 10 || a === 127 || a >= 224
+        || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31)
+        || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127)) return '';
+    return value;
+}
