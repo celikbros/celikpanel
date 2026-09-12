@@ -1,0 +1,105 @@
+{
+  "id": "68a4f5ec08037ac5d8a2e11deb3e9491",
+  "request_id": "68a4f5ec08037ac5d8a2e11deb3e9491",
+  "plan_id": "af0d6e2350362f889d8767d278f96cbd",
+  "status": "succeeded",
+  "phase": "complete",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "target": "local",
+      "status": "succeeded",
+      "request_id": "34b57658cd2f155d40391a1f75b2b4e2",
+      "owner_id": "b6d2faaba195def6ce00a12f9192b3c8"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "target": "nginx",
+      "status": "succeeded",
+      "request_id": "25649d412c1031a5befcb1d395057b9c",
+      "owner_id": "f456f3c0e471034b97390fcb16e51095",
+      "operation_id": "3bb23f24262522cc6f6192d7b44084d1"
+    },
+    {
+      "id": "03-service",
+      "kind": "service",
+      "target": "nftables",
+      "status": "succeeded",
+      "request_id": "b11de7f2abb41e19515888a799d717da",
+      "owner_id": "037c707f0e839794f4cbdf1b60b8159f",
+      "operation_id": "350aa48a4782852a778f45c021825a13"
+    },
+    {
+      "id": "04-service",
+      "kind": "service",
+      "target": "certbot",
+      "status": "succeeded",
+      "request_id": "bb8d14f497e87267177344cd33891192",
+      "owner_id": "02bc1bacbb18c5c4da033c484756e667",
+      "operation_id": "7478be09e713cf8cf5f8ab22443ff68f"
+    },
+    {
+      "id": "05-firewall",
+      "kind": "firewall",
+      "target": "enable_and_persist",
+      "status": "succeeded",
+      "request_id": "a8c566b282e0680a04ff7bc1e760506f",
+      "owner_id": "f490aaa273c0032a0d9ef0311c9bda64"
+    },
+    {
+      "id": "06-panel_certificate",
+      "kind": "panel_certificate",
+      "target": "panel.dnssecondary.setup.test",
+      "status": "succeeded",
+      "request_id": "bf426c6c4aad2717d5f5ae85bab9bc7e",
+      "owner_id": "5e4d78d11378910e5f87183a020d4b72",
+      "operation_id": "fdfe69fd2ea26c24bd4b6c6aab5d2c7d"
+    },
+    {
+      "id": "07-dns_publisher",
+      "kind": "dns_publisher",
+      "target": "https://panel.dnsprimary.setup.test:2083",
+      "status": "succeeded",
+      "request_id": "e37c15719cfd6bc80cfc0a0605cdf81f",
+      "owner_id": "6db3f890a13280bb0cc93b705942eae1"
+    },
+    {
+      "id": "08-verify",
+      "kind": "verify",
+      "target": "custom",
+      "status": "succeeded",
+      "request_id": "bb80c85678b8d10026414f3a8b02ed4a",
+      "owner_id": "333a5e105921b2fbece1c769ef637454"
+    }
+  ],
+  "checks": [
+    {
+      "id": "panel_https",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "panel_renewal",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "dns",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "firewall",
+      "state": "ready",
+      "code": "ready"
+    },
+    {
+      "id": "services",
+      "state": "ready",
+      "code": "ready"
+    }
+  ],
+  "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+}

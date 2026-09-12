@@ -1,0 +1,11 @@
+{
+  "DomainID": 1,
+  "SiteID": 1,
+  "Domain": "customer.secondaryfixture.test",
+  "TempDomain": "",
+  "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/1/public_html",
+  "ProjectType": "static",
+  "FTPUser": "customer_secondaryfixture_test",
+  "FTPPassword": "%lvS0joNAf5G9jD1e@nH",
+  "PHPVersion": ""
+}

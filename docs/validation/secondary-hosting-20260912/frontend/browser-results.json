@@ -1,0 +1,101 @@
+{
+  "target": "localhost production bundle with mocked API; no installed panel",
+  "results": [
+    {
+      "name": "tr-1440",
+      "passed": true,
+      "writes": [
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/dns/remote/connections",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/publisher",
+          "method": "POST"
+        }
+      ],
+      "bindingCalls": 1,
+      "startCalls": 0
+    },
+    {
+      "name": "tr-390",
+      "passed": true,
+      "writes": [
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/dns/remote/connections",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/publisher",
+          "method": "POST"
+        }
+      ],
+      "bindingCalls": 1,
+      "startCalls": 0
+    },
+    {
+      "name": "en-1440",
+      "passed": true,
+      "writes": [
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/dns/remote/connections",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/publisher",
+          "method": "POST"
+        }
+      ],
+      "bindingCalls": 1,
+      "startCalls": 0
+    },
+    {
+      "name": "en-390",
+      "passed": true,
+      "writes": [
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/dns/remote/connections",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/publisher",
+          "method": "POST"
+        }
+      ],
+      "bindingCalls": 1,
+      "startCalls": 0
+    }
+  ]
+}

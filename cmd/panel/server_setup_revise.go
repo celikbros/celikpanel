@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// Release only a plan whose host-changing steps have all finished. Revision
-// does not undo installed services or interrupt a committed operation.
+// Release a verified final wait or a DNS bootstrap gate with no admitted
+// remaining child. Revision preserves completed changes and exact child receipts.
 func (p *Panel) handleServerSetupRevise(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
@@ -46,7 +46,7 @@ func (p *Panel) handleServerSetupRevise(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var execution serverSetupExecution
-	if json.Unmarshal([]byte(raw), &execution) != nil || execution.ID != request.ExecutionID || execution.Status != "waiting" || execution.Phase != "verification" {
+	if json.Unmarshal([]byte(raw), &execution) != nil || execution.ID != request.ExecutionID || execution.Status != "waiting" || !stringIn(execution.Phase, "verification", "dns_publisher", "dns_readiness") {
 		conflict()
 		return
 	}
@@ -55,8 +55,14 @@ func (p *Panel) handleServerSetupRevise(w http.ResponseWriter, r *http.Request) 
 		conflict()
 		return
 	}
-	for _, step := range execution.Steps {
-		if step.Status != "succeeded" {
+	if !serverSetupExecutionCanRevise(plan, execution) {
+		conflict()
+		return
+	}
+	if execution.Phase != "verification" {
+		dnsState, err := readDNSEngineDBState(r.Context(), p.db.GetDB())
+		marker, markerErr := readDNSEngineOperationMarker(r.Context(), p.db.GetDB())
+		if err != nil || markerErr != nil || dnsState.CurrentSwitchID != "" || marker != nil {
 			conflict()
 			return
 		}
@@ -110,4 +116,42 @@ func (p *Panel) handleServerSetupRevise(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	json.NewEncoder(w).Encode(state)
+}
+
+// A bootstrap gate may be revised only after every preceding host operation has
+// succeeded and before any subsequent child was admitted. The new review keeps
+// installed services; it never mutates or replaces the old reviewed plan.
+func serverSetupExecutionCanRevise(plan serverSetupPlan, execution serverSetupExecution) bool {
+	if execution.Status != "waiting" || validateServerSetupExecution(plan, execution) != nil || len(execution.Steps) == 0 {
+		return false
+	}
+	if execution.Phase == "verification" {
+		for _, step := range execution.Steps {
+			if step.Status != "succeeded" {
+				return false
+			}
+		}
+		return true
+	}
+	if execution.Phase == "dns_publisher" && !serverSetupSecondaryHosting(plan.Draft) {
+		return false
+	}
+	if execution.Phase == "dns_readiness" && (plan.Draft.DNSMode != "local" || plan.Draft.DNSRole != "primary" || !serverSetupNeedsDNSPublisher(plan.Draft)) {
+		return false
+	}
+	if !stringIn(execution.Phase, "dns_publisher", "dns_readiness") {
+		return false
+	}
+	found := false
+	for _, step := range execution.Steps {
+		if step.Kind == execution.Phase {
+			if found || step.Status != "running" || step.OperationID != "" {
+				return false
+			}
+			found = true
+		} else if (!found && step.Status != "succeeded") || (found && (step.Status != "pending" || step.OperationID != "")) {
+			return false
+		}
+	}
+	return found
 }

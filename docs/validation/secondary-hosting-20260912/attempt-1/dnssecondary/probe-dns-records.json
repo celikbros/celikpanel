@@ -1,0 +1,88 @@
+{
+  "management": "existing",
+  "published": true,
+  "records": [
+    {
+      "id": 10,
+      "domain_id": 1,
+      "name": "mail.probe.secondaryfixture.test",
+      "type": "A",
+      "content": "192.0.2.20",
+      "ttl": 3600,
+      "disabled": false
+    },
+    {
+      "id": 1,
+      "domain_id": 1,
+      "name": "probe.secondaryfixture.test",
+      "type": "A",
+      "content": "192.0.2.20",
+      "ttl": 3600,
+      "disabled": false
+    },
+    {
+      "id": 11,
+      "domain_id": 1,
+      "name": "mail.probe.secondaryfixture.test",
+      "type": "AAAA",
+      "content": "fec0::5054:ff:fe71:2",
+      "ttl": 3600,
+      "disabled": false
+    },
+    {
+      "id": 2,
+      "domain_id": 1,
+      "name": "probe.secondaryfixture.test",
+      "type": "AAAA",
+      "content": "fec0::5054:ff:fe71:2",
+      "ttl": 3600,
+      "disabled": false
+    },
+    {
+      "id": 3,
+      "domain_id": 1,
+      "name": "www.probe.secondaryfixture.test",
+      "type": "CNAME",
+      "content": "probe.secondaryfixture.test",
+      "ttl": 3600,
+      "disabled": false
+    },
+    {
+      "id": 12,
+      "domain_id": 1,
+      "name": "probe.secondaryfixture.test",
+      "type": "MX",
+      "content": "mail.probe.secondaryfixture.test",
+      "ttl": 3600,
+      "prio": 10,
+      "disabled": false
+    },
+    {
+      "id": 9,
+      "domain_id": 1,
+      "name": "_dmarc.probe.secondaryfixture.test",
+      "type": "TXT",
+      "content": "\"v=DMARC1; p=none; rua=mailto:dmarc@probe.secondaryfixture.test\"",
+      "ttl": 3600,
+      "disabled": false
+    },
+    {
+      "id": 4,
+      "domain_id": 1,
+      "name": "probe.secondaryfixture.test",
+      "type": "TXT",
+      "content": "\"secondary-hosting-validation\"",
+      "ttl": 300,
+      "disabled": false
+    },
+    {
+      "id": 8,
+      "domain_id": 1,
+      "name": "probe.secondaryfixture.test",
+      "type": "TXT",
+      "content": "\"v=spf1 a mx ~all\"",
+      "ttl": 3600,
+      "disabled": false
+    }
+  ]
+}

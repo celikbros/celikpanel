@@ -1,0 +1,81 @@
+{
+  "id": "68a4f5ec08037ac5d8a2e11deb3e9491",
+  "request_id": "68a4f5ec08037ac5d8a2e11deb3e9491",
+  "plan_id": "6bfe5f06843f691b6cc96ee343822a97",
+  "status": "waiting",
+  "phase": "dns_publisher",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "target": "local",
+      "status": "succeeded",
+      "request_id": "34b57658cd2f155d40391a1f75b2b4e2",
+      "owner_id": "b6d2faaba195def6ce00a12f9192b3c8"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "target": "nftables",
+      "status": "succeeded",
+      "request_id": "25649d412c1031a5befcb1d395057b9c",
+      "owner_id": "f456f3c0e471034b97390fcb16e51095",
+      "operation_id": "6c407a575cb532d69d3ec3ae6db3f5c0"
+    },
+    {
+      "id": "03-service",
+      "kind": "service",
+      "target": "certbot",
+      "status": "succeeded",
+      "request_id": "b11de7f2abb41e19515888a799d717da",
+      "owner_id": "037c707f0e839794f4cbdf1b60b8159f",
+      "operation_id": "36c54d4efdd5b9d5c7aee524dd477890"
+    },
+    {
+      "id": "04-firewall",
+      "kind": "firewall",
+      "target": "enable_and_persist",
+      "status": "succeeded",
+      "request_id": "3cce1f00ad7bb2d665ddd4f23f52208b",
+      "owner_id": "7de855ddb2c9b2eedd9990e88e6ed50c"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "target": "panel.dnssecondary.setup.test",
+      "status": "succeeded",
+      "request_id": "c1da2d10a16e8b7b24e0257fe5d1917a",
+      "owner_id": "f13fb630e61ecc687e264ed58d399b63",
+      "operation_id": "446e6f449c7f21a248c4edf6c4411fea"
+    },
+    {
+      "id": "06-dns_publisher",
+      "kind": "dns_publisher",
+      "target": "https://panel.dnsprimary.setup.test:2083",
+      "status": "running",
+      "request_id": "5632a2fd52e63973c48885a4f797333a",
+      "owner_id": "38a91b85074b2244cd533c08f57d6e1c"
+    },
+    {
+      "id": "07-service",
+      "kind": "service",
+      "target": "nginx",
+      "status": "pending",
+      "request_id": "eba33a6f0942019c692d225029db5a5f",
+      "owner_id": "775e13eae1d01b3265dbc7370c1e28e7"
+    },
+    {
+      "id": "08-verify",
+      "kind": "verify",
+      "target": "custom",
+      "status": "pending",
+      "request_id": "bb80c85678b8d10026414f3a8b02ed4a",
+      "owner_id": "333a5e105921b2fbece1c769ef637454"
+    }
+  ],
+  "error": {
+    "code": "server_setup_dns_publisher_required",
+    "message": "Finish the DNS connection shown in this setup flow to continue. Completed operations and existing services are preserved."
+  },
+  "panel_url": "https://panel.dnssecondary.setup.test:2083/"
+}

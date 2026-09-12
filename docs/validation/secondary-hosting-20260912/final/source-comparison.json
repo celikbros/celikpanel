@@ -1,0 +1,13 @@
+{
+  "unchanged_count": 1218,
+  "changed_files": [
+    "deploy/release-sequence-policy",
+    "deploy/test-download-portal-contract.sh",
+    "deploy/test-release-sequence-policy.sh",
+    "deploy/test-signed-release-manifest-contract.sh"
+  ],
+  "missing_files": [],
+  "added_go_files": [
+    "cmd/panel/secondary_hosting_mail_profile_test.go"
+  ]
+}

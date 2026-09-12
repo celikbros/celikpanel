@@ -1,0 +1,10 @@
+{
+  "web/src/components/ServerSetup.tsx": "3a1ba6a47bfc34474ff6cc96fd2c022443e1ff9a8a35ec38dbaee12123b3c8cf",
+  "web/src/components/ServerSetupDNSConnections.tsx": "d407cf1762ebe8e2b16df155fe3114694babd845149cc3affe776b3ca07e44f9",
+  "web/src/i18n/screens/en.ts": "b5ec3908f01d271e4a20e861201b65676c7bc93cb903c53b76c3383862a88469",
+  "web/src/i18n/screens/tr.ts": "3a0233e40b8e597e595d5e19c39267022fd110ba8611be0f074a30f62adb2b97",
+  "web/src/lib/serverSetup.ts": "8bc4df5e8ef7d42cab1e2e7bbbad1de5f1d7ef53691b0188131453a5e16e9a52",
+  "web/src/lib/serverSetupOperation.ts": "613731abcc606c4fdd4b6df8736614860439ce674db325c7b97c829a6a51cf5e",
+  "web/tests/server-setup-runtime.test.mjs": "ea0f6f31811f5c5231af771fe59f88424d9121c44c9699851c30f6903fa9230e",
+  "web/tests/remote-dns-ui-runtime.test.mjs": "271e4f27124d71be6bab8ff500d86f8a3cf179b22d0471ce7c1f0cd3be7720fe"
+}

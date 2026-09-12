@@ -8,6 +8,7 @@ export interface ServerSetupDraft {
     mail_hostname: string;
     dns_mode: SetupDNSMode;
     remote_dns_connection_id: string;
+    dns_publisher_endpoint?: string;
     dns_engine: 'bind' | 'pdns';
     dns_role: 'primary' | 'secondary';
     ns1: string;
@@ -49,6 +50,7 @@ export function decodeServerSetup(value: unknown): ServerSetupSnapshot | null {
         || !['bind', 'pdns'].includes(String(draft.dns_engine))
         || !['primary', 'secondary'].includes(String(draft.dns_role))
         || draftStrings.some(key => typeof draft[key] !== 'string')) return null;
+    if (draft.dns_publisher_endpoint !== undefined && typeof draft.dns_publisher_endpoint !== 'string') return null;
     if (draft.customization !== undefined && (!record(draft.customization) || !Array.isArray(draft.customization.components)
         || draft.customization.components.length > 80 || draft.customization.components.some(id => typeof id !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(id))
         || new Set(draft.customization.components).size !== draft.customization.components.length)) return null;

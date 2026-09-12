@@ -9,6 +9,11 @@ claim that they are published or installed on Boston, Frankfurt, or another host
 Installed-panel updates must be initiated by the user in CelikPanel, as required
 by [AGENTS.md](../AGENTS.md), regardless of older deployment instructions.
 
+A later working-tree extension supports [secondary DNS with hosting](SECONDARY-DNS-HOSTING.md)
+through a scoped connection to the publishing primary. Its separate
+[acceptance record](validation/secondary-hosting-20260912/README.md) records the tested
+source and limitations; the historical evidence below remains dated 11 September.
+
 ## Implemented in the working tree
 
 | Area | Current behavior and boundary |

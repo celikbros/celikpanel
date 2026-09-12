@@ -247,8 +247,11 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 			if state.ActiveEngine != "" && !setupDNSDraftMatchesState(draft, request, local, state) {
 				addBlocker("server_setup_existing_dns_requires_migration")
 			}
-			if serverSetupNeedsDNSPublisher(draft) && draft.DNSRole == "secondary" {
-				addBlocker("server_setup_hosting_requires_dns_publisher")
+			if serverSetupSecondaryHosting(draft) {
+				endpoint, err := canonicalRemoteDNSEndpoint(draft.DNSPublisherEndpoint)
+				if err != nil || endpoint != draft.DNSPublisherEndpoint {
+					addBlocker("server_setup_dns_publisher_endpoint_required")
+				}
 			}
 		}
 	}
@@ -423,7 +426,16 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 	plan.UDPPorts = slices.Compact(plan.UDPPorts)
 	addStep("firewall", "enable_and_persist", "")
 	cert := currentPanelCert()
-	if !cert.HTTPSEnabled || cert.SelfSigned || !slices.Contains(cert.DNSNames, draft.PanelDomain) || !cert.ExpiresAt.After(time.Now().Add(24*time.Hour)) {
+	certificateRequired := serverSetupPanelCertificateChangesRequired(cert, draft.PanelDomain, plan.Steps)
+	if !certificateRequired {
+		var renewal transport.PanelRenewalReadinessResponse
+		if err := p.callAgentContext(ctx, "Agent.PanelRenewalReadiness", &transport.PanelRenewalReadinessRequest{Domain: draft.PanelDomain}, &renewal); err != nil {
+			addBlocker("server_setup_panel_renewal_unavailable")
+		} else {
+			certificateRequired = !renewal.Ready
+		}
+	}
+	if certificateRequired {
 		addStep("panel_certificate", draft.PanelDomain, "")
 	}
 	if len(mailProfiles) > 0 {
@@ -437,6 +449,7 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 		addStep("mail_certificate", draft.MailHostname, "")
 	}
 	addStep("verify", draft.Purpose, "")
+	plan.Steps = serverSetupDNSBootstrapSteps(draft, plan.Steps)
 	plan.CanStart = len(plan.Blockers) == 0
 	plan.ID = serverSetupPlanIdentity(plan)
 	return plan, nil
@@ -686,7 +699,19 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 				return false, err
 			}
 		}
-		done, err := p.runServerSetupStep(ctx, plan, step)
+		var done bool
+		var err error
+		if step.Kind == "dns_publisher" {
+			done, err = p.runServerSetupDNSPublisher(ctx, plan, execution.ID)
+		} else {
+			done, err = p.runServerSetupStep(ctx, plan, step)
+		}
+		if errors.Is(err, errServerSetupDNSPublisherRequired) || errors.Is(err, errServerSetupDNSReadinessRequired) {
+			execution.Status = "waiting"
+			execution.Phase = step.Kind
+			execution.Error = &serviceOperationError{Code: "server_setup_" + step.Kind + "_required", Message: "Finish the DNS connection shown in this setup flow to continue. Completed operations and existing services are preserved."}
+			return false, p.persistServerSetupExecution(ctx, *execution)
+		}
 		if errors.Is(err, errServerSetupLicenseRequired) {
 			execution.Status = "waiting"
 			execution.Phase = "license"
@@ -755,6 +780,14 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, step *serverSetupExecutionStep) (bool, error) {
 	switch step.Kind {
 	case "verify":
+		return true, nil
+	case "dns_readiness":
+		if err := p.requireServerSetupAdmission(); err != nil {
+			return false, err
+		}
+		if _, err := p.remoteDNSLocalAuthority(ctx); err != nil {
+			return false, errServerSetupDNSReadinessRequired
+		}
 		return true, nil
 	case "dns":
 		if plan.Draft.DNSMode == "external" {

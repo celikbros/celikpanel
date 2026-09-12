@@ -1,0 +1,18 @@
+{
+  "root": "/var/tmp/cp-secondary-hosting-20260912-v2",
+  "controller_stops": [],
+  "guests": [
+    {
+      "name": "dnsprimary",
+      "pid": 351,
+      "stopped": true,
+      "overlay": "/var/tmp/cp-secondary-hosting-20260912-v2/dnsprimary/overlay.qcow2"
+    },
+    {
+      "name": "dnssecondary",
+      "pid": 366,
+      "stopped": true,
+      "overlay": "/var/tmp/cp-secondary-hosting-20260912-v2/dnssecondary/overlay.qcow2"
+    }
+  ]
+}

@@ -9,6 +9,18 @@ veya Boston, Frankfurt ya da başka bir sunucuya kurulduğunu söylemez.
 Eski dağıtım talimatlarından bağımsız olarak [AGENTS.md](../AGENTS.md) gereğince
 kurulu panel güncellemelerini kullanıcı CelikPanel'in kendi arayüzünden başlatır.
 
+## 12 Eylül 2026 eklemesi: ikincil DNS ile barındırma
+
+[İkincil DNS sunucusunda barındırma](SECONDARY-DNS-HOSTING.tr.md) kaydı,
+Frankfurt'un birincil, Boston'un hem ikincil DNS hem web/uygulama/e-posta
+sunucusu olduğu çalışma ağacı uygulamasını açıklar. Boston'un barındırma
+kayıtları, tek sihirbaz içinde açıkça bağlanan yetkili Frankfurt bağlantısı
+üzerinden yayımlanır. Bölgeye göre karşılıklı birincil/ikincil roller eklenmez.
+Bu ek kayıt da bir sürüm yayımlama veya kurulu sunucu güncelleme kanıtı değildir;
+kurulu panelleri kullanıcı kendi panel arayüzünden günceller.
+
+Aşağıdaki 11 Eylül uygulama ve doğrulama kayıtları tarihsel kapsamını korur.
+
 ## Çalışma ağacında uygulananlar
 
 | Alan | Geçerli davranış ve sınırı |

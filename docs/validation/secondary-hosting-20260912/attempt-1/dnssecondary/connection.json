@@ -1,0 +1,14 @@
+{
+  "connection": {
+    "id": "919f624b6382d32a61e740a528e20c37",
+    "endpoint": "https://panel.dnsprimary.setup.test:2083",
+    "label": "Disposable secondary hosting",
+    "status": "ready",
+    "nameservers": [
+      "ns1.setup.test",
+      "ns2.setup.test"
+    ],
+    "created_at": "2026-09-12T14:00:19Z"
+  },
+  "verified": true
+}

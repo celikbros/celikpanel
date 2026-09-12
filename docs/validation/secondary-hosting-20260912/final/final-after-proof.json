@@ -1,0 +1,296 @@
+{
+  "dnsprimary": {
+    "stage": "after",
+    "profile": "dnsprimary",
+    "domain": "customer.secondaryfixture.test",
+    "panel_zones": [],
+    "hosting": [],
+    "local_writes": [],
+    "engine": [
+      [
+        "bind",
+        1,
+        3
+      ]
+    ],
+    "pair": [
+      [
+        "primary",
+        "192.0.2.10",
+        "ns1.setup.test",
+        "192.0.2.20",
+        "ns2.setup.test"
+      ]
+    ],
+    "wire": {
+      "192.0.2.10 +tcp customer.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 43145\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: a06005083a4ce5ba010000006aa55e26227add32938c3bd3 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 5086\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 64964a1e282582e6010000006aa55e26b085996b3cbc2776 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp customer.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 40574\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: d2e7cfabfa1e0156010000006aa55e2675c3f51b7fb68622 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 34097\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: e65f89323ae8f099010000006aa55e26af20a3de2df76f0c (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp mail.customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 57365\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 22077e9bfbc3ecf4010000006aa55e26725b27a5f006daaf (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp _dmarc.customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 43177\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 8716c4bf9c02dae5010000006aa55e264cf7ea877e6b5015 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp customer.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 41630\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: c8d4004e825c3291010000006aa55e26e4a072da35651dd8 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 25494\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: c19ac354cfb3f655010000006aa55e26747654330e4d5ee6 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp customer.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 40380\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 602ee2ae5f550104010000006aa55e26772bc0570c8e3ac1 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 18869\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 5dfafb1eb775f0c5010000006aa55e261bb38921e06d456b (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp mail.customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 10645\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 8e5183fa370acbaa010000006aa55e2692f0d844b90147a2 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp _dmarc.customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 42826\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: a77e13e65d0ca7db010000006aa55e26da5e5fd8c8c4e0b5 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp customer.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 31988\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 45693\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp customer.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 42207\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 6534\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp mail.customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 55764\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp _dmarc.customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 65461\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp customer.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 56204\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 43159\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp customer.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 39439\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 9535\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp mail.customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 29779\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp _dmarc.customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 8370\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      }
+    }
+  },
+  "dnssecondary": {
+    "stage": "after",
+    "profile": "dnssecondary",
+    "domain": "customer.secondaryfixture.test",
+    "panel_zones": [],
+    "hosting": [],
+    "local_writes": [],
+    "engine": [
+      [
+        "pdns",
+        1,
+        3
+      ]
+    ],
+    "pair": [
+      [
+        "secondary",
+        "192.0.2.20",
+        "ns2.setup.test",
+        "192.0.2.10",
+        "ns1.setup.test"
+      ]
+    ],
+    "runtime_zones": [],
+    "runtime_records": [],
+    "wire": {
+      "192.0.2.10 +tcp customer.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 45902\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 79dc1da1ac9a9c9a010000006aa55e29324dceacaa3f08e5 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 23492\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: fd800ca6ae759c40010000006aa55e29a29d953c9223e3a6 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp customer.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 30910\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 0a8a8708c627f58f010000006aa55e29ea22c136632c9537 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 36801\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: d3a3900422323cde010000006aa55e296d4147afb6af996f (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp mail.customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 63166\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 8716c68bcb685474010000006aa55e298b145f31951d9f19 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +tcp _dmarc.customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 39255\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 5ae44efe381dd09e010000006aa55e29c144ebbb36cefb22 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp customer.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 25481\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: f67d74f8b371f91b010000006aa55e293abd647cbb0ece28 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 49484\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 9f11bb8eae44a684010000006aa55e29754e8be58c5ea812 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp customer.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 61239\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 993839eeb5c2ab37010000006aa55e297399ae8ed5b2c827 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 64248\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 64853b38472af03a010000006aa55e29db99ba4c9d800da1 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp mail.customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 46808\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: c2de282b6ef90606010000006aa55e2995aa509787971ff2 (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.10 +notcp _dmarc.customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 37210\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: d12e5d4baf0d90f6010000006aa55e294cf28d0037d6f97b (good)\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp customer.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 11085\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 20397\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp customer.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 26436\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 2507\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp mail.customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 11281\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +tcp _dmarc.customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 28390\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp customer.secondaryfixture.test SOA": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 14811\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 10231\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp customer.secondaryfixture.test MX": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 12686\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 51446\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp mail.customer.secondaryfixture.test A": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 31506\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      },
+      "192.0.2.20 +notcp _dmarc.customer.secondaryfixture.test TXT": {
+        "code": 0,
+        "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 21789\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n",
+        "stderr": ""
+      }
+    }
+  }
+}

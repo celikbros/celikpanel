@@ -1,0 +1,64 @@
+{
+  "leaf_sha256": "a88e4092f7e78a4470762d900ce7d59c4e64a9ccff0636b137dd81c733721563",
+  "state": {
+    "setup": [
+      [
+        "ready",
+        1,
+        "2026-09-12T14:12:08Z"
+      ]
+    ],
+    "children": [
+      [
+        "350aa48a4782852a778f45c021825a13",
+        "succeeded",
+        "service_install",
+        "b11de7f2abb41e19515888a799d717da"
+      ],
+      [
+        "3bb23f24262522cc6f6192d7b44084d1",
+        "succeeded",
+        "service_install",
+        "25649d412c1031a5befcb1d395057b9c"
+      ],
+      [
+        "7478be09e713cf8cf5f8ab22443ff68f",
+        "succeeded",
+        "service_install",
+        "bb8d14f497e87267177344cd33891192"
+      ],
+      [
+        "fdfe69fd2ea26c24bd4b6c6aab5d2c7d",
+        "succeeded",
+        "panel_certificate_issue",
+        "bf426c6c4aad2717d5f5ae85bab9bc7e"
+      ]
+    ],
+    "engine": [
+      [
+        "pdns",
+        1,
+        3
+      ]
+    ],
+    "pair": [
+      [
+        "secondary",
+        "192.0.2.20",
+        "192.0.2.10"
+      ]
+    ]
+  },
+  "panel_pid": "8714",
+  "timer_enabled": "enabled",
+  "timer_active": "active",
+  "timer_trigger": "Sat 2026-09-12 14:16:51 UTC",
+  "service_result": "success",
+  "renewal_configs": {
+    "celikpanel-panel-f586ff4a651a1c6d1a97c77c.conf": "# renew_before_expiry = 30 days\nversion = 4.0.0\narchive_dir = /etc/letsencrypt/archive/celikpanel-panel-f586ff4a651a1c6d1a97c77c\ncert = /etc/letsencrypt/live/celikpanel-panel-f586ff4a651a1c6d1a97c77c/cert.pem\nprivkey = /etc/letsencrypt/live/celikpanel-panel-f586ff4a651a1c6d1a97c77c/privkey.pem\nchain = /etc/letsencrypt/live/celikpanel-panel-f586ff4a651a1c6d1a97c77c/chain.pem\nfullchain = /etc/letsencrypt/live/celikpanel-panel-f586ff4a651a1c6d1a97c77c/fullchain.pem\n\n# Options used in the renewal process\n[renewalparams]\naccount = 21e75889959d6c5747a29c18f7ffdad0\npref_challs = http-01,\nserver = https://acme.setup.test:14000/dir\nauthenticator = webroot\nwebroot_path = /var/lib/celikpanel-agent/acme-http-01/panel,\nkey_type = ecdsa\n[[webroot_map]]\npanel.dnssecondary.setup.test = /var/lib/celikpanel-agent/acme-http-01/panel\n"
+  },
+  "active_workloads": {
+    "pdns": "active",
+    "nginx": "active"
+  }
+}

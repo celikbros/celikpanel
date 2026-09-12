@@ -1161,6 +1161,7 @@ func main() {
 	http.HandleFunc(serverSetupPath+"/components", panel.handleServerSetupComponents)
 	http.HandleFunc(serverSetupPath+"/complete", panel.handleServerSetupComplete)
 	http.HandleFunc(serverSetupPath+"/revise", panel.handleServerSetupRevise)
+	http.HandleFunc(serverSetupPath+"/publisher", panel.handleServerSetupPublisher)
 	http.HandleFunc(serverSetupPath+"/plan", panel.handleServerSetupPlan)
 	http.HandleFunc(serverSetupPath+"/start", panel.handleServerSetupStart)
 	http.HandleFunc(serverSetupPath+"/operation", panel.handleServerSetupOperation)

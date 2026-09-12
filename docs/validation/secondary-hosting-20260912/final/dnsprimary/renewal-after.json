@@ -1,0 +1,57 @@
+{
+  "leaf_sha256": "9d0e2a09936e0d8eb4c4e056c6cd66d5c3a3c58fdb0df2527f40b66fccb7ac31",
+  "state": {
+    "setup": [
+      [
+        "ready",
+        1,
+        "2026-09-12T14:11:12Z"
+      ]
+    ],
+    "children": [
+      [
+        "0307dbb853383a0c20aeb2c6c5d39a60",
+        "succeeded",
+        "panel_certificate_issue",
+        "dceca3ca1598460c4f51bd4c3adb4acc"
+      ],
+      [
+        "2c38d0f6596f9311f2e7299a220554d1",
+        "succeeded",
+        "service_install",
+        "497a196578bb46f2fa6bfa49f03fa830"
+      ],
+      [
+        "7af5291cab0be27308a2f0ded8969791",
+        "succeeded",
+        "service_install",
+        "110d3c77406d2a187dd2b5d7923d3c19"
+      ]
+    ],
+    "engine": [
+      [
+        "bind",
+        1,
+        3
+      ]
+    ],
+    "pair": [
+      [
+        "primary",
+        "192.0.2.10",
+        "192.0.2.20"
+      ]
+    ]
+  },
+  "panel_pid": "13025",
+  "timer_enabled": "enabled",
+  "timer_active": "active",
+  "timer_trigger": "Sat 2026-09-12 14:16:52 UTC",
+  "service_result": "success",
+  "renewal_configs": {
+    "celikpanel-panel-6d5c3534f3842dc58a2cbc8f.conf": "# renew_before_expiry = 30 days\nversion = 4.0.0\narchive_dir = /etc/letsencrypt/archive/celikpanel-panel-6d5c3534f3842dc58a2cbc8f\ncert = /etc/letsencrypt/live/celikpanel-panel-6d5c3534f3842dc58a2cbc8f/cert.pem\nprivkey = /etc/letsencrypt/live/celikpanel-panel-6d5c3534f3842dc58a2cbc8f/privkey.pem\nchain = /etc/letsencrypt/live/celikpanel-panel-6d5c3534f3842dc58a2cbc8f/chain.pem\nfullchain = /etc/letsencrypt/live/celikpanel-panel-6d5c3534f3842dc58a2cbc8f/fullchain.pem\n\n# Options used in the renewal process\n[renewalparams]\naccount = dba2c40291f3bb017fdde4562e337e65\npref_challs = http-01,\nserver = https://acme.setup.test:14000/dir\nauthenticator = standalone\nkey_type = ecdsa\n"
+  },
+  "active_workloads": {
+    "bind9": "active"
+  }
+}
