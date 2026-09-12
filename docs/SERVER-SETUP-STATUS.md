@@ -14,6 +14,25 @@ through a scoped connection to the publishing primary. Its separate
 [acceptance record](validation/secondary-hosting-20260912/README.md) records the tested
 source and limitations; the historical evidence below remains dated 11 September.
 
+## Operation guidance extension — 13 September 2026
+
+The alpha.73 source candidate adds reviewed-plan progress context, role-specific
+DNS next actions, and distinct guidance for waiting, failure and uncertain
+results before the setup step list. Mandatory local DNS readiness checks finish
+before bounded peer probes; missing peer proof never grants pair readiness.
+Known service failures remain visible during state verification. Progress GETs
+remain read-only and do not launch duplicate operations.
+
+Validation for this extension: 421 frontend tests, production build/bundle checks,
+focused panel/agent Go and race checks, and 28 Turkish/English desktop/mobile
+browser scenarios. See the [alpha.73 notes](RELEASE-NOTES-v0.1.0-alpha.73.md) and
+[product-wide guidance requirement](OPERATION-GUIDANCE.md). Arbitrary third-party
+license adapters and a complete lifecycle-adapter audit are not included. This
+addendum is source-validation evidence, not publication or installed-host proof;
+the dated 11 September evidence below retains its original scope.
+
+After a version change, CelikPanel rechecks recorded operations. Remaining steps in a plan bound to the previous build may require a fresh review; the update does not automatically repeat recorded installations.
+
 ## Implemented in the working tree
 
 | Area | Current behavior and boundary |

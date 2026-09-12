@@ -8,6 +8,30 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-024 · Every operation explains the current state and next action
+
+*September 13, 2026 · User-approved requirement; product-wide implementation and audit incomplete*
+
+Progress, waiting, failure and recovery guidance apply to every managed program,
+service, runtime and integration. The user must see the current reason, who needs
+to act, the concrete next action and how the operation will resume before a long
+list of steps. DNS topology, license, credentials, permissions and provider access
+are examples of dependencies that require specific guidance, not silent waiting.
+
+Separate verified failures, unmet prerequisites and unknown results. Preserve
+known failures while checking their outcome, retain the accepted plan and exact
+operation identity, never expose secrets and never start a duplicate mutation
+because a page refreshed or a reply was lost. Every supported adapter must supply
+stable state/error codes and actionable translated messages for its own cases.
+
+The current source work provides setup DNS role context, panel-license guidance
+and generic service-error handling. Third-party license adapters and an exhaustive
+review of all operation screens are not implemented by this decision. The
+[operation guidance contract](OPERATION-GUIDANCE.md) defines acceptance and limits.
+D-021 and D-022 remain binding; installed panels are still updated only by the user.
+
+---
+
 ## D-022 · Owner-controlled infrastructure independent of CelikPanel
 
 *September 12, 2026 · User-approved requirement; first audit recorded, removal not certified*

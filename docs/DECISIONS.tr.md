@@ -8,6 +8,31 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-024 · Her işlem mevcut durumu ve sonraki eylemi açıklar
+
+*13 Eylül 2026 · Kullanıcının onayladığı gereksinim; ürün genelindeki uygulama ve inceleme tamamlanmadı*
+
+İlerleme, bekleme, hata ve kurtarma yönlendirmesi; yönetilen her program, hizmet,
+çalışma ortamı ve entegrasyon için geçerlidir. Kullanıcı uzun adım listesinden
+önce mevcut nedeni, kimin işlem yapacağını, somut sonraki eylemi ve işlemin nasıl
+devam edeceğini görmelidir. DNS topolojisi, lisans, kimlik bilgileri, yetkiler ve
+sağlayıcı erişimi sessiz bekleme yerine özel yönlendirme gerektiren örneklerdir.
+
+Doğrulanmış hata, eksik önkoşul ve bilinmeyen sonuç ayrılır. Sonuç kontrol
+edilirken bilinen hata korunur; kabul edilen plan ve tam işlem kimliği korunur;
+gizli bilgi gösterilmez. Sayfa yenilendi veya yanıt kayboldu diye ikinci değişiklik
+işlemi başlatılmaz. Desteklenen her adaptör kendi durumları için sabit durum/hata
+kodları ve uygulanabilir çevrilmiş mesajlar sağlamalıdır.
+
+Mevcut kaynak çalışması kurulum DNS rol bağlamını, panel lisansı yönlendirmesini
+ve genel hizmet hatası gösterimini sağlar. Bu karar üçüncü taraf lisans
+adaptörlerini veya bütün işlem ekranlarının eksiksiz incelemesini uygulamaz.
+[İşlem yönlendirme sözleşmesi](OPERATION-GUIDANCE.tr.md) kabul ölçütlerini ve
+sınırları tanımlar. D-021 ve D-022 geçerlidir; kurulu panelleri yalnız kullanıcı
+günceller.
+
+---
+
 ## D-022 · CelikPanel'den bağımsız, sahibinin yönetebildiği altyapı
 
 *12 Eylül 2026 · Kullanıcının onayladığı gereksinim; ilk inceleme kaydedildi; kaldırma desteği henüz doğrulanmadı*

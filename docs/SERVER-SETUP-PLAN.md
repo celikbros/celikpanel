@@ -203,6 +203,12 @@ claims unsupported profiles or treats incomplete checks as ready.
 - Turkish/English, desktop/mobile, keyboard navigation and actionable errors are
   verified against the actual UI. No success requires a hidden extra button.
 
+- Every setup operation follows [D-024 actionable guidance](OPERATION-GUIDANCE.md):
+  show the current reason, actor, next action and continuation behavior before
+  lengthy progress lists; distinguish prerequisites, observed failures and unknown
+  results. Cover both DNS start orders and the chosen DNS mode, relevant license,
+  credential and provider failures, preserved failures during reconciliation,
+  secret-free diagnostics and refresh without duplicate mutations.
 ## 8. Baseline at approval
 
 At approval, Dashboard contained `StartGuide`; there was no persisted general

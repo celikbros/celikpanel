@@ -14,6 +14,12 @@ export interface ServerSetupExecution {
     status: 'running' | 'waiting' | 'failed' | 'succeeded'; phase: string;
     steps: (SetupPlanStep & { status: 'pending' | 'running' | 'failed' | 'succeeded' })[];
     error?: { code: string; message: string }; panel_url?: string; checks?: ServerSetupCheck[];
+    context?: SetupExecutionContext;
+}
+export interface SetupExecutionContext {
+    dns_mode: 'local' | 'external' | 'existing'; dns_role: 'primary' | 'secondary' | '';
+    dns_engine: string; local_nameserver: string; local_ip: string; peer_nameserver: string; peer_ip: string;
+    panel_domain: string; mail_hostname: string; dns_hosting_management: string;
 }
 const kinds = ['dns', 'dns_publisher', 'dns_readiness', 'service', 'runtime', 'mail_profile', 'firewall', 'panel_certificate', 'mail_certificate', 'verify'];
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -47,6 +53,17 @@ export function decodeSetupExecution(value: unknown, marker?: SetupStartMarker |
         || (value.error !== undefined && (!isRecord(value.error) || typeof value.error.code !== 'string' || typeof value.error.message !== 'string'))
         || (value.checks !== undefined && (!Array.isArray(value.checks) || value.checks.some(check => !isRecord(check) || typeof check.id !== 'string' || !['ready', 'action_required', 'unknown'].includes(String(check.state)) || typeof check.code !== 'string')))
         || (value.panel_url !== undefined && typeof value.panel_url !== 'string')) return null;
+    // Invalid optional metadata must not hide the durable execution.
+    // Gecersiz istege bagli bilgi kalici islemi gizlememelidir.
+    const context = value.context;
+    if (context !== undefined && (!isRecord(context)
+        || !['local', 'external', 'existing'].includes(String(context.dns_mode))
+        || !(context.dns_mode === 'local' ? ['primary', 'secondary'] : ['', 'primary', 'secondary']).includes(String(context.dns_role))
+        || ['dns_engine', 'local_nameserver', 'local_ip', 'peer_nameserver', 'peer_ip', 'panel_domain', 'mail_hostname', 'dns_hosting_management']
+            .some(key => typeof context[key] !== 'string' || (context[key] as string).length > 1024))) {
+        const { context: _invalid, ...execution } = value;
+        return execution as unknown as ServerSetupExecution;
+    }
     return value as unknown as ServerSetupExecution;
 }
 export interface SetupStartMarker { request_id: string; plan_id: string; panel_domain: string }

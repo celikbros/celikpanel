@@ -608,7 +608,7 @@ func (p *Panel) handleServerSetupOperation(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(execution)
+	_ = json.NewEncoder(w).Encode(p.serverSetupOperationResponse(r.Context(), execution))
 }
 
 func (p *Panel) persistServerSetupExecution(ctx context.Context, execution serverSetupExecution) error {
@@ -890,7 +890,7 @@ func (p *Panel) ensureServerSetupChild(ctx context.Context, plan serverSetupPlan
 		return serviceOperation{}, err
 	}
 	if plan.BuildCommit != "" && plan.BuildCommit != strings.TrimSpace(buildCommit) {
-		return serviceOperation{}, errors.New("setup build changed; review the remaining plan")
+		return serviceOperation{}, errServerSetupBuildChanged
 	}
 	if _, degraded := p.subsystemDegraded(degradedSubsystemServiceOperations); degraded {
 		return serviceOperation{}, errors.New("service operation recovery is required")
@@ -1135,6 +1135,8 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 		return &serviceOperationError{Code: child.Code, Message: child.Message}
 	}
 	switch {
+	case errors.Is(cause, errServerSetupBuildChanged):
+		return &serviceOperationError{Code: "server_setup_build_changed", Message: "The panel version changed after this setup plan was reviewed. Completed operations are preserved. Review and confirm a new plan before starting the remaining setup steps."}
 	case errors.Is(cause, errFirewallNoSSHService):
 		return &serviceOperationError{Code: "firewall_no_ssh_service", Message: "No SSH service is available. Configure a verified management access path before enabling the firewall."}
 	case errors.Is(cause, errFirewallSSHNotListening):
@@ -1157,6 +1159,7 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 }
 
 var errServerSetupLicenseRequired = errors.New("setup requires an active license")
+var errServerSetupBuildChanged = errors.New("setup build changed; review the remaining plan")
 
 func (p *Panel) requireServerSetupAdmission() error {
 	if p.license == nil || !p.license.Status().CanProvision {
@@ -1205,7 +1208,7 @@ func (p *Panel) runServerSetupMailCertificate(ctx context.Context, plan serverSe
 		return false, err
 	}
 	if plan.BuildCommit != strings.TrimSpace(buildCommit) {
-		return false, errors.New("setup build changed")
+		return false, errServerSetupBuildChanged
 	}
 	if !p.serviceMutationMu.TryLock() {
 		return false, errServiceOperationBusy

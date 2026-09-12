@@ -9,6 +9,26 @@ veya Boston, Frankfurt ya da başka bir sunucuya kurulduğunu söylemez.
 Eski dağıtım talimatlarından bağımsız olarak [AGENTS.md](../AGENTS.md) gereğince
 kurulu panel güncellemelerini kullanıcı CelikPanel'in kendi arayüzünden başlatır.
 
+## İşlem yönlendirmesi genişletmesi — 13 Eylül 2026
+
+Alpha.73 kaynak adayı; incelenmiş plandan ilerleme bilgisi, DNS rolüne göre sonraki
+eylem ve kurulum adımlarından önce bekleme, hata ve belirsiz sonuç için ayrı
+yönlendirmeler ekler. Zorunlu yerel DNS hazırlık denetimleri, sınırlı süreli eş
+sorgularından önce tamamlanır; eksik eş kanıtı eş hazırlığı izni vermez. Durum
+doğrulanırken bilinen servis hataları görünür kalır. İlerleme GET istekleri salt
+okunurdur ve ikinci işlem başlatmaz.
+
+Bu genişletmenin doğrulaması: 421 arayüz testi, üretim derlemesi/paket kontrolleri,
+odaklı panel/agent Go ve yarış durumu testleri, 28 Türkçe/İngilizce masaüstü/mobil
+tarayıcı senaryosu. [Alpha.73 notlarına](RELEASE-NOTES-v0.1.0-alpha.73.tr.md) ve
+[ürün genelindeki yönlendirme gereksinimine](OPERATION-GUIDANCE.tr.md) bakın.
+Üçüncü taraf ürünlerin tamamı için lisans adaptörleri ve bütün yaşam döngüsü
+adaptörlerinin denetimi bu kapsamda değildir. Bu ek kaynak doğrulama kanıtıdır;
+yayımlama veya kurulu sunucu kanıtı değildir. Aşağıdaki 11 Eylül tarihli kanıtlar
+özgün kapsamını korur.
+
+Sürüm değişikliğinden sonra CelikPanel kayıtlı işlemleri yeniden denetler. Önceki derlemeye bağlı planda kalan adımlar için yeni bir inceleme gerekebilir; güncelleme, kayıtlı kurulumları kendiliğinden tekrarlamaz.
+
 ## 12 Eylül 2026 eklemesi: ikincil DNS ile barındırma
 
 [İkincil DNS sunucusunda barındırma](SECONDARY-DNS-HOSTING.tr.md) kaydı,

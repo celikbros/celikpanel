@@ -185,6 +185,12 @@ kontrolleri hazır sayan bir sihirbaz yayımlama izni değildir.
 - Türkçe/İngilizce, masaüstü/mobil, klavye erişimi ve uygulanabilir hatalar gerçek
   arayüzde doğrulanır. Başarı gizli bir ek düğmeye basmayı gerektirmez.
 
+- Her kurulum işlemi [D-024 uygulanabilir yönlendirme](OPERATION-GUIDANCE.tr.md)
+  kuralına uyar: mevcut neden, eylemi yapacak kişi, sonraki eylem ve devam davranışı
+  uzun ilerleme listesinden önce gösterilir. Önkoşul, gözlenmiş hata ve bilinmeyen
+  sonuç ayrılır. İki DNS başlatma sırası, seçilen DNS modu, ilgili lisans/kimlik
+  bilgisi/sağlayıcı hataları, uzlaştırmada hatanın korunması, gizli bilgi içermeyen
+  tanılar ve yenilemenin işlemi tekrarlamaması kapsanır.
 ## 8. Onay sırasındaki başlangıç durumu
 
 Onay sırasında Dashboard içinde `StartGuide` vardı; kalıcı genel amaç sihirbazı

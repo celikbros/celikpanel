@@ -12,6 +12,7 @@ import { remoteDNSEndpoint } from '../lib/remoteDNS';
 import { ServerSetupChoice, ServerSetupManualAction } from './ServerSetupChoice';
 import { Button, inputClass, Spinner } from './ui';
 import { ServerSetupComponents, useSetupComponentCatalog } from './ServerSetupComponents';
+import { setupExecutionGuidance } from '../lib/serverSetupGuidance';
 import { setupEffectiveComponents, setupPresetComponents } from '../lib/serverSetupComponents';
 
 type Step = 'purpose' | 'components' | 'access' | 'review' | 'progress';
@@ -26,6 +27,7 @@ const editorKey = (username: string) => `celikpanel.setup.editor.${username}`;
 const markerKey = (username: string) => `celikpanel.setup.start.${username}`;
 const codeKey: Record<string, TranslationKey> = {
     license_required: 'license.restricted',
+    server_setup_build_changed: 'setup.guide.buildChanged',
     server_setup_reconciling: 'setup.confirmingPrevious',
     REMOTE_DNS_UNAVAILABLE: 'setup.blocker.remote',
     REMOTE_DNS_AUTHORITY_NOT_READY: 'setup.remote.authorityNotReady',
@@ -384,13 +386,15 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const isNode = selectedComponents.has('node');
     const nextPath = setupNextPath(snapshot.draft.purpose, customized ? selectedComponents : undefined);
     const nextLabel = nextPath === '/settings?section=dns' ? 'setup.nextDNS' : nextPath === '/services' ? 'setup.nextComponents' : isNode ? 'setup.nextApplication' : 'setup.nextWebsite';
+    const progressCurrentStep = execution?.steps.find(item => ['running', 'failed'].includes(item.status));
+    const guidance = execution && !reconnecting ? setupExecutionGuidance(execution) : null;
     const progressChecks = (execution?.checks || snapshot.checks).filter(check => check.state !== 'ready');
 
     if (manualExit) return <Navigate to="/" replace />;
     return <ServerSetupShell>
         <div className="max-w-3xl">
             <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold leading-tight outline-none focus-visible:outline-none sm:text-3xl">{t(completed ? 'setup.completeTitle' : 'setup.title')}</h1>
-            <p className="mt-3 max-w-2xl text-fg-muted">{t(completed ? 'setup.completeHelp' : 'setup.intro')}</p>
+            <p className="mt-3 max-w-2xl text-fg-muted">{t(completed ? 'setup.completeHelp' : hasOperation ? 'setup.guide.progressIntro' : 'setup.intro')}</p>
         </div>
         {completed ? <section className="mt-8 max-w-3xl space-y-6" aria-labelledby="setup-ready-title">
             <div className="flex items-start gap-3"><Check className="mt-1 h-5 w-5 shrink-0 text-success" aria-hidden="true" /><div><h2 id="setup-ready-title" className="text-lg font-semibold">{t(customized ? 'setup.purpose.custom' : `setup.purpose.${snapshot.draft.purpose}`)}</h2><p className="mt-1 text-sm text-fg-muted">{t('setup.completeServices')}</p></div></div>
@@ -409,14 +413,19 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
             {resolving ? <div className="flex items-center gap-3"><Spinner label={t('setup.resuming')} /><p>{t('setup.resuming')}</p></div>
                 : step === 'progress' || hasOperation ? <section aria-labelledby="setup-progress-title">
                     <h2 id="setup-progress-title" className="text-xl font-semibold">{t(reconnecting ? 'setup.reconnecting' : execution?.status === 'failed' ? 'setup.operationFailed' : waitingLicense ? 'setup.licenseWaiting' : execution?.status === 'waiting' ? 'setup.waiting' : execution?.status === 'succeeded' ? 'setup.verifying' : 'setup.installing')}</h2>
-                    <p className="mt-3 text-sm leading-6 text-fg-muted">{t(reconnecting ? 'setup.uncertain' : execution?.status === 'failed' ? 'setup.failedHelp' : 'setup.progressHelp')}</p>
+                    {reconnecting && <p className="mt-3 text-sm leading-6 text-fg-muted">{t('setup.uncertain')}</p>}
                     {execution?.status === 'waiting' && execution.phase === 'dns_publisher' && <SetupDNSPublisher key={execution.id} execution={execution} onBound={reconcile} />}
-                    {execution?.status === 'waiting' && execution.phase === 'dns_readiness' && <p role="status" className="mt-5 text-sm leading-6 text-fg-muted">{t('setup.publisher.pairWaiting')}</p>}
+                    {guidance && <aside aria-labelledby="setup-guidance-title" className="mt-5 rounded-lg border border-border bg-surface p-4 sm:p-5">
+                        <h3 id="setup-guidance-title" className="font-semibold">{t(guidance.title)}</h3>
+                        {progressCurrentStep && !waitingLicense && <p className="mt-2 break-words text-sm font-medium">{t(`setup.kind.${progressCurrentStep.kind}`, { target: stepTarget(progressCurrentStep.kind, progressCurrentStep.target) })}</p>}
+                        <div role={execution?.status === 'failed' ? 'alert' : 'status'} className="mt-2 space-y-2 text-sm leading-6 text-fg-muted">{guidance.messages.map((message, index) => <p key={index} className="break-words">{t(message.key, message.values)}</p>)}</div>
+                        {guidance.details.length > 0 && <details className="mt-3 text-sm leading-6"><summary className="cursor-pointer font-medium text-primary">{t('setup.guide.more')}</summary><ul className="mt-2 list-disc space-y-2 pl-5 text-fg-muted">{guidance.details.map((message, index) => <li key={index}>{t(message.key, message.values)}</li>)}</ul></details>}
+                    </aside>}
+                    {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={confirmingPrevious ? 'status' : 'alert'} className="mt-5 space-y-2 text-sm">{(!confirmingPrevious || !guidance) && <p className={confirmingPrevious ? 'text-fg-muted' : 'text-danger'}>{failureText(execution.error.code)}</p>}<details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
+                    {progressChecks.length > 0 && waitingVerification && <ul className="mt-5 list-disc space-y-2 pl-5 text-sm text-fg-muted">{progressChecks.map(check => <li key={check.id}>{failureText(check.code)}</li>)}</ul>}
                     <ol className="mt-6 divide-y divide-border" aria-live="polite">
                         {execution?.steps.map(item => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && <p className="mt-1 break-words text-sm text-fg-muted">{item.qualifier}</p>}</div><span className="flex shrink-0 items-center gap-2 text-sm text-fg-muted">{item.status === 'succeeded' ? <Check className="h-4 w-4 text-success" aria-hidden="true" /> : item.status === 'running' ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" /> : <Circle className="h-3 w-3" aria-hidden="true" />}{t(`setup.operation.${item.status}`)}</span></li>)}
                     </ol>
-                    {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={confirmingPrevious ? 'status' : 'alert'} className="mt-5 space-y-2 text-sm"><p className={confirmingPrevious ? 'text-fg-muted' : 'text-danger'}>{failureText(execution.error.code)}</p><details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
-                    {progressChecks.length > 0 && waitingVerification && <ul className="mt-5 list-disc space-y-2 pl-5 text-sm text-fg-muted">{progressChecks.map(check => <li key={check.id}>{failureText(check.code)}</li>)}</ul>}
                     {waitingVerification && <p className="mt-5 text-sm text-fg-muted">{t('setup.reviseHelp')}</p>}
                     {completionFailed && <p role="alert" className="mt-5 text-sm text-danger">{t('setup.verificationFailed')}</p>}
                     {panelURL && new URL(panelURL).hostname !== window.location.hostname && <p className="mt-6"><a href={new URL('/setup', panelURL).href} className="font-semibold text-primary underline underline-offset-4">{t('setup.secureAddress')}</a></p>}
