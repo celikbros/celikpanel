@@ -450,49 +450,17 @@ func (p *Panel) runMailProfileInstall(
 		return result, mailProfileInstallFailure(err)
 	}
 
-	// Give this server its fully qualified name before anything is installed.
-	// Postfix announces it and the mail certificate is issued for it, so the
-	// name has to be true on the host before the mail software reads it. When
-	// the server already carries exactly this name, nothing is touched.
-	// Herhangi bir şey kurulmadan önce bu sunucuya tam nitelikli adını ver.
-	// Postfix onu duyurur ve posta sertifikası onun için verilir; bu yüzden
-	// posta yazılımı adı okumadan önce ad sunucuda doğru olmalıdır. Sunucu
-	// zaten tam olarak bu adı taşıyorsa hiçbir şeye dokunulmaz.
+	// Mail identity belongs to Postfix and the mail TLS snapshot, not the OS.
+	// Persist it before installing services so recovery and certificate renewal
+	// use the same identity even when the system hostname is a short name.
 	desiredHostname, err := p.resolveMailProfileHostname(ctx)
 	if err != nil {
 		return result, mailProfileInstallFailure(err)
 	}
-	currentHostname, err := readMailProfileHostname()
-	if err != nil {
-		return result, mailProfileInstallFailure(
-			fmt.Errorf("read mail profile server hostname: %w", err))
+	if err := p.setSetting(ctx, settingMailHostname, desiredHostname); err != nil {
+		return result, mailProfileInstallFailure(fmt.Errorf("save mail identity: %w", err))
 	}
-	canonicalCurrent, canonicalErr := hostname.CanonicalFQDN(currentHostname)
-	if canonicalErr != nil || canonicalCurrent != desiredHostname {
-		if err := advance(mailProfilePhase(profile.ID, "hostname")); err != nil {
-			return result, operationAdvanceFailure(err)
-		}
-		hostnameRequest := transport.SetServerHostnameRequest{
-			ServiceMutationBinding: binding,
-			Hostname:               desiredHostname,
-		}
-		var hostnameResponse transport.SetServerHostnameResponse
-		if err := p.callAgentContext(
-			ctx, "Agent.SetServerHostname", &hostnameRequest, &hostnameResponse,
-		); err != nil {
-			return result, mailProfileInstallFailure(
-				fmt.Errorf("set the server hostname: %w", err))
-		}
-		if hostnameResponse.Error != "" {
-			return result, mailProfileInstallFailure(
-				fmt.Errorf("set the server hostname: %s", hostnameResponse.Error))
-		}
-		if hostnameResponse.Hostname != desiredHostname {
-			return result, mailProfileInstallFailure(
-				errors.New("agent did not confirm the exact server hostname"))
-		}
-		result["server_hostname"] = desiredHostname
-	}
+	result["mail_hostname"] = desiredHostname
 
 	completed := make([]string, 0, len(profile.Services))
 	for _, serviceID := range profile.Services {
@@ -670,12 +638,12 @@ func (p *Panel) resolveMailProfileHostname(ctx context.Context) (string, error) 
 
 // mailProfileHostBlockedReason exposes the safe, actionable hostname gate in
 // the read-only catalogue. A server without a fully qualified name is no
-// longer blocked: the install screen asks for one and the install sets it. The
+// longer blocked: the install asks for a separate mail identity. The
 // catalogue only fails closed when this server's own hostname cannot be read
 // at all, because then nothing about the name can be decided.
 // mailProfileHostBlockedReason, salt-okunur katalogdaki güvenli ve eyleme
 // dönük ana bilgisayar adı kapısını gösterir. Tam nitelikli adı olmayan bir
-// sunucu artık engellenmez: kurulum ekranı bir ad ister, kurulum onu koyar.
+// sunucu artık engellenmez: kurulum ekranı ayrı bir posta kimliği ister.
 // Katalog yalnız bu sunucunun kendi adı hiç okunamadığında kapanır; çünkü o
 // zaman ad hakkında hiçbir şeye karar verilemez.
 func mailProfileHostBlockedReason() string {

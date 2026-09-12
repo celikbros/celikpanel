@@ -259,9 +259,15 @@ func (p *Panel) loadMailTLSSnapshotLocked(
 		return "", nil, fmt.Errorf("target domain %d is not active in the secure-mail ledger", strictDomainID)
 	}
 
-	host, err := readMailTLSHostname()
-	if err != nil {
-		return "", nil, fmt.Errorf("read mail server hostname: %w", err)
+	// Preserve legacy installations without a saved mail identity. Once an
+	// explicit identity exists, never fall back to the OS on invalid input.
+	host := p.setting(ctx, settingMailHostname)
+	if host == "" {
+		var err error
+		host, err = readMailTLSHostname()
+		if err != nil {
+			return "", nil, fmt.Errorf("read mail server hostname: %w", err)
+		}
 	}
 	canonicalHost, err := hostname.CanonicalFQDN(host)
 	if err != nil {

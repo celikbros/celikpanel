@@ -43,6 +43,7 @@ type mailProfileTestAgent struct {
 	firewallCalls       int
 	hostnameError       string
 	hostnameRequests    []string
+	tlsHostnames        []string
 }
 
 func (a *mailProfileTestAgent) SetServerHostname(
@@ -264,6 +265,9 @@ func (a *mailProfileTestAgent) SyncMailTLSV2(
 	response *transport.SecureMailTLSResponse,
 ) error {
 	a.record("mail-tls", "", request.ServiceMutationBinding)
+	a.profileMu.Lock()
+	a.tlsHostnames = append(a.tlsHostnames, request.Myhostname)
+	a.profileMu.Unlock()
 	a.serviceOperationTestAgent.mu.Lock()
 	a.serviceOperationTestAgent.mutationEvents = append(
 		a.serviceOperationTestAgent.mutationEvents,
@@ -717,7 +721,7 @@ func TestMailProfileHostnameComesFromPanelIdentityOrTheOperator(t *testing.T) {
 		t.Fatalf("nameserver-derived hostname = %q, %v", got, err)
 	}
 	identity = fixture.panel.mailHostnameIdentity(ctx)
-	if identity.CurrentUsable || !identity.WillSetHostname ||
+	if identity.CurrentUsable || identity.WillSetHostname ||
 		identity.Source != mailHostnameSourceNameserver ||
 		identity.Current != "ALIASUSPC" {
 		t.Fatalf("bare host identity = %+v", identity)
@@ -772,10 +776,8 @@ func TestMailProfileHostnameComesFromPanelIdentityOrTheOperator(t *testing.T) {
 	}
 }
 
-// The install gives this server the name it was told, through the agent, as a
-// normal privileged mutation inside the same lease and before anything is
-// installed - and never touches the hostname when it is already exact.
-func TestMailProfileInstallSetsTheServerHostnameThroughTheAgent(t *testing.T) {
+// Mail identity is persisted and published through TLS without changing the OS.
+func TestMailProfileInstallKeepsSystemHostnameAndPublishesMailIdentity(t *testing.T) {
 	fixture, agent := newMailProfileTestFixture(t)
 	readMailProfileHostname = func() (string, error) { return "ALIASUSPC", nil }
 
@@ -787,16 +789,20 @@ func TestMailProfileInstallSetsTheServerHostnameThroughTheAgent(t *testing.T) {
 	}
 	waitForServiceOperation(t, fixture.panel, fixture.userID, queued.ID, serviceOperationSucceeded)
 
-	requests := agent.hostnameRequestsSnapshot()
-	if len(requests) != 1 || requests[0] != "mail.s2.test" {
-		t.Fatalf("server hostname requests = %v", requests)
+	if requests := agent.hostnameRequestsSnapshot(); len(requests) != 0 {
+		t.Fatalf("mail installation renamed the OS: %v", requests)
 	}
-	calls := agent.callsSnapshot()
-	if len(calls) == 0 || calls[0].Name != "hostname" {
-		t.Fatalf("hostname was not the first host mutation: %+v", calls)
+	if current, _ := readMailProfileHostname(); current != "ALIASUSPC" {
+		t.Fatalf("system hostname changed: %q", current)
 	}
-	if calls[0].Binding.MutationRequestID == "" {
-		t.Fatal("hostname step ran outside the profile mutation binding")
+	if saved := fixture.panel.setting(context.Background(), settingMailHostname); saved != "mail.s2.test" {
+		t.Fatalf("mail identity not persisted: %q", saved)
+	}
+	agent.profileMu.Lock()
+	mailHosts := append([]string(nil), agent.tlsHostnames...)
+	agent.profileMu.Unlock()
+	if len(mailHosts) == 0 || mailHosts[len(mailHosts)-1] != "mail.s2.test" {
+		t.Fatalf("mail TLS did not configure the explicit mail identity: %v", mailHosts)
 	}
 
 	// A second install of the same profile finds the exact name already in

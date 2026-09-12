@@ -7,27 +7,8 @@ import (
 	"github.com/alicelik/celikpanel/internal/hostname"
 )
 
-// The mail stack answers as one fully qualified name. Until now that name was
-// only ever read from the operating system, and nothing in the product could
-// set it, so a server whose hostname was a bare machine name was told its
-// hostname was invalid and given no field, no explanation and no action.
-//
-// The name now comes from the panel's own identity wherever the panel already
-// holds one: the certificate this panel is reached at, or this server's own
-// nameserver name from the saved DNS identity. When the panel holds none, the
-// mail install screen asks the operator for it and the install gives the
-// server that name as part of its work.
-//
-// Posta yığını tek bir tam nitelikli adla yanıt verir. Şimdiye dek bu ad
-// yalnız işletim sisteminden okunuyordu ve üründe onu koyabilecek hiçbir şey
-// yoktu; bu yüzden ana bilgisayar adı çıplak bir makine adı olan bir sunucuya
-// adının geçersiz olduğu söyleniyor, ama ne bir alan, ne bir açıklama, ne de
-// bir eylem veriliyordu.
-//
-// Ad artık, panelin zaten bir kimliği olduğu her yerde kendi kimliğinden
-// gelir: bu panele erişilen sertifika ya da kayıtlı DNS kimliğindeki bu
-// sunucunun kendi ad sunucusu adı. Panelin hiçbiri yoksa, posta kurulum ekranı
-// operatöre sorar ve kurulum, işinin bir parçası olarak sunucuya o adı verir.
+// Mail identity is configured independently of the operating-system hostname.
+// Existing host, panel and DNS names are suggestions; installation never renames the OS.
 
 const settingMailHostname = "mail_hostname"
 
@@ -54,20 +35,12 @@ type MailHostnameIdentity struct {
 	Hostname string `json:"hostname,omitempty"`
 	// Source names where Hostname came from, so the screen can say it.
 	Source string `json:"source,omitempty"`
-	// WillSetHostname is true when installing mail renames this server.
+	// WillSetHostname is retained for wire compatibility and is always false.
 	WillSetHostname bool `json:"will_set_hostname"`
 }
 
-// mailHostnameIdentity resolves the mail hostname from everything the panel
-// already knows, in the order of how deliberate each source is. A saved answer
-// the operator gave wins; then the operating system, because a server that
-// already carries a fully qualified name is not renamed by installing mail;
-// then the panel's own certificate; then this server's nameserver name.
-// mailHostnameIdentity, posta ana bilgisayar adını panelin zaten bildiği her
-// şeyden, kaynakların ne kadar bilinçli olduğu sırasına göre çözer. Operatörün
-// verdiği kayıtlı yanıt kazanır; sonra işletim sistemi, çünkü zaten tam
-// nitelikli bir ad taşıyan bir sunucu posta kurulumuyla yeniden adlandırılmaz;
-// sonra panelin kendi sertifikası; sonra bu sunucunun ad sunucusu adı.
+// mailHostnameIdentity prefers the saved mail identity. Other existing names
+// are suggestions when no mail identity has been saved, never rename requests.
 func (p *Panel) mailHostnameIdentity(ctx context.Context) MailHostnameIdentity {
 	identity := MailHostnameIdentity{}
 	rawHostname, err := readMailProfileHostname()
@@ -99,7 +72,6 @@ func (p *Panel) mailHostnameIdentity(ctx context.Context) MailHostnameIdentity {
 		identity.Source = candidate.source
 		break
 	}
-	identity.WillSetHostname = identity.Hostname != "" && identity.Hostname != canonicalOS
 	return identity
 }
 
