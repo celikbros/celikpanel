@@ -529,6 +529,7 @@ func (hostDNSEngineBackend) Readiness(
 	if stateErr != nil {
 		return transport.DNSBackendReadinessResponse{}, stateErr
 	}
+	pairProbes := make(map[transport.DNSEngine]dnsBackendPairReadinessProbes)
 	if exists && state.Engine == transport.DNSEngineBIND && layoutErr == nil {
 		publisher, _, publisherErr := newHostBINDPublisher(ctx, layout)
 		if publisherErr == nil {
@@ -549,15 +550,13 @@ func (hostDNSEngineBackend) Readiness(
 					func() error { return verifyOnlyBINDActive(ctx, profile, systemctl) },
 				)
 				if states[0].Managed {
-					states[0].PairReady, err = bindPrimaryPairReadyForState(
-						ctx, layout.GenerationRoot, tree, state,
-					)
-					if err != nil {
-						log.Printf("BIND primary peer readiness proof failed: %v", err)
-					}
-					states[0].SecondaryReady, err = bindSecondaryPairReadyForState(ctx, layout.GenerationRoot, tree, state)
-					if err != nil {
-						log.Printf("BIND secondary transfer readiness proof failed: %v", err)
+					pairProbes[transport.DNSEngineBIND] = dnsBackendPairReadinessProbes{
+						primary: func(proofCtx context.Context) (bool, error) {
+							return bindPrimaryPairReadyForState(proofCtx, layout.GenerationRoot, tree, state)
+						},
+						secondary: func(proofCtx context.Context) (bool, error) {
+							return bindSecondaryPairReadyForState(proofCtx, layout.GenerationRoot, tree, state)
+						},
 					}
 				}
 			}
@@ -632,13 +631,13 @@ func (hostDNSEngineBackend) Readiness(
 			func() error { return requireLegacyPowerDNSReadSafe(ctx, true) },
 		)
 		if states[1].Managed {
-			states[1].PairReady, err = powerDNSPrimaryPairReady(ctx, state)
-			if err != nil {
-				log.Printf("PowerDNS primary peer readiness proof failed: %v", err)
-			}
-			states[1].SecondaryReady, err = powerDNSSecondaryPairReady(ctx, state)
-			if err != nil {
-				log.Printf("PowerDNS secondary transfer readiness proof failed: %v", err)
+			pairProbes[transport.DNSEnginePowerDNS] = dnsBackendPairReadinessProbes{
+				primary: func(proofCtx context.Context) (bool, error) {
+					return powerDNSPrimaryPairReady(proofCtx, state)
+				},
+				secondary: func(proofCtx context.Context) (bool, error) {
+					return powerDNSSecondaryPairReady(proofCtx, state)
+				},
 			}
 		}
 	}
@@ -682,15 +681,84 @@ func (hostDNSEngineBackend) Readiness(
 			states[0].ForeignViews = foreignViews
 		}
 	}
-	port53Conflict, err := dnsPort53ConflictCheck(
-		ctx, states[0].Running, states[1].Running,
-	)
+	return completeDNSBackendReadiness(ctx, states, pairProbes)
+}
+
+type dnsBackendPairReadinessProbes struct {
+	primary   func(context.Context) (bool, error)
+	secondary func(context.Context) (bool, error)
+}
+
+func completeDNSBackendReadiness(
+	ctx context.Context,
+	states []transport.DNSBackendRuntimeState,
+	pairProbes map[transport.DNSEngine]dnsBackendPairReadinessProbes,
+) (transport.DNSBackendReadinessResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return transport.DNSBackendReadinessResponse{}, err
+	}
+	bindRunning, pdnsRunning := false, false
+	for _, state := range states {
+		switch state.Engine {
+		case transport.DNSEngineBIND:
+			bindRunning = state.Running
+		case transport.DNSEnginePowerDNS:
+			pdnsRunning = state.Running
+		}
+	}
+	// Finish required local evidence before any remote transfer probe. An
+	// absent peer must not exhaust the RPC deadline and erase an installed,
+	// running engine when the final local port inspection still needs to run.
+	// Uzak es sorgusu butceyi tuketmeden zorunlu yerel kanit tamamlanir;
+	// esin yoklugu kurulu ve calisan motorun yerel kanitini silmemelidir.
+	port53Conflict, err := dnsPort53ConflictCheck(ctx, bindRunning, pdnsRunning)
 	if err != nil {
 		return transport.DNSBackendReadinessResponse{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return transport.DNSBackendReadinessResponse{}, err
+	}
+	// Pair proofs are advisory and share one bounded budget, reserving time
+	// to return the local evidence before the RPC deadline. Failure or
+	// cancellation retains the already verified local facts, but never grants
+	// primary publication or secondary transfer readiness.
+	// Es kanitlari cevap suresi ayiran ortak butceyi kullanir. Hata veya
+	// iptal yerel kaniti korur; birincil yayin ya da ikincil aktarim izni vermez.
+	proofDeadline := time.Now().Add(dnsPairProofLimit)
+	if deadline, ok := ctx.Deadline(); ok && deadline.Before(proofDeadline) {
+		proofDeadline = deadline
+	}
+	proofCtx, cancel := context.WithDeadline(ctx, proofDeadline.Add(-250*time.Millisecond))
+	defer cancel()
+	for index := range states {
+		states[index].PairReady = false
+		states[index].SecondaryReady = false
+		if !states[index].Managed {
+			continue
+		}
+		probes := pairProbes[states[index].Engine]
+		states[index].PairReady = probeDNSBackendPairReadiness(proofCtx, states[index].Engine, "primary", probes.primary)
+		states[index].SecondaryReady = probeDNSBackendPairReadiness(proofCtx, states[index].Engine, "secondary", probes.secondary)
 	}
 	return transport.DNSBackendReadinessResponse{
 		Engines: states, Port53Conflict: port53Conflict,
 	}, nil
+}
+
+func probeDNSBackendPairReadiness(
+	ctx context.Context,
+	engine transport.DNSEngine,
+	role string,
+	probe func(context.Context) (bool, error),
+) bool {
+	if probe == nil || ctx.Err() != nil {
+		return false
+	}
+	ready, err := probe(ctx)
+	if err != nil {
+		log.Printf("%s %s pair readiness proof failed: %v", engine, role, err)
+	}
+	return err == nil && ctx.Err() == nil && ready
 }
 
 type bindReadinessUnitProofOps struct {

@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { AlertTriangle, Loader2 as LoaderCircle, WifiOff, X } from 'lucide-react';
 import { useI18n } from '../i18n';
-import type { TranslationKey } from '../i18n/en';
 import type { ApiError } from '../lib/apiError';
-import type { ComponentOperation, InteractionBlockView } from './ComponentOperation';
+import { operationError, type ComponentOperation, type InteractionBlockView } from './ComponentOperation';
+import { componentOperationGuidance, componentOperationPhaseKey } from '../lib/componentOperationGuidance';
 import { ErrorBanner } from './ui';
 
 type OperationOverlayProps = {
@@ -38,6 +38,9 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
             >
                 <div className="relative">
                     <ErrorBanner error={props.failure} className="pr-12" />
+                    <p className="px-3 pb-3 pt-2 text-xs leading-5 text-fg-muted">
+                        {t('services.operation.failureNextStep')}
+                    </p>
                     <button
                         type="button"
                         onClick={props.onDismiss}
@@ -53,25 +56,20 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
     }
     const { view, operation, label, submitting, recovering, refreshing, interrupted } = props;
     const disconnected = view?.interrupted ?? interrupted;
-    let statusText = view?.status ?? (disconnected
-        ? t('services.operation.reconnecting')
+    const guidance = componentOperationGuidance(operation, disconnected, recovering, refreshing);
+    const knownFailure = !view && guidance.failed
+        ? operationError(operation?.error, t('services.operation.failed'))
+        : null;
+    let statusText = view?.status ?? (guidance.statusKey
+        ? t(guidance.statusKey)
         : t('services.operation.starting'));
-    if (!view && !disconnected && recovering) {
-        statusText = t('services.operation.recoveringRequest');
-    } else if (!view && !disconnected && refreshing) {
-        statusText = t('services.operation.refreshing');
-    } else if (!view && !disconnected && !submitting && operation) {
-        const normalizedPhase = operation.phase.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
-        const phaseKey = `services.operation.phase.${normalizedPhase}` as TranslationKey;
-        const translated = t(phaseKey);
-        statusText = translated === phaseKey
-            ? operation.phase || t('services.operation.running')
-            : translated;
+    if (!view && !guidance.statusKey && !submitting && operation) {
+        statusText = t(componentOperationPhaseKey(operation.phase));
     }
-    const hint = view?.hint ?? t('services.operation.backgroundHint');
+    const hint = view?.hint ?? t(guidance.hintKey);
     const operationID = view?.operationID || operation?.id;
-    const busy = view?.busy ?? !disconnected;
-    const severity = view?.severity ?? 'warning';
+    const busy = view?.busy ?? (!disconnected && !knownFailure);
+    const severity = view?.severity ?? (knownFailure ? 'error' : 'warning');
     const statusRole = !busy && severity === 'error' ? 'alert' : 'status';
 
     return (
@@ -98,7 +96,7 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
                             : <AlertTriangle className="h-7 w-7" />}
                 </span>
                 <h2 id="component-operation-title" className="text-xl font-semibold text-fg">
-                    {view?.title ?? t('services.operation.title', { name: label || t('services.install') })}
+                    {view?.title ?? t(knownFailure ? 'services.operation.failedTitle' : 'services.operation.title', { name: label || t('services.install') })}
                 </h2>
                 <p role={statusRole} aria-live="polite" className="mt-2 text-sm font-medium text-fg-muted">
                     {statusText}
@@ -112,6 +110,11 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
                             </div>
                         ))}
                     </dl>
+                )}
+                {knownFailure && (
+                    <div className="mt-4 text-left">
+                        <ErrorBanner error={{ ...knownFailure, action: undefined }} />
+                    </div>
                 )}
                 {view?.message && (
                     <p

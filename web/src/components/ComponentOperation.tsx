@@ -780,7 +780,7 @@ function waitForRetry(): Promise<void> {
     return new Promise((resolve) => window.setTimeout(resolve, RETRY_DELAY_MS));
 }
 
-function operationError(value: unknown, fallback: string): ApiError {
+export function operationError(value: unknown, fallback: string): ApiError {
     if (typeof value === 'string') {
         return { message: value || fallback };
     }
@@ -796,6 +796,9 @@ function operationError(value: unknown, fallback: string): ApiError {
                 || fallback,
             code: typeof raw.code === 'string' ? raw.code : undefined,
             action: typeof raw.action === 'string' ? raw.action : undefined,
+            reason: typeof raw.reason === 'string' ? raw.reason : undefined,
+            partialSuccess: raw.partial_success === true ? true : undefined,
+            mutationApplied: raw.mutation_applied === true ? true : undefined,
             details,
         };
     }

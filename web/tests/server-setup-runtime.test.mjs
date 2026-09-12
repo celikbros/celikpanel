@@ -18,6 +18,7 @@ const remoteURL = dataURL(compile('../src/lib/remoteDNS.ts'));
 const setupURL = dataURL(compile('../src/lib/serverSetup.ts'));
 const componentLibURL = dataURL(compile('../src/lib/serverSetupComponents.ts').replace("from './serverSetup'", `from '${setupURL}'`));
 const operationURL = dataURL(compile('../src/lib/serverSetupOperation.ts').replace("from './serverSetup'", `from '${setupURL}'`));
+const guidanceURL = dataURL(compile('../src/lib/serverSetupGuidance.ts'));
 const setup = await import(setupURL);
 const operations = await import(operationURL);
 const stub = dataURL(`
@@ -41,7 +42,7 @@ const componentUIURL = dataURL(`import React from '${reactURL}';\n` + compile('.
 const { ServerSetupComponents: ComponentPicker } = await import(componentUIURL);
 async function loadComponent(name) {
     const source = compile(`../src/components/${name}.tsx`).replace(/from ['"]([^'"]+)['"]/g, (_, path) => {
-        const url = path === 'react' ? reactURL : path.endsWith('/remoteDNS') ? remoteURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
+        const url = path === 'react' ? reactURL : path.endsWith('/remoteDNS') ? remoteURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/serverSetupGuidance') ? guidanceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
         return `from '${url}'`;
     });
     return (await import(dataURL(`import React from '${reactURL}';\n${source}`)))[name];
@@ -267,9 +268,9 @@ test('pending receipt reconciliation is neutral progress and preserves the opera
         globalThis.fetch=async(url,options)=>url.includes('/setup/operation')?Response.json(current):read(url,options);
         try{
             await mount();
-            const notice=tree.root.findAllByProps({role:status==='running'?'status':'alert'}).find(node=>node.findAllByType('p').some(p=>p.props.children==='setup.confirmingPrevious'));
+            const notice=tree.root.findAllByProps({role:status==='running'?'status':'alert'}).find(node=>node.findAllByType('p').some(p=>p.props.children===(status==='running'?'setup.guide.confirm':'setup.confirmingPrevious')));
             assert.ok(notice,'pending running receipt is status; terminal failure remains an alert');
-            assert.equal(notice.findAllByType('p')[0].props.className,status==='running'?'text-fg-muted':'text-danger');
+            assert.equal(notice.findAllByType('p')[0].props.className.includes('text-danger'),status==='failed');
             assert.equal(tree.root.findAllByType('form').length,0);
             assert.equal(findButton('setup.editPlan'),undefined);
             assert.equal(findButton('setup.start'),undefined);
@@ -915,4 +916,32 @@ test('an existing publisher endpoint keeps automatic management until the owner 
         assert.equal(state.draft.dns_hosting_management,'manual');
         assert.equal(calls.some(c=>c.url.includes('/dns/remote') || c.url==='/api/v1/setup/start'),false);
     } finally {await cleanup();}
+});
+
+
+test('optional progress context tolerates nonlocal roles and drops malformed metadata without hiding execution',()=>{
+    const current=execution({plan_id:'a'.repeat(32),request_id:'b'.repeat(32)});
+    const context={dns_mode:'external',dns_role:'',dns_engine:'',local_nameserver:'',local_ip:'',peer_nameserver:'',peer_ip:'',panel_domain:'panel.example.com',mail_hostname:'',dns_hosting_management:''};
+    assert.deepEqual(operations.decodeSetupExecution({...current,context}).context,context);
+    for(const invalid of [null,{}, {...context,dns_role:'wrong'}, {...context,peer_ip:42}]){
+        const decoded=operations.decodeSetupExecution({...current,context:invalid});
+        assert.equal(decoded.id,current.id);assert.equal(decoded.context,undefined);
+    }
+});
+
+test('resumed DNS guidance is above the step list and uses the saved plan context without a new start',async()=>{
+    init('admin',{status:'running',guidance:'guided'});
+    state.draft.peer_ip='203.0.113.99';
+    const current={...execution({plan_id:'a'.repeat(32),request_id:'b'.repeat(32)}),phase:'01-dns',
+        context:{dns_mode:'local',dns_role:'primary',dns_engine:'bind',local_nameserver:'ns1.example.com',local_ip:'192.0.2.10',peer_nameserver:'ns2.example.com',peer_ip:'192.0.2.20',panel_domain:'panel.example.com',mail_hostname:'',dns_hosting_management:''},
+        steps:[{id:'01-dns',kind:'dns',target:'local',status:'running'}]};
+    const base=fetch;globalThis.fetch=async(url,options)=>url.includes('/setup/operation')?Response.json(current):base(url,options);
+    try{
+        await mount();
+        const notice=tree.root.findByProps({'aria-labelledby':'setup-guidance-title'});
+        assert.ok(notice.findAllByType('p').some(item=>item.props.children==='setup.guide.startSecondary'));
+        const rendered=JSON.stringify(tree.toJSON());
+        assert.ok(rendered.indexOf('setup-guidance-title')<rendered.indexOf('mt-6 divide-y divide-border'));
+        assert.ok(calls.every(call=>!call.options?.method||call.options.method==='GET'));
+    }finally{await cleanup();}
 });

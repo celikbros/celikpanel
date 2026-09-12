@@ -58,3 +58,27 @@ connector implementation and local tests: see docs/REMOTE-DNS-AUTHORIZATION.md.
 Earlier automatic-review permission rejections are resolved by this user reply.
 Continue that scoped work without asking for the same permission again. The
 installed-panel update restriction above remains binding.
+
+## Actionable guidance for every operation — user requirement, 2026-09-13
+
+Every program, service, runtime and integration must show actionable progress,
+waiting, failure and recovery guidance. Put the current reason, who must act,
+the concrete next action and how work resumes before long step lists. Distinguish
+verified failure, unmet prerequisite and unknown result; preserve known failures
+while reconciling the exact operation. Include supported license, credential,
+permission and external-provider states. Never expose secrets or start duplicate
+mutations from polling. Read D-024 and docs/OPERATION-GUIDANCE.md before adding or
+changing lifecycle flows. This is a product-wide requirement, not a claim that
+all adapters are implemented or audited. Owner independence and user-only panel
+updates remain unchanged.
+
+Her program, hizmet, çalışma ortamı ve entegrasyon; ilerleme, bekleme, hata ve
+kurtarmada uygulanabilir yönlendirme göstermelidir. Mevcut neden, kimin işlem
+yapacağı, somut sonraki eylem ve nasıl devam edileceği uzun listelerden önce gelir.
+Doğrulanmış hata, eksik önkoşul ve bilinmeyen sonuç ayrılır; tam işlem sonucu
+uzlaştırılırken bilinen hatalar korunur. Desteklenen lisans, kimlik bilgisi, yetki
+ve dış sağlayıcı durumları kapsanır. Gizli bilgi gösterilmez; durum sorgusu ikinci
+bir değişiklik işlemi başlatamaz. Yaşam döngüsü akışlarını değiştirmeden önce
+D-024 ve docs/OPERATION-GUIDANCE.tr.md okunur. Bu ürün geneli gereksinimidir;
+bütün adaptörlerin uygulandığı veya incelendiği iddiası değildir. Sunucu sahibinin
+bağımsızlığı ve paneli yalnız kullanıcının güncellemesi kuralları değişmez.

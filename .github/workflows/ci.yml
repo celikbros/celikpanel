@@ -189,9 +189,14 @@ jobs:
           - shard: R
             pattern: '^TestR'
             skip: ''
+          # Keep the existing status-check name while separating setup tests.
+          # Kurulum testlerini ayirirken mevcut durum denetimi adini koru.
           - shard: S, except the service tests
             pattern: '^TestS'
-            skip: '^TestService'
+            skip: '^Test(Service|ServerSetup)'
+          - shard: Server setup
+            pattern: '^TestServerSetup'
+            skip: ''
           - shard: Service
             pattern: '^TestService'
             skip: ''
@@ -207,7 +212,7 @@ jobs:
       - name: Verify exact Go toolchain
         run: test "$(go env GOVERSION)" = go1.26.5
       # cmd/panel has hundreds of SQLite-backed tests that run serially under
-      # the race detector. These fourteen matrix entries run concurrently, are
+      # the race detector. These fifteen matrix entries run concurrently, are
       # disjoint and cover every valid Test* suffix, including a future exact
       # `Test` name or non-uppercase suffix. Four groups are split from
       # within: the complement shard keeps the broader pattern and -skips the
@@ -221,8 +226,10 @@ jobs:
       # 421 s before the first split; the run that measured every shard put
       # D-except-DNS at 257 s and DNS-engine-and-zone at 248 s, and the split
       # that answered those put A-through-C at 258 s, because the tests
-      # written that week landed there. Each split is a measurement, not a
-      # guess, and the next run measures it again.
+      # written that week landed there. The S complement reached 480 s
+      # while an ordinary store test had run for only 2 s, so server setup
+      # now has its own shard. Each split is a measurement, not a guess,
+      # and the next run measures it again.
       - name: Race-test panel boundaries
         run: >-
           go test -race -count=1 -timeout=8m ./cmd/panel

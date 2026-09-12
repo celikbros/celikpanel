@@ -133,14 +133,14 @@ reject_literal "$CI" 'windows-portability:'
 reject_literal "$CI" 'freebsd-compile:'
 reject_literal "$CI" 'darwin-compile:'
 require_count "$CI" 'go test -race -count=1 -timeout=8m ./cmd/panel' 1
-# Fourteen disjoint, exhaustive shards (R-020). A letter group split from within
+# Fifteen disjoint, exhaustive shards (R-020). A letter group split from within
 # keeps its pattern on the complement shard and -skips the carved-out prefix,
 # so the pair covers exactly what the single shard covered before. The D group
 # is carved twice, because measurement put both of its halves within seconds
 # of the 240 s exit line: TestD minus every TestDNS, then TestDNS minus the
 # engine and zone tests, then those two on their own.
-require_count "$CI" 'pattern:' 14
-require_count "$CI" 'skip:' 14
+require_count "$CI" 'pattern:' 15
+require_count "$CI" 'skip:' 15
 require_literal "$CI" "pattern: '^Test($|[A-B]|[^A-Z])'"
 require_literal "$CI" "pattern: '^TestC'"
 require_literal "$CI" "skip: '^TestControlPlane'"
@@ -156,10 +156,11 @@ require_literal "$CI" "pattern: '^Test[L-M]'"
 require_literal "$CI" "pattern: '^Test[N-Q]'"
 require_literal "$CI" "pattern: '^TestR'"
 require_literal "$CI" "pattern: '^TestS'"
-require_literal "$CI" "skip: '^TestService'"
+require_literal "$CI" "skip: '^Test(Service|ServerSetup)'"
+require_literal "$CI" "pattern: '^TestServerSetup'"
 require_literal "$CI" "pattern: '^TestService'"
 require_literal "$CI" "pattern: '^Test[T-Z]'"
-require_count "$CI" "skip: ''" 10
+require_count "$CI" "skip: ''" 11
 require_literal "$CI" "-run '\${{ matrix.pattern }}' -skip '\${{ matrix.skip }}'"
 reject_literal "$CI" "pattern: '^Test[E-G]'"
 reject_literal "$CI" "pattern: '^Test[N-R]'"
@@ -189,19 +190,47 @@ reject_literal "$PORTABILITY" 'go-version-file:'
 # exactly one panel race shard. Keep explicit boundary sentinels too: a valid
 # test may be named exactly `Test`, so current source names alone are not a
 # sufficient proof that the empty suffix remains covered.
+# Read each pattern and its skip from the actual matrix, rather than checking
+# a separately maintained partition that can drift from the workflow.
+# Her deseni ve dislama desenini dogrudan is akisindaki matristen oku.
+panel_shard_output=$(awk -F "'" '
+    { sub(/\r$/, "") }
+    /^  panel-race:$/ { in_panel = 1; next }
+    in_panel && /^    steps:$/ { exit }
+    in_panel && /^[[:space:]]+pattern: / {
+        if (have_pattern || NF != 3 || $2 == "") exit 1
+        pattern = $2
+        have_pattern = 1
+        next
+    }
+    in_panel && /^[[:space:]]+skip: / {
+        if (!have_pattern || NF != 3) exit 1
+        printf "%s\t%s\n", pattern, $2
+        have_pattern = 0
+    }
+    END { if (have_pattern) exit 1 }
+' "$CI") || die "cannot read panel race pattern/skip pairs from ci.yml"
+mapfile -t panel_shard_rows <<< "$panel_shard_output"
+((${#panel_shard_rows[@]} == 15)) ||
+    die "panel race matrix must contain exactly 15 pattern/skip pairs"
+
 panel_shard_membership_count() {
-    local test_name=$1 count=0
-    [[ "$test_name" =~ ^Test($|[A-C]|[^A-Z]) ]] && ((count += 1))
-    [[ "$test_name" =~ ^TestD ]] && ((count += 1))
-    [[ "$test_name" =~ ^Test[E-G] ]] && ((count += 1))
-    [[ "$test_name" =~ ^Test[H-M] ]] && ((count += 1))
-    [[ "$test_name" =~ ^Test[N-R] ]] && ((count += 1))
-    [[ "$test_name" =~ ^TestS ]] && ((count += 1))
-    [[ "$test_name" =~ ^Test[T-Z] ]] && ((count += 1))
+    local test_name=$1 count=0 row pattern skip
+    for row in "${panel_shard_rows[@]}"; do
+        pattern=${row%%$'\t'*}
+        skip=${row#*$'\t'}
+        if [[ "$test_name" =~ $pattern ]] &&
+            { [[ -z "$skip" ]] || [[ ! "$test_name" =~ $skip ]]; }; then
+            ((count += 1))
+        fi
+    done
     printf '%s\n' "$count"
 }
 
-for boundary_name in Test TestA TestC TestD TestE TestG TestH TestM TestN TestR TestS TestT TestZ Test_ Test9 Testa; do
+for boundary_name in Test TestA TestC TestControlPlane TestD TestDNS \
+    TestDNSEngine TestDNSZone TestE TestG TestH TestM TestN TestR TestS \
+    TestService TestServerSetup TestServerSetupFuture TestServerFuture \
+    TestT TestZ Test_ Test9 Testa; do
     [[ "$(panel_shard_membership_count "$boundary_name")" == 1 ]] ||
         die "panel race shard boundary is not disjoint and exhaustive: $boundary_name"
 done
