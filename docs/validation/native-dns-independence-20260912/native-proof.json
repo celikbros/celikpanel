@@ -1,0 +1,28 @@
+{
+  "target": "two disposable Debian 13 clones, BIND primary and PowerDNS secondary",
+  "management_stopped": {
+    "dnsprimary": "management absent",
+    "dnssecondary": "management absent"
+  },
+  "stages": [
+    {
+      "stage": "add zone through native catalog",
+      "answer": "ns1.example.test. hostmaster.example.test. 100 10 5 3600 30\n192.0.2.80\n",
+      "validation": "zone catalog-c000020a.celikpanel.invalid/IN: loaded serial 100\nOK\nzone independent.example.test/IN: loaded serial 100\nOK\nserver reload successful\n"
+    },
+    {
+      "stage": "owner changes A record and SOA serial",
+      "answer": "ns1.example.test. hostmaster.example.test. 101 10 5 3600 30\n192.0.2.81\n",
+      "validation": "zone catalog-c000020a.celikpanel.invalid/IN: loaded serial 100\nOK\nzone independent.example.test/IN: loaded serial 101\nOK\nserver reload successful\n"
+    },
+    {
+      "stage": "restart both DNS daemons without management binaries",
+      "answer": "ns1.example.test. hostmaster.example.test. 101 10 5 3600 30\n192.0.2.81\n"
+    },
+    {
+      "stage": "native catalog removes member",
+      "answer": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 57318\n;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n"
+    }
+  ],
+  "passed": true
+}

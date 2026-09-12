@@ -136,7 +136,7 @@ func serverSetupExecutionCanRevise(plan serverSetupPlan, execution serverSetupEx
 	if execution.Phase == "dns_publisher" && !serverSetupSecondaryHosting(plan.Draft) {
 		return false
 	}
-	if execution.Phase == "dns_readiness" && (plan.Draft.DNSMode != "local" || plan.Draft.DNSRole != "primary" || !serverSetupNeedsDNSPublisher(plan.Draft)) {
+	if execution.Phase == "dns_readiness" && (plan.Draft.DNSMode != "local" || (plan.Draft.DNSRole != "primary" && !serverSetupManualSecondaryHosting(plan.Draft)) || !serverSetupNeedsDNSPublisher(plan.Draft)) {
 		return false
 	}
 	if !stringIn(execution.Phase, "dns_publisher", "dns_readiness") {

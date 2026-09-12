@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { Link, Navigate } from '../router';
-import { changeSetupDNSRole, setupDNSNames, setupDetectedIPv4, chooseSetupPurpose, decodeServerSetup, setupNextPath, setupPurposes, type ServerSetupDraft, type ServerSetupSnapshot } from '../lib/serverSetup';
+import { decodeSetupEditorCheckpoint, changeSetupDNSRole, setupDNSNames, setupDetectedIPv4, chooseSetupPurpose, decodeServerSetup, setupNextPath, setupPurposes, type ServerSetupDraft, type ServerSetupSnapshot } from '../lib/serverSetup';
 import { decodeSetupExecution, decodeSetupMarker, decodeSetupPlan, newSetupRequestID, safeSetupPanelURL, type ServerSetupExecution, type ServerSetupPlan, type SetupStartMarker } from '../lib/serverSetupOperation';
 import { ServerSetupShell, useServerSetup } from './ServerSetupGate';
 import { ServerSetupDNSConnection } from './ServerSetupDNSConnections';
@@ -22,6 +22,7 @@ async function setupFetch(url: string, options?: RequestInit) {
     try { return await fetch(url, { ...options, signal: controller.signal }); }
     finally { window.clearTimeout(timeout); }
 }
+const editorKey = (username: string) => `celikpanel.setup.editor.${username}`;
 const markerKey = (username: string) => `celikpanel.setup.start.${username}`;
 const codeKey: Record<string, TranslationKey> = {
     license_required: 'license.restricted',
@@ -119,7 +120,13 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const { t } = useI18n();
     const { catalog, failed: catalogFailed, reload: reloadCatalog } = useSetupComponentCatalog(!['running', 'waiting', 'ready'].includes(initial.status));
     const [snapshot, setSnapshot] = useState(initial);
-    const [draft, setDraft] = useState(initial.draft);
+    const [restoredEditor] = useState(() => {
+        try { return decodeSetupEditorCheckpoint(sessionStorage.getItem(editorKey(user.username)), initial); }
+        catch { return null; }
+    });
+    const [draft, setDraft] = useState(restoredEditor?.draft || initial.draft);
+    const restoreReview = useRef(restoredEditor?.step === 'review');
+    const restoredSnapshot = useRef(initial);
     const localIPTouched = useRef(false);
     const detectedIP = setupDetectedIPv4(snapshot.server_ip);
     useEffect(() => {
@@ -127,7 +134,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
         setDraft(previous => previous.local_ip ? previous : { ...previous, local_ip: detectedIP });
     }, [detectedIP, snapshot.status]);
     const dnsNames = setupDNSNames(draft);
-    const [step, setStep] = useState<Step>(initial.status === 'new' || initial.status === 'legacy' ? 'purpose' : initial.draft.customization ? 'components' : 'access');
+    const [step, setStep] = useState<Step>(restoredEditor?.step || (initial.status === 'new' || initial.status === 'legacy' ? 'purpose' : initial.draft.customization ? 'components' : 'access'));
     const [plan, setPlan] = useState<ServerSetupPlan | null>(null);
     const [execution, setExecution] = useState<ServerSetupExecution | null>(null);
     const [marker, setMarker] = useState<SetupStartMarker | null>(() => {
@@ -160,6 +167,17 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     useEffect(() => {
         heading.current?.focus();
     }, [step]);
+    useEffect(() => {
+        try {
+            if (step === 'progress' || manualExit || snapshot.status === 'ready') {
+                sessionStorage.removeItem(editorKey(user.username));
+            } else if (['new', 'legacy', 'draft'].includes(snapshot.status)) {
+                sessionStorage.setItem(editorKey(user.username), JSON.stringify({
+                    version: 1, revision: snapshot.revision, step, draft,
+                }));
+            }
+        } catch { /* Browser storage may be unavailable; normal setup still works. */ }
+    }, [step, draft, snapshot.revision, snapshot.status, manualExit, user.username]);
     useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
     async function readExecution() {
@@ -182,6 +200,24 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
         try {
             const next = await readExecution();
             if (!alive.current || epoch !== pollEpoch.current) return;
+            // Rebuild the review after a remount/reload, only after ruling out
+            // an accepted execution. Never restore the confirmation checkbox.
+            // Kabul edilmis islem yoksa incelemeyi yeniden kur; baslatma
+            // onayini geri yukleme.
+            if (!next && restoreReview.current) {
+                restoreReview.current = false;
+                try {
+                    const response = await setupFetch('/api/v1/setup/plan', requestOptions({ revision: restoredSnapshot.current.revision }));
+                    const reviewed = response.ok ? decodeSetupPlan(await response.json(), restoredSnapshot.current.revision) : null;
+                    if (!reviewed || (restoredSnapshot.current.draft.dns_mode === 'existing' && reviewed.can_start
+                        && reviewed.remote_dns_connection?.id !== restoredSnapshot.current.draft.remote_dns_connection_id)) throw new Error('review unavailable');
+                    if (!alive.current || epoch !== pollEpoch.current) return;
+                    setPlan(reviewed); setAcknowledged(false);
+                } catch {
+                    if (!alive.current || epoch !== pollEpoch.current) return;
+                    setStep('access'); setError(t('setup.planFailed'));
+                }
+            }
             setExecution(next); setResolving(false); setReconnecting(false);
             if (next) {
                 setStep('progress');
@@ -216,7 +252,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
         setDraft(previous => ({ ...previous, [key]: value })); setPlan(null); setAcknowledged(false); setError('');
     }
     async function saveDraft(): Promise<ServerSetupSnapshot> {
-        const response = await setupFetch('/api/v1/setup', { ...requestOptions({ revision: snapshot.revision, draft }), method: 'PUT' });
+        const response = await setupFetch('/api/v1/setup', { ...requestOptions({ revision: snapshot.revision, draft: { ...draft, ...(secondaryHosting ? { dns_hosting_management: hostingDNSManagement, ...(hostingDNSManagement === 'manual' ? { dns_publisher_endpoint: '' } : {}) } : {}) } }), method: 'PUT' });
         if (response.status === 409) throw new Error(t('setup.conflict'));
         if (!response.ok) throw new Error(t('setup.saveFailed'));
         const next = decodeServerSetup(await response.json());
@@ -337,10 +373,12 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const isDNS = draft.purpose === 'dns' || (draft.purpose === 'custom' && selectedComponents.size === 0);
     const needsDNSPublisher = ['nginx', 'node', 'postfix', 'roundcube'].some(id => selectedComponents.has(id));
     const secondaryHosting = needsDNSPublisher && draft.dns_mode === 'local' && draft.dns_role === 'secondary';
+    const hostingDNSManagement = draft.dns_hosting_management || (draft.dns_publisher_endpoint ? 'panel' : 'manual');
+    const automaticPublisher = secondaryHosting && hostingDNSManagement === 'panel';
     const publisherEndpoint = remoteDNSEndpoint(draft.dns_publisher_endpoint || '');
     const dnsSelectionError: TranslationKey | null = isDNS && draft.dns_mode !== 'local'
         ? 'setup.components.localDNSRequired'
-        : secondaryHosting && !publisherEndpoint
+        : automaticPublisher && !publisherEndpoint
             ? 'setup.publisher.endpointRequired' : null;
     const isMail = ['postfix', 'dovecot', 'rspamd', 'roundcube'].some(id => selectedComponents.has(id));
     const isNode = selectedComponents.has('node');
@@ -421,7 +459,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                                 <fieldset className="min-w-0 space-y-4">
                                     <legend className="mb-0 font-semibold">{t('setup.thisServer')}</legend>
                                     <SetupSelect name="dns_role" label={t('setup.dnsRole')} value={draft.dns_role} onChange={value => { setDraft(previous => changeSetupDNSRole(previous, value as 'primary' | 'secondary')); setPlan(null); setAcknowledged(false); setError(''); }}><option value="primary">{t('setup.primary')}</option><option value="secondary">{t('setup.secondary')}</option></SetupSelect>
-                                    {secondaryHosting && <p className="text-sm leading-6 text-fg-muted" role="note">{t('setup.publisher.roleHelp')}</p>}
+                                    {automaticPublisher && <p className="text-sm leading-6 text-fg-muted" role="note">{t('setup.publisher.roleHelp')}</p>}
                                     <SetupInput name={dnsNames.localKey} label={t('setup.nameserverName')} value={draft[dnsNames.localKey]} onChange={value => change(dnsNames.localKey, value)} placeholder="ns1.example.com" required />
                                     <SetupInput name="local_ip" label={t('setup.publicIPv4')} value={draft.local_ip} onChange={value => change('local_ip', value)} required />
                                     {detectedIP && draft.local_ip === detectedIP && <p className="text-xs leading-5 text-fg-muted">{t('setup.detectedIPHelp')}</p>}
@@ -436,11 +474,17 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                             {dnsNames.mismatch && <div role="alert" className="space-y-2 rounded-lg border border-warning-mark/40 bg-warning-mark/10 p-4 text-sm"><p>{t('setup.dnsMappingMismatch')}</p><p className="break-all">{t('setup.savedPeerName')}: {draft.peer_ns || '—'}</p><Button type="button" disabled={!draft[dnsNames.peerKey].trim()} onClick={() => change('peer_ns', draft[dnsNames.peerKey])}>{t('setup.useDisplayedPeer')}</Button></div>}
                             <div className="max-w-sm"><SetupSelect name="dns_engine" label={t('setup.engine')} value={draft.dns_engine} onChange={value => change('dns_engine', value as 'bind' | 'pdns')}><option value="pdns">PowerDNS</option><option value="bind">BIND</option></SetupSelect></div>
                             <p className="text-sm leading-6 text-fg-muted">{t('setup.dnsStartPrimary')}</p>
-                            <details className="text-sm text-fg-muted"><summary className="cursor-pointer font-medium text-primary">{t('setup.dnsPairDetails')}</summary><p className="mt-3 leading-6">{t('setup.dnsPairOrder')}</p></details>
+                            <details className="text-sm text-fg-muted"><summary className="cursor-pointer font-medium text-primary">{t('setup.dnsPairDetails')}</summary><p className="mt-3 leading-6">{t('setup.dnsPairOrder')}</p><p className="mt-3 leading-6">{t('setup.dnsNativePeerHelp')}</p></details>
                         </div>}
                         {secondaryHosting && <div className="space-y-3">
+                            <SetupSelect name="dns_hosting_management" label={t('setup.publisher.management')} value={hostingDNSManagement} onChange={value => change('dns_hosting_management', value as 'manual' | 'panel')}>
+                                <option value="manual">{t('setup.publisher.manual')}</option>
+                                <option value="panel">{t('setup.publisher.automatic')}</option>
+                            </SetupSelect>
+                            {automaticPublisher ? <>
                             <SetupInput name="dns_publisher_endpoint" label={t('setup.publisher.endpoint')} value={draft.dns_publisher_endpoint || ''} onChange={value => change('dns_publisher_endpoint', value)} placeholder="https://primary.example.com:2083" required />
                             <p className="text-sm leading-6 text-fg-muted">{t('setup.publisher.setupHelp')}</p>
+                            </> : <p className="text-sm leading-6 text-fg-muted">{t('setup.publisher.manualHelp')}</p>}
                         </div>}
                         {isNode && <SetupNodeVersion value={draft.node_version} onChange={value => change('node_version', value)} />}
                         {draft.purpose === 'application' && !customized && <SetupSelect name="database" label={t('setup.database')} value={draft.database} onChange={value => change('database', value)}><option value="">{t('setup.databaseNone')}</option><option value="mariadb">MariaDB</option><option value="postgresql">PostgreSQL</option></SetupSelect>}
@@ -450,8 +494,9 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         {plan.components && <div className="mt-5"><h3 className="font-semibold">{t('setup.components.reviewTitle')}</h3><ul className="mt-2 divide-y divide-border">{plan.components.map(item => <li key={item.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm"><span>{catalog?.components.find(row => row.id === item.id)?.name || stepTarget('service', item.id)}</span><span className="text-fg-muted">{t(item.installed ? 'setup.components.keep' : item.required ? 'setup.components.dependency' : 'setup.components.toInstall')}</span></li>)}</ul><p className="mt-3 text-sm text-fg-muted">{t('setup.components.preserve')}</p></div>}
                         <ol className="mt-5 divide-y divide-border">{plan.steps.map(item => <li key={item.id} className="py-4"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && <p className="mt-1 text-sm text-fg-muted">{item.qualifier}</p>}</li>)}</ol>
                         <dl className="mt-5 space-y-3 rounded-lg bg-surface-2 p-4 text-sm"><div><dt className="font-semibold">{t('setup.firewallReview')}</dt><dd className="mt-1 leading-6 text-fg-muted">{t('setup.firewallHelp')}</dd></div><div><dt className="font-semibold">TCP</dt><dd className="mt-1 break-words tabular-nums">{plan.tcp_ports.join(', ') || t('setup.noPorts')}</dd></div><div><dt className="font-semibold">UDP</dt><dd className="mt-1 break-words tabular-nums">{plan.udp_ports.join(', ') || t('setup.noPorts')}</dd></div><div><dt className="font-semibold">{t('setup.certificateContact')}</dt><dd className="mt-1 break-all">{plan.contact_email}</dd></div>{plan.hostname_change && <div><dt className="font-semibold">{t('setup.hostnameChange')}</dt><dd className="mt-1 break-all">{plan.hostname_change}</dd></div>}</dl>
-                        {secondaryHosting && publisherEndpoint && <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm"><p className="font-semibold">{t('setup.publisher.reviewTitle')}</p><p className="break-all">{publisherEndpoint}</p><p className="leading-6 text-fg-muted">{t('setup.publisher.setupHelp')}</p></div>}
+                        {automaticPublisher && publisherEndpoint && <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm"><p className="font-semibold">{t('setup.publisher.reviewTitle')}</p><p className="break-all">{publisherEndpoint}</p><p className="leading-6 text-fg-muted">{t('setup.publisher.setupHelp')}</p></div>}
                         {plan.remote_dns_connection && <div className="mt-5 rounded-lg border border-border p-4 text-sm"><p className="font-semibold">{t('setup.remote.reviewTitle')}</p><p className="mt-2 break-all">{plan.remote_dns_connection.endpoint}</p><p className="mt-1 break-words text-fg-muted">{plan.remote_dns_connection.nameservers.join(', ')}</p><p className="mt-2 leading-6 text-fg-muted">{t('setup.remote.reviewHelp')}</p></div>}
+                        {secondaryHosting && !automaticPublisher && <p className="mt-5 text-sm leading-6 text-fg-muted">{t('setup.publisher.manualHelp')}</p>}
                         {draft.dns_mode === 'external' && <p className="mt-5 text-sm leading-6 text-fg-muted">{t('setup.externalAfter')}</p>}
                         {isMail && <p className="mt-4 text-sm leading-6 text-fg-muted">{t('setup.mailAfter')}</p>}
                         {plan.blockers.length > 0 && <div role="alert" className="mt-5 rounded-lg border border-warning-mark/40 bg-warning-mark/10 p-4"><p className="font-semibold">{t('setup.planBlocked')}</p><ul className="mt-3 list-disc space-y-2 pl-5 text-sm">{plan.blockers.map(code => <li key={code}>{failureText(code)}<details className="mt-1 text-xs text-fg-muted"><summary className="cursor-pointer">{t('setup.details')}</summary><code className="mt-1 block break-words">{code}</code></details></li>)}</ul></div>}

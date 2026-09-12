@@ -1,0 +1,154 @@
+{
+  "target": "localhost production bundle with mocked API; no installed panel",
+  "results": [
+    {
+      "name": "tr-1440",
+      "passed": true,
+      "writes": [
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        }
+      ],
+      "bindingCalls": 0,
+      "startCalls": 0,
+      "checks": [
+        "tab switch",
+        "access reload",
+        "access license remount",
+        "review reload",
+        "review license remount",
+        "confirmation reset"
+      ]
+    },
+    {
+      "name": "tr-390",
+      "passed": true,
+      "writes": [
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        }
+      ],
+      "bindingCalls": 0,
+      "startCalls": 0,
+      "checks": [
+        "tab switch",
+        "access reload",
+        "access license remount",
+        "review reload",
+        "review license remount",
+        "confirmation reset"
+      ]
+    },
+    {
+      "name": "en-1440",
+      "passed": true,
+      "writes": [
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        }
+      ],
+      "bindingCalls": 0,
+      "startCalls": 0,
+      "checks": [
+        "tab switch",
+        "access reload",
+        "access license remount",
+        "review reload",
+        "review license remount",
+        "confirmation reset"
+      ]
+    },
+    {
+      "name": "en-390",
+      "passed": true,
+      "writes": [
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup",
+          "method": "PUT"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        },
+        {
+          "path": "/api/v1/setup/plan",
+          "method": "POST"
+        }
+      ],
+      "bindingCalls": 0,
+      "startCalls": 0,
+      "checks": [
+        "tab switch",
+        "access reload",
+        "access license remount",
+        "review reload",
+        "review license remount",
+        "confirmation reset"
+      ]
+    }
+  ],
+  "source_sha256": {
+    "web/src/components/ServerSetup.tsx": "a5cda0c2266f11735141b3d85a659db7fca35803c14d1a0c46c4089a50371873",
+    "web/src/lib/serverSetup.ts": "255daf9cc0e272a33d875c85212d8fc089f7df48d040ec8ca50a9ccfae2c3a8e",
+    "web/tests/server-setup-runtime.test.mjs": "1d00421ee53778dd3cfd52045a4b85c495dc9727f3943a764d6dac370910b612"
+  }
+}

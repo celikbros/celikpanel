@@ -785,6 +785,13 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 		if err := p.requireServerSetupAdmission(); err != nil {
 			return false, err
 		}
+		if serverSetupManualSecondaryHosting(plan.Draft) {
+			ready, err := p.serverSetupManualSecondaryHostingReadiness(ctx, plan.Draft)
+			if err != nil || !ready {
+				return false, errServerSetupDNSReadinessRequired
+			}
+			return true, nil
+		}
 		if _, err := p.remoteDNSLocalAuthority(ctx); err != nil {
 			return false, errServerSetupDNSReadinessRequired
 		}

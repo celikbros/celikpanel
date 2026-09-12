@@ -48,7 +48,7 @@ async function loadComponent(name) {
 }
 const Gate = await loadComponent('ServerSetupGate');
 const Wizard = await loadComponent('ServerSetup');
-const original = { fetch:globalThis.fetch, window:globalThis.window, localStorage:globalThis.localStorage };
+const original = { fetch:globalThis.fetch, window:globalThis.window, localStorage:globalThis.localStorage, sessionStorage:globalThis.sessionStorage };
 const fresh = () => ({ version:1,revision:1,origin:'fresh',status:'new',required:true,
     draft:{purpose:'web',panel_domain:'',mail_hostname:'',dns_mode:'local',remote_dns_connection_id:'',dns_engine:'pdns',dns_role:'primary',ns1:'',ns2:'',local_ip:'',peer_ip:'',peer_ns:'',node_version:'',database:'mariadb'},checks:[] });
 let calls, state, tree, store, fixture;
@@ -57,6 +57,8 @@ function init(role='admin', overrides={}) {
     const context={snapshot:state,accept(next){state=next;context.snapshot=next;},async reload(){return state;}};
     fixture=globalThis.setupFixture={auth:{role,user:{username:role},logout(){}},path:'/',context};
     globalThis.localStorage={getItem:key=>store.get(key)??null,setItem:(key,value)=>store.set(key,value),removeItem:key=>store.delete(key)};
+    const editorStore=new Map();
+    globalThis.sessionStorage={getItem:key=>editorStore.get(key)??null,setItem:(key,value)=>editorStore.set(key,value),removeItem:key=>editorStore.delete(key)};
     globalThis.window={setTimeout,clearTimeout,setInterval,clearInterval,location:{hostname:'192.0.2.4',reload(){}}};
     globalThis.fetch=async(url,options)=>{
         calls.push({url,options});
@@ -436,6 +438,8 @@ test('custom setup persists an explicit empty selection and restores it after re
         assert.equal(state.draft.purpose, 'custom');
         await act(async () => tree.unmount());tree = null;
         fixture.context.accept(state);await mount();
+        assert.ok(tree.root.findByProps({id:'setup-panel_domain'}), 'reopen on the last access step');
+        await act(async()=>findButton('setup.back').props.onClick());
         assert.ok(component('nginx'));
         assert.ok(tree.root.findAllByProps({ type: 'checkbox' }).every(input => !input.props.checked));
         assert.equal(calls.some(call => call.url === '/api/v1/setup/start'), false);
@@ -603,8 +607,8 @@ test('saved external DNS stays visible until the administrator changes an empty 
     } finally { await cleanup(); }
 });
 
-test('saved local secondary hosting requires a publisher address or an explicit role change', async () => {
-    init('admin', { status: 'draft', draft: { ...fresh().draft, purpose: 'custom', dns_mode: 'local', dns_role: 'secondary', customization: { components: ['nginx'] } } });
+test('explicit automatic secondary hosting requires a publisher address or an explicit role change', async () => {
+    init('admin', { status: 'draft', draft: { ...fresh().draft, purpose: 'custom', dns_mode: 'local', dns_role: 'secondary', dns_hosting_management: 'panel', customization: { components: ['nginx'] } } });
     try {
         await mount();await submit();
         const selector = tree.root.findByProps({ id: 'setup-dns_role' });
@@ -694,13 +698,15 @@ test('a conflicting saved peer remains visible and blocks review until explicitl
 });
 
 
-test('web secondary requests a publisher while DNS-only permits either engine without one', async () => {
+test('web secondary offers optional publication while DNS-only permits either engine without one', async () => {
     init();
     try {
         await mount(); await submit();
         const secondary = () => tree.root.findByProps({id:'setup-dns_role'}).findAllByType('option').find(option => option.props.value === 'secondary');
         assert.notEqual(secondary().props.disabled, true);
         await act(async () => tree.root.findByProps({id:'setup-dns_role'}).props.onChange({target:{value:'secondary'}}));
+        assert.equal(tree.root.findAllByProps({id:'setup-dns_publisher_endpoint'}).length, 0);
+        await act(async () => tree.root.findByProps({id:'setup-dns_hosting_management'}).props.onChange({target:{value:'panel'}}));
         assert.ok(tree.root.findByProps({id:'setup-dns_publisher_endpoint'}));
         assert.ok(JSON.stringify(tree.toJSON()).includes('setup.publisher.roleHelp'));
         assert.equal(calls.some(c => c.url.includes('/dns/remote')), false);
@@ -730,7 +736,7 @@ test('changing from customized mail hosting to DNS or web clears inherited mail 
 
 
 test('secondary hosting requires a valid reviewed primary endpoint without pairing during review', async () => {
-    init('admin', {status:'draft', draft:{...fresh().draft,purpose:'web_mail',panel_domain:'boston.example.com',mail_hostname:'mail.boston.example.com',dns_role:'secondary',ns1:'ns1.example.com',ns2:'ns2.example.com',peer_ns:'ns1.example.com',peer_ip:'192.0.2.10',local_ip:'192.0.2.20'}});
+    init('admin', {status:'draft', draft:{...fresh().draft,purpose:'web_mail',panel_domain:'boston.example.com',mail_hostname:'mail.boston.example.com',dns_role:'secondary',dns_hosting_management:'panel',ns1:'ns1.example.com',ns2:'ns2.example.com',peer_ns:'ns1.example.com',peer_ip:'192.0.2.10',local_ip:'192.0.2.20'}});
     try {
         await mount();
         await submit();
@@ -783,4 +789,130 @@ test('waiting secondary keeps its reviewed endpoint and binds only an explicitly
             assert.equal(tree.root.findAllByType('remote-connection').length,0);
         } finally {await cleanup();}
     }
+});
+
+async function remountWizard() {
+    await act(async()=>tree.unmount());
+    fixture.context.snapshot=state;
+    await mount();
+}
+
+test('customized access survives remount and reload with unsaved fields and no configuration requests',async()=>{
+    init('admin',{status:'draft',draft:{...fresh().draft,customization:{components:['nginx']}}});
+    try{
+        await mount();await submit();
+        await act(async()=>tree.root.findByProps({id:'setup-panel_domain'}).props.onChange({target:{value:'frankfurt.example.com'}}));
+        await act(async()=>tree.root.findByProps({id:'setup-peer_ip'}).props.onChange({target:{value:'192.0.2.20'}}));
+        const before=calls.length;
+        await remountWizard();
+        assert.equal(tree.root.findByProps({'aria-current':'step'}).findAllByType('span')[1].props.children,'setup.step.access');
+        assert.equal(tree.root.findByProps({id:'setup-panel_domain'}).props.value,'frankfurt.example.com');
+        assert.equal(tree.root.findByProps({id:'setup-peer_ip'}).props.value,'192.0.2.20');
+        assert.ok(calls.slice(before).every(call=>!call.options?.method||call.options.method==='GET'));
+    }finally{await cleanup();}
+});
+
+test('review survives remount with a fresh server plan and requires confirmation again',async()=>{
+    init();try{
+        await mount();await toReview();
+        await act(async()=>tree.root.findByProps({type:'checkbox'}).props.onChange({target:{checked:true}}));
+        const before=calls.length;
+        await remountWizard();
+        assert.ok(findButton('setup.start'));
+        assert.equal(findButton('setup.start').props.disabled,true);
+        assert.equal(tree.root.findByProps({type:'checkbox'}).props.checked,false);
+        assert.equal(calls.slice(before).filter(call=>call.url==='/api/v1/setup/plan').length,1);
+        assert.equal(calls.some(call=>call.url==='/api/v1/setup/start'),false);
+        assert.equal(calls.slice(before).some(call=>call.options?.method==='PUT'),false);
+    }finally{await cleanup();}
+});
+
+test('review recovery cannot reuse a stale or unavailable plan, and preserves access fields',async()=>{
+    for(const kind of ['offline','revision','blocked']){
+        init();try{
+            await mount();await toReview();
+            const base=fetch;
+            globalThis.fetch=async(url,options)=>{
+                if(url==='/api/v1/setup/plan'){
+                    if(kind==='offline')throw new Error('offline');
+                    return Response.json(kind==='revision'?plan({revision:state.revision+1}):plan({can_start:false,blockers:['panel_dns_not_ready']}));
+                }
+                return base(url,options);
+            };
+            await remountWizard();
+            if(kind==='blocked')assert.equal(findButton('setup.start').props.disabled,true);
+            else{
+                assert.equal(findButton('setup.start'),undefined);
+                assert.equal(tree.root.findByProps({id:'setup-panel_domain'}).props.value,'panel.example.com');
+                assert.ok(JSON.stringify(tree.toJSON()).includes('setup.planFailed'));
+            }
+            assert.equal(calls.some(call=>call.url==='/api/v1/setup/start'),false);
+        }finally{await cleanup();}
+    }
+});
+
+test('server operation wins over a saved review after reload',async()=>{
+    init();try{
+        await mount();await toReview();
+        const before=calls.length, base=fetch;
+        globalThis.fetch=async(url,options)=>url.includes('/setup/operation')?Response.json(execution({plan_id:'a'.repeat(32),request_id:'b'.repeat(32)})):base(url,options);
+        await remountWizard();
+        assert.equal(findButton('setup.start'),undefined);
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.installing'));
+        assert.equal(calls.slice(before).some(call=>call.url==='/api/v1/setup/plan'),false);
+        assert.equal(sessionStorage.getItem('celikpanel.setup.editor.admin'),null);
+    }finally{await cleanup();}
+});
+
+test('editor checkpoints cannot override changed server revisions, completed setup, or another user',async()=>{
+    init();try{
+        await mount();await toReview();
+        const raw=sessionStorage.getItem('celikpanel.setup.editor.admin');
+        assert.ok(setup.decodeSetupEditorCheckpoint(raw,state));
+        assert.equal(setup.decodeSetupEditorCheckpoint(raw,{...state,revision:state.revision+1}),null);
+        assert.equal(setup.decodeSetupEditorCheckpoint(raw,{...state,status:'ready',required:false}),null);
+        assert.equal(setup.decodeSetupEditorCheckpoint('{broken',state),null);
+        const edited=JSON.parse(raw);edited.draft.panel_domain='changed.example.com';
+        assert.equal(setup.decodeSetupEditorCheckpoint(JSON.stringify(edited),state),null);
+        fixture.auth.user.username='another-admin';
+        await remountWizard();
+        assert.equal(findButton('setup.start'),undefined);
+    }finally{await cleanup();}
+});
+
+test('unavailable session storage does not prevent normal wizard use',async()=>{
+    init();globalThis.sessionStorage={getItem(){throw new Error('denied')},setItem(){throw new Error('denied')},removeItem(){throw new Error('denied')}};
+    try{await mount();await toReview();assert.ok(findButton('setup.start'));}finally{await cleanup();}
+});
+
+
+test('manual secondary hosting reviews without a primary panel and preserves the selected topology', async () => {
+    for (const engine of ['bind', 'pdns']) {
+        init('admin', {status:'draft', draft:{...fresh().draft,purpose:'web_mail',panel_domain:'boston.example.com',mail_hostname:'mail.boston.example.com',dns_role:'secondary',dns_engine:engine,ns1:'ns1.example.com',ns2:'ns2.example.com',peer_ns:'ns1.example.com',peer_ip:'192.0.2.10',local_ip:'192.0.2.20'}});
+        try {
+            await mount();
+            assert.equal(tree.root.findByProps({id:'setup-dns_hosting_management'}).props.value,'manual');
+            assert.equal(tree.root.findAllByProps({id:'setup-dns_publisher_endpoint'}).length,0);
+            await submit();
+            assert.equal(state.draft.dns_hosting_management,'manual');
+            assert.equal(state.draft.dns_role,'secondary');
+            assert.equal(state.draft.dns_engine,engine);
+            assert.equal(calls.filter(c=>c.url==='/api/v1/setup/plan').length,1);
+            assert.ok(JSON.stringify(tree.toJSON()).includes('setup.publisher.manualHelp'));
+            assert.equal(calls.some(c=>c.url.includes('/dns/remote') || c.url==='/api/v1/setup/start'),false);
+        } finally {await cleanup();}
+    }
+});
+
+test('an existing publisher endpoint keeps automatic management until the owner selects manual', async () => {
+    init('admin',{status:'draft',draft:{...fresh().draft,purpose:'web',dns_role:'secondary',dns_publisher_endpoint:'https://primary.example.com:2083'}});
+    try {
+        await mount();
+        assert.equal(tree.root.findByProps({id:'setup-dns_hosting_management'}).props.value,'panel');
+        await act(async()=>tree.root.findByProps({id:'setup-dns_hosting_management'}).props.onChange({target:{value:'manual'}}));
+        assert.equal(tree.root.findAllByProps({id:'setup-dns_publisher_endpoint'}).length,0);
+        await submit();
+        assert.equal(state.draft.dns_hosting_management,'manual');
+        assert.equal(calls.some(c=>c.url.includes('/dns/remote') || c.url==='/api/v1/setup/start'),false);
+    } finally {await cleanup();}
 });

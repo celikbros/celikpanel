@@ -20,6 +20,7 @@ var errServerSetupConflict = errors.New("server setup changed; reload the curren
 
 type serverSetupDraft struct {
 	Purpose               string                    `json:"purpose"`
+	DNSHostingManagement  string                    `json:"dns_hosting_management,omitempty"`
 	DNSPublisherEndpoint  string                    `json:"dns_publisher_endpoint,omitempty"`
 	RemoteDNSConnectionID string                    `json:"remote_dns_connection_id"`
 	PanelDomain           string                    `json:"panel_domain"`
@@ -63,7 +64,7 @@ func defaultServerSetupDraft() serverSetupDraft {
 // Drafts may be incomplete; review validates the complete executable plan.
 // Taslak eksik olabilir; inceleme calistirilacak tam plani dogrular.
 func canonicalServerSetupDraft(d serverSetupDraft) (serverSetupDraft, error) {
-	for _, item := range []*string{&d.Purpose, &d.PanelDomain, &d.MailHostname, &d.DNSMode, &d.DNSEngine, &d.DNSRole, &d.NS1, &d.NS2, &d.LocalIP, &d.PeerIP, &d.PeerNS, &d.NodeVersion, &d.Database, &d.RemoteDNSConnectionID, &d.DNSPublisherEndpoint} {
+	for _, item := range []*string{&d.Purpose, &d.PanelDomain, &d.MailHostname, &d.DNSMode, &d.DNSEngine, &d.DNSRole, &d.NS1, &d.NS2, &d.LocalIP, &d.PeerIP, &d.PeerNS, &d.NodeVersion, &d.Database, &d.RemoteDNSConnectionID, &d.DNSPublisherEndpoint, &d.DNSHostingManagement} {
 		*item = strings.TrimSpace(*item)
 		if len(*item) > 253 {
 			return d, errors.New("setup input is too long")
@@ -97,6 +98,9 @@ func canonicalServerSetupDraft(d serverSetupDraft) (serverSetupDraft, error) {
 			return d, errors.New("invalid setup address")
 		}
 		*value = ip.String()
+	}
+	if !stringIn(d.DNSHostingManagement, "", "manual", "panel") {
+		return d, errors.New("invalid hosting DNS management choice")
 	}
 	if d.DNSPublisherEndpoint != "" {
 		endpoint, err := canonicalRemoteDNSEndpoint(d.DNSPublisherEndpoint)
