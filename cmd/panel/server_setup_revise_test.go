@@ -47,3 +47,29 @@ func TestServerSetupReviseOnlyReopensFullyAppliedWaitingPlan(t *testing.T) {
 		})
 	}
 }
+
+func TestServerSetupReviseAllowsOnlyUnfinishedFinalVerification(t *testing.T) {
+	f, state := setupOperationFixture(t)
+	plan := saveSetupPlanForTest(t, f, state)
+	execution := serverSetupExecution{ID: strings.Repeat("4", 32), RequestID: strings.Repeat("4", 32), PlanID: plan.ID, Status: "waiting", Phase: "verification"}
+	for _, step := range plan.Steps {
+		execution.Steps = append(execution.Steps, serverSetupExecutionStep{serverSetupPlanStep: step, Status: "succeeded", RequestID: serverSetupID(execution.ID, step.ID, "request"), OwnerID: serverSetupID(execution.ID, step.ID, "owner")})
+	}
+	last := &execution.Steps[len(execution.Steps)-1]
+	if last.Kind != "verify" {
+		t.Fatal("fixture has no final verification")
+	}
+	last.Status = "pending"
+	if !serverSetupExecutionCanRevise(plan, execution) {
+		t.Fatal("completed installations with pending verification cannot be revised")
+	}
+	last.OperationID = strings.Repeat("7", 32)
+	if serverSetupExecutionCanRevise(plan, execution) {
+		t.Fatal("unresolved child was ignored")
+	}
+	last.OperationID = ""
+	execution.Steps[0].Status = "pending"
+	if serverSetupExecutionCanRevise(plan, execution) {
+		t.Fatal("unfinished installation was ignored")
+	}
+}

@@ -5,7 +5,7 @@ import { useI18n } from '../i18n';
 import { setupDNSTranslation } from '../i18n/setupDNS';
 import type { TranslationKey } from '../i18n/en';
 import { Link, Navigate } from '../router';
-import { decodeSetupEditorCheckpoint, setupInfrastructureZoneCandidate, changeSetupDNSRole, setupDNSNames, setupDetectedIPv4, chooseSetupPurpose, decodeServerSetup, setupNextPath, setupPurposes, type ServerSetupDraft, type ServerSetupSnapshot } from '../lib/serverSetup';
+import { decodeSetupEditorCheckpoint, setupInfrastructureZoneCandidate, changeSetupDNSRole, setupDNSNames, setupDetectedIPv4, chooseSetupPurpose, decodeServerSetup, setupNextPath, setupPurposes, type ServerSetupCheck, type ServerSetupDraft, type ServerSetupSnapshot } from '../lib/serverSetup';
 import { decodeSetupExecution, decodeSetupMarker, decodeSetupPlan, newSetupRequestID, safeSetupPanelURL, type ServerSetupExecution, type SetupInfrastructureDNSPlan, type ServerSetupPlan, type SetupStartMarker } from '../lib/serverSetupOperation';
 import { ServerSetupShell, useServerSetup } from './ServerSetupGate';
 import { ServerSetupSteps } from './ServerSetupSteps';
@@ -165,6 +165,8 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const [error, setError] = useState('');
     const [reconnecting, setReconnecting] = useState(false);
     const [completionFailed, setCompletionFailed] = useState(false);
+    const [verificationResult, setVerificationResult] = useState<{ checks: ServerSetupCheck[]; failed: boolean } | null>(null);
+    const [verifyingRequirements, setVerifyingRequirements] = useState(false);
     const [manualExit, setManualExit] = useState(false);
     const pendingRef = useRef(false);
     const pollingRef = useRef(false);
@@ -331,11 +333,15 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     async function verifyManual() {
         if (pendingRef.current) return;
         pendingRef.current = true; setBusy(true); setError('');
+        setVerifyingRequirements(true); setVerificationResult(null);
         try {
-            const latest = await setup.reload(true); accept(latest);
+            const latest = await setup.reload(true);
+            if (!alive.current) return;
+            accept(latest);
+            setVerificationResult({ checks: latest.checks, failed: false });
             await reconcile();
-        } catch { if (alive.current) setError(t('setup.verificationFailed')); }
-        finally { pendingRef.current = false; if (alive.current) setBusy(false); }
+        } catch { if (alive.current) setVerificationResult({ checks: [], failed: true }); }
+        finally { pendingRef.current = false; if (alive.current) { setBusy(false); setVerifyingRequirements(false); } }
     }
     async function resumeUnconfirmed() {
         const saved = markerRef.current;
@@ -359,6 +365,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     }
     function resetForReview() {
         pollEpoch.current++;
+        setVerificationResult(null);
         try { localStorage.removeItem(markerKey(user.username)); } catch { /* next start still requires storage */ }
         markerRef.current = null; setMarker(null); setExecution(null); setPlan(null); setAcknowledged(false); setStep('access');
     }
@@ -406,7 +413,13 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const nextLabel = nextPath === '/settings?section=dns' ? 'setup.nextDNS' : nextPath === '/services' ? 'setup.nextComponents' : isNode ? 'setup.nextApplication' : 'setup.nextWebsite';
     const progressCurrentStep = execution?.steps.find(item => ['running', 'failed'].includes(item.status));
     const guidance = execution && !reconnecting ? setupExecutionGuidance(execution) : null;
-    const progressChecks = (execution?.checks || snapshot.checks).filter(check => check.state !== 'ready');
+    const progressChecks = (verificationResult && !verificationResult.failed ? verificationResult.checks : execution?.checks || snapshot.checks).filter(check => check.state !== 'ready');
+    const verifiedBlockers = verificationResult?.checks.filter(check => check.state !== 'ready') || [];
+    const verificationMessage = verifyingRequirements ? 'setup.verifyChecking'
+        : !verificationResult ? null
+        : verificationResult.failed || verificationResult.checks.length === 0 ? 'setup.verificationFailed'
+        : verifiedBlockers.some(check => check.state === 'unknown') ? 'setup.verifyUnknown'
+        : verifiedBlockers.length > 0 ? 'setup.verifyStillWaiting' : 'setup.verifyChecksPassed';
 
     if (manualExit) return <Navigate to="/" replace />;
     return <ServerSetupShell navigation={!completed ? <ServerSetupSteps steps={steps} current={hasOperation ? 'progress' : step} /> : undefined}>
@@ -437,7 +450,12 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                     {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={confirmingPrevious || waitingDNSPrerequisite ? 'status' : 'alert'} className="mt-5 space-y-2 text-sm">{(!confirmingPrevious || !guidance) && <p className={confirmingPrevious || waitingDNSPrerequisite ? 'text-fg-muted' : 'text-danger'}>{failureText(execution.error.code)}</p>}<details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
                     {progressChecks.length > 0 && waitingVerification && <ul className="mt-5 list-disc space-y-2 pl-5 text-sm text-fg-muted">{progressChecks.map(check => <li key={check.id}>{failureText(check.code)}</li>)}</ul>}
                     <ol className="mt-6 divide-y divide-border" aria-live="polite">
-                        {execution?.steps.map(item => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && <p className="mt-1 break-words text-sm text-fg-muted">{item.qualifier}</p>}</div><span className="flex shrink-0 items-center gap-2 text-sm text-fg-muted">{item.status === 'succeeded' ? <Check className="h-4 w-4 text-success" aria-hidden="true" /> : item.status === 'running' ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" /> : <Circle className="h-3 w-3" aria-hidden="true" />}{t(`setup.operation.${item.status}`)}</span></li>)}
+                        {execution?.steps.map(item => {
+                            const status = item.kind === 'verify'
+                                ? !waitingVerification && (execution.phase === 'verification' || execution.status === 'succeeded') ? 'running' : 'pending'
+                                : item.status;
+                            const label = item.kind === 'verify' && waitingVerification ? 'setup.verifyWaiting' : `setup.operation.${status}` as TranslationKey;
+                            return <li key={item.id} className="flex flex-col items-start justify-between gap-2 py-4 sm:flex-row sm:items-center sm:gap-4"><div className="min-w-0"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && <p className="mt-1 break-words text-sm text-fg-muted">{item.qualifier}</p>}</div><span className="flex shrink-0 items-center gap-2 text-sm text-fg-muted">{status === 'succeeded' ? <Check className="h-4 w-4 text-success" aria-hidden="true" /> : status === 'running' ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" /> : <Circle className="h-3 w-3" aria-hidden="true" />}{t(label)}</span></li>; })}
                     </ol>
                     {waitingVerification && <p className="mt-5 text-sm text-fg-muted">{t('setup.reviseHelp')}</p>}
                     {completionFailed && <p role="alert" className="mt-5 text-sm text-danger">{t('setup.verificationFailed')}</p>}
@@ -446,9 +464,15 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                     <div className="mt-6 flex flex-wrap gap-3">
                         {canReviseWaiting && !guidance && <Button variant="secondary" disabled={busy} onClick={() => void reviseWaiting()}>{t('setup.editPlan')}</Button>}
                         {execution?.status === 'failed' ? <Button variant="primary" onClick={editPlan}>{t('setup.revise')}</Button>
-                            : waitingVerification ? <Button variant="primary" disabled={busy} onClick={() => void verifyManual()}>{t('setup.verify')}</Button>
+                            : waitingVerification ? <Button variant="primary" disabled={busy} onClick={() => void verifyManual()}>{t(verifyingRequirements ? 'setup.verifyChecking' : 'setup.verify')}</Button>
                                 : (reconnecting || completionFailed) && <Button variant="primary" disabled={busy} onClick={() => void (marker && !execution ? resumeUnconfirmed() : reconcile())}>{t(marker && !execution ? 'setup.resumeConfirmed' : 'setup.reconnect')}</Button>}
                     </div>
+                    {waitingVerification && <div role="status" aria-live="polite" aria-atomic="true" className="mt-4 text-sm">
+                        {verificationMessage && <div className="rounded-lg border border-border bg-surface p-4">
+                            <p className="font-medium">{t(verificationMessage)}</p>
+                            {!verifyingRequirements && verifiedBlockers.length > 0 && <ul className="mt-2 list-disc space-y-2 pl-5 text-fg-muted">{verifiedBlockers.map(check => <li key={check.id}>{failureText(check.code)}</li>)}</ul>}
+                        </div>}
+                    </div>}
                 </section> : <form onSubmit={next} className="min-w-0">
                     {step === 'purpose' && <fieldset disabled={busy}>
                         <legend className="text-xl font-semibold">{t('setup.purposeTitle')}</legend>

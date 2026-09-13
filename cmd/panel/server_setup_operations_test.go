@@ -261,12 +261,22 @@ func TestServerSetupInstalledChildCannotCompleteWithoutFreshReadiness(t *testing
 	if err != nil || state.Status == "ready" {
 		t.Fatalf("installed component falsely completed setup: %+v %v", state, err)
 	}
+	if execution.Steps[1].Status != "pending" {
+		t.Fatal("final verification falsely succeeded while requirements were missing")
+	}
+	execution.Steps[1].Status = "succeeded"
+	if _, err := f.panel.advanceServerSetupExecution(plan, &execution); err != nil {
+		t.Fatal(err)
+	}
+	if execution.Steps[1].Status != "pending" {
+		t.Fatal("legacy early verification success was not normalized")
+	}
 	ready = true
 	if _, err := f.panel.advanceServerSetupExecution(plan, &execution); err != nil {
 		t.Fatal(err)
 	}
 	state, err = f.panel.loadServerSetup(context.Background())
-	if err != nil || execution.Status != "succeeded" || state.Status != "ready" {
+	if err != nil || execution.Status != "succeeded" || execution.Steps[1].Status != "succeeded" || state.Status != "ready" {
 		t.Fatalf("fresh readiness did not complete: %+v %+v %v", execution, state, err)
 	}
 	if f.agent.installCalls.Load() != 0 {

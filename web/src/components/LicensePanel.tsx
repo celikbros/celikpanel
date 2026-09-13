@@ -60,14 +60,14 @@ export function LicensePanel({ locked = false, onContinue }: { locked?: boolean;
                 else navigate('/', { replace: true });
             }
         } catch (cause) {
-            if (!signal?.aborted) setError(cause instanceof TypeError ? t('license.unavailable') : cause instanceof Error ? cause.message : t('license.loadFailed'));
+            if (!signal?.aborted) setError(cause instanceof TypeError ? t('license.lockError') : cause instanceof Error ? cause.message : t('license.loadFailed'));
         } finally { if (!signal?.aborted) setBusy(false); }
     }
     useEffect(() => { const controller = new AbortController(); void request(undefined, controller.signal); return () => controller.abort(); }, []);
     const Heading = locked ? 'h1' : 'h2';
     return <section className="rounded-xl border border-border bg-surface p-5 sm:p-6" aria-labelledby="license-heading">
-        <Heading id="license-heading" className="mb-3 flex items-center gap-2 text-lg font-semibold text-fg"><BadgeCheck className="h-5 w-5 shrink-0" />{t(setup ? status?.can_provision ? 'license.readyTitle' : status?.state === 'expired' ? 'license.state.expired' : 'license.setupTitle' : 'license.title')}</Heading>
-        <p className="mb-5 max-w-prose text-sm text-fg-muted">{t(status?.state === 'expired' ? 'license.expiredHelp' : setup && !status?.can_provision ? 'license.setupIntro' : 'license.description')}</p>
+        <Heading id="license-heading" className="mb-3 flex items-center gap-2 text-lg font-semibold text-fg"><BadgeCheck className="h-5 w-5 shrink-0" />{t(setup && status ? status.can_provision ? 'license.readyTitle' : status?.state === 'expired' ? 'license.state.expired' : 'license.setupTitle' : 'license.title')}</Heading>
+        {status && <p className="mb-5 max-w-prose text-sm text-fg-muted">{t(status?.state === 'expired' ? 'license.expiredHelp' : setup && !status?.can_provision ? 'license.setupIntro' : 'license.description')}</p>}
         {error && <p role="alert" className="mb-4 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}</p>}
         {status ? <div className="mb-6 space-y-2 text-sm" role="status">
             {(!setup || (!status.can_provision && status.state !== 'missing' && status.state !== 'expired')) && <p className="font-semibold">{t(`license.state.${status.state}`)}</p>}
@@ -75,7 +75,7 @@ export function LicensePanel({ locked = false, onContinue }: { locked?: boolean;
             {!status.can_provision && <p className="max-w-prose text-fg-muted">{t('license.restricted')}</p>}
             {setup && status.can_provision && <p>{t('license.setupSuccess')}</p>}
         </div> : <p role="status" className="mb-4 text-sm">{busy ? t('common.loading') : t('license.loadFailed')}</p>}
-        {!(setup && status?.can_provision) && <form noValidate onSubmit={event => { event.preventDefault(); void request('activate'); }} className="space-y-3">
+        {status && !(setup && status.can_provision) && <form noValidate onSubmit={event => { event.preventDefault(); void request('activate'); }} className="space-y-3">
             <label htmlFor="license-key" className="block text-sm font-medium">{t('license.key')}</label>
             <div className="flex items-stretch gap-2">
                 <input id="license-key" name="license_key" type={showKey ? 'text' : 'password'} autoComplete="off" autoCapitalize="off" spellCheck={false} value={key} onChange={event => { setKey(event.target.value); setKeyError(''); }} className={`${inputClass} min-w-0 flex-1`} aria-invalid={!!keyError} aria-describedby={keyError ? 'license-key-help license-key-error' : 'license-key-help'} disabled={busy} />

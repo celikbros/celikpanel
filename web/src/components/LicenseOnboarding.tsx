@@ -12,28 +12,41 @@ export function LicenseOnboarding({ children, onAccessChange }: { children?: Rea
     const navigate = useNavigate();
     const location = useLocation();
     const { t, screensReady, screensFailed } = useI18n();
-    const [access, setAccess] = useState<{ owner: string; allowed: boolean; until: number } | null>(null);
+    const [access, setAccess] = useState<{ owner: string; allowed: boolean | null; until: number } | null>(null);
     const [failed, setFailed] = useState(false);
     const controller = useRef<AbortController | null>(null);
     const check = useCallback(async () => {
-        controller.current?.abort();
+        // Focus and periodic checks share the pending request.
+        // Odak ve zamanlayıcı kontrolleri sürmekte olan isteği paylaşır.
+        if (controller.current) return;
         const request = new AbortController();
         controller.current = request;
         const timeout = window.setTimeout(() => request.abort(), 15000);
-        setFailed(false);
         try {
             const response = await fetch('/api/v1/license/access', { cache: 'no-store', signal: request.signal });
             if (!response.ok) throw new Error('access unavailable');
             const result = await response.json();
             if (typeof result.can_use_panel !== 'boolean' || !Number.isSafeInteger(result.valid_until)
                 || (result.can_use_panel && result.valid_until <= Date.now() / 1000)) throw new Error('invalid access');
-            if (!request.signal.aborted) setAccess({ owner: user.username, allowed: result.can_use_panel, until: result.valid_until });
+            if (!request.signal.aborted && controller.current === request) {
+                setAccess({ owner: user.username, allowed: result.can_use_panel, until: result.valid_until });
+                setFailed(false);
+            }
         } catch {
             if (controller.current === request) {
-                setAccess({ owner: user.username, allowed: false, until: 0 });
+                // A failed request is not a license rejection. Keep only an
+                // unexpired decision for this identity; never extend its deadline.
+                // Bağlantı hatası lisans reddi değildir; bu kimliğin geçerli kararı
+                // yalnızca sunucunun belirlediği süre dolana kadar korunur.
+                setAccess(previous => previous?.owner === user.username
+                    && (previous.allowed === false || (previous.allowed && previous.until * 1000 > Date.now()))
+                    ? previous : { owner: user.username, allowed: null, until: 0 });
                 setFailed(true);
             }
-        } finally { window.clearTimeout(timeout); }
+        } finally {
+            window.clearTimeout(timeout);
+            if (controller.current === request) controller.current = null;
+        }
     }, [user.username]);
 
     useEffect(() => {
@@ -44,6 +57,7 @@ export function LicenseOnboarding({ children, onAccessChange }: { children?: Rea
         const locked = () => {
             controller.current?.abort();
             controller.current = null;
+            setFailed(false);
             setAccess({ owner: user.username, allowed: false, until: 0 });
         };
         window.addEventListener('focus', focus);
@@ -66,7 +80,8 @@ export function LicenseOnboarding({ children, onAccessChange }: { children?: Rea
             if (document.visibilityState === 'visible') void check();
         }, Math.min(2147483647, refreshDelay)) : undefined;
         const timer = window.setTimeout(() => {
-            setAccess(previous => previous ? { ...previous, allowed: false } : null);
+            setAccess(previous => previous ? { ...previous, allowed: null } : null);
+            setFailed(true);
             if (document.visibilityState === 'visible') void check();
         }, Math.min(2147483647, Math.max(0, access.until * 1000 - Date.now())));
         return () => { window.clearTimeout(timer); window.clearTimeout(refreshTimer); };
@@ -78,12 +93,19 @@ export function LicenseOnboarding({ children, onAccessChange }: { children?: Rea
     useLayoutEffect(() => { onAccessChange?.(!!allowed); }, [allowed, onAccessChange]);
     useEffect(() => {
         if (!access || access.owner !== user.username) return;
-        if (!allowed && location.pathname !== '/activate') navigate('/activate', { replace: true });
+        if (access.allowed === false && location.pathname !== '/activate') navigate('/activate', { replace: true });
         if (allowed && location.pathname === '/activate') navigate('/', { replace: true });
     }, [access, allowed, location.pathname, navigate, user.username]);
-    if (allowed) return <>{children}</>;
+    if (allowed) return <>
+        {failed && <div role="status" className="flex flex-wrap items-center justify-center gap-3 border-b border-border bg-surface px-4 py-3 text-sm text-fg">
+            <p className="max-w-prose">{t('license.connectionRetry')}</p>
+            <Button variant="secondary" onClick={() => void check()}>{t('license.refresh')}</Button>
+            <Button variant="secondary" onClick={() => window.location.reload()}>{t('common.reloadPage')}</Button>
+        </div>}
+        {children}
+    </>;
     const loading = <div className="min-h-screen flex items-center justify-center bg-bg"><Spinner /></div>;
     if (screensFailed) return <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-bg"><p>{t('app.pageLoadFailed')}</p><Button onClick={() => window.location.reload()}>{t('app.reload')}</Button></div>;
     if (!screensReady) return loading;
-    return <Suspense fallback={loading}><LicenseLockScreen checking={!access || access.owner !== user.username} failed={failed} onCheck={() => void check()} /></Suspense>;
+    return <Suspense fallback={loading}><LicenseLockScreen checking={!access || access.owner !== user.username || access.allowed === null} failed={failed} onCheck={() => void check()} /></Suspense>;
 }

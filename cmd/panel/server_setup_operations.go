@@ -718,6 +718,9 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 	}
 	for index := range execution.Steps {
 		step := &execution.Steps[index]
+		if step.Kind == "verify" {
+			continue
+		}
 		if step.Status == "succeeded" {
 			continue
 		}
@@ -801,20 +804,34 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 		}
 		return true, nil
 	}
+	// Final verification is evidence, not an installation child. Normalize older
+	// receipts that marked this row successful before the readiness checks.
+	// Son doğrulama kurulum işi değil, kanıttır. Eski erken başarı kaydını düzelt.
+	for index := range execution.Steps {
+		if execution.Steps[index].Kind == "verify" {
+			execution.Steps[index].Status = "pending"
+		}
+	}
+	execution.Phase = "verification"
+	if err := p.persistServerSetupExecution(ctx, *execution); err != nil {
+		return false, err
+	}
 	checks, err := p.serverSetupCompletionChecks(ctx, plan.Draft)
 	if err != nil {
 		return false, err
 	}
 	execution.Checks = checks
-	for _, check := range checks {
-		if check.State != "ready" {
-			execution.Status = "waiting"
-			execution.Phase = "verification"
-			return false, p.persistServerSetupExecution(ctx, *execution)
-		}
+	if !serverSetupChecksReady(checks) {
+		execution.Status = "waiting"
+		return false, p.persistServerSetupExecution(ctx, *execution)
 	}
 	if err := p.completeServerSetupExecution(ctx, plan.Revision, execution.ID); err != nil {
 		return false, err
+	}
+	for index := range execution.Steps {
+		if execution.Steps[index].Kind == "verify" {
+			execution.Steps[index].Status = "succeeded"
+		}
 	}
 	execution.Status = "succeeded"
 	execution.Phase = "complete"
@@ -823,8 +840,6 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 
 func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, step *serverSetupExecutionStep) (bool, error) {
 	switch step.Kind {
-	case "verify":
-		return true, nil
 	case "access_dns":
 		return p.runServerSetupAccessDNS(ctx, plan, *step)
 	case "infrastructure_dns":

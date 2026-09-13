@@ -117,7 +117,7 @@ const fullScreenStates = new Map([
   ['ComponentOperation.tsx', 'the scrim shown while the operation overlay chunk loads'],
   ['HelpDrawer.tsx', 'a drawer, not a dialogue'],
   ['Layout.tsx', 'the mobile navigation rail'],
-  ['OperationOverlay.tsx', 'the operation lock: no actions, deliberately not dismissible'],
+  ['OperationOverlay.tsx', 'the operation lock: reconnect by reload, never dismiss or start again'],
   ['SystemUpdateOperation.tsx', 'the panel-update lock: Escape is trapped on purpose'],
 ]);
 
