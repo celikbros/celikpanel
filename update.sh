@@ -898,7 +898,12 @@ coordinator_process_start_time() {
 coordinator_cgroup_matches_pid() {
     local unit=$1 expected_pid=$2 pid_output
     local -a pids=()
+    coordinator_cgroup_detail="expected_pid=$expected_pid observed_pids=unavailable"
+    coordinator_cgroup_readable=0
     pid_output=$(service_cgroup_pids "$unit") || return 1
+    coordinator_cgroup_readable=1
+    coordinator_cgroup_detail="expected_pid=$expected_pid observed_pids=${pid_output//$'\n'/,}"
+    coordinator_cgroup_detail=${coordinator_cgroup_detail:0:350}
     if [[ -n "$pid_output" ]]; then
         mapfile -t pids <<< "$pid_output"
     fi
@@ -907,6 +912,47 @@ coordinator_cgroup_matches_pid() {
     else
         [[ ${#pids[@]} -eq 0 ]]
     fi
+}
+
+# Before publishing quiesce, let short-lived status helpers exit naturally.
+# Every observation stays bound to the original state/PID/starttime; neither a
+# timeout nor an unreadable cgroup permits publication. Later frozen proofs
+# remain immediate and strict. Diagnostics contain PIDs, never command arguments.
+# Quiesce yayımlanmadan önce kısa ömürlü durum yardımcılarının doğal çıkışını bekle.
+# Her okuma ilk durum/PID/başlangıç zamanına bağlıdır; süre dolması veya okunamayan
+# cgroup yayıma izin vermez. Sonraki donmuş süreç kontrolleri anlık ve katıdır.
+# Tanı bilgisi yalnız PID içerir, komut argümanlarını içermez.
+wait_for_quiesce_cgroup_capture() {
+    local unit=$1 expected_state=$2 expected_pid=$3 expected_start=$4
+    local attempt matches state main_pid start_time process_state
+    for ((attempt = 0; attempt < 20; attempt++)); do
+        matches=0
+        coordinator_cgroup_matches_pid "$unit" "$expected_pid" && matches=1
+        update_failure_detail=$coordinator_cgroup_detail
+        state=$(systemctl show --property=ActiveState --value "$unit") || return 1
+        main_pid=$(systemctl show --property=MainPID --value "$unit") || return 1
+        start_time=$(coordinator_process_start_time "$main_pid") || return 1
+        process_state=$(awk '/^State:/ {print $2}' "/proc/$main_pid/status" 2>/dev/null || true)
+        if [[ "$state" != "$expected_state" || "$main_pid" != "$expected_pid" ||
+              "$start_time" != "$expected_start" || -z "$process_state" ||
+              "$process_state" == T || "$process_state" == t ]]; then
+            update_failure_detail="coordinator identity or process state changed while waiting: $unit"
+            return 1
+        fi
+        if [[ "$matches" -eq 1 ]]; then
+            update_failure_detail=
+            return 0
+        fi
+        [[ "$coordinator_cgroup_readable" -eq 1 ]] || return 1
+        if [[ "$attempt" -eq 0 ]]; then
+            echo "==> Waiting for coordinator helpers to exit: $unit" >&2
+            echo "==> Koordinatör yardımcılarının çıkışı bekleniyor: $unit" >&2
+        fi
+        if [[ "$attempt" -lt 19 ]]; then
+            sleep 0.1
+        fi
+    done
+    return 1
 }
 
 # Capture a stable coordinator identity before quiesce publication. Active-like
@@ -930,8 +976,9 @@ capture_quiesce_coordinator_identity() {
         process_state=$(awk '/^State:/ {print $2}' "/proc/$main_pid/status" 2>/dev/null || true)
         [[ -n "$process_state" && "$process_state" != T && "$process_state" != t ]] \
             || die "coordinator is frozen before quiesce capture: $unit"
-        coordinator_cgroup_matches_pid "$unit" "$main_pid" \
+        wait_for_quiesce_cgroup_capture "$unit" "$state" "$main_pid" "$start_time" \
             || die "coordinator cgroup changed during quiesce capture: $unit"
+        update_failure_detail=
         state_after=$(systemctl show --property=ActiveState --value "$unit") \
             || die "cannot recheck coordinator state before quiesce: $unit"
         main_pid_after=$(systemctl show --property=MainPID --value "$unit") \
