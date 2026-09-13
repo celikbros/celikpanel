@@ -9,16 +9,18 @@ import (
 // without rewriting the durable execution or probing the host during polling.
 // Sunum bilgisi kabul edilen plandan gelir; sorgu kayit yazmaz ve sunucuyu taramaz.
 type serverSetupExecutionContext struct {
-	DNSMode              string `json:"dns_mode"`
-	DNSRole              string `json:"dns_role"`
-	DNSEngine            string `json:"dns_engine"`
-	LocalNameserver      string `json:"local_nameserver"`
-	LocalIP              string `json:"local_ip"`
-	PeerNameserver       string `json:"peer_nameserver"`
-	PeerIP               string `json:"peer_ip"`
-	PanelDomain          string `json:"panel_domain"`
-	MailHostname         string `json:"mail_hostname"`
-	DNSHostingManagement string `json:"dns_hosting_management"`
+	InfrastructureDNS    *serverSetupInfrastructureDNSPlan `json:"infrastructure_dns,omitempty"`
+	AccessDNSIP          string                            `json:"access_dns_ip,omitempty"`
+	DNSMode              string                            `json:"dns_mode"`
+	DNSRole              string                            `json:"dns_role"`
+	DNSEngine            string                            `json:"dns_engine"`
+	LocalNameserver      string                            `json:"local_nameserver"`
+	LocalIP              string                            `json:"local_ip"`
+	PeerNameserver       string                            `json:"peer_nameserver"`
+	PeerIP               string                            `json:"peer_ip"`
+	PanelDomain          string                            `json:"panel_domain"`
+	MailHostname         string                            `json:"mail_hostname"`
+	DNSHostingManagement string                            `json:"dns_hosting_management"`
 }
 
 type serverSetupOperationResponse struct {
@@ -45,9 +47,11 @@ func (p *Panel) serverSetupOperationResponse(ctx context.Context, execution *ser
 	}
 	draft := plan.Draft
 	response.Context = &serverSetupExecutionContext{
-		DNSMode:      draft.DNSMode,
-		PanelDomain:  draft.PanelDomain,
-		MailHostname: draft.MailHostname,
+		DNSMode:           draft.DNSMode,
+		InfrastructureDNS: plan.InfrastructureDNS,
+		AccessDNSIP:       plan.ServerIP,
+		PanelDomain:       draft.PanelDomain,
+		MailHostname:      draft.MailHostname,
 	}
 	if draft.DNSMode == setupDNSModeLocal {
 		response.Context.DNSRole = draft.DNSRole

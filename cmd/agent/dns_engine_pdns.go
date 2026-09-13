@@ -543,6 +543,9 @@ func applyPDNSV3ZoneDatabaseForState(
 		if err := verifyPDNSStateManifestReceiptTx(ctx, tx, state); err != nil {
 			return err
 		}
+		if err := requirePDNSV3ZoneOwnershipTx(ctx, tx, commitment.Domain); err != nil {
+			return err
+		}
 		if state.PairRole == transport.DNSPairRolePrimary {
 			serial, err := readExactPDNSProducerSerialTx(
 				ctx, tx, state.PairLocalIP,

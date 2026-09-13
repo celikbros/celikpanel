@@ -46,7 +46,7 @@ func (p *Panel) handleServerSetupRevise(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var execution serverSetupExecution
-	if json.Unmarshal([]byte(raw), &execution) != nil || execution.ID != request.ExecutionID || execution.Status != "waiting" || !stringIn(execution.Phase, "verification", "dns_publisher", "dns_readiness") {
+	if json.Unmarshal([]byte(raw), &execution) != nil || execution.ID != request.ExecutionID || execution.Status != "waiting" || !stringIn(execution.Phase, "verification", "dns_publisher", "dns_readiness", "access_dns", "infrastructure_dns", "primary_dns") {
 		conflict()
 		return
 	}
@@ -63,6 +63,13 @@ func (p *Panel) handleServerSetupRevise(w http.ResponseWriter, r *http.Request) 
 		dnsState, err := readDNSEngineDBState(r.Context(), p.db.GetDB())
 		marker, markerErr := readDNSEngineOperationMarker(r.Context(), p.db.GetDB())
 		if err != nil || markerErr != nil || dnsState.CurrentSwitchID != "" || marker != nil {
+			conflict()
+			return
+		}
+	}
+	if execution.Phase == "infrastructure_dns" {
+		var leases int
+		if err := p.db.GetDB().QueryRowContext(r.Context(), `SELECT COUNT(*) FROM dns_zone_engine_leases`).Scan(&leases); err != nil || leases != 0 {
 			conflict()
 			return
 		}
@@ -139,12 +146,22 @@ func serverSetupExecutionCanRevise(plan serverSetupPlan, execution serverSetupEx
 	if execution.Phase == "dns_readiness" && (plan.Draft.DNSMode != "local" || (plan.Draft.DNSRole != "primary" && !serverSetupManualSecondaryHosting(plan.Draft)) || !serverSetupNeedsDNSPublisher(plan.Draft)) {
 		return false
 	}
-	if !stringIn(execution.Phase, "dns_publisher", "dns_readiness") {
+	if execution.Phase == "infrastructure_dns" && plan.InfrastructureDNS == nil {
 		return false
+	}
+	if execution.Phase == "primary_dns" && (plan.Draft.DNSMode != "local" || plan.Draft.DNSRole != "secondary") {
+		return false
+	}
+	if !stringIn(execution.Phase, "dns_publisher", "dns_readiness", "access_dns", "infrastructure_dns", "primary_dns") {
+		return false
+	}
+	kind := execution.Phase
+	if kind == "primary_dns" {
+		kind = "dns"
 	}
 	found := false
 	for _, step := range execution.Steps {
-		if step.Kind == execution.Phase {
+		if step.Kind == kind && step.Status == "running" {
 			if found || step.Status != "running" || step.OperationID != "" {
 				return false
 			}
