@@ -29,7 +29,8 @@ export const useLocation = () => ({ pathname:globalThis.setupFixture.path });
 export const Navigate = props => React.createElement('redirect',props);
 export const Link = props => React.createElement('a',{...props,href:props.to});
 export const useServerSetup = () => globalThis.setupFixture.context;
-export const ServerSetupShell = props => React.createElement('main',props);
+export const ServerSetupShell = props => React.createElement('main',null,props.navigation,props.children);
+export const Layout = props => React.createElement('div',null,props.children);
 export const BrandMark=()=>null, LanguageSwitcher=()=>null, ThemeSwitcher=()=>null, ChangePasswordModal=()=>null;
 export const Button=props=>React.createElement('button',props);
 export const Spinner=()=>React.createElement('span',null,'loading');
@@ -37,12 +38,13 @@ export const ArrowRight=()=>null, Check=()=>null, Circle=()=>null, Loader2=()=>n
 export const ServerSetupDNSConnection=props=>React.createElement('remote-connection',props);
 export const inputClass='';
 `);
+const stepsURL = dataURL(`import React from '${reactURL}';\n` + compile('../src/components/ServerSetupSteps.tsx').replace(/from ['"]([^'"]+)['"]/g, (_, path) => `from '${stub}'`));
 const choiceURL = dataURL(`import React from '${reactURL}';\n` + compile('../src/components/ServerSetupChoice.tsx').replace(/from ['"]([^'"]+)['"]/g, (_, path) => `from '${path === 'react' ? reactURL : path.endsWith('/serverSetup') ? setupURL : stub}'`));
 const componentUIURL = dataURL(`import React from '${reactURL}';\n` + compile('../src/components/ServerSetupComponents.tsx').replace(/from ['"]([^'"]+)['"]/g, (_, path) => `from '${path === 'react' ? reactURL : path.endsWith('/serverSetupComponents') ? componentLibURL : stub}'`));
 const { ServerSetupComponents: ComponentPicker } = await import(componentUIURL);
 async function loadComponent(name) {
     const source = compile(`../src/components/${name}.tsx`).replace(/from ['"]([^'"]+)['"]/g, (_, path) => {
-        const url = path === 'react' ? reactURL : path.endsWith('/remoteDNS') ? remoteURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/serverSetupGuidance') ? guidanceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
+        const url = path === 'react' ? reactURL : path.endsWith('/ServerSetupSteps') ? stepsURL : path.endsWith('/remoteDNS') ? remoteURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/serverSetupGuidance') ? guidanceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
         return `from '${url}'`;
     });
     return (await import(dataURL(`import React from '${reactURL}';\n${source}`)))[name];
@@ -404,7 +406,7 @@ test('default profiles keep four steps and customization is a separate explicit 
     init();
     try {
         await mount();
-        assert.equal(tree.root.findByType('ol').findAllByType('li').length, 4);
+        assert.equal(tree.root.findAllByType('ol')[0].findAllByType('li').length, 4);
         assert.equal(tree.root.findAllByProps({ name: 'setup-purpose' }).length, 5);
         assert.ok(findButton('setup.components.customize'));
         await submit();
@@ -418,7 +420,7 @@ test('profile customization starts from its defaults and saves only explicit cho
     init();
     try {
         await mount();await act(async () => findButton('setup.components.customize').props.onClick());
-        assert.equal(tree.root.findByType('ol').findAllByType('li').length, 5);
+        assert.equal(tree.root.findAllByType('ol')[0].findAllByType('li').length, 5);
         for (const id of ['nginx', 'php-fpm', 'mariadb']) assert.equal(component(id).props.checked, true);
         await toggleComponent('mariadb');await toggleComponent('postgresql');await submit();
         assert.deepEqual([...state.draft.customization.components].sort(), ['nginx', 'php-fpm', 'postgresql']);
@@ -806,7 +808,7 @@ test('customized access survives remount and reload with unsaved fields and no c
         await act(async()=>tree.root.findByProps({id:'setup-peer_ip'}).props.onChange({target:{value:'192.0.2.20'}}));
         const before=calls.length;
         await remountWizard();
-        assert.equal(tree.root.findByProps({'aria-current':'step'}).findAllByType('span')[1].props.children,'setup.step.access');
+        assert.equal(tree.root.findAllByProps({'aria-current':'step'})[0].findAllByType('span')[1].props.children,'setup.step.access');
         assert.equal(tree.root.findByProps({id:'setup-panel_domain'}).props.value,'frankfurt.example.com');
         assert.equal(tree.root.findByProps({id:'setup-peer_ip'}).props.value,'192.0.2.20');
         assert.ok(calls.slice(before).every(call=>!call.options?.method||call.options.method==='GET'));

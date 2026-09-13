@@ -31,7 +31,7 @@ test('hostname and IPv4 remain visible in the desktop footer and narrow header',
   assert.match(layout, /<aside className="hidden shrink-0 md:block">/);
 
   const sidebarIdentity = layout.indexOf('placement="sidebar"');
-  const buildStamp = layout.indexOf('<BuildStamp runtime={panelRuntime} />');
+  const buildStamp = layout.indexOf('<BuildStamp runtime={panelRuntime} />', sidebarIdentity);
   assert.ok(
     sidebarIdentity >= 0 && buildStamp > sidebarIdentity,
     'desktop identity must appear above the build stamp',

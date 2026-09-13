@@ -82,3 +82,25 @@ bir değişiklik işlemi başlatamaz. Yaşam döngüsü akışlarını değişti
 D-024 ve docs/OPERATION-GUIDANCE.tr.md okunur. Bu ürün geneli gereksinimidir;
 bütün adaptörlerin uygulandığı veya incelendiği iddiası değildir. Sunucu sahibinin
 bağımsızlığı ve paneli yalnız kullanıcının güncellemesi kuralları değişmez.
+
+## User-operated recovery first — 2026-09-13
+
+For problems on installed servers, use the same recovery path available to an
+ordinary server owner. Prefer the user operating CelikPanel's own interface.
+If the interface cannot resolve the issue, give the user short, understandable
+terminal commands after establishing what they do and why they are appropriate.
+Only when that route would be long or complex may assistant-side direct recovery
+be considered as the last resort; explain the reason and concrete scope first.
+Do not silently repair live state through SSH, scripts, APIs or database edits.
+Read-only code investigation and preparation remain allowed. This recovery
+preference does not authorize assistant-side installed-panel updates: the user
+must still initiate every panel update from the panel's own update interface.
+
+Kurulu sunuculardaki sorunlarda önce kullanıcının panelden uygulayabileceği yolu
+seç. Panel yeterli değilse kullanıcıya kısa ve anlaşılır terminal komutları ver;
+komutun etkisini ve neden uygun olduğunu önce doğrula. Bu yol uzun veya karmaşık
+olacaksa doğrudan müdahaleyi son seçenek olarak değerlendir; gerekçeyi ve somut
+kapsamı önce açıkla. Canlı durumu kullanıcıdan gizli biçimde SSH, script, API veya
+veritabanı düzenlemesiyle düzeltme. Kodun salt-okur incelenmesi ve hazırlık
+serbesttir. Panel güncellemesini her durumda kullanıcı panelin kendi güncelleme
+arayüzünden başlatır; bu kurtarma tercihi o kuralı değiştirmez.
