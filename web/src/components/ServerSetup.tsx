@@ -7,6 +7,7 @@ import { Link, Navigate } from '../router';
 import { decodeSetupEditorCheckpoint, changeSetupDNSRole, setupDNSNames, setupDetectedIPv4, chooseSetupPurpose, decodeServerSetup, setupNextPath, setupPurposes, type ServerSetupDraft, type ServerSetupSnapshot } from '../lib/serverSetup';
 import { decodeSetupExecution, decodeSetupMarker, decodeSetupPlan, newSetupRequestID, safeSetupPanelURL, type ServerSetupExecution, type ServerSetupPlan, type SetupStartMarker } from '../lib/serverSetupOperation';
 import { ServerSetupShell, useServerSetup } from './ServerSetupGate';
+import { ServerSetupSteps } from './ServerSetupSteps';
 import { ServerSetupDNSConnection } from './ServerSetupDNSConnections';
 import { remoteDNSEndpoint } from '../lib/remoteDNS';
 import { ServerSetupChoice, ServerSetupManualAction } from './ServerSetupChoice';
@@ -369,7 +370,6 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const panelURL = certificateReady ? safeSetupPanelURL(execution?.panel_url, marker?.panel_domain || draft.panel_domain) : null;
     const customized = !!draft.customization || draft.purpose === 'custom';
     const steps: Step[] = ['purpose', ...(customized ? ['components' as const] : []), 'access', 'review', 'progress'];
-    const currentStep = steps.indexOf(step);
     const selectedComponents = setupEffectiveComponents(draft, catalog);
     const emptySelectionInvalid = customized && selectedComponents.size === 0 && !['dns', 'custom'].includes(draft.purpose);
     const isDNS = draft.purpose === 'dns' || (draft.purpose === 'custom' && selectedComponents.size === 0);
@@ -391,7 +391,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const progressChecks = (execution?.checks || snapshot.checks).filter(check => check.state !== 'ready');
 
     if (manualExit) return <Navigate to="/" replace />;
-    return <ServerSetupShell>
+    return <ServerSetupShell navigation={!completed ? <ServerSetupSteps steps={steps} current={hasOperation ? 'progress' : step} /> : undefined}>
         <div className="max-w-3xl">
             <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold leading-tight outline-none focus-visible:outline-none sm:text-3xl">{t(completed ? 'setup.completeTitle' : 'setup.title')}</h1>
             <p className="mt-3 max-w-2xl text-fg-muted">{t(completed ? 'setup.completeHelp' : hasOperation ? 'setup.guide.progressIntro' : 'setup.intro')}</p>
@@ -399,16 +399,9 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
         {completed ? <section className="mt-8 max-w-3xl space-y-6" aria-labelledby="setup-ready-title">
             <div className="flex items-start gap-3"><Check className="mt-1 h-5 w-5 shrink-0 text-success" aria-hidden="true" /><div><h2 id="setup-ready-title" className="text-lg font-semibold">{t(customized ? 'setup.purpose.custom' : `setup.purpose.${snapshot.draft.purpose}`)}</h2><p className="mt-1 text-sm text-fg-muted">{t('setup.completeServices')}</p></div></div>
             <Link to={nextPath} className="inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-fg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{t(nextLabel)}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
-        </section> : <div className="mt-6 grid items-start gap-6 lg:grid-cols-12 lg:gap-8">
-            <nav className="lg:sticky lg:top-6 lg:col-span-2" aria-label={t('setup.steps')}>
-                <p className="mb-3 flex items-center justify-between gap-4 font-semibold lg:hidden"><span>{t(`setup.step.${step}`)}</span><span className="text-sm tabular-nums text-fg-muted">{currentStep + 1} / {steps.length}</span></p>
-                <ol className={`grid gap-2 ${customized ? 'grid-cols-5' : 'grid-cols-4'} lg:flex lg:flex-col lg:gap-1`}>
-                    {steps.map((item, index) => <li key={item} aria-current={step === item ? 'step' : undefined} className={`flex items-center justify-center gap-3 rounded-lg px-2 py-3 text-sm lg:justify-start lg:px-3 ${index === currentStep ? 'bg-surface-2 font-semibold text-primary' : 'text-fg-muted'}`}>
-                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full tabular-nums ${index === currentStep ? 'bg-primary text-primary-fg' : 'border border-border-strong'}`}>{index + 1}</span><span className="sr-only lg:not-sr-only">{t(`setup.step.${item}`)}</span>
-                    </li>)}
-                </ol>
-            </nav>
-            <div className="min-w-0 lg:col-span-10">
+        </section> : <div className="mt-6 space-y-6">
+            <div className="md:hidden"><ServerSetupSteps steps={steps} current={hasOperation ? 'progress' : step} mobile /></div>
+            <div className="min-w-0">
             {error && <p role="alert" className="mb-5 rounded-lg border border-danger/40 bg-danger/5 p-4 text-sm text-danger">{error}</p>}
             {resolving ? <div className="flex items-center gap-3"><Spinner label={t('setup.resuming')} /><p>{t('setup.resuming')}</p></div>
                 : step === 'progress' || hasOperation ? <section aria-labelledby="setup-progress-title">
@@ -441,7 +434,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         <legend className="text-xl font-semibold">{t('setup.purposeTitle')}</legend>
                         <div className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface">
                             {setupPurposes.map(purpose => <div key={purpose} className={`first:rounded-t-xl last:rounded-b-xl ${draft.purpose === purpose ? 'bg-surface-2' : 'hover:bg-surface-subtle'}`}>
-                                <label className="flex cursor-pointer items-start gap-4 px-4 py-4 sm:px-5"><input type="radio" name="setup-purpose" value={purpose} checked={draft.purpose === purpose} onChange={() => { setDraft(previous => chooseSetupPurpose(previous, purpose)); setPlan(null); }} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span className="grid min-w-0 flex-1 gap-1 sm:grid-cols-3 sm:gap-5"><span className="font-semibold"><span id={`setup-purpose-title-${purpose}`}>{t(`setup.purpose.${purpose}`)}</span>{purpose === 'web' && <span className="mt-1 block text-xs font-normal text-fg-muted">{t('setup.recommended')}</span>}</span><span className="text-sm leading-6 text-fg-muted sm:col-span-2">{t(`setup.purpose.${purpose}.help`)}</span></span></label>
+                                <label className="flex cursor-pointer items-start gap-4 px-4 py-4 sm:px-5"><input type="radio" name="setup-purpose" value={purpose} checked={draft.purpose === purpose} onChange={() => { setDraft(previous => chooseSetupPurpose(previous, purpose)); setPlan(null); }} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span className="grid min-w-0 flex-1 gap-1 xl:grid-cols-3 xl:gap-5"><span className="font-semibold"><span id={`setup-purpose-title-${purpose}`}>{t(`setup.purpose.${purpose}`)}</span>{purpose === 'web' && <span className="mt-1 block text-xs font-normal text-fg-muted">{t('setup.recommended')}</span>}</span><span className="text-sm leading-6 text-fg-muted xl:col-span-2">{t(`setup.purpose.${purpose}.help`)}</span></span></label>
                                 {draft.purpose === purpose && purpose !== 'custom' && <button type="button" disabled={!catalog || busy} aria-describedby={`setup-purpose-title-${purpose}`} className="mb-3 ml-12 inline-flex min-h-9 items-center text-sm font-medium text-primary underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60 sm:ml-[3.25rem]" onClick={() => { if (!catalog) return; change('customization', { components: draft.customization?.components || setupPresetComponents(draft, catalog) }); setStep('components'); }}>{t('setup.components.customize')}</button>}
                             </div>)}
                         </div>
@@ -458,13 +451,13 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         </div>
                         {isMail && <div className="space-y-3"><SetupInput name="mail_hostname" label={t('setup.mailHostname')} value={draft.mail_hostname} onChange={value => change('mail_hostname', value)} placeholder="mail.example.com" required /><p className="text-sm leading-6 text-fg-muted">{t('setup.mailHostnameHelp')}</p></div>}
                         <fieldset><legend className="font-semibold">{t('setup.dnsTitle')}</legend><p className="mt-2 text-sm text-fg-muted">{t('setup.dnsHelp')}</p>
-                            <div className="mt-4 grid gap-3 lg:grid-cols-3">{(['local', 'external', 'existing'] as const).map(mode => <label key={mode} className={`flex items-start gap-3 rounded-lg border border-border p-4 ${draft.dns_mode === mode ? 'bg-surface-2 ring-1 ring-primary' : 'bg-surface'} ${isDNS && mode !== 'local' ? 'text-fg-muted' : 'cursor-pointer hover:bg-surface-2'}`}><input type="radio" name="setup-dns" value={mode} checked={draft.dns_mode === mode} disabled={isDNS && mode !== 'local' && draft.dns_mode !== mode} onChange={() => change('dns_mode', mode)} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span><span className="font-medium">{t(`setup.dns.${mode}.shortTitle`)}</span><span className="mt-1 block text-sm leading-6 text-fg-muted">{t(`setup.dns.${mode}.shortHelp`)}</span></span></label>)}</div>
+                            <div className="mt-4 grid gap-3 xl:grid-cols-3">{(['local', 'external', 'existing'] as const).map(mode => <label key={mode} className={`flex items-start gap-3 rounded-lg border border-border p-4 ${draft.dns_mode === mode ? 'bg-surface-2 ring-1 ring-primary' : 'bg-surface'} ${isDNS && mode !== 'local' ? 'text-fg-muted' : 'cursor-pointer hover:bg-surface-2'}`}><input type="radio" name="setup-dns" value={mode} checked={draft.dns_mode === mode} disabled={isDNS && mode !== 'local' && draft.dns_mode !== mode} onChange={() => change('dns_mode', mode)} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span><span className="font-medium">{t(`setup.dns.${mode}.shortTitle`)}</span><span className="mt-1 block text-sm leading-6 text-fg-muted">{t(`setup.dns.${mode}.shortHelp`)}</span></span></label>)}</div>
                         </fieldset>
                         {dnsSelectionError && <p role="alert" className="text-sm leading-6 text-danger">{t(dnsSelectionError)}</p>}
                         {draft.dns_mode === 'existing' && <ServerSetupDNSConnection value={draft.remote_dns_connection_id} onChange={value => change('remote_dns_connection_id', value)} onValidityChange={setRemoteVerified} />}
                         {draft.dns_mode === 'local' && <div className="space-y-5">
                             <p className="text-sm leading-6 text-fg-muted">{t(draft.dns_role === 'secondary' ? 'setup.secondaryHelp' : 'setup.primaryHelp')}</p>
-                            <div className="grid gap-6 rounded-xl border border-border bg-surface p-4 sm:p-5 md:grid-cols-2 md:gap-8">
+                            <div className="grid gap-6 rounded-xl border border-border bg-surface p-4 sm:p-5 lg:grid-cols-2 lg:gap-8">
                                 <fieldset className="min-w-0 space-y-4">
                                     <legend className="mb-0 font-semibold">{t('setup.thisServer')}</legend>
                                     <SetupSelect name="dns_role" label={t('setup.dnsRole')} value={draft.dns_role} onChange={value => { setDraft(previous => changeSetupDNSRole(previous, value as 'primary' | 'secondary')); setPlan(null); setAcknowledged(false); setError(''); }}><option value="primary">{t('setup.primary')}</option><option value="secondary">{t('setup.secondary')}</option></SetupSelect>
@@ -512,7 +505,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         {plan.can_start && <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-6"><input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span>{t('setup.confirm')}</span></label>}
                     </section>}
                     <div className="setup-actions sticky bottom-0 z-10 mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-bg py-4">
-                        {step !== 'purpose' && <Button type="button" variant="secondary" disabled={busy} onClick={() => { setStep(steps[Math.max(0, currentStep - 1)]); setPlan(null); setAcknowledged(false); }}>{t('setup.back')}</Button>}
+                        {step !== 'purpose' && <Button type="button" variant="secondary" disabled={busy} onClick={() => { setStep(steps[Math.max(0, steps.indexOf(step) - 1)]); setPlan(null); setAcknowledged(false); }}>{t('setup.back')}</Button>}
                         <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
                         {step === 'review' ? <Button type="button" variant="primary" disabled={busy || !plan?.can_start || !acknowledged} onClick={() => void start()}>{t('setup.start')}</Button> : <button type="submit" disabled={busy || (step === 'components' && (!catalog || catalog.inventory_state !== 'ready' || emptySelectionInvalid)) || (step === 'access' && (!!dnsSelectionError || (draft.dns_mode === 'local' && dnsNames.mismatch) || (draft.dns_mode === 'existing' && !remoteVerified)))} className="inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-2.5 font-semibold text-primary-fg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60">{busy ? t('common.loading') : t(step === 'purpose' || step === 'components' ? 'setup.continue' : 'setup.review')}<ArrowRight className="h-4 w-4" aria-hidden="true" /></button>}
                         </div>

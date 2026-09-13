@@ -22,8 +22,10 @@ import type { TranslationKey } from '../i18n/en';
 // alanında değişmeden render edilir.
 interface LayoutProps {
     children: React.ReactNode;
-    currentPage: string;
-    onPageChange: (id: string) => void;
+    currentPage?: string;
+    onPageChange?: (id: string) => void;
+    mode?: 'panel' | 'setup';
+    setupNavigation?: React.ReactNode;
 }
 
 // null is a count this panel does not have, which is not the same as zero:
@@ -67,7 +69,9 @@ function decodePanelRuntime(value: unknown): PanelRuntime | null {
     };
 }
 
-export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
+export function Layout({ children, currentPage = '', onPageChange, mode = 'panel', setupNavigation }: LayoutProps) {
+    const { t } = useI18n();
+    const setupMode = mode === 'setup';
     const { role, user } = useAuth();
     const navAccess: NavAccessContext = {
         accountType: typeof user?.account_type === 'string' ? user.account_type : undefined,
@@ -93,6 +97,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
     // Canlı sayılar kenar çubuğu rozetlerini besler. Hatalar sessizdir —
     // eksik bir rozet, bozuk bir kabuktan iyidir.
     useEffect(() => {
+        if (setupMode) return;
         fetch('/api/v1/domains')
             .then((r) => (r.ok ? r.json() : []))
             .then((d) => setCounts((c) => ({ ...c, domains: Array.isArray(d) ? d.length : 0 })))
@@ -125,7 +130,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                 .then(publishComponentCensus)
                 .catch(() => {});
         }
-    }, [role]);
+    }, [role, setupMode]);
 
     // One number, read from where every screen publishes it. Non-admins never
     // see this item, so they never carry its count.
@@ -171,12 +176,14 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                     counts={sidebarCounts}
                     currentPage={currentPage}
                     onPageChange={(id) => {
-                        onPageChange(id);
+                        onPageChange?.(id);
                         setMobileOpen(false);
                     }}
                     mobileOpen={mobileOpen}
                     onCloseMobile={() => setMobileOpen(false)}
-                    expandedHeader={hasDesktopPageHeader}
+                    expandedHeader={hasDesktopPageHeader || setupMode}
+                    setupMode={setupMode}
+                    setupNavigation={setupNavigation}
                     serverIdentity={serverIdentity}
                     panelRuntime={panelRuntime}
                 />
@@ -184,16 +191,16 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                 <div className="flex min-w-0 flex-1 flex-col">
                     <ImpersonationBanner />
                     <header
-                        className={'flex h-14 items-center gap-3 border-b border-border bg-surface px-4 md:px-6 ' +
-                            (hasDesktopPageHeader ? 'xl:h-auto xl:min-h-[90px] xl:py-2' : '')}
+                        className={'flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-6 ' +
+                            (hasDesktopPageHeader || setupMode ? 'xl:h-auto xl:min-h-[90px] xl:py-2' : '')}
                     >
-                        <button
+                        {!setupMode && <button
                             className="rounded-lg p-1.5 text-fg-muted hover:bg-surface-2 md:hidden"
                             onClick={() => setMobileOpen(true)}
                             aria-label="Menu"
                         >
                             <Menu className="h-5 w-5" />
-                        </button>
+                        </button>}
                         {serverIdentity && (
                             <ServerIdentityLabel identity={serverIdentity} placement="mobile" />
                         )}
@@ -201,18 +208,21 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                             ref={setDesktopPageHeaderTarget}
                             className="hidden min-w-0 flex-1 self-stretch xl:flex xl:items-center"
                             data-shell-page-header-target
-                        />
+                        >{setupMode && <p className="text-lg font-semibold">{t('setup.settingsTitle')}</p>}</div>
                         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
                             <div className="hidden sm:block">
                                 <LanguageSwitcher />
                             </div>
-                            <SkinSwitcher />
+                            <div className={setupMode ? 'hidden sm:block' : undefined}><SkinSwitcher /></div>
                             <ThemeSwitcher />
                             <UserMenu />
                         </div>
                     </header>
 
-                    <main id="celikpanel-main-content" tabIndex={-1} className="flex-1 overflow-auto">{children}</main>
+                    <main id="celikpanel-main-content" tabIndex={-1} className="min-h-0 flex-1 overflow-auto">{children}</main>
+                    {setupMode && <footer data-setup-build className="shrink-0 border-t border-border bg-surface px-4 py-2 text-xs text-fg-muted [overflow-wrap:anywhere] md:hidden">
+                        <BuildStamp runtime={panelRuntime} />
+                    </footer>}
                 </div>
             </div>
         </DesktopPageHeaderTargetContext.Provider>
@@ -228,6 +238,8 @@ function Sidebar({
     mobileOpen,
     onCloseMobile,
     expandedHeader,
+    setupMode,
+    setupNavigation,
     serverIdentity,
     panelRuntime,
 }: {
@@ -239,6 +251,8 @@ function Sidebar({
     mobileOpen: boolean;
     onCloseMobile: () => void;
     expandedHeader: boolean;
+    setupMode: boolean;
+    setupNavigation?: React.ReactNode;
     serverIdentity: ServerIdentity | null;
     panelRuntime: PanelRuntime | null;
 }) {
@@ -257,7 +271,9 @@ function Sidebar({
                 <span className="text-lg font-bold text-white">{t('app.name')}</span>
             </div>
 
-            <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+            {setupMode ? <div className="min-h-0 flex-1 overflow-y-auto px-3 py-6" data-setup-navigation>
+                {setupNavigation || <p className="px-3 text-sm font-semibold">{t('setup.settingsTitle')}</p>}
+            </div> : <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
                 {navGroups.map((group) => {
                     const groupItems = items.filter((i) => i.group === group.id);
                     if (groupItems.length === 0) return null;
@@ -282,9 +298,9 @@ function Sidebar({
                         </div>
                     );
                 })}
-            </nav>
+            </nav>}
 
-            <div className="border-t border-sidebar-border px-4 py-3 text-xs text-sidebar-muted [overflow-wrap:anywhere]">
+            <div className="shrink-0 border-t border-sidebar-border px-4 py-3 text-xs text-sidebar-muted [overflow-wrap:anywhere]">
                 {serverIdentity && (
                     <ServerIdentityLabel identity={serverIdentity} placement="sidebar" />
                 )}

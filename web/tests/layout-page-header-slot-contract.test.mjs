@@ -51,7 +51,7 @@ test('desktop heading row and sidebar brand share the same compact height', () =
   assert.match(layout, /xl:min-h-\[90px\]/);
   assert.match(layout, /xl:h-\[90px\]/);
   assert.match(layout, /const hasDesktopPageHeader = desktopPageHeaderCount > 0/);
-  assert.match(layout, /hasDesktopPageHeader \? 'xl:h-auto xl:min-h-\[90px\] xl:py-2' : ''/);
+  assert.match(layout, /hasDesktopPageHeader \|\| setupMode \? 'xl:h-auto xl:min-h-\[90px\] xl:py-2' : ''/);
   assert.match(layout, /expandedHeader \? 'xl:h-\[90px\]' : ''/);
 });
 
