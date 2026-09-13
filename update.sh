@@ -229,6 +229,7 @@ verify_recovery_expected_tuple() {
 prepare_and_acquire_release_transaction_lock() {
     local root=$RELEASE_TRANSACTION_ROOT parent lock owner group mode links size
     local path_identity fd_identity probe_fd probe_rc lock_count=0 line
+    local label sequence kind advisory access remainder
     parent=$(dirname -- "$root")
     [[ "$parent" == /var/lib && -d "$parent" && ! -L "$parent" ]] || die "unsafe release transaction parent: $parent"
     [[ "$(readlink -e -- "$parent")" == "$parent" ]] || die "release transaction parent is not canonical"
@@ -273,7 +274,12 @@ prepare_and_acquire_release_transaction_lock() {
             case "$line" in
                 lock:*)
                     lock_count=$((lock_count + 1))
-                    [[ "$line" == *" FLOCK ADVISORY WRITE "* ]] \
+                    # fdinfo aligns columns with variable whitespace; validate fields.
+                    # fdinfo sütun aralıkları değişkendir; alanları doğrula.
+                    read -r label sequence kind advisory access remainder <<< "$line"
+                    [[ $label == lock: && $sequence =~ ^[0-9]+:$ &&
+                       $kind == FLOCK && $advisory == ADVISORY &&
+                       $access == WRITE && -n $remainder ]] \
                         || die "recovery transaction descriptor owns an unexpected lock"
                     ;;
             esac
@@ -2854,7 +2860,7 @@ tls_snapshot_root="$tmp_snap/panel-tls"
 if [[ ! -e "$tls_snapshot_root" && ! -L "$tls_snapshot_root" ]]; then
     panel_tls_normalize_legacy_self_signed \
         "$PANEL_TLS_DIR" "$(id -u celikpanel)" "$(getent group celikpanel | cut -d: -f3)" \
-        || die "legacy self-signed panel TLS ownership normalization failed"
+        || die "panel TLS layout validation or legacy ownership normalization failed"
     service_state_rows=$(wc -l < "$tmp_snap/service-states.tsv")
     if [[ "$service_state_rows" -eq 3 ]]; then
         panel_tls_capture_scheduler_states_to_service_ledger \

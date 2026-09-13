@@ -236,6 +236,41 @@ rm -rf -- "$LEGACY_TLS_SNAPSHOT"
 rm -rf -- "$TLS_DIR"
 mv -- "$ATOMIC_TLS_DIR" "$TLS_DIR"
 
+# Exercise the updater's normalization entry point before snapshot capture.
+# Güncelleyicinin normalleştirme girişini snapshot kaydından önce sına.
+tls_tree_proof() {
+    find "$TLS_DIR" -printf '%y %m %U %G %i %n %T@ %p %l\n' | LC_ALL=C sort
+    find "$TLS_DIR" -type f -exec sha256sum -- {} + | LC_ALL=C sort
+}
+ATOMIC_BEFORE=$(tls_tree_proof)
+panel_tls_normalize_legacy_self_signed "$TLS_DIR" 65534 0 || fail 'atomic-only TLS normalization failed'
+[[ $(tls_tree_proof) == "$ATOMIC_BEFORE" ]] || fail 'atomic-only TLS tree changed'
+printf 'BOOTSTRAP-CERT\n' >"$TLS_DIR/panel.crt"
+printf 'BOOTSTRAP-KEY\n' >"$TLS_DIR/panel.key"
+chmod 0640 "$TLS_DIR/panel.crt" "$TLS_DIR/panel.key"
+MIXED_BEFORE=$(tls_tree_proof)
+for retry in 1 2; do
+    panel_tls_normalize_legacy_self_signed "$TLS_DIR" 65534 0 || fail 'mixed atomic/bootstrap TLS normalization failed'
+    [[ $(tls_tree_proof) == "$MIXED_BEFORE" ]] || fail 'mixed atomic/bootstrap tree changed'
+done
+printf 'unrecognized\n' >"$TLS_DIR/unexpected"
+REJECT_BEFORE=$(tls_tree_proof)
+expect_tls_failure_with_stderr 'mixed TLS tree accepted an unexpected entry' panel_tls_normalize_legacy_self_signed "$TLS_DIR" 65534 0
+[[ $(tls_tree_proof) == "$REJECT_BEFORE" ]] || fail 'invalid mixed TLS tree was mutated'
+rm -- "$TLS_DIR/unexpected"
+chown 65534 "$TLS_DIR/$VERSION/panel.key"
+REJECT_BEFORE=$(tls_tree_proof)
+expect_tls_failure_with_stderr 'atomic service-owned key was silently repaired' panel_tls_normalize_legacy_self_signed "$TLS_DIR" 65534 0
+[[ $(tls_tree_proof) == "$REJECT_BEFORE" ]] || fail 'unsafe atomic key was mutated'
+chown 0 "$TLS_DIR/$VERSION/panel.key"
+rm -- "$TLS_DIR/current"
+ln -s ../outside "$TLS_DIR/current"
+REJECT_BEFORE=$(tls_tree_proof)
+expect_tls_failure_with_stderr 'escaping current symlink was accepted' panel_tls_normalize_legacy_self_signed "$TLS_DIR" 65534 0
+[[ $(tls_tree_proof) == "$REJECT_BEFORE" ]] || fail 'escaping symlink was mutated'
+rm -- "$TLS_DIR/current" "$TLS_DIR/panel.crt" "$TLS_DIR/panel.key"
+ln -s "$VERSION" "$TLS_DIR/current"
+
 panel_tls_capture_scheduler_states_to_service_ledger "$LEDGER" \
     || fail 'scheduler ledger capture failed'
 [[ $(wc -l <"$LEDGER") -eq 5 ]] || fail 'scheduler ledger is not canonical five rows'
