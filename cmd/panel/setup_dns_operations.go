@@ -167,6 +167,11 @@ func (p *Panel) startServerSetupDNS(ctx context.Context, draft serverSetupDraft,
 	if !exactUnresolvedDNSEngineState(state) {
 		return errors.New("another DNS operation must finish before setup")
 	}
+	// A secondary can be started first, but must wait before admitting an
+	// installation whose native catalog source is not available yet.
+	if err := serverSetupSecondaryPrerequisite(ctx, draft); err != nil {
+		return err
+	}
 	if err := p.requireNoPendingDNSClusterSaga(ctx); err != nil {
 		return err
 	}

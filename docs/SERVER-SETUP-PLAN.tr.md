@@ -19,6 +19,23 @@ ve devam eden kurulumlar korunur. Manuel tercih kurulumu tamamlamaz, güvenlik
 kontrollerini veya lisans denetimini kaldırmaz. Etkin/bekleyen işlem varken
 tercih değiştirilemez. [Uygulama ve doğrulama kaydı](SERVER-SETUP-GUIDANCE.md).
 
+## 13 Eylül uygulama notu: erişim DNS kayıtları sihirbazın içinde
+
+Çalışma ağacındaki düzeltme, açıkça incelenen altyapı DNS kayıtlarını sihirbaz
+içinde, herkese açık ad doğrulaması ve sertifika isteğinden önce hazırlar. Bir
+müşteri alan adı oluşturmak için kurulumdan çıkmak gerekmez. Yerel DNS seçmek,
+otomatik çıkarılan bir üst bölgenin yönetimini devralma izni değildir: sunucu
+sahibi tam bölgeyi seçer ve gerekli kayıt eklemelerini inceler. Mevcut DNS
+sahipliği ve kayıtlar korunur; ikincil sunucu doğal bölge aktarımı alır.
+Uygulama barındırması onu yerel birincil DNS sunucusuna dönüştürmez.
+
+Bu ek, aşağıdaki mevcut sonuç ve sahiplik gereksinimlerini uygular; onay
+kapsamını değiştirmez. Önceden başlatılan planların adımları ve işlem kimlikleri
+korunur; yeni altyapı değişiklikleri yeniden inceleme gerektirir. Sıralama,
+kurtarma, yerel test kanıtları ve destek sınırları için
+[erişim DNS uygulama notuna](SERVER-SETUP-ACCESS-DNS.tr.md) bakın. Bu düzeltme
+henüz yayımlanmadı ve kurulu Frankfurt/Boston çiftinde doğrulanmadı.
+
 ## 1. Sonuç ve hedef kullanıcı
 
 Sunucu yöneticisi bileşen kataloğunu yorumlamadan ve ilgisiz ayar sayfaları arasında

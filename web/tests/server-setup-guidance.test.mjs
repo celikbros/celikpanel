@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { setupExecutionGuidance } from '../src/lib/serverSetupGuidance.ts';
-import { enScreens } from '../src/i18n/screens/en.ts';
-import { trScreens } from '../src/i18n/screens/tr.ts';
+import { enScreens as baseEnScreens } from '../src/i18n/screens/en.ts';
+import { trScreens as baseTrScreens } from '../src/i18n/screens/tr.ts';
+
+import { enSetupDNS } from '../src/i18n/setupDNS/en.ts';
+import { trSetupDNS } from '../src/i18n/setupDNS/tr.ts';
+const enScreens = {...baseEnScreens,...enSetupDNS};
+const trScreens = {...baseTrScreens,...trSetupDNS};
 
 const context = (extra={}) => ({dns_mode:'local',dns_role:'primary',dns_engine:'bind',local_nameserver:'ns1.example.com',local_ip:'192.0.2.10',peer_nameserver:'ns2.example.com',peer_ip:'192.0.2.20',panel_domain:'panel.example.com',mail_hostname:'mail.example.com',dns_hosting_management:'',...extra});
 const execution = (extra={}) => ({status:'running',phase:'01-dns',steps:[{id:'01-dns',kind:'dns',target:'local',status:'running'}],context:context(),...extra});
@@ -80,4 +85,51 @@ test('a new build requires plan review without misdiagnosing DNS or component fa
     const guide=setupExecutionGuidance(execution({status:'failed',error:{code:'server_setup_build_changed',message:'review'},steps:[{id:'service',kind:'service',target:'nginx',status:'failed'}]}));
     assert.equal(guide.title,'setup.guide.buildChangedTitle');
     assert.deepEqual(keys(guide),['setup.guide.buildChanged']);
+});
+
+
+test('public DNS prerequisite uses the exact certificate step for panel and mail and distinguishes wrong from unknown answers',()=>{
+    for(const domain of ['panel.example.com','mail.example.com'])for(const code of ['server_setup_access_dns_required','server_setup_access_dns_mismatch']){
+        const guide=setupExecutionGuidance(execution({status:'waiting',phase:'access_dns',error:{code,message:'result'},context:context({access_dns_ip:'192.0.2.10'}),steps:[{id:'access',kind:'access_dns',target:domain,qualifier:'192.0.2.10',status:'running'}]}));
+        assert.deepEqual(guide.messages[0].values,{domain,ip:'192.0.2.10'});
+        assert.ok(keys(guide).includes(code.endsWith('mismatch')?'setup.guide.accessDNSMismatch':'setup.guide.accessDNSUnknown'));
+        assert.ok(keys(guide).includes('setup.guide.accessDNSResume'));
+    }
+});
+
+test('public DNS ownership determines who must act without requiring a website or remote panel',()=>{
+    for(const mode of ['local','external','existing'])for(const role of ['primary','secondary']){
+        const infrastructure_dns=mode==='local'&&role==='primary'?{zone:'example.com'}:undefined;
+        const guide=setupExecutionGuidance(execution({status:'waiting',phase:'access_dns',context:context({dns_mode:mode,dns_role:role,infrastructure_dns}),steps:[{id:'access',kind:'access_dns',target:'panel.example.com',qualifier:'192.0.2.10',status:'running'}]}));
+        const expected=mode==='local'?(role==='primary'?'setup.guide.accessDNSPrepared':'setup.guide.accessDNSSecondary'):'setup.guide.accessDNSProvider';
+        assert.ok(keys(guide).includes(expected));
+        assert.ok(!keys(guide).includes('setup.guide.automaticRecords'));
+    }
+});
+
+test('stopped DNS checks never promise automatic continuation while active secondary waits identify the primary',()=>{
+    const failed=setupExecutionGuidance(execution({status:'failed',phase:'access_dns',steps:[{id:'access',kind:'access_dns',target:'panel.example.com',qualifier:'192.0.2.10',status:'failed'}]}));
+    assert.ok(keys(failed).includes('setup.guide.failed'));
+    assert.ok(!keys(failed).includes('setup.guide.accessDNSResume'));
+    const waiting=setupExecutionGuidance(execution({status:'waiting',phase:'primary_dns',context:context({dns_role:'secondary'})}));
+    assert.ok(keys(waiting).includes('setup.guide.primaryDNSWaiting'));
+    assert.deepEqual(waiting.messages[0].values,{primary:'ns2.example.com',primaryIP:'192.0.2.20'});
+    assert.ok(keys(waiting).includes('setup.guide.nativeDNS'));
+});
+
+test('unknown infrastructure publication preserves uncertainty instead of directing duplicate creation',()=>{
+    const guide=setupExecutionGuidance(execution({phase:'infrastructure_dns',error:{code:'server_setup_infrastructure_dns_unknown',message:'pending outcome'},context:context({infrastructure_dns:{zone:'example.com'}})}));
+    assert.ok(keys(guide).includes('setup.infrastructure.unknown'));
+    assert.ok(!keys(guide).includes('setup.guide.infrastructureDNSPeer'));
+    assert.ok(!keys(guide).includes('setup.guide.accessDNSResume'));
+});
+
+test('infrastructure record copy has complete bilingual placeholders and intact Turkish characters',()=>{
+    const enKeys=Object.keys(enScreens).filter(key=>key.startsWith('setup.infrastructure.'));
+    assert.deepEqual(Object.keys(trScreens).filter(key=>key.startsWith('setup.infrastructure.')).sort(),enKeys.sort());
+    for(const key of enKeys){
+        assert.deepEqual((enScreens[key].match(/\{[^}]+\}/g)||[]).sort(),(trScreens[key].match(/\{[^}]+\}/g)||[]).sort(),key);
+        assert.ok(!trScreens[key].includes('?'),key);
+    }
+    assert.ok(trScreens['setup.infrastructure.title'].includes('kayıtları'));
 });

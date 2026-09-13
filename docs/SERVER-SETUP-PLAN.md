@@ -34,6 +34,23 @@ verification remain in the same guided flow. Components remains the place for
 later service administration. See the [customization contract and validation
 boundary](SERVER-SETUP-CUSTOMIZATION.md).
 
+## September 13 implementation note: access DNS inside setup
+
+The working-tree correction prepares explicitly reviewed infrastructure DNS
+records inside the wizard before public hostname verification and certificate
+issuance. It does not require leaving setup to create a tenant domain. Selecting
+local DNS does not authorize taking over an inferred parent zone: the owner
+chooses the exact zone and reviews its minimal record additions. Existing DNS
+ownership and records are preserved; a secondary receives native zone transfers
+and never becomes a local primary merely because it also hosts applications.
+
+This implements the existing outcome and ownership requirements below; it does
+not change their approval scope. Previously accepted plans retain their exact
+steps and identities; new infrastructure changes require a new review. See the
+[access DNS implementation note](SERVER-SETUP-ACCESS-DNS.md) for ordering, recovery,
+local test evidence and unsupported cases. This correction is not yet released
+or verified on the installed Frankfurt/Boston pair.
+
 ## 1. Outcome and audience
 
 A server administrator should reach a usable, secured environment without

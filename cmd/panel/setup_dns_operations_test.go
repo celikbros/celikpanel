@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -127,6 +128,7 @@ func TestSetupDNSResumesAfterIdentityStagingBeforeSwitchPersistence(t *testing.T
 }
 
 func TestSetupDNSSecondaryCompletionNeedsConsumerProofWithoutPublisherAuthority(t *testing.T) {
+	setupDNSReadyPrimaryCatalog(t)
 	p := newDNSPanelForTest(t)
 	seedSetupDNSOwner(t, p)
 	agent := newDNSEngineTestAgent()
@@ -156,6 +158,7 @@ func TestSetupDNSSecondaryCompletionNeedsConsumerProofWithoutPublisherAuthority(
 }
 
 func TestSetupDNSManualSecondaryHostingUsesNativeProofAndExternalDomainDefault(t *testing.T) {
+	setupDNSReadyPrimaryCatalog(t)
 	for _, engine := range []string{"bind", "pdns"} {
 		t.Run(engine, func(t *testing.T) {
 			p := newDNSPanelForTest(t)
@@ -216,6 +219,80 @@ func TestSetupDNSManualSecondaryHostingUsesNativeProofAndExternalDomainDefault(t
 			}
 			if _, ready, err := p.activeDNSPublisher(ctx); err != nil || ready {
 				t.Fatalf("secondary gained write authority: %v %v", ready, err)
+			}
+		})
+	}
+}
+
+func setupDNSReadyPrimaryCatalog(t *testing.T) {
+	t.Helper()
+	previous := probeServerSetupPrimaryCatalogSOA
+	t.Cleanup(func() { probeServerSetupPrimaryCatalogSOA = previous })
+	probeServerSetupPrimaryCatalogSOA = func(context.Context, string, string) (uint32, error) { return 1, nil }
+}
+
+func TestSetupDNSSecondaryWaitsForPrimaryBeforeStagingOrInstalling(t *testing.T) {
+	for _, engine := range []string{"bind", "pdns"} {
+		t.Run(engine, func(t *testing.T) {
+			p := newDNSPanelForTest(t)
+			seedSetupDNSOwner(t, p)
+			agent := newDNSEngineTestAgent()
+			attachDNSEngineTestAgent(t, p, agent)
+			t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.1")
+			draft := setupDNSTestDraft()
+			draft.Purpose, draft.DNSRole, draft.PeerNS, draft.DNSEngine = "dns", "secondary", draft.NS1, engine
+			previous := probeServerSetupPrimaryCatalogSOA
+			t.Cleanup(func() { probeServerSetupPrimaryCatalogSOA = previous })
+			reachable := false
+			probes := 0
+			probeServerSetupPrimaryCatalogSOA = func(context.Context, string, string) (uint32, error) {
+				probes++
+				if !reachable {
+					return 0, errors.New("primary is unavailable")
+				}
+				return 1, nil
+			}
+			ctx := context.Background()
+			before, err := readDNSEngineDBState(ctx, p.db.GetDB())
+			if err != nil {
+				t.Fatal(err)
+			}
+			requestID := strings.Repeat("9", 32)
+			for attempt := 0; attempt < 2; attempt++ {
+				if err := p.startServerSetupDNS(ctx, draft, requestID, serviceOperationActor{UserID: 1}); !errors.Is(err, errServerSetupPrimaryDNSRequired) {
+					t.Fatalf("unavailable primary did not remain a prerequisite: %v", err)
+				}
+			}
+			after, err := readDNSEngineDBState(ctx, p.db.GetDB())
+			if err != nil || before.Revision != after.Revision || after.ActiveEngine != "" {
+				t.Fatalf("waiting preflight changed topology: before=%+v after=%+v err=%v", before, after, err)
+			}
+			var snapshots int
+			if err := p.db.GetDB().QueryRow(`SELECT count(*) FROM dns_engine_switch_snapshots`).Scan(&snapshots); err != nil || snapshots != 0 {
+				t.Fatalf("waiting preflight admitted an operation: snapshots=%d err=%v", snapshots, err)
+			}
+			agent.mu.Lock()
+			calls := agent.switchCalls
+			agent.mu.Unlock()
+			if calls != 0 {
+				t.Fatal("waiting prerequisite installed DNS")
+			}
+			reachable = true
+			if err := p.startServerSetupDNS(ctx, draft, requestID, serviceOperationActor{UserID: 1}); err != nil {
+				t.Fatalf("primary readiness did not unblock existing setup identity: %v", err)
+			}
+			probesBeforeReplay := probes
+			reachable = false
+			for _, id := range []string{requestID, strings.Repeat("8", 32)} {
+				if err := p.startServerSetupDNS(ctx, draft, id, serviceOperationActor{UserID: 1}); err != nil {
+					t.Fatalf("committed DNS was reclassified by preflight: %v", err)
+				}
+			}
+			agent.mu.Lock()
+			calls = agent.switchCalls
+			agent.mu.Unlock()
+			if calls != 1 || probes != probesBeforeReplay {
+				t.Fatalf("committed replay repeated prerequisite/install: calls=%d probes=%d->%d", calls, probesBeforeReplay, probes)
 			}
 		})
 	}

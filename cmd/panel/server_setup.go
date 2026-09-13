@@ -18,24 +18,32 @@ const serverSetupPath = "/api/v1/setup"
 
 var errServerSetupConflict = errors.New("server setup changed; reload the current plan")
 
+// Explicit zone scope is independent of the default DNS mode for new domains.
+// Optional fields preserve the identity of previously accepted plans.
+type serverSetupInfrastructureDNSDraft struct {
+	Zone            string `json:"zone"`
+	PeerPanelDomain string `json:"peer_panel_domain,omitempty"`
+}
+
 type serverSetupDraft struct {
-	Purpose               string                    `json:"purpose"`
-	DNSHostingManagement  string                    `json:"dns_hosting_management,omitempty"`
-	DNSPublisherEndpoint  string                    `json:"dns_publisher_endpoint,omitempty"`
-	RemoteDNSConnectionID string                    `json:"remote_dns_connection_id"`
-	PanelDomain           string                    `json:"panel_domain"`
-	MailHostname          string                    `json:"mail_hostname"`
-	DNSMode               string                    `json:"dns_mode"`
-	DNSEngine             string                    `json:"dns_engine"`
-	DNSRole               string                    `json:"dns_role"`
-	NS1                   string                    `json:"ns1"`
-	NS2                   string                    `json:"ns2"`
-	LocalIP               string                    `json:"local_ip"`
-	PeerIP                string                    `json:"peer_ip"`
-	PeerNS                string                    `json:"peer_ns"`
-	NodeVersion           string                    `json:"node_version"`
-	Database              string                    `json:"database"`
-	Customization         *serverSetupCustomization `json:"customization,omitempty"`
+	InfrastructureDNS     *serverSetupInfrastructureDNSDraft `json:"infrastructure_dns,omitempty"`
+	Purpose               string                             `json:"purpose"`
+	DNSHostingManagement  string                             `json:"dns_hosting_management,omitempty"`
+	DNSPublisherEndpoint  string                             `json:"dns_publisher_endpoint,omitempty"`
+	RemoteDNSConnectionID string                             `json:"remote_dns_connection_id"`
+	PanelDomain           string                             `json:"panel_domain"`
+	MailHostname          string                             `json:"mail_hostname"`
+	DNSMode               string                             `json:"dns_mode"`
+	DNSEngine             string                             `json:"dns_engine"`
+	DNSRole               string                             `json:"dns_role"`
+	NS1                   string                             `json:"ns1"`
+	NS2                   string                             `json:"ns2"`
+	LocalIP               string                             `json:"local_ip"`
+	PeerIP                string                             `json:"peer_ip"`
+	PeerNS                string                             `json:"peer_ns"`
+	NodeVersion           string                             `json:"node_version"`
+	Database              string                             `json:"database"`
+	Customization         *serverSetupCustomization          `json:"customization,omitempty"`
 }
 
 type serverSetupCheck struct {
@@ -64,6 +72,22 @@ func defaultServerSetupDraft() serverSetupDraft {
 // Drafts may be incomplete; review validates the complete executable plan.
 // Taslak eksik olabilir; inceleme calistirilacak tam plani dogrular.
 func canonicalServerSetupDraft(d serverSetupDraft) (serverSetupDraft, error) {
+	if d.InfrastructureDNS != nil {
+		selection := *d.InfrastructureDNS
+		selection.Zone = strings.TrimSpace(selection.Zone)
+		selection.PeerPanelDomain = strings.TrimSpace(selection.PeerPanelDomain)
+		for _, value := range []*string{&selection.Zone, &selection.PeerPanelDomain} {
+			if *value == "" {
+				continue
+			}
+			canonical, err := hostname.CanonicalFQDN(*value)
+			if err != nil {
+				return d, errors.New("infrastructure DNS names must be fully qualified")
+			}
+			*value = canonical
+		}
+		d.InfrastructureDNS = &selection
+	}
 	for _, item := range []*string{&d.Purpose, &d.PanelDomain, &d.MailHostname, &d.DNSMode, &d.DNSEngine, &d.DNSRole, &d.NS1, &d.NS2, &d.LocalIP, &d.PeerIP, &d.PeerNS, &d.NodeVersion, &d.Database, &d.RemoteDNSConnectionID, &d.DNSPublisherEndpoint, &d.DNSHostingManagement} {
 		*item = strings.TrimSpace(*item)
 		if len(*item) > 253 {

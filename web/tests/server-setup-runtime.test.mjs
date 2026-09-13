@@ -18,13 +18,16 @@ const remoteURL = dataURL(compile('../src/lib/remoteDNS.ts'));
 const setupURL = dataURL(compile('../src/lib/serverSetup.ts'));
 const componentLibURL = dataURL(compile('../src/lib/serverSetupComponents.ts').replace("from './serverSetup'", `from '${setupURL}'`));
 const operationURL = dataURL(compile('../src/lib/serverSetupOperation.ts').replace("from './serverSetup'", `from '${setupURL}'`));
+const dnsEnglishURL = dataURL(compile('../src/i18n/setupDNS/en.ts'));
+const dnsTurkishURL = dataURL(compile('../src/i18n/setupDNS/tr.ts'));
+const dnsCopyURL = dataURL(compile('../src/i18n/setupDNS.ts').replace("from './setupDNS/en'", `from '${dnsEnglishURL}'`).replace("from './setupDNS/tr'", `from '${dnsTurkishURL}'`));
 const guidanceURL = dataURL(compile('../src/lib/serverSetupGuidance.ts'));
 const setup = await import(setupURL);
 const operations = await import(operationURL);
 const stub = dataURL(`
 import React from '${reactURL}';
 export const useAuth = () => globalThis.setupFixture.auth;
-export const useI18n = () => ({ t:(key, vars)=>globalThis.setupFixture.translations?.[key]??key, screensReady:true, screensFailed:false });
+export const useI18n = () => ({ locale:globalThis.setupFixture.locale, t:(key, vars)=>globalThis.setupFixture.translations?.[key]??key, screensReady:true, screensFailed:false });
 export const useLocation = () => ({ pathname:globalThis.setupFixture.path });
 export const Navigate = props => React.createElement('redirect',props);
 export const Link = props => React.createElement('a',{...props,href:props.to});
@@ -44,7 +47,7 @@ const componentUIURL = dataURL(`import React from '${reactURL}';\n` + compile('.
 const { ServerSetupComponents: ComponentPicker } = await import(componentUIURL);
 async function loadComponent(name) {
     const source = compile(`../src/components/${name}.tsx`).replace(/from ['"]([^'"]+)['"]/g, (_, path) => {
-        const url = path === 'react' ? reactURL : path.endsWith('/ServerSetupSteps') ? stepsURL : path.endsWith('/remoteDNS') ? remoteURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/serverSetupGuidance') ? guidanceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
+        const url = path === 'react' ? reactURL : path.endsWith('/ServerSetupSteps') ? stepsURL : path.endsWith('/remoteDNS') ? remoteURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/setupDNS') ? dnsCopyURL : path.endsWith('/serverSetupGuidance') ? guidanceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
         return `from '${url}'`;
     });
     return (await import(dataURL(`import React from '${reactURL}';\n${source}`)))[name];
@@ -945,5 +948,120 @@ test('resumed DNS guidance is above the step list and uses the saved plan contex
         const rendered=JSON.stringify(tree.toJSON());
         assert.ok(rendered.indexOf('setup-guidance-title')<rendered.indexOf('mt-6 divide-y divide-border'));
         assert.ok(calls.every(call=>!call.options?.method||call.options.method==='GET'));
+    }finally{await cleanup();}
+});
+
+
+const infrastructurePlan = () => ({zone:'example.com',expected_digest:'d'.repeat(64),records:[
+    {name:'example.com',type:'NS',content:'ns1.example.com.',ttl:300,action:'keep'},
+    {name:'panel.example.com',type:'A',content:'192.0.2.10',ttl:300,action:'add'},
+    {name:'boston.example.com',type:'A',content:'192.0.2.20',ttl:300,action:'add'},
+]});
+const primaryDraft = () => ({...fresh().draft,panel_domain:'panel.example.com',ns1:'ns1.example.com',ns2:'ns2.example.com',peer_ns:'ns2.example.com',local_ip:'192.0.2.10',peer_ip:'192.0.2.20'});
+
+test('infrastructure DNS requires explicit owner intent and reviews the exact native records without creating a website',async()=>{
+    init('admin',{status:'draft',draft:primaryDraft()});
+    const base=fetch;globalThis.fetch=async(url,options)=>url==='/api/v1/setup/plan'?Response.json(plan({infrastructure_dns:infrastructurePlan(),steps:[{id:'infra',kind:'infrastructure_dns',target:'example.com'},{id:'public',kind:'access_dns',target:'panel.example.com',qualifier:'192.0.2.10'}]})):base(url,options);
+    try {
+        await mount();
+        const prepare=tree.root.findByProps({id:'setup-prepare-infrastructure-dns'});
+        assert.equal(prepare.props.checked,false);
+        assert.equal(tree.root.findAllByProps({id:'setup-infrastructure_zone'}).length,0);
+        assert.equal(calls.some(c=>c.options?.method),false,'opening an editor must not claim a zone');
+        await act(async()=>prepare.props.onChange({target:{checked:true}}));
+        assert.equal(tree.root.findByProps({id:'setup-infrastructure_zone'}).props.value,'example.com');
+        await act(async()=>tree.root.findByProps({id:'setup-peer_panel_domain'}).props.onChange({target:{value:'boston.example.com'}}));
+        await submit();
+        assert.deepEqual(state.draft.infrastructure_dns,{zone:'example.com',peer_panel_domain:'boston.example.com'});
+        const review=tree.root.findByProps({'aria-label':'setup.infrastructure.reviewTitle'});
+        assert.ok(review.findAllByType('td').some(row=>row.props.children==='A'));
+        assert.ok(JSON.stringify(tree.toJSON()).includes('boston.example.com'));
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.infrastructure.keep'));
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.infrastructure.add'));
+        assert.equal(findButton('setup.start').props.disabled,true,'record review still requires the start acknowledgement');
+        assert.equal(calls.some(c=>c.url.includes('/domains')||c.url==='/api/v1/setup/start'),false);
+    } finally {await cleanup();}
+});
+
+test('changing DNS ownership or role clears hidden infrastructure creation intent',async()=>{
+    for(const next of ['external','existing','secondary']){
+        init('admin',{status:'draft',draft:{...primaryDraft(),infrastructure_dns:{zone:'example.com',peer_panel_domain:'boston.example.com'}}});
+        try{
+            await mount();
+            await act(async()=>next==='secondary'?tree.root.findByProps({id:'setup-dns_role'}).props.onChange({target:{value:next}}):tree.root.findByProps({name:'setup-dns',value:next}).props.onChange());
+            assert.equal(tree.root.findAllByProps({id:'setup-prepare-infrastructure-dns'}).length,0);
+            const checkpoint=JSON.parse(sessionStorage.getItem('celikpanel.setup.editor.admin'));
+            assert.equal(checkpoint.draft.infrastructure_dns,undefined);
+            assert.equal(calls.some(c=>c.url==='/api/v1/setup/start'),false);
+        } finally {await cleanup();}
+    }
+});
+
+test('zone suggestions are editable and never infer an unrelated parent zone',()=>{
+    const draft=primaryDraft();
+    assert.equal(setup.setupInfrastructureZoneCandidate(draft),'example.com');
+    assert.equal(setup.setupInfrastructureZoneCandidate({...draft,ns2:'ns2.external.net'}),'');
+    assert.equal(setup.setupInfrastructureZoneCandidate({...draft,panel_domain:'not a hostname'}),'');
+    assert.equal(setup.setupInfrastructureZoneCandidate({...draft,panel_domain:' panel.EXAMPLE.com. '}),'example.com');
+    const snapshot={...fresh(),draft:{...draft,infrastructure_dns:{zone:'example.com'}}};
+    assert.ok(setup.decodeServerSetup(snapshot));
+    for(const infrastructure_dns of [null,{}, {zone:42}, {zone:'example.com',peer_panel_domain:42}])assert.equal(setup.decodeServerSetup({...snapshot,draft:{...draft,infrastructure_dns}}),null);
+    assert.ok(setup.decodeServerSetup({...fresh(),draft}),'old drafts remain readable');
+});
+
+test('DNS record plans reject malformed mutation details but optional execution metadata cannot hide an active operation',()=>{
+    init();
+    const reviewed=plan({infrastructure_dns:infrastructurePlan(),server_ip:'192.0.2.10'});
+    assert.ok(operations.decodeSetupPlan(reviewed,state.revision));
+    for(const bad of [null,{}, {...infrastructurePlan(),records:[{name:'example.com',type:'A',content:'192.0.2.10',ttl:300,action:'delete'}]}, {...infrastructurePlan(),expected_digest:42}]){
+        assert.equal(operations.decodeSetupPlan({...reviewed,infrastructure_dns:bad},state.revision),null);
+    }
+    const current=execution({plan_id:'a'.repeat(32),request_id:'b'.repeat(32)});
+    const context={dns_mode:'local',dns_role:'primary',dns_engine:'bind',local_nameserver:'ns1.example.com',local_ip:'192.0.2.10',peer_nameserver:'ns2.example.com',peer_ip:'192.0.2.20',panel_domain:'panel.example.com',mail_hostname:'',dns_hosting_management:'',access_dns_ip:'192.0.2.10',infrastructure_dns:infrastructurePlan()};
+    assert.equal(operations.decodeSetupExecution({...current,context}).context.infrastructure_dns.zone,'example.com');
+    const preserved=operations.decodeSetupExecution({...current,context:{...context,infrastructure_dns:{invalid:true}}});
+    assert.equal(preserved.id,current.id);assert.equal(preserved.context,undefined);
+});
+
+test('secondary setup keeps server address prerequisites inside the wizard without a zone claim or primary panel API',async()=>{
+    init('admin',{status:'draft',draft:{...primaryDraft(),purpose:'dns',dns_role:'secondary',panel_domain:'boston.example.com',peer_ns:'ns1.example.com',local_ip:'192.0.2.20',peer_ip:'192.0.2.10'}});
+    try{
+        await mount();
+        assert.equal(tree.root.findAllByProps({id:'setup-infrastructure_zone'}).length,0);
+        assert.equal(tree.root.findAllByProps({id:'setup-dns_publisher_endpoint'}).length,0);
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.infrastructure.secondaryHelp'));
+        await submit();
+        assert.equal(state.draft.infrastructure_dns,undefined);
+        assert.equal(calls.some(c=>c.url.includes('/dns/remote')||c.url.includes('/domains')||c.url==='/api/v1/setup/start'),false);
+    }finally{await cleanup();}
+});
+
+test('public DNS waiting retains exact operation and exposes safe in-wizard plan revision',async()=>{
+    init('admin',{status:'waiting'});
+    state.draft.panel_domain='edited.invalid.example';
+    const current={...execution({plan_id:'a'.repeat(32),request_id:'b'.repeat(32)},'waiting'),phase:'access_dns',steps:[{id:'access',kind:'access_dns',target:'panel.example.com',qualifier:'192.0.2.10',status:'running'}],error:{code:'server_setup_access_dns_required',message:'not verified'}};
+    const base=fetch;globalThis.fetch=async(url,options)=>url.includes('/setup/operation')?Response.json(current):base(url,options);
+    try{
+        await mount();
+        assert.ok(findButton('setup.editPlan'));
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.guide.accessDNSRecord'));
+        assert.ok(JSON.stringify(tree.toJSON()).includes('setup.guide.accessDNSResume'));
+        assert.equal(tree.root.findAllByType('form').length,0);
+        assert.ok(calls.every(c=>!c.options?.method||c.options.method==='GET'));
+    }finally{await cleanup();}
+});
+
+
+test('route-scoped DNS copy follows language changes without losing the draft or issuing mutations',async()=>{
+    init('admin',{status:'draft',draft:{...primaryDraft(),infrastructure_dns:{zone:'example.com',peer_panel_domain:'boston.example.com'}}});
+    fixture.locale='en';
+    try{
+        await mount();
+        assert.ok(JSON.stringify(tree.toJSON()).includes('DNS for server addresses'));
+        fixture.locale='tr';
+        await act(async()=>tree.update(React.createElement(Wizard)));
+        assert.ok(JSON.stringify(tree.toJSON()).includes('Sunucu adreslerinin DNS kayıtları'));
+        assert.equal(tree.root.findByProps({id:'setup-peer_panel_domain'}).props.value,'boston.example.com');
+        assert.ok(calls.every(c=>!c.options?.method||c.options.method==='GET'));
     }finally{await cleanup();}
 });

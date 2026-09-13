@@ -17,6 +17,7 @@ import (
 // to the disposable two-host acceptance fixture, not this test seam.
 func secondaryHostingConsumerFixture(t *testing.T, engine transport.DNSEngine) (*remoteConsumerIntegrationFixture, func()) {
 	t.Helper()
+	setupDNSReadyPrimaryCatalog(t)
 	f := newRemoteConsumerIntegrationFixture(t)
 	engineAgent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, f.origin, engineAgent)

@@ -103,6 +103,7 @@ type secondaryHostingFixture struct {
 }
 
 func newSecondaryHostingFixture(t *testing.T) *secondaryHostingFixture {
+	setupDNSReadyPrimaryCatalog(t)
 	t.Helper()
 	f, state := setupOperationFixture(t)
 	caps := []string{transport.AgentCapabilityMailHostCertificateV1, transport.AgentCapabilityMailTLSSyncV2}

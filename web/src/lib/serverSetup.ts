@@ -4,6 +4,7 @@ export type SetupDNSMode = 'local' | 'existing' | 'external';
 export interface ServerSetupDraft {
     purpose: SetupPurpose;
     customization?: { components: string[] };
+    infrastructure_dns?: { zone: string; peer_panel_domain?: string };
     panel_domain: string;
     mail_hostname: string;
     dns_mode: SetupDNSMode;
@@ -51,6 +52,9 @@ export function decodeServerSetup(value: unknown): ServerSetupSnapshot | null {
         || !['bind', 'pdns'].includes(String(draft.dns_engine))
         || !['primary', 'secondary'].includes(String(draft.dns_role))
         || draftStrings.some(key => typeof draft[key] !== 'string')) return null;
+    if (draft.infrastructure_dns !== undefined && (!record(draft.infrastructure_dns)
+        || typeof draft.infrastructure_dns.zone !== 'string' || draft.infrastructure_dns.zone.length > 253
+        || (draft.infrastructure_dns.peer_panel_domain !== undefined && (typeof draft.infrastructure_dns.peer_panel_domain !== 'string' || draft.infrastructure_dns.peer_panel_domain.length > 253)))) return null;
     if (draft.dns_hosting_management !== undefined && !['manual', 'panel'].includes(String(draft.dns_hosting_management))) return null;
     if (draft.dns_publisher_endpoint !== undefined && typeof draft.dns_publisher_endpoint !== 'string') return null;
     if (draft.customization !== undefined && (!record(draft.customization) || !Array.isArray(draft.customization.components)
@@ -98,7 +102,22 @@ export function setupDNSNames(draft: ServerSetupDraft) {
 }
 export function changeSetupDNSRole(draft: ServerSetupDraft, role: ServerSetupDraft['dns_role']): ServerSetupDraft {
     // Changing roles keeps the name and IP attached to the same physical server.
-    return role === draft.dns_role ? draft : { ...draft, dns_role: role, ns1: draft.ns2, ns2: draft.ns1 };
+    if (role === draft.dns_role) return draft;
+    const next = { ...draft, dns_role: role, ns1: draft.ns2, ns2: draft.ns1 };
+    if (role === 'secondary') delete next.infrastructure_dns;
+    return next;
+}
+// An editable suggestion only: common suffixes never authorize zone creation.
+export function setupInfrastructureZoneCandidate(draft: ServerSetupDraft): string {
+    const names = [draft.panel_domain, draft.ns1, draft.ns2].map(value => value.trim().toLowerCase().replace(/\.$/, '').split('.'));
+    if (names.some(labels => labels.length < 2 || labels.some(label => !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label)))) return '';
+    const suffix: string[] = [];
+    for (let index = 1; index < Math.min(...names.map(labels => labels.length)); index++) {
+        const label = names[0][names[0].length - index];
+        if (!names.every(labels => labels[labels.length - index] === label)) break;
+        suffix.unshift(label);
+    }
+    return suffix.length >= 2 ? suffix.join('.') : '';
 }
 export function setupDetectedIPv4(value?: string): string {
     if (!value || !/^(?:0|[1-9]\d{0,2})(?:\.(?:0|[1-9]\d{0,2})){3}$/.test(value)) return '';

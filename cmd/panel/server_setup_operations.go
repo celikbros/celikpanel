@@ -38,24 +38,26 @@ type serverSetupRemoteDNSConnection struct {
 }
 
 type serverSetupPlan struct {
-	ID                  string                          `json:"id"`
-	Version             int                             `json:"version"`
-	Revision            int                             `json:"revision"`
-	Purpose             string                          `json:"purpose"`
-	Steps               []serverSetupPlanStep           `json:"steps"`
-	Blockers            []string                        `json:"blockers"`
-	CanStart            bool                            `json:"can_start"`
-	TCPPorts            []int                           `json:"tcp_ports"`
-	UDPPorts            []int                           `json:"udp_ports"`
-	PreserveSSH         bool                            `json:"preserve_ssh"`
-	PersistFirewall     bool                            `json:"persist_firewall"`
-	HostnameChange      string                          `json:"hostname_change,omitempty"`
-	RemoteDNSConnection *serverSetupRemoteDNSConnection `json:"remote_dns_connection,omitempty"`
-	Draft               serverSetupDraft                `json:"draft"`
-	BuildCommit         string                          `json:"build_commit"`
-	ContactEmail        string                          `json:"contact_email"`
-	Actor               serviceOperationActor           `json:"actor"`
-	Components          []serverSetupPlanComponent      `json:"components,omitempty"`
+	InfrastructureDNS   *serverSetupInfrastructureDNSPlan `json:"infrastructure_dns,omitempty"`
+	ServerIP            string                            `json:"server_ip,omitempty"`
+	ID                  string                            `json:"id"`
+	Version             int                               `json:"version"`
+	Revision            int                               `json:"revision"`
+	Purpose             string                            `json:"purpose"`
+	Steps               []serverSetupPlanStep             `json:"steps"`
+	Blockers            []string                          `json:"blockers"`
+	CanStart            bool                              `json:"can_start"`
+	TCPPorts            []int                             `json:"tcp_ports"`
+	UDPPorts            []int                             `json:"udp_ports"`
+	PreserveSSH         bool                              `json:"preserve_ssh"`
+	PersistFirewall     bool                              `json:"persist_firewall"`
+	HostnameChange      string                            `json:"hostname_change,omitempty"`
+	RemoteDNSConnection *serverSetupRemoteDNSConnection   `json:"remote_dns_connection,omitempty"`
+	Draft               serverSetupDraft                  `json:"draft"`
+	BuildCommit         string                            `json:"build_commit"`
+	ContactEmail        string                            `json:"contact_email"`
+	Actor               serviceOperationActor             `json:"actor"`
+	Components          []serverSetupPlanComponent        `json:"components,omitempty"`
 }
 
 type serverSetupExecutionStep struct {
@@ -425,6 +427,28 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 	slices.Sort(plan.UDPPorts)
 	plan.UDPPorts = slices.Compact(plan.UDPPorts)
 	addStep("firewall", "enable_and_persist", "")
+	plan.ServerIP, _ = canonicalIPv4(serverPrimaryIP())
+	if draft.DNSMode == setupDNSModeLocal {
+		plan.ServerIP, _ = canonicalIPv4(draft.LocalIP)
+	}
+	if plan.ServerIP == "" {
+		addBlocker("server_setup_panel_dns_address_unavailable")
+	}
+	if draft.InfrastructureDNS != nil {
+		var infrastructureErr error
+		plan.InfrastructureDNS, infrastructureErr = p.buildServerSetupInfrastructureDNSPlan(ctx, draft)
+		if infrastructureErr != nil {
+			var reviewError *serverSetupInfrastructureDNSPlanError
+			if !errors.As(infrastructureErr, &reviewError) {
+				return plan, infrastructureErr
+			}
+			addBlocker("server_setup_infrastructure_dns_conflict:" + reviewError.Message)
+		}
+		if plan.InfrastructureDNS != nil {
+			addStep("infrastructure_dns", plan.InfrastructureDNS.Zone, "")
+		}
+	}
+	addStep("access_dns", draft.PanelDomain, plan.ServerIP)
 	cert := currentPanelCert()
 	certificateRequired := serverSetupPanelCertificateChangesRequired(cert, draft.PanelDomain, plan.Steps)
 	if !certificateRequired {
@@ -446,6 +470,7 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 		if err := requireKnownAgentCapabilities(agent.Capabilities, transport.AgentCapabilityMailHostCertificateV1); err != nil {
 			addBlocker("server_setup_mail_certificate_unavailable")
 		}
+		addStep("access_dns", draft.MailHostname, plan.ServerIP)
 		addStep("mail_certificate", draft.MailHostname, "")
 	}
 	addStep("verify", draft.Purpose, "")
@@ -686,6 +711,11 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Minute)
 	defer cancel()
+	if execution.Status == "waiting" && stringIn(execution.Phase, "primary_dns", "infrastructure_dns", "access_dns") {
+		if err := p.claimServerSetupDNSRetry(ctx, plan, execution); err != nil {
+			return false, err
+		}
+	}
 	for index := range execution.Steps {
 		step := &execution.Steps[index]
 		if step.Status == "succeeded" {
@@ -705,6 +735,20 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 			done, err = p.runServerSetupDNSPublisher(ctx, plan, execution.ID)
 		} else {
 			done, err = p.runServerSetupStep(ctx, plan, step)
+		}
+		if errors.Is(err, errServerSetupAccessDNSRequired) || errors.Is(err, errServerSetupPrimaryDNSRequired) || errors.Is(err, errServerSetupInfrastructureDNSWaiting) {
+			execution.Status = "waiting"
+			execution.Phase = step.Kind
+			if errors.Is(err, errServerSetupPrimaryDNSRequired) {
+				execution.Phase = "primary_dns"
+			}
+			execution.Error = serverSetupDNSWaitMessage(plan, *step, err)
+			return false, p.persistServerSetupExecution(ctx, *execution)
+		}
+		if errors.Is(err, errServerSetupInfrastructureDNSUnknown) {
+			execution.Status = "running"
+			execution.Error = &serviceOperationError{Code: "server_setup_infrastructure_dns_unknown", Message: "The DNS publication result is being checked using its saved operation. Do not start it again."}
+			return false, p.persistServerSetupExecution(ctx, *execution)
 		}
 		if errors.Is(err, errServerSetupDNSPublisherRequired) || errors.Is(err, errServerSetupDNSReadinessRequired) {
 			execution.Status = "waiting"
@@ -781,6 +825,10 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 	switch step.Kind {
 	case "verify":
 		return true, nil
+	case "access_dns":
+		return p.runServerSetupAccessDNS(ctx, plan, *step)
+	case "infrastructure_dns":
+		return p.runServerSetupInfrastructureDNS(ctx, plan, *step)
 	case "dns_readiness":
 		if err := p.requireServerSetupAdmission(); err != nil {
 			return false, err
@@ -1135,6 +1183,8 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 		return &serviceOperationError{Code: child.Code, Message: child.Message}
 	}
 	switch {
+	case errors.Is(cause, errServerSetupInfrastructureDNSChanged):
+		return &serviceOperationError{Code: "server_setup_infrastructure_dns_changed", Message: "The DNS zone or its ownership changed after review. Existing records were preserved. Review the infrastructure records again before continuing."}
 	case errors.Is(cause, errServerSetupBuildChanged):
 		return &serviceOperationError{Code: "server_setup_build_changed", Message: "The panel version changed after this setup plan was reviewed. Completed operations are preserved. Review and confirm a new plan before starting the remaining setup steps."}
 	case errors.Is(cause, errFirewallNoSSHService):
@@ -1147,6 +1197,10 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 		return &serviceOperationError{Code: "firewall_no_engine", Message: "The firewall engine is unavailable. Review the component installation result."}
 	}
 	switch step.Kind {
+	case "infrastructure_dns":
+		return &serviceOperationError{Code: "server_setup_infrastructure_dns_failed", Message: "The infrastructure DNS records could not be published and verified. Review the DNS operation and native DNS service before reviewing a new setup plan."}
+	case "access_dns":
+		return &serviceOperationError{Code: "server_setup_access_dns_failed", Message: "The reviewed address check could not be completed. Review the panel or mail hostname and server address in this setup plan."}
 	case "dns":
 		return &serviceOperationError{Code: "server_setup_dns_failed", Message: "DNS setup requires attention. Verify the local address, nameserver identities, independent peer and the DNS operation result."}
 	case "panel_certificate":

@@ -12,5 +12,5 @@ import { readFileSync } from 'node:fs';
 // ikisini tek katalog olarak okur.
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-export const englishCatalogue = read('../src/i18n/en.ts') + read('../src/i18n/screens/en.ts');
-export const turkishCatalogue = read('../src/i18n/tr.ts') + read('../src/i18n/screens/tr.ts');
+export const englishCatalogue = read('../src/i18n/en.ts') + read('../src/i18n/screens/en.ts') + read('../src/i18n/setupDNS/en.ts');
+export const turkishCatalogue = read('../src/i18n/tr.ts') + read('../src/i18n/screens/tr.ts') + read('../src/i18n/setupDNS/tr.ts');

@@ -42,7 +42,7 @@ func serverSetupDNSBootstrapSteps(draft serverSetupDraft, steps []serverSetupPla
 	}
 	bootstrap, remaining := []serverSetupPlanStep{}, []serverSetupPlanStep{}
 	for _, step := range steps {
-		if step.Kind == "dns" || step.Kind == "firewall" || step.Kind == "panel_certificate" || (step.Kind == "service" && (step.Target == "nginx" || step.Target == "nftables" || step.Target == "certbot")) {
+		if step.Kind == "dns" || step.Kind == "firewall" || step.Kind == "panel_certificate" || step.Kind == "infrastructure_dns" || (step.Kind == "access_dns" && step.Target == draft.PanelDomain) || (step.Kind == "service" && (step.Target == "nginx" || step.Target == "nftables" || step.Target == "certbot")) {
 			bootstrap = append(bootstrap, step)
 		} else {
 			remaining = append(remaining, step)

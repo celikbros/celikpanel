@@ -1,3 +1,4 @@
+import type { SetupDNSKey } from './setupDNS/en';
 // English catalog. This file is the source of truth for translation keys:
 // its shape defines the TranslationKey type, and every other locale must
 // provide the same keys.
@@ -281,4 +282,4 @@ export const en = {
 } as const;
 
 export type ShellKey = keyof typeof en;
-export type TranslationKey = ShellKey | ScreenKey;
+export type TranslationKey = ShellKey | ScreenKey | SetupDNSKey;

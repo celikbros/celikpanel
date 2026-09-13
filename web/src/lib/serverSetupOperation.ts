@@ -1,11 +1,17 @@
 import { setupPurposes, type ServerSetupCheck, type SetupPurpose } from './serverSetup';
 
-export interface SetupPlanStep { id: string; kind: 'dns' | 'dns_publisher' | 'dns_readiness' | 'service' | 'runtime' | 'mail_profile' | 'firewall' | 'panel_certificate' | 'mail_certificate' | 'verify'; target: string; qualifier?: string }
+export interface SetupPlanStep { id: string; kind: 'infrastructure_dns' | 'access_dns' | 'dns' | 'dns_publisher' | 'dns_readiness' | 'service' | 'runtime' | 'mail_profile' | 'firewall' | 'panel_certificate' | 'mail_certificate' | 'verify'; target: string; qualifier?: string }
+export interface SetupInfrastructureDNSPlan {
+    zone: string; existing_zone_id?: number; expected_digest: string;
+    records: { name: string; type: string; content: string; ttl: number; action: 'add' | 'keep' }[];
+}
 export interface ServerSetupPlan {
     id: string; version: number; revision: number; purpose: SetupPurpose;
     steps: SetupPlanStep[]; blockers: string[]; can_start: boolean;
     tcp_ports: number[]; udp_ports: number[]; preserve_ssh: boolean;
     persist_firewall: boolean; hostname_change?: string; contact_email: string;
+    infrastructure_dns?: SetupInfrastructureDNSPlan;
+    server_ip?: string;
     components?: { id: string; selected: boolean; required: boolean; installed: boolean }[];
     remote_dns_connection?: { id: string; endpoint: string; nameservers: string[] };
 }
@@ -20,14 +26,26 @@ export interface SetupExecutionContext {
     dns_mode: 'local' | 'external' | 'existing'; dns_role: 'primary' | 'secondary' | '';
     dns_engine: string; local_nameserver: string; local_ip: string; peer_nameserver: string; peer_ip: string;
     panel_domain: string; mail_hostname: string; dns_hosting_management: string;
+    access_dns_ip?: string; infrastructure_dns?: SetupInfrastructureDNSPlan;
 }
-const kinds = ['dns', 'dns_publisher', 'dns_readiness', 'service', 'runtime', 'mail_profile', 'firewall', 'panel_certificate', 'mail_certificate', 'verify'];
+const kinds = ['infrastructure_dns', 'access_dns', 'dns', 'dns_publisher', 'dns_readiness', 'service', 'runtime', 'mail_profile', 'firewall', 'panel_certificate', 'mail_certificate', 'verify'];
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const identity = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
 function isStep(value: unknown): value is SetupPlanStep {
     return isRecord(value) && typeof value.id === 'string' && value.id !== ''
         && kinds.includes(String(value.kind)) && typeof value.target === 'string'
         && (value.qualifier === undefined || typeof value.qualifier === 'string');
+}
+function isInfrastructureDNSPlan(value: unknown): value is SetupInfrastructureDNSPlan {
+    return isRecord(value) && typeof value.zone === 'string' && value.zone.length > 0 && value.zone.length <= 253
+        && (value.existing_zone_id === undefined || (Number.isSafeInteger(value.existing_zone_id) && (value.existing_zone_id as number) > 0))
+        && typeof value.expected_digest === 'string' && value.expected_digest.length <= 128
+        && Array.isArray(value.records) && value.records.length > 0 && value.records.length <= 32
+        && value.records.every(item => isRecord(item) && typeof item.name === 'string' && item.name.length <= 253
+            && typeof item.type === 'string' && ['SOA', 'NS', 'A', 'AAAA'].includes(item.type)
+            && typeof item.content === 'string' && item.content.length <= 2048
+            && Number.isSafeInteger(item.ttl) && (item.ttl as number) >= 0 && (item.ttl as number) <= 2147483647
+            && ['add', 'keep'].includes(String(item.action)));
 }
 export function decodeSetupPlan(value: unknown, revision: number): ServerSetupPlan | null {
     if (!isRecord(value) || !identity(value.id) || value.version !== 1 || value.revision !== revision
@@ -40,6 +58,8 @@ export function decodeSetupPlan(value: unknown, revision: number): ServerSetupPl
         || typeof value.contact_email !== 'string'
         || (value.remote_dns_connection !== undefined && (!isRecord(value.remote_dns_connection) || !identity(value.remote_dns_connection.id) || typeof value.remote_dns_connection.endpoint !== 'string' || !Array.isArray(value.remote_dns_connection.nameservers) || value.remote_dns_connection.nameservers.some(name => typeof name !== 'string')))
         || (value.hostname_change !== undefined && typeof value.hostname_change !== 'string')) return null;
+    if (value.server_ip !== undefined && (typeof value.server_ip !== 'string' || value.server_ip.length > 64)) return null;
+    if (value.infrastructure_dns !== undefined && !isInfrastructureDNSPlan(value.infrastructure_dns)) return null;
     if (value.components !== undefined && (!Array.isArray(value.components) || value.components.length > 80
         || value.components.some(item => !isRecord(item) || typeof item.id !== 'string' || typeof item.selected !== 'boolean' || typeof item.required !== 'boolean' || typeof item.installed !== 'boolean'))) return null;
     return value as unknown as ServerSetupPlan;
@@ -59,6 +79,8 @@ export function decodeSetupExecution(value: unknown, marker?: SetupStartMarker |
     if (context !== undefined && (!isRecord(context)
         || !['local', 'external', 'existing'].includes(String(context.dns_mode))
         || !(context.dns_mode === 'local' ? ['primary', 'secondary'] : ['', 'primary', 'secondary']).includes(String(context.dns_role))
+        || (context.infrastructure_dns !== undefined && !isInfrastructureDNSPlan(context.infrastructure_dns))
+        || (context.access_dns_ip !== undefined && (typeof context.access_dns_ip !== 'string' || context.access_dns_ip.length > 64))
         || ['dns_engine', 'local_nameserver', 'local_ip', 'peer_nameserver', 'peer_ip', 'panel_domain', 'mail_hostname', 'dns_hosting_management']
             .some(key => typeof context[key] !== 'string' || (context[key] as string).length > 1024))) {
         const { context: _invalid, ...execution } = value;

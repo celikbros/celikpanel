@@ -18,7 +18,7 @@ export function setupExecutionGuidance(execution: ServerSetupExecution): SetupEx
     const context = execution.context;
     const current = execution.steps.find(step => step.status === 'failed')
         || execution.steps.find(step => step.status === 'running');
-    const phase = ['license', 'verification', 'dns_readiness', 'dns_publisher'].includes(execution.phase)
+    const phase = ['license', 'verification', 'dns_readiness', 'dns_publisher', 'primary_dns', 'infrastructure_dns', 'access_dns'].includes(execution.phase)
         ? execution.phase : current?.kind || execution.phase;
     const confirming = execution.status === 'running' && execution.error?.code.split(':')[0] === 'server_setup_reconciling';
     const result: SetupExecutionGuidance = {
@@ -39,7 +39,32 @@ export function setupExecutionGuidance(execution: ServerSetupExecution): SetupEx
     if (confirming) result.messages.push(text('setup.guide.confirm'));
     if (execution.status === 'failed') result.messages.push(text('setup.guide.failed'));
 
-    if (['dns', 'dns_readiness'].includes(phase) && context?.dns_mode === 'local') {
+    if (phase === 'access_dns') {
+        const domain = current?.kind === 'access_dns' ? current.target : context?.panel_domain;
+        const ip = current?.kind === 'access_dns' && current.qualifier ? current.qualifier : context?.access_dns_ip || context?.local_ip;
+        if (domain && ip) result.messages.push(text('setup.guide.accessDNSRecord', { domain, ip }));
+        if (execution.error?.code === 'server_setup_access_dns_mismatch') result.messages.push(text('setup.guide.accessDNSMismatch'));
+        else if (execution.status === 'waiting') result.messages.push(text('setup.guide.accessDNSUnknown'));
+        if (context?.dns_mode === 'local' && context.dns_role === 'secondary') {
+            result.messages.push(text('setup.guide.accessDNSSecondary', { primary: context.peer_nameserver, primaryIP: context.peer_ip }));
+            if (domain === context.panel_domain) result.details.push(text('setup.guide.accessDNSPeerPanel'));
+        } else if (context?.infrastructure_dns) {
+            result.messages.push(text('setup.guide.accessDNSPrepared', { zone: context.infrastructure_dns.zone, primary: context.local_nameserver, secondary: context.peer_nameserver }));
+        } else result.messages.push(text('setup.guide.accessDNSProvider'));
+        result.details.push(text(context?.dns_mode === 'local' ? 'setup.guide.accessDNSChecks' : 'setup.guide.accessDNSExternalChecks'));
+        if (execution.status === 'waiting') result.messages.push(text('setup.guide.accessDNSResume'));
+    } else if (phase === 'infrastructure_dns') {
+        if (context?.infrastructure_dns) result.messages.push(text('setup.guide.infrastructureDNS', { zone: context.infrastructure_dns.zone }));
+        if (execution.error?.code === 'server_setup_infrastructure_dns_unknown') result.messages.push(text('setup.infrastructure.unknown'));
+        else if (execution.status === 'waiting') {
+            result.messages.push(text('setup.guide.infrastructureDNSWaiting'));
+            if (context?.peer_nameserver && context.peer_ip) result.messages.push(text('setup.guide.infrastructureDNSPeer', { peer: context.peer_nameserver, peerIP: context.peer_ip }));
+        }
+    } else if (phase === 'primary_dns' && context?.dns_mode === 'local') {
+        result.messages.push(text('setup.guide.primaryDNSWaiting', { primary: context.peer_nameserver, primaryIP: context.peer_ip }));
+        result.details.push(text('setup.guide.nativeDNS'));
+        if (execution.status === 'waiting') result.messages.push(text('setup.guide.accessDNSResume'));
+    } else if (['dns', 'dns_readiness'].includes(phase) && context?.dns_mode === 'local') {
         const values = { local: context.local_nameserver, localIP: context.local_ip, peer: context.peer_nameserver, peerIP: context.peer_ip };
         result.messages.push(text(context.dns_role === 'primary' ? 'setup.guide.primary' : 'setup.guide.secondary', values));
         result.messages.push(text(context.dns_role === 'primary' ? 'setup.guide.startSecondary' : 'setup.guide.startPrimary', values));
@@ -78,7 +103,7 @@ export function setupExecutionGuidance(execution: ServerSetupExecution): SetupEx
         }
     }
     if (result.messages.length === 0) result.messages.push(text('setup.guide.unknown'));
-    if (execution.status === 'running' || (execution.status === 'waiting' && ['dns_readiness', 'dns_publisher'].includes(phase))) {
+    if (execution.status === 'running' || (execution.status === 'waiting' && ['dns_readiness', 'dns_publisher', 'access_dns', 'primary_dns', 'infrastructure_dns'].includes(phase))) {
         result.details.push(text('setup.guide.monitoring'));
     }
     return result;
