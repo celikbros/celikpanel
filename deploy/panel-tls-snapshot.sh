@@ -358,6 +358,22 @@ panel_tls_normalize_legacy_self_signed() (
     listing=$(mktemp "${TMPDIR:-/tmp}/celikpanel-legacy-tls.XXXXXXXX") || return 1
     trap 'rm -f -- "$listing"' EXIT HUP INT TERM
     _panel_tls_find0 "$listing" "$tls_dir" -mindepth 1 -maxdepth 1 || return 1
+    # Atomic domain certificates (with or without the bootstrap pair) already
+    # have trusted ownership. Validate the entire tree without changing it.
+    # Atomik alan adı sertifikalarının sahipliği zaten korunur. Başlangıç çifti
+    # bulunsa da bulunmasa da bütün ağacı değiştirmeden doğrula.
+    while IFS= read -r -d '' path; do
+        case "${path##*/}" in
+            panel.crt|panel.key) ;;
+            *)
+                _panel_tls_validate_managed_tree "$tls_dir" || {
+                    _panel_tls_fail "existing managed TLS tree failed strict validation"
+                    return 1
+                }
+                return 0
+                ;;
+        esac
+    done <"$listing"
     while IFS= read -r -d '' path; do
         base=${path##*/}
         case "$base" in

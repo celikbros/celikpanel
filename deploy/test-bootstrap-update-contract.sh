@@ -3280,5 +3280,6 @@ rm -rf -- "$rollback_contract_tmp"
 trap - EXIT
 
 bash "$ROOT/deploy/test-update-quiesce-capture.sh"
+bash "$ROOT/deploy/test-update-recovery-lock.sh"
 
 echo "bootstrap update contract: ok"
