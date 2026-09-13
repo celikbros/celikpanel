@@ -17,6 +17,7 @@ const stub = dataModule(`
   export const useLocation = () => ({ pathname: globalThis.licenseTest.pathname || '/domains' });
   export const useSearchParams = () => [new URLSearchParams(globalThis.licenseTest.search)];
   export const useI18n = () => ({ t: key => key, locale: 'en', screensReady: true, screensFailed: false });
+ export const PanelAddressHint = () => null;
  export const BrandMark = () => null, LanguageSwitcher = () => null, ThemeSwitcher = () => null, ChangePasswordModal = () => null, ToastContainer = () => null;
  export const LicensePanel = () => React.createElement('section', null, 'activation');
  export const PanelUpdateCard = props => React.createElement('article', props, 'signed-update');
@@ -83,7 +84,7 @@ test('network errors, malformed status, and a license rejection close management
  for(const reply of [()=>{throw new Error('offline')},()=>Response.json({can_use_panel:true}),()=>Response.json({}, {status:503})]) {
   fixture();
   globalThis.fetch=async()=>reply();
-  try {await mount(LicenseOnboarding);assert.equal(tree.root.findByType('aside').props.failed,true)} finally {await cleanup()}
+  try {await mount(LicenseOnboarding);assert.equal(tree.root.findByType('aside').props.failed,true);assert.equal(navigations.length,0,'unavailable access is not activation')} finally {await cleanup()}
  }
  fixture('admin','active');
  try {
@@ -237,4 +238,81 @@ test('an already active activation page automatically rechecks access', async ()
     assert.equal(button('license.continueSetup'), undefined);
     assert.equal(button('license.refresh'), undefined);
   } finally { await cleanup(); }
+});
+
+
+test('transient access failures preserve the current route and mounted form until the signed deadline', async () => {
+ fixture('admin','active');
+ const originalTimer=window.setTimeout;
+ const timers=[];let mounts=0;
+ window.setTimeout=(fn,ms)=>{if(ms>15000){timers.push(fn);return 0}return originalTimer(fn,ms)};
+ function Management(){React.useEffect(()=>{mounts++},[]);return React.createElement('main',null,'setup')}
+ try {
+  await act(async()=>{tree=Renderer.create(React.createElement(LicenseOnboarding,null,React.createElement(Management)))});
+  for(const reply of [()=>{throw new TypeError('Failed to fetch')},()=>Response.json({}, {status:503}),()=>Response.json({can_use_panel:true})]) {
+   globalThis.fetch=async()=>reply();
+   await act(async()=>window.dispatchEvent(new Event('focus')));
+   assert.equal(tree.root.findAllByType('main').length,1);
+   assert.equal(mounts,1,'connection banner must not remount the form');
+   assert.equal(navigations.length,0);
+   assert.ok(button('common.reloadPage'),'a full page reload is available for TLS recovery');
+  }
+  await act(async()=>timers.at(-1)());
+  assert.equal(tree.root.findAllByType('main').length,0,'cached access cannot outlive the server deadline');
+  assert.equal(tree.root.findByType('aside').props.failed,true);
+  assert.equal(navigations.length,0,'unknown state retains the setup URL');
+ } finally {window.setTimeout=originalTimer;await cleanup()}
+});
+
+test('focus checks share an in-flight access request and explicit rejection still locks immediately',async()=>{
+ fixture('admin','active');let resolve;let requests=0;
+ try {
+  await act(async()=>{tree=Renderer.create(React.createElement(LicenseOnboarding,null,React.createElement('main')))});
+  globalThis.fetch=()=>{requests++;return new Promise(done=>{resolve=done})};
+  await act(async()=>{window.dispatchEvent(new Event('focus'));window.dispatchEvent(new Event('focus'))});
+  assert.equal(requests,1);
+  await act(async()=>window.dispatchEvent(new Event('celikpanel:license-locked')));
+  assert.equal(tree.root.findAllByType('main').length,0);
+  await act(async()=>resolve(Response.json({can_use_panel:true,valid_until:Math.floor(Date.now()/1000)+3600})));
+  assert.equal(tree.root.findAllByType('main').length,0,'superseded response cannot undo rejection');
+  assert.equal(navigations.at(-1)[0],'/activate');
+ }finally{await cleanup()}
+});
+
+test('connection recovery has retry and reload without an activation form or update requests',async()=>{
+ fixture();let reloads=0;window.location={reload(){reloads++}};
+ try {
+  await act(async()=>{tree=Renderer.create(React.createElement(LicenseLockScreen,{checking:false,failed:true,onCheck(){}}))});
+  assert.equal(tree.root.findAllByType('section').length,1);
+  assert.ok(!JSON.stringify(tree.toJSON()).includes('activation'));
+  assert.equal(tree.root.findAllByType('details').length,0);
+  assert.ok(button('license.refresh'));
+  await act(async()=>button('common.reloadPage').props.onClick());assert.equal(reloads,1);
+  assert.equal(calls.length,0);
+ }finally{await cleanup()}
+});
+
+test('license status fetch failure does not ask for a replacement key',async()=>{
+ fixture();globalThis.fetch=async()=>{throw new TypeError('Failed to fetch')};
+ try {
+  await mount(LicensePanel);
+  assert.equal(tree.root.findAllByType('form').length,0);
+  assert.equal(tree.root.findByProps({role:'alert'}).props.children,'license.lockError');
+  assert.ok(button('license.refresh'));
+ }finally{await cleanup()}
+});
+
+
+test('panel address hint only links to safe server metadata and preserves the current port',async()=>{
+ const Hint=await component('PanelAddressHint');
+ for(const hostname of ['panel.example.test','evil.example/path','user@evil.example','*.example.test','',null,'127.0.0.1']) {
+  fixture(); window.location={origin:'https://127.0.0.1:2083',hostname:'127.0.0.1'};
+  globalThis.fetch=async()=>Response.json({hostname});
+  try {
+   await mount(Hint);
+   const links=tree.root.findAllByType('a');
+   assert.equal(links.length,hostname==='panel.example.test'?1:0);
+   if(links.length)assert.equal(links[0].props.href,'https://panel.example.test:2083/');
+  }finally{await cleanup()}
+ }
 });

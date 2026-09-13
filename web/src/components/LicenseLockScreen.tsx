@@ -1,3 +1,4 @@
+import { PanelAddressHint } from './PanelAddressHint';
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
@@ -34,16 +35,21 @@ export function LicenseLockScreen({ checking, failed, onCheck }: { checking: boo
         </header>
         <main className="mx-auto max-w-3xl px-4 py-10 sm:px-8 sm:py-16">
             <p className="mb-5 break-words text-sm text-fg-muted">{user.username}</p>
+            {!failed && <PanelAddressHint />}
             {error && <p role="alert" className="mb-4 text-danger">{t('common.error')}</p>}
-            {failed && <div role="alert" className="mb-5 space-y-3"><p>{t('license.lockError')}</p><Button variant="secondary" onClick={onCheck}>{t('license.refresh')}</Button></div>}
-            {checking ? <div className="flex items-center gap-3"><Spinner /><p>{t('license.lockCheck')}</p></div>
+            {failed ? <section role="alert" className="space-y-5" aria-labelledby="access-recovery-heading">
+                <h1 id="access-recovery-heading" className="text-2xl font-semibold">{t('license.connectionTitle')}</h1>
+                <p className="max-w-prose">{t('license.connectionHelp')}</p>
+                <PanelAddressHint />
+                <div className="flex flex-wrap gap-3"><Button onClick={onCheck}>{t('license.refresh')}</Button><Button variant="secondary" onClick={() => window.location.reload()}>{t('common.reloadPage')}</Button></div>
+            </section> : checking ? <div className="flex items-center gap-3"><Spinner /><p>{t('license.lockCheck')}</p></div>
                 : role === 'admin' ? <LicensePanel locked onContinue={onCheck} />
                     : <section className="space-y-5" aria-labelledby="license-lock-heading"><h1 id="license-lock-heading" className="text-2xl font-semibold">{t('license.tenantTitle')}</h1><p className="max-w-prose">{t('license.tenantHelp')}</p><p className="max-w-prose text-sm text-fg-muted">{t('license.restricted')}</p><Button onClick={onCheck}>{t('license.refresh')}</Button></section>}
-            {!checking && role === 'admin' && <details className="mt-8" onToggle={event => setShowUpdate(event.currentTarget.open)}>
+            {!checking && !failed && role === 'admin' && <details className="mt-8" onToggle={event => setShowUpdate(event.currentTarget.open)}>
                 <summary className="cursor-pointer rounded text-sm font-semibold text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">{t('license.updatePanel')}</summary>
                 {showUpdate && <div className="mt-4"><PanelUpdateCard activation /></div>}
             </details>}
-            <div className="mt-8"><Button variant="secondary" onClick={() => setPassword(true)}>{t('profile.changePassword')}</Button></div>
+            {!failed && <div className="mt-8"><Button variant="secondary" onClick={() => setPassword(true)}>{t('profile.changePassword')}</Button></div>}
         </main>
         {password && <ChangePasswordModal onClose={() => setPassword(false)} />}
         <ToastContainer />

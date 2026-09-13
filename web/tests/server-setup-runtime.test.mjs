@@ -128,7 +128,7 @@ test('a lost start response reconciles exact request identity and never starts t
 test('operation success alone cannot show completion when the server readiness state is not ready',async()=>{
     init('admin',{status:'waiting'});const saved={plan_id:'a'.repeat(32),request_id:'b'.repeat(32),panel_domain:'panel.example.com'};store.set('celikpanel.setup.start.admin',JSON.stringify(saved));const read=fetch;
     globalThis.fetch=async(url,options)=>url.includes('/setup/operation')?Response.json(execution(saved,'succeeded')):read(url,options);
-    try{await mount();assert.ok(JSON.stringify(tree.toJSON()).includes('setup.verificationFailed'));assert.ok(!JSON.stringify(tree.toJSON()).includes('setup.completeTitle'));}finally{await cleanup();}
+    try{await mount();assert.ok(JSON.stringify(tree.toJSON()).includes('setup.verificationFailed'));assert.ok(!JSON.stringify(tree.toJSON()).includes('setup.completeTitle'));assert.ok(!JSON.stringify(tree.toJSON()).includes('setup.operation.succeeded'));}finally{await cleanup();}
 });
 test('execution decoder rejects an unrelated operation and unsafe panel links',()=>{
     const marker={request_id:'b'.repeat(32),plan_id:'a'.repeat(32),panel_domain:'panel.example.com'};
@@ -1064,4 +1064,39 @@ test('route-scoped DNS copy follows language changes without losing the draft or
         assert.equal(tree.root.findByProps({id:'setup-peer_panel_domain'}).props.value,'boston.example.com');
         assert.ok(calls.every(c=>!c.options?.method||c.options.method==='GET'));
     }finally{await cleanup();}
+});
+
+test('final verification stays waiting and manual checks report unchanged, unknown, passed or unavailable evidence without installation',async()=>{
+    for(const outcome of ['action_required','unknown','ready','empty','error']){
+        init('admin',{status:'waiting'});
+        const marker={plan_id:'a'.repeat(32),request_id:'b'.repeat(32),panel_domain:'panel.example.com'};
+        store.set('celikpanel.setup.start.admin',JSON.stringify(marker));
+        const oldCheck={id:'panel_https',state:'action_required',code:'panel_https_required'};
+        const waiting={...execution(marker,'waiting'),phase:'verification',steps:[{id:'verify',kind:'verify',target:'web',status:'succeeded'}],checks:[oldCheck]};
+        const read=fetch;
+        globalThis.fetch=async(url,options)=>url.includes('/setup/operation')?Response.json(waiting):read(url,options);
+        let finish, reject, manual=false;
+        fixture.context.reload=()=>manual?new Promise((resolve,fail)=>{finish=resolve;reject=fail;}):Promise.resolve(state);
+        try{
+            await mount();
+            const row=tree.root.findAllByType('ol').find(item=>item.props['aria-live']==='polite');
+            assert.ok(JSON.stringify(row.findAllByType('span').map(item=>item.props.children.filter(child=>typeof child==='string'))).includes('setup.verifyWaiting'));
+            assert.ok(!JSON.stringify(row.findAllByType('span').map(item=>item.props.children.filter(child=>typeof child==='string'))).includes('setup.operation.succeeded'));
+            manual=true;
+            await act(async()=>{void findButton('setup.verify').props.onClick();});
+            assert.equal(findButton('setup.verifyChecking').props.disabled,true);
+            await act(async()=>{
+                if(outcome==='error')reject(new Error('offline'));
+                else finish({...state,checks:outcome==='empty'?[]:[{id:'mail_identity',state:outcome,code:outcome==='ready'?'ready':outcome==='unknown'?'mail_identity_unavailable':'mail_identity_required'}]});
+            });
+            assert.equal(findButton('setup.verify').props.disabled,false);
+            const message=outcome==='error'||outcome==='empty'?'setup.verificationFailed':outcome==='unknown'?'setup.verifyUnknown':outcome==='ready'?'setup.verifyChecksPassed':'setup.verifyStillWaiting';
+            const result=tree.root.findAllByProps({role:'status'}).find(item=>item.props['aria-atomic']==='true');
+            assert.ok(JSON.stringify(result.findAllByType('p').map(item=>item.props.children).concat(result.findAllByType('li').map(item=>item.props.children))).includes(message),outcome);
+            if(outcome==='unknown'||outcome==='action_required')assert.ok(JSON.stringify(result.findAllByType('p').map(item=>item.props.children).concat(result.findAllByType('li').map(item=>item.props.children))).includes('setup.blocker.mailIdentity'));
+            assert.ok(!JSON.stringify(tree.toJSON()).includes('setup.completeTitle'));
+            assert.ok(calls.every(call=>!call.options?.method||call.options.method==='GET'));
+            assert.equal(store.size,1);
+        }finally{await cleanup();}
+    }
 });

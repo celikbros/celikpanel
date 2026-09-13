@@ -74,6 +74,24 @@ func startPanelHTTP(
 			tlsConfig = server.TLSConfig.Clone()
 		}
 		tlsConfig.Certificates = []tls.Certificate{pair}
+		// Browsers do not send SNI for a literal IP. Keep the original
+		// bootstrap identity for that path across managed certificate changes.
+		// Explicit TLS pairs and owner-provided callbacks remain authoritative.
+		// IP bağlantısında SNI yoktur; başlangıç kimliği korunur. Açık TLS ayarları ve özel geri çağrılar önceliklidir.
+		if tlsConfig.GetCertificate == nil && tlsConfig.GetConfigForClient == nil {
+			if bootstrap := panelIPCertificate(certPath, keyPath); bootstrap != nil {
+				// Go bypasses GetCertificate for an empty SNI when a default
+				// certificate exists, so the default itself must be bootstrap.
+				// Go boş SNI için geri çağrıyı atlayabilir; varsayılan sertifika başlangıç kimliği olmalıdır.
+				tlsConfig.Certificates = []tls.Certificate{*bootstrap}
+				tlsConfig.GetCertificate = func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+					if hello.ServerName == "" || net.ParseIP(hello.ServerName) != nil {
+						return bootstrap, nil
+					}
+					return &pair, nil
+				}
+			}
+		}
 		server.TLSConfig = tlsConfig
 	}
 

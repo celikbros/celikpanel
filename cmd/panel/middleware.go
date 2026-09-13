@@ -186,6 +186,9 @@ func isPublicPath(r *http.Request) bool {
 	// the pending token, not a session, so it too must be public.
 	// login/totp, kimlik-doğrulamasız girişin ikinci adımıdır — oturum değil
 	// bekleme jetonu taşır; o da herkese açık olmalıdır.
+	if r.URL.Path == panelAccessAddressPath && r.Method == http.MethodGet {
+		return true
+	}
 	if r.URL.Path == "/api/v1/auth/login" || r.URL.Path == "/api/v1/auth/demo" || r.URL.Path == "/api/v1/auth/login/totp" {
 		return true
 	}

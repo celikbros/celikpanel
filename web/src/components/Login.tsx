@@ -1,3 +1,4 @@
+import { PanelAddressHint } from './PanelAddressHint';
 import { BrandMark } from './BrandMark';
 import { useState, useEffect } from 'react';
 import { ShieldCheck, Users, User, Eye, EyeOff } from 'lucide-react';
@@ -101,6 +102,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                     <p className="mt-1 text-sm text-fg-muted">{t('login.subtitle')}</p>
                 </div>
 
+                <PanelAddressHint />
                 {pendingToken ? (
                     <form
                         onSubmit={handleTotp}

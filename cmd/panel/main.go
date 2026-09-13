@@ -1123,6 +1123,7 @@ func main() {
 
 	// Authentication routes (login is public; logout/me require a session).
 	// Kimlik doğrulama rotaları (giriş herkese açık; çıkış/me oturum ister).
+	http.HandleFunc(panelAccessAddressPath, panelAccessAddressHandler(certPath, keyPath))
 	http.HandleFunc("/api/v1/auth/login", panel.handleLogin)
 	http.HandleFunc("/api/v1/auth/logout", panel.handleLogout)
 	http.HandleFunc("/api/v1/auth/me", panel.handleMe)

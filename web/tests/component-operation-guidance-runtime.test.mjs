@@ -28,6 +28,7 @@ export const useI18n = () => ({ t: (key, vars={}) => {
     for (const [name,value] of Object.entries(vars)) text=text.replaceAll('{'+name+'}',String(value));
     return text;
 }});
+export const Button = props => React.createElement('button', props);
 export const ErrorBanner = props => React.createElement('error-banner', props);
 export const AlertTriangle=()=>React.createElement('warning-icon');
 export const Loader2=()=>React.createElement('spinner-icon');
@@ -58,7 +59,8 @@ for (const [locale,catalog] of Object.entries({en,tr})) {
                 assert.ok(!text.includes(catalog['services.operation.refreshing']));
                 assert.ok(!text.includes(catalog['services.operation.backgroundHint']));
                 assert.equal(tree.root.findAllByType('spinner-icon').length,0);
-                assert.equal(tree.root.findAllByType('button').length,0,'result verification must not unlock navigation or offer an install retry');
+                assert.equal(tree.root.findAllByType('button').length,interrupted ? 1 : 0,'only full-page reconnection is offered while disconnected');
+                if(interrupted) assert.equal(tree.root.findByType('button').props.children,catalog['common.reloadPage']);
                 const error=tree.root.findByType('error-banner').props.error;
                 assert.equal(error.code,'service_install_failed');
                 assert.equal(error.reason,'inactive_service');
@@ -73,7 +75,11 @@ for (const [locale,catalog] of Object.entries({en,tr})) {
             const text=JSON.stringify(tree.toJSON());
             assert.ok(text.includes(catalog['services.operation.uncertainHint']));
             assert.ok(!text.includes(catalog['services.operation.backgroundHint']));
-            assert.equal(tree.root.findAllByType('button').length,0);
+            assert.equal(tree.root.findAllByType('button').length,1);
+            assert.equal(tree.root.findByType('button').props.children,catalog['common.reloadPage']);
+            let reloads=0; globalThis.window={location:{reload(){reloads++}}};
+            tree.root.findByType('button').props.onClick();
+            assert.equal(reloads,1);
         });
     });
     test(`${locale}: released errors keep recovery actions and explicitly require a new user action`,async()=>{

@@ -66,6 +66,7 @@ const eagerModules = [
   'src/lib/panelUpdateAdmission.ts',
   'src/components/BrandMark.tsx',
   'src/components/Login.tsx',
+  'src/components/PanelAddressHint.tsx',
   'src/components/Layout.tsx',
   'src/components/PageHeader.tsx',
   'src/components/pageHeaderSlot.ts',

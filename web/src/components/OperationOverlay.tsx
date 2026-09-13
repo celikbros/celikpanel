@@ -4,7 +4,7 @@ import { useI18n } from '../i18n';
 import type { ApiError } from '../lib/apiError';
 import { operationError, type ComponentOperation, type InteractionBlockView } from './ComponentOperation';
 import { componentOperationGuidance, componentOperationPhaseKey } from '../lib/componentOperationGuidance';
-import { ErrorBanner } from './ui';
+import { Button, ErrorBanner } from './ui';
 
 type OperationOverlayProps = {
     view: InteractionBlockView | null;
@@ -133,6 +133,10 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
                         {hint}
                     </p>
                 )}
+                {disconnected && <div className="mt-5 space-y-2">
+                    <Button variant="secondary" onClick={() => window.location.reload()}>{t('common.reloadPage')}</Button>
+                    <p className="text-xs leading-5 text-fg-muted">{t('services.operation.reloadHelp')}</p>
+                </div>}
                 {operationID && (
                     <p className="mt-3 font-mono text-xs text-fg-subtle">
                         {view?.operationID ?? t('services.operation.id', { id: operationID })}

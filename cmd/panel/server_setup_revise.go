@@ -133,7 +133,10 @@ func serverSetupExecutionCanRevise(plan serverSetupPlan, execution serverSetupEx
 		return false
 	}
 	if execution.Phase == "verification" {
-		for _, step := range execution.Steps {
+		for index, step := range execution.Steps {
+			if index == len(execution.Steps)-1 && step.Kind == "verify" && step.Status == "pending" && step.OperationID == "" {
+				continue
+			}
 			if step.Status != "succeeded" {
 				return false
 			}
