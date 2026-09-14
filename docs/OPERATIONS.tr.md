@@ -1,13 +1,23 @@
 # İşletim El Kitabı (Runbook)
 
-*Son güncelleme: 30 Ağustos 2026 · [English](OPERATIONS.md)*
+*Yetki/dayanıklılık açıklaması: 14 Eylül 2026; tarihsel işlem temeli: 30 Ağustos 2026 · [English](OPERATIONS.md)*
+
+**Güncel öncelik.** [AGENTS.md](../AGENTS.md), D-022, D-025 ve
+[dayanıklılık sözleşmesi](RESILIENCE-CONTRACT.tr.md) aşağıdaki tarihsel işlemlerden
+önce gelir. Kurulu panel güncellemelerini yalnız kullanıcı CelikPanel'in güncelleme
+ekranından başlatır. SSH/bootstrap örnekleri saklı iç veya tarihsel mekanizmayı
+anlatır; asistana ya da operatöre güncelleme ekranını atlama izni vermez. İndirme
+sürümünü yayımlamak ayrı işlemdir. Kurtarmada önce kullanıcı paneli kullanır;
+panel yeterli değilse tam doğrulanmış desteklenen kullanıcı komutu uygulanır.
+Bu runbook yeni bağımsız kurtarma yürütücüsünü uygulamaz.
 
 Bu belge CelikPanel sürüm dağıtımı ve geri alma işlemlerinin operasyonel tek
 doğruluk kaynağıdır. Strateji [ROADMAP](../ROADMAP.tr.md)'te, mimari kararlar
 [DECISIONS](DECISIONS.tr.md)'ta, katkı kuralları
 [CONVENTIONS](CONVENTIONS.tr.md)'ta bulunur.
 
-Güncel ürün sürümü Alpha52'dir. İncelenmiş kaynak, imzalı ürünler ve portal
+30 Ağustos tarihsel temeli Alpha52'dir; bu güncel yayın veya kurulu sürüm
+iddiası değildir. İncelenmiş kaynak, imzalı ürünler ve portal
 yayını [RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md](RELEASE-EVIDENCE-v0.1.0-alpha.52.tr.md)
 içinde doğrulanmıştır. Ayrı [tarihli canlı durum kaydı](LIVE-STATE-2026-08-30.tr.md),
 iki Alpha52 kurulumunu ve zone öncesi karma DNS çiftini kanıtlar. Tarihsel
@@ -24,13 +34,13 @@ DNSSEC, SSL, posta, güvenlik duvarı, servisler, eklentiler, alan adları,
 kullanıcılar, veritabanları ve diğer panel ayarlarını kullanıcı CelikPanel
 arayüzünden değiştirir.
 
-Dağıtım araçları incelenmiş ve sürümlenmiş CelikPanel artefaktlarını, veritabanı
-migration'larını ve CelikPanel'in sahibi olduğu systemd unit'lerini kurabilir
-veya geri alabilir. Dağıtımın yan etkisi olarak panel ayar API'lerini çağıramaz,
-arayüz işlemi yapamaz, operatörün seçtiği bir servisi kuramaz; canlı DNS, SSL,
-posta, güvenlik duvarı veya servis yapılandırmasını yeniden yazamaz. SSH,
-burada belgelenen dar kapsamlı ürün güncellemesi, bir kerelik bootstrap ve geri
-alma yolları dışında teşhis için yalnız salt-okurdur.
+Yayın araçları incelenmiş imzalı sürümleri indirme portalında yayımlayabilir;
+sahibinin sunucularına kurmaz. Kullanıcı güncellemeyi panelden başlattıktan sonra
+sürümlü ürün, şema ve unit geçişini güvenilen işçi yürütür. Sahibin kendi
+araçlarıyla yönetim yetkisi korunur (D-022). Asistanın tanısı salt-okurdur;
+canlı kurtarma AGENTS.md'deki açık kullanıcı kurtarma kuralına uyar. Ayarları
+sessizce değiştirme, panel API'sini çağırma, güncelleme başlatma veya ilgisiz bir
+geri alma scriptini kestirme yol olarak kullanma.
 
 Üretimdeki bir sorun panel değişikliği gerektiriyorsa kesin arayüz adımını
 açıklayın ve kullanıcının uygulamasını bekleyin. Aynı işlemi arka planda
@@ -58,13 +68,17 @@ bu runbook'u canlı durum önbelleğine çevirmeyin.
 - panel veritabanı: `/var/lib/celikpanel/celikpanel.db`
 - unit'ler: `celikpanel-agent` ve `celikpanel-panel`
 
-Agent'ı durdurmak veya temiz biçimde yeniden başlatmak artık paneli durdurmaz.
-Panel agent'tan sonra sıralanır, onu zayıf bağımlılık olarak ister ve agent geri
-dönerken yeniden dener. Daha sıkı dondurma, güncelleme ve toparlama sırası yine
-incelenmiş ürün scriptlerinin sorumluluğundadır; bu akışı doğaçlama SSH
-komutlarıyla değiştirmeyin.
+Unit'ler Agent her durduğunda paneli durdurmak yerine sıralama/zayıf bağımlılık
+kullanır. Bu, bağımsız kurtarma erişimi değildir: panel hâlâ HTTPS açmadan önce
+ilk Agent bağlantısını ister; güncelleme durumu da Agent'a bağlıdır. D-025 bu
+açıkları kaydeder. Karışık veya doğrulanmamış kurulu durumu yine incelenmiş
+sürüm/kurtarma sözleşmeleri yönetir.
 
 ## 3. Sürüm kapıları
+
+Yaşam döngüsü değişiklikleri ayrıca D-025 ilke/P0 ve kabul incelemesini gerektirir.
+Aşağıdaki komutlar tarihsel geliştirme/hazırlama işlemidir; kurulu paneli
+güncelleme talimatı değildir.
 
 İki sunucu için tek, temiz ve push edilmiş release commit'ini sabitleyin. Her
 dağıtımdan önce tam commit şu kontrolleri geçmelidir:

@@ -1,13 +1,23 @@
 # Operations Runbook
 
-*Last updated: August 30, 2026 · [Türkçe](OPERATIONS.tr.md)*
+*Authority/resilience clarification: September 14, 2026; historical procedure baseline: August 30, 2026 · [Türkçe](OPERATIONS.tr.md)*
+
+**Current precedence.** [AGENTS.md](../AGENTS.md), D-022, D-025 and the
+[resilience contract](RESILIENCE-CONTRACT.md) govern the historical procedures
+below. Installed-panel updates are initiated only by the user in CelikPanel's
+update UI. SSH/bootstrap examples describe retained internal or historical
+mechanics, not permission for an assistant or operator to bypass that UI update
+rule. Publishing a download release is separate. For recovery, prefer the owner
+using the panel; if unavailable, use the exact verified supported owner command.
+No replacement independent recovery executor is implemented by this runbook.
 
 This document is the operational source of truth for releasing and recovering
 CelikPanel. Strategy lives in the [ROADMAP](../ROADMAP.md), architectural
 decisions in [DECISIONS](DECISIONS.md), and contribution rules in
 [CONVENTIONS](CONVENTIONS.md).
 
-The current product release is Alpha52. Its reviewed source, signed artifacts
+The August 30 historical baseline is Alpha52; this is not a current release or
+installed-version assertion. Its reviewed source, signed artifacts
 and portal publication are verified in
 [RELEASE-EVIDENCE-v0.1.0-alpha.52.md](RELEASE-EVIDENCE-v0.1.0-alpha.52.md).
 The separate [dated live-state record](LIVE-STATE-2026-08-30.md) proves both
@@ -25,12 +35,13 @@ The panel user owns every live panel change. DNS, nameservers, DNSSEC, SSL,
 mail, firewall, services, add-ons, domains, users, databases, and other panel
 settings are changed by the user through the CelikPanel UI.
 
-Deployment tooling may install or roll back reviewed, versioned CelikPanel
-artifacts, database migrations, and CelikPanel-owned systemd units. It must not
-call panel setting APIs, click UI actions, install an operator-selected service,
-or rewrite live DNS, SSL, mail, firewall, or service configuration as a side
-effect of deployment. SSH is read-only for diagnosis except for the narrowly
-scoped product update, one-time bootstrap, and rollback paths documented here.
+Publishing tooling may publish reviewed signed releases to the download portal;
+it does not install them on the owner's servers. After the user initiates an
+installed update in the panel, its trusted worker owns the versioned artifact,
+migration and unit transition. Native owner administration remains permitted
+(D-022). Assistant diagnosis is read-only; live recovery follows the explicit
+user-operated recovery rule in AGENTS.md. Never silently change settings, call
+panel APIs, start an update, or use an unrelated rollback script as a shortcut.
 
 If a production problem requires a panel change, explain the exact UI action
 and wait for the user to perform it. Do not reproduce that action in the
@@ -59,12 +70,17 @@ The stable product layout is:
 - panel database: `/var/lib/celikpanel/celikpanel.db`
 - units: `celikpanel-agent` and `celikpanel-panel`
 
-Stopping or cleanly restarting the agent no longer stops the panel. The panel
-orders itself after and weakly wants the agent, then retries while the agent
-returns. Reviewed product scripts still own the stricter freeze, update and
-recovery sequence; do not replace that sequence with ad-hoc SSH commands.
+The units use ordering/weak dependency rather than stopping the panel whenever
+the Agent stops. This is not independent recovery availability: the panel still
+requires its initial Agent connection before opening HTTPS, and update status
+requires the Agent. D-025 records those gaps. Reviewed release/recovery contracts
+still govern mixed or unverified installed state.
 
 ## 3. Release gates
+
+Lifecycle changes also require the D-025 invariant/P0 and acceptance review. The
+commands below are the historical development/staging procedure; they are not
+installed-panel update instructions.
 
 Freeze one clean, pushed release commit for both servers. Before any deployment
 the exact commit must pass:

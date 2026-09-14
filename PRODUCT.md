@@ -28,32 +28,38 @@ being tuned for one and degraded for the others.
 
 ## Product Purpose
 
-A web hosting control panel: the operator installs it on a clean Linux server
-and, from a browser, provisions and runs domains, sites, DNS, mail, databases,
-certificates, backups and the system services beneath them.
+A web hosting control panel acting for the server owner: the operator installs
+it on a Linux server and normally uses a browser to provision and manage domains,
+sites, DNS, mail, databases, certificates, backups and system services. Native
+services remain the owner's infrastructure; CelikPanel does not replace the
+owner's authority to configure or operate them independently (D-022).
 
 It exists as a modern replacement for cPanel and Plesk, which the project's own
 README characterises as carrying twenty years of legacy: long installs, forced
 dependencies, imposed service versions, and crowded interfaces.
 
-Success is that an operator can go from a bare server to a working, secured
-hosting environment through the panel alone, quickly, and can keep it running
-without specialist knowledge.
+Success means routine setup and administration are understandable through the
+panel, with verified results and a supported recovery path when a dependency or
+the panel itself fails. This is a product goal, not a claim of complete recovery
+coverage. The [resilience contract](docs/RESILIENCE-CONTRACT.md) records the
+remaining architecture and acceptance work.
 
 ## Positioning
 
 The mechanism a neighbouring product could not truthfully copy without rebuilding:
 
-- **One statically-compiled Go binary plus an embedded React SPA and SQLite.**
-  No external database, no separate web server, no interpreter required to run
-  the panel itself.
+- **Separate Go panel and agent executables, a React SPA, and SQLite.**
+  The panel serves the built SPA from the installed web directory; it is not
+  embedded in a single combined executable. The panel's own HTTP and database
+  operation does not require a separate web server or external database.
 - **A structural privilege split.** The web-facing panel runs unprivileged on
-  port 2083 and holds no root. A separate root agent, reachable only over a local
-  authenticated Unix socket, is the only component permitted to touch the OS.
-  This is intended to structurally block the classic "web layer to root" panel
-  exploit rather than defend against it by policy.
-- **Modular by install.** Services are installed on demand from the UI; a service
-  that is not installed is not shown. The panel does not drag a fixed stack along.
+  port 2083. Its privileged requests go to a separate root agent over a local
+  authenticated Unix socket, with authorization and resource checks. This limits
+  the web process's authority; it is not proof against every exploit and does
+  not restrict the owner's native administration of the OS.
+- **Modular by install.** Services are installed on demand. Routine management
+  shows installed services; discovery and setup can offer supported additions.
+  The panel does not impose a fixed hosting stack.
 - **Current versions from the OS repositories** rather than vendored older ones,
   with the version choice left to the operator.
 
@@ -64,13 +70,18 @@ The mechanism a neighbouring product could not truthfully copy without rebuildin
   are active and `dnf` is gated in preview (`docs/DECISIONS.md` D-020,
   `docs/DISTRO-SUPPORT.md`).
 - Operators reach the panel over HTTPS on port 2083.
-- **Install, uninstall and configuration always go through the panel API.** SSH
-  is used only for read-only diagnosis. This is a standing operating rule, not a
-  preference: it is what guarantees that an install the panel reports as
-  successful is actually functional (`docs/AUTOPSY.md` A10, A14).
-- **Servers start clean.** Manual intervention on a host is performed only by the
-  operator and is documented afterwards, so that the panel's behaviour on a fresh
-  machine stays the thing being tested.
+- **Routine product workflows use the panel.** Browser-first operation is the
+  default and the ordinary-owner acceptance path. When the interface cannot
+  resolve a failure, use the supported owner recovery path with short,
+  understandable terminal commands. This does not prohibit native owner
+  administration or authorize silent assistant-side repairs.
+- **Installed panel updates are user-only.** The user initiates each update in
+  CelikPanel's update interface. Publishing a release, preparing recovery or
+  permission to continue does not authorize installing it through SSH, scripts,
+  APIs or browser automation (`AGENTS.md`).
+- **Existing hosts and owner changes are preserved.** Clean-install testing is
+  one scenario. Upgrades and recovery must also preserve real existing service
+  state and detect later owner edits instead of silently overwriting them.
 - Two live servers are in use for verification, in different roles and on
   different distributions.
 - The product surface is bilingual (Turkish and English) today. The market target
@@ -78,7 +89,7 @@ The mechanism a neighbouring product could not truthfully copy without rebuildin
 
 ## Capabilities and Constraints
 
-**Working today** (functional; hardening in progress): domain and site
+**Implemented areas** (coverage and hardening vary by adapter): domain and site
 management · PHP version selection and FPM pools · SSL via Let's Encrypt and
 custom certificates · DNS · e-mail accounts and forwarding · databases with
 multi-server support (MariaDB, PostgreSQL) · file manager · backup and restore ·
@@ -94,15 +105,22 @@ service catalogue · signed self-update.
   :25), web (nginx / Apache on :80,:443). Database engines are not exclusive and
   coexist. The UI must be able to express "this cannot be installed because a
   competing engine holds the slot".
-- **A service that is not installed is invisible** in the UI. No empty screens,
-  no disabled menus for absent services.
+- **Installed services lead routine management.** Setup and discovery may show
+  supported additions with their prerequisites; an unavailable adapter must not
+  be presented as an executable promise.
 - **Long-running privileged operations are first-class UI states.** Installing a
   service, switching a DNS engine or applying a signed update are multi-minute
   operations that can be interrupted, and the interface has to represent stage,
   progress, terminal success and terminal failure honestly.
-- **The panel is the only interface.** There is no companion CLI or rescue UI for
-  operators, so any state the product can enter must be explainable and
-  recoverable from the browser.
+- **Recovery coverage is incomplete.** Owner-operated retained-release rollback
+  and incident recovery paths exist, but an authenticated recovery surface that
+  survives failure of the normal Agent or candidate startup is not yet complete.
+  Independent recovery/status and shared UI/CLI contracts are required by D-025,
+  not shipped guarantees.
+- **Workload independence is required, not fully certified.** Native DNS
+  operation has scoped evidence; mail certificate deployment, firewall boot
+  restore and other retention boundaries still need work. See the
+  [owner-independence audit](docs/OWNER-INDEPENDENCE.md).
 
 ## Brand Commitments
 
@@ -132,18 +150,25 @@ identity, and do not remove them either.
 
 ## Product Principles
 
-Derived from the project's own constitution (`ROADMAP.md`), which states these
-are applied in order:
+Derived from the constitution (`ROADMAP.md`) and D-022, D-024 and D-025:
 
-1. **Security by default** — least privilege, secure defaults, nothing ships
-   without authentication.
-2. **Simplicity** — one obvious way to do each thing; saying no is a feature.
-   Applies to the user's path, not to the set of supported backends.
-3. **Speed** — fast API responses, an instant-feeling UI, a fast install.
-4. **Flexibility** — API-first, modular services, the operator's data is never
-   held hostage.
-5. **Everything through the panel** — if the product can do it, the panel can do
-   it; an operation that requires SSH is an unfinished feature.
+1. **Security by default** — authentication, least privilege and exact authority
+   checks remain mandatory, including during recovery.
+2. **Continuity and recovery** — reject the unsafe action at its resource
+   boundary; retain supported authenticated recovery and independent workloads.
+   Each mutation needs observable checkpoints and verified compensation.
+3. **Typed evidence** — unknown, unavailable, absent, rejected and failed are
+   different states. Preserve the accepted operation and its evidence; a timeout
+   cannot invent success, revoke identity or authorize another mutation.
+4. **Simplicity** — one obvious routine path, with a clear supported recovery
+   route. Fewer user decisions must come from reliable defaults and contracts.
+5. **Speed** — responsive interaction and bounded checks; measure setup and
+   recovery rather than claim universal uptime or timing guarantees.
+6. **Flexibility and owner authority** — API-first management, modular native
+   services and portable data. Detect owner changes and preserve them.
+7. **Honest completion** — tests, security review, documentation and the relevant
+   lifecycle acceptance must agree. The open resilience work is not complete
+   merely because one incident correction passes its focused tests.
 
 ## Accessibility & Inclusion
 

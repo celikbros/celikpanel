@@ -8,6 +8,48 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-025 · Dayanıklılık, olay yaması değil temel çalışma sözleşmesidir
+
+*14 Eylül 2026 · Kullanıcının istediği anayasa incelemesi; bağlayıcı yön, uygulama açık*
+
+Kullanıcı, Frankfurt'ta tekrar eden hatalardan sonra sistemin anayasasının
+incelenmesini istedi. Kaynak incelemesi; birbirine bağlı arıza sınırları, anlamı
+karışmış kanıt rolleri, uyumsuz çıktı okuyucuları ve kurtaracağı aday sürüme
+bağımlı kurtarma mekanizması buldu. Benzer hatalar 26 Ağustos'ta da kaydedilmişti.
+Tek hatayı yeniden üreten testin geçmesi bütün yaşam döngüsünün güvenilirliğini
+kanıtlamamıştı.
+
+**Yön.** Panel/Agent yetki ayrımı korunur; normal değişiklik yetkisi, durum
+gözlemi ve kurtarma erişimi ayrılır. Güvensiz eylem etkilenen sınırda durdurulur;
+çalışan yerel hizmetler ve desteklenen sunucu arıza modeli içinde dar, kimlik
+doğrulamalı kurtarma yolu korunur. Bilinmeyen durum; lisans süresi doldu, hizmet
+yok veya iş tamamlandı şeklinde yanlış bir teşhise dönüştürülemez.
+
+Her kalıcı çıktının sürümlü tek bir üretim/okuma/geri yükleme sözleşmesi gerekir.
+Metadata normalleştirmesi dahil her değişiklik; salt-okur keşif, açık kalıcı
+kontrol noktaları, sınırlı devam/telafi ve sonuç kanıtı ister. Kurtarma, normal
+Agent ve aday uygulama başlayamadığında da çalışabilmelidir. Ayrı sürümlenen
+asgari yürütücü ve manifest protokolü önerilir; yerine geçecek mekanizma uygulanıp
+doğrulanana kadar mevcut tam eşleşen saklı sürüm geri alma kuralları sürer.
+Sınırsız kabuk veya yapay zekâyla kanıt düzeltme yolu açılmaz.
+
+[Dayanıklılık sözleşmesi](RESILIENCE-CONTRACT.tr.md); kaynak kanıtını, ilkeleri,
+açık P0 kabul kaydını ve uygulama sırasını içerir. [Anayasa](../ROADMAP.tr.md)
+artık sürekliliği, gerçeği yansıtan durumu ve arıza kanıtını zorunlu tutar. PR
+incelemesi etkilenen sözleşmeleri, taşıma/kurtarma davranışını ve tam test kanıtını
+adlandırmalıdır. Tam destek; kurtarmanın kendisindeki arızalar dahil, geçici gerçek
+sistem ortamında güncelleme ve otomatik geri yükleme denemeleri ister. Acil olay
+düzeltmesi kapsam ve sınırları belirtilerek yayımlanabilir; mimari işi kapatmaz
+ve ilgisiz özellik genişlemesini haklı çıkarmaz.
+
+Bu karar kurulu sunucuyu değiştirmez; yeni yürütücüyü, kurtarma arayüzünü, şema
+ayrımını veya bağımsız hizmet yenilemesini uygulamaz. Alpha80 dar kapsamlı BIND ve
+kurtarma düzeltmesidir. D-021, D-022, D-024, kullanıcının yürüttüğü kurtarma ve
+kurulu paneli yalnız kullanıcının güncellemesi kuralları geçerlidir. Eski tek
+binary, yalnız-panel ve tarihsel bootstrap ifadeleri bu sınırları geçersiz kılamaz.
+
+---
+
 ## D-024 · Her işlem mevcut durumu ve sonraki eylemi açıklar
 
 *13 Eylül 2026 · Kullanıcının onayladığı gereksinim; ürün genelindeki uygulama ve inceleme tamamlanmadı*
@@ -1022,6 +1064,14 @@ daemon'ın otorite olduğunu tahmin etmez.
 
 *9 Temmuz 2026*
 
+**14 Eylül açıklaması.** Panelden ilerleme kuralı ürün kabul disiplinidir;
+sunucu sahibinin kendi araçlarıyla yönetim yetkisini sınırlamaz (D-022). Kurulu
+sunucuda 13 Eylül kullanıcı kurtarma kuralı geçerlidir: önce panel, panel yeterli
+değilse kısa ve doğrulanmış kullanıcı komutları. Bu, gizli asistan müdahalesine
+veya kurulu paneli asistanın güncellemesine izin vermez. Elle kurtarma, ilgili
+ürün akışının tamamlandığının kanıtı değildir. Aşağıdaki ilk karar tarihsel
+bağlamıyla ve bu açıklamayla okunmalıdır.
+
 **Karar.** Debian 13 yeniden kurulumundan itibaren operatör, CelikPanel'i
 gerçek bir müşteri gibi kullanır: her kurulum, her ayar, her domain panelden
 ve kendi eliyle geçer. Geliştirici sunucuyu asla yapılandırmaz — izinle bile.
@@ -1343,6 +1393,14 @@ kendileri derler, gerisini dağıtıma bırakır).
 ## D-001 · Güncelleme ve geri alma: sunucuyu asla sıfırdan kurma
 
 *8 Temmuz 2026 · 28 Temmuz 2026'da değiştirildi*
+
+**Güncel kurulu panel sınırı — 14 Eylül açıklaması.** Aşağıdaki bootstrap
+komutları iç/tarihsel sürüm mekanizmasını belgeler; kurulu paneli SSH üzerinden
+güncelleme izni vermez. 10 Eylül'den beri bütün kurulu panel güncellemelerini
+kullanıcı CelikPanel'in güncelleme arayüzünden başlatır. Yayınlama ve kurma ayrı
+eylemlerdir. D-025'in yeni yürütücüsü uygulanıp doğrulanana kadar, tam eşleşen
+saklı sürümün geri alma yolu desteklenen kullanıcı kurtarması olarak kalır;
+başka sürümün rollback scripti yerine konulamaz.
 
 **Karar.** Üretim güncellemeleri yalnız
 `sudo /bin/bash ./bootstrap-update.sh --normal` ile veya bir kerelik

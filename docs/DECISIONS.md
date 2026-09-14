@@ -8,6 +8,47 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-025 · Resilience is a core contract, not an incident patch
+
+*September 14, 2026 · Owner-requested constitutional audit; required direction, implementation open*
+
+The owner requested examination of the system's constitution after repeated
+Frankfurt failures. The source audit found coupled failure boundaries, ambiguous
+evidence roles, incompatible artifact readers and recovery dependent on the
+candidate it must recover. Similar failures had already been documented on
+August 26. A passing reproducer did not establish whole-lifecycle reliability.
+
+**Direction.** Preserve the Panel/Agent privilege split, while separating normal
+mutation authority, state observation and recovery availability. Stop unsafe
+actions at their affected boundary; preserve working native services and a narrow
+authenticated recovery path within the supported host fault model. Unknown status
+must not become false license expiry, missing service or completed work.
+
+Every durable artifact needs one versioned producer/reader/restore contract.
+Every mutation, including metadata normalization, needs read-only discovery,
+explicit durable checkpoints, bounded continuation/compensation and terminal
+proof. Recovery must be able to outlive ordinary Agent and candidate startup.
+A separately versioned minimal executor and manifest protocol are proposed;
+existing exact retained-release rollback rules continue until that replacement
+is implemented and verified. No unrestricted shell or AI-based evidence repair.
+
+The [resilience contract](RESILIENCE-CONTRACT.md) contains source evidence,
+invariants, the open P0 acceptance register and implementation sequence. The
+[constitution](../ROADMAP.md) now makes survival, truthful state and fault evidence
+mandatory. PR review must name affected contracts, migration/recovery behavior
+and exact test evidence. Full support requires disposable native upgrade and
+automatic-restore drills, including failure during recovery itself. An emergency
+incident correction may ship with explicit scope and limitations; it does not
+close the architectural work or justify unrelated feature expansion.
+
+This decision changes no installed server and does not implement the new
+executor, recovery UI, schema split or independent workload renewal. Alpha80 is a
+scoped BIND/recovery correction. D-021, D-022, D-024, owner-operated recovery and
+user-only installed-panel updates remain binding. Older one-binary, only-panel
+and historical bootstrap wording cannot override these boundaries.
+
+---
+
 ## D-024 · Every operation explains the current state and next action
 
 *September 13, 2026 · User-approved requirement; product-wide implementation and audit incomplete*
@@ -1068,6 +1109,15 @@ which daemon owns authority.
 
 *July 9, 2026*
 
+**September 14 clarification.** The panel-first rule is a product acceptance
+discipline, not a restriction on the owner's native administration (D-022).
+For installed-server recovery, the September 13 user-operated recovery rule
+applies: prefer the panel, then short verified owner-run commands when the panel
+cannot recover. This does not authorize silent assistant-side configuration or
+installed-panel updates. Manual recovery is not evidence that the corresponding
+product flow is complete. Read the original decision below in that historical
+context and subject to this clarification.
+
 **Decision.** From the Debian 13 reinstall onward, the operator uses CelikPanel
 exactly like a real customer: every install, every setting, every domain goes
 through the panel, by their hand. The developer never configures the server —
@@ -1390,6 +1440,14 @@ cPanel/Plesk (they compile PHP themselves, leave the rest to the distro).
 ## D-001 · Update & rollback: never re-image the server
 
 *July 8, 2026 · amended July 28, 2026*
+
+**Current installed-panel boundary — September 14 clarification.** The
+bootstrap commands below document internal/historical release mechanics; they
+do not authorize updating an installed panel through SSH. Since September 10,
+the user initiates every installed-panel update through CelikPanel's update UI.
+Publishing and installing are separate. Exact retained-release rollback remains
+the supported owner-operated recovery path until D-025's replacement executor
+is implemented and verified; another release's rollback must not be substituted.
 
 **Decision.** Production updates start only with
 `sudo /bin/bash ./bootstrap-update.sh --normal`, or the one-time
