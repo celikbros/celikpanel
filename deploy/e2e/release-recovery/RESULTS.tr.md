@@ -2,12 +2,16 @@
 
 *[English](RESULTS.md) · [Deney düzeneği talimatları](README.tr.md)*
 
+Bu kayıt ilk dört imzalı sürüm denemesini korur. Daha sonraki yayımlanmamış
+aday, iki sistemde de sınırlı eski sürüme geri dönüş senaryosunu geçti;
+[birim geçişi kabul kaydına](UNIT-TRANSITION.tr.md) bakın.
+
 Dört geçici QEMU denemesinde gerçekten yayımlanmış dosyalar ve kurulu Agent'ın
 imzalı güncelleme işçisi çalıştırıldı. Debian 13'te güncelleme hatası ve ardından
 otomatik kurtarma hatası yeniden üretildi. Arch'ta bekleyen Alpha80 güncellemesi
 tamamlanarak hizmetler çalışır duruma getirildi. Yeni Arch ve Debian konuklardaki
 süreç öldürme denemeleri ise geri yüklemeden önce başarısız oldu.
-**Hiçbir denemede eski sürüme
+**Bu dört denemenin hiçbirinde eski sürüme
 tam geri yükleme çalışmadı. P0.1 açık kalıyor.**
 
 İlk iki gözlem, yerel olarak `/var/tmp/cp-release-drill-20260914-b` altında saklanan

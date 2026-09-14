@@ -1399,18 +1399,24 @@ rollback_on_exit() {
 validate_running_release
 # shellcheck source=deploy/release-transaction-guard.sh
 source "$TRUSTED_RELEASE_ROOT/deploy/release-transaction-guard.sh"
+# shellcheck source=deploy/release-unit-transition.sh
+source "$TRUSTED_RELEASE_ROOT/deploy/release-unit-transition.sh"
 # shellcheck source=deploy/release-recovery-foundation.sh
 source "$TRUSTED_RELEASE_ROOT/deploy/release-recovery-foundation.sh"
 # shellcheck source=deploy/panel-tls-snapshot.sh
 source "$TRUSTED_RELEASE_ROOT/deploy/panel-tls-snapshot.sh"
 release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" || die "persistent release transaction lock verification failed"
-release_txn_verify_unit_guards \
+# Disk guard proof is independent of the manager's loaded vendor units. A
+# crash between atomic unit publication and daemon-reload is a recoverable
+# transition, admitted below only after the complete snapshot/target proof.
+release_txn_verify_unit_guard_files \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
-    "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" \
-    || die "release transaction service guards differ from the monotonic foundation"
+    "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" \
+    || die "release transaction guard files differ from the monotonic foundation"
+[[ ! -e $RELEASE_RECOVERY_MANIFEST.intent && ! -L $RELEASE_RECOVERY_MANIFEST.intent ]] \
+    || die "recovery foundation publication remains unconfirmed"
 release_recovery_verify_foundation "$TRUSTED_RELEASE_ROOT" "$RELEASE_RECOVERY_RUNNER" "$RELEASE_RECOVERY_UNIT" "$RELEASE_RECOVERY_TIMER" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_RECOVERY_AGENT_DROPIN" "$RELEASE_RECOVERY_PANEL_DROPIN" "$RELEASE_RECOVERY_MANIFEST" "$SYSTEMCTL_BIN" \
     || die "rollback recovery foundation proof failed"
-release_txn_clear_stale_start_authorization "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$RELEASE_TRANSACTION_FD" || die "stale release start authorization could not be cleared"
 rollback_quiesce_present=0
 rollback_active_present=0
 rollback_completion_present=0
@@ -1894,6 +1900,39 @@ case "$transition_state" in
         ;;
 esac
 
+# Every payload and the exact retained target release have now been proved.
+# Admit a mixed old/candidate vendor-unit set only for the restoration body.
+# Completion/scheduler resumes grant no permission to repair manager state.
+unit_root_restore_identity=$(release_txn_systemd_unit_root_identity "$UNIT_DIR") \
+    || die "systemd unit root identity cannot be proved before rollback"
+if [[ $rollback_pending_resume -eq 1 || $rollback_scheduler_only_resume -eq 1 ]]; then
+    release_txn_verify_unit_guards \
+        "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
+        "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" \
+        || die "completed rollback requires fully loaded transaction guards"
+else
+    if [[ $rollback_active_present -eq 1 ]]; then
+        IFS=$'\t' read -r unit_transition_token unit_transition_operation unit_transition_snapshot \
+            < <(release_txn_read_active_fields "$RELEASE_TRANSACTION_ROOT") \
+            || die "cannot bind unit restoration to the active transaction"
+        [[ $unit_transition_snapshot == "$snapshot_name" ]] \
+            || die "active transaction names a different unit restoration snapshot"
+        release_txn_validate_active_token \
+            "$RELEASE_TRANSACTION_ROOT" "$unit_transition_token" "$unit_transition_operation" "$snapshot_name" \
+            || die "active unit restoration transaction proof failed"
+    fi
+    release_unit_validate_transition \
+        "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+        "$snap/units" "$TRUSTED_RELEASE_ROOT/deploy/systemd" "$UNIT_DIR" \
+        "$firewall_state" "$unit_root_restore_identity" \
+        || die "unit restoration cannot preserve unrecognized owner configuration"
+    release_txn_verify_unit_guards_for_restore \
+        "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
+        "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" \
+        || die "loaded transaction guards do not permit unit restoration"
+fi
+release_txn_clear_stale_start_authorization "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$RELEASE_TRANSACTION_FD" || die "stale release start authorization could not be cleared"
+
 rollback_verified_snapshot=$snap
 if [[ $rollback_scheduler_only_resume -eq 1 ]]; then
     release_txn_validate_scheduler_restore_token \
@@ -2125,12 +2164,14 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
         die "private agent state path became unsafe during rollback"
     fi
 
-    unit_root_restore_identity=$(release_txn_systemd_unit_root_identity "$UNIT_DIR") \
-        || die "systemd unit root must be root:root mode 0755 before rollback restore"
-    release_txn_validate_celikpanel_unit_restore_inputs \
+    release_txn_validate_active_token \
+        "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
+        || die "active rollback marker changed before unit restoration"
+    release_unit_validate_transition \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
-        "$snap/units" "$UNIT_DIR" "$firewall_state" "$unit_root_restore_identity" \
-        || die "fixed CelikPanel systemd unit restore inputs are unsafe"
+        "$snap/units" "$TRUSTED_RELEASE_ROOT/deploy/systemd" "$UNIT_DIR" \
+        "$firewall_state" "$unit_root_restore_identity" \
+        || die "fixed CelikPanel systemd unit transition changed before restore"
     for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
         systemctl disable "$unit" >/dev/null 2>&1 || true
     done
@@ -2139,10 +2180,11 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
     release_txn_verify_systemd_unit_root_identity \
         "$UNIT_DIR" "$unit_root_restore_identity" \
         || die "systemd unit root changed while disabling fixed unit files"
-    release_txn_restore_celikpanel_unit_files \
+    release_unit_restore_transition \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
-        "$snap/units" "$UNIT_DIR" "$firewall_state" "$unit_root_restore_identity" \
-        || die "fixed CelikPanel systemd units could not be restored safely"
+        "$snap/units" "$TRUSTED_RELEASE_ROOT/deploy/systemd" "$UNIT_DIR" \
+        "$firewall_state" "$unit_root_restore_identity" \
+        || die "fixed CelikPanel systemd units could not be restored atomically"
     release_txn_verify_systemd_unit_root_identity \
         "$UNIT_DIR" "$unit_root_restore_identity" \
         || die "systemd unit root changed while restoring fixed unit files"

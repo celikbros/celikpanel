@@ -243,6 +243,55 @@ python3 deploy/e2e/release-recovery/arm_update_kill.py --work-root "$LAB_ROOT" -
 Fault collection preserves exact guest/operation events and unit state. It does
 not repair the guest, rearm a fault, or declare the rollback acceptance complete.
 
+### Unpublished committed candidate: native recovery regression
+
+`local_candidate_trial.py` tests an unpublished local build through the existing
+`bootstrap-prebuilt-update.sh` entrypoint and actual retained-release recovery.
+It requires a fresh registered VM with the genuine Alpha75 installation and
+producer seed above. Do not combine it with a signed trial on the same guest.
+Build the archive with `make dist` from a clean committed source export; supply
+its exact SHA256. The controller verifies the complete archive inventory and
+every packaged static source file against that Git commit/tree. This path is
+explicitly **unsigned local-build evidence**, not signed Agent admission coverage;
+it does not sign a release, enroll a key or change production trust policy.
+
+The default `require-unit-reload` checkpoint requires a legitimate old-to-new
+coordinator unit revision. For example, before the baseline capture, add a
+harmless owner comment to the old fixture's coordinator units, reload systemd
+and verify them; preserve that fixture-only change in
+`evidence/<node>/owner-unit-baseline.json`. Preparation records its digest.
+Do not manufacture a pending reload after preparation. Byte-identical units
+may correctly be left untouched, so a missing checkpoint yields no injected
+kill. Choose `--boundary candidate-installed` only for a separately described
+trial that does not claim the stale-manager regression.
+
+Set `CANDIDATE_ARCHIVE` and `CANDIDATE_SHA256` to the verified local artifact.
+Run each mutation once, inspect its result, and start promptly after the exact
+fault reports armed:
+
+```sh
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode prepare --archive "$CANDIDATE_ARCHIVE" --archive-sha256 "$CANDIDATE_SHA256" --boundary require-unit-reload --execute
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode arm --execute
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode start --execute
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode collect
+```
+
+Preparation durably saves the exact artifact and guest intent before staging;
+arming and the sole native start each have separate durable attempt records.
+An ambiguous response permits only collection of the same operation, never a
+second start or rearm. Collection may be repeated with new evidence labels.
+The fault binds the original Bash executable, exact bootstrap command line,
+PID/start ticks, invocation and cgroup. Before SIGKILL, it freezes that updater,
+proves the candidate binaries and installed units/helpers, and verifies both
+the complete snapshot and the retained candidate inventory. Native systemd
+`OnFailure` invokes normal recovery; the fixture neither substitutes a rollback
+body nor signals ordinary panel/Agent services. Collected events and journals
+remain evidence, not an inferred recovery PASS.
+
+The 22 focused offline tests in `test_local_candidate_trial.py` passed when this
+path was added. That count is not whole-CI coverage or proof of a native rollback;
+the actual before/checkpoint/recovery/after workload evidence is still required.
+
 Stop guests while preserving their evidence:
 
 ```sh

@@ -188,13 +188,54 @@ if [[ "$1" == show && "$2" == --property=DropInPaths && "$3" == --value && $# -e
     exit 0
 fi
 if [[ "$1" == show && "$2" == --property=NeedDaemonReload && "$3" == --value && $# -eq 4 ]]; then
-    printf '%s\n' "${FIXTURE_NEEDS_RELOAD:-no}"
+    printf '%s\n' "${FIXTURE_NEEDS_RELOAD-no}"
+    exit 0
+fi
+if [[ "$1" == show && "$3" == --value && $# -eq 4 ]]; then
+    property=${2#--property=}
+    fixture_unit=${FIXTURE_RESTORE_UNIT:-celikpanel-agent.service}
+    if [[ $4 == "$fixture_unit" && $property == "${FIXTURE_RESTORE_SHOW_FAILURE:-}" ]]; then
+        exit 23
+    fi
+    case $property in
+        FragmentPath)
+            fragment=$FIXTURE_SYSTEMD_ROOT/$4
+            [[ $4 != "$fixture_unit" ]] || fragment=${FIXTURE_FRAGMENT_PATH-$fragment}
+            printf '%s\n' "$fragment"
+            ;;
+        ExecCondition)
+            condition="{ path=$FIXTURE_HELPER_PATH ; argv[]=$FIXTURE_HELPER_PATH $FIXTURE_TRANSACTION_ROOT $FIXTURE_RUNTIME_ROOT ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }"
+            mode=normal
+            [[ $4 != "$fixture_unit" ]] || mode=${FIXTURE_CONDITION_MODE:-normal}
+            case $mode in
+                normal) ;;
+                wrong-helper) condition=${condition/"path=$FIXTURE_HELPER_PATH"/path=\/wrong\/helper} ;;
+                wrong-arguments) condition=${condition/"$FIXTURE_TRANSACTION_ROOT $FIXTURE_RUNTIME_ROOT"/\/wrong\/transaction\ \/wrong\/runtime} ;;
+                ignored-error) condition=${condition/ignore_errors=no/ignore_errors=yes} ;;
+                additional) condition+=" { path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; pid=0 }" ;;
+                multiline) condition=${condition/"pid=0"/$'pid=0\n'} ;;
+                missing) condition= ;;
+                *) exit 64 ;;
+            esac
+            printf '%s\n' "$condition"
+            ;;
+        ActiveState|MainPID|ControlPID)
+            case $property in
+                ActiveState) value=inactive; [[ $4 != "$fixture_unit" ]] || value=${FIXTURE_ACTIVE_STATE-inactive} ;;
+                MainPID) value=0; [[ $4 != "$fixture_unit" ]] || value=${FIXTURE_MAIN_PID-0} ;;
+                ControlPID) value=0; [[ $4 != "$fixture_unit" ]] || value=${FIXTURE_CONTROL_PID-0} ;;
+            esac
+            printf '%s\n' "$value"
+            ;;
+        *) exit 64 ;;
+    esac
     exit 0
 fi
 exit 64
 SYSTEMCTL
 chmod 0755 "$tmp/bin/systemctl"
 export FIXTURE_SYSTEMD_ROOT=$systemd_root
+export FIXTURE_HELPER_PATH=$helper_path FIXTURE_TRANSACTION_ROOT=$transaction_root FIXTURE_RUNTIME_ROOT=$runtime_root
 mkdir -m 0755 -- "$tmp/poison"
 cat > "$tmp/poison/systemctl" <<'POISON_SYSTEMCTL'
 #!/usr/bin/env bash
@@ -354,6 +395,173 @@ assert_guard_verify_read_only() {
 }
 assert_guard_verify_read_only "$runtime_preserve_dropin"
 assert_guard_verify_read_only
+
+# Disk trust and manager freshness are separate facts. A pending reload cannot
+# block read-only inspection of exact trusted guard files, and that inspection
+# cannot reload systemd or repair an unexpected owner file.
+# Disk güveni ile yöneticinin güncelliği ayrı olgulardır. Bekleyen reload, tam
+# güvenilir dosyaların salt-okur kontrolünü engellemez; kontrol systemd'yi yeniden
+# yükleyemez veya beklenmeyen sunucu sahibi dosyasını düzeltemez.
+guard_files_fixture_state() {
+    local -a roots=("$transaction_root" "$runtime_parent" "$systemd_root" "$helper_parent")
+    find "${roots[@]}" -xdev \
+        -printf '%y %m %U %G %n %s %D %i %T@ %C@ %p -> %l\n' | LC_ALL=C sort
+    find "${roots[@]}" -xdev -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum
+}
+assert_guard_files_read_only() {
+    local expected=$1 description=$2 additional_dropin=${3:-}
+    local before after status=0 trace_before
+    before=$(guard_files_fixture_state)
+    trace_before=$(guard_artifact_state "$systemctl_trace")
+    release_txn_verify_unit_guard_files \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
+        "$additional_dropin" || status=$?
+    after=$(guard_files_fixture_state)
+    [[ $after == "$before" ]] || fail "guard file inspection mutated fixture state: $description"
+    [[ $(guard_artifact_state "$systemctl_trace") == "$trace_before" ]] ||
+        fail "guard file inspection called systemctl: $description"
+    [[ ! -e $POISON_SYSTEMCTL_SENTINEL ]] ||
+        fail "guard file inspection called PATH-shadow systemctl: $description"
+    case $expected in
+        accept) [[ $status -eq 0 ]] || fail "guard file inspection rejected $description" ;;
+        reject) [[ $status -ne 0 ]] || fail "guard file inspection accepted $description" ;;
+        *) fail "unknown guard file fixture expectation" ;;
+    esac
+}
+assert_guard_files_read_only accept 'canonical agent 09+10 set'
+assert_guard_files_read_only accept 'explicit canonical agent 09+10 set' "$runtime_preserve_dropin"
+assert_guard_files_read_only reject 'a different explicit agent 09 identity' \
+    "$systemd_root/celikpanel-panel.service.d/09-runtime-directory-preserve.conf"
+export FIXTURE_NEEDS_RELOAD=yes
+assert_guard_files_read_only accept 'trusted files before pending manager reload'
+assert_guard_files_read_only accept 'explicit trusted files before pending manager reload' "$runtime_preserve_dropin"
+expect_failure 'file trust incorrectly admitted a pending reload for controlled starts' \
+    release_txn_verify_unit_guards \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
+unset FIXTURE_NEEDS_RELOAD
+
+# The manager still reports a clean loaded set: the unconsumed disk-only reset
+# must be found without first reloading it into the manager.
+# Yönetici temiz bir yüklenmiş liste bildirirken diskteki yeni sıfırlama dosyası,
+# yöneticiye yüklenmeden bulunmalıdır.
+pending_owner_dropin=$systemd_root/celikpanel-panel.service.d/99-reset.conf
+printf '[Service]\nExecCondition=\n' > "$pending_owner_dropin"
+chmod 0644 -- "$pending_owner_dropin"
+assert_guard_files_read_only reject 'an unloaded owner reset drop-in'
+rm -- "$pending_owner_dropin"
+unexpected_guard_entry=$systemd_root/celikpanel-agent.service.d/.unreviewed
+printf 'unreviewed staging bytes\n' > "$unexpected_guard_entry"
+assert_guard_files_read_only reject 'an unexpected hidden regular entry'
+rm -- "$unexpected_guard_entry"
+mkdir -- "$unexpected_guard_entry"
+assert_guard_files_read_only reject 'an unexpected directory entry'
+rmdir -- "$unexpected_guard_entry"
+ln -s -- missing-target "$unexpected_guard_entry"
+assert_guard_files_read_only reject 'an unexpected dangling symlink entry'
+rm -- "$unexpected_guard_entry"
+
+cp -p -- "$helper_path" "$tmp/guard-files-helper.saved"
+chmod 0777 -- "$helper_path"
+assert_guard_files_read_only reject 'unsafe helper permissions'
+chmod 0755 -- "$helper_path"
+printf '\n# unexpected local helper edit\n' >> "$helper_path"
+assert_guard_files_read_only reject 'changed helper bytes'
+cp -p -- "$tmp/guard-files-helper.saved" "$helper_path"
+ln -- "$helper_path" "$tmp/guard-files-helper.alias"
+assert_guard_files_read_only reject 'a hard-linked helper'
+rm -- "$tmp/guard-files-helper.alias"
+guard_files_agent_dropin=$systemd_root/celikpanel-agent.service.d/10-release-transaction-guard.conf
+cp -p -- "$guard_files_agent_dropin" "$tmp/guard-files-agent-dropin.saved"
+chmod 0666 -- "$guard_files_agent_dropin"
+assert_guard_files_read_only reject 'unsafe guard drop-in permissions'
+chmod 0644 -- "$guard_files_agent_dropin"
+printf '[Service]\nExecCondition=\n' > "$guard_files_agent_dropin"
+assert_guard_files_read_only reject 'changed guard drop-in bytes'
+cp -p -- "$tmp/guard-files-agent-dropin.saved" "$guard_files_agent_dropin"
+cp -p -- "$runtime_preserve_dropin" "$tmp/guard-files-preserve.saved"
+printf '[Service]\nRuntimeDirectoryPreserve=no\n' > "$runtime_preserve_dropin"
+assert_guard_files_read_only reject 'changed canonical agent 09 bytes'
+cp -p -- "$tmp/guard-files-preserve.saved" "$runtime_preserve_dropin"
+cp -p -- "$runtime_preserve_dropin" \
+    "$systemd_root/celikpanel-panel.service.d/09-runtime-directory-preserve.conf"
+assert_guard_files_read_only reject 'agent-only 09 installed for panel'
+rm -- "$systemd_root/celikpanel-panel.service.d/09-runtime-directory-preserve.conf"
+assert_guard_files_read_only accept 'restored exact canonical guard set'
+
+# Restore admission may inspect a trusted but stale manager definition only when
+# both coordinators are already stopped. It does not reload or authorize starts.
+# Geri alma kontrolü güvenilir fakat eski yönetici tanımını yalnız iki koordinatör
+# de durmuşken kabul eder. Reload yapmaz veya servis başlatma izni vermez.
+assert_guard_restore_read_only() {
+    local expected=$1 description=$2 additional_dropin=${3:-} before after status=0
+    before=$(guard_files_fixture_state)
+    : > "$systemctl_trace"
+    release_txn_verify_unit_guards_for_restore \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
+        "$tmp/bin/systemctl" "$additional_dropin" || status=$?
+    after=$(guard_files_fixture_state)
+    [[ $after == "$before" ]] || fail "restore guard inspection mutated fixture state: $description"
+    if grep -Ev '^show --property=(DropInPaths|NeedDaemonReload|FragmentPath|ExecCondition|ActiveState|MainPID|ControlPID) --value celikpanel-(agent|panel)\.service$' "$systemctl_trace"; then
+        fail "restore guard inspection performed a non-observational command: $description"
+    fi
+    [[ ! -e $POISON_SYSTEMCTL_SENTINEL ]] ||
+        fail "restore guard inspection called PATH-shadow systemctl: $description"
+    case $expected in
+        accept) [[ $status -eq 0 ]] || fail "restore guard inspection rejected $description" ;;
+        reject) [[ $status -ne 0 ]] || fail "restore guard inspection accepted $description" ;;
+        *) fail 'unknown restore guard fixture expectation' ;;
+    esac
+}
+assert_guard_restore_read_only accept 'exact loaded guard without pending reload'
+export FIXTURE_NEEDS_RELOAD=yes
+assert_guard_restore_read_only accept 'pending reload with both coordinators stopped'
+assert_guard_restore_read_only accept 'pending reload with explicit canonical 09' "$runtime_preserve_dropin"
+for fixture_unit in celikpanel-agent.service celikpanel-panel.service; do
+    export FIXTURE_RESTORE_UNIT=$fixture_unit
+    export FIXTURE_ACTIVE_STATE=failed
+    assert_guard_restore_read_only accept "pending reload with failed $fixture_unit and zero PIDs"
+    for bad_state in active activating unknown ''; do
+        export FIXTURE_ACTIVE_STATE=$bad_state
+        assert_guard_restore_read_only reject "pending reload with $fixture_unit state '$bad_state'"
+    done
+    unset FIXTURE_ACTIVE_STATE
+    export FIXTURE_MAIN_PID=4242
+    assert_guard_restore_read_only reject "pending reload with a live MainPID in $fixture_unit"
+    unset FIXTURE_MAIN_PID
+    export FIXTURE_CONTROL_PID=4243
+    assert_guard_restore_read_only reject "pending reload with a live ControlPID in $fixture_unit"
+    unset FIXTURE_CONTROL_PID
+    export FIXTURE_FRAGMENT_PATH=$systemd_root/owner-controlled.service
+    assert_guard_restore_read_only reject "wrong loaded fragment for $fixture_unit"
+    unset FIXTURE_FRAGMENT_PATH
+    for condition_mode in wrong-helper wrong-arguments ignored-error additional multiline missing; do
+        export FIXTURE_CONDITION_MODE=$condition_mode
+        assert_guard_restore_read_only reject "$condition_mode loaded condition for $fixture_unit"
+    done
+    unset FIXTURE_CONDITION_MODE
+    for unavailable_property in FragmentPath ExecCondition ActiveState MainPID ControlPID; do
+        export FIXTURE_RESTORE_SHOW_FAILURE=$unavailable_property
+        assert_guard_restore_read_only reject "unavailable $unavailable_property for $fixture_unit"
+    done
+    unset FIXTURE_RESTORE_SHOW_FAILURE
+ done
+unset FIXTURE_RESTORE_UNIT
+for unknown_reload in unknown ''; do
+    export FIXTURE_NEEDS_RELOAD=$unknown_reload
+    assert_guard_restore_read_only reject "unknown manager reload state '$unknown_reload'"
+done
+unset FIXTURE_NEEDS_RELOAD
+export FIXTURE_WRONG_DROPIN=1
+assert_guard_restore_read_only reject 'a different loaded drop-in path'
+unset FIXTURE_WRONG_DROPIN
+export FIXTURE_EXTRA_DROPIN=1
+assert_guard_restore_read_only reject 'an additional loaded drop-in'
+unset FIXTURE_EXTRA_DROPIN
+printf '[Service]\nExecCondition=\n' > "$pending_owner_dropin"
+chmod 0644 -- "$pending_owner_dropin"
+assert_guard_restore_read_only reject 'an unloaded owner reset during restore admission'
+rm -- "$pending_owner_dropin"
+assert_guard_restore_read_only accept 'restored exact disk and loaded guard set'
 export FIXTURE_EXTRA_DROPIN=1
 expect_failure "unexpected third drop-in joined the trusted 09+10 set" \
     release_txn_install_and_verify_unit_guards \
@@ -388,6 +596,8 @@ expect_failure "pending manager reload bypassed guard recovery proof" \
     release_txn_verify_unit_guards \
         "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
 unset FIXTURE_NEEDS_RELOAD
+assert_guard_files_read_only accept 'exact 10 set without optional agent 09'
+assert_guard_files_read_only reject 'explicit but absent agent 09' "$runtime_preserve_dropin"
 "$helper_path" "$transaction_root" "$runtime_root" \
     || fail "start guard blocked an ordinary start without a release marker"
 

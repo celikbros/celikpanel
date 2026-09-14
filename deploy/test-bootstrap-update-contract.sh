@@ -1262,7 +1262,9 @@ require_sequence "$INSTALL" \
 require_sequence "$ROLLBACK" \
     'cp -a "$snap/bin" "$BIN_DIR"' \
     'cp -a "$snap/web" "$WEB_DIR"' \
-    'release_txn_restore_celikpanel_unit_files \' \
+    'active rollback marker changed before unit restoration' \
+    'release_unit_validate_transition \' \
+    'release_unit_restore_transition \' \
     'release_txn_verify_systemd_unit_root_identity \' \
     'restore_celikpanel_selinux_labels' \
     'systemctl daemon-reload' \
@@ -3280,6 +3282,133 @@ run_rollback_completion_exit_case \
 rm -rf -- "$rollback_contract_tmp"
 trap - EXIT
 
+# Exercise the installer's snapshot-to-unit admission with real files, complete
+# checksum inventory, active marker and inherited flock. Only the fixed storage
+# prefix is relocated into a private local fixture; no installed service runs.
+# These payload placeholders test the immutable envelope and unit boundary, not
+# DB/TLS semantics or whole native upgrade/rollback acceptance.
+run_apply_only_unit_snapshot_contract() (
+    [[ $EUID -eq 0 ]] || { printf 'SKIP: apply-only snapshot fixture needs root metadata\n'; exit 0; }
+    fixture_root=$(mktemp -d /var/lib/celikpanel-unit-admission.XXXXXXXX)
+    trap 'rm -rf -- "$fixture_root"' EXIT
+    TRUSTED_RELEASE_ROOT=$ROOT
+    source "$ROOT/deploy/release-transaction-guard.sh"
+    source "$ROOT/deploy/release-recovery-foundation.sh"
+    source "$ROOT/deploy/release-unit-transition.sh"
+    definitions=$(extract_function_source "$INSTALL" validate_apply_only_snapshot)
+    definitions=${definitions//\/var\/backups\/celikpanel\/update-snapshots\//$fixture_root\/snapshots\/}
+    eval "$definitions"
+    eval "$(extract_function_source "$INSTALL" publish_apply_only_units)"
+    APPLY_ONLY=1
+    SRC=$fixture_root/release
+    UNIT_DIR=$fixture_root/systemd
+    RELEASE_TRANSACTION_ROOT=$fixture_root/transaction
+    mkdir -m 0700 -- "$SRC" "$fixture_root/snapshots" "$RELEASE_TRANSACTION_ROOT"
+    mkdir -m 0755 -- "$UNIT_DIR" "$SRC/deploy" "$SRC/deploy/systemd"
+    : > "$RELEASE_TRANSACTION_ROOT/transaction.lock"
+    chmod 0600 -- "$RELEASE_TRANSACTION_ROOT/transaction.lock"
+    exec {CELIKPANEL_RELEASE_TRANSACTION_FD}<>"$RELEASE_TRANSACTION_ROOT/transaction.lock"
+    flock -n -x "$CELIKPANEL_RELEASE_TRANSACTION_FD" || die 'apply-only fixture lock unavailable'
+    CELIKPANEL_RELEASE_TRANSACTION_TOKEN=$(release_txn_generate_token)
+    commit=$(printf 'a%.0s' {1..40})
+    tree=$(printf 'b%.0s' {1..40})
+    stamp=20260914T120000Z
+    CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT=$stamp-from-unknown-to-$commit-0123456789abcdef0123456789abcdef
+    release_txn_create_active_marker "$RELEASE_TRANSACTION_ROOT" "$CELIKPANEL_RELEASE_TRANSACTION_FD" \
+        "$CELIKPANEL_RELEASE_TRANSACTION_TOKEN" update "$CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT"
+    snapshot=$fixture_root/snapshots/$CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT
+    mkdir -m 0700 -- "$snapshot" "$snapshot/units" "$snapshot/bin" "$snapshot/web" \
+        "$snapshot/agent-state" "$snapshot/panel-tls"
+    printf '%s\n' "$commit" > "$SRC/release.commit"
+    printf '%s\n' "$tree" > "$SRC/release.tree"
+    printf '6\n' > "$snapshot/snapshot.version"
+    printf 'unknown\n' > "$snapshot/commit"
+    printf '%s\n' "$commit" > "$snapshot/target-release.commit"
+    printf '%s\n' "$tree" > "$snapshot/target-release.tree"
+    printf '%s\n' "$stamp" > "$snapshot/created-at-utc"
+    printf 'present\n' > "$snapshot/firewall-unit.state"
+    for file in celikpanel.db bin/panel bin/agent web/index.html agent-ledger.state \
+        agent-state-root service-states.tsv quiesce-coordinators.tsv snapshot-transition.state release-updater.state; do
+        printf 'opaque payload for envelope validation\n' > "$snapshot/$file"
+    done
+    for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
+        printf '[Unit]\nDescription=old %s\n' "$unit" > "$snapshot/units/$unit"
+        printf '[Unit]\nDescription=candidate %s\n' "$unit" > "$SRC/deploy/systemd/$unit"
+        chmod 0644 -- "$snapshot/units/$unit" "$SRC/deploy/systemd/$unit"
+        cp -- "$snapshot/units/$unit" "$UNIT_DIR/$unit"
+    done
+    SYSTEMCTL_BIN=$fixture_root/systemctl
+    cat > "$SYSTEMCTL_BIN" <<'APPLY_SNAPSHOT_SYSTEMCTL'
+#!/bin/bash
+[[ $# -eq 4 && $1 == show && $2 == --property=ActiveState && $3 == --value &&
+   ( $4 == celikpanel-agent.service || $4 == celikpanel-panel.service ) ]] || exit 71
+printf '%s\n' inactive
+APPLY_SNAPSHOT_SYSTEMCTL
+    chmod 0755 -- "$SYSTEMCTL_BIN"
+    hash_snapshot() {
+        (cd "$snapshot" && LC_ALL=C find . -type f ! -path './SHA256SUMS' -print0 |
+            LC_ALL=C sort -z | xargs -0 sha256sum > SHA256SUMS)
+        chmod 0600 -- "$snapshot/SHA256SUMS"
+    }
+    reset_admission() {
+        unset APPLY_ONLY_SNAPSHOT APPLY_ONLY_FIREWALL_STATE APPLY_ONLY_UNIT_ROOT_IDENTITY \
+            APPLY_ONLY_SNAPSHOT_ROOT_IDENTITY APPLY_ONLY_SNAPSHOT_MANIFEST_SHA
+    }
+    expect_snapshot_rejection() {
+        local reason=$1
+        shift
+        if ( "$@" ); then die "$reason"; fi
+    }
+    hash_snapshot
+    reset_admission
+    validate_apply_only_snapshot
+    [[ $APPLY_ONLY_SNAPSHOT == "$snapshot" && $APPLY_ONLY_FIREWALL_STATE == present ]] \
+        || die 'apply-only snapshot admission did not bind exact inputs'
+    publish_apply_only_units
+    for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
+        cmp -s "$SRC/deploy/systemd/$unit" "$UNIT_DIR/$unit" || die 'apply-only did not publish exact candidate unit'
+    done
+    before=$(stat -Lc '%d:%i:%Y:%Z' "$UNIT_DIR/celikpanel-agent.service")
+    publish_apply_only_units
+    [[ $(stat -Lc '%d:%i:%Y:%Z' "$UNIT_DIR/celikpanel-agent.service") == "$before" ]] \
+        || die 'apply-only candidate retry rewrote an unchanged unit'
+    cp -- "$snapshot/units/celikpanel-panel.service" "$UNIT_DIR/celikpanel-panel.service"
+    publish_apply_only_units
+    cmp -s "$SRC/deploy/systemd/celikpanel-panel.service" "$UNIT_DIR/celikpanel-panel.service" \
+        || die 'apply-only did not reconcile a legitimate mixed unit set'
+    cp -- "$snapshot/SHA256SUMS" "$fixture_root/manifest.before"
+    head -n 1 "$fixture_root/manifest.before" > "$snapshot/SHA256SUMS"
+    expect_snapshot_rejection 'apply-only accepted a partial checksum manifest' validate_apply_only_snapshot
+    cp -- "$fixture_root/manifest.before" "$snapshot/SHA256SUMS"
+    printf 'not in manifest\n' > "$snapshot/unlisted"
+    expect_snapshot_rejection 'apply-only accepted an unlisted snapshot file' validate_apply_only_snapshot
+    rm -- "$snapshot/unlisted"
+    printf 'owner changed prior payload\n' > "$snapshot/celikpanel.db"
+    hash_snapshot
+    expect_snapshot_rejection 'apply-only adopted a changed snapshot after admission' publish_apply_only_units
+    reset_admission
+    printf '%s\n' "$(printf 'c%.0s' {1..40})" > "$snapshot/target-release.tree"
+    hash_snapshot
+    expect_snapshot_rejection 'apply-only accepted a different target tree' validate_apply_only_snapshot
+    printf '%s\n' "$tree" > "$snapshot/target-release.tree"
+    hash_snapshot
+    validate_apply_only_snapshot
+    printf 'owner unit edit\n' > "$UNIT_DIR/celikpanel-agent.service"
+    expect_snapshot_rejection 'apply-only publication overwrote owner unit bytes' publish_apply_only_units
+    grep -Fx 'owner unit edit' "$UNIT_DIR/celikpanel-agent.service" >/dev/null \
+        || die 'apply-only lost owner unit bytes'
+    cp -- "$SRC/deploy/systemd/celikpanel-agent.service" "$UNIT_DIR/celikpanel-agent.service"
+    CELIKPANEL_RELEASE_TRANSACTION_TOKEN=$(release_txn_generate_token)
+    expect_snapshot_rejection 'apply-only accepted another transaction token' validate_apply_only_snapshot
+)
+require_function_sequence "$INSTALL" validate_apply_only_transaction \
+    'apply-only trusted release checksum verification failed' \
+    'source "$root/deploy/release-unit-transition.sh"' \
+    'apply-only active transaction marker proof failed' \
+    'validate_apply_only_snapshot'
+require_function_sequence "$INSTALL" publish_apply_only_units \
+    'validate_apply_only_snapshot' 'release_unit_publish_transition'
+run_apply_only_unit_snapshot_contract
 bash "$ROOT/deploy/test-update-quiesce-capture.sh"
 bash "$ROOT/deploy/test-update-recovery-lock.sh"
 

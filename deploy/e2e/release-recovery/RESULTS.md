@@ -2,11 +2,15 @@
 
 *[Türkçe](RESULTS.tr.md) · [Fixture instructions](README.md)*
 
+This record preserves the first four signed-release trials. A later unpublished
+candidate passed the bounded old-release restoration scenario on both systems;
+see [unit-transition acceptance](UNIT-TRANSITION.md).
+
 Four disposable QEMU trials exercised genuine released binaries and the installed
 Agent's signed update worker. Debian 13 reproduced an update failure followed by
 an automatic recovery failure. Arch recovered operation by finishing the pending
 Alpha80 update. Fresh Arch and Debian kill trials failed before restoration.
-**No trial executed a complete restoration to the old
+**None of these four trials executed a complete restoration to the old
 release. P0.1 remains open.**
 
 The first two observations concern fixture cell `release-recovery__35a6cb18dede09f7`,

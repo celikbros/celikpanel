@@ -61,6 +61,8 @@ web: ## Build the frontend (web/dist)
 	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) run build
 
 release-recovery-contract: ## Exercise persistent release recovery and crash boundaries
+	sudo bash deploy/test-release-transaction-guard.sh
+	sudo bash deploy/test-release-unit-transition.sh
 	sudo bash deploy/test-release-recovery-contract.sh
 
 dist: build ## Assemble an offline initial-install tarball with verified provenance
