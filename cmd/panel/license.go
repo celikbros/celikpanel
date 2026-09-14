@@ -132,7 +132,7 @@ func (p *Panel) handleLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if p.license == nil {
-		writeCodedError(w, http.StatusServiceUnavailable, "license_unavailable", "license service is unavailable", "")
+		writeCodedError(w, http.StatusServiceUnavailable, errCodeLicenseStatusUnavailable, "license status could not be checked", "")
 		return
 	}
 	switch r.Method {
@@ -183,16 +183,16 @@ func (p *Panel) handleLicense(w http.ResponseWriter, r *http.Request) {
 func licenseRecoveryRequest(r *http.Request) bool {
 	// Exact methods and paths only. This exception never grants tenant authority
 	// or relaxes the updater's signed-target, host admission and rollback checks.
-	if caller := currentCaller(r); caller != nil && caller.Role == roleAdmin {
+	if caller := currentCaller(r); caller != nil && caller.hasAccountRole(roleAdmin) {
 		switch r.URL.Path {
-		case panelUpdateCheckPath, panelUpdateStatusPath, "/api/v1/panel/version", hostMutationReadinessPath:
+		case panelUpdateCheckPath, panelUpdateStatusPath, "/api/v1/panel/version", hostMutationReadinessPath, panelRecoveryStatusPath:
 			return r.Method == http.MethodGet
 		case panelUpdateStartPath, panelUpdateAbandonPath:
 			return r.Method == http.MethodPost
 		}
 	}
 	switch r.URL.Path {
-	case "/api/v1/auth/me", panelLicenseAccessPath:
+	case "/api/v1/auth/me", panelLicenseAccessPath, panelAvailabilityPath:
 		return r.Method == http.MethodGet
 	case panelLicensePath:
 		return r.Method == http.MethodGet || r.Method == http.MethodPost
@@ -212,30 +212,44 @@ func (p *Panel) handleLicenseAccess(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	allowed := false
-	var until int64
-	if p.license != nil {
-		_ = p.license.Refresh(r.Context(), false)
-		status := p.license.Status()
-		allowed = status.CanProvision
-		until = min(status.ExpiresAt, status.OfflineUntil)
-	}
+	status := p.panelLicenseStatus(r.Context())
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	_ = json.NewEncoder(w).Encode(struct {
-		CanUsePanel bool  `json:"can_use_panel"`
-		ValidUntil  int64 `json:"valid_until"`
-	}{allowed, until})
+		CanUsePanel bool   `json:"can_use_panel"`
+		ValidUntil  int64  `json:"valid_until"`
+		State       string `json:"state"`
+		Observation string `json:"observation"`
+	}{status.CanProvision, min(status.ExpiresAt, status.OfflineUntil), status.State, status.Observation})
 }
 
 func (p *Panel) allowLicensedPanel(w http.ResponseWriter, r *http.Request) bool {
 	if licenseRecoveryRequest(r) {
 		return true
 	}
-	if p.license != nil && p.license.CanProvision(r.Context()) {
+	status := p.panelLicenseStatus(r.Context())
+	if status.CanProvision {
 		return true
+	}
+	if status.Observation != licensing.ObservationKnown {
+		code := errCodeLicenseStatusUnavailable
+		message := "License status could not be checked. The administrator can check again; this request did not proceed."
+		if status.State == "verification_unavailable" {
+			code = errCodeLicenseVerificationUnavailable
+			message = "Current license verification is unavailable. The administrator can check again; this request did not proceed."
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		writeCodedError(w, http.StatusServiceUnavailable, code, message, "")
+		return false
 	}
 	writeCodedError(w, http.StatusForbidden, "license_required",
 		"Panel access requires an active server license. Existing services and scheduled tasks keep running. The server administrator must activate or renew the license.", "")
 	return false
+}
+
+func (p *Panel) panelLicenseStatus(ctx context.Context) licensing.Status {
+	if p.license == nil {
+		return licensing.Status{State: "status_unavailable", Observation: licensing.ObservationUnavailable}
+	}
+	return p.license.AccessStatus(ctx)
 }

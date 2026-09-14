@@ -79,6 +79,15 @@ func TestLicensePanelGateAcrossRolesStatesAndMethods(t *testing.T) {
 			if state != "unconfigured" {
 				fixture.panel.license = testPanelLicense(t, state)
 			}
+			wantDenied := http.StatusForbidden
+			wantCode := "license_required"
+			if state == "verification_unavailable" || state == "unconfigured" {
+				wantDenied = http.StatusServiceUnavailable
+				wantCode = errCodeLicenseStatusUnavailable
+				if state == "verification_unavailable" {
+					wantCode = errCodeLicenseVerificationUnavailable
+				}
+			}
 			reached := 0
 			handler := fixture.panel.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { reached++; w.WriteHeader(204) }))
 			for _, id := range []int{authzMatrixAdminID, authzMatrixResellerID, authzMatrixCustomerID, authzMatrixAdditionalUserID} {
@@ -86,7 +95,11 @@ func TestLicensePanelGateAcrossRolesStatesAndMethods(t *testing.T) {
 					for _, path := range []string{"/api/v1/domains", "/api/v1/domains/9902/backups", "/api/v2/databases", "/dbtool/tool/", "/api/v1/future-management-route"} {
 						before := reached
 						w := requestWithToken(handler, method, path, fixture.tokens[id])
-						if state != "active" && (w.Code != 403 || reached != before) {
+						want := wantDenied
+						if id == authzMatrixAdditionalUserID && isAdditionalUserRestrictedPath(path) {
+							want = http.StatusForbidden
+						}
+						if state != "active" && (w.Code != want || reached != before) {
 							t.Fatalf("%s %s role %d: %d handler=%d", method, path, id, w.Code, reached-before)
 						}
 						if state == "active" && id == authzMatrixAdminID && w.Code != 204 {
@@ -98,7 +111,7 @@ func TestLicensePanelGateAcrossRolesStatesAndMethods(t *testing.T) {
 			for _, path := range []string{"/api/v1/firewall", "/api/v1/service/install", "/api/v1/panel/update", "/api/v1/config", "/api/v1/system/stats"} {
 				before := reached
 				w := requestWithToken(handler, "POST", path, fixture.tokens[authzMatrixAdminID])
-				if state != "active" && (w.Code != 403 || reached != before || !strings.Contains(w.Body.String(), "license_required")) {
+				if state != "active" && (w.Code != wantDenied || reached != before || !strings.Contains(w.Body.String(), wantCode)) {
 					t.Fatalf("management escaped: %s %d", path, w.Code)
 				}
 			}
@@ -140,7 +153,14 @@ func TestLicenseAccessResponseIsMinimalAndTracksState(t *testing.T) {
 		if state == "active" && result["valid_until"].(float64) > float64(time.Now().Add(time.Minute).Unix()) {
 			t.Fatal("browser deadline exceeds short verification", result)
 		}
-		if len(result) != 2 || result["can_use_panel"] != (state == "active") || w.Header().Get("Cache-Control") != "no-store" {
+		wantState, wantObservation := state, "known"
+		if state == "rejected" {
+			wantState = "invalid"
+		}
+		if state == "verification_unavailable" {
+			wantObservation = "unavailable"
+		}
+		if len(result) != 4 || result["state"] != wantState || result["observation"] != wantObservation || result["can_use_panel"] != (state == "active") || w.Header().Get("Cache-Control") != "no-store" {
 			t.Fatal(state, result)
 		}
 	}
@@ -159,6 +179,10 @@ func TestLicenseUpdateExceptionIsExactAndAdministratorOnly(t *testing.T) {
 		if state != "unconfigured" {
 			fixture.panel.license = testPanelLicense(t, state)
 		}
+		wantLicenseDenied := http.StatusForbidden
+		if state == "verification_unavailable" || state == "unconfigured" {
+			wantLicenseDenied = http.StatusServiceUnavailable
+		}
 		reached := 0
 		handler := fixture.panel.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { reached++; w.WriteHeader(204) }))
 		for path, permitted := range allowed {
@@ -167,7 +191,11 @@ func TestLicenseUpdateExceptionIsExactAndAdministratorOnly(t *testing.T) {
 					before := reached
 					w := requestWithToken(handler, method, path, fixture.tokens[id])
 					want := id == authzMatrixAdminID && method == permitted
-					if (reached != before) != want || (want && w.Code != 204) || (!want && w.Code != 403) {
+					denied := wantLicenseDenied
+					if id != authzMatrixAdminID && isAdminOnlyPath(path) {
+						denied = http.StatusForbidden
+					}
+					if (reached != before) != want || (want && w.Code != 204) || (!want && w.Code != denied) {
 						t.Fatalf("%s %s %s role=%d status=%d", state, method, path, id, w.Code)
 					}
 				}
@@ -179,7 +207,7 @@ func TestLicenseUpdateExceptionIsExactAndAdministratorOnly(t *testing.T) {
 			}
 			for _, suffix := range []string{"/", "/anything"} {
 				w = requestWithToken(handler, permitted, path+suffix, fixture.tokens[authzMatrixAdminID])
-				if reached != before || w.Code != 403 {
+				if reached != before || w.Code != wantLicenseDenied {
 					t.Fatalf("update prefix bypass: %s", path+suffix)
 				}
 			}

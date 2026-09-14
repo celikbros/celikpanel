@@ -17,8 +17,9 @@ import (
 const panelHTTPShutdownTimeout = 25 * time.Second
 
 type panelHTTPStartupGate struct {
-	ready atomic.Bool
-	next  http.Handler
+	ready    atomic.Bool
+	next     http.Handler
+	recovery http.Handler
 }
 
 func newPanelHTTPStartupGate(next http.Handler) *panelHTTPStartupGate {
@@ -36,6 +37,10 @@ func (gate *panelHTTPStartupGate) Open() {
 
 func (gate *panelHTTPStartupGate) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if gate == nil || !gate.ready.Load() {
+		if gate != nil && gate.recovery != nil {
+			gate.recovery.ServeHTTP(w, r)
+			return
+		}
 		w.Header().Set("Retry-After", "1")
 		http.Error(w, "panel startup recovery is still in progress", http.StatusServiceUnavailable)
 		return

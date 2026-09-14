@@ -1741,6 +1741,11 @@ source "$TRUSTED_RELEASE_ROOT/deploy/release-transaction-guard.sh"
 source "$TRUSTED_RELEASE_ROOT/deploy/panel-tls-snapshot.sh"
 # shellcheck source=deploy/release-recovery-foundation.sh
 source "$TRUSTED_RELEASE_ROOT/deploy/release-recovery-foundation.sh"
+# Observation support is optional for historical releases and never participates
+# in update admission. Its bytes are covered by the complete release manifest.
+if [[ -f $TRUSTED_RELEASE_ROOT/deploy/release-recovery-observation.sh ]]; then
+    source "$TRUSTED_RELEASE_ROOT/deploy/release-recovery-observation.sh"
+fi
 
 classify_release_transaction_entries() {
     local entry name
@@ -2584,6 +2589,15 @@ else
     preserve_staging=1
     transaction_started=1
     transaction_phase=quiesce-publishing
+    # Bind the real worker request before a durable transaction can interrupt it.
+    # A missing legacy observation or unsupported kernel hierarchy is unknown;
+    # failure to publish this auxiliary record cannot change the update result.
+    if declare -F release_observation_bind_update >/dev/null &&
+       ! release_observation_bind_update "$RELEASE_TRANSACTION_ROOT" \
+            "$RELEASE_TRANSACTION_FD" "$release_transaction_token" \
+            "$snapshot_name" "$target_release_commit"; then
+        printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+    fi
     release_txn_create_quiesce_marker \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$release_transaction_token" update "$snapshot_name" \

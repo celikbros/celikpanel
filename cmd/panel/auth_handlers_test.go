@@ -35,7 +35,7 @@ type authMeUserRepositoryOverride struct {
 func (r *authMeUserRepositoryOverride) GetByID(ctx context.Context, id int) (*core.User, error) {
 	if user, ok := r.users[id]; ok {
 		if user == nil {
-			return nil, nil
+			return nil, repositories.ErrUserNotFound
 		}
 		clone := *user
 		return &clone, nil

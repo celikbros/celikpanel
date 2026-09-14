@@ -654,6 +654,37 @@ esac
 TRUSTED_RELEASE_ROOT=$RECOVERY_RELEASE
 source "$RECOVERY_RELEASE/deploy/release-transaction-guard.sh"
 source "$RECOVERY_RELEASE/deploy/release-recovery-foundation.sh"
+# Only the exact retained release may provide this optional, non-authorizing
+# observer. Historical releases without a request binding remain unavailable.
+RECOVERY_OBSERVATION_REQUEST=
+RECOVERY_OBSERVATION_COMMIT=
+recovery_observation_exit() {
+    local original_status=$?
+    if [[ $original_status -ne 0 && -n $RECOVERY_OBSERVATION_REQUEST ]]; then
+        release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+            "$RECOVERY_OBSERVATION_COMMIT" recovery_required none recovery_failed ||
+            printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+    fi
+    return "$original_status"
+}
+if [[ -f $RECOVERY_RELEASE/deploy/release-recovery-observation.sh ]]; then
+    source "$RECOVERY_RELEASE/deploy/release-recovery-observation.sh"
+    if [[ -n $TEST_ROOT ]]; then
+        RELEASE_OBSERVATION_ROOT=$TEST_ROOT/var/lib/celikpanel-recovery-observations
+        RELEASE_OBSERVATION_BINDINGS=$TEST_ROOT/var/lib/celikpanel-release-state/recovery-observation-bindings
+    fi
+    if release_observation_bind_recovery "$TRANSACTION_ROOT" "$TRANSACTION_FD" \
+        "$MARKER_TOKEN" "$MARKER_OPERATION" "$MARKER_SNAPSHOT" "$TARGET_COMMIT"; then
+        RECOVERY_OBSERVATION_REQUEST=$OBSERVATION_REQUEST
+        RECOVERY_OBSERVATION_COMMIT=$OBSERVATION_BINDING_COMMIT
+        trap recovery_observation_exit EXIT
+        release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+            "$RECOVERY_OBSERVATION_COMMIT" recovering none recovery_running ||
+            printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+    else
+        printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+    fi
+fi
 release_txn_verify_inherited_lock "$TRANSACTION_ROOT" "$TRANSACTION_FD" ||
     die 'dispatch transaction lock proof failed'
 release_txn_validate_service_states "$RECOVERY_SNAPSHOT_DIR/service-states.tsv" ||
@@ -736,6 +767,19 @@ if [[ $TRANSACTION_PHASE == none ]]; then
     classify_transaction
     [[ $TRANSACTION_PHASE == none ]] ||
         die 'a release transaction marker appeared during final recovery verification'
+    # Success is published only after the native child and the runner's final
+    # foundation, coordinator, transaction-root and empty-marker proofs agree.
+    if [[ -n $RECOVERY_OBSERVATION_REQUEST ]]; then
+        if [[ $ACTION == rollback ]]; then
+            release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+                "$RECOVERY_OBSERVATION_COMMIT" recovered rollback_verified rollback_verified ||
+                printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+        else
+            release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+                "$RECOVERY_OBSERVATION_COMMIT" succeeded update_verified update_verified ||
+                printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+        fi
+    fi
     release_transaction_lock
     exit 0
 fi

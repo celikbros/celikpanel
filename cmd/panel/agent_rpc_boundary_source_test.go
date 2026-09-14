@@ -21,6 +21,7 @@ func TestProductionAgentRPCDispatchIsCentralized(t *testing.T) {
 
 	fset := token.NewFileSet()
 	rawDispatches := 0
+	startupInitializations := 0
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
@@ -32,6 +33,26 @@ func TestProductionAgentRPCDispatchIsCentralized(t *testing.T) {
 		}
 		allowedAgentClientReferences := make(map[token.Pos]struct{})
 		ast.Inspect(file, func(node ast.Node) bool {
+			// The one connection assignment now follows the early recovery
+			// listener. It initializes the client; it is not an RPC dispatch.
+			if assignment, ok := node.(*ast.AssignStmt); ok && name == "main.go" &&
+				enclosingProductionFunctionName(file, assignment) == "main" &&
+				assignment.Tok == token.ASSIGN && len(assignment.Lhs) == 1 && len(assignment.Rhs) == 1 {
+				selector, leftOK := assignment.Lhs[0].(*ast.SelectorExpr)
+				call, rightOK := assignment.Rhs[0].(*ast.CallExpr)
+				if leftOK && rightOK && selector.Sel.Name == "agentClient" && len(call.Args) == 1 {
+					receiver, receiverOK := selector.X.(*ast.Ident)
+					constructor, constructorOK := call.Fun.(*ast.SelectorExpr)
+					argument, argumentOK := call.Args[0].(*ast.Ident)
+					if receiverOK && receiver.Name == "panel" && constructorOK && argumentOK && argument.Name == "rawClient" {
+						pkg, packageOK := constructor.X.(*ast.Ident)
+						if packageOK && pkg.Name == "transport" && constructor.Sel.Name == "NewReconnectingClient" {
+							startupInitializations++
+							allowedAgentClientReferences[selector.Pos()] = struct{}{}
+						}
+					}
+				}
+			}
 			binary, ok := node.(*ast.BinaryExpr)
 			if !ok {
 				return true
@@ -73,6 +94,9 @@ func TestProductionAgentRPCDispatchIsCentralized(t *testing.T) {
 		})
 	}
 
+	if startupInitializations != 1 {
+		t.Fatalf("found %d startup client initializations; want exactly one", startupInitializations)
+	}
 	if rawDispatches != 1 {
 		t.Fatalf("found %d raw panel Agent client dispatches; want exactly the reviewed low-level dispatch", rawDispatches)
 	}

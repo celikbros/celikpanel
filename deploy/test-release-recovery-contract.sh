@@ -65,6 +65,12 @@ install -m 0755 "$REPO_ROOT/deploy/release-recovery-runner.sh" \
     "$SOURCE_ROOT/deploy/release-recovery-runner.sh"
 install -m 0644 "$REPO_ROOT/deploy/release-recovery-foundation.sh" \
     "$SOURCE_ROOT/deploy/release-recovery-foundation.sh"
+install -m 0644 "$REPO_ROOT/deploy/release-recovery-observation.sh" \
+    "$SOURCE_ROOT/deploy/release-recovery-observation.sh"
+# Only account lookup is a fixture seam; no host account/group is created.
+# The actual observer parser, binding, lock and atomic publisher execute.
+printf '\n_release_observation_gid() { printf "0\\n"; }\n' \
+    >>"$SOURCE_ROOT/deploy/release-recovery-observation.sh"
 install -m 0755 "$REPO_ROOT/deploy/release-transaction-start-guard.sh" \
     "$SOURCE_ROOT/deploy/release-transaction-start-guard.sh"
 install -m 0755 "$REPO_ROOT/deploy/release-transaction-guard.sh" \
@@ -378,6 +384,8 @@ make_retained_release() {
         "$release/deploy/release-recovery-runner.sh"
     install -m 0644 "$REPO_ROOT/deploy/release-recovery-foundation.sh" \
         "$release/deploy/release-recovery-foundation.sh"
+    install -m 0644 "$SOURCE_ROOT/deploy/release-recovery-observation.sh" \
+        "$release/deploy/release-recovery-observation.sh"
     install -m 0644 "$REPO_ROOT/deploy/release-recovery.protocol" \
         "$release/deploy/release-recovery.protocol"
     install -m 0644 "$REPO_ROOT/deploy/systemd/celikpanel-release-recovery.service" \
@@ -425,9 +433,37 @@ write_active_marker
 expect_failure zero-release run_recovery
 RELEASE_ONE=$RELEASES_ROOT/${TARGET_COMMIT:0:12}-aaaaaaaaaaaaaaaaaaaaaaaa
 make_retained_release "$RELEASE_ONE"
+# Execute the whole production runner with its existing child/systemd fixtures.
+# This is observer glue coverage, not evidence of a native VM rollback body.
+TRUSTED_RELEASE_ROOT=$SOURCE_ROOT
+source "$SOURCE_ROOT/deploy/release-recovery-observation.sh"
+RELEASE_OBSERVATION_ROOT=$TEST_ROOT/var/lib/celikpanel-recovery-observations
+RELEASE_OBSERVATION_BINDINGS=$TEST_ROOT/var/lib/celikpanel-release-state/recovery-observation-bindings
+OBSERVATION_TEST_REQUEST=77777777777777777777777777777777
+release_observation_publish "$OBSERVATION_TEST_REQUEST" "$TARGET_COMMIT" running none update_running
+(
+    exec 9<>"$TRANSACTION_ROOT/transaction.lock"
+    flock -x 9
+    source "$SOURCE_ROOT/deploy/release-transaction-guard.sh"
+    release_observation_worker_request() { printf '%s\n' 77777777777777777777777777777777; }
+    release_observation_bind_update "$TRANSACTION_ROOT" 9 \
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+        "$SNAPSHOT" "$TARGET_COMMIT"
+)
+observation_binding_before=$(sha256sum "$RELEASE_OBSERVATION_BINDINGS/$SNAPSHOT.binding")
+printf '%s\n' fail >"$TEST_ROOT/child-mode"
+write_active_marker
+expect_failure observed-child-failure run_recovery
+_release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+[[ $OBSERVATION_PHASE == recovery_required && $OBSERVATION_PROOF == none &&
+   $OBSERVATION_REASON == recovery_failed ]] || fail 'runner failure did not publish exact recovery observation'
 printf '%s\n' success >"$TEST_ROOT/child-mode"
 write_active_marker
 run_recovery
+_release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+[[ $OBSERVATION_PHASE == recovered && $OBSERVATION_PROOF == rollback_verified &&
+   $OBSERVATION_PREVIOUS == recovery_failed ]] || fail 'runner terminal proof or prior failure was lost'
+[[ $(sha256sum "$RELEASE_OBSERVATION_BINDINGS/$SNAPSHOT.binding") == "$observation_binding_before" ]] || fail 'runner altered immutable request binding'
 
 printf '%s\n' leave-active >"$TEST_ROOT/child-mode"
 write_active_marker

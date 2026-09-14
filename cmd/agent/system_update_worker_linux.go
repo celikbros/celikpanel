@@ -273,7 +273,7 @@ func inspectInstalledSystemUpdateBuild(ctx context.Context) (string, string, err
 	return version, commit, nil
 }
 
-func (backend *linuxSystemUpdateBackend) RunWorker(ctx context.Context, requestID string, fetcher systemUpdateManifestFetcher) error {
+func (backend *linuxSystemUpdateBackend) RunWorker(ctx context.Context, requestID string, fetcher systemUpdateManifestFetcher) (resultErr error) {
 	backend.mu.Lock()
 	defer backend.mu.Unlock()
 	if fetcher == nil {
@@ -296,6 +296,14 @@ func (backend *linuxSystemUpdateBackend) RunWorker(ctx context.Context, requestI
 	if !state.active() {
 		stateLock.Close()
 		return errors.New("system update request is not active")
+	}
+	if backend.observe != nil {
+		backend.observe(state, "running", "none", "update_running")
+		defer func() {
+			if resultErr != nil {
+				backend.observe(state, "failed", "none", "update_failed")
+			}
+		}()
 	}
 	manifest, err := fetcher.Fetch(ctx, state.TargetVersion, state.TargetOS, state.TargetArch)
 	if err != nil {
@@ -379,7 +387,13 @@ func (backend *linuxSystemUpdateBackend) RunWorker(ctx context.Context, requestI
 	succeeded.Status = systemUpdateSucceeded
 	succeeded.Error = ""
 	succeeded.UpdatedAt = backend.now().UTC().Format(time.RFC3339Nano)
-	return writeSystemUpdateState(backend.stateRoot, &succeeded, backend.writeFault)
+	if err := writeSystemUpdateState(backend.stateRoot, &succeeded, backend.writeFault); err != nil {
+		return err
+	}
+	if backend.observe != nil {
+		backend.observe(&succeeded, "succeeded", "update_verified", "update_verified")
+	}
+	return nil
 }
 
 func stateToSystemUpdateStartRequest(state *systemUpdateState) transport.SystemUpdateStartRequest {
