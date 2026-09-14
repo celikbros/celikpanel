@@ -89,7 +89,9 @@ publication was skipped. Build, vet, Go/race, web, shell/recovery contracts and
 reproducible archive checks passed. The Python fixture suite passed **191/191**.
 Later controller commits did not change the native candidate's production behavior.
 
-The complete checkpoint matrix, signed Agent candidate admission, retained
-candidate-data independence, supported metadata transitions, evidence cleanup,
+The later [material acceptance](RECOVERY-MATERIAL.md) additionally exercises three
+missing retained candidate files during complete-snapshot rollback. The complete
+checkpoint matrix, signed Agent candidate admission, incomplete-capture/forward-
+completion data independence, supported metadata transitions, evidence cleanup,
 external certificate renewal, mail and native secondary-DNS workload matrix remain
 open. These results do not close P0.1–P0.5 and are not a published production release.

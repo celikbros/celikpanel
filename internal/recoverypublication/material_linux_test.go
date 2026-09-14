@@ -161,6 +161,65 @@ func TestMaterialMissingDoesNotDowngradeV2Authority(t *testing.T) {
 		t.Fatalf("runner can downgrade: %v", err)
 	}
 }
+func TestMaterialMissingRejectsOrphanPublishedWithoutMutation(t *testing.T) {
+	for _, journal := range []string{"update-bin", "update-web", "rollback-bin", "rollback-web"} {
+		for _, receipt := range []string{"complete", "empty"} {
+			t.Run(journal+"/"+receipt, func(t *testing.T) {
+				f := newMaterialFixture(t)
+				path := filepath.Join(filepath.Dir(f.journal()), journal)
+				if err := os.MkdirAll(path, 0700); err != nil {
+					t.Fatal(err)
+				}
+				raw := []byte("format=celikpanel-resource-publication-v1\nintent=" + strings.Repeat("f", 64) + "\n")
+				if receipt == "empty" {
+					raw = nil
+				}
+				write(t, filepath.Join(path, "published"), raw, 0600)
+				before := readTree(t, f.Root, f.Root)
+				c := f.config()
+				c.stopped = func() error { t.Fatal("reader requested stopped services"); return nil }
+				m, err := readMaterial(f.Request.Snapshot, c)
+				if m != nil {
+					m.close()
+				}
+				if err == nil || errors.Is(err, ErrMaterialAbsent) {
+					t.Fatalf("orphan committed receipt admitted as legacy absence: %v", err)
+				}
+				if !before.equal(readTree(t, f.Root, f.Root)) {
+					t.Fatal("read changed owner state or evidence")
+				}
+				if err = prepareRecoveryMaterial(f.Request, f.config()); err == nil || errors.Is(err, ErrMaterialAbsent) {
+					t.Fatalf("preparation accepted orphan committed receipt: %v", err)
+				}
+				if !before.equal(readTree(t, f.Root, f.Root)) {
+					t.Fatal("preparation changed owner state or evidence")
+				}
+			})
+		}
+	}
+}
+
+func TestMaterialMissingPreservesUncommittedJournalDebris(t *testing.T) {
+	f := newMaterialFixture(t)
+	path := f.journal()
+	if err := os.MkdirAll(path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(path, ".intent-"+strings.Repeat("e", 32)), []byte("interrupted intent write"), 0600)
+	write(t, filepath.Join(path, ".published-"+strings.Repeat("f", 32)), []byte("interrupted receipt write"), 0600)
+	if err := os.Mkdir(filepath.Join(path, ".stage-"+strings.Repeat("a", 32)), 0700); err != nil {
+		t.Fatal(err)
+	}
+	before := readTree(t, f.Root, path)
+	if _, err := readMaterial(f.Request.Snapshot, f.config()); !errors.Is(err, ErrMaterialAbsent) {
+		t.Fatalf("uncommitted debris became publication authority: %v", err)
+	}
+	prepareMaterial(t, f)
+	if !before.equal(readTree(t, f.Root, path)) {
+		t.Fatal("uncommitted evidence changed or was adopted")
+	}
+}
+
 func TestMaterialMalformedNeverLegacyFallback(t *testing.T) {
 	for _, fault := range []string{"json", "data-content", "data-mode", "extra-file", "symlink", "snapshot", "token", "material-sha-intent"} {
 		t.Run(fault, func(t *testing.T) {

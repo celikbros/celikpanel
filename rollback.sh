@@ -857,6 +857,72 @@ verify_independent_recovery_material() {
         || die "independent recovery data identity changed"
 }
 
+# This fixed-path check can only refuse admission. It does not parse or adopt
+# material authority. A successful parent listing distinguishes absence from
+# an unsafe/unreadable path; unrelated snapshot records are not inspected.
+rollback_material_path_state() {
+    local parent=/var/lib component found metadata key
+    [[ $snapshot_name =~ ^[0-9]{8}T[0-9]{6}Z-from-unknown-to-[0-9a-f]{40}-[0-9a-f]{32}$ ]] \
+        || die "recovery material snapshot identity is unavailable"
+    validate_root_trusted_dir_chain "$parent"
+    key=$(printf '%s' "$snapshot_name" | sha256sum) \
+        || die "recovery material snapshot key is unavailable"
+    key=${key%% *}
+    [[ $key =~ ^[0-9a-f]{64}$ ]] || die "recovery material snapshot key is invalid"
+    for component in celikpanel-release-state recovery-material v1 "$key"; do
+        found=$(find "$parent" -mindepth 1 -maxdepth 1 -name "$component" -printf '%f\n') \
+            || die "recovery material path could not be inspected; preserve the evidence"
+        if [[ -z $found ]]; then
+            printf '%s\n' absent
+            return 0
+        fi
+        [[ $found == "$component" ]] || die "recovery material path identity is ambiguous"
+        parent=$parent/$component
+        validate_root_trusted_dir_chain "$parent"
+        metadata=$(stat -Lc '%u:%g:%a' -- "$parent") \
+            || die "recovery material directory metadata is unavailable"
+        [[ $metadata == 0:0:* ]] || die "recovery material directory must be root-owned"
+        if [[ $component == v1 || $component == "$key" ]]; then
+            [[ $metadata == 0:0:700 ]] || die "recovery material directory must be private"
+        fi
+    done
+    printf '%s\n' present
+}
+
+# New-token historical rollback has no authority over material belonging to the
+# original update. Existing material-backed recovery uses the selected runtime,
+# never the candidate script. Run this before any marker or service mutation.
+preflight_rollback_material_admission() {
+    local state reader=/usr/libexec/celikpanel/recovery result status=0
+    state=$(rollback_material_path_state) || die "recovery material admission is unavailable"
+    if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+        [[ $state == present ]] || die "independent recovery material is missing"
+        verify_independent_recovery_material
+        return 0
+    fi
+    if [[ $state == present ]]; then
+        if [[ $rollback_active_present == 1 || $rollback_pending_resume == 1 ||
+              $rollback_scheduler_only_resume == 1 ]]; then
+            die "this transaction requires independent recovery; use sudo /usr/libexec/celikpanel/recovery recover"
+        fi
+        die "a new rollback cannot reuse an earlier transaction's recovery material; preserve the snapshot and use a supported recovery plan"
+    fi
+    if [[ $rollback_active_present == 1 || $rollback_pending_resume == 1 ||
+          $rollback_scheduler_only_resume == 1 ]]; then
+        # A missing material directory is not legacy absence when its original
+        # token still has v2 publication authority or corrupt committed receipts.
+        # Reuse the shared reader; an older/incompatible reader is not absence.
+        validate_root_trusted_dir_chain "${reader%/*}"
+        [[ -f $reader && ! -L $reader && $(readlink -e -- "$reader") == "$reader" &&
+           $(stat -Lc '%u:%g:%a:%h' -- "$reader") == 0:0:755:1 ]] \
+            || die "compatible independent recovery reader is unavailable; preserve the operation"
+        result=$("$reader" material-root --snapshot "$snapshot_name" 9<&"$RELEASE_TRANSACTION_FD") \
+            || status=$?
+        [[ $status == 3 && -z $result ]] \
+            || die "legacy recovery material absence could not be proved; use sudo /usr/libexec/celikpanel/recovery recover"
+    fi
+}
+
 print_rollback_retry() {
     if [[ -n ${RECOVERY_RUNTIME_ROOT:-} ]]; then
         echo "!! Retry / Yeniden deneyin: sudo /usr/libexec/celikpanel/recovery recover" >&2
@@ -1717,6 +1783,7 @@ snapshot_nonce=${BASH_REMATCH[3]}
 snap="$SNAP_ROOT/$snapshot_name"
 [[ -d "$snap" && ! -L "$snap" ]] || die "snapshot does not exist or is unsafe: $snap"
 validate_root_trusted_dir_chain "$snap"
+preflight_rollback_material_admission
 
 # Snapshot payloads must be plain directories and regular files. Symlinks would
 # make checksum verification and privileged restore target different objects.

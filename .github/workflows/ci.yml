@@ -127,6 +127,7 @@ jobs:
       - run: sudo env PATH="$PATH" GOTOOLCHAIN=local bash deploy/test-rollback-ledger-preservation.sh
       - run: sudo bash deploy/test-rollback-reboot-runtime.sh
       - run: sudo bash deploy/test-recovery-resource-shell-contract.sh
+      - run: sudo bash deploy/test-rollback-material-admission.sh
       - run: sudo bash deploy/test-release-recovery-observation.sh
       - run: sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./internal/recoveryobs -count=1
       - name: Verify independent recovery runtime and offline checker boundaries

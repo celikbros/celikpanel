@@ -24,7 +24,7 @@ karşılaştırma dosyaları ve üç ürün servisinin unit dosyaları bulunur. 
 Agent/Panel/web içeriği ve aday install/rollback girişleri kopyalanmaz. Saklanan
 script baytları karşılaştırma verisidir; kod ayrı seçili kurtarma ortamından
 çalışır. Bin/web yayınlama kaydı v2, kurtarma verisinin özetine bağlanır. Verisi
-olmayan tam v1 işlem eski okuyucuyu kullanmaya devam eder.
+olmayan tam v1 işlem, uyumlu seçili okuyucuyla eski yorumunu kullanmaya devam eder.
 
 Hazırlık; native root, FD 9 üzerinde tutulan işlem kilidi, tam aktif güncelleme,
 durmuş koordinatörler, doğrulanmış kaynak/yedek ağaçları, değişmemiş eski kurulu
@@ -51,6 +51,17 @@ Seçili program, koordinatörler durmadan önce
 desteklediğini bildirmelidir. Eski seçili ortam korunur; güncelleme bu kesintiden önce reddedilir.
 Bu dilim yeni bir kurtarma ortamını otomatik olarak seçili hâle getirmez.
 
+Bu sözleşme kabul edilmiş aynı işlemi sürdürür. İşlem tamamlandıktan sonra eski
+bir yedeğe yeni geri alma başlatmak farklı bir token gerektirir; bu dilim o yolu
+kabul etmez. Yedeğin kurtarma verisi varsa doğrudan geri alma yeni işaretçi
+oluşturmadan veya servisleri durdurmadan reddedilir. Eski token yeniden kullanılmaz,
+yedek kanıt uydurulmaz. Gerçek eski v1 geri alma yolu ayrı kalır. Yeni işlem olarak
+tarihsel geri alma kabulü, seçili kurtarma ortamının yükseltilmesiyle birlikte
+açık bir uyumluluk işidir. Yeni doğrudan geri alma scripti, mevcut eski işlem için
+verinin gerçekten yokluğunu seçili okuyucuyla kanıtlamayı da gerektirir; eski
+uyumsuz ortam bu yüzden kesintiden önce reddedebilir. Değişmemiş tarihsel saklanan
+scriptlerin eski yolu ayrıdır.
+
 Kapalı CLI komutları dahili root girişleridir: `verify-material-support`,
 `prepare-recovery-material`, `material-root`. Yeni güncelleme başlatamaz, çağıranın
 verdiği token veya çıktı dizinini kabul edemez, sahip doğrulamasını atlayamaz.
@@ -68,8 +79,11 @@ Geçici VM düzeneği, kurulu aday kontrol noktasından sonra saklanan adayın t
 dosyasını (`rollback.sh`, `bin/agent`, `web/dist/index.html`) karantinaya alıp tam
 güncelleyici sürecini öldürebilir. Asılları korur; hata enjeksiyonunun kurulu
 ürünleri, yedeği ve kurtarma ortamını değiştirmediğini doğrular. Özel deney kayıtları
-ürün kurtarma yetkisi değildir. Yeni hata için gerçek sistem sonucu henüz bekliyor;
-ayrı bir kabul kaydında bildirilecektir.
+ürün kurtarma yetkisi değildir. [Gerçek sistem kabulü](../deploy/e2e/release-recovery/RECOVERY-MATERIAL.tr.md),
+bu dosyalar yokken Arch'ta kurtarma SIGKILL ve Debian 13'te reboot sonrasında
+otomatik geri almanın geçtiğini kaydeder. Tam veritabanı eşitliği gözlenmedi: eski
+satırlar korundu, sonraki ölçümler eklendi. Kabul kaydı bu sonucu ve kalan
+hizmet/hata kapsamını ayırır.
 
 Tamamlanmamış yedek alma ve güncellemeyi ileri yönde tamamlama hâlâ saklanan aday
 verisini gerektirir. Bütün kontrol noktaları, imzalı Agent kabulü, seçili kurtarma

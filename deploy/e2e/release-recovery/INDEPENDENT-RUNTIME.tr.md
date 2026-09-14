@@ -89,7 +89,9 @@ yayımlanmadı. Derleme, vet, Go/race, web, shell/kurtarma sözleşmeleri ve yen
 üretilebilir arşiv kontrolü geçti. Python düzeneği **191/191** testi geçti.
 Sonraki denetleyici commit'leri yerel adayın üretim davranışını değiştirmedi.
 
-Tam aşama matrisi, imzalı Agent aday kabulü, korunan aday verisinden bağımsızlık,
-desteklenen metadata geçişleri, kanıt temizliği, dış sertifika yenilemesi, mail
-ve yerel ikincil DNS hizmet matrisi açıktır. Bu sonuçlar P0.1–P0.5 maddelerini
+Sonraki [veri kabulü](RECOVERY-MATERIAL.tr.md), tam yedekten geri almada saklanan
+adayın üç dosyasının eksikliğini de sınar. Tam aşama matrisi, imzalı Agent kabulü,
+eksik yedek/ileri tamamlama veri bağımsızlığı, desteklenen metadata geçişleri,
+kanıt temizliği, dış sertifika yenilemesi, mail ve yerel ikincil DNS hizmet matrisi
+açıktır. Bu sonuçlar P0.1–P0.5 maddelerini
 kapatmaz; yayımlanmış üretim sürümü değildir.

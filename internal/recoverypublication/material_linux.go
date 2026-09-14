@@ -812,10 +812,17 @@ func refuseMissingMaterialIntent(c config, token string) error {
 			return e
 		}
 		raw, e := readPrivateFile(journal, "intent.json", maxIntent)
-		journal.Close()
 		if errors.Is(e, unix.ENOENT) {
+			// A committed receipt without its intent is corrupt evidence, not
+			// legacy absence. Reject it before rollback can stop services.
+			_, receiptErr := readPrivateFile(journal, "published", 4096)
+			journal.Close()
+			if !errors.Is(receiptErr, unix.ENOENT) {
+				return ErrUnavailable
+			}
 			continue
 		}
+		journal.Close()
 		var record intent
 		if e != nil || decodeExact(raw, &record) != nil || record.Schema != Schema || record.MaterialSHA != "" {
 			return ErrUnavailable

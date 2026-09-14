@@ -24,7 +24,8 @@ foundation comparison files and the three product service units. Candidate
 Agent/Panel/web payloads and candidate install/rollback entrypoints are not copied.
 Saved script bytes are comparison data; execution remains in the separately
 selected recovery kit. Bin/web publication uses intent v2 bound to the material
-record digest. An exact v1 transaction without material keeps its legacy reader.
+record digest. With a compatible selected reader, an exact v1 transaction without
+material keeps its legacy interpretation.
 
 Preparation requires native root, the held release lock on FD 9, the exact active
 update, stopped coordinators, verified source/snapshot trees, unchanged old
@@ -52,6 +53,17 @@ with `verify-material-support --layout snapshot-name-sha256-v1` before coordinat
 An older selected kit is retained and the update refuses before that downtime;
 this slice does not automatically promote a replacement recovery kit.
 
+This contract resumes the same accepted transaction. A fresh historical rollback
+after that transaction has completed has a different token and is not admitted
+by this slice. When its snapshot has recovery material, direct rollback refuses
+before creating a new marker or stopping services; it does not reuse the old
+token or fabricate replacement evidence. Genuine legacy v1 rollback remains
+separate. New-operation historical rollback admission is an open compatibility
+item, alongside selected-kit promotion. The new direct rollback script also
+requires the selected reader to prove material absence for an existing legacy
+transaction; an older incompatible kit may therefore refuse before downtime.
+Unchanged historical retained scripts keep their separate legacy path.
+
 The closed CLI commands are internal root entrypoints: `verify-material-support`,
 `prepare-recovery-material` and `material-root`. They cannot start a new update,
 accept caller-supplied transaction tokens, choose an output directory, or bypass
@@ -70,7 +82,11 @@ The disposable VM fixture can quarantine exactly the retained candidate's
 checkpoint, then kill the exact updater. It preserves originals and verifies
 that installed products, snapshot and runtime were not changed by the injection.
 Its private records are test evidence, never product recovery authority.
-Native results for this new fault are pending and will be recorded separately.
+[Native acceptance](../deploy/e2e/release-recovery/RECOVERY-MATERIAL.md) records
+successful automatic rollback with those files absent, plus recovery SIGKILL on
+Arch and reboot on Debian 13. Full database equality was not observed: old rows
+were retained and later metrics were added. The acceptance record distinguishes
+those results and remaining workload/fault coverage.
 
 Incomplete snapshot capture and update completion still require retained
 candidate data. The full checkpoint matrix, signed Agent admission, selected-kit
