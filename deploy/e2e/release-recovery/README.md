@@ -11,6 +11,10 @@ update/automatic rollback and native workload acceptance remain required by the
 
 ## Recorded native results
 
+Later scoped records cover [independent material](RECOVERY-MATERIAL.md),
+[runtime promotion](RUNTIME-PROMOTION.md) and [forward completion](FORWARD-COMPLETION.md).
+They retain the earlier failures below and do not close the full matrix.
+
 The [2026-09-14 result record](RESULTS.md) contains the exact operations,
 artifacts, snapshots and private-evidence digests for genuine QEMU trials:
 

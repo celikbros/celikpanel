@@ -2512,7 +2512,17 @@ require_sequence "$UPDATE" \
 # Kanonik panel kontrolleri sağlıklı dolu WAL'ı kabul eder. Kanonik DB'de yalnız
 # aşağıdaki iki cold postcondition immutable checker kullanabilir.
 require_literal "$UPDATE" 'healthy coordinator may retain a non-empty SQLite WAL'
-require_count "$UPDATE" '--check-service-operations-idle-wal-aware' 9
+# Independent forward completion needs the whole target schema/history proof,
+# while the eight ordinary idle probes retain their WAL-aware queue contract.
+# Bağımsız tamamlama bütün hedef şema/geçmiş kanıtını ister; sekiz olağan boşluk
+# kontrolünün WAL-aware kuyruk sözleşmesi ayrı kalır.
+require_count "$UPDATE" '--check-service-operations-idle-wal-aware' 8
+require_count "$UPDATE" '--check-completed-update-database-wal-aware' 1
+require_function_sequence "$UPDATE" run_panel_migrations_offline \
+    'if [[ -n ${RECOVERY_RUNTIME_ROOT:-} ]]; then' \
+    '"$PREFLIGHT_PANEL" --check-completed-update-database-wal-aware' \
+    'return 0' \
+    '"$BIN_DIR/panel" --migrate-only'
 require_count "$UPDATE" '--check-pre-ledger-service-operations-idle-wal-aware' 6
 require_regex_count "$UPDATE" '^[[:space:]]*"\$\{RECOVERY_PANEL_CHECKER:-\$BIN_DIR/panel\}" --check-service-operations-idle[[:space:]]*\\$' 1
 require_regex_count "$UPDATE" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 1

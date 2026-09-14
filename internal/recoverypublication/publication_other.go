@@ -9,3 +9,6 @@ func ProbeCurrentResources() error { return ErrUnavailable }
 
 func PrepareRecoveryMaterial(Request) error         { return ErrUnavailable }
 func VerifyRecoveryMaterial(string) (string, error) { return "", ErrUnavailable }
+
+func VerifyCompletionMaterial(string) (string, error) { return "", ErrUnavailable }
+func VerifyInstalledCompletion(string) error          { return ErrUnavailable }

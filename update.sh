@@ -50,6 +50,7 @@ BOOTSTRAP_PRE_LEDGER=0
 BOOTSTRAP_SCHEMA17=0
 TRUSTED_RELEASE_ROOT="${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}"
 RECOVERY_RUNTIME_ROOT="${CELIKPANEL_RECOVERY_RUNTIME_ROOT:-}"
+RECOVERY_MATERIAL_ROOT="${CELIKPANEL_RECOVERY_MATERIAL_ROOT:-}"
 CODE_ROOT=
 RECOVERY_PANEL_CHECKER=
 RECOVERY_AGENT_CHECKER=
@@ -322,7 +323,8 @@ prepare_independent_recovery_runtime() {
     # Ask the selected executable itself after verified enrollment/promotion.
     # A writer cannot infer capability solely from its own source version.
     /usr/libexec/celikpanel/recovery verify-material-support --layout snapshot-name-sha256-v1 \
-        || die "selected recovery runtime does not support recovery material v1; panel services have not been stopped"
+        --schema celikpanel/recovery-material/v2 \
+        || die "selected recovery runtime does not support completion recovery material v2; panel services have not been stopped"
 }
 
 prepare_and_acquire_release_transaction_lock() {
@@ -652,8 +654,78 @@ validate_recovery_code_root() {
     CODE_ROOT=$runtime
 }
 
+# Completion data is bound to the same durable update, never supplied as code.
+# Tamamlama verisi aynı kalıcı güncellemeye bağlıdır; çalıştırılabilir kod değildir.
+verify_independent_completion_material() {
+    [[ -n $RECOVERY_MATERIAL_ROOT ]] || return 0
+    local material_data_root
+    material_data_root=$("$CODE_ROOT/bin/recovery" completion-material-root \
+        --snapshot "$RECOVERY_EXPECTED_SNAPSHOT" 9<&"$RELEASE_TRANSACTION_FD") \
+        || die "completion recovery material changed; preserve this operation and its evidence"
+    [[ $material_data_root == "$RECOVERY_MATERIAL_ROOT" &&
+       $material_data_root == "$TRUSTED_RELEASE_ROOT" ]] \
+        || die "completion recovery data identity changed"
+}
+
+# A v2 completion proof still needs the exact durable transaction marker. Recheck
+# after controlled starts and scheduler restoration, before consuming that marker.
+# Saved runtime/enablement is checked without starting or repairing any service.
+verify_independent_completion_terminal() {
+    [[ -n $RECOVERY_MATERIAL_ROOT ]] || return 0
+    verify_saved_enablement
+    verify_saved_runtime_states
+    verify_installed_release_artifacts
+}
+
+# A direct retained updater cannot bypass a material-backed completion failure.
+# Only proven absence or fully verified v1 data permits the legacy path.
+preflight_completion_material_admission() {
+    [[ $release_completion_present == 1 || $release_scheduler_present == 1 ]] || return 0
+    if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+        verify_independent_completion_material
+        return 0
+    fi
+    local result status=0 reader=/usr/libexec/celikpanel/recovery
+    validate_root_trusted_dir_chain "${reader%/*}"
+    [[ -f $reader && ! -L $reader && $(readlink -e -- "$reader") == "$reader" &&
+       $(stat -Lc '%u:%g:%a:%h' -- "$reader") == 0:0:755:1 ]] \
+        || die "compatible completion recovery reader is unavailable; preserve the operation"
+    local snapshot
+    if [[ $release_completion_present == 1 ]]; then
+        IFS=$'\t' read -r _ _ snapshot < <(release_txn_read_pending_fields "$RELEASE_TRANSACTION_ROOT")
+    else
+        IFS=$'\t' read -r _ _ snapshot < <(release_txn_read_scheduler_restore_fields "$RELEASE_TRANSACTION_ROOT")
+    fi
+    result=$("$reader" completion-material-root --snapshot "$snapshot" 9<&"$RELEASE_TRANSACTION_FD") \
+        || status=$?
+    [[ ( $status == 3 || $status == 6 ) && -z $result ]] \
+        || die "this completion requires independent recovery; use sudo /usr/libexec/celikpanel/recovery recover"
+}
+
 validate_trusted_release() {
     local root canonical relative updater entry owner mode permissions version
+    if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+        validate_recovery_code_root update.sh
+        [[ -n $RECOVERY_RUNTIME_ROOT && $RECOVER_EXISTING_TRANSACTION == 1 &&
+           $RECOVERY_EXPECTED_OPERATION == update &&
+           ( $RECOVERY_EXPECTED_PHASE == completion ||
+             $RECOVERY_EXPECTED_PHASE == completion-scheduler ||
+             $RECOVERY_EXPECTED_PHASE == scheduler ) &&
+           $RECOVERY_MATERIAL_ROOT =~ ^/var/lib/celikpanel-release-state/recovery-material/v1/[0-9a-f]{64}/data$ &&
+           $TRUSTED_RELEASE_ROOT == "$RECOVERY_MATERIAL_ROOT" ]] \
+            || die "completion data requires the exact independent late-update transaction"
+        verify_independent_completion_material
+        trusted_release_commit=$(cat -- "$TRUSTED_RELEASE_ROOT/release.commit")
+        trusted_release_tree=$(cat -- "$TRUSTED_RELEASE_ROOT/release.tree")
+        PREFLIGHT_PANEL=$CODE_ROOT/bin/panel-checker
+        PREFLIGHT_AGENT=$CODE_ROOT/bin/agent-checker
+        SCHEMA17_BRIDGE=$CODE_ROOT/bin/schema17-bridge
+        RECOVERY_PANEL_CHECKER=$PREFLIGHT_PANEL
+        RECOVERY_AGENT_CHECKER=$PREFLIGHT_AGENT
+        validate_preflight_binary "$SCHEMA17_BRIDGE" schema17-bridge
+        verify_independent_completion_material
+        return 0
+    fi
     [[ "$TRUSTED_RELEASE_ROOT" == /* ]] || die "trusted release root must be absolute"
     canonical=$(readlink -e -- "$TRUSTED_RELEASE_ROOT") || die "trusted release root is unavailable"
     [[ "$canonical" == "$TRUSTED_RELEASE_ROOT" ]] || die "trusted release root contains an alias"
@@ -1451,29 +1523,36 @@ validate_pending_update_snapshot() {
 verify_installed_release_artifacts() {
     validate_preflight_binary "$BIN_DIR/panel" installed-panel
     validate_preflight_binary "$BIN_DIR/agent" installed-agent
-    cmp -s "$TRUSTED_RELEASE_ROOT/bin/panel" "$BIN_DIR/panel" \
-        || die "installed panel does not match the trusted release"
-    cmp -s "$TRUSTED_RELEASE_ROOT/bin/agent" "$BIN_DIR/agent" \
-        || die "installed agent does not match the trusted release"
-    validate_root_trusted_dir_chain "$WEB_DIR"
-    if find "$WEB_DIR" -type l -print -quit | grep -q .; then
-        die "installed web tree contains a symbolic link"
+    if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+        verify_independent_completion_material
+        "$CODE_ROOT/bin/recovery" verify-installed-completion \
+            --snapshot "$RECOVERY_EXPECTED_SNAPSHOT" 9<&"$RELEASE_TRANSACTION_FD" \
+            || die "installed completion payload differs from its publication proof; preserve the operation"
+    else
+        cmp -s "$TRUSTED_RELEASE_ROOT/bin/panel" "$BIN_DIR/panel" \
+            || die "installed panel does not match the trusted release"
+        cmp -s "$TRUSTED_RELEASE_ROOT/bin/agent" "$BIN_DIR/agent" \
+            || die "installed agent does not match the trusted release"
+        validate_root_trusted_dir_chain "$WEB_DIR"
+        if find "$WEB_DIR" -type l -print -quit | grep -q .; then
+            die "installed web tree contains a symbolic link"
+        fi
+        if find "$WEB_DIR" ! -type d ! -type f -print -quit | grep -q .; then
+            die "installed web tree contains a special filesystem object"
+        fi
+        cmp -s \
+            <(cd "$TRUSTED_RELEASE_ROOT/web/dist" && \
+                LC_ALL=C find . -mindepth 1 -printf '%y\t%p\n' | LC_ALL=C sort) \
+            <(cd "$WEB_DIR" && \
+                LC_ALL=C find . -mindepth 1 -printf '%y\t%p\n' | LC_ALL=C sort) \
+            || die "installed web tree structure does not match the trusted release"
+        cmp -s \
+            <(cd "$TRUSTED_RELEASE_ROOT/web/dist" && \
+                LC_ALL=C find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
+            <(cd "$WEB_DIR" && \
+                LC_ALL=C find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
+            || die "installed web tree does not match the trusted release"
     fi
-    if find "$WEB_DIR" ! -type d ! -type f -print -quit | grep -q .; then
-        die "installed web tree contains a special filesystem object"
-    fi
-    cmp -s \
-        <(cd "$TRUSTED_RELEASE_ROOT/web/dist" && \
-            LC_ALL=C find . -mindepth 1 -printf '%y\t%p\n' | LC_ALL=C sort) \
-        <(cd "$WEB_DIR" && \
-            LC_ALL=C find . -mindepth 1 -printf '%y\t%p\n' | LC_ALL=C sort) \
-        || die "installed web tree structure does not match the trusted release"
-    cmp -s \
-        <(cd "$TRUSTED_RELEASE_ROOT/web/dist" && \
-            LC_ALL=C find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
-        <(cd "$WEB_DIR" && \
-            LC_ALL=C find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
-        || die "installed web tree does not match the trusted release"
     [[ -f "$RELEASE_UPDATER" && ! -L "$RELEASE_UPDATER" ]] \
         || die "installed reviewed release updater is missing or unsafe"
     [[ "$(stat -Lc '%u:%g:%a:%h' -- "$RELEASE_UPDATER")" == 0:0:755:1 ]] \
@@ -1810,7 +1889,7 @@ wait_for_post_apply_mutation_idle() {
 run_panel_migrations_offline() {
     if [[ -n ${RECOVERY_RUNTIME_ROOT:-} ]]; then
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \
+            "$PREFLIGHT_PANEL" --check-completed-update-database-wal-aware \
             || die "independent recovery cannot prove the completed panel database; candidate migration is not executed"
         return 0
     fi
@@ -1956,6 +2035,7 @@ publish_release_recovery_intent() {
 
 release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" || die "persistent release transaction lock verification failed"
 classify_release_transaction_entries
+preflight_completion_material_admission
 if [[ $release_marker_count -eq 0 ]]; then
     [[ -z $RECOVERY_RUNTIME_ROOT ]] \
         || die "independent recovery cannot initiate a new update"
@@ -2009,7 +2089,11 @@ scheduler_recovery_exit() {
            release_txn_validate_scheduler_restore_token \
                "$RELEASE_TRANSACTION_ROOT" "$scheduler_recovery_token" \
                update "$scheduler_recovery_snapshot"; then
-            echo "!! Runtime completion remains durable; exact Certbot scheduler restoration is safely retryable." >&2
+            if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+                echo "!! Update completion is unconfirmed; the exact scheduler marker and recovery evidence are retained. Resolve the reported check, then run sudo /usr/libexec/celikpanel/recovery recover to retry this operation." >&2
+            else
+                echo "!! Runtime completion remains durable; exact Certbot scheduler restoration is safely retryable." >&2
+            fi
             return "$status"
         fi
         if [[ "$scheduler_recovery_restored" -eq 1 &&
@@ -2062,6 +2146,7 @@ if [[ "$release_scheduler_present" -eq 1 && "$release_completion_present" -eq 0 
     panel_tls_restore_certbot_scheduler "$pending_snapshot_path/panel-tls" \
         || die "pending update Certbot scheduler state could not be restored"
     scheduler_recovery_restored=1
+    verify_independent_completion_terminal
     release_txn_remove_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$scheduler_recovery_token" update "$scheduler_recovery_snapshot" \
@@ -2107,7 +2192,11 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
                         || { stop_release_coordinators_fail_closed; return "$status"; }
                 fi
                 release_release_mutation_lock >/dev/null 2>&1 || true
-                echo "!! Runtime completion is exact and durable; Certbot scheduler restoration is safely retryable." >&2
+                if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+                    echo "!! Update completion is unconfirmed; the exact scheduler marker and recovery evidence are retained. Resolve the reported check, then run sudo /usr/libexec/celikpanel/recovery recover to retry this operation." >&2
+                else
+                    echo "!! Runtime completion is exact and durable; Certbot scheduler restoration is safely retryable." >&2
+                fi
                 return "$status"
             fi
             if [[ $pending_scheduler_restored -eq 1 &&
@@ -2198,6 +2287,8 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
         || die "pending update marker changed before offline migration"
     run_panel_migrations_offline
     verify_installed_release_artifacts
+    # An observation for operators; this line grants no recovery authority.
+    printf '%s\n' 'CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start'
     verify_saved_enablement
     release_txn_validate_pending_token \
         "$RELEASE_TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
@@ -2234,6 +2325,7 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
             || die "pending update panel is not active"
     fi
 
+    verify_independent_completion_terminal
     verify_saved_runtime_states
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
@@ -2253,6 +2345,7 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
     release_txn_validate_pending_token \
         "$RELEASE_TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
         || die "pending update marker changed before durable completion"
+    verify_independent_completion_terminal
     pending_completion_verified=1
     release_txn_mark_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
@@ -2274,6 +2367,7 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
     panel_tls_restore_certbot_scheduler "$pending_snapshot_path/panel-tls" \
         || die "pending update Certbot scheduler state could not be restored"
     pending_scheduler_restored=1
+    verify_independent_completion_terminal
     release_txn_remove_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$pending_token" update "$pending_snapshot" \
@@ -3428,6 +3522,8 @@ release_txn_mark_completion_pending \
     || die "cannot mark update completion pending"
 run_panel_migrations_offline
 verify_installed_release_artifacts
+# An observation for operators; this line grants no recovery authority.
+printf '%s\n' 'CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start'
 verify_saved_enablement
 release_txn_validate_pending_token \
     "$RELEASE_TRANSACTION_ROOT" "$release_transaction_token" update "$snapshot_name" \

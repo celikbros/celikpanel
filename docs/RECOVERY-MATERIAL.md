@@ -3,7 +3,8 @@
 *September 14, 2026 · [Türkçe](RECOVERY-MATERIAL.tr.md) · D-025 / P0.3*
 
 This source slice extends the [independent runtime](RECOVERY-RUNTIME.md) with a
-separate data contract for rollback from a complete v6 snapshot. It does not
+separate data contract for rollback from a complete v6 snapshot. Its v2 extension
+also supports [pending update completion](RECOVERY-FORWARD-COMPLETION.md). It does not
 claim the entire resilience exit matrix or install an update on any server.
 
 ## Boundary and formats
@@ -13,13 +14,15 @@ candidate archive's complete retained file tree. Missing candidate files could
 therefore prevent restoration from an intact old snapshot.
 
 Before the first schema or product apply, the selected recovery executable now
-seals `celikpanel/recovery-material/v1` under the fixed private recovery-material
+seals a versioned recovery-material record under the fixed private recovery-material
 root, indexed directly by SHA-256 of the canonical snapshot name. Unrelated
 historical records are not scanned. The record binds the exact transaction token hash, v6 snapshot name and
 manifest digest, candidate provenance, old/new product tree descriptions, and a
 fixed inventory of recovery data. Snapshot format 6 is unchanged.
 
-The data contains release provenance, recovery protocol and sequence policy,
+Original record schema v1 remains readable. New preparation writes v2, which adds
+`libexec/get.sh` as comparison data; the `recovery-material/v1` directory layout
+is unchanged. The data contains release provenance, recovery protocol and sequence policy,
 foundation comparison files and the three product service units. Candidate
 Agent/Panel/web payloads and candidate install/rollback entrypoints are not copied.
 Saved script bytes are comparison data; execution remains in the separately
@@ -49,7 +52,9 @@ downgraded. The full existing snapshot database/TLS/units and runtime checks rem
 mandatory. Successful file restoration alone is not recovery completion.
 
 The selected executable must confirm the exact `snapshot-name-sha256-v1` layout
-with `verify-material-support --layout snapshot-name-sha256-v1` before coordinator stop.
+and v2 record with
+`verify-material-support --layout snapshot-name-sha256-v1 --schema celikpanel/recovery-material/v2`
+before coordinator stop.
 An older selected kit is retained and the update refuses before that downtime;
 this material slice does not itself promote a replacement recovery kit. The
 separate [runtime promotion contract](RECOVERY-RUNTIME-PROMOTION.md) defines that
@@ -61,7 +66,8 @@ by this slice. When its snapshot has recovery material, direct rollback refuses
 before creating a new marker or stopping services; it does not reuse the old
 token or fabricate replacement evidence. Genuine legacy v1 rollback remains
 separate. New-operation historical rollback admission is an open compatibility
-item, alongside selected-kit promotion. The new direct rollback script also
+item. Selected-kit promotion has its separate contract and native acceptance.
+The new direct rollback script also
 requires the selected reader to prove material absence for an existing legacy
 transaction; an older incompatible kit may therefore refuse before downtime.
 Unchanged historical retained scripts keep their separate legacy path.
@@ -90,6 +96,7 @@ Arch and reboot on Debian 13. Full database equality was not observed: old rows
 were retained and later metrics were added. The acceptance record distinguishes
 those results and remaining workload/fault coverage.
 
-Incomplete snapshot capture and update completion still require retained
-candidate data. The full checkpoint matrix, signed Agent admission, selected-kit
-promotion, metadata migrations and evidence cleanup remain open. P0.3 is partial.
+Incomplete snapshot capture still requires retained candidate data. The
+[forward completion extension](RECOVERY-FORWARD-COMPLETION.md) records its separate
+source and acceptance boundary. The full checkpoint matrix, signed Agent
+admission, metadata migrations and evidence cleanup remain open. P0.3 is partial.

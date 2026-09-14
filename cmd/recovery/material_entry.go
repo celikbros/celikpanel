@@ -12,7 +12,8 @@ import (
 )
 
 // Internal material commands accept no token or arbitrary output location.
-// Only an actually absent material returns 3; invalid evidence never falls back.
+// Only absent material returns 3. The completion reader returns 6 for fully
+// verified v1 data. Invalid evidence never permits either compatibility path.
 func dispatchMaterial(args []string, uid int, execute func(string, recoverypublication.Request) (string, error), out io.Writer, report func(string)) int {
 	if uid != 0 {
 		report("Owner authentication is required. Use your root or authorized sudo session.")
@@ -21,7 +22,8 @@ func dispatchMaterial(args []string, uid int, execute func(string, recoverypubli
 	var request recoverypublication.Request
 	switch {
 	case len(args) == 3 && args[0] == "verify-material-support" && args[1] == "--layout" && args[2] == "snapshot-name-sha256-v1":
-	case len(args) == 3 && args[0] == "material-root" && args[1] == "--snapshot" && recoverypublication.ValidSnapshot(args[2]):
+	case len(args) == 5 && args[0] == "verify-material-support" && args[1] == "--layout" && args[2] == "snapshot-name-sha256-v1" && args[3] == "--schema" && args[4] == recoverypublication.MaterialSchemaV2:
+	case len(args) == 3 && (args[0] == "material-root" || args[0] == "completion-material-root" || args[0] == "verify-installed-completion") && args[1] == "--snapshot" && recoverypublication.ValidSnapshot(args[2]):
 		request.Snapshot = args[2]
 	case len(args) == 9 && args[0] == "prepare-recovery-material" && args[1] == "--snapshot" && args[3] == "--snapshot-manifest" && args[5] == "--candidate-root" && args[7] == "--candidate-manifest":
 		request = recoverypublication.Request{Snapshot: args[2], SnapshotManifest: args[4], CandidateRoot: args[6], CandidateManifest: args[8]}
@@ -33,13 +35,16 @@ func dispatchMaterial(args []string, uid int, execute func(string, recoverypubli
 	}
 	root, err := execute(args[0], request)
 	if err != nil {
-		if args[0] == "material-root" && errors.Is(err, recoverypublication.ErrMaterialAbsent) {
+		if (args[0] == "material-root" || args[0] == "completion-material-root") && errors.Is(err, recoverypublication.ErrMaterialAbsent) {
 			return exitUnavailable
+		}
+		if args[0] == "completion-material-root" && errors.Is(err, recoverypublication.ErrLegacyCompletionMaterial) {
+			return 6
 		}
 		report("Recovery material could not be verified. Preserve this operation and its evidence; no alternative data was adopted.")
 		return exitOutput
 	}
-	if args[0] == "material-root" {
+	if args[0] == "material-root" || args[0] == "completion-material-root" {
 		if !filepath.IsAbs(root) || filepath.Clean(root) != root || strings.ContainsAny(root, "\r\n\x00") {
 			return exitOutput
 		}
@@ -65,6 +70,10 @@ func runMaterial(command string, request recoverypublication.Request) (string, e
 		err = recoverypublication.PrepareRecoveryMaterial(request)
 	case "material-root":
 		root, err = recoverypublication.VerifyRecoveryMaterial(request.Snapshot)
+	case "completion-material-root":
+		root, err = recoverypublication.VerifyCompletionMaterial(request.Snapshot)
+	case "verify-installed-completion":
+		err = recoverypublication.VerifyInstalledCompletion(request.Snapshot)
 	default:
 		return "", recoveryruntime.ErrUnavailable
 	}

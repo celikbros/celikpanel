@@ -93,7 +93,7 @@ func TestMaterialDataContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer m.close()
-	if m.record.Schema != MaterialSchema {
+	if m.record.Schema != MaterialSchemaV2 {
 		t.Fatal("schema")
 	}
 	for _, name := range materialFiles {
@@ -330,7 +330,7 @@ func TestMaterialMarkerPhasesAndNoWrite(t *testing.T) {
 			if m != nil {
 				m.close()
 			}
-			allowed := phase == "active" || phase == "completion" || phase == "completion-scheduler" || phase == "scheduler"
+			allowed := phase == "active" || phase == "completion" || phase == "completion-scheduler" || phase == "scheduler" || phase == "update-completion"
 			if (err == nil) != allowed {
 				t.Fatalf("phase %s: %v", phase, err)
 			}

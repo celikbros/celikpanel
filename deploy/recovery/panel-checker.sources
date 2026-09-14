@@ -1,4 +1,5 @@
 cmd/panel/recovery_check_entry.go
+cmd/panel/recovery_completion_database.go
 cmd/panel/config.go
 cmd/panel/open_read_only_noatime_linux.go
 cmd/panel/service_operation_idle_check.go

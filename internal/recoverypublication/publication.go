@@ -27,8 +27,15 @@ type Request struct {
 // intent returns a different error and must never select legacy fallback.
 var ErrMaterialAbsent = errors.New("recovery material is absent")
 
+// ErrLegacyCompletionMaterial is returned only after verifying a v1 material
+// and its completed product publications. Its data cannot replace the retained
+// candidate during forward completion because it lacks the reviewed updater.
+var ErrLegacyCompletionMaterial = errors.New("verified legacy material requires retained candidate completion data")
+
 const MaterialSchema = "celikpanel/recovery-material/v1"
+const MaterialSchemaV2 = "celikpanel/recovery-material/v2"
 const MaterialIntentSchema = "celikpanel/recovery-resource-intent/v2"
+const MaterialNoopIntentSchema = "celikpanel/recovery-resource-noop-intent/v1"
 
 var ErrUnavailable = errors.New("recovery publication unavailable; preserve resource evidence")
 var ErrUnsupportedMetadata = errors.New("program metadata is not supported by this recovery protocol (ACL, capabilities or SELinux labels); preserve metadata and operation evidence")

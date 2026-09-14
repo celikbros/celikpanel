@@ -50,7 +50,9 @@ def names(operation):
 def validate_plan(plan,identity,operation):
     if (plan.get('schema')!=SCHEMA or plan.get('identity')!=identity or plan.get('operation_id')!=operation
             or plan.get('provenance')!='unpublished-local-build-not-signed-agent-admission'
-            or plan.get('boundary') not in ('candidate-installed','require-unit-reload')):raise ValueError('local candidate intent differs from exact disposable guest')
+            or plan.get('boundary') not in ('candidate-installed','require-unit-reload','completion-database-verified')):raise ValueError('local candidate intent differs from exact disposable guest')
+    if plan.get('boundary')=='completion-database-verified' and ('recovery_fault' in plan or plan.get('candidate_data_fault')!='quarantine-fixed-three'):
+        raise ValueError('completion fault requires the exact data-loss plan and no second recovery fault')
     if 'recovery_fault' in plan:
         value=plan['recovery_fault']
         if (not isinstance(value,dict) or set(value)!={'action','checkpoint'} or value['action'] not in ('kill','reboot')
@@ -196,7 +198,11 @@ def run_fault(args,plan,paths):
         with os.fdopen(fd,'w') as stream:
             def emit(event,**fields):
                 stream.write(json.dumps({'schema':kill.SCHEMA,'event':event,'at':probe.utc_now(),'identity':plan['identity'],**fields},sort_keys=True)+'\n');stream.flush();os.fsync(stream.fileno())
-            return kill.run_kill(args,emit,LocalNative(args,plan,proof),interrupted=lambda:stopped)
+            native=LocalNative(args,plan,proof)
+            if plan['boundary']=='completion-database-verified':
+                forward=module('local_forward_completion','guest_forward_completion_fault.py')
+                return forward.run_fault(args,emit,forward.CompletionNative(native),interrupted=lambda:stopped)
+            return kill.run_kill(args,emit,native,interrupted=lambda:stopped)
     finally:
         for sig,handler in previous.items():signal.signal(sig,handler)
 

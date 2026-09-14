@@ -31,7 +31,7 @@ INTENT='local-candidate-intent.json'
 STAGE='local-candidate-stage.json'
 START='local-candidate-start-attempt.json'
 ARM='local-candidate-kill-intent.json'
-ASSETS=('candidate_archive.py','guest_probe.py','guest_port_fault.py','guest_update_kill.py','guest_local_candidate.py','guest_recovery_fault.py','guest_recovery_handoff.py','guest_candidate_data_fault.py')
+ASSETS=('candidate_archive.py','guest_probe.py','guest_port_fault.py','guest_update_kill.py','guest_local_candidate.py','guest_recovery_fault.py','guest_recovery_handoff.py','guest_candidate_data_fault.py','guest_forward_completion_fault.py')
 
 def encoded(value):return (json.dumps(value,sort_keys=True)+'\n').encode()
 
@@ -58,7 +58,11 @@ def read_guest(root,record,plan,node,intent):
     state=json.loads(result.stdout)
     if state.get('schema')!='celikpanel/local-candidate-collection/v1' or state.get('identity')!=intent['identity'] or state.get('operation_id')!=intent['operation_id']:raise ValueError('local collection identity differs')
     raw=base64.b64decode(state['fault_jsonl_base64'],validate=True)
-    events=events_tools.validate_events(raw,intent['identity'],intent['operation_id'])
+    if intent['boundary']=='completion-database-verified':
+        forward=module('local_completion_events','guest_forward_completion_fault.py')
+        events=forward.validate_events(raw,intent['identity'],intent['operation_id'])
+    else:
+        events=events_tools.validate_events(raw,intent['identity'],intent['operation_id'])
     return state,raw,events
 
 def validate_stage(value,intent):
@@ -176,7 +180,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--work-root',required=True);parser.add_argument('--node',choices=('arch','debian13'),default='arch')
     parser.add_argument('--mode',choices=('prepare','arm','start','collect'),required=True);parser.add_argument('--execute',action='store_true')
-    parser.add_argument('--archive',type=Path);parser.add_argument('--archive-sha256');parser.add_argument('--boundary',choices=('candidate-installed','require-unit-reload'),default='require-unit-reload')
+    parser.add_argument('--archive',type=Path);parser.add_argument('--archive-sha256');parser.add_argument('--boundary',choices=('candidate-installed','require-unit-reload','completion-database-verified'),default='require-unit-reload')
     parser.add_argument('--candidate-data-fault',choices=('quarantine-fixed-three',))
     args=parser.parse_args(argv)
     if args.mode!='collect' and not args.execute:parser.error('mutation requires --execute and the registered disposable VM')
