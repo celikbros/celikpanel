@@ -166,12 +166,13 @@ with open(os.environ['FIXTURE_LOCK'],'rb') as independent:
     except BlockingIOError: pass
     else: raise AssertionError('native flock was released')
 args=sys.argv[1:]
-if args[0]=='enroll-runtime':
-    assert args==['enroll-runtime','--source',os.environ['FIXTURE_KIT'],'--transaction-fd','9']
+if args[0]=='prepare-runtime':
+    assert args==['prepare-runtime','--source',os.environ['FIXTURE_KIT'],'--mode',os.environ['FIXTURE_MODE'],'--transaction-fd','9']
 elif args[0]=='verify-compatibility':
     assert args==['verify-compatibility','--mode',os.environ['FIXTURE_MODE']]
 else: raise AssertionError(args)
 with open(os.environ['FIXTURE_CALLS'],'a') as f: f.write(args[0]+'\n')
+if args[0]=='prepare-runtime' and os.environ.get('FIXTURE_REJECT_PREPARATION')=='1': sys.exit(78)
 PY
 chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
 (
@@ -188,14 +189,23 @@ chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
         [[ $FIXTURE_MODE != --bootstrap-schema17 ]] || BOOTSTRAP_SCHEMA17=1
         prepare_independent_recovery_runtime
     done
-    [[ $(wc -l < "$FIXTURE_CALLS") -eq 9 ]] || fail 'preflight did not execute both fixed-ABI children'
+    [[ $(wc -l < "$FIXTURE_CALLS") -eq 9 ]] || fail 'preflight did not execute the expected preparation, compatibility and capability calls'
+    # A rejected/incomplete promotion must not reach compatibility or the material
+    # writer capability call. The actual selector journal has native Go tests.
+    before_calls=$(wc -l < "$FIXTURE_CALLS")
+    export FIXTURE_REJECT_PREPARATION=1
+    status=0
+    (prepare_independent_recovery_runtime) >"$TEST_ROOT/rejected-promotion.log" 2>&1 || status=$?
+    [[ $status == 41 && $(wc -l < "$FIXTURE_CALLS") -eq $((before_calls + 1)) ]] || fail 'rejected preparation continued'
+    [[ $(tail -n 1 "$FIXTURE_CALLS") == prepare-runtime ]] || fail 'unexpected call after rejected preparation'
+    unset FIXTURE_REJECT_PREPARATION
     export FIXTURE_UNSUPPORTED=1
     status=0
     (prepare_independent_recovery_runtime) >"$TEST_ROOT/unsupported-kit.log" 2>&1 || status=$?
     [[ $status == 41 ]] || fail 'older selected kit was silently admitted'
     grep -F 'panel services have not been stopped' "$TEST_ROOT/unsupported-kit.log" >/dev/null
 )
-printf 'PASS: fresh updater dynamic lock FD reaches both recovery children as the same FD9 flock\n'
+printf 'PASS: fresh updater preparation and compatibility retain FD9; rejected promotion stops admission\n'
 
 
 # Real selector branches, with a private CLI boundary instead of the installed
@@ -262,3 +272,19 @@ r=(root/'rollback.sh').read_text()
 assert '--candidate-root "$rollback_candidate_root"' in r
 assert 'sudo /usr/libexec/celikpanel/recovery recover' in r
 PY
+
+# The public failure envelope must not call a possibly changed recovery launcher
+# unchanged merely because application quiescence has not begun.
+eval "$(extract_function report_update_failure)"
+(
+    mutation_started=0 transaction_started=0 quiesce_abort_failed=0
+    transaction_completion_verified=0 scheduler_restore_verified=0
+    recovery_runtime_preparation_attempted=1 recovery_runtime_preparation_verified=0
+    update_failure_reason='runtime preparation is unconfirmed' update_failure_detail=
+    report_update_failure 1 none 2>"$TEST_ROOT/promotion-failure-summary"
+    grep -F 'code=recovery_runtime_preparation_unconfirmed state=recovery_required' "$TEST_ROOT/promotion-failure-summary" >/dev/null
+    recovery_runtime_preparation_verified=1
+    report_update_failure 1 none 2>"$TEST_ROOT/verified-preparation-summary"
+    grep -F 'code=update_failed state=unchanged' "$TEST_ROOT/verified-preparation-summary" >/dev/null
+)
+printf 'PASS: unconfirmed recovery preparation is never reported as unchanged\n'

@@ -21,9 +21,12 @@ kurtarma paketini kaydeder. Kod
 `/usr/libexec/celikpanel/recovery-runtimes/v1/<manifest-sha256>` altında;
 root erişimli seçim `/var/lib/celikpanel-release-state/recovery-runtime.v1`
 dosyasındadır. Tam paket ve başlatıcı diske kalıcı yazılmadan seçim yayımlanmaz.
-Mevcut uyumlu seçim korunur. Seçilmiş kodun kayıp/bozuk olması yeni adayla üzerine
-yazma veya aday yaşam döngüsü koduna geri dönme yetkisi değildir. Yarım kalmış
-paketler seçilmeden kanıt olarak saklanır.
+İlk kayıt mevcut uyumlu seçimi korur. Ayrı kayda bağlı
+[kurtarma ortamı geçişi](RECOVERY-RUNTIME-PROMOTION.tr.md), kabul edilmiş
+güncellemenin ön kontrolünde yeni kiti hazırlar; önceki kiti korur ve doğrular.
+Seçilmiş kodun kayıp/bozuk olması yeni adayla üzerine yazma veya aday yaşam
+döngüsü koduna geri dönme yetkisi değildir. Yarım kalmış paketler seçilmeden
+kanıt olarak saklanır.
 
 Kanonik manifest protokol1, snapshot6, on iki dosya, izinler, SHA-256 ve tam
 envanteri sabitler. Okuyucu root sahipliğini, yol zincirini, bağlantıları, boyut
@@ -68,9 +71,9 @@ işlem kimliği, snapshot bütünlüğü ve sahip değişiklikleri kontrol edilm
 Bütün desteklenen aşamalar sınanmadan P0.3 kapanmaz. Aşağıda tanımlanan bin/web
 kaynaklarının kabul edilen program yayını atomiktir. Diğer geri yükleme adımları
 sürüm scriptleriyle ortak sözleşmeleri kullanır; bu dilim TLS normalizasyonunu
-salt-okur veya adayın veri bütünlüğünden tamamen bağımsız yapmaz. Yeni kurtarma
-paketi/protokolü seçimi, uyumluluk deneyi ve kanıtlanmış önceki paketin korunmasını
-gerektirir. P0.4 ortak veri sözleşmeleri ve P0.5 bağımsız yenileme/açılış kanıtı
+salt-okur veya adayın veri bütünlüğünden tamamen bağımsız yapmaz. [Seçili kit geçişi](RECOVERY-RUNTIME-PROMOTION.tr.md), uyumluluk
+kontrollerini, önceki kitin korunmasını ve ayrı gerçek sistem kabulünü kaydeder.
+Yeni kurtarma protokolü yine açık bir uyumluluk geçişi gerektirir. P0.4 ortak veri sözleşmeleri ve P0.5 bağımsız yenileme/açılış kanıtı
 ayrı işlerdir.
 
 ## Servisler durdurulmadan önce uyumluluk

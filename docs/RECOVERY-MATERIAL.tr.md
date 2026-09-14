@@ -88,3 +88,5 @@ hizmet/hata kapsamını ayırır.
 Tamamlanmamış yedek alma ve güncellemeyi ileri yönde tamamlama hâlâ saklanan aday
 verisini gerektirir. Bütün kontrol noktaları, imzalı Agent kabulü, seçili kurtarma
 ortamının yükseltilmesi, metadata geçişleri ve kanıt temizliği açıktır. P0.3 kısmidir.
+
+Seçili kitin değiştirilmesi ayrı [kurtarma ortamı geçişi sözleşmesinde](RECOVERY-RUNTIME-PROMOTION.tr.md) tanımlanır. Bu veri diliminin kanıtları yeni geçişin gerçek sistem kabulü yerine geçmez.

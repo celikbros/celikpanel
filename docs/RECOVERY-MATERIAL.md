@@ -51,7 +51,9 @@ mandatory. Successful file restoration alone is not recovery completion.
 The selected executable must confirm the exact `snapshot-name-sha256-v1` layout
 with `verify-material-support --layout snapshot-name-sha256-v1` before coordinator stop.
 An older selected kit is retained and the update refuses before that downtime;
-this slice does not automatically promote a replacement recovery kit.
+this material slice does not itself promote a replacement recovery kit. The
+separate [runtime promotion contract](RECOVERY-RUNTIME-PROMOTION.md) defines that
+preflight transition and its own acceptance boundary.
 
 This contract resumes the same accepted transaction. A fresh historical rollback
 after that transaction has completed has a different token and is not admitted

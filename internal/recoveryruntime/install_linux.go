@@ -57,6 +57,10 @@ func enrollWithCheckpoint(source string, fd int, paths enrollmentPaths, afterLau
 	if err := verifyEnrollmentLock(paths.transaction, fd); err != nil {
 		return err
 	}
+	promotionPaths := promotionPaths{paths, filepath.Join(filepath.Dir(paths.selection), "recovery-promotions", "v1")}
+	if err := requireNoPromotion(promotionPaths); err != nil {
+		return err
+	}
 	if _, err := os.Lstat(paths.selection); err == nil {
 		selected, err := resolveSelected()
 		if err != nil {
@@ -327,6 +331,9 @@ func verifyLauncherAt(runtime *Runtime, launcherPath string) error {
 	return launcher.verifyContents()
 }
 func verifyEnrollmentLock(root string, fd int) error {
+	return verifyEnrollmentLockState(root, fd, true)
+}
+func verifyEnrollmentLockState(root string, fd int, requireEmpty bool) error {
 	state := &runtimeState{config: resolveConfig{anchor: "/", uid: 0, gid: 0}}
 	defer state.close()
 	parent, err := state.openPath(root)
@@ -363,6 +370,9 @@ func verifyEnrollmentLock(root string, fd int) error {
 			unix.Flock(other, unix.LOCK_UN)
 		}
 		return fail(ReasonUnsafeMetadata)
+	}
+	if !requireEmpty {
+		return nil
 	}
 	for _, marker := range []string{"active", "quiesce.pending", "completion.pending", "scheduler-restore.pending"} {
 		var stat unix.Stat_t
