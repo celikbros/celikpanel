@@ -221,19 +221,41 @@ _panel_tls_mount_guard() {
     rm -f -- "$list" || return
 }
 
+_panel_tls_validate_issue_receipt() {
+    local path=$1 metadata
+    # Issuance keeps this root-only receipt after publication. Snapshot its
+    # exact bytes; the agent owns semantic validation and operation recovery.
+    # Sertifika işlemi bu root kaydını yayından sonra korur. Baytları aynen
+    # yedekle; anlamsal doğrulama ve işlem kurtarma agent'a aittir.
+    _panel_tls_regular "$path" 1024 || return
+    metadata=$(stat -Lc '%u:%g:%a:%h' -- "$path") || return
+    [[ "$metadata" == 0:0:600:1 && -s "$path" ]] || {
+        _panel_tls_fail "certificate issue receipt must be nonempty root:root mode 0600 with one link: $path"
+        return 1
+    }
+}
+
 _panel_tls_validate_version_directory() {
-    local directory=$1 listing entry base count=0
+    local directory=$1 listing entry base count=0 receipt=0
     [[ -d "$directory" && ! -L "$directory" ]] || return 1
     _panel_tls_directory_metadata "$directory" >/dev/null || return
     listing=$(mktemp "${TMPDIR:-/tmp}/celikpanel-tls-version.XXXXXXXX") || return
     _panel_tls_find0 "$listing" "$directory" -mindepth 1 -maxdepth 1 || { rm -f -- "$listing" >/dev/null 2>&1 || true; return 1; }
     while IFS= read -r -d '' entry; do
-        base=${entry##*/}; case "$base" in panel.crt|panel.key|panel.domain) ;; *) rm -f -- "$listing"; return 1 ;; esac
+        base=${entry##*/}
+        case "$base" in
+            panel.crt|panel.key|panel.domain) ;;
+            .panel-certificate-issue-receipt.json)
+                _panel_tls_validate_issue_receipt "$entry" || { rm -f -- "$listing"; return 1; }
+                receipt=1
+                ;;
+            *) rm -f -- "$listing"; _panel_tls_fail "unknown certificate version entry: $entry"; return 1 ;;
+        esac
         _panel_tls_regular "$entry" || { rm -f -- "$listing"; return 1; }
         [[ -s "$entry" ]] || { rm -f -- "$listing"; return 1; }; count=$((count + 1))
     done < "$listing"
     rm -f -- "$listing" || return
-    [[ "$count" -eq 3 && -f "$directory/panel.crt" && -f "$directory/panel.key" && -f "$directory/panel.domain" ]]
+    [[ "$count" -eq $((3 + receipt)) && -f "$directory/panel.crt" && -f "$directory/panel.key" && -f "$directory/panel.domain" ]]
 }
 
 _panel_tls_validate_managed_tree() {

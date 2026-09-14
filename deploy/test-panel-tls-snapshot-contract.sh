@@ -271,6 +271,40 @@ expect_tls_failure_with_stderr 'escaping current symlink was accepted' panel_tls
 rm -- "$TLS_DIR/current" "$TLS_DIR/panel.crt" "$TLS_DIR/panel.key"
 ln -s "$VERSION" "$TLS_DIR/current"
 
+# A successful issuance retains a fourth, root-only recovery receipt even
+# after renewal makes a different three-file version current.
+# Sertifika işlem kaydı, yenileme yeni sürümü etkinleştirse de eski sürümde kalır.
+ISSUE_VERSION=.panel-cert-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+RECEIPT_NAME=.panel-certificate-issue-receipt.json
+RECEIPT_PATH=$TLS_DIR/$ISSUE_VERSION/$RECEIPT_NAME
+cp -a -- "$TLS_DIR/$VERSION" "$TLS_DIR/$ISSUE_VERSION"
+printf '{"schema":"panel-certificate-issue-receipt/v1","request_id":"%032d","qualifier":"panel-certificate-issue/v1:sha256:%064d","domain":"boston.celikhost.com","leaf_sha256":"%064d"}\n' 1 2 3 >"$RECEIPT_PATH"
+chmod 0600 "$RECEIPT_PATH"
+RECEIPT_SAVED=$TEST_ROOT/receipt-saved
+cp -a -- "$RECEIPT_PATH" "$RECEIPT_SAVED"
+RECEIPT_META=$(stat -Lc '%u:%g:%a:%h:%s:%y' "$RECEIPT_PATH")
+ISSUE_BEFORE=$(tls_tree_proof)
+panel_tls_normalize_legacy_self_signed "$TLS_DIR" 65534 0 || fail 'retained issuance receipt was rejected beside renewed current version'
+[[ $(tls_tree_proof) == "$ISSUE_BEFORE" ]] || fail 'issuance receipt normalization changed the TLS tree'
+for fault in mode owner group hardlink empty oversize symlink unknown; do
+    case "$fault" in
+        mode) chmod 0640 "$RECEIPT_PATH" ;;
+        owner) chown 65534 "$RECEIPT_PATH" ;;
+        group) chown :65534 "$RECEIPT_PATH" ;;
+        hardlink) ln -- "$RECEIPT_PATH" "$TEST_ROOT/receipt-hardlink" ;;
+        empty) : >"$RECEIPT_PATH" ;;
+        oversize) printf '%01025d' 0 >"$RECEIPT_PATH" ;;
+        symlink) rm -- "$RECEIPT_PATH"; ln -s "$RECEIPT_SAVED" "$RECEIPT_PATH" ;;
+        unknown) printf 'unexpected\n' >"$TLS_DIR/$ISSUE_VERSION/receipt-extra.json" ;;
+    esac
+    REJECT_BEFORE=$(tls_tree_proof)
+    expect_tls_failure_with_stderr "unsafe issuance receipt ($fault) was accepted" \
+        panel_tls_normalize_legacy_self_signed "$TLS_DIR" 65534 0
+    [[ $(tls_tree_proof) == "$REJECT_BEFORE" ]] || fail "receipt rejection ($fault) changed the TLS tree"
+    rm -f -- "$RECEIPT_PATH" "$TEST_ROOT/receipt-hardlink" "$TLS_DIR/$ISSUE_VERSION/receipt-extra.json"
+    cp -a -- "$RECEIPT_SAVED" "$RECEIPT_PATH"
+done
+
 panel_tls_capture_scheduler_states_to_service_ledger "$LEDGER" \
     || fail 'scheduler ledger capture failed'
 [[ $(wc -l <"$LEDGER") -eq 5 ]] || fail 'scheduler ledger is not canonical five rows'
@@ -280,6 +314,18 @@ panel_tls_snapshot_scheduler_matches_service_ledger "$TLS_SNAPSHOT" "$LEDGER" \
     || fail 'scheduler snapshot/ledger mismatch'
 [[ ! -L "$TLS_SNAPSHOT/managed/$VERSION" ]] || fail 'snapshot encoded a managed version as a symlink'
 [[ "$(cat "$TLS_SNAPSHOT/layout.state")" == atomic ]] || fail 'atomic layout marker missing'
+cmp -s -- "$RECEIPT_SAVED" "$TLS_SNAPSHOT/managed/$ISSUE_VERSION/$RECEIPT_NAME" \
+    || fail 'snapshot dropped or changed the retained issuance receipt'
+[[ $(stat -Lc '%u:%g:%a:%h:%s:%y' "$TLS_SNAPSHOT/managed/$ISSUE_VERSION/$RECEIPT_NAME") == "$RECEIPT_META" ]] \
+    || fail 'snapshot changed issuance receipt metadata'
+grep -Fq "$(printf 'F\t%s/%s\t0\t0\t600\t' "$ISSUE_VERSION" "$RECEIPT_NAME")" "$TLS_SNAPSHOT/managed.manifest" \
+    || fail 'snapshot manifest omitted issuance receipt provenance'
+chmod 0640 "$TLS_SNAPSHOT/managed/$ISSUE_VERSION/$RECEIPT_NAME"
+expect_tls_failure_with_stderr 'snapshot accepted group-readable issuance receipt' panel_tls_snapshot_validate "$TLS_SNAPSHOT"
+chmod 0600 "$TLS_SNAPSHOT/managed/$ISSUE_VERSION/$RECEIPT_NAME"
+printf 'changed-receipt\n' >"$TLS_SNAPSHOT/managed/$ISSUE_VERSION/$RECEIPT_NAME"
+expect_tls_failure_with_stderr 'snapshot accepted changed issuance receipt bytes' panel_tls_snapshot_validate "$TLS_SNAPSHOT"
+cp -a -- "$RECEIPT_SAVED" "$TLS_SNAPSHOT/managed/$ISSUE_VERSION/$RECEIPT_NAME"
 HOOK_META=$(stat -Lc '%u:%g:%a:%Y:%y' "$HOOK")
 PENDING_META=$(stat -Lc '%u:%g:%a:%Y:%y' "$PENDING")
 
@@ -313,6 +359,9 @@ expect_tls_failure_with_stderr 'mutated TLS source was accepted' panel_tls_snaps
 panel_tls_restore_snapshot "$TLS_SNAPSHOT" "$TLS_DIR" "$PENDING" "$HOOK" \
     || fail 'TLS snapshot restore failed'
 [[ "$(readlink "$TLS_DIR/current")" == "$VERSION" ]] || fail 'atomic current link was not restored'
+cmp -s -- "$RECEIPT_SAVED" "$RECEIPT_PATH" || fail 'restore dropped or changed retained issuance receipt'
+[[ $(stat -Lc '%u:%g:%a:%h:%s:%y' "$RECEIPT_PATH") == "$RECEIPT_META" ]] \
+    || fail 'restore changed issuance receipt metadata'
 cmp -s "$TLS_DIR/$VERSION/panel.crt" "$TLS_SNAPSHOT/managed/$VERSION/panel.crt" \
     || fail 'active certificate bytes differ after restore'
 cmp -s "$PENDING" "$TLS_SNAPSHOT/pending/panel-certificate-activation.json" \

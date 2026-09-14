@@ -123,6 +123,13 @@ jobs:
       - run: sudo bash deploy/test-panel-tls-snapshot-contract.sh
       - run: sudo bash deploy/test-update-recovery-lock.sh
       - run: sudo python3 deploy/test-recover-frankfurt-alpha75.py
+      - run: sudo python3 deploy/test-recover-frankfurt-alpha78-attempt.py
+      - run: sudo bash deploy/test-recover-frankfurt-alpha78-runner.sh
+      - name: Verify real panel certificate writer snapshot compatibility
+        run: >-
+          sudo env PATH=$PATH GOTOOLCHAIN=local go test ./cmd/agent
+          -run '^TestPanelTLSSnapshot(PreservesRealIssuedReceiptAfterRenewal|RejectsUnsafeIssuedReceipt)$'
+          -count=1
       - run: bash deploy/test-abort-pre-mutation-active-update-contract.sh
       - run: sudo bash deploy/test-abort-pre-mutation-active-update-behavior.sh
       - run: bash deploy/test-recover-active-update-database-contract.sh

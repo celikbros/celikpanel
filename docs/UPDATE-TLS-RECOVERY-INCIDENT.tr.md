@@ -59,3 +59,35 @@ reddeder. Frankfurt'taki ara program yakalanmadığından bu test olası nedeni
 gösterir, canlı geçişin kesin kanıtı değildir. On sekiz test dosya sistemi, kilit,
 işaretçi ve başlangıç davranışını kapsar. systemctl yanıtları taklit edilir;
 fork/exec ve kilit denetimleri gerçek yerel Linux süreçleri kullanır.
+
+## Alpha78 sonrası: saklanan sertifika işlem kaydı
+
+Kullanıcının 13 Eylül 2026 22:17 UTC Alpha78 denemesi TLS snapshot yayımlanmadan
+durdu. Kurtarma sürekli `existing managed TLS tree failed strict validation`
+hatasına ulaştı. Paylaşılan dosya listesinde eski sertifika sürümünde
+`.panel-certificate-issue-receipt.json` (root:root, 0600, tek link, 325 bayt)
+ve yanında üç dosyalı daha yeni bir `current` sürümü bulunuyor.
+
+Sertifika üreticisi bu dördüncü dosyayı işlem kanıtı olarak özellikle koruyor.
+Shell snapshot doğrulayıcısı ise eski sürümler dahil her dizinde tam üç dosya
+istiyordu. Paylaşılan düzenin yerel örneği hatayı yeniden üretiyor. Alpha78 testleri
+elle hazırlanmış üç dosyalı sürümler kullandığından gerçek üretici çıktısı bu
+kontrollerde sınanmadı. CI başarısı bu güncelleme yolunu doğrulamaya yetmedi.
+
+Kaynak düzeltmesi yalnız bu adı taşıyan isteğe bağlı kaydı, root erişimiyle
+sınırlı metaverisi ve 1–1024 bayt boyut koşuluyla kabul eder. Snapshot ve geri
+yükleme baytları ve metaveriyi aynen korur; işlem kimliği ve canonical JSON
+yorumlaması agent'ın sorumluluğunda kalır. Bilinmeyen dosyalar ve güvensiz izinler
+reddedilir. İşlem kaydını silmek kurtarma yöntemi değildir.
+
+Bu ek düzeltme Alpha79 kapsamındadır. Yayımdan önce kullanıcı gözden geçirilmiş kurtarma
+aracını (SHA256
+`13f03ebe790a3b9af9b01207a22393ab287a9c938b87b697859873ac2b19763c`)
+aktarıp hash değerini doğruladı ve çalıştırdı. Araç, kilit altında program/veri
+kontrollerinden sonra mevcut Alpha75 servislerinin aktif olduğunu bildirdi;
+güncelleme kurulmadı. Kanıtlar
+`/var/backups/celikpanel/frankfurt-recovery-20260913T221708Z` yolunda saklandı.
+Ardından bağımsız salt-okur HTTPS giriş isteği geçerli sertifika ile HTTP 200
+aldı. Bu panel erişimini doğrular; barındırılan hizmetlerin denetimi değildir.
+Önceki olay kanıtları, kurtarma kopyaları ve TLS dosyaları aracın değişiklik
+kapsamı dışındaydı.

@@ -59,3 +59,35 @@ was not captured, so this test demonstrates a possible cause of the premature
 failure rather than proving that exact live transition. Eighteen tests cover
 filesystem/lock/marker handling and startup; systemctl responses are simulated,
 while the fork/exec and lock behavior use real local Linux processes.
+
+## Alpha78 follow-up: retained issuance receipt
+
+The owner's Alpha78 attempt at 2026-09-13 22:17 UTC stopped before TLS snapshot
+publication. Recovery repeatedly reached `existing managed TLS tree failed
+strict validation`. The owner-provided file inventory identifies a retained
+certificate version with `.panel-certificate-issue-receipt.json` (root:root,
+0600, one link, 325 bytes), alongside a newer three-file `current` version.
+
+The certificate issuance writer deliberately writes and retains this fourth
+file as operation evidence. The shell snapshot validator required exactly three
+files in every version directory, including retained versions. A local fixture
+of the supplied layout reproduces the rejection. Alpha78's earlier tests used
+manually constructed three-file versions, so the release checks did not cover
+this actual issuance output. Passing CI did not establish this upgrade path.
+
+The follow-up source change accepts only that named optional receipt with its
+root-only metadata and 1–1024-byte bound. Snapshot and restore preserve its exact
+bytes and metadata; the agent retains responsibility for interpreting operation
+identity and canonical JSON. Unknown files and unsafe receipt metadata remain
+rejected. Deleting the receipt is not a recovery strategy.
+
+This follow-up is included in Alpha79. Before publication, the owner transferred the
+reviewed incident recovery tool (SHA256
+`13f03ebe790a3b9af9b01207a22393ab287a9c938b87b697859873ac2b19763c`),
+verified its checksum and ran it. It reported both existing Alpha75 services
+active after its locked identity/data checks; no update was installed. Evidence
+was preserved at `/var/backups/celikpanel/frankfurt-recovery-20260913T221708Z`.
+A subsequent independent read-only HTTPS login request returned HTTP 200 with
+certificate verification successful. This confirms panel access, not an audit
+of hosted workloads. Previous incident evidence, rescue snapshots and TLS files
+were outside the recovery tool's mutation scope.
