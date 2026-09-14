@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Portable acceptance tests; synthetic records here are never native VM proof."""
 import copy
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -71,6 +72,50 @@ def example_record():
 class EvidenceTests(unittest.TestCase):
     def test_complete_facts_pass(self):
         self.assertEqual(evidence.classify(example_record())["status"], "PASS")
+
+    def runtime_record(self):
+        value = example_record()
+        files = {name: hashlib.sha256(name.encode()).hexdigest() for name in evidence.RUNTIME_FILES_V1}
+        manifest = "format=celikpanel-recovery-runtime-v1\nprotocol=1\nsnapshot=6\n"
+        manifest += "".join(files[name]+"  "+name+"\n" for name in sorted(files))
+        digest = hashlib.sha256(manifest.encode()).hexdigest()
+        value["recovery"].update(entrypoint="independent-runtime", rollback_script_sha256=files["rollback.sh"],
+                                 runtime_proof={"schema":"celikpanel/recovery-runtime-proof/v1","protocol":1,"snapshot_format":6,
+                                                "manifest_sha256":digest,"selected_manifest_sha256":digest,"executed_manifest_sha256":digest,
+                                                "files":files,"inventory_verified":True,"refs":["native-selected-runtime-inventory.json","native-runtime-execution.json"]})
+        return value
+
+    def test_independent_runtime_requires_separate_complete_manifest_and_execution_proof(self):
+        value = self.runtime_record()
+        self.assertEqual(evidence.classify(value)["status"],"PASS")
+        self.assertEqual(evidence.classify(example_record())["status"],"PASS")
+        del value["recovery"]["runtime_proof"]
+        self.assertEqual(evidence.classify(value)["status"],"INCONCLUSIVE")
+
+    def test_independent_runtime_missing_unknown_or_unsupported_proof_never_passes(self):
+        for field in self.runtime_record()["recovery"]["runtime_proof"]:
+            value=self.runtime_record();del value["recovery"]["runtime_proof"][field]
+            self.assertNotEqual(evidence.classify(value)["status"],"PASS",field)
+        for field,bad in (("protocol",2),("protocol",True),("snapshot_format",7),("inventory_verified",None),("files",{}),("refs",[])):
+            value=self.runtime_record();value["recovery"]["runtime_proof"][field]=bad
+            self.assertEqual(evidence.classify(value)["status"],"INCONCLUSIVE",field)
+
+    def test_independent_runtime_manifest_selection_execution_and_rollback_mismatches_fail(self):
+        for field in ("selected_manifest_sha256","executed_manifest_sha256","manifest_sha256"):
+            value=self.runtime_record();value["recovery"]["runtime_proof"][field]="0"*64
+            self.assertEqual(evidence.classify(value)["status"],"FAIL",field)
+        value=self.runtime_record();value["recovery"]["rollback_script_sha256"]="0"*64
+        self.assertEqual(evidence.classify(value)["status"],"FAIL")
+        value=self.runtime_record();value["recovery"]["runtime_proof"]["inventory_verified"]=False
+        self.assertEqual(evidence.classify(value)["status"],"FAIL")
+
+    def test_independent_runtime_does_not_mask_missing_database_or_manual_recovery(self):
+        value=self.runtime_record();value["after"]["database"]["semantic_checks"]=[]
+        self.assertEqual(evidence.classify(value)["status"],"INCONCLUSIVE")
+        value=self.runtime_record();value["recovery"]["automatic"]=False
+        self.assertEqual(evidence.classify(value)["status"],"FAIL")
+        value=self.runtime_record();value["recovery"]["entrypoint"]="retained-release-rollback"
+        self.assertEqual(evidence.classify(value)["status"],"INCONCLUSIVE")
 
     def test_each_missing_section_is_inconclusive(self):
         for section in evidence.SECTIONS:

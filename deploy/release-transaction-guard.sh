@@ -13,7 +13,7 @@ fi
 # checkout, alias or sibling copy is never accepted after privilege is gained.
 # Source edilen baytları önceden doğrulanmış çalışan sürüme sabitle. Ayrıcalık
 # alındıktan sonra değişebilir checkout, takma yol veya kardeş kopya kabul edilmez.
-_release_txn_expected_root=${TRUSTED_RELEASE_ROOT:-${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}}
+_release_txn_expected_root=${CODE_ROOT:-${TRUSTED_RELEASE_ROOT:-${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}}}
 _release_txn_library_relative=deploy/release-transaction-guard.sh
 if [[ -z "$_release_txn_expected_root" || "$_release_txn_expected_root" != /* ]]; then
     printf '%s\n' "trusted release root is missing while sourcing release guard" >&2

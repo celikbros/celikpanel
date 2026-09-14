@@ -55,6 +55,27 @@ if [[ $VERIFY_FINAL_STATE == 1 ]]; then
     }
 fi
 
+# A selected independent kit is a durable capability, not an optional hint.
+# Corrupt/missing selected material must not fall back to candidate scripts.
+# Before first enrollment historical installations retain their exact runner.
+RECOVERY_CODE_ROOT=${CELIKPANEL_RECOVERY_RUNTIME_ROOT:-}
+if [[ -z $RECOVERY_CODE_ROOT && ${CELIKPANEL_RELEASE_RECOVERY_TESTING:-0} != 1 &&
+      ( -e /var/lib/celikpanel-release-state/recovery-runtime.v1 ||
+        -L /var/lib/celikpanel-release-state/recovery-runtime.v1 ) ]]; then
+    if [[ $VERIFY_FINAL_STATE == 1 ]]; then
+        exec /usr/libexec/celikpanel/recovery "$@"
+    fi
+    exec /usr/libexec/celikpanel/recovery recover
+fi
+if [[ -n $RECOVERY_CODE_ROOT ]]; then
+    [[ $RECOVERY_CODE_ROOT =~ ^/usr/libexec/celikpanel/recovery-runtimes/v1/[0-9a-f]{64}$ &&
+       $(readlink -e -- "${BASH_SOURCE[0]}") == "$RECOVERY_CODE_ROOT/deploy/recovery/runtime-entry.sh" ]] || {
+        echo '!! independent recovery entry is not the selected installed kit' >&2
+        exit 1
+    }
+fi
+readonly RECOVERY_CODE_ROOT
+
 # Tests exercise the real classifier and dispatcher in an isolated root.  The
 # installed systemd unit has a fixed, empty environment and can never select it.
 if [[ ${CELIKPANEL_RELEASE_RECOVERY_TESTING:-0} == 1 ]]; then
@@ -652,8 +673,15 @@ esac
 [[ -n $RECOVERY_SNAPSHOT_DIR ]] ||
     die 'recovery did not bind an exact snapshot directory'
 TRUSTED_RELEASE_ROOT=$RECOVERY_RELEASE
-source "$RECOVERY_RELEASE/deploy/release-transaction-guard.sh"
-source "$RECOVERY_RELEASE/deploy/release-recovery-foundation.sh"
+RECOVERY_EXEC_ROOT=${RECOVERY_CODE_ROOT:-$RECOVERY_RELEASE}
+CODE_ROOT=$RECOVERY_EXEC_ROOT
+RECOVERY_RESULT_ACTION=$ACTION
+# Incomplete capture can only publish a snapshot and roll it back in kit mode.
+if [[ -n $RECOVERY_CODE_ROOT && $ACTION == update && $TRANSACTION_PHASE == active ]]; then
+    RECOVERY_RESULT_ACTION=rollback
+fi
+source "$RECOVERY_EXEC_ROOT/deploy/release-transaction-guard.sh"
+source "$RECOVERY_EXEC_ROOT/deploy/release-recovery-foundation.sh"
 # Only the exact retained release may provide this optional, non-authorizing
 # observer. Historical releases without a request binding remain unavailable.
 RECOVERY_OBSERVATION_REQUEST=
@@ -667,8 +695,8 @@ recovery_observation_exit() {
     fi
     return "$original_status"
 }
-if [[ -f $RECOVERY_RELEASE/deploy/release-recovery-observation.sh ]]; then
-    source "$RECOVERY_RELEASE/deploy/release-recovery-observation.sh"
+if [[ -f $RECOVERY_EXEC_ROOT/deploy/release-recovery-observation.sh ]]; then
+    source "$RECOVERY_EXEC_ROOT/deploy/release-recovery-observation.sh"
     if [[ -n $TEST_ROOT ]]; then
         RELEASE_OBSERVATION_ROOT=$TEST_ROOT/var/lib/celikpanel-recovery-observations
         RELEASE_OBSERVATION_BINDINGS=$TEST_ROOT/var/lib/celikpanel-release-state/recovery-observation-bindings
@@ -714,17 +742,27 @@ common_env=(
     CELIKPANEL_RECOVERY_EXPECTED_SNAPSHOT="$MARKER_SNAPSHOT"
     CELIKPANEL_RECOVERY_EXPECTED_PHASE="$TRANSACTION_PHASE"
 )
+if [[ -n $RECOVERY_CODE_ROOT ]]; then
+    common_env+=(CELIKPANEL_RECOVERY_RUNTIME_ROOT="$RECOVERY_CODE_ROOT"
+        CELIKPANEL_TRUSTED_RELEASE_ROOT="$RECOVERY_RELEASE")
+fi
 if [[ -n $TEST_ROOT ]]; then
     common_env+=(CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT="$TEST_ROOT")
+fi
+RECOVERY_PANEL_CHECKER=$RECOVERY_RELEASE/bin/panel
+RECOVERY_AGENT_CHECKER=$RECOVERY_RELEASE/bin/agent
+if [[ -n $RECOVERY_CODE_ROOT ]]; then
+    RECOVERY_PANEL_CHECKER=$RECOVERY_CODE_ROOT/bin/panel-checker
+    RECOVERY_AGENT_CHECKER=$RECOVERY_CODE_ROOT/bin/agent-checker
 fi
 if [[ $ACTION == update ]]; then
     env -i "${common_env[@]}" \
         CELIKPANEL_TRUSTED_RELEASE_ROOT="$RECOVERY_RELEASE" \
-        CELIKPANEL_PREFLIGHT_PANEL="$RECOVERY_RELEASE/bin/panel" \
-        CELIKPANEL_PREFLIGHT_AGENT="$RECOVERY_RELEASE/bin/agent" \
-        /bin/bash "$RECOVERY_RELEASE/update.sh" "$UPDATE_MODE" || child_status=$?
+        CELIKPANEL_PREFLIGHT_PANEL="$RECOVERY_PANEL_CHECKER" \
+        CELIKPANEL_PREFLIGHT_AGENT="$RECOVERY_AGENT_CHECKER" \
+        /bin/bash "$RECOVERY_EXEC_ROOT/update.sh" "$UPDATE_MODE" || child_status=$?
 else
-    env -i "${common_env[@]}" /bin/bash "$RECOVERY_RELEASE/rollback.sh" \
+    env -i "${common_env[@]}" /bin/bash "$RECOVERY_EXEC_ROOT/rollback.sh" \
         "$SNAPSHOT_ROOT/$MARKER_SNAPSHOT" || child_status=$?
 fi
 
@@ -770,7 +808,7 @@ if [[ $TRANSACTION_PHASE == none ]]; then
     # Success is published only after the native child and the runner's final
     # foundation, coordinator, transaction-root and empty-marker proofs agree.
     if [[ -n $RECOVERY_OBSERVATION_REQUEST ]]; then
-        if [[ $ACTION == rollback ]]; then
+        if [[ $RECOVERY_RESULT_ACTION == rollback ]]; then
             release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
                 "$RECOVERY_OBSERVATION_COMMIT" recovered rollback_verified rollback_verified ||
                 printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2

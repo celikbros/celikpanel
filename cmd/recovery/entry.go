@@ -1,0 +1,79 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+
+	"github.com/alicelik/celikpanel/internal/recoverycheckpoint"
+	"github.com/alicelik/celikpanel/internal/recoveryobs"
+)
+
+// There is deliberately no remote listener or credential fallback. Native root
+// or authorized sudo is the recovery principal when the panel cannot start.
+func runEntry(args []string) int {
+	if len(args) > 0 && (args[0] == "restore-resource" || args[0] == "publish-resource") {
+		return dispatchPublication(args, os.Geteuid(), runPublication, func(message string) { fmt.Fprintln(os.Stderr, message) })
+	}
+	if len(args) > 0 && args[0] == "verify-compatibility" {
+		return dispatchCompatibility(args, os.Geteuid(), checkRecoveryCompatibility, func(message string) { fmt.Fprintln(os.Stderr, message) })
+	}
+	if len(args) > 0 && args[0] == "checkpoint" {
+		if os.Geteuid() != 0 {
+			return exitNotOwner
+		}
+		if len(args) != 3 || args[1] != "--name" || !recoverycheckpoint.ValidName(args[2]) {
+			return exitUsage
+		}
+		if recoverycheckpoint.Publish(args[2]) != nil {
+			fmt.Fprintln(os.Stderr, "Recovery checkpoint observation is unavailable.")
+			return exitUnavailable
+		}
+		return exitOK
+	}
+	return dispatchEntry(args, os.Geteuid(), func() int { return run(args, cliRuntime{os.Geteuid, recoveryobs.Read, os.Stdout, os.Stderr}) }, runSelectedRuntime, enrollRuntime, func(message string) { fmt.Fprintln(os.Stderr, message) })
+}
+func dispatchEntry(args []string, uid int, observe func() int, execute func([]string) error, enroll func(string) error, report func(string)) int {
+	if len(args) == 0 || args[0] == "status" || args[0] == "version" {
+		return observe()
+	}
+	if uid != 0 {
+		report("Owner authentication is required. Use your root or authorized sudo session.")
+		return exitNotOwner
+	}
+	var err error
+	switch {
+	case len(args) == 1 && args[0] == "recover":
+		err = execute(nil)
+	case len(args) == 7 && args[0] == "--verify-final-state" && args[1] == "--expected-version" && args[3] == "--expected-commit" && args[5] == "--expected-sequence" &&
+		regexp.MustCompile(`^v[0-9A-Za-z.-]+$`).MatchString(args[2]) && regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(args[4]) && regexp.MustCompile(`^[1-9][0-9]{0,18}$`).MatchString(args[6]):
+		err = execute(args)
+	case len(args) == 5 && args[0] == "enroll-runtime" && args[1] == "--source" && args[3] == "--transaction-fd" && args[4] == "9" && filepath.IsAbs(args[2]) && filepath.Clean(args[2]) == args[2]:
+		err = enroll(args[2])
+	default:
+		report("Usage: recovery status --request-id <id> [--json] | version | recover")
+		return exitUsage
+	}
+	if err != nil {
+		report("Recovery could not be verified. Preserve the current operation and its evidence; no new update was started. " + err.Error())
+		return exitUnavailable
+	}
+	return exitOK
+}
+
+func dispatchCompatibility(args []string, uid int, check func(string) error, report func(string)) int {
+	if uid != 0 {
+		report("Owner authentication is required. Use your root or authorized sudo session.")
+		return exitNotOwner
+	}
+	if len(args) != 3 || args[0] != "verify-compatibility" || args[1] != "--mode" ||
+		(args[2] != "--normal" && args[2] != "--bootstrap-pre-ledger" && args[2] != "--bootstrap-schema17") {
+		return exitUsage
+	}
+	if err := check(args[2]); err != nil {
+		report("The selected recovery runtime cannot verify this installation. The update has not stopped the panel. " + err.Error())
+		return exitUnavailable
+	}
+	return exitOK
+}

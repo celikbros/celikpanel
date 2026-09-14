@@ -21,6 +21,12 @@ class ControllerTests(unittest.TestCase):
         kinds=['armed','worker_frozen','candidate_installed_checkpoint','kill_requested','kill_sent','released']
         events=s.validate_events(self.raw([self.event(k) for k in kinds]),self.identity,self.operation)
         self.assertEqual([e['event'] for e in events],kinds)
+    def test_opted_in_recovery_handoff_stream_preserves_required_order(self):
+        kinds=['armed','worker_frozen','candidate_installed_checkpoint','recovery_fault_armed','kill_requested','kill_sent','released']
+        self.assertEqual([e['event'] for e in s.validate_events(self.raw([self.event(k) for k in kinds]),self.identity,self.operation)],kinds)
+        for invalid in (['armed','recovery_fault_armed'],['armed','worker_frozen','candidate_installed_checkpoint','kill_requested','recovery_fault_armed']):
+            with self.subTest(invalid=invalid),self.assertRaises(ValueError):s.validate_events(self.raw([self.event(k) for k in invalid]),self.identity,self.operation)
+
     def test_missed_checkpoint_stream_allowed_without_success_inference(self):
         events=s.validate_events(self.raw([self.event('armed'),self.event('released')]),self.identity,self.operation)
         self.assertEqual(len(events),2)

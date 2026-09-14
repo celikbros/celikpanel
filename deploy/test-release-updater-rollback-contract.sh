@@ -83,4 +83,6 @@ grep -Fq 'rm -f -- "$RELEASE_UPDATER"' "$rollback" \
 grep -Fq '[[ "$(stat -Lc '\''%u:%g:%a:%h'\'' -- "$RELEASE_UPDATER")" == 0:0:755:1 ]]' "$rollback" \
     || fail 'rollback does not prove restored updater metadata'
 
+bash "$repo_root/deploy/test-rollback-ledger-preservation.sh"
+
 printf 'release updater rollback contract passed\n'

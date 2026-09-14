@@ -61,6 +61,13 @@ var skippedDirectories = map[string]bool{
 // adlandirilmis listesidir. Her deger nedenini soyler; "henuz" turunden bir
 // gerekce borctur ve borc olarak yazilmistir.
 var privilegedCommandAllowlist = map[string]string{
+	// Independent recovery cannot depend on the Agent mutation launcher or RPC.
+	// These commands only observe fixed local identities; arbitrary child output
+	// is deliberately not forwarded as operator-visible recovery evidence.
+	"cmd/recovery/compatibility_linux.go:<computed>":                       "runs only the selected hash-verified kit's named offline readers before quiescence under the inherited native release lock; closed mode, clean environment, no Agent startup; reader output may contain private state so failure is a typed unavailable compatibility result",
+	"internal/recoverycheckpoint/publish_linux.go:/usr/bin/systemctl":      "read-only fixed recovery-unit identity probe with a two-second deadline; parsed properties corroborate the checkpoint and cannot authorize recovery; unavailable output remains unavailable",
+	"internal/recoverypublication/publication_linux.go:/usr/bin/systemctl": "read-only fixed coordinator-state proof inside the independent publication boundary; native transaction lock and exact properties are checked before filesystem mutation; no service start/stop or raw output forwarding",
+
 	// The launchers. A direct exec here is the point of the file: each one
 	// exists for a reason the others do not share, which is why this package
 	// is a failure value and not a runner.

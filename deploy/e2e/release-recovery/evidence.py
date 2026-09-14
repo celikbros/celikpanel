@@ -17,6 +17,7 @@ recovery FAIL into PASS. No commands, services or guest files are touched here.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -32,6 +33,13 @@ COMMIT = re.compile(r"[0-9a-f]{40}\Z")
 OPERATION = re.compile(r"[0-9a-f]{32}\Z")
 ARTIFACTS = {"agent", "panel", "web"}
 SECTIONS = {"baseline", "candidate", "update", "fault", "recovery", "after", "workloads"}
+RUNTIME_FILES_V1 = {
+    "bin/recovery", "bin/panel-checker", "bin/agent-checker", "bin/schema17-bridge",
+    "update.sh", "rollback.sh", "deploy/release-transaction-guard.sh",
+    "deploy/release-unit-transition.sh", "deploy/release-recovery-foundation.sh",
+    "deploy/panel-tls-snapshot.sh", "deploy/release-recovery-observation.sh",
+    "deploy/recovery/runtime-entry.sh",
+}
 
 
 class EvidenceError(ValueError):
@@ -58,6 +66,95 @@ def decode(raw: bytes) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise EvidenceError("evidence must be a JSON object")
     return value
+
+
+def compare_database_semantics(snapshot: Any, current: Any) -> dict[str, Any]:
+    """Compare all observed schema/tables; never silently exempt volatile tables.
+
+    Inputs come from the guarded probe. Snapshot manifest/operation provenance
+    must still be supplied by its native controller; JSON is not authentication.
+    """
+    result = {"status": "unknown", "result": "INCONCLUSIVE", "differences": []}
+    def checked(observation):
+        if not isinstance(observation, dict) or observation.get("status") != "ok" or observation.get("integrity_check") != ["ok"]:
+            raise EvidenceError("consistent database observation missing")
+        value = observation.get("semantic")
+        fields = {"schema", "schema_sha256", "user_version", "application_id", "tables", "excluded_tables", "row_count", "sha256"}
+        if not isinstance(value, dict) or set(value) != fields or value.get("schema") != "celikpanel/sqlite-semantic-observation/v1" or value.get("excluded_tables") != []:
+            raise EvidenceError("complete semantic schema missing")
+        for field in ("schema_sha256", "sha256"):
+            if not isinstance(value[field], str) or not HASH.fullmatch(value[field]):
+                raise EvidenceError("invalid semantic digest")
+        for field in ("user_version", "application_id", "row_count"):
+            if type(value[field]) is not int:
+                raise EvidenceError("invalid semantic count")
+        tables = value.get("tables")
+        if not isinstance(tables, list) or len(tables) > 256:
+            raise EvidenceError("table inventory unavailable")
+        names, count = [], 0
+        for table in tables:
+            if not isinstance(table, dict) or set(table) != {"name", "rows", "columns", "rowid_included", "sha256"}:
+                raise EvidenceError("table evidence incomplete")
+            if not isinstance(table["name"], str) or not table["name"] or len(table["name"].encode()) > 256:
+                raise EvidenceError("invalid table name")
+            if type(table["rows"]) is not int or table["rows"] < 0 or type(table["columns"]) is not int or not 1 <= table["columns"] <= 256 or type(table["rowid_included"]) is not bool:
+                raise EvidenceError("invalid table counts")
+            if not isinstance(table["sha256"], str) or not HASH.fullmatch(table["sha256"]):
+                raise EvidenceError("invalid table digest")
+            names.append(table["name"])
+            count += table["rows"]
+        if names != sorted(set(names)) or count != value["row_count"] or not 0 <= count <= 100000:
+            raise EvidenceError("table inventory is ambiguous")
+        digest_input = {key: item for key, item in value.items() if key != "sha256"}
+        import hashlib
+        expected = hashlib.sha256(json.dumps(digest_input, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if value["sha256"] != expected:
+            raise EvidenceError("semantic envelope digest differs")
+        return value
+    try:
+        old, new = checked(snapshot), checked(current)
+        differences = []
+        for field in ("schema_sha256", "user_version", "application_id"):
+            if old[field] != new[field]:
+                differences.append({"scope": "database", "field": field})
+        before = {table["name"]: table for table in old["tables"]}
+        after = {table["name"]: table for table in new["tables"]}
+        for name in sorted(before.keys() | after.keys()):
+            if name not in before:
+                differences.append({"scope": "table", "name": name, "change": "added"})
+            elif name not in after:
+                differences.append({"scope": "table", "name": name, "change": "removed"})
+            elif before[name] != after[name]:
+                differences.append({"scope": "table", "name": name, "change": "changed",
+                                    "fields": sorted(key for key in before[name] if before[name][key] != after[name][key])})
+        result.update(status="ok", result="DIFFERENT" if differences else "EQUAL", differences=differences,
+                      snapshot_semantic_sha256=old["sha256"], current_semantic_sha256=new["sha256"], excluded_tables=[])
+    except (EvidenceError, UnicodeError) as exc:
+        result["reason"] = str(exc)
+    return result
+
+
+def compare_verified_snapshot_database(snapshot: Any, current: Any, *, snapshot_name: str,
+                                       manifest_sha256: str) -> dict[str, Any]:
+    """Require the native full-snapshot observation to match the pinned evidence.
+
+    The controller must bind these expected fields to its exact operation before
+    collection; this function neither guesses latest nor authenticates JSON.
+    """
+    proof = snapshot.get("snapshot") if isinstance(snapshot, dict) else None
+    expected_name = re.compile(r"[0-9]{8}T[0-9]{6}Z-from-[A-Za-z0-9._-]+-to-[0-9a-f]{40}-[0-9a-f]{32}\Z")
+    if (not isinstance(snapshot_name, str) or not expected_name.fullmatch(snapshot_name)
+            or not isinstance(manifest_sha256, str) or not HASH.fullmatch(manifest_sha256)
+            or not isinstance(proof, dict) or set(proof) != {"name", "manifest_sha256", "database_sha256", "verified_files"}
+            or snapshot.get("read_mode") != "verified-immutable-snapshot"
+            or proof.get("name") != snapshot_name or proof.get("manifest_sha256") != manifest_sha256
+            or not isinstance(proof.get("database_sha256"), str) or not HASH.fullmatch(proof["database_sha256"])
+            or type(proof.get("verified_files")) is not int or not 5 <= proof["verified_files"] <= 20000):
+        return {"status": "unknown", "result": "INCONCLUSIVE", "differences": [],
+                "reason": "exact verified snapshot database observation missing"}
+    result = compare_database_semantics(snapshot, current)
+    result["snapshot"] = dict(proof)
+    return result
 
 
 class _Assessment:
@@ -136,6 +233,34 @@ class _Assessment:
             self.invalid(path)
 
 
+def _runtime_proof(a: _Assessment, recovery: dict[str, Any]) -> None:
+    path = "recovery.runtime_proof"
+    value = a.obj(recovery.get("runtime_proof"), path, {
+        "schema", "protocol", "snapshot_format", "manifest_sha256", "selected_manifest_sha256",
+        "executed_manifest_sha256", "files", "inventory_verified", "refs",
+    })
+    if value.get("schema") != "celikpanel/recovery-runtime-proof/v1":
+        a.invalid(path + ".schema")
+    for field, expected in (("protocol", 1), ("snapshot_format", 6)):
+        if type(value.get(field)) is not int or value[field] != expected:
+            a.invalid(path + "." + field)  # unsupported format is unknown evidence
+    a.refs(value.get("refs"), path + ".refs")
+    a.expect(value.get("inventory_verified"), True, path + ".inventory_verified")
+    manifest = a.text(value.get("manifest_sha256"), path + ".manifest_sha256", HASH)
+    for field in ("selected_manifest_sha256", "executed_manifest_sha256"):
+        observed = a.text(value.get(field), path + "." + field, HASH)
+        if observed and manifest and observed != manifest:
+            a.fail(path + "." + field)
+    files = a.hashes(value.get("files"), path + ".files", RUNTIME_FILES_V1)
+    if set(files) == RUNTIME_FILES_V1 and manifest:
+        raw = "format=celikpanel-recovery-runtime-v1\nprotocol=1\nsnapshot=6\n"
+        raw += "".join(files[name] + "  " + name + "\n" for name in sorted(files))
+        if hashlib.sha256(raw.encode()).hexdigest() != manifest:
+            a.fail(path + ".manifest_contents")
+    if files.get("rollback.sh") and recovery.get("rollback_script_sha256") != files["rollback.sh"]:
+        a.fail(path + ".executed_rollback_script")
+
+
 def classify(record: Any, *, expected_regression: str | None = None) -> dict[str, Any]:
     """Return PASS/FAIL/INCONCLUSIVE; known failures dominate unknown observations."""
     a = _Assessment()
@@ -149,7 +274,7 @@ def classify(record: Any, *, expected_regression: str | None = None) -> dict[str
         "candidate": {"release", "commit", "manifest_sha256", "artifacts", "refs"},
         "update": {"operation_id", "snapshot_id", "entrypoint", "started_operation_ids", "snapshot_complete", "refs"},
         "fault": {"operation_id", "kind", "boundary", "observed", "installed_artifacts", "refs"},
-        "recovery": {"operation_id", "snapshot_id", "automatic", "entrypoint", "rollback_script_sha256", "restore_started", "restore_completed", "exit_code", "terminal_outcome", "failure_code", "refs"},
+        "recovery": {"operation_id", "snapshot_id", "automatic", "entrypoint", "rollback_script_sha256", "restore_started", "restore_completed", "exit_code", "terminal_outcome", "failure_code", "runtime_proof", "refs"},
         "after": {"artifacts", "running_artifacts", "protected_sentinels", "database", "services", "transaction_markers", "https", "refs"},
         "workloads": {"required", "observations", "refs"},
     }
@@ -199,7 +324,12 @@ def classify(record: Any, *, expected_regression: str | None = None) -> dict[str
     a.same(recovery.get("operation_id"), operation, "recovery.operation_id")
     a.same(recovery.get("snapshot_id"), snapshot, "recovery.snapshot_id")
     a.expect(recovery.get("automatic"), True, "recovery.automatic")
-    a.expect(recovery.get("entrypoint"), "retained-release-rollback", "recovery.entrypoint")
+    if recovery.get("entrypoint") == "independent-runtime":
+        _runtime_proof(a, recovery)
+    else:
+        a.expect(recovery.get("entrypoint"), "retained-release-rollback", "recovery.entrypoint")
+        if "runtime_proof" in recovery:
+            a.invalid("recovery.runtime_proof.inconsistent_entrypoint")
     a.text(recovery.get("rollback_script_sha256"), "recovery.rollback_script_sha256", HASH)
     a.expect(recovery.get("restore_started"), True, "recovery.restore_started")
     a.expect(recovery.get("restore_completed"), True, "recovery.restore_completed")

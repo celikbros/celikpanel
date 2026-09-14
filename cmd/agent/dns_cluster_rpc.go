@@ -47,12 +47,8 @@ var (
 	dnsClusterStat     = os.Lstat
 	dnsClusterReadDir  = os.ReadDir
 
-	// Managed PowerDNS drop-ins are root-owned in production. Focused tests
-	// replace this with the current euid because their temporary directories
-	// cannot be root-owned.
-	dnsClusterConfigRequiredOwnerUID = uint32(0)
-	dnsClusterConfigOwnerUID         = platformRepoFileOwnerUID
-	dnsClusterRestart                = func(ctx context.Context) ([]byte, error) {
+	dnsClusterConfigOwnerUID = platformRepoFileOwnerUID
+	dnsClusterRestart        = func(ctx context.Context) ([]byte, error) {
 		return serviceMutationCommand(ctx, "systemctl", "restart", "pdns").CombinedOutput()
 	}
 	dnsClusterRetrieve = func(ctx context.Context, zone string) ([]byte, error) {

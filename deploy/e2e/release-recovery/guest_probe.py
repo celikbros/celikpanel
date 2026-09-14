@@ -2,8 +2,10 @@
 """Read-only native observations inside an explicitly marked disposable QEMU guest.
 
 Salt okunur yerel gözlemler; yalnız açıkça işaretlenmiş geçici QEMU konuğunda.
-This does not install, update, repair, stop services, or read private credentials.
-Bu araç kurmaz, güncellemez, onarmaz, servis durdurmaz, özel kimlik bilgisi okumaz.
+This does not install, update, repair or stop services. SQLite values are hashed
+inside process memory and never emitted; credential/key files are not opened.
+Kurulum, güncelleme, onarım veya servis durdurma yapmaz. SQLite değerleri
+bellekte özetlenir, yayımlanmaz; kimlik bilgisi/anahtar dosyaları açılmaz.
 """
 from __future__ import annotations
 
@@ -12,7 +14,7 @@ import datetime as dt
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import selectors
 import signal
@@ -20,6 +22,7 @@ import socket
 import sqlite3
 import ssl
 import stat
+import struct
 import subprocess
 import sys
 import time
@@ -81,7 +84,7 @@ def metadata(st: os.stat_result) -> tuple:
 
 def bounded_file(path: Path, limit: int, *, marker: bool = False, virtual: bool = False) -> bytes:
     try:
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
         with os.fdopen(fd, "rb") as stream:
             before = os.fstat(stream.fileno())
             if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
@@ -296,39 +299,313 @@ def observe_service(unit: str, binary: Path) -> dict:
     return result
 
 
-def observe_database() -> dict:
-    # immutable avoids creating/writing SQLite SHM. Never silently ignore a WAL.
-    # immutable SHM oluşturmaz/yazmaz. WAL varsa içerik yok sayılarak başarı verilmez.
+DATABASE_SEMANTIC_SCHEMA = "celikpanel/sqlite-semantic-observation/v1"
+SNAPSHOT_ROOT = Path("/var/backups/celikpanel/update-snapshots")
+SNAPSHOT_NAME = re.compile(r"[0-9]{8}T[0-9]{6}Z-from-[A-Za-z0-9._-]+-to-[0-9a-f]{40}-[0-9a-f]{32}\Z")
+DB_MAX_BYTES = 256 * 1024 * 1024
+DB_MAX_ROWS = 100000
+DB_MAX_VALUE_BYTES = 64 * 1024 * 1024
+DB_TIMEOUT = 8
+
+
+def database_owners() -> set[int]:
+    # Canonical live data can belong to the panel account; snapshots belong to root.
+    owners = {0}
     try:
-        before = PANEL_DB.lstat()
-        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
-            raise ProbeError("database is not a single-link regular file")
-        wal = Path(str(PANEL_DB) + "-wal")
-        if wal.exists() or wal.is_symlink():
-            info = wal.lstat()
-            if not stat.S_ISREG(info.st_mode) or info.st_size != 0:
-                return unknown("nonempty or unsafe WAL requires a separately verified consistent snapshot")
-        connection = sqlite3.connect(PANEL_DB.as_uri() + "?mode=ro&immutable=1", uri=True, timeout=2)
-        deadline = time.monotonic() + 8
-        connection.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
+        import pwd
+        owners.add(pwd.getpwnam("celikpanel").pw_uid)
+    except (ImportError, KeyError):
+        pass
+    return owners
+
+
+def protected_identity(path: Path, *, directory=False, owners=None) -> tuple:
+    info = path.lstat()
+    owners = {0} if owners is None else owners
+    kind = stat.S_ISDIR if directory else stat.S_ISREG
+    if (not kind(info.st_mode) or info.st_uid not in owners
+            or stat.S_IMODE(info.st_mode) & 0o022
+            or (not directory and (info.st_nlink != 1 or info.st_size > DB_MAX_BYTES))):
+        raise ProbeError("unsafe database evidence metadata")
+    return (info.st_dev, info.st_ino, info.st_uid, info.st_gid, stat.S_IMODE(info.st_mode))
+
+
+def protected_parents(path: Path, owners: set[int]) -> dict:
+    if not path.is_absolute() or path != Path(os.path.normpath(path)):
+        raise ProbeError("database evidence path is not canonical")
+    result = {}
+    for directory in reversed(path.parents):
+        info = directory.lstat()
+        # Root-owned sticky /tmp ancestors are safe for private root-owned test roots.
+        if (stat.S_ISDIR(info.st_mode) and info.st_uid == 0
+                and stat.S_IMODE(info.st_mode) & stat.S_ISVTX):
+            result[directory] = (info.st_dev, info.st_ino, info.st_uid, info.st_gid, stat.S_IMODE(info.st_mode))
+        else:
+            result[directory] = protected_identity(directory, directory=True, owners=owners)
+    return result
+
+
+def _database_files(path: Path, *, immutable=False) -> dict:
+    owners = {0} if immutable else database_owners()
+    identities = protected_parents(path, owners)
+    identities[path] = protected_identity(path, owners=owners)
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    try:
+        opened = os.fstat(fd)
+        if not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1 or (opened.st_dev, opened.st_ino) != identities[path][:2]:
+            raise ProbeError("database changed before read")
+        header = os.read(fd, 100)
+        if (os.fstat(fd).st_dev, os.fstat(fd).st_ino) != identities[path][:2]:
+            raise ProbeError("database changed before read")
+    finally:
+        os.close(fd)
+    if len(header) != 100 or header[:16] != b"SQLite format 3\x00":
+        raise ProbeError("database header is invalid")
+    sidecars = {}
+    for suffix in ("-wal", "-shm", "-journal"):
+        sidecar = Path(str(path) + suffix)
         try:
+            sidecars[sidecar] = protected_identity(sidecar, owners=owners)
+        except FileNotFoundError:
+            sidecars[sidecar] = None
+    if immutable:
+        if any(value is not None for value in sidecars.values()):
+            raise ProbeError("verified snapshot has unexpected SQLite sidecars")
+    elif header[18:20] == b"\x02\x02":
+        if any(sidecars[Path(str(path) + suffix)] is None for suffix in ("-wal", "-shm")):
+            raise ProbeError("WAL read requires existing safe WAL and SHM")
+        if any(sidecars[Path(str(path) + suffix)][2:] != identities[path][2:] for suffix in ("-wal", "-shm")):
+            raise ProbeError("WAL/SHM ownership and permissions must already match the database")
+    if sidecars[Path(str(path) + "-journal")] is not None:
+        raise ProbeError("rollback journal requires separate recovery observation")
+    identities.update(sidecars)
+    return identities
+
+
+def _recheck_database_files(path: Path, identities: dict, *, immutable=False):
+    current = _database_files(path, immutable=immutable)
+    if current != identities:
+        raise ProbeError("database evidence path or permissions changed during read")
+
+
+def _typed_row(row, budget: list[int]) -> bytes:
+    digest = hashlib.sha256()
+    for value in row:
+        if value is None:
+            tag, raw = b"n", b""
+        elif isinstance(value, int):
+            tag, raw = b"i", str(value).encode("ascii")
+        elif isinstance(value, float):
+            tag, raw = b"f", struct.pack(">d", value)
+        elif isinstance(value, str):
+            tag, raw = b"t", value.encode("utf-8")
+        elif isinstance(value, bytes):
+            tag, raw = b"b", value
+        else:
+            raise ProbeError("unsupported SQLite value type")
+        budget[0] += len(raw)
+        if budget[0] > DB_MAX_VALUE_BYTES:
+            raise ProbeError("database logical content exceeds bound")
+        digest.update(tag + len(raw).to_bytes(8, "big") + raw)
+    return digest.digest()
+
+
+def _quoted(name: str) -> str:
+    if not isinstance(name, str) or not name or len(name.encode("utf-8")) > 256 or "\x00" in name:
+        raise ProbeError("database identifier exceeds bound")
+    return '"' + name.replace('"', '""') + '"'
+
+
+def _database_semantics(connection, deadline: float) -> dict:
+    def tick():
+        if time.monotonic() >= deadline:
+            raise ProbeError("database semantic read exceeded time bound")
+    # BEGIN + the first schema read fixes one SQLite snapshot for all subsequent
+    # reads, including committed WAL frames. No checkpoint/backup-to-source occurs.
+    # https://sqlite.org/isolation.html and https://sqlite.org/wal.html#concurrency
+    schema = connection.execute("SELECT type,name,tbl_name,sql FROM main.sqlite_schema ORDER BY type,name,tbl_name LIMIT 2049").fetchall()
+    if len(schema) > 2048:
+        raise ProbeError("database schema exceeds bound")
+    budget = [0]
+    schema_digest = hashlib.sha256()
+    for row in schema:
+        schema_digest.update(_typed_row(row, budget))
+    integrity = [row[0] for row in connection.execute("PRAGMA main.integrity_check(1)")]
+    if integrity != ["ok"]:
+        # SQLite corruption details may contain user data: never return them.
+        raise ProbeError("database integrity check did not pass")
+    version = connection.execute("PRAGMA main.user_version").fetchone()[0]
+    application = connection.execute("PRAGMA main.application_id").fetchone()[0]
+    table_kinds = {row[1]: (row[2], row[4]) for row in connection.execute("PRAGMA main.table_list")}
+    tables, total_rows = [], 0
+    for kind, name, _, sql in schema:
+        if kind != "table":
+            continue
+        tick()
+        if len(tables) >= 256 or (sql and re.match(r"\s*CREATE\s+VIRTUAL\s+TABLE\b", sql, re.I)):
+            raise ProbeError("virtual or excessive tables require a separate observer")
+        quoted = _quoted(name)
+        columns = connection.execute("PRAGMA main.table_xinfo(" + quoted + ")").fetchall()
+        if not columns or len(columns) > 256:
+            raise ProbeError("database columns exceed bound")
+        column_names = [row[1] for row in columns]
+        projection = [_quoted(column) for column in column_names]
+        if name not in table_kinds or table_kinds[name][0] not in {"table", "shadow"}:
+            raise ProbeError("SQLite table metadata unavailable")
+        without_rowid = bool(table_kinds[name][1])
+        rowid = None
+        if not without_rowid:
+            rowid = next((value for value in ("_rowid_", "rowid", "oid") if value not in {c.lower() for c in column_names}), None)
+            if rowid is None:
+                raise ProbeError("all implicit rowid aliases are shadowed")
+            projection.insert(0, rowid)
+        rows = []
+        for row in connection.execute("SELECT " + ",".join(projection) + " FROM main." + quoted):
+            tick()
+            total_rows += 1
+            if total_rows > DB_MAX_ROWS:
+                raise ProbeError("database row count exceeds bound")
+            rows.append(_typed_row(row, budget))
+        table_digest = hashlib.sha256(b"celikpanel/sqlite-table/v1\x00")
+        for row_digest in sorted(rows):
+            table_digest.update(row_digest)
+        tables.append({"name": name, "rows": len(rows), "columns": len(columns),
+                       "rowid_included": rowid is not None, "sha256": table_digest.hexdigest()})
+    tables.sort(key=lambda value: value["name"])
+    semantic = {"schema": DATABASE_SEMANTIC_SCHEMA, "schema_sha256": schema_digest.hexdigest(),
+                "user_version": version, "application_id": application, "tables": tables,
+                "excluded_tables": [], "row_count": total_rows}
+    semantic["sha256"] = hashlib.sha256(json.dumps(semantic, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    migrations = None
+    if any(value["name"] == "schema_migrations" for value in tables):
+        columns = {row[1] for row in connection.execute("PRAGMA main.table_info(schema_migrations)")}
+        if "version" in columns:
+            values = [row[0] for row in connection.execute("SELECT version FROM main.schema_migrations ORDER BY version LIMIT 1001")]
+            if len(values) > 1000 or any(type(value) is not int for value in values):
+                raise ProbeError("migration version observation is not bounded integer data")
+            migrations = values
+    return {"status": "ok", "integrity_check": ["ok"], "user_version": version,
+            "schema_version": max(migrations) if migrations else None, "migrations": migrations,
+            "semantic": semantic}
+
+
+def _observe_database_path(path: Path, *, immutable=False) -> dict:
+    try:
+        identities = _database_files(path, immutable=immutable)
+        before_metadata = {entry: metadata(entry.lstat()) for entry in identities if entry == path or entry in (Path(str(path) + "-wal"), Path(str(path) + "-shm")) and identities[entry] is not None}
+        deadline = time.monotonic() + DB_TIMEOUT
+        connection = sqlite3.connect(path.as_uri() + "?mode=ro" + ("&immutable=1" if immutable else ""),
+                                     uri=True, timeout=0, isolation_level=None)
+        try:
+            connection.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, DB_MAX_VALUE_BYTES)
+            connection.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
             connection.execute("PRAGMA query_only=ON")
-            integrity = [row[0] for row in connection.execute("PRAGMA integrity_check(10)")]
-            version = connection.execute("PRAGMA user_version").fetchone()[0]
-            names = {row[0] for row in connection.execute("SELECT name FROM sqlite_schema WHERE type='table'")}
-            migrations = None
-            if "schema_migrations" in names:
-                columns = {row[1] for row in connection.execute("PRAGMA table_info(schema_migrations)")}
-                if "version" in columns:
-                    migrations = [row[0] for row in connection.execute("SELECT version FROM schema_migrations ORDER BY version LIMIT 1000")]
+            connection.execute("PRAGMA trusted_schema=OFF")
+            connection.execute("PRAGMA temp_store=MEMORY")
+            connection.execute("BEGIN")
+            result = _database_semantics(connection, deadline)
+            _recheck_database_files(path, identities, immutable=immutable)
+            connection.execute("ROLLBACK")  # end the read transaction; no source write
         finally:
             connection.close()
-        if metadata(before) != metadata(PANEL_DB.lstat()) or (wal.exists() and wal.stat().st_size != 0):
-            return unknown("database or WAL changed during observation")
-        return {"status": "ok", "integrity_check": integrity, "user_version": version,
-                "schema_version": max(migrations) if migrations else None, "migrations": migrations}
-    except (OSError, sqlite3.Error, ProbeError) as exc:
+        _recheck_database_files(path, identities, immutable=immutable)
+        result["read_mode"] = "verified-immutable-snapshot" if immutable else "sqlite-read-only-transaction"
+        result["wal_included"] = not immutable and identities[Path(str(path) + "-wal")] is not None
+        # A supported WAL reader may touch WAL/SHM coordination metadata. Record
+        # observed changes, including concurrent writer activity; never claim a
+        # byte-for-byte metadata-preserving read or silently normalize permissions.
+        result["source_metadata_changed"] = {"database" if entry == path else entry.name.rsplit("-", 1)[1]: metadata(entry.lstat()) != before for entry, before in before_metadata.items()}
+        return result
+    except ProbeError as exc:
+        return unknown(str(exc))  # bounded constant reason, never SQL error text
+    except (OSError, sqlite3.Error, UnicodeError) as exc:
         return unknown(f"database observation failed: {exc.__class__.__name__}")
+
+
+def observe_database() -> dict:
+    return _observe_database_path(PANEL_DB)
+
+
+def observe_snapshot_database(name: str, manifest_sha256: str) -> dict:
+    """Read only a fully verified final snapshot, never a staged/arbitrary path.
+
+    The caller binds this explicit manifest to its operation evidence. This
+    observer does not guess latest snapshot or infer request identity from names.
+    """
+    try:
+        if not SNAPSHOT_NAME.fullmatch(name) or not HEX64.fullmatch(manifest_sha256):
+            raise ProbeError("invalid expected snapshot identity")
+        directory = SNAPSHOT_ROOT / name
+        protected_parents(directory / "celikpanel.db", {0})
+        manifest = directory / "SHA256SUMS"
+        protected_identity(manifest)
+        raw = bounded_file(manifest, 8 * 1024 * 1024)
+        if hashlib.sha256(raw).hexdigest() != manifest_sha256:
+            raise ProbeError("snapshot manifest differs from expected evidence")
+        rows = {}
+        for line in raw.decode("utf-8").splitlines():
+            match = re.fullmatch(r"([0-9a-f]{64})  (\./[^\x00\r\n]+)", line)
+            if not match:
+                raise ProbeError("invalid snapshot manifest entry")
+            relative = match[2][2:]
+            parsed = PurePosixPath(relative)
+            if parsed.is_absolute() or ".." in parsed.parts or str(parsed) != relative or relative == "SHA256SUMS" or relative in rows:
+                raise ProbeError("ambiguous snapshot manifest path")
+            rows[relative] = match[1]
+        if not {"snapshot.version", "celikpanel.db", "bin/agent", "bin/panel", "web/index.html"} <= rows.keys() or len(rows) > 20000:
+            raise ProbeError("snapshot manifest is incomplete")
+        actual, identities, stable_metadata = set(), {}, {}
+        deadline, total, walked = time.monotonic() + 30, 0, 0
+        for parent, dirs, files in os.walk(directory, followlinks=False):
+            walked += 1 + len(dirs) + len(files)
+            if walked > 60000 or time.monotonic() >= deadline:
+                raise ProbeError("snapshot inventory exceeded observation bound")
+            identities[Path(parent)] = protected_identity(Path(parent), directory=True)
+            for child in dirs:
+                protected_identity(Path(parent) / child, directory=True)
+            for child in files:
+                path = Path(parent) / child
+                identities[path] = protected_identity(path)
+                if path != manifest:
+                    actual.add(path.relative_to(directory).as_posix())
+        stable_metadata = {path: metadata(path.lstat()) for path in identities}
+        if actual != set(rows):
+            raise ProbeError("snapshot inventory differs from complete manifest")
+        for relative, expected in rows.items():
+            path = directory / relative
+            digest = hashlib.sha256()
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+            with os.fdopen(fd, "rb") as stream:
+                before = os.fstat(stream.fileno())
+                if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or (before.st_dev, before.st_ino) != identities[path][:2]:
+                    raise ProbeError("snapshot payload identity changed before read")
+                for chunk in iter(lambda: stream.read(1048576), b""):
+                    total += len(chunk)
+                    if total > 2 * 1024 * 1024 * 1024 or time.monotonic() >= deadline:
+                        raise ProbeError("snapshot verification exceeded bound")
+                    digest.update(chunk)
+                if metadata(before) != metadata(os.fstat(stream.fileno())):
+                    raise ProbeError("snapshot payload changed during verification")
+            if digest.hexdigest() != expected:
+                raise ProbeError("snapshot payload checksum mismatch")
+        if bounded_file(directory / "snapshot.version", 16).strip() != b"6":
+            raise ProbeError("unsupported snapshot version")
+        result = _observe_database_path(directory / "celikpanel.db", immutable=True)
+        if bounded_file(manifest, 8 * 1024 * 1024) != raw:
+            raise ProbeError("snapshot manifest changed")
+        for path, identity in identities.items():
+            if protected_identity(path, directory=path.is_dir()) != identity or metadata(path.lstat()) != stable_metadata[path]:
+                raise ProbeError("snapshot identity changed during observation")
+        # Rehash the exact standalone DB after the semantic read; no WAL is ignored.
+        if hashlib.sha256(bounded_file(directory / "celikpanel.db", DB_MAX_BYTES)).hexdigest() != rows["celikpanel.db"]:
+            raise ProbeError("snapshot database changed during semantic observation")
+        result["snapshot"] = {"name": name, "manifest_sha256": manifest_sha256,
+                              "database_sha256": rows["celikpanel.db"], "verified_files": len(rows)}
+        return result
+    except ProbeError as exc:
+        return unknown(str(exc))
+    except (OSError, UnicodeError) as exc:
+        return unknown(f"snapshot database observation failed: {exc.__class__.__name__}")
 
 
 def observe_web() -> dict:
@@ -559,9 +836,13 @@ def main(argv=None) -> int:
     parser.add_argument("--name", type=valid_dns_name, required=True)
     parser.add_argument("--since", type=parse_since, required=True)
     parser.add_argument("--operation-id")
+    parser.add_argument("--snapshot-name")
+    parser.add_argument("--snapshot-manifest-sha256")
     args = parser.parse_args(argv)
     if args.operation_id and not HEX32.fullmatch(args.operation_id):
         parser.error("operation-id must be 32 lowercase hex characters")
+    if bool(args.snapshot_name) != bool(args.snapshot_manifest_sha256) or (args.snapshot_name and not args.operation_id):
+        parser.error("snapshot observation requires exact operation-id, snapshot-name and manifest-sha256")
     try:
         identity = guard_guest(args)
     except (ProbeError, UnicodeError) as exc:
@@ -576,6 +857,8 @@ def main(argv=None) -> int:
               "timers": {unit: collect_observation(service_properties, unit) for unit in TIMERS},
               "transaction": collect_observation(observe_transaction), "journal": collect_observation(observe_journal, args.since, args.operation_id),
               "completed_at_utc": utc_now()}
+    if args.snapshot_name:
+        result["snapshot_database"] = collect_observation(observe_snapshot_database, args.snapshot_name, args.snapshot_manifest_sha256)
     print(json.dumps(result, sort_keys=True, indent=2))
     return 0
 

@@ -189,7 +189,7 @@ dar kapsamlı adımları tercih et; ürünü tek seferde baştan yazma.
 |---|---|---|
 | P0.1 | Gerçek önceki sürüm çıktısıyla yeniden üretilebilir yerel yükseltme/otomatik geri alma tatbikatı; işlem kanıtının bağımsız yakalanması. | Önce yayımlanmış dosyalarla tek kullanımlık sanal makinelerde bilinen bir başarısız yaşam döngüsünü yeniden üret. Test, geri yükleme gövdesini gerçekten çalıştırmalı, hizmetleri yeniden başlatmalı ve sonucu incelemelidir. Taklit systemctl veya yalnız başarı döndüren bir alt süreç yeterli değildir. |
 | P0.2 | Türlerle ayrılmış erişim/gözlem ve Agent ile adayın başlamasından bağımsız, kimlik doğrulamalı kurtarma/durum yolu. | İlk başlangıçta ve işlem sırasında Agent'ın kullanılamaması; lisans doğrulayıcısının mevcut süreden uzun kullanılamaması; sayfa yenileme ve üst katman yükleme hatası. Aynı işlem görünür kalır; ek değişikliğe veya yeni yetkiye izin verilmez. |
-| P0.3 | Kısmi — snapshot’a bağlı birim geçişi kurtarması uygulandı ve gerçek ortamda sınandı | [Sınırlı uygulama ve kabul](../deploy/e2e/release-recovery/UNIT-TRANSITION.tr.md): atomik eski/aday yayımı ve geri yükleme, sahip değişikliğini reddetme, aşamaya uygun koruma kontrolleri. Ayrı sürümlü yürütücü, tüm kontrol noktaları, kesilen geri alma ve yeniden başlatma kapsamı açıktır. |
+| P0.3 | Kararlı kurtarma manifesti/yürütücüsü ve açık güncelleme aşamaları. | Her aşamada ve geri alma sırasında hata uygula; kurtarma sürecini öldür veya sistemi yeniden başlat. Geliştiriciye özel script olmadan desteklenen son durum ve kurtarılabilir erişimi doğrula. Etkinleştirmeden önce eski snapshot uyumluluğunu kanıtla. |
 | P0.4 | Ortak DNS/TLS dosya sözleşmeleri ve desteklenen geçişler. | Gerçek eski/yeni sertifika düzenleme, yenileme, kayıt ekleme/düzenleme/silme, snapshot ve geri yükleme üreticileri birlikte çalışır. Olağan revizyon değişiklikleri geçer; değişen sahip yetkisi, bozuk kanıt ve sahibin düzenlemeleri doğru sınırda reddedilir. |
 | P0.5 | Bağımsız yenileme ve hizmetlerin açılışta çalışması. | Yönetim durdurulmuşken veya sistemde yokken DNS primary/secondary aktarımı, web isteği, veritabanı işlemi, posta teslimi/kimlik doğrulaması, cron, sertifika yenileme ve yeniden başlatma sonrası güvenlik duvarı; desteklendiği söylenen her birleşimde çalışır. |
 
@@ -200,8 +200,8 @@ Yukarıdaki P0 kimlikleri, takip edilen iş kalemleridir. Başlangıç durumlar�
 | İş | 14 Eylül'deki durum | Tamamlanma kanıtı |
 |---|---|---|
 | P0.1 | Kısmi — Arch ve Debian’da bir kontrol noktasında gerçek eski sürüme dönüş geçti | [Birim geçişi kabulü](../deploy/e2e/release-recovery/UNIT-TRANSITION.tr.md), SIGKILL sonrası gerçek geri yüklemeyi ve çalışan eski dosyaları kaydeder. Geniş hata/hizmet matrisi, tutarlı veritabanı içeriği ve imzalı aday kabulü hâlâ açıktır. |
-| P0.2 | Kısmi — türlerle ayrılmış erişim ve Agent’tan bağımsız başlangıç gözlemi uygulandı | [Erişim/gözlem kabulü](RECOVERY-ACCESS.tr.md): Agent’sız gerçek panel süreci, sınırlı token okuması, katı yerel gözlem ve tarayıcı hata senaryoları. Panel dosyası, veritabanı, TLS ve ilk arayüz paketi bağımlılıkları sürer; tam yerel kesinti/yeniden başlatma kabulü açıktır. |
-| P0.3 | Kısmi — snapshot’a bağlı birim geçişi kurtarması uygulandı ve gerçek ortamda sınandı | [Sınırlı uygulama ve kabul](../deploy/e2e/release-recovery/UNIT-TRANSITION.tr.md): atomik eski/aday yayımı ve geri yükleme, sahip değişikliğini reddetme, aşamaya uygun koruma kontrolleri. Ayrı sürümlü yürütücü, tüm kontrol noktaları, kesilen geri alma ve yeniden başlatma kapsamı açıktır. |
+| P0.2 | Kısmi — türlenmiş erişim, Agent bağımsız başlangıç gözlemi ve yerel kurtarma girişi uygulandı | [Erişim/gözlem kabulü](RECOVERY-ACCESS.tr.md) ve [bağımsız kurtarma ortamı](RECOVERY-RUNTIME.tr.md). Root/sudo durum ve kurtarma yolu Panel/Agent başlangıcına veya lisansa bağlı değildir; tam yerel kesinti/erişim matrisi açıktır. |
+| P0.3 | Kısmi — bağımsız kurtarma, atomik program yayını ve seçili aşamalarda gerçek kurtarma SIGKILL/reboot geçti | [Bağımsız kurtarma kabulü](../deploy/e2e/release-recovery/INDEPENDENT-RUNTIME.tr.md): Arch payload_restored SIGKILL ve Debian runtime_verified reboot sonrası aynı işlem otomatik tamamlandı. Tam aşama matrisi, imzalı aday kabulü, korunan veriden bağımsızlık, metadata geçişleri ve temizleme açıktır. |
 | P0.4 | Kısmi — Alpha80'de sınırlı BIND ilerleme denetimi/ön kontrolü var; şema ayrımı tamamlanmadı | Gerekli: korunan TLS kanıtı ve sahibin değişiklikleri dahil, desteklenen tüm gerçek üreticiden okuyucuya ve geri yükleyiciye geçiş sonuçları. |
 | P0.5 | Açık — belgelenmiş yenileme/güvenlik duvarı bağımlılıkları sürüyor | Gerekli: desteklendiği söylenen her yerel hizmet birleşimi için yönetim bileşenlerinin kaldırılması/yokluğu ve yeniden başlatma kontrolleri. |
 
@@ -244,10 +244,10 @@ belirlenmelidir; evrensel bir kesintisizlik garantisi uydurulamaz.
 
 ## Bu inceleme şimdi neyi değiştiriyor?
 
-Anayasa, D-025 ve ürün ilkeleri artık bu gereksinimleri açıkça tanımlıyor ve
-çelişen eski ifadeleri gideriyor. Kaynak kod denetimi ve tamamlanma matrisi,
-neyin geliştirilip kanıtlanması gerektiğini ortaya koyuyor. Bunlar bağımsız
-kurtarma yürütücüsünü, erişim yolunu, dosya şeması geçişini veya yerel yenileme
-geçişini uygulamıyor. Bu işler açık P0 işleri olarak kalıyor. Sunucu sahibinin
-uyguladığı Frankfurt geri alması ve Alpha80 olay düzeltmeleri, olay ve sürüm
-notlarında ayrı kaydediliyor.
+Anayasa, D-025 ve ürün ilkeleri bu gereksinimleri açıkça tanımlıyor ve çelişen
+eski ifadeleri gideriyor. İlk kaynak denetimi ve tamamlanma matrisi yapılacak işi
+belirledi; yukarıdaki kabul takibi sonraki uygulamaları ve kanıtlarını kaydeder.
+Bağımsız kurtarma yürütücüsü ve erişim yolu artık sınırlı kapsamda uygulanmıştır.
+Bunların tam kabulü, dosya şeması geçişi ve yerel yenileme geçişi açık P0 işleridir.
+Sunucu sahibinin uyguladığı Frankfurt geri alması ve Alpha80 olay düzeltmeleri,
+olay ve sürüm notlarında ayrı kaydedilir.

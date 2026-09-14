@@ -53,6 +53,24 @@ validate_root_trusted_dir_chain() {
     done
 }
 
+# Only a newly prepared candidate must carry the independent runtime artifact.
+# Retained historical releases remain eligible for their existing recovery path.
+# Bağımsız çalışma ortamı yalnız yeni adayda zorunludur; tarihsel saklı
+# sürümlerin mevcut kurtarma yolu bu yeni dosya koşuluyla reddedilmez.
+validate_recovery_runtime_artifact() {
+    local root=$1 relative
+    [[ -d "$root/recovery-runtime" && ! -L "$root/recovery-runtime" ]] \
+        || die "candidate recovery runtime directory is missing"
+    for relative in runtime.manifest bin/recovery bin/agent-checker bin/panel-checker bin/schema17-bridge update.sh rollback.sh deploy/release-transaction-guard.sh deploy/release-unit-transition.sh deploy/release-recovery-foundation.sh deploy/panel-tls-snapshot.sh deploy/release-recovery-observation.sh deploy/recovery/runtime-entry.sh; do
+        [[ -f "$root/recovery-runtime/$relative" && ! -L "$root/recovery-runtime/$relative" ]] \
+            || die "candidate recovery runtime file is missing: $relative"
+    done
+    for relative in bin/recovery bin/agent-checker bin/panel-checker bin/schema17-bridge update.sh rollback.sh deploy/recovery/runtime-entry.sh; do
+        [[ -x "$root/recovery-runtime/$relative" ]] \
+            || die "candidate recovery runtime file is not executable: $relative"
+    done
+}
+
 validate_release_tree() {
     local root=$1 require_direct=${2:-0} canonical relative entry owner group mode links permissions
     local version commit tree expected actual
@@ -875,6 +893,7 @@ case "$SOURCE_ROOT" in
     *) die "prebuilt source is outside the fixed download staging boundary: $SOURCE_ROOT" ;;
 esac
 validate_release_tree "$SOURCE_ROOT" 0
+validate_recovery_runtime_artifact "$SOURCE_ROOT"
 
 [[ -f "$SOURCE_ROOT/deploy/finalize-pending-rollback.sh" &&
    ! -L "$SOURCE_ROOT/deploy/finalize-pending-rollback.sh" ]] \
@@ -888,12 +907,20 @@ find "$SOURCE_ROOT" -xdev -type f -exec chmod 0644 -- {} +
 chmod 0700 -- "$SOURCE_ROOT"
 chmod 0755 -- "$SOURCE_ROOT/bin/panel" "$SOURCE_ROOT/bin/agent" \
     "$SOURCE_ROOT/bin/schema17-bridge" "$SOURCE_ROOT/install.sh" \
+    "$SOURCE_ROOT/recovery-runtime/bin/recovery" \
+    "$SOURCE_ROOT/recovery-runtime/bin/agent-checker" \
+    "$SOURCE_ROOT/recovery-runtime/bin/panel-checker" \
+    "$SOURCE_ROOT/recovery-runtime/bin/schema17-bridge" \
+    "$SOURCE_ROOT/recovery-runtime/update.sh" \
+    "$SOURCE_ROOT/recovery-runtime/rollback.sh" \
+    "$SOURCE_ROOT/recovery-runtime/deploy/recovery/runtime-entry.sh" \
     "$SOURCE_ROOT/update.sh" "$SOURCE_ROOT/rollback.sh" \
     "$SOURCE_ROOT/bootstrap-prebuilt-update.sh" \
     "$SOURCE_ROOT/deploy/release-recovery-runner.sh" \
     "$SOURCE_ROOT/deploy/finalize-pending-rollback.sh"
 
 validate_release_tree "$SOURCE_ROOT" 0
+validate_recovery_runtime_artifact "$SOURCE_ROOT"
 sync_release_tree_durably "$SOURCE_ROOT"
 
 nonce=$(od -An -N12 -tx1 /dev/urandom | tr -d ' \n')
@@ -905,6 +932,7 @@ FINAL_RELEASE=$RELEASES_ROOT/$release_name
 mv -T --no-clobber -- "$SOURCE_ROOT" "$FINAL_RELEASE"
 sync -f -- "$RELEASES_ROOT" || die "cannot make release publication durable"
 validate_release_tree "$FINAL_RELEASE" 1
+validate_recovery_runtime_artifact "$FINAL_RELEASE"
 [[ -x "$FINAL_RELEASE/deploy/finalize-pending-rollback.sh" &&
    -f "$FINAL_RELEASE/deploy/finalize-pending-rollback.sh" &&
    ! -L "$FINAL_RELEASE/deploy/finalize-pending-rollback.sh" ]] \

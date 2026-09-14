@@ -185,8 +185,8 @@ The P0 identifiers above are the tracked work items. Their initial state is:
 | Item | Status on September 14 | Completion evidence |
 |---|---|---|
 | P0.1 | Partial — native old-release restoration passed at one checkpoint on Arch and Debian | [Unit-transition acceptance](../deploy/e2e/release-recovery/UNIT-TRANSITION.md) records real restoration and running old binaries after SIGKILL. The broader fault/workload matrix, consistent database semantics and signed candidate admission remain open. |
-| P0.2 | Partial — typed access and Agent-independent startup observation implemented | [Access/observation acceptance](RECOVERY-ACCESS.md): real panel process without Agent, bounded token reads, strict native observations, and browser fault cases. Panel binary, DB, TLS and eager shell remain dependencies; full native interruption/reboot acceptance stays open. |
-| P0.3 | Partial — snapshot-bound unit transition recovery implemented and natively tested | [Scoped implementation and acceptance](../deploy/e2e/release-recovery/UNIT-TRANSITION.md): atomic old/candidate publication and restoration, owner-edit refusal, and phase-appropriate guard checks. The separate versioned executor, complete checkpoints, interrupted rollback and reboot coverage remain open. |
+| P0.2 | Partial — typed access, Agent-independent startup observation and native recovery entrypoint implemented | [Access/observation acceptance](RECOVERY-ACCESS.md) and [independent runtime](RECOVERY-RUNTIME.md). Root/sudo status and recovery do not require Panel/Agent startup or licensing; the full native fault/access matrix remains open. |
+| P0.3 | Partial — independent executor, atomic publication and native recovery SIGKILL/reboot passed at selected checkpoints | [Independent recovery acceptance](../deploy/e2e/release-recovery/INDEPENDENT-RUNTIME.md): Arch payload_restored SIGKILL and Debian runtime_verified reboot automatically completed the same operation. The full checkpoint matrix, signed candidate admission, retained-data independence, metadata transitions and cleanup remain open. |
 | P0.4 | Partial — Alpha80 has a scoped BIND progression check/preflight; schema separation incomplete | Required: all supported real producer-to-reader-to-restore transition results, including retained TLS evidence and owner changes. |
 | P0.5 | Open — documented renewal/firewall dependencies remain | Required: removal/absence and reboot probes for each claimed native workload combination. |
 
@@ -224,10 +224,11 @@ measured and set per supported operation; no invented universal uptime guarantee
 
 ## What this review changes now
 
-The constitution, D-025 and product principles now make these requirements
-explicit and resolve contradictory older wording. The source audit and exit
-matrix establish what has to be built and proved. They do not implement the
-independent recovery executor, availability path, artifact-schema migration or
-native renewal migration. Those remain open P0 work. The owner-operated Frankfurt
-rollback and the Alpha80 incident fixes are recorded separately in the incident
-and release notes.
+The constitution, D-025 and product principles make these requirements explicit
+and resolve contradictory older wording. The original source audit and exit
+matrix established the work; the acceptance register above records subsequent
+implementation and its evidence. The independent recovery executor and access
+path now have scoped implementations. Their full acceptance, artifact-schema
+migration and native renewal migration remain open P0 work. The owner-operated
+Frankfurt rollback and Alpha80 incident fixes are recorded separately in the
+incident and release notes.

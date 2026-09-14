@@ -1260,8 +1260,7 @@ require_sequence "$INSTALL" \
     'restore_celikpanel_selinux_labels' \
     '"$SYSTEMCTL_BIN" daemon-reload'
 require_sequence "$ROLLBACK" \
-    'cp -a "$snap/bin" "$BIN_DIR"' \
-    'cp -a "$snap/web" "$WEB_DIR"' \
+    '    restore_product_resources' \
     'active rollback marker changed before unit restoration' \
     'release_unit_validate_transition \' \
     'release_unit_restore_transition \' \
@@ -2136,7 +2135,7 @@ trap - EXIT
 
 # The Makefile artifact contains the complete offline initial-install payload.
 # Updates and rollbacks still use the immutable bootstrap transaction path.
-require_literal "$MAKEFILE" 'build: panel agent schema17-bridge web'
+require_literal "$MAKEFILE" 'build: panel agent schema17-bridge recovery-runtime web'
 require_literal "$MAKEFILE" '$(NPM) ci --no-audit --no-fund'
 reject_literal "$MAKEFILE" '$(NPM) install --no-audit --no-fund'
 require_literal "$MAKEFILE" 'cp bin/panel bin/agent bin/schema17-bridge dist/$(DIST)/bin/'
@@ -2221,7 +2220,7 @@ require_literal "$UPDATE" '--bootstrap-pre-ledger)'
 require_literal "$UPDATE" '--bootstrap-schema17)'
 require_literal "$UPDATE" '--normal) ;;'
 require_literal "$UPDATE" '[[ "$relative" =~ ^[0-9a-f]{12}-[0-9a-f]{24}$ ]]'
-require_literal "$UPDATE" '[[ "$updater" == "$root/update.sh" ]]'
+require_literal "$UPDATE" '[[ "$updater" == "$CODE_ROOT/update.sh" ]]'
 require_literal "$UPDATE" '! -path '\''./SHA256SUMS'\'' -print0'
 require_count "$UPDATE" 'preflight_staged_installer_runtime' 2
 reject_literal "$UPDATE" 'grep hostname id install'
@@ -2513,9 +2512,9 @@ require_sequence "$UPDATE" \
 # Kanonik panel kontrolleri sağlıklı dolu WAL'ı kabul eder. Kanonik DB'de yalnız
 # aşağıdaki iki cold postcondition immutable checker kullanabilir.
 require_literal "$UPDATE" 'healthy coordinator may retain a non-empty SQLite WAL'
-require_count "$UPDATE" '--check-service-operations-idle-wal-aware' 8
+require_count "$UPDATE" '--check-service-operations-idle-wal-aware' 9
 require_count "$UPDATE" '--check-pre-ledger-service-operations-idle-wal-aware' 6
-require_regex_count "$UPDATE" '^[[:space:]]*"\$BIN_DIR/panel" --check-service-operations-idle[[:space:]]*\\$' 1
+require_regex_count "$UPDATE" '^[[:space:]]*"\$\{RECOVERY_PANEL_CHECKER:-\$BIN_DIR/panel\}" --check-service-operations-idle[[:space:]]*\\$' 1
 require_regex_count "$UPDATE" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 1
 require_regex_count "$UPDATE" '^[[:space:]]*"\$TRUSTED_RELEASE_ROOT/bin/panel" --check-(pre-ledger-)?service-operations-idle([[:space:]]*\\|; then)$' 0
 
@@ -2534,8 +2533,8 @@ require_sequence "$UPDATE" \
 require_sequence "$UPDATE" \
     'freeze_release_service_cgroup celikpanel-panel.service panel panel_frozen' \
     'freeze_release_service_cgroup celikpanel-agent.service agent agent_frozen' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then' \
+    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware; then' \
+    '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware; then' \
     'final frozen panel idle proof failed' \
     'final frozen agent idle proof failed' \
     'verify_quiesce_coordinator_identity celikpanel-panel.service frozen' \
@@ -2549,8 +2548,8 @@ require_sequence "$UPDATE" \
     'release_release_mutation_lock || die "cannot release stale mutation lock after coordinator stop"' \
     'prepare_runtime_mutation_lock_dir' \
     'acquire_release_mutation_lock' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \' \
+    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware \' \
+    '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \' \
     'stopped panel idle proof failed' \
     'stopped agent idle proof failed'
 
@@ -2613,8 +2612,8 @@ require_literal "$UPDATE" 'systemctl stop celikpanel-agent.service >/dev/null 2>
 require_literal "$UPDATE" 'sudo /bin/bash '\''$TRUSTED_RELEASE_ROOT/rollback.sh'\'' '\''$verified_snapshot'\'''
 require_literal "$UPDATE" 'cmp -s "$TRUSTED_RELEASE_ROOT/bin/panel" "$BIN_DIR/panel"'
 require_literal "$UPDATE" 'installed web tree does not match the trusted release'
-require_literal "$UPDATE" '"$BIN_DIR/panel" --check-service-operations-idle'
-require_literal "$UPDATE" '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock'
+require_literal "$UPDATE" '"${RECOVERY_PANEL_CHECKER:-$BIN_DIR/panel}" --check-service-operations-idle'
+require_literal "$UPDATE" '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock'
 reject_literal "$UPDATE" 'systemctl restart celikpanel-panel.service'
 reject_literal "$UPDATE" 'systemctl restart celikpanel-agent.service'
 
@@ -2628,11 +2627,11 @@ require_sequence "$UPDATE" \
     'for unit in celikpanel-agent.service celikpanel-panel.service; do' \
     'inactive|failed) ;;' \
     'reject_extra_service_cgroup_processes "$unit" 0' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     '"$BIN_DIR/panel" --migrate-only' \
-    '"$BIN_DIR/panel" --check-service-operations-idle' \
+    '"${RECOVERY_PANEL_CHECKER:-$BIN_DIR/panel}" --check-service-operations-idle' \
     'sync -f -- "$PANEL_DB" "$(dirname "$PANEL_DB")"' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock'
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock'
 
 require_sequence "$UPDATE" \
     '"$SCHEMA17_BRIDGE" migrate \' \
@@ -2645,10 +2644,10 @@ require_sequence "$UPDATE" \
 # migration durumunu kabul eder; iki başarılı elif gövdesi de açık no-op olmalıdır.
 require_sequence "$UPDATE" \
     'elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then' \
+    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware; then' \
     '        :' \
     'elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then' \
+    '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware; then' \
     '        :'
 
 # Controlled agent starts require a proven-absent socket and both a fresh socket
@@ -2673,7 +2672,7 @@ require_sequence "$UPDATE" \
     'for unit in celikpanel-agent.service celikpanel-panel.service; do' \
     'inactive|failed) ;;' \
     'for attempt in $(seq 1 60); do' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock; then' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock; then' \
     '[ "$attempt" -lt 60 ]' \
     'sleep 0.5' \
     'return 1'
@@ -2707,11 +2706,11 @@ require_sequence "$UPDATE" \
     'pending update marker changed during the startup lock handoff' \
     'systemctl start celikpanel-panel.service \' \
     'verify_saved_runtime_states' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     'verify_saved_enablement' \
     'release_txn_remove_start_authorization \' \
     'verify_saved_runtime_states' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     'verify_saved_enablement' \
     'release_txn_validate_pending_token \' \
     'pending_completion_verified=1' \
@@ -2740,7 +2739,7 @@ require_sequence "$UPDATE" \
     'apply-only unexpectedly left $unit active' \
     'verify_saved_enablement' \
     'verify_installed_release_artifacts' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware' \
+    '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware' \
     'wait_for_post_apply_mutation_idle' \
     'env -i \' \
     '"$BIN_DIR/agent" --prepare-bind-generation-root-under-external-lock' \
@@ -2761,11 +2760,11 @@ require_sequence "$UPDATE" \
     'update completion marker changed during the startup lock handoff' \
     'systemctl start celikpanel-panel.service || die "verified panel could not be started"' \
     'verify_saved_runtime_states' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     'verify_saved_enablement' \
     'release_txn_remove_start_authorization \' \
     'verify_saved_runtime_states' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     'verify_saved_enablement' \
     'release_txn_validate_pending_token \' \
     'transaction_completion_verified=1' \
@@ -2837,10 +2836,10 @@ require_literal "$ROLLBACK" 'panel database snapshot must be standalone without 
 require_literal "$ROLLBACK" 'CELIKPANEL_DATA_DIR="$snap"'
 require_literal "$ROLLBACK" '"$PREFLIGHT_PANEL" --check-service-operations-idle'
 require_literal "$ROLLBACK" '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle'
-require_count "$ROLLBACK" '--check-service-operations-idle-wal-aware' 1
-require_count "$ROLLBACK" '--check-pre-ledger-service-operations-idle-wal-aware' 1
-require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-service-operations-idle[[:space:]]*\\$' 2
-require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 2
+require_count "$ROLLBACK" '--check-service-operations-idle-wal-aware' 2
+require_count "$ROLLBACK" '--check-pre-ledger-service-operations-idle-wal-aware' 2
+require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-service-operations-idle[[:space:]]*\\$' 1
+require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 1
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-wal"'
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-shm"'
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-journal"'
@@ -2856,14 +2855,18 @@ require_sequence "$ROLLBACK" \
 
 require_sequence "$ROLLBACK" \
     'cmp -s "$snap/bin/panel" "$BIN_DIR/panel"' \
-    '"$PREFLIGHT_PANEL" --check-service-operations-idle \' \
+    'restored_panel_idle_flag=--check-service-operations-idle' \
+    '[[ $rollback_pending_resume -ne 1 ]] || restored_panel_idle_flag=--check-service-operations-idle-wal-aware' \
+    '"$PREFLIGHT_PANEL" "$restored_panel_idle_flag" \' \
     'release_txn_create_start_authorization \' \
     'systemctl start celikpanel-panel.service || die "restored panel did not start"' \
     'systemctl stop celikpanel-panel.service \' \
     '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \'
 require_sequence "$ROLLBACK" \
     'cmp -s "$snap/bin/panel" "$BIN_DIR/panel"' \
-    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \' \
+    'restored_panel_idle_flag=--check-pre-ledger-service-operations-idle' \
+    '[[ $rollback_pending_resume -ne 1 ]] || restored_panel_idle_flag=--check-pre-ledger-service-operations-idle-wal-aware' \
+    '"$PREFLIGHT_PANEL" "$restored_panel_idle_flag" \' \
     'release_txn_create_start_authorization \' \
     'systemctl start celikpanel-panel.service || die "restored panel did not start"' \
     'systemctl stop celikpanel-panel.service \' \
@@ -3058,7 +3061,7 @@ require_sequence "$ROLLBACK" \
     'rollback_service_state_recorded=1' \
     'systemctl stop celikpanel-panel.service' \
     'rollback_mutation_started=1' \
-    'rm -rf -- "$BIN_DIR"' \
+    '    restore_product_resources' \
     'trap - EXIT'
 
 # Exercise the privileged rollback EXIT state machine itself with injected
@@ -3411,5 +3414,7 @@ require_function_sequence "$INSTALL" publish_apply_only_units \
 run_apply_only_unit_snapshot_contract
 bash "$ROOT/deploy/test-update-quiesce-capture.sh"
 bash "$ROOT/deploy/test-update-recovery-lock.sh"
+
+bash "$ROOT/deploy/test-recovery-resource-shell-contract.sh"
 
 echo "bootstrap update contract: ok"

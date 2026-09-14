@@ -10,10 +10,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"os/user"
+
 	"path/filepath"
 	"regexp"
-	"strconv"
+
 	"strings"
 	"time"
 
@@ -22,39 +22,6 @@ import (
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-// lookupGroupID resolves a system group's numeric gid.
-// lookupGroupID, bir sistem grubunun sayısal gid'ini çözer.
-func lookupGroupID(name string) (int, bool) {
-	g, err := user.LookupGroup(name)
-	if err != nil {
-		return 0, false
-	}
-	gid, err := strconv.Atoi(g.Gid)
-	return gid, err == nil
-}
-
-// The panel's own certificate. Out of the box the panel serves HTTPS with a
-// self-signed certificate — safe, but every browser warns. This RPC turns the
-// operator's "get a real certificate" click into: ensure certbot exists,
-// issue via Let's Encrypt (standalone :80), install the result where the
-// panel loads its TLS material from, and drop a certbot deploy hook so future
-// automatic renewals reach the panel too. The panel restart that activates
-// the new certificate is triggered by the panel itself after replying.
-//
-// Panelin kendi sertifikası. Panel kutudan çıktığında HTTPS'i kendinden
-// imzalı sertifikayla sunar — güvenli ama her tarayıcı uyarır. Bu RPC,
-// operatörün "gerçek sertifika al" tıklamasını şuna çevirir: certbot'un
-// varlığını sağla, Let's Encrypt ile al (standalone :80), sonucu panelin TLS
-// malzemesini yüklediği yere kur ve gelecekteki otomatik yenilemeler panele
-// de ulaşsın diye bir certbot deploy kancası bırak. Yeni sertifikayı
-// etkinleştiren panel yeniden başlatması, cevap verdikten sonra panelin
-// kendisi tarafından tetiklenir.
-
-// validPanelCertDomain: a plain FQDN — becomes a certbot arg and part of a
-// filesystem path, so nothing but hostname characters may pass.
-// validPanelCertDomain: düz bir FQDN — certbot argümanı ve dosya yolu parçası
-// olur; makine adı karakterlerinden başkası geçemez.
-var validPanelCertDomain = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$`)
 var validPanelCertLineage = regexp.MustCompile(`^celikpanel-panel-[a-f0-9]{24}$`)
 var validStagedSiteLineage = regexp.MustCompile(`^cp-site-[1-9][0-9]*-[a-f0-9]{24}$`)
 

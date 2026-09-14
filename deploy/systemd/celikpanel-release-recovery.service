@@ -16,6 +16,7 @@ UMask=0077
 NoNewPrivileges=no
 Environment=CELIKPANEL_RELEASE_RECOVERY_TESTING=0
 Environment=CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT=
+Environment=CELIKPANEL_RECOVERY_RUNTIME_ROOT=
 
 [Install]
 WantedBy=multi-user.target

@@ -76,7 +76,16 @@ def verify_committed_source(candidate,repository):
     names=[];queries=[]
     for name in candidate['files']:
         if name=='SHA256SUMS' or name.startswith(('bin/','web/dist/','release.')):continue
+
+        # The kit embeds reviewed static sources under a separate data root.
+        # Its binaries and generated manifest are covered by the full archive
+        # inventory and runtime admission, not fictitious Git source blobs.
+        if name.startswith('recovery-runtime/bin/') or name=='recovery-runtime/runtime.manifest':continue
         source='download-portal/get.sh' if name=='libexec/get.sh' else name
+        if name.startswith('recovery-runtime/'):
+            source=name.removeprefix('recovery-runtime/')
+            if source=='deploy/recovery/runtime-entry.sh':source='deploy/release-recovery-runner.sh'
+
         names.append(name);queries.append(commit+':'+source)
     result=subprocess.run(['git','-C',str(repository),'cat-file','--batch'],input=('\n'.join(queries)+'\n').encode(),check=True,capture_output=True)
     raw=result.stdout
