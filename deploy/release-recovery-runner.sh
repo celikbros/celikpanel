@@ -838,6 +838,11 @@ if [[ $TRANSACTION_PHASE == none ]]; then
         die 'a release transaction marker appeared during final recovery verification'
     # Success is published only after the native child and the runner's final
     # foundation, coordinator, transaction-root and empty-marker proofs agree.
+    # Material-v2 update completion checks exact installed payload plus saved
+    # enablement/runtime after controlled starts and scheduler restoration, while
+    # its last marker still exists. A failed proof must leave that marker and a
+    # nonzero child result; a marker-gated proof cannot be deferred to this point.
+    # This records completion at those checks, not continuous runtime health.
     if [[ -n $RECOVERY_OBSERVATION_REQUEST ]]; then
         if [[ $RECOVERY_RESULT_ACTION == rollback ]]; then
             release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \

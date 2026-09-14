@@ -667,6 +667,16 @@ verify_independent_completion_material() {
         || die "completion recovery data identity changed"
 }
 
+# A v2 completion proof still needs the exact durable transaction marker. Recheck
+# after controlled starts and scheduler restoration, before consuming that marker.
+# Saved runtime/enablement is checked without starting or repairing any service.
+verify_independent_completion_terminal() {
+    [[ -n $RECOVERY_MATERIAL_ROOT ]] || return 0
+    verify_saved_enablement
+    verify_saved_runtime_states
+    verify_installed_release_artifacts
+}
+
 # A direct retained updater cannot bypass a material-backed completion failure.
 # Only proven absence or fully verified v1 data permits the legacy path.
 preflight_completion_material_admission() {
@@ -2079,7 +2089,11 @@ scheduler_recovery_exit() {
            release_txn_validate_scheduler_restore_token \
                "$RELEASE_TRANSACTION_ROOT" "$scheduler_recovery_token" \
                update "$scheduler_recovery_snapshot"; then
-            echo "!! Runtime completion remains durable; exact Certbot scheduler restoration is safely retryable." >&2
+            if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+                echo "!! Update completion is unconfirmed; the exact scheduler marker and recovery evidence are retained. Resolve the reported check, then run sudo /usr/libexec/celikpanel/recovery recover to retry this operation." >&2
+            else
+                echo "!! Runtime completion remains durable; exact Certbot scheduler restoration is safely retryable." >&2
+            fi
             return "$status"
         fi
         if [[ "$scheduler_recovery_restored" -eq 1 &&
@@ -2132,6 +2146,7 @@ if [[ "$release_scheduler_present" -eq 1 && "$release_completion_present" -eq 0 
     panel_tls_restore_certbot_scheduler "$pending_snapshot_path/panel-tls" \
         || die "pending update Certbot scheduler state could not be restored"
     scheduler_recovery_restored=1
+    verify_independent_completion_terminal
     release_txn_remove_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$scheduler_recovery_token" update "$scheduler_recovery_snapshot" \
@@ -2177,7 +2192,11 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
                         || { stop_release_coordinators_fail_closed; return "$status"; }
                 fi
                 release_release_mutation_lock >/dev/null 2>&1 || true
-                echo "!! Runtime completion is exact and durable; Certbot scheduler restoration is safely retryable." >&2
+                if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+                    echo "!! Update completion is unconfirmed; the exact scheduler marker and recovery evidence are retained. Resolve the reported check, then run sudo /usr/libexec/celikpanel/recovery recover to retry this operation." >&2
+                else
+                    echo "!! Runtime completion is exact and durable; Certbot scheduler restoration is safely retryable." >&2
+                fi
                 return "$status"
             fi
             if [[ $pending_scheduler_restored -eq 1 &&
@@ -2306,6 +2325,7 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
             || die "pending update panel is not active"
     fi
 
+    verify_independent_completion_terminal
     verify_saved_runtime_states
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
@@ -2325,6 +2345,7 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
     release_txn_validate_pending_token \
         "$RELEASE_TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
         || die "pending update marker changed before durable completion"
+    verify_independent_completion_terminal
     pending_completion_verified=1
     release_txn_mark_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
@@ -2346,6 +2367,7 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
     panel_tls_restore_certbot_scheduler "$pending_snapshot_path/panel-tls" \
         || die "pending update Certbot scheduler state could not be restored"
     pending_scheduler_restored=1
+    verify_independent_completion_terminal
     release_txn_remove_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$pending_token" update "$pending_snapshot" \

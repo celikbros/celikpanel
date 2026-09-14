@@ -60,6 +60,22 @@ korunur. Bu dilim dönüşüm durumunu tahmin etmez. Günlükteki
 `CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start` satırı gözlemdir;
 kalıcı yetki veya başarı kaydı değildir.
 
+Dönüşüm öncesi kesinti penceresi açık bir P0.3 eksiğidir. Yeni migration gereken
+bir güncelleme, `completion.pending` yayımlandıktan sonra fakat dönüşüm bitmeden
+kesilirse katı okuyucu ileri tamamlamayı reddeder. Sabit sahip kurtarma girişi aynı
+tamamlama yolunu seçer; saklanan update/rollback girişleri bu veriye dayalı kabul
+kuralını aşamaz. Bu birleşim için şu anda desteklenen otomatik telafi veya sahibin
+uygulayabileceği devam yolu yoktur. Sonraki kontrol noktası geçişi, veritabanının
+hazır olmasını ayrı göstermeli; adaydan bağımsız devam veya yedeğe dönüşü
+kanıtlamalıdır. Okuyucu gevşetilmemeli, mevcut işaretten hazır olunduğu çıkarılmamalıdır.
+
+Material-v2 yolu kontrollü başlangıçlardan sonra, zamanlayıcı yükümlülüğü
+yayımlanmadan önce ve zamanlayıcı geri yüklendikten sonra son işaret silinmeden
+hemen önce kurulu ürünleri ve kaydedilmiş servis çalışma/etkinlik durumunu yeniden
+doğrular. Kontrol başarısızsa tam işlem kanıtları kalır, başarı yayımlanmaz. Geç
+zamanlayıcı yolundaki hata koordinatörleri yeniden başlatmaz. Bunlar tamamlama
+anındaki gözlemlerdir; kesintisiz sağlık güvencesi değildir.
+
 Yürütücü ancak gerçek süreçler ve zamanlayıcı doğrulandıktan, tam işaretler
 kaldırıldıktan sonra `succeeded / update_verified` yayımlayabilir. Durum sorgusu
 yeni değişiklik başlatamaz. Sahibin kurtarma komutu

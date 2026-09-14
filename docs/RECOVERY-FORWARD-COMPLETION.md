@@ -61,6 +61,23 @@ and its evidence remain available; this slice does not invent migration state.
 The journal line `CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start` is
 an observation, not a durable authority or a success result.
 
+The pre-migration interruption window remains an explicit P0.3 gap. If a new
+migration is required and the updater dies after publishing `completion.pending`
+but before finishing that migration, the strict reader refuses forward completion.
+The fixed owner recovery entrypoint selects the same completion path; direct
+retained update/rollback entrypoints do not bypass its material-backed admission.
+There is currently no supported automatic compensation or owner continuation for
+that combination. The next checkpoint transition must distinguish database
+readiness and prove candidate-independent continuation or snapshot compensation;
+it must not relax this reader or infer readiness from the existing marker.
+
+The material-v2 path rechecks installed payloads and saved service
+runtime/enablement after controlled starts, before publishing the scheduler
+obligation, and after scheduler restoration immediately before removing its last
+marker. A failed check preserves the exact operation evidence and does not
+publish success. A late scheduler-path failure does not restart coordinators.
+These are completion-time observations, not a continuous-health guarantee.
+
 Only after native runtime and scheduler restoration and exact marker cleanup
 may the runner publish `succeeded / update_verified`. Polling cannot retry a
 mutation. Owner recovery remains `sudo /usr/libexec/celikpanel/recovery recover`.

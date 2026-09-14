@@ -292,7 +292,12 @@ flock -n -E 75 "$FIXTURE_COMPLETION_LOCK" true || status=$?
 printf '%s\n' "$1" >> "$FIXTURE_COMPLETION_CALLS"
 case $1 in
  completion-material-root) printf '%s' "$FIXTURE_MATERIAL_OUTPUT"; exit "$FIXTURE_MATERIAL_STATUS" ;;
- verify-installed-completion) exit "${FIXTURE_PAYLOAD_STATUS:-0}" ;;
+ verify-installed-completion)
+  if [[ -n ${FIXTURE_EXPECTED_WEB_HASH:-} ]]; then
+   [[ -f $FIXTURE_TRANSACTION_ROOT/completion.pending || -f $FIXTURE_TRANSACTION_ROOT/scheduler-restore.pending ]] || exit 95
+   [[ $(sha256sum "$FIXTURE_WEB_FILE" | cut -d ' ' -f 1) == "$FIXTURE_EXPECTED_WEB_HASH" ]] || exit 96
+  fi
+  exit "${FIXTURE_PAYLOAD_STATUS:-0}" ;;
  *) exit 94 ;;
 esac
 SH
@@ -504,6 +509,7 @@ EOF
  RECOVERY_EXPECTED_SNAPSHOT=$FIXTURE_SNAPSHOT
  export FIXTURE_COMPLETION_CALLS=$case_root/calls FIXTURE_MATERIAL_STATUS=0 FIXTURE_MATERIAL_OUTPUT=$TRUSTED_RELEASE_ROOT FIXTURE_PAYLOAD_STATUS=0
  case $kind in
+  flow-*) ;;
   exact) ;;
   payload-unproven) FIXTURE_PAYLOAD_STATUS=1 ;;
   material-changed) FIXTURE_MATERIAL_STATUS=1 ;;
@@ -521,6 +527,7 @@ EOF
   *) exit 99 ;;
  esac
  verify_installed_release_artifacts
+ if [[ $kind == flow-* ]]; then terminal_flow_case "${kind#flow-}"; exit; fi
  if [[ $kind == legacy ]]; then
   [[ ! -e $FIXTURE_COMPLETION_CALLS ]] || fail 'legacy payload unexpectedly invoked material CLI'
  else
@@ -535,6 +542,122 @@ for kind in exact payload-unproven material-changed data-changed unsafe-panel fo
  [[ $status == "$expected" ]] || { cat "$TEST_ROOT/payload-$kind.log" >&2; fail "completion payload $kind: $status"; }
  printf 'PASS: independent completion payload %s\n' "$kind"
 done
+# Execute the actual updater tails, including their real EXIT traps and marker
+# producers/removers. Snapshot/Go proofs and native service boundaries are stubbed;
+# the whole installed-artifact/foundation validator above remains real. A stubbed
+# immutable web digest models the Go After proof, not a second shell implementation.
+python3 - "$ROOT/update.sh" "$TEST_ROOT" <<'PY'
+from pathlib import Path
+import sys, textwrap
+s=Path(sys.argv[1]).read_text(); out=Path(sys.argv[2])
+start=s.index('    if service_state_is_active_like "${saved_active_states[celikpanel-panel.service]}"; then', s.index('cannot authorize pending update controlled starts'))
+end=s.index('\nfi\nresume_quiescing_update=', start)
+trap_start=s.index('    pending_finalization_succeeded=0', s.index('# A durable completion marker'))
+trap_end=s.index("    IFS=$'\\t' read -r pending_token", trap_start)
+(out/'completion-tail.sh').write_text(textwrap.dedent(s[trap_start:trap_end])+s[start:end])
+start=s.index('scheduler_recovery_succeeded=0')
+end=s.index('\n# A durable completion marker', start)
+(out/'scheduler-tail.sh').write_text(s[start:end])
+PY
+eval "$(extract_function service_state_is_active_like)"
+eval "$(extract_function verify_saved_enablement)"
+eval "$(extract_function verify_saved_runtime_states)"
+# Empty on the pre-fix source: the actual extracted tail then exposes the bug.
+eval "$(extract_function verify_independent_completion_terminal)"
+terminal_flow_case() {
+ local flow=$1 unit
+ RELEASE_TRANSACTION_ROOT=$case_root/transaction
+ mkdir -m 0700 "$RELEASE_TRANSACTION_ROOT"
+ export FIXTURE_COMPLETION_LOCK=$RELEASE_TRANSACTION_ROOT/transaction.lock
+ exec 9<>"$FIXTURE_COMPLETION_LOCK"
+ chmod 0600 "$FIXTURE_COMPLETION_LOCK"
+ flock -x 9
+ export FIXTURE_LOCK_IDENTITY=$(stat -Lc '%d:%i' /proc/self/fd/9)
+ pending_token=$(release_txn_generate_token)
+ pending_snapshot=$FIXTURE_SNAPSHOT
+ release_txn_create_active_marker "$RELEASE_TRANSACTION_ROOT" 9 "$pending_token" update "$pending_snapshot"
+ release_txn_mark_completion_pending "$RELEASE_TRANSACTION_ROOT" 9 "$pending_token" update "$pending_snapshot"
+ pending_snapshot_path=$case_root/snapshot
+ RELEASE_TRANSACTION_RUNTIME_ROOT=$case_root/runtime
+ mkdir -m 0700 "$pending_snapshot_path" "$RELEASE_TRANSACTION_RUNTIME_ROOT"
+ release_completion_present=1 release_scheduler_present=0
+ if [[ $flow == scheduler-* ]]; then
+  release_txn_mark_scheduler_restore_pending "$RELEASE_TRANSACTION_ROOT" 9 "$pending_token" update "$pending_snapshot"
+  release_txn_remove_completion_pending "$RELEASE_TRANSACTION_ROOT" 9 "$pending_token" update "$pending_snapshot"
+  release_completion_present=0 release_scheduler_present=1
+ fi
+ export FIXTURE_TRANSACTION_ROOT=$RELEASE_TRANSACTION_ROOT FIXTURE_WEB_FILE=$WEB_DIR/index.html
+ export FIXTURE_EXPECTED_WEB_HASH=$(sha256sum "$FIXTURE_WEB_FILE" | cut -d ' ' -f 1)
+ declare -A saved_enabled_states=() saved_active_states=()
+ for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
+  saved_enabled_states[$unit]=enabled
+  saved_active_states[$unit]=active
+ done
+ RECOVERY_AGENT_CHECKER=/usr/bin/true RECOVERY_PANEL_CHECKER=/usr/bin/true
+ AGENT_STATE_DIR=$case_root MUTATION_LOCK=$case_root/mutation.lock MUTATION_LOCK_FD=
+ PANEL_DB=$case_root/db
+ printf 'active\n' > "$case_root/current-state"
+ printf 'enabled\n' > "$case_root/current-enablement"
+ systemctl() {
+  case "$*" in
+   'start celikpanel-panel.service')
+    printf '%s\n' "$*" >> "$case_root/starts"
+    [[ $flow != completion-panel-edit ]] || printf 'owner edit\n' >> "$FIXTURE_WEB_FILE"
+    ;;
+   'is-active --quiet celikpanel-agent.service'|'is-active --quiet celikpanel-panel.service'|'is-active --quiet celikpanel-firewall-restore.service')
+    [[ $(cat "$case_root/current-state") == active ]] ;;
+   'is-enabled celikpanel-agent.service'|'is-enabled celikpanel-panel.service'|'is-enabled celikpanel-firewall-restore.service')
+    cat "$case_root/current-enablement" ;;
+   *) "$SYSTEMCTL_BIN" "$@" ;;
+  esac
+ }
+ release_txn_remove_start_authorization() {
+  printf 'remove-start-authorization\n' >> "$case_root/start-auth"
+  [[ $flow != completion-authorization-edit ]] || printf 'owner edit\n' >> "$FIXTURE_WEB_FILE"
+ }
+ validate_pending_update_snapshot() { [[ $1 == "$pending_snapshot" ]] || die 'wrong snapshot'; }
+ panel_tls_quiesce_certbot_scheduler() { printf 'quiesce\n' >> "$case_root/scheduler"; }
+ panel_tls_restore_certbot_scheduler() {
+  printf 'restore\n' >> "$case_root/scheduler"
+  case $flow in
+   completion-scheduler-edit|scheduler-edit) printf 'owner edit\n' >> "$FIXTURE_WEB_FILE" ;;
+   scheduler-service-edit) printf 'inactive\n' > "$case_root/current-state" ;;
+   scheduler-enablement-edit) printf 'disabled\n' > "$case_root/current-enablement" ;;
+  esac
+ }
+ stop_release_coordinators_fail_closed() { printf 'stop\n' >> "$case_root/stops"; }
+ if [[ $flow == scheduler-* ]]; then
+  source "$TEST_ROOT/scheduler-tail.sh"
+ else
+  source "$TEST_ROOT/completion-tail.sh"
+ fi
+}
+for flow in completion-panel-edit completion-authorization-edit completion-scheduler-edit scheduler-edit scheduler-service-edit scheduler-enablement-edit completion-clean scheduler-clean; do
+ status=0
+ payload_case "flow-$flow" >"$TEST_ROOT/flow-$flow.log" 2>&1 || status=$?
+ expected=41; [[ $flow != *-clean ]] || expected=0
+ [[ $status == "$expected" ]] || { cat "$TEST_ROOT/flow-$flow.log" >&2; fail "terminal flow $flow: got $status, want $expected"; }
+ case_root=$TEST_ROOT/payload-flow-$flow
+ if [[ $expected == 41 ]]; then
+  [[ -f $case_root/transaction/completion.pending || -f $case_root/transaction/scheduler-restore.pending ]] || fail 'failed terminal proof removed its last marker'
+  ! grep -q '^==> Previous' "$TEST_ROOT/flow-$flow.log" || fail 'failed proof emitted success'
+  if [[ $flow == completion-panel-edit || $flow == completion-authorization-edit || $flow == completion-scheduler-edit || $flow == scheduler-edit ]]; then
+   grep -qx 'owner edit' "$case_root/installed/web/index.html" || fail 'owner bytes were overwritten'
+  fi
+  if [[ $flow != completion-panel-edit && $flow != completion-authorization-edit ]]; then
+   [[ ! -e $case_root/stops ]] || fail 'late scheduler proof failure stopped or restarted saved runtime'
+  fi
+ else
+  [[ ! -e $case_root/transaction/completion.pending && ! -e $case_root/transaction/scheduler-restore.pending ]] || fail 'successful exact terminal proof did not finish its markers'
+ fi
+ if [[ $flow == completion-* ]]; then
+  [[ $(wc -l < "$case_root/starts") == 1 ]] || fail 'completion restarted panel more than once'
+ else
+  [[ ! -e $case_root/starts ]] || fail 'scheduler-only recovery started a coordinator'
+ fi
+ printf 'PASS: extracted terminal flow %s\n' "$flow"
+done
+
 python3 - "$ROOT" <<'PY'
 from pathlib import Path
 import sys
