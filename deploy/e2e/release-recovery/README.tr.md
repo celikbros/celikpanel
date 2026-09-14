@@ -11,6 +11,10 @@ güncelleme/otomatik geri alma ve yerel iş yükü kabulünün tamamlanmasını 
 
 ## Kaydedilmiş gerçek ortam sonuçları
 
+Sonraki sınırlı kayıtlar [bağımsız veriyi](RECOVERY-MATERIAL.tr.md),
+[çalışma ortamı geçişini](RUNTIME-PROMOTION.tr.md) ve [ileri tamamlamayı](FORWARD-COMPLETION.tr.md)
+kapsar. Aşağıdaki önceki başarısızlıklar korunur; bütün matris tamamlanmış sayılmaz.
+
 [2026-09-14 sonuç kaydı](RESULTS.tr.md), gerçek QEMU denemelerinin tam işlem,
 ürün, yedek ve özel kanıt özetlerini içerir:
 

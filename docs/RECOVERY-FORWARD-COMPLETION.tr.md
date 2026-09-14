@@ -92,5 +92,9 @@ korunduğunu gözlemlemelidir. Bileşen testleri tek başına bunu kanıtlamaz.
 
 Eksik yedek alma, desteklenmeyen veritabanı geçişleri, yeni tarihsel geri alma
 işlemi, tüm hata/reboot matrisi, imzalı Agent kabulü, metadata geçişleri ve kanıt
-temizliği açıktır. Bu dilimin gerçek sistem kanıtı henüz bekliyor; çalışma kurulu
-kullanıcı panellerinde güncelleme başlatmadı.
+temizliği açıktır. [Gerçek O ve P deneyleri](../deploy/e2e/release-recovery/FORWARD-COMPLETION.tr.md),
+temiz Arch ve Debian 13 konuklarında üç saklanan aday dosyası karantinaya
+alındıktan ve tam güncelleyici öldürüldükten sonra sınırlı otomatik tamamlamayı
+kaydeder. P, son kanıt kontrollerini içeren nihai kaynağı çalıştırır. Değişmeyen
+şema, başlangıç TLS'i ve etkin olmayan zamanlayıcı sınırları açık kalır; çalışma
+kurulu kullanıcı panellerinde güncelleme başlatmadı.

@@ -94,5 +94,9 @@ cannot establish that result.
 
 Incomplete snapshot capture, unsupported database transitions, a new historical
 rollback transaction, the full fault/reboot matrix, signed Agent admission,
-metadata migrations and evidence cleanup remain open. Native evidence for this
-slice is pending; no installed user panel has been updated by this work.
+metadata migrations and evidence cleanup remain open. [Native trials O and P](../deploy/e2e/release-recovery/FORWARD-COMPLETION.md)
+record scoped automatic completion on fresh Arch and Debian 13 guests after
+three retained candidate files were quarantined and the exact updater killed.
+P exercises the final source with terminal rechecks. Its unchanged-schema,
+bootstrap-TLS and inactive-scheduler limits remain explicit; no installed user
+panel has been updated by this work.
