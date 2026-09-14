@@ -134,6 +134,22 @@ class ContractTests(unittest.TestCase):
             with self.assertRaises(g.probe.ProbeError): g.main(argv)
             load.assert_not_called()
 
+    def test_collect_keeps_observation_and_summary_in_distinct_files(self):
+        intent = {'identity': IDENTITY, 'operation_id': OPERATION, 'created_at': '2026-09-14T00:00:00Z'}
+        state = {'artifacts': {}, 'worker': {}, 'fault': {}}
+        saved = {}
+        def save(root, node, name, raw):
+            if name in saved: raise FileExistsError(name)
+            saved[name] = raw
+            return {'path': str(root / node / name), 'sha256': hashlib.sha256(raw).hexdigest()}
+        def capture(root, record, plan, node, label, since): return save(root, node, label + '.json', b'{"native_observation":true}')
+        with mock.patch.object(c, 'read_guest', return_value=(state, b'', [])), mock.patch.object(c.trial, 'save', side_effect=save), \
+             mock.patch.object(c.lab, 'guarded_script', return_value=argparse.Namespace(stdout='')), \
+             mock.patch.object(c.trial.exercise, 'capture', side_effect=capture), mock.patch('sys.stdout', new=io.StringIO()):
+            c.collect(Path('/fixture'), {}, {}, 'arch', intent, {})
+        self.assertEqual(sum(name.endswith('.summary.json') for name in saved), 1)
+        self.assertEqual(sum(raw == b'{"native_observation":true}' for raw in saved.values()), 1)
+
     def test_only_armed_exact_watcher_allows_start(self):
         state = {'fault': {'ActiveState': 'active'}, 'worker': {'LoadState': 'not-found'}}
         c.require_armed(state, [{'event': 'armed'}], {})
@@ -294,6 +310,31 @@ class NativeFileTests(unittest.TestCase):
         with self.assertRaises(g.Unavailable): g.read_record(PREVIOUS, TARGET)
         unknown.unlink(); committed = self.current / 'committed.json'; committed.write_bytes(b''); committed.chmod(0o600)
         with self.assertRaises(g.Unavailable): g.read_record(PREVIOUS, TARGET)
+
+    def test_retained_source_uses_real_bootstrap_move_not_vanished_staging(self):
+        releases = self.root / 'releases'; releases.mkdir(mode=0o700)
+        staging = self.root / 'source'; staging.mkdir(mode=0o700)
+        candidate = {'commit': 'a' * 40, 'manifest_sha256': 'b' * 64, 'files': {}}
+        for name in ('update.sh', 'rollback.sh'):
+            raw = ('genuine ' + name).encode(); (staging / name).write_bytes(raw); (staging / name).chmod(0o644)
+            candidate['files'][name] = hashlib.sha256(raw).hexdigest()
+        final = releases / ('a' * 12 + '-' + 'c' * 24); staging.rename(final)
+        with mock.patch.object(g.local, 'RELEASES', releases):
+            value = g.retained_source(candidate)
+            self.assertEqual(value['root'], str(final)); self.assertEqual(value['verified_files'], 2)
+            self.assertFalse(staging.exists())
+            (final / 'update.sh').write_bytes(b'corrupt')
+            with self.assertRaises(ValueError): g.retained_source(candidate)
+
+    def test_retained_candidate_absent_ambiguous_and_link_refused(self):
+        releases = self.root / 'releases'; releases.mkdir(mode=0o700)
+        candidate = {'commit': 'a' * 40, 'files': {}, 'manifest_sha256': 'b' * 64}
+        with mock.patch.object(g.local, 'RELEASES', releases):
+            with self.assertRaises(g.Unavailable): g.retained_source(candidate)
+            first = releases / ('a' * 12 + '-' + 'c' * 24); first.symlink_to(self.root)
+            with self.assertRaises(ValueError): g.retained_source(candidate)
+            second = releases / ('a' * 12 + '-' + 'd' * 24); second.mkdir(mode=0o700)
+            with self.assertRaises(g.Unavailable): g.retained_source(candidate)
 
     def test_partial_first_attempt_is_never_overwritten(self):
         path = self.root / 'attempt.json'; path.write_bytes(b'{partial'); path.chmod(0o600)

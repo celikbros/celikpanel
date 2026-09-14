@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """One native kit-promotion cut in registered disposable VMs only.
 
 The predecessor is genuine pinned enrollment on signed Alpha75, not a prior
@@ -204,7 +204,7 @@ def collect(root, record, plan, node, intent, spec):
                'events': [item['event'] for item in values], 'worker': state['worker'], 'fault': state['fault'],
                'journal_truncated': len(journal) > 524288, 'evidence': refs,
                'automatic_resume': 'not-established-by-predecessor-enrollment-fixture', 'native_outcome': 'not-inferred'}
-    trial.save(root, node, label + '.json', encoded(summary)); print(json.dumps(summary, sort_keys=True), flush=True)
+    trial.save(root, node, label + '.summary.json', encoded(summary)); print(json.dumps(summary, sort_keys=True), flush=True)
     return summary
 
 

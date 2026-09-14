@@ -145,6 +145,18 @@ def runtime_inventory(candidate):
     return {'manifest_sha256': digest, 'inventory': proof, 'manifest': manifest}
 
 
+def retained_source(candidate, tick=lambda: None):
+    # The genuine bootstrap moves SOURCE_ROOT into this immutable namespace
+    # before update.sh starts. The original staging pathname must not be reused.
+    old.trusted_chain(local.RELEASES)
+    roots = []
+    for index, entry in enumerate(local.RELEASES.iterdir()):
+        tick()
+        if index >= 10000: raise Unavailable('retained-release-directory-bound')
+        if re.fullmatch(re.escape(candidate['commit'][:12]) + r'-[0-9a-f]{24}', entry.name): roots.append(entry)
+    if len(roots) != 1: raise Unavailable('exact-retained-candidate-root-unavailable')
+    return local.verify_tree(roots[0], candidate, tick)
+
 def validate_predecessor(intent, result, identity):
     old.validate_plan(intent, identity, intent.get('operation_id'))
     if (result.get('schema') != 'celikpanel/runtime-predecessor-result/v1' or result.get('identity') != identity
@@ -196,13 +208,13 @@ class Native(local.LocalNative):
         if current != checkpoint: raise Unavailable('promotion-record-changed-under-freeze')
         pair = mixed_pair(current, full=True)
         if pair is None: raise Unavailable('promotion-window-missed-under-freeze')
-        tick(); previous = runtime_inventory(self.spec['predecessor_intent']['candidate'])
-        tick(); target = runtime_inventory(self.plan['candidate'])
-        tick(); source = local.verify_tree(Path(self.plan['source_root']), self.plan['candidate'], tick)
+        self.proof_phase = 'previous-runtime'; tick(); previous = runtime_inventory(self.spec['predecessor_intent']['candidate'])
+        self.proof_phase = 'target-runtime'; tick(); target = runtime_inventory(self.plan['candidate'])
+        self.proof_phase = 'retained-candidate'; tick(); source = retained_source(self.plan['candidate'], tick)
         if (current['record']['old_launcher']['sha256'] != previous['inventory']['files']['bin/recovery']
                 or current['record']['new_launcher']['sha256'] != target['inventory']['files']['bin/recovery']):
             raise Unavailable('promotion-launcher-runtime-binding-differs')
-        baseline = old.baseline(); tick()
+        self.proof_phase = 'coordinator-baseline'; baseline = old.baseline(); tick()
         self.revalidate(self.frozen_identity)
         if self.checkpoint() != checkpoint or mixed_pair(checkpoint, full=True) != pair:
             raise Unavailable('promotion-full-proof-changed')
@@ -252,7 +264,7 @@ def run_watch(native, emit, clock=time.monotonic, pause=time.sleep, interrupted=
         raise Unavailable('promotion-window-unobserved')
     except (OSError, ValueError, subprocess.SubprocessError, local.kill.MissedCheckpoint, probe.ProbeError) as exc:
         code = str(exc) if isinstance(exc, (Unavailable, local.kill.MissedCheckpoint)) else type(exc).__name__
-        emit('inconclusive', reason=code[:120])
+        emit('inconclusive', reason=code[:120], proof_phase=getattr(native, 'proof_phase', 'checkpoint'))
         return 'inconclusive'
     finally:
         if freeze_attempted and identity is not None:

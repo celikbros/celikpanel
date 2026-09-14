@@ -79,7 +79,8 @@ mock checker is not a whole-server recovery test.
 Native acceptance must start from a genuinely enrolled predecessor on registered
 disposable Arch and Debian 13 guests. The fixture must call the predecessor's
 real enrollment command rather than manufacture selector records. It must
-exercise the selected executable's material proof during the transition and
+exercise selected-executable proof through the read-only material-capability
+entry during the transition and
 perform an actual failed update and restoration after promotion. A predecessor
 enrollment fixture is distinct from a complete successful previous update.
 

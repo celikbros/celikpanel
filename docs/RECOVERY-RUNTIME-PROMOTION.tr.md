@@ -73,8 +73,8 @@ başarılı çıkışı, bütün sunucunun kurtarıldığını kanıtlamaz.
 
 Gerçek sistem kabulü, kayıtlı ve geçici Arch ile Debian 13 misafirlerinde gerçekten
 kaydedilmiş önceki kit ile başlamalıdır. Test düzeneği seçici kaydı üretmek
-yerine önceki programın gerçek kayıt komutunu çağırmalıdır. Ara durumda seçili
-programın veri kanıtını ve geçişten sonra gerçek başarısız güncellemenin geri
+yerine önceki programın gerçek kayıt komutunu çağırmalıdır. Ara durumda salt-okur veri yeteneği girişinden seçili yürütücünün
+doğrulanmasını ve geçişten sonra gerçek başarısız güncellemenin geri
 alınmasını sınamalıdır. Önceki kitin kaydı, daha önce bütünüyle başarılı bir
 sürüm güncellemesi yapılmasından ayrı bir test koşuludur.
 
