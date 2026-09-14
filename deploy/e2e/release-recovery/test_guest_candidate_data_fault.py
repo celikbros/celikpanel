@@ -131,6 +131,30 @@ class FilesystemTests(unittest.TestCase):
         with mock.patch.object(s.fault.files, 'verify_snapshot', return_value=None), self.assertRaises(ValueError): self.apply()
         self.assertFalse(self.q.exists())
 
+    def test_completion_quarantine_requires_exact_opt_in_and_readiness_tuple(self):
+        self.plan['boundary'] = 'completion-database-verified'
+        self.txn['transaction_phase'] = 'completion.pending'
+        with self.assertRaises(ValueError): self.apply()
+        self.assertFalse(self.q.exists())
+        self.proof.update(phase='completion.pending', transaction=self.txn.copy(),
+                          database_readonly_checker={'exit_code': 0},
+                          material={'transaction_token_sha256': self.txn['transaction_token_sha256']})
+        result = self.apply()
+        self.assertEqual(result['status'], 'applied')
+        self.assertEqual(result['removed'], list(s.TARGETS))
+
+    def test_completion_wrong_token_or_failed_checker_is_refused_before_quarantine(self):
+        self.plan['boundary'] = 'completion-database-verified'
+        self.txn['transaction_phase'] = 'completion.pending'
+        self.proof.update(phase='completion.pending', transaction=self.txn.copy(),
+                          database_readonly_checker={'exit_code': 1},
+                          material={'transaction_token_sha256': self.txn['transaction_token_sha256']})
+        with self.assertRaises(ValueError): self.apply()
+        self.proof['database_readonly_checker']['exit_code'] = 0
+        self.proof['material']['transaction_token_sha256'] = '0' * 64
+        with self.assertRaises(ValueError): self.apply()
+        self.assertFalse(self.q.exists())
+
     def test_symlink_hardlink_fifo_and_writable_target_refused(self):
         path = self.root / s.TARGETS[0]
         for kind in ('symlink', 'hardlink', 'fifo', 'mode', 'owner'):

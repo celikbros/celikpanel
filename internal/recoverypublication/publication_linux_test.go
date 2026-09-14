@@ -245,6 +245,8 @@ func TestIndependentPublicationChild(t *testing.T) {
 	}
 	if f.Operation == "material" {
 		err = prepareRecoveryMaterial(f.Request, c)
+	} else if f.Operation == "verify-completion" {
+		err = verifyInstalledCompletion(f.Request.Snapshot, c)
 	} else {
 		err = publish(f.Request, f.Operation, c)
 	}

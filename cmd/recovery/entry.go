@@ -26,7 +26,7 @@ func runEntry(args []string) int {
 			return exitUnavailable
 		}
 	}
-	if len(args) > 0 && (args[0] == "verify-material-support" || args[0] == "prepare-recovery-material" || args[0] == "material-root") {
+	if len(args) > 0 && (args[0] == "verify-material-support" || args[0] == "prepare-recovery-material" || args[0] == "material-root" || args[0] == "completion-material-root" || args[0] == "verify-installed-completion") {
 		return dispatchMaterial(args, os.Geteuid(), runMaterial, os.Stdout, func(message string) { fmt.Fprintln(os.Stderr, message) })
 	}
 	if len(args) > 0 && (args[0] == "restore-resource" || args[0] == "publish-resource") {

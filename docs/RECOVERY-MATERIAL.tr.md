@@ -3,7 +3,8 @@
 *14 Eylül 2026 · [English](RECOVERY-MATERIAL.md) · D-025 / P0.3*
 
 Bu kaynak değişikliği, [bağımsız kurtarma çalışma ortamına](RECOVERY-RUNTIME.tr.md)
-tamamlanmış v6 yedeğinden geri alma için ayrı bir veri sözleşmesi ekler. Bütün
+tamamlanmış v6 yedeğinden geri alma için ayrı bir veri sözleşmesi ekler. V2 uzantısı
+[bekleyen güncellemeyi tamamlamayı](RECOVERY-FORWARD-COMPLETION.tr.md) da kapsar. Bütün
 dayanıklılık kabul matrisini tamamlamaz; kurulu sunucularda güncelleme başlatmaz.
 
 ## Sınır ve biçimler
@@ -13,12 +14,14 @@ ağacının tamamına ihtiyaç duyuyordu. Aday dosyalarının kaybolması, sağl
 yedekten kurtarmayı da engelleyebiliyordu.
 
 İlk şema veya ürün değişikliğinden önce seçili kurtarma programı, sabit özel dizin
-altına `celikpanel/recovery-material/v1` kaydını mühürler. Dizin anahtarı doğrudan
+altına sürümlü kurtarma verisi kaydını mühürler. Dizin anahtarı doğrudan
 kurallı yedek adının SHA-256 özetidir; ilgisiz eski kayıtlar taranmaz. Kayıt tam işlem token
 özetini, v6 yedeğin adını ve manifest özetini, adayın kökenini, eski/yeni ürün
 ağaçlarının tanımlarını ve sabit kurtarma verisi envanterini birbirine bağlar.
 Yedek biçimi 6 değişmez.
 
+İlk v1 kayıt şeması okunmaya devam eder. Yeni hazırlık, karşılaştırma verisine
+`libexec/get.sh` ekleyen v2 üretir; `recovery-material/v1` dizin düzeni değişmez.
 Veride sürüm kökeni, kurtarma protokolü ve sıra politikası, kurtarma altyapısının
 karşılaştırma dosyaları ve üç ürün servisinin unit dosyaları bulunur. Aday
 Agent/Panel/web içeriği ve aday install/rollback girişleri kopyalanmaz. Saklanan
@@ -47,8 +50,8 @@ Mevcut tam yedek veritabanı/TLS/unit ve çalışan süreç doğrulamaları zoru
 Dosyaların geri gelmesi tek başına kurtarmanın tamamlandığı anlamına gelmez.
 
 Seçili program, koordinatörler durmadan önce
-`verify-material-support --layout snapshot-name-sha256-v1` ile tam veri düzenini
-desteklediğini bildirmelidir. Eski seçili ortam korunur; güncelleme bu kesintiden önce reddedilir.
+`verify-material-support --layout snapshot-name-sha256-v1 --schema celikpanel/recovery-material/v2`
+ile tam veri düzenini ve v2 kaydını desteklediğini bildirmelidir. Eski seçili ortam korunur; güncelleme bu kesintiden önce reddedilir.
 Bu dilim yeni bir kurtarma ortamını otomatik olarak seçili hâle getirmez.
 
 Bu sözleşme kabul edilmiş aynı işlemi sürdürür. İşlem tamamlandıktan sonra eski
@@ -56,8 +59,8 @@ bir yedeğe yeni geri alma başlatmak farklı bir token gerektirir; bu dilim o y
 kabul etmez. Yedeğin kurtarma verisi varsa doğrudan geri alma yeni işaretçi
 oluşturmadan veya servisleri durdurmadan reddedilir. Eski token yeniden kullanılmaz,
 yedek kanıt uydurulmaz. Gerçek eski v1 geri alma yolu ayrı kalır. Yeni işlem olarak
-tarihsel geri alma kabulü, seçili kurtarma ortamının yükseltilmesiyle birlikte
-açık bir uyumluluk işidir. Yeni doğrudan geri alma scripti, mevcut eski işlem için
+tarihsel geri alma kabulü açık bir uyumluluk işidir. Seçili kurtarma ortamının
+geçişi ayrı sözleşme ve gerçek sistem kabulüyle tanımlanır. Yeni doğrudan geri alma scripti, mevcut eski işlem için
 verinin gerçekten yokluğunu seçili okuyucuyla kanıtlamayı da gerektirir; eski
 uyumsuz ortam bu yüzden kesintiden önce reddedebilir. Değişmemiş tarihsel saklanan
 scriptlerin eski yolu ayrıdır.
@@ -85,8 +88,9 @@ otomatik geri almanın geçtiğini kaydeder. Tam veritabanı eşitliği gözlenm
 satırlar korundu, sonraki ölçümler eklendi. Kabul kaydı bu sonucu ve kalan
 hizmet/hata kapsamını ayırır.
 
-Tamamlanmamış yedek alma ve güncellemeyi ileri yönde tamamlama hâlâ saklanan aday
-verisini gerektirir. Bütün kontrol noktaları, imzalı Agent kabulü, seçili kurtarma
-ortamının yükseltilmesi, metadata geçişleri ve kanıt temizliği açıktır. P0.3 kısmidir.
+Tamamlanmamış yedek alma hâlâ saklanan aday verisini gerektirir.
+[İleri tamamlama uzantısı](RECOVERY-FORWARD-COMPLETION.tr.md) ayrı kaynak ve kabul
+sınırını kaydeder. Bütün kontrol noktaları, imzalı Agent kabulü, metadata geçişleri
+ve kanıt temizliği açıktır. P0.3 kısmidir.
 
 Seçili kitin değiştirilmesi ayrı [kurtarma ortamı geçişi sözleşmesinde](RECOVERY-RUNTIME-PROMOTION.tr.md) tanımlanır. Bu veri diliminin kanıtları yeni geçişin gerçek sistem kabulü yerine geçmez.

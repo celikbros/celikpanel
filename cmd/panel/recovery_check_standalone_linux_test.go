@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"fmt"
@@ -13,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	paneldb "github.com/alicelik/celikpanel/internal/db"
 )
 
 // This builds the exact production list, not the ordinary panel test binary.
@@ -36,7 +39,7 @@ func TestRecoveryCheckStandalone(t *testing.T) {
 		}
 		seen[source] = true
 	}
-	if !seen["cmd/panel/recovery_check_entry.go"] || !seen["cmd/panel/service_operation_restore_linux.go"] {
+	if !seen["cmd/panel/recovery_check_entry.go"] || !seen["cmd/panel/service_operation_restore_linux.go"] || !seen["cmd/panel/recovery_completion_database.go"] {
 		t.Fatal("standalone entry or real guarded restoration implementation is absent")
 	}
 	entry, err := os.ReadFile(filepath.Join(repository, "cmd/panel/recovery_check_entry.go"))
@@ -79,6 +82,7 @@ func TestRecoveryCheckStandalone(t *testing.T) {
 			}
 			run(directory, true, mode)
 			run(directory, true, mode+"-wal-aware")
+			run(directory, false, "--check-completed-update-database-wal-aware")
 			if version == 20 {
 				run(directory, false, "--check-service-operations-idle")
 			} else {
@@ -130,6 +134,26 @@ func TestRecoveryCheckStandalone(t *testing.T) {
 			t.Fatal(err)
 		}
 		run(directory, true, "--check-service-operations-idle-wal-aware")
+	})
+	t.Run("completed-latest-schema", func(t *testing.T) {
+		latest, err := paneldb.HighestEmbeddedMigrationVersion()
+		if err != nil {
+			t.Fatal(err)
+		}
+		directory := t.TempDir()
+		path := filepath.Join(directory, "celikpanel.db")
+		seedRecoveryCheckerDatabase(t, repository, path, latest)
+		before := captureRecoveryCheckerSQLiteBytes(t, path)
+		run(directory, true, "--check-completed-update-database-wal-aware")
+		run(directory, false, "--check-completed-update-database-wal-aware", "--check-service-operations-idle")
+		run(directory, false, "--check-completed-update-database-wal-aware", "--check-completed-update-database-wal-aware")
+		run(directory, false, "--check-completed-update-database-wal-aware", "--release-transaction-fd=9")
+		after := captureRecoveryCheckerSQLiteBytes(t, path)
+		for suffix, content := range before {
+			if !bytes.Equal(content, after[suffix]) {
+				t.Fatalf("completion reader changed source%s", suffix)
+			}
+		}
 	})
 	t.Run("no-startup-or-unguarded-restore", func(t *testing.T) {
 		directory := t.TempDir()
@@ -190,7 +214,26 @@ func seedRecoveryCheckerDatabase(t *testing.T, repository, path string, version 
 	}
 	defer database.Close()
 	database.SetMaxOpenConns(1)
-	if _, err := database.Exec(`CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, filename TEXT, sha256 TEXT, applied_at TEXT DEFAULT (datetime('now')))`); err != nil {
+	// Match production migration execution. Placeholder deletion must apply
+	// its foreign-key actions instead of leaving invalid historical fixtures.
+	if _, err := database.Exec(`PRAGMA foreign_keys=ON`); err != nil {
+		t.Fatal(err)
+	}
+	// Use the writer-owned table SQL, including its exact durable schema text.
+	reference, err := paneldb.ReferenceSQLiteUserSchema(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ledgerSQL := ""
+	for _, object := range reference {
+		if object.Type == "table" && object.Name == "schema_migrations" {
+			ledgerSQL = object.SQL
+		}
+	}
+	if ledgerSQL == "" {
+		t.Fatal("reference migration ledger is absent")
+	}
+	if _, err := database.Exec(ledgerSQL); err != nil {
 		t.Fatal(err)
 	}
 	files, err := filepath.Glob(filepath.Join(repository, "internal/db/migrations/*.sql"))

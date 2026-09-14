@@ -113,3 +113,59 @@ func TestMaterialCapabilityNamesExactLayout(t *testing.T) {
 		t.Fatal(got, called)
 	}
 }
+
+func TestCompletionMaterialCLIClosedCapabilityAndResultCodes(t *testing.T) {
+	snapshot := materialTestArgs()[2]
+	report := func(string) {}
+	deny := func(string, recoverypublication.Request) (string, error) {
+		t.Fatal("invalid command executed")
+		return "", nil
+	}
+	valid := [][]string{{"verify-material-support", "--layout", "snapshot-name-sha256-v1", "--schema", recoverypublication.MaterialSchemaV2}, {"completion-material-root", "--snapshot", snapshot}, {"verify-installed-completion", "--snapshot", snapshot}}
+	for _, args := range valid {
+		if got := dispatchMaterial(args, 1000, deny, io.Discard, report); got != exitNotOwner {
+			t.Fatal(got)
+		}
+		if !launcherDispatchCommand(args) {
+			t.Fatal("missing fixed launcher dispatch", args)
+		}
+	}
+	for _, args := range [][]string{{"verify-material-support", "--layout", "snapshot-name-sha256-v1", "--schema", recoverypublication.MaterialSchema}, {"verify-material-support", "--schema", recoverypublication.MaterialSchemaV2, "--layout", "snapshot-name-sha256-v1"}, {"completion-material-root", "--snapshot", "../snapshot"}, {"verify-installed-completion", "--snapshot", snapshot, "--repair"}} {
+		if got := dispatchMaterial(args, 0, deny, io.Discard, report); got != exitUsage {
+			t.Fatal(got, args)
+		}
+	}
+	for _, args := range valid {
+		called := false
+		code := dispatchMaterial(args, 0, func(command string, r recoverypublication.Request) (string, error) {
+			called = true
+			if command != args[0] {
+				t.Fatal(command)
+			}
+			return "/valid/data", nil
+		}, io.Discard, report)
+		if code != 0 || !called {
+			t.Fatal(code, called)
+		}
+	}
+	for _, command := range []string{"material-root", "completion-material-root", "verify-installed-completion", "prepare-recovery-material"} {
+		args := []string{command, "--snapshot", snapshot}
+		if command == "prepare-recovery-material" {
+			args = materialTestArgs()
+		}
+		for _, e := range []error{recoverypublication.ErrMaterialAbsent, recoverypublication.ErrLegacyCompletionMaterial, errors.New("private evidence")} {
+			var output, reported bytes.Buffer
+			code := dispatchMaterial(args, 0, func(string, recoverypublication.Request) (string, error) { return "/ignored", e }, &output, func(s string) { reported.WriteString(s) })
+			want := exitOutput
+			if errors.Is(e, recoverypublication.ErrMaterialAbsent) && (command == "material-root" || command == "completion-material-root") {
+				want = 3
+			}
+			if errors.Is(e, recoverypublication.ErrLegacyCompletionMaterial) && command == "completion-material-root" {
+				want = 6
+			}
+			if code != want || output.Len() != 0 || strings.Contains(reported.String(), e.Error()) {
+				t.Fatal(command, e, code, want, output.String(), reported.String())
+			}
+		}
+	}
+}

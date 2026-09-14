@@ -503,25 +503,33 @@ verify_installed_foundation_final() {
     verify_installed_foundation_systemd
 }
 
-# Final-snapshot rollback consumes independently retained data when available.
-# Only a verified absence permits the historical intact-candidate path. Corrupt
-# material must never be turned into a lookup of unrelated candidate bytes.
+# Complete-snapshot recovery consumes independently retained data. For forward
+# completion only a proven absent record (3) or a fully verified legacy v1 (6)
+# permits retained candidate lookup; invalid evidence can never downgrade.
 select_recovery_data() {
     RECOVERY_MATERIAL_ROOT=
-    if [[ -n $RECOVERY_CODE_ROOT && $ACTION == rollback ]]; then
-        material_status=0
-        RECOVERY_MATERIAL_ROOT=$("$RECOVERY_CODE_ROOT/bin/recovery" material-root \
-            --snapshot "$MARKER_SNAPSHOT" 9<&"$TRANSACTION_FD") || material_status=$?
-        case "$material_status" in
-            0) [[ $RECOVERY_MATERIAL_ROOT =~ ^/var/lib/celikpanel-release-state/recovery-material/v1/[0-9a-f]{64}/data$ ]] \
-                   || die 'independent recovery data root is noncanonical'
-               RECOVERY_RELEASE=$RECOVERY_MATERIAL_ROOT ;;
-            3) RECOVERY_MATERIAL_ROOT=; find_exact_release "$TARGET_COMMIT" ;;
-            *) die 'independent recovery material is invalid; preserve it without candidate fallback' ;;
-        esac
-    else
+    local material_command=material-root material_status=0
+    if [[ -n $RECOVERY_CODE_ROOT && $ACTION == update &&
+          ( $TRANSACTION_PHASE == completion || $TRANSACTION_PHASE == completion-scheduler ||
+            $TRANSACTION_PHASE == scheduler ) ]]; then
+        material_command=completion-material-root
+    elif [[ -z $RECOVERY_CODE_ROOT || $ACTION != rollback ]]; then
         find_exact_release "$TARGET_COMMIT"
+        return 0
     fi
+    RECOVERY_MATERIAL_ROOT=$("$RECOVERY_CODE_ROOT/bin/recovery" "$material_command" \
+        --snapshot "$MARKER_SNAPSHOT" 9<&"$TRANSACTION_FD") || material_status=$?
+    case "$material_status" in
+        0) [[ $RECOVERY_MATERIAL_ROOT =~ ^/var/lib/celikpanel-release-state/recovery-material/v1/[0-9a-f]{64}/data$ ]] \
+               || die 'independent recovery data root is noncanonical'
+           RECOVERY_RELEASE=$RECOVERY_MATERIAL_ROOT ;;
+        3) [[ -z $RECOVERY_MATERIAL_ROOT ]] || die 'absent recovery material returned data'
+           find_exact_release "$TARGET_COMMIT" ;;
+        6) [[ $material_command == completion-material-root && -z $RECOVERY_MATERIAL_ROOT ]] \
+               || die 'legacy material result is not valid for this recovery action'
+           find_exact_release "$TARGET_COMMIT" ;;
+        *) die 'independent recovery material is invalid; preserve it without candidate fallback' ;;
+    esac
 }
 
 validate_snapshot_storage() {

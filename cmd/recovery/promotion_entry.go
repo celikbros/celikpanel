@@ -68,7 +68,7 @@ func launcherDispatchCommand(args []string) bool {
 	}
 	switch args[0] {
 	case "recover", "--verify-final-state", "verify-compatibility",
-		"verify-material-support", "prepare-recovery-material", "material-root",
+		"verify-material-support", "prepare-recovery-material", "material-root", "completion-material-root", "verify-installed-completion",
 		"restore-resource", "publish-resource":
 		return true
 	default:

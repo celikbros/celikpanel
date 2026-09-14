@@ -149,7 +149,12 @@ def apply(args, plan, proof, worker, tick, revalidate, *, after_step=lambda _: N
         raise ValueError('candidate-data-retained-proof-mismatch')
     transaction = fault.read_transaction()
     runtime, selection = hand.selection()
-    if (transaction.get('transaction_operation') != 'update' or transaction.get('transaction_phase') != 'active'
+    phase = 'completion.pending' if plan.get('boundary') == 'completion-database-verified' else 'active'
+    if phase == 'completion.pending' and (proof.get('phase') != phase or proof.get('transaction') != transaction
+            or proof.get('database_readonly_checker', {}).get('exit_code') != 0
+            or proof.get('material', {}).get('transaction_token_sha256') != transaction.get('transaction_token_sha256')):
+        raise ValueError('candidate-data-completion-proof-missing')
+    if (transaction.get('transaction_operation') != 'update' or transaction.get('transaction_phase') != phase
             or transaction.get('snapshot') != proof.get('snapshot')):
         raise ValueError('candidate-data-active-transaction-mismatch')
     def verify_live():

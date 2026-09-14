@@ -596,6 +596,9 @@ func (v *inputs) journal() (*os.File, error) {
 	return result, nil
 }
 func validateJournalObjects(result *os.File) error {
+	if _, err := result.Seek(0, 0); err != nil {
+		return ErrUnavailable
+	}
 	names, err := result.Readdirnames(67)
 	if err != nil && err != io.EOF {
 		return ErrUnavailable
@@ -669,6 +672,20 @@ func (v *inputs) verifyForwardBeforeRestore() error {
 		return ErrOwnerChanged
 	}
 	defer current.Close()
+	if forward.Schema == MaterialNoopIntentSchema {
+		actual, e := scan(current)
+		if e != nil || !actual.equal(forward.After) || !samePath(v.prefix, v.request.Resource, current) || !sameRootPath(v.c, path, journal, jid) {
+			return ErrOwnerChanged
+		}
+		receipt, e := readPrivateFile(journal, "published", 4096)
+		if errors.Is(e, unix.ENOENT) {
+			return nil
+		}
+		if e != nil || !bytes.Equal(receipt, []byte("format=celikpanel-resource-publication-v1\nintent="+digest(raw)+"\n")) {
+			return ErrOwnerChanged
+		}
+		return nil
+	}
 	staged, err := openAt(journal, forward.Stage, true)
 	if err != nil {
 		return ErrOwnerChanged
@@ -705,7 +722,12 @@ func (v *inputs) validIntent(record intent, operation string, wanted tree) bool 
 			return false
 		}
 	}
-	return record.Schema == schema && record.MaterialSHA == materialSHA && record.Resource == r.Resource && record.Operation == operation && record.Snapshot == r.Snapshot && record.SnapshotManifest == r.SnapshotManifest && record.CandidateRoot == r.CandidateRoot && record.CandidateManifest == r.CandidateManifest && record.TokenHash == digest([]byte(v.token)) && record.Parent == v.prefixID && stagePattern.MatchString(record.Stage) && v.beforeAllowed(record.Before) && record.After.semantic() == wanted.semantic()
+	stageValid := stagePattern.MatchString(record.Stage)
+	if record.Schema == MaterialNoopIntentSchema {
+		schema = MaterialNoopIntentSchema
+		stageValid = operation == "update" && v.material != nil && v.material.record.Schema == MaterialSchemaV2 && record.Stage == "" && record.Before.equal(record.After)
+	}
+	return record.Schema == schema && record.MaterialSHA == materialSHA && record.Resource == r.Resource && record.Operation == operation && record.Snapshot == r.Snapshot && record.SnapshotManifest == r.SnapshotManifest && record.CandidateRoot == r.CandidateRoot && record.CandidateManifest == r.CandidateManifest && record.TokenHash == digest([]byte(v.token)) && record.Parent == v.prefixID && stageValid && v.beforeAllowed(record.Before) && record.After.semantic() == wanted.semantic()
 }
 func publish(r Request, operation string, c config) error {
 	v, err := load(r, operation, c)
@@ -749,7 +771,7 @@ func publish(r Request, operation string, c config) error {
 		if e != nil || !bound || !v.beforeAllowed(before) || (v.material != nil && operation == "update" && before.semantic() != v.old.semantic()) {
 			return ErrOwnerChanged
 		}
-		if before.semantic() == wanted.semantic() {
+		if before.semantic() == wanted.semantic() && !(operation == "update" && v.material != nil && v.material.record.Schema == MaterialSchemaV2) {
 			if err = v.revalidate(); err != nil {
 				return err
 			}
@@ -765,9 +787,14 @@ func publish(r Request, operation string, c config) error {
 			}
 			return checkJournal()
 		}
-		stage, after, e := v.stage(journal, wanted)
-		if e != nil {
-			return e
+		noop := before.semantic() == wanted.semantic()
+		var stage string
+		after := before
+		if !noop {
+			stage, after, e = v.stage(journal, wanted)
+			if e != nil {
+				return e
+			}
 		}
 		if e = v.revalidate(); e != nil {
 			return e
@@ -786,6 +813,9 @@ func publish(r Request, operation string, c config) error {
 		if v.material != nil {
 			record.Schema = MaterialIntentSchema
 			record.MaterialSHA = v.material.sha
+			if noop {
+				record.Schema = MaterialNoopIntentSchema
+			}
 		}
 		raw = canonical(record)
 		if int64(len(raw)) > maxIntent {
@@ -821,6 +851,9 @@ func publish(r Request, operation string, c config) error {
 	}
 	if err = v.revalidate(); err != nil {
 		return err
+	}
+	if record.Schema == MaterialNoopIntentSchema {
+		return v.finishNoopPublication(journal, raw, record, checkJournal)
 	}
 	current, err := openAt(v.prefix, r.Resource, true)
 	if err != nil {

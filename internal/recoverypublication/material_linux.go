@@ -22,13 +22,25 @@ const materialLimit = int64(48 << 20)
 
 // These are evidence, never executable recovery code. Recovery executes its
 // separately selected installed kit and compares the saved data contracts.
-var materialFiles = []string{
+var materialFilesV1 = []string{
 	"release.version", "release.commit", "release.tree",
 	"deploy/release-recovery.protocol", "deploy/release-sequence-policy",
 	"deploy/release-recovery-runner.sh", "deploy/release-transaction-start-guard.sh",
 	"deploy/systemd/celikpanel-release-recovery.service", "deploy/systemd/celikpanel-release-recovery.timer",
 	"deploy/systemd/celikpanel-agent.service", "deploy/systemd/celikpanel-panel.service",
 	"deploy/systemd/celikpanel-firewall-restore.service",
+}
+
+var materialFiles = append(append([]string{}, materialFilesV1...), "libexec/get.sh")
+
+func materialDataFiles(schema string) []string {
+	if schema == MaterialSchema {
+		return materialFilesV1
+	}
+	if schema == MaterialSchemaV2 {
+		return materialFiles
+	}
+	return nil
 }
 
 type materialResource struct {
@@ -148,7 +160,7 @@ func readMaterialTransaction(txn *os.File, snapshot string) (materialTransaction
 			return p, ErrUnavailable
 		}
 	} else {
-		if p.operation != "rollback" || len(p.markers) < 1 || len(p.markers) > 2 {
+		if len(p.markers) < 1 || len(p.markers) > 2 {
 			return p, ErrUnavailable
 		}
 		if len(p.markers) == 2 && !bytes.Equal(p.markers["completion.pending"], p.markers["scheduler-restore.pending"]) {
@@ -171,6 +183,10 @@ func VerifyRecoveryMaterial(snapshot string) (string, error) {
 	return filepath.Join(m.path, "data"), nil
 }
 func readMaterial(snapshot string, c config) (*verifiedMaterial, error) {
+	return readMaterialFor(snapshot, c, false)
+}
+
+func readMaterialFor(snapshot string, c config, completionOnly bool) (*verifiedMaterial, error) {
 	if os.Geteuid() != 0 || os.Getegid() != 0 || !ValidSnapshot(snapshot) {
 		return nil, ErrUnavailable
 	}
@@ -191,6 +207,9 @@ func readMaterial(snapshot string, c config) (*verifiedMaterial, error) {
 	if err != nil {
 		return nil, err
 	}
+	if completionOnly && !m.proof.updateCompletion() {
+		return nil, ErrUnavailable
+	}
 	// The canonical snapshot is stable across update/rollback phase changes.
 	// Its direct key isolates this transaction from unrelated retained history.
 	m.path = filepath.Join(materialBase(c), digest([]byte(snapshot)))
@@ -198,6 +217,17 @@ func readMaterial(snapshot string, c config) (*verifiedMaterial, error) {
 	if errors.Is(err, ErrMaterialAbsent) {
 		if e := refuseMissingMaterialIntent(c, m.proof.token); e != nil {
 			return nil, e
+		}
+		c.point("material_absence_read")
+		if e := m.revalidateTransaction(); e != nil {
+			return nil, e
+		}
+		selected, e := openMaterialPath(c, snapshot)
+		if selected != nil {
+			selected.Close()
+		}
+		if !errors.Is(e, ErrMaterialAbsent) {
+			return nil, ErrOwnerChanged
 		}
 		return nil, ErrMaterialAbsent
 	}
@@ -214,7 +244,7 @@ func readMaterial(snapshot string, c config) (*verifiedMaterial, error) {
 	}
 	m.sha = digest(m.raw)
 	r := m.record
-	if r.Schema != MaterialSchema || r.Snapshot != snapshot || !ValidManifest(r.SnapshotManifest) || !ValidManifest(r.CandidateManifest) || r.TokenHash != digest([]byte(m.proof.token)) || filepath.Clean(r.CandidateRoot) != r.CandidateRoot || filepath.Dir(r.CandidateRoot) != c.candidates || !releasePattern.MatchString(filepath.Base(r.CandidateRoot)) || !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(r.CandidateCommit) || !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(r.CandidateTree) || snapshotPattern.FindStringSubmatch(snapshot)[2] != r.CandidateCommit || !strings.HasPrefix(filepath.Base(r.CandidateRoot), r.CandidateCommit[:12]+"-") || !ValidManifest(r.DataManifest) || len(r.Resources) != 2 {
+	if materialDataFiles(r.Schema) == nil || r.Snapshot != snapshot || !ValidManifest(r.SnapshotManifest) || !ValidManifest(r.CandidateManifest) || r.TokenHash != digest([]byte(m.proof.token)) || filepath.Clean(r.CandidateRoot) != r.CandidateRoot || filepath.Dir(r.CandidateRoot) != c.candidates || !releasePattern.MatchString(filepath.Base(r.CandidateRoot)) || !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(r.CandidateCommit) || !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(r.CandidateTree) || snapshotPattern.FindStringSubmatch(snapshot)[2] != r.CandidateCommit || !strings.HasPrefix(filepath.Base(r.CandidateRoot), r.CandidateCommit[:12]+"-") || !ValidManifest(r.DataManifest) || len(r.Resources) != 2 {
 		return nil, ErrUnavailable
 	}
 	m.snapshot, err = openPath(c.anchor, filepath.Join(c.snapshots, snapshot))
@@ -235,6 +265,24 @@ func readMaterial(snapshot string, c config) (*verifiedMaterial, error) {
 	okay = true
 	return m, nil
 }
+func (m *verifiedMaterial) revalidateTransaction() error {
+	c := m.c
+	if !sameRootPath(c, c.transaction, m.transaction, m.transactionID) || verifyLock(m.transaction, c.fd) != nil {
+		return ErrOwnerChanged
+	}
+	proof, err := readMaterialTransaction(m.transaction, m.proofSnapshot())
+	if err != nil || !reflect.DeepEqual(proof, m.proof) {
+		return ErrOwnerChanged
+	}
+	return nil
+}
+func (m *verifiedMaterial) proofSnapshot() string {
+	for _, raw := range m.proof.markers {
+		return string(markerPattern.FindSubmatch(raw)[3])
+	}
+	return ""
+}
+
 func (m *verifiedMaterial) revalidate() error {
 	c, r := m.c, m.record
 	selected, err := openMaterialPath(c, r.Snapshot)
@@ -380,7 +428,7 @@ func validRecordedTree(t tree) bool {
 }
 func validateMaterialData(t tree, rows map[string]string, r materialRecord) error {
 	files := map[string]bool{"candidate-root": true, "candidate-manifest-sha256": true}
-	for _, name := range materialFiles {
+	for _, name := range materialDataFiles(r.Schema) {
 		files[name] = true
 	}
 	if len(rows) != len(files) {
@@ -391,7 +439,7 @@ func validateMaterialData(t tree, rows map[string]string, r materialRecord) erro
 			return ErrUnavailable
 		}
 		if e.Identity.Mode&unix.S_IFMT == unix.S_IFDIR {
-			if (e.Path != "." && e.Path != "deploy" && e.Path != "deploy/systemd") || e.Identity.Mode&07777 != 0700 {
+			if (e.Path != "." && e.Path != "deploy" && e.Path != "deploy/systemd" && !(r.Schema == MaterialSchemaV2 && e.Path == "libexec")) || e.Identity.Mode&07777 != 0700 {
 				return ErrUnavailable
 			}
 			continue
@@ -548,6 +596,9 @@ func prepareRecoveryMaterial(r Request, c config) error {
 	old, err := readMaterial(r.Snapshot, c)
 	if err == nil {
 		defer old.close()
+		if old.record.Schema != MaterialSchemaV2 {
+			return ErrUnavailable
+		} // Never rewrite durable v1 authority.
 		if old.record.SnapshotManifest != r.SnapshotManifest || old.record.CandidateRoot != r.CandidateRoot || old.record.CandidateManifest != r.CandidateManifest || !old.record.Resources[0].Old.equal(bin.old) || !old.record.Resources[0].New.equal(bin.new) || !old.record.Resources[1].Old.equal(web.old) || !old.record.Resources[1].New.equal(web.new) {
 			return ErrOwnerChanged
 		}
@@ -601,6 +652,11 @@ func prepareRecoveryMaterial(r Request, c config) error {
 		return err
 	}
 	systemd.Close()
+	libexec, err := privateDir(data, "libexec")
+	if err != nil {
+		return err
+	}
+	libexec.Close()
 	checks := map[string]string{}
 	for _, name := range materialFiles {
 		raw, e := readRelative(bin.candidate, name, maxFile)
@@ -635,7 +691,7 @@ func prepareRecoveryMaterial(r Request, c config) error {
 	if err != nil {
 		return err
 	}
-	record := materialRecord{Schema: MaterialSchema, Snapshot: r.Snapshot, SnapshotManifest: r.SnapshotManifest, CandidateRoot: r.CandidateRoot, CandidateManifest: r.CandidateManifest, TokenHash: digest([]byte(bin.token)), CandidateCommit: strings.TrimSuffix(commit, "\n"), CandidateTree: strings.TrimSuffix(candidateTree, "\n"), Resources: []materialResource{{"bin", bin.old, bin.new, bin.expectedCandidate()}, {"web", web.old, web.new, web.expectedCandidate()}}, Data: copied, DataManifest: digest([]byte(sums.String()))}
+	record := materialRecord{Schema: MaterialSchemaV2, Snapshot: r.Snapshot, SnapshotManifest: r.SnapshotManifest, CandidateRoot: r.CandidateRoot, CandidateManifest: r.CandidateManifest, TokenHash: digest([]byte(bin.token)), CandidateCommit: strings.TrimSuffix(commit, "\n"), CandidateTree: strings.TrimSuffix(candidateTree, "\n"), Resources: []materialResource{{"bin", bin.old, bin.new, bin.expectedCandidate()}, {"web", web.old, web.new, web.expectedCandidate()}}, Data: copied, DataManifest: digest([]byte(sums.String()))}
 	if err = validateMaterialData(copied, checks, record); err != nil {
 		return err
 	}

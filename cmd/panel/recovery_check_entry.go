@@ -34,6 +34,7 @@ func runRecoveryPanelCheck(args []string) error {
 	normal := flags.Bool("check-service-operations-idle", false, "")
 	preLedger := flags.Bool("check-pre-ledger-service-operations-idle", false, "")
 	walNormal := flags.Bool("check-service-operations-idle-wal-aware", false, "")
+	completed := flags.Bool("check-completed-update-database-wal-aware", false, "")
 	walPreLedger := flags.Bool("check-pre-ledger-service-operations-idle-wal-aware", false, "")
 	restore := flags.String("restore-service-operation-snapshot", "", "")
 	create := flags.String("create-service-operation-snapshot", "", "")
@@ -70,7 +71,7 @@ func runRecoveryPanelCheck(args []string) error {
 		return fmt.Errorf("positional arguments are not accepted")
 	}
 	modes := 0
-	for _, enabled := range []bool{*normal, *preLedger, *walNormal, *walPreLedger, *restore != "", *create != "", *rescue != ""} {
+	for _, enabled := range []bool{*normal, *preLedger, *walNormal, *walPreLedger, *completed, *restore != "", *create != "", *rescue != ""} {
 		if enabled {
 			modes++
 		}
@@ -89,6 +90,8 @@ func runRecoveryPanelCheck(args []string) error {
 			return checkPreLedgerServiceOperationsIdle(databaseFile())
 		case *walNormal:
 			return checkWALAwareServiceOperationsIdle(databaseFile())
+		case *completed:
+			return checkCompletedUpdateDatabaseWALAware(databaseFile())
 		default:
 			return checkWALAwarePreLedgerServiceOperationsIdle(databaseFile())
 		}
