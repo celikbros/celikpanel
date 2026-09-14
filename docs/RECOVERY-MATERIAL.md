@@ -14,7 +14,8 @@ therefore prevent restoration from an intact old snapshot.
 
 Before the first schema or product apply, the selected recovery executable now
 seals `celikpanel/recovery-material/v1` under the fixed private recovery-material
-root. The record binds the exact transaction token hash, v6 snapshot name and
+root, indexed directly by SHA-256 of the canonical snapshot name. Unrelated
+historical records are not scanned. The record binds the exact transaction token hash, v6 snapshot name and
 manifest digest, candidate provenance, old/new product tree descriptions, and a
 fixed inventory of recovery data. Snapshot format 6 is unchanged.
 

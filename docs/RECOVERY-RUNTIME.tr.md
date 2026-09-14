@@ -129,3 +129,5 @@ geri yüklemez. WAL ve atomik yayın kesintileri gerçek alt süreç öldürüle
 Gerçek deneyler ve uygulanamayan hata girişimleri
 [bağımsız kurtarma kabul kaydında](../deploy/e2e/release-recovery/INDEPENDENT-RUNTIME.tr.md)
 ayrı sonuçlarla tutulur.
+
+Tamamlanmış yedekten geri alma ayrıca [bağımsız kurtarma verisini](RECOVERY-MATERIAL.tr.md) ve ona bağlı v2 yayınlama kaydını kullanır. Eski v1 işlemleri mevcut okuyucuyu korur; kalan kabul matrisi tamamlanmış sayılmaz.

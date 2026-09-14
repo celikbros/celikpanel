@@ -127,3 +127,5 @@ Real child-process kills cover both the WAL checkpoint and publication exchanges
 
 The exact native trials, including failed or unexercised fault injections, are
 recorded in [independent runtime acceptance](../deploy/e2e/release-recovery/INDEPENDENT-RUNTIME.md).
+
+Complete-snapshot rollback also uses [independent recovery material](RECOVERY-MATERIAL.md) and its material-bound v2 publication intent. Legacy v1 transactions retain their existing reader; this does not close the remaining acceptance matrix.

@@ -4,6 +4,7 @@ package recoverypublication
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,7 +32,7 @@ func newMaterialFixture(t *testing.T) fixture {
 	return f
 }
 func materialPath(f fixture) string {
-	return filepath.Join(materialBase(f.config()), digest([]byte(strings.Repeat("d", 64))))
+	return filepath.Join(materialBase(f.config()), digest([]byte(f.Request.Snapshot)))
 }
 func prepareMaterial(t *testing.T, f fixture) {
 	t.Helper()
@@ -379,16 +380,105 @@ func TestMaterialOtherTokenCannotHideSealedSnapshot(t *testing.T) {
 		t.Fatalf("changed token downgraded material: %v", err)
 	}
 }
-func TestMaterialAbsentLookupRefusesUnknownRootEntries(t *testing.T) {
-	for _, name := range []string{"unexpected", strings.Repeat("a", 64)} {
-		t.Run(name, func(t *testing.T) {
+func TestMaterialUnrelatedHistoryCannotBlockNewPreparation(t *testing.T) {
+	for _, kind := range []string{"unrelated-file", "malformed-record", "unsafe-sibling", "foreign-record", "many-records"} {
+		t.Run(kind, func(t *testing.T) {
 			f := newMaterialFixture(t)
-			write(t, filepath.Join(materialBase(f.config()), name), []byte("unmodeled entry"), 0600)
-			if err := os.Chmod(materialBase(f.config()), 0700); err != nil {
+			base := materialBase(f.config())
+			if err := os.MkdirAll(base, 0700); err != nil {
 				t.Fatal(err)
 			}
+			sibling := filepath.Join(base, strings.Repeat("a", 64))
+			switch kind {
+			case "unrelated-file":
+				write(t, filepath.Join(base, "owner-private-history"), []byte("unknown retained bytes"), 0600)
+			case "malformed-record":
+				if err := os.Mkdir(sibling, 0700); err != nil {
+					t.Fatal(err)
+				}
+				write(t, filepath.Join(sibling, "material.json"), []byte("broken old record"), 0600)
+			case "unsafe-sibling":
+				if err := os.Symlink("/unavailable", sibling); err != nil {
+					t.Fatal(err)
+				}
+			case "foreign-record":
+				if err := os.Mkdir(sibling, 0700); err != nil {
+					t.Fatal(err)
+				}
+				write(t, filepath.Join(sibling, "material.json"), canonical(materialRecord{Schema: MaterialSchema, Snapshot: f.Request.Snapshot, TokenHash: strings.Repeat("f", 64)}), 0600)
+			case "many-records":
+				for i := 0; i < 1026; i++ {
+					if err := os.Mkdir(filepath.Join(base, fmt.Sprintf("%064x", i)), 0700); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			before := map[string]os.FileInfo{}
+			entries, err := os.ReadDir(base)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, entry := range entries {
+				info, e := os.Lstat(filepath.Join(base, entry.Name()))
+				if e != nil {
+					t.Fatal(e)
+				}
+				before[entry.Name()] = info
+			}
+			m, err := readMaterial(f.Request.Snapshot, f.config())
+			if m != nil {
+				m.close()
+			}
+			if !errors.Is(err, ErrMaterialAbsent) {
+				t.Fatalf("unrelated history blocked verified absence: %v", err)
+			}
+			prepareMaterial(t, f)
+			for name, previous := range before {
+				now, e := os.Lstat(filepath.Join(base, name))
+				if e != nil || !os.SameFile(previous, now) || previous.Mode() != now.Mode() || previous.Size() != now.Size() || previous.ModTime() != now.ModTime() {
+					t.Fatalf("history %s changed", name)
+				}
+			}
+			applyMaterial(t, f, "bin")
+			f.marker(t, "rollback")
+			if err := os.Rename(f.Request.CandidateRoot, f.Request.CandidateRoot+".unavailable"); err != nil {
+				t.Fatal(err)
+			}
+			if err := publish(f.Request, "rollback", f.config()); err != nil {
+				t.Fatalf("unrelated history blocked rollback: %v", err)
+			}
+		})
+	}
+}
+func TestMaterialSelectedPathAndPrivateBaseRemainRequired(t *testing.T) {
+	for _, fault := range []string{"selected-file", "selected-symlink", "selected-empty-dir", "base-mode"} {
+		t.Run(fault, func(t *testing.T) {
+			f := newMaterialFixture(t)
+			base := materialBase(f.config())
+			if err := os.MkdirAll(base, 0700); err != nil {
+				t.Fatal(err)
+			}
+			switch fault {
+			case "selected-file":
+				write(t, materialPath(f), []byte("unknown selected material"), 0600)
+			case "selected-symlink":
+				if err := os.Symlink("/unavailable", materialPath(f)); err != nil {
+					t.Fatal(err)
+				}
+			case "selected-empty-dir":
+				if err := os.Mkdir(materialPath(f), 0700); err != nil {
+					t.Fatal(err)
+				}
+			case "base-mode":
+				if err := os.Chmod(base, 0755); err != nil {
+					t.Fatal(err)
+				}
+			}
 			if _, err := readMaterial(f.Request.Snapshot, f.config()); err == nil || errors.Is(err, ErrMaterialAbsent) {
-				t.Fatalf("unknown evidence downgraded: %v", err)
+				t.Fatalf("selected evidence downgraded: %v", err)
+			}
+			if err := prepareRecoveryMaterial(f.Request, f.config()); err == nil {
+				t.Fatal("invalid selected evidence overwritten")
 			}
 		})
 	}

@@ -13,7 +13,8 @@ ağacının tamamına ihtiyaç duyuyordu. Aday dosyalarının kaybolması, sağl
 yedekten kurtarmayı da engelleyebiliyordu.
 
 İlk şema veya ürün değişikliğinden önce seçili kurtarma programı, sabit özel dizin
-altına `celikpanel/recovery-material/v1` kaydını mühürler. Kayıt tam işlem token
+altına `celikpanel/recovery-material/v1` kaydını mühürler. Dizin anahtarı doğrudan
+kurallı yedek adının SHA-256 özetidir; ilgisiz eski kayıtlar taranmaz. Kayıt tam işlem token
 özetini, v6 yedeğin adını ve manifest özetini, adayın kökenini, eski/yeni ürün
 ağaçlarının tanımlarını ve sabit kurtarma verisi envanterini birbirine bağlar.
 Yedek biçimi 6 değişmez.

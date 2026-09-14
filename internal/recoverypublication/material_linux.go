@@ -191,13 +191,12 @@ func readMaterial(snapshot string, c config) (*verifiedMaterial, error) {
 	if err != nil {
 		return nil, err
 	}
-	m.path = filepath.Join(materialBase(c), digest([]byte(m.proof.token)))
-	m.root, err = optionalPath(c, m.path)
+	// The canonical snapshot is stable across update/rollback phase changes.
+	// Its direct key isolates this transaction from unrelated retained history.
+	m.path = filepath.Join(materialBase(c), digest([]byte(snapshot)))
+	m.root, err = openMaterialPath(c, snapshot)
 	if errors.Is(err, ErrMaterialAbsent) {
 		if e := refuseMissingMaterialIntent(c, m.proof.token); e != nil {
-			return nil, e
-		}
-		if e := refuseOtherMaterialToken(c, snapshot, m.proof.token); e != nil {
 			return nil, e
 		}
 		return nil, ErrMaterialAbsent
@@ -238,6 +237,15 @@ func readMaterial(snapshot string, c config) (*verifiedMaterial, error) {
 }
 func (m *verifiedMaterial) revalidate() error {
 	c, r := m.c, m.record
+	selected, err := openMaterialPath(c, r.Snapshot)
+	if err != nil {
+		return ErrOwnerChanged
+	}
+	same := rootIdentity(selected) == m.rootID
+	selected.Close()
+	if !same {
+		return ErrOwnerChanged
+	}
 	if !sameRootPath(c, m.path, m.root, m.rootID) || !sameRootPath(c, filepath.Join(c.snapshots, r.Snapshot), m.snapshot, m.snapshotID) || !sameRootPath(c, c.transaction, m.transaction, m.transactionID) || !samePath(m.root, "data", m.data) || verifyLock(m.transaction, c.fd) != nil {
 		return fmt.Errorf("material bound evidence: %w", ErrOwnerChanged)
 	}
@@ -655,7 +663,7 @@ func prepareRecoveryMaterial(r Request, c config) error {
 	if unix.Fsync(int(data.Fd())) != nil || unix.Fsync(int(stageRoot.Fd())) != nil {
 		return ErrUnavailable
 	}
-	if unix.Renameat2(int(base.Fd()), stage, int(base.Fd()), record.TokenHash, unix.RENAME_NOREPLACE) != nil {
+	if unix.Renameat2(int(base.Fd()), stage, int(base.Fd()), digest([]byte(record.Snapshot)), unix.RENAME_NOREPLACE) != nil {
 		return ErrUnavailable
 	}
 	c.point("material_published")
@@ -816,86 +824,31 @@ func refuseMissingMaterialIntent(c config, token string) error {
 	return nil
 }
 
-// A valid marker with a different token must not hide an already sealed
-// material for this snapshot. This bounded check examines only durable material
-// headers. Known private capture stages are preserved, never adopted; a fresh
-// Prepare call must prove all pre-mutation inputs again before creating a stage.
-func refuseOtherMaterialToken(c config, snapshot, token string) error {
+// Only the exact snapshot-keyed child is relevant. Sibling records and capture
+// stages are preserved without inspecting them or making them recovery authority.
+func openMaterialPath(c config, snapshot string) (*os.File, error) {
 	base, err := optionalPath(c, materialBase(c))
-	if errors.Is(err, ErrMaterialAbsent) {
-		return nil
-	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer base.Close()
-	if st, e := fstat(base); e != nil || st.Mode&07777 != 0700 {
-		return ErrUnavailable
+	st, err := fstat(base)
+	if err != nil || st.Mode&07777 != 0700 {
+		return nil, ErrUnavailable
 	}
 	baseID := rootIdentity(base)
-	names, err := base.Readdirnames(1025)
-	if (err != nil && err != io.EOF) || len(names) > 1024 {
-		return ErrUnavailable
-	}
-	sort.Strings(names)
-	var bytesRead int64
-	stagePattern := regexp.MustCompile(`^\.material-[0-9a-f]{32}$`)
-	for _, name := range names {
-		if !hex64.MatchString(name) && !stagePattern.MatchString(name) {
-			return ErrUnavailable
-		}
-		dir, e := openAt(base, name, true)
-		if e != nil {
-			return ErrUnavailable
-		}
-		st, e := fstat(dir)
-		if e != nil || st.Mode&07777 != 0700 {
-			dir.Close()
-			return ErrUnavailable
-		}
-		if stagePattern.MatchString(name) {
-			dir.Close()
-			continue
-		}
-		raw, e := readPrivateFile(dir, "material.json", materialLimit)
-		bytesRead += int64(len(raw))
-		if e != nil || bytesRead > 256<<20 {
-			dir.Close()
-			return ErrUnavailable
-		}
-		var r materialRecord
-		if decodeExact(raw, &r) != nil || r.Schema != MaterialSchema || !ValidSnapshot(r.Snapshot) || r.TokenHash != name || !ValidManifest(r.SnapshotManifest) || !ValidManifest(r.CandidateManifest) {
-			dir.Close()
-			return ErrUnavailable
-		}
-		children, e := dir.Readdirnames(4)
-		if e != nil || len(children) != 2 {
-			dir.Close()
-			return ErrUnavailable
-		}
-		sort.Strings(children)
-		if children[0] != "data" || children[1] != "material.json" {
-			dir.Close()
-			return ErrUnavailable
-		}
-		data, e := openAt(dir, "data", true)
-		if e != nil {
-			dir.Close()
-			return ErrUnavailable
-		}
-		st, e = fstat(data)
-		data.Close()
-		bound := samePath(base, name, dir)
-		dir.Close()
-		if e != nil || st.Mode&07777 != 0700 || !bound {
-			return ErrUnavailable
-		}
-		if r.Snapshot == snapshot || name == digest([]byte(token)) {
-			return ErrOwnerChanged
-		}
-	}
+	root, err := openAt(base, digest([]byte(snapshot)), true)
 	if !sameRootPath(c, materialBase(c), base, baseID) {
-		return ErrOwnerChanged
+		if root != nil {
+			root.Close()
+		}
+		return nil, ErrOwnerChanged
 	}
-	return nil
+	if errors.Is(err, unix.ENOENT) {
+		return nil, ErrMaterialAbsent
+	}
+	if err != nil {
+		return nil, ErrUnavailable
+	}
+	return root, nil
 }
