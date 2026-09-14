@@ -27,9 +27,12 @@ before publishing quiesce intent or stopping coordinators. An incompatible reade
 therefore refuses the update while the panel is still running. This proves current
 state readability, not success of a future restore.
 
-An existing compatible selection is retained. Missing/corrupt selected bytes do
-not authorize overwriting it with a new candidate or falling back to candidate
-lifecycle scripts. Interrupted unpublished stages remain unselected evidence.
+First enrollment retains an existing compatible selection. The separately
+journaled [runtime promotion](RECOVERY-RUNTIME-PROMOTION.md) prepares a replacement
+inside the admitted update preflight; it preserves and verifies the predecessor.
+Missing/corrupt selected bytes do not authorize overwriting it with a new candidate
+or falling back to candidate lifecycle scripts. Interrupted unpublished stages
+remain unselected evidence.
 
 The canonical manifest fixes protocol 1, snapshot format 6, twelve files, modes,
 SHA-256 values, and exact inventory. The reader checks root ownership, canonical
@@ -80,8 +83,9 @@ publication is atomic for the admitted bin/web resources described below. Other
 restoration algorithms still share release-script contracts; this slice does not
 make TLS normalization read-only or remove every dependency on retained candidate
 **data** integrity.
-A later recovery protocol/kit promotion needs compatibility drills and retention
-of the proven predecessor. P0.4 artifact schema separation and P0.5 independent
+The [selected-kit promotion contract](RECOVERY-RUNTIME-PROMOTION.md) records its
+compatibility checks, predecessor retention and separate native acceptance. A new
+recovery protocol still requires an explicit compatibility transition. P0.4 artifact schema separation and P0.5 independent
 workload renewal/boot acceptance remain separate work.
 
 If enrollment stops after publishing the launcher but before its selector, retry

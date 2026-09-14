@@ -354,6 +354,12 @@ peer'ı denemeden önce güncellenen sunucuyu geri alın.
 Kayıtlı [bağımsız kurtarma ortamı](RECOVERY-RUNTIME.tr.md) varsa, mevcut kalıcı
 işlemi sürdürmek için `sudo /usr/libexec/celikpanel/recovery recover` kullanın.
 Bu komut başarılı tamamlanmadan sonra yeni bir geri alma başlatmaz.
+[Ortam geçişini](RECOVERY-RUNTIME-PROMOTION.tr.md) destekleyen başlatıcı ayrıca
+`sudo /usr/libexec/celikpanel/recovery runtime-status --lang tr` komutunu sunar.
+Bu salt-okur komut kit geçişini uygulama/servis sağlığından ayırır ve sonraki
+eylemi bildirir. Değişmemiş eski başlatıcı bu komutu geriye dönük kazanmaz; yeni
+başlatıcı yayımlanmadan kesilen ilk geçişte aynı sürüm panelden yeniden incelenir,
+otomatik tamamlanma iddia edilmez.
 [Kurtarma verili yedekler](RECOVERY-MATERIAL.tr.md) şimdilik yalnız aynı işlemi
 kabul eder; yeni tokenlı tarihsel geri alma servisler durmadan reddedilir. Yedeği
 ve çalışan ortamı koruyun. Yeni doğrudan script, verinin yokluğunu kanıtlayamayan

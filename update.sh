@@ -68,6 +68,8 @@ unset CELIKPANEL_RECOVER_EXISTING_TRANSACTION \
 panel_frozen=0
 agent_frozen=0
 mutation_started=0
+recovery_runtime_preparation_attempted=0
+recovery_runtime_preparation_verified=0
 transaction_started=0
 quiesce_abort_failed=0
 transaction_completion_verified=0
@@ -163,6 +165,14 @@ report_update_failure() {
           ${transaction_started:-0} -eq 0 && ${quiesce_abort_failed:-0} -eq 0 &&
           ${transaction_completion_verified:-0} -eq 0 && ${scheduler_restore_verified:-0} -eq 0 ]]; then
         state=unchanged
+    fi
+    # An interrupted kit preparation may have changed the independent launcher
+    # or selector even though no application transaction was created.
+    # Kit hazırlığı kesilirse ürün işlemi başlamadan başlatıcı/seçici değişmiş olabilir.
+    if [[ ${recovery_runtime_preparation_attempted:-0} -eq 1 &&
+          ${recovery_runtime_preparation_verified:-0} -ne 1 ]]; then
+        state=recovery_required
+        code=recovery_runtime_preparation_unconfirmed
     fi
     if [[ "${update_failure_detail:-}" == *': the host package manager is active'* ]]; then
         code=package_manager_busy
@@ -292,18 +302,25 @@ prepare_independent_recovery_runtime() {
     [[ -x "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" &&
        ! -L "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" ]] \
         || die "candidate independent recovery runtime is missing"
-    "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" enroll-runtime \
-        --source "$TRUSTED_RELEASE_ROOT/recovery-runtime" \
-        --transaction-fd 9 9<&"$RELEASE_TRANSACTION_FD" \
-        || die "independent recovery runtime could not be enrolled before update"
     local recovery_compatibility_mode=--normal
     [[ $BOOTSTRAP_PRE_LEDGER -ne 1 ]] || recovery_compatibility_mode=--bootstrap-pre-ledger
     [[ $BOOTSTRAP_SCHEMA17 -ne 1 ]] || recovery_compatibility_mode=--bootstrap-schema17
+    # Prepare and verify a retained replacement before stopping any coordinator.
+    # An interrupted kit promotion keeps its own evidence and predecessor.
+    # Koordinatörler durmadan korunan yeni kiti hazırla ve doğrula.
+    # Kesilen kit geçişi kendi kanıtını ve önceki kiti korur.
+    recovery_runtime_preparation_attempted=1
+    run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" prepare-runtime \
+        --source "$TRUSTED_RELEASE_ROOT/recovery-runtime" \
+        --mode "$recovery_compatibility_mode" \
+        --transaction-fd 9 9<&"$RELEASE_TRANSACTION_FD" \
+        || die "independent recovery runtime preparation is unconfirmed; panel services have not been stopped; inspect the same update and retained recovery evidence"
+    recovery_runtime_preparation_verified=1
     "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" verify-compatibility \
         --mode "$recovery_compatibility_mode" 9<&"$RELEASE_TRANSACTION_FD" \
         || die "selected recovery runtime cannot verify the current installation before update"
-    # Ask the selected executable itself. An older kit is retained, but cannot
-    # silently accept a writer whose durable recovery data it does not understand.
+    # Ask the selected executable itself after verified enrollment/promotion.
+    # A writer cannot infer capability solely from its own source version.
     /usr/libexec/celikpanel/recovery verify-material-support --layout snapshot-name-sha256-v1 \
         || die "selected recovery runtime does not support recovery material v1; panel services have not been stopped"
 }

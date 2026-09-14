@@ -8,11 +8,24 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/recoverycheckpoint"
 	"github.com/alicelik/celikpanel/internal/recoveryobs"
+	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 )
 
 // There is deliberately no remote listener or credential fallback. Native root
 // or authorized sudo is the recovery principal when the panel cannot start.
 func runEntry(args []string) int {
+	if len(args) > 0 && args[0] == "runtime-status" {
+		return runRuntimeStatus(args, os.Geteuid(), recoveryruntime.InspectPromotion, os.Stdout, os.Stderr)
+	}
+	if len(args) > 0 && args[0] == "prepare-runtime" {
+		return dispatchRuntimePreparation(args, os.Geteuid(), prepareRuntime, func(message string) { fmt.Fprintln(os.Stderr, message) })
+	}
+	if os.Geteuid() == 0 && launcherDispatchCommand(args) {
+		if err := dispatchLauncher(args); err != nil {
+			fmt.Fprintln(os.Stderr, "The selected recovery entry could not be verified. Preserve its evidence. "+err.Error())
+			return exitUnavailable
+		}
+	}
 	if len(args) > 0 && (args[0] == "verify-material-support" || args[0] == "prepare-recovery-material" || args[0] == "material-root") {
 		return dispatchMaterial(args, os.Geteuid(), runMaterial, os.Stdout, func(message string) { fmt.Fprintln(os.Stderr, message) })
 	}
@@ -55,7 +68,7 @@ func dispatchEntry(args []string, uid int, observe func() int, execute func([]st
 	case len(args) == 5 && args[0] == "enroll-runtime" && args[1] == "--source" && args[3] == "--transaction-fd" && args[4] == "9" && filepath.IsAbs(args[2]) && filepath.Clean(args[2]) == args[2]:
 		err = enroll(args[2])
 	default:
-		report("Usage: recovery status --request-id <id> [--json] | version | recover")
+		report("Usage: recovery status --request-id <id> [--json] | runtime-status [--json] [--lang en|tr] | version | recover")
 		return exitUsage
 	}
 	if err != nil {

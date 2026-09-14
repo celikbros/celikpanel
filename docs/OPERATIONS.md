@@ -347,6 +347,12 @@ server before attempting the peer.
 When an enrolled [independent recovery runtime](RECOVERY-RUNTIME.md) is present,
 use `sudo /usr/libexec/celikpanel/recovery recover` to resume an existing durable
 operation. It does not start a fresh rollback after successful completion.
+A launcher supporting [runtime promotion](RECOVERY-RUNTIME-PROMOTION.md) also
+provides `sudo /usr/libexec/celikpanel/recovery runtime-status --lang en`. This
+read-only command distinguishes a kit transition from application/service health
+and gives the next action. An unchanged older launcher does not gain this command
+retroactively; its pre-launcher bootstrap interruption requires reviewing the same
+release in the panel rather than claiming automatic completion.
 [Material-backed snapshots](RECOVERY-MATERIAL.md) currently admit only that same
 transaction; a new-token historical rollback refuses before service stop. Preserve
 the snapshot and working runtime. The new direct script can also refuse an older
