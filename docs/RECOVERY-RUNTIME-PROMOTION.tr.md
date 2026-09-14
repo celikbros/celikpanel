@@ -1,9 +1,9 @@
 # Kurtarma çalışma ortamının yükseltilmesi
 
-*14 Eylül 2026 · [English](RECOVERY-RUNTIME-PROMOTION.md) · D-025 / P0.3*
+*14–15 Eylül 2026 · [English](RECOVERY-RUNTIME-PROMOTION.md) · D-025 / P0.3*
 
-**Kaynak uygulaması ve kabul çalışması sürüyor; yayımlanmış veya kurulu bir
-yetenek değildir.** Bu dilim, daha önce seçilmiş bağımsız kurtarma kitinin
+**Kaynak uygulaması ve sınırlı gerçek sistem kabulü tamamlandı; kurulu paneller
+için yayımlanmış güncelleme değildir.** Bu dilim, daha önce seçilmiş bağımsız kurtarma kitinin
 değiştirilmesini ele alır. Dayanıklılık sözleşmesinin tamamını kapatmaz.
 
 ## Neden ayrı bir geçiş gerekiyor?
@@ -13,8 +13,8 @@ korunuyor, fakat güncellemenin gerektirdiği yeni kurtarma verisi okuyucusu
 seçilemiyordu. Başlatıcı ile seçiciyi birbirinden bağımsız yazmak, kurtarmanın
 kendi içinde ikinci bir kesinti aralığı oluştururdu.
 
-Geçiş yalnız kabul edilmiş güncellemenin ön kontrolünde, FD 9 üzerinden yerel
-sürüm kilidi tutulurken ve active, quiesce, completion veya scheduler işlem
+Yeni kit geçişinin kabulü yalnız kabul edilmiş güncellemenin ön kontrolünde,
+FD 9 üzerinden yerel sürüm kilidi tutulurken ve active, quiesce, completion veya scheduler işlem
 işaretçisi yokken yapılır. Yeni kit bütünüyle saklanır, mevcut kurulum sabit
 çevrimdışı okuyucularla denetlenir ve önceki kit korunur. Kit geçişi için panel
 veya Agent servisi durdurulmaz. Okunamayan seçim, seçim yokmuş gibi yorumlanmaz.
@@ -81,14 +81,17 @@ başarılı çıkışı, bütün sunucunun kurtarıldığını kanıtlamaz.
 
 Gerçek sistem kabulü, kayıtlı ve geçici Arch ile Debian 13 misafirlerinde gerçekten
 kaydedilmiş önceki kit ile başlamalıdır. Test düzeneği seçici kaydı üretmek
-yerine önceki programın gerçek kayıt komutunu çağırmalıdır. Ara durumda salt-okur veri yeteneği girişinden seçili yürütücünün
-doğrulanmasını ve geçişten sonra gerçek başarısız güncellemenin geri
+yerine önceki programın gerçek kayıt komutunu çağırmalıdır. Ara durumda salt-okur
+veri yeteneği girişinden seçili yürütücünün doğrulanmasını ve geçişten sonra gerçek başarısız güncellemenin geri
 alınmasını sınamalıdır. Önceki kitin kaydı, daha önce bütünüyle başarılı bir
 sürüm güncellemesi yapılmasından ayrı bir test koşuludur.
 
-Tam kaynak commit'leri, hata sınırları, başarısız veya kaçırılmış enjeksiyonlar
-ve korunan kanıt özetleri kaydedilir. Bu sonuçlar oluşana kadar belge gerçek
-sistem geçiş kabulünün tamamlandığını iddia etmez. Tam aşama matrisi, yeni işlem
+[Gerçek sistem kabul kaydı](../deploy/e2e/release-recovery/RUNTIME-PROMOTION.tr.md),
+tam kaynakları, kanıt özetlerini ve başarısız K/L deneylerini korur. Düzeltilmiş M,
+Arch ve Debian 13'te gerçek başlatıcı yayını kesintisinden sonra açık sahip
+devamını kanıtlar. Ayrı N, bu sistemlerde kit geçişinden sonra otomatik uygulama
+geri almasını kanıtlar. Bunlar sınırlı kabul sonuçlarıdır; bütün dayanıklılığın
+tamamlandığı iddiası değildir. Tam aşama matrisi, yeni işlem
 kimliğiyle tarihsel geri alma, metadata geçişleri, bağımsız servis yenileme ve
 açılış davranışı ile temizleme ayrı açık işlerdir. Kurulu panel güncellemelerini
 kullanıcı CelikPanel'in kendi arayüzünden başlatır.

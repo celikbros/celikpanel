@@ -1,9 +1,9 @@
 # Recovery runtime promotion
 
-*September 14, 2026 · [Türkçe](RECOVERY-RUNTIME-PROMOTION.tr.md) · D-025 / P0.3*
+*September 14–15, 2026 · [Türkçe](RECOVERY-RUNTIME-PROMOTION.tr.md) · D-025 / P0.3*
 
-**Source implementation and acceptance work in progress; not a published or
-installed capability.** This slice addresses replacement of an already selected
+**Source implementation with scoped native acceptance; not a released update
+for installed panels.** This slice addresses replacement of an already selected
 independent recovery kit. It does not complete the resilience contract.
 
 ## Why this is a separate transition
@@ -13,7 +13,8 @@ executor but could not provide a newer recovery-data reader when an update
 needed it. Replacing the launcher and selector with unrelated writes would
 introduce a second failure window inside recovery itself.
 
-Promotion is restricted to the already admitted update's preflight, with the
+Admission of a new promotion is restricted to the already admitted update's
+preflight, with the
 native release lock on FD 9 and no active, quiesce, completion or scheduler
 transaction marker. It prepares a complete retained kit, checks the current
 installation with its fixed offline readers, and preserves the predecessor.
@@ -89,9 +90,12 @@ entry during the transition and
 perform an actual failed update and restoration after promotion. A predecessor
 enrollment fixture is distinct from a complete successful previous update.
 
-Record exact source commits, fault boundaries, negative or missed injections,
-and retained evidence digests. Until those results exist, this document does
-not claim native promotion acceptance. The complete checkpoint matrix, new-token
+The [native acceptance record](../deploy/e2e/release-recovery/RUNTIME-PROMOTION.md)
+preserves exact sources, evidence digests and failed K/L trials. Corrected M
+proves explicit owner completion after a real launcher-publication interruption
+on Arch and Debian 13. Separate N proves automatic application rollback after
+promotion on those systems. These are bounded acceptance results, not a complete
+resilience claim. The complete checkpoint matrix, new-token
 historical rollback, metadata transitions, independent workload renewal/boot,
 and cleanup remain separate open work. Installed-panel updates remain actions
 initiated by the user in CelikPanel's own interface.

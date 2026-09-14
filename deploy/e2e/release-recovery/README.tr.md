@@ -438,3 +438,5 @@ GOTOOLCHAIN=go1.26.5 go test ./deploy/e2e/release-recovery/driver ./deploy/e2e/r
 
 Bu kontroller iletişimi taklit eder veya geçici yerel dosyalar kullanır. Gerçek
 konuk yaşam döngüsünün sonucunu raporlamaz.
+
+Seçili kurtarma kitinin değiştirilmesi ayrı [geçiş kabul kaydında](RUNTIME-PROMOTION.tr.md) izlenir. Gerçek önceki kit kaydı, ara durumdaki salt-okur yürütme, açık sahip devamı ve geçiş sonrası gerçek otomatik geri alma ayrılır. Kaçırılmış hata deneyi sonuçsuz olarak korunur.
