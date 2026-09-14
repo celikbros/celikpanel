@@ -214,7 +214,7 @@ def collect(identity, operation, require_reboot=False):
         observation = native.observe()
         event = events[-1]
         if (observation['worker'] != event.get('worker') or observation['checkpoint_sha256'] != event.get('checkpoint_sha256')
-                or native.properties()['FreezerState'] != 'frozen'):
+                or not native.frozen()):
             raise fault.Unavailable('reboot-ready-proof-changed')
         result['reboot_proof'] = observation
     return result

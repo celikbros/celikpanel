@@ -32,6 +32,7 @@ CHECKPOINT_ROOT = Path('/var/lib/celikpanel-recovery-checkpoints')
 RUNTIME_ROOT = Path('/usr/libexec/celikpanel/recovery-runtimes/v1')
 PRIVATE_ROOT = Path('/root/celikpanel-release-recovery-lab')
 TRANSACTION_ROOT = Path('/var/lib/celikpanel-release-transaction')
+CGROUP_ROOT = Path('/sys/fs/cgroup')
 SCHEMA = 'celikpanel/recovery-fault/v1'
 INTENT_SCHEMA = 'celikpanel/recovery-fault-intent/v1'
 CHECKPOINT_SCHEMA = 'celikpanel/recovery-checkpoint/v1'
@@ -171,6 +172,68 @@ def verify_runtime(digest, tick=lambda: None):
     return {'runtime_manifest_sha256': digest, 'verified_files': len(expected)}
 
 
+def kernel_group_identity():
+    path = CGROUP_ROOT / 'system.slice' / UNIT
+    for parent in (CGROUP_ROOT, path.parent, path):
+        info = parent.lstat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_gid != 0 or stat.S_IMODE(info.st_mode) & 0o022:
+            raise Unavailable('unsafe-recovery-cgroup')
+    return {'cgroup_device': info.st_dev, 'cgroup_inode': info.st_ino}
+
+
+class KernelGroup:
+    """Fixed native cgroup v2 directory; held FD cannot follow a replacement."""
+    def __init__(self, expected):
+        self.fd = None
+        if expected.get('unit') != UNIT or expected.get('cgroup') != '/system.slice/' + UNIT:
+            raise Unavailable('unexpected-recovery-cgroup')
+        self.expected = {key: expected.get(key) for key in ('cgroup_device', 'cgroup_inode')}
+        if any(type(value) is not int for value in self.expected.values()) or kernel_group_identity() != self.expected:
+            raise Unavailable('recovery-cgroup-identity-changed')
+        self.fd = os.open(CGROUP_ROOT / 'system.slice' / UNIT, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try: self.check()
+        except BaseException: self.close(); raise
+
+    def check(self):
+        info = os.fstat(self.fd)
+        if {'cgroup_device': info.st_dev, 'cgroup_inode': info.st_ino} != self.expected or kernel_group_identity() != self.expected:
+            raise Unavailable('recovery-cgroup-identity-changed')
+
+    def control(self, name, value=None):
+        if name not in ('cgroup.freeze', 'cgroup.events') or value not in (None, b'0', b'1') or (value is not None and name != 'cgroup.freeze'):
+            raise Unavailable('unsupported-recovery-cgroup-control')
+        self.check()
+        flags = (os.O_RDONLY if value is None else os.O_WRONLY) | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
+        descriptor = os.open(name, flags, dir_fd=self.fd)
+        try:
+            info = os.fstat(descriptor)
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_gid != 0 or info.st_nlink != 1 or stat.S_IMODE(info.st_mode) & 0o022:
+                raise Unavailable('unsafe-recovery-cgroup-control')
+            self.check()
+            if value is not None:
+                if os.write(descriptor, value) != 1: raise Unavailable('recovery-cgroup-write-unconfirmed')
+                result = None
+            else:
+                result = os.read(descriptor, 4097)
+                if len(result) > 4096: raise Unavailable('recovery-cgroup-control-too-large')
+            self.check()
+            return result
+        finally: os.close(descriptor)
+
+    def frozen(self):
+        raw = self.control('cgroup.events').decode('ascii')
+        fields = {}
+        for line in raw.splitlines():
+            pair = line.split()
+            if len(pair) != 2 or pair[0] in fields: raise Unavailable('recovery-cgroup-events-invalid')
+            fields[pair[0]] = pair[1]
+        if fields.get('frozen') not in ('0', '1'): raise Unavailable('recovery-cgroup-freezer-unavailable')
+        return fields['frozen'] == '1'
+
+    def close(self):
+        if self.fd is not None: os.close(self.fd); self.fd = None
+
+
 class Native:
     def __init__(self, intent):
         self.intent = intent
@@ -212,7 +275,7 @@ class Native:
             raise Unavailable('recovery-identity-changed')
         return {'unit': UNIT, 'pid': int(values['MainPID']), 'start_ticks': start, 'invocation_id': values['InvocationID'],
                 'cgroup': values['ControlGroup'], 'boot_id': boot, 'running_executable_sha256': binary['sha256'],
-                'command_sha256': hashlib.sha256(command).hexdigest()}
+                'command_sha256': hashlib.sha256(command).hexdigest(), **kernel_group_identity()}
 
     def observe(self):
         worker = self.worker_identity()
@@ -222,15 +285,26 @@ class Native:
         return {'worker': worker, 'transaction': transaction, 'checkpoint': checkpoint,
                 'checkpoint_sha256': hashlib.sha256(raw).hexdigest()}
 
+    def frozen(self):
+        group = getattr(self, '_frozen_group', None)
+        if group is not None: return group.frozen()
+        group = KernelGroup(self.worker_identity(cleanup=True))
+        try: return group.frozen()
+        finally: group.close()
+
     def freeze(self):
-        self.command('freeze')
-        if self.properties()['FreezerState'] != 'frozen':
-            raise Unavailable('recovery-freeze-not-confirmed')
-        # Cleanup follows the invocation actually frozen, even if restart raced
-        # with systemctl. This identity never admits a kill or reboot.
+        before = self.worker_identity()
+        group = KernelGroup(before)
+        self._frozen_group = group
+        group.control('cgroup.freeze', b'1')
+        deadline = time.monotonic() + 2
+        while not group.frozen():
+            if time.monotonic() >= deadline: raise Unavailable('recovery-kernel-freeze-not-confirmed')
+            time.sleep(.01)
         actual = self.worker_identity(cleanup=True)
-        if self.properties()['FreezerState'] != 'frozen':
-            raise Unavailable('recovery-freeze-result-changed')
+        if any(actual.get(key) != before.get(key) for key in ('cgroup_device', 'cgroup_inode')):
+            raise Unavailable('recovery-frozen-cgroup-changed')
+        if not group.frozen(): raise Unavailable('recovery-freeze-result-changed')
         return actual
 
     def command(self, action):
@@ -238,31 +312,39 @@ class Native:
         if result.returncode: raise Unavailable('recovery-' + action + '-unconfirmed')
 
     def thaw(self, worker):
-        # Do not thaw a newly started invocation of the fixed recovery unit.
+        # The exact cgroup inode and live invocation must still agree. Direct
+        # kernel thaw supports a oneshot unit's pending start job; systemctl
+        # freeze/thaw rejects that valid native lifecycle state.
+        group = getattr(self, '_frozen_group', None)
         try:
-            current = self.worker_identity(cleanup=True)
-        except (Unavailable, OSError):
-            values = self.properties()
-            if values['MainPID'] == '0' and values['InvocationID'] == worker['invocation_id']:
-                self.command('thaw')
-                return 'old-empty-unit-thawed'
-            if values['MainPID'] == '0': return 'unit-exited'
-            return 'identity-unavailable'
-        if current != worker: return 'identity-changed'
-        self.command('thaw')
-        return 'thawed'
+            if group is None: group = KernelGroup(worker)
+            if group.expected != {key: worker.get(key) for key in ('cgroup_device', 'cgroup_inode')}:
+                return 'cgroup-identity-changed'
+            try:
+                current = self.worker_identity(cleanup=True)
+            except (Unavailable, OSError):
+                values = self.properties()
+                if values['MainPID'] != '0' or values['InvocationID'] != worker['invocation_id']:
+                    return 'identity-unavailable'
+            else:
+                if current != worker: return 'identity-changed'
+            group.control('cgroup.freeze', b'0')
+            return 'thawed'
+        finally:
+            if group is not None: group.close()
+            self._frozen_group = None
 
     def proof(self, observation, tick):
         tick()
         current = self.observe()
-        if current != observation or self.properties()['FreezerState'] != 'frozen':
+        if current != observation or not self.frozen():
             raise Unavailable('frozen-recovery-checkpoint-changed')
         snapshot = files.verify_snapshot(self.intent['snapshot'], tick)
         if snapshot is None or snapshot['manifest_sha256'] != self.intent['snapshot_manifest_sha256']:
             raise Unavailable('exact-complete-snapshot-not-verified')
         runtime_proof = verify_runtime(self.intent['runtime_manifest_sha256'], tick)
         tick()
-        if self.observe() != observation or self.properties()['FreezerState'] != 'frozen':
+        if self.observe() != observation or not self.frozen():
             raise Unavailable('checkpoint-changed-after-full-proof')
         return dict(snapshot, runtime=runtime_proof)
 
@@ -348,9 +430,9 @@ def cleanup(intent, identity, operation):
         # Helper SIGKILL may fall between systemctl freeze and the fsynced result.
         # On this guarded fixture only, prove the currently frozen fixed unit's
         # full process identity afresh. This is thaw authority, never kill authority.
-        if native.properties()['FreezerState'] != 'frozen': return 'no-frozen-result'
+        if not native.frozen(): return 'no-frozen-result'
         expected = native.worker_identity(cleanup=True)
-        if expected['boot_id'] != requested.get('boot_id') or native.properties()['FreezerState'] != 'frozen':
+        if (expected['boot_id'] != requested.get('boot_id') or any(expected.get(key) != requested.get(key) for key in ('cgroup_device', 'cgroup_inode')) or not native.frozen()):
             return 'freeze-result-changed'
     if not isinstance(expected, dict) or expected.get('unit') != UNIT: raise Unavailable('cleanup-worker-invalid')
     return native.thaw(expected)

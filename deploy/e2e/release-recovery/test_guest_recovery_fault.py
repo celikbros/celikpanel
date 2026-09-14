@@ -224,4 +224,65 @@ class RuntimeProofTests(unittest.TestCase):
             with self.assertRaises(f.Unavailable): f.private_read(path)
 
 
+@unittest.skipUnless(sys.platform == 'linux' and getattr(os,'geteuid',lambda:-1)()==0, 'root cgroup metadata boundary')
+class KernelGroupTests(unittest.TestCase):
+    def fixture(self, directory):
+        root=Path(directory);group=root/'system.slice'/f.UNIT;group.mkdir(parents=True)
+        (group/'cgroup.freeze').write_bytes(b'0');(group/'cgroup.events').write_bytes(b'populated 1\nfrozen 0\n')
+        info=group.stat();who=dict(worker(),cgroup_device=info.st_dev,cgroup_inode=info.st_ino)
+        return root,group,who
+
+    def test_exact_fd_control_and_kernel_events(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root,path,who=self.fixture(directory)
+            with patch.object(f,'CGROUP_ROOT',root):
+                group=f.KernelGroup(who)
+                try:
+                    self.assertFalse(group.frozen());group.control('cgroup.freeze',b'1')
+                    self.assertEqual((path/'cgroup.freeze').read_bytes(),b'1')
+                    (path/'cgroup.events').write_bytes(b'populated 1\nfrozen 1\n')
+                    self.assertTrue(group.frozen());group.control('cgroup.freeze',b'0')
+                    self.assertEqual((path/'cgroup.freeze').read_bytes(),b'0')
+                finally:group.close()
+
+    def test_replaced_cgroup_is_never_written_or_thawed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root,path,who=self.fixture(directory)
+            with patch.object(f,'CGROUP_ROOT',root):
+                group=f.KernelGroup(who)
+                try:
+                    path.rename(path.with_name('retired'));path.mkdir();(path/'cgroup.freeze').write_bytes(b'1')
+                    with self.assertRaises(f.Unavailable):group.control('cgroup.freeze',b'0')
+                    self.assertEqual((path/'cgroup.freeze').read_bytes(),b'1')
+                    with self.assertRaises(f.Unavailable):f.KernelGroup(who)
+                finally:group.close()
+
+    def test_wrong_unit_inode_owner_permissions_and_symlink_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root,path,who=self.fixture(directory)
+            with patch.object(f,'CGROUP_ROOT',root):
+                for changed in (dict(who,unit='celikpanel-agent.service'),dict(who,cgroup_inode=0)):
+                    with self.assertRaises(f.Unavailable):f.KernelGroup(changed)
+                group=f.KernelGroup(who)
+                try:
+                    control=path/'cgroup.freeze';control.chmod(0o666)
+                    with self.assertRaises(f.Unavailable):group.control('cgroup.freeze',b'1')
+                    control.chmod(0o644);os.chown(control,1,0)
+                    with self.assertRaises(f.Unavailable):group.control('cgroup.freeze',b'1')
+                    os.chown(control,0,0);control.unlink();control.symlink_to(path/'cgroup.events')
+                    with self.assertRaises(OSError):group.control('cgroup.freeze',b'1')
+                finally:group.close()
+
+    def test_freeze_revalidates_actual_identity_and_thaw_refuses_new_invocation(self):
+        before=dict(worker(),cgroup_device=1,cgroup_inode=2)
+        group=unittest.mock.Mock();group.expected={'cgroup_device':1,'cgroup_inode':2};group.frozen.return_value=True
+        native=f.Native(intent())
+        with patch.object(f,'KernelGroup',return_value=group),patch.object(native,'worker_identity',return_value=before):
+            self.assertEqual(native.freeze(),before)
+        group.control.assert_called_once_with('cgroup.freeze',b'1')
+        with patch.object(native,'worker_identity',return_value=dict(before,invocation_id='5'*32)):
+            self.assertEqual(native.thaw(before),'identity-changed')
+        self.assertEqual(group.control.call_count,1);group.close.assert_called_once()
+
+
 if __name__ == '__main__': unittest.main()

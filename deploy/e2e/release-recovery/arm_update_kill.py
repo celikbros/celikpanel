@@ -26,7 +26,7 @@ def validate_events(raw,identity,operation):
     if len(raw)>shared.MAXIMUM or (raw and not raw.endswith(b"\n")):
         raise ValueError("kill event stream is incomplete or oversized")
     events=[json.loads(line) for line in raw.splitlines()]
-    order={"armed":0,"worker_frozen":1,"candidate_installed_checkpoint":2,"kill_requested":3,"kill_sent":4,"released":5}
+    order={"armed":0,"worker_frozen":1,"candidate_installed_checkpoint":2,"recovery_fault_armed":3,"kill_requested":4,"kill_sent":5,"released":6}
     previous=-1
     for event in events:
         kind=event.get("event")
@@ -36,7 +36,9 @@ def validate_events(raw,identity,operation):
         previous=order[kind]
     kinds=[event["event"] for event in events]
     progress=kinds[:-1] if kinds and kinds[-1]=="released" else kinds
-    expected=["armed","worker_frozen","candidate_installed_checkpoint","kill_requested","kill_sent"]
+    expected=["armed","worker_frozen","candidate_installed_checkpoint"]
+    if "recovery_fault_armed" in progress: expected.append("recovery_fault_armed")
+    expected += ["kill_requested","kill_sent"]
     if progress!=expected[:len(progress)] or (kinds and not progress):
         raise ValueError("kill stream is missing a required prior checkpoint")
     return events

@@ -72,7 +72,7 @@ tls_validate_line=$(line_of "$ROLLBACK" 'panel TLS compatibility snapshot is mis
     || fail 'rollback interprets TLS payload before the outer manifest is verified'
 quiesce_line=$(line_of "$ROLLBACK" 'panel_tls_quiesce_certbot_scheduler')
 restore_line=$(line_of "$ROLLBACK" 'panel_tls_restore_snapshot')
-first_install_line=$(line_of "$ROLLBACK" 'rm -rf -- "$BIN_DIR"')
+first_install_line=$(line_of "$ROLLBACK" '    restore_product_resources')
 [[ "$quiesce_line" -lt "$restore_line" && "$restore_line" -lt "$first_install_line" ]] \
     || fail 'TLS restore ordering is not fail-closed before release byte restore'
 
