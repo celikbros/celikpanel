@@ -38,6 +38,7 @@ CODE_ROOT=$TEST_ROOT/kit RECOVERY_RUNTIME_ROOT=$TEST_ROOT/kit
 snapshot_name=$EXPECTED_SNAPSHOT TRUSTED_RELEASE_ROOT=$EXPECTED_CANDIDATE
 rollback_snapshot_manifest_sha=$EXPECTED_SNAPSHOT_MANIFEST
 rollback_candidate_manifest_sha=$EXPECTED_CANDIDATE_MANIFEST
+rollback_candidate_root=$EXPECTED_CANDIDATE
 eval "$(extract rollback.sh restore_product_resources)"
 restore_product_resources
 printf 'restore-resource bin\nrestore-resource web\n' | cmp -s - "$TEST_ROOT/calls" || fail 'rollback CLI identity or sequence changed'

@@ -56,6 +56,8 @@ def validate_plan(plan,identity,operation):
         if (not isinstance(value,dict) or set(value)!={'action','checkpoint'} or value['action'] not in ('kill','reboot')
                 or value['checkpoint'] not in ('restore_admitted','payload_restored','units_reloaded','runtime_verified','schedulers_restored')):
             raise ValueError('invalid opted-in recovery fault')
+    if 'candidate_data_fault' in plan and plan['candidate_data_fault'] != 'quarantine-fixed-three':
+        raise ValueError('invalid opted-in retained candidate data fault')
     candidate=plan['candidate']
     expected=str(RELEASES/('.download.lab-'+operation)/'payload'/candidate['root_name'])
     if plan.get('source_root')!=expected or plan.get('archive_path')!=str(PRIVATE/('local-candidate-'+operation+'.tar.gz')):raise ValueError('candidate staging boundary differs')
@@ -128,6 +130,7 @@ class LocalNative(kill.Native):
         self.args.candidate_agent=plan['candidate']['files']['bin/agent'];self.args.candidate_panel=plan['candidate']['files']['bin/panel']
         option=plan.get('recovery_fault',{})
         self.args.recovery_action=option.get('action');self.args.recovery_checkpoint=option.get('checkpoint')
+        self.args.candidate_data_fault=plan.get('candidate_data_fault')
 
     def unit_reload(self):
         result={}
@@ -176,6 +179,10 @@ class LocalNative(kill.Native):
         if any(proof['installed_unit_helpers'][target]!=candidate['files'][source] for source,target in INSTALLED.items()):raise kill.MissedCheckpoint('installed-candidate-unit-or-helper-changed')
         return proof
 
+    def candidate_data_fault(self, identity, proof, tick):
+        helper=module('local_candidate_data_fault','guest_candidate_data_fault.py')
+        return helper.apply(self.args,self.plan,proof,identity,tick,self.revalidate)
+
 
 def run_fault(args,plan,paths):
     proof=private_json(paths['proof'])
@@ -212,7 +219,12 @@ def collect(plan,paths):
         if result.returncode not in (0,1) or (result.returncode==1 and values.get('LoadState')!='not-found'):raise ValueError('local unit observation unavailable')
         states[unit]=values
     import base64
-    return {'schema':'celikpanel/local-candidate-collection/v1','identity':plan['identity'],'operation_id':plan['operation_id'],'fault_jsonl_base64':base64.b64encode(raw).decode(),'states':states,'transaction':shared.transaction()}
+    data_fault={}
+    if plan.get('candidate_data_fault') is not None:
+        helper=module('local_candidate_data_collect','guest_candidate_data_fault.py')
+        try:data_fault=helper.collect(plan['operation_id'])
+        except (ValueError,OSError):data_fault={'status':'unavailable','reason':'candidate-data-evidence-unavailable'}
+    return {'candidate_data_fault':data_fault,'schema':'celikpanel/local-candidate-collection/v1','identity':plan['identity'],'operation_id':plan['operation_id'],'fault_jsonl_base64':base64.b64encode(raw).decode(),'states':states,'transaction':shared.transaction()}
 
 
 def main(argv=None):

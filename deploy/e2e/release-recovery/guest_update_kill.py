@@ -289,6 +289,9 @@ def run_kill(args, emit, native, *, clock=time.monotonic, pause=time.sleep, inte
                     if getattr(args, "recovery_action", None) is not None:
                         handoff = native.recovery_handoff(identity, proof, tick)
                         emit("recovery_fault_armed", operation_id=args.operation_id, handoff=handoff)
+                    if getattr(args, "candidate_data_fault", None) is not None:
+                        data_fault = native.candidate_data_fault(identity, proof, tick)
+                        emit("candidate_data_fault_applied", operation_id=args.operation_id, data_fault=data_fault)
                     tick()
                     native.revalidate(identity)
                     emit("kill_requested", operation_id=args.operation_id, worker=identity, snapshot=snapshot, signal="SIGKILL", scope="exact-update-unit-cgroup")

@@ -233,15 +233,23 @@ func TestIndependentPublicationChild(t *testing.T) {
 		t.Fatal("fixture")
 	}
 	f.lock = os.NewFile(9, "inherited-test-lock")
+	defer f.lock.Close() // Keep the inherited descriptor alive through JSON/tree allocations.
 	c := f.config()
 	point := os.Getenv("CP_RECOVERY_PUBLICATION_POINT")
+	lastPoint := "before-load"
 	c.checkpoint = func(name string) {
+		lastPoint = name
 		if name == point {
 			unix.Kill(os.Getpid(), unix.SIGKILL)
 		}
 	}
-	if err = publish(f.Request, f.Operation, c); err != nil {
-		t.Fatal(err)
+	if f.Operation == "material" {
+		err = prepareRecoveryMaterial(f.Request, c)
+	} else {
+		err = publish(f.Request, f.Operation, c)
+	}
+	if err != nil {
+		t.Fatalf("after checkpoint %s: %v", lastPoint, err)
 	}
 	t.Fatal("requested kill checkpoint was not reached")
 }

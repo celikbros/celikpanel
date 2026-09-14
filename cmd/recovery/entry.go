@@ -13,6 +13,9 @@ import (
 // There is deliberately no remote listener or credential fallback. Native root
 // or authorized sudo is the recovery principal when the panel cannot start.
 func runEntry(args []string) int {
+	if len(args) > 0 && (args[0] == "verify-material-support" || args[0] == "prepare-recovery-material" || args[0] == "material-root") {
+		return dispatchMaterial(args, os.Geteuid(), runMaterial, os.Stdout, func(message string) { fmt.Fprintln(os.Stderr, message) })
+	}
 	if len(args) > 0 && (args[0] == "restore-resource" || args[0] == "publish-resource") {
 		return dispatchPublication(args, os.Geteuid(), runPublication, func(message string) { fmt.Fprintln(os.Stderr, message) })
 	}

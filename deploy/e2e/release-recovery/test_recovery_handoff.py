@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
@@ -168,6 +169,19 @@ class HandoffTests(unittest.TestCase):
         with patch.object(c,'read_guest') as read,self.assertRaises(ValueError):
             c.reboot(Path('/unused'),{}, {},'arch',{'recovery_fault':{'action':'kill'}})
         read.assert_not_called()
+
+
+class CandidateDataForwardingTests(unittest.TestCase):
+    def test_recovery_prepare_forwards_sealed_data_fault(self):
+        with mock.patch.object(c.lab,'checked_root',return_value=Path('/unused')),mock.patch.object(c.lab,'load',return_value=({}, {'nodes':{'arch':{}}})),mock.patch.object(c.lab,'process_guard'),mock.patch.object(c.local,'prepare') as prepare:
+            c.main(['--work-root','/unused','--node','arch','--mode','prepare','--execute','--archive','/tmp/payload','--archive-sha256','a'*64,'--action','kill','--checkpoint','payload_restored','--candidate-data-fault','quarantine-fixed-three'])
+        self.assertEqual(prepare.call_args.kwargs['candidate_data_fault'],'quarantine-fixed-three')
+        self.assertEqual(prepare.call_args.kwargs['recovery_fault'],{'action':'kill','checkpoint':'payload_restored'})
+
+    def test_data_fault_cannot_be_reselected_at_start(self):
+        with mock.patch.object(c.lab,'checked_root') as checked,self.assertRaises(SystemExit):
+            c.main(['--work-root','/unused','--node','arch','--mode','start','--execute','--candidate-data-fault','quarantine-fixed-three'])
+        checked.assert_not_called()
 
 
 if __name__=='__main__':unittest.main()

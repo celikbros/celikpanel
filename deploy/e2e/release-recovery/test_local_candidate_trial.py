@@ -90,6 +90,21 @@ class ControllerTests(unittest.TestCase):
         for field in ('source_root','archive_path'):
             value=dict(self.intent);value[field]='/tmp/untrusted'
             with self.assertRaises(ValueError):g.validate_plan(value,self.ident,self.op)
+    def test_data_fault_requires_exact_explicit_option(self):
+        g.validate_plan({**self.intent,'candidate_data_fault':'quarantine-fixed-three'},self.ident,self.op)
+        for value in (True,False,'',{},'remove-any-path'):
+            with self.subTest(value=value),self.assertRaises(ValueError):g.validate_plan({**self.intent,'candidate_data_fault':value},self.ident,self.op)
+
+    def test_data_fault_option_cannot_be_changed_after_prepare(self):
+        with mock.patch.object(controller.lab,'checked_root') as checked,self.assertRaises(SystemExit):
+            controller.main(['--work-root','/var/tmp/cp-release-drill-test','--mode','start','--execute','--candidate-data-fault','quarantine-fixed-three'])
+        checked.assert_not_called()
+
+    def test_prepare_cli_forwards_data_fault_only_after_explicit_execute(self):
+        with mock.patch.object(controller.lab,'checked_root',return_value=Path('/unused')),mock.patch.object(controller.lab,'load',return_value=({}, {'nodes':{'arch':{}}})),mock.patch.object(controller.lab,'process_guard'),mock.patch.object(controller,'prepare') as prepare:
+            controller.main(['--work-root','/unused','--node','arch','--mode','prepare','--execute','--archive','/tmp/payload','--archive-sha256','a'*64,'--candidate-data-fault','quarantine-fixed-three'])
+        self.assertEqual(prepare.call_args.kwargs['candidate_data_fault'],'quarantine-fixed-three')
+
     def test_wrong_guest_identity_rejected(self):
         with self.assertRaises(ValueError):g.validate_plan(self.intent,{**self.ident,'nonce':'b'*64},self.op)
     def test_no_signed_admission_claim(self):

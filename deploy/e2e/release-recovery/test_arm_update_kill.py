@@ -27,6 +27,13 @@ class ControllerTests(unittest.TestCase):
         for invalid in (['armed','recovery_fault_armed'],['armed','worker_frozen','candidate_installed_checkpoint','kill_requested','recovery_fault_armed']):
             with self.subTest(invalid=invalid),self.assertRaises(ValueError):s.validate_events(self.raw([self.event(k) for k in invalid]),self.identity,self.operation)
 
+    def test_data_fault_event_requires_full_proof_and_precedes_kill(self):
+        for recovery in ([],['recovery_fault_armed']):
+            kinds=['armed','worker_frozen','candidate_installed_checkpoint']+recovery+['candidate_data_fault_applied','kill_requested','kill_sent','released']
+            self.assertEqual([e['event'] for e in s.validate_events(self.raw([self.event(k) for k in kinds]),self.identity,self.operation)],kinds)
+        for bad in (['armed','candidate_data_fault_applied'],['armed','worker_frozen','candidate_installed_checkpoint','kill_requested','candidate_data_fault_applied'],['armed','worker_frozen','candidate_installed_checkpoint','candidate_data_fault_applied','candidate_data_fault_applied']):
+            with self.subTest(bad=bad),self.assertRaises(ValueError):s.validate_events(self.raw([self.event(k) for k in bad]),self.identity,self.operation)
+
     def test_missed_checkpoint_stream_allowed_without_success_inference(self):
         events=s.validate_events(self.raw([self.event('armed'),self.event('released')]),self.identity,self.operation)
         self.assertEqual(len(events),2)
