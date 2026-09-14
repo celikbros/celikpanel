@@ -10,7 +10,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
     printf '%s\n' 'release unit transition library must be sourced' >&2
     exit 1
 fi
-_release_unit_source_root=${TRUSTED_RELEASE_ROOT:-${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}}
+_release_unit_source_root=${CODE_ROOT:-${TRUSTED_RELEASE_ROOT:-${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}}}
 if [[ -z $_release_unit_source_root || $_release_unit_source_root != /* ||
       $(readlink -e -- "$_release_unit_source_root") != "$_release_unit_source_root" ||
       $(readlink -e -- "${BASH_SOURCE[0]}") != "$_release_unit_source_root/deploy/release-unit-transition.sh" ]] ||

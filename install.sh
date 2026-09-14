@@ -564,6 +564,13 @@ prepare_fresh_release_transaction_foundation() {
         "$RELEASE_TRANSACTION_ROOT" "$INSTALL_RELEASE_TRANSACTION_FD" \
         || die "fresh release transaction lock ownership proof failed"
     TRUSTED_RELEASE_ROOT=$SRC
+    [[ -x "$SRC/recovery-runtime/bin/recovery" &&
+       ! -L "$SRC/recovery-runtime/bin/recovery" ]] \
+        || die "fresh install independent recovery runtime is missing"
+    "$SRC/recovery-runtime/bin/recovery" enroll-runtime \
+        --source "$SRC/recovery-runtime" \
+        --transaction-fd 9 9<&"$INSTALL_RELEASE_TRANSACTION_FD" \
+        || die "fresh install independent recovery runtime could not be enrolled"
     preflight_reviewed_release_recovery_foundation
     publish_reviewed_release_recovery_intent
     install_release_transaction_guards_with_label_barrier \

@@ -224,7 +224,7 @@ func ensureSecureServiceMutationStateDirectory(path string) error {
 }
 
 func readSecureServiceMutationLedger(path string, maxSize int64) ([]byte, bool, error) {
-	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if errors.Is(err, unix.ENOENT) {
 		return nil, false, nil
 	}
@@ -257,7 +257,7 @@ func readSecureServiceMutationLedger(path string, maxSize int64) ([]byte, bool, 
 	return raw, true, nil
 }
 func readRecoverableInitialServiceMutationStage(path string, maxSize int64) ([]byte, bool, error) {
-	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if errors.Is(err, unix.ENOENT) {
 		return nil, false, nil
 	}

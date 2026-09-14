@@ -8,6 +8,8 @@ import importlib.util
 import json
 from pathlib import Path
 import sqlite3
+import sys
+import os
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -122,6 +124,7 @@ class ObservationTests(unittest.TestCase):
             with self.assertRaises(interruption):
                 probe.collect_observation(interrupted)
 
+    @unittest.skipUnless(sys.platform == "linux" and getattr(os, "geteuid", lambda: -1)() == 0, "native root file semantics")
     def test_database_nonempty_wal_is_unknown_without_sqlite_open(self):
         with tempfile.TemporaryDirectory() as root:
             database = Path(root) / "celikpanel.db"
@@ -134,6 +137,7 @@ class ObservationTests(unittest.TestCase):
             self.assertEqual(result["status"], "unknown")
             self.assertEqual(before, sorted((p.name, p.read_bytes()) for p in Path(root).iterdir()))
 
+    @unittest.skipUnless(sys.platform == "linux" and getattr(os, "geteuid", lambda: -1)() == 0, "native root file semantics")
     def test_database_checkpointed_fixture_integrity_and_schema_are_read_only(self):
         with tempfile.TemporaryDirectory() as root:
             database = Path(root) / "celikpanel.db"

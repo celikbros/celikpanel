@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """One unpublished native update and automatic-recovery trial in a registered VM.
 
 This path tests native update/recovery, not signed agent admission. It never
@@ -31,7 +31,7 @@ INTENT='local-candidate-intent.json'
 STAGE='local-candidate-stage.json'
 START='local-candidate-start-attempt.json'
 ARM='local-candidate-kill-intent.json'
-ASSETS=('candidate_archive.py','guest_probe.py','guest_port_fault.py','guest_update_kill.py','guest_local_candidate.py')
+ASSETS=('candidate_archive.py','guest_probe.py','guest_port_fault.py','guest_update_kill.py','guest_local_candidate.py','guest_recovery_fault.py','guest_recovery_handoff.py')
 
 def encoded(value):return (json.dumps(value,sort_keys=True)+'\n').encode()
 
@@ -67,7 +67,7 @@ def validate_stage(value,intent):
             or value.get('verified_files')!=len(intent['candidate']['files']) or not trial.HEX64.fullmatch(value.get('bash_sha256',''))):raise ValueError('local candidate stage proof differs')
     return value
 
-def prepare(root,record,plan,node,archive,digest,boundary):
+def prepare(root,record,plan,node,archive,digest,boundary,recovery_fault=None):
     assert_absent(root,node,INTENT,START,ARM,'update-intent.json','update-start-attempt.json')
     candidate=guest.archive_tools.inspect_archive(archive,digest)
     source_proof=guest.archive_tools.verify_committed_source(candidate,trial.REPOSITORY)
@@ -80,6 +80,9 @@ def prepare(root,record,plan,node,archive,digest,boundary):
             'baseline_evidence_sha256':hashlib.sha256(baseline_raw).hexdigest(),'seed_evidence_sha256':hashlib.sha256(seed_raw).hexdigest(),
             'archive_path':str(guest.PRIVATE/('local-candidate-'+operation+'.tar.gz')),
             'source_root':str(guest.RELEASES/('.download.lab-'+operation)/'payload'/candidate['root_name'])}
+    if recovery_fault is not None:
+        intent['recovery_fault']=recovery_fault
+        guest.validate_plan(intent,intent['identity'],operation)
     customization=evidence_path(root,node,'owner-unit-baseline.json')
     if customization.exists() or customization.is_symlink():
         raw=trial.read_private(customization)

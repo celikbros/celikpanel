@@ -312,6 +312,62 @@ Canlı düğümler kayıtlı QEMU süreçleriyle eşleşmelidir. Durdurma; yazı
 katmanlarını, günlükleri ve kanıtları korur. Bu sarmalayıcıda özyinelemeli silme
 komutu yoktur.
 
+## Kurtarma süreci hata devri (henüz native kabul değil)
+
+`recovery_fault_trial.py`, **yeni** yayımlanmamış aday deneyine otomatik kurtarma
+sırasında ikinci bir hata ekler. Yukarıdaki gerçek Alpha75 tabanını ve commit'e
+bağlı yerel arşiv sınırını korur; imzalı Agent kabulünü test etmez. Her eylemde yeni
+bir düğüm kullanılır; tüketilmiş işlem niyeti değiştirilmez:
+
+```sh
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode prepare --archive "$CANDIDATE_ARCHIVE" --archive-sha256 "$CANDIDATE_SHA256" --action kill --checkpoint payload_restored --execute
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode arm --execute
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode start --execute
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode collect
+```
+
+Güncelleyici hata yardımcısı önce tam adayın kurulduğu noktayı dondurur ve kanıtlar.
+`guest_recovery_handoff.py` gerçek kanonik etkin işlemi ve seçili runtime'ı okur;
+root-only snapshot/token-özeti niyetini kalıcı kaydeder ve tam kurtarma hata
+birimini başlatır. Aynı işlem `armed` kaydı üretmeden ilk güncelleyiciye tek
+SIGKILL gönderilemez. Başlatma sonucu bilinmiyorsa cleanup; tam yardımcı komutunu,
+VM kimliğini ve süreç invocation kimliğini kanıtlamadan birimi durdurmaz. İkinci
+başlatma yoktur. Tahmini token, wildcard işlem veya gecikmeye dayalı kill
+yoktur. Varsayılan güncelleyici hata deneyleri bu devri etkinleştirmez.
+
+`guest_recovery_fault.py`; mevcut VM nonce/DMI kimliği, tam snapshot/runtime
+kanıtı ve açık `celikpanel/recovery-checkpoint/v1` kaydı ister. Dondurma ve yeniden
+kanıtlama öncesinde kurtarma servisinin MainPID/başlangıç tick'i, invocation,
+boot, cgroup ve çalıştırılabilir dosyası bağlanır. Eksik veya değişmiş kanıt
+bilinmeyen kalır. Dondurma öncesinde `freeze_requested` fsync edilir; yardımcı
+öldürülmesine karşı `freeze_observed`, gerçekten donan invocation kimliğini yalnız
+cleanup için kaydeder. Dondurmayla yarışan restart, eski checkpoint'in kill/reboot
+kabulünden geçemez; ancak donan yeni süreç çözülebilir. Yardımcı sonuç kaydından
+önce ölürse `ExecStopPost`, aynı boot'taki donmuş sabit birimin kimliğini yeniden
+kanıtlayıp yalnız çözebilir; bu gözlem kill/reboot yetkisi vermez.
+
+Ayrı ve yeni düğümde reboot deneyi için hazırlıkta `--action reboot` ve checkpoint
+seçilir; yukarıdaki arm/start sonrasında hemen şu komut çalıştırılır:
+
+```sh
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode reboot --execute
+```
+
+Guest, `reboot_ready` yayımlayıp yalnız o kurtarma cgroup'unu en çok 30 saniye
+donmuş tutar; guest reboot komutu vermez. Host tam olayı en çok 600 saniye bekler,
+donmuş checkpoint'i tekrar kanıtlar; süreç/peer PID ve VM UUID doğrulanmış tek
+QMP bağlantısını kullanır. Tek `system_reset` öncesinde deneme kalıcı kaydedilir;
+bilinmeyen sonuç yeniden denemeyi başlatmaz. Reset gönderimi yeni boot veya
+başarılı kurtarma kanıtı değildir. Native servis, boot, tam snapshot/eski dosya,
+iş yükü ve veritabanı kanıtları ayrıca toplanır. Henüz native kurtarma süreci
+kill/reboot kabulü iddia edilmez.
+
+Üretici katı release marker dizini dışında,
+`/var/lib/celikpanel-recovery-checkpoints/<token-sha256>.json` yazar. API yalnız
+checkpoint adı alır; tutulan transaction fd9, doğrulanmış seçili runtime ve gerçek
+kurtarma birimi kimliği gerekir. Yayım atomik root-only gözlemdir; mutasyon yetkisi
+vermez. Yayın hatası kurtarmayı durdurmamalı veya tamamlanmış göstermemelidir.
+
 ## Kanıt ve kalan kabul çalışmaları
 
 `guest_probe.py`, `celikpanel/release-recovery-observation/v1` üretir: kurulu ve
@@ -342,10 +398,24 @@ bu bilgileri desteklemelidir.
 Gerekli gerçek güncelleme/korunan sürüme otomatik geri alma ve iş yükü matrisi
 ölçülene kadar P0.1 açıktır. Güncel sınırlar:
 
-- Dolu veya güvensiz SQLite WAL, `unknown` üretir; toplayıcı WAL'ı yok saymaz,
-  checkpoint yapmaz veya SHM oluşturmaz. Gerektiğinde tutarlılığı ayrıca
-  kanıtlanmış anlık görüntü alın. Canlı veritabanının bayt özeti, anlamsal veri
-  denetimi değildir.
+- Veritabanı toplayıcısı artık desteklenen tek bir SQLite salt-okur işlemiyle
+  commit edilmiş WAL verisini de okuyup tutarlı görünümden şema/tüm tablo
+  özetlerini üretir. Kaynakta checkpoint veya izin normalizasyonu yapmaz.
+  Önceden mevcut, güvenli ve veritabanıyla sahiplik/izinleri eşleşen WAL/SHM
+  gerekir; eksik/güvensiz yan dosya, kilit, desteklenmeyen şema veya sınır aşımı
+  `unknown` üretir. SQLite okuma koordinasyonu mevcut WAL/SHM metadata'sına
+  dokunabilir; gözlem farkı raporlar, sebebini veya metadata'nın bayt düzeyinde
+  değişmezliğini iddia etmez. Satır içerikleri ve ham şema SQL'i yayımlanmaz.
+- Korumalı guest probe'daki isteğe bağlı
+  `--snapshot-name AD --snapshot-manifest-sha256 SHA`, `--operation-id` de ister.
+  Tam v6 snapshot envanteri, dosya özetleri ve bağımsız veritabanı doğrulandıktan
+  sonra semantik okuma yapılır. `evidence.compare_verified_snapshot_database`
+  sabitlenmiş snapshot adı ve manifest özetiyle `EQUAL`, `DIFFERENT` veya
+  `INCONCLUSIVE` döndürür. Oturum ve işlem tabloları dahil bütün tablolar katılır;
+  değişken satırlar sessizce dışlanmaz. İşlem-snapshot bağı denetleyici kanıtıyla
+  desteklenmelidir. Eski native deneylerin bilinmeyen WAL sonucu, yeniden gerçek
+  ölçüm yapılana kadar bilinmeyen kalır; bu uygulama eski sonucu değiştirmez.
+
 - Başlangıç HTTPS'si ve genel sertifika özetleri; güvenilir üretimi, yenilemenin
   çalışmasını, ACME/DNS doğrulamasını veya panel/Agent kaldırıldıktan sonra
   bağımsız yenilemeyi kanıtlamaz. Zamanlayıcı durumu tek başına yeterli değildir.

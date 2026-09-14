@@ -47,6 +47,8 @@ RELEASE_STATE_DIR=/var/lib/celikpanel-release-state
 RELEASE_RECOVERY_MANIFEST="$RELEASE_STATE_DIR/recovery-foundation.v1"
 RELEASE_RECOVERY_AGENT_DROPIN="$UNIT_DIR/celikpanel-agent.service.d/10-release-transaction-guard.conf"
 RELEASE_RECOVERY_PANEL_DROPIN="$UNIT_DIR/celikpanel-panel.service.d/10-release-transaction-guard.conf"
+RECOVERY_RUNTIME_ROOT="${CELIKPANEL_RECOVERY_RUNTIME_ROOT:-}"
+CODE_ROOT=
 RECOVER_EXISTING_TRANSACTION="${CELIKPANEL_RECOVER_EXISTING_TRANSACTION:-0}"
 RECOVERY_EXPECTED_TOKEN="${CELIKPANEL_RECOVERY_EXPECTED_TOKEN:-}"
 RECOVERY_EXPECTED_OPERATION="${CELIKPANEL_RECOVERY_EXPECTED_OPERATION:-}"
@@ -777,11 +779,60 @@ validate_root_trusted_dir_chain() {
 # root-owned immutable release staged by bootstrap-update.sh.
 # Rollback kendisi ayrıcalıklı koddur. Yalnız bootstrap-update.sh tarafından
 # hazırlanmış eksiksiz, root sahipli değişmez sürümden çalışabilir.
+
+# In recovery mode the dispatcher has verified the independently selected kit.
+# Rebind its canonical root, self-entry and manifest identity before sourcing it.
+# Candidate release provenance remains DATA; it never chooses executable code.
+validate_recovery_code_root() {
+    local entry=$1 runtime=${RECOVERY_RUNTIME_ROOT:-} digest manifest
+    CODE_ROOT=$TRUSTED_RELEASE_ROOT
+    [[ -n $runtime ]] || return 0
+    [[ $RECOVER_EXISTING_TRANSACTION == 1 &&
+       $runtime =~ ^/usr/libexec/celikpanel/recovery-runtimes/v1/[0-9a-f]{64}$ ]] \
+        || die "independent runtime requires the exact existing recovery transaction"
+    [[ $(readlink -e -- "$runtime") == "$runtime" ]] \
+        || die "independent runtime root is not canonical"
+    validate_root_trusted_dir_chain "$runtime"
+    [[ $(stat -Lc '%u:%g:%a' -- "$runtime") == 0:0:700 ]] \
+        || die "independent runtime directory metadata changed"
+    manifest=$runtime/runtime.manifest
+    [[ -f $manifest && ! -L $manifest &&
+       $(stat -Lc '%u:%g:%a:%h' -- "$manifest") == 0:0:600:1 ]] \
+        || die "independent runtime manifest metadata changed"
+    digest=$(sha256sum -- "$manifest" | awk '{print $1}') \
+        || die "independent runtime manifest cannot be read"
+    [[ $digest == "${runtime##*/}" &&
+       $(readlink -e -- "$0") == "$runtime/$entry" &&
+       $(stat -Lc '%u:%g:%a:%h' -- "$runtime/$entry") == 0:0:755:1 ]] \
+        || die "independent runtime entry identity changed"
+    digest=$(sha256sum -- "$runtime/$entry" | awk '{print $1}') \
+        || die "independent runtime entry cannot be read"
+    grep -Fxq -- "$digest  $entry" "$manifest" \
+        || die "independent runtime entry differs from its selected manifest"
+    CODE_ROOT=$runtime
+}
+
+# This observer cannot authorize or block restoration. Failed publication stays
+# unavailable; native recovery continues using its existing admission proof.
+observe_independent_recovery_checkpoint() {
+    [[ -n $RECOVERY_RUNTIME_ROOT ]] || return 0
+    "$CODE_ROOT/bin/recovery" checkpoint --name "$1" ||
+        printf '%s\n' 'Recovery checkpoint observation is unavailable' >&2
+    return 0
+}
+
 validate_running_release() {
     local script root relative entry owner mode permissions
     script=$(readlink -e -- "$0") || die "cannot resolve rollback entrypoint"
     root=$(dirname "$script")
-    TRUSTED_RELEASE_ROOT=$root
+    if [[ -n $RECOVERY_RUNTIME_ROOT ]]; then
+        TRUSTED_RELEASE_ROOT=${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}
+        [[ -n $TRUSTED_RELEASE_ROOT ]] || die "independent rollback requires exact candidate data provenance"
+        root=$TRUSTED_RELEASE_ROOT
+    else
+        TRUSTED_RELEASE_ROOT=$root
+    fi
+    validate_recovery_code_root rollback.sh
     [[ "$root" == "$RELEASES_ROOT/"* ]] || die "rollback is outside trusted release storage"
     relative=${root#"$RELEASES_ROOT/"}
     [[ "$relative" =~ ^[0-9a-f]{12}-[0-9a-f]{24}$ ]] \
@@ -805,7 +856,7 @@ validate_running_release() {
         (( (permissions & 0022) == 0 )) \
             || die "rollback release entry must not be group/other writable: $entry"
     done < <(find "$root" -mindepth 1 -print0)
-    [[ "$script" == "$root/rollback.sh" && -x "$script" && ! -L "$script" ]] \
+    [[ "$script" == "$CODE_ROOT/rollback.sh" && -x "$script" && ! -L "$script" ]] \
         || die "rollback entrypoint is not the trusted release script"
     [[ -f "$root/SHA256SUMS" && ! -L "$root/SHA256SUMS" ]] \
         || die "rollback release checksum manifest is missing"
@@ -1286,6 +1337,52 @@ stop_new_agent_and_hold_mutation_lock() {
         "$PREFLIGHT_AGENT" "$held_checker" \
         || die "agent/package state changed before the locked restore; rollback refused"
 }
+# Normal admission already proves that this ledger equals the snapshot. Keep
+# that inode: unlink/reinstall would create an unrecoverable missing-ledger gap.
+# Shared Agent validation rechecks owner/mode/nlink, canonical bytes, idle state
+# and the inherited mutation lock. Legacy absence remains a separate transition.
+restore_paired_agent_ledger() {
+    local before after
+    [[ -n "${MUTATION_LOCK_FD:-}" ]] \
+        || die "paired ledger restoration requires the rollback mutation lock"
+    release_txn_validate_active_token \
+        "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
+        || die "active rollback marker changed before paired ledger restoration"
+    if [[ "$transition_state" == normal ]]; then
+        [[ "$agent_ledger_state" == present && -f "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
+            || die "normal rollback requires the existing paired agent ledger"
+        before=$(stat -Lc '%d:%i:%u:%g:%a:%h:%s:%y:%z' -- "$AGENT_LEDGER") \
+            || die "cannot inspect paired agent ledger before preservation"
+        CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+            CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+            "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock \
+            || die "paired agent ledger is not exact, safe and idle before preservation"
+        cmp -s "$AGENT_LEDGER" "$snap/agent-state/service-mutations.json" \
+            || die "current agent ledger differs from the verified snapshot; preserve host mutations"
+        after=$(stat -Lc '%d:%i:%u:%g:%a:%h:%s:%y:%z' -- "$AGENT_LEDGER") \
+            || die "cannot re-inspect preserved agent ledger"
+        [[ "$after" == "$before" && ! -L "$AGENT_LEDGER" ]] \
+            || die "paired agent ledger changed during preservation proof"
+        return 0
+    fi
+    [[ "$transition_state" == pre-ledger || "$transition_state" == schema17 ]] \
+        || die "unsupported paired agent ledger transition"
+    # The separately admitted legacy transition has no ledger in its snapshot.
+    # Preserve its exact empty-initializer/absence behavior; never generalize
+    # normal recovery's missing-ledger policy to accept absence.
+    rm -f -- "$AGENT_LEDGER"
+    if [[ "$agent_ledger_state" == present ]]; then
+        install -d -m 0700 -o root -g celikpanel "$AGENT_STATE_DIR"
+        install -m 0600 -o root -g celikpanel \
+            "$snap/agent-state/service-mutations.json" "$AGENT_LEDGER"
+    elif [[ -d "$AGENT_STATE_DIR" && ! -L "$AGENT_STATE_DIR" ]]; then
+        rmdir -- "$AGENT_STATE_DIR" \
+            || die "private agent state directory is not empty after pre-ledger restore"
+    elif [[ -e "$AGENT_STATE_DIR" || -L "$AGENT_STATE_DIR" ]]; then
+        die "private agent state path became unsafe during rollback"
+    fi
+}
+
 # Restore availability only while no installed byte has changed. Once rollback
 # mutation starts, fail closed with both services stopped and an exact retry.
 # Kurulu hiçbir bayt değişmemişken yalnız erişilebilirliği geri getir. Geri alma
@@ -1398,13 +1495,13 @@ rollback_on_exit() {
 
 validate_running_release
 # shellcheck source=deploy/release-transaction-guard.sh
-source "$TRUSTED_RELEASE_ROOT/deploy/release-transaction-guard.sh"
+source "$CODE_ROOT/deploy/release-transaction-guard.sh"
 # shellcheck source=deploy/release-unit-transition.sh
-source "$TRUSTED_RELEASE_ROOT/deploy/release-unit-transition.sh"
+source "$CODE_ROOT/deploy/release-unit-transition.sh"
 # shellcheck source=deploy/release-recovery-foundation.sh
-source "$TRUSTED_RELEASE_ROOT/deploy/release-recovery-foundation.sh"
+source "$CODE_ROOT/deploy/release-recovery-foundation.sh"
 # shellcheck source=deploy/panel-tls-snapshot.sh
-source "$TRUSTED_RELEASE_ROOT/deploy/panel-tls-snapshot.sh"
+source "$CODE_ROOT/deploy/panel-tls-snapshot.sh"
 release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" || die "persistent release transaction lock verification failed"
 # Disk guard proof is independent of the manager's loaded vendor units. A
 # crash between atomic unit publication and daemon-reload is a recoverable
@@ -1467,8 +1564,13 @@ elif [[ "$rollback_scheduler_present" -eq 1 ]]; then
     rollback_pending_snapshot=$scheduler_snapshot
     rollback_transaction_token=$scheduler_token
 fi
-PREFLIGHT_PANEL="$TRUSTED_RELEASE_ROOT/bin/panel"
-PREFLIGHT_AGENT="$TRUSTED_RELEASE_ROOT/bin/agent"
+if [[ -n $RECOVERY_RUNTIME_ROOT ]]; then
+    PREFLIGHT_PANEL=$CODE_ROOT/bin/panel-checker
+    PREFLIGHT_AGENT=$CODE_ROOT/bin/agent-checker
+else
+    PREFLIGHT_PANEL="$TRUSTED_RELEASE_ROOT/bin/panel"
+    PREFLIGHT_AGENT="$TRUSTED_RELEASE_ROOT/bin/agent"
+fi
 trap rollback_on_exit EXIT
 
 validate_root_trusted_dir_chain "$SNAP_ROOT"
@@ -1815,7 +1917,11 @@ case "$transition_state" in
             || die "schema17 release tree does not match target provenance"
         [[ "$snapshot_created_at" == "${schema17_values[created-at-utc]}" ]] \
             || die "schema17 creation time does not match snapshot provenance"
-        PREFLIGHT_SCHEMA17_BRIDGE="$snap/transition-preflight/schema17-bridge"
+        if [[ -n $RECOVERY_RUNTIME_ROOT ]]; then
+            PREFLIGHT_SCHEMA17_BRIDGE=$CODE_ROOT/bin/schema17-bridge
+        else
+            PREFLIGHT_SCHEMA17_BRIDGE="$snap/transition-preflight/schema17-bridge"
+        fi
         ;;
     *) die "invalid snapshot transition state: $transition_state" ;;
 esac
@@ -1947,6 +2053,7 @@ if [[ $rollback_scheduler_only_resume -eq 1 ]]; then
     panel_tls_restore_certbot_scheduler "$snap/panel-tls" \
         || die "Certbot renewal scheduler state could not be restored"
     rollback_scheduler_restore_completed=1
+observe_independent_recovery_checkpoint schedulers_restored
     release_txn_remove_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$rollback_transaction_token" rollback "$snapshot_name" \
@@ -2068,6 +2175,7 @@ fi
 # coordinators stopped and the durable transaction marker available for retry.
 # İlk kurulu-bayt değişiminden itibaren her hata iki koordinatörü kapalı bırakmalı
 # ve dayanıklı işlem işaretçisini yeniden deneme için korumalıdır.
+observe_independent_recovery_checkpoint restore_admitted
 rollback_mutation_started=1
 for unit in celikpanel-agent.service celikpanel-panel.service; do
     stopped_state=$(systemctl show --property=ActiveState --value "$unit") \
@@ -2148,21 +2256,7 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
             || die "trusted database restore was not confirmed; it may be committed-but-unconfirmed, retry this exact snapshot"
     fi
 
-    # Restore the paired durable ledger. A pre-ledger target removes the now-empty
-    # private directory so the one-time bootstrap can be retried exactly.
-    # Eşlenmiş kalıcı ledger'ı geri yükle. Ledger öncesi hedef, tek seferlik bootstrap
-    # tam olarak yeniden denenebilsin diye artık boş olan özel dizini kaldırır.
-    rm -f -- "$AGENT_LEDGER"
-    if [[ "$agent_ledger_state" == present ]]; then
-        install -d -m 0700 -o root -g celikpanel "$AGENT_STATE_DIR"
-        install -m 0600 -o root -g celikpanel \
-            "$snap/agent-state/service-mutations.json" "$AGENT_LEDGER"
-    elif [[ -d "$AGENT_STATE_DIR" && ! -L "$AGENT_STATE_DIR" ]]; then
-        rmdir -- "$AGENT_STATE_DIR" \
-            || die "private agent state directory is not empty after pre-ledger restore"
-    elif [[ -e "$AGENT_STATE_DIR" || -L "$AGENT_STATE_DIR" ]]; then
-        die "private agent state path became unsafe during rollback"
-    fi
+    restore_paired_agent_ledger
 
     release_txn_validate_active_token \
         "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
@@ -2334,6 +2428,11 @@ if [[ "$agent_ledger_state" == present ]]; then
         || die "restored agent ledger could not be made durable"
 fi
 
+# Payload, unit files, loaded guards and DB/ledger have all passed their
+# existing comparisons and durability calls before these observations.
+observe_independent_recovery_checkpoint payload_restored
+observe_independent_recovery_checkpoint units_reloaded
+
 if [[ $rollback_pending_resume -eq 0 ]]; then
     release_txn_mark_completion_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
@@ -2411,6 +2510,7 @@ release_txn_remove_start_authorization \
 release_txn_validate_pending_token \
     "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
     || die "rollback completion marker changed before scheduler publication"
+observe_independent_recovery_checkpoint runtime_verified
 rollback_completion_verified=1
 release_txn_mark_scheduler_restore_pending \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
@@ -2438,6 +2538,7 @@ release_txn_validate_scheduler_restore_token \
 panel_tls_restore_certbot_scheduler "$snap/panel-tls" \
     || die "Certbot renewal scheduler state could not be restored"
 rollback_scheduler_restore_completed=1
+observe_independent_recovery_checkpoint schedulers_restored
 release_txn_remove_scheduler_restore_pending \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
     "$rollback_transaction_token" rollback "$snapshot_name" \

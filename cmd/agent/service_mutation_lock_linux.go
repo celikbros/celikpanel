@@ -424,7 +424,7 @@ func probeServiceMutationFileLockIdle(path string) error {
 	if err := secureServiceMutationStat(lockDir, info, true); err != nil {
 		return err
 	}
-	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if errors.Is(err, unix.ENOENT) {
 		return nil
 	}

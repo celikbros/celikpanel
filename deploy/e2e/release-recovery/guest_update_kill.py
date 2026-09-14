@@ -160,6 +160,19 @@ class Native:
         if self.properties().get("FreezerState") != "frozen" or self.worker_identity() != identity:
             raise MissedCheckpoint("frozen-worker-identity-changed")
 
+    def recovery_handoff(self, identity, proof, tick):
+        spec = importlib.util.spec_from_file_location("update_recovery_handoff", Path(__file__).with_name("guest_recovery_handoff.py"))
+        helper = importlib.util.module_from_spec(spec); spec.loader.exec_module(helper)
+        self.recovery_handoff_module = helper
+        self.recovery_handoff_proof = helper.arm(self.args, identity, proof, tick, self.revalidate)
+        return self.recovery_handoff_proof
+
+    def cancel_recovery_handoff(self):
+        proof = getattr(self, "recovery_handoff_proof", None)
+        if proof is not None:
+            return self.recovery_handoff_module.cancel(self.args.operation_id, proof['unit'])
+        return None
+
     def kill(self):
         result = subprocess.run(["/usr/bin/systemctl", "kill", "--kill-whom=all", "--signal=KILL", self.unit],
                                 stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=5, env=ENV)
@@ -215,6 +228,9 @@ def run_kill(args, emit, native, *, clock=time.monotonic, pause=time.sleep, inte
                     native.revalidate(identity)
                     active_snapshot(native.observe(), snapshot)
                     emit("candidate_installed_checkpoint", operation_id=args.operation_id, phase="active", worker=identity, **proof)
+                    if getattr(args, "recovery_action", None) is not None:
+                        handoff = native.recovery_handoff(identity, proof, tick)
+                        emit("recovery_fault_armed", operation_id=args.operation_id, handoff=handoff)
                     tick()
                     native.revalidate(identity)
                     emit("kill_requested", operation_id=args.operation_id, worker=identity, snapshot=snapshot, signal="SIGKILL", scope="exact-update-unit-cgroup")
@@ -230,6 +246,9 @@ def run_kill(args, emit, native, *, clock=time.monotonic, pause=time.sleep, inte
         reason = "observation-error:" + type(exc).__name__
     finally:
         thaw_exit = None
+        if not killed and getattr(args, "recovery_action", None) is not None:
+            try: native.cancel_recovery_handoff()
+            except Exception: pass  # no additional mutation is authorized by cleanup uncertainty
         if frozen:
             try:
                 thaw_exit = native.thaw()
@@ -244,7 +263,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("lab-nonce", "vm-uuid", "cell-id", "node", "operation-id", "candidate-agent", "candidate-panel"):
         parser.add_argument("--" + name, required=True)
+    parser.add_argument("--recovery-action", choices=("kill", "reboot"))
+    parser.add_argument("--recovery-checkpoint", choices=("restore_admitted", "payload_restored", "units_reloaded", "runtime_verified", "schedulers_restored"))
     args = parser.parse_args(argv)
+    if bool(args.recovery_action) != bool(args.recovery_checkpoint):
+        parser.error("recovery handoff requires both action and durable checkpoint")
     if (not shared.HEX32.fullmatch(args.operation_id) or not shared.HEX64.fullmatch(args.candidate_agent)
             or not shared.HEX64.fullmatch(args.candidate_panel) or args.node not in ("arch", "debian13")):
         parser.error("invalid exact fixture identities")

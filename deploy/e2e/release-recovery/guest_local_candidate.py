@@ -51,6 +51,11 @@ def validate_plan(plan,identity,operation):
     if (plan.get('schema')!=SCHEMA or plan.get('identity')!=identity or plan.get('operation_id')!=operation
             or plan.get('provenance')!='unpublished-local-build-not-signed-agent-admission'
             or plan.get('boundary') not in ('candidate-installed','require-unit-reload')):raise ValueError('local candidate intent differs from exact disposable guest')
+    if 'recovery_fault' in plan:
+        value=plan['recovery_fault']
+        if (not isinstance(value,dict) or set(value)!={'action','checkpoint'} or value['action'] not in ('kill','reboot')
+                or value['checkpoint'] not in ('restore_admitted','payload_restored','units_reloaded','runtime_verified','schedulers_restored')):
+            raise ValueError('invalid opted-in recovery fault')
     candidate=plan['candidate']
     expected=str(RELEASES/('.download.lab-'+operation)/'payload'/candidate['root_name'])
     if plan.get('source_root')!=expected or plan.get('archive_path')!=str(PRIVATE/('local-candidate-'+operation+'.tar.gz')):raise ValueError('candidate staging boundary differs')
@@ -121,6 +126,8 @@ class LocalNative(kill.Native):
     def __init__(self,args,plan,proof):
         self.args=args;self.plan=plan;self.stage_proof=proof;self.unit=names(args.operation_id)['worker']
         self.args.candidate_agent=plan['candidate']['files']['bin/agent'];self.args.candidate_panel=plan['candidate']['files']['bin/panel']
+        option=plan.get('recovery_fault',{})
+        self.args.recovery_action=option.get('action');self.args.recovery_checkpoint=option.get('checkpoint')
 
     def unit_reload(self):
         result={}

@@ -18,11 +18,11 @@ SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 LDFLAGS := -s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT)
 DIST    := celikpanel-$(VERSION)
 
-.PHONY: all build check-go test vet panel agent schema17-bridge distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
+.PHONY: all build check-go test vet panel agent schema17-bridge recovery recovery-agent-checker recovery-panel-checker recovery-runtime distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
 
 all: build
 
-build: panel agent schema17-bridge web ## Build binaries and frontend
+build: panel agent schema17-bridge recovery-runtime web ## Build binaries and frontend
 
 check-go: ## Require the exact reviewed Go compiler without auto-download
 	@actual="$$(env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" env GOVERSION 2>/dev/null)" || { \
@@ -48,6 +48,18 @@ agent: check-go ## Build the agent binary
 
 schema17-bridge: check-go ## Build the audited legacy schema transition helper
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -o bin/schema17-bridge ./deploy/schema17bridge
+
+recovery: check-go ## Build the independent owner recovery CLI
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/recovery ./cmd/recovery
+
+recovery-agent-checker: check-go ## Build only the shared Agent ledger/lock checker sources
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -o bin/agent-checker $$(cat deploy/recovery/agent-checker.sources)
+
+recovery-panel-checker: check-go ## Build only the shared panel database checker sources
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -o bin/panel-checker $$(cat deploy/recovery/panel-checker.sources)
+
+recovery-runtime: recovery recovery-agent-checker recovery-panel-checker schema17-bridge ## Assemble the offline versioned recovery kit
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/recovery/bundle --source-root . --binary-root bin --output bin/recovery-runtime
 
 distro-matrix: check-go ## Regenerate the distro support matrix with the exact reviewed compiler
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./tools/gen-distro-matrix
@@ -78,6 +90,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	cp bin/panel bin/agent bin/schema17-bridge dist/$(DIST)/bin/
 	cp -r web/dist/. dist/$(DIST)/web/dist/
 	cp -r deploy/. dist/$(DIST)/deploy/
+	cp -r bin/recovery-runtime dist/$(DIST)/recovery-runtime
 	cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
 	cp download-portal/get.sh dist/$(DIST)/libexec/get.sh
 	echo 1 > dist/$(DIST)/release.version
@@ -90,6 +103,8 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	chmod 0755 dist/$(DIST)/update.sh dist/$(DIST)/rollback.sh
 	chmod 0755 dist/$(DIST)/libexec/get.sh
 	chmod 0755 dist/$(DIST)/deploy/write-release-manifest.sh
+	chmod 0755 dist/$(DIST)/recovery-runtime/bin/recovery dist/$(DIST)/recovery-runtime/bin/agent-checker dist/$(DIST)/recovery-runtime/bin/panel-checker dist/$(DIST)/recovery-runtime/bin/schema17-bridge
+	chmod 0755 dist/$(DIST)/recovery-runtime/update.sh dist/$(DIST)/recovery-runtime/rollback.sh dist/$(DIST)/recovery-runtime/deploy/recovery/runtime-entry.sh
 	chmod 0755 dist/$(DIST)/deploy/release-recovery-runner.sh
 	chmod 0644 dist/$(DIST)/deploy/release-recovery-foundation.sh
 	chmod 0644 dist/$(DIST)/deploy/release-recovery.protocol

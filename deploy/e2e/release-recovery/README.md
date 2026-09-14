@@ -304,6 +304,64 @@ unexplained socket or a reused PID is refused. Live nodes must still match their
 registered QEMU process. Stop retains overlays, logs and evidence; this wrapper
 has no recursive teardown command.
 
+## Recovery-process fault handoff (not yet native acceptance)
+
+`recovery_fault_trial.py` opts a **new** unpublished candidate trial into a second
+fault during automatic recovery. It retains the genuine Alpha75 baseline and
+committed local archive boundary above; it does not test signed Agent admission.
+Use one fresh node per action and never replace a consumed intent:
+
+```sh
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode prepare --archive "$CANDIDATE_ARCHIVE" --archive-sha256 "$CANDIDATE_SHA256" --action kill --checkpoint payload_restored --execute
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode arm --execute
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode start --execute
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode collect
+```
+
+The updater fault helper first freezes and proves the exact candidate-installed
+checkpoint. `guest_recovery_handoff.py` then reads the real canonical active
+transaction and selected runtime, seals a root-only snapshot/token-hash intent,
+and starts the exact recovery fault helper. Only after the same operation emits
+`armed` may the original updater receive its single SIGKILL. Unknown launch results
+enter cleanup, which must prove the exact helper command, VM identity and process
+invocation before stopping it; they never cause a second launch. There is no guessed
+token, wildcard operation or delay-based kill. Default updater fault trials do
+not enable this handoff.
+
+`guest_recovery_fault.py` requires the existing VM nonce/DMI identity, full
+snapshot/runtime proof and explicit `celikpanel/recovery-checkpoint/v1` record.
+It binds the recovery service's MainPID/start ticks, invocation, boot, cgroup and
+executable before freezing and rechecking that checkpoint. Missing or changed
+proof remains unavailable. `freeze_requested` is fsynced before freezing;
+`freeze_observed` records the actual frozen invocation solely for cleanup. If a
+restart races with freezing, the changed invocation cannot pass the old checkpoint
+fault proof, but it can be thawed. If the helper dies before writing that result,
+`ExecStopPost` re-proves the currently frozen fixed unit in the same boot for thaw
+only; this cleanup observation cannot admit a kill or reboot.
+
+For a separate fresh-node reboot trial, prepare with `--action reboot` and the
+selected checkpoint, then arm/start as above and immediately run:
+
+```sh
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode reboot --execute
+```
+
+The guest publishes `reboot_ready` and holds only that recovery cgroup frozen for
+at most 30 seconds. It issues no guest reboot command. The host waits at most 600
+seconds for this exact event, rechecks the frozen checkpoint and uses one QMP
+connection with verified process identity/peer PID and VM UUID. It durably saves
+an attempt before one `system_reset`; ambiguous results never trigger a retry.
+A reset submission is not proof of a new boot or successful recovery. Collect
+native service, boot, exact snapshot/old-file, workload and database evidence
+separately. No native recovery-process kill/reboot acceptance is claimed yet.
+
+The producer writes
+`/var/lib/celikpanel-recovery-checkpoints/<token-sha256>.json`, outside the strict
+release marker directory. Its API accepts only a checkpoint name and requires
+held transaction fd9, verified selected runtime and real recovery-unit identity.
+Publication is atomic root-only observation. It cannot authorize a mutation;
+failure to publish must not interrupt or falsely complete recovery.
+
 ## Evidence and remaining acceptance
 
 `guest_probe.py` emits `celikpanel/release-recovery-observation/v1`: installed and
@@ -333,9 +391,23 @@ artifact signatures and real execution traces must substantiate those facts.
 P0.1 remains open until the required real update/automatic retained-release
 rollback and workload matrix is measured. Current limits include:
 
-- A nonempty or unsafe SQLite WAL yields `unknown`; the collector does not
-  ignore it, checkpoint it or create SHM. Obtain a separately proven consistent
-  snapshot when needed. A live database byte hash is not a semantic data check.
+- The database collector now reads a supported SQLite read-only transaction,
+  including committed WAL frames, and produces schema/all-table digests from one
+  consistent view. It neither checkpoints nor normalizes source permissions.
+  Existing safe WAL/SHM files with matching database ownership and modes are
+  required; missing/unsafe sidecars, locks, unsupported schema or bounds produce
+  `unknown`. SQLite read coordination can touch existing WAL/SHM metadata; the
+  observation reports metadata changes without claiming their cause or bytewise
+  metadata preservation. Row contents and raw schema SQL are never emitted.
+- Optional `--snapshot-name NAME --snapshot-manifest-sha256 SHA` on the guarded
+  guest probe also requires `--operation-id`. It verifies the complete final v6
+  snapshot inventory, file hashes and standalone database before semantic reading.
+  `evidence.compare_verified_snapshot_database` requires the pinned snapshot name
+  and manifest digest and returns `EQUAL`, `DIFFERENT` or `INCONCLUSIVE`. Every
+  table, including sessions and operations, participates; no volatile rows are
+  silently excluded. The controller must substantiate operation-to-snapshot
+  binding. Historical native trials with unknown WAL evidence stay unknown until
+  independently measured again; this implementation does not rewrite their result.
 - Bootstrap HTTPS and public certificate fingerprints do not prove trusted
   issuance, renewal execution, ACME/DNS validation or independent renewal after
   removing panel/Agent binaries. Timer status alone is insufficient.

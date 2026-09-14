@@ -182,6 +182,24 @@ validate_pinned_go_toolchain() {
 # commit, all root-owned and never group/other writable.
 # Sürüm yalnızca incelenmiş commit'ten gelen dizinleri ve normal dosyaları
 # içerir; hepsi root sahipli ve grup/diğer yazmasına kapalıdır.
+# Only a newly prepared candidate must carry the independent runtime artifact.
+# Retained historical releases remain eligible for their existing recovery path.
+# Bağımsız çalışma ortamı yalnız yeni adayda zorunludur; tarihsel saklı
+# sürümlerin mevcut kurtarma yolu bu yeni dosya koşuluyla reddedilmez.
+validate_recovery_runtime_artifact() {
+    local root=$1 relative
+    [[ -d "$root/recovery-runtime" && ! -L "$root/recovery-runtime" ]] \
+        || die "candidate recovery runtime directory is missing"
+    for relative in runtime.manifest bin/recovery bin/agent-checker bin/panel-checker bin/schema17-bridge update.sh rollback.sh deploy/release-transaction-guard.sh deploy/release-unit-transition.sh deploy/release-recovery-foundation.sh deploy/panel-tls-snapshot.sh deploy/release-recovery-observation.sh deploy/recovery/runtime-entry.sh; do
+        [[ -f "$root/recovery-runtime/$relative" && ! -L "$root/recovery-runtime/$relative" ]] \
+            || die "candidate recovery runtime file is missing: $relative"
+    done
+    for relative in bin/recovery bin/agent-checker bin/panel-checker bin/schema17-bridge update.sh rollback.sh deploy/recovery/runtime-entry.sh; do
+        [[ -x "$root/recovery-runtime/$relative" ]] \
+            || die "candidate recovery runtime file is not executable: $relative"
+    done
+}
+
 validate_release_tree() {
     local root=$1 entry owner mode permissions
     validate_root_trusted_dir_chain "$root"
@@ -214,6 +232,7 @@ validate_release_tree() {
     [[ -f "$root/deploy/systemd/celikpanel-release-recovery.service" ]] || die "staged recovery service is missing"
     [[ -f "$root/deploy/systemd/celikpanel-release-recovery.timer" ]] || die "staged recovery timer is missing"
     [[ -f "$root/web/dist/index.html" ]] || die "staged web build is missing"
+    validate_recovery_runtime_artifact "$root"
     [[ -f "$root/SHA256SUMS" && ! -L "$root/SHA256SUMS" ]] || die "release checksum manifest is missing"
     (
         cd "$root"
@@ -323,6 +342,12 @@ echo "==> Building matching panel and agent / Eşleşen panel ve agent derleniyo
     run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/panel ./cmd/panel
     run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/agent ./cmd/agent
     run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/recovery ./cmd/recovery
+    mapfile -t agent_checker_sources < deploy/recovery/agent-checker.sources
+    mapfile -t panel_checker_sources < deploy/recovery/panel-checker.sources
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/agent-checker "${agent_checker_sources[@]}"
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/panel-checker "${panel_checker_sources[@]}"
+    run_clean "$go_bin" run ./deploy/recovery/bundle --source-root . --binary-root bin --output recovery-runtime
 )
 
 echo "==> Building matching web artifact / Eşleşen web ürünü derleniyor"
@@ -353,6 +378,16 @@ chmod 0755 \
     "$incomplete_root/bin/panel" \
     "$incomplete_root/bin/agent" \
     "$incomplete_root/bin/schema17-bridge" \
+    "$incomplete_root/bin/recovery" \
+    "$incomplete_root/bin/agent-checker" \
+    "$incomplete_root/bin/panel-checker" \
+    "$incomplete_root/recovery-runtime/bin/recovery" \
+    "$incomplete_root/recovery-runtime/bin/agent-checker" \
+    "$incomplete_root/recovery-runtime/bin/panel-checker" \
+    "$incomplete_root/recovery-runtime/bin/schema17-bridge" \
+    "$incomplete_root/recovery-runtime/update.sh" \
+    "$incomplete_root/recovery-runtime/rollback.sh" \
+    "$incomplete_root/recovery-runtime/deploy/recovery/runtime-entry.sh" \
     "$incomplete_root/install.sh" \
     "$incomplete_root/update.sh" \
     "$incomplete_root/rollback.sh" \
