@@ -172,14 +172,16 @@ def main(argv=None):
     parser.add_argument('--execute', action='store_true')
     parser.add_argument('--archive', type=Path); parser.add_argument('--archive-sha256')
     parser.add_argument('--action', choices=('kill', 'reboot')); parser.add_argument('--checkpoint', choices=hand.fault.CHECKPOINTS)
+    parser.add_argument('--candidate-data-fault', choices=('quarantine-fixed-three',))
     args = parser.parse_args(argv)
     if args.mode != 'collect' and not args.execute: parser.error('mutation requires --execute and a registered disposable VM')
     if args.mode == 'prepare' and (args.archive is None or not args.archive_sha256 or not args.action or not args.checkpoint):
         parser.error('prepare requires exact committed archive, action and durable checkpoint')
+    if args.mode != 'prepare' and args.candidate_data_fault is not None: parser.error('candidate data fault must be sealed during prepare')
     root = lab.checked_root(args.work_root); record, plan = lab.load(root); lab.process_guard(plan['nodes'][args.node])
     if args.mode == 'prepare':
         return local.prepare(root, record, plan, args.node, args.archive, args.archive_sha256, 'require-unit-reload',
-                             recovery_fault={'action': args.action, 'checkpoint': args.checkpoint})
+                             recovery_fault={'action': args.action, 'checkpoint': args.checkpoint}, candidate_data_fault=args.candidate_data_fault)
     intent = local.load_intent(root, record, plan, args.node)
     if 'recovery_fault' not in intent: raise ValueError('existing intent did not opt in to a recovery fault')
     return {'arm': local.arm, 'start': local.start, 'collect': collect, 'reboot': reboot}[args.mode](root, record, plan, args.node, intent)

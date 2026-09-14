@@ -1,8 +1,10 @@
 // Package recoverypublication publishes only transaction-bound product trees.
 // It does not admit snapshots, launch updates, delete retired trees, or restore
 // application databases. The caller must first verify the complete v6 snapshot
-// and retained candidate contracts; this package rechecks their exact manifests,
-// relevant payloads, native transaction identity and stopped coordinators.
+// and either the retained candidate or sealed recovery-material contract. This
+// package rechecks the exact manifests and relevant payloads. Publication also
+// requires the native transaction lock and stopped coordinators; read-only
+// material verification does not stop or require stopped services.
 package recoverypublication
 
 import (
@@ -19,6 +21,14 @@ type Request struct {
 	CandidateRoot     string
 	CandidateManifest string
 }
+
+// ErrMaterialAbsent means no committed material authority exists for this
+// transaction. Unsafe, malformed, or missing material with a surviving v2
+// intent returns a different error and must never select legacy fallback.
+var ErrMaterialAbsent = errors.New("recovery material is absent")
+
+const MaterialSchema = "celikpanel/recovery-material/v1"
+const MaterialIntentSchema = "celikpanel/recovery-resource-intent/v2"
 
 var ErrUnavailable = errors.New("recovery publication unavailable; preserve resource evidence")
 var ErrUnsupportedMetadata = errors.New("program metadata is not supported by this recovery protocol (ACL, capabilities or SELinux labels); preserve metadata and operation evidence")

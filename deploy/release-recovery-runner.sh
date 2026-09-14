@@ -503,6 +503,27 @@ verify_installed_foundation_final() {
     verify_installed_foundation_systemd
 }
 
+# Final-snapshot rollback consumes independently retained data when available.
+# Only a verified absence permits the historical intact-candidate path. Corrupt
+# material must never be turned into a lookup of unrelated candidate bytes.
+select_recovery_data() {
+    RECOVERY_MATERIAL_ROOT=
+    if [[ -n $RECOVERY_CODE_ROOT && $ACTION == rollback ]]; then
+        material_status=0
+        RECOVERY_MATERIAL_ROOT=$("$RECOVERY_CODE_ROOT/bin/recovery" material-root \
+            --snapshot "$MARKER_SNAPSHOT" 9<&"$TRANSACTION_FD") || material_status=$?
+        case "$material_status" in
+            0) [[ $RECOVERY_MATERIAL_ROOT =~ ^/var/lib/celikpanel-release-state/recovery-material/v1/[0-9a-f]{64}/data$ ]] \
+                   || die 'independent recovery data root is noncanonical'
+               RECOVERY_RELEASE=$RECOVERY_MATERIAL_ROOT ;;
+            3) RECOVERY_MATERIAL_ROOT=; find_exact_release "$TARGET_COMMIT" ;;
+            *) die 'independent recovery material is invalid; preserve it without candidate fallback' ;;
+        esac
+    else
+        find_exact_release "$TARGET_COMMIT"
+    fi
+}
+
 validate_snapshot_storage() {
     local owner group mode
     [[ -d $SNAPSHOT_ROOT && ! -L $SNAPSHOT_ROOT ]] \
@@ -629,7 +650,6 @@ snapshot_pattern='^([0-9]{8}T[0-9]{6}Z)-from-unknown-to-([0-9a-f]{40})-([0-9a-f]
 [[ $MARKER_SNAPSHOT =~ $snapshot_pattern ]] \
     || die 'transaction snapshot name does not bind a canonical target commit'
 TARGET_COMMIT=${BASH_REMATCH[2]}
-find_exact_release "$TARGET_COMMIT"
 validate_snapshot_storage
 
 ACTION=
@@ -672,6 +692,8 @@ esac
 
 [[ -n $RECOVERY_SNAPSHOT_DIR ]] ||
     die 'recovery did not bind an exact snapshot directory'
+
+select_recovery_data
 TRUSTED_RELEASE_ROOT=$RECOVERY_RELEASE
 RECOVERY_EXEC_ROOT=${RECOVERY_CODE_ROOT:-$RECOVERY_RELEASE}
 CODE_ROOT=$RECOVERY_EXEC_ROOT
@@ -744,7 +766,8 @@ common_env=(
 )
 if [[ -n $RECOVERY_CODE_ROOT ]]; then
     common_env+=(CELIKPANEL_RECOVERY_RUNTIME_ROOT="$RECOVERY_CODE_ROOT"
-        CELIKPANEL_TRUSTED_RELEASE_ROOT="$RECOVERY_RELEASE")
+        CELIKPANEL_TRUSTED_RELEASE_ROOT="$RECOVERY_RELEASE"
+        CELIKPANEL_RECOVERY_MATERIAL_ROOT="$RECOVERY_MATERIAL_ROOT")
 fi
 if [[ -n $TEST_ROOT ]]; then
     common_env+=(CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT="$TEST_ROOT")

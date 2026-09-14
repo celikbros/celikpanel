@@ -146,7 +146,15 @@ printf 'recovery runtime shell contract: ok\n'
 
 # Production fresh-update call uses a dynamic Bash FD, while the recovery ABI
 # always uses FD9. Exercise actual inherited flock and inode identity in a child.
-eval "$(extract_function prepare_independent_recovery_runtime)"
+# Redirect only the fixed selected CLI path into this private fixture.
+eval "$(extract_function prepare_independent_recovery_runtime | sed 's@/usr/libexec/celikpanel/recovery verify-material-support@"$TEST_ROOT/selected-recovery" verify-material-support@')"
+cat > "$TEST_ROOT/selected-recovery" <<'SH'
+#!/usr/bin/env bash
+[[ $# == 3 && $1 == verify-material-support && $2 == --layout && $3 == snapshot-name-sha256-v1 ]] || exit 91
+printf 'selected-material-support\n' >> "$FIXTURE_CALLS"
+[[ ${FIXTURE_UNSUPPORTED:-0} == 0 ]]
+SH
+chmod 0755 "$TEST_ROOT/selected-recovery"
 mkdir -p "$TEST_ROOT/fresh/recovery-runtime/bin"
 cat > "$TEST_ROOT/fresh/recovery-runtime/bin/recovery" <<'PY'
 #!/usr/bin/python3
@@ -180,6 +188,77 @@ chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
         [[ $FIXTURE_MODE != --bootstrap-schema17 ]] || BOOTSTRAP_SCHEMA17=1
         prepare_independent_recovery_runtime
     done
-    [[ $(wc -l < "$FIXTURE_CALLS") -eq 6 ]] || fail 'preflight did not execute both fixed-ABI children'
+    [[ $(wc -l < "$FIXTURE_CALLS") -eq 9 ]] || fail 'preflight did not execute both fixed-ABI children'
+    export FIXTURE_UNSUPPORTED=1
+    status=0
+    (prepare_independent_recovery_runtime) >"$TEST_ROOT/unsupported-kit.log" 2>&1 || status=$?
+    [[ $status == 41 ]] || fail 'older selected kit was silently admitted'
+    grep -F 'panel services have not been stopped' "$TEST_ROOT/unsupported-kit.log" >/dev/null
 )
 printf 'PASS: fresh updater dynamic lock FD reaches both recovery children as the same FD9 flock\n'
+
+
+# Real selector branches, with a private CLI boundary instead of the installed
+# executable. The selected-kit and material parsers have separate root tests.
+eval "$(sed -n '/^select_recovery_data() {$/,/^}$/p' "$ROOT/deploy/release-recovery-runner.sh")"
+mkdir -m 0700 "$TEST_ROOT/selected-kit" "$TEST_ROOT/selected-kit/bin"
+cat > "$TEST_ROOT/selected-kit/bin/recovery" <<'SH'
+#!/usr/bin/env bash
+[[ $# == 3 && $1 == material-root && $2 == --snapshot && $3 == "$FIXTURE_SNAPSHOT" ]] || exit 91
+[[ $(stat -Lc '%d:%i' /proc/self/fd/9) == "$FIXTURE_LOCK_IDENTITY" ]] || exit 92
+printf '%s' "$FIXTURE_MATERIAL_OUTPUT"
+exit "$FIXTURE_MATERIAL_STATUS"
+SH
+chmod 0755 "$TEST_ROOT/selected-kit/bin/recovery"
+selection_case() (
+ set -euo pipefail
+ local kind=$1
+ export FIXTURE_SNAPSHOT=20260914T120000Z-from-unknown-to-$(printf 'a%.0s' {1..40})-$(printf 'b%.0s' {1..32})
+ MARKER_SNAPSHOT=$FIXTURE_SNAPSHOT TARGET_COMMIT=$(printf 'a%.0s' {1..40})
+ TRANSACTION_FD=9
+ exec 9<>"$TEST_ROOT/selection.lock"
+ flock -x 9
+ export FIXTURE_LOCK_IDENTITY=$(stat -Lc '%d:%i' /proc/self/fd/9)
+ export FIXTURE_MATERIAL_STATUS=0 FIXTURE_MATERIAL_OUTPUT=/var/lib/celikpanel-release-state/recovery-material/v1/$(printf 'c%.0s' {1..64})/data
+ RECOVERY_CODE_ROOT=$TEST_ROOT/selected-kit ACTION=rollback
+ find_exact_release() {
+  [[ $1 == "$TARGET_COMMIT" && ( $kind == absent || $kind == legacy || $kind == update ) ]] || die 'unexpected retained-candidate lookup'
+  RECOVERY_RELEASE=$TEST_ROOT/legacy-data
+ }
+ case $kind in
+  present) ;;
+  absent) FIXTURE_MATERIAL_STATUS=3 ;;
+  invalid) FIXTURE_MATERIAL_STATUS=1 ;;
+  unsupported) FIXTURE_MATERIAL_STATUS=2 ;;
+  foreign-path) FIXTURE_MATERIAL_OUTPUT=/tmp/foreign/data ;;
+  extra-output) FIXTURE_MATERIAL_OUTPUT+=$'\n/untrusted' ;;
+  legacy) RECOVERY_CODE_ROOT= ;;
+  update) ACTION=update ;;
+ esac
+ select_recovery_data
+ case $kind in
+  present) [[ $RECOVERY_RELEASE == "$FIXTURE_MATERIAL_OUTPUT" && $RECOVERY_MATERIAL_ROOT == "$RECOVERY_RELEASE" ]] ;;
+  absent|legacy|update) [[ $RECOVERY_RELEASE == "$TEST_ROOT/legacy-data" && -z $RECOVERY_MATERIAL_ROOT ]] ;;
+  *) fail "$kind unexpectedly continued" ;;
+ esac
+)
+for kind in present absent invalid unsupported foreign-path extra-output legacy update; do
+ status=0
+ selection_case "$kind" >"$TEST_ROOT/selection-$kind.log" 2>&1 || status=$?
+ expected=0
+ case $kind in invalid|unsupported|foreign-path|extra-output) expected=41;; esac
+ [[ $status == "$expected" ]] || { cat "$TEST_ROOT/selection-$kind.log" >&2; fail "selection $kind: $status"; }
+ printf 'PASS: independent rollback data selection %s\n' "$kind"
+done
+python3 - "$ROOT" <<'PY'
+from pathlib import Path
+import sys
+root=Path(sys.argv[1]);s=(root/'update.sh').read_text()
+material=s.index('/usr/libexec/celikpanel/recovery prepare-recovery-material')
+seal=s.rfind('panel_tls_snapshot_scheduler_matches_service_ledger',0,material)
+assert seal>=0 and seal<material<s.index('if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then',material)
+assert s.index('prepare_independent_recovery_runtime\n')<s.index('transaction_phase=quiesce-publishing')
+r=(root/'rollback.sh').read_text()
+assert '--candidate-root "$rollback_candidate_root"' in r
+assert 'sudo /usr/libexec/celikpanel/recovery recover' in r
+PY

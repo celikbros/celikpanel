@@ -49,6 +49,8 @@ RELEASE_RECOVERY_AGENT_DROPIN="$UNIT_DIR/celikpanel-agent.service.d/10-release-t
 RELEASE_RECOVERY_PANEL_DROPIN="$UNIT_DIR/celikpanel-panel.service.d/10-release-transaction-guard.conf"
 RECOVERY_RUNTIME_ROOT="${CELIKPANEL_RECOVERY_RUNTIME_ROOT:-}"
 CODE_ROOT=
+RECOVERY_MATERIAL_ROOT="${CELIKPANEL_RECOVERY_MATERIAL_ROOT:-}"
+rollback_candidate_root=
 RECOVER_EXISTING_TRANSACTION="${CELIKPANEL_RECOVER_EXISTING_TRANSACTION:-0}"
 RECOVERY_EXPECTED_TOKEN="${CELIKPANEL_RECOVERY_EXPECTED_TOKEN:-}"
 RECOVERY_EXPECTED_OPERATION="${CELIKPANEL_RECOVERY_EXPECTED_OPERATION:-}"
@@ -827,7 +829,7 @@ restore_product_resources() {
         "$publisher" restore-resource --resource "$resource" \
             --snapshot "$snapshot_name" \
             --snapshot-manifest "$rollback_snapshot_manifest_sha" \
-            --candidate-root "$TRUSTED_RELEASE_ROOT" \
+            --candidate-root "$rollback_candidate_root" \
             --candidate-manifest "$rollback_candidate_manifest_sha" \
             9<&"$RELEASE_TRANSACTION_FD" \
             || die "exact transactional $resource restoration could not be verified; preserve resource evidence"
@@ -843,6 +845,92 @@ observe_independent_recovery_checkpoint() {
     return 0
 }
 
+verify_independent_recovery_material() {
+    [[ -n $RECOVERY_MATERIAL_ROOT ]] || return 0
+    local material_data_root
+    material_data_root=$("$CODE_ROOT/bin/recovery" material-root \
+        --snapshot "${snapshot_name:-$RECOVERY_EXPECTED_SNAPSHOT}" \
+        9<&"$RELEASE_TRANSACTION_FD") \
+        || die "independent recovery material changed; preserve the current operation"
+    [[ $material_data_root == "$RECOVERY_MATERIAL_ROOT" &&
+       $material_data_root == "$TRUSTED_RELEASE_ROOT" ]] \
+        || die "independent recovery data identity changed"
+}
+
+# This fixed-path check can only refuse admission. It does not parse or adopt
+# material authority. A successful parent listing distinguishes absence from
+# an unsafe/unreadable path; unrelated snapshot records are not inspected.
+rollback_material_path_state() {
+    local parent=/var/lib component found metadata key
+    [[ $snapshot_name =~ ^[0-9]{8}T[0-9]{6}Z-from-unknown-to-[0-9a-f]{40}-[0-9a-f]{32}$ ]] \
+        || die "recovery material snapshot identity is unavailable"
+    validate_root_trusted_dir_chain "$parent"
+    key=$(printf '%s' "$snapshot_name" | sha256sum) \
+        || die "recovery material snapshot key is unavailable"
+    key=${key%% *}
+    [[ $key =~ ^[0-9a-f]{64}$ ]] || die "recovery material snapshot key is invalid"
+    for component in celikpanel-release-state recovery-material v1 "$key"; do
+        found=$(find "$parent" -mindepth 1 -maxdepth 1 -name "$component" -printf '%f\n') \
+            || die "recovery material path could not be inspected; preserve the evidence"
+        if [[ -z $found ]]; then
+            printf '%s\n' absent
+            return 0
+        fi
+        [[ $found == "$component" ]] || die "recovery material path identity is ambiguous"
+        parent=$parent/$component
+        validate_root_trusted_dir_chain "$parent"
+        metadata=$(stat -Lc '%u:%g:%a' -- "$parent") \
+            || die "recovery material directory metadata is unavailable"
+        [[ $metadata == 0:0:* ]] || die "recovery material directory must be root-owned"
+        if [[ $component == v1 || $component == "$key" ]]; then
+            [[ $metadata == 0:0:700 ]] || die "recovery material directory must be private"
+        fi
+    done
+    printf '%s\n' present
+}
+
+# New-token historical rollback has no authority over material belonging to the
+# original update. Existing material-backed recovery uses the selected runtime,
+# never the candidate script. Run this before any marker or service mutation.
+preflight_rollback_material_admission() {
+    local state reader=/usr/libexec/celikpanel/recovery result status=0
+    state=$(rollback_material_path_state) || die "recovery material admission is unavailable"
+    if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+        [[ $state == present ]] || die "independent recovery material is missing"
+        verify_independent_recovery_material
+        return 0
+    fi
+    if [[ $state == present ]]; then
+        if [[ $rollback_active_present == 1 || $rollback_pending_resume == 1 ||
+              $rollback_scheduler_only_resume == 1 ]]; then
+            die "this transaction requires independent recovery; use sudo /usr/libexec/celikpanel/recovery recover"
+        fi
+        die "a new rollback cannot reuse an earlier transaction's recovery material; preserve the snapshot and use a supported recovery plan"
+    fi
+    if [[ $rollback_active_present == 1 || $rollback_pending_resume == 1 ||
+          $rollback_scheduler_only_resume == 1 ]]; then
+        # A missing material directory is not legacy absence when its original
+        # token still has v2 publication authority or corrupt committed receipts.
+        # Reuse the shared reader; an older/incompatible reader is not absence.
+        validate_root_trusted_dir_chain "${reader%/*}"
+        [[ -f $reader && ! -L $reader && $(readlink -e -- "$reader") == "$reader" &&
+           $(stat -Lc '%u:%g:%a:%h' -- "$reader") == 0:0:755:1 ]] \
+            || die "compatible independent recovery reader is unavailable; preserve the operation"
+        result=$("$reader" material-root --snapshot "$snapshot_name" 9<&"$RELEASE_TRANSACTION_FD") \
+            || status=$?
+        [[ $status == 3 && -z $result ]] \
+            || die "legacy recovery material absence could not be proved; use sudo /usr/libexec/celikpanel/recovery recover"
+    fi
+}
+
+print_rollback_retry() {
+    if [[ -n ${RECOVERY_RUNTIME_ROOT:-} ]]; then
+        echo "!! Retry / Yeniden deneyin: sudo /usr/libexec/celikpanel/recovery recover" >&2
+    else
+        echo "!! Retry / Yeniden deneyin: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$rollback_verified_snapshot'" >&2
+    fi
+}
+
 validate_running_release() {
     local script root relative entry owner mode permissions
     script=$(readlink -e -- "$0") || die "cannot resolve rollback entrypoint"
@@ -855,6 +943,20 @@ validate_running_release() {
         TRUSTED_RELEASE_ROOT=$root
     fi
     validate_recovery_code_root rollback.sh
+    if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+        [[ -n $RECOVERY_RUNTIME_ROOT && $RECOVER_EXISTING_TRANSACTION == 1 &&
+           $RECOVERY_MATERIAL_ROOT =~ ^/var/lib/celikpanel-release-state/recovery-material/v1/[0-9a-f]{64}/data$ &&
+           $root == "$RECOVERY_MATERIAL_ROOT" ]] \
+            || die "recovery data requires the exact independent existing-transaction path"
+        verify_independent_recovery_material
+        rollback_candidate_root=$(cat -- "$root/candidate-root")
+        rollback_candidate_manifest_sha=$(cat -- "$root/candidate-manifest-sha256")
+        trusted_rollback_release_commit=$(cat -- "$root/release.commit")
+        trusted_rollback_release_tree=$(cat -- "$root/release.tree")
+        verify_independent_recovery_material
+        return 0
+    fi
+    rollback_candidate_root=$root
     [[ "$root" == "$RELEASES_ROOT/"* ]] || die "rollback is outside trusted release storage"
     relative=${root#"$RELEASES_ROOT/"}
     [[ "$relative" =~ ^[0-9a-f]{12}-[0-9a-f]{24}$ ]] \
@@ -1505,7 +1607,7 @@ rollback_on_exit() {
         fi
         echo "!! Rollback runtime completion is visible; completion marker removal durability is uncertain. Restored runtime was left intact and exact scheduler recovery remains retryable." >&2
         echo "!! Verified snapshot / Doğrulanmış snapshot: $rollback_verified_snapshot" >&2
-        echo "!! Retry / Yeniden deneyin: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$rollback_verified_snapshot'" >&2
+        print_rollback_retry
         return "$status"
     fi
     if [[ $rollback_scheduler_restore_pending -eq 1 &&
@@ -1528,7 +1630,7 @@ rollback_on_exit() {
             fi
             echo "!! Rollback runtime is complete; exact Certbot scheduler restoration remains safely retryable." >&2
             echo "!! Verified snapshot / Doğrulanmış snapshot: $rollback_verified_snapshot" >&2
-            echo "!! Retry / Yeniden deneyin: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$rollback_verified_snapshot'" >&2
+            print_rollback_retry
             return "$status"
         fi
         systemctl stop celikpanel-panel.service >/dev/null 2>&1 || true
@@ -1543,7 +1645,7 @@ rollback_on_exit() {
         echo "!! Rollback transaction remains pending; both services were left stopped for exact recovery." >&2
         echo "!! Geri alma işlemi beklemede kaldı; tam kurtarma için iki servis kapalı bırakıldı." >&2
         echo "!! Verified snapshot / Doğrulanmış snapshot: $rollback_verified_snapshot" >&2
-        echo "!! Retry / Yeniden deneyin: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$rollback_verified_snapshot'" >&2
+        print_rollback_retry
         return "$status"
     fi
     if [[ $rollback_mutation_started -eq 1 ]]; then
@@ -1552,7 +1654,7 @@ rollback_on_exit() {
         echo "!! Rollback failed after installed mutation began; both services were left stopped." >&2
         echo "!! Kurulu mutasyon başladıktan sonra geri alma başarısız oldu; iki servis kapalı bırakıldı." >&2
         echo "!! Verified snapshot / Doğrulanmış snapshot: $rollback_verified_snapshot" >&2
-        echo "!! Retry / Yeniden deneyin: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$rollback_verified_snapshot'" >&2
+        print_rollback_retry
         return "$status"
     fi
     if [[ $rollback_service_state_recorded -eq 1 ]]; then
@@ -1681,6 +1783,7 @@ snapshot_nonce=${BASH_REMATCH[3]}
 snap="$SNAP_ROOT/$snapshot_name"
 [[ -d "$snap" && ! -L "$snap" ]] || die "snapshot does not exist or is unsafe: $snap"
 validate_root_trusted_dir_chain "$snap"
+preflight_rollback_material_admission
 
 # Snapshot payloads must be plain directories and regular files. Symlinks would
 # make checksum verification and privileged restore target different objects.
@@ -2107,6 +2210,7 @@ else
             "$RELEASE_TRANSACTION_ROOT" "$unit_transition_token" "$unit_transition_operation" "$snapshot_name" \
             || die "active unit restoration transaction proof failed"
     fi
+    verify_independent_recovery_material
     release_unit_validate_transition \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$snap/units" "$TRUSTED_RELEASE_ROOT/deploy/systemd" "$UNIT_DIR" \
@@ -2341,6 +2445,7 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
     release_txn_validate_active_token \
         "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
         || die "active rollback marker changed before unit restoration"
+    verify_independent_recovery_material
     release_unit_validate_transition \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$snap/units" "$TRUSTED_RELEASE_ROOT/deploy/systemd" "$UNIT_DIR" \
@@ -2354,6 +2459,7 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
     release_txn_verify_systemd_unit_root_identity \
         "$UNIT_DIR" "$unit_root_restore_identity" \
         || die "systemd unit root changed while disabling fixed unit files"
+    verify_independent_recovery_material
     release_unit_restore_transition \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$snap/units" "$TRUSTED_RELEASE_ROOT/deploy/systemd" "$UNIT_DIR" \

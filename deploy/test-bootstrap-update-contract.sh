@@ -3078,6 +3078,7 @@ set +e
     eval "$(extract_function_source "$ROLLBACK" unfreeze_legacy_agent)"
     eval "$(extract_function_source "$ROLLBACK" terminate_frozen_legacy_agent_fail_closed)"
     eval "$(extract_function_source "$ROLLBACK" freeze_and_stop_legacy_agent)"
+    eval "$(extract_function_source "$ROLLBACK" print_rollback_retry)"
     eval "$(extract_function_source "$ROLLBACK" rollback_on_exit)"
 
     TRACE="$legacy_trace"
@@ -3193,7 +3194,8 @@ run_rollback_completion_exit_case() {
         set -euo pipefail
         eval "$(extract_function_source "$ROLLBACK" unfreeze_legacy_agent)"
         eval "$(extract_function_source "$ROLLBACK" terminate_frozen_legacy_agent_fail_closed)"
-        eval "$(extract_function_source "$ROLLBACK" rollback_on_exit)"
+        eval "$(extract_function_source "$ROLLBACK" print_rollback_retry)"
+    eval "$(extract_function_source "$ROLLBACK" rollback_on_exit)"
 
         TRACE="$case_trace"
         VALIDATOR_OK="$validator_ok"

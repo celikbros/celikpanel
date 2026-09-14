@@ -302,6 +302,10 @@ prepare_independent_recovery_runtime() {
     "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" verify-compatibility \
         --mode "$recovery_compatibility_mode" 9<&"$RELEASE_TRANSACTION_FD" \
         || die "selected recovery runtime cannot verify the current installation before update"
+    # Ask the selected executable itself. An older kit is retained, but cannot
+    # silently accept a writer whose durable recovery data it does not understand.
+    /usr/libexec/celikpanel/recovery verify-material-support --layout snapshot-name-sha256-v1 \
+        || die "selected recovery runtime does not support recovery material v1; panel services have not been stopped"
 }
 
 prepare_and_acquire_release_transaction_lock() {
@@ -3262,6 +3266,23 @@ panel_tls_snapshot_assert_source_unchanged \
 panel_tls_snapshot_scheduler_matches_service_ledger \
     "$snap/panel-tls" "$snap/service-states.tsv" \
     || die "published TLS scheduler snapshot disagrees with the service ledger"
+
+# Bind the already sealed snapshot to the accepted target BEFORE schema/product
+# apply. The material retains only recovery data, never candidate executables.
+# v6 snapshot bytes stay unchanged; its exact manifest is part of this contract.
+recovery_snapshot_manifest_sha=$(sha256sum -- "$snap/SHA256SUMS") \
+    || die "sealed snapshot identity could not be read before recovery material capture"
+recovery_snapshot_manifest_sha=${recovery_snapshot_manifest_sha%% *}
+recovery_candidate_manifest_sha=$(sha256sum -- "$TRUSTED_RELEASE_ROOT/SHA256SUMS") \
+    || die "candidate identity could not be read before recovery material capture"
+recovery_candidate_manifest_sha=${recovery_candidate_manifest_sha%% *}
+/usr/libexec/celikpanel/recovery prepare-recovery-material \
+    --snapshot "$snapshot_name" \
+    --snapshot-manifest "$recovery_snapshot_manifest_sha" \
+    --candidate-root "$TRUSTED_RELEASE_ROOT" \
+    --candidate-manifest "$recovery_candidate_manifest_sha" \
+    9<&"$RELEASE_TRANSACTION_FD" \
+    || die "recovery material could not be committed before candidate apply; preserve the exact snapshot"
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     # Release the outer flock only for the trusted one-shot initializer. Prove
     # its exact empty ledger, recreate and reacquire the common lock, then run

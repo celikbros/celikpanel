@@ -344,8 +344,19 @@ Only then repeat the applicable update mode on **Frankfurt** and run the same
 checks. If any check fails, stop the rollout and roll back the already-updated
 server before attempting the peer.
 
-Use only the root-trusted rollback script and `VERIFIED_SNAPSHOT` value printed
-by the update. Substitute the exact printed release directory; never use a
+When an enrolled [independent recovery runtime](RECOVERY-RUNTIME.md) is present,
+use `sudo /usr/libexec/celikpanel/recovery recover` to resume an existing durable
+operation. It does not start a fresh rollback after successful completion.
+[Material-backed snapshots](RECOVERY-MATERIAL.md) currently admit only that same
+transaction; a new-token historical rollback refuses before service stop. Preserve
+the snapshot and working runtime. The new direct script can also refuse an older
+selected reader that cannot prove material absence, before downtime. Unchanged
+historical retained scripts have their separate legacy path. New-operation
+admission remains unimplemented; do not substitute tokens, copy receipts or retry
+through another release.
+
+For the legacy retained-release path, use only the root-trusted rollback script
+and `VERIFIED_SNAPSHOT` value printed by the update. Substitute the exact printed release directory; never use a
 checkout copy or a rollback script from another release:
 
 ```bash

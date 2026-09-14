@@ -31,7 +31,7 @@ INTENT='local-candidate-intent.json'
 STAGE='local-candidate-stage.json'
 START='local-candidate-start-attempt.json'
 ARM='local-candidate-kill-intent.json'
-ASSETS=('candidate_archive.py','guest_probe.py','guest_port_fault.py','guest_update_kill.py','guest_local_candidate.py','guest_recovery_fault.py','guest_recovery_handoff.py')
+ASSETS=('candidate_archive.py','guest_probe.py','guest_port_fault.py','guest_update_kill.py','guest_local_candidate.py','guest_recovery_fault.py','guest_recovery_handoff.py','guest_candidate_data_fault.py')
 
 def encoded(value):return (json.dumps(value,sort_keys=True)+'\n').encode()
 
@@ -67,7 +67,7 @@ def validate_stage(value,intent):
             or value.get('verified_files')!=len(intent['candidate']['files']) or not trial.HEX64.fullmatch(value.get('bash_sha256',''))):raise ValueError('local candidate stage proof differs')
     return value
 
-def prepare(root,record,plan,node,archive,digest,boundary,recovery_fault=None):
+def prepare(root,record,plan,node,archive,digest,boundary,recovery_fault=None,candidate_data_fault=None):
     assert_absent(root,node,INTENT,START,ARM,'update-intent.json','update-start-attempt.json')
     candidate=guest.archive_tools.inspect_archive(archive,digest)
     source_proof=guest.archive_tools.verify_committed_source(candidate,trial.REPOSITORY)
@@ -82,7 +82,9 @@ def prepare(root,record,plan,node,archive,digest,boundary,recovery_fault=None):
             'source_root':str(guest.RELEASES/('.download.lab-'+operation)/'payload'/candidate['root_name'])}
     if recovery_fault is not None:
         intent['recovery_fault']=recovery_fault
-        guest.validate_plan(intent,intent['identity'],operation)
+    if candidate_data_fault is not None:
+        intent['candidate_data_fault']=candidate_data_fault
+    guest.validate_plan(intent,intent['identity'],operation)
     customization=evidence_path(root,node,'owner-unit-baseline.json')
     if customization.exists() or customization.is_symlink():
         raw=trial.read_private(customization)
@@ -175,11 +177,13 @@ def main(argv=None):
     parser.add_argument('--work-root',required=True);parser.add_argument('--node',choices=('arch','debian13'),default='arch')
     parser.add_argument('--mode',choices=('prepare','arm','start','collect'),required=True);parser.add_argument('--execute',action='store_true')
     parser.add_argument('--archive',type=Path);parser.add_argument('--archive-sha256');parser.add_argument('--boundary',choices=('candidate-installed','require-unit-reload'),default='require-unit-reload')
+    parser.add_argument('--candidate-data-fault',choices=('quarantine-fixed-three',))
     args=parser.parse_args(argv)
     if args.mode!='collect' and not args.execute:parser.error('mutation requires --execute and the registered disposable VM')
     if args.mode=='prepare' and (args.archive is None or args.archive_sha256 is None):parser.error('prepare requires exact local archive and SHA256')
+    if args.mode!='prepare' and args.candidate_data_fault is not None:parser.error('candidate data fault must be sealed during prepare')
     root=lab.checked_root(args.work_root);record,plan=lab.load(root);lab.process_guard(plan['nodes'][args.node])
-    if args.mode=='prepare':return prepare(root,record,plan,args.node,args.archive,args.archive_sha256,args.boundary)
+    if args.mode=='prepare':return prepare(root,record,plan,args.node,args.archive,args.archive_sha256,args.boundary,candidate_data_fault=args.candidate_data_fault)
     intent=load_intent(root,record,plan,args.node)
     return {'arm':arm,'start':start,'collect':collect}[args.mode](root,record,plan,args.node,intent)
 

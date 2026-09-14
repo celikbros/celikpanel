@@ -351,8 +351,18 @@ Yalnız bundan sonra ilgili update modunu **Frankfurt** üzerinde tekrarlayın v
 aynı kontrolleri uygulayın. Herhangi bir kontrol başarısızsa dağıtımı durdurun;
 peer'ı denemeden önce güncellenen sunucuyu geri alın.
 
-Yalnız update çıktısında verilen root tarafından güvenilen rollback scriptini
-ve `VERIFIED_SNAPSHOT` değerini kullanın. Yer tutucuyu çıktıda verilen kesin
+Kayıtlı [bağımsız kurtarma ortamı](RECOVERY-RUNTIME.tr.md) varsa, mevcut kalıcı
+işlemi sürdürmek için `sudo /usr/libexec/celikpanel/recovery recover` kullanın.
+Bu komut başarılı tamamlanmadan sonra yeni bir geri alma başlatmaz.
+[Kurtarma verili yedekler](RECOVERY-MATERIAL.tr.md) şimdilik yalnız aynı işlemi
+kabul eder; yeni tokenlı tarihsel geri alma servisler durmadan reddedilir. Yedeği
+ve çalışan ortamı koruyun. Yeni doğrudan script, verinin yokluğunu kanıtlayamayan
+eski seçili okuyucuyu da kesintiden önce reddedebilir. Değişmemiş tarihsel saklanan
+scriptlerin yolu ayrıdır. Yeni işlem kabulü henüz uygulanmadı; token değiştirmeyin,
+kayıt kopyalamayın veya başka sürüm üzerinden tekrar denemeyin.
+
+Eski saklanan-sürüm yolu için yalnız update çıktısında verilen root tarafından
+güvenilen rollback scriptini ve `VERIFIED_SNAPSHOT` değerini kullanın. Yer tutucuyu çıktıda verilen kesin
 release diziniyle değiştirin; checkout kopyasını veya başka bir release'in
 rollback scriptini asla kullanmayın:
 

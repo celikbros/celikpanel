@@ -122,6 +122,7 @@ type intent struct {
 	Stage             string   `json:"stage"`
 	Before            tree     `json:"before"`
 	After             tree     `json:"after"`
+	MaterialSHA       string   `json:"recovery_material_sha256,omitempty"`
 }
 type inputs struct {
 	c                                                          config
@@ -133,9 +134,13 @@ type inputs struct {
 	old, new                                                   tree
 	snapshotRows, candidateRows                                map[string]string
 	prefixID, transactionID, snapshotID, candidateID           identity
+	material                                                   *verifiedMaterial
 }
 
 func (v *inputs) close() {
+	if v.material != nil {
+		v.material.close()
+	}
 	for _, f := range []*os.File{v.oldRoot, v.newRoot, v.snapshot, v.candidate, v.transaction, v.prefix} {
 		if f != nil {
 			f.Close()
@@ -216,7 +221,7 @@ func readMarker(txn *os.File, op, snapshot string) ([]byte, string, error) {
 	}
 	return raw, string(match[1]), nil
 }
-func load(r Request, op string, c config) (*inputs, error) {
+func loadCandidate(r Request, op string, c config) (*inputs, error) {
 	if os.Geteuid() != 0 || os.Getegid() != 0 || !ValidResource(r.Resource) || !ValidSnapshot(r.Snapshot) || !ValidManifest(r.SnapshotManifest) || !ValidManifest(r.CandidateManifest) || filepath.Clean(r.CandidateRoot) != r.CandidateRoot || filepath.Dir(r.CandidateRoot) != c.candidates || !releasePattern.MatchString(filepath.Base(r.CandidateRoot)) || (op != "update" && op != "rollback") {
 		return nil, ErrUnavailable
 	}
@@ -332,7 +337,7 @@ func load(r Request, op string, c config) (*inputs, error) {
 func (v *inputs) revalidate() error {
 	c := v.c
 	r := v.request
-	if !sameRootPath(c, c.prefix, v.prefix, v.prefixID) || !sameRootPath(c, c.transaction, v.transaction, v.transactionID) || !sameRootPath(c, filepath.Join(c.snapshots, r.Snapshot), v.snapshot, v.snapshotID) || !sameRootPath(c, r.CandidateRoot, v.candidate, v.candidateID) {
+	if !sameRootPath(c, c.prefix, v.prefix, v.prefixID) || !sameRootPath(c, c.transaction, v.transaction, v.transactionID) || !sameRootPath(c, filepath.Join(c.snapshots, r.Snapshot), v.snapshot, v.snapshotID) || (v.candidate != nil && !sameRootPath(c, r.CandidateRoot, v.candidate, v.candidateID)) {
 		return ErrOwnerChanged
 	}
 	if err := verifyLock(v.transaction, c.fd); err != nil {
@@ -345,33 +350,44 @@ func (v *inputs) revalidate() error {
 	if _, err = manifest(v.snapshot, r.SnapshotManifest); err != nil {
 		return err
 	}
-	if _, err = manifest(v.candidate, r.CandidateManifest); err != nil {
-		return err
+	if v.candidate != nil {
+		if _, err = manifest(v.candidate, r.CandidateManifest); err != nil {
+			return err
+		}
 	}
 	old, err := scan(v.oldRoot)
 	if err != nil || !old.equal(v.old) {
 		return ErrOwnerChanged
 	}
-	fresh, err := scan(v.newRoot)
-	if err != nil || !fresh.equal(v.new) {
-		return ErrOwnerChanged
+	if v.newRoot != nil {
+		fresh, err := scan(v.newRoot)
+		if err != nil || !fresh.equal(v.new) {
+			return ErrOwnerChanged
+		}
 	}
 	if !samePath(v.snapshot, r.Resource, v.oldRoot) {
 		return ErrOwnerChanged
 	}
-	if r.Resource == "bin" {
-		if !samePath(v.candidate, "bin", v.newRoot) {
-			return ErrOwnerChanged
+	if v.candidate != nil {
+		if r.Resource == "bin" {
+			if !samePath(v.candidate, "bin", v.newRoot) {
+				return ErrOwnerChanged
+			}
+		} else {
+			web, e := openAt(v.candidate, "web", true)
+			if e != nil {
+				return ErrOwnerChanged
+			}
+			same := samePath(web, "dist", v.newRoot)
+			web.Close()
+			if !same {
+				return ErrOwnerChanged
+			}
 		}
-	} else {
-		web, e := openAt(v.candidate, "web", true)
-		if e != nil {
-			return ErrOwnerChanged
-		}
-		same := samePath(web, "dist", v.newRoot)
-		web.Close()
-		if !same {
-			return ErrOwnerChanged
+	}
+	if v.material != nil {
+		if err := v.material.revalidate(); err != nil {
+			return fmt.Errorf("publication material recheck: %w", err)
 		}
 	}
 	if c.stopped == nil {
@@ -411,7 +427,7 @@ func (v *inputs) beforeAllowed(t tree) bool {
 	if t.semantic() == v.old.semantic() || t.semantic() == desired.semantic() {
 		return true
 	}
-	if v.request.Resource != "bin" {
+	if v.material != nil || v.request.Resource != "bin" {
 		return false
 	}
 	old, new := v.old.entryMap(), desired.entryMap()
@@ -616,14 +632,17 @@ func (v *inputs) verifyForwardBeforeRestore() error {
 		return nil
 	}
 	path := filepath.Join(v.c.prefix, journalName, digest([]byte(v.token)), "update-"+v.request.Resource)
-	parent, err := openPath(v.c.anchor, filepath.Dir(path))
+	parent, err := optionalPath(v.c, filepath.Dir(path))
+	if errors.Is(err, ErrMaterialAbsent) {
+		return v.requireOldWithoutForward()
+	}
 	if err != nil {
 		return ErrUnavailable
 	}
 	defer parent.Close()
 	journal, err := openAt(parent, filepath.Base(path), true)
 	if errors.Is(err, unix.ENOENT) {
-		return nil // Legacy update or forward publication not started.
+		return v.requireOldWithoutForward() // Legacy unchanged; v2 requires old snapshot state.
 	}
 	if err != nil {
 		return ErrOwnerChanged
@@ -639,7 +658,7 @@ func (v *inputs) verifyForwardBeforeRestore() error {
 		if _, e := readPrivateFile(journal, "published", 4096); !errors.Is(e, unix.ENOENT) {
 			return ErrOwnerChanged
 		}
-		return nil // Only unreferenced stages exist; current membership still checked.
+		return v.requireOldWithoutForward() // No committed forward publication authority.
 	}
 	var forward intent
 	if err != nil || decodeExact(raw, &forward) != nil || !v.validIntent(forward, "update", v.expectedCandidate()) {
@@ -679,7 +698,14 @@ func (v *inputs) verifyForwardBeforeRestore() error {
 }
 func (v *inputs) validIntent(record intent, operation string, wanted tree) bool {
 	r := v.request
-	return record.Schema == Schema && record.Resource == r.Resource && record.Operation == operation && record.Snapshot == r.Snapshot && record.SnapshotManifest == r.SnapshotManifest && record.CandidateRoot == r.CandidateRoot && record.CandidateManifest == r.CandidateManifest && record.TokenHash == digest([]byte(v.token)) && record.Parent == v.prefixID && stagePattern.MatchString(record.Stage) && v.beforeAllowed(record.Before) && record.After.semantic() == wanted.semantic()
+	schema, materialSHA := Schema, ""
+	if v.material != nil {
+		schema, materialSHA = MaterialIntentSchema, v.material.sha
+		if operation == "update" && record.Before.semantic() != v.old.semantic() {
+			return false
+		}
+	}
+	return record.Schema == schema && record.MaterialSHA == materialSHA && record.Resource == r.Resource && record.Operation == operation && record.Snapshot == r.Snapshot && record.SnapshotManifest == r.SnapshotManifest && record.CandidateRoot == r.CandidateRoot && record.CandidateManifest == r.CandidateManifest && record.TokenHash == digest([]byte(v.token)) && record.Parent == v.prefixID && stagePattern.MatchString(record.Stage) && v.beforeAllowed(record.Before) && record.After.semantic() == wanted.semantic()
 }
 func publish(r Request, operation string, c config) error {
 	v, err := load(r, operation, c)
@@ -720,7 +746,7 @@ func publish(r Request, operation string, c config) error {
 		before, e := scan(current)
 		bound := samePath(v.prefix, r.Resource, current)
 		current.Close()
-		if e != nil || !bound || !v.beforeAllowed(before) {
+		if e != nil || !bound || !v.beforeAllowed(before) || (v.material != nil && operation == "update" && before.semantic() != v.old.semantic()) {
 			return ErrOwnerChanged
 		}
 		if before.semantic() == wanted.semantic() {
@@ -756,7 +782,11 @@ func publish(r Request, operation string, c config) error {
 		if e != nil || !bound || !before.equal(now) {
 			return ErrOwnerChanged
 		}
-		record = intent{Schema, r.Resource, operation, r.Snapshot, r.SnapshotManifest, r.CandidateRoot, r.CandidateManifest, digest([]byte(v.token)), v.prefixID, stage, before, after}
+		record = intent{Schema: Schema, Resource: r.Resource, Operation: operation, Snapshot: r.Snapshot, SnapshotManifest: r.SnapshotManifest, CandidateRoot: r.CandidateRoot, CandidateManifest: r.CandidateManifest, TokenHash: digest([]byte(v.token)), Parent: v.prefixID, Stage: stage, Before: before, After: after}
+		if v.material != nil {
+			record.Schema = MaterialIntentSchema
+			record.MaterialSHA = v.material.sha
+		}
 		raw = canonical(record)
 		if int64(len(raw)) > maxIntent {
 			return ErrUnavailable

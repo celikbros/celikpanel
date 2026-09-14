@@ -49,6 +49,25 @@ class KillTests(unittest.TestCase):
         self.assertEqual(native.actions,['freeze','kill','thaw'])
         self.assertEqual([e['event'] for e in events],['armed','worker_frozen','candidate_installed_checkpoint','kill_requested','kill_sent','released'])
         self.assertTrue(events[-1]['kill_sent'])
+    def test_opted_in_data_fault_occurs_after_proof_before_kill(self):
+        native=FakeNative(); events=[]
+        def data_fault(identity,proof,tick):
+            self.assertEqual(events[-1]['event'],'candidate_installed_checkpoint')
+            self.assertEqual(identity,native.identity); self.assertEqual(proof['verified_files'],129)
+            native.actions.append('data-fault');return {'status':'applied'}
+        native.candidate_data_fault=data_fault
+        result=s.run_kill(SimpleNamespace(operation_id='a'*32,candidate_data_fault='quarantine-fixed-three'),lambda event,**fields:events.append(dict(event=event,**fields)),native)
+        self.assertEqual(result,0);self.assertEqual(native.actions,['freeze','data-fault','kill','thaw'])
+        self.assertEqual([e['event'] for e in events],['armed','worker_frozen','candidate_installed_checkpoint','candidate_data_fault_applied','kill_requested','kill_sent','released'])
+
+    def test_data_fault_failure_cannot_claim_application_or_kill(self):
+        native=FakeNative();events=[]
+        def fail(*args):raise ValueError('partial retained data fault')
+        native.candidate_data_fault=fail
+        result=s.run_kill(SimpleNamespace(operation_id='a'*32,candidate_data_fault='quarantine-fixed-three'),lambda event,**fields:events.append(dict(event=event,**fields)),native)
+        self.assertEqual(result,2);self.assertEqual(native.actions,['freeze','thaw'])
+        self.assertFalse(any(e['event'] in ('candidate_data_fault_applied','kill_requested','kill_sent') for e in events))
+
     def test_completion_pending_is_never_killed(self):
         native=FakeNative();native.state['transaction']['phase']='completion.pending'
         result,events=self.run_case(native)
