@@ -304,7 +304,7 @@ prepare_independent_recovery_runtime() {
         || die "selected recovery runtime cannot verify the current installation before update"
     # Ask the selected executable itself. An older kit is retained, but cannot
     # silently accept a writer whose durable recovery data it does not understand.
-    /usr/libexec/celikpanel/recovery verify-material-support \
+    /usr/libexec/celikpanel/recovery verify-material-support --layout snapshot-name-sha256-v1 \
         || die "selected recovery runtime does not support recovery material v1; panel services have not been stopped"
 }
 

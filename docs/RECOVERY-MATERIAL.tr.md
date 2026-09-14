@@ -46,8 +46,9 @@ güvensiz kayıt veya v2 yayınla ilişkili eksik veri eski sözleşmeye indirge
 Mevcut tam yedek veritabanı/TLS/unit ve çalışan süreç doğrulamaları zorunlu kalır.
 Dosyaların geri gelmesi tek başına kurtarmanın tamamlandığı anlamına gelmez.
 
-Seçili program, koordinatörler durmadan önce yeni veri biçimini desteklediğini
-bildirmelidir. Eski seçili ortam korunur; güncelleme bu kesintiden önce reddedilir.
+Seçili program, koordinatörler durmadan önce
+`verify-material-support --layout snapshot-name-sha256-v1` ile tam veri düzenini
+desteklediğini bildirmelidir. Eski seçili ortam korunur; güncelleme bu kesintiden önce reddedilir.
 Bu dilim yeni bir kurtarma ortamını otomatik olarak seçili hâle getirmez.
 
 Kapalı CLI komutları dahili root girişleridir: `verify-material-support`,

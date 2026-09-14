@@ -150,7 +150,7 @@ printf 'recovery runtime shell contract: ok\n'
 eval "$(extract_function prepare_independent_recovery_runtime | sed 's@/usr/libexec/celikpanel/recovery verify-material-support@"$TEST_ROOT/selected-recovery" verify-material-support@')"
 cat > "$TEST_ROOT/selected-recovery" <<'SH'
 #!/usr/bin/env bash
-[[ $# == 1 && $1 == verify-material-support ]] || exit 91
+[[ $# == 3 && $1 == verify-material-support && $2 == --layout && $3 == snapshot-name-sha256-v1 ]] || exit 91
 printf 'selected-material-support\n' >> "$FIXTURE_CALLS"
 [[ ${FIXTURE_UNSUPPORTED:-0} == 0 ]]
 SH

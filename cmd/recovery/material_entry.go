@@ -20,7 +20,7 @@ func dispatchMaterial(args []string, uid int, execute func(string, recoverypubli
 	}
 	var request recoverypublication.Request
 	switch {
-	case len(args) == 1 && args[0] == "verify-material-support":
+	case len(args) == 3 && args[0] == "verify-material-support" && args[1] == "--layout" && args[2] == "snapshot-name-sha256-v1":
 	case len(args) == 3 && args[0] == "material-root" && args[1] == "--snapshot" && recoverypublication.ValidSnapshot(args[2]):
 		request.Snapshot = args[2]
 	case len(args) == 9 && args[0] == "prepare-recovery-material" && args[1] == "--snapshot" && args[3] == "--snapshot-manifest" && args[5] == "--candidate-root" && args[7] == "--candidate-manifest":

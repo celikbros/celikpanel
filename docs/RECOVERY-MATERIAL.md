@@ -47,7 +47,8 @@ foreign, unsafe or missing material associated with v2 publication cannot be
 downgraded. The full existing snapshot database/TLS/units and runtime checks remain
 mandatory. Successful file restoration alone is not recovery completion.
 
-The selected executable must confirm material support before coordinator stop.
+The selected executable must confirm the exact `snapshot-name-sha256-v1` layout
+with `verify-material-support --layout snapshot-name-sha256-v1` before coordinator stop.
 An older selected kit is retained and the update refuses before that downtime;
 this slice does not automatically promote a replacement recovery kit.
 

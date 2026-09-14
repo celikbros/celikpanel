@@ -22,12 +22,12 @@ func TestMaterialDispatchClosedBoundary(t *testing.T) {
 		return "", nil
 	}
 	report := func(string) {}
-	for _, valid := range [][]string{args, {"material-root", "--snapshot", args[2]}, {"verify-material-support"}} {
+	for _, valid := range [][]string{args, {"material-root", "--snapshot", args[2]}, {"verify-material-support", "--layout", "snapshot-name-sha256-v1"}} {
 		if got := dispatchMaterial(valid, 1000, deny, io.Discard, report); got != exitNotOwner {
 			t.Fatalf("owner gate: %d", got)
 		}
 	}
-	for _, bad := range [][]string{nil, {"recover"}, {"material-root"}, {"material-root", "--snapshot", "../snapshot"}, {"material-root", "--snapshot", args[2], "--token", "supplied"}, {"verify-material-support", "--force"}, append(append([]string{}, args...), "--output", "/tmp/material")} {
+	for _, bad := range [][]string{nil, {"recover"}, {"material-root"}, {"material-root", "--snapshot", "../snapshot"}, {"material-root", "--snapshot", args[2], "--token", "supplied"}, {"verify-material-support"}, {"verify-material-support", "--layout", "token-sha256-v1"}, {"verify-material-support", "--force"}, append(append([]string{}, args...), "--output", "/tmp/material")} {
 		if got := dispatchMaterial(bad, 0, deny, io.Discard, report); got != exitUsage {
 			t.Fatalf("accepted %q: %d", bad, got)
 		}
@@ -97,5 +97,19 @@ func TestMaterialDispatchOutputIsSingleCanonicalPath(t *testing.T) {
 	}
 	if code := call(expected, materialFailWriter{}); code != exitOutput {
 		t.Fatal("write failure hidden", code)
+	}
+}
+
+func TestMaterialCapabilityNamesExactLayout(t *testing.T) {
+	called := false
+	got := dispatchMaterial([]string{"verify-material-support", "--layout", "snapshot-name-sha256-v1"}, 0, func(command string, r recoverypublication.Request) (string, error) {
+		called = true
+		if command != "verify-material-support" || !reflect.DeepEqual(r, recoverypublication.Request{}) {
+			t.Fatal(command, r)
+		}
+		return "", nil
+	}, io.Discard, func(string) {})
+	if got != exitOK || !called {
+		t.Fatal(got, called)
 	}
 }
