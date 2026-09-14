@@ -199,9 +199,9 @@ Yukarıdaki P0 kimlikleri, takip edilen iş kalemleridir. Başlangıç durumlar�
 
 | İş | 14 Eylül'deki durum | Tamamlanma kanıtı |
 |---|---|---|
-| P0.1 | Açık — yerel hizmetlerle tam yaşam döngüsü tatbikatı yok | Gerekli: tam test düzeneği/sürümler, hata senaryoları ve gerçek geri yükleme/hizmet sonuçları. Bileşen ve devir testlerinin kanıtları tamamlanma kanıtı değildir. |
+| P0.1 | Açık — gerçek ortam arıza denemeleri kayıtlı; tam geri yükleme doğrulanmadı | [Gerçek ortam sonuçları](../deploy/e2e/release-recovery/RESULTS.tr.md), başarısız kurtarmayı ve eski sürüme geri dönüşten farklı olan bekleyen güncellemenin tamamlanmasını içerir. Gerekli: desteklenen hata matrisi boyunca gerçek geri yükleme gövdesi ve önce/sonra hizmet kabulü. Bileşen veya devir başarısı yeterli değildir. |
 | P0.2 | Açık — başlangıç/erişim bağımlılıkları sürüyor | Gerekli: Agent ve lisans doğrulayıcısı kullanılamazken sayfa yenileme dahil, kimlik doğrulamalı kurtarma ve türlerle ayrılmış erişim kararlarına yönelik hata denemeleri. |
-| P0.3 | Açık — yeni yürütücü/kontrol noktaları uygulanmadı | Gerekli: sürümlü sözleşme, önceki snapshot'larla uyumluluk ve gerçek yürütücü üzerinden kesinti/yeniden başlatma tatbikatları. |
+| P0.3 | Açık — kesilen geçişte kontrol hatası yeniden üretildi; yeni yürütücü/kontrol noktaları uygulanmadı | [Gerçek kesinti kanıtı](../deploy/e2e/release-recovery/RESULTS.tr.md): değişmemiş üretici servis dosyaları yeniden yükleme öncesinde yayımlandı; `NeedDaemonReload=yes`, olağan çalışma durumunu arayan kontrolün geri yükleme gövdesinden önce kurtarmayı reddetmesine yol açtı. Gerekli: kontrol noktasına uygun kurtarma doğrulaması, sürümlü sözleşme, önceki yedeklerle uyumluluk ve gerçek kesinti/yeniden başlatma geri yükleme sonuçları. Düzeltme yapıldığı iddia edilmez. |
 | P0.4 | Kısmi — Alpha80'de sınırlı BIND ilerleme denetimi/ön kontrolü var; şema ayrımı tamamlanmadı | Gerekli: korunan TLS kanıtı ve sahibin değişiklikleri dahil, desteklenen tüm gerçek üreticiden okuyucuya ve geri yükleyiciye geçiş sonuçları. |
 | P0.5 | Açık — belgelenmiş yenileme/güvenlik duvarı bağımlılıkları sürüyor | Gerekli: desteklendiği söylenen her yerel hizmet birleşimi için yönetim bileşenlerinin kaldırılması/yokluğu ve yeniden başlatma kontrolleri. |
 

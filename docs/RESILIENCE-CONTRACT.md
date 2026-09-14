@@ -184,9 +184,9 @@ The P0 identifiers above are the tracked work items. Their initial state is:
 
 | Item | Status on September 14 | Completion evidence |
 |---|---|---|
-| P0.1 | Open — native full-lifecycle drill absent | Required: exact fixture/releases, fault cases and actual restoration/workload results. Component and handoff test evidence is not completion evidence. |
+| P0.1 | Open — native fault drills recorded; full restoration unverified | [Native results](../deploy/e2e/release-recovery/RESULTS.md) include failed recovery and observed forward finalization, which is distinct from old-release restoration. Required: the actual restoration body and before/after workload acceptance across the supported fault matrix. Component or handoff success is insufficient. |
 | P0.2 | Open — startup/access dependencies remain | Required: authenticated recovery and typed-access fault runs, including reload with Agent and license verifier unavailable. |
-| P0.3 | Open — replacement executor/checkpoints not implemented | Required: versioned contract, prior-snapshot compatibility and interruption/reboot drills through the actual executor. |
+| P0.3 | Open — interrupted-transition guard failure reproduced; replacement executor/checkpoints not implemented | [Native interruption evidence](../deploy/e2e/release-recovery/RESULTS.md): unchanged vendor unit bytes were republished before reload; `NeedDaemonReload=yes` caused the steady-state guard to reject recovery before the restoration body. Required: checkpoint-specific recovery validation, a versioned contract, prior-snapshot compatibility and actual interruption/reboot restoration results. No fix is claimed. |
 | P0.4 | Partial — Alpha80 has a scoped BIND progression check/preflight; schema separation incomplete | Required: all supported real producer-to-reader-to-restore transition results, including retained TLS evidence and owner changes. |
 | P0.5 | Open — documented renewal/firewall dependencies remain | Required: removal/absence and reboot probes for each claimed native workload combination. |
 
