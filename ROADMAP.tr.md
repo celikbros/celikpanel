@@ -1,46 +1,76 @@
 # CelikPanel Yol Haritası
 
-*Son güncelleme: 29 Ağustos 2026 · [English](ROADMAP.md)*
+*Son güncelleme: 14 Eylül 2026 · [English](ROADMAP.md)*
 
 ---
 
 ## Anayasa — Her Kararın Süzgeci
 
-Her özellik, her commit, her tasarım kararı bu dört süzgeçten geçer.
-Birinden geçemeyen iş bitmiş sayılmaz, ertelenir ya da sadeleştirilir.
+Her özellik, commit ve tasarım kararı bu gereksinimleri karşılamalıdır.
+Bunlar mevcut uygulamanın karşıladığı iddiası değil, bağlayıcı yükümlülüklerdir.
+[Dayanıklı çalışma sözleşmesi ve kaynak incelemesi](docs/RESILIENCE-CONTRACT.tr.md),
+açık P0 işlerini, uygulama sırasını ve kapatılmaları için gereken kanıtı kaydeder (D-025).
 
-### 1. Güvenlik varsayılandır
-- Kimlik doğrulamasız hiçbir özellik yayına çıkmaz.
-- Varsayılan yapılandırma her zaman en güvenli olandır (localhost bağlama, token, en az yetki).
-- Parola/token yalnız `crypto/rand` üretir. SQL yalnız parametrelidir.
-- Root yetkili Agent'a yalnız Panel erişebilir — başka hiçbir şey.
+### 1. Güvenlik ve sunucu sahibinin yetkisi
+- Yönetim erişiminde kimlik doğrula; her eylemi ilgili kaynaklar için yetkilendir. En az yetki, yerel kimlik doğrulamalı IPC, parametreli SQL ve gizli değerler için `crypto/rand` kullan.
+- Root yetkisi olmayan Panel ile ayrıcalıklı Agent ayrı kalır. Normal ayrıcalıklı otomasyon yetkili Agent API'sini kullanır; desteklenen kullanıcı kurtarmasının ayrı ve dar bir sözleşmesi vardır. Yapay zekâ planlayıcısı veya kurtarma ekranı sınırsız root çalıştırma yetkisi kazanmaz.
+- Sunucu sahibi hizmetleri kendi araçlarıyla yönetebilir. Sahibinin değişikliklerini algıla ve açıkça uzlaştır; önbellekteki hedefe uydurmak için sessizce üzerlerine yazma (D-022).
+- Kanıt belirsizse ilgili güvensiz değişikliği engelle. Doğrulanmamış yetki vermeden, kimlik doğrulamalı tanı ve desteklenen kurtarma erişimini koru.
 
-### 2. Sadelik (Google ilkesi)
-AltaVista portal olmaya çalışırken Google tek arama kutusuyla kazandı.
-cPanel/Plesk bugünün AltaVista'sıdır: kalabalık, yavaş, ürkütücü.
-- Her işin **tek bariz yolu** olur. İki yol varsa biri silinir.
-- Özellik eklemeden önce sor: *"Eklemezsek ne kaybederiz?"* Cevap net değilse eklenmez.
-- Kurulu olmayan servis arayüzde **görünmezdir**. Boş ekran yok, pasif menü yok.
-- Akıllı varsayılanlar: sormadan doğrusunu yap; düğme isteyen %5 için "gelişmiş" bölümü.
+### 2. Süreklilik ve kurtarılabilirlik
+- Panel kesintisi, lisans kaybı veya panelin kaldırılması; barındırılan işleri ve hizmetlerin kendi yenileme, zamanlama ve açılış mekanizmalarını durdurmamalıdır. Bağımsızlık iddiasından önce kalan bağımlılıklar giderilip sınanmalıdır.
+- Her değişiklik; etkilenen kaynakları, salt-okur ön kontrolü, kalıcı kontrol noktalarını, sınırlı tekrar/kurtarmayı ve sonuç kanıtını tanımlar. İzin veya sahiplik normalleştirmesi de değişikliktir.
+- Aday sürüm, normal Agent, uygulama şema geçişi veya lisans doğrulayıcı çalışmadığında kurtarma kullanılabilir kalmalıdır. Karışık ya da doğrulanmamış uygulama durumu normal yönetimi engelleyebilir; bağımsız kurtarma yolunu ortadan kaldıramaz.
+- Aday sürüm ve kurtarma uyumluluğu doğrulanana kadar son doğrulanmış kullanılabilir durum ile kurtarma malzemesi korunur. Temizlik bu kanıttan sonra gelir.
+- Otomatik onarım, kabul edilen işlemin kuralları belli ve tekrarlandığında ek etki yaratmayan devamı veya telafisidir. Eksik kanıt uydurmaz, sahibinin sonraki değişikliklerini geri almaz, doğrulamayı atlamaz veya sonucu belirsiz ikinci bir değişiklik başlatmaz.
 
-### 3. Hız
-- Panel API yanıt hedefi: < 100 ms. Arayüz etkileşimleri: anında.
-- Kurulum hedefi: **60 saniye** (v0.1 `install.sh`'ı teslim etti; hedef korunuyor).
-- Tek statik binary; dış bağımlılık eklemek yasaktır (bu bir özelliktir — koruruz).
+### 3. Gerçeği yansıtan durum ve ortak sözleşmeler
+- Sahibin niyeti, yetki, yayımlanmış yapılandırma, gözlem, yürütme, doğrulama ve kurtarma ayrı tutulur. Bilinmeyen; yok, başarısız, süresi dolmuş veya tamamlanmış değildir.
+- Her kalıcı çıktının sürümlü tek bir üretim/okuma/geri yükleme sözleşmesi ve açık desteklenen geçişleri vardır. Kanıt rolüne göre karşılaştırılır; geçerli yayımlama kaydın yalnız bir bölümünü ilerletiyorsa bütün kayıt eşitliği aranmaz.
+- Tamamlanmış kurulum adımı geçmiş yürütmenin kanıtıdır; güncel sağlık kanıtı değildir. Mevcut neden, sorumlu kişi, sonraki eylem ve aynı işlemin nasıl süreceği açıklanır (D-024).
+- Tarayıcı yetkili işlem durumunu gözlemler. Yenileme, yeniden bağlanma ve zaman aşımı ikinci işi yetkilendirmez veya tamamlanma anlamına gelmez.
 
-### 4. Esneklik
-- Her şey önce API'dir; arayüz onun tüketicilerinden yalnızca biridir.
-- Servisler modülerdir: müşteri istediğini, istediği sürümde kurar.
-- Veri asla rehin tutulmaz: yedekler standart biçimde (tar.gz, SQL dump), dışa aktarım her zaman mümkün.
+### 4. Sadelik
+- Her olağan işin kullanıcı için tek ve açık yolu olur. Tarayıcı ile desteklenen kullanıcı kurtarması aynı işlem sözleşmesini paylaşır; tek ekran, kurtarmanın tek arıza noktası olamaz.
+- Özellik somut kullanıcı ihtiyacı için eklenir. Kabul edilen kapsam içinde güvenli varsayılanlar kullanılır; gelişmiş seçimler gerektiğinde gösterilir.
+- Kullanılmayan hizmetlerin özel menüleri arayüzü doldurmaz. Kullanıcının işi tamamlamasına yardımcı olan kurulum keşfi, gerçek çakışmalar ve kurtarma eylemleri görünür kalır.
+- Olağan işler panelden yapılabilmelidir. Sahibin kendi araçlarıyla yönetimi ve kurtarması desteklenir; elle kurtarma, kurtarmayı yasaklama gerekçesi değil otomasyon açığının kanıtıdır.
 
-### Dürüstlük kuralı
-Önceki dönemin hatası tekrarlanmayacak: **"çalışıyor" ≠ "bitti".**
-İş ancak üçü birdenle biter: test + güvenlik incelemesi + dokümantasyon.
-Her sürümün ölçülebilir çıkış ölçütü vardır; karşılanmadan sonrakine geçilmez.
+### 5. Kanıtla ölçülen hız
+- API yanıtında 100 ms altı, hızlı arayüz tepkisi ve asgari kurulumda 60 saniye hedefleri korunur. Bir hedefin karşılandığı söylenmeden ölçülen platform ve kapsam kaydedilir.
+- Çalışma ortamı küçük tutulur. Mevcut Panel/Agent yetki ayrımı, hizmetlerin kendi yaşam döngüsü ve bağımsız kurtarma mekanizması tek binary söyleminden önce gelir.
+- Hız; doğrulamayı, kurtarılabilir kontrol noktalarını veya arıza testlerini atlamayı haklı çıkarmaz.
+
+### 6. Esneklik ve bağımsızlık
+- Türleri belirli API'ler, modüler hizmetler ve standart protokoller kullanılır; isteğe bağlı otomasyon, hizmetin çalışmasından ayrıdır.
+- Yedekler ve dışa aktarımlar standart biçimdedir. Yönetim yazılımı sahibinin verisinin sahibi olamaz veya veriyi rehin tutamaz.
+- Standart DNS çoğaltması karşı tarafta panel veya lisans gerektirmez. Ayrı yetkilendirilen uzaktan kayıt yönetimi isteğe bağlıdır.
+- Kurulu panel güncellemelerini yalnız kullanıcı CelikPanel'in güncelleme ekranından başlatır. Yayınlama, tanı ve desteklenen geri alma asistana kurulum izni vermez.
+
+### Dürüstlük ve sürüm kabul kuralı
+
+Test, güvenlik incelemesi ve dokümantasyon gereklidir. Yaşam döngüsü desteği ayrıca
+geçici ve gerçek sistem hizmetleri kullanan ortamlarda eksiksiz arıza geçiş kanıtı
+ister: gerçek önceki sürüm durumu, başarısız güncelleme, fiilen otomatik geri yükleme,
+kurtarmanın kesilmesi/yeniden başlatma, sahibin değişikliklerinin korunması,
+yönetim kurtarması ve hizmet kontrolleri. Bileşen testleri, taklit servis yöneticisi
+ve tek başına başarılı kurulum bu sözleşmeyi kanıtlamaz.
+
+Her yaşam döngüsü değişikliği; etkilenen ilkeyi, şema/sürüm geçişini, kurtarma
+davranışını ve kabul kanıtını adlandırır. Ölçülmemiş veya sonucu belirsiz işler
+açık kalır. Dar kapsamlı bir olay düzeltmesi sınırları belirtilerek yayımlanabilir;
+bu, temel P0 işlerini kapatmaz veya ilgisiz özellik genişlemesini haklı çıkarmaz.
+Dayanıklı çalışma iddiasından önce D-025'in kabul matrisi uygulanıp geçmelidir.
+Sistemin mümkün olan her arızayı kendiliğinden gidereceği vaat edilmez.
+
 
 ---
 
 ## Sürüm Merdiveni
+
+Aşağıdaki sürüm merdiveni önceki aşamaların tarihsel kaydıdır. Geçmiş başarılı
+kurulum sonuçları ve mimari değerlendirmeler, 14 Eylül dayanıklılık sözleşmesinin
+karşılandığını göstermez; bu kabul çalışması açık kalmaktadır.
 
 Varış noktası: **v1.0 — bir yabancının temiz VPS'e dakikalar içinde kurabildiği,
 üzerinde gerçek hosting işi yürütebildiği ve güvenebildiği panel.** Aşağıdaki her şey o yolun taşı.

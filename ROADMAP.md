@@ -1,46 +1,76 @@
 # CelikPanel Roadmap
 
-*Last updated: August 29, 2026 · [Türkçe](ROADMAP.tr.md)*
+*Last updated: September 14, 2026 · [Türkçe](ROADMAP.tr.md)*
 
 ---
 
 ## The Constitution — Every Decision's Filter
 
-Every feature, every commit, every design decision passes these four filters.
-Work that fails one is not done, is postponed, or is simplified.
+Every feature, commit and design decision must satisfy these requirements.
+They are obligations, not a claim that the present implementation meets them.
+The [resilience contract and source audit](docs/RESILIENCE-CONTRACT.md) records
+open P0 work, implementation order and the evidence required to close it (D-025).
 
-### 1. Security is the default
-- No feature ships without authentication.
-- The default configuration is always the most secure one (localhost bind, token, least privilege).
-- Passwords/tokens come from `crypto/rand` only. SQL is parameterized only.
-- Only the Panel can reach the root-privileged Agent — nothing else.
+### 1. Security and owner authority
+- Authenticate management access and authorize each action for its exact resources. Use least privilege, local authenticated IPC, parameterized SQL and `crypto/rand` for secrets.
+- The unprivileged Panel and privileged Agent remain separate. Normal privileged automation uses the authorized Agent API; supported owner recovery has a separate narrow contract. Neither an AI planner nor a recovery UI gains unrestricted root execution.
+- The server owner retains native service administration. Detect owner changes and reconcile explicitly; never silently overwrite them to match cached intent (D-022).
+- When evidence is uncertain, block the affected unsafe mutation. Preserve authenticated diagnostics and supported recovery without granting unverified privileges.
 
-### 2. Simplicity (the Google principle)
-While AltaVista tried to be a portal, Google won with a single search box.
-cPanel/Plesk are today's AltaVista: crowded, slow, intimidating.
-- Every job has **one obvious way**. If there are two, one gets deleted.
-- Before adding a feature, ask: *"What do we lose by not adding it?"* If the answer isn't clear, it isn't added.
-- A service that isn't installed is **invisible** in the UI. No empty screens, no disabled menus.
-- Smart defaults: do the right thing without asking; an "advanced" section for the 5% who want knobs.
+### 2. Continuity and recoverability
+- Panel outage, license loss or removal must not stop hosted workloads or their native renewal, scheduling and boot mechanisms. Remaining dependencies must be eliminated and tested before claiming independence.
+- Every mutation defines affected resources, read-only preflight, durable checkpoints, bounded retry/recovery and terminal proof. Permission or ownership normalization is also a mutation.
+- Recovery must remain usable when the candidate release, ordinary Agent, application migration or license verifier fails. Mixed or unverified application state may block normal management; it must not erase the independent recovery path.
+- Preserve the last verified usable state and recovery material until the candidate and its recovery compatibility are verified. Cleanup follows that proof.
+- Automatic repair is a deterministic, idempotent continuation or compensation of the accepted operation. It does not invent missing evidence, undo later owner changes, bypass validation or launch a second unknown mutation.
 
-### 3. Speed
-- Panel API response target: < 100 ms. UI interactions: instant.
-- Install target: **60 seconds** (v0.1's `install.sh` delivered it; the target stands).
-- One static binary; adding external dependencies is forbidden (this is a feature — we protect it).
+### 3. Truthful state and shared contracts
+- Separate owner intent, authority, published configuration, observation, execution, verification and recovery. Unknown is not absent, failed, expired or completed.
+- Each durable artifact has one versioned producer/reader/restore contract with explicit supported transitions. Compare evidence according to its role; do not use whole-record equality where legitimate publication advances only part of a record.
+- A completed installation step is historical execution evidence, not proof of present health. Report the current reason, responsible actor, next action and how the same operation resumes (D-024).
+- The browser observes authoritative operation state. Refresh, reconnect and timeout never authorize duplicate work or imply completion.
 
-### 4. Flexibility
-- Everything is API-first; the UI is just one of its consumers.
-- Services are modular: the customer installs what they want, at the version they want.
-- Data is never held hostage: backups in standard formats (tar.gz, SQL dump), export always possible.
+### 4. Simplicity
+- Give each routine task one clear user path. Share the underlying operation contract across the browser and supported owner recovery; a single screen is not a single point of recovery failure.
+- Add features only for a concrete user need. Use safe defaults within the accepted scope and reveal advanced choices when needed.
+- Keep unused service-specific navigation quiet. Keep installation discovery, actual conflicts and recovery actions visible when they help the user complete the task.
+- Normal operation should be possible through the panel. Native owner administration and recovery remain supported; a manual rescue is evidence of an automation gap, not a reason to prohibit rescue.
 
-### The honesty rule
-The previous era's mistake will not repeat: **"works" ≠ "done".**
-Work is finished only with all three: tests + security review + documentation.
-Every release has a measurable exit criterion; the next one doesn't start until it's met.
+### 5. Speed with evidence
+- Targets remain API response under 100 ms, responsive interaction and a 60-second minimal installation. Record the measured platform and scope before claiming any target achieved.
+- Keep the runtime small. The existing Panel/Agent privilege split, native workload services and an independent recovery mechanism take precedence over a one-binary slogan.
+- Speed does not justify skipping validation, recoverable checkpoints or fault testing.
+
+### 6. Flexibility and independence
+- Use typed APIs, modular services and standard protocols; optional automation is separate from service operation.
+- Backups and exports use standard formats. Management software does not own or hold the owner's data hostage.
+- Standard DNS replication does not require a remote panel or its license. Separately authorized remote record management is optional.
+- Installed-panel updates are initiated only by the owner in CelikPanel's update UI. Publication, diagnosis and supported rollback do not authorize assistant-side installation.
+
+### The honesty and release rule
+
+Tests, security review and documentation remain necessary. Lifecycle support
+also requires complete fault-transition evidence in disposable native environments:
+real previous-release state, failed update, actual automatic restoration, recovery
+interruption/reboot, preserved owner changes, management recovery and workload
+probes. Component tests, mocked service managers and a successful installation
+alone do not prove that contract.
+
+Every lifecycle change names its affected invariant, schema/version transition,
+recovery behavior and acceptance evidence. Unmeasured or inconclusive results stay
+open. A narrowly scoped incident correction may ship with its limits explicit;
+it does not close foundational P0 work or justify unrelated feature expansion.
+The exit matrix in D-025 must be implemented and passed before claiming resilient
+operation. No system is promised to recover autonomously from every possible fault.
+
 
 ---
 
 ## The Version Ladder
+
+The version ladder below is a historical record of earlier milestones. Its past
+golden-path results and architecture assessments do not establish compliance
+with the September 14 resilience contract; that acceptance remains open.
 
 Destination: **v1.0 — a panel a stranger can install on a clean VPS in minutes,
 run a real hosting business on, and trust.** Everything below is a stone on that road.
