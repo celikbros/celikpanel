@@ -91,3 +91,57 @@ A subsequent independent read-only HTTPS login request returned HTTP 200 with
 certificate verification successful. This confirms panel access, not an audit
 of hosted workloads. Previous incident evidence, rescue snapshots and TLS files
 were outside the recovery tool's mutation scope.
+
+## Alpha79 follow-up: BIND publication and automatic rollback
+
+The owner initiated Alpha79 operation `971510e51549422a7cd8c4878dc714af` on
+September 14. At 04:31:58 UTC, the updater rejected `BIND state and ownership
+receipts disagree` after installing and verifying the target artifacts. The
+subsequent recovery service repeatedly failed with `recovery transaction
+descriptor owns an unexpected lock`. Historical failed systemd trigger
+candidates in the journal do not prove concurrent updates.
+
+The supplied current BIND state and acquisition ownership have the same engine,
+epoch 1, primary role, local/peer IPs, source revision and mutation identity.
+Only generation and primary catalog serial differ: current state records
+`ea6ea68b1b7caa4fa9b0a4260e567842353f3667aa5ad4df98ba5b70cb1f1469`
+and serial 2, while acquisition ownership records
+`b19ee90a81d87342cba30751f1aede6342706643c243130f37c3f164006926c7`
+and serial 1. Ordinary zone publication advances those current-state fields
+without replacing engine acquisition evidence. The updater incorrectly required
+complete equality and then selected the historical acquisition generation.
+A regression using the actual zone renderer and state writer reproduces the
+original rejection. The corrective code preserves acquisition evidence and
+requires the current generation and runtime configuration to verify.
+
+Automatic rollback independently failed because Alpha78's fdinfo field-parsing
+fix covered `update.sh` but left `rollback.sh` using a single-space substring.
+A real inherited Linux exclusive-flock test against Alpha79's rollback
+entrypoint reproduces `exclusive status=41 expected=0`. The local fix parses
+fields on both entrypoints while retaining single-record, inode identity and
+independent exclusion checks. Shared, unlocked, closed, wrong-identity and
+foreign-owner descriptors remain rejected.
+
+### Confirmed owner-operated Alpha79 rollback
+
+This was a post-apply failure, so the earlier pre-mutation abort tools were not
+applicable. The owner used the standard rollback entrypoint in the retained,
+verified Alpha79 release:
+
+- Release: `/var/backups/celikpanel/releases/f3390addc85b-1f7e1f714db463724f795ebb`
+- Snapshot: `/var/backups/celikpanel/update-snapshots/20260914T043142Z-from-unknown-to-f3390addc85bbe92a0cc865448d9bb366e6b980a-db8813bd340936d749913d55dbcda68d`
+
+Normal owner invocation acquires its own transaction lock and avoids the broken
+inherited-lock parser. It still verifies the retained release, complete snapshot,
+matching transaction and idle ledger before restoration. The original Alpha79
+entrypoint's normal acquisition and busy-lock refusal were tested locally before
+the command was supplied. No retained signed file or transaction marker was
+manually edited.
+
+At 05:53:39 UTC, the owner output reported `Rollback complete`, `Panel: active`
+and `Agent: active`, after database, artifacts, TLS and lifecycle restoration.
+An independent read-only request to `https://frankfurt.celikhost.com:2083/login`
+then returned HTTP 200 with certificate validation successful at `72.62.38.15`.
+This confirms management access; it does not establish hosted workload health
+or correct the remaining BIND receipt-consumer defect. No new update was installed
+by this recovery. Permanent fixes remain local until separately published.

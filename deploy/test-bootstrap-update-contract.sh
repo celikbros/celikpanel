@@ -2401,7 +2401,8 @@ require_literal "$UPDATE" 'mutation lock pathname disappeared before controlled 
 require_literal "$UPDATE" 'mutation lock was not handed back after controlled agent start; update refused'
 reject_literal "$UPDATE" 'flock -w'
 reject_literal "$UPDATE" 'unset MUTATION_LOCK_IDENTITY'
-require_regex_count "$UPDATE" '^[[:space:]]*acquire_release_mutation_lock$' 5
+# Includes the read-only BIND preflight before the durable quiesce barrier.
+require_regex_count "$UPDATE" '^[[:space:]]*acquire_release_mutation_lock$' 6
 require_regex_count "$UPDATE" '^[[:space:]]*acquire_release_mutation_lock handoff$' 2
 require_count "$UPDATE" 'cannot hand the mutation lock to' 2
 require_active_agent_handoff_blocks "$UPDATE" 2

@@ -130,6 +130,11 @@ jobs:
           sudo env PATH=$PATH GOTOOLCHAIN=local go test ./cmd/agent
           -run '^TestPanelTLSSnapshot(PreservesRealIssuedReceiptAfterRenewal|RejectsUnsafeIssuedReceipt)$'
           -count=1
+      - name: Verify real BIND publication and read-only upgrade preflight
+        run: >-
+          sudo env PATH=$PATH GOTOOLCHAIN=local go test ./cmd/agent
+          -run 'TestBINDUpdatePreflight|TestSignedUpdateBINDPreparationAfterRealZonePublication|TestFinalizedBINDOwnershipAfterRealZonePublication|TestBINDPublicationOwnership'
+          -count=1
       - run: bash deploy/test-abort-pre-mutation-active-update-contract.sh
       - run: sudo bash deploy/test-abort-pre-mutation-active-update-behavior.sh
       - run: bash deploy/test-recover-active-update-database-contract.sh

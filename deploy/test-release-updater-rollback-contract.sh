@@ -37,6 +37,19 @@ grep -Fq 'rollback intentionally retains them for alpha35 compatibility' "$updat
     || fail 'update does not declare monotonic BIND root hardening rollback compatibility'
 grep -Fq -- '--prepare-bind-generation-root-under-external-lock' "$update" \
     || fail 'signed updater does not prepare an exact managed legacy BIND root'
+# The real target probe runs before a durable barrier or coordinator freeze.
+# It repeats under the held lock so a preflight-to-freeze race cannot pass.
+# Gerçek hedef kontrolü kalıcı engelden önce, ardından eldeki kilit altında çalışır.
+bind_preflight_line=$(line_of "$update" '    preflight_bind_before_quiesce')
+quiesce_line=$(line_of "$update" '    transaction_phase=quiesce-publishing')
+bind_recheck_line=$(line_of "$update" '    fail_before_active "managed BIND state changed before coordinator freeze"')
+freeze_line=$(line_of "$update" '    freeze_release_service_cgroup celikpanel-panel.service panel panel_frozen')
+[[ -n "$bind_preflight_line" && -n "$quiesce_line" && -n "$bind_recheck_line" && -n "$freeze_line" &&
+   "$bind_preflight_line" -lt "$quiesce_line" && "$quiesce_line" -lt "$bind_recheck_line" &&
+   "$bind_recheck_line" -lt "$freeze_line" ]] ||
+    fail 'BIND compatibility must be checked before quiesce and again before freeze'
+grep -Fq -- '--check-pre-ledger-bind-signed-update-compatible-under-external-lock' "$update" ||
+    fail 'BIND preflight lacks the supported pre-ledger idle proof'
 if grep -Fq 'dpkg-statoverride --remove' "$rollback"; then
     fail 'rollback removes monotonic BIND root hardening'
 fi

@@ -836,11 +836,18 @@ func prepareBINDGenerationRootForSignedUpdateWithOps(
 		managedStateExists = true
 	}
 	if ownershipExists {
-		if managedStateExists && ownership != managedState {
-			return errors.New("BIND state and ownership receipts disagree")
+		if managedStateExists {
+			if ownership != managedState &&
+				!bindPublicationPreservesEngineOwnership(ownership, managedState) {
+				return errors.New("BIND state and ownership receipts disagree")
+			}
+			// Keep the current publication state. The ownership receipt records
+			// engine acquisition; zone publication advances the generation. The
+			// actual tree and runtime configuration are proved below.
+		} else {
+			managedState = ownership
+			managedStateExists = true
 		}
-		managedState = ownership
-		managedStateExists = true
 	}
 	if installExists && managedStateExists {
 		return errors.New(

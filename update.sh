@@ -97,6 +97,31 @@ run_update_idle_probe() {
     return 1
 }
 
+# The signed target reads current BIND compatibility under the common mutation
+# lock. It cannot publish, repair, harden, or rewrite DNS configuration.
+# İmzalı hedef, mevcut BIND uyumluluğunu ortak mutasyon kilidi altında okur;
+# DNS yapılandırmasını yayımlayamaz, onaramaz veya yeniden yazamaz.
+check_bind_update_compatibility() {
+    local probe=--check-bind-signed-update-compatible-under-external-lock
+    [[ $BOOTSTRAP_PRE_LEDGER -ne 1 ]] ||
+        probe=--check-pre-ledger-bind-signed-update-compatible-under-external-lock
+    run_update_idle_probe env -i PATH="$PATH" HOME=/root LC_ALL=C \
+        CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" \
+        CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+        CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+        "$PREFLIGHT_AGENT" "$probe"
+}
+
+preflight_bind_before_quiesce() {
+    prepare_runtime_mutation_lock_dir
+    acquire_release_mutation_lock
+    if ! check_bind_update_compatibility; then
+        release_release_mutation_lock || die "cannot release mutation lock after BIND preflight"
+        die "managed BIND compatibility check failed before stopping panel services"
+    fi
+    release_release_mutation_lock || die "cannot release mutation lock after BIND preflight"
+}
+
 report_update_failure() {
     local status=$1 marker_phase=$2 state=recovery_required code=update_failed reason detail
     [[ "$status" -ne 0 ]] || return 0
@@ -2495,6 +2520,11 @@ elif [[ $resume_quiescing_update -eq 1 ]]; then
         || die "quiesce recovery could not resume coordinators and remove the exact phase"
     die "previous quiesce phase was safely aborted and cleaned; rerun the exact trusted update"
 else
+    # Reject incompatible installed DNS while the panel is still available and
+    # before a durable start barrier exists. Recheck under the final lock below.
+    # Uyumsuz DNS durumunu panel erişilebilirken, kalıcı başlangıç engelinden
+    # önce reddet. Aşağıda son kilit altında tekrar doğrula.
+    preflight_bind_before_quiesce
     mkdir -m 0700 -- "$stage_root"
     chown root:root -- "$stage_root"
     mkdir -m 0700 -- "$tmp_snap"
@@ -2623,6 +2653,10 @@ else
         run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock; then
         fail_before_active "agent/package state changed before freeze"
     fi
+fi
+
+if ! check_bind_update_compatibility; then
+    fail_before_active "managed BIND state changed before coordinator freeze"
 fi
 
 if [[ "$transaction_phase" == quiesce ]]; then
