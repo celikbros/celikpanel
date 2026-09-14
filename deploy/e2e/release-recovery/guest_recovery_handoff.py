@@ -65,7 +65,7 @@ def properties(unit):
 
 
 def helper_argv(identity, operation, cleanup=False):
-    argv = ['python3', '-I', str(fault.PRIVATE_ROOT / 'guest_recovery_fault.py'), '--execute']
+    argv = ['/usr/bin/python3', '-I', str(fault.PRIVATE_ROOT / 'guest_recovery_fault.py'), '--execute']
     for flag, value in (('lab-nonce', identity['nonce']), ('vm-uuid', identity['vm_uuid']),
                         ('cell-id', identity['cell_id']), ('node', identity['node']), ('operation-id', operation)):
         argv.extend(('--' + flag, value))

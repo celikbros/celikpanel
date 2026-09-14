@@ -1,4 +1,7 @@
 ﻿import copy
+import os
+import tempfile
+from unittest.mock import patch
 import importlib.util
 from pathlib import Path
 import sys
@@ -85,6 +88,37 @@ class KillTests(unittest.TestCase):
             changed=dict(props);changed[key]=value
             with self.subTest(key=key),self.assertRaises(s.MissedCheckpoint):s.validate_worker_fields(changed,op)
         with self.assertRaises(s.probe.ProbeError):s.unit_name('../bad')
+    def test_timer_noop_requires_exact_updater_exclusive_lock(self):
+        native=FakeNative();native.state['recovery']['ActiveState']='active'
+        for proof in (None,False,'true'):
+            native.state['update_lock_exclusive']=proof
+            with self.assertRaises(s.MissedCheckpoint):s.active_snapshot(native.state,'fixture')
+        native.state['update_lock_exclusive']=True
+        self.assertEqual(s.active_snapshot(native.state,'fixture'),'fixture')
+        result,events=self.run_case(native)
+        self.assertEqual(result,0);self.assertTrue(events[-1]['kill_sent'])
+
+    @unittest.skipUnless(sys.platform=='linux' and getattr(os,'geteuid',lambda:-1)()==0,'real kernel flock evidence')
+    def test_real_kernel_fd_exclusive_shared_open_and_foreign_holder(self):
+        import fcntl, subprocess
+        with tempfile.TemporaryDirectory() as directory:
+            lock=Path(directory)/'transaction.lock';lock.touch(mode=0o600)
+            with lock.open('rb') as held:
+                self.assertFalse(s.process_owns_exclusive_lock(Path('/proc/self'),lock))
+                fcntl.flock(held,fcntl.LOCK_SH)
+                self.assertFalse(s.process_owns_exclusive_lock(Path('/proc/self'),lock))
+                fcntl.flock(held,fcntl.LOCK_EX)
+                self.assertTrue(s.process_owns_exclusive_lock(Path('/proc/self'),lock))
+                fcntl.flock(held,fcntl.LOCK_UN)
+                child=subprocess.Popen([sys.executable,'-c',"import fcntl,sys;f=open(sys.argv[1],'rb');fcntl.flock(f,fcntl.LOCK_EX);print('held',flush=True);sys.stdin.read()",str(lock)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+                try:
+                    self.assertEqual(child.stdout.readline().strip(),'held')
+                    self.assertFalse(s.process_owns_exclusive_lock(Path('/proc/self'),lock))
+                    self.assertTrue(s.process_owns_exclusive_lock(Path('/proc')/str(child.pid),lock))
+                finally:child.communicate('',timeout=5)
+            lock.chmod(0o644)
+            self.assertFalse(s.process_owns_exclusive_lock(Path('/proc/self'),lock))
+
     def test_snapshot_change_and_recovery_refused(self):
         native=FakeNative()
         with self.assertRaises(s.MissedCheckpoint):s.active_snapshot(native.state,'other')

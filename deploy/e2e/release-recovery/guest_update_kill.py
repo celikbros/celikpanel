@@ -63,9 +63,34 @@ def active_snapshot(state, expected=None):
         raise MissedCheckpoint("active-update-checkpoint-missed")
     if expected is not None and marker.get("snapshot") != expected:
         raise MissedCheckpoint("snapshot-identity-changed")
-    if state["recovery"]["ActiveState"] in shared.ACTIVE:
+    if state["recovery"]["ActiveState"] in shared.ACTIVE and state.get("update_lock_exclusive") is not True:
         raise MissedCheckpoint("recovery-already-started")
     return marker["snapshot"]
+
+
+def process_owns_exclusive_lock(proc, lock):
+    """Read a kernel FD lock record; busy or merely-open descriptors never suffice."""
+    info = lock.lstat()
+    if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_gid != 0
+            or info.st_nlink != 1 or stat.S_IMODE(info.st_mode) != 0o600 or info.st_size):
+        return False
+    before = process_start(probe.bounded_file(proc / 'stat', 16384, virtual=True).decode())
+    descriptors = list((proc / 'fdinfo').iterdir())
+    if len(descriptors) > 512: return False
+    for entry in descriptors:
+        if not entry.name.isdigit(): continue
+        try:
+            held = (proc / 'fd' / entry.name).stat()
+            if (held.st_dev, held.st_ino) != (info.st_dev, info.st_ino): continue
+            raw = probe.bounded_file(entry, 16384, virtual=True).decode()
+            records = [line.split() for line in raw.splitlines() if line.startswith('lock:')]
+            if (len(records) != 1 or len(records[0]) != 9 or records[0][2:5] != ['FLOCK', 'ADVISORY', 'WRITE']
+                    or records[0][-2:] != ['0', 'EOF']): continue
+            after = lock.lstat()
+            if (after.st_dev, after.st_ino, after.st_uid, after.st_gid, after.st_mode, after.st_nlink, after.st_size) != (info.st_dev, info.st_ino, info.st_uid, info.st_gid, info.st_mode, info.st_nlink, info.st_size): return False
+            return process_start(probe.bounded_file(proc / 'stat', 16384, virtual=True).decode()) == before
+        except (FileNotFoundError, ProcessLookupError): continue
+    return False
 
 
 class Native:
@@ -91,8 +116,36 @@ class Native:
         return values
 
     def observe(self):
-        return {"worker": self.properties(), "transaction": shared.transaction(),
-                "recovery": shared.unit_state("celikpanel-release-recovery.service")}
+        worker = self.properties()
+        state = {"worker": worker, "transaction": shared.transaction(),
+                 "recovery": shared.unit_state("celikpanel-release-recovery.service")}
+        if state["recovery"]["ActiveState"] in shared.ACTIVE:
+            state["update_lock_exclusive"] = self.owns_transaction_lock(worker)
+        return state
+
+    def owns_transaction_lock(self, worker):
+        # A timer may run a lock-busy recovery no-op while the updater owns the
+        # transaction. Only its exact unit cgroup's actual exclusive FD proves
+        # this distinction; a foreign holder or global busy result does not.
+        group = '/system.slice/' + self.unit
+        if (worker.get('Id') != self.unit or worker.get('ControlGroup') != group
+                or worker.get('ActiveState') != 'active'): return False
+        try:
+            raw = probe.bounded_file(Path('/sys/fs/cgroup' + group) / 'cgroup.procs', 16384, virtual=True).decode()
+            pids = raw.split()
+            if not pids or len(pids) > 1024 or any(not pid.isdigit() for pid in pids): return False
+            for pid in pids:
+                proc = Path('/proc') / pid
+                try:
+                    membership = probe.bounded_file(proc / 'cgroup', 4096, virtual=True).decode()
+                    if membership != '0::' + group + '\n': continue
+                    if not process_owns_exclusive_lock(proc, shared.TRANSACTIONS / 'transaction.lock'): continue
+                    if probe.bounded_file(proc / 'cgroup', 4096, virtual=True).decode() != membership: return False
+                    after = self.properties()
+                    return all(after.get(key) == worker.get(key) for key in ('Id', 'MainPID', 'InvocationID', 'ControlGroup', 'ActiveState'))
+                except (FileNotFoundError, ProcessLookupError): continue
+        except (OSError, probe.ProbeError): return False
+        return False
 
     def installed(self, tick=lambda: None):
         try:
@@ -164,7 +217,12 @@ class Native:
         spec = importlib.util.spec_from_file_location("update_recovery_handoff", Path(__file__).with_name("guest_recovery_handoff.py"))
         helper = importlib.util.module_from_spec(spec); spec.loader.exec_module(helper)
         self.recovery_handoff_module = helper
-        self.recovery_handoff_proof = helper.arm(self.args, identity, proof, tick, self.revalidate)
+        try:
+            self.recovery_handoff_proof = helper.arm(self.args, identity, proof, tick, self.revalidate)
+        except helper.fault.Unavailable as exc:
+            code = str(exc)
+            if not re.fullmatch(r'[a-z][a-z0-9-]{0,95}', code): code = 'observation-unavailable'
+            raise MissedCheckpoint('recovery-handoff-' + code) from None
         return self.recovery_handoff_proof
 
     def cancel_recovery_handoff(self):

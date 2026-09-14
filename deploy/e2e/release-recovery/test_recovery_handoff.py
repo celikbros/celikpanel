@@ -41,6 +41,9 @@ class HandoffTests(unittest.TestCase):
     def test_launch_has_exact_unit_and_identity_bound_execstoppost(self):
         argv = h.launch_argv(ID, OP)
         self.assertIn('--unit=celikpanel-lab-recovery-fault-'+OP+'.service', argv)
+        self.assertEqual(h.helper_argv(ID,OP)[0],'/usr/bin/python3')
+        self.assertIn('/usr/bin/python3',argv)
+        self.assertNotIn('python3',argv)
         cleanup = next(value for value in argv if value.startswith('--property=ExecStopPost='))
         self.assertIn('--cleanup',cleanup);self.assertIn('--operation-id '+OP,cleanup);self.assertIn(ID['nonce'],cleanup)
         self.assertNotIn('/usr/bin/systemctl thaw celikpanel-release-recovery.service',cleanup)
