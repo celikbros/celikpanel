@@ -59,7 +59,11 @@ jobs:
         run: >-
           go test ./internal/hostcmd -count=1 -v
           -run 'TestEveryPrivilegedLaunchIsNamedAndJustified|TestTheHiddenStderrIsReadInOnePlace|TestRepeatingACommandsOwnWordsAlwaysStatesWhy'
-      - run: go test ./... -count=1
+      # The full panel package has >1,200 tests with real password hashing.
+      # Hosted-runner evidence hit Go's aggregate 10-minute default while the
+      # current test was only 1 second old. Keep all tests and crypto parameters;
+      # use an explicit bounded package budget (race shards keep their own limits).
+      - run: go test ./... -count=1 -timeout=20m
       - name: Race-test security and persistence boundaries
         run: >-
           go test -race -count=1 -timeout=8m
