@@ -167,9 +167,12 @@ class CompletionNative:
             listener.close()
             if exc.errno == errno.EADDRINUSE: return False
             raise
-        if self.native.worker_identity() != worker or not self.native.owns_transaction_lock(self.native.properties()):
+        try:
+            if self.native.worker_identity() != worker or not self.native.owns_transaction_lock(self.native.properties()):
+                raise kill.MissedCheckpoint('completion-worker-changed-during-port-admission')
+        except BaseException:
             listener.close()
-            raise kill.MissedCheckpoint('completion-worker-changed-during-port-admission')
+            raise
         self.socket = listener
         return True
 

@@ -212,6 +212,12 @@ class PortTests(unittest.TestCase):
         self.binder.return_value.close.assert_called_once()
         self.assertIsNone(self.native.socket)
 
+    def test_post_bind_observation_error_also_closes_listener(self):
+        self.native.native.worker_identity = mock.Mock(side_effect=[{'pid': 42}, OSError()])
+        with self.assertRaises(OSError): self.native.maybe_hold_port(self.state)
+        self.binder.return_value.close.assert_called_once()
+        self.assertIsNone(self.native.socket)
+
     def test_occupied_port_waits_without_reuseport_or_foreign_signal(self):
         self.binder.return_value.bind.side_effect = OSError(s.errno.EADDRINUSE, 'already held')
         self.assertFalse(self.native.maybe_hold_port(self.state))
