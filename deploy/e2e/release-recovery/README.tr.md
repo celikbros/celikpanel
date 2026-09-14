@@ -249,6 +249,56 @@ python3 deploy/e2e/release-recovery/arm_update_kill.py --work-root "$LAB_ROOT" -
 Arıza kanıtı toplama, tam konuk/işlem olaylarını ve birim durumunu korur. Konuğu
 onarmaz, arızayı tekrar kurmaz veya geri alma kabulünün tamamlandığını ilan etmez.
 
+### Yayımlanmamış commit adayı: gerçek kurtarma regresyonu
+
+`local_candidate_trial.py`, yayımlanmamış yerel derlemeyi mevcut
+`bootstrap-prebuilt-update.sh` giriş noktası ve korunan sürümün gerçek kurtarma
+betiği üzerinden sınar. Yukarıdaki gerçek Alpha75 kurulumu ve hazırlama işlemleri
+bulunan yeni, kaydedilmiş bir VM gerektirir. Aynı konukta imzalı denemeyle
+birleştirmeyin. Arşivi temiz ve commit edilmiş kaynak dışa aktarımından `make dist`
+ile derleyin; tam SHA256 değerini verin. Denetleyici arşivin tüm envanterini ve
+paketlenmiş her sabit kaynak dosyasını o Git commit/ağaç kaydıyla doğrular.
+Bu yol açıkça **imzasız yerel derleme kanıtıdır**; imzalı Agent kabulünü sınamaz.
+Sürüm imzalamaz, anahtar tanıtmaz veya üretim güven politikasını değiştirmez.
+
+Varsayılan `require-unit-reload` kontrol noktası, koordinatör birimlerinde gerçek
+bir eski-yeni sürüm geçişi gerektirir. Örneğin başlangıç gözleminden önce eski
+test konuğunun koordinatör birimlerine zararsız bir sahip yorumu ekleyin,
+systemd yapılandırmasını yeniden yükleyip doğrulayın; yalnız test ortamındaki bu
+değişikliği `evidence/<node>/owner-unit-baseline.json` dosyasında saklayın.
+Hazırlık bu dosyanın özetini kaydeder. Hazırlıktan sonra yapay bir bekleyen yeniden
+yükleme durumu üretmeyin. Baytları aynı birimleri değiştirmemek doğru davranış
+olabilir; kontrol noktası oluşmazsa süreç öldürülmez. `--boundary candidate-installed`
+yalnız eski systemd görünümü regresyonunu kanıtladığı iddia edilmeyen, ayrıca
+açıklanmış bir denemede seçilmelidir.
+
+`CANDIDATE_ARCHIVE` ve `CANDIDATE_SHA256` değişkenlerini doğrulanmış yerel arşive
+ayarlayın. Her değişiklik komutunu bir kez çalıştırıp sonucunu inceleyin; tam arıza
+hazır olduğunu bildirdikten sonra gecikmeden başlatın:
+
+```sh
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode prepare --archive "$CANDIDATE_ARCHIVE" --archive-sha256 "$CANDIDATE_SHA256" --boundary require-unit-reload --execute
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode arm --execute
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode start --execute
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode collect
+```
+
+Hazırlık, dosyaları yerleştirmeden önce tam arşiv ve konuk niyetini kalıcı kaydeder.
+Arızayı kurmanın ve tek gerçek başlatmanın ayrı kalıcı deneme kayıtları vardır.
+Belirsiz yanıttan sonra yalnız aynı işlemin kanıtı toplanabilir; ikinci başlatma
+veya arızayı yeniden kurma yapılmaz. Toplama, yeni kanıt etiketleriyle tekrarlanabilir.
+Arıza; özgün Bash programını, tam bootstrap komutunu, PID/başlangıç sayacını,
+çalıştırma kimliğini ve cgroup'u doğrular. SIGKILL öncesinde o güncelleyiciyi
+dondurur; aday programları ve kurulu birim/yardımcıları kanıtlar; hem tam yedeği
+hem korunan aday envanterini doğrular. Gerçek systemd `OnFailure`, olağan kurtarmayı
+çağırır; test, geri alma betiğini taklitle değiştirmez veya olağan panel/Agent
+servislerine sinyal göndermez. Toplanan olaylar ve günlükler kanıttır; bunlardan
+otomatik olarak kurtarma PASS sonucu çıkarılmaz.
+
+Bu yol eklenirken `test_local_candidate_trial.py` içindeki 22 odaklı çevrimdışı
+test geçti. Bu sayı bütün CI kapsamını veya gerçek geri almayı kanıtlamaz;
+gerçek önce/kontrol noktası/kurtarma/sonra iş yükü kanıtları hâlâ gereklidir.
+
 Kanıtları koruyarak konukları durdurun:
 
 ```sh

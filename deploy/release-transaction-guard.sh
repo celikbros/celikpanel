@@ -1309,6 +1309,49 @@ release_txn_install_and_verify_unit_guards() {
     _release_txn_validate_start_helper "$source" "$helper_path"
 }
 
+# Prove the persistent guard files without consulting or changing the manager.
+# A verified interrupted unit publication may legitimately need daemon-reload;
+# file identity and loaded-manager identity are separate recovery predicates.
+release_txn_verify_unit_guard_files() {
+    local transaction_root=$1 runtime_root=$2 systemd_root=$3 helper_path=$4 inherited_fd=$5
+    local additional_agent_dropin=${6:-} unit directory dropin source entries expected_entries
+    release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd" || return 1
+    _release_txn_validate_safe_path "$runtime_root" || return 1
+    _release_txn_validate_safe_path "$systemd_root" || return 1
+    _release_txn_validate_safe_path "$helper_path" || return 1
+    local installed_runtime_preserve
+    installed_runtime_preserve=$systemd_root/celikpanel-agent.service.d/09-runtime-directory-preserve.conf
+    if [[ -e $installed_runtime_preserve || -L $installed_runtime_preserve ]]; then
+        _release_txn_validate_runtime_preserve_dropin "$installed_runtime_preserve" "$systemd_root" ||
+            return 1
+        [[ -z $additional_agent_dropin || $additional_agent_dropin == "$installed_runtime_preserve" ]] ||
+            { _release_txn_fail "runtime-directory preserve drop-in argument differs from installed identity"; return 1; }
+        additional_agent_dropin=$installed_runtime_preserve
+    elif [[ -n $additional_agent_dropin ]]; then
+        _release_txn_fail "requested runtime-directory preserve drop-in is absent"
+        return 1
+    fi
+    _release_txn_validate_root_directory "$systemd_root" 755 || return 1
+    source=$TRUSTED_RELEASE_ROOT/deploy/release-transaction-start-guard.sh
+    _release_txn_validate_start_helper "$source" "$helper_path" || return 1
+    for unit in celikpanel-agent.service celikpanel-panel.service; do
+        directory=$systemd_root/$unit.d
+        _release_txn_validate_dropin_dir "$directory" || return 1
+        dropin=$directory/10-release-transaction-guard.conf
+        _release_txn_validate_dropin_file \
+            "$dropin" "$transaction_root" "$runtime_root" "$helper_path" || return 1
+        expected_entries=10-release-transaction-guard.conf
+        if [[ $unit == celikpanel-agent.service && -n $additional_agent_dropin ]]; then
+            expected_entries=$'09-runtime-directory-preserve.conf\n10-release-transaction-guard.conf'
+        fi
+        entries=$(find "$directory" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort) ||
+            { _release_txn_fail "cannot inspect guard directory entries: $unit"; return 1; }
+        [[ $entries == "$expected_entries" ]] ||
+            { _release_txn_fail "guard directory contains unrecognized entries: $unit"; return 1; }
+    done
+    release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd"
+}
+
 # Verify an already-committed guard foundation without changing a byte,
 # directory, symlink, enablement state, or manager state.  Recovery paths use
 # this after a durable transaction marker exists.
@@ -1317,6 +1360,8 @@ release_txn_verify_unit_guards() {
     local systemctl_bin=$6 additional_agent_dropin=${7:-}
     local unit directory dropin loaded_dropins expected_dropins source reload
     local -a loaded_dropin_paths=() expected_dropin_paths=()
+    release_txn_verify_unit_guard_files \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$inherited_fd" "$additional_agent_dropin" || return 1
     release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd" || return 1
     _release_txn_validate_safe_path "$runtime_root" || return 1
     _release_txn_validate_safe_path "$systemd_root" || return 1
@@ -1363,6 +1408,89 @@ release_txn_verify_unit_guards() {
         [[ $reload == no ]] ||
             { _release_txn_fail "$unit has unconsumed guard changes"; return 1; }
     done
+}
+
+# Restoration-only proof; callers first bind a fully verified snapshot and target.
+release_txn_verify_unit_guards_for_restore() {
+    local transaction_root=$1 runtime_root=$2 systemd_root=$3 helper_path=$4 inherited_fd=$5
+    local systemctl_bin=$6 additional_agent_dropin=${7:-}
+    local unit directory dropin loaded_dropins expected_dropins source reload
+    local fragment condition expected_condition state main_pid control_pid any_reload=0
+    local -a loaded_dropin_paths=() expected_dropin_paths=()
+    release_txn_verify_unit_guard_files \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$inherited_fd" "$additional_agent_dropin" || return 1
+    release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd" || return 1
+    _release_txn_validate_safe_path "$runtime_root" || return 1
+    _release_txn_validate_safe_path "$systemd_root" || return 1
+    _release_txn_validate_safe_path "$helper_path" || return 1
+    local installed_runtime_preserve
+    installed_runtime_preserve=$systemd_root/celikpanel-agent.service.d/09-runtime-directory-preserve.conf
+    if [[ -e $installed_runtime_preserve || -L $installed_runtime_preserve ]]; then
+        _release_txn_validate_runtime_preserve_dropin "$installed_runtime_preserve" "$systemd_root" ||
+            return 1
+        [[ -z $additional_agent_dropin || $additional_agent_dropin == "$installed_runtime_preserve" ]] ||
+            { _release_txn_fail "runtime-directory preserve drop-in argument differs from installed identity"; return 1; }
+        additional_agent_dropin=$installed_runtime_preserve
+    elif [[ -n $additional_agent_dropin ]]; then
+        _release_txn_fail "requested runtime-directory preserve drop-in is absent"
+        return 1
+    fi
+    _release_txn_validate_root_directory "$systemd_root" 755 || return 1
+    [[ $systemctl_bin == /* && -f $systemctl_bin && ! -L $systemctl_bin && -x $systemctl_bin ]] \
+        || { _release_txn_fail "systemctl must be an exact executable regular file"; return 1; }
+    source=$TRUSTED_RELEASE_ROOT/deploy/release-transaction-start-guard.sh
+    _release_txn_validate_start_helper "$source" "$helper_path" || return 1
+    for unit in celikpanel-agent.service celikpanel-panel.service; do
+        directory=$systemd_root/$unit.d
+        _release_txn_validate_dropin_dir "$directory" || return 1
+        dropin=$directory/10-release-transaction-guard.conf
+        _release_txn_validate_dropin_file \
+            "$dropin" "$transaction_root" "$runtime_root" "$helper_path" || return 1
+        loaded_dropins=$("$systemctl_bin" show --property=DropInPaths --value "$unit") ||
+            { _release_txn_fail "cannot inspect loaded systemd drop-ins for $unit"; return 1; }
+        expected_dropin_paths=()
+        [[ $unit != celikpanel-agent.service || -z $additional_agent_dropin ]] ||
+            expected_dropin_paths+=("$additional_agent_dropin")
+        expected_dropin_paths+=("$dropin")
+        loaded_dropins=${loaded_dropins//$'\n'/ }
+        read -r -a loaded_dropin_paths <<<"$loaded_dropins"
+        [[ ${#loaded_dropin_paths[@]} -eq ${#expected_dropin_paths[@]} ]] ||
+            { _release_txn_fail "systemd did not load only the exact transaction guard for $unit"; return 1; }
+        for ((expected_dropins = 0; expected_dropins < ${#expected_dropin_paths[@]}; expected_dropins++)); do
+            [[ ${loaded_dropin_paths[$expected_dropins]} == "${expected_dropin_paths[$expected_dropins]}" ]] ||
+                { _release_txn_fail "systemd did not load only the exact transaction guard set for $unit"; return 1; }
+        done
+        reload=$("$systemctl_bin" show --property=NeedDaemonReload --value "$unit") ||
+            { _release_txn_fail "cannot inspect reload state for $unit"; return 1; }
+        case "$reload" in
+            no) ;;
+            yes) any_reload=1 ;;
+            *) _release_txn_fail "unrecognized manager reload state: $unit"; return 1 ;;
+        esac
+        fragment=$("$systemctl_bin" show --property=FragmentPath --value "$unit") || return 1
+        [[ $fragment == "$systemd_root/$unit" ]] ||
+            { _release_txn_fail "loaded unit fragment differs from the fixed transition target: $unit"; return 1; }
+        condition=$("$systemctl_bin" show --property=ExecCondition --value "$unit") || return 1
+        expected_condition="{ path=$helper_path ; argv[]=$helper_path $transaction_root $runtime_root ; ignore_errors=no ; "
+        [[ $condition == "$expected_condition"*" }" ]] ||
+            { _release_txn_fail "loaded start condition differs from the persistent guard: $unit"; return 1; }
+        condition=${condition#"$expected_condition"}
+        condition=${condition%" }"}
+        [[ $condition != *'{'* && $condition != *'}'* && $condition != *$'\n'* ]] ||
+            { _release_txn_fail "loaded start condition contains additional commands: $unit"; return 1; }
+    done
+    # Do not stop an active service through a stale manager definition. The
+    # pending-reload exception is only for already-stopped coordinators. The
+    # rollback body separately proves empty cgroups and holds mutation locks.
+    if [[ $any_reload == 1 ]]; then
+        for unit in celikpanel-agent.service celikpanel-panel.service; do
+            state=$("$systemctl_bin" show --property=ActiveState --value "$unit") || return 1
+            main_pid=$("$systemctl_bin" show --property=MainPID --value "$unit") || return 1
+            control_pid=$("$systemctl_bin" show --property=ControlPID --value "$unit") || return 1
+            [[ ( $state == inactive || $state == failed ) && $main_pid == 0 && $control_pid == 0 ]] ||
+                { _release_txn_fail "pending unit reload requires stopped coordinators: $unit"; return 1; }
+        done
+    fi
 }
 
 _release_txn_prepare_runtime_root() {
