@@ -85,7 +85,7 @@ func TestPromotionInheritedLock(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("native root fixture")
 	}
-	cases := []string{"success", "same-target", "next-promotion", "bad-checker", "bad-source", "active", "no-lock", "pending-enroll", "foreign-target", "owner-selector", "owner-launcher", "corrupt-old-kit", "corrupt-target-kit", "corrupt-intent", "orphan-receipt", "unknown-journal", "unsafe-journal", "bad-stage", "history-isolated", "resume-rechecks", "active-handoff", "completion-handoff", "ambiguous-handoff", "foreign-fd", "launcher-xattr", "selector-xattr", "replay-xattr", "owner-acquire", "unknown-transaction", "retired-loss"}
+	cases := []string{"success", "same-target", "next-promotion", "bad-checker", "bad-source", "active", "no-lock", "pending-enroll", "foreign-target", "owner-selector", "owner-launcher", "corrupt-old-kit", "corrupt-target-kit", "corrupt-intent", "orphan-receipt", "unknown-journal", "unsafe-journal", "bad-stage", "history-isolated", "resume-rechecks", "active-handoff", "completion-handoff", "ambiguous-handoff", "foreign-fd", "launcher-xattr", "selector-xattr", "replay-xattr", "owner-acquire", "owner-foreign-fd", "owner-epoll-fd", "owner-busy-foreign-fd", "owner-active-foreign-fd", "unknown-transaction", "retired-loss"}
 	for _, scenario := range cases {
 		t.Run(scenario, func(t *testing.T) {
 			root, err := os.MkdirTemp("/run", "celikpanel-promotion-test-")
@@ -121,7 +121,7 @@ func TestPromotionChild(t *testing.T) {
 	if status, err := inspectPromotionAt(paths); err != nil || status.Phase != "none" {
 		t.Fatal("initial observation", status, err)
 	}
-	if scenario == "owner-acquire" {
+	if scenario == "owner-acquire" || scenario == "owner-foreign-fd" || scenario == "owner-epoll-fd" || scenario == "owner-busy-foreign-fd" || scenario == "owner-active-foreign-fd" {
 		for _, name := range []string{"bin/panel-checker", "bin/agent-checker"} {
 			replaceFixtureFile(t, target, name, []byte("#!/bin/sh\nexit 0\n"))
 		}
@@ -167,7 +167,7 @@ func TestPromotionChild(t *testing.T) {
 		}
 		return
 	}
-	pendingCases := map[string]bool{"pending-enroll": true, "foreign-target": true, "owner-selector": true, "owner-launcher": true, "corrupt-old-kit": true, "corrupt-target-kit": true, "corrupt-intent": true, "orphan-receipt": true, "unknown-journal": true, "unsafe-journal": true, "bad-stage": true, "resume-rechecks": true, "active-handoff": true, "completion-handoff": true, "ambiguous-handoff": true, "foreign-fd": true, "replay-xattr": true, "owner-acquire": true}
+	pendingCases := map[string]bool{"pending-enroll": true, "foreign-target": true, "owner-selector": true, "owner-launcher": true, "corrupt-old-kit": true, "corrupt-target-kit": true, "corrupt-intent": true, "orphan-receipt": true, "unknown-journal": true, "unsafe-journal": true, "bad-stage": true, "resume-rechecks": true, "active-handoff": true, "completion-handoff": true, "ambiguous-handoff": true, "foreign-fd": true, "replay-xattr": true, "owner-acquire": true, "owner-foreign-fd": true, "owner-epoll-fd": true, "owner-busy-foreign-fd": true, "owner-active-foreign-fd": true}
 	if pendingCases[scenario] {
 		stop := errors.New("fixture interruption")
 		checks := 0
@@ -261,7 +261,7 @@ func TestPromotionChild(t *testing.T) {
 				os.WriteFile(filepath.Join(paths.transaction, "completion.pending"), raw, 0600)
 			}
 			before := readFixture(t, paths.selection)
-			err := resumePromotionOwnerLocked(paths)
+			err := resumePromotionOwnerLocked(paths, 9)
 			if (scenario == "ambiguous-handoff") != (err != nil) {
 				t.Fatal("handoff classification", err)
 			}
@@ -270,6 +270,94 @@ func TestPromotionChild(t *testing.T) {
 			}
 			if _, err := os.Lstat(filepath.Join(paths.promotions, "current/committed.json")); !errors.Is(err, os.ErrNotExist) {
 				t.Fatal("handoff wrote promotion receipt")
+			}
+			return
+		case "owner-foreign-fd", "owner-epoll-fd", "owner-busy-foreign-fd", "owner-active-foreign-fd":
+			proof, _, err := readPromotion(paths)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := exchangePromotion(paths, proof, 9, true); err != nil {
+				t.Fatal(err)
+			}
+			proof.close()
+			before := map[string][]byte{paths.selection: readFixture(t, paths.selection), paths.launcher: readFixture(t, paths.launcher), filepath.Join(paths.promotions, "current/intent.json"): readFixture(t, filepath.Join(paths.promotions, "current/intent.json"))}
+			if scenario != "owner-busy-foreign-fd" {
+				if err := unix.Flock(9, unix.LOCK_UN); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := unix.Close(9); err != nil {
+				t.Fatal(err)
+			}
+			var borrowed int
+			if scenario == "owner-epoll-fd" {
+				borrowed, err = unix.EpollCreate1(unix.EPOLL_CLOEXEC)
+			} else {
+				borrowed, err = unix.Open(filepath.Join(root, "borrowed-owner-fd"), unix.O_CREAT|unix.O_EXCL|unix.O_RDWR|unix.O_CLOEXEC, 0600)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if borrowed != 9 {
+				if err := unix.Dup3(borrowed, 9, unix.O_CLOEXEC); err != nil {
+					t.Fatal(err)
+				}
+				unix.Close(borrowed)
+			}
+			defer unix.Close(9)
+			var beforeFD, afterFD unix.Stat_t
+			if err := unix.Fstat(9, &beforeFD); err != nil {
+				t.Fatal(err)
+			}
+			beforeFlags, err := unix.FcntlInt(9, unix.F_GETFD, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			beforeLink, err := os.Readlink("/proc/self/fd/9")
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Exercise the real entry's preceding proof reads before acquiring
+			// owner authority. An occupied runtime/foreign FD is not a lock.
+			if entry, err := isLauncherEntryAt(paths.launcher); err != nil || entry {
+				t.Fatal("fixture entry proof", entry, err)
+			}
+			if pending, err := promotionPendingAt(paths); err != nil || !pending {
+				t.Fatal("preceding pending proof", pending, err)
+			}
+			if scenario == "owner-active-foreign-fd" {
+				raw := []byte("version=1\ntoken=" + strings.Repeat("a", 64) + "\noperation=rollback\nsnapshot=20260914T000000Z-from-unknown-to-" + strings.Repeat("b", 40) + "-" + strings.Repeat("c", 32) + "\n")
+				if err := os.WriteFile(filepath.Join(paths.transaction, "active"), raw, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			err = resumePromotionForOwnerAt(paths)
+			if scenario == "owner-busy-foreign-fd" {
+				if err == nil {
+					t.Fatal("foreign held native lock bypassed")
+				}
+			} else if err != nil {
+				t.Fatal("independent owner lock blocked by unrelated FD9", err)
+			}
+			if err := unix.Fstat(9, &afterFD); err != nil {
+				t.Fatal("borrowed FD closed", err)
+			}
+			afterFlags, err := unix.FcntlInt(9, unix.F_GETFD, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			afterLink, err := os.Readlink("/proc/self/fd/9")
+			if err != nil || !sameFile(beforeFD, afterFD) || beforeFlags != afterFlags || beforeLink != afterLink {
+				t.Fatal("borrowed FD changed", err)
+			}
+			if scenario == "owner-busy-foreign-fd" || scenario == "owner-active-foreign-fd" {
+				unchangedPromotionFixture(t, before)
+				if _, err := os.Lstat(filepath.Join(paths.promotions, "current/committed.json")); !errors.Is(err, os.ErrNotExist) {
+					t.Fatal("unadmitted receipt", err)
+				}
+			} else if status, err := inspectPromotionAt(paths); err != nil || status.Phase != "committed" {
+				t.Fatal("owner did not finish retained promotion", status, err)
 			}
 			return
 		case "owner-acquire":

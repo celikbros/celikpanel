@@ -630,9 +630,14 @@ func installPromotionBundle(source *Runtime, paths promotionPaths) (*Runtime, er
 	return installed, nil
 }
 
-func ResumePromotion(fd int) error { return resumePromotionAt(fd, defaultPromotionPaths(), nil, nil) }
+func ResumePromotion(fd int) error {
+	if fd != 9 {
+		return fail(ReasonUnsafeMetadata)
+	}
+	return resumePromotionAt(fd, defaultPromotionPaths(), nil, nil)
+}
 func resumePromotionAt(fd int, paths promotionPaths, checkpoint func(string), check func(string, string) error) error {
-	if os.Geteuid() != 0 || fd != 9 {
+	if os.Geteuid() != 0 || fd < 3 {
 		return fail(ReasonUnsafeMetadata)
 	}
 	if err := verifyPromotionBoundary(paths, fd); err != nil {
@@ -843,8 +848,10 @@ func dispatchEnvironment() []string {
 	return []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "HOME=/root", "USER=root", "LOGNAME=root", "SHELL=/bin/bash", "LANG=C", "LC_ALL=C"}
 }
 
-// ResumePromotionForOwner acquires only the existing native lock. It never
-// overwrites an unrelated FD 9, creates a transaction, or stops coordinators.
+// ResumePromotionForOwner acquires only the existing native lock. The public
+// admitted-update API retains its inherited FD 9 contract, but an owner process
+// may already use FD 9 for a runtime poller or unrelated inherited object. Such
+// descriptors grant no authority and are neither replaced nor closed here.
 func ResumePromotionForOwner() error { return resumePromotionForOwnerAt(defaultPromotionPaths()) }
 func resumePromotionForOwnerAt(paths promotionPaths) error {
 	if os.Geteuid() != 0 {
@@ -852,7 +859,11 @@ func resumePromotionForOwnerAt(paths promotionPaths) error {
 	}
 	var occupied unix.Stat_t
 	if err := unix.Fstat(9, &occupied); err == nil {
-		return resumePromotionOwnerLocked(paths)
+		// Reuse an inherited lock only after its exact canonical identity and
+		// exclusive ownership are proved. Otherwise acquire our own descriptor.
+		if err := verifyEnrollmentLockState(paths.transaction, 9, false); err == nil {
+			return resumePromotionOwnerLocked(paths, 9)
+		}
 	} else if !errors.Is(err, unix.EBADF) {
 		return fail(ReasonReadFailed)
 	}
@@ -866,34 +877,16 @@ func resumePromotionForOwnerAt(paths promotionPaths) error {
 	if err != nil {
 		return asReadError(err)
 	}
-	defer func() {
-		if fd >= 0 {
-			unix.Close(fd)
-		}
-	}()
+	defer unix.Close(fd)
 	if err := unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err != nil {
 		return fail(ReasonChanged)
 	}
-	// Close path-proof descriptors before reserving FD 9: opening ancestors may
-	// itself have used that descriptor. Never replace a still-live proof FD.
-	if err := state.close(); err != nil {
+	if err := state.revalidate(); err != nil {
 		return err
 	}
-	if fd != 9 {
-		var occupied unix.Stat_t
-		if err := unix.Fstat(9, &occupied); !errors.Is(err, unix.EBADF) {
-			return fail(ReasonChanged)
-		}
-		if err := unix.Dup3(fd, 9, 0); err != nil {
-			return fail(ReasonReadFailed)
-		}
-		unix.Close(fd)
-		fd = -1
-	} else {
-		fd = -1
-	}
-	defer unix.Close(9)
-	return resumePromotionOwnerLocked(paths)
+	// Carry the actual owned descriptor through every proof and exchange. No
+	// descriptor-number reservation or replacement is needed for owner recovery.
+	return resumePromotionOwnerLocked(paths, fd)
 }
 
 // IsLauncherEntry is false for candidate/direct-kit execution and for a not-yet
@@ -1112,8 +1105,8 @@ func (runtime *Runtime) execSelectedAt(args []string, transaction string) error 
 // Once an ordinary release has started, an incomplete promotion receipt must
 // not delay the selected release recovery. This only admits read-only handoff;
 // the selected runner still verifies its complete snapshot/operation contract.
-func resumePromotionOwnerLocked(paths promotionPaths) error {
-	if err := verifyEnrollmentLockState(paths.transaction, 9, false); err != nil {
+func resumePromotionOwnerLocked(paths promotionPaths, fd int) error {
+	if err := verifyEnrollmentLockState(paths.transaction, fd, false); err != nil {
 		return err
 	}
 	existing, err := promotionReleaseWork(paths)
@@ -1121,7 +1114,7 @@ func resumePromotionOwnerLocked(paths promotionPaths) error {
 		return err
 	}
 	if !existing {
-		return resumePromotionAt(9, paths, nil, nil)
+		return resumePromotionAt(fd, paths, nil, nil)
 	}
 	proof, absent, err := readPromotion(paths)
 	if err != nil {
@@ -1134,7 +1127,7 @@ func resumePromotionOwnerLocked(paths promotionPaths) error {
 	if _, _, err := verifyPromotionState(paths, proof); err != nil {
 		return err
 	}
-	return verifyEnrollmentLockState(paths.transaction, 9, false)
+	return verifyEnrollmentLockState(paths.transaction, fd, false)
 }
 
 var promotionMarkerPattern = regexp.MustCompile(`\Aversion=1\ntoken=([0-9a-f]{64})\noperation=(update|rollback)\nsnapshot=([A-Za-z0-9][A-Za-z0-9._-]{0,127})\n\z`)

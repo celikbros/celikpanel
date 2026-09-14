@@ -47,7 +47,12 @@ bu yeni komutu kendiliğinden kazanmaz.
 Durum ve sürüm sorguları salt okunur kalır ve seçili kitin doğrulanmasından
 bağımsızdır. Veri ve yetenek okumaları, seçim değiştirmeden doğrulanmış seçili
 okuyucuya aktarılır. Bekleyen geçişi yalnız dar kurtarma veya kabul edilmiş ön
-kontrol yolu sürdürebilir. Sahibin değişiklikleri, yabancı nesneler, güvensiz
+kontrol yolu sürdürebilir. Kabul edilmiş güncelleyici yine FD 9 üzerinden
+doğrulanmış yerel kilidi almalıdır. Sahip kurtarması aynı kanonik kilit için
+gerçekte aldığı tanıtıcıyı kullanır; Go, FD 9'u kendi olay izleyicisine ayırmış
+olabilir. İlgisiz tanıtıcı korunur ve yetki sağlamaz; meşgul yerel kilit kurtarmayı
+engeller. Miras FD 9 yalnız tam kilit kimliği ve özel sahipliği kanıtlanırsa
+yeniden kullanılır. Sahibin değişiklikleri, yabancı nesneler, güvensiz
 metadata ve açıklanamayan kanıt kaybı korunur ve ilgili işlem reddedilir.
 Değiştirilecek girişlerde genişletilmiş öznitelikler desteklenmez; silinmek yerine
 reddedilir. Geçiş tamamlandığında güncel kurtarma, doğrulanmış yeni çift ve hedef
@@ -58,6 +63,9 @@ Hazırlığı doğrulanamayan işlem, panel güncellemesi henüz başlamasa bile
 hata iletisinde `recovery_required` olarak bildirilir; kurtarma dosyalarının
 tamamının değişmeden kaldığı iddia edilmez. Kit geçişinin tamamlanması, panel
 güncellemesinin veya güncel servis sağlığının başarılı olduğunu kanıtlamaz.
+Doğrulanmış kit hazırlığından sonraki uygulama ön kontrolü hâlâ `state=unchanged`
+bildirebilir: bu, uygulama dosyalarını anlatır; tamamlanmış kit geçişinin geri
+alındığını söylemez. Kit ayrıca `runtime-status` üzerinden incelenir.
 
 Değişmemiş eski kayıt programları sabit başlatıcının seçili programla aynı özete
 sahip olmasını bekler. Ara durumdaki başlatıcıyı, normal servisler durmadan

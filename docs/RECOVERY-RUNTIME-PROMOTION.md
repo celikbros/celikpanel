@@ -49,7 +49,12 @@ An old unchanged launcher does not acquire this new command retroactively.
 Status and version remain read-only and available independently of selected-kit
 verification. Material/capability reads dispatch the currently proved selected
 reader without changing selection. Only the narrow recovery/admitted-preflight
-path can resume a pending promotion. Owner edits, foreign objects, unsafe
+path can resume a pending promotion. The admitted updater must still inherit
+the proved native lock on FD 9. Owner recovery instead uses the descriptor it
+actually acquires for that same canonical lock: Go may already use FD 9 for its
+event poller. An unrelated descriptor is preserved and grants no authority; a
+busy native lock still prevents recovery. An inherited FD 9 is reused only when
+its exact lock identity and exclusive ownership are proved. Owner edits, foreign objects, unsafe
 metadata and unexplained missing evidence are preserved and refused. Extended
 attributes on either replaced entry are unsupported and rejected rather than
 removed. Once commit is proved, current recovery depends on the verified new
