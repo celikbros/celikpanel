@@ -91,3 +91,55 @@ Ardından bağımsız salt-okur HTTPS giriş isteği geçerli sertifika ile HTTP
 aldı. Bu panel erişimini doğrular; barındırılan hizmetlerin denetimi değildir.
 Önceki olay kanıtları, kurtarma kopyaları ve TLS dosyaları aracın değişiklik
 kapsamı dışındaydı.
+
+## Alpha79 sonrası: BIND yayımı ve otomatik geri alma
+
+Kullanıcı 14 Eylül'de `971510e51549422a7cd8c4878dc714af` Alpha79 güncellemesini
+başlattı. Güncelleyici 04:31:58 UTC'de hedef dosyaları kurup doğruladıktan sonra
+`BIND state and ownership receipts disagree` hatası verdi. Ardından kurtarma
+servisi sürekli `recovery transaction descriptor owns an unexpected lock`
+hatasıyla durdu. Günlükte eski başarısız systemd tetikleyicilerinin listelenmesi
+eşzamanlı güncelleme yapıldığını kanıtlamaz.
+
+Paylaşılan mevcut BIND durumu ile motor edinim kaydında motor, epoch 1, primary
+rolü, yerel/eş IP, kaynak revizyonu ve işlem kimliği aynı. Yalnız nesil ve primary
+katalog sayacı farklı: güncel durum
+`ea6ea68b1b7caa4fa9b0a4260e567842353f3667aa5ad4df98ba5b70cb1f1469`
+ve sayaç 2; edinim kaydı
+`b19ee90a81d87342cba30751f1aede6342706643c243130f37c3f164006926c7`
+ve sayaç 1 gösteriyor. Normal alan yayımı, motorun edinim kanıtını değiştirmeden
+bu güncel alanları ilerletiyor. Güncelleyici hatalı biçimde bütün alanların eşit
+olmasını istiyor ve sonra eski edinim neslini seçiyordu. Gerçek alan üreticisi
+ve durum yazıcısını kullanan regresyon testi aynı hatayı üretiyor. Düzeltme,
+edinim kanıtını koruyup güncel nesil ve çalışma yapılandırmasını doğruluyor.
+
+Otomatik geri almanın ayrı nedeni, Alpha78'in fdinfo alan ayrıştırma düzeltmesinin
+`update.sh` içinde yapılıp `rollback.sh` içindeki tek boşluğa bağlı karşılaştırmanın
+kalması. Gerçek Linux devralınmış özel flock testi Alpha79 geri alma girişinde
+`exclusive status=41 expected=0` sonucunu üretiyor. Yerel düzeltme iki girişte de
+alanları ayrıştırıyor; tek kayıt, inode kimliği ve bağımsız kilit dışlama
+kontrollerini koruyor. Paylaşımlı, kilitsiz, kapalı, yanlış kimlikli ve başka
+sahibe ait kilitler reddedilmeye devam ediyor.
+
+### Kullanıcının tamamladığı Alpha79 geri alması
+
+Hata dosyalar uygulandıktan sonra oluştuğundan eski değişiklik öncesi iptal
+araçları uygun değildi. Kullanıcı, saklanan ve doğrulanmış Alpha79 sürümünün
+standart geri alma girişini kullandı:
+
+- Sürüm: `/var/backups/celikpanel/releases/f3390addc85b-1f7e1f714db463724f795ebb`
+- Yedek: `/var/backups/celikpanel/update-snapshots/20260914T043142Z-from-unknown-to-f3390addc85bbe92a0cc865448d9bb366e6b980a-db8813bd340936d749913d55dbcda68d`
+
+Kullanıcının normal çağrısı işlem kilidini kendisi alarak hatalı devralınmış
+kilit ayrıştırıcısına girmez. Geri yüklemeden önce sürüm, tam yedek, eşleşen işlem
+ve boşta işlem defteri doğrulanır. Komut verilmeden önce orijinal Alpha79 girişinin
+normal kilit edinimi ve meşgul kilitte durması yerelde sınandı. Saklanan imzalı
+dosyalar veya işlem işaretçileri elle değiştirilmedi.
+
+Kullanıcı çıktısı 05:53:39 UTC'de veritabanı, dosyalar, TLS ve servis düzeni geri
+yüklendikten sonra `Rollback complete`, `Panel: active`, `Agent: active` bildirdi.
+Ardından bağımsız salt-okur `https://frankfurt.celikhost.com:2083/login` isteği
+`72.62.38.15` adresinden geçerli sertifikayla HTTP 200 aldı. Bu yönetim erişimini
+doğrular; barındırılan hizmetlerin sağlığını veya BIND kayıtlarını yorumlayan
+kodun düzeldiğini kanıtlamaz. Kurtarma yeni güncelleme kurmadı. Kalıcı düzeltmeler
+ayrıca yayımlanana kadar yerel çalışma olarak duruyor.

@@ -486,6 +486,21 @@ func main() {
 		log.Println("Service mutation state is idle under the external lock")
 		return
 	}
+	if len(os.Args) == 2 && (os.Args[1] == "--check-bind-signed-update-compatible-under-external-lock" ||
+		os.Args[1] == "--check-pre-ledger-bind-signed-update-compatible-under-external-lock") {
+		ctx, cancel := context.WithTimeout(context.Background(), bindSignedUpdatePreparationTimeout)
+		defer cancel()
+		preLedger := os.Args[1] == "--check-pre-ledger-bind-signed-update-compatible-under-external-lock"
+		if err := checkBINDSignedUpdateCompatibleUnderExternalLock(ctx, "", "", preLedger); err != nil {
+			if errors.Is(err, errBINDSignedUpdatePreflightDeferred) {
+				log.Println(errBINDSignedUpdatePreflightDeferred)
+				return
+			}
+			log.Fatalf("Read-only BIND update compatibility check failed: %v", err)
+		}
+		log.Println("BIND update compatibility verified without changing DNS")
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--prepare-bind-generation-root-under-external-lock" {
 		ctx, cancel := context.WithTimeout(
 			context.Background(), bindSignedUpdatePreparationTimeout,

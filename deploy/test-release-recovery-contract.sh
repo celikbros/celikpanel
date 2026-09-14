@@ -571,4 +571,5 @@ if [[ -d ${FI_RUNTIME}.authorization-discard ]]; then
         fail 'fresh authorization removal left a discard artifact'
 fi
 
+bash "$REPO_ROOT/deploy/test-release-recovery-rollback-handoff.sh"
 printf 'release recovery unit/foundation/final-proof contract: PASS\n'

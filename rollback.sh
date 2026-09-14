@@ -659,6 +659,7 @@ install_release_transaction_guards_with_label_barrier() {
 prepare_and_acquire_release_transaction_lock() {
     local root=$RELEASE_TRANSACTION_ROOT parent lock owner group mode links size
     local path_identity fd_identity probe_fd probe_rc lock_count=0 line
+    local label sequence kind advisory access remainder
     parent=$(dirname -- "$root")
     [[ "$parent" == /var/lib && -d "$parent" && ! -L "$parent" ]] || die "unsafe release transaction parent: $parent"
     [[ "$(readlink -e -- "$parent")" == "$parent" ]] || die "release transaction parent is not canonical"
@@ -703,7 +704,12 @@ prepare_and_acquire_release_transaction_lock() {
             case "$line" in
                 lock:*)
                     lock_count=$((lock_count + 1))
-                    [[ "$line" == *" FLOCK ADVISORY WRITE "* ]] \
+                    # fdinfo uses variable column spacing, also in rollback recovery.
+                    # Geri alma kurtarmasında da fdinfo sütun aralıkları değişkendir.
+                    read -r label sequence kind advisory access remainder <<< "$line"
+                    [[ $label == lock: && $sequence =~ ^[0-9]+:$ &&
+                       $kind == FLOCK && $advisory == ADVISORY &&
+                       $access == WRITE && -n $remainder ]] \
                         || die "recovery transaction descriptor owns an unexpected lock"
                     ;;
             esac

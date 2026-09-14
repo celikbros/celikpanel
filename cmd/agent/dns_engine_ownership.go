@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -838,6 +839,22 @@ func exactFinalizedDNSEngineSwitchProvenanceOnHost(
 	qualifier string,
 	binding transport.ServiceMutationBinding,
 ) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dnsRuntimeInspectionTimeout)
+	defer cancel()
+	return exactFinalizedDNSEngineSwitchProvenanceWithBINDVerifier(
+		target, qualifier, binding,
+		func(state dnsEngineStateReceipt) error {
+			return verifyExistingManagedBINDGenerationForSignedUpdate(ctx, state)
+		},
+	)
+}
+
+func exactFinalizedDNSEngineSwitchProvenanceWithBINDVerifier(
+	target transport.DNSEngine,
+	qualifier string,
+	binding transport.ServiceMutationBinding,
+	verifyBIND func(dnsEngineStateReceipt) error,
+) (bool, error) {
 	state, stateExists, err := readDNSEngineState()
 	if err != nil {
 		return false, fmt.Errorf("read finalized DNS engine state receipt: %w", err)
@@ -901,10 +918,8 @@ func exactFinalizedDNSEngineSwitchProvenanceOnHost(
 		if err := validateDNSEngineState(currentOwnership); err != nil {
 			return false, fmt.Errorf("validate current DNS engine ownership: %w", err)
 		}
-		if currentOwnership != state {
-			return false, errors.New(
-				"journal-free DNS engine state differs from its active ownership",
-			)
+		if err := verifyCurrentDNSEngineOwnership(currentOwnership, state, verifyBIND); err != nil {
+			return false, fmt.Errorf("journal-free DNS engine ownership: %w", err)
 		}
 		if installExists {
 			// An install receipt on a target that owns nothing is residue, not
@@ -1033,8 +1048,8 @@ func exactFinalizedDNSEngineSwitchProvenanceOnHost(
 	if err := validateDNSEngineState(ownership); err != nil {
 		return false, fmt.Errorf("validate finalized DNS engine ownership: %w", err)
 	}
-	if ownership != state {
-		return false, errors.New("finalized DNS engine ownership differs from its active state")
+	if err := verifyCurrentDNSEngineOwnership(ownership, state, verifyBIND); err != nil {
+		return false, fmt.Errorf("finalized DNS engine ownership: %w", err)
 	}
 	if installExists {
 		return false, errors.New("finalized DNS engine install ownership was not retired")
