@@ -88,3 +88,39 @@ kayıt reddedilmeye devam eder.
 Kayıt işlemi başlatıcıyı yayımladıktan, seçiciyi yazmadan önce kesilirse aynı kit
 ile tekrar desteklenir ve gerçek SIGKILL ile sınanmıştır. Farklı bir kitin
 başlatıcısına otomatik geçilmez: ilk kit ve başlatıcı korunur; seçici uydurulmaz.
+
+## Atomik program yayını
+
+Seçili kurtarma programı hem güncellemede hem geri almada
+`/opt/celikpanel/bin` ve `/opt/celikpanel/web` dizinlerini yayımlar. Kapalı iç
+komutlar yalnız kaynak, snapshot ve korunan aday manifest kimliğini kabul eder;
+işlem token'ını parametreden almaz, mevcut yerel işlemden okur. Çalışan programın
+hash'i kaynak değişikliğinden önce seçili kitle aynı olmalıdır.
+
+Tam özel dizin doğrulanıp fsync edildikten sonra root erişimli değişmez kaynak
+niyeti yazılır. Aynı dosya sistemindeki atomik dizin takası bütün dizini yayımlar
+ve çıkarılan dizini korur. Tekrar giriş, önceki/sonraki inode, içerik ve metadata
+çiftini doğrular. Bilinmeyen ekler, bağlantılar, sahip değişiklikleri ve kanıtsız
+eksik dizinler korunup reddedilir. Yalnız panel/Agent değişirken kabul edilmiş ek
+bin dosyaları korunur. İlk kurulum kendi kabul yolunu kullanır; güncelleme snapshot'ı
+uydurmaz.
+
+`celikpanel/recovery-resource-intent/v1` şeması yerel token özeti, snapshot v6
+manifesti ve aday manifestine bağlıdır. Kesilen staging ve çıkarılmış dizinler
+`.recovery-publications` altında kanıt olarak kalır; bu dilimde otomatik temizleme
+yoktur. Eski, kayıtsız kurucuların kısmen yazdığı dosyalar geriye dönük olarak
+sahiplenilmez.
+
+
+Yayın, sınırlandırılmış `user.*` genişletilmiş özelliklerini korur ve tekrar girişte
+doğrular. Protokol 1 ACL, dosya yetenekleri ve SELinux etiketlerini kabul etmez;
+salt-okur kaynak taraması bunları koordinatörler durmadan önce bildirir. SELinux
+hedef politika geçişinin kalıcı niyette tanımlanmasını gerektirir; yedek yolunun
+etiketini kopyalayıp sonra `restorecon` çalıştırmak geçerli yayın kanıtı değildir.
+Güncellemeyi geçirebilmek için sahip metadata'sı sessizce kaldırılmaz.
+
+Yeniden başlatmadan sonra kurtarma, eksik `/run/celikpanel` dizinini yalnız tam
+kabul edilmiş geri alma ve iki koordinatörün durduğu kanıtıyla oluşturabilir.
+Mevcut dizinin özelliklerini düzeltmeye kalkmaz. Tamamlama bekleyen veritabanı
+kontrolü mevcut WAL'ı özel kopyada okur; canlı DB/WAL'ı değiştirmez veya yeniden
+geri yüklemez. WAL ve atomik yayın kesintileri gerçek alt süreç öldürülerek sınanır.

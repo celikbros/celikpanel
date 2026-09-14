@@ -1260,8 +1260,7 @@ require_sequence "$INSTALL" \
     'restore_celikpanel_selinux_labels' \
     '"$SYSTEMCTL_BIN" daemon-reload'
 require_sequence "$ROLLBACK" \
-    'cp -a "$snap/bin" "$BIN_DIR"' \
-    'cp -a "$snap/web" "$WEB_DIR"' \
+    '    restore_product_resources' \
     'active rollback marker changed before unit restoration' \
     'release_unit_validate_transition \' \
     'release_unit_restore_transition \' \
@@ -2837,10 +2836,10 @@ require_literal "$ROLLBACK" 'panel database snapshot must be standalone without 
 require_literal "$ROLLBACK" 'CELIKPANEL_DATA_DIR="$snap"'
 require_literal "$ROLLBACK" '"$PREFLIGHT_PANEL" --check-service-operations-idle'
 require_literal "$ROLLBACK" '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle'
-require_count "$ROLLBACK" '--check-service-operations-idle-wal-aware' 1
-require_count "$ROLLBACK" '--check-pre-ledger-service-operations-idle-wal-aware' 1
-require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-service-operations-idle[[:space:]]*\\$' 2
-require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 2
+require_count "$ROLLBACK" '--check-service-operations-idle-wal-aware' 2
+require_count "$ROLLBACK" '--check-pre-ledger-service-operations-idle-wal-aware' 2
+require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-service-operations-idle[[:space:]]*\\$' 1
+require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 1
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-wal"'
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-shm"'
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-journal"'
@@ -2856,14 +2855,18 @@ require_sequence "$ROLLBACK" \
 
 require_sequence "$ROLLBACK" \
     'cmp -s "$snap/bin/panel" "$BIN_DIR/panel"' \
-    '"$PREFLIGHT_PANEL" --check-service-operations-idle \' \
+    'restored_panel_idle_flag=--check-service-operations-idle' \
+    '[[ $rollback_pending_resume -ne 1 ]] || restored_panel_idle_flag=--check-service-operations-idle-wal-aware' \
+    '"$PREFLIGHT_PANEL" "$restored_panel_idle_flag" \' \
     'release_txn_create_start_authorization \' \
     'systemctl start celikpanel-panel.service || die "restored panel did not start"' \
     'systemctl stop celikpanel-panel.service \' \
     '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \'
 require_sequence "$ROLLBACK" \
     'cmp -s "$snap/bin/panel" "$BIN_DIR/panel"' \
-    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \' \
+    'restored_panel_idle_flag=--check-pre-ledger-service-operations-idle' \
+    '[[ $rollback_pending_resume -ne 1 ]] || restored_panel_idle_flag=--check-pre-ledger-service-operations-idle-wal-aware' \
+    '"$PREFLIGHT_PANEL" "$restored_panel_idle_flag" \' \
     'release_txn_create_start_authorization \' \
     'systemctl start celikpanel-panel.service || die "restored panel did not start"' \
     'systemctl stop celikpanel-panel.service \' \
@@ -3058,7 +3061,7 @@ require_sequence "$ROLLBACK" \
     'rollback_service_state_recorded=1' \
     'systemctl stop celikpanel-panel.service' \
     'rollback_mutation_started=1' \
-    'rm -rf -- "$BIN_DIR"' \
+    '    restore_product_resources' \
     'trap - EXIT'
 
 # Exercise the privileged rollback EXIT state machine itself with injected
@@ -3411,5 +3414,7 @@ require_function_sequence "$INSTALL" publish_apply_only_units \
 run_apply_only_unit_snapshot_contract
 bash "$ROOT/deploy/test-update-quiesce-capture.sh"
 bash "$ROOT/deploy/test-update-recovery-lock.sh"
+
+bash "$ROOT/deploy/test-recovery-resource-shell-contract.sh"
 
 echo "bootstrap update contract: ok"

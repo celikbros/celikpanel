@@ -119,13 +119,16 @@ jobs:
       - run: sudo bash deploy/test-release-unit-transition.sh
       # Exercise durable recovery publication, strict final proof and crash retries.
       - run: sudo bash deploy/test-release-recovery-contract.sh
-      - run: bash deploy/test-recovery-runtime-shell-contract.sh
+      - run: sudo env PATH="$PATH" GOTOOLCHAIN=local bash deploy/test-recovery-runtime-shell-contract.sh
+      - run: sudo env PATH="$PATH" GOTOOLCHAIN=local bash deploy/test-rollback-ledger-preservation.sh
+      - run: sudo bash deploy/test-rollback-reboot-runtime.sh
+      - run: sudo bash deploy/test-recovery-resource-shell-contract.sh
       - run: sudo bash deploy/test-release-recovery-observation.sh
       - run: sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./internal/recoveryobs -count=1
       - name: Verify independent recovery runtime and offline checker boundaries
         run: |
-          sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./internal/recoveryruntime ./internal/recoverycheckpoint ./cmd/recovery -count=1
-          sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./cmd/agent ./cmd/panel -run 'TestRecovery(CheckStandalone|AgentCheckerStandalone)' -count=1
+          sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./internal/recoveryruntime ./internal/recoverycheckpoint ./internal/recoverypublication ./cmd/recovery -count=1
+          sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./cmd/agent ./cmd/panel -run 'TestRecovery(CheckStandalone|AgentCheckerStandalone)|TestPendingRollback' -count=1
 
       # These fixture contracts mock transport; they do not boot QEMU or prove native recovery.
       # Bu testler iletişimi taklit eder; QEMU başlatmaz veya gerçek kurtarmayı kanıtlamaz.

@@ -179,6 +179,7 @@ APPLY_ONLY_FIREWALL_STATE=
 APPLY_ONLY_UNIT_ROOT_IDENTITY=
 APPLY_ONLY_SNAPSHOT_ROOT_IDENTITY=
 APPLY_ONLY_SNAPSHOT_MANIFEST_SHA=
+APPLY_ONLY_CANDIDATE_MANIFEST_SHA=
 
 # Fresh self-signed certificates are created by the unprivileged panel process.
 # Normalize their metadata once, after the service is stopped, so the public
@@ -2085,6 +2086,23 @@ publish_apply_only_units() {
         "$APPLY_ONLY_FIREWALL_STATE" "$APPLY_ONLY_UNIT_ROOT_IDENTITY" \
         || die "apply-only atomic unit publication was not confirmed"
 }
+# Forward publication and rollback use the same durable resource protocol.
+# There is no deletion window or unjournaled partial web copy in apply-only.
+publish_apply_only_resources() {
+    local resource
+    [[ "$APPLY_ONLY" -eq 1 ]] || die "transactional resources require apply-only mode"
+    validate_apply_only_transaction
+    for resource in bin web; do
+        /usr/libexec/celikpanel/recovery publish-resource --resource "$resource" \
+            --snapshot "$CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT" \
+            --snapshot-manifest "$APPLY_ONLY_SNAPSHOT_MANIFEST_SHA" \
+            --candidate-root "$TRUSTED_RELEASE_ROOT" \
+            --candidate-manifest "$APPLY_ONLY_CANDIDATE_MANIFEST_SHA" \
+            9<&"$CELIKPANEL_RELEASE_TRANSACTION_FD" \
+            || die "exact transactional $resource publication could not be verified; preserve resource evidence"
+    done
+}
+
 validate_apply_only_transaction() {
     local root canonical relative entry owner mode permissions state
     [[ "$APPLY_ONLY" -eq 1 ]] || return 0
@@ -2111,8 +2129,17 @@ validate_apply_only_transaction() {
         permissions=$((8#$mode)); (( (permissions & 0022) == 0 )) || die "apply-only release entry is writable"
     done < <(find "$root" -mindepth 1 -print0)
     [[ -f "$root/SHA256SUMS" && ! -L "$root/SHA256SUMS" ]] || die "apply-only checksum manifest is missing"
+    local candidate_manifest_sha
+    candidate_manifest_sha=$(sha256sum -- "$root/SHA256SUMS") \
+        || die "apply-only candidate manifest identity is unavailable"
+    candidate_manifest_sha=${candidate_manifest_sha%% *}
+    [[ -z ${APPLY_ONLY_CANDIDATE_MANIFEST_SHA:-} || $APPLY_ONLY_CANDIDATE_MANIFEST_SHA == "$candidate_manifest_sha" ]] \
+        || die "apply-only candidate changed after admission"
     (cd "$root"; LC_ALL=C find . -type f ! -path './SHA256SUMS' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | cmp -s - SHA256SUMS; sha256sum -c SHA256SUMS >/dev/null) \
         || die "apply-only trusted release checksum verification failed"
+    [[ $(sha256sum -- "$root/SHA256SUMS" | awk '{print $1}') == "$candidate_manifest_sha" ]] \
+        || die "apply-only candidate manifest changed during admission"
+    APPLY_ONLY_CANDIDATE_MANIFEST_SHA=$candidate_manifest_sha
     [[ -x "$root/bin/panel" && -x "$root/bin/agent" && -f "$root/web/dist/index.html" ]] \
         || die "apply-only release artifacts are incomplete"
     [[ "${CELIKPANEL_RELEASE_TRANSACTION_FD:-}" =~ ^[0-9]+$ ]] || die "apply-only transaction FD is missing"
@@ -2993,7 +3020,13 @@ fi
 
 # 4. Install files -----------------------------------------------------------
 step "Installing files under $PREFIX" "Dosyalar $PREFIX altına kuruluyor"
-install -d -m 0755 "$PREFIX/bin" "$PREFIX/web" "$PREFIX/runtimes"
+install -d -m 0755 "$PREFIX/runtimes"
+if [[ "$APPLY_ONLY" -eq 1 ]]; then
+    publish_apply_only_resources
+else
+# Fresh installation has no existing update snapshot and remains a separate
+# admission path. It must not create an artificial restoration intent.
+install -d -m 0755 "$PREFIX/bin" "$PREFIX/web"
 install -m 0755 "$SRC/bin/panel" "$PREFIX/bin/panel"
 install -m 0755 "$SRC/bin/agent" "$PREFIX/bin/agent"
 
@@ -3050,6 +3083,7 @@ if find "$installed_web_root" -xdev -type f ! -perm 0644 -print -quit | grep -q 
 fi
 [[ -f "$installed_web_root/index.html" && ! -L "$installed_web_root/index.html" ]] \
     || die "kurulu web index ürünü eksik veya güvensiz"
+fi
 # Runtimes dir is where the agent installs Node versions; group-owned so the
 # root agent writes and the panel can stat.
 # Runtimes dizini agent'ın Node sürümlerini kurduğu yerdir; grup-sahipli.

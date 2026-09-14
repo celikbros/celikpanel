@@ -285,6 +285,25 @@ verify_recovery_expected_tuple() {
 # trusting release-controlled code. The descriptor remains open for this process.
 # Modu ayrıştırmadan, state okumadan veya sürüm denetimli koda güvenmeden önce
 # sabit kalıcı sürüm kilidini al. Descriptor bu süreç boyunca açık kalır.
+# The shell allocates a dynamic descriptor; the standalone recovery ABI uses
+# descriptor 9. Duplicate the same open file description for each child without
+# reacquiring the native flock or changing the parent's descriptor.
+prepare_independent_recovery_runtime() {
+    [[ -x "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" &&
+       ! -L "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" ]] \
+        || die "candidate independent recovery runtime is missing"
+    "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" enroll-runtime \
+        --source "$TRUSTED_RELEASE_ROOT/recovery-runtime" \
+        --transaction-fd 9 9<&"$RELEASE_TRANSACTION_FD" \
+        || die "independent recovery runtime could not be enrolled before update"
+    local recovery_compatibility_mode=--normal
+    [[ $BOOTSTRAP_PRE_LEDGER -ne 1 ]] || recovery_compatibility_mode=--bootstrap-pre-ledger
+    [[ $BOOTSTRAP_SCHEMA17 -ne 1 ]] || recovery_compatibility_mode=--bootstrap-schema17
+    "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" verify-compatibility \
+        --mode "$recovery_compatibility_mode" 9<&"$RELEASE_TRANSACTION_FD" \
+        || die "selected recovery runtime cannot verify the current installation before update"
+}
+
 prepare_and_acquire_release_transaction_lock() {
     local root=$RELEASE_TRANSACTION_ROOT parent lock owner group mode links size
     local path_identity fd_identity probe_fd probe_rc lock_count=0 line
@@ -1919,19 +1938,7 @@ classify_release_transaction_entries
 if [[ $release_marker_count -eq 0 ]]; then
     [[ -z $RECOVERY_RUNTIME_ROOT ]] \
         || die "independent recovery cannot initiate a new update"
-    [[ -x "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" &&
-       ! -L "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" ]] \
-        || die "candidate independent recovery runtime is missing"
-    "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" enroll-runtime \
-        --source "$TRUSTED_RELEASE_ROOT/recovery-runtime" \
-        --transaction-fd "$RELEASE_TRANSACTION_FD" \
-        || die "independent recovery runtime could not be enrolled before update"
-    recovery_compatibility_mode=--normal
-    [[ $BOOTSTRAP_PRE_LEDGER -ne 1 ]] || recovery_compatibility_mode=--bootstrap-pre-ledger
-    [[ $BOOTSTRAP_SCHEMA17 -ne 1 ]] || recovery_compatibility_mode=--bootstrap-schema17
-    "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" verify-compatibility \
-        --mode "$recovery_compatibility_mode" \
-        || die "selected recovery runtime cannot verify the current installation before update"
+    prepare_independent_recovery_runtime
     # The candidate sequence/commit and every already-bound foundation byte
     # are proven before guard/drop-in publication can change the host.
     preflight_release_recovery_foundation

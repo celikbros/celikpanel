@@ -143,3 +143,43 @@ done
 grep -Fx exact-independent-rollback "$TEST_ROOT/exact/handoff.result" >/dev/null
 grep -Fx normal-update-unmodified "$TEST_ROOT/normal-update/handoff.result" >/dev/null
 printf 'recovery runtime shell contract: ok\n'
+
+# Production fresh-update call uses a dynamic Bash FD, while the recovery ABI
+# always uses FD9. Exercise actual inherited flock and inode identity in a child.
+eval "$(extract_function prepare_independent_recovery_runtime)"
+mkdir -p "$TEST_ROOT/fresh/recovery-runtime/bin"
+cat > "$TEST_ROOT/fresh/recovery-runtime/bin/recovery" <<'PY'
+#!/usr/bin/python3
+import fcntl,os,sys
+assert os.fstat(9).st_ino == os.stat(os.environ['FIXTURE_LOCK']).st_ino
+assert any('FLOCK  ADVISORY  WRITE' in line for line in open('/proc/self/fdinfo/9'))
+with open(os.environ['FIXTURE_LOCK'],'rb') as independent:
+    try: fcntl.flock(independent,fcntl.LOCK_EX|fcntl.LOCK_NB)
+    except BlockingIOError: pass
+    else: raise AssertionError('native flock was released')
+args=sys.argv[1:]
+if args[0]=='enroll-runtime':
+    assert args==['enroll-runtime','--source',os.environ['FIXTURE_KIT'],'--transaction-fd','9']
+elif args[0]=='verify-compatibility':
+    assert args==['verify-compatibility','--mode',os.environ['FIXTURE_MODE']]
+else: raise AssertionError(args)
+with open(os.environ['FIXTURE_CALLS'],'a') as f: f.write(args[0]+'\n')
+PY
+chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
+(
+    TRUSTED_RELEASE_ROOT=$TEST_ROOT/fresh
+    export FIXTURE_LOCK=$TEST_ROOT/fresh.lock FIXTURE_KIT=$TRUSTED_RELEASE_ROOT/recovery-runtime FIXTURE_CALLS=$TEST_ROOT/fresh.calls
+    : > "$FIXTURE_LOCK"
+    exec {RELEASE_TRANSACTION_FD}<>"$FIXTURE_LOCK"
+    [[ $RELEASE_TRANSACTION_FD != 9 ]] || fail 'fixture did not allocate a dynamic FD'
+    flock -x "$RELEASE_TRANSACTION_FD"
+    for FIXTURE_MODE in --normal --bootstrap-pre-ledger --bootstrap-schema17; do
+        export FIXTURE_MODE
+        BOOTSTRAP_PRE_LEDGER=0 BOOTSTRAP_SCHEMA17=0
+        [[ $FIXTURE_MODE == --normal ]] || BOOTSTRAP_PRE_LEDGER=1
+        [[ $FIXTURE_MODE != --bootstrap-schema17 ]] || BOOTSTRAP_SCHEMA17=1
+        prepare_independent_recovery_runtime
+    done
+    [[ $(wc -l < "$FIXTURE_CALLS") -eq 6 ]] || fail 'preflight did not execute both fixed-ABI children'
+)
+printf 'PASS: fresh updater dynamic lock FD reaches both recovery children as the same FD9 flock\n'

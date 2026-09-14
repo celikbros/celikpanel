@@ -17,6 +17,7 @@ recovery FAIL into PASS. No commands, services or guest files are touched here.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -32,6 +33,13 @@ COMMIT = re.compile(r"[0-9a-f]{40}\Z")
 OPERATION = re.compile(r"[0-9a-f]{32}\Z")
 ARTIFACTS = {"agent", "panel", "web"}
 SECTIONS = {"baseline", "candidate", "update", "fault", "recovery", "after", "workloads"}
+RUNTIME_FILES_V1 = {
+    "bin/recovery", "bin/panel-checker", "bin/agent-checker", "bin/schema17-bridge",
+    "update.sh", "rollback.sh", "deploy/release-transaction-guard.sh",
+    "deploy/release-unit-transition.sh", "deploy/release-recovery-foundation.sh",
+    "deploy/panel-tls-snapshot.sh", "deploy/release-recovery-observation.sh",
+    "deploy/recovery/runtime-entry.sh",
+}
 
 
 class EvidenceError(ValueError):
@@ -225,6 +233,34 @@ class _Assessment:
             self.invalid(path)
 
 
+def _runtime_proof(a: _Assessment, recovery: dict[str, Any]) -> None:
+    path = "recovery.runtime_proof"
+    value = a.obj(recovery.get("runtime_proof"), path, {
+        "schema", "protocol", "snapshot_format", "manifest_sha256", "selected_manifest_sha256",
+        "executed_manifest_sha256", "files", "inventory_verified", "refs",
+    })
+    if value.get("schema") != "celikpanel/recovery-runtime-proof/v1":
+        a.invalid(path + ".schema")
+    for field, expected in (("protocol", 1), ("snapshot_format", 6)):
+        if type(value.get(field)) is not int or value[field] != expected:
+            a.invalid(path + "." + field)  # unsupported format is unknown evidence
+    a.refs(value.get("refs"), path + ".refs")
+    a.expect(value.get("inventory_verified"), True, path + ".inventory_verified")
+    manifest = a.text(value.get("manifest_sha256"), path + ".manifest_sha256", HASH)
+    for field in ("selected_manifest_sha256", "executed_manifest_sha256"):
+        observed = a.text(value.get(field), path + "." + field, HASH)
+        if observed and manifest and observed != manifest:
+            a.fail(path + "." + field)
+    files = a.hashes(value.get("files"), path + ".files", RUNTIME_FILES_V1)
+    if set(files) == RUNTIME_FILES_V1 and manifest:
+        raw = "format=celikpanel-recovery-runtime-v1\nprotocol=1\nsnapshot=6\n"
+        raw += "".join(files[name] + "  " + name + "\n" for name in sorted(files))
+        if hashlib.sha256(raw.encode()).hexdigest() != manifest:
+            a.fail(path + ".manifest_contents")
+    if files.get("rollback.sh") and recovery.get("rollback_script_sha256") != files["rollback.sh"]:
+        a.fail(path + ".executed_rollback_script")
+
+
 def classify(record: Any, *, expected_regression: str | None = None) -> dict[str, Any]:
     """Return PASS/FAIL/INCONCLUSIVE; known failures dominate unknown observations."""
     a = _Assessment()
@@ -238,7 +274,7 @@ def classify(record: Any, *, expected_regression: str | None = None) -> dict[str
         "candidate": {"release", "commit", "manifest_sha256", "artifacts", "refs"},
         "update": {"operation_id", "snapshot_id", "entrypoint", "started_operation_ids", "snapshot_complete", "refs"},
         "fault": {"operation_id", "kind", "boundary", "observed", "installed_artifacts", "refs"},
-        "recovery": {"operation_id", "snapshot_id", "automatic", "entrypoint", "rollback_script_sha256", "restore_started", "restore_completed", "exit_code", "terminal_outcome", "failure_code", "refs"},
+        "recovery": {"operation_id", "snapshot_id", "automatic", "entrypoint", "rollback_script_sha256", "restore_started", "restore_completed", "exit_code", "terminal_outcome", "failure_code", "runtime_proof", "refs"},
         "after": {"artifacts", "running_artifacts", "protected_sentinels", "database", "services", "transaction_markers", "https", "refs"},
         "workloads": {"required", "observations", "refs"},
     }
@@ -288,7 +324,12 @@ def classify(record: Any, *, expected_regression: str | None = None) -> dict[str
     a.same(recovery.get("operation_id"), operation, "recovery.operation_id")
     a.same(recovery.get("snapshot_id"), snapshot, "recovery.snapshot_id")
     a.expect(recovery.get("automatic"), True, "recovery.automatic")
-    a.expect(recovery.get("entrypoint"), "retained-release-rollback", "recovery.entrypoint")
+    if recovery.get("entrypoint") == "independent-runtime":
+        _runtime_proof(a, recovery)
+    else:
+        a.expect(recovery.get("entrypoint"), "retained-release-rollback", "recovery.entrypoint")
+        if "runtime_proof" in recovery:
+            a.invalid("recovery.runtime_proof.inconsistent_entrypoint")
     a.text(recovery.get("rollback_script_sha256"), "recovery.rollback_script_sha256", HASH)
     a.expect(recovery.get("restore_started"), True, "recovery.restore_started")
     a.expect(recovery.get("restore_completed"), True, "recovery.restore_completed")

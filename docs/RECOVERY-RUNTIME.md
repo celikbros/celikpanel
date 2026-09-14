@@ -87,3 +87,39 @@ If enrollment stops after publishing the launcher but before its selector, retry
 with the same kit is supported and tested with actual SIGKILL. A different kit's
 launcher is not substituted automatically: the existing launcher and first kit
 remain intact, and no selector is fabricated.
+
+## Atomic program publication
+
+The selected recovery executable owns both forward update and rollback publication
+of `/opt/celikpanel/bin` and `/opt/celikpanel/web`. Its fixed internal commands
+accept only resource, snapshot identity and retained candidate manifest identity;
+they read the existing native transaction rather than accepting a caller token.
+The executing binary must match the selected kit before resource mutation.
+
+A complete private tree is verified and fsynced before a root-only immutable
+resource intent is published. Same-filesystem directory exchange publishes the
+whole tree and retains the displaced tree. Retry verifies exact before/after
+inode, payload and metadata pairs. Unknown additions, links, owner edits and
+unexplained missing trees are preserved and refused. Already admitted extra bin
+files remain present when only panel/Agent executables change. Initial install
+has its separate admission; it cannot fabricate an update snapshot.
+
+The intent schema is `celikpanel/recovery-resource-intent/v1`, bound to the native
+token digest, snapshot v6 manifest and candidate manifest. Interrupted stages and
+retired trees remain evidence under `.recovery-publications`; their garbage
+collection is not implemented in this slice. This protocol does not retroactively
+prove ownership of partial output from older unjournaled installers.
+
+
+Publication preserves bounded `user.*` extended attributes and checks them on
+retry. ACLs, file capabilities and SELinux labels are not admitted by protocol 1;
+a read-only resource scan rejects them before coordinators stop. SELinux requires
+a destination-policy transition in the durable intent; copying labels from a
+backup path and running `restorecon` afterward is not valid publication evidence.
+No owner metadata is silently removed to make an update pass.
+
+After reboot, recovery may create a missing `/run/celikpanel` only for the exact
+admitted rollback with both coordinators proven stopped. An existing directory
+is never normalized. Completion-pending database checks include the existing WAL
+through a private copy, without replacing the live DB/WAL or restoring it again.
+Real child-process kills cover both the WAL checkpoint and publication exchanges.

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/alicelik/celikpanel/internal/recoverypublication"
 	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 )
 
@@ -18,7 +19,7 @@ import (
 // durumuyla dogrular. Resolve bu CLI'nin destekledigi protokolu ve snapshot
 // bicimini de denetler. Kabul, gelecekteki geri yuklemenin basardigi anlamina gelmez.
 func checkRecoveryCompatibility(mode string) error {
-	return verifyRecoveryCompatibility(mode, compatibilityDependencies{
+	if err := verifyRecoveryCompatibility(mode, compatibilityDependencies{
 		euid:     os.Geteuid,
 		boundary: recoveryruntime.VerifyPreflightBoundary,
 		resolve: func() (string, compatibilityRuntime, error) {
@@ -29,7 +30,18 @@ func checkRecoveryCompatibility(mode string) error {
 			return selected.Root, selected, nil
 		},
 		run: runRecoveryCompatibilityCommand,
-	})
+	}); err != nil {
+		return err
+	}
+	// Unsupported owner metadata must be found while management is available,
+	// before quiescence. This probe cannot create publication intents or stages.
+	if err := recoveryruntime.VerifyPreflightBoundary(9); err != nil {
+		return err
+	}
+	if err := recoverypublication.ProbeCurrentResources(); err != nil {
+		return err
+	}
+	return recoveryruntime.VerifyPreflightBoundary(9)
 }
 
 func runRecoveryCompatibilityCommand(ctx context.Context, path string, args, environment []string) error {
