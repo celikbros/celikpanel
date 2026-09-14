@@ -118,6 +118,23 @@ jobs:
       - run: sudo bash deploy/test-release-transaction-guard.sh
       # Exercise durable recovery publication, strict final proof and crash retries.
       - run: sudo bash deploy/test-release-recovery-contract.sh
+      # These fixture contracts mock transport; they do not boot QEMU or prove native recovery.
+      # Bu testler iletişimi taklit eder; QEMU başlatmaz veya gerçek kurtarmayı kanıtlamaz.
+      # Full checkout history above retains the exact released Alpha75 bootstrap object.
+      # Yukarıdaki tam geçmiş, yayımlanan Alpha75 başlatıcısının tam Git nesnesini korur.
+      - name: Verify offline release-recovery fixture contracts (no VM)
+        run: |
+          git cat-file -e '5aa03fd5b6775b21834ff7b1ce0695d92f50ae93^{commit}'
+          python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_*.py' -v
+      - name: Test and build disposable release-recovery drivers (no VM)
+        run: |
+          go test ./deploy/e2e/release-recovery/driver ./deploy/e2e/release-recovery/driver-update -count=1
+          go build -o "$RUNNER_TEMP/release-recovery-seed" ./deploy/e2e/release-recovery/driver
+          go build -o "$RUNNER_TEMP/release-recovery-update" ./deploy/e2e/release-recovery/driver-update
+      - name: Verify root-owned fixture marker checks on disposable local files
+        run: >-
+          sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./deploy/e2e/release-recovery/driver
+          -run '^TestMarkerProtectedReadRejectsSymlinkAndWritableFile$' -count=1
       - run: bash deploy/test-finalize-pending-update-contract.sh
       - run: bash deploy/test-finalize-pending-rollback-contract.sh
       - run: sudo bash deploy/test-panel-tls-snapshot-contract.sh
