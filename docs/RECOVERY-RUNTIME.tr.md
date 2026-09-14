@@ -65,8 +65,9 @@ işlem kimliği, snapshot bütünlüğü ve sahip değişiklikleri kontrol edilm
 - Kurtarma sürecinin öldürülmesi ve yeniden başlatılması ayrıca gerçek VM
   matrisiyle kanıtlanır; bileşen testlerinden çıkarılmaz.
 
-Bütün desteklenen aşamalar sınanmadan P0.3 kapanmaz. Paketin mevcut geri yükleme
-algoritmalarını paylaşması; bütün dosya yayımını atomik, TLS normalizasyonunu
+Bütün desteklenen aşamalar sınanmadan P0.3 kapanmaz. Aşağıda tanımlanan bin/web
+kaynaklarının kabul edilen program yayını atomiktir. Diğer geri yükleme adımları
+sürüm scriptleriyle ortak sözleşmeleri kullanır; bu dilim TLS normalizasyonunu
 salt-okur veya adayın veri bütünlüğünden tamamen bağımsız yapmaz. Yeni kurtarma
 paketi/protokolü seçimi, uyumluluk deneyi ve kanıtlanmış önceki paketin korunmasını
 gerektirir. P0.4 ortak veri sözleşmeleri ve P0.5 bağımsız yenileme/açılış kanıtı
@@ -124,3 +125,7 @@ kabul edilmiş geri alma ve iki koordinatörün durduğu kanıtıyla oluşturabi
 Mevcut dizinin özelliklerini düzeltmeye kalkmaz. Tamamlama bekleyen veritabanı
 kontrolü mevcut WAL'ı özel kopyada okur; canlı DB/WAL'ı değiştirmez veya yeniden
 geri yüklemez. WAL ve atomik yayın kesintileri gerçek alt süreç öldürülerek sınanır.
+
+Gerçek deneyler ve uygulanamayan hata girişimleri
+[bağımsız kurtarma kabul kaydında](../deploy/e2e/release-recovery/INDEPENDENT-RUNTIME.tr.md)
+ayrı sonuçlarla tutulur.

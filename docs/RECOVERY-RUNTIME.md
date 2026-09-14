@@ -75,10 +75,11 @@ snapshot integrity and owner-change checks.
 - Native recovery-process interruption and reboot evidence is recorded with the
   disposable VM matrix, not inferred from these component tests.
 
-P0.3 remains open until the complete supported checkpoint matrix passes. The kit
-currently shares restoration algorithms with the release scripts; enrolling them
-does not by itself make every payload publication atomic, make TLS normalization
-read-only, or remove every dependency on retained candidate **data** integrity.
+P0.3 remains open until the complete supported checkpoint matrix passes. Program
+publication is atomic for the admitted bin/web resources described below. Other
+restoration algorithms still share release-script contracts; this slice does not
+make TLS normalization read-only or remove every dependency on retained candidate
+**data** integrity.
 A later recovery protocol/kit promotion needs compatibility drills and retention
 of the proven predecessor. P0.4 artifact schema separation and P0.5 independent
 workload renewal/boot acceptance remain separate work.
@@ -123,3 +124,6 @@ admitted rollback with both coordinators proven stopped. An existing directory
 is never normalized. Completion-pending database checks include the existing WAL
 through a private copy, without replacing the live DB/WAL or restoring it again.
 Real child-process kills cover both the WAL checkpoint and publication exchanges.
+
+The exact native trials, including failed or unexercised fault injections, are
+recorded in [independent runtime acceptance](../deploy/e2e/release-recovery/INDEPENDENT-RUNTIME.md).
