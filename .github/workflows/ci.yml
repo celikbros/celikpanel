@@ -119,6 +119,8 @@ jobs:
       - run: sudo bash deploy/test-release-unit-transition.sh
       # Exercise durable recovery publication, strict final proof and crash retries.
       - run: sudo bash deploy/test-release-recovery-contract.sh
+      - run: sudo bash deploy/test-release-recovery-observation.sh
+      - run: sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./internal/recoveryobs -count=1
       # These fixture contracts mock transport; they do not boot QEMU or prove native recovery.
       # Bu testler iletişimi taklit eder; QEMU başlatmaz veya gerçek kurtarmayı kanıtlamaz.
       # Full checkout history above retains the exact released Alpha75 bootstrap object.

@@ -113,8 +113,9 @@ func TestRequireAuthAdditionalUserParentMustRemainActiveCustomerAccount(t *testi
 		nilParent  bool
 		want       int
 	}{
-		{name: "missing parent", parentErr: errors.New("not found"), want: http.StatusUnauthorized},
-		{name: "nil parent without repository error", nilParent: true, want: http.StatusUnauthorized},
+		{name: "unreadable parent", parentErr: errors.New("database read failed"), want: http.StatusServiceUnavailable},
+		{name: "missing parent", parentErr: repositories.ErrUserNotFound, want: http.StatusUnauthorized},
+		{name: "nil parent without repository error", nilParent: true, want: http.StatusServiceUnavailable},
 		{name: "suspended parent", parentUser: &core.User{ID: authzMatrixCustomerID, Role: roleCustomer, AccountType: core.AccountTypeAccount, Status: "suspended"}, want: http.StatusForbidden},
 		{name: "reseller parent", parentUser: &core.User{ID: authzMatrixCustomerID, Role: roleReseller, AccountType: core.AccountTypeAccount, Status: "active"}, want: http.StatusUnauthorized},
 		{name: "additional-user parent", parentUser: &core.User{ID: authzMatrixCustomerID, Role: roleCustomer, AccountType: core.AccountTypeAdditionalUser, ParentID: authzIntPtr(authzMatrixOutsiderID), Status: "active"}, want: http.StatusUnauthorized},
@@ -217,8 +218,8 @@ func TestRequireAuthRejectsNilUserWithoutPanic(t *testing.T) {
 	}
 
 	recorder := fixture.request(t, http.MethodGet, "/api/v1/auth/me", authzMatrixCustomerID)
-	if recorder.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want %d; body=%s", recorder.Code, http.StatusUnauthorized, recorder.Body.String())
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d; body=%s", recorder.Code, http.StatusServiceUnavailable, recorder.Body.String())
 	}
 }
 

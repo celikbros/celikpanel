@@ -48,6 +48,7 @@ type linuxSystemUpdateBackend struct {
 	runInstaller   func(context.Context, *systemUpdateState, string) error
 	now            func() time.Time
 	writeFault     func(string) error
+	observe        func(*systemUpdateState, string, string, string)
 }
 
 type systemUpdateIdleLease interface{ Close() error }
@@ -174,6 +175,11 @@ func newLinuxSystemUpdateBackend() *linuxSystemUpdateBackend {
 	backend.installedBuild = inspectInstalledSystemUpdateBuild
 	backend.finalProof = proveSystemUpdateRecoveryFinalState
 	backend.runInstaller = runSystemUpdateInstaller
+	backend.observe = func(state *systemUpdateState, phase, proof, reason string) {
+		if backend.stateRoot == systemUpdateStateRoot {
+			writeSystemUpdateObservation(state, phase, proof, reason, backend.now())
+		}
+	}
 	return backend
 }
 
@@ -765,6 +771,9 @@ func (backend *linuxSystemUpdateBackend) QueueAndLaunch(ctx context.Context, sta
 	if err := writeSystemUpdateState(backend.stateRoot, state, backend.writeFault); err != nil {
 		return nil, err
 	}
+	if backend.observe != nil {
+		backend.observe(state, "accepted", "none", "operation_accepted")
+	}
 	if backend.launch == nil {
 		return nil, backend.failStateLocked(state, errors.New("system-update worker launcher is unavailable"))
 	}
@@ -781,6 +790,9 @@ func (backend *linuxSystemUpdateBackend) failStateLocked(state *systemUpdateStat
 	failed.UpdatedAt = backend.now().UTC().Format(time.RFC3339Nano)
 	if err := writeSystemUpdateState(backend.stateRoot, &failed, backend.writeFault); err != nil {
 		return errors.Join(cause, err)
+	}
+	if backend.observe != nil {
+		backend.observe(&failed, "failed", "none", "update_failed")
 	}
 	return cause
 }
@@ -822,6 +834,8 @@ func (backend *linuxSystemUpdateBackend) Status(ctx context.Context, requestID s
 	}
 	if state.active() || state.Status == systemUpdateFailed {
 		state, err = backend.reconcileStateLocked(ctx, state)
+	} else if state.Status == systemUpdateSucceeded {
+		backend.observePreviouslySucceeded(ctx, state)
 	}
 	return state, err
 }
@@ -845,7 +859,7 @@ func (backend *linuxSystemUpdateBackend) Reconcile(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	var active, failed []*systemUpdateState
+	var active, failed, succeeded []*systemUpdateState
 	for _, entry := range entries {
 		if entry.Name() == ".lock" || entry.Name() == ".worker.lock" {
 			continue
@@ -861,6 +875,8 @@ func (backend *linuxSystemUpdateBackend) Reconcile(ctx context.Context) error {
 			active = append(active, state)
 		} else if state.Status == systemUpdateFailed {
 			failed = append(failed, state)
+		} else if state.Status == systemUpdateSucceeded {
+			succeeded = append(succeeded, state)
 		}
 	}
 	if len(active) > 1 {
@@ -874,6 +890,9 @@ func (backend *linuxSystemUpdateBackend) Reconcile(ctx context.Context) error {
 		if _, err := backend.reconcileStateLocked(ctx, state); err != nil {
 			return err
 		}
+	}
+	for _, state := range succeeded {
+		backend.observePreviouslySucceeded(ctx, state)
 	}
 	return nil
 }
@@ -978,6 +997,9 @@ func (backend *linuxSystemUpdateBackend) reconcileStateLocked(ctx context.Contex
 			if err := writeSystemUpdateState(backend.stateRoot, &failed, backend.writeFault); err != nil {
 				return nil, err
 			}
+			if backend.observe != nil {
+				backend.observe(&failed, "recovery_required", "none", "recovery_incomplete")
+			}
 			return &failed, nil
 		}
 		reconciled := *state
@@ -986,6 +1008,9 @@ func (backend *linuxSystemUpdateBackend) reconcileStateLocked(ctx context.Contex
 		reconciled.UpdatedAt = reconciledAt.Format(time.RFC3339Nano)
 		if err := writeSystemUpdateState(backend.stateRoot, &reconciled, backend.writeFault); err != nil {
 			return nil, err
+		}
+		if backend.observe != nil {
+			backend.observe(&reconciled, "succeeded", "update_verified", "update_verified")
 		}
 		return &reconciled, nil
 	}
@@ -1001,6 +1026,11 @@ func (backend *linuxSystemUpdateBackend) reconcileStateLocked(ctx context.Contex
 	failed.UpdatedAt = reconciledAt.Format(time.RFC3339Nano)
 	if err := writeSystemUpdateState(backend.stateRoot, &failed, backend.writeFault); err != nil {
 		return nil, err
+	}
+	// Only a definite inactive worker plus readable non-target identity proves
+	// that this attempt stopped. Probe errors remain an unavailable observation.
+	if backend.observe != nil && err == nil && unit == systemUpdateUnitInactive && identityErr == nil && floorErr == nil && (version != state.TargetVersion || commit != state.TargetCommit) {
+		backend.observe(&failed, "failed", "none", "update_failed")
 	}
 	return &failed, nil
 }

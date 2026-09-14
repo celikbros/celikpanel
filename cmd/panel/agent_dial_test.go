@@ -3,149 +3,147 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
+	"net"
+	"net/http"
 	"net/rpc"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
-// A fake clock: the wait is bounded in simulated time, so the test proves the
-// bound without spending it.
-type dialClock struct {
-	now    time.Time
-	slept  []time.Duration
-	sleeps int
+func recoveryDialTestPolicy() recoveryAgentDialPolicy {
+	return recoveryAgentDialPolicy{attemptWait: 30 * time.Millisecond, firstPause: time.Millisecond, maxPause: 4 * time.Millisecond}
 }
 
-func (c *dialClock) Now() time.Time { return c.now }
-
-func (c *dialClock) Sleep(d time.Duration) {
-	c.slept = append(c.slept, d)
-	c.sleeps++
-	c.now = c.now.Add(d)
+func recoveryDialTestClient(t *testing.T) (*rpc.Client, net.Conn) {
+	t.Helper()
+	clientSide, serverSide := net.Pipe()
+	client := rpc.NewClient(clientSide)
+	t.Cleanup(func() { _ = client.Close(); _ = serverSide.Close() })
+	return client, serverSide
 }
 
-func newDialClock() *dialClock {
-	return &dialClock{now: time.Unix(1_700_000_000, 0)}
-}
-
-// The agent socket appearing a few seconds after the panel starts is the normal
-// systemd case — After= orders execution, not readiness. The panel must wait
-// through it rather than exiting and being restarted into the same race.
-func TestConnectAgentPatientlyWaitsThroughAStartupRace(t *testing.T) {
-	clock := newDialClock()
-	attempts := 0
-	client, waited, err := connectAgentPatiently(
-		context.Background(),
-		func(context.Context) (*rpc.Client, error) {
-			attempts++
-			if attempts < 4 {
-				return nil, errors.New("dial unix /run/celikpanel/agent.sock: no such file or directory")
-			}
-			return &rpc.Client{}, nil
-		},
-		clock.Now, clock.Sleep,
-	)
-	if err != nil {
-		t.Fatalf("a socket that appears on the fourth attempt must connect: %v", err)
-	}
-	if client == nil {
-		t.Fatal("a successful dial must return a client")
-	}
-	if attempts != 4 {
-		t.Fatalf("attempts = %d, want 4", attempts)
-	}
-	if waited <= 0 {
-		t.Fatal("a wait that took several attempts must be reported as non-zero")
-	}
-}
-
-// An agent that is genuinely absent must not hang the unit forever: the panel
-// gives up inside the bound and lets systemd decide what happens next.
-func TestConnectAgentPatientlyGivesUpInsideTheBound(t *testing.T) {
-	clock := newDialClock()
-	cause := errors.New("permission denied")
-	attempts := 0
-	client, waited, err := connectAgentPatiently(
-		context.Background(),
-		func(context.Context) (*rpc.Client, error) {
-			attempts++
-			return nil, cause
-		},
-		clock.Now, clock.Sleep,
-	)
-	if err == nil {
-		t.Fatal("a permanently absent agent must eventually fail")
-	}
-	if client != nil {
-		t.Fatal("a failed dial must not return a client")
-	}
-	if !errors.Is(err, cause) {
-		t.Fatalf("the reported error must be the last dial error, got %v", err)
-	}
-	if waited > agentDialTotalWait {
-		t.Fatalf("waited %s, which exceeds the %s bound", waited, agentDialTotalWait)
-	}
-	if attempts < 2 {
-		t.Fatalf("attempts = %d; giving up on the first attempt is the defect this fixes", attempts)
-	}
-}
-
-// The pause grows and then stops growing: a slow-starting agent is retried
-// often at first and cheaply later, and no pause exceeds the ceiling.
-func TestConnectAgentPatientlyBacksOffToACeiling(t *testing.T) {
-	clock := newDialClock()
-	_, _, err := connectAgentPatiently(
-		context.Background(),
-		func(context.Context) (*rpc.Client, error) {
-			return nil, errors.New("connection refused")
-		},
-		clock.Now, clock.Sleep,
-	)
-	if err == nil {
-		t.Fatal("expected failure")
-	}
-	if len(clock.slept) < 3 {
-		t.Fatalf("expected several pauses, got %d", len(clock.slept))
-	}
-	if clock.slept[0] != agentDialFirstPause {
-		t.Fatalf("first pause = %s, want %s", clock.slept[0], agentDialFirstPause)
-	}
-	for i, d := range clock.slept {
-		if d > agentDialMaxPause {
-			t.Fatalf("pause %d = %s exceeds the ceiling %s", i, d, agentDialMaxPause)
+func TestConnectAgentRecoveryWaitsWithoutRestartingAndReturnsOneConnection(t *testing.T) {
+	client, _ := recoveryDialTestClient(t)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	var attempts atomic.Int32
+	got, err := connectAgentPreservingRecovery(ctx, nil, func(context.Context) (*rpc.Client, error) {
+		if attempts.Add(1) < 5 {
+			return nil, errors.New("socket unavailable")
 		}
-		if i > 0 && d < clock.slept[i-1] {
-			t.Fatalf("pause %d shrank from %s to %s", i, clock.slept[i-1], d)
-		}
-	}
-	if last := clock.slept[len(clock.slept)-1]; last != agentDialMaxPause {
-		t.Fatalf("the backoff must reach its ceiling, last pause = %s", last)
+		return client, nil
+	}, recoveryDialTestPolicy())
+	if err != nil || got != client || attempts.Load() != 5 {
+		t.Fatalf("client=%p err=%v attempts=%d", got, err, attempts.Load())
 	}
 }
 
-// A cancelled context stops the wait immediately: shutdown must not be held
-// hostage by a retry loop.
-func TestConnectAgentPatientlyHonoursCancellation(t *testing.T) {
-	clock := newDialClock()
+func TestConnectAgentRecoveryMissingAgentRemainsBoundedByOwnerCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var attempts atomic.Int32
+	got, err := connectAgentPreservingRecovery(ctx, nil, func(context.Context) (*rpc.Client, error) {
+		if attempts.Add(1) == 12 {
+			cancel()
+		}
+		return nil, errors.New("socket absent")
+	}, recoveryDialTestPolicy())
+	if got != nil || !errors.Is(err, context.Canceled) || attempts.Load() != 12 {
+		t.Fatalf("client=%p err=%v attempts=%d", got, err, attempts.Load())
+	}
+}
+
+func TestConnectAgentRecoveryTimesOutEachAttempt(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var attempts atomic.Int32
+	_, err := connectAgentPreservingRecovery(ctx, nil, func(attempt context.Context) (*rpc.Client, error) {
+		deadline, ok := attempt.Deadline()
+		if !ok || time.Until(deadline) > 35*time.Millisecond {
+			t.Error("dial attempt lacks its bounded deadline")
+		}
+		<-attempt.Done()
+		if attempts.Add(1) == 2 {
+			cancel()
+		}
+		return nil, attempt.Err()
+	}, recoveryDialTestPolicy())
+	if !errors.Is(err, context.Canceled) || attempts.Load() != 2 {
+		t.Fatalf("err=%v attempts=%d", err, attempts.Load())
+	}
+}
+
+func TestConnectAgentRecoveryClosesLateConnectionAfterCancellation(t *testing.T) {
+	client, peer := recoveryDialTestClient(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	_, err := connectAgentPreservingRecovery(ctx, nil, func(attempt context.Context) (*rpc.Client, error) {
+		cancel()
+		<-attempt.Done()
+		return client, nil
+	}, recoveryDialTestPolicy())
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err=%v", err)
+	}
+	_ = peer.SetReadDeadline(time.Now().Add(time.Second))
+	if _, readErr := peer.Read(make([]byte, 1)); !errors.Is(readErr, io.EOF) {
+		t.Fatalf("cancelled attempt did not close its connected client: %v", readErr)
+	}
+}
+
+func TestConnectAgentRecoveryStopsWhenListenerFails(t *testing.T) {
+	failure := errors.New("listener closed unexpectedly")
+	serveResult := make(chan error, 1)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, err := connectAgentPreservingRecovery(ctx, serveResult, func(attempt context.Context) (*rpc.Client, error) {
+		serveResult <- failure
+		<-attempt.Done()
+		return nil, attempt.Err()
+	}, recoveryDialTestPolicy())
+	if !errors.Is(err, failure) {
+		t.Fatalf("listener failure lost: %v", err)
+	}
+}
+
+func TestConnectAgentRecoveryDoesNotAcceptConnectionAfterListenerStopped(t *testing.T) {
+	client, _ := recoveryDialTestClient(t)
+	serveResult := make(chan error, 1)
+	_, err := connectAgentPreservingRecovery(context.Background(), serveResult, func(context.Context) (*rpc.Client, error) {
+		serveResult <- http.ErrServerClosed
+		return client, nil
+	}, recoveryDialTestPolicy())
+	if err == nil {
+		t.Fatal("connection admitted without a recovery listener")
+	}
+}
+
+func TestConnectAgentRecoveryNilSuccessIsNotAdmission(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	var attempts atomic.Int32
+	got, err := connectAgentPreservingRecovery(ctx, nil, func(context.Context) (*rpc.Client, error) {
+		if attempts.Add(1) == 3 {
+			cancel()
+		}
+		return nil, nil
+	}, recoveryDialTestPolicy())
+	if got != nil || !errors.Is(err, context.Canceled) || attempts.Load() != 3 {
+		t.Fatalf("client=%p err=%v attempts=%d", got, err, attempts.Load())
+	}
+}
+
+func TestConnectAgentRecoveryInvalidConfigurationAndCancelledContextNeverDial(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, _, err := connectAgentPatiently(
-		ctx,
-		func(context.Context) (*rpc.Client, error) {
-			return nil, errors.New("still starting")
-		},
-		clock.Now, clock.Sleep,
-	)
-	if err == nil {
-		t.Fatal("a cancelled wait must fail")
+	_, err := connectAgentPreservingRecovery(ctx, nil, func(context.Context) (*rpc.Client, error) { t.Fatal("cancelled request dialled"); return nil, nil }, recoveryDialTestPolicy())
+	if !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
 	}
-	if clock.sleeps != 0 {
-		t.Fatalf("a cancelled wait must not sleep, slept %d times", clock.sleeps)
+	if _, err = connectAgentPreservingRecovery(context.Background(), nil, nil, recoveryDialTestPolicy()); err == nil {
+		t.Fatal("nil dialer accepted")
 	}
-}
-
-func TestConnectAgentPatientlyRequiresADialer(t *testing.T) {
-	if _, _, err := connectAgentPatiently(context.Background(), nil, nil, nil); err == nil {
-		t.Fatal("a nil dialer must be refused, not dereferenced")
+	if _, err = connectAgentWithRecovery(nil, dialAgentOnce); err == nil {
+		t.Fatal("missing listener accepted")
 	}
 }

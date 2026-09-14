@@ -140,7 +140,10 @@ func TestMainStartupLifecycleOrdering(t *testing.T) {
 	}
 
 	markers := []string{
+		"startupGate.recovery = panel.startupRecoveryHandler(webDir(), certPath, keyPath)",
 		"runningServer, err := startPanelHTTP(server, certPath, keyPath)",
+		"rawClient, err := connectAgentWithRecovery(runningServer, dialAgentOnce)",
+		"panel.agentClient = transport.NewReconnectingClient(rawClient)",
 		"panel.recoverInterruptedServiceOperations(context.Background())",
 		"panel.serviceMutationMu.Lock()",
 		"panel.serviceMutationMu.Unlock()",

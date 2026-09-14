@@ -48,6 +48,10 @@ const eagerModules = [
   'src/main.tsx',
   'src/App.tsx',
   'src/components/LicenseOnboarding.tsx',
+  'src/auth/usePanelSession.ts',
+  'src/components/RecoveryAccess.tsx',
+  'src/lib/accessObservation.ts',
+  'src/lib/recoveryObservation.ts',
   'src/router.tsx',
   'src/router-core.ts',
   'src/router-history.ts',
@@ -88,7 +92,7 @@ const eagerModules = [
 //
 // Anahtarları çalışma anında kurulan gruplar; hiçbir tarama birinin
 // erişilemez olduğunu kanıtlayamaz.
-const runtimeBuiltGroups = ['err', 'common', 'app', 'nav', 'role', 'theme', 'lang', 'login', 'profile'];
+const runtimeBuiltGroups = ['err', 'common', 'app', 'nav', 'role', 'theme', 'lang', 'login', 'profile', 'recovery'];
 
 test('the two halves are one catalogue: no key is missing, duplicated or untranslated', () => {
   const overlap = [...shellKeys].filter((key) => screenKeys.has(key));

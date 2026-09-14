@@ -6,7 +6,9 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/rpc"
 	"os"
@@ -82,6 +84,10 @@ func AgentTokenPath() string {
 func LoadOrCreateToken(path string) (string, error) {
 	if token, err := ReadToken(path); err == nil {
 		return token, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		// Unreadable or malformed existing state must not rotate the token.
+		// Okunamayan veya bozuk mevcut durum token'ı değiştirmemelidir.
+		return "", fmt.Errorf("cannot read existing token file: %w", err)
 	}
 
 	raw := make([]byte, 32)
@@ -99,12 +105,29 @@ func LoadOrCreateToken(path string) (string, error) {
 	return token, nil
 }
 
-// ReadToken reads and trims the shared token from disk.
-// ReadToken, paylaşımlı token'ı diskten okur ve kırpar.
+// ReadToken reads a bounded regular file and trims the shared token. Linux
+// opens nonblocking so a FIFO cannot hold agent connection or shutdown open.
+// ReadToken sınırlı normal dosyayı okur ve paylaşımlı token'ı kırpar. Linux'ta
+// engellemesiz açılır; FIFO, agent bağlantısını veya kapanışı bekletemez.
 func ReadToken(path string) (string, error) {
-	data, err := os.ReadFile(path)
+	f, err := openTokenFile(path)
 	if err != nil {
 		return "", err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return "", err
+	}
+	if !info.Mode().IsRegular() || info.Size() > maxTokenLineLen {
+		return "", fmt.Errorf("token file is not a bounded regular file")
+	}
+	data, err := io.ReadAll(io.LimitReader(f, maxTokenLineLen+1))
+	if err != nil {
+		return "", err
+	}
+	if len(data) > maxTokenLineLen {
+		return "", fmt.Errorf("token file exceeds size limit")
 	}
 	token := strings.TrimSpace(string(data))
 	if token == "" {

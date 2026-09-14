@@ -421,12 +421,12 @@ test('401 and 403 authentication loss pause only the global guard and resume exa
     assert.match(tracker, /const authenticatedRef = useRef\(false\)/);
     assert.match(tracker, /const paused = !authenticatedRef\.current/);
     assert.match(tracker, /await reconcileCanonicalRecord\(\);[\s\S]*pollWakeRef\.current\?\.\(\)/);
-    assert.match(app, /useLayoutEffect\(\(\) => \{[\s\S]*publishSystemUpdateAuthentication\(!loading && user !== null && user.effective_role === 'admin'\)/);
+    assert.match(app, /useLayoutEffect\(\(\) => \{[\s\S]*publishSystemUpdateAuthentication\(state === 'ready' && !observationRecovery && user\?\.effective_role === 'admin'\)/);
     const authBranch = tracker.slice(tracker.indexOf(`if (outcome.kind === 'auth')`), tracker.indexOf(`if (authPausedRef.current`));
     assert.doesNotMatch(authBranch, /schedule\(/);
     assert.match(tracker, /if \(cancelled \|\| authPausedRef\.current\) return/);
     assert.match(tracker, /requestAuthGeneration !== authSignalGenerationRef\.current/);
-    assert.match(app, /const authGenerationRef = useRef\(0\)/);
+    assert.match(app, /generation: authGenerationRef/);
     assert.match(app, /const requestGeneration = authGenerationRef\.current/);
     assert.match(app, /shouldApplyUnauthorizedResponse\(requestGeneration, authGenerationRef\.current\)/);
     assert.match(app, /<Login onSuccess=\{transitionAuthentication\}/);

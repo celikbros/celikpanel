@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/auth"
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/repositories"
 )
 
 // sessionCookieName is the cookie carrying the raw session token.
@@ -50,9 +53,17 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		if p.sessions == nil || p.users == nil {
+			writeAuthStatusUnavailable(w)
+			return
+		}
 		userID, err := p.sessions.Validate(r.Context(), cookie.Value)
 		if err != nil {
-			writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+			if errors.Is(err, auth.ErrSessionInvalid) {
+				writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+			} else {
+				writeAuthStatusUnavailable(w)
+			}
 			return
 		}
 
@@ -62,14 +73,15 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 		// Çağıranı (kimlik + rol) iliştir; böylece işleyiciler sahipliği
 		// uygulayabilir. Askıya alınmış hesaplar, ellerinde hangi oturum
 		// olursa olsun anında kesilir.
-		// Fail closed: a request whose user record cannot be read never
-		// proceeds with an empty role — an unreadable user is treated as an
-		// invalid session, not as a roleless one.
-		// Kapalı-varsayılan: kullanıcı kaydı okunamayan istek boş rolle asla
-		// ilerlemez — okunamayan kullanıcı, rolsüz değil geçersiz oturumdur.
+		// A failed read blocks admission without inventing an invalid session.
+		// Okuma hatası erişimi durdurur; oturumu geçersiz saymaz.
 		u, err := p.users.GetByID(r.Context(), userID)
 		if err != nil || u == nil {
-			writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+			if errors.Is(err, repositories.ErrUserNotFound) {
+				writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+			} else {
+				writeAuthStatusUnavailable(w)
+			}
 			return
 		}
 		if u.Status == "suspended" {
@@ -99,7 +111,11 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 		if accountType == core.AccountTypeAdditionalUser {
 			parent, parentErr := p.users.GetByID(r.Context(), identity.CustomerID)
 			if parentErr != nil || parent == nil {
-				writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+				if errors.Is(parentErr, repositories.ErrUserNotFound) {
+					writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+				} else {
+					writeAuthStatusUnavailable(w)
+				}
 				return
 			}
 			if parent.Status == "suspended" {
@@ -205,6 +221,12 @@ func isPublicPath(r *http.Request) bool {
 // (/api/v1/system/stats), kimlik doğrulama ve sahiplik-süzgeçli domain
 // rotaları bilerek listelenmemiştir.
 func isAdminOnlyPath(path string) bool {
+	if path == panelAvailabilityPath {
+		return false
+	}
+	if path == panelRecoveryStatusPath {
+		return true
+	}
 	if strings.HasPrefix(path, "/api/v1/dns/remote/") {
 		return true
 	}
@@ -312,4 +334,12 @@ func currentUserID(r *http.Request) int {
 		return c.ID
 	}
 	return 0
+}
+
+// Preserve the cookie and deny this request until authentication can be observed.
+// Çerezi koru; kimlik durumu okunabilene kadar bu isteği reddet.
+func writeAuthStatusUnavailable(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+	writeCodedError(w, http.StatusServiceUnavailable, errCodeAuthStatusUnavailable,
+		"Authentication status could not be checked. Check again; this request did not proceed.", "")
 }

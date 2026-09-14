@@ -64,6 +64,7 @@ type Panel struct {
 	secureCookies bool
 	loginLimiter  *rateLimiter
 	demoMode      bool
+	startupGate   *panelHTTPStartupGate
 	// webmailReadinessProbe is injectable only so handler tests never need a
 	// real Roundcube process. Production leaves it nil and uses the fixed,
 	// Unix-socket-backed probe.
@@ -801,25 +802,6 @@ func main() {
 		return
 	}
 
-	// Connect to Agent. The reconnecting wrapper survives agent restarts and
-	// poisoned RPC streams without needing a panel restart.
-	// Agent'a bağlan. Yeniden bağlanan sarmalayıcı, panel yeniden başlatılmadan
-	// agent yeniden başlamalarını ve bozulmuş RPC akışlarını atlatır.
-	rawClient, waited, err := connectAgentPatiently(
-		context.Background(), dialAgentOnce, nil, nil,
-	)
-	if err != nil {
-		log.Fatalf(
-			"Failed to connect to Agent after waiting %s: %v", waited.Round(time.Second), err,
-		)
-	}
-	client := transport.NewReconnectingClient(rawClient)
-	if waited > time.Second {
-		log.Printf("Connected to Agent RPC after waiting %s", waited.Round(time.Second))
-	} else {
-		log.Println("Connected to Agent RPC")
-	}
-
 	sessions := auth.NewSessionStore(database.GetDB())
 
 	// Load (or on first boot, create) the key that seals stored credentials
@@ -836,7 +818,6 @@ func main() {
 	}
 
 	panel := &Panel{
-		agentClient:   client,
 		db:            database,
 		sessions:      sessions,
 		users:         repositories.NewPostgresUserRepository(database.GetDB()),
@@ -877,12 +858,13 @@ func main() {
 
 	// Bind and serve TLS before durable mutation recovery. Certificate
 	// activation restarts the panel and then verifies the published leaf over
-	// this listener; an atomic gate returns 503 for every application request
-	// until all startup recovery and route registration is complete.
+	// this listener. The closed gate serves a fixed recovery surface while
+	// ordinary application requests remain blocked until startup completes.
 	applicationHandler := panel.requireRemoteDNSMachineAuth(csrfProtect(
 		panel.requireAuth(http.DefaultServeMux),
 	))
 	startupGate := newPanelHTTPStartupGate(applicationHandler)
+	panel.startupGate = startupGate
 	handler := securityHeaders(panel.secureCookies, startupGate)
 	addr := listenAddr()
 	server := newPanelHTTPServer(addr, handler)
@@ -895,6 +877,7 @@ func main() {
 	if !tlsOn && panel.secureCookies {
 		log.Fatal("refusing to serve over plain HTTP with secure cookies: enable TLS (CELIKPANEL_TLS=1 or CELIKPANEL_TLS_CERT/KEY) or pass --insecure-cookies for development")
 	}
+	startupGate.recovery = panel.startupRecoveryHandler(webDir(), certPath, keyPath)
 	runningServer, err := startPanelHTTP(server, certPath, keyPath)
 	if err != nil {
 		log.Fatalf("Failed to start panel listener: %v", err)
@@ -904,6 +887,23 @@ func main() {
 	} else {
 		log.Printf("Panel startup listener active on %s (HTTP; application gated)", addr)
 	}
+
+	// Authentication and read-only recovery are already served while the Agent
+	// is unavailable. Only a connected Agent may begin normal startup recovery.
+	// Agent yokken kimlik ve salt-okur kurtarma erişimi açıktır. Olağan açılış
+	// kurtarması yalnız Agent bağlantısı kurulduktan sonra başlayabilir.
+	rawClient, err := connectAgentWithRecovery(runningServer, dialAgentOnce)
+	if err != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), panelHTTPShutdownTimeout)
+		_ = server.Shutdown(shutdownCtx)
+		shutdownCancel()
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		log.Fatalf("Panel startup stopped while waiting for Agent: %v", err)
+	}
+	panel.agentClient = transport.NewReconnectingClient(rawClient)
+	log.Println("Connected to Agent RPC; preparing normal management access")
 
 	// A failed reconcile degrades its subsystem; it does not end the process.
 	// The durable markers stay for the next replay, the listener stays bound,
@@ -1128,6 +1128,7 @@ func main() {
 	http.HandleFunc("/api/v1/auth/logout", panel.handleLogout)
 	http.HandleFunc("/api/v1/auth/me", panel.handleMe)
 	http.HandleFunc(panelLicenseAccessPath, panel.handleLicenseAccess)
+	panel.registerRecoveryRoutes(http.DefaultServeMux)
 
 	// Demo credentials (public, but empty unless --demo is set).
 	// Demo kimlik bilgileri (herkese açık, ama --demo yoksa boş).

@@ -470,8 +470,8 @@ func TestLoginFailsClosedWhenTOTPReadFails(t *testing.T) {
 	))
 	panel.handleLogin(recorder, request)
 
-	if recorder.Code != http.StatusInternalServerError {
-		t.Fatalf(`login status = %d, want 500; body=%s`, recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), errCodeAuthStatusUnavailable) {
+		t.Fatalf(`login status = %d, want 503/AUTH_STATUS_UNAVAILABLE; body=%s`, recorder.Code, recorder.Body.String())
 	}
 	if recorder.Header().Get(`Set-Cookie`) != `` {
 		t.Fatalf(`login issued a cookie on TOTP read failure: %q`, recorder.Header().Get(`Set-Cookie`))
@@ -507,8 +507,8 @@ func TestLoginFailsClosedForInvalidOrUnopenableTOTPSecret(t *testing.T) {
 				`{"username":"totp-user","password":"correct horse battery staple"}`,
 			))
 			panel.handleLogin(recorder, request)
-			if recorder.Code != http.StatusInternalServerError {
-				t.Fatalf(`login status = %d, want 500; body=%s`, recorder.Code, recorder.Body.String())
+			if recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), errCodeAuthStatusUnavailable) {
+				t.Fatalf(`login status = %d, want 503/AUTH_STATUS_UNAVAILABLE; body=%s`, recorder.Code, recorder.Body.String())
 			}
 			if recorder.Header().Get(`Set-Cookie`) != `` {
 				t.Fatal(`login issued a cookie for an invalid TOTP secret`)
