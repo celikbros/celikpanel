@@ -80,7 +80,10 @@ dosyaların yokluğu aranır. Servisler başladıktan sonraki olağan DB/WAL yaz
 içerik ve zamanları değiştirebilir. Geç doğrulama yayınlanmış inode/sahiplik,
 korunan karşı dosya ve makbuzlarla birlikte özel WAL kopyasında tam şema,
 migration geçmişi ve kuyruk kontrolü kullanır. Güncelleme hedef şemayı; geri
-alma tarihsel snapshot şemasını gerektirir. Zamanlayıcılar geri yüklenmeden
+alma tarihsel snapshot şemasını gerektirir. Bilinen eski iki sütunlu migration
+defteri yalnız özel okuma kopyasında standartlaştırılır, sonra snapshot
+geçmişiyle karşılaştırılır; bilinmeyen defter biçimleri reddedilir. Asıl
+DB/WAL/SHM ve snapshot değişmez. Zamanlayıcılar geri yüklenmeden
 önce ve sonra son kanıt tekrarlanır. Completion işaretçisi başarı demek değildir.
 
 ## Kanıt ve açık işler

@@ -572,3 +572,86 @@ func TestRecoveryDatabaseMigrationSealRefusesLateOwnerChangeBeforeMetadata(t *te
 		t.Fatal("unknown owner state normalized before refusal")
 	}
 }
+
+func migrationLegacyLedgerFixture(t *testing.T) *migrationFixture {
+	t.Helper()
+	f := newMigrationFixture(t)
+	db, e := sql.Open("sqlite", f.target())
+	migrationMust(t, e)
+	tx, e := db.Begin()
+	migrationMust(t, e)
+	_, e = tx.Exec("ALTER TABLE schema_migrations RENAME TO migration_fixture_previous")
+	migrationMust(t, e)
+	_, e = tx.Exec(knownLegacySchemaMigrationsSQL)
+	migrationMust(t, e)
+	_, e = tx.Exec("INSERT INTO schema_migrations(version,applied_at) SELECT version,applied_at FROM migration_fixture_previous")
+	migrationMust(t, e)
+	_, e = tx.Exec("UPDATE schema_migrations SET applied_at=NULL WHERE version=1")
+	migrationMust(t, e)
+	_, e = tx.Exec("DROP TABLE migration_fixture_previous")
+	migrationMust(t, e)
+	migrationMust(t, tx.Commit())
+	migrationMust(t, db.Close())
+	dir := filepath.Join(f.Root, "legacy-normal-snapshot")
+	migrationMust(t, os.Mkdir(dir, 0700))
+	source := filepath.Join(dir, databaseMigrationDB)
+	migrationMust(t, createServiceOperationSnapshot(f.target(), source, serviceOperationSnapshotSchemaNormal))
+	b, e := os.ReadFile(source)
+	migrationMust(t, e)
+	f.Source = source
+	f.Authority.Source = source
+	f.Authority.ID.SnapshotDatabaseSHA256 = databaseMigrationDigest(b)
+	f.Before = f.current(t)
+	f.Authority.ID.DatabaseBefore.File = migrationAPIIdentity(f.Before.Identity)
+	f.Authority.ID.DatabaseBefore.SHA256 = f.Before.SHA256
+	return f
+}
+func TestRecoveryDatabaseMigrationLegacyLedgerLate(t *testing.T) {
+	for _, published := range []bool{false, true} {
+		for _, malformed := range []bool{false, true} {
+			t.Run(fmt.Sprintf("published=%v/malformed=%v", published, malformed), func(t *testing.T) {
+				f := migrationLegacyLedgerFixture(t)
+				f.prepare(t)
+				if published {
+					f.migrate(t)
+					f.publish(t)
+				}
+				f.rollback(t)
+				f.assertBefore(t)
+				f.Authority.ID.Phase = "completion-scheduler"
+				db, e := sql.Open("sqlite", f.target()+"?_pragma=journal_mode(WAL)&_pragma=wal_autocheckpoint(0)")
+				migrationMust(t, e)
+				defer db.Close()
+				_, e = db.Exec("UPDATE server_setup_state SET revision=revision+1 WHERE id=1")
+				migrationMust(t, e)
+				if malformed {
+					_, e = db.Exec("ALTER TABLE schema_migrations ADD COLUMN owner_note TEXT")
+					migrationMust(t, e)
+				}
+				for _, suffix := range []string{"-wal", "-shm"} {
+					migrationMust(t, os.Chown(f.target()+suffix, int(f.Owner.uid), int(f.Owner.gid)))
+					migrationMust(t, os.Chmod(f.target()+suffix, 0600))
+				}
+				before := migrationTreeBytes(t, f.Parent)
+				snapshotBefore, e := os.ReadFile(f.Source)
+				migrationMust(t, e)
+				e = verifyRecoveryDatabaseMigrationWith(f.Snapshot, f.Config)
+				if malformed {
+					if e == nil {
+						t.Fatal("unknown legacy ledger was accepted")
+					}
+				} else {
+					migrationMust(t, e)
+				}
+				if !bytes.Equal(databaseMigrationCanonical(before), databaseMigrationCanonical(migrationTreeBytes(t, f.Parent))) {
+					t.Fatal("legacy verification modified canonical DB/WAL/SHM or evidence")
+				}
+				snapshotAfter, e := os.ReadFile(f.Source)
+				migrationMust(t, e)
+				if !bytes.Equal(snapshotBefore, snapshotAfter) {
+					t.Fatal("historical snapshot changed")
+				}
+			})
+		}
+	}
+}

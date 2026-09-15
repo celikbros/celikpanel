@@ -86,7 +86,10 @@ allowed to run, legitimate database/WAL writes may change content and timestamps
 Late verification therefore checks the published canonical inode/owner, retained
 counterpart and receipts, plus a private WAL-aware whole-schema/migration/idle
 read. Update completion requires the exact current target schema; rollback
-completion requires the historical snapshot schema. Terminal checks repeat
+completion requires the historical snapshot schema. A recognized historical
+two-column migration ledger is canonicalized only on that private read copy,
+then compared with the snapshot history; unknown ledger layouts are rejected.
+The canonical DB/WAL/SHM and snapshot remain unchanged. Terminal checks repeat
 before and after scheduler restoration. A completion marker is not success.
 
 ## Evidence and remaining work

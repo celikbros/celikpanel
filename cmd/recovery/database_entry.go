@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -33,7 +34,7 @@ func dispatchDatabaseAction(args []string, uid int, execute func(string, string)
 	}
 	work, err := execute(args[0], args[2])
 	if err != nil {
-		report("The database transition could not be verified. Preserve this operation and its database evidence; use recovery for the same operation. " + err.Error())
+		report("The database transition could not be verified. Preserve this operation and its database evidence. The server owner can inspect the recovery runtime with sudo /usr/libexec/celikpanel/recovery runtime-status, then resume this same operation with sudo /usr/libexec/celikpanel/recovery recover. " + err.Error())
 		return exitOutput
 	}
 	if args[0] == "prepare-update-database" {
@@ -57,7 +58,11 @@ func dispatchDatabaseProbe(args []string, uid int, probe func() error, report fu
 		return exitUsage
 	}
 	if err := probe(); err != nil {
-		report("Database metadata is not supported for isolated migration. Panel services have not been stopped. " + err.Error())
+		reason := "Database migration readiness could not be verified."
+		if errors.Is(err, recoverypublication.ErrUnsupportedMetadata) {
+			reason = "This recovery version does not support the database's filesystem attributes."
+		}
+		report(reason + " This check has not stopped services. The server owner should review the database and parent metadata in the update details, preserve existing attributes, and retry from the panel only after the reported requirement is resolved. " + err.Error())
 		return exitOutput
 	}
 	return exitOK

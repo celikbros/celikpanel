@@ -5,6 +5,9 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/alicelik/celikpanel/internal/recoverypublication"
+	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 )
 
 func TestDatabaseCommandRejectsNewAuthorityAndInvalidResults(t *testing.T) {
@@ -73,5 +76,61 @@ func TestDatabasePreflightCannotBecomeMutation(t *testing.T) {
 	}
 	if got := dispatchDatabaseProbe([]string{"probe-update-database"}, 1000, func() error { t.Fatal("unprivileged probe executed"); return nil }, func(string) {}); got != exitNotOwner {
 		t.Fatal(got)
+	}
+}
+
+func TestDatabasePreflightDistinguishesUnsupportedMetadataFromUnknown(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		failure error
+		want    string
+		wrong   string
+	}{
+		{"unsupported", recoverypublication.ErrUnsupportedMetadata, "does not support the database's filesystem attributes", "readiness could not be verified"},
+		{"unknown", recoverypublication.ErrUnavailable, "readiness could not be verified", "does not support the database's filesystem attributes"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var message string
+			code := dispatchDatabaseProbe([]string{"probe-update-database"}, 0, func() error { return tc.failure }, func(v string) { message = v })
+			if code != exitOutput || !strings.Contains(message, tc.want) || strings.Contains(message, tc.wrong) {
+				t.Fatalf("incorrect classification: %d %s", code, message)
+			}
+			if !strings.Contains(message, "server owner") || !strings.Contains(message, "retry from the panel") {
+				t.Fatalf("owner action is missing: %s", message)
+			}
+		})
+	}
+}
+
+func TestDatabaseFailureGuidanceUsesAcceptedOwnerCommands(t *testing.T) {
+	snapshot := "20260915T010000Z-from-unknown-to-" + strings.Repeat("a", 40) + "-" + strings.Repeat("b", 32)
+	var message string
+	var output bytes.Buffer
+	code := dispatchDatabaseAction([]string{"publish-update-database", "--snapshot", snapshot}, 0, func(string, string) (string, error) { return "", errors.New("unknown evidence") }, &output, func(v string) { message = v })
+	if code != exitOutput {
+		t.Fatal(code)
+	}
+	prefix := "sudo /usr/libexec/celikpanel/recovery "
+	parts := strings.Split(message, prefix)
+	if len(parts) != 3 {
+		t.Fatalf("owner commands missing: %s", message)
+	}
+	observation := strings.TrimRight(strings.Fields(parts[1])[0], ",.")
+	resume := strings.TrimRight(strings.Fields(parts[2])[0], ",.")
+	var diagnostics bytes.Buffer
+	if got := runRuntimeStatus([]string{observation}, 0, func() (recoveryruntime.PromotionStatus, error) {
+		return recoveryruntime.PromotionStatus{Phase: "none"}, nil
+	}, &output, &diagnostics); got != exitOK {
+		t.Fatalf("suggested read command rejected: %s exit=%d", observation, got)
+	}
+	called := false
+	if got := dispatchEntry([]string{resume}, 0, func() int { t.Fatal("resume became observation"); return exitUsage }, func(args []string) error {
+		called = true
+		if len(args) != 0 {
+			t.Fatal("resume introduced authority")
+		}
+		return nil
+	}, func(string) error { t.Fatal("resume became enrollment"); return nil }, func(string) {}); got != exitOK || !called {
+		t.Fatalf("suggested recovery rejected: %s exit=%d", resume, got)
 	}
 }

@@ -671,6 +671,13 @@ func (v *recoveryDatabaseMigration) historicalSchema() error {
 		return e
 	}
 	return checkWALAwareServiceOperationsIdleWith(filepath.Join(v.c.parent, databaseMigrationDB), func(path string) error {
+		// Only this disposable WAL-consistent copy may normalize the historically
+		// emitted two-column ledger. The source DB/WAL/SHM are never opened by SQLite.
+		// The same helper produced the snapshot ledger and preserves applied_at.
+		if e := canonicalizeKnownLegacySnapshotSchemaMigrations(path); e != nil {
+			return e
+		}
+
 		if e := validateServiceOperationSnapshot(path, serviceOperationSnapshotSchemaNormal); e != nil {
 			return e
 		}
