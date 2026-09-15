@@ -23,6 +23,40 @@ class BaselineTests(unittest.TestCase):
         self.assertIn(b"bootstrap_release_sequence=75\n", raw)
         self.assertIn(b"bootstrap_release_version=v0.1.0-alpha.75\n", raw)
 
+    def test_alpha64_uses_unchanged_pinned_historical_bootstrap(self):
+        raw = baseline.historical_bootstrap(Path(__file__).resolve().parents[3], 'alpha64-schema38')
+        self.assertIn(b"bootstrap_release_sequence=64\n", raw)
+        self.assertIn(b"bootstrap_release_version=v0.1.0-alpha.64\n", raw)
+
+    def test_alpha64_driver_has_profile_pins_and_readonly_observation(self):
+        record = {"nonce": "a" * 64, "cell_id": "release-recovery__0123456789abcdef"}
+        node = {"qemu_command": ["qemu-system-x86_64", "-uuid", "12345678-1234-5678-1234-567812345678"]}
+        script = baseline.guest_driver(record, "debian13", node, 'alpha64-schema38')
+        ast.parse(script)
+        self.assertIn("VERSION='v0.1.0-alpha.64'", script)
+        self.assertIn("get-alpha64.sh", script)
+        self.assertNotIn("get-alpha75.sh", script)
+        self.assertIn('observe_migration_identity', script)
+        self.assertIn('expected_release_pin', script)
+        self.assertIn('os.O_EXCL', script)
+        self.assertNotIn('--expected-archive-sha256', script)
+        self.assertNotIn('INSERT INTO schema_migrations', script)
+
+    def test_invalid_profile_is_rejected_before_any_guest_contact(self):
+        with mock.patch.object(baseline.lab, "guarded_script") as guest:
+            with self.assertRaises(ValueError):baseline.start(Path('/unused'), {}, {}, 'arch', True, 'https://other')
+        guest.assert_not_called()
+
+    def test_alpha64_dry_run_explicit_and_no_guest_contact(self):
+        with mock.patch.object(baseline.lab, 'guarded_script', side_effect=AssertionError('guest reached')):
+            value = baseline.start(Path('/unused'), {}, {}, 'arch', False, 'alpha64-schema38')
+        self.assertEqual(value['version'], 'v0.1.0-alpha.64')
+
+    def test_status_cannot_relabel_existing_75_result_as_64(self):
+        reply = types.SimpleNamespace(stdout='{"installation":{"version":"v0.1.0-alpha.75"}}')
+        with mock.patch.object(baseline.lab, 'guarded_script', return_value=reply):
+            with self.assertRaises(ValueError):baseline.status(Path('/unused'), {}, {}, 'arch', 'alpha64-schema38')
+
     def test_modified_bootstrap_is_refused(self):
         with mock.patch.object(baseline.subprocess, "run", return_value=types.SimpleNamespace(stdout=b"echo changed")):
             with self.assertRaises(ValueError):

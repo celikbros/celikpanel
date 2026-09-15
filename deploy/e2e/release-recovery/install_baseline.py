@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install the genuine signed Alpha75 baseline only inside registered fresh QEMU guests.
+"""Install a fixed signed baseline only inside registered fresh QEMU guests.
 
 There is no arbitrary SSH target or installed-update mode. The lab controller
 checks the QEMU process, loopback transport, host key, nonce and guest DMI UUID.
@@ -25,6 +25,11 @@ lab = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = lab
 SPEC.loader.exec_module(lab)
 
+PROFILE_SPEC = importlib.util.spec_from_file_location("release_baseline_profiles", HERE / "baseline_profiles.py")
+profiles = importlib.util.module_from_spec(PROFILE_SPEC)
+sys.modules[PROFILE_SPEC.name] = profiles
+PROFILE_SPEC.loader.exec_module(profiles)
+
 VERSION = "v0.1.0-alpha.75"
 COMMIT = "5aa03fd5b6775b21834ff7b1ce0695d92f50ae93"
 BOOTSTRAP_SHA256 = "82b2674c103e347df471ec7e3f2f091d50006c957c54ac946b7c021ed19e041d"
@@ -39,12 +44,13 @@ FRESH_PATHS = (
 )
 
 
-def historical_bootstrap(repository):
-    raw = subprocess.run(["git", "-C", str(repository), "show", COMMIT + ":download-portal/get.sh"],
+def historical_bootstrap(repository, profile_name=profiles.DEFAULT):
+    profile = profiles.get_profile(profile_name)
+    raw = subprocess.run(["git", "-C", str(repository), "show", profile.commit + ":download-portal/get.sh"],
                          check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
-    if hashlib.sha256(raw).hexdigest() != BOOTSTRAP_SHA256:
+    if hashlib.sha256(raw).hexdigest() != profile.bootstrap_sha256:
         raise ValueError("historical bootstrap does not match the pinned released bytes")
-    if b"bootstrap_release_sequence=75\n" not in raw or b"bootstrap_release_version=" + VERSION.encode() + b"\n" not in raw:
+    if ("bootstrap_release_sequence=" + str(profile.sequence) + "\n").encode() not in raw or b"bootstrap_release_version=" + profile.version.encode() + b"\n" not in raw:
         raise ValueError("historical bootstrap release selection changed")
     return raw
 
@@ -70,13 +76,17 @@ def fresh_check():
         "CP_BASELINE_FRESH\n"
 
 
-def guest_driver(record, node_name, node):
+def guest_driver(record, node_name, node, profile_name=profiles.DEFAULT):
+    profile = profiles.get_profile(profile_name)
+    helper_pins = {name: hashlib.sha256((HERE / name).read_bytes()).hexdigest() for name in ("baseline_profiles.py", "guest_probe.py")} if profile_name == profiles.ALPHA64 else {}
     guard = lab.guest_guard(record, node_name, node)
     return guard + "\n" + r'''
 import datetime,fcntl,hashlib,secrets,subprocess,time
 ROOT=Path("/root/celikpanel-release-recovery-lab")
-VERSION="v0.1.0-alpha.75"
-EXPECTED_BOOTSTRAP="82b2674c103e347df471ec7e3f2f091d50006c957c54ac946b7c021ed19e041d"
+VERSION=VERSION_LITERAL
+PROFILE_NAME=PROFILE_LITERAL
+EXPECTED_BOOTSTRAP=BOOTSTRAP_LITERAL
+HELPER_PINS=HELPER_PINS_LITERAL
 os.umask(0o077)
 info=ROOT.lstat()
 if not (stat.S_ISDIR(info.st_mode) and info.st_uid==0 and stat.S_IMODE(info.st_mode)==0o700): raise RuntimeError("unsafe private lab directory")
@@ -85,7 +95,7 @@ fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
 for path in FRESH_PATHS_LITERAL:
     p=Path(path)
     if p.exists() or p.is_symlink(): raise RuntimeError("guest already contains CelikPanel state")
-bootstrap=ROOT/"get-alpha75.sh"
+bootstrap=ROOT/BOOTSTRAP_NAME_LITERAL
 if hashlib.sha256(bootstrap.read_bytes()).hexdigest()!=EXPECTED_BOOTSTRAP: raise RuntimeError("bootstrap changed")
 credentials={"username":"labadmin","email":"labadmin@example.invalid","password":secrets.token_urlsafe(32)}
 raw=json.dumps(credentials,separators=(",",":")).encode()+b"\n"
@@ -145,6 +155,22 @@ for name in services:
 request=subprocess.run(["curl","--silent","--insecure","--max-time","15","--output","/dev/null",
                         "--write-out","%{http_code}","https://127.0.0.1:2083/login"],
                        stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,timeout=20)
+database=None
+if PROFILE_NAME == "alpha64-schema38":
+    import importlib.util,sys
+    def helper(name):
+        path=ROOT/name
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        with os.fdopen(fd,"rb") as stream:
+            info=os.fstat(stream.fileno())
+            if not (stat.S_ISREG(info.st_mode) and info.st_uid==0 and info.st_nlink==1 and stat.S_IMODE(info.st_mode)==0o600 and info.st_size<=524288): raise RuntimeError("unsafe baseline observation helper")
+            raw=stream.read(524289)
+        if hashlib.sha256(raw).hexdigest()!=HELPER_PINS[name]: raise RuntimeError("baseline observation helper changed")
+        spec=importlib.util.spec_from_file_location("baseline_observer_"+name[:-3],path)
+        value=importlib.util.module_from_spec(spec);sys.modules[spec.name]=value;spec.loader.exec_module(value)
+        return value
+    pinned_profiles=helper("baseline_profiles.py");probe=helper("guest_probe.py")
+    database=pinned_profiles.observe_migration_identity(Path("/var/lib/celikpanel/celikpanel.db"),PROFILE_NAME,probe)
 proof={"schema":"celikpanel/release-baseline-install-result/v1","version":VERSION,"started_at":started,
        "finished_at":datetime.datetime.now(datetime.timezone.utc).isoformat(),"exit_code":code,"error_type":problem,
        "bootstrap_sha256":EXPECTED_BOOTSTRAP,"installer_log_sha256":digest(log_path),
@@ -152,38 +178,51 @@ proof={"schema":"celikpanel/release-baseline-install-result/v1","version":VERSIO
        "running_artifacts":running,"services":services,"https_curl_exit":request.returncode,
        "https_http_code":request.stdout.strip(),"https_trust_validation":"not-claimed-self-signed-bootstrap",
        "credentials":"guest-root-only"}
+if PROFILE_NAME == "alpha64-schema38":
+    proof.update({"baseline_profile":PROFILE_NAME,"source_commit":pinned_profiles.get_profile(PROFILE_NAME).commit,
+                  "expected_release_pin":pinned_profiles.public_pin(PROFILE_NAME),"database":database,
+                  "archive_pin_scope":"expected published archive identity; original bootstrap verifies its own download"})
+    try:
+        pinned_profiles.validate_result(proof,PROFILE_NAME)
+    except ValueError:
+        proof["error_type"]=proof["error_type"] or "BaselineVerificationUnavailable"
 fd=os.open(ROOT/"baseline-install-result.json",os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
 with os.fdopen(fd,"w") as stream:
     json.dump(proof,stream,sort_keys=True)
     stream.write("\n")
     stream.flush()
     os.fsync(stream.fileno())
-sys_exit=0 if code==0 else 1
+sys_exit=0 if code==0 and proof["error_type"] is None else 1
 raise SystemExit(sys_exit)
-'''.replace("FRESH_PATHS_LITERAL", repr(FRESH_PATHS))
+'''.replace("FRESH_PATHS_LITERAL", repr(FRESH_PATHS)).replace("VERSION_LITERAL", repr(profile.version)).replace("PROFILE_LITERAL", repr(profile.name)).replace("BOOTSTRAP_LITERAL", repr(profile.bootstrap_sha256)).replace("BOOTSTRAP_NAME_LITERAL", repr(profile.bootstrap_name)).replace("HELPER_PINS_LITERAL", repr(helper_pins))
 
 
-def start(root, record, plan, node_name, execute):
+def start(root, record, plan, node_name, execute, profile_name=profiles.DEFAULT):
+    profile = profiles.get_profile(profile_name)
     if not execute:
-        return {"node": node_name, "action": "fresh-signed-install", "version": VERSION, "execute": False}
+        return {"node": node_name, "action": "fresh-signed-install", "version": profile.version, "execute": False}
     lab.guarded_script(root, record, plan, node_name, fresh_check())
-    bootstrap = root / "get-alpha75.sh"
-    private_file(bootstrap, historical_bootstrap(HERE.parents[2]))
+    bootstrap = root / profile.bootstrap_name
+    private_file(bootstrap, historical_bootstrap(HERE.parents[2], profile_name))
     driver = root / ("baseline-driver-" + node_name + ".py")
-    private_file(driver, guest_driver(record, node_name, plan["nodes"][node_name]).encode())
-    lab.put_file(root, record, plan, node_name, bootstrap, "get-alpha75.sh")
+    private_file(driver, guest_driver(record, node_name, plan["nodes"][node_name], profile_name).encode())
+    lab.put_file(root, record, plan, node_name, bootstrap, profile.bootstrap_name)
+    if profile_name == profiles.ALPHA64:
+        for name in ("baseline_profiles.py", "guest_probe.py"):
+            lab.put_file(root, record, plan, node_name, HERE / name, name)
     lab.put_file(root, record, plan, node_name, driver, "baseline-install-driver.py")
     body = fresh_check() + (
-        "systemd-run --quiet --no-block --unit=" + UNIT +
+        "systemd-run --quiet --no-block --unit=" + profile.unit +
         " --property=Type=oneshot --property=TimeoutStartSec=2500 --property=UMask=0077"
         " /usr/bin/python3 -I " + GUEST_ROOT + "/baseline-install-driver.py\n"
     )
     lab.guarded_script(root, record, plan, node_name, body, timeout=60)
-    return {"node": node_name, "action": "started", "version": VERSION, "unit": UNIT,
-            "bootstrap_sha256": BOOTSTRAP_SHA256, "credentials": "guest-root-only"}
+    return {"node": node_name, "action": "started", "version": profile.version, "unit": profile.unit,
+            "baseline_profile": profile.name, "bootstrap_sha256": profile.bootstrap_sha256, "credentials": "guest-root-only"}
 
 
-def status(root, record, plan, node_name):
+def status(root, record, plan, node_name, profile_name=profiles.DEFAULT):
+    profile = profiles.get_profile(profile_name)
     body = """python3 -I - <<'CP_BASELINE_STATUS'
 import json,stat,subprocess
 from pathlib import Path
@@ -198,17 +237,20 @@ else:
     result['installation']=None
 print(json.dumps(result,sort_keys=True))
 CP_BASELINE_STATUS
-"""
+""".replace("celikpanel-lab-alpha75-install.service", profile.unit)
     result = lab.guarded_script(root, record, plan, node_name, body, timeout=45)
     data = json.loads(result.stdout)
     data["node"] = node_name
+    observed = data.get("installation")
+    if observed is not None and (observed.get("version") != profile.version or observed.get("baseline_profile", profiles.DEFAULT) != profile.name):
+        raise ValueError("existing baseline result belongs to a different profile")
     return data
 
 
 
-def collect(root, record, plan, node_name):
+def collect(root, record, plan, node_name, profile_name=profiles.DEFAULT):
     """Copy only private installation log/result evidence; never credentials."""
-    observed = status(root, record, plan, node_name)
+    observed = status(root, record, plan, node_name, profile_name)
     if observed["installation"] is None:
         raise ValueError("installation has no terminal result; private guest log is retained")
     result = {"node": node_name, "artifacts": {}}
@@ -239,12 +281,13 @@ def main():
     parser.add_argument("--work-root", required=True)
     parser.add_argument("--node", choices=("debian13", "arch", "all"), default="all")
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--profile", choices=profiles.CHOICES, default=profiles.DEFAULT)
     args = parser.parse_args()
     root = lab.checked_root(args.work_root)
     record, plan = lab.load(root)
     names = list(plan["nodes"]) if args.node == "all" else [args.node]
     for name in names:
-        result = start(root, record, plan, name, args.execute) if args.command == "start" else (collect(root, record, plan, name) if args.command == "collect" else status(root, record, plan, name))
+        result = start(root, record, plan, name, args.execute, args.profile) if args.command == "start" else (collect(root, record, plan, name, args.profile) if args.command == "collect" else status(root, record, plan, name, args.profile))
         print(json.dumps(result, sort_keys=True), flush=True)
 
 

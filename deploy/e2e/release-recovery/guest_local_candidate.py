@@ -19,6 +19,7 @@ def module(name,filename):
     spec=importlib.util.spec_from_file_location(name,HERE/filename)
     value=importlib.util.module_from_spec(spec);sys.modules[name]=value;spec.loader.exec_module(value);return value
 
+profiles=module('local_candidate_profiles','baseline_profiles.py')
 archive_tools=module('local_candidate_archive','candidate_archive.py')
 kill=module('local_candidate_kill','guest_update_kill.py')
 shared=kill.shared;probe=shared.probe
@@ -51,6 +52,10 @@ def validate_plan(plan,identity,operation):
     if (plan.get('schema')!=SCHEMA or plan.get('identity')!=identity or plan.get('operation_id')!=operation
             or plan.get('provenance')!='unpublished-local-build-not-signed-agent-admission'
             or plan.get('boundary') not in ('candidate-installed','require-unit-reload','completion-database-verified')):raise ValueError('local candidate intent differs from exact disposable guest')
+    profile=profiles.get_profile(plan.get('baseline_profile',profiles.DEFAULT))
+    if profile.name==profiles.ALPHA64 and (plan.get('baseline_artifacts')!={'agent':profile.agent_sha256,'panel':profile.panel_sha256}
+            or plan.get('baseline_migration_identities_sha256')!=profile.migration_identities_sha256):
+        raise ValueError('historical baseline identity differs from sealed profile')
     if plan.get('boundary')=='completion-database-verified' and ('recovery_fault' in plan or plan.get('candidate_data_fault')!='quarantine-fixed-three'):
         raise ValueError('completion fault requires the exact data-loss plan and no second recovery fault')
     if 'recovery_fault' in plan:

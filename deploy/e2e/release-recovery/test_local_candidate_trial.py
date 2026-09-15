@@ -105,6 +105,23 @@ class ControllerTests(unittest.TestCase):
             controller.main(['--work-root','/unused','--node','arch','--mode','prepare','--execute','--archive','/tmp/payload','--archive-sha256','a'*64,'--candidate-data-fault','quarantine-fixed-three'])
         self.assertEqual(prepare.call_args.kwargs['candidate_data_fault'],'quarantine-fixed-three')
 
+    def test_alpha64_profile_is_explicit_and_bound_to_old_bytes_and_ledger(self):
+        profile=controller.trial.profiles.get_profile('alpha64-schema38')
+        value={**self.intent,'baseline_profile':profile.name,'baseline_artifacts':{'agent':profile.agent_sha256,'panel':profile.panel_sha256},'baseline_migration_identities_sha256':profile.migration_identities_sha256}
+        g.validate_plan(value,self.ident,self.op)
+        for key,changed in (('baseline_profile','arbitrary'),('baseline_artifacts',{'agent':'a'*64,'panel':'b'*64}),('baseline_migration_identities_sha256','c'*64)):
+            with self.subTest(key=key),self.assertRaises(ValueError):g.validate_plan({**value,key:changed},self.ident,self.op)
+
+    def test_baseline_profile_cannot_be_changed_after_prepare(self):
+        with mock.patch.object(controller.lab,'checked_root') as checked,self.assertRaises(SystemExit):
+            controller.main(['--work-root','/unused','--mode','start','--execute','--baseline-profile','alpha64-schema38'])
+        checked.assert_not_called()
+
+    def test_prepare_cli_explicit_baseline_selection(self):
+        with mock.patch.object(controller.lab,'checked_root',return_value=Path('/unused')),mock.patch.object(controller.lab,'load',return_value=({}, {'nodes':{'arch':{}}})),mock.patch.object(controller.lab,'process_guard'),mock.patch.object(controller,'prepare') as prepare:
+            controller.main(['--work-root','/unused','--mode','prepare','--execute','--archive','/tmp/payload','--archive-sha256','a'*64,'--baseline-profile','alpha64-schema38'])
+        self.assertEqual(prepare.call_args.kwargs['baseline_profile'],'alpha64-schema38')
+
     def test_wrong_guest_identity_rejected(self):
         with self.assertRaises(ValueError):g.validate_plan(self.intent,{**self.ident,'nonce':'b'*64},self.op)
     def test_no_signed_admission_claim(self):

@@ -31,7 +31,7 @@ INTENT='local-candidate-intent.json'
 STAGE='local-candidate-stage.json'
 START='local-candidate-start-attempt.json'
 ARM='local-candidate-kill-intent.json'
-ASSETS=('candidate_archive.py','guest_probe.py','guest_port_fault.py','guest_update_kill.py','guest_local_candidate.py','guest_recovery_fault.py','guest_recovery_handoff.py','guest_candidate_data_fault.py','guest_forward_completion_fault.py')
+ASSETS=('baseline_profiles.py','candidate_archive.py','guest_probe.py','guest_port_fault.py','guest_update_kill.py','guest_local_candidate.py','guest_recovery_fault.py','guest_recovery_handoff.py','guest_candidate_data_fault.py','guest_forward_completion_fault.py')
 
 def encoded(value):return (json.dumps(value,sort_keys=True)+'\n').encode()
 
@@ -71,12 +71,12 @@ def validate_stage(value,intent):
             or value.get('verified_files')!=len(intent['candidate']['files']) or not trial.HEX64.fullmatch(value.get('bash_sha256',''))):raise ValueError('local candidate stage proof differs')
     return value
 
-def prepare(root,record,plan,node,archive,digest,boundary,recovery_fault=None,candidate_data_fault=None):
+def prepare(root,record,plan,node,archive,digest,boundary,recovery_fault=None,candidate_data_fault=None,baseline_profile=trial.profiles.DEFAULT):
     assert_absent(root,node,INTENT,START,ARM,'update-intent.json','update-start-attempt.json')
     candidate=guest.archive_tools.inspect_archive(archive,digest)
     source_proof=guest.archive_tools.verify_committed_source(candidate,trial.REPOSITORY)
     baseline_raw=trial.read_private(root/('baseline-'+node+'-baseline-install-result.json'))
-    baseline=json.loads(baseline_raw);trial.validate_baseline(baseline)
+    baseline=json.loads(baseline_raw);trial.validate_baseline(baseline,baseline_profile)
     seed_raw=trial.read_private(evidence_path(root,node,'seed.stdout.jsonl'));trial.validate_seed(seed_raw,record,node)
     operation=secrets.token_hex(16)
     intent={'schema':guest.SCHEMA,'provenance':'unpublished-local-build-not-signed-agent-admission','identity':trial.identity(record,plan,node),'operation_id':operation,
@@ -84,6 +84,9 @@ def prepare(root,record,plan,node,archive,digest,boundary,recovery_fault=None,ca
             'baseline_evidence_sha256':hashlib.sha256(baseline_raw).hexdigest(),'seed_evidence_sha256':hashlib.sha256(seed_raw).hexdigest(),
             'archive_path':str(guest.PRIVATE/('local-candidate-'+operation+'.tar.gz')),
             'source_root':str(guest.RELEASES/('.download.lab-'+operation)/'payload'/candidate['root_name'])}
+    if baseline_profile != trial.profiles.DEFAULT:
+        intent['baseline_profile']=baseline_profile
+        intent['baseline_migration_identities_sha256']=baseline['database']['migration_identities_sha256']
     if recovery_fault is not None:
         intent['recovery_fault']=recovery_fault
     if candidate_data_fault is not None:
@@ -182,12 +185,14 @@ def main(argv=None):
     parser.add_argument('--mode',choices=('prepare','arm','start','collect'),required=True);parser.add_argument('--execute',action='store_true')
     parser.add_argument('--archive',type=Path);parser.add_argument('--archive-sha256');parser.add_argument('--boundary',choices=('candidate-installed','require-unit-reload','completion-database-verified'),default='require-unit-reload')
     parser.add_argument('--candidate-data-fault',choices=('quarantine-fixed-three',))
+    parser.add_argument('--baseline-profile',choices=trial.profiles.CHOICES)
     args=parser.parse_args(argv)
     if args.mode!='collect' and not args.execute:parser.error('mutation requires --execute and the registered disposable VM')
     if args.mode=='prepare' and (args.archive is None or args.archive_sha256 is None):parser.error('prepare requires exact local archive and SHA256')
     if args.mode!='prepare' and args.candidate_data_fault is not None:parser.error('candidate data fault must be sealed during prepare')
+    if args.mode!='prepare' and args.baseline_profile is not None:parser.error('baseline profile must be sealed during prepare')
     root=lab.checked_root(args.work_root);record,plan=lab.load(root);lab.process_guard(plan['nodes'][args.node])
-    if args.mode=='prepare':return prepare(root,record,plan,args.node,args.archive,args.archive_sha256,args.boundary,candidate_data_fault=args.candidate_data_fault)
+    if args.mode=='prepare':return prepare(root,record,plan,args.node,args.archive,args.archive_sha256,args.boundary,candidate_data_fault=args.candidate_data_fault,baseline_profile=args.baseline_profile or trial.profiles.DEFAULT)
     intent=load_intent(root,record,plan,args.node)
     return {'arm':arm,'start':start,'collect':collect}[args.mode](root,record,plan,args.node,intent)
 
