@@ -87,6 +87,7 @@ func TestDatabasePreflightDistinguishesUnsupportedMetadataFromUnknown(t *testing
 		wrong   string
 	}{
 		{"unsupported", recoverypublication.ErrUnsupportedMetadata, "does not support the database's filesystem attributes", "readiness could not be verified"},
+		{"unsupported parent", recoverypublication.ErrUnsupportedDatabaseParent, "observed directory layout is unsupported", "filesystem attributes"},
 		{"unknown", recoverypublication.ErrUnavailable, "readiness could not be verified", "does not support the database's filesystem attributes"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -132,5 +133,20 @@ func TestDatabaseFailureGuidanceUsesAcceptedOwnerCommands(t *testing.T) {
 		return nil
 	}, func(string) error { t.Fatal("resume became enrollment"); return nil }, func(string) {}); got != exitOK || !called {
 		t.Fatalf("suggested recovery rejected: %s exit=%d", resume, got)
+	}
+}
+
+func TestDatabaseUnsupportedParentGuidancePreservesOwnerLayout(t *testing.T) {
+	var message string
+	code := dispatchDatabaseProbe([]string{"probe-update-database"}, 0, func() error { return recoverypublication.ErrUnsupportedDatabaseParent }, func(v string) { message = v })
+	for _, want := range []string{"/var/lib/celikpanel", "celikpanel:celikpanel", "0750", "has been preserved", "This check has not stopped services", "server owner", "preserve intentional settings", "retry from the panel", "compatible recovery version"} {
+		if code != exitOutput || !strings.Contains(message, want) {
+			t.Fatalf("missing actionable parent guidance %q: %d %s", want, code, message)
+		}
+	}
+	for _, unsafe := range []string{"chmod", "chown", "readiness could not be verified", "filesystem attributes"} {
+		if strings.Contains(message, unsafe) {
+			t.Fatalf("unsupported layout misclassified or silently normalized: %s", message)
+		}
 	}
 }

@@ -434,3 +434,134 @@ func TestDatabasePolicyRefusesResidueWithoutMaterial(t *testing.T) {
 		})
 	}
 }
+
+// New normal admission must not accept layouts which the installer and native
+// StateDirectory startup would later normalize after DatabaseBefore was sealed.
+func TestDatabaseNewAdmissionRejectsUnsupportedParentWithoutMutation(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		uid, gid int
+		mode     os.FileMode
+	}{
+		{"root0700", 0, 0, 0700}, {"root0750", 0, 0, 0750},
+		{"panel0700", 1001, 1001, 0700}, {"panel-root-group", 1001, 0, 0750},
+	} {
+		for _, boundary := range []string{"preflight", "sealed-snapshot-capture"} {
+			t.Run(tc.name+"/"+boundary, func(t *testing.T) {
+				f := newMaterialFixture(t)
+				parent := filepath.Join(f.Root, "database")
+				if e := os.Chown(parent, tc.uid, tc.gid); e != nil {
+					t.Fatal(e)
+				}
+				if e := os.Chmod(parent, tc.mode); e != nil {
+					t.Fatal(e)
+				}
+				if boundary == "preflight" {
+					write(t, filepath.Join(parent, databaseName+"-wal"), []byte("owner live WAL"), 0600)
+				}
+				before := readWholeFixtureTree(t, f.Root)
+				var e error
+				if boundary == "preflight" {
+					e = probeDatabaseMigration(f.config())
+				} else {
+					e = prepareRecoveryMaterial(f.Request, f.config())
+				}
+				if !errors.Is(e, ErrUnsupportedDatabaseParent) {
+					t.Errorf("unsupported parent not classified before a later installer normalization: %v", e)
+				}
+				if !before.equal(readWholeFixtureTree(t, f.Root)) {
+					t.Error("rejected parent, canonical database, WAL, snapshot, or material namespace changed")
+				}
+			})
+		}
+	}
+}
+
+func TestDatabaseHistoricalParentAuthorityRemainsReadable(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		uid, gid int
+		mode     os.FileMode
+	}{
+		{"root0700", 0, 0, 0700}, {"root0750", 0, 0, 0750}, {"panel0700", 1001, 1001, 0700},
+	} {
+		for _, op := range []string{"update", "rollback"} {
+			t.Run(tc.name+"/"+op, func(t *testing.T) {
+				f := newMaterialFixture(t)
+				prepareMaterial(t, f)
+				parent := filepath.Join(f.Root, "database")
+				if e := os.Chown(parent, tc.uid, tc.gid); e != nil {
+					t.Fatal(e)
+				}
+				if e := os.Chmod(parent, tc.mode); e != nil {
+					t.Fatal(e)
+				}
+				// Model already sealed historical v3 authority, not a new admission.
+				alterMaterial(t, f, func(r *materialRecord) {
+					r.DatabaseBefore.Parent.UID = uint32(tc.uid)
+					r.DatabaseBefore.Parent.GID = uint32(tc.gid)
+					r.DatabaseBefore.Parent.Mode = unix.S_IFDIR | uint32(tc.mode)
+				})
+				f.marker(t, op)
+				if op == "rollback" {
+					materialCompletionPhase(t, f, "completion")
+				}
+				before := readWholeFixtureTree(t, f.Root)
+				a, e := openDatabaseAuthority(f.Request.Snapshot, f.config())
+				if e != nil {
+					t.Fatal("historical authority refused", e)
+				}
+				if e = a.Revalidate(); e != nil {
+					t.Fatal(e)
+				}
+				if e = a.Close(); e != nil {
+					t.Fatal(e)
+				}
+				if !before.equal(readWholeFixtureTree(t, f.Root)) {
+					t.Fatal("historical reader normalized evidence")
+				}
+			})
+		}
+	}
+}
+
+func TestDatabaseNewAdmissionPreservesConcurrentParentChange(t *testing.T) {
+	for _, boundary := range []string{"preflight", "material_ready"} {
+		t.Run(boundary, func(t *testing.T) {
+			f := newMaterialFixture(t)
+			parent := filepath.Join(f.Root, "database")
+			dbPath := filepath.Join(parent, databaseName)
+			before := readWholeFixtureTree(t, parent)
+			c := f.config()
+			changed := false
+			c.checkpoint = func(point string) {
+				if !changed && ((boundary == "preflight" && point == "database_metadata_probed") || point == boundary) {
+					changed = true
+					if e := os.Chmod(parent, 0700); e != nil {
+						t.Fatal(e)
+					}
+				}
+			}
+			var e error
+			if boundary == "preflight" {
+				e = probeDatabaseMigration(c)
+			} else {
+				e = prepareRecoveryMaterial(f.Request, c)
+			}
+			if !changed || e == nil {
+				t.Fatal("parent change accepted", changed, e)
+			}
+			st, statErr := os.Stat(parent)
+			if statErr != nil || st.Mode().Perm() != 0700 {
+				t.Fatal("owner parent mode was overwritten", statErr)
+			}
+			after := readWholeFixtureTree(t, parent)
+			if !(tree{Entries: []entry{before.entryMap()[databaseName]}}).equal(tree{Entries: []entry{after.entryMap()[databaseName]}}) {
+				t.Fatal("canonical database changed", dbPath)
+			}
+			if _, e := os.Lstat(materialPath(f)); !errors.Is(e, os.ErrNotExist) {
+				t.Fatal("material published despite owner parent change", e)
+			}
+		})
+	}
+}

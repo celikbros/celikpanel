@@ -50,6 +50,11 @@ const MaterialNoopIntentSchema = "celikpanel/recovery-resource-noop-intent/v1"
 
 var ErrUnavailable = errors.New("recovery publication unavailable; preserve resource evidence")
 var ErrUnsupportedMetadata = errors.New("program metadata is not supported by this recovery protocol (ACL, capabilities or SELinux labels); preserve metadata and operation evidence")
+
+// ErrUnsupportedDatabaseParent is an observed unsupported new-update layout,
+// distinct from unsupported attributes or unavailable metadata. No normalization
+// is authorized by this result; historical material remains readable.
+var ErrUnsupportedDatabaseParent = errors.New("new database migration requires /var/lib/celikpanel owned by celikpanel:celikpanel with mode 0750; preserve the existing directory layout")
 var ErrOwnerChanged = errors.New("recovery resource differs from the accepted publication; preserve owner changes")
 var hex64 = regexp.MustCompile(`^[0-9a-f]{64}$`)
 var snapshotPattern = regexp.MustCompile(`^[0-9]{8}T[0-9]{6}Z-from-(unknown|[0-9a-f]{40})-to-([0-9a-f]{40})-[0-9a-f]{32}$`)

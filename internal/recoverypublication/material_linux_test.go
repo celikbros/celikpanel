@@ -30,6 +30,9 @@ func newMaterialFixture(t *testing.T) fixture {
 	write(t, filepath.Join(f.Root, "snapshots", f.Request.Snapshot, "snapshot-transition.state"), []byte("normal\n"), 0600)
 	write(t, filepath.Join(f.Root, "snapshots", f.Request.Snapshot, databaseName), []byte("fixture snapshot database"), 0600)
 	write(t, filepath.Join(f.Root, "database", databaseName), []byte("fixture canonical database"), 0600)
+	if err := os.Chown(filepath.Join(f.Root, "database"), 1001, 1001); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Chmod(filepath.Join(f.Root, "database"), 0750); err != nil {
 		t.Fatal(err)
 	}

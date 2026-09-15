@@ -88,6 +88,17 @@ func openDatabaseParent(c config, uid, gid uint32) (*os.File, error) {
 	}
 	return f, nil
 }
+
+// New normal transitions require the layout that apply-only installation and
+// native StateDirectory startup preserve. Historical authority readers retain
+// the broader secure/quarantine layout contract in openDatabaseParent.
+func requireNewDatabaseParent(st unix.Stat_t, uid, gid uint32) error {
+	if st.Mode != unix.S_IFDIR|0750 || st.Uid != uid || st.Gid != gid {
+		return ErrUnsupportedDatabaseParent
+	}
+	return nil
+}
+
 func openCanonicalDatabase(parent *os.File, uid, gid uint32) (*os.File, error) {
 	fd, e := unix.Openat(int(parent.Fd()), databaseName, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC|unix.O_NONBLOCK|unix.O_NOATIME, 0)
 	if e != nil {
@@ -142,6 +153,9 @@ func captureDatabaseBefore(c config) (*DatabaseBeforeEvidence, error) {
 	defer parent.Close()
 	pst, e := fstat(parent)
 	if e != nil {
+		return nil, e
+	}
+	if e = requireNewDatabaseParent(pst, uid, gid); e != nil {
 		return nil, e
 	}
 	db, e := openCanonicalDatabase(parent, uid, gid)
@@ -278,6 +292,9 @@ func probeDatabaseMigration(c config) error {
 	defer parent.Close()
 	pst, e := fstat(parent)
 	if e != nil {
+		return e
+	}
+	if e = requireNewDatabaseParent(pst, uid, gid); e != nil {
 		return e
 	}
 	db, e := openCanonicalDatabase(parent, uid, gid)

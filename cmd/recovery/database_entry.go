@@ -62,6 +62,10 @@ func dispatchDatabaseProbe(args []string, uid int, probe func() error, report fu
 		if errors.Is(err, recoverypublication.ErrUnsupportedMetadata) {
 			reason = "This recovery version does not support the database's filesystem attributes."
 		}
+		if errors.Is(err, recoverypublication.ErrUnsupportedDatabaseParent) {
+			report("This update requires /var/lib/celikpanel to be owned by celikpanel:celikpanel with mode 0750. The observed directory layout is unsupported and has been preserved. This check has not stopped services. The server owner should review the directory ownership and permissions in the update details, preserve intentional settings, and retry from the panel only after choosing a supported layout or a compatible recovery version. " + err.Error())
+			return exitOutput
+		}
 		report(reason + " This check has not stopped services. The server owner should review the database and parent metadata in the update details, preserve existing attributes, and retry from the panel only after the reported requirement is resolved. " + err.Error())
 		return exitOutput
 	}
