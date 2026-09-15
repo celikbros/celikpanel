@@ -83,7 +83,7 @@ Yeni geçici kök `/var/tmp/cp-release-drill-20260915-x`, gerçek Alpha64/schema
 `52dd34b435ba6d1fd1429aaadf875bf0cacae9f0cbeeb249ea9795e74a08698d`, seçili kit
 `ed7c3eebe46d7ee5a1ad4b566ef4794daf295cb695151be40a4577b8fdc5a770`.
 DNS gözlem araçları ve kalıcı günlük depolaması başlangıç kurulumu öncesinde
-hazırlandı. Yirmi yardımcı özeti incelenen kaynakla eşleşir.
+hazırlandı. Yirmi yardımcı özeti incelenen çalışma dosyalarına bağlıdır. Ayrı kaynak karşılaştırması tüm yüklenen yardımcıları `a422ec739ce64e38602ca7b506762cfa01f0b529` commit ile doğrular: beşinde yalnız Git CRLF→LF satır sonu normalleştirmesi vardır; diğer 15 bayt düzeyinde aynıdır. Ham yüklenen özetler değiştirilmez. Kayıt: `analysis/helper-source-binding-1789504804577210406.json`, SHA256 `5265b66db7f53ca94f5d1df92d9ecef6f77024c7710f99ee77fc60bcb570cd57`.
 
 `6c5e5a31ed6164cbc6888de7748ecbf0` işlemi şu snapshot'ı kullandı:
 `20260915T202701Z-from-unknown-to-cb3165456bb4ba4654dc19d51a5eafc13721a5fb-c8105cd7d2840cc6589e11faa4199d7c`.

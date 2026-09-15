@@ -83,7 +83,7 @@ trial: source `cb3165456bb4ba4654dc19d51a5eafc13721a5fb`, archive SHA256
 `52dd34b435ba6d1fd1429aaadf875bf0cacae9f0cbeeb249ea9795e74a08698d`, selected kit
 `ed7c3eebe46d7ee5a1ad4b566ef4794daf295cb695151be40a4577b8fdc5a770`.
 DNS observation tools and persistent journal storage were prepared before baseline
-installation. The 20 helper pins match the reviewed source.
+installation. The 20 helper pins bind the reviewed working files. A separate source binding verifies every uploaded helper against commit `a422ec739ce64e38602ca7b506762cfa01f0b529`: five differ only by Git CRLF-to-LF normalization; the other 15 are byte-identical. Raw uploaded pins remain unchanged. The binding is `analysis/helper-source-binding-1789504804577210406.json`, SHA256 `5265b66db7f53ca94f5d1df92d9ecef6f77024c7710f99ee77fc60bcb570cd57`.
 
 Operation `6c5e5a31ed6164cbc6888de7748ecbf0` used snapshot
 `20260915T202701Z-from-unknown-to-cb3165456bb4ba4654dc19d51a5eafc13721a5fb-c8105cd7d2840cc6589e11faa4199d7c`.
