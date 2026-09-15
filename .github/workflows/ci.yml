@@ -86,6 +86,7 @@ jobs:
       # Keep the one-time pre-ledger release path fail-closed and ordered.
       # Tek seferlik pre-ledger sürüm yolunu fail-closed ve sıralı tut.
       - run: bash deploy/test-bootstrap-update-contract.sh
+      - run: bash deploy/test-isolated-database-migration.sh
       # Keep the RHEL preview probe blocked-only, default-dry-run and injection-safe.
       - run: bash deploy/e2e/rhel9/test-contract.sh
       - run: bash deploy/test-install-localization-contract.sh
@@ -134,6 +135,7 @@ jobs:
         run: |
           sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./internal/recoveryruntime ./internal/recoverycheckpoint ./internal/recoverypublication ./cmd/recovery -count=1
           sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./cmd/agent ./cmd/panel -run 'TestRecovery(CheckStandalone|AgentCheckerStandalone)|TestPendingRollback' -count=1
+          sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./cmd/panel -run '^TestRecoveryDatabaseMigration' -count=1
 
       # These fixture contracts mock transport; they do not boot QEMU or prove native recovery.
       # Bu testler iletişimi taklit eder; QEMU başlatmaz veya gerçek kurtarmayı kanıtlamaz.
@@ -142,6 +144,7 @@ jobs:
       - name: Verify offline release-recovery fixture contracts (no VM)
         run: |
           git cat-file -e '5aa03fd5b6775b21834ff7b1ce0695d92f50ae93^{commit}'
+          git cat-file -e '3ee8dac009c7e3db1d940f9b8be078e186693a80^{commit}'
           python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_*.py' -v
       - name: Test and build disposable release-recovery drivers (no VM)
         run: |

@@ -31,11 +31,12 @@ type config struct {
 	anchor, prefix, snapshots, candidates, transaction string
 	fd                                                 int
 	stopped                                            func() error
-	checkpoint                                         func(string) // Private deterministic fault seam; nil in production.
+	databaseOwner                                      func() (uint32, uint32, error) // Private test identity seam; nil resolves native celikpanel.
+	checkpoint                                         func(string)                   // Private deterministic fault seam; nil in production.
 }
 
 func production() config {
-	return config{"/", prefixRoot, snapshotRoot, candidateRoot, transactionRoot, 9, verifyStopped, nil}
+	return config{anchor: "/", prefix: prefixRoot, snapshots: snapshotRoot, candidates: candidateRoot, transaction: transactionRoot, fd: 9, stopped: verifyStopped}
 }
 
 // ProbeCurrentResources is a read-only eligibility check before quiescing.
@@ -725,7 +726,7 @@ func (v *inputs) validIntent(record intent, operation string, wanted tree) bool 
 	stageValid := stagePattern.MatchString(record.Stage)
 	if record.Schema == MaterialNoopIntentSchema {
 		schema = MaterialNoopIntentSchema
-		stageValid = operation == "update" && v.material != nil && v.material.record.Schema == MaterialSchemaV2 && record.Stage == "" && record.Before.equal(record.After)
+		stageValid = operation == "update" && v.material != nil && modernMaterial(v.material.record.Schema) && record.Stage == "" && record.Before.equal(record.After)
 	}
 	return record.Schema == schema && record.MaterialSHA == materialSHA && record.Resource == r.Resource && record.Operation == operation && record.Snapshot == r.Snapshot && record.SnapshotManifest == r.SnapshotManifest && record.CandidateRoot == r.CandidateRoot && record.CandidateManifest == r.CandidateManifest && record.TokenHash == digest([]byte(v.token)) && record.Parent == v.prefixID && stageValid && v.beforeAllowed(record.Before) && record.After.semantic() == wanted.semantic()
 }
@@ -771,7 +772,7 @@ func publish(r Request, operation string, c config) error {
 		if e != nil || !bound || !v.beforeAllowed(before) || (v.material != nil && operation == "update" && before.semantic() != v.old.semantic()) {
 			return ErrOwnerChanged
 		}
-		if before.semantic() == wanted.semantic() && !(operation == "update" && v.material != nil && v.material.record.Schema == MaterialSchemaV2) {
+		if before.semantic() == wanted.semantic() && !(operation == "update" && v.material != nil && modernMaterial(v.material.record.Schema)) {
 			if err = v.revalidate(); err != nil {
 				return err
 			}

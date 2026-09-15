@@ -923,6 +923,32 @@ preflight_rollback_material_admission() {
     fi
 }
 
+# Read policy from verified material, never from staging-directory absence.
+# Only explicit legacy evidence permits the historical database restore path.
+run_database_recovery_command() {
+    /usr/libexec/celikpanel/recovery "$@" 9<&"$RELEASE_TRANSACTION_FD"
+}
+
+read_database_migration_policy() {
+    local snapshot=$1 result status=0
+    result=$(run_database_recovery_command database-policy --snapshot "$snapshot") || status=$?
+    if [[ $status == 0 && $result == required ]]; then
+        printf '%s\n' required
+    elif [[ $status == 6 && -z $result ]]; then
+        printf '%s\n' legacy
+    else
+        die "database recovery policy is unverified; preserve this operation and use its independent recovery path"
+    fi
+}
+
+verify_database_publication_if_required() {
+    local snapshot=$1 policy
+    policy=$(read_database_migration_policy "$snapshot") || return 1
+    [[ $policy == required ]] || return 0
+    run_database_recovery_command verify-update-database --snapshot "$snapshot" \
+        || die "database publication is unverified; preserve the same operation and database evidence"
+}
+
 print_rollback_retry() {
     if [[ -n ${RECOVERY_RUNTIME_ROOT:-} ]]; then
         echo "!! Retry / Yeniden deneyin: sudo /usr/libexec/celikpanel/recovery recover" >&2
@@ -2237,6 +2263,7 @@ if [[ $rollback_scheduler_only_resume -eq 1 ]]; then
     panel_tls_restore_certbot_scheduler "$snap/panel-tls" \
         || die "Certbot renewal scheduler state could not be restored"
     rollback_scheduler_restore_completed=1
+verify_database_publication_if_required "$snapshot_name"
 observe_independent_recovery_checkpoint schedulers_restored
     release_txn_remove_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
@@ -2420,7 +2447,12 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
     # sidecar handling and atomic durable replacement. Shell never copies DB bytes.
     # SQLite geri yüklemesini sidecar yönetimi ve atomik dayanıklı değiştirme dahil
     # manifest ile doğrulanmış sürüm yardımcısı yapar. Shell DB baytlarını kopyalamaz.
-    if [[ "$transition_state" == schema17 ]]; then
+    database_restore_policy=$(read_database_migration_policy "$snapshot_name") \
+        || die "database recovery policy is unverified before restore"
+    if [[ $database_restore_policy == required ]]; then
+        run_database_recovery_command restore-update-database --snapshot "$snapshot_name" \
+            || die "isolated database restoration was not confirmed; preserve its work and publication evidence"
+    elif [[ "$transition_state" == schema17 ]]; then
         release_txn_validate_active_token \
             "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
             || die "active rollback marker changed before exact schema17 restore"
@@ -2627,6 +2659,7 @@ fi
 
 # Payload, unit files, loaded guards and DB/ledger have all passed their
 # existing comparisons and durability calls before these observations.
+verify_database_publication_if_required "$snapshot_name"
 observe_independent_recovery_checkpoint payload_restored
 observe_independent_recovery_checkpoint units_reloaded
 
@@ -2707,6 +2740,7 @@ release_txn_remove_start_authorization \
 release_txn_validate_pending_token \
     "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
     || die "rollback completion marker changed before scheduler publication"
+verify_database_publication_if_required "$snapshot_name"
 observe_independent_recovery_checkpoint runtime_verified
 rollback_completion_verified=1
 release_txn_mark_scheduler_restore_pending \
@@ -2735,6 +2769,7 @@ release_txn_validate_scheduler_restore_token \
 panel_tls_restore_certbot_scheduler "$snap/panel-tls" \
     || die "Certbot renewal scheduler state could not be restored"
 rollback_scheduler_restore_completed=1
+verify_database_publication_if_required "$snapshot_name"
 observe_independent_recovery_checkpoint schedulers_restored
 release_txn_remove_scheduler_restore_pending \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \

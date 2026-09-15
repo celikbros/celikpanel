@@ -43,6 +43,7 @@ func materialLegacyV1(t *testing.T, f fixture) {
 		t.Fatal(err)
 	}
 	record.Schema = MaterialSchema
+	record.DatabaseBefore = nil
 	record.DataManifest = checksumManifest(t, filepath.Join(path, "data"))
 	record.Data = readTree(t, f.Root, filepath.Join(path, "data"))
 	write(t, filepath.Join(path, "material.json"), canonical(record), 0600)

@@ -147,13 +147,32 @@ printf 'recovery runtime shell contract: ok\n'
 # Production fresh-update call uses a dynamic Bash FD, while the recovery ABI
 # always uses FD9. Exercise actual inherited flock and inode identity in a child.
 # Redirect only the fixed selected CLI path into this private fixture.
-eval "$(extract_function prepare_independent_recovery_runtime | sed 's@/usr/libexec/celikpanel/recovery verify-material-support@"$TEST_ROOT/selected-recovery" verify-material-support@')"
+eval "$(extract_function prepare_independent_recovery_runtime | sed 's@/usr/libexec/celikpanel/recovery@"$TEST_ROOT/selected-recovery"@g')"
 cat > "$TEST_ROOT/selected-recovery" <<'SH'
 #!/usr/bin/env bash
-[[ $# == 5 && $1 == verify-material-support && $2 == --layout && $3 == snapshot-name-sha256-v1 &&
-   $4 == --schema && $5 == celikpanel/recovery-material/v2 ]] || exit 91
-printf 'selected-material-support\n' >> "$FIXTURE_CALLS"
-[[ ${FIXTURE_UNSUPPORTED:-0} == 0 ]]
+set -euo pipefail
+case ${1:-} in
+ verify-material-support)
+  [[ $# == 5 && $2 == --layout && $3 == snapshot-name-sha256-v1 &&
+     $4 == --schema && $5 == celikpanel/recovery-material/v3 ]] || exit 91
+  printf 'selected-material-support\n' >> "$FIXTURE_CALLS"
+  [[ ${FIXTURE_UNSUPPORTED:-0} == 0 ]]
+  ;;
+ verify-database-support)
+  [[ $# == 3 && $2 == --schema && $3 == celikpanel/database-migration-admission/v1 ]] || exit 92
+  printf 'selected-database-support\n' >> "$FIXTURE_CALLS"
+  [[ ${FIXTURE_DB_UNSUPPORTED:-0} == 0 ]]
+  ;;
+ probe-update-database)
+  [[ $# == 1 && $FIXTURE_MODE == --normal ]] || exit 93
+  [[ $(stat -Lc '%d:%i' /proc/self/fd/9) == $(stat -Lc '%d:%i' "$FIXTURE_LOCK") ]] || exit 94
+  status=0; flock -n -E 75 "$FIXTURE_LOCK" true || status=$?
+  [[ $status == 75 ]] || exit 95
+  printf 'probe-update-database\n' >> "$FIXTURE_CALLS"
+  [[ ${FIXTURE_DB_PROBE_REJECTED:-0} == 0 ]]
+  ;;
+ *) exit 96 ;;
+esac
 SH
 chmod 0755 "$TEST_ROOT/selected-recovery"
 mkdir -p "$TEST_ROOT/fresh/recovery-runtime/bin"
@@ -190,7 +209,11 @@ chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
         [[ $FIXTURE_MODE != --bootstrap-schema17 ]] || BOOTSTRAP_SCHEMA17=1
         prepare_independent_recovery_runtime
     done
-    [[ $(wc -l < "$FIXTURE_CALLS") -eq 9 ]] || fail 'preflight did not execute the expected preparation, compatibility and capability calls'
+    cmp -s "$FIXTURE_CALLS" <(printf '%s\n' \
+        prepare-runtime verify-compatibility selected-material-support selected-database-support probe-update-database \
+        prepare-runtime verify-compatibility selected-material-support selected-database-support \
+        prepare-runtime verify-compatibility selected-material-support selected-database-support) \
+        || fail 'preflight order or normal-only database probe changed'
     # A rejected/incomplete promotion must not reach compatibility or the material
     # writer capability call. The actual selector journal has native Go tests.
     before_calls=$(wc -l < "$FIXTURE_CALLS")
@@ -205,6 +228,19 @@ chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
     (prepare_independent_recovery_runtime) >"$TEST_ROOT/unsupported-kit.log" 2>&1 || status=$?
     [[ $status == 41 ]] || fail 'older selected kit was silently admitted'
     grep -F 'panel services have not been stopped' "$TEST_ROOT/unsupported-kit.log" >/dev/null
+    [[ $(tail -n 1 "$FIXTURE_CALLS") == selected-material-support ]] || fail 'unsupported material continued to database admission'
+    unset FIXTURE_UNSUPPORTED
+    export FIXTURE_MODE=--normal FIXTURE_DB_UNSUPPORTED=1
+    BOOTSTRAP_PRE_LEDGER=0 BOOTSTRAP_SCHEMA17=0
+    status=0
+    (prepare_independent_recovery_runtime) >"$TEST_ROOT/unsupported-db-kit.log" 2>&1 || status=$?
+    [[ $status == 41 && $(tail -n 1 "$FIXTURE_CALLS") == selected-database-support ]] || fail 'unsupported database capability continued to metadata probe'
+    grep -F 'panel services have not been stopped' "$TEST_ROOT/unsupported-db-kit.log" >/dev/null
+    unset FIXTURE_DB_UNSUPPORTED
+    export FIXTURE_DB_PROBE_REJECTED=1
+    status=0
+    (prepare_independent_recovery_runtime) >"$TEST_ROOT/rejected-db-probe.log" 2>&1 || status=$?
+    [[ $status == 41 && $(tail -n 1 "$FIXTURE_CALLS") == probe-update-database ]] || fail 'rejected database metadata probe did not stop preflight'
 )
 printf 'PASS: fresh updater preparation and compatibility retain FD9; rejected promotion stops admission\n'
 
@@ -298,6 +334,18 @@ case $1 in
    [[ $(sha256sum "$FIXTURE_WEB_FILE" | cut -d ' ' -f 1) == "$FIXTURE_EXPECTED_WEB_HASH" ]] || exit 96
   fi
   exit "${FIXTURE_PAYLOAD_STATUS:-0}" ;;
+ database-policy)
+  [[ -f $FIXTURE_TRANSACTION_ROOT/completion.pending || -f $FIXTURE_TRANSACTION_ROOT/scheduler-restore.pending ]] || exit 97
+  case $FIXTURE_DATABASE_POLICY in
+   required) printf 'required\n' ;;
+   legacy) exit 6 ;;
+   *) exit 98 ;;
+  esac ;;
+ verify-update-database)
+  [[ $FIXTURE_DATABASE_POLICY == required ]] || exit 99
+  [[ -f $FIXTURE_TRANSACTION_ROOT/completion.pending || -f $FIXTURE_TRANSACTION_ROOT/scheduler-restore.pending ]] || exit 100
+  [[ $(sha256sum "$FIXTURE_DATABASE_FILE" | cut -d ' ' -f 1) == "$FIXTURE_EXPECTED_DATABASE_HASH" ]] || exit 101
+  ;;
  *) exit 94 ;;
 esac
 SH
@@ -564,6 +612,11 @@ eval "$(extract_function verify_saved_enablement)"
 eval "$(extract_function verify_saved_runtime_states)"
 # Empty on the pre-fix source: the actual extracted tail then exposes the bug.
 eval "$(extract_function verify_independent_completion_terminal)"
+# Keep the real policy parser and publication gate. Only their fixed CLI path
+# is relocated, so terminal tests cannot silently bypass required v3 DB proof.
+eval "$(extract_function read_database_migration_policy)"
+eval "$(extract_function verify_database_publication_if_required)"
+eval "$(extract_function run_database_recovery_command | sed 's@/usr/libexec/celikpanel/recovery@"$TEST_ROOT/completion-cli"@')"
 terminal_flow_case() {
  local flow=$1 unit
  RELEASE_TRANSACTION_ROOT=$case_root/transaction
@@ -596,6 +649,10 @@ terminal_flow_case() {
  RECOVERY_AGENT_CHECKER=/usr/bin/true RECOVERY_PANEL_CHECKER=/usr/bin/true
  AGENT_STATE_DIR=$case_root MUTATION_LOCK=$case_root/mutation.lock MUTATION_LOCK_FD=
  PANEL_DB=$case_root/db
+ printf 'verified canonical database\n' > "$PANEL_DB"
+ export FIXTURE_DATABASE_FILE=$PANEL_DB FIXTURE_DATABASE_POLICY=required
+ export FIXTURE_EXPECTED_DATABASE_HASH=$(sha256sum "$PANEL_DB" | cut -d ' ' -f 1)
+ [[ $flow != *-legacy-clean ]] || FIXTURE_DATABASE_POLICY=legacy
  printf 'active\n' > "$case_root/current-state"
  printf 'enabled\n' > "$case_root/current-enablement"
  systemctl() {
@@ -603,6 +660,7 @@ terminal_flow_case() {
    'start celikpanel-panel.service')
     printf '%s\n' "$*" >> "$case_root/starts"
     [[ $flow != completion-panel-edit ]] || printf 'owner edit\n' >> "$FIXTURE_WEB_FILE"
+    [[ $flow != completion-db-edit ]] || printf 'owner database edit\n' >> "$FIXTURE_DATABASE_FILE"
     ;;
    'is-active --quiet celikpanel-agent.service'|'is-active --quiet celikpanel-panel.service'|'is-active --quiet celikpanel-firewall-restore.service')
     [[ $(cat "$case_root/current-state") == active ]] ;;
@@ -621,6 +679,7 @@ terminal_flow_case() {
   printf 'restore\n' >> "$case_root/scheduler"
   case $flow in
    completion-scheduler-edit|scheduler-edit) printf 'owner edit\n' >> "$FIXTURE_WEB_FILE" ;;
+   scheduler-db-edit) printf 'owner database edit\n' >> "$FIXTURE_DATABASE_FILE" ;;
    scheduler-service-edit) printf 'inactive\n' > "$case_root/current-state" ;;
    scheduler-enablement-edit) printf 'disabled\n' > "$case_root/current-enablement" ;;
   esac
@@ -632,7 +691,7 @@ terminal_flow_case() {
   source "$TEST_ROOT/completion-tail.sh"
  fi
 }
-for flow in completion-panel-edit completion-authorization-edit completion-scheduler-edit scheduler-edit scheduler-service-edit scheduler-enablement-edit completion-clean scheduler-clean; do
+for flow in completion-panel-edit completion-authorization-edit completion-scheduler-edit scheduler-edit scheduler-service-edit scheduler-enablement-edit completion-db-edit scheduler-db-edit completion-clean scheduler-clean completion-legacy-clean scheduler-legacy-clean; do
  status=0
  payload_case "flow-$flow" >"$TEST_ROOT/flow-$flow.log" 2>&1 || status=$?
  expected=41; [[ $flow != *-clean ]] || expected=0
@@ -644,7 +703,7 @@ for flow in completion-panel-edit completion-authorization-edit completion-sched
   if [[ $flow == completion-panel-edit || $flow == completion-authorization-edit || $flow == completion-scheduler-edit || $flow == scheduler-edit ]]; then
    grep -qx 'owner edit' "$case_root/installed/web/index.html" || fail 'owner bytes were overwritten'
   fi
-  if [[ $flow != completion-panel-edit && $flow != completion-authorization-edit ]]; then
+  if [[ $flow != completion-panel-edit && $flow != completion-authorization-edit && $flow != completion-db-edit ]]; then
    [[ ! -e $case_root/stops ]] || fail 'late scheduler proof failure stopped or restarted saved runtime'
   fi
  else
@@ -654,6 +713,26 @@ for flow in completion-panel-edit completion-authorization-edit completion-sched
   [[ $(wc -l < "$case_root/starts") == 1 ]] || fail 'completion restarted panel more than once'
  else
   [[ ! -e $case_root/starts ]] || fail 'scheduler-only recovery started a coordinator'
+ fi
+ # The selected CLI records artifact and DB proof ordering. Legacy6 must
+ # suppress only DB publication verification, never artifact checks.
+ python3 - "$case_root/calls" "$flow" "$expected" <<'PYFLOW'
+from pathlib import Path
+import sys
+calls=Path(sys.argv[1]).read_text().splitlines();flow=sys.argv[2]
+legacy='-legacy-clean' in flow
+policies=[i for i,v in enumerate(calls) if v=='database-policy']
+for i in policies:
+    assert i>0 and calls[i-1]=='verify-installed-completion', (flow,calls)
+    if not legacy:
+        assert i+1<len(calls) and calls[i+1]=='verify-update-database', (flow,calls)
+if legacy:
+    assert 'verify-update-database' not in calls, (flow,calls)
+if sys.argv[3]=='0' or flow.endswith('-db-edit'):
+    assert policies, (flow,'required terminal database policy was skipped')
+PYFLOW
+ if [[ $flow == *-db-edit ]]; then
+  grep -qx 'owner database edit' "$case_root/db" || fail 'owner database bytes were overwritten'
  fi
  printf 'PASS: extracted terminal flow %s\n' "$flow"
 done

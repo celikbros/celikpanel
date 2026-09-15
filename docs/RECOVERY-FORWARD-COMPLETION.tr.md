@@ -98,3 +98,5 @@ alındıktan ve tam güncelleyici öldürüldükten sonra sınırlı otomatik ta
 kaydeder. P, son kanıt kontrollerini içeren nihai kaynağı çalıştırır. Değişmeyen
 şema, başlangıç TLS'i ve etkin olmayan zamanlayıcı sınırları açık kalır; çalışma
 kurulu kullanıcı panellerinde güncelleme başlatmadı.
+
+Sonraki kaynak dilimi material v3 ile [ayrı veritabanı dönüşümünü](RECOVERY-ISOLATED-DATABASE.tr.md) getirir. Normal güncelleme, ayrı dönüştürülen kopya doğrulanıp yayımlanana kadar active kalır. O dilimin uyumluluk ve bekleyen gerçek sistem kabul sınırı ayrıdır; burada anlatılan tarihsel v2 davranışı geriye dönük değiştirilmez.

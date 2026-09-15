@@ -169,3 +169,54 @@ func TestCompletionMaterialCLIClosedCapabilityAndResultCodes(t *testing.T) {
 		}
 	}
 }
+
+func TestDatabaseMaterialCLIExactContract(t *testing.T) {
+	snapshot := materialTestArgs()[2]
+	for _, schema := range []string{recoverypublication.MaterialSchemaV2, recoverypublication.MaterialSchemaV3} {
+		if code := dispatchMaterial([]string{"verify-material-support", "--layout", "snapshot-name-sha256-v1", "--schema", schema}, 0, func(string, recoverypublication.Request) (string, error) { return "", nil }, io.Discard, func(string) {}); code != 0 {
+			t.Fatal(schema, code)
+		}
+	}
+	good := [][]string{{"database-policy", "--snapshot", snapshot}, {"verify-database-support", "--schema", recoverypublication.DatabaseAdmissionSchema}}
+	for _, args := range good {
+		var output bytes.Buffer
+		if code := dispatchMaterial(args, 0, func(command string, r recoverypublication.Request) (string, error) {
+			if command == "database-policy" {
+				if r.Snapshot != snapshot {
+					t.Fatal(r)
+				}
+				return "required", nil
+			}
+			return "", nil
+		}, &output, func(string) {}); code != 0 {
+			t.Fatal(args, code)
+		}
+		if args[0] == "database-policy" && output.String() != "required\n" {
+			t.Fatal(output.String())
+		}
+	}
+	for _, args := range [][]string{{"database-policy", "--snapshot", "../bad"}, {"database-policy", "--snapshot", snapshot, "--root", "/tmp"}, {"verify-database-support", "--schema", "unknown"}, {"verify-material-support", "--layout", "snapshot-name-sha256-v1", "--schema", "celikpanel/recovery-material/v4"}} {
+		if code := dispatchMaterial(args, 0, func(string, recoverypublication.Request) (string, error) {
+			t.Fatal("invalid contract executed")
+			return "", nil
+		}, io.Discard, func(string) {}); code != exitUsage {
+			t.Fatal(args, code)
+		}
+	}
+	for _, e := range []error{recoverypublication.ErrLegacyDatabaseMaterial, recoverypublication.ErrMaterialAbsent, recoverypublication.ErrUnavailable, recoverypublication.ErrLegacyCompletionMaterial} {
+		var out bytes.Buffer
+		code := dispatchMaterial(good[0], 0, func(string, recoverypublication.Request) (string, error) { return "required", e }, &out, func(string) {})
+		want := exitOutput
+		if e == recoverypublication.ErrLegacyDatabaseMaterial {
+			want = 6
+		}
+		if code != want || out.Len() != 0 {
+			t.Fatal(e, code, want, out.String())
+		}
+	}
+	for _, value := range []string{"", "legacy", "required\n", "/tmp/path"} {
+		if code := dispatchMaterial(good[0], 0, func(string, recoverypublication.Request) (string, error) { return value, nil }, io.Discard, func(string) {}); code != exitOutput {
+			t.Fatal(value, code)
+		}
+	}
+}

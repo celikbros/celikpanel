@@ -54,6 +54,7 @@ RECOVERY_MATERIAL_ROOT="${CELIKPANEL_RECOVERY_MATERIAL_ROOT:-}"
 CODE_ROOT=
 RECOVERY_PANEL_CHECKER=
 RECOVERY_AGENT_CHECKER=
+isolated_database_work=
 RECOVER_EXISTING_TRANSACTION="${CELIKPANEL_RECOVER_EXISTING_TRANSACTION:-0}"
 RECOVERY_EXPECTED_TOKEN="${CELIKPANEL_RECOVERY_EXPECTED_TOKEN:-}"
 RECOVERY_EXPECTED_OPERATION="${CELIKPANEL_RECOVERY_EXPECTED_OPERATION:-}"
@@ -323,8 +324,14 @@ prepare_independent_recovery_runtime() {
     # Ask the selected executable itself after verified enrollment/promotion.
     # A writer cannot infer capability solely from its own source version.
     /usr/libexec/celikpanel/recovery verify-material-support --layout snapshot-name-sha256-v1 \
-        --schema celikpanel/recovery-material/v2 \
-        || die "selected recovery runtime does not support completion recovery material v2; panel services have not been stopped"
+        --schema celikpanel/recovery-material/v3 \
+        || die "selected recovery runtime does not support recovery material v3; panel services have not been stopped"
+    /usr/libexec/celikpanel/recovery verify-database-support --schema celikpanel/database-migration-admission/v1 \
+        || die "selected recovery runtime does not support isolated database migration; panel services have not been stopped"
+    if [[ $BOOTSTRAP_PRE_LEDGER -eq 0 && $BOOTSTRAP_SCHEMA17 -eq 0 ]]; then
+        /usr/libexec/celikpanel/recovery probe-update-database 9<&"$RELEASE_TRANSACTION_FD" \
+            || die "database metadata is not supported for isolated migration; panel services have not been stopped"
+    fi
 }
 
 prepare_and_acquire_release_transaction_lock() {
@@ -675,6 +682,7 @@ verify_independent_completion_terminal() {
     verify_saved_enablement
     verify_saved_runtime_states
     verify_installed_release_artifacts
+    verify_database_publication_if_required "$RECOVERY_EXPECTED_SNAPSHOT"
 }
 
 # A direct retained updater cannot bypass a material-backed completion failure.
@@ -1886,6 +1894,32 @@ wait_for_post_apply_mutation_idle() {
 # lock held. No HTTP process starts before this durable proof succeeds.
 # Gömülü migration'ları iki koordinatör kapalı ve tam mutation kilidi eldeyken
 # çalıştır. Bu kalıcı kanıt başarılı olmadan hiçbir HTTP süreci başlamaz.
+# Read policy from verified material, never from staging-directory absence.
+# Only explicit legacy evidence permits the historical database restore path.
+run_database_recovery_command() {
+    /usr/libexec/celikpanel/recovery "$@" 9<&"$RELEASE_TRANSACTION_FD"
+}
+
+read_database_migration_policy() {
+    local snapshot=$1 result status=0
+    result=$(run_database_recovery_command database-policy --snapshot "$snapshot") || status=$?
+    if [[ $status == 0 && $result == required ]]; then
+        printf '%s\n' required
+    elif [[ $status == 6 && -z $result ]]; then
+        printf '%s\n' legacy
+    else
+        die "database recovery policy is unverified; preserve this operation and use its independent recovery path"
+    fi
+}
+
+verify_database_publication_if_required() {
+    local snapshot=$1 policy
+    policy=$(read_database_migration_policy "$snapshot") || return 1
+    [[ $policy == required ]] || return 0
+    run_database_recovery_command verify-update-database --snapshot "$snapshot" \
+        || die "database publication is unverified; preserve the same operation and database evidence"
+}
+
 run_panel_migrations_offline() {
     if [[ -n ${RECOVERY_RUNTIME_ROOT:-} ]]; then
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
@@ -1909,12 +1943,23 @@ run_panel_migrations_offline() {
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
         "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
         || die "agent ledger is not idle before offline panel migration"
+    local migration_directory
+    migration_directory=$(dirname "$PANEL_DB")
+    if [[ -n ${isolated_database_work:-} ]]; then
+        [[ $isolated_database_work =~ ^/var/lib/celikpanel/\.release-db-migrations/[0-9a-f]{64}/work$ ]] \
+            || die "isolated database workspace identity is invalid"
+        migration_directory=$isolated_database_work
+    fi
     sudo -u celikpanel -- env -i \
         PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
         HOME=/var/lib/celikpanel LC_ALL=C \
-        CELIKPANEL_DATA_DIR="$(dirname "$PANEL_DB")" \
+        CELIKPANEL_DATA_DIR="$migration_directory" \
         "$BIN_DIR/panel" --migrate-only \
-        || die "offline panel database migration failed"
+        || die "offline panel database migration failed; its original database and work evidence are preserved"
+    if [[ -n ${isolated_database_work:-} ]]; then
+        run_database_recovery_command publish-update-database --snapshot "$snapshot_name" \
+            || die "isolated database publication was not confirmed; preserve the same operation"
+    fi
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
         "${RECOVERY_PANEL_CHECKER:-$BIN_DIR/panel}" --check-service-operations-idle \
         || die "panel ledger is not idle after offline migration"
@@ -3394,6 +3439,14 @@ recovery_candidate_manifest_sha=${recovery_candidate_manifest_sha%% *}
     --candidate-manifest "$recovery_candidate_manifest_sha" \
     9<&"$RELEASE_TRANSACTION_FD" \
     || die "recovery material could not be committed before candidate apply; preserve the exact snapshot"
+isolated_database_policy=$(read_database_migration_policy "$snapshot_name") \
+    || die "database transition policy is unverified before apply"
+if [[ $isolated_database_policy == required ]]; then
+    isolated_database_work=$(run_database_recovery_command prepare-update-database --snapshot "$snapshot_name") \
+        || die "isolated database preparation was not confirmed; preserve the exact snapshot and work evidence"
+    [[ $isolated_database_work =~ ^/var/lib/celikpanel/\.release-db-migrations/[0-9a-f]{64}/work$ ]] \
+        || die "isolated database preparation returned an invalid workspace"
+fi
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     # Release the outer flock only for the trusted one-shot initializer. Prove
     # its exact empty ledger, recreate and reacquire the common lock, then run
@@ -3512,15 +3565,21 @@ sync -f -- "$BIN_DIR" "$WEB_DIR" "$PANEL_DB" \
     "$UNIT_DIR/celikpanel-agent.service" "$UNIT_DIR/celikpanel-panel.service" "$UNIT_DIR" \
     || die "installed release directories could not be made durable"
 
-# Move active to completion.pending only after the stopped-state durable proof;
-# then publish process-bound authorization for the exact controlled starts.
-# Active işaretçisini yalnız kapalı-durum dayanıklılık kanıtından sonra
-# completion.pending'e taşı; sonra tam kontrollü başlangıçlar için süreç bağlı yetki yayımla.
+# New normal updates remain active through isolated migration and durable DB
+# publication. Historical schema17/pre-ledger retains its separate legacy path.
+# Yeni normal güncellemede migration ve DB yayını doğrulanana kadar active kalır.
+if [[ -n ${isolated_database_work:-} ]]; then
+    run_panel_migrations_offline
+    verify_installed_release_artifacts
+    verify_database_publication_if_required "$snapshot_name"
+fi
 release_txn_mark_completion_pending \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
     "$release_transaction_token" update "$snapshot_name" \
     || die "cannot mark update completion pending"
-run_panel_migrations_offline
+if [[ -z ${isolated_database_work:-} ]]; then
+    run_panel_migrations_offline
+fi
 verify_installed_release_artifacts
 # An observation for operators; this line grants no recovery authority.
 printf '%s\n' 'CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start'
@@ -3573,6 +3632,7 @@ verify_saved_enablement
 release_txn_validate_pending_token \
     "$RELEASE_TRANSACTION_ROOT" "$release_transaction_token" update "$snapshot_name" \
     || die "update completion marker changed before durable removal"
+verify_database_publication_if_required "$snapshot_name"
 transaction_completion_verified=1
 transaction_phase=scheduler-publishing
 release_txn_mark_scheduler_restore_pending \
@@ -3599,6 +3659,7 @@ release_txn_validate_scheduler_restore_token \
 panel_tls_restore_certbot_scheduler "$snap/panel-tls" \
     || die "Certbot renewal scheduler state could not be restored"
 scheduler_restore_verified=1
+verify_database_publication_if_required "$snapshot_name"
 transaction_phase=scheduler-removing
 release_txn_remove_scheduler_restore_pending \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \

@@ -34,6 +34,17 @@ var ErrLegacyCompletionMaterial = errors.New("verified legacy material requires 
 
 const MaterialSchema = "celikpanel/recovery-material/v1"
 const MaterialSchemaV2 = "celikpanel/recovery-material/v2"
+const MaterialSchemaV3 = "celikpanel/recovery-material/v3"
+const DatabaseAdmissionSchema = "celikpanel/database-migration-admission/v1"
+
+// ErrLegacyDatabaseMaterial identifies a verified older material/transition.
+// Malformed v3 evidence never returns this compatibility result.
+var ErrLegacyDatabaseMaterial = errors.New("verified legacy database recovery policy")
+
+func modernMaterial(schema string) bool {
+	return schema == MaterialSchemaV2 || schema == MaterialSchemaV3
+}
+
 const MaterialIntentSchema = "celikpanel/recovery-resource-intent/v2"
 const MaterialNoopIntentSchema = "celikpanel/recovery-resource-noop-intent/v1"
 
