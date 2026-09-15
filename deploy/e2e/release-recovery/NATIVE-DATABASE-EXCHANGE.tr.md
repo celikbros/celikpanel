@@ -5,7 +5,7 @@
 Bu düzenek, kayıtlı ve atılabilir bir Linux konuğunda değişmemiş ürünün taşınmış
 veritabanını yayımlamasını gözler. Gerçek atomik exchange çağrısını syscall
 çıkışında, yayımlama makbuzundan önce tutar; bağımsız doğrulamadan sonra tek bir
-kesintiye izin verir. **Kaydedilen kapsamda Arch kabulü geçti; Debian sonucu belirsiz kaldı.** Kesinti, kurtarma sonucu değildir.
+kesintiye izin verir. **Kaydedilen kapsamda Arch U ve Debian W kabulü geçti.** Kesinti, kurtarma sonucu değildir.
 
 Etkilenen [dayanıklılık ilkeleri](../../../docs/RESILIENCE-CONTRACT.tr.md) 2–5'tir:
 anlamı belirli kanıt, tehlikeli eylemin gerçek sınırında durması, her değişikliğin
@@ -106,10 +106,12 @@ collect salt-okurdur. Mevcut deneme kayıtları sessiz yeniden başlatmayı enge
 | Kanıt | Mevcut sonuç |
 |---|---|
 | Root çevrimdışı test grubu | 495 test: 494 PASS; gerçek ikili girdi eksikliğinden 1 açık atlama |
-| Alt dizin izleyici testleri, root ve yetkisiz `nobody` | İkisinde de 45/45 PASS, atlama yok; değişmemiş 27 WAL regresyonu dahil |
+| Alt dizin izleyici testleri, root ve yetkisiz `nobody` | İkisinde de 49/49 PASS, atlama yok; mevcut WAL regresyonları ve dört adil bekleme testi dahil |
 | Gerçek, yeni fork edilmiş çocuk süreç syscall testleri | Başarılı exchange çocuk dönmeden inode'ları değiştirir; gerçek ENOENT pozitif kanıtı reddeder |
 | U / Debian 13 | Giriş/çıkış, tam unit kesintisi ve yerel kurtarma gözlendi; DNS gözlemcisi, ardından kayıtlı VM kullanılamadığı için son kabul belirsiz |
 | U / Arch | Tam exchange kesintisi, yerel OnFailure geri alma, schema38 dönüşü; 55 tablodaki 132 kesinti anı satırı korundu, dört sonraki ölçüm satırı eklendi |
+| V / Debian 13 | Exchange öncesi yayımlayıcı süre aşımı; kontrolcü kesintisi yok; otomatik geri alma ve noktasal sağlık gözlendi; exchange kabulü belirsiz |
+| W / Debian 13 | Tam exchange kesintisi, yerel OnFailure geri alması, schema38; 55 tablodaki 98 satır korundu, sonraki tek metrics örneği eklendi |
 
 Bütün başarısız veya belirsiz denemeler kayıtta korunmalıdır. Yerel testler ve
 önceki WAL/ayrılmış-DB sonuçları bu yeni gerçek sistem sınırını kanıtlamaz.
@@ -173,3 +175,80 @@ eksikliğinden bir test açıkça atlandı. İlgili iki alt dizin izleyici modü
 60 test çalıştırdı: 56 PASS, mevcut kontrollü çocuk ikili girdileri için dört atlama.
 Bu geniş sayım hedefli gerçek exchange-çocuk testlerinin yerine geçmez. Bunlar yerel
 sonuçlardır; CI sonucu değildir.
+
+### V: korunan belirsiz gözlem ve izleyicide adil bekleme
+
+`/var/tmp/cp-release-drill-20260915-v` altında yeni, yalnız Debian denemesinde
+`bind9-dnsutils` başlangıçtan ve kesintiden önce kuruldu; UDP/TCP üzerinden yetkili
+A/SOA yanıtları ve iki koordinatör doğrulandı.
+`1907a660bbe2291e2190d31e67cb4c76` işlemi exchange sınırına ulaşmadı. Seçilen
+yayımlayıcı, ürünün değişmeyen üç dakikalık komut süresi dolunca sonlandırıldı;
+gözlemci, kontrolcü kesintisi yapmadan `no-exact-native-database-exchange-boundary`
+bildirdi. Yerel OnFailure geri alması tamamlandı. Sonraki salt-okur kontrollerde
+aynı DNS test yanıtları ve başlangıç ikililerini çalıştıran aktif koordinatörler
+bulundu. Kayıtlı konuklar disk ve kanıtları korunarak durduruldu. Bu sonuç exchange
+kabulü veya son veritabanının bütün satırlarının karşılaştırılması değildir.
+
+Eski izleyici daima en küçük kayıtlı TID'yi önce sorguluyordu. Bir regresyon,
+bu görev sürekli hazırken diğerlerinin süresiz bekleyebildiğini gösterdi.
+Düzenek artık her alınan olaydan sonra sırayı döndürüyor; yalnız o an kayıtlı
+TID'leri sorguluyor ve aynı süre sınırını koruyor. Dört regresyon sürekli hazır
+olmayı, değişen görev kümesini, hazır olmayan/çıkmış görevleri ve süre sınırında
+reddi kapsıyor. Aday, ürün süreleri ve bütün kontrol noktası/kimlik denetimleri
+değişmedi. V günlüğü süre aşımını; birim testi zamanlama kusurunu kanıtlar.
+Bu kusurun gerçek süre aşımının tek nedeni olduğu ileri sürülmez.
+
+V'nin dokuz girdiyi bağlayan kanıt mührü:
+`analysis/v-inconclusive-seal-1789499043977694487.json`, SHA256
+`d65f485ed829d6d1a87fc557b754573647932f494842f3821fd907a112dbf4a8`.
+Değişiklik sonrası yerel testlerde 495 test (494 geçti, gerçek ikili girdisi eksik
+bir açık atlama), ayrıca root ve `nobody` altında 49'ar hedefli izleyici testi
+geçti; bu grupta atlama yok ve iki gerçek çocuk exchange çağrısı bulunuyor.
+
+### W: Debian gerçek exchange kabulü
+
+Yeni `/var/tmp/cp-release-drill-20260915-w` dizini; aynı sabit başlangıcı, adayı
+ve kurtarma paketini, adil bekleme düzeneğiyle kullandı. DNS gözlem aracı
+başlangıçtan önce hazırlandı. `885d5b78165aaa2bd3c247628970120d` işlemi,
+`20260915T190442Z-from-unknown-to-cb3165456bb4ba4654dc19d51a5eafc13721a5fb-1ce830889e8d3010c8d1527409e28512`
+snapshot'ını kullandı. Değişmez deneme kaydındaki 19 yardımcı özeti incelenen
+kaynakla aynı; `native_trace.py` SHA256 değeri
+`1bd8b693cfa83ec3d18f74d827608f9ef18ca34f2ad5ec65508de19782abb8a8`.
+
+Gerçek giriş/çıkış kanıtları ve tam birim kesinti makbuzu, başarılı atomik değişimi
+yayın makbuzundan önceki kontrol noktasına bağlıyor. Yerel systemd OnFailure,
+elle kurtarma veya ikinci güncelleme olmadan ters exchange ile otomatik geri aldı.
+Aynı işlemin günlüğü, son kontrol noktası, korunan Before/After dosyaları, geri alma
+niyeti/makbuzu, seçilen kurtarma paketi ve çalışan/diskteki Alpha64 ikilileri uyumlu.
+Sürüm işlem işaretçileri temizlendi; `published.json` oluşmadı.
+
+Host üzerinde yeni özel SQLite kopyaları, exchange anındaki schema38→42 çiftini,
+55 tablodaki 98 eski satırın tamamını, dört migration ekini ve on yeni tablo/varsayılanı
+bağımsız doğruluyor. Son schema38 veritabanı, kesinti anındaki bütün satır kimlikleri
+ve tür bilgili değerleri koruyor; eski satır kaybı/değişimi yok. Sonraki tek metrics
+örneğiyle toplam 99 satır var; genel eşitlik **DIFFERENT**. Saklanan ham DB/WAL'dan
+özel kopyada yeniden kurulan veritabanı doğrulanmış yedekle aynı. Özgün kanıtlar
+SQLite ile açılmıyor.
+
+Dört yetkili UDP/TCP A/SOA gözlemi, kesinti öncesi ve kurtarma sonrası aynı.
+Sunulan/kurulu TLS parmak izleri eşleşiyor; loopback HTTPS 200 dönüyor. Ayrı son
+ölçüm, iki koordinatörü bir kez dondurup/kopyalayıp çözdü; ikisinin de çözülmesi
+aynı süreç kimlikleriyle doğrulandı. Kayıtlı iki W konuğu, disk ve kanıtları
+korunarak durduruldu. Bunlar noktasal kontroller ve süreç ölümü sonrası kurtarma
+kanıtıdır; kesintisiz hizmet veya güç kaybı dayanıklılığı değildir.
+
+| Korunan W kanıtı | SHA256 |
+|---|---|
+| Debian son sonuç | `98b0459ac4c384e17c9aa4bdf8e94d6dbdd134b6e705d9ec825a51aa7ec26295` |
+| Yeni host satır incelemesi, `analysis/debian13-exchange-rows-gfvx5uxx/review.json` | `d99cdb578712c9ca119bebeae266e1e8ed44349c58f8ddddc19e3155e2746713` |
+| Son host mührü, `analysis/host-seal-1789499468326072969.json` (76 girdi bağı) | `cc7c76b062e727f4ac034c31d9efa20e2fb95eb2ba2defad2daeb2beb8b76080` |
+
+Mühür, kopyalanmış açıklama etiketlerinin düzeltmesini de koruyor: ilk host raporu
+laboratuvar V/toplayıcı denemesi2 diyor, son sonuçta ise eski U seed kapsam etiketi
+kalıyordu. Bütün korumalı kimlikler ve yakalanan girdiler W'ye bağlı. Son host raporu
+aynı satırları W/deneme1 etiketiyle yeniden hesaplıyor; özgün raporlar değişmedi.
+Bunun için konuğa erişim, ikinci yakalama veya kurtarma yapılmadı. 76 girdi bağı,
+19 yardımcı özetini ve gerçek olay zincirini de yeniden denetliyor. Eski U/V Debian
+sınırlamaları kayıtta kalıyor; W yalnız bu gerçek exchange kabul işini kapatıyor.
+Tam P0.3, gerçek barındırılan hizmetler, yeniden başlatma/güç kaybı ve güncellemeyi
+yalnız sahibin başlatması gereksinimleri yukarıdaki gibi devam ediyor.

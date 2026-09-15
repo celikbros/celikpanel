@@ -150,6 +150,7 @@ class LinuxKernel:
     def __init__(self, registration):
         require(platform.system() == 'Linux' and platform.machine() == 'x86_64', 'linux-amd64-required')
         self.registration = registration
+        self._wait_after = 0
         self.cgroup = Path('/sys/fs/cgroup/system.slice') / registration['unit']
         self.cgroup_fd = directory_fd(self.cgroup)
         self.cgroup_identity = directory_metadata(os.fstat(self.cgroup_fd))
@@ -243,13 +244,20 @@ class LinuxKernel:
         return {'op': 'exit', 'result': int(value.payload.exit.result), 'is_error': bool(value.payload.exit.is_error)}
 
     def wait(self, tids, deadline):
+        # Poll only admitted tasks, rotating after each consumed event. A Go
+        # thread with another immediately ready syscall must not starve its
+        # siblings while the real publisher's unchanged timeout is running.
+        ordered = sorted(tids)
+        ordered = [tid for tid in ordered if tid > self._wait_after] + [
+            tid for tid in ordered if tid <= self._wait_after]
         while self.now() < deadline:
-            for tid in sorted(tids):
+            for tid in ordered:
                 try:
                     got, status = os.waitpid(tid, WAIT_ALL | os.WNOHANG)
                 except ChildProcessError:
                     continue
                 if got:
+                    self._wait_after = got
                     return got, status
             time.sleep(0.0002)
         raise Inconclusive('trace-deadline')

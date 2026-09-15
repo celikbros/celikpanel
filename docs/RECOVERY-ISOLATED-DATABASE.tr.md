@@ -167,4 +167,4 @@ kanıt temizliği ve eski schema17/pre-ledger kabulü açıktır. AI yardımcıs
 sınırlı işlem/kurtarma sözleşmesini kullanmalıdır; eksik yetkiyi tamamlayamaz veya
 bilinmeyen sonucu başarı sayamaz.
 
-Sonraki [yerel exchange kesinti düzeneği](../deploy/e2e/release-recovery/NATIVE-DATABASE-EXCHANGE.tr.md), başarılı veritabanı değişiminden sonra ve makbuzdan önce keser. Arch için sınırlı kapsamda otomatik geri alma ve kesinti anı satırlarının tamamını koruma kanıtı var; Debian son kabulü belirsiz. Ürüne yeni şema geçişi eklemez, P0.3 kapanmaz.
+Sonraki [yerel exchange kesinti düzeneği](../deploy/e2e/release-recovery/NATIVE-DATABASE-EXCHANGE.tr.md), başarılı veritabanı değişiminden sonra ve makbuzdan önce keser. Arch U ve yeni Debian W için sınırlı kapsamda otomatik geri alma ve kesinti anı satırlarının tamamını koruma kanıtı var; önceki Debian U/V denemeleri belirsiz olarak korunuyor. Ürüne yeni şema geçişi eklemez, P0.3 kapanmaz.

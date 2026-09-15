@@ -5,7 +5,7 @@
 This fixture observes the unchanged product publishing a migrated database in a
 registered disposable Linux guest. It holds the actual atomic exchange at syscall
 exit, before the publication receipt, then permits one independently verified
-fault. **Arch native acceptance passed for the recorded scope; Debian remains inconclusive.**
+fault. **Arch U and Debian W native acceptance passed for the recorded scope.**
 A successful cut is not a recovery result.
 
 The affected [resilience invariants](../../../docs/RESILIENCE-CONTRACT.md) are 2–5:
@@ -107,10 +107,12 @@ collection is read-only. Existing attempt records prevent a silent retry.
 | Evidence | Current result |
 |---|---|
 | Root offline suite | 495 tests: 494 PASS; 1 explicit missing-actual-binary-input skip |
-| Nested tracer suite, root and unprivileged `nobody` | 45/45 PASS each, no skips; includes 27 unchanged WAL regressions |
+| Nested tracer suite, root and unprivileged `nobody` | 49/49 PASS each, no skips; includes the existing WAL regressions and four wait-fairness cases |
 | Real newly forked child syscall tests | Successful exchange swaps inodes before child return; real ENOENT refuses a positive proof |
 | U / Debian 13 | Entry/exit, exact-unit cut and native recovery observed; final acceptance inconclusive: DNS observer unavailable, then registered VM unavailable |
 | U / Arch | Exact exchange cut, native OnFailure rollback, schema38 restored; all 132 cut-time rows retained in 55 tables; four later metrics samples added |
+| V / Debian 13 | Publisher timeout before exchange; no controller cut; automatic rollback and point health observed; exchange acceptance inconclusive |
+| W / Debian 13 | Exact exchange cut, native OnFailure rollback, schema38 restored; all 98 cut-time rows retained in 55 tables; one later metrics sample added |
 
 All failed or inconclusive attempts must remain in the record. Local tests and
 older WAL/isolated-DB results do not establish this new native boundary. Wider
@@ -174,3 +176,78 @@ actual-binary-input skip). The two relevant nested tracer modules ran 45/45 unde
 both root and `nobody`, with no skips. A broader nested discovery additionally ran
 60 tests (56 PASS, four existing controlled-child binary-input skips); it does not
 replace the focused real exchange-child checks. These are local results, not CI.
+
+### V: preserved inconclusive observation and tracer fairness
+
+A fresh Debian-only attempt in `/var/tmp/cp-release-drill-20260915-v` installed
+`bind9-dnsutils` before the baseline and fault, then verified authoritative A/SOA
+responses over UDP/TCP and both coordinators. Operation
+`1907a660bbe2291e2190d31e67cb4c76` never reached the exchange boundary. The selected
+publisher was killed at the product's unchanged three-minute command deadline;
+the observer reported `no-exact-native-database-exchange-boundary`, without a
+controller cut. Native OnFailure rollback completed. Later read-only checks found
+the same fixture DNS answers and active coordinators running the baseline bytes.
+The registered guests were then stopped, with disks and evidence retained. This
+is not exchange acceptance or a complete terminal row comparison.
+
+The old tracer always polled the lowest admitted TID first. A regression reproduced
+indefinite starvation when that task remained ready. The fixture now rotates after
+each consumed event, still polling only the current admitted TIDs and honoring the
+same deadline. Four regressions cover continuous readiness, changing membership,
+not-ready/exited tasks and deadline refusal. The candidate, its timeouts and all
+checkpoint/identity checks are unchanged. The V journal establishes the timeout;
+the unit test establishes the scheduling defect, not its sole causal contribution
+to that native timeout.
+
+V's nine-input evidence seal is
+`analysis/v-inconclusive-seal-1789499043977694487.json`, SHA256
+`d65f485ed829d6d1a87fc557b754573647932f494842f3821fd907a112dbf4a8`.
+The post-change local suite ran 495 tests (494 PASS, one explicit missing-binary
+skip), plus 49 focused tracer tests under both root and `nobody` (all PASS,
+no skips, including both actual child exchange syscalls).
+
+### W: Debian native exchange acceptance
+
+Fresh root `/var/tmp/cp-release-drill-20260915-w` used the same pinned baseline,
+candidate and recovery kit, with the fair-wait fixture and DNS observation client
+prepared before the baseline. Operation `885d5b78165aaa2bd3c247628970120d` used
+snapshot `20260915T190442Z-from-unknown-to-cb3165456bb4ba4654dc19d51a5eafc13721a5fb-1ce830889e8d3010c8d1527409e28512`.
+The immutable attempt's 19 helper hashes match the reviewed source, including
+`native_trace.py` SHA256 `1bd8b693cfa83ec3d18f74d827608f9ef18ca34f2ad5ec65508de19782abb8a8`.
+
+The native entry/exit proofs and exact-unit kill receipt bind successful atomic
+exchange to the pre-receipt checkpoint. Native systemd OnFailure then performed
+automatic inverse-exchange rollback, without manual recovery or another update.
+The same-operation journal, terminal checkpoint, preserved Before/After files,
+restoration intent/receipt, selected recovery kit and running/disk Alpha64 binaries
+agree. Release transaction markers were absent and `published.json` stayed absent.
+
+Fresh host-only SQLite copies independently prove the exchanged schema38-to-42
+pair, all 98 old rows across 55 tables, the four migration additions and ten new
+tables/defaults. The final schema38 database retains every cut-time rowid and typed
+value; no old row is missing or changed. One later metrics sample makes 99 final
+rows: global equality remains **DIFFERENT**. The private reconstruction from saved
+raw DB/WAL matches the verified backup. Original evidence is never opened by SQLite.
+
+Four authoritative UDP/TCP A/SOA observations agree before the fault and after
+recovery. Served/installed TLS fingerprints match and loopback HTTPS returns 200.
+The separate post-terminal measurement froze/copied/thawed the two coordinators
+once; both thaws retained their verified process identities. Both registered W
+guests were stopped with disks and evidence retained. These are point checks and
+process-death recovery evidence, not uninterrupted service or power-loss durability.
+
+| Preserved W proof | SHA256 |
+|---|---|
+| Debian terminal outcome | `98b0459ac4c384e17c9aa4bdf8e94d6dbdd134b6e705d9ec825a51aa7ec26295` |
+| Fresh host row review, `analysis/debian13-exchange-rows-gfvx5uxx/review.json` | `d99cdb578712c9ca119bebeae266e1e8ed44349c58f8ddddc19e3155e2746713` |
+| Final host seal, `analysis/host-seal-1789499468326072969.json` (76 input bindings) | `cc7c76b062e727f4ac034c31d9efa20e2fb95eb2ba2defad2daeb2beb8b76080` |
+
+The seal preserves a correction to inherited descriptive collector labels: the
+first host report said lab V/collector attempt2 and the terminal outcome retained
+an old U seed-scope label. All guarded identities and captured inputs bind W.
+The final host report recomputes the same retained rows with lab W/attempt1;
+original reports remain intact. This required no guest access, second capture or
+recovery. The 76 bindings also recheck the 19 helper pins and native causal chain.
+Earlier U/V Debian limitations remain recorded; W closes only this native exchange
+acceptance item. Full P0.3, real hosted workloads, reboot/power loss and owner-only
+installed-update requirements remain as above.

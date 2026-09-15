@@ -426,5 +426,48 @@ class NativeTraceTests(unittest.TestCase):
         self.assertEqual(result['detached'], [100, 101])
 
 
+class KernelWaitFairnessTests(unittest.TestCase):
+    def kernel(self):
+        kernel = native.LinuxKernel.__new__(native.LinuxKernel)
+        kernel._wait_after = 0
+        kernel.now = lambda: 0
+        return kernel
+
+    def test_continuously_ready_low_tid_does_not_starve_other_threads(self):
+        kernel = self.kernel()
+        with mock.patch.object(native.os, 'waitpid', side_effect=lambda tid, flags: (tid, 123)) as wait:
+            results = [kernel.wait({101, 102, 103}, 1)[0] for _ in range(6)]
+        self.assertEqual(results, [101, 102, 103, 101, 102, 103])
+        self.assertTrue(all(call.args[1] == native.WAIT_ALL | native.os.WNOHANG for call in wait.call_args_list))
+
+    def test_removed_cursor_and_new_threads_only_wait_on_current_admitted_set(self):
+        kernel = self.kernel()
+        with mock.patch.object(native.os, 'waitpid', side_effect=lambda tid, flags: (tid, 123)) as wait:
+            self.assertEqual(kernel.wait({101, 103}, 1)[0], 101)
+            self.assertEqual(kernel.wait({100, 102, 103}, 1)[0], 102)
+            self.assertEqual(kernel.wait({100, 103}, 1)[0], 103)
+            self.assertEqual(kernel.wait({100}, 1)[0], 100)
+        self.assertEqual([call.args[0] for call in wait.call_args_list], [101, 102, 103, 100])
+
+    def test_not_ready_and_exited_tasks_do_not_hide_ready_thread(self):
+        kernel = self.kernel()
+        def waitpid(tid, flags):
+            if tid == 101:
+                return 0, 0
+            if tid == 102:
+                raise ChildProcessError()
+            return tid, 123
+        with mock.patch.object(native.os, 'waitpid', side_effect=waitpid):
+            self.assertEqual(kernel.wait({101, 102, 103}, 1), (103, 123))
+
+    def test_deadline_still_bounds_wait_without_consuming_another_task(self):
+        kernel = self.kernel()
+        kernel.now = mock.Mock(side_effect=[0, 1])
+        with mock.patch.object(native.os, 'waitpid', return_value=(0, 0)) as wait, mock.patch.object(native.time, 'sleep'):
+            with self.assertRaisesRegex(native.Inconclusive, 'trace-deadline'):
+                kernel.wait({101}, 1)
+        wait.assert_called_once_with(101, native.WAIT_ALL | native.os.WNOHANG)
+
+
 if __name__ == '__main__':
     unittest.main()
