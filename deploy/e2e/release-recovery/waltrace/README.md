@@ -1,5 +1,9 @@
 # Controlled-child WAL syscall-stop feasibility
 
+This document covers `trace_fixture.py` and its own child. The separate
+`native_trace.py` adapter and its registered-VM acceptance are documented in
+[Native WAL interruption](../NATIVE-WAL.md).
+
 This is a disposable Linux x86_64 experiment, not a native CelikPanel update
 acceptance result. It never attaches to a caller-supplied PID and never touches
 an installed panel, a VM or the network.

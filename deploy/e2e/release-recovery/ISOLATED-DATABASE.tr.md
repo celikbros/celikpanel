@@ -178,3 +178,5 @@ web/posta/veritabanı işleri ve kesintisiz erişim ayrı gözlem gerektirir.
 Tam kill/reboot matrisi, genel imzalı kabul, eksik snapshot yakalama, sahibin
 metadata geçişleri, sonraki ilgisiz sahip/veri değişiklikleri, kanıt temizliği
 ve eski schema17/pre-ledger geçişleri açıktır. P0.3 kısmi kalır.
+
+Sonraki [gerçek WAL deneyleri](NATIVE-WAL.tr.md), dolu SQL verisiyle tek bir fiziksel, commit edilmemiş dönüşüm yazısını ve otomatik geri almayı ayrı olarak sınar. Yukarıdaki Q/R kanıtı kendi kontrol noktalarıyla sınırlıdır; dolu domain verisinin başarılı dönüşümü ve gerçek barındırma kabulü açık kalır.

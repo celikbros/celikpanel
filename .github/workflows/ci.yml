@@ -146,6 +146,13 @@ jobs:
           git cat-file -e '5aa03fd5b6775b21834ff7b1ce0695d92f50ae93^{commit}'
           git cat-file -e '3ee8dac009c7e3db1d940f9b8be078e186693a80^{commit}'
           python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_*.py' -v
+      - name: Verify native WAL tracer boundaries (mock kernel, no VM)
+        run: python3 -m unittest discover -s deploy/e2e/release-recovery/waltrace -p 'test_native_trace.py' -v
+      - name: Verify root-owned native WAL fixture filesystems (no VM)
+        run: |
+          sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_populated_baseline.py' -v
+          sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_wal_checkpoint.py' -v
+          sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_native_wal_trial.py' -v
       - name: Test and build disposable release-recovery drivers (no VM)
         run: |
           go test ./deploy/e2e/release-recovery/driver ./deploy/e2e/release-recovery/driver-update -count=1

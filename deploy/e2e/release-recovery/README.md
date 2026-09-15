@@ -441,4 +441,4 @@ Selected recovery-kit replacement has its own [promotion acceptance record](RUNT
 
 [The bounded fixture record](WAL-FIXTURE.md) separates controlled-child WAL
 interruption and populated private SQL copies from native update acceptance.
-The real migration/automatic recovery adapter remains open.
+The separate [native WAL experiment](NATIVE-WAL.md) now records an unchanged product migrator, one verified physical noncommit WAL write and same-operation automatic rollback. Its scoped acceptance and retained inconclusive attempt do not close the full fault matrix.

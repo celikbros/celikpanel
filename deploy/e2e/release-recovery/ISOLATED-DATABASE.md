@@ -179,3 +179,5 @@ observations.
 The full kill/reboot matrix, signed public admission, incomplete snapshot capture,
 owner metadata migrations, unrelated later owner/data changes, evidence cleanup
 and older schema17/pre-ledger transitions remain open. P0.3 is partial.
+
+The later [native WAL trials](NATIVE-WAL.md) separately test one physical noncommit migration write with populated SQL data and automatic rollback. The Q/R evidence above remains limited to its original checkpoints; successful populated-domain conversion and native hosting acceptance remain open.
