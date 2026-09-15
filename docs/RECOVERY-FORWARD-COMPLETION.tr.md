@@ -99,4 +99,4 @@ kaydeder. P, son kanıt kontrollerini içeren nihai kaynağı çalıştırır. D
 şema, başlangıç TLS'i ve etkin olmayan zamanlayıcı sınırları açık kalır; çalışma
 kurulu kullanıcı panellerinde güncelleme başlatmadı.
 
-Sonraki kaynak dilimi material v3 ile [ayrı veritabanı dönüşümünü](RECOVERY-ISOLATED-DATABASE.tr.md) getirir. Normal güncelleme, ayrı dönüştürülen kopya doğrulanıp yayımlanana kadar active kalır. O dilimin uyumluluk ve bekleyen gerçek sistem kabul sınırı ayrıdır; burada anlatılan tarihsel v2 davranışı geriye dönük değiştirilmez.
+Sonraki kaynak dilimi material v3 ile [ayrı veritabanı dönüşümünü](RECOVERY-ISOLATED-DATABASE.tr.md) getirir. Normal güncelleme, ayrı dönüştürülen kopya doğrulanıp yayımlanana kadar active kalır. O dilimin uyumluluk ve sınırlı Q/R gerçek sistem kabul kaydı ayrıdır; burada anlatılan tarihsel v2 davranışı geriye dönük değiştirilmez.

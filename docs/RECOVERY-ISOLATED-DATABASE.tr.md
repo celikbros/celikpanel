@@ -7,7 +7,9 @@ kesilen işlemi ele alır. Aday sürüm ayrı çalışma kopyasını dönüştü
 veritabanı ancak bağımsız doğrulamadan sonra atomik olarak değiştirilir.
 [İleri tamamlamanın](RECOVERY-FORWARD-COMPLETION.tr.md) devamıdır. P0.3 kapanmaz;
 lisans politikası ve kurulu panel güncellemesini yalnız kullanıcının başlatması
-kuralı değişmez. Yeni migration sınırlarının gerçek sistem kabulü henüz bekliyor.
+kuralı değişmez. Aşağıdaki sınırlı Q sonucu `0610b239` kaynağına aittir. Ayrı
+ve temiz R konukları, düzeltilmiş `cb31654` için aynı iki sınırı doğrular;
+bunlar tam arıza matrisi kabulü değildir.
 
 ## Yetki ve uyumluluk
 
@@ -21,11 +23,31 @@ sayılmaz.
 Servisler durmadan seçili kurtarma ortamının material-v3 ve
 `celikpanel/database-migration-admission/v1` desteği doğrulanır.
 `probe-update-database`, devralınan yerel işlem kilidi altında dosya özelliklerini
-salt okunur kontrol eder; çalışan SQLite'ın WAL dosyasına izin verir. Bu dilim
-asıl DB veya üst dizinin genişletilmiş özniteliklerini desteklemez; bunları
-silmez veya bir kısmını sessizce atmaz. Mevcut snapshot üreticisi önce dayanıklı
-kopyayı alır, sonra asıl SQLite'ı normalleştirir. V3 önceki-hal kaydı oluşurken
-asıl veritabanının yan dosyaları bulunmamalıdır.
+salt okunur kontrol eder; çalışan SQLite'ın WAL dosyasına izin verir.
+
+`cb31654` ile yeni normal kabul, `/var/lib/celikpanel` için panel hesabının tam
+UID'sini, `celikpanel` grubunun tam GID'sini ve `0750` iznini gerektirir. Aynı
+koşul, apply-only kurulumdan önce yeni material için asıl Before yakalanırken
+yeniden kontrol edilir. Böylece kurucunun veya yerel hizmetin
+`StateDirectoryMode=0750` başlangıcının daha sonra normalleştireceği bir üst dizin
+düzeni kabul edilmez. Root sahipliği, `0700` izni veya farklı grup; dizin, DB ve
+WAL değiştirilmeden reddedilir.
+
+Gözlenen desteklenmeyen üst dizin `ErrUnsupportedDatabaseParent` döndürür.
+Yönlendirme, sahibin bilinçli ayarlarını korumasını; desteklenen düzeni veya
+uyumlu kurtarma sürümünü seçtikten sonra panelden yeniden denemesini belirtir.
+Bu sonuç, desteklenmeyen dosya öznitelikleri için `ErrUnsupportedMetadata` ve
+bilinmeyen/okunamayan metadata sonucundan ayrıdır. Kontrol servisleri durdurmaz,
+`chown`/`chmod` onarımı yetkisi vermez. Asıl DB veya üst dizinin genişletilmiş
+öznitelikleri desteklenmez; silinmez veya yalnız bir kısmı kopyalanmaz.
+
+Tarihsel material okuyucuları daha geniş güvenli/karantina üst dizin sözleşmesini
+korur. Kabul düzeltmesi eski Before kayıtlarını yeniden yazmaz, kurtarma yolunu
+değiştirmez. Mevcut snapshot üreticisi önce dayanıklı kopyayı alır, sonra asıl
+SQLite'ı normalleştirir; karantina çıkışında panel sahipliği ve `0750` iznini
+geri yükler. Bu önceki normalleştirme, sahibin keyfi dizin düzeninin korunduğu
+kanıtı değildir. Yeni normal ön kontrol desteklenmeyen düzeni bu yola girmeden
+reddeder. V3 önceki-hal yayını ayrıca asıl DB'nin yan dosyalarının yokluğunu arar.
 
 V1/V2 kayıtları okunmaya devam eder. `database-policy --snapshot NAME`, normal
 v3 için `required` döndürür. Yalnız boş standart çıktıyla çıkış 6, ayrıca
@@ -94,11 +116,50 @@ yazıcı, uygunsuz çalışma yolu, belirsiz politikayı ret ve eski/yeni geri a
 seçimi sınanır. Go testleri gerçek SQLite ve korumalı yayın API'lerini, seçili
 sınırlarda SIGKILL dahil sınar. Bunlar gerçek sistem güncelleme kabulü değildir.
 
-Geçici deney düzeneğine varsayılan Alpha75 yanında sabit yayımlanmış
-Alpha64/schema38 başlangıcı eklendi. Gerçek çalışan/disk ikili özetleri ve 38
-migration kimliği kontrol edilir. Arch ve Debian'da gerçek eski-yeni dönüşümü,
-korunan başarısız WAL, kesin süreç kesintisi, aynı işlemin otomatik kurtarılması
-ve iş yüklerinin korunması gözlenmeden bu dilime gerçek sistem kabulü verilmez.
+[Q gerçek sistem kabul kaydı](../deploy/e2e/release-recovery/ISOLATED-DATABASE.tr.md),
+`0610b239a7bb976874a2c347099bf88e779237d1` kaynağını gerçek yayımlanmış
+Alpha64/schema38 durumuyla başlayan yeni Arch ve Debian 13 konuklarına bağlar.
+Bağımsız host incelemesinde Arch'ın 87, Debian'ın 70 indeksli kanıt dosyasının tümü
+doğrulandı. Deney, kayıtlı imzasız yerel aday düzeneğini kullandı; yayımlanmış
+imzalı Agent/UI kabul yolu sınanmadı.
+
+Arch'ın `candidate-installed` kesintisinde asıl Before ve ilk çalışma kopyası
+tam eşleşiyordu; yalnız admission kanıtı vardı, sonraki DB yayın kayıtları yoktu.
+Otomatik geri alma çalışma kopyasını koruyarak eski ikililere ve schema38/55
+tabloya döndü. Bu ilk durum kanıtıdır; SQLite işleminin içinde gerçek kesinti veya
+başarısız WAL koruma sonucu değildir. Debian gerçek schema38→42 dönüşümünü
+bitirdikten sonra `completion-database-verified` sınırında adayın saklanan tam üç
+dosyası ve güncelleyici kaybedildi. Otomatik ileri tamamlama yeni ikilileri ve
+schema42/65 tabloyu korudu. Ham admission, mühür ve yayın makbuzları; korunan özgün
+Before inode/içeriğini ve yayınlanmış asıl inode'u bağlar. Son işlem işaretçileri
+yoktu, loopback HTTPS erişilebilirdi; kesintisiz erişim kanıtlanmış sayılmaz.
+
+Yerel toplu veri doğrulayıcısı, `sqlite_sequence` dahil 55 eski tabloyu eski sütun
+izdüşümleri, satır kimliği ve tür bilgili değerlerle karşılaştırdı. Eski satır
+kaybı/değişimi yoktu; `applied_at` dahil eski migration satırları korundu. Her konukta
+19 sonraki metrics satırı eklendi. Hiçbir tablo dışlanmadan tam DB karşılaştırması
+`DIFFERENT` kaldı: Debian'da ayrıca amaçlanan 10 yeni tablo, iki yeni domain sütunu
+ve 39–42 migration kayıtları bulunuyor. Domain tablosu boştu; dolu domain dönüşümü
+sınanmış değildir. Ham satır değerleri dışarı aktarılmadı; host incelemesi özel
+satırları yeniden hesaplamak yerine doğrulayıcıyı, mühürlü sonuçları ve kanıt
+bağlarını denetler. Son inceleme silinmiş işaretçileri üretmedi veya yalnız active
+aşamasına ait DB API'sini yeniden çalıştırmadı.
+
+Sonraki `cb31654` düzeltmesinin root/Linux regresyonları önce desteklenmeyen üst
+dizinin kabul edildiğini gösterdi; ardından izin/içerik değiştirmeyen reddi,
+tarihsel okuma uyumluluğunu ve ayrı uygulanabilir düzen yönlendirmesini doğruladı.
+Bu bileşen testleri Q'nun kaynak kapsamını genişletmez.
+
+Yeni R konukları tam `cb3165456bb4ba4654dc19d51a5eafc13721a5fb` kaynağını,
+aynı gerçek Alpha64 başlangıcını ve iki arıza sınırını kullandı. Bağımsız
+incelemede Arch 62, Debian 63 mühürlü dosyanın tamamı ve 28/44 ek DB kontrolü
+geçti: Arch ilk çalışma kopyasını koruyarak otomatik geri döndü; Debian üç dosya
+kaybından sonra schema38→42 geçişini otomatik tamamladı. Eski 55 tablonun bütün
+eski satırları korundu; her konukta dört sonraki metrics örneği eklendi
+(15→19 ve 16→20), genel karşılaştırma `DIFFERENT` kaldı. Kabul kaydı kaynak,
+düzenek, arşiv ve tam işlem özetlerini bağlar. Gerçek deney desteklenen normal
+dizin yolunu kanıtlar; desteklenmeyen düzenin reddi bileşen test kanıtıdır.
+İki laboratuvar da disk ve kanıtları korunarak durduruldu.
 
 Tam kill/reboot matrisi, imzalı aday kabulü, eksik snapshot yakalama, sahibin
 öznitelik geçişleri, ilgisiz canlı şema/veri değişiklikleri sonrası kurtarma,
