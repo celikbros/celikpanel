@@ -37,7 +37,7 @@ func materialDataFiles(schema string) []string {
 	if schema == MaterialSchema {
 		return materialFilesV1
 	}
-	if schema == MaterialSchemaV2 {
+	if modernMaterial(schema) {
 		return materialFiles
 	}
 	return nil
@@ -50,17 +50,18 @@ type materialResource struct {
 	Target   tree   `json:"target"`
 }
 type materialRecord struct {
-	Schema            string             `json:"schema"`
-	Snapshot          string             `json:"snapshot"`
-	SnapshotManifest  string             `json:"snapshot_manifest_sha256"`
-	CandidateRoot     string             `json:"candidate_root"`
-	CandidateManifest string             `json:"candidate_manifest_sha256"`
-	TokenHash         string             `json:"transaction_token_sha256"`
-	CandidateCommit   string             `json:"candidate_commit"`
-	CandidateTree     string             `json:"candidate_tree"`
-	Resources         []materialResource `json:"resources"`
-	Data              tree               `json:"data"`
-	DataManifest      string             `json:"data_manifest_sha256"`
+	Schema            string                  `json:"schema"`
+	Snapshot          string                  `json:"snapshot"`
+	SnapshotManifest  string                  `json:"snapshot_manifest_sha256"`
+	CandidateRoot     string                  `json:"candidate_root"`
+	CandidateManifest string                  `json:"candidate_manifest_sha256"`
+	TokenHash         string                  `json:"transaction_token_sha256"`
+	CandidateCommit   string                  `json:"candidate_commit"`
+	CandidateTree     string                  `json:"candidate_tree"`
+	Resources         []materialResource      `json:"resources"`
+	Data              tree                    `json:"data"`
+	DataManifest      string                  `json:"data_manifest_sha256"`
+	DatabaseBefore    *DatabaseBeforeEvidence `json:"database_before,omitempty"`
 }
 type materialTransaction struct {
 	operation, token string
@@ -326,6 +327,9 @@ func (m *verifiedMaterial) revalidate() error {
 			return fmt.Errorf("material bound evidence: %w", ErrOwnerChanged)
 		}
 	}
+	if err = validateDatabaseMaterial(m.snapshot, rows, r); err != nil {
+		return err
+	}
 	for i, name := range []string{"bin", "web"} {
 		resource := r.Resources[i]
 		if resource.Resource != name || !validRecordedTree(resource.New) {
@@ -439,7 +443,7 @@ func validateMaterialData(t tree, rows map[string]string, r materialRecord) erro
 			return ErrUnavailable
 		}
 		if e.Identity.Mode&unix.S_IFMT == unix.S_IFDIR {
-			if (e.Path != "." && e.Path != "deploy" && e.Path != "deploy/systemd" && !(r.Schema == MaterialSchemaV2 && e.Path == "libexec")) || e.Identity.Mode&07777 != 0700 {
+			if (e.Path != "." && e.Path != "deploy" && e.Path != "deploy/systemd" && !(modernMaterial(r.Schema) && e.Path == "libexec")) || e.Identity.Mode&07777 != 0700 {
 				return ErrUnavailable
 			}
 			continue
@@ -596,15 +600,22 @@ func prepareRecoveryMaterial(r Request, c config) error {
 	old, err := readMaterial(r.Snapshot, c)
 	if err == nil {
 		defer old.close()
-		if old.record.Schema != MaterialSchemaV2 {
+		if old.record.Schema != MaterialSchemaV3 {
 			return ErrUnavailable
-		} // Never rewrite durable v1 authority.
+		} // Never upgrade already sealed v1/v2 authority.
 		if old.record.SnapshotManifest != r.SnapshotManifest || old.record.CandidateRoot != r.CandidateRoot || old.record.CandidateManifest != r.CandidateManifest || !old.record.Resources[0].Old.equal(bin.old) || !old.record.Resources[0].New.equal(bin.new) || !old.record.Resources[1].Old.equal(web.old) || !old.record.Resources[1].New.equal(web.new) {
 			return ErrOwnerChanged
+		}
+		if err = verifyMaterialDatabaseBefore(old.record.DatabaseBefore, c); err != nil {
+			return err
 		}
 		return revalidatePreparation(bin, web, before)
 	}
 	if !errors.Is(err, ErrMaterialAbsent) {
+		return err
+	}
+	databaseBefore, err := captureMaterialDatabaseBefore(bin.snapshot, bin.snapshotRows, c)
+	if err != nil {
 		return err
 	}
 	commit, e := manifestValue(bin.candidate, bin.candidateRows, "release.commit")
@@ -691,7 +702,8 @@ func prepareRecoveryMaterial(r Request, c config) error {
 	if err != nil {
 		return err
 	}
-	record := materialRecord{Schema: MaterialSchemaV2, Snapshot: r.Snapshot, SnapshotManifest: r.SnapshotManifest, CandidateRoot: r.CandidateRoot, CandidateManifest: r.CandidateManifest, TokenHash: digest([]byte(bin.token)), CandidateCommit: strings.TrimSuffix(commit, "\n"), CandidateTree: strings.TrimSuffix(candidateTree, "\n"), Resources: []materialResource{{"bin", bin.old, bin.new, bin.expectedCandidate()}, {"web", web.old, web.new, web.expectedCandidate()}}, Data: copied, DataManifest: digest([]byte(sums.String()))}
+	record := materialRecord{Schema: MaterialSchemaV3, Snapshot: r.Snapshot, SnapshotManifest: r.SnapshotManifest, CandidateRoot: r.CandidateRoot, CandidateManifest: r.CandidateManifest, TokenHash: digest([]byte(bin.token)), CandidateCommit: strings.TrimSuffix(commit, "\n"), CandidateTree: strings.TrimSuffix(candidateTree, "\n"), Resources: []materialResource{{"bin", bin.old, bin.new, bin.expectedCandidate()}, {"web", web.old, web.new, web.expectedCandidate()}}, Data: copied, DataManifest: digest([]byte(sums.String()))}
+	record.DatabaseBefore = databaseBefore
 	if err = validateMaterialData(copied, checks, record); err != nil {
 		return err
 	}
@@ -703,6 +715,9 @@ func prepareRecoveryMaterial(r Request, c config) error {
 		return err
 	}
 	c.point("material_ready")
+	if err = verifyMaterialDatabaseBefore(databaseBefore, c); err != nil {
+		return err
+	}
 	if err = revalidatePreparation(bin, web, before); err != nil {
 		return err
 	}
@@ -734,6 +749,9 @@ func prepareRecoveryMaterial(r Request, c config) error {
 	defer verified.close()
 	if verified.sha != digest(raw) {
 		return ErrOwnerChanged
+	}
+	if err = verifyMaterialDatabaseBefore(databaseBefore, c); err != nil {
+		return err
 	}
 	return revalidatePreparation(bin, web, before)
 }

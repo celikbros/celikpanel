@@ -34,11 +34,27 @@ var ErrLegacyCompletionMaterial = errors.New("verified legacy material requires 
 
 const MaterialSchema = "celikpanel/recovery-material/v1"
 const MaterialSchemaV2 = "celikpanel/recovery-material/v2"
+const MaterialSchemaV3 = "celikpanel/recovery-material/v3"
+const DatabaseAdmissionSchema = "celikpanel/database-migration-admission/v1"
+
+// ErrLegacyDatabaseMaterial identifies a verified older material/transition.
+// Malformed v3 evidence never returns this compatibility result.
+var ErrLegacyDatabaseMaterial = errors.New("verified legacy database recovery policy")
+
+func modernMaterial(schema string) bool {
+	return schema == MaterialSchemaV2 || schema == MaterialSchemaV3
+}
+
 const MaterialIntentSchema = "celikpanel/recovery-resource-intent/v2"
 const MaterialNoopIntentSchema = "celikpanel/recovery-resource-noop-intent/v1"
 
 var ErrUnavailable = errors.New("recovery publication unavailable; preserve resource evidence")
 var ErrUnsupportedMetadata = errors.New("program metadata is not supported by this recovery protocol (ACL, capabilities or SELinux labels); preserve metadata and operation evidence")
+
+// ErrUnsupportedDatabaseParent is an observed unsupported new-update layout,
+// distinct from unsupported attributes or unavailable metadata. No normalization
+// is authorized by this result; historical material remains readable.
+var ErrUnsupportedDatabaseParent = errors.New("new database migration requires /var/lib/celikpanel owned by celikpanel:celikpanel with mode 0750; preserve the existing directory layout")
 var ErrOwnerChanged = errors.New("recovery resource differs from the accepted publication; preserve owner changes")
 var hex64 = regexp.MustCompile(`^[0-9a-f]{64}$`)
 var snapshotPattern = regexp.MustCompile(`^[0-9]{8}T[0-9]{6}Z-from-(unknown|[0-9a-f]{40})-to-([0-9a-f]{40})-[0-9a-f]{32}$`)

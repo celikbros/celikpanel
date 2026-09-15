@@ -36,6 +36,10 @@ func runRecoveryPanelCheck(args []string) error {
 	walNormal := flags.Bool("check-service-operations-idle-wal-aware", false, "")
 	completed := flags.Bool("check-completed-update-database-wal-aware", false, "")
 	walPreLedger := flags.Bool("check-pre-ledger-service-operations-idle-wal-aware", false, "")
+	databasePrepare := flags.String("prepare-update-database", "", "")
+	databasePublish := flags.String("publish-update-database", "", "")
+	databaseRestore := flags.String("restore-update-database", "", "")
+	databaseVerify := flags.String("verify-update-database", "", "")
 	restore := flags.String("restore-service-operation-snapshot", "", "")
 	create := flags.String("create-service-operation-snapshot", "", "")
 	rescue := flags.String("ensure-service-operation-rescue-snapshot", "", "")
@@ -71,13 +75,33 @@ func runRecoveryPanelCheck(args []string) error {
 		return fmt.Errorf("positional arguments are not accepted")
 	}
 	modes := 0
-	for _, enabled := range []bool{*normal, *preLedger, *walNormal, *walPreLedger, *completed, *restore != "", *create != "", *rescue != ""} {
+	for _, enabled := range []bool{*normal, *preLedger, *walNormal, *walPreLedger, *completed, *restore != "", *create != "", *rescue != "", *databasePrepare != "", *databasePublish != "", *databaseRestore != "", *databaseVerify != ""} {
 		if enabled {
 			modes++
 		}
 	}
 	if modes != 1 {
 		return fmt.Errorf("exactly one offline checker operation is required")
+	}
+	if *databasePrepare != "" || *databasePublish != "" || *databaseRestore != "" || *databaseVerify != "" {
+		if len(seen) != 1 {
+			return fmt.Errorf("database transition accepts only its exact snapshot identity")
+		}
+		switch {
+		case *databasePrepare != "":
+			work, err := prepareRecoveryDatabaseMigration(*databasePrepare)
+			if err != nil {
+				return err
+			}
+			_, err = fmt.Fprintln(os.Stdout, work)
+			return err
+		case *databasePublish != "":
+			return publishRecoveryDatabaseMigration(*databasePublish)
+		case *databaseRestore != "":
+			return restoreRecoveryDatabaseMigration(*databaseRestore)
+		default:
+			return verifyRecoveryDatabaseMigration(*databaseVerify)
+		}
 	}
 	if *restore == "" && *create == "" && *rescue == "" {
 		if len(seen) != 1 {

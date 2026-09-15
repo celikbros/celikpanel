@@ -69,6 +69,13 @@ var privilegedCommandAllowlist = map[string]string{
 	"internal/recoverycheckpoint/publish_linux.go:/usr/bin/systemctl":      "read-only fixed recovery-unit identity probe with a two-second deadline; parsed properties corroborate the checkpoint and cannot authorize recovery; unavailable output remains unavailable",
 	"internal/recoverypublication/publication_linux.go:/usr/bin/systemctl": "read-only fixed coordinator-state proof inside the independent publication boundary; native transaction lock and exact properties are checked before filesystem mutation; no service start/stop or raw output forwarding",
 
+	// This independent recovery action also publishes/restores a database; it
+	// cannot use the unavailable Agent launcher. Its checker emits bounded local
+	// diagnostics directly to stderr, and the parent adds same-operation guidance.
+	// Bağımsız kurtarma yalnız sabit veritabanı eylemlerini yürütür; Agent'a
+	// bağımlı değildir. Hata aynı işlemin korunması ve kurtarılmasıyla açıklanır.
+	"cmd/recovery/database_entry_linux.go:<computed>": "runs only the selected hash-verified panel-checker with one of four fixed database actions and an existing snapshot; clean environment, inherited native FD9 lock, stopped-writer and authority checks inside checker, three-minute deadline and parent-death SIGKILL; bounded stdout is an exact work path or empty, local checker stderr is preserved and failure adds owner guidance without a duplicate mutation",
+
 	// The launchers. A direct exec here is the point of the file: each one
 	// exists for a reason the others do not share, which is why this package
 	// is a failure value and not a runner.

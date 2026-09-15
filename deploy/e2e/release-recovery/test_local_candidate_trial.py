@@ -105,6 +105,39 @@ class ControllerTests(unittest.TestCase):
             controller.main(['--work-root','/unused','--node','arch','--mode','prepare','--execute','--archive','/tmp/payload','--archive-sha256','a'*64,'--candidate-data-fault','quarantine-fixed-three'])
         self.assertEqual(prepare.call_args.kwargs['candidate_data_fault'],'quarantine-fixed-three')
 
+    def test_alpha64_profile_is_explicit_and_bound_to_old_bytes_and_ledger(self):
+        profile=controller.trial.profiles.get_profile('alpha64-schema38')
+        value={**self.intent,'baseline_profile':profile.name,'baseline_artifacts':{'agent':profile.agent_sha256,'panel':profile.panel_sha256},'baseline_migration_identities_sha256':profile.migration_identities_sha256}
+        value['candidate']={**value['candidate'],'commit':'a'*40,'tree':'b'*40}
+        rows=[{'version':n,'filename':f'{n:03d}_fixture.sql','sha256':'d'*64} for n in range(1,43)]
+        value['candidate_migration_identities']={'schema':'celikpanel/lab-candidate-migration-identities/v1','source_commit':'a'*40,'source_tree':'b'*40,'migrations':rows,'sha256':controller.trial.profiles.identities_digest(rows)}
+        g.validate_plan(value,self.ident,self.op)
+        for key,changed in (('baseline_profile','arbitrary'),('baseline_artifacts',{'agent':'a'*64,'panel':'b'*64}),('baseline_migration_identities_sha256','c'*64)):
+            with self.subTest(key=key),self.assertRaises(ValueError):g.validate_plan({**value,key:changed},self.ident,self.op)
+
+    def test_real_committed_migration_inventory_is_independent_of_release_archive_SQL(self):
+        repository=HERE.parents[2]
+        commit=subprocess.run(['git','-C',str(repository),'rev-parse','HEAD'],check=True,capture_output=True,text=True).stdout.strip()
+        tree=subprocess.run(['git','-C',str(repository),'rev-parse',commit+'^{tree}'],check=True,capture_output=True,text=True).stdout.strip()
+        candidate={'commit':commit,'tree':tree,'files':{'bin/panel':'a'*64}}
+        value=controller.committed_candidate_migrations(candidate,repository)
+        self.assertEqual(len(value['migrations']),42)
+        last=value['migrations'][-1]
+        raw=subprocess.run(['git','-C',str(repository),'show',commit+':internal/db/migrations/'+last['filename']],check=True,capture_output=True).stdout
+        self.assertEqual(last['sha256'],hashlib.sha256(raw).hexdigest())
+        self.assertEqual(value['source_commit'],commit)
+        with self.assertRaises(ValueError):controller.committed_candidate_migrations({**candidate,'tree':'f'*40},repository)
+
+    def test_baseline_profile_cannot_be_changed_after_prepare(self):
+        with mock.patch.object(controller.lab,'checked_root') as checked,self.assertRaises(SystemExit):
+            controller.main(['--work-root','/unused','--mode','start','--execute','--baseline-profile','alpha64-schema38'])
+        checked.assert_not_called()
+
+    def test_prepare_cli_explicit_baseline_selection(self):
+        with mock.patch.object(controller.lab,'checked_root',return_value=Path('/unused')),mock.patch.object(controller.lab,'load',return_value=({}, {'nodes':{'arch':{}}})),mock.patch.object(controller.lab,'process_guard'),mock.patch.object(controller,'prepare') as prepare:
+            controller.main(['--work-root','/unused','--mode','prepare','--execute','--archive','/tmp/payload','--archive-sha256','a'*64,'--baseline-profile','alpha64-schema38'])
+        self.assertEqual(prepare.call_args.kwargs['baseline_profile'],'alpha64-schema38')
+
     def test_wrong_guest_identity_rejected(self):
         with self.assertRaises(ValueError):g.validate_plan(self.intent,{**self.ident,'nonce':'b'*64},self.op)
     def test_no_signed_admission_claim(self):
@@ -120,6 +153,26 @@ class ControllerTests(unittest.TestCase):
             self.assertIsNone(native.installed())
         with mock.patch.object(g.kill.Native,'installed',return_value={'agent':'a'*64,'panel':'b'*64}),mock.patch.object(g.shared,'digest_file',return_value='e'*64):
             self.assertIsNone(native.installed())
+    def test_supplementary_database_observation_cannot_bypass_existing_full_proof(self):
+        self.intent['candidate']['files'].update({'bin/agent':'a'*64,'bin/panel':'b'*64})
+        native=g.LocalNative(argparse.Namespace(operation_id=self.op),self.intent,{'bash_sha256':'d'*64})
+        native.plan['baseline_profile']='alpha64-schema38'
+        with mock.patch.object(g.kill.Native,'full_proof',side_effect=g.kill.MissedCheckpoint('existing-proof-failed')),mock.patch.object(g,'module') as module:
+            with self.assertRaises(g.kill.MissedCheckpoint):native.full_proof('fixture',lambda:None)
+        module.assert_not_called()
+
+    def test_explicit_alpha64_adds_observation_after_full_proof_without_changing_unknown(self):
+        commit='a'*40;snapshot='20260915T000000Z-from-old-to-'+commit+'-'+'b'*32
+        plan={**self.intent,'baseline_profile':'alpha64-schema38','candidate':{**self.intent['candidate'],'commit':commit,'files':{'bin/agent':'a'*64,'bin/panel':'b'*64,**{name:'c'*64 for name in g.INSTALLED}}}}
+        native=g.LocalNative(argparse.Namespace(operation_id=self.op),plan,{'bash_sha256':'d'*64})
+        unknown={'status':'unavailable','premigration_acceptance':'INCONCLUSIVE'}
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root/(commit[:12]+'-'+'d'*24)).mkdir()
+            with mock.patch.object(g,'RELEASES',root),mock.patch.object(g.kill.Native,'full_proof',return_value={'snapshot':snapshot,'manifest_sha256':'e'*64}),mock.patch.object(g,'verify_tree',return_value={'verified_files':1}),mock.patch.object(g.shared,'digest_file',return_value='c'*64),mock.patch.object(native,'unit_reload',return_value={}),mock.patch.object(g,'module') as module:
+                module.return_value.observe.return_value=unknown
+                value=native.full_proof(snapshot,lambda:None)
+                self.assertEqual(value['database_checkpoint'],unknown);module.return_value.observe.assert_called_once()
+
     def test_stage_proof_requires_full_manifest_and_exact_operation(self):
         proof={'schema':'celikpanel/local-candidate-stage/v1','identity':self.ident,'operation_id':self.op,'root':self.intent['source_root'],'manifest_sha256':'a'*64,'verified_files':0,'bash_sha256':'b'*64}
         controller.validate_stage(proof,self.intent)

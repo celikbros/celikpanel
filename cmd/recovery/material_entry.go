@@ -22,8 +22,9 @@ func dispatchMaterial(args []string, uid int, execute func(string, recoverypubli
 	var request recoverypublication.Request
 	switch {
 	case len(args) == 3 && args[0] == "verify-material-support" && args[1] == "--layout" && args[2] == "snapshot-name-sha256-v1":
-	case len(args) == 5 && args[0] == "verify-material-support" && args[1] == "--layout" && args[2] == "snapshot-name-sha256-v1" && args[3] == "--schema" && args[4] == recoverypublication.MaterialSchemaV2:
-	case len(args) == 3 && (args[0] == "material-root" || args[0] == "completion-material-root" || args[0] == "verify-installed-completion") && args[1] == "--snapshot" && recoverypublication.ValidSnapshot(args[2]):
+	case len(args) == 5 && args[0] == "verify-material-support" && args[1] == "--layout" && args[2] == "snapshot-name-sha256-v1" && args[3] == "--schema" && (args[4] == recoverypublication.MaterialSchemaV2 || args[4] == recoverypublication.MaterialSchemaV3):
+	case len(args) == 3 && args[0] == "verify-database-support" && args[1] == "--schema" && args[2] == recoverypublication.DatabaseAdmissionSchema:
+	case len(args) == 3 && (args[0] == "database-policy" || args[0] == "material-root" || args[0] == "completion-material-root" || args[0] == "verify-installed-completion") && args[1] == "--snapshot" && recoverypublication.ValidSnapshot(args[2]):
 		request.Snapshot = args[2]
 	case len(args) == 9 && args[0] == "prepare-recovery-material" && args[1] == "--snapshot" && args[3] == "--snapshot-manifest" && args[5] == "--candidate-root" && args[7] == "--candidate-manifest":
 		request = recoverypublication.Request{Snapshot: args[2], SnapshotManifest: args[4], CandidateRoot: args[6], CandidateManifest: args[8]}
@@ -38,11 +39,19 @@ func dispatchMaterial(args []string, uid int, execute func(string, recoverypubli
 		if (args[0] == "material-root" || args[0] == "completion-material-root") && errors.Is(err, recoverypublication.ErrMaterialAbsent) {
 			return exitUnavailable
 		}
-		if args[0] == "completion-material-root" && errors.Is(err, recoverypublication.ErrLegacyCompletionMaterial) {
+		if (args[0] == "completion-material-root" && errors.Is(err, recoverypublication.ErrLegacyCompletionMaterial)) || (args[0] == "database-policy" && errors.Is(err, recoverypublication.ErrLegacyDatabaseMaterial)) {
 			return 6
 		}
 		report("Recovery material could not be verified. Preserve this operation and its evidence; no alternative data was adopted.")
 		return exitOutput
+	}
+	if args[0] == "database-policy" {
+		if root != "required" {
+			return exitOutput
+		}
+		if _, err = fmt.Fprintln(out, root); err != nil {
+			return exitOutput
+		}
 	}
 	if args[0] == "material-root" || args[0] == "completion-material-root" {
 		if !filepath.IsAbs(root) || filepath.Clean(root) != root || strings.ContainsAny(root, "\r\n\x00") {
@@ -65,7 +74,12 @@ func runMaterial(command string, request recoverypublication.Request) (string, e
 	}
 	var root string
 	switch command {
-	case "verify-material-support":
+	case "verify-material-support", "verify-database-support":
+	case "database-policy":
+		err = recoverypublication.VerifyDatabasePolicy(request.Snapshot)
+		if err == nil {
+			root = "required"
+		}
 	case "prepare-recovery-material":
 		err = recoverypublication.PrepareRecoveryMaterial(request)
 	case "material-root":

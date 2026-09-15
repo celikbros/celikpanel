@@ -2523,6 +2523,66 @@ require_function_sequence "$UPDATE" run_panel_migrations_offline \
     '"$PREFLIGHT_PANEL" --check-completed-update-database-wal-aware' \
     'return 0' \
     '"$BIN_DIR/panel" --migrate-only'
+# V3 normal updates must bind the DB beforeimage before product apply, migrate
+# only the prepared private workspace, and publish/verify before changing the
+# active marker into completion.pending. Legacy remains an explicit policy.
+require_function_sequence "$UPDATE" prepare_independent_recovery_runtime \
+    'prepare-runtime \' \
+    'verify-compatibility \' \
+    'verify-material-support --layout snapshot-name-sha256-v1' \
+    '--schema celikpanel/recovery-material/v3' \
+    'verify-database-support --schema celikpanel/database-migration-admission/v1' \
+    'if [[ $BOOTSTRAP_PRE_LEDGER -eq 0 && $BOOTSTRAP_SCHEMA17 -eq 0 ]]; then' \
+    'probe-update-database 9<&"$RELEASE_TRANSACTION_FD"'
+for database_script in "$UPDATE" "$ROLLBACK"; do
+    require_function_sequence "$database_script" read_database_migration_policy \
+        'database-policy --snapshot "$snapshot"' \
+        'if [[ $status == 0 && $result == required ]]; then' \
+        'elif [[ $status == 6 && -z $result ]]; then' \
+        'database recovery policy is unverified'
+    reject_function_literal "$database_script" read_database_migration_policy '$status == 3'
+    require_function_sequence "$database_script" verify_database_publication_if_required \
+        'read_database_migration_policy "$snapshot"' \
+        '[[ $policy == required ]] || return 0' \
+        'verify-update-database --snapshot "$snapshot"'
+    require_function_literal "$database_script" run_database_recovery_command \
+        '/usr/libexec/celikpanel/recovery "$@" 9<&"$RELEASE_TRANSACTION_FD"'
+done
+require_sequence "$UPDATE" \
+    '/usr/libexec/celikpanel/recovery prepare-recovery-material' \
+    'isolated_database_policy=$(read_database_migration_policy "$snapshot_name")' \
+    'if [[ $isolated_database_policy == required ]]; then' \
+    'prepare-update-database --snapshot "$snapshot_name"' \
+    'isolated database preparation returned an invalid workspace' \
+    '/bin/bash "$TRUSTED_RELEASE_ROOT/install.sh"'
+require_function_sequence "$UPDATE" run_panel_migrations_offline \
+    'if [[ -n ${isolated_database_work:-} ]]; then' \
+    'migration_directory=$isolated_database_work' \
+    'CELIKPANEL_DATA_DIR="$migration_directory"' \
+    '"$BIN_DIR/panel" --migrate-only' \
+    'publish-update-database --snapshot "$snapshot_name"' \
+    '"${RECOVERY_PANEL_CHECKER:-$BIN_DIR/panel}" --check-service-operations-idle'
+require_function_sequence "$UPDATE" verify_independent_completion_terminal \
+    'verify_saved_enablement' \
+    'verify_saved_runtime_states' \
+    'verify_installed_release_artifacts' \
+    'verify_database_publication_if_required "$RECOVERY_EXPECTED_SNAPSHOT"'
+require_sequence "$UPDATE" \
+    'installed release directories could not be made durable' \
+    'if [[ -n ${isolated_database_work:-} ]]; then' \
+    'run_panel_migrations_offline' \
+    'verify_installed_release_artifacts' \
+    'verify_database_publication_if_required "$snapshot_name"' \
+    'release_txn_mark_completion_pending \' \
+    'if [[ -z ${isolated_database_work:-} ]]; then' \
+    'run_panel_migrations_offline'
+require_sequence "$ROLLBACK" \
+    'database_restore_policy=$(read_database_migration_policy "$snapshot_name")' \
+    'if [[ $database_restore_policy == required ]]; then' \
+    'restore-update-database --snapshot "$snapshot_name"' \
+    'elif [[ "$transition_state" == schema17 ]]; then' \
+    '"$PREFLIGHT_SCHEMA17_BRIDGE" restore \' \
+    '--restore-service-operation-snapshot="$snap/$(basename "$PANEL_DB")"'
 require_count "$UPDATE" '--check-pre-ledger-service-operations-idle-wal-aware' 6
 require_regex_count "$UPDATE" '^[[:space:]]*"\$\{RECOVERY_PANEL_CHECKER:-\$BIN_DIR/panel\}" --check-service-operations-idle[[:space:]]*\\$' 1
 require_regex_count "$UPDATE" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 1

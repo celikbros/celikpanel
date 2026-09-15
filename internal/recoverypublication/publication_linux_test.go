@@ -164,13 +164,16 @@ func (f fixture) marker(t *testing.T, op string) {
 	write(t, filepath.Join(f.Root, "transaction/active"), []byte("version=1\ntoken="+strings.Repeat("d", 64)+"\noperation="+op+"\nsnapshot="+f.Request.Snapshot+"\n"), 0600)
 }
 func (f fixture) config() config {
-	return config{anchor: f.Root, prefix: filepath.Join(f.Root, "prefix"), snapshots: filepath.Join(f.Root, "snapshots"), candidates: filepath.Join(f.Root, "releases"), transaction: filepath.Join(f.Root, "transaction"), fd: int(f.lock.Fd()), stopped: func() error { return nil }}
+	return config{anchor: f.Root, prefix: filepath.Join(f.Root, "prefix"), snapshots: filepath.Join(f.Root, "snapshots"), candidates: filepath.Join(f.Root, "releases"), transaction: filepath.Join(f.Root, "transaction"), fd: int(f.lock.Fd()), databaseOwner: func() (uint32, uint32, error) { return 1001, 1001, nil }, stopped: func() error { return nil }}
 }
 func (f fixture) journal() string {
 	return filepath.Join(f.Root, "prefix", journalName, digest([]byte(strings.Repeat("d", 64))), f.Operation+"-"+f.Request.Resource)
 }
 func readTree(t *testing.T, root, path string) tree {
 	t.Helper()
+	if root == path {
+		return readWholeFixtureTree(t, root)
+	}
 	f, err := openPath(root, path)
 	if err != nil {
 		t.Fatal(err)

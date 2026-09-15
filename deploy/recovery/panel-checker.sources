@@ -16,3 +16,6 @@ cmd/panel/service_operation_snapshot_source_normalize_linux.go
 cmd/panel/service_operation_file_integrity_linux.go
 cmd/panel/service_operation_database_quarantine_linux.go
 cmd/panel/service_operation_rescue_snapshot_linux.go
+cmd/panel/recovery_database_migration_linux.go
+cmd/panel/recovery_database_migration_files_linux.go
+cmd/panel/recovery_database_migration_publication_linux.go

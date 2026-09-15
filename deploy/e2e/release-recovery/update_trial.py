@@ -26,6 +26,10 @@ SPEC = importlib.util.spec_from_file_location("release_update_exercise", HERE / 
 exercise = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = exercise
 SPEC.loader.exec_module(exercise)
+PROFILE_SPEC = importlib.util.spec_from_file_location("update_baseline_profiles", HERE / "baseline_profiles.py")
+profiles = importlib.util.module_from_spec(PROFILE_SPEC)
+sys.modules[PROFILE_SPEC.name] = profiles
+PROFILE_SPEC.loader.exec_module(profiles)
 lab = exercise.lab
 HEX32 = re.compile(r"[0-9a-f]{32}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
@@ -99,9 +103,11 @@ def validate_seed(raw, record, node):
     return events[-1]
 
 
-def validate_baseline(value):
+def validate_baseline(value, profile_name=profiles.DEFAULT):
+    profile = profiles.get_profile(profile_name)
+    profiles.validate_result(value, profile_name)
     if (value.get("schema") != "celikpanel/release-baseline-install-result/v1"
-            or value.get("version") != "v0.1.0-alpha.75" or value.get("exit_code") != 0
+            or value.get("version") != profile.version or value.get("exit_code") != 0
             or value.get("error_type") is not None or value.get("https_curl_exit") != 0
             or value.get("https_http_code") != "200"):
         raise ValueError("genuine baseline installation is not confirmed")

@@ -100,3 +100,5 @@ three retained candidate files were quarantined and the exact updater killed.
 P exercises the final source with terminal rechecks. Its unchanged-schema,
 bootstrap-TLS and inactive-scheduler limits remain explicit; no installed user
 panel has been updated by this work.
+
+The next source slice introduces [isolated database migration](RECOVERY-ISOLATED-DATABASE.md) with material v3. It keeps normal updates active until a separately migrated copy is verified and published. That slice has its own compatibility and scoped Q/R native acceptance record; the historical v2 behavior described here is not retroactively changed.

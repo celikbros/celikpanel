@@ -42,6 +42,11 @@ func TestRecoveryCheckStandalone(t *testing.T) {
 	if !seen["cmd/panel/recovery_check_entry.go"] || !seen["cmd/panel/service_operation_restore_linux.go"] || !seen["cmd/panel/recovery_completion_database.go"] {
 		t.Fatal("standalone entry or real guarded restoration implementation is absent")
 	}
+	for _, source := range []string{"cmd/panel/recovery_database_migration_linux.go", "cmd/panel/recovery_database_migration_files_linux.go", "cmd/panel/recovery_database_migration_publication_linux.go"} {
+		if !seen[source] {
+			t.Fatalf("real isolated database recovery source is missing: %s", source)
+		}
+	}
 	entry, err := os.ReadFile(filepath.Join(repository, "cmd/panel/recovery_check_entry.go"))
 	if err != nil {
 		t.Fatal(err)
@@ -177,6 +182,16 @@ func TestRecoveryCheckStandalone(t *testing.T) {
 			for _, operation := range []string{"rollback", "update"} {
 				run(directory, false, mode+path, "--snapshot-schema=normal", "--release-transaction-fd=9", "--release-transaction-token="+strings.Repeat("a", 64), "--release-transaction-operation="+operation, "--release-transaction-snapshot=fixture")
 			}
+		}
+		for _, mode := range []string{"prepare-update-database", "publish-update-database", "restore-update-database", "verify-update-database"} {
+			// Correctly shaped names still cannot create authority from flags,
+			// a caller-selected data directory, or an absent inherited lock.
+			exact := "20260915T010000Z-from-unknown-to-" + strings.Repeat("a", 40) + "-" + strings.Repeat("b", 32)
+			run(directory, false, "--"+mode+"="+exact)
+			run(directory, false, "--"+mode+"="+exact, "--release-transaction-fd=9")
+			run(directory, false, "--"+mode+"="+exact, "--"+mode+"="+exact)
+			run(directory, false, "--"+mode+"="+path)
+			run(directory, false, "--"+mode+"="+exact, "--migrate-only")
 		}
 		after, err := os.ReadFile(path)
 		if err != nil {
