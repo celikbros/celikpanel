@@ -157,4 +157,28 @@ class ReadOnlyDatabaseTests(unittest.TestCase):
         with mock.patch.object(probe, '_database_semantics', side_effect=replace_after_read):
             self.assertEqual(self.observe()['status'], 'unknown')
 
+
+
+class CandidateMigrationTests(unittest.TestCase):
+    def setUp(self):
+        self.candidate={'commit':'a'*40,'tree':'b'*40}
+        rows=[{'version':n,'filename':f'{n:03d}_fixture.sql','sha256':'c'*64} for n in range(1,43)]
+        self.value={'schema':'celikpanel/lab-candidate-migration-identities/v1','source_commit':'a'*40,'source_tree':'b'*40,'migrations':rows,'sha256':profiles.identities_digest(rows)}
+    def test_exact_source_map_accepted_and_source_identity_change_refused(self):
+        self.assertEqual(profiles.validate_candidate_migrations(self.value,self.candidate),self.value)
+        for key in ('source_commit','source_tree','schema','sha256'):
+            value=copy.deepcopy(self.value);value[key]='d'*40
+            with self.subTest(key=key),self.assertRaises(ValueError):profiles.validate_candidate_migrations(value,self.candidate)
+    def test_sealed_row_mutation_and_noncanonical_or_incomplete_versions_refused(self):
+        for key,changed in (('version',2),('version',True),('filename','../private'),('filename','002_wrong.sql'),('sha256','d'*64)):
+            value=copy.deepcopy(self.value);value['migrations'][0][key]=changed
+            with self.subTest(key=key,changed=changed),self.assertRaises(ValueError):profiles.validate_candidate_migrations(value,self.candidate)
+        for rows in (self.value['migrations'][:38],self.value['migrations'][1:],self.value['migrations']*4):
+            value={**self.value,'migrations':rows,'sha256':profiles.identities_digest(rows)}
+            with self.assertRaises(ValueError):profiles.validate_candidate_migrations(value,self.candidate)
+    def test_recomputed_digest_does_not_make_wrong_migration_order_or_filename_valid(self):
+        value=copy.deepcopy(self.value);value['migrations'][0]['filename']='002_fixture.sql';value['sha256']=profiles.identities_digest(value['migrations'])
+        with self.assertRaises(ValueError):profiles.validate_candidate_migrations(value,self.candidate)
+
+
 if __name__ == '__main__':unittest.main()

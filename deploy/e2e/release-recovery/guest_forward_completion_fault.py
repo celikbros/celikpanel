@@ -91,6 +91,41 @@ def checkpoint_hint(raw, identity):
     return matches[0] if matches else None
 
 
+def database_before_proof(value):
+    fields={'dev','ino','mode','uid','gid','links','size','mtime_sec','mtime_nsec','ctime_sec','ctime_nsec'}
+    if (not isinstance(value,dict) or set(value)-{'parent','file','sha256','attributes','parent_attributes'}
+            or not isinstance(value.get('sha256'),str) or not shared.HEX64.fullmatch(value['sha256'])
+            or any(key in value and value[key]!=[] for key in ('attributes','parent_attributes'))):
+        raise kill.MissedCheckpoint('completion-material-database-before-invalid')
+    result={'sha256':value['sha256']}
+    for key in ('parent','file'):
+        item=value.get(key)
+        if (not isinstance(item,dict) or set(item)!=fields or any(type(x)is not int for x in item.values())
+                or any(item[k]<0 for k in fields-{'mtime_sec','ctime_sec'})):
+            raise kill.MissedCheckpoint('completion-material-database-identity-invalid')
+        result[key]=item
+    file=result['file'];parent=result['parent']
+    if (file['dev']==0 or file['ino']==0 or file['mode']!=(stat.S_IFREG|0o600)
+            or file['uid']==0 or file['gid']==0 or file['links']!=1 or not 0<file['size']<=16<<30
+            or not 0<=file['mtime_nsec']<1000000000 or not 0<=file['ctime_nsec']<1000000000
+            or parent['dev']==0 or parent['ino']==0 or not stat.S_ISDIR(parent['mode'])
+            or stat.S_IMODE(parent['mode']) not in (0o700,0o750)
+            or parent['uid'] not in (0,file['uid']) or parent['gid'] not in (0,file['gid'])
+            or any(parent[k]!=0 for k in ('links','size','mtime_sec','mtime_nsec','ctime_sec','ctime_nsec'))):
+        raise kill.MissedCheckpoint('completion-material-database-identity-unsupported')
+    # Product v3 rejects attributes; their values are never printed by this parser.
+    result['attribute_counts']={'attributes':0,'parent_attributes':0}
+    return result
+
+
+def require_completion_material(material,plan):
+    schema=material.get('schema')
+    if schema not in ('celikpanel/recovery-material/v2','celikpanel/recovery-material/v3'):
+        raise kill.MissedCheckpoint('completion-modern-material-required')
+    if plan.get('baseline_profile')=='alpha64-schema38' and (schema!='celikpanel/recovery-material/v3' or not material.get('database_before')):
+        raise kill.MissedCheckpoint('completion-alpha64-material-v3-required')
+
+
 def material_proof(snapshot, token_hash, candidate_manifest, tick):
     root = MATERIAL / hashlib.sha256(snapshot.encode()).hexdigest()
     fd = data.open_dir(root)
@@ -104,7 +139,7 @@ def material_proof(snapshot, token_hash, candidate_manifest, tick):
         if hashlib.sha256(raw).hexdigest() != metadata['sha256']:
             raise kill.MissedCheckpoint('completion-material-record-changed')
         value = probe.strict_object(raw)
-        if (value.get('schema') not in ('celikpanel/recovery-material/v1', 'celikpanel/recovery-material/v2')
+        if (value.get('schema') not in ('celikpanel/recovery-material/v1', 'celikpanel/recovery-material/v2', 'celikpanel/recovery-material/v3')
                 or value.get('snapshot') != snapshot or value.get('transaction_token_sha256') != token_hash
                 or value.get('candidate_manifest_sha256') != candidate_manifest
                 or not shared.HEX64.fullmatch(value.get('data_manifest_sha256', ''))):
@@ -133,7 +168,8 @@ def material_proof(snapshot, token_hash, candidate_manifest, tick):
         return {'root': str(root), 'schema': value['schema'], 'record_sha256': metadata['sha256'],
                 'snapshot': snapshot, 'snapshot_manifest_sha256': value['snapshot_manifest_sha256'],
                 'transaction_token_sha256': token_hash, 'candidate_manifest_sha256': candidate_manifest,
-                'data_manifest_sha256': value['data_manifest_sha256'], 'data_inventory': inventory}
+                'data_manifest_sha256': value['data_manifest_sha256'], 'data_inventory': inventory,
+                **({'database_before':database_before_proof(value.get('database_before'))} if value['schema']=='celikpanel/recovery-material/v3' else {})}
     finally: os.close(fd)
 
 
@@ -231,8 +267,7 @@ class CompletionNative:
         runtime, selection = data.hand.selection()
         runtime_proof = data.fault.verify_runtime(runtime, tick)
         material = material_proof(snapshot, transaction['transaction_token_sha256'], self.plan['candidate']['manifest_sha256'], tick)
-        if material['schema'] != 'celikpanel/recovery-material/v2':
-            raise kill.MissedCheckpoint('completion-material-v2-required')
+        require_completion_material(material,self.plan)
         if material['snapshot_manifest_sha256'] != proof['manifest_sha256']:
             raise kill.MissedCheckpoint('completion-material-snapshot-differs')
         checker = data.fault.RUNTIME_ROOT / runtime / 'bin/panel-checker'

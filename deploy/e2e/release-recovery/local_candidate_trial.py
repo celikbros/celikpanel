@@ -11,6 +11,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import re
 import secrets
 import shlex
 import subprocess
@@ -31,7 +32,7 @@ INTENT='local-candidate-intent.json'
 STAGE='local-candidate-stage.json'
 START='local-candidate-start-attempt.json'
 ARM='local-candidate-kill-intent.json'
-ASSETS=('baseline_profiles.py','candidate_archive.py','guest_probe.py','guest_port_fault.py','guest_update_kill.py','guest_local_candidate.py','guest_recovery_fault.py','guest_recovery_handoff.py','guest_candidate_data_fault.py','guest_forward_completion_fault.py')
+ASSETS=('guest_database_checkpoint.py','baseline_profiles.py','candidate_archive.py','guest_probe.py','guest_port_fault.py','guest_update_kill.py','guest_local_candidate.py','guest_recovery_fault.py','guest_recovery_handoff.py','guest_candidate_data_fault.py','guest_forward_completion_fault.py')
 
 def encoded(value):return (json.dumps(value,sort_keys=True)+'\n').encode()
 
@@ -71,6 +72,27 @@ def validate_stage(value,intent):
             or value.get('verified_files')!=len(intent['candidate']['files']) or not trial.HEX64.fullmatch(value.get('bash_sha256',''))):raise ValueError('local candidate stage proof differs')
     return value
 
+def committed_candidate_migrations(candidate,repository=trial.REPOSITORY):
+    commit=candidate['commit'];tree=candidate['tree']
+    if not re.fullmatch(r'[0-9a-f]{40}',commit) or not re.fullmatch(r'[0-9a-f]{40}',tree):raise ValueError('candidate source identity malformed')
+    actual=subprocess.run(['git','-C',str(repository),'rev-parse',commit+'^{tree}'],check=True,capture_output=True,text=True).stdout.strip()
+    if actual!=tree:raise ValueError('candidate migration source tree differs')
+    raw=subprocess.run(['git','-C',str(repository),'ls-tree','-r','-z',commit,'--','internal/db/migrations'],check=True,capture_output=True).stdout
+    if len(raw)>65536:raise ValueError('candidate migration tree exceeds bound')
+    rows=[]
+    for line in raw.split(b'\0'):
+        if not line:continue
+        match=re.fullmatch(rb'100644 blob ([0-9a-f]{40})\tinternal/db/migrations/([0-9]{3}_[a-z0-9_]+\.sql)',line)
+        if not match:raise ValueError('candidate migration source entry is unsafe')
+        size_raw=subprocess.run(['git','-C',str(repository),'cat-file','-s',match[1].decode()],check=True,capture_output=True,text=True).stdout.strip()
+        if not size_raw.isdigit() or not 0<int(size_raw)<=1048576 or len(rows)>=128:raise ValueError('candidate SQL source exceeds fixture bound')
+        blob=subprocess.run(['git','-C',str(repository),'cat-file','blob',match[1].decode()],check=True,capture_output=True).stdout
+        if len(blob)!=int(size_raw):raise ValueError('candidate SQL source size changed')
+        name=match[2].decode();rows.append({'version':int(name[:3]),'filename':name,'sha256':hashlib.sha256(blob).hexdigest()})
+    result={'schema':'celikpanel/lab-candidate-migration-identities/v1','source_commit':commit,'source_tree':tree,
+            'migrations':rows,'sha256':trial.profiles.identities_digest(rows)}
+    return trial.profiles.validate_candidate_migrations(result,candidate)
+
 def prepare(root,record,plan,node,archive,digest,boundary,recovery_fault=None,candidate_data_fault=None,baseline_profile=trial.profiles.DEFAULT):
     assert_absent(root,node,INTENT,START,ARM,'update-intent.json','update-start-attempt.json')
     candidate=guest.archive_tools.inspect_archive(archive,digest)
@@ -87,6 +109,7 @@ def prepare(root,record,plan,node,archive,digest,boundary,recovery_fault=None,ca
     if baseline_profile != trial.profiles.DEFAULT:
         intent['baseline_profile']=baseline_profile
         intent['baseline_migration_identities_sha256']=baseline['database']['migration_identities_sha256']
+        intent['candidate_migration_identities']=committed_candidate_migrations(candidate)
     if recovery_fault is not None:
         intent['recovery_fault']=recovery_fault
     if candidate_data_fault is not None:

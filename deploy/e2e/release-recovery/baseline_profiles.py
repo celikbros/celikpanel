@@ -138,3 +138,25 @@ def observe_migration_identity(path: Path, name, probe):
         return result
     except (probe.ProbeError, ValueError, OSError, sqlite3.Error, UnicodeError) as exc:
         return {'status': 'unknown', 'reason': 'historical database observation unavailable: ' + type(exc).__name__}
+
+
+def validate_candidate_migrations(value,candidate):
+    """Validate the host-sealed source inventory, never infer SQL from a package."""
+    required={'schema','source_commit','source_tree','migrations','sha256'}
+    if (not isinstance(value,dict) or set(value)!=required or value.get('schema')!='celikpanel/lab-candidate-migration-identities/v1'
+            or value.get('source_commit')!=candidate.get('commit') or value.get('source_tree')!=candidate.get('tree')
+            or not isinstance(value.get('source_commit'),str) or re.fullmatch(r'[0-9a-f]{40}',value['source_commit']) is None
+            or not isinstance(value.get('source_tree'),str) or re.fullmatch(r'[0-9a-f]{40}',value['source_tree']) is None):
+        raise ValueError('candidate migration source identity differs')
+    rows=value['migrations']
+    if not isinstance(rows,list) or not 39<=len(rows)<=128:
+        raise ValueError('candidate migration inventory is incomplete or exceeds fixture bound')
+    for version,row in enumerate(rows,1):
+        if (not isinstance(row,dict) or set(row)!={'version','filename','sha256'} or type(row['version'])is not int
+                or row['version']!=version or not isinstance(row['filename'],str)
+                or re.fullmatch(r'[0-9]{3}_[a-z0-9_]+\.sql',row['filename']) is None or int(row['filename'][:3])!=version
+                or not isinstance(row['sha256'],str) or re.fullmatch(r'[0-9a-f]{64}',row['sha256']) is None):
+            raise ValueError('candidate migration entry is invalid')
+    if identities_digest(rows)!=value['sha256']:
+        raise ValueError('candidate migration sealed inventory changed')
+    return value

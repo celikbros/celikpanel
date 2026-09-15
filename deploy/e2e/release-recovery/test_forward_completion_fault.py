@@ -259,6 +259,15 @@ class NativeOracleTests(unittest.TestCase):
             self.native.completion_proof('fixture', {}, lambda: None)
         self.command.assert_not_called()
 
+    def test_alpha64_completion_requires_v3_database_before_evidence(self):
+        self.native.plan['baseline_profile']='alpha64-schema38'
+        with self.assertRaises(s.kill.MissedCheckpoint):self.native.completion_proof('fixture',{},lambda:None)
+        self.command.assert_not_called()
+        self.material['schema']='celikpanel/recovery-material/v3'
+        with self.assertRaises(s.kill.MissedCheckpoint):self.native.completion_proof('fixture',{},lambda:None)
+        self.material['database_before']={'sha256':'a'*64}
+        self.assertEqual(self.native.completion_proof('fixture',{},lambda:None)['material']['schema'],'celikpanel/recovery-material/v3')
+
     def test_checker_failure_preserves_unknown_without_recovery_or_migration_command(self):
         self.command.return_value = SimpleNamespace(returncode=1, stdout=b'', stderr=b'private failure')
         with self.assertRaisesRegex(s.kill.MissedCheckpoint, 'readonly-database-check-failed'):
@@ -297,6 +306,26 @@ class MaterialTests(unittest.TestCase):
         self.assertEqual(result['data_inventory']['libexec/get.sh'], self.hash)
         self.assertEqual(result['schema'], 'celikpanel/recovery-material/v2')
         self.assertEqual(before, {str(p): (p.stat().st_ino, p.stat().st_mode, p.read_bytes()) for p in self.root.rglob('*') if p.is_file()})
+
+    def test_v3_database_before_matches_supported_metadata_and_rejects_attributes(self):
+        file={'dev':1,'ino':2,'mode':0o100600,'uid':123,'gid':123,'links':1,'size':4096,'mtime_sec':1,'mtime_nsec':2,'ctime_sec':1,'ctime_nsec':2}
+        parent={**file,'mode':0o40750,'links':0,'size':0,'mtime_sec':0,'mtime_nsec':0,'ctime_sec':0,'ctime_nsec':0}
+        before={'file':file,'parent':parent,'sha256':'d'*64}
+        self.record.update(schema='celikpanel/recovery-material/v3',database_before=before);self.write()
+        self.assertEqual(self.proof()['database_before']['file'],file)
+        for name in ('attributes','parent_attributes'):
+            for value in ([{'value':'not-public'}],{},None,'not-public'):
+                self.record['database_before']={**before,name:value};self.write()
+                with self.subTest(name=name,value=value),self.assertRaises(s.kill.MissedCheckpoint) as caught:self.proof()
+                self.assertNotIn('not-public',str(caught.exception))
+        for key,value in (('mode',0o100640),('links',2),('uid',0),('gid',0),('size',0),('mtime_nsec',1000000000)):
+            self.record['database_before']={**before,'file':{**file,key:value}};self.write()
+            with self.subTest(key=key),self.assertRaises(s.kill.MissedCheckpoint):self.proof()
+        for key,value in (('mode',0o40755),('uid',456),('gid',456),('links',2),('size',1),('ctime_sec',1)):
+            self.record['database_before']={**before,'parent':{**parent,key:value}};self.write()
+            with self.subTest(parent_key=key),self.assertRaises(s.kill.MissedCheckpoint):self.proof()
+        del self.record['database_before'];self.write()
+        with self.assertRaises(s.kill.MissedCheckpoint):self.proof()
 
     def test_corrupt_or_missing_or_extra_data_refused(self):
         payload = self.root / 'data/libexec/get.sh'
