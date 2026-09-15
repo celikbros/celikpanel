@@ -128,3 +128,5 @@ otomatik kurtarılmasını kanıtlamalıdır. DDL uygun yazı gözlenmeden biteb
 bu sonuç belirsiz kalır. Dolu SQL satırları gerçek barındırma kanıtı değildir.
 Bu değişiklik ve önceki Q/R ilk kopya kontrolü, bu kabul maddelerini veya geniş
 P0.3 arıza matrisini kapatmaz.
+
+Sonraki [gerçek WAL deneyi](NATIVE-WAL.tr.md), bu ayrı adaptörü ve sınırlı fiziksel yazma/otomatik geri alma gözlemlerini kaydeder. Kontrollü yazıcının Begin/Commit işaretlerini kullanmaz; önceki önkoşul sonucunun kapsamını genişletmez.

@@ -132,3 +132,5 @@ observe same-operation automatic recovery. DDL may finish without a qualifying
 write; that outcome stays inconclusive. Populated SQL records are not native
 hosting evidence. Neither this slice nor the earlier Q/R initial-copy checkpoint
 closes those acceptance items or the wider P0.3 fault matrix.
+
+A subsequent [native WAL experiment](NATIVE-WAL.md) implements that separate adapter and records its bounded physical-write/automatic-rollback observations. It does not use the controlled child's Begin/Commit markers or extend this earlier feasibility result.
