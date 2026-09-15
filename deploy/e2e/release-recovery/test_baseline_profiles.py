@@ -99,6 +99,10 @@ class ReadOnlyDatabaseTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory();self.addCleanup(self.directory.cleanup)
         self.path = Path(self.directory.name) / 'canonical.db'
+        # The disposable database belongs to the test account. Map only the
+        # account lookup; retain the real parent/file/WAL ownership and mode gates.
+        self.owner_lookup = mock.patch.object(probe, 'database_owners', return_value={0, os.geteuid()})
+        self.owner_lookup.start();self.addCleanup(self.owner_lookup.stop)
         self.writer = sqlite3.connect(self.path, isolation_level=None)
         self.addCleanup(self.writer.close)
         self.writer.execute('PRAGMA journal_mode=WAL')
@@ -117,6 +121,11 @@ class ReadOnlyDatabaseTests(unittest.TestCase):
         self.assertEqual(value['table_count'], 2)
         self.assertNotIn('never-output-this-secret', json.dumps(value))
         self.assertEqual(value['excluded_tables'], [])
+
+    def test_unapproved_fixture_owner_is_unknown_before_sqlite_read(self):
+        with mock.patch.object(probe, 'database_owners', return_value=set()), mock.patch.object(profiles.sqlite3, 'connect') as connect:
+            self.assertEqual(self.observe()['status'], 'unknown')
+        connect.assert_not_called()
 
     def test_committing_writer_during_observation_does_not_mix_ledger_views(self):
         original = probe._database_semantics
