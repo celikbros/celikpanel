@@ -127,6 +127,73 @@ disks and evidence retained. No installed panel was accessed.
 The final local suite ran 517 tests: 516 passed, with one explicit missing actual
 binary-input skip. The two focused tracer modules ran 49 tests under root and 49
 under `nobody`, all passing without skips, including actual child exchange calls.
-These local and native results are distinct from CI. The two-fault native result
-is Debian-only; Arch, other checkpoints, real workloads and the remaining P0.3
-acceptance items remain open.
+These local and native results are distinct from CI. At the X checkpoint this two-fault result was Debian-only; Z below adds Arch.
+Other checkpoints, real workloads and the remaining P0.3 items remain open.
+
+## Z: Arch native acceptance
+
+The September 16 local-date run used fresh disposable root
+`/var/tmp/cp-release-drill-20260916-z`; the journal timestamps below are September
+15 UTC. It reused X's genuine Alpha64/schema38 baseline, unchanged candidate
+archive and selected recovery kit. All 20 uploaded helper pins were independently
+bound to commit `f63229497da0eff906c91a0a70f870e964415ae7`: 15 byte-identical files
+and five with only Git CRLF-to-LF normalization. The raw pins were preserved.
+
+An earlier Y preparation attempt stopped before baseline installation or native
+fault admission when an extra DNS-observer package command returned nonzero.
+Its first controller did not preserve that command's output; the exact package
+failure reason is unconfirmed. Y was stopped with its evidence retained, not
+reused or counted as a recovery test. Z prepared the persistent journal before
+baseline installation and used the existing DNS seed operation to supply BIND
+and its observer. Later command failures preserve stdout/stderr. The Y assessment
+hash is recorded below.
+
+Operation `54ac53a2ba3b5f5c84076d2f064f392f` used snapshot
+`20260915T212447Z-from-unknown-to-cb3165456bb4ba4654dc19d51a5eafc13721a5fb-ebba15fe7f3f45aa50b11acb9a048eeb`.
+The successful native exchange, held canonical After/retained Before pair,
+absent publication receipt and exact updater SIGKILL were verified. Native
+OnFailure began rollback; its durable `payload_restored` checkpoint was held at
+21:30:42 UTC and one QEMU reset was submitted. The new boot and final recovery
+invocation differ; the operation, snapshot, transaction token and selected kit
+are unchanged.
+
+The first two boot recovery invocations failed at 21:30:55 and 21:31:26 because
+systemd was still `starting`. Both failures remain in the journal and causal
+proof. The host only observed the existing native timer; it did not start a
+second update or manually invoke recovery. The timer started the third boot
+invocation at 21:31:57, and the same rollback completed at 21:32:14 with the
+`schedulers_restored` checkpoint and cleared transaction markers. This proves
+eventual automatic recovery, not first-attempt success or uninterrupted access.
+
+The exchanged pair passed the populated schema38-to-42 semantic checks across
+all 55 old tables. Final schema38 restored the original Before inode and all
+100 cut-time rowids and typed values unchanged. One later metrics row makes 101
+final rows: global equality is **DIFFERENT**, with zero missing or changed old
+rows. The inverse-exchange intent/receipt, unchanged admission/seal/publication
+records, retained migrated After bytes and sealed work were independently checked.
+Raw DB/WAL reconstruction agreed with the saved backup. Both running/disk
+baseline binaries, authoritative A/SOA UDP/TCP, served/installed TLS fingerprints
+and HTTPS 200 passed. The first and only terminal measurement freeze/copy/thaw
+preserved both coordinator process identities. Both registered Z guests were
+then stopped; disks and private evidence remain retained.
+
+The baseline installer had upgraded the kernel package before the candidate
+trial: the running kernel was `7.1.8-arch1-3`, while installed modules belonged to
+`7.2.6-arch2-1`. The test reset booted `7.2.6-arch2-1`; installed Linux/systemd
+package versions were unchanged across that reset. The installer's reboot warning
+and both observations are preserved. This result does not claim firewall/VPN
+readiness or recovery with an identical running kernel across boots.
+
+| Preserved proof | SHA256 |
+|---|---|
+| Arch terminal outcome | `40af76b80cf2ecfc0a5246df748c2696dc2e4211a6ce6f749d8cea7f5d22e0dc` |
+| Host row review, `analysis/arch-exchange-rows-bqne81lj/review.json` | `5bf0d718b5e0fc3f339ff83a6af20024756e087d83735d19be8aba872d7c50d4` |
+| Host seal, `analysis/host-seal-1789507983843020713.json` (96 inputs, 20 helper pins) | `58583442a8d8563f0bb1a91f5046fd85835707083b408a81c418e7c110884f7b` |
+| Helper source binding, `analysis/helper-source-binding-1789507986010838196.json` | `a430639bad29f33d33bcd16ddcf1a6f35f98c758c100f85719eaa2f16130fc8b` |
+| Y preparation assessment, `evidence/arch/y-preparation-assessment.json` under the Y root | `99b160905ce9ee0471c0209199c3e529f695a48793f5a5c8442a4955e54fdfc2` |
+
+The unchanged local suite again ran 517 tests: 516 passed and one explicitly
+skipped its missing actual-binary input. X and Z now cover this two-fault boundary
+on Debian and Arch. Product code and persisted schemas are unchanged. Other
+checkpoints, real workload/renewal independence, signed admission, physical
+power-loss durability and the remaining P0 acceptance items stay open.

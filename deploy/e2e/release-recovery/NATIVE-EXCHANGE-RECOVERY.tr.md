@@ -128,6 +128,73 @@ Kurulu kullanıcı panellerine erişilmedi.
 Son yerel pakette 517 test çalıştı: 516 geçti; gerçek ikili girdisi bulunmayan bir
 test açıkça atlandı. İki odaklı izleyici modülü root altında 49, `nobody` altında
 49 test geçirdi; atlama yoktu ve gerçek alt süreç exchange çağrıları dahildi.
-Bu yerel ve gerçek sistem sonuçları CI'dan ayrıdır. İki kesintili gerçek kabul
-yalnız Debian içindir; Arch, diğer kontrol noktaları, gerçek iş yükleri ve kalan
-P0.3 kabul işleri açıktır.
+Bu yerel ve gerçek sistem sonuçları CI'dan ayrıdır. X aşamasındaki iki kesintili
+kabul yalnız Debian içindi; aşağıdaki Z, Arch sonucunu ekler. Diğer kontrol
+noktaları, gerçek iş yükleri ve kalan P0.3 kabul işleri açıktır.
+
+## Z: Arch gerçek sistem kabulü
+
+16 Eylül yerel tarihli deney, yeni geçici kök
+`/var/tmp/cp-release-drill-20260916-z` üzerinde yapıldı; aşağıdaki günlük saatleri
+15 Eylül UTC'dir. X ile aynı gerçek Alpha64/schema38 başlangıcı, değiştirilmemiş
+aday arşivi ve seçili kurtarma kiti kullanıldı. Yüklenen 20 yardımcı özeti bağımsız
+olarak `f63229497da0eff906c91a0a70f870e964415ae7` commit'ine bağlandı: 15 dosya
+bayt düzeyinde aynı, beş dosyada yalnız Git CRLF→LF normalleştirmesi var.
+Ham yükleme özetleri korundu.
+
+Önceki Y hazırlık denemesi, ek DNS gözlem aracı paket komutu sıfır dışında sonuç
+verince başlangıç kurulumu veya gerçek kesinti kabulü öncesinde durdu. İlk
+denetleyici o komutun çıktısını saklamadığı için paket hatasının kesin nedeni
+belirsizdir. Y kanıtları korunarak durduruldu; yeniden kullanılmadı ve kurtarma
+testi sayılmadı. Z, kalıcı günlüğü başlangıç kurulumu öncesinde hazırladı; BIND ve
+gözlem aracını mevcut DNS örneği kurma işlemi sağladı. Sonraki komut hatalarında
+stdout/stderr korunur. Y değerlendirmesinin özeti aşağıdadır.
+
+`54ac53a2ba3b5f5c84076d2f064f392f` işlemi şu snapshot'ı kullandı:
+`20260915T212447Z-from-unknown-to-cb3165456bb4ba4654dc19d51a5eafc13721a5fb-ebba15fe7f3f45aa50b11acb9a048eeb`.
+Başarılı gerçek değişim, tutulan asıl After/saklanan Before çifti, yayın makbuzunun
+yokluğu ve tam güncelleyiciye SIGKILL doğrulandı. Yerel OnFailure geri almayı
+başlattı; kalıcı `payload_restored` noktası UTC 21:30:42'de tutuldu ve QEMU'ya bir
+yeniden başlatma gönderildi. Yeni açılış ve son kurtarma invocation kimlikleri
+farklı; işlem, snapshot, transaction token ve seçili kit aynı kaldı.
+
+İlk iki açılış kurtarma denemesi, systemd hâlâ `starting` olduğu için 21:30:55 ve
+21:31:26'da başarısız oldu. İki hata da günlükte ve neden-sonuç kanıtında korunur.
+Ana makine yalnız mevcut yerel zamanlayıcıyı gözledi; ikinci güncelleme başlatmadı,
+kurtarmayı elle çağırmadı. Zamanlayıcı üçüncü açılış denemesini 21:31:57'de
+başlattı; aynı geri alma 21:32:14'te `schedulers_restored` noktası ve temizlenmiş
+transaction işaretleriyle tamamlandı. Bu, sonunda otomatik kurtarmayı kanıtlar;
+ilk denemede başarı veya kesintisiz erişim iddiası değildir.
+
+Değiştirilen çift, 55 eski tablonun tamamında dolu şema38→42 anlam kontrollerini
+geçti. Son şema38, asıl Before inode'unu ve kesinti anındaki 100 satırın tüm rowid
+ve tipli değerlerini değiştirmeden geri getirdi. Sonraki bir ölçüm satırıyla son
+toplam 101 oldu: küresel eşitlik **DIFFERENT**, eksilen veya değişen eski satır
+sayısı sıfır. Ters değişim niyeti/makbuzu, değişmeyen kabul/mühür/yayın kayıtları,
+saklanan yeni After baytları ve mühürlü çalışma dosyaları bağımsız denetlendi.
+Ham DB/WAL'dan yeniden oluşturulan kopya kaydedilmiş yedekle eşleşti. İki çalışan/
+diskteki başlangıç ikilisi, yetkili A/SOA UDP/TCP, sunulan/kurulu TLS parmak izleri
+ve HTTPS 200 kontrolleri geçti. İlk ve tek son durum ölçümünde dondur/kopyala/çöz
+adımı iki koordinatörün süreç kimliklerini korudu. Ardından kayıtlı iki Z konuğu
+durduruldu; diskler ve özel kanıtlar saklandı.
+
+Başlangıç kurucusu aday deneyi öncesinde çekirdek paketini yükseltmişti: çalışan
+çekirdek `7.1.8-arch1-3`, kurulu modüller `7.2.6-arch2-1` içindi. Testteki yeniden
+başlatma `7.2.6-arch2-1` çekirdeğini açtı; kurulu Linux/systemd paket sürümleri
+bu yeniden başlatma boyunca değişmedi. Kurucunun yeniden başlatma uyarısı ve iki
+gözlem korundu. Bu sonuç güvenlik duvarı/VPN hazır oluşunu veya iki açılışta aynı
+çalışan çekirdekle kurtarmayı kanıtlamaz.
+
+| Korunan kanıt | SHA256 |
+|---|---|
+| Arch son durum sonucu | `40af76b80cf2ecfc0a5246df748c2696dc2e4211a6ce6f749d8cea7f5d22e0dc` |
+| Ana makine satır incelemesi, `analysis/arch-exchange-rows-bqne81lj/review.json` | `5bf0d718b5e0fc3f339ff83a6af20024756e087d83735d19be8aba872d7c50d4` |
+| Ana makine mührü, `analysis/host-seal-1789507983843020713.json` (96 girdi, 20 yardımcı özeti) | `58583442a8d8563f0bb1a91f5046fd85835707083b408a81c418e7c110884f7b` |
+| Yardımcı kaynak bağı, `analysis/helper-source-binding-1789507986010838196.json` | `a430639bad29f33d33bcd16ddcf1a6f35f98c758c100f85719eaa2f16130fc8b` |
+| Y kökündeki hazırlık değerlendirmesi, `evidence/arch/y-preparation-assessment.json` | `99b160905ce9ee0471c0209199c3e529f695a48793f5a5c8442a4955e54fdfc2` |
+
+Değişmeyen yerel pakette yine 517 test çalıştı: 516 geçti, gerçek ikili girdisi
+olmayan biri açıkça atlandı. X ve Z, bu iki kesinti sınırını artık Debian ve Arch
+üzerinde kapsıyor. Ürün kodu ve kalıcı şemalar değişmedi. Diğer kontrol noktaları,
+gerçek iş yükü/yenileme bağımsızlığı, imzalı kabul, fiziksel güç kaybı dayanıklılığı
+ve kalan P0 kabul işleri açıktır.
