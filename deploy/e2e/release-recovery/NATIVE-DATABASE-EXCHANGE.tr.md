@@ -252,3 +252,5 @@ Bunun için konuğa erişim, ikinci yakalama veya kurtarma yapılmadı. 76 girdi
 sınırlamaları kayıtta kalıyor; W yalnız bu gerçek exchange kabul işini kapatıyor.
 Tam P0.3, gerçek barındırılan hizmetler, yeniden başlatma/güç kaybı ve güncellemeyi
 yalnız sahibin başlatması gereksinimleri yukarıdaki gibi devam ediyor.
+
+Sonraki [Debian X kurtarma sırasında yeniden başlatma deneyi](NATIVE-EXCHANGE-RECOVERY.tr.md), bu kesintiyi yerel geri alma sırasında yeniden başlatmayla birleştirir. Ayrı kanıt ilk açılış hatasını korur ve mevcut zamanlayıcının sonunda bütün kesinti anı satırlarını koruyarak kurtardığını doğrular; geniş P0.3 matrisi açıktır.

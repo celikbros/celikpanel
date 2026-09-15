@@ -40,7 +40,8 @@ REQUIRED_HELPERS = frozenset((
 ))
 
 
-BOUNDARIES = ('wal', 'database-exchange')
+RECOVERY_BOUNDARY = 'database-exchange-recovery-reboot'
+BOUNDARIES = ('wal', 'database-exchange', RECOVERY_BOUNDARY)
 EXCHANGE_HELPERS = REQUIRED_HELPERS | {'guest_exchange_checkpoint.py', 'exchange_trace.py'}
 
 
@@ -58,6 +59,17 @@ def profile(boundary='wal'):
                 'gate_schema': 'celikpanel/native-database-exchange-gate/v1',
                 'release_schema': 'celikpanel/native-database-exchange-gate-release/v1',
                 'tracer_unit': 'celikpanel-lab-database-exchange-trace-', 'helpers': EXCHANGE_HELPERS}
+    if boundary == RECOVERY_BOUNDARY:
+        value = profile('database-exchange')
+        value.update(prefix='native-exchange-recovery-reboot',
+                     schema='celikpanel/native-exchange-recovery-reboot-trial/v1',
+                     fault='native-database-exchange-kill-then-payload-restored-reboot',
+                     gate_schema='celikpanel/native-exchange-recovery-reboot-gate/v1',
+                     release_schema='celikpanel/native-exchange-recovery-reboot-gate-release/v1',
+                     tracer_unit='celikpanel-lab-exchange-recovery-trace-',
+                     helpers=EXCHANGE_HELPERS | {'guest_exchange_recovery_handoff.py'},
+                     recovery_fault={'action': 'reboot', 'checkpoint': 'payload_restored'})
+        return value
     raise ValueError('unsupported native boundary')
 
 
@@ -121,6 +133,8 @@ def load(args):
         raise ValueError('native boundary intent differs')
     plan,plan_raw=private_record(local.names(args.operation_id)['plan'])
     local.validate_plan(plan,identity,args.operation_id)
+    if plan.get('recovery_fault') != selected.get('recovery_fault'):
+        raise ValueError('native recovery fault differs from fixed profile')
     if hashlib.sha256(plan_raw).hexdigest()!=value['local_intent_sha256']:
         raise ValueError('local intent changed')
     seeded=value['populated_seed']
@@ -242,7 +256,7 @@ def capture_checkpoint(operation,proof,prior_wal):
 DATABASE_PARENT = Path('/var/lib/celikpanel')
 
 
-def capture_exchange_checkpoint(operation, proof):
+def capture_exchange_checkpoint(operation, proof, *, boundary='database-exchange'):
     """Copy only the exact observed pair. Never open a source with SQLite."""
     local.names(operation)
     token = proof['transaction']['transaction_token_sha256']
@@ -255,7 +269,9 @@ def capture_exchange_checkpoint(operation, proof):
         or not re.fullmatch(r'\.build-[0-9a-f]{32}', build.parent.name)
         or database['canonical']['path'] != str(DATABASE_PARENT / 'celikpanel.db')):
         raise ValueError('exchange capture paths differ')
-    target = PRIVATE / ('native-database-exchange-' + operation + '-capture')
+    if boundary not in ('database-exchange', RECOVERY_BOUNDARY):
+        raise ValueError('exchange capture profile differs')
+    target = PRIVATE / (profile(boundary)['prefix'] + '-' + operation + '-capture')
     handles = []
     pins = []
     def directory(path, expected):
@@ -375,7 +391,7 @@ def make_callbacks(args, value, plan, paths, native, gateproof, tracer, checkpoi
         def writer_expected(self):
             return checkpoint.writer_expected(args,plan,int(gateproof['start_ticks']))
         def exchange_entry(self, trace_snapshot):
-            if boundary != 'database-exchange':
+            if boundary == 'wal':
                 raise ValueError('exchange callback is unavailable in WAL profile')
             self.revalidate('exchange-entry', trace_snapshot)
             proof = checkpoint.inspect_entry(args, plan, native.worker_identity(), trace_snapshot)
@@ -398,7 +414,7 @@ def make_callbacks(args, value, plan, paths, native, gateproof, tracer, checkpoi
             if proof.get('status')!='verified':
                 local.save_private(PRIVATE/(prefix+'.checkpoint-refused.json'),proof)
                 raise ValueError('native checkpoint not verified')
-            if boundary == 'database-exchange' and (
+            if boundary != 'wal' and (
                 proof.get('operation_id') != args.operation_id
                 or proof.get('trace_sha256') != tracer.proof_digest(trace_snapshot)
                 or proof.get('entry_proof_sha256') != tracer.proof_digest(prior_proof)
@@ -412,11 +428,19 @@ def make_callbacks(args, value, plan, paths, native, gateproof, tracer, checkpoi
                 proof.update({'status':'verified','operation_id':args.operation_id,'trace_sha256':tracer.proof_digest(trace_snapshot),'prior_wal_sha256':hashlib.sha256(prior_proof).hexdigest()})
                 event='wal_checkpoint_verified'
             else:
-                proof['capture']=capture_exchange_checkpoint(args.operation_id,proof)
+                proof['capture']=capture_exchange_checkpoint(args.operation_id,proof,boundary=boundary)
                 event='database_exchange_checkpoint_verified'
             emit(event,checkpoint=proof,trace=trace_snapshot)
             return proof
         def perform_cut(self,verified_proof):
+            self.recovery_handoff = None
+            try:
+                return self.perform_exact_cut(verified_proof)
+            except BaseException:
+                if self.recovery_handoff is not None:
+                    self.recovery_handoff_cleanup = self.recovery_helper.cancel(args.operation_id, self.recovery_handoff)
+                raise
+        def perform_exact_cut(self,verified_proof):
             self.revalidate('cut',verified_proof)
             if boundary == 'wal':
                 latest=checkpoint.inspect(args,plan,native.worker_identity(),self.cut_trace,prior_wal=self.cut_prior)
@@ -426,10 +450,22 @@ def make_callbacks(args, value, plan, paths, native, gateproof, tracer, checkpoi
                 latest=checkpoint.inspect(args,plan,native.worker_identity(),self.cut_trace,self.cut_prior)
             if latest!=self.cut_base:raise ValueError('final checkpoint authority changed')
             self.revalidate('final-cut',verified_proof)
+            if boundary == RECOVERY_BOUNDARY:
+                helper = module('exchange_recovery_handoff', 'guest_exchange_recovery_handoff.py')
+                def exact():
+                    self.revalidate('recovery-handoff', verified_proof)
+                    now = checkpoint.inspect(args, plan, native.worker_identity(), self.cut_trace, self.cut_prior)
+                    if now != self.cut_base:
+                        raise ValueError('exchange proof changed during recovery handoff')
+                self.recovery_helper = helper
+                handoff = helper.arm(args, plan, native.worker_identity(), self.cut_base, exact)
+                self.recovery_handoff = handoff
+                emit('recovery_fault_armed', handoff=handoff)
+                exact()
             emit('kill_requested',scope='exact-update-unit-cgroup',signal='SIGKILL')
             native.kill()
             receipt={'status':'cut-sent','trace_sha256':verified_proof['trace_sha256'],'scope':'exact-update-unit-cgroup','signal':'SIGKILL','operation_id':args.operation_id}
-            if boundary == 'database-exchange':receipt['entry_proof_sha256']=tracer.proof_digest(self.entry_proof)
+            if boundary != 'wal':receipt['entry_proof_sha256']=tracer.proof_digest(self.entry_proof)
             emit('kill_sent',receipt=receipt)
             return receipt
     return Callbacks()
@@ -470,6 +506,8 @@ def trace(args,value,plan,paths):
         except Exception as exc:
             result={'status':'inconclusive','reason':'native-trace-'+type(exc).__name__}
         finally:os.close(trace_fd)
+        if hasattr(callbacks, 'recovery_handoff_cleanup'):
+            result['recovery_handoff_cleanup'] = callbacks.recovery_handoff_cleanup
         local.save_private(paths['result'],result)
         emit('trace_finished',result=result)
         return 0 if result.get('status')=='cut-sent' else 2
