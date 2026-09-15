@@ -251,3 +251,5 @@ recovery. The 76 bindings also recheck the 19 helper pins and native causal chai
 Earlier U/V Debian limitations remain recorded; W closes only this native exchange
 acceptance item. Full P0.3, real hosted workloads, reboot/power loss and owner-only
 installed-update requirements remain as above.
+
+The subsequent [Debian X recovery-reboot fixture](NATIVE-EXCHANGE-RECOVERY.md) combines this cut with a reset during native rollback. Its separate evidence preserves the first boot failure and proves eventual watchdog recovery with all cut-time rows retained; the wider P0.3 matrix remains open.

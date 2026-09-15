@@ -122,13 +122,71 @@ class QMP:
         self.sock.close()
 
 
-def reboot(root, record, plan, node, intent):
+def native_start(root, record, plan, node, intent, boundary):
+    """A separate closed profile must prove its own immutable once-only start."""
+    native = local.module('reboot_native_exchange', 'native_wal_trial.py')
+    if boundary != native.guest.RECOVERY_BOUNDARY:
+        raise ValueError('unsupported native recovery reboot profile')
+    value, inner = native.load(root, record, plan, node, boundary=boundary)
+    if inner != intent:
+        raise ValueError('native recovery local intent changed')
+    started = json.loads(trial.read_private(local.evidence_path(root, node, native.host_names(boundary)[1]), 4 * 1024 * 1024))
+    if (started.get('intent') != value
+            or started.get('entrypoint') != native.argv(value, 'gate', boundary=boundary)):
+        raise ValueError('exact native updater start not established')
+    return native, value
+
+
+def bind_native_cut(data, events, recovery, intent):
+    """The second fault is subordinate to the confirmed first cut and handoff."""
+    expected = ['armed', 'gate_released', 'database_exchange_entry_verified',
+                'database_exchange_checkpoint_verified', 'recovery_fault_armed',
+                'kill_requested', 'kill_sent', 'trace_finished']
+    result = data.get('result') or {}
+    if ([e.get('event') for e in events] != expected or result.get('status') != 'cut-sent'
+            or events[-1].get('result') != result or 'recovery_handoff_cleanup' in result):
+        raise ValueError('native cut not conclusively finished; no reboot')
+    if any(e.get('identity') != intent['identity'] or e.get('operation_id') != intent['operation_id'] for e in events):
+        raise ValueError('native cut operation differs')
+    entry, checkpoint = events[2]['checkpoint'], events[3]['checkpoint']
+    digest = lambda v: hashlib.sha256(json.dumps(v, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    receipt = events[6]['receipt']
+    handoff = events[4]['handoff']
+    exact = recovery['intent']
+    if (checkpoint.get('status') != 'verified'
+            or checkpoint.get('classification') != 'database-exchanged-before-receipt-held'
+            or checkpoint.get('entry_proof_sha256') != digest(entry)
+            or checkpoint.get('trace_sha256') != digest(events[3]['trace'])
+            or result.get('cut_receipt') != receipt
+            or result.get('independent_proof') != checkpoint
+            or receipt.get('status') != 'cut-sent' or receipt.get('operation_id') != intent['operation_id']
+            or receipt.get('trace_sha256') != checkpoint['trace_sha256']
+            or receipt.get('entry_proof_sha256') != checkpoint['entry_proof_sha256']
+            or receipt.get('scope') != 'exact-update-unit-cgroup' or receipt.get('signal') != 'SIGKILL'
+            or handoff.get('identity') != intent['identity'] or handoff.get('operation_id') != intent['operation_id']
+            or handoff.get('intent') != exact
+            or handoff.get('intent_sha256') != hashlib.sha256(hand.encoded(exact)).hexdigest()
+            or exact.get('snapshot') != checkpoint['transaction']['snapshot']
+            or exact.get('snapshot_manifest_sha256') != checkpoint['database']['snapshot']['manifest_sha256']
+            or exact.get('transaction_token_sha256') != checkpoint['transaction']['transaction_token_sha256']
+            or exact.get('runtime_manifest_sha256') != checkpoint['kit']['manifest_sha256']
+            or {k: exact.get(k) for k in ('action', 'checkpoint')} != intent['recovery_fault']):
+        raise ValueError('recovery reboot is not bound to exact native exchange')
+    return {'checkpoint_sha256': digest(checkpoint), 'handoff_intent_sha256': handoff['intent_sha256'],
+            'snapshot': exact['snapshot'], 'transaction_token_sha256': exact['transaction_token_sha256']}
+
+
+def reboot(root, record, plan, node, intent, *, native_boundary=None):
     if intent['recovery_fault']['action'] != 'reboot': raise ValueError('sealed intent does not request reboot')
     local.assert_absent(root, node, REBOOT_ATTEMPT)
     # The updater was submitted exactly once by this same local fixture controller.
-    started = json.loads(trial.read_private(local.evidence_path(root, node, local.START)))
-    if started.get('identity') != intent['identity'] or started.get('operation_id') != intent['operation_id']:
-        raise ValueError('exact local updater start not established')
+    native = None
+    if native_boundary is None:
+        started = json.loads(trial.read_private(local.evidence_path(root, node, local.START)))
+        if started.get('identity') != intent['identity'] or started.get('operation_id') != intent['operation_id']:
+            raise ValueError('exact local updater start not established')
+    else:
+        native, native_intent = native_start(root, record, plan, node, intent, native_boundary)
     deadline = time.monotonic() + 600
     while time.monotonic() < deadline:
         try:
@@ -140,12 +198,28 @@ def reboot(root, record, plan, node, intent):
             time.sleep(.1); continue
         break
     else: raise TimeoutError('recovery reboot checkpoint unavailable; no reset')
+    cut_binding = None
+    if native is not None:
+        cut, cut_raw, cut_events = native.read(root, record, plan, node, native_intent, boundary=native_boundary)
+        cut_binding = bind_native_cut(cut, cut_events, value, intent)
+        cut_binding['evidence'] = {
+            'record': trial.save(root, node, 'native-recovery-reboot-cut.json', local.encoded(cut)),
+            'events': trial.save(root, node, 'native-recovery-reboot-cut.jsonl', cut_raw)}
+        journal = lab.guarded_script(root, record, plan, node, shlex.join([
+            'journalctl', '--no-pager', '--output=json', '-u',
+            native.guest.names(intent['operation_id'], native_boundary)['worker'],
+            '-u', 'celikpanel-release-recovery.service', '--since', native_intent['created_at'], '-n', '600']), timeout=10).stdout.encode()
+        if len(journal) > 4 * 1024 * 1024 or len(journal.splitlines()) >= 600:
+            raise ValueError('pre-reset journal exceeds bound')
+        cut_binding['evidence']['journal'] = trial.save(root, node, 'native-recovery-reboot-before.jsonl', journal)
     native_node = plan['nodes'][node]
     expected = qemu_identity(native_node)
     connection = QMP(native_node, expected)
     try:
         value, raw, events = read_guest(root, record, plan, node, intent, reboot_proof=True)
         proof_at = time.monotonic()
+        if native is not None:
+            bind_native_cut(cut, cut_events, value, intent)
         proof = value.get('reboot_proof')
         if not proof or proof['worker']['boot_id'] != events[-1]['worker']['boot_id']:
             raise ValueError('exact frozen recovery reboot proof unavailable')
@@ -154,6 +228,8 @@ def reboot(root, record, plan, node, intent):
                    'operation_id': intent['operation_id'], 'created_at': trial.now(), 'qemu': expected,
                    'checkpoint_sha256': proof['checkpoint_sha256'], 'before_boot_id': proof['worker']['boot_id'],
                    'evidence': refs, 'command': 'system_reset', 'scope': 'registered-disposable-QEMU-only'}
+        if cut_binding is not None:
+            attempt['native_cut'] = cut_binding
         trial.save(root, node, REBOOT_ATTEMPT, local.encoded(attempt))
         if time.monotonic() - proof_at > 3: raise ValueError('frozen checkpoint proof expired before reset')
         connection.reset()

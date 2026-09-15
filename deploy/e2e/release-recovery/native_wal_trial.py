@@ -33,7 +33,8 @@ ASSETS=(*local.ASSETS,'guest_native_wal_trial.py','guest_wal_checkpoint.py','wal
 
 def assets_for(boundary='wal'):
     guest.profile(boundary)
-    return ASSETS if boundary == 'wal' else (*ASSETS, 'guest_exchange_checkpoint.py', 'waltrace/exchange_trace.py')
+    assets = ASSETS if boundary == 'wal' else (*ASSETS, 'guest_exchange_checkpoint.py', 'waltrace/exchange_trace.py')
+    return (*assets, 'guest_exchange_recovery_handoff.py') if boundary == guest.RECOVERY_BOUNDARY else assets
 
 
 def host_names(boundary='wal'):
@@ -49,6 +50,8 @@ def load(root,record,plan,node,*,boundary='wal'):
     guest.validate_helpers(value.get('helpers'),boundary)
     intent=local.load_intent(root,record,plan,node)
     if value['operation_id']!=intent['operation_id'] or value['local_intent_sha256']!=hashlib.sha256(local.trial.read_private(local.evidence_path(root,node,local.INTENT),4*1024*1024)).hexdigest():raise ValueError('local intent changed')
+    if intent.get('recovery_fault') != selected.get('recovery_fault'):
+        raise ValueError('native recovery fault differs from fixed profile')
     return value,intent
 
 
@@ -81,7 +84,8 @@ def read(root,record,plan,node,value,*,boundary='wal'):
 def validate_event_order(kinds, result=None,*,boundary='wal'):
     guest.profile(boundary)
     checkpoints=['wal_checkpoint_verified'] if boundary=='wal' else ['database_exchange_entry_verified','database_exchange_checkpoint_verified']
-    progress=['armed','gate_released',*checkpoints,'kill_requested','kill_sent']
+    handoff = ['recovery_fault_armed'] if boundary == guest.RECOVERY_BOUNDARY else []
+    progress=['armed','gate_released',*checkpoints,*handoff,'kill_requested','kill_sent']
     observed=kinds[:-1] if kinds and kinds[-1]=='trace_finished' else kinds
     if kinds and (not observed or observed!=progress[:len(observed)] or len(observed)>len(progress)):
         raise ValueError('native event sequence skips a required proof')
@@ -102,7 +106,8 @@ def prepare(root,record,plan,node,archive,digest,*,boundary='wal'):
     seeded_raw=local.trial.read_private(local.evidence_path(root,node,'populated-seed-result.json'))
     seeded=json.loads(seeded_raw)
     if seeded.get('schema')!='celikpanel/lab-populated-installed/v1' or seeded.get('identity')!=local.trial.identity(record,plan,node):raise ValueError('populated fixture is not verified')
-    intent=local.prepare(root,record,plan,node,archive,digest,'candidate-installed',baseline_profile=local.trial.profiles.ALPHA64)
+    recovery = {'recovery_fault': selected['recovery_fault']} if 'recovery_fault' in selected else {}
+    intent=local.prepare(root,record,plan,node,archive,digest,'candidate-installed',baseline_profile=local.trial.profiles.ALPHA64,**recovery)
     assets={}
     for source in assets_source:
         path,sha=lab.put_file(root,record,plan,node,HERE/source,Path(source).name)
@@ -187,7 +192,7 @@ def main(argv=None,*,boundary='wal'):
     guest.profile(boundary)
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--work-root',required=True);p.add_argument('--node',choices=('arch','debian13'),required=True)
-    p.add_argument('--mode',choices=('prepare','arm','start','collect'),required=True)
+    p.add_argument('--mode',choices=('prepare','arm','start','collect','reboot') if boundary==guest.RECOVERY_BOUNDARY else ('prepare','arm','start','collect'),required=True)
     p.add_argument('--archive',type=Path);p.add_argument('--archive-sha256')
     p.add_argument('--execute',action='store_true')
     a=p.parse_args(argv)
@@ -198,6 +203,9 @@ def main(argv=None,*,boundary='wal'):
         if not a.archive or not a.archive_sha256:p.error('prepare requires archive and exact hash')
         return prepare(root,record,plan,a.node,a.archive,a.archive_sha256,boundary=boundary)
     value,intent=load(root,record,plan,a.node,boundary=boundary)
+    if a.mode=='reboot':
+        recovery=module('native_exchange_reboot_host','recovery_fault_trial.py')
+        return recovery.reboot(root,record,plan,a.node,intent,native_boundary=boundary)
     return {'arm':arm,'start':start,'collect':collect}[a.mode](root,record,plan,a.node,value,boundary=boundary)
 
 if __name__=='__main__':
