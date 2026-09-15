@@ -151,6 +151,9 @@ jobs:
           go test ./deploy/e2e/release-recovery/driver ./deploy/e2e/release-recovery/driver-update -count=1
           go build -o "$RUNNER_TEMP/release-recovery-seed" ./deploy/e2e/release-recovery/driver
           go build -o "$RUNNER_TEMP/release-recovery-update" ./deploy/e2e/release-recovery/driver-update
+      # This traces only its own disposable SQLite child; it is not native update acceptance.
+      - name: Verify controlled WAL interruption feasibility (no VM)
+        run: bash deploy/e2e/release-recovery/waltrace/run-local.sh
       - name: Verify root-owned fixture marker checks on disposable local files
         run: >-
           sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./deploy/e2e/release-recovery/driver

@@ -436,3 +436,9 @@ These checks mock transport or use disposable local files. They do not report a
 native guest lifecycle result.
 
 Selected recovery-kit replacement has its own [promotion acceptance record](RUNTIME-PROMOTION.md). It separates genuine predecessor enrollment, read-only mixed-pair dispatch, explicit owner continuation and actual post-promotion automatic rollback. A missed fault is retained as inconclusive.
+
+## WAL and populated SQL prerequisites
+
+[The bounded fixture record](WAL-FIXTURE.md) separates controlled-child WAL
+interruption and populated private SQL copies from native update acceptance.
+The real migration/automatic recovery adapter remains open.
