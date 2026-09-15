@@ -462,13 +462,29 @@ class NativeTrace:
         self.entries.pop(tid, None)
         self.syscall_tgids.discard(tid)
         expected = self.refresh_expected(force=True) if observing else None
+        self.select_syscall_target(tid, expected)
+        self.event('kernel-exec-transition', tid=tid, former_tid=old,
+                   retired_tids=[v['tid'] for v in group if v['tid'] != tid] if old != tid else [])
+
+    def select_syscall_target(self, tid, expected):
+        """Closed observer hook; lifecycle and admitted exec proof stay shared."""
         if expected is not None and self.kernel.command(tid) == COMMAND:
             require(self.kernel.executable(tid)['sha256'] == expected['candidate_panel_sha256'],
                     'migrator-executable-differs')
             self.syscall_tgids.add(tid)
             self.event('admitted-migrator-syscalls-enabled', tgid=tid, candidate_panel_sha256=expected['candidate_panel_sha256'])
-        self.event('kernel-exec-transition', tid=tid, former_tid=old,
-                   retired_tids=[v['tid'] for v in group if v['tid'] != tid] if old != tid else [])
+
+    def syscall_event(self, tid, syscall):
+        if syscall['op'] == 'entry':
+            self.entries[tid] = syscall
+            return None
+        return successful_pwrite(self.entries.pop(tid, None), syscall)
+
+    def observe_boundary(self, tid, boundary):
+        return self.observe_write(tid, boundary)
+
+    def missing_boundary_reason(self):
+        return 'no-exact-native-wal-boundary'
 
     def consume(self, tid, status, *, initial=False):
         require(tid in self.known, 'wait-outside-admitted-family')
@@ -497,10 +513,7 @@ class NativeTrace:
             raise Inconclusive('unsupported-ptrace-event')
         elif sig == SYSCALL_STOP:
             syscall = self.kernel.syscall(tid)
-            if syscall['op'] == 'entry':
-                self.entries[tid] = syscall
-            else:
-                return successful_pwrite(self.entries.pop(tid, None), syscall)
+            return self.syscall_event(tid, syscall)
         else:
             self.signals[tid] = sig
         return None
@@ -657,13 +670,13 @@ class NativeTrace:
                 if tid not in self.stopped:
                     continue
                 if write:
-                    candidate = self.observe_write(tid, write)
+                    candidate = self.observe_boundary(tid, write)
                     if candidate is not None:
                         result.update(candidate)
                         break
                 self.resume(tid)
             else:
-                raise Inconclusive('no-exact-native-wal-boundary')
+                raise Inconclusive(self.missing_boundary_reason())
         except Exception as error:
             result['reason'] = str(error) if isinstance(error, Inconclusive) else type(error).__name__
         finally:
