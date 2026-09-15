@@ -176,3 +176,5 @@ changes, evidence cleanup and older schema17/pre-ledger transition acceptance
 remain open. An AI assistant must use this same bounded operation/recovery
 contract; it cannot supply missing authority or turn an unknown result into
 success.
+
+The next [native exchange interruption fixture](../deploy/e2e/release-recovery/NATIVE-DATABASE-EXCHANGE.md) cuts after successful database exchange and before its receipt. Arch has scoped automatic-rollback and complete cut-row retention evidence; Debian final acceptance remains inconclusive. This adds no product schema transition and does not close P0.3.

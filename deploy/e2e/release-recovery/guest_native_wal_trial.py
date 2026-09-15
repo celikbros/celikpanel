@@ -7,10 +7,12 @@ unchanged bootstrap invocation. It does not alter product SQL, files or receipts
 from __future__ import annotations
 import argparse
 import base64
+import copy
 import hashlib
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import signal
 import stat
@@ -38,8 +40,35 @@ REQUIRED_HELPERS = frozenset((
 ))
 
 
-def validate_helpers(helpers):
-    if not isinstance(helpers, dict) or set(helpers) != REQUIRED_HELPERS:
+BOUNDARIES = ('wal', 'database-exchange')
+EXCHANGE_HELPERS = REQUIRED_HELPERS | {'guest_exchange_checkpoint.py', 'exchange_trace.py'}
+
+
+def profile(boundary='wal'):
+    if boundary == 'wal':
+        return {'prefix': 'native-wal', 'schema': SCHEMA,
+                'fault': 'physical-uncommitted-wal-after-successful-native-pwrite64',
+                'gate_schema': 'celikpanel/native-wal-gate/v1',
+                'release_schema': 'celikpanel/native-wal-gate-release/v1',
+                'tracer_unit': 'celikpanel-lab-wal-trace-', 'helpers': REQUIRED_HELPERS}
+    if boundary == 'database-exchange':
+        return {'prefix': 'native-database-exchange',
+                'schema': 'celikpanel/native-database-exchange-trial/v1',
+                'fault': 'database-exchange-after-successful-native-renameat2-before-receipt',
+                'gate_schema': 'celikpanel/native-database-exchange-gate/v1',
+                'release_schema': 'celikpanel/native-database-exchange-gate-release/v1',
+                'tracer_unit': 'celikpanel-lab-database-exchange-trace-', 'helpers': EXCHANGE_HELPERS}
+    raise ValueError('unsupported native boundary')
+
+
+def boundary_of(args):
+    boundary = getattr(args, 'boundary', 'wal')
+    profile(boundary)
+    return boundary
+
+
+def validate_helpers(helpers, boundary='wal'):
+    if not isinstance(helpers, dict) or set(helpers) != profile(boundary)['helpers']:
         raise ValueError('native helper inventory is incomplete or unexpected')
     if any(not isinstance(digest, str) or not local.shared.HEX64.fullmatch(digest)
            for digest in helpers.values()):
@@ -47,11 +76,12 @@ def validate_helpers(helpers):
     return helpers
 
 
-def names(operation):
+def names(operation, boundary='wal'):
     local.names(operation)
+    selected = profile(boundary)
     return {'worker':'celikpanel-self-update-'+operation+'.service',
-            'tracer':'celikpanel-lab-wal-trace-'+operation+'.service',
-            **{key:PRIVATE/('native-wal-'+operation+suffix) for key,suffix in
+            'tracer':selected['tracer_unit']+operation+'.service',
+            **{key:PRIVATE/(selected['prefix']+'-'+operation+suffix) for key,suffix in
                (('intent','.json'),('gate','.gate.json'),('release','.release.json'),
                 ('result','.result.json'),('events','.events.jsonl'))}}
 
@@ -79,15 +109,16 @@ def private_json(path):
 
 
 def load(args):
-    identity=probe.guard_guest(args);paths=names(args.operation_id)
+    boundary=boundary_of(args);selected=profile(boundary)
+    identity=probe.guard_guest(args);paths=names(args.operation_id,boundary)
     local.trusted_chain(PRIVATE)
     if stat.S_IMODE(PRIVATE.lstat().st_mode)!=0o700:raise ValueError('private root mode differs')
     value=private_json(paths['intent'])
-    if (value.get('schema')!=SCHEMA or value.get('identity')!=identity
+    if (value.get('schema')!=selected['schema'] or value.get('identity')!=identity
         or value.get('operation_id')!=args.operation_id
-        or value.get('fault')!='physical-uncommitted-wal-after-successful-native-pwrite64'
+        or value.get('fault')!=selected['fault']
         or value.get('provenance')!='unpublished-local-build-not-signed-agent-admission'):
-        raise ValueError('native WAL intent differs')
+        raise ValueError('native boundary intent differs')
     plan,plan_raw=private_record(local.names(args.operation_id)['plan'])
     local.validate_plan(plan,identity,args.operation_id)
     if hashlib.sha256(plan_raw).hexdigest()!=value['local_intent_sha256']:
@@ -98,7 +129,7 @@ def load(args):
     installed=private_json(seedroot/'installed.json');manifest,manifest_raw=private_record(seedroot/'manifest.json')
     if installed!=seeded['installed'] or installed.get('identity')!=identity or hashlib.sha256(manifest_raw).hexdigest()!=seeded['manifest_sha256']:
         raise ValueError('populated seed proof changed')
-    for filename,digest in validate_helpers(value.get('helpers')).items():
+    for filename,digest in validate_helpers(value.get('helpers'),boundary).items():
         if Path(filename).name!=filename:raise ValueError('helper path differs')
         p=PRIVATE/filename
         fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
@@ -128,6 +159,7 @@ def executable(pid):
 
 
 def gate(args,value,plan,paths):
+    selected=profile(boundary_of(args))
     if paths['release'].exists() or paths['result'].exists():raise ValueError('prior release or result exists')
     native=local.LocalNative(args,plan,private_json(local.names(args.operation_id)['proof']))
     native.unit=paths['worker'];props=native.properties();pid=os.getpid()
@@ -135,7 +167,7 @@ def gate(args,value,plan,paths):
         raise ValueError('gate is not exact registered systemd MainPID')
     start=local.kill.process_start(Path('/proc/self/stat').read_text())
     ex=executable(pid)
-    proof={'schema':'celikpanel/native-wal-gate/v1','identity':value['identity'],'operation_id':args.operation_id,
+    proof={'schema':selected['gate_schema'],'identity':value['identity'],'operation_id':args.operation_id,
            'pid':pid,'start_ticks':start,'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
            'unit':paths['worker'],'invocation_id':props['InvocationID'],'executable':ex}
     local.save_private(paths['gate'],proof)
@@ -143,7 +175,7 @@ def gate(args,value,plan,paths):
     while time.monotonic()<deadline:
         if paths['release'].exists():
             permit=private_json(paths['release'])
-            if permit!={'schema':'celikpanel/native-wal-gate-release/v1','operation_id':args.operation_id,'gate':proof}:
+            if permit!={'schema':selected['release_schema'],'operation_id':args.operation_id,'gate':proof}:
                 raise ValueError('gate release differs')
             probe.guard_guest(args)
             if hashlib.sha256(Path(plan['source_root'],'bootstrap-prebuilt-update.sh').read_bytes()).hexdigest()!=plan['candidate']['files']['bootstrap-prebuilt-update.sh']:
@@ -206,15 +238,214 @@ def capture_checkpoint(operation,proof,prior_wal):
     finally:os.close(source)
 
 
+
+DATABASE_PARENT = Path('/var/lib/celikpanel')
+
+
+def capture_exchange_checkpoint(operation, proof):
+    """Copy only the exact observed pair. Never open a source with SQLite."""
+    local.names(operation)
+    token = proof['transaction']['transaction_token_sha256']
+    if not isinstance(token, str) or not local.shared.HEX64.fullmatch(token):
+        raise ValueError('capture token malformed')
+    database = proof['database']
+    authority = DATABASE_PARENT / '.release-db-migrations' / token / 'authority'
+    build = Path(database['build']['path'])
+    if (build.name != 'celikpanel.db' or build.parent.parent != authority
+        or not re.fullmatch(r'\.build-[0-9a-f]{32}', build.parent.name)
+        or database['canonical']['path'] != str(DATABASE_PARENT / 'celikpanel.db')):
+        raise ValueError('exchange capture paths differ')
+    target = PRIVATE / ('native-database-exchange-' + operation + '-capture')
+    handles = []
+    pins = []
+    def directory(path, expected):
+        parent = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+        handles.append(parent)
+        for part in path.parts[1:]:
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=parent)
+            handles.append(child)
+            info = os.fstat(child)
+            if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o022:
+                raise ValueError('exchange capture directory is unsafe')
+            pins.append((parent, part, child, file_identity(info)))
+            parent = child
+        observed = {k: v for k, v in file_identity(os.fstat(parent)).items() if k in ('dev', 'ino', 'mode', 'uid', 'gid')}
+        if observed != expected:
+            raise ValueError('exchange capture directory changed')
+        return parent
+    try:
+        sources = {
+            'canonical.db': (directory(DATABASE_PARENT, database['directories']['parent']), database['canonical']),
+            'retained-before.db': (directory(build.parent, database['directories']['build']), database['build']),
+        }
+        target.mkdir(mode=0o700)
+        captured = {}
+        for name, (parent, want) in sources.items():
+            fd = os.open('celikpanel.db', os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=parent)
+            try:
+                info = os.fstat(fd)
+                if (file_identity(info) != want['identity'] or not stat.S_ISREG(info.st_mode)
+                    or info.st_nlink != 1 or not 0 < info.st_size <= 256 * 1024 * 1024):
+                    raise ValueError('exchange capture input changed')
+                out = os.open(target / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+                digest = hashlib.sha256()
+                size = 0
+                with os.fdopen(out, 'wb') as stream:
+                    while True:
+                        raw = os.read(fd, 1048576)
+                        if not raw:
+                            break
+                        size += len(raw)
+                        if size > info.st_size:
+                            raise ValueError('exchange capture grew')
+                        stream.write(raw)
+                        digest.update(raw)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                if (size != info.st_size or digest.hexdigest() != want['sha256']
+                    or file_identity(os.fstat(fd)) != want['identity']
+                    or file_identity(os.stat('celikpanel.db', dir_fd=parent, follow_symlinks=False)) != want['identity']):
+                    raise ValueError('exchange capture input changed after copy')
+                captured[name] = {'sha256': digest.hexdigest(), 'bytes': size, 'source': copy.deepcopy(want)}
+            finally:
+                os.close(fd)
+        # A first input must still be the same pair member after copying the second.
+        for parent, want in sources.values():
+            fd = os.open('celikpanel.db', os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=parent)
+            try:
+                if file_identity(os.fstat(fd)) != want['identity']:
+                    raise ValueError('exchange capture pair changed')
+                digest = hashlib.sha256()
+                size = 0
+                while True:
+                    raw = os.read(fd, 1048576)
+                    if not raw:
+                        break
+                    size += len(raw)
+                    if size > want['identity']['size']:
+                        raise ValueError('exchange capture pair grew')
+                    digest.update(raw)
+                if (size != want['identity']['size'] or digest.hexdigest() != want['sha256']
+                    or file_identity(os.fstat(fd)) != want['identity']
+                    or file_identity(os.stat('celikpanel.db', dir_fd=parent, follow_symlinks=False)) != want['identity']):
+                    raise ValueError('exchange capture pair changed after copy')
+            finally:
+                os.close(fd)
+        for parent, name, child, before in pins:
+            if (file_identity(os.fstat(child)) != before
+                or file_identity(os.stat(name, dir_fd=parent, follow_symlinks=False)) != before):
+                raise ValueError('exchange capture ancestor changed')
+        answer = {'schema': 'celikpanel/native-database-exchange-raw-capture/v1',
+                  'operation_id': operation, 'directory': str(target), 'files': captured,
+                  'scope': 'copies-only-no-SQLite-open-on-source'}
+        local.save_private(target / 'capture.json', answer)
+        fd = os.open(target, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        return answer
+    finally:
+        for fd in reversed(handles):
+            os.close(fd)
+
+
+def make_callbacks(args, value, plan, paths, native, gateproof, tracer, checkpoint, emit, trace_fd):
+    boundary = boundary_of(args)
+    selected = profile(boundary)
+    prefix = selected['prefix'] + '-' + args.operation_id
+    class Callbacks:
+        def record(self,event):
+            raw=(json.dumps(event,sort_keys=True)+'\n').encode()
+            written=os.write(trace_fd,raw)
+            if written!=len(raw):raise OSError('short trace evidence write')
+            os.fsync(trace_fd)
+        def revalidate(self,stage,proof):
+            if probe.guard_guest(args)!=value['identity']:raise ValueError('guest identity changed')
+            props=native.properties()
+            if props.get('MainPID')!=str(gateproof['pid']) or props.get('InvocationID')!=gateproof['invocation_id'] or props.get('ControlGroup')!='/system.slice/'+paths['worker']:
+                raise ValueError('native worker changed')
+            if local.kill.process_start(Path('/proc',str(gateproof['pid']),'stat').read_text())!=gateproof['start_ticks']:
+                raise ValueError('worker start changed')
+        def release_start_gate(self,proof):
+            self.revalidate('release',proof)
+            if executable(gateproof['pid'])!=gateproof['executable']:raise ValueError('gate executable changed')
+            local.save_private(paths['release'],{'schema':selected['release_schema'],'operation_id':args.operation_id,'gate':gateproof})
+            emit('gate_released',gate=gateproof)
+        def writer_expected(self):
+            return checkpoint.writer_expected(args,plan,int(gateproof['start_ticks']))
+        def exchange_entry(self, trace_snapshot):
+            if boundary != 'database-exchange':
+                raise ValueError('exchange callback is unavailable in WAL profile')
+            self.revalidate('exchange-entry', trace_snapshot)
+            proof = checkpoint.inspect_entry(args, plan, native.worker_identity(), trace_snapshot)
+            if (proof.get('status') != 'verified' or proof.get('operation_id') != args.operation_id
+                or proof.get('trace_sha256') != tracer.proof_digest(trace_snapshot)):
+                local.save_private(PRIVATE / (prefix + '.entry-checkpoint-refused.json'), proof)
+                raise ValueError('database exchange entry checkpoint not verified')
+            self.entry_proof = copy.deepcopy(proof)
+            emit('database_exchange_entry_verified', checkpoint=proof, trace=trace_snapshot)
+            return proof
+        def authorize_cut(self,trace_snapshot,prior_proof):
+            self.revalidate('authorize',trace_snapshot)
+            worker=native.worker_identity()
+            if boundary == 'wal':
+                proof=checkpoint.inspect(args,plan,worker,trace_snapshot,prior_wal=prior_proof)
+            else:
+                if not hasattr(self, 'entry_proof') or prior_proof != self.entry_proof:
+                    raise ValueError('database exchange entry proof changed')
+                proof=checkpoint.inspect(args,plan,worker,trace_snapshot,prior_proof)
+            if proof.get('status')!='verified':
+                local.save_private(PRIVATE/(prefix+'.checkpoint-refused.json'),proof)
+                raise ValueError('native checkpoint not verified')
+            if boundary == 'database-exchange' and (
+                proof.get('operation_id') != args.operation_id
+                or proof.get('trace_sha256') != tracer.proof_digest(trace_snapshot)
+                or proof.get('entry_proof_sha256') != tracer.proof_digest(prior_proof)
+                or prior_proof != self.entry_proof):
+                raise ValueError('database exchange proof binding changed')
+            self.cut_trace=copy.deepcopy(trace_snapshot)
+            self.cut_prior=copy.deepcopy(prior_proof)
+            self.cut_base=copy.deepcopy(proof)
+            if boundary == 'wal':
+                proof['capture']=capture_checkpoint(args.operation_id,proof,prior_proof)
+                proof.update({'status':'verified','operation_id':args.operation_id,'trace_sha256':tracer.proof_digest(trace_snapshot),'prior_wal_sha256':hashlib.sha256(prior_proof).hexdigest()})
+                event='wal_checkpoint_verified'
+            else:
+                proof['capture']=capture_exchange_checkpoint(args.operation_id,proof)
+                event='database_exchange_checkpoint_verified'
+            emit(event,checkpoint=proof,trace=trace_snapshot)
+            return proof
+        def perform_cut(self,verified_proof):
+            self.revalidate('cut',verified_proof)
+            if boundary == 'wal':
+                latest=checkpoint.inspect(args,plan,native.worker_identity(),self.cut_trace,prior_wal=self.cut_prior)
+            else:
+                if self.cut_prior != self.entry_proof:
+                    raise ValueError('database exchange entry proof changed before kill')
+                latest=checkpoint.inspect(args,plan,native.worker_identity(),self.cut_trace,self.cut_prior)
+            if latest!=self.cut_base:raise ValueError('final checkpoint authority changed')
+            self.revalidate('final-cut',verified_proof)
+            emit('kill_requested',scope='exact-update-unit-cgroup',signal='SIGKILL')
+            native.kill()
+            receipt={'status':'cut-sent','trace_sha256':verified_proof['trace_sha256'],'scope':'exact-update-unit-cgroup','signal':'SIGKILL','operation_id':args.operation_id}
+            if boundary == 'database-exchange':receipt['entry_proof_sha256']=tracer.proof_digest(self.entry_proof)
+            emit('kill_sent',receipt=receipt)
+            return receipt
+    return Callbacks()
+
+
 def trace(args,value,plan,paths):
-    tracer_path='native_trace.py' if (HERE/'native_trace.py').exists() else 'waltrace/native_trace.py'
-    tracer=module('native_wal_tracer',tracer_path)
-    checkpoint=module('native_wal_checkpoint','guest_wal_checkpoint.py')
+    boundary=boundary_of(args);selected=profile(boundary)
+    tracer_name='native_trace.py' if boundary=='wal' else 'exchange_trace.py'
+    tracer_path=tracer_name if (HERE/tracer_name).exists() else 'waltrace/'+tracer_name
+    tracer=module('native_boundary_tracer',tracer_path)
+    checkpoint=module('native_boundary_checkpoint','guest_wal_checkpoint.py' if boundary=='wal' else 'guest_exchange_checkpoint.py')
     if paths['events'].exists() or paths['result'].exists():raise ValueError('trace was already attempted')
     fd=os.open(paths['events'],os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
     with os.fdopen(fd,'w') as stream:
         def emit(event,**fields):
-            stream.write(json.dumps({'schema':SCHEMA,'event':event,'identity':value['identity'],
+            stream.write(json.dumps({'schema':selected['schema'],'event':event,'identity':value['identity'],
                 'operation_id':args.operation_id,'at':probe.utc_now(),**fields},sort_keys=True)+'\n')
             stream.flush();os.fsync(stream.fileno())
         emit('armed')
@@ -223,7 +454,8 @@ def trace(args,value,plan,paths):
             if time.monotonic()>=deadline:raise TimeoutError('gate did not appear')
             time.sleep(.025)
         gateproof=private_json(paths['gate'])
-        if gateproof.get('identity')!=value['identity'] or gateproof.get('operation_id')!=args.operation_id or gateproof.get('unit')!=paths['worker']:
+        if (gateproof.get('schema') != selected['gate_schema'] or gateproof.get('identity')!=value['identity']
+            or gateproof.get('operation_id')!=args.operation_id or gateproof.get('unit')!=paths['worker']):
             raise ValueError('gate identity differs')
         native=local.LocalNative(args,plan,private_json(local.names(args.operation_id)['proof']))
         native.unit=paths['worker']
@@ -231,50 +463,10 @@ def trace(args,value,plan,paths):
             'worker_start_ticks':int(gateproof['start_ticks']),'boot_id':gateproof['boot_id'],
             'gate_executable_sha256':gateproof['executable']['sha256'],
             'gate_executable_device':gateproof['executable']['device'],'gate_executable_inode':gateproof['executable']['inode']}
-        trace_fd=os.open(PRIVATE/('native-wal-'+args.operation_id+'.trace.jsonl'),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
-        class Callbacks:
-            def record(self,event):
-                raw=(json.dumps(event,sort_keys=True)+'\n').encode()
-                written=os.write(trace_fd,raw)
-                if written!=len(raw):raise OSError('short trace evidence write')
-                os.fsync(trace_fd)
-            def revalidate(self,stage,proof):
-                if probe.guard_guest(args)!=value['identity']:raise ValueError('guest identity changed')
-                props=native.properties()
-                if props.get('MainPID')!=str(gateproof['pid']) or props.get('InvocationID')!=gateproof['invocation_id'] or props.get('ControlGroup')!='/system.slice/'+paths['worker']:
-                    raise ValueError('native worker changed')
-                if local.kill.process_start(Path('/proc',str(gateproof['pid']),'stat').read_text())!=gateproof['start_ticks']:
-                    raise ValueError('worker start changed')
-            def release_start_gate(self,proof):
-                self.revalidate('release',proof)
-                if executable(gateproof['pid'])!=gateproof['executable']:raise ValueError('gate executable changed')
-                local.save_private(paths['release'],{'schema':'celikpanel/native-wal-gate-release/v1','operation_id':args.operation_id,'gate':gateproof})
-                emit('gate_released',gate=gateproof)
-            def writer_expected(self):
-                return checkpoint.writer_expected(args,plan,int(gateproof['start_ticks']))
-            def authorize_cut(self,trace_snapshot,prior_wal):
-                self.revalidate('authorize',trace_snapshot)
-                worker=native.worker_identity()
-                proof=checkpoint.inspect(args,plan,worker,trace_snapshot,prior_wal=prior_wal)
-                if proof.get('status')!='verified':
-                    local.save_private(PRIVATE/('native-wal-'+args.operation_id+'.checkpoint-refused.json'),proof)
-                    raise ValueError('WAL checkpoint not verified')
-                self.cut_trace=trace_snapshot;self.cut_prior=prior_wal;self.cut_base=dict(proof)
-                proof['capture']=capture_checkpoint(args.operation_id,proof,prior_wal)
-                proof.update({'status':'verified','operation_id':args.operation_id,'trace_sha256':tracer.proof_digest(trace_snapshot),'prior_wal_sha256':hashlib.sha256(prior_wal).hexdigest()})
-                emit('wal_checkpoint_verified',checkpoint=proof,trace=trace_snapshot)
-                return proof
-            def perform_cut(self,verified_proof):
-                self.revalidate('cut',verified_proof)
-                latest=checkpoint.inspect(args,plan,native.worker_identity(),self.cut_trace,prior_wal=self.cut_prior)
-                if latest!=self.cut_base:raise ValueError('final checkpoint authority changed')
-                self.revalidate('final-cut',verified_proof)
-                emit('kill_requested',scope='exact-update-unit-cgroup',signal='SIGKILL')
-                native.kill()
-                receipt={'status':'cut-sent','trace_sha256':verified_proof['trace_sha256'],'scope':'exact-update-unit-cgroup','signal':'SIGKILL','operation_id':args.operation_id}
-                emit('kill_sent',receipt=receipt)
-                return receipt
-        try:result=tracer.trace_native(registration,Callbacks(),timeout=600)
+        trace_fd=os.open(PRIVATE/(selected['prefix']+'-'+args.operation_id+'.trace.jsonl'),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+        callbacks=make_callbacks(args,value,plan,paths,native,gateproof,tracer,checkpoint,emit,trace_fd)
+        driver=tracer.trace_native if boundary=='wal' else tracer.trace_database_publication
+        try:result=driver(registration,callbacks,timeout=600)
         except Exception as exc:
             result={'status':'inconclusive','reason':'native-trace-'+type(exc).__name__}
         finally:os.close(trace_fd)
@@ -284,7 +476,8 @@ def trace(args,value,plan,paths):
 
 
 def collect(args,value,plan,paths):
-    answer={'schema':SCHEMA,'identity':value['identity'],'operation_id':args.operation_id,'states':{}}
+    selected=profile(boundary_of(args))
+    answer={'schema':selected['schema'],'identity':value['identity'],'operation_id':args.operation_id,'states':{}}
     for unit in (paths['worker'],paths['tracer'],'celikpanel-release-recovery.service','celikpanel-agent.service','celikpanel-panel.service'):
         r=subprocess.run(['/usr/bin/systemctl','show',unit,'-p','Id','-p','LoadState','-p','ActiveState','-p','SubState','-p','MainPID','-p','Result','-p','InvocationID','-p','OnFailure'],capture_output=True,text=True,timeout=5,env=local.kill.ENV)
         answer['states'][unit]=dict(l.split('=',1) for l in r.stdout.splitlines() if '=' in l)
@@ -302,6 +495,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     for key in ('lab-nonce','vm-uuid','cell-id','node','operation-id'):parser.add_argument('--'+key,required=True)
     parser.add_argument('--mode',choices=('gate','trace','collect'),required=True)
+    parser.add_argument('--boundary',choices=BOUNDARIES,default='wal')
     args=parser.parse_args(argv);value,plan,paths=load(args)
     return {'gate':gate,'trace':trace,'collect':collect}[args.mode](args,value,plan,paths)
 
