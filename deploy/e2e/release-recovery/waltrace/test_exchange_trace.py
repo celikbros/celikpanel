@@ -336,6 +336,7 @@ class OwnedChildExchangeTests(unittest.TestCase):
         os.close(ready_r)
         pidfd = os.pidfd_open(child)
         kernel = exchange.ExchangeKernel.__new__(exchange.ExchangeKernel)
+        kernel._wait_after = 0
         attached, reaped = False, False
         deadline = time.monotonic() + 10
         evidence = {'scope': 'new-owned-child-kernel-only', 'pid': child, 'success_requested': succeeds}
