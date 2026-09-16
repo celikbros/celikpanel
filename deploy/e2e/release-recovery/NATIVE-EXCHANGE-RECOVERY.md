@@ -197,3 +197,48 @@ skipped its missing actual-binary input. X and Z now cover this two-fault bounda
 on Debian and Arch. Product code and persisted schemas are unchanged. Other
 checkpoints, real workload/renewal independence, signed admission, physical
 power-loss durability and the remaining P0 acceptance items stay open.
+
+## AA: changed-runner trial was inconclusive before the requested faults
+
+A fresh Arch attempt on September 16 used the runner correction from commit
+`8d62896f0fb5be329090923ad074115941c0328c` (tree
+`fb57ef517982dec3b5d08673efcc658a23ace21b`). Its unpublished Alpha81 fixture archive
+was `1c49df9ea65ec5758470b4ee347ed51cd2d00b7cf3f3f34253f58543d4a6cba8`.
+The genuine Alpha64/schema38 baseline, populated SQL fixture and authoritative
+DNS precheck completed in `/var/tmp/cp-release-drill-20260916-aa`. Operation
+`d8b241a2e3665e04cc81f261628cb926` belonged to cell
+`release-recovery__90f1cb34a68e7020`, Arch UUID
+`a0eaacb0-3f8f-521f-8620-390d6c62649e`.
+
+The attempt did **not** establish either requested fault boundary. While the
+candidate's `recovery verify-compatibility --mode --normal` waited, a read-only
+process capture found panel-checker leader 14295 in zombie state and thread 14299
+in a ptrace stop owned by tracer 10882. That thread was absent from the preserved
+`task-admitted` records. The exact kernel event ordering behind this discrepancy
+has not been established. The tracer reached its bound and reported
+`trace-detach-incomplete-controller-watchdog-required`, with
+`controller_cut_called=false`, `cleanup.complete=false` and leader 14295 still
+listed in its cleanup result. The host reboot controller timed out without
+submitting a reset. Recorded controller events were `armed`, `gate_released`,
+`trace_finished`; no exchange-cut or recovery-reboot proof was produced.
+
+This is an **inconclusive measurement**, not evidence that the changed boot
+readiness path passed or failed. No mutation was retried. Current state, journal,
+raw trace and the process diagnostic were preserved; the registered Arch and
+Debian QEMU guests were then stopped with their disks retained. A corrected,
+verified tracer and a fresh registered attempt are required before claiming
+changed-runner native acceptance. X/Z remain evidence for their earlier source.
+
+The local candidate used Go 1.26.5 and Node 26.8.1. Two earlier build-preparation
+failures were retained: the wrong default Go version and Windows archive CRLF
+conversion. The successful archive used Git's LF export; runner/checker-source
+list bytes were compared with their exact Git blobs. The baseline installer again
+reported a kernel/modules mismatch; there was no trial reboot to observe the new
+kernel. No firewall/VPN or workload-independence claim is made.
+
+| Preserved proof | SHA256 |
+|---|---|
+| AA inconclusive assessment, `evidence/arch/aa-inconclusive-assessment.json` | `f923722f2c51c2a524e18e3e03c92c673435029cf4098a85c38d1332ac767c7a` |
+| Raw final trace, `evidence/arch/aa-final-trace.jsonl` | `4e2018a59e2bd734c0a34542cb87329c8ca6acae0d07138ccf0cf96ac1971765` |
+| Candidate build evidence (including both failed preparations) | `54c62e5c7a2637935efa509b5a9794deb962f32fc54af8c918765342bcf6e1aa` |
+| Helper source binding, `analysis/helper-source-binding-1789531049641104441.json` (20 helpers; five CRLF-only differences) | `284e54c521105e7627bed733a4f6c49de9cc9afa78299b1a57a2e46616a17a63` |

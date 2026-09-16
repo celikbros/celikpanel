@@ -129,6 +129,14 @@ set -eu
 root='$TEST_ROOT'
 printf '%s\n' "\$*" >>"\$root/systemctl.trace"
 case \$1 in
+    is-system-running)
+        if [[ -f "\$root/readiness-delay" ]]; then sleep 10; fi
+        if [[ -f "\$root/readiness-state" ]]; then
+            cat "\$root/readiness-state"
+            exit "\$(cat "\$root/readiness-status")"
+        fi
+        printf '%s\n' running
+        exit 0 ;;
     show)
         case \$2 in
             --property=LoadState) printf '%s\n' loaded ;;
@@ -401,6 +409,7 @@ make_retained_release() {
 #!/usr/bin/env bash
 set -Eeuo pipefail
 root=${CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT:?}
+printf "dispatch\n" >>"$root/child-dispatches"
 case $(cat "$root/child-mode") in
     success) rm -f -- "$root/var/lib/celikpanel-release-transaction/active" ;;
     leave-active) : ;;
@@ -451,14 +460,67 @@ release_observation_publish "$OBSERVATION_TEST_REQUEST" "$TARGET_COMMIT" running
         "$SNAPSHOT" "$TARGET_COMMIT"
 )
 observation_binding_before=$(sha256sum "$RELEASE_OBSERVATION_BINDINGS/$SNAPSHOT.binding")
+printf 'starting\n' >"$TEST_ROOT/readiness-state"
+printf '1\n' >"$TEST_ROOT/readiness-status"
+run_recovery >"$TEST_ROOT/first-boot-wait.log" 2>&1 || fail 'first boot transition did not defer'
+_release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+[[ $OBSERVATION_PHASE == recovering && $OBSERVATION_PROOF == none &&
+   $OBSERVATION_PREVIOUS == none ]] || fail 'first boot wait invented a recovery failure'
+[[ ! -e "$TEST_ROOT/child-dispatches" && -f "$TRANSACTION_ROOT/active" ]] || fail 'first boot wait dispatched or completed recovery'
+rm -f -- "$TEST_ROOT/readiness-state" "$TEST_ROOT/readiness-status"
 printf '%s\n' fail >"$TEST_ROOT/child-mode"
 write_active_marker
 expect_failure observed-child-failure run_recovery
 _release_observation_read "$OBSERVATION_TEST_REQUEST" 0
 [[ $OBSERVATION_PHASE == recovery_required && $OBSERVATION_PROOF == none &&
    $OBSERVATION_REASON == recovery_failed ]] || fail 'runner failure did not publish exact recovery observation'
+# A boot transition is a pending prerequisite, not a failed rollback. Exercise
+# the real runner while the fixture child would succeed if wrongly dispatched.
 printf '%s\n' success >"$TEST_ROOT/child-mode"
-write_active_marker
+transition_marker_before=$(sha256sum "$TRANSACTION_ROOT/active")
+transition_dispatch_before=$(sha256sum "$TEST_ROOT/child-dispatches")
+for readiness in initializing starting stopping; do
+    printf '%s\n' "$readiness" >"$TEST_ROOT/readiness-state"
+    printf '1\n' >"$TEST_ROOT/readiness-status"
+    run_recovery >"$TEST_ROOT/deferred-$readiness.log" 2>&1 || fail "$readiness did not defer"
+    grep -F 'native recovery timer will retry this same operation' "$TEST_ROOT/deferred-$readiness.log" >/dev/null || fail 'deferred recovery has no resumption guidance'
+    [[ $(sha256sum "$TRANSACTION_ROOT/active") == "$transition_marker_before" ]] || fail 'deferral changed the transaction'
+    [[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'deferral dispatched recovery'
+    [[ $(sha256sum "$RELEASE_OBSERVATION_BINDINGS/$SNAPSHOT.binding") == "$observation_binding_before" ]] || fail 'deferral changed the exact request binding'
+    _release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+    [[ $OBSERVATION_PHASE == recovering && $OBSERVATION_PROOF == none &&
+       $OBSERVATION_REASON == recovery_running && $OBSERVATION_PREVIOUS == recovery_failed ]] || fail 'deferral lost prior failure or claimed terminal proof'
+    (exec 9<>"$TRANSACTION_ROOT/transaction.lock"; flock -xn 9) || fail 'deferred invocation retained the transaction lock'
+    observation_before=$(sha256sum "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")
+    expect_failure "final-proof-$readiness" run_final_proof
+    grep -F 'final-state proof requires no pending transaction markers' "$TEST_ROOT/final-proof-$readiness.stderr" >/dev/null || fail 'final proof accepted deferral as completion'
+    [[ $(sha256sum "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status") == "$observation_before" ]] || fail 'final proof changed observation'
+    [[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'final proof dispatched recovery'
+done
+# A surprising status, malformed response or bounded probe failure is not a
+# known transition and must never reach the mutation child.
+for readiness in maintenance offline unknown empty multiline running-error starting-error timeout; do
+    printf '1\n' >"$TEST_ROOT/readiness-status"
+    case $readiness in
+        empty) : >"$TEST_ROOT/readiness-state" ;;
+        multiline) printf 'starting\nrunning\n' >"$TEST_ROOT/readiness-state" ;;
+        running-error) printf 'running\n' >"$TEST_ROOT/readiness-state" ;;
+        starting-error) printf 'starting\n' >"$TEST_ROOT/readiness-state"; printf '2\n' >"$TEST_ROOT/readiness-status" ;;
+        timeout) printf 'running\n' >"$TEST_ROOT/readiness-state"; printf '0\n' >"$TEST_ROOT/readiness-status"; : >"$TEST_ROOT/readiness-delay" ;;
+        *) printf '%s\n' "$readiness" >"$TEST_ROOT/readiness-state" ;;
+    esac
+    expect_failure "readiness-$readiness" run_recovery
+    grep -F 'Cannot verify operating system readiness' "$TEST_ROOT/readiness-$readiness.stderr" >/dev/null || fail 'readiness rejection was not explained'
+    [[ $(sha256sum "$TRANSACTION_ROOT/active") == "$transition_marker_before" ]] || fail 'unknown readiness changed the transaction'
+    [[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'unknown readiness dispatched recovery'
+    rm -f -- "$TEST_ROOT/readiness-delay"
+done
+rm -f -- "$TEST_ROOT/readiness-state" "$TEST_ROOT/readiness-status"
+# Even a ready host must not use the read-only final-proof command to repair
+# an active transaction; only the subsequent recovery invocation may dispatch.
+expect_failure final-proof-ready-active run_final_proof
+[[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'ready final proof dispatched recovery'
+# Ready dispatch resumes the same marker and request without a new mutation.
 run_recovery
 _release_observation_read "$OBSERVATION_TEST_REQUEST" 0
 [[ $OBSERVATION_PHASE == recovered && $OBSERVATION_PROOF == rollback_verified &&
@@ -471,6 +533,16 @@ expect_failure child-exit0-marker-remains run_recovery
 grep -F 'release recovery child returned success while a verified marker remains' \
     "$TEST_ROOT/child-exit0-marker-remains.stderr" >/dev/null ||
     fail 'successful child bypassed final marker reproof'
+
+for readiness_status in 0 1; do
+    printf 'degraded\n' >"$TEST_ROOT/readiness-state"
+    printf '%s\n' "$readiness_status" >"$TEST_ROOT/readiness-status"
+    write_active_marker
+    expect_failure "degraded-$readiness_status" run_recovery
+    grep -F 'release recovery child returned success while a verified marker remains' \
+        "$TEST_ROOT/degraded-$readiness_status.stderr" >/dev/null || fail 'degraded readiness did not reach child reproof'
+done
+rm -f -- "$TEST_ROOT/readiness-state" "$TEST_ROOT/readiness-status"
 
 printf '%s\n' fail >"$TEST_ROOT/child-mode"
 write_active_marker
