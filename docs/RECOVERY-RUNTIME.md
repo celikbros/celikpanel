@@ -154,9 +154,9 @@ recovery dispatch or observation publication; it cannot turn deferral into proof
 A deferred invocation is not completed recovery. Its journal names the waiting
 prerequisite and automatic next action. An exact bound observation remains
 `recovering`, with `terminal_proof=none`; any previous failure stays recorded.
-No persisted schema, kit protocol or database version changes. The ordinary
-browser still receives the existing nonterminal recovery state, not a new typed
-boot-wait reason. Detailed waiting guidance in that UI remains outside this change.
+The original readiness correction changed no persisted schema, kit protocol or database version. That original runner change exposed only a generic nonterminal browser state.
+The subsequent [optional wait observation](RECOVERY-ACCESS.md#operating-system-transition-guidance-2026-09-16)
+adds compatible UI/CLI guidance without changing the canonical v1 record.
 
 This addresses D-025 invariants 2–5 and P0.2/P0.3. The actual runner contract tests
 exercise first boot without an invented failure, all three deferred states after
@@ -179,6 +179,6 @@ The separate [AD native Debian acceptance](../deploy/e2e/release-recovery/NATIVE
 passes the same two-fault boundary: one boot deferral, zero postboot recovery
 failures and automatic completion of the same rollback. All 100 old rows across
 55 tables, DNS and HTTPS pass; one later metrics row is recorded separately.
-AC's earlier preparation-only failure remains preserved. Browser waiting guidance
-and the wider P0 matrix remain open. AB/AD prove eventual recovery at this
+AC's earlier preparation-only failure remains preserved. The subsequent UI/CLI wait guidance has component and fixture evidence; fresh
+native worker-to-UI binding acceptance and the wider P0 matrix remain open. AB/AD prove eventual recovery at this
 boundary, not uninterrupted access or power-loss durability.

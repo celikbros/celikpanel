@@ -153,3 +153,32 @@ test('a rejected lazy provider reaches the eager recovery boundary',async()=>{
  assert.ok(!auth.includes('<RouteLoadBoundary>'),'initial lazy shells reach the eager root boundary');
  assert.ok(app.slice(app.indexOf('function App()')).indexOf('<RecoveryBoundary>')<app.slice(app.indexOf('function App()')).indexOf('<SystemUpdateOperationProvider>'));
 });
+
+
+test('optional waiting guidance keeps v1 semantics and ignores untrusted or inapplicable hints',()=>{
+ const base={...known('running'),phase:'recovering',reason:'recovery_running',previous_failure:'update_failed'};
+ for(const reason of ['initializing','starting','stopping']) {
+  const value=parseRecoveryObservation({...base,waiting_for:reason},id);
+  assert.equal(value.waiting_for,reason);assert.equal(value.previous_failure,'update_failed');assert.equal(value.terminal_proof,'none');
+ }
+ for(const waiting_for of [undefined,'unknown','private-diagnostic',{},null])assert.equal(parseRecoveryObservation({...base,waiting_for},id).waiting_for,undefined);
+ for(const phase of ['failed','recovered','succeeded'])assert.equal(parseRecoveryObservation({...known(phase),waiting_for:'starting'},id).waiting_for,undefined);
+ assert.equal(parseRecoveryObservation({...base,observation:'unavailable',waiting_for:'starting'},id).waiting_for,undefined);
+ const waited=parseRecoveryObservation({...base,waiting_for:'starting'},id);
+ assert.equal(reconcileRecoveryObservation(waited,parseRecoveryObservation(base,id)).record.waiting_for,undefined);
+});
+
+test('waiting recovery shows automatic continuation and known failure; checking is GET only',async()=>{
+ const waited={...known('running'),phase:'recovering',reason:'recovery_running',waiting_for:'starting',previous_failure:'update_failed'};
+ setup(async()=>admin,async()=>Response.json(waited));
+ try {
+  await act(async()=>{tree=Renderer.create(React.createElement(RecoveryStatus,{username:'admin'}))});
+  const content=JSON.stringify(tree.toJSON());assert.ok(content.includes('recovery.wait.starting'));assert.ok(content.includes('recovery.wait.next'));assert.ok(content.includes('recovery.reason.update_failed'));
+  assert.ok(!content.includes('recovery.next.recovering'));
+  await act(async()=>{await tree.root.findByType('button').props.onClick()});
+  assert.equal(calls.length,2);assert.ok(calls.every(([url,options])=>url.endsWith(id)&&(!options.method||options.method==='GET')));
+  globalThis.fetch=async()=>{throw new Error('offline')};
+  await act(async()=>{await tree.root.findByType('button').props.onClick()});
+  assert.ok(JSON.stringify(tree.toJSON()).includes('recovery.wait.starting'));assert.ok(JSON.stringify(tree.toJSON()).includes('recovery.observationUnavailable'));
+ }finally{await clean()}
+});

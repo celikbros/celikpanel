@@ -4,14 +4,17 @@ package recoveryobs
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -48,11 +51,22 @@ func readAt(root, id string, uid, gid uint32, anchor string) Status {
 		return unavailable(id)
 	}
 	defer unix.Close(fd)
-	r, err := readRecord(fd, id, uid, gid)
+	raw, identity, err := readObservationFile(fd, id+".status", uid, gid)
 	if err != nil {
 		return unavailable(id)
 	}
-	return r.Status()
+	r, err := Decode(raw, id)
+	if err != nil {
+		return unavailable(id)
+	}
+	status := r.Status()
+	if r.Phase == "recovering" && r.TerminalProof == "none" {
+		waiting, _, err := readObservationFile(fd, id+".wait", uid, gid)
+		if err == nil {
+			status.WaitingFor = decodeWaiting(waiting, id, identity, raw)
+		}
+	}
+	return status
 }
 
 // Every directory component is opened relative to the verified preceding FD.
@@ -109,25 +123,54 @@ func openRoot(root string, uid, gid uint32, anchor string, create bool) (int, er
 }
 
 func readRecord(rootFD int, id string, uid, gid uint32) (Record, error) {
-	fd, err := unix.Openat(rootFD, id+".status", unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
+	raw, _, err := readObservationFile(rootFD, id+".status", uid, gid)
 	if err != nil {
 		return Record{}, err
+	}
+	return Decode(raw, id)
+}
+
+func readObservationFile(rootFD int, name string, uid, gid uint32) ([]byte, string, error) {
+	fd, err := unix.Openat(rootFD, name, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, "", err
 	}
 	f := os.NewFile(uintptr(fd), "recovery-observation")
 	defer f.Close()
 	var st unix.Stat_t
 	if unix.Fstat(fd, &st) != nil || st.Mode&unix.S_IFMT != unix.S_IFREG || st.Mode&0o7777 != 0o640 || st.Uid != uid || st.Gid != gid || st.Nlink != 1 || st.Size <= 0 || st.Size > MaxRecordSize {
-		return Record{}, ErrUnavailable
+		return nil, "", ErrUnavailable
 	}
 	raw, err := io.ReadAll(io.LimitReader(f, MaxRecordSize+1))
 	if err != nil {
-		return Record{}, ErrUnavailable
+		return nil, "", ErrUnavailable
 	}
 	var after unix.Stat_t
 	if unix.Fstat(fd, &after) != nil || st.Size != after.Size || st.Mtim != after.Mtim || st.Ctim != after.Ctim || st.Nlink != after.Nlink {
-		return Record{}, ErrUnavailable
+		return nil, "", ErrUnavailable
 	}
-	return Decode(raw, id)
+	// Nanosecond timestamps match GNU stat with TZ=UTC0. Identical legacy
+	// republication in the same second must not revive an older wait hint.
+	stamp := func(t unix.Timespec) string {
+		return time.Unix(t.Sec, t.Nsec).UTC().Format("2006-01-02 15:04:05.000000000 -0700")
+	}
+	identity := fmt.Sprintf("%d:%d:%d:%s:%s", st.Dev, st.Ino, st.Size, stamp(st.Mtim), stamp(st.Ctim))
+	return raw, identity, nil
+}
+
+func decodeWaiting(raw []byte, id, identity string, observation []byte) string {
+	lines := strings.Split(string(raw), "\n")
+	if len(lines) != 6 || lines[0] != "schema=celikpanel-recovery-wait/v1" ||
+		lines[1] != "request_id="+id || lines[2] != "observation_identity="+identity ||
+		lines[3] != fmt.Sprintf("observation_sha256=%x", sha256.Sum256(observation)) ||
+		!strings.HasPrefix(lines[4], "waiting_for=") || lines[5] != "" {
+		return ""
+	}
+	reason := strings.TrimPrefix(lines[4], "waiting_for=")
+	if !ValidWaitingFor(reason) {
+		return ""
+	}
+	return reason
 }
 
 // Publish is best-effort observation only. Callers retain their original

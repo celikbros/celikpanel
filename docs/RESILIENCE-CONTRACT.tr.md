@@ -232,7 +232,8 @@ Ayrı [AD Debian deneyi](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY
 bir açılış ertelemesini, aynı işlemin otomatik geri alınmasını, açılış sonrası
 sıfır kurtarma hatasını ve 55 tablodaki 100 eski satırın korunmasını doğrular.
 Değişen yürütücünün bu Debian kabul sınırı kapanır; P0.1–P0.3 bütünüyle kapanmaz.
-Tarayıcıdaki bekleme açıklaması ve geniş matris açıktır. Önceki X/Z hataları,
+Tarayıcıdaki bekleme açıklaması [uyumlu ek gözlemle](RECOVERY-ACCESS.tr.md) uygulandı;
+yeni gerçek worker→arayüz bağı kabulü ve geniş matris açıktır. Önceki X/Z hataları,
 belirsiz AA sonucu ve yalnız hazırlıkta duran AC korunur.
 
 ## Hata matrisi

@@ -102,3 +102,51 @@ Eski worker başlangıç gözlemi üretmediğinden ilk sürüm geçişine geriye
 istek bağı eklenmez; sonuç kullanılamaz kalır. En son snapshot tahmin edilmez.
 İmzalı güncelleme kabulü, geri alma manifestleri, sahibin yetkisi ve kurulu paneli
 yalnız kullanıcının güncellemesi sözleşmeleri korunur.
+
+
+## İşletim sistemi geçişini bekleme açıklaması (2026-09-16)
+
+D-025 ilkeleri 2, 4 ve 5 / P0.2: tam isteğe bağlı kurtarma çağrısı systemd'nin
+`initializing`, `starting` veya `stopping` durumunda ertelendiğinde isteğe bağlı,
+türlenmiş bekleme kaydı üretir. Kullanıcı son kaydedilen önkoşulu, bu bekleme için
+kendisinin işlem yapması gerekmediğini ve yerel zamanlayıcının **aynı işlemi**
+yeniden kontrol edeceğini görür. Arayüz ve sunucu sahibinin CLI'ı önceki hatayı,
+gözlem zamanını ve `terminal_proof=none` durumunu korur. Durum sorgusu kurtarma
+başlatmaz ve yetki süresini uzatmaz.
+
+Sekiz alanlı ana `celikpanel-recovery-observation/v1` kaydı, kit protokolü ve
+veritabanı şeması değişmez. Ayrı `<id>.wait` dosyası
+`celikpanel-recovery-wait/v1` kullanır: satır sonuyla biten tam beş alan (`schema`,
+`request_id`, `observation_identity`, `observation_sha256`, `waiting_for`), en çok
+2 KiB ve ana kayıtla aynı normal dosya/sahip/grup/izin/bağ sayısı kontrolleri.
+Kimlik, ana dosyanın cihazı, inode'u, boyutu, nanosaniyeli mtime ve ctime değeridir;
+GNU stat tarafından UTC biçiminde yazılır. SHA-256 tam içeriğe bağlar. İki yayın
+mevcut üretici kilidini ve atomik yeniden adlandırmayı kullanır. Eski üretici aynı
+saniyede aynı içeriği yazsa bile yeni durum yayını eski bekleme açıklamasını geçersiz kılar.
+
+Okuyucu yalnız bilinen recovering durumu için izin listesindeki `waiting_for`
+değerini döndürür; dosya kimliği ve özeti dışarı verilmez. Eksik, eski, güvensiz
+veya bilinmeyen ek kayıt yok sayılır; doğrulanmış ana v1 durumu kullanılabilir kalır.
+Ek kaydın yazılamaması yerel runner'ın kilidi bırakıp ertelemesini engellemez.
+Eski okuyucular ek dosyayı yok sayar; eski üreticilerin onu yazması veya silmesi
+gerekmez. HTTP/CLI JSON alanı isteğe bağlıdır; eski tarayıcı genel kurtarma
+metnini korur, yeni tarayıcı yalnız v1 içeren eski yanıtları kabul eder. Nihai
+kanıt önceliklidir. Bekleme bir gözlemdir; anlık canlılık güvencesi veya yeni
+değişiklik yapma yetkisi değildir.
+
+Sınırlı doğrulama: gerçek shell→Go yayını üç bekleme durumunu, eski v1 okumayı,
+aynı içerikli yalnız-v1 yeniden yayını, nihai kanıt önceliğini ve bozuk, fazla büyük,
+yanlış işlem/kimlik/özet, güvensiz izin, sembolik bağ ve FIFO ek dosyalarını sınar.
+Runner sözleşme testleri işaretçi ve istek bağının korunmasını, önceki hatayı,
+bırakılan kilidi, aynı işlemin devamını ve ek yayının başarısızlığından etkilenmemeyi
+doğrular. CLI ve yalnız yöneticinin eriştiği HTTP testleri aynı anlamı korur.
+460 web testi ve üretim derlemesi geçti. Yerel Chrome'da EN/TR, 1440 ve 390 px,
+sayfa yenileme ve sonradan başarısız okuma sınandı: aynı kimlik ve hata korundu;
+yalnız GET istekleri, sıfır sayfa hatası ve yatay taşma. Tarayıcıdaki API yanıtları
+ve runner testindeki systemd hazır olma yanıtları test verisidir.
+
+Önceki gerçek AB/AD deneyleri bu yeni arayüz bağını **kanıtlamaz**; deney güncelleyicisi
+gerçek worker ilişkisi üretmemişti. Gerçek worker bağı ve bu okuyucu/arayüz ile yeni
+yerel kurtarma kabulü açık kalır. Bu, sınırlı yönlendirme uygulamasını tamamlar;
+P0.2'yi veya tüm dayanıklılık matrisini kapatmaz. Bu değişiklik sürüm yayımlamaz
+ve kurulu panel güncellemez.

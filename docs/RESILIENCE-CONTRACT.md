@@ -215,7 +215,10 @@ The separate [AD Debian drill](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RE
 now verifies one boot deferral, same-operation automatic rollback, zero postboot
 recovery failures and all 100 old rows retained across 55 tables. This closes
 that changed-runner Debian boundary, not P0.1–P0.3 in full. Browser-specific
-waiting guidance and the wider matrix remain open. Earlier X/Z failures,
+waiting guidance is now implemented with
+[compatible optional observations](RECOVERY-ACCESS.md#operating-system-transition-guidance-2026-09-16);
+its fresh native worker-to-UI binding acceptance and the wider matrix remain open.
+Earlier X/Z failures,
 inconclusive AA and preparation-only AC remain preserved.
 
 ## Fault matrix
