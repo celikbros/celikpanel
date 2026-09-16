@@ -134,3 +134,36 @@ Gerçek deneyler ve uygulanamayan hata girişimleri
 ayrı sonuçlarla tutulur.
 
 Tamamlanmış yedekten geri alma ayrıca [bağımsız kurtarma verisini](RECOVERY-MATERIAL.tr.md) ve ona bağlı v2 yayınlama kaydını kullanır. Eski v1 işlemleri mevcut okuyucuyu korur; kalan kabul matrisi tamamlanmış sayılmaz.
+
+## İşletim sistemi geçişinde kurtarmayı erteleme
+
+Açılışta etkin olan kurtarma oneshot servisi, `multi-user.target` hedefine ulaşmanın
+bir parçasıdır. İçinde systemd açılışının bitmesini beklemek, açılışın kendisini
+engelleyebilir. Runner artık doğrulanmış güncelleme/geri alma alt sürecini başlatmadan
+önce tek ve süre sınırı olan salt-okur hazırlık sorgusu yapar. `running` (çıkış 0)
+ve `degraded` (çıkış 0 veya 1) başlatmaya izin verir. Çıkış 1 ile `initializing`,
+`starting` veya `stopping` ise başlatmayı erteler: işlem kilidi bırakılır; işlem
+işaretçileri, snapshot ve istek bağlantısı değiştirilmeden çağrı sonlanır. Mevcut
+yerel zamanlayıcı çağrı bittikten sonra aynı işlemi yeniden ele alır. Sorgunun
+zaman aşımı beş saniye, zorla sonlandırma ek sınırı bir saniyedir. Bilinmeyen çıktı,
+beklenmeyen çıkış kodu veya başarısız/zaman aşımına uğramış sorgu kurtarmayı başlatma
+yetkisi vermez; günlük incelenecek hazırlık kontrolünü açıklar. Alt sürecin değişiklik
+anındaki platform ve kilit kontrolleri zorunlu kalır. Salt-okur son durum doğrulaması,
+kurtarma başlatmadan veya gözlem yazmadan önce bekleyen işlem işaretçilerini reddeder;
+ertelemeyi tamamlanma kanıtına çeviremez.
+
+Ertelenen çağrı, tamamlanmış kurtarma değildir. Günlük beklenen önkoşulu ve otomatik
+sonraki adımı açıklar. Tam isteğe bağlı gözlem `recovering`, `terminal_proof=none`
+olarak kalır; önceki hata korunur. Kalıcı şema, kit protokolü veya veritabanı sürümü
+değişmez. Tarayıcı yeni bir açılış bekleme nedeni yerine mevcut, sonlanmamış kurtarma
+durumunu alır. Arayüzde ayrıntılı açılış bekleme açıklaması bu değişikliğin dışındadır.
+
+Bu çalışma D-025 ilkeleri 2–5 ve P0.2/P0.3 kapsamındadır. Gerçek runner sözleşme
+testleri; ilk açılışta hata uydurulmamasını, bilinen hatadan sonra üç bekleme durumunu,
+istek/işaretçi kanıtlarının korunmasını, kilidin bırakılmasını, aynı işlemin sonradan
+tamamlanmasını, degraded durumunu, bozuk/bilinmeyen yanıtları ve zaman aşımını sınar.
+Geri alma giriş testleri gerçek devralınmış kilit kontrollerini korur. Bu testlerde
+systemctl ve geri yükleme alt süreci modellenir; **değişen runner için gerçek yeniden
+başlatma kabul kanıtı değildir**. Debian X ve Arch Z eski runner ile çalışmıştır;
+açılış hataları tarihsel kanıt olarak korunur. Yeni kaynak kimliğine sabitlenmiş adayla
+yeniden başlatma deneyi ve kalan kontrol noktası/hizmet matrisi açık kalır.

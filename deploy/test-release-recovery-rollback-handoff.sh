@@ -46,6 +46,16 @@ chmod 0600 "$SNAPSHOT_PATH/service-states.tsv"
 : >"$TRANSACTION_ROOT/transaction.lock"
 chmod 0600 "$TRANSACTION_ROOT/transaction.lock"
 
+# Only the runner's read-only readiness query is modeled; unexpected native
+# service operations still fail this fixture.
+install -d -m 0755 "$TEST_ROOT/usr/bin"
+cat >"$TEST_ROOT/usr/bin/systemctl" <<'EOF'
+#!/bin/bash
+[[ $# == 1 && $1 == is-system-running ]] || exit 98
+printf 'running\n'
+EOF
+chmod 0755 "$TEST_ROOT/usr/bin/systemctl"
+
 # Preserve the complete production prefix and its actual top-level calls.
 # Only fixed filesystem anchors and unrelated vendor-platform preflight are
 # replaced. This consumes the runner's real env -i tuple, inherited FD9 and

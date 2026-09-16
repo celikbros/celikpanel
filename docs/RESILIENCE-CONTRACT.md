@@ -204,6 +204,13 @@ items. An emergency incident correction may still ship with its narrow evidence
 and limits, but it cannot mark the foundation complete. Alpha80 is such a scoped
 correction, not proof of the full contract.
 
+The [systemd transition correction](RECOVERY-RUNTIME.md#deferring-recovery-during-an-operating-system-transition)
+adds a bounded dispatch deferral and preserves the same pending operation and
+previous failure evidence. It also prevents read-only final proof from dispatching
+recovery for pending markers. Local contracts pass; a new pinned-candidate native
+reboot drill and browser-specific waiting guidance remain open. Earlier X/Z boot
+failures remain historical evidence, not acceptance for this changed runner.
+
 ## Fault matrix
 
 The VM fixture must start from a released installation with real state: populated

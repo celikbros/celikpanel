@@ -636,6 +636,10 @@ DISPATCH_FD_IDENTITY=$(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$TRANSACTION_FD") 
 [[ $DISPATCH_LOCK_IDENTITY == "$DISPATCH_FD_IDENTITY" ]] ||
     die 'dispatch descriptor does not name the fixed transaction lock'
 classify_transaction
+# Final proof is read-only: neither deferred dispatch nor a child that repairs
+# an active transaction may be interpreted as an already-completed operation.
+[[ $VERIFY_FINAL_STATE == 0 || $TRANSACTION_PHASE == none ]] ||
+    die 'final-state proof requires no pending transaction markers'
 if [[ $TRANSACTION_PHASE == none ]]; then
     if [[ $VERIFY_FINAL_STATE == 1 ]]; then
         verify_installed_foundation_final
@@ -753,6 +757,26 @@ IFS=$'\t' read -r _ _ EXPECTED_PANEL_STATE _ \
     < <(sed -n '2p' "$RECOVERY_SNAPSHOT_DIR/service-states.tsv")
 [[ -n $EXPECTED_AGENT_STATE && -n $EXPECTED_PANEL_STATE ]] ||
     die 'recovery coordinator expectations are missing'
+
+# The boot-enabled oneshot participates in reaching multi-user.target. Waiting
+# here for systemd to become running would therefore hold up the very boot we
+# need. Probe once, yield on a verified transition, and let the existing native
+# timer retry the same durable transaction after this invocation has exited.
+# Unknown/error output is never permission to dispatch privileged recovery.
+systemd_readiness_status=0
+systemd_readiness=$(/usr/bin/timeout --signal=TERM --kill-after=1s 5s \
+    "$SYSTEMCTL_BIN" is-system-running 2>/dev/null) || systemd_readiness_status=$?
+case "$systemd_readiness:$systemd_readiness_status" in
+    running:0|degraded:0|degraded:1) ;;
+    initializing:1|starting:1|stopping:1)
+        release_transaction_lock
+        printf '%s\n' \
+            'Recovery waiting for the operating system transition; no owner action is needed. The native recovery timer will retry this same operation. Recovery is not yet complete.' \
+            'Kurtarma işletim sistemi geçişini bekliyor; kullanıcı işlemi gerekmiyor. Yerel kurtarma zamanlayıcısı aynı işlemi yeniden deneyecek. Kurtarma henüz tamamlanmadı.'
+        exit 0
+        ;;
+    *) die 'Cannot verify operating system readiness for recovery; no recovery child was started. Inspect this service journal and systemctl is-system-running; the native timer will recheck the same operation.' ;;
+esac
 
 # Keep fixed descriptor 9 and the same locked open file description
 # continuously across dispatch.  The signed target updater/rollback entrypoint

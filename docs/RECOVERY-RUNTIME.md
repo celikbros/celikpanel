@@ -133,3 +133,37 @@ The exact native trials, including failed or unexercised fault injections, are
 recorded in [independent runtime acceptance](../deploy/e2e/release-recovery/INDEPENDENT-RUNTIME.md).
 
 Complete-snapshot rollback also uses [independent recovery material](RECOVERY-MATERIAL.md) and its material-bound v2 publication intent. Legacy v1 transactions retain their existing reader; this does not close the remaining acceptance matrix.
+
+## Deferring recovery during an operating system transition
+
+The boot-enabled recovery oneshot is part of reaching `multi-user.target`.
+Waiting inside it for systemd to finish booting can therefore hold boot itself.
+The runner now makes one read-only, bounded readiness query before dispatching
+its verified update/rollback child. `running` (status 0) and `degraded` (status
+0 or 1) admit dispatch. `initializing`, `starting` or `stopping`, each with
+status 1, defer dispatch: the invocation releases its transaction lock and exits
+without changing the transaction markers, snapshot or request binding. The
+existing native timer re-enters the same operation after the invocation exits.
+The query has a five-second timeout and a one-second forced-termination bound.
+Unknown output, an unexpected exit status or a failed/timed-out query does not
+authorize recovery dispatch; the journal explains the readiness check to inspect.
+The child's own mutation-time platform and lock checks remain mandatory. The
+read-only final-state command rejects pending transaction markers before any
+recovery dispatch or observation publication; it cannot turn deferral into proof.
+
+A deferred invocation is not completed recovery. Its journal names the waiting
+prerequisite and automatic next action. An exact bound observation remains
+`recovering`, with `terminal_proof=none`; any previous failure stays recorded.
+No persisted schema, kit protocol or database version changes. The ordinary
+browser still receives the existing nonterminal recovery state, not a new typed
+boot-wait reason. Detailed waiting guidance in that UI remains outside this change.
+
+This addresses D-025 invariants 2–5 and P0.2/P0.3. The actual runner contract tests
+exercise first boot without an invented failure, all three deferred states after
+a known failure, unchanged request/marker evidence, released locks, later same-
+operation completion, degraded readiness, malformed/unknown responses and timeout.
+The rollback entrypoint handoff tests retain their real inherited-lock checks.
+Those tests model systemctl and child restoration; they are **not native reboot
+acceptance for the changed runner**. Debian X and Arch Z used the earlier runner
+and retain their early-boot failures as historical evidence. A new pinned-candidate
+native reboot drill and the remaining checkpoint/workload matrix stay open.

@@ -221,6 +221,13 @@ Acil bir olay düzeltmesi dar kapsamlı kanıtları ve sınırlarıyla yine
 yayımlanabilir, ancak temelin tamamlandığı anlamına gelemez. Alpha80 böyle sınırlı
 bir düzeltmedir; sözleşmenin tamamının kanıtı değildir.
 
+[Systemd geçişi düzeltmesi](RECOVERY-RUNTIME.tr.md#işletim-sistemi-geçişinde-kurtarmayı-erteleme),
+süre sınırı olan başlatma ertelemesiyle aynı bekleyen işlemi ve önceki hata kanıtını
+korur. Salt-okur son doğrulamanın bekleyen işaretçiler için kurtarma başlatmasını da
+engeller. Yerel sözleşmeler geçti; yeni adaya sabitlenmiş gerçek yeniden başlatma
+deneyi ve tarayıcıya özgü bekleme yönlendirmesi açıktır. Önceki X/Z açılış hataları,
+değişen runner için kabul kanıtı yerine tarihsel kanıt olarak korunur.
+
 ## Hata matrisi
 
 Sanal makine test düzeneği, gerçek durum içeren yayımlanmış bir kurulumdan
