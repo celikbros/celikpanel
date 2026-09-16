@@ -67,6 +67,7 @@ class RealExitThreadTests(unittest.TestCase):
         evidence = Path(os.environ['CELIKPANEL_EXIT_TRACE_EVIDENCE'])
         evidence.mkdir(mode=0o700)  # refuse overwriting an earlier campaign
         reconciled = 0
+        replacements = 0
         outcomes = {}
         for trial in range(50):
             rd, wr = os.pipe()
@@ -121,21 +122,19 @@ class RealExitThreadTests(unittest.TestCase):
             outcomes[result['reason']] = outcomes.get(result['reason'], 0) + 1
             self.assertFalse(result['controller_cut_called'])
             self.assertTrue(result['cleanup']['complete'], result)
-            if result['reason'] == 'task-id':
-                # An invalid kernel event-message is a separate inconclusive
-                # trace, never counted as a verified exit-race completion.
-                continue
             self.assertEqual(result['reason'], 'no-exact-native-wal-boundary', result)
             self.assertEqual(result['cleanup']['detached'], [], result)
             admitted = {e['tid'] for e in result['events'] if e['event'] == 'exit-thread-admitted'}
             exited = {e['tid'] for e in result['events'] if e['event'] == 'kernel-wait-exit'}
             self.assertTrue(admitted <= exited)
             reconciled += len(admitted)
-        summary = dict(trials=50, outcomes=outcomes, reconciled_threads=reconciled, kernel=platform.release(),
+            replacements += sum(e['event'] == 'kernel-child-stop-replaced-by-exit' for e in result['events'])
+        summary = dict(trials=50, outcomes=outcomes, reconciled_threads=reconciled, replaced_stops=replacements, kernel=platform.release(),
                        binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
                        scope='controlled children only; not native recovery acceptance')
         (evidence / 'summary.json').write_text(json.dumps(summary, sort_keys=True) + '\n')
-        self.assertGreater(reconciled, 0, 'race was not exercised; no positive race proof')
+        self.assertGreater(reconciled, 0, 'thread race was not exercised; no positive race proof')
+        self.assertGreater(replacements, 0, 'stop replacement was not exercised; no positive race proof')
 
 
 if __name__ == '__main__':

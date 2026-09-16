@@ -275,6 +275,102 @@ class NativeTraceTests(unittest.TestCase):
         self.assertTrue(proof['no_kill_by_tracer'])
         self.assertFalse(any(c[0] == 'cut' for c in callback.calls))
 
+    def test_zero_child_message_requires_real_same_parent_exit_before_resume(self):
+        for event in (native.EVENT_FORK, native.EVENT_VFORK, native.EVENT_CLONE):
+            tracer, kernel, callback = self.make(attached=True)
+            kernel.messages[100] = 0
+            kernel.queue.append((100, stop(native.EVENT_EXIT)))
+            tracer.entries[100] = {'op': 'entry'}
+            tracer.consume(100, stop(event))
+            self.assertEqual(set(tracer.known), {100})
+            self.assertEqual(tracer.exiting, {100})
+            self.assertNotIn(100, tracer.entries)
+            self.assertFalse(kernel.calls)  # no resume before consuming EXIT
+            self.assertFalse(kernel.queue)
+            replacement = tracer.events[-2]
+            self.assertEqual(replacement['event'], 'kernel-child-stop-replaced-by-exit')
+            self.assertEqual(replacement['original_event'], event)
+            self.assertEqual(replacement['replacement_wait_status'], stop(native.EVENT_EXIT))
+            tracer.resume(100)
+            tracer.consume(100, 0)
+            self.assertFalse(tracer.known)
+            self.assertFalse(any(c[0] == 'cut' for c in callback.calls))
+
+    def test_zero_child_message_cannot_substitute_another_wait_event(self):
+        for tid, value in ((101, stop(native.EVENT_EXIT)), (100, stop(native.EVENT_CLONE)),
+                           (100, stop(native.EVENT_STOP)), (100, 0),
+                           (100, stop(native.EVENT_EXIT, signal.SIGUSR1))):
+            tracer, kernel, _ = self.make(attached=True)
+            kernel.messages[100] = 0
+            kernel.wait = lambda tids, deadline: (tid, value)
+            with self.subTest(tid=tid, value=value), self.assertRaisesRegex(
+                    native.Inconclusive, 'child-stop-replacement-unproved'):
+                tracer.consume(100, stop(native.EVENT_CLONE))
+            self.assertEqual(set(tracer.known), {100})
+            self.assertFalse(tracer.exiting)
+            self.assertFalse(kernel.calls)
+
+    def test_replaced_child_stop_rechecks_identity_scope_tracer_and_held_stop(self):
+        for change in ({'start_ticks': 201}, {'tracer_pid': 0},
+                       {'cgroup_raw': b'0::/other\n'}, {'state': 'R'}):
+            tracer, kernel, _ = self.make(attached=True)
+            kernel.messages[100] = 0
+            def replacement(tids, deadline):
+                self.assertEqual(tids, {100})
+                kernel.processes[100].update(change)
+                return 100, stop(native.EVENT_EXIT)
+            kernel.wait = replacement
+            with self.subTest(change=change), self.assertRaises(native.Inconclusive):
+                tracer.consume(100, stop(native.EVENT_CLONE))
+            self.assertFalse(tracer.exiting)
+            self.assertFalse(kernel.calls)
+
+    def test_missing_replacement_exit_keeps_deadline_and_unknown_result(self):
+        tracer, kernel, _ = self.make(attached=True)
+        kernel.messages[100] = 0
+        tracer.deadline = 1.025
+        with self.assertRaisesRegex(native.Inconclusive, 'trace-deadline'):
+            tracer.consume(100, stop(native.EVENT_CLONE))
+        self.assertEqual(kernel.clock, tracer.deadline)
+        self.assertEqual(set(tracer.known), {100})
+        self.assertFalse(tracer.exiting)
+        self.assertFalse(kernel.calls)
+
+    def test_disappeared_parent_is_not_synthesized_as_wait_exit(self):
+        tracer, kernel, _ = self.make(attached=True)
+        kernel.messages[100] = 0
+        def disappeared(tids, deadline):
+            kernel.processes.pop(100)
+            return 100, stop(native.EVENT_EXIT)
+        kernel.wait = disappeared
+        with self.assertRaises(FileNotFoundError):
+            tracer.consume(100, stop(native.EVENT_CLONE))
+        self.assertEqual(set(tracer.known), {100})
+        self.assertFalse(tracer.exiting)
+        self.assertFalse(kernel.calls)
+
+    def test_cleanup_consumes_replacement_using_its_own_bounded_deadline(self):
+        tracer, kernel, callback = self.make(attached=True)
+        tracer.deadline = 0  # normal trace expired; cleanup still has its own bound
+        tracer.stopped.clear()
+        kernel.messages[100] = 0
+        kernel.interrupt = lambda tid: None
+        kernel.queue = [(100, stop(native.EVENT_CLONE)), (100, stop(native.EVENT_EXIT))]
+        original = kernel.wait
+        def waiting(tids, deadline):
+            self.assertGreater(deadline, kernel.clock)
+            self.assertLessEqual(deadline, 6)
+            return original(tids, deadline)
+        kernel.wait = waiting
+        proof = tracer.cleanup()
+        self.assertTrue(proof['complete'], proof)
+        self.assertEqual(proof['detached'], [100])
+        self.assertEqual(proof['observed_exits'], [])
+        self.assertTrue(proof['no_kill_by_tracer'])
+        self.assertFalse(kernel.queue)
+        self.assertFalse(any(c[0] in ('resume', 'seize') for c in kernel.calls))
+        self.assertFalse(any(c[0] == 'cut' for c in callback.calls))
+
     def test_registration_accepts_only_fixed_exact_operation_unit(self):
         self.assertEqual(native.validate_registration(REG), REG)
         for change in ({'unit': 'celikpanel-agent.service'}, {'worker_pid': True}, {'operation_id': '../bad'},

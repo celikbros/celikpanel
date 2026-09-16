@@ -79,3 +79,41 @@ its kernel adapter substitutes the fixture cgroup for native VM registration.
 No installed panel, VM, update or network is touched. The stochastic test must
 actually reconcile a thread; a run that never exercises the race cannot pass.
 Full native exchange/reboot acceptance and the remaining P0 matrix stay open.
+
+## Follow-up: consumed CLONE stop replaced by EXIT
+
+The earlier three `task-id` results remain inconclusive. A separate controlled-child
+probe captured the actual ordering: after consuming CLONE (wait status `198015`),
+GETEVENTMSG returned zero; a bounded wait for **that same parent** returned the
+pending EXIT stop (`394623`). Private read-only SIGINFO observations independently
+identified EXIT. These observations explain the local race; they do not reconstruct
+AA's unrecorded kernel ordering.
+
+The adapter now handles a zero child message only by consuming that real same-parent
+EXIT stop within 100 ms and the existing overall deadline, then rechecking pinned
+identity, tracer, cgroup and held stop. It records both the superseded event and real
+replacement wait status. It neither guesses a child nor resumes the parent early.
+Timeout, a different event or changed identity remains inconclusive. Cleanup uses
+its existing separate deadline. The native ptrace allowlist is unchanged: SIGINFO
+was diagnostic only. There is no product schema, lifecycle or recovery-policy change.
+
+A fresh isolated run `/var/tmp/celikpanel-exit-trace.bIVuSpkR`, with the same pinned
+Go toolchain, kernel and child binary above, completed **50/50** real-exit drains:
+44 reconciled siblings and two observed replaced stops, with no controller cut.
+The opt-in test now requires every trace to drain and both race paths to occur;
+it no longer permits `task-id` as an accepted trial result.
+
+| Follow-up proof | SHA256 |
+|---|---|
+| `evidence/summary.json` | `c3e544a7fe9efaa063dfcbb3e930a63af1e8702a7fa7d1d45c858fcd487b9fe5` |
+| `source.sha256` | `ec57c167d5be47503aa62adc79df38194870919cfcf0e584fb33e96bee17b2af` |
+| `tests.log` | `f1816fb9b509e60e4888e539253d3441fdbdb7a8a8d0ce1a2b045a399028ca6d` |
+
+The adapter suite passes 45 contracts; discovery runs 79 tests (74 passed, five
+optional kernel tests skipped). Added cases reject another TID, non-EXIT or wrong
+signal, unheld stop, lost ownership, PID reuse, changed scope, disappearance and
+missing replacement within the deadline. Cleanup proves detach without fabricated
+wait exit or cut. Existing nonzero CLONE admission remains covered.
+
+This closes the reproduced zero-message uncertainty only. Fresh native exchange
+and recovery-reboot acceptance and the remaining P0 matrix are still open.

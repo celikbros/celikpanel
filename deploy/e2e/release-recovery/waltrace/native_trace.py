@@ -548,6 +548,26 @@ class NativeTrace:
     def missing_boundary_reason(self):
         return 'no-exact-native-wal-boundary'
 
+    def child_message(self, tid, event, *, deadline, scope=True):
+        child = self.kernel.event_message(tid)
+        if child != 0:
+            return child
+        # During group exit a consumed CLONE stop can be replaced by EXIT
+        # before GETEVENTMSG. Zero cannot name a child. Require the actual
+        # pending wait EXIT from this same pinned parent; never synthesize a
+        # stop, guess ancestry, or resume it before consuming that real stop.
+        self.validate_known(tid, scope=scope)
+        got, status = self.kernel.wait({tid}, min(deadline, self.kernel.now() + 0.1))
+        require(got == tid and os.WIFSTOPPED(status) and status >> 16 == EVENT_EXIT
+                and os.WSTOPSIG(status) == signal.SIGTRAP, 'child-stop-replacement-unproved')
+        require(self.validate_known(tid, scope=scope)['state'] == 't', 'exit-stop-not-held')
+        self.exiting.add(tid)
+        self.entries.pop(tid, None)
+        self.event('kernel-child-stop-replaced-by-exit', tid=tid, original_event=event,
+                   replacement_wait_status=status)
+        self.event('kernel-exit-started', tid=tid)
+        return None
+
     def consume(self, tid, status, *, initial=False):
         require(tid in self.known, 'wait-outside-admitted-family')
         if os.WIFEXITED(status) or os.WIFSIGNALED(status):
@@ -570,8 +590,9 @@ class NativeTrace:
             return None
         self.validate_known(tid)
         if event in (EVENT_FORK, EVENT_VFORK, EVENT_CLONE):
-            child = self.kernel.event_message(tid)
-            self.remember(child, parent=tid)
+            child = self.child_message(tid, event, deadline=self.deadline)
+            if child is not None:
+                self.remember(child, parent=tid)
         elif event == EVENT_EXIT:
             self.exiting.add(tid)
             self.event('kernel-exit-started', tid=tid)
@@ -709,8 +730,8 @@ class NativeTrace:
                     self.stopped.add(tid)
                     event = status >> 16
                     if event in (EVENT_FORK, EVENT_VFORK, EVENT_CLONE):
-                        child = self.kernel.event_message(tid)
-                        if child not in self.known:
+                        child = self.child_message(tid, event, deadline=bound, scope=False)
+                        if child is not None and child not in self.known:
                             # Automatically attached descendants still need to
                             # be released if the parent fails before consume().
                             self.remember(child, parent=tid)
