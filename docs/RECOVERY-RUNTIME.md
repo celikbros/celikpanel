@@ -167,3 +167,5 @@ Those tests model systemctl and child restoration; they are **not native reboot
 acceptance for the changed runner**. Debian X and Arch Z used the earlier runner
 and retain their early-boot failures as historical evidence. A new pinned-candidate
 native reboot drill and the remaining checkpoint/workload matrix stay open.
+
+The [AA changed-source attempt](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md#aa-changed-runner-trial-was-inconclusive-before-the-requested-faults) did not reach either fault boundary because the tracer stalled during compatibility checking. Its inconclusive result, incomplete detach and stopped guests are recorded; native readiness acceptance stays open.

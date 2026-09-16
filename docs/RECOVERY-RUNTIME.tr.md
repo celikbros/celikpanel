@@ -167,3 +167,5 @@ systemctl ve geri yükleme alt süreci modellenir; **değişen runner için ger�
 başlatma kabul kanıtı değildir**. Debian X ve Arch Z eski runner ile çalışmıştır;
 açılış hataları tarihsel kanıt olarak korunur. Yeni kaynak kimliğine sabitlenmiş adayla
 yeniden başlatma deneyi ve kalan kontrol noktası/hizmet matrisi açık kalır.
+
+[Değişen kaynakla AA denemesi](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md), izleyici uyumluluk kontrolünde beklediği için iki hata sınırına da ulaşamadı. Sonuçsuz ölçüm, tamamlanmamış detach ve durdurulan misafirler kaydedildi; gerçek açılış hazırlığı kabulü açık kalır.

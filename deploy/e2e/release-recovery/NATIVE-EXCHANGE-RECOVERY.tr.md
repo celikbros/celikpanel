@@ -198,3 +198,47 @@ olmayan biri açıkça atlandı. X ve Z, bu iki kesinti sınırını artık Debi
 üzerinde kapsıyor. Ürün kodu ve kalıcı şemalar değişmedi. Diğer kontrol noktaları,
 gerçek iş yükü/yenileme bağımsızlığı, imzalı kabul, fiziksel güç kaybı dayanıklılığı
 ve kalan P0 kabul işleri açıktır.
+
+## AA: değişen runner deneyi hedef kesintilerden önce sonuçsuz kaldı
+
+16 Eylül tarihli yeni Arch denemesi, runner düzeltmesini içeren
+`8d62896f0fb5be329090923ad074115941c0328c` commit'ini (ağaç:
+`fb57ef517982dec3b5d08673efcc658a23ace21b`) kullandı. Yayımlanmamış Alpha81 deney
+arşivinin özeti `1c49df9ea65ec5758470b4ee347ed51cd2d00b7cf3f3f34253f58543d4a6cba8`.
+Gerçek Alpha64/şema38 kurulumu, dolu SQL fixture'ı ve yetkili DNS ön kontrolü
+`/var/tmp/cp-release-drill-20260916-aa` altında tamamlandı.
+`d8b241a2e3665e04cc81f261628cb926` işlemi,
+`release-recovery__90f1cb34a68e7020` hücresine ve
+`a0eaacb0-3f8f-521f-8620-390d6c62649e` Arch UUID'sine bağlıydı.
+
+Deneme hedeflenen iki hata sınırını da **doğrulayamadı**. Adayın
+`recovery verify-compatibility --mode --normal` çağrısı beklerken salt-okur süreç
+kaydı, panel-checker lideri 14295'i zombie, thread 14299'u ise izleyici 10882'ye
+bağlı ptrace beklemesinde gösterdi. Bu thread saklanan `task-admitted` kayıtlarında
+yoktu. Farkın ardındaki kesin çekirdek olay sırası henüz belirlenmedi. İzleyici
+süre sınırına ulaşıp `trace-detach-incomplete-controller-watchdog-required` bildirdi;
+`controller_cut_called=false`, `cleanup.complete=false` idi ve lider 14295 temizlik
+sonucunda hâlâ listeleniyordu. Host yeniden başlatma denetleyicisi reset göndermeden
+zaman aşımına uğradı. Kaydedilen denetleyici olayları `armed`, `gate_released`,
+`trace_finished` oldu; exchange kesintisi veya kurtarma yeniden başlatma kanıtı oluşmadı.
+
+Bu, **sonuçsuz ölçümdür**; değişen açılış hazırlığı yolunun geçtiği veya başarısız
+olduğu kanıtı değildir. Değişiklik işlemi tekrarlanmadı. Mevcut durum, günlük,
+ham iz ve süreç tanısı korundu; kayıtlı Arch ve Debian QEMU misafirleri diskleri
+saklanarak durduruldu. Değişen runner için gerçek sistem kabulünden önce izleyicinin
+düzeltilip doğrulanması ve yeni kayıtlı deneme gerekir. X/Z yalnız eski kaynaklarının
+kanıtı olarak kalır.
+
+Yerel aday Go 1.26.5 ve Node 26.8.1 ile oluşturuldu. Önceki iki derleme hazırlığı
+hatası korundu: yanlış varsayılan Go sürümü ve Windows arşivinin CRLF dönüşümü.
+Başarılı arşiv Git'in LF dışa aktarımını kullandı; runner ve checker kaynak listesi
+baytları tam Git blob'larıyla karşılaştırıldı. Eski sürüm kurucusu yine çekirdek/modül
+uyuşmazlığı bildirdi; yeni çekirdeği gözlemleyecek deney yeniden başlatması gerçekleşmedi.
+Güvenlik duvarı/VPN veya hizmet bağımsızlığı iddiası yoktur.
+
+| Korunan kanıt | SHA256 |
+|---|---|
+| AA sonuçsuzluk değerlendirmesi, `evidence/arch/aa-inconclusive-assessment.json` | `f923722f2c51c2a524e18e3e03c92c673435029cf4098a85c38d1332ac767c7a` |
+| Son ham iz, `evidence/arch/aa-final-trace.jsonl` | `4e2018a59e2bd734c0a34542cb87329c8ca6acae0d07138ccf0cf96ac1971765` |
+| Aday derleme kanıtı (iki başarısız hazırlık dahil) | `54c62e5c7a2637935efa509b5a9794deb962f32fc54af8c918765342bcf6e1aa` |
+| Helper kaynak bağı, `analysis/helper-source-binding-1789531049641104441.json` (20 helper; beş fark yalnız CRLF) | `284e54c521105e7627bed733a4f6c49de9cc9afa78299b1a57a2e46616a17a63` |
