@@ -224,9 +224,12 @@ bir düzeltmedir; sözleşmenin tamamının kanıtı değildir.
 [Systemd geçişi düzeltmesi](RECOVERY-RUNTIME.tr.md#işletim-sistemi-geçişinde-kurtarmayı-erteleme),
 süre sınırı olan başlatma ertelemesiyle aynı bekleyen işlemi ve önceki hata kanıtını
 korur. Salt-okur son doğrulamanın bekleyen işaretçiler için kurtarma başlatmasını da
-engeller. Yerel sözleşmeler geçti; yeni adaya sabitlenmiş gerçek yeniden başlatma
-deneyi ve tarayıcıya özgü bekleme yönlendirmesi açıktır. Önceki X/Z açılış hataları,
-değişen runner için kabul kanıtı yerine tarihsel kanıt olarak korunur.
+engeller. Yerel sözleşmeler geçti. Yeni
+[AB Arch deneyi](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md), iki
+açılış ertelemesinden sonra aynı işlemin otomatik geri alındığını, açılış sonrası
+sıfır kurtarma hatasını ve 55 tablodaki 102 eski satırın korunduğunu doğrular.
+Değişen yürütücünün Debian kabulü, tarayıcıdaki bekleme açıklaması ve geniş matris
+açıktır. Önceki X/Z hataları ile belirsiz AA sonucu korunur.
 
 ## Hata matrisi
 

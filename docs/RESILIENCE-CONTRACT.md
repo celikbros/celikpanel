@@ -207,9 +207,12 @@ correction, not proof of the full contract.
 The [systemd transition correction](RECOVERY-RUNTIME.md#deferring-recovery-during-an-operating-system-transition)
 adds a bounded dispatch deferral and preserves the same pending operation and
 previous failure evidence. It also prevents read-only final proof from dispatching
-recovery for pending markers. Local contracts pass; a new pinned-candidate native
-reboot drill and browser-specific waiting guidance remain open. Earlier X/Z boot
-failures remain historical evidence, not acceptance for this changed runner.
+recovery for pending markers. Local contracts pass. The fresh
+[AB Arch native drill](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md#ab-changed-runner-completes-the-native-arch-recovery-reboot)
+now verifies two boot deferrals followed by same-operation automatic rollback,
+zero postboot recovery failures and all 102 old rows retained across 55 tables.
+Changed-runner Debian acceptance, browser-specific waiting guidance and the wider
+matrix remain open. Earlier X/Z failures and inconclusive AA remain preserved.
 
 ## Fault matrix
 
