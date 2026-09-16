@@ -84,3 +84,40 @@ yerine örneğin cgroup’unu kullanır. Kurulu panel, VM, güncelleme veya ağa
 dokunulmaz. Olasılıksal test gerçekten bir thread uzlaştırmalıdır; yarışı hiç
 tetiklemeyen koşu geçemez. Gerçek exchange/yeniden başlatma kabulü ve diğer P0
 matrisi açık kalır.
+
+## Devam: tüketilmiş CLONE duruşunun EXIT ile değişmesi
+
+Önceki üç `task-id` sonucu belirsiz olarak korunur. Ayrı bir kontrollü çocuk süreç
+ölçümü gerçek sırayı yakaladı: CLONE (`198015`) tüketildikten sonra GETEVENTMSG sıfır
+döndü; **aynı ebeveyn** için süreli bekleme, sıradaki gerçek EXIT duruşunu (`394623`)
+verdi. Özel salt-okur SIGINFO gözlemi de EXIT bildirdi. Bu ölçüm yerel yarışı açıklar;
+AA'nın kaydedilmemiş çekirdek olay sırasını kanıtlamaz.
+
+Uyarlayıcı artık sıfır çocuk kimliğini yalnız aynı ebeveynin gerçek EXIT duruşunu
+100 ms ve mevcut toplam süre sınırı içinde tüketerek işler. Ardından sabitlenmiş
+kimliği, izleyiciyi, cgroup'u ve duruşu yeniden doğrular. Eski olay ile gerçek yeni
+bekleme durumu kaydedilir. Çocuk kimliği tahmin edilmez, ebeveyn erken sürdürülmez.
+Süre aşımı, farklı olay veya değişen kimlik belirsiz kalır. Temizlik kendi mevcut
+süresini kullanır. Yerel ptrace izin listesi değişmedi; SIGINFO yalnız teşhis içindi.
+Ürün şeması, yaşam döngüsü veya kurtarma politikası değişmedi.
+
+Yeni `/var/tmp/celikpanel-exit-trace.bIVuSpkR` denemesinde yukarıdaki aynı Go aracı,
+çekirdek ve çocuk ikilisiyle **50/50** gerçek süreç çıkışı tamamlandı: 44 uzlaştırılan
+thread, iki değişen duruş ve sıfır denetleyici kesintisi. İsteğe bağlı çekirdek testi
+artık bütün denemelerin tamamlanmasını ve her iki yarışın gerçekten oluşmasını
+ister; `task-id` kabul edilen deneme sonucu değildir.
+
+| Devam kanıtı | SHA256 |
+|---|---|
+| `evidence/summary.json` | `c3e544a7fe9efaa063dfcbb3e930a63af1e8702a7fa7d1d45c858fcd487b9fe5` |
+| `source.sha256` | `ec57c167d5be47503aa62adc79df38194870919cfcf0e584fb33e96bee17b2af` |
+| `tests.log` | `f1816fb9b509e60e4888e539253d3441fdbdb7a8a8d0ce1a2b045a399028ca6d` |
+
+Uyarlayıcıda 45 sözleşme geçti; genel keşifte 79 testten 74'ü geçti, beş isteğe bağlı
+çekirdek testi atlandı. Yeni durumlar farklı TID, EXIT dışı olay, yanlış sinyal,
+tutulmayan duruş, kaybolan sahiplik, yeniden kullanılan PID, değişen kapsam,
+kaybolan süreç ve süresi içinde gelmeyen bildirimi reddeder. Temizlik, sahte çıkış
+veya kesinti üretmeden izlemeyi bırakır. Sıfır olmayan normal CLONE kabulü de testlidir.
+
+Yalnız yeniden üretilen sıfır mesaj belirsizliği giderildi. Yeni yerel değişim ve
+kurtarma sırasında yeniden başlatma kabulü ile kalan P0 matrisi hâlâ açıktır.
