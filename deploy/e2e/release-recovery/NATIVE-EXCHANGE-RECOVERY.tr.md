@@ -247,3 +247,69 @@ Sonraki [özel alt süreç yeniden üretimi ve izleyici düzeltmesi](waltrace/EX
 eksik çıkan kardeş thread’i ele alır. Eski kaynakla olumsuz kontrolü ve ayrı
 sonuçsuz izleri korur; AA’nın yerini almaz veya değişen çalıştırıcı için gerçek
 sistem kabulünü kanıtlamaz.
+
+## AB: değişen yürütücü Arch üzerinde yeniden başlatılan kurtarmayı tamamladı
+
+16 Eylül'deki yeni `/var/tmp/cp-release-drill-20260916-ab` denemesi AA ile aynı,
+yayımlanmamış `8d62896f0fb5be329090923ad074115941c0328c` adayını kullandı; arşiv:
+`1c49df9ea65ec5758470b4ee347ed51cd2d00b7cf3f3f34253f58543d4a6cba8`.
+Yüklenen 20 test yardımcısı ayrı olarak
+`b8c99e733920e7a16a4fa7878dd9074225c6efa8` kaynağına bağlandı;
+[çıkış thread'i ve değişen duruş düzeltmeleri](waltrace/EXIT-THREADS.tr.md) dahildir.
+Beş yardımcıda Git nesnesine göre yalnız kaydedilmiş CRLF farkı vardı.
+Aday ürün kaynağı ve ölçüm kaynağı ayrı belirtilir. Aday yayımlanmadı ve
+kullanıcının kurulu sunucularına kurulmadı.
+
+`d893716344ff28f4c624f998b6c47aae` işlemi
+`release-recovery__e121df9f6b0161e5` hücresine ve Arch UUID
+`28b32bb4-a452-57c4-b348-bbeeeaf6220c` kimliğine aittir. Hata öncesinde gerçek
+Alpha64/şema38, doldurulmuş SQL verileri ve yetkili DNS doğrulandı. Ayrı çalışma
+veritabanındaki gerçek 38→42 geçişi tamamlandı. Denetleyici yayımlama makbuzundan
+önce başarılı `renameat2` değişimini doğrulayıp güncelleyiciyi kesti; yerel
+`OnFailure` geri almasını gözledi. Sonra yalnız kayıtlı bu VM'yi geri almanın
+`payload_restored` aşamasında yeniden başlattı.
+
+Yeni açılışta **iki erteleme ve sıfır kurtarma hatası** gözlendi. Her erteleme,
+işletim sisteminin geçişte olduğunu ve yerel zamanlayıcının aynı işlemi yeniden
+deneyeceğini kaydetti. Çağrı sona erdi; sonraki yerel çağrı aynı yedeği doğrulayıp
+geri almayı tamamladı. Kullanıcı komutuyla kurtarma/güncelleme yeniden başlatılmadı,
+konuk durumu onarılmadı. Aynı işlem kanıtı
+`4a97287a-0f6b-45e2-b550-b9dcb1f03a4e` ve
+`2bd4be18-9a3b-43c6-b260-b30b411009e9` açılışlarını kapsar. 12:11:58 ve
+12:12:29 UTC ertelemelerinden sonra 12:13:15 UTC'de tamamlandı.
+
+Geri yüklenen şema38, kurulu/çalışan ikili çifti, yerel unit'ler, web dosyaları,
+seçili kurtarma temeli ve temizlenen işlem işaretleri doğrulandı. UDP/TCP DNS
+A/SOA yanıtları hata öncesiyle eşleşti; HTTPS beklenen sertifikayla 200 döndü.
+Ana makine saklanan kanıttan reset, aşama ve günlük zincirini yeniden doğruladı.
+Son durumdan sonra ayrıca yapılan dondur/kopyala/çöz işlemi yalnız veritabanı
+ölçümüdür; otomatik kurtarma ve sağlık doğrulamasından sonra gerçekleştirilmiştir.
+
+**55 tablo / 102 satırdaki** bütün kesinti anı kayıtları, rowid ve türlenmiş sütun
+değerleriyle korundu: sıfır eksik, sıfır değişen. Bir yeni metrik satırının zamanı
+son kesinti metriğinden sonraydı. Dolayısıyla tüm veritabanı eşitliği **farklıdır**;
+eşitlik iddia edilmez. Asıl kanıt dosyaları değiştirilmedi; SQLite analizi yalnız
+yeni özel kopyaları açtı. Her iki kayıtlı QEMU konuğu durduruldu; diskler ve
+kanıtlar korundu.
+
+| AB kanıtı | SHA256 |
+|---|---|
+| Son durum | `ddf251ff3fa59af43a5cc3b946f33b7a00de48c983b3fb55eae858acaf418699` |
+| Son canlı durum kanıtı | `4b2f5c7ad394f0f582e586254f0eeccf9cd067671f655d1e59af6ef71a1a6d29` |
+| Veritabanı değişim aşaması | `c3e3ec85832d521723340e8e1ca12715926a741b0c06f3cf1d8942f4e3d0fd0a` |
+| Aşamaya bağlı reset gönderimi | `a52c20166cbc0d97a4863e8efb70e3a11bee65592f8b97d18ee6f1032a1d2984` |
+| Yerel neden-sonuç zinciri | `0cde6a950bb76be5be27b0d80f0de1a8e32505b08f221a41504f2e4adfb1b712` |
+| Satır incelemesi, `analysis/arch-exchange-rows-ncs4v6vf/review.json` | `8d28992965917c81408f8f9b7822cfc328212ecabd0b31fb3121637504326380` |
+| Yardımcı kaynak bağı, `analysis/helper-source-binding-1789560280611337958.json` | `47fe271923ca0432ea711a7c7a7d1b4eca6e0640a91bbbd8cc33cfe0f89a222f` |
+| Ana makine mührü, `analysis/host-seal-1789560857086448038.json` (92 girdi) | `dbe051a4f61dc986c9a95456a880762708f0e5bfe1d6c0f9fa9db0519a8c1695` |
+
+Bu, D-025/P0.1–P0.3 kapsamında değişen yürütücünün Arch açılış ertelemesini dar
+kapsamda doğrular. Şema ve kurtarma protokolü değişmedi. X/Z önceki kaynak kanıtı,
+AA ise belirsiz olarak kalır. Temel kurulum çekirdek paketini yükseltmişti;
+reset sonrası çalışan çekirdek `7.1.8-arch1-3` yerine `7.2.6-arch2-1` oldu.
+`linux 7.2.6.arch2-1` ve `systemd 261.3-1` paketleri hata boyunca değişmedi.
+Güvenlik duvarı/VPN hazırlığı iddia edilmez. Bu sonuç sonunda kurtarmayı kanıtlar;
+kesintisiz erişim veya depolamanın güç kesintisine dayanıklılığı değildir.
+Değişen yürütücünün Debian kabulü, imzalı aday kabulü, kalan aşama/üstveri matrisi
+ve bütün gerçek hizmet/yenileme bağımsızlığı açıktır. Kurulu Frankfurt ve Boston
+panellerine müdahale edilmedi.

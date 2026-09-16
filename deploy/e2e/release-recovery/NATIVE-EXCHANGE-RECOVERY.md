@@ -247,3 +247,71 @@ A later [controlled-child reproduction and tracer correction](waltrace/EXIT-THRE
 addresses the missing exiting sibling. It includes an old-source negative control
 and preserves separately inconclusive traces; it does not replace AA or establish
 changed-runner native acceptance.
+
+## AB: changed runner completes the native Arch recovery reboot
+
+The September 16 fresh attempt `/var/tmp/cp-release-drill-20260916-ab` used the
+same unpublished `8d62896f0fb5be329090923ad074115941c0328c` candidate as AA, archive
+`1c49df9ea65ec5758470b4ee347ed51cd2d00b7cf3f3f34253f58543d4a6cba8`.
+The 20 uploaded fixture helpers were separately bound to
+`b8c99e733920e7a16a4fa7878dd9074225c6efa8`, including the
+[exit-thread and replaced-stop corrections](waltrace/EXIT-THREADS.md).
+Five helper files differed from Git blobs only by recorded CRLF normalization.
+Candidate product source and test-helper source are deliberately identified
+separately. The candidate was not published or installed on an owner's server.
+
+Operation `d893716344ff28f4c624f998b6c47aae` belonged to cell
+`release-recovery__e121df9f6b0161e5`, Arch UUID
+`28b32bb4-a452-57c4-b348-bbeeeaf6220c`. Genuine Alpha64/schema38, populated SQL
+fixture and authoritative DNS were checked before the fault. The real 38→42
+migration completed in the separate work database; the controller verified the
+successful `renameat2` exchange before the publication receipt, cut the updater,
+and observed native `OnFailure` rollback. It then reset only that registered VM
+at rollback's `payload_restored` checkpoint.
+
+The new boot observed **two deferred invocations and zero recovery failures**.
+Each deferral recorded that the operating system was still transitioning and
+that the native timer would retry the same operation. The invocation yielded;
+a later native invocation verified the same snapshot and completed rollback.
+No owner command restarted recovery, resumed an update or repaired guest state.
+The same-operation evidence spans boot IDs
+`4a97287a-0f6b-45e2-b550-b9dcb1f03a4e` and
+`2bd4be18-9a3b-43c6-b260-b30b411009e9`. Completion occurred at
+12:13:15 UTC; the deferrals preceded it at 12:11:58 and 12:12:29 UTC.
+
+The restored schema38 runtime, installed/running artifact pair, native units,
+web inventory, selected recovery foundation and cleared transaction markers
+were verified. DNS A/SOA answers over UDP and TCP matched the pre-fault values;
+HTTPS returned 200 with the expected served certificate. The host independently
+rechecked the reset, checkpoint and journal chain from preserved evidence.
+A separate post-terminal fixture freeze/copy/thaw collected database evidence;
+it was measurement only, after automatic recovery and health checks.
+
+Every cut-time row in all **55 tables / 102 rows** was retained with the same
+rowid and typed column values: zero missing, zero changed. One new metrics row
+had a timestamp later than the last cut-time metric. Whole-database equality is
+therefore **different**, not asserted. All original evidence files were left
+unchanged; SQLite analysis opened only new private copies. Both registered
+QEMU guests were stopped afterward and their disks and evidence retained.
+
+| AB preserved proof | SHA256 |
+|---|---|
+| Terminal outcome | `ddf251ff3fa59af43a5cc3b946f33b7a00de48c983b3fb55eae858acaf418699` |
+| Terminal live proof | `4b2f5c7ad394f0f582e586254f0eeccf9cd067671f655d1e59af6ef71a1a6d29` |
+| Exchange checkpoint | `c3e3ec85832d521723340e8e1ca12715926a741b0c06f3cf1d8942f4e3d0fd0a` |
+| Reset submission with checkpoint binding | `a52c20166cbc0d97a4863e8efb70e3a11bee65592f8b97d18ee6f1032a1d2984` |
+| Native causal chain | `0cde6a950bb76be5be27b0d80f0de1a8e32505b08f221a41504f2e4adfb1b712` |
+| Host row review, `analysis/arch-exchange-rows-ncs4v6vf/review.json` | `8d28992965917c81408f8f9b7822cfc328212ecabd0b31fb3121637504326380` |
+| Helper source binding, `analysis/helper-source-binding-1789560280611337958.json` | `47fe271923ca0432ea711a7c7a7d1b4eca6e0640a91bbbd8cc33cfe0f89a222f` |
+| Host seal, `analysis/host-seal-1789560857086448038.json` (92 inputs) | `dbe051a4f61dc986c9a95456a880762708f0e5bfe1d6c0f9fa9db0519a8c1695` |
+
+This establishes the changed runner's bounded Arch boot-deferral acceptance for
+D-025/P0.1–P0.3. Schemas and the recovery protocol did not change. X/Z remain
+previous-source evidence; AA remains inconclusive. The baseline installer had
+updated the kernel package: the running kernel changed from `7.1.8-arch1-3` to
+`7.2.6-arch2-1` after reset, with packages `linux 7.2.6.arch2-1` and
+`systemd 261.3-1` unchanged across the fault. Firewall/VPN readiness is not claimed.
+This is eventual recovery, not uninterrupted availability or storage power-loss
+durability. Changed-runner Debian acceptance, signed candidate admission, the
+remaining checkpoint/metadata matrix and full native workload/renewal
+independence remain open. No installed Frankfurt or Boston panel was changed.

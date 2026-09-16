@@ -165,7 +165,16 @@ tamamlanmasını, degraded durumunu, bozuk/bilinmeyen yanıtları ve zaman aşı
 Geri alma giriş testleri gerçek devralınmış kilit kontrollerini korur. Bu testlerde
 systemctl ve geri yükleme alt süreci modellenir; **değişen runner için gerçek yeniden
 başlatma kabul kanıtı değildir**. Debian X ve Arch Z eski runner ile çalışmıştır;
-açılış hataları tarihsel kanıt olarak korunur. Yeni kaynak kimliğine sabitlenmiş adayla
-yeniden başlatma deneyi ve kalan kontrol noktası/hizmet matrisi açık kalır.
+açılış hataları tarihsel kanıt olarak korunur. Aşağıdaki ayrı AB sonucu bir Arch
+sınırını kanıtlar; geniş kontrol noktası/hizmet matrisi açık kalır.
 
-[Değişen kaynakla AA denemesi](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md), izleyici uyumluluk kontrolünde beklediği için iki hata sınırına da ulaşamadı. Sonuçsuz ölçüm, tamamlanmamış detach ve durdurulan misafirler kaydedildi; gerçek açılış hazırlığı kabulü açık kalır.
+[Değişen kaynakla AA denemesi](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md), izleyici uyumluluk kontrolünde beklediği için iki hata sınırına da ulaşamadı. Sonuçsuz ölçüm, tamamlanmamış detach ve durdurulan misafirler kayıtlı kalır.
+
+Yeni [AB Arch kabulü](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md),
+değişen adayı ve ayrı kaynak kimliğiyle sabitlenmiş düzeltilen izleyiciyi kullanır.
+Exchange kesintisi ve yerel geri almanın `payload_restored` aşamasındaki reset
+sonrası iki açılış çağrısı hata vermeden erteler; yerel zamanlayıcı aynı geri almayı
+tamamlar. 55 tablodaki 102 eski satır, DNS ve HTTPS dar kapsamlı denetimleri geçer.
+Değişen yürütücünün Debian kabulü, tarayıcıdaki bekleme açıklaması ve geniş P0
+matrisi açıktır. AB sonunda kurtarmayı kanıtlar; kesintisiz erişim veya güç kaybı
+dayanıklılığı değildir.

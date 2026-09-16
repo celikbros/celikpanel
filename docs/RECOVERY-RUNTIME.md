@@ -165,7 +165,15 @@ operation completion, degraded readiness, malformed/unknown responses and timeou
 The rollback entrypoint handoff tests retain their real inherited-lock checks.
 Those tests model systemctl and child restoration; they are **not native reboot
 acceptance for the changed runner**. Debian X and Arch Z used the earlier runner
-and retain their early-boot failures as historical evidence. A new pinned-candidate
-native reboot drill and the remaining checkpoint/workload matrix stay open.
+and retain their early-boot failures as historical evidence. The separate AB result
+below establishes one Arch boundary; the wider checkpoint/workload matrix stays open.
 
-The [AA changed-source attempt](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md#aa-changed-runner-trial-was-inconclusive-before-the-requested-faults) did not reach either fault boundary because the tracer stalled during compatibility checking. Its inconclusive result, incomplete detach and stopped guests are recorded; native readiness acceptance stays open.
+The [AA changed-source attempt](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md#aa-changed-runner-trial-was-inconclusive-before-the-requested-faults) did not reach either fault boundary because the tracer stalled during compatibility checking. Its inconclusive result, incomplete detach and stopped guests remain recorded.
+
+The fresh [AB native Arch acceptance](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md#ab-changed-runner-completes-the-native-arch-recovery-reboot)
+uses the exact changed candidate and separately pinned corrected tracer. After
+an exchange cut and reset at native rollback `payload_restored`, two boot
+invocations defer without a recovery failure; the native timer completes the
+same rollback. All 102 old rows in 55 tables, DNS and HTTPS pass the scoped checks.
+Changed-runner Debian, browser waiting guidance and the wider P0 matrix remain
+open. AB is eventual recovery, not uninterrupted access or power-loss durability.
