@@ -490,6 +490,9 @@ for readiness in initializing starting stopping; do
     _release_observation_read "$OBSERVATION_TEST_REQUEST" 0
     [[ $OBSERVATION_PHASE == recovering && $OBSERVATION_PROOF == none &&
        $OBSERVATION_REASON == recovery_running && $OBSERVATION_PREVIOUS == recovery_failed ]] || fail 'deferral lost prior failure or claimed terminal proof'
+    wait_path=$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.wait
+    grep -Fx "waiting_for=$readiness" "$wait_path" >/dev/null || fail 'wrong typed wait reason'
+    grep -Fx "observation_identity=$(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")" "$wait_path" >/dev/null || fail 'wait is not bound to exact status file'
     (exec 9<>"$TRANSACTION_ROOT/transaction.lock"; flock -xn 9) || fail 'deferred invocation retained the transaction lock'
     observation_before=$(sha256sum "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")
     expect_failure "final-proof-$readiness" run_final_proof
@@ -497,6 +500,16 @@ for readiness in initializing starting stopping; do
     [[ $(sha256sum "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status") == "$observation_before" ]] || fail 'final proof changed observation'
     [[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'final proof dispatched recovery'
 done
+# Optional guidance cannot block deferral or turn it into a failed rollback.
+wait_path=$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.wait
+chmod 0660 "$wait_path"
+run_recovery >"$TEST_ROOT/unsafe-wait.log" 2>&1 || fail 'unsafe hint blocked known transition'
+grep -F 'recovery waiting observation is unavailable' "$TEST_ROOT/unsafe-wait.log" >/dev/null || fail 'unsafe hint was silently accepted'
+_release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+[[ $OBSERVATION_PHASE == recovering && $OBSERVATION_PROOF == none && $OBSERVATION_PREVIOUS == recovery_failed ]] || fail 'optional hint changed verified base'
+[[ $(sha256sum "$TRANSACTION_ROOT/active") == "$transition_marker_before" && $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'optional hint caused mutation'
+(exec 9<>"$TRANSACTION_ROOT/transaction.lock"; flock -xn 9) || fail 'optional hint retained transaction lock'
+chmod 0640 "$wait_path"
 # A surprising status, malformed response or bounded probe failure is not a
 # known transition and must never reach the mutation child.
 for readiness in maintenance offline unknown empty multiline running-error starting-error timeout; do

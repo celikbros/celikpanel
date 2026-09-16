@@ -46,7 +46,7 @@ export function RecoveryStatus({ username, onUnauthorized }: { username: string;
             <p className="mt-3 break-all text-sm text-fg-muted">{t('recovery.operationId')}: <span className="font-mono">{requestId}</span></p>
             <div className="mt-4 space-y-3 text-sm" role="status" aria-live="polite">
                 {(unavailable || !last) && <p>{t(busy && !unavailable && !last ? 'recovery.checking' : 'recovery.observationUnavailable')}</p>}
-                {last?.phase && <><p className="font-semibold">{t(`recovery.phase.${last.phase}`)}</p><p className="max-w-prose text-fg-muted">{t(`recovery.next.${last.phase}`)}</p></>}
+                {last?.phase && <><p className="font-semibold">{t(last.waiting_for ? `recovery.wait.${last.waiting_for}` : `recovery.phase.${last.phase}`)}</p><p className="max-w-prose text-fg-muted">{t(last.waiting_for ? 'recovery.wait.next' : `recovery.next.${last.phase}`)}</p></>}
                 {last?.previous_failure && <p>{t('recovery.previousFailure')}: {t(`recovery.reason.${last.previous_failure}`)}</p>}
                 {last?.observed_at && <p className="text-fg-muted">{t('recovery.observedAt')}: <time dateTime={last.observed_at}>{new Date(last.observed_at).toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US')}</time></p>}
             </div>

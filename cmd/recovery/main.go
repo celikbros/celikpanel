@@ -180,6 +180,9 @@ func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
 			en, tr = "The producer recorded verified restoration. Check current service health separately.", "Üretici, doğrulanmış geri yükleme kaydetmiş. Güncel hizmet sağlığını ayrıca kontrol edin."
 		}
 	}
+	if status.Phase == "recovering" && status.TerminalProof == "none" && recoveryobs.ValidWaitingFor(status.WaitingFor) {
+		en, tr = "The last recorded state is waiting for the operating system transition. No owner action is needed for this wait; the native timer will check the same operation again when ready. Recovery is not yet complete.", "Son kayıtta işletim sistemi geçişi bekleniyor. Bu bekleme için kullanıcı işlemi gerekmiyor; yerel zamanlayıcı hazır olduğunda aynı işlemi yeniden kontrol edecek. Kurtarma henüz tamamlanmadı."
+	}
 	if _, err := fmt.Fprintln(w, translated(lang, en, tr)); err != nil {
 		return err
 	}

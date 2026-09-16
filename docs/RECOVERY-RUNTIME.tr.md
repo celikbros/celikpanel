@@ -154,9 +154,10 @@ ertelemeyi tamamlanma kanıtına çeviremez.
 
 Ertelenen çağrı, tamamlanmış kurtarma değildir. Günlük beklenen önkoşulu ve otomatik
 sonraki adımı açıklar. Tam isteğe bağlı gözlem `recovering`, `terminal_proof=none`
-olarak kalır; önceki hata korunur. Kalıcı şema, kit protokolü veya veritabanı sürümü
-değişmez. Tarayıcı yeni bir açılış bekleme nedeni yerine mevcut, sonlanmamış kurtarma
-durumunu alır. Arayüzde ayrıntılı açılış bekleme açıklaması bu değişikliğin dışındadır.
+olarak kalır; önceki hata korunur. İlk hazır olma düzeltmesi kalıcı şemayı, kit
+protokolünü veya veritabanı sürümünü değiştirmedi. İlk runner değişikliği tarayıcıda yalnız genel kurtarma durumunu gösteriyordu.
+Sonraki [isteğe bağlı bekleme gözlemi](RECOVERY-ACCESS.tr.md), ana v1 kaydını
+değiştirmeden uyumlu arayüz/CLI açıklaması ekler.
 
 Bu çalışma D-025 ilkeleri 2–5 ve P0.2/P0.3 kapsamındadır. Gerçek runner sözleşme
 testleri; ilk açılışta hata uydurulmamasını, bilinen hatadan sonra üç bekleme durumunu,
@@ -179,6 +180,7 @@ Ayrı [AD Debian kabulü](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVER
 aynı iki kesinti sınırını geçer: bir açılış ertelemesi, açılış sonrası sıfır
 kurtarma hatası ve aynı geri almanın otomatik tamamlanması. 55 tablodaki 100 eski
 satır, DNS ve HTTPS denetimleri geçer; sonradan eklenen bir metrik satırı ayrı
-kaydedilir. AC'nin önceki hazırlık hatası korunur. Tarayıcıdaki bekleme açıklaması
-ve geniş P0 matrisi açıktır. AB/AD bu sınırda sonunda kurtarmayı kanıtlar;
+kaydedilir. AC'nin önceki hazırlık hatası korunur. Sonraki arayüz/CLI açıklamasının
+bileşen ve test verisi kanıtı vardır; yeni gerçek worker→arayüz bağı kabulü ve
+geniş P0 matrisi açıktır. AB/AD bu sınırda sonunda kurtarmayı kanıtlar;
 kesintisiz erişim veya güç kaybı dayanıklılığı değildir.

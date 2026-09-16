@@ -29,6 +29,12 @@ type Status struct {
 	Reason          string `json:"reason"`
 	ObservedAt      string `json:"observed_at,omitempty"`
 	PreviousFailure string `json:"previous_failure,omitempty"`
+	WaitingFor      string `json:"waiting_for,omitempty"`
+}
+
+// ValidWaitingFor accepts optional guidance, never a phase or mutation authority.
+func ValidWaitingFor(value string) bool {
+	return value == "initializing" || value == "starting" || value == "stopping"
 }
 
 // Record is internal producer data, not an HTTP response. Its commit binds the

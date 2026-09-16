@@ -110,3 +110,50 @@ Legacy workers did not publish the initial exact-ID record. Their first upgrade
 cannot retrospectively gain this observation binding: it remains unavailable.
 No latest-snapshot inference is made. Existing signed-update admission, rollback
 manifests, owner authority and owner-only installed-panel updates are unchanged.
+
+
+## Operating-system transition guidance (2026-09-16)
+
+D-025 invariants 2, 4 and 5 / P0.2: a bound recovery invocation that defers for
+systemd `initializing`, `starting` or `stopping` now records an optional typed wait.
+The owner sees the last recorded prerequisite, that no action is needed for this
+wait, and that the native timer checks the **same operation** again. The UI and
+owner CLI retain the previous failure, observation time and `terminal_proof=none`.
+No polling request starts recovery or extends authorization.
+
+The canonical eight-field `celikpanel-recovery-observation/v1` record, kit protocol
+and database schema remain unchanged. A separate `<id>.wait` sidecar uses
+`celikpanel-recovery-wait/v1`: exactly five newline-terminated fields (`schema`,
+`request_id`, `observation_identity`, `observation_sha256`, `waiting_for`), at most
+2 KiB with the same regular-file/owner/group/mode/link checks as the status record.
+The identity is the status file's device, inode, size, nanosecond mtime and ctime,
+formatted by GNU stat in UTC; SHA-256 binds its exact bytes. Both publications use
+the existing producer lock and atomic rename. A later status replacement invalidates
+the hint even if an old producer writes identical bytes in the same second.
+
+The reader exposes only the allowlisted `waiting_for` value on a known recovering
+status. It never exposes the file identity or digest. Missing, stale, unsafe or
+unknown optional data is ignored while the verified v1 status remains available.
+Optional publication failure does not prevent the native runner from releasing
+its lock and deferring. Old readers ignore the sidecar; old producers need not
+write or delete it. The additive HTTP/CLI JSON field is optional; old browsers
+keep generic recovery guidance, and new browsers accept old v1-only responses.
+A terminal proof always wins. A wait is a recorded observation, not a current
+liveness guarantee or a new permission to run a mutation.
+
+Scoped validation: real shell-to-Go publication covers all three waits, old v1
+reads, identical-byte v1-only republication, terminal dominance and malformed,
+oversized, wrong-operation, wrong-identity/hash, unsafe-mode, symlink and FIFO
+sidecars. Runner contract fixtures verify unchanged markers and request binding,
+previous failure, released locks, same-operation continuation and best-effort
+publication failure. CLI and administrator-only HTTP tests preserve that meaning.
+The 460 web tests and production build pass. Local Chrome checks EN/TR at 1440
+and 390 px, reload and a failed subsequent read: same ID and failure retained,
+GET-only requests, no page errors or horizontal overflow. API responses in this
+browser check and systemd readiness in the runner check are fixtures.
+
+The earlier native AB/AD trials do **not** establish this new UI binding; their
+fixture updater did not publish a real worker association. Fresh native recovery
+with the real worker binding and this reader/UI remains an open acceptance item.
+This closes the scoped guidance implementation, not P0.2 or the full resilience
+matrix. No release or installed-panel update is part of this change.

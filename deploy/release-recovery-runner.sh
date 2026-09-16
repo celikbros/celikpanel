@@ -769,6 +769,11 @@ systemd_readiness=$(/usr/bin/timeout --signal=TERM --kill-after=1s 5s \
 case "$systemd_readiness:$systemd_readiness_status" in
     running:0|degraded:0|degraded:1) ;;
     initializing:1|starting:1|stopping:1)
+        if [[ -n $RECOVERY_OBSERVATION_REQUEST ]]; then
+            release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+                "$RECOVERY_OBSERVATION_COMMIT" recovering none recovery_running "$systemd_readiness" ||
+                printf '%s\n' 'CelikPanel recovery waiting observation is unavailable' >&2
+        fi
         release_transaction_lock
         printf '%s\n' \
             'Recovery waiting for the operating system transition; no owner action is needed. The native recovery timer will retry this same operation. Recovery is not yet complete.' \

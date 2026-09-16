@@ -1,11 +1,13 @@
 export const UPDATE_MARKER_KEY = 'celikpanel.system-update-operation.v1';
 export const recoveryPhases = ['accepted', 'running', 'recovering', 'recovered', 'succeeded', 'failed', 'recovery_required'] as const;
 export const recoveryReasons = ['operation_accepted', 'update_running', 'update_failed', 'recovery_running', 'recovery_failed', 'recovery_incomplete', 'update_verified', 'rollback_verified', 'observation_unavailable'] as const;
+export const recoveryWaitReasons = ['initializing', 'starting', 'stopping'] as const;
 export type RecoveryReason = typeof recoveryReasons[number];
 export type RecoveryFailureReason = 'update_failed' | 'recovery_failed' | 'recovery_incomplete';
 export type RecoveryObservation = {
     request_id: string; observation: 'known' | 'unavailable'; panel_state: 'starting' | 'ready';
     phase?: typeof recoveryPhases[number]; terminal_proof: 'none' | 'update_verified' | 'rollback_verified';
+    waiting_for?: typeof recoveryWaitReasons[number];
     reason: RecoveryReason; observed_at?: string; previous_failure?: RecoveryFailureReason;
 };
 
@@ -37,7 +39,8 @@ export function parseRecoveryObservation(raw: unknown, requestId: string): Recov
     const proof = value.phase === 'succeeded' ? 'update_verified' : value.phase === 'recovered' ? 'rollback_verified' : 'none';
     if (value.terminal_proof !== proof) throw new Error('unproved recovery outcome');
     if (value.previous_failure !== undefined && !['update_failed', 'recovery_failed', 'recovery_incomplete'].includes(String(value.previous_failure))) throw new Error('invalid previous failure');
-    return { ...base, observation: 'known', phase: value.phase as RecoveryObservation['phase'], terminal_proof: proof,
+    const waiting = value.phase === 'recovering' && recoveryWaitReasons.includes(value.waiting_for as never) ? value.waiting_for as RecoveryObservation['waiting_for'] : undefined;
+    return { ...base, observation: 'known', waiting_for: waiting, phase: value.phase as RecoveryObservation['phase'], terminal_proof: proof,
         reason: value.reason as RecoveryReason, observed_at: value.observed_at, previous_failure: value.previous_failure as RecoveryFailureReason | undefined };
 }
 
