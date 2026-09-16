@@ -242,3 +242,8 @@ Güvenlik duvarı/VPN veya hizmet bağımsızlığı iddiası yoktur.
 | Son ham iz, `evidence/arch/aa-final-trace.jsonl` | `4e2018a59e2bd734c0a34542cb87329c8ca6acae0d07138ccf0cf96ac1971765` |
 | Aday derleme kanıtı (iki başarısız hazırlık dahil) | `54c62e5c7a2637935efa509b5a9794deb962f32fc54af8c918765342bcf6e1aa` |
 | Helper kaynak bağı, `analysis/helper-source-binding-1789531049641104441.json` (20 helper; beş fark yalnız CRLF) | `284e54c521105e7627bed733a4f6c49de9cc9afa78299b1a57a2e46616a17a63` |
+
+Sonraki [özel alt süreç yeniden üretimi ve izleyici düzeltmesi](waltrace/EXIT-THREADS.tr.md)
+eksik çıkan kardeş thread’i ele alır. Eski kaynakla olumsuz kontrolü ve ayrı
+sonuçsuz izleri korur; AA’nın yerini almaz veya değişen çalıştırıcı için gerçek
+sistem kabulünü kanıtlamaz.
