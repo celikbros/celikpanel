@@ -167,6 +167,114 @@ class NativeTraceTests(unittest.TestCase):
         kernel.raw = wal(frame=True)
         return tracer, kernel, callbacks
 
+    def exiting_group(self):
+        tracer, kernel, callback = self.make(attached=True)
+        tracer.consume(100, stop(native.EVENT_EXIT))
+        tracer.resume(100)
+        kernel.processes[100]['state'] = 'Z'
+        kernel.processes[101] = task(101, 100, 201, traced=True, state='t')
+        return tracer, kernel, callback
+
+    def test_exiting_thread_reconciles_only_from_stable_kernel_group(self):
+        tracer, kernel, callback = self.exiting_group()
+        tracer.reconcile_exiting_threads()
+        self.assertEqual(tracer.exit_threads, {101})
+        self.assertNotIn(101, tracer.stopped)  # inventory alone is not a wait stop
+        self.assertEqual(tracer.events[-1]['authority'], 'kernel-zombie-thread-group')
+        tracer.consume(101, stop(native.EVENT_STOP))
+        tracer.resume(101)
+        self.assertEqual(kernel.calls[-1], ('resume', 101, 0, False))
+        tracer.consume(101, stop(native.EVENT_EXIT))
+        tracer.resume(101)
+        tracer.consume(101, 0)
+        self.assertNotIn(101, tracer.known)
+        self.assertFalse(tracer.exit_threads)
+        self.assertFalse(any(c[0] == 'cut' for c in callback.calls))
+
+    def test_thread_inventory_cannot_admit_a_new_process_or_live_group(self):
+        for change in ('no-exit-event', 'live-leader', 'other-group', 'new-process'):
+            tracer, kernel, _ = self.exiting_group()
+            if change == 'no-exit-event': tracer.exiting.clear()
+            elif change == 'live-leader': kernel.processes[100]['state'] = 'S'
+            elif change == 'other-group': kernel.processes[101]['tgid'] = 999
+            else: kernel.processes[101]['tgid'] = 101
+            tracer.reconcile_exiting_threads()
+            self.assertEqual(set(tracer.known), {100}, change)
+
+    def test_exiting_thread_identity_scope_and_tracer_are_required(self):
+        for change in ({'tracer_pid': 0}, {'tracer_pid': os.getpid()+1}, {'state': 'R'},
+                       {'start_ticks': 199}, {'cgroup_raw': b'0::/other\n'}):
+            tracer, kernel, _ = self.exiting_group()
+            kernel.processes[101].update(change)
+            with self.subTest(change=change), self.assertRaises(native.Inconclusive):
+                tracer.reconcile_exiting_threads()
+            self.assertNotIn(101, tracer.known)
+
+    def test_exiting_group_rechecks_both_identities_before_admission(self):
+        for changed in (100, 101):
+            tracer, kernel, _ = self.exiting_group()
+            original = kernel.task
+            reads = {}
+            def unstable(tid):
+                reads[tid] = reads.get(tid, 0) + 1
+                if tid == changed and reads[tid] == 2:
+                    kernel.processes[tid]['start_ticks'] += 1
+                return original(tid)
+            kernel.task = unstable
+            with self.subTest(changed=changed), self.assertRaises(native.Inconclusive):
+                tracer.reconcile_exiting_threads()
+            self.assertNotIn(101, tracer.known)
+
+    def test_reconciled_thread_cannot_produce_syscall_or_exec_evidence(self):
+        for value in (stop(sig=native.SYSCALL_STOP), stop(native.EVENT_CLONE),
+                      stop(native.EVENT_EXEC), stop(sig=signal.SIGUSR1)):
+            tracer, kernel, callback = self.exiting_group()
+            tracer.reconcile_exiting_threads()
+            with self.assertRaisesRegex(native.Inconclusive, 'exit-thread-not-exiting'):
+                tracer.consume(101, value)
+            self.assertFalse(any(c[0] == 'cut' for c in callback.calls))
+
+    def test_reconciled_thread_without_wait_exit_blocks_cut_freeze(self):
+        tracer, kernel, _ = self.exiting_group()
+        tracer.reconcile_exiting_threads()
+        tracer.stopped = {100, 101}
+        with self.assertRaisesRegex(native.Inconclusive, 'exit-thread-drain-incomplete'):
+            tracer.freeze()
+
+    def test_wait_slice_discovers_thread_without_extending_deadline(self):
+        tracer, kernel, _ = self.exiting_group()
+        original = kernel.wait
+        def waiting(tids, deadline):
+            if 101 in tids: kernel.queue.append((101, stop(native.EVENT_EXIT)))
+            return original(tids, deadline)
+        kernel.wait = waiting
+        self.assertEqual(tracer.wait_known(2), (101, stop(native.EVENT_EXIT)))
+        self.assertLess(kernel.clock, 2)
+        tracer.consume(101, 0)
+        kernel.processes.pop(101, None)
+        with self.assertRaisesRegex(native.Inconclusive, 'trace-deadline'):
+            tracer.wait_known(2)
+        self.assertEqual(kernel.clock, 2)
+
+    def test_cleanup_releases_reconciled_thread_without_kill_or_cut(self):
+        tracer, kernel, callback = self.exiting_group()
+        original = kernel.wait
+        def waiting(tids, deadline):
+            if 100 in tids and 101 not in kernel.processes:
+                kernel.queue.append((100, 0))
+            elif 101 in tids:
+                kernel.queue.append((101, stop(native.EVENT_EXIT)))
+            return original(tids, deadline)
+        kernel.wait = waiting
+        kernel.interrupt = lambda tid: None  # zombie leader has no new stop
+        kernel.after_detach = lambda tid: kernel.processes.pop(tid, None)
+        proof = tracer.cleanup()
+        self.assertTrue(proof['complete'], proof)
+        self.assertEqual(proof['detached'], [101])
+        self.assertEqual(proof['observed_exits'], [100])
+        self.assertTrue(proof['no_kill_by_tracer'])
+        self.assertFalse(any(c[0] == 'cut' for c in callback.calls))
+
     def test_registration_accepts_only_fixed_exact_operation_unit(self):
         self.assertEqual(native.validate_registration(REG), REG)
         for change in ({'unit': 'celikpanel-agent.service'}, {'worker_pid': True}, {'operation_id': '../bad'},

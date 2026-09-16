@@ -242,3 +242,8 @@ kernel. No firewall/VPN or workload-independence claim is made.
 | Raw final trace, `evidence/arch/aa-final-trace.jsonl` | `4e2018a59e2bd734c0a34542cb87329c8ca6acae0d07138ccf0cf96ac1971765` |
 | Candidate build evidence (including both failed preparations) | `54c62e5c7a2637935efa509b5a9794deb962f32fc54af8c918765342bcf6e1aa` |
 | Helper source binding, `analysis/helper-source-binding-1789531049641104441.json` (20 helpers; five CRLF-only differences) | `284e54c521105e7627bed733a4f6c49de9cc9afa78299b1a57a2e46616a17a63` |
+
+A later [controlled-child reproduction and tracer correction](waltrace/EXIT-THREADS.md)
+addresses the missing exiting sibling. It includes an old-source negative control
+and preserves separately inconclusive traces; it does not replace AA or establish
+changed-runner native acceptance.

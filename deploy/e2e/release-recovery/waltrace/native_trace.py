@@ -327,6 +327,7 @@ class NativeTrace:
         self.kernel = kernel if kernel is not None else LinuxKernel(self.registration)
         self.deadline = self.kernel.now() + timeout
         self.known, self.stopped, self.entries, self.signals = {}, set(), {}, {}
+        self.exiting, self.exit_threads = set(), set()
         self.syscall_tgids = set()
         self.events = []
         self.baseline = None
@@ -369,6 +370,57 @@ class NativeTrace:
         if scope:
             self.same_scope(now)
         return now
+
+    def reconcile_exiting_threads(self):
+        # exit_group can retire a cloning parent before its CLONE event is
+        # consumed, leaving an automatically traced sibling stopped. Admit no
+        # new process: kernel TGID must name an already admitted zombie leader
+        # whose EXIT event we consumed. These threads may only drain to exit;
+        # they cannot supply a WAL/exchange observation or a cut proof.
+        leaders = {}
+        for tid in self.exiting & self.known.keys():
+            if self.known[tid]['tgid'] != tid:
+                continue
+            try:
+                value = self.validate_known(tid)
+            except FileNotFoundError:
+                continue
+            if value['state'] == 'Z':
+                leaders[tid] = value
+        if not leaders:
+            return
+        for tid in sorted(self.kernel.tasks() - self.known.keys()):
+            try:
+                value = self.kernel.task(tid)
+                leader = leaders.get(value['tgid'])
+                if leader is None:
+                    continue
+                require(value['tracer_pid'] == os.getpid() and value['state'] == 't',
+                        'exit-thread-trace-unproved')
+                require(value['start_ticks'] >= leader['start_ticks'], 'exit-thread-predates-leader')
+                self.same_scope(value)
+                require(self.validate_known(leader['tid']) == leader
+                        and self.kernel.task(tid) == value, 'exit-thread-identity-changed')
+            except FileNotFoundError:
+                continue
+            require(len(self.known) < MAX_TASKS, 'task-admission-bound')
+            self.known[tid] = {key: value[key] for key in ('tid', 'tgid', 'start_ticks')}
+            self.exit_threads.add(tid)
+            self.event('exit-thread-admitted', **self.known[tid],
+                       leader_start_ticks=leader['start_ticks'], authority='kernel-zombie-thread-group')
+
+    def wait_known(self, deadline):
+        # Bounded slices discover siblings even if no admitted TID has a ready
+        # wait event. Total observation/cleanup deadlines remain unchanged.
+        # Never waitpid(-1) or reap an unrelated process.
+        while self.kernel.now() < deadline:
+            try:
+                return self.kernel.wait(set(self.known), min(deadline, self.kernel.now() + 0.1))
+            except Inconclusive as error:
+                if str(error) != 'trace-deadline':
+                    raise
+                self.reconcile_exiting_threads()
+        raise Inconclusive('trace-deadline')
 
     def initial_attach(self):
         r = self.registration
@@ -432,7 +484,7 @@ class NativeTrace:
         require(tid in self.stopped, 'resume-without-stop')
         self.validate_known(tid)
         try:
-            self.kernel.resume(tid, self.signals.pop(tid, 0), syscalls=self.known[tid]['tgid'] in self.syscall_tgids)
+            self.kernel.resume(tid, self.signals.pop(tid, 0), syscalls=tid not in self.exit_threads and self.known[tid]['tgid'] in self.syscall_tgids)
         except ProcessLookupError:
             self.await_exit(tid)
         self.stopped.discard(tid)
@@ -463,6 +515,8 @@ class NativeTrace:
                     except FileNotFoundError:
                         pass
                     self.known.pop(value['tid'])
+                    self.exiting.discard(value['tid'])
+                    self.exit_threads.discard(value['tid'])
                     self.stopped.discard(value['tid'])
                     self.entries.pop(value['tid'], None)
                     self.signals.pop(value['tid'], None)
@@ -498,6 +552,8 @@ class NativeTrace:
         require(tid in self.known, 'wait-outside-admitted-family')
         if os.WIFEXITED(status) or os.WIFSIGNALED(status):
             self.known.pop(tid)
+            self.exiting.discard(tid)
+            self.exit_threads.discard(tid)
             self.stopped.discard(tid)
             self.entries.pop(tid, None)
             self.signals.pop(tid, None)
@@ -506,6 +562,9 @@ class NativeTrace:
         require(os.WIFSTOPPED(status), 'unexpected-wait-state')
         event, sig = status >> 16, os.WSTOPSIG(status)
         self.stopped.add(tid)
+        if tid in self.exit_threads:
+            require(event == EVENT_EXIT or (event == EVENT_STOP and sig == signal.SIGTRAP),
+                    'exit-thread-not-exiting')
         if event == EVENT_EXEC:
             self.exec_transition(tid)
             return None
@@ -514,6 +573,7 @@ class NativeTrace:
             child = self.kernel.event_message(tid)
             self.remember(child, parent=tid)
         elif event == EVENT_EXIT:
+            self.exiting.add(tid)
             self.event('kernel-exit-started', tid=tid)
         elif event == EVENT_STOP:
             require(initial or sig == signal.SIGTRAP, 'external-group-stop')
@@ -536,10 +596,11 @@ class NativeTrace:
                 self.await_exit(tid)
         while set(self.known) != self.stopped:
             require(bool(self.known), 'updater-exited-before-stop')
-            tid, status = self.kernel.wait(set(self.known), bound)
+            tid, status = self.wait_known(bound)
             self.consume(tid, status, initial=initial)
         require(self.kernel.boot() == self.registration['boot_id'], 'boot-changed')
         require(self.kernel.tasks() == set(self.known), 'cgroup-has-untraced-tasks')
+        require(not self.exit_threads, 'exit-thread-drain-incomplete')
         for tid in self.known:
             require(self.validate_known(tid)['state'] == 't', 'task-not-in-ptrace-stop')
 
@@ -639,7 +700,7 @@ class NativeTrace:
             if not self.known:
                 break
             try:
-                tid, status = self.kernel.wait(set(self.known), bound)
+                tid, status = self.wait_known(bound)
                 if os.WIFEXITED(status) or os.WIFSIGNALED(status):
                     self.known.pop(tid)
                     self.stopped.discard(tid)
@@ -669,7 +730,7 @@ class NativeTrace:
         try:
             self.initial_attach()
             while self.known and self.kernel.now() < self.deadline:
-                tid, status = self.kernel.wait(set(self.known), self.deadline)
+                tid, status = self.wait_known(self.deadline)
                 try:
                     write = self.consume(tid, status)
                 except (FileNotFoundError, ProcessLookupError):
