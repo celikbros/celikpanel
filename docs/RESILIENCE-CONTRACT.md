@@ -211,8 +211,12 @@ recovery for pending markers. Local contracts pass. The fresh
 [AB Arch native drill](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md#ab-changed-runner-completes-the-native-arch-recovery-reboot)
 now verifies two boot deferrals followed by same-operation automatic rollback,
 zero postboot recovery failures and all 102 old rows retained across 55 tables.
-Changed-runner Debian acceptance, browser-specific waiting guidance and the wider
-matrix remain open. Earlier X/Z failures and inconclusive AA remain preserved.
+The separate [AD Debian drill](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md#ad-changed-runner-completes-the-native-debian-recovery-reboot)
+now verifies one boot deferral, same-operation automatic rollback, zero postboot
+recovery failures and all 100 old rows retained across 55 tables. This closes
+that changed-runner Debian boundary, not P0.1–P0.3 in full. Browser-specific
+waiting guidance and the wider matrix remain open. Earlier X/Z failures,
+inconclusive AA and preparation-only AC remain preserved.
 
 ## Fault matrix
 

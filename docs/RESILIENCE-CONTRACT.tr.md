@@ -228,8 +228,12 @@ engeller. Yerel sözleşmeler geçti. Yeni
 [AB Arch deneyi](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md), iki
 açılış ertelemesinden sonra aynı işlemin otomatik geri alındığını, açılış sonrası
 sıfır kurtarma hatasını ve 55 tablodaki 102 eski satırın korunduğunu doğrular.
-Değişen yürütücünün Debian kabulü, tarayıcıdaki bekleme açıklaması ve geniş matris
-açıktır. Önceki X/Z hataları ile belirsiz AA sonucu korunur.
+Ayrı [AD Debian deneyi](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md),
+bir açılış ertelemesini, aynı işlemin otomatik geri alınmasını, açılış sonrası
+sıfır kurtarma hatasını ve 55 tablodaki 100 eski satırın korunmasını doğrular.
+Değişen yürütücünün bu Debian kabul sınırı kapanır; P0.1–P0.3 bütünüyle kapanmaz.
+Tarayıcıdaki bekleme açıklaması ve geniş matris açıktır. Önceki X/Z hataları,
+belirsiz AA sonucu ve yalnız hazırlıkta duran AC korunur.
 
 ## Hata matrisi
 

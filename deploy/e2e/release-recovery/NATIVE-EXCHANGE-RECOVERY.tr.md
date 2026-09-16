@@ -313,3 +313,76 @@ kesintisiz erişim veya depolamanın güç kesintisine dayanıklılığı değil
 Değişen yürütücünün Debian kabulü, imzalı aday kabulü, kalan aşama/üstveri matrisi
 ve bütün gerçek hizmet/yenileme bağımsızlığı açıktır. Kurulu Frankfurt ve Boston
 panellerine müdahale edilmedi.
+
+## AC: Debian hazırlığı iki kesintiden önce durdu
+
+16 Eylül tarihli yeni `/var/tmp/cp-release-drill-20260916-ac` denemesi,
+Alpha64 temel kurulumunu, dolu veri hazırlığını, DNS ve koordinatör sağlık
+kontrollerini tamamladı; aday hazırlığından ve iki kesintiden önce durdu.
+Gözlemci, Debian bulut imajında bulunmayan `linux-image-amd64` üst paketini
+sorguladı; çalışan çekirdek `6.12.105+deb13-cloud-amd64` idi. Bu bir test hazırlığı
+hatasıdır; ürün güncellemesi veya kurtarma sonucu değildir. İki kayıtlı konuk
+durduruldu; diskler, başarısız komut çıktısı ve hazırlık sonucu korundu.
+
+Sonraki temiz deneme, gerçekten çalışan çekirdeğin paketini sorgular. AC içinde
+yeniden deneme veya kurtarma değişikliği yapılmadı. AC gerçek kesinti kabulü
+sayılmaz; başarısızlığı sonraki sonuçtan ayrı tutulur.
+
+## AD: değişen yürütücü Debian yeniden başlatmasında kurtarmayı tamamladı
+
+16 Eylül tarihli yeni `/var/tmp/cp-release-drill-20260916-ad` denemesi,
+AB ile aynı aday kaynağını (`8d62896f0fb5be329090923ad074115941c0328c`) ve
+`1c49df9ea65ec5758470b4ee347ed51cd2d00b7cf3f3f34253f58543d4a6cba8` arşivini
+kullandı. Yüklenen 20 yardımcı ayrı olarak
+`b8c99e733920e7a16a4fa7878dd9074225c6efa8` kaynağına bağlandı; beş fark yalnız
+CRLF idi. Aday, yayımlanmamış ve yalnız geçici deneyde kullanılan bir pakettir.
+
+`a19adb95a00c684f9e11e45e8ff130c3` işlemi,
+`release-recovery__d08881e596c231d1` hücresi ve
+`505c33bb-c657-5999-a1bd-733b4611b130` Debian UUID'si; gerçek Alpha64/schema38,
+dolu SQL ve doğrulanmış yetkili DNS ile başladı. Ayrı veritabanındaki gerçek
+38→42 geçişi ve başarılı yerel exchange sonrasında, yayın makbuzundan önce tam
+güncelleyici süreci kesildi. Yerel OnFailure geri almayı başlattı; denetleyici
+kayıtlı VM'yi `payload_restored` aşamasında bir kez resetledi.
+
+13:36:15 UTC'de yeni açılış, systemd hâlâ başlarken kurtarmayı erteledi;
+kilidi bıraktı ve bekleyen işlemi korudu. Yerel zamanlayıcı sonraki çağrıyı
+13:36:47'de başlattı; geri alma 13:37:15'te tamamlandı. **Bir açılış ertelemesi,
+sıfır açılış sonrası kurtarma hatası ve sıfır elle kurtarma müdahalesi** kaydedildi.
+Açılış kimlikleri `fbb4ab74-afc2-41d9-a43e-4393aca9ab59` ve
+`7d08370d-10a1-4f9e-8e6d-98e6395a90b0` idi.
+
+Son kontroller; kurulu/çalışan eski ikilileri, schema38'i, yerel unit'leri, web
+dosyalarını, kurtarma temelini, ters exchange kanıt zincirini ve işlem
+işaretçilerinin temizlendiğini doğruladı. **55 tablo / 100 kesinti anı satırının**
+rowid ve türlenmiş değerleri aynı kaldı: sıfır eksik, sıfır değişen. Sonradan
+eklenen bir metrik satırı ayrıca kaydedilir; bütün veritabanı eşit değildir.
+Korunan göç ettirilmiş After veritabanı gerçek 38→42 dönüşümünü kanıtlar.
+Analiz özel kopyaları kullandı; son durum sonrası dondur/kopyala/çöz işlemi,
+otomatik kurtarmadan sonra kanıt toplamak içindi, kurtarmayı bitirme müdahalesi değildi.
+
+DNS A/SOA UDP/TCP yanıtları başlangıçla aynıydı; HTTPS beklenen sertifikayla 200
+döndürdü. Çalışan çekirdek `6.12.105+deb13-cloud-amd64`, çekirdek paketi
+`6.12.105-1` ve systemd `257.13-1~deb13u1` reset boyunca değişmedi. Ana makine;
+neden-sonuç zinciri ve 20 yardımcı bağı dahil 92 bağlı girdiyi bağımsız doğruladı.
+İki kayıtlı konuk durduruldu; diskler ve kanıtlar korunur.
+
+| AD kanıtı | SHA256 |
+|---|---|
+| Son durum | `8dfa3c2d75a693bb5d744d1a6a44152c7526bf51b1dc82fe74df7532996c6955` |
+| Son canlı durum kanıtı | `d46192f719d25b443cfdf9d3497bd91f70f19fd16d865518659ff58aecd28aa2` |
+| Veritabanı değişim aşaması | `377293f3b15e4f2116dc09538cf078dafa8b6e28ea97036fe46b11c83dfa7843` |
+| Aşamaya bağlı reset gönderimi | `bb5cc7a509e92bcf9d4fb164a931646a5af5ac46b90e28dd0fac450fc94ee86c` |
+| Yerel neden-sonuç zinciri | `cc570ac8330db3408284584e5354719c1171a4056d3c3987d88c440e96d97525` |
+| Ana makine satır incelemesi | `46de9ec4e8f9b1a0ab7bab07bfcec416afcfc1ed3a0fc3d9c579c038efa81640` |
+| Yardımcı kaynak bağı | `5141a2e581944b727d6fc88db78de2a503e233216f7c5ff3171a1fb4eaecf6fd` |
+| Ana makine mührü (92 girdi) | `4ca0ebf48bcc5671ec8fdc48486cd30ef6534b0fcf20e63afbb32cab1911b170` |
+
+Bu sonuç D-025 ilkeleri 2–5 / P0.1–P0.3 kapsamında değişen yürütücünün bu iki
+kesinti sınırındaki Debian kabulünü kapatır. Bu belge değişikliğinde ürün,
+kalıcı şema veya protokol değişmedi. AB ve AD bu sınırı Arch ve Debian için
+kapsar; X/Z hataları, AA'nın belirsiz denemesi ve AC'nin hazırlık hatası kayıtlı
+kalır. Tarayıcıdaki bekleme açıklaması, imzalı aday kabulü, bütün aşama/üstveri
+matrisi ve yerel hizmet/yenileme bağımsızlığı açıktır. QEMU reseti, depolamanın
+güç kaybına dayanıklılığını veya kesintisiz erişimi kanıtlamaz. Kurulu Frankfurt
+ve Boston panellerine müdahale edilmedi.

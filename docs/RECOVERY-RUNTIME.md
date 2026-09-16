@@ -175,5 +175,10 @@ uses the exact changed candidate and separately pinned corrected tracer. After
 an exchange cut and reset at native rollback `payload_restored`, two boot
 invocations defer without a recovery failure; the native timer completes the
 same rollback. All 102 old rows in 55 tables, DNS and HTTPS pass the scoped checks.
-Changed-runner Debian, browser waiting guidance and the wider P0 matrix remain
-open. AB is eventual recovery, not uninterrupted access or power-loss durability.
+The separate [AD native Debian acceptance](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md#ad-changed-runner-completes-the-native-debian-recovery-reboot)
+passes the same two-fault boundary: one boot deferral, zero postboot recovery
+failures and automatic completion of the same rollback. All 100 old rows across
+55 tables, DNS and HTTPS pass; one later metrics row is recorded separately.
+AC's earlier preparation-only failure remains preserved. Browser waiting guidance
+and the wider P0 matrix remain open. AB/AD prove eventual recovery at this
+boundary, not uninterrupted access or power-loss durability.
