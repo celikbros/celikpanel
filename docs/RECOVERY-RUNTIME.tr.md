@@ -175,6 +175,10 @@ değişen adayı ve ayrı kaynak kimliğiyle sabitlenmiş düzeltilen izleyiciyi
 Exchange kesintisi ve yerel geri almanın `payload_restored` aşamasındaki reset
 sonrası iki açılış çağrısı hata vermeden erteler; yerel zamanlayıcı aynı geri almayı
 tamamlar. 55 tablodaki 102 eski satır, DNS ve HTTPS dar kapsamlı denetimleri geçer.
-Değişen yürütücünün Debian kabulü, tarayıcıdaki bekleme açıklaması ve geniş P0
-matrisi açıktır. AB sonunda kurtarmayı kanıtlar; kesintisiz erişim veya güç kaybı
-dayanıklılığı değildir.
+Ayrı [AD Debian kabulü](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md),
+aynı iki kesinti sınırını geçer: bir açılış ertelemesi, açılış sonrası sıfır
+kurtarma hatası ve aynı geri almanın otomatik tamamlanması. 55 tablodaki 100 eski
+satır, DNS ve HTTPS denetimleri geçer; sonradan eklenen bir metrik satırı ayrı
+kaydedilir. AC'nin önceki hazırlık hatası korunur. Tarayıcıdaki bekleme açıklaması
+ve geniş P0 matrisi açıktır. AB/AD bu sınırda sonunda kurtarmayı kanıtlar;
+kesintisiz erişim veya güç kaybı dayanıklılığı değildir.

@@ -315,3 +315,76 @@ This is eventual recovery, not uninterrupted availability or storage power-loss
 durability. Changed-runner Debian acceptance, signed candidate admission, the
 remaining checkpoint/metadata matrix and full native workload/renewal
 independence remain open. No installed Frankfurt or Boston panel was changed.
+
+## AC: Debian preparation stopped before either fault
+
+The September 16 fresh attempt `/var/tmp/cp-release-drill-20260916-ac`
+completed its Alpha64 baseline, populated seed, DNS and coordinator health
+checks, but stopped before candidate preparation or either fault. The observer
+queried the absent `linux-image-amd64` metadata package in a Debian cloud image;
+its running kernel was `6.12.105+deb13-cloud-amd64`. This was a test preparation
+error, not a product update or recovery result. Both registered guests were
+stopped and the disks, failed command output and preparation outcome retained.
+
+The next fresh attempt queries the package for the actual running kernel.
+There was no retry or recovery mutation in AC. It is not counted as native fault
+acceptance and its failure remains separate from the subsequent result.
+
+## AD: changed runner completes the native Debian recovery reboot
+
+The September 16 fresh `/var/tmp/cp-release-drill-20260916-ad` trial used the
+same candidate source `8d62896f0fb5be329090923ad074115941c0328c` and archive
+`1c49df9ea65ec5758470b4ee347ed51cd2d00b7cf3f3f34253f58543d4a6cba8` as AB.
+All 20 uploaded helpers were bound separately to
+`b8c99e733920e7a16a4fa7878dd9074225c6efa8`; five differences were CRLF only.
+The candidate remains an unpublished disposable-lab fixture.
+
+Operation `a19adb95a00c684f9e11e45e8ff130c3`, cell
+`release-recovery__d08881e596c231d1`, Debian UUID
+`505c33bb-c657-5999-a1bd-733b4611b130` started from genuine Alpha64/schema38
+with populated SQL and verified authoritative DNS. Real 38→42 migration in a
+separate database and successful native exchange preceded the exact updater
+kill, before the publication receipt. Native OnFailure began rollback; the
+controller reset the registered VM once at `payload_restored`.
+
+At 13:36:15 UTC the new boot deferred dispatch while systemd was still starting,
+released the lock and preserved the pending operation. The native timer began
+the next invocation at 13:36:47; rollback completed at 13:37:15. There was **one
+boot deferral, zero postboot recovery failures, and no manual recovery**.
+The boot IDs were `fbb4ab74-afc2-41d9-a43e-4393aca9ab59` and
+`7d08370d-10a1-4f9e-8e6d-98e6395a90b0`.
+
+Terminal checks verified old installed/running binaries, schema38, native units,
+web files, recovery foundation, the inverse-exchange receipt chain and cleared
+transaction markers. All **55 tables / 100 cut-time rows** retained identical
+rowids and typed values: zero missing, zero changed. One later metrics row is
+reported separately; whole-database equality is different. The preserved
+migrated After database still proves the real 38→42 conversion. Analysis used
+private copies; the post-terminal fixture freeze/copy/thaw was evidence
+collection after automatic recovery, not an intervention to complete it.
+
+DNS A/SOA over UDP/TCP matched the baseline and HTTPS returned 200 with the
+expected certificate. Running kernel `6.12.105+deb13-cloud-amd64`, kernel package
+`6.12.105-1` and systemd `257.13-1~deb13u1` were unchanged across reset. The host
+independently rechecked 92 bound inputs, including the causal chain and all 20
+helper pins. Both registered guests were stopped; disks and evidence remain.
+
+| AD preserved proof | SHA256 |
+|---|---|
+| Terminal outcome | `8dfa3c2d75a693bb5d744d1a6a44152c7526bf51b1dc82fe74df7532996c6955` |
+| Terminal live proof | `d46192f719d25b443cfdf9d3497bd91f70f19fd16d865518659ff58aecd28aa2` |
+| Exchange checkpoint | `377293f3b15e4f2116dc09538cf078dafa8b6e28ea97036fe46b11c83dfa7843` |
+| Reset submission with checkpoint binding | `bb5cc7a509e92bcf9d4fb164a931646a5af5ac46b90e28dd0fac450fc94ee86c` |
+| Native causal chain | `cc570ac8330db3408284584e5354719c1171a4056d3c3987d88c440e96d97525` |
+| Host row review | `46de9ec4e8f9b1a0ab7bab07bfcec416afcfc1ed3a0fc3d9c579c038efa81640` |
+| Helper source binding | `5141a2e581944b727d6fc88db78de2a503e233216f7c5ff3171a1fb4eaecf6fd` |
+| Host seal (92 inputs) | `4ca0ebf48bcc5671ec8fdc48486cd30ef6534b0fcf20e63afbb32cab1911b170` |
+
+This closes the changed runner's Debian acceptance at this two-fault boundary
+for D-025 invariants 2–5 / P0.1–P0.3. No product, persisted schema or protocol
+changed in this documentation slice. AB and AD now cover Arch and Debian for
+this boundary; X/Z failures, AA's inconclusive trial and AC's preparation error
+remain recorded. Browser waiting guidance, signed candidate admission, the full
+checkpoint/metadata matrix and native workload/renewal independence remain open.
+A QEMU reset does not establish storage power-loss durability or uninterrupted
+availability. No installed Frankfurt or Boston panel was changed.
