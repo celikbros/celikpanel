@@ -78,3 +78,23 @@ hizmet testleri gerektiren ayrı bir geçiştir. Denetimsiz dosya kopyalayan bet
 D-022'yi karşılamaz. Bu değişiklik kaldırma komutu sunmaz veya onaylamaz. Kaldırma,
 sahibinin incelediği, bütün hizmet verilerini koruyan ve yerel yönetim yolunu
 belgeleyen bir işlem olarak tamamlanmalıdır.
+
+## Ortak firewall politika sözleşmesi (kaynak aşaması)
+
+D-025 ilkeleri 1, 3, 6 / P0.5. Kalıcı firewall üreticisi, okuyucusu ve açılış
+kuralları hazırlığı artık `internal/firewallpolicy` paketini paylaşıyor. Paket
+yalnız Go standart kütüphanesini kullanır; Agent, uygulama veritabanı, lisans,
+sunucu komutu veya dosya erişimi bağımlılığı yoktur. Agent aynı paketten v2
+yazar, eski/v2 dosyayı okur ve güncel doğrulanmış SSH portları ile kaydedilmiş
+SSH geçiş korumasını birleştirir.
+
+V2 JSON baytları, boş liste temsili, boyut sınırı ve eski nft biçimi korundu;
+şema geçişi veya disk normalizasyonu yok. Bilinmeyen sürüm, keyfi nft metni,
+yinelenen JSON alanı ve geçersiz SSH portu reddedilir. Yalnız `inet celikpanel_fw`
+tablosu hedeflenir. Yetki, güvenli dosya okuma, SSH keşfi, nft ön kontrolü,
+atomik uygulama ve geri alma mevcut çağıranda kalır; kural üretmek başarı kanıtı değildir.
+
+Paket ve mevcut Agent firewall testleri yarış algılayıcıyla geçti. Kurulu açılış
+uniti hâlâ Agent'ı çağırıyor. Bağımsız tüketicinin paketlenmesi, kalıcı
+politika/açılış geçişi, hata kurtarması ve Agent yokken gerçek yeniden başlatma
+kabulü açık. Kurulu sunucular değiştirilmedi.
