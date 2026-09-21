@@ -196,4 +196,9 @@ or power-loss durability.
 The [durable dispatch budget](RECOVERY-DISPATCH-BUDGET.md) permits three automatic
 child attempts per snapshot, then requires an explicit owner retry. Waiting and
 read-only queries consume no slot. The new source has shell/Go contract coverage;
-selected-kit transition and native VM acceptance remain open.
+the scoped native result is recorded below.
+
+The subsequent [Debian AL budget acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md)
+passes new-kit selection, interrupted reservations across a reboot, exhaustion and
+one supported owner retry. Publication-edge faults, browser budget guidance and
+the full P0 matrix remain open.

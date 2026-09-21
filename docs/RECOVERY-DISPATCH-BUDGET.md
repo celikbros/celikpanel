@@ -86,7 +86,12 @@ foreign snapshot rejection and final terminal verification. Existing actual
 rollback-entry lock handoff cases and independent-runtime shell contracts pass.
 Shell/Go observation parity and race-enabled CLI/observation tests pass.
 
-**This is not native VM acceptance.** The previous AJ/AK artifacts predate this
-change. Real selected-kit upgrade, reboot across reservation publication,
-exhaustion and owner retry, plus the wider workload/platform matrix remain open.
-No production release or installed owner panel was changed. P0.2/P0.3 remain open.
+[Debian AL native acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md)
+now proves selection of the new kit, a reboot after the first reservation, two
+more interrupted native attempts, repeated exhaustion and one owner retry with
+unchanged automatic receipts. CLI and authenticated HTTP agree on final rollback.
+Earlier AJ/AK evidence predates this policy and is not reused as proof for it.
+Reservation-publication-edge power loss, native repeated deterministic errors,
+other platforms, browser budget guidance and the broader fault/workload matrix
+remain open. No production release or installed owner panel changed. P0.2/P0.3
+remain open.
