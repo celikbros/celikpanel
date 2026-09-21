@@ -194,3 +194,60 @@ browser pause access, interrupted owner continuation, publication-edge faults,
 production trust and workload independence remain open. Existing AL/AN evidence
 is unchanged. D-025 invariants 2, 4, 5 / P0.2–P0.3 remain partial. This evidence
 change adds no product schema, migration, installed-panel update or release.
+
+
+## Debian AP independent owner browser acceptance
+
+[AP's machine-readable result](OWNER-VIEW-AP.json) closes the scoped Debian
+owner-started browser fallback test with both normal coordinators stopped.
+Candidate `29b2b01ee391dc776f0b521344a73d241fa601ea` has parent
+`b62e474408d17b5273b807f2384cd8772eb58bd0` (PR179); its only fixture override is
+release-sequence policy. Archive SHA256:
+`698eec7dc80813bcfcf1bd890dadbfc86d01195c8639c3937a42d7352cb6bb0a`.
+The baseline is the retained Alpha81 archive. This is isolated lab trust, not
+production signing or ordinary panel UI update admission.
+
+Request `0e8a6ab74609736589b62ba6dc87306e` passed real Agent admission, worker
+termination, first-recovery QMP reset and two further native cuts at
+`payload_restored`. After the three automatic admissions were exhausted, the
+installed recovery entry and running viewer matched the verified selected kit.
+Agent and Panel had MainPID 0 before and after viewing. The owner reader returned
+401 anonymously and with the wrong code, 403 for a foreign origin and 200 for the
+correct temporary code. Its actual observation preserved the same request,
+known recovery failure and paused automatic continuation.
+
+Chrome reached that native reader through SSH loopback forwarding in EN/TR at
+1440/390 px. Read-only polling, offline last-result retention, explicit lock,
+reload clearing, empty browser storage and no overflow passed. The fixture alone
+captures the controlling-terminal code in root-private temporary evidence to
+drive the browser; that credential is excluded from collected/public evidence.
+The product emits it only to the controlling terminal. Viewer shutdown returned
+0 with empty stdout/stderr and unchanged automatic receipt hashes.
+
+One explicit supported owner continuation then completed rollback at
+`2026-09-21T23:02:33Z`. Baseline Agent/Panel binaries and their running processes
+matched, selected CLI and authenticated HTTP agreed, and anonymous HTTP returned
+401. All three automatic receipts remained unchanged; one owner receipt was
+added. The retained pause hint lost to verified terminal proof. Both disposable
+VMs are stopped with private evidence retained.
+
+`guest_owner_view.py` requires sealed VM identity, prior native cuts and exhausted
+budget before starting the installed read-only entry. `verify_owner_view.py`
+first requires the complete native budget/guidance proof, then binds viewer,
+service state, runtime hashes, authorization and browser evidence. Negative tests
+reject active normal services, foreign binaries/VM/operation/boot, anonymous
+access, unknown or terminal data masquerading as exhaustion, leaked output,
+failed shutdown and changed budget.
+
+```sh
+python3 deploy/e2e/release-recovery/verify_owner_view.py \
+  --evidence-dir /var/tmp/cp-release-drill-20260922-ap/evidence/debian13 \
+  --operation-id 0e8a6ab74609736589b62ba6dc87306e
+```
+
+D-025 invariants 2, 3, 5, 6 / P0.2-P0.3 remain partial. This additive test/evidence
+change alters no product schema or runtime protocol. The fallback requires an
+explicit owner SSH command; automatic normal-address access, Arch viewer proof,
+historical launcher compatibility, interrupted owner retry, publication-edge
+faults, production trust and workload independence remain open. No installed
+owner panel was updated and no production release was published.

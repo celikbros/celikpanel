@@ -298,3 +298,13 @@ tek kullanıcı devamıyla doğrulanan geri almanın eski durma kaydından üst�
 kanıtlar. Eski uygulamalar geri yüklenir; sonrasında yetkili HTTP aynı sonucu verir.
 Debian'da yeni kayıttan CLI'a kabul kapanır; Panel durmuşken tarayıcı erişimi ve
 tüm P0.2/P0.3 matrisi açık kalır.
+
+
+[Debian AP bağımsız tarayıcı kabulü](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md#debian-ap-independent-owner-browser-acceptance)
+Panel ve Agent kapalıyken kurulu kurtarma okuyucusunu doğruladı. Kullanıcının
+SSH tüneli, gerçek işlemin duraklama bilgisini geçici kodla EN/TR masaüstü ve
+mobil tarayıcıya sundu; otomatik deneme kayıtları değişmedi. Ardından desteklenen
+kullanıcı devamı eski servisleri geri getirdi; CLI ve yetkili HTTP sonucu eşleşti.
+Yalnız bu Debian yedek erişim sınırı kapandı. Normal adresten otomatik erişim,
+Arch/eski başlatıcı uyumu ve P0.2/P0.3'ün kalan hata matrisi açık. Önceki yalnız
+yerel test sınırı bu AP vakası için aşıldı; tüm erişim kabulü tamamlanmış sayılmaz.

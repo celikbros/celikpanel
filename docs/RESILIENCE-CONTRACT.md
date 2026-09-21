@@ -282,3 +282,14 @@ three interrupted native attempts, and retained stale guidance loses to verified
 rollback after one owner continuation. Old binaries are restored and authenticated
 HTTP agrees afterwards. This closes native Debian hint-to-CLI acceptance; it does
 not close browser access while Panel is stopped or the full P0.2/P0.3 matrix.
+
+
+[Debian AP independent browser acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md#debian-ap-independent-owner-browser-acceptance)
+now verifies the installed recovery reader while both normal Panel and Agent are
+stopped. An owner SSH tunnel serves the actual exhausted-operation observation
+in EN/TR desktop/mobile, with temporary-code authorization and no budget change.
+Subsequent supported owner continuation restores baseline services and matching
+CLI/authenticated HTTP results. This closes that Debian fallback boundary only;
+automatic normal-address access, Arch/historical-launcher compatibility and the
+remaining P0.2/P0.3 fault matrix stay open. The earlier local-only statement above
+is superseded for this exact AP boundary, not relabeled as full access acceptance.
