@@ -173,3 +173,56 @@ tek kullanıcı devamıyla doğrulanan geri almanın eski durma kaydından üst�
 kanıtlar. Eski uygulamalar geri yüklenir; sonrasında yetkili HTTP aynı sonucu verir.
 Debian'da yeni kayıttan CLI'a kabul kapanır; Panel durmuşken tarayıcı erişimi ve
 tüm P0.2/P0.3 matrisi açık kalır.
+
+## Sunucu sahibinin açtığı bağımsız tarayıcı ekranı (kaynak uygulaması)
+
+D-025 ilkeleri 2, 3, 5, 6 / P0.2. `recovery view`, yerel kullanıcı CLI'ına geçici
+ve isteğe bağlı bir tarayıcı okuyucusu ekler. Güncelleme veya kurtarma başlatmaz;
+uygulama veritabanı açmaz. Panel, Agent, lisans doğrulayıcı, TLS dosyaları, web
+dizini veya Node gerekmez. HTML/CSS/JS kurtarma dosyasına gömülüdür. Gözlem v1 ve
+çalışma ortamı protokolü değişmez; komut eklenir. Eski dosyalar komutu reddeder.
+Kullanım için kurulu başlatıcının bu komutu içermesi gerekir; bu çalışmada kurulu
+kullanıcı paneli güncellenmedi.
+
+Sunucu sahibi etkileşimli root/yetkili sudo SSH oturumundan yerel port yönlendirmesi
+ile açar. SERVER ve OPERATION yerine gerçek sunucuyu ve 32 karakterli tam işlem
+kimliğini yazın:
+
+```sh
+ssh -t -o ExitOnForwardFailure=yes \
+  -L 127.0.0.1:2084:127.0.0.1:2084 owner@SERVER \
+  sudo /usr/libexec/celikpanel/recovery view --request-id OPERATION --lang tr
+```
+
+Bilgisayarınızda `http://127.0.0.1:2084/` açıp SSH terminalindeki geçici kodu girin.
+256 bit rastgele kod yalnız komutun denetim terminaline yazılır; stdout/stderr,
+günlük, dosya, URL veya tarayıcı depolamasına yazılmaz. Tarayıcı kodu bellekte tutar
+ve SSH tünelindeki yetkilendirme başlığında gönderir. Yenileme veya **Bu ekranı
+kilitle** tarayıcı erişimini temizler; Ctrl+C/SIGHUP/SIGTERM dinleyiciyi kapatır.
+Erişim uzatılmadan 30 dakika sonra biter. Yeniden erişim için kullanıcı komutu
+tekrar açar. Port doluysa kod gösterilmeden işlem reddedilir. `--port` başka bir
+yetkisiz port seçebilir; iki uçta yönlendirilen port aynı olmalıdır. Dış arayüze
+bağlanma seçeneği veya gözetimsiz gizli kod aktarımı yoktur.
+
+Dinleyici yalnız IPv4 yerel arayüzüne bağlanır. Tam Host/origin denetimi, başka
+siteden istek reddi, CSP, önbelleksiz yanıtlar, başlık/zaman sınırları ve sabit
+zamanlı kod doğrulaması okuyucuyu korur. Yetkiden önce işlem kaydı okunmaz. Yalnız
+GET ile gömülü dosyalar ve tek sabit `/status` yolu açıktır; sorguyla işlem kapsamı
+değiştirme, değişiklik ve vekil yolları reddedilir. Kimlik bilgisi, işlem yetki
+belirteci, snapshot yolu veya ham hizmet günlüğü döndürülmez. Gözlem güncel sağlık
+iddiası değildir. Bilinmeyen okumada son sonuç korunur; doğrulanmış nihai sonuç
+eski okumadan üstün kalır. CLI ile aynı TR/EN kullanıcı yönlendirmesi kullanılır.
+
+Yerel doğrulama: yarış denetimli kurtarma testleri; kapalı seçenek/host/origin/
+yöntem/süre yetki testleri; veritabanı/Agent/TLS olmadan ayrı gerçek HTTP süreci;
+gerçek üretim girişinin denetim terminalinde çalışması. Sonuncusunda kodun özel
+terminale iletimi, boş stdout/stderr, anonim 401, dürüst bilinmeyen gözlem ve temiz
+SIGTERM çıkışı doğrulandı. Chrome TR/EN, 1440/390 px kontrolleri gerçek HTTP
+okuyucuda bağlantı kaybı, kilitleme/yenileme, yalnız GET, boş depolama ve taşmasız/
+hatasız görüntüyü denedi. Tarayıcıdaki işlem gözlemi test verisiydi.
+
+**Açık:** gerçek kurtarmada Panel durmuşken doğrulanmış kurulu kitten çalışma,
+SSH tünelinin uçtan uca kabulü, eski başlatıcıdan geçiş uyumluluğu ve normal panel
+adresinden otomatik erişim. Kullanıcının açtığı bu yedek yol bunları veya P0.2'yi
+kapatmaz. Normal kimlik doğrulama, lisans politikası, hizmet başlangıç koruması,
+işlem kilidi, güvenlik duvarı, DNS ve iş yükü yaşam döngüsü değişmez.
