@@ -291,3 +291,10 @@ için uyumlu üretici/okuyucu sözleşmesi ve çift dilli UI/CLI davranışı ek
 Yerel katmanlar arası ve tarayıcı testleri geçti. Bu, P0.2'yi kapatmaz: yeni
 bilginin gerçek yerel yürütücüden tarayıcıya kabulü ve Panel durmuşken doğrulanmış
 erişim hâlâ kanıtlanmalıdır. AL/AN sonuçları bu yeni özelliğin kanıtı sayılmaz.
+
+[Debian AO yerel kabulü](../deploy/e2e/release-recovery/DISPATCH-BUDGET.tr.md#debian-ao-yerel-durma-yönlendirmesi)
+yeni durma kaydının üç gerçek kesintiden sonra seçili CLI'a TR/EN ulaştığını ve
+tek kullanıcı devamıyla doğrulanan geri almanın eski durma kaydından üstün olduğunu
+kanıtlar. Eski uygulamalar geri yüklenir; sonrasında yetkili HTTP aynı sonucu verir.
+Debian'da yeni kayıttan CLI'a kabul kapanır; Panel durmuşken tarayıcı erişimi ve
+tüm P0.2/P0.3 matrisi açık kalır.

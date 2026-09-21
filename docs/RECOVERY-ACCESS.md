@@ -174,3 +174,10 @@ adds an optional exact-status hint for three spent automatic admissions. CLI and
 administrator UI explain owner action and the supported one-time continuation.
 Producer/reader, authorization, terminal precedence and local browser checks pass;
 fresh native hint-to-browser and stopped-Panel access acceptance remain open.
+
+[Debian AO native acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md#debian-ao-native-pause-guidance)
+now proves the new exact-status pause hint reaches the selected CLI in EN/TR after
+three interrupted native attempts, and retained stale guidance loses to verified
+rollback after one owner continuation. Old binaries are restored and authenticated
+HTTP agrees afterwards. This closes native Debian hint-to-CLI acceptance; it does
+not close browser access while Panel is stopped or the full P0.2/P0.3 matrix.

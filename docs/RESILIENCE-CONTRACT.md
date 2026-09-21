@@ -275,3 +275,10 @@ now has a compatible producer/reader contract and bilingual UI/CLI behavior.
 Local cross-layer and browser-fixture checks pass. This does not close P0.2:
 new-hint native acceptance and authenticated access with Panel stopped still need
 proof. Existing AL/AN native dispatch evidence is not relabeled as that proof.
+
+[Debian AO native acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md#debian-ao-native-pause-guidance)
+now proves the new exact-status pause hint reaches the selected CLI in EN/TR after
+three interrupted native attempts, and retained stale guidance loses to verified
+rollback after one owner continuation. Old binaries are restored and authenticated
+HTTP agrees afterwards. This closes native Debian hint-to-CLI acceptance; it does
+not close browser access while Panel is stopped or the full P0.2/P0.3 matrix.

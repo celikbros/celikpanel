@@ -131,3 +131,10 @@ Bu tarayıcı yanıtları ve shell işletim sistemi durumu test verisidir. AL/AN
 önceki yerel deneme sınırını kanıtlar; **yeni ek bilgiyi kanıtlamaz**. Yeni bilginin
 yerel yürütücüden tarayıcıya kabulü ve Panel durmuşken erişim açıktır. Üretim
 sürümü veya kurulu kullanıcı paneli değiştirilmedi.
+
+[Debian AO yerel kabulü](../deploy/e2e/release-recovery/DISPATCH-BUDGET.tr.md#debian-ao-yerel-durma-yönlendirmesi)
+yeni durma kaydının üç gerçek kesintiden sonra seçili CLI'a TR/EN ulaştığını ve
+tek kullanıcı devamıyla doğrulanan geri almanın eski durma kaydından üstün olduğunu
+kanıtlar. Eski uygulamalar geri yüklenir; sonrasında yetkili HTTP aynı sonucu verir.
+Debian'da yeni kayıttan CLI'a kabul kapanır; Panel durmuşken tarayıcı erişimi ve
+tüm P0.2/P0.3 matrisi açık kalır.
