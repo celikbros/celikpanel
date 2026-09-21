@@ -1,0 +1,97 @@
+{
+  "anonymous_http": 401,
+  "authenticated_http": 200,
+  "automatic_receipts_preserved": {
+    "1": {
+      "bytes": 273,
+      "sha256": "ed524ef29c24c953b98f780c5d6d8339135c4f1755eebec1ca389e9182903feb"
+    },
+    "2": {
+      "bytes": 275,
+      "sha256": "4b2ab5ae5c5ed113dcd7e8af7c9587b432eefc8c5c1085570319a8d15d999466"
+    },
+    "3": {
+      "bytes": 275,
+      "sha256": "545df35636ae8b89e475ddd179706b256f9a932edf361a5e7cce137fabe3a701"
+    }
+  },
+  "baseline": {
+    "agent_sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+    "commit": "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00",
+    "panel_sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd",
+    "version": "v0.1.0-alpha.81"
+  },
+  "coordinators_restored_to_baseline": true,
+  "cut_invocations": [
+    "3d294c5e4c5c4ebeb5da6f3a37f9ca17",
+    "16abac583b0742a9997d6f27a45e406c"
+  ],
+  "evidence_sha256": {
+    "bound-worker-4c0ec761ef57aa38aea5b2b7f83964fd.json": "ed994eec174dae538231db8bed1922f1aac1bb5cfbf5b842e09eac5bf88ccc76",
+    "bound-worker-reboot-cut-4c0ec761ef57aa38aea5b2b7f83964fd.jsonl": "75e812ef1049ee35c82e223d0ea1450015eeb06714d65b48e5dc97159b6521f0",
+    "bound-worker-reboot-result-4c0ec761ef57aa38aea5b2b7f83964fd.json": "c0f9af0a6a955a0e074319d2c19c71bf8b7eef7ec3fc4ce81c47710db6411cdc",
+    "bound-worker-start-4c0ec761ef57aa38aea5b2b7f83964fd.json": "ec34ce79feae429da67a65fb5afc0f42709688dffcd814db6244298e6c40f5f6",
+    "bound-worker-start-4c0ec761ef57aa38aea5b2b7f83964fd.stdout.jsonl": "3dced900ec5c9a501a9c3856e9666df6485215d4d92d1b4178216dc270622f1b",
+    "budget-candidate-build.json": "236c94808b1acbac524db2ebf1f687f677b3c335fcf04645686db7f21f8a5e99",
+    "budget-candidate-files.json": "f862f20612b842441b3d12984cf102306ca1d616af52dae86021a2945a32dfaf",
+    "budget-collected/boot-wait-4c0ec761ef57aa38aea5b2b7f83964fd.jsonl": "54375b6e3454ea0b168d8595fcc739add0c5eac762172c1427f86e820f986a5b",
+    "budget-collected/bound-reader-after-owner.jsonl": "3d1a80b9f6d2abc727e4cea86002ceba82068e4ee49f17d5d9b4864686b46da1",
+    "budget-collected/budget-cuts-4c0ec761ef57aa38aea5b2b7f83964fd.json": "e236fb74d5934715ce912417c65c6d4b8d8aaf6bf25e8adccb144daf02938ab6",
+    "budget-collected/budget-cuts-4c0ec761ef57aa38aea5b2b7f83964fd.jsonl": "584830620692e2a744972ac445e6bd938d7ea7e59a0b8834a89b83c73c61bc4e",
+    "budget-collected/budget-owner-retry-4c0ec761ef57aa38aea5b2b7f83964fd.admitted.json": "644557c484320f919ae88b0ef4ef10badee0a3ccbf6191e5850063de321bc92e",
+    "budget-collected/budget-owner-retry-4c0ec761ef57aa38aea5b2b7f83964fd.result.json": "9a553cdda4e176576ef0efa205c462ebe0f3bbdf1a2bbfa9e709e747fc605dac",
+    "budget-collected/budget-owner-retry-4c0ec761ef57aa38aea5b2b7f83964fd.stderr": "1568d40785fce2f111a7dae960c18e1695116a16dc11872f8ac3b96ddb5c05f8",
+    "budget-collected/budget-owner-retry-4c0ec761ef57aa38aea5b2b7f83964fd.stdout": "ee2740d62caba11435a63f90587187f1e360c28e320181b6353a4d2c2cc238a9",
+    "budget-collected/budget-terminal-4c0ec761ef57aa38aea5b2b7f83964fd.json": "60faa6522b0b8682642c793593c6ee23ad354dae73ac7da7084ecefc2311036e",
+    "budget-final-native.json": "bcbb2445429feb76d74fba60917dd83eab3c4cc681d19088fdbd3ed45b3367b6",
+    "budget-native-journal.jsonl": "404624ab14b6f2d0683b829f95ae7ce6c98029c2342f991b32ca82152624a86a",
+    "budget-selected-kit.json": "e366a63e1e367cad94a9b0e24bb5f4438d4fb9fd659c15ef77ca65a03ca4ce49",
+    "budget-terminal-wait.json": "ce631ed73b9d46a1cd84d039bf1234c449eeb003c466d3c145016df6cdd9be96",
+    "recovery-fault-collection-1790027163241667701.json": "2b86406abe2dab74d047c44bb48de41276049d68f2e614425299fbbdb9d59615",
+    "recovery-fault-collection-1790027163241667701.jsonl": "591faa7e23ce76c360bccd00680119bd4343e3479eedeb744b88225691f84227"
+  },
+  "exhausted_status": {
+    "observation": "known",
+    "observed_at": "2026-09-21T21:49:41Z",
+    "phase": "recovery_required",
+    "previous_failure": "recovery_incomplete",
+    "reason": "recovery_incomplete",
+    "request_id": "4c0ec761ef57aa38aea5b2b7f83964fd",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "floor_and_foundation_sequence": 82,
+  "limitations": [
+    "Fixture signing; production signing/admission not proved",
+    "Only after-publication interruption; publication-edge power loss remains open",
+    "Interrupted attempts, not repeated deterministic child errors",
+    "No browser or HTTP access proof while exhausted",
+    "This single-platform case does not prove schema migration or workload continuity",
+    "Full P0.2/P0.3 remain open"
+  ],
+  "native_pause_observations": 3,
+  "owner_receipt_count": 1,
+  "platform": "systemd 261 (261.3-1-arch) / Arch Linux / amd64 / disposable QEMU",
+  "request_id": "4c0ec761ef57aa38aea5b2b7f83964fd",
+  "result": "scoped-checks-passed",
+  "retained_wait_republished": true,
+  "schema": "celikpanel/native-dispatch-budget-acceptance/v1",
+  "selected_runtime_sha256": "af345a00a06012d33f32c684a47f315058826592c4d73940019e4a96ef9c2d87",
+  "target": {
+    "agent_sha256": "aadf5923ee21467bfa6c52ae72b17f479c5b3769e83a218e662e5e634dd341e7",
+    "commit": "20c72254de4211a0c56fa7e16b9aec6b0e68b888",
+    "panel_sha256": "3a07b30574341def28fb67e2e625bc3e3b7cfa8b3857b69c2eaa05118b0aedb0",
+    "version": "v0.1.0-alpha.82"
+  },
+  "target_archive_sha256": "c0f06a3b4d841ad8243642a17f19d6235ea7073442db80a7a4f03aee204f1e63",
+  "terminal": {
+    "observation": "known",
+    "observed_at": "2026-09-21T21:50:01Z",
+    "phase": "recovered",
+    "previous_failure": "update_failed",
+    "reason": "rollback_verified",
+    "request_id": "4c0ec761ef57aa38aea5b2b7f83964fd",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "rollback_verified"
+  }
+}

@@ -88,7 +88,12 @@ class BudgetNative(fault.Native):
         super().__init__(intent); self.attempt = attempt
 
     def observe(self):
-        value = super().observe()
+        # A short-lived native boot deferral can exit during the read-only
+        # process probe. Unknown evidence never authorizes a cut; the bounded
+        # observer may resample until the complete identity/checkpoint agrees.
+        try: value = super().observe()
+        except fault.probe.ProbeError as exc:
+            raise fault.Unavailable('native-process-probe-unavailable') from exc
         try: value['budget_receipts'] = receipts(self.intent['snapshot'],self.attempt)
         except (FileNotFoundError,ValueError) as exc:
             raise fault.Unavailable('exact-budget-reservation-not-observed') from exc

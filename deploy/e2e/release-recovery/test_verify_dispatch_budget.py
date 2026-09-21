@@ -7,6 +7,23 @@ spec=importlib.util.spec_from_file_location('tested_budget_verify',Path(__file__
 f=importlib.util.module_from_spec(spec);spec.loader.exec_module(f)
 
 class BudgetEvidenceTests(unittest.TestCase):
+    def test_platform_comes_from_closed_sealed_node(self):
+        self.assertEqual(f.platform_name('arch'),'Arch Linux')
+        self.assertEqual(f.platform_name('debian13'),'Debian 13')
+        with self.assertRaises(ValueError):f.platform_name('unknown')
+
+    def test_republished_wait_requires_exact_stale_bytes_and_multiple_invocations(self):
+        op='a'*32
+        raw='schema=celikpanel-recovery-wait/v1\nrequest_id='+op+'\nobservation_identity=earlier\nobservation_sha256='+'b'*64+'\nwaiting_for=starting\n'
+        saved={'operation_id':op,'boot_id':'boot','wait_raw':raw,'status_sha256':'c'*64,'status_identity':'terminal'}
+        terminal={'boot_id':'boot','stale_wait_sha256':f.w.wait.sha(raw.encode())}
+        waits=[{'_SYSTEMD_INVOCATION_ID':'d'*32},{'_SYSTEMD_INVOCATION_ID':'e'*32}]
+        f.check_republished_wait(saved,terminal,op,waits)
+        for key,value in [('operation_id','f'*32),('boot_id','other'),('wait_raw',raw+'x'),('status_sha256','b'*64),('status_identity','earlier')]:
+            wrong=dict(saved);wrong[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):f.check_republished_wait(wrong,terminal,op,waits)
+        with self.assertRaises(ValueError):f.check_republished_wait(saved,terminal,op,waits[:1])
+
     def setUp(self):
         self.op='a'*32;self.snapshot='snapshot'
         self.before={'schema':'celikpanel/native-budget-result/v1','operation_id':self.op,'snapshot':self.snapshot,

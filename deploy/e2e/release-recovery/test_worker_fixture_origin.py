@@ -105,6 +105,29 @@ class WhitelistTests(unittest.TestCase):
                 f.guest_intent(path, nonce)
 
 
+class NativeTrustPathTests(unittest.TestCase):
+    def test_only_native_registered_platform_paths(self):
+        for node, directory, command in (
+            ('debian13','/usr/local/share/ca-certificates','/usr/sbin/update-ca-certificates'),
+            ('arch','/etc/ca-certificates/trust-source/anchors','/usr/bin/update-ca-trust')):
+            with self.subTest(node=node):
+                cert, argv=f.trust_paths(node,'a'*64)
+                self.assertEqual(cert,Path(directory)/('celikpanel-worker-fixture-'+'a'*16+'.crt'))
+                self.assertEqual(argv,[command])
+    def test_arch_parent_does_not_relax_private_payload(self):
+        from types import SimpleNamespace
+        def info(mode,uid=0,gid=0):return SimpleNamespace(st_mode=f.stat.S_IFDIR|mode,st_uid=uid,st_gid=gid)
+        f.validate_origin_directory(Path('/root'),info(0o750))
+        f.validate_origin_directory(f.GUEST_ROOT,info(0o700))
+        for path,item in [(f.GUEST_ROOT,info(0o750)),(Path('/root'),info(0o770)),(Path('/root'),info(0o755)),
+                          (Path('/root'),info(0o750,gid=1)),(f.GUEST_ROOT,info(0o700,uid=1000)),
+                          (Path('/tmp/other'),info(0o700))]:
+            with self.subTest(path=path,item=item),self.assertRaises(ValueError):f.validate_origin_directory(path,item)
+    def test_unknown_platform_or_pathlike_nonce_refused(self):
+        for node,nonce in [('ubuntu','a'*64),('../arch','a'*64),('arch','../owner'),('arch','A'*64),('debian13','a'*63)]:
+            with self.subTest(node=node,nonce=nonce),self.assertRaises(ValueError):f.trust_paths(node,nonce)
+
+
 class CryptoAndServerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

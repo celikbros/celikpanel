@@ -196,14 +196,21 @@ def stage(root, node_name):
     return {'intent': str(INTENT), 'helper': str(GUEST_ROOT / 'worker-fixture-origin.py')}
 
 
+def validate_origin_directory(path, item):
+    # Arch's root-owned /root is 0750. The payload itself must remain 0700;
+    # trusting that non-writable ancestor does not expose fixture credentials.
+    modes = (0o700,) if path == GUEST_ROOT else (0o700, 0o750)
+    if (path not in (Path('/root'), GUEST_ROOT) or not stat.S_ISDIR(item.st_mode)
+            or item.st_uid != 0 or item.st_gid != 0 or stat.S_IMODE(item.st_mode) not in modes):
+        raise ValueError('unsafe private origin directory')
+
+
 def guest_intent(path, nonce):
     if os.geteuid() != 0 or Path(path) != INTENT or not re.fullmatch('[0-9a-f]{64}', nonce):
         raise ValueError('fixed disposable guest origin is required')
     for parent in (Path('/root'), GUEST_ROOT):
         item = parent.lstat()
-        if (not stat.S_ISDIR(item.st_mode) or item.st_uid != 0 or item.st_gid != 0
-                or item.st_mode & 0o077):
-            raise ValueError('unsafe private origin directory')
+        validate_origin_directory(parent, item)
     marker = json.loads(read_file(Path('/etc/celikpanel-release-recovery-lab'), 2048, 0o444))
     intent = json.loads(read_file(INTENT))
     if (intent.get('schema') != SCHEMA or intent.get('identity') != marker
@@ -264,21 +271,35 @@ def validate_intent(intent):
         raise ValueError('origin checksum sidecar differs from the exact target')
 
 
+def trust_paths(node, nonce):
+    """Closed native CA destinations for the two registered fixture platforms."""
+    if not re.fullmatch('[0-9a-f]{64}', nonce):
+        raise ValueError('invalid fixture nonce')
+    choices = {
+        'debian13': ('/usr/local/share/ca-certificates', '/usr/sbin/update-ca-certificates'),
+        'arch': ('/etc/ca-certificates/trust-source/anchors', '/usr/bin/update-ca-trust'),
+    }
+    if node not in choices:
+        raise ValueError('unsupported fixture trust platform')
+    directory, command = choices[node]
+    return Path(directory) / ('celikpanel-worker-fixture-' + nonce[:16] + '.crt'), [command]
+
+
 def provision(path, nonce):
     """Guest-only trust/network fixture. Does not enroll release trust or update."""
     intent = guest_intent(path, nonce)
-    if not Path('/usr/sbin/update-ca-certificates').is_file():
-        raise ValueError('this fixture trust setup supports Debian only')
+    certificate, updater = trust_paths(intent['identity']['node'], nonce)
+    if not Path(updater[0]).is_file() or not certificate.parent.is_dir():
+        raise ValueError('native fixture CA store or updater unavailable')
     hosts = Path('/etc/hosts')
     before = read_file(hosts, 65536, 0o644)
     if any('celikpanel.net' in line.split('#', 1)[0].split()[1:] for line in before.decode().splitlines()):
         raise ValueError('origin mapping already exists; no retry mutation')
     private_write(GUEST_ROOT / 'worker-origin-hosts.before', before)
-    certificate = Path('/usr/local/share/ca-certificates') / ('celikpanel-worker-fixture-' + nonce[:16] + '.crt')
     raw = read_file(GUEST_ROOT / 'worker-origin-ca.pem')
     private_write(certificate, raw)
     certificate.chmod(0o644)
-    run(['/usr/sbin/update-ca-certificates'])
+    run(updater)
     # The prior exact bytes and intent are durable before this one-time lab-only mapping.
     with hosts.open('ab') as stream:
         stream.write(b'\n127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture\n')

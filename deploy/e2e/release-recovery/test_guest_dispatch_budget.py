@@ -26,6 +26,12 @@ class BudgetFaultTests(unittest.TestCase):
         with patch.object(f.fault.Native,'observe',return_value={'worker':'verified'}),patch.object(f,'receipts',side_effect=FileNotFoundError):
             with self.assertRaises(f.fault.Unavailable):native.observe()
 
+    def test_unavailable_process_probe_cannot_authorize_a_cut(self):
+        native=f.BudgetNative({'snapshot':self.snapshot},2)
+        with patch.object(f.fault.Native,'observe',side_effect=f.fault.probe.ProbeError('unavailable')),patch.object(f,'receipts') as receipts:
+            with self.assertRaisesRegex(f.fault.Unavailable,'native-process-probe-unavailable'):native.observe()
+            receipts.assert_not_called()
+
     def test_unit_never_starts_product_recovery_or_updates(self):
         raw=f.unit_bytes('a'*32).decode()
         self.assertIn('Type=exec\n',raw);self.assertIn('RuntimeMaxSec=650\n',raw)
