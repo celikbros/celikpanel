@@ -235,3 +235,14 @@ SSH-tunnel end-to-end acceptance, upgrade/old-launcher compatibility and automat
 same-address browser access. This owner-operated fallback does not close those
 items or P0.2. It changes no normal authentication, license policy, service start
 guard, transaction lock, host firewall, DNS or workload lifecycle.
+
+
+[Debian AP independent browser acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md#debian-ap-independent-owner-browser-acceptance)
+now verifies the installed recovery reader while both normal Panel and Agent are
+stopped. An owner SSH tunnel serves the actual exhausted-operation observation
+in EN/TR desktop/mobile, with temporary-code authorization and no budget change.
+Subsequent supported owner continuation restores baseline services and matching
+CLI/authenticated HTTP results. This closes that Debian fallback boundary only;
+automatic normal-address access, Arch/historical-launcher compatibility and the
+remaining P0.2/P0.3 fault matrix stay open. The earlier local-only statement above
+is superseded for this exact AP boundary, not relabeled as full access acceptance.

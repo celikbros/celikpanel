@@ -1,0 +1,113 @@
+{
+  "anonymous_http": 401,
+  "authenticated_http": 200,
+  "automatic_receipts_preserved": {
+    "1": {
+      "bytes": 273,
+      "sha256": "c70550528c7275c44fb24c69aa0d0972c4bfeb0b49ad3adb1d2a85854b2ea5df"
+    },
+    "2": {
+      "bytes": 275,
+      "sha256": "52a61ce991ece844958ea111de4d36da6bb4b2e27aa4dceb09703596fd930c49"
+    },
+    "3": {
+      "bytes": 275,
+      "sha256": "68feeadc5380d7ebc03adb5f15a84e345863ccbd9ae738b0ef5e1bfb457cbeb8"
+    }
+  },
+  "baseline": {
+    "agent_sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+    "commit": "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00",
+    "panel_sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd",
+    "version": "v0.1.0-alpha.81"
+  },
+  "coordinators_restored_to_baseline": true,
+  "cut_invocations": [
+    "852f090c4c8143bda754824a51ee5a8e",
+    "4510e2c27a384ebcb47c71b42692f734"
+  ],
+  "evidence_sha256": {
+    "bound-worker-0e8a6ab74609736589b62ba6dc87306e.json": "ee92970f051a21514db87d4c2a5dc94b2cf8b1c814ee577af33378ce597dfe48",
+    "bound-worker-reboot-cut-0e8a6ab74609736589b62ba6dc87306e.jsonl": "c2d69e76044dd2739f7a2020bb29e44ffbdf6e3871e9f7d63e83edc96696c3f5",
+    "bound-worker-reboot-result-0e8a6ab74609736589b62ba6dc87306e.json": "baba22185d83fc6d09a00049cbb380cca51b96c07284a7aff36d70b9edf36ecc",
+    "bound-worker-start-0e8a6ab74609736589b62ba6dc87306e.json": "dca343c4257e337a0352bb9898ecd7e04f38763a484fb87b1ad576ceb179dc5a",
+    "bound-worker-start-0e8a6ab74609736589b62ba6dc87306e.stdout.jsonl": "3623bfa5247736f68b6374a3cbce9a44b1a64748fe642b8daf31cb53b8646274",
+    "budget-candidate-build.json": "f91e653f5f13098d2d8a30c1fd55c5159a826cc13fcf72b8b07ca1dace915cb1",
+    "budget-candidate-files.json": "9deb1c3c9da6df55b3ea5acd4b9c63236c34c465de535b7972ec5db0eb335936",
+    "budget-collected/boot-wait-0e8a6ab74609736589b62ba6dc87306e.jsonl": "d5c2f66f2e9a3928fe086f5f17b9d2db7e00f9cda5cd778d002caa5e86732787",
+    "budget-collected/bound-reader-after-owner.jsonl": "a28b8c169b86c0973097a10dff0713b635ad79d7dd4e3d247720cd553452fe9a",
+    "budget-collected/budget-cuts-0e8a6ab74609736589b62ba6dc87306e.json": "643903c4255fdbfa84c5d57ed428dec47d6985a813b29fa6284958f3ca50d60a",
+    "budget-collected/budget-cuts-0e8a6ab74609736589b62ba6dc87306e.jsonl": "bfead0e3e87d478b266bca6cf5474d4d7c3f70ae6ebb8efa2169a2d102eced16",
+    "budget-collected/budget-guidance-exhausted-0e8a6ab74609736589b62ba6dc87306e.json": "17dd6cc76a6c91342db56b4fc545ae8be50fd8b8041d3d08c12856f57cd225cc",
+    "budget-collected/budget-guidance-terminal-0e8a6ab74609736589b62ba6dc87306e.json": "f7568c6f5f5c09aff0f755ade43d1aeea0ec7a2681924bb9b4942e9b04d85379",
+    "budget-collected/budget-owner-retry-0e8a6ab74609736589b62ba6dc87306e.admitted.json": "ac0e59380c145aafbb022053eea101fd4cfbb7e2804658a905b428ac43786da5",
+    "budget-collected/budget-owner-retry-0e8a6ab74609736589b62ba6dc87306e.result.json": "309b3d205709d3ca93d982529f20a2a02bc3e23269c8a41f800ff33b27a79eb0",
+    "budget-collected/budget-owner-retry-0e8a6ab74609736589b62ba6dc87306e.stderr": "1568d40785fce2f111a7dae960c18e1695116a16dc11872f8ac3b96ddb5c05f8",
+    "budget-collected/budget-owner-retry-0e8a6ab74609736589b62ba6dc87306e.stdout": "606ef91336bc7f0821fd79cb02e60c13154d985ce9a5bc6bfb080799ce7ad5d7",
+    "budget-collected/budget-terminal-0e8a6ab74609736589b62ba6dc87306e.json": "21d48de8c6964bfe8f1de1749b63b93d86758c9c0296122b116ea7b5a645a0fc",
+    "budget-collected/owner-view-0e8a6ab74609736589b62ba6dc87306e.admitted.json": "47d066bcd514793505cbbfa123f8d5f31afc4770120d3a9eb907028574597e54",
+    "budget-collected/owner-view-0e8a6ab74609736589b62ba6dc87306e.closed.json": "863edd76284319db6140250be72b3a3c4fbf1c1f3bf7c48898dd638381c277ad",
+    "budget-collected/owner-view-0e8a6ab74609736589b62ba6dc87306e.ready.json": "bc8a69eab601461197e65261febe8c2db351bdc3093874e05f189d9fdbdf7094",
+    "budget-final-native.json": "c192f36994b657c9b8f0e485560ebe75d2a54e743c890030b5824c88234615aa",
+    "budget-native-journal.jsonl": "1b3a71aba15460b105da59fecdecd283bd530f6b5d78b35dca96697df6574594",
+    "budget-selected-kit.json": "a40a758c12152f8305eb89708cace4244d1b05e1d150781b7fb78f94e4aeee14",
+    "owner-view-browser.json": "569f9dddf9678d369ad3c0b28eb77f48ec5384a46fcf959ad7fd6c6485fd9b24",
+    "recovery-fault-collection-1790031503188428766.json": "2f2cfa0763597b493ff8664d1f18b5080fcb6794e3f05180687454db79f36ec0",
+    "recovery-fault-collection-1790031503188428766.jsonl": "7a5f8c246b14f41080af7d023985479f4ed7c1fcaa371fc8948c0758e56b9826"
+  },
+  "exhausted_status": {
+    "automatic_recovery": "paused_retry_limit",
+    "observation": "known",
+    "observed_at": "2026-09-21T23:02:04Z",
+    "phase": "recovery_required",
+    "previous_failure": "recovery_incomplete",
+    "reason": "recovery_incomplete",
+    "request_id": "0e8a6ab74609736589b62ba6dc87306e",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "floor_and_foundation_sequence": 82,
+  "limitations": [
+    "Fixture signing; production signing/admission not proved",
+    "Only after-publication interruption; publication-edge power loss remains open",
+    "Interrupted attempts, not repeated deterministic child errors",
+    "This single-platform case does not prove schema migration or workload continuity",
+    "Full P0.2/P0.3 remain open",
+    "Browser access is explicitly owner-started over SSH; automatic normal-address access remains open"
+  ],
+  "native_cli_languages": [
+    "en",
+    "tr"
+  ],
+  "native_hint_bound_to_status": true,
+  "native_owner_view_http": true,
+  "native_pause_observations": 4,
+  "normal_same_address_access": false,
+  "owner_receipt_count": 1,
+  "owner_view_while_panel_agent_stopped": true,
+  "platform": "systemd 257 (257.13-1~deb13u1) / Debian 13 / amd64 / disposable QEMU",
+  "request_id": "0e8a6ab74609736589b62ba6dc87306e",
+  "result": "scoped-checks-passed",
+  "retained_pause_ignored_after_rollback": true,
+  "retained_wait_republished": false,
+  "schema": "celikpanel/native-owner-view-acceptance/v1",
+  "selected_runtime_sha256": "c138bb0e84d97375e5fd111388d22b0cbd796b6bf1acad26e88b4d935247dc7d",
+  "ssh_forwarded_browser": true,
+  "target": {
+    "agent_sha256": "60b9e72a8e8e56f6bafe6915284077482afa7518342789c7acc93b71e492f908",
+    "commit": "29b2b01ee391dc776f0b521344a73d241fa601ea",
+    "panel_sha256": "6435f94fe307418537917b303250268a01ab3d43c5ed030790023a7f767ff5ae",
+    "version": "v0.1.0-alpha.82"
+  },
+  "target_archive_sha256": "698eec7dc80813bcfcf1bd890dadbfc86d01195c8639c3937a42d7352cb6bb0a",
+  "terminal": {
+    "observation": "known",
+    "observed_at": "2026-09-21T23:02:33Z",
+    "phase": "recovered",
+    "previous_failure": "update_failed",
+    "reason": "rollback_verified",
+    "request_id": "0e8a6ab74609736589b62ba6dc87306e",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "rollback_verified"
+  }
+}
