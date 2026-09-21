@@ -11,9 +11,12 @@ import (
 	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 )
 
-// There is deliberately no remote listener or credential fallback. Native root
-// or authorized sudo is the recovery principal when the panel cannot start.
+// Native root or authorized sudo remains the recovery principal. The optional
+// owner view is loopback-only, temporary and read-only; it cannot dispatch work.
 func runEntry(args []string) int {
+	if len(args) > 0 && args[0] == "view" {
+		return runOwnerView(args)
+	}
 	if len(args) > 0 && args[0] == "runtime-status" {
 		return runRuntimeStatus(args, os.Geteuid(), recoveryruntime.InspectPromotion, os.Stdout, os.Stderr)
 	}
@@ -77,7 +80,7 @@ func dispatchEntry(args []string, uid int, observe func() int, execute func([]st
 	case len(args) == 5 && args[0] == "enroll-runtime" && args[1] == "--source" && args[3] == "--transaction-fd" && args[4] == "9" && filepath.IsAbs(args[2]) && filepath.Clean(args[2]) == args[2]:
 		err = enroll(args[2])
 	default:
-		report("Usage: recovery status --request-id <id> [--json] | runtime-status [--json] [--lang en|tr] | version | recover [--retry --snapshot <exact pending snapshot>]")
+		report("Usage: recovery status --request-id <id> [--json] | view --request-id <id> [--port 2084] [--lang en|tr] | runtime-status [--json] [--lang en|tr] | version | recover [--retry --snapshot <exact pending snapshot>]")
 		return exitUsage
 	}
 	if err != nil {

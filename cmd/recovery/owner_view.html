@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="LANGUAGE"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CelikPanel · Recovery</title><link rel="stylesheet" href="/view.css"><script src="/view.js" defer></script></head>
+<body><header><div><strong>CelikPanel</strong><label><span id="language-label">Language</span><select id="language"><option value="en">English</option><option value="tr">Türkçe</option></select></label></div></header>
+<main><h1 id="title">Recovery status</h1><p id="intro"></p>
+<form id="access"><label id="code-label" for="code"></label><input id="code" type="password" autocomplete="off" spellcheck="false" maxlength="64" required><button id="open" type="submit"></button><p id="code-help"></p></form>
+<section id="result" hidden aria-labelledby="state-title"><h2 id="state-title"></h2><p id="details"></p><dl><dt id="request-label"></dt><dd id="request"></dd><dt id="recorded-label"></dt><dd id="recorded"></dd><dt id="failure-label"></dt><dd id="failure"></dd></dl><p id="expires"></p><div class="actions"><button id="check" type="button"></button><button id="close" class="secondary" type="button"></button></div></section>
+<p id="notice" role="status" aria-live="polite"></p><footer id="foot"></footer></main></body></html>

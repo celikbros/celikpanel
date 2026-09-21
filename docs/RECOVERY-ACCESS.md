@@ -181,3 +181,57 @@ three interrupted native attempts, and retained stale guidance loses to verified
 rollback after one owner continuation. Old binaries are restored and authenticated
 HTTP agrees afterwards. This closes native Debian hint-to-CLI acceptance; it does
 not close browser access while Panel is stopped or the full P0.2/P0.3 matrix.
+
+## Owner-operated independent browser view (source implementation)
+
+D-025 invariants 2, 3, 5, 6 / P0.2. `recovery view` adds an optional, temporary
+browser reader to the native owner CLI. It starts no update or recovery, opens no
+application database and needs no Panel, Agent, license verifier, TLS material,
+web directory or Node runtime. HTML/CSS/JS are embedded in the recovery binary.
+The existing observation v1 and runtime protocol are unchanged; this is an
+additive command. Older binaries reject it. The installed launcher must include
+this command before it can be used; no installed owner panel was updated here.
+
+The owner starts it through an interactive root/authorized-sudo SSH session with
+loopback forwarding. Replace SERVER and OPERATION with the actual server and
+exact 32-character operation ID:
+
+```sh
+ssh -t -o ExitOnForwardFailure=yes \
+  -L 127.0.0.1:2084:127.0.0.1:2084 owner@SERVER \
+  sudo /usr/libexec/celikpanel/recovery view --request-id OPERATION --lang en
+```
+
+Open `http://127.0.0.1:2084/` locally and enter the temporary code displayed in
+that SSH terminal. Only the controlling terminal receives the 256-bit random
+code; there is no stdout/stderr, journal, file, URL or browser-storage copy.
+The browser holds it only in memory and sends it in an authorization header over
+the SSH-forwarded connection. Reload or **Lock this view** clears browser access;
+Ctrl+C/SIGHUP/SIGTERM closes the listener. Access ends after 30 minutes without
+renewal. A fresh view needs a new owner command. Port conflicts fail before code
+delivery; `--port` may choose another unprivileged port, with the same forwarding
+port on both ends. There is no wildcard-address option or unattended secret path.
+
+The listener binds IPv4 loopback only. Exact Host/origin checks, cross-site
+rejection, a strict CSP, no-store responses, header/time limits and constant-time
+code verification protect the reader. Before authorization no operation data is
+read. Only GET for the embedded assets and the single fixed `/status` route is
+accepted; query-based scope changes, mutations and proxy routes are rejected.
+No credential, transaction token, snapshot path or raw service diagnostic is
+returned. The current observation is not a live-health claim. Unknown reads retain
+the browser's last known result; verified terminal results dominate stale later
+reads. The view uses the same EN/TR owner guidance as the native CLI.
+
+Local validation: race-enabled recovery package, closed option/host/origin/method/
+expiry authorization tests, a separate real HTTP process with no database/Agent/
+TLS, and actual production entry through a controlling pseudo-terminal. The latter
+proved private code delivery, empty stdout/stderr, anonymous 401, honest unavailable
+observation and clean SIGTERM exit. Chrome EN/TR at 1440/390 px exercised the real
+HTTP handler, wrong-connection retention, lock/reload clearing, GET-only traffic,
+empty storage and no overflow/page errors. Browser observations were fixtures.
+
+**Open:** verified installed-kit execution during an actual stopped-Panel recovery,
+SSH-tunnel end-to-end acceptance, upgrade/old-launcher compatibility and automatic
+same-address browser access. This owner-operated fallback does not close those
+items or P0.2. It changes no normal authentication, license policy, service start
+guard, transaction lock, host firewall, DNS or workload lifecycle.
