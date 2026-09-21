@@ -182,7 +182,10 @@ failures and automatic completion of the same rollback. All 100 old rows across
 AC's earlier preparation-only failure remains preserved. Subsequent
 [AJ acceptance](../deploy/e2e/release-recovery/BOUND-WORKER.md) proves the scoped
 genuine worker-to-snapshot-to-CLI/authenticated HTTP/browser terminal-reader
-association after two native faults. AJ observed no native `waiting_for` hint;
-boot-wait publication/display and the wider P0 matrix remain open. AB/AD and AJ
+association after two native faults. AJ observed no native `waiting_for` hint.
+The separate [AK trial](../deploy/e2e/release-recovery/BOOT-WAIT.md) proves real
+`starting` publication, root CLI guidance, released lock and automatic retry
+of the same request to verified rollback. Other waits, HTTP/browser wait access
+and the wider P0 matrix remain open. AB/AD and AJ
 prove eventual recovery at their recorded boundaries, not uninterrupted access
 or power-loss durability.

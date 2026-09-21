@@ -183,7 +183,10 @@ satır, DNS ve HTTPS denetimleri geçer; sonradan eklenen bir metrik satırı ay
 kaydedilir. AC'nin önceki hazırlık hatası korunur. Sonraki
 [AJ kabulü](../deploy/e2e/release-recovery/BOUND-WORKER.tr.md), iki gerçek kesintiden
 sonra gerçek worker→snapshot→CLI/kimlik doğrulamalı HTTP/tarayıcı nihai okuyucu
-bağını sınırlı kapsamda kanıtlar. AJ'de yerel `waiting_for` ipucu gözlenmedi;
-açılışta bekleme kaydının üretilmesi/gösterimi ve geniş P0 matrisi açıktır.
+bağını sınırlı kapsamda kanıtlar. AJ'de yerel `waiting_for` ipucu gözlenmedi.
+Ayrı [AK deneyi](../deploy/e2e/release-recovery/BOOT-WAIT.tr.md), gerçek `starting`
+yayını, root CLI yönlendirmesi, bırakılmış kilit ve aynı isteğin otomatik yeniden
+denenerek doğrulanmış geri almaya ulaşmasını kanıtlar. Diğer beklemeler, beklerken
+HTTP/tarayıcı erişimi ve geniş P0 matrisi açıktır.
 AB/AD ve AJ, kayıtlı sınırlarında sonunda kurtarmayı kanıtlar; kesintisiz erişim
 veya güç kaybı dayanıklılığı değildir.

@@ -166,3 +166,5 @@ older-release schema transitions, native wait display, browser update-start
 admission and independent workload lifecycle requirements remain open.
 
 A sanitized, machine-readable [AJ evidence summary](BOUND-WORKER-AJ.json) records the scoped result, source identities and evidence digests without credentials or private lab identity material.
+
+The subsequent [AK boot-wait trial](BOOT-WAIT.md) separately proves real `starting` guidance in the root CLI and automatic retry of the same request. AJ's limits above remain specific to AJ.
