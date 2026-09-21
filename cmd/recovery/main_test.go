@@ -216,3 +216,28 @@ func TestWaitingGuidancePreservesFailureWithoutReportingCompletion(t *testing.T)
 		}
 	}
 }
+
+func TestAutomaticPauseGuidancePreservesFailureWithoutReportingCompletion(t *testing.T) {
+	for _, wait := range []string{"paused_retry_limit"} {
+		for _, lang := range []string{"en", "tr"} {
+			observed := knownStatus("recovery_required")
+			observed.AutomaticRecovery, observed.PreviousFailure = wait, "update_failed"
+			var output, diagnostics bytes.Buffer
+			code := run([]string{"status", "--request-id", requestID, "--lang", lang}, cliRuntime{
+				func() int { return 0 }, func(string) recoveryobs.Status { return observed }, &output, &diagnostics})
+			if code != exitOK || diagnostics.Len() != 0 || !strings.Contains(output.String(), "update_failed") || !strings.Contains(output.String(), "none") {
+				t.Fatalf("wait lost observation: %d %q %q", code, output.String(), diagnostics.String())
+			}
+			if lang == "en" && (!strings.Contains(output.String(), "same-operation") || !strings.Contains(output.String(), "all three attempts")) {
+				t.Fatalf("wait guidance: %q", output.String())
+			}
+			output.Reset()
+			code = run([]string{"status", "--request-id", requestID, "--json"}, cliRuntime{
+				func() int { return 0 }, func(string) recoveryobs.Status { return observed }, &output, &diagnostics})
+			var got recoveryobs.Status
+			if json.Unmarshal(output.Bytes(), &got) != nil || code != exitOK || got != observed {
+				t.Fatalf("wait JSON: %q", output.String())
+			}
+		}
+	}
+}

@@ -62,9 +62,10 @@ kilit veya kanıt denetimlerini atlayamaz; otomatik hakları yenilemez. Özel
 snapshot farklıysa sonraya yetki kaydetmeden reddedilir. İşletim sistemi hâlâ
 geçişteyse yalnız ertelenir; açık izin sonraki çağrıya taşınmaz.
 
-HTTP/CLI v1, sayısal hak alanı yerine mevcut genel kurtarma-gerekiyor durumunu
-gösterir. Sınıra özgü açıklama yerel günlükte bulunur. Tarayıcıda buna özel görünüm
-açıktır; durum sorguları tekrar yetkisi vermez.
+HTTP/CLI v1 mevcut kurtarma-gerekiyor durumunu korur. Yerel yürütücü ayrıca
+aynı durum kaydına bağlı otomatik deneme sınırı bilgisini yayımlar; sözleşme
+aşağıdadır. Eski okuyucular genel yönlendirmeyi korur. Durum sorgusu tekrar
+yetkisi vermez.
 
 ## Kanıt ve açık kabul
 
@@ -91,3 +92,42 @@ sınırını doğrular. Önceki AM gözlemci hatası sonuçsuz olarak korunur. B
 açılış bekleme yayını, tek kaydın değişmeden korunmasından ayrılır. Yalnız bu
 Arch vakası kapanır; yayın anındaki güç kaybı, tarayıcı yönlendirmesi ve bütün
 P0.2/P0.3 kabul kapsamı açık kalır.
+
+## Uyumlu durma yönlendirmesi (2026-09-22)
+
+D-025 ilkeleri 2, 4, 5 / P0.2. Yeni bilgi yalnız yerel yürütücünün üç otomatik
+kaydı doğrulayıp yeni deneme başlatmadığı dalda yayımlanır. `<istek>.automatic`
+dosyası `celikpanel-recovery-automatic/v1` şemasını ve beş kanonik, satır sonlu
+alanı kullanır: `schema`, `request_id`, `observation_identity`,
+`observation_sha256`, `automatic_recovery=paused_retry_limit`. Mevcut sekiz alanlı
+gözlem v1 kaydı değişmez. Veritabanı veya kurtarma kiti protokolü göçü yoktur.
+
+İsteğe bağlı dosya bekleme sözleşmesini izler: en fazla 2 KiB, tek bağlantılı
+normal dosya, root sahipliği ve panel grubuyla 0640; doğrulanmış 0750 gözlem
+kökünün altında. Mevcut yayın kilidi altında, durum dosyası yenilendikten sonra
+o dosyanın tam baytlarına ve nanosaniyeli GNU-stat kimliğine bağlanır. Aynı
+baytları yazan eski üretici bile yeni dosya kimliğiyle önceki ipucunu geçersiz
+kılar. Bozuk, güvensiz, eskimiş veya desteklenmeyen ek bilgi yok sayılır; geçerli
+v1 sonucu okunmaya devam eder. Nihai kanıt üstün gelir. Ek bilginin yayımlanamaması
+kilidi tutamaz veya yeni kurtarma başlatamaz. Eski okuyucu/üretici bunu bilmek
+veya silmek zorunda değildir. Değişiklik yetkisi özel deneme kayıtlarındadır;
+bu halka açık gözlem yetki vermez.
+
+Yönetici ekranı ve kullanıcı CLI'si kaydedilen üç deneme sınırını açıklar,
+sorumlunun sunucu sahibi olduğunu söyler, kurtarma günlüğü komutunu gösterir.
+Kullanıcı bildirilen nedeni giderir ve günlükte aynı işlem için gösterilen tek
+seferlik devam komutunu kullanır. Genel hatadan sınırın dolduğu çıkarılmaz;
+yeni değişiklik API'si eklenmez. İşlem kimliği, gözlem zamanı ve önceki hata
+korunur. Sonraki okuma başarısızsa son doğrulanmış bilgi, güncel sonucun bilinmediği
+açıklamasıyla görünür kalır. Kontrol ve sayfa yenileme salt okumadır.
+
+Doğrulama: gerçek shell üreticisi ve Go okuyucusu arasında uyumluluk; eskime,
+aynı baytlarla tekrar yayın, yanlış istek/özet/kimlik/şema, güvensiz izin,
+bağlantı ve FIFO; nihai kanıt üstünlüğü ve önceki hata; CLI ve yalnız yöneticiye
+açık HTTP; modellenmiş systemd ve sınırlı alt işlemle tam yürütücü sözleşmesi;
+462 web testi ve üretim derlemesi. Yerel Chrome'da EN/TR, 1440/390 px, yeniden
+yükleme, sonraki okuma hatası, yalnız GET, taşma ve sayfa hatası kontrol edildi.
+Bu tarayıcı yanıtları ve shell işletim sistemi durumu test verisidir. AL/AN,
+önceki yerel deneme sınırını kanıtlar; **yeni ek bilgiyi kanıtlamaz**. Yeni bilginin
+yerel yürütücüden tarayıcıya kabulü ve Panel durmuşken erişim açıktır. Üretim
+sürümü veya kurulu kullanıcı paneli değiştirilmedi.

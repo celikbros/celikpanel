@@ -285,3 +285,9 @@ sınırını doğrular. Önceki AM gözlemci hatası sonuçsuz olarak korunur. B
 açılış bekleme yayını, tek kaydın değişmeden korunmasından ayrılır. Yalnız bu
 Arch vakası kapanır; yayın anındaki güç kaybı, tarayıcı yönlendirmesi ve bütün
 P0.2/P0.3 kabul kapsamı açık kalır.
+
+[Otomatik kurtarma durma yönlendirmesi](RECOVERY-DISPATCH-BUDGET.tr.md#uyumlu-durma-yönlendirmesi-2026-09-22)
+için uyumlu üretici/okuyucu sözleşmesi ve çift dilli UI/CLI davranışı eklendi.
+Yerel katmanlar arası ve tarayıcı testleri geçti. Bu, P0.2'yi kapatmaz: yeni
+bilginin gerçek yerel yürütücüden tarayıcıya kabulü ve Panel durmuşken doğrulanmış
+erişim hâlâ kanıtlanmalıdır. AL/AN sonuçları bu yeni özelliğin kanıtı sayılmaz.

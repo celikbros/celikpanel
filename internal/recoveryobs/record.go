@@ -21,15 +21,16 @@ var ErrUnavailable = errors.New("recovery observation is unavailable")
 func ValidRequestID(id string) bool { return requestPattern.MatchString(id) }
 
 type Status struct {
-	Schema          string `json:"schema"`
-	RequestID       string `json:"request_id"`
-	Observation     string `json:"observation"`
-	Phase           string `json:"phase,omitempty"`
-	TerminalProof   string `json:"terminal_proof"`
-	Reason          string `json:"reason"`
-	ObservedAt      string `json:"observed_at,omitempty"`
-	PreviousFailure string `json:"previous_failure,omitempty"`
-	WaitingFor      string `json:"waiting_for,omitempty"`
+	AutomaticRecovery string `json:"automatic_recovery,omitempty"`
+	Schema            string `json:"schema"`
+	RequestID         string `json:"request_id"`
+	Observation       string `json:"observation"`
+	Phase             string `json:"phase,omitempty"`
+	TerminalProof     string `json:"terminal_proof"`
+	Reason            string `json:"reason"`
+	ObservedAt        string `json:"observed_at,omitempty"`
+	PreviousFailure   string `json:"previous_failure,omitempty"`
+	WaitingFor        string `json:"waiting_for,omitempty"`
 }
 
 // ValidWaitingFor accepts optional guidance, never a phase or mutation authority.

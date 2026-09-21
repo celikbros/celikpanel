@@ -70,11 +70,16 @@ _release_observation_read() {
 }
 
 release_observation_publish() (
-    local id=$1 commit=$2 phase=$3 proof=$4 reason=$5 waiting=${6:-} gid now previous=none path stage lock_fd identity digest wait_path
+    local id=$1 commit=$2 phase=$3 proof=$4 reason=$5 waiting=${6:-} automatic=${7:-} gid now previous=none path stage lock_fd identity digest wait_path hint schema field suffix
     [[ $EUID == 0 && $id =~ ^[0-9a-f]{32}$ && $commit =~ ^[0-9a-f]{40}$ ]] || return 1
     case "$waiting" in
         '') ;;
         initializing|starting|stopping) [[ $phase:$proof:$reason == recovering:none:recovery_running ]] || return 1 ;;
+        *) return 1 ;;
+    esac
+    case "$automatic" in
+        '') ;;
+        paused_retry_limit) [[ -z $waiting && $phase:$proof == recovery_required:none ]] || return 1 ;;
         *) return 1 ;;
     esac
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ) || return 1
@@ -110,26 +115,33 @@ release_observation_publish() (
     _release_observation_file "$stage" 640 "$gid" 2048 || return 1
     if [[ -e $path || -L $path ]]; then _release_observation_read "$id" "$gid" || return 1; fi
     mv -T -- "$stage" "$path" && sync -f -- "$RELEASE_OBSERVATION_ROOT" || return 1
-    [[ -n $waiting ]] || return 0
+    [[ -n $waiting || -n $automatic ]] || return 0
+    hint=$waiting schema=celikpanel-recovery-wait/v1 field=waiting_for suffix=wait
+    if [[ -n $automatic ]]; then
+        hint=$automatic schema=celikpanel-recovery-automatic/v1 field=automatic_recovery suffix=automatic
+    fi
     # Optional, independently versioned guidance. The v1 status remains readable
     # by old producers/consumers. Any later status rename invalidates this hint.
     identity=$(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' -- "$path") || return 1
     digest=$(sha256sum -- "$path") || return 1
     digest=${digest%% *}
-    wait_path=$RELEASE_OBSERVATION_ROOT/$id.wait
+    wait_path=$RELEASE_OBSERVATION_ROOT/$id.$suffix
     if [[ -e $wait_path || -L $wait_path ]]; then
         _release_observation_file "$wait_path" 640 "$gid" 2048 || return 1
         local -a wait_lines=()
         mapfile -t wait_lines < "$wait_path" || return 1
-        [[ ${#wait_lines[@]} == 5 && ${wait_lines[0]} == schema=celikpanel-recovery-wait/v1 &&
+        [[ ${#wait_lines[@]} == 5 && ${wait_lines[0]} == "schema=$schema" &&
            ${wait_lines[1]} == "request_id=$id" && ${wait_lines[2]} == observation_identity=* &&
-           ${wait_lines[3]} =~ ^observation_sha256=[0-9a-f]{64}$ &&
-           ${wait_lines[4]} =~ ^waiting_for=(initializing|starting|stopping)$ ]] || return 1
+           ${wait_lines[3]} =~ ^observation_sha256=[0-9a-f]{64}$ ]] || return 1
+        case "$suffix:${wait_lines[4]}" in
+            wait:waiting_for=initializing|wait:waiting_for=starting|wait:waiting_for=stopping|automatic:automatic_recovery=paused_retry_limit) ;;
+            *) return 1 ;;
+        esac
         cmp -s -- "$wait_path" <(printf '%s\n' "${wait_lines[@]}") || return 1
     fi
     stage=$(mktemp "$RELEASE_OBSERVATION_ROOT/.observation-XXXXXXXX") || return 1
-    printf '%s\n' schema=celikpanel-recovery-wait/v1 "request_id=$id" \
-        "observation_identity=$identity" "observation_sha256=$digest" "waiting_for=$waiting" > "$stage" || return 1
+    printf '%s\n' "schema=$schema" "request_id=$id" \
+        "observation_identity=$identity" "observation_sha256=$digest" "$field=$hint" > "$stage" || return 1
     chown "0:$gid" -- "$stage" && chmod 0640 -- "$stage" && sync -f -- "$stage" || return 1
     _release_observation_file "$stage" 640 "$gid" 2048 || return 1
     [[ $(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' -- "$path") == "$identity" ]] || return 1

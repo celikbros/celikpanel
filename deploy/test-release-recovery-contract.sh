@@ -557,6 +557,11 @@ for attempt in 4 5; do
     _release_observation_read "$OBSERVATION_TEST_REQUEST" 0
     [[ $OBSERVATION_PHASE == recovery_required && $OBSERVATION_REASON == recovery_incomplete &&
        $OBSERVATION_PREVIOUS == recovery_failed && $OBSERVATION_PROOF == none ]] || fail 'pause lost failure or claimed proof'
+    pause_hint=$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.automatic
+    _release_observation_file "$pause_hint" 640 0 2048 || fail 'unsafe automatic-pause observation'
+    grep -Fx 'automatic_recovery=paused_retry_limit' "$pause_hint" >/dev/null || fail 'missing automatic-pause guidance'
+    pause_identity=$(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")
+    grep -Fx "observation_identity=$pause_identity" "$pause_hint" >/dev/null || fail 'pause guidance not bound to current status'
     (exec 9<>"$TRANSACTION_ROOT/transaction.lock"; flock -xn 9) || fail 'paused budget retained lock'
 done
 # Wrong snapshot, broken receipts and metadata cannot authorize an owner retry.

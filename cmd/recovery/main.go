@@ -183,6 +183,9 @@ func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
 	if status.Phase == "recovering" && status.TerminalProof == "none" && recoveryobs.ValidWaitingFor(status.WaitingFor) {
 		en, tr = "The last recorded state is waiting for the operating system transition. No owner action is needed for this wait; the native timer will check the same operation again when ready. Recovery is not yet complete.", "Son kayıtta işletim sistemi geçişi bekleniyor. Bu bekleme için kullanıcı işlemi gerekmiyor; yerel zamanlayıcı hazır olduğunda aynı işlemi yeniden kontrol edecek. Kurtarma henüz tamamlanmadı."
 	}
+	if status.Observation == "known" && status.Phase == "recovery_required" && status.TerminalProof == "none" && status.AutomaticRecovery == "paused_retry_limit" {
+		en, tr = "Automatic recovery last reported that all three attempts were used without verified completion. The server owner must inspect sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50, resolve the cause, then use the one-time same-operation retry command shown there. Checking status does not retry recovery.", "Son kayıtta üç otomatik kurtarma denemesi doğrulanmış tamamlanma olmadan kullanılmış. Sunucu sahibi sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 ile günlüğü incelemeli, nedeni gidermeli ve orada aynı işlem için gösterilen tek seferlik yeniden deneme komutunu kullanmalıdır. Durum sorgusu kurtarmayı yeniden başlatmaz."
+	}
 	if _, err := fmt.Fprintln(w, translated(lang, en, tr)); err != nil {
 		return err
 	}

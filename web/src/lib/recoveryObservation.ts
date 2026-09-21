@@ -8,6 +8,7 @@ export type RecoveryObservation = {
     request_id: string; observation: 'known' | 'unavailable'; panel_state: 'starting' | 'ready';
     phase?: typeof recoveryPhases[number]; terminal_proof: 'none' | 'update_verified' | 'rollback_verified';
     waiting_for?: typeof recoveryWaitReasons[number];
+    automatic_recovery?: 'paused_retry_limit';
     reason: RecoveryReason; observed_at?: string; previous_failure?: RecoveryFailureReason;
 };
 
@@ -40,7 +41,8 @@ export function parseRecoveryObservation(raw: unknown, requestId: string): Recov
     if (value.terminal_proof !== proof) throw new Error('unproved recovery outcome');
     if (value.previous_failure !== undefined && !['update_failed', 'recovery_failed', 'recovery_incomplete'].includes(String(value.previous_failure))) throw new Error('invalid previous failure');
     const waiting = value.phase === 'recovering' && recoveryWaitReasons.includes(value.waiting_for as never) ? value.waiting_for as RecoveryObservation['waiting_for'] : undefined;
-    return { ...base, observation: 'known', waiting_for: waiting, phase: value.phase as RecoveryObservation['phase'], terminal_proof: proof,
+    const automatic = value.phase === 'recovery_required' && value.automatic_recovery === 'paused_retry_limit' ? 'paused_retry_limit' : undefined;
+    return { ...base, observation: 'known', waiting_for: waiting, automatic_recovery: automatic, phase: value.phase as RecoveryObservation['phase'], terminal_proof: proof,
         reason: value.reason as RecoveryReason, observed_at: value.observed_at, previous_failure: value.previous_failure as RecoveryFailureReason | undefined };
 }
 

@@ -680,7 +680,7 @@ recovery_budget_reserve() {
         # while recording that unverified recovery needs explicit owner action.
         if [[ -n $RECOVERY_OBSERVATION_REQUEST ]]; then
             release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
-                "$RECOVERY_OBSERVATION_COMMIT" recovery_required none recovery_incomplete || true
+                "$RECOVERY_OBSERVATION_COMMIT" recovery_required none recovery_incomplete "" paused_retry_limit || true
         fi
         trap - EXIT
         release_transaction_lock

@@ -72,9 +72,10 @@ transaction exists or the snapshot differs, the command refuses without saving
 future retry authority. If the OS is still transitioning, it only defers; the
 explicit permission is not queued for a later invocation.
 
-The current HTTP/CLI v1 status exposes the existing generic recovery-required
-state, not a numeric budget field. Exact budget guidance is in the native journal.
-A dedicated browser budget view remains open; polling never authorizes retries.
+The HTTP/CLI v1 status retains the existing recovery-required state. The native
+runner now additionally publishes exact-status-bound `automatic_recovery:
+paused_retry_limit` guidance; see the contract below. Older readers keep generic
+guidance. Polling never authorizes retries.
 
 ## Evidence and open acceptance
 
@@ -102,3 +103,41 @@ boundary with the exact AL candidate. The earlier AM observer failure remains
 inconclusive and retained. Repeated boot-wait publication is distinguished from
 unchanged-wait preservation. This closes the scoped Arch budget case, not the
 publication-edge, browser-guidance or full P0.2/P0.3 matrix.
+
+## Compatible pause guidance (2026-09-22)
+
+D-025 invariants 2, 4, 5 / P0.2. Only the native three-receipt exhaustion branch
+publishes this hint. `<request>.automatic` uses
+`celikpanel-recovery-automatic/v1` and five canonical newline-terminated fields:
+`schema`, `request_id`, `observation_identity`, `observation_sha256`, and
+`automatic_recovery=paused_retry_limit`. The existing status file remains the
+unchanged eight-field observation v1. There is no database or kit-protocol migration.
+
+The optional sidecar follows the wait contract: bounded 2 KiB, regular single-link
+root-owned 0640 with the panel group, beneath the verified 0750 observation root.
+It is published under the existing producer lock, with exact status bytes and
+GNU-stat nanosecond identity, after the status rename. Later status republication
+invalidates it even for identical bytes. Malformed, unsafe, stale or unsupported
+optional data is ignored while the verified v1 result remains readable. A
+terminal proof wins. Optional publication failure cannot retain the native lock
+or admit another child. Old readers/producers need not understand or delete it.
+The private receipts remain the dispatch authority; the public hint is not.
+
+The administrator UI and owner CLI explain the recorded three-attempt limit,
+name the server owner as the actor, show the bounded recovery-journal command,
+and direct the owner to resolve the reported cause and use the same-operation
+one-time retry command printed there. They do not infer exhaustion from a generic
+error or add a mutation endpoint. The exact request, observation time and previous
+failure remain visible. Missing subsequent reads retain the last observation with
+an explicit unknown-current-result explanation. Check/reload only reads.
+
+Validation: real shell producer-to-Go reader compatibility, stale/identical-byte
+republication, wrong request/hash/identity/schema, unsafe modes, links and FIFO;
+terminal dominance and preserved prior failure; root CLI and administrator-only
+HTTP; full native-runner shell contract with modeled systemd and bounded child;
+462 web tests and production build. Local Chrome EN/TR at 1440/390 px checks
+reload, failed subsequent read, GET-only requests and no overflow/page errors.
+Browser responses and shell readiness in those checks are fixtures. AL/AN prove
+the earlier native dispatch implementation, **not** this newly added hint.
+Fresh native hint-to-browser acceptance and access while Panel is stopped remain
+open. No production release or installed owner panel was changed.

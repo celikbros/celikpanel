@@ -182,3 +182,36 @@ test('waiting recovery shows automatic continuation and known failure; checking 
   assert.ok(JSON.stringify(tree.toJSON()).includes('recovery.wait.starting'));assert.ok(JSON.stringify(tree.toJSON()).includes('recovery.observationUnavailable'));
  }finally{await clean()}
 });
+
+
+test('automatic pause guidance is optional and applies only to a known recovery-required result',()=>{
+ const base={...known('running'),phase:'recovery_required',reason:'recovery_incomplete',previous_failure:'update_failed'};
+ const paused=parseRecoveryObservation({...base,automatic_recovery:'paused_retry_limit'},id);
+ assert.equal(paused.automatic_recovery,'paused_retry_limit');assert.equal(paused.previous_failure,'update_failed');
+ for(const automatic_recovery of [undefined,'running','private-diagnostic',{},null])assert.equal(parseRecoveryObservation({...base,automatic_recovery},id).automatic_recovery,undefined);
+ for(const phase of ['failed','running','recovered','succeeded'])assert.equal(parseRecoveryObservation({...known(phase),automatic_recovery:'paused_retry_limit'},id).automatic_recovery,undefined);
+ const unknown=parseRecoveryObservation({...base,observation:'unavailable',automatic_recovery:'paused_retry_limit'},id);
+ assert.equal(unknown.automatic_recovery,undefined);assert.equal(reconcileRecoveryObservation(paused,unknown).record,paused);
+ assert.equal(reconcileRecoveryObservation(paused,parseRecoveryObservation(base,id)).record.automatic_recovery,undefined);
+ const terminal=parseRecoveryObservation(known('recovered'),id);
+ assert.equal(reconcileRecoveryObservation(terminal,paused).record,terminal);
+});
+
+test('paused recovery explains owner action, keeps the failure and only reads on check/reload',async()=>{
+ const paused={...known('running'),phase:'recovery_required',reason:'recovery_incomplete',automatic_recovery:'paused_retry_limit',previous_failure:'update_failed'};
+ setup(async()=>admin,async()=>Response.json(paused));
+ try {
+  await act(async()=>{tree=Renderer.create(React.createElement(RecoveryStatus,{username:'admin'}))});
+  const content=JSON.stringify(tree.toJSON());
+  for(const text of ['recovery.automatic.pausedTitle','recovery.automatic.pausedHelp','recovery.automatic.resume','sudo journalctl -u celikpanel-release-recovery.service','recovery.reason.update_failed'])assert.ok(content.includes(text));
+  assert.ok(!content.includes('recovery.next.recovering'));
+  await act(async()=>{await tree.root.findByType('button').props.onClick()});
+  await act(async()=>tree.unmount());tree=undefined;
+  await act(async()=>{tree=Renderer.create(React.createElement(RecoveryStatus,{username:'admin'}))});
+  assert.ok(JSON.stringify(tree.toJSON()).includes('recovery.automatic.pausedTitle'));
+  assert.equal(calls.length,3);assert.ok(calls.every(([url,options])=>url.endsWith(id)&&(!options.method||options.method==='GET')));
+  globalThis.fetch=async()=>{throw new Error('offline')};
+  await act(async()=>{await tree.root.findByType('button').props.onClick()});
+  const offline=JSON.stringify(tree.toJSON());assert.ok(offline.includes('recovery.automatic.pausedTitle'));assert.ok(offline.includes('recovery.observationUnavailable'));
+ }finally{await clean()}
+});
