@@ -84,9 +84,9 @@ AG, AH ve AI konukları durduruldu. Kayıtlı diskler ve özel kanıtlar
 `/var/tmp/cp-release-drill-20260921-ai` altında korunuyor. Yeni başlangıç için
 bu ortamlar tekrar kullanılmaz.
 
-## Yeni AJ hazırlığı: tutarlı, yalıtılmış sürüm kimlikleri
+## AJ sürüm kimlikleri
 
-`/var/tmp/cp-release-drill-20260921-aj` altındaki AJ sonucu henüz bekleniyor.
+AJ, `/var/tmp/cp-release-drill-20260921-aj` ortamını kullandı.
 İki gerçek Git test commit'i; program/arşiv sürümünü, paket sürüm politikasını ve
 bootstrap sürüm/sıra değerlerini eşleştirir. Bunlar yalıtılmış test commit'leridir,
 üretim sürümü etiketleri değildir. Üretim dalının sürüm politikası ve üretim imza
@@ -106,9 +106,69 @@ değiştirilmemiş kayıt yardımcısı test güveni tabanını yayımlar. Test 
 kayıtları elle düzeltmez ve aynı sırada farklı commit reddini gevşetmez. Otomatik
 geri alma, önceki programları geri yüklerken daha yeni monoton temeli koruyabilir.
 
-Bu hazırlıklar AJ'nin yerel sonucunu kanıtlamaz. Gerçek çalışan bağlantısı, kontrol
-noktası hatası, kesilen kurtarma, geri yüklenen son durum ve aynı işlemi gösteren
-CLI/kimlik doğrulamalı HTTP için bu ortamda gözlenmiş sonuç hâlâ gereklidir.
+## AJ'de gözlenen yerel sonuç
 
-Tam P0.1/P0.2/P0.3 matrisi, üretim sürüm imzası yolu, eski sürüm şema geçişleri
-ve bağımsız iş yükü yaşam döngüsü kabul işleri açık kalır.
+2026-09-21 tarihinde gerçek `ac1f33778fe5eb107fc212bb96f1907b` işlemi, tam
+çalışan/işlem/hedef/snapshot/token bağlantısıyla hedefin kurulduğu kontrol
+noktasına ulaştı. Hata aracı yalnız bu doğrulanmış güncelleme birimini öldürdü.
+Yerel kurtarma `payload_restored` noktasına ulaştı; ayrıca yetkilendirilmiş QMP
+yeniden başlatması kurtarmayı bir kez kesti. Farklı bir boot ID gözlendi ve açılışta
+yerel kurtarma geri almayı tamamladı. `2026-09-21T17:42:56Z` anında kalıcı gözlem
+`recovered`, `terminal_proof=rollback_verified` ve
+`previous_failure=update_failed` değerlerini taşıyordu.
+
+Panelin HTTP erişimi yokken root kurtarma CLI'ı hem yeniden başlatmadan önce hem
+sonraki açılışta `recovering` bildirdi. HTTP erişimi dönünce CLI ile kimlik
+doğrulamalı HTTP 200, tam aynı işlem ve sonucun kanıtında birleşti; anonim HTTP 401
+döndürdü. Önceki güncelleme hatası kayıtta korundu. Gözlenen CLI örneklerinde
+`waiting_for` ipucu yoktu. Yerel bekleme yönlendirmesinin gösterilmesi AJ ile hâlâ
+kanıtlanmış değildir.
+
+Kayıtlı karşılaştırma `scoped-checks-passed` bildirdi: etkin işlem tanımlayıcısı yoktu;
+Panel ve Agent etkindi, kurulu ve çalışan program özetleri başlangıç B paketiyle
+eşleşti; web içeriği ve açık TLS sertifikasının parmak izi geri yüklendi.
+Loopback üzerindeki yetkili A ve SOA yanıtları UDP ve TCP üzerinden korundu.
+Bu, dış DNS delegasyonunu, tam DNS sahipliğini veya barındırılan iş yüklerinin
+kesintisizliğini kanıtlamaz. Son okumada çalışan programlar B / Alpha81'e geri
+dönerken **hem sürüm tabanı 82 hem temel 82 / commit C korundu**; sürüm tabanı
+81'e geri alınmadı.
+
+Veritabanı kabulü doğrulanmış, işleme bağlı snapshot'ı esas alır. Şema ve tablo
+envanteri aynı; karşılaştırılan 61 tablonun tüm içerikleri eşleşiyor. Daha önceki
+başlangıç durumuyla karşılaştırma da bu kapsamda eşleşiyor. Kimlik doğrulama ve arka plan
+yazıcılarıyla değişebilen ve farklı olduğu gözlenen `audit_logs`, `metrics_samples`,
+`sessions` ve `sqlite_sequence` içerik eşitliğinin dışında tutuldu. Bunların tek tek sayaç ve satırlarının
+değişmeden kaldığı kabul edilmedi.
+Karşılaştırılan tablolarda beklenmeyen değişiklik yok; tüm veritabanı özetleri farklıydı ve toplam
+veritabanı eşitliği iddia edilmiyor.
+
+Ayrı gerçek tarayıcı okuyucu kontrolü EN/TR dillerinde 1440 ve 390 genişlikte,
+yenileme dahil geçti: dört durum, sekiz kayıtlı ekran görüntüsü; sayfa hatası veya
+yatay taşma kaydedilmedi. API taklidi olmadan gerçek kimlik doğrulamalı yerel HTTP
+kullanıldı. Yalnız sonradan yüklenen `SystemUpdateOperation` JavaScript istekleri
+kesildi. Açıkça eklenen yerel işlem ipucu, gerçek RPC inceleme/kabulünden alınan
+kimlik ve hedef bilgilerini taşıdı; güncellemeyi tarayıcının başlattığını kanıtlamaz.
+Bunlar açılış sonrası son durum okuyucu kontrolleridir, geçici açılış bekleme
+ekranı testi değildir. Tünel üzerinden bootstrap/tarayıcı sertifika güveni
+doğrulaması iddia edilmiyor.
+
+AJ'nin iki konuğu da artık durduruldu; kayıtlı diskler ve özel kanıtlar
+`/var/tmp/cp-release-drill-20260921-aj` altında korunuyor. Yerel kanıt dizini bu
+kök altındaki `evidence/debian13`; tarayıcı kanıtı depo içindeki
+`.tmp-portal-review/bound-native-browser-aj` dizinindedir. Karşılaştırmanın 13
+girdi dosyası özeti ve tarayıcı sonucunun sekiz ekran görüntüsü özeti salt-okur
+olarak kontrol edildi.
+
+| Kanıt dosyası | SHA-256 |
+| --- | --- |
+| `evidence/debian13/bound-native-comparison.json` | `57fe316a572e5e9b1bbd837fb5eb408b057b83b8ce030fdc100c23a7b16f9744` |
+| `evidence/debian13/bound-final-floor-foundation.txt` | `5b72ded8b176ef10f1ba8af5b165c4bc7c8b0e801034416a579cc97512a33ce2` |
+| `.tmp-portal-review/bound-native-browser-aj/results.json` | `a33a3a2c57a1f07471e21c4f6d030ee0f8ce5829cae62b56ec5c71f6c481d3d5` |
+
+AJ, bu kapsamda gerçek çalışan → kesilen yerel kurtarma → açılışta geri alma →
+aynı işlemi gösteren CLI/HTTP/tarayıcı son durum okuyucusu bağlantısını kanıtlar.
+Tam P0.1/P0.2/P0.3 matrisi, diğer kesinti noktaları, üretim sürüm imzası yolu,
+eski sürüm şema geçişleri, yerel bekleme ekranı, tarayıcıdan güncelleme başlatma
+kabulü ve bağımsız iş yükü yaşam döngüsü gereksinimleri açık kalır.
+
+Gizli bilgi içermeyen, makine tarafından okunabilir [AJ kanıt özeti](BOUND-WORKER-AJ.json); sınırlı sonucu, kaynak kimliklerini ve kanıt özetlerini kaydeder. Kimlik bilgileri ve özel laboratuvar kimlik malzemesi içermez.

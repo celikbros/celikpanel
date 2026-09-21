@@ -84,9 +84,9 @@ preserved at `/var/tmp/cp-release-drill-20260921-ag`,
 `/var/tmp/cp-release-drill-20260921-ah` and
 `/var/tmp/cp-release-drill-20260921-ai`. They are not reused for another start.
 
-## Fresh AJ preparation: coherent isolated release identities
+## AJ release identities
 
-AJ is pending at `/var/tmp/cp-release-drill-20260921-aj`. Two real Git fixture
+AJ used `/var/tmp/cp-release-drill-20260921-aj`. Two real Git fixture
 commits align the binary/archive version, packaged release policy and bootstrap
 version/sequence. They are isolated fixture commits, not production release tags;
 the production branch's release policy and production signing trust are unchanged.
@@ -105,9 +105,64 @@ the fixture trust floor. The harness does not repair those records by hand or
 weaken same-sequence conflict detection. An automatic rollback may retain a newer
 monotonic foundation while restoring the predecessor payload.
 
-These preparations do not establish AJ's native result. Genuine worker binding,
-checkpoint fault, interrupted recovery, final restored state and matching
-CLI/authenticated HTTP evidence still need an observed outcome for this cell.
+## AJ observed native outcome
 
-The full P0.1/P0.2/P0.3 matrix, production release-signature path, older-release
-schema transitions and independent workload lifecycle requirements remain open.
+On 2026-09-21, genuine request `ac1f33778fe5eb107fc212bb96f1907b` reached the
+candidate-installed checkpoint with an exact worker/request/target/snapshot/token
+binding. The fault injector killed only that verified update unit. Native recovery
+reached `payload_restored`; the separately authorized QMP reset interrupted that
+recovery once. A different boot ID was observed, and native boot recovery completed
+the rollback. At `2026-09-21T17:42:56Z`, the persisted observation was `recovered`
+with `terminal_proof=rollback_verified` and `previous_failure=update_failed`.
+
+The root recovery CLI reported `recovering` while the panel HTTP endpoint was
+unavailable, both before the reset and during the subsequent boot. Once HTTP
+returned, CLI and authenticated HTTP 200 agreed on that exact request and terminal
+proof; anonymous HTTP returned 401. The earlier update failure remained recorded.
+The observed CLI samples had no `waiting_for` hint. Native waiting-guidance display
+is still unproved by AJ.
+
+The saved comparison reports `scoped-checks-passed`: the active transaction descriptor was
+absent; Panel and Agent were active with installed and running hashes matching
+baseline B; web content and the public TLS fingerprint were restored. Loopback
+authoritative A and SOA answers were preserved over UDP and TCP. This is not proof
+of external DNS delegation, complete DNS ownership, or uninterrupted hosted
+workloads. Final readback retained **both sequence floor 82 and foundation 82 /
+commit C**, while the restored running payload was B / Alpha81; the floor was not
+restored to 81.
+
+Database acceptance uses the verified bound snapshot. Schema and table inventory
+match, and all 61 compared table contents match. The earlier baseline comparison
+also matches within that scope. Content equality excludes `audit_logs`,
+`metrics_samples`, `sessions` and `sqlite_sequence` which can change with authentication/background writers and did differ. Their
+individual counters and rows were not accepted as unchanged. No compared table differed unexpectedly; whole-database
+digests differed, and total database equality is not claimed.
+
+The separate real-browser reader check passed EN/TR at widths 1440 and 390,
+including reload: four cases, eight saved screenshots, no page errors or horizontal
+overflow recorded. It used genuine authenticated native HTTP, with no API mocks.
+Only lazy `SystemUpdateOperation` JavaScript requests were aborted. An explicit
+local operation hint used the ID and target tuple from the genuine RPC
+review/acceptance; this is not proof that the browser initiated the update. These
+were post-reboot terminal-reader checks, not a transient boot-wait display test.
+Bootstrap/browser certificate trust validation through the tunnel is not claimed.
+
+Both AJ guests are now stopped; registered disks and private evidence remain at
+`/var/tmp/cp-release-drill-20260921-aj`. The native evidence directory is
+`evidence/debian13` below that root; browser evidence is in repository-local
+`.tmp-portal-review/bound-native-browser-aj`. The comparison's 13 input-file
+hashes and the browser results' eight screenshot hashes were checked read-only.
+
+| Evidence file | SHA-256 |
+| --- | --- |
+| `evidence/debian13/bound-native-comparison.json` | `57fe316a572e5e9b1bbd837fb5eb408b057b83b8ce030fdc100c23a7b16f9744` |
+| `evidence/debian13/bound-final-floor-foundation.txt` | `5b72ded8b176ef10f1ba8af5b165c4bc7c8b0e801034416a579cc97512a33ce2` |
+| `.tmp-portal-review/bound-native-browser-aj/results.json` | `a33a3a2c57a1f07471e21c4f6d030ee0f8ce5829cae62b56ec5c71f6c481d3d5` |
+
+AJ establishes this scoped real-worker → interrupted native recovery → boot
+rollback → exact CLI/HTTP/browser terminal-reader association. The full
+P0.1/P0.2/P0.3 matrix, other crash boundaries, production release-signature path,
+older-release schema transitions, native wait display, browser update-start
+admission and independent workload lifecycle requirements remain open.
+
+A sanitized, machine-readable [AJ evidence summary](BOUND-WORKER-AJ.json) records the scoped result, source identities and evidence digests without credentials or private lab identity material.

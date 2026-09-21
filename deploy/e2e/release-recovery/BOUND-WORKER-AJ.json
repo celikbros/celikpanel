@@ -1,0 +1,146 @@
+{
+  "browser": {
+    "api_mocked": false,
+    "api_source": "actual authenticated native HTTP",
+    "asset_fault": "only lazy SystemUpdateOperation JavaScript aborted",
+    "cases": [
+      {
+        "horizontal_overflow": false,
+        "locale": "en",
+        "reload_passed": true,
+        "screenshot_sha256": [
+          "adbba8202c8a3492cea51b7fccb84570f60ec7c2965acb15b138e84f96814ae5",
+          "9503e2a292b015322a564e0ff29efbed13320e364eec15b23e4a81d5cfc080a7"
+        ],
+        "viewport_width": 1440
+      },
+      {
+        "horizontal_overflow": false,
+        "locale": "en",
+        "reload_passed": true,
+        "screenshot_sha256": [
+          "d6a987a48a7e5658b1aeff52c72d78057deab2a5c0b08ff12f009525fc0ab4fa",
+          "63c02cac9461098917abcc3cfbd8e2e4651af09b664c28485e872b99d3f6cfa4"
+        ],
+        "viewport_width": 390
+      },
+      {
+        "horizontal_overflow": false,
+        "locale": "tr",
+        "reload_passed": true,
+        "screenshot_sha256": [
+          "572faa593b2a1d5d7fe157cf907fa7372c60ee2a9009cc8bba74799daabe15a2",
+          "9dccdabeafb960d1fd820a5686f7f386dcdd352e030073b8026695268986e18b"
+        ],
+        "viewport_width": 1440
+      },
+      {
+        "horizontal_overflow": false,
+        "locale": "tr",
+        "reload_passed": true,
+        "screenshot_sha256": [
+          "014e4b110be894656a558804e33a8410abf9139668dbff4bd43bd62288eda320",
+          "3683c25b528749e43be595d3a80cbd2b9cfa5e4179c05d626b93f247ec7c5d3e"
+        ],
+        "viewport_width": 390
+      }
+    ],
+    "operation_hint": "derived from genuine reviewed/accepted driver events; no terminal outcome seeded",
+    "terminal_time_and_previous_failure_preserved": true
+  },
+  "case": "AJ",
+  "database_schema_transition": {
+    "after": 42,
+    "baseline": 42,
+    "snapshot": 42
+  },
+  "evidence_sha256": {
+    "accepted_driver_events": "0b43353eeac9c993e7632a69f4d51e0f28cf1f519151241501b86558848f0e6d",
+    "browser_results": "a33a3a2c57a1f07471e21c4f6d030ee0f8ce5829cae62b56ec5c71f6c481d3d5",
+    "comparison": "57fe316a572e5e9b1bbd837fb5eb408b057b83b8ce030fdc100c23a7b16f9744",
+    "floor_and_foundation": "5b72ded8b176ef10f1ba8af5b165c4bc7c8b0e801034416a579cc97512a33ce2",
+    "immutable_binding": "64d3f39d8655109b1ae77e847c3cb35d3519e6fd2a6627d0355caabaa90db65b",
+    "reboot_result": "03697955d0a7b17dbd0f90d15b663b7af4ab22b7ff8a8ea5df873a6d9a4b1b1a",
+    "snapshot_manifest": "a0a6738569979fb8a9bd6f6e4580cf72b13423fbfcac9e8434e4744b0259fb98",
+    "start_receipt": "c2544ee42b1cd68b4f3d4799ad6b7e480c64aa8efe5ab7ed315a683b7f91c24a",
+    "worker_cut": "c86be899698ae3f07b0a48d1a66dbdab6cf2834eb6e3943c4bf1f8ccaa96d83e"
+  },
+  "faults": [
+    {
+      "cut": "complete verified snapshot, installed candidate, immutable observation binding",
+      "kind": "SIGKILL",
+      "target": "exact accepted native update worker"
+    },
+    {
+      "changed_guest_boot_id": true,
+      "cut": "native recovery frozen at payload_restored",
+      "kind": "QMP system_reset"
+    }
+  ],
+  "guests_stopped_evidence_retained": true,
+  "monotonic_policy_after_rollback": {
+    "foundation_commit": "9bdb27473f0341fc1ab47cb72d1269839ca0ddee",
+    "foundation_sequence": 82,
+    "restored_payload_version": "v0.1.0-alpha.81",
+    "sequence_floor": 82
+  },
+  "native_result": {
+    "anonymous_http": 401,
+    "authenticated_http": 200,
+    "cli_and_http_exact_request_agree": true,
+    "cli_during_http_unavailable": true,
+    "native_waiting_for_hint_observed": false,
+    "observed_at": "2026-09-21T17:42:56Z",
+    "phase": "recovered",
+    "previous_failure": "update_failed",
+    "terminal_proof": "rollback_verified"
+  },
+  "not_established": [
+    "Native waiting_for hint emission/rendering during boot",
+    "UI update-start admission",
+    "Production signing-key admission",
+    "Browser certificate trust on loopback tunnel",
+    "Schema-migration rollback in this case (42 to 42)",
+    "Hosted workload continuity or public DNS/secondary replication",
+    "Total database content equality",
+    "Broader platform and fault matrix completion"
+  ],
+  "platform": "Debian 13 / amd64 / registered disposable QEMU",
+  "request_id": "ac1f33778fe5eb107fc212bb96f1907b",
+  "restoration": {
+    "active_transaction_absent": true,
+    "agent_and_panel_active_with_baseline_executables": true,
+    "database_content_exclusions": [
+      "audit_logs",
+      "metrics_samples",
+      "sessions",
+      "sqlite_sequence"
+    ],
+    "database_total_equality_claimed": false,
+    "database_total_tables": 65,
+    "installed_and_served_public_tls_matches_baseline": true,
+    "live_database_integrity": "ok",
+    "loopback_authoritative_dns_A_SOA_UDP_TCP_matches_baseline": true,
+    "snapshot_database_content_tables_matching": 61,
+    "snapshot_database_integrity": "ok",
+    "snapshot_manifest_verified_files": 129,
+    "web_tree_matches_baseline": true
+  },
+  "result": "scoped-checks-passed",
+  "schema": "celikpanel/bound-native-acceptance-summary/v1",
+  "transition": {
+    "baseline": {
+      "agent_sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+      "commit": "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00",
+      "panel_sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd",
+      "version": "v0.1.0-alpha.81"
+    },
+    "target": {
+      "agent_sha256": "169e3230f5099c36bfd0e4d4ed86972847822095023b427297ccdd8088b6bc0d",
+      "commit": "9bdb27473f0341fc1ab47cb72d1269839ca0ddee",
+      "panel_sha256": "e1bbe2c4f0d9b5d6b28b533b06925f7c31a39d5d1391e9de0b45fbc7de3ebb57",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "versions_are_unpublished_fixtures": true
+}

@@ -146,7 +146,14 @@ yalnız GET istekleri, sıfır sayfa hatası ve yatay taşma. Tarayıcıdaki API
 ve runner testindeki systemd hazır olma yanıtları test verisidir.
 
 Önceki gerçek AB/AD deneyleri bu yeni arayüz bağını **kanıtlamaz**; deney güncelleyicisi
-gerçek worker ilişkisi üretmemişti. Gerçek worker bağı ve bu okuyucu/arayüz ile yeni
-yerel kurtarma kabulü açık kalır. Bu, sınırlı yönlendirme uygulamasını tamamlar;
-P0.2'yi veya tüm dayanıklılık matrisini kapatmaz. Bu değişiklik sürüm yayımlamaz
-ve kurulu panel güncellemez.
+gerçek worker ilişkisi üretmemişti. Sonraki [Debian AJ kabulü](../deploy/e2e/release-recovery/BOUND-WORKER.tr.md),
+gerçek Go worker ilişkisini doğrulanmış yerel yedek, worker sonlandırma, kurtarma
+sırasında yeniden başlatma, otomatik geri alma ve aynı sonucu gösteren root CLI ile
+kimlik doğrulamalı HTTP üzerinden kanıtlar. Gerçek HTTP kullanan EN/TR tarayıcı
+okuyucusu, belirtilen gecikmeli JavaScript yükleme hatasından sonra aynı isteği ve
+nihai sonucu sayfa yenilemede korur. Bu, şema42→42 ve deney imza güveni ile sınırlıdır;
+arayüzden güncelleme başlatmayı veya üretim imzasıyla kabulü kanıtlamaz. AJ'de yerel
+`waiting_for` ek kaydı gözlenmedi; açılışta bekleme kaydının üretilmesi ve gösterimi
+açıktır. [Sınırlı kanıt özeti](../deploy/e2e/release-recovery/BOUND-WORKER-AJ.json).
+Bu sonuç P0.2'yi veya tüm dayanıklılık matrisini kapatmaz. Bu değişiklik üretim sürümü
+yayımlamaz ve sunucu sahibinin kurulu panellerini güncellemez.
