@@ -293,3 +293,12 @@ CLI/authenticated HTTP results. This closes that Debian fallback boundary only;
 automatic normal-address access, Arch/historical-launcher compatibility and the
 remaining P0.2/P0.3 fault matrix stay open. The earlier local-only statement above
 is superseded for this exact AP boundary, not relabeled as full access acceptance.
+
+
+[Debian AR owner-interruption acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md#debian-ar-interrupted-owner-continuation)
+now proves a supported owner continuation can be killed after its admission,
+remain honestly paused without replenishing automatic slots, and finish the same
+rollback after a second explicit owner command. Both owner receipts and the three
+automatic receipts remain; restored baseline processes and authenticated HTTP/CLI
+agree. This closes that Debian admission-cut boundary only. Failed continuation,
+Arch, other checkpoints and the remaining P0.3 matrix stay open.

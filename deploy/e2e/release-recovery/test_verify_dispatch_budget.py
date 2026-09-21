@@ -50,6 +50,11 @@ class BudgetEvidenceTests(unittest.TestCase):
     def test_duplicate_owner_admission_rejected(self):
         self.after['receipts']['owner.Def456']={'sha256':'5'*64,'bytes':279}
         with self.assertRaises(ValueError):self.check()
+    def test_two_explicit_admissions_require_separate_mode(self):
+        self.after['receipts']['owner.Def456']={'sha256':'5'*64,'bytes':279}
+        with self.assertRaises(ValueError):self.check()
+        f.check_budget(self.before,self.after,self.op,self.snapshot,owner_receipt_count=2)
+        with self.assertRaises(ValueError):f.check_budget(self.before,self.after,self.op,self.snapshot,owner_receipt_count=3)
     def test_marker_lock_boot_or_snapshot_mismatch_rejected(self):
         for key,value in [('marker',self.before['marker']),('lock_free',False),('boot_id','other'),('snapshot','foreign'),('at','2026-09-21T19:59:00Z')]:
             original=copy.deepcopy(self.after);self.after[key]=value

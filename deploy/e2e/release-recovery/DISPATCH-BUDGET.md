@@ -251,3 +251,61 @@ explicit owner SSH command; automatic normal-address access, Arch viewer proof,
 historical launcher compatibility, interrupted owner retry, publication-edge
 faults, production trust and workload independence remain open. No installed
 owner panel was updated and no production release was published.
+
+
+## Debian AR interrupted owner continuation
+
+[AR's machine-readable result](OWNER-INTERRUPTION-AR.json) proves one additional
+P0.3 boundary: an explicitly requested owner continuation is SIGKILLed after its
+own durable admission receipt is published. This is an **admission boundary**,
+not a claim of interruption at every rollback checkpoint or SSH-disconnect mode.
+It uses AP's exact candidate/archive/runtime and the same Alpha81 baseline on a
+fresh Debian 13 QEMU. Request: `2cb6da8332448755c7b82bfa7c0aaee2`.
+
+Real Agent admission, worker termination, QMP reset at the first automatic
+rollback's `payload_restored`, and two further native cuts first exhaust the three
+automatic slots. The supported owner CLI then starts in a dedicated disposable
+systemd unit. Before signalling, the helper checks sealed VM identity, exact
+operation/token/snapshot, selected runtime, bash executable/command, unit
+invocation/PID/start ticks, boot and held cgroup inode. A frozen recheck verifies
+the complete snapshot and runtime and the newly published owner receipt. Only
+that fixed lab unit and its descendants receive SIGKILL. No product marker,
+observation, receipt, budget, service unit or normal timer is edited.
+
+After the cut, the same operation reports `recovery_required` with a known failure
+and `paused_retry_limit`. The lock is free. A further 32-second observation
+interval spanning the normal recovery timer creates no additional admission.
+The three automatic receipt hashes and interrupted owner receipt are unchanged.
+A second explicit supported owner continuation completes rollback at
+`2026-09-21T23:24:53Z`. Both owner receipts remain, baseline installed/running
+Agent and Panel match, and selected CLI/authenticated HTTP agree on terminal
+rollback. Anonymous HTTP returns 401. Sequence floor and foundation remain 82.
+
+The helper and offline verifier reject another operation/VM/boot/runtime, a changed
+cut process, missing SIGKILL proof, unknown or false terminal results, reset
+automatic slots, lost owner receipts and a too-short timer observation. The base
+budget verifier still defaults to exactly one owner admission; the separate
+interruption verifier requires two plus the full native cut/pause evidence.
+29 focused evidence-verifier tests pass. Both AR VMs are stopped and their private
+source evidence remains under `/var/tmp/cp-release-drill-20260922-ar`.
+
+```sh
+python3 deploy/e2e/release-recovery/verify_owner_interruption.py \
+  --evidence-dir /var/tmp/cp-release-drill-20260922-ar/evidence/debian13 \
+  --operation-id 2cb6da8332448755c7b82bfa7c0aaee2
+```
+
+The earlier AQ attempt is **inconclusive for owner interruption**: the host missed
+the initial recovery's bounded reboot handoff, so the controller refused reset.
+Native recovery subsequently completed ordinary rollback and both services were
+active. AQ disks/journals remain retained and its VMs are stopped; it is not
+counted as the AR case. AR's initial host status poll encountered an absent result
+while baseline installation was still running; a read-only continuation observed
+that same successful installation before the single update admission. No second
+baseline or update was started.
+
+D-025 invariants 2, 3, 5 / P0.3 remains partial. No product schema/runtime change,
+production release or installed owner-panel update. Arch owner interruption,
+deterministic failed owner continuation, reservation publication-edge power loss,
+remaining rollback checkpoints, production trust and independent workloads remain
+open. Previous AL/AN/AO/AP evidence is unchanged.
