@@ -148,3 +148,12 @@ three interrupted native attempts, and retained stale guidance loses to verified
 rollback after one owner continuation. Old binaries are restored and authenticated
 HTTP agrees afterwards. This closes native Debian hint-to-CLI acceptance; it does
 not close browser access while Panel is stopped or the full P0.2/P0.3 matrix.
+
+
+[Debian AR owner-interruption acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md#debian-ar-interrupted-owner-continuation)
+now proves a supported owner continuation can be killed after its admission,
+remain honestly paused without replenishing automatic slots, and finish the same
+rollback after a second explicit owner command. Both owner receipts and the three
+automatic receipts remain; restored baseline processes and authenticated HTTP/CLI
+agree. This closes that Debian admission-cut boundary only. Failed continuation,
+Arch, other checkpoints and the remaining P0.3 matrix stay open.

@@ -308,3 +308,12 @@ kullanıcı devamı eski servisleri geri getirdi; CLI ve yetkili HTTP sonucu eş
 Yalnız bu Debian yedek erişim sınırı kapandı. Normal adresten otomatik erişim,
 Arch/eski başlatıcı uyumu ve P0.2/P0.3'ün kalan hata matrisi açık. Önceki yalnız
 yerel test sınırı bu AP vakası için aşıldı; tüm erişim kabulü tamamlanmış sayılmaz.
+
+
+[Debian AR kullanıcı kurtarması kesinti kabulü](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md#debian-ar-interrupted-owner-continuation)
+kabul kaydından sonra kesilen kullanıcı kurtarmasının otomatik sayacı yenilemeden
+durakladığını ve ikinci açık kullanıcı komutuyla aynı geri almanın tamamlandığını
+doğruladı. İki kullanıcı ve üç otomatik deneme kaydı korundu; eski sürümün
+çalışan süreçleri ile yetkili HTTP/CLI sonucu eşleşti. Yalnız bu Debian kabul
+sınırı kapandı. Başarısız devam, Arch, diğer checkpoint'ler ve P0.3'ün kalan
+matrisi açık.

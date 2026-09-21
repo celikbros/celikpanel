@@ -18,7 +18,8 @@ def platform_name(node):
     return names[node]
 
 
-def check_budget(before,after,operation,snapshot):
+def check_budget(before,after,operation,snapshot,owner_receipt_count=1):
+    require(owner_receipt_count in (1,2),'unsupported explicit owner count')
     for value in (before,after):
         require(value.get('schema')=='celikpanel/native-budget-result/v1' and value.get('operation_id')==operation
                 and value.get('snapshot')==snapshot and value.get('lock_free') is True,'budget sample identity or lock differs')
@@ -30,7 +31,7 @@ def check_budget(before,after,operation,snapshot):
     require(after['phase']=='terminal' and after['marker'] is None and after['cli'].get('phase')=='recovered'
             and after['cli'].get('terminal_proof')=='rollback_verified','owner retry not terminal')
     require(set(before['receipts'])=={'1','2','3'},'exhausted automatic slots differ')
-    require(len(after['receipts'])==4 and sum(re.fullmatch(r'owner\.[A-Za-z0-9]+',n) is not None for n in after['receipts'])==1,'not exactly one owner admission')
+    require(len(after['receipts'])==3+owner_receipt_count and sum(re.fullmatch(r'owner\.[A-Za-z0-9]+',n) is not None for n in after['receipts'])==owner_receipt_count,'explicit owner admission count differs')
     require(all(after['receipts'].get(n)==before['receipts'][n] for n in ('1','2','3')),'automatic reservation changed')
     require(len(before['paused_messages'])>=2 and all(x.startswith('Automatic recovery paused after three admitted attempts.') for x in before['paused_messages']),'repeated native deferral not recorded')
     require(before['at']<after['at'],'result predates exhaustion')
@@ -50,7 +51,7 @@ def check_republished_wait(saved,terminal,operation,deferrals):
             'no repeated native wait publication evidence')
 
 
-def verify(directory,operation):
+def verify(directory,operation,*,owner_receipt_count=1):
     require(re.fullmatch('[0-9a-f]{32}',operation),'invalid request')
     directory=Path(directory).resolve(strict=True);refs={}
     def raw(name,collected=False):
@@ -76,7 +77,7 @@ def verify(directory,operation):
     association=w.bound.bind_cut(intent,cut,w.wait.probe.strict_object(collection['record']))
     require(association==reset['worker_cut'],'worker cut association differs');snapshot=association['snapshot']
     before=obj('budget-owner-retry-'+operation+'.admitted.json',True);after=obj('budget-terminal-'+operation+'.json',True)
-    check_budget(before,after,operation,snapshot)
+    check_budget(before,after,operation,snapshot,owner_receipt_count)
     require(before['identity']==intent['identity'] and before['boot_id']!=reset['before_boot_id'],'genuine boot change missing')
     config=obj('budget-cuts-'+operation+'.json',True)
     require(config['armed_boot_id']==reset['before_boot_id'] and config['intent_sha256']==w.wait.sha(iraw)
@@ -123,7 +124,7 @@ def verify(directory,operation):
     return {'schema':'celikpanel/native-dispatch-budget-acceptance/v1','result':'scoped-checks-passed','request_id':operation,
         'platform':terminal['systemd']+' / '+platform_name(intent['identity']['node'])+' / amd64 / disposable QEMU','baseline':intent['baseline'],'target':intent['target'],
         'target_archive_sha256':build['sha256'],'selected_runtime_sha256':kit['runtime_manifest_sha256'],
-        'automatic_receipts_preserved':before['receipts'],'owner_receipt_count':1,'cut_invocations':invocations,
+        'automatic_receipts_preserved':before['receipts'],'owner_receipt_count':owner_receipt_count,'cut_invocations':invocations,
         'native_pause_observations':len(paused),'exhausted_status':before['cli'],'terminal':after['cli'],
         'retained_wait_republished':wait_republished,'authenticated_http':200,'anonymous_http':401,'coordinators_restored_to_baseline':True,
         'floor_and_foundation_sequence':82,'evidence_sha256':refs,
