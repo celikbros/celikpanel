@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/firewallpolicy"
 	"github.com/alicelik/celikpanel/internal/hostcmd"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -42,9 +41,9 @@ import (
 // siler (dağıtım varsayılanına, her şey açık, döner).
 
 const (
-	fwTable                 = "celikpanel_fw"
-	maxFirewallSnapshotSize = 64 << 10
-	firewallSnapshotVersion = 2
+	fwTable                 = firewallpolicy.Table
+	maxFirewallSnapshotSize = firewallpolicy.MaxSnapshotSize
+	firewallSnapshotVersion = firewallpolicy.Version
 	firewallRestoreUnitName = "celikpanel-firewall-restore.service"
 
 	firewallPersistenceDisabled   = "disabled"
@@ -758,28 +757,7 @@ func restoreFirewallSnapshotState(store firewallStateStore, previous []byte, exi
 }
 
 func buildFirewallRuleset(replace bool, tcp, udp []int) string {
-	tcp = dedupeSorted(tcp)
-	udp = dedupeSorted(udp)
-	var b strings.Builder
-	if replace {
-		b.WriteString(fmt.Sprintf("delete table inet %s\n", fwTable))
-	}
-	b.WriteString(fmt.Sprintf("table inet %s {\n", fwTable))
-	b.WriteString("  chain input {\n")
-	b.WriteString("    type filter hook input priority 0; policy drop;\n")
-	b.WriteString("    iif lo accept\n")
-	b.WriteString("    ct state established,related accept\n")
-	b.WriteString("    ct state invalid drop\n")
-	b.WriteString("    meta l4proto icmp accept\n")
-	b.WriteString("    meta l4proto ipv6-icmp accept\n")
-	if len(tcp) > 0 {
-		b.WriteString(fmt.Sprintf("    tcp dport { %s } accept\n", joinInts(tcp)))
-	}
-	if len(udp) > 0 {
-		b.WriteString(fmt.Sprintf("    udp dport { %s } accept\n", joinInts(udp)))
-	}
-	b.WriteString("  }\n}\n")
-	return b.String()
+	return firewallpolicy.Ruleset(replace, tcp, udp)
 }
 
 func rollbackFirewallPolicy(runner firewallCommandRunner, currentPresent, oldPresent bool, oldRules []byte) error {
@@ -802,77 +780,17 @@ func rollbackFirewallPolicy(runner firewallCommandRunner, currentPresent, oldPre
 	return nil
 }
 
-type firewallSnapshotPolicy struct {
-	Version        int   `json:"version"`
-	TCPPorts       []int `json:"tcp_ports"`
-	UDPPorts       []int `json:"udp_ports"`
-	SSHPortsAtSave []int `json:"ssh_ports_at_save"`
-}
+// The RPC producer and boot reader share one wire contract that an independent
+// boot consumer can use without importing the Agent. This alias preserves the
+// existing callers and JSON bytes.
+type firewallSnapshotPolicy = firewallpolicy.Policy
 
-// Version 2 keeps operator/service ports separate from automatically protected
-// SSH ports, so boot can add the current trusted sshd configuration safely.
-// Sürüm 2, operatör/servis portlarını otomatik korunan SSH portlarından ayırır;
-// böylece açılış güncel ve güvenilir sshd yapılandırmasını güvenle ekleyebilir.
 func encodeFirewallSnapshot(tcp, udp, ssh []int) []byte {
-	policy := firewallSnapshotPolicy{
-		Version:        firewallSnapshotVersion,
-		TCPPorts:       dedupeSorted(tcp),
-		UDPPorts:       dedupeSorted(udp),
-		SSHPortsAtSave: dedupeSorted(ssh),
-	}
-	data, _ := json.Marshal(policy)
-	return append(data, '\n')
+	return firewallpolicy.Encode(tcp, udp, ssh)
 }
 
-// decodeFirewallSnapshot accepts only canonical V2 JSON or the exact legacy
-// ruleset emitted by older CelikPanel builds. Arbitrary nft text never reaches
-// the privileged `nft -f` command.
-// decodeFirewallSnapshot yalnız kanonik V2 JSON'u veya eski CelikPanel
-// sürümlerinin ürettiği tam kural kümesini kabul eder. Keyfi nft metni
-// ayrıcalıklı `nft -f` komutuna asla ulaşmaz.
 func decodeFirewallSnapshot(data []byte) (firewallSnapshotPolicy, bool, error) {
-	if len(data) == 0 || len(data) > maxFirewallSnapshotSize {
-		return firewallSnapshotPolicy{}, false, fmt.Errorf("persistent firewall snapshot has invalid size %d", len(data))
-	}
-	if data[0] == '{' {
-		var policy firewallSnapshotPolicy
-		decoder := json.NewDecoder(bytes.NewReader(data))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&policy); err != nil {
-			return firewallSnapshotPolicy{}, false, fmt.Errorf("decode persistent firewall snapshot: %w", err)
-		}
-		var extra any
-		if err := decoder.Decode(&extra); err != io.EOF {
-			return firewallSnapshotPolicy{}, false, fmt.Errorf("persistent firewall snapshot has trailing data")
-		}
-		if policy.Version != firewallSnapshotVersion {
-			return firewallSnapshotPolicy{}, false, fmt.Errorf("unsupported persistent firewall snapshot version %d", policy.Version)
-		}
-		if !bytes.Equal(data, encodeFirewallSnapshot(policy.TCPPorts, policy.UDPPorts, policy.SSHPortsAtSave)) {
-			return firewallSnapshotPolicy{}, false, fmt.Errorf("persistent firewall snapshot is not canonical")
-		}
-		return policy, false, nil
-	}
-
-	var tcp, udp []int
-	for _, raw := range strings.Split(string(data), "\n") {
-		line := strings.TrimSpace(raw)
-		if p, ok := parsePortLine(line, "tcp dport"); ok {
-			tcp = p
-		}
-		if p, ok := parsePortLine(line, "udp dport"); ok {
-			udp = p
-		}
-	}
-	expected := buildFirewallRuleset(false, dedupeSorted(tcp), dedupeSorted(udp))
-	if string(data) != expected {
-		return firewallSnapshotPolicy{}, false, fmt.Errorf("persistent firewall snapshot does not match CelikPanel's exact legacy ruleset")
-	}
-	return firewallSnapshotPolicy{
-		Version:  firewallSnapshotVersion,
-		TCPPorts: dedupeSorted(tcp),
-		UDPPorts: dedupeSorted(udp),
-	}, true, nil
+	return firewallpolicy.Decode(data)
 }
 
 func validateFirewallSnapshot(data []byte) error {
@@ -1505,7 +1423,7 @@ func prepareFirewallRestoreBatch(runner firewallCommandRunner, store firewallSta
 	if err != nil || !exists {
 		return "", exists, err
 	}
-	policy, legacy, err := decodeFirewallSnapshot(snapshot)
+	_, _, err = decodeFirewallSnapshot(snapshot)
 	if err != nil {
 		return "", true, err
 	}
@@ -1531,27 +1449,12 @@ func prepareFirewallRestoreBatch(runner firewallCommandRunner, store firewallSta
 		}
 		configuredSSHPorts = nil
 	}
-	tcp := append(append([]int{}, policy.TCPPorts...), configuredSSHPorts...)
-	if !legacy {
-		// Keep the last verified listener as a transition guard while also opening
-		// the current effective configuration. The next normal panel sync drops a
-		// stale listener port from the persisted V2 policy.
-		// Güncel etkili yapılandırmayı açarken son doğrulanmış dinleyiciyi geçiş
-		// koruması olarak tut. Sonraki olağan panel eşitlemesi eski dinleyici
-		// portunu kalıcı V2 politikasından düşürür.
-		tcp = append(tcp, policy.SSHPortsAtSave...)
-	}
-	rules := buildFirewallRuleset(false, tcp, policy.UDPPorts)
 	tables, err := runner.Output("nft", "list", "tables")
 	if err != nil {
 		return "", true, fmt.Errorf("nft table discovery failed: %w", err)
 	}
-	var batch strings.Builder
-	if firewallTablePresent(tables) {
-		batch.WriteString(fmt.Sprintf("delete table inet %s\n", fwTable))
-	}
-	batch.WriteString(rules)
-	return batch.String(), true, nil
+	rules, err := firewallpolicy.RestoreRuleset(snapshot, configuredSSHPorts, firewallTablePresent(tables))
+	return rules, true, err
 }
 
 // parsePortLine reads the ports an nft rule admits. nft renders a set of two or

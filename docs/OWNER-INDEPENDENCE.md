@@ -78,3 +78,27 @@ rollback and native acceptance requirements; replacing those paths with unchecke
 shell copies would not meet D-022. No removal command is offered or certified by
 this change. Panel removal must eventually be an owner-reviewed operation that
 preserves all workload state and leaves a documented native administration path.
+
+
+## Shared firewall policy contract (source stage)
+
+D-025 invariants 1, 3, 6 / P0.5. The persisted firewall producer, reader and boot
+ruleset preparation now share `internal/firewallpolicy`. The package imports only
+the Go standard library and has no Agent, application database, license, host
+command or filesystem dependency. The management Agent uses this same package
+for v2 writing, exact legacy/v2 reading and restoring the reviewed TCP/UDP policy
+with the current verified SSH ports and the saved SSH transition guard.
+
+The stored v2 JSON, null/empty representation, size limit, canonical comparison
+and exact legacy nft format stay unchanged. No schema migration or on-disk
+normalization is performed. Unsupported versions, injected nft text, duplicate
+JSON fields, altered canonical bytes and invalid configured SSH ports are refused.
+The generated batch touches only `inet celikpanel_fw`, never the host ruleset.
+Authority, secure file reads, SSH discovery, nft preflight, atomic application and
+rollback still belong to the existing caller; a rendered plan is not kernel proof.
+
+Race-enabled package tests and existing Agent firewall/port-reader tests pass.
+This is the shared contract needed by the independent boot consumer, not its
+activation. The installed boot unit still invokes Agent. Native consumer packaging,
+owner-reviewed persistence/boot migration, failed-restore recovery and real
+Agent-absent reboot acceptance remain open. Existing installations are unchanged.
