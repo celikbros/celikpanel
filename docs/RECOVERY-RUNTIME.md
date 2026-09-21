@@ -179,6 +179,10 @@ The separate [AD native Debian acceptance](../deploy/e2e/release-recovery/NATIVE
 passes the same two-fault boundary: one boot deferral, zero postboot recovery
 failures and automatic completion of the same rollback. All 100 old rows across
 55 tables, DNS and HTTPS pass; one later metrics row is recorded separately.
-AC's earlier preparation-only failure remains preserved. The subsequent UI/CLI wait guidance has component and fixture evidence; fresh
-native worker-to-UI binding acceptance and the wider P0 matrix remain open. AB/AD prove eventual recovery at this
-boundary, not uninterrupted access or power-loss durability.
+AC's earlier preparation-only failure remains preserved. Subsequent
+[AJ acceptance](../deploy/e2e/release-recovery/BOUND-WORKER.md) proves the scoped
+genuine worker-to-snapshot-to-CLI/authenticated HTTP/browser terminal-reader
+association after two native faults. AJ observed no native `waiting_for` hint;
+boot-wait publication/display and the wider P0 matrix remain open. AB/AD and AJ
+prove eventual recovery at their recorded boundaries, not uninterrupted access
+or power-loss durability.
