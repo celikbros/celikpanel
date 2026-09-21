@@ -9,7 +9,7 @@ used a direct native bootstrap and cannot establish this association.
 ## Trust and operation boundaries
 
 - `current_worker_baseline.py` installs a fresh unpublished Alpha81 artifact
-  from commit `8a0c94035912a2a1cbddc47a44133088343aeeda` using its unchanged
+  from commit `eb14273227340d811f1db8500e6886c5b23d7f24` using its unchanged
   installer. Its unchanged enrollment helper installs a new fixture public key
   and sequence floor. It refuses an existing installation and repeat intent.
 - `worker_fixture_origin.py` generates a separate disposable signing key and
@@ -46,8 +46,16 @@ failed disk/log evidence remains at `/var/tmp/cp-release-drill-20260921-ae`.
 
 The extractor now preserves exact package modes. A real Alpha81 archive check
 verified 377 entry modes and 353 file hashes. This is fixture correction evidence,
-not native recovery acceptance. Fresh AF is the next trial; its result must be
-recorded before making any native PASS claim.
+not native recovery acceptance. AF then exposed a production contract mismatch: runtime enrollment created the
+shared `/usr/libexec/celikpanel` directory as `0700`; the next start-guard step
+required `0755`. Its stopped guest and logs are retained separately. The fresh
+installer now establishes the shared directory through the strict existing
+contract before enrollment. Existing conflicting owner metadata remains unchanged;
+private runtime directories remain `0700`. A real Bash-to-Go regression reproduces
+the previous failure and verifies absent, existing `0755`, and conflicting `0700`
+cases under a real inherited transaction lock. Schema and runtime ABI are unchanged.
+
+Fresh AG will exercise this predecessor. Native results remain unconfirmed.
 
 The full P0.1/P0.2/P0.3 matrix, production release-signature path, older-release
 schema transitions and independent workload lifecycle requirements remain open.

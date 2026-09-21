@@ -54,6 +54,8 @@ def validate_intent(value, identity, operation):
                 or item['version'] != version or not HEX40.fullmatch(item.get('commit', ''))
                 or any(not files.HEX64.fullmatch(item.get(key, '')) for key in ('agent_sha256', 'panel_sha256'))):
             raise probe.ProbeError('unsupported current-producer artifact identity')
+    if value['baseline']['commit'] == value['target']['commit']:
+        raise probe.ProbeError('candidate source commit must be distinct')
     if any(value['baseline'][key] == value['target'][key] for key in ('agent_sha256', 'panel_sha256')):
         raise probe.ProbeError('candidate artifacts must be distinct')
     if value['recovery_fault'] not in (None, {'action': 'reboot', 'checkpoint': 'payload_restored'}):

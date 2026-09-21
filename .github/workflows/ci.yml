@@ -156,6 +156,7 @@ jobs:
           sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_wal_checkpoint.py' -v
           sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_exchange_checkpoint.py' -v
           sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_native_wal_trial.py' -v
+          sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_worker_fixture_origin.py' -v
       - name: Test and build disposable release-recovery drivers (no VM)
         run: |
           go test ./deploy/e2e/release-recovery/driver ./deploy/e2e/release-recovery/driver-update -count=1

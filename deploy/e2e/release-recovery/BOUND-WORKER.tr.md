@@ -8,7 +8,7 @@ yerel bootstrap kullandığından bu bağlantıyı kanıtlamaz.
 
 ## Güven ve işlem sınırları
 
-- `current_worker_baseline.py`, `8a0c94035912a2a1cbddc47a44133088343aeeda`
+- `current_worker_baseline.py`, `eb14273227340d811f1db8500e6886c5b23d7f24`
   commit'inden yayımlanmamış Alpha81 paketini, değiştirilmemiş kurucusuyla temiz
   konuğa kurar. Asıl kayıt yardımcısı test açık anahtarını ve sürüm tabanını
   kaydeder. Mevcut kurulum ve yinelenen başlangıç reddedilir.
@@ -44,8 +44,15 @@ disk ve günlükler `/var/tmp/cp-release-drill-20260921-ae` altında korundu.
 
 Arşiv açıcı artık paketin izinlerini aynen korur. Gerçek Alpha81 arşivinde
 377 girdi izni ve 353 dosya özeti doğrulandı. Bu, test yardımcısı düzeltmesinin
-kanıtıdır; yerel kurtarma kabulü değildir. Yeni AF deneyi sonuçlanmadan başarı
-iddiasında bulunulamaz.
+kanıtıdır; yerel kurtarma kabulü değildir. AF daha sonra ürünün ortak dizin sözleşmesindeki çelişkiyi gösterdi: runtime
+kaydı `/usr/libexec/celikpanel` dizinini `0700` oluştururken sonraki adım `0755`
+bekliyordu. Durdurulmuş konuk ve günlükleri korundu. Temiz kurucu artık ortak
+dizini kayıt öncesinde mevcut katı sözleşmeyle hazırlar. Önceden farklı metadata
+taşıyan sahip dizinine dokunmaz; özel runtime dizinleri `0700` kalır.
+Gerçek kilit/FD üzerinden Bash–Go regresyonu önceki hatayı üretip eksik dizin,
+mevcut `0755` ve çakışan `0700` durumlarını doğrular. Şema ve runtime ABI değişmedi.
+
+Yeni AG deneyi bu önceki sürümü kullanacak. Yerel sonuç henüz doğrulanmadı.
 
 Tam P0.1/P0.2/P0.3 matrisi, üretim sürüm imzası yolu, eski sürüm şema geçişleri
 ve bağımsız iş yükü yaşam döngüsü kabul işleri açık kalır.

@@ -19,12 +19,12 @@ class BoundWorkerTests(unittest.TestCase):
         self.identity = {'nonce': 'b' * 64, 'vm_uuid': 'd61f4a8b-31dd-4bb0-b280-1741c539f4c3', 'cell_id': 'bound-worker-fixture', 'node': 'debian13'}
         self.intent = {'schema': s.SCHEMA, 'identity': self.identity, 'operation_id': self.operation,
                        'baseline': {'version': 'v0.1.0-alpha.81', 'commit': 'c' * 40, 'agent_sha256': 'd' * 64, 'panel_sha256': 'e' * 64},
-                       'target': {'version': 'v0.1.0-alpha.82', 'commit': 'c' * 40, 'agent_sha256': 'f' * 64, 'panel_sha256': '0' * 64}, 'recovery_fault': None}
-        self.snapshot = '20260916T180000Z-from-unknown-to-' + 'c' * 40 + '-' + '1' * 32
+                       'target': {'version': 'v0.1.0-alpha.82', 'commit': '3' * 40, 'agent_sha256': 'f' * 64, 'panel_sha256': '0' * 64}, 'recovery_fault': None}
+        self.snapshot = '20260916T180000Z-from-unknown-to-' + '3' * 40 + '-' + '1' * 32
         self.transaction = {'version': '1', 'token': '2' * 64, 'operation': 'update', 'snapshot': self.snapshot}
-        self.observation = {'schema': 'celikpanel-recovery-observation/v1', 'request_id': self.operation, 'target_commit': 'c' * 40, 'phase': 'running', 'terminal_proof': 'none', 'reason': 'update_running', 'observed_at': '2026-09-16T18:00:00Z', 'previous_failure': 'none'}
-        self.binding = {'schema': 'celikpanel-recovery-binding/v1', 'request_id': self.operation, 'target_commit': 'c' * 40, 'snapshot': self.snapshot, 'update_token': '2' * 64}
-        self.state = {'version': 1, 'request_id': self.operation, 'status': 'running', 'target_version': 'v0.1.0-alpha.82', 'target_commit': 'c' * 40, 'expected_current_version': 'v0.1.0-alpha.81', 'expected_current_commit': 'c' * 40, 'target_os': 'linux', 'target_arch': 'amd64'}
+        self.observation = {'schema': 'celikpanel-recovery-observation/v1', 'request_id': self.operation, 'target_commit': '3' * 40, 'phase': 'running', 'terminal_proof': 'none', 'reason': 'update_running', 'observed_at': '2026-09-16T18:00:00Z', 'previous_failure': 'none'}
+        self.binding = {'schema': 'celikpanel-recovery-binding/v1', 'request_id': self.operation, 'target_commit': '3' * 40, 'snapshot': self.snapshot, 'update_token': '2' * 64}
+        self.state = {'version': 1, 'request_id': self.operation, 'status': 'running', 'target_version': 'v0.1.0-alpha.82', 'target_commit': '3' * 40, 'expected_current_version': 'v0.1.0-alpha.81', 'expected_current_commit': 'c' * 40, 'target_os': 'linux', 'target_arch': 'amd64'}
 
     @staticmethod
     def record(value): return ''.join(key + '=' + val + '\n' for key, val in value.items()).encode()
@@ -40,7 +40,7 @@ class BoundWorkerTests(unittest.TestCase):
         self.assertEqual(result['terminal_proof'], 'none')
 
     def test_identity_bound_intent_rejects_retargeting_and_unsupported_profile(self):
-        for path, value in [(('identity', 'nonce'), 'f' * 64), (('baseline', 'version'), 'v0.1.0-alpha.75'), (('target', 'commit'), 'unknown'), (('target', 'agent_sha256'), 'd' * 64)]:
+        for path, value in [(('identity', 'nonce'), 'f' * 64), (('baseline', 'version'), 'v0.1.0-alpha.75'), (('target', 'commit'), 'unknown'), (('target', 'commit'), 'c' * 40), (('target', 'agent_sha256'), 'd' * 64)]:
             modified = copy.deepcopy(self.intent); modified[path[0]][path[1]] = value
             with self.subTest(path=path), self.assertRaises(s.probe.ProbeError):
                 s.validate_intent(modified, self.identity, self.operation)

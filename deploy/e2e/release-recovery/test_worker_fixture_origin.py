@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Offline trust and network-scope checks, not native recovery evidence."""
-import copy
 import hashlib
 import http.client
 import http.server
 import importlib.util
-import json
 import os
 from pathlib import Path
 import socket
@@ -67,13 +65,18 @@ class WhitelistTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 f.validate_intent(value)
 
+    def test_keys_require_root_before_any_lab_access(self):
+        with mock.patch.object(f.os, 'geteuid', return_value=1000), mock.patch.object(f, 'identity') as identity:
+            with self.assertRaises(ValueError):
+                f.prepare_keys(Path('/unused'), 'debian13')
+            identity.assert_not_called()
+
     def test_guest_requires_fixed_path_and_nonce(self):
         for path, nonce in [('/tmp/fake.json', 'a' * 64), (str(f.INTENT), 'bad')]:
             with self.assertRaises(ValueError):
                 f.guest_intent(path, nonce)
 
 
-@unittest.skipUnless(os.geteuid() == 0, 'production metadata contract requires root')
 class CryptoAndServerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -82,7 +85,8 @@ class CryptoAndServerTests(unittest.TestCase):
         cls.identity = {'schema': 'celikpanel-release-recovery-lab/v1', 'nonce': 'a' * 64,
                         'node': 'debian', 'cell_id': 'release-recovery-test',
                         'vm_uuid': '11111111-1111-1111-1111-111111111111'}
-        with mock.patch.object(f, 'identity', return_value=(None, cls.root, None, None, cls.identity)):
+        # Generate real fixture keys as the CI user; no real guest or host guard is bypassed.
+        with mock.patch.object(f, 'identity', return_value=(None, cls.root, None, None, cls.identity)), mock.patch.object(f.os, 'geteuid', return_value=0):
             cls.result = f.prepare_keys(cls.root, 'debian')
         cls.directory = cls.root / 'worker-origin'
 
@@ -107,15 +111,17 @@ class CryptoAndServerTests(unittest.TestCase):
             self.assertEqual((self.directory / ('worker-origin-' + name + '.pem')).stat().st_mode & 0o777, 0o600)
 
     def test_keys_refuse_recreation(self):
-        with mock.patch.object(f, 'identity', return_value=(None, self.root, None, None, self.identity)):
+        with mock.patch.object(f, 'identity', return_value=(None, self.root, None, None, self.identity)), mock.patch.object(f.os, 'geteuid', return_value=0):
             with self.assertRaises(FileExistsError):
                 f.prepare_keys(self.root, 'debian')
 
+    @unittest.skipUnless(os.geteuid() == 0, 'real root ownership is exercised by the explicit sudo CI run')
     def test_reader_refuses_symlinks_and_permissions(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             p = root / 'file'
             f.private_write(p, b'sealed')
+            self.assertEqual(f.read_file(p), b'sealed')
             link = root / 'link'
             link.symlink_to(p)
             with self.assertRaises(OSError):
@@ -132,6 +138,19 @@ class CryptoAndServerTests(unittest.TestCase):
                 raw = b'test ' + name.encode()
                 f.private_write(root / name, raw)
                 value['files'][name] = {'size': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
+            # Non-root TLS/route coverage isolates only the root-owned filesystem
+            # admission boundary. The sudo CI run uses the unmodified reader.
+            def fixture_read(path, maximum, mode=0o600):
+                if path.parent != root or path.name not in value['files']:
+                    raise AssertionError('HTTP handler escaped its fixture root')
+                data = path.read_bytes()
+                if len(data) > maximum:
+                    raise ValueError('fixture payload exceeds bound')
+                return data
+            reader_patch = mock.patch.object(f, 'read_file', side_effect=fixture_read) if os.geteuid() != 0 else None
+            if reader_patch is not None:
+                reader_patch.start()
+                self.addCleanup(reader_patch.stop)
             server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), f.make_handler(root, value))
             tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             tls.load_cert_chain(self.directory / 'worker-origin-tls.pem', self.directory / 'worker-origin-tls-key.pem')
