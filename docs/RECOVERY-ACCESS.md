@@ -167,3 +167,10 @@ same request to verified rollback. The old wait remains but is not exposed after
 terminal proof. Other native waits and HTTP/browser wait access remain open. See the [scoped evidence summary](../deploy/e2e/release-recovery/BOUND-WORKER-AJ.json).
 This does not close P0.2 or the full resilience matrix. No production release or
 installed owner-panel update is part of this change.
+
+
+The [automatic recovery pause contract](RECOVERY-DISPATCH-BUDGET.md#compatible-pause-guidance-2026-09-22)
+adds an optional exact-status hint for three spent automatic admissions. CLI and
+administrator UI explain owner action and the supported one-time continuation.
+Producer/reader, authorization, terminal precedence and local browser checks pass;
+fresh native hint-to-browser and stopped-Panel access acceptance remain open.

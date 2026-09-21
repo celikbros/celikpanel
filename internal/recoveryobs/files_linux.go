@@ -66,6 +66,12 @@ func readAt(root, id string, uid, gid uint32, anchor string) Status {
 			status.WaitingFor = decodeWaiting(waiting, id, identity, raw)
 		}
 	}
+	if r.Phase == "recovery_required" && r.TerminalProof == "none" {
+		automatic, _, err := readObservationFile(fd, id+".automatic", uid, gid)
+		if err == nil {
+			status.AutomaticRecovery = decodeAutomatic(automatic, id, identity, raw)
+		}
+	}
 	return status
 }
 
@@ -171,6 +177,18 @@ func decodeWaiting(raw []byte, id, identity string, observation []byte) string {
 		return ""
 	}
 	return reason
+}
+
+// Optional, exact-status guidance. It cannot authorize a new recovery dispatch.
+func decodeAutomatic(raw []byte, id, identity string, observation []byte) string {
+	lines := strings.Split(string(raw), "\n")
+	if len(lines) != 6 || lines[0] != "schema=celikpanel-recovery-automatic/v1" ||
+		lines[1] != "request_id="+id || lines[2] != "observation_identity="+identity ||
+		lines[3] != fmt.Sprintf("observation_sha256=%x", sha256.Sum256(observation)) ||
+		lines[4] != "automatic_recovery=paused_retry_limit" || lines[5] != "" {
+		return ""
+	}
+	return "paused_retry_limit"
 }
 
 // Publish is best-effort observation only. Callers retain their original

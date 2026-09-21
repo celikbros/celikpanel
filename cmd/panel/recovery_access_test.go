@@ -143,3 +143,28 @@ func TestRecoveryWaitingHTTPRemainsAnExactAdminRead(t *testing.T) {
 		t.Fatalf("wait response %d: %s", rr.Code, rr.Body)
 	}
 }
+
+func TestRecoveryAutomaticPauseHTTPRemainsAnExactAdminRead(t *testing.T) {
+	p, token := newAuthHandlerTestPanel(t, true)
+	calls := 0
+	read := func(id string) recoveryobs.Status {
+		calls++
+		if id != recoveryHTTPTestID {
+			t.Fatal("wrong operation")
+		}
+		return recoveryobs.Status{Schema: recoveryobs.StatusSchema, RequestID: id, Observation: "known", Phase: "recovery_required", TerminalProof: "none", Reason: "recovery_incomplete", AutomaticRecovery: "paused_retry_limit", ObservedAt: "2026-09-16T13:36:15Z", PreviousFailure: "update_failed"}
+	}
+	handler := p.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { p.serveRecoveryStatus(w, r, read) }))
+	path := panelRecoveryStatusPath + "?request_id=" + recoveryHTTPTestID
+	if rr := requestWithToken(handler, "GET", path, ""); rr.Code != 401 || calls != 0 {
+		t.Fatal("anonymous wait read")
+	}
+	rr := requestWithToken(handler, "GET", path, token)
+	var body map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if rr.Code != 200 || calls != 1 || body["automatic_recovery"] != "paused_retry_limit" || body["terminal_proof"] != "none" || body["previous_failure"] != "update_failed" || len(body) != 10 || rr.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("wait response %d: %s", rr.Code, rr.Body)
+	}
+}

@@ -160,3 +160,9 @@ kalır; nihai kanıttan sonra gösterilmez. Diğer gerçek bekleme durumları ve
 beklerken HTTP/tarayıcı erişimi açıktır. [Sınırlı kanıt özeti](../deploy/e2e/release-recovery/BOUND-WORKER-AJ.json).
 Bu sonuç P0.2'yi veya tüm dayanıklılık matrisini kapatmaz. Bu değişiklik üretim sürümü
 yayımlamaz ve sunucu sahibinin kurulu panellerini güncellemez.
+
+[Otomatik kurtarma durma yönlendirmesi](RECOVERY-DISPATCH-BUDGET.tr.md#uyumlu-durma-yönlendirmesi-2026-09-22)
+için uyumlu üretici/okuyucu sözleşmesi ve çift dilli UI/CLI davranışı eklendi.
+Yerel katmanlar arası ve tarayıcı testleri geçti. Bu, P0.2'yi kapatmaz: yeni
+bilginin gerçek yerel yürütücüden tarayıcıya kabulü ve Panel durmuşken doğrulanmış
+erişim hâlâ kanıtlanmalıdır. AL/AN sonuçları bu yeni özelliğin kanıtı sayılmaz.

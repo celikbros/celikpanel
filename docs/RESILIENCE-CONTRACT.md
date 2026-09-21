@@ -268,3 +268,10 @@ boundary with the exact AL candidate. The earlier AM observer failure remains
 inconclusive and retained. Repeated boot-wait publication is distinguished from
 unchanged-wait preservation. This closes the scoped Arch budget case, not the
 publication-edge, browser-guidance or full P0.2/P0.3 matrix.
+
+
+[Bounded recovery owner guidance](RECOVERY-DISPATCH-BUDGET.md#compatible-pause-guidance-2026-09-22)
+now has a compatible producer/reader contract and bilingual UI/CLI behavior.
+Local cross-layer and browser-fixture checks pass. This does not close P0.2:
+new-hint native acceptance and authenticated access with Panel stopped still need
+proof. Existing AL/AN native dispatch evidence is not relabeled as that proof.
