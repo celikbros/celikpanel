@@ -236,6 +236,13 @@ Tarayıcıdaki bekleme açıklaması [uyumlu ek gözlemle](RECOVERY-ACCESS.tr.md
 yeni gerçek worker→arayüz bağı kabulü ve geniş matris açıktır. Önceki X/Z hataları,
 belirsiz AA sonucu ve yalnız hazırlıkta duran AC korunur.
 
+[Kalıcı deneme sınırı](RECOVERY-DISPATCH-BUDGET.tr.md), snapshot başına
+üç otomatik hak ve açık sahip devamıyla sınırsız alt işlem tekrar?
+kaynak açığını giderir. Shell/Go sözleşmeleri geçti; gerçek sistemde
+hak ayırma/yeniden başlatma/tükenme kabulü ve tarayıcıya özel
+yönlendirme P0.2/P0.3 altında açıktır. Önceki AJ/AK kanıtı yeni
+politikayı doğrulamaz.
+
 ## Hata matrisi
 
 Sanal makine test düzeneği, gerçek durum içeren yayımlanmış bir kurulumdan

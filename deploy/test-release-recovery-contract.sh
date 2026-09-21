@@ -364,8 +364,10 @@ write_active_marker() {
 }
 
 run_recovery() {
+    local -a owner_args=()
+    if [[ ${CONTRACT_OWNER_RETRY:-0} == 1 ]]; then owner_args=(--owner-retry --snapshot "$SNAPSHOT"); fi
     CELIKPANEL_RELEASE_RECOVERY_TESTING=1 \
-    CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT="$TEST_ROOT" /bin/bash "$RUNNER"
+    CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT="$TEST_ROOT" /bin/bash "$RUNNER" "${owner_args[@]}" "$@"
 }
 
 refresh_release_checksums() {
@@ -414,6 +416,7 @@ case $(cat "$root/child-mode") in
     success) rm -f -- "$root/var/lib/celikpanel-release-transaction/active" ;;
     leave-active) : ;;
     fail) exit 23 ;;
+    kill-runner) kill -KILL "$PPID"; exit 23 ;;
     replace-lock-success)
         rm -f -- "$root/var/lib/celikpanel-release-transaction/transaction.lock"
         : >"$root/var/lib/celikpanel-release-transaction/transaction.lock"
@@ -533,6 +536,64 @@ rm -f -- "$TEST_ROOT/readiness-state" "$TEST_ROOT/readiness-status"
 # an active transaction; only the subsequent recovery invocation may dispatch.
 expect_failure final-proof-ready-active run_final_proof
 [[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'ready final proof dispatched recovery'
+# The first child failure consumed one durable slot; waiting and final proof
+# did not. Two more attempts reach the child, the fourth only reports guidance.
+budget=$TEST_ROOT/var/lib/celikpanel-release-state/recovery-dispatch/v1/$SNAPSHOT
+[[ -f $budget/1 && ! -e $budget/2 ]] || fail 'wait or proof consumed dispatch budget'
+printf '%s\n' fail >"$TEST_ROOT/child-mode"
+for attempt in 2 3; do
+    if [[ $attempt == 3 ]]; then printf 'kill-runner\n' >"$TEST_ROOT/child-mode"; fi
+    expect_failure "budget-failure-$attempt" run_recovery
+    [[ -f $budget/$attempt ]] || fail 'dispatch had no durable receipt'
+done
+budget_marker=$(sha256sum "$TRANSACTION_ROOT/active")
+budget_calls=$(sha256sum "$TEST_ROOT/child-dispatches")
+budget_receipts=$(sha256sum "$budget/1" "$budget/2" "$budget/3")
+for attempt in 4 5; do
+    run_recovery >"$TEST_ROOT/budget-paused-$attempt.log" 2>&1
+    grep -F 'Automatic recovery paused after three admitted attempts' "$TEST_ROOT/budget-paused-$attempt.log" >/dev/null || fail 'budget not explained'
+    [[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$budget_calls" ]] || fail 'exhausted budget dispatched'
+    [[ $(sha256sum "$TRANSACTION_ROOT/active") == "$budget_marker" ]] || fail 'exhausted budget changed marker'
+    _release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+    [[ $OBSERVATION_PHASE == recovery_required && $OBSERVATION_REASON == recovery_incomplete &&
+       $OBSERVATION_PREVIOUS == recovery_failed && $OBSERVATION_PROOF == none ]] || fail 'pause lost failure or claimed proof'
+    (exec 9<>"$TRANSACTION_ROOT/transaction.lock"; flock -xn 9) || fail 'paused budget retained lock'
+done
+# Wrong snapshot, broken receipts and metadata cannot authorize an owner retry.
+expect_failure foreign-owner-retry run_recovery --owner-retry --snapshot "${SNAPSHOT%?}e"
+chmod 0644 "$budget/2"
+expect_failure unsafe-budget run_recovery
+chmod 0600 "$budget/2"
+mv "$budget/2" "$budget/saved-2"
+expect_failure missing-budget-slot run_recovery
+mv "$budget/saved-2" "$budget/2"
+cp -p "$budget/2" "$budget/saved-2"
+for kind in symlink fifo hardlink truncated; do
+    rm -- "$budget/2"
+    case $kind in
+        symlink) ln -s saved-2 "$budget/2" ;;
+        fifo) mkfifo -m 0600 "$budget/2" ;;
+        hardlink) ln "$budget/saved-2" "$budget/2" ;;
+        truncated) printf 'schema=celikpanel-recovery-dispatch/v1' >"$budget/2"; chmod 0600 "$budget/2" ;;
+    esac
+    expect_failure "budget-$kind" run_recovery --owner-retry --snapshot "$SNAPSHOT"
+done
+rm -- "$budget/2"
+mv "$budget/saved-2" "$budget/2"
+[[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$budget_calls" ]] || fail 'invalid retry reached child'
+# Explicit native owner retry is one dispatch, without replenishing auto slots.
+CONTRACT_OWNER_RETRY=1
+printf '%s\n' fail >"$TEST_ROOT/child-mode"
+expect_failure owner-retry-failed run_recovery
+[[ $(sha256sum "$budget/1" "$budget/2" "$budget/3") == "$budget_receipts" ]] || fail 'owner retry reset auto budget'
+CONTRACT_OWNER_RETRY=0
+owner_calls=$(sha256sum "$TEST_ROOT/child-dispatches")
+run_recovery >"$TEST_ROOT/budget-after-owner.log" 2>&1
+[[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$owner_calls" ]] || fail 'owner retry replenished budget'
+# Later unrelated child/final-proof cases explicitly authorize one owner attempt.
+CONTRACT_OWNER_RETRY=1
+printf '%s\n' success >"$TEST_ROOT/child-mode"
+printf 'PASS: durable three-attempt budget, interrupted runner, preserved failure and explicit owner retry\n'
 # Ready dispatch resumes the same marker and request without a new mutation.
 run_recovery
 _release_observation_read "$OBSERVATION_TEST_REQUEST" 0

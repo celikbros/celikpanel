@@ -98,7 +98,9 @@ release_observation_publish() (
         [[ $now > "$OBSERVATION_AT" || $now == "$OBSERVATION_AT" ]] || return 1
         previous=$OBSERVATION_PREVIOUS
     fi
-    [[ $phase != failed && $phase != recovery_required ]] || previous=$reason
+    if [[ $phase == failed || $phase == recovery_required ]]; then
+        [[ $reason == recovery_incomplete && $previous != none ]] || previous=$reason
+    fi
     stage=$(mktemp "$RELEASE_OBSERVATION_ROOT/.observation-XXXXXXXX") || return 1
     trap 'rm -f -- "$stage"' EXIT
     printf '%s\n' schema=celikpanel-recovery-observation/v1 "request_id=$id" \

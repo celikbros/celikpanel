@@ -189,3 +189,11 @@ of the same request to verified rollback. Other waits, HTTP/browser wait access
 and the wider P0 matrix remain open. AB/AD and AJ
 prove eventual recovery at their recorded boundaries, not uninterrupted access
 or power-loss durability.
+
+
+## Automatic dispatch budget (2026-09-21)
+
+The [durable dispatch budget](RECOVERY-DISPATCH-BUDGET.md) permits three automatic
+child attempts per snapshot, then requires an explicit owner retry. Waiting and
+read-only queries consume no slot. The new source has shell/Go contract coverage;
+selected-kit transition and native VM acceptance remain open.

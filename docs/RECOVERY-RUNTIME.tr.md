@@ -190,3 +190,11 @@ denenerek doğrulanmış geri almaya ulaşmasını kanıtlar. Diğer beklemeler,
 HTTP/tarayıcı erişimi ve geniş P0 matrisi açıktır.
 AB/AD ve AJ, kayıtlı sınırlarında sonunda kurtarmayı kanıtlar; kesintisiz erişim
 veya güç kaybı dayanıklılığı değildir.
+
+
+## Otomatik deneme sınırı (21 Eylül 2026)
+
+[Kalıcı deneme sınırı](RECOVERY-DISPATCH-BUDGET.tr.md), aynı snapshot için
+üç otomatik alt işlem ve sonrasında açık sahip tekrar? uygular.
+Bekleme ve salt-okur sorgular hak tüketmez. Bu yeni kaynağın shell/Go
+sözleşmeleri geçmiştir; gerçek kit geçişi ve VM kabulü açıktır.
