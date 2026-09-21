@@ -110,6 +110,8 @@ chmod 0755 "$RELEASE/rollback.sh"
         | LC_ALL=C sort -z | xargs -0 sha256sum >SHA256SUMS
 )
 chmod 0644 "$RELEASE/SHA256SUMS"
+# These independent lock cases deliberately reuse one fixture snapshot. Each
+# explicitly authorizes a single owner retry; budget behavior is tested separately.
 for scenario in valid shared closed wrong-identity wrong-tuple; do
     printf '%s\n' "$scenario" >"$TEST_ROOT/scenario"
     rm -f -- "$TEST_ROOT/rollback-gate-passed"
@@ -121,7 +123,7 @@ for scenario in valid shared closed wrong-identity wrong-tuple; do
     status=0
     CELIKPANEL_RELEASE_RECOVERY_TESTING=1 \
         CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT="$TEST_ROOT" \
-        /bin/bash "$REPO_ROOT/deploy/release-recovery-runner.sh" \
+        /bin/bash "$REPO_ROOT/deploy/release-recovery-runner.sh" --owner-retry --snapshot "$SNAPSHOT" \
         >"$TEST_ROOT/$scenario.log" 2>&1 || status=$?
     [[ $status -ne 0 ]] || fail "$scenario unexpectedly claimed completed recovery"
     [[ $(sha256sum "$TRANSACTION_ROOT/active") == "$before" ]] || fail "$scenario changed the active transaction"

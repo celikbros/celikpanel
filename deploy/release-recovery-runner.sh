@@ -26,9 +26,18 @@ VERIFY_FINAL_STATE=0
 EXPECTED_FINAL_VERSION=
 EXPECTED_FINAL_COMMIT=
 EXPECTED_FINAL_SEQUENCE=
+OWNER_RETRY_SNAPSHOT=
+DISPATCH_BUDGET_ROOT=/var/lib/celikpanel-release-state/recovery-dispatch/v1
 
 case $# in
     0) ;;
+    3)
+        [[ $1 == --owner-retry && $2 == --snapshot &&
+           $3 =~ ^[0-9]{8}T[0-9]{6}Z-from-unknown-to-[0-9a-f]{40}-[0-9a-f]{32}$ ]] || {
+            echo "!! unsupported owner recovery retry" >&2; exit 1;
+        }
+        OWNER_RETRY_SNAPSHOT=$3
+        ;;
     7)
         [[ $1 == --verify-final-state && $2 == --expected-version &&
            $4 == --expected-commit && $6 == --expected-sequence ]] || {
@@ -65,6 +74,9 @@ if [[ -z $RECOVERY_CODE_ROOT && ${CELIKPANEL_RELEASE_RECOVERY_TESTING:-0} != 1 &
     if [[ $VERIFY_FINAL_STATE == 1 ]]; then
         exec /usr/libexec/celikpanel/recovery "$@"
     fi
+    if [[ -n $OWNER_RETRY_SNAPSHOT ]]; then
+        exec /usr/libexec/celikpanel/recovery recover --retry --snapshot "$OWNER_RETRY_SNAPSHOT"
+    fi
     exec /usr/libexec/celikpanel/recovery recover
 fi
 if [[ -n $RECOVERY_CODE_ROOT ]]; then
@@ -86,6 +98,7 @@ if [[ ${CELIKPANEL_RELEASE_RECOVERY_TESTING:-0} == 1 ]]; then
     TEST_ROOT=$(readlink -e -- "$TEST_ROOT") \
         || { echo '!! cannot canonicalize release recovery test root' >&2; exit 1; }
     TRANSACTION_ROOT=$TEST_ROOT/var/lib/celikpanel-release-transaction
+    DISPATCH_BUDGET_ROOT=$TEST_ROOT$DISPATCH_BUDGET_ROOT
     RELEASES_ROOT=$TEST_ROOT/var/backups/celikpanel/releases
     SNAPSHOT_ROOT=$TEST_ROOT/var/backups/celikpanel/update-snapshots
     TRUST_ANCHOR=$TEST_ROOT
@@ -105,7 +118,7 @@ readonly PATH TRANSACTION_ROOT RELEASES_ROOT SNAPSHOT_ROOT TRUST_ANCHOR \
     EXPECTED_UID EXPECTED_GID TEST_ROOT RECOVERY_RUNNER RECOVERY_SERVICE \
     RECOVERY_TIMER START_GUARD AGENT_DROPIN PANEL_DROPIN FOUNDATION_MANIFEST \
     SYSTEMCTL_BIN VERIFY_FINAL_STATE EXPECTED_FINAL_VERSION \
-    EXPECTED_FINAL_COMMIT EXPECTED_FINAL_SEQUENCE
+    EXPECTED_FINAL_COMMIT EXPECTED_FINAL_SEQUENCE OWNER_RETRY_SNAPSHOT DISPATCH_BUDGET_ROOT
 
 die() {
     echo "!! $*" >&2
@@ -607,17 +620,117 @@ verify_coordinator_result() {
     fi
 }
 
+# Durable admission receipts are separate from observations and strict native
+# transaction markers. Count before dispatch, including uncertain interrupted
+# attempts. Waiting/lock contention/read-only proof never consumes a slot.
+recovery_budget_directory() {
+    local path=$1 mode
+    if [[ ! -e $path && ! -L $path ]]; then
+        validate_trusted_directory_chain "$(dirname -- "$path")"
+        mkdir -m 0700 -- "$path" || die 'cannot create recovery attempt directory'
+        sync -f -- "$(dirname -- "$path")" || die 'cannot persist recovery attempt directory'
+    fi
+    validate_trusted_directory_chain "$path"
+    mode=$(stat -Lc '%a' -- "$path") || die 'cannot inspect recovery attempt directory'
+    [[ $mode == 700 ]] || die 'recovery attempt directory must be mode 0700'
+}
+
+recovery_budget_read() {
+    local path=$1 number=$2 owner group mode links size
+    local -a rows=()
+    [[ -f $path && ! -L $path ]] || die 'recovery attempt receipt is not a regular file'
+    read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$path") ||
+        die 'cannot inspect recovery attempt receipt'
+    [[ $owner == "$EXPECTED_UID" && $group == "$EXPECTED_GID" && $mode == 600 &&
+       $links == 1 && $size -gt 0 && $size -le 1024 ]] || die 'unsafe recovery attempt receipt'
+    mapfile -t rows < "$path"
+    [[ ${#rows[@]} == 6 && ${rows[0]} == schema=celikpanel-recovery-dispatch/v1 &&
+       ${rows[1]} == "snapshot=$MARKER_SNAPSHOT" && ${rows[2]} == "attempt=$number" &&
+       ${rows[3]} =~ ^token_sha256=[0-9a-f]{64}$ &&
+       ${rows[4]} =~ ^operation=(update|rollback)$ &&
+       ${rows[5]} =~ ^phase=(quiesce|active|completion|completion-scheduler|scheduler)$ ]] ||
+        die 'recovery attempt receipt is incompatible or belongs to another operation'
+    cmp -s -- "$path" <(printf '%s\n' "${rows[@]}") || die 'noncanonical recovery attempt receipt'
+}
+
+recovery_budget_reserve() {
+    local check_only=${1:-0} directory parent n count=0 gap=0 token_hash stage destination directory_identity
+    # The existing release lock is still held; no observer can authorize this.
+    verify_held_transaction_lock
+    [[ -z $OWNER_RETRY_SNAPSHOT || $OWNER_RETRY_SNAPSHOT == "$MARKER_SNAPSHOT" ]] ||
+        die 'owner retry names a different pending snapshot'
+    parent=$(dirname -- "$DISPATCH_BUDGET_ROOT")
+    recovery_budget_directory "$(dirname -- "$parent")"
+    recovery_budget_directory "$parent"
+    recovery_budget_directory "$DISPATCH_BUDGET_ROOT"
+    directory=$DISPATCH_BUDGET_ROOT/$MARKER_SNAPSHOT
+    recovery_budget_directory "$directory"
+    directory_identity=$(stat -Lc '%d:%i' -- "$directory") || die 'cannot identify attempt directory'
+    for n in 1 2 3; do
+        if [[ -e $directory/$n || -L $directory/$n ]]; then
+            [[ $gap == 0 ]] || die 'recovery attempt sequence has a missing receipt'
+            recovery_budget_read "$directory/$n" "$n"
+            count=$n
+        else
+            gap=1
+        fi
+    done
+    if [[ -z $OWNER_RETRY_SNAPSHOT && $count == 3 ]]; then
+        # Stop publishing recovering on every timer tick. Keep the known failure
+        # while recording that unverified recovery needs explicit owner action.
+        if [[ -n $RECOVERY_OBSERVATION_REQUEST ]]; then
+            release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+                "$RECOVERY_OBSERVATION_COMMIT" recovery_required none recovery_incomplete || true
+        fi
+        trap - EXIT
+        release_transaction_lock
+        printf '%s\n' \
+            'Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.' \
+            'Otomatik kurtarma, izin verilen üç denemeden sonra durdu. Kurtarma alt işlemi başlatılmadı. Kanıtları koruyun ve kurtarma servisi günlüğünü inceleyin.' \
+            "After resolving the cause, the owner may authorize one same-snapshot retry: sudo /usr/libexec/celikpanel/recovery recover --retry --snapshot $MARKER_SNAPSHOT" >&2
+        return 1
+    fi
+    [[ $check_only == 0 ]] || return 0
+    token_hash=$(printf '%s' "$MARKER_TOKEN" | sha256sum) || die 'cannot bind recovery attempt token'
+    token_hash=${token_hash%% *}
+    stage=$(mktemp "$directory/.pending.XXXXXXXX") || die 'cannot stage recovery attempt'
+    if [[ -n $OWNER_RETRY_SNAPSHOT ]]; then
+        # Explicit owner attempts are retained, but never replenish automatic slots.
+        destination=$directory/owner.${stage##*.}
+        n=owner
+    else
+        n=$((count + 1))
+        destination=$directory/$n
+    fi
+    printf '%s\n' schema=celikpanel-recovery-dispatch/v1 "snapshot=$MARKER_SNAPSHOT" \
+        "attempt=$n" "token_sha256=$token_hash" "operation=$MARKER_OPERATION" \
+        "phase=$TRANSACTION_PHASE" > "$stage" || die 'cannot write recovery attempt'
+    chmod 0600 -- "$stage" || die 'cannot protect recovery attempt'
+    sync -f -- "$stage" || die 'cannot persist recovery attempt'
+    [[ ! -e $destination && ! -L $destination ]] || die 'recovery attempt destination exists'
+    mv -T -n -- "$stage" "$destination" || die 'cannot publish recovery attempt'
+    [[ ! -e $stage && ! -L $stage ]] || die 'recovery attempt destination changed'
+    sync -f -- "$directory" || die 'cannot persist recovery admission'
+    validate_trusted_directory_chain "$directory"
+    [[ $(stat -Lc '%d:%i' -- "$directory") == "$directory_identity" ]] || die 'attempt directory changed'
+    recovery_budget_read "$destination" "$n"
+    verify_held_transaction_lock
+    printf 'Recovery dispatch admitted: attempt=%s snapshot=%s\n' "$n" "$MARKER_SNAPSHOT"
+}
+
 [[ $EUID -eq 0 ]] || die 'release recovery must run as root'
 
 # Absence is the normal steady state.  Do not create coordination storage merely
 # because the boot unit ran.
 if [[ ! -e $TRANSACTION_ROOT && ! -L $TRANSACTION_ROOT ]]; then
+    [[ -z $OWNER_RETRY_SNAPSHOT ]] || die 'owner retry requires an existing pending transaction'
     [[ $VERIFY_FINAL_STATE == 0 ]] ||
         die 'final-state proof requires the exact persistent transaction root and lock'
     exit 0
 fi
 validate_transaction_root_and_lock
 if ! acquire_transaction_lock; then
+    [[ -z $OWNER_RETRY_SNAPSHOT ]] || die 'existing operation is busy; no owner retry was started'
     # A live updater owns the exact fixed flock. Never wait here: otherwise a
     # recovery job can delay the updater's controlled agent/panel starts. The
     # 30-second timer retries after the holder exits or is killed; future
@@ -636,6 +749,8 @@ DISPATCH_FD_IDENTITY=$(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$TRANSACTION_FD") 
 [[ $DISPATCH_LOCK_IDENTITY == "$DISPATCH_FD_IDENTITY" ]] ||
     die 'dispatch descriptor does not name the fixed transaction lock'
 classify_transaction
+[[ -z $OWNER_RETRY_SNAPSHOT || ( $TRANSACTION_PHASE != none && $MARKER_SNAPSHOT == "$OWNER_RETRY_SNAPSHOT" ) ]] ||
+    die 'owner retry requires the exact pending snapshot'
 # Final proof is read-only: neither deferred dispatch nor a child that repairs
 # an active transaction may be interpreted as an already-completed operation.
 [[ $VERIFY_FINAL_STATE == 0 || $TRANSACTION_PHASE == none ]] ||
@@ -740,9 +855,6 @@ if [[ -f $RECOVERY_EXEC_ROOT/deploy/release-recovery-observation.sh ]]; then
         RECOVERY_OBSERVATION_REQUEST=$OBSERVATION_REQUEST
         RECOVERY_OBSERVATION_COMMIT=$OBSERVATION_BINDING_COMMIT
         trap recovery_observation_exit EXIT
-        release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
-            "$RECOVERY_OBSERVATION_COMMIT" recovering none recovery_running ||
-            printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
     else
         printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
     fi
@@ -757,6 +869,8 @@ IFS=$'\t' read -r _ _ EXPECTED_PANEL_STATE _ \
     < <(sed -n '2p' "$RECOVERY_SNAPSHOT_DIR/service-states.tsv")
 [[ -n $EXPECTED_AGENT_STATE && -n $EXPECTED_PANEL_STATE ]] ||
     die 'recovery coordinator expectations are missing'
+
+recovery_budget_reserve 1 || exit 0
 
 # The boot-enabled oneshot participates in reaching multi-user.target. Waiting
 # here for systemd to become running would therefore hold up the very boot we
@@ -782,6 +896,13 @@ case "$systemd_readiness:$systemd_readiness_status" in
         ;;
     *) die 'Cannot verify operating system readiness for recovery; no recovery child was started. Inspect this service journal and systemctl is-system-running; the native timer will recheck the same operation.' ;;
 esac
+
+recovery_budget_reserve || exit 0
+if [[ -n $RECOVERY_OBSERVATION_REQUEST ]]; then
+    release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+        "$RECOVERY_OBSERVATION_COMMIT" recovering none recovery_running ||
+        printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+fi
 
 # Keep fixed descriptor 9 and the same locked open file description
 # continuously across dispatch.  The signed target updater/rollback entrypoint

@@ -68,13 +68,16 @@ func dispatchEntry(args []string, uid int, observe func() int, execute func([]st
 	switch {
 	case len(args) == 1 && args[0] == "recover":
 		err = execute(nil)
+	case len(args) == 4 && args[0] == "recover" && args[1] == "--retry" && args[2] == "--snapshot" &&
+		regexp.MustCompile(`^[0-9]{8}T[0-9]{6}Z-from-unknown-to-[0-9a-f]{40}-[0-9a-f]{32}$`).MatchString(args[3]):
+		err = execute([]string{"--owner-retry", "--snapshot", args[3]})
 	case len(args) == 7 && args[0] == "--verify-final-state" && args[1] == "--expected-version" && args[3] == "--expected-commit" && args[5] == "--expected-sequence" &&
 		regexp.MustCompile(`^v[0-9A-Za-z.-]+$`).MatchString(args[2]) && regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(args[4]) && regexp.MustCompile(`^[1-9][0-9]{0,18}$`).MatchString(args[6]):
 		err = execute(args)
 	case len(args) == 5 && args[0] == "enroll-runtime" && args[1] == "--source" && args[3] == "--transaction-fd" && args[4] == "9" && filepath.IsAbs(args[2]) && filepath.Clean(args[2]) == args[2]:
 		err = enroll(args[2])
 	default:
-		report("Usage: recovery status --request-id <id> [--json] | runtime-status [--json] [--lang en|tr] | version | recover")
+		report("Usage: recovery status --request-id <id> [--json] | runtime-status [--json] [--lang en|tr] | version | recover [--retry --snapshot <exact pending snapshot>]")
 		return exitUsage
 	}
 	if err != nil {

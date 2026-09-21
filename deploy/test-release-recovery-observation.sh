@@ -53,6 +53,9 @@ release_observation_publish "$id" "$commit" failed none update_failed
 release_observation_publish "$id" "$commit" recovering none recovery_running
 _release_observation_read "$id" 0
 [[ $OBSERVATION_PREVIOUS == update_failed ]] || fail 'recovery erased known failure'
+release_observation_publish "$id" "$commit" recovery_required none recovery_incomplete
+_release_observation_read "$id" 0
+[[ $OBSERVATION_PREVIOUS == update_failed ]] || fail 'incomplete recovery erased known failure'
 release_observation_publish "$id" "$commit" recovered rollback_verified rollback_verified
 before=$(sha256sum "$RELEASE_OBSERVATION_ROOT/$id.status")
 release_observation_publish "$id" "$commit" failed none update_failed

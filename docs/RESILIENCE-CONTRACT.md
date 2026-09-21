@@ -221,6 +221,12 @@ its fresh native worker-to-UI binding acceptance and the wider matrix remain ope
 Earlier X/Z failures,
 inconclusive AA and preparation-only AC remain preserved.
 
+The [bounded dispatch implementation](RECOVERY-DISPATCH-BUDGET.md) closes the
+unbounded child-retry source gap with three persisted automatic admissions per
+snapshot and explicit owner continuation. Shell/Go contracts passed; native
+reservation/reboot/exhaustion acceptance and browser-specific guidance remain
+open under P0.2/P0.3. Prior AJ/AK evidence does not validate this new policy.
+
 ## Fault matrix
 
 The VM fixture must start from a released installation with real state: populated

@@ -76,3 +76,29 @@ func TestRecoveryCompatibilityDispatch(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestOwnerRetryRequiresExactSnapshotAndRoot(t *testing.T) {
+	snapshot := "20260921T190000Z-from-unknown-to-" + strings.Repeat("a", 40) + "-" + strings.Repeat("b", 32)
+	args := []string{"recover", "--retry", "--snapshot", snapshot}
+	called := false
+	execute := func(got []string) error {
+		called = true
+		if !reflect.DeepEqual(got, []string{"--owner-retry", "--snapshot", snapshot}) {
+			t.Fatal(got)
+		}
+		return nil
+	}
+	if code := dispatchEntry(args, 0, nil, execute, nil, func(string) {}); code != exitOK || !called {
+		t.Fatal(code, called)
+	}
+	for _, invalid := range [][]string{{"recover", "--retry"}, {"recover", "--retry", "--snapshot", "../other"}, {"recover", "--retry", "--snapshot", snapshot, "--force"}} {
+		called = false
+		if code := dispatchEntry(invalid, 0, nil, execute, nil, func(string) {}); code != exitUsage || called {
+			t.Fatal(code, called)
+		}
+	}
+	called = false
+	if code := dispatchEntry(args, 1000, nil, execute, nil, func(string) {}); code != exitNotOwner || called {
+		t.Fatal(code, called)
+	}
+}

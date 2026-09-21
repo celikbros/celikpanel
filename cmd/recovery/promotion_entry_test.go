@@ -176,3 +176,20 @@ func TestLauncherPreservesIndependentObservationAndAvoidsRecursion(t *testing.T)
 		t.Fatal("same binary dispatched recursively", err, runtime.args)
 	}
 }
+
+func TestOwnerRetryPreservesTupleThroughSelectedLauncherWithoutPromotion(t *testing.T) {
+	args := []string{"recover", "--retry", "--snapshot", "20260921T190000Z-from-unknown-to-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+	if !launcherDispatchCommand(args) {
+		t.Fatal("retry bypassed selected runtime")
+	}
+	runtime := &fakeLauncherRuntime{}
+	err := dispatchLauncherWith(args, launcherDependencies{
+		isEntry:  func() (bool, error) { return true, nil },
+		pending:  func() (bool, error) { t.Fatal("retry must not select a new kit"); return false, nil },
+		resume:   func() error { t.Fatal("retry must not resume a kit promotion"); return nil },
+		selected: func() (launcherRuntime, error) { return runtime, nil },
+	})
+	if err != nil || !reflect.DeepEqual(runtime.args, args) {
+		t.Fatal(err, runtime.args)
+	}
+}

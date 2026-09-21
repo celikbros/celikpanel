@@ -173,7 +173,7 @@ func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
 		case "failed":
 			en, tr = "The update reported a failure. Review this request in the panel when available; do not start another update.", "Güncelleme hata bildirmiş. Panel erişilebilir olduğunda bu işlemi inceleyin; başka güncelleme başlatmayın."
 		case "recovery_required":
-			en, tr = "Recovery needs attention. Preserve evidence and follow the owner recovery guidance for this request.", "Kurtarma için işlem gerekiyor. Kanıtları koruyun ve bu işlem için sunucu sahibine yönelik kurtarma yönlendirmesini izleyin."
+			en, tr = "Recovery needs attention. Preserve evidence. Inspect the recorded reason and next action with sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50; do not start another update.", "Kurtarma için işlem gerekiyor. Kanıtları koruyun. Kaydedilen neden ve sonraki eylem için sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 komutunu kullanın; başka güncelleme başlatmayın."
 		case "succeeded":
 			en, tr = "The producer recorded verified update completion. Check current service health separately.", "Üretici, güncellemenin doğrulanmış tamamlanmasını kaydetmiş. Güncel hizmet sağlığını ayrıca kontrol edin."
 		case "recovered":

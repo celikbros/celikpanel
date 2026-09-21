@@ -83,3 +83,20 @@ func TestMergePreservesVerifiedFailureAndTerminalProof(t *testing.T) {
 		t.Fatal("clock reversal replaced newer observation")
 	}
 }
+
+func TestIncompleteRecoveryRetainsPriorVerifiedFailure(t *testing.T) {
+	for _, previous := range []string{"none", "update_failed", "recovery_failed"} {
+		old := testRecord()
+		old.PreviousFailure = previous
+		next := testRecord()
+		next.Phase, next.Reason = "recovery_required", "recovery_incomplete"
+		got, err := merge(&old, next)
+		want := previous
+		if want == "none" {
+			want = "recovery_incomplete"
+		}
+		if err != nil || got.PreviousFailure != want || got.TerminalProof != "none" {
+			t.Fatalf("%s: %#v %v", previous, got, err)
+		}
+	}
+}

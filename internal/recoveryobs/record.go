@@ -155,7 +155,8 @@ func merge(old *Record, next Record) (Record, error) {
 			next.PreviousFailure = old.PreviousFailure
 		}
 	}
-	if next.Phase == "failed" || next.Phase == "recovery_required" {
+	if (next.Phase == "failed" || next.Phase == "recovery_required") &&
+		(next.Reason != "recovery_incomplete" || next.PreviousFailure == "none") {
 		next.PreviousFailure = next.Reason
 	}
 	return next, nil
