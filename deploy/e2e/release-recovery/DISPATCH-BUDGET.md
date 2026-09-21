@@ -145,3 +145,52 @@ signing/admission, workload continuity and the wider checkpoint matrix remain
 open. This run interrupts **after** durable receipt publication and does not
 claim every fsync or storage-loss boundary. Database, observation and runtime
 protocol versions are unchanged; only test tools and evidence are added here.
+
+## Debian AO native pause guidance
+
+[AO's machine-readable result](BUDGET-GUIDANCE-AO.json) verifies the new pause
+sidecar from a genuine native runner through the selected recovery CLI, in both
+English and Turkish. Candidate `3218e50bc26cbe1b1544e312e4636b8c794d7809` is an
+unpublished fixture commit whose parent is PR177's
+`b2d739b2ecf6d31f9ee9f84282487941b5303a80`; the only fixture-source difference is
+release-sequence policy. The archived SHA256 is
+`3c048febf58a940328d6573d93179e6682157103ff4d176368ca105cb153b170`.
+The baseline is the same Alpha81 archive as AL/AN. Trust remains isolated fixture
+trust, not production signing or ordinary UI update admission.
+
+Request `af0de8c801a3d13c780e9b4089d60c98` passed real Agent admission, worker
+termination, first-recovery QMP reset and two further native recovery cuts at
+`payload_restored`. Three subsequent timer invocations reported exhaustion. The
+read-only guidance capture proves the root/panel metadata checks, exact status
+bytes and nanosecond file identity, bound automatic hint, native JSON and EN/TR
+owner instructions. The transaction lock was free, three automatic receipts
+remained, and the known recovery failure stayed visible.
+
+One supported explicit owner retry completed rollback at
+`2026-09-21T22:24:36Z`. All automatic receipt hashes remained unchanged, one owner
+receipt was added, and installed/running Agent and Panel matched the baseline.
+The retained pause sidecar was stale; the selected CLI ignored it in favour of
+verified terminal proof. Normal authenticated HTTP returned the same rollback
+result and anonymous HTTP returned 401. This HTTP check is **after restoration**;
+no browser or HTTP accessibility while Panel is stopped is claimed.
+
+`guest_budget_guidance.py` only reads product state and writes root-private lab
+evidence after the sealed identity and both prior native cuts are verified.
+Capture once before owner continuation and once after it. The offline verifier
+first requires the complete dispatch-budget proof, then checks the new native
+hint, CLI text and terminal precedence. Negative cases reject stale identities,
+foreign requests, changed status bytes, unknown CLI, lost failures, missing
+instructions and terminal results that still show a pause.
+
+```sh
+python3 deploy/e2e/release-recovery/verify_budget_guidance.py \
+  --evidence-dir /var/tmp/cp-release-drill-20260922-ao/evidence/debian13 \
+  --operation-id af0de8c801a3d13c780e9b4089d60c98
+```
+
+Both AO VMs are stopped; private disks and evidence remain retained. This closes
+new-hint Debian native CLI acceptance only. Arch new-hint acceptance, actual
+browser pause access, interrupted owner continuation, publication-edge faults,
+production trust and workload independence remain open. Existing AL/AN evidence
+is unchanged. D-025 invariants 2, 4, 5 / P0.2–P0.3 remain partial. This evidence
+change adds no product schema, migration, installed-panel update or release.

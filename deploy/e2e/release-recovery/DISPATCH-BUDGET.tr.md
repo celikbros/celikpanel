@@ -119,3 +119,50 @@ python3 deploy/e2e/release-recovery/verify_dispatch_budget.py \
 Bu sonuç Arch deneme sınırı vakasını kapatır.
 Yayın anında güç kaybı, tarayıcı yönlendirmesi, belirli çocuk işlem hataları,
 kullanıcı yeniden denemesinin kesilmesi ve bütün P0.2/P0.3 kapsamı açık kalır.
+
+## Debian AO yerel durma yönlendirmesi
+
+[AO makinece okunabilir sonucu](BUDGET-GUIDANCE-AO.json), yeni durma ek kaydını
+gerçek yerel yürütücüden seçili kurtarma CLI'ına kadar Türkçe ve İngilizce doğrular.
+Yayımlanmamış test adayı `3218e50bc26cbe1b1544e312e4636b8c794d7809`, PR177'nin
+`b2d739b2ecf6d31f9ee9f84282487941b5303a80` commit'inden yalnız test sürüm sırası
+politikasıyla ayrılır. Arşiv SHA256 değeri
+`3c048febf58a940328d6573d93179e6682157103ff4d176368ca105cb153b170`.
+Başlangıç AL/AN ile aynı Alpha81 arşividir. İmza güveni izole test güvenidir;
+üretim imzası veya normal arayüzden güncelleme kabulü kanıtlanmaz.
+
+`af0de8c801a3d13c780e9b4089d60c98` işlemi gerçek Agent kabulünü, worker kesilmesini,
+ilk kurtarmada QMP yeniden başlatmayı ve `payload_restored` noktasındaki iki ek
+yerel kurtarma kesintisini geçti. Sonraki üç zamanlayıcı çağrısı sınırın dolduğunu
+bildirdi. Salt-okur kayıt; root/panel dosya izinlerini, tam durum baytlarını ve
+nanosaniyeli dosya kimliğini, bağlı durma bilgisini, gerçek JSON ve TR/EN kullanıcı
+yönergelerini doğrular. Kilit serbestti; üç otomatik deneme kaydı ve bilinen
+kurtarma hatası korunmuştu.
+
+Desteklenen tek seferlik kullanıcı devamı `2026-09-21T22:24:36Z` anında geri almayı
+tamamladı. Otomatik kayıtların hash'leri değişmedi; yalnız bir kullanıcı denemesi
+eklendi. Kurulu ve çalışan Panel/Agent başlangıç sürümüyle eşleşti. Saklanan eski
+durma kaydı, nihai doğrulanmış geri alma sonucunun önüne geçmedi. Geri yükleme
+**sonrasında** yetkili HTTP aynı sonucu, anonim HTTP 401 verdi. Panel durmuşken
+HTTP veya tarayıcı erişimi kanıtlandığı iddia edilmez.
+
+`guest_budget_guidance.py` kapalı laboratuvar kimliğini ve önceki iki gerçek
+kesintiyi doğruladıktan sonra yalnız ürün durumunu okur ve özel test kanıtı yazar.
+Kullanıcı devamından önce ve sonra birer kez çalıştırılır. Çevrimdışı doğrulayıcı
+önce tam deneme sınırı kanıtını, ardından yeni kaydın bağını, CLI metnini ve nihai
+sonucun üstünlüğünü denetler. Olumsuz testler; eski kimlik, başka işlem, değişmiş
+baytlar, bilinmeyen CLI, kaybolan hata, eksik yönerge ve hâlâ durma gösteren nihai
+sonucu reddeder.
+
+```sh
+python3 deploy/e2e/release-recovery/verify_budget_guidance.py \
+  --evidence-dir /var/tmp/cp-release-drill-20260922-ao/evidence/debian13 \
+  --operation-id af0de8c801a3d13c780e9b4089d60c98
+```
+
+AO'nun iki VM'i durduruldu; disk ve özel kanıtlar saklandı. Yalnız yeni kaydın
+Debian yerel CLI kabulü kapanır. Arch'ta yeni kayıt, durma sırasında gerçek tarayıcı
+erişimi, kullanıcı devamının kesilmesi, yayın sınırındaki güç kaybı, üretim güveni
+ve iş yükü bağımsızlığı açıktır. AL/AN kanıtı değişmedi. D-025 ilkeleri 2, 4, 5 /
+P0.2–P0.3 kısmi kalır. Bu kanıt değişikliği ürün şeması, geçiş, kurulu panel
+güncellemesi veya üretim sürümü içermez.
