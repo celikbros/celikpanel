@@ -76,7 +76,11 @@ kayıtlar, yabancı snapshot reddi ve nihai doğrulama kapsandı. Gerçek geri a
 noktasının kilit devri ve bağımsız kit shell sözleşmeleri de geçti. Shell/Go hata
 korunumu ile yarış denetimli CLI/gözlem testleri geçti.
 
-**Bu, gerçek VM kabulü değildir.** Önceki AJ/AK çıktıları bu değişiklikten öncedir.
-Gerçek seçili kit yükseltmesi, deneme kaydı yayımlanırken yeniden başlatma, hakkın
-tükenmesi ve sahibin devamı; geniş hizmet/platform matrisiyle birlikte açıktır.
-Üretim sürümü veya kurulu kullanıcı paneli değiştirilmedi. P0.2/P0.3 açık kalır.
+[Debian AL gerçek sistem kabulü](../deploy/e2e/release-recovery/DISPATCH-BUDGET.tr.md),
+yeni kit seçimini, ilk kayıttan sonra yeniden başlatmayı, iki ek gerçek kesintiyi,
+otomatik hakların tükenmesini ve değişmeyen otomatik kayıtlarla tek sahip tekrarını
+kanıtladı. CLI ve kimlik doğrulamalı HTTP nihai geri alma sonucunda eşleşti.
+Önceki AJ/AK sonuçları yeni politikanın kanıtı sayılmaz. Kayıt yayın sınırındaki
+güç kaybı, gerçek tekrarlanan kesin hatalar, diğer platformlar, tarayıcıdaki özel
+yönlendirme ve geniş kesinti/hizmet matrisi açıktır. Üretim sürümü veya kurulu
+kullanıcı paneli değiştirilmedi. P0.2/P0.3 açık kalır.

@@ -237,11 +237,10 @@ yeni gerçek worker→arayüz bağı kabulü ve geniş matris açıktır. Öncek
 belirsiz AA sonucu ve yalnız hazırlıkta duran AC korunur.
 
 [Kalıcı deneme sınırı](RECOVERY-DISPATCH-BUDGET.tr.md), snapshot başına
-üç otomatik hak ve açık sahip devamıyla sınırsız alt işlem tekrar?
-kaynak açığını giderir. Shell/Go sözleşmeleri geçti; gerçek sistemde
-hak ayırma/yeniden başlatma/tükenme kabulü ve tarayıcıya özel
-yönlendirme P0.2/P0.3 altında açıktır. Önceki AJ/AK kanıtı yeni
-politikayı doğrulamaz.
+üç otomatik hak ve açık sahip devamıyla sınırsız alt işlem tekrarı açığını giderir.
+Shell/Go sözleşmeleri geçti. Sınırlı AL kabulü aşağıda kaydedilmiştir; yayın
+sınırındaki kesintiler ve tarayıcıya özel yönlendirme P0.2/P0.3 altında açıktır.
+Önceki AJ/AK kanıtı yeni politikayı doğrulamaz.
 
 ## Hata matrisi
 
@@ -273,3 +272,9 @@ Bağımsız kurtarma yürütücüsü ve erişim yolu artık sınırlı kapsamda 
 Bunların tam kabulü, dosya şeması geçişi ve yerel yenileme geçişi açık P0 işleridir.
 Sunucu sahibinin uyguladığı Frankfurt geri alması ve Alpha80 olay düzeltmeleri,
 olay ve sürüm notlarında ayrı kaydedilir.
+
+[Debian AL deneme sınırı kabulü](../deploy/e2e/release-recovery/DISPATCH-BUDGET.tr.md),
+yeni kitin yeniden başlatmaya rağmen üç kesilmiş girişimi koruduğunu, otomatik
+kurtarmayı durdurduğunu ve tek açık sahip tekrarıyla aynı geri almayı tamamladığını
+kanıtlar. Yayın sınırındaki güç kaybı, tarayıcı yönlendirmesi ve kalan P0.2/P0.3
+matrisi açıktır.

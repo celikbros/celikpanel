@@ -197,4 +197,10 @@ veya güç kaybı dayanıklılığı değildir.
 [Kalıcı deneme sınırı](RECOVERY-DISPATCH-BUDGET.tr.md), aynı snapshot için
 üç otomatik alt işlem ve sonrasında açık sahip tekrar? uygular.
 Bekleme ve salt-okur sorgular hak tüketmez. Bu yeni kaynağın shell/Go
-sözleşmeleri geçmiştir; gerçek kit geçişi ve VM kabulü açıktır.
+sözleşmeleri geçmiştir; sınırlı gerçek sistem sonucu aşağıda kaydedilmiştir.
+
+[Debian AL deneme sınırı kabulü](../deploy/e2e/release-recovery/DISPATCH-BUDGET.tr.md),
+yeni kitin yeniden başlatmaya rağmen üç kesilmiş girişimi koruduğunu, otomatik
+kurtarmayı durdurduğunu ve tek açık sahip tekrarıyla aynı geri almayı tamamladığını
+kanıtlar. Yayın sınırındaki güç kaybı, tarayıcı yönlendirmesi ve kalan P0.2/P0.3
+matrisi açıktır.

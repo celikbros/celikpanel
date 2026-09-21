@@ -223,9 +223,15 @@ inconclusive AA and preparation-only AC remain preserved.
 
 The [bounded dispatch implementation](RECOVERY-DISPATCH-BUDGET.md) closes the
 unbounded child-retry source gap with three persisted automatic admissions per
-snapshot and explicit owner continuation. Shell/Go contracts passed; native
-reservation/reboot/exhaustion acceptance and browser-specific guidance remain
-open under P0.2/P0.3. Prior AJ/AK evidence does not validate this new policy.
+snapshot and explicit owner continuation. Shell/Go contracts passed. The scoped
+AL native result follows; publication-edge faults and browser-specific guidance
+remain open under P0.2/P0.3. Prior AJ/AK evidence does not validate this policy.
+
+[Debian AL dispatch-budget acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md)
+now proves the new selected kit preserves three interrupted reservations across
+one reboot, stops further automatic children and admits one explicit owner retry
+to verified rollback. This closes that scoped native case; publication-edge
+power loss, browser exhaustion guidance and the rest of P0.2/P0.3 remain open.
 
 ## Fault matrix
 

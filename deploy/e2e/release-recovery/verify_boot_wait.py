@@ -27,7 +27,7 @@ def require(value,message):
     if not value:raise ValueError(message)
 
 
-def check_terminal(proof, terminal, intent, boot, readers, journal):
+def check_terminal_state(proof, terminal, intent, boot, readers):
     op=intent['operation_id'];cli=terminal['cli']
     expected={'schema':'celikpanel-recovery-status/v1','request_id':op,'observation':'known',
               'phase':'recovered','terminal_proof':'rollback_verified','reason':'rollback_verified'}
@@ -44,6 +44,11 @@ def check_terminal(proof, terminal, intent, boot, readers, journal):
     require(terminal['timer']['ActiveState']=='active','native recovery timer unavailable')
     require(any(row.get('cli')==cli and row.get('http',{}).get('body')==dict(cli,panel_state='ready') and row.get('http',{}).get('status')==200
                 and row.get('anonymous_status')==401 for row in readers),'authenticated reader disagreement')
+
+
+def check_terminal(proof, terminal, intent, boot, readers, journal):
+    check_terminal_state(proof, terminal, intent, boot, readers)
+    cli=terminal['cli']
     boot_hex=boot.replace('-','')
     deferrals=[row for row in journal if row.get('_BOOT_ID')==boot_hex and row.get('MESSAGE','').startswith(wait.WAIT_MESSAGE)]
     completions=[row for row in journal if row.get('_BOOT_ID')==boot_hex and 'Rollback complete / ' in row.get('MESSAGE','')]
