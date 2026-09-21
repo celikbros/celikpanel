@@ -565,6 +565,11 @@ prepare_fresh_release_transaction_foundation() {
         "$RELEASE_TRANSACTION_ROOT" "$INSTALL_RELEASE_TRANSACTION_FD" \
         || die "fresh release transaction lock ownership proof failed"
     TRUSTED_RELEASE_ROOT=$SRC
+    # The root-only kit lives below a shared executable directory. Establish
+    # that directory's exact contract before enrollment creates private paths.
+    # Ozel runtime dizinlerinden once ortak calistirilabilir dizini dogrula.
+    _release_txn_prepare_start_helper_directory "$LIBEXEC_DIR" \
+        || die "fresh recovery executable directory is unsafe; preserve its existing owner configuration"
     [[ -x "$SRC/recovery-runtime/bin/recovery" &&
        ! -L "$SRC/recovery-runtime/bin/recovery" ]] \
         || die "fresh install independent recovery runtime is missing"

@@ -180,7 +180,10 @@ Ayrı [AD Debian kabulü](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVER
 aynı iki kesinti sınırını geçer: bir açılış ertelemesi, açılış sonrası sıfır
 kurtarma hatası ve aynı geri almanın otomatik tamamlanması. 55 tablodaki 100 eski
 satır, DNS ve HTTPS denetimleri geçer; sonradan eklenen bir metrik satırı ayrı
-kaydedilir. AC'nin önceki hazırlık hatası korunur. Sonraki arayüz/CLI açıklamasının
-bileşen ve test verisi kanıtı vardır; yeni gerçek worker→arayüz bağı kabulü ve
-geniş P0 matrisi açıktır. AB/AD bu sınırda sonunda kurtarmayı kanıtlar;
-kesintisiz erişim veya güç kaybı dayanıklılığı değildir.
+kaydedilir. AC'nin önceki hazırlık hatası korunur. Sonraki
+[AJ kabulü](../deploy/e2e/release-recovery/BOUND-WORKER.tr.md), iki gerçek kesintiden
+sonra gerçek worker→snapshot→CLI/kimlik doğrulamalı HTTP/tarayıcı nihai okuyucu
+bağını sınırlı kapsamda kanıtlar. AJ'de yerel `waiting_for` ipucu gözlenmedi;
+açılışta bekleme kaydının üretilmesi/gösterimi ve geniş P0 matrisi açıktır.
+AB/AD ve AJ, kayıtlı sınırlarında sonunda kurtarmayı kanıtlar; kesintisiz erişim
+veya güç kaybı dayanıklılığı değildir.

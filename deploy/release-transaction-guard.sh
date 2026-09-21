@@ -1107,12 +1107,38 @@ _release_txn_validate_start_helper() {
         || { _release_txn_fail "installed release start guard hash mismatch"; return 1; }
 }
 
+# The launcher and start guard share one public executable directory. Prepare
+# its exact existing contract before private runtime enrollment can create it
+# with a different mode. Existing owner metadata is checked, never normalized.
+# Launcher ve baslatma korumasi ayni dizini kullanir. Ozel runtime kaydindan
+# once ortak dizin sozlesmesini sagla; mevcut sahip metadata'sini degistirme.
+_release_txn_prepare_start_helper_directory() {
+    local directory=$1 parent
+    _release_txn_validate_safe_path "$directory" || return 1
+    parent=$(dirname -- "$directory")
+    _release_txn_prepare_secure_parent_directory "$parent" || return 1
+    if [[ -e "$directory" || -L "$directory" ]]; then
+        _release_txn_validate_root_directory "$directory" 755 || return 1
+    else
+        mkdir -m 0755 -- "$directory" \
+            || { _release_txn_fail "cannot create release start guard directory"; return 1; }
+        chown root:root -- "$directory" \
+            || { _release_txn_fail "cannot own release start guard directory"; return 1; }
+        sync -f -- "$parent" \
+            || { _release_txn_fail "cannot make release start guard directory durable"; return 1; }
+        _release_txn_validate_root_directory "$directory" 755 || return 1
+    fi
+
+    sync -f -- "$directory" "$parent" \
+        || { _release_txn_fail "cannot prove release start guard directory durability"; return 1; }
+}
+
 # Install the ExecCondition helper outside retained releases, publish it
 # atomically, and prove exact bytes, hash and root-only metadata.
 # ExecCondition yardımcısını saklanan sürümlerin dışında atomik yayımla; tam
 # baytları, hash'i ve yalnız root'a açık metadata'yı kanıtla.
 _release_txn_install_start_helper() {
-    local target=$1 source directory parent tmp owner group mode links
+    local target=$1 source directory tmp owner group mode links
     source=$TRUSTED_RELEASE_ROOT/deploy/release-transaction-start-guard.sh
     _release_txn_validate_safe_path "$target" || return 1
     case "$target" in
@@ -1127,19 +1153,7 @@ _release_txn_install_start_helper() {
         || { _release_txn_fail "verified release start guard source path is not canonical"; return 1; }
 
     directory=$(dirname -- "$target")
-    parent=$(dirname -- "$directory")
-    _release_txn_prepare_secure_parent_directory "$parent" || return 1
-    if [[ -e "$directory" || -L "$directory" ]]; then
-        _release_txn_validate_root_directory "$directory" 755 || return 1
-    else
-        mkdir -m 0755 -- "$directory" \
-            || { _release_txn_fail "cannot create release start guard directory"; return 1; }
-        chown root:root -- "$directory" \
-            || { _release_txn_fail "cannot own release start guard directory"; return 1; }
-        sync -f -- "$parent" \
-            || { _release_txn_fail "cannot make release start guard directory durable"; return 1; }
-        _release_txn_validate_root_directory "$directory" 755 || return 1
-    fi
+    _release_txn_prepare_start_helper_directory "$directory" || return 1
 
     if [[ -e "$target" || -L "$target" ]]; then
         [[ -f "$target" && ! -L "$target" ]] \

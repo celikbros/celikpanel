@@ -153,7 +153,14 @@ GET-only requests, no page errors or horizontal overflow. API responses in this
 browser check and systemd readiness in the runner check are fixtures.
 
 The earlier native AB/AD trials do **not** establish this new UI binding; their
-fixture updater did not publish a real worker association. Fresh native recovery
-with the real worker binding and this reader/UI remains an open acceptance item.
-This closes the scoped guidance implementation, not P0.2 or the full resilience
-matrix. No release or installed-panel update is part of this change.
+fixture updater did not publish a real worker association. The subsequent
+[Debian AJ acceptance](../deploy/e2e/release-recovery/BOUND-WORKER.md) now proves
+a genuine Go worker association through a verified native snapshot, worker kill,
+recovery reboot, automatic rollback and matching root CLI/authenticated HTTP.
+The actual HTTP-backed EN/TR browser reader preserves that terminal result and
+exact request across reload after a declared lazy-bundle failure. This is a
+schema42-to42 fixture-trust trial, not UI update-start or production-signing
+admission. No native `waiting_for` sidecar was observed in AJ; native boot-time
+wait emission/rendering remains open. See the [scoped evidence summary](../deploy/e2e/release-recovery/BOUND-WORKER-AJ.json).
+This does not close P0.2 or the full resilience matrix. No production release or
+installed owner-panel update is part of this change.
