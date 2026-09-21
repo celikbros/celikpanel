@@ -261,3 +261,10 @@ path now have scoped implementations. Their full acceptance, artifact-schema
 migration and native renewal migration remain open P0 work. The owner-operated
 Frankfurt rollback and Alpha80 incident fixes are recorded separately in the
 incident and release notes.
+
+[Arch AN acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md#arch-an-acceptance)
+now passes the same three-admission exhaustion and explicit-owner continuation
+boundary with the exact AL candidate. The earlier AM observer failure remains
+inconclusive and retained. Repeated boot-wait publication is distinguished from
+unchanged-wait preservation. This closes the scoped Arch budget case, not the
+publication-edge, browser-guidance or full P0.2/P0.3 matrix.

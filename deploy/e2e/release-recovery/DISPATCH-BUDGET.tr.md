@@ -67,8 +67,55 @@ sahip çağrısı, kalan işlem belirteci, dolu kilit ve belirsiz sonuç reddedi
 ## Açık kalanlar
 
 Kaydın yayımlanma anındaki güç kaybı, tekrarlanan kesin alt işlem hataları,
-kullanıcı tekrarının kesilmesi/başarısızlığı, Arch üzerinde aynı kabul,
+kullanıcı tekrarının kesilmesi/başarısızlığı,
 sınırdayken HTTP/tarayıcı erişimi ve özel yönlendirme, üretim imzası, hizmet
 sürekliliği ve bütün kontrol noktaları matrisi açıktır. Bu deney kalıcı kayıt
 **yayımlandıktan sonraki** kesintiyi doğrular. Ürün şeması veya kurtarma protokolü
 bu kabul çalışmasında değiştirilmedi.
+
+## Arch AN kabulü
+
+[Arch AN kanıtı](DISPATCH-BUDGET-AN.json), AL ile aynı temel ve aday arşivleriyle
+aynı sınırlı politikayı doğrular. Gerçek Agent'ın kabul ettiği
+`4c0ec761ef57aa38aea5b2b7f83964fd` işleminde ilk yerel geri alma `payload_restored`
+noktasında tek QMP yeniden başlatmasıyla kesildi. Sonraki açılışta 2. ve 3.
+denemeler aynı noktada tam süreç, cgroup ve snapshot kanıtıyla kesildi. Ardından
+üç zamanlayıcı çalışması yeni kurtarma başlatmadan sınırın dolduğunu bildirdi.
+Kilit serbestti; aynı geri alma bekliyordu. Tek açık kullanıcı komutu
+`2026-09-21T21:50:01Z` anında geri almayı tamamladı. Üç otomatik kayıt özeti
+korundu ve yalnız bir kullanıcı deneme kaydı eklendi. Çalışan ve kurulu dosyalar
+eski sürümle; CLI ve yetkili HTTP sonucu birbiriyle eşleşti. Anonim HTTP reddedildi.
+
+Yeniden açılan sistem systemd 261 (261.3-1-arch), çekirdek 7.2.6-arch2-1 kullanıyor.
+Temel kurulum çekirdek paketlerini yükseltti; güvenlik duvarı veya VPN hazırlığı
+bu deneyin kanıtı değildir. İkinci kabulden önce iki gerçek açılış beklemesi oldu.
+Bu nedenle saklanan bekleme kaydı ilk gözlenen yayınla aynı değildir. Ayrı,
+metadata denetimli okuma; son kaydın tam baytlarını, aynı isteğe ait olduğunu ve
+sonuç kaydına göre eskidiğini doğrular. Doğrulayıcı farklı yerel bekleme
+çalışmalarını şart koşar; son CLI/HTTP sonucunda eski bekleme gösterilmez.
+İlk bekleme kaydının değişmeden korunduğu iddia edilmez. AL kanıtı da geçmeye devam eder.
+
+Önceki AM denemesi **deneme sınırı için sonuçsuzdur**. Laboratuvar gözlemcisi kısa
+açılış beklemesinde süreç bilgisini okuyamayınca durdu; planlanan ikinci/üçüncü
+kesintileri uygulamadı. Yerel zamanlayıcı sonrasında geri almayı tamamladı.
+Hata günlüğü, kesinti kaydı ve son durum
+`/var/tmp/cp-release-drill-20260922-am/evidence/arch` altında korunur. AN temiz VM
+kullanır. Düzeltilen sınırlı gözlemci okunamayan süreç bilgisini bilinmeyen sayıp
+yeniden gözler; bu bilgi kesinti izni vermez. Tam doğrulama şartları korunur.
+AM kayıtları yeniden yazılmadı.
+
+Deney indirme kaynağı artık doğrulanmış platformun yerel CA deposunu kullanır.
+Arch'ın root sahipliğindeki 0750 `/root` dizini kabul edilir; deney dosyalarının
+dizini root-only 0700 kalır. Bunlar yalnız laboratuvar değişiklikleridir. AM'nin
+ilk hazırlık retleri güven hazırlığı ve güncelleme kabulünden önce gerçekleşti.
+AM ve AN'nin iki VM'si de durduruldu; özel kanıtlar saklanıyor.
+
+```sh
+python3 deploy/e2e/release-recovery/verify_dispatch_budget.py \
+  --evidence-dir /var/tmp/cp-release-drill-20260922-an/evidence/arch \
+  --operation-id 4c0ec761ef57aa38aea5b2b7f83964fd
+```
+
+Bu sonuç Arch deneme sınırı vakasını kapatır.
+Yayın anında güç kaybı, tarayıcı yönlendirmesi, belirli çocuk işlem hataları,
+kullanıcı yeniden denemesinin kesilmesi ve bütün P0.2/P0.3 kapsamı açık kalır.

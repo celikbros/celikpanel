@@ -12,6 +12,12 @@ spec=importlib.util.spec_from_file_location('budget_wait_verifier',Path(__file__
 w=importlib.util.module_from_spec(spec);sys.modules[spec.name]=w;spec.loader.exec_module(w)
 require=w.require
 
+def platform_name(node):
+    names={'debian13':'Debian 13','arch':'Arch Linux'}
+    require(node in names,'unsupported sealed platform')
+    return names[node]
+
+
 def check_budget(before,after,operation,snapshot):
     for value in (before,after):
         require(value.get('schema')=='celikpanel/native-budget-result/v1' and value.get('operation_id')==operation
@@ -28,6 +34,21 @@ def check_budget(before,after,operation,snapshot):
     require(all(after['receipts'].get(n)==before['receipts'][n] for n in ('1','2','3')),'automatic reservation changed')
     require(len(before['paused_messages'])>=2 and all(x.startswith('Automatic recovery paused after three admitted attempts.') for x in before['paused_messages']),'repeated native deferral not recorded')
     require(before['at']<after['at'],'result predates exhaustion')
+
+def check_republished_wait(saved,terminal,operation,deferrals):
+    require(saved['operation_id']==operation and saved['boot_id']==terminal['boot_id'],'retained wait identity differs')
+    raw=saved['wait_raw'].encode('ascii')
+    require(w.wait.sha(raw)==terminal['stale_wait_sha256'],'retained wait digest differs')
+    hint=w.wait.record(raw,('schema','request_id','observation_identity','observation_sha256','waiting_for'))
+    require(hint['schema']=='celikpanel-recovery-wait/v1' and hint['request_id']==operation
+            and hint['waiting_for']=='starting','retained wait request/type differs')
+    require(re.fullmatch('[0-9a-f]{64}',hint['observation_sha256'])
+            and re.fullmatch('[0-9a-f]{64}',saved['status_sha256'])
+            and hint['observation_sha256']!=saved['status_sha256']
+            and hint['observation_identity']!=saved['status_identity'],'wait not stale against terminal status')
+    require(len({r.get('_SYSTEMD_INVOCATION_ID') for r in deferrals if r.get('_SYSTEMD_INVOCATION_ID')})>=2,
+            'no repeated native wait publication evidence')
+
 
 def verify(directory,operation):
     require(re.fullmatch('[0-9a-f]{32}',operation),'invalid request')
@@ -76,6 +97,11 @@ def verify(directory,operation):
     boot_events=lines('boot-wait-'+operation+'.jsonl',True);proof=next(r for r in boot_events if r['event']=='native-wait-verified')
     w.wait.validate_sample(proof['sample'],intent,before['boot_id'])
     terminal=obj('budget-final-native.json');journal=lines('budget-native-journal.jsonl');readers=lines('bound-reader-after-owner.jsonl',True)
+    wait_republished=terminal['stale_wait_sha256']!=proof['sample']['hint_sha256']
+    if wait_republished:
+        deferrals=[r for r in journal if r.get('_BOOT_ID')==before['boot_id'].replace('-','')
+                   and r.get('MESSAGE','').startswith(w.wait.WAIT_MESSAGE)]
+        check_republished_wait(obj('budget-terminal-wait.json'),terminal,operation,deferrals)
     w.check_terminal_state(proof,terminal,intent,before['boot_id'],readers)
     require(terminal['cli']==after['cli'],'terminal CLI changed')
     require('sequence=82\n' in terminal['release_floor'] and 'sequence=82\n' in terminal['foundation']
@@ -95,15 +121,15 @@ def verify(directory,operation):
     require(admitted[0]['_BOOT_ID']==reset['before_boot_id'].replace('-','')
             and all(r['_BOOT_ID']==before['boot_id'].replace('-','') for r in admitted[1:]),'reservations not split across real reboot')
     return {'schema':'celikpanel/native-dispatch-budget-acceptance/v1','result':'scoped-checks-passed','request_id':operation,
-        'platform':terminal['systemd']+' / Debian 13 / amd64 / disposable QEMU','baseline':intent['baseline'],'target':intent['target'],
+        'platform':terminal['systemd']+' / '+platform_name(intent['identity']['node'])+' / amd64 / disposable QEMU','baseline':intent['baseline'],'target':intent['target'],
         'target_archive_sha256':build['sha256'],'selected_runtime_sha256':kit['runtime_manifest_sha256'],
         'automatic_receipts_preserved':before['receipts'],'owner_receipt_count':1,'cut_invocations':invocations,
         'native_pause_observations':len(paused),'exhausted_status':before['cli'],'terminal':after['cli'],
-        'authenticated_http':200,'anonymous_http':401,'coordinators_restored_to_baseline':True,
+        'retained_wait_republished':wait_republished,'authenticated_http':200,'anonymous_http':401,'coordinators_restored_to_baseline':True,
         'floor_and_foundation_sequence':82,'evidence_sha256':refs,
         'limitations':['Fixture signing; production signing/admission not proved','Only after-publication interruption; publication-edge power loss remains open',
             'Interrupted attempts, not repeated deterministic child errors','No browser or HTTP access proof while exhausted',
-            'No Arch budget trial, schema migration or workload continuity proof','Full P0.2/P0.3 remain open']}
+            'This single-platform case does not prove schema migration or workload continuity','Full P0.2/P0.3 remain open']}
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--evidence-dir',required=True);p.add_argument('--operation-id',required=True);a=p.parse_args()

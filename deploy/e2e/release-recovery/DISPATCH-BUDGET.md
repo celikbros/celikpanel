@@ -92,10 +92,54 @@ reset receipts, a fourth automatic slot, duplicate owner admissions, remaining
 markers, held locks and unknown outcomes. Both AL VMs are stopped; disks and
 private evidence remain retained.
 
+## Arch AN acceptance
+
+The [Arch AN summary](DISPATCH-BUDGET-AN.json) passes the same scoped policy with
+exactly the same baseline/candidate archives as AL. Request
+`4c0ec761ef57aa38aea5b2b7f83964fd` was admitted by the genuine Agent. One QMP reset
+interrupted the first native rollback at `payload_restored`; the next-boot helper
+proved and killed attempts 2 and 3 at that checkpoint. Three later timer runs
+reported exhaustion without a child. The lock was free and the exact rollback
+remained pending. One explicit supported owner retry completed it at
+`2026-09-21T21:50:01Z`, retaining all three automatic receipt hashes and adding
+exactly one owner receipt. Running and installed baseline binaries match; CLI
+and authenticated HTTP agree, and anonymous HTTP is rejected.
+
+The post-reset guest runs systemd 261 (261.3-1-arch), kernel 7.2.6-arch2-1. The
+baseline installer upgraded kernel packages; this case does not validate firewall
+or VPN readiness. Two genuine boot waits occurred before the second admission.
+The retained wait sidecar therefore differs from the first observed publication.
+A separate metadata-checked read proves its exact retained bytes, same request,
+and staleness against the terminal status. The verifier requires distinct native
+wait invocations and confirms that neither terminal reader exposes that stale
+wait. It does not claim the first wait remained unchanged. AL's earlier evidence
+still passes the verifier.
+
+The earlier AM attempt is **inconclusive for budget exhaustion**. Its fault
+observer exited on an unavailable process probe during the short boot deferral;
+it did not perform the intended second/third cuts. The native timer subsequently
+completed rollback. The private failure journal, cut log and terminal status are
+retained under `/var/tmp/cp-release-drill-20260922-am/evidence/arch`. AN uses a fresh
+VM and a bounded observer that treats an unavailable read-only process probe as
+unknown, never as permission to cut. Full identity/checkpoint/snapshot checks
+remain required before freezing or killing. No AM records were rewritten.
+
+The disposable origin now uses the sealed platform's native CA store. Arch's
+root-owned 0750 `/root` is accepted; the fixture payload remains root-only 0700.
+These are lab-only changes, not production trust or ownership changes. Earlier
+AM preparation refusals occurred before trust provisioning or update admission.
+Both AM and AN VM pairs are stopped with private evidence retained.
+
+```sh
+python3 deploy/e2e/release-recovery/verify_dispatch_budget.py \
+  --evidence-dir /var/tmp/cp-release-drill-20260922-an/evidence/arch \
+  --operation-id 4c0ec761ef57aa38aea5b2b7f83964fd
+```
+
 ## Still open
 
 Reservation staging/publication-edge power loss, repeated deterministic child
-errors, native owner-retry interruption/failure, Arch budget acceptance,
+errors, native owner-retry interruption/failure,
 HTTP/browser access and budget-specific guidance while exhausted, production
 signing/admission, workload continuity and the wider checkpoint matrix remain
 open. This run interrupts **after** durable receipt publication and does not

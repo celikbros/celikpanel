@@ -36,7 +36,6 @@ def check_terminal_state(proof, terminal, intent, boot, readers):
     require(terminal['active_transaction_absent'] is True and terminal['wait_is_not_exposed'] is True,'terminal descriptor/wait differs')
     for key in ('binding_sha256','manifest_sha256'):
         require(terminal[key]==proof['material'][key],'native recovery material changed')
-    require(terminal['stale_wait_sha256']==proof['sample']['hint_sha256'],'stale wait was not retained unchanged')
     for name in ('agent','panel'):
         service=terminal['services'][name]
         require(service['properties']['ActiveState']=='active' and service['properties']['SubState']=='running','coordinator not running')
@@ -47,6 +46,7 @@ def check_terminal_state(proof, terminal, intent, boot, readers):
 
 
 def check_terminal(proof, terminal, intent, boot, readers, journal):
+    require(terminal['stale_wait_sha256']==proof['sample']['hint_sha256'],'stale wait was not retained unchanged')
     check_terminal_state(proof, terminal, intent, boot, readers)
     cli=terminal['cli']
     boot_hex=boot.replace('-','')

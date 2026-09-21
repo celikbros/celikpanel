@@ -278,3 +278,10 @@ yeni kitin yeniden başlatmaya rağmen üç kesilmiş girişimi koruduğunu, oto
 kurtarmayı durdurduğunu ve tek açık sahip tekrarıyla aynı geri almayı tamamladığını
 kanıtlar. Yayın sınırındaki güç kaybı, tarayıcı yönlendirmesi ve kalan P0.2/P0.3
 matrisi açıktır.
+
+[Arch AN kabulü](../deploy/e2e/release-recovery/DISPATCH-BUDGET.tr.md#arch-an-kabulü),
+AL ile aynı adayda üç otomatik deneme sınırı ve açık kullanıcı komutuyla devam
+sınırını doğrular. Önceki AM gözlemci hatası sonuçsuz olarak korunur. Birden çok
+açılış bekleme yayını, tek kaydın değişmeden korunmasından ayrılır. Yalnız bu
+Arch vakası kapanır; yayın anındaki güç kaybı, tarayıcı yönlendirmesi ve bütün
+P0.2/P0.3 kabul kapsamı açık kalır.

@@ -92,6 +92,13 @@ more interrupted native attempts, repeated exhaustion and one owner retry with
 unchanged automatic receipts. CLI and authenticated HTTP agree on final rollback.
 Earlier AJ/AK evidence predates this policy and is not reused as proof for it.
 Reservation-publication-edge power loss, native repeated deterministic errors,
-other platforms, browser budget guidance and the broader fault/workload matrix
+browser budget guidance and the broader fault/workload matrix
 remain open. No production release or installed owner panel changed. P0.2/P0.3
 remain open.
+
+[Arch AN acceptance](../deploy/e2e/release-recovery/DISPATCH-BUDGET.md#arch-an-acceptance)
+now passes the same three-admission exhaustion and explicit-owner continuation
+boundary with the exact AL candidate. The earlier AM observer failure remains
+inconclusive and retained. Repeated boot-wait publication is distinguished from
+unchanged-wait preservation. This closes the scoped Arch budget case, not the
+publication-edge, browser-guidance or full P0.2/P0.3 matrix.

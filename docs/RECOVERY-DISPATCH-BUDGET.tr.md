@@ -81,6 +81,13 @@ yeni kit seçimini, ilk kayıttan sonra yeniden başlatmayı, iki ek gerçek kes
 otomatik hakların tükenmesini ve değişmeyen otomatik kayıtlarla tek sahip tekrarını
 kanıtladı. CLI ve kimlik doğrulamalı HTTP nihai geri alma sonucunda eşleşti.
 Önceki AJ/AK sonuçları yeni politikanın kanıtı sayılmaz. Kayıt yayın sınırındaki
-güç kaybı, gerçek tekrarlanan kesin hatalar, diğer platformlar, tarayıcıdaki özel
+güç kaybı, gerçek tekrarlanan kesin hatalar, tarayıcıdaki özel
 yönlendirme ve geniş kesinti/hizmet matrisi açıktır. Üretim sürümü veya kurulu
 kullanıcı paneli değiştirilmedi. P0.2/P0.3 açık kalır.
+
+[Arch AN kabulü](../deploy/e2e/release-recovery/DISPATCH-BUDGET.tr.md#arch-an-kabulü),
+AL ile aynı adayda üç otomatik deneme sınırı ve açık kullanıcı komutuyla devam
+sınırını doğrular. Önceki AM gözlemci hatası sonuçsuz olarak korunur. Birden çok
+açılış bekleme yayını, tek kaydın değişmeden korunmasından ayrılır. Yalnız bu
+Arch vakası kapanır; yayın anındaki güç kaybı, tarayıcı yönlendirmesi ve bütün
+P0.2/P0.3 kabul kapsamı açık kalır.
