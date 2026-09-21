@@ -160,7 +160,10 @@ recovery reboot, automatic rollback and matching root CLI/authenticated HTTP.
 The actual HTTP-backed EN/TR browser reader preserves that terminal result and
 exact request across reload after a declared lazy-bundle failure. This is a
 schema42-to42 fixture-trust trial, not UI update-start or production-signing
-admission. No native `waiting_for` sidecar was observed in AJ; native boot-time
-wait emission/rendering remains open. See the [scoped evidence summary](../deploy/e2e/release-recovery/BOUND-WORKER-AJ.json).
+admission. AJ observed no native `waiting_for` sidecar. The subsequent
+[Debian AK trial](../deploy/e2e/release-recovery/BOOT-WAIT.md) proves actual
+`starting` wait publication, root CLI guidance and a native timer retry of the
+same request to verified rollback. The old wait remains but is not exposed after
+terminal proof. Other native waits and HTTP/browser wait access remain open. See the [scoped evidence summary](../deploy/e2e/release-recovery/BOUND-WORKER-AJ.json).
 This does not close P0.2 or the full resilience matrix. No production release or
 installed owner-panel update is part of this change.

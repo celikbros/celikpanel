@@ -172,3 +172,5 @@ eski sürüm şema geçişleri, yerel bekleme ekranı, tarayıcıdan güncelleme
 kabulü ve bağımsız iş yükü yaşam döngüsü gereksinimleri açık kalır.
 
 Gizli bilgi içermeyen, makine tarafından okunabilir [AJ kanıt özeti](BOUND-WORKER-AJ.json); sınırlı sonucu, kaynak kimliklerini ve kanıt özetlerini kaydeder. Kimlik bilgileri ve özel laboratuvar kimlik malzemesi içermez.
+
+Sonraki [AK açılış bekleme deneyi](BOOT-WAIT.tr.md), gerçek `starting` yönlendirmesini root CLI üzerinde ve aynı isteğin otomatik yeniden denenmesini ayrı olarak kanıtlar. Yukarıdaki AJ sınırları AJ'ye özgü kalır.

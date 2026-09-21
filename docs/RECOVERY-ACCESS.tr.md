@@ -153,7 +153,10 @@ kimlik doğrulamalı HTTP üzerinden kanıtlar. Gerçek HTTP kullanan EN/TR tara
 okuyucusu, belirtilen gecikmeli JavaScript yükleme hatasından sonra aynı isteği ve
 nihai sonucu sayfa yenilemede korur. Bu, şema42→42 ve deney imza güveni ile sınırlıdır;
 arayüzden güncelleme başlatmayı veya üretim imzasıyla kabulü kanıtlamaz. AJ'de yerel
-`waiting_for` ek kaydı gözlenmedi; açılışta bekleme kaydının üretilmesi ve gösterimi
-açıktır. [Sınırlı kanıt özeti](../deploy/e2e/release-recovery/BOUND-WORKER-AJ.json).
+`waiting_for` ek kaydı gözlenmedi. Sonraki [Debian AK deneyi](../deploy/e2e/release-recovery/BOOT-WAIT.tr.md),
+gerçek `starting` bekleme yayını, root CLI yönlendirmesi ve aynı isteğin yerel
+zamanlayıcıyla doğrulanmış geri almaya ulaşmasını kanıtlar. Eski bekleme kaydı
+kalır; nihai kanıttan sonra gösterilmez. Diğer gerçek bekleme durumları ve
+beklerken HTTP/tarayıcı erişimi açıktır. [Sınırlı kanıt özeti](../deploy/e2e/release-recovery/BOUND-WORKER-AJ.json).
 Bu sonuç P0.2'yi veya tüm dayanıklılık matrisini kapatmaz. Bu değişiklik üretim sürümü
 yayımlamaz ve sunucu sahibinin kurulu panellerini güncellemez.
