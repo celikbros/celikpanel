@@ -5,6 +5,8 @@ import http.client
 import http.server
 import importlib.util
 import os
+import re
+import shlex
 from pathlib import Path
 import socket
 import ssl
@@ -27,16 +29,42 @@ def fixture_intent():
     base = '/releases/' + version + '/linux/amd64/'
     routes = {'/releases/latest.txt': 'worker-origin-latest', base + 'release-manifest-v2': 'worker-origin-manifest',
               base + 'release-manifest-v2.sig': 'worker-origin-signature',
-              base + 'celikpanel-' + version + '-linux-amd64.tar.gz': 'worker-origin-archive.tar.gz'}
+              base + 'celikpanel-' + version + '-linux-amd64.tar.gz': 'worker-origin-archive.tar.gz',
+              base + 'celikpanel-' + version + '-linux-amd64.tar.gz.sha256': 'worker-origin-archive.sha256'}
     names = set(routes.values()) | {'worker-origin-public.pem', 'worker-origin-ca.pem',
                                     'worker-origin-tls.pem', 'worker-origin-tls-key.pem'}
-    return {'schema': f.SCHEMA, 'target': {'version': version, 'commit': 'a' * 40}, 'routes': routes,
-            'files': {name: {'sha256': 'b' * 64, 'size': 1} for name in names}}
+    target = {'version': version, 'sequence': '82', 'commit': 'a' * 40, 'archive': 'celikpanel-' + version + '-linux-amd64.tar.gz', 'archive_sha256': 'b' * 64}
+    files = {name: {'sha256': 'b' * 64, 'size': 1} for name in names}
+    checksum = f.checksum_bytes(target)
+    files['worker-origin-archive.sha256'] = {'sha256': hashlib.sha256(checksum).hexdigest(), 'size': len(checksum)}
+    policy = {'format': 'celikpanel-release-sequence-policy-v1', 'version': version, 'current': 82, 'previous': 81, 'previous_version': 'v0.1.0-alpha.81', 'previous_commit': 'd' * 40}
+    policy['sha256'] = hashlib.sha256(''.join(key + '=' + str(value) + '\n' for key, value in policy.items()).encode()).hexdigest()
+    return {'schema': f.SCHEMA, 'target': target, 'source_proof': {'release_policy': policy}, 'routes': routes, 'files': files}
 
 
 class WhitelistTests(unittest.TestCase):
     def test_exact_routes(self):
         f.validate_intent(fixture_intent())
+
+    def test_origin_policy_is_bound_to_target_and_canonical_bytes(self):
+        for key, wrong in [('version', 'v0.1.0-alpha.80'), ('current', 80), ('previous', 80),
+                           ('previous_version', 'v0.1.0-alpha.80'), ('previous_commit', 'a' * 40), ('sha256', 'a' * 64)]:
+            with self.subTest(key=key):
+                value = fixture_intent()
+                value['source_proof']['release_policy'][key] = wrong
+                with self.assertRaises(ValueError):
+                    f.validate_intent(value)
+
+    def test_checksum_sidecar_is_bound_to_target(self):
+        for key, changed in [('size', 1), ('sha256', 'f' * 64)]:
+            value = fixture_intent()
+            value['files']['worker-origin-archive.sha256'][key] = changed
+            with self.assertRaises(ValueError):
+                f.validate_intent(value)
+        value = fixture_intent()
+        value['target']['archive_sha256'] = 'c' * 64
+        with self.assertRaises(ValueError):
+            f.validate_intent(value)
 
     def test_no_private_key_or_arbitrary_route(self):
         for route, name in [('/key', 'worker-origin-signing.pem'),
@@ -134,8 +162,9 @@ class CryptoAndServerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             value = fixture_intent()
+            value['target']['archive_sha256'] = hashlib.sha256(b'test worker-origin-archive.tar.gz').hexdigest()
             for name in value['files']:
-                raw = b'test ' + name.encode()
+                raw = f.checksum_bytes(value['target']) if name == 'worker-origin-archive.sha256' else b'test ' + name.encode()
                 f.private_write(root / name, raw)
                 value['files'][name] = {'size': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
             # Non-root TLS/route coverage isolates only the root-owned filesystem
@@ -168,7 +197,29 @@ class CryptoAndServerTests(unittest.TestCase):
                     connection.close()
                     return status, body
                 self.assertEqual(request('/releases/latest.txt')[0], 200)
-                for path in ('/worker-origin-tls-key.pem', '/../etc/passwd', '/releases/latest.txt?x=1', '/releases/%2e%2e/key'):
+                checksum_path = next(path for path in value['routes'] if path.endswith('.tar.gz.sha256'))
+                self.assertEqual(request(checksum_path), (200, f.checksum_bytes(value['target'])))
+                # Exercise the real installed updater's signed_fetch function and
+                # every update-branch release_url fetch line. Only TLS transport
+                # address/CA are redirected to this temporary loopback server.
+                get_sh = (HERE.parents[2] / 'download-portal/get.sh').read_text()
+                function = re.search(r'(?ms)^signed_fetch\(\) \{\n.*?^\}', get_sh)
+                self.assertIsNotNone(function)
+                fetches = re.findall(r'^  signed_fetch "\$release_url/[^\n]+', get_sh, flags=re.MULTILINE)
+                self.assertEqual(len(fetches), 4)
+                downloads = root / 'downloads'
+                downloads.mkdir()
+                quote = shlex.quote
+                base = 'https://celikpanel.net:' + str(server.server_port) + '/releases/' + value['target']['version'] + '/linux/amd64'
+                wrapper = 'curl() { command /usr/bin/curl --noproxy "*" --resolve ' + quote('celikpanel.net:' + str(server.server_port) + ':127.0.0.1') + ' --cacert ' + quote(str(self.directory / 'worker-origin-ca.pem')) + ' --header "Host: celikpanel.net" "$@"; }\n'
+                script = ('set -eu\n' + wrapper + function.group() + '\nrelease_url=' + quote(base) +
+                          '\narchive=' + quote(value['target']['archive']) + '\nworkdir=' + quote(str(downloads)) +
+                          '\nsigned_archive_size=' + str(value['files']['worker-origin-archive.tar.gz']['size']) + '\n' +
+                          '\n'.join(fetches) + '\ncd "$workdir"\nsha256sum -c "$archive.sha256"\n')
+                completed = subprocess.run(['/bin/bash', '-c', script], capture_output=True, text=True, timeout=10)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertIn(value['target']['archive'] + ': OK', completed.stdout)
+                for path in ('/get.sh', '/worker-origin-tls-key.pem', '/../etc/passwd', '/releases/latest.txt?x=1', '/releases/%2e%2e/key'):
                     self.assertEqual(request(path)[0], 404)
                 self.assertEqual(request('/releases/latest.txt', 'other.invalid')[0], 404)
                 (root / 'worker-origin-latest').write_bytes(b'tampered')

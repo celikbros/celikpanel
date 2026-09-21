@@ -106,7 +106,7 @@ def validate_origin(intent, start, origin, expected):
         raise ValueError('real start differs from the sealed fixture origin')
 
 
-def bind_cut(intent, events, recovery):
+def validate_completed_cut(intent, events):
     expected = ['armed', 'worker_frozen', 'candidate_installed_checkpoint', 'recovery_fault_armed', 'kill_requested', 'kill_sent', 'released']
     if [event.get('event') for event in events] != expected:
         raise ValueError('real worker cut is not conclusively finished')
@@ -115,6 +115,10 @@ def bind_cut(intent, events, recovery):
     released = events[-1]
     if released.get('kill_sent') is not True or released.get('checkpoint_verified') is not True or released.get('reason') != 'exact-update-unit-killed':
         raise ValueError('real worker cut outcome is unconfirmed')
+
+
+def bind_cut(intent, events, recovery):
+    validate_completed_cut(intent, events)
     checkpoint, handoff = events[2], events[3].get('handoff', {})
     worker_identity = events[1].get('worker')
     bound = checkpoint.get('bound_worker', {})
@@ -155,6 +159,14 @@ def reboot(root, record, plan, node, operation, execute=False):
         if path.exists() or path.is_symlink(): raise ValueError('reset was already attempted; never retry')
     deadline = time.monotonic() + 600
     while time.monotonic() < deadline:
+        # The subordinate handoff exists only after the candidate checkpoint. A
+        # worker that exits earlier has a terminal cut result, not a handoff to
+        # wait for. Validate that result first and never turn it into a reset.
+        state, cut_raw = kill.shared.read_guest(root, record, plan, node, operation, 'update-kill')
+        cut_events = kill.validate_events(cut_raw, intent['identity'], operation)
+        if not cut_events or cut_events[-1].get('event') != 'released':
+            time.sleep(.1); continue
+        validate_completed_cut(intent, cut_events)
         try: recovery, raw, events = native.read_guest(root, record, plan, node, intent)
         except subprocess.CalledProcessError:
             time.sleep(.1); continue  # the subordinate intent does not predate the verified updater cut

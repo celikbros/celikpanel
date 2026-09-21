@@ -104,6 +104,13 @@ class CurrentWorkerBaselineTests(unittest.TestCase):
                 if member.isfile():self.assertEqual(path.read_bytes(),bundle.extractfile(member).read())
         self.assertEqual(stat.S_IMODE(self.root.stat().st_mode),0o700)
 
+    def test_post_install_foundation_must_match_real_policy81_commit(self):
+        prefix=("format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=81\nrelease-version="+baseline.VERSION+"\nrelease-commit="+baseline.COMMIT+"\n")
+        raw=(prefix+"".join(key+"="+"a"*64+"\n" for key in ("runner-sha256","service-sha256","timer-sha256","start-guard-sha256","agent-dropin-sha256","panel-dropin-sha256","protocol-sha256"))).encode()
+        self.assertEqual(baseline.verify_foundation_identity(raw,baseline.VERSION,81,baseline.COMMIT)["commit"],baseline.COMMIT)
+        for damaged in (raw.replace(b"sequence=81",b"sequence=80"),raw.replace(b"alpha.81",b"alpha.80"),raw.replace(baseline.COMMIT.encode(),b"e"*40),raw+b"extra=1\n"):
+            with self.assertRaises(ValueError):baseline.verify_foundation_identity(damaged,baseline.VERSION,81,baseline.COMMIT)
+
     def test_guest_driver_compiles_and_uses_original_install_and_enrollment(self):
         code=baseline.guest_driver(self.record,"debian13",self.node,"b"*64)
         tree=ast.parse(code)

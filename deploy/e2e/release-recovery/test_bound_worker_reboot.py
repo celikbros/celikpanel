@@ -1,9 +1,12 @@
 """Negative admission checks only; no QEMU or product mutation occurs here."""
 import copy
+from contextlib import ExitStack, contextmanager
 import importlib.util
 import json
 from pathlib import Path
-from unittest.mock import patch
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 import unittest
 
 SPEC = importlib.util.spec_from_file_location('tested_bound_reboot', Path(__file__).with_name('bound_worker_reboot.py'))
@@ -40,7 +43,8 @@ class BoundRebootTests(unittest.TestCase):
         handoff = {'schema': f.native.hand.SCHEMA, 'identity': self.identity, 'operation_id': self.op,
                    'updater': worker, 'intent': exact, 'intent_sha256': f.sha(f.native.hand.encoded(exact))}
         names = ['armed', 'worker_frozen', 'candidate_installed_checkpoint', 'recovery_fault_armed', 'kill_requested', 'kill_sent', 'released']
-        self.events = [{'event': name, 'identity': self.identity, 'operation_id': self.op} for name in names]
+        self.events = [{'schema': f.kill.EVENT_SCHEMA, 'at': '2026-09-21T18:00:00Z',
+                        'event': name, 'identity': self.identity, 'operation_id': self.op} for name in names]
         self.events[1]['worker'] = worker
         self.events[2].update(phase='active', worker=worker, snapshot=snapshot, manifest_sha256='5' * 64,
                               verified_files=150, installed_artifacts={'agent': 'f' * 64, 'panel': '0' * 64}, bound_worker=bound)
@@ -89,6 +93,91 @@ class BoundRebootTests(unittest.TestCase):
             elif changes == 'other-snapshot': events[2]['snapshot'] += 'x'
             else: events[2]['installed_artifacts']['agent'] = 'e' * 64
             with self.subTest(change=changes), self.assertRaises(ValueError): f.bind_cut(self.intent, events, self.recovery)
+
+    @contextmanager
+    def reboot_environment(self, streams):
+        with TemporaryDirectory() as temporary, ExitStack() as stack:
+            root = Path(temporary)
+            record, plan = {'fixture': 'registered'}, {'nodes': {'debian13': {'fixture': 'registered'}}}
+            stack.enter_context(patch.object(f.lab, 'checked_root', return_value=root))
+            stack.enter_context(patch.object(f.lab, 'load', return_value=(record, plan)))
+            stack.enter_context(patch.object(f.lab, 'process_guard'))
+            stack.enter_context(patch.object(f, 'load', return_value=(self.intent, {})))
+            reads = stack.enter_context(patch.object(f.kill.shared, 'read_guest', side_effect=[({}, raw) for raw in streams]))
+            subordinate = stack.enter_context(patch.object(f.native, 'read_guest', side_effect=AssertionError('no subordinate handoff is expected')))
+            sleep = stack.enter_context(patch.object(f.time, 'sleep'))
+            qmp = stack.enter_context(patch.object(f.native, 'QMP'))
+            save = stack.enter_context(patch.object(f.trial, 'save'))
+            yield root, record, plan, reads, subordinate, sleep
+            qmp.assert_not_called()
+            save.assert_not_called()
+            self.assertEqual(list(root.rglob('*')), [])
+
+    def exited_worker_events(self):
+        # Use the real guest cut loop's early-exit path rather than inventing a
+        # released event which may differ from the on-guest fixture protocol.
+        native = Mock()
+        native.observe.side_effect = [
+            {'worker': {'ActiveState': 'active'}, 'transaction': None},
+            {'worker': {'ActiveState': 'failed'}, 'transaction': None}]
+        events = []
+        def emit(event, **fields):
+            events.append({'schema': f.kill.EVENT_SCHEMA, 'identity': self.identity,
+                           'at': '2026-09-21T18:00:00Z', 'event': event, **fields})
+        args = SimpleNamespace(operation_id=self.op, recovery_action='reboot')
+        result = f.worker.base.run_kill(args, emit, native, pause=lambda _: None)
+        self.assertEqual(result, 2)
+        self.assertEqual(events[-1]['reason'], 'update-unit-exited-before-checkpoint')
+        native.kill.assert_not_called()
+        return events
+
+    def test_real_worker_exit_before_checkpoint_stops_without_handoff_or_reset(self):
+        events = self.exited_worker_events()
+        raw = b''.join(f.encoded(event) for event in events)
+        with self.reboot_environment([raw]) as (root, record, plan, reads, subordinate, sleep):
+            with self.assertRaisesRegex(ValueError, 'cut is not conclusively finished'):
+                f.reboot(root, record, plan, 'debian13', self.op, execute=True)
+            reads.assert_called_once_with(root, record, plan, 'debian13', self.op, 'update-kill')
+            subordinate.assert_not_called()
+            sleep.assert_not_called()
+
+    def test_pending_cut_then_failed_release_stops_at_first_terminal_read(self):
+        events = self.exited_worker_events()
+        streams = [f.encoded(events[0]), b''.join(f.encoded(event) for event in events)]
+        with self.reboot_environment(streams) as (root, record, plan, reads, subordinate, sleep):
+            with self.assertRaisesRegex(ValueError, 'cut is not conclusively finished'):
+                f.reboot(root, record, plan, 'debian13', self.op, execute=True)
+            self.assertEqual(reads.call_count, 2)
+            sleep.assert_called_once_with(.1)
+            subordinate.assert_not_called()
+
+    def test_unconfirmed_or_other_operation_release_never_polls_handoff(self):
+        cases = []
+        for key, value in [('kill_sent', False), ('checkpoint_verified', False), ('reason', 'observation-error:ProbeError')]:
+            events = copy.deepcopy(self.events); events[-1][key] = value
+            cases.append(b''.join(f.encoded(event) for event in events))
+        events = copy.deepcopy(self.events); events[-1]['operation_id'] = 'f' * 32
+        cases.append(b''.join(f.encoded(event) for event in events))
+        events = copy.deepcopy(self.events); events[-1]['identity']['nonce'] = 'e' * 64
+        cases.append(b''.join(f.encoded(event) for event in events))
+        cases.append(b''.join(f.encoded(event) for event in self.events)[:-1])
+        for raw in cases:
+            with self.subTest(raw_sha256=f.sha(raw)), self.reboot_environment([raw]) as (root, record, plan, reads, subordinate, sleep):
+                with self.assertRaises(ValueError): f.reboot(root, record, plan, 'debian13', self.op, execute=True)
+                self.assertEqual(reads.call_count, 1)
+                subordinate.assert_not_called()
+                sleep.assert_not_called()
+
+    def test_confirmed_cut_can_wait_for_handoff_but_never_reset_after_recovery_release(self):
+        raw = b''.join(f.encoded(event) for event in self.events)
+        with self.reboot_environment([raw, raw]) as (root, record, plan, reads, subordinate, sleep):
+            subordinate.side_effect = [f.subprocess.CalledProcessError(1, 'fixture-read'),
+                                       (self.recovery, b'', [{'event': 'released'}])]
+            with self.assertRaisesRegex(ValueError, 'recovery reset checkpoint missed'):
+                f.reboot(root, record, plan, 'debian13', self.op, execute=True)
+            self.assertEqual(reads.call_count, 2)
+            self.assertEqual(subordinate.call_count, 2)
+            sleep.assert_called_once_with(.1)
 
     def test_no_guest_or_qmp_access_without_execute(self):
         with patch.object(f.lab, 'checked_root') as check, patch.object(f.native, 'QMP') as qmp:

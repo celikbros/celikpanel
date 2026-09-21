@@ -152,12 +152,13 @@ func parseManifest(raw []byte, targetArch string) (manifest, error) {
 	}
 	result = manifest{Sequence: values[1], Version: values[2], Commit: values[3], PublishedAt: values[4], OS: values[5], Arch: values[6], Archive: values[7], ArchiveSHA256: values[8], ArchiveSize: values[9]}
 	if values[0] != "celikpanel-release-manifest-v2" ||
-		(result.Version != "v0.1.0-alpha.79" && result.Version != "v0.1.0-alpha.80") ||
+		(result.Version != "v0.1.0-alpha.79" && result.Version != "v0.1.0-alpha.80" && result.Version != boundWorkerTargetVersion) ||
+		(result.Version == boundWorkerTargetVersion && result.Sequence != "82") ||
 		!positiveDecimal(result.Sequence, math.MaxInt64) || !hex40.MatchString(result.Commit) ||
 		result.OS != "linux" || result.Arch != targetArch || (targetArch != "amd64" && targetArch != "arm64") ||
 		result.Archive != "celikpanel-"+result.Version+"-"+result.OS+"-"+result.Arch+".tar.gz" ||
 		!hex64.MatchString(result.ArchiveSHA256) || !positiveDecimal(result.ArchiveSize, 2147483648) {
-		return result, errors.New("manifest is not a canonical Alpha79/Alpha80 target for this guest")
+		return result, errors.New("manifest is not a canonical supported fixture target for this guest")
 	}
 	published, err := time.Parse("2006-01-02T15:04:05Z", result.PublishedAt)
 	if err != nil || published.UTC().Format("2006-01-02T15:04:05Z") != result.PublishedAt {
@@ -215,6 +216,9 @@ func requestFor(marker markerIdentity, target manifest, current transport.System
 	}
 	if !hex32.MatchString(requestID) {
 		return transport.SystemUpdateStartRequest{}, errors.New("request ID must be 32 lowercase hexadecimal characters")
+	}
+	if err := validateBoundWorkerCurrent(target, current); err != nil {
+		return transport.SystemUpdateStartRequest{}, err
 	}
 	return transport.SystemUpdateStartRequest{
 		RequestID: requestID, TargetVersion: target.Version, TargetCommit: target.Commit,
@@ -370,6 +374,17 @@ func run(ctx context.Context, nonce, manifestPath, signaturePath, mode, explicit
 	if err != nil {
 		return err
 	}
+	var boundOrigin []byte
+	if target.Version == boundWorkerTargetVersion {
+		origin, err := protectedRead(boundWorkerOriginPath, 16384, false)
+		if err != nil {
+			return errors.New("current-producer target requires its sealed disposable origin intent")
+		}
+		if err := validateBoundWorkerOrigin(origin, marker, target, raw, signature, key); err != nil {
+			return err
+		}
+		boundOrigin = origin
+	}
 	requestID := requestIdentity(marker, target)
 	if explicitRequestID != "" {
 		if !hex32.MatchString(explicitRequestID) {
@@ -392,6 +407,11 @@ func run(ctx context.Context, nonce, manifestPath, signaturePath, mode, explicit
 	var current transport.SystemUpdateCheckResponse
 	if err := callAgent(ctx, "Agent.CheckSystemUpdate", &transport.Empty{}, &current); err != nil {
 		return err
+	}
+	if target.Version == boundWorkerTargetVersion {
+		if err := validateBoundWorkerPredecessor(boundOrigin, current.CurrentCommit); err != nil {
+			return err
+		}
 	}
 	request, err := requestFor(marker, target, current, requestID)
 	if err != nil {

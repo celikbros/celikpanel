@@ -27,6 +27,7 @@ INTENT = GUEST_ROOT / 'worker-origin-intent.json'
 SCHEMA = 'celikpanel/worker-fixture-origin/v1'
 PREFIX = 'worker-origin-'
 MAX_ARCHIVE = 100 * 1024 * 1024
+RELEASE_POLICY = {'version': 'v0.1.0-alpha.82', 'current': 82, 'previous': 81, 'previous_version': 'v0.1.0-alpha.81'}
 
 
 def module(name):
@@ -136,10 +137,13 @@ def prepare(root, node_name, archive, version, commit, sequence, repository):
         raise ValueError('invalid fixture release identity')
     archive = Path(archive)
     source = module('candidate_archive')
-    candidate = source.inspect_archive(archive, digest(archive))
-    if candidate['version'] != version or candidate['commit'] != commit:
+    candidate = source.inspect_archive(archive, digest(archive), release_policy=RELEASE_POLICY)
+    if candidate['version'] != version or candidate['commit'] != commit or sequence != RELEASE_POLICY['current']:
         raise ValueError('candidate version/commit differs')
     proof = source.verify_committed_source(candidate, Path(repository))
+    proof['release_policy'] = candidate['release_policy']
+    if proof['release_policy']['previous_commit'] == commit:
+        raise ValueError('candidate release policy predecessor must be a distinct commit')
     target = directory / 'worker-origin-archive.tar.gz'
     private_write(target, read_file(archive, MAX_ARCHIVE, stat.S_IMODE(archive.stat().st_mode)))
     if digest(target) != candidate['archive_sha256']:
@@ -159,9 +163,11 @@ def prepare(root, node_name, archive, version, commit, sequence, repository):
     run(['openssl', 'pkeyutl', '-verify', '-pubin', '-rawin', '-inkey', str(directory / 'worker-origin-public.pem'),
          '-in', str(manifest), '-sigfile', str(signature)])
     private_write(directory / 'worker-origin-latest', (version + '\n').encode())
+    private_write(directory / 'worker-origin-archive.sha256', checksum_bytes(dict(fields)))
     base = '/releases/' + version + '/linux/amd64/'
     routes = {'/releases/latest.txt': 'worker-origin-latest', base + 'release-manifest-v2': manifest.name,
-              base + 'release-manifest-v2.sig': signature.name, base + archive_name: target.name}
+              base + 'release-manifest-v2.sig': signature.name, base + archive_name: target.name,
+              base + archive_name + '.sha256': 'worker-origin-archive.sha256'}
     served = set(routes.values()) | {'worker-origin-public.pem', 'worker-origin-ca.pem',
                                    'worker-origin-tls.pem', 'worker-origin-tls-key.pem'}
     intent = {'schema': SCHEMA, 'provenance': 'unpublished-local-artifact-with-disposable-fixture-trust',
@@ -215,6 +221,15 @@ def guest_intent(path, nonce):
     return intent
 
 
+def checksum_bytes(target):
+    version, name, sha = target['version'], target['archive'], target['archive_sha256']
+    if (not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?', version)
+            or name != 'celikpanel-' + version + '-linux-amd64.tar.gz'
+            or not re.fullmatch('[0-9a-f]{64}', sha)):
+        raise ValueError('invalid exact archive checksum identity')
+    return (sha + '  ' + name + '\n').encode('ascii')
+
+
 def validate_intent(intent):
     target = intent['target']
     version = target['version']
@@ -224,7 +239,8 @@ def validate_intent(intent):
     base = '/releases/' + version + '/linux/amd64/'
     expected = {'/releases/latest.txt': 'worker-origin-latest', base + 'release-manifest-v2': 'worker-origin-manifest',
                 base + 'release-manifest-v2.sig': 'worker-origin-signature',
-                base + 'celikpanel-' + version + '-linux-amd64.tar.gz': 'worker-origin-archive.tar.gz'}
+                base + 'celikpanel-' + version + '-linux-amd64.tar.gz': 'worker-origin-archive.tar.gz',
+                base + 'celikpanel-' + version + '-linux-amd64.tar.gz.sha256': 'worker-origin-archive.sha256'}
     files = set(expected.values()) | {'worker-origin-public.pem', 'worker-origin-ca.pem',
                                       'worker-origin-tls.pem', 'worker-origin-tls-key.pem'}
     if intent['routes'] != expected or set(intent['files']) != files:
@@ -233,6 +249,19 @@ def validate_intent(intent):
         if (set(item) != {'sha256', 'size'} or not re.fullmatch('[0-9a-f]{64}', item['sha256'])
                 or type(item['size']) is not int or not 0 < item['size'] <= MAX_ARCHIVE):
             raise ValueError('invalid sealed origin file')
+    policy = intent['source_proof']['release_policy']
+    if (set(policy) != {'format', 'version', 'current', 'previous', 'previous_version', 'previous_commit', 'sha256'}
+            or policy['format'] != 'celikpanel-release-sequence-policy-v1'
+            or any(policy[key] != wanted or type(policy[key]) is not type(wanted) for key, wanted in RELEASE_POLICY.items())
+            or target.get('sequence') != str(policy['current']) or target['version'] != policy['version']
+            or not re.fullmatch('[0-9a-f]{40}', policy['previous_commit']) or policy['previous_commit'] == target['commit']):
+        raise ValueError('origin release policy differs from the target transition')
+    canonical_policy = ''.join(key + '=' + str(policy[key]) + '\n' for key in ('format', 'version', 'current', 'previous', 'previous_version', 'previous_commit')).encode('ascii')
+    if policy['sha256'] != hashlib.sha256(canonical_policy).hexdigest():
+        raise ValueError('origin release policy checksum differs')
+    checksum = checksum_bytes(target)
+    if intent['files']['worker-origin-archive.sha256'] != {'sha256': hashlib.sha256(checksum).hexdigest(), 'size': len(checksum)}:
+        raise ValueError('origin checksum sidecar differs from the exact target')
 
 
 def provision(path, nonce):

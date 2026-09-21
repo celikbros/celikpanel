@@ -37,7 +37,8 @@ lab = module("current_worker_baseline_lab", "lab.py")
 archive_tools = module("current_worker_baseline_archive", "candidate_archive.py")
 VERSION = "v0.1.0-alpha.81"
 SEQUENCE = 81
-COMMIT = "eb14273227340d811f1db8500e6886c5b23d7f24"
+RELEASE_POLICY = {"version": VERSION, "current": SEQUENCE, "previous": 80, "previous_version": "v0.1.0-alpha.80"}
+COMMIT = "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00"
 SCHEMA = "celikpanel/current-worker-baseline-intent/v1"
 RESULT_SCHEMA = "celikpanel/current-worker-baseline-result/v1"
 PRIVATE = "/root/celikpanel-release-recovery-lab"
@@ -147,8 +148,22 @@ def extract_current_archive(source, packed, candidate, archive):
             os.close(descriptor)
 
 
+def verify_foundation_identity(raw, version, sequence, commit):
+    """Read-only identity check after the real installer publishes foundation."""
+    fields=("format","protocol","sequence","release-version","release-commit","runner-sha256","service-sha256","timer-sha256","start-guard-sha256","agent-dropin-sha256","panel-dropin-sha256","protocol-sha256")
+    try:lines=raw.decode("ascii").splitlines(keepends=True)
+    except UnicodeDecodeError as error:raise ValueError("installed foundation is not ASCII") from error
+    if len(lines)!=len(fields) or any(not line.startswith(key+"=") or not line.endswith("\n") or "\r" in line for key,line in zip(fields,lines)):
+        raise ValueError("installed foundation is noncanonical")
+    value={key:line[len(key)+1:-1] for key,line in zip(fields,lines)}
+    expected={"format":"celikpanel-release-recovery-foundation-v1","protocol":"1","sequence":str(sequence),"release-version":version,"release-commit":commit}
+    if any(value[key]!=wanted for key,wanted in expected.items()) or any(len(value[key])!=64 or any(char not in "0123456789abcdef" for char in value[key]) for key in fields[5:]):
+        raise ValueError("installed foundation differs from the verified baseline release")
+    return {"version":version,"sequence":sequence,"commit":commit,"sha256":hashlib.sha256(raw).hexdigest()}
+
+
 def guest_driver(record, node_name, node, intent_sha256):
-    return lab.guest_guard(record, node_name, node) + "\n" + inspect.getsource(extract_current_archive) + "\n" + GUEST_DRIVER.replace(
+    return lab.guest_guard(record, node_name, node) + "\n" + inspect.getsource(extract_current_archive) + "\n" + inspect.getsource(verify_foundation_identity) + "\n" + GUEST_DRIVER.replace(
         "INTENT_SHA256_LITERAL", repr(intent_sha256)).replace("FRESH_PATHS_LITERAL", repr(FRESH_PATHS))
 
 
@@ -218,7 +233,7 @@ with os.fdopen(log_fd,"wb") as output:
         spec=importlib.util.spec_from_file_location("current_baseline_archive",helper_path)
         archive=importlib.util.module_from_spec(spec);sys.modules[spec.name]=archive;spec.loader.exec_module(archive)
         packed=ROOT/"current-worker-baseline.tar.gz"
-        candidate=archive.inspect_archive(packed,intent["candidate"]["archive_sha256"])
+        candidate=archive.inspect_archive(packed,intent["candidate"]["archive_sha256"],release_policy={"version":"v0.1.0-alpha.81","current":81,"previous":80,"previous_version":"v0.1.0-alpha.80"})
         if candidate!=intent["candidate"]:raise ValueError("baseline archive identity differs")
         source=ROOT/"current-worker-baseline-source"
         extract_current_archive(source,packed,candidate,archive)
@@ -241,6 +256,8 @@ with os.fdopen(log_fd,"wb") as output:
         trusted_key=private_read(Path("/etc/celikpanel/release-signing-ed25519.pem"),16384,(0o644,))
         if hashlib.sha256(trusted_key).hexdigest()!=intent["public_key_sha256"]:raise ValueError("enrolled fixture key differs")
         proof["sequence_floor_sha256"]=hashlib.sha256(floor).hexdigest();proof["public_key_sha256"]=hashlib.sha256(trusted_key).hexdigest()
+        foundation=private_read(Path("/var/lib/celikpanel-release-state/recovery-foundation.v1"),2048)
+        proof["foundation"]=verify_foundation_identity(foundation,intent["version"],intent["sequence"],candidate["commit"])
         services={};installed={};running={}
         for name in ("agent","panel"):
             def observe():
@@ -273,7 +290,7 @@ def start(root, record, plan, node_name, execute, *, archive_path, archive_sha25
     intent_path(root, node_name)
     if public_key_path != PUBLIC_KEY or not archive_tools.SHA.fullmatch(public_key_sha256):
         raise ValueError("only the fixed isolated fixture public key is accepted")
-    candidate = archive_tools.inspect_archive(Path(archive_path), archive_sha256)
+    candidate = archive_tools.inspect_archive(Path(archive_path), archive_sha256, release_policy=RELEASE_POLICY)
     if candidate["version"] != VERSION or candidate["commit"] != COMMIT or "deploy/enroll-signed-release-trust.sh" not in candidate["files"]:
         raise ValueError("baseline must be the complete Alpha81 current-feature archive")
     source = archive_tools.verify_committed_source(candidate, HERE.parents[2])
