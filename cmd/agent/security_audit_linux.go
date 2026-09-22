@@ -175,6 +175,12 @@ func inspectSecurityAuditFirewallAndListeners() (result securityAuditFirewallIns
 
 	firewallMu.Lock()
 	defer firewallMu.Unlock()
+	lock, lockErr := (hostFirewallCommandRunner{ctx: ctx}).AcquireFirewallLock()
+	if lockErr != nil {
+		return result, nil, lockErr
+	}
+	defer lock.Close()
+
 	defer func() {
 		result.persistence = inspectSecurityAuditFirewallSnapshot(
 			firewallSnapshotPath, result,

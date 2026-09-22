@@ -56,7 +56,8 @@ const (
 // The production path is replaceable only by focused crash-recovery tests.
 var firewallSnapshotPath = "/etc/celikpanel/firewall.nft"
 
-// firewallMu serializes status, apply and boot restore. nft itself applies a
+// firewallMu serializes local status, apply and boot restore; the shared
+// native process lock additionally excludes independent boot consumers. nft itself applies a
 // batch atomically, but without this process lock a Status→Apply sequence could
 // observe a table that another RPC removes a millisecond later.
 //
@@ -90,6 +91,7 @@ var firewallLastPersistenceError string
 // Üretim çalıştırıcısı yine yalnız bu dosyada oluşturulan sabit nft/ss
 // komutlarını çağırır; çağıran taraf komut veya argüman veremez.
 type firewallCommandRunner interface {
+	AcquireFirewallLock() (io.Closer, error)
 	LookPath(string) (string, error)
 	Output(string, ...string) ([]byte, error)
 	CombinedOutput(string, []string, string) ([]byte, error)
@@ -503,6 +505,12 @@ func applyFirewallWithRunner(runner firewallCommandRunner, req *ApplyFirewallReq
 func applyFirewallWithRunnerAndStore(runner firewallCommandRunner, store firewallStateStore, req *ApplyFirewallRequest, resp *FirewallStatusResponse) error {
 	firewallMu.Lock()
 	defer firewallMu.Unlock()
+	lock, err := runner.AcquireFirewallLock()
+	if err != nil {
+		reportFirewallExclusion(resp, err)
+		return nil
+	}
+	defer lock.Close()
 	return applyFirewallLocked(runner, store, req, resp)
 }
 
@@ -835,6 +843,12 @@ func (a *Agent) FirewallStatus(_ *transport.Empty, resp *FirewallStatusResponse)
 func firewallStatusWithRunnerAndStore(runner firewallCommandRunner, store firewallStateStore, resp *FirewallStatusResponse) error {
 	firewallMu.Lock()
 	defer firewallMu.Unlock()
+	lock, err := runner.AcquireFirewallLock()
+	if err != nil {
+		reportFirewallExclusion(resp, err)
+		return nil
+	}
+	defer lock.Close()
 	return firewallStatusLocked(runner, store, resp)
 }
 
@@ -1258,6 +1272,12 @@ func verifyRootSSHDProcess(pid int) error {
 func restoreFirewallSnapshot() error {
 	firewallMu.Lock()
 	defer firewallMu.Unlock()
+	lock, lockErr := (hostFirewallCommandRunner{}).AcquireFirewallLock()
+	if lockErr != nil {
+		return lockErr
+	}
+	defer lock.Close()
+
 	err := restoreFirewallSnapshotLocked(hostFirewallCommandRunner{}, fileFirewallStateStore{path: firewallSnapshotPath})
 	if err != nil {
 		firewallLastRestoreError = fmt.Sprintf("persistent firewall restore failed: %v", err)
@@ -1271,6 +1291,12 @@ func restoreFirewallSnapshot() error {
 func checkFirewallRestore() error {
 	firewallMu.Lock()
 	defer firewallMu.Unlock()
+	lock, lockErr := (hostFirewallCommandRunner{}).AcquireFirewallLock()
+	if lockErr != nil {
+		return lockErr
+	}
+	defer lock.Close()
+
 	return checkFirewallRestoreLocked(hostFirewallCommandRunner{}, fileFirewallStateStore{path: firewallSnapshotPath})
 }
 

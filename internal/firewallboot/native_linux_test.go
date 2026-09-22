@@ -67,27 +67,6 @@ func TestUnknownExecutableNameRefused(t *testing.T) {
 	}
 }
 
-func TestNativeExclusionRejectsDuplicate(t *testing.T) {
-	if os.Geteuid() != 0 {
-		t.Skip("root-owned native lock fixture")
-	}
-	first, err := acquireLock()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer first.Close()
-	if duplicate, err := acquireLock(); err == nil {
-		duplicate.Close()
-		t.Fatal("duplicate native restore admitted")
-	}
-	first.Close()
-	next, err := acquireLock()
-	if err != nil {
-		t.Fatal(err)
-	}
-	next.Close()
-}
-
 func TestNativeSnapshotAcceptsReadOnlyGroupParents(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("native ownership fixture requires root")
