@@ -207,3 +207,15 @@ Bunlar kaynak/bileşen kanıtıdır. Önceki yerel A/B/A deneyi tam paket birimi
 kullanır fakat normal uygulama güncelleme gövdesini kanıtlamaz. Tam imzalı
 güncelleme/otomatik geri alma, hatalı boot konsol kurtarması, Arch ve kalan
 iş yükü/yenileme matrisi açıktır. Kurulu kullanıcı sunucusu değiştirilmez.
+
+
+Sonraki [Debian AS/AT yerel kabulü](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md),
+yalıtılmış test imzasıyla gerçek Agent güncelleme yürütücüsünü kapsar:
+bağımsız birim yayımlanır; ikinci denemede aday birim/yardımcı yayınından
+sonra yürütücü öldürülür ve yerel kurtarma eski birimi otomatik geri getirir.
+İki yol da politika, ayrı tablo, yardımcı ve HTTPS erişimini yeniden açılışta korur.
+AS, eski kapalı boot durumunu koruduktan sonra test için açıkça etkinleştirildi;
+AT, baştan etkin olan durumu korudu. Üretim arayüzü/imzası, Arch, bozuk yardımcının
+boot/konsol kurtarması ve P0.5'in diğer kabul işleri açıktır.
+
+Arch AU, gerçek güncellemede yeni firewall unit’i yayımlandıktan sonraki kesintiyi, otomatik geri almayı ve yeni açılışı doğruladı. [Kanıt ve sınırlar](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md#arch-automatic-rollback-and-boot-au). Arch başarılı ileri güncelleme deneyi ve P0.5 bütünü açıktır. Eski Agent’ın geçici platform tespit hatasını kalıcı güncelleme reddi olarak saklaması ayrı bir P0.2/P0.4 düzeltmesi gerektirir; test Agent’ını yeniden başlatmak bu kabul maddesini kapatmaz.

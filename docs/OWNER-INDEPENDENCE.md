@@ -219,3 +219,19 @@ rollback. These are source/component checks. Previous native A/B/A evidence uses
 the exact bundled unit but not the normal application update body. Full signed
 update/automatic rollback, failed-boot console recovery, Arch and the remaining
 workload/renewal matrix remain open. No installed owner server is changed.
+
+
+The subsequent [Debian AS/AT native update acceptance](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md)
+now covers the actual Agent signed worker with isolated fixture trust: a normal
+update publishes the independent unit; a second worker is killed after candidate
+unit/helper publication and native recovery automatically restores the old unit.
+Both branches retain policy, the unrelated table, the helper and working HTTPS
+across orderly boots. AS explicitly enabled boot after preserving its previously
+disabled state; AT preserved its already enabled baseline. Production UI/trust,
+Arch, failed-helper boot/console recovery and the rest of P0.5 remain open.
+
+Arch AU now passes the same exact candidate-unit publication cut and automatic
+rollback, followed by a distinct boot with policy, unrelated table, enablement and
+HTTPS preserved. [Native evidence](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md#arch-automatic-rollback-and-boot-au)
+retains the preliminary baseline platform-cache refusal; it is not silently
+counted as automatic recovery. Successful Arch forward update remains open.
