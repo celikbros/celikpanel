@@ -125,3 +125,20 @@ These functions are compiled but not exposed as new RPC/CLI admission. Initial
 owner intent provisioning, authenticated setup dispatch and boot dispatch remain
 open. The guarded native fixture now supports joining these actual components;
 its result must be recorded separately from the fixture-native process tests.
+
+### Combined native acceptance
+
+[Joined Arch evidence](../deploy/e2e/release-recovery/MAIL-JOINED-ENROLLMENT-BE.json)
+uses source `055851b8b2e9e0fbc8ac6fecabe7fca0ac814eed` with the actual common
+reservation writer, prepared executor and production systemctl adapter. Native
+processes are killed after timer start and after inverse timer stop. Fresh-process
+inverse finishes the same operation and publishes `restored`. A final exact retry
+performs zero native mutations and leaves the terminal ledger byte-for-byte
+unchanged. The original shared-directory inventory is durably captured before
+work; final native files/units are absent and retained inverse evidence remains.
+
+The trial passes on its first run. Its owner intent and initial empty ledger are
+explicit test admission, with current-source Agent compatibility material retained
+in the protected lab directory; the normal installed management paths are absent.
+This closes the combined writer/executor/native-adapter trial, not production UI
+admission, boot dispatcher, old-release compatibility or real mail workload tests.
