@@ -145,3 +145,30 @@ owner-edited output, and two real Go 1.26.5 builds on WSL's Linux filesystem und
 022/077 umasks produced identical payload bytes and 0755/0644 modes. The Windows
 mount's synthetic 0777 modes were refused; no permission check was weakened.
 This establishes artifact reproducibility, not full release/native activation.
+
+
+## Durable firewall preparation (unit activation still pending)
+
+The candidate recovery entry now supports `prepare-firewall-runtime --source
+<absolute reviewed firewall-runtime directory> --transaction-fd 9`. It requires
+root and the existing exclusive release-lock descriptor with no active transaction
+markers. The caller must first admit the outer release; this internal command
+cannot initiate an update, install a unit, apply firewall rules or start a service.
+It is not dispatched to an older selected recovery executable.
+
+Preparation shares recovery's pinned root-owned directory/file validation and
+publishes only a complete verified generation below the fixed independent root.
+Each file and its directory are synced before no-replace rename; the parent is
+synced before reporting success. An existing generation is reverified and synced
+on retry, never overwritten. Partial stages and old generations are retained.
+Owner edits, substituted paths, unexpected files and changed source evidence stop
+preparation before any unit transition. No policy or installed-unit format changes.
+
+Root child-process tests pass for inherited-lock enforcement, active transaction
+refusal, unsafe source metadata, late source/destination changes, collisions and
+retained predecessors. Actual SIGKILL at first-file, durable-stage, published and
+parent-durable boundaries is followed by successful idempotent preparation.
+These are local Linux filesystem/process tests, not power-loss or native service
+activation acceptance. The full runtime/CLI race suite and vet also pass. Automatic
+installer/update wiring, exact unit transition, rollback helper retention proofs
+and the remaining workload matrix are still open under P0.5.
