@@ -246,6 +246,10 @@ func (m *serviceMutationManager) recoverPersistedMailHostCertificateLocked(
 	}
 	runtime.job.ErrorCode = "agent_restart_during_mail_host_certificate"
 	runtime.job.ErrorMessage = "The agent is reconciling mail host certificate publication after a restart."
+	if m.mailRenewalScope != nil {
+		runtime.job.ErrorCode = "mail_renewal_selected_recovery"
+		runtime.job.ErrorMessage = "Independent mail renewal is completing the already selected certificate for this recorded operation."
+	}
 	runtime.job.WorkerPID = 0
 	runtime.job.WorkerStarted = ""
 	runtime.job.WorkerCommand = ""

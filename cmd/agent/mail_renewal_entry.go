@@ -40,13 +40,23 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 		if !found {
 			return 0
 		}
-		if _, err = decodeMailHostRenewal(raw); err != nil {
+		var pending mailHostRenewal
+		if pending, err = decodeMailHostRenewal(raw); err != nil {
 			break
 		}
 		if err = prepareIndependentMailRuntime(); err != nil {
 			break
 		}
 		err = deployPendingMailHostCertificate()
+		if errors.Is(err, errMailRenewalCompletionUnverified) || errors.Is(err, errMailRenewalRecoveryRequired) {
+			// Complete only an interrupted publication already selected for this
+			// exact pending source. No new request or general recovery dispatch.
+			if recoveryErr := recoverIndependentSelectedMailRenewal(pending); recoveryErr != nil {
+				err = errors.Join(err, recoveryErr)
+			} else {
+				err = deployPendingMailHostCertificate()
+			}
+		}
 	}
 	if err != nil {
 		// Native output/configuration never becomes a command-line error response.

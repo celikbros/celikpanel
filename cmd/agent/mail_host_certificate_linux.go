@@ -210,21 +210,23 @@ func queueMailHostCertificateRenewal(lineage string) error {
 }
 
 func clearMailHostCertificateRenewal(expected mailHostRenewal) error {
-	return acknowledgeMailHostRenewal(expected, func() (mailHostCertificateReceipt, error) {
-		fd, err := openTrustedPanelTLSDirectoryOwned(managedMailHostTLSDir, 0)
-		if err != nil {
-			return mailHostCertificateReceipt{}, err
-		}
-		defer unix.Close(fd)
-		_, receipt, _, _, found, err := readCurrentMailHostCertificateVersionAt(fd)
-		if err != nil {
-			return mailHostCertificateReceipt{}, err
-		}
-		if !found {
-			return mailHostCertificateReceipt{}, errors.New("selected mail certificate evidence unavailable")
-		}
-		return receipt, nil
-	}, removeMailHostRenewalUnderPublicationLock)
+	return acknowledgeMailHostRenewal(expected, readSelectedMailHostReceipt, removeMailHostRenewalUnderPublicationLock)
+}
+
+func readSelectedMailHostReceipt() (mailHostCertificateReceipt, error) {
+	fd, err := openTrustedPanelTLSDirectoryOwned(managedMailHostTLSDir, 0)
+	if err != nil {
+		return mailHostCertificateReceipt{}, err
+	}
+	defer unix.Close(fd)
+	_, receipt, _, _, found, err := readCurrentMailHostCertificateVersionAt(fd)
+	if err != nil {
+		return mailHostCertificateReceipt{}, err
+	}
+	if !found {
+		return mailHostCertificateReceipt{}, errors.New("selected mail certificate evidence unavailable")
+	}
+	return receipt, nil
 }
 
 // Caller owns the common host, ledger publication and certificate publication

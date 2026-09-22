@@ -14,7 +14,7 @@ var errMailRenewalRecoveryRequired = errors.New("mail renewal paused: retained s
 
 // This constructor never invokes general Agent recovery. Even the same renewal
 // left active by another process is retained, not guessed failed or replayed.
-// The ordinary Agent still owns supported interrupted-operation recovery.
+// Exact already-selected recovery is a separate, narrowly admitted path.
 func newMailRenewalMutationManager(stateDir, lockPath string, request *ServiceMutationBeginRequest) (*serviceMutationManager, error) {
 	if request == nil || !validMutationIdentity(request.RequestID) ||
 		!validMutationIdentity(request.OwnerID) || request.Kind != "mail_host_certificate" ||
@@ -39,6 +39,12 @@ func (m *serviceMutationManager) observeMailRenewalAdmissionLocked() error {
 	if m.ledger.ActiveRequestID != "" {
 		return errors.Join(errMailRenewalRecoveryRequired, errServiceMutationBusy)
 	}
+	return m.observeMailRenewalEvidenceLocked()
+}
+
+// This read-only portion is shared by new admission and exact selected recovery.
+// The latter separately proves its one active job rather than erasing the pointer.
+func (m *serviceMutationManager) observeMailRenewalEvidenceLocked() error {
 	for _, job := range m.ledger.Jobs {
 		if job.Status == serviceMutationStatusPending {
 			return errMailRenewalRecoveryRequired

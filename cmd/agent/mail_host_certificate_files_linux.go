@@ -100,6 +100,9 @@ func reconcilePersistedMailHostCertificateHostAt(
 		dirFD, openErr := openTrustedPanelTLSDirectoryOwned(tlsDir, 0)
 		if openErr != nil {
 			if errors.Is(openErr, os.ErrNotExist) {
+				if mailHostCertificateUsesScopedRenewal(ctx) {
+					return errMailRenewalCompletionUnverified
+				}
 				return nil
 			}
 			return openErr
@@ -124,6 +127,11 @@ func reconcilePersistedMailHostCertificateHostAt(
 			}
 			success = true
 			return nil
+		}
+		if mailHostCertificateUsesScopedRenewal(ctx) {
+			// Independent recovery may reload the exact selected version only.
+			// A changed selection never authorizes cleanup of other generations.
+			return errMailRenewalCompletionUnverified
 		}
 		matches, scanErr := findMailHostCertificateVersionsAt(
 			dirFD, requestID, qualifier, domain,
