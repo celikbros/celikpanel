@@ -919,6 +919,12 @@ chmod 0755 -- "$SOURCE_ROOT/bin/panel" "$SOURCE_ROOT/bin/agent" \
     "$SOURCE_ROOT/deploy/release-recovery-runner.sh" \
     "$SOURCE_ROOT/deploy/finalize-pending-rollback.sh"
 
+# The independent firewall artifact is additive; historical archives lack it.
+# Preserve its executable mode inside the already admitted staging tree only.
+if [[ -d "$SOURCE_ROOT/firewall-runtime" ]]; then
+    chmod 0755 -- "$SOURCE_ROOT/firewall-runtime/restore"
+fi
+
 validate_release_tree "$SOURCE_ROOT" 0
 validate_recovery_runtime_artifact "$SOURCE_ROOT"
 sync_release_tree_durably "$SOURCE_ROOT"

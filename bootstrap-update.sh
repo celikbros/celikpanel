@@ -348,6 +348,10 @@ echo "==> Building matching panel and agent / Eşleşen panel ve agent derleniyo
     run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/agent-checker "${agent_checker_sources[@]}"
     run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/panel-checker "${panel_checker_sources[@]}"
     run_clean "$go_bin" run ./deploy/recovery/bundle --source-root . --binary-root bin --output recovery-runtime
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/firewall-restore ./cmd/firewall-restore
+    run_clean "$go_bin" run ./deploy/firewall/bundle --binary bin/firewall-restore --output firewall-runtime
+    # Retain the helper only in its independent artifact, not the application bin resource.
+    rm -- bin/firewall-restore
 )
 
 echo "==> Building matching web artifact / Eşleşen web ürünü derleniyor"
@@ -381,6 +385,7 @@ chmod 0755 \
     "$incomplete_root/bin/recovery" \
     "$incomplete_root/bin/agent-checker" \
     "$incomplete_root/bin/panel-checker" \
+    "$incomplete_root/firewall-runtime/restore" \
     "$incomplete_root/recovery-runtime/bin/recovery" \
     "$incomplete_root/recovery-runtime/bin/agent-checker" \
     "$incomplete_root/recovery-runtime/bin/panel-checker" \

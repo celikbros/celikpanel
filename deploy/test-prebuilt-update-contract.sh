@@ -237,6 +237,9 @@ validate_alpha4_pre_snapshot_cleanup_contract() (
 [[ -f "$bootstrap" && ! -L "$bootstrap" ]] || fail "bootstrap is missing or unsafe"
 bash -n "$bootstrap"
 
+require_literal 'if [[ -d "$SOURCE_ROOT/firewall-runtime" ]]; then'
+require_literal 'chmod 0755 -- "$SOURCE_ROOT/firewall-runtime/restore"'
+
 require_literal 'RELEASES_ROOT=/var/backups/celikpanel/releases'
 require_literal 'for required_command in awk bash chmod chown cmp cut dirname env find flock getent grep id mv od'
 require_literal 'prebuilt source is outside the fixed download staging boundary'
