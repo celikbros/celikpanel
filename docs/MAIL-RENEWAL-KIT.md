@@ -417,3 +417,34 @@ installed-panel update is enabled by this component.
 now proves actual idle loading, two process interruptions and same-operation
 compensation to positive absence. Two preparation refusals are retained. No timer
 activation, mail workload or whole-update acceptance is claimed by this trial.
+
+## Initial native timer enablement and inverse (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The private enablement phase now requires the
+exact completed initial file/load records and current native inodes. It stages
+one fixed systemd wants symlink, syncs it, and publishes an immutable
+`celikpanel-mail-renewal-enable/v1` plan binding the file-plan digest, protected
+parent/stage identities, symlink inode, metadata and exact target. Unrecorded
+staging directories are retained and never adopted after an interrupted prepare.
+
+Only that recorded link can move into `timers.target.wants`, using no-replace
+rename. Inverse compensation durably records its direction before moving the
+same link back. Current owner links, same-target replacements, parent changes,
+extra stage contents, hard links, attributes or unknown native observations are
+refused. Original files are not normalized. Only rename-induced ctime drift on
+the recorded inode is permitted. Both parents are synced again on re-entry.
+
+Actual daemon-reload must verify enabled/inactive after forward publication or
+disabled/inactive after inverse. A busy service or active/overridden timer blocks
+this phase; no timer/service start or stop capability exists here. A completed
+receipt is revalidated against current link identity and native state. File
+compensation cannot start until the exact enablement inverse receipt and link
+absence are proved, and its mutation barriers retain that pinned proof. A future
+composite dispatcher must also retain the native inactivity/exclusion boundary.
+
+The native wants parent must already exist and be protected; this primitive does
+not silently create or adopt a missing directory. Initial parent publication,
+timer activity transitions, accepted production dispatch and historical old-Agent
+hook-writer compatibility remain open. Existing certificate/ledger/kit schemas
+are unchanged. Enabling a timer makes it eligible for the native boot target;
+this phase alone does not prove current activity or a completed renewal.

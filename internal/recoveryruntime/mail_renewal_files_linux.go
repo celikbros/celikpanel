@@ -598,6 +598,21 @@ func applyMailFilesAt(operation, captureSHA, direction string, fd int, paths mai
 	if err = plan.validate(c); err != nil {
 		return err
 	}
+	verifyEnable := func() error { return nil }
+	if direction == "rollback" {
+		var closeEnable func()
+		verifyEnable, closeEnable, err = mailEnableRollbackBarrier(c, operation, Digest(raw))
+		if err != nil {
+			return err
+		}
+		defer closeEnable()
+	}
+	barrier := func() error {
+		if e := verifyEnrollmentLock(paths.transaction, fd); e != nil {
+			return e
+		}
+		return verifyEnable()
+	}
 	receipt := mailFilesReceipt{mailFilesSchema, Digest(raw), direction}
 	receiptRaw, err := promotionJSON(receipt)
 	if err != nil {
@@ -647,7 +662,7 @@ func applyMailFilesAt(operation, captureSHA, direction string, fd int, paths mai
 	}
 	if direction == "rollback" && !present {
 		verify := func() error {
-			if e := verifyEnrollmentLock(paths.transaction, fd); e != nil {
+			if e := barrier(); e != nil {
 				return e
 			}
 			if e := observation.revalidate(); e != nil {
@@ -680,7 +695,7 @@ func applyMailFilesAt(operation, captureSHA, direction string, fd int, paths mai
 		}
 		e = func() error {
 			defer o.close()
-			if e := verifyEnrollmentLock(paths.transaction, fd); e != nil {
+			if e := barrier(); e != nil {
 				return e
 			}
 			if e := c.revalidate(); e != nil {
@@ -740,7 +755,7 @@ func applyMailFilesAt(operation, captureSHA, direction string, fd int, paths mai
 		}
 	}
 	verify := func() error {
-		if e := verifyEnrollmentLock(paths.transaction, fd); e != nil {
+		if e := barrier(); e != nil {
 			return e
 		}
 		if e := final.revalidate(); e != nil {

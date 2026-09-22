@@ -581,3 +581,12 @@ observation accepts a missing native unit only with complete absence evidence,
 not a failed command alone. Component process-kill and owner-change coverage is
 recorded in [the mail renewal contract](MAIL-RENEWAL-KIT.md). Native enrollment,
 timer activation and historical application rollback remain open.
+
+### Native mail enablement identity (September 22)
+
+P0.3/P0.5 now gives initial native enablement a separate inode-bound plan and
+inverse. Exact publication cannot overwrite an owner link, and file compensation
+is blocked until that enablement has been inversely restored. Both directions
+require an inactive native schedule and verified daemon-reload. This remains a
+private component; missing-parent publication, timer activity and production
+admission are not established. See [the contract](MAIL-RENEWAL-KIT.md).

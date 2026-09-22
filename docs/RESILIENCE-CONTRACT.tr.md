@@ -527,3 +527,12 @@ doğrular. Başarısız komut tek başına yokluk sayılmaz; ortak okuyucu eksik
 kanıt ister. Süreç kesme ve sahip değişikliği testleri [posta yenileme
 sözleşmesinde](MAIL-RENEWAL-KIT.md) kayıtlıdır. Yerel kurulum, zamanlayıcıyı
 etkinleştirme ve eski uygulamaya geri dönüş uyumluluğu açık kalır.
+
+### Yerel posta etkinleştirme kimliği (22 Eylül)
+
+P0.3/P0.5 kapsamında ilk yerel etkinleştirme için dosya kimliğine bağlı ayrı plan
+ve ters işlem eklendi. Yayın, sunucu sahibinin bağlantısını ezemez; etkinleştirme
+geri alınmadan birim dosyalarının geri alınması engellenir. Her iki yön de
+çalışmayan zamanlayıcıyı ve doğrulanmış yerel yeniden yüklemeyi gerektirir. Bu
+özel bir bileşendir; eksik üst dizinin yayını, zamanlayıcının çalıştırılması ve
+üretim akışına kabul henüz tamamlanmamıştır. [Sözleşme](MAIL-RENEWAL-KIT.md).
