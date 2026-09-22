@@ -416,6 +416,11 @@ func applyMailEnableAt(ctx context.Context, operation, captureSHA, direction str
 	if err = plan.validate(e.filesSHA); err != nil {
 		return err
 	}
+	if direction == "rollback" {
+		if err = mailActivityRollbackBarrier(e.c, operation, Digest(raw)); err != nil {
+			return err
+		}
+	}
 	expected, _ := promotionJSON(mailEnableReceipt{mailEnableSchema, Digest(raw), direction})
 	rollbackRaw, _ := promotionJSON(mailEnableReceipt{mailEnableSchema, Digest(raw), "rollback"})
 	rollback, present, err := e.c.read(operation + ".timer-enable-rollback-intent.json")

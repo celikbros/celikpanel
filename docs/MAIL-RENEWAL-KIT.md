@@ -454,3 +454,28 @@ proves actual enabled/inactive state, two process interruptions and ordered
 compensation through disabled/inactive to original native absence. The wants
 parent was fixture-prepared. Timer start, workloads and production dispatch are
 not established by this trial.
+
+## Initial timer activity and bounded compensation (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The additive private
+`celikpanel-mail-renewal-activity/v1` records bind the completed enablement plan,
+immutable generation and direction. Durable intent and numbered admission precede
+each fixed timer start/stop. At most three commands per direction are admitted;
+known native failures remain as redacted immutable records. A lost response is
+reconciled from fresh native evidence before another admission. After exhaustion,
+the owner can resolve the native error and start/stop the exact timer, then resume
+the same operation for verification without resetting history.
+
+The executor requires current file/kit/link identities, native enabled state and
+an idle renewal service. Busy is a wait; unknown observations do not authorize a
+command. An unrecorded already-active timer cannot be adopted. Completed records
+require fresh native activity and valid attempt history. A later owner stop does
+not authorize a restart from an old receipt. Monotonic activity inverse precedes
+enablement inverse, which precedes file inverse. Hosted services are not stopped.
+
+Component race tests cover bounded start/stop failures, unknown results, retained
+owner edits, record corruption, ordering and twenty SIGKILL/re-entry boundaries.
+Native activity evidence is still required. This remains a private component:
+accepted production dispatch, host/renewal exclusion, missing-parent publication
+and historical old-Agent hook-writer compatibility remain open. Existing native
+renewal ledger and certificate schemas are unchanged.
