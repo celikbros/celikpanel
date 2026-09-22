@@ -316,3 +316,9 @@ process-wide admission cache exposed by AU. Same-process failure/readiness and
 ready-to-invalid Start tests pass under race detection. No durable schema changes
 or automatic update retry are introduced. Corrected-candidate native startup
 acceptance and the broader P0.2 matrix remain open.
+
+[Shared mail certificate artifact v1](MAIL-CERTIFICATE-ARTIFACT.md) now removes
+Agent coupling from receipt/pending/lineage parsing and certificate verification.
+Actual Alpha81 producer bytes remain exact in the new shared and Agent readers.
+This advances P0.4/P0.5 groundwork only; the native renewal consumer, hook migration
+and management-absent renewal acceptance remain open.

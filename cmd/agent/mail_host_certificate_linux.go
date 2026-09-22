@@ -4,9 +4,7 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -14,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailhostartifact"
 	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/sys/unix"
 )
@@ -49,36 +48,11 @@ func readMailHostCertificateSource(domain string) ([]byte, []byte, []byte, time.
 }
 
 func validateMailHostCertificatePair(cert, key []byte, domain string) ([]byte, time.Time, error) {
-	pair, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	if len(pair.Certificate) == 0 {
-		return nil, time.Time{}, errors.New("empty host certificate")
-	}
-	leaf, err := x509.ParseCertificate(pair.Certificate[0])
-	if err != nil {
-		return nil, time.Time{}, err
-	}
 	roots, err := panelCertificateSourceSystemRoots()
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	if roots == nil {
-		return nil, time.Time{}, errors.New("system trust roots unavailable")
-	}
-	intermediates := x509.NewCertPool()
-	for _, der := range pair.Certificate[1:] {
-		c, err := x509.ParseCertificate(der)
-		if err != nil {
-			return nil, time.Time{}, err
-		}
-		intermediates.AddCert(c)
-	}
-	if _, err = leaf.Verify(x509.VerifyOptions{DNSName: domain, Roots: roots, Intermediates: intermediates, CurrentTime: mailHostCertificateReceiptTime(leaf), KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}); err != nil {
-		return nil, time.Time{}, err
-	}
-	return leaf.Raw, leaf.NotAfter, nil
+	return mailhostartifact.VerifyRetainedPair(cert, key, domain, roots, time.Now())
 }
 
 // Absence permits the existing self-signed bootstrap pair. A present but
@@ -228,7 +202,10 @@ func queueMailHostCertificateRenewal(lineage string) error {
 			return err
 		}
 		pending := mailHostRenewal{Lineage: lineage, LeafSHA256: panelCertificateLeafSHA256(leaf)}
-		raw, _ := json.Marshal(pending)
+		raw, err := mailhostartifact.CanonicalPending(pending)
+		if err != nil {
+			return err
+		}
 		if err := writeMailHostRenewalPending(mailHostRenewalPendingPath(), raw); err != nil {
 			return fmt.Errorf("queue mail host renewal: %w", err)
 		}
@@ -276,17 +253,6 @@ func currentMailHostCertificateIdentity() (string, string, error) {
 		return "", "", errors.New("active mail host certificate not found")
 	}
 	return receipt.Domain, receipt.LeafSHA256, nil
-}
-
-func mailHostCertificateReceiptTime(leaf *x509.Certificate) time.Time {
-	now := time.Now()
-	if now.Before(leaf.NotBefore) {
-		return leaf.NotBefore
-	}
-	if !now.Before(leaf.NotAfter) {
-		return leaf.NotAfter.Add(-time.Second)
-	}
-	return now
 }
 
 // Queue metadata uses the same 0600 ownership contract as its ledger reader.

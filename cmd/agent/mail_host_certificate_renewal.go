@@ -1,16 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"log"
 	"path/filepath"
-	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailhostartifact"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 )
 
@@ -112,30 +110,8 @@ func deployPendingMailHostCertificate() error {
 	return clearMailHostCertificateRenewal(pending)
 }
 
-type mailHostRenewal struct {
-	Lineage    string `json:"lineage"`
-	LeafSHA256 string `json:"leaf_sha256"`
-}
+type mailHostRenewal = mailhostartifact.Pending
 
 func decodeMailHostRenewal(raw []byte) (mailHostRenewal, error) {
-	var value mailHostRenewal
-	if len(raw) > 512 || json.Unmarshal(raw, &value) != nil {
-		return value, errors.New("invalid host renewal queue")
-	}
-	canonical, _ := json.Marshal(value)
-	if !bytes.Equal(raw, canonical) {
-		return value, errors.New("noncanonical host renewal queue")
-	}
-	suffix := strings.TrimPrefix(value.Lineage, "celikpanel-mail-")
-	if suffix == value.Lineage || len(suffix) != 24 {
-		return value, errors.New("invalid host renewal lineage")
-	}
-	decoded, err := hex.DecodeString(suffix)
-	if err != nil || hex.EncodeToString(decoded) != suffix {
-		return value, errors.New("invalid host renewal lineage")
-	}
-	if err := validatePanelCertificateLeafSHA256(value.LeafSHA256); err != nil {
-		return value, err
-	}
-	return value, nil
+	return mailhostartifact.DecodePending(raw)
 }

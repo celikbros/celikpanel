@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailhostartifact"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -16,10 +15,7 @@ import (
 const managedMailHostTLSDir = mutationpayload.MailHostCertificateDirectory
 const mailHostCertificateCapability = transport.AgentCapabilityMailHostCertificateV1
 
-func mailHostCertLineageName(domain string) string {
-	digest := sha256.Sum256([]byte(domain))
-	return "celikpanel-mail-" + hex.EncodeToString(digest[:12])
-}
+func mailHostCertLineageName(domain string) string { return mailhostartifact.LineageName(domain) }
 
 // This endpoint issues only the explicitly reviewed host identity. It cannot
 // name customer certificate paths or replace customer SNI entries.
