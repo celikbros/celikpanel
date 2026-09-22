@@ -30,7 +30,7 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 		return 0
 	case "--queue":
 		err = queueMailHostCertificateRenewal(args[1])
-	case "--process-pending", "--retry-selected":
+	case "--process-pending", "--retry-selected", "--retry-failed":
 		// A no-work probe does not create volatile runtime or durable enrollment.
 		raw, found, readErr := readSecureServiceMutationLedger(mailHostRenewalPendingPath(), 512)
 		if readErr != nil {
@@ -38,6 +38,10 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 			break
 		}
 		if !found {
+			if args[0] == "--retry-failed" {
+				err = errors.New("no pending failed renewal matches the owner retry")
+				break
+			}
 			return 0
 		}
 		var pending mailHostRenewal
@@ -45,6 +49,10 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 			break
 		}
 		if err = prepareIndependentMailRuntime(); err != nil {
+			break
+		}
+		if args[0] == "--retry-failed" {
+			err = deployPendingMailHostCertificateWithRetry(args[1])
 			break
 		}
 		if args[0] == "--retry-selected" {
@@ -69,6 +77,11 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 		var budget *mailRenewalRecoveryBudgetError
 		if errors.As(err, &budget) {
 			fmt.Fprintln(os.Stderr, budget.Error())
+			return 1
+		}
+		var failedBudget *mailRenewalFailedBudgetError
+		if errors.As(err, &failedBudget) {
+			fmt.Fprintln(os.Stderr, failedBudget.Error())
 			return 1
 		}
 		// Native output/configuration never becomes a command-line error response.
@@ -98,7 +111,7 @@ func validateIndependentMailEntry(args []string, euid int, environment []string)
 	if len(args) == 1 && (args[0] == "--process-pending" || args[0] == "--inspect-build-identity") {
 		return nil
 	}
-	if len(args) == 2 && args[0] == "--retry-selected" && validMutationIdentity(args[1]) {
+	if len(args) == 2 && (args[0] == "--retry-selected" || args[0] == "--retry-failed") && validMutationIdentity(args[1]) {
 		return nil
 	}
 	if len(args) == 2 && args[0] == "--queue" {
@@ -112,7 +125,7 @@ func validateIndependentMailEntry(args []string, euid int, environment []string)
 			return nil
 		}
 	}
-	return errors.New("supported actions are --process-pending, --queue <managed-mail-lineage>, --retry-selected <recorded-operation-id>, and --inspect-build-identity")
+	return errors.New("supported actions are --process-pending, --queue <managed-mail-lineage>, --retry-selected <recorded-operation-id>, --retry-failed <recorded-operation-id>, and --inspect-build-identity")
 }
 
 func validateIndependentMailSupervisor(args []string, euid int, environment []string) error {

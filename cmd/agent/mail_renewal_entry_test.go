@@ -6,12 +6,12 @@ import (
 )
 
 func TestIndependentMailEntryScope(t *testing.T) {
-	for _, args := range [][]string{{"--process-pending"}, {"--retry-selected", strings.Repeat("a", 32)}, {"--inspect-build-identity"}, {"--queue", "celikpanel-mail-" + strings.Repeat("a", 24)}} {
+	for _, args := range [][]string{{"--retry-failed", strings.Repeat("a", 32)}, {"--process-pending"}, {"--retry-selected", strings.Repeat("a", 32)}, {"--inspect-build-identity"}, {"--queue", "celikpanel-mail-" + strings.Repeat("a", 24)}} {
 		if err := validateIndependentMailEntry(args, 0, []string{"PATH=/owner/bin", "INVOCATION_ID=fixture"}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, args := range [][]string{nil, {}, {"--self-update-worker", strings.Repeat("a", 32)}, {"--initialize-service-mutation-ledger"}, {"--restart-panel-after-certificate-publish"}, {"--deploy-panel-certificate", "domain"}, {"--process-pending", "extra"}, {"--queue", "celikpanel-mail-" + strings.Repeat("A", 24)}, {"--queue", "../other"}, {"--retry-selected"}, {"--retry-selected", "bad"}, {"--retry-selected", strings.Repeat("a", 32), "extra"}} {
+	for _, args := range [][]string{nil, {}, {"--retry-failed"}, {"--retry-failed", "bad"}, {"--retry-failed", strings.Repeat("a", 32), "extra"}, {"--self-update-worker", strings.Repeat("a", 32)}, {"--initialize-service-mutation-ledger"}, {"--restart-panel-after-certificate-publish"}, {"--deploy-panel-certificate", "domain"}, {"--process-pending", "extra"}, {"--queue", "celikpanel-mail-" + strings.Repeat("A", 24)}, {"--queue", "../other"}, {"--retry-selected"}, {"--retry-selected", "bad"}, {"--retry-selected", strings.Repeat("a", 32), "extra"}} {
 		if err := validateIndependentMailEntry(args, 0, nil); err == nil {
 			t.Fatalf("broad entry accepted: %v", args)
 		}

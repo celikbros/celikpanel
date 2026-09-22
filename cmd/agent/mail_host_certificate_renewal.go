@@ -34,6 +34,10 @@ var mailRenewalExecution struct {
 }
 
 func deployPendingMailHostCertificate() error {
+	return deployPendingMailHostCertificateWithRetry("")
+}
+
+func deployPendingMailHostCertificateWithRetry(ownerRequest string) error {
 	mailRenewalExecution.Lock()
 	defer mailRenewalExecution.Unlock()
 	if held := mailRenewalExecution.retained; held != nil {
@@ -52,6 +56,9 @@ func deployPendingMailHostCertificate() error {
 
 	raw, found, err := readSecureServiceMutationLedger(mailHostRenewalPendingPath(), 512)
 	if err != nil || !found {
+		if err == nil && ownerRequest != "" {
+			return errors.New("explicit failed renewal retry has no pending operation")
+		}
 		return err
 	}
 	pending, err := decodeMailHostRenewal(raw)
@@ -74,7 +81,7 @@ func deployPendingMailHostCertificate() error {
 	if panelCertificateLeafSHA256(leaf) != pending.LeafSHA256 {
 		return errors.New("queued renewal source generation changed")
 	}
-	if panelCertificateLeafSHA256(leaf) == currentLeaf {
+	if ownerRequest == "" && panelCertificateLeafSHA256(leaf) == currentLeaf {
 		return clearMailHostCertificateRenewal(pending)
 	}
 	commitment, err := mutationpayload.CanonicalMailHostCertificate(domain, "renewal@celikpanel.invalid", buildCommit)
@@ -85,6 +92,9 @@ func deployPendingMailHostCertificate() error {
 	// another Certbot generation gets another durable request identity.
 	digest := sha256.Sum256(append([]byte("mail-host-renewal/v1/"+domain+"/"+buildCommit+"/"), leaf...))
 	requestID := hex.EncodeToString(digest[:16])
+	if ownerRequest != "" && (!validMutationIdentity(ownerRequest) || ownerRequest != requestID || panelCertificateLeafSHA256(leaf) == currentLeaf) {
+		return errors.New("explicit failed renewal retry does not match an unpublished pending operation")
+	}
 	ownerID := hex.EncodeToString(digest[16:])
 	request := &ServiceMutationBeginRequest{RequestID: requestID, OwnerID: ownerID, Kind: "mail_host_certificate", Target: domain, PackageName: commitment.Qualifier}
 	manager, err := newMailRenewalMutationManager("", "", request)
@@ -94,6 +104,7 @@ func deployPendingMailHostCertificate() error {
 	if err != nil {
 		return err
 	}
+	manager.mailRenewalFailedOwnerRequest = ownerRequest
 	resume := false
 	if previous := manager.status(requestID); previous != nil {
 		resume = previous.Status == serviceMutationStatusFailed

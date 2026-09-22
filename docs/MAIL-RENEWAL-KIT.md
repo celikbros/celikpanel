@@ -350,3 +350,28 @@ now proves actual daemon-reload in both directions, two process interruptions,
 same-operation recovery and matching native ExecStart generations. Native timer
 preferences and trusted mail workloads were preserved. Bootstrap, production
 dispatch, historical application rollback and power-loss acceptance remain open.
+
+## Failed-operation retry admission (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The scoped renewal executor now checks the
+existing v1 ledger Attempt counter under the same host/publication locks and
+fresh ledger read as admission. An initial execution plus two failed-operation
+resumes consume three automatic attempts for that exact request. A stale manager
+or another polling process cannot reset the counter. Budget refusal leaves the
+failed result, selected certificate, pending queue and foreign history intact.
+
+The root-only independent helper accepts `--retry-failed <recorded-operation-id>`
+for one additional admission of the exact failed, unpublished pending operation.
+It cannot create a new operation, resume an active/selected operation, change
+owner identity or reset Attempt. The grant is consumed when admission is durable;
+another failure returns to the exhausted automatic budget. `--retry-selected`
+continues to handle the separate already-selected recovery boundary. Diagnostic
+budget messages identify the operation, owner action and precise continuation;
+raw native output remains redacted. No ledger schema migration is introduced.
+
+This closes automatic retries of terminal failed renewals, not interruption
+recovery before selection, cross-build request adoption, initial enrollment or
+general Agent recovery. Request identity still includes the producer build and
+exact source certificate; a different build must not silently adopt an old
+owner retry. Historical native selected-budget evidence remains separately
+scoped; this source change alone does not establish native execution acceptance.

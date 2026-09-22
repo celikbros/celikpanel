@@ -128,6 +128,8 @@ type serviceMutationManager struct {
 	mailRenewalScope *ServiceMutationBeginRequest
 	// Set only by the root-only exact selected-operation retry entry. Never resets Attempt.
 	mailRenewalRecoveryOwnerRequest string
+	// One explicit failed-operation retry; consumed when its admission is durable.
+	mailRenewalFailedOwnerRequest string
 
 	releaseTransactionPresent func() (bool, error)
 
@@ -967,6 +969,11 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		return closeLock(m.ledger.Jobs[m.ledger.ActiveRequestID], errServiceMutationBusy)
 	}
 	previous := m.ledger.Jobs[request.RequestID]
+	if m.mailRenewalScope != nil {
+		if err := admitMailRenewalFailedRetry(previous, request, m.mailRenewalFailedOwnerRequest); err != nil {
+			return closeLock(previous, err)
+		}
+	}
 	pendingRecovery := false
 	pendingPhase := ""
 	recoveringPhase := ""
@@ -1078,6 +1085,7 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		_ = lock.Close()
 		return nil, err
 	}
+	m.mailRenewalFailedOwnerRequest = ""
 	go m.watch(runtime)
 	return cloneServiceMutationJob(job), nil
 }

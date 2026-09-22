@@ -492,3 +492,13 @@ ger?ek systemd yeniden y?klemesini iki y?nde, iki s?re? kesintisini ve ayn? i?le
 geri al?nmas?n? do?rular. Ger?ek ExecStart nesilleri, zamanlay?c? tercihi ve
 posta hizmetleri kontrol edildi. ?lk kurulum, ?retimden ?a??rma, eski uygulama
 s?r?m?ne d?n?? uyumu ve g?? kesintisi kabul? a??k kal?r.
+
+### Ba?ar?s?z posta yenilemesinin tekrar kabul? (2026-09-22)
+
+P0.3/P0.5: Sonucu ba?ar?s?z kaydedilmi? yenilemenin otomatik tekrar?, g?ncel defter
+kilit alt?nda okunarak v1 Attempt sayac? ?zerinden s?n?rland?r?l?r. ?? otomatik
+denemeden sonra hata ve kuyruk korunur. Sunucu sahibinin tam i?lem kimli?iyle
+istedi?i tek ek deneme sayac? s?f?rlamaz; yeni i?lem veya se?ilmi? sertifika
+kurtarmas? ba?latmaz. [S?zle?me](MAIL-RENEWAL-KIT.md#failed-operation-retry-admission-2026-09-22).
+Sertifika se?iminden ?nce kesinti kurtarmas?, s?r?mler aras? i?lem devralma,
+?retimde ilk devreye alma ve tam ger?ek sistem kabul matrisi a??k kal?r.

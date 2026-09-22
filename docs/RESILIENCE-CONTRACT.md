@@ -546,3 +546,13 @@ now proves actual daemon-reload in both directions, two process interruptions,
 same-operation recovery and matching native ExecStart generations. Native timer
 preferences and trusted mail workloads were preserved. Bootstrap, production
 dispatch, historical application rollback and power-loss acceptance remain open.
+
+### Failed mail renewal retry admission (2026-09-22)
+
+P0.3/P0.5 now bound scoped terminal-failure retries at fresh, locked durable
+admission using the existing v1 Attempt counter. Three automatic executions are
+followed by retained failure and owner guidance; one exact root-owner retry
+consumes another attempt without resetting the budget. No new operation or
+selected recovery is authorized by this command. See [contract](MAIL-RENEWAL-KIT.md#failed-operation-retry-admission-2026-09-22).
+Pre-selection interruption recovery, cross-build adoption, production enrollment
+and the full native acceptance matrix remain open.
