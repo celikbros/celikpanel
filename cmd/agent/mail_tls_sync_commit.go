@@ -572,6 +572,27 @@ func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRun
 			return fmt.Errorf("verify committed immutable mail TLS snapshot: %w", err)
 		}
 	}
+	if err := verifyMailTLSConfiguration(journal, certPath, keyPath, runner, secureReadConfig); err != nil {
+		return err
+	}
+
+	if err := validatePostfixTLSConfig(runner); err != nil {
+		return err
+	}
+	return validateDovecotTLSConfig(runner)
+}
+
+// Observe only the accepted TLS fields and managed fragments. Unlike native
+// post-publication validation, this boundary must not run postfix check (which
+// can create directories), map compilation, service commands or config writers.
+// It does not prove other includes/overrides, indexed SNI contents or listeners.
+func verifyMailTLSConfiguration(journal *mailTLSSyncJournal, certPath, keyPath string, runner mailTLSCommandRunner, readConfig func(string) ([]byte, error)) error {
+	if err := validateMailTLSSyncJournal(journal); err != nil {
+		return err
+	}
+	if readConfig == nil {
+		return errors.New("mail TLS configuration reader unavailable")
+	}
 	modern, err := dovecotIs24WithRunner(runner)
 	if err != nil {
 		return err
@@ -587,12 +608,12 @@ func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRun
 		observed.Postfix[setting[0]] = string(out)
 	}
 	if len(journal.SNI) > 0 {
-		observed.PostfixSNI, err = secureReadConfig(postfixSNIPath)
+		observed.PostfixSNI, err = readConfig(postfixSNIPath)
 		if err != nil {
 			return fmt.Errorf("read back Postfix SNI source: %w", err)
 		}
 	}
-	observed.Dovecot, err = secureReadConfig(dovecotTLSConf)
+	observed.Dovecot, err = readConfig(dovecotTLSConf)
 	if err != nil {
 		return errors.New("Dovecot TLS readback does not match the committed snapshot")
 	}
@@ -600,10 +621,7 @@ func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRun
 		return err
 	}
 
-	if err := validatePostfixTLSConfig(runner); err != nil {
-		return err
-	}
-	return validateDovecotTLSConfig(runner)
+	return nil
 }
 
 func mailTLSSyncJobMatchesJournal(job *ServiceMutationJob, journal *mailTLSSyncJournal) bool {

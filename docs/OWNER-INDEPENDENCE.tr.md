@@ -317,3 +317,12 @@ makbuzları ve aktif işaretçi kuralları birlikte korunur. Eski üretici
 baytları uyumluluk örneğidir; okunamayacak büyüklükte kayıt dosyaya
 hazırlanmadan reddedilir. P0.3/P0.4 ilerler; bu tek başına sunucunun boşta
 olduğunu veya bağımsız yenileme ve kesinti kabulünün bittiğini kanıtlamaz.
+
+### Posta yenilemesinde yayın öncesi gözlem (2026-09-22)
+
+[Mevcut yapılandırma kontrolü](MAIL-RENEWAL-OBSERVATION.md), ortak salt-okur
+gözlemi ilk sertifika yayınına ve kuyruktaki yenilemeye bağlar. Sahibin
+ayarlarıyla uyuşmazlık veya belirsiz gözlem sertifika hazırlanmadan durur;
+bekleyen kaynak ve mevcut ayarlar korunur. Kalıcı şema değişmez. Yayından
+sonraki sahip değişikliklerini koruyan kurtarma ve bağımsız yenileme açıktır;
+bu sınırlı değişiklik P0.4/P0.5'i tamamlamaz.

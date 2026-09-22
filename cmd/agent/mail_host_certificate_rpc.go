@@ -131,8 +131,30 @@ func preflightMailHostCertificate(ctx context.Context, domain string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return nil
+	certPath, keyPath, err := selectedMailHostCertificate(domain)
+	if err != nil {
+		return err
+	}
+	// Historical configuration success is not current permission to overwrite
+	// native owner changes. This is repeated under the publication lock before
+	// any source stage/selection, for initial issuance and queued renewal alike.
+	run := func(name string, args ...string) ([]byte, error) {
+		return runMailHostCertificateCommand(ctx, name, args...)
+	}
+	if err := verifyMailTLSConfiguration(journal, certPath, keyPath, run, secureReadConfig); err != nil {
+		return &mailHostConfigurationUnverified{cause: err}
+	}
+	return ctx.Err()
 }
+
+// Do not include command output or owner configuration values in public errors.
+// Unwrap retains typed unknown-dialect evidence for internal classification.
+type mailHostConfigurationUnverified struct{ cause error }
+
+func (e *mailHostConfigurationUnverified) Error() string {
+	return "mail certificate publication paused: current Postfix/Dovecot TLS settings could not be verified against the accepted configuration; the server owner must review the native settings and accepted mail configuration before retrying; existing settings and pending renewal are preserved"
+}
+func (e *mailHostConfigurationUnverified) Unwrap() error { return e.cause }
 
 func loadMailHostCertificatePlan() (*mailTLSSyncJournal, error) {
 	// Only publication of a successfully verified mail TLS configuration writes

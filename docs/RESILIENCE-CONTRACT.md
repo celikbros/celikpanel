@@ -430,3 +430,12 @@ including every direct-publication receipt and active-pointer invariant. Old
 producer bytes are retained as compatibility fixtures; unreadable oversized
 writes are refused before staging. This advances P0.3/P0.4. It does not establish
 host idleness by itself or complete native independent renewal and fault acceptance.
+
+### Mail renewal pre-publication observation (2026-09-22)
+
+The [current-configuration barrier](MAIL-RENEWAL-OBSERVATION.md) connects the
+shared native observation to actual initial issuance and queued renewal. Owner
+configuration disagreement/unknown observation now stops before certificate
+staging; pending source and existing native settings are retained. No persisted
+schema migration. Post-publication owner-safe recovery and independent renewal
+remain open; this bounded change does not close P0.4/P0.5.
