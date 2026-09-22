@@ -36,10 +36,16 @@ func TestMailLoadedDisposableVMTransition(t *testing.T) {
 		t.Fatal("QEMU required", e)
 	}
 	target, phase := os.Getenv("CP_MAIL_LOADED_NATIVE_TARGET"), os.Getenv("CP_MAIL_LOADED_NATIVE_PHASE")
-	if !ValidDigest(target) || (phase != "forward-cut" && phase != "rollback-cut" && phase != "recover") {
+	if !ValidDigest(target) || (phase != "forward-cut" && phase != "rollback-cut" && phase != "recover" && phase != "forward-verify") {
 		t.Fatal("explicit native target/phase required")
 	}
-	const operation = "2dbbb7485fe846de98e972cf2fa654c1"
+	operation := os.Getenv("CP_MAIL_LOADED_NATIVE_OPERATION")
+	if operation == "" {
+		operation = "2dbbb7485fe846de98e972cf2fa654c1"
+	}
+	if !validPromotionNonce(operation) {
+		t.Fatal("exact fixture operation required")
+	}
 	paths := mailCapturePaths{MailRenewalHookPath, "/etc/systemd/system", mailrenewalkit.InstalledRoot, "/root/celikpanel-release-recovery-lab/mail-native-loaded-journal", transactionPath}
 	if e = verifyEnrollmentLock(paths.transaction, 9); e != nil {
 		t.Fatal(e)
@@ -61,7 +67,7 @@ func TestMailLoadedDisposableVMTransition(t *testing.T) {
 	}
 	capturePath := filepath.Join(paths.journals, operation+".json")
 	captured, e := os.ReadFile(capturePath)
-	if os.IsNotExist(e) && phase == "forward-cut" {
+	if os.IsNotExist(e) && (phase == "forward-cut" || phase == "forward-verify") {
 		raw, err := commands.observe(ctx, mailrenewalkit.ServiceName)
 		if err != nil {
 			t.Fatal(err)
@@ -116,6 +122,14 @@ func TestMailLoadedDisposableVMTransition(t *testing.T) {
 		}
 		if e = reloadMailFilesAt(ctx, operation, captureSHA, "forward", 9, paths, commands, checkpoint); e != nil {
 			t.Fatal(e)
+		}
+		if phase == "forward-verify" {
+			assertMailNativeSide(t, paths, before, plan, true)
+			if e = commands.observePair(ctx, before.Contract.TimerAfter, false); e != nil {
+				t.Fatal(e)
+			}
+			t.Logf("native_loaded_forward=verified timer_preference=preserved operation=%s previous=%s target=%s", operation, before.Contract.Previous, target)
+			return
 		}
 		if phase == "forward-cut" {
 			t.Fatal("forward cut not reached")
