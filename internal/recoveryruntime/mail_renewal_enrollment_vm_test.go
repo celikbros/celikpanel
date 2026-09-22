@@ -167,7 +167,7 @@ func TestMailEnrollmentDisposableVM(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f, err := os.OpenFile(filepath.Join(paths.journals, operation+".scope.json"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+		f, err := os.OpenFile(filepath.Join(private, "mail-joined.scope.json"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 		if err != nil {
 			t.Fatal(err)
 		}

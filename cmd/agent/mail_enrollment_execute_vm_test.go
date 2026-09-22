@@ -70,7 +70,7 @@ func TestMailEnrollmentExecuteDisposableVM(t *testing.T) {
 	serviceMutationRequiredOwnerUID, serviceMutationRequiredOwnerGID = 0, 0
 	const root = "/root/celikpanel-release-recovery-lab"
 	journal := filepath.Join(root, "mail-joined-enrollment-journal")
-	scopePath := filepath.Join(journal, operation+".scope.json")
+	scopePath := filepath.Join(root, "mail-joined.scope.json")
 	scopeRaw, found, e := readSecureServiceMutationLedger(scopePath, 2048)
 	if e != nil || !found {
 		t.Fatal("prepared scope missing", e)
