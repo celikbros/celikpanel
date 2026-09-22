@@ -3,11 +3,13 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -153,4 +155,90 @@ func TestMailHostCertificateDisposableVMRenewalReceipt(t *testing.T) {
 	if _, err = os.Stat(mailHostRenewalPendingPath()); !os.IsNotExist(err) {
 		t.Fatalf("queue remains: %v", err)
 	}
+}
+
+// A completed renewal is history, not authority to undo a later owner selection.
+func TestMailHostCertificateDisposableVMCompletedRenewalOwnerDrift(t *testing.T) {
+	requireDisposableMailVM(t)
+	const domain = "mail.setup.celikpanel.test"
+	_, _, source, _, err := readMailHostCertificateSource(domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager, err := agentServiceMutationManager()
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertMailVMRenewalReceipt(t, manager, domain, source)
+	current, err := os.Readlink(filepath.Join(managedMailHostTLSDir, "current"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(managedMailHostTLSDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	older, olderLeaf := "", ""
+	for _, entry := range entries {
+		if !entry.IsDir() || !validManagedPanelCertVersionName(entry.Name()) || entry.Name() == current {
+			continue
+		}
+		raw, readErr := os.ReadFile(filepath.Join(managedMailHostTLSDir, entry.Name(), mailHostCertificateReceiptName))
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		receipt, readErr := decodeMailHostCertificateReceipt(raw)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		if receipt.Domain == domain && receipt.LeafSHA256 != panelCertificateLeafSHA256(source) {
+			if older != "" {
+				t.Fatal("ambiguous fixture predecessor")
+			}
+			older, olderLeaf = entry.Name(), receipt.LeafSHA256
+		}
+	}
+	if older == "" {
+		t.Fatal("retained earlier generation missing")
+	}
+	err = panelCertWithPublishLock(func() error {
+		target := filepath.Join(managedMailHostTLSDir, ".owner-selected-for-test")
+		if e := os.Symlink(older, target); e != nil {
+			return e
+		}
+		return os.Rename(target, filepath.Join(managedMailHostTLSDir, "current"))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out, e := exec.Command("systemctl", "reload", "postfix", "dovecot").CombinedOutput(); e != nil {
+		t.Fatalf("owner reload: %v %s", e, out)
+	}
+	assertMailVMListeners(t, domain, olderLeaf)
+	if err = queueMailHostCertificateRenewal(mailHostCertLineageName(domain)); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := os.ReadFile(mailHostRenewalPendingPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = deployPendingMailHostCertificate()
+	if err == nil || !strings.Contains(err.Error(), "server owner must review") {
+		t.Fatalf("historical success concealed owner drift: %v", err)
+	}
+	after, readErr := os.ReadFile(mailHostRenewalPendingPath())
+	if readErr != nil || !bytes.Equal(pending, after) {
+		t.Fatal("unfulfilled queue was cleared or rewritten")
+	}
+	selected, readErr := os.Readlink(filepath.Join(managedMailHostTLSDir, "current"))
+	if readErr != nil || selected != older {
+		t.Fatal("owner selection overwritten")
+	}
+	digest := sha256.Sum256(append([]byte("mail-host-renewal/v1/"+domain+"/"+buildCommit+"/"), source...))
+	prior := manager.status(hex.EncodeToString(digest[:16]))
+	if prior == nil || prior.Status != serviceMutationStatusSucceeded {
+		t.Fatal("historical completion rewritten")
+	}
+	assertMailVMListeners(t, domain, olderLeaf)
+	t.Logf("owner selection preserved; pending retained; historical completion preserved; selected=%s source=%s", olderLeaf, panelCertificateLeafSHA256(source))
 }

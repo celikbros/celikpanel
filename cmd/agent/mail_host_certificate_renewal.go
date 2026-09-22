@@ -75,7 +75,10 @@ func deployPendingMailHostCertificate() error {
 		return err
 	}
 	if job.Status == serviceMutationStatusSucceeded {
-		return clearMailHostCertificateRenewal(pending)
+		// A matching current leaf already returned above. Historical execution
+		// success cannot erase a queue after the owner changes current selection.
+		// Keep both facts and require review rather than rewriting owner state.
+		return errors.New("mail host renewal previously completed, but the selected certificate differs; the server owner must review the current mail certificate before retrying")
 	}
 	ctx, finish, err := manager.acquireStep(ServiceMutationBinding{MutationRequestID: requestID, MutationOwnerID: ownerID}, newServiceMutationStepClaim(serviceMutationStepIssueMailHostCertificate, domain, commitment.Qualifier, "issue"))
 	if err != nil {
