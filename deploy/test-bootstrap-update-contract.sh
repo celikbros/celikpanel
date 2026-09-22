@@ -2135,13 +2135,18 @@ trap - EXIT
 
 # The Makefile artifact contains the complete offline initial-install payload.
 # Updates and rollbacks still use the immutable bootstrap transaction path.
-require_literal "$MAKEFILE" 'build: panel agent schema17-bridge recovery-runtime firewall-runtime web'
+require_literal "$MAKEFILE" 'build: panel agent schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime web'
 require_literal "$MAKEFILE" 'cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime'
 require_literal "$MAKEFILE" 'chmod 0755 dist/$(DIST)/firewall-runtime/restore'
 require_literal "$MAKEFILE" 'cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/$(DIST)/deploy/systemd/celikpanel-firewall-restore.service'
 require_literal "$BOOTSTRAP" 'cp -- firewall-runtime/celikpanel-firewall-restore.service deploy/systemd/celikpanel-firewall-restore.service'
 require_literal "$BOOTSTRAP" 'run_clean "$go_bin" run ./deploy/firewall/bundle --binary bin/firewall-restore --output firewall-runtime'
 require_literal "$BOOTSTRAP" 'rm -- bin/firewall-restore'
+require_literal "$MAKEFILE" 'cp -r bin/mail-renewal-runtime dist/$(DIST)/mail-renewal-runtime'
+require_literal "$MAKEFILE" 'chmod 0755 dist/$(DIST)/mail-renewal-runtime/renew dist/$(DIST)/mail-renewal-runtime/celikpanel-mail-host-cert'
+require_literal "$BOOTSTRAP" 'run_clean "$go_bin" run ./deploy/mail-renewal/bundle --binary bin/mail-renewal --output mail-renewal-runtime'
+require_literal "$BOOTSTRAP" 'rm -- bin/mail-renewal'
+
 
 require_literal "$MAKEFILE" '$(NPM) ci --no-audit --no-fund'
 reject_literal "$MAKEFILE" '$(NPM) install --no-audit --no-fund'

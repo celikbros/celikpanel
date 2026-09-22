@@ -128,14 +128,45 @@ def verify_generated_firewall(candidate, repository):
     return expected | {destination}
 
 
+def verify_generated_mail_renewal(candidate, repository):
+    """Reconstruct the fixed v1 artifact from its committed templates.
+
+    This binds generated native files; it is not compiler or signing provenance.
+    """
+    files = candidate['files']; prefix = 'mail-renewal-runtime/'
+    payload = {name for name in files if name.startswith(prefix)}
+    if not payload: return set()
+    names = {'service': 'celikpanel-mail-renewal.service', 'timer': 'celikpanel-mail-renewal.timer', 'hook': 'celikpanel-mail-host-cert'}
+    expected = {prefix + n for n in ['renew', 'runtime.manifest', *names.values()]}
+    if payload != expected: raise ValueError('candidate mail runtime inventory differs')
+    binary = files[prefix+'renew']
+    if not SHA.fullmatch(binary): raise ValueError('candidate mail runtime binary hash is invalid')
+    templates = {}
+    for kind, name in [('service', 'renewal.service'), ('timer', 'renewal.timer'), ('hook', 'deploy-hook')]:
+        raw = subprocess.run(['git', '-C', str(repository), 'show', candidate['commit']+':internal/mailrenewalkit/'+name], check=True, capture_output=True).stdout
+        if not 0 < len(raw) <= 16384 or raw.count(b'@RENEW@') != (0 if kind == 'timer' else 1):
+            raise ValueError('committed mail template is not bounded v1')
+        templates[kind] = raw
+    sha = lambda raw: hashlib.sha256(raw).hexdigest()
+    schema = 'celikpanel-mail-renewal-runtime/v1'
+    generation = sha((schema+'\n'+binary+'\n'+'\n'.join(sha(templates[n]) for n in ('service', 'timer', 'hook'))+'\n').encode())
+    rendered = {n: raw.replace(b'@RENEW@', ('/usr/libexec/celikpanel/mail-renewal/'+generation+'/renew').encode()) for n, raw in templates.items()}
+    manifest = {'schema': schema, 'generation': generation, 'ledger_version': 1, 'plan_version': 1, 'receipt_schema': 'mail-host-certificate-receipt/v1', 'binary_sha256': binary, **{n+'_sha256': sha(rendered[n]) for n in ('service', 'timer', 'hook')}}
+    canonical = (json.dumps(manifest, separators=(',', ':'))+'\n').encode()
+    if files[prefix+'runtime.manifest'] != sha(canonical) or any(files[prefix+name] != sha(rendered[kind]) for kind, name in names.items()):
+        raise ValueError('generated mail payload differs from committed v1 templates')
+    return expected
+
+
 def verify_committed_source(candidate,repository):
     commit=candidate['commit']
     actual=subprocess.run(['git','-C',str(repository),'rev-parse',commit+'^{tree}'],check=True,capture_output=True,text=True).stdout.strip()
     if actual!=candidate['tree']:raise ValueError('candidate source tree differs from real committed source')
     generated_firewall=verify_generated_firewall(candidate,repository)
+    generated_mail=verify_generated_mail_renewal(candidate,repository)
     names=[];queries=[]
     for name in candidate['files']:
-        if name in generated_firewall:continue
+        if name in generated_firewall or name in generated_mail:continue
         if name=='SHA256SUMS' or name.startswith(('bin/','web/dist/','release.')):continue
 
         # The kit embeds reviewed static sources under a separate data root.

@@ -587,6 +587,12 @@ prepare_fresh_release_transaction_foundation() {
             || die "fresh firewall unit and prepared helper do not agree; preserve their files"
 
     fi
+    if [[ -e "$SRC/mail-renewal-runtime" || -L "$SRC/mail-renewal-runtime" ]]; then
+        "$SRC/recovery-runtime/bin/recovery" prepare-mail-renewal-runtime \
+            --source "$SRC/mail-renewal-runtime" \
+            --transaction-fd 9 9<&"$INSTALL_RELEASE_TRANSACTION_FD" \
+            || die "fresh independent mail renewal preparation could not be verified; preserve its files"
+    fi
     preflight_reviewed_release_recovery_foundation
     publish_reviewed_release_recovery_intent
     install_release_transaction_guards_with_label_barrier \

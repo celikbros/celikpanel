@@ -3,8 +3,10 @@
 P0.5 owner independence; P0.3/P0.4 versioned code and evidence compatibility.
 This offline artifact is separate from installation authority. `make
 mail-renewal-runtime` uses the reviewed compiler, clean build environment, helper
-build tag and explicit build identity. Default release packaging and installed
-Certbot hooks are unchanged until enrollment/migration acceptance is implemented.
+build tag and explicit build identity. Default build/dist and source/prebuilt
+release paths now carry this artifact and prepare it before service downtime.
+Installed Certbot hooks and native units remain unchanged until the separate
+enrollment/migration operation is verified.
 
 The v1 manifest binds the exact helper, service, timer and Certbot deploy hook.
 Its immutable generation is derived from the helper and original template bytes;
@@ -131,3 +133,20 @@ CLI acceptance is recorded separately; these tests alone do not close P0.5.
 [Native Debian BE preparation evidence](../deploy/e2e/release-recovery/MAIL-PREPARATION-BE.md)
 now verifies the actual candidate CLI and process-kill boundaries with running
 mail workloads and management absent. Enrollment and power-loss remain open.
+
+## Release payload and pre-downtime preparation
+
+P0.3/P0.5, no evidence schema transition. Source builds, offline dist and prebuilt
+staging preserve the exact helper/hook executable modes; neither helper is added
+to the application bin resource. The complete outer release inventory covers all
+five artifact files. Native candidate preparation verifies them under inherited
+fd 9 before coordinator stop or application transaction creation. Historical
+archives without this additive artifact remain readable. Preparation refusal
+stops admission with its specific unconfirmed state and leaves existing native
+renewal selection and workload configuration unchanged.
+
+Shell behavior tests prove lock inheritance, ordering and refusal propagation.
+Clean-toolchain tests cover the independent build tag, and local candidate
+archive admission reconstructs every generated manifest/unit/hook from committed
+templates using a real Go-produced vector. These checks do not establish signing,
+installed native enrollment, legacy hook migration or whole-update rollback.

@@ -22,7 +22,7 @@ DIST    := celikpanel-$(VERSION)
 
 all: build
 
-build: panel agent schema17-bridge recovery-runtime firewall-runtime web ## Build binaries and frontend
+build: panel agent schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime web ## Build binaries and frontend
 
 check-go: ## Require the exact reviewed Go compiler without auto-download
 	@actual="$$(env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" env GOVERSION 2>/dev/null)" || { \
@@ -104,6 +104,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	cp -r deploy/. dist/$(DIST)/deploy/
 	cp -r bin/recovery-runtime dist/$(DIST)/recovery-runtime
 	cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime
+	cp -r bin/mail-renewal-runtime dist/$(DIST)/mail-renewal-runtime
 	cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/$(DIST)/deploy/systemd/celikpanel-firewall-restore.service
 	cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
 	cp download-portal/get.sh dist/$(DIST)/libexec/get.sh
@@ -117,6 +118,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	chmod 0755 dist/$(DIST)/update.sh dist/$(DIST)/rollback.sh
 	chmod 0755 dist/$(DIST)/libexec/get.sh
 	chmod 0755 dist/$(DIST)/firewall-runtime/restore
+	chmod 0755 dist/$(DIST)/mail-renewal-runtime/renew dist/$(DIST)/mail-renewal-runtime/celikpanel-mail-host-cert
 	chmod 0755 dist/$(DIST)/deploy/write-release-manifest.sh
 	chmod 0755 dist/$(DIST)/recovery-runtime/bin/recovery dist/$(DIST)/recovery-runtime/bin/agent-checker dist/$(DIST)/recovery-runtime/bin/panel-checker dist/$(DIST)/recovery-runtime/bin/schema17-bridge
 	chmod 0755 dist/$(DIST)/recovery-runtime/update.sh dist/$(DIST)/recovery-runtime/rollback.sh dist/$(DIST)/recovery-runtime/deploy/recovery/runtime-entry.sh

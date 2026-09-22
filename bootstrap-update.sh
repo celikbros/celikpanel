@@ -352,6 +352,9 @@ echo "==> Building matching panel and agent / Eşleşen panel ve agent derleniyo
     run_clean "$go_bin" run ./deploy/firewall/bundle --binary bin/firewall-restore --output firewall-runtime
     # Retain the helper only in its independent artifact, not the application bin resource.
     rm -- bin/firewall-restore
+    run_clean "$go_bin" build -tags celikpanel_mail_renewal -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/mail-renewal ./cmd/agent
+    run_clean "$go_bin" run ./deploy/mail-renewal/bundle --binary bin/mail-renewal --output mail-renewal-runtime
+    rm -- bin/mail-renewal
     cp -- firewall-runtime/celikpanel-firewall-restore.service deploy/systemd/celikpanel-firewall-restore.service
 )
 
@@ -387,6 +390,8 @@ chmod 0755 \
     "$incomplete_root/bin/agent-checker" \
     "$incomplete_root/bin/panel-checker" \
     "$incomplete_root/firewall-runtime/restore" \
+    "$incomplete_root/mail-renewal-runtime/renew" \
+    "$incomplete_root/mail-renewal-runtime/celikpanel-mail-host-cert" \
     "$incomplete_root/recovery-runtime/bin/recovery" \
     "$incomplete_root/recovery-runtime/bin/agent-checker" \
     "$incomplete_root/recovery-runtime/bin/panel-checker" \

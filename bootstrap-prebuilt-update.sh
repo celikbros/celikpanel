@@ -925,6 +925,10 @@ if [[ -d "$SOURCE_ROOT/firewall-runtime" ]]; then
     chmod 0755 -- "$SOURCE_ROOT/firewall-runtime/restore"
 fi
 
+if [[ -d "$SOURCE_ROOT/mail-renewal-runtime" ]]; then
+    chmod 0755 -- "$SOURCE_ROOT/mail-renewal-runtime/renew" "$SOURCE_ROOT/mail-renewal-runtime/celikpanel-mail-host-cert"
+fi
+
 validate_release_tree "$SOURCE_ROOT" 0
 validate_recovery_runtime_artifact "$SOURCE_ROOT"
 sync_release_tree_durably "$SOURCE_ROOT"

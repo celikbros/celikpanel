@@ -104,7 +104,7 @@ require_sequence "$BOOTSTRAP" \
 require_literal "$MAKEFILE" 'override REQUIRED_GO_VERSION := go1.26.5'
 require_literal "$MAKEFILE" 'check-go:'
 require_literal "$MAKEFILE" 'env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" env GOVERSION'
-require_count "$MAKEFILE" 'env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build' 7
+require_count "$MAKEFILE" 'env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build' 8
 require_literal "$MAKEFILE" 'test: check-go'
 require_literal "$MAKEFILE" 'env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" test ./...'
 require_literal "$MAKEFILE" 'vet: check-go'
@@ -382,7 +382,7 @@ if command -v make >/dev/null; then
     chmod 0700 "$build_go"
     GOFLAGS='-toolexec=attacker' GOROOT=/attacker CC=/attacker/cc \
         GOTOOLCHAIN=go1.99.0 GOENV=/attacker/goenv GOWORK=/attacker/go.work CGO_ENABLED=1 \
-        make -s -C "$ROOT" -f "$MAKEFILE" recovery-runtime firewall-runtime GO="$build_go" >/dev/null ||
+        make -s -C "$ROOT" -f "$MAKEFILE" recovery-runtime firewall-runtime mail-renewal-runtime GO="$build_go" >/dev/null ||
         die "independent kit build leaked or accepted a compiler environment override"
     require_count "$build_trace" 'build -trimpath -buildvcs=false' 5
     require_literal "$build_trace" '-o bin/recovery ./cmd/recovery'
@@ -392,6 +392,9 @@ if command -v make >/dev/null; then
     require_literal "$build_trace" 'run ./deploy/recovery/bundle --source-root . --binary-root bin --output bin/recovery-runtime'
     require_literal "$build_trace" '-o bin/firewall-restore ./cmd/firewall-restore'
     require_literal "$build_trace" 'run ./deploy/firewall/bundle --binary bin/firewall-restore --output bin/firewall-runtime'
+    require_literal "$build_trace" 'build -tags celikpanel_mail_renewal -trimpath -buildvcs=false'
+    require_literal "$build_trace" '-o bin/mail-renewal ./cmd/agent'
+    require_literal "$build_trace" 'run ./deploy/mail-renewal/bundle --binary bin/mail-renewal --output bin/mail-renewal-runtime'
     reject_literal "$build_trace" 'cmd/agent/main.go'
     reject_literal "$build_trace" 'cmd/panel/main.go'
 

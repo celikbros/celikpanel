@@ -191,12 +191,15 @@ if args[0]=='prepare-runtime':
     assert args==['prepare-runtime','--source',os.environ['FIXTURE_KIT'],'--mode',os.environ['FIXTURE_MODE'],'--transaction-fd','9']
 elif args[0]=='prepare-firewall-runtime':
     assert args==['prepare-firewall-runtime','--source',os.environ['FIXTURE_FIREWALL'],'--transaction-fd','9']
+elif args[0]=='prepare-mail-renewal-runtime':
+    assert args==['prepare-mail-renewal-runtime','--source',os.environ['FIXTURE_MAIL'],'--transaction-fd','9']
 elif args[0]=='verify-firewall-unit':
     assert args==['verify-firewall-unit','--unit',os.environ['FIXTURE_FIREWALL_UNIT']]
 elif args[0]=='verify-compatibility':
     assert args==['verify-compatibility','--mode',os.environ['FIXTURE_MODE']]
 else: raise AssertionError(args)
 with open(os.environ['FIXTURE_CALLS'],'a') as f: f.write(args[0]+'\n')
+if args[0]=='prepare-mail-renewal-runtime' and os.environ.get('FIXTURE_MAIL_REJECT')=='1': sys.exit(81)
 if args[0]=='prepare-runtime' and os.environ.get('FIXTURE_REJECT_PREPARATION')=='1': sys.exit(78)
 if args[0]=='prepare-firewall-runtime' and os.environ.get('FIXTURE_FIREWALL_REJECT')=='1': sys.exit(79)
 if args[0]=='verify-firewall-unit' and os.environ.get('FIXTURE_FIREWALL_UNIT_REJECT')=='1': sys.exit(80)
@@ -247,6 +250,23 @@ chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
     [[ $(tail -n 1 "$FIXTURE_CALLS") == verify-firewall-unit ]] || fail 'unexpected action after firewall unit refusal'
     grep -F 'panel services have not been stopped' "$TEST_ROOT/firewall-unit-rejected.log" >/dev/null
     unset FIXTURE_FIREWALL_UNIT_REJECT
+    export FIXTURE_MAIL=$TRUSTED_RELEASE_ROOT/mail-renewal-runtime
+    mkdir "$FIXTURE_MAIL"
+    before_calls=$(wc -l < "$FIXTURE_CALLS")
+    prepare_independent_recovery_runtime
+    tail -n +"$((before_calls + 1))" "$FIXTURE_CALLS" > "$TEST_ROOT/mail.calls"
+    cmp -s "$TEST_ROOT/mail.calls" <(printf '%s\n' prepare-firewall-runtime verify-firewall-unit prepare-mail-renewal-runtime prepare-runtime verify-compatibility selected-material-support selected-database-support) \
+        || fail 'mail preparation did not precede promotion under the inherited lock'
+    [[ $mail_runtime_preparation_attempted == 1 && $mail_runtime_preparation_verified == 1 ]] || fail 'mail preparation completion not recorded'
+    export FIXTURE_MAIL_REJECT=1
+    before_calls=$(wc -l < "$FIXTURE_CALLS")
+    status=0
+    (prepare_independent_recovery_runtime) >"$TEST_ROOT/mail-rejected.log" 2>&1 || status=$?
+    [[ $status == 41 && $(wc -l < "$FIXTURE_CALLS") -eq $((before_calls + 3)) ]] || fail 'mail refusal proceeded'
+    [[ $(tail -n 1 "$FIXTURE_CALLS") == prepare-mail-renewal-runtime ]] || fail 'unexpected action after mail refusal'
+    grep -F 'panel services have not been stopped' "$TEST_ROOT/mail-rejected.log" >/dev/null
+    unset FIXTURE_MAIL_REJECT
+    rmdir "$FIXTURE_MAIL"
     rmdir "$FIXTURE_FIREWALL"
     # A rejected/incomplete promotion must not reach compatibility or the material
     # writer capability call. The actual selector journal has native Go tests.
@@ -814,3 +834,17 @@ printf 'PASS: unconfirmed recovery preparation is never reported as unchanged\n'
     grep -F 'state=unchanged' "$TEST_ROOT/firewall-verified-summary" >/dev/null
 )
 printf 'PASS: unconfirmed firewall preparation retains its own truthful failure state\n'
+
+(
+    mutation_started=0 transaction_started=0 quiesce_abort_failed=0
+    transaction_completion_verified=0 scheduler_restore_verified=0
+    recovery_runtime_preparation_attempted=0 firewall_runtime_preparation_attempted=0
+    mail_runtime_preparation_attempted=1 mail_runtime_preparation_verified=0
+    update_failure_reason='independent mail renewal preparation unconfirmed'
+    report_update_failure 1 none 2>"$TEST_ROOT/mail-failure-summary"
+    grep -F 'code=mail_runtime_preparation_unconfirmed state=recovery_required' "$TEST_ROOT/mail-failure-summary" >/dev/null
+    mail_runtime_preparation_verified=1
+    report_update_failure 1 none 2>"$TEST_ROOT/mail-verified-summary"
+    grep -F 'state=unchanged' "$TEST_ROOT/mail-verified-summary" >/dev/null
+)
+printf 'PASS: unconfirmed mail preparation retains its failure state without native enrollment\n'

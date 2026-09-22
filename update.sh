@@ -72,6 +72,8 @@ agent_frozen=0
 mutation_started=0
 firewall_runtime_preparation_attempted=0
 firewall_runtime_preparation_verified=0
+mail_runtime_preparation_attempted=0
+mail_runtime_preparation_verified=0
 recovery_runtime_preparation_attempted=0
 recovery_runtime_preparation_verified=0
 transaction_started=0
@@ -182,6 +184,11 @@ report_update_failure() {
           ${firewall_runtime_preparation_verified:-0} -ne 1 ]]; then
         state=recovery_required
         code=firewall_runtime_preparation_unconfirmed
+    fi
+    if [[ ${mail_runtime_preparation_attempted:-0} -eq 1 &&
+          ${mail_runtime_preparation_verified:-0} -ne 1 ]]; then
+        state=recovery_required
+        code=mail_runtime_preparation_unconfirmed
     fi
     if [[ "${update_failure_detail:-}" == *': the host package manager is active'* ]]; then
         code=package_manager_busy
@@ -332,6 +339,17 @@ prepare_independent_recovery_runtime() {
             --unit "$TRUSTED_RELEASE_ROOT/deploy/systemd/celikpanel-firewall-restore.service" \
             || die "candidate firewall unit and prepared helper do not agree; panel services have not been stopped"
         firewall_runtime_preparation_verified=1
+    fi
+    # Preparing the mail artifact is separate from publishing its native hook and units.
+    # Historical releases omit it; existing renewal stays selected during preparation.
+    if [[ -e "$TRUSTED_RELEASE_ROOT/mail-renewal-runtime" || -L "$TRUSTED_RELEASE_ROOT/mail-renewal-runtime" ]]; then
+        mail_runtime_preparation_attempted=1
+        mail_runtime_preparation_verified=0
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" prepare-mail-renewal-runtime \
+            --source "$TRUSTED_RELEASE_ROOT/mail-renewal-runtime" \
+            --transaction-fd 9 9<&"$RELEASE_TRANSACTION_FD" \
+            || die "independent mail renewal preparation is unconfirmed; panel services have not been stopped; preserve its files and review this preflight failure before retrying the same release"
+        mail_runtime_preparation_verified=1
     fi
     recovery_runtime_preparation_attempted=1
     run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" prepare-runtime \
