@@ -20,6 +20,9 @@ func runEntry(args []string) int {
 	if len(args) > 0 && args[0] == "runtime-status" {
 		return runRuntimeStatus(args, os.Geteuid(), recoveryruntime.InspectPromotion, os.Stdout, os.Stderr)
 	}
+	if len(args) > 0 && args[0] == "prepare-firewall-runtime" {
+		return dispatchFirewallPreparation(args, os.Geteuid(), recoveryruntime.PrepareFirewallRuntime, os.Stdout, func(message string) { fmt.Fprintln(os.Stderr, message) })
+	}
 	if len(args) > 0 && args[0] == "prepare-runtime" {
 		return dispatchRuntimePreparation(args, os.Geteuid(), prepareRuntime, func(message string) { fmt.Fprintln(os.Stderr, message) })
 	}

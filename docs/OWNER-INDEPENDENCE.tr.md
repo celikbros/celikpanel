@@ -139,3 +139,28 @@ Sözleşme/paketleyici yarış testleri, bağlantılı girdi ve kullanıcının 
 iki derleme aynı baytları ve 0755/0644 izinlerini üretti. Windows paylaşımının
 0777 gösterimi reddedildi; izin denetimi gevşetilmedi. Bu, tam sürüm veya yerel
 etkinleştirme kanıtı değildir.
+
+
+## Kalıcı güvenlik duvarı hazırlığı (birim etkinleştirme henüz açık)
+
+Aday kurtarma girişi, `prepare-firewall-runtime --source <mutlak incelenmiş
+firewall-runtime dizini> --transaction-fd 9` komutunu destekler. Root, devralınan
+tekil sürüm kilidi ve etkin işlem işaretçilerinin yokluğu gerekir. Çağıran
+önce dış sürüm paketini kabul etmelidir. Bu iç komut güncelleme başlatmaz,
+birim kurmaz, kural uygulamaz veya hizmet başlatmaz; eski seçili kurtarma
+çalıştırıcısına yönlendirilmez.
+
+Hazırlık, kurtarmanın açık dosya tanıtıcılarıyla kimlik ve root sahipliği
+doğrulamasını paylaşır. Yalnız tamamı doğrulanan nesil sabit bağımsız
+konuma yayımlanır. Dosyalar ve dizinleri diske eşitlenir; var olan hedefin
+üzerine yazılmaz. Sonuç bildirilmeden üst dizin de eşitlenir. Tekrar denemede
+mevcut nesil yeniden doğrulanır. Yarım dizinler, eski nesiller ve sahip
+değişiklikleri korunur. Politika veya kurulu birim biçimi değişmez.
+
+Kilit devri, etkin işlem reddi, güvensiz kaynak, sonradan kaynak/hedef değişikliği
+ve hedef çakışması testleri geçti. İlk dosya, kalıcı dizin, yayım ve üst
+dizin eşitleme sınırlarındaki gerçek SIGKILL sonrası tekrar hazırlık başarılı.
+Bunlar yerel Linux dosya sistemi/süreç testleridir; güç kaybı veya yerel
+hizmet etkinleştirme kabulü değildir. Otomatik kurucu/güncelleyici bağlantısı,
+tam birim geçişi, geri almada yardımcıların korunmasının kanıtı ve kalan
+P0.5 hizmet matrisi açıktır.
