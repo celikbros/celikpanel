@@ -180,8 +180,8 @@ and refuses destructive cleanup of changed staged material or unexpected files.
 A successful rename followed by failed fsync remains a published/uncertain result
 for the durable caller to reconcile. This is not a filesystem compare-and-swap
 against a root administrator ignoring all locks: the final check-to-rename race
-and abrupt-power-loss matrix are not certified here. Legacy persisted recovery
-cleanup remains in Agent and still requires its separate audit before removal.
+and abrupt-power-loss matrix are not certified here. At this extraction boundary, persisted recovery cleanup still remained in Agent.
+The separately audited shared cleanup is documented below.
 
 Root ext4 race tests cover actual producer-to-reader agreement, unpublished
 cleanup, owner-selected preservation, changed key/mode/directory/extra file,

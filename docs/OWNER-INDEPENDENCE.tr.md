@@ -280,3 +280,10 @@ ortak temizliği gerçek dosya ve mail servisleriyle doğruladı: sahip dosyalar
 korunur; sahibi çatışmayı açıkça giderince aynı işlemin hazırlığı temizlenir;
 mail ve diğer bekleyen yenileme korunur. Kontrollü tamamlanmamış hazırlık deneyi,
 çökme/açılış kurtarmasını veya P0.4/P0.5'in tamamını kanıtlamaz.
+
+
+[Ortak sunucu kilidi](HOST-MUTATION-EXCLUSION.tr.md), gerçek Agent ve ayrı
+kurtarma denetleyicisinde kullanılır. FIFO'da beklemeden veya dosyayı düzeltmeden
+sahip değişikliklerini reddeder; mevcut dış flock kimliğini korur. Yerel süreç
+ve kurtarma denetleyicisi testleri geçti. Bağımsız yenileme yetkisi/geçici
+dizin kurulumu ve P0.3-P0.5'in tam kabul matrisi açıktır.
