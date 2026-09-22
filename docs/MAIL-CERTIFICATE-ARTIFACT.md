@@ -248,3 +248,25 @@ renewal binding must establish those boundaries and protect owner changes before
 publication/reload. The existing Agent renewal still reapplies its retained mail
 plan; this extraction does not claim that owner-preserving independent renewal,
 its enrollment, durable transaction, hook migration or absence matrix is done.
+
+
+The shared Dovecot dialect observation now accepts the implemented 2.3/2.4
+syntax only after a successful version command. Missing, malformed and failed
+observations are unknown; an observed unimplemented version is unsupported.
+Neither becomes an assumed 2.4 host. Actual TLS preflight stops before snapshot,
+map preparation or configuration mutation; direct TLS and virtual-mail writers
+also require verified dialects. Retained-plan readback cannot certify an unknown
+dialect. Native configuration bytes and on-disk schemas are unchanged. Component
+race tests cover nonzero exit with plausible output, empty/malformed/unsupported
+observations, preserved untouched outcome, no later command, no raw-output leak,
+and successful 2.3/2.4 parsing; existing mail tests and vet pass. Native acceptance
+is still pending at this source stage. Other version probes and the full
+independent renewal transaction remain open.
+
+
+[Subsequent AY native dialect acceptance](../deploy/e2e/release-recovery/MAIL-DIALECT-AY.md)
+now verifies the shared host lock and native retained-plan readback on the exact
+current source. A real failing version executable prevents configuration work;
+configuration, ledger, queued renewal and trusted SMTP/IMAP leaf stay unchanged.
+This closes the bounded native observation check, not independent renewal,
+complete effective native configuration verification or crash recovery.

@@ -572,6 +572,10 @@ func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRun
 			return fmt.Errorf("verify committed immutable mail TLS snapshot: %w", err)
 		}
 	}
+	modern, err := dovecotIs24WithRunner(runner)
+	if err != nil {
+		return err
+	}
 	observed := mailtlsconfig.Observation{Postfix: make(map[string]string)}
 	settings := mailtlsconfig.PostfixSettings(journal.Myhostname, certPath, keyPath)
 	settings = append(settings, [2]string{"tls_server_sni_maps", ""})
@@ -592,7 +596,7 @@ func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRun
 	if err != nil {
 		return errors.New("Dovecot TLS readback does not match the committed snapshot")
 	}
-	if err = mailtlsconfig.Verify(journal, certPath, keyPath, postfixSNIPath, dovecotIs24WithRunner(runner), observed); err != nil {
+	if err = mailtlsconfig.Verify(journal, certPath, keyPath, postfixSNIPath, modern, observed); err != nil {
 		return err
 	}
 

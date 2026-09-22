@@ -84,10 +84,45 @@ def verify_cleanup(record, base_bytes):
     require(served==selected, 'cleanup changed served certificate')
     return {'owner_reviewed_native_cleanup':'verified','operation':request,'automatic_crash_recovery':'not established'}
 
+def verify_dialect(record, base_bytes):
+    require(record.get('schema') == 'celikpanel/native-mail-dialect/v1', 'dialect schema differs')
+    require(record.get('base_record_sha256') == hashlib.sha256(base_bytes).hexdigest(), 'retained fixture evidence differs')
+    base = json.loads(base_bytes); verify(base)
+    require(record.get('lab') == {key:base['lab'][key] for key in ('cell_id','node')}, 'dialect fixture differs')
+    require(re.fullmatch(r'[0-9a-f]{40}',record.get('source_commit','')), 'dialect source missing')
+    binary = record.get('test_binary_sha256',''); require(re.fullmatch(HEX,binary), 'dialect binary missing')
+    expected_scope={'real_native_config_readback':True,'real_executable_version_failure':True,'shared_host_mutation_lock':True,'configuration_and_pending_preserved':True,'native_daemon_failure':False,'independent_renewal':False,'crash_recovery':False}
+    require(record.get('scope') == expected_scope, 'unsupported dialect scope')
+    logs={}
+    for name,item in record['logs'].items():
+        text=item['text']
+        require(len(text)<32768 and hashlib.sha256(text.encode()).hexdigest()==item['sha256'], 'dialect log digest differs')
+        require('PRIVATE KEY' not in text and 'nonce=' not in text, 'private dialect evidence present')
+        logs[name]=text
+    start=logs['mail-native-dialect-start.log']; result=logs['mail-native-dialect-result.log']
+    require(start.startswith(binary+'  /root/celikpanel-release-recovery-lab/mail-dialect.test\n'), 'executed dialect binary differs')
+    require(one(r'(?m)^('+UUID+')$',start) == one(r'(?m)^('+UUID+')$',result), 'dialect boot changed')
+    require('--- PASS: TestMailHostCertificateDisposableVMNativeDialectReadback (' in result and '--- FAIL:' not in result and 'Result=success' in result and 'ExecMainStatus=0' in result, 'native dialect did not pass')
+    selected=one(r'owner selection preserved; pending retained; historical completion preserved; selected=('+HEX+') source='+HEX,base['logs']['mail-owner-drift.log']['text'])
+    served=one(r'native version failure refused before configuration; native 2[.]4 retained-plan readback passed; configuration, ledger, pending renewal and trusted SMTP/IMAP leaf unchanged: ('+HEX+')',result)
+    require(served==selected, 'dialect test changed served certificate')
+    return {'unknown_dialect_preserves_native_state':'verified','native_retained_plan_readback':'verified','independent_renewal':'not established'}
+
+
+def verify_record(record, base_bytes=None):
+    if base_bytes is None:
+        return verify(record)
+    schema=record.get('schema')
+    if schema == 'celikpanel/native-mail-cleanup/v1':
+        return verify_cleanup(record,base_bytes)
+    if schema == 'celikpanel/native-mail-dialect/v1':
+        return verify_dialect(record,base_bytes)
+    raise ValueError('unsupported dependent evidence schema')
+
 if __name__ == '__main__':
     import argparse
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('record');parser.add_argument('--base')
     args=parser.parse_args();record=json.loads(Path(args.record).read_text())
-    result=verify_cleanup(record,Path(args.base).read_bytes()) if args.base else verify(record)
+    result=verify_record(record,Path(args.base).read_bytes() if args.base else None)
     print(json.dumps(result,sort_keys=True))

@@ -56,4 +56,24 @@ class MailCleanupTests(unittest.TestCase):
             item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
             with self.subTest(old=old),self.assertRaises(ValueError):s.verify_cleanup(record,self.base)
 
+class MailDialectTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-DIALECT-AY.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-AY.json').read_bytes()
+    def test_native_dialect_evidence(self):
+        self.assertEqual(s.verify_record(self.record,self.base)['unknown_dialect_preserves_native_state'],'verified')
+    def test_wrong_scope_binary_or_fixture(self):
+        for key,value in [('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('source_commit',''),('scope',{}),('lab',{}),('schema','unrecognized')]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_rehashed_failure_or_changed_workload(self):
+        for old,new in [('--- PASS:','--- FAIL:'),('ExecMainStatus=0','ExecMainStatus=1'),('pending renewal','discarded renewal'),('7a3fbe8a-98b5-4b50-857e-f238ad4b22dc','00000000-0000-0000-0000-000000000000'),('7713abe26e69887a166cd5c6efc39bb96be0f19cf6ec55428af1673924466a11','0'*64)]:
+            record=copy.deepcopy(self.record);item=record['logs']['mail-native-dialect-result.log']
+            self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new)
+            item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_unhashed_edit(self):
+        self.record['logs']['mail-native-dialect-result.log']['text']+='changed'
+        with self.assertRaises(ValueError):s.verify_record(self.record,self.base)
+
 if __name__ == '__main__': unittest.main()
