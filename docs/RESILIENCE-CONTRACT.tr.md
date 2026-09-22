@@ -517,3 +517,13 @@ yeni ortak okuyucuyla aynen korunur. Motor dönemi, sahip ve çift yönü; yayı
 ve katalog ilerlemesinden ayrılır. Etkin ağaç kanıtı yine gereklidir. Kalıcı
 şemaların ayrılması, kurulu kanıt geçişi ve tam gerçek üretici/geri yükleme matrisi
 açıktır; bu kaynak değişikliği kurulu sunucuda geçiş yapmaz.
+
+### İlk posta birimi yükleme sınırı (22 Eylül)
+
+P0.3/P0.5 kapsamında ilk birim yükleme, yenilemeyi etkinleştirmekten ayrıldı.
+Ayrı ve işleme bağlı kayıt yalnız devre dışı ve çalışmayan birimlerin yüklendiğini
+kanıtlar; dosyalar geri alındıktan sonraki ters yükleme ise birimlerin yokluğunu
+doğrular. Başarısız komut tek başına yokluk sayılmaz; ortak okuyucu eksiksiz yerel
+kanıt ister. Süreç kesme ve sahip değişikliği testleri [posta yenileme
+sözleşmesinde](MAIL-RENEWAL-KIT.md) kayıtlıdır. Yerel kurulum, zamanlayıcıyı
+etkinleştirme ve eski uygulamaya geri dönüş uyumluluğu açık kalır.

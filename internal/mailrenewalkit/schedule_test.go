@@ -116,3 +116,74 @@ func TestBootstrapRequiresPositiveNativeAbsence(t *testing.T) {
 		t.Fatal("existing schedule adopted as bootstrap")
 	}
 }
+
+func TestBootstrapLoadingDoesNotGrantScheduleReadiness(t *testing.T) {
+	s := UnitObservation{Unit: ServiceName, LoadState: "not-found", NeedDaemonReload: "no", ActiveState: "inactive"}
+	tm := s
+	tm.Unit = TimerName
+	ls, lt := loadedScheduleUnit(ServiceName), loadedScheduleUnit(TimerName)
+	lt.UnitFileState, lt.ActiveState = "disabled", "inactive"
+	for _, service := range []UnitObservation{s, ls} {
+		for _, timer := range []UnitObservation{tm, lt} {
+			for _, published := range []bool{false, true} {
+				for _, pending := range []string{"no", "yes"} {
+					a, b := service, timer
+					a.NeedDaemonReload, b.NeedDaemonReload = pending, pending
+					if err := VerifyBootstrapLoaded(a, b, published, true); err != nil {
+						t.Fatal("verified intermediate cache refused", err)
+					}
+				}
+				err := VerifyBootstrapLoaded(service, timer, published, false)
+				want := published && service == ls && timer == lt || !published && service == s && timer == tm
+				if (err == nil) != want {
+					t.Fatal("terminal cache not exact", service, timer, published, err)
+				}
+			}
+		}
+	}
+	if lt.Ready() {
+		t.Fatal("idle bootstrap timer is not scheduled renewal")
+	}
+	for _, side := range []string{"service", "timer"} {
+		for _, alter := range []func(*UnitObservation){
+			func(u *UnitObservation) { u.Unit = "owner.service" },
+			func(u *UnitObservation) { u.LoadState = "error" },
+			func(u *UnitObservation) { u.FragmentPath = "/run/systemd/system/" + u.Unit },
+			func(u *UnitObservation) { u.DropInPaths = "owner.conf" },
+			func(u *UnitObservation) { u.NeedDaemonReload = "unknown" },
+			func(u *UnitObservation) { u.ActiveState = "activating" },
+			func(u *UnitObservation) { u.ActiveState = "active" },
+			func(u *UnitObservation) { u.ActiveState = "failed" },
+			func(u *UnitObservation) { u.UnitFileState = "enabled" },
+			func(u *UnitObservation) { u.UnitFileState = "masked" },
+		} {
+			a, b := ls, lt
+			if side == "service" {
+				alter(&a)
+			} else {
+				alter(&b)
+			}
+			if err := VerifyBootstrapLoaded(a, b, true, true); err == nil {
+				t.Fatal("owner or unknown native state adopted", side, a, b)
+			}
+		}
+	}
+}
+
+func TestNativeShowMissingStatusRequiresCompleteAbsence(t *testing.T) {
+	absent := UnitObservation{Unit: ServiceName, LoadState: "not-found", NeedDaemonReload: "no", ActiveState: "inactive"}
+	for _, status := range []int{-1, 0, 1, 3, 4, 5, 124, 255} {
+		got, err := ParseUnitObservationResult(ServiceName, unitOutput(absent), status)
+		if (err == nil) != (status == 0 || status == 4) {
+			t.Fatal("native status hidden", status, err)
+		}
+		if err == nil && got != absent {
+			t.Fatal(got)
+		}
+	}
+	for _, raw := range [][]byte{nil, []byte("LoadState=not-found\n"), unitOutput(loadedScheduleUnit(ServiceName))} {
+		if _, err := ParseUnitObservationResult(ServiceName, raw, 4); err == nil {
+			t.Fatal("failed native lookup treated as positive absence")
+		}
+	}
+}

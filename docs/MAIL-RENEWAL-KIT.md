@@ -381,3 +381,34 @@ now proves three native failed executions across fresh processes, retained owner
 configuration, refusal after exhaustion/wrong owner, and explicit same-request
 attempt 4 with trusted SMTP/IMAP serving the new certificate. The regular timer
 was paused for deterministic commands; no automatic-dispatch/reboot claim is made.
+
+## Initial idle unit loading and compensation (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The shared loaded-unit executor now handles
+verified initial absence as a separate phase. Its additive private
+`celikpanel-mail-renewal-bootstrap-loaded/v1` intent/receipt binds the exact
+file plan and direction. Forward completion proves the fixed units loaded with
+an inactive static service and disabled inactive timer. It does **not** claim
+renewal enabled, start a job or complete enrollment. The existing independent
+schedule schema and retained owner preferences remain unchanged.
+
+Before reload, each native cache entry may independently be absent or the exact
+idle target. This permits lazy discovery and restart after a killed reload;
+an enabled, running, masked, overridden or unknown entry is never adopted.
+After reload both entries must match the exact direction: loaded idle units for
+forward, positive native absence for inverse compensation. The file before-image,
+original inodes, source kit and monotonic rollback intent remain mandatory.
+Unknown observations preserve intent and cannot publish a completion receipt.
+
+Native `systemctl show` exit 4 is accepted only with all six bounded properties
+proving that the specific unit is absent. Any other failure, partial output or
+loaded unit with that status is unknown. Exit status alone cannot prove absence.
+Existing readiness and transition admission do not change.
+
+Tests exercise initial absence and legacy hooks, partial native caches, failed
+or interrupted reloads, owner edits before/after completion, 28 actual process
+kill/re-entry boundaries and original-inode compensation. The cache in component
+tests is simulated; native acceptance is separate. Production activation still
+requires durable timer enablement/activity transitions, accepted dispatch and
+historical application rollback compatibility. No production dispatcher or
+installed-panel update is enabled by this component.

@@ -571,3 +571,13 @@ with the new shared reader. Engine tenure/owner/pair direction remains separate
 from publication generation/catalog evolution; live tree proof is still required.
 A durable split-schema migration and the full native producer/restore matrix
 remain open; this source refactor does not perform an installed migration.
+
+### Initial mail unit load boundary (September 22)
+
+P0.3/P0.5 now distinguishes initial unit loading from activating renewal. A
+separate bound bootstrap receipt proves only disabled/inactive loaded units;
+inverse reload proves native absence after exact file compensation. Shared
+observation accepts a missing native unit only with complete absence evidence,
+not a failed command alone. Component process-kill and owner-change coverage is
+recorded in [the mail renewal contract](MAIL-RENEWAL-KIT.md). Native enrollment,
+timer activation and historical application rollback remain open.

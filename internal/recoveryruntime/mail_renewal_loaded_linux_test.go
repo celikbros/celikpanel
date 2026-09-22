@@ -26,7 +26,7 @@ func TestMailLoadedTransitionPreservesOwnerSchedule(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("root descriptor fixture")
 	}
-	for _, scenario := range []string{"normal", "bootstrap", "intent-owner-change", "busy-after-completion", "late-receipt-owner-change", "busy", "masked", "owner-preference", "observe-failed", "query-missing-field", "reload-failed-retry", "after-reload-unknown-retry", "after-reload-owner-edit", "after-reload-owner-schedule", "missing-file-receipt", "bad-intent", "bad-receipt", "cancelled", "owner-change-after-completion"} {
+	for _, scenario := range []string{"normal", "intent-owner-change", "busy-after-completion", "late-receipt-owner-change", "busy", "masked", "owner-preference", "observe-failed", "query-missing-field", "reload-failed-retry", "after-reload-unknown-retry", "after-reload-owner-edit", "after-reload-owner-schedule", "missing-file-receipt", "bad-intent", "bad-receipt", "cancelled", "owner-change-after-completion"} {
 		t.Run(scenario, func(t *testing.T) {
 			root, lock := mailRenewalTestRoot(t)
 			kind := "independent"

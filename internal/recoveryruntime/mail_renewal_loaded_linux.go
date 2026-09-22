@@ -11,6 +11,7 @@ import (
 )
 
 const mailLoadedSchema = "celikpanel-mail-renewal-loaded/v1"
+const mailBootstrapLoadedSchema = "celikpanel-mail-renewal-bootstrap-loaded/v1"
 
 type mailLoadedRecord struct {
 	Schema     string                    `json:"schema"`
@@ -29,6 +30,10 @@ type mailLoadedCommands struct {
 }
 
 func (commands mailLoadedCommands) observePair(ctx context.Context, timer mailrenewalkit.TimerState, allowReload bool) error {
+	return commands.observeTransition(ctx, timer, allowReload, false, false)
+}
+
+func (commands mailLoadedCommands) observeTransition(ctx context.Context, timer mailrenewalkit.TimerState, allowReload, bootstrap, published bool) error {
 	units := make([]mailrenewalkit.UnitObservation, 0, 2)
 	for _, name := range []string{mailrenewalkit.ServiceName, mailrenewalkit.TimerName} {
 		if err := ctx.Err(); err != nil {
@@ -49,6 +54,12 @@ func (commands mailLoadedCommands) observePair(ctx context.Context, timer mailre
 		}
 		units = append(units, unit)
 	}
+	if bootstrap {
+		if err := mailrenewalkit.VerifyBootstrapLoaded(units[0], units[1], published, allowReload); err != nil {
+			return err
+		}
+		return ctx.Err()
+	}
 	observed, err := mailrenewalkit.TransitionTimer(true, units[0], units[1])
 	if err != nil {
 		return err
@@ -59,9 +70,10 @@ func (commands mailLoadedCommands) observePair(ctx context.Context, timer mailre
 	return ctx.Err()
 }
 
-// reloadMailFilesAt handles existing independent schedules only. It binds actual
+// reloadMailFilesAt handles existing schedules and initial idle unit loading. It binds actual
 // native daemon-reload to a completed, verified file transition. It never changes
-// owner enablement/activity preferences, starts a workload or enrolls a timer.
+// owner enablement/activity preferences, starts a workload or enables a timer.
+// Bootstrap forward proves loaded but disabled/inactive; inverse proves absence.
 // The caller separately holds host/renewal exclusion and accepted owner authority;
 // this private primitive additionally requires the inherited release lock.
 func reloadMailFilesAt(ctx context.Context, operation, captureSHA, direction string, fd int, paths mailCapturePaths, commands mailLoadedCommands, checkpoint func(string)) error {
@@ -76,9 +88,7 @@ func reloadMailFilesAt(ctx context.Context, operation, captureSHA, direction str
 		return err
 	}
 	defer c.close()
-	if c.capture.Contract.Previous == "" {
-		return fail(ReasonUnsupported)
-	}
+	bootstrap := c.capture.Contract.Previous == ""
 	planRaw, ok, err := c.read(operation + ".files.json")
 	if err != nil {
 		return err
@@ -128,6 +138,15 @@ func reloadMailFilesAt(ctx context.Context, operation, captureSHA, direction str
 		generation = c.capture.Contract.Previous
 	}
 	record := mailLoadedRecord{mailLoadedSchema, Digest(planRaw), direction, generation, c.capture.Contract.TimerBefore}
+	if bootstrap {
+		record.Schema = mailBootstrapLoadedSchema
+		if direction == "forward" {
+			record.Timer = mailrenewalkit.TimerState{Enablement: "disabled", Activity: "inactive"}
+		}
+	}
+	observe := func(allowReload bool) error {
+		return commands.observeTransition(ctx, record.Timer, allowReload, bootstrap, direction == "forward")
+	}
 	raw, err := promotionJSON(record)
 	if err != nil {
 		return err
@@ -161,7 +180,7 @@ func reloadMailFilesAt(ctx context.Context, operation, captureSHA, direction str
 		return c.revalidate()
 	}
 	if complete {
-		if err = commands.observePair(ctx, record.Timer, false); err != nil {
+		if err = observe(false); err != nil {
 			return err
 		}
 		if err = unix.Fsync(int(c.parent.file.Fd())); err != nil {
@@ -169,7 +188,7 @@ func reloadMailFilesAt(ctx context.Context, operation, captureSHA, direction str
 		}
 		return verify()
 	}
-	if err = commands.observePair(ctx, record.Timer, true); err != nil {
+	if err = observe(true); err != nil {
 		return err
 	}
 	if err = publishMailRecord(c, intentName, raw, verify, checkpoint, "loaded_"+direction+"_intent"); err != nil {
@@ -177,7 +196,7 @@ func reloadMailFilesAt(ctx context.Context, operation, captureSHA, direction str
 	}
 	// Re-observe after intent durability; a newly running oneshot is a wait, and
 	// a changed/unknown timer is preserved rather than repaired by this operation.
-	if err = commands.observePair(ctx, record.Timer, true); err != nil {
+	if err = observe(true); err != nil {
 		return err
 	}
 	if err = verify(); err != nil {
@@ -192,14 +211,14 @@ func reloadMailFilesAt(ctx context.Context, operation, captureSHA, direction str
 	if err = verify(); err != nil {
 		return err
 	}
-	if err = commands.observePair(ctx, record.Timer, false); err != nil {
+	if err = observe(false); err != nil {
 		return err
 	}
 	verifyLoaded := func() error {
 		if e := verify(); e != nil {
 			return e
 		}
-		if e := commands.observePair(ctx, record.Timer, false); e != nil {
+		if e := observe(false); e != nil {
 			return e
 		}
 		return verify()

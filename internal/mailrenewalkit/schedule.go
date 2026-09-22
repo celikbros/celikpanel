@@ -52,6 +52,22 @@ func ParseUnitObservation(unit string, raw []byte) (UnitObservation, error) {
 	}
 	return UnitObservation{unit, fields["LoadState"], fields["FragmentPath"], fields["DropInPaths"], fields["NeedDaemonReload"], fields["ActiveState"], fields["UnitFileState"]}, nil
 }
+
+// ParseUnitObservationResult interprets the native exit status with its complete
+// bounded property output. systemctl show returns 4 for a positively missing
+// unit on supported systemd; all other failures remain unknown. Exit 4 cannot
+// carry loaded or partial evidence, and is never converted to success blindly.
+func ParseUnitObservationResult(unit string, raw []byte, exitCode int) (UnitObservation, error) {
+	if exitCode != 0 && exitCode != 4 {
+		return UnitObservation{}, ErrScheduleObservation
+	}
+	result, err := ParseUnitObservation(unit, raw)
+	if err != nil || exitCode == 4 && !result.verifiedAbsent() {
+		return UnitObservation{}, ErrScheduleObservation
+	}
+	return result, nil
+}
+
 func (s UnitObservation) reviewedLoaded() bool {
 	return knownUnit(s.Unit) && s.LoadState == "loaded" && s.FragmentPath == "/etc/systemd/system/"+s.Unit && s.DropInPaths == "" && s.NeedDaemonReload == "no"
 }
@@ -102,4 +118,36 @@ func TransitionTimer(previous bool, service, timer UnitObservation) (TimerState,
 		return TimerState{}, ErrScheduleObservation
 	}
 	return state, nil
+}
+
+// VerifyBootstrapLoaded observes only the loaded-unit part of an initial
+// enrollment or its compensation. Before reload, the native manager may retain
+// either cache entry independently. Every accepted entry is absent or the fixed
+// idle, disabled target; an enabled/running/overridden unit is never adopted.
+// Callers must prove the exact completed file phase and original absence first.
+// This does not enable or start renewal and is not a readiness result.
+func VerifyBootstrapLoaded(service, timer UnitObservation, published, beforeReload bool) error {
+	if service.Unit != ServiceName || timer.Unit != TimerName {
+		return ErrScheduleObservation
+	}
+	for _, unit := range []UnitObservation{service, timer} {
+		if beforeReload && unit.NeedDaemonReload == "yes" {
+			unit.NeedDaemonReload = "no"
+		}
+		absent := unit.verifiedAbsent()
+		loaded := unit.reviewedLoaded() && unit.ActiveState == "inactive"
+		if unit.Unit == ServiceName {
+			loaded = loaded && unit.UnitFileState == "static"
+		} else {
+			loaded = loaded && unit.UnitFileState == "disabled"
+		}
+		if beforeReload {
+			if !absent && !loaded {
+				return ErrScheduleObservation
+			}
+		} else if published && !loaded || !published && !absent {
+			return ErrScheduleObservation
+		}
+	}
+	return nil
 }
