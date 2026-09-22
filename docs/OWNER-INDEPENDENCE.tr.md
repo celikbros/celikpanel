@@ -301,3 +301,11 @@ ve başarısız gözlem 2.4 sayılmaz. Desteklenmeyen sürüm ayrı reddedilir.
 TLS önkoşulu dosya/snapshot değişikliğinden önce durur; sanal posta yazıcısı
 ve kalıcı plan doğrulaması da doğrulanmış lehçe gerektirir. Mail race testleri
 ve vet geçti; bu kaynak aşamasında native kabul ve bağımsız yenileme açıktır.
+
+
+[Sonraki AY yerel sürüm gözlemi kabulü](../deploy/e2e/release-recovery/MAIL-DIALECT-AY.md)
+paylaşılan ana makine kilidini ve yerel plan geri okumasını tam kaynak
+sürümüyle doğrular. Gerçek hata veren sürüm komutu yapılandırmayı
+değiştirmeden durur; yapılandırma, işlem kaydı, bekleyen yenileme ve
+güvenilir SMTP/IMAP sertifikası korunur. Bağımsız yenileme, tüm etkin
+yerel yapılandırma doğrulaması ve çökme kurtarması açık kalır.

@@ -414,3 +414,11 @@ observations, preserved untouched outcome, no later command, no raw-output leak,
 and successful 2.3/2.4 parsing; existing mail tests and vet pass. Native acceptance
 is still pending at this source stage. Other version probes and the full
 independent renewal transaction remain open.
+
+
+[Subsequent AY native dialect acceptance](../deploy/e2e/release-recovery/MAIL-DIALECT-AY.md)
+now verifies the shared host lock and native retained-plan readback on the exact
+current source. A real failing version executable prevents configuration work;
+configuration, ledger, queued renewal and trusted SMTP/IMAP leaf stay unchanged.
+This closes the bounded native observation check, not independent renewal,
+complete effective native configuration verification or crash recovery.
