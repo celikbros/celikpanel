@@ -102,3 +102,16 @@ This is the shared contract needed by the independent boot consumer, not its
 activation. The installed boot unit still invokes Agent. Native consumer packaging,
 owner-reviewed persistence/boot migration, failed-restore recovery and real
 Agent-absent reboot acceptance remain open. Existing installations are unchanged.
+
+
+## Independent firewall consumer: bounded native evidence
+
+The source `cmd/firewall-restore` now reads the shared legacy/v2 policy without
+Agent, application DB or licensing. [Debian AR evidence](../deploy/e2e/release-recovery/FIREWALL-BOOT.md)
+proves an orderly reboot with both management binaries absent, fresh SSH access
+and a retained unrelated nft table. The fixture uses the existing root-owned,
+non-writable `celikpanel` group layout. There is no stored-schema transition.
+
+The installed unit still uses Agent. Packaging, shared mutation exclusion,
+upgrade/rollback retention, failed-boot recovery and the remaining native workload
+matrix stay open; this result does not close P0.5 or certify panel removal.

@@ -1,0 +1,55 @@
+{
+  "at": "2026-09-22T00:03:08.515672+00:00",
+  "boot_ids": [
+    "a3f768c4-395f-4ccc-9840-98fe3c1c3ce9",
+    "f3bd1148-12bb-4e6e-8e23-04df20022d58"
+  ],
+  "evidence_sha256": {
+    "after.json": "3515ee31dcc42b50114aea7d21c7b6bff4b06cf382150c9f3d53ba90f2b19daf",
+    "before.json": "e69b6c23ac5912651a43af24ab23fbb0ba14b55fbd3116e0a84296cef2ee19d4",
+    "source.json": "523d3754798efae70b4b64e40b8b305bfcb78284481abfc768abba59f513de92"
+  },
+  "fresh_guarded_ssh_after_reboot": true,
+  "helper_sha256": "570bda6a4b980f8b0e0e791462778e42db5b7183c458a0809f8c369f75d7312e",
+  "limitations": [
+    "Fixture-seeded canonical v2 policy, not Agent RPC production or installation migration",
+    "Separate fixture unit; production boot unit still invokes Agent",
+    "Orderly Debian reboot, not power loss, Arch or emergency-target recovery",
+    "No shared Agent exclusion or concurrent owner nft mutation acceptance",
+    "Not panel removal or complete P0.5 acceptance"
+  ],
+  "management_binaries_absent": true,
+  "management_services_disabled": true,
+  "native_firewall_after_reboot": true,
+  "nft": "nftables v1.1.3 (Commodore Bullmoose #4)",
+  "node": "debian13",
+  "other_native_table_retained": true,
+  "policy_sha256": "dd4ada156db53b4bb458aeb3034a257ec469c141c58e65aaaf2ea2c5276867ac",
+  "schema": "celikpanel/native-firewall-boot-acceptance/v1",
+  "source": {
+    "binary_sha256": "570bda6a4b980f8b0e0e791462778e42db5b7183c458a0809f8c369f75d7312e",
+    "build": [
+      "CGO_ENABLED=0",
+      "go",
+      "build",
+      "-trimpath",
+      "-buildvcs=false",
+      "./cmd/firewall-restore"
+    ],
+    "go_version": "go version go1.26.5 linux/amd64",
+    "source_sha256": {
+      "cmd/firewall-restore/main.go": "13ab620310da8eefbcd15b54113ba1ee12c2858c21fdf48922df96636c77e15f",
+      "internal/firewallboot/native_linux.go": "8185463de22363f40a496dfb4219bf10dbcf87fa06a6495ce20b6b615dbe43af",
+      "internal/firewallboot/native_linux_test.go": "6537644641c0b35f6b7dd4a98a1b9099804fa552f91d94af71f4ba6c0fc3be17",
+      "internal/firewallboot/native_other.go": "6c00391084e7ee9f3f83dc7e562b06d3712e0ff2943075fcee3234f7958c483c",
+      "internal/firewallboot/restore.go": "32db7b580d72728f9dd8654f07287ed6c60f40709bcea137296f9e237b2e6a16",
+      "internal/firewallboot/restore_test.go": "1a115c7cbbf3a87ff938f94f7ebfc7d8fa75a23ee6845f7cb6e0b41dbad7fac2",
+      "internal/firewallpolicy/policy.go": "a267a50585ba6f009bc6745af32f98f981ed6eaf85e4a981530e887e649a71e3",
+      "internal/firewallpolicy/policy_test.go": "0decaef29473b418a421c5a59f0a0a3ecd2446ab3c5adef369d8ecb6153126e1",
+      "internal/firewallpolicy/ssh.go": "9b5bc2cedb64f5f3e5c9acdcc6b09a52be12ceb963d20adafb0d730aa741c20e"
+    }
+  },
+  "systemd": "systemd 257 (257.13-1~deb13u1)",
+  "unit_sha256": "64036c856c833e84719effddde915b4a247f45ef3d88fccb93ffafad2743673f",
+  "vm_uuid": "c6b28f46-c2f3-5024-897b-8d153ee7fe13"
+}
