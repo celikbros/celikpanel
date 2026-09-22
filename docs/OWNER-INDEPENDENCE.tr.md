@@ -249,3 +249,10 @@ seçimiyle bekleyen işin korunmasını doğruladı. P0.4/P0.5 kısmen kanıtlı
 yenileme hâlâ Agent kodunu kullanıyor; bağımsız yardımcının yetkilendirilmesi,
 tekrar denemesi, hook geçişi ve panel kaldırma kabulü açıktır. Kurulu kullanıcı
 panelinde değişiklik yapılmadı.
+
+
+[Kabul edilmiş mail TLS planı](MAIL-CERTIFICATE-ARTIFACT.md#shared-accepted-mail-tls-plan)
+Agent üreticisi ve kurtarma okuyucusunun kullandığı tek v1 sözleşmeye taşındı.
+Gerçek Alpha81 üreticisinin boş/SNI kayıtları aynen korunuyor. Kabul edilmiş
+planı okumak güncel sağlığı kanıtlamaz ve yeni yardımcıya değişiklik yetkisi
+vermez; bağımsız yenileme işlemi ve gerçek sistem kabulü açıktır.

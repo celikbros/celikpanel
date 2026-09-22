@@ -136,3 +136,27 @@ success no longer clears a queued renewal when the owner selected another
 certificate; the real-daemon owner-drift test preserves both facts. No schema
 migration was introduced. This does not complete independent renewal: the test
 still invokes Agent code and the production deploy hook still needs Agent.
+
+
+## Shared accepted mail TLS plan
+
+`internal/mailtlsartifact` now owns the existing v1 accepted Postfix/Dovecot TLS
+plan (`mail-tls-sync-journal.json` and retained `mail-tls-committed.json`). Agent's
+actual producer, current reader, recovery reader and equality checks delegate to
+it. It validates the request identity, complete canonical payload and its existing
+`mail-tls-sync/v1:sha256:` qualifier, including immutable SNI snapshot paths.
+Unknown/duplicate fields, trailing bytes, altered host/root/SNI and alternate
+empty representations remain rejected. Validation does not normalize caller intent.
+
+This is an extraction of the historical byte contract, not a schema migration.
+Actual Alpha81 producer output at `45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00`
+provides empty/SNI golden files; both Agent and shared encoder reproduce them.
+Race tests cover those fixtures, changed meaning and current Agent mail host/TLS
+paths; vet also runs. The prior AX native trial predates this extraction and is
+not represented as native proof of this new build.
+
+A syntactically valid plan is accepted intent, not proof of present daemon state,
+owner authorization for a new helper, or completed publication. Reading it cannot
+start a mutation. Agent still owns filesystem security, its operation ledger,
+recovery execution and service reload. P0.4 sharing advances; P0.5 still needs the
+independent deployment transaction, owner binding and real removal/reboot proof.

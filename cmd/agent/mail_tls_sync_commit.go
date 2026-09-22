@@ -3,25 +3,24 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailtlsartifact"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
-	mailTLSSyncJournalFileName   = "mail-tls-sync-journal.json"
-	mailTLSCommittedFileName     = "mail-tls-committed.json"
-	mailTLSSyncJournalVersion    = 1
-	mailTLSSyncJournalMaxSize    = 2 << 20
+	mailTLSSyncJournalFileName   = mailtlsartifact.JournalFileName
+	mailTLSCommittedFileName     = mailtlsartifact.CommittedFileName
+	mailTLSSyncJournalVersion    = mailtlsartifact.Version
+	mailTLSSyncJournalMaxSize    = mailtlsartifact.MaxSize
 	mailTLSSyncJournalStageLimit = 8
 
 	mailTLSSyncConvergenceTime = 2 * time.Minute
@@ -92,14 +91,7 @@ func mailTLSSyncCleanFailureText(
 	return mailTLSSyncFailureVoice.cleanFailureText(outcome, cause, afterRestart)
 }
 
-type mailTLSSyncJournal struct {
-	Version     int                      `json:"version"`
-	RequestID   string                   `json:"request_id"`
-	Qualifier   string                   `json:"qualifier"`
-	ManagedRoot string                   `json:"managed_root"`
-	Myhostname  string                   `json:"myhostname"`
-	SNI         []transport.MailSNIEntry `json:"sni,omitempty"`
-}
+type mailTLSSyncJournal = mailtlsartifact.Plan
 
 var recoverMailTLSSyncHost = func(
 	ctx context.Context,
@@ -111,74 +103,23 @@ var recoverMailTLSSyncHost = func(
 }
 
 func equalMailTLSSNI(left, right []transport.MailSNIEntry) bool {
-	leftRaw, leftErr := json.Marshal(left)
-	rightRaw, rightErr := json.Marshal(right)
-	return leftErr == nil && rightErr == nil && bytes.Equal(leftRaw, rightRaw)
+	return mailtlsartifact.EqualSNI(left, right)
 }
 
 func equalMailTLSSyncJournals(left, right *mailTLSSyncJournal) bool {
-	if left == nil || right == nil {
-		return left == right
-	}
-	leftRaw, leftErr := encodeMailTLSSyncJournal(left)
-	rightRaw, rightErr := encodeMailTLSSyncJournal(right)
-	return leftErr == nil && rightErr == nil && bytes.Equal(leftRaw, rightRaw)
+	return mailtlsartifact.Equal(left, right)
 }
 
 func validateMailTLSSyncJournal(journal *mailTLSSyncJournal) error {
-	if journal == nil || journal.Version != mailTLSSyncJournalVersion ||
-		!validMutationIdentity(journal.RequestID) ||
-		!mutationpayload.ValidMailTLSSyncQualifier(journal.Qualifier) {
-		return errors.New("mail TLS sync journal identity is invalid")
-	}
-	canonical, err := mutationpayload.CanonicalMailTLSSync(
-		journal.ManagedRoot, journal.Myhostname, journal.SNI,
-	)
-	if err != nil || canonical.Qualifier != journal.Qualifier ||
-		canonical.ManagedRoot != journal.ManagedRoot ||
-		canonical.Myhostname != journal.Myhostname ||
-		!equalMailTLSSNI(canonical.SNI, journal.SNI) {
-		return errors.New("mail TLS sync journal payload is not canonical")
-	}
-	return nil
+	return mailtlsartifact.Validate(journal)
 }
 
 func encodeMailTLSSyncJournal(journal *mailTLSSyncJournal) ([]byte, error) {
-	if err := validateMailTLSSyncJournal(journal); err != nil {
-		return nil, err
-	}
-	raw, err := json.Marshal(journal)
-	if err != nil {
-		return nil, err
-	}
-	if len(raw) > mailTLSSyncJournalMaxSize {
-		return nil, errors.New("mail TLS sync journal exceeds the size limit")
-	}
-	return raw, nil
+	return mailtlsartifact.Encode(journal)
 }
 
 func decodeMailTLSSyncJournal(raw []byte) (*mailTLSSyncJournal, error) {
-	if len(raw) == 0 || len(raw) > mailTLSSyncJournalMaxSize {
-		return nil, errors.New("mail TLS sync journal has invalid size")
-	}
-	var journal mailTLSSyncJournal
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&journal); err != nil {
-		return nil, fmt.Errorf("decode mail TLS sync journal: %w", err)
-	}
-	var extra json.RawMessage
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		return nil, errors.New("mail TLS sync journal contains trailing JSON")
-	}
-	canonical, err := encodeMailTLSSyncJournal(&journal)
-	if err != nil {
-		return nil, err
-	}
-	if !bytes.Equal(raw, canonical) {
-		return nil, errors.New("mail TLS sync journal is not canonical")
-	}
-	return &journal, nil
+	return mailtlsartifact.Decode(raw)
 }
 
 func mailTLSSyncJournalPath(manager *serviceMutationManager) string {
