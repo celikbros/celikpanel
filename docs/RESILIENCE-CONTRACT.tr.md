@@ -463,3 +463,10 @@ seçili sertifikanın tam işlemine ait başarılı kalıcı yayımlama kaydıyl
 silinir. Sertifika eşleşmesi tek başına yeterli değildir; yarım işlem,
 belirsiz kanıt ve daha yeni kuyruk korunur. Şema değişikliği veya örtülü
 genel kurtarma yoktur. P0.3/P0.5 ve ayrı izlenen yerel kabul işleri açıktır.
+
+
+[Bağımsız posta yenileme girişi](MAIL-RENEWAL-EXECUTOR.md), ortak uygulamayı
+kullanarak yalnız sınırlı kuyruk/işleme ve posta servislerini okuma/yeniden
+yükleme eylemlerini sunar. Kurulu hizmet, hook veya unit değişikliği yapılmaz.
+Kayıt, kalıcı sahiplik/runtime, yerel kabul ve yarım yenilemenin bağımsız
+kurtarılması P0.3/P0.5 kapsamında ayrı ve açıktır.

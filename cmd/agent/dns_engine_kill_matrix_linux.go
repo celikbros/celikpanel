@@ -142,6 +142,9 @@ const (
 )
 
 func init() {
+	if mailRenewalOnlyBuild {
+		return
+	}
 	config, active, err := dnsKillMatrixConfigFromEnvironment(os.LookupEnv)
 	if !active {
 		return

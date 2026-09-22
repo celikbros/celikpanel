@@ -74,6 +74,12 @@ func selectedMailHostCertificate(domain string) (cert, key string, err error) {
 }
 
 func runMailHostCertificateCommand(ctx context.Context, name string, args ...string) ([]byte, error) {
+	if mailRenewalOnlyBuild {
+		if err := validateIndependentMailCommand(name, args); err != nil {
+			return nil, err
+		}
+	}
+
 	// Both preflight and execution only use the existing fixed mail command
 	// inventory. No input supplies a program, directory, unit or shell text.
 	switch filepath.Base(name) {

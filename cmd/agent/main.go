@@ -360,6 +360,10 @@ func (a *Agent) ResetFailedUnitMutation(req *ServiceMutationServiceRequest, repl
 }
 
 func main() {
+	if mailRenewalOnlyBuild {
+		os.Exit(runIndependentMailRenewal(os.Args[1:], os.Geteuid(), os.Environ()))
+	}
+
 	// Hidden system-update modes exit before managers, RPC, sockets, or
 	// background tasks. The worker accepts only one canonical request ID.
 	if len(os.Args) == 2 && os.Args[1] == "--inspect-build-identity" {

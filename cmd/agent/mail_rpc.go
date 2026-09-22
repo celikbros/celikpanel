@@ -35,6 +35,9 @@ var (
 )
 
 func init() {
+	if mailRenewalOnlyBuild {
+		return
+	}
 	if d := os.Getenv("CELIKPANEL_MAIL_DIR"); d != "" {
 		postfixVBoxPath = filepath.Join(d, "vmailbox")
 		postfixVirtualPath = filepath.Join(d, "virtual")

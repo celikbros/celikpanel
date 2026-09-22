@@ -20,6 +20,12 @@ const (
 
 func init() {
 	if len(os.Args) > 1 && os.Args[1] == serviceMutationSupervisorMode {
+		if mailRenewalOnlyBuild {
+			if err := validateIndependentMailSupervisor(os.Args[2:], os.Geteuid(), os.Environ()); err != nil {
+				fmt.Fprintln(os.Stderr, "mail renewal supervisor refused: "+err.Error())
+				os.Exit(125)
+			}
+		}
 		os.Exit(runServiceMutationSupervisor(os.Args[2:]))
 	}
 }

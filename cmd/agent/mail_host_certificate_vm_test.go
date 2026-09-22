@@ -29,6 +29,14 @@ import (
 // It installs no panel and does not contact an ACME provider. A temporary CA
 // proves the production file/commit/reload/renewal path against real daemons.
 func TestMailHostCertificateDisposableVMConvergenceAndRenewal(t *testing.T) {
+	exerciseMailHostCertificateVM(t, false)
+}
+
+func TestMailHostCertificateDisposableVMPrepareIndependentRenewal(t *testing.T) {
+	exerciseMailHostCertificateVM(t, true)
+}
+
+func exerciseMailHostCertificateVM(t *testing.T, prepareIndependent bool) {
 	if os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "debian13-20260911" {
 		t.Skip("disposable Debian13 VM acceptance only")
 	}
@@ -207,6 +215,13 @@ func TestMailHostCertificateDisposableVMConvergenceAndRenewal(t *testing.T) {
 		t.Fatal(err)
 	}
 	secondLeaf := issueFixtureSource(2)
+	if prepareIndependent {
+		if _, err := os.Stat(mailHostRenewalPendingPath()); !os.IsNotExist(err) {
+			t.Fatal("fresh independent fixture already has pending work")
+		}
+		t.Logf("independent renewal source prepared; lineage=%s selected=%s source=%s", lineage, firstLeaf, secondLeaf)
+		return
+	}
 	if err = queueMailHostCertificateRenewal(lineage); err != nil {
 		t.Fatal(err)
 	}

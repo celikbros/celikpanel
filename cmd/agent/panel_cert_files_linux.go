@@ -32,6 +32,9 @@ const (
 )
 
 func init() {
+	if mailRenewalOnlyBuild {
+		return
+	}
 	panelCertificateActivationPublishMaterial = installPanelCertMaterial
 }
 

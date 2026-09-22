@@ -473,3 +473,10 @@ certificate bytes alone cannot erase interrupted activation; different-host,
 foreign/unknown work and newer queues are retained. No schema migration or
 implicit general recovery. Native acceptance is tracked separately in
 [renewal observation](MAIL-RENEWAL-OBSERVATION.md); P0.3/P0.5 remain partial.
+
+
+A [separate mail renewal entry](MAIL-RENEWAL-EXECUTOR.md) now builds from the shared
+implementation with only scoped queue/process actions and restricted supervised
+native probes/reloads. It does not ship enrollment, hook/unit migration or change
+installed services. Native acceptance, retained ownership/runtime prerequisites
+and independent interrupted recovery remain separate P0.3/P0.5 work.
