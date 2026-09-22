@@ -196,6 +196,11 @@ func (m *serviceMutationManager) recoverPersistedMailHostCertificateLocked(
 		serviceMutationWorkerMatches(job.WorkerPID, job.WorkerStarted) {
 		return false, nil
 	}
+	if m.mailRenewalScope != nil {
+		if err := admitMailRenewalSelectedRecovery(job, m.mailRenewalRecoveryOwnerRequest); err != nil {
+			return false, err
+		}
+	}
 	if !mutationpayload.ValidMailHostCertificateQualifier(job.PackageName) {
 		m.poisonLock = lock
 		if job.PackageName == "certbot" {
@@ -247,6 +252,7 @@ func (m *serviceMutationManager) recoverPersistedMailHostCertificateLocked(
 	runtime.job.ErrorCode = "agent_restart_during_mail_host_certificate"
 	runtime.job.ErrorMessage = "The agent is reconciling mail host certificate publication after a restart."
 	if m.mailRenewalScope != nil {
+		runtime.job.Attempt++ // Reserved durably with recovery intent below.
 		runtime.job.ErrorCode = "mail_renewal_selected_recovery"
 		runtime.job.ErrorMessage = "Independent mail renewal is completing the already selected certificate for this recorded operation."
 	}

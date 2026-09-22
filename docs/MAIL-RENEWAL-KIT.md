@@ -71,3 +71,29 @@ management binaries. Such evidence is recorded separately; these unit tests do
 not close the native acceptance item. Pre-selection interruptions, bounded
 recovery retry policy, enrollment/migration/removal and power-loss acceptance
 remain open.
+
+## Bounded selected-operation retry
+
+The existing v1 job `attempt` is now reserved in the same durable recovery-intent
+write before an independent selected-certificate recovery may reload services.
+The recorded initial execution and up to two automatic recovery attempts exhaust
+the limit of three. Kills, reboot and a different helper build do not reset that
+same selected operation's counter. Historical attempts not recorded by older
+writers are not inferred or backfilled. No ledger version migration is made.
+
+At exhaustion the helper makes no further native change and emits the recorded
+request ID, preserved pending state, and a concrete root-owner continuation:
+`<installed immutable helper> --retry-selected <recorded-operation-id>`.
+The owner first resolves native Postfix/Dovecot problems. Each explicit command
+admits only one further attempt for that exact selected receipt and pending leaf;
+it does not clear or reset the counter, start a service, replace selection, grant
+a broad recovery capability or reopen a terminal failure. Overflow and another
+operation identity are refused. Read-only prerequisites may be checked repeatedly
+without spending a mutation attempt; their failure preserves the original job.
+
+This budget governs the independent helper's already-selected recovery only.
+Pre-selection failed-issuance retry and ordinary Agent recovery policy remain
+separate open work. Production enrollment must retain the selected helper's
+policy and its state through migration/rollback; an older helper is not evidence
+of this new retry guarantee. Native failure/reboot/exhaustion/explicit-owner
+acceptance is recorded separately from the component tests.

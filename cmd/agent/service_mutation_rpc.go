@@ -126,6 +126,8 @@ type serviceMutationManager struct {
 
 	// Non-nil grants only this exact unattended renewal, never general recovery.
 	mailRenewalScope *ServiceMutationBeginRequest
+	// Set only by the root-only exact selected-operation retry entry. Never resets Attempt.
+	mailRenewalRecoveryOwnerRequest string
 
 	releaseTransactionPresent func() (bool, error)
 

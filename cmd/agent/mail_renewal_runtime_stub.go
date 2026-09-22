@@ -4,4 +4,4 @@ package main
 
 func prepareIndependentMailRuntime() error { return mailHostLinuxOnly() }
 
-func recoverIndependentSelectedMailRenewal(mailHostRenewal) error { return mailHostLinuxOnly() }
+func recoverIndependentSelectedMailRenewal(mailHostRenewal, string) error { return mailHostLinuxOnly() }

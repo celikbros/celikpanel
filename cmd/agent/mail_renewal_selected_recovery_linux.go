@@ -67,20 +67,20 @@ func mailRenewalWorkerGone(job *ServiceMutationJob, read func(int) (string, erro
 	return nil // The observed PID belongs to a different process incarnation.
 }
 
-func recoverIndependentSelectedMailRenewal(expected mailHostRenewal) error {
+func recoverIndependentSelectedMailRenewal(expected mailHostRenewal, ownerRequest string) error {
 	mailRenewalExecution.Lock()
 	defer mailRenewalExecution.Unlock()
 	if mailRenewalExecution.retained != nil {
 		return errMailRenewalRecoveryRequired
 	}
-	manager, err := recoverSelectedMailRenewalAt(expected, serviceMutationStateDirectory(), serviceMutationLockFile(), readSelectedMailHostReceipt, preflightMailHostCertificateReload)
+	manager, err := recoverSelectedMailRenewalAt(expected, ownerRequest, serviceMutationStateDirectory(), serviceMutationLockFile(), readSelectedMailHostReceipt, preflightMailHostCertificateReload)
 	if manager != nil {
 		mailRenewalExecution.retained = manager
 	}
 	return err
 }
 
-func recoverSelectedMailRenewalAt(expected mailHostRenewal, stateDir, lockPath string, readSelected func() (mailHostCertificateReceipt, error), preflight func(context.Context, string) error) (retained *serviceMutationManager, result error) {
+func recoverSelectedMailRenewalAt(expected mailHostRenewal, ownerRequest, stateDir, lockPath string, readSelected func() (mailHostCertificateReceipt, error), preflight func(context.Context, string) error) (retained *serviceMutationManager, result error) {
 	lock, err := acquireServiceMutationHostAndPublicationLocks(lockPath)
 	if err != nil {
 		return nil, err
@@ -116,6 +116,9 @@ func recoverSelectedMailRenewalAt(expected mailHostRenewal, stateDir, lockPath s
 			if e != nil {
 				return e
 			}
+			if ownerRequest != "" && (!validMutationIdentity(ownerRequest) || ownerRequest != receipt.RequestID) {
+				return errMailRenewalRecoveryRequired
+			}
 			job, e = selectedMailRenewalRecoveryJob(m.ledger, pending, receipt)
 			return e
 		})
@@ -130,6 +133,10 @@ func recoverSelectedMailRenewalAt(expected mailHostRenewal, stateDir, lockPath s
 	}
 	scope := &ServiceMutationBeginRequest{RequestID: job.RequestID, OwnerID: job.OwnerID, Kind: job.Kind, Target: job.Target, PackageName: job.PackageName}
 	m.mailRenewalScope = scope
+	m.mailRenewalRecoveryOwnerRequest = ownerRequest
+	if err = admitMailRenewalSelectedRecovery(job, ownerRequest); err != nil {
+		return nil, err
+	}
 	if err = m.observeMailRenewalEvidenceLocked(); err != nil {
 		return nil, err
 	}

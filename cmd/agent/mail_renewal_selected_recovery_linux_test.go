@@ -16,7 +16,7 @@ import (
 )
 
 func TestSelectedMailRenewalRecoveryPreservesUnverifiedEvidence(t *testing.T) {
-	for _, scenario := range []string{"preflight-refusal", "completed", "failed", "missing-job", "foreign-active", "wrong-phase", "other-host", "other-qualifier", "other-leaf", "unknown-selection", "newer-queue", "stage", "dns-journal", "held-lock", "ledger-changed-during-preflight", "selection-changed-during-preflight", "queue-changed-during-preflight", "live-worker"} {
+	for _, scenario := range []string{"preflight-refusal", "completed", "failed", "missing-job", "foreign-active", "wrong-phase", "other-host", "other-qualifier", "other-leaf", "unknown-selection", "newer-queue", "stage", "dns-journal", "held-lock", "ledger-changed-during-preflight", "selection-changed-during-preflight", "queue-changed-during-preflight", "live-worker", "budget-exhausted", "owner-retry", "wrong-owner-retry"} {
 		t.Run(scenario, func(t *testing.T) {
 			m, _ := newMutationTestManager(t)
 			dir := filepath.Dir(m.ledgerPath)
@@ -30,6 +30,7 @@ func TestSelectedMailRenewalRecoveryPreservesUnverifiedEvidence(t *testing.T) {
 			receipt := mailHostCertificateReceipt{Schema: mailhostartifact.ReceiptSchema, RequestID: job.RequestID, Qualifier: job.PackageName, Domain: job.Target, LeafSHA256: strings.Repeat("a", 64)}
 			expected := mailHostRenewal{Lineage: mailHostCertLineageName(receipt.Domain), LeafSHA256: receipt.LeafSHA256}
 			pending := expected
+			ownerRequest := ""
 			if scenario != "completed" && scenario != "failed" {
 				job.Status = serviceMutationStatusRunning
 				job.FinishedAt = time.Time{}
@@ -41,6 +42,14 @@ func TestSelectedMailRenewalRecoveryPreservesUnverifiedEvidence(t *testing.T) {
 				ledger.ActiveRequestID = job.RequestID
 			}
 			switch scenario {
+			case "budget-exhausted":
+				job.Attempt = 3
+			case "owner-retry":
+				job.Attempt = 3
+				ownerRequest = job.RequestID
+			case "wrong-owner-retry":
+				job.Attempt = 3
+				ownerRequest = testMutationSecondRequestID
 			case "failed":
 				job.Status = serviceMutationStatusFailed
 			case "missing-job":
@@ -108,7 +117,7 @@ func TestSelectedMailRenewalRecoveryPreservesUnverifiedEvidence(t *testing.T) {
 				defer lock.Close()
 			}
 			selectedCalls, preflightCalls := 0, 0
-			retained, err := recoverSelectedMailRenewalAt(expected, dir, m.lockPath, func() (mailHostCertificateReceipt, error) {
+			retained, err := recoverSelectedMailRenewalAt(expected, ownerRequest, dir, m.lockPath, func() (mailHostCertificateReceipt, error) {
 				selectedCalls++
 				if !inPublication {
 					t.Fatal("selection observed outside publication lock")
@@ -153,6 +162,12 @@ func TestSelectedMailRenewalRecoveryPreservesUnverifiedEvidence(t *testing.T) {
 				}
 				return &mailHostReloadUnverified{cause: errors.New("owner stopped native mail")}
 			})
+			if scenario == "budget-exhausted" {
+				var budget *mailRenewalRecoveryBudgetError
+				if !errors.As(err, &budget) || budget.RequestID != job.RequestID {
+					t.Fatalf("missing actionable budget result: %v", err)
+				}
+			}
 			if retained != nil {
 				t.Fatal("read-only refusal retained a manager")
 			}
@@ -163,7 +178,7 @@ func TestSelectedMailRenewalRecoveryPreservesUnverifiedEvidence(t *testing.T) {
 			} else if err == nil {
 				t.Fatal("unverified recovery accepted")
 			}
-			if scenario == "preflight-refusal" || strings.HasSuffix(scenario, "during-preflight") {
+			if scenario == "preflight-refusal" || scenario == "owner-retry" || strings.HasSuffix(scenario, "during-preflight") {
 				if preflightCalls != 1 {
 					t.Fatalf("preflight not reached: %d, %v", preflightCalls, err)
 				}
