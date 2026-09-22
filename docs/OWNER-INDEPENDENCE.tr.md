@@ -173,3 +173,11 @@ arşivlerin yolu korunur. Ret akışı durdurur; yarım hazırlık yanlış
 "değişmedi" yerine `firewall_runtime_preparation_unconfirmed` sonucu verir.
 Gerçek FD devri ve ilk kurucu fonksiyonu testleri başarılı hazırlığı ve bozuk
 paket reddini kapsar. Kurulu güvenlik duvarı birimi henüz bu yardımcıya geçmez.
+
+
+[Debian AR nesil kabulü](../deploy/e2e/release-recovery/FIREWALL-GENERATIONS.md),
+paketlenen gerçek birimin Panel/Agent dosyaları yokken üç A/B/A açılışını
+kanıtlar. İki yardımcı nesli, kayıtlı politika ve ayrı yerel tablo korunur.
+Eksik tablo deneyinin ilk sonucu da saklanır. Nesiller aynı okuyucunun iki
+derlemesidir; anlamsal sürüm geçişi veya normal uygulama güncelleme/geri alma
+kanıtı değildir. P0.5 açık kalır.

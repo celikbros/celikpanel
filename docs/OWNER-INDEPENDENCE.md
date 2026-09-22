@@ -183,3 +183,11 @@ preparation halts that flow; incomplete preparation has its own
 state. Real inherited-FD shell tests and the real extracted fresh-installer
 function cover successful preparation and corrupt-payload refusal. This wiring
 still does not switch the installed firewall unit to the prepared helper.
+
+
+[Debian AR generation acceptance](../deploy/e2e/release-recovery/FIREWALL-GENERATIONS.md)
+now proves the actual bundled native unit across three A/B/A boots with Panel
+and Agent binaries absent. Both helper generations, saved policy and unrelated
+native table remain intact. A preliminary incomplete table fixture is retained.
+The generations are two builds of the same audited reader; this is not semantic
+version migration or a normal application-update/rollback proof. P0.5 stays open.

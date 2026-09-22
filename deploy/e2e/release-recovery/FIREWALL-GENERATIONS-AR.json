@@ -1,0 +1,334 @@
+{
+  "before": {
+    "boot_id": "7f20cffe-33af-4450-a19e-e2adb60012eb",
+    "policy_sha256": "dd4ada156db53b4bb458aeb3034a257ec469c141c58e65aaaf2ea2c5276867ac",
+    "tables": {
+      "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+      "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain marker {\n\t\tcounter packets 0 bytes 0\n\t}\n}\n"
+    },
+    "unit_sha256": "dd176e36365bd0c681543ef1ac5922b52d3ad2126bc5c48b94342f689a27d602"
+  },
+  "build": {
+    "a": {
+      "celikpanel-firewall-restore.service": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+      "restore": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+      "runtime.manifest": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f"
+    },
+    "b": {
+      "celikpanel-firewall-restore.service": "ff6a429ce3575f2cefb6a28bea33fe6ec0706716ad8e676707c2b2a806c9ab15",
+      "restore": "a9637ab4ff236b9199585e88dd58b537613414fee503f192937003ff92e978af",
+      "runtime.manifest": "48a7f4978a4694d98e8bc20eb15069885a096fd5679c245490e44ed551ea6bb4"
+    },
+    "recovery_sha256": "3e69ea2e78d639033b247345df71b1ea02171d6e87d04937230dee4ca081d405"
+  },
+  "observations": [
+    {
+      "at": "2026-09-22T01:14:15.016848+00:00",
+      "boot_id": "826a7ca6-3666-4f57-a6f6-c276767d9db5",
+      "generations": {
+        "a": {
+          "files": {
+            "celikpanel-firewall-restore.service": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+              "uid": 0
+            },
+            "restore": {
+              "gid": 0,
+              "mode": 493,
+              "sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+              "uid": 0
+            },
+            "runtime.manifest": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+              "uid": 0
+            }
+          },
+          "generation": "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2"
+        },
+        "b": {
+          "files": {
+            "celikpanel-firewall-restore.service": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "ff6a429ce3575f2cefb6a28bea33fe6ec0706716ad8e676707c2b2a806c9ab15",
+              "uid": 0
+            },
+            "restore": {
+              "gid": 0,
+              "mode": 493,
+              "sha256": "a9637ab4ff236b9199585e88dd58b537613414fee503f192937003ff92e978af",
+              "uid": 0
+            },
+            "runtime.manifest": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "48a7f4978a4694d98e8bc20eb15069885a096fd5679c245490e44ed551ea6bb4",
+              "uid": 0
+            }
+          },
+          "generation": "1fdf7a12c11905e044686098369dab470752b2ef4faab4a1dbb89f6584835393"
+        }
+      },
+      "identity": {
+        "schema": "celikpanel-release-recovery-lab/v1",
+        "vm_uuid": "c6b28f46-c2f3-5024-897b-8d153ee7fe13"
+      },
+      "installed_unit": {
+        "gid": 0,
+        "mode": 420,
+        "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+        "uid": 0
+      },
+      "management_binaries_absent": true,
+      "policy": {
+        "gid": 989,
+        "mode": 384,
+        "sha256": "dd4ada156db53b4bb458aeb3034a257ec469c141c58e65aaaf2ea2c5276867ac",
+        "uid": 0
+      },
+      "schema": "celikpanel/native-firewall-generations/v1",
+      "systemd": "systemd 257 (257.13-1~deb13u1)",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain marker {\n\t\tcounter packets 0 bytes 0\n\t}\n}\n"
+      },
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "inactive",
+          "FragmentPath": "/etc/systemd/system/celikpanel-agent.service",
+          "Result": "success",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        },
+        "celikpanel-firewall-restore.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-firewall-restore.service",
+          "Result": "success",
+          "SubState": "exited",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "inactive",
+          "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+          "Result": "success",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T01:15:06.531264+00:00",
+      "boot_id": "3cde9576-e469-4fc8-ac5b-a2422dbca914",
+      "generations": {
+        "a": {
+          "files": {
+            "celikpanel-firewall-restore.service": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+              "uid": 0
+            },
+            "restore": {
+              "gid": 0,
+              "mode": 493,
+              "sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+              "uid": 0
+            },
+            "runtime.manifest": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+              "uid": 0
+            }
+          },
+          "generation": "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2"
+        },
+        "b": {
+          "files": {
+            "celikpanel-firewall-restore.service": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "ff6a429ce3575f2cefb6a28bea33fe6ec0706716ad8e676707c2b2a806c9ab15",
+              "uid": 0
+            },
+            "restore": {
+              "gid": 0,
+              "mode": 493,
+              "sha256": "a9637ab4ff236b9199585e88dd58b537613414fee503f192937003ff92e978af",
+              "uid": 0
+            },
+            "runtime.manifest": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "48a7f4978a4694d98e8bc20eb15069885a096fd5679c245490e44ed551ea6bb4",
+              "uid": 0
+            }
+          },
+          "generation": "1fdf7a12c11905e044686098369dab470752b2ef4faab4a1dbb89f6584835393"
+        }
+      },
+      "identity": {
+        "schema": "celikpanel-release-recovery-lab/v1",
+        "vm_uuid": "c6b28f46-c2f3-5024-897b-8d153ee7fe13"
+      },
+      "installed_unit": {
+        "gid": 0,
+        "mode": 420,
+        "sha256": "ff6a429ce3575f2cefb6a28bea33fe6ec0706716ad8e676707c2b2a806c9ab15",
+        "uid": 0
+      },
+      "management_binaries_absent": true,
+      "policy": {
+        "gid": 989,
+        "mode": 384,
+        "sha256": "dd4ada156db53b4bb458aeb3034a257ec469c141c58e65aaaf2ea2c5276867ac",
+        "uid": 0
+      },
+      "schema": "celikpanel/native-firewall-generations/v1",
+      "systemd": "systemd 257 (257.13-1~deb13u1)",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain marker {\n\t\tcounter packets 0 bytes 0\n\t}\n}\n"
+      },
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "inactive",
+          "FragmentPath": "/etc/systemd/system/celikpanel-agent.service",
+          "Result": "success",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        },
+        "celikpanel-firewall-restore.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-firewall-restore.service",
+          "Result": "success",
+          "SubState": "exited",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "inactive",
+          "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+          "Result": "success",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T01:15:43.177054+00:00",
+      "boot_id": "59019748-ff2d-4d9a-ac3f-538ba3dc8e0f",
+      "generations": {
+        "a": {
+          "files": {
+            "celikpanel-firewall-restore.service": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+              "uid": 0
+            },
+            "restore": {
+              "gid": 0,
+              "mode": 493,
+              "sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+              "uid": 0
+            },
+            "runtime.manifest": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+              "uid": 0
+            }
+          },
+          "generation": "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2"
+        },
+        "b": {
+          "files": {
+            "celikpanel-firewall-restore.service": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "ff6a429ce3575f2cefb6a28bea33fe6ec0706716ad8e676707c2b2a806c9ab15",
+              "uid": 0
+            },
+            "restore": {
+              "gid": 0,
+              "mode": 493,
+              "sha256": "a9637ab4ff236b9199585e88dd58b537613414fee503f192937003ff92e978af",
+              "uid": 0
+            },
+            "runtime.manifest": {
+              "gid": 0,
+              "mode": 420,
+              "sha256": "48a7f4978a4694d98e8bc20eb15069885a096fd5679c245490e44ed551ea6bb4",
+              "uid": 0
+            }
+          },
+          "generation": "1fdf7a12c11905e044686098369dab470752b2ef4faab4a1dbb89f6584835393"
+        }
+      },
+      "identity": {
+        "schema": "celikpanel-release-recovery-lab/v1",
+        "vm_uuid": "c6b28f46-c2f3-5024-897b-8d153ee7fe13"
+      },
+      "installed_unit": {
+        "gid": 0,
+        "mode": 420,
+        "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+        "uid": 0
+      },
+      "management_binaries_absent": true,
+      "policy": {
+        "gid": 989,
+        "mode": 384,
+        "sha256": "dd4ada156db53b4bb458aeb3034a257ec469c141c58e65aaaf2ea2c5276867ac",
+        "uid": 0
+      },
+      "schema": "celikpanel/native-firewall-generations/v1",
+      "systemd": "systemd 257 (257.13-1~deb13u1)",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain marker {\n\t\tcounter packets 0 bytes 0\n\t}\n}\n"
+      },
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "inactive",
+          "FragmentPath": "/etc/systemd/system/celikpanel-agent.service",
+          "Result": "success",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        },
+        "celikpanel-firewall-restore.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-firewall-restore.service",
+          "Result": "success",
+          "SubState": "exited",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "inactive",
+          "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+          "Result": "success",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      }
+    }
+  ],
+  "preliminary_trial": "The first A boot started the native unit successfully but the unrelated table fixture was not enabled. Retained as incomplete evidence; enablement fixed before the three recorded boots.",
+  "schema": "celikpanel/native-firewall-generation-acceptance/v1",
+  "scope": "Same audited helper built stripped/unstripped; native unit A/B/A with management binaries absent. Not an installed-panel update/rollback acceptance.",
+  "source": {
+    "artifact_commit": "07816cdc3d142d8e60cba141616e5392cffc79dd",
+    "buildvcs": false,
+    "cgo_enabled": false,
+    "firewall_base_commit": "094c60b",
+    "preflight_commit": "cae8538ff1a526fb18ef96baefc742e0c61dc376",
+    "preparation_commit": "759bf2c073fb7f776bb36fd40adf262a4d11952d",
+    "toolchain": "go1.26.5",
+    "trimpath": true
+  },
+  "vm_uuid": "c6b28f46-c2f3-5024-897b-8d153ee7fe13"
+}
