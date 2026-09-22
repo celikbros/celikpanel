@@ -61,6 +61,7 @@ var skippedDirectories = map[string]bool{
 // adlandirilmis listesidir. Her deger nedenini soyler; "henuz" turunden bir
 // gerekce borctur ve borc olarak yazilmistir.
 var privilegedCommandAllowlist = map[string]string{
+	"internal/firewallboot/native_linux.go:<computed>":                 "independent native boot consumer cannot require Agent; fixed trusted nft/systemctl/sshd paths and closed arguments, clean environment, 20-second operation deadline, bounded combined output and hostcmd.Reason failures; only the canonical owned nft table may be applied",
 	"deploy/e2e/release-recovery/waltrace/fixture_child.go:<computed>": "disposable WAL feasibility child launches only its own executable with fixed --helper; output is captured by its parent tracer, not an installed service launcher",
 	// Independent recovery cannot depend on the Agent mutation launcher or RPC.
 	// These commands only observe fixed local identities; arbitrary child output
