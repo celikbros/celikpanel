@@ -109,6 +109,36 @@ def verify_dialect(record, base_bytes):
     return {'unknown_dialect_preserves_native_state':'verified','native_retained_plan_readback':'verified','independent_renewal':'not established'}
 
 
+def verify_ledger(record, base_bytes):
+    require(record.get('schema') == 'celikpanel/native-mail-ledger/v1', 'ledger schema differs')
+    require(record.get('base_record_sha256') == hashlib.sha256(base_bytes).hexdigest(), 'retained fixture evidence differs')
+    base=json.loads(base_bytes);verify(base)
+    require(record.get('lab') == {key:base['lab'][key] for key in ('cell_id','node')}, 'ledger fixture differs')
+    require(re.fullmatch(r'[0-9a-f]{40}',record.get('source_commit','')), 'ledger source missing')
+    binary=record.get('test_binary_sha256','');require(re.fullmatch(HEX,binary), 'ledger binary missing')
+    require(record.get('scope') == {'standalone_production_checker':True,'retained_native_ledger':True,'host_lock_contention_and_inheritance':True,'managed_state_unchanged':True,'installed_management_absent':True,'independent_renewal':False,'crash_recovery':False}, 'unsupported ledger scope')
+    logs={}
+    for name,item in record['logs'].items():
+        text=item['text']
+        require(len(text)<32768 and hashlib.sha256(text.encode()).hexdigest()==item['sha256'], 'ledger log digest differs')
+        require('PRIVATE KEY' not in text and 'nonce=' not in text, 'private ledger evidence present')
+        logs[name]=text
+    before=logs['mail-native-ledger-before.log'];result=logs['mail-native-ledger-result.log']
+    require(result.startswith(binary+'  /root/celikpanel-release-recovery-lab/ledger-checker\n'), 'executed ledger binary differs')
+    require(one(r'(?m)^('+UUID+')$',before)==one(r'(?m)^('+UUID+')$',result), 'ledger boot changed')
+    require(before.startswith('active\nactive\n') and '\nactive\nactive\n' in result, 'native mail not active')
+    for marker in ('retained-ledger-idle=verified','held-lock-refused=verified','inherited-lock-idle=verified','managed-state-unchanged=verified','native-ledger-check=passed'):
+        require(result.splitlines().count(marker)==1, 'missing ledger proof: '+marker)
+    require('Recovery agent check: service mutation state is not idle: the host package manager or mutation lock is busy' in result,'missing contention refusal')
+    for filename in ('service-mutations.json','mail-host-certificate-renewal.pending'):
+        pattern=r'(?m)^('+HEX+r')  /var/lib/celikpanel-agent-private/'+re.escape(filename)+r'$'
+        require(one(pattern,before)==one(pattern,result), 'retained state changed: '+filename)
+    selected=one(r'owner selection preserved; pending retained; historical completion preserved; selected=('+HEX+') source='+HEX,base['logs']['mail-owner-drift.log']['text'])
+    fingerprint=':'.join(selected[i:i+2].upper() for i in range(0,64,2))
+    require(re.findall(r'(?m)^sha256 Fingerprint=(.*)$',result)==[fingerprint,fingerprint], 'native ledger listeners changed')
+    return {'standalone_retained_ledger':'verified','host_lock_exclusion':'verified','native_mail_preserved':'verified','independent_renewal':'not established'}
+
+
 def verify_record(record, base_bytes=None):
     if base_bytes is None:
         return verify(record)
@@ -117,6 +147,8 @@ def verify_record(record, base_bytes=None):
         return verify_cleanup(record,base_bytes)
     if schema == 'celikpanel/native-mail-dialect/v1':
         return verify_dialect(record,base_bytes)
+    if schema == 'celikpanel/native-mail-ledger/v1':
+        return verify_ledger(record,base_bytes)
     raise ValueError('unsupported dependent evidence schema')
 
 if __name__ == '__main__':

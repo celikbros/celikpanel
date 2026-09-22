@@ -76,4 +76,20 @@ class MailDialectTests(unittest.TestCase):
         self.record['logs']['mail-native-dialect-result.log']['text']+='changed'
         with self.assertRaises(ValueError):s.verify_record(self.record,self.base)
 
+class MailLedgerTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-LEDGER-AY.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-AY.json').read_bytes()
+    def test_native_ledger_evidence(self):
+        self.assertEqual(s.verify_record(self.record,self.base)['host_lock_exclusion'],'verified')
+    def test_wrong_binary_scope_or_base(self):
+        for key,value in [('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('scope',{})]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_rehashed_missing_exclusion_or_changed_state(self):
+        for old,new in [('held-lock-refused=verified','held-lock-accepted=verified'),('native-ledger-check=passed','native-ledger-check=failed'),('51e1704bc9a5d460678b0458e068e16614076ed9547309487f5a6b6051857bde','0'*64),('689a6c54-3150-43bd-b95b-277adf11d5e1','00000000-0000-0000-0000-000000000000'),('Fingerprint=77:13','Fingerprint=00:00')]:
+            record=copy.deepcopy(self.record);item=record['logs']['mail-native-ledger-result.log']
+            self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new);item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)
+
 if __name__ == '__main__': unittest.main()

@@ -39,3 +39,8 @@ complete interruption/automatic-restoration matrix remain open.
 Validation at this source stage: shared package and full Agent `go test -race`
 pass (Agent 197.597 s), including the actual separately compiled recovery checker;
 `go vet` passes. Native retained-host readback is the next acceptance check.
+
+[Subsequent AY native acceptance](../deploy/e2e/release-recovery/MAIL-LEDGER-AY.md)
+passes on that exact source: standalone production checker, retained native
+ledger, real lock contention/inheritance, unchanged state and trusted native
+SMTP/IMAP leaf. It does not close independent renewal or crash recovery.
