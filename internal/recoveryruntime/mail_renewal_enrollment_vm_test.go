@@ -16,13 +16,16 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"golang.org/x/sys/unix"
 )
 
 // Test-only outer authority: a guarded disposable VM and protected owner intent.
 // This does not stand in for production fence/dispatch enrollment acceptance.
 func TestMailEnrollmentDisposableVM(t *testing.T) {
-	if os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "arch-20260922-bootstrap" {
+	fixture := os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM")
+	reserved := fixture == "arch-20260923-reserved"
+	if fixture != "arch-20260922-bootstrap" && !reserved {
 		t.Skip("guarded disposable Arch VM only")
 	}
 	if os.Geteuid() != 0 {
@@ -74,6 +77,11 @@ func TestMailEnrollmentDisposableVM(t *testing.T) {
 	}
 	const private = "/root/celikpanel-release-recovery-lab"
 	paths := mailCapturePaths{MailRenewalHookPath, "/etc/systemd/system", mailrenewalkit.InstalledRoot, filepath.Join(private, "mail-native-enrollment-journal"), transactionPath}
+	intentName := "mail-native-enrollment.intent"
+	if reserved {
+		paths.journals = filepath.Join(private, "mail-reserved-enrollment-journal")
+		intentName = "mail-reserved-enrollment.intent"
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	observe := func(ctx context.Context, unit string) ([]byte, error) {
@@ -126,7 +134,7 @@ func TestMailEnrollmentDisposableVM(t *testing.T) {
 			return fail(ReasonChanged)
 		}
 		var st unix.Stat_t
-		name := filepath.Join(private, "mail-native-enrollment.intent")
+		name := filepath.Join(private, intentName)
 		if unix.Lstat(name, &st) != nil || st.Mode != unix.S_IFREG|0600 || st.Uid != 0 || st.Gid != 0 || st.Nlink != 1 {
 			return fail(ReasonUnsafeMetadata)
 		}
@@ -139,6 +147,46 @@ func TestMailEnrollmentDisposableVM(t *testing.T) {
 		}
 		return nil
 	}}
+	reservation := mailEnrollmentReservation{Path: filepath.Join(private, "mail-reserved-ledger", "service-mutations.json"), OwnerID: strings.Repeat("b", 32)}
+	var identity servicemutationledger.MailEnrollmentIdentity
+	if reserved {
+		// The protected disposable owner intent admits this fixture reservation.
+		// Its producer is deliberately recorded separately from the production
+		// common writer; this trial proves real native consumers of that schema.
+		if e = guard.Verify(scope); e != nil {
+			t.Fatal(e)
+		}
+		scopeRaw, _ := promotionJSON(scope)
+		identity = servicemutationledger.MailEnrollmentIdentity{RequestID: operation, OwnerID: reservation.OwnerID, ScopeSHA256: Digest(scopeRaw)}
+		raw, found, err := servicemutationledger.ReadFile(reservation.Path, servicemutationledger.MaxSize, reservation.Owner)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ledger servicemutationledger.Ledger
+		if found {
+			ledger, err = servicemutationledger.Decode(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if phase != "forward-cut" {
+				t.Fatal("missing initial reservation")
+			}
+			ledger = servicemutationledger.Ledger{Version: 1, Jobs: map[string]*servicemutationledger.ServiceMutationJob{}}
+			ledger, err = servicemutationledger.AdmitMailEnrollment(&ledger, identity, time.Now().UTC())
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeMailEnrollmentVMFixtureLedger(t, reservation.Path, ledger)
+		}
+		if phase == "rollback-cut" {
+			ledger, err = servicemutationledger.AdvanceMailEnrollment(&ledger, identity, "rollback", time.Now().UTC())
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeMailEnrollmentVMFixtureLedger(t, reservation.Path, ledger)
+		}
+	}
 	checkpoint := func(point string) {
 		if point == cut {
 			t.Logf("native_enrollment_cut=%s operation=%s target=%s capture=%s", point, operation, target, scope.CaptureSHA256)
@@ -147,7 +195,11 @@ func TestMailEnrollmentDisposableVM(t *testing.T) {
 		}
 	}
 	for {
-		e = runMailEnrollmentAt(ctx, scope, direction, paths, guard, commands, checkpoint)
+		if reserved {
+			e = runReservedMailEnrollmentAt(ctx, scope, direction, paths, guard, reservation, commands, checkpoint)
+		} else {
+			e = runMailEnrollmentAt(ctx, scope, direction, paths, guard, commands, checkpoint)
+		}
 		if !errors.Is(e, mailrenewalkit.ErrScheduleBusy) {
 			break
 		}
@@ -163,5 +215,68 @@ func TestMailEnrollmentDisposableVM(t *testing.T) {
 	if cut != "" {
 		t.Fatal("native cut not reached")
 	}
+	if reserved {
+		if e = verifyReservedMailEnrollmentAt(ctx, scope, direction, paths, guard, reservation, commands.loaded); e != nil {
+			t.Fatal(e)
+		}
+		if phase == "rollback-verify" {
+			raw, found, err := servicemutationledger.ReadFile(reservation.Path, servicemutationledger.MaxSize, reservation.Owner)
+			if err != nil || !found {
+				t.Fatal(err)
+			}
+			ledger, err := servicemutationledger.Decode(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ledger, err = servicemutationledger.AdvanceMailEnrollment(&ledger, identity, "restored", time.Now().UTC())
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeMailEnrollmentVMFixtureLedger(t, reservation.Path, ledger)
+			if e = verifyReservedMailEnrollmentAt(ctx, scope, direction, paths, guard, reservation, commands.loaded); e != nil {
+				t.Fatal("terminal ledger read-only proof", e)
+			}
+			if e = runReservedMailEnrollmentAt(ctx, scope, direction, paths, guard, reservation, commands, nil); e == nil {
+				t.Fatal("terminal fence reopened")
+			}
+		}
+	}
 	t.Logf("native_enrollment_verified=%s operation=%s target=%s capture=%s files=%s", direction, operation, target, scope.CaptureSHA256, scope.FilesSHA256)
+}
+
+// Test fixture only. Existing producer publication crashes are tested through
+// the actual common writer in cmd/agent; this helper adds no production path.
+func writeMailEnrollmentVMFixtureLedger(t *testing.T, path string, ledger servicemutationledger.Ledger) {
+	t.Helper()
+	raw, e := servicemutationledger.Encode(&ledger)
+	if e != nil {
+		t.Fatal(e)
+	}
+	stage, e := os.CreateTemp(filepath.Dir(path), ".fixture-enrollment-")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = stage.Chmod(0600); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = stage.Write(raw); e != nil {
+		t.Fatal(e)
+	}
+	if e = stage.Sync(); e != nil {
+		t.Fatal(e)
+	}
+	if e = stage.Close(); e != nil {
+		t.Fatal(e)
+	}
+	if e = os.Rename(stage.Name(), path); e != nil {
+		t.Fatal(e)
+	}
+	dir, e := os.Open(filepath.Dir(path))
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer dir.Close()
+	if e = dir.Sync(); e != nil {
+		t.Fatal(e)
+	}
 }

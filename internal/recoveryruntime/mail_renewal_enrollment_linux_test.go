@@ -6,12 +6,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"golang.org/x/sys/unix"
@@ -127,6 +129,8 @@ func TestMailEnrollmentChild(t *testing.T) {
 		t.Skip("descriptor subprocess")
 	}
 	target, scenario := os.Getenv("CP_MAIL_ENROLL_TARGET"), os.Getenv("CP_MAIL_ENROLL_CASE")
+	reserved := strings.HasPrefix(scenario, "reserved:")
+	scenario = strings.TrimPrefix(scenario, "reserved:")
 	paths := mailCapturePaths{filepath.Join(root, "hooks", mailrenewalkit.HookName), filepath.Join(root, "units"), filepath.Join(root, "runtime"), filepath.Join(root, "journals"), filepath.Join(root, "transaction")}
 	capture, e := os.ReadFile(filepath.Join(paths.journals, mailCaptureTestOperation+".json"))
 	if os.IsNotExist(e) {
@@ -221,8 +225,61 @@ func TestMailEnrollmentChild(t *testing.T) {
 	if scenario == "resume:rollback" {
 		direction = "rollback"
 	}
+	reservation := mailEnrollmentReservation{Path: filepath.Join(root, "ledger", "service-mutations.json"), OwnerID: strings.Repeat("b", 32)}
+	identity := servicemutationledger.MailEnrollmentIdentity{RequestID: scope.Operation, OwnerID: reservation.OwnerID}
+	scopeRaw, _ := promotionJSON(scope)
+	identity.ScopeSHA256 = Digest(scopeRaw)
+	if reserved {
+		if _, e = os.Stat(filepath.Dir(reservation.Path)); os.IsNotExist(e) {
+			if e = os.Mkdir(filepath.Dir(reservation.Path), 0700); e != nil {
+				t.Fatal(e)
+			}
+		}
+		if _, e = os.Stat(reservation.Path); os.IsNotExist(e) {
+			empty := servicemutationledger.Ledger{Version: 1, Jobs: map[string]*servicemutationledger.ServiceMutationJob{}}
+			ledger, err := servicemutationledger.AdmitMailEnrollment(&empty, identity, time.Now().UTC())
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw, err := servicemutationledger.Encode(&ledger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			capturePut(t, reservation.Path, raw, 0600)
+		}
+	}
 	run := func(side string, checkpoint func(string)) error {
-		return runMailEnrollmentAt(context.Background(), scope, side, paths, guard, commands, checkpoint)
+		if !reserved {
+			return runMailEnrollmentAt(context.Background(), scope, side, paths, guard, commands, checkpoint)
+		}
+		// Test owner explicitly selects inverse in the common ledger first.
+		// The production writer's fsync/SIGKILL behavior is tested in cmd/agent.
+		if side == "rollback" {
+			raw, err := os.ReadFile(reservation.Path)
+			if err != nil {
+				return err
+			}
+			ledger, err := servicemutationledger.Decode(raw)
+			if err != nil {
+				return err
+			}
+			state, err := servicemutationledger.MailEnrollmentState(&ledger, identity)
+			if err != nil {
+				return err
+			}
+			if state == "forward" {
+				ledger, err = servicemutationledger.AdvanceMailEnrollment(&ledger, identity, "rollback", time.Now().UTC())
+				if err != nil {
+					return err
+				}
+				raw, err = servicemutationledger.Encode(&ledger)
+				if err != nil {
+					return err
+				}
+				capturePut(t, reservation.Path, raw, 0600)
+			}
+		}
+		return runReservedMailEnrollmentAt(context.Background(), scope, side, paths, guard, reservation, commands, checkpoint)
 	}
 	if strings.HasPrefix(scenario, "cut:rollback:") {
 		if e = run("forward", nil); e != nil {
@@ -235,6 +292,19 @@ func TestMailEnrollmentChild(t *testing.T) {
 			panic("kill returned")
 		}
 		if point == "enrollment_acceptance_parent_durable" {
+			if scenario == "reservation-late-replace" {
+				raw, err := os.ReadFile(reservation.Path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = os.Rename(reservation.Path, reservation.Path+".retained"); err != nil {
+					t.Fatal(err)
+				}
+				capturePut(t, reservation.Path, raw, 0600)
+			}
+			if scenario == "reservation-late-clear" {
+				capturePut(t, reservation.Path, []byte(`{"version":1,"jobs":{}}`), 0600)
+			}
 			if scenario == "late-deny" {
 				denied = true
 			}
@@ -276,6 +346,33 @@ func TestMailEnrollmentChild(t *testing.T) {
 	}
 	expectRefusal := false
 	switch scenario {
+	case "reservation-missing":
+		os.Remove(reservation.Path)
+		expectRefusal = true
+	case "reservation-owner":
+		reservation.OwnerID = strings.Repeat("c", 32)
+		expectRefusal = true
+	case "reservation-group":
+		reservation.Owner.GID = 65534
+		expectRefusal = true
+	case "reservation-closed":
+		raw, _ := os.ReadFile(reservation.Path)
+		ledger, err := servicemutationledger.Decode(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ledger, err = servicemutationledger.AdvanceMailEnrollment(&ledger, identity, "published", time.Now().UTC())
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, err = servicemutationledger.Encode(&ledger)
+		if err != nil {
+			t.Fatal(err)
+		}
+		capturePut(t, reservation.Path, raw, 0600)
+		expectRefusal = true
+	case "reservation-late-clear", "reservation-late-replace":
+		expectRefusal = true
 	case "deny":
 		denied = true
 		expectRefusal = true
@@ -341,6 +438,45 @@ func TestMailEnrollmentChild(t *testing.T) {
 	if cut != "" {
 		t.Fatal("checkpoint not reached", cut)
 	}
+	if reserved {
+		before := calls
+		if e = verifyReservedMailEnrollmentAt(context.Background(), scope, direction, paths, guard, reservation, commands.loaded); e != nil {
+			t.Fatal("terminal native proof", e)
+		}
+		if calls != before {
+			t.Fatal("terminal proof ran native mutation")
+		}
+		if scenario == "terminal-ledger-observer" {
+			raw, _ := os.ReadFile(reservation.Path)
+			ledger, err := servicemutationledger.Decode(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ledger, err = servicemutationledger.AdvanceMailEnrollment(&ledger, identity, "published", time.Now().UTC())
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw, err = servicemutationledger.Encode(&ledger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			capturePut(t, reservation.Path, raw, 0600)
+			if e = verifyReservedMailEnrollmentAt(context.Background(), scope, "forward", paths, guard, reservation, commands.loaded); e != nil {
+				t.Fatal("released terminal retry", e)
+			}
+			if e = run("forward", nil); e == nil {
+				t.Fatal("released reservation reopened mutation")
+			}
+			capturePut(t, activity, []byte("inactive"), 0600)
+			if e = verifyReservedMailEnrollmentAt(context.Background(), scope, "forward", paths, guard, reservation, commands.loaded); e == nil {
+				t.Fatal("old receipt hid owner stop")
+			}
+			if calls != before {
+				t.Fatal("observer repaired owner state")
+			}
+			return
+		}
+	}
 	beforeCalls := calls
 	if e = run(direction, nil); e != nil || calls != beforeCalls {
 		t.Fatal("terminal repeat mutated", e, calls, beforeCalls)
@@ -366,4 +502,43 @@ func TestMailEnrollmentChild(t *testing.T) {
 		t.Fatal(e)
 	}
 	assertMailNativeSide(t, paths, original, files, false)
+}
+
+func TestMailReservedEnrollmentComposition(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("root descriptor fixture")
+	}
+	for _, scenario := range []string{"terminal-ledger-observer", "resume:rollback", "reservation-missing", "reservation-owner", "reservation-group", "reservation-closed", "reservation-late-clear", "reservation-late-replace"} {
+		t.Run(scenario, func(t *testing.T) {
+			root, target, host, release := enrollmentFixture(t, "legacy")
+			out, e := enrollmentChild(root, target, "reserved:"+scenario, host, release).CombinedOutput()
+			if e != nil {
+				t.Fatal(e, string(out))
+			}
+		})
+	}
+	for _, side := range []string{"forward", "rollback"} {
+		points := []string{"enrollment_acceptance_published", "enable_forward_moved", "activity_forward_acted"}
+		if side == "rollback" {
+			points = []string{"enrollment_rollback_intent_published", "enable_rollback_moved", "enrollment_rollback_receipt_published"}
+		}
+		for _, point := range points {
+			t.Run(side+"/"+point, func(t *testing.T) {
+				root, target, host, release := enrollmentFixture(t, "legacy")
+				cmd := enrollmentChild(root, target, "reserved:cut:"+side+":"+point, host, release)
+				out, e := cmd.CombinedOutput()
+				if e == nil {
+					t.Fatal("missing kill", string(out))
+				}
+				st, ok := cmd.ProcessState.Sys().(syscall.WaitStatus)
+				if !ok || !st.Signaled() || st.Signal() != syscall.SIGKILL {
+					t.Fatal(e, string(out))
+				}
+				out, e = enrollmentChild(root, target, "reserved:resume:"+side, host, release).CombinedOutput()
+				if e != nil {
+					t.Fatal("resume", e, string(out))
+				}
+			})
+		}
+	}
 }

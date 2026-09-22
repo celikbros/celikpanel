@@ -318,7 +318,10 @@ func runMailEnrollmentAt(ctx context.Context, scope mailEnrollmentScope, directi
 		return err
 	}
 	if !hasAcceptance {
-		if direction != "forward" || history != (mailEnrollmentHistory{}) {
+		// The outer reservation can survive a kill before this first receipt.
+		// Explicit inverse may adopt only the unchanged prepared before-image;
+		// it must not require a forward mutation just to undo an unstarted job.
+		if history != (mailEnrollmentHistory{}) {
 			return fail(ReasonChanged)
 		}
 		before, e := observeMailFiles(c, &plan)
@@ -476,6 +479,20 @@ func runMailEnrollmentAt(ctx context.Context, scope mailEnrollmentScope, directi
 			return err
 		}
 	}
+	return finishMailEnrollmentAt(ctx, scope, direction, paths, verify, commands.loaded, checkpoint, false)
+}
+
+func finishMailEnrollmentAt(ctx context.Context, scope mailEnrollmentScope, direction string, paths mailCapturePaths, verify func() error, commands mailLoadedCommands, checkpoint func(string), verifyOnly bool) error {
+	if verify == nil || ctx == nil || commands.observe == nil || (direction != "forward" && direction != "rollback") {
+		return fail(ReasonUnsupported)
+	}
+	if err := verify(); err != nil {
+		return err
+	}
+	scopeRaw, err := promotionJSON(scope)
+	if err != nil {
+		return err
+	}
 	// Terminal acknowledgement observes the selected disk and loaded state again;
 	// an old success never repairs a later owner stop, link replacement or edit.
 	final, err := openMailFilesContext(scope.Operation, scope.CaptureSHA256, 9, paths)
@@ -483,11 +500,35 @@ func runMailEnrollmentAt(ctx context.Context, scope mailEnrollmentScope, directi
 		return err
 	}
 	defer final.close()
+	accepted, present, err := final.read(scope.Operation + ".enrollment.json")
+	if err != nil {
+		return err
+	}
+	if !present || !bytes.Equal(accepted, scopeRaw) {
+		return fail(ReasonChanged)
+	}
+	planRaw, present, err := final.read(scope.Operation + ".files.json")
+	if err != nil {
+		return err
+	}
+	if !present || Digest(planRaw) != scope.FilesSHA256 {
+		return fail(ReasonChanged)
+	}
+	var plan mailFilesRecord
+	if err = decodePromotion(planRaw, &plan); err != nil {
+		return err
+	}
+	if err = plan.validate(final); err != nil {
+		return err
+	}
 	finalHistory, err := readMailEnrollmentHistory(final, scope)
 	if err != nil {
 		return err
 	}
 	if direction == "forward" && !finalHistory.activityForward || direction == "rollback" && !finalHistory.loadInverse {
+		return fail(ReasonChanged)
+	}
+	if verifyOnly && (direction == "forward" && !finalHistory.terminalForward || direction == "rollback" && !finalHistory.terminalRollback) {
 		return fail(ReasonChanged)
 	}
 	observation, err := observeMailFiles(final, &plan)
@@ -532,16 +573,19 @@ func runMailEnrollmentAt(ctx context.Context, scope mailEnrollmentScope, directi
 			return e
 		}
 		if direction == "forward" {
-			if e := commands.loaded.observePair(ctx, c.capture.Contract.TimerAfter, false); e != nil {
+			if e := commands.observePair(ctx, final.capture.Contract.TimerAfter, false); e != nil {
 				return e
 			}
-		} else if e := commands.loaded.observeTransition(ctx, c.capture.Contract.TimerBefore, false, true, false); e != nil {
+		} else if e := commands.observeTransition(ctx, final.capture.Contract.TimerBefore, false, true, false); e != nil {
 			return e
 		}
 		if e := final.revalidate(); e != nil {
 			return e
 		}
 		return verify()
+	}
+	if verifyOnly {
+		return verifyFinal()
 	}
 	result, _ := promotionJSON(mailEnrollmentResult{mailEnrollmentSchema, Digest(scopeRaw), direction})
 	return publishMailRecord(final, scope.Operation+".enrollment-"+direction+".json", result, verifyFinal, checkpoint, "enrollment_"+direction+"_receipt")

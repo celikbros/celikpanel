@@ -79,6 +79,23 @@ late source/ledger/publication-lock replacement, an occupied publication lock,
 and unknown native result. Native result callbacks in these writer tests are
 fixtures, not evidence of a complete native enrollment transaction.
 
+The private composite executor now requires the same durable reservation at
+every boundary, including native commands. It pins the ledger inode/metadata and
+parent identity, verifies the established numeric owner, and binds the exact
+operation, owner, scope and direction. Six additional real subprocess SIGKILL
+cases resume forward and inverse execution under that reservation. Missing or
+replaced ledgers, changed owners and prematurely closed reservations refuse.
+An inverse accepted immediately after admission can finish without performing
+the previously unstarted forward native work.
+
+Terminal acknowledgement has a separate read-only observer. A terminal ledger
+retry may re-observe exact files, links and loaded native state; it cannot
+re-enter native mutation. Later owner changes remain refusal and are never
+repaired merely because a historical success exists. The terminal observer
+and native executor share final verification rather than separate definitions
+of completion. Scoped recoveryruntime race tests and vet pass; production
+dispatch remains disabled.
+
 The composite executor has its separately recorded Arch native proof. Joining
 this reservation to authenticated production owner intent, dispatch/boot recovery,
 initial private identity provisioning and the full native update/rollback and
