@@ -234,3 +234,7 @@ No production dispatcher invokes this component yet. Accepted owner authority,
 actual loaded-unit/schedule observation, after-image publication, interrupted
 native transition/rollback and owner removal remain required before enrollment
 can be enabled. Kit v1 and existing certificate/operation schemas are unchanged.
+
+[Debian BE capture evidence](../deploy/e2e/release-recovery/MAIL-CAPTURE-BE.md)
+records these process tests under the native kernel with unchanged running mail
+workloads. It does not establish native enrollment or power-loss recovery.

@@ -522,3 +522,7 @@ P0.3/P0.5 now have a private [transition and before-image contract](MAIL-RENEWAL
 Actual inherited-lock/SIGKILL component tests preserve native files and retained
 owner evidence. This is preparation only: no dispatcher, timer enrollment or
 rollback is enabled, and complete native update/power-loss acceptance stays open.
+
+[Debian BE capture evidence](../deploy/e2e/release-recovery/MAIL-CAPTURE-BE.md)
+records these process tests under the native kernel with unchanged running mail
+workloads. It does not establish native enrollment or power-loss recovery.
