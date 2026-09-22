@@ -213,7 +213,8 @@ func checkServiceMutationIdlePolicy(stateDir, lockPath string, allowMissingState
 	if err != nil {
 		return fmt.Errorf("%w: inspect service mutation state directory: %v", errServiceMutationNotIdle, err)
 	}
-	stateDirectoryErr := secureServiceMutationStateDirectoryStat(stateDir, info)
+	strictStateDirectoryErr := secureServiceMutationStateDirectoryStat(stateDir, info)
+	stateDirectoryErr := strictStateDirectoryErr
 	if allowMissingState {
 		stateDirectoryErr = securePreLedgerServiceMutationStateDirectoryStat(stateDir, info)
 	}
@@ -221,10 +222,16 @@ func checkServiceMutationIdlePolicy(stateDir, lockPath string, allowMissingState
 		return fmt.Errorf("%w: %v", errServiceMutationNotIdle, stateDirectoryErr)
 	}
 
-	raw, exists, err := readSecureServiceMutationLedger(
-		filepath.Join(stateDir, serviceMutationLedgerFileName),
-		serviceMutationLedgerMaxSize,
-	)
+	// Only the historical empty root:root mkdir residue may skip the strict
+	// file reader. It supplies no ledger bytes and is re-proved before return.
+	emptyInitialResidue := allowMissingState && strictStateDirectoryErr != nil
+	var raw []byte
+	var exists bool
+	if emptyInitialResidue {
+		err = verifyEmptyInitialServiceMutationDirectory(stateDir)
+	} else {
+		raw, exists, err = readSecureServiceMutationLedger(filepath.Join(stateDir, serviceMutationLedgerFileName), serviceMutationLedgerMaxSize)
+	}
 	if err != nil {
 		return fmt.Errorf("%w: %v", errServiceMutationNotIdle, err)
 	}
@@ -270,6 +277,11 @@ func checkServiceMutationIdlePolicy(stateDir, lockPath string, allowMissingState
 	}
 	if busy {
 		return serviceMutationPackageManagerBusyError()
+	}
+	if emptyInitialResidue {
+		if err := verifyEmptyInitialServiceMutationDirectory(stateDir); err != nil {
+			return fmt.Errorf("%w: %v", errServiceMutationNotIdle, err)
+		}
 	}
 	return nil
 }

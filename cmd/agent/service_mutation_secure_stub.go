@@ -111,3 +111,7 @@ func readRecoverableInitialServiceMutationStage(path string, maxSize int64) ([]b
 	}
 	return raw, true, nil
 }
+
+func verifyEmptyInitialServiceMutationDirectory(path string) error {
+	return errors.New("root-owned initial directory proof requires Linux")
+}

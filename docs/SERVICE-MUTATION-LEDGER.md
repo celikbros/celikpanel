@@ -44,3 +44,36 @@ pass (Agent 197.597 s), including the actual separately compiled recovery checke
 passes on that exact source: standalone production checker, retained native
 ledger, real lock contention/inheritance, unchanged state and trusted native
 SMTP/IMAP leaf. It does not close independent renewal or crash recovery.
+
+## Trusted Linux evidence reader
+
+`servicemutationledger.ReadFile` is also used by the actual Agent and standalone
+recovery checker for the ledger, renewal queue and existing mutation journals.
+The caller supplies the already established numeric UID/GID; the reader does
+not infer an identity from the file or recreate missing accounts/directories.
+Only a missing final name in an existing trusted 0700 directory is absence.
+Missing/untrusted parent paths are uncertainty, and unsafe evidence is retained.
+
+All symlink components are refused with openat2 (no weaker fallback). The final
+file must remain a bounded regular, single-link 0600 file with the accepted
+owner. Reads are nonblocking for substituted FIFOs. Open-file and named-file
+identity, permissions, ownership, links, size, mtime and ctime are checked after
+reading; the parent path is reopened and compared to the pinned directory.
+Observed replacement or change returns no accepted bytes. No repair or metadata
+normalization happens. Other actors respecting the publication/host lease remain
+serialized; this is not a guarantee against a root operator changing state after
+the final check or return.
+
+The historical JSON/receipt schema is unchanged. Supported state directories
+already require private 0700 metadata. Invalid paths/symlinks and nonprivate
+parents previously reachable by the low-level reader now require owner review.
+The separate recoverable-initial-stage reader and its narrowly authorized
+initializer repair remain unchanged. This does not implement native renewal
+binding, a new mutation executor or automatic recovery from missing evidence.
+
+The pre-ledger idle proof keeps the historical empty root:root mkdir residue
+separate: a pinned, empty-directory proof accepts no alternate-owner file and is
+repeated after other readiness probes. An owner-created record during that window
+is preserved and rejected. The strict reader is never relaxed for that exception.
+Shared root filesystem/race tests, the full Agent race suite (196.211 s), the
+production standalone checker tests and vet pass on this source.
