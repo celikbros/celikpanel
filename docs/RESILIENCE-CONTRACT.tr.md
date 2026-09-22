@@ -428,3 +428,13 @@ ayarlarıyla uyuşmazlık veya belirsiz gözlem sertifika hazırlanmadan durur;
 bekleyen kaynak ve mevcut ayarlar korunur. Kalıcı şema değişmez. Yayından
 sonraki sahip değişikliklerini koruyan kurtarma ve bağımsız yenileme açıktır;
 bu sınırlı değişiklik P0.4/P0.5'i tamamlamaz.
+
+### Posta yenilemesinin işlem yetkisi (2026-09-22)
+
+Kuyruktaki yenileme artık genel kurtarma yöneticisi yerine
+[dar kapsamlı yöneticiyi](MAIL-RENEWAL-OBSERVATION.md#scoped-unattended-admission-2026-09-22)
+kullanır. Başka işi kurtaramaz, kayıtlarını temizleyemez, kesilen işi
+başarısız varsayamaz veya başka sahibin eski işlemini devralamaz. Aynı
+host/yayın kilitleri ve v1 işlem defteri korunur. Bu, P0.5 yetki ayrımını
+ilerletir; bağımsız yenileme programını veya kesintili yerel kurtarma
+kabulünü tamamlamaz.

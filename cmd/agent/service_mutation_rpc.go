@@ -124,6 +124,9 @@ type serviceMutationManager struct {
 	poisonLock *serviceMutationFileLock
 	writeFault func(string) error
 
+	// Non-nil grants only this exact unattended renewal, never general recovery.
+	mailRenewalScope *ServiceMutationBeginRequest
+
 	releaseTransactionPresent func() (bool, error)
 
 	// hostBootWait is the one in-flight bounded wait for a host that has not
@@ -252,6 +255,10 @@ func newServiceMutationManagerWithWriteFault(
 	stateDir, lockPath string,
 	writeFault func(string) error,
 ) (*serviceMutationManager, error) {
+	return newServiceMutationManagerWithScope(stateDir, lockPath, writeFault, nil)
+}
+
+func newServiceMutationManagerWithScope(stateDir, lockPath string, writeFault func(string) error, scope *ServiceMutationBeginRequest) (*serviceMutationManager, error) {
 	if strings.TrimSpace(stateDir) == "" {
 		stateDir = serviceMutationStateDirectory()
 	}
@@ -269,6 +276,7 @@ func newServiceMutationManagerWithWriteFault(
 			Jobs:    map[string]*ServiceMutationJob{},
 		},
 		writeFault:                writeFault,
+		mailRenewalScope:          scope,
 		releaseTransactionPresent: productionReleaseTransactionPresent,
 	}
 	if err := manager.load(); err != nil {
@@ -497,6 +505,9 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 		}
 		return fmt.Errorf("reload service mutation ledger under reconciliation lock: %w", err)
 	}
+	if m.mailRenewalScope != nil {
+		return errors.Join(m.observeMailRenewalAdmissionLocked(), lock.Close())
+	}
 	if err := cleanupAbandonedServiceMutationWriteStages(filepath.Dir(m.ledgerPath)); err != nil {
 		closeErr := lock.Close()
 		if closeErr != nil {
@@ -679,6 +690,9 @@ func (m *serviceMutationManager) tryResolvePersistedOrphan() error {
 	if err := m.reloadLedgerUnderHostLockLocked(); err != nil {
 		return errors.Join(fmt.Errorf("reload service mutation ledger under orphan lock: %w", err), lock.Close())
 	}
+	if m.mailRenewalScope != nil {
+		return errors.Join(m.observeMailRenewalAdmissionLocked(), lock.Close())
+	}
 	if err := cleanupAbandonedFirewallApplyJournalStages(filepath.Dir(m.ledgerPath)); err != nil {
 		m.poisonLock = lock
 		return m.poisonLocked(fmt.Errorf(
@@ -838,6 +852,9 @@ func (m *serviceMutationManager) releaseTransactionBlocksMutations() (bool, erro
 }
 
 func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*ServiceMutationJob, error) {
+	if m.mailRenewalScope != nil && !mailRenewalRequestMatches(m.mailRenewalScope, request) {
+		return nil, errors.New("mail renewal executor cannot admit another operation")
+	}
 	if request == nil || !validMutationIdentity(request.RequestID) ||
 		!validMutationIdentity(request.OwnerID) ||
 		strings.TrimSpace(request.Kind) == "" ||
@@ -938,6 +955,11 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 	}
 	if err := m.reloadLedgerUnderHostLockLocked(); err != nil {
 		return closeLock(nil, fmt.Errorf("reload service mutation ledger under begin lock: %w", err))
+	}
+	if m.mailRenewalScope != nil {
+		if err := m.observeMailRenewalAdmissionLocked(); err != nil {
+			return closeLock(nil, err)
+		}
 	}
 	if m.ledger.ActiveRequestID != "" {
 		return closeLock(m.ledger.Jobs[m.ledger.ActiveRequestID], errServiceMutationBusy)
@@ -1837,6 +1859,9 @@ func (m *serviceMutationManager) acquireStep(
 func (m *serviceMutationManager) trimHistoryLocked(
 	protectedRequestIDs ...string,
 ) {
+	if m.mailRenewalScope != nil {
+		return // Renewal has no authority to discard other operations' evidence.
+	}
 	if len(m.ledger.Jobs) <= serviceMutationHistoryLimit {
 		return
 	}
@@ -1883,7 +1908,11 @@ func (m *serviceMutationManager) writeProtectedLocked(
 	if err := ensureSecureServiceMutationStateDirectory(filepath.Dir(m.ledgerPath)); err != nil {
 		return fmt.Errorf("secure service mutation state directory: %w", err)
 	}
-	if err := cleanupAbandonedServiceMutationWriteStages(filepath.Dir(m.ledgerPath)); err != nil {
+	if m.mailRenewalScope != nil {
+		if err := observeMailRenewalStages(filepath.Dir(m.ledgerPath)); err != nil {
+			return err
+		}
+	} else if err := cleanupAbandonedServiceMutationWriteStages(filepath.Dir(m.ledgerPath)); err != nil {
 		return err
 	}
 	dir := filepath.Dir(m.ledgerPath)

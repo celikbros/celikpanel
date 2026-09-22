@@ -439,3 +439,12 @@ configuration disagreement/unknown observation now stops before certificate
 staging; pending source and existing native settings are retained. No persisted
 schema migration. Post-publication owner-safe recovery and independent renewal
 remain open; this bounded change does not close P0.4/P0.5.
+
+### Mail renewal admission authority (2026-09-22)
+
+Actual queued renewal now uses the [scoped manager](MAIL-RENEWAL-OBSERVATION.md#scoped-unattended-admission-2026-09-22)
+instead of acquiring the general recovery singleton. It cannot clean or recover
+unrelated work, assume an interrupted job failed, take over another historical
+owner or prune unrelated history. The existing host/publication locks and v1
+ledger remain shared. This advances P0.5 admission isolation; it does not ship an
+independent renewal binary or close native interrupted recovery acceptance.

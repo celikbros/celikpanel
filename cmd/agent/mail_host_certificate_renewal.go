@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/mailhostartifact"
@@ -25,7 +26,30 @@ func runMailHostCertificateRenewalWorker() {
 	}
 }
 
+// Keep a poisoned manager (and any still-active worker lease) reachable. A new
+// polling iteration must not discard fail-closed state and create another owner.
+var mailRenewalExecution struct {
+	sync.Mutex
+	retained *serviceMutationManager
+}
+
 func deployPendingMailHostCertificate() error {
+	mailRenewalExecution.Lock()
+	defer mailRenewalExecution.Unlock()
+	if held := mailRenewalExecution.retained; held != nil {
+		held.mu.Lock()
+		err := held.healthErrorLocked()
+		active := held.active != nil
+		held.mu.Unlock()
+		if err != nil {
+			return err
+		}
+		if active {
+			return errServiceMutationBusy
+		}
+		mailRenewalExecution.retained = nil
+	}
+
 	raw, found, err := readSecureServiceMutationLedger(mailHostRenewalPendingPath(), 512)
 	if err != nil || !found {
 		return err
@@ -36,10 +60,6 @@ func deployPendingMailHostCertificate() error {
 	}
 	lineage := pending.Lineage
 
-	manager, err := agentServiceMutationManager()
-	if err != nil {
-		return err
-	}
 	domain, currentLeaf, err := currentMailHostCertificateIdentity()
 	if err != nil {
 		return err
@@ -66,11 +86,20 @@ func deployPendingMailHostCertificate() error {
 	digest := sha256.Sum256(append([]byte("mail-host-renewal/v1/"+domain+"/"+buildCommit+"/"), leaf...))
 	requestID := hex.EncodeToString(digest[:16])
 	ownerID := hex.EncodeToString(digest[16:])
+	request := &ServiceMutationBeginRequest{RequestID: requestID, OwnerID: ownerID, Kind: "mail_host_certificate", Target: domain, PackageName: commitment.Qualifier}
+	manager, err := newMailRenewalMutationManager("", "", request)
+	if manager != nil {
+		mailRenewalExecution.retained = manager
+	}
+	if err != nil {
+		return err
+	}
 	resume := false
 	if previous := manager.status(requestID); previous != nil {
 		resume = previous.Status == serviceMutationStatusFailed
 	}
-	job, err := manager.begin(&ServiceMutationBeginRequest{RequestID: requestID, OwnerID: ownerID, Kind: "mail_host_certificate", Target: domain, PackageName: commitment.Qualifier, Resume: resume})
+	request.Resume = resume
+	job, err := manager.begin(request)
 	if err != nil {
 		return err
 	}

@@ -70,3 +70,41 @@ not an implemented helper or a new authorization. Enrollment, retained identity,
 managed-hook migration, prior-version rollback compatibility and native fault
 acceptance remain prerequisites to shipping it. No general manager behavior was
 changed by this audit.
+
+## Scoped unattended admission (2026-09-22)
+
+P0.5 now routes actual queued renewal through a separate manager with an immutable
+copy of the exact request, owner, mail hostname and payload qualifier. It does
+not instantiate the general Agent singleton. Constructor, status reconciliation
+and begin observe fresh canonical disk state under the same host/publication
+locks before any admission. They never dispatch general recovery, clean journal
+stages, start deferred host recovery or rewrite an interrupted operation. Begin
+rechecks after reacquiring the lease; a prior idle observation is insufficient.
+
+Active work (including the same interrupted renewal), pending propagation,
+retained writer/journal stages, unreadable typed journals or a retained DNS switch
+journal block this narrow entry. Historical records with another owner cannot be
+taken over. The ordinary Agent retains its existing supported recovery paths.
+Unknown evidence is preserved and the refusal names owner recovery before retry;
+this is deliberately not a new independent interrupted-operation recovery claim.
+
+Renewal retains the existing durable v1 writer, execution tracker, supervisor,
+lease watchdog, publication receipt and failure semantics. It neither trims
+other jobs' terminal history nor cleans abandoned shared writer stages. A
+poisoned manager or still-active worker remains reachable across polling so a
+new iteration cannot discard its held lease. Ordinary Agent admission shares the
+same exclusion and reloads canonical disk state; this is not a second ledger.
+No schema/version transition, installed migration, hook or native unit change.
+
+Tests exercise retained foreign and same-operation active evidence, journal and
+stage refusal, constructor-to-begin state change, exact immutable scope,
+historical-owner mismatch, preservation beyond the normal history limit and
+mutual exclusion/lost-write prevention with the ordinary Agent. Native lifecycle
+acceptance for this source is recorded separately after execution. This manager
+still lives inside the Agent executable. Separate runtime/enrollment, narrow
+interrupted renewal recovery, reload-only convergence, current owner-change
+protection after publication and old-version rollback compatibility remain open.
+
+The final scoped-admission source passed the full Agent race suite (203.139 s).
+Native results and remaining limits must be read separately; this unit-level
+result does not certify an independent executor.
