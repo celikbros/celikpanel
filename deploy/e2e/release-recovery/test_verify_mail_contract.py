@@ -82,6 +82,9 @@ class MailLedgerTests(unittest.TestCase):
         self.base=(HERE/'MAIL-CONTRACT-AY.json').read_bytes()
     def test_native_ledger_evidence(self):
         self.assertEqual(s.verify_record(self.record,self.base)['host_lock_exclusion'],'verified')
+    def test_native_strict_reader_evidence(self):
+        record=json.loads((HERE/'MAIL-READER-AY.json').read_text())
+        self.assertEqual(s.verify_record(record,self.base)['host_lock_exclusion'],'verified')
     def test_wrong_binary_scope_or_base(self):
         for key,value in [('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('scope',{})]:
             record=copy.deepcopy(self.record);record[key]=value

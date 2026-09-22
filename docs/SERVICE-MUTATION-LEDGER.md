@@ -21,7 +21,8 @@ Failure preserves the previous readable durable file. No automatic truncation,
 repair, retry or owner metadata normalization is introduced. Callers retain their
 existing durable failure and recovery behavior.
 
-This package accepts bytes, not file paths. It does not establish file trust,
+The codec accepts bytes; the separate Linux reader below establishes file trust.
+The codec alone does not establish file trust,
 lock ownership, absence of other journals, process/package-manager idleness,
 renewal enrollment, workload health or mutation authority. Those proofs remain
 at their existing host boundaries. A future independent renewal helper must use
@@ -77,3 +78,9 @@ repeated after other readiness probes. An owner-created record during that windo
 is preserved and rejected. The strict reader is never relaxed for that exception.
 Shared root filesystem/race tests, the full Agent race suite (196.211 s), the
 production standalone checker tests and vet pass on this source.
+
+[Strict-reader AY native acceptance](../deploy/e2e/release-recovery/MAIL-READER-AY.md)
+passes with the exact source above: retained ledger, ordinary/inherited host-lock
+checks, unchanged queue/configuration and independently verified native TLS.
+The disposable guest was stopped and evidence retained. Independent renewal,
+crash recovery and the complete P0 acceptance matrix remain open.
