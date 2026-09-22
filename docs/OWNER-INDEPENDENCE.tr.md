@@ -98,3 +98,17 @@ Paket ve mevcut Agent firewall testleri yarış algılayıcıyla geçti. Kurulu 
 uniti hâlâ Agent'ı çağırıyor. Bağımsız tüketicinin paketlenmesi, kalıcı
 politika/açılış geçişi, hata kurtarması ve Agent yokken gerçek yeniden başlatma
 kabulü açık. Kurulu sunucular değiştirilmedi.
+
+
+## Bağımsız firewall okuyucusu: sınırlı yerel kanıt
+
+Kaynak `cmd/firewall-restore`, ortak eski/v2 politikayı Agent, uygulama
+veritabanı veya lisans olmadan okur. [Debian AR kanıtı](../deploy/e2e/release-recovery/FIREWALL-BOOT.md),
+yönetim binary’leri yokken normal yeniden başlatma, yeni SSH bağlantısı ve
+bağımsız nft tablosunun korunmasını doğrular. Deneme, mevcut root sahipliğini
+ve yazma izni olmayan `celikpanel` grup düzenini kullanır. Kayıtlı şema değişmez.
+
+Kurulu unit hâlâ Agent kullanır. Paketleme, ortak değişiklik kilidi,
+güncelleme/geri alma sırasında okuyucu koruması, başarısız açılış kurtarması
+ve kalan yerel iş yükü matrisi açıktır; bu sonuç P0.5’i kapatmaz veya panelin
+kaldırılmasını onaylamaz.
