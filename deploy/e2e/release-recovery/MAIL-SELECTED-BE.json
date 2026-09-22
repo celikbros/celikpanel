@@ -1,0 +1,70 @@
+{
+  "schema": "celikpanel/native-mail-selected-recovery/v1",
+  "source_commit": "7dcd9fc72f2e543f974389f02ce36e7d81be7535",
+  "lab": {
+    "cell_id": "release-recovery__3688d130a0721786",
+    "node": "debian13"
+  },
+  "manifest": {
+    "schema": "celikpanel-mail-renewal-runtime/v1",
+    "generation": "bad8373a7674fcde1ff7043649666907e02cedee9302ba8014c4185a009e90fd",
+    "ledger_version": 1,
+    "plan_version": 1,
+    "receipt_schema": "mail-host-certificate-receipt/v1",
+    "binary_sha256": "81038042f515e76432c2c480bb54f7087186351f9fa79a86102a909fd208f6ee",
+    "service_sha256": "846b9e28952b877b9e6663053cf29e51b21d9ecd18d577db28f17df496bd9f2f",
+    "timer_sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "hook_sha256": "5e7584585f69a46390df2552c8e7503ad093a433c5c886fc71bc5d24923389c0"
+  },
+  "scope": {
+    "actual_sigkill_after_selection": true,
+    "same_operation_recovery": true,
+    "native_boot_timer_recovery": true,
+    "stopped_service_preserved": true,
+    "native_configuration_preserved": true,
+    "installed_management_absent": true,
+    "fixture_ca": true,
+    "production_enrollment": false,
+    "power_loss": false,
+    "preselection_recovery": false,
+    "bounded_retry": false
+  },
+  "logs": {
+    "mail-selected-source5.log": {
+      "text": "inactive\nkit_fixture_source_prepared old=e547037bb03d6350c18bba7f68f6d0681f2748632253c4752fa810984b3533b9 new=2cb47143a6d32fca2a26043704fe4bd14f689a742e13f687c32222314e27797b\nnative_hook=queued; helper_service_not_started_by_hook=yes\n-----\nCertificate request self-signature ok\nsubject=CN=mail.setup.celikpanel.test\n",
+      "sha256": "777645b70b3a10df645967ce34489eae96d4de8acc7969ff7e5f3e4d43616f39"
+    },
+    "mail-selected-kill-observe.log": {
+      "text": "Result=signal\nExecMainCode=2\nExecMainStatus=9\nSep 22 12:28:27 dns-debian13 systemd[1]: Starting celikpanel-mail-selected-kill.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-selected-agent.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillAfterSelection\\$\" -test.timeout=180s...\nSep 22 12:28:27 dns-debian13 mail-selected-agent.test[1783]: === RUN   TestMailRenewalDisposableVMKillAfterSelection\nSep 22 12:28:27 dns-debian13 systemd[1]: celikpanel-mail-selected-kill.service: Main process exited, code=killed, status=9/KILL\nSep 22 12:28:27 dns-debian13 systemd[1]: celikpanel-mail-selected-kill.service: Failed with result 'signal'.\nSep 22 12:28:27 dns-debian13 systemd[1]: Failed to start celikpanel-mail-selected-kill.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-selected-agent.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillAfterSelection\\$\" -test.timeout=180s.\n-rw------- 1 root celikpanel 405 Sep 22 12:28 /root/celikpanel-release-recovery-lab/mail-selected-kill.json\n",
+      "sha256": "a083226751943cdab1cf7b530205e465d88be00df17c80d592b471ed37cdcee3"
+    },
+    "mail-selected-kill-proof2.log": {
+      "text": "native_sigkill_selected_before_reload=verified request=be1377388f780358bbd3f5424c1abd07 selected=2cb47143a6d32fca2a26043704fe4bd14f689a742e13f687c32222314e27797b served={\"587\": \"2cb47143a6d32fca2a26043704fe4bd14f689a742e13f687c32222314e27797b\", \"993\": \"e547037bb03d6350c18bba7f68f6d0681f2748632253c4752fa810984b3533b9\"} queue=retained configuration=unchanged\n",
+      "sha256": "bafdd70844e8b2e556e8b3f96a1866f9ea4bb33a41ea2c04b73f1ceb5c9b8905"
+    },
+    "mail-selected-refuse.log": {
+      "text": "Sep 22 12:31:16 dns-debian13 systemd[1]: Starting celikpanel-mail-selected-refuse.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-selected-renew --process-pending...\nSep 22 12:31:16 dns-debian13 mail-selected-renew[2047]: mail renewal remains pending; the server owner must review the retained operation and native mail service status before retrying; no general recovery was started\nSep 22 12:31:16 dns-debian13 systemd[1]: celikpanel-mail-selected-refuse.service: Main process exited, code=exited, status=1/FAILURE\nSep 22 12:31:16 dns-debian13 systemd[1]: celikpanel-mail-selected-refuse.service: Failed with result 'exit-code'.\nSep 22 12:31:16 dns-debian13 systemd[1]: Failed to start celikpanel-mail-selected-refuse.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-selected-renew --process-pending.\nResult=exit-code\nExecMainStatus=1\nindependent_selected_recovery_stopped_service=refused ledger=unchanged queue=unchanged configuration=unchanged selected=preserved service=not_started request=be1377388f780358bbd3f5424c1abd07\nRunning as unit: celikpanel-mail-selected-refuse.service; invocation ID: d712d082fbef4f0fbe704d2c02afb489\nFinished with result: exit-code\nMain processes terminated with: code=exited, status=1/FAILURE\nService runtime: 121ms\nCPU time consumed: 102ms\nMemory peak: 14.5M (swap: 0B)\n",
+      "sha256": "eb2d04d019f4068a2024e0f9b3f93dcccce5b188cf42f886f253361ab738796d"
+    },
+    "mail-selected-recover.log": {
+      "text": "Sep 22 12:32:17 dns-debian13 systemd[1]: Starting celikpanel-mail-selected-recover.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-selected-renew --process-pending...\nSep 22 12:32:18 dns-debian13 systemd[1]: celikpanel-mail-selected-recover.service: Deactivated successfully.\nSep 22 12:32:18 dns-debian13 systemd[1]: Finished celikpanel-mail-selected-recover.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-selected-renew --process-pending.\nResult=success\nExecMainStatus=0\nindependent_selected_recovery=verified request=be1377388f780358bbd3f5424c1abd07 leaf=2cb47143a6d32fca2a26043704fe4bd14f689a742e13f687c32222314e27797b served={\"587\": \"2cb47143a6d32fca2a26043704fe4bd14f689a742e13f687c32222314e27797b\", \"993\": \"2cb47143a6d32fca2a26043704fe4bd14f689a742e13f687c32222314e27797b\"} queue=acknowledged foreign_history=preserved config_bytes_and_mtime=preserved management=absent\nRunning as unit: celikpanel-mail-selected-recover.service; invocation ID: 0d02f94c9b3a44bfb391abc7c7637bc9\nFinished with result: success\nMain processes terminated with: code=exited, status=0/SUCCESS\nService runtime: 1.008s\nCPU time consumed: 698ms\nMemory peak: 21.7M (swap: 0B)\n",
+      "sha256": "dc09ae7de365b05c43196076f9c55cd83b54cd3464e676d69246a04741a27b98"
+    },
+    "mail-selected-kit.log": {
+      "text": "selected_recovery_fixture_kit=installed old_generation=retained generation=bad8373a7674fcde1ff7043649666907e02cedee9302ba8014c4185a009e90fd\ncomponent=mail-renewal\nversion=dev\ncommit=7dcd9fc72f2e543f974389f02ce36e7d81be7535\n",
+      "sha256": "a60c9798b696e904e51a7db51072fae73335e6852d660af9be6d43115722fcb6"
+    },
+    "mail-selected-source6.log": {
+      "text": "inactive\nkit_fixture_source_prepared old=2cb47143a6d32fca2a26043704fe4bd14f689a742e13f687c32222314e27797b new=29397ae156b697ffbf77a6a31539f6091c5c6e410645d1f17c1998a0da2ae8dd\nnative_hook=queued; helper_service_not_started_by_hook=yes\n-----\nCertificate request self-signature ok\nsubject=CN=mail.setup.celikpanel.test\n",
+      "sha256": "809b2beff0bdd908c2b0626c946864a762c3e3dc48972ff788191dc9c5e94da9"
+    },
+    "mail-selected-boot-kill.log": {
+      "text": "first_selected_trial_evidence=retained\ncomponent=mail-renewal\nversion=dev\ncommit=7dcd9fc72f2e543f974389f02ce36e7d81be7535\nSep 22 12:36:17 dns-debian13 systemd[1]: Starting celikpanel-mail-selected-boot-kill.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-selected-agent.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillAfterSelection\\$\" -test.timeout=180s...\nSep 22 12:36:17 dns-debian13 mail-selected-agent.test[2692]: === RUN   TestMailRenewalDisposableVMKillAfterSelection\nSep 22 12:36:18 dns-debian13 systemd[1]: celikpanel-mail-selected-boot-kill.service: Main process exited, code=killed, status=9/KILL\nSep 22 12:36:18 dns-debian13 systemd[1]: celikpanel-mail-selected-boot-kill.service: Failed with result 'signal'.\nSep 22 12:36:18 dns-debian13 systemd[1]: Failed to start celikpanel-mail-selected-boot-kill.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-selected-agent.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillAfterSelection\\$\" -test.timeout=180s.\nResult=signal\nExecMainCode=2\nExecMainStatus=9\nnative_sigkill_selected_before_reload=verified request=123206fc903e1e20a2cd34e99b408def selected=29397ae156b697ffbf77a6a31539f6091c5c6e410645d1f17c1998a0da2ae8dd served={\"587\": \"29397ae156b697ffbf77a6a31539f6091c5c6e410645d1f17c1998a0da2ae8dd\", \"993\": \"2cb47143a6d32fca2a26043704fe4bd14f689a742e13f687c32222314e27797b\"} queue=retained configuration=unchanged\nenabled\nbe151cee-97ee-4d8c-b4b4-05abfa475e0f\nbefore_reboot=selected_intent_pending; timer=enabled_but_stopped; no_manual_recovery_start=yes\nRunning as unit: celikpanel-mail-selected-boot-kill.service\nFinished with result: signal\nMain processes terminated with: code=killed, status=9/KILL\nService runtime: 354ms\nCPU time consumed: 267ms\nMemory peak: 23.9M (swap: 0B)\nRunning timer as unit: celikpanel-lab-mail-selected-reboot.timer\nWill run service as unit: celikpanel-lab-mail-selected-reboot.service\n",
+      "sha256": "860d38f2eb2f0a5009c9a5384be7d76353eeb7befdb0080c48c038e789709f6d"
+    },
+    "mail-selected-boot-proof2.log": {
+      "text": "1627ab8d-b4d0-4e30-9811-4f4b250de357\nenabled\nactive\nLastTriggerUSec=Tue 2026-09-22 12:37:08 UTC\nResult=success\nExecMainStatus=0\nSep 22 12:36:39 dns-debian13 systemd[1]: Started celikpanel-mail-renewal.timer - Check retained mail certificate renewal work.\nSep 22 12:37:08 dns-debian13 systemd[1]: Starting celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate...\nSep 22 12:37:09 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Deactivated successfully.\nSep 22 12:37:09 dns-debian13 systemd[1]: Finished celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate.\nautomatic_boot_selected_recovery=verified request=123206fc903e1e20a2cd34e99b408def leaf=29397ae156b697ffbf77a6a31539f6091c5c6e410645d1f17c1998a0da2ae8dd served={\"587\": \"29397ae156b697ffbf77a6a31539f6091c5c6e410645d1f17c1998a0da2ae8dd\", \"993\": \"29397ae156b697ffbf77a6a31539f6091c5c6e410645d1f17c1998a0da2ae8dd\"} queue=acknowledged foreign_history=preserved config_bytes_and_mtime=preserved management=absent\n81038042f515e76432c2c480bb54f7087186351f9fa79a86102a909fd208f6ee  /usr/libexec/celikpanel/mail-renewal/bad8373a7674fcde1ff7043649666907e02cedee9302ba8014c4185a009e90fd/renew\n",
+      "sha256": "4e30b14d820d12a9fd56da303a7118403e049a437e713bf9ec65c9b686b4fcb7"
+    }
+  }
+}

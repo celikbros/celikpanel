@@ -497,3 +497,12 @@ Scheduling/enrollment and independent interrupted recovery remain open.
 now proves the actual hook, service sandbox, timer-triggered new-leaf publication
 and automatic new-leaf deployment after reboot, with installed management absent.
 Production enrollment/rollback and independent interruption recovery remain open.
+
+[BE selected-renewal recovery](../deploy/e2e/release-recovery/MAIL-SELECTED-BE.md)
+adds actual post-selection SIGKILL acceptance without installed management.
+The independent helper preserves an owner-stopped service and unmodified
+ledger/queue, then completes the same request after explicit owner resolution.
+A second kill/reboot is recovered automatically by the native timer with the
+same retained operation, preserved native settings and matching trusted SMTP
+and IMAP listeners. Production enrollment, pre-selection interruptions, bounded
+renewal retries and power-loss acceptance remain open; P0.3/P0.5 remain partial.
