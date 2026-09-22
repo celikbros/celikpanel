@@ -456,3 +456,10 @@ doğruladı. Kullanıcı ayarları ve belirsiz etkinleştirme kanıtı korundu.
 [Sınırlı kanıt](../deploy/e2e/release-recovery/MAIL-CONTRACT-BB.md),
 P0.3/P0.4/P0.5 tamamlandı veya bağımsız yenileme/güç kesintisi
 kurtarması kanıtlandı anlamına gelmez.
+
+
+Bekleyen posta yenilemesi ancak ortak işlem/yayımlama kilitleri altında,
+seçili sertifikanın tam işlemine ait başarılı kalıcı yayımlama kaydıyla
+silinir. Sertifika eşleşmesi tek başına yeterli değildir; yarım işlem,
+belirsiz kanıt ve daha yeni kuyruk korunur. Şema değişikliği veya örtülü
+genel kurtarma yoktur. P0.3/P0.5 ve ayrı izlenen yerel kabul işleri açıktır.

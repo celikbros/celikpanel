@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
@@ -215,5 +216,55 @@ func TestMailHostCertificateDisposableVMReloadOwnerResolution(t *testing.T) {
 		t.Fatal("recovery rewrote resolved metadata")
 	}
 	assertMailVMListeners(t, value.Domain, value.Leaf)
+	// Recovered completion, not the selected leaf alone, now authorizes queue
+	// acknowledgement. The receipt's original identity survives build changes.
+	if err = deployPendingMailHostCertificate(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = os.Stat(mailHostRenewalPendingPath()); !os.IsNotExist(err) {
+		t.Fatal("verified completed renewal not acknowledged")
+	}
+	t.Log("same-leaf pending renewal acknowledged after exact recovered completion")
 	t.Logf("explicit owner resolution recovered same operation by reload only; request=%s leaf=%s", value.Request, value.Leaf)
+}
+
+// Run in a separate native unit after the controlled publication fault, before
+// generic startup recovery. This reaches the same-leaf acknowledgement branch.
+func TestMailHostCertificateDisposableVMPendingAcknowledgementRefuses(t *testing.T) {
+	value := readMailReloadOwnerFixture(t)
+	if mailRenewalExecution.retained != nil {
+		t.Fatal("requires fresh polling process")
+	}
+	domain, leaf, err := currentMailHostCertificateIdentity()
+	if err != nil || domain != value.Domain || leaf != value.Leaf {
+		t.Fatal("selected publication missing")
+	}
+	// The selected leaf already equals the pending Certbot generation, but
+	// activation is still unknown. A polling process must not acknowledge it.
+	pendingBefore, err := os.ReadFile(mailHostRenewalPendingPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ledgerBefore, err := os.ReadFile(filepath.Join(serviceMutationStateDirectory(), "service-mutations.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = deployPendingMailHostCertificate(); !errors.Is(err, errMailRenewalCompletionUnverified) {
+		t.Fatalf("fresh same-leaf polling did not require completion evidence: %v", err)
+	}
+	if mailRenewalExecution.retained != nil {
+		t.Fatal("acknowledgement created an execution owner")
+	}
+	ledgerAfter, err := os.ReadFile(filepath.Join(serviceMutationStateDirectory(), "service-mutations.json"))
+	if err != nil || !bytes.Equal(ledgerBefore, ledgerAfter) {
+		t.Fatal("acknowledgement rewrote unresolved operation")
+	}
+	pendingAfter, err := os.ReadFile(mailHostRenewalPendingPath())
+	if err != nil || !bytes.Equal(pendingBefore, pendingAfter) {
+		t.Fatal("unknown activation lost pending renewal")
+	}
+	t.Log("same-leaf pending renewal preserved while activation is unresolved")
+
+	assertMailVMListeners(t, value.Domain, value.PreviousLeaf, value.Leaf)
+	t.Logf("fresh renewal polling retained unresolved same-leaf queue; request=%s leaf=%s", value.Request, value.Leaf)
 }

@@ -204,29 +204,47 @@ func queueMailHostCertificateRenewal(lineage string) error {
 }
 
 func clearMailHostCertificateRenewal(expected mailHostRenewal) error {
-	return panelCertWithPublishLock(func() error {
-		raw, found, err := readSecureServiceMutationLedger(mailHostRenewalPendingPath(), 512)
-		if err != nil || !found {
-			return err
-		}
-		actual, err := decodeMailHostRenewal(raw)
+	return acknowledgeMailHostRenewal(expected, func() (mailHostCertificateReceipt, error) {
+		fd, err := openTrustedPanelTLSDirectoryOwned(managedMailHostTLSDir, 0)
 		if err != nil {
-			return err
-		}
-		if actual != expected {
-			return errors.New("renewal queue identity changed")
-		}
-
-		fd, err := openMailHostRenewalStateDirectory(filepath.Dir(mailHostRenewalPendingPath()))
-		if err != nil {
-			return err
+			return mailHostCertificateReceipt{}, err
 		}
 		defer unix.Close(fd)
-		if err = unix.Unlinkat(fd, filepath.Base(mailHostRenewalPendingPath()), 0); err != nil {
-			return err
+		_, receipt, _, _, found, err := readCurrentMailHostCertificateVersionAt(fd)
+		if err != nil {
+			return mailHostCertificateReceipt{}, err
 		}
-		return unix.Fsync(fd)
-	})
+		if !found {
+			return mailHostCertificateReceipt{}, errors.New("selected mail certificate evidence unavailable")
+		}
+		return receipt, nil
+	}, removeMailHostRenewalUnderPublicationLock)
+}
+
+// Caller owns the common host, ledger publication and certificate publication
+// locks and has verified exact successful completion for the selected receipt.
+func removeMailHostRenewalUnderPublicationLock(expected mailHostRenewal) error {
+	raw, found, err := readSecureServiceMutationLedger(mailHostRenewalPendingPath(), 512)
+	if err != nil || !found {
+		return err
+	}
+	actual, err := decodeMailHostRenewal(raw)
+	if err != nil {
+		return err
+	}
+	if actual != expected {
+		return errors.New("renewal queue identity changed")
+	}
+
+	fd, err := openMailHostRenewalStateDirectory(filepath.Dir(mailHostRenewalPendingPath()))
+	if err != nil {
+		return err
+	}
+	defer unix.Close(fd)
+	if err = unix.Unlinkat(fd, filepath.Base(mailHostRenewalPendingPath()), 0); err != nil {
+		return err
+	}
+	return unix.Fsync(fd)
 }
 
 func currentMailHostCertificateIdentity() (string, string, error) {

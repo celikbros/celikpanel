@@ -465,3 +465,11 @@ SMTP/IMAP continuity, and same-request recovery after a controlled publication
 fault and explicit owner resolution. Owner edits and unknown activation remain
 preserved. See [bounded evidence](../deploy/e2e/release-recovery/MAIL-CONTRACT-BB.md).
 This does not close P0.3/P0.4/P0.5 or establish power-loss/independent renewal.
+
+
+Pending mail renewal acknowledgement now requires the exact selected receipt's
+successful published ledger job under common host/publication locks. Matching
+certificate bytes alone cannot erase interrupted activation; different-host,
+foreign/unknown work and newer queues are retained. No schema migration or
+implicit general recovery. Native acceptance is tracked separately in
+[renewal observation](MAIL-RENEWAL-OBSERVATION.md); P0.3/P0.5 remain partial.

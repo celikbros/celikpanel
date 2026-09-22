@@ -158,3 +158,33 @@ post-publication owner-edit/refusal/explicit-resolution sequence through actual
 startup recovery. The same request and receipt survive; recovery changes no
 resolved configuration bytes or modification time. This bounded controlled-fault
 result does not establish power-loss recovery or an independent renewal runtime.
+
+
+## Pending renewal acknowledgement (2026-09-22)
+
+P0.3/P0.5 now treats deletion of pending renewal as a lifecycle transition.
+A selected leaf matching the queued source is insufficient: publication may have
+finished before activation or durable terminal completion. A different selected
+hostname also retains the queue for owner review instead of silently discarding
+it. Existing queued v1 bytes, receipt schema and canonical ledger are unchanged.
+
+Acknowledgement holds the common host/ledger publication locks and certificate
+publication lock while reading the latest selected validated pair/receipt,
+canonical ledger, retained stages and operation journals. It requires that exact
+receipt's successful published job, hostname, qualifier and leaf, no active or
+pending foreign work, and no release transition. It never invokes the general
+recovering constructor or creates a new job. Removal still compares the complete
+pending identity and fsyncs its directory. A newer queue is preserved.
+
+The selected receipt's original operation is used, not a newly derived identity
+from the current build. Thus a verified older completed publication remains
+acknowledgeable after a binary change. Missing/trimmed job evidence, unknown
+selection, active/failed work or retained recovery evidence cannot be promoted
+to completion. This narrows automatic cleanup for legacy incomplete evidence;
+explicit supported owner recovery remains required. It does not establish
+current daemon health, independent executor enrollment or all queue migration.
+
+Targeted tests cover successful exact removal, retained active/failed/missing or
+mismatched evidence, held host lock, unknown selected material, retained stages
+and a newer queue. Native fresh-process same-leaf acknowledgement is prepared;
+its results are recorded only after execution.

@@ -65,7 +65,7 @@ func deployPendingMailHostCertificate() error {
 		return err
 	}
 	if mailHostCertLineageName(domain) != lineage {
-		return clearMailHostCertificateRenewal(pending)
+		return errors.New("queued mail renewal belongs to another selected hostname; the server owner must review the retained queue and accepted mail identity")
 	}
 	_, _, leaf, _, err := readMailHostCertificateSource(domain)
 	if err != nil {
