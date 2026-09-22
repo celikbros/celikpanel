@@ -108,3 +108,8 @@ protection after publication and old-version rollback compatibility remain open.
 The final scoped-admission source passed the full Agent race suite (203.139 s).
 Native results and remaining limits must be read separately; this unit-level
 result does not certify an independent executor.
+
+[BA native acceptance](../deploy/e2e/release-recovery/MAIL-CONTRACT-BA.md) passed
+initial publication, actual scoped queued renewal, independent native boot
+handshakes, exact persisted receipt and owner-selected-certificate preservation
+on that source. Vet also passed. Independent recovery limits remain open.
