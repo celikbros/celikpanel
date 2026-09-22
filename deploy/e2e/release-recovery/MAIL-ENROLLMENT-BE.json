@@ -1,0 +1,411 @@
+{
+  "absent_after": [
+    "/etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert",
+    "/etc/systemd/system/celikpanel-mail-renewal.service",
+    "/etc/systemd/system/celikpanel-mail-renewal.timer",
+    "/etc/systemd/system/timers.target.wants/celikpanel-mail-renewal.timer",
+    "/opt/celikpanel/bin/agent",
+    "/opt/celikpanel/bin/panel"
+  ],
+  "boot_id": "c6036c01-327c-4bad-9dd6-5d443c87fc1c",
+  "files": {
+    "bin/enrollment.test": "5c8150b3136a2e790e7104172d032f585b8558c0dad6f315cb6cd0949e83bf82",
+    "bin/mail-renewal-runtime/celikpanel-mail-host-cert": "d7763ff5d54639367519d3048cedb9ffe3bf301b5133f30315476bf5f9135a34",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.service": "7db40a935c1eff000068d4df5d4b6806adbb9e364b8294eeda40a2eb53d2bfcf",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.timer": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "bin/mail-renewal-runtime/renew": "3d2c4330ba25546fb98c2bd64125a269ba818706b707996b8263fadef704a27b",
+    "bin/mail-renewal-runtime/runtime.manifest": "969ede3996fea30880ebad210fa850a62f6cc8dac3707f374db22f9085c64512",
+    "bin/recovery": "418f71038ce57257e6213c8f0cb03349c7347f4c18a2f7f9fccdb5bc284ef733"
+  },
+  "lab": {
+    "cell_id": "release-recovery__3688d130a0721786",
+    "loopback": true,
+    "node": "arch"
+  },
+  "loaded_inverse": {
+    "celikpanel-mail-renewal.service": {
+      "ActiveState": "inactive",
+      "DropInPaths": "",
+      "FragmentPath": "",
+      "LoadState": "not-found",
+      "NeedDaemonReload": "no",
+      "UnitFileState": ""
+    },
+    "celikpanel-mail-renewal.timer": {
+      "ActiveState": "inactive",
+      "DropInPaths": "",
+      "FragmentPath": "",
+      "LoadState": "not-found",
+      "NeedDaemonReload": "no",
+      "UnitFileState": ""
+    }
+  },
+  "logs": {
+    "forward-cut": "=== RUN   TestMailEnrollmentDisposableVM\n    mail_renewal_enrollment_vm_test.go:144: native_enrollment_cut=activity_forward_acted operation=6be0a33f3fef07e1497a5c235a1d7402 target=d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f capture=4512a7fa0ed215a53c49adf039b7b630ece2d6df2710b780e245836d17785226\n",
+    "forward-verify": "=== RUN   TestMailEnrollmentDisposableVM\n    mail_renewal_enrollment_vm_test.go:166: native_enrollment_verified=forward operation=6be0a33f3fef07e1497a5c235a1d7402 target=d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f capture=4512a7fa0ed215a53c49adf039b7b630ece2d6df2710b780e245836d17785226 files=39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\n--- PASS: TestMailEnrollmentDisposableVM (0.81s)\nPASS\n",
+    "rollback-cut": "=== RUN   TestMailEnrollmentDisposableVM\n    mail_renewal_enrollment_vm_test.go:144: native_enrollment_cut=enable_rollback_moved operation=6be0a33f3fef07e1497a5c235a1d7402 target=d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f capture=4512a7fa0ed215a53c49adf039b7b630ece2d6df2710b780e245836d17785226\n",
+    "rollback-verify": "=== RUN   TestMailEnrollmentDisposableVM\n    mail_renewal_enrollment_vm_test.go:166: native_enrollment_verified=rollback operation=6be0a33f3fef07e1497a5c235a1d7402 target=d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f capture=4512a7fa0ed215a53c49adf039b7b630ece2d6df2710b780e245836d17785226 files=39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\n--- PASS: TestMailEnrollmentDisposableVM (1.31s)\nPASS\n"
+  },
+  "management_absent": true,
+  "native_mail_workload": false,
+  "native_result": "forward_and_exact_inverse_verified",
+  "operation": "6be0a33f3fef07e1497a5c235a1d7402",
+  "preserved_attempts": [
+    {
+      "file": "mail-enrollment-native.log",
+      "log": "Traceback (most recent call last):\n  File \"<stdin>\", line 21, in <module>\nAssertionError\n",
+      "sha256": "7beee19b89c24c9aef7701670a68b24fd46c30e393ffe5bd85a7bdc5422d173c"
+    },
+    {
+      "file": "mail-enrollment-native-resume.log",
+      "log": "Traceback (most recent call last):\n  File \"<stdin>\", line 21, in <module>\nAssertionError: Independent mail renewal preparation could not be verified before service downtime. Preserve the files and review this preflight failure before retrying the same release in CelikPanel. recovery runtime unavailable: runtime_changed\n\n",
+      "sha256": "28e0658750a4d817feaa9772aac63d61f1849fde1649a12f54db11fd9fa39d5c"
+    },
+    {
+      "file": "mail-enrollment-native-resume2.log",
+      "log": "Traceback (most recent call last):\n  File \"<stdin>\", line 39, in <module>\nAssertionError\n",
+      "sha256": "a24f4e1d101d82fe3f9b1f5b5e1842879f96de13feabe2d0799c383afbbf7d01"
+    }
+  ],
+  "production_enrollment": false,
+  "receipt_bytes": {
+    "6be0a33f3fef07e1497a5c235a1d7402.enrollment-forward.json": "{\"schema\":\"celikpanel-mail-renewal-enrollment/v1\",\"scope_sha256\":\"9925f9f420677f8e1ef5b17a4325b60071910e77fc690f1f3c4583ca09e6e913\",\"direction\":\"forward\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.enrollment-rollback-intent.json": "{\"schema\":\"celikpanel-mail-renewal-enrollment/v1\",\"scope_sha256\":\"9925f9f420677f8e1ef5b17a4325b60071910e77fc690f1f3c4583ca09e6e913\",\"direction\":\"rollback\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.enrollment-rollback.json": "{\"schema\":\"celikpanel-mail-renewal-enrollment/v1\",\"scope_sha256\":\"9925f9f420677f8e1ef5b17a4325b60071910e77fc690f1f3c4583ca09e6e913\",\"direction\":\"rollback\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.enrollment.json": "{\"schema\":\"celikpanel-mail-renewal-enrollment/v1\",\"operation\":\"6be0a33f3fef07e1497a5c235a1d7402\",\"capture_sha256\":\"4512a7fa0ed215a53c49adf039b7b630ece2d6df2710b780e245836d17785226\",\"files_sha256\":\"39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\",\"target\":\"d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.files-forward.json": "{\"schema\":\"celikpanel-mail-renewal-files/v1\",\"plan_sha256\":\"39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\",\"direction\":\"forward\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.files-rollback-intent.json": "{\"schema\":\"celikpanel-mail-renewal-files/v1\",\"plan_sha256\":\"39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\",\"direction\":\"rollback\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.files-rollback.json": "{\"schema\":\"celikpanel-mail-renewal-files/v1\",\"plan_sha256\":\"39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\",\"direction\":\"rollback\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.files.json": "{\"schema\":\"celikpanel-mail-renewal-files/v1\",\"capture_sha256\":\"4512a7fa0ed215a53c49adf039b7b630ece2d6df2710b780e245836d17785226\",\"nonce\":\"3e2bf2c0f76b5885ff7c822f61dc395d\",\"hook_stage\":{\"dev\":34,\"ino\":49214,\"mode\":16832,\"uid\":0,\"gid\":0},\"unit_stage\":{\"dev\":34,\"ino\":49215,\"mode\":16832,\"uid\":0,\"gid\":0},\"new\":{\"celikpanel-mail-host-cert\":{\"dev\":34,\"ino\":49218,\"mode\":33261,\"uid\":0,\"gid\":0,\"size\":443,\"mtime_sec\":1790108451,\"mtime_nsec\":979250142,\"ctime_sec\":1790108451,\"ctime_nsec\":979250142,\"sha256\":\"d7763ff5d54639367519d3048cedb9ffe3bf301b5133f30315476bf5f9135a34\"},\"celikpanel-mail-renewal.service\":{\"dev\":34,\"ino\":49216,\"mode\":33188,\"uid\":0,\"gid\":0,\"size\":483,\"mtime_sec\":1790108451,\"mtime_nsec\":970250089,\"ctime_sec\":1790108451,\"ctime_nsec\":970250089,\"sha256\":\"7db40a935c1eff000068d4df5d4b6806adbb9e364b8294eeda40a2eb53d2bfcf\"},\"celikpanel-mail-renewal.timer\":{\"dev\":34,\"ino\":49217,\"mode\":33188,\"uid\":0,\"gid\":0,\"size\":219,\"mtime_sec\":1790108451,\"mtime_nsec\":975250118,\"ctime_sec\":1790108451,\"ctime_nsec\":975250118,\"sha256\":\"8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df\"}}}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.json": "{\"schema\":\"celikpanel-mail-renewal-before-image/v1\",\"contract\":{\"schema\":\"celikpanel-mail-renewal-transition/v1\",\"operation_id\":\"6be0a33f3fef07e1497a5c235a1d7402\",\"previous_generation\":\"\",\"target_generation\":\"d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f\",\"before\":{},\"after\":{\"celikpanel-mail-host-cert\":\"IyEvYmluL3NoCnNldCAtZXUKIyBRdWV1ZSBvbmx5IHRoZSBzZWxlY3RlZCBtYW5hZ2VkIGhvc3QgbGluZWFnZS4gTmF0aXZlIHRpbWVyIGhhbmRsZXMgZGVwbG95bWVudC4KbGluZWFnZT0ke1JFTkVXRURfTElORUFHRTotfQpjYXNlICIkbGluZWFnZSIgaW4KIC9ldGMvbGV0c2VuY3J5cHQvbGl2ZS9jZWxpa3BhbmVsLW1haWwtKikKICBsaW5lYWdlX25hbWU9JHtsaW5lYWdlIy9ldGMvbGV0c2VuY3J5cHQvbGl2ZS99CiAgY2FzZSAiJGxpbmVhZ2VfbmFtZSIgaW4gIiJ8Ki8qKSBleGl0IDAgOzsgZXNhYwogIGV4ZWMgL3Vzci9saWJleGVjL2NlbGlrcGFuZWwvbWFpbC1yZW5ld2FsL2Q0MmYwMmE2ZmE4MWY0ZmJmYmQxM2YxYTVkYWE4YjI5ZWM0NjQ3NGI4MmRhZTc0MjU5NGM1ODI4ZTUzODk5OGYvcmVuZXcgLS1xdWV1ZSAiJGxpbmVhZ2VfbmFtZSIKICA7Owplc2FjCmV4aXQgMAo=\",\"celikpanel-mail-renewal.service\":\"W1VuaXRdCkRlc2NyaXB0aW9uPURlcGxveSBhbiBhbHJlYWR5IHJlbmV3ZWQgbWFpbCBob3N0IGNlcnRpZmljYXRlCkFmdGVyPWxvY2FsLWZzLnRhcmdldCBwb3N0Zml4LnNlcnZpY2UgZG92ZWNvdC5zZXJ2aWNlCgpbU2VydmljZV0KVHlwZT1vbmVzaG90ClVzZXI9cm9vdApHcm91cD1jZWxpa3BhbmVsClVNYXNrPTAwNzcKRXhlY1N0YXJ0PS91c3IvbGliZXhlYy9jZWxpa3BhbmVsL21haWwtcmVuZXdhbC9kNDJmMDJhNmZhODFmNGZiZmJkMTNmMWE1ZGFhOGIyOWVjNDY0NzRiODJkYWU3NDI1OTRjNTgyOGU1Mzg5OThmL3JlbmV3IC0tcHJvY2Vzcy1wZW5kaW5nClRpbWVvdXRTdGFydFNlYz0xODBzCktpbGxNb2RlPWNvbnRyb2wtZ3JvdXAKTm9OZXdQcml2aWxlZ2VzPXRydWUKUHJpdmF0ZVRtcD10cnVlClByb3RlY3RIb21lPXRydWUKUHJvdGVjdFN5c3RlbT1mdWxsClJlYWRXcml0ZVBhdGhzPS0vZXRjL3NzbC9jZWxpa3BhbmVsL19tYWlsL2hvc3QK\",\"celikpanel-mail-renewal.timer\":\"W1VuaXRdCkRlc2NyaXB0aW9uPUNoZWNrIHJldGFpbmVkIG1haWwgY2VydGlmaWNhdGUgcmVuZXdhbCB3b3JrCgpbVGltZXJdCk9uQm9vdFNlYz0zMHMKT25Vbml0SW5hY3RpdmVTZWM9NW1pbgpSYW5kb21pemVkRGVsYXlTZWM9MTVzCkFjY3VyYWN5U2VjPTFzClVuaXQ9Y2VsaWtwYW5lbC1tYWlsLXJlbmV3YWwuc2VydmljZQoKW0luc3RhbGxdCldhbnRlZEJ5PXRpbWVycy50YXJnZXQK\"},\"timer_before\":{\"enablement\":\"absent\",\"activity\":\"inactive\"},\"timer_after\":{\"enablement\":\"enabled\",\"activity\":\"active\"}},\"hook_parent\":{\"dev\":34,\"ino\":48918,\"mode\":16832,\"uid\":0,\"gid\":0},\"unit_parent\":{\"dev\":34,\"ino\":27293,\"mode\":16877,\"uid\":0,\"gid\":0},\"files\":{}}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.loaded-forward-intent.json": "{\"schema\":\"celikpanel-mail-renewal-bootstrap-loaded/v1\",\"plan_sha256\":\"39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\",\"direction\":\"forward\",\"generation\":\"d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f\",\"timer\":{\"enablement\":\"disabled\",\"activity\":\"inactive\"}}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.loaded-forward.json": "{\"schema\":\"celikpanel-mail-renewal-bootstrap-loaded/v1\",\"plan_sha256\":\"39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\",\"direction\":\"forward\",\"generation\":\"d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f\",\"timer\":{\"enablement\":\"disabled\",\"activity\":\"inactive\"}}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.loaded-rollback-intent.json": "{\"schema\":\"celikpanel-mail-renewal-bootstrap-loaded/v1\",\"plan_sha256\":\"39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\",\"direction\":\"rollback\",\"generation\":\"\",\"timer\":{\"enablement\":\"absent\",\"activity\":\"inactive\"}}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.loaded-rollback.json": "{\"schema\":\"celikpanel-mail-renewal-bootstrap-loaded/v1\",\"plan_sha256\":\"39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\",\"direction\":\"rollback\",\"generation\":\"\",\"timer\":{\"enablement\":\"absent\",\"activity\":\"inactive\"}}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-forward-attempt-1.json": "{\"schema\":\"celikpanel-mail-renewal-activity/v1\",\"intent_sha256\":\"4ebb46068a8a93cc66689b65f42d24e0c63b7805b5fd39e4019468c2023d5f07\",\"number\":1,\"outcome\":\"admitted\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-forward-intent.json": "{\"schema\":\"celikpanel-mail-renewal-activity/v1\",\"enable_sha256\":\"f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4\",\"generation\":\"d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f\",\"direction\":\"forward\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-forward.json": "{\"schema\":\"celikpanel-mail-renewal-activity/v1\",\"enable_sha256\":\"f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4\",\"generation\":\"d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f\",\"direction\":\"forward\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-rollback-attempt-1.json": "{\"schema\":\"celikpanel-mail-renewal-activity/v1\",\"intent_sha256\":\"c7708ffbfad80cfa326041e01b1fd6571f6142ba6d3a1b401fdb7240c91552a2\",\"number\":1,\"outcome\":\"admitted\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-rollback-intent.json": "{\"schema\":\"celikpanel-mail-renewal-activity/v1\",\"enable_sha256\":\"f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4\",\"generation\":\"d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f\",\"direction\":\"rollback\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-rollback.json": "{\"schema\":\"celikpanel-mail-renewal-activity/v1\",\"enable_sha256\":\"f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4\",\"generation\":\"d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f\",\"direction\":\"rollback\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-enable-forward.json": "{\"schema\":\"celikpanel-mail-renewal-enable/v1\",\"plan_sha256\":\"f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4\",\"direction\":\"forward\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-enable-rollback-intent.json": "{\"schema\":\"celikpanel-mail-renewal-enable/v1\",\"plan_sha256\":\"f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4\",\"direction\":\"rollback\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-enable-rollback.json": "{\"schema\":\"celikpanel-mail-renewal-enable/v1\",\"plan_sha256\":\"f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4\",\"direction\":\"rollback\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-enable.json": "{\"schema\":\"celikpanel-mail-renewal-enable/v1\",\"files_sha256\":\"39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd\",\"nonce\":\"d30f89809783b88569205180f34d6e2b\",\"parent\":{\"dev\":34,\"ino\":49118,\"mode\":16877,\"uid\":0,\"gid\":0},\"stage\":{\"dev\":34,\"ino\":49226,\"mode\":16832,\"uid\":0,\"gid\":0},\"link\":{\"dev\":34,\"ino\":49227,\"mode\":41471,\"uid\":0,\"gid\":0,\"size\":49,\"mtime_sec\":1790108453,\"mtime_nsec\":16256277,\"ctime_sec\":1790108453,\"ctime_nsec\":16256277,\"sha256\":\"831fd3180e7237e420b27a609edfef81e76eaf96992881cbbfc40abe656b6d71\"}}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-parent-ready.json": "{\"schema\":\"celikpanel-mail-renewal-parent/v1\",\"plan_sha256\":\"bfbe48d9dec3669bce8992188a19d69599c927d2f97d8f90cef931459fd6883d\",\"direction\":\"retained\"}\n",
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-parent.json": "{\"schema\":\"celikpanel-mail-renewal-parent/v1\",\"capture_sha256\":\"4512a7fa0ed215a53c49adf039b7b630ece2d6df2710b780e245836d17785226\",\"existing\":true,\"nonce\":\"\",\"directory\":{\"dev\":34,\"ino\":49118,\"mode\":16877,\"uid\":0,\"gid\":0}}\n"
+  },
+  "receipts": {
+    "6be0a33f3fef07e1497a5c235a1d7402.enrollment-forward.json": {
+      "direction": "forward",
+      "schema": "celikpanel-mail-renewal-enrollment/v1",
+      "scope_sha256": "9925f9f420677f8e1ef5b17a4325b60071910e77fc690f1f3c4583ca09e6e913"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.enrollment-rollback-intent.json": {
+      "direction": "rollback",
+      "schema": "celikpanel-mail-renewal-enrollment/v1",
+      "scope_sha256": "9925f9f420677f8e1ef5b17a4325b60071910e77fc690f1f3c4583ca09e6e913"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.enrollment-rollback.json": {
+      "direction": "rollback",
+      "schema": "celikpanel-mail-renewal-enrollment/v1",
+      "scope_sha256": "9925f9f420677f8e1ef5b17a4325b60071910e77fc690f1f3c4583ca09e6e913"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.enrollment.json": {
+      "capture_sha256": "4512a7fa0ed215a53c49adf039b7b630ece2d6df2710b780e245836d17785226",
+      "files_sha256": "39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd",
+      "operation": "6be0a33f3fef07e1497a5c235a1d7402",
+      "schema": "celikpanel-mail-renewal-enrollment/v1",
+      "target": "d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.files-forward.json": {
+      "direction": "forward",
+      "plan_sha256": "39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd",
+      "schema": "celikpanel-mail-renewal-files/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.files-rollback-intent.json": {
+      "direction": "rollback",
+      "plan_sha256": "39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd",
+      "schema": "celikpanel-mail-renewal-files/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.files-rollback.json": {
+      "direction": "rollback",
+      "plan_sha256": "39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd",
+      "schema": "celikpanel-mail-renewal-files/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.files.json": {
+      "capture_sha256": "4512a7fa0ed215a53c49adf039b7b630ece2d6df2710b780e245836d17785226",
+      "hook_stage": {
+        "dev": 34,
+        "gid": 0,
+        "ino": 49214,
+        "mode": 16832,
+        "uid": 0
+      },
+      "new": {
+        "celikpanel-mail-host-cert": {
+          "ctime_nsec": 979250142,
+          "ctime_sec": 1790108451,
+          "dev": 34,
+          "gid": 0,
+          "ino": 49218,
+          "mode": 33261,
+          "mtime_nsec": 979250142,
+          "mtime_sec": 1790108451,
+          "sha256": "d7763ff5d54639367519d3048cedb9ffe3bf301b5133f30315476bf5f9135a34",
+          "size": 443,
+          "uid": 0
+        },
+        "celikpanel-mail-renewal.service": {
+          "ctime_nsec": 970250089,
+          "ctime_sec": 1790108451,
+          "dev": 34,
+          "gid": 0,
+          "ino": 49216,
+          "mode": 33188,
+          "mtime_nsec": 970250089,
+          "mtime_sec": 1790108451,
+          "sha256": "7db40a935c1eff000068d4df5d4b6806adbb9e364b8294eeda40a2eb53d2bfcf",
+          "size": 483,
+          "uid": 0
+        },
+        "celikpanel-mail-renewal.timer": {
+          "ctime_nsec": 975250118,
+          "ctime_sec": 1790108451,
+          "dev": 34,
+          "gid": 0,
+          "ino": 49217,
+          "mode": 33188,
+          "mtime_nsec": 975250118,
+          "mtime_sec": 1790108451,
+          "sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+          "size": 219,
+          "uid": 0
+        }
+      },
+      "nonce": "3e2bf2c0f76b5885ff7c822f61dc395d",
+      "schema": "celikpanel-mail-renewal-files/v1",
+      "unit_stage": {
+        "dev": 34,
+        "gid": 0,
+        "ino": 49215,
+        "mode": 16832,
+        "uid": 0
+      }
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.json": {
+      "contract": {
+        "after": {
+          "celikpanel-mail-host-cert": "IyEvYmluL3NoCnNldCAtZXUKIyBRdWV1ZSBvbmx5IHRoZSBzZWxlY3RlZCBtYW5hZ2VkIGhvc3QgbGluZWFnZS4gTmF0aXZlIHRpbWVyIGhhbmRsZXMgZGVwbG95bWVudC4KbGluZWFnZT0ke1JFTkVXRURfTElORUFHRTotfQpjYXNlICIkbGluZWFnZSIgaW4KIC9ldGMvbGV0c2VuY3J5cHQvbGl2ZS9jZWxpa3BhbmVsLW1haWwtKikKICBsaW5lYWdlX25hbWU9JHtsaW5lYWdlIy9ldGMvbGV0c2VuY3J5cHQvbGl2ZS99CiAgY2FzZSAiJGxpbmVhZ2VfbmFtZSIgaW4gIiJ8Ki8qKSBleGl0IDAgOzsgZXNhYwogIGV4ZWMgL3Vzci9saWJleGVjL2NlbGlrcGFuZWwvbWFpbC1yZW5ld2FsL2Q0MmYwMmE2ZmE4MWY0ZmJmYmQxM2YxYTVkYWE4YjI5ZWM0NjQ3NGI4MmRhZTc0MjU5NGM1ODI4ZTUzODk5OGYvcmVuZXcgLS1xdWV1ZSAiJGxpbmVhZ2VfbmFtZSIKICA7Owplc2FjCmV4aXQgMAo=",
+          "celikpanel-mail-renewal.service": "W1VuaXRdCkRlc2NyaXB0aW9uPURlcGxveSBhbiBhbHJlYWR5IHJlbmV3ZWQgbWFpbCBob3N0IGNlcnRpZmljYXRlCkFmdGVyPWxvY2FsLWZzLnRhcmdldCBwb3N0Zml4LnNlcnZpY2UgZG92ZWNvdC5zZXJ2aWNlCgpbU2VydmljZV0KVHlwZT1vbmVzaG90ClVzZXI9cm9vdApHcm91cD1jZWxpa3BhbmVsClVNYXNrPTAwNzcKRXhlY1N0YXJ0PS91c3IvbGliZXhlYy9jZWxpa3BhbmVsL21haWwtcmVuZXdhbC9kNDJmMDJhNmZhODFmNGZiZmJkMTNmMWE1ZGFhOGIyOWVjNDY0NzRiODJkYWU3NDI1OTRjNTgyOGU1Mzg5OThmL3JlbmV3IC0tcHJvY2Vzcy1wZW5kaW5nClRpbWVvdXRTdGFydFNlYz0xODBzCktpbGxNb2RlPWNvbnRyb2wtZ3JvdXAKTm9OZXdQcml2aWxlZ2VzPXRydWUKUHJpdmF0ZVRtcD10cnVlClByb3RlY3RIb21lPXRydWUKUHJvdGVjdFN5c3RlbT1mdWxsClJlYWRXcml0ZVBhdGhzPS0vZXRjL3NzbC9jZWxpa3BhbmVsL19tYWlsL2hvc3QK",
+          "celikpanel-mail-renewal.timer": "W1VuaXRdCkRlc2NyaXB0aW9uPUNoZWNrIHJldGFpbmVkIG1haWwgY2VydGlmaWNhdGUgcmVuZXdhbCB3b3JrCgpbVGltZXJdCk9uQm9vdFNlYz0zMHMKT25Vbml0SW5hY3RpdmVTZWM9NW1pbgpSYW5kb21pemVkRGVsYXlTZWM9MTVzCkFjY3VyYWN5U2VjPTFzClVuaXQ9Y2VsaWtwYW5lbC1tYWlsLXJlbmV3YWwuc2VydmljZQoKW0luc3RhbGxdCldhbnRlZEJ5PXRpbWVycy50YXJnZXQK"
+        },
+        "before": {},
+        "operation_id": "6be0a33f3fef07e1497a5c235a1d7402",
+        "previous_generation": "",
+        "schema": "celikpanel-mail-renewal-transition/v1",
+        "target_generation": "d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f",
+        "timer_after": {
+          "activity": "active",
+          "enablement": "enabled"
+        },
+        "timer_before": {
+          "activity": "inactive",
+          "enablement": "absent"
+        }
+      },
+      "files": {},
+      "hook_parent": {
+        "dev": 34,
+        "gid": 0,
+        "ino": 48918,
+        "mode": 16832,
+        "uid": 0
+      },
+      "schema": "celikpanel-mail-renewal-before-image/v1",
+      "unit_parent": {
+        "dev": 34,
+        "gid": 0,
+        "ino": 27293,
+        "mode": 16877,
+        "uid": 0
+      }
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.loaded-forward-intent.json": {
+      "direction": "forward",
+      "generation": "d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f",
+      "plan_sha256": "39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd",
+      "schema": "celikpanel-mail-renewal-bootstrap-loaded/v1",
+      "timer": {
+        "activity": "inactive",
+        "enablement": "disabled"
+      }
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.loaded-forward.json": {
+      "direction": "forward",
+      "generation": "d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f",
+      "plan_sha256": "39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd",
+      "schema": "celikpanel-mail-renewal-bootstrap-loaded/v1",
+      "timer": {
+        "activity": "inactive",
+        "enablement": "disabled"
+      }
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.loaded-rollback-intent.json": {
+      "direction": "rollback",
+      "generation": "",
+      "plan_sha256": "39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd",
+      "schema": "celikpanel-mail-renewal-bootstrap-loaded/v1",
+      "timer": {
+        "activity": "inactive",
+        "enablement": "absent"
+      }
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.loaded-rollback.json": {
+      "direction": "rollback",
+      "generation": "",
+      "plan_sha256": "39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd",
+      "schema": "celikpanel-mail-renewal-bootstrap-loaded/v1",
+      "timer": {
+        "activity": "inactive",
+        "enablement": "absent"
+      }
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-forward-attempt-1.json": {
+      "intent_sha256": "4ebb46068a8a93cc66689b65f42d24e0c63b7805b5fd39e4019468c2023d5f07",
+      "number": 1,
+      "outcome": "admitted",
+      "schema": "celikpanel-mail-renewal-activity/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-forward-intent.json": {
+      "direction": "forward",
+      "enable_sha256": "f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4",
+      "generation": "d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f",
+      "schema": "celikpanel-mail-renewal-activity/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-forward.json": {
+      "direction": "forward",
+      "enable_sha256": "f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4",
+      "generation": "d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f",
+      "schema": "celikpanel-mail-renewal-activity/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-rollback-attempt-1.json": {
+      "intent_sha256": "c7708ffbfad80cfa326041e01b1fd6571f6142ba6d3a1b401fdb7240c91552a2",
+      "number": 1,
+      "outcome": "admitted",
+      "schema": "celikpanel-mail-renewal-activity/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-rollback-intent.json": {
+      "direction": "rollback",
+      "enable_sha256": "f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4",
+      "generation": "d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f",
+      "schema": "celikpanel-mail-renewal-activity/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-activity-rollback.json": {
+      "direction": "rollback",
+      "enable_sha256": "f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4",
+      "generation": "d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f",
+      "schema": "celikpanel-mail-renewal-activity/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-enable-forward.json": {
+      "direction": "forward",
+      "plan_sha256": "f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4",
+      "schema": "celikpanel-mail-renewal-enable/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-enable-rollback-intent.json": {
+      "direction": "rollback",
+      "plan_sha256": "f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4",
+      "schema": "celikpanel-mail-renewal-enable/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-enable-rollback.json": {
+      "direction": "rollback",
+      "plan_sha256": "f7c15124cc1d7f8d50b711c3eb3fd8c0c62fd3ce9e1d6fdbf6a8c72348879fe4",
+      "schema": "celikpanel-mail-renewal-enable/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-enable.json": {
+      "files_sha256": "39158aed5ebebf9872eef5906c94db55160ebe95c5404ef8b3faf125fa9bbfdd",
+      "link": {
+        "ctime_nsec": 16256277,
+        "ctime_sec": 1790108453,
+        "dev": 34,
+        "gid": 0,
+        "ino": 49227,
+        "mode": 41471,
+        "mtime_nsec": 16256277,
+        "mtime_sec": 1790108453,
+        "sha256": "831fd3180e7237e420b27a609edfef81e76eaf96992881cbbfc40abe656b6d71",
+        "size": 49,
+        "uid": 0
+      },
+      "nonce": "d30f89809783b88569205180f34d6e2b",
+      "parent": {
+        "dev": 34,
+        "gid": 0,
+        "ino": 49118,
+        "mode": 16877,
+        "uid": 0
+      },
+      "schema": "celikpanel-mail-renewal-enable/v1",
+      "stage": {
+        "dev": 34,
+        "gid": 0,
+        "ino": 49226,
+        "mode": 16832,
+        "uid": 0
+      }
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-parent-ready.json": {
+      "direction": "retained",
+      "plan_sha256": "bfbe48d9dec3669bce8992188a19d69599c927d2f97d8f90cef931459fd6883d",
+      "schema": "celikpanel-mail-renewal-parent/v1"
+    },
+    "6be0a33f3fef07e1497a5c235a1d7402.timer-parent.json": {
+      "capture_sha256": "4512a7fa0ed215a53c49adf039b7b630ece2d6df2710b780e245836d17785226",
+      "directory": {
+        "dev": 34,
+        "gid": 0,
+        "ino": 49118,
+        "mode": 16877,
+        "uid": 0
+      },
+      "existing": true,
+      "nonce": "",
+      "schema": "celikpanel-mail-renewal-parent/v1"
+    }
+  },
+  "retained_enable_stage": ".celikpanel-mail-enable-d30f89809783b88569205180f34d6e2b",
+  "schema": "celikpanel-native-mail-enrollment-composition/v1",
+  "scope": {
+    "actual_sigkill_count": 2,
+    "management_absent": true,
+    "native_composition": true,
+    "outer_fence": "protected_test_intent",
+    "power_loss": false,
+    "production_enrollment": false,
+    "real_mail_workload": false,
+    "reboot": false
+  },
+  "source_commit": "298ae2c34754d9ce219081475ec35fc0a5eee24a",
+  "target": "d42f02a6fa81f4fbfbd13f1a5daa8b29ec46474b82dae742594c5828e538998f",
+  "wants_after": [
+    34,
+    49118,
+    16877,
+    0,
+    0,
+    [
+      ".celikpanel-mail-enable-7aee70d6aab03bd8c2d695135687fd96",
+      ".celikpanel-mail-enable-d30f89809783b88569205180f34d6e2b"
+    ]
+  ],
+  "wants_before": [
+    34,
+    49118,
+    16877,
+    0,
+    0,
+    [
+      ".celikpanel-mail-enable-7aee70d6aab03bd8c2d695135687fd96"
+    ]
+  ]
+}

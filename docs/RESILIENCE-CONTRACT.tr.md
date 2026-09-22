@@ -622,3 +622,9 @@ kuyruğu veya işlem sonucunu tamamlamadan sonraki zamanlayıcı çağrısına b
 [Uygulama ve süreç testlerinin kapsamı](MAIL-RENEWAL-KIT.md#composite-enrollment-execution-2026-09-22)
 üretim kabulü, süreçler arası kalıcı engel ve gerçek sistem birleşik kabulünü açık
 tutar; P0 tamamlandı denmez.
+
+
+[BE birleşik native kabulü](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-BE.md)
+gerçek Arch systemd üzerinde iki süreç kesintisi ve aynı işlemden kesin geri almayı
+kanıtlar. Önceki hazırlık ve envanter kontrolü hataları ayrı tutulmuştur. Üretim
+kabulü/kalıcı engel, gerçek posta yükü ve yeniden başlatma bu kanıtın kapsamı dışındadır.

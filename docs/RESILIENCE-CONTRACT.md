@@ -676,3 +676,10 @@ budgets retain failures and permit verification of owner-completed work. Exact
 known helper exclusion waits preserve pending work without poisoning native unit
 health. [Contract and process evidence](MAIL-RENEWAL-KIT.md#composite-enrollment-execution-2026-09-22)
 keep production fencing/admission, native composition and full acceptance open.
+
+
+[BE composite native evidence](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-BE.md)
+now proves real Arch systemd enrollment, two process kills and exact same-operation
+compensation with management absent. Preparation/inventory harness failures are
+retained separately. Production fencing/admission, real mail workload and reboot
+composition remain outside this bounded result.

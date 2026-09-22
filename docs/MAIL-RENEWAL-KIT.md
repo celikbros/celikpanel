@@ -657,3 +657,10 @@ bootstrap/enable/activity tests and scoped Agent entry tests pass; vet passes.
 These are private process fixtures. Native combined enrollment, trusted bounded
 production dispatch, persistent cross-invocation exclusion, initial state/group
 preparation and application rollback integration remain required. P0 stays open.
+
+
+[BE composite native evidence](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-BE.md)
+now proves real Arch systemd enrollment, two process kills and exact same-operation
+compensation with management absent. Preparation/inventory harness failures are
+retained separately. Production fencing/admission, real mail workload and reboot
+composition remain outside this bounded result.
