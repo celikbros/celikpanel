@@ -267,3 +267,11 @@ now supplies both actual Agent source paths from the same confined live/archive
 implementation. Existing chain/lifetime/purpose checks remain in the caller, and
 its adversarial source tests pass. This removes another P0.4/P0.5 duplication risk;
 it does not activate a native renewal hook or close management-absent acceptance.
+
+
+[AX mail acceptance](../deploy/e2e/release-recovery/MAIL-CONTRACT-AX.md) now proves
+real shared-contract renewal, retained native TLS after an orderly Debian reboot,
+and preservation of an owner-selected certificate plus pending work after replay
+of a completed renewal. P0.4/P0.5 evidence is partial: renewal still invokes Agent
+code; independent helper enrollment, retries, hook migration and removal remain
+open. No installed owner panel was changed.

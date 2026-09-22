@@ -342,3 +342,12 @@ hook geçişi ve yönetim yokken kabul P0.4/P0.5 kapsamında açık kalıyor.
 gerçek Agent panel/mail yollarında aynı sınırlı live/archive okumasını kullanır.
 Zincir, süre ve amaç denetimleri çağıranda korunur; mevcut olumsuz kaynak testleri
 geçti. Yerel yenileme hook'u ve yönetim yokken kabul henüz tamamlanmadı.
+
+
+[AX mail kabul deneyi](../deploy/e2e/release-recovery/MAIL-CONTRACT-AX.md), gerçek
+servislerle ortak sözleşme üzerinden yenilemeyi, Debian yeniden başlatmasından
+sonra TLS'nin korunmasını ve tamamlanmış yenileme tekrarında sahibin sertifika
+seçimiyle bekleyen işin korunmasını doğruladı. P0.4/P0.5 kısmen kanıtlıdır:
+yenileme hâlâ Agent kodunu kullanıyor; bağımsız yardımcının yetkilendirilmesi,
+tekrar denemesi, hook geçişi ve panel kaldırma kabulü açıktır. Kurulu kullanıcı
+panelinde değişiklik yapılmadı.
