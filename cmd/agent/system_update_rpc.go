@@ -146,35 +146,38 @@ type systemUpdateBackend interface {
 }
 
 type systemUpdateService struct {
-	fetcher           systemUpdateManifestFetcher
-	backend           systemUpdateBackend
-	now               func() time.Time
-	os                string
-	arch              string
-	unsupportedReason string
+	fetcher         systemUpdateManifestFetcher
+	backend         systemUpdateBackend
+	now             func() time.Time
+	os              string
+	arch            string
+	hostPolicyCheck func() error
 }
 
 func newSystemUpdateService(fetcher systemUpdateManifestFetcher, backend systemUpdateBackend, platformOS, platformArch string) *systemUpdateService {
 	return &systemUpdateService{fetcher: fetcher, backend: backend, now: func() time.Time { return time.Now().UTC() }, os: platformOS, arch: platformArch}
 }
 
-func (service *systemUpdateService) supported() bool {
-	return service != nil && service.unsupportedReason == "" && service.fetcher != nil && service.backend != nil &&
-		service.os == "linux" && (service.arch == "amd64" || service.arch == "arm64")
+// Host readiness is an observation, not a property of the cached RPC service.
+// Probe once at each admission boundary; never memoize either success or failure.
+func (service *systemUpdateService) supportError() error {
+	if service == nil || service.fetcher == nil || service.backend == nil || service.os != "linux" || (service.arch != "amd64" && service.arch != "arm64") {
+		return errors.New("system updates are supported only on Linux amd64 and arm64")
+	}
+	if service.hostPolicyCheck != nil {
+		return service.hostPolicyCheck()
+	}
+	return nil
 }
 
-func (service *systemUpdateService) unsupportedError() error {
-	if service != nil && service.unsupportedReason != "" {
-		return errors.New(service.unsupportedReason)
-	}
-	return errors.New("system updates are supported only on Linux amd64 and arm64")
-}
+func (service *systemUpdateService) supported() bool { return service.supportError() == nil }
 
 func (service *systemUpdateService) check(ctx context.Context) (transport.SystemUpdateCheckResponse, error) {
-	response := transport.SystemUpdateCheckResponse{Supported: service.supported(), CurrentVersion: buildVersion, CurrentCommit: buildCommit}
-	if !response.Supported {
-		return response, service.unsupportedError()
+	response := transport.SystemUpdateCheckResponse{CurrentVersion: buildVersion, CurrentCommit: buildCommit}
+	if err := service.supportError(); err != nil {
+		return response, err
 	}
+	response.Supported = true
 	version, err := service.fetcher.Discover(ctx)
 	if err != nil {
 		return response, err
@@ -207,8 +210,8 @@ func (service *systemUpdateService) check(ctx context.Context) (transport.System
 }
 
 func (service *systemUpdateService) start(ctx context.Context, request *transport.SystemUpdateStartRequest) (transport.SystemUpdateStartResponse, error) {
-	if !service.supported() {
-		return transport.SystemUpdateStartResponse{}, service.unsupportedError()
+	if err := service.supportError(); err != nil {
+		return transport.SystemUpdateStartResponse{}, err
 	}
 	if err := validateSystemUpdateStartRequest(request); err != nil {
 		return transport.SystemUpdateStartResponse{}, err
@@ -269,8 +272,8 @@ func (service *systemUpdateService) start(ctx context.Context, request *transpor
 }
 
 func (service *systemUpdateService) abandon(ctx context.Context, request *transport.SystemUpdateAbandonRequest) (transport.SystemUpdateStatusResponse, error) {
-	if !service.supported() {
-		return transport.SystemUpdateStatusResponse{}, service.unsupportedError()
+	if err := service.supportError(); err != nil {
+		return transport.SystemUpdateStatusResponse{}, err
 	}
 	if err := validateSystemUpdateStartRequest(request); err != nil {
 		return transport.SystemUpdateStatusResponse{}, err

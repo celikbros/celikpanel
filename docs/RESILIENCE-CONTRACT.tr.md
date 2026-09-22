@@ -318,4 +318,6 @@ doğruladı. İki kullanıcı ve üç otomatik deneme kaydı korundu; eski sür�
 sınırı kapandı. Başarısız devam, Arch, diğer checkpoint'ler ve P0.3'ün kalan
 matrisi açık.
 
-Arch AU, gerçek güncellemede yeni firewall unit’i yayımlandıktan sonraki kesintiyi, otomatik geri almayı ve yeni açılışı doğruladı. [Kanıt ve sınırlar](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md#arch-automatic-rollback-and-boot-au). Arch başarılı ileri güncelleme deneyi ve P0.5 bütünü açıktır. Eski Agent’ın geçici platform tespit hatasını kalıcı güncelleme reddi olarak saklaması ayrı bir P0.2/P0.4 düzeltmesi gerektirir; test Agent’ını yeniden başlatmak bu kabul maddesini kapatmaz.
+Arch AU, gerçek güncellemede yeni firewall unit’i yayımlandıktan sonraki kesintiyi, otomatik geri almayı ve yeni açılışı doğruladı. [Kanıt ve sınırlar](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md#arch-automatic-rollback-and-boot-au). Arch başarılı ileri güncelleme deneyi ve P0.5 bütünü açıktır. Eski Agent’ın geçici platform tespit hatasını kalıcı güncelleme reddi olarak saklaması ayrı bir P0.2 düzeltmesi gerektirir; test Agent’ını yeniden başlatmak bu kabul maddesini kapatmaz.
+
+[Güncel platform gözlemi](UPDATE-PLATFORM-OBSERVATION.md), AU deneyinde bulunan süreç boyu ret önbelleğini düzeltir. Aynı süreçte bekleme/hazır geçişi ve sonradan geçersiz olan önkoşulun Start işlemini engellemesi race testlerinden geçti. Kalıcı şema değişikliği veya otomatik güncelleme tekrarı yoktur. Yeni adayla gerçek açılış/kabul deneyi ve P0.2 geneli açıktır.
