@@ -15,6 +15,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
+	"golang.org/x/sys/unix"
 )
 
 // Resume only the exact disposable fixture after initial host publication.
@@ -241,4 +242,119 @@ func TestMailHostCertificateDisposableVMCompletedRenewalOwnerDrift(t *testing.T)
 	}
 	assertMailVMListeners(t, domain, olderLeaf)
 	t.Logf("owner selection preserved; pending retained; historical completion preserved; selected=%s source=%s", olderLeaf, panelCertificateLeafSHA256(source))
+}
+
+// Exercise the actual retained recovery cleanup with native material and daemons.
+// This is a controlled uncommitted stage, not a simulated successful rollback.
+func TestMailHostCertificateDisposableVMRecoveryCleanupOwnerEdit(t *testing.T) {
+	requireDisposableMailVM(t)
+	const domain = "mail.setup.celikpanel.test"
+	currentDomain, currentLeaf, err := currentMailHostCertificateIdentity()
+	if err != nil || currentDomain != domain {
+		t.Fatalf("native fixture missing: %v", err)
+	}
+	assertMailVMListeners(t, domain, currentLeaf)
+	pendingBefore, pendingErr := os.ReadFile(mailHostRenewalPendingPath())
+	if pendingErr != nil && !os.IsNotExist(pendingErr) {
+		t.Fatal(pendingErr)
+	}
+	cert, key, leaf, _, err := readMailHostCertificateSource(domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commitment, err := mutationpayload.CanonicalMailHostCertificate(domain, "fixture@example.test", buildCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager, err := agentServiceMutationManager()
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := make([]byte, 32)
+	if _, err = rand.Read(identity); err != nil {
+		t.Fatal(err)
+	}
+	request, owner := hex.EncodeToString(identity[:16]), hex.EncodeToString(identity[16:])
+	if _, err = manager.begin(&ServiceMutationBeginRequest{RequestID: request, OwnerID: owner, Kind: "mail_host_certificate", Target: domain, PackageName: commitment.Qualifier}); err != nil {
+		t.Fatal(err)
+	}
+	ctx, finish, err := manager.acquireStep(ServiceMutationBinding{MutationRequestID: request, MutationOwnerID: owner}, newServiceMutationStepClaim(serviceMutationStepIssueMailHostCertificate, domain, commitment.Qualifier, "issue"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	released := false
+	defer func() {
+		if !released {
+			finish()
+		}
+	}()
+	receipt, err := newMailHostCertificateReceipt(request, commitment.Qualifier, domain, leaf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stage *mailHostCertificateStage
+	var version string
+	err = panelCertWithPublishLock(func() error {
+		var e error
+		stage, e = stageMailHostCertificateMaterial(domain, managedMailHostTLSDir, cert, key, receipt)
+		if e != nil {
+			return e
+		}
+		fd, e := openTrustedPanelTLSDirectoryOwned(managedMailHostTLSDir, 0)
+		if e != nil {
+			return e
+		}
+		defer unix.Close(fd)
+		matches, e := findMailHostCertificateVersionsAt(fd, request, commitment.Qualifier, domain)
+		if e != nil {
+			return e
+		}
+		if len(matches) != 1 {
+			t.Fatal("exact fixture stage missing")
+		}
+		version = matches[0]
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = panelCertWithPublishLock(stage.close) }()
+	note := filepath.Join(managedMailHostTLSDir, version, "owner-note")
+	if err = os.WriteFile(note, []byte("owner evidence: preserve this directory\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	published, err := reconcilePersistedMailHostCertificateHostAt(ctx, managedMailHostTLSDir, request, commitment.Qualifier, domain)
+	if err == nil || published {
+		t.Fatalf("owner-modified stage was disposed: %v", err)
+	}
+	for _, name := range []string{"owner-note", "privkey.pem", "fullchain.pem", mailHostCertificateReceiptName} {
+		if _, err = os.Stat(filepath.Join(managedMailHostTLSDir, version, name)); err != nil {
+			t.Fatal("refusal removed owner material", err)
+		}
+	}
+	assertMailVMListeners(t, domain, currentLeaf)
+	// Explicit fixture owner action resolves the conflict; the program must not
+	// invent this action. Retry of the same operation may then remove its stage.
+	if err = os.Remove(note); err != nil {
+		t.Fatal(err)
+	}
+	published, err = reconcilePersistedMailHostCertificateHostAt(ctx, managedMailHostTLSDir, request, commitment.Qualifier, domain)
+	if err != nil || published {
+		t.Fatalf("exact abandoned stage cleanup: %v %v", published, err)
+	}
+	if _, err = os.Stat(filepath.Join(managedMailHostTLSDir, version)); !os.IsNotExist(err) {
+		t.Fatal("abandoned stage remains")
+	}
+	finish()
+	released = true
+	job, err := manager.finish(&ServiceMutationFinishRequest{RequestID: request, OwnerID: owner, Success: false, FailureCode: "mail_host_renewal_failed", Message: "Disposable uncommitted stage was abandoned after owner review."})
+	if err != nil || job.Status != serviceMutationStatusFailed {
+		t.Fatalf("historical failure not retained: %+v %v", job, err)
+	}
+	pendingAfter, afterErr := os.ReadFile(mailHostRenewalPendingPath())
+	if !bytes.Equal(pendingBefore, pendingAfter) || os.IsNotExist(pendingErr) != os.IsNotExist(afterErr) || (afterErr != nil && !os.IsNotExist(afterErr)) {
+		t.Fatal("unrelated renewal queue changed")
+	}
+	assertMailVMListeners(t, domain, currentLeaf)
+	t.Logf("native cleanup refused owner files; same-operation owner-resolved cleanup retained failed status, queue and served leaf; request=%s selected=%s", request, currentLeaf)
 }
