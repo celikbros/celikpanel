@@ -152,3 +152,32 @@ func TestMailEnrollmentRejectsIdentityStatusAndForgedRelease(t *testing.T) {
 		t.Fatal("nil ledger")
 	}
 }
+
+func TestRecordedMailEnrollmentSelectsOnlyExactRequest(t *testing.T) {
+	ledger, id, now := enrollmentFixture(t)
+	before, _ := Encode(&ledger)
+	for _, request := range []string{"", strings.Repeat("f", 32), "../active"} {
+		if _, _, err := RecordedMailEnrollment(&ledger, request); err == nil {
+			t.Fatal("unrecorded request accepted")
+		}
+	}
+	got, state, err := RecordedMailEnrollment(&ledger, id.RequestID)
+	if err != nil || got != id || state != "forward" {
+		t.Fatal(got, state, err)
+	}
+	after, _ := Encode(&ledger)
+	if !bytes.Equal(before, after) {
+		t.Fatal("selector modified ledger")
+	}
+	ledger, err = AdvanceMailEnrollment(&ledger, id, MailEnrollmentPublished, now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, state, err = RecordedMailEnrollment(&ledger, id.RequestID); err != nil || state != "published" {
+		t.Fatal(state, err)
+	}
+	ledger.ActiveRequestID = id.RequestID
+	if _, _, err = RecordedMailEnrollment(&ledger, id.RequestID); err == nil {
+		t.Fatal("inconsistent whole ledger accepted")
+	}
+}

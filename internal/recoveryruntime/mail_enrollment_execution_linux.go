@@ -115,6 +115,12 @@ func (e *PreparedMailEnrollment) verifyBoundary(ctx context.Context) error {
 	}
 	return e.binding.VerifyAuthority()
 }
+
+// RevalidateAuthority gives the durable writer the same source/owner/lock check
+// used by native execution. It is not a native result or a readiness observation.
+func (e *PreparedMailEnrollment) RevalidateAuthority(ctx context.Context) error {
+	return e.verifyBoundary(ctx)
+}
 func (e *PreparedMailEnrollment) Identity() servicemutationledger.MailEnrollmentIdentity {
 	if e == nil {
 		return servicemutationledger.MailEnrollmentIdentity{}

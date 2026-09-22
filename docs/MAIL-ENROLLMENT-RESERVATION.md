@@ -121,9 +121,10 @@ observations, daemon-reload, and start/stop of the renewal timer. It has a clean
 environment, ten-second deadline, parent-death SIGKILL and bounded classified
 output. It does not borrow a generic expiring RPC lease or register another job.
 
-These functions are compiled but not exposed as new RPC/CLI admission. Initial
-owner intent provisioning, authenticated setup dispatch and boot dispatch remain
-open. The guarded native fixture now supports joining these actual components;
+These functions are compiled but not exposed as new RPC/CLI admission. The
+recorded-operation CLI below can resume only an existing accepted reservation.
+Initial owner intent provisioning, authenticated setup dispatch and boot dispatch
+remain open. The guarded native fixture now supports joining these actual components;
 its result must be recorded separately from the fixture-native process tests.
 
 ### Combined native acceptance
@@ -142,3 +143,39 @@ explicit test admission, with current-source Agent compatibility material retain
 in the protected lab directory; the normal installed management paths are absent.
 This closes the combined writer/executor/native-adapter trial, not production UI
 admission, boot dispatcher, old-release compatibility or real mail workload tests.
+
+## Recorded-operation continuation (2026-09-23)
+
+P0.2/P0.3/P0.5: `OpenRecordedMailEnrollment` reconstructs the scope exclusively
+from the existing canonical capture and file plan and compares its digest with
+one exact accepted common-ledger request. It never searches for the newest job,
+creates a missing record, or treats a terminal receipt as current native success.
+Forward/rollback direction comes from the same reservation. A removed request,
+changed owner/scope/source or newer rollback decision invalidates the old opener.
+The durable writer and native executor use the same authority check. Existing
+v1 schemas and transitions are unchanged; no additional intent marker is added.
+
+The separately built helper now accepts `--resume-enrollment <recorded-id>`.
+It is a narrow owner/dispatcher entry requiring already-held release fd9 and
+host fd8, the established numeric service group, the canonical common ledger,
+root-owned journals under `/var/lib/celikpanel-mail-renewal/enrollment`, and the
+verified current Agent declaration. It proves its own executing bytes match the
+exact declared mail runtime. It cannot initialize any missing identity/evidence,
+select another kit, change direction, start an update, or become a general Agent.
+It invokes the existing writer/executor and terminal proof. Error guidance keeps
+unknown results distinct and excludes raw private output. A terminal retry only
+observes; it cannot restart an owner-stopped timer.
+
+This is **not automatic boot recovery or authenticated setup admission**. Those
+callers must still provision the accepted journal/identity, provide exclusion,
+and dispatch this fixed consumer. Retained Agent compatibility files are currently
+required, although the Agent daemon need not be running. This does not certify
+recovery after deleting management files or enrollment after reboot with missing
+volatile locks. The normal independent certificate-renewal path is unchanged.
+
+Validation: shared-ledger selector, recorded preparation/refusal and full
+forward/inverse composition tests pass with the race detector; Agent enrollment
+and CLI scope/guidance tests and vet pass. Real management/helper builds pass;
+the actual independent helper refuses missing inherited locks, malformed IDs,
+direction overrides and update-worker arguments. These are component/process and
+build checks, not a new native reboot or automatic-dispatch acceptance result.

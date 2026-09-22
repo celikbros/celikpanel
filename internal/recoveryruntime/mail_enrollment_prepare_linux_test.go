@@ -21,7 +21,7 @@ func TestMailEnrollmentPreparation(t *testing.T) {
 		t.Skip("root descriptor fixture")
 	}
 	for _, kind := range []string{"absent", "legacy", "independent"} {
-		for _, scenario := range []string{"ok", "missing-binding", "wrong-generation", "denied", "cancelled", "unknown-native", "owner-hook", "late-source-change", "late-denial", "no-host-lock", "late-prepared-source-change"} {
+		for _, scenario := range []string{"ok", "missing-binding", "wrong-generation", "denied", "cancelled", "unknown-native", "owner-hook", "late-source-change", "late-denial", "no-host-lock", "late-prepared-source-change", "recorded-forward", "recorded-rollback", "recorded-terminal", "recorded-missing", "recorded-owner", "recorded-scope", "recorded-capture", "recorded-plan", "recorded-source", "recorded-late-clear", "recorded-late-inverse"} {
 			if kind == "independent" && scenario != "ok" {
 				continue
 			}
@@ -121,7 +121,7 @@ func TestMailEnrollmentPreparationChild(t *testing.T) {
 		beforeErr = nil
 	}
 	prepared, scope, err := prepareMailEnrollmentAt(ctx, mailCaptureTestOperation, paths, agent, binding)
-	good := scenario == "ok" || scenario == "late-prepared-source-change"
+	good := scenario == "ok" || scenario == "late-prepared-source-change" || strings.HasPrefix(scenario, "recorded-")
 	if (err == nil) != good {
 		t.Fatalf("expected prepared=%v: %v", good, err)
 	}
@@ -151,6 +151,12 @@ func TestMailEnrollmentPreparationChild(t *testing.T) {
 	second, again, err := prepareMailEnrollmentAt(ctx, mailCaptureTestOperation, paths, agent, binding)
 	if err != nil || !bytes.Equal(scope, again) || second.Identity() != prepared.Identity() {
 		t.Fatal("retry changed prepared plan", err)
+	}
+	if strings.HasPrefix(scenario, "recorded-") {
+		exerciseRecordedEnrollment(t, ctx, paths, agent, prepared, binding, scenario)
+		if mutations != 0 {
+			t.Fatal("recorded observation performed native mutation")
+		}
 	}
 	if scenario == "late-prepared-source-change" {
 		capturePut(t, filepath.Join(binaryDir, "agent"), []byte("later owner replacement"), 0755)

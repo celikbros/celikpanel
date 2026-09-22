@@ -279,9 +279,21 @@ func TestMailEnrollmentChild(t *testing.T) {
 				capturePut(t, reservation.Path, raw, 0600)
 			}
 		}
-		if scenario == "adapter" {
+		if scenario == "adapter" || scenario == "recorded" {
 			binding := MailEnrollmentBinding{LedgerPath: reservation.Path, Owner: reservation.Owner, OwnerID: reservation.OwnerID, HostLock: guard.HostLock, HostOwner: guard.HostOwner, VerifyAuthority: func() error { return guard.Verify(scope) }, Native: enrollmentNativeFixture{commands}}
-			prepared, err := openPreparedMailEnrollmentAt(context.Background(), scopeRaw, paths, binding)
+			var prepared *PreparedMailEnrollment
+			var err error
+			if scenario == "recorded" {
+				agent := enrollmentRecordedAgent(t, root, target)
+				defer agent.Close()
+				var recordedSide string
+				prepared, recordedSide, err = openRecordedMailEnrollmentAt(context.Background(), scope.Operation, paths, agent, binding)
+				if err == nil && recordedSide != side {
+					return errors.New("recorded direction cannot be reversed")
+				}
+			} else {
+				prepared, err = openPreparedMailEnrollmentAt(context.Background(), scopeRaw, paths, binding)
+			}
 			if err != nil {
 				return err
 			}
@@ -529,7 +541,7 @@ func TestMailReservedEnrollmentComposition(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("root descriptor fixture")
 	}
-	for _, scenario := range []string{"adapter", "terminal-ledger-observer", "resume:rollback", "reservation-missing", "reservation-owner", "reservation-group", "reservation-closed", "reservation-late-clear", "reservation-late-replace"} {
+	for _, scenario := range []string{"adapter", "recorded", "terminal-ledger-observer", "resume:rollback", "reservation-missing", "reservation-owner", "reservation-group", "reservation-closed", "reservation-late-clear", "reservation-late-replace"} {
 		t.Run(scenario, func(t *testing.T) {
 			root, target, host, release := enrollmentFixture(t, "legacy")
 			out, e := enrollmentChild(root, target, "reserved:"+scenario, host, release).CombinedOutput()

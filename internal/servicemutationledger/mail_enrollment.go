@@ -142,3 +142,13 @@ func AdvanceMailEnrollment(ledger *Ledger, id MailEnrollmentIdentity, next strin
 	}
 	return out, Validate(&out)
 }
+
+// RecordedMailEnrollment selects one exact accepted request, including a terminal
+// result. It never searches for a likely owner, chooses the newest job, admits
+// work or reinterprets an expired RPC lease as permission to retry.
+func RecordedMailEnrollment(ledger *Ledger, requestID string) (MailEnrollmentIdentity, string, error) {
+	if !ValidIdentity(requestID) || Validate(ledger) != nil {
+		return MailEnrollmentIdentity{}, "", ErrMailEnrollment
+	}
+	return mailEnrollmentState(ledger.Jobs[requestID])
+}

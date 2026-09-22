@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/mailtlsconfig"
+	"github.com/alicelik/celikpanel/internal/recoveryruntime"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
 
 const independentMailPath = "/usr/sbin:/usr/bin:/sbin:/bin"
 
 // This is a separately built, one-shot owner process. It has no RPC listener,
-// panel database, license gate, installation or general recovery entrypoint.
+// panel database, license gate, new-enrollment or general recovery entrypoint.
 // Existing reviewed mail intent, common locks and versioned evidence still apply.
 func runIndependentMailRenewal(args []string, euid int, environment []string) int {
 	if err := validateIndependentMailEntry(args, euid, environment); err != nil {
@@ -27,6 +31,15 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 	switch args[0] {
 	case "--inspect-build-identity":
 		fmt.Printf("component=mail-renewal\nversion=%s\ncommit=%s\n", buildVersion, buildCommit)
+		return 0
+	case "--resume-enrollment":
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err = resumeIndependentMailEnrollment(ctx, args[1]); err != nil {
+			fmt.Fprintln(os.Stderr, mailEnrollmentResumeGuidance(err)+" Request: "+args[1])
+			return 1
+		}
+		fmt.Fprintln(os.Stdout, "Recorded mail renewal enrollment result verified: "+args[1])
 		return 0
 	case "--queue":
 		err = queueMailHostCertificateRenewal(args[1])
@@ -115,7 +128,7 @@ func validateIndependentMailEntry(args []string, euid int, environment []string)
 	if len(args) == 1 && (args[0] == "--process-pending" || args[0] == "--inspect-build-identity") {
 		return nil
 	}
-	if len(args) == 2 && (args[0] == "--retry-selected" || args[0] == "--retry-failed") && validMutationIdentity(args[1]) {
+	if len(args) == 2 && (args[0] == "--retry-selected" || args[0] == "--retry-failed" || args[0] == "--resume-enrollment") && validMutationIdentity(args[1]) {
 		return nil
 	}
 	if len(args) == 2 && args[0] == "--queue" {
@@ -129,7 +142,7 @@ func validateIndependentMailEntry(args []string, euid int, environment []string)
 			return nil
 		}
 	}
-	return errors.New("supported actions are --process-pending, --queue <managed-mail-lineage>, --retry-selected <recorded-operation-id>, --retry-failed <recorded-operation-id>, and --inspect-build-identity")
+	return errors.New("supported actions are --process-pending, --queue <managed-mail-lineage>, --retry-selected <recorded-operation-id>, --retry-failed <recorded-operation-id>, --resume-enrollment <recorded-operation-id> (requires inherited release fd9 and host fd8), and --inspect-build-identity")
 }
 
 func validateIndependentMailSupervisor(args []string, euid int, environment []string) error {
@@ -210,4 +223,30 @@ func independentMailRenewalWait(err error) bool {
 		return independentMailRenewalWait(e.Unwrap())
 	}
 	return false
+}
+
+// Do not expose raw command output, paths or persisted job messages at this
+// boundary. Known evidence/timeout states retain their meaning; unknown remains
+// unverified, not a claim that the native service stopped or enrollment failed.
+func mailEnrollmentResumeGuidance(err error) string {
+	reason := "The recorded mail enrollment result could not be verified."
+	switch {
+	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
+		reason = "Mail enrollment observation was interrupted or timed out; the native result is unknown."
+	case errors.Is(err, servicemutationledger.ErrMailEnrollment):
+		reason = "Mail enrollment records do not match this accepted request; no replacement request was admitted."
+	default:
+		var runtime *recoveryruntime.Error
+		if errors.As(err, &runtime) {
+			switch runtime.Reason {
+			case recoveryruntime.ReasonChanged, recoveryruntime.ReasonContentMismatch, recoveryruntime.ReasonInvalidManifest:
+				reason = "Mail enrollment source or recovery evidence changed; the existing evidence was preserved."
+			case recoveryruntime.ReasonUnsafeMetadata:
+				reason = "Mail enrollment source, ownership or inherited lock evidence could not be verified."
+			case recoveryruntime.ReasonUnsupported:
+				reason = "This release does not verify the recorded mail enrollment source or format."
+			}
+		}
+	}
+	return reason + " The server owner must inspect this request's journal and native renewal units, resolve the reported prerequisite, then resume the same request with release fd9 and host fd8 held. No new enrollment or update was started."
 }

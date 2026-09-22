@@ -16,9 +16,10 @@ import (
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
 
-// This private boundary is not exposed through RPC, the renewal hook or a CLI.
-// The future enrollment dispatcher must provide authenticated source and exact
-// owner intent, plus native result proofs. An Agent declaration alone is not
+// New admission through this boundary is not exposed through RPC or the renewal
+// hook. The independent CLI can only resume an existing exact reservation. The
+// setup dispatcher must supply authenticated source and accepted owner intent;
+// native result proofs remain mandatory. An Agent declaration alone is not
 // authorization. No historical release may be retroactively certified.
 type mailEnrollmentAuthority struct {
 	identity     servicemutationledger.MailEnrollmentIdentity

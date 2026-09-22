@@ -1,19 +1,21 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"strings"
 	"testing"
 )
 
 func TestIndependentMailEntryScope(t *testing.T) {
-	for _, args := range [][]string{{"--retry-failed", strings.Repeat("a", 32)}, {"--process-pending"}, {"--retry-selected", strings.Repeat("a", 32)}, {"--inspect-build-identity"}, {"--queue", "celikpanel-mail-" + strings.Repeat("a", 24)}} {
+	for _, args := range [][]string{{"--resume-enrollment", strings.Repeat("a", 32)}, {"--retry-failed", strings.Repeat("a", 32)}, {"--process-pending"}, {"--retry-selected", strings.Repeat("a", 32)}, {"--inspect-build-identity"}, {"--queue", "celikpanel-mail-" + strings.Repeat("a", 24)}} {
 		if err := validateIndependentMailEntry(args, 0, []string{"PATH=/owner/bin", "INVOCATION_ID=fixture"}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, args := range [][]string{nil, {}, {"--retry-failed"}, {"--retry-failed", "bad"}, {"--retry-failed", strings.Repeat("a", 32), "extra"}, {"--self-update-worker", strings.Repeat("a", 32)}, {"--initialize-service-mutation-ledger"}, {"--restart-panel-after-certificate-publish"}, {"--deploy-panel-certificate", "domain"}, {"--process-pending", "extra"}, {"--queue", "celikpanel-mail-" + strings.Repeat("A", 24)}, {"--queue", "../other"}, {"--retry-selected"}, {"--retry-selected", "bad"}, {"--retry-selected", strings.Repeat("a", 32), "extra"}} {
+	for _, args := range [][]string{nil, {}, {"--resume-enrollment"}, {"--resume-enrollment", "../active"}, {"--resume-enrollment", strings.Repeat("a", 32), "rollback"}, {"--retry-failed"}, {"--retry-failed", "bad"}, {"--retry-failed", strings.Repeat("a", 32), "extra"}, {"--self-update-worker", strings.Repeat("a", 32)}, {"--initialize-service-mutation-ledger"}, {"--restart-panel-after-certificate-publish"}, {"--deploy-panel-certificate", "domain"}, {"--process-pending", "extra"}, {"--queue", "celikpanel-mail-" + strings.Repeat("A", 24)}, {"--queue", "../other"}, {"--retry-selected"}, {"--retry-selected", "bad"}, {"--retry-selected", strings.Repeat("a", 32), "extra"}} {
 		if err := validateIndependentMailEntry(args, 0, nil); err == nil {
 			t.Fatalf("broad entry accepted: %v", args)
 		}
@@ -62,6 +64,34 @@ func TestIndependentMailRenewalWaitClassification(t *testing.T) {
 	for _, e := range []error{nil, unknown, errMailRenewalCompletionUnverified, errMailRenewalRecoveryRequired, errors.Join(errServiceMutationHostBusy, unknown), fmt.Errorf("wrapped: %w", errors.Join(errServiceMutationBusy, errMailRenewalRecoveryRequired))} {
 		if independentMailRenewalWait(e) {
 			t.Fatalf("unknown/failure hidden by busy cause: %v", e)
+		}
+	}
+}
+
+func TestEnrollmentEntryCannotUseGenericManagementOrOverrides(t *testing.T) {
+	args := []string{"--resume-enrollment", strings.Repeat("a", 32)}
+	if err := validateIndependentMailEntry(args, 1000, nil); err == nil {
+		t.Fatal("unprivileged enrollment consumer")
+	}
+	for _, env := range []string{"CELIKPANEL_AGENT_STATE_DIR=/tmp/fake", "LD_PRELOAD=override", "CELIKPANEL_MUTATION_LOCK=/tmp/lock"} {
+		if err := validateIndependentMailEntry(args, 0, []string{env}); err == nil {
+			t.Fatal("overridden recorded source")
+		}
+	}
+}
+
+func TestEnrollmentGuidancePreservesUnknownAndRedactsRawErrors(t *testing.T) {
+	for _, tt := range []struct {
+		err  error
+		want string
+	}{
+		{errors.New("SECRET key material /private/path"), "could not be verified"},
+		{context.DeadlineExceeded, "native result is unknown"},
+		{servicemutationledger.ErrMailEnrollment, "do not match"},
+	} {
+		got := mailEnrollmentResumeGuidance(tt.err)
+		if !strings.Contains(got, tt.want) || !strings.Contains(got, "same request") || strings.Contains(got, "SECRET") || strings.Contains(got, "/private/path") {
+			t.Fatal(got)
 		}
 	}
 }
