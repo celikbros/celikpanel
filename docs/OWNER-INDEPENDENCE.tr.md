@@ -256,3 +256,13 @@ Agent üreticisi ve kurtarma okuyucusunun kullandığı tek v1 sözleşmeye taş
 Gerçek Alpha81 üreticisinin boş/SNI kayıtları aynen korunuyor. Kabul edilmiş
 planı okumak güncel sağlığı kanıtlamaz ve yeni yardımcıya değişiklik yetkisi
 vermez; bağımsız yenileme işlemi ve gerçek sistem kabulü açıktır.
+
+
+[Ortak mail sertifikası yayını](MAIL-CERTIFICATE-ARTIFACT.md#shared-immutable-publication)
+Agent üreticisi tarafından kullanılıyor; hazırlanan dosyalarda ve sertifika
+seçiminde gözlenen sahip değişikliklerini koruyor.
+[AY gerçek sistem deneyi](../deploy/e2e/release-recovery/MAIL-CONTRACT-AY.md), bu
+üretici ve ortak kabul edilmiş plan okuyucusuyla yenilemeyi, yeniden başlatmayı
+ve sahip değişikliği sonrası tekrarı doğruladı. Şema geçişi veya bağımsız
+yenileme yardımcısı iddiası yok; Agent işlem/kurtarma ve servis uyarlaması
+hâlâ gerekli.

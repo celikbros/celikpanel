@@ -282,3 +282,11 @@ now has one v1 contract shared by actual Agent production and recovery readers.
 Actual Alpha81 empty/SNI producer bytes are preserved exactly. Parsing accepted
 intent does not establish current health or authorize native helper mutations;
 the independent renewal transaction and its native acceptance remain open.
+
+
+[Shared immutable mail publication](MAIL-CERTIFICATE-ARTIFACT.md#shared-immutable-publication)
+now serves the actual Agent producer and preserves observed owner changes to
+staged material/current selection. The [AY native trial](../deploy/e2e/release-recovery/MAIL-CONTRACT-AY.md)
+passes real renewed TLS, orderly boot and owner-drift replay with this producer
+and the shared accepted-plan reader. No schema migration or independent renewal
+helper is claimed; Agent commit/recovery and service convergence remain required.

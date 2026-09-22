@@ -4,8 +4,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"os"
@@ -21,151 +19,27 @@ const (
 	mailHostCertificatePEMMaxSize      = mailhoststore.PEMMaxSize
 )
 
-func stageMailHostCertificateMaterial(
-	domain, tlsDir string,
-	certificate, privateKey []byte,
-	receipt mailHostCertificateReceipt,
-) (*mailHostCertificateStage, error) {
+func stageMailHostCertificateMaterial(domain, tlsDir string, certificate, privateKey []byte, receipt mailHostCertificateReceipt) (*mailHostCertificateStage, error) {
 	if tlsDir != managedMailHostTLSDir || domain != receipt.Domain {
 		return nil, errors.New("invalid mail host certificate issue stage target")
 	}
-	if err := validateMailHostCertificateReceipt(receipt); err != nil {
+	if _, err := mailhoststore.ValidateMaterial(certificate, privateKey, receipt); err != nil {
 		return nil, err
 	}
-	pair, err := tls.X509KeyPair(certificate, privateKey)
-	if err != nil {
-		return nil, fmt.Errorf("validate staged mail host certificate pair: %w", err)
-	}
-	if len(pair.Certificate) == 0 {
-		return nil, errors.New("validate staged mail host certificate pair: chain is empty")
-	}
-	leaf, err := x509.ParseCertificate(pair.Certificate[0])
-	if err != nil {
-		return nil, fmt.Errorf("parse staged mail host certificate leaf: %w", err)
-	}
-	if err := leaf.VerifyHostname(domain); err != nil {
-		return nil, fmt.Errorf("validate staged mail host certificate identity: %w", err)
-	}
-	if panelCertificateLeafSHA256(pair.Certificate[0]) != receipt.LeafSHA256 {
-		return nil, errors.New("staged mail host certificate leaf does not match receipt")
-	}
-	receiptRaw, err := canonicalMailHostCertificateReceipt(receipt)
+	// Directory acquisition and all operation/publication locks remain Agent-owned.
+	dirFD, _, err := openManagedMailHostTLSDirectory(tlsDir)
 	if err != nil {
 		return nil, err
 	}
-	dirFD, panelGID, err := openManagedMailHostTLSDirectory(tlsDir)
+	defer unix.Close(dirFD)
+	prepared, err := mailhoststore.StageMaterialAt(dirFD, certificate, privateKey, receipt)
 	if err != nil {
 		return nil, err
 	}
-	versionName, err := randomPanelCertEntry(managedPanelCertVersionPrefix)
-	if err != nil {
-		unix.Close(dirFD)
-		return nil, err
-	}
-	if err := unix.Mkdirat(dirFD, versionName, 0o750); err != nil {
-		unix.Close(dirFD)
-		return nil, fmt.Errorf("create certificate issue version directory: %w", err)
-	}
-	versionFD, err := openPanelCertDirectoryAt(dirFD, versionName)
-	if err != nil {
-		_ = unix.Unlinkat(dirFD, versionName, unix.AT_REMOVEDIR)
-		unix.Close(dirFD)
-		return nil, fmt.Errorf("open certificate issue version directory: %w", err)
-	}
-	staged := false
-	defer func() {
-		unix.Close(versionFD)
-		if !staged {
-			_ = removeMailHostCertificateVersionFilesAt(dirFD, versionName)
-			unix.Close(dirFD)
-		}
-	}()
-	if err := unix.Fchown(versionFD, 0, panelGID); err != nil {
-		return nil, fmt.Errorf("own certificate issue version directory: %w", err)
-	}
-	if err := unix.Fchmod(versionFD, 0o750); err != nil {
-		return nil, fmt.Errorf("protect certificate issue version directory: %w", err)
-	}
-	for _, file := range []struct {
-		name    string
-		gid     int
-		mode    uint32
-		content []byte
-	}{
-		{name: "fullchain.pem", gid: panelGID, mode: 0o600, content: certificate},
-		{name: "privkey.pem", gid: panelGID, mode: 0o600, content: privateKey},
-		{name: "mail.domain", gid: panelGID, mode: 0o600, content: []byte(domain + "\n")},
-		{name: mailHostCertificateReceiptName, gid: 0, mode: 0o600, content: receiptRaw},
-	} {
-		if err := writePanelCertificateFile(
-			versionFD, file.name, 0, file.gid, file.mode, file.content,
-		); err != nil {
-			return nil, err
-		}
-	}
-	if err := unix.Fsync(versionFD); err != nil {
-		return nil, fmt.Errorf("sync certificate issue version directory: %w", err)
-	}
-	if err := unix.Fsync(dirFD); err != nil {
-		return nil, fmt.Errorf("sync staged mail host certificate directory: %w", err)
-	}
-	staged = true
-	stage := &mailHostCertificateStage{}
-	stage.publishAction = func() (bool, error) {
-		return activateMailHostCertificateVersionAt(dirFD, versionName)
-	}
-	stage.cleanupAction = func(published bool) error {
-		defer unix.Close(dirFD)
-		if published {
-			return nil
-		}
-		current, found, err := readCurrentPanelCertificateVersionAt(dirFD)
-		if err != nil {
-			return err
-		}
-		if found && current == versionName {
-			return nil
-		}
-		if err := removeExactMailHostCertificateVersionAt(
-			dirFD, versionName, receipt,
-		); err != nil {
-			return err
-		}
-		return unix.Fsync(dirFD)
-	}
-	return stage, nil
-}
-
-func activateMailHostCertificateVersionAt(
-	dirFD int,
-	versionName string,
-) (published bool, err error) {
-	if !validManagedPanelCertVersionName(versionName) {
-		return false, errors.New("invalid staged mail host certificate version")
-	}
-	linkName, err := randomPanelCertEntry(".current-")
-	if err != nil {
-		return false, err
-	}
-	if err := unix.Symlinkat(versionName, dirFD, linkName); err != nil {
-		return false, fmt.Errorf("create staged mail host certificate link: %w", err)
-	}
-	linkPublished := false
-	defer func() {
-		if !linkPublished {
-			_ = unix.Unlinkat(dirFD, linkName, 0)
-		}
-	}()
-	if err := unix.Renameat(dirFD, linkName, dirFD, "current"); err != nil {
-		return false, fmt.Errorf("activate mail host certificate atomically: %w", err)
-	}
-	linkPublished = true
-	if err := unix.Fsync(dirFD); err != nil {
-		return true, fmt.Errorf(
-			"sync mail host TLS directory after certificate activation: %w", err,
-		)
-	}
-	return true, nil
+	return &mailHostCertificateStage{
+		publishAction: prepared.Publish,
+		cleanupAction: func(bool) error { return prepared.Close() },
+	}, nil
 }
 
 func verifyPublishedMailHostCertificateReceipt(
