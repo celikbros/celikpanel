@@ -191,3 +191,7 @@ original group/mode for revalidation and never normalizes them. Immutable runtim
 kits and hook/unit files retain their exact root:root contract. Group-writable,
 non-root-owned parents and later group changes are refused. This compatibility
 rule applies only to the native file observer, not recovery kit enrollment.
+
+[BE native hook preservation](../deploy/e2e/release-recovery/MAIL-HOOK-BE.md)
+verifies these boundaries with the actual writer and loaded native schedule,
+including the retained first refusal and metadata-compatible correction.
