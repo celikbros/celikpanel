@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +41,12 @@ type fakeFirewallCommandRunner struct {
 	unitEnabled           bool
 	commands              []recordedFirewallCommand
 	outputCalls           []string
+}
+
+// Only in-memory tests have a no-op exclusion. Production runners must implement
+// the same mandatory interface and cannot silently omit process exclusion.
+func (*fakeFirewallCommandRunner) AcquireFirewallLock() (io.Closer, error) {
+	return io.NopCloser(strings.NewReader("")), nil
 }
 
 func (f *fakeFirewallCommandRunner) LookPath(string) (string, error) {

@@ -115,3 +115,9 @@ non-writable `celikpanel` group layout. There is no stored-schema transition.
 The installed unit still uses Agent. Packaging, shared mutation exclusion,
 upgrade/rollback retention, failed-boot recovery and the remaining native workload
 matrix stay open; this result does not close P0.5 or certify panel removal.
+
+The subsequent [shared exclusion source and native contention proof](../deploy/e2e/release-recovery/FIREWALL-BOOT.md#shared-process-exclusion-next-source-stage)
+cover both the independent consumer and Agent entry points. Busy state preserves
+unverified/ambiguous outcomes; the kernel releases exclusion after process death.
+This closes the source-level shared-lock gap, not production activation or the
+whole native concurrency/upgrade matrix.

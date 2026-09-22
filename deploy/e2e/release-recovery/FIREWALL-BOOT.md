@@ -86,3 +86,40 @@ update/rollback, unsupported-policy boot recovery, Arch/RHEL and power-loss test
 remain open. No management-removal command or complete workload independence is
 claimed. Mail/website certificate renewal and the rest of P0.5 still require their
 own independent lifecycle and native evidence.
+
+
+## Shared process exclusion (next source stage)
+
+`internal/firewalllock` now supplies the same fixed native lock to the independent
+consumer and the Agent's apply, committed recovery, legacy check/restore and
+status/audit entry points. Lock order is the existing process mutex followed by
+nonblocking native exclusion. Exclusion is a required runner method; production
+adapters cannot silently fall back to an unlocked path. The helper never acquires the management mutation
+ledger, so it introduces no reverse lock order. Agent's prior authorization and
+durable commitment checks are unchanged.
+
+Busy or unsafe lock state is unverified, not disabled, ready or a clean terminal
+failure. Committed recovery reports an ambiguous host outcome when it cannot
+acquire the lock, retaining the unresolved operation. No probe, publication or
+second mutation starts under contention. Root-owned 0600 lock files support both
+root:root and the Agent's root:celikpanel group without metadata normalization.
+The ephemeral lock is released by the kernel after process death.
+
+[AR native contention evidence](FIREWALL-EXCLUSION-AR.json) records both final
+candidate Agent boot modes and both independent consumer modes refusing the same
+held OS lock. Kernel rules and saved policy stayed identical. After release, both
+preflight commands succeeded. Ordinary management binaries/services remained
+absent/disabled; candidate CLIs ran only from the private disposable fixture path.
+The final Agent digest is `eea3d17d904da68933876459f9c723c844ae438d5ed09f14bac0672d26dcb690`
+and consumer digest is `a9637ab4ff236b9199585e88dd58b537613414fee503f192937003ff92e978af`.
+This is native lock contention, not simultaneous full Agent RPC acceptance.
+
+Race-enabled tests additionally prove independent-process exclusion and automatic
+lock release after SIGKILL; untrusted modes/owners/symlink/hardlink rejection;
+read-only group compatibility; no host probe/publication under Agent contention;
+and preservation of an ambiguous recovery outcome. Existing firewall/SSH/security
+audit regression tests pass. The older reboot evidence above remains bound to
+its original binary; it is not relabeled as a reboot of this later source.
+
+Packaging, installed-unit activation, recovery across old/new consumer versions
+and remaining owner-concurrency/workload acceptance are still open.

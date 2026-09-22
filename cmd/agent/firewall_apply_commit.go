@@ -135,18 +135,21 @@ var firewallApplyJournalFaultHook func(string) error
 
 // Replaceable only by focused startup-recovery tests. Production always uses
 // the fixed nft/systemctl runner and fixed root-owned snapshot path.
-var recoverFirewallApplyHost = func(
-	ctx context.Context,
-	journal *firewallApplyJournal,
-) (firewallHostOutcome, error) {
+var recoverFirewallApplyHost = func(ctx context.Context, journal *firewallApplyJournal) (firewallHostOutcome, error) {
+	return recoverFirewallApplyWithRunner(ctx, journal, hostFirewallCommandRunner{ctx: ctx}, fileFirewallStateStore{path: firewallSnapshotPath})
+}
+
+func recoverFirewallApplyWithRunner(ctx context.Context, journal *firewallApplyJournal, runner firewallCommandRunner, store firewallStateStore) (firewallHostOutcome, error) {
 	firewallMu.Lock()
 	defer firewallMu.Unlock()
-	return convergeFirewallApplyPlan(
-		ctx,
-		journal,
-		hostFirewallCommandRunner{ctx: ctx},
-		fileFirewallStateStore{path: firewallSnapshotPath},
-	)
+	lock, err := runner.AcquireFirewallLock()
+	if err != nil {
+		// A predecessor may have changed the host. Contention supplies no terminal
+		// proof and must never finish its committed recovery as an untouched failure.
+		return firewallHostAmbiguous, err
+	}
+	defer lock.Close()
+	return convergeFirewallApplyPlan(ctx, journal, runner, store)
 }
 
 type firewallApplyJournal struct {
@@ -821,6 +824,12 @@ func applyStandaloneFirewallV2(
 ) error {
 	firewallMu.Lock()
 	defer firewallMu.Unlock()
+	lock, lockErr := runner.AcquireFirewallLock()
+	if lockErr != nil {
+		reportFirewallExclusion(response, lockErr)
+		return nil
+	}
+	defer lock.Close()
 	response.EngineAvailable = false
 	prepared, err := prepareFirewallApplyJournal(ctx, commitment, runner, store)
 	if err != nil {

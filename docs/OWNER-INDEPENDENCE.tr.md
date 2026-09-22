@@ -112,3 +112,9 @@ Kurulu unit hâlâ Agent kullanır. Paketleme, ortak değişiklik kilidi,
 güncelleme/geri alma sırasında okuyucu koruması, başarısız açılış kurtarması
 ve kalan yerel iş yükü matrisi açıktır; bu sonuç P0.5’i kapatmaz veya panelin
 kaldırılmasını onaylamaz.
+
+Sonraki [ortak kilit kaynağı ve yerel çakışma kanıtı](../deploy/e2e/release-recovery/FIREWALL-BOOT.md#shared-process-exclusion-next-source-stage),
+bağımsız okuyucu ve Agent girişlerini kapsar. Meşgul kilit, doğrulanmamış
+ve belirsiz sonucu korur; süreç ölünce kilidi çekirdek bırakır. Bu,
+kaynak düzeyindeki ortak kilit açığını kapatır; kurulu sistemde devreye alma
+ve bütün eşzamanlılık/güncelleme matrisi tamamlanmış değildir.

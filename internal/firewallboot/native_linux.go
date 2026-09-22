@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/alicelik/celikpanel/internal/firewalllock"
 	"github.com/alicelik/celikpanel/internal/firewallpolicy"
 	"github.com/alicelik/celikpanel/internal/hostcmd"
 	"golang.org/x/sys/unix"
@@ -31,7 +32,7 @@ func Restore(ctx context.Context, checkOnly bool) (Result, error) {
 	if err != nil || !initial.exists {
 		return Result{}, err
 	}
-	lock, err := acquireLock()
+	lock, err := firewalllock.Acquire()
 	if err != nil {
 		return Result{}, err
 	}
@@ -212,45 +213,4 @@ func (h nativeHost) ssh(ctx context.Context) ([]int, error) {
 		ports = append(ports, socketPorts...)
 	}
 	return ports, nil
-}
-
-// The boot consumer has a fixed local nonblocking exclusion lock. A second
-// invocation observes busy rather than launching another nft mutation.
-func acquireLock() (*os.File, error) {
-	const directory = "/run/celikpanel-firewall-boot"
-	const path = directory + "/restore.lock"
-	parent, err := os.Lstat("/run")
-	if err != nil {
-		return nil, err
-	}
-	owner, ok := parent.Sys().(*syscall.Stat_t)
-	if !ok || !parent.IsDir() || owner.Uid != 0 || owner.Gid != 0 || parent.Mode().Perm()&0022 != 0 {
-		return nil, errors.New("unsafe firewall lock directory")
-	}
-	if err = os.Mkdir(directory, 0755); err != nil && !errors.Is(err, os.ErrExist) {
-		return nil, err
-	}
-	dirInfo, err := os.Lstat(directory)
-	if err != nil {
-		return nil, err
-	}
-	dirOwner, ok := dirInfo.Sys().(*syscall.Stat_t)
-	if !ok || !dirInfo.IsDir() || dirOwner.Uid != 0 || dirOwner.Gid != 0 || dirInfo.Mode().Perm()&0022 != 0 {
-		return nil, errors.New("unsafe firewall lock parent")
-	}
-	fd, err := unix.Open(path, unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0600)
-	if err != nil {
-		return nil, err
-	}
-	file := os.NewFile(uintptr(fd), "firewall boot exclusion")
-	var st unix.Stat_t
-	if unix.Fstat(fd, &st) != nil || st.Mode&unix.S_IFMT != unix.S_IFREG || st.Mode&07777 != 0600 || st.Uid != 0 || st.Gid != 0 || st.Nlink != 1 {
-		file.Close()
-		return nil, errors.New("unsafe firewall lock metadata")
-	}
-	if err = unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err != nil {
-		file.Close()
-		return nil, errors.New("another native firewall restore is running; observe it before retrying")
-	}
-	return file, nil
 }
