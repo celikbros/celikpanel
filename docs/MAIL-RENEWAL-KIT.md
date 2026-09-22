@@ -35,3 +35,8 @@ Contract and builder race tests and vet pass. Native service sandbox, hook,
 scheduled boot renewal and production enrollment/rollback evidence are separate
 acceptance items; artifact tests alone do not establish them. Independent recovery
 of interrupted renewal and the full P0.5 workload matrix remain open.
+
+[BE native scheduling evidence](../deploy/e2e/release-recovery/MAIL-KIT-BE.md)
+now proves the actual hook, service sandbox, timer-triggered new-leaf publication
+and automatic new-leaf deployment after reboot, with installed management absent.
+Production enrollment/rollback and independent interruption recovery remain open.

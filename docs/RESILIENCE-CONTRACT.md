@@ -492,3 +492,8 @@ postboot evidence, enrollment/migration and remaining P0.5 acceptance stay expli
 now verifies postboot same-leaf acknowledgement and new-leaf renewal with installed
 management absent, empty-queue no-op, and owner-modified runtime preservation.
 Scheduling/enrollment and independent interrupted recovery remain open.
+
+[BE native scheduling evidence](../deploy/e2e/release-recovery/MAIL-KIT-BE.md)
+now proves the actual hook, service sandbox, timer-triggered new-leaf publication
+and automatic new-leaf deployment after reboot, with installed management absent.
+Production enrollment/rollback and independent interruption recovery remain open.
