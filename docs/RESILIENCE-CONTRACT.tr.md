@@ -603,3 +603,10 @@ koordinatörler durmadan reddeder ve son değişiklik kilidi altında yeniden de
 Bildirim, Agent ile aynı atomik dizin değişiminde yayımlanır ve aynı geri alma
 kanıtıyla korunur. Bu, eski ikililere sonradan uyumluluk verme, üretimde ilk
 kaydı etkinleştirme veya tüm gerçek sistem geri alma kabulünü kapatma değildir.
+
+
+[BE gerçek sistem uyumluluk kanıtı](../deploy/e2e/release-recovery/AGENT-COMPATIBILITY-BE.md),
+çalışan bağımsız Debian postasının yanında salt-okur kabulü, Arch'ta kayıt yokluğu
+ayrımını ve iki çekirdekte özel test dizinlerindeki atomik yayın/kesilme/tersine
+çevirme adımlarını doğrular. Üretimde ilk kayıt ile tüm uygulamanın otomatik geri
+alınması bu kanıtın kapsamına girmez.

@@ -75,3 +75,10 @@ build producer; `go vet` passed for those packages. Real management/helper build
 admission passed separately. Prebuilt/source bootstrap, recovery runtime/resource,
 installer toolchain and native-contract shell checks passed. These results do not
 substitute for the separately scoped native acceptance described above.
+
+
+[BE native compatibility evidence](../deploy/e2e/release-recovery/AGENT-COMPATIBILITY-BE.md)
+now verifies read-only admission beside running independent Debian mail, absent
+native enrollment on Arch, and private atomic-resource SIGKILL/inverse cases on
+both kernels. This evidence preserves the stated production enrollment and whole
+application rollback limits.

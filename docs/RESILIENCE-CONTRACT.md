@@ -658,3 +658,10 @@ coordinator stop and repeat before mutation. The declaration travels in the same
 atomic bin exchange and exact inverse as Agent. This is not retroactive
 certification of old releases, production enrollment or full native rollback
 acceptance; those boundaries remain open.
+
+
+[BE native compatibility evidence](../deploy/e2e/release-recovery/AGENT-COMPATIBILITY-BE.md)
+now verifies read-only admission beside running independent Debian mail, absent
+native enrollment on Arch, and private atomic-resource SIGKILL/inverse cases on
+both kernels. This evidence preserves the stated production enrollment and whole
+application rollback limits.

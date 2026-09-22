@@ -1,0 +1,554 @@
+{
+  "arch": {
+    "absent_after": [
+      "/etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert",
+      "/etc/systemd/system/celikpanel-mail-renewal.service",
+      "/etc/systemd/system/celikpanel-mail-renewal.timer",
+      "/etc/systemd/system/timers.target.wants/celikpanel-mail-renewal.timer",
+      "/opt/celikpanel/bin/agent",
+      "/opt/celikpanel/bin/panel"
+    ],
+    "absent_before": [
+      "/etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert",
+      "/etc/systemd/system/celikpanel-mail-renewal.service",
+      "/etc/systemd/system/celikpanel-mail-renewal.timer",
+      "/etc/systemd/system/timers.target.wants/celikpanel-mail-renewal.timer",
+      "/opt/celikpanel/bin/agent",
+      "/opt/celikpanel/bin/panel"
+    ],
+    "boot_id": "c6036c01-327c-4bad-9dd6-5d443c87fc1c",
+    "cases": {
+      "edited-agent": {
+        "candidate_exit": 3,
+        "candidate_stderr": "This application's compatibility with independent mail renewal could not be verified. The server owner must keep the current renewal files and choose a release or snapshot carrying a matching supported Agent contract before resuming the same operation. recovery runtime unavailable: runtime_unsupported_protocol\n",
+        "compatibility_exit": 0
+      },
+      "supported": {
+        "candidate_exit": 0,
+        "candidate_stderr": "",
+        "compatibility_exit": 0
+      },
+      "unmarked": {
+        "candidate_exit": 3,
+        "candidate_stderr": "This application's compatibility with independent mail renewal could not be verified. The server owner must keep the current renewal files and choose a release or snapshot carrying a matching supported Agent contract before resuming the same operation. recovery runtime unavailable: runtime_missing\n",
+        "compatibility_exit": 0
+      }
+    },
+    "files": {
+      "bin/agent": "39a2c43eed2d64be2670150cb7626cb36d255796644878e823d6fd85c4350798",
+      "bin/agent-native-contract.json": "3790fc045a8092bc02702861d06533017c0c032ad1b34342f90198e1b163afc9",
+      "bin/publication.test": "f64875f917f80316aa740d02d4b6860da2ee918e0129545f497f86d5976cb26a",
+      "bin/recovery": "a2671ec739da5a8b38cdb001547c8caf05b44dca2ed9450c63928c7710f5b13a"
+    },
+    "management_absent": true,
+    "native_enrollment": false,
+    "publication_log": "=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/complete\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/stage_file_written\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/intent_durable\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/exchange_done\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/receipt_durable\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/complete-prior-contract\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/stage_file_written-prior-contract\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/intent_durable-prior-contract\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/exchange_done-prior-contract\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/receipt_durable-prior-contract\n--- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse (0.13s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/complete (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/stage_file_written (0.02s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/intent_durable (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/exchange_done (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/receipt_durable (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/complete-prior-contract (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/stage_file_written-prior-contract (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/intent_durable-prior-contract (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/exchange_done-prior-contract (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/receipt_durable-prior-contract (0.01s)\n=== RUN   TestAgentDeclarationEditAfterForwardPublicationBlocksInverse\n--- PASS: TestAgentDeclarationEditAfterForwardPublicationBlocksInverse (0.01s)\n=== RUN   TestAgentDeclarationMaterialRollbackWithoutCandidate\n--- PASS: TestAgentDeclarationMaterialRollbackWithoutCandidate (0.04s)\nPASS\n",
+    "schema": "celikpanel-native-agent-compatibility-absent/v1",
+    "source_commit": "1505a9bcbd43e19962bafac0d24fb721ded38928",
+    "wants_after": [
+      34,
+      49118,
+      16877,
+      0,
+      0,
+      [
+        ".celikpanel-mail-enable-7aee70d6aab03bd8c2d695135687fd96"
+      ]
+    ],
+    "wants_before": [
+      34,
+      49118,
+      16877,
+      0,
+      0,
+      [
+        ".celikpanel-mail-enable-7aee70d6aab03bd8c2d695135687fd96"
+      ]
+    ]
+  },
+  "debian13": {
+    "boot_id": "b8691874-0b1c-43d6-8fa3-ab32100cec0a",
+    "cases": {
+      "edited-agent": {
+        "agent_sha256": "ae9529eca7b8609a7eae3fe2c6bc5cb7dbce9caa819409a12dc95b6ce2d16e35",
+        "exit": 3,
+        "stderr": "This application's compatibility with independent mail renewal could not be verified. The server owner must keep the current renewal files and choose a release or snapshot carrying a matching supported Agent contract before resuming the same operation. recovery runtime unavailable: runtime_unsupported_protocol\n",
+        "stdout": ""
+      },
+      "edited-contract": {
+        "agent_sha256": "39a2c43eed2d64be2670150cb7626cb36d255796644878e823d6fd85c4350798",
+        "exit": 3,
+        "stderr": "This application's compatibility with independent mail renewal could not be verified. The server owner must keep the current renewal files and choose a release or snapshot carrying a matching supported Agent contract before resuming the same operation. recovery runtime unavailable: runtime_unsupported_protocol\n",
+        "stdout": ""
+      },
+      "linked-agent": {
+        "agent_sha256": "39a2c43eed2d64be2670150cb7626cb36d255796644878e823d6fd85c4350798",
+        "exit": 3,
+        "stderr": "This application's compatibility with independent mail renewal could not be verified. The server owner must keep the current renewal files and choose a release or snapshot carrying a matching supported Agent contract before resuming the same operation. recovery runtime unavailable: runtime_unsafe_metadata\n",
+        "stdout": ""
+      },
+      "supported": {
+        "agent_sha256": "39a2c43eed2d64be2670150cb7626cb36d255796644878e823d6fd85c4350798",
+        "exit": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "unmarked": {
+        "agent_sha256": "0ef98dfa75a3e4ccf19bb43c1defa2d04a50d82f6e488d58816216f545e2d83e",
+        "exit": 3,
+        "stderr": "This application's compatibility with independent mail renewal could not be verified. The server owner must keep the current renewal files and choose a release or snapshot carrying a matching supported Agent contract before resuming the same operation. recovery runtime unavailable: runtime_missing\n",
+        "stdout": ""
+      }
+    },
+    "contract": {
+      "agent_sha256": "39a2c43eed2d64be2670150cb7626cb36d255796644878e823d6fd85c4350798",
+      "mail_hook_policy": "preserve-independent-v1",
+      "schema": "celikpanel-agent-native-contract/v1",
+      "source_commit": "1505a9bcbd43e19962bafac0d24fb721ded38928"
+    },
+    "files": {
+      "bin/agent": "39a2c43eed2d64be2670150cb7626cb36d255796644878e823d6fd85c4350798",
+      "bin/agent-native-contract.json": "3790fc045a8092bc02702861d06533017c0c032ad1b34342f90198e1b163afc9",
+      "bin/publication.test": "f64875f917f80316aa740d02d4b6860da2ee918e0129545f497f86d5976cb26a",
+      "bin/recovery": "a2671ec739da5a8b38cdb001547c8caf05b44dca2ed9450c63928c7710f5b13a"
+    },
+    "generation": "a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb",
+    "leaf_sha256": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7",
+    "management_absent": true,
+    "publication_log": "=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/complete\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/stage_file_written\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/intent_durable\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/exchange_done\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/receipt_durable\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/complete-prior-contract\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/stage_file_written-prior-contract\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/intent_durable-prior-contract\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/exchange_done-prior-contract\n=== RUN   TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/receipt_durable-prior-contract\n--- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse (0.14s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/complete (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/stage_file_written (0.02s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/intent_durable (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/exchange_done (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/receipt_durable (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/complete-prior-contract (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/stage_file_written-prior-contract (0.02s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/intent_durable-prior-contract (0.02s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/exchange_done-prior-contract (0.01s)\n    --- PASS: TestAgentDeclarationTravelsWithAtomicPublicationAndInverse/receipt_durable-prior-contract (0.02s)\n=== RUN   TestAgentDeclarationEditAfterForwardPublicationBlocksInverse\n--- PASS: TestAgentDeclarationEditAfterForwardPublicationBlocksInverse (0.01s)\n=== RUN   TestAgentDeclarationMaterialRollbackWithoutCandidate\n--- PASS: TestAgentDeclarationMaterialRollbackWithoutCandidate (0.05s)\nPASS\n",
+    "schema": "celikpanel-native-agent-compatibility/v1",
+    "served": {
+      "imap": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7",
+      "smtp": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7"
+    },
+    "source_commit": "1505a9bcbd43e19962bafac0d24fb721ded38928",
+    "strict_candidate_exit": 0,
+    "timer_enabled_active": true,
+    "workload_after": {
+      "/etc/dovecot/conf.d/98-celikpanel-tls.conf": {
+        "ctime_ns": 1790076994461709815,
+        "dev": 65025,
+        "gid": 989,
+        "ino": 133138,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790076994453709794,
+        "sha256": "4a23ff8f467c7f369f2d973e58f184a2932235c3be3947cff93563c3391c6696",
+        "size": 245,
+        "uid": 0
+      },
+      "/etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert": {
+        "ctime_ns": 1790102887199968714,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133467,
+        "links": 1,
+        "mode": 33261,
+        "mtime_ns": 1790102886843966499,
+        "sha256": "b7afb144016aa04e28306ec9e087a239e160a0f96b517813dfe6e3ec7f89cdeb",
+        "size": 443,
+        "uid": 0
+      },
+      "/etc/postfix/main.cf": {
+        "ctime_ns": 1790091004143504179,
+        "dev": 65025,
+        "gid": 989,
+        "ino": 133137,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790076994437709752,
+        "sha256": "a5540face86c9d0fff9a174e9cd9439756bac673b3ad6c8dea7897d49053f1e8",
+        "size": 3396,
+        "uid": 0
+      },
+      "/etc/ssl/celikpanel/_mail/host/.panel-cert-e4d58c602a824af2398c3464149badea/.mail-host-certificate-receipt.json": {
+        "ctime_ns": 1790103016120960842,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133494,
+        "links": 1,
+        "mode": 33152,
+        "mtime_ns": 1790103016120960842,
+        "sha256": "81e34684928e7fcc22a96ce83e47d6e99ceef1b6c1dde8b62c54f1d47e8597d9",
+        "size": 297,
+        "uid": 0
+      },
+      "/etc/ssl/celikpanel/_mail/host/.panel-cert-e4d58c602a824af2398c3464149badea/fullchain.pem": {
+        "ctime_ns": 1790103016112894933,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133491,
+        "links": 1,
+        "mode": 33152,
+        "mtime_ns": 1790103016112894933,
+        "sha256": "b53ed2165cd3810a57fd90416e181e4efe2e5713e8ac8e56dda97140a89c536c",
+        "size": 623,
+        "uid": 0
+      },
+      "/etc/ssl/celikpanel/_mail/host/.panel-cert-e4d58c602a824af2398c3464149badea/mail.domain": {
+        "ctime_ns": 1790103016116927888,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133493,
+        "links": 1,
+        "mode": 33152,
+        "mtime_ns": 1790103016116927888,
+        "sha256": "a9eddf20047957639dd3c9d14907e29386d354c513ce8b3085596a90c2036f95",
+        "size": 27,
+        "uid": 0
+      },
+      "/etc/ssl/celikpanel/_mail/host/.panel-cert-e4d58c602a824af2398c3464149badea/privkey.pem": {
+        "ctime_ns": 1790103016116927888,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133492,
+        "links": 1,
+        "mode": 33152,
+        "mtime_ns": 1790103016116927888,
+        "sha256": "1af60042823dfe9b0fb576ab343413b5a20c297c66bbbfb4e2347ecf8183ddd7",
+        "size": 119,
+        "uid": 0
+      },
+      "/etc/ssl/celikpanel/_mail/host/current": {
+        "ctime_ns": 1790103016133059706,
+        "dev": 65025,
+        "gid": 989,
+        "ino": 133485,
+        "link": ".panel-cert-e4d58c602a824af2398c3464149badea",
+        "links": 1,
+        "mode": 41471,
+        "mtime_ns": 1790103016133059706,
+        "size": 44,
+        "uid": 0
+      },
+      "/etc/systemd/system/celikpanel-mail-renewal.service": {
+        "ctime_ns": 1790102887147968390,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133466,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790102886843966499,
+        "sha256": "412e6e7a818cfde830cd3d13cd932232cd9b55f1bf3d246475622fe3d22d1d55",
+        "size": 483,
+        "uid": 0
+      },
+      "/etc/systemd/system/celikpanel-mail-renewal.timer": {
+        "ctime_ns": 1790081500669429740,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 561,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790081500665429735,
+        "sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+        "size": 219,
+        "uid": 0
+      },
+      "/etc/systemd/system/timers.target.wants/celikpanel-mail-renewal.timer": {
+        "ctime_ns": 1790078118124627854,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 62,
+        "link": "/etc/systemd/system/celikpanel-mail-renewal.timer",
+        "links": 1,
+        "mode": 41471,
+        "mtime_ns": 1790078118124627854,
+        "size": 49,
+        "uid": 0
+      },
+      "/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/celikpanel-mail-host-cert": {
+        "ctime_ns": 1790102828763603834,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133461,
+        "links": 1,
+        "mode": 33261,
+        "mtime_ns": 1790102828763603834,
+        "sha256": "b7afb144016aa04e28306ec9e087a239e160a0f96b517813dfe6e3ec7f89cdeb",
+        "size": 443,
+        "uid": 0
+      },
+      "/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/celikpanel-mail-renewal.service": {
+        "ctime_ns": 1790102828759603809,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133459,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790102828759603809,
+        "sha256": "412e6e7a818cfde830cd3d13cd932232cd9b55f1bf3d246475622fe3d22d1d55",
+        "size": 483,
+        "uid": 0
+      },
+      "/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/celikpanel-mail-renewal.timer": {
+        "ctime_ns": 1790102828759603809,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133460,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790102828759603809,
+        "sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+        "size": 219,
+        "uid": 0
+      },
+      "/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/renew": {
+        "ctime_ns": 1790102828739603683,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133458,
+        "links": 1,
+        "mode": 33261,
+        "mtime_ns": 1790102828723603583,
+        "sha256": "70d5bc97427328e17f9700d7bd94c98a211953966a9b18e842a1e585846daad9",
+        "size": 16429218,
+        "uid": 0
+      },
+      "/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/runtime.manifest": {
+        "ctime_ns": 1790102828767603859,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133462,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790102828767603859,
+        "sha256": "e98cc1f809f51f7e73a258bf77bec51ad5839521eaa063ac796cf1085585398c",
+        "size": 546,
+        "uid": 0
+      },
+      "/var/lib/celikpanel-agent-private/service-mutations.json": {
+        "ctime_ns": 1790103016984013147,
+        "dev": 65025,
+        "gid": 989,
+        "ino": 133439,
+        "links": 1,
+        "mode": 33152,
+        "mtime_ns": 1790103016975947237,
+        "sha256": "0ec0a524cb1f56a562ba67b5cff08dfbeee3619e2fe0d21527b62ed4d2d4dda9",
+        "size": 9484,
+        "uid": 0
+      }
+    },
+    "workload_before": {
+      "/etc/dovecot/conf.d/98-celikpanel-tls.conf": {
+        "ctime_ns": 1790076994461709815,
+        "dev": 65025,
+        "gid": 989,
+        "ino": 133138,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790076994453709794,
+        "sha256": "4a23ff8f467c7f369f2d973e58f184a2932235c3be3947cff93563c3391c6696",
+        "size": 245,
+        "uid": 0
+      },
+      "/etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert": {
+        "ctime_ns": 1790102887199968714,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133467,
+        "links": 1,
+        "mode": 33261,
+        "mtime_ns": 1790102886843966499,
+        "sha256": "b7afb144016aa04e28306ec9e087a239e160a0f96b517813dfe6e3ec7f89cdeb",
+        "size": 443,
+        "uid": 0
+      },
+      "/etc/postfix/main.cf": {
+        "ctime_ns": 1790091004143504179,
+        "dev": 65025,
+        "gid": 989,
+        "ino": 133137,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790076994437709752,
+        "sha256": "a5540face86c9d0fff9a174e9cd9439756bac673b3ad6c8dea7897d49053f1e8",
+        "size": 3396,
+        "uid": 0
+      },
+      "/etc/ssl/celikpanel/_mail/host/.panel-cert-e4d58c602a824af2398c3464149badea/.mail-host-certificate-receipt.json": {
+        "ctime_ns": 1790103016120960842,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133494,
+        "links": 1,
+        "mode": 33152,
+        "mtime_ns": 1790103016120960842,
+        "sha256": "81e34684928e7fcc22a96ce83e47d6e99ceef1b6c1dde8b62c54f1d47e8597d9",
+        "size": 297,
+        "uid": 0
+      },
+      "/etc/ssl/celikpanel/_mail/host/.panel-cert-e4d58c602a824af2398c3464149badea/fullchain.pem": {
+        "ctime_ns": 1790103016112894933,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133491,
+        "links": 1,
+        "mode": 33152,
+        "mtime_ns": 1790103016112894933,
+        "sha256": "b53ed2165cd3810a57fd90416e181e4efe2e5713e8ac8e56dda97140a89c536c",
+        "size": 623,
+        "uid": 0
+      },
+      "/etc/ssl/celikpanel/_mail/host/.panel-cert-e4d58c602a824af2398c3464149badea/mail.domain": {
+        "ctime_ns": 1790103016116927888,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133493,
+        "links": 1,
+        "mode": 33152,
+        "mtime_ns": 1790103016116927888,
+        "sha256": "a9eddf20047957639dd3c9d14907e29386d354c513ce8b3085596a90c2036f95",
+        "size": 27,
+        "uid": 0
+      },
+      "/etc/ssl/celikpanel/_mail/host/.panel-cert-e4d58c602a824af2398c3464149badea/privkey.pem": {
+        "ctime_ns": 1790103016116927888,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133492,
+        "links": 1,
+        "mode": 33152,
+        "mtime_ns": 1790103016116927888,
+        "sha256": "1af60042823dfe9b0fb576ab343413b5a20c297c66bbbfb4e2347ecf8183ddd7",
+        "size": 119,
+        "uid": 0
+      },
+      "/etc/ssl/celikpanel/_mail/host/current": {
+        "ctime_ns": 1790103016133059706,
+        "dev": 65025,
+        "gid": 989,
+        "ino": 133485,
+        "link": ".panel-cert-e4d58c602a824af2398c3464149badea",
+        "links": 1,
+        "mode": 41471,
+        "mtime_ns": 1790103016133059706,
+        "size": 44,
+        "uid": 0
+      },
+      "/etc/systemd/system/celikpanel-mail-renewal.service": {
+        "ctime_ns": 1790102887147968390,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133466,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790102886843966499,
+        "sha256": "412e6e7a818cfde830cd3d13cd932232cd9b55f1bf3d246475622fe3d22d1d55",
+        "size": 483,
+        "uid": 0
+      },
+      "/etc/systemd/system/celikpanel-mail-renewal.timer": {
+        "ctime_ns": 1790081500669429740,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 561,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790081500665429735,
+        "sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+        "size": 219,
+        "uid": 0
+      },
+      "/etc/systemd/system/timers.target.wants/celikpanel-mail-renewal.timer": {
+        "ctime_ns": 1790078118124627854,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 62,
+        "link": "/etc/systemd/system/celikpanel-mail-renewal.timer",
+        "links": 1,
+        "mode": 41471,
+        "mtime_ns": 1790078118124627854,
+        "size": 49,
+        "uid": 0
+      },
+      "/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/celikpanel-mail-host-cert": {
+        "ctime_ns": 1790102828763603834,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133461,
+        "links": 1,
+        "mode": 33261,
+        "mtime_ns": 1790102828763603834,
+        "sha256": "b7afb144016aa04e28306ec9e087a239e160a0f96b517813dfe6e3ec7f89cdeb",
+        "size": 443,
+        "uid": 0
+      },
+      "/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/celikpanel-mail-renewal.service": {
+        "ctime_ns": 1790102828759603809,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133459,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790102828759603809,
+        "sha256": "412e6e7a818cfde830cd3d13cd932232cd9b55f1bf3d246475622fe3d22d1d55",
+        "size": 483,
+        "uid": 0
+      },
+      "/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/celikpanel-mail-renewal.timer": {
+        "ctime_ns": 1790102828759603809,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133460,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790102828759603809,
+        "sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+        "size": 219,
+        "uid": 0
+      },
+      "/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/renew": {
+        "ctime_ns": 1790102828739603683,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133458,
+        "links": 1,
+        "mode": 33261,
+        "mtime_ns": 1790102828723603583,
+        "sha256": "70d5bc97427328e17f9700d7bd94c98a211953966a9b18e842a1e585846daad9",
+        "size": 16429218,
+        "uid": 0
+      },
+      "/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/runtime.manifest": {
+        "ctime_ns": 1790102828767603859,
+        "dev": 65025,
+        "gid": 0,
+        "ino": 133462,
+        "links": 1,
+        "mode": 33188,
+        "mtime_ns": 1790102828767603859,
+        "sha256": "e98cc1f809f51f7e73a258bf77bec51ad5839521eaa063ac796cf1085585398c",
+        "size": 546,
+        "uid": 0
+      },
+      "/var/lib/celikpanel-agent-private/service-mutations.json": {
+        "ctime_ns": 1790103016984013147,
+        "dev": 65025,
+        "gid": 989,
+        "ino": 133439,
+        "links": 1,
+        "mode": 33152,
+        "mtime_ns": 1790103016975947237,
+        "sha256": "0ec0a524cb1f56a562ba67b5cff08dfbeee3619e2fe0d21527b62ed4d2d4dda9",
+        "size": 9484,
+        "uid": 0
+      }
+    }
+  },
+  "lab": {
+    "cell_id": "release-recovery__3688d130a0721786",
+    "local_qemu_loopback": true
+  },
+  "schema": "celikpanel/native-agent-compatibility/v1",
+  "scope": {
+    "arch_mail_workload": false,
+    "debian_mail_workload": true,
+    "private_resource_sigkill": true,
+    "production_enrollment": false,
+    "read_only_native_admission": true,
+    "whole_application_rollback": false
+  },
+  "source_commit": "1505a9bcbd43e19962bafac0d24fb721ded38928"
+}
