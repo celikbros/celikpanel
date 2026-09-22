@@ -61,6 +61,7 @@ var skippedDirectories = map[string]bool{
 // adlandirilmis listesidir. Her deger nedenini soyler; "henuz" turunden bir
 // gerekce borctur ve borc olarak yazilmistir.
 var privilegedCommandAllowlist = map[string]string{
+	"cmd/agent/mail_enrollment_native_linux.go:<computed>":             "independent enrollment command adapter uses only trusted /usr/bin/systemctl, two fixed unit observations, daemon-reload and the renewal timer start/stop; durable reservation and inherited locks are checked by the composite executor, clean environment, ten-second deadline, parent-death SIGKILL, bounded output and classified same-operation guidance",
 	"internal/firewallboot/native_linux.go:<computed>":                 "independent native boot consumer cannot require Agent; fixed trusted nft/systemctl/sshd paths and closed arguments, clean environment, 20-second operation deadline, bounded combined output and hostcmd.Reason failures; only the canonical owned nft table may be applied",
 	"deploy/e2e/release-recovery/waltrace/fixture_child.go:<computed>": "disposable WAL feasibility child launches only its own executable with fixed --helper; output is captured by its parent tracer, not an installed service launcher",
 	// Independent recovery cannot depend on the Agent mutation launcher or RPC.

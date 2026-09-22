@@ -279,6 +279,27 @@ func TestMailEnrollmentChild(t *testing.T) {
 				capturePut(t, reservation.Path, raw, 0600)
 			}
 		}
+		if scenario == "adapter" {
+			binding := MailEnrollmentBinding{LedgerPath: reservation.Path, Owner: reservation.Owner, OwnerID: reservation.OwnerID, HostLock: guard.HostLock, HostOwner: guard.HostOwner, VerifyAuthority: func() error { return guard.Verify(scope) }, Native: enrollmentNativeFixture{commands}}
+			prepared, err := openPreparedMailEnrollmentAt(context.Background(), scopeRaw, paths, binding)
+			if err != nil {
+				return err
+			}
+			if prepared.Identity() != identity {
+				return errors.New("prepared scope identity changed")
+			}
+			if err = prepared.Resume(context.Background(), side); err != nil {
+				return err
+			}
+			before := calls
+			if err = prepared.Verify(context.Background(), side); err != nil {
+				return err
+			}
+			if calls != before {
+				return errors.New("adapter verification changed native state")
+			}
+			return nil
+		}
 		return runReservedMailEnrollmentAt(context.Background(), scope, side, paths, guard, reservation, commands, checkpoint)
 	}
 	if strings.HasPrefix(scenario, "cut:rollback:") {
@@ -508,7 +529,7 @@ func TestMailReservedEnrollmentComposition(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("root descriptor fixture")
 	}
-	for _, scenario := range []string{"terminal-ledger-observer", "resume:rollback", "reservation-missing", "reservation-owner", "reservation-group", "reservation-closed", "reservation-late-clear", "reservation-late-replace"} {
+	for _, scenario := range []string{"adapter", "terminal-ledger-observer", "resume:rollback", "reservation-missing", "reservation-owner", "reservation-group", "reservation-closed", "reservation-late-clear", "reservation-late-replace"} {
 		t.Run(scenario, func(t *testing.T) {
 			root, target, host, release := enrollmentFixture(t, "legacy")
 			out, e := enrollmentChild(root, target, "reserved:"+scenario, host, release).CombinedOutput()
@@ -541,4 +562,20 @@ func TestMailReservedEnrollmentComposition(t *testing.T) {
 			})
 		}
 	}
+}
+
+// A native adapter for the existing subprocess fixture; no second executor.
+type enrollmentNativeFixture struct{ commands mailEnrollmentCommands }
+
+func (n enrollmentNativeFixture) ObserveUnit(ctx context.Context, unit string) ([]byte, error) {
+	return n.commands.loaded.observe(ctx, unit)
+}
+func (n enrollmentNativeFixture) Reload(ctx context.Context) error {
+	return n.commands.loaded.reload(ctx)
+}
+func (n enrollmentNativeFixture) StartTimer(ctx context.Context) error {
+	return n.commands.activity.startTimer(ctx)
+}
+func (n enrollmentNativeFixture) StopTimer(ctx context.Context) error {
+	return n.commands.activity.stopTimer(ctx)
 }

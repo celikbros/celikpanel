@@ -25,7 +25,8 @@ import (
 func TestMailEnrollmentDisposableVM(t *testing.T) {
 	fixture := os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM")
 	reserved := fixture == "arch-20260923-reserved"
-	if fixture != "arch-20260922-bootstrap" && !reserved {
+	joined := fixture == "arch-20260923-joined"
+	if fixture != "arch-20260922-bootstrap" && !reserved && !joined {
 		t.Skip("guarded disposable Arch VM only")
 	}
 	if os.Geteuid() != 0 {
@@ -64,6 +65,10 @@ func TestMailEnrollmentDisposableVM(t *testing.T) {
 	}
 	direction, cut := "forward", ""
 	switch phase {
+	case "prepare-only":
+		if !joined {
+			t.Fatal("joined fixture only")
+		}
 	case "forward-cut":
 		cut = "activity_forward_acted"
 	case "forward-verify":
@@ -75,12 +80,19 @@ func TestMailEnrollmentDisposableVM(t *testing.T) {
 	default:
 		t.Fatal("explicit native phase required")
 	}
+	if joined && phase != "prepare-only" {
+		t.Fatal("joined fixture prepares evidence only")
+	}
 	const private = "/root/celikpanel-release-recovery-lab"
 	paths := mailCapturePaths{MailRenewalHookPath, "/etc/systemd/system", mailrenewalkit.InstalledRoot, filepath.Join(private, "mail-native-enrollment-journal"), transactionPath}
 	intentName := "mail-native-enrollment.intent"
 	if reserved {
 		paths.journals = filepath.Join(private, "mail-reserved-enrollment-journal")
 		intentName = "mail-reserved-enrollment.intent"
+	}
+	if joined {
+		paths.journals = filepath.Join(private, "mail-joined-enrollment-journal")
+		intentName = "mail-joined-enrollment.intent"
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -115,7 +127,7 @@ func TestMailEnrollmentDisposableVM(t *testing.T) {
 		}},
 	}
 	capture, e := os.ReadFile(filepath.Join(paths.journals, operation+".json"))
-	if os.IsNotExist(e) && phase == "forward-cut" {
+	if os.IsNotExist(e) && (phase == "forward-cut" || phase == "prepare-only") {
 		if e = commands.loaded.observeTransition(ctx, mailrenewalkit.TimerState{Enablement: "absent", Activity: "inactive"}, false, true, false); e != nil {
 			t.Fatal(e)
 		}
@@ -147,6 +159,38 @@ func TestMailEnrollmentDisposableVM(t *testing.T) {
 		}
 		return nil
 	}}
+	if joined {
+		if e = guard.Verify(scope); e != nil {
+			t.Fatal(e)
+		}
+		raw, err := promotionJSON(scope)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f, err := os.OpenFile(filepath.Join(paths.journals, operation+".scope.json"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = f.Write(raw); err != nil {
+			t.Fatal(err)
+		}
+		if err = f.Sync(); err != nil {
+			t.Fatal(err)
+		}
+		if err = f.Close(); err != nil {
+			t.Fatal(err)
+		}
+		d, err := os.Open(paths.journals)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer d.Close()
+		if err = d.Sync(); err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("native_enrollment_prepared operation=%s scope=%s", operation, Digest(raw))
+		return
+	}
 	reservation := mailEnrollmentReservation{Path: filepath.Join(private, "mail-reserved-ledger", "service-mutations.json"), OwnerID: strings.Repeat("b", 32)}
 	var identity servicemutationledger.MailEnrollmentIdentity
 	if reserved {

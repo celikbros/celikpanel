@@ -102,3 +102,26 @@ fixture producer and collector limitation are explicitly recorded. Joining
 this reservation to authenticated production owner intent, dispatch/boot recovery,
 initial private identity provisioning and the full native update/rollback and
 workload matrix remains open. Component success does not close those P0 items.
+
+## Joined writer and native execution (2026-09-23)
+
+`executePreparedMailEnrollment` now sequences the actual common writer and
+prepared native executor: admit/sync the exact direction, resume native work,
+re-observe the result, then publish its terminal ledger state. It supplies the
+native proof itself rather than accepting a cached success callback. Terminal
+retry only verifies; opposite-direction retry and identity reuse refuse. Native
+or observation errors preserve the reservation. Twelve additional subprocess
+SIGKILL cases cut both directions before/after native work and at terminal ledger
+publication, including directory sync. Scoped race tests and vet pass.
+
+The shared runtime adapter opens the canonical existing v1 scope and file plan,
+fixes native resource paths and rechecks owner/source authority and locks. The
+native command adapter uses only trusted `/usr/bin/systemctl`, the two fixed unit
+observations, daemon-reload, and start/stop of the renewal timer. It has a clean
+environment, ten-second deadline, parent-death SIGKILL and bounded classified
+output. It does not borrow a generic expiring RPC lease or register another job.
+
+These functions are compiled but not exposed as new RPC/CLI admission. Initial
+owner intent provisioning, authenticated setup dispatch and boot dispatch remain
+open. The guarded native fixture now supports joining these actual components;
+its result must be recorded separately from the fixture-native process tests.
