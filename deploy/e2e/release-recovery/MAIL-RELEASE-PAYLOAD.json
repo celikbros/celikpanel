@@ -1,0 +1,19 @@
+{
+  "source": "defa2acfb2443c6e7c4f72233b6d3f91026777bf",
+  "archive_sha256": "d7ad2fe07fcd996e4e87b4ab5af6c235f772bd78d84798bf0acabb31d81ebaa9",
+  "bytes": 51153185,
+  "proof": {
+    "commit": "defa2acfb2443c6e7c4f72233b6d3f91026777bf",
+    "tree": "e923e95dd46a34f06cbc48fbd2b5ca20a0e9a970",
+    "verified_static_files": 365,
+    "method": "real Git commit/tree and every packaged static source blob"
+  },
+  "mail_modes": {
+    "renew": 493,
+    "celikpanel-mail-host-cert": 493,
+    "celikpanel-mail-renewal.service": 420,
+    "celikpanel-mail-renewal.timer": 420,
+    "runtime.manifest": 420
+  },
+  "scope": "local unpublished unsigned artifact, not installed acceptance"
+}

@@ -150,3 +150,11 @@ Clean-toolchain tests cover the independent build tag, and local candidate
 archive admission reconstructs every generated manifest/unit/hook from committed
 templates using a real Go-produced vector. These checks do not establish signing,
 installed native enrollment, legacy hook migration or whole-update rollback.
+
+The full local `make dist` archive from `defa2acfb2443c6e7c4f72233b6d3f91026777bf`
+was built with the reviewed Go compiler and frontend build, then read back through
+complete archive inventory and committed-source validation (365 static files).
+All five native mail files matched the v1 generated contract and exact archive
+modes, and no helper was added to the application bin tree. See
+[local artifact evidence](../deploy/e2e/release-recovery/MAIL-RELEASE-PAYLOAD.json).
+It is explicitly unpublished and unsigned, with no installed update performed.
