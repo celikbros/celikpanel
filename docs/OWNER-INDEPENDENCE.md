@@ -341,3 +341,11 @@ current source. A real failing version executable prevents configuration work;
 configuration, ledger, queued renewal and trusted SMTP/IMAP leaf stay unchanged.
 This closes the bounded native observation check, not independent renewal,
 complete effective native configuration verification or crash recovery.
+
+
+[Shared service mutation ledger](SERVICE-MUTATION-LEDGER.md) now puts actual
+Agent producers and independent recovery readers behind one v1 artifact contract,
+including every direct-publication receipt and active-pointer invariant. Old
+producer bytes are retained as compatibility fixtures; unreadable oversized
+writes are refused before staging. This advances P0.3/P0.4. It does not establish
+host idleness by itself or complete native independent renewal and fault acceptance.

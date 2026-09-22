@@ -1,46 +1,18 @@
 package main
 
-import (
-	"errors"
-	"strings"
+import "github.com/alicelik/celikpanel/internal/servicemutationledger"
 
-	"github.com/alicelik/celikpanel/internal/mutationpayload"
-)
-
-const firewallApplyCommitPhasePrefix = "commit/firewall-apply/v1/"
-
-const firewallApplyCommitIntent = "intent"
-
-const firewallApplyCommitPublished = "published"
+const firewallApplyCommitPhasePrefix = servicemutationledger.FirewallApplyCommitPhasePrefix
+const firewallApplyCommitIntent = servicemutationledger.FirewallApplyCommitIntent
+const firewallApplyCommitPublished = servicemutationledger.FirewallApplyCommitPublished
 
 func formatFirewallApplyCommitPhase(state, requestID, qualifier string) (string, error) {
-	if (state != firewallApplyCommitIntent && state != firewallApplyCommitPublished) ||
-		!validMutationIdentity(requestID) ||
-		!mutationpayload.ValidFirewallApplyQualifier(qualifier) {
-		return "", errors.New("invalid firewall apply commit phase identity")
-	}
-	return firewallApplyCommitPhasePrefix + state + "/" + requestID + "/" + qualifier, nil
+	return servicemutationledger.FormatFirewallApplyCommitPhase(state, requestID, qualifier)
 }
 
 func parseFirewallApplyCommitPhase(value string) (
 	state, requestID, qualifier string,
 	err error,
 ) {
-	if !strings.HasPrefix(value, firewallApplyCommitPhasePrefix) {
-		return "", "", "", errors.New("not a firewall apply commit phase")
-	}
-	remainder := strings.TrimPrefix(value, firewallApplyCommitPhasePrefix)
-	state, remainder, found := strings.Cut(remainder, "/")
-	if !found {
-		return "", "", "", errors.New("invalid firewall apply commit phase")
-	}
-	requestID, qualifier, found = strings.Cut(remainder, "/")
-	if !found {
-		return "", "", "", errors.New("invalid firewall apply commit phase")
-	}
-	canonical, formatErr := formatFirewallApplyCommitPhase(state, requestID, qualifier)
-	if formatErr != nil || canonical != value {
-		return "", "", "", errors.New("invalid firewall apply commit phase")
-	}
-	return state, requestID, qualifier, nil
+	return servicemutationledger.ParseFirewallApplyCommitPhase(value)
 }

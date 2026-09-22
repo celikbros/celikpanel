@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -18,7 +17,7 @@ const (
 )
 
 func canonicalInitialServiceMutationLedger() ([]byte, error) {
-	return json.Marshal(&serviceMutationLedger{
+	return encodeServiceMutationLedger(&serviceMutationLedger{
 		Version: serviceMutationLedgerVersion,
 		Jobs:    map[string]*ServiceMutationJob{},
 	})

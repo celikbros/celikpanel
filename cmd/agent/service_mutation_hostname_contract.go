@@ -1,10 +1,7 @@
 package main
 
-import (
-	"github.com/alicelik/celikpanel/internal/hostname"
-)
+import "github.com/alicelik/celikpanel/internal/servicemutationledger"
 
 func serviceMutationCanonicalFQDN(value string) bool {
-	canonical, err := hostname.CanonicalFQDN(value)
-	return err == nil && canonical == value
+	return servicemutationledger.ServiceMutationCanonicalFQDN(value)
 }

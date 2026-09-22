@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -1877,7 +1876,8 @@ func (m *serviceMutationManager) writeProtectedLocked(
 		return err
 	}
 	m.trimHistoryLocked(protectedRequestID)
-	if err := validateServiceMutationLedger(&m.ledger); err != nil {
+	raw, err := encodeServiceMutationLedger(&m.ledger)
+	if err != nil {
 		return fmt.Errorf("validate service mutation ledger before write: %w", err)
 	}
 	if err := ensureSecureServiceMutationStateDirectory(filepath.Dir(m.ledgerPath)); err != nil {
@@ -1885,10 +1885,6 @@ func (m *serviceMutationManager) writeProtectedLocked(
 	}
 	if err := cleanupAbandonedServiceMutationWriteStages(filepath.Dir(m.ledgerPath)); err != nil {
 		return err
-	}
-	raw, err := json.Marshal(&m.ledger)
-	if err != nil {
-		return fmt.Errorf("encode service mutation ledger: %w", err)
 	}
 	dir := filepath.Dir(m.ledgerPath)
 	stage, err := os.CreateTemp(dir, ".service-mutations-*.json")
