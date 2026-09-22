@@ -5,6 +5,7 @@ package recoveryruntime
 import (
 	"bytes"
 	"context"
+	"errors"
 
 	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"golang.org/x/sys/unix"
@@ -203,6 +204,10 @@ func reloadMailFilesAt(ctx context.Context, operation, captureSHA, direction str
 		return err
 	}
 	if err = commands.reload(ctx); err != nil {
+		var budget *mailEnrollmentReloadBudget
+		if errors.As(err, &budget) {
+			return budget
+		}
 		return mailrenewalkit.ErrScheduleObservation
 	}
 	if checkpoint != nil {

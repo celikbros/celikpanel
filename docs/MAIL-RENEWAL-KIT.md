@@ -612,3 +612,48 @@ now verifies read-only admission beside running independent Debian mail, absent
 native enrollment on Arch, and private atomic-resource SIGKILL/inverse cases on
 both kernels. This evidence preserves the stated production enrollment and whole
 application rollback limits.
+
+
+## Composite enrollment execution (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. A private composite executor now joins initial
+native file publication, idle unit loading, timer enablement/activity and their
+ordered inverse. `celikpanel-mail-renewal-enrollment/v1` binds the externally
+accepted operation to exact before-image, prepared inode-plan and target digests.
+An immutable inverse decision prevents forward resurrection after a cut. It does
+not derive owner consent from a certificate, runtime kit or historical receipt.
+
+Both actual inherited flocks are mandatory (release fd 9, then host fd 8). The
+outer authority callback is required again on every invocation and around every
+phase/native action. Accepted scope, pinned evidence and known record inventory
+are revalidated; another request, lost authority, changed lock, owner edits,
+unknown future attempt and malformed history refuse continuation. This private
+callback still needs a production durable fence/dispatcher and authenticated
+admission; it is not itself such a fence or an enabled production entrypoint.
+
+Historical phase receipts select the right current observer. In particular an
+already-enabled/active timer is not sent back to the bootstrap disabled/inactive
+observer. Terminal success rechecks actual files, link identity and loaded native
+state. Owner changes after success are preserved, not repaired. Compensation can
+start from a partially published forward chain and never starts a mail workload.
+Uncommitted stages, original native inodes and failures remain retained.
+
+Native daemon-reload has three durable attempts per direction and load/enable
+phase. A killed or uncertain command consumes its admitted attempt. A fresh
+native observation can acknowledge an already-completed action without another
+command; exhaustion retains actionable owner guidance and does not reset counts.
+Timer start/stop keeps the separately implemented activity budget.
+
+The independent helper now treats only wholly known host-exclusion waits as a
+handled scheduling invocation: it logs that work remains pending for the next
+timer check, without clearing the queue or completing a ledger job. Mixed busy
+and unknown/failure causes retain the failure exit. Existing v1 unit templates
+and native kit bytes remain readable; no template/schema rewrite is required.
+
+Local race checks include 88 actual process SIGKILLs across forward admission,
+publication, loading, enablement, activity, terminal acknowledgement and partial
+compensation, plus authority, owner-edit, budget and unknown-history cases. Related
+bootstrap/enable/activity tests and scoped Agent entry tests pass; vet passes.
+These are private process fixtures. Native combined enrollment, trusted bounded
+production dispatch, persistent cross-invocation exclusion, initial state/group
+preparation and application rollback integration remain required. P0 stays open.

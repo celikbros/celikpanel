@@ -534,6 +534,10 @@ func applyMailEnableAt(ctx context.Context, operation, captureSHA, direction str
 		return err
 	}
 	if err = commands.reload(ctx); err != nil {
+		var budget *mailEnrollmentReloadBudget
+		if errors.As(err, &budget) {
+			return budget
+		}
 		return mailrenewalkit.ErrScheduleObservation
 	}
 	if checkpoint != nil {

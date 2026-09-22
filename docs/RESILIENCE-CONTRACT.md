@@ -665,3 +665,14 @@ now verifies read-only admission beside running independent Debian mail, absent
 native enrollment on Arch, and private atomic-resource SIGKILL/inverse cases on
 both kernels. This evidence preserves the stated production enrollment and whole
 application rollback limits.
+
+
+### Composite native mail enrollment execution (2026-09-22)
+
+P0.3/P0.5 now have a private, scope-bound composite executor for file/load/enable/
+activity and monotonic compensation. Both native locks and renewed outer authority
+are required; terminal proof re-observes current resources. Per-phase native reload
+budgets retain failures and permit verification of owner-completed work. Exact
+known helper exclusion waits preserve pending work without poisoning native unit
+health. [Contract and process evidence](MAIL-RENEWAL-KIT.md#composite-enrollment-execution-2026-09-22)
+keep production fencing/admission, native composition and full acceptance open.

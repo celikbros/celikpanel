@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -47,5 +49,19 @@ func TestIndependentMailSupervisorCommandScope(t *testing.T) {
 	}
 	if err := validateIndependentMailSupervisor([]string{"/tmp/lock", "/bin/systemctl", "reload", "postfix.service"}, 0, nil); err == nil {
 		t.Fatal("other lock accepted")
+	}
+}
+
+func TestIndependentMailRenewalWaitClassification(t *testing.T) {
+	unknown := errors.New("native state unreadable")
+	for _, e := range []error{errServiceMutationBusy, errServiceMutationHostBusy, fmt.Errorf("host exclusion: %w", errServiceMutationHostBusy), errors.Join(errServiceMutationBusy, errServiceMutationHostBusy)} {
+		if !independentMailRenewalWait(e) {
+			t.Fatalf("known wait rejected: %v", e)
+		}
+	}
+	for _, e := range []error{nil, unknown, errMailRenewalCompletionUnverified, errMailRenewalRecoveryRequired, errors.Join(errServiceMutationHostBusy, unknown), fmt.Errorf("wrapped: %w", errors.Join(errServiceMutationBusy, errMailRenewalRecoveryRequired))} {
+		if independentMailRenewalWait(e) {
+			t.Fatalf("unknown/failure hidden by busy cause: %v", e)
+		}
 	}
 }

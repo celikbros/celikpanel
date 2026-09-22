@@ -74,6 +74,10 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 		}
 	}
 	if err != nil {
+		if independentMailRenewalWait(err) {
+			fmt.Fprintln(os.Stderr, "mail renewal is waiting for the current host operation; pending work is retained and the native timer will check it again; no renewal was marked complete")
+			return 0
+		}
 		var budget *mailRenewalRecoveryBudgetError
 		if errors.As(err, &budget) {
 			fmt.Fprintln(os.Stderr, budget.Error())
@@ -177,4 +181,33 @@ func validateIndependentMailCommand(path string, args []string) error {
 		return errors.New("command is outside mail renewal observation and reload scope")
 	}
 	return nil
+}
+
+// Only a wholly known exclusion wait is handled as a deferred timer invocation.
+// Joined read failures, unknown worker state and terminal failures retain their
+// error result even if one nested cause also reports a busy lock. Invocation exit
+// zero does not acknowledge the pending queue or write a successful ledger job.
+func independentMailRenewalWait(err error) bool {
+	if err == nil {
+		return false
+	}
+	if err == errServiceMutationBusy || err == errServiceMutationHostBusy {
+		return true
+	}
+	switch e := err.(type) {
+	case interface{ Unwrap() []error }:
+		children := e.Unwrap()
+		if len(children) == 0 {
+			return false
+		}
+		for _, child := range children {
+			if !independentMailRenewalWait(child) {
+				return false
+			}
+		}
+		return true
+	case interface{ Unwrap() error }:
+		return independentMailRenewalWait(e.Unwrap())
+	}
+	return false
 }

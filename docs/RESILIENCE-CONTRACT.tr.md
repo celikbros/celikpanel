@@ -610,3 +610,15 @@ kaydı etkinleştirme veya tüm gerçek sistem geri alma kabulünü kapatma değ
 ayrımını ve iki çekirdekte özel test dizinlerindeki atomik yayın/kesilme/tersine
 çevirme adımlarını doğrular. Üretimde ilk kayıt ile tüm uygulamanın otomatik geri
 alınması bu kanıtın kapsamına girmez.
+
+
+### Birleşik yerel posta yenileme kurulumu (2026-09-22)
+
+P0.3/P0.5 için dosya, yükleme, etkinleştirme, zamanlayıcı ve tek yönlü geri alma
+adımları aynı kabul edilmiş kapsama bağlandı. Gerçek iki kilit ve her çağrıda dış
+işlem yetkisi gerekir; geçmiş başarı güncel dosya/hizmet doğrulamasının yerine
+geçmez. Aşama başına üç kalıcı daemon-reload denemesi vardır. Bilinen kilit beklemesi
+kuyruğu veya işlem sonucunu tamamlamadan sonraki zamanlayıcı çağrısına bırakılır.
+[Uygulama ve süreç testlerinin kapsamı](MAIL-RENEWAL-KIT.md#composite-enrollment-execution-2026-09-22)
+üretim kabulü, süreçler arası kalıcı engel ve gerçek sistem birleşik kabulünü açık
+tutar; P0 tamamlandı denmez.
