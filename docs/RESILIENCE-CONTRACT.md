@@ -305,8 +305,14 @@ Arch, other checkpoints and the remaining P0.3 matrix stay open.
 
 [Arch AU firewall acceptance](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md#arch-automatic-rollback-and-boot-au)
 now verifies the actual update-unit publication cut, automatic rollback and a
-new native boot. P0.5 remains partial. AU also exposed a separate P0.2/P0.4 gap:
+new native boot. P0.5 remains partial. AU also exposed a separate P0.2 observation gap:
 the baseline Agent caches a failed initial platform probe as permanent update
 unsupported status. Read-only detection later succeeds, but only restarting that
 Agent refreshes it. Source correction and same-process transition tests are
 required; the fixture restart does not close this gap.
+
+[Fresh update platform observation](UPDATE-PLATFORM-OBSERVATION.md) fixes the
+process-wide admission cache exposed by AU. Same-process failure/readiness and
+ready-to-invalid Start tests pass under race detection. No durable schema changes
+or automatic update retry are introduced. Corrected-candidate native startup
+acceptance and the broader P0.2 matrix remain open.

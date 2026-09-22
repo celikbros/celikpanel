@@ -241,19 +241,26 @@ func newPlatformSystemUpdateService() (*systemUpdateService, error) {
 	platformOS, platformArch := runtimeSystemUpdatePlatform()
 	backend := newLinuxSystemUpdateBackend()
 	service := newSystemUpdateService(newHTTPSystemUpdateManifestFetcher(), backend, platformOS, platformArch)
+	service.hostPolicyCheck = verifySystemUpdateHostPolicy
+	return service, nil
+}
+
+func verifySystemUpdateHostPolicy() error {
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
-		service.unsupportedReason = "host package-manager policy could not be verified"
-		return service, nil
+		if hostplatform.StillStarting(err) {
+			return fmt.Errorf("host is still starting; check for updates again after startup completes: %w", err)
+		}
+		return fmt.Errorf("host package-manager policy could not be verified; the server owner must resolve the reported host check and check for updates again: %w", err)
 	}
 	switch profile.PackageManager {
 	case hostplatform.PackageManagerAPT, hostplatform.PackageManagerPacman:
+		return nil
 	case hostplatform.PackageManagerDNF:
-		service.unsupportedReason = "system updates are not enabled for the dnf package-manager family"
+		return errors.New("system updates are not enabled for the dnf package-manager family")
 	default:
-		service.unsupportedReason = "system updates are not enabled for this package-manager family"
+		return errors.New("system updates are not enabled for this package-manager family")
 	}
-	return service, nil
 }
 
 func systemUpdateStatePath(root, requestID string) string {
