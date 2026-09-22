@@ -45,3 +45,28 @@ owner resolution passes readback. This does not close the limits listed above.
 also passed initial publication, real renewal, orderly boot without installed
 management and owner-selected-certificate replay protection on the same source.
 Renewal still executes Agent code; independent helper and interruption gaps remain.
+
+## Independent executor boundary found during implementation
+
+The existing `agentServiceMutationManager` is not a mail-only library entrypoint.
+`newServiceMutationManagerWithWriteFault` loads state and immediately calls
+`reconcilePersistedActive`. Under the shared host/publication locks that path
+cleans other journal stages and can recover firewall, DNS, panel certificates
+and VPN work. Even an idle active pointer can trigger released DNS publication
+recovery. `begin` calls `tryResolvePersistedOrphan`, which has the same broad
+recovery responsibilities. A mail helper must not gain those actions merely by
+reusing this constructor or renaming the Agent executable.
+
+A future scoped executor must establish its scope under the host/publication
+lease before any cleanup, deferred recovery or mutation admission, and recheck
+fresh disk state at every later admission boundary. Unrelated pending/active or
+unknown evidence is retained with an actionable refusal. Checking only before
+acquiring the lease is insufficient. The existing supervisor also reexecutes
+its own executable with a verified inherited host-lock descriptor; that behavior
+must survive the separate entrypoint without opening general RPC/CLI modes.
+
+This is a source-grounded boundary audit for the already open P0.5 executor item,
+not an implemented helper or a new authorization. Enrollment, retained identity,
+managed-hook migration, prior-version rollback compatibility and native fault
+acceptance remain prerequisites to shipping it. No general manager behavior was
+changed by this audit.
