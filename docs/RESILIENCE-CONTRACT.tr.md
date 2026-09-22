@@ -447,3 +447,12 @@ kullanır. Güncel ayarlar ve çalışan servisler doğrulanır; kullanıcının
 ayarları yeniden yazılmaz ve durdurduğu servis başlatılmaz. V1 kayıtları değişmez.
 İlk kurulum geçişinin yeterli önceki durum kanıtı olmadan kesilmesi, açık bir
 kullanıcı kurtarma gereksinimidir. Bağımsız yenileme ve P0.4/P0.5 kabulü tamamlanmadı.
+
+
+BB yerel posta deneyi; yalnız yeniden yükleme ile yenilemeyi, yeniden
+başlatma sonrası SMTP/IMAP hizmetini ve kontrollü yayımlama hatasından
+sonra kullanıcı uyuşmazlığı giderdiğinde aynı işlemin kurtarılmasını
+doğruladı. Kullanıcı ayarları ve belirsiz etkinleştirme kanıtı korundu.
+[Sınırlı kanıt](../deploy/e2e/release-recovery/MAIL-CONTRACT-BB.md),
+P0.3/P0.4/P0.5 tamamlandı veya bağımsız yenileme/güç kesintisi
+kurtarması kanıtlandı anlamına gelmez.

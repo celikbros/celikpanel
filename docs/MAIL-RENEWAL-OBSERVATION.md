@@ -150,3 +150,11 @@ controlled post-publication fault/owner-resolution trial is prepared; native
 results will be recorded only after it executes. Independent helper enrollment,
 management-removal renewal, all effective overrides, power-loss and the complete
 native platform/fault matrix remain open.
+
+
+[BB native acceptance](../deploy/e2e/release-recovery/MAIL-CONTRACT-BB.md) now
+passes reload-only renewal, independent native boot handshakes and the controlled
+post-publication owner-edit/refusal/explicit-resolution sequence through actual
+startup recovery. The same request and receipt survive; recovery changes no
+resolved configuration bytes or modification time. This bounded controlled-fault
+result does not establish power-loss recovery or an independent renewal runtime.

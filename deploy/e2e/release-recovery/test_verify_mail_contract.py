@@ -115,3 +115,37 @@ class MailObservationTests(unittest.TestCase):
             with self.subTest(old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)
 
 if __name__ == '__main__': unittest.main()
+
+
+class MailReloadRecoveryTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-RELOAD-BB.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-BB.json').read_bytes()
+    def test_native_reload_recovery(self):
+        self.assertEqual(s.verify_record(self.record,self.base)['same_operation_reload_recovery'],'verified')
+    def test_scope_and_identity(self):
+        for key,value in [('schema','unknown'),('source_commit','0'*40),('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('lab',{}),('scope',{})]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+        for key in ('power_loss','independent_renewal','installed_owner_server'):
+            record=copy.deepcopy(self.record);record['scope'][key]=True
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_rehashed_false_results(self):
+        edits=[
+          ('mail-reload-fault.log','--- PASS:','--- FAIL:'),
+          ('mail-reload-refuses.log','ExecMainStatus=0','ExecMainStatus=1'),
+          ('mail-reload-refuses.log','84608456-e725-4862-bcee-60991cd0bab4','00000000-0000-0000-0000-000000000000'),
+          ('mail-reload-refuses.log','1a2b299bf64c88f4b321512b7d4a5a4f','0'*32),
+          ('mail-reload-refuses.log','preserved owner edit','overwrote owner edit'),
+          ('mail-reload-resolution.log','imap=423d547f79d2e5601c4b14fc14ecf9e8a6f7c332950c902095b0ac55b042527f','imap=8616c53e89b9dd3a4c87c3d0b9a2236cdaa00364e8a55b06f39dfd6c8152b571'),
+          ('mail-reload-resolution.log','mail-agent.test[1377]','mail-agent.test[1236]'),
+          ('mail-reload-resolution.log','ActiveState=inactive','ActiveState=failed'),
+        ]
+        for name,old,new in edits:
+            record=copy.deepcopy(self.record);item=record['logs'][name];self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new);item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(name=name,old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_unhashed_or_extra_evidence(self):
+        self.record['logs']['mail-reload-fault.log']['text']+='changed'
+        with self.assertRaises(ValueError):s.verify_record(self.record,self.base)
+        self.setUp();self.record['logs']['unexpected']={}
+        with self.assertRaises(ValueError):s.verify_record(self.record,self.base)

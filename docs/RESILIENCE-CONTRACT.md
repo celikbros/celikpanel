@@ -458,3 +458,10 @@ edits, and do not reapply historical mail settings or start stopped services.
 The v1 records are unchanged. An interrupted initial configuration transition
 without an adequate before-image remains an explicit owner-recovery gap;
 independent renewal and full P0.4/P0.5 acceptance are not complete.
+
+
+BB native mail acceptance now verifies scoped reload-only renewal, postboot
+SMTP/IMAP continuity, and same-request recovery after a controlled publication
+fault and explicit owner resolution. Owner edits and unknown activation remain
+preserved. See [bounded evidence](../deploy/e2e/release-recovery/MAIL-CONTRACT-BB.md).
+This does not close P0.3/P0.4/P0.5 or establish power-loss/independent renewal.

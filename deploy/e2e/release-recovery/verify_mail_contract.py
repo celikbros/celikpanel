@@ -164,10 +164,50 @@ def verify_observation(record, base_bytes):
     return {'owner_configuration_preserved':'verified','operation':request,'post_publication_recovery':'not established','independent_renewal':'not established'}
 
 
+def verify_reload_recovery(record, base_bytes):
+    require(record.get('schema') == 'celikpanel/native-mail-reload-recovery/v1', 'reload schema differs')
+    require(record.get('base_record_sha256') == hashlib.sha256(base_bytes).hexdigest(), 'reload baseline differs')
+    base = json.loads(base_bytes); verify(base)
+    require(record.get('lab') == {k:base['lab'][k] for k in ('cell_id','node')}, 'reload fixture differs')
+    require(record.get('source_commit') == base['source_commit'], 'reload source differs')
+    binary = base['test_binary_sha256']
+    require(record.get('test_binary_sha256') == binary, 'reload binary differs')
+    expected = {'controlled_post_publication_fault':True,'separate_native_recovery_processes':True,'owner_edit_preserved':True,'explicit_owner_resolution':True,'reload_only_same_operation':True,'power_loss':False,'independent_renewal':False,'installed_owner_server':False}
+    require(record.get('scope') == expected, 'unsupported reload scope')
+    cases = [('mail-reload-fault.log','ReloadOwnerFault'),('mail-reload-refuses.log','ReloadOwnerRecoveryRefuses'),('mail-reload-resolution.log','ReloadOwnerResolution')]
+    require(set(record.get('logs',{})) == {x[0] for x in cases}, 'reload log set differs')
+    boot = one(r'(?m)^('+UUID+')$',base['logs']['mail-receipt-after-boot.log']['text'])
+    previous, selected = one(r'owner selection preserved; pending retained; historical completion preserved; selected=('+HEX+') source=('+HEX+')',base['logs']['mail-owner-drift.log']['text'])
+    logs = {}; pids = []
+    for name, case in cases:
+        item = record['logs'][name]; text = item['text']
+        require(len(text)<32768 and hashlib.sha256(text.encode()).hexdigest()==item['sha256'], 'reload log digest differs')
+        require('PRIVATE KEY' not in text and 'nonce=' not in text, 'private reload evidence present')
+        require(text.startswith(binary+'  /root/celikpanel-release-recovery-lab/mail-agent.test\n'), 'executed reload binary differs')
+        require(one(r'(?m)^('+UUID+')$',text)==boot, 'reload boot differs')
+        require('--- PASS: TestMailHostCertificateDisposableVM'+case+' (' in text and '--- FAIL:' not in text, 'reload native test failed')
+        require('Result=success' in text and 'ExecMainStatus=0' in text and 'ActiveState=inactive' in text, 'reload native unit failed')
+        pids.append(one(r'mail-agent[.]test\[(\d+)\]: === RUN   TestMailHostCertificateDisposableVM'+case+r'\n',text))
+        imap,smtp=one(r'native trusted listeners: imap=('+HEX+') smtp=('+HEX+')',text)
+        accepted={selected} if case=='ReloadOwnerResolution' else {previous,selected}
+        require(imap in accepted and smtp in accepted, 'reload native listener differs')
+        logs[name]=text
+    require(len(set(pids))==3, 'recovery processes not distinct')
+    request,old,new=one(r'controlled post-publication fault retained exact active intent and owner edit; request=([0-9a-f]{32}) previous=('+HEX+') selected=('+HEX+')',logs['mail-reload-fault.log'])
+    require((old,new)==(previous,selected), 'fault certificate differs')
+    resumed=one(r'native startup recovery preserved owner edit and exact published receipt; active request=([0-9a-f]{32}) previous=('+HEX+') selected=('+HEX+')',logs['mail-reload-refuses.log'])
+    require(resumed==(request,old,new), 'recovery replaced operation evidence')
+    resolved=one(r'explicit owner resolution recovered same operation by reload only; request=([0-9a-f]{32}) leaf=('+HEX+')',logs['mail-reload-resolution.log'])
+    require(resolved==(request,new), 'resolution changed operation or certificate')
+    return {'owner_edit_preserved':'verified','same_operation_reload_recovery':'verified','operation':request,'power_loss':'not established','independent_renewal':'not established'}
+
+
 def verify_record(record, base_bytes=None):
     if base_bytes is None:
         return verify(record)
     schema=record.get('schema')
+    if schema == 'celikpanel/native-mail-reload-recovery/v1':
+        return verify_reload_recovery(record,base_bytes)
     if schema == 'celikpanel/native-mail-observation/v1':
         return verify_observation(record,base_bytes)
     if schema == 'celikpanel/native-mail-cleanup/v1':
