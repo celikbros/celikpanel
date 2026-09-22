@@ -97,3 +97,9 @@ separate open work. Production enrollment must retain the selected helper's
 policy and its state through migration/rollback; an older helper is not evidence
 of this new retry guarantee. Native failure/reboot/exhaustion/explicit-owner
 acceptance is recorded separately from the component tests.
+
+[Debian BE budget acceptance](../deploy/e2e/release-recovery/MAIL-BUDGET-BE.md)
+now verifies actual failed reload, automatic retry after reboot, refusal at the
+third recorded execution, unchanged evidence for another request, and one
+explicit owner continuation to successful attempt four. This closes that narrow
+native budget item; the pre-selection and enrollment limitations above remain.

@@ -506,3 +506,12 @@ A second kill/reboot is recovered automatically by the native timer with the
 same retained operation, preserved native settings and matching trusted SMTP
 and IMAP listeners. Production enrollment, pre-selection interruptions, bounded
 renewal retries and power-loss acceptance remain open; P0.3/P0.5 remain partial.
+
+[BE mail recovery budget](../deploy/e2e/release-recovery/MAIL-BUDGET-BE.md)
+now binds the independent selected-operation retry limit to the existing durable
+attempt field: native failed reload consumes attempt two; an automatic boot
+retry consumes attempt three; another automatic-mode call and a wrong-owner
+request preserve exact evidence without another reload. Explicit owner
+resolution/continuation completes attempt four for the same request. This is
+P0.3/P0.5 evidence for that boundary, not production enrollment, pre-selection
+retry, general Agent recovery or the full workload matrix.

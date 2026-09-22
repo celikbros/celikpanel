@@ -1,0 +1,61 @@
+{
+  "schema": "celikpanel/native-mail-recovery-budget/v1",
+  "source_commit": "f78d57fdf609389c005d5583e5ad9551c2ca2910",
+  "producer_commit": "7dcd9fc72f2e543f974389f02ce36e7d81be7535",
+  "lab": {
+    "cell_id": "release-recovery__3688d130a0721786",
+    "node": "debian13"
+  },
+  "manifest": {
+    "schema": "celikpanel-mail-renewal-runtime/v1",
+    "generation": "7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d",
+    "ledger_version": 1,
+    "plan_version": 1,
+    "receipt_schema": "mail-host-certificate-receipt/v1",
+    "binary_sha256": "11497d40d96ca2d073e64480c32a4be2eee25ec28efdf408ecd8f7e509d22e0c",
+    "service_sha256": "de961acb1f9b19770b7cec78e909ba39fd66c0cf32f8355aedf9051b71e8884b",
+    "timer_sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "hook_sha256": "b9e3410412db3954c004a01b4fe6762b6326ee04278ed99f8e66d3e7bc8f0457"
+  },
+  "scope": {
+    "selected_recovery_budget": true,
+    "actual_reload_failure": true,
+    "native_boot_timer_retry": true,
+    "same_operation_owner_retry": true,
+    "installed_management_absent": true,
+    "fixture_ca": true,
+    "production_enrollment": false,
+    "preselection_retry": false,
+    "power_loss": false
+  },
+  "logs": {
+    "mail-budget-source7.log": {
+      "text": "inactive\nkit_fixture_source_prepared old=29397ae156b697ffbf77a6a31539f6091c5c6e410645d1f17c1998a0da2ae8dd new=446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33\nnative_hook=queued; helper_service_not_started_by_hook=yes\n-----\nCertificate request self-signature ok\nsubject=CN=mail.setup.celikpanel.test\n",
+      "sha256": "5118013f04be6798ae4f6674d5029775dae6b35a72655120e385021a3cf82afc"
+    },
+    "mail-budget-kill.log": {
+      "text": "second_selected_trial_evidence=retained\ncomponent=mail-renewal\nversion=dev\ncommit=7dcd9fc72f2e543f974389f02ce36e7d81be7535\nSep 22 12:49:20 dns-debian13 systemd[1]: Starting celikpanel-mail-budget-kill.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-selected-agent.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillAfterSelection\\$\" -test.timeout=180s...\nSep 22 12:49:20 dns-debian13 mail-selected-agent.test[1331]: === RUN   TestMailRenewalDisposableVMKillAfterSelection\nSep 22 12:49:20 dns-debian13 systemd[1]: celikpanel-mail-budget-kill.service: Main process exited, code=killed, status=9/KILL\nSep 22 12:49:20 dns-debian13 systemd[1]: celikpanel-mail-budget-kill.service: Failed with result 'signal'.\nSep 22 12:49:20 dns-debian13 systemd[1]: Failed to start celikpanel-mail-budget-kill.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-selected-agent.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillAfterSelection\\$\" -test.timeout=180s.\nResult=signal\nExecMainCode=2\nExecMainStatus=9\nnative_sigkill_selected_before_reload=verified request=37d0b8e49a8515f0adc6fd4b91f15d06 selected=446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33 served={\"587\": \"446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33\", \"993\": \"29397ae156b697ffbf77a6a31539f6091c5c6e410645d1f17c1998a0da2ae8dd\"} queue=retained configuration=unchanged\nRunning as unit: celikpanel-mail-budget-kill.service; invocation ID: 3fe41ec44ffe421e9c2fc5d1ba358395\nFinished with result: signal\nMain processes terminated with: code=killed, status=9/KILL\nService runtime: 414ms\nCPU time consumed: 259ms\nMemory peak: 41.1M (swap: 0B)\n",
+      "sha256": "ab0290b901362235ed37413c0501d1542cfe8f08810c79a71250ceccf08d81ce"
+    },
+    "mail-budget-kit.log": {
+      "text": "budget_recovery_fixture_kit=installed old_generation=retained generation=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d\ncomponent=mail-renewal\nversion=dev\ncommit=f78d57fdf609389c005d5583e5ad9551c2ca2910\n",
+      "sha256": "3b9d8c68b625e67894bb2d5fdb10cd55b447b374021062238f47b12529b77761"
+    },
+    "mail-budget-attempt2.log": {
+      "text": "fixture_native_reload_fault=installed; ordinary_mail_configuration=unchanged\nResult=exit-code\nExecMainStatus=1\nExecReload={ path=/usr/bin/false ; argv[]=/usr/bin/false ; ignore_errors=no ; start_time=[Tue 2026-09-22 12:52:34 UTC] ; stop_time=[Tue 2026-09-22 12:52:34 UTC] ; pid=1905 ; code=exited ; status=1 }\nActiveState=active\nSep 22 12:42:14 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Deactivated successfully.\nSep 22 12:42:14 dns-debian13 systemd[1]: Finished celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate.\nSep 22 12:47:23 dns-debian13 systemd[1]: Starting celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate...\nSep 22 12:47:23 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Deactivated successfully.\nSep 22 12:47:23 dns-debian13 systemd[1]: Finished celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate.\nSep 22 12:52:33 dns-debian13 systemd[1]: Starting celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate...\nSep 22 12:52:34 dns-debian13 renew[1664]: mail renewal remains pending; the server owner must review the retained operation and native mail service status before retrying; no general recovery was started\nSep 22 12:52:34 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Main process exited, code=exited, status=1/FAILURE\nSep 22 12:52:34 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Failed with result 'exit-code'.\nSep 22 12:52:34 dns-debian13 systemd[1]: Failed to start celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate.\nnative_failed_reload_retained request=37d0b8e49a8515f0adc6fd4b91f15d06 attempt=2 status=cancelling queue=unchanged configuration=unchanged foreign_history=preserved\n1627ab8d-b4d0-4e30-9811-4f4b250de357\nenabled\nbefore_reboot=attempt2; native_reload_fault=retained; timer=enabled_but_stopped\nJob for celikpanel-mail-renewal.service failed because the control process exited with error code.\nSee \"systemctl status celikpanel-mail-renewal.service\" and \"journalctl -xeu celikpanel-mail-renewal.service\" for details.\nRunning timer as unit: celikpanel-lab-mail-budget-reboot.timer\nWill run service as unit: celikpanel-lab-mail-budget-reboot.service\n",
+      "sha256": "35c39d9d4ed7b185839cdd300d8f010da92162a814c9f36a1e40f83ea7aee0fb"
+    },
+    "mail-budget-boot.log": {
+      "text": "47c9fa4d-0d12-4533-9b79-59a638fe4673\nLastTriggerUSec=Tue 2026-09-22 12:53:22 UTC\nActiveState=active\nResult=exit-code\nExecMainStatus=1\nactive\nactive\nSep 22 12:52:56 dns-debian13 systemd[1]: Started celikpanel-mail-renewal.timer - Check retained mail certificate renewal work.\nSep 22 12:53:22 dns-debian13 systemd[1]: Starting celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate...\nSep 22 12:53:22 dns-debian13 renew[808]: mail renewal remains pending; the server owner must review the retained operation and native mail service status before retrying; no general recovery was started\nSep 22 12:53:22 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Main process exited, code=exited, status=1/FAILURE\nSep 22 12:53:22 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Failed with result 'exit-code'.\nSep 22 12:53:22 dns-debian13 systemd[1]: Failed to start celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate.\nautomatic_boot_failed_reload_retained request=37d0b8e49a8515f0adc6fd4b91f15d06 attempt=3 status=cancelling queue=unchanged configuration=unchanged foreign_history=preserved\n11497d40d96ca2d073e64480c32a4be2eee25ec28efdf408ecd8f7e509d22e0c  /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/renew\n",
+      "sha256": "fd993a3e6fffc85e8b4c403a22653e601d08bb6b4715b852ef70af568c6b0eb9"
+    },
+    "mail-budget-exhausted.log": {
+      "text": "Sep 22 12:54:18 dns-debian13 systemd[1]: Starting celikpanel-mail-budget-exhausted.service - [systemd-run] /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/renew --process-pending...\nSep 22 12:54:18 dns-debian13 renew[1135]: mail renewal automatic recovery is paused after three recorded execution attempts for operation 37d0b8e49a8515f0adc6fd4b91f15d06; the server owner must check Postfix/Dovecot status and configuration, resolve the reported cause, then run the installed renewal helper with --retry-selected 37d0b8e49a8515f0adc6fd4b91f15d06 for one explicit attempt; the selected certificate and pending work are preserved\nSep 22 12:54:18 dns-debian13 systemd[1]: celikpanel-mail-budget-exhausted.service: Main process exited, code=exited, status=1/FAILURE\nSep 22 12:54:18 dns-debian13 systemd[1]: celikpanel-mail-budget-exhausted.service: Failed with result 'exit-code'.\nSep 22 12:54:18 dns-debian13 systemd[1]: Failed to start celikpanel-mail-budget-exhausted.service - [systemd-run] /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/renew --process-pending.\nResult=exit-code\nExecMainStatus=1\nResult=exit-code\nExecMainStatus=1\nbudget_exhausted_and_wrong_owner=refused request=37d0b8e49a8515f0adc6fd4b91f15d06 attempt=3 ledger=unchanged queue=unchanged native_reload=not_repeated configuration=unchanged\nRunning as unit: celikpanel-mail-budget-exhausted.service\nFinished with result: exit-code\nMain processes terminated with: code=exited, status=1/FAILURE\nService runtime: 38ms\nCPU time consumed: 29ms\nMemory peak: 11M (swap: 0B)\nRunning as unit: celikpanel-mail-budget-wrong-owner.service; invocation ID: 5175781fbf684ab0b190f64456442264\nFinished with result: exit-code\nMain processes terminated with: code=exited, status=1/FAILURE\nService runtime: 47ms\nCPU time consumed: 27ms\nMemory peak: 10.1M (swap: 0B)\n",
+      "sha256": "76dac1f881e86652240ef0a493ffe7c00861541ed669a98cc2cb9e5a659b3b01"
+    },
+    "mail-budget-owner.log": {
+      "text": "fixture_owner_reload_resolution=explicit; fault_evidence=retained\nSep 22 12:55:48 dns-debian13 systemd[1]: Starting celikpanel-mail-budget-owner-retry.service - [systemd-run] /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/renew --retry-selected 37d0b8e49a8515f0adc6fd4b91f15d06...\nSep 22 12:55:49 dns-debian13 systemd[1]: celikpanel-mail-budget-owner-retry.service: Deactivated successfully.\nSep 22 12:55:49 dns-debian13 systemd[1]: Finished celikpanel-mail-budget-owner-retry.service - [systemd-run] /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/renew --retry-selected 37d0b8e49a8515f0adc6fd4b91f15d06.\nResult=success\nExecMainStatus=0\nexplicit_budget_owner_recovery=verified request=37d0b8e49a8515f0adc6fd4b91f15d06 leaf=446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33 served={\"587\": \"446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33\", \"993\": \"446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33\"} attempt=4 queue=acknowledged foreign_history=preserved config_bytes_and_mtime=preserved management=absent\nRunning as unit: celikpanel-mail-budget-owner-retry.service\nFinished with result: success\nMain processes terminated with: code=exited, status=0/SUCCESS\nService runtime: 999ms\nCPU time consumed: 707ms\nMemory peak: 21.9M (swap: 0B)\n",
+      "sha256": "907829ebe05851819cc3ba67838b5af0409c6811e688a4b358867eb962f6a286"
+    }
+  }
+}
