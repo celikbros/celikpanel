@@ -516,3 +516,31 @@ now proves creation of the missing shared wants directory, an automatic native
 no-work invocation and two process cuts followed by ordered compensation. The
 shared parent remains with its recorded inode. The private ledger/group remained
 fixture prerequisites; production initialization and actual renewal are separate.
+
+
+## Before-selection evidence (P0.3/P0.5, September 22)
+
+New renewal admission durably writes `celikpanel-mail-renewal-before/v1` before
+publishing its active ledger job. The immutable root/service-group 0600 record
+binds the exact pending leaf, build-qualified request/owner, prior publication
+receipt and `mail-host-selection-identity/v1` digest of the actual selected
+link/material/generation inodes. No private key bytes enter this record. Source
+and selection are re-observed under host, ledger and certificate publication
+exclusion; owner replacements, including equal-byte replacements, refuse retry.
+The existing request/owner derivation is unchanged and is tested against the
+public DER and identity produced by the actual earlier native BE trial.
+
+This adds evidence to new operations; it does not migrate an active historical
+operation or fabricate its missing before-image. Shared v1 ledger and publication
+receipt formats are unchanged. The writer uses fsynced exclusive staging,
+no-replace publication and parent synchronization; unknown stages remain retained
+and are not adopted as authority. Missing/invalid evidence prevents admission,
+while existing services, selection and owner files are preserved. Lower-level
+ledger and selected-publication fixtures explicitly bypass the new adapter and
+are not counted as before-selection acceptance.
+
+Validation: material/owner-change tests, real SIGKILL at three writer boundaries,
+actual prior-producer identity compatibility, admission-before-ledger ordering,
+race tests of mailhoststore/mailrenewalintent and relevant Agent tests, and vet.
+Native interrupted-before-selection continuation, old-build adoption and complete
+production enrollment remain open; this evidence slice alone does not close P0.

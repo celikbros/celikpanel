@@ -555,3 +555,15 @@ hazırlar ve yayımlar. Mevcut sahip içeriği korunur; ortak dizin geri almada 
 yönetim yazılımları olmadan otomatik boş-kuyruk çağrısı ve iki süreç kesintisi
 sonrası geri almayı doğrular. Özel günlük/grup hazırlığı, gerçek yenileme, üretim
 kabulü, tarihsel geri alma ve tam hata matrisi açık kalır.
+
+
+### Posta yenilemesi öncesi durum kaydı — 22 Eylül
+
+P0.3/P0.5 kapsamında yeni yenilemeler, aktif işlem kaydından önce değişmez
+`celikpanel-mail-renewal-before/v1` kanıtını yazar. Ortak salt-okur seçim kimliği,
+önceki gerçek sertifika dosyalarını bağlar; aynı baytlarla yapılan sahip değişimini
+de algılar. Mevcut v1 istek kimliği, önceki gerçek yerel denemenin üretici çıktısıyla
+karşılaştırıldı. Sahip değişimi, belirsiz kanıt, üç gerçek SIGKILL noktası ve durum
+kaydının işlem defterinden önce kalıcı olması sınandı. Tarihsel aktif işe eksik
+kanıt sonradan üretilmez. Seçim öncesi yerel kurtarma ve tam ürün devreye alma
+kabulü hâlâ açıktır; bu dilim P0 işlerini kapatmaz.

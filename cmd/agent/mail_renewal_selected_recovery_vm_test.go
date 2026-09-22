@@ -54,7 +54,7 @@ func TestMailRenewalDisposableVMKillAfterSelection(t *testing.T) {
 		t.Fatal(err)
 	}
 	request := &ServiceMutationBeginRequest{RequestID: hex.EncodeToString(identity[:16]), OwnerID: hex.EncodeToString(identity[16:]), Kind: "mail_host_certificate", Target: domain, PackageName: c.Qualifier}
-	manager, err := newMailRenewalMutationManager("", "", request)
+	manager, err := newLedgerOnlyMailRenewalTestManager("", "", request)
 	if err != nil {
 		t.Fatal(err)
 	}

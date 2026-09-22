@@ -14,7 +14,7 @@ func TestMailRenewalFailedBudgetDurableFreshAdmissionAndOwnerRetry(t *testing.T)
 	request := renewalScopeTestRequest(t)
 	newScoped := func() *serviceMutationManager {
 		t.Helper()
-		m, err := newMailRenewalMutationManager(filepath.Dir(base.ledgerPath), base.lockPath, request)
+		m, err := newLedgerOnlyMailRenewalTestManager(filepath.Dir(base.ledgerPath), base.lockPath, request)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -94,7 +94,7 @@ func TestMailRenewalFailedBudgetDurableFreshAdmissionAndOwnerRetry(t *testing.T)
 func TestMailRenewalFailedOwnerRetryCannotCreateOperation(t *testing.T) {
 	m, _ := newMutationTestManager(t)
 	request := renewalScopeTestRequest(t)
-	scoped, err := newMailRenewalMutationManager(filepath.Dir(m.ledgerPath), m.lockPath, request)
+	scoped, err := newLedgerOnlyMailRenewalTestManager(filepath.Dir(m.ledgerPath), m.lockPath, request)
 	if err != nil {
 		t.Fatal(err)
 	}

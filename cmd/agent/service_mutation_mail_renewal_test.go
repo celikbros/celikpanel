@@ -94,7 +94,7 @@ func TestMailRenewalScopePreservesForeignEvidence(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			scoped, err := newMailRenewalMutationManager(filepath.Dir(m.ledgerPath), m.lockPath, request)
+			scoped, err := newLedgerOnlyMailRenewalTestManager(filepath.Dir(m.ledgerPath), m.lockPath, request)
 			if scoped != nil || !errors.Is(err, errMailRenewalRecoveryRequired) {
 				t.Fatalf("scoped=%v err=%v", scoped, err)
 			}
@@ -116,7 +116,7 @@ func TestMailRenewalScopePreservesForeignEvidence(t *testing.T) {
 func TestMailRenewalScopeRechecksFreshEvidenceAtBeginAndStatus(t *testing.T) {
 	m, _ := newMutationTestManager(t)
 	request := renewalScopeTestRequest(t)
-	scoped, err := newMailRenewalMutationManager(filepath.Dir(m.ledgerPath), m.lockPath, request)
+	scoped, err := newLedgerOnlyMailRenewalTestManager(filepath.Dir(m.ledgerPath), m.lockPath, request)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestMailRenewalScopeRechecksFreshEvidenceAtBeginAndStatus(t *testing.T) {
 func TestMailRenewalScopeRejectsBroaderIdentityBeforeRecovery(t *testing.T) {
 	m, _ := newMutationTestManager(t)
 	original := renewalScopeTestRequest(t)
-	scoped, err := newMailRenewalMutationManager(filepath.Dir(m.ledgerPath), m.lockPath, original)
+	scoped, err := newLedgerOnlyMailRenewalTestManager(filepath.Dir(m.ledgerPath), m.lockPath, original)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestMailRenewalScopeOwnLifecyclePreservesHistory(t *testing.T) {
 		t.Fatal(err)
 	}
 	request := renewalScopeTestRequest(t)
-	scoped, err := newMailRenewalMutationManager(filepath.Dir(m.ledgerPath), m.lockPath, request)
+	scoped, err := newLedgerOnlyMailRenewalTestManager(filepath.Dir(m.ledgerPath), m.lockPath, request)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +220,7 @@ func TestMailRenewalScopeOwnLifecyclePreservesHistory(t *testing.T) {
 func TestMailRenewalScopeSharesExclusionWithOrdinaryAgent(t *testing.T) {
 	ordinary, _ := newMutationTestManager(t)
 	request := renewalScopeTestRequest(t)
-	scoped, err := newMailRenewalMutationManager(filepath.Dir(ordinary.ledgerPath), ordinary.lockPath, request)
+	scoped, err := newLedgerOnlyMailRenewalTestManager(filepath.Dir(ordinary.ledgerPath), ordinary.lockPath, request)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,8 +273,19 @@ func TestMailRenewalScopeDoesNotTakeOverHistoricalOwner(t *testing.T) {
 	if err = os.WriteFile(m.ledgerPath, raw, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := newMailRenewalMutationManager(filepath.Dir(m.ledgerPath), m.lockPath, request); !errors.Is(err, errMailRenewalRecoveryRequired) {
+	if _, err := newLedgerOnlyMailRenewalTestManager(filepath.Dir(m.ledgerPath), m.lockPath, request); !errors.Is(err, errMailRenewalRecoveryRequired) {
 		t.Fatalf("owner takeover: %v", err)
 	}
 	assertRenewalScopeBytes(t, m.ledgerPath, raw)
+}
+
+// These ledger/selected-publication fixtures deliberately start below the new
+// source/selection admission adapter. They do not establish before-selection
+// recovery coverage; that adapter has separate material and interruption tests.
+func newLedgerOnlyMailRenewalTestManager(stateDir, lockPath string, request *ServiceMutationBeginRequest) (*serviceMutationManager, error) {
+	m, err := newMailRenewalMutationManager(stateDir, lockPath, request)
+	if m != nil {
+		m.mailRenewalBeforeAdmission = func(*ServiceMutationBeginRequest) error { return nil }
+	}
+	return m, err
 }

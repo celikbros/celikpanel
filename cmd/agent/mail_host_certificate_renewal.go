@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"log"
 	"path/filepath"
@@ -10,7 +8,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/mailhostartifact"
-	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/mailrenewalintent"
 )
 
 func mailHostRenewalPendingPath() string {
@@ -84,19 +82,15 @@ func deployPendingMailHostCertificateWithRetry(ownerRequest string) error {
 	if ownerRequest == "" && panelCertificateLeafSHA256(leaf) == currentLeaf {
 		return clearMailHostCertificateRenewal(pending)
 	}
-	commitment, err := mutationpayload.CanonicalMailHostCertificate(domain, "renewal@celikpanel.invalid", buildCommit)
+	requestID, ownerID, qualifier, err := mailrenewalintent.Identity(domain, buildCommit, leaf)
 	if err != nil {
 		return err
 	}
-	// The unattended operation is bound to this precise source generation;
-	// another Certbot generation gets another durable request identity.
-	digest := sha256.Sum256(append([]byte("mail-host-renewal/v1/"+domain+"/"+buildCommit+"/"), leaf...))
-	requestID := hex.EncodeToString(digest[:16])
+	// The shared v1 identity retains the exact source generation and build.
 	if ownerRequest != "" && (!validMutationIdentity(ownerRequest) || ownerRequest != requestID || panelCertificateLeafSHA256(leaf) == currentLeaf) {
 		return errors.New("explicit failed renewal retry does not match an unpublished pending operation")
 	}
-	ownerID := hex.EncodeToString(digest[16:])
-	request := &ServiceMutationBeginRequest{RequestID: requestID, OwnerID: ownerID, Kind: "mail_host_certificate", Target: domain, PackageName: commitment.Qualifier}
+	request := &ServiceMutationBeginRequest{RequestID: requestID, OwnerID: ownerID, Kind: "mail_host_certificate", Target: domain, PackageName: qualifier}
 	manager, err := newMailRenewalMutationManager("", "", request)
 	if manager != nil {
 		mailRenewalExecution.retained = manager
@@ -120,7 +114,7 @@ func deployPendingMailHostCertificateWithRetry(ownerRequest string) error {
 		// Keep both facts and require review rather than rewriting owner state.
 		return errors.New("mail host renewal previously completed, but the selected certificate differs; the server owner must review the current mail certificate before retrying")
 	}
-	ctx, finish, err := manager.acquireStep(ServiceMutationBinding{MutationRequestID: requestID, MutationOwnerID: ownerID}, newServiceMutationStepClaim(serviceMutationStepIssueMailHostCertificate, domain, commitment.Qualifier, "issue"))
+	ctx, finish, err := manager.acquireStep(ServiceMutationBinding{MutationRequestID: requestID, MutationOwnerID: ownerID}, newServiceMutationStepClaim(serviceMutationStepIssueMailHostCertificate, domain, qualifier, "issue"))
 	if err != nil {
 		return err
 	}
@@ -143,7 +137,7 @@ func deployPendingMailHostCertificateWithRetry(ownerRequest string) error {
 		err = errors.New("renewed source changed after mutation admission")
 	}
 	if err == nil {
-		_, err = publishMailHostCertificateSource(ctx, domain, requestID, commitment.Qualifier, panelCertificateLeafSHA256(leaf))
+		_, err = publishMailHostCertificateSource(ctx, domain, requestID, qualifier, panelCertificateLeafSHA256(leaf))
 	}
 	finish()
 	if err != nil {

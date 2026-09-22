@@ -126,6 +126,8 @@ type serviceMutationManager struct {
 
 	// Non-nil grants only this exact unattended renewal, never general recovery.
 	mailRenewalScope *ServiceMutationBeginRequest
+	// Required admission boundary, after exact ledger/budget checks under host exclusion.
+	mailRenewalBeforeAdmission func(*ServiceMutationBeginRequest) error
 	// Set only by the root-only exact selected-operation retry entry. Never resets Attempt.
 	mailRenewalRecoveryOwnerRequest string
 	// One explicit failed-operation retry; consumed when its admission is durable.
@@ -1034,6 +1036,14 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 	}
 	if busy {
 		return closeLock(nil, errServiceMutationHostBusy)
+	}
+	if m.mailRenewalScope != nil {
+		if m.mailRenewalBeforeAdmission == nil {
+			return closeLock(nil, errMailRenewalRecoveryRequired)
+		}
+		if err := m.mailRenewalBeforeAdmission(request); err != nil {
+			return closeLock(nil, err)
+		}
 	}
 	now := m.now()
 	attempt := 1

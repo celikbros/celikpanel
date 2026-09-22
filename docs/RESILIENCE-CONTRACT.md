@@ -609,3 +609,16 @@ shared directory after compensation. [BE native evidence](../deploy/e2e/release-
 proves missing-parent publication, automatic no-work execution without management
 and double process-cut inverse. Private ledger/group bootstrap, actual renewal,
 production admission, historical rollback and the full matrix remain open.
+
+
+### Mail renewal before-image admission — September 22
+
+P0.3/P0.5 now have an immutable `celikpanel-mail-renewal-before/v1` record for new
+renewals, written before their active ledger admission. A shared read-only
+selection identity binds actual prior selected material and detects equal-byte
+owner replacement. The existing v1 request identity is checked against actual
+prior native producer output, not only a mirrored formula. Tests cover owner
+changes, unknown evidence, three real writer SIGKILL boundaries and durable
+before-image/ledger ordering. Missing historical evidence remains missing: no
+active operation is retrospectively enrolled. Native pre-selection recovery and
+full production enrollment still require acceptance; all P0 items remain open.

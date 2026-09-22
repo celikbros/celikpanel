@@ -23,7 +23,11 @@ func newMailRenewalMutationManager(stateDir, lockPath string, request *ServiceMu
 		return nil, errors.New("invalid scoped mail renewal identity")
 	}
 	scope := *request // Caller changes cannot broaden the retained authority.
-	return newServiceMutationManagerWithScope(stateDir, lockPath, nil, &scope)
+	m, err := newServiceMutationManagerWithScope(stateDir, lockPath, nil, &scope)
+	if m != nil {
+		m.mailRenewalBeforeAdmission = m.persistMailRenewalBeforeAdmissionLocked
+	}
+	return m, err
 }
 
 func mailRenewalRequestMatches(scope, request *ServiceMutationBeginRequest) bool {

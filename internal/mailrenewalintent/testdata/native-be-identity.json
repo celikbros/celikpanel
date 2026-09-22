@@ -1,0 +1,10 @@
+{
+  "job": {
+    "request_id": "79066f5075f0b92fe8ce964819030c60",
+    "owner_id": "de50584be7ff29985e52fe7a41898618",
+    "kind": "mail_host_certificate",
+    "target": "mail.setup.celikpanel.test",
+    "package_name": "mhc1:358c1848e497c32f67fb7b0544678260161a7b917f8c8892330c7204b4562e92",
+    "attempt": 4
+  }
+}
