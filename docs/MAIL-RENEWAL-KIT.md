@@ -305,3 +305,42 @@ These observations are not ownership, accepted intent, durable evidence or a
 mutation barrier. Callers must source them from the actual local service manager,
 retain native file proofs, establish host/renewal exclusion and re-observe at the
 mutation boundary. Production schedule activation and rollback remain open.
+
+## Existing loaded-unit transition (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The private
+`celikpanel-mail-renewal-loaded/v1` intent and receipt bind native daemon-reload
+to the exact verified file-phase plan, direction, generation and retained timer
+preference. Both the file terminal record and current inode pairs must agree.
+A historical forward receipt cannot authorize action after rollback intent.
+
+Before the native reload, both fixed units are observed through the shared
+contract, the oneshot must be idle, and owner enablement/activity must match the
+accepted before-image. Intent is durable before the command. Current files,
+source kits and observations are checked again before and after execution and
+before terminal receipt publication. Re-entry after an interrupted reload may
+repeat the idempotent daemon-reload; it never starts a second workload mutation.
+A completed receipt requires fresh observation and causes no repeated reload.
+Unavailable observations retain intent and cannot become completed activation.
+Later owner preferences, overrides and file changes are preserved and refused.
+
+The command capability permits only fixed-unit observation and daemon-reload.
+There is no start/stop/enable/disable capability. This step supports an existing
+independent native schedule only; bootstrap enrollment is explicitly unsupported.
+The future dispatcher must supply accepted authority, host/renewal exclusion and
+a trusted bounded local command runner. No production dispatcher is enabled.
+Component tests cover native-command failure/unknown retry, same intent identity,
+owner changes before/after reload and after completion, busy states, and 14 actual
+process-kill boundaries with a simulated service-manager cache. Native systemd
+acceptance is recorded separately; simulation does not establish native loading.
+
+### Compatibility gate still required before production enrollment
+
+The actual hook producer immediately before source `3c268c2` unconditionally
+published the legacy Agent hook. Restoring such an older application producer and
+then issuing another mail certificate could replace independent enrollment.
+Current-source writer preservation and the file inverse protocol do not prove
+compatibility with every historical application rollback target. Production
+admission must resolve this old-producer/restore relationship explicitly before
+claiming independent renewal survives supported application rollback. Keep this
+P0.4/P0.5 acceptance item open; do not infer compatibility from a running timer.
