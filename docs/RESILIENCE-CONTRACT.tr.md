@@ -203,7 +203,7 @@ Yukarıdaki P0 kimlikleri, takip edilen iş kalemleridir. Kanıtlar 21 Eylül it
 | P0.2 | Kısmi — türlenmiş erişim, Agent bağımsız başlangıç gözlemi ve yerel kurtarma girişi uygulandı | [Erişim/gözlem kabulü](RECOVERY-ACCESS.tr.md) ve [bağımsız kurtarma ortamı](RECOVERY-RUNTIME.tr.md). Root/sudo durum ve kurtarma yolu Panel/Agent başlangıcına veya lisansa bağlı değildir. [Yerel AJ](../deploy/e2e/release-recovery/BOUND-WORKER.tr.md), tek kullanımlık Debian şema42→42 deneyinde gerçek worker sonlandırmasını, otomatik kurtarma sırasında yeniden başlatmayı, doğrulanmış geri almayı ve CLI/kimlik doğrulamalı HTTP/tarayıcı nihai sonuçlarının eşleşmesini kanıtlar. [Yerel AK](../deploy/e2e/release-recovery/BOOT-WAIT.tr.md), gerçek `starting` yönlendirmesini root CLI üzerinde ve aynı isteğin zamanlayıcıyla geri almaya ulaşmasını da kanıtlar. Diğer beklemeler, önceden bilinen hatanın gerçek beklemede korunması, beklerken HTTP/tarayıcı erişimi, arayüzden güncelleme başlatma, üretim imzası ve tam kesinti/erişim matrisi açıktır. |
 | P0.3 | Kısmi — bağımsız kod/veri, atomik yayın ve seçili gerçek kurtarma SIGKILL/reboot sınırları geçti | [Bağımsız çalışma ortamı](../deploy/e2e/release-recovery/INDEPENDENT-RUNTIME.tr.md) ve [veri kabulü](../deploy/e2e/release-recovery/RECOVERY-MATERIAL.tr.md): saklanan adayın üç dosyası yokken Arch payload_restored SIGKILL ve Debian runtime_verified reboot aynı geri almayı otomatik tamamladı. Seçili kit geçişinin ayrı [kaynak sözleşmesi](RECOVERY-RUNTIME-PROMOTION.tr.md) ve [gerçek sistem kabul kaydı](../deploy/e2e/release-recovery/RUNTIME-PROMOTION.tr.md) vardır; Ayrı Arch/Debian deneyleri, başlatıcı geçişindeki kesintiden sonra sahip devamını ve kit geçişinden sonra otomatik uygulama geri almasını kanıtlar. Önceki başarısız deneyler kayıtlı kalır; bu sınırlı sonuçlar P0.3’ü kapatmaz. [İleri tamamlama verisi v2](RECOVERY-FORWARD-COMPLETION.tr.md), veritabanı hazır kontrol noktasından sonra üç saklanan aday dosyası yokken [sınırlı Arch/Debian gerçek sistem kabulüne](../deploy/e2e/release-recovery/FORWARD-COMPLETION.tr.md) sahiptir. [Ayrı kopyada veritabanı dönüşümü v3](RECOVERY-ISOLATED-DATABASE.tr.md), aday ayrı kopyayı dönüştürürken normal güncellemeyi active tutar; bağımsız doğrulamadan sonra atomik yayımlar. [Sınırlı gerçek Q/R kabulü](../deploy/e2e/release-recovery/ISOLATED-DATABASE.tr.md), gerçek Alpha64/schema38 başlangıcını kapsar: Arch ilk DB çalışma kopyasını koruyarak otomatik geri alır; Debian gerçek 38→42 dönüşümünü ve saklanan üç aday dosyasının kaybını otomatik tamamlar. Son kaynağa ait ayrı R kanıtı, 55 tablonun eski satırlarını ve yayın kayıtlarını doğrular. Ayrı [gerçek WAL kesintisi kanıtı](../deploy/e2e/release-recovery/NATIVE-WAL.tr.md), Debian ve Arch üzerinde dolu schema38 verisiyle tek bir fiziksel, commit edilmemiş yazma sınırını ve ardından aynı işlemin otomatik geri alınmasını kaydeder. WAL kanıtı tek başına dolu domain verisinin başarılı 38→42 dönüşümünü kanıtlamaz. Sonraki [gerçek exchange kabulü](../deploy/e2e/release-recovery/NATIVE-DATABASE-EXCHANGE.tr.md), Arch U ve Debian W üzerinde değiştirilen çiftte bu dönüşümü ve yayın makbuzundan önce ters exchange ile otomatik geri almayı doğrular; 55 eski tablo ve kesinti anındaki bütün satırlar korunur. Önceki belirsiz Debian U/V denemeleri kayıtlı kalır. Ayrı [Debian X iki kesintili kabulü](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md), gerçek exchange kesintisinden sonra yerel geri almayı payload_restored noktasında VM yeniden başlatmasıyla keser. İlk açılış denemesi systemd starting durumundayken başarısız olur; mevcut zamanlayıcı tekrar çalışıp aynı geri almayı tamamlar ve kesinti anındaki 99 satır korunur. Başarısız deneme saklanır. Bu sonunda otomatik kurtarma kanıtıdır; kesintisiz hizmet veya güç kaybı dayanıklılığı değildir. Sonraki [Arch Z kabulü](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md#z-arch-gerçek-sistem-kabulü), aynı iki kesinti sınırını geçer: erken açılıştaki iki hata korunur, mevcut zamanlayıcı aynı geri almayı tamamlar ve 100 eski satır değişmeden kalır. Z, başlangıçtaki çekirdek paketi yükseltmesini ve yeniden başlatma sonrasındaki farklı çalışan çekirdeği de kaydeder; güvenlik duvarı/VPN hazır oluşu iddia edilmez. Önceki Y hazırlık hatası korunur ve gerçek kesinti deneyi sayılmaz. Kalan arıza/gerçek hizmet matrisi kapanmaz. [WAL ve dolu SQL deney önkoşulları](../deploy/e2e/release-recovery/WAL-FIXTURE.tr.md), kontrollü yazıcı ve özel kopya testlerini ayrı tutar; gerçek sistem kabulü değildir. Önceki v2 deneyleri bu yeni sınırı kanıtlamaz. Tam aşama matrisi, imzalı kabul, eksik yedek veri bağımsızlığı, metadata geçişleri ve temizleme açıktır. |
 | P0.4 | Kısmi: ortak mail TLS dosya sözleşmesi, kaynak okuyucu, plan, yayıncı ve kurtarma temizliği | [Sözleşme](MAIL-CERTIFICATE-ARTIFACT.md), gerçek Alpha81 üretici uyumu ve [AY yerel yenileme/açılış kanıtı](../deploy/e2e/release-recovery/MAIL-CONTRACT-AY.md) mevcut. Temizliğin sahip değişikliği bileşen testleri geçti; yerel kesintili temizlik, DNS şema ayrımı ve tüm üretici/geri yükleme geçişleri açık. |
-| P0.5 | Kısmi: Debian/Arch bağımsız güvenlik duvarı güncelleme/geri alma ve yerel mail sürekliliği | [Güvenlik duvarı](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md), [Arch ileri güncelleme/açılış](../deploy/e2e/release-recovery/PLATFORM-UPDATE-AV.md), [mail yenileme/açılış](../deploy/e2e/release-recovery/MAIL-CONTRACT-AY.md) kanıtlı. Mail yenilemesi hâlâ Agent kodunu kullanıyor. Bağımsız yenileme, üretim arayüzü/güven, yardımcı hatası/açılış kurtarması ve tam iş yükü/yönetimsiz çalışma matrisi açık. |
+| P0.5 | Kısmi: Debian/Arch bağımsız güvenlik duvarı; Debian bağımsız posta yardımcısı ve seçili kurtarma deneyleri | [Güvenlik duvarı](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md), [Arch ileri güncelleme/açılış](../deploy/e2e/release-recovery/PLATFORM-UPDATE-AV.md), [posta yardımcısı ve kesinti sözleşmeleri](MAIL-RENEWAL-KIT.md), [sınırlı başarısız yenileme](../deploy/e2e/release-recovery/MAIL-FAILED-BUDGET-BE.md). Korumalı Debian deneyinde yönetim yokken yenileme ve seçili açılış kurtarması kanıtlandı. Üretimde ilk devreye alma, eski uygulamaya geri alma uyumu, Arch posta ve tam iş yükü/yönetimsiz çalışma matrisi açık. |
 
 Yaşam döngüsünü, kalıcı kanıtı, erişim koşullarını, kurtarmayı veya yerel hizmet
 sahipliğini değiştiren her PR; etkilenen P0 işlerini/değişmezleri, önceki/sonraki
@@ -471,40 +471,49 @@ yükleme eylemlerini sunar. Kurulu hizmet, hook veya unit değişikliği yapılm
 Kayıt, kalıcı sahiplik/runtime, yerel kabul ve yarım yenilemenin bağımsız
 kurtarılması P0.3/P0.5 kapsamında ayrı ve açıktır.
 
-### Yerel posta yenilemesi i?in ?nceki durum kayd? (2026-09-22)
+### Yerel posta yenilemesi için önceki durum kaydı (2026-09-22)
 
-P0.3/P0.5 i?in [ge?i? ve ?nceki durum s?zle?mesi](MAIL-RENEWAL-KIT.md#native-enrollment-before-image-contract-2026-09-22)
-eklendi. Ger?ek kal?t?lm?? kilit ve SIGKILL kullanan bile?en testleri yerel
-dosyalar? ve sahip de?i?ikli?i kan?tlar?n? korur. Bu yaln?z haz?rl?k bile?enidir;
-?retimden ?a?r?lma, zamanlay?c?y? devreye alma ve geri alma hen?z a??lmad?.
-Tam yerel g?ncelleme ve g?? kesintisi kabul? a??k kal?r.
+P0.3/P0.5 için [geçiş ve önceki durum sözleşmesi](MAIL-RENEWAL-KIT.md#native-enrollment-before-image-contract-2026-09-22)
+eklendi. Gerçek kalıtılmış kilit ve SIGKILL kullanan bileşen testleri yerel
+dosyaları ve sahip değişikliği kanıtlarını korur. Bu yalnız hazırlık bileşenidir;
+üretimden çağrılma, zamanlayıcıyı devreye alma ve geri alma henüz açılmadı.
+Tam yerel güncelleme ve güç kesintisi kabulü açık kalır.
 
-### Yerel posta dosyalar?n?n geri al?nmas? (2026-09-22)
+### Yerel posta dosyalarının geri alınması (2026-09-22)
 
-[?zel dosya ge?i?i s?zle?mesi](MAIL-RENEWAL-KIT.md#native-file-transition-and-inverse-exchange-2026-09-22),
-P0.3/P0.5 i?in kal?c? dosya kimliklerini, saklanan eski dosyalar? ve y?n?
-sabitlenmi? geri alma niyetini ekler. S?re? kesintisi testleri yay?m?, geri almay?
-ve geri alman?n yeniden kesilmesini kapsar. ?retimde zamanlay?c?y? devreye alma,
-kurtarma ba?lant?s?, kald?rma ve tam yerel g?ncelleme/i? y?k? matrisi a??kt?r.
+[Özel dosya geçişi sözleşmesi](MAIL-RENEWAL-KIT.md#native-file-transition-and-inverse-exchange-2026-09-22),
+P0.3/P0.5 için kalıcı dosya kimliklerini, saklanan eski dosyaları ve yönü
+sabitlenmiş geri alma niyetini ekler. Süreç kesintisi testleri yayımı, geri almayı
+ve geri almanın yeniden kesilmesini kapsar. Üretimde zamanlayıcıyı devreye alma,
+kurtarma bağlantısı, kaldırma ve tam yerel güncelleme/iş yükü matrisi açıktır.
 
-[Debian BE y?kl? zamanlay?c? kabul?](../deploy/e2e/release-recovery/MAIL-LOADED-BE.md),
-ger?ek systemd yeniden y?klemesini iki y?nde, iki s?re? kesintisini ve ayn? i?lemin
-geri al?nmas?n? do?rular. Ger?ek ExecStart nesilleri, zamanlay?c? tercihi ve
-posta hizmetleri kontrol edildi. ?lk kurulum, ?retimden ?a??rma, eski uygulama
-s?r?m?ne d?n?? uyumu ve g?? kesintisi kabul? a??k kal?r.
+[Debian BE yüklü zamanlayıcı kabulü](../deploy/e2e/release-recovery/MAIL-LOADED-BE.md),
+gerçek systemd yeniden yüklemesini iki yönde, iki süreç kesintisini ve aynı işlemin
+geri alınmasını doğrular. Gerçek ExecStart nesilleri, zamanlayıcı tercihi ve
+posta hizmetleri kontrol edildi. İlk kurulum, üretimden çağırma, eski uygulama
+sürümüne dönüş uyumu ve güç kesintisi kabulü açık kalır.
 
-### Ba?ar?s?z posta yenilemesinin tekrar kabul? (2026-09-22)
+### Başarısız posta yenilemesinin tekrar kabulü (2026-09-22)
 
-P0.3/P0.5: Sonucu ba?ar?s?z kaydedilmi? yenilemenin otomatik tekrar?, g?ncel defter
-kilit alt?nda okunarak v1 Attempt sayac? ?zerinden s?n?rland?r?l?r. ?? otomatik
-denemeden sonra hata ve kuyruk korunur. Sunucu sahibinin tam i?lem kimli?iyle
-istedi?i tek ek deneme sayac? s?f?rlamaz; yeni i?lem veya se?ilmi? sertifika
-kurtarmas? ba?latmaz. [S?zle?me](MAIL-RENEWAL-KIT.md#failed-operation-retry-admission-2026-09-22).
-Sertifika se?iminden ?nce kesinti kurtarmas?, s?r?mler aras? i?lem devralma,
-?retimde ilk devreye alma ve tam ger?ek sistem kabul matrisi a??k kal?r.
+P0.3/P0.5: Sonucu başarısız kaydedilmiş yenilemenin otomatik tekrarı, güncel defter
+kilit altında okunarak v1 Attempt sayacı üzerinden sınırlandırılır. Üç otomatik
+denemeden sonra hata ve kuyruk korunur. Sunucu sahibinin tam işlem kimliğiyle
+istediği tek ek deneme sayacı sıfırlamaz; yeni işlem veya seçilmiş sertifika
+kurtarması başlatmaz. [Sözleşme](MAIL-RENEWAL-KIT.md#failed-operation-retry-admission-2026-09-22).
+Sertifika seçiminden önce kesinti kurtarması, sürümler arası işlem devralma,
+üretimde ilk devreye alma ve tam gerçek sistem kabul matrisi açık kalır.
 
-[Ger?ek sistem ba?ar?s?z deneme kan?t?](../deploy/e2e/release-recovery/MAIL-FAILED-BUDGET-BE.md)
-?? ayr? yard?mc? s?re?te ayar ?ak??mas?n? koruyarak reddi, otomatik s?n?rda durmay?,
-yanl?? i?lem kimli?inin reddini ve ayn? i?lemin a??k kullan?c? devam?yla do?rulanm??
-posta eri?imine ula?mas?n? kan?tlar. Otomatik zamanlay?c? ?al??mas?, se?im ?ncesi
-kesinti kurtarmas? ve ?retimde ilk devreye alma bu deneyle kan?tlanm?? de?ildir.
+[Gerçek sistem başarısız deneme kanıtı](../deploy/e2e/release-recovery/MAIL-FAILED-BUDGET-BE.md)
+üç ayrı yardımcı süreçte ayar çakışmasını koruyarak reddi, otomatik sınırda durmayı,
+yanlış işlem kimliğinin reddini ve aynı işlemin açık kullanıcı devamıyla doğrulanmış
+posta erişimine ulaşmasını kanıtlar. Otomatik zamanlayıcı çalışması, seçim öncesi
+kesinti kurtarması ve üretimde ilk devreye alma bu deneyle kanıtlanmış değildir.
+
+### Ortak DNS motoru kanıt rolleri (2026-09-22)
+
+P0.4 artık tek bir [v1 üretici/okuyucu ve rol sözleşmesi](DNS-ENGINE-ARTIFACT.md)
+kullanır. Gerçek Alpha81 edinim ve ekleme/düzenleme/silme üreticilerinin baytları
+yeni ortak okuyucuyla aynen korunur. Motor dönemi, sahip ve çift yönü; yayın nesli
+ve katalog ilerlemesinden ayrılır. Etkin ağaç kanıtı yine gereklidir. Kalıcı
+şemaların ayrılması, kurulu kanıt geçişi ve tam gerçek üretici/geri yükleme matrisi
+açıktır; bu kaynak değişikliği kurulu sunucuda geçiş yapmaz.

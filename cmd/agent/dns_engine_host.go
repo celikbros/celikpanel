@@ -3,12 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
-	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,13 +17,14 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
-	dnsEngineStateSchema = "celikpanel-dns-engine-state/v1"
+	dnsEngineStateSchema = dnsengineartifact.StateSchemaV1
 
 	aptBINDGenerationRoot          = "/var/cache/bind/celikpanel"
 	aptBINDCacheParentPath         = "/var/cache/bind"
@@ -50,21 +48,7 @@ type bindHostLayout struct {
 	Packages       []string
 }
 
-type dnsEngineStateReceipt struct {
-	Schema               string              `json:"schema"`
-	Mode                 string              `json:"mode"`
-	Engine               transport.DNSEngine `json:"engine"`
-	EngineEpoch          int64               `json:"engine_epoch"`
-	Generation           string              `json:"generation,omitempty"`
-	PairRole             string              `json:"pair_role,omitempty"`
-	PairLocalIP          string              `json:"pair_local_ip,omitempty"`
-	PairPeerIP           string              `json:"pair_peer_ip,omitempty"`
-	PrimaryCatalogSerial uint32              `json:"primary_catalog_serial,omitempty"`
-	SourceRevision       int64               `json:"source_revision"`
-	ManifestQualifier    string              `json:"manifest_qualifier"`
-	MutationRequestID    string              `json:"mutation_request_id"`
-	MutationOwnerID      string              `json:"mutation_owner_id"`
-}
+type dnsEngineStateReceipt = dnsengineartifact.StateV1
 
 type dnsUnitState struct {
 	Name          string
@@ -268,98 +252,15 @@ func dnsEngineStatePath() string {
 }
 
 func encodeDNSEngineState(state dnsEngineStateReceipt) ([]byte, error) {
-	if err := validateDNSEngineState(state); err != nil {
-		return nil, err
-	}
-	encoded, err := json.Marshal(state)
-	if err != nil {
-		return nil, fmt.Errorf("encode DNS engine state: %w", err)
-	}
-	return append(encoded, '\n'), nil
+	return dnsengineartifact.CanonicalV1(state)
 }
 
 func decodeDNSEngineState(data []byte) (dnsEngineStateReceipt, error) {
-	if len(data) == 0 || len(data) > 64<<10 {
-		return dnsEngineStateReceipt{}, errors.New("DNS engine state has an invalid size")
-	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	var state dnsEngineStateReceipt
-	if err := decoder.Decode(&state); err != nil {
-		return dnsEngineStateReceipt{}, fmt.Errorf("decode DNS engine state: %w", err)
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		return dnsEngineStateReceipt{}, errors.New("DNS engine state contains trailing JSON")
-	}
-	canonical, err := encodeDNSEngineState(state)
-	if err != nil {
-		return dnsEngineStateReceipt{}, err
-	}
-	if !bytes.Equal(data, canonical) {
-		return dnsEngineStateReceipt{}, errors.New("DNS engine state is not canonical JSON")
-	}
-	return state, nil
+	return dnsengineartifact.DecodeV1(data)
 }
 
 func validateDNSEngineState(state dnsEngineStateReceipt) error {
-	if state.Schema != dnsEngineStateSchema || !transport.ValidDNSEngine(state.Engine) ||
-		(state.Mode != transport.DNSEngineSwitchModeSwitch &&
-			state.Mode != transport.DNSEngineSwitchModeAdopt) ||
-		state.EngineEpoch < 1 || state.SourceRevision < 0 ||
-		!mutationpayload.ValidDNSEngineSwitchQualifier(state.ManifestQualifier) ||
-		!validMutationIdentity(state.MutationRequestID) ||
-		!validMutationIdentity(state.MutationOwnerID) {
-		return errors.New("DNS engine state has an unsupported identity")
-	}
-	if state.Mode == transport.DNSEngineSwitchModeAdopt &&
-		state.Engine != transport.DNSEnginePowerDNS {
-		return errors.New("DNS engine adoption state must name PowerDNS")
-	}
-	if state.Mode == transport.DNSEngineSwitchModeAdopt &&
-		(state.PairRole != "" || state.PairLocalIP != "" ||
-			state.PairPeerIP != "" || state.PrimaryCatalogSerial != 0) {
-		return errors.New("legacy PowerDNS adoption state cannot claim directional primary identity")
-	}
-	if (state.PairLocalIP == "") != (state.PairPeerIP == "") {
-		return errors.New("DNS engine state contains a partial pair address identity")
-	}
-	hasPairAddresses := state.PairLocalIP != ""
-	if hasPairAddresses {
-		localIP := net.ParseIP(state.PairLocalIP)
-		peerIP := net.ParseIP(state.PairPeerIP)
-		if localIP == nil || localIP.To4() == nil ||
-			localIP.String() != state.PairLocalIP || !localIP.IsGlobalUnicast() ||
-			peerIP == nil || peerIP.To4() == nil ||
-			peerIP.String() != state.PairPeerIP || !peerIP.IsGlobalUnicast() ||
-			localIP.Equal(peerIP) {
-			return errors.New("DNS engine state pair addresses are not canonical and distinct")
-		}
-	}
-	switch state.PairRole {
-	case transport.DNSPairRolePrimary:
-		if !hasPairAddresses || state.PrimaryCatalogSerial == 0 {
-			return errors.New("paired primary DNS engine state is missing its catalog serial")
-		}
-	case transport.DNSPairRoleSecondary:
-		if !hasPairAddresses || state.PrimaryCatalogSerial != 0 {
-			return errors.New("paired secondary DNS engine state contains a primary catalog serial")
-		}
-	case "":
-		if state.PrimaryCatalogSerial != 0 || hasPairAddresses {
-			return errors.New("standalone DNS engine state contains directional pair identity")
-		}
-	default:
-		return errors.New("DNS engine state has an unsupported pair role")
-	}
-	if state.Engine == transport.DNSEngineBIND {
-		if !validDNSGeneration(state.Generation) {
-			return errors.New("BIND engine state has an invalid generation")
-		}
-	} else if state.Generation != "" {
-		return errors.New("PowerDNS engine state unexpectedly names a BIND generation")
-	}
-	return nil
+	return dnsengineartifact.ValidateV1(state)
 }
 
 func isLegacyDNSEngineState(state dnsEngineStateReceipt) bool {
@@ -368,15 +269,7 @@ func isLegacyDNSEngineState(state dnsEngineStateReceipt) bool {
 }
 
 func validDNSGeneration(value string) bool {
-	if len(value) != 64 {
-		return false
-	}
-	for _, character := range value {
-		if (character < '0' || character > '9') && (character < 'a' || character > 'f') {
-			return false
-		}
-	}
-	return true
+	return dnsengineartifact.ValidGeneration(value)
 }
 
 func readDNSEngineState() (dnsEngineStateReceipt, bool, error) {
@@ -2235,12 +2128,14 @@ func verifyDNSEngineReinstallSource(
 	if err != nil {
 		return fmt.Errorf("read DNS engine reinstall ownership: %w", err)
 	}
-	if !ownershipExists || validateDNSEngineState(ownership) != nil ||
-		ownership.Engine != state.Engine ||
-		ownership.EngineEpoch != state.EngineEpoch {
-		return errors.New(
-			"DNS engine reinstall requires a panel ownership receipt at the active epoch",
-		)
+	if !ownershipExists {
+		return errors.New("DNS engine reinstall requires its recorded acquisition ownership")
+	}
+	// An absent-engine repair still needs the whole accepted tenure. Matching
+	// engine/epoch cannot reconcile another owner, manifest or pair authority.
+	// Ordinary publication within that tenure may have advanced independently.
+	if _, err := dnsengineartifact.CompareV1(ownership, state); err != nil {
+		return fmt.Errorf("DNS engine reinstall acquisition conflict: %w", err)
 	}
 	if bindUnit.active() || bindAliasUnit.active() || pdnsUnit.active() {
 		return errors.New("DNS engine reinstall requires no running authoritative DNS engine")

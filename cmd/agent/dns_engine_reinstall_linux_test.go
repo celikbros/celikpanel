@@ -485,3 +485,47 @@ func TestDNSEngineReinstallAbortLeavesRecoverableInstallResidue(t *testing.T) {
 		t.Fatal("a foreign install receipt on the active engine was dismissed")
 	}
 }
+
+// Engine+epoch alone cannot grant a repair against a different recorded owner
+// or accepted source. Publication changes remain supported within one tenure.
+func TestDNSEngineReinstallRequiresWholeAcquisitionIdentity(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		change func(*dnsEngineStateReceipt)
+	}{
+		{"owner", func(s *dnsEngineStateReceipt) { s.MutationOwnerID = strings.Repeat("d", 32) }},
+		{"request", func(s *dnsEngineStateReceipt) { s.MutationRequestID = strings.Repeat("e", 32) }},
+		{"manifest", func(s *dnsEngineStateReceipt) {
+			s.ManifestQualifier = "dns-engine-switch/v1:sha256:" + strings.Repeat("f", 64)
+		}},
+		{"reviewed-source", func(s *dnsEngineStateReceipt) { s.SourceRevision++ }},
+		{"directional-authority", func(s *dnsEngineStateReceipt) {
+			s.PairRole = transport.DNSPairRolePrimary
+			s.PairLocalIP = "192.0.2.10"
+			s.PairPeerIP = "192.0.2.20"
+			s.PrimaryCatalogSerial = 1
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			state, ownership := stageAbsentActiveDNSEngine(t)
+			test.change(&ownership)
+			if err := writeDNSEngineOwnership(ownership); err != nil {
+				t.Fatal(err)
+			}
+			previous := dnsPort53ConflictCheck
+			calls := 0
+			dnsPort53ConflictCheck = func(context.Context, bool, bool) (bool, error) { calls++; return false, nil }
+			t.Cleanup(func() { dnsPort53ConflictCheck = previous })
+			if err := verifyDNSEngineReinstallSource(context.Background(), reinstallManifestForTest(t, 1), state, true, inactiveDNSUnitForTest, inactiveDNSUnitForTest, inactiveDNSUnitForTest); err == nil {
+				t.Fatal("same engine/epoch accepted different acquisition authority")
+			}
+			if calls != 0 {
+				t.Fatal("conflicting authority reached native inspection")
+			}
+			actual, found, err := readDNSEngineOwnership(transport.DNSEngineBIND)
+			if err != nil || !found || actual != ownership {
+				t.Fatal("conflicting owner evidence was rewritten")
+			}
+		})
+	}
+}

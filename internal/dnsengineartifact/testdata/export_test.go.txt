@@ -1,0 +1,16 @@
+package main
+import ("os";"path/filepath";"testing";"github.com/alicelik/celikpanel/internal/binddns";"github.com/alicelik/celikpanel/internal/transport")
+func TestExportHistoricalDNSArtifacts(t *testing.T) {
+ out:=os.Getenv("CP_DNS_ARTIFACT_OUTPUT");if out=="" {t.Fatal("output required")}
+ ownership,state,generation:=publishedBINDOwnershipFixture(t)
+ values:=map[string]dnsEngineStateReceipt{"bind-acquisition":ownership,"bind-zone-add":state,"bind-standalone":legacyDurableDNSState(transport.DNSEngineBIND),"pdns-standalone":legacyDurableDNSState(transport.DNSEnginePowerDNS)}
+ previous,err:=publicationGenerationTree(generation);if err!=nil {t.Fatal(err)}
+ for _,step:=range []struct{name string;revision int64;remove bool}{{"bind-zone-edit",2,false},{"bind-zone-delete",3,true}} {
+ plan,err:=binddns.ApplyDelta(previous,testBINDV3Snapshot(t,"celikhost.com",step.revision,uint32(step.revision),step.remove));if err!=nil {t.Fatal(err)}
+ gen,err:=binddns.RenderTree(aptBINDGenerationRoot,plan);if err!=nil {t.Fatal(err)}
+ state,err=bindStateForPublishedReceipt(state,gen.ReceiptValue);if err!=nil {t.Fatal(err)}
+ values[step.name]=state;previous,err=publicationGenerationTree(gen);if err!=nil {t.Fatal(err)}
+ }
+ adopted:=values["pdns-standalone"];adopted.Mode=transport.DNSEngineSwitchModeAdopt;values["pdns-adopted"]=adopted
+ for name,value:=range values {raw,err:=encodeDNSEngineState(value);if err!=nil {t.Fatal(err)};p:=filepath.Join(out,"alpha81-"+name+".json");f,err:=os.OpenFile(p,os.O_WRONLY|os.O_CREATE|os.O_EXCL,0600);if err!=nil {t.Fatal(err)};if _,err=f.Write(raw);err!=nil {t.Fatal(err)};if err=f.Close();err!=nil {t.Fatal(err)}}
+}

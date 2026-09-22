@@ -4,8 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/alicelik/celikpanel/internal/binddns"
-	"github.com/alicelik/celikpanel/internal/transport"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 )
 
 // bindPublicationPreservesEngineOwnership recognizes only the fields advanced
@@ -17,27 +16,20 @@ import (
 // ve yönlü yetkisi değişmez. Bu ilişki tek başına yeterli değildir: çağıran,
 // etkin ağacı ve çalışma yapılandırmasını ayrıca doğrulamalıdır.
 func bindPublicationPreservesEngineOwnership(ownership, state dnsEngineStateReceipt) bool {
-	if validateDNSEngineState(ownership) != nil || validateDNSEngineState(state) != nil ||
-		ownership.Engine != transport.DNSEngineBIND || state.Engine != transport.DNSEngineBIND ||
-		ownership.Generation == state.Generation || state.PairRole == binddns.PairRoleSecondary ||
-		state.PrimaryCatalogSerial < ownership.PrimaryCatalogSerial {
-		return false
-	}
-	candidate := ownership
-	candidate.Generation = state.Generation
-	candidate.PrimaryCatalogSerial = state.PrimaryCatalogSerial
-	return candidate == state
+	relationship, err := dnsengineartifact.CompareV1(ownership, state)
+	return err == nil && relationship == dnsengineartifact.LaterBINDPublication
 }
 
 func verifyCurrentDNSEngineOwnership(
 	ownership, state dnsEngineStateReceipt,
 	verifyBIND func(dnsEngineStateReceipt) error,
 ) error {
-	if ownership == state {
-		return nil
+	relationship, err := dnsengineartifact.CompareV1(ownership, state)
+	if err != nil {
+		return err
 	}
-	if !bindPublicationPreservesEngineOwnership(ownership, state) {
-		return errors.New("DNS engine state differs from its acquisition ownership")
+	if relationship == dnsengineartifact.SamePublication {
+		return nil
 	}
 	if verifyBIND == nil {
 		return errors.New("current BIND publication proof is unavailable")
