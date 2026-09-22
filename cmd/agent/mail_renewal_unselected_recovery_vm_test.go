@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -48,6 +49,9 @@ func unselectedMailVMCheckpoint(t *testing.T, point string, request *ServiceMuta
 // resume; this test cannot invoke a normal Agent or alter native configuration.
 func TestMailRenewalDisposableVMKillBeforeSelection(t *testing.T) {
 	requireDisposableMailVM(t)
+	if raw, err := hex.DecodeString(buildCommit); err != nil || len(raw) != 20 {
+		t.Fatal("native trial requires an exact source build identity before admission")
+	}
 	if _, err := os.Stat("/opt/celikpanel/bin/agent"); !os.IsNotExist(err) {
 		t.Fatal("management must be absent")
 	}
@@ -118,6 +122,9 @@ func TestMailRenewalDisposableVMKillBeforeSelection(t *testing.T) {
 
 func TestMailRenewalDisposableVMKillUnselectedTerminal(t *testing.T) {
 	requireDisposableMailVM(t)
+	if raw, err := hex.DecodeString(buildCommit); err != nil || len(raw) != 20 {
+		t.Fatal("native trial requires an exact source build identity before admission")
+	}
 	if _, err := os.Stat("/opt/celikpanel/bin/agent"); !os.IsNotExist(err) {
 		t.Fatal("management must be absent")
 	}
