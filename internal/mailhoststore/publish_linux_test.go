@@ -260,3 +260,40 @@ func TestPublishedDespiteSyncFailureIsRetained(t *testing.T) {
 		t.Fatal("cleanup failed")
 	}
 }
+
+func TestUnsafePublicationParentIsNotNormalized(t *testing.T) {
+	for _, change := range []string{"owner", "group", "writable"} {
+		t.Run(change, func(t *testing.T) {
+			root, fd, cert, key, receipt, _ := publicationFixture(t)
+			var e error
+			switch change {
+			case "owner":
+				e = os.Chown(root, 12345, 0)
+			case "group":
+				e = os.Chown(root, 0, 12345)
+			case "writable":
+				e = os.Chmod(root, 0770)
+			}
+			if e != nil {
+				t.Fatal(e)
+			}
+			var before, after unix.Stat_t
+			if e = unix.Fstat(fd, &before); e != nil {
+				t.Fatal(e)
+			}
+			if _, e = StageMaterialAt(fd, cert, key, receipt); e == nil {
+				t.Fatal("unsafe parent accepted")
+			}
+			if e = unix.Fstat(fd, &after); e != nil {
+				t.Fatal(e)
+			}
+			if !sameEvidenceStat(before, after) {
+				t.Fatal("parent metadata normalized")
+			}
+			entries, e := os.ReadDir(root)
+			if e != nil || len(entries) != 0 {
+				t.Fatal("unsafe parent mutated")
+			}
+		})
+	}
+}

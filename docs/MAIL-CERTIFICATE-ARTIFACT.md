@@ -160,3 +160,34 @@ owner authorization for a new helper, or completed publication. Reading it canno
 start a mutation. Agent still owns filesystem security, its operation ledger,
 recovery execution and service reload. P0.4 sharing advances; P0.5 still needs the
 independent deployment transaction, owner binding and real removal/reboot proof.
+
+
+## Shared immutable publication
+
+`internal/mailhoststore.StageMaterialAt` now prepares and publishes the actual
+Agent's mail certificate generation, using the same v1 receipt, filenames,
+root:root metadata, immutable version naming and fsync ordering as the historical
+producer. The caller authenticates the parent path, holds the outer mutation and
+publication locks, and verifies current certificate trust/lifetime. The primitive
+duplicates the supplied descriptor and never grants new mutation authority or
+claims native service convergence. No on-disk schema migration is introduced.
+
+Material is checked before directory preparation and bounded by the reader's PEM
+limit. The stage owns its input buffers. Before activation it rechecks generation
+authority, exact contents and the original current-link identity; observed owner
+changes stop this publication. Close preserves a selected/published generation,
+and refuses destructive cleanup of changed staged material or unexpected files.
+A successful rename followed by failed fsync remains a published/uncertain result
+for the durable caller to reconcile. This is not a filesystem compare-and-swap
+against a root administrator ignoring all locks: the final check-to-rename race
+and abrupt-power-loss matrix are not certified here. Legacy persisted recovery
+cleanup remains in Agent and still requires its separate audit before removal.
+
+Root ext4 race tests cover actual producer-to-reader agreement, unpublished
+cleanup, owner-selected preservation, changed key/mode/directory/extra file,
+replaced current symlink, unsafe parent refusal without normalization and retained
+publication uncertainty. Existing Agent mail/TLS regressions and vet pass.
+[AY native acceptance](../deploy/e2e/release-recovery/MAIL-CONTRACT-AY.md) then
+verifies this exact shared producer and accepted-plan reader with real renewal,
+Postfix/Dovecot reload, trusted handshakes, orderly boot and owner-drift replay.
+The existing Agent durable commit gate and service convergence remain in charge.
