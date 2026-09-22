@@ -21,7 +21,7 @@ func inspectMailRenewalHookAt(path, units, runtimeRoot string) (result *MailRene
 	if os.Geteuid() != 0 || filepath.Base(path) != mailrenewalkit.HookName {
 		return nil, fail(ReasonUnsafeMetadata)
 	}
-	state := &runtimeState{config: resolveConfig{anchor: "/", uid: 0, gid: 0}}
+	state := &runtimeState{config: resolveConfig{anchor: "/", uid: 0, gid: 0, protectedDirectoryGroups: true}}
 	var bundle *flatNativeBundle
 	cleanup := func() {
 		state.close()

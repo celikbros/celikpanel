@@ -20,6 +20,10 @@ type resolveConfig struct {
 	runtimeRoot, selectionPath, anchor string
 	uid, gid                           uint32
 	beforeFinalProof                   func() // Private deterministic test seam; production nil.
+	// Native Certbot hook parents may retain a nonzero group from the legacy
+	// root producer. Only this read-only observer opts in; files and immutable
+	// kits keep exact group checks, and parent metadata remains pinned.
+	protectedDirectoryGroups bool
 }
 type pinnedDirectory struct {
 	file       *os.File
@@ -272,7 +276,7 @@ func (state *runtimeState) openChildDirectory(parent *pinnedDirectory, base stri
 	return directory, nil
 }
 func (state *runtimeState) validDirectory(stat unix.Stat_t, exactMode uint32) bool {
-	return stat.Mode&unix.S_IFMT == unix.S_IFDIR && stat.Uid == state.config.uid && stat.Gid == state.config.gid &&
+	return stat.Mode&unix.S_IFMT == unix.S_IFDIR && stat.Uid == state.config.uid && (stat.Gid == state.config.gid || (state.config.protectedDirectoryGroups && state.config.uid == 0)) &&
 		stat.Mode&0o7022 == 0 && (exactMode == 0 || stat.Mode&0o7777 == exactMode)
 }
 func (state *runtimeState) openFile(parent *pinnedDirectory, base string, mode uint32, maxSize int64) (*pinnedFile, error) {

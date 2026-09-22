@@ -13,7 +13,7 @@ func TestMailRenewalHookObservationPreservesEvidence(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("native root fixture")
 	}
-	for _, scenario := range []string{"absent", "legacy", "independent", "foreign-hook", "hook-symlink", "hook-hardlink", "hook-mode", "unit-edited", "timer-missing", "helper-edited", "late-hook-edit", "late-helper-edit", "late-unit-edit", "late-absent-created", "late-parent-moved"} {
+	for _, scenario := range []string{"absent", "legacy", "independent", "foreign-hook", "hook-symlink", "hook-hardlink", "hook-mode", "unit-edited", "timer-missing", "helper-edited", "late-hook-edit", "late-helper-edit", "late-unit-edit", "late-absent-created", "late-parent-moved", "protected-parent-group", "writable-parent-group", "foreign-parent-owner", "late-parent-group", "kit-parent-group"} {
 		t.Run(scenario, func(t *testing.T) {
 			root, err := os.MkdirTemp("/run", "celikpanel-hook-observation-")
 			if err != nil {
@@ -58,6 +58,16 @@ func TestMailRenewalHookObservationPreservesEvidence(t *testing.T) {
 				put(target, raw, mode)
 			}
 			switch scenario {
+			case "protected-parent-group", "late-parent-group":
+				os.Chown(hooks, 0, 65534)
+				os.Chmod(hooks, 0700)
+			case "writable-parent-group":
+				os.Chown(hooks, 0, 65534)
+				os.Chmod(hooks, 0770)
+			case "foreign-parent-owner":
+				os.Chown(hooks, 65534, 0)
+			case "kit-parent-group":
+				os.Chown(final, 0, 65534)
 			case "absent", "late-absent-created":
 				os.Remove(hook)
 			case "legacy":
@@ -79,7 +89,7 @@ func TestMailRenewalHookObservationPreservesEvidence(t *testing.T) {
 				put(filepath.Join(final, mailrenewalkit.BinaryName), []byte("owner helper"), 0755)
 			}
 			h, err := inspectMailRenewalHookAt(hook, units, runtimeRoot)
-			bad := map[string]bool{"foreign-hook": true, "hook-symlink": true, "hook-hardlink": true, "hook-mode": true, "unit-edited": true, "timer-missing": true, "helper-edited": true}[scenario]
+			bad := map[string]bool{"foreign-hook": true, "hook-symlink": true, "hook-hardlink": true, "hook-mode": true, "unit-edited": true, "timer-missing": true, "helper-edited": true, "writable-parent-group": true, "foreign-parent-owner": true, "kit-parent-group": true}[scenario]
 			if bad {
 				if err == nil {
 					h.Close()
@@ -105,6 +115,8 @@ func TestMailRenewalHookObservationPreservesEvidence(t *testing.T) {
 				t.Fatal("wrong generation")
 			}
 			switch scenario {
+			case "late-parent-group":
+				os.Chown(hooks, 0, 65533)
 			case "late-hook-edit", "late-absent-created":
 				put(hook, []byte("later owner hook"), 0755)
 			case "late-helper-edit":

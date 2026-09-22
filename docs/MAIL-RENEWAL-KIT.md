@@ -183,3 +183,11 @@ Race tests cover source/owner drift and concurrent absent-hook publication;
 loaded-unit tests cover missing, overridden, disabled and failed states. Native
 writer-preservation acceptance is recorded separately. Legacy enrollment,
 initial managed-unit publication, rollback and owner removal remain open.
+
+Native observation found an existing producer layout with root-owned mode-0700
+Certbot hook parents carrying the `celikpanel` group. The hook observer accepts
+protected root-owned directory parents without imposing a new group, pins their
+original group/mode for revalidation and never normalizes them. Immutable runtime
+kits and hook/unit files retain their exact root:root contract. Group-writable,
+non-root-owned parents and later group changes are refused. This compatibility
+rule applies only to the native file observer, not recovery kit enrollment.
