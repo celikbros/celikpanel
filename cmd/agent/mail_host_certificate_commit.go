@@ -2,32 +2,24 @@ package main
 
 import (
 	"context"
-	"crypto/subtle"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailhostartifact"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 )
 
 const (
-	mailHostCertificateReceiptName    = ".mail-host-certificate-receipt.json"
-	mailHostCertificateReceiptSchema  = "mail-host-certificate-receipt/v1"
-	mailHostCertificateReceiptMaxSize = 1024
+	mailHostCertificateReceiptName    = mailhostartifact.ReceiptName
+	mailHostCertificateReceiptSchema  = mailhostartifact.ReceiptSchema
+	mailHostCertificateReceiptMaxSize = mailhostartifact.ReceiptMaxSize
 
 	mailHostCertificateRecoveryTimeout = 30 * time.Second
 )
 
-type mailHostCertificateReceipt struct {
-	Schema     string `json:"schema"`
-	RequestID  string `json:"request_id"`
-	Qualifier  string `json:"qualifier"`
-	Domain     string `json:"domain"`
-	LeafSHA256 string `json:"leaf_sha256"`
-}
+type mailHostCertificateReceipt = mailhostartifact.Receipt
 
 type mailHostCertificateStage struct {
 	publishAction func() (bool, error)
@@ -41,87 +33,17 @@ var (
 	mailHostCertificateStabilizePublished = stabilizePublishedMailHostCertificate
 )
 
-func newMailHostCertificateReceipt(
-	requestID, qualifier, domain string,
-	leafDER []byte,
-) (mailHostCertificateReceipt, error) {
-	receipt := mailHostCertificateReceipt{
-		Schema:     mailHostCertificateReceiptSchema,
-		RequestID:  requestID,
-		Qualifier:  qualifier,
-		Domain:     domain,
-		LeafSHA256: panelCertificateLeafSHA256(leafDER),
-	}
-	if err := validateMailHostCertificateReceipt(receipt); err != nil {
-		return mailHostCertificateReceipt{}, err
-	}
-	return receipt, nil
+func newMailHostCertificateReceipt(requestID, qualifier, domain string, leafDER []byte) (mailHostCertificateReceipt, error) {
+	return mailhostartifact.NewReceipt(requestID, qualifier, domain, leafDER)
 }
-
 func validateMailHostCertificateReceipt(receipt mailHostCertificateReceipt) error {
-	if receipt.Schema != mailHostCertificateReceiptSchema ||
-		!validMutationIdentity(receipt.RequestID) ||
-		!mutationpayload.ValidMailHostCertificateQualifier(receipt.Qualifier) ||
-		!validPanelCertDomain.MatchString(receipt.Domain) ||
-		receipt.Domain != strings.ToLower(strings.TrimSpace(receipt.Domain)) {
-		return errors.New("invalid mail host certificate issue receipt identity")
-	}
-	if err := validatePanelCertificateLeafSHA256(receipt.LeafSHA256); err != nil {
-		return err
-	}
-	return nil
+	return mailhostartifact.ValidateReceipt(receipt)
 }
-
-func canonicalMailHostCertificateReceipt(
-	receipt mailHostCertificateReceipt,
-) ([]byte, error) {
-	if err := validateMailHostCertificateReceipt(receipt); err != nil {
-		return nil, err
-	}
-	raw, err := json.Marshal(receipt)
-	if err != nil {
-		return nil, fmt.Errorf("encode mail host certificate issue receipt: %w", err)
-	}
-	raw = append(raw, '\n')
-	if len(raw) > mailHostCertificateReceiptMaxSize {
-		return nil, errors.New("mail host certificate issue receipt exceeds size limit")
-	}
-	return raw, nil
+func canonicalMailHostCertificateReceipt(receipt mailHostCertificateReceipt) ([]byte, error) {
+	return mailhostartifact.CanonicalReceipt(receipt)
 }
-
 func decodeMailHostCertificateReceipt(raw []byte) (mailHostCertificateReceipt, error) {
-	if len(raw) == 0 || len(raw) > mailHostCertificateReceiptMaxSize {
-		return mailHostCertificateReceipt{}, errors.New(
-			"mail host certificate issue receipt has invalid size",
-		)
-	}
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
-	decoder.DisallowUnknownFields()
-	var receipt mailHostCertificateReceipt
-	if err := decoder.Decode(&receipt); err != nil {
-		return mailHostCertificateReceipt{}, fmt.Errorf(
-			"decode mail host certificate issue receipt: %w", err,
-		)
-	}
-	var extra any
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		if err == nil {
-			err = errors.New("multiple JSON values")
-		}
-		return mailHostCertificateReceipt{}, fmt.Errorf(
-			"decode mail host certificate issue receipt trailer: %w", err,
-		)
-	}
-	canonical, err := canonicalMailHostCertificateReceipt(receipt)
-	if err != nil {
-		return mailHostCertificateReceipt{}, err
-	}
-	if subtle.ConstantTimeCompare(raw, canonical) != 1 {
-		return mailHostCertificateReceipt{}, errors.New(
-			"mail host certificate issue receipt is not canonical JSON",
-		)
-	}
-	return receipt, nil
+	return mailhostartifact.DecodeReceipt(raw)
 }
 
 func (stage *mailHostCertificateStage) publish() error {

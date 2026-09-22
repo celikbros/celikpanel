@@ -1,0 +1,1 @@
+{"schema":"mail-host-certificate-receipt/v1","request_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","qualifier":"mhc1:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","domain":"mail.example.test","leaf_sha256":"0a842959e82210c2ff82ae3d321f84b7f78e28cf5ba622b3b61a9dc2802ecfa3"}

@@ -235,3 +235,9 @@ rollback, followed by a distinct boot with policy, unrelated table, enablement a
 HTTPS preserved. [Native evidence](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md#arch-automatic-rollback-and-boot-au)
 retains the preliminary baseline platform-cache refusal; it is not silently
 counted as automatic recovery. Successful Arch forward update remains open.
+
+[Shared mail certificate artifact v1](MAIL-CERTIFICATE-ARTIFACT.md) now removes
+Agent coupling from receipt/pending/lineage parsing and certificate verification.
+Actual Alpha81 producer bytes remain exact in the new shared and Agent readers.
+This advances P0.4/P0.5 groundwork only; the native renewal consumer, hook migration
+and management-absent renewal acceptance remain open.

@@ -3,8 +3,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -333,5 +335,32 @@ func TestMailHostCertificateCommitRejectsUntrackedContext(t *testing.T) {
 	)
 	if err == nil || published {
 		t.Fatalf("untracked commit published=%v err=%v", published, err)
+	}
+}
+
+func TestMailHostArtifactUsesHistoricalProducerContract(t *testing.T) {
+	raw, err := os.ReadFile("../../internal/mailhostartifact/testdata/alpha81-receipt.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := decodeMailHostCertificateReceipt(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	produced, err := newMailHostCertificateReceipt(receipt.RequestID, receipt.Qualifier, receipt.Domain, []byte("historical leaf DER fixture"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := canonicalMailHostCertificateReceipt(produced)
+	if err != nil || !bytes.Equal(encoded, raw) {
+		t.Fatalf("Agent writer differs: %s %v", encoded, err)
+	}
+	queued, err := os.ReadFile("../../internal/mailhostartifact/testdata/alpha81-pending.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pending, err := decodeMailHostRenewal(queued)
+	if err != nil || pending.Lineage != mailHostCertLineageName(receipt.Domain) || pending.LeafSHA256 != receipt.LeafSHA256 {
+		t.Fatalf("Agent renewal differs: %+v %v", pending, err)
 	}
 }

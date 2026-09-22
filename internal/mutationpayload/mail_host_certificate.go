@@ -4,12 +4,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"regexp"
 
 	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/mailhostartifact"
 )
 
-const MailHostCertificateDirectory = "/etc/ssl/celikpanel/_mail/host"
+const MailHostCertificateDirectory = mailhostartifact.Directory
 
 type MailHostCertificateCommitment struct {
 	Domain              string `json:"domain"`
@@ -17,8 +17,6 @@ type MailHostCertificateCommitment struct {
 	ExpectedBuildCommit string `json:"expected_build_commit"`
 	Qualifier           string `json:"qualifier"`
 }
-
-var mailHostCertificateQualifier = regexp.MustCompile(`^mhc1:[0-9a-f]{64}$`)
 
 func CanonicalMailHostCertificate(domain, email, build string) (MailHostCertificateCommitment, error) {
 	canonical, err := hostname.CanonicalFQDN(domain)
@@ -40,5 +38,5 @@ func CanonicalMailHostCertificate(domain, email, build string) (MailHostCertific
 }
 
 func ValidMailHostCertificateQualifier(value string) bool {
-	return mailHostCertificateQualifier.MatchString(value)
+	return mailhostartifact.ValidQualifier(value)
 }
