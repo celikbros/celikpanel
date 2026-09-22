@@ -546,3 +546,12 @@ ve dosya geri almadan önce tamamlanır. [BE yerel kanıtı](../deploy/e2e/relea
 gerçek start/stop ve iki süreç kesintisini doğrular. Eksik özel dizinden kaynaklanan
 ilk fixture hatası korunmuştur; otomatik yenileme başarısı, üretim kaydı, tarihsel
 geri alma uyumu ve bütün yerel hata matrisi açık kalır.
+
+### Korunan ortak zamanlayıcı dizini (2026-09-22)
+
+P0.3/P0.5, eksik ortak systemd wants dizinini özel parent/v1 kaydıyla kalıcı olarak
+hazırlar ve yayımlar. Mevcut sahip içeriği korunur; ortak dizin geri almada silinmez.
+[BE yerel kanıtı](../deploy/e2e/release-recovery/MAIL-PARENT-BE.md), eksik dizin yayımı,
+yönetim yazılımları olmadan otomatik boş-kuyruk çağrısı ve iki süreç kesintisi
+sonrası geri almayı doğrular. Özel günlük/grup hazırlığı, gerçek yenileme, üretim
+kabulü, tarihsel geri alma ve tam hata matrisi açık kalır.

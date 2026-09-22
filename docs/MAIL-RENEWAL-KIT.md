@@ -510,3 +510,9 @@ the wants parent. It does not prepare the private renewal ledger/group, admit a
 production operation, resolve historical Agent compatibility, or close enrollment
 acceptance. Interrupted mkdir/staging/publication and later owner edits are tested
 separately from native execution. Existing ledger/certificate schemas do not change.
+
+[BE native parent evidence](../deploy/e2e/release-recovery/MAIL-PARENT-BE.md)
+now proves creation of the missing shared wants directory, an automatic native
+no-work invocation and two process cuts followed by ordered compensation. The
+shared parent remains with its recorded inode. The private ledger/group remained
+fixture prerequisites; production initialization and actual renewal are separate.

@@ -600,3 +600,12 @@ and file inverse. [BE native evidence](../deploy/e2e/release-recovery/MAIL-ACTIV
 proves real start/stop and double process interruption. An initial missing-parent
 fixture failure is retained; automatic renewal success and production enrollment
 remain open, alongside historical rollback compatibility and native fault matrix.
+
+### Retained shared timer parent (2026-09-22)
+
+P0.3/P0.5 now durably stages and publishes an absent shared systemd wants parent
+under private parent/v1, preserving existing metadata/content and retaining the
+shared directory after compensation. [BE native evidence](../deploy/e2e/release-recovery/MAIL-PARENT-BE.md)
+proves missing-parent publication, automatic no-work execution without management
+and double process-cut inverse. Private ledger/group bootstrap, actual renewal,
+production admission, historical rollback and the full matrix remain open.
