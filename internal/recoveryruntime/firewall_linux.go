@@ -4,12 +4,10 @@ package recoveryruntime
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"path/filepath"
 
 	"github.com/alicelik/celikpanel/internal/firewallruntime"
-	"golang.org/x/sys/unix"
 )
 
 const firewallUnitName = "celikpanel-firewall-restore.service"
@@ -82,139 +80,18 @@ func PrepareFirewallRuntime(source string, fd int) (string, error) {
 
 // checkpoint is private to native interruption tests; production always nil.
 func prepareFirewallAt(source string, fd int, root, transaction string, checkpoint func(string)) (string, error) {
-	if os.Geteuid() != 0 || fd != 9 || !filepath.IsAbs(source) || filepath.Clean(source) != source || filepath.Base(source) != "firewall-runtime" {
-		return "", fail(ReasonUnsafeMetadata)
+	contract := flatNativeContract{
+		sourceBase: "firewall-runtime", stagePrefix: ".prepare-firewall-",
+		files: []flatNativeFile{{"restore", 0755}, {firewallUnitName, 0644}, {firewallruntime.ManifestName, 0644}},
+		read: func(path string) (*flatNativeBundle, error) {
+			bundle, err := readFirewallBundle(path)
+			if err != nil {
+				return nil, err
+			}
+			return &flatNativeBundle{state: bundle.state, generation: bundle.manifest.Generation, manifest: bundle.payload[firewallruntime.ManifestName], payload: bundle.payload}, nil
+		},
 	}
-	boundary := func() error { return verifyEnrollmentLock(transaction, fd) }
-	if err := boundary(); err != nil {
-		return "", err
-	}
-	bundle, err := readFirewallBundle(source)
-	if err != nil {
-		return "", err
-	}
-	defer bundle.state.close()
-	if err = createTrustedDirectories(root); err != nil {
-		return "", err
-	}
-	destination := &runtimeState{config: resolveConfig{anchor: "/", uid: 0, gid: 0}}
-	defer destination.close()
-	parent, err := destination.openPath(root)
-	if err != nil {
-		return "", err
-	}
-	generation := bundle.manifest.Generation
-	final := filepath.Join(root, generation)
-	verifyFinal := func() error {
-		retained, err := readFirewallBundle(final)
-		if err != nil {
-			return err
-		}
-		defer retained.state.close()
-		if retained.manifest != bundle.manifest {
-			return fail(ReasonContentMismatch)
-		}
-		if err = bundle.state.revalidate(); err != nil {
-			return err
-		}
-		if err = destination.revalidate(); err != nil {
-			return err
-		}
-		if err = boundary(); err != nil {
-			return err
-		}
-		return retained.state.revalidate()
-	}
-	var stat unix.Stat_t
-	err = unix.Fstatat(int(parent.file.Fd()), generation, &stat, unix.AT_SYMLINK_NOFOLLOW)
-	if err == nil {
-		if err = verifyFinal(); err != nil {
-			return "", err
-		}
-		// Repeat the durability barrier after a crash between rename and parent sync.
-		if err = unix.Fsync(int(parent.file.Fd())); err != nil {
-			return "", fail(ReasonReadFailed)
-		}
-		return generation, verifyFinal()
-	}
-	if !errors.Is(err, unix.ENOENT) {
-		return "", asReadError(err)
-	}
-	if checkpoint != nil {
-		checkpoint("before_stage")
-	}
-	if err = bundle.state.revalidate(); err != nil {
-		return "", err
-	}
-	if err = destination.revalidate(); err != nil {
-		return "", err
-	}
-	if err = boundary(); err != nil {
-		return "", err
-	}
-	// Root-only stage is never used by a native unit. A killed writer leaves it
-	// for diagnosis; a subsequent invocation prepares a fresh complete stage.
-	stage, err := os.MkdirTemp(root, ".prepare-firewall-")
-	if err != nil {
-		return "", fail(ReasonReadFailed)
-	}
-	for _, name := range []string{"restore", firewallUnitName, firewallruntime.ManifestName} {
-		mode := os.FileMode(0644)
-		if name == "restore" {
-			mode = 0755
-		}
-		if err = writeNewFile(filepath.Join(stage, name), bundle.payload[name], mode); err != nil {
-			return "", err
-		}
-		if checkpoint != nil {
-			checkpoint("file_" + name)
-		}
-	}
-	if err = os.Chmod(stage, 0755); err != nil {
-		return "", fail(ReasonReadFailed)
-	}
-	if err = syncDirectory(stage); err != nil {
-		return "", err
-	}
-	staged, err := readFirewallBundle(stage)
-	if err != nil {
-		return "", err
-	}
-	defer staged.state.close()
-	if staged.manifest != bundle.manifest {
-		return "", fail(ReasonContentMismatch)
-	}
-	if checkpoint != nil {
-		checkpoint("stage_durable")
-	}
-	if err = bundle.state.revalidate(); err != nil {
-		return "", err
-	}
-	if err = staged.state.revalidate(); err != nil {
-		return "", err
-	}
-	if err = destination.revalidate(); err != nil {
-		return "", err
-	}
-	if err = boundary(); err != nil {
-		return "", err
-	}
-	if err = unix.Renameat2(int(parent.file.Fd()), filepath.Base(stage), int(parent.file.Fd()), generation, unix.RENAME_NOREPLACE); err != nil && !errors.Is(err, unix.EEXIST) {
-		return "", fail(ReasonReadFailed)
-	}
-	if checkpoint != nil {
-		checkpoint("published")
-	}
-	if err = unix.Fsync(int(parent.file.Fd())); err != nil {
-		return "", fail(ReasonReadFailed)
-	}
-	if checkpoint != nil {
-		checkpoint("parent_durable")
-	}
-	if err = verifyFinal(); err != nil {
-		return "", err
-	}
-	return generation, nil
+	return prepareFlatNativeRuntimeAt(source, fd, root, transaction, contract, checkpoint)
 }
 
 // VerifyFirewallUnit is read-only. It proves the exact native unit and retained

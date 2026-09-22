@@ -103,3 +103,27 @@ now verifies actual failed reload, automatic retry after reboot, refusal at the
 third recorded execution, unchanged evidence for another request, and one
 explicit owner continuation to successful attempt four. This closes that narrow
 native budget item; the pre-selection and enrollment limitations above remain.
+
+## Immutable runtime preparation
+
+P0.3/P0.5, invariants 1, 2 and 4. The candidate recovery CLI accepts
+`prepare-mail-renewal-runtime --source /absolute/mail-renewal-runtime --transaction-fd 9`
+only as root under the inherited exclusive native release lock, before a release
+transaction or service downtime. The fixed v1 kit is validated using pinned,
+root-owned files, exact inventory and modes, bounded reads and digest identity.
+Outer signed release admission remains the caller's responsibility.
+
+Mail and firewall kits share the immutable publication writer. Each generation
+is staged, validated, synced and published without replacing an existing path.
+Repeated preparation preserves the existing generation's inode. Changed owner
+content, source drift, active transactions and path replacement are refused.
+A killed process leaves its partial stage as evidence; a new process prepares a
+fresh stage or repeats the durability check of the already-published generation.
+Older complete generations are retained. No schema migration occurs.
+
+This command only prepares an artifact. It does not publish native units or the
+Certbot hook, enable a timer, stop a service or install a panel update. Production
+enrollment, legacy hook migration, snapshot/rollback and removal remain open.
+Component tests cover inherited lock rejection, owner changes, restricted umask,
+retained predecessors and actual SIGKILL at five publication boundaries. Native
+CLI acceptance is recorded separately; these tests alone do not close P0.5.
