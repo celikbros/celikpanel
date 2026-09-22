@@ -64,9 +64,9 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 		}
 		err = deployPendingMailHostCertificate()
 		if errors.Is(err, errMailRenewalCompletionUnverified) || errors.Is(err, errMailRenewalRecoveryRequired) {
-			// Complete only an interrupted publication already selected for this
-			// exact pending source. No new request or general recovery dispatch.
-			if recoveryErr := recoverIndependentSelectedMailRenewal(pending, ""); recoveryErr != nil {
+			// Reconcile this exact interrupted request. An unselected renewal also
+			// requires its immutable admission before-image; never general recovery.
+			if recoveryErr := recoverIndependentPendingMailRenewal(pending); recoveryErr != nil {
 				err = errors.Join(err, recoveryErr)
 			} else {
 				err = deployPendingMailHostCertificate()

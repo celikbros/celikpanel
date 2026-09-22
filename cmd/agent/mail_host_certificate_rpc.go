@@ -114,7 +114,16 @@ func publishMailHostCertificateSource(ctx context.Context, domain, requestID, qu
 			return stageErr
 		}
 		defer stage.close()
-		_, commitErr := commitStandaloneMailHostCertificateStep(ctx, stage.publish, func(convergence context.Context) error {
+		publish := stage.publish
+		if mailHostCertificateUsesScopedRenewal(ctx) {
+			publish = func() error {
+				if err := verifyMailRenewalBeforePublicationLocked(ctx); err != nil {
+					return err
+				}
+				return stage.publish()
+			}
+		}
+		_, commitErr := commitStandaloneMailHostCertificateStep(ctx, publish, func(convergence context.Context) error {
 			return activate(convergence, domain)
 		})
 		if commitErr != nil {

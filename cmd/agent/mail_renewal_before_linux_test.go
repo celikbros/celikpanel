@@ -261,3 +261,32 @@ func TestMailRenewalBeforeImagePrecedesEveryLedgerPublication(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+func TestMailRenewalBeforePublicationRechecksOwnerSelection(t *testing.T) {
+	for _, change := range []bool{false, true} {
+		t.Run(map[bool]string{false: "stable", true: "owner-replaced"}[change], func(t *testing.T) {
+			state, tls, request, leaf := mailRenewalBeforeTestMaterial(t)
+			read := func(string) ([]byte, error) { return leaf, nil }
+			gate := func() error { return nil }
+			if e := persistMailRenewalBeforeAt(state, tls, request, buildCommit, read, gate); e != nil {
+				t.Fatal(e)
+			}
+			if change {
+				link := filepath.Join(tls, "current")
+				target, e := os.Readlink(link)
+				if e != nil {
+					t.Fatal(e)
+				}
+				if e = os.Rename(link, link+"-owner-kept"); e != nil {
+					t.Fatal(e)
+				}
+				if e = os.Symlink(target, link); e != nil {
+					t.Fatal(e)
+				}
+			}
+			if e := verifyMailRenewalBeforeAt(state, tls, request, buildCommit, read, gate); change != (e != nil) {
+				t.Fatal("wrong publication decision", e)
+			}
+		})
+	}
+}

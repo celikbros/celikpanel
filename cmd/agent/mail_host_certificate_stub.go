@@ -41,3 +41,5 @@ func (a *Agent) MailHostCertificateStatus(_ *transport.MailHostCertificateStatus
 func (m *serviceMutationManager) persistMailRenewalBeforeAdmissionLocked(*ServiceMutationBeginRequest) error {
 	return mailHostLinuxOnly()
 }
+
+func verifyMailRenewalBeforePublicationLocked(context.Context) error { return mailHostLinuxOnly() }

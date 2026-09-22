@@ -544,3 +544,33 @@ actual prior-producer identity compatibility, admission-before-ledger ordering,
 race tests of mailhoststore/mailrenewalintent and relevant Agent tests, and vet.
 Native interrupted-before-selection continuation, old-build adoption and complete
 production enrollment remain open; this evidence slice alone does not close P0.
+
+
+## Unselected interrupted attempt reconciliation (P0.3/P0.5)
+
+The pending-work helper now distinguishes an already selected interrupted
+publication from a provably unselected one. The latter requires the immutable
+before-image, exact pending source and build, a matching active running job in
+`leased` or exact publication-intent phase, a proven absent worker, no release or
+foreign mutation evidence, and unchanged accepted native mail configuration and
+running services. It re-observes all evidence under host/ledger/certificate locks
+before recording that the attempt was interrupted without changing selection.
+
+This transition changes only the exact job to failed/interrupted. It does not
+reload services, select a stage, remove generations, clear the pending queue,
+reset Attempt, or replace a known failure. The next same-request admission uses
+the existing three-execution budget; exhaustion still needs the explicit owner
+retry. Missing historical before-images, cancelled/unknown phases, changed owner
+material, cross-build state and native uncertainty remain preserved for review.
+Terminal write uncertainty retains the poisoned manager and host exclusion.
+
+Local adversarial/race tests cover these distinctions and terminal write faults.
+Guarded native tests add actual SIGKILL cuts before the ledger, after admission,
+before stage selection and during interruption-result publication. These tests
+are opt-in; native evidence must be recorded separately before claiming that
+acceptance. They do not establish automatic production enrollment, historical
+application rollback compatibility, cross-build adoption or full P0 completion.
+
+Admission proof is also revalidated inside the durable publication callback,
+immediately before selection. Owner replacement after admission or during native
+preflight therefore cannot be overwritten using a stale before-image.
