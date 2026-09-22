@@ -188,11 +188,14 @@ with open(os.environ['FIXTURE_LOCK'],'rb') as independent:
 args=sys.argv[1:]
 if args[0]=='prepare-runtime':
     assert args==['prepare-runtime','--source',os.environ['FIXTURE_KIT'],'--mode',os.environ['FIXTURE_MODE'],'--transaction-fd','9']
+elif args[0]=='prepare-firewall-runtime':
+    assert args==['prepare-firewall-runtime','--source',os.environ['FIXTURE_FIREWALL'],'--transaction-fd','9']
 elif args[0]=='verify-compatibility':
     assert args==['verify-compatibility','--mode',os.environ['FIXTURE_MODE']]
 else: raise AssertionError(args)
 with open(os.environ['FIXTURE_CALLS'],'a') as f: f.write(args[0]+'\n')
 if args[0]=='prepare-runtime' and os.environ.get('FIXTURE_REJECT_PREPARATION')=='1': sys.exit(78)
+if args[0]=='prepare-firewall-runtime' and os.environ.get('FIXTURE_FIREWALL_REJECT')=='1': sys.exit(79)
 PY
 chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
 (
@@ -214,6 +217,24 @@ chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
         prepare-runtime verify-compatibility selected-material-support selected-database-support \
         prepare-runtime verify-compatibility selected-material-support selected-database-support) \
         || fail 'preflight order or normal-only database probe changed'
+    # Additive payload runs under the exact same inherited lock, before kit
+    # promotion. Refusal must not proceed to promotion, migration or downtime.
+    export FIXTURE_FIREWALL=$TRUSTED_RELEASE_ROOT/firewall-runtime
+    mkdir "$FIXTURE_FIREWALL"
+    before_calls=$(wc -l < "$FIXTURE_CALLS")
+    prepare_independent_recovery_runtime
+    tail -n +"$((before_calls + 1))" "$FIXTURE_CALLS" > "$TEST_ROOT/firewall.calls"
+    cmp -s "$TEST_ROOT/firewall.calls" <(printf '%s\n' prepare-firewall-runtime prepare-runtime verify-compatibility selected-material-support selected-database-support) \
+        || fail 'firewall preparation did not precede promotion under the inherited lock'
+    export FIXTURE_FIREWALL_REJECT=1
+    before_calls=$(wc -l < "$FIXTURE_CALLS")
+    status=0
+    (prepare_independent_recovery_runtime) >"$TEST_ROOT/firewall-rejected.log" 2>&1 || status=$?
+    [[ $status == 41 && $(wc -l < "$FIXTURE_CALLS") -eq $((before_calls + 1)) ]] || fail 'firewall refusal proceeded'
+    [[ $(tail -n 1 "$FIXTURE_CALLS") == prepare-firewall-runtime ]] || fail 'unexpected action after firewall refusal'
+    grep -F 'panel services have not been stopped' "$TEST_ROOT/firewall-rejected.log" >/dev/null
+    unset FIXTURE_FIREWALL_REJECT
+    rmdir "$FIXTURE_FIREWALL"
     # A rejected/incomplete promotion must not reach compatibility or the material
     # writer capability call. The actual selector journal has native Go tests.
     before_calls=$(wc -l < "$FIXTURE_CALLS")
@@ -765,3 +786,18 @@ eval "$(extract_function report_update_failure)"
     grep -F 'code=update_failed state=unchanged' "$TEST_ROOT/verified-preparation-summary" >/dev/null
 )
 printf 'PASS: unconfirmed recovery preparation is never reported as unchanged\n'
+
+(
+    eval "$(extract_function report_update_failure)"
+    mutation_started=0 transaction_started=0 quiesce_abort_failed=0
+    transaction_completion_verified=0 scheduler_restore_verified=0
+    recovery_runtime_preparation_attempted=0 recovery_runtime_preparation_verified=0
+    firewall_runtime_preparation_attempted=1 firewall_runtime_preparation_verified=0
+    update_failure_reason='independent firewall preparation unconfirmed'
+    report_update_failure 1 none 2>"$TEST_ROOT/firewall-failure-summary"
+    grep -F 'code=firewall_runtime_preparation_unconfirmed state=recovery_required' "$TEST_ROOT/firewall-failure-summary" >/dev/null
+    firewall_runtime_preparation_verified=1
+    report_update_failure 1 none 2>"$TEST_ROOT/firewall-verified-summary"
+    grep -F 'state=unchanged' "$TEST_ROOT/firewall-verified-summary" >/dev/null
+)
+printf 'PASS: unconfirmed firewall preparation retains its own truthful failure state\n'
