@@ -4,6 +4,7 @@ package recoveryruntime
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -29,8 +30,22 @@ func TestMailBootstrapLoadedDisposableVMTransition(t *testing.T) {
 			t.Fatal("management must be absent")
 		}
 	}
-	if _, e := os.Stat("/var/lib/celikpanel-setup-vm"); e != nil {
-		t.Fatal("fixture marker missing")
+	const markerPath = "/etc/celikpanel-release-recovery-lab"
+	var markerStat unix.Stat_t
+	if unix.Lstat(markerPath, &markerStat) != nil || markerStat.Mode != unix.S_IFREG|0444 || markerStat.Uid != 0 || markerStat.Gid != 0 || markerStat.Nlink != 1 || markerStat.Size > 2048 {
+		t.Fatal("protected cloud-init lab marker required")
+	}
+	markerRaw, e := os.ReadFile(markerPath)
+	if e != nil {
+		t.Fatal(e)
+	}
+	var marker map[string]string
+	if json.Unmarshal(markerRaw, &marker) != nil || marker["schema"] != "celikpanel-release-recovery-lab/v1" || marker["node"] != "arch" {
+		t.Fatal("wrong disposable native fixture")
+	}
+	uuid, e := os.ReadFile("/sys/class/dmi/id/product_uuid")
+	if e != nil || strings.ToLower(strings.TrimSpace(string(uuid))) != marker["vm_uuid"] {
+		t.Fatal("cloud-init marker does not match this virtual machine")
 	}
 	virt, e := exec.Command("systemd-detect-virt", "--vm").Output()
 	if e != nil || (strings.TrimSpace(string(virt)) != "qemu" && strings.TrimSpace(string(virt)) != "kvm") {
