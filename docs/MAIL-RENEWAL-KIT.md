@@ -542,8 +542,9 @@ are not counted as before-selection acceptance.
 Validation: material/owner-change tests, real SIGKILL at three writer boundaries,
 actual prior-producer identity compatibility, admission-before-ledger ordering,
 race tests of mailhoststore/mailrenewalintent and relevant Agent tests, and vet.
-Native interrupted-before-selection continuation, old-build adoption and complete
-production enrollment remain open; this evidence slice alone does not close P0.
+Native interrupted-before-selection continuation is now recorded in the bounded
+[BE acceptance](../deploy/e2e/release-recovery/MAIL-UNSELECTED-BE.md). Old-build
+adoption and complete production enrollment remain open; this does not close P0.
 
 
 ## Unselected interrupted attempt reconciliation (P0.3/P0.5)
@@ -574,3 +575,12 @@ application rollback compatibility, cross-build adoption or full P0 completion.
 Admission proof is also revalidated inside the durable publication callback,
 immediately before selection. Owner replacement after admission or during native
 preflight therefore cannot be overwritten using a stale before-image.
+
+
+The [BE unselected-renewal record](../deploy/e2e/release-recovery/MAIL-UNSELECTED-BE.md)
+now proves three source-bound native continuation cases and four actual SIGKILLs,
+including interrupted terminal-result publication, with management binaries
+absent. Trusted SMTP/IMAP listeners, native settings, prior ledger jobs and the
+unselected stage are verified. The timer was paused for these deterministic
+cuts; new-helper automatic dispatch, reboot and production enrollment are not
+claimed. Earlier preparation failures remain recorded separately.

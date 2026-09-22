@@ -1,0 +1,136 @@
+{
+  "schema": "celikpanel/native-mail-unselected/v1",
+  "source_commit": "c93d2be8b90bd5c4fdefd9111ec74dfcf51054f6",
+  "binary_sha256": "1f37d15f2b2f80836e3249774c2a25225932a881fdef88205c98789db8316af6",
+  "test_sha256": "d7a09ed1e845fa0021c8e24ea4ca50d1bf566c99ced3827f213cdc2167f23603",
+  "lab": {
+    "cell_id": "release-recovery__3688d130a0721786",
+    "node": "debian13",
+    "local_qemu_loopback": true
+  },
+  "scope": {
+    "before_ledger_cut": true,
+    "leased_cut": true,
+    "unselected_intent_cut": true,
+    "terminal_write_cut": true,
+    "fresh_processes": true,
+    "management_absent": true,
+    "automatic_timer_dispatch": false,
+    "production_enrollment": false,
+    "cross_build_adoption": false,
+    "reboot": false,
+    "power_loss": false
+  },
+  "result": {
+    "commit": "c93d2be8b90bd5c4fdefd9111ec74dfcf51054f6",
+    "management_absent": true,
+    "native_timer_paused_for_faults": true,
+    "native_timer_restored": true,
+    "schema": "celikpanel-mail-unselected-native/v1",
+    "trials": [
+      {
+        "attempt": 1,
+        "before_selection_unchanged": true,
+        "before_sha256": "87d861add189517d5b3ed43f89e8ce2dd0eff81a0efa3f15aed05fe4750a11b5",
+        "config_unchanged": true,
+        "new_leaf": "d5bcbf93d4fef0354724a23f98385cabedb5de863ae18b094cc786635dcdfe3d",
+        "old_leaf": "65a3ae295898b4339f99f4c1b7afeb1f72a8277983b70e4fc098cabc79e6347d",
+        "owner": "af51e5a892e4bb44bea329b5782e7e10",
+        "point": "before_ledger",
+        "prior_jobs_unchanged": true,
+        "request": "d8c65d49030e94b258b9cdd07cf87d7a",
+        "retained_stages": [],
+        "served": {
+          "imap993": "d5bcbf93d4fef0354724a23f98385cabedb5de863ae18b094cc786635dcdfe3d",
+          "smtp587": "d5bcbf93d4fef0354724a23f98385cabedb5de863ae18b094cc786635dcdfe3d"
+        },
+        "terminal_cut": false,
+        "trial": "ce7d2fdb9e880ec103dcfc7a81dfe148"
+      },
+      {
+        "attempt": 2,
+        "before_selection_unchanged": true,
+        "before_sha256": "f7279523dccfb381135825d8427652fab675f5ebe902b364cbaf0da939d32b48",
+        "config_unchanged": true,
+        "new_leaf": "8c1bbc684195f125fe707511b07634f14be8b35af9416e8592800cce9b1f4561",
+        "old_leaf": "d5bcbf93d4fef0354724a23f98385cabedb5de863ae18b094cc786635dcdfe3d",
+        "owner": "b67137237977a6b13915df8f1d599418",
+        "point": "leased",
+        "prior_jobs_unchanged": true,
+        "request": "b8e1ecf645e92e24fdb5a177a0eb05a5",
+        "retained_stages": [],
+        "served": {
+          "imap993": "8c1bbc684195f125fe707511b07634f14be8b35af9416e8592800cce9b1f4561",
+          "smtp587": "8c1bbc684195f125fe707511b07634f14be8b35af9416e8592800cce9b1f4561"
+        },
+        "terminal_cut": false,
+        "trial": "0ab9cbcab951acfd3db5a048c0ca389a"
+      },
+      {
+        "attempt": 2,
+        "before_selection_unchanged": true,
+        "before_sha256": "f98fc287f9937a99a4931ffb7f8f01efcdf1908740b176c61360cafefe7af34f",
+        "config_unchanged": true,
+        "new_leaf": "3c0bf4e30c71bb7b289bd41fffa6ff8c39e5f996ecedcfc1c037c71fba4aa100",
+        "old_leaf": "8c1bbc684195f125fe707511b07634f14be8b35af9416e8592800cce9b1f4561",
+        "owner": "9a477de6b17e0401897e7fe189e00afc",
+        "point": "intent",
+        "prior_jobs_unchanged": true,
+        "request": "318bcc071cafcfcfdd3ea6c3235db59d",
+        "retained_stages": [
+          [
+            ".panel-cert-5f97b8995fb04cffa2b7ce0b93da5d75",
+            133402,
+            "29b0e68bfc64c40cc1a0751c1658569b8d376238780c7266430e4076f01bd776"
+          ]
+        ],
+        "served": {
+          "imap993": "3c0bf4e30c71bb7b289bd41fffa6ff8c39e5f996ecedcfc1c037c71fba4aa100",
+          "smtp587": "3c0bf4e30c71bb7b289bd41fffa6ff8c39e5f996ecedcfc1c037c71fba4aa100"
+        },
+        "terminal_cut": true,
+        "trial": "1760c290264b75345fd561ba60cb0972"
+      }
+    ]
+  },
+  "journals": {
+    "celikpanel-mail-unselected-0ab9cbcab951acfd3db5a048c0ca389a-leased.log": {
+      "text": "Running as unit: celikpanel-mail-unselected-0ab9cbcab951acfd3db5a048c0ca389a-leased.service\nFinished with result: signal\nMain processes terminated with: code=killed, status=9/KILL\nService runtime: 69ms\nCPU time consumed: 40ms\nMemory peak: 8.9M (swap: 0B)\nSep 22 18:27:34 dns-debian13 systemd[1]: Starting celikpanel-mail-unselected-0ab9cbcab951acfd3db5a048c0ca389a-leased.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-agent-v2.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillBeforeSelection\\$\" -test.timeout=120s...\nSep 22 18:27:34 dns-debian13 mail-unselected-agent-v2.test[5404]: === RUN   TestMailRenewalDisposableVMKillBeforeSelection\nSep 22 18:27:34 dns-debian13 systemd[1]: celikpanel-mail-unselected-0ab9cbcab951acfd3db5a048c0ca389a-leased.service: Main process exited, code=killed, status=9/KILL\nSep 22 18:27:34 dns-debian13 systemd[1]: celikpanel-mail-unselected-0ab9cbcab951acfd3db5a048c0ca389a-leased.service: Failed with result 'signal'.\nSep 22 18:27:34 dns-debian13 systemd[1]: Failed to start celikpanel-mail-unselected-0ab9cbcab951acfd3db5a048c0ca389a-leased.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-agent-v2.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillBeforeSelection\\$\" -test.timeout=120s.\n",
+      "sha256": "1a0f7225f5e1a0f9ac77c809b4666e0d7021470d54e8bcba5b57754a2ae00a45"
+    },
+    "celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-intent.log": {
+      "text": "Running as unit: celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-intent.service; invocation ID: 127bd5dd3670419f968b7b664f8cb738\nFinished with result: signal\nMain processes terminated with: code=killed, status=9/KILL\nService runtime: 348ms\nCPU time consumed: 251ms\nMemory peak: 22.4M (swap: 0B)\nSep 22 18:27:35 dns-debian13 systemd[1]: Starting celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-intent.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-agent-v2.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillBeforeSelection\\$\" -test.timeout=120s...\nSep 22 18:27:35 dns-debian13 mail-unselected-agent-v2.test[5815]: === RUN   TestMailRenewalDisposableVMKillBeforeSelection\nSep 22 18:27:36 dns-debian13 systemd[1]: celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-intent.service: Main process exited, code=killed, status=9/KILL\nSep 22 18:27:36 dns-debian13 systemd[1]: celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-intent.service: Failed with result 'signal'.\nSep 22 18:27:36 dns-debian13 systemd[1]: Failed to start celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-intent.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-agent-v2.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillBeforeSelection\\$\" -test.timeout=120s.\n",
+      "sha256": "4c69054a592898fe9a7e8a57a08ca90b16cf250e49863938f312110acd55f59e"
+    },
+    "celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-terminal.log": {
+      "text": "Running as unit: celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-terminal.service; invocation ID: b464eb2a5604485587d862e150966644\nFinished with result: signal\nMain processes terminated with: code=killed, status=9/KILL\nService runtime: 135ms\nCPU time consumed: 120ms\nMemory peak: 14.3M (swap: 0B)\nSep 22 18:27:36 dns-debian13 systemd[1]: Starting celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-terminal.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-agent-v2.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillUnselectedTerminal\\$\" -test.timeout=120s...\nSep 22 18:27:36 dns-debian13 mail-unselected-agent-v2.test[5915]: === RUN   TestMailRenewalDisposableVMKillUnselectedTerminal\nSep 22 18:27:36 dns-debian13 systemd[1]: celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-terminal.service: Main process exited, code=killed, status=9/KILL\nSep 22 18:27:36 dns-debian13 systemd[1]: celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-terminal.service: Failed with result 'signal'.\nSep 22 18:27:36 dns-debian13 systemd[1]: Failed to start celikpanel-mail-unselected-1760c290264b75345fd561ba60cb0972-terminal.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-agent-v2.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillUnselectedTerminal\\$\" -test.timeout=120s.\n",
+      "sha256": "3cc3e4596a6495728359aa66667efe4f4017731fca098680f4dfe4e0d84f7430"
+    },
+    "celikpanel-mail-unselected-ce7d2fdb9e880ec103dcfc7a81dfe148-before_ledger.log": {
+      "text": "Running as unit: celikpanel-mail-unselected-ce7d2fdb9e880ec103dcfc7a81dfe148-before_ledger.service; invocation ID: cb42e42f866a4de788746fd3eca05b0f\nFinished with result: signal\nMain processes terminated with: code=killed, status=9/KILL\nService runtime: 69ms\nCPU time consumed: 50ms\nMemory peak: 11.4M (swap: 0B)\nSep 22 18:27:32 dns-debian13 systemd[1]: Starting celikpanel-mail-unselected-ce7d2fdb9e880ec103dcfc7a81dfe148-before_ledger.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-agent-v2.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillBeforeSelection\\$\" -test.timeout=120s...\nSep 22 18:27:32 dns-debian13 mail-unselected-agent-v2.test[5008]: === RUN   TestMailRenewalDisposableVMKillBeforeSelection\nSep 22 18:27:32 dns-debian13 systemd[1]: celikpanel-mail-unselected-ce7d2fdb9e880ec103dcfc7a81dfe148-before_ledger.service: Main process exited, code=killed, status=9/KILL\nSep 22 18:27:32 dns-debian13 systemd[1]: celikpanel-mail-unselected-ce7d2fdb9e880ec103dcfc7a81dfe148-before_ledger.service: Failed with result 'signal'.\nSep 22 18:27:32 dns-debian13 systemd[1]: Failed to start celikpanel-mail-unselected-ce7d2fdb9e880ec103dcfc7a81dfe148-before_ledger.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-agent-v2.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillBeforeSelection\\$\" -test.timeout=120s.\n",
+      "sha256": "96e086363ec2b315acb864436a4b96e92ef29d8a7db76b8b1d8d1f85119083f8"
+    },
+    "celikpanel-mail-unselected-resume-0ab9cbcab951acfd3db5a048c0ca389a.log": {
+      "text": "Running as unit: celikpanel-mail-unselected-resume-0ab9cbcab951acfd3db5a048c0ca389a.service; invocation ID: aa8a87f20e98412c9cebf639de97787f\nFinished with result: success\nMain processes terminated with: code=exited, status=0/SUCCESS\nService runtime: 1.334s\nCPU time consumed: 934ms\nMemory peak: 23.1M (swap: 0B)\nSep 22 18:27:34 dns-debian13 systemd[1]: Starting celikpanel-mail-unselected-resume-0ab9cbcab951acfd3db5a048c0ca389a.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-renew-v2 --process-pending...\nSep 22 18:27:35 dns-debian13 systemd[1]: celikpanel-mail-unselected-resume-0ab9cbcab951acfd3db5a048c0ca389a.service: Deactivated successfully.\nSep 22 18:27:35 dns-debian13 systemd[1]: Finished celikpanel-mail-unselected-resume-0ab9cbcab951acfd3db5a048c0ca389a.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-renew-v2 --process-pending.\n",
+      "sha256": "c392c0c30b7b51fa0883ce5883ca56c8252f740710db2dc4fde163d519f3e98c"
+    },
+    "celikpanel-mail-unselected-resume-1760c290264b75345fd561ba60cb0972.log": {
+      "text": "Running as unit: celikpanel-mail-unselected-resume-1760c290264b75345fd561ba60cb0972.service; invocation ID: 63217472b6864fb79eac21eaa3d76f4c\nFinished with result: success\nMain processes terminated with: code=exited, status=0/SUCCESS\nService runtime: 1.256s\nCPU time consumed: 853ms\nMemory peak: 22.3M (swap: 0B)\nSep 22 18:27:36 dns-debian13 systemd[1]: Starting celikpanel-mail-unselected-resume-1760c290264b75345fd561ba60cb0972.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-renew-v2 --process-pending...\nSep 22 18:27:37 dns-debian13 systemd[1]: celikpanel-mail-unselected-resume-1760c290264b75345fd561ba60cb0972.service: Deactivated successfully.\nSep 22 18:27:37 dns-debian13 systemd[1]: Finished celikpanel-mail-unselected-resume-1760c290264b75345fd561ba60cb0972.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-renew-v2 --process-pending.\n",
+      "sha256": "0aa92154aa2216726443e927089925e3d9649f1c8698063e059d9c10d056aa23"
+    },
+    "celikpanel-mail-unselected-resume-ce7d2fdb9e880ec103dcfc7a81dfe148.log": {
+      "text": "Running as unit: celikpanel-mail-unselected-resume-ce7d2fdb9e880ec103dcfc7a81dfe148.service; invocation ID: e9ad5fe0277f425ea9e737bfe5f2960f\nFinished with result: success\nMain processes terminated with: code=exited, status=0/SUCCESS\nService runtime: 1.444s\nCPU time consumed: 1.024s\nMemory peak: 24M (swap: 0B)\nSep 22 18:27:32 dns-debian13 systemd[1]: Starting celikpanel-mail-unselected-resume-ce7d2fdb9e880ec103dcfc7a81dfe148.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-renew-v2 --process-pending...\nSep 22 18:27:33 dns-debian13 systemd[1]: celikpanel-mail-unselected-resume-ce7d2fdb9e880ec103dcfc7a81dfe148.service: Deactivated successfully.\nSep 22 18:27:33 dns-debian13 systemd[1]: Finished celikpanel-mail-unselected-resume-ce7d2fdb9e880ec103dcfc7a81dfe148.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-unselected-renew-v2 --process-pending.\nSep 22 18:27:33 dns-debian13 systemd[1]: celikpanel-mail-unselected-resume-ce7d2fdb9e880ec103dcfc7a81dfe148.service: Consumed 1.024s CPU time, 24M memory peak.\n",
+      "sha256": "4137cb0d1ced6d846fbffe29a8c193792ed6ea603b370d82c952a67addab1004"
+    }
+  },
+  "retained_preparations": [
+    {
+      "result": "refused_before_certificate_preparation",
+      "reason": "pre-existing source8 test material preserved; native timer paused"
+    },
+    {
+      "result": "not_accepted_as_native_proof",
+      "reason": "test binary linker identity was unknown; before-image retained with no active ledger job; corrected package linker identity and fixture admission guard used in accepted trials"
+    }
+  ]
+}

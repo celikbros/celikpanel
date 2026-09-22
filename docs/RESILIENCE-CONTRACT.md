@@ -622,3 +622,18 @@ changes, unknown evidence, three real writer SIGKILL boundaries and durable
 before-image/ledger ordering. Missing historical evidence remains missing: no
 active operation is retrospectively enrolled. Native pre-selection recovery and
 full production enrollment still require acceptance; all P0 items remain open.
+
+
+### Unselected mail renewal interruption — September 22
+
+[Native BE](../deploy/e2e/release-recovery/MAIL-UNSELECTED-BE.md) now proves recovery
+from three before-selection boundaries and an additional SIGKILL during terminal
+result publication. Exact immutable prior-selection evidence, same source/build,
+unchanged native settings and worker absence permit only marking the interrupted
+attempt failed; bounded same-request admission then continues. No stage is
+promoted or removed by reconciliation, and prior failures are not erased. Forward
+publication rechecks the prior selection after admission as well. Four actual
+kills and trusted SMTP/IMAP results are recorded with management binaries absent.
+Two failed preparations are retained and excluded. Production enrollment,
+reboot/power-loss, missing historical evidence and cross-build adoption remain
+open; this is a scoped P0.3/P0.5 acceptance advance, not full closure.

@@ -567,3 +567,18 @@ karşılaştırıldı. Sahip değişimi, belirsiz kanıt, üç gerçek SIGKILL n
 kaydının işlem defterinden önce kalıcı olması sınandı. Tarihsel aktif işe eksik
 kanıt sonradan üretilmez. Seçim öncesi yerel kurtarma ve tam ürün devreye alma
 kabulü hâlâ açıktır; bu dilim P0 işlerini kapatmaz.
+
+
+### Seçim öncesinde kesilen posta yenilemesi — 22 Eylül
+
+[Yerel BE denemesi](../deploy/e2e/release-recovery/MAIL-UNSELECTED-BE.md), seçimden
+önce üç kesinti sınırını ve kurtarma sonucunu yazarken ek bir SIGKILL durumunu
+kanıtladı. Değişmez önceki seçim kaydı, aynı kaynak/derleme, değişmemiş hizmet
+ayarları ve bitmiş işçi kanıtı; yalnız kesilen denemeyi başarısız kaydetmeye izin
+verir. Ardından aynı istek kalan deneme bütçesiyle sürer. Kurtarma hazırlanmış
+sertifikayı seçmez veya silmez; bilinen hatayı yok saymaz. İleri yayınlama da
+başlangıçtan sonraki sahip değişimini yeniden kontrol eder. Yönetim ikilileri
+yokken dört gerçek kesinti ve doğrulanmış SMTP/IMAP sonuçları kaydedildi. İki
+başarısız hazırlık ayrı tutuldu. Ürün devreye alma, yeniden başlatma/güç kaybı,
+tarihsel eksik kanıt ve derlemeler arası devam hâlâ açıktır; P0.3/P0.5 tamamlanmış
+sayılmıyor.
