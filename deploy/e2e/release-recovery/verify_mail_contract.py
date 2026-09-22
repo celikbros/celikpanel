@@ -60,5 +60,34 @@ def verify(record):
     require('installed_panel_absent=yes' in metadata and 'installed_agent_absent=yes' in metadata, 'installed management present')
     return {'renewal': 'verified', 'retained_after_orderly_boot': 'verified', 'owner_drift_preserved': 'verified', 'independent_renewal': 'not established'}
 
+def verify_cleanup(record, base_bytes):
+    require(record.get('schema') == 'celikpanel/native-mail-cleanup/v1', 'cleanup schema differs')
+    require(record.get('base_record_sha256') == hashlib.sha256(base_bytes).hexdigest(), 'retained fixture evidence differs')
+    base = json.loads(base_bytes); verify(base)
+    require(record.get('lab') == {key:base['lab'][key] for key in ('cell_id','node')}, 'cleanup fixture differs')
+    require(re.fullmatch(r'[0-9a-f]{40}',record.get('source_commit','')), 'cleanup source missing')
+    binary = record.get('test_binary_sha256',''); require(re.fullmatch(HEX,binary), 'cleanup binary missing')
+    expected_scope={'controlled_uncommitted_stage':True,'actual_agent_cleanup_path':True,'owner_explicitly_resolved_conflict':True,'automatic_crash_recovery':False,'independent_renewal':False}
+    require(record.get('scope') == expected_scope, 'unsupported cleanup scope')
+    logs={}
+    for name,item in record['logs'].items():
+        text=item['text']
+        require(len(text)<32768 and hashlib.sha256(text.encode()).hexdigest()==item['sha256'], 'cleanup log digest differs')
+        require('PRIVATE KEY' not in text and 'nonce=' not in text, 'private cleanup evidence present')
+        logs[name]=text
+    start=logs['mail-cleanup-start.log']; result=logs['mail-recovery-cleanup.log']
+    require(start.startswith(binary+'  /root/celikpanel-release-recovery-lab/mail-cleanup.test\n'), 'executed cleanup binary differs')
+    require(one(r'(?m)^('+UUID+')$',start) == one(r'(?m)^('+UUID+')$',result), 'cleanup boot changed')
+    require('--- PASS: TestMailHostCertificateDisposableVMRecoveryCleanupOwnerEdit (' in result and '--- FAIL:' not in result and 'Result=success' in result and 'ExecMainStatus=0' in result, 'native cleanup did not pass')
+    selected=one(r'owner selection preserved; pending retained; historical completion preserved; selected=('+HEX+') source='+HEX,base['logs']['mail-owner-drift.log']['text'])
+    request,served=one(r'native cleanup refused owner files; same-operation owner-resolved cleanup retained failed status, queue and served leaf; request=([0-9a-f]{32}) selected=('+HEX+')',result)
+    require(served==selected, 'cleanup changed served certificate')
+    return {'owner_reviewed_native_cleanup':'verified','operation':request,'automatic_crash_recovery':'not established'}
+
 if __name__ == '__main__':
-    print(json.dumps(verify(json.loads(Path(sys.argv[1]).read_text())), sort_keys=True))
+    import argparse
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('record');parser.add_argument('--base')
+    args=parser.parse_args();record=json.loads(Path(args.record).read_text())
+    result=verify_cleanup(record,Path(args.base).read_bytes()) if args.base else verify(record)
+    print(json.dumps(result,sort_keys=True))

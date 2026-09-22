@@ -408,3 +408,92 @@ func unchangedMaterialAt(parent int, name string, certificate, key, receipt []by
 	}
 	return nil
 }
+
+// RemoveUnselectedExactAt removes only an unselected, complete, verified v1
+// generation for the exact operation. Caller owns outer recovery/publication
+// exclusion and supplies the retained-pair trust verifier. Owner edits or extra
+// files are not disposable operation residue.
+func RemoveUnselectedExactAt(parent int, name string, expected mailhostartifact.Receipt, verify PairVerifier) error {
+	if !validVersionName(name) || verify == nil {
+		return errors.New("invalid mail host certificate cleanup request")
+	}
+	if err := mailhostartifact.ValidateReceipt(expected); err != nil {
+		return err
+	}
+	current, found, err := readCurrentVersionAt(parent)
+	if err != nil {
+		return err
+	}
+	if found && current == name {
+		return errors.New("refusing to remove selected mail host certificate")
+	}
+	fd, err := openDirectoryAt(parent, name)
+	if err != nil {
+		return err
+	}
+	defer unix.Close(fd)
+	var before unix.Stat_t
+	if err = unix.Fstat(fd, &before); err != nil {
+		return err
+	}
+	receipt, present, err := ReadReceiptAt(fd)
+	if err != nil {
+		return err
+	}
+	if !present || receipt != expected {
+		return errors.New("mail host certificate cleanup receipt mismatch")
+	}
+	fileStates := map[string]unix.Stat_t{}
+	for _, file := range []string{mailhostartifact.ReceiptName, "mail.domain", "privkey.pem", "fullchain.pem"} {
+		var st unix.Stat_t
+		if err = unix.Fstatat(fd, file, &st, unix.AT_SYMLINK_NOFOLLOW); err != nil {
+			return err
+		}
+		fileStates[file] = st
+	}
+	if _, _, err = VerifyVersionAt(fd, receipt, verify); err != nil {
+		return err
+	}
+	duplicate, err := unix.FcntlInt(uintptr(fd), unix.F_DUPFD_CLOEXEC, 0)
+	if err != nil {
+		return err
+	}
+	dir := os.NewFile(uintptr(duplicate), "mail-host-cleanup")
+	names, err := dir.Readdirnames(5)
+	dir.Close()
+	if err != nil && !errors.Is(err, io.EOF) {
+		return err
+	}
+	expectedNames := map[string]bool{mailhostartifact.ReceiptName: true, "mail.domain": true, "privkey.pem": true, "fullchain.pem": true}
+	if len(names) != len(expectedNames) {
+		return errors.New("mail host cleanup found owner files; review required")
+	}
+	for _, file := range names {
+		if !expectedNames[file] {
+			return errors.New("mail host cleanup found an unexpected file; review required")
+		}
+	}
+	selected, selectedFound, err := readCurrentVersionAt(parent)
+	if err != nil {
+		return err
+	}
+	if selectedFound != found || selected != current {
+		return errors.New("mail host selection changed during cleanup verification; review required")
+	}
+	var after, named unix.Stat_t
+	if unix.Fstat(fd, &after) != nil || unix.Fstatat(parent, name, &named, unix.AT_SYMLINK_NOFOLLOW) != nil || !sameEvidenceStat(before, after) || !sameEvidenceStat(after, named) {
+		return errors.New("mail host generation changed during cleanup verification; review required")
+	}
+	for file, beforeFile := range fileStates {
+		var afterFile unix.Stat_t
+		if unix.Fstatat(fd, file, &afterFile, unix.AT_SYMLINK_NOFOLLOW) != nil || !sameEvidenceStat(beforeFile, afterFile) {
+			return errors.New("mail host material changed during cleanup verification; owner review required")
+		}
+	}
+	// Recheck the exact receipt through the same shared remover. No recursive
+	// deletion or unexpected filename is permitted.
+	if err = removeExactVersionAt(parent, name, expected); err != nil {
+		return err
+	}
+	return unix.Fsync(parent)
+}

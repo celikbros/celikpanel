@@ -297,3 +297,61 @@ func TestUnsafePublicationParentIsNotNormalized(t *testing.T) {
 		})
 	}
 }
+
+func TestRecoveryCleanupRequiresCompleteUnselectedExactMaterial(t *testing.T) {
+	for _, change := range []string{"none", "selected", "extra", "key", "receipt", "during-verification"} {
+		t.Run(change, func(t *testing.T) {
+			root, fd, cert, key, receipt, verify := publicationFixture(t)
+			stage, e := StageMaterialAt(fd, cert, key, receipt)
+			if e != nil {
+				t.Fatal(e)
+			}
+			t.Cleanup(func() { _ = stage.Close() })
+			version := onlyStage(t, root)
+			dir := filepath.Join(root, version)
+			switch change {
+			case "selected":
+				e = os.Symlink(version, filepath.Join(root, "current"))
+			case "extra":
+				e = os.WriteFile(filepath.Join(dir, "owner-note"), []byte("keep"), 0600)
+			case "key":
+				e = os.WriteFile(filepath.Join(dir, "privkey.pem"), []byte("owner material"), 0600)
+			case "receipt":
+				receipt.RequestID = strings.Repeat("c", 32)
+			case "during-verification":
+				original := verify
+				verify = func(c, k []byte, d string) ([]byte, time.Time, error) {
+					leaf, expires, err := original(c, k, d)
+					// Same valid key bytes plus a newline changes no leaf identity, but it
+					// is a new owner write after the reader checked the original file.
+					if e := os.WriteFile(filepath.Join(dir, "privkey.pem"), append(bytes.Clone(k), '\n'), 0600); e != nil {
+						t.Fatal(e)
+					}
+					return leaf, expires, err
+				}
+			}
+			if e != nil {
+				t.Fatal(e)
+			}
+			e = RemoveUnselectedExactAt(fd, version, receipt, verify)
+			if change == "none" {
+				if e != nil {
+					t.Fatal(e)
+				}
+				if _, e = os.Stat(dir); !os.IsNotExist(e) {
+					t.Fatal("exact abandoned generation not removed")
+				}
+				return
+			}
+			if e == nil {
+				t.Fatal("owner change or selected generation removed")
+			}
+			if _, e = os.Stat(filepath.Join(dir, "fullchain.pem")); e != nil {
+				t.Fatal("refusal removed certificate")
+			}
+			if _, e = os.Stat(filepath.Join(dir, "privkey.pem")); e != nil {
+				t.Fatal("refusal removed private key")
+			}
+		})
+	}
+}

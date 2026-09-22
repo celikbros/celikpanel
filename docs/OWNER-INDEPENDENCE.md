@@ -290,3 +290,17 @@ staged material/current selection. The [AY native trial](../deploy/e2e/release-r
 passes real renewed TLS, orderly boot and owner-drift replay with this producer
 and the shared accepted-plan reader. No schema migration or independent renewal
 helper is claimed; Agent commit/recovery and service convergence remain required.
+
+
+[Mail recovery cleanup](MAIL-CERTIFICATE-ARTIFACT.md#recovery-cleanup-shares-the-artifact-contract)
+now uses the shared complete-generation validator rather than receipt-only
+removal. Observed owner changes, selected generations and extra files remain
+intact. Component/race evidence advances P0.4; no new native interrupted-recovery
+or independent renewal claim is made.
+
+
+[Retained AY owner-reviewed cleanup](../deploy/e2e/release-recovery/MAIL-CLEANUP-AY.md)
+adds real native evidence for the shared cleanup path: refusal preserves owner
+files, explicit owner resolution allows exact cleanup, and native mail/queued
+renewal remain intact. This controlled uncommitted stage does not establish
+crash/startup recovery or full P0.4/P0.5 completion.

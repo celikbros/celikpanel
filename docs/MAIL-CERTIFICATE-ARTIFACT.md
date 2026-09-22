@@ -191,3 +191,34 @@ publication uncertainty. Existing Agent mail/TLS regressions and vet pass.
 verifies this exact shared producer and accepted-plan reader with real renewal,
 Postfix/Dovecot reload, trusted handshakes, orderly boot and owner-drift replay.
 The existing Agent durable commit gate and service convergence remain in charge.
+
+
+## Recovery cleanup shares the artifact contract
+
+Agent's persisted recovery cleanup now delegates to
+`mailhoststore.RemoveUnselectedExactAt`. It requires the exact receipt, full
+retained-pair validation with the caller's trust roots, matching domain/leaf,
+exactly the four historical files, an unselected generation, and stable directory
+and file identities across verification. A receipt match alone cannot discard
+owner-modified contents. Current selection, extra files, corrupted material or
+an observed concurrent write leave the generation intact for owner review. The
+existing operation identity and recovery caller still determine whether cleanup
+is authorized; this API is not permission to remove arbitrary retained versions.
+
+Schema v1 and recovery phases stay unchanged. The fsynced removal still names
+only the four fixed files and the exact version directory; no recursive deletion
+or metadata normalization is introduced. Root race tests include owner-key edits,
+extra files, selected generations, wrong operation identity and a valid-key write
+after cryptographic verification begins. Existing Agent MailHost/MailTLS race
+tests and vet pass. AY predates this recovery cleanup change: it is not native
+interrupted-recovery proof. That checkpoint, partial staging failures and a root
+operator bypassing locks remain outside this bounded acceptance.
+
+
+[Retained AY cleanup acceptance](../deploy/e2e/release-recovery/MAIL-CLEANUP-AY.md)
+subsequently exercises the new cleanup through the actual Agent recovery helper,
+real mutation lease, native certificate material and running SMTP/IMAP services.
+An owner-note prevents removal; explicit owner resolution permits same-operation
+cleanup without changing the selected certificate or unrelated pending renewal.
+The abandoned operation is explicitly finished failed. This closes the bounded
+controlled-stage native check, not crash/startup dispatch or power-loss cleanup.
