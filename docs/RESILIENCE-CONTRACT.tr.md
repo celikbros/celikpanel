@@ -502,3 +502,9 @@ istedi?i tek ek deneme sayac? s?f?rlamaz; yeni i?lem veya se?ilmi? sertifika
 kurtarmas? ba?latmaz. [S?zle?me](MAIL-RENEWAL-KIT.md#failed-operation-retry-admission-2026-09-22).
 Sertifika se?iminden ?nce kesinti kurtarmas?, s?r?mler aras? i?lem devralma,
 ?retimde ilk devreye alma ve tam ger?ek sistem kabul matrisi a??k kal?r.
+
+[Ger?ek sistem ba?ar?s?z deneme kan?t?](../deploy/e2e/release-recovery/MAIL-FAILED-BUDGET-BE.md)
+?? ayr? yard?mc? s?re?te ayar ?ak??mas?n? koruyarak reddi, otomatik s?n?rda durmay?,
+yanl?? i?lem kimli?inin reddini ve ayn? i?lemin a??k kullan?c? devam?yla do?rulanm??
+posta eri?imine ula?mas?n? kan?tlar. Otomatik zamanlay?c? ?al??mas?, se?im ?ncesi
+kesinti kurtarmas? ve ?retimde ilk devreye alma bu deneyle kan?tlanm?? de?ildir.

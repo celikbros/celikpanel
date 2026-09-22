@@ -375,3 +375,9 @@ general Agent recovery. Request identity still includes the producer build and
 exact source certificate; a different build must not silently adopt an old
 owner retry. Historical native selected-budget evidence remains separately
 scoped; this source change alone does not establish native execution acceptance.
+
+[Debian BE failed-budget acceptance](../deploy/e2e/release-recovery/MAIL-FAILED-BUDGET-BE.md)
+now proves three native failed executions across fresh processes, retained owner
+configuration, refusal after exhaustion/wrong owner, and explicit same-request
+attempt 4 with trusted SMTP/IMAP serving the new certificate. The regular timer
+was paused for deterministic commands; no automatic-dispatch/reboot claim is made.

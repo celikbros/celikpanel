@@ -556,3 +556,9 @@ consumes another attempt without resetting the budget. No new operation or
 selected recovery is authorized by this command. See [contract](MAIL-RENEWAL-KIT.md#failed-operation-retry-admission-2026-09-22).
 Pre-selection interruption recovery, cross-build adoption, production enrollment
 and the full native acceptance matrix remain open.
+
+[Native failed-budget evidence](../deploy/e2e/release-recovery/MAIL-FAILED-BUDGET-BE.md)
+proves real native configuration refusal across three helper processes, automatic
+budget exhaustion, wrong-owner rejection and exact owner continuation to trusted
+mail listeners. Timer dispatch, preselection interruption and production enrollment
+are not established by that drill.
