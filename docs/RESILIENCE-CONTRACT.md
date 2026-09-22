@@ -342,3 +342,9 @@ waiting and refuses replaced/owner-modified locks without normalization. Actual
 Agent calls use it; root cross-process death/exclusion tests pass. This advances
 P0.4/P0.5 shared-contract groundwork; native renewal publication, outer mutation
 exclusion, hook migration and management-absent acceptance remain open.
+
+[Shared native Certbot reader](MAIL-CERTIFICATE-ARTIFACT.md#shared-native-certbot-source-reader)
+now supplies both actual Agent source paths from the same confined live/archive
+implementation. Existing chain/lifetime/purpose checks remain in the caller, and
+its adversarial source tests pass. This removes another P0.4/P0.5 duplication risk;
+it does not activate a native renewal hook or close management-absent acceptance.
