@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/mailtlsconfig"
 )
 
 // Dovecot config comes in two dialects. 2.3 (Ubuntu 24.04) uses mail_location,
@@ -115,27 +117,7 @@ userdb passwd-file {
 // buildDovecotTLSConf, TLS ekini (varsayılan sertifika + SNI adı başına bir
 // local_name bloğu) istenen lehçede üretir.
 func buildDovecotTLSConf(is24 bool, certPath, keyPath string, sni []MailSNIEntry) string {
-	cert, key := "ssl_cert = <", "ssl_key = <"
-	if is24 {
-		cert, key = "ssl_server_cert_file = ", "ssl_server_key_file = "
-	}
-	var b strings.Builder
-	b.WriteString("# Managed by CelikPanel — mail TLS. Do not edit by hand.\n")
-	b.WriteString("ssl = yes\n")
-	b.WriteString("ssl_min_protocol = TLSv1.2\n")
-	fmt.Fprintf(&b, "%s%s\n", cert, certPath)
-	fmt.Fprintf(&b, "%s%s\n", key, keyPath)
-	for _, e := range sni {
-		for _, name := range e.Names {
-			name = strings.ToLower(strings.TrimSpace(name))
-			if name == "" {
-				continue
-			}
-			fmt.Fprintf(&b, "\nlocal_name %s {\n  %s%s\n  %s%s\n}\n",
-				name, cert, e.CertPath, key, e.KeyPath)
-		}
-	}
-	return b.String()
+	return mailtlsconfig.Dovecot(is24, certPath, keyPath, sni)
 }
 
 // applyDovecotConf writes a drop-in, then validates the WHOLE resulting config

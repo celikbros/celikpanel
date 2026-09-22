@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/mailtlsartifact"
+	"github.com/alicelik/celikpanel/internal/mailtlsconfig"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -544,14 +544,7 @@ func convergeMailTLSSyncPlan(
 }
 
 func expectedPostfixSNIMap(sni []transport.MailSNIEntry) []byte {
-	var builder strings.Builder
-	builder.WriteString("# Managed by CelikPanel — per-domain mail certificates (SNI).\n")
-	for _, entry := range sni {
-		for _, name := range entry.Names {
-			fmt.Fprintf(&builder, "%s %s %s\n", name, entry.KeyPath, entry.CertPath)
-		}
-	}
-	return []byte(builder.String())
+	return mailtlsconfig.PostfixSNI(sni)
 }
 
 func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRunner) error {
@@ -579,60 +572,30 @@ func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRun
 			return fmt.Errorf("verify committed immutable mail TLS snapshot: %w", err)
 		}
 	}
-	expectedSettings := map[string]string{
-		"smtpd_tls_cert_file":      certPath,
-		"smtpd_tls_key_file":       keyPath,
-		"smtpd_tls_security_level": "may",
-		"smtp_tls_security_level":  "may",
-		"smtpd_tls_protocols":      ">=TLSv1.2",
-		"smtp_tls_protocols":       ">=TLSv1.2",
-		"smtpd_tls_loglevel":       "1",
-		"myhostname":               journal.Myhostname,
-	}
-	for setting, expected := range expectedSettings {
-		out, err := runner("postconf", "-h", setting)
+	observed := mailtlsconfig.Observation{Postfix: make(map[string]string)}
+	settings := mailtlsconfig.PostfixSettings(journal.Myhostname, certPath, keyPath)
+	settings = append(settings, [2]string{"tls_server_sni_maps", ""})
+	for _, setting := range settings {
+		out, err := runner("postconf", "-h", setting[0])
 		if err != nil {
-			return mailTLSCommandError("read back postconf "+setting, out, err)
+			return mailTLSCommandError("read back postconf "+setting[0], out, err)
 		}
-		if strings.TrimSpace(string(out)) != expected {
-			return fmt.Errorf("Postfix setting %s does not match the committed snapshot", setting)
-		}
+		observed.Postfix[setting[0]] = string(out)
 	}
-	sniSettingOut, err := runner("postconf", "-h", "tls_server_sni_maps")
-	if err != nil {
-		return mailTLSCommandError("read back postconf tls_server_sni_maps", sniSettingOut, err)
-	}
-	sniSetting := strings.TrimSpace(string(sniSettingOut))
-	if len(journal.SNI) == 0 {
-		if sniSetting != "" {
-			return errors.New("Postfix SNI setting is not empty for the committed fallback-only snapshot")
-		}
-	} else {
-		validSNISetting := false
-		for _, mapType := range []string{"lmdb", "hash", "btree"} {
-			if sniSetting == mapType+":"+postfixSNIPath {
-				validSNISetting = true
-				break
-			}
-		}
-		if !validSNISetting {
-			return errors.New("Postfix SNI setting does not reference the committed managed map")
-		}
-		actualSNI, err := secureReadConfig(postfixSNIPath)
+	if len(journal.SNI) > 0 {
+		observed.PostfixSNI, err = secureReadConfig(postfixSNIPath)
 		if err != nil {
 			return fmt.Errorf("read back Postfix SNI source: %w", err)
 		}
-		if !bytes.Equal(actualSNI, expectedPostfixSNIMap(journal.SNI)) {
-			return errors.New("Postfix SNI source does not match the committed snapshot")
-		}
 	}
-	expectedDovecot := buildDovecotTLSConf(
-		dovecotIs24WithRunner(runner), certPath, keyPath, journal.SNI,
-	)
-	actualDovecot, err := secureReadConfig(dovecotTLSConf)
-	if err != nil || string(actualDovecot) != expectedDovecot {
+	observed.Dovecot, err = secureReadConfig(dovecotTLSConf)
+	if err != nil {
 		return errors.New("Dovecot TLS readback does not match the committed snapshot")
 	}
+	if err = mailtlsconfig.Verify(journal, certPath, keyPath, postfixSNIPath, dovecotIs24WithRunner(runner), observed); err != nil {
+		return err
+	}
+
 	if err := validatePostfixTLSConfig(runner); err != nil {
 		return err
 	}

@@ -222,3 +222,29 @@ An owner-note prevents removal; explicit owner resolution permits same-operation
 cleanup without changing the selected certificate or unrelated pending renewal.
 The abandoned operation is explicitly finished failed. This closes the bounded
 controlled-stage native check, not crash/startup dispatch or power-loss cleanup.
+
+
+## Shared native mail configuration contract
+
+`internal/mailtlsconfig` now supplies the actual Postfix settings/SNI renderer,
+Dovecot 2.3/2.4 TLS drop-in producer, and retained-plan configuration comparison.
+Agent's native producer and verifier use it. The comparison takes observations
+and performs no filesystem writes or subprocess execution; it rejects missing
+settings, changed owner values, other map paths/types/source bytes, changed
+Dovecot fragments and invalid plans without normalizing them or exposing their
+values. Existing caller crypto, trusted-file, native parser and reload checks
+remain separate. There is no file-format or artifact-schema migration.
+
+Actual Alpha81 Dovecot producer bytes, captured Postfix settings from its
+no-SNI producer and its SNI readback-renderer output are golden compatibility
+fixtures. Current Agent wrappers and the shared implementation reproduce them;
+shared and Agent MailTLS/MailHost/Dovecot race tests and vet pass. Prior AY native
+results predate this extraction; they are not new native acceptance of this build.
+
+This compares the specific managed fragment and effective Postfix settings.
+It does not certify indexed SNI map contents, all Dovecot include overrides,
+listener identity, service health or renewal authority. A future independent
+renewal binding must establish those boundaries and protect owner changes before
+publication/reload. The existing Agent renewal still reapplies its retained mail
+plan; this extraction does not claim that owner-preserving independent renewal,
+its enrollment, durable transaction, hook migration or absence matrix is done.

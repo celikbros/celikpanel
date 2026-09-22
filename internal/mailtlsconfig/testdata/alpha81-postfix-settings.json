@@ -1,0 +1,1 @@
+[["smtpd_tls_cert_file","/etc/ssl/celikpanel/_mail/default-cert.pem"],["smtpd_tls_key_file","/etc/ssl/celikpanel/_mail/default-key.pem"],["smtpd_tls_security_level","may"],["smtp_tls_security_level","may"],["smtpd_tls_protocols","\u003e=TLSv1.2"],["smtp_tls_protocols","\u003e=TLSv1.2"],["smtpd_tls_loglevel","1"],["myhostname","mail.host.example.test"],["tls_server_sni_maps",""]]
