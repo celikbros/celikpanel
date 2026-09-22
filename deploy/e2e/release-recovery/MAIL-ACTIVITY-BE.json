@@ -1,0 +1,159 @@
+{
+  "schema": "celikpanel/native-mail-activity/v1",
+  "source_commit": "f322ffe5f37ccc6ac50e21bcf390880933130576",
+  "test_sha256": "4ea875fc16b1d13c9923a8c16154a79320d3fce303ca3c61818b4ec70b66769a",
+  "recovery_sha256": "52236e11ddbff0e8df3b00daa2e945049cb954c94feda0a8e7658adf6efc1abb",
+  "archive_sha256": "de2ea5cdb5543029ca481c17eaa35636bdaff5870f48e62ae45d3e0eee214731",
+  "runtime_manifest": {
+    "schema": "celikpanel-mail-renewal-runtime/v1",
+    "generation": "7426660be8cd8c992ff9c1708b2b331005e51f895e6e1a564e159e54f650ebcb",
+    "ledger_version": 1,
+    "plan_version": 1,
+    "receipt_schema": "mail-host-certificate-receipt/v1",
+    "binary_sha256": "83dfc94a113c833c01d9bfa18b8371c19825aed7ab4d90269e0991a498abb842",
+    "service_sha256": "902a8a0c891535bdbff300d29db3e53193f2ebedb381f644f83c934fae25442e",
+    "timer_sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "hook_sha256": "a47a6c771cc760014ab5f67bba4c1e9d10865abc888cf2141897a6d3fba5b163"
+  },
+  "fixture": {
+    "cell_id": "release-recovery__3688d130a0721786",
+    "node": "arch"
+  },
+  "scope": {
+    "native_enablement": true,
+    "actual_systemd_reload": true,
+    "double_process_interruption": true,
+    "ordered_inverse": true,
+    "management_absent": true,
+    "timer_start": true,
+    "wants_parent_creation": false,
+    "mail_workload": false,
+    "production_dispatch": false,
+    "whole_update_rollback": false,
+    "power_loss": false,
+    "automatic_no_work_success": false
+  },
+  "result": {
+    "initial": {
+      "celikpanel-mail-renewal.service": {
+        "code": 0,
+        "properties": {
+          "ActiveState": "inactive",
+          "DropInPaths": "",
+          "FragmentPath": "",
+          "LoadState": "not-found",
+          "NeedDaemonReload": "no",
+          "UnitFileState": ""
+        }
+      },
+      "celikpanel-mail-renewal.timer": {
+        "code": 0,
+        "properties": {
+          "ActiveState": "inactive",
+          "DropInPaths": "",
+          "FragmentPath": "",
+          "LoadState": "not-found",
+          "NeedDaemonReload": "no",
+          "UnitFileState": ""
+        }
+      }
+    },
+    "management_absent": true,
+    "manual_no_work_invocation": {
+      "ActiveState": "inactive",
+      "ExecMainStartTimestampMonotonic": "20344042375",
+      "ExecMainStatus": "0",
+      "Result": "success"
+    },
+    "native_files_absent": true,
+    "operation": "67ca3eb8c16d4131ac4782b13c0a3199",
+    "phases": {
+      "forward-cut": {
+        "celikpanel-mail-renewal.service": {
+          "code": 0,
+          "properties": {
+            "ActiveState": "inactive",
+            "DropInPaths": "",
+            "FragmentPath": "/etc/systemd/system/celikpanel-mail-renewal.service",
+            "LoadState": "loaded",
+            "NeedDaemonReload": "no",
+            "UnitFileState": "static"
+          }
+        },
+        "celikpanel-mail-renewal.timer": {
+          "code": 0,
+          "properties": {
+            "ActiveState": "active",
+            "DropInPaths": "",
+            "FragmentPath": "/etc/systemd/system/celikpanel-mail-renewal.timer",
+            "LoadState": "loaded",
+            "NeedDaemonReload": "no",
+            "UnitFileState": "enabled"
+          }
+        }
+      },
+      "recover": {
+        "celikpanel-mail-renewal.service": {
+          "code": 0,
+          "properties": {
+            "ActiveState": "inactive",
+            "DropInPaths": "",
+            "FragmentPath": "",
+            "LoadState": "not-found",
+            "NeedDaemonReload": "no",
+            "UnitFileState": ""
+          }
+        },
+        "celikpanel-mail-renewal.timer": {
+          "code": 0,
+          "properties": {
+            "ActiveState": "inactive",
+            "DropInPaths": "",
+            "FragmentPath": "",
+            "LoadState": "not-found",
+            "NeedDaemonReload": "no",
+            "UnitFileState": ""
+          }
+        }
+      },
+      "rollback-cut": {
+        "celikpanel-mail-renewal.service": {
+          "code": 0,
+          "properties": {
+            "ActiveState": "inactive",
+            "DropInPaths": "",
+            "FragmentPath": "/etc/systemd/system/celikpanel-mail-renewal.service",
+            "LoadState": "loaded",
+            "NeedDaemonReload": "no",
+            "UnitFileState": "static"
+          }
+        },
+        "celikpanel-mail-renewal.timer": {
+          "code": 0,
+          "properties": {
+            "ActiveState": "inactive",
+            "DropInPaths": "",
+            "FragmentPath": "/etc/systemd/system/celikpanel-mail-renewal.timer",
+            "LoadState": "loaded",
+            "NeedDaemonReload": "no",
+            "UnitFileState": "enabled"
+          }
+        }
+      }
+    },
+    "private_parent_fixture_prepared": true,
+    "target": "7426660be8cd8c992ff9c1708b2b331005e51f895e6e1a564e159e54f650ebcb",
+    "timer_enablement_absent": true,
+    "wants_parent_preserved": true
+  },
+  "log": {
+    "text": "7426660be8cd8c992ff9c1708b2b331005e51f895e6e1a564e159e54f650ebcb\n\nphase=forward-cut returncode=-9\n=== RUN   TestMailActivityDisposableVMTransition\n    mail_renewal_activity_vm_test.go:136: native_activity_cut=activity_forward_acted operation=67ca3eb8c16d4131ac4782b13c0a3199 previous= target=7426660be8cd8c992ff9c1708b2b331005e51f895e6e1a564e159e54f650ebcb capture=00c6946191f7d6f64e270af4851b3d180eb98c0cf53e816017d4a95a1ba88af9\n\nTraceback (most recent call last):\n  File \"<stdin>\", line 53, in <module>\nAssertionError: {'ActiveState': 'failed', 'Result': 'exit-code', 'ExecMainStartTimestampMonotonic': '20138718251', 'ExecMainStatus': '1'}\nmanual_fixture_no_work_invocation={\"ActiveState\": \"inactive\", \"ExecMainStartTimestampMonotonic\": \"20344042375\", \"ExecMainStatus\": \"0\", \"Result\": \"success\"}\nnative_observation phase=forward-cut {\"celikpanel-mail-renewal.service\": {\"code\": 0, \"properties\": {\"ActiveState\": \"inactive\", \"DropInPaths\": \"\", \"FragmentPath\": \"/etc/systemd/system/celikpanel-mail-renewal.service\", \"LoadState\": \"loaded\", \"NeedDaemonReload\": \"no\", \"UnitFileState\": \"static\"}}, \"celikpanel-mail-renewal.timer\": {\"code\": 0, \"properties\": {\"ActiveState\": \"active\", \"DropInPaths\": \"\", \"FragmentPath\": \"/etc/systemd/system/celikpanel-mail-renewal.timer\", \"LoadState\": \"loaded\", \"NeedDaemonReload\": \"no\", \"UnitFileState\": \"enabled\"}}}\nphase=rollback-cut returncode=-9\n=== RUN   TestMailActivityDisposableVMTransition\n    mail_renewal_activity_vm_test.go:136: native_activity_cut=activity_rollback_acted operation=67ca3eb8c16d4131ac4782b13c0a3199 previous= target=7426660be8cd8c992ff9c1708b2b331005e51f895e6e1a564e159e54f650ebcb capture=00c6946191f7d6f64e270af4851b3d180eb98c0cf53e816017d4a95a1ba88af9\n\nnative_observation phase=rollback-cut {\"celikpanel-mail-renewal.service\": {\"code\": 0, \"properties\": {\"ActiveState\": \"inactive\", \"DropInPaths\": \"\", \"FragmentPath\": \"/etc/systemd/system/celikpanel-mail-renewal.service\", \"LoadState\": \"loaded\", \"NeedDaemonReload\": \"no\", \"UnitFileState\": \"static\"}}, \"celikpanel-mail-renewal.timer\": {\"code\": 0, \"properties\": {\"ActiveState\": \"inactive\", \"DropInPaths\": \"\", \"FragmentPath\": \"/etc/systemd/system/celikpanel-mail-renewal.timer\", \"LoadState\": \"loaded\", \"NeedDaemonReload\": \"no\", \"UnitFileState\": \"enabled\"}}}\nphase=recover returncode=0\n=== RUN   TestMailActivityDisposableVMTransition\n    mail_renewal_activity_vm_test.go:210: native_activity_inverse=verified native_units=absent original_inodes=restored operation=67ca3eb8c16d4131ac4782b13c0a3199 previous= target=7426660be8cd8c992ff9c1708b2b331005e51f895e6e1a564e159e54f650ebcb\n--- PASS: TestMailActivityDisposableVMTransition (1.65s)\nPASS\n\nnative_observation phase=recover {\"celikpanel-mail-renewal.service\": {\"code\": 0, \"properties\": {\"ActiveState\": \"inactive\", \"DropInPaths\": \"\", \"FragmentPath\": \"\", \"LoadState\": \"not-found\", \"NeedDaemonReload\": \"no\", \"UnitFileState\": \"\"}}, \"celikpanel-mail-renewal.timer\": {\"code\": 0, \"properties\": {\"ActiveState\": \"inactive\", \"DropInPaths\": \"\", \"FragmentPath\": \"\", \"LoadState\": \"not-found\", \"NeedDaemonReload\": \"no\", \"UnitFileState\": \"\"}}}\nactivity_inverse=verified native_files=absent native_units=absent manual_no_work_invocation=verified management=absent wants_parent=preserved\n",
+    "sha256": "400160b3350497f13cddd2abee78633fa1b08e2d83aa3479c3413f8e59e18f7b"
+  },
+  "preparation_failure": {
+    "reason": "missing protected private ledger parent",
+    "log": "7426660be8cd8c992ff9c1708b2b331005e51f895e6e1a564e159e54f650ebcb\n\nphase=forward-cut returncode=-9\n=== RUN   TestMailActivityDisposableVMTransition\n    mail_renewal_activity_vm_test.go:136: native_activity_cut=activity_forward_acted operation=67ca3eb8c16d4131ac4782b13c0a3199 previous= target=7426660be8cd8c992ff9c1708b2b331005e51f895e6e1a564e159e54f650ebcb capture=00c6946191f7d6f64e270af4851b3d180eb98c0cf53e816017d4a95a1ba88af9\n\nTraceback (most recent call last):\n  File \"<stdin>\", line 53, in <module>\nAssertionError: {'ActiveState': 'failed', 'Result': 'exit-code', 'ExecMainStartTimestampMonotonic': '20138718251', 'ExecMainStatus': '1'}\n",
+    "sha256": "b945b90e6085e4275ed6c099d7fbd620aceb9e62e7215ae40de4cb41ee6e4a16",
+    "action": "fixture-created empty root:celikpanel 0700 parent and manually started the same no-work service; retained original operation"
+  }
+}

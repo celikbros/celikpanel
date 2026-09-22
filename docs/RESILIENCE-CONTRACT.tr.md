@@ -536,3 +536,13 @@ geri alınmadan birim dosyalarının geri alınması engellenir. Her iki yön de
 çalışmayan zamanlayıcıyı ve doğrulanmış yerel yeniden yüklemeyi gerektirir. Bu
 özel bir bileşendir; eksik üst dizinin yayını, zamanlayıcının çalıştırılması ve
 üretim akışına kabul henüz tamamlanmamıştır. [Sözleşme](MAIL-RENEWAL-KIT.md).
+
+### İlk zamanlayıcı etkinliği ve sınırlı geri alma (2026-09-22)
+
+P0.3/P0.5 özel activity/v1 sözleşmesi, sabit start/stop işlemlerini kesin dosya,
+yükleme ve etkinleştirme zincirine bağlar; her yön en fazla üç kalıcı deneme alır.
+Sahip değişiklikleri ve bilinmeyen sonuçlar korunur. Etkinlik geri alma, bağlantı
+ve dosya geri almadan önce tamamlanır. [BE yerel kanıtı](../deploy/e2e/release-recovery/MAIL-ACTIVITY-BE.md)
+gerçek start/stop ve iki süreç kesintisini doğrular. Eksik özel dizinden kaynaklanan
+ilk fixture hatası korunmuştur; otomatik yenileme başarısı, üretim kaydı, tarihsel
+geri alma uyumu ve bütün yerel hata matrisi açık kalır.

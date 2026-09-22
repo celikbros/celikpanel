@@ -590,3 +590,13 @@ is blocked until that enablement has been inversely restored. Both directions
 require an inactive native schedule and verified daemon-reload. This remains a
 private component; missing-parent publication, timer activity and production
 admission are not established. See [the contract](MAIL-RENEWAL-KIT.md).
+
+### Initial timer activity and bounded inverse (2026-09-22)
+
+P0.3/P0.5 private activity/v1 binds fixed native start/stop to the exact initial
+file/load/enablement chain with three durable attempts per direction. Owner
+changes and unknown outcomes are preserved; activity inverse precedes enablement
+and file inverse. [BE native evidence](../deploy/e2e/release-recovery/MAIL-ACTIVITY-BE.md)
+proves real start/stop and double process interruption. An initial missing-parent
+fixture failure is retained; automatic renewal success and production enrollment
+remain open, alongside historical rollback compatibility and native fault matrix.

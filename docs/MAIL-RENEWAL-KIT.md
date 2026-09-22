@@ -479,3 +479,9 @@ Native activity evidence is still required. This remains a private component:
 accepted production dispatch, host/renewal exclusion, missing-parent publication
 and historical old-Agent hook-writer compatibility remain open. Existing native
 renewal ledger and certificate schemas are unchanged.
+
+[BE Arch native activity evidence](../deploy/e2e/release-recovery/MAIL-ACTIVITY-BE.md)
+now proves actual timer start/stop, two process interruptions and ordered inverse.
+The first automatic no-work invocation failed on an absent private ledger parent;
+that result is retained. Fixture preparation and a manual successful no-work run
+preceded same-operation continuation. Automatic renewal success is not claimed.
