@@ -438,3 +438,12 @@ başarısız varsayamaz veya başka sahibin eski işlemini devralamaz. Aynı
 host/yayın kilitleri ve v1 işlem defteri korunur. Bu, P0.5 yetki ayrımını
 ilerletir; bağımsız yenileme programını veya kesintili yerel kurtarma
 kabulünü tamamlamaz.
+
+### Posta sertifikasını devreye alma sınırı (2026-09-22)
+
+Dar kapsamlı yenileme ve seçilmiş sürümün tam işlem kimliğiyle kurtarılması
+[yalnız yeniden yükleme yolunu](MAIL-RENEWAL-OBSERVATION.md#reload-only-renewal-and-selected-version-recovery-2026-09-22)
+kullanır. Güncel ayarlar ve çalışan servisler doğrulanır; kullanıcının
+ayarları yeniden yazılmaz ve durdurduğu servis başlatılmaz. V1 kayıtları değişmez.
+İlk kurulum geçişinin yeterli önceki durum kanıtı olmadan kesilmesi, açık bir
+kullanıcı kurtarma gereksinimidir. Bağımsız yenileme ve P0.4/P0.5 kabulü tamamlanmadı.

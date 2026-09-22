@@ -119,7 +119,7 @@ func reconcilePersistedMailHostCertificateHostAt(
 			}
 			_ = leafDER
 			_ = notAfter
-			if err := applyMailHostCertificateSelection(ctx, domain); err != nil {
+			if err := reloadMailHostCertificateSelection(ctx, domain); err != nil {
 				return err
 			}
 			success = true

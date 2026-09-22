@@ -89,7 +89,13 @@ func (a *Agent) IssueMailHostCertificateV1(req *transport.IssueMailHostCertifica
 
 func publishMailHostCertificateSource(ctx context.Context, domain, requestID, qualifier, expectedLeaf string) (expires time.Time, err error) {
 	err = panelCertWithPublishLock(func() error {
-		if err := preflightMailHostCertificate(ctx, domain); err != nil {
+		preflight := preflightMailHostCertificate
+		activate := applyMailHostCertificateSelection
+		if mailHostCertificateUsesScopedRenewal(ctx) {
+			preflight = preflightMailHostCertificateReload
+			activate = reloadMailHostCertificateSelection
+		}
+		if err := preflight(ctx, domain); err != nil {
 			return err
 		}
 		cert, key, leaf, notAfter, readErr := readMailHostCertificateSource(domain)
@@ -109,7 +115,7 @@ func publishMailHostCertificateSource(ctx context.Context, domain, requestID, qu
 		}
 		defer stage.close()
 		_, commitErr := commitStandaloneMailHostCertificateStep(ctx, stage.publish, func(convergence context.Context) error {
-			return applyMailHostCertificateSelection(convergence, domain)
+			return activate(convergence, domain)
 		})
 		if commitErr != nil {
 			return commitErr

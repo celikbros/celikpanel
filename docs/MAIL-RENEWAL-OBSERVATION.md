@@ -113,3 +113,40 @@ result does not certify an independent executor.
 initial publication, actual scoped queued renewal, independent native boot
 handshakes, exact persisted receipt and owner-selected-certificate preservation
 on that source. Vet also passed. Independent recovery limits remain open.
+
+## Reload-only renewal and selected-version recovery (2026-09-22)
+
+P0.4/P0.5 owner authority and checkpoint recovery. Actual scoped renewal now
+observes the accepted native fields/fragments, selected trusted host pair,
+immutable customer SNI references, supported Dovecot dialect/parser and running
+Postfix/Dovecot before staging. After publication it repeats those observations
+and sends only `systemctl reload` to the two fixed units, observing again between
+and after reloads. It cannot regenerate fallback material, compile a customer
+SNI map, write native settings, run `postfix check`, or start a stopped service.
+Public failure text excludes native command output while retaining typed causes.
+
+The existing exact selected-receipt startup recovery uses this same reload-only
+path. A later owner edit prevents convergence and remains intact with the active
+intent and receipt. Once the owner explicitly resolves the disagreement,
+supported recovery can reload and verify the same operation. A certificate
+receipt alone is no longer permission for recovery to reapply the old mail plan.
+No v1 ledger/receipt migration or new recovery identity is introduced.
+
+Initial issuance still performs the separately accepted fallback-to-host native
+configuration transition. If that initial transition is interrupted after
+selection but before configuration agrees, legacy v1 evidence lacks a trusted
+before-image for rewriting the current configuration. Recovery now retains that
+uncertainty for explicit owner/configuration recovery rather than guessing.
+A durable owner-safe initial-transition protocol remains open. This is a stricter
+compatibility boundary, not a claim that every old interrupted issuance is
+self-healing. An owner editing concurrently outside the native locks can still
+change state between observations; no filesystem exclusion over root is claimed.
+
+Unit tests cover stopped/unknown services, parser/version failure, owner drift
+before/between/after reloads, command failure and cancellation, a read-only
+preflight and redacted guidance. The native fixture additionally asserts config
+bytes and modification times remain unchanged during real renewal. A separate
+controlled post-publication fault/owner-resolution trial is prepared; native
+results will be recorded only after it executes. Independent helper enrollment,
+management-removal renewal, all effective overrides, power-loss and the complete
+native platform/fault matrix remain open.

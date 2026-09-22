@@ -448,3 +448,13 @@ unrelated work, assume an interrupted job failed, take over another historical
 owner or prune unrelated history. The existing host/publication locks and v1
 ledger remain shared. This advances P0.5 admission isolation; it does not ship an
 independent renewal binary or close native interrupted recovery acceptance.
+
+### Mail certificate activation boundary (2026-09-22)
+
+Scoped renewal and exact selected-version recovery now use
+[reload-only activation](MAIL-RENEWAL-OBSERVATION.md#reload-only-renewal-and-selected-version-recovery-2026-09-22).
+They observe current accepted configuration and active services, preserve owner
+edits, and do not reapply historical mail settings or start stopped services.
+The v1 records are unchanged. An interrupted initial configuration transition
+without an adequate before-image remains an explicit owner-recovery gap;
+independent renewal and full P0.4/P0.5 acceptance are not complete.
