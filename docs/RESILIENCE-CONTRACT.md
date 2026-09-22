@@ -683,3 +683,15 @@ now proves real Arch systemd enrollment, two process kills and exact same-operat
 compensation with management absent. Preparation/inventory harness failures are
 retained separately. Production fencing/admission, real mail workload and reboot
 composition remain outside this bounded result.
+
+### Durable mail enrollment reservation (2026-09-22)
+
+P0.2/P0.3/P0.5: the common ledger now recognizes an exact native enrollment
+reservation which generic startup, lease expiry and mutation RPCs cannot release.
+The private writer reuses the common publication protocol under release/host/
+publication locks, and requires fresh proof before forward or inverse completion.
+The updater rejects active/unknown mutations before quiesce. Historical ledger
+bytes remain v1; enrollment capability is an explicit optional Agent declaration.
+[Scope, transition rules and twelve process cuts](MAIL-ENROLLMENT-RESERVATION.md)
+leave authenticated production admission/dispatch and native full-transaction
+acceptance open. No P0 item is closed by these component tests.

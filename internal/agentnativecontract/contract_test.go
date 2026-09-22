@@ -46,3 +46,26 @@ func TestProducerRequiresBoundSourceAndNonemptyBinary(t *testing.T) {
 		t.Fatal("empty binary")
 	}
 }
+
+func TestEnrollmentCapabilityDoesNotCertifyHistoricalAgents(t *testing.T) {
+	c, _ := New([]byte("agent"), strings.Repeat("a", 40))
+	if c.MailEnrollmentPolicy != MailEnrollmentPolicy {
+		t.Fatal("current producer lacks retention capability")
+	}
+	c.MailEnrollmentPolicy = ""
+	raw, err := Encode(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(raw, []byte("mail_enrollment_policy")) {
+		t.Fatal("changed historical envelope")
+	}
+	old, err := Verify(raw, []byte("agent"))
+	if err != nil || old.MailEnrollmentPolicy != "" {
+		t.Fatal(old, err)
+	}
+	c.MailEnrollmentPolicy = "unknown"
+	if _, err := Encode(c); err == nil {
+		t.Fatal("unknown capability")
+	}
+}

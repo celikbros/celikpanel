@@ -16,6 +16,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -142,9 +143,10 @@ type serviceMutationManager struct {
 	// beklemedir.
 	hostBootWait chan struct{}
 
-	now             func() time.Time
-	leaseDuration   time.Duration
-	overallDuration time.Duration
+	retainAllHistory bool // narrow native enrollment never discards another operation
+	now              func() time.Time
+	leaseDuration    time.Duration
+	overallDuration  time.Duration
 }
 
 func serviceMutationLedgerPublicationLockFile(hostLockPath string) string {
@@ -514,6 +516,12 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 	if m.mailRenewalScope != nil {
 		return errors.Join(m.observeMailRenewalAdmissionLocked(), lock.Close())
 	}
+	// A native enrollment reservation is not a crashed RPC worker. Preserve its
+	// bytes before generic host readiness, orphan cleanup or lease expiry. Only
+	// the exact enrollment executor may prove its forward or inverse result.
+	if job := m.ledger.Jobs[m.ledger.ActiveRequestID]; job != nil && job.Kind == servicemutationledger.MailEnrollmentKind {
+		return lock.Close()
+	}
 	if err := cleanupAbandonedServiceMutationWriteStages(filepath.Dir(m.ledgerPath)); err != nil {
 		closeErr := lock.Close()
 		if closeErr != nil {
@@ -699,6 +707,12 @@ func (m *serviceMutationManager) tryResolvePersistedOrphan() error {
 	if m.mailRenewalScope != nil {
 		return errors.Join(m.observeMailRenewalAdmissionLocked(), lock.Close())
 	}
+	// A native enrollment reservation is not a crashed RPC worker. Preserve its
+	// bytes before generic host readiness, orphan cleanup or lease expiry. Only
+	// the exact enrollment executor may prove its forward or inverse result.
+	if job := m.ledger.Jobs[m.ledger.ActiveRequestID]; job != nil && job.Kind == servicemutationledger.MailEnrollmentKind {
+		return lock.Close()
+	}
 	if err := cleanupAbandonedFirewallApplyJournalStages(filepath.Dir(m.ledgerPath)); err != nil {
 		m.poisonLock = lock
 		return m.poisonLocked(fmt.Errorf(
@@ -807,6 +821,9 @@ func (m *serviceMutationManager) finishPersistedOrphanLocked(
 	job *ServiceMutationJob,
 	code, message string,
 ) error {
+	if job != nil && job.Kind == servicemutationledger.MailEnrollmentKind {
+		return servicemutationledger.ErrMailEnrollment
+	}
 	before := cloneServiceMutationLedger(m.ledger)
 	now := m.now()
 	job.Status = serviceMutationStatusFailed
@@ -858,6 +875,10 @@ func (m *serviceMutationManager) releaseTransactionBlocksMutations() (bool, erro
 }
 
 func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*ServiceMutationJob, error) {
+	// Generic RPCs cannot create or resume the two-lock native enrollment.
+	if request != nil && request.Kind == servicemutationledger.MailEnrollmentKind {
+		return nil, servicemutationledger.ErrMailEnrollment
+	}
 	if m.mailRenewalScope != nil && !mailRenewalRequestMatches(m.mailRenewalScope, request) {
 		return nil, errors.New("mail renewal executor cannot admit another operation")
 	}
@@ -1879,6 +1900,10 @@ func (m *serviceMutationManager) acquireStep(
 func (m *serviceMutationManager) trimHistoryLocked(
 	protectedRequestIDs ...string,
 ) {
+	if m.retainAllHistory {
+		return
+	}
+
 	if m.mailRenewalScope != nil {
 		return // Renewal has no authority to discard other operations' evidence.
 	}

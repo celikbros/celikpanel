@@ -79,6 +79,12 @@ func PublishedPhase(
 	var phase string
 	var err error
 	switch job.Kind {
+	case MailEnrollmentKind:
+		id, state, err := mailEnrollmentState(job)
+		if err != nil || state != MailEnrollmentPublished {
+			return "", true, ErrMailEnrollment
+		}
+		return id.phase(MailEnrollmentPublished), true, nil
 	case "vpn_peer_sync":
 		if job.Target != "wireguard" ||
 			!mutationpayload.ValidVPNPeerSyncQualifier(job.PackageName) {
@@ -193,6 +199,12 @@ func Validate(ledger *Ledger) error {
 			strings.TrimSpace(job.Phase) == "" ||
 			job.Attempt <= 0 {
 			return errors.New("service mutation ledger job metadata is incomplete")
+		}
+		if job.Kind == MailEnrollmentKind || strings.HasPrefix(job.Phase, MailEnrollmentPhasePrefix) ||
+			strings.HasPrefix(job.PackageName, MailEnrollmentQualifierPrefix) {
+			if _, _, err := mailEnrollmentState(job); err != nil {
+				return err
+			}
 		}
 		if err := ValidateSuccess(job); err != nil {
 			return fmt.Errorf("service mutation ledger job %s: %w", requestID, err)

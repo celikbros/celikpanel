@@ -58,6 +58,12 @@ func (m *serviceMutationManager) observeMailRenewalEvidenceLocked() error {
 		(!serviceMutationIdentityMatches(previous, m.mailRenewalScope) || previous.OwnerID != m.mailRenewalScope.OwnerID) {
 		return errMailRenewalRecoveryRequired
 	}
+	return m.observeRetainedMutationEvidenceLocked()
+}
+
+// Shared read-only journal admission for the narrow native mail consumers.
+// It never invokes generic recovery or alters a retained mutation.
+func (m *serviceMutationManager) observeRetainedMutationEvidenceLocked() error {
 	dir := filepath.Dir(m.ledgerPath)
 	if err := observeMailRenewalStages(dir); err != nil {
 		return err

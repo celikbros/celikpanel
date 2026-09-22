@@ -628,3 +628,15 @@ tutar; P0 tamamlandı denmez.
 gerçek Arch systemd üzerinde iki süreç kesintisi ve aynı işlemden kesin geri almayı
 kanıtlar. Önceki hazırlık ve envanter kontrolü hataları ayrı tutulmuştur. Üretim
 kabulü/kalıcı engel, gerçek posta yükü ve yeniden başlatma bu kanıtın kapsamı dışındadır.
+
+### Kalıcı posta yenileme kurulum sahipliği (2026-09-22)
+
+P0.2/P0.3/P0.5: ortak işlem kaydı, genel başlangıç kurtarmasının, süresi geçen
+kiralamanın veya RPC çağrılarının serbest bırakamadığı kesin kurulum sahipliğini
+tanır. Özel yazıcı aynı yayın protokolünü release/host/publication kilitleri altında
+kullanır; ileri işlem veya geri alma tamamlanmadan güncel sonuç kanıtı ister.
+Güncelleyici, etkin veya bilinmeyen işlemi koordinatörleri durdurmadan reddeder.
+Geçmiş v1 kayıt baytları korunur; destek yeni isteğe bağlı Agent yetenek beyanında
+açıkça belirtilir. [Kapsam ve 12 süreç kesintisi](MAIL-ENROLLMENT-RESERVATION.md)
+üretimde doğrulanmış kabul/çalıştırma ile tam gerçek sistem işlem kabulünün yerine
+geçmez. Bu bileşen testleri hiçbir P0 işini kapatmaz.

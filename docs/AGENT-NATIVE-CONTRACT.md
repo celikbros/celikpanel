@@ -82,3 +82,13 @@ now verifies read-only admission beside running independent Debian mail, absent
 native enrollment on Arch, and private atomic-resource SIGKILL/inverse cases on
 both kernels. This evidence preserves the stated production enrollment and whole
 application rollback limits.
+
+## Durable enrollment capability (2026-09-22)
+
+The optional `mail_enrollment_policy` field is now emitted as
+`retain-enrollment-ledger-v1` by the current producer. Historical contracts without
+it retain their canonical bytes and hook compatibility meaning; they do not gain
+permission for enrollment admission. The stronger claim means Agent startup and
+generic mutation RPCs retain the exact active enrollment reservation. It does not
+certify production enrollment dispatch. Earlier strict readers may refuse the
+new field. See [reservation and transition contract](MAIL-ENROLLMENT-RESERVATION.md).

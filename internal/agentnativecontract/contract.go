@@ -15,6 +15,7 @@ import (
 const Schema = "celikpanel-agent-native-contract/v1"
 const FileName = "agent-native-contract.json"
 const MailHookPolicy = "preserve-independent-v1"
+const MailEnrollmentPolicy = "retain-enrollment-ledger-v1"
 const MaxSize = 2048
 const MaxAgentSize = 128 << 20
 
@@ -23,10 +24,11 @@ var commitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 var digestPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 type Contract struct {
-	Schema         string `json:"schema"`
-	SourceCommit   string `json:"source_commit"`
-	AgentSHA256    string `json:"agent_sha256"`
-	MailHookPolicy string `json:"mail_hook_policy"`
+	Schema               string `json:"schema"`
+	SourceCommit         string `json:"source_commit"`
+	AgentSHA256          string `json:"agent_sha256"`
+	MailHookPolicy       string `json:"mail_hook_policy"`
+	MailEnrollmentPolicy string `json:"mail_enrollment_policy,omitempty"`
 }
 
 // New is only the reviewed current-source build producer. It must never be used
@@ -38,10 +40,11 @@ func New(agent []byte, commit string) (Contract, error) {
 		return Contract{}, ErrContract
 	}
 	digest := sha256.Sum256(agent)
-	return Contract{Schema, commit, hex.EncodeToString(digest[:]), MailHookPolicy}, nil
+	return Contract{Schema, commit, hex.EncodeToString(digest[:]), MailHookPolicy, MailEnrollmentPolicy}, nil
 }
 func Encode(c Contract) ([]byte, error) {
-	if c.Schema != Schema || !commitPattern.MatchString(c.SourceCommit) || !digestPattern.MatchString(c.AgentSHA256) || c.MailHookPolicy != MailHookPolicy {
+	if c.Schema != Schema || !commitPattern.MatchString(c.SourceCommit) || !digestPattern.MatchString(c.AgentSHA256) || c.MailHookPolicy != MailHookPolicy ||
+		(c.MailEnrollmentPolicy != "" && c.MailEnrollmentPolicy != MailEnrollmentPolicy) {
 		return nil, ErrContract
 	}
 	raw, err := json.Marshal(c)

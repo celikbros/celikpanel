@@ -164,6 +164,16 @@ handoff_independent_capture_rollback() {
     die "independent rollback handoff failed"
 }
 
+# Reject durable reservations while the management interface is still reachable.
+# Final idle proofs under exclusion remain mandatory after this early check.
+preflight_mutations_before_quiesce() {
+    [[ $BOOTSTRAP_PRE_LEDGER -eq 0 ]] || return 0
+    if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+        run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle; then
+        die "an existing server operation requires completion or exact recovery before update; coordinators remain available"
+    fi
+}
+
 preflight_bind_before_quiesce() {
     prepare_runtime_mutation_lock_dir
     acquire_release_mutation_lock
@@ -2844,6 +2854,7 @@ else
     # Uyumsuz DNS durumunu panel erişilebilirken, kalıcı başlangıç engelinden
     # önce reddet. Aşağıda son kilit altında tekrar doğrula.
     preflight_bind_before_quiesce
+    preflight_mutations_before_quiesce
     check_mail_application_compatibility || die "application compatibility with independent mail renewal is unverified before coordinator downtime"
     mkdir -m 0700 -- "$stage_root"
     chown root:root -- "$stage_root"
