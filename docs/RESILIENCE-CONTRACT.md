@@ -356,3 +356,10 @@ and preservation of an owner-selected certificate plus pending work after replay
 of a completed renewal. P0.4/P0.5 evidence is partial: renewal still invokes Agent
 code; independent helper enrollment, retries, hook migration and removal remain
 open. No installed owner panel was changed.
+
+
+The [accepted mail TLS plan](MAIL-CERTIFICATE-ARTIFACT.md#shared-accepted-mail-tls-plan)
+now has one v1 contract shared by actual Agent production and recovery readers.
+Actual Alpha81 empty/SNI producer bytes are preserved exactly. Parsing accepted
+intent does not establish current health or authorize native helper mutations;
+the independent renewal transaction and its native acceptance remain open.
