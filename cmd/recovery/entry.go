@@ -32,6 +32,9 @@ func runEntry(args []string) int {
 			return exitUnavailable
 		}
 	}
+	if len(args) > 0 && args[0] == "verify-firewall-unit" {
+		return dispatchFirewallUnitVerification(args, os.Geteuid(), recoveryruntime.VerifyFirewallUnit, func(message string) { fmt.Fprintln(os.Stderr, message) })
+	}
 	if len(args) > 0 && (args[0] == "verify-material-support" || args[0] == "prepare-recovery-material" || args[0] == "material-root" || args[0] == "completion-material-root" || args[0] == "verify-installed-completion" || args[0] == "database-policy" || args[0] == "verify-database-support") {
 		return dispatchMaterial(args, os.Geteuid(), runMaterial, os.Stdout, func(message string) { fmt.Fprintln(os.Stderr, message) })
 	}

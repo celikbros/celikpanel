@@ -25,6 +25,21 @@ _release_unit_fail() {
     return 1
 }
 
+# Check only the helper needed by the intended destination. A damaged candidate
+# helper must not block rollback to a valid old unit. Legacy units retain the
+# existing snapshot/manifest proof and do not call a new reader.
+_release_unit_verify_firewall_helper() {
+    local source=$1 match_status=0
+    LC_ALL=C grep -Fq -- '/usr/libexec/celikpanel/firewall/' "$source" || match_status=$?
+    if [[ $match_status == 0 ]]; then
+        /usr/libexec/celikpanel/recovery verify-firewall-unit --unit "$source" ||
+            { _release_unit_fail 'required independent firewall helper is unverified; preserve its retained generation'; return 1; }
+    elif [[ $match_status != 1 ]]; then
+        _release_unit_fail 'cannot classify firewall unit; preserve its evidence'
+        return 1
+    fi
+}
+
 # A complete snapshot supplies the old state; the verified target release
 # supplies the candidate state. Per-file mixtures are legitimate interrupted
 # publications. Neither an active marker alone nor metadata alone proves bytes.
@@ -67,6 +82,9 @@ _release_unit_replace_transition_file() {
     local systemd_root=$5 target stage
     target=$systemd_root/$unit
     release_unit_validate_transition "$@" || return 1
+    if [[ $unit == celikpanel-firewall-restore.service ]]; then
+        _release_unit_verify_firewall_helper "$source" || return 1
+    fi
     if [[ -f $target ]] && cmp -s -- "$source" "$target"; then
         return 0
     fi
@@ -88,6 +106,10 @@ _release_unit_replace_transition_file() {
         rm -f -- "$stage"
         return 1
     fi
+    if [[ $unit == celikpanel-firewall-restore.service ]] && ! _release_unit_verify_firewall_helper "$source"; then
+        rm -f -- "$stage"
+        return 1
+    fi
     if ! mv -T -- "$stage" "$target"; then
         rm -f -- "$stage"
         _release_unit_fail "cannot publish unit atomically: $unit"
@@ -98,12 +120,16 @@ _release_unit_replace_transition_file() {
     _release_txn_validate_celikpanel_unit_file "$target" 'published systemd unit' || return 1
     cmp -s -- "$source" "$target" ||
         { _release_unit_fail "published unit differs from intended bytes: $unit"; return 1; }
+    if [[ $unit == celikpanel-firewall-restore.service ]]; then
+        _release_unit_verify_firewall_helper "$source" || return 1
+    fi
     release_unit_validate_transition "$@"
 }
 
 release_unit_publish_transition() {
     release_unit_validate_transition "$@" || return 1
     local candidate_units=$4 unit
+    _release_unit_verify_firewall_helper "$candidate_units/celikpanel-firewall-restore.service" || return 1
     for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
         _release_unit_replace_transition_file "$candidate_units/$unit" "$unit" "$@" || return 1
     done
@@ -117,6 +143,9 @@ release_unit_publish_transition() {
 release_unit_restore_transition() {
     release_unit_validate_transition "$@" || return 1
     local snapshot_units=$3 systemd_root=$5 firewall_state=$6 unit
+    if [[ $firewall_state == present ]]; then
+        _release_unit_verify_firewall_helper "$snapshot_units/celikpanel-firewall-restore.service" || return 1
+    fi
     for unit in celikpanel-agent.service celikpanel-panel.service; do
         _release_unit_replace_transition_file "$snapshot_units/$unit" "$unit" "$@" || return 1
     done

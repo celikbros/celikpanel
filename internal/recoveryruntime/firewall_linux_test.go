@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"syscall"
 	"testing"
 
@@ -225,6 +226,63 @@ func TestFirewallPreparationResumesAfterSIGKILL(t *testing.T) {
 			stages, _ := filepath.Glob(filepath.Join(root, "libexec", "firewall", ".prepare-firewall-*"))
 			if (phase == "file_restore" || phase == "stage_durable") && len(stages) == 0 {
 				t.Fatal("interrupted evidence disappeared")
+			}
+		})
+	}
+}
+
+func TestFirewallUnitVerificationPreservesDamagedEvidence(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("native root fixture")
+	}
+	for _, scenario := range []string{"valid", "unit-edited", "helper-edited", "missing-helper", "extra-file", "linked-unit", "unsafe-unit", "unsafe-helper"} {
+		t.Run(scenario, func(t *testing.T) {
+			root, err := os.MkdirTemp("/run", "celikpanel-firewall-unit-test-")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(root)
+			source := filepath.Join(root, "firewall-runtime")
+			generation := firewallFixture(t, source, []byte("native helper"))
+			retained := filepath.Join(root, "retained")
+			if err = os.Mkdir(retained, 0700); err != nil {
+				t.Fatal(err)
+			}
+			final := filepath.Join(retained, generation)
+			if err = os.Rename(source, final); err != nil {
+				t.Fatal(err)
+			}
+			raw, err := os.ReadFile(filepath.Join(final, firewallUnitName))
+			if err != nil {
+				t.Fatal(err)
+			}
+			unit := filepath.Join(root, firewallUnitName)
+			if err = os.WriteFile(unit, raw, 0644); err != nil {
+				t.Fatal(err)
+			}
+			switch scenario {
+			case "unit-edited":
+				os.WriteFile(unit, append(raw, []byte("# owner edit\n")...), 0644)
+			case "helper-edited":
+				os.WriteFile(filepath.Join(final, "restore"), []byte("owner helper"), 0755)
+			case "missing-helper":
+				os.Remove(filepath.Join(final, "restore"))
+			case "extra-file":
+				os.WriteFile(filepath.Join(final, "owner-note"), []byte("keep"), 0600)
+			case "linked-unit":
+				os.Link(unit, filepath.Join(root, "unit-link"))
+			case "unsafe-unit":
+				os.Chmod(unit, 0664)
+			case "unsafe-helper":
+				os.Chmod(filepath.Join(final, "restore"), 0775)
+			}
+			before := snapshotRuntimeFixture(t, root)
+			err = verifyFirewallUnitAt(unit, retained)
+			if (err == nil) != (scenario == "valid") {
+				t.Fatalf("verification: %v", err)
+			}
+			if !reflect.DeepEqual(before, snapshotRuntimeFixture(t, root)) {
+				t.Fatal("read-only proof changed evidence")
 			}
 		})
 	}

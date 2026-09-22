@@ -352,6 +352,7 @@ echo "==> Building matching panel and agent / Eşleşen panel ve agent derleniyo
     run_clean "$go_bin" run ./deploy/firewall/bundle --binary bin/firewall-restore --output firewall-runtime
     # Retain the helper only in its independent artifact, not the application bin resource.
     rm -- bin/firewall-restore
+    cp -- firewall-runtime/celikpanel-firewall-restore.service deploy/systemd/celikpanel-firewall-restore.service
 )
 
 echo "==> Building matching web artifact / Eşleşen web ürünü derleniyor"

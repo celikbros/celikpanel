@@ -181,3 +181,29 @@ kanıtlar. İki yardımcı nesli, kayıtlı politika ve ayrı yerel tablo korunu
 Eksik tablo deneyinin ilk sonucu da saklanır. Nesiller aynı okuyucunun iki
 derlemesidir; anlamsal sürüm geçişi veya normal uygulama güncelleme/geri alma
 kanıtı değildir. P0.5 açık kalır.
+
+
+## Paketlenen yerel birim geçişi (kaynak aşaması)
+
+D-025 ilkeleri 1, 3, 4 / P0.3, P0.5. Çevrimdışı dağıtım ve kaynak bootstrap
+sürümleri, paketteki güvenlik duvarı biriminin aynı baytlarını incelenen systemd
+içeriğine koyar. Kaynak ağacındaki eski birim uyumluluk için korunur; doğrudan
+kaynak ağacı kurulumu veya panel kaldırma desteği tamamlanmış sayılmaz. Yardımcı,
+koordinatörler durmadan hazırlanır; aday okuyucu hedef birimi korunan nesliyle
+doğrular. Yeni paket kurulumu aynı kanıtı temel kurulum niyetinden önce ister.
+
+Atomik eski/aday birim geçişi artık gidilecek birimin yardımcısını da doğrular.
+Bozuk aday, değişikliksiz tekrar dahil yayını durdurur; sağlam eski birime geri
+almayı engelleyemez. Eski bağımsız birim kendi korunan yardımcısını gerektirir.
+Bilinmeyen şablon, sahip düzenlemesi, okuma hatası veya eksik/değişmiş yardımcı
+kanıtları korur ve ilgili geçişi durdurur. Her iki yardımcı nesli uygulama
+dosyalarının değiştirilmesinden ayrı kalır. Eski/v2 politika, v1 yapıt ve v6
+tam snapshot biçimleri değişmez.
+
+Kanıt: tam runtime/CLI yarış testleri; salt-okur birim/yardımcı doğrulamasının
+bozuk, bağlı ve güvensiz dosyaları reddi; gerçek kurulum/güncelleme önkontrol
+fonksiyonları; hedef yardımcıya göre ret ve eski birime geri alma shell testleri.
+Bunlar kaynak/bileşen kanıtıdır. Önceki yerel A/B/A deneyi tam paket birimini
+kullanır fakat normal uygulama güncelleme gövdesini kanıtlamaz. Tam imzalı
+güncelleme/otomatik geri alma, hatalı boot konsol kurtarması, Arch ve kalan
+iş yükü/yenileme matrisi açıktır. Kurulu kullanıcı sunucusu değiştirilmez.

@@ -2138,6 +2138,8 @@ trap - EXIT
 require_literal "$MAKEFILE" 'build: panel agent schema17-bridge recovery-runtime firewall-runtime web'
 require_literal "$MAKEFILE" 'cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime'
 require_literal "$MAKEFILE" 'chmod 0755 dist/$(DIST)/firewall-runtime/restore'
+require_literal "$MAKEFILE" 'cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/$(DIST)/deploy/systemd/celikpanel-firewall-restore.service'
+require_literal "$BOOTSTRAP" 'cp -- firewall-runtime/celikpanel-firewall-restore.service deploy/systemd/celikpanel-firewall-restore.service'
 require_literal "$BOOTSTRAP" 'run_clean "$go_bin" run ./deploy/firewall/bundle --binary bin/firewall-restore --output firewall-runtime'
 require_literal "$BOOTSTRAP" 'rm -- bin/firewall-restore'
 

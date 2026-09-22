@@ -191,3 +191,31 @@ and Agent binaries absent. Both helper generations, saved policy and unrelated
 native table remain intact. A preliminary incomplete table fixture is retained.
 The generations are two builds of the same audited reader; this is not semantic
 version migration or a normal application-update/rollback proof. P0.5 stays open.
+
+
+## Packaged native unit transition (source stage)
+
+D-025 invariants 1, 3, 4 / P0.3, P0.5. Offline distributions and source-bootstrap
+releases now copy the exact bundled firewall unit into their reviewed systemd
+payload. The source checkout's historical unit is retained for compatibility;
+this does not certify direct source-checkout installation or panel removal.
+The helper is prepared before coordinator downtime, and the candidate reader
+then verifies the intended unit against its retained generation. Fresh packaged
+installation performs the same proof before foundation intent is published.
+
+The existing atomic old/candidate unit transition now also verifies the helper
+required by its intended destination. A damaged candidate blocks publication,
+including an otherwise idempotent retry, but cannot prevent rollback to a valid
+legacy unit. An old independent unit requires its own retained helper to verify.
+Unknown templates, owner edits, read errors, missing or changed helpers retain
+evidence and stop the affected transition. Only the intended unit changes; both
+helper generations remain outside application payload replacement. Policy
+legacy/v2, artifact v1 and complete snapshot v6 formats stay unchanged.
+
+Validation: full runtime/CLI race tests; root-owned read-only unit/helper proof
+with changed, linked and unsafe evidence; real extracted fresh-install and update
+preflights; atomic shell transition with destination-only helper refusal and old
+rollback. These are source/component checks. Previous native A/B/A evidence uses
+the exact bundled unit but not the normal application update body. Full signed
+update/automatic rollback, failed-boot console recovery, Arch and the remaining
+workload/renewal matrix remain open. No installed owner server is changed.

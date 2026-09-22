@@ -25,3 +25,17 @@ func dispatchFirewallPreparation(args []string, uid int, prepare func(string, in
 	}
 	return exitOK
 }
+
+func dispatchFirewallUnitVerification(args []string, uid int, verify func(string) error, report func(string)) int {
+	if uid != 0 {
+		return exitNotOwner
+	}
+	if len(args) != 3 || args[0] != "verify-firewall-unit" || args[1] != "--unit" || !filepath.IsAbs(args[2]) || filepath.Clean(args[2]) != args[2] || filepath.Base(args[2]) != "celikpanel-firewall-restore.service" {
+		return exitUsage
+	}
+	if err := verify(args[2]); err != nil {
+		report("The independent helper required by this firewall unit could not be verified. Preserve its files; the owner must restore the matching retained generation before resuming this unit transition. " + err.Error())
+		return exitUnavailable
+	}
+	return exitOK
+}

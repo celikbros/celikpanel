@@ -23,7 +23,7 @@ func TestFreshInstallerEnrollmentSharedDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	repository := filepath.Clean(filepath.Join(directory, "../.."))
-	for _, scenario := range []string{"absent", "existing-755", "owner-700", "firewall", "firewall-corrupt"} {
+	for _, scenario := range []string{"absent", "existing-755", "owner-700", "firewall", "firewall-corrupt", "firewall-unit-corrupt"} {
 		t.Run(scenario, func(t *testing.T) {
 			root, err := os.MkdirTemp("/run", "celikpanel-fresh-install-test-")
 			if err != nil {
@@ -71,9 +71,24 @@ func TestFreshInstallerEnrollmentSharedDirectory(t *testing.T) {
 				t.Fatal(err)
 			}
 			firewallGeneration := ""
-			if scenario == "firewall" || scenario == "firewall-corrupt" {
+			if scenario == "firewall" || scenario == "firewall-corrupt" || scenario == "firewall-unit-corrupt" {
 				firewallSource := filepath.Join(source, "firewall-runtime")
 				firewallGeneration = firewallFixture(t, firewallSource, []byte("reviewed native helper"))
+				unitRoot := filepath.Join(source, "deploy/systemd")
+				if err := os.Mkdir(unitRoot, 0755); err != nil {
+					t.Fatal(err)
+				}
+				unitBytes, err := os.ReadFile(filepath.Join(firewallSource, firewallUnitName))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if scenario == "firewall-unit-corrupt" {
+					unitBytes = append(unitBytes, []byte("# owner edit\n")...)
+				}
+				if err = os.WriteFile(filepath.Join(unitRoot, firewallUnitName), unitBytes, 0644); err != nil {
+					t.Fatal(err)
+				}
+
 				if scenario == "firewall-corrupt" {
 					os.WriteFile(filepath.Join(firewallSource, "restore"), []byte("owner edit"), 0755)
 				}
@@ -132,14 +147,14 @@ prepare_fresh_release_transaction_foundation
 				}
 				return
 			}
-			if scenario == "firewall-corrupt" {
+			if scenario == "firewall-corrupt" || scenario == "firewall-unit-corrupt" {
 				if err == nil {
 					t.Fatal("corrupt firewall accepted")
 				}
 				if _, e := os.Stat(filepath.Join(root, "foundation-intent")); !os.IsNotExist(e) {
 					t.Fatal("foundation publication continued after firewall refusal")
 				}
-				if _, e := os.Stat(filepath.Join(shared, "firewall", firewallGeneration)); !os.IsNotExist(e) {
+				if _, e := os.Stat(filepath.Join(shared, "firewall", firewallGeneration)); scenario == "firewall-corrupt" && !os.IsNotExist(e) {
 					t.Fatal("corrupt firewall published")
 				}
 				return
@@ -197,6 +212,16 @@ func TestFreshInstallerEnrollmentChild(t *testing.T) {
 			t.Fatal("fresh firewall tuple changed")
 		}
 		if _, err := prepareFirewallAt(source, 9, filepath.Join(root, "usr/libexec/celikpanel/firewall"), filepath.Join(root, "transaction"), nil); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	if len(flag.Args()) > 0 && flag.Args()[0] == "verify-firewall-unit" {
+		unit := filepath.Join(root, "source/deploy/systemd", firewallUnitName)
+		if !reflect.DeepEqual(flag.Args(), []string{"verify-firewall-unit", "--unit", unit}) {
+			t.Fatal("unit proof tuple changed")
+		}
+		if err := verifyFirewallUnitAt(unit, filepath.Join(root, "usr/libexec/celikpanel/firewall")); err != nil {
 			t.Fatal(err)
 		}
 		return
