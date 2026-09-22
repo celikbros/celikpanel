@@ -637,3 +637,13 @@ kills and trusted SMTP/IMAP results are recorded with management binaries absent
 Two failed preparations are retained and excluded. Production enrollment,
 reboot/power-loss, missing historical evidence and cross-build adoption remain
 open; this is a scoped P0.3/P0.5 acceptance advance, not full closure.
+
+### Automatic unselected renewal after reboot — September 22
+
+P0.3/P0.5: [BE native boot evidence](../deploy/e2e/release-recovery/MAIL-UNSELECTED-BOOT-BE.md)
+proves the installed native timer completed the exact interrupted, unselected
+renewal after a normal VM reboot, with management binaries absent. No manual
+helper continuation ran after reboot. Owner configuration, old material,
+unselected stage and prior history were preserved; both trusted mail listeners
+served the new leaf. This closes that bounded reboot acceptance case, not
+power-loss, cross-build adoption or production enrollment/rollback compatibility.

@@ -1,0 +1,231 @@
+{
+  "schema": "celikpanel/native-mail-unselected-boot/v1",
+  "source_commit": "07cf2a1121262e54c86a98706ac33a5782cc318e",
+  "binary_sha256": "70d5bc97427328e17f9700d7bd94c98a211953966a9b18e842a1e585846daad9",
+  "test_sha256": "1e5a4f86c02bf7ed72314ddd6bdf3edbf3711897ee88e0840232fcc3f952119b",
+  "kit_manifest": {
+    "schema": "celikpanel-mail-renewal-runtime/v1",
+    "generation": "a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb",
+    "ledger_version": 1,
+    "plan_version": 1,
+    "receipt_schema": "mail-host-certificate-receipt/v1",
+    "binary_sha256": "70d5bc97427328e17f9700d7bd94c98a211953966a9b18e842a1e585846daad9",
+    "service_sha256": "412e6e7a818cfde830cd3d13cd932232cd9b55f1bf3d246475622fe3d22d1d55",
+    "timer_sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "hook_sha256": "b7afb144016aa04e28306ec9e087a239e160a0f96b517813dfe6e3ec7f89cdeb"
+  },
+  "lab": {
+    "cell_id": "release-recovery__3688d130a0721786",
+    "node": "debian13",
+    "local_qemu_loopback": true
+  },
+  "scope": {
+    "automatic_timer_dispatch": true,
+    "management_absent": true,
+    "graceful_reboot": true,
+    "power_loss": false,
+    "production_enrollment": false,
+    "cross_build_adoption": false,
+    "old_application_rollback": false
+  },
+  "before": {
+    "attempt_before": 1,
+    "before_sha256": "c6fc6846340b0e5d67af53219e60436e64b9001a32bfa3a01399cf50a1ffe1e4",
+    "boot_id": "47c9fa4d-0d12-4533-9b79-59a638fe4673",
+    "commit": "07cf2a1121262e54c86a98706ac33a5782cc318e",
+    "cut": {
+      "build": "07cf2a1121262e54c86a98706ac33a5782cc318e",
+      "domain": "mail.setup.celikpanel.test",
+      "new_leaf": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7",
+      "old_leaf": "3c0bf4e30c71bb7b289bd41fffa6ff8c39e5f996ecedcfc1c037c71fba4aa100",
+      "owner": "ec805213ca11f4aa3fc62ff08dde1da1",
+      "point": "intent",
+      "qualifier": "mhc1:ef703a3a65fb5de252936691b5ed883961bbfee2bd9b2415f8def1a399c943fc",
+      "request": "73de573861c1cbc1ea8c7e355929092c",
+      "trial": "86e9c8f6a708026e0788bcff040599bd"
+    },
+    "generation": "a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb",
+    "new_leaf": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7",
+    "old_leaf": "3c0bf4e30c71bb7b289bd41fffa6ff8c39e5f996ecedcfc1c037c71fba4aa100",
+    "owner": "ec805213ca11f4aa3fc62ff08dde1da1",
+    "request": "73de573861c1cbc1ea8c7e355929092c",
+    "retained_stages": [
+      [
+        ".panel-cert-906829c60bbe9dc58747e4afe95b9f16",
+        133415,
+        "81e34684928e7fcc22a96ce83e47d6e99ceef1b6c1dde8b62c54f1d47e8597d9"
+      ]
+    ],
+    "schema": "celikpanel-mail-boot-pending/v1",
+    "served_before": {
+      "imap993": "3c0bf4e30c71bb7b289bd41fffa6ff8c39e5f996ecedcfc1c037c71fba4aa100",
+      "smtp587": "3c0bf4e30c71bb7b289bd41fffa6ff8c39e5f996ecedcfc1c037c71fba4aa100"
+    },
+    "trial": "86e9c8f6a708026e0788bcff040599bd"
+  },
+  "result": {
+    "attempt": 2,
+    "before_image_unchanged": true,
+    "boot_after": "b8691874-0b1c-43d6-8fa3-ab32100cec0a",
+    "boot_before": "47c9fa4d-0d12-4533-9b79-59a638fe4673",
+    "commit": "07cf2a1121262e54c86a98706ac33a5782cc318e",
+    "generation": "a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb",
+    "leaf_after": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7",
+    "leaf_before": "3c0bf4e30c71bb7b289bd41fffa6ff8c39e5f996ecedcfc1c037c71fba4aa100",
+    "management_absent": true,
+    "native_config_unchanged": true,
+    "native_journal": [
+      {
+        "CODE_FILE": "src/core/job.c",
+        "CODE_FUNC": "job_emit_start_message",
+        "CODE_LINE": "627",
+        "INVOCATION_ID": "72fd4ba97af442ad96729ff2111d7a00",
+        "JOB_ID": "490",
+        "JOB_TYPE": "start",
+        "MESSAGE": "Starting celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate...",
+        "MESSAGE_ID": "7d4958e842da4a758f6c1cdc7b36dcc5",
+        "PRIORITY": "6",
+        "SYSLOG_FACILITY": "3",
+        "SYSLOG_IDENTIFIER": "systemd",
+        "TID": "1",
+        "UNIT": "celikpanel-mail-renewal.service",
+        "_BOOT_ID": "b86918740b1c43d68fa3ab32100cec0a",
+        "_CAP_EFFECTIVE": "1ffffffffff",
+        "_CMDLINE": "/sbin/init",
+        "_COMM": "systemd",
+        "_EXE": "/usr/lib/systemd/systemd",
+        "_GID": "0",
+        "_HOSTNAME": "dns-debian13",
+        "_MACHINE_ID": "068526e12927582f9e8f6b606d369057",
+        "_PID": "1",
+        "_RUNTIME_SCOPE": "system",
+        "_SELINUX_CONTEXT": "unconfined\n",
+        "_SOURCE_REALTIME_TIMESTAMP": "1790103015474016",
+        "_SYSTEMD_CGROUP": "/init.scope",
+        "_SYSTEMD_SLICE": "-.slice",
+        "_SYSTEMD_UNIT": "init.scope",
+        "_TRANSPORT": "journal",
+        "_UID": "0",
+        "__CURSOR": "s=788c880f79b14d1ba113c817839edfc5;i=28f9;b=b86918740b1c43d68fa3ab32100cec0a;m=24135d3;t=65c16d65948d1;x=acb2b202bee3481c",
+        "__MONOTONIC_TIMESTAMP": "37828051",
+        "__REALTIME_TIMESTAMP": "1790103015475409",
+        "__SEQNUM": "10489",
+        "__SEQNUM_ID": "788c880f79b14d1ba113c817839edfc5"
+      },
+      {
+        "CODE_FILE": "src/core/unit.c",
+        "CODE_FUNC": "unit_log_success",
+        "CODE_LINE": "6061",
+        "INVOCATION_ID": "72fd4ba97af442ad96729ff2111d7a00",
+        "MESSAGE": "celikpanel-mail-renewal.service: Deactivated successfully.",
+        "MESSAGE_ID": "7ad2d189f7e94e70a38c781354912448",
+        "PRIORITY": "6",
+        "SYSLOG_FACILITY": "3",
+        "SYSLOG_IDENTIFIER": "systemd",
+        "TID": "1",
+        "UNIT": "celikpanel-mail-renewal.service",
+        "_BOOT_ID": "b86918740b1c43d68fa3ab32100cec0a",
+        "_CAP_EFFECTIVE": "1ffffffffff",
+        "_CMDLINE": "/sbin/init",
+        "_COMM": "systemd",
+        "_EXE": "/usr/lib/systemd/systemd",
+        "_GID": "0",
+        "_HOSTNAME": "dns-debian13",
+        "_MACHINE_ID": "068526e12927582f9e8f6b606d369057",
+        "_PID": "1",
+        "_RUNTIME_SCOPE": "system",
+        "_SELINUX_CONTEXT": "unconfined\n",
+        "_SOURCE_REALTIME_TIMESTAMP": "1790103016994006",
+        "_SYSTEMD_CGROUP": "/init.scope",
+        "_SYSTEMD_SLICE": "-.slice",
+        "_SYSTEMD_UNIT": "init.scope",
+        "_TRANSPORT": "journal",
+        "_UID": "0",
+        "__CURSOR": "s=788c880f79b14d1ba113c817839edfc5;i=2905;b=b86918740b1c43d68fa3ab32100cec0a;m=2586202;t=65c16d67074ff;x=8a41da8f3dc30aab",
+        "__MONOTONIC_TIMESTAMP": "39346690",
+        "__REALTIME_TIMESTAMP": "1790103016994047",
+        "__SEQNUM": "10501",
+        "__SEQNUM_ID": "788c880f79b14d1ba113c817839edfc5"
+      },
+      {
+        "CODE_FILE": "src/core/job.c",
+        "CODE_FUNC": "job_emit_done_message",
+        "CODE_LINE": "818",
+        "INVOCATION_ID": "72fd4ba97af442ad96729ff2111d7a00",
+        "JOB_ID": "490",
+        "JOB_RESULT": "done",
+        "JOB_TYPE": "start",
+        "MESSAGE": "Finished celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate.",
+        "MESSAGE_ID": "39f53479d3a045ac8e11786248231fbf",
+        "PRIORITY": "6",
+        "SYSLOG_FACILITY": "3",
+        "SYSLOG_IDENTIFIER": "systemd",
+        "TID": "1",
+        "UNIT": "celikpanel-mail-renewal.service",
+        "_BOOT_ID": "b86918740b1c43d68fa3ab32100cec0a",
+        "_CAP_EFFECTIVE": "1ffffffffff",
+        "_CMDLINE": "/sbin/init",
+        "_COMM": "systemd",
+        "_EXE": "/usr/lib/systemd/systemd",
+        "_GID": "0",
+        "_HOSTNAME": "dns-debian13",
+        "_MACHINE_ID": "068526e12927582f9e8f6b606d369057",
+        "_PID": "1",
+        "_RUNTIME_SCOPE": "system",
+        "_SELINUX_CONTEXT": "unconfined\n",
+        "_SOURCE_REALTIME_TIMESTAMP": "1790103016994285",
+        "_SYSTEMD_CGROUP": "/init.scope",
+        "_SYSTEMD_SLICE": "-.slice",
+        "_SYSTEMD_UNIT": "init.scope",
+        "_TRANSPORT": "journal",
+        "_UID": "0",
+        "__CURSOR": "s=788c880f79b14d1ba113c817839edfc5;i=2906;b=b86918740b1c43d68fa3ab32100cec0a;m=258630d;t=65c16d670760a;x=b7cdb9430d3763b6",
+        "__MONOTONIC_TIMESTAMP": "39346957",
+        "__REALTIME_TIMESTAMP": "1790103016994314",
+        "__SEQNUM": "10502",
+        "__SEQNUM_ID": "788c880f79b14d1ba113c817839edfc5"
+      }
+    ],
+    "native_unit": "Result=success\nExecMainStatus=0\nExecStart={ path=/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/renew ; argv[]=/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/renew --process-pending ; ignore_errors=no ; start_time=[Tue 2026-09-22 18:50:15 UTC] ; stop_time=[Tue 2026-09-22 18:50:16 UTC] ; pid=840 ; code=exited ; status=0 }\nInvocationID=72fd4ba97af442ad96729ff2111d7a00\n",
+    "old_generation_preserved": true,
+    "owner": "ec805213ca11f4aa3fc62ff08dde1da1",
+    "prior_jobs_unchanged": true,
+    "request": "73de573861c1cbc1ea8c7e355929092c",
+    "schema": "celikpanel-mail-boot-result/v1",
+    "served": {
+      "imap993": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7",
+      "smtp587": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7"
+    },
+    "timer_enabled_active": true,
+    "trial": "86e9c8f6a708026e0788bcff040599bd",
+    "unselected_stage_preserved": true
+  },
+  "logs": {
+    "kill": {
+      "text": "Running as unit: celikpanel-mail-unselected-86e9c8f6a708026e0788bcff040599bd-intent.service\nFinished with result: signal\nMain processes terminated with: code=killed, status=9/KILL\nService runtime: 315ms\nCPU time consumed: 223ms\nMemory peak: 21.5M (swap: 0B)\nSep 22 18:49:02 dns-debian13 systemd[1]: Starting celikpanel-mail-unselected-86e9c8f6a708026e0788bcff040599bd-intent.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-boot-unselected.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillBeforeSelection\\$\" -test.timeout=120s...\nSep 22 18:49:02 dns-debian13 mail-boot-unselected.test[6801]: === RUN   TestMailRenewalDisposableVMKillBeforeSelection\nSep 22 18:49:03 dns-debian13 systemd[1]: celikpanel-mail-unselected-86e9c8f6a708026e0788bcff040599bd-intent.service: Main process exited, code=killed, status=9/KILL\nSep 22 18:49:03 dns-debian13 systemd[1]: celikpanel-mail-unselected-86e9c8f6a708026e0788bcff040599bd-intent.service: Failed with result 'signal'.\nSep 22 18:49:03 dns-debian13 systemd[1]: Failed to start celikpanel-mail-unselected-86e9c8f6a708026e0788bcff040599bd-intent.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-boot-unselected.test -test.v \"-test.run=^TestMailRenewalDisposableVMKillBeforeSelection\\$\" -test.timeout=120s.\n",
+      "sha256": "4a3b7541d3632ba6162b820ffb2c341bc166096c80fb562e6986183a05126557"
+    },
+    "enrollment": {
+      "text": "a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb\n=== RUN   TestMailLoadedDisposableVMTransition\n    mail_renewal_loaded_vm_test.go:131: native_loaded_forward=verified timer_preference=preserved operation=eb7f56e41d0bc42462e08f86ed1f3574 previous=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d target=a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb\n--- PASS: TestMailLoadedDisposableVMTransition (1.61s)\nPASS\ncomponent=mail-renewal\nversion=mail-boot-fixture\ncommit=07cf2a1121262e54c86a98706ac33a5782cc318e\nExecStart={ path=/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/renew ; argv[]=/usr/libexec/celikpanel/mail-renewal/a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb/renew --process-pending ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\nId=celikpanel-mail-renewal.service\nActiveState=inactive\nUnitFileState=static\n\nId=celikpanel-mail-renewal.timer\nActiveState=active\nUnitFileState=enabled\n",
+      "sha256": "7b130254a050692261ac3eb888f8dab58e7aa14d0829da7d11d621b29d2e7095"
+    },
+    "first_preparation": {
+      "text": "Independent mail renewal preparation could not be verified before service downtime. Preserve the files and review this preflight failure before retrying the same release in CelikPanel. recovery runtime unavailable: runtime_unsafe_metadata\n",
+      "sha256": "1f43e64d43fbfcd498a5f70b2bf03c665cd3431074af6b7e2f7cf1b140771974"
+    },
+    "second_preparation": {
+      "text": "a4939ac8fcda2c9194f06de7fe5bdfec2955471d52d8398c391a92d849c6addb\n=== RUN   TestMailLoadedDisposableVMTransition\n    mail_renewal_loaded_vm_test.go:102: independent target/predecessor required\n--- FAIL: TestMailLoadedDisposableVMTransition (0.00s)\nFAIL\n",
+      "sha256": "156be663eac7210cb65411332e28513c27f72ae7656d40a336a3131e60ed8629"
+    }
+  },
+  "retained_preparations": [
+    {
+      "reason": "fixture opened lock instead of transaction.lock; rejected before runtime preparation",
+      "accepted": false
+    },
+    {
+      "reason": "fixture placeholder changed environment variable name; old trial identity rejected before native publication",
+      "accepted": false
+    }
+  ]
+}

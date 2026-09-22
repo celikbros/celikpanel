@@ -584,3 +584,13 @@ absent. Trusted SMTP/IMAP listeners, native settings, prior ledger jobs and the
 unselected stage are verified. The timer was paused for these deterministic
 cuts; new-helper automatic dispatch, reboot and production enrollment are not
 claimed. Earlier preparation failures remain recorded separately.
+
+## Automatic continuation after normal reboot (2026-09-22)
+
+The separate [BE boot trial](../deploy/e2e/release-recovery/MAIL-UNSELECTED-BOOT-BE.md)
+now proves an actual before-selection process kill followed by a normal VM reboot.
+With management binaries absent, the installed native timer automatically invoked
+the source-bound helper and completed the same request at attempt 2. Trusted
+SMTP/IMAP, prior material, owner configuration and unrelated history were verified.
+This adds automatic-dispatch/normal-reboot proof to the earlier fresh-process
+trials; power-loss and production admission/old-application rollback stay open.

@@ -582,3 +582,13 @@ yokken dört gerçek kesinti ve doğrulanmış SMTP/IMAP sonuçları kaydedildi.
 başarısız hazırlık ayrı tutuldu. Ürün devreye alma, yeniden başlatma/güç kaybı,
 tarihsel eksik kanıt ve derlemeler arası devam hâlâ açıktır; P0.3/P0.5 tamamlanmış
 sayılmıyor.
+
+### Yeniden açılışta otomatik posta yenilemesi — 22 Eylül
+
+P0.3/P0.5: [BE gerçek açılış kanıtı](../deploy/e2e/release-recovery/MAIL-UNSELECTED-BOOT-BE.md),
+sertifika seçilmeden kesilen aynı işi normal VM yeniden açılışından sonra yerel
+zamanlayıcının otomatik tamamladığını gösterir. Panel ve Agent dosyaları yoktu;
+açılıştan sonra elle devam komutu çalıştırılmadı. Sahibin ayarları, eski sertifika,
+seçilmemiş geçici nesil ve önceki iş kayıtları korundu. SMTP/IMAP yeni sertifikayla
+doğrulandı. Bu sınırlı açılış kabulü tamamlandı; güç kaybı, farklı derlemenin işi
+devralması, üretim kaydı ve eski uygulama sürümüne dönüş uyumluluğu açık kalır.
