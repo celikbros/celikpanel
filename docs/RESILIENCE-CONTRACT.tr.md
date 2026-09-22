@@ -331,3 +331,9 @@ aynı aday yardımcı/birim, sahip etkinleştirme durumu, politika, ilgisiz tabl
 HTTPS korunarak geçti. Yeni Agent, açılıştaki geçici ret sonrası aynı PID ve
 süreç kimliğiyle hazır kontrol sonucu verdi. Bu sınırlı kabul tamamlandı;
 P0.2/P0.3/P0.5 matrisi, üretim arayüzü/imza güveni ve bağımsız yenileme açık.
+
+[Ortak sertifika yayınlama kilidi](MAIL-CERTIFICATE-ARTIFACT.md#shared-publication-exclusion)
+eski sabit flock kimliğini korur; sınırlı beklemeyi destekler ve değiştirilmiş
+kilidi izinlerini düzeltmeden reddeder. Agent ortak kodu kullanıyor; ayrı süreçle
+kilitleme ve süreç kesintisi testleri geçti. Yerel yenileme, dış mutasyon kilidi,
+hook geçişi ve yönetim yokken kabul P0.4/P0.5 kapsamında açık kalıyor.

@@ -254,3 +254,10 @@ unrelated table and HTTPS. The corrected Agent also changes from a native starti
 refusal to a ready update check in the same PID/start/invocation after boot. This
 supersedes the scoped open Arch-forward/same-process items above, not the remaining
 P0.2/P0.3/P0.5 matrix, production UI/trust or independent renewal acceptance.
+
+[Shared certificate publication exclusion](MAIL-CERTIFICATE-ARTIFACT.md#shared-publication-exclusion)
+now uses the historical fixed flock identity outside Agent code, supports bounded
+waiting and refuses replaced/owner-modified locks without normalization. Actual
+Agent calls use it; root cross-process death/exclusion tests pass. This advances
+P0.4/P0.5 shared-contract groundwork; native renewal publication, outer mutation
+exclusion, hook migration and management-absent acceptance remain open.

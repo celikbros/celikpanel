@@ -67,3 +67,34 @@ Existing Agent tests verify real certificate/key trust through the shared reader
 No on-disk version, publication, hook or update migration changes. This is a native
 consumer prerequisite; it does not complete independent renewal or prove a whole
 mail service restart/renewal flow.
+
+## Shared publication exclusion
+
+`internal/certpublishlock` now owns the existing `/run/celikpanel-panel-cert.lock`
+flock protocol used by both panel and mail certificate publication. Agent delegates
+to it with its historical wait behavior. Future native consumers can supply a
+bounded context. This is exclusion only: it grants no issuance, service-config,
+operation-ledger or renewal authority, and does not replace the outer mutation lock.
+
+The same pathname and flock mechanism interoperate with historical Agents. New
+locks are private root-owned files. Existing root-owned single-link mode0600 files
+keep their original group, including the Agent's celikpanel group. Existing wrong
+permissions/ownership/types are refused without Fchmod or other normalization.
+Nonblocking open avoids hanging on a substituted FIFO; cancellable lock acquisition
+never runs the callback after an observed cancellation. The selected descriptor
+and named entry are checked again after acquiring the lock; replacing the name
+while a waiter holds the old descriptor cannot authorize publication through the
+old inode. The fixed `/run` directory identity is also rechecked.
+
+There is no persisted schema or migration. An altered lock requires the owner to
+inspect the named resource and resolve the conflicting change before explicitly
+retrying. Do not delete a lock held by another publisher: that creates two locks.
+Unknown authority does not permit deleting the owner's file or changing its mode.
+Root ext4 tests cover cancellation, action failure/reuse, replaced inode, unsafe
+metadata/types with no normalization, historical private group and exclusion
+against a separate process using plain historical flock. Killing that test holder
+releases the kernel lock and a subsequent caller proceeds. Agent mail/panel TLS
+race tests and the standalone recovery-checker build retain compatibility.
+
+Native deployment/reload, durable renewal recovery and hook migration remain open.
+This shared lock does not by itself establish independent certificate renewal.

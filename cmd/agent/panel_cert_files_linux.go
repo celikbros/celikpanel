@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
@@ -17,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/certpublishlock"
 	"golang.org/x/sys/unix"
 )
 
@@ -314,35 +316,7 @@ func deployRenewedPanelCertFiles(lineageName, tlsDir string) (bool, error) {
 }
 
 func withPanelCertPublishLock(action func() error) error {
-	if action == nil {
-		return fmt.Errorf("panel certificate publication action is required")
-	}
-	const lockPath = "/run/celikpanel-panel-cert.lock"
-	fd, err := unix.Open(
-		lockPath,
-		unix.O_RDWR|unix.O_CREAT|unix.O_CLOEXEC|unix.O_NOFOLLOW,
-		0o600,
-	)
-	if err != nil {
-		return fmt.Errorf("open panel certificate publication lock: %w", err)
-	}
-	defer unix.Close(fd)
-	var stat unix.Stat_t
-	if err := unix.Fstat(fd, &stat); err != nil {
-		return fmt.Errorf("stat panel certificate publication lock: %w", err)
-	}
-	if stat.Mode&unix.S_IFMT != unix.S_IFREG || stat.Uid != 0 ||
-		stat.Nlink != 1 || stat.Mode&0o077 != 0 {
-		return fmt.Errorf("panel certificate publication lock is not trusted")
-	}
-	if err := unix.Fchmod(fd, 0o600); err != nil {
-		return fmt.Errorf("protect panel certificate publication lock: %w", err)
-	}
-	if err := unix.Flock(fd, unix.LOCK_EX); err != nil {
-		return fmt.Errorf("lock panel certificate publication: %w", err)
-	}
-	defer unix.Flock(fd, unix.LOCK_UN)
-	return action()
+	return certpublishlock.With(context.Background(), action)
 }
 
 func activePanelCertificateIdentity(tlsDir string) (string, bool, error) {
