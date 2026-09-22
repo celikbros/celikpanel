@@ -511,6 +511,14 @@ func publishPanelCertDeployHookOwned(
 	content []byte,
 	ownerUID, ownerGID int,
 ) error {
+	return publishPanelCertDeployHookMode(dirPath, base, content, ownerUID, ownerGID, false)
+}
+
+// Mail initial publication cannot replace a hook that appeared after admission.
+func publishPanelCertDeployHookAbsent(dirPath, base string, content []byte) error {
+	return publishPanelCertDeployHookMode(dirPath, base, content, 0, 0, true)
+}
+func publishPanelCertDeployHookMode(dirPath, base string, content []byte, ownerUID, ownerGID int, onlyAbsent bool) error {
 	if filepath.Base(base) != base || base == "." || base == "" {
 		return fmt.Errorf("invalid certbot deploy hook name")
 	}
@@ -582,7 +590,12 @@ func publishPanelCertDeployHookOwned(
 		return fmt.Errorf("close certbot deploy hook replacement: %w", err)
 	}
 	closed = true
-	if err := unix.Renameat(dirFD, tempName, dirFD, base); err != nil {
+	if onlyAbsent {
+		err = unix.Renameat2(dirFD, tempName, dirFD, base, unix.RENAME_NOREPLACE)
+	} else {
+		err = unix.Renameat(dirFD, tempName, dirFD, base)
+	}
+	if err != nil {
 		return secureConfigOpenError("publish certbot deploy hook", filepath.Join(dirPath, base), err)
 	}
 	published = true

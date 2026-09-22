@@ -158,3 +158,28 @@ All five native mail files matched the v1 generated contract and exact archive
 modes, and no helper was added to the application bin tree. See
 [local artifact evidence](../deploy/e2e/release-recovery/MAIL-RELEASE-PAYLOAD.json).
 It is explicitly unpublished and unsigned, with no installed update performed.
+
+## Certificate writer compatibility with independent enrollment
+
+P0.4/P0.5, unchanged v1 kit/ledger/receipt. The legacy hook producer bytes now
+have one shared embedded contract. A pinned root-owned reader distinguishes
+verified absence, exact legacy hook and complete independent hook/unit/runtime
+material. Unsafe, unknown, altered or missing supporting files are errors, never
+absence. The reader retains descriptors for a final revalidation after probes.
+
+Certificate issuance preserves a recognized existing legacy or independent hook
+without replacing its inode or normalizing owner metadata. Unknown owner content
+stops that certificate action with guidance. Initial legacy publication remains
+a compatibility path only and now uses no-replace rename, so a concurrent owner
+file cannot be overwritten. This does not itself enroll independent renewal.
+
+Independent renewal readiness additionally observes the actually loaded service
+and timer: exact fragments, no loaded drop-ins or pending daemon reload, enabled
+active timer and a usable oneshot service state. Disk evidence is revalidated
+after these observations. The check never enables a timer, starts a service,
+changes a hook or grants certificate/operation authority.
+
+Race tests cover source/owner drift and concurrent absent-hook publication;
+loaded-unit tests cover missing, overridden, disabled and failed states. Native
+writer-preservation acceptance is recorded separately. Legacy enrollment,
+initial managed-unit publication, rollback and owner removal remain open.

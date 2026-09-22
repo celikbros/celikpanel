@@ -136,3 +136,23 @@ func ServiceGeneration(raw []byte) (string, error) {
 	}
 	return id, nil
 }
+
+// LegacyHook is recognized for compatibility only, not independent enrollment.
+//
+//go:embed legacy-deploy-hook
+var legacyHook []byte
+
+func LegacyHook() []byte { return bytes.Clone(legacyHook) }
+
+func HookGeneration(raw []byte) (string, error) {
+	prefix := InstalledRoot + "/"
+	at := bytes.Index(raw, []byte(prefix))
+	if at < 0 || len(raw) < at+len(prefix)+64 {
+		return "", errors.New("unsupported mail runtime hook")
+	}
+	id := string(raw[at+len(prefix) : at+len(prefix)+64])
+	if !validDigest(id) || !bytes.Equal(raw, render(hookTemplate, id)) {
+		return "", errors.New("unsupported mail runtime hook")
+	}
+	return id, nil
+}

@@ -71,3 +71,18 @@ func TestServiceRejectsChangedAuthority(t *testing.T) {
 		}
 	}
 }
+
+func TestHookIdentityCannotAcceptLegacyOrEditedIndependentHook(t *testing.T) {
+	m, files, err := Payload([]byte("helper"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := HookGeneration(files[HookName]); err != nil || got != m.Generation {
+		t.Fatal(got, err)
+	}
+	for _, raw := range [][]byte{LegacyHook(), append(files[HookName], []byte("# owner edit\n")...), []byte("/usr/libexec/celikpanel/mail-renewal/" + m.Generation + "/renew")} {
+		if _, err := HookGeneration(raw); err == nil {
+			t.Fatal("unsupported hook accepted")
+		}
+	}
+}

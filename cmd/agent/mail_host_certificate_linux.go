@@ -14,6 +14,8 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/mailhostartifact"
 	"github.com/alicelik/celikpanel/internal/mailhoststore"
+	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
+	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/sys/unix"
 )
@@ -91,19 +93,7 @@ func runMailHostCertificateCommand(ctx context.Context, name string, args ...str
 }
 
 func renderMailHostCertificateDeployHook() string {
-	return `#!/bin/sh
-set -eu
-# Managed by CelikPanel. Only the currently approved host lineage is queued.
-lineage=${RENEWED_LINEAGE:-}
-case "$lineage" in
- /etc/letsencrypt/live/celikpanel-mail-*)
-  lineage_name=${lineage#/etc/letsencrypt/live/}
-  case "$lineage_name" in ""|*/*) exit 0 ;; esac
-  exec /opt/celikpanel/bin/agent --deploy-mail-host-certificate "$lineage_name"
-  ;;
-esac
-exit 0
-`
+	return string(mailrenewalkit.LegacyHook())
 }
 
 func writeMailHostCertificateDeployHook() error {
@@ -111,10 +101,20 @@ func writeMailHostCertificateDeployHook() error {
 	if err := ensureRootOwnedPanelCertHookDirectory(dir); err != nil {
 		return err
 	}
-	if err := publishPanelCertDeployHook(dir, "celikpanel-mail-host-cert", []byte(renderMailHostCertificateDeployHook())); err != nil {
+	hook, err := recoveryruntime.InspectMailRenewalHook()
+	if err != nil {
+		return fmt.Errorf("mail renewal hook could not be verified; preserve the owner's hook and native units and review their configuration before retrying: %w", err)
+	}
+	defer hook.Close()
+	if err = hook.Revalidate(); err != nil {
 		return err
 	}
-	return protectPanelCertDeployHook(dir + "/celikpanel-mail-host-cert")
+	// Preserve verified independent enrollment and existing legacy bytes. Merely
+	// issuing another certificate grants no permission to downgrade either one.
+	if hook.Mode != recoveryruntime.MailRenewalHookAbsent {
+		return nil
+	}
+	return publishPanelCertDeployHookAbsent(dir, mailrenewalkit.HookName, mailrenewalkit.LegacyHook())
 }
 
 func (a *Agent) MailHostCertificateStatus(req *transport.MailHostCertificateStatusRequest, resp *transport.MailHostCertificateStatusResponse) error {
@@ -147,12 +147,13 @@ func (a *Agent) MailHostCertificateStatus(req *transport.MailHostCertificateStat
 	}
 	resp.Ready = true
 	resp.ExpiresAt = expires
-	hook, ok := setupProtectedFile("/etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert")
-	if !ok || string(hook) != renderMailHostCertificateDeployHook() {
+	hook, err := recoveryruntime.InspectMailRenewalHook()
+	if err != nil {
+		resp.Error = "Mail renewal hook or native runtime could not be verified; preserve its files and review the native renewal configuration."
 		return nil
 	}
-	info, err := os.Stat("/etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert")
-	if err != nil || info.Mode().Perm()&0100 == 0 {
+	defer hook.Close()
+	if hook.Mode == recoveryruntime.MailRenewalHookAbsent {
 		return nil
 	}
 	config, ok := setupProtectedFile(filepath.Join("/etc/letsencrypt/renewal", mailHostCertLineageName(req.Domain)+".conf"))
@@ -161,11 +162,19 @@ func (a *Agent) MailHostCertificateStatus(req *transport.MailHostCertificateStat
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
+	if hook.Mode == recoveryruntime.MailRenewalHookIndependent && !independentMailRenewalScheduleReady(ctx) {
+		resp.Error = "The independent mail renewal timer or loaded service does not match the installed configuration; the server owner must review its native unit status before verification."
+		return nil
+	}
 	if !setupPanelRenewalRouteReady(ctx, req.Domain, setupPanelRenewalAuthenticator(config)) {
 		return nil
 	}
 	for _, timer := range []string{"certbot.timer", "certbot-renew.timer"} {
 		if serviceMutationCommand(ctx, "systemctl", "is-active", "--quiet", timer).Run() == nil && serviceMutationCommand(ctx, "systemctl", "is-enabled", "--quiet", timer).Run() == nil {
+			if hook.Revalidate() != nil {
+				resp.Error = "Mail renewal configuration changed during verification; check again after the owner operation finishes."
+				return nil
+			}
 			resp.RenewalReady = true
 			return nil
 		}
