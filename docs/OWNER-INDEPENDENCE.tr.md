@@ -266,3 +266,10 @@ seçiminde gözlenen sahip değişikliklerini koruyor.
 ve sahip değişikliği sonrası tekrarı doğruladı. Şema geçişi veya bağımsız
 yenileme yardımcısı iddiası yok; Agent işlem/kurtarma ve servis uyarlaması
 hâlâ gerekli.
+
+
+[Mail kurtarma temizliği](MAIL-CERTIFICATE-ARTIFACT.md#recovery-cleanup-shares-the-artifact-contract)
+artık yalnız makbuz eşleşmesine değil, ortak tam nesil doğrulamasına dayanıyor.
+Gözlenen sahip değişiklikleri, seçili nesiller ve ek dosyalar korunur. Bileşen
+ve yarış testleri P0.4'ü ilerletir; yeni gerçek sistem kesintili kurtarma veya
+bağımsız yenileme kabulü iddiası yoktur.

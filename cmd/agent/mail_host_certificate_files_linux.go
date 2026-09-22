@@ -244,57 +244,6 @@ func findMailHostCertificateVersionsAt(
 	return matches, nil
 }
 
-func removeExactMailHostCertificateVersionAt(
-	dirFD int,
-	versionName string,
-	expected mailHostCertificateReceipt,
-) error {
-	if !validManagedPanelCertVersionName(versionName) {
-		return errors.New("invalid mail host certificate issue cleanup version")
-	}
-	versionFD, err := openPanelCertDirectoryAt(dirFD, versionName)
-	if err != nil {
-		return err
-	}
-	receipt, found, err :=
-		readMailHostCertificateReceiptAt(versionFD)
-	unix.Close(versionFD)
-	if err != nil {
-		return err
-	}
-	if !found || receipt != expected {
-		return errors.New(
-			"mail host certificate issue cleanup receipt mismatch",
-		)
-	}
-	return removeMailHostCertificateVersionFilesAt(dirFD, versionName)
-}
-
-func removeMailHostCertificateVersionFilesAt(
-	dirFD int,
-	versionName string,
-) error {
-	versionFD, err := openPanelCertDirectoryAt(dirFD, versionName)
-	if err != nil {
-		return err
-	}
-	for _, name := range []string{
-		mailHostCertificateReceiptName,
-		"mail.domain",
-		"privkey.pem",
-		"fullchain.pem",
-	} {
-		if err := unix.Unlinkat(versionFD, name, 0); err != nil &&
-			!errors.Is(err, unix.ENOENT) {
-			unix.Close(versionFD)
-			return err
-		}
-	}
-	unix.Close(versionFD)
-	if err := unix.Unlinkat(
-		dirFD, versionName, unix.AT_REMOVEDIR,
-	); err != nil {
-		return err
-	}
-	return nil
+func removeExactMailHostCertificateVersionAt(dirFD int, versionName string, expected mailHostCertificateReceipt) error {
+	return mailhoststore.RemoveUnselectedExactAt(dirFD, versionName, expected, validateMailHostCertificatePair)
 }
