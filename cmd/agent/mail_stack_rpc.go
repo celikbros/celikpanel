@@ -589,7 +589,11 @@ func configureDovecotVirtual() error {
 	// (mail_driver/mail_path) — see dovecot_dialect.go for the why.
 	// Lehçe kurulu Dovecot'u izler: 2.3 (mail_location) vs 2.4
 	// (mail_driver/mail_path) — nedeni için dovecot_dialect.go.
-	conf := buildDovecotVirtualConf(dovecotIs24())
+	modern, err := dovecotIs24()
+	if err != nil {
+		return err
+	}
+	conf := buildDovecotVirtualConf(modern)
 
 	confDir := "/etc/dovecot/conf.d"
 	if !fileExistsAgent(confDir) {

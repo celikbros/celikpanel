@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/mailtlsconfig"
@@ -29,33 +28,10 @@ import (
 // ayrıştırıcısıyla doğrular (nginx -t deseni): yanlış yapılandırma dürüst bir
 // hataya dönüşür, asla ölü bir posta sunucusuna değil.
 
-// dovecotIs24 reports whether the installed Dovecot speaks the 2.4+ config
-// dialect. Unknown/unparsable versions count as 2.4: every distro we target
-// ships 2.4+ going forward, and on 2.3 the validation step still catches a
-// wrong guess with a clear error instead of a dead service.
-// dovecotIs24, kurulu Dovecot'un 2.4+ lehçesini konuşup konuşmadığını
-// bildirir. Bilinmeyen sürümler 2.4 sayılır: hedeflediğimiz dağıtımlar artık
-// 2.4+ taşıyor ve 2.3'te doğrulama adımı yanlış tahmini yine açık bir hatayla
-// yakalar.
-func dovecotIs24() bool {
-	out, err := runMailTLSCommand("dovecot", "--version")
-	if err != nil {
-		return true
-	}
-	ver := strings.Fields(strings.TrimSpace(string(out)))
-	if len(ver) == 0 {
-		return true
-	}
-	parts := strings.SplitN(ver[0], ".", 3)
-	if len(parts) < 2 {
-		return true
-	}
-	major, err1 := strconv.Atoi(parts[0])
-	minor, err2 := strconv.Atoi(parts[1])
-	if err1 != nil || err2 != nil {
-		return true
-	}
-	return major > 2 || (major == 2 && minor >= 4)
+// dovecotIs24 requires a successful observation of an implemented dialect.
+// Unknown does not establish 2.4 compatibility or permission to change files.
+func dovecotIs24() (bool, error) {
+	return dovecotIs24WithRunner(runMailTLSCommand)
 }
 
 // buildDovecotVirtualConf renders the virtual-mailbox override (auth against

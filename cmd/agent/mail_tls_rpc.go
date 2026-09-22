@@ -16,7 +16,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -119,6 +118,7 @@ type mailTLSDirectoryOwner struct {
 type mailTLSCommandPreflight struct {
 	run        mailTLSCommandRunner
 	sniMapType string
+	dovecot24  bool
 }
 
 type mailTLSFileSnapshot struct {
@@ -302,7 +302,7 @@ func reconcileMailTLSHost(
 	if err := configurePostfixTLS(myhostname, valid, preflight.sniMapType, run); err != nil {
 		return setMailTLSFailure(resp, "postfix configuration", err, previous, run), nil
 	}
-	if err := configureDovecotTLSForHost(myhostname, valid, run); err != nil {
+	if err := configureDovecotTLSForDialect(myhostname, valid, preflight.dovecot24, run); err != nil {
 		return setMailTLSFailure(resp, "dovecot configuration", err, previous, run), nil
 	}
 	if err := validatePostfixTLSConfig(run); err != nil {
@@ -373,7 +373,11 @@ func preflightMailTLSCommands(needsSNIMap bool, execute mailTLSCommandRunner) (m
 		}
 		return execute(commandPath, args...)
 	}
-	preflight := mailTLSCommandPreflight{run: pinned}
+	modern, err := dovecotIs24WithRunner(pinned)
+	if err != nil {
+		return mailTLSCommandPreflight{}, err
+	}
+	preflight := mailTLSCommandPreflight{run: pinned, dovecot24: modern}
 	if needsSNIMap {
 		mapType, err := probePostfixTLSMapType(pinned)
 		if err != nil {
@@ -1150,6 +1154,13 @@ func configureDovecotTLS(sni []MailSNIEntry, run mailTLSCommandRunner) error {
 	return configureDovecotTLSForHost("", sni, run)
 }
 func configureDovecotTLSForHost(myhostname string, sni []MailSNIEntry, run mailTLSCommandRunner) error {
+	modern, err := dovecotIs24WithRunner(run)
+	if err != nil {
+		return err
+	}
+	return configureDovecotTLSForDialect(myhostname, sni, modern, run)
+}
+func configureDovecotTLSForDialect(myhostname string, sni []MailSNIEntry, modern bool, run mailTLSCommandRunner) error {
 	certPath, keyPath, err := selectedMailHostCertificate(myhostname)
 	if err != nil {
 		return err
@@ -1161,29 +1172,19 @@ func configureDovecotTLSForHost(myhostname string, sni []MailSNIEntry, run mailT
 	// validated by dovecot's parser before any restart — see dovecot_dialect.go.
 	// Lehçe-farkında (2.3 ssl_cert=< vs 2.4 ssl_server_cert_file=) ve yeniden
 	// başlatmadan önce dovecot ayrıştırıcısıyla doğrulanır.
-	conf := buildDovecotTLSConf(dovecotIs24WithRunner(run), certPath, keyPath, sni)
+	conf := buildDovecotTLSConf(modern, certPath, keyPath, sni)
 	return applyDovecotTLSConf(dovecotTLSConf, conf, run)
 }
 
-func dovecotIs24WithRunner(run mailTLSCommandRunner) bool {
+func dovecotIs24WithRunner(run mailTLSCommandRunner) (bool, error) {
+	if run == nil {
+		return false, mailtlsconfig.ErrDovecotVersionUnknown
+	}
 	out, err := run("dovecot", "--version")
 	if err != nil {
-		return true
+		return false, mailtlsconfig.ErrDovecotVersionUnknown
 	}
-	fields := strings.Fields(strings.TrimSpace(string(out)))
-	if len(fields) == 0 {
-		return true
-	}
-	parts := strings.SplitN(fields[0], ".", 3)
-	if len(parts) < 2 {
-		return true
-	}
-	major, majorErr := strconv.Atoi(parts[0])
-	minor, minorErr := strconv.Atoi(parts[1])
-	if majorErr != nil || minorErr != nil {
-		return true
-	}
-	return major > 2 || (major == 2 && minor >= 4)
+	return mailtlsconfig.DovecotIs24(out)
 }
 
 func applyDovecotTLSConf(
