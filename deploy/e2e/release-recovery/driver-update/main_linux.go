@@ -358,6 +358,17 @@ func run(ctx context.Context, nonce, manifestPath, signaturePath, mode, explicit
 	if err != nil {
 		return err
 	}
+	if mode == "check" {
+		if manifestPath != "" || signaturePath != "" || explicitRequestID != "" {
+			return errors.New("read-only check does not accept update identity inputs")
+		}
+		fields, err := observeSupport(ctx, callAgent)
+		if err != nil {
+			return err
+		}
+		emit("support_observed", marker, fields)
+		return nil
+	}
 	raw, err := protectedRead(manifestPath, 4096, false)
 	if err != nil {
 		return fmt.Errorf("published target manifest: %w", err)
@@ -438,11 +449,11 @@ func main() {
 	nonce := flag.String("nonce", "", "exact disposable guest nonce")
 	manifestPath := flag.String("manifest", "", "root-owned unchanged published release-manifest-v2")
 	signaturePath := flag.String("signature", "", "root-owned published Ed25519 manifest signature")
-	mode := flag.String("mode", "preview", "preview, start or status")
+	mode := flag.String("mode", "preview", "check (read-only), preview, start or status")
 	requestID := flag.String("request-id", "", "controller-persisted exact request ID (32 lowercase hex); otherwise derived from guest and target")
 	flag.Parse()
-	if flag.NArg() != 0 || *manifestPath == "" || *signaturePath == "" || (*mode != "preview" && *mode != "start" && *mode != "status") {
-		fmt.Fprintln(os.Stderr, "required: --nonce --manifest --signature [--request-id HEX32] [--mode preview|start|status]")
+	if flag.NArg() != 0 || (*mode != "check" && (*manifestPath == "" || *signaturePath == "" || (*mode != "preview" && *mode != "start" && *mode != "status"))) {
+		fmt.Fprintln(os.Stderr, "required: --nonce --mode check OR --nonce --manifest --signature [--request-id HEX32] [--mode preview|start|status]")
 		os.Exit(2)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)

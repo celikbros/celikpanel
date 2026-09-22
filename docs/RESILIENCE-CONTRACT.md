@@ -328,3 +328,10 @@ now serves actual Agent mail certificate reads without an Agent dependency. It
 preserves historical file trust and rejects observed concurrent owner selection
 changes without rewriting them. Native deployment/reload and renewal absence
 acceptance remain open; no new artifact version or installed migration is claimed.
+
+[Arch AV forward update and boot](../deploy/e2e/release-recovery/PLATFORM-UPDATE-AV.md)
+now passes with the exact candidate helper/unit, retained owner enablement, policy,
+unrelated table and HTTPS. The corrected Agent also changes from a native starting
+refusal to a ready update check in the same PID/start/invocation after boot. This
+supersedes the scoped open Arch-forward/same-process items above, not the remaining
+P0.2/P0.3/P0.5 matrix, production UI/trust or independent renewal acceptance.

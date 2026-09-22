@@ -33,5 +33,12 @@ Validation: same service instance goes from tagged starting error to ready;
 a subsequent invalid executable observation blocks Start without fetching or
 queueing; a new explicit ready Start succeeds. All SystemUpdate tests pass under
 the race detector and Agent vet passes. This closes the scoped source cache defect,
-not P0.2 or the native acceptance matrix. The corrected candidate still needs a
-native same-process startup/admission trial; AU ran the historical Alpha81 baseline.
+not P0.2 or the full native acceptance matrix. AU ran the historical Alpha81 baseline.
+
+The subsequent [AV native trial](../deploy/e2e/release-recovery/PLATFORM-UPDATE-AV.md)
+now verifies the corrected candidate on Arch: after real signed-worker update and
+reboot, the same Agent PID/start ticks/invocation/binary first rejects Check while
+systemd reports starting, then returns supported with no error once running. No
+Agent restart or second update is used for this transition. Native Start after a
+ready-to-invalid transition, Debian startup observation and the broader access
+matrix remain open; component tests cover those admission boundaries.
