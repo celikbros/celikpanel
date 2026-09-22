@@ -285,3 +285,23 @@ now verifies actual hook/service exchange, a second kill during inverse exchange
 original inode restoration and unchanged trusted mail workloads. The initial
 test-driver refusal is retained. Loaded-unit activation and whole-update acceptance
 remain open.
+
+## Shared native schedule observation (2026-09-22)
+
+The immutable-kit module now owns the six-property native systemd observation
+parser and readiness policy used by the Agent. A complete disk kit is not proof
+of a loaded, enabled schedule. Missing/duplicate/unknown properties, changed
+fragment paths, overrides and pending reload remain unverified. This refactor
+does not change the existing public readiness policy or start a native action.
+
+The separate transition observation requires the current oneshot invocation to
+be idle and preserves all four supported enabled/disabled and active/inactive
+timer combinations. A running service is an explicit wait, not absence. An
+unverified timer is not hidden by that wait. Bootstrap absence requires both
+native units positively not found with empty fragment/override/enablement data;
+a failed query, failed service, masked unit or substituted fragment is not absent.
+
+These observations are not ownership, accepted intent, durable evidence or a
+mutation barrier. Callers must source them from the actual local service manager,
+retain native file proofs, establish host/renewal exclusion and re-observe at the
+mutation boundary. Production schedule activation and rollback remain open.
