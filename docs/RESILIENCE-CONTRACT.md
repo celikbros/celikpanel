@@ -526,3 +526,11 @@ rollback is enabled, and complete native update/power-loss acceptance stays open
 [Debian BE capture evidence](../deploy/e2e/release-recovery/MAIL-CAPTURE-BE.md)
 records these process tests under the native kernel with unchanged running mail
 workloads. It does not establish native enrollment or power-loss recovery.
+
+### Native mail file compensation (2026-09-22)
+
+The private [file transition contract](MAIL-RENEWAL-KIT.md#native-file-transition-and-inverse-exchange-2026-09-22)
+adds durable inode plans, retained old files and monotonic rollback intent for
+P0.3/P0.5. Process interruption tests cover publication and compensation, including
+an interruption during rollback itself. Production schedule activation, recovery
+dispatch, removal and the complete native update/workload matrix remain open.

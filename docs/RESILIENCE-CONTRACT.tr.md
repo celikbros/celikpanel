@@ -478,3 +478,11 @@ eklendi. Ger?ek kal?t?lm?? kilit ve SIGKILL kullanan bile?en testleri yerel
 dosyalar? ve sahip de?i?ikli?i kan?tlar?n? korur. Bu yaln?z haz?rl?k bile?enidir;
 ?retimden ?a?r?lma, zamanlay?c?y? devreye alma ve geri alma hen?z a??lmad?.
 Tam yerel g?ncelleme ve g?? kesintisi kabul? a??k kal?r.
+
+### Yerel posta dosyalar?n?n geri al?nmas? (2026-09-22)
+
+[?zel dosya ge?i?i s?zle?mesi](MAIL-RENEWAL-KIT.md#native-file-transition-and-inverse-exchange-2026-09-22),
+P0.3/P0.5 i?in kal?c? dosya kimliklerini, saklanan eski dosyalar? ve y?n?
+sabitlenmi? geri alma niyetini ekler. S?re? kesintisi testleri yay?m?, geri almay?
+ve geri alman?n yeniden kesilmesini kapsar. ?retimde zamanlay?c?y? devreye alma,
+kurtarma ba?lant?s?, kald?rma ve tam yerel g?ncelleme/i? y?k? matrisi a??kt?r.

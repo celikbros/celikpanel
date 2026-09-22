@@ -238,3 +238,44 @@ can be enabled. Kit v1 and existing certificate/operation schemas are unchanged.
 [Debian BE capture evidence](../deploy/e2e/release-recovery/MAIL-CAPTURE-BE.md)
 records these process tests under the native kernel with unchanged running mail
 workloads. It does not establish native enrollment or power-loss recovery.
+
+## Native file transition and inverse exchange (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The private
+`celikpanel-mail-renewal-files/v1` plan binds the before-image digest to exact new
+inodes in two random staging directories under the native hook/unit parents.
+The hook stage is a directory, so an incomplete executable cannot become an
+additional top-level Certbot deploy hook. Files and both staging directories are
+synced before the inode plan is published and parent-synced. A killed preparation
+leaves orphan stages intact; the next attempt never adopts an unrecorded inode.
+
+Only changed native files participate. Existing files are atomically exchanged
+with the exact staged inode; verified absence uses no-replace rename. The old
+inode remains available for inverse exchange. Each step rechecks the accepted
+capture, immutable kits, both sides' content/metadata, fixed parent identities,
+stage inventory and inherited release lock. Foreign contents, attributes, hard
+links, same-byte replacements and missing supporting evidence stop this operation.
+No existing parent metadata is normalized and no retained evidence is deleted.
+
+An interrupted forward transition can continue the same exact plan or be
+compensated. Rollback first persists a bound intent; once visible, forward action
+is refused. Inverse exchange/rename restores original inodes or original absence.
+Only rename-induced ctime differences on the recorded inode pairs are tolerated;
+content, owner, mode, inode, size and mtime remain exact. Both directories are
+synced again even when a killed predecessor already performed the move. Immutable
+forward/rollback receipts record file outcomes only and are verified against
+current file state; a historical receipt cannot establish current readiness.
+
+The component preserves unchanged timer files and does not reload systemd,
+operate a service/timer, enroll production renewal or complete an application
+update. Production dispatch still needs accepted owner authority, host/renewal
+exclusion, actual schedule observation/transition, rollback integration and
+native acceptance. No new installed-panel update path is exposed. Existing kit,
+certificate and ledger schemas remain unchanged; the two transition records are
+additive and private.
+
+Tests include forward/inverse inode preservation, explicit owner drift/refusal,
+all 76 process-kill boundaries across absent/legacy/independent layouts, and a
+second process kill during rollback of an interrupted forward operation. These
+component results do not establish reboot, power loss, complete native enrollment
+or whole-update rollback. Native execution evidence is recorded separately.
