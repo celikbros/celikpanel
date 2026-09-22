@@ -577,6 +577,12 @@ prepare_fresh_release_transaction_foundation() {
         --source "$SRC/recovery-runtime" \
         --transaction-fd 9 9<&"$INSTALL_RELEASE_TRANSACTION_FD" \
         || die "fresh install independent recovery runtime could not be enrolled"
+    if [[ -e "$SRC/firewall-runtime" || -L "$SRC/firewall-runtime" ]]; then
+        "$SRC/recovery-runtime/bin/recovery" prepare-firewall-runtime \
+            --source "$SRC/firewall-runtime" \
+            --transaction-fd 9 9<&"$INSTALL_RELEASE_TRANSACTION_FD" \
+            || die "fresh independent firewall preparation could not be verified; preserve its files"
+    fi
     preflight_reviewed_release_recovery_foundation
     publish_reviewed_release_recovery_intent
     install_release_transaction_guards_with_label_barrier \

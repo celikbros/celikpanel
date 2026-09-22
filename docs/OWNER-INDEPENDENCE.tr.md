@@ -164,3 +164,12 @@ Bunlar yerel Linux dosya sistemi/süreç testleridir; güç kaybı veya yerel
 hizmet etkinleştirme kabulü değildir. Otomatik kurucu/güncelleyici bağlantısı,
 tam birim geçişi, geri almada yardımcıların korunmasının kanıtı ve kalan
 P0.5 hizmet matrisi açıktır.
+
+
+Sonraki ön kontrol bağlantısı, paketi taşıyan sürümlerde hazırlığı
+çağırır: güncelleyicide kurtarma kiti geçişi ve hizmet duruşundan, ilk
+kurucuda kalıcı temel niyeti yayımından önce. Paketi olmayan tarihsel
+arşivlerin yolu korunur. Ret akışı durdurur; yarım hazırlık yanlış
+"değişmedi" yerine `firewall_runtime_preparation_unconfirmed` sonucu verir.
+Gerçek FD devri ve ilk kurucu fonksiyonu testleri başarılı hazırlığı ve bozuk
+paket reddini kapsar. Kurulu güvenlik duvarı birimi henüz bu yardımcıya geçmez.

@@ -70,6 +70,8 @@ unset CELIKPANEL_RECOVER_EXISTING_TRANSACTION \
 panel_frozen=0
 agent_frozen=0
 mutation_started=0
+firewall_runtime_preparation_attempted=0
+firewall_runtime_preparation_verified=0
 recovery_runtime_preparation_attempted=0
 recovery_runtime_preparation_verified=0
 transaction_started=0
@@ -175,6 +177,11 @@ report_update_failure() {
           ${recovery_runtime_preparation_verified:-0} -ne 1 ]]; then
         state=recovery_required
         code=recovery_runtime_preparation_unconfirmed
+    fi
+    if [[ ${firewall_runtime_preparation_attempted:-0} -eq 1 &&
+          ${firewall_runtime_preparation_verified:-0} -ne 1 ]]; then
+        state=recovery_required
+        code=firewall_runtime_preparation_unconfirmed
     fi
     if [[ "${update_failure_detail:-}" == *': the host package manager is active'* ]]; then
         code=package_manager_busy
@@ -311,6 +318,18 @@ prepare_independent_recovery_runtime() {
     # An interrupted kit promotion keeps its own evidence and predecessor.
     # Koordinatörler durmadan korunan yeni kiti hazırla ve doğrula.
     # Kesilen kit geçişi kendi kanıtını ve önceki kiti korur.
+    # New releases may carry the independent firewall payload. Prepare it under
+    # this same lock before any coordinator stops; historical releases omit it.
+    # This does not replace or start the installed firewall unit.
+    if [[ -e "$TRUSTED_RELEASE_ROOT/firewall-runtime" || -L "$TRUSTED_RELEASE_ROOT/firewall-runtime" ]]; then
+        firewall_runtime_preparation_attempted=1
+        firewall_runtime_preparation_verified=0
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" prepare-firewall-runtime \
+            --source "$TRUSTED_RELEASE_ROOT/firewall-runtime" \
+            --transaction-fd 9 9<&"$RELEASE_TRANSACTION_FD" \
+            || die "independent firewall preparation is unconfirmed; panel services have not been stopped; preserve its files and review this preflight failure before retrying the same release"
+        firewall_runtime_preparation_verified=1
+    fi
     recovery_runtime_preparation_attempted=1
     run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" prepare-runtime \
         --source "$TRUSTED_RELEASE_ROOT/recovery-runtime" \

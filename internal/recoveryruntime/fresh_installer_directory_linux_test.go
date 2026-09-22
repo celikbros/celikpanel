@@ -23,7 +23,7 @@ func TestFreshInstallerEnrollmentSharedDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	repository := filepath.Clean(filepath.Join(directory, "../.."))
-	for _, scenario := range []string{"absent", "existing-755", "owner-700"} {
+	for _, scenario := range []string{"absent", "existing-755", "owner-700", "firewall", "firewall-corrupt"} {
 		t.Run(scenario, func(t *testing.T) {
 			root, err := os.MkdirTemp("/run", "celikpanel-fresh-install-test-")
 			if err != nil {
@@ -70,6 +70,14 @@ func TestFreshInstallerEnrollmentSharedDirectory(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(bundle, ManifestName), raw, 0644); err != nil {
 				t.Fatal(err)
 			}
+			firewallGeneration := ""
+			if scenario == "firewall" || scenario == "firewall-corrupt" {
+				firewallSource := filepath.Join(source, "firewall-runtime")
+				firewallGeneration = firewallFixture(t, firewallSource, []byte("reviewed native helper"))
+				if scenario == "firewall-corrupt" {
+					os.WriteFile(filepath.Join(firewallSource, "restore"), []byte("owner edit"), 0755)
+				}
+			}
 			shared := filepath.Join(root, "usr/libexec/celikpanel")
 			var before map[string]string
 			if scenario != "absent" {
@@ -105,7 +113,7 @@ source "$SRC/deploy/release-transaction-guard.sh"
 eval "$(sed -n '/^prepare_fresh_release_transaction_foundation() {$/,/^}$/p' "$repository/install.sh")"
 die() { printf 'fixture installer stopped: %s\n' "$1" >&2; exit 91; }
 preflight_reviewed_release_recovery_foundation() { :; }
-publish_reviewed_release_recovery_intent() { :; }
+publish_reviewed_release_recovery_intent() { printf "intent\n" > "$root/foundation-intent"; }
 install_release_transaction_guards_with_label_barrier() { _release_txn_install_start_helper "$4"; }
 prepare_fresh_release_transaction_foundation
 `
@@ -123,6 +131,25 @@ prepare_fresh_release_transaction_foundation
 					t.Fatal("conflicting shared directory was discovered only after enrollment")
 				}
 				return
+			}
+			if scenario == "firewall-corrupt" {
+				if err == nil {
+					t.Fatal("corrupt firewall accepted")
+				}
+				if _, e := os.Stat(filepath.Join(root, "foundation-intent")); !os.IsNotExist(e) {
+					t.Fatal("foundation publication continued after firewall refusal")
+				}
+				if _, e := os.Stat(filepath.Join(shared, "firewall", firewallGeneration)); !os.IsNotExist(e) {
+					t.Fatal("corrupt firewall published")
+				}
+				return
+			}
+			if scenario == "firewall" && err == nil {
+				prepared, e := readFirewallBundle(filepath.Join(shared, "firewall", firewallGeneration))
+				if e != nil {
+					t.Fatal(e)
+				}
+				prepared.state.close()
 			}
 			if err != nil {
 				t.Fatalf("fresh installer/enrollment boundary: %v\n%s", err, output)
@@ -163,6 +190,16 @@ func TestFreshInstallerEnrollmentChild(t *testing.T) {
 	root := os.Getenv("CP_FRESH_INSTALL_TEST_ROOT")
 	if root == "" {
 		t.Skip("only inherited native fresh-installer child")
+	}
+	if len(flag.Args()) > 0 && flag.Args()[0] == "prepare-firewall-runtime" {
+		source := filepath.Join(root, "source/firewall-runtime")
+		if !reflect.DeepEqual(flag.Args(), []string{"prepare-firewall-runtime", "--source", source, "--transaction-fd", "9"}) {
+			t.Fatal("fresh firewall tuple changed")
+		}
+		if _, err := prepareFirewallAt(source, 9, filepath.Join(root, "usr/libexec/celikpanel/firewall"), filepath.Join(root, "transaction"), nil); err != nil {
+			t.Fatal(err)
+		}
+		return
 	}
 	source := filepath.Join(root, "source/recovery-runtime")
 	if !reflect.DeepEqual(flag.Args(), []string{"enroll-runtime", "--source", source, "--transaction-fd", "9"}) {

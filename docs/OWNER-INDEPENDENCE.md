@@ -172,3 +172,14 @@ These are local Linux filesystem/process tests, not power-loss or native service
 activation acceptance. The full runtime/CLI race suite and vet also pass. Automatic
 installer/update wiring, exact unit transition, rollback helper retention proofs
 and the remaining workload matrix are still open under P0.5.
+
+
+The subsequent preflight wiring invokes preparation for releases carrying the
+artifact: the normal updater does so before runtime promotion/coordinator
+quiescence, and the fresh installer before foundation-intent publication.
+Historical archives without the artifact keep their existing path. A refused
+preparation halts that flow; incomplete preparation has its own
+`firewall_runtime_preparation_unconfirmed` outcome instead of false unchanged
+state. Real inherited-FD shell tests and the real extracted fresh-installer
+function cover successful preparation and corrupt-payload refusal. This wiring
+still does not switch the installed firewall unit to the prepared helper.
