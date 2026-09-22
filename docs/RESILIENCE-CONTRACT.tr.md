@@ -470,3 +470,11 @@ kullanarak yalnız sınırlı kuyruk/işleme ve posta servislerini okuma/yeniden
 yükleme eylemlerini sunar. Kurulu hizmet, hook veya unit değişikliği yapılmaz.
 Kayıt, kalıcı sahiplik/runtime, yerel kabul ve yarım yenilemenin bağımsız
 kurtarılması P0.3/P0.5 kapsamında ayrı ve açıktır.
+
+### Yerel posta yenilemesi i?in ?nceki durum kayd? (2026-09-22)
+
+P0.3/P0.5 i?in [ge?i? ve ?nceki durum s?zle?mesi](MAIL-RENEWAL-KIT.md#native-enrollment-before-image-contract-2026-09-22)
+eklendi. Ger?ek kal?t?lm?? kilit ve SIGKILL kullanan bile?en testleri yerel
+dosyalar? ve sahip de?i?ikli?i kan?tlar?n? korur. Bu yaln?z haz?rl?k bile?enidir;
+?retimden ?a?r?lma, zamanlay?c?y? devreye alma ve geri alma hen?z a??lmad?.
+Tam yerel g?ncelleme ve g?? kesintisi kabul? a??k kal?r.

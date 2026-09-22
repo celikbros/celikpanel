@@ -195,3 +195,42 @@ rule applies only to the native file observer, not recovery kit enrollment.
 [BE native hook preservation](../deploy/e2e/release-recovery/MAIL-HOOK-BE.md)
 verifies these boundaries with the actual writer and loaded native schedule,
 including the retained first refusal and metadata-compatible correction.
+
+## Native enrollment before-image contract (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The new
+`celikpanel-mail-renewal-transition/v1` describes exactly three native files,
+the verified previous/target immutable kits and the observed timer preference.
+It grants no execution permission. Initial enrollment accepts only verified
+absence or the byte-exact historical Agent hook, with no pre-existing renewal
+units. An upgrade requires the complete previous kit. A disabled or stopped
+native timer remains disabled or stopped; unknown states cannot imply consent.
+
+The private capture primitive writes
+`celikpanel-mail-renewal-before-image/v1` under the inherited exclusive release
+lock before any native mutation. It retains old file contents, inode and metadata
+identities and protected parent identities. Read-only capture neither normalizes
+metadata nor starts/stops services. The journal parent must already be admitted;
+the primitive does not create it. Root-owned protected legacy hook directories
+may retain their original group; files and immutable kits keep exact ownership.
+Extra file attributes are refused rather than silently dropped during recovery.
+
+The record is created through a pinned parent descriptor, synced, published with
+no-replace rename and parent-synced. Repeated capture requires exact agreement
+with the existing record, including inode identity. Owner changes, missing or
+altered kit support, changed parents, conflicting journals and pending release
+transactions preserve evidence and refuse capture. A process killed before
+publication leaves its staging evidence; a new invocation can capture unchanged
+native state. After publication, it reuses the identical durable record. This
+re-entry is for capture only, not recovery after native file publication.
+
+Component tests use a real inherited flock and actual SIGKILL at staged-file,
+publication and parent-sync boundaries for absent, legacy and independent
+fixtures. They also exercise same-byte owner inode replacement, directory/group
+drift, native file/source changes, conflicting journals, extra attributes and
+strict decoding. They do not prove power-loss durability or native enrollment.
+
+No production dispatcher invokes this component yet. Accepted owner authority,
+actual loaded-unit/schedule observation, after-image publication, interrupted
+native transition/rollback and owner removal remain required before enrollment
+can be enabled. Kit v1 and existing certificate/operation schemas are unchanged.
