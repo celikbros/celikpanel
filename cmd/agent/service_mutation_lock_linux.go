@@ -11,6 +11,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/alicelik/celikpanel/internal/hostmutationlock"
+
 	"golang.org/x/sys/unix"
 )
 
@@ -25,65 +27,25 @@ type serviceMutationFileLock struct {
 	publication *serviceMutationFileLock
 }
 
+func serviceMutationLockOwner() hostmutationlock.Owner {
+	return hostmutationlock.Owner{UID: serviceMutationRequiredOwnerUID, GID: serviceMutationRequiredOwnerGID}
+}
+func serviceMutationLockObservationError(err error) error {
+	if errors.Is(err, hostmutationlock.ErrBusy) {
+		return errServiceMutationHostBusy
+	}
+	return err
+}
+
 // acquireExistingServiceMutationFileLock obtains the common host flock without
 // creating or repairing any filesystem object. Comparison-only RPCs use this
 // lease so a missing or non-canonical lock fails closed instead of turning a
 // read into host mutation.
 func acquireExistingServiceMutationFileLock(path string) (*serviceMutationFileLock, error) {
-	path = filepath.Clean(path)
-	if !filepath.IsAbs(path) {
-		return nil, errors.New("service mutation lock path must be absolute")
-	}
-	lockDir := filepath.Dir(path)
-	dirInfo, err := os.Lstat(lockDir)
+	file, err := hostmutationlock.AcquireExisting(path, serviceMutationLockOwner())
 	if err != nil {
-		return nil, fmt.Errorf("inspect service mutation lock directory: %w", err)
+		return nil, serviceMutationLockObservationError(err)
 	}
-	if err := secureServiceMutationStat(lockDir, dirInfo, true); err != nil {
-		return nil, err
-	}
-	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-	if err != nil {
-		return nil, fmt.Errorf("open existing service mutation lock: %w", err)
-	}
-	file := os.NewFile(uintptr(fd), path)
-	if file == nil {
-		_ = unix.Close(fd)
-		return nil, errors.New("open existing service mutation lock handle")
-	}
-	keepFile := false
-	defer func() {
-		if !keepFile {
-			_ = file.Close()
-		}
-	}()
-	verify := func() error {
-		info, statErr := file.Stat()
-		if statErr != nil {
-			return fmt.Errorf("inspect existing service mutation lock: %w", statErr)
-		}
-		if statErr := secureServiceMutationStat(path, info, false); statErr != nil {
-			return statErr
-		}
-		if info.Size() != 0 {
-			return fmt.Errorf("%s service mutation lock must be empty", path)
-		}
-		return verifyServiceMutationLockPathIdentity(path, info)
-	}
-	if err := verify(); err != nil {
-		return nil, err
-	}
-	if err := unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err != nil {
-		if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
-			return nil, errServiceMutationHostBusy
-		}
-		return nil, fmt.Errorf("lock existing service mutation file: %w", err)
-	}
-	if err := verify(); err != nil {
-		_ = unix.Flock(fd, unix.LOCK_UN)
-		return nil, err
-	}
-	keepFile = true
 	return &serviceMutationFileLock{file: file}, nil
 }
 
@@ -279,68 +241,7 @@ func verifyInheritedServiceMutationFileLock(path string) error {
 }
 
 func verifyInheritedServiceMutationFileLockFD(path string, fd int) error {
-	path = filepath.Clean(path)
-	if !filepath.IsAbs(path) || fd < 3 {
-		return errors.New("inherited service mutation lock proof is invalid")
-	}
-	if err := ensureSecureServiceMutationLockDirectory(filepath.Dir(path)); err != nil {
-		return err
-	}
-	dupFD, err := unix.FcntlInt(uintptr(fd), unix.F_DUPFD_CLOEXEC, 3)
-	if err != nil {
-		return fmt.Errorf("duplicate inherited service mutation lock descriptor: %w", err)
-	}
-	file := os.NewFile(uintptr(dupFD), path)
-	if file == nil {
-		_ = unix.Close(dupFD)
-		return errors.New("open inherited service mutation lock descriptor")
-	}
-	defer file.Close()
-	info, err := file.Stat()
-	if err != nil {
-		return fmt.Errorf("inspect inherited service mutation lock descriptor: %w", err)
-	}
-	if err := secureServiceMutationStat(path, info, false); err != nil {
-		return err
-	}
-	if info.Size() != 0 {
-		return fmt.Errorf("%s service mutation lock must be empty", path)
-	}
-	if err := verifyServiceMutationLockPathIdentity(path, info); err != nil {
-		return err
-	}
-	fdInfo, err := os.ReadFile(filepath.Join("/proc/self/fdinfo", strconv.Itoa(dupFD)))
-	if err != nil {
-		return fmt.Errorf("inspect inherited service mutation flock ownership: %w", err)
-	}
-	if !serviceMutationFDInfoHasExclusiveFlock(fdInfo) {
-		return errors.New("inherited service mutation lock descriptor does not already own the flock")
-	}
-	probeFD, err := unix.Open(path, unix.O_RDWR|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-	if err != nil {
-		return fmt.Errorf("open independent service mutation lock proof: %w", err)
-	}
-	defer unix.Close(probeFD)
-	if err := unix.Flock(probeFD, unix.LOCK_EX|unix.LOCK_NB); err == nil {
-		_ = unix.Flock(probeFD, unix.LOCK_UN)
-		return errors.New("inherited service mutation descriptor does not exclude an independent opener")
-	} else if !errors.Is(err, unix.EWOULDBLOCK) && !errors.Is(err, unix.EAGAIN) {
-		return fmt.Errorf("prove inherited service mutation flock contention: %w", err)
-	}
-	return nil
-}
-
-func serviceMutationFDInfoHasExclusiveFlock(raw []byte) bool {
-	for _, line := range strings.Split(string(raw), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) >= 9 && fields[0] == "lock:" &&
-			fields[2] == "FLOCK" && fields[3] == "ADVISORY" &&
-			fields[4] == "WRITE" && fields[len(fields)-2] == "0" &&
-			fields[len(fields)-1] == "EOF" {
-			return true
-		}
-	}
-	return false
+	return hostmutationlock.VerifyInherited(path, fd, serviceMutationLockOwner())
 }
 
 func syncServiceMutationLockDirectory(path string) error {
@@ -412,48 +313,7 @@ func (l *serviceMutationFileLock) Close() error {
 }
 
 func probeServiceMutationFileLockIdle(path string) error {
-	path = filepath.Clean(path)
-	if !filepath.IsAbs(path) {
-		return errors.New("service mutation lock path must be absolute")
-	}
-	lockDir := filepath.Dir(path)
-	info, err := os.Lstat(lockDir)
-	if err != nil {
-		return fmt.Errorf("inspect service mutation lock directory: %w", err)
-	}
-	if err := secureServiceMutationStat(lockDir, info, true); err != nil {
-		return err
-	}
-	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
-	if errors.Is(err, unix.ENOENT) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("open service mutation lock for idle check: %w", err)
-	}
-	file := os.NewFile(uintptr(fd), path)
-	if file == nil {
-		_ = unix.Close(fd)
-		return errors.New("open service mutation lock idle-check handle")
-	}
-	defer file.Close()
-	lockInfo, err := file.Stat()
-	if err != nil {
-		return fmt.Errorf("inspect service mutation lock: %w", err)
-	}
-	if err := secureServiceMutationStat(path, lockInfo, false); err != nil {
-		return err
-	}
-	if err := unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err != nil {
-		if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
-			return errServiceMutationHostBusy
-		}
-		return fmt.Errorf("probe service mutation lock: %w", err)
-	}
-	if err := unix.Flock(fd, unix.LOCK_UN); err != nil {
-		return fmt.Errorf("release service mutation lock probe: %w", err)
-	}
-	return nil
+	return serviceMutationLockObservationError(hostmutationlock.ProbeIdle(path, serviceMutationLockOwner()))
 }
 
 func syncServiceMutationDirectory(path string) error {

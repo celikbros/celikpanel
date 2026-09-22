@@ -304,3 +304,11 @@ adds real native evidence for the shared cleanup path: refusal preserves owner
 files, explicit owner resolution allows exact cleanup, and native mail/queued
 renewal remain intact. This controlled uncommitted stage does not establish
 crash/startup recovery or full P0.4/P0.5 completion.
+
+
+[Shared host exclusion](HOST-MUTATION-EXCLUSION.md) now serves actual Agent
+observation and the independently built recovery checker. It refuses replaced
+or malformed lock evidence without normalization or FIFO waits, preserves the
+existing outer flock identity, and proves inherited exclusion without releasing
+it. Native-filesystem component/process and standalone-checker tests pass. Native
+renewal enrollment/runtime initialization and the full P0.3-P0.5 matrix remain open.
