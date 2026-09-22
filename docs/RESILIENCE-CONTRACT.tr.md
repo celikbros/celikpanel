@@ -337,3 +337,8 @@ eski sabit flock kimliğini korur; sınırlı beklemeyi destekler ve değiştiri
 kilidi izinlerini düzeltmeden reddeder. Agent ortak kodu kullanıyor; ayrı süreçle
 kilitleme ve süreç kesintisi testleri geçti. Yerel yenileme, dış mutasyon kilidi,
 hook geçişi ve yönetim yokken kabul P0.4/P0.5 kapsamında açık kalıyor.
+
+[Ortak yerel Certbot okuyucusu](MAIL-CERTIFICATE-ARTIFACT.md#shared-native-certbot-source-reader)
+gerçek Agent panel/mail yollarında aynı sınırlı live/archive okumasını kullanır.
+Zincir, süre ve amaç denetimleri çağıranda korunur; mevcut olumsuz kaynak testleri
+geçti. Yerel yenileme hook'u ve yönetim yokken kabul henüz tamamlanmadı.

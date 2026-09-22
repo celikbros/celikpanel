@@ -98,3 +98,29 @@ race tests and the standalone recovery-checker build retain compatibility.
 
 Native deployment/reload, durable renewal recovery and hook migration remain open.
 This shared lock does not by itself establish independent certificate renewal.
+
+## Shared native Certbot source reader
+
+`internal/certbotsource` now owns the existing live/archive filesystem reader.
+Both Agent panel and mail source paths use it. It accepts only the two established
+managed lineage namespaces, confines resolution beneath the trusted source root,
+checks directory/link/file authority and requires matching archive revisions.
+Native private keys remain owner-readable and inaccessible to group/others;
+missing openat2 support fails closed. Reads neither repair metadata nor invoke
+Certbot. Actual domain/purpose approval, chain/key verification, current validity
+and the existing 24-hour minimum source lifetime stay in the Agent caller.
+Future native consumers must perform those checks too before publication.
+
+The internal reader configuration retains the existing Agent test seams; production
+uses `/etc/letsencrypt`, UID/GID zero and the native openat2 syscall. This is not an
+RPC-selectable path or privilege override. The reader returns private bytes only
+to trusted in-process consumers; they must never be logged or exposed as diagnostics.
+No lineage, receipt or on-disk schema migration is introduced.
+
+Validation: the existing actual-Agent trust-chain, wrong intermediate, server-auth,
+time, missing secure syscall, unsafe link/metadata and revision/key mismatch tests
+now exercise the shared reader. Additional root native-filesystem tests cover both
+managed namespaces, invalid lineage/configuration, unchanged source metadata and
+owner-modified key refusal without normalization. MailHost/MailTLS/PanelCert and
+Certbot source-ownership tests pass under race detection; vet and the standalone
+recovery Agent checker build pass. Native renewal deployment remains open.
