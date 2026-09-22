@@ -328,6 +328,9 @@ prepare_independent_recovery_runtime() {
             --source "$TRUSTED_RELEASE_ROOT/firewall-runtime" \
             --transaction-fd 9 9<&"$RELEASE_TRANSACTION_FD" \
             || die "independent firewall preparation is unconfirmed; panel services have not been stopped; preserve its files and review this preflight failure before retrying the same release"
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" verify-firewall-unit \
+            --unit "$TRUSTED_RELEASE_ROOT/deploy/systemd/celikpanel-firewall-restore.service" \
+            || die "candidate firewall unit and prepared helper do not agree; panel services have not been stopped"
         firewall_runtime_preparation_verified=1
     fi
     recovery_runtime_preparation_attempted=1

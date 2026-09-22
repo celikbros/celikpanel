@@ -50,3 +50,18 @@ func TestRuntimeRefusesForeignVersionPayloadAndNoncanonicalEvidence(t *testing.T
 		t.Fatal("foreign generation accepted")
 	}
 }
+
+func TestUnitGenerationClosedTemplate(t *testing.T) {
+	manifest, unit, err := Build([]byte("helper"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id, err := UnitGeneration(unit); err != nil || id != manifest.Generation {
+		t.Fatal(id, err)
+	}
+	for _, raw := range [][]byte{nil, []byte("legacy unit"), append(append([]byte{}, unit...), '\n'), bytes.Replace(unit, []byte("--restore"), []byte("--other"), 1), bytes.Replace(unit, []byte(manifest.Generation), []byte(strings.Repeat("f", 64)), 1)} {
+		if _, err := UnitGeneration(raw); err == nil {
+			t.Fatal("foreign unit accepted")
+		}
+	}
+}

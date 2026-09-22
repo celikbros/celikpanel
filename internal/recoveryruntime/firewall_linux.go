@@ -3,6 +3,7 @@
 package recoveryruntime
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -214,4 +215,47 @@ func prepareFirewallAt(source string, fd int, root, transaction string, checkpoi
 		return "", err
 	}
 	return generation, nil
+}
+
+// VerifyFirewallUnit is read-only. It proves the exact native unit and retained
+// helper it references without starting a service or requiring a live Agent.
+// The caller still owns authorization to publish/restore that unit.
+func VerifyFirewallUnit(path string) error {
+	return verifyFirewallUnitAt(path, firewallruntime.InstalledRoot)
+}
+func verifyFirewallUnitAt(path, runtimeRoot string) error {
+	if os.Geteuid() != 0 || !filepath.IsAbs(path) || filepath.Clean(path) != path || filepath.Base(path) != firewallUnitName {
+		return fail(ReasonUnsafeMetadata)
+	}
+	state := &runtimeState{config: resolveConfig{anchor: "/", uid: 0, gid: 0}}
+	defer state.close()
+	parent, err := state.openPath(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	file, err := state.openFile(parent, firewallUnitName, 0644, 16384)
+	if err != nil {
+		return asReadError(err)
+	}
+	raw, err := file.readBounded()
+	if err != nil {
+		return err
+	}
+	file.digest = Digest(raw)
+	generation, err := firewallruntime.UnitGeneration(raw)
+	if err != nil {
+		return fail(ReasonUnsupported)
+	}
+	bundle, err := readFirewallBundle(filepath.Join(runtimeRoot, generation))
+	if err != nil {
+		return err
+	}
+	defer bundle.state.close()
+	if bundle.manifest.Generation != generation || !bytes.Equal(raw, bundle.payload[firewallUnitName]) {
+		return fail(ReasonContentMismatch)
+	}
+	if err = bundle.state.revalidate(); err != nil {
+		return err
+	}
+	return state.revalidate()
 }

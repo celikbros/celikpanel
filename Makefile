@@ -52,7 +52,7 @@ schema17-bridge: check-go ## Build the audited legacy schema transition helper
 firewall-restore: check-go ## Build the independent native firewall consumer
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/firewall-restore ./cmd/firewall-restore
 
-firewall-runtime: firewall-restore ## Assemble the dormant versioned firewall artifact
+firewall-runtime: firewall-restore ## Assemble the versioned independent firewall artifact
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/firewall/bundle --binary bin/firewall-restore --output bin/firewall-runtime
 
 recovery: check-go ## Build the independent owner recovery CLI
@@ -98,6 +98,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	cp -r deploy/. dist/$(DIST)/deploy/
 	cp -r bin/recovery-runtime dist/$(DIST)/recovery-runtime
 	cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime
+	cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/$(DIST)/deploy/systemd/celikpanel-firewall-restore.service
 	cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
 	cp download-portal/get.sh dist/$(DIST)/libexec/get.sh
 	echo 1 > dist/$(DIST)/release.version

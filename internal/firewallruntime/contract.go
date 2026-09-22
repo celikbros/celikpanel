@@ -98,3 +98,18 @@ func Verify(raw, binary, unit []byte) (Manifest, error) {
 	}
 	return m, nil
 }
+
+// UnitGeneration accepts only the exact v1 template and its bound helper path.
+// Unknown future templates need an explicit reader transition.
+func UnitGeneration(unit []byte) (string, error) {
+	prefix := InstalledRoot + "/"
+	at := bytes.Index(unit, []byte(prefix))
+	if at < 0 || len(unit) < at+len(prefix)+64 {
+		return "", errors.New("unsupported independent firewall unit")
+	}
+	id := string(unit[at+len(prefix) : at+len(prefix)+64])
+	if !validDigest(id) || !bytes.Equal(unit, renderUnit(id)) {
+		return "", errors.New("unsupported independent firewall unit")
+	}
+	return id, nil
+}

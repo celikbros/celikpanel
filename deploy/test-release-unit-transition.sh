@@ -195,6 +195,56 @@ release_unit_restore_transition "${args[@]}"
 assert_tree "$snapshot_units"
 unset -f mv sync
 
+# Redirect only the fixed selected reader into this private fixture. All unit
+# metadata, byte-state, inherited flock and atomic replacement checks are real.
+# The reader itself has root-owned artifact/metadata/read-only Go tests.
+eval "$(declare -f _release_unit_verify_firewall_helper | sed 's@/usr/libexec/celikpanel/recovery@"$tmp/selected-recovery"@g')"
+cat > "$tmp/selected-recovery" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+[[ $# == 3 && $1 == verify-firewall-unit && $2 == --unit ]] || exit 91
+printf '%s\n' "$3" >> "$FIXTURE_PROOF_CALLS"
+[[ $3 != "${FIXTURE_REJECT_UNIT:-}" ]]
+SH
+chmod 0755 "$tmp/selected-recovery"
+export FIXTURE_PROOF_CALLS=$tmp/helper-proof.calls
+: > "$FIXTURE_PROOF_CALLS"
+firewall=celikpanel-firewall-restore.service
+cp -- "$snapshot_units/$firewall" "$tmp/legacy-firewall"
+printf 'ExecStart=/usr/libexec/celikpanel/firewall/candidate/restore --restore\n' >> "$candidate_units/$firewall"
+reset_old
+export FIXTURE_REJECT_UNIT=$candidate_units/$firewall
+expect_failure 'missing candidate helper permitted publication' release_unit_publish_transition "${args[@]}"
+assert_tree "$snapshot_units"
+[[ $(wc -l < "$FIXTURE_PROOF_CALLS") == 1 ]] || fail 'helper refusal was not before unit writes'
+unset FIXTURE_REJECT_UNIT
+release_unit_publish_transition "${args[@]}"
+assert_tree "$candidate_units"
+# Corruption after publication must prevent an idempotent success, but must not
+# make the unusable candidate helper a prerequisite for the valid old rollback.
+export FIXTURE_REJECT_UNIT=$candidate_units/$firewall
+expect_failure 'unchanged candidate unit hid damaged helper' release_unit_publish_transition "${args[@]}"
+proof_count=$(wc -l < "$FIXTURE_PROOF_CALLS")
+release_unit_restore_transition "${args[@]}"
+assert_tree "$snapshot_units"
+[[ $(wc -l < "$FIXTURE_PROOF_CALLS") == "$proof_count" ]] || fail 'legacy rollback required damaged candidate helper'
+unset FIXTURE_REJECT_UNIT
+# A retained independent old destination must itself be proved before any unit
+# is restored. Candidate health does not prove old generation health.
+printf 'ExecStart=/usr/libexec/celikpanel/firewall/old/restore --restore\n' >> "$snapshot_units/$firewall"
+reset_old
+release_unit_publish_transition "${args[@]}"
+export FIXTURE_REJECT_UNIT=$snapshot_units/$firewall
+expect_failure 'damaged old helper permitted restore' release_unit_restore_transition "${args[@]}"
+assert_tree "$candidate_units"
+unset FIXTURE_REJECT_UNIT
+release_unit_restore_transition "${args[@]}"
+assert_tree "$snapshot_units"
+# A read error is unknown, never evidence of a legacy unit.
+expect_failure 'unreadable source was treated as legacy' _release_unit_verify_firewall_helper "$tmp/missing-unit"
+cp -- "$tmp/legacy-firewall" "$snapshot_units/$firewall"
+reset_old
+
 # A firewall unit absent in the old snapshot may be added by publication, or
 # already absent on an interrupted restoration retry. No other absence is valid.
 rm -- "$snapshot_units/celikpanel-firewall-restore.service"

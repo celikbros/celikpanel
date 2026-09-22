@@ -179,23 +179,27 @@ mkdir -p "$TEST_ROOT/fresh/recovery-runtime/bin"
 cat > "$TEST_ROOT/fresh/recovery-runtime/bin/recovery" <<'PY'
 #!/usr/bin/python3
 import fcntl,os,sys
-assert os.fstat(9).st_ino == os.stat(os.environ['FIXTURE_LOCK']).st_ino
-assert any('FLOCK  ADVISORY  WRITE' in line for line in open('/proc/self/fdinfo/9'))
-with open(os.environ['FIXTURE_LOCK'],'rb') as independent:
-    try: fcntl.flock(independent,fcntl.LOCK_EX|fcntl.LOCK_NB)
-    except BlockingIOError: pass
-    else: raise AssertionError('native flock was released')
 args=sys.argv[1:]
+if args[0]!='verify-firewall-unit':
+    assert os.fstat(9).st_ino == os.stat(os.environ['FIXTURE_LOCK']).st_ino
+    assert any('FLOCK  ADVISORY  WRITE' in line for line in open('/proc/self/fdinfo/9'))
+    with open(os.environ['FIXTURE_LOCK'],'rb') as independent:
+        try: fcntl.flock(independent,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError: pass
+        else: raise AssertionError('native flock was released')
 if args[0]=='prepare-runtime':
     assert args==['prepare-runtime','--source',os.environ['FIXTURE_KIT'],'--mode',os.environ['FIXTURE_MODE'],'--transaction-fd','9']
 elif args[0]=='prepare-firewall-runtime':
     assert args==['prepare-firewall-runtime','--source',os.environ['FIXTURE_FIREWALL'],'--transaction-fd','9']
+elif args[0]=='verify-firewall-unit':
+    assert args==['verify-firewall-unit','--unit',os.environ['FIXTURE_FIREWALL_UNIT']]
 elif args[0]=='verify-compatibility':
     assert args==['verify-compatibility','--mode',os.environ['FIXTURE_MODE']]
 else: raise AssertionError(args)
 with open(os.environ['FIXTURE_CALLS'],'a') as f: f.write(args[0]+'\n')
 if args[0]=='prepare-runtime' and os.environ.get('FIXTURE_REJECT_PREPARATION')=='1': sys.exit(78)
 if args[0]=='prepare-firewall-runtime' and os.environ.get('FIXTURE_FIREWALL_REJECT')=='1': sys.exit(79)
+if args[0]=='verify-firewall-unit' and os.environ.get('FIXTURE_FIREWALL_UNIT_REJECT')=='1': sys.exit(80)
 PY
 chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
 (
@@ -220,11 +224,12 @@ chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
     # Additive payload runs under the exact same inherited lock, before kit
     # promotion. Refusal must not proceed to promotion, migration or downtime.
     export FIXTURE_FIREWALL=$TRUSTED_RELEASE_ROOT/firewall-runtime
+    export FIXTURE_FIREWALL_UNIT=$TRUSTED_RELEASE_ROOT/deploy/systemd/celikpanel-firewall-restore.service
     mkdir "$FIXTURE_FIREWALL"
     before_calls=$(wc -l < "$FIXTURE_CALLS")
     prepare_independent_recovery_runtime
     tail -n +"$((before_calls + 1))" "$FIXTURE_CALLS" > "$TEST_ROOT/firewall.calls"
-    cmp -s "$TEST_ROOT/firewall.calls" <(printf '%s\n' prepare-firewall-runtime prepare-runtime verify-compatibility selected-material-support selected-database-support) \
+    cmp -s "$TEST_ROOT/firewall.calls" <(printf '%s\n' prepare-firewall-runtime verify-firewall-unit prepare-runtime verify-compatibility selected-material-support selected-database-support) \
         || fail 'firewall preparation did not precede promotion under the inherited lock'
     export FIXTURE_FIREWALL_REJECT=1
     before_calls=$(wc -l < "$FIXTURE_CALLS")
@@ -234,6 +239,14 @@ chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
     [[ $(tail -n 1 "$FIXTURE_CALLS") == prepare-firewall-runtime ]] || fail 'unexpected action after firewall refusal'
     grep -F 'panel services have not been stopped' "$TEST_ROOT/firewall-rejected.log" >/dev/null
     unset FIXTURE_FIREWALL_REJECT
+    export FIXTURE_FIREWALL_UNIT_REJECT=1
+    before_calls=$(wc -l < "$FIXTURE_CALLS")
+    status=0
+    (prepare_independent_recovery_runtime) >"$TEST_ROOT/firewall-unit-rejected.log" 2>&1 || status=$?
+    [[ $status == 41 && $(wc -l < "$FIXTURE_CALLS") -eq $((before_calls + 2)) ]] || fail 'firewall unit refusal proceeded'
+    [[ $(tail -n 1 "$FIXTURE_CALLS") == verify-firewall-unit ]] || fail 'unexpected action after firewall unit refusal'
+    grep -F 'panel services have not been stopped' "$TEST_ROOT/firewall-unit-rejected.log" >/dev/null
+    unset FIXTURE_FIREWALL_UNIT_REJECT
     rmdir "$FIXTURE_FIREWALL"
     # A rejected/incomplete promotion must not reach compatibility or the material
     # writer capability call. The actual selector journal has native Go tests.

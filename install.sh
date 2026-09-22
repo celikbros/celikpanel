@@ -582,6 +582,10 @@ prepare_fresh_release_transaction_foundation() {
             --source "$SRC/firewall-runtime" \
             --transaction-fd 9 9<&"$INSTALL_RELEASE_TRANSACTION_FD" \
             || die "fresh independent firewall preparation could not be verified; preserve its files"
+        "$SRC/recovery-runtime/bin/recovery" verify-firewall-unit \
+            --unit "$SRC/deploy/systemd/celikpanel-firewall-restore.service" \
+            || die "fresh firewall unit and prepared helper do not agree; preserve their files"
+
     fi
     preflight_reviewed_release_recovery_foundation
     publish_reviewed_release_recovery_intent
