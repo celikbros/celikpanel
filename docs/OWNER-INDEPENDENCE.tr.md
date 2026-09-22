@@ -118,3 +118,24 @@ bağımsız okuyucu ve Agent girişlerini kapsar. Meşgul kilit, doğrulanmamı�
 ve belirsiz sonucu korur; süreç ölünce kilidi çekirdek bırakır. Bu,
 kaynak düzeyindeki ortak kilit açığını kapatır; kurulu sistemde devreye alma
 ve bütün eşzamanlılık/güncelleme matrisi tamamlanmış değildir.
+
+
+## Sürümlü firewall paketi (henüz etkin değil)
+
+Derleme artık `firewall-runtime/` paketini uygulama binary dizininden ayrı hazırlar.
+`celikpanel-firewall-runtime/v1`; politika okuyucusu sürüm 2’yi, binary’yi ve
+sabit v1 şablonundan üretilen systemd birimini aynı generation’a bağlar.
+Birim `/usr/libexec/celikpanel/firewall/<generation>/restore` yolunu kullanır.
+Bilinmeyen sürüm, kanonik olmayan manifest, değiştirilmiş binary/birim reddedilir.
+Mevcut eski/v2 politika dosyasının biçimi değişmez.
+
+Çevrimdışı paketleyici tanınmayan çıktıyı ve önceki doğrulanmış derlemeyi
+korur. Normal arşiv ve kaynak bootstrap aynı bağımsız paketi taşır. Paket
+hazırlamak, kurulum yetkisi vermez. Kalıcı yayın, birim geçişi ve geri alma
+koruması uygulanıp kanıtlanana kadar mevcut installer/açılış birimi korunur.
+
+Sözleşme/paketleyici yarış testleri, bağlantılı girdi ve kullanıcının düzenlediği
+çıktının reddi geçti. Linux dosya sisteminde Go 1.26.5 ile 022/077 umask altında
+iki derleme aynı baytları ve 0755/0644 izinlerini üretti. Windows paylaşımının
+0777 gösterimi reddedildi; izin denetimi gevşetilmedi. Bu, tam sürüm veya yerel
+etkinleştirme kanıtı değildir.

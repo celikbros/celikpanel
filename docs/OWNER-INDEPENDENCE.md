@@ -121,3 +121,27 @@ cover both the independent consumer and Agent entry points. Busy state preserves
 unverified/ambiguous outcomes; the kernel releases exclusion after process death.
 This closes the source-level shared-lock gap, not production activation or the
 whole native concurrency/upgrade matrix.
+
+
+## Versioned firewall artifact (not yet activated)
+
+The build now packages `firewall-runtime/` separately from the application bin
+resource. `celikpanel-firewall-runtime/v1` binds policy-reader version 2, exact
+binary bytes, a native systemd unit and a generation derived from the binary and
+frozen v1 unit template. The unit refers to an immutable path below
+`/usr/libexec/celikpanel/firewall/<generation>/restore`. The same contract builds
+and verifies the payload; unknown versions, noncanonical manifests, substituted
+binaries and edited units are refused. Existing legacy/v2 policy bytes do not change.
+
+The offline builder preserves unrecognized output and retains the previous known
+build during atomic replacement. Normal archives and the source bootstrap carry
+the same independent payload; the outer release checksum/signature covers it.
+A checksummed artifact is not installation authority. The current installer and
+installed boot unit remain unchanged until durable publication, unit transition
+and rollback retention are implemented and proved.
+
+Validation: race-enabled contract/builder tests, refusal of linked input and
+owner-edited output, and two real Go 1.26.5 builds on WSL's Linux filesystem under
+022/077 umasks produced identical payload bytes and 0755/0644 modes. The Windows
+mount's synthetic 0777 modes were refused; no permission check was weakened.
+This establishes artifact reproducibility, not full release/native activation.

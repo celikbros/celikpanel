@@ -18,11 +18,11 @@ SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 LDFLAGS := -s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT)
 DIST    := celikpanel-$(VERSION)
 
-.PHONY: all build check-go test vet panel agent schema17-bridge recovery recovery-agent-checker recovery-panel-checker recovery-runtime distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
+.PHONY: all build check-go test vet panel agent schema17-bridge firewall-restore firewall-runtime recovery recovery-agent-checker recovery-panel-checker recovery-runtime distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
 
 all: build
 
-build: panel agent schema17-bridge recovery-runtime web ## Build binaries and frontend
+build: panel agent schema17-bridge recovery-runtime firewall-runtime web ## Build binaries and frontend
 
 check-go: ## Require the exact reviewed Go compiler without auto-download
 	@actual="$$(env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" env GOVERSION 2>/dev/null)" || { \
@@ -48,6 +48,12 @@ agent: check-go ## Build the agent binary
 
 schema17-bridge: check-go ## Build the audited legacy schema transition helper
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -o bin/schema17-bridge ./deploy/schema17bridge
+
+firewall-restore: check-go ## Build the independent native firewall consumer
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/firewall-restore ./cmd/firewall-restore
+
+firewall-runtime: firewall-restore ## Assemble the dormant versioned firewall artifact
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/firewall/bundle --binary bin/firewall-restore --output bin/firewall-runtime
 
 recovery: check-go ## Build the independent owner recovery CLI
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/recovery ./cmd/recovery
@@ -91,6 +97,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	cp -r web/dist/. dist/$(DIST)/web/dist/
 	cp -r deploy/. dist/$(DIST)/deploy/
 	cp -r bin/recovery-runtime dist/$(DIST)/recovery-runtime
+	cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime
 	cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
 	cp download-portal/get.sh dist/$(DIST)/libexec/get.sh
 	echo 1 > dist/$(DIST)/release.version
@@ -102,6 +109,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	chmod 0755 dist/$(DIST)/install.sh dist/$(DIST)/bootstrap-update.sh dist/$(DIST)/bootstrap-prebuilt-update.sh
 	chmod 0755 dist/$(DIST)/update.sh dist/$(DIST)/rollback.sh
 	chmod 0755 dist/$(DIST)/libexec/get.sh
+	chmod 0755 dist/$(DIST)/firewall-runtime/restore
 	chmod 0755 dist/$(DIST)/deploy/write-release-manifest.sh
 	chmod 0755 dist/$(DIST)/recovery-runtime/bin/recovery dist/$(DIST)/recovery-runtime/bin/agent-checker dist/$(DIST)/recovery-runtime/bin/panel-checker dist/$(DIST)/recovery-runtime/bin/schema17-bridge
 	chmod 0755 dist/$(DIST)/recovery-runtime/update.sh dist/$(DIST)/recovery-runtime/rollback.sh dist/$(DIST)/recovery-runtime/deploy/recovery/runtime-entry.sh
