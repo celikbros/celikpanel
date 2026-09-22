@@ -412,3 +412,8 @@ tests is simulated; native acceptance is separate. Production activation still
 requires durable timer enablement/activity transitions, accepted dispatch and
 historical application rollback compatibility. No production dispatcher or
 installed-panel update is enabled by this component.
+
+[BE Arch native initial-load evidence](../deploy/e2e/release-recovery/MAIL-BOOTSTRAP-LOADED-BE.md)
+now proves actual idle loading, two process interruptions and same-operation
+compensation to positive absence. Two preparation refusals are retained. No timer
+activation, mail workload or whole-update acceptance is claimed by this trial.
