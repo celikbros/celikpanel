@@ -35,3 +35,8 @@ Neither installed panels nor native owner workloads are modified by source tests
 Source validation: targeted drift/unknown/read-failure tests, full Agent race
 suite (194.454 s), shared configuration race tests and vet pass. Native owner-edit
 publication refusal is the next acceptance check; no native success is claimed here.
+
+[Subsequent native AY acceptance](../deploy/e2e/release-recovery/MAIL-OBSERVATION-AY.md)
+passed on the exact source: deliberate owner edit blocks actual publication before
+staging, native listeners and pending source are preserved, and explicit fixture
+owner resolution passes readback. This does not close the limits listed above.

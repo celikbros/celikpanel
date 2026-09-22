@@ -95,4 +95,19 @@ class MailLedgerTests(unittest.TestCase):
             self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new);item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
             with self.subTest(old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)
 
+class MailObservationTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-OBSERVATION-AY.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-AY.json').read_bytes()
+    def test_native_owner_observation(self):
+        self.assertEqual(s.verify_record(self.record,self.base)['owner_configuration_preserved'],'verified')
+    def test_invalid_scope_or_identity(self):
+        for key,value in [('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('scope',{}),('lab',{})]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_rehashed_false_result(self):
+        for name,old,new in [('result','--- PASS:','--- FAIL:'),('result','failed request=','succeeded request='),('result','owner edit preserved','owner edit erased'),('witness','installed_agent_absent=yes','installed_agent_absent=no'),('witness','Fingerprint=77:13','Fingerprint=00:00')]:
+            record=copy.deepcopy(self.record);item=record['logs']['mail-native-observation-'+name+'.log'];self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new);item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)
+
 if __name__ == '__main__': unittest.main()

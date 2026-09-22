@@ -139,10 +139,37 @@ def verify_ledger(record, base_bytes):
     return {'standalone_retained_ledger':'verified','host_lock_exclusion':'verified','native_mail_preserved':'verified','independent_renewal':'not established'}
 
 
+def verify_observation(record, base_bytes):
+    require(record.get('schema') == 'celikpanel/native-mail-observation/v1', 'observation schema differs')
+    require(record.get('base_record_sha256') == hashlib.sha256(base_bytes).hexdigest(), 'retained fixture differs')
+    base=json.loads(base_bytes);verify(base)
+    require(record.get('lab') == {key:base['lab'][key] for key in ('cell_id','node')}, 'observation fixture differs')
+    require(re.fullmatch(r'[0-9a-f]{40}',record.get('source_commit','')), 'source missing')
+    binary=record.get('test_binary_sha256','');require(re.fullmatch(HEX,binary), 'binary missing')
+    require(record.get('scope') == {'actual_publication_preflight':True,'owner_edit_and_explicit_resolution':True,'pending_and_selection_preserved':True,'installed_management_absent':True,'independent_renewal':False,'post_publication_recovery':False}, 'unsupported observation scope')
+    logs={}
+    for name,item in record['logs'].items():
+        text=item['text'];require(len(text)<32768 and hashlib.sha256(text.encode()).hexdigest()==item['sha256'],'log digest differs')
+        require('PRIVATE KEY' not in text and 'nonce=' not in text,'private evidence present');logs[name]=text
+    result=logs['mail-native-observation-result.log'];witness=logs['mail-native-observation-witness.log']
+    require(result.startswith(binary+'  /root/celikpanel-release-recovery-lab/mail-observation.test\n'),'executed binary differs')
+    require(one(r'(?m)^('+UUID+')$',result)==one(r'(?m)^('+UUID+')$',witness),'observation boot changed')
+    require('--- PASS: TestMailHostCertificateDisposableVMOwnerConfigurationBarrier (' in result and '--- FAIL:' not in result and 'Result=success' in result and 'ExecMainStatus=0' in result and result.endswith('active\nactive\n'),'native observation failed')
+    request,served=one(r'owner edit preserved before certificate staging; pending renewal and selected trusted SMTP/IMAP leaf unchanged; explicit fixture owner resolution reverified; failed request=([0-9a-f]{32}) leaf=('+HEX+')',result)
+    selected=one(r'owner selection preserved; pending retained; historical completion preserved; selected=('+HEX+') source='+HEX,base['logs']['mail-owner-drift.log']['text'])
+    require(served==selected,'owner-selected certificate changed')
+    fingerprint=':'.join(selected[i:i+2].upper() for i in range(0,64,2))
+    require(re.findall(r'(?m)^sha256 Fingerprint=(.*)$',witness)==[fingerprint,fingerprint],'independent listeners differ')
+    require('installed_agent_absent=yes' in witness and 'installed_panel_absent=yes' in witness,'installed management present')
+    return {'owner_configuration_preserved':'verified','operation':request,'post_publication_recovery':'not established','independent_renewal':'not established'}
+
+
 def verify_record(record, base_bytes=None):
     if base_bytes is None:
         return verify(record)
     schema=record.get('schema')
+    if schema == 'celikpanel/native-mail-observation/v1':
+        return verify_observation(record,base_bytes)
     if schema == 'celikpanel/native-mail-cleanup/v1':
         return verify_cleanup(record,base_bytes)
     if schema == 'celikpanel/native-mail-dialect/v1':
