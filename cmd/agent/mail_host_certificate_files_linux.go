@@ -8,17 +8,17 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailhoststore"
 	"golang.org/x/sys/unix"
 )
 
 const (
 	mailHostCertificateVersionMaxCount = 128
-	mailHostCertificatePEMMaxSize      = 1 << 20
+	mailHostCertificatePEMMaxSize      = mailhoststore.PEMMaxSize
 )
 
 func stageMailHostCertificateMaterial(
@@ -296,186 +296,17 @@ func reconcilePersistedMailHostCertificateHostAt(
 	return success, err
 }
 
-func readCurrentMailHostCertificateVersionAt(
-	dirFD int,
-) (
-	version string,
-	receipt mailHostCertificateReceipt,
-	leafDER []byte,
-	notAfter time.Time,
-	found bool,
-	err error,
-) {
-	version, currentFound, err := readCurrentPanelCertificateVersionAt(dirFD)
-	if err != nil || !currentFound {
-		return "", mailHostCertificateReceipt{}, nil, time.Time{}, false, err
-	}
-	versionFD, err := openPanelCertDirectoryAt(dirFD, version)
-	if err != nil {
-		return "", mailHostCertificateReceipt{}, nil, time.Time{}, false,
-			fmt.Errorf("open current mail host certificate version: %w", err)
-	}
-	defer unix.Close(versionFD)
-	receipt, receiptFound, err := readMailHostCertificateReceiptAt(versionFD)
-	if err != nil {
-		return version, mailHostCertificateReceipt{}, nil, time.Time{}, false, err
-	}
-	if !receiptFound {
-		return version, mailHostCertificateReceipt{}, nil, time.Time{}, false, errors.New("current host certificate lacks its exact receipt")
-	}
-
-	leafDER, notAfter, err = verifyMailHostCertificateVersionAt(
-		versionFD, receipt,
-	)
-	if err != nil {
-		return version, mailHostCertificateReceipt{}, nil, time.Time{}, false, err
-	}
-	return version, receipt, leafDER, notAfter, true, nil
+func readCurrentMailHostCertificateVersionAt(dirFD int) (string, mailHostCertificateReceipt, []byte, time.Time, bool, error) {
+	return mailhoststore.ReadCurrentAt(dirFD, validateMailHostCertificatePair)
 }
-
-func readMailHostCertificateReceiptAt(
-	versionFD int,
-) (mailHostCertificateReceipt, bool, error) {
-	fd, err := unix.Openat2(
-		versionFD,
-		mailHostCertificateReceiptName,
-		&unix.OpenHow{
-			Flags: uint64(
-				unix.O_RDONLY |
-					unix.O_CLOEXEC |
-					unix.O_NOFOLLOW |
-					unix.O_NONBLOCK,
-			),
-			Resolve: panelCertSecureResolve,
-		},
-	)
-	if errors.Is(err, unix.ENOENT) {
-		return mailHostCertificateReceipt{}, false, nil
-	}
-	if err != nil {
-		return mailHostCertificateReceipt{}, false, fmt.Errorf(
-			"open mail host certificate issue receipt: %w", err,
-		)
-	}
-	file := os.NewFile(uintptr(fd), mailHostCertificateReceiptName)
-	if file == nil {
-		unix.Close(fd)
-		return mailHostCertificateReceipt{}, false, errors.New(
-			"open mail host certificate issue receipt: invalid descriptor",
-		)
-	}
-	defer file.Close()
-	var stat unix.Stat_t
-	if err := unix.Fstat(fd, &stat); err != nil {
-		return mailHostCertificateReceipt{}, false, err
-	}
-	if stat.Mode&unix.S_IFMT != unix.S_IFREG ||
-		stat.Uid != 0 ||
-		stat.Gid != 0 ||
-		stat.Mode&0o7777 != 0o600 ||
-		stat.Nlink != 1 ||
-		stat.Size < 1 ||
-		stat.Size > mailHostCertificateReceiptMaxSize {
-		return mailHostCertificateReceipt{}, false, errors.New(
-			"mail host certificate issue receipt must be root-owned single-link 0600",
-		)
-	}
-	raw, err := io.ReadAll(io.LimitReader(
-		file, mailHostCertificateReceiptMaxSize+1,
-	))
-	if err != nil {
-		return mailHostCertificateReceipt{}, false, err
-	}
-	if int64(len(raw)) != stat.Size {
-		return mailHostCertificateReceipt{}, false, errors.New(
-			"mail host certificate issue receipt changed while read",
-		)
-	}
-	receipt, err := decodeMailHostCertificateReceipt(raw)
-	return receipt, err == nil, err
+func readMailHostCertificateReceiptAt(versionFD int) (mailHostCertificateReceipt, bool, error) {
+	return mailhoststore.ReadReceiptAt(versionFD)
 }
-
-func verifyMailHostCertificateVersionAt(
-	versionFD int,
-	receipt mailHostCertificateReceipt,
-) ([]byte, time.Time, error) {
-	domain, err := readMailHostCertificateDomainAt(versionFD, 0)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	if domain != receipt.Domain {
-		return nil, time.Time{}, errors.New(
-			"mail host certificate issue receipt domain mismatch",
-		)
-	}
-	certificate, err := readMailHostCertificateRegularFileAt(
-		versionFD, "fullchain.pem", 0o600, mailHostCertificatePEMMaxSize,
-	)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	key, err := readMailHostCertificateRegularFileAt(versionFD, "privkey.pem", 0600, mailHostCertificatePEMMaxSize)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	leaf, expires, err := validateMailHostCertificatePair(certificate, key, receipt.Domain)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	if panelCertificateLeafSHA256(leaf) != receipt.LeafSHA256 {
-		return nil, time.Time{}, errors.New("host certificate receipt leaf mismatch")
-	}
-	return leaf, expires, nil
+func verifyMailHostCertificateVersionAt(versionFD int, receipt mailHostCertificateReceipt) ([]byte, time.Time, error) {
+	return mailhoststore.VerifyVersionAt(versionFD, receipt, validateMailHostCertificatePair)
 }
-
-func readMailHostCertificateRegularFileAt(
-	dirFD int,
-	name string,
-	mode uint32,
-	maxSize int64,
-) ([]byte, error) {
-	fd, err := unix.Openat2(dirFD, name, &unix.OpenHow{
-		Flags: uint64(
-			unix.O_RDONLY |
-				unix.O_CLOEXEC |
-				unix.O_NOFOLLOW |
-				unix.O_NONBLOCK,
-		),
-		Resolve: panelCertSecureResolve,
-	})
-	if err != nil {
-		return nil, err
-	}
-	file := os.NewFile(uintptr(fd), name)
-	if file == nil {
-		unix.Close(fd)
-		return nil, errors.New("invalid mail host certificate file descriptor")
-	}
-	defer file.Close()
-	var stat unix.Stat_t
-	if err := unix.Fstat(fd, &stat); err != nil {
-		return nil, err
-	}
-	if stat.Mode&unix.S_IFMT != unix.S_IFREG ||
-		stat.Uid != 0 ||
-		stat.Mode&0o7777 != mode ||
-		stat.Nlink != 1 ||
-		stat.Size < 1 ||
-		stat.Size > maxSize {
-		return nil, errors.New(
-			"mail host certificate issue version file is not trusted",
-		)
-	}
-	data, err := io.ReadAll(io.LimitReader(file, maxSize+1))
-	if err != nil {
-		return nil, err
-	}
-	if int64(len(data)) != stat.Size {
-		return nil, errors.New(
-			"mail host certificate issue version changed while read",
-		)
-	}
-	return data, nil
+func readMailHostCertificateRegularFileAt(dirFD int, name string, mode uint32, maxSize int64) ([]byte, error) {
+	return mailhoststore.ReadRegularFileAt(dirFD, name, mode, maxSize)
 }
 
 func findMailHostCertificateVersionsAt(

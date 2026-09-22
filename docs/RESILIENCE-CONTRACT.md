@@ -322,3 +322,9 @@ Agent coupling from receipt/pending/lineage parsing and certificate verification
 Actual Alpha81 producer bytes remain exact in the new shared and Agent readers.
 This advances P0.4/P0.5 groundwork only; the native renewal consumer, hook migration
 and management-absent renewal acceptance remain open.
+
+The [shared descriptor reader](MAIL-CERTIFICATE-ARTIFACT.md#shared-descriptor-reader)
+now serves actual Agent mail certificate reads without an Agent dependency. It
+preserves historical file trust and rejects observed concurrent owner selection
+changes without rewriting them. Native deployment/reload and renewal absence
+acceptance remain open; no new artifact version or installed migration is claimed.

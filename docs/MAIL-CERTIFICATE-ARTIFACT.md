@@ -40,3 +40,30 @@ binding, shared update exclusion, durable retry and recovery, hook migration,
 retained helper/update rollback and real renewal with both management binaries
 absent. The existing deploy hook still invokes Agent until that complete path is
 implemented and accepted. No installed owner server has been changed.
+
+
+## Shared descriptor reader
+
+`internal/mailhoststore` now owns the actual retained-generation file reader.
+Agent delegates current selection, receipt, domain and key/certificate file reads
+to it. The caller still supplies a trusted parent descriptor, publication exclusion
+and the shared certificate verifier with its explicit trust roots. The package
+has no Agent, database, licensing, process execution or service dependency.
+
+The existing no-symlink/beneath resolution, root/single-link/mode/size rules and
+missing-versus-corrupt distinction are retained. File descriptor and named entry
+identity/metadata are checked again after reads. A selected version directory
+must itself be root-owned and not writable by group/others; a changed directory
+authority is refused without normalization. Replacing `current` during
+verification is refused without undoing the owner's replacement. The reader
+returns public leaf evidence and receipt, not private key bytes, from its current
+selection API. Lower-level internal file reads remain confined to the caller's
+trusted descriptor.
+
+Root ext4 tests cover original producer receipt reads, absent current selection,
+missing receipt, public key mode, wrong owner/group, hardlinks, symlinks, FIFO,
+wrong domain/leaf and replacing the owner's current selection during verification.
+Existing Agent tests verify real certificate/key trust through the shared reader.
+No on-disk version, publication, hook or update migration changes. This is a native
+consumer prerequisite; it does not complete independent renewal or prove a whole
+mail service restart/renewal flow.

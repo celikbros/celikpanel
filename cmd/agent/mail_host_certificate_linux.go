@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/mailhostartifact"
+	"github.com/alicelik/celikpanel/internal/mailhoststore"
 	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/sys/unix"
 )
@@ -29,18 +30,7 @@ func openManagedMailHostTLSDirectory(path string) (int, int, error) {
 }
 
 func readMailHostCertificateDomainAt(fd, uid int) (string, error) {
-	if uid != 0 {
-		return "", errors.New("host certificate owner must be root")
-	}
-	raw, err := readMailHostCertificateRegularFileAt(fd, "mail.domain", 0600, 254)
-	if err != nil {
-		return "", err
-	}
-	domain := strings.TrimSuffix(string(raw), "\n")
-	if string(raw) != domain+"\n" || !serviceMutationCanonicalFQDN(domain) {
-		return "", errors.New("invalid host certificate identity")
-	}
-	return domain, nil
+	return mailhoststore.ReadDomainAt(fd, uid)
 }
 
 func readMailHostCertificateSource(domain string) ([]byte, []byte, []byte, time.Time, error) {
