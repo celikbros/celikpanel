@@ -61,8 +61,21 @@ func TestMailEnableChild(t *testing.T) {
 		t.Fatal(err)
 	}
 	wants := filepath.Join(paths.units, mailTimerWants)
-	if err = os.Mkdir(wants, 0700); err != nil && !os.IsExist(err) {
-		t.Fatal(err)
+	if !strings.HasPrefix(scenario, "parent-") && !strings.HasPrefix(scenario, "cut-parent_") {
+		if err = os.Mkdir(wants, 0700); err != nil && !os.IsExist(err) {
+			t.Fatal(err)
+		}
+	}
+	if scenario == "parent-existing-owner-content" {
+		if err = os.Mkdir(wants, 0750); err != nil {
+			t.Fatal(err)
+		}
+		capturePut(t, filepath.Join(wants, "owner"), []byte("retain"), 0600)
+	}
+	if scenario == "parent-unsafe-symlink" {
+		if err = os.Symlink(root, wants); err != nil {
+			t.Fatal(err)
+		}
 	}
 	link := filepath.Join(wants, mailrenewalkit.TimerName)
 	cache := filepath.Join(root, "enable-cache")
@@ -131,6 +144,19 @@ func TestMailEnableChild(t *testing.T) {
 		}
 	}
 	checkpoint := func(point string) {
+		if scenario == "parent-stage-edit" && point == "parent_staged" {
+			found, e := filepath.Glob(filepath.Join(paths.units, ".celikpanel-mail-wants-*"))
+			if e != nil || len(found) != 1 {
+				t.Fatal("stage missing", e)
+			}
+			capturePut(t, filepath.Join(found[0], "owner"), []byte("retain"), 0600)
+		}
+		if scenario == "parent-owner-before-publish" && point == "parent_plan_parent_durable" {
+			if err = os.Mkdir(wants, 0750); err != nil {
+				t.Fatal(err)
+			}
+			capturePut(t, filepath.Join(wants, "owner"), []byte("retain"), 0600)
+		}
 		if scenario == "cut-"+point {
 			unix.Kill(os.Getpid(), syscall.SIGKILL)
 			panic("kill returned")
@@ -142,6 +168,22 @@ func TestMailEnableChild(t *testing.T) {
 		cancel()
 	}
 	planRaw, err := prepareMailEnableAt(ctx, mailCaptureTestOperation, sha, 9, paths, commands, checkpoint)
+	if scenario == "parent-stage-edit" || scenario == "parent-unsafe-symlink" {
+		if err == nil {
+			t.Fatal("foreign parent accepted")
+		}
+		return
+	}
+	if scenario == "parent-owner-before-publish" {
+		if err == nil {
+			t.Fatal("owner directory adopted")
+		}
+		raw, readErr := os.ReadFile(filepath.Join(wants, "owner"))
+		if readErr != nil || string(raw) != "retain" {
+			t.Fatal("owner directory changed", readErr)
+		}
+		return
+	}
 	if scenario == "owner-link-before" || scenario == "missing-load-receipt" || scenario == "cancelled" {
 		if err == nil || reloads != 0 {
 			t.Fatal("unverified plan accepted", err)
@@ -150,6 +192,42 @@ func TestMailEnableChild(t *testing.T) {
 	}
 	if err != nil {
 		t.Fatal(err)
+	}
+	if scenario == "parent-created" || scenario == "parent-resume" {
+		raw, e := os.ReadFile(filepath.Join(paths.journals, mailCaptureTestOperation+".timer-parent.json"))
+		if e != nil {
+			t.Fatal(e)
+		}
+		var parentPlan mailParentRecord
+		if e = decodePromotion(raw, &parentPlan); e != nil {
+			t.Fatal(e)
+		}
+		info, e := os.Stat(wants)
+		if e != nil || parentPlan.Existing || info.Mode().Perm() != 0755 {
+			t.Fatal("missing parent creation proof", e)
+		}
+	}
+	if scenario == "parent-owner-after-ready" || scenario == "parent-corrupt-ready" {
+		if scenario == "parent-owner-after-ready" {
+			if err = os.Rename(wants, filepath.Join(root, "owner-prior-wants")); err != nil {
+				t.Fatal(err)
+			}
+			if err = os.Mkdir(wants, 0755); err != nil {
+				t.Fatal(err)
+			}
+			capturePut(t, filepath.Join(wants, "owner"), []byte("retain"), 0600)
+		} else {
+			capturePut(t, filepath.Join(paths.journals, mailCaptureTestOperation+".timer-parent-ready.json"), []byte("changed"), 0600)
+		}
+		e, openErr := openMailEnableContext(mailCaptureTestOperation, sha, 9, paths)
+		if openErr != nil {
+			t.Fatal(openErr)
+		}
+		defer e.close()
+		if err = prepareMailWantsParent(ctx, e, mailCaptureTestOperation, 9, nil); err == nil {
+			t.Fatal("stale parent proof accepted")
+		}
+		return
 	}
 	var plan mailEnableRecord
 	if err = decodePromotion(planRaw, &plan); err != nil {
@@ -312,6 +390,18 @@ func TestMailEnableChild(t *testing.T) {
 			}
 		} else if !os.IsNotExist(e) {
 			t.Fatal("original absence not restored", name, e)
+		}
+	}
+	if strings.HasPrefix(scenario, "parent-") {
+		info, e := os.Stat(wants)
+		if e != nil || !info.IsDir() {
+			t.Fatal("shared directory removed", e)
+		}
+		if scenario == "parent-existing-owner-content" {
+			raw, e := os.ReadFile(filepath.Join(wants, "owner"))
+			if e != nil || string(raw) != "retain" || info.Mode().Perm() != 0750 {
+				t.Fatal("existing owner parent changed", e)
+			}
 		}
 	}
 }

@@ -485,3 +485,28 @@ now proves actual timer start/stop, two process interruptions and ordered invers
 The first automatic no-work invocation failed on an absent private ledger parent;
 that result is retained. Fixture preparation and a manual successful no-work run
 preceded same-operation continuation. Automatic renewal success is not claimed.
+
+## Retained shared native wants parent (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. Before first enablement, the private component
+now prepares `timers.target.wants` as a separately recorded infrastructure
+prerequisite. `celikpanel-mail-renewal-parent/v1` binds the exact capture and
+existing or newly staged directory identity. Existing protected directories,
+permissions, group and other entries are preserved. A missing directory is staged
+with final root:root 0755 metadata, synced and recorded before no-replace rename;
+re-entry accepts only that recorded inode. Unrecorded stages remain evidence and
+are never adopted. Unknown, unsafe or replaced parents block that boundary.
+
+This shared directory is deliberately **retained** after compensation, including
+when it was initially absent. It is not a CelikPanel-owned workload: another
+native timer may use it after publication. Inverse removes only the recorded
+CelikPanel enablement link and files, and never recursively deletes shared owner
+content. The private parent plan and ready record are retained too. This is the
+explicit compensation policy, not an assertion that every original directory
+absence is restored. No native service is started by parent preparation.
+
+This supersedes the primitive's earlier requirement that an operator pre-create
+the wants parent. It does not prepare the private renewal ledger/group, admit a
+production operation, resolve historical Agent compatibility, or close enrollment
+acceptance. Interrupted mkdir/staging/publication and later owner edits are tested
+separately from native execution. Existing ledger/certificate schemas do not change.

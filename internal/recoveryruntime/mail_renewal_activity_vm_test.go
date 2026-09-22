@@ -55,7 +55,13 @@ func TestMailActivityDisposableVMTransition(t *testing.T) {
 	if !ValidDigest(target) || (phase != "forward-cut" && phase != "rollback-cut" && phase != "recover") {
 		t.Fatal("explicit native target/phase required")
 	}
-	const operation = "67ca3eb8c16d4131ac4782b13c0a3199"
+	operation := os.Getenv("CP_MAIL_ACTIVITY_NATIVE_OPERATION")
+	if operation == "" {
+		operation = "67ca3eb8c16d4131ac4782b13c0a3199"
+	}
+	if !validPromotionNonce(operation) {
+		t.Fatal("explicit native operation malformed")
+	}
 	paths := mailCapturePaths{MailRenewalHookPath, "/etc/systemd/system", mailrenewalkit.InstalledRoot, "/root/celikpanel-release-recovery-lab/mail-native-activity-journal", transactionPath}
 	if e = verifyEnrollmentLock(paths.transaction, 9); e != nil {
 		t.Fatal(e)

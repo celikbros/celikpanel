@@ -300,6 +300,9 @@ func prepareMailEnableAt(ctx context.Context, operation, captureSHA string, fd i
 	if err = observeMailEnableSchedule(ctx, commands, false, false); err != nil {
 		return nil, err
 	}
+	if err = prepareMailWantsParent(ctx, e, operation, fd, checkpoint); err != nil {
+		return nil, err
+	}
 	state := &runtimeState{config: resolveConfig{anchor: "/", uid: 0, gid: 0, protectedDirectoryGroups: true}}
 	defer state.close()
 	parent, err := state.openPath(filepath.Join(paths.units, mailTimerWants))
