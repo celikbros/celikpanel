@@ -448,3 +448,9 @@ timer activity transitions, accepted production dispatch and historical old-Agen
 hook-writer compatibility remain open. Existing certificate/ledger/kit schemas
 are unchanged. Enabling a timer makes it eligible for the native boot target;
 this phase alone does not prove current activity or a completed renewal.
+
+[BE Arch native enablement evidence](../deploy/e2e/release-recovery/MAIL-ENABLE-BE.md)
+proves actual enabled/inactive state, two process interruptions and ordered
+compensation through disabled/inactive to original native absence. The wants
+parent was fixture-prepared. Timer start, workloads and production dispatch are
+not established by this trial.
