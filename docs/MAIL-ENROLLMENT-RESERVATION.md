@@ -96,7 +96,9 @@ and native executor share final verification rather than separate definitions
 of completion. Scoped recoveryruntime race tests and vet pass; production
 dispatch remains disabled.
 
-The composite executor has its separately recorded Arch native proof. Joining
+[The reserved Arch native composition](../deploy/e2e/release-recovery/MAIL-RESERVED-ENROLLMENT-BE.md)
+now exercises two actual native cuts with the shared reservation consumer. Its
+fixture producer and collector limitation are explicitly recorded. Joining
 this reservation to authenticated production owner intent, dispatch/boot recovery,
 initial private identity provisioning and the full native update/rollback and
 workload matrix remains open. Component success does not close those P0 items.
