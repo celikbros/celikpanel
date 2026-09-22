@@ -1,0 +1,45 @@
+{
+  "schema": "celikpanel/native-mail-file-transition/v1",
+  "source_commit": "02b56b715c5b32946f04df2638fe82076c455af5",
+  "test_sha256": "04f1fa749c81723afaa8cef07400c64578ae77e9aaa53d8c1a9e2ff71a0c9644",
+  "recovery_sha256": "ba6a26a57fcc4b0c3982bc39d2a741732bef94b51a27ad0508cb832064819924",
+  "runtime_manifest": {
+    "schema": "celikpanel-mail-renewal-runtime/v1",
+    "generation": "ae1e039119318ddbc1f6fea1cabdb0ddf4322a38e3a33bc94da9b4f789d964c8",
+    "ledger_version": 1,
+    "plan_version": 1,
+    "receipt_schema": "mail-host-certificate-receipt/v1",
+    "binary_sha256": "7520370363a4b56a9ab89deefd4444472b820a2719969bf72c7dcec6c34e073d",
+    "service_sha256": "11c7545cbff9ccc02065b6463c6f877486691e9e3cbe92f11105d79e68194862",
+    "timer_sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "hook_sha256": "7b476b9413cf2cd0a714b01b1c6e22766bd1b4ddb814bb07414523955087bb73"
+  },
+  "scope": {
+    "native_file_exchange": true,
+    "interrupted_inverse_exchange": true,
+    "original_inodes_restored": true,
+    "trusted_mail_listeners": true,
+    "native_schedule_activation": false,
+    "production_dispatch": false,
+    "whole_update_rollback": false,
+    "power_loss": false
+  },
+  "logs": {
+    "mail-files-native.log": {
+      "text": "ae1e039119318ddbc1f6fea1cabdb0ddf4322a38e3a33bc94da9b4f789d964c8\n\nphase=forward-cut returncode=1\n=== RUN   TestMailFilesDisposableVMTransition\n    mail_renewal_files_vm_test.go:42: explicit target required\n--- FAIL: TestMailFilesDisposableVMTransition (0.00s)\nFAIL\n\nTraceback (most recent call last):\n  File \"<stdin>\", line 27, in <module>\nAssertionError: ('forward-cut', 1)\n",
+      "sha256": "799cfd545fbcc4141d1c97a67945b58574382d70b0aad13f1875632ce45b5d3a"
+    },
+    "mail-files-native-resume.log": {
+      "text": "prior_guard_refusal=preserved native_files=unchanged journal=empty\nphase=forward-cut returncode=-9\n=== RUN   TestMailFilesDisposableVMTransition\n    mail_renewal_files_vm_test.go:93: native_cut=forward_celikpanel-mail-host-cert operation=a4c0f42e45db4cc7af843fd2ab338907 previous=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d target=ae1e039119318ddbc1f6fea1cabdb0ddf4322a38e3a33bc94da9b4f789d964c8 capture=cf419e50354d756b29228ffc5d26bc61c3ab4fad9a3b4fe1b04bf02cd80fea91\n\nphase=rollback-cut returncode=-9\n=== RUN   TestMailFilesDisposableVMTransition\n    mail_renewal_files_vm_test.go:93: native_cut=rollback_celikpanel-mail-host-cert operation=a4c0f42e45db4cc7af843fd2ab338907 previous=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d target=ae1e039119318ddbc1f6fea1cabdb0ddf4322a38e3a33bc94da9b4f789d964c8 capture=cf419e50354d756b29228ffc5d26bc61c3ab4fad9a3b4fe1b04bf02cd80fea91\n\nphase=recover returncode=0\n=== RUN   TestMailFilesDisposableVMTransition\n    mail_renewal_files_vm_test.go:116: native_inverse=verified original_inodes=restored capture=preserved direction=rollback operation=a4c0f42e45db4cc7af843fd2ab338907 previous=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d target=ae1e039119318ddbc1f6fea1cabdb0ddf4322a38e3a33bc94da9b4f789d964c8\n--- PASS: TestMailFilesDisposableVMTransition (0.68s)\nPASS\n\nnative_files=original_inodes_restored configuration_ledger=unchanged management=absent trusted_listeners={\"587\": \"446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33\", \"993\": \"446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33\"}\nLoadState=loaded\nActiveState=inactive\nFragmentPath=/etc/systemd/system/celikpanel-mail-renewal.service\nDropInPaths=\nUnitFileState=static\nNeedDaemonReload=no\n\nLoadState=loaded\nActiveState=active\nFragmentPath=/etc/systemd/system/celikpanel-mail-renewal.timer\nDropInPaths=\nUnitFileState=enabled\nNeedDaemonReload=no\n\n",
+      "sha256": "123f12a135f48d1f4dd1c1a1c2a0c0acec60a15ef392c8cd825f9cdf1623c0d7"
+    },
+    "mail-files-certbot-filter.log": {
+      "text": "def is_executable(path: str) -> bool:\n    \"\"\"\n    Is path an executable file?\n\n    :param str path: path to test\n    :return: True if path is an executable file\n    :rtype: bool\n    \"\"\"\n    if POSIX_MODE:\n        return os.path.isfile(path) and os.access(path, os.X_OK)\n\n    return _win_is_executable(path)\n\n    display_ops.report_executed_command(f\"Hook '{cmd_name}'\", returncode, out, err)\n    return err\n\n\ndef list_hooks(dir_path: str) -> List[str]:\n    \"\"\"List paths to all hooks found in dir_path in sorted order.\n\n    :param str dir_path: directory to search\n\n    :returns: `list` of `str`\n    :rtype: sorted list of absolute paths to executables in dir_path\n\n    \"\"\"\n    allpaths = (os.path.join(dir_path, f) for f in os.listdir(dir_path))\n    hooks = [path for path in allpaths if filesystem.is_executable(path) and not path.endswith('~')]\n    return sorted(hooks)\n",
+      "sha256": "8dafb60740d909dc2c4f45db57b8ef9e7747cbfd8d022af9c61295123f560c29"
+    },
+    "mail-files-certbot-inventory.log": {
+      "text": "certbot_hook_inventory=one_live_hook staging_directories=excluded\n",
+      "sha256": "270673f660dfccda30e1810987e24cff7be0a958289281a13274356c7996fa9a"
+    }
+  }
+}

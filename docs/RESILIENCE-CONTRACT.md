@@ -534,3 +534,9 @@ adds durable inode plans, retained old files and monotonic rollback intent for
 P0.3/P0.5. Process interruption tests cover publication and compensation, including
 an interruption during rollback itself. Production schedule activation, recovery
 dispatch, removal and the complete native update/workload matrix remain open.
+
+[Debian BE native file compensation](../deploy/e2e/release-recovery/MAIL-FILES-BE.md)
+now verifies actual hook/service exchange, a second kill during inverse exchange,
+original inode restoration and unchanged trusted mail workloads. The initial
+test-driver refusal is retained. Loaded-unit activation and whole-update acceptance
+remain open.

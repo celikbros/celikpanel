@@ -279,3 +279,9 @@ all 76 process-kill boundaries across absent/legacy/independent layouts, and a
 second process kill during rollback of an interrupted forward operation. These
 component results do not establish reboot, power loss, complete native enrollment
 or whole-update rollback. Native execution evidence is recorded separately.
+
+[Debian BE native file compensation](../deploy/e2e/release-recovery/MAIL-FILES-BE.md)
+now verifies actual hook/service exchange, a second kill during inverse exchange,
+original inode restoration and unchanged trusted mail workloads. The initial
+test-driver refusal is retained. Loaded-unit activation and whole-update acceptance
+remain open.
