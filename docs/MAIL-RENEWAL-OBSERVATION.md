@@ -188,3 +188,11 @@ Targeted tests cover successful exact removal, retained active/failed/missing or
 mismatched evidence, held host lock, unknown selected material, retained stages
 and a newer queue. Native fresh-process same-leaf acknowledgement is prepared;
 its results are recorded only after execution.
+
+
+[BC native acceptance](../deploy/e2e/release-recovery/MAIL-CONTRACT-BC.md) now
+verifies this acknowledgement boundary in a fresh polling process between actual
+publication and generic startup recovery. Same-leaf unknown work and the ledger
+remain byte-identical; only exact recovered completion clears the queue. Full
+Agent race and vet passed. Independent renewal and power-loss acceptance remain
+open.

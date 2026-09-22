@@ -149,3 +149,20 @@ class MailReloadRecoveryTests(unittest.TestCase):
         with self.assertRaises(ValueError):s.verify_record(self.record,self.base)
         self.setUp();self.record['logs']['unexpected']={}
         with self.assertRaises(ValueError):s.verify_record(self.record,self.base)
+
+
+class MailAcknowledgementTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-ACK-BC.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-BC.json').read_bytes()
+    def test_native_acknowledgement(self):
+        self.assertEqual(s.verify_record(self.record,self.base)['same_leaf_unresolved_queue_preserved'],'verified')
+    def test_scope_and_binding(self):
+        for key,value in [('schema','unknown'),('source_commit','0'*40),('base_record_sha256','0'*64),('scope',{}),('lab',{})]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_rehashed_false_acknowledgement(self):
+        edits=[('mail-ack-refuses.log','--- PASS:','--- FAIL:'),('mail-ack-refuses.log','1bf47bd647da500d893f203ee9277cbf','0'*32),('mail-ack-refuses.log','713fe42c-d881-4031-b295-c9565acaa4db','00000000-0000-0000-0000-000000000000'),('mail-ack-refuses.log','mail-agent.test[1179]','mail-agent.test[1036]'),('mail-ack-refuses.log','ExecMainStatus=0','ExecMainStatus=1'),('mail-reload-resolution.log','same-leaf pending renewal acknowledged after exact recovered completion','pending renewal discarded before completion')]
+        for name,old,new in edits:
+            record=copy.deepcopy(self.record);item=record['logs'][name];self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new);item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(name=name,old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)

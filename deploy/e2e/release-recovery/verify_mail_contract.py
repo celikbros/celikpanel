@@ -202,10 +202,41 @@ def verify_reload_recovery(record, base_bytes):
     return {'owner_edit_preserved':'verified','same_operation_reload_recovery':'verified','operation':request,'power_loss':'not established','independent_renewal':'not established'}
 
 
+def verify_renewal_ack(record, base_bytes):
+    require(record.get('schema') == 'celikpanel/native-mail-renewal-ack/v1', 'ack schema differs')
+    require(record.get('scope',{}).get('fresh_process_same_leaf_acknowledgement') is True, 'fresh acknowledgement scope absent')
+    require(set(record.get('logs',{})) == {'mail-reload-fault.log','mail-ack-refuses.log','mail-reload-refuses.log','mail-reload-resolution.log'}, 'ack log set differs')
+    # Reuse the exact baseline, source, binary, native fault/recovery, operation
+    # and listener checks. Only this extension's explicitly checked fields differ.
+    inherited=dict(record,schema='celikpanel/native-mail-reload-recovery/v1',scope={k:v for k,v in record['scope'].items() if k!='fresh_process_same_leaf_acknowledgement'},logs={k:v for k,v in record['logs'].items() if k!='mail-ack-refuses.log'})
+    result=verify_reload_recovery(inherited,base_bytes)
+    item=record['logs']['mail-ack-refuses.log'];text=item['text']
+    require(len(text)<32768 and hashlib.sha256(text.encode()).hexdigest()==item['sha256'], 'ack digest differs')
+    require('PRIVATE KEY' not in text and 'nonce=' not in text, 'private ack evidence present')
+    require(text.startswith(record['test_binary_sha256']+'  /root/celikpanel-release-recovery-lab/mail-agent.test\n'), 'ack binary differs')
+    fault=record['logs']['mail-reload-fault.log']['text']
+    require(one(r'(?m)^('+UUID+')$',text)==one(r'(?m)^('+UUID+')$',fault), 'ack boot differs')
+    case='TestMailHostCertificateDisposableVMPendingAcknowledgementRefuses'
+    require('--- PASS: '+case+' (' in text and '--- FAIL:' not in text and 'Result=success' in text and 'ExecMainStatus=0' in text and 'ActiveState=inactive' in text, 'native ack failed')
+    pid=one(r'mail-agent[.]test\[(\d+)\]: === RUN   '+case+r'\n',text)
+    for name,item in inherited['logs'].items():
+        require('mail-agent.test['+pid+']:' not in item['text'], 'ack process not independent')
+    request,previous,selected=one(r'request=([0-9a-f]{32}) previous=('+HEX+') selected=('+HEX+')',fault)
+    require(one(r'fresh renewal polling retained unresolved same-leaf queue; request=([0-9a-f]{32}) leaf=('+HEX+')',text)==(request,selected), 'ack changed operation or selected leaf')
+    imap,smtp=one(r'native trusted listeners: imap=('+HEX+') smtp=('+HEX+')',text)
+    require(imap in {previous,selected} and smtp in {previous,selected}, 'ack native listener differs')
+    require('same-leaf pending renewal acknowledged after exact recovered completion' in record['logs']['mail-reload-resolution.log']['text'], 'completion not acknowledged')
+    result['same_leaf_unresolved_queue_preserved']='verified'
+    result['exact_completed_queue_acknowledged']='verified'
+    return result
+
+
 def verify_record(record, base_bytes=None):
     if base_bytes is None:
         return verify(record)
     schema=record.get('schema')
+    if schema == 'celikpanel/native-mail-renewal-ack/v1':
+        return verify_renewal_ack(record,base_bytes)
     if schema == 'celikpanel/native-mail-reload-recovery/v1':
         return verify_reload_recovery(record,base_bytes)
     if schema == 'celikpanel/native-mail-observation/v1':
