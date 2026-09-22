@@ -2135,7 +2135,7 @@ trap - EXIT
 
 # The Makefile artifact contains the complete offline initial-install payload.
 # Updates and rollbacks still use the immutable bootstrap transaction path.
-require_literal "$MAKEFILE" 'build: panel agent schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime web'
+require_literal "$MAKEFILE" 'build: panel agent-native-contract schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime web'
 require_literal "$MAKEFILE" 'cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime'
 require_literal "$MAKEFILE" 'chmod 0755 dist/$(DIST)/firewall-runtime/restore'
 require_literal "$MAKEFILE" 'cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/$(DIST)/deploy/systemd/celikpanel-firewall-restore.service'
@@ -2150,7 +2150,7 @@ require_literal "$BOOTSTRAP" 'rm -- bin/mail-renewal'
 
 require_literal "$MAKEFILE" '$(NPM) ci --no-audit --no-fund'
 reject_literal "$MAKEFILE" '$(NPM) install --no-audit --no-fund'
-require_literal "$MAKEFILE" 'cp bin/panel bin/agent bin/schema17-bridge dist/$(DIST)/bin/'
+require_literal "$MAKEFILE" 'cp bin/panel bin/agent bin/agent-native-contract.json bin/schema17-bridge dist/$(DIST)/bin/'
 require_literal "$MAKEFILE" 'cp -r deploy/. dist/$(DIST)/deploy/'
 require_literal "$MAKEFILE" 'cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/'
 require_literal "$MAKEFILE" 'sha256sum "$(DIST).tar.gz" > "$(DIST).tar.gz.sha256"'
@@ -3500,5 +3500,6 @@ bash "$ROOT/deploy/test-update-quiesce-capture.sh"
 bash "$ROOT/deploy/test-update-recovery-lock.sh"
 
 bash "$ROOT/deploy/test-recovery-resource-shell-contract.sh"
+bash "$ROOT/deploy/test-agent-native-contract.sh"
 
 echo "bootstrap update contract: ok"

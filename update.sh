@@ -127,6 +127,16 @@ check_bind_update_compatibility() {
         "$PREFLIGHT_AGENT" "$probe"
 }
 
+# Read target/installed Agent bytes, never execute a historical capability flag.
+# Native renewal is preserved; an incompatible application is refused before stop.
+check_mail_application_compatibility() {
+    local inspector="$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery"
+    [[ -z ${RECOVERY_RUNTIME_ROOT:-} ]] || inspector="$CODE_ROOT/bin/recovery"
+    run_update_idle_probe "$inspector" verify-agent-native-contract --bin "$TRUSTED_RELEASE_ROOT/bin" &&
+    run_update_idle_probe "$inspector" verify-mail-application --bin "$BIN_DIR" &&
+        run_update_idle_probe "$inspector" verify-mail-application --bin "$TRUSTED_RELEASE_ROOT/bin"
+}
+
 # A recovered active capture exists only to obtain complete rollback material.
 # Keep the persistent release flock, drop the transient Agent mutation flock,
 # then run the independent rollback adapter for the SAME accepted transaction.
@@ -2834,6 +2844,7 @@ else
     # Uyumsuz DNS durumunu panel erişilebilirken, kalıcı başlangıç engelinden
     # önce reddet. Aşağıda son kilit altında tekrar doğrula.
     preflight_bind_before_quiesce
+    check_mail_application_compatibility || die "application compatibility with independent mail renewal is unverified before coordinator downtime"
     mkdir -m 0700 -- "$stage_root"
     chown root:root -- "$stage_root"
     mkdir -m 0700 -- "$tmp_snap"
@@ -2975,6 +2986,9 @@ fi
 
 if ! check_bind_update_compatibility; then
     fail_before_active "managed BIND state changed before coordinator freeze"
+fi
+if ! check_mail_application_compatibility; then
+    fail_before_active "application compatibility with independent mail renewal changed before coordinator freeze"
 fi
 
 if [[ "$transaction_phase" == quiesce ]]; then

@@ -18,11 +18,11 @@ SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 LDFLAGS := -s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT)
 DIST    := celikpanel-$(VERSION)
 
-.PHONY: all build check-go test vet panel agent schema17-bridge firewall-restore firewall-runtime mail-renewal mail-renewal-runtime recovery recovery-agent-checker recovery-panel-checker recovery-runtime distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
+.PHONY: all build check-go test vet panel agent agent-native-contract schema17-bridge firewall-restore firewall-runtime mail-renewal mail-renewal-runtime recovery recovery-agent-checker recovery-panel-checker recovery-runtime distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
 
 all: build
 
-build: panel agent schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime web ## Build binaries and frontend
+build: panel agent-native-contract schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime web ## Build binaries and frontend
 
 check-go: ## Require the exact reviewed Go compiler without auto-download
 	@actual="$$(env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" env GOVERSION 2>/dev/null)" || { \
@@ -45,6 +45,9 @@ panel: check-go ## Build the panel binary
 
 agent: check-go ## Build the agent binary
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/agent ./cmd/agent
+
+agent-native-contract: agent ## Bind this reviewed Agent to its native mail compatibility declaration
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/agent-native-contract --agent bin/agent --commit "$(COMMIT)" --output bin/agent-native-contract.json
 
 schema17-bridge: check-go ## Build the audited legacy schema transition helper
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -o bin/schema17-bridge ./deploy/schema17bridge
@@ -99,7 +102,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	# yine değişmez sürümü yayımlayıp doğrulayan bootstrap-update.sh yolunu kullanır.
 	rm -rf dist/$(DIST)
 	mkdir -p dist/$(DIST)/bin dist/$(DIST)/web/dist dist/$(DIST)/deploy dist/$(DIST)/libexec
-	cp bin/panel bin/agent bin/schema17-bridge dist/$(DIST)/bin/
+	cp bin/panel bin/agent bin/agent-native-contract.json bin/schema17-bridge dist/$(DIST)/bin/
 	cp -r web/dist/. dist/$(DIST)/web/dist/
 	cp -r deploy/. dist/$(DIST)/deploy/
 	cp -r bin/recovery-runtime dist/$(DIST)/recovery-runtime

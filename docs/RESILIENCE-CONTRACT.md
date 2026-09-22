@@ -647,3 +647,14 @@ helper continuation ran after reboot. Owner configuration, old material,
 unselected stage and prior history were preserved; both trusted mail listeners
 served the new leaf. This closes that bounded reboot acceptance case, not
 power-loss, cross-build adoption or production enrollment/rollback compatibility.
+
+
+## Agent compatibility admission (2026-09-22)
+
+P0.3/P0.4/P0.5 now have a [source-bound application contract](AGENT-NATIVE-CONTRACT.md)
+for independent mail renewal. Current releases bind a declaration to exact Agent
+bytes; read-only update/rollback gates refuse unverified historical writers before
+coordinator stop and repeat before mutation. The declaration travels in the same
+atomic bin exchange and exact inverse as Agent. This is not retroactive
+certification of old releases, production enrollment or full native rollback
+acceptance; those boundaries remain open.

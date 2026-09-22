@@ -15,9 +15,11 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/agentnativecontract"
 	"golang.org/x/sys/unix"
 )
 
@@ -396,24 +398,35 @@ func (v *inputs) revalidate() error {
 	}
 	return c.stopped()
 }
+
+// Only these fixed application slots follow the candidate. Other owner tools
+// stay with the snapshot. The declaration and Agent publish in one directory
+// exchange, never as a later write that could leave mismatched evidence.
+func managedAgentFile(path string) bool {
+	return path == "panel" || path == "agent" || path == agentnativecontract.FileName
+}
 func (v *inputs) expectedCandidate() tree {
 	var wanted tree
 	if v.request.Resource == "web" {
 		wanted.Entries = append([]entry{}, v.new.Entries...)
 	} else {
-		wanted.Entries = append([]entry{}, v.old.Entries...)
-		source := v.new.entryMap()
-		for i, e := range wanted.Entries {
-			if e.Path == "panel" || e.Path == "agent" {
-				wanted.Entries[i] = source[e.Path]
+		for _, e := range v.old.Entries {
+			if !managedAgentFile(e.Path) {
+				wanted.Entries = append(wanted.Entries, e)
 			}
 		}
+		for _, e := range v.new.Entries {
+			if managedAgentFile(e.Path) {
+				wanted.Entries = append(wanted.Entries, e)
+			}
+		}
+		sort.Slice(wanted.Entries, func(i, j int) bool { return wanted.Entries[i].Path < wanted.Entries[j].Path })
 	}
 	for i := range wanted.Entries {
 		e := &wanted.Entries[i]
-		if v.request.Resource == "web" || e.Path == "." || e.Path == "panel" || e.Path == "agent" {
+		if v.request.Resource == "web" || e.Path == "." || managedAgentFile(e.Path) {
 			mode := uint32(0644)
-			if e.Identity.Mode&unix.S_IFMT == unix.S_IFDIR || v.request.Resource == "bin" && e.Path != "." {
+			if e.Identity.Mode&unix.S_IFMT == unix.S_IFDIR || v.request.Resource == "bin" && (e.Path == "panel" || e.Path == "agent") {
 				mode = 0755
 			}
 			e.Identity.Mode = e.Identity.Mode&unix.S_IFMT | mode
@@ -490,7 +503,7 @@ func (v *inputs) stage(journal *os.File, wanted tree) (string, tree, error) {
 		}
 		src := v.oldRoot
 		source := v.old.entryMap()[e.Path]
-		if v.operation == "update" && (v.request.Resource == "web" || e.Path == "panel" || e.Path == "agent") {
+		if v.operation == "update" && (v.request.Resource == "web" || managedAgentFile(e.Path)) {
 			src = v.newRoot
 			source = v.new.entryMap()[e.Path]
 		}

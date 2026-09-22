@@ -594,3 +594,14 @@ the source-bound helper and completed the same request at attempt 2. Trusted
 SMTP/IMAP, prior material, owner configuration and unrelated history were verified.
 This adds automatic-dispatch/normal-reboot proof to the earlier fresh-process
 trials; power-loss and production admission/old-application rollback stay open.
+
+
+## Agent compatibility admission (2026-09-22)
+
+P0.3/P0.4/P0.5 now have a [source-bound application contract](AGENT-NATIVE-CONTRACT.md)
+for independent mail renewal. Current releases bind a declaration to exact Agent
+bytes; read-only update/rollback gates refuse unverified historical writers before
+coordinator stop and repeat before mutation. The declaration travels in the same
+atomic bin exchange and exact inverse as Agent. This is not retroactive
+certification of old releases, production enrollment or full native rollback
+acceptance; those boundaries remain open.

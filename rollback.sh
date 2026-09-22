@@ -2215,6 +2215,14 @@ case "$transition_state" in
         ;;
 esac
 
+# Native renewal is workload state, not application rollback payload. A verified
+# snapshot may still contain an older Agent that overwrites its hook. Refuse that
+# application before changing coordinator state; never disable renewal to fit it.
+mail_compatibility_inspector="$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery"
+[[ -z $RECOVERY_RUNTIME_ROOT ]] || mail_compatibility_inspector="$CODE_ROOT/bin/recovery"
+"$mail_compatibility_inspector" verify-mail-application --bin "$snap/bin" \
+    || die "snapshot Agent compatibility with independent mail renewal is unverified; preserve native renewal and the snapshot"
+
 # Every payload and the exact retained target release have now been proved.
 # Admit a mixed old/candidate vendor-unit set only for the restoration body.
 # Completion/scheduler resumes grant no permission to repair manager state.
@@ -2363,6 +2371,11 @@ case "$current_transition_phase" in
         ;;
     *) die "invalid current transition phase: $current_transition_phase" ;;
 esac
+# Re-observe after coordinator shutdown under the common mutation lock, before
+# any payload restoration. Earlier compatibility is not continuing authority.
+"$mail_compatibility_inspector" verify-mail-application --bin "$snap/bin" \
+    || die "snapshot Agent compatibility changed before the locked restore; preserve native renewal and this operation"
+
 # A pre-ledger target had no private agent state directory. Refuse to erase any
 # unexpected post-upgrade state; the sole known transition artifact is the
 # durable service-mutation ledger.

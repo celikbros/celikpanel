@@ -592,3 +592,14 @@ açılıştan sonra elle devam komutu çalıştırılmadı. Sahibin ayarları, e
 seçilmemiş geçici nesil ve önceki iş kayıtları korundu. SMTP/IMAP yeni sertifikayla
 doğrulandı. Bu sınırlı açılış kabulü tamamlandı; güç kaybı, farklı derlemenin işi
 devralması, üretim kaydı ve eski uygulama sürümüne dönüş uyumluluğu açık kalır.
+
+
+## Agent uyumluluğunun işlem öncesinde denetlenmesi (22 Eylül 2026)
+
+P0.3/P0.4/P0.5 için [uygulama uyumluluk sözleşmesi](AGENT-NATIVE-CONTRACT.md)
+eklenmiştir. Yeni sürüm bildirimi tam Agent dosyasına bağlanır; güncelleme ve geri
+alma, bağımsız posta yenilemesiyle uyumluluğu doğrulanmamış eski yazıcıyı
+koordinatörler durmadan reddeder ve son değişiklik kilidi altında yeniden denetler.
+Bildirim, Agent ile aynı atomik dizin değişiminde yayımlanır ve aynı geri alma
+kanıtıyla korunur. Bu, eski ikililere sonradan uyumluluk verme, üretimde ilk
+kaydı etkinleştirme veya tüm gerçek sistem geri alma kabulünü kapatma değildir.

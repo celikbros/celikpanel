@@ -3031,6 +3031,12 @@ if [ -d "$SRC/.git" ] || [ ! -x "$SRC/bin/panel" ] || [ ! -x "$SRC/bin/agent" ] 
     NODE_BIN=$(bootstrap_node)
     ( cd "$SRC" && run_go_clean "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/panel ./cmd/panel ) || die "Panel build failed" "Panel derlenemedi"
     ( cd "$SRC" && run_go_clean "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/agent ./cmd/agent ) || die "Agent build failed" "Agent derlenemedi"
+    # The declaration is produced only for the freshly built reviewed Agent.
+    # Historical binaries never acquire compatibility by version-label inference.
+    native_contract_commit=$(cd "$SRC" && git rev-parse HEAD 2>/dev/null || cat release.commit 2>/dev/null) \
+        || die "Exact Agent source identity is unavailable" "Agent kaynak kimliği doğrulanamadı"
+    ( cd "$SRC" && run_go_clean "$GO_BIN" run ./deploy/agent-native-contract --agent bin/agent --commit "$native_contract_commit" --output bin/agent-native-contract.json ) \
+        || die "Agent native compatibility artifact failed" "Agent yerel uyumluluk kaydı hazırlanamadı"
     ( cd "$SRC/web" && run_node_clean "$NODE_BIN" "$NODE_BIN/npm" ci --no-audit --no-fund >/dev/null 2>&1 ) || die "npm installation failed" "npm kurulumu başarısız"
     ( cd "$SRC/web" && run_node_clean "$NODE_BIN" "$NODE_BIN/npm" run build >/dev/null ) || die "Frontend build failed" "Frontend derlenemedi"
     ok "built ($CP_VERSION · $CP_COMMIT)" "derlendi ($CP_VERSION · $CP_COMMIT)"
@@ -3050,6 +3056,7 @@ else
 install -d -m 0755 "$PREFIX/bin" "$PREFIX/web"
 install -m 0755 "$SRC/bin/panel" "$PREFIX/bin/panel"
 install -m 0755 "$SRC/bin/agent" "$PREFIX/bin/agent"
+install -m 0644 "$SRC/bin/agent-native-contract.json" "$PREFIX/bin/agent-native-contract.json"
 
 # Replace the exact fixed web root, including hidden entries and empty stale
 # directories. Canonical root-owned boundaries are proven before -delete runs.
@@ -3181,7 +3188,7 @@ if [[ $APPLY_ONLY -eq 1 ]]; then
     [[ -f "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] || die "apply-only durable agent ledger is missing"
     read -r ledger_owner ledger_group ledger_mode < <(stat -Lc '%u %g %a' -- "$AGENT_LEDGER") || die "apply-only cannot inspect agent ledger"
     [[ "$ledger_owner" == 0 && "$ledger_group" == "$SVC_GROUP_ID" && "$ledger_mode" == 600 ]] || die "apply-only agent ledger metadata mismatch"
-    sync -f -- "$PREFIX/bin/panel" "$PREFIX/bin/agent" "$PREFIX/bin" "$PREFIX/web" \
+    sync -f -- "$PREFIX/bin/panel" "$PREFIX/bin/agent" "$PREFIX/bin/agent-native-contract.json" "$PREFIX/bin" "$PREFIX/web" \
         "$PANEL_ENV" "$CONF_DIR" /etc/systemd/system \
         || die "apply-only installed layout could not be made durable"
     ok "apply-only layout completed; services were left stopped" \

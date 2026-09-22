@@ -341,6 +341,7 @@ echo "==> Building matching panel and agent / Eşleşen panel ve agent derleniyo
     cd "$incomplete_root"
     run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/panel ./cmd/panel
     run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/agent ./cmd/agent
+    run_clean "$go_bin" run ./deploy/agent-native-contract --agent bin/agent --commit "$release_commit" --output bin/agent-native-contract.json
     run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge
     run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/recovery ./cmd/recovery
     mapfile -t agent_checker_sources < deploy/recovery/agent-checker.sources

@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -38,5 +40,51 @@ func TestMailRenewalPreparationCLIBoundary(t *testing.T) {
 	}
 	if launcherDispatchCommand(good) {
 		t.Fatal("preparation dispatched to old selected runtime")
+	}
+}
+
+func TestMailApplicationCompatibilityDispatch(t *testing.T) {
+	called := false
+	check := func(path string) error {
+		called = true
+		if path != "/snapshot/bin" {
+			t.Fatal(path)
+		}
+		return nil
+	}
+	report := func(string) {}
+	for _, args := range [][]string{nil, {"verify-mail-application"}, {"verify-mail-application", "--bin", "relative/bin"}, {"verify-mail-application", "--bin", "/snapshot/../bin"}, {"verify-mail-application", "--bin", "/snapshot/other"}} {
+		if got := dispatchMailApplicationCompatibility(args, 0, check, report); got != exitUsage || called {
+			t.Fatal(args, got)
+		}
+	}
+	args := []string{"verify-mail-application", "--bin", "/snapshot/bin"}
+	if got := dispatchMailApplicationCompatibility(args, 1000, check, report); got != exitNotOwner || called {
+		t.Fatal(got)
+	}
+	if got := dispatchMailApplicationCompatibility(args, 0, check, report); got != exitOK || !called {
+		t.Fatal(got)
+	}
+	message := ""
+	if got := dispatchMailApplicationCompatibility(args, 0, func(string) error { return fmt.Errorf("unverified") }, func(s string) { message = s }); got != exitUnavailable || !strings.Contains(message, "preserve") && !strings.Contains(message, "keep") {
+		t.Fatal(got, message)
+	}
+}
+
+func TestCandidateAgentContractCheckIsNotSkippedWithNoNativeHook(t *testing.T) {
+	calls := 0
+	args := []string{"verify-agent-native-contract", "--bin", "/release/bin"}
+	code := dispatchMailApplicationCompatibility(args, 0, func(path string) error {
+		calls++
+		if path != "/release/bin" {
+			t.Fatal(path)
+		}
+		return errors.New("missing declaration")
+	}, func(string) {})
+	if code != exitUnavailable || calls != 1 {
+		t.Fatal("missing candidate declaration accepted", code, calls)
+	}
+	if launcherDispatchCommand(args) {
+		t.Fatal("candidate artifact check sent to historical selected reader")
 	}
 }
