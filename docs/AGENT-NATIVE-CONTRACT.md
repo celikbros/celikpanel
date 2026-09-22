@@ -92,3 +92,35 @@ permission for enrollment admission. The stronger claim means Agent startup and
 generic mutation RPCs retain the exact active enrollment reservation. It does not
 certify production enrollment dispatch. Earlier strict readers may refuse the
 new field. See [reservation and transition contract](MAIL-ENROLLMENT-RESERVATION.md).
+
+## Exact enrollment source (2026-09-23)
+
+P0.3/P0.5: the current offline Make producer verifies the complete matching mail
+runtime and adds optional `mail_renewal_generation` to the existing v1 Agent
+contract. The declaration binds an exact kit; it neither grants owner consent nor
+selects a generation by directory age. Existing bindings cannot be redirected by
+the binding validator. Malformed, mixed, missing or altered kit inputs refuse
+before publishing a declaration. Build failure preserves the preceding output.
+
+Historical records without this field retain their exact canonical bytes and
+previous meaning; they do not acquire an initial-enrollment target. Older strict
+readers may refuse the new field. No installed historical Agent is retroactively
+certified. Outer signed-release provenance remains required: this is a content
+binding, not a signature or a migration permission. Common ledger and native
+journal versions remain unchanged.
+
+The setup preparation adapter now requires this pinned source and an accepted
+owner-operation callback under the existing release/host locks. It observes both
+native units, captures the exact before-image and returns the immutable scope
+used by the common reservation. It never installs a unit, changes a hook, starts
+a timer or reserves new work. Repeated preparation preserves the same plan;
+post-admission continuation must open that recorded scope instead. Existing
+independent schedules are refused here so setup cannot restart an owner-disabled
+installation. Authenticated setup/boot dispatch remains open.
+
+Evidence: scoped contract/producer/preparation race tests and vet pass; actual
+management/helper artifact admission and Make output generation binding pass.
+Native compatibility and bootstrap/update shell checks pass. Preparation tests
+cover legacy/absent hooks, unknown observation, missing/wrong source, lost
+approval/exclusion, late source replacement, and existing independent schedules.
+These do not close production dispatch or the full update/rollback matrix.

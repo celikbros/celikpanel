@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+
+	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 )
 
 const Schema = "celikpanel-agent-native-contract/v1"
@@ -24,11 +26,12 @@ var commitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 var digestPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 type Contract struct {
-	Schema               string `json:"schema"`
-	SourceCommit         string `json:"source_commit"`
-	AgentSHA256          string `json:"agent_sha256"`
-	MailHookPolicy       string `json:"mail_hook_policy"`
-	MailEnrollmentPolicy string `json:"mail_enrollment_policy,omitempty"`
+	Schema                string `json:"schema"`
+	SourceCommit          string `json:"source_commit"`
+	AgentSHA256           string `json:"agent_sha256"`
+	MailHookPolicy        string `json:"mail_hook_policy"`
+	MailEnrollmentPolicy  string `json:"mail_enrollment_policy,omitempty"`
+	MailRenewalGeneration string `json:"mail_renewal_generation,omitempty"`
 }
 
 // New is only the reviewed current-source build producer. It must never be used
@@ -40,11 +43,12 @@ func New(agent []byte, commit string) (Contract, error) {
 		return Contract{}, ErrContract
 	}
 	digest := sha256.Sum256(agent)
-	return Contract{Schema, commit, hex.EncodeToString(digest[:]), MailHookPolicy, MailEnrollmentPolicy}, nil
+	return Contract{Schema: Schema, SourceCommit: commit, AgentSHA256: hex.EncodeToString(digest[:]), MailHookPolicy: MailHookPolicy, MailEnrollmentPolicy: MailEnrollmentPolicy}, nil
 }
 func Encode(c Contract) ([]byte, error) {
 	if c.Schema != Schema || !commitPattern.MatchString(c.SourceCommit) || !digestPattern.MatchString(c.AgentSHA256) || c.MailHookPolicy != MailHookPolicy ||
-		(c.MailEnrollmentPolicy != "" && c.MailEnrollmentPolicy != MailEnrollmentPolicy) {
+		(c.MailEnrollmentPolicy != "" && c.MailEnrollmentPolicy != MailEnrollmentPolicy) ||
+		(c.MailRenewalGeneration != "" && (!digestPattern.MatchString(c.MailRenewalGeneration) || c.MailEnrollmentPolicy != MailEnrollmentPolicy)) {
 		return nil, ErrContract
 	}
 	raw, err := json.Marshal(c)
@@ -84,5 +88,20 @@ func Verify(raw, agent []byte) (Contract, error) {
 	if c.AgentSHA256 != hex.EncodeToString(digest[:]) {
 		return Contract{}, ErrContract
 	}
+	return c, nil
+}
+
+// BindMailRenewal binds the current release producer's exact verified kit. It
+// does not choose among installed generations or authorize enrollment. Existing
+// bindings cannot be redirected, and historical declarations gain no capability.
+func BindMailRenewal(c Contract, manifest []byte, files map[string][]byte) (Contract, error) {
+	if _, err := Encode(c); err != nil || c.MailEnrollmentPolicy != MailEnrollmentPolicy {
+		return Contract{}, ErrContract
+	}
+	kit, err := mailrenewalkit.Verify(manifest, files)
+	if err != nil || (c.MailRenewalGeneration != "" && c.MailRenewalGeneration != kit.Generation) {
+		return Contract{}, ErrContract
+	}
+	c.MailRenewalGeneration = kit.Generation
 	return c, nil
 }

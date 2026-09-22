@@ -18,17 +18,21 @@ func main() {
 	binary := flag.String("agent", "bin/agent", "fresh current-source Agent build")
 	commit := flag.String("commit", "", "reviewed exact source commit")
 	output := flag.String("output", "bin/agent-native-contract.json", "offline contract output")
+	runtime := flag.String("mail-runtime", "", "matching current-source mail-renewal-runtime build")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		fmt.Fprintln(os.Stderr, "unexpected arguments")
 		os.Exit(2)
 	}
-	if err := assemble(*binary, *commit, *output); err != nil {
+	if err := assemble(*binary, *commit, *output, *runtime); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
-func assemble(binary, commit, output string) error {
+func assemble(binary, commit, output string, runtime ...string) error {
+	if len(runtime) > 1 {
+		return errors.New("one mail runtime required")
+	}
 	if filepath.Base(binary) != "agent" || filepath.Base(output) != agentnativecontract.FileName || filepath.Clean(binary) == filepath.Clean(output) {
 		return errors.New("separate Agent/contract build outputs required")
 	}
@@ -70,6 +74,12 @@ func assemble(binary, commit, output string) error {
 	contract, err := agentnativecontract.New(raw, commit)
 	if err != nil {
 		return err
+	}
+	if len(runtime) == 1 && runtime[0] != "" {
+		contract, err = bindBuildMailRuntime(contract, runtime[0])
+		if err != nil {
+			return err
+		}
 	}
 	encoded, err := agentnativecontract.Encode(contract)
 	if err != nil {

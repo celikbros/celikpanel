@@ -2,6 +2,7 @@ package agentnativecontract
 
 import (
 	"bytes"
+	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"strings"
 	"testing"
 )
@@ -67,5 +68,58 @@ func TestEnrollmentCapabilityDoesNotCertifyHistoricalAgents(t *testing.T) {
 	c.MailEnrollmentPolicy = "unknown"
 	if _, err := Encode(c); err == nil {
 		t.Fatal("unknown capability")
+	}
+}
+
+func TestExactMailRuntimeBinding(t *testing.T) {
+	c, _ := New([]byte("agent"), strings.Repeat("a", 40))
+	old, _ := Encode(c)
+	parsed, err := Parse(old)
+	if err != nil || parsed.MailRenewalGeneration != "" {
+		t.Fatal("old retention-only declaration gained a target", err)
+	}
+	again, _ := Encode(parsed)
+	if !bytes.Equal(old, again) {
+		t.Fatal("historical bytes changed")
+	}
+	m, files, _ := mailrenewalkit.Payload([]byte("reviewed runtime A"))
+	manifest, _ := mailrenewalkit.Encode(m)
+	bound, err := BindMailRenewal(c, manifest, files)
+	if err != nil || bound.MailRenewalGeneration != m.Generation {
+		t.Fatal(bound, err)
+	}
+	raw, _ := Encode(bound)
+	if got, err := Verify(raw, []byte("agent")); err != nil || got != bound {
+		t.Fatal(got, err)
+	}
+	if got, err := BindMailRenewal(bound, manifest, files); err != nil || got != bound {
+		t.Fatal("exact retry", err)
+	}
+	other, otherFiles, _ := mailrenewalkit.Payload([]byte("reviewed runtime B"))
+	otherRaw, _ := mailrenewalkit.Encode(other)
+	if _, err := BindMailRenewal(bound, otherRaw, otherFiles); err == nil {
+		t.Fatal("existing binding redirected")
+	}
+	if _, err := BindMailRenewal(c, manifest, otherFiles); err == nil {
+		t.Fatal("mixed release files accepted")
+	}
+	files[mailrenewalkit.TimerName] = []byte("owner timer")
+	if _, err := BindMailRenewal(c, manifest, files); err == nil {
+		t.Fatal("modified native template accepted")
+	}
+	c.MailEnrollmentPolicy = ""
+	if _, err := BindMailRenewal(c, otherRaw, otherFiles); err == nil {
+		t.Fatal("historical Agent certified")
+	}
+	for _, bad := range []string{"x", strings.Repeat("A", 64), strings.Repeat("a", 63)} {
+		bound.MailRenewalGeneration = bad
+		if _, err := Encode(bound); err == nil {
+			t.Fatal("invalid target", bad)
+		}
+	}
+	bound.MailRenewalGeneration = m.Generation
+	bound.MailEnrollmentPolicy = ""
+	if _, err := Encode(bound); err == nil {
+		t.Fatal("target without retention capability")
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"context"
 	"path/filepath"
 
+	"github.com/alicelik/celikpanel/internal/agentnativecontract"
 	"github.com/alicelik/celikpanel/internal/hostmutationlock"
 	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
@@ -146,4 +147,86 @@ func (e *PreparedMailEnrollment) Verify(ctx context.Context, direction string) e
 		return err
 	}
 	return verifyReservedMailEnrollmentAt(ctx, e.scope, direction, e.paths, e.guard(ctx), e.reservation(), e.commands().loaded)
+}
+
+// PrepareMailEnrollment prepares initial enrollment for an authenticated owner
+// operation. It selects only the kit bound to the current Agent's release, and
+// records the before-image and immutable file plan. It does not admit the common
+// reservation or change native units/hooks/timers. The caller supplies an already
+// provisioned journal directory and both inherited locks. After admission, resume
+// the recorded scope with OpenPreparedMailEnrollment; never prepare it anew.
+func PrepareMailEnrollment(ctx context.Context, operation, journals string, agent *CompatibleMailAgent, binding MailEnrollmentBinding) (*PreparedMailEnrollment, []byte, error) {
+	return prepareMailEnrollmentAt(ctx, operation, nativeMailEnrollmentPaths(journals), agent, binding)
+}
+func prepareMailEnrollmentAt(ctx context.Context, operation string, paths mailCapturePaths, agent *CompatibleMailAgent, binding MailEnrollmentBinding) (*PreparedMailEnrollment, []byte, error) {
+	if ctx == nil || agent == nil || binding.VerifyAuthority == nil || binding.Native == nil || !validPromotionNonce(operation) || !servicemutationledger.ValidIdentity(binding.OwnerID) {
+		return nil, nil, fail(ReasonUnsupported)
+	}
+	if err := agent.Revalidate(); err != nil {
+		return nil, nil, err
+	}
+	target := agent.Contract.MailRenewalGeneration
+	if agent.Contract.MailEnrollmentPolicy != agentnativecontract.MailEnrollmentPolicy || !ValidDigest(target) {
+		return nil, nil, fail(ReasonUnsupported)
+	}
+	authority := binding.VerifyAuthority
+	binding.VerifyAuthority = func() error {
+		if err := agent.Revalidate(); err != nil {
+			return err
+		}
+		if agent.Contract.MailRenewalGeneration != target {
+			return fail(ReasonChanged)
+		}
+		return authority()
+	}
+	execution := &PreparedMailEnrollment{paths: paths, binding: binding}
+	boundary := func() error { return execution.verifyBoundary(ctx) }
+	if err := boundary(); err != nil {
+		return nil, nil, err
+	}
+	hook, err := inspectMailRenewalHookAt(paths.hook, paths.units, paths.runtime)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer hook.Close()
+	// Existing independent schedules have a separate retained-preference transition.
+	// Initial setup cannot use this path to restart an owner-disabled installation.
+	if hook.Mode != MailRenewalHookAbsent && hook.Mode != MailRenewalHookLegacy {
+		return nil, nil, fail(ReasonUnsupported)
+	}
+	commands := execution.commands()
+	timer := mailrenewalkit.TimerState{Enablement: "absent", Activity: "inactive"}
+	if err = commands.loaded.observeTransition(ctx, timer, false, true, false); err != nil {
+		return nil, nil, err
+	}
+	if err = boundary(); err != nil {
+		return nil, nil, err
+	}
+	if err = hook.Revalidate(); err != nil {
+		return nil, nil, err
+	}
+	capture, err := captureMailRenewalBeforeImageAt(operation, target, timer, 9, paths, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = boundary(); err != nil {
+		return nil, nil, err
+	}
+	plan, err := prepareMailFilesAt(operation, Digest(capture), 9, paths, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = hook.Revalidate(); err != nil {
+		return nil, nil, err
+	}
+	scope := mailEnrollmentScope{mailEnrollmentSchema, operation, Digest(capture), Digest(plan), target}
+	raw, err := promotionJSON(scope)
+	if err != nil {
+		return nil, nil, err
+	}
+	prepared, err := openPreparedMailEnrollmentAt(ctx, raw, paths, binding)
+	if err != nil {
+		return nil, nil, err
+	}
+	return prepared, raw, nil
 }

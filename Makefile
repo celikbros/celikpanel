@@ -46,8 +46,8 @@ panel: check-go ## Build the panel binary
 agent: check-go ## Build the agent binary
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/agent ./cmd/agent
 
-agent-native-contract: agent ## Bind this reviewed Agent to its native mail compatibility declaration
-	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/agent-native-contract --agent bin/agent --commit "$(COMMIT)" --output bin/agent-native-contract.json
+agent-native-contract: agent mail-renewal-runtime ## Bind this reviewed Agent to its native mail compatibility declaration
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/agent-native-contract --agent bin/agent --commit "$(COMMIT)" --output bin/agent-native-contract.json --mail-runtime bin/mail-renewal-runtime
 
 schema17-bridge: check-go ## Build the audited legacy schema transition helper
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -o bin/schema17-bridge ./deploy/schema17bridge

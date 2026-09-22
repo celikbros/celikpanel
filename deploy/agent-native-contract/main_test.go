@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"github.com/alicelik/celikpanel/internal/agentnativecontract"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,6 +87,28 @@ func TestReviewedAgentAndHelperArtifacts(t *testing.T) {
 			second, e := os.ReadFile(out)
 			if e != nil || string(first) != string(second) {
 				t.Fatal("nonrepeatable contract")
+			}
+			kit, generation := writeBuildKit(t)
+			if e = assemble(binary, strings.Repeat("a", 40), out, kit); e != nil {
+				t.Fatal(e)
+			}
+			boundRaw, e := os.ReadFile(out)
+			if e != nil {
+				t.Fatal(e)
+			}
+			bound, e := agentnativecontract.Verify(boundRaw, raw)
+			if e != nil || bound.MailRenewalGeneration != generation {
+				t.Fatal(bound, e)
+			}
+			if e = os.WriteFile(filepath.Join(kit, "celikpanel-mail-renewal.timer"), []byte("changed"), 0644); e != nil {
+				t.Fatal(e)
+			}
+			if e = assemble(binary, strings.Repeat("a", 40), out, kit); e == nil {
+				t.Fatal("mixed build published")
+			}
+			unchanged, e := os.ReadFile(out)
+			if e != nil || !bytes.Equal(boundRaw, unchanged) {
+				t.Fatal("refusal changed existing contract", e)
 			}
 			if e = os.WriteFile(out, []byte("owner evidence"), 0600); e != nil {
 				t.Fatal(e)
