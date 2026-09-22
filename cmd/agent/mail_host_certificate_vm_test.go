@@ -91,6 +91,13 @@ func TestMailHostCertificateDisposableVMConvergenceAndRenewal(t *testing.T) {
 		if err = os.MkdirAll(dir, 0755); err != nil {
 			t.Fatal(err)
 		}
+		// The Agent fixture runs with its socket-sharing group. Native Certbot
+		// runs as root:root; model that producer rather than weakening reads.
+		for _, owned := range []string{filepath.Dir(dir), dir} {
+			if err = os.Chown(owned, 0, 0); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	issueFixtureSource := func(generation int64) string {
 		t.Helper()
@@ -116,8 +123,14 @@ func TestMailHostCertificateDisposableVMConvergenceAndRenewal(t *testing.T) {
 			if err = os.WriteFile(filepath.Join(archive, name+number+".pem"), data, mode); err != nil {
 				t.Fatal(err)
 			}
+			if err = os.Chown(filepath.Join(archive, name+number+".pem"), 0, 0); err != nil {
+				t.Fatal(err)
+			}
 			temp := filepath.Join(live, "."+name+"-next")
 			if err = os.Symlink("../../archive/"+lineage+"/"+name+number+".pem", temp); err != nil {
+				t.Fatal(err)
+			}
+			if err = os.Lchown(temp, 0, 0); err != nil {
 				t.Fatal(err)
 			}
 			if err = os.Rename(temp, filepath.Join(live, name+".pem")); err != nil {

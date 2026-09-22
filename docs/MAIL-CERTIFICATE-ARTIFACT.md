@@ -124,3 +124,15 @@ managed namespaces, invalid lineage/configuration, unchanged source metadata and
 owner-modified key refusal without normalization. MailHost/MailTLS/PanelCert and
 Certbot source-ownership tests pass under race detection; vet and the standalone
 recovery Agent checker build pass. Native renewal deployment remains open.
+
+
+## Native shared-contract acceptance
+
+[AX native acceptance](../deploy/e2e/release-recovery/MAIL-CONTRACT-AX.md) exercised
+the actual shared artifact, descriptor reader, publication lock and Certbot
+source reader through real Postfix/Dovecot convergence and renewal, then an
+orderly reboot. Exact receipts and trusted SMTP/IMAP leafs agreed. Historical
+success no longer clears a queued renewal when the owner selected another
+certificate; the real-daemon owner-drift test preserves both facts. No schema
+migration was introduced. This does not complete independent renewal: the test
+still invokes Agent code and the production deploy hook still needs Agent.

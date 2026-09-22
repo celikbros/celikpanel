@@ -10,9 +10,11 @@ import (
 // the machine running the test binary. Production keeps the real host probe.
 // TestMain, ledger ve supervisor testlerini test ikilisini çalıştıran makinenin
 // paket yöneticisi kilitlerinden yalıtır. Üretim gerçek host probunu korur.
+// Native mail acceptance retains the real package-manager and readiness probes.
+// Its test entrypoint separately refuses non-QEMU or installed-panel hosts.
 func TestMain(m *testing.M) {
-	packageManagerMutationBusyProbe = func() (bool, error) {
-		return false, nil
+	if os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "debian13-20260911" {
+		packageManagerMutationBusyProbe = func() (bool, error) { return false, nil }
 	}
 	// The same isolation, for the other thing these tests read off the machine:
 	// whether the host has finished starting. Startup recovery asks, and when
@@ -34,8 +36,8 @@ func TestMain(m *testing.M) {
 	// acilisinin bitip bitmedigi. On test dosyasi yoneticiyi bu sekilde yeniden
 	// yukluyor; onlari tek tek sabitlemek, bu kod tabaninin surekli buldugu
 	// hatanin ayni olurdu. Varsayilan burada, bir kez.
-	hostRecoveryProbe = func() (hostRecoveryReadiness, error) {
-		return hostRecoveryDecideNow, nil
+	if os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "debian13-20260911" {
+		hostRecoveryProbe = func() (hostRecoveryReadiness, error) { return hostRecoveryDecideNow, nil }
 	}
 	// Unit tests exercise the mutation coordinator on portability builds, where
 	// production deliberately refuses every host mutation.
