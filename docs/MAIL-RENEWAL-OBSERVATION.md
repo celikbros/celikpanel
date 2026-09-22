@@ -40,3 +40,8 @@ publication refusal is the next acceptance check; no native success is claimed h
 passed on the exact source: deliberate owner edit blocks actual publication before
 staging, native listeners and pending source are preserved, and explicit fixture
 owner resolution passes readback. This does not close the limits listed above.
+
+[Fresh native AZ lifecycle acceptance](../deploy/e2e/release-recovery/MAIL-CONTRACT-AZ.md)
+also passed initial publication, real renewal, orderly boot without installed
+management and owner-selected-certificate replay protection on the same source.
+Renewal still executes Agent code; independent helper and interruption gaps remain.

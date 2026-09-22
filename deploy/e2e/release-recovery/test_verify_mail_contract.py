@@ -15,6 +15,8 @@ class MailContractTests(unittest.TestCase):
         self.assertEqual(s.verify(self.record)['owner_drift_preserved'], 'verified')
         ay = json.loads((HERE / 'MAIL-CONTRACT-AY.json').read_text())
         self.assertEqual(s.verify(ay)['retained_after_orderly_boot'], 'verified')
+        az = json.loads((HERE / 'MAIL-CONTRACT-AZ.json').read_text())
+        self.assertEqual(s.verify(az)['renewal'], 'verified')
     def test_false_scope_claim(self):
         for key in ('external_acme_issuance', 'independent_renewal_helper', 'installed_owner_server', 'power_loss'):
             value = copy.deepcopy(self.record); value['scope'][key] = True
