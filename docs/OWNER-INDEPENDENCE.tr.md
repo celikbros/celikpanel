@@ -287,3 +287,10 @@ kurtarma denetleyicisinde kullanılır. FIFO'da beklemeden veya dosyayı düzelt
 sahip değişikliklerini reddeder; mevcut dış flock kimliğini korur. Yerel süreç
 ve kurtarma denetleyicisi testleri geçti. Bağımsız yenileme yetkisi/geçici
 dizin kurulumu ve P0.3-P0.5'in tam kabul matrisi açıktır.
+
+
+[Yerel mail yapılandırma sözleşmesi](MAIL-CERTIFICATE-ARTIFACT.md#shared-native-mail-configuration-contract),
+gerçek Agent üreticileri ve kalıcı plan karşılaştırmasında paylaşılır. Alpha81
+çıktı uyumluluğu, sahip değişiklikleri ve eksik gözlem testleri geçti. Bu
+P0.4 ilerlemesidir; yapılandırma eşleşmesi yenileme yetkisi veya hizmet sağlığı
+değildir. Agent'tan bağımsız yenileme ve P0.5'in tam kabul matrisi açıktır.

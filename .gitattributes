@@ -34,3 +34,7 @@ portal-membership/vendor/phpmailer/LICENSE text eol=lf
 # Validation artifacts carry byte hashes; preserve exact recorded output.
 # Doğrulama kanıtları bayt özetleri taşır; kaydedilen çıktıyı aynen koru.
 docs/validation/** -text -whitespace
+
+# Historical native configuration fixtures are compared byte-for-byte.
+internal/mailtlsconfig/testdata/*.conf text eol=lf
+internal/mailtlsconfig/testdata/*.map text eol=lf

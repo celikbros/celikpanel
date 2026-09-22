@@ -23,6 +23,8 @@ import (
 	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
+
+	"github.com/alicelik/celikpanel/internal/mailtlsconfig"
 )
 
 // Mail TLS — the equivalent of Plesk's "assign the certificate to the mail
@@ -1083,22 +1085,11 @@ func configurePostfixTLS(
 	if err != nil {
 		return err
 	}
-	settings := [][2]string{
-		{"smtpd_tls_cert_file", certPath},
-		{"smtpd_tls_key_file", keyPath},
-		// "may" = offer TLS, accept plaintext — mandatory TLS on port 25
-		// violates RFC and loses mail from old senders.
-		// "may" = TLS öner, düz metni kabul et — 25'te zorunlu TLS RFC'ye
-		// aykırıdır ve eski göndericilerden postayı kaybettirir.
-		{"smtpd_tls_security_level", "may"},
-		{"smtp_tls_security_level", "may"},
-		{"smtpd_tls_protocols", ">=TLSv1.2"},
-		{"smtp_tls_protocols", ">=TLSv1.2"},
-		{"smtpd_tls_loglevel", "1"},
+	settings := mailtlsconfig.PostfixSettings(myhostname, certPath, keyPath)
+	if myhostname == "" {
+		settings = settings[:len(settings)-1]
 	}
-	if myhostname != "" {
-		settings = append(settings, [2]string{"myhostname", myhostname})
-	}
+
 	if len(sni) > 0 {
 		if sniMapType == "" {
 			return fmt.Errorf("Postfix SNI map type was not selected during preflight")
@@ -1130,20 +1121,10 @@ func writePostfixSNIMap(
 	if mapType != "lmdb" && mapType != "hash" && mapType != "btree" {
 		return fmt.Errorf("invalid preflighted Postfix SNI map type %q", mapType)
 	}
-	var b strings.Builder
-	b.WriteString("# Managed by CelikPanel — per-domain mail certificates (SNI).\n")
-	for _, e := range sni {
-		for _, name := range e.Names {
-			name = strings.ToLower(strings.TrimSpace(name))
-			if name == "" {
-				continue
-			}
-			fmt.Fprintf(&b, "%s %s %s\n", name, e.KeyPath, e.CertPath)
-		}
-	}
-	if err := secureWriteConfig(postfixSNIPath, []byte(b.String()), 0o600); err != nil {
+	if err := secureWriteConfig(postfixSNIPath, mailtlsconfig.PostfixSNI(sni), 0600); err != nil {
 		return err
 	}
+
 	// Same portability trap as the virtual maps: `hash:` is unusable on distros
 	// that build postfix without Berkeley DB (Arch), and per-domain mail
 	// certificates would silently never load. An SNI map MUST be indexed —

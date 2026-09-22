@@ -312,3 +312,10 @@ or malformed lock evidence without normalization or FIFO waits, preserves the
 existing outer flock identity, and proves inherited exclusion without releasing
 it. Native-filesystem component/process and standalone-checker tests pass. Native
 renewal enrollment/runtime initialization and the full P0.3-P0.5 matrix remain open.
+
+
+[Native mail configuration sharing](MAIL-CERTIFICATE-ARTIFACT.md#shared-native-mail-configuration-contract)
+now gives actual Agent producers and retained-plan comparison one tested contract,
+with historical Alpha81 byte fixtures and owner-change/missing-observation tests.
+This advances P0.4; configuration comparison is not renewal authority or service
+health. Agent-independent renewal and the full P0.5 absence matrix remain open.
