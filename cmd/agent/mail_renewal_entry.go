@@ -31,6 +31,21 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 	case "--queue":
 		err = queueMailHostCertificateRenewal(args[1])
 	case "--process-pending":
+		// A no-work probe does not create volatile runtime or durable enrollment.
+		raw, found, readErr := readSecureServiceMutationLedger(mailHostRenewalPendingPath(), 512)
+		if readErr != nil {
+			err = readErr
+			break
+		}
+		if !found {
+			return 0
+		}
+		if _, err = decodeMailHostRenewal(raw); err != nil {
+			break
+		}
+		if err = prepareIndependentMailRuntime(); err != nil {
+			break
+		}
 		err = deployPendingMailHostCertificate()
 	}
 	if err != nil {

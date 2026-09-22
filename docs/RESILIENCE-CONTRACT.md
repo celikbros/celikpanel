@@ -480,3 +480,10 @@ implementation with only scoped queue/process actions and restricted supervised
 native probes/reloads. It does not ship enrollment, hook/unit migration or change
 installed services. Native acceptance, retained ownership/runtime prerequisites
 and independent interrupted recovery remain separate P0.3/P0.5 work.
+
+
+The independent mail entry now prepares an absent volatile runtime directory only
+after existing durable enrollment is observed. Existing owner paths and pending
+work on uncertainty are preserved. See [executor runtime](MAIL-RENEWAL-EXECUTOR.md#volatile-runtime-after-reboot).
+There is no persistent schema transition or general recovery admission. Native
+postboot evidence, enrollment/migration and remaining P0.5 acceptance stay explicit.
