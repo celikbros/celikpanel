@@ -213,3 +213,12 @@ after cryptographic verification begins. Existing Agent MailHost/MailTLS race
 tests and vet pass. AY predates this recovery cleanup change: it is not native
 interrupted-recovery proof. That checkpoint, partial staging failures and a root
 operator bypassing locks remain outside this bounded acceptance.
+
+
+[Retained AY cleanup acceptance](../deploy/e2e/release-recovery/MAIL-CLEANUP-AY.md)
+subsequently exercises the new cleanup through the actual Agent recovery helper,
+real mutation lease, native certificate material and running SMTP/IMAP services.
+An owner-note prevents removal; explicit owner resolution permits same-operation
+cleanup without changing the selected certificate or unrelated pending renewal.
+The abandoned operation is explicitly finished failed. This closes the bounded
+controlled-stage native check, not crash/startup dispatch or power-loss cleanup.

@@ -39,4 +39,21 @@ class MailContractTests(unittest.TestCase):
         self.record['logs']['mail-owner-drift.log']['text'] += 'changed'
         with self.assertRaises(ValueError): s.verify(self.record)
 
+class MailCleanupTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-CLEANUP-AY.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-AY.json').read_bytes()
+    def test_native_cleanup_evidence(self):
+        self.assertEqual(s.verify_cleanup(self.record,self.base)['owner_reviewed_native_cleanup'],'verified')
+    def test_wrong_scope_binary_or_retained_fixture(self):
+        for key,value in [('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('scope',{})]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_cleanup(record,self.base)
+    def test_rehashed_failure_or_changed_workload(self):
+        for old,new in [('--- PASS:','--- FAIL:'),('retained failed status','reported success'),('7713abe26e69887a166cd5c6efc39bb96be0f19cf6ec55428af1673924466a11','0'*64)]:
+            record=copy.deepcopy(self.record);item=record['logs']['mail-recovery-cleanup.log']
+            self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new)
+            item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(old=old),self.assertRaises(ValueError):s.verify_cleanup(record,self.base)
+
 if __name__ == '__main__': unittest.main()
