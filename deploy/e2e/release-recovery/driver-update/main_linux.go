@@ -212,7 +212,7 @@ func requestIdentity(marker markerIdentity, target manifest) string {
 
 func requestFor(marker markerIdentity, target manifest, current transport.SystemUpdateCheckResponse, requestID string) (transport.SystemUpdateStartRequest, error) {
 	if !current.Supported || current.Error != "" || current.CurrentVersion == "" || !hex40.MatchString(current.CurrentCommit) {
-		return transport.SystemUpdateStartRequest{}, errors.New("Agent did not verify its current identifiable release/update support")
+		return transport.SystemUpdateStartRequest{}, fmt.Errorf("Agent did not verify its current identifiable release/update support (supported=%t, version_present=%t, commit_valid=%t): %s", current.Supported, current.CurrentVersion != "", hex40.MatchString(current.CurrentCommit), boundedDetail(current.Error))
 	}
 	if !hex32.MatchString(requestID) {
 		return transport.SystemUpdateStartRequest{}, errors.New("request ID must be 32 lowercase hexadecimal characters")

@@ -1,0 +1,817 @@
+{
+  "arch_rollback": {
+    "after": {
+      "at": "2026-09-22T02:28:10.955425+00:00",
+      "binaries": {
+        "agent": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+          "uid": 0
+        },
+        "panel": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd",
+          "uid": 0
+        }
+      },
+      "boot_id": "b954f4fa-cc17-4d85-b435-beb635fa0fd4",
+      "generations": {
+        "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2": {
+          "celikpanel-firewall-restore.service": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+            "uid": 0
+          },
+          "restore": {
+            "gid": 0,
+            "mode": 493,
+            "sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+            "uid": 0
+          },
+          "runtime.manifest": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+            "uid": 0
+          }
+        }
+      },
+      "https_http_code": "200",
+      "https_trust": "not claimed; self-signed lab baseline",
+      "identity": {
+        "cell_id": "release-recovery__ea19a2a5ba45f405",
+        "node": "arch",
+        "schema": "celikpanel-release-recovery-lab/v1",
+        "vm_uuid": "88ad9c92-b2a9-55e2-9fb1-e0af0ca93d99"
+      },
+      "operation_status": {
+        "observation": "known",
+        "observed_at": "2026-09-22T02:27:20Z",
+        "phase": "recovered",
+        "previous_failure": "update_failed",
+        "reason": "rollback_verified",
+        "request_id": "ac21d74e16738afbcc3d090ebdc7ebca",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "rollback_verified"
+      },
+      "operation_status_exit": 0,
+      "policy": {
+        "gid": 0,
+        "mode": 384,
+        "sha256": "31e2f1f71d6d1c0a24dd5175630166d81f9963f9c620801b7934c1840b6f9d95",
+        "uid": 0
+      },
+      "request_id": "ac21d74e16738afbcc3d090ebdc7ebca",
+      "schema": "celikpanel/native-firewall-update/v1",
+      "systemd": "systemd 261 (261.3-1-arch)",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain fixture {\n\t\ttype filter hook output priority 20; policy accept;\n\t}\n}\n"
+      },
+      "unit": {
+        "gid": 0,
+        "mode": 420,
+        "sha256": "dd176e36365bd0c681543ef1ac5922b52d3ad2126bc5c48b94342f689a27d602",
+        "uid": 0
+      },
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-agent.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-firewall-restore.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-firewall-restore.service",
+          "Result": "success",
+          "SubState": "exited",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      }
+    },
+    "before": {
+      "policy_sha256": "31e2f1f71d6d1c0a24dd5175630166d81f9963f9c620801b7934c1840b6f9d95",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain fixture {\n\t\ttype filter hook output priority 20; policy accept;\n\t}\n}\n"
+      },
+      "unit_enabled": "enabled",
+      "unit_sha256": "dd176e36365bd0c681543ef1ac5922b52d3ad2126bc5c48b94342f689a27d602"
+    },
+    "boot": {
+      "at": "2026-09-22T02:29:59.565050+00:00",
+      "binaries": {
+        "agent": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+          "uid": 0
+        },
+        "panel": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd",
+          "uid": 0
+        }
+      },
+      "boot_id": "1bdd5053-f8a2-44bb-9f13-86ecfec34207",
+      "generations": {
+        "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2": {
+          "celikpanel-firewall-restore.service": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+            "uid": 0
+          },
+          "restore": {
+            "gid": 0,
+            "mode": 493,
+            "sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+            "uid": 0
+          },
+          "runtime.manifest": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+            "uid": 0
+          }
+        }
+      },
+      "https_http_code": "200",
+      "https_trust": "not claimed; self-signed lab baseline",
+      "identity": {
+        "cell_id": "release-recovery__ea19a2a5ba45f405",
+        "node": "arch",
+        "schema": "celikpanel-release-recovery-lab/v1",
+        "vm_uuid": "88ad9c92-b2a9-55e2-9fb1-e0af0ca93d99"
+      },
+      "operation_status": {
+        "observation": "known",
+        "observed_at": "2026-09-22T02:27:20Z",
+        "phase": "recovered",
+        "previous_failure": "update_failed",
+        "reason": "rollback_verified",
+        "request_id": "ac21d74e16738afbcc3d090ebdc7ebca",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "rollback_verified"
+      },
+      "operation_status_exit": 0,
+      "policy": {
+        "gid": 0,
+        "mode": 384,
+        "sha256": "31e2f1f71d6d1c0a24dd5175630166d81f9963f9c620801b7934c1840b6f9d95",
+        "uid": 0
+      },
+      "request_id": "ac21d74e16738afbcc3d090ebdc7ebca",
+      "schema": "celikpanel/native-firewall-update/v1",
+      "systemd": "systemd 261 (261.3-1-arch)",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain fixture {\n\t\ttype filter hook output priority 20; policy accept;\n\t}\n}\n"
+      },
+      "unit": {
+        "gid": 0,
+        "mode": 420,
+        "sha256": "dd176e36365bd0c681543ef1ac5922b52d3ad2126bc5c48b94342f689a27d602",
+        "uid": 0
+      },
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-agent.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-firewall-restore.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-firewall-restore.service",
+          "Result": "success",
+          "SubState": "exited",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      }
+    },
+    "fault": {
+      "checkpoint": {
+        "at": "2026-09-22T02:27:02.438186+00:00",
+        "bound_worker": {
+          "binding_sha256": "145aaca319928f672c73d799b0395b8fb65e72c271d6f9a32f2c0fe3628f585b",
+          "observation_sha256": "468b46ee2ea09d4482fc4bd1a27b2e93831abdf3b925865516bda9e33069049f",
+          "phase": "running",
+          "request_id": "ac21d74e16738afbcc3d090ebdc7ebca",
+          "snapshot": "20260922T022647Z-from-unknown-to-971e60b0f4aba47106c64cae220d5a0a32619c0f-6e98d04ab0a6f8d2f07fd9eb7fb53f72",
+          "target_commit": "971e60b0f4aba47106c64cae220d5a0a32619c0f",
+          "terminal_proof": "none",
+          "transaction_token_sha256": "e9ff453270724a05381d232a0033a2e0c7e5aaedd80b1ec790f2512ccbc8326a",
+          "worker_state_sha256": "76dbacced181938c7359e7266fdcf02966502f402c3c68a6b69a6b6ae1a1ed5c"
+        },
+        "event": "candidate_installed_checkpoint",
+        "firewall_unit": {
+          "generation": "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2",
+          "helper_sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+          "manifest_sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+          "operation_id": "ac21d74e16738afbcc3d090ebdc7ebca",
+          "schema": "celikpanel/lab-firewall-unit-fault/v1",
+          "unit_sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062"
+        },
+        "identity": {
+          "cell_id": "release-recovery__ea19a2a5ba45f405",
+          "node": "arch",
+          "vm_uuid": "88ad9c92-b2a9-55e2-9fb1-e0af0ca93d99"
+        },
+        "installed_artifacts": {
+          "agent": "f868495ccd107dcccca8b6571be21af291dab3240e0b0b6f9bec2279506d7a09",
+          "panel": "9083743e12094bae188ed003a48992e210736c8a016fd30c41eaa6654df30140"
+        },
+        "manifest_sha256": "97a2faeee607055cc01d23b8409b67b59a673e894ca1278809275cf04e234d25",
+        "operation_id": "ac21d74e16738afbcc3d090ebdc7ebca",
+        "phase": "active",
+        "schema": "celikpanel/release-update-kill/v1",
+        "snapshot": "20260922T022647Z-from-unknown-to-971e60b0f4aba47106c64cae220d5a0a32619c0f-6e98d04ab0a6f8d2f07fd9eb7fb53f72",
+        "verified_files": 129,
+        "worker": {
+          "boot_id": "b954f4fa-cc17-4d85-b435-beb635fa0fd4",
+          "cgroup": "/system.slice/celikpanel-self-update-ac21d74e16738afbcc3d090ebdc7ebca.service",
+          "invocation_id": "b0b47b5ec0f7433bbce885bc3e3afbdf",
+          "pid": 19702,
+          "running_executable_sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+          "start_ticks": "68711",
+          "unit": "celikpanel-self-update-ac21d74e16738afbcc3d090ebdc7ebca.service"
+        }
+      },
+      "events": [
+        "armed",
+        "worker_frozen",
+        "candidate_installed_checkpoint",
+        "kill_requested",
+        "kill_sent",
+        "released"
+      ],
+      "raw_evidence_sha256": "8ef91d2e12e9abd822ab91dfdb43ba1da20c85027d681a8ff20ddaec5dd97352",
+      "released": {
+        "at": "2026-09-22T02:27:02.507775+00:00",
+        "checkpoint_verified": true,
+        "event": "released",
+        "identity": {
+          "cell_id": "release-recovery__ea19a2a5ba45f405",
+          "node": "arch",
+          "vm_uuid": "88ad9c92-b2a9-55e2-9fb1-e0af0ca93d99"
+        },
+        "kill_sent": true,
+        "operation_id": "ac21d74e16738afbcc3d090ebdc7ebca",
+        "reason": "exact-update-unit-killed",
+        "schema": "celikpanel/release-update-kill/v1",
+        "thaw_exit": 1
+      },
+      "scope": "exact-update-unit-cgroup",
+      "signal": "SIGKILL"
+    }
+  },
+  "archive_sha256": "c15eecf925aaa82f76cc8799094bcec7814151a681bd8007d9b89025107d4aa4",
+  "baseline": {
+    "agent_sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+    "commit": "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00",
+    "panel_sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd"
+  },
+  "fixture_commit": "971e60b0f4aba47106c64cae220d5a0a32619c0f",
+  "fixture_only_changes": [
+    "deploy/release-sequence-policy"
+  ],
+  "limits": [
+    "source-checkout install not certified",
+    "AS boot explicitly enabled after preserving disabled baseline",
+    "isolated fixture signing key; no production trust or browser admission claim",
+    "orderly boots; no power loss or failed-helper emergency console drill",
+    "Arch successful forward update/reboot still open; automatic rollback/reboot verified",
+    "baseline Agent transient platform rejection caching remains open source correction"
+  ],
+  "preliminary": [
+    "AS initial test nft text rejected before admission; corrected fixture retained",
+    "first build rejected for archive/version policy mismatch before update start",
+    "AU kernel/modules mismatch resolved by an orderly fixture reboot before update admission",
+    "AU initial admission refused by cached baseline Agent platform check; read-only detection later passed; baseline Agent restarted, a new preview passed, then a distinct operation was accepted; no admission guard bypassed"
+  ],
+  "rollback": {
+    "after": {
+      "at": "2026-09-22T02:02:11.694825+00:00",
+      "binaries": {
+        "agent": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+          "uid": 0
+        },
+        "panel": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd",
+          "uid": 0
+        }
+      },
+      "boot_id": "3f2958a2-e765-45c8-b16f-ac0f236ad3eb",
+      "generations": {
+        "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2": {
+          "celikpanel-firewall-restore.service": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+            "uid": 0
+          },
+          "restore": {
+            "gid": 0,
+            "mode": 493,
+            "sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+            "uid": 0
+          },
+          "runtime.manifest": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+            "uid": 0
+          }
+        }
+      },
+      "https_http_code": "200",
+      "https_trust": "not claimed; self-signed lab baseline",
+      "identity": {
+        "cell_id": "release-recovery__2294c7c6c8b846a1",
+        "node": "debian13",
+        "schema": "celikpanel-release-recovery-lab/v1",
+        "vm_uuid": "9b15eea8-2b3d-56d7-8a53-f1969aaafbef"
+      },
+      "operation_status": {
+        "observation": "known",
+        "observed_at": "2026-09-22T02:01:34Z",
+        "phase": "recovered",
+        "previous_failure": "update_failed",
+        "reason": "rollback_verified",
+        "request_id": "64c20d1647537aaf5a51d8ba81a8aa70",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "rollback_verified"
+      },
+      "operation_status_exit": 0,
+      "policy": {
+        "gid": 0,
+        "mode": 384,
+        "sha256": "31e2f1f71d6d1c0a24dd5175630166d81f9963f9c620801b7934c1840b6f9d95",
+        "uid": 0
+      },
+      "request_id": "64c20d1647537aaf5a51d8ba81a8aa70",
+      "schema": "celikpanel/native-firewall-update/v1",
+      "systemd": "systemd 257 (257.13-1~deb13u1)",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain fixture {\n\t\ttype filter hook output priority 20; policy accept;\n\t}\n}\n"
+      },
+      "unit": {
+        "gid": 0,
+        "mode": 420,
+        "sha256": "dd176e36365bd0c681543ef1ac5922b52d3ad2126bc5c48b94342f689a27d602",
+        "uid": 0
+      },
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-agent.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-firewall-restore.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-firewall-restore.service",
+          "Result": "success",
+          "SubState": "exited",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      }
+    },
+    "before": {
+      "policy_sha256": "31e2f1f71d6d1c0a24dd5175630166d81f9963f9c620801b7934c1840b6f9d95",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain fixture {\n\t\ttype filter hook output priority 20; policy accept;\n\t}\n}\n"
+      },
+      "unit_enabled": "enabled",
+      "unit_sha256": "dd176e36365bd0c681543ef1ac5922b52d3ad2126bc5c48b94342f689a27d602"
+    },
+    "boot": {
+      "at": "2026-09-22T02:03:07.914205+00:00",
+      "binaries": {
+        "agent": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+          "uid": 0
+        },
+        "panel": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd",
+          "uid": 0
+        }
+      },
+      "boot_id": "835caff0-2ec9-4a1b-9cef-0f1369a95e75",
+      "generations": {
+        "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2": {
+          "celikpanel-firewall-restore.service": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+            "uid": 0
+          },
+          "restore": {
+            "gid": 0,
+            "mode": 493,
+            "sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+            "uid": 0
+          },
+          "runtime.manifest": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+            "uid": 0
+          }
+        }
+      },
+      "https_http_code": "200",
+      "https_trust": "not claimed; self-signed lab baseline",
+      "identity": {
+        "cell_id": "release-recovery__2294c7c6c8b846a1",
+        "node": "debian13",
+        "schema": "celikpanel-release-recovery-lab/v1",
+        "vm_uuid": "9b15eea8-2b3d-56d7-8a53-f1969aaafbef"
+      },
+      "operation_status": {
+        "observation": "known",
+        "observed_at": "2026-09-22T02:01:34Z",
+        "phase": "recovered",
+        "previous_failure": "update_failed",
+        "reason": "rollback_verified",
+        "request_id": "64c20d1647537aaf5a51d8ba81a8aa70",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "rollback_verified"
+      },
+      "operation_status_exit": 0,
+      "policy": {
+        "gid": 0,
+        "mode": 384,
+        "sha256": "31e2f1f71d6d1c0a24dd5175630166d81f9963f9c620801b7934c1840b6f9d95",
+        "uid": 0
+      },
+      "request_id": "64c20d1647537aaf5a51d8ba81a8aa70",
+      "schema": "celikpanel/native-firewall-update/v1",
+      "systemd": "systemd 257 (257.13-1~deb13u1)",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain fixture {\n\t\ttype filter hook output priority 20; policy accept;\n\t}\n}\n"
+      },
+      "unit": {
+        "gid": 0,
+        "mode": 420,
+        "sha256": "dd176e36365bd0c681543ef1ac5922b52d3ad2126bc5c48b94342f689a27d602",
+        "uid": 0
+      },
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-agent.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-firewall-restore.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-firewall-restore.service",
+          "Result": "success",
+          "SubState": "exited",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      }
+    },
+    "fault": {
+      "checkpoint": {
+        "at": "2026-09-22T02:01:14.079455+00:00",
+        "bound_worker": {
+          "binding_sha256": "95ebc1409c3351f5e2ce96220d5f40312369d92ebcad0073a20a920544ba88ac",
+          "observation_sha256": "589a24ee3a6796c79cc052bdc079bcf5bc8f67a6bb64680cdc30a7633c73bdcb",
+          "phase": "running",
+          "request_id": "64c20d1647537aaf5a51d8ba81a8aa70",
+          "snapshot": "20260922T020054Z-from-unknown-to-971e60b0f4aba47106c64cae220d5a0a32619c0f-8c71dc2a7937e36721dd75832878c53f",
+          "target_commit": "971e60b0f4aba47106c64cae220d5a0a32619c0f",
+          "terminal_proof": "none",
+          "transaction_token_sha256": "577f14724e626b8a34c731cbc0089be713128ad8dd2d5cdf0499fab220708d74",
+          "worker_state_sha256": "6402a1aa697e82ba1036cc0bbc857d5476cda9470e2b9e2c156a9e82b06d5ee8"
+        },
+        "event": "candidate_installed_checkpoint",
+        "firewall_unit": {
+          "generation": "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2",
+          "helper_sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+          "manifest_sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+          "operation_id": "64c20d1647537aaf5a51d8ba81a8aa70",
+          "schema": "celikpanel/lab-firewall-unit-fault/v1",
+          "unit_sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062"
+        },
+        "identity": {
+          "cell_id": "release-recovery__2294c7c6c8b846a1",
+          "node": "debian13",
+          "vm_uuid": "9b15eea8-2b3d-56d7-8a53-f1969aaafbef"
+        },
+        "installed_artifacts": {
+          "agent": "f868495ccd107dcccca8b6571be21af291dab3240e0b0b6f9bec2279506d7a09",
+          "panel": "9083743e12094bae188ed003a48992e210736c8a016fd30c41eaa6654df30140"
+        },
+        "manifest_sha256": "72294640c63c33c05397a4a965545a24e41a74b78f8a7e4088d82c984d52211e",
+        "operation_id": "64c20d1647537aaf5a51d8ba81a8aa70",
+        "phase": "active",
+        "schema": "celikpanel/release-update-kill/v1",
+        "snapshot": "20260922T020054Z-from-unknown-to-971e60b0f4aba47106c64cae220d5a0a32619c0f-8c71dc2a7937e36721dd75832878c53f",
+        "verified_files": 129,
+        "worker": {
+          "boot_id": "3f2958a2-e765-45c8-b16f-ac0f236ad3eb",
+          "cgroup": "/system.slice/celikpanel-self-update-64c20d1647537aaf5a51d8ba81a8aa70.service",
+          "invocation_id": "04dabeb8e701464b9f77d6ae75d8f109",
+          "pid": 8289,
+          "running_executable_sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+          "start_ticks": "32932",
+          "unit": "celikpanel-self-update-64c20d1647537aaf5a51d8ba81a8aa70.service"
+        }
+      },
+      "events": [
+        "armed",
+        "worker_frozen",
+        "candidate_installed_checkpoint",
+        "kill_requested",
+        "kill_sent",
+        "released"
+      ],
+      "raw_evidence_sha256": "882bd2f418661ae85ba93f9742dddedc263c00e74584eae2af87a975688cd40a",
+      "released": {
+        "at": "2026-09-22T02:01:14.185350+00:00",
+        "checkpoint_verified": true,
+        "event": "released",
+        "identity": {
+          "cell_id": "release-recovery__2294c7c6c8b846a1",
+          "node": "debian13",
+          "vm_uuid": "9b15eea8-2b3d-56d7-8a53-f1969aaafbef"
+        },
+        "kill_sent": true,
+        "operation_id": "64c20d1647537aaf5a51d8ba81a8aa70",
+        "reason": "exact-update-unit-killed",
+        "schema": "celikpanel/release-update-kill/v1",
+        "thaw_exit": 1
+      },
+      "scope": "exact-update-unit-cgroup",
+      "signal": "SIGKILL"
+    }
+  },
+  "schema": "celikpanel/native-firewall-update-acceptance/v1",
+  "scope": "disposable Debian 13; real Agent signed worker with isolated fixture trust; not production UI admission",
+  "source_commit": "8043605929111685b0c3d239076c2afe049081aa",
+  "updated": {
+    "after": {
+      "at": "2026-09-22T01:53:05.164714+00:00",
+      "binaries": {
+        "agent": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "f868495ccd107dcccca8b6571be21af291dab3240e0b0b6f9bec2279506d7a09",
+          "uid": 0
+        },
+        "panel": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "9083743e12094bae188ed003a48992e210736c8a016fd30c41eaa6654df30140",
+          "uid": 0
+        }
+      },
+      "boot_id": "8f2b444f-fbad-4173-b434-11af3edc635e",
+      "generations": {
+        "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2": {
+          "celikpanel-firewall-restore.service": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+            "uid": 0
+          },
+          "restore": {
+            "gid": 0,
+            "mode": 493,
+            "sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+            "uid": 0
+          },
+          "runtime.manifest": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+            "uid": 0
+          }
+        }
+      },
+      "https_http_code": "200",
+      "https_trust": "not claimed; self-signed lab baseline",
+      "identity": {
+        "cell_id": "release-recovery__28e174fbda4f8aad",
+        "node": "debian13",
+        "schema": "celikpanel-release-recovery-lab/v1",
+        "vm_uuid": "51569fbb-be5e-5296-99ce-77bdf19561c6"
+      },
+      "operation_status": {
+        "observation": "known",
+        "observed_at": "2026-09-22T01:51:18Z",
+        "phase": "succeeded",
+        "reason": "update_verified",
+        "request_id": "ce86b00cb23ff0d0ce21dc7024d2bf13",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "update_verified"
+      },
+      "operation_status_exit": 0,
+      "policy": {
+        "gid": 0,
+        "mode": 384,
+        "sha256": "31e2f1f71d6d1c0a24dd5175630166d81f9963f9c620801b7934c1840b6f9d95",
+        "uid": 0
+      },
+      "request_id": "ce86b00cb23ff0d0ce21dc7024d2bf13",
+      "schema": "celikpanel/native-firewall-update/v1",
+      "systemd": "systemd 257 (257.13-1~deb13u1)",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain fixture {\n\t\ttype filter hook output priority 20; policy accept;\n\t}\n}\n"
+      },
+      "unit": {
+        "gid": 0,
+        "mode": 420,
+        "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+        "uid": 0
+      },
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-agent.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-firewall-restore.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-firewall-restore.service",
+          "Result": "success",
+          "SubState": "exited",
+          "UnitFileState": "disabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      }
+    },
+    "before": {
+      "policy_sha256": "31e2f1f71d6d1c0a24dd5175630166d81f9963f9c620801b7934c1840b6f9d95",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain fixture {\n\t\ttype filter hook output priority 20; policy accept;\n\t}\n}\n"
+      },
+      "unit_sha256": "dd176e36365bd0c681543ef1ac5922b52d3ad2126bc5c48b94342f689a27d602"
+    },
+    "before_enablement": "disabled",
+    "boot": {
+      "at": "2026-09-22T01:56:55.535424+00:00",
+      "binaries": {
+        "agent": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "f868495ccd107dcccca8b6571be21af291dab3240e0b0b6f9bec2279506d7a09",
+          "uid": 0
+        },
+        "panel": {
+          "gid": 0,
+          "mode": 493,
+          "sha256": "9083743e12094bae188ed003a48992e210736c8a016fd30c41eaa6654df30140",
+          "uid": 0
+        }
+      },
+      "boot_id": "3e0923de-710c-4c23-95b3-c5a01ac37761",
+      "generations": {
+        "2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2": {
+          "celikpanel-firewall-restore.service": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+            "uid": 0
+          },
+          "restore": {
+            "gid": 0,
+            "mode": 493,
+            "sha256": "4937746c7ee74241f3dce97fe73843faa96e61fe57a4588e914327261d80d9da",
+            "uid": 0
+          },
+          "runtime.manifest": {
+            "gid": 0,
+            "mode": 420,
+            "sha256": "54cd4e489fa9757047abd78cd28ea217fd42557778e115c4a123e264130c664f",
+            "uid": 0
+          }
+        }
+      },
+      "https_http_code": "200",
+      "https_trust": "not claimed; self-signed lab baseline",
+      "identity": {
+        "cell_id": "release-recovery__28e174fbda4f8aad",
+        "node": "debian13",
+        "schema": "celikpanel-release-recovery-lab/v1",
+        "vm_uuid": "51569fbb-be5e-5296-99ce-77bdf19561c6"
+      },
+      "operation_status": {
+        "observation": "known",
+        "observed_at": "2026-09-22T01:51:18Z",
+        "phase": "succeeded",
+        "reason": "update_verified",
+        "request_id": "ce86b00cb23ff0d0ce21dc7024d2bf13",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "update_verified"
+      },
+      "operation_status_exit": 0,
+      "policy": {
+        "gid": 0,
+        "mode": 384,
+        "sha256": "31e2f1f71d6d1c0a24dd5175630166d81f9963f9c620801b7934c1840b6f9d95",
+        "uid": 0
+      },
+      "request_id": "ce86b00cb23ff0d0ce21dc7024d2bf13",
+      "schema": "celikpanel/native-firewall-update/v1",
+      "systemd": "systemd 257 (257.13-1~deb13u1)",
+      "tables": {
+        "celikpanel_fw": "table inet celikpanel_fw {\n\tchain input {\n\t\ttype filter hook input priority filter; policy drop;\n\t\tiif \"lo\" accept\n\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tmeta l4proto icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n\t\ttcp dport { 22, 2083 } accept\n\t\tudp dport 53 accept\n\t}\n}\n",
+        "celikpanel_lab_other": "table inet celikpanel_lab_other {\n\tchain fixture {\n\t\ttype filter hook output priority 20; policy accept;\n\t}\n}\n"
+      },
+      "unit": {
+        "gid": 0,
+        "mode": 420,
+        "sha256": "2b8e4403e8fc2457cf64b8f128fb11a71c4a6534e7d78fba29900c03624e8062",
+        "uid": 0
+      },
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-agent.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-firewall-restore.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-firewall-restore.service",
+          "Result": "success",
+          "SubState": "exited",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+          "Result": "success",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      }
+    },
+    "explicit_boot_enablement": true
+  }
+}

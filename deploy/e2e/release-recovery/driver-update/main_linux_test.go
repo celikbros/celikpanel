@@ -156,3 +156,12 @@ func TestGuestIdentityCannotCrossNonceOrVM(t *testing.T) {
 		t.Fatal("non-QEMU host accepted")
 	}
 }
+
+func TestAdmissionRefusalPreservesBoundedReasonWithoutRequest(t *testing.T) {
+	_, _, _, target := signedTarget(t)
+	current := transport.SystemUpdateCheckResponse{Supported: true, CurrentVersion: "v0.1.0-alpha.75", CurrentCommit: strings.Repeat("d", 40), Error: "certificate verification failed"}
+	request, err := requestFor(markerIdentity{}, target, current, strings.Repeat("e", 32))
+	if err == nil || !strings.Contains(err.Error(), "certificate verification failed") || !strings.Contains(err.Error(), "supported=true") || request.RequestID != "" {
+		t.Fatalf("refusal lost reason or created request: %+v %v", request, err)
+	}
+}
