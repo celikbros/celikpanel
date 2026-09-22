@@ -1,0 +1,17 @@
+[Unit]
+Description=Deploy an already renewed mail host certificate
+After=local-fs.target postfix.service dovecot.service
+
+[Service]
+Type=oneshot
+User=root
+Group=celikpanel
+UMask=0077
+ExecStart=@RENEW@ --process-pending
+TimeoutStartSec=180s
+KillMode=control-group
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=-/etc/ssl/celikpanel/_mail/host

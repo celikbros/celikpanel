@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+# Queue only the selected managed host lineage. Native timer handles deployment.
+lineage=${RENEWED_LINEAGE:-}
+case "$lineage" in
+ /etc/letsencrypt/live/celikpanel-mail-*)
+  lineage_name=${lineage#/etc/letsencrypt/live/}
+  case "$lineage_name" in ""|*/*) exit 0 ;; esac
+  exec @RENEW@ --queue "$lineage_name"
+  ;;
+esac
+exit 0

@@ -1,0 +1,12 @@
+[Unit]
+Description=Check retained mail certificate renewal work
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=5min
+RandomizedDelaySec=15s
+AccuracySec=1s
+Unit=celikpanel-mail-renewal.service
+
+[Install]
+WantedBy=timers.target

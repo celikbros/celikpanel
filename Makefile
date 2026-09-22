@@ -18,7 +18,7 @@ SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 LDFLAGS := -s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT)
 DIST    := celikpanel-$(VERSION)
 
-.PHONY: all build check-go test vet panel agent schema17-bridge firewall-restore firewall-runtime recovery recovery-agent-checker recovery-panel-checker recovery-runtime distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
+.PHONY: all build check-go test vet panel agent schema17-bridge firewall-restore firewall-runtime mail-renewal mail-renewal-runtime recovery recovery-agent-checker recovery-panel-checker recovery-runtime distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
 
 all: build
 
@@ -54,6 +54,12 @@ firewall-restore: check-go ## Build the independent native firewall consumer
 
 firewall-runtime: firewall-restore ## Assemble the versioned independent firewall artifact
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/firewall/bundle --binary bin/firewall-restore --output bin/firewall-runtime
+
+mail-renewal: check-go ## Build the independent one-shot mail renewal consumer
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -tags celikpanel_mail_renewal -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/mail-renewal ./cmd/agent
+
+mail-renewal-runtime: mail-renewal ## Assemble offline native renewal files; no enrollment
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/mail-renewal/bundle --binary bin/mail-renewal --output bin/mail-renewal-runtime
 
 recovery: check-go ## Build the independent owner recovery CLI
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/recovery ./cmd/recovery
