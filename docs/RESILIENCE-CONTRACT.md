@@ -487,3 +487,8 @@ after existing durable enrollment is observed. Existing owner paths and pending
 work on uncertainty are preserved. See [executor runtime](MAIL-RENEWAL-EXECUTOR.md#volatile-runtime-after-reboot).
 There is no persistent schema transition or general recovery admission. Native
 postboot evidence, enrollment/migration and remaining P0.5 acceptance stay explicit.
+
+[BD/BE native runtime acceptance](../deploy/e2e/release-recovery/MAIL-RUNTIME-BE.md)
+now verifies postboot same-leaf acknowledgement and new-leaf renewal with installed
+management absent, empty-queue no-op, and owner-modified runtime preservation.
+Scheduling/enrollment and independent interrupted recovery remain open.

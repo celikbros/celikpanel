@@ -81,3 +81,8 @@ power-loss durability or the complete absence matrix.
 
 Runtime package race tests, helper entry tests and build, full ordinary Agent race
 tests (194.576 s), and Agent/runtime vet passed on the isolated source copy.
+
+[BD/BE native runtime acceptance](../deploy/e2e/release-recovery/MAIL-RUNTIME-BE.md)
+now verifies postboot same-leaf acknowledgement and new-leaf renewal with installed
+management absent, empty-queue no-op, and owner-modified runtime preservation.
+Scheduling/enrollment and independent interrupted recovery remain open.
