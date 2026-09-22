@@ -486,3 +486,9 @@ P0.3/P0.5 i?in kal?c? dosya kimliklerini, saklanan eski dosyalar? ve y?n?
 sabitlenmi? geri alma niyetini ekler. S?re? kesintisi testleri yay?m?, geri almay?
 ve geri alman?n yeniden kesilmesini kapsar. ?retimde zamanlay?c?y? devreye alma,
 kurtarma ba?lant?s?, kald?rma ve tam yerel g?ncelleme/i? y?k? matrisi a??kt?r.
+
+[Debian BE y?kl? zamanlay?c? kabul?](../deploy/e2e/release-recovery/MAIL-LOADED-BE.md),
+ger?ek systemd yeniden y?klemesini iki y?nde, iki s?re? kesintisini ve ayn? i?lemin
+geri al?nmas?n? do?rular. Ger?ek ExecStart nesilleri, zamanlay?c? tercihi ve
+posta hizmetleri kontrol edildi. ?lk kurulum, ?retimden ?a??rma, eski uygulama
+s?r?m?ne d?n?? uyumu ve g?? kesintisi kabul? a??k kal?r.

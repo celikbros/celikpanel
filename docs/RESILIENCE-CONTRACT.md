@@ -540,3 +540,9 @@ now verifies actual hook/service exchange, a second kill during inverse exchange
 original inode restoration and unchanged trusted mail workloads. The initial
 test-driver refusal is retained. Loaded-unit activation and whole-update acceptance
 remain open.
+
+[Debian BE loaded-schedule acceptance](../deploy/e2e/release-recovery/MAIL-LOADED-BE.md)
+now proves actual daemon-reload in both directions, two process interruptions,
+same-operation recovery and matching native ExecStart generations. Native timer
+preferences and trusted mail workloads were preserved. Bootstrap, production
+dispatch, historical application rollback and power-loss acceptance remain open.

@@ -344,3 +344,9 @@ compatibility with every historical application rollback target. Production
 admission must resolve this old-producer/restore relationship explicitly before
 claiming independent renewal survives supported application rollback. Keep this
 P0.4/P0.5 acceptance item open; do not infer compatibility from a running timer.
+
+[Debian BE loaded-schedule acceptance](../deploy/e2e/release-recovery/MAIL-LOADED-BE.md)
+now proves actual daemon-reload in both directions, two process interruptions,
+same-operation recovery and matching native ExecStart generations. Native timer
+preferences and trusted mail workloads were preserved. Bootstrap, production
+dispatch, historical application rollback and power-loss acceptance remain open.
