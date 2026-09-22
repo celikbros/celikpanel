@@ -1,0 +1,49 @@
+{
+  "schema": "celikpanel/native-mail-executor/v1",
+  "source_commit": "77e71cbde4080dcd69eaa87961a3b00d8f4b15d3",
+  "test_binary_sha256": "1a7e5941b1576ec0043012ff464a5b2a75ce9e8d1050855cde3db7f045afa5b0",
+  "helper_binary_sha256": "9aa59dd3650d4c70fee4e6e6112ef1d4226f9dff8075e3a65ba8565a6cf45cf4",
+  "lab": {
+    "cell_id": "release-recovery__8c1c73ebd3eadabb",
+    "node": "debian13"
+  },
+  "scope": {
+    "separate_renewal_executable": true,
+    "real_native_mail": true,
+    "fixture_ca_certbot_source": true,
+    "orderly_reboot": true,
+    "installed_management_absent": true,
+    "runtime_absence_refusal": true,
+    "production_enrollment": false,
+    "public_acme": false,
+    "automatic_boot_renewal": false,
+    "power_loss": false,
+    "independent_interrupted_recovery": false
+  },
+  "logs": {
+    "mail-prepare-independent.log": {
+      "text": "1a7e5941b1576ec0043012ff464a5b2a75ce9e8d1050855cde3db7f045afa5b0  /root/celikpanel-release-recovery-lab/mail-agent.test\n00294b15-afea-4bce-8634-163a26dda861\nSep 22 10:52:46 dns-debian13 systemd[1]: Starting celikpanel-lab-mail-prepare-independent.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-agent.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMPrepareIndependentRenewal\\$\" -test.timeout=180s...\nSep 22 10:52:46 dns-debian13 mail-agent.test[4478]: === RUN   TestMailHostCertificateDisposableVMPrepareIndependentRenewal\nSep 22 10:52:55 dns-debian13 postfix/postfix-script[6636]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\nSep 22 10:52:55 dns-debian13 mail-agent.test[4478]:     mail_host_certificate_vm_test.go:211: native trusted listeners: imap=079902ec8cfe725ccdddf0341fdebc48b72d7b4b5be5247ecb1e8c3b38abe622 smtp=079902ec8cfe725ccdddf0341fdebc48b72d7b4b5be5247ecb1e8c3b38abe622\nSep 22 10:52:55 dns-debian13 mail-agent.test[4478]:     mail_host_certificate_vm_test.go:212: initial host publication and SMTP/IMAP system-trusted TLS passed; request=4f71500d08f0f7eb664bc19768bd6bf9 leaf=079902ec8cfe725ccdddf0341fdebc48b72d7b4b5be5247ecb1e8c3b38abe622\nSep 22 10:52:55 dns-debian13 mail-agent.test[4478]:     mail_host_certificate_vm_test.go:222: independent renewal source prepared; lineage=celikpanel-mail-1c502962f80151f4f1375f62 selected=079902ec8cfe725ccdddf0341fdebc48b72d7b4b5be5247ecb1e8c3b38abe622 source=e240f369afdd4de760e349df41e98bcb5499faf2e61653eb2400e17bc2641034\nSep 22 10:52:55 dns-debian13 mail-agent.test[4478]: --- PASS: TestMailHostCertificateDisposableVMPrepareIndependentRenewal (9.40s)\nSep 22 10:52:55 dns-debian13 mail-agent.test[4478]: PASS\nSep 22 10:52:55 dns-debian13 systemd[1]: celikpanel-lab-mail-prepare-independent.service: Deactivated successfully.\nSep 22 10:52:55 dns-debian13 systemd[1]: Finished celikpanel-lab-mail-prepare-independent.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-agent.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMPrepareIndependentRenewal\\$\" -test.timeout=180s.\nSep 22 10:52:55 dns-debian13 systemd[1]: celikpanel-lab-mail-prepare-independent.service: Consumed 3.820s CPU time, 26.3M memory peak.\nResult=success\nExecMainStatus=0\nActiveState=inactive\n",
+      "sha256": "a7ad62032cc578613048c40994371d7694492040ff033ba37de36f32b72ce0e4"
+    },
+    "mail-helper-negative.log": {
+      "text": "9aa59dd3650d4c70fee4e6e6112ef1d4226f9dff8075e3a65ba8565a6cf45cf4  /root/celikpanel-release-recovery-lab/mail-renewal\n00294b15-afea-4bce-8634-163a26dda861\n{\"args\": [\"--inspect-build-identity\"], \"exit\": 0, \"stdout\": \"component=mail-renewal\\nversion=dev\\ncommit=unknown\\n\", \"stderr\": \"\"}\n{\"args\": [\"--self-update-worker\", \"00000000000000000000000000000000\"], \"exit\": 2, \"stdout\": \"\", \"stderr\": \"mail renewal refused: supported actions are --process-pending, --queue <managed-mail-lineage>, and --inspect-build-identity\\n\"}\n{\"args\": [\"--initialize-service-mutation-ledger\"], \"exit\": 2, \"stdout\": \"\", \"stderr\": \"mail renewal refused: supported actions are --process-pending, --queue <managed-mail-lineage>, and --inspect-build-identity\\n\"}\n{\"args\": [], \"exit\": 2, \"stdout\": \"\", \"stderr\": \"mail renewal refused: supported actions are --process-pending, --queue <managed-mail-lineage>, and --inspect-build-identity\\n\"}\n{\"args\": [\"--internal-service-mutation-supervisor\", \"/run/celikpanel/service-mutation.lock\", \"/bin/sh\", \"-c\", \"true\"], \"exit\": 125, \"stdout\": \"\", \"stderr\": \"mail renewal supervisor refused: command is outside mail renewal observation and reload scope\\n\"}\nhelper_negative_scope=verified; native_config_ledger_selection_unchanged=yes; override_init_write=absent\n",
+      "sha256": "6992360bf0a8ac08b9c233372cfb985a8c3ad762ac78c8007676b79ea357cfbb"
+    },
+    "mail-helper-native-result.log": {
+      "text": "9aa59dd3650d4c70fee4e6e6112ef1d4226f9dff8075e3a65ba8565a6cf45cf4  /root/celikpanel-release-recovery-lab/mail-renewal\n00294b15-afea-4bce-8634-163a26dda861\ninstalled_agent_absent=yes\ninstalled_panel_absent=yes\nSep 22 10:54:20 dns-debian13 systemd[1]: Starting celikpanel-lab-mail-independent-queue.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-renewal --queue celikpanel-mail-1c502962f80151f4f1375f62...\nSep 22 10:54:20 dns-debian13 systemd[1]: celikpanel-lab-mail-independent-queue.service: Deactivated successfully.\nSep 22 10:54:20 dns-debian13 systemd[1]: Finished celikpanel-lab-mail-independent-queue.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-renewal --queue celikpanel-mail-1c502962f80151f4f1375f62.\nResult=success\nExecMainStatus=0\nActiveState=inactive\nSep 22 10:54:20 dns-debian13 systemd[1]: Starting celikpanel-lab-mail-independent-process.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-renewal --process-pending...\nSep 22 10:54:21 dns-debian13 systemd[1]: celikpanel-lab-mail-independent-process.service: Deactivated successfully.\nSep 22 10:54:21 dns-debian13 systemd[1]: Finished celikpanel-lab-mail-independent-process.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-renewal --process-pending.\nResult=success\nExecMainStatus=0\nActiveState=inactive\nnative_configuration_bytes_and_mtimes=unchanged\nindependent_renewal_completed request=b5f275fcb8f9809cdc3ca9093f2fb8d6 leaf=e240f369afdd4de760e349df41e98bcb5499faf2e61653eb2400e17bc2641034 queue=absent\nsha256 Fingerprint=E2:40:F3:69:AF:DD:4D:E7:60:E3:49:DF:41:E9:8B:CB:54:99:FA:F2:E6:16:53:EB:24:00:E1:7B:C2:64:10:34\nsha256 Fingerprint=E2:40:F3:69:AF:DD:4D:E7:60:E3:49:DF:41:E9:8B:CB:54:99:FA:F2:E6:16:53:EB:24:00:E1:7B:C2:64:10:34\n",
+      "sha256": "9d91e2c9cb090fbb39863f409130bc6d0f3a56b89f2d5f7ba4d225818bd60ff0"
+    },
+    "mail-helper-replay.log": {
+      "text": "9aa59dd3650d4c70fee4e6e6112ef1d4226f9dff8075e3a65ba8565a6cf45cf4  /root/celikpanel-release-recovery-lab/mail-renewal\n00294b15-afea-4bce-8634-163a26dda861\nindependent_same_leaf_replay=acknowledged; canonical_ledger=unchanged\n",
+      "sha256": "be4e1ffd2d21ecd21fadd67cc3616b4db6269f41c66e385449ebb4d91f55a50b"
+    },
+    "mail-helper-native-boot.log": {
+      "text": "2ba12c6e-41fe-4848-9d9d-15d6703b3117\nactive\nactive\ninactive\ninstalled_agent_absent=yes\ninstalled_panel_absent=yes\nvolatile_management_runtime=absent\nsha256 Fingerprint=E2:40:F3:69:AF:DD:4D:E7:60:E3:49:DF:41:E9:8B:CB:54:99:FA:F2:E6:16:53:EB:24:00:E1:7B:C2:64:10:34\nsha256 Fingerprint=E2:40:F3:69:AF:DD:4D:E7:60:E3:49:DF:41:E9:8B:CB:54:99:FA:F2:E6:16:53:EB:24:00:E1:7B:C2:64:10:34\n",
+      "sha256": "7b3986840bb47de3f27b9f3da2c0bb10a22ad744be7b235b6bdfafa75b1d61f8"
+    },
+    "mail-helper-runtime-gap.log": {
+      "text": "9aa59dd3650d4c70fee4e6e6112ef1d4226f9dff8075e3a65ba8565a6cf45cf4  /root/celikpanel-release-recovery-lab/mail-renewal\n2ba12c6e-41fe-4848-9d9d-15d6703b3117\nmissing_runtime_refusal=verified; pending=retained; ledger_native_config=unchanged\nmail renewal remains pending; the server owner must review the retained operation and native mail service status before retrying; no general recovery was started\n",
+      "sha256": "d55ca952333ed8e778a9e05da3cf287cb7a59f3d05de1403c249b2fdd833a58d"
+    }
+  }
+}

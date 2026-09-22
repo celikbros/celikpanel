@@ -47,3 +47,10 @@ wrong locks, configuration writers, arbitrary programs and broader systemd calls
 An attempted local-host executable smoke was refused by automatic approval
 review because it included process-pending; no local renewal was run. Executable
 negative/positive acceptance is confined to guarded disposable QEMU guests.
+
+
+[BD native acceptance](../deploy/e2e/release-recovery/MAIL-EXECUTOR-BD.md) now
+verifies separate-executable renewal, exact completion/queue replay, protected
+entry refusals and native mail after reboot. It also records the unresolved
+missing-runtime refusal after reboot; that is preserved evidence, not successful
+boot renewal. Native enrollment and ownership/runtime migration remain open.
