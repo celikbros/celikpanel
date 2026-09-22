@@ -127,3 +127,7 @@ enrollment, legacy hook migration, snapshot/rollback and removal remain open.
 Component tests cover inherited lock rejection, owner changes, restricted umask,
 retained predecessors and actual SIGKILL at five publication boundaries. Native
 CLI acceptance is recorded separately; these tests alone do not close P0.5.
+
+[Native Debian BE preparation evidence](../deploy/e2e/release-recovery/MAIL-PREPARATION-BE.md)
+now verifies the actual candidate CLI and process-kill boundaries with running
+mail workloads and management absent. Enrollment and power-loss remain open.
