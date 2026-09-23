@@ -1,3 +1,4 @@
+import { prepareRecoveryShell } from '../lib/recoveryShell';
 import { systemUpdateFailureMessage } from '../lib/systemUpdateFailure';
 import {
     createContext,
@@ -1787,6 +1788,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
         return (async () => {
             try {
                 if (!await guardCommit) return { kind: 'failed', message: t('panelUpdate.markerFailed') };
+                await prepareRecoveryShell();
                 const claim = await claimCanonicalRecord(exactMarker);
                 if (claim.kind === 'adopted') return { kind: 'adopted' };
                 if (claim.kind !== 'owned' || claim.record.phase !== 'active'

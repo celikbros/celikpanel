@@ -58,7 +58,7 @@ const largestAsync = measurements
   .filter((item) => item.kind === 'async')
   .sort((a, b) => b.raw - a.raw)[0]
 
-const entryManifest = Object.entries(manifest).find(([, item]) => item.isEntry)
+const entryManifest = Object.entries(manifest).find(([, item]) => item.isEntry && item.src === 'index.html')
 if (!entryManifest) {
   throw new Error('Bundle budget: manifest has no entry')
 }

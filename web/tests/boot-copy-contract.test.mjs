@@ -52,6 +52,7 @@ const eagerModules = [
   'src/components/RecoveryAccess.tsx',
   'src/lib/accessObservation.ts',
   'src/lib/recoveryObservation.ts',
+  'src/lib/recoveryShell.ts',
   'src/router.tsx',
   'src/router-core.ts',
   'src/router-history.ts',

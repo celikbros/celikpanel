@@ -78,3 +78,29 @@ func TestFrontendHandlerCachePolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestRecoveryStaticMissingDoesNotBecomeApplicationShell(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "index.html"), []byte("private app shell"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"/recovery-worker.js", "/recovery-offline.html"} {
+		w := httptest.NewRecorder()
+		frontendHandler(root).ServeHTTP(w, httptest.NewRequest("GET", name, nil))
+		if w.Code != http.StatusNotFound || strings.Contains(w.Body.String(), "app shell") {
+			t.Fatalf("missing recovery resource: %s %d %s", name, w.Code, w.Body.String())
+		}
+	}
+}
+
+func TestRecoveryWorkerHasJavaScriptTypeAndRevalidates(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "recovery-worker.js"), []byte("self.addEventListener('fetch', () => {});"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	frontendHandler(root).ServeHTTP(w, httptest.NewRequest("GET", "/recovery-worker.js", nil))
+	if w.Code != http.StatusOK || w.Header().Get("Cache-Control") != "no-cache" || !strings.Contains(w.Header().Get("Content-Type"), "javascript") {
+		t.Fatalf("worker response: %d %v", w.Code, w.Header())
+	}
+}

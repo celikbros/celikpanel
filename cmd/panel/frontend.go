@@ -34,6 +34,10 @@ func frontendHandler(webRoot string) http.Handler {
 			return
 		}
 
+		if cleanPath == "/recovery-worker.js" || cleanPath == "/recovery-offline.html" {
+			http.NotFound(w, r)
+			return
+		}
 		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, filepath.Join(webRoot, "index.html"))
 	})

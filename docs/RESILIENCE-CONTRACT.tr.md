@@ -657,3 +657,16 @@ ile ezmez; uyumsuz hedefi reddeder.
 eski/yeni karışık kayıt ve sahip değişikliği testlerini açıklar. Bağımsız DNS işlem
 kurtarıcısı ve bütün imzalı güncelleme/otomatik geri alma matrisi hâlâ açıktır.
 Bu değişiklik bütün mimari planın tamamlandığı anlamına gelmez.
+
+## Normal panel adresinde çevrimdışı yönlendirme (2026-09-23)
+
+[Statik tarayıcı kurtarma kabuğu](OFFLINE-RECOVERY-SHELL.md), daha önce hazırlanmış
+bir tarayıcı panel bağlantısını kaybettiğinde normal sayfa yenilemesinde açılır.
+Mevcut işlem kimliği yalnız doğrulanmamış bir referans olarak korunur. Salt-okur
+SSH kontrolleri gösterilir; panel gerçekten yanıt verince geri dönme seçeneği
+sunulur. Yalnız genel statik dosyalar saklanır; oturum, lisans, API yanıtları veya
+değişiklik yetkisi önbelleğe alınmaz. Gerçek Chrome'da bağlantıyı kapatma, İngilizce
+masaüstü ve Türkçe mobil kontrolleri geçti. Bu çevrimdışı yönlendirmedir; panel
+kapalıyken bağımsız ve kimlik doğrulamalı güncel durum erişimi değildir. Bu sınır
+ve P0.2'nin kalan kabul işleri açıktır. Yeni tarayıcı, silinmiş önbellek veya
+güvenilmeyen TLS bağlantısında bu kabuğun bulunacağı sözü verilmez.

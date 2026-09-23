@@ -246,3 +246,15 @@ CLI/authenticated HTTP results. This closes that Debian fallback boundary only;
 automatic normal-address access, Arch/historical-launcher compatibility and the
 remaining P0.2/P0.3 fault matrix stay open. The earlier local-only statement above
 is superseded for this exact AP boundary, not relabeled as full access acceptance.
+
+
+## Offline guidance at the normal panel address (2026-09-23)
+
+The [static browser recovery shell](OFFLINE-RECOVERY-SHELL.md) now survives a
+normal reload after a prepared browser loses the panel connection. It preserves
+the existing operation reference, exposes read-only owner guidance and offers
+return after an actual availability response. Public static files alone are
+cached; no authenticated status or mutation authority is retained. Real Chrome
+listener-interruption and EN desktop/TR mobile checks pass. This is offline
+guidance, not independent live authenticated status while Panel is stopped;
+the latter and the wider P0.2 matrix remain open.

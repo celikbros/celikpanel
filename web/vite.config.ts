@@ -9,6 +9,7 @@ export default defineConfig({
     // The post-build budget follows this graph so a route cannot hide a large
     // payload behind several individually small shared chunks.
     manifest: true,
+    rolldownOptions: { input: { app: path.resolve(import.meta.dirname, "index.html"), recovery: path.resolve(import.meta.dirname, "recovery-offline.html") } },
   },
   resolve: {
     alias: {
