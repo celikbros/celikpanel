@@ -18,6 +18,9 @@ func TestDNSSwitchStatusRequiresOwnerAndExactCommand(t *testing.T) {
 	if got := runDNSSwitchStatus([]string{"dns-switch-status"}, 1000, &out, &diagnostic); got != exitNotOwner {
 		t.Fatalf("unprivileged observation was accepted: %d", got)
 	}
+	if got := runDNSSwitchStatus([]string{"dns-switch-status", "--quiesced"}, 1000, &out, &diagnostic); got != exitNotOwner {
+		t.Fatalf("unprivileged quiesced observation was accepted: %d", got)
+	}
 	if !strings.Contains(diagnostic.String(), "Owner authentication") || out.Len() != 0 {
 		t.Fatalf("unexpected guidance or data disclosure: %q / %q", diagnostic.String(), out.String())
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/hostmutationlock"
 	"github.com/alicelik/celikpanel/internal/processidentity"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
@@ -80,7 +81,7 @@ func localCelikPanelGroupID(path string) (uint32, error) {
 	return gid, nil
 }
 func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
-	if len(args) != 1 || args[0] != "dns-switch-status" {
+	if (len(args) != 1 && !(len(args) == 2 && args[1] == "--quiesced")) || args[0] != "dns-switch-status" {
 		return exitUsage
 	}
 	if uid != 0 {
@@ -94,6 +95,20 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	}
 	root := hostingpath.ServiceMutationStateRoot()
 	owner := servicemutationledger.FileOwner{UID: 0, GID: groupID}
+	if len(args) == 2 {
+		release, lockErr := hostmutationlock.AcquireExisting("/var/lib/celikpanel-release-transaction/transaction.lock", hostmutationlock.Owner{})
+		if lockErr != nil {
+			fmt.Fprintln(diagnostic, "A quiesced DNS observation cannot acquire the release lock. The server owner should follow the existing update or inspect that lock; no DNS operation was started. "+lockErr.Error())
+			return exitUnavailable
+		}
+		defer release.Close()
+		host, lockErr := hostmutationlock.AcquireExisting("/run/celikpanel/service-mutation.lock", hostmutationlock.Owner{UID: owner.UID, GID: owner.GID})
+		if lockErr != nil {
+			fmt.Fprintln(diagnostic, "A quiesced DNS observation cannot acquire the host lock. The server owner should follow the existing mutation or inspect that lock; no DNS operation was started. "+lockErr.Error())
+			return exitUnavailable
+		}
+		defer host.Close()
+	}
 	journalRaw, present, err := servicemutationledger.ReadFile(filepath.Join(root, "dns-engine-switch-journal.json"), dnsengineartifact.SwitchJournalLimit, owner)
 	if err != nil {
 		fmt.Fprintln(diagnostic, "DNS switch evidence could not be read. Preserve the private state directory; the server owner must inspect its path and ownership before retrying. "+err.Error())
@@ -125,6 +140,9 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		return exitUnavailable
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
+	if len(args) == 2 {
+		fmt.Fprintln(out, "Release and host mutation locks were held during this evidence read. Native DNS state and future worker liveness remain unproved.")
+	}
 	switch observation.Status {
 	case dnsenginerecovery.EvidenceLeaseExpired:
 		fmt.Fprintln(out, "The active ledger lease has expired. The server owner should inspect the original operation and native DNS service; do not start another switch. A compatible recovery executor must establish worker liveness and host ownership before the same operation can resume.")
