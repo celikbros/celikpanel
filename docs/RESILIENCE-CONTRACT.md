@@ -800,3 +800,12 @@ The selected forward/inverse boot boundaries pass on both Debian and Arch;
 early admission, production enrollment, old-release migration and the wider
 acceptance matrix remain open. These native enrollment results do not establish
 all workload independence or complete P0 resilience.
+
+
+September 23 pre-admission boundary: [Debian BE](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-PREADMISSION-BOOT-BE.json)
+proves a cut after bootstrap registration but before common admission cannot
+cause boot to invent a job or alter existing evidence. The exact original owner
+start tuple later publishes after a fixture-provided new-admission runtime
+prerequisite. This closes that selected P0.1/P0.3/P0.5 boundary, not automatic
+new admission, unrecorded-handoff UI retry or the remaining platform/migration
+matrix. No persisted schema changes.

@@ -566,3 +566,23 @@ restores original native absence with one automatic attempt and preserves known
 configuration/certificate files remain unchanged; Postfix/Dovecot are active.
 This closes the selected Debian inverse boot boundary noted above, not automatic
 failure-to-inverse selection or the remaining early-admission/migration matrix.
+
+
+### Native cut before common admission (2026-09-23)
+
+[Debian BE pre-admission boot](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-PREADMISSION-BOOT-BE.json)
+SIGKILLs after the boot unit is armed, before the first common ledger reservation.
+After reset, the installed boot helper exits successfully without admitting the
+missing request, creating volatile locks, consuming an automatic attempt or
+changing existing ledger/immutable receipts. Native renewal files remain absent;
+Postfix and Dovecot remain active. This distinguishes prepared owner intent from
+an admitted native transaction instead of inventing a job during observation.
+
+A subsequent explicit owner `--start-enrollment` with the original reviewed
+request/owner/generation reuses the existing preparation and publishes exactly
+that request. All older jobs and precut receipts remain unchanged. The fixture
+explicitly supplies the normal new-admission volatile lock prerequisite before
+this owner action; it does not claim independent automatic provisioning of that
+prerequisite. No management daemon runs. The unrecorded-handoff UI retry,
+production plan admission, other early registration cuts/platforms and migration
+remain open. No owner-installed panel was changed.

@@ -21,12 +21,15 @@ import (
 // Following reboot, only the installed production helper/native boot unit runs;
 // neither this test executable nor its fault hook is part of that continuation.
 func TestMailEnrollmentBootDisposableVM(t *testing.T) {
-	runMailEnrollmentBootDisposableVM(t, false)
+	runMailEnrollmentBootDisposableVM(t, false, false)
 }
 func TestMailEnrollmentRollbackBootDisposableVM(t *testing.T) {
-	runMailEnrollmentBootDisposableVM(t, true)
+	runMailEnrollmentBootDisposableVM(t, true, false)
 }
-func runMailEnrollmentBootDisposableVM(t *testing.T, rollback bool) {
+func TestMailEnrollmentPreAdmissionBootDisposableVM(t *testing.T) {
+	runMailEnrollmentBootDisposableVM(t, false, true)
+}
+func runMailEnrollmentBootDisposableVM(t *testing.T, rollback, beforeAdmission bool) {
 	node := ""
 	switch os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") {
 	case "arch-20260923-boot":
@@ -51,6 +54,9 @@ func runMailEnrollmentBootDisposableVM(t *testing.T, rollback bool) {
 	intentPath := "/root/celikpanel-release-recovery-lab/mail-boot-automatic.intent"
 	if rollback {
 		intentPath = "/root/celikpanel-release-recovery-lab/mail-boot-rollback-automatic.intent"
+	}
+	if beforeAdmission {
+		intentPath = "/root/celikpanel-release-recovery-lab/mail-boot-preadmission.intent"
 	}
 	gid, ok := lookupGroupID("celikpanel")
 	if !ok || gid < 0 {
@@ -113,6 +119,11 @@ func runMailEnrollmentBootDisposableVM(t *testing.T, rollback bool) {
 	}
 	if err = execution.ArmBoot(ctx); err != nil {
 		t.Fatal(err)
+	}
+	if beforeAdmission {
+		t.Log("boot_enrollment_cut=boot_armed_before_common_admission")
+		_ = unix.Kill(os.Getpid(), unix.SIGKILL)
+		panic("kill returned")
 	}
 	authority := mailEnrollmentAuthority{identity: execution.Identity(), agent: proof, verifyIntent: func() error { return execution.RevalidateAuthority(ctx) }}
 	if !recordedInverse {
