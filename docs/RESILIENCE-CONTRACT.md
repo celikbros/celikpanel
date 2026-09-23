@@ -819,3 +819,13 @@ recorded or terminal races do not replay it. The same plan/step authority and
 initial fence remain intact, and polling/reload never grants retry permission.
 No persisted schema changes. HTTP and UI evidence closes this owner-action gap,
 not production plan admission, old-release migration or full P0 acceptance.
+
+
+### Recognized legacy mail hook transition (2026-09-23)
+
+[Arch native enrollment evidence](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-LEGACY-BOOT-BE.json)
+now covers real timer-stop/start cuts and independent boot continuation from the
+exact recognized legacy hook. Inverse restores its bytes and inode; forward
+publishes the independent native timer. Existing ledger/receipts are preserved.
+P0.3/P0.4/P0.5 remain partial: this explicit legacy-byte fixture does not establish
+an actual old-release migration or the complete workload/rollback matrix.

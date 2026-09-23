@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"golang.org/x/sys/unix"
@@ -57,6 +58,20 @@ func runMailEnrollmentBootDisposableVM(t *testing.T, rollback, beforeAdmission b
 	}
 	if beforeAdmission {
 		intentPath = "/root/celikpanel-release-recovery-lab/mail-boot-preadmission.intent"
+	}
+	legacy := os.Getenv("CP_MAIL_BOOT_LEGACY") == "1"
+	if legacy {
+		if beforeAdmission {
+			t.Fatal("legacy fixture requires native publication")
+		}
+		intentPath = "/root/celikpanel-release-recovery-lab/mail-legacy-boot-automatic.intent"
+		if rollback {
+			intentPath = "/root/celikpanel-release-recovery-lab/mail-legacy-inverse-boot-automatic.intent"
+		}
+		raw, err := os.ReadFile(recoveryruntime.MailRenewalHookPath)
+		if err != nil || !bytes.Equal(raw, mailrenewalkit.LegacyHook()) {
+			t.Fatal("exact legacy producer hook required", err)
+		}
 	}
 	gid, ok := lookupGroupID("celikpanel")
 	if !ok || gid < 0 {

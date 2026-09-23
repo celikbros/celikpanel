@@ -611,3 +611,25 @@ and guidance tests plus the production web build/budget pass. The preceding
 Debian native pre-admission trial establishes the reused Start path, not a live
 browser-to-native installation. Production plan-builder admission and migration
 remain open. No owner-installed panel was changed.
+
+
+### Recognized legacy hook transition after reboot (2026-09-23)
+
+[Arch BE legacy enrollment](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-LEGACY-BOOT-BE.json)
+uses the exact versioned legacy hook as an explicit fixture before-state, the
+existing production executor and unchanged installed `d3aab13` boot helper.
+The inverse trial records compensation, kills the producer after real timer stop,
+and resets the VM. Automatic boot restores the same legacy hook bytes **and
+inode**, removes the originally absent independent units and preserves the known
+restored failure. A new explicit fixture request then uses this restored legacy
+hook without rewriting it, cuts after actual timer start, and automatically
+publishes independent renewal after another boot. Both use one automatic attempt;
+prior jobs and precut immutable records remain unchanged. No Panel/Agent daemon
+or manual postboot continuation is involved.
+
+This closes the selected recognized-hook forward/inverse reboot boundaries on
+Arch under P0.3/P0.4/P0.5. It does not prove an actual previous-release install
+migration, mail traffic, new certificate renewal, automatic choice of inverse,
+management-file-absent pending recovery, production plan admission or the full
+P0 matrix. The initial inverse SSH read failed during boot and is retained; the
+successful later read introduced no mutation. No owner-installed server changed.
