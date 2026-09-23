@@ -4,6 +4,8 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"github.com/alicelik/celikpanel/internal/hostmutationlock"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,4 +71,52 @@ func TestLocalCelikPanelGroupIsBoundedAndUnambiguous(t *testing.T) {
 	if _, err := localCelikPanelGroupID(path); err == nil {
 		t.Fatal("symlink group file accepted")
 	}
+}
+func TestDNSObservationLocksKeepReleaseThenHostAndReleaseOnFailure(t *testing.T) {
+	root := t.TempDir()
+	makeLock := func(name string) string {
+		t.Helper()
+		parent := filepath.Join(root, name)
+		if err := os.Mkdir(parent, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(parent, "transaction.lock")
+		if err := os.WriteFile(path, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	releasePath, hostPath := makeLock("release"), makeLock("host")
+	locks, err := acquireDNSObservationLocks(releasePath, hostPath, hostmutationlock.Owner{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := hostmutationlock.AcquireExisting(hostPath, hostmutationlock.Owner{}); !errors.Is(err, hostmutationlock.ErrBusy) {
+		t.Fatalf("host lock was not retained: %v", err)
+	}
+	locks.Close()
+
+	heldHost, err := hostmutationlock.AcquireExisting(hostPath, hostmutationlock.Owner{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := acquireDNSObservationLocks(releasePath, hostPath, hostmutationlock.Owner{}); !errors.Is(err, hostmutationlock.ErrBusy) {
+		t.Fatalf("busy host was not refused: %v", err)
+	}
+	// The failed second acquisition must release the first lease.
+	releaseAfterFailure, err := hostmutationlock.AcquireExisting(releasePath, hostmutationlock.Owner{})
+	if err != nil {
+		t.Fatalf("release lease leaked: %v", err)
+	}
+	_ = releaseAfterFailure.Close()
+	_ = heldHost.Close()
+
+	heldRelease, err := hostmutationlock.AcquireExisting(releasePath, hostmutationlock.Owner{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := acquireDNSObservationLocks(releasePath, hostPath, hostmutationlock.Owner{}); !errors.Is(err, hostmutationlock.ErrBusy) {
+		t.Fatalf("busy release was not refused: %v", err)
+	}
+	_ = heldRelease.Close()
 }

@@ -80,6 +80,38 @@ func localCelikPanelGroupID(path string) (uint32, error) {
 	}
 	return gid, nil
 }
+
+type dnsObservationLocks struct {
+	release *os.File
+	host    *os.File
+}
+
+func (locks *dnsObservationLocks) Close() {
+	if locks == nil {
+		return
+	}
+	if locks.host != nil {
+		_ = locks.host.Close()
+	}
+	if locks.release != nil {
+		_ = locks.release.Close()
+	}
+}
+
+func acquireDNSObservationLocks(releasePath, hostPath string, hostOwner hostmutationlock.Owner) (*dnsObservationLocks, error) {
+	release, err := hostmutationlock.AcquireExisting(releasePath, hostmutationlock.Owner{})
+	if err != nil {
+		return nil, fmt.Errorf("release lock: %w", err)
+	}
+	locks := &dnsObservationLocks{release: release}
+	host, err := hostmutationlock.AcquireExisting(hostPath, hostOwner)
+	if err != nil {
+		locks.Close()
+		return nil, fmt.Errorf("host lock: %w", err)
+	}
+	locks.host = host
+	return locks, nil
+}
 func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	if (len(args) != 1 && !(len(args) == 2 && args[1] == "--quiesced")) || args[0] != "dns-switch-status" {
 		return exitUsage
@@ -96,18 +128,16 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	root := hostingpath.ServiceMutationStateRoot()
 	owner := servicemutationledger.FileOwner{UID: 0, GID: groupID}
 	if len(args) == 2 {
-		release, lockErr := hostmutationlock.AcquireExisting("/var/lib/celikpanel-release-transaction/transaction.lock", hostmutationlock.Owner{})
+		locks, lockErr := acquireDNSObservationLocks(
+			"/var/lib/celikpanel-release-transaction/transaction.lock",
+			"/run/celikpanel/service-mutation.lock",
+			hostmutationlock.Owner{UID: owner.UID, GID: owner.GID},
+		)
 		if lockErr != nil {
-			fmt.Fprintln(diagnostic, "A quiesced DNS observation cannot acquire the release lock. The server owner should follow the existing update or inspect that lock; no DNS operation was started. "+lockErr.Error())
+			fmt.Fprintln(diagnostic, "A quiesced DNS observation cannot acquire the release and host locks. The server owner should follow the existing update or mutation, then retry this observation; no DNS operation was started. "+lockErr.Error())
 			return exitUnavailable
 		}
-		defer release.Close()
-		host, lockErr := hostmutationlock.AcquireExisting("/run/celikpanel/service-mutation.lock", hostmutationlock.Owner{UID: owner.UID, GID: owner.GID})
-		if lockErr != nil {
-			fmt.Fprintln(diagnostic, "A quiesced DNS observation cannot acquire the host lock. The server owner should follow the existing mutation or inspect that lock; no DNS operation was started. "+lockErr.Error())
-			return exitUnavailable
-		}
-		defer host.Close()
+		defer locks.Close()
 	}
 	journalRaw, present, err := servicemutationledger.ReadFile(filepath.Join(root, "dns-engine-switch-journal.json"), dnsengineartifact.SwitchJournalLimit, owner)
 	if err != nil {
