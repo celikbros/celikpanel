@@ -705,3 +705,7 @@ kabulü hâlâ açık.
 Dondurulmuş kaynak durumunun kesin karşılaştırması dnsengineartifact içinde
 ortaklaştırıldı ve üç Alpha81 günlük örneğiyle denetlendi. Sunucu gözlemi ve
 ters işlem hâlâ Agent'ta; bu bağımsız DNS kurtarması değildir.
+
+Bileşen testi v1 geçiş günlüğünün v2 kaynak belgesiyle uyumunu da doğruluyor;
+sonraki yayımı dondurulmuş kaynak saymıyor. Kurulu sistem geçişi ve gerçek
+geri alma kabulü hâlâ açık.

@@ -314,3 +314,8 @@ reconstruction, ownership receipt and filesystem observation. The function is
 read-only and does not grant native mutation authority. All three Alpha81
 switch-journal fixtures and Agent DNS race tests pass. No schema bytes change;
 the independent executor and native fault matrix remain open.
+
+The source predicate also accepts a v1 switch journal with a canonical v2
+source-state before-image, then refuses a later publication generation as the
+same frozen source. This is component compatibility evidence, not an installed
+v1-to-v2 migration or native recovery trial.

@@ -263,3 +263,34 @@ func TestProveFrozenSwitchSourceStateHistoricalJournals(t *testing.T) {
 		})
 	}
 }
+
+func TestProveFrozenSwitchSourceStateSeparatedV2(t *testing.T) {
+	policy := journalTestPolicy()
+	j, err := policy.DecodeSwitchJournal(journalFixture(t, "alpha81-pdns-switch"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, exists, err := SourceStateFromSwitchJournal(j)
+	if err != nil || !exists {
+		t.Fatalf("historical source: exists=%v err=%v", exists, err)
+	}
+	v2, err := CanonicalStateDocumentV2(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	j.StateBefore.Data = v2
+	j.StateBefore.SHA256 = DigestBytes(v2)
+	if _, err := policy.EncodeSwitchJournal(j); err != nil {
+		t.Fatalf("v1 journal cannot freeze a v2 source document: %v", err)
+	}
+	proved, err := ProveFrozenSwitchSourceState(j, source, true)
+	if err != nil || !proved {
+		t.Fatalf("separated source not proved: proved=%v err=%v", proved, err)
+	}
+	advanced := source
+	advanced.Generation = strings.Repeat("e", 64)
+	proved, err = ProveFrozenSwitchSourceState(j, advanced, true)
+	if err != nil || proved {
+		t.Fatalf("newer publication mistaken for frozen source: proved=%v err=%v", proved, err)
+	}
+}

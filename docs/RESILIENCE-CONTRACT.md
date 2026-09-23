@@ -970,3 +970,7 @@ The exact frozen-source predicate is also shared in dnsengineartifact and
 tested against all three Alpha81 journal fixtures. Agent still owns the host
 observation and inverse; this is a reusable proof boundary, not independent
 DNS recovery.
+
+A component fixture further verifies v1 switch-journal/v2 source-document
+compatibility and rejects a later publication as the original frozen source.
+Installed migration and native rollback acceptance remain open.
