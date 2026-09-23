@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	serviceMutationPhaseCancellingExpiredLease = "cancelling_expired_lease"
-	serviceMutationErrorLeaseExpired           = "service_mutation_lease_expired"
-	serviceMutationMessageLeaseExpired         = "The panel stopped heartbeating before the service mutation completed."
+	serviceMutationPhaseCancellingExpiredLease = servicemutationledger.PhaseCancellingExpiredLease
+	serviceMutationErrorLeaseExpired           = servicemutationledger.ErrorLeaseExpired
+	serviceMutationMessageLeaseExpired         = servicemutationledger.MessageLeaseExpired
 
 	serviceMutationLeaseDuration = 20 * time.Second
 	serviceMutationOverallLimit  = 45 * time.Minute

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -32,8 +33,8 @@ const (
 )
 
 const (
-	dnsEngineSwitchPublishedPhasePrefix = "commit/dns-engine-switch/v1/published/"
-	dnsEngineSwitchFinalizedPhasePrefix = "commit/dns-engine-switch/v2/finalized/"
+	dnsEngineSwitchPublishedPhasePrefix = dnsengineartifact.SwitchPublishedPhasePrefix
+	dnsEngineSwitchFinalizedPhasePrefix = dnsengineartifact.SwitchFinalizedPhasePrefix
 )
 
 const dnsBackendReadinessTimeout = 10 * time.Second
@@ -947,39 +948,7 @@ func exactFinalizedDNSEngineSwitchLedger(
 	journal dnsEngineSwitchJournal,
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 ) error {
-	if err := validateServiceMutationLedger(&ledger); err != nil {
-		return fmt.Errorf("validate finalized DNS engine ledger: %w", err)
-	}
-	if ledger.ActiveRequestID != "" {
-		return errors.New("finalized DNS engine ledger has an active request")
-	}
-	job := ledger.Jobs[journal.MutationRequestID]
-	wantPhase, err := formatDNSEngineSwitchFinalizedPhase(
-		journal.MutationRequestID, manifest.Qualifier,
-	)
-	if err != nil {
-		return err
-	}
-	if job == nil || job.RequestID != journal.MutationRequestID ||
-		job.OwnerID != journal.MutationOwnerID ||
-		job.Kind != "dns_engine_switch" ||
-		job.Target != string(manifest.TargetEngine) ||
-		job.PackageName != manifest.Qualifier ||
-		job.Status != serviceMutationStatusSucceeded || job.Phase != wantPhase ||
-		job.Attempt <= 0 || job.StartedAt.IsZero() || job.UpdatedAt.IsZero() ||
-		job.DeadlineAt.IsZero() || job.FinishedAt.IsZero() ||
-		job.UpdatedAt.Before(job.StartedAt) ||
-		job.DeadlineAt.Before(job.StartedAt) ||
-		job.FinishedAt.Before(job.StartedAt) ||
-		!job.UpdatedAt.Equal(job.FinishedAt) ||
-		!job.LeaseExpiresAt.IsZero() || job.WorkerPID != 0 ||
-		strings.TrimSpace(job.WorkerStarted) != "" ||
-		strings.TrimSpace(job.WorkerCommand) != "" ||
-		strings.TrimSpace(job.ErrorCode) != "" ||
-		strings.TrimSpace(job.ErrorMessage) != "" {
-		return errors.New("DNS engine ledger lacks its exact finalized receipt")
-	}
-	return nil
+	return (dnsengineartifact.SwitchIdentity{RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID, Target: manifest.TargetEngine, Qualifier: manifest.Qualifier}).ValidateFinalizedLedger(ledger)
 }
 
 func (m *serviceMutationManager) persistFinalizedDNSEngineSwitchReceiptLocked(
@@ -1402,19 +1371,11 @@ func equalDNSEngineSwitchWireZones(
 }
 
 func formatDNSEngineSwitchPublishedPhase(requestID, qualifier string) (string, error) {
-	if !validMutationIdentity(requestID) ||
-		!mutationpayload.ValidDNSEngineSwitchQualifier(qualifier) {
-		return "", errors.New("invalid DNS engine switch terminal receipt identity")
-	}
-	return dnsEngineSwitchPublishedPhasePrefix + requestID + "/" + qualifier, nil
+	return dnsengineartifact.FormatSwitchPublishedPhase(requestID, qualifier)
 }
 
 func formatDNSEngineSwitchFinalizedPhase(requestID, qualifier string) (string, error) {
-	if !validMutationIdentity(requestID) ||
-		!mutationpayload.ValidDNSEngineSwitchQualifier(qualifier) {
-		return "", errors.New("invalid finalized DNS engine switch receipt identity")
-	}
-	return dnsEngineSwitchFinalizedPhasePrefix + requestID + "/" + qualifier, nil
+	return dnsengineartifact.FormatSwitchFinalizedPhase(requestID, qualifier)
 }
 
 func exactActiveDNSEngineSwitchRuntimeLocked(
@@ -1659,28 +1620,7 @@ func exactActiveDNSEngineSwitchJob(
 	target transport.DNSEngine,
 	qualifier string,
 ) bool {
-	return job != nil &&
-		job.RequestID == requestID &&
-		job.OwnerID == ownerID &&
-		job.Kind == "dns_engine_switch" &&
-		job.Target == string(target) &&
-		job.PackageName == qualifier &&
-		job.Status == serviceMutationStatusRunning &&
-		job.Phase == "leased" &&
-		job.Attempt > 0 &&
-		!job.StartedAt.IsZero() &&
-		!job.UpdatedAt.IsZero() &&
-		!job.LeaseExpiresAt.IsZero() &&
-		!job.DeadlineAt.IsZero() &&
-		job.FinishedAt.IsZero() &&
-		!job.UpdatedAt.Before(job.StartedAt) &&
-		!job.LeaseExpiresAt.Before(job.UpdatedAt) &&
-		!job.DeadlineAt.Before(job.LeaseExpiresAt) &&
-		job.WorkerPID == 0 &&
-		strings.TrimSpace(job.WorkerStarted) == "" &&
-		strings.TrimSpace(job.WorkerCommand) == "" &&
-		strings.TrimSpace(job.ErrorCode) == "" &&
-		strings.TrimSpace(job.ErrorMessage) == ""
+	return (dnsengineartifact.SwitchIdentity{RequestID: requestID, OwnerID: ownerID, Target: target, Qualifier: qualifier}).ActiveJob(job)
 }
 
 // exactActiveDNSEngineSwitchJobWithRegisteredWorker accepts the owning job's
@@ -1717,27 +1657,7 @@ func exactActiveDNSEngineSwitchJobWithRegisteredWorker(
 	target transport.DNSEngine,
 	qualifier string,
 ) bool {
-	if job == nil || job.WorkerPID <= 0 {
-		return false
-	}
-	started := strings.TrimSpace(job.WorkerStarted)
-	command := strings.TrimSpace(job.WorkerCommand)
-	if started == "" || job.WorkerStarted != started ||
-		command == "" || job.WorkerCommand != command ||
-		len(command) > 64 || filepath.Base(command) != command {
-		return false
-	}
-	workerFree := cloneServiceMutationJob(job)
-	workerFree.WorkerPID = 0
-	workerFree.WorkerStarted = ""
-	workerFree.WorkerCommand = ""
-	return exactActiveDNSEngineSwitchJob(
-		workerFree,
-		requestID,
-		ownerID,
-		target,
-		qualifier,
-	)
+	return (dnsengineartifact.SwitchIdentity{RequestID: requestID, OwnerID: ownerID, Target: target, Qualifier: qualifier}).ActiveJobWithRegisteredWorker(job)
 }
 
 func exactExpiredCancellingDNSEngineSwitchJob(
@@ -1747,30 +1667,7 @@ func exactExpiredCancellingDNSEngineSwitchJob(
 	qualifier string,
 	now time.Time,
 ) bool {
-	return job != nil &&
-		job.RequestID == requestID &&
-		job.OwnerID == ownerID &&
-		job.Kind == "dns_engine_switch" &&
-		job.Target == string(target) &&
-		job.PackageName == qualifier &&
-		job.Status == serviceMutationStatusCancelling &&
-		job.Phase == serviceMutationPhaseCancellingExpiredLease &&
-		job.Attempt > 0 &&
-		!job.StartedAt.IsZero() &&
-		!job.UpdatedAt.IsZero() &&
-		!job.LeaseExpiresAt.IsZero() &&
-		!job.DeadlineAt.IsZero() &&
-		job.FinishedAt.IsZero() &&
-		!job.UpdatedAt.Before(job.StartedAt) &&
-		!job.LeaseExpiresAt.Before(job.StartedAt) &&
-		!job.UpdatedAt.Before(job.LeaseExpiresAt) &&
-		!job.DeadlineAt.Before(job.LeaseExpiresAt) &&
-		!now.Before(job.LeaseExpiresAt) &&
-		job.WorkerPID == 0 &&
-		strings.TrimSpace(job.WorkerStarted) == "" &&
-		strings.TrimSpace(job.WorkerCommand) == "" &&
-		job.ErrorCode == serviceMutationErrorLeaseExpired &&
-		job.ErrorMessage == serviceMutationMessageLeaseExpired
+	return (dnsengineartifact.SwitchIdentity{RequestID: requestID, OwnerID: ownerID, Target: target, Qualifier: qualifier}).ExpiredCancellingJob(job, now)
 }
 
 func poisonUnfinalizedDNSEngineSwitch(

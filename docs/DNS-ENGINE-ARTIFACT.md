@@ -223,3 +223,24 @@ race tests pass (1.403s). A 12-second bounded fuzz run passed but executed only
 eight cases and is not broad fuzz coverage. No installed server was changed.
 The standalone native DNS recovery executor and native interrupted operation
 acceptance remain open; sharing the journal does not establish either.
+### Accepted operation identity
+
+`switch_authority.go` shares the existing exact active-job, registered-worker,
+expired-cancellation and finalized-ledger comparisons. The Agent uses these same
+functions. The published v1 and finalized v2 phase strings and generic lease
+expiry values retain their historical bytes. Expected request/owner IDs, target
+engine and manifest qualifier must also be canonical before comparison.
+
+Registered-worker shape deliberately does not probe `/proc`, clear the worker
+slot or permit independent recovery of a living worker. The strict active-job
+comparison still requires an empty worker slot. Host/publication locks, liveness
+and accepted-ledger revalidation remain obligations of the executor. An exact
+finalized ledger records past completion, not current DNS health.
+
+Shared race checks (artifact 1.408s, ledger 2.235s) cover different IDs, target,
+manifest, phase, lease timing, worker and conflicting terminal evidence. Agent
+DNS/BIND/PowerDNS/primary-catalog/service-mutation race checks pass (11.525s).
+The initial expanded run rejected one old worker-shape test's literal `qualifier`
+placeholder; the test now supplies a valid canonical manifest qualifier, while
+new tests separately require malformed expected identities to be refused.
+No new native mutation entry point or lifecycle permission is introduced.

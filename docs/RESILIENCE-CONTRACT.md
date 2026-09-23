@@ -944,3 +944,8 @@ include exact historical Alpha81 producer bytes and Agent/shared race checks.
 Journal v1 is unchanged; embedded source v1/v2 bytes are preserved. No independent
 mutation entry point was added: accepted-ledger authority, worker/host locks and
 native inverse execution must still be separated and proven. P0.4 stays open.
+The same P0.4 boundary now shares exact accepted-operation and finalized-ledger
+comparisons in `dnsengineartifact.SwitchIdentity`. Canonical expected identity
+is required; registered worker shape is not recovery permission. Historical
+phase and lease-expiry bytes are unchanged. Shared and Agent race checks pass;
+independent host locks, liveness and native inverse execution remain open.

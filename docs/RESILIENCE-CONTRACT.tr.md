@@ -680,3 +680,8 @@ paketin yarış denetimli testleri geçti. Günlük v1 ve içindeki kaynak v1/v2
 korunuyor. Bağımsız değişiklik komutu eklenmedi; kabul edilmiş işlem yetkisi,
 işçi/sunucu kilitleri ve yerel geri alma yürütücüsünün ayrılması ve kanıtlanması
 hâlâ gerekiyor. Bu çalışma P0.4'ü kapatmıyor; kurulu sunucular değiştirilmedi.
+Aynı P0.4 sınırında kabul edilmiş işlem ve tamamlanmış defter karşılaştırmaları
+`dnsengineartifact.SwitchIdentity` içinde ortaklaştırıldı. Beklenen kimlik de
+kanonik olmalı; kayıtlı işçinin biçimi kurtarma yetkisi vermiyor. Tarihsel evre ve
+süre aşımı baytları korunuyor. Ortak paket ve Agent yarış denetimleri geçti;
+bağımsız sunucu kilitleri, canlılık kontrolü ve yerel geri alma hâlâ açık.

@@ -25,13 +25,14 @@ import (
 // yine doğrudan reddetmelidir.
 func TestDNSEngineSwitchWorkerShapeProofRejectsEverythingForeign(t *testing.T) {
 	now := time.Now()
+	qualifier := "dns-engine-switch/v1:sha256:" + strings.Repeat("c", 64)
 	base := func() *ServiceMutationJob {
 		return &ServiceMutationJob{
 			RequestID:      strings.Repeat("a", 32),
 			OwnerID:        strings.Repeat("b", 32),
 			Kind:           "dns_engine_switch",
 			Target:         string(transport.DNSEngineBIND),
-			PackageName:    "qualifier",
+			PackageName:    qualifier,
 			Status:         serviceMutationStatusRunning,
 			Phase:          "leased",
 			Attempt:        1,
@@ -47,7 +48,7 @@ func TestDNSEngineSwitchWorkerShapeProofRejectsEverythingForeign(t *testing.T) {
 	accepts := func(job *ServiceMutationJob) bool {
 		return exactActiveDNSEngineSwitchJobWithRegisteredWorker(
 			job, strings.Repeat("a", 32), strings.Repeat("b", 32),
-			transport.DNSEngineBIND, "qualifier",
+			transport.DNSEngineBIND, qualifier,
 		)
 	}
 
@@ -61,7 +62,7 @@ func TestDNSEngineSwitchWorkerShapeProofRejectsEverythingForeign(t *testing.T) {
 
 	if exactActiveDNSEngineSwitchJob(
 		base(), strings.Repeat("a", 32), strings.Repeat("b", 32),
-		transport.DNSEngineBIND, "qualifier",
+		transport.DNSEngineBIND, qualifier,
 	) {
 		t.Fatal("the strict proof must keep rejecting a worker-bearing job")
 	}
@@ -94,7 +95,7 @@ func TestDNSEngineSwitchWorkerShapeProofRejectsEverythingForeign(t *testing.T) {
 	wrong := base()
 	if exactActiveDNSEngineSwitchJobWithRegisteredWorker(
 		wrong, strings.Repeat("z", 32), strings.Repeat("b", 32),
-		transport.DNSEngineBIND, "qualifier",
+		transport.DNSEngineBIND, qualifier,
 	) {
 		t.Fatal("a foreign request identity must be rejected")
 	}
