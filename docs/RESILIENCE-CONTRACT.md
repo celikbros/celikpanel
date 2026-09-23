@@ -960,3 +960,8 @@ inverse requires the exact frozen source-state proof, not a generic verifier
 error. Historical journal v1 bytes are unchanged. Unknown probes retain evidence
 and may need owner recovery; independent native execution and full fault-matrix
 acceptance remain open.
+
+P0.4 also preserves the v1 DNS switch decision across crash replay: a durable
+inverse phase cannot recommit, and a rolled-back phase cannot regress to
+rolling-back. Shared race tests cover the replay ordering. This is not yet
+independent native recovery acceptance.

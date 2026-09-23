@@ -696,3 +696,8 @@ dönmesine dayanmaz: yeni otomatik ters işlem, günlüğün dondurduğu kaynak 
 kesin kanıtını gerektirir. Tarihsel günlük v1 baytları değişmedi. Belirsiz
 denetimler kanıtları korur ve kullanıcı kurtarması gerektirebilir; bağımsız yerel
 yürütücü ile tam hata matrisi kabulü hâlâ açıktır.
+
+P0.4, DNS geçişinin v1 günlüğündeki kalıcı geri alma kararı yeniden başlatmada
+ileri alma olarak sınıflandırılamaz; rolled-back evresi rolling-back evresine
+dönmez. Ortak yarış testleri bu sırayı denetliyor. Bağımsız yerel kurtarma
+kabulü hâlâ açık.

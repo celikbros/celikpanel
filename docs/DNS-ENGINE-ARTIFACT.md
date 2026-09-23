@@ -289,3 +289,16 @@ unknown and cancelled observation, checkpoint order and durable inverse resume.
 This narrows destructive recovery admission but may require owner action when
 the target receipt exists and runtime proof is unavailable. It does not add an
 independent executor or satisfy native historical fault acceptance.
+
+### Monotonic recovery checkpoints
+
+P0.4, invariants 2/3: once the v1 journal records rolling-back or
+rolled-back, replay cannot reclassify that operation as committed even if a
+later target probe would pass. The accepted inverse is retried with its
+owner-aware native checks. Replay does not write rolling-back again when it
+already exists, and rolled-back replay performs the inverse/source proof
+before removal without regressing either checkpoint. Direct rollback of a
+target-verified or committed journal is refused. No journal schema or phase
+encoding changes. Race tests cover both crash-replay phases, a later passing
+target probe, and direct verified-target refusal. Native power-cut and
+independent executor acceptance remain open.

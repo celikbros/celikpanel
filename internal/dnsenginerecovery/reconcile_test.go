@@ -214,3 +214,43 @@ func TestRollbackCancelledBeforeCheckpoint(t *testing.T) {
 		t.Fatalf("cancelled inverse began: err=%v steps=%v", err, tr.steps)
 	}
 }
+
+func TestReconcileNeverRecommitsDurableInverse(t *testing.T) {
+	p, fixture, id := switchFixture(t)
+	for name, tc := range map[string]struct {
+		phase string
+		steps []string
+	}{
+		"rolling back": {
+			phase: dnsengineartifact.SwitchPhaseRollingBack,
+			steps: []string{"read", "inverse", "write:rolled-back", "remove"},
+		},
+		"rolled back": {
+			phase: dnsengineartifact.SwitchPhaseRolledBack,
+			steps: []string{"read", "inverse", "remove"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			j := fixture
+			j.Phase = tc.phase
+			// A later target observation would pass. It must not reverse an
+			// already durable inverse decision.
+			tr := &trace{journal: j, exists: true}
+			got, err := Reconcile(context.Background(), p, id, tr.operations())
+			if err != nil || got != OutcomeRolledBack || !reflect.DeepEqual(tr.steps, tc.steps) {
+				t.Fatalf("inverse decision changed: got=%s err=%v steps=%v", got, err, tr.steps)
+			}
+		})
+	}
+}
+
+func TestRollbackRefusesVerifiedTarget(t *testing.T) {
+	_, j, _ := switchFixture(t)
+	for _, phase := range []string{dnsengineartifact.SwitchPhaseTargetVerified, dnsengineartifact.SwitchPhaseCommitted} {
+		j.Phase = phase
+		tr := &trace{journal: j}
+		if err := Rollback(context.Background(), &j, tr.operations()); err == nil || len(tr.steps) != 0 || j.Phase != phase {
+			t.Fatalf("verified phase %s entered inverse: err=%v steps=%v", phase, err, tr.steps)
+		}
+	}
+}
