@@ -37,8 +37,16 @@ this behavior applies to operations admitted to the new helper generation.
 
 Root descriptor/subprocess race tests cover source removal, fixed direction,
 missing/mismatched admission, late ledger direction/identity changes, replaced
-helper bytes/inode/templates and absence of new admission. Native pending reboot
-acceptance is still open until the new production helper is exercised in the lab.
+helper bytes/inode/templates and absence of new admission. The [native absence trial](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-MANAGEMENT-ABSENT-BE.json)
+now proves Arch forward and inverse, plus Debian forward, after real timer action
+interruption and reboot. Agent, Panel and Agent declaration were absent. The
+production boot consumer restored volatile locks and completed the same recorded
+direction without manual recovery. Fresh start remained refused; explicit same
+terminal continuation preserved all receipt/ledger bytes. Debian retained 61 mail
+files and verified the existing SMTP STARTTLS/IMAP TLS leaf. This closes the
+ordinary-management source dependency for those admitted operations, not the full
+P0 matrix. The inverse restored the exact legacy hook; legacy renewal independence
+is not claimed. Two early Arch SSH-reset observations remain preserved.
 
 ## One common durable owner
 
