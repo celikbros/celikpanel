@@ -17,6 +17,14 @@ type buildGateOperation struct {
 func protectedBuildGateOperations() []buildGateOperation {
 	agent := &Agent{}
 	return []buildGateOperation{
+		{name: "StartMailEnrollmentV1", run: func(expected string) string {
+			var response transport.MailEnrollmentStartResponse
+			err := agent.StartMailEnrollmentV1(&transport.MailEnrollmentStartRequest{MailEnrollmentRequest: transport.MailEnrollmentRequest{RequestID: strings.Repeat("a", 32), OwnerID: strings.Repeat("b", 32), Generation: strings.Repeat("c", 64)}, ExpectedBuildCommit: expected}, &response)
+			if err == nil {
+				return ""
+			}
+			return err.Error()
+		}},
 		{
 			name: "ApplyVhost",
 			run: func(expected string) string {

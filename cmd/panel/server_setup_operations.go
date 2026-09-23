@@ -62,10 +62,11 @@ type serverSetupPlan struct {
 
 type serverSetupExecutionStep struct {
 	serverSetupPlanStep
-	Status      string `json:"status"`
-	RequestID   string `json:"request_id"`
-	OwnerID     string `json:"owner_id"`
-	OperationID string `json:"operation_id,omitempty"`
+	Status                      string `json:"status"`
+	RequestID                   string `json:"request_id"`
+	OwnerID                     string `json:"owner_id"`
+	OperationID                 string `json:"operation_id,omitempty"`
+	EnrollmentDispatchAttempted bool   `json:"enrollment_dispatch_attempted,omitempty"`
 }
 
 type serverSetupExecution struct {
@@ -736,9 +737,32 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 		var err error
 		if step.Kind == "dns_publisher" {
 			done, err = p.runServerSetupDNSPublisher(ctx, plan, execution.ID)
+		} else if step.Kind == "mail_enrollment" {
+			done, err = p.runServerSetupMailEnrollment(ctx, plan, execution, index)
 		} else {
 			done, err = p.runServerSetupStep(ctx, plan, step)
 		}
+		var enrollmentWait *serverSetupMailEnrollmentWait
+		if errors.As(err, &enrollmentWait) {
+			execution.Status = "running"
+			execution.Error = &serviceOperationError{Code: enrollmentWait.Code, Message: enrollmentWait.Message}
+			return false, p.persistServerSetupExecution(ctx, *execution)
+		}
+
+		var enrollmentFailure *serverSetupChildFailure
+		if step.Kind == "mail_enrollment" && errors.As(err, &enrollmentFailure) && enrollmentFailure.Code == "mail_enrollment_restored" {
+			// Exact terminal inverse evidence is a known outcome. An unrelated service
+			// observation must not turn it back into an unknown/reconciling diagnosis.
+			step.Status = "failed"
+			execution.Status = "failed"
+			execution.Error = &serviceOperationError{Code: enrollmentFailure.Code, Message: enrollmentFailure.Message}
+			if persistErr := p.persistServerSetupExecution(ctx, *execution); persistErr != nil {
+				return false, persistErr
+			}
+			p.releaseFailedServerSetupDraft(ctx, plan)
+			return false, nil
+		}
+
 		if errors.Is(err, errServerSetupAccessDNSRequired) || errors.Is(err, errServerSetupPrimaryDNSRequired) || errors.Is(err, errServerSetupInfrastructureDNSWaiting) {
 			execution.Status = "waiting"
 			execution.Phase = step.Kind
@@ -1180,6 +1204,9 @@ func validateServerSetupExecution(plan serverSetupPlan, execution serverSetupExe
 	for index, step := range execution.Steps {
 		if step.serverSetupPlanStep != plan.Steps[index] || step.RequestID != serverSetupID(execution.ID, step.ID, "request") || step.OwnerID != serverSetupID(execution.ID, step.ID, "owner") {
 			return errors.New("saved setup child does not match its reviewed identity")
+		}
+		if step.EnrollmentDispatchAttempted && (step.Kind != "mail_enrollment" || step.Status == "pending") {
+			return errors.New("saved enrollment dispatch does not match its reviewed step")
 		}
 		if !slices.Contains([]string{"pending", "running", "succeeded", "failed"}, step.Status) {
 			return errors.New("saved setup child status is invalid")

@@ -695,3 +695,16 @@ bytes remain v1; enrollment capability is an explicit optional Agent declaration
 [Scope, transition rules and twelve process cuts](MAIL-ENROLLMENT-RESERVATION.md)
 leave authenticated production admission/dispatch and native full-transaction
 acceptance open. No P0 item is closed by these component tests.
+
+
+### Mail enrollment setup boundary (2026-09-23)
+
+P0.2/P0.3/P0.5 now have an [accepted-plan execution adapter and read-only
+observation contract](MAIL-ENROLLMENT-RESERVATION.md#accepted-setup-binding-and-read-only-observation-2026-09-23).
+Exact owner/request/kit binding and a database-persisted pre-dispatch fence keep
+lost replies and restart observation from creating another job. The shared reader
+separates recorded completion from current native health and does not need the
+installed management/runtime files. Agent IPC still requires its authenticated
+connection; no independent HTTP status availability is claimed. The new step is
+not yet offered by the plan builder. Native handoff/reboot, supported owner retry,
+boot dispatch and the remaining workload matrix stay open; no P0 is closed.

@@ -28,6 +28,16 @@ func launchIndependentMailEnrollment(ctx context.Context, accepted []string) err
 	if err != nil {
 		return err
 	}
+	return dispatchMailEnrollmentHelper(ctx, helper, accepted)
+}
+
+func dispatchMailEnrollmentHelper(ctx context.Context, helper string, accepted []string) error {
+	if ctx == nil {
+		return servicemutationledger.ErrMailEnrollment
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	runner, err := resolveFixedRootExecutable("/usr/bin/systemd-run")
 	if err != nil {
 		return err
@@ -38,14 +48,13 @@ func launchIndependentMailEnrollment(ctx context.Context, accepted []string) err
 	}
 	bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	// Same deterministic unit identity prevents parallel starts. --collect permits
-	// a later explicit same-request continuation after a failed/stopped worker.
 	_, err = runFixedSystemUpdateCommand(bounded, runner, args)
 	if err != nil {
 		return errors.New("mail enrollment handoff is unconfirmed; inspect the same request's native worker unit before retrying")
 	}
 	return nil
 }
+
 func validMailEnrollmentWorkerArgs(args []string) bool {
 	return (len(args) == 1 && validMutationIdentity(args[0])) ||
 		(len(args) == 3 && validMutationIdentity(args[0]) && validMutationIdentity(args[1]) && recoveryruntime.ValidDigest(args[2]))

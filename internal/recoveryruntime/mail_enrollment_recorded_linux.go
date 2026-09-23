@@ -5,7 +5,6 @@ package recoveryruntime
 import (
 	"context"
 	"github.com/alicelik/celikpanel/internal/agentnativecontract"
-	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
 
@@ -76,40 +75,11 @@ func openRecordedMailEnrollmentAt(ctx context.Context, requestID string, paths m
 		}
 		return nil
 	}
-	journal := promotionState()
+	scope, journal, err := openRecordedMailEnrollmentScope(paths.journals, requestID)
+	if err != nil {
+		return nil, "", err
+	}
 	defer journal.close()
-	parent, err := journal.openPath(paths.journals)
-	if err != nil {
-		return nil, "", err
-	}
-	parent.exactMode = 0700
-	if err = journal.verifyDirectory(parent); err != nil {
-		return nil, "", err
-	}
-	readRecord := func(suffix string) ([]byte, error) {
-		f, e := journal.openFile(parent, requestID+suffix, 0600, mailrenewalkit.MaxTransitionSize)
-		if e != nil {
-			return nil, asReadError(e)
-		}
-		raw, e := f.readBounded()
-		if e == nil {
-			f.digest = Digest(raw)
-		}
-		return raw, e
-	}
-	capture, err := readRecord(".json")
-	if err != nil {
-		return nil, "", err
-	}
-	plan, err := readRecord(".files.json")
-	if err != nil {
-		return nil, "", err
-	}
-	var before mailCaptureRecord
-	if err = decodePromotion(capture, &before); err != nil {
-		return nil, "", err
-	}
-	scope := mailEnrollmentScope{mailEnrollmentSchema, requestID, Digest(capture), Digest(plan), before.Contract.Target}
 	raw, err := promotionJSON(scope)
 	if err != nil {
 		return nil, "", err

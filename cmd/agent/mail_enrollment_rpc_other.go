@@ -1,0 +1,17 @@
+//go:build !linux
+
+package main
+
+import "github.com/alicelik/celikpanel/internal/transport"
+
+func (a *Agent) StartMailEnrollmentV1(req *transport.MailEnrollmentStartRequest, _ *transport.MailEnrollmentStartResponse) error {
+	if req != nil {
+		if err := requireExpectedBuildCommit(req.ExpectedBuildCommit, "mail renewal enrollment"); err != nil {
+			return err
+		}
+	}
+	return mailHostLinuxOnly()
+}
+func (a *Agent) MailEnrollmentStatusV1(*transport.MailEnrollmentRequest, *transport.MailEnrollmentStatusResponse) error {
+	return mailHostLinuxOnly()
+}

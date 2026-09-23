@@ -238,3 +238,55 @@ boot dispatch, volatile lock/identity restoration, management-file absence and
 full native lifecycle/workload acceptance remain open. No existing accepted setup
 plan is retroactively changed; no new setup capability is advertised. This source
 change was not installed on an owner's panel.
+
+
+## Accepted setup binding and read-only observation (2026-09-23)
+
+P0.2/P0.3/P0.5, constitution invariants 1, 2 and 3. The authenticated local
+Agent IPC now separates `StartMailEnrollmentV1` from `MailEnrollmentStatusV1`.
+Start accepts only the reviewed request/owner/kit tuple and the paired build.
+It verifies the running Agent bytes against the protected release declaration,
+the complete installed helper bundle against that declaration, and any existing
+request against the immutable scope before handing off to the fixed independent
+systemd worker. It cannot accept an executable path, shell command, direction or
+arbitrary unit. The existing root CLI and IPC share the same bounded launcher.
+A returned handoff means acceptance by systemd, not completed enrollment. A lost
+reply stays unknown; private command/source diagnostics are not returned to IPC.
+
+The setup execution consumer derives its tuple from the immutable reviewed plan
+and deterministic child IDs, including the exact kit in the existing step
+qualifier. Before dispatch it checks licensing, paired build and platform
+capability, then persists `enrollment_dispatch_attempted` in the existing
+execution JSON. That optional field is omitted for old steps; the plan, common
+ledger and immutable enrollment records keep their existing v1 schemas. Polling
+or reloading that execution cannot clear the attempt fence or dispatch again,
+even if the Agent has not yet recorded admission. A database failure prevents
+handoff. A historical published result can complete the execution step; present
+service health still requires separate final verification. A verified restored
+result remains a known failure even when unrelated generic Agent status fails.
+
+The shared descriptor reader now reconstructs the same immutable scope for both
+the locked executor and read-only observation. Observation binds request, owner,
+kit, capture and file-plan digests, validates the whole common ledger, and refuses
+concurrent changes rather than combining two different observations. It does not
+need a current Agent contract, installed runtime, held mutation locks, systemd
+or a license. It never creates directories, edits evidence, extends leases or
+starts workers. `not_recorded` means only absence from a verified existing ledger;
+a missing/unreadable ledger is unknown, and neither result grants retry authority.
+The IPC status method still requires the ordinary authenticated Agent connection;
+this shared reader alone is not an Agent-independent HTTP recovery endpoint.
+
+**Enablement remains gated:** no new capability is advertised and the plan
+builder does not offer the new enrollment step. Existing accepted plans are not
+rewritten. Native dispatch/reboot acceptance, explicit UI continuation for an
+unconfirmed handoff, boot dispatch, volatile identity/lock restoration and the
+full management-absence/workload matrix remain open. This backend consumer is
+not a claim that independent enrollment is now available in the public wizard.
+No installed owner panel was changed and no release was installed.
+
+Validation covers exact plan/owner/kit binding, a real database reload after a
+lost handoff, repeated observation without redispatch, licensing/storage refusal,
+historical terminal results without management/runtime files, changed and mixed
+immutable evidence, source/bundle replacement, bounded IPC policy and the shared
+build gate. This is component/process and build evidence, not new native systemd
+or reboot acceptance. See the retained local build/test metadata for this source.

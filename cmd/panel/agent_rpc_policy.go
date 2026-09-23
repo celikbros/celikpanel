@@ -127,7 +127,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.InstalledServiceIDsStrict Agent.ListBackups Agent.ListCronJobs Agent.ListFiles
 		Agent.ListNodeLTS Agent.ListNodeVersions Agent.ListServiceInstances
 		Agent.ListSystemSQLiteDatabases Agent.MailFilterWiringState Agent.MailHealth
-		Agent.NginxInspect Agent.PanelRenewalReadiness Agent.MailHostCertificateStatus Agent.PkgFamily
+		Agent.NginxInspect Agent.PanelRenewalReadiness Agent.MailHostCertificateStatus Agent.MailEnrollmentStatusV1 Agent.PkgFamily
 		Agent.PostfixQueue Agent.ReadBackupChunk Agent.ReadFile
 		Agent.ReadSystemSQLiteSnapshotChunk Agent.RepoPackages Agent.ServiceCandidateVersion
 		Agent.ServiceJournal Agent.ServiceMutationReadiness Agent.SiteUsage Agent.Version Agent.VPNStatus
@@ -178,7 +178,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.AddMailAccount Agent.ConfigureDKIMSigning Agent.ConfigureMailStack
 		Agent.ConfigureMailSubmission Agent.DeleteMailAccount Agent.DeleteMailDomain
 		Agent.EnsureDKIMKey Agent.ImportMailAccount Agent.PostfixQueueAction
-		Agent.SetMailPolicy Agent.SyncMailTLSV2
+		Agent.SetMailPolicy Agent.SyncMailTLSV2 Agent.StartMailEnrollmentV1
 		Agent.UpdateMailForwarding Agent.UpdateMailPassword Agent.UpdateMailQuota
 		Agent.WireMailFilters
 	`),
@@ -237,6 +237,8 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.Fail2banConfig":              agentRPCQuickReadTimeout,
 	"Agent.Fail2banStatus":              agentRPCQuickReadTimeout,
 	"Agent.PanelRenewalReadiness":       agentRPCQuickReadTimeout,
+	"Agent.MailEnrollmentStatusV1":      agentRPCQuickReadTimeout,
+	"Agent.StartMailEnrollmentV1":       agentRPCQuickReadTimeout,
 	"Agent.MailHostCertificateStatus":   agentRPCQuickReadTimeout,
 	"Agent.FirewallStatus":              agentRPCQuickReadTimeout,
 	"Agent.GetCertificateInfo":          agentRPCQuickReadTimeout,
