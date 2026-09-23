@@ -14,6 +14,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/agentnativecontract"
 	"github.com/alicelik/celikpanel/internal/hostmutationlock"
+	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"golang.org/x/sys/unix"
@@ -196,6 +197,48 @@ func TestMailEnrollmentLedgerChild(t *testing.T) {
 		}
 		return nil
 	}}
+	if strings.HasPrefix(scenario, "retained-") {
+		m, files, e := mailrenewalkit.Payload([]byte("retained native helper fixture"))
+		if e != nil {
+			t.Fatal(e)
+		}
+		manifest, e := mailrenewalkit.Encode(m)
+		if e != nil {
+			t.Fatal(e)
+		}
+		files[mailrenewalkit.ManifestName] = manifest
+		runtime := filepath.Join(root, "native-kit")
+		kit := filepath.Join(runtime, m.Generation)
+		if e = os.MkdirAll(kit, 0755); e != nil {
+			t.Fatal(e)
+		}
+		for name, raw := range files {
+			mode := os.FileMode(0644)
+			if name == mailrenewalkit.BinaryName || name == mailrenewalkit.HookName {
+				mode = 0755
+			}
+			if e = os.WriteFile(filepath.Join(kit, name), raw, mode); e != nil {
+				t.Fatal(e)
+			}
+		}
+		helper, e := recoveryruntime.InspectRetainedMailEnrollmentHelper(runtime, m.Generation)
+		if e != nil {
+			t.Fatal(e)
+		}
+		defer helper.Close()
+		authority.agent, authority.retained = nil, helper
+		if e = os.RemoveAll(bin); e != nil {
+			t.Fatal(e)
+		}
+		if scenario == "retained-owner" {
+			authority.identity.OwnerID = strings.Repeat("f", 32)
+		}
+		if scenario == "retained-source" {
+			if e = os.WriteFile(filepath.Join(kit, mailrenewalkit.TimerName), []byte("changed"), 0644); e != nil {
+				t.Fatal(e)
+			}
+		}
+	}
 	verifyRelease := func() error {
 		return hostmutationlock.VerifyInherited(filepath.Join(root, "transaction.lock"), 9, hostmutationlock.Owner{})
 	}
@@ -251,7 +294,7 @@ func TestMailEnrollmentLedgerChild(t *testing.T) {
 		return nil
 	}
 	err = writeMailEnrollmentReservationAt(filepath.Join(root, "state"), filepath.Join(root, "mutation.lock"), authority, next, verifyRelease, fault)
-	if scenario != "" && !strings.HasPrefix(scenario, "kill:") {
+	if scenario != "" && scenario != "retained-allowed" && !strings.HasPrefix(scenario, "kill:") {
 		if err == nil {
 			t.Fatal("unsafe reservation accepted", scenario)
 		}
@@ -272,4 +315,37 @@ func TestMailEnrollmentLedgerChild(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("durable native enrollment reservation", next)
+}
+
+// Exercise the real publication writer with management files removed. A native
+// kit is never sufficient for new admission or choosing a different direction.
+func TestMailEnrollmentRetainedLedgerCannotAdmitOrReverse(t *testing.T) {
+	for _, tc := range []struct{ state, next, scenario string }{
+		{"", "forward", "retained-denied"},
+		{"forward", "forward", "retained-allowed"},
+		{"forward", "published", "retained-allowed"},
+		{"forward", "rollback", "retained-denied"},
+		{"rollback", "forward", "retained-denied"},
+		{"rollback", "restored", "retained-allowed"},
+		{"published", "forward", "retained-denied"},
+		{"published", "published", "retained-allowed"},
+		{"restored", "rollback", "retained-denied"},
+		{"restored", "restored", "retained-allowed"},
+		{"forward", "published", "retained-owner"},
+		{"forward", "published", "retained-source"},
+	} {
+		t.Run(tc.state+"/"+tc.next+"/"+tc.scenario, func(t *testing.T) {
+			root, host, release := enrollmentLedgerFixture(t)
+			if tc.state != "" {
+				runEnrollmentLedgerChild(t, root, "forward", "", host, release)
+			}
+			if tc.state == "rollback" || tc.state == "restored" {
+				runEnrollmentLedgerChild(t, root, "rollback", "", host, release)
+			}
+			if tc.state == "restored" || tc.state == "published" {
+				runEnrollmentLedgerChild(t, root, tc.state, "", host, release)
+			}
+			runEnrollmentLedgerChild(t, root, tc.next, tc.scenario, host, release)
+		})
+	}
 }

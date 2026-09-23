@@ -17,6 +17,29 @@ owner-disabled timers and their current kit. Older accepted plans are unchanged.
 This is source enablement, not a published release or full native wizard/update
 acceptance. The detailed historical slices below retain their original scope.
 
+## Recorded continuation without ordinary management files — September 23
+
+P0.3/P0.5: admission still requires a pinned compatible Agent declaration and
+explicit reviewed owner intent. After admission, the canonical ledger's scope
+digest binds the immutable capture, file plan and content-addressed native kit.
+The boot worker and explicit `--continue-enrollment` consume that retained kit
+without requiring `/opt/celikpanel/bin/agent` or its declaration. The running
+image must be the pinned installed helper; the whole kit is revalidated. Missing
+volatile locks may be restored only from the same verified durable reservation.
+
+The retained writer cannot admit an absent request, choose rollback, resurrect a
+terminal request, replace scope/owner identity or bypass native result proofs.
+Changed owner files, missing/altered journals, exhausted retry bounds and unknown
+native observations still retain the reservation and require owner action.
+Fresh starts retain the current-Agent gate. No ledger, scope, kit manifest or
+Agent contract schema changes, and no historical helper is retroactively fixed;
+this behavior applies to operations admitted to the new helper generation.
+
+Root descriptor/subprocess race tests cover source removal, fixed direction,
+missing/mismatched admission, late ledger direction/identity changes, replaced
+helper bytes/inode/templates and absence of new admission. Native pending reboot
+acceptance is still open until the new production helper is exercised in the lab.
+
 ## One common durable owner
 
 Enrollment uses the existing canonical `service-mutations.json` v1 ledger and
@@ -52,7 +75,7 @@ outer dispatcher on every call. The root-owner CLI and reviewed setup RPC can
 invoke this boundary. Renewal-hook and polling admission remain disabled. A
 digest or callback alone is not serialized owner authority.
 
-A pinned current Agent must explicitly declare
+For new admission, a pinned current Agent must explicitly declare
 `mail_enrollment_policy: retain-enrollment-ledger-v1`. This optional field extends
 the native Agent contract without changing historical canonical bytes when it is
 absent. Absent means no enrollment retention capability. The current-source build

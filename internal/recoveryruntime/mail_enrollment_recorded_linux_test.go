@@ -5,6 +5,7 @@ package recoveryruntime
 import (
 	"context"
 	"github.com/alicelik/celikpanel/internal/agentnativecontract"
+	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"os"
 	"path/filepath"
@@ -17,6 +18,10 @@ import (
 // producer here is explicit test admission through the common ledger encoder.
 func exerciseRecordedEnrollment(t *testing.T, ctx context.Context, paths mailCapturePaths, agent *CompatibleMailAgent, prepared *PreparedMailEnrollment, binding MailEnrollmentBinding, scenario string) {
 	t.Helper()
+	retained := strings.HasPrefix(scenario, "recorded-retained-")
+	if retained {
+		scenario = strings.Replace(scenario, "recorded-retained-", "recorded-", 1)
+	}
 	stateDir := filepath.Join(filepath.Dir(paths.journals), "accepted-ledger")
 	if err := os.Mkdir(stateDir, 0700); err != nil {
 		t.Fatal(err)
@@ -70,7 +75,29 @@ func exerciseRecordedEnrollment(t *testing.T, ctx context.Context, paths mailCap
 		agent.Contract.MailRenewalGeneration = strings.Repeat("e", 64)
 	}
 	beforeLedger, _ := os.ReadFile(binding.LedgerPath)
-	got, side, err := openRecordedMailEnrollmentAt(ctx, identity.RequestID, paths, agent, binding)
+	var got *PreparedMailEnrollment
+	var side string
+	if retained {
+		// After real preparation/admission, remove ordinary management artifacts.
+		// The same immutable scope and native kit must remain sufficient to reopen.
+		helper, e := InspectRetainedMailEnrollmentHelper(paths.runtime, prepared.scope.Target)
+		if e != nil {
+			t.Fatal(e)
+		}
+		defer helper.Close()
+		if e = os.RemoveAll(filepath.Join(filepath.Dir(paths.journals), "agent-bin")); e != nil {
+			t.Fatal(e)
+		}
+		if _, _, e = prepareMailEnrollmentAt(ctx, strings.Repeat("f", 32), paths, agent, binding); e == nil {
+			t.Fatal("missing Agent admitted new work")
+		}
+		if scenario == "recorded-source" {
+			capturePut(t, filepath.Join(paths.runtime, helper.Generation(), mailrenewalkit.TimerName), []byte("changed timer"), 0644)
+		}
+		got, side, err = openRetainedMailEnrollmentAt(ctx, identity.RequestID, paths, helper, binding)
+	} else {
+		got, side, err = openRecordedMailEnrollmentAt(ctx, identity.RequestID, paths, agent, binding)
+	}
 	good := scenario == "recorded-forward" || scenario == "recorded-rollback" || scenario == "recorded-terminal" || strings.HasPrefix(scenario, "recorded-late-")
 	if (err == nil) != good {
 		t.Fatalf("recorded open expected=%v: %v", good, err)
@@ -92,6 +119,12 @@ func exerciseRecordedEnrollment(t *testing.T, ctx context.Context, paths mailCap
 	if scenario == "recorded-terminal" {
 		if err = got.Verify(ctx, side); err == nil {
 			t.Fatal("unverified historical success became current native success")
+		}
+	}
+	if scenario == "recorded-late-helper" {
+		capturePut(t, filepath.Join(paths.runtime, prepared.scope.Target, mailrenewalkit.BinaryName), []byte("owner replacement"), 0755)
+		if err = got.Resume(ctx, side); err == nil {
+			t.Fatal("changed retained helper was accepted")
 		}
 	}
 	if scenario == "recorded-late-clear" || scenario == "recorded-late-inverse" {

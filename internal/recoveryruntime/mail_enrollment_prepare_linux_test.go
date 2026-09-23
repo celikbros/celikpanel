@@ -21,7 +21,7 @@ func TestMailEnrollmentPreparation(t *testing.T) {
 		t.Skip("root descriptor fixture")
 	}
 	for _, kind := range []string{"absent", "legacy", "independent"} {
-		for _, scenario := range []string{"ok", "missing-binding", "wrong-generation", "denied", "cancelled", "unknown-native", "owner-hook", "late-source-change", "late-denial", "no-host-lock", "late-prepared-source-change", "recorded-forward", "recorded-rollback", "recorded-terminal", "recorded-missing", "recorded-owner", "recorded-scope", "recorded-capture", "recorded-plan", "recorded-source", "recorded-late-clear", "recorded-late-inverse"} {
+		for _, scenario := range []string{"ok", "missing-binding", "wrong-generation", "denied", "cancelled", "unknown-native", "owner-hook", "late-source-change", "late-denial", "no-host-lock", "late-prepared-source-change", "recorded-forward", "recorded-rollback", "recorded-terminal", "recorded-missing", "recorded-owner", "recorded-scope", "recorded-capture", "recorded-plan", "recorded-source", "recorded-late-clear", "recorded-late-inverse", "recorded-retained-forward", "recorded-retained-rollback", "recorded-retained-terminal", "recorded-retained-missing", "recorded-retained-owner", "recorded-retained-scope", "recorded-retained-capture", "recorded-retained-plan", "recorded-retained-source", "recorded-retained-late-clear", "recorded-retained-late-inverse", "recorded-retained-late-helper"} {
 			if kind == "independent" && scenario != "ok" {
 				continue
 			}

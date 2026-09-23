@@ -16,14 +16,14 @@ import (
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
 
-// New admission through this boundary is not exposed through RPC or the renewal
-// hook. The independent root CLI supplies an exact reviewed request/owner/kit
-// tuple. A future setup dispatcher must bind authenticated accepted owner intent;
-// native result proofs remain mandatory. An Agent declaration alone is not
-// authorization. No historical release may be retroactively certified.
+// Fresh admission requires the reviewed owner tuple and compatible Agent source.
+// Retained consumers have separate source proof and may only advance the exact
+// existing reservation in its recorded direction. Neither source proof alone
+// authorizes work; native result proofs remain mandatory.
 type mailEnrollmentAuthority struct {
 	identity     servicemutationledger.MailEnrollmentIdentity
 	agent        *recoveryruntime.CompatibleMailAgent
+	retained     *recoveryruntime.RetainedMailEnrollmentHelper
 	verifyIntent func() error
 	verifyResult func() error
 }
@@ -37,7 +37,7 @@ func writeMailEnrollmentReservation(stateDir, hostPath string, authority mailEnr
 }
 
 func writeMailEnrollmentReservationAt(stateDir, hostPath string, authority mailEnrollmentAuthority, next string, verifyRelease func() error, fault func(string) error) error {
-	if authority.agent == nil || authority.verifyIntent == nil || verifyRelease == nil ||
+	if (authority.agent == nil) == (authority.retained == nil) || authority.verifyIntent == nil || verifyRelease == nil ||
 		!filepath.IsAbs(stateDir) || filepath.Clean(stateDir) != stateDir ||
 		!filepath.IsAbs(hostPath) || filepath.Clean(hostPath) != hostPath {
 		return servicemutationledger.ErrMailEnrollment
@@ -53,11 +53,17 @@ func writeMailEnrollmentReservationAt(stateDir, hostPath string, authority mailE
 		if err := verifyInheritedServiceMutationFileLockFD(hostPath, 8); err != nil {
 			return err
 		}
-		if authority.agent.Contract.MailEnrollmentPolicy != agentnativecontract.MailEnrollmentPolicy {
-			return agentnativecontract.ErrContract
-		}
-		if err := authority.agent.Revalidate(); err != nil {
-			return err
+		if authority.retained != nil {
+			if err := authority.retained.Revalidate(); err != nil {
+				return err
+			}
+		} else {
+			if authority.agent.Contract.MailEnrollmentPolicy != agentnativecontract.MailEnrollmentPolicy {
+				return agentnativecontract.ErrContract
+			}
+			if err := authority.agent.Revalidate(); err != nil {
+				return err
+			}
 		}
 		return authority.verifyIntent()
 	}
@@ -103,6 +109,14 @@ func writeMailEnrollmentReservationAt(stateDir, hostPath string, authority mailE
 	}
 	if err = verifyOriginal(); err != nil {
 		return err
+	}
+	// A retained consumer cannot turn absence into authority or choose a new
+	// direction. Check before even cleaning abandoned publication stages.
+	if authority.retained != nil {
+		state, err := servicemutationledger.MailEnrollmentState(&manager.ledger, authority.identity)
+		if err != nil || !retainedMailEnrollmentTransition(state, next) {
+			return servicemutationledger.ErrMailEnrollment
+		}
 	}
 	before, err := encodeServiceMutationLedger(&manager.ledger)
 	if err != nil {
@@ -213,4 +227,17 @@ func writeMailEnrollmentReservationAt(stateDir, hostPath string, authority mailE
 		return servicemutationledger.ErrMailEnrollment
 	}
 	return nil
+}
+
+func retainedMailEnrollmentTransition(state, next string) bool {
+	switch state {
+	case servicemutationledger.MailEnrollmentForward:
+		return next == state || next == servicemutationledger.MailEnrollmentPublished
+	case servicemutationledger.MailEnrollmentRollback:
+		return next == state || next == servicemutationledger.MailEnrollmentRestored
+	case servicemutationledger.MailEnrollmentPublished, servicemutationledger.MailEnrollmentRestored:
+		return next == state
+	default:
+		return false
+	}
 }

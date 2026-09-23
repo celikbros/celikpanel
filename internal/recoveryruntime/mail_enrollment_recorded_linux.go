@@ -16,7 +16,7 @@ func OpenRecordedMailEnrollment(ctx context.Context, requestID, journals string,
 	return openRecordedMailEnrollmentAt(ctx, requestID, nativeMailEnrollmentPaths(journals), agent, binding)
 }
 func openRecordedMailEnrollmentAt(ctx context.Context, requestID string, paths mailCapturePaths, agent *CompatibleMailAgent, binding MailEnrollmentBinding) (*PreparedMailEnrollment, string, error) {
-	if ctx == nil || agent == nil || binding.VerifyAuthority == nil || binding.Native == nil || !servicemutationledger.ValidIdentity(requestID) {
+	if agent == nil || binding.VerifyAuthority == nil {
 		return nil, "", fail(ReasonUnsupported)
 	}
 	originalAuthority := binding.VerifyAuthority
@@ -28,6 +28,32 @@ func openRecordedMailEnrollmentAt(ctx context.Context, requestID string, paths m
 			return fail(ReasonUnsupported)
 		}
 		return originalAuthority()
+	}
+	return openRecordedMailEnrollmentSourceAt(ctx, requestID, paths, agent.Contract.MailRenewalGeneration, binding)
+}
+
+// OpenRetainedMailEnrollment consumes only an existing admission. The immutable
+// scope digest in that admission binds the retained kit, so ordinary management
+// files are unnecessary. It cannot create a reservation or reconstruct evidence.
+func OpenRetainedMailEnrollment(ctx context.Context, requestID, journals string, helper *RetainedMailEnrollmentHelper, binding MailEnrollmentBinding) (*PreparedMailEnrollment, string, error) {
+	return openRetainedMailEnrollmentAt(ctx, requestID, nativeMailEnrollmentPaths(journals), helper, binding)
+}
+func openRetainedMailEnrollmentAt(ctx context.Context, requestID string, paths mailCapturePaths, helper *RetainedMailEnrollmentHelper, binding MailEnrollmentBinding) (*PreparedMailEnrollment, string, error) {
+	if helper == nil || binding.VerifyAuthority == nil {
+		return nil, "", fail(ReasonUnsupported)
+	}
+	originalAuthority := binding.VerifyAuthority
+	binding.VerifyAuthority = func() error {
+		if err := helper.Revalidate(); err != nil {
+			return err
+		}
+		return originalAuthority()
+	}
+	return openRecordedMailEnrollmentSourceAt(ctx, requestID, paths, helper.Generation(), binding)
+}
+func openRecordedMailEnrollmentSourceAt(ctx context.Context, requestID string, paths mailCapturePaths, generation string, binding MailEnrollmentBinding) (*PreparedMailEnrollment, string, error) {
+	if ctx == nil || !ValidDigest(generation) || binding.VerifyAuthority == nil || binding.Native == nil || !servicemutationledger.ValidIdentity(requestID) {
+		return nil, "", fail(ReasonUnsupported)
 	}
 	boundary := func() error { return (&PreparedMailEnrollment{paths: paths, binding: binding}).verifyBoundary(ctx) }
 	if err := boundary(); err != nil {
@@ -84,7 +110,7 @@ func openRecordedMailEnrollmentAt(ctx context.Context, requestID string, paths m
 	if err != nil {
 		return nil, "", err
 	}
-	if Digest(raw) != identity.ScopeSHA256 || scope.Target != agent.Contract.MailRenewalGeneration {
+	if Digest(raw) != identity.ScopeSHA256 || scope.Target != generation {
 		return nil, "", fail(ReasonChanged)
 	}
 	prepared, err := openPreparedMailEnrollmentAt(ctx, raw, paths, binding)

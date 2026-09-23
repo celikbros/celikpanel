@@ -863,3 +863,17 @@ enrollment/ledger bytes remain unchanged; native SMTP/IMAP TLS serves the same
 system-trusted fixture certificate with management daemons stopped. This is a
 P0.4/P0.5 continuity proof for that trial, not delivery/authentication, new renewal,
 historical application rollback or full first-install/browser acceptance.
+
+
+### September 23: recorded native mail continuation source separation
+
+P0.3/P0.5 invariants: accepted recovery survives ordinary management failure;
+new authority is never inferred from absence. Fresh enrollment retains compatible
+Agent and reviewed-owner admission. Already accepted boot/owner continuation uses
+its ledger-bound immutable scope and complete retained helper instead. The common
+writer restricts that consumer to the recorded direction and verified terminal
+transition before publication-stage cleanup. No durable schema migration or
+historical receipt rewriting. Root race fixtures cover removed management files,
+source edits, missing/wrong admission and forbidden direction changes. Native
+pending-operation reboot with absent management files remains to be demonstrated;
+this source change alone does not close P0.3 or P0.5.

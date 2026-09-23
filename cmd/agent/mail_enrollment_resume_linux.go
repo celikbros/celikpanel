@@ -46,41 +46,27 @@ func runIndependentMailEnrollmentMode(ctx context.Context, requestID, ownerID, t
 	if err := verifyInheritedServiceMutationFileLockFD(host, 8); err != nil {
 		return err
 	}
-	agent, err := recoveryruntime.InspectCompatibleMailAgent("/opt/celikpanel/bin")
-	if err != nil {
-		return err
-	}
-	defer agent.Close()
-	// The caller cannot substitute an unrelated consumer for the helper bound in
-	// the accepted release. Reading this executable never executes an Agent probe.
+	// The running consumer must match the complete retained content-addressed
+	// kit. Its generation is subsequently bound to the accepted ledger scope.
 	self, err := os.Open("/proc/self/exe")
 	if err != nil {
 		return err
 	}
+	defer self.Close()
 	raw, err := io.ReadAll(io.LimitReader(self, mailrenewalkit.MaxBinarySize+1))
-	closeErr := self.Close()
-	if err != nil || closeErr != nil {
-		return errors.Join(err, closeErr)
+	if err != nil {
+		return err
 	}
 	kit, _, err := mailrenewalkit.Payload(raw)
-	if err != nil || kit.Generation != agent.Contract.MailRenewalGeneration || (target != "" && target != kit.Generation) {
+	if err != nil || (target != "" && target != kit.Generation) {
 		return servicemutationledger.ErrMailEnrollment
-	}
-	verify := func() error {
-		if err := agent.Revalidate(); err != nil {
-			return err
-		}
-		if kit.Generation != agent.Contract.MailRenewalGeneration || (target != "" && target != kit.Generation) {
-			return servicemutationledger.ErrMailEnrollment
-		}
-		return nil
 	}
 	state := hostingpath.ServiceMutationStateRoot()
 	binding := recoveryruntime.MailEnrollmentBinding{
 		LedgerPath: filepath.Join(state, serviceMutationLedgerFileName),
 		OwnerID:    ownerID,
 		Owner:      servicemutationledger.FileOwner{UID: serviceMutationRequiredOwnerUID, GID: serviceMutationRequiredOwnerGID},
-		HostLock:   host, HostOwner: serviceMutationLockOwner(), VerifyAuthority: verify, Native: mailEnrollmentNativeHost{},
+		HostLock:   host, HostOwner: serviceMutationLockOwner(), Native: mailEnrollmentNativeHost{},
 	}
 	rawLedger, found, err := servicemutationledger.ReadFile(binding.LedgerPath, servicemutationledger.MaxSize, binding.Owner)
 	if err != nil {
@@ -106,6 +92,34 @@ func runIndependentMailEnrollmentMode(ctx context.Context, requestID, ownerID, t
 	if err != nil {
 		return err
 	}
+	var agent *recoveryruntime.CompatibleMailAgent
+	var retained *recoveryruntime.RetainedMailEnrollmentHelper
+	if fresh {
+		agent, err = recoveryruntime.InspectCompatibleMailAgent("/opt/celikpanel/bin")
+		if err != nil {
+			return err
+		}
+		defer agent.Close()
+		binding.VerifyAuthority = func() error {
+			if err := agent.Revalidate(); err != nil {
+				return err
+			}
+			if agent.Contract.MailRenewalGeneration != kit.Generation {
+				return servicemutationledger.ErrMailEnrollment
+			}
+			return nil
+		}
+	} else {
+		retained, err = recoveryruntime.InspectRetainedMailEnrollmentHelper(mailrenewalkit.InstalledRoot, kit.Generation)
+		if err != nil {
+			return err
+		}
+		defer retained.Close()
+		binding.VerifyAuthority = func() error { return retained.VerifyExecutable(self) }
+	}
+	if err = binding.VerifyAuthority(); err != nil {
+		return err
+	}
 	var execution *recoveryruntime.PreparedMailEnrollment
 	direction := servicemutationledger.MailEnrollmentForward
 	if fresh {
@@ -116,7 +130,7 @@ func runIndependentMailEnrollmentMode(ctx context.Context, requestID, ownerID, t
 		}
 		execution, _, err = recoveryruntime.PrepareMailEnrollment(ctx, requestID, mailEnrollmentJournalRoot, agent, binding)
 	} else {
-		execution, direction, err = recoveryruntime.OpenRecordedMailEnrollment(ctx, requestID, mailEnrollmentJournalRoot, agent, binding)
+		execution, direction, err = recoveryruntime.OpenRetainedMailEnrollment(ctx, requestID, mailEnrollmentJournalRoot, retained, binding)
 	}
 	if err != nil {
 		return err
@@ -135,7 +149,7 @@ func runIndependentMailEnrollmentMode(ctx context.Context, requestID, ownerID, t
 			return err
 		}
 	}
-	authority := mailEnrollmentAuthority{identity: execution.Identity(), agent: agent, verifyIntent: func() error { return execution.RevalidateAuthority(ctx) }}
+	authority := mailEnrollmentAuthority{identity: execution.Identity(), agent: agent, retained: retained, verifyIntent: func() error { return execution.RevalidateAuthority(ctx) }}
 	return executePreparedMailEnrollment(ctx, state, host, authority, execution, direction)
 }
 

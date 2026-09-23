@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	"github.com/alicelik/celikpanel/internal/hostingpath"
-	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"github.com/alicelik/celikpanel/internal/mailrenewalruntime"
 	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
@@ -17,7 +16,7 @@ import (
 
 // An explicit recorded continuation may restore volatile exclusion after reboot.
 // New enrollment still requires the existing initialized runtime. A missing
-// durable ledger, source declaration, group or accepted scope is never repaired.
+// durable ledger, retained helper, group or accepted scope is never repaired.
 func prepareRecordedMailEnrollmentRuntime(ctx context.Context, accepted []string, releaseFD int) error {
 	if ctx == nil || !validMailEnrollmentWorkerArgs(accepted) {
 		return servicemutationledger.ErrMailEnrollment
@@ -33,15 +32,11 @@ func prepareRecordedMailEnrollmentRuntime(ctx context.Context, accepted []string
 	if err := recoveryruntime.VerifyHeldPreflightBoundary(releaseFD); err != nil {
 		return err
 	}
-	proof, err := recoveryruntime.InspectMailEnrollmentHelper("/opt/celikpanel/bin", mailrenewalkit.InstalledRoot)
+	proof, err := inspectRunningRetainedMailEnrollmentHelper()
 	if err != nil {
 		return err
 	}
 	defer proof.Close()
-	self, err := verifiedMailEnrollmentHelper()
-	if err != nil || self != proof.Path {
-		return errors.Join(servicemutationledger.ErrMailEnrollment, err)
-	}
 	owner := servicemutationledger.FileOwner{UID: serviceMutationRequiredOwnerUID, GID: serviceMutationRequiredOwnerGID}
 	ledgerPath := filepath.Join(hostingpath.ServiceMutationStateRoot(), serviceMutationLedgerFileName)
 	readIdentity := func() (servicemutationledger.MailEnrollmentIdentity, error) {
@@ -49,7 +44,7 @@ func prepareRecordedMailEnrollmentRuntime(ctx context.Context, accepted []string
 		if err != nil || !found {
 			return servicemutationledger.MailEnrollmentIdentity{}, errors.Join(servicemutationledger.ErrMailEnrollment, err)
 		}
-		return recordedMailEnrollmentRuntimeIdentity(raw, accepted, proof.Generation)
+		return recordedMailEnrollmentRuntimeIdentity(raw, accepted, proof.Generation())
 	}
 	id, err := readIdentity()
 	if err != nil {
@@ -72,7 +67,7 @@ func prepareRecordedMailEnrollmentRuntime(ctx context.Context, accepted []string
 		if current != id {
 			return servicemutationledger.ErrMailEnrollment
 		}
-		observed, err := recoveryruntime.ObserveMailEnrollment(ctx, ledgerPath, owner, mailEnrollmentJournalRoot, id.RequestID, id.OwnerID, proof.Generation)
+		observed, err := recoveryruntime.ObserveMailEnrollment(ctx, ledgerPath, owner, mailEnrollmentJournalRoot, id.RequestID, id.OwnerID, proof.Generation())
 		if err != nil {
 			return err
 		}

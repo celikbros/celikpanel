@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/hostmutationlock"
 	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"github.com/alicelik/celikpanel/internal/recoveryruntime"
@@ -23,6 +24,31 @@ import (
 func launchIndependentMailEnrollment(ctx context.Context, accepted []string) error {
 	if !mailRenewalOnlyBuild || os.Geteuid() != 0 || !validMailEnrollmentWorkerArgs(accepted) {
 		return servicemutationledger.ErrMailEnrollment
+	}
+	if len(accepted) == 1 {
+		proof, err := inspectRunningRetainedMailEnrollmentHelper()
+		if err != nil {
+			return err
+		}
+		defer proof.Close()
+		owner := servicemutationledger.FileOwner{UID: serviceMutationRequiredOwnerUID, GID: serviceMutationRequiredOwnerGID}
+		ledgerPath := filepath.Join(hostingpath.ServiceMutationStateRoot(), serviceMutationLedgerFileName)
+		raw, found, err := servicemutationledger.ReadFile(ledgerPath, servicemutationledger.MaxSize, owner)
+		if err != nil || !found {
+			return errors.Join(servicemutationledger.ErrMailEnrollment, err)
+		}
+		id, err := recordedMailEnrollmentRuntimeIdentity(raw, accepted, proof.Generation())
+		if err != nil {
+			return err
+		}
+		observed, err := recoveryruntime.ObserveMailEnrollment(ctx, ledgerPath, owner, mailEnrollmentJournalRoot, id.RequestID, id.OwnerID, proof.Generation())
+		if err != nil || !observed.Found || observed.Identity != id {
+			return errors.Join(servicemutationledger.ErrMailEnrollment, err)
+		}
+		if err = proof.Revalidate(); err != nil {
+			return err
+		}
+		return dispatchMailEnrollmentHelper(ctx, filepath.Join(mailrenewalkit.InstalledRoot, proof.Generation(), mailrenewalkit.BinaryName), accepted)
 	}
 	helper, err := verifiedMailEnrollmentHelper()
 	if err != nil {
@@ -182,4 +208,34 @@ func verifiedMailEnrollmentHelper() (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+// Proves the actual executing retained helper without consulting ordinary
+// management files. This is a source proof only, never fresh owner admission.
+func inspectRunningRetainedMailEnrollmentHelper() (*recoveryruntime.RetainedMailEnrollmentHelper, error) {
+	if !mailRenewalOnlyBuild || os.Geteuid() != 0 {
+		return nil, servicemutationledger.ErrMailEnrollment
+	}
+	self, err := os.Open("/proc/self/exe")
+	if err != nil {
+		return nil, err
+	}
+	defer self.Close()
+	raw, err := io.ReadAll(io.LimitReader(self, mailrenewalkit.MaxBinarySize+1))
+	if err != nil {
+		return nil, err
+	}
+	kit, _, err := mailrenewalkit.Payload(raw)
+	if err != nil {
+		return nil, err
+	}
+	proof, err := recoveryruntime.InspectRetainedMailEnrollmentHelper(mailrenewalkit.InstalledRoot, kit.Generation)
+	if err != nil {
+		return nil, err
+	}
+	if err = proof.VerifyExecutable(self); err != nil {
+		proof.Close()
+		return nil, err
+	}
+	return proof, nil
 }
