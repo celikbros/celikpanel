@@ -133,6 +133,40 @@ func exactBINDPairingForSwitchJournal(
 		journal.PrimaryCatalogSerial == 0 && pairing.CatalogSerial == 1
 }
 
+// proveDNSSwitchTargetAbsentForRecovery only admits a new inverse while the
+// authoritative state receipt still matches the journal's frozen source. A
+// failed runtime probe, a target receipt, or an unrelated owner's receipt is
+// not evidence that rollback is safe.
+func proveDNSSwitchTargetAbsentForRecovery(
+	ctx context.Context,
+	journal dnsEngineSwitchJournal,
+) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	if _, err := switchJournalManifest(journal); err != nil {
+		return false, err
+	}
+	if err := verifyDNSSwitchSourceOwnership(journal); err != nil {
+		return false, err
+	}
+	source, sourceExists, err := sourceStateFromDNSSwitchJournal(journal)
+	if err != nil {
+		return false, err
+	}
+	current, currentExists, err := readDNSEngineState()
+	if err != nil {
+		return false, err
+	}
+	if sourceExists != currentExists {
+		return false, nil
+	}
+	if !sourceExists {
+		return true, nil
+	}
+	return reflect.DeepEqual(current, source), nil
+}
+
 func verifyDNSSwitchJournalTarget(
 	ctx context.Context,
 	journal dnsEngineSwitchJournal,
@@ -838,7 +872,8 @@ func (hostDNSEngineBackend) RecoverSwitch(
 		ProveFinalized: func(context.Context, dnsengineartifact.SwitchIdentity) (bool, error) {
 			return exactFinalizedDNSEngineSwitchProvenanceOnHost(target, qualifier, binding)
 		},
-		VerifyTarget: verifyDNSSwitchJournalTarget,
+		VerifyTarget:      verifyDNSSwitchJournalTarget,
+		ProveTargetAbsent: proveDNSSwitchTargetAbsentForRecovery,
 		Write: func(_ context.Context, j dnsengineartifact.SwitchJournalV1) error {
 			return writeDNSEngineSwitchJournal(j)
 		},

@@ -1,7 +1,11 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -131,7 +135,7 @@ func TestCommittedDNSEngineJournalUsesSharedRecoverySequence(t *testing.T) {
 		t.Fatal("DNS engine recovery adapter end missing")
 	}
 	adapter := strings.Join(strings.Fields(source[start:start+end]), "")
-	for _, wire := range []string{"dnsenginerecovery.Reconcile(", "VerifyTarget:verifyDNSSwitchJournalTarget", "Inverse:rollbackDNSSwitchJournal", "Read:func", "Write:func"} {
+	for _, wire := range []string{"dnsenginerecovery.Reconcile(", "VerifyTarget:verifyDNSSwitchJournalTarget", "ProveTargetAbsent:proveDNSSwitchTargetAbsentForRecovery", "Inverse:rollbackDNSSwitchJournal", "Read:func", "Write:func"} {
 		if !strings.Contains(adapter, wire) {
 			t.Fatal("shared recovery callback missing:", wire)
 		}
@@ -452,5 +456,54 @@ func TestRestoredUnmanagedBINDProofNamesEveryOwnershipItRefuses(t *testing.T) {
 		if !strings.Contains(body, required) {
 			t.Errorf("the restored unmanaged BIND proof lost %s", required)
 		}
+	}
+}
+
+func TestDNSSwitchRollbackRequiresExactFrozenSourceState(t *testing.T) {
+	useTestServiceMutationOwner(t)
+	root := t.TempDir()
+	t.Setenv("CELIKPANEL_AGENT_STATE_DIR", filepath.Join(root, "state"))
+	if err := os.MkdirAll(serviceMutationStateDirectory(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join("..", "..", "internal", "dnsengineartifact", "testdata", "switch-journal", "alpha81-pdns-switch.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var journal dnsEngineSwitchJournal
+	if err := json.Unmarshal(raw, &journal); err != nil {
+		t.Fatal(err)
+	}
+	source, exists, err := sourceStateFromDNSSwitchJournal(journal)
+	if err != nil || !exists {
+		t.Fatalf("historical source receipt: exists=%v err=%v", exists, err)
+	}
+	if err := writeDNSEngineState(source); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeDNSEngineOwnership(source); err != nil {
+		t.Fatal(err)
+	}
+	proved, err := proveDNSSwitchTargetAbsentForRecovery(context.Background(), journal)
+	if err != nil || !proved {
+		t.Fatalf("exact source was not proved: proved=%v err=%v", proved, err)
+	}
+
+	foreign := source
+	foreign.MutationRequestID = strings.Repeat("f", 32)
+	if err := writeDNSEngineState(foreign); err != nil {
+		t.Fatal(err)
+	}
+	proved, err = proveDNSSwitchTargetAbsentForRecovery(context.Background(), journal)
+	if err != nil || proved {
+		t.Fatalf("foreign current receipt admitted rollback: proved=%v err=%v", proved, err)
+	}
+
+	if err := os.WriteFile(dnsEngineStatePath(), []byte("not a receipt"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	proved, err = proveDNSSwitchTargetAbsentForRecovery(context.Background(), journal)
+	if err == nil || proved {
+		t.Fatalf("unreadable current receipt admitted rollback: proved=%v err=%v", proved, err)
 	}
 }

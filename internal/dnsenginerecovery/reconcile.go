@@ -23,12 +23,13 @@ const (
 type Operations struct {
 	// Read must pin or lock the host evidence, decode through the shared policy,
 	// and refuse unrecognized file metadata. Missing is not a verified success.
-	Read           func(context.Context) (dnsengineartifact.SwitchJournalV1, bool, error)
-	ProveFinalized func(context.Context, dnsengineartifact.SwitchIdentity) (bool, error)
-	VerifyTarget   func(context.Context, dnsengineartifact.SwitchJournalV1) error
-	Write          func(context.Context, dnsengineartifact.SwitchJournalV1) error
-	Inverse        func(context.Context, dnsengineartifact.SwitchJournalV1) error
-	Remove         func(context.Context) error
+	Read              func(context.Context) (dnsengineartifact.SwitchJournalV1, bool, error)
+	ProveFinalized    func(context.Context, dnsengineartifact.SwitchIdentity) (bool, error)
+	VerifyTarget      func(context.Context, dnsengineartifact.SwitchJournalV1) error
+	ProveTargetAbsent func(context.Context, dnsengineartifact.SwitchJournalV1) (bool, error)
+	Write             func(context.Context, dnsengineartifact.SwitchJournalV1) error
+	Inverse           func(context.Context, dnsengineartifact.SwitchJournalV1) error
+	Remove            func(context.Context) error
 }
 
 // Reconcile preserves the original operation. Its caller proves the accepted
@@ -37,7 +38,7 @@ type Operations struct {
 // interpreting a failed observation as absence. Unknown results leave the
 // frozen journal in place for owner review.
 func Reconcile(ctx context.Context, policy dnsengineartifact.JournalPolicy, id dnsengineartifact.SwitchIdentity, ops Operations) (Outcome, error) {
-	if ctx == nil || id.Validate() != nil || policy.Validate() != nil || ops.Read == nil || ops.ProveFinalized == nil || ops.VerifyTarget == nil || ops.Write == nil || ops.Inverse == nil || ops.Remove == nil {
+	if ctx == nil || id.Validate() != nil || policy.Validate() != nil || ops.Read == nil || ops.ProveFinalized == nil || ops.VerifyTarget == nil || ops.ProveTargetAbsent == nil || ops.Write == nil || ops.Inverse == nil || ops.Remove == nil {
 		return OutcomeAbsent, errors.New("invalid DNS switch recovery admission")
 	}
 	journal, exists, err := ops.Read(ctx)
@@ -68,6 +69,20 @@ func Reconcile(ctx context.Context, policy dnsengineartifact.JournalPolicy, id d
 		return OutcomeCommitted, nil
 	} else if journal.Phase == dnsengineartifact.SwitchPhaseTargetVerified || journal.Phase == dnsengineartifact.SwitchPhaseCommitted {
 		return OutcomeAbsent, fmt.Errorf("verified DNS engine target no longer matches its journal: %w", err)
+	} else if ctx.Err() != nil {
+		return OutcomeAbsent, fmt.Errorf("DNS engine target observation interrupted: %w", errors.Join(err, ctx.Err()))
+	} else if journal.Phase != dnsengineartifact.SwitchPhaseRollingBack && journal.Phase != dnsengineartifact.SwitchPhaseRolledBack {
+		// A failed target observation does not prove that rollback is safe.
+		// Only the exact source preimage (or verified absence when there was
+		// no source) admits a new inverse. A durable inverse intent resumes
+		// through its own owner-aware native checks.
+		absent, absenceErr := ops.ProveTargetAbsent(ctx, journal)
+		if absenceErr != nil {
+			return OutcomeAbsent, fmt.Errorf("DNS engine target absence could not be proved: %w", errors.Join(err, absenceErr))
+		}
+		if !absent {
+			return OutcomeAbsent, fmt.Errorf("DNS engine target observation is uncertain; journal retained: %w", err)
+		}
 	}
 	if err = Rollback(ctx, &journal, ops); err != nil {
 		return OutcomeAbsent, err
@@ -81,6 +96,9 @@ func Reconcile(ctx context.Context, policy dnsengineartifact.JournalPolicy, id d
 func Rollback(ctx context.Context, journal *dnsengineartifact.SwitchJournalV1, ops Operations) error {
 	if ctx == nil || journal == nil || ops.Write == nil || ops.Inverse == nil || ops.Remove == nil {
 		return errors.New("invalid DNS switch recovery rollback operations")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	journal.Phase = dnsengineartifact.SwitchPhaseRollingBack
 	if err := ops.Write(ctx, *journal); err != nil {

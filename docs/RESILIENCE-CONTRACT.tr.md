@@ -690,3 +690,9 @@ ortak pakete taşındı; Agent da bu sırayı kullanıyor. Günlük v1 ve evre b
 değişmedi. Hata testleri doğrulama, kayıt ve geri alma sırasını ve belirsizlikte
 kanıtların korunmasını denetliyor. Sunucu kilitleri, bağımsız yerel geri alma
 ve tam gerçek sürüm kabulü hâlâ açık; kurulu sunuculara dokunulmadı.
+
+P0.4 DNS geçişinde doğrulanamayan hedef için geri alma artık yalnızca hata
+dönmesine dayanmaz: yeni otomatik ters işlem, günlüğün dondurduğu kaynak durumunun
+kesin kanıtını gerektirir. Tarihsel günlük v1 baytları değişmedi. Belirsiz
+denetimler kanıtları korur ve kullanıcı kurtarması gerektirebilir; bağımsız yerel
+yürütücü ile tam hata matrisi kabulü hâlâ açıktır.

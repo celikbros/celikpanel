@@ -954,3 +954,9 @@ The Agent delegates its old post-crash decision order to that package; v1
 journal and phase bytes are unchanged. Its fault tests guard write/verify/inverse
 ordering and retained evidence after uncertainty. Host locks, independent native
 inverse execution and full native release acceptance stay open.
+
+P0.4 now fails closed on an unverified DNS switch target: a fresh automatic
+inverse requires the exact frozen source-state proof, not a generic verifier
+error. Historical journal v1 bytes are unchanged. Unknown probes retain evidence
+and may need owner recovery; independent native execution and full fault-matrix
+acceptance remain open.

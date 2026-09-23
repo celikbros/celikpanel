@@ -269,3 +269,23 @@ precommit inverse, foreign identity, malformed before-images, inverse failure,
 checkpoint failure and failed removal. Agent DNS/BIND/PowerDNS race checks and
 `go vet` complete the scoped source validation. These checks do not constitute
 native installed-release fault acceptance; no installed server was changed.
+
+### Source-proof gate for an unverified switch target
+
+P0.4 and constitutional invariants 1/2/3: an early switch journal no longer
+starts an inverse merely because target verification returned an error. The
+shared reconciler first requires a separate proof that the current state receipt
+matches the journal's exact frozen source (or that both source and current state
+are absent). The Agent adapter also reconstructs the committed manifest and
+checks the source ownership receipt. Read failure, foreign receipt, target
+receipt with an inconclusive runtime probe, cancellation, or an expired deadline
+retains the journal and blocks this automatic inverse. A previously durable
+rolling-back intent continues through existing owner-aware native inverse
+checks; verified/committed target disagreement remains blocked.
+
+There is no wire/schema transition: journal v1 and historical phase bytes are
+unchanged. Scoped race tests cover exact source, foreign/malformed receipt,
+unknown and cancelled observation, checkpoint order and durable inverse resume.
+This narrows destructive recovery admission but may require owner action when
+the target receipt exists and runtime proof is unavailable. It does not add an
+independent executor or satisfy native historical fault acceptance.
