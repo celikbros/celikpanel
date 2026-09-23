@@ -105,44 +105,11 @@ func resolvePDNSGroupGIDWithRunner(
 func validatePDNSConfigSnapshotSetStructure(
 	snapshots []dnsFileSnapshot,
 ) error {
-	paths := pdnsConfigPaths()
-	if len(snapshots) != len(paths) {
-		return errors.New("PowerDNS config snapshot set is incomplete")
-	}
-	for index, snapshot := range snapshots {
-		if err := validateDNSFileSnapshotIntegrity(snapshot); err != nil {
-			return err
-		}
-		if snapshot.Path != paths[index] {
-			return errors.New("PowerDNS config snapshot set contains an unexpected path")
-		}
-		if err := validatePDNSConfigSnapshotStructure(snapshot); err != nil {
-			return err
-		}
-	}
-	return nil
+	return dnsJournalPolicy().ValidatePDNSConfigSnapshotSet(snapshots)
 }
 
 func validatePDNSConfigSnapshotStructure(snapshot dnsFileSnapshot) error {
-	if err := validateDNSFileSnapshotIntegrity(snapshot); err != nil {
-		return err
-	}
-	switch snapshot.Path {
-	case filepath.Clean(dnsMainConf):
-		if !snapshot.Exists || snapshot.Mode != 0o640 ||
-			!snapshot.OwnerKnown || snapshot.UID != 0 ||
-			snapshot.GID > uint32(1<<31-1) {
-			return errors.New("PowerDNS main config snapshot differs from its installed-file contract")
-		}
-	case filepath.Clean(dnsManagedConf), filepath.Clean(dnsClusterConf):
-		if snapshot.Exists && (snapshot.Mode != 0o644 ||
-			!snapshot.OwnerKnown || snapshot.UID != 0 || snapshot.GID != 0) {
-			return errors.New("PowerDNS managed config snapshot differs from its root-owned contract")
-		}
-	default:
-		return errors.New("PowerDNS config snapshot path is unsupported")
-	}
-	return nil
+	return dnsJournalPolicy().ValidatePDNSConfigSnapshot(snapshot)
 }
 
 func (policy pdnsConfigOwnerPolicy) validateSnapshot(

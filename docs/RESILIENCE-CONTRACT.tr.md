@@ -670,3 +670,13 @@ masaüstü ve Türkçe mobil kontrolleri geçti. Bu çevrimdışı yönlendirmed
 kapalıyken bağımsız ve kimlik doğrulamalı güncel durum erişimi değildir. Bu sınır
 ve P0.2'nin kalan kabul işleri açıktır. Yeni tarayıcı, silinmiş önbellek veya
 güvenilmeyen TLS bağlantısında bu kabuğun bulunacağı sözü verilmez.
+### Ortak DNS geçiş günlüğü sözleşmesi — 23 Eylül 2026
+
+P0.4 kapsamında tarihsel geçiş günlüğünün kodlayıcısı, okuyucusu, dondurulmuş
+dosya/birim görüntüleri, kaynak edinim kimliği ve sabit sunucu yerleşimi kuralları
+ortak pakete taşındı. [Kanıt ve sınırlar](DNS-ENGINE-ARTIFACT.md#shared-switch-journal-contract--2026-09-23):
+Alpha81 üreticisinin gerçek çıktıları baytları değişmeden okunuyor; Agent ve ortak
+paketin yarış denetimli testleri geçti. Günlük v1 ve içindeki kaynak v1/v2 baytları
+korunuyor. Bağımsız değişiklik komutu eklenmedi; kabul edilmiş işlem yetkisi,
+işçi/sunucu kilitleri ve yerel geri alma yürütücüsünün ayrılması ve kanıtlanması
+hâlâ gerekiyor. Bu çalışma P0.4'ü kapatmıyor; kurulu sunucular değiştirilmedi.

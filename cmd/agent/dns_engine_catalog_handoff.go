@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -16,24 +17,14 @@ import (
 func requiresPrimaryCatalogSerial(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 ) bool {
-	return manifest.Topology == transport.DNSTopologyPaired &&
-		manifest.PairRole == transport.DNSPairRolePrimary
+	return dnsengineartifact.RequiresPrimaryCatalogSerial(manifest)
 }
 
 func validatePrimaryCatalogSerialContract(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	serial uint32,
 ) error {
-	if requiresPrimaryCatalogSerial(manifest) {
-		if serial == 0 {
-			return errors.New("paired primary DNS engine state is missing its catalog serial")
-		}
-		return nil
-	}
-	if serial != 0 {
-		return errors.New("non-primary DNS engine state unexpectedly binds a catalog serial")
-	}
-	return nil
+	return dnsengineartifact.ValidatePrimaryCatalogSerial(manifest, serial)
 }
 
 func pairRoleForEngineState(

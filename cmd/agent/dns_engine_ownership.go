@@ -168,28 +168,7 @@ func publishDNSEngineSourceOwnership(
 func sourceStateFromDNSSwitchJournal(
 	journal dnsEngineSwitchJournal,
 ) (dnsEngineStateReceipt, bool, error) {
-	if journal.SourceEngine == "" {
-		if journal.StateBefore.Exists {
-			return dnsEngineStateReceipt{}, false,
-				errors.New("uninitialized DNS source journal unexpectedly snapshots active state")
-		}
-		return dnsEngineStateReceipt{}, false, nil
-	}
-	if !journal.StateBefore.Exists {
-		return dnsEngineStateReceipt{}, false,
-			errors.New("DNS switch journal is missing source engine state")
-	}
-	state, err := decodeDNSEngineState(journal.StateBefore.Data)
-	if err != nil {
-		return dnsEngineStateReceipt{}, false,
-			fmt.Errorf("decode DNS switch source state: %w", err)
-	}
-	if state.Engine != journal.SourceEngine ||
-		state.EngineEpoch != journal.SourceEpoch {
-		return dnsEngineStateReceipt{}, false,
-			errors.New("DNS switch journal source state identity differs from its manifest")
-	}
-	return state, true, nil
+	return dnsengineartifact.SourceStateFromSwitchJournal(journal)
 }
 
 func verifyDNSSwitchSourceOwnership(journal dnsEngineSwitchJournal) error {

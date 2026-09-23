@@ -1,0 +1,19 @@
+{
+  "source_commit": "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00",
+  "scope": "Historical canonical producer with historical test inputs; no native daemon or recovery execution.",
+  "export_test_sha256": "f2b754b5701b907a50ec4c722fe49ea9cfb184b3bc51e7db5c969ea1e97f98cd",
+  "source_sha256": {
+    "cmd/agent/dns_engine_transaction.go": "b36a048fbde08b8299a7f1f5a8135f6beea36c0402b77d832b00bdf4babc7e58",
+    "cmd/agent/dns_engine_transaction_test.go": "db37101e9d06ac058196dc8edd632d8cb46efb53c41a3effd893b32fcf8767fa",
+    "cmd/agent/dns_engine_host.go": "12be6d9c37d641f7c4b2a1adfe2150e46175745d5dce4f7b6797f38f24bd093a",
+    "cmd/agent/dns_engine_ownership.go": "21204350ba38f823292559d33fc9e126c0df243a3e2765f90ab85439ef056b21",
+    "cmd/agent/dns_engine_pdns_config_owner.go": "a83efcea45c134058debe29b5962fac12e8ddf1a4c5c605da14b366b5d8ac6e8",
+    "cmd/agent/dns_engine_pdns_adopt.go": "67ba9ee1c6b1942780736e9db3e2ded78b83ac1b42e9e287c51c0ee3eeef89f8",
+    "cmd/agent/dns_engine_catalog_handoff.go": "2ad8d9a38444b888ef64420919bcf7a3ee7a9baa9b902649c7b88dfcbf331a11"
+  },
+  "files": {
+    "alpha81-bind.json": "4fc4f636302b1847437d6dba9ad958b899e916e9bd4bd07c766979d7da74c35e",
+    "alpha81-pdns-adopt.json": "347e8c455b3f0ed5d46f2aade04348e978348c2a1ef590e07187428e116174a6",
+    "alpha81-pdns-switch.json": "1bb7826e14c458da2279b31ab55bfb1e15be03f5c939a560627c52c47aaa830d"
+  }
+}

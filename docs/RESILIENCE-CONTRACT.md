@@ -934,3 +934,13 @@ cached; no authenticated status or mutation authority is retained. Real Chrome
 listener-interruption and EN desktop/TR mobile checks pass. This is offline
 guidance, not independent live authenticated status while Panel is stopped;
 the latter and the wider P0.2 matrix remain open.
+
+### DNS switch journal shared contract — September 23, 2026
+
+P0.4 now shares the historical switch journal codec, frozen file/unit snapshots,
+source acquisition and fixed host-layout rules between potential consumers.
+[Evidence and limits](DNS-ENGINE-ARTIFACT.md#shared-switch-journal-contract--2026-09-23)
+include exact historical Alpha81 producer bytes and Agent/shared race checks.
+Journal v1 is unchanged; embedded source v1/v2 bytes are preserved. No independent
+mutation entry point was added: accepted-ledger authority, worker/host locks and
+native inverse execution must still be separated and proven. P0.4 stays open.

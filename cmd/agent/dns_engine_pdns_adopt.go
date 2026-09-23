@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -373,24 +374,7 @@ func mutatePDNSAdoptionAfterConfigProof(
 }
 
 func validatePDNSAdoptionUnitEvidence(units []dnsUnitSnapshot) error {
-	if !dnsUnitSnapshotNamesEqual(
-		units, []string{"bind9.service", "named.service", "pdns.service"},
-	) {
-		return errors.New("PowerDNS adoption unit evidence is incomplete")
-	}
-	for _, unit := range units {
-		active := unit.ActiveState == "active"
-		if unit.Name == "pdns.service" {
-			if !active {
-				return errors.New("PowerDNS adoption target is not running")
-			}
-			continue
-		}
-		if active {
-			return errors.New("PowerDNS adoption found another DNS engine running")
-		}
-	}
-	return nil
+	return dnsengineartifact.ValidatePDNSAdoptionUnits(units)
 }
 
 type pdnsAdoptionEvidenceStage uint8

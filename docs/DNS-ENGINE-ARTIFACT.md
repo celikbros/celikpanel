@@ -197,3 +197,29 @@ active, and neither management executable is installed or started. This is the
 positive counterpart of the historical-target refusal in
 [DNS-DOCUMENTS-BE.json](../deploy/e2e/release-recovery/DNS-DOCUMENTS-BE.json);
 it proves read-only target admission, not a signed update or rollback.
+
+## Shared switch journal contract — 2026-09-23
+
+P0.4, invariants 1/2/4: `internal/dnsengineartifact/switch_journal.go` now owns
+`celikpanel-dns-engine-switch-journal/v1`, file/unit before-images, canonical
+encoding and decoding, source acquisition comparison, catalog serial rules and
+BIND/PowerDNS switch/adoption layout validation. Agent aliases and adapters use
+this implementation; persistence, locks, process observation and native inverse
+execution remain in the Agent. The package performs no filesystem access.
+
+The wire schema and field order do not change. Embedded v1 or v2 DNS source
+bytes remain frozen through every journal phase, including rollback; decoding
+never rewrites them. A trusted host adapter supplies state ownership and fixed
+PowerDNS paths. Journal input cannot select its own permitted restore paths.
+A valid journal is **not** mutation authority: exact accepted ledger identity,
+worker exclusion, host ownership, unchanged evidence and native verification
+are still required before any action.
+
+Evidence: three [historical Alpha81 producer fixtures](../internal/dnsengineartifact/testdata/switch-journal/README.md)
+round-trip byte-for-byte; current shared tests reject ambiguous JSON, wrong
+owners/paths, source acquisition drift and conflicting adoption evidence.
+Agent DNS/BIND/PowerDNS/primary catalog race tests pass (6.720s), shared artifact
+race tests pass (1.403s). A 12-second bounded fuzz run passed but executed only
+eight cases and is not broad fuzz coverage. No installed server was changed.
+The standalone native DNS recovery executor and native interrupted operation
+acceptance remain open; sharing the journal does not establish either.
