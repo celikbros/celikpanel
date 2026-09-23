@@ -6,6 +6,8 @@
 // Giris formu cizilmeden once degil, o ekranlarla birlikte getirilir.
 
 export const enScreens = {
+    "setup.mailEnrollment.retry": "Retry reviewed handoff",
+    "setup.guide.mailEnrollmentUnrecorded": "The reviewed mail renewal request has no verified admission record yet. Checks continue automatically. After inspecting the worker in Technical details, the server administrator can retry the original reviewed handoff below. The same request and preparation are retained.",
     "setup.kind.mail_enrollment": "Prepare independent mail certificate renewal",
     "setup.mailEnrollment.continue": "Continue recorded operation",
     "setup.mailEnrollment.checking": "Continuation requested. Checking the same operation; completion is not yet confirmed.",

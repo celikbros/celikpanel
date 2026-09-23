@@ -3,6 +3,8 @@
 import type { ScreenKey } from './en';
 
 export const trScreens: Record<ScreenKey, string> = {
+    "setup.mailEnrollment.retry": "Onaylı başlangıcı yeniden ilet",
+    "setup.guide.mailEnrollmentUnrecorded": "Onaylı e-posta yenileme isteğinin henüz doğrulanmış bir kabul kaydı yok. Kontroller otomatik sürer. Sunucu yöneticisi Teknik ayrıntılardaki işçiyi inceledikten sonra aşağıdan ilk onaylı başlangıcı yeniden iletebilir. Aynı istek ve hazırlık kayıtları korunur.",
     "setup.kind.mail_enrollment": "Bağımsız e-posta sertifikası yenilemeyi hazırla",
     "setup.mailEnrollment.continue": "Kayıtlı işleme devam et",
     "setup.mailEnrollment.checking": "Devam isteği gönderildi. Aynı işlem kontrol ediliyor; tamamlandığı henüz doğrulanmadı.",

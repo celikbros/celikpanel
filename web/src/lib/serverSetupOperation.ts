@@ -113,3 +113,8 @@ export function continuableMailEnrollment(execution: ServerSetupExecution | null
     if (!execution || execution.status !== 'running' || !['server_setup_mail_enrollment_running', 'server_setup_mail_enrollment_rollback'].includes(execution.error?.code || '')) return null;
     return execution.steps.find(step => step.kind === 'mail_enrollment' && step.status === 'running' && step.id === execution.phase) || null;
 }
+
+export function retryableMailEnrollmentHandoff(execution: ServerSetupExecution | null): SetupPlanStep | null {
+    if (!execution || execution.status !== 'running' || execution.error?.code !== 'server_setup_mail_enrollment_not_recorded') return null;
+    return execution.steps.find(step => step.kind === 'mail_enrollment' && step.status === 'running' && step.id === execution.phase) || null;
+}

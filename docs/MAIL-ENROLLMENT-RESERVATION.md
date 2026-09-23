@@ -586,3 +586,28 @@ this owner action; it does not claim independent automatic provisioning of that
 prerequisite. No management daemon runs. The unrecorded-handoff UI retry,
 production plan admission, other early registration cuts/platforms and migration
 remain open. No owner-installed panel was changed.
+
+
+### Explicit retry before common admission (2026-09-23)
+
+P0.2/P0.3/P0.5: the current accepted setup exposes a separate **Retry reviewed
+handoff** action only after verified common-ledger absence. Its POST accepts
+execution/step IDs and uses the same immutable request, owner and kit generation.
+It shares the administrator, revision, license, paired-build and saved dispatch
+fence checks with recorded continuation. It neither rewrites execution JSON nor
+clears the fence. Unknown/unreadable evidence cannot dispatch; an intervening
+recorded or terminal result returns to read-only reconciliation without replay.
+
+This action uses the existing authenticated Start RPC and native locked executor.
+It is explicit owner authority to retry the original reviewed handoff, not a new
+setup or an automatic polling side effect. A lost response remains unknown.
+Double click, remount and reconnect cannot automatically repeat it. No persistent
+schema, unit template, license policy or native retry budget changes.
+
+Evidence: both HTTP actions exercise the same denial matrix and unchanged saved
+execution; retry checks the exact native tuple. Lost reply and unavailable,
+foreign or untimed evidence retain the result without retry. All 82 setup runtime
+and guidance tests plus the production web build/budget pass. The preceding
+Debian native pre-admission trial establishes the reused Start path, not a live
+browser-to-native installation. Production plan-builder admission and migration
+remain open. No owner-installed panel was changed.

@@ -82,7 +82,8 @@ export function setupExecutionGuidance(execution: ServerSetupExecution): SetupEx
         result.details.push(text('setup.guide.certificateChecks'));
     } else if (phase === 'mail_enrollment') {
         const code = execution.error?.code;
-        const key = code === 'server_setup_mail_enrollment_rollback' ? 'setup.guide.mailEnrollmentRollback'
+        const key = code === 'server_setup_mail_enrollment_not_recorded' ? 'setup.guide.mailEnrollmentUnrecorded'
+            : code === 'server_setup_mail_enrollment_rollback' ? 'setup.guide.mailEnrollmentRollback'
             : code === 'server_setup_mail_enrollment_running' ? 'setup.guide.mailEnrollmentRecorded'
                 : execution.status === 'failed' ? 'setup.guide.mailEnrollmentFailed' : 'setup.guide.mailEnrollmentUnknown';
         result.messages.push(text(key));

@@ -1144,3 +1144,42 @@ test('unverified, terminal and mismatched enrollment states never offer continua
     for(const status of ['waiting','failed','succeeded'])assert.equal(operations.continuableMailEnrollment({...pending,status}),null);
     assert.equal(operations.continuableMailEnrollment({...pending,phase:'other'}),null);
 });
+
+test('unrecorded reviewed handoff retries only by explicit click and never repeats after lost reply or remount', async()=>{
+    for (const outcome of ['accepted','lost','refused']) {
+        init('admin',{status:'running'});
+        const saved={plan_id:'a'.repeat(32),request_id:'b'.repeat(32),panel_domain:'panel.example.com'};
+        store.set('celikpanel.setup.start.admin',JSON.stringify(saved));
+        const running={...execution(saved),phase:'mail-renewal',steps:[{id:'mail-renewal',kind:'mail_enrollment',target:'mail-renewal',qualifier:'c'.repeat(64),status:'running'}],error:{code:'server_setup_mail_enrollment_not_recorded',message:'recorded'}};
+        const read=fetch;let posted=0;
+        globalThis.fetch=async(url,options)=>{
+            if(url==='/api/v1/setup/mail-enrollment/retry'){
+                posted++; assert.deepEqual(JSON.parse(options.body),{execution_id:running.id,step_id:'mail-renewal'});
+                if(outcome==='lost')throw new Error('reply lost');
+                return Response.json({handoff:'accepted'},{status:outcome==='refused'?409:202});
+            }
+            if(url.includes('/setup/operation'))return Response.json(running);
+            return read(url,options);
+        };
+        try{
+            await mount();assert.equal(posted,0);
+            const button=findButton('setup.mailEnrollment.retry');assert.ok(button);
+            assert.ok(!JSON.stringify(tree.toJSON()).includes('setup.blocker.unknown'),'recorded waiting is not a DNS failure');
+            await act(async()=>{void button.props.onClick();void button.props.onClick();});
+            assert.equal(posted,1,'double click/lost reply must not dispatch twice');
+            assert.ok(JSON.stringify(tree.toJSON()).includes(outcome==='accepted'?'setup.mailEnrollment.checking':'setup.mailEnrollment.unknown'));
+            assert.ok(!calls.some(call=>call.url==='/api/v1/setup/start'));
+            await act(async()=>tree.unmount());tree=null;
+            await mount();assert.equal(posted,1,'remount is observational');
+        }finally{await cleanup();}
+    }
+});
+
+test('reviewed handoff retry is limited to verified absence on the current running step',()=>{
+ const pending={...execution({plan_id:'a'.repeat(32),request_id:'b'.repeat(32)}),phase:'mail-renewal',steps:[{id:'mail-renewal',kind:'mail_enrollment',target:'mail-renewal',status:'running'}],error:{code:'server_setup_mail_enrollment_not_recorded',message:'absent'}};
+ assert.ok(operations.retryableMailEnrollmentHandoff(pending));
+ for(const code of ['server_setup_mail_enrollment_running','server_setup_mail_enrollment_rollback','server_setup_mail_enrollment_unknown','server_setup_mail_enrollment_handoff','server_setup_reconciling'])assert.equal(operations.retryableMailEnrollmentHandoff({...pending,error:{code,message:'other'}}),null);
+ for(const status of ['waiting','failed','succeeded'])assert.equal(operations.retryableMailEnrollmentHandoff({...pending,status}),null);
+ assert.equal(operations.retryableMailEnrollmentHandoff({...pending,phase:'other'}),null);
+ assert.equal(operations.retryableMailEnrollmentHandoff({...pending,steps:[{...pending.steps[0],status:'succeeded'}]}),null);
+});

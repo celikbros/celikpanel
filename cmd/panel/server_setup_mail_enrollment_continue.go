@@ -20,10 +20,16 @@ func setupMailEnrollmentContinuation(plan serverSetupPlan, execution *serverSetu
 			}
 		}
 	}
-	return transport.MailEnrollmentStartRequest{}, errors.New("the current setup has no matching recorded mail enrollment to continue")
+	return transport.MailEnrollmentStartRequest{}, errors.New("the current setup has no matching reviewed mail enrollment handoff")
 }
 
 func (p *Panel) handleServerSetupMailEnrollmentContinue(w http.ResponseWriter, r *http.Request) {
+	p.handleServerSetupMailEnrollmentHandoff(w, r, false)
+}
+func (p *Panel) handleServerSetupMailEnrollmentRetry(w http.ResponseWriter, r *http.Request) {
+	p.handleServerSetupMailEnrollmentHandoff(w, r, true)
+}
+func (p *Panel) handleServerSetupMailEnrollmentHandoff(w http.ResponseWriter, r *http.Request, initialRetry bool) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	if !requireServerSetupAdmin(w, r) {
@@ -46,7 +52,7 @@ func (p *Panel) handleServerSetupMailEnrollmentContinue(w http.ResponseWriter, r
 	p.serverSetupMu.Lock()
 	defer p.serverSetupMu.Unlock()
 	conflict := func() {
-		writeCodedError(w, http.StatusConflict, "setup_mail_enrollment_continue_conflict", "Reload the current setup. Only its recorded mail renewal operation can be continued.", "/setup")
+		writeCodedError(w, http.StatusConflict, "setup_mail_enrollment_continue_conflict", "Reload the current setup. Only its reviewed mail renewal operation can be continued or retried.", "/setup")
 	}
 	execution, err := p.latestServerSetupExecution(ctx)
 	if err != nil {
@@ -88,18 +94,22 @@ func (p *Panel) handleServerSetupMailEnrollmentContinue(w http.ResponseWriter, r
 		conflict()
 		return
 	}
-	if err = p.authorizeAgentRPCContext(ctx, "Agent.ContinueMailEnrollmentV1"); err != nil {
+	method, event := "Agent.ContinueMailEnrollmentV1", "server.setup.mail_enrollment.continue"
+	if initialRetry {
+		method, event = "Agent.StartMailEnrollmentV1", "server.setup.mail_enrollment.retry_reviewed"
+	}
+	if err = p.authorizeAgentRPCContext(ctx, method); err != nil {
 		writeCodedError(w, http.StatusForbidden, "setup_mail_enrollment_continue_denied", "Mail renewal continuation is not authorized. The recorded operation is preserved.", "/setup")
 		return
 	}
 	// No execution JSON rewrite: the concurrent runner remains the only writer
 	// of its reconciliation result. Both observers retain the same native identity.
-	out, err := continueSetupMailEnrollment(ctx, req, func(request *transport.MailEnrollmentRequest, response *transport.MailEnrollmentStatusResponse) error {
+	out, err := handoffSetupMailEnrollment(ctx, req, func(request *transport.MailEnrollmentRequest, response *transport.MailEnrollmentStatusResponse) error {
 		return p.callAgentContext(ctx, "Agent.MailEnrollmentStatusV1", request, response)
 	}, func(request *transport.MailEnrollmentStartRequest, response *transport.MailEnrollmentStartResponse) error {
-		p.audit(r, "server.setup.mail_enrollment.continue", execution.ID, 0)
-		return p.callAgentContext(ctx, "Agent.ContinueMailEnrollmentV1", request, response)
-	})
+		p.audit(r, event, execution.ID, 0)
+		return p.callAgentContext(ctx, method, request, response)
+	}, initialRetry)
 	if err != nil {
 		writeCodedError(w, http.StatusConflict, "setup_mail_enrollment_continue_unverified", "Continuation could not be confirmed. Check the same operation; do not start another setup.", "/setup")
 		return
@@ -109,6 +119,13 @@ func (p *Panel) handleServerSetupMailEnrollmentContinue(w http.ResponseWriter, r
 }
 
 func continueSetupMailEnrollment(ctx context.Context, req transport.MailEnrollmentStartRequest, status func(*transport.MailEnrollmentRequest, *transport.MailEnrollmentStatusResponse) error, dispatch func(*transport.MailEnrollmentStartRequest, *transport.MailEnrollmentStartResponse) error) (transport.MailEnrollmentStartResponse, error) {
+	return handoffSetupMailEnrollment(ctx, req, status, dispatch, false)
+}
+
+// An explicit reviewed-handoff retry retains the exact original authority. It
+// dispatches Start only on verified absence; pending/terminal observations are
+// handed back to the existing read-only runner without native replay.
+func handoffSetupMailEnrollment(ctx context.Context, req transport.MailEnrollmentStartRequest, status func(*transport.MailEnrollmentRequest, *transport.MailEnrollmentStatusResponse) error, dispatch func(*transport.MailEnrollmentStartRequest, *transport.MailEnrollmentStartResponse) error, initialRetry bool) (transport.MailEnrollmentStartResponse, error) {
 	out := transport.MailEnrollmentStartResponse{RequestID: req.RequestID, Handoff: "unknown"}
 	if ctx == nil || status == nil || dispatch == nil {
 		return out, errors.New("continuation unavailable")
@@ -125,6 +142,14 @@ func continueSetupMailEnrollment(ctx context.Context, req transport.MailEnrollme
 		out.Handoff, out.Reason = "accepted", "mail_enrollment_already_terminal"
 		return out, nil // The normal observer retains success versus restored failure.
 	case "forward", "rollback":
+		if initialRetry {
+			out.Handoff, out.Reason = "accepted", "mail_enrollment_already_recorded"
+			return out, nil
+		}
+	case "not_recorded":
+		if !initialRetry {
+			return out, setupMailEnrollmentWaiting("not_recorded", req.RequestID)
+		}
 	default:
 		return out, setupMailEnrollmentWaiting("unknown", req.RequestID)
 	}

@@ -140,7 +140,7 @@ test('mail enrollment guidance distinguishes recorded forward, inverse, unknown 
         ['server_setup_mail_enrollment_running','running','setup.guide.mailEnrollmentRecorded'],
         ['server_setup_mail_enrollment_rollback','running','setup.guide.mailEnrollmentRollback'],
         ['server_setup_mail_enrollment_unknown','running','setup.guide.mailEnrollmentUnknown'],
-        ['server_setup_mail_enrollment_not_recorded','running','setup.guide.mailEnrollmentUnknown'],
+        ['server_setup_mail_enrollment_not_recorded','running','setup.guide.mailEnrollmentUnrecorded'],
         ['mail_enrollment_restored','failed','setup.guide.mailEnrollmentFailed'],
     ]){
         const guide=setupExecutionGuidance(execution({status,phase:'mail-renewal',steps:[{id:'mail-renewal',kind:'mail_enrollment',target:'mail-renewal',status:status==='failed'?'failed':'running'}],error:{code,message:'recorded'}}));

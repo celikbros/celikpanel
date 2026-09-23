@@ -23,7 +23,7 @@ func setupMailEnrollmentWaiting(reason, requestID string) error {
 	case "rollback":
 		message = "The recorded mail renewal request requires restoration; its completion is not yet verified. Setup will check that result automatically. The server administrator can inspect the same worker unit if restoration stops."
 	case "not_recorded":
-		message = "The mail renewal handoff has no verified admission record yet. The server administrator must inspect the same worker unit before explicitly retrying the original reviewed request. Setup will keep checking; it will not create another request."
+		message = "The mail renewal handoff has no verified admission record yet. The server administrator can inspect the same worker unit and use Retry reviewed handoff to submit the original reviewed request again. Setup will keep checking; it will not create another request."
 	}
 	return &serverSetupMailEnrollmentWait{"server_setup_mail_enrollment_" + reason, strings.ReplaceAll(message, "<request-id>", requestID)}
 }

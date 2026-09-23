@@ -809,3 +809,13 @@ start tuple later publishes after a fixture-provided new-admission runtime
 prerequisite. This closes that selected P0.1/P0.3/P0.5 boundary, not automatic
 new admission, unrecorded-handoff UI retry or the remaining platform/migration
 matrix. No persisted schema changes.
+
+
+### Explicit reviewed mail handoff retry (2026-09-23)
+
+P0.2/P0.3/P0.5 now exposes the [original accepted handoff retry](MAIL-ENROLLMENT-RESERVATION.md#explicit-retry-before-common-admission-2026-09-23)
+when the common record is verifiably absent. Unknown evidence cannot start work;
+recorded or terminal races do not replay it. The same plan/step authority and
+initial fence remain intact, and polling/reload never grants retry permission.
+No persisted schema changes. HTTP and UI evidence closes this owner-action gap,
+not production plan admission, old-release migration or full P0 acceptance.
