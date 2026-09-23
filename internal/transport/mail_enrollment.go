@@ -25,3 +25,16 @@ type MailEnrollmentStatusResponse struct {
 	ObservedAt time.Time `json:"observed_at"`
 	Reason     string    `json:"reason,omitempty"`
 }
+
+// Source inspection is read-only release evidence, not enrollment admission or
+// current timer/certificate health. The reviewed plan must retain Generation.
+type MailEnrollmentSourceRequest struct {
+	ExpectedBuildCommit string `json:"expected_build_commit"`
+}
+type MailEnrollmentSourceResponse struct {
+	State       string    `json:"state"` // verified or unknown
+	Generation  string    `json:"generation,omitempty"`
+	BuildCommit string    `json:"build_commit,omitempty"`
+	ObservedAt  time.Time `json:"observed_at"`
+	Reason      string    `json:"reason,omitempty"`
+}

@@ -633,3 +633,22 @@ migration, mail traffic, new certificate renewal, automatic choice of inverse,
 management-file-absent pending recovery, production plan admission or the full
 P0 matrix. The initial inverse SSH read failed during boot and is retained; the
 successful later read introduced no mutation. No owner-installed server changed.
+
+
+### Read-only reviewed kit source (2026-09-23)
+
+`Agent.MailEnrollmentSourceV1` supplies the generation needed by a future new
+reviewed plan. It validates the known paired build, protected Agent declaration,
+running executable digest, complete installed helper bundle and fixed helper
+path, then revalidates the pinned evidence before returning `verified` with its
+observation time. Unknown source returns no usable generation or build identity;
+private filesystem diagnostics are not sent over IPC. Partial proof objects are
+closed even on inspection errors. The method is a bounded read policy, not a
+mutation capability, enrollment admission or current native renewal health.
+
+Race-enabled source/RPC/policy tests cover changed source, wrong running bytes,
+foreign declaration, invalid generation/path, build mismatch, missing evidence,
+cancellation and partial read cleanup. Agent/Panel vet passes. No persistent
+schema changes, plan-builder enablement or capability advertisement occurs in
+this slice. Native enrollment preflight and its plan review binding remain the
+next admission boundary; existing accepted plans are untouched.
