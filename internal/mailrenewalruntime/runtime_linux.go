@@ -41,12 +41,19 @@ func existingAt(parent int, uid, gid uint32) (bool, error) {
 	return true, nil
 }
 
-func ensureAt(parent int, uid, gid uint32, beforePublish func(string) error) (result error) {
+func ensureAt(parent int, uid, gid uint32, beforePublish func(string) error) error {
+	return ensureRuntimeAt(parent, uid, gid, beforePublish, false)
+}
+
+func ensureRuntimeAt(parent int, uid, gid uint32, beforePublish func(string) error, enrollmentLocks bool) (result error) {
 	var root unix.Stat_t
 	if err := unix.Fstat(parent, &root); err != nil || root.Mode&unix.S_IFMT != unix.S_IFDIR || root.Uid != uid || root.Mode&0022 != 0 {
 		return errors.New("mail renewal runtime parent is not trusted")
 	}
 	if found, err := existingAt(parent, uid, gid); found || err != nil {
+		if err == nil && enrollmentLocks {
+			return verifyRuntimeLocksAt(parent, uid, gid)
+		}
 		return err
 	}
 	random := make([]byte, 16)
@@ -94,6 +101,11 @@ func ensureAt(parent int, uid, gid uint32, beforePublish func(string) error) (re
 		return err
 	}
 	cleanupAllowed = true
+	if enrollmentLocks {
+		if err = createRuntimeLocksAt(fd, uid, gid); err != nil {
+			return err
+		}
+	}
 	if beforePublish != nil {
 		if err = beforePublish(stage); err != nil {
 			return err
@@ -113,12 +125,22 @@ func ensureAt(parent int, uid, gid uint32, beforePublish func(string) error) (re
 	if err != nil {
 		return err
 	}
-	if len(entries) != 0 {
+	expectedEntries := 0
+	if enrollmentLocks {
+		expectedEntries = 2
+		if err = verifyLockFilesAt(fd, uid, gid); err != nil {
+			return err
+		}
+	}
+	if len(entries) != expectedEntries {
 		return errors.New("runtime stage contains owner files; preserve it for review")
 	}
 	if err = unix.Renameat2(parent, stage, parent, directory, unix.RENAME_NOREPLACE); err != nil {
 		if errors.Is(err, unix.EEXIST) {
 			_, err = existingAt(parent, uid, gid)
+			if err == nil && enrollmentLocks {
+				return verifyRuntimeLocksAt(parent, uid, gid)
+			}
 			return err
 		}
 		return fmt.Errorf("publish independent mail runtime: %w", err)

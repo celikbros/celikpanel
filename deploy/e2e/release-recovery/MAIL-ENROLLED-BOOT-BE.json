@@ -1,0 +1,45 @@
+{
+  "schema": "celikpanel-mail-enrolled-boot-evidence/v1",
+  "actual_certificate_renewal": false,
+  "after_boot": "b601e7e1-3fb3-4145-a8d2-0c4550792917",
+  "before_boot": "1594d0d3-fbd1-4af7-aece-6e13a96c679f",
+  "enablement": "enabled",
+  "generation": "13146927a50653aef22c048027c170a0eebbed14b1f58321710d86a16c069093",
+  "interrupted_enrollment_recovery": false,
+  "journal": "Sep 23 09:57:41 dns-arch systemd[1]: Started Check retained mail certificate renewal work.\nSep 23 09:58:15 dns-arch systemd[1]: Starting Deploy an already renewed mail host certificate...\nSep 23 09:58:15 dns-arch systemd[1]: celikpanel-mail-renewal.service: Deactivated successfully.\nSep 23 09:58:15 dns-arch systemd[1]: Finished Deploy an already renewed mail host certificate.\n",
+  "management_bytes_absent": true,
+  "operation": "7df0fdc49040edabb95900570ebf31ac",
+  "retained_files_unchanged": true,
+  "scope": "completed enrollment timer boot and no-pending-work invocation only",
+  "service_properties": "ActiveState=inactive\nResult=success\nExecMainStartTimestamp=Wed 2026-09-23 09:58:15 UTC\nExecMainExitTimestamp=Wed 2026-09-23 09:58:15 UTC\nExecMainStatus=0\n",
+  "source_commit": "2fc9a5902ba5dcd2e5f89f9e635007b67635d2ed",
+  "timer": "active",
+  "volatile_runtime_absent": true,
+  "evidence": {
+    "mail-enrolled-boot-preparation.script": {
+      "sha256": "661454a285e8718416aff23203096941ca7992be1bbd24d7a019100ccaa5076a",
+      "bytes": 3169
+    },
+    "mail-enrolled-boot-before.json": {
+      "sha256": "82a78110f90f6b7499de9f00495e87858a515412838493234d1701f203c3f499",
+      "bytes": 3204
+    },
+    "mail-enrolled-boot-reset.intent": {
+      "sha256": "6358ee205f72a9a1a0a602a878a44839e0666bce647c419043e9dbfc2f9001c1",
+      "bytes": 313
+    },
+    "mail-enrolled-boot-reset.result": {
+      "sha256": "7d076be6c2c4549a7ab26d2216cb96939824a17184e13ed3ec0efa33c7c18c48",
+      "bytes": 24
+    },
+    "mail-enrolled-boot-observe.script": {
+      "sha256": "4c769d803d11f533a7dcbe843ab1811bd68810f19d4660590793e354339db195",
+      "bytes": 4905
+    },
+    "mail-enrolled-boot-result.json": {
+      "sha256": "72981c937e62d6e4163c1d01d6667150d1c5bfdd8aa868abc8064ddde2c4b9b6",
+      "bytes": 1188
+    }
+  },
+  "first_ssh_observation": "SSH not yet available (exit 255); no mutation retried; later guarded read succeeded"
+}

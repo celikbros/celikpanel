@@ -719,3 +719,13 @@ trial completes fresh admission on its first start with successful worker exit
 and active/enabled timer. Automatic boot admission, full mail workload and P0
 completion remain open. See
 [enrollment contract](MAIL-ENROLLMENT-RESERVATION.md#native-owner-handoff-and-transient-observation-2026-09-23).
+
+
+September 23 completed enrollment reboot: [Arch BE boot evidence](../deploy/e2e/release-recovery/MAIL-ENROLLED-BOOT-BE.json)
+proves the enrolled timer's new-boot no-pending-work invocation with management
+files absent and durable records unchanged. It does not prove interrupted
+enrollment recovery or certificate renewal. The recorded owner-continuation
+consumer now atomically restores an absent volatile directory and its two locks
+only after source, accepted scope and durable release exclusion are verified;
+existing owner paths are preserved. This boundary has component/process tests;
+its native interrupted-enrollment and automatic-dispatch acceptance remain open.

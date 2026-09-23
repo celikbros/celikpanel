@@ -326,3 +326,41 @@ migration or recovery. Existing v1 ledger and enrollment receipt schemas do not 
 This advances P0.2 truthful observation and P0.5 enrollment only. Automatic boot
 continuation, production wizard admission, actual Arch mail workloads, previous
 application rollback compatibility and the complete acceptance matrix remain open.
+
+
+### Reboot observation and recorded volatile runtime (2026-09-23)
+
+[Arch completed-enrollment boot evidence](../deploy/e2e/release-recovery/MAIL-ENROLLED-BOOT-BE.json)
+proves that source `2fc9a5902ba5dcd2e5f89f9e635007b67635d2ed` leaves its
+native timer enabled across a guarded QEMU reset, with Agent, Panel and Agent
+compatibility-declaration files absent. The new boot ran the no-pending-work
+helper successfully without recreating `/run/celikpanel`; native files, immutable
+receipts and the common ledger stayed byte-identical. The first SSH read was
+unavailable during boot, followed by a successful guarded read. This is completed
+schedule boot evidence, not interrupted enrollment recovery or real certificate
+renewal in that Arch fixture.
+
+The independent enrollment worker now supports one additional explicit owner
+continuation boundary: if `/run/celikpanel` is absent, it may publish that volatile
+directory together with both common lock files. It holds the existing durable
+release lock, verifies no active release transaction, requires the established
+numeric group, verifies the complete source-bound helper and exact recorded
+request/owner/kit/capture/file-plan relationship, then publishes an isolated stage
+with `RENAME_NOREPLACE`. Authority is checked again around publication. A competing
+path is re-observed; an existing partial or changed runtime is not normalized or
+filled in. Existing lock identity and contention are preserved.
+
+This cannot initialize a missing ledger or admit new work from an unrecorded
+start tuple. Changed source, lost identity and conflicting requests preserve
+existing evidence. A denied or interrupted staged publication may retain its
+private unselected stage; this is not a selected runtime or a successful enrollment.
+The existing v1 receipt and common-ledger formats are unchanged. Native execution
+still revalidates accepted authority under release and host exclusion. The generic
+lock-only runner remains non-initializing. No automatic boot dispatcher is added.
+
+Validation covers both locks being published together, existing contention,
+missing/malformed/owner-edited lock preservation, concurrent directory publication,
+authority failure, exact recorded identity and release-before-host ordering. Native
+continuation using this new runtime publication, reboot during unfinished enrollment,
+production UI continuation and automatic boot dispatch remain open. This step
+advances P0.2/P0.3/P0.5; it does not close them or authorize an installed update.

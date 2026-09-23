@@ -192,3 +192,87 @@ func TestMailEnrollmentWorkerLockChild(t *testing.T) {
 		time.Sleep(10 * time.Second)
 	}
 }
+
+func TestMailEnrollmentRuntimePreparationHasReleaseExclusion(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("root lock fixture")
+	}
+	root := t.TempDir()
+	release := filepath.Join(root, "transaction.lock")
+	host := filepath.Join(root, "mutation.lock")
+	if err := os.WriteFile(release, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	sentinel := errors.New("recorded proof unavailable")
+	called := false
+	err := runMailEnrollmentWithPreparedLocks(context.Background(), release, host, hostmutationlock.Owner{}, nil, func(f *os.File) error {
+		called = true
+		if err := hostmutationlock.VerifyInherited(release, int(f.Fd()), hostmutationlock.Owner{}); err != nil {
+			t.Fatal(err)
+		}
+		return sentinel
+	})
+	if err != sentinel || !called {
+		t.Fatal("preparation boundary skipped", err)
+	}
+	if _, err = os.Stat(host); !os.IsNotExist(err) {
+		t.Fatal("denied proof created host lock")
+	}
+	lock, err := hostmutationlock.AcquireExisting(release, hostmutationlock.Owner{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Close()
+	called = false
+	err = runMailEnrollmentWithPreparedLocks(context.Background(), release, host, hostmutationlock.Owner{}, nil, func(*os.File) error { called = true; return nil })
+	if !errors.Is(err, errMailEnrollmentWorkerBusy) || called {
+		t.Fatal("prepare ran without release exclusion", err)
+	}
+}
+
+func TestMailEnrollmentRuntimeRequiresRecordedIdentity(t *testing.T) {
+	id := enrollmentLedgerID()
+	generation := strings.Repeat("e", 64)
+	empty := servicemutationledger.Ledger{Version: 1, Jobs: map[string]*servicemutationledger.ServiceMutationJob{}}
+	raw, _ := servicemutationledger.Encode(&empty)
+	if _, err := recordedMailEnrollmentRuntimeIdentity(raw, []string{id.RequestID, id.OwnerID, generation}, generation); err == nil {
+		t.Fatal("new intent became recorded runtime authority")
+	}
+	ledger, err := servicemutationledger.AdmitMailEnrollment(&empty, id, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, state := range []string{"forward", "rollback", "restored"} {
+		if state != "forward" {
+			ledger, err = servicemutationledger.AdvanceMailEnrollment(&ledger, id, state, time.Now().UTC())
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		raw, _ = servicemutationledger.Encode(&ledger)
+		for _, accepted := range [][]string{{id.RequestID}, {id.RequestID, id.OwnerID, generation}} {
+			got, err := recordedMailEnrollmentRuntimeIdentity(raw, accepted, generation)
+			if err != nil || got != id {
+				t.Fatal(state, got, err)
+			}
+		}
+		for _, accepted := range [][]string{{strings.Repeat("d", 32)}, {id.RequestID, strings.Repeat("c", 32), generation}, {id.RequestID, id.OwnerID, strings.Repeat("f", 64)}, nil} {
+			if _, err := recordedMailEnrollmentRuntimeIdentity(raw, accepted, generation); err == nil {
+				t.Fatal("invalid runtime authority accepted", accepted)
+			}
+		}
+	}
+	other := id
+	other.RequestID = strings.Repeat("f", 32)
+	ledger, err = servicemutationledger.AdmitMailEnrollment(&ledger, other, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ = servicemutationledger.Encode(&ledger)
+	if _, err := recordedMailEnrollmentRuntimeIdentity(raw, []string{id.RequestID}, generation); err == nil {
+		t.Fatal("competing active operation ignored")
+	}
+	if _, err := recordedMailEnrollmentRuntimeIdentity([]byte("{}"), []string{id.RequestID}, generation); err == nil {
+		t.Fatal("missing canonical state accepted")
+	}
+}

@@ -73,7 +73,8 @@ func mailEnrollmentWorkerUnitArgs(helper string, accepted []string) ([]string, e
 
 // The detached worker owns exclusion before executing the consumer. Re-exec via
 // a pinned descriptor assigns fd8/fd9 without overwriting Go runtime descriptors.
-// All locks already exist; this path cannot recreate a vanished runtime identity.
+// Recorded owner continuation can restore absent volatile locks from verified
+// durable evidence under the release lock; existing owner paths are preserved.
 func runIndependentMailEnrollmentWorker(ctx context.Context, accepted []string) error {
 	if !mailRenewalOnlyBuild || os.Geteuid() != 0 || !validMailEnrollmentWorkerArgs(accepted) {
 		return servicemutationledger.ErrMailEnrollment
@@ -86,9 +87,14 @@ func runIndependentMailEnrollmentWorker(ctx context.Context, accepted []string) 
 	if len(accepted) == 3 {
 		args = append([]string{"--enroll-under-lock"}, accepted...)
 	}
-	return runMailEnrollmentWithLocks(ctx, "/var/lib/celikpanel-release-transaction/transaction.lock", "/run/celikpanel/service-mutation.lock", serviceMutationLockOwner(), args)
+	return runMailEnrollmentWithPreparedLocks(ctx, "/var/lib/celikpanel-release-transaction/transaction.lock", "/run/celikpanel/service-mutation.lock", serviceMutationLockOwner(), args, func(release *os.File) error {
+		return prepareRecordedMailEnrollmentRuntime(ctx, accepted, int(release.Fd()))
+	})
 }
 func runMailEnrollmentWithLocks(ctx context.Context, releasePath, hostPath string, owner hostmutationlock.Owner, args []string) error {
+	return runMailEnrollmentWithPreparedLocks(ctx, releasePath, hostPath, owner, args, nil)
+}
+func runMailEnrollmentWithPreparedLocks(ctx context.Context, releasePath, hostPath string, owner hostmutationlock.Owner, args []string, prepare func(*os.File) error) error {
 	if ctx == nil {
 		return servicemutationledger.ErrMailEnrollment
 	}
@@ -103,6 +109,11 @@ func runMailEnrollmentWithLocks(ctx context.Context, releasePath, hostPath strin
 		return err
 	}
 	defer release.Close()
+	if prepare != nil {
+		if err = prepare(release); err != nil {
+			return err
+		}
+	}
 	host, err := hostmutationlock.AcquireExisting(hostPath, owner)
 	if err != nil {
 		if errors.Is(err, hostmutationlock.ErrBusy) {
