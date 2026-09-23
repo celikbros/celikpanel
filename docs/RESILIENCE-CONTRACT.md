@@ -883,3 +883,18 @@ admission remained refused and explicit terminal continuation kept evidence
 unchanged. Debian preserved 61 mail files and the verified SMTP/IMAP TLS leaf.
 This closes the measured ordinary-management dependency, not P0.3/P0.5 in full;
 old helper/application compatibility and the wider workload matrix remain open.
+
+
+### DNS acquisition/publication schema boundary (2026-09-23)
+
+P0.4 now has separate canonical acquisition and publication schemas with exact
+content binding and shared legacy validators. Agent ownership/update/reinstall
+comparisons consume that boundary without changing active on-disk producers.
+The lossless legacy separation proposal preserves both original before-images;
+its inverse refuses later publications or changed ownership evidence. Actual
+Alpha81 producer fixtures cover the transition's byte contract. See
+[DNS schema and migration boundary](DNS-ENGINE-ARTIFACT.md#separate-wire-records-and-retained-before-images-2026-09-23).
+
+The operation-bound filesystem publisher, protected metadata/checkpoint protocol,
+independent DNS executor and native historical update/restore matrix remain open.
+This component contract is not an installed migration or closure of P0.4.

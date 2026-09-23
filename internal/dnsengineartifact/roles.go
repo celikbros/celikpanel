@@ -10,31 +10,30 @@ import (
 // SourceRevision identifies the acquisition's reviewed source, not later zones.
 // Pair direction and endpoints are authority, never ordinary publication drift.
 type AcquisitionV1 struct {
-	Mode                                                  string
-	Engine                                                transport.DNSEngine
-	EngineEpoch                                           int64
-	PairRole, PairLocalIP, PairPeerIP                     string
-	SourceRevision                                        int64
-	ManifestQualifier, MutationRequestID, MutationOwnerID string
+	Mode              string              `json:"mode"`
+	Engine            transport.DNSEngine `json:"engine"`
+	EngineEpoch       int64               `json:"engine_epoch"`
+	PairRole          string              `json:"pair_role,omitempty"`
+	PairLocalIP       string              `json:"pair_local_ip,omitempty"`
+	PairPeerIP        string              `json:"pair_peer_ip,omitempty"`
+	SourceRevision    int64               `json:"source_revision"`
+	ManifestQualifier string              `json:"manifest_qualifier"`
+	MutationRequestID string              `json:"mutation_request_id"`
+	MutationOwnerID   string              `json:"mutation_owner_id"`
 }
 
 // PublicationV1 is changeable configuration evidence within that tenure. It
 // neither grants engine ownership nor proves what the native daemon is serving.
 type PublicationV1 struct {
-	Generation           string
-	PrimaryCatalogSerial uint32
+	Generation           string `json:"generation,omitempty"`
+	PrimaryCatalogSerial uint32 `json:"primary_catalog_serial,omitempty"`
 }
 
 func SplitV1(state StateV1) (AcquisitionV1, PublicationV1, error) {
 	if err := ValidateV1(state); err != nil {
 		return AcquisitionV1{}, PublicationV1{}, err
 	}
-	return AcquisitionV1{
-		Mode: state.Mode, Engine: state.Engine, EngineEpoch: state.EngineEpoch,
-		PairRole: state.PairRole, PairLocalIP: state.PairLocalIP, PairPeerIP: state.PairPeerIP,
-		SourceRevision: state.SourceRevision, ManifestQualifier: state.ManifestQualifier,
-		MutationRequestID: state.MutationRequestID, MutationOwnerID: state.MutationOwnerID,
-	}, PublicationV1{Generation: state.Generation, PrimaryCatalogSerial: state.PrimaryCatalogSerial}, nil
+	return acquisitionFromV1(state), PublicationV1{Generation: state.Generation, PrimaryCatalogSerial: state.PrimaryCatalogSerial}, nil
 }
 
 type Relationship uint8
@@ -49,22 +48,16 @@ const (
 // Exact frozen journal/snapshot comparisons must not use this function instead.
 // Secondary or PowerDNS evolution has no admitted publication transition here.
 func CompareV1(ownership, current StateV1) (Relationship, error) {
-	acquisition, before, err := SplitV1(ownership)
+	acquisition, before, err := SeparateV1(ownership)
 	if err != nil {
 		return 0, err
 	}
-	currentAcquisition, after, err := SplitV1(current)
+	currentAcquisition, after, err := SeparateV1(current)
 	if err != nil {
 		return 0, err
 	}
 	if acquisition != currentAcquisition {
 		return 0, errors.New("DNS engine state differs from its acquisition ownership")
 	}
-	if before == after {
-		return SamePublication, nil
-	}
-	if acquisition.Engine != transport.DNSEngineBIND || acquisition.PairRole == transport.DNSPairRoleSecondary || before.Generation == after.Generation || after.PrimaryCatalogSerial < before.PrimaryCatalogSerial {
-		return 0, errors.New("DNS engine publication is not a supported continuation of its acquisition")
-	}
-	return LaterBINDPublication, nil
+	return ComparePublicationsV1(acquisition, before, after)
 }

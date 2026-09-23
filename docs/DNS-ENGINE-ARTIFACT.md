@@ -1,4 +1,4 @@
-# DNS engine evidence: shared v1 contract and roles
+# DNS engine evidence: shared roles and separate record schemas
 
 P0.4, invariants 1, 2 and 4. The Agent now uses `internal/dnsengineartifact`
 for every canonical v1 engine state/acquisition encode, decode and validation.
@@ -51,7 +51,73 @@ Existing Agent tests exercise actual shared writers, source snapshot/restore,
 BIND tree proofs, owner edits and rollback guards.
 
 This establishes a shared producer/reader and explicit semantic role boundary.
-It does not replace the combined durable v1 record with separate immutable
-acquisition/publication schemas, migrate installed evidence, create an independent
-DNS recovery executor or complete native old/new update/restore acceptance.
-Those P0.4 items remain open. No installed server is changed by this refactor.
+The following work adds separate wire schemas and a lossless transition contract.
+Active Agent writers, switch journals and snapshot readers still use the legacy
+v1 disk layout. Installing a filesystem migration, independent DNS recovery and
+native old/new update/restore acceptance remains open. No installed server is
+changed by this source work.
+
+
+## Separate wire records and retained before-images (2026-09-23)
+
+P0.4, invariants 1/2/4. `internal/dnsengineartifact` now owns three additional
+strict canonical contracts:
+
+| Schema | Role |
+|---|---|
+| `celikpanel-dns-engine-acquisition/v1` | Immutable engine tenure, owner/request/manifest, source revision, epoch and directional endpoints. No generation or catalog fields. |
+| `celikpanel-dns-engine-publication/v1` | Exact acquisition SHA-256 plus generation/catalog publication. The digest covers canonical acquisition bytes including their newline. |
+| `celikpanel-dns-engine-legacy-separation/v1` | A read-only proposal retaining both original canonical v1 byte sequences, one acquisition, and separate ownership-checkpoint/current publication records. |
+
+`CompareV1`, already used by Agent update preflight, ownership/finalization and
+reinstall admission, now delegates to these separate records and their shared
+publication validator. Existing native-generation verification remains mandatory
+where it was required. A matching acquisition digest is a content binding, not
+an ownership signature, current daemon observation or mutation permission.
+Acquisition and publication validators are also the validators for legacy v1;
+they do not drift into independent interpretations of the same fields.
+
+`SeparateV1` and `CombineV1` preserve the actual Alpha81 producer's exact bytes.
+`PlanLegacySeparationV1` requires two present, canonical, compatible inputs. It
+refuses acquisition drift, unsupported publication evolution, regression and
+malformed records. The proposal keeps the original ownership publication even
+when current publication has advanced. It does not invent a new operation,
+revision counter, missing receipt or fresh ownership.
+
+A proposal is NOT mutation admission. `VerifyLegacySeparationSourceV1` refuses
+any subsequent source change, including otherwise valid later zone publication.
+`LegacyBeforeImagesV1` returns independent copies of the old bytes only when all
+three observed separated artifacts still exactly match the recorded proposal.
+It refuses a later publication instead of restoring old evidence over new work.
+Neither function reads/writes files or changes permissions or services.
+
+### Remaining filesystem transition
+
+Before activating this format, the publisher and independent recovery executor
+must bind the proposal to the accepted operation and protected source identities,
+prove native configuration under the common mutation barrier, retain metadata and
+before-images durably, and publish/recover with explicit checkpoints. Source and
+new-layout equality checks above are byte-level prerequisites, not replacements
+for that filesystem/authority proof. Old application compatibility and frozen
+switch/snapshot consumers must be covered before active writers change format.
+No pending historical journal or snapshot may be edited to appear migrated.
+
+### Evidence and limits
+
+Component coverage uses all seven unchanged historical Alpha81 outputs and the
+add/edit/delete sequence. It verifies stable acquisition bytes, publication
+binding to every authority field, exact historical inverse, missing/mixed inputs,
+unknown/duplicate/noncanonical JSON, changed sources, later publication, preserved
+checkpoint evidence and defensive buffer ownership. The existing Agent suite
+continues to exercise actual writers, native-tree proof gates, owner changes,
+rollback and exact snapshots through the new comparison implementation.
+
+These tests do not prove an installed filesystem migration, native interruption
+recovery, independent DNS execution or a complete signed release transition.
+P0.4 remains partial; those acceptance items stay open.
+
+Recorded local validation (Go 1.26.5, Linux): `go test -race
+./internal/dnsengineartifact` passed (1.241 s); `go test -race ./cmd/agent -run
+'DNS|BIND|PDNS' -count=1` passed (15.456 s); `go vet` passed for both packages.
+The 20-second separated/legacy round-trip fuzz run passed 593,703 executions.
+These figures describe component checks, not native service interruption trials.

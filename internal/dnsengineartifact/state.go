@@ -72,22 +72,37 @@ func DecodeV1(data []byte) (StateV1, error) {
 }
 
 func ValidateV1(state StateV1) error {
-	if state.Schema != StateSchemaV1 || !transport.ValidDNSEngine(state.Engine) ||
-		(state.Mode != transport.DNSEngineSwitchModeSwitch &&
-			state.Mode != transport.DNSEngineSwitchModeAdopt) ||
-		state.EngineEpoch < 1 || state.SourceRevision < 0 ||
-		!mutationpayload.ValidDNSEngineSwitchQualifier(state.ManifestQualifier) ||
-		!servicemutationledger.ValidIdentity(state.MutationRequestID) ||
-		!servicemutationledger.ValidIdentity(state.MutationOwnerID) {
+	if state.Schema != StateSchemaV1 {
 		return errors.New("DNS engine state has an unsupported identity")
 	}
-	if state.Mode == transport.DNSEngineSwitchModeAdopt &&
-		state.Engine != transport.DNSEnginePowerDNS {
+	acquisition := acquisitionFromV1(state)
+	if err := validateAcquisition(acquisition); err != nil {
+		return err
+	}
+	return validatePublication(acquisition, PublicationV1{Generation: state.Generation, PrimaryCatalogSerial: state.PrimaryCatalogSerial})
+}
+
+func acquisitionFromV1(state StateV1) AcquisitionV1 {
+	return AcquisitionV1{
+		Mode: state.Mode, Engine: state.Engine, EngineEpoch: state.EngineEpoch,
+		PairRole: state.PairRole, PairLocalIP: state.PairLocalIP, PairPeerIP: state.PairPeerIP,
+		SourceRevision: state.SourceRevision, ManifestQualifier: state.ManifestQualifier,
+		MutationRequestID: state.MutationRequestID, MutationOwnerID: state.MutationOwnerID,
+	}
+}
+
+func validateAcquisition(state AcquisitionV1) error {
+	if !transport.ValidDNSEngine(state.Engine) ||
+		(state.Mode != transport.DNSEngineSwitchModeSwitch && state.Mode != transport.DNSEngineSwitchModeAdopt) ||
+		state.EngineEpoch < 1 || state.SourceRevision < 0 ||
+		!mutationpayload.ValidDNSEngineSwitchQualifier(state.ManifestQualifier) ||
+		!servicemutationledger.ValidIdentity(state.MutationRequestID) || !servicemutationledger.ValidIdentity(state.MutationOwnerID) {
+		return errors.New("DNS engine state has an unsupported identity")
+	}
+	if state.Mode == transport.DNSEngineSwitchModeAdopt && state.Engine != transport.DNSEnginePowerDNS {
 		return errors.New("DNS engine adoption state must name PowerDNS")
 	}
-	if state.Mode == transport.DNSEngineSwitchModeAdopt &&
-		(state.PairRole != "" || state.PairLocalIP != "" ||
-			state.PairPeerIP != "" || state.PrimaryCatalogSerial != 0) {
+	if state.Mode == transport.DNSEngineSwitchModeAdopt && (state.PairRole != "" || state.PairLocalIP != "" || state.PairPeerIP != "") {
 		return errors.New("legacy PowerDNS adoption state cannot claim directional primary identity")
 	}
 	if (state.PairLocalIP == "") != (state.PairPeerIP == "") {
@@ -95,37 +110,40 @@ func ValidateV1(state StateV1) error {
 	}
 	hasPairAddresses := state.PairLocalIP != ""
 	if hasPairAddresses {
-		localIP := net.ParseIP(state.PairLocalIP)
-		peerIP := net.ParseIP(state.PairPeerIP)
-		if localIP == nil || localIP.To4() == nil ||
-			localIP.String() != state.PairLocalIP || !localIP.IsGlobalUnicast() ||
-			peerIP == nil || peerIP.To4() == nil ||
-			peerIP.String() != state.PairPeerIP || !peerIP.IsGlobalUnicast() ||
-			localIP.Equal(peerIP) {
+		localIP, peerIP := net.ParseIP(state.PairLocalIP), net.ParseIP(state.PairPeerIP)
+		if localIP == nil || localIP.To4() == nil || localIP.String() != state.PairLocalIP || !localIP.IsGlobalUnicast() ||
+			peerIP == nil || peerIP.To4() == nil || peerIP.String() != state.PairPeerIP || !peerIP.IsGlobalUnicast() || localIP.Equal(peerIP) {
 			return errors.New("DNS engine state pair addresses are not canonical and distinct")
 		}
 	}
 	switch state.PairRole {
-	case transport.DNSPairRolePrimary:
-		if !hasPairAddresses || state.PrimaryCatalogSerial == 0 {
-			return errors.New("paired primary DNS engine state is missing its catalog serial")
-		}
-	case transport.DNSPairRoleSecondary:
-		if !hasPairAddresses || state.PrimaryCatalogSerial != 0 {
-			return errors.New("paired secondary DNS engine state contains a primary catalog serial")
+	case transport.DNSPairRolePrimary, transport.DNSPairRoleSecondary:
+		if !hasPairAddresses {
+			return errors.New("paired DNS engine state is missing its address identity")
 		}
 	case "":
-		if state.PrimaryCatalogSerial != 0 || hasPairAddresses {
+		if hasPairAddresses {
 			return errors.New("standalone DNS engine state contains directional pair identity")
 		}
 	default:
 		return errors.New("DNS engine state has an unsupported pair role")
 	}
-	if state.Engine == transport.DNSEngineBIND {
-		if !ValidGeneration(state.Generation) {
+	return nil
+}
+
+func validatePublication(acquisition AcquisitionV1, publication PublicationV1) error {
+	if acquisition.PairRole == transport.DNSPairRolePrimary {
+		if publication.PrimaryCatalogSerial == 0 {
+			return errors.New("paired primary DNS engine state is missing its catalog serial")
+		}
+	} else if publication.PrimaryCatalogSerial != 0 {
+		return errors.New("non-primary DNS engine state contains a primary catalog serial")
+	}
+	if acquisition.Engine == transport.DNSEngineBIND {
+		if !ValidGeneration(publication.Generation) {
 			return errors.New("BIND engine state has an invalid generation")
 		}
-	} else if state.Generation != "" {
+	} else if publication.Generation != "" {
 		return errors.New("PowerDNS engine state unexpectedly names a BIND generation")
 	}
 	return nil
