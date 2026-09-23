@@ -23,9 +23,11 @@ const (
 )
 
 type EvidenceObservation struct {
-	Status    EvidenceStatus
-	RequestID string
-	Phase     string
+	Status        EvidenceStatus
+	RequestID     string
+	Phase         string
+	WorkerPID     int
+	WorkerStarted string
 }
 
 // InspectEvidence binds a previously decoded canonical journal to a canonical
@@ -60,6 +62,8 @@ func InspectEvidence(policy dnsengineartifact.JournalPolicy, journal dnsenginear
 			}
 		case id.ActiveJobWithRegisteredWorker(job):
 			observation.Status = EvidenceWorkerRecorded
+			observation.WorkerPID = job.WorkerPID
+			observation.WorkerStarted = job.WorkerStarted
 		case id.ExpiredCancellingJob(job, now):
 			observation.Status = EvidenceExpiredCancellation
 		default:

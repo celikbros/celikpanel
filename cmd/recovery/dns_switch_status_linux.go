@@ -139,35 +139,15 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 		defer locks.Close()
 	}
-	journalRaw, present, err := servicemutationledger.ReadFile(filepath.Join(root, "dns-engine-switch-journal.json"), dnsengineartifact.SwitchJournalLimit, owner)
+	policy := installedDNSJournalPolicy(owner.GID)
+	observation, present, err := dnsenginerecovery.InspectFiles(root, owner, policy, time.Now().UTC())
 	if err != nil {
-		fmt.Fprintln(diagnostic, "DNS switch evidence could not be read. Preserve the private state directory; the server owner must inspect its path and ownership before retrying. "+err.Error())
+		fmt.Fprintln(diagnostic, "DNS switch evidence could not be verified. Preserve the private journal and ledger; the server owner must inspect their ownership, native DNS state and compatibility before the same operation resumes. "+err.Error())
 		return exitUnavailable
 	}
 	if !present {
 		fmt.Fprintln(out, "No DNS switch journal was observed. This does not prove historical completion or current DNS health. The server owner should inspect the native DNS service and the panel's operation status before starting another switch.")
 		return exitOK
-	}
-	policy := installedDNSJournalPolicy(owner.GID)
-	journal, err := policy.DecodeSwitchJournal(journalRaw)
-	if err != nil {
-		fmt.Fprintln(diagnostic, "DNS switch journal is unrecognized. Preserve the file; the server owner must use a compatible recovery version and inspect the native DNS service. "+err.Error())
-		return exitUnavailable
-	}
-	ledgerRaw, present, err := servicemutationledger.ReadFile(filepath.Join(root, "service-mutations.json"), servicemutationledger.MaxSize, owner)
-	if err != nil || !present {
-		fmt.Fprintln(diagnostic, "DNS switch ledger could not be verified. Preserve the journal and ledger; the server owner must inspect the private state directory before the same operation can resume.")
-		return exitUnavailable
-	}
-	ledger, err := servicemutationledger.Decode(ledgerRaw)
-	if err != nil {
-		fmt.Fprintln(diagnostic, "DNS switch ledger is unrecognized. Preserve both files; the server owner must use a compatible recovery version before the same operation can resume. "+err.Error())
-		return exitUnavailable
-	}
-	observation, err := dnsenginerecovery.InspectEvidence(policy, journal, ledger, time.Now().UTC())
-	if err != nil {
-		fmt.Fprintln(diagnostic, "DNS switch evidence disagrees. Preserve both files; the server owner must review the operation and native DNS state before retrying. "+err.Error())
-		return exitUnavailable
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	if len(args) == 2 {
@@ -177,8 +157,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	case dnsenginerecovery.EvidenceLeaseExpired:
 		fmt.Fprintln(out, "The active ledger lease has expired. The server owner should inspect the original operation and native DNS service; do not start another switch. A compatible recovery executor must establish worker liveness and host ownership before the same operation can resume.")
 	case dnsenginerecovery.EvidenceWorkerRecorded:
-		job := ledger.Jobs[observation.RequestID]
-		matches, probeErr := processidentity.Matches(job.WorkerPID, job.WorkerStarted)
+		matches, probeErr := processidentity.Matches(observation.WorkerPID, observation.WorkerStarted)
 		switch {
 		case probeErr != nil:
 			fmt.Fprintln(out, "A worker is recorded, but its process identity could not be inspected. The server owner should check the same operation and native DNS service. Do not start another switch; recovery must prove worker and host state under the lock.")
