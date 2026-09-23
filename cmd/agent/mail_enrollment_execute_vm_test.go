@@ -132,6 +132,13 @@ func (n *mailEnrollmentCutNative) StopTimer(ctx context.Context) error {
 
 func requireMailEnrollmentVMIdentity(t *testing.T) {
 	t.Helper()
+	requireMailEnrollmentVMIdentityFor(t, "arch")
+}
+func requireMailEnrollmentVMIdentityFor(t *testing.T, node string) {
+	t.Helper()
+	if node != "arch" && node != "debian13" {
+		t.Fatal("unsupported fixture node")
+	}
 	const markerPath = "/etc/celikpanel-release-recovery-lab"
 	var st unix.Stat_t
 	if unix.Lstat(markerPath, &st) != nil || st.Mode != unix.S_IFREG|0444 || st.Uid != 0 || st.Gid != 0 || st.Nlink != 1 || st.Size > 2048 {
@@ -142,7 +149,7 @@ func requireMailEnrollmentVMIdentity(t *testing.T) {
 		t.Fatal(e)
 	}
 	var marker map[string]string
-	if json.Unmarshal(raw, &marker) != nil || marker["schema"] != "celikpanel-release-recovery-lab/v1" || marker["node"] != "arch" {
+	if json.Unmarshal(raw, &marker) != nil || marker["schema"] != "celikpanel-release-recovery-lab/v1" || marker["node"] != node {
 		t.Fatal("wrong fixture")
 	}
 	uuid, e := os.ReadFile("/sys/class/dmi/id/product_uuid")

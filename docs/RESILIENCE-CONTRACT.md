@@ -782,3 +782,21 @@ immutable precut receipts are preserved. One automatic attempt, no postboot owne
 continuation and no management daemons. The test producer explicitly selected
 inverse intent before reset; automatic inverse selection and the remaining
 P0.1/P0.5 platform/early-admission/migration matrix remain open. No schema change.
+
+
+September 23 Debian enrollment follow-up: [Debian 13 BE](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-DEBIAN-BOOT-BE.json)
+passes the same P0.1/P0.5 lost native timer-start reply plus reboot boundary as
+Arch. Automatic same-request publication needs one boot attempt and no Panel or
+Agent daemon. Old jobs, precut receipts and captured mail configuration/certificate
+files are preserved; Postfix/Dovecot are active after boot. Lab teardown of the
+previous test renewal installation is explicit, not a production migration claim.
+Inverse/early-admission boot, production admission and the remaining matrix stay open.
+
+
+The same Debian BE record now also proves recorded inverse completion after
+actual timer-stop interruption and reboot, with one automatic attempt, known
+restored failure, unchanged prior evidence and preserved mail files/services.
+The selected forward/inverse boot boundaries pass on both Debian and Arch;
+early admission, production enrollment, old-release migration and the wider
+acceptance matrix remain open. These native enrollment results do not establish
+all workload independence or complete P0 resilience.

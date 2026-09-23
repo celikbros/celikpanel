@@ -27,13 +27,19 @@ func TestMailEnrollmentRollbackBootDisposableVM(t *testing.T) {
 	runMailEnrollmentBootDisposableVM(t, true)
 }
 func runMailEnrollmentBootDisposableVM(t *testing.T, rollback bool) {
-	if os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "arch-20260923-boot" {
-		t.Skip("guarded Arch fixture only")
+	node := ""
+	switch os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") {
+	case "arch-20260923-boot":
+		node = "arch"
+	case "debian13-20260923-boot":
+		node = "debian13"
+	default:
+		t.Skip("guarded Debian/Arch fixture only")
 	}
 	if os.Geteuid() != 0 {
 		t.Fatal("root fixture required")
 	}
-	requireMailEnrollmentVMIdentity(t)
+	requireMailEnrollmentVMIdentityFor(t, node)
 	if _, err := os.Lstat("/opt/celikpanel/bin/panel"); !os.IsNotExist(err) {
 		t.Fatal("panel must be absent")
 	}

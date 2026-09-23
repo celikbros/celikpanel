@@ -537,3 +537,32 @@ P0.1/P0.5. It does not prove automatic selection of rollback after an arbitrary
 failure, early admission cuts, Debian enrollment boot, production plan admission,
 old-release migration or the full P0 matrix. Compatible Agent files remain
 required for unfinished enrollment; no owner-installed panel changed.
+
+
+### Native Debian automatic boot evidence (2026-09-23)
+
+[Debian 13 BE enrollment boot](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-DEBIAN-BOOT-BE.json)
+uses the same installed production helper generation as the Arch trials. The
+root-marker/DMI/QEMU-gated static test producer is killed after actual timer
+start, before its receipt. On a new boot, the native unit automatically completes
+request `1a1b8b789d273cb6f7a48ef9e1350728` with one attempt. No management daemon
+or postboot owner continuation is used. Existing jobs and precut immutable
+receipts remain unchanged. Postfix/Dovecot run after boot, with their captured
+configuration/certificate files unchanged.
+
+The older fixture renewal service/timer/hook were moved into a protected
+before-directory by explicit lab preparation. This establishes the fresh
+accepted-enrollment boundary, not legacy migration. The test does not prove
+SMTP traffic, new certificate issuance or real renewal in this run. Debian
+inverse boot, early admission, production plan admission, old-release migration
+and the full P0 matrix remain open. No installed owner panel was changed.
+
+
+The same Debian fixture additionally passes inverse boot for request
+`6400548513ba4842582784d16da1adb8`: explicit test-fixture rollback is persisted,
+then actual timer-stop return is interrupted. On a new boot the installed helper
+restores original native absence with one automatic attempt and preserves known
+`mail_enrollment_restored` failure. Old jobs/receipts and the captured mail
+configuration/certificate files remain unchanged; Postfix/Dovecot are active.
+This closes the selected Debian inverse boot boundary noted above, not automatic
+failure-to-inverse selection or the remaining early-admission/migration matrix.
