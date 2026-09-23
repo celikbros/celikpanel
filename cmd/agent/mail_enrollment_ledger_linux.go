@@ -17,8 +17,8 @@ import (
 )
 
 // New admission through this boundary is not exposed through RPC or the renewal
-// hook. The independent CLI can only resume an existing exact reservation. The
-// setup dispatcher must supply authenticated source and accepted owner intent;
+// hook. The independent root CLI supplies an exact reviewed request/owner/kit
+// tuple. A future setup dispatcher must bind authenticated accepted owner intent;
 // native result proofs remain mandatory. An Agent declaration alone is not
 // authorization. No historical release may be retroactively certified.
 type mailEnrollmentAuthority struct {

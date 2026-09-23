@@ -14,10 +14,13 @@ import (
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
 
+var errMailEnrollmentWorkerBusy = errors.New("mail enrollment is waiting for existing host exclusion")
+
 const independentMailPath = "/usr/sbin:/usr/bin:/sbin:/bin"
 
 // This is a separately built, one-shot owner process. It has no RPC listener,
-// panel database, license gate, new-enrollment or general recovery entrypoint.
+// panel database, license gate or general recovery entrypoint. New enrollment
+// requires explicit root-owner dispatch with exact request, owner and kit IDs.
 // Existing reviewed mail intent, common locks and versioned evidence still apply.
 func runIndependentMailRenewal(args []string, euid int, environment []string) int {
 	if err := validateIndependentMailEntry(args, euid, environment); err != nil {
@@ -31,6 +34,32 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 	switch args[0] {
 	case "--inspect-build-identity":
 		fmt.Printf("component=mail-renewal\nversion=%s\ncommit=%s\n", buildVersion, buildCommit)
+		return 0
+	case "--start-enrollment", "--continue-enrollment":
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		if err = launchIndependentMailEnrollment(ctx, args[1:]); err != nil {
+			fmt.Fprintln(os.Stderr, "Mail enrollment handoff is not confirmed. The server owner must inspect celikpanel-mail-enrollment-"+args[1]+".service and the same request before retrying; no completion is claimed.")
+			return 1
+		}
+		fmt.Fprintln(os.Stdout, "Mail enrollment worker accepted: "+args[1]+". Completion is not yet verified. Observe celikpanel-mail-enrollment-"+args[1]+".service; after interruption, continue this same request.")
+		return 0
+	case "--enrollment-worker":
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err = runIndependentMailEnrollmentWorker(ctx, args[1:]); err != nil {
+			fmt.Fprintln(os.Stderr, mailEnrollmentWorkerGuidance(err)+" Request: "+args[1])
+			return 1
+		}
+		return 0
+	case "--enroll-under-lock":
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err = runIndependentMailEnrollment(ctx, args[1], args[2], args[3]); err != nil {
+			fmt.Fprintln(os.Stderr, mailEnrollmentWorkerGuidance(err)+" Request: "+args[1])
+			return 1
+		}
+		fmt.Fprintln(os.Stdout, "Mail enrollment result verified for request: "+args[1])
 		return 0
 	case "--resume-enrollment":
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -125,6 +154,12 @@ func validateIndependentMailEntry(args []string, euid int, environment []string)
 	if err := validateIndependentMailEnvironment(euid, environment); err != nil {
 		return err
 	}
+	if len(args) == 4 && (args[0] == "--start-enrollment" || args[0] == "--enrollment-worker" || args[0] == "--enroll-under-lock") && validMutationIdentity(args[1]) && validMutationIdentity(args[2]) && recoveryruntime.ValidDigest(args[3]) {
+		return nil
+	}
+	if len(args) == 2 && (args[0] == "--continue-enrollment" || args[0] == "--enrollment-worker") && validMutationIdentity(args[1]) {
+		return nil
+	}
 	if len(args) == 1 && (args[0] == "--process-pending" || args[0] == "--inspect-build-identity") {
 		return nil
 	}
@@ -142,7 +177,7 @@ func validateIndependentMailEntry(args []string, euid int, environment []string)
 			return nil
 		}
 	}
-	return errors.New("supported actions are --process-pending, --queue <managed-mail-lineage>, --retry-selected <recorded-operation-id>, --retry-failed <recorded-operation-id>, --resume-enrollment <recorded-operation-id> (requires inherited release fd9 and host fd8), and --inspect-build-identity")
+	return errors.New("supported actions are --start-enrollment <request-id> <owner-id> <reviewed-kit-digest>, --continue-enrollment <recorded-id>, --process-pending, --queue <managed-mail-lineage>, --retry-selected <recorded-operation-id>, --retry-failed <recorded-operation-id>, --resume-enrollment <recorded-operation-id> (requires inherited release fd9 and host fd8), and --inspect-build-identity")
 }
 
 func validateIndependentMailSupervisor(args []string, euid int, environment []string) error {
@@ -228,7 +263,7 @@ func independentMailRenewalWait(err error) bool {
 // Do not expose raw command output, paths or persisted job messages at this
 // boundary. Known evidence/timeout states retain their meaning; unknown remains
 // unverified, not a claim that the native service stopped or enrollment failed.
-func mailEnrollmentResumeGuidance(err error) string {
+func mailEnrollmentReason(err error) string {
 	reason := "The recorded mail enrollment result could not be verified."
 	switch {
 	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
@@ -248,5 +283,18 @@ func mailEnrollmentResumeGuidance(err error) string {
 			}
 		}
 	}
-	return reason + " The server owner must inspect this request's journal and native renewal units, resolve the reported prerequisite, then resume the same request with release fd9 and host fd8 held. No new enrollment or update was started."
+	return reason
+}
+
+func mailEnrollmentResumeGuidance(err error) string {
+	return mailEnrollmentReason(err) + " The server owner must inspect this request's journal and native renewal units, resolve the reported prerequisite, then resume the same request with release fd9 and host fd8 held. No new enrollment or update was started."
+}
+
+// Worker failures never ask owners to manipulate descriptors or invent evidence.
+func mailEnrollmentWorkerGuidance(err error) string {
+	reason := mailEnrollmentReason(err)
+	if errors.Is(err, errMailEnrollmentWorkerBusy) {
+		return "Mail enrollment is waiting because another operation holds the release or host lock. No enrollment work was started by this worker. The server owner must wait for that operation to finish, then continue the same recorded request or retry the original reviewed tuple if admission never occurred."
+	}
+	return reason + " The server owner must inspect this request's native worker journal and renewal units. Resolve the reported prerequisite, then use --continue-enrollment with the same recorded request; if admission never occurred, retry the original reviewed start tuple. Existing evidence is retained."
 }

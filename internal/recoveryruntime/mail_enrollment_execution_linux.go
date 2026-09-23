@@ -4,6 +4,9 @@ package recoveryruntime
 
 import (
 	"context"
+	"errors"
+
+	"golang.org/x/sys/unix"
 	"path/filepath"
 
 	"github.com/alicelik/celikpanel/internal/agentnativecontract"
@@ -235,4 +238,50 @@ func prepareMailEnrollmentAt(ctx context.Context, operation string, paths mailCa
 		return nil, nil, err
 	}
 	return prepared, raw, nil
+}
+
+// PrepareMailEnrollmentJournal provisions only the fixed private enrollment
+// directory during explicit initial admission. It never normalizes existing
+// owner directories or initializes a missing ledger. Empty directories left by
+// interruption are harmless and the same admission may reuse them.
+func PrepareMailEnrollmentJournal(fd int) error {
+	if err := VerifyPreflightBoundary(fd); err != nil {
+		return err
+	}
+	return prepareMailEnrollmentJournalAt("/var/lib/celikpanel-mail-renewal/enrollment")
+}
+func prepareMailEnrollmentJournalAt(path string) error {
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path || filepath.Dir(filepath.Dir(path)) == "/" {
+		return fail(ReasonUnsafeMetadata)
+	}
+	state := promotionState()
+	defer state.close()
+	// Only the two dedicated components may be created. Pin the existing ancestor
+	// and use descriptor-relative creation; an owner rename cannot redirect writes
+	// through a newly substituted symlink. Existing modes are never normalized.
+	parent, err := state.openPath(filepath.Dir(filepath.Dir(path)))
+	if err != nil {
+		return err
+	}
+	for _, base := range []string{filepath.Base(filepath.Dir(path)), filepath.Base(path)} {
+		if err = state.revalidate(); err != nil {
+			return err
+		}
+		if err = unix.Mkdirat(int(parent.file.Fd()), base, 0700); err != nil && !errors.Is(err, unix.EEXIST) {
+			return fail(ReasonReadFailed)
+		}
+		child, err := state.openChildDirectory(parent, base, 0700)
+		if err != nil {
+			return asReadError(err)
+		}
+		if err = state.revalidate(); err != nil {
+			return err
+		}
+		// Retry syncs existing directories too, closing an interrupted parent sync.
+		if unix.Fsync(int(child.file.Fd())) != nil || unix.Fsync(int(parent.file.Fd())) != nil {
+			return fail(ReasonReadFailed)
+		}
+		parent = child
+	}
+	return state.revalidate()
 }

@@ -19,7 +19,7 @@ type nativeMailEnrollmentExecution interface {
 
 // executePreparedMailEnrollment joins the actual common writer to the native
 // executor. It runs only within accepted owner-operation dispatch; no periodic
-// observer, generic RPC or CLI admits a new operation through this function.
+// observer or generic leased RPC admits an operation through this function.
 func executePreparedMailEnrollment(ctx context.Context, stateDir, hostPath string, authority mailEnrollmentAuthority, execution *recoveryruntime.PreparedMailEnrollment, direction string) error {
 	if execution == nil {
 		return servicemutationledger.ErrMailEnrollment

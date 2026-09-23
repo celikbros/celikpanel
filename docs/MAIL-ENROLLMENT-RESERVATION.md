@@ -3,7 +3,9 @@
 P0.2/P0.3/P0.5; constitution: owner continuity, exact operation ownership,
 unknown is not absence, and verified terminal results. This is the private
 reservation boundary for the existing composite native enrollment executor.
-It does not enable production enrollment or complete the resilience plan.
+The explicit root-owner worker entry is described below; authenticated wizard
+admission and automatic boot dispatch are still open. This does not complete
+the resilience plan.
 
 ## One common durable owner
 
@@ -36,8 +38,9 @@ The private writer requires existing release fd9 then host fd8, then acquires
 the existing ledger publication lock. It reads an established private ledger;
 it does not initialize owner/group identity or start the general Agent recovery
 constructor. Exact owner intent and authenticated source must be supplied by the
-outer dispatcher on every call. No RPC, renewal hook or production CLI invokes
-this boundary yet. A digest or callback alone is not serialized owner authority.
+outer dispatcher on every call. The root-owner CLI below can invoke this
+boundary; RPC, renewal-hook and polling admission remain disabled. A digest or
+callback alone is not serialized owner authority.
 
 A pinned current Agent must explicitly declare
 `mail_enrollment_policy: retain-enrollment-ledger-v1`. This optional field extends
@@ -179,3 +182,59 @@ and CLI scope/guidance tests and vet pass. Real management/helper builds pass;
 the actual independent helper refuses missing inherited locks, malformed IDs,
 direction overrides and update-worker arguments. These are component/process and
 build checks, not a new native reboot or automatic-dispatch acceptance result.
+
+
+## Explicit owner handoff and initial admission (2026-09-23)
+
+P0.2/P0.3/P0.5, same v1 schemas and terminal transitions. The independently
+built helper now implements root-owner initial admission and detached execution:
+
+- `--start-enrollment <request-id> <owner-id> <reviewed-kit-digest>` accepts an
+  exact root-authorized tuple. Request and owner are canonical 32-hex IDs; the
+  64-hex kit must match the current verified Agent declaration and helper bytes.
+- `--continue-enrollment <recorded-id>` cannot admit a missing request, choose a
+  direction, change owner, or reprepare its capture. The existing ledger decides
+  forward/inverse execution. A terminal retry only re-observes native proof.
+- Both dispatch the fixed installed helper into
+  `celikpanel-mail-enrollment-<request-id>.service`. The deterministic unit name
+  prevents concurrent instances of that request. A returned handoff is only
+  systemd acceptance, not admission, successful enrollment or native readiness.
+  A lost handoff response stays unconfirmed. No polling path starts this worker.
+- The worker takes the existing release lock, then the existing host lock. It
+  re-executes its own pinned image with the correct inherited descriptors and a
+  clean environment. No general Agent is started. systemd owns the process group
+  independently of the invoking process; runtime and shutdown bounds apply.
+  There is no automatic restart loop or application-update recovery dependency.
+
+Initial admission requires the established numeric service group, canonical
+common ledger, publication lock, compatible source and prepared installed kit.
+It creates only the fixed private enrollment journal directory, refusing existing
+unsafe metadata rather than normalizing it. Preparation records the native
+before-image and file plan. The existing common writer durably reserves the
+scope before any native publication or timer start. An interrupted preparation
+can be retried with the same reviewed tuple; once a record exists, even a repeated
+start selects the recorded opener. Reused, malformed or differently owned
+requests refuse. Unknown native results retain the active reservation.
+
+An owner inspects `journalctl -u celikpanel-mail-enrollment-<request-id>.service`
+and the common request result. A failed worker can be explicitly continued after
+the prerequisite is resolved; if it never admitted the request, only the original
+reviewed start tuple can admit it. Existing evidence is not cleared. A busy lock
+is reported as a wait, and a timeout remains an unknown result. These commands
+are an owner entry for this source implementation, not instructions to update
+Frankfurt/Boston or to execute a helper flag on a historical management Agent.
+
+Validation: race tests cover exact initial/recorded admission, owner/target
+conflicts, terminal/inverse preservation, competing work, real subprocess fd8/fd9
+handoff, lock contention, deadline termination and missing runtime refusal.
+Journal tests preserve inode/content and reject owner mode/symlink changes.
+CLI scope/guidance, privileged-command guard and vet pass. Actual management,
+helper and recovery builds pass; six actual helper entry/refusal probes pass.
+A guarded native read was refused before SSH because the registered lab QEMU was
+not running. **No new native systemd dispatch or reboot acceptance is claimed.**
+
+Authenticated wizard admission/status, accepted-plan binding in Panel/Agent RPC,
+boot dispatch, volatile lock/identity restoration, management-file absence and
+full native lifecycle/workload acceptance remain open. No existing accepted setup
+plan is retroactively changed; no new setup capability is advertised. This source
+change was not installed on an owner's panel.

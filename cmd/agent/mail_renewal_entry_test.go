@@ -95,3 +95,46 @@ func TestEnrollmentGuidancePreservesUnknownAndRedactsRawErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestIndependentMailEnrollmentDispatchScope(t *testing.T) {
+	id, owner, target := strings.Repeat("a", 32), strings.Repeat("b", 32), strings.Repeat("c", 64)
+	for _, action := range []string{"--start-enrollment", "--enrollment-worker", "--enroll-under-lock"} {
+		args := []string{action, id, owner, target}
+		if err := validateIndependentMailEntry(args, 0, nil); err != nil {
+			t.Fatal(err)
+		}
+		if err := validateIndependentMailEntry(args, 1000, nil); err == nil {
+			t.Fatal("unprivileged owner")
+		}
+		if err := validateIndependentMailEntry(args, 0, []string{"CELIKPANEL_AGENT_STATE_DIR=/tmp/fake"}); err == nil {
+			t.Fatal("override")
+		}
+		for i := 1; i < 4; i++ {
+			bad := append([]string(nil), args...)
+			bad[i] = "../other"
+			if err := validateIndependentMailEntry(bad, 0, nil); err == nil {
+				t.Fatal(bad)
+			}
+		}
+	}
+	for _, action := range []string{"--continue-enrollment", "--enrollment-worker"} {
+		if err := validateIndependentMailEntry([]string{action, id}, 0, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, args := range [][]string{{"--start-enrollment", id}, {"--continue-enrollment", id, "rollback"}, {"--enroll-under-lock", id}, {"--start-enrollment", id, owner, target, "extra"}} {
+		if err := validateIndependentMailEntry(args, 0, nil); err == nil {
+			t.Fatal(args)
+		}
+	}
+	if got := mailEnrollmentWorkerGuidance(context.DeadlineExceeded); !strings.Contains(got, "unknown") || strings.Contains(got, "fd9") {
+		t.Fatal(got)
+	}
+}
+
+func TestMailEnrollmentBusyGuidance(t *testing.T) {
+	got := mailEnrollmentWorkerGuidance(errMailEnrollmentWorkerBusy)
+	if !strings.Contains(got, "waiting") || !strings.Contains(got, "same recorded request") || strings.Contains(got, "fd9") {
+		t.Fatal(got)
+	}
+}

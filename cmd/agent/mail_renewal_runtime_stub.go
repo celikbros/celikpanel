@@ -11,3 +11,9 @@ func recoverIndependentSelectedMailRenewal(mailHostRenewal, string) error { retu
 func recoverIndependentPendingMailRenewal(mailHostRenewal) error { return mailHostLinuxOnly() }
 
 func resumeIndependentMailEnrollment(context.Context, string) error { return mailHostLinuxOnly() }
+
+func runIndependentMailEnrollment(context.Context, string, string, string) error {
+	return mailHostLinuxOnly()
+}
+func launchIndependentMailEnrollment(context.Context, []string) error    { return mailHostLinuxOnly() }
+func runIndependentMailEnrollmentWorker(context.Context, []string) error { return mailHostLinuxOnly() }

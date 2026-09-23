@@ -19,9 +19,16 @@ const mailEnrollmentJournalRoot = "/var/lib/celikpanel-mail-renewal/enrollment"
 
 // One-shot recorded-operation consumer. It requires the existing release fd9 and
 // host fd8; it cannot acquire a new lease, prepare evidence, change direction or
-// initialize a missing ledger. Initial setup and boot dispatch supply these locks.
+// initialize a missing ledger. The detached worker supplies these locks.
 func resumeIndependentMailEnrollment(ctx context.Context, requestID string) error {
-	if !validMutationIdentity(requestID) || !mailRenewalOnlyBuild || os.Geteuid() != 0 {
+	return runIndependentMailEnrollment(ctx, requestID, "", "")
+}
+
+// An explicit root-owner invocation supplies new intent. Recorded requests always
+// take the recorded path; even a repeated start cannot recreate their scope.
+func runIndependentMailEnrollment(ctx context.Context, requestID, ownerID, target string) error {
+	if ctx == nil || !validMutationIdentity(requestID) || !mailRenewalOnlyBuild || os.Geteuid() != 0 ||
+		(ownerID != "" && (!validMutationIdentity(ownerID) || !recoveryruntime.ValidDigest(target))) || (ownerID == "" && target != "") {
 		return servicemutationledger.ErrMailEnrollment
 	}
 	gid, ok := lookupGroupID("celikpanel")
@@ -52,14 +59,14 @@ func resumeIndependentMailEnrollment(ctx context.Context, requestID string) erro
 		return errors.Join(err, closeErr)
 	}
 	kit, _, err := mailrenewalkit.Payload(raw)
-	if err != nil || kit.Generation != agent.Contract.MailRenewalGeneration {
+	if err != nil || kit.Generation != agent.Contract.MailRenewalGeneration || (target != "" && target != kit.Generation) {
 		return servicemutationledger.ErrMailEnrollment
 	}
 	verify := func() error {
 		if err := agent.Revalidate(); err != nil {
 			return err
 		}
-		if kit.Generation != agent.Contract.MailRenewalGeneration {
+		if kit.Generation != agent.Contract.MailRenewalGeneration || (target != "" && target != kit.Generation) {
 			return servicemutationledger.ErrMailEnrollment
 		}
 		return nil
@@ -67,16 +74,68 @@ func resumeIndependentMailEnrollment(ctx context.Context, requestID string) erro
 	state := hostingpath.ServiceMutationStateRoot()
 	binding := recoveryruntime.MailEnrollmentBinding{
 		LedgerPath: filepath.Join(state, serviceMutationLedgerFileName),
+		OwnerID:    ownerID,
 		Owner:      servicemutationledger.FileOwner{UID: serviceMutationRequiredOwnerUID, GID: serviceMutationRequiredOwnerGID},
 		HostLock:   host, HostOwner: serviceMutationLockOwner(), VerifyAuthority: verify, Native: mailEnrollmentNativeHost{},
 	}
-	execution, direction, err := recoveryruntime.OpenRecordedMailEnrollment(ctx, requestID, mailEnrollmentJournalRoot, agent, binding)
+	rawLedger, found, err := servicemutationledger.ReadFile(binding.LedgerPath, servicemutationledger.MaxSize, binding.Owner)
 	if err != nil {
 		return err
 	}
-	// The recorded opener revalidates the same ledger selection on every native
-	// boundary. The writer must keep that admission requirement too, so a missing
-	// request can never fall through to executeMailEnrollmentAt's new-admission path.
+	if !found {
+		return servicemutationledger.ErrMailEnrollment
+	}
+	ledger, err := servicemutationledger.Decode(rawLedger)
+	if err != nil {
+		return err
+	}
+	fresh, err := mailEnrollmentAdmission(&ledger, requestID, ownerID, target, kit.Generation)
+	if err != nil {
+		return err
+	}
+	var execution *recoveryruntime.PreparedMailEnrollment
+	direction := servicemutationledger.MailEnrollmentForward
+	if fresh {
+		// Directory creation is explicit new owner work. Resume/status never repairs
+		// missing evidence. Native publication still follows the common reservation.
+		if err = recoveryruntime.PrepareMailEnrollmentJournal(9); err != nil {
+			return err
+		}
+		execution, _, err = recoveryruntime.PrepareMailEnrollment(ctx, requestID, mailEnrollmentJournalRoot, agent, binding)
+	} else {
+		execution, direction, err = recoveryruntime.OpenRecordedMailEnrollment(ctx, requestID, mailEnrollmentJournalRoot, agent, binding)
+	}
+	if err != nil {
+		return err
+	}
 	authority := mailEnrollmentAuthority{identity: execution.Identity(), agent: agent, verifyIntent: func() error { return execution.RevalidateAuthority(ctx) }}
 	return executePreparedMailEnrollment(ctx, state, host, authority, execution, direction)
+}
+
+// Absence is new admission only with an explicit exact owner/target tuple. The
+// whole canonical ledger is validated first; malformed/reused IDs never become
+// absence, and terminal or inverse requests retain their recorded direction.
+func mailEnrollmentAdmission(ledger *servicemutationledger.Ledger, requestID, ownerID, target, currentTarget string) (bool, error) {
+	if !validMutationIdentity(requestID) || !recoveryruntime.ValidDigest(currentTarget) || servicemutationledger.Validate(ledger) != nil {
+		return false, servicemutationledger.ErrMailEnrollment
+	}
+	if ownerID != "" && (!validMutationIdentity(ownerID) || target != currentTarget) || ownerID == "" && target != "" {
+		return false, servicemutationledger.ErrMailEnrollment
+	}
+	if ledger.Jobs[requestID] != nil {
+		id, _, err := servicemutationledger.RecordedMailEnrollment(ledger, requestID)
+		if err != nil || ownerID != "" && id.OwnerID != ownerID {
+			return false, servicemutationledger.ErrMailEnrollment
+		}
+		return false, nil
+	}
+	if ownerID == "" || ledger.ActiveRequestID != "" {
+		return false, servicemutationledger.ErrMailEnrollment
+	}
+	for _, job := range ledger.Jobs {
+		if job.Status == servicemutationledger.StatusPending {
+			return false, servicemutationledger.ErrMailEnrollment
+		}
+	}
+	return true, nil
 }
