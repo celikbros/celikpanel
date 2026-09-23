@@ -685,3 +685,8 @@ Aynı P0.4 sınırında kabul edilmiş işlem ve tamamlanmış defter karşıla�
 kanonik olmalı; kayıtlı işçinin biçimi kurtarma yetkisi vermiyor. Tarihsel evre ve
 süre aşımı baytları korunuyor. Ortak paket ve Agent yarış denetimleri geçti;
 bağımsız sunucu kilitleri, canlılık kontrolü ve yerel geri alma hâlâ açık.
+P0.4 için [DNS geçişi kurtarma karar sırası](DNS-ENGINE-ARTIFACT.md#shared-switch-recovery-decision-sequence)
+ortak pakete taşındı; Agent da bu sırayı kullanıyor. Günlük v1 ve evre baytları
+değişmedi. Hata testleri doğrulama, kayıt ve geri alma sırasını ve belirsizlikte
+kanıtların korunmasını denetliyor. Sunucu kilitleri, bağımsız yerel geri alma
+ve tam gerçek sürüm kabulü hâlâ açık; kurulu sunuculara dokunulmadı.

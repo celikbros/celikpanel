@@ -949,3 +949,8 @@ comparisons in `dnsengineartifact.SwitchIdentity`. Canonical expected identity
 is required; registered worker shape is not recovery permission. Historical
 phase and lease-expiry bytes are unchanged. Shared and Agent race checks pass;
 independent host locks, liveness and native inverse execution remain open.
+P0.4 now also has a shared [DNS switch recovery decision sequence](DNS-ENGINE-ARTIFACT.md#shared-switch-recovery-decision-sequence).
+The Agent delegates its old post-crash decision order to that package; v1
+journal and phase bytes are unchanged. Its fault tests guard write/verify/inverse
+ordering and retained evidence after uncertainty. Host locks, independent native
+inverse execution and full native release acceptance stay open.

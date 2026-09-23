@@ -120,34 +120,28 @@ func TestCrashedRunningBINDTakeoverRecoversThroughTheAdoptionRollback(t *testing
 // kanıtlar ve onu sonlandırır; herhangi bir geri almaya yalnız hedefi
 // doğrulanmayan bir günlük ulaşır, dolayısıyla başarılı bir yeniden yükleme ve
 // makbuzdan sonraki bir çökme, işlemi geri almak yerine bitirir.
-func TestCommittedDNSEngineJournalIsFinalizedRatherThanRolledBack(t *testing.T) {
+func TestCommittedDNSEngineJournalUsesSharedRecoverySequence(t *testing.T) {
 	source := readAgentSource(t, "dns_engine_recovery.go")
 	start := strings.Index(source, "func (hostDNSEngineBackend) RecoverSwitch(")
 	if start < 0 {
-		t.Fatal("the DNS engine switch recovery entry point is missing")
+		t.Fatal("DNS engine recovery adapter missing")
 	}
 	end := strings.Index(source[start:], "\nfunc reconcileExistingDNSEngineSwitchJournal(")
 	if end < 0 {
-		t.Fatal("the DNS engine switch recovery end boundary is missing")
+		t.Fatal("DNS engine recovery adapter end missing")
 	}
-	body := source[start : start+end]
-	verify := strings.Index(body, "verifyDNSSwitchJournalTarget(ctx, journal)")
-	committed := strings.Index(body, "dnsEngineSwitchRecoveryCommitted, nil")
-	rollback := strings.Index(body, "runDNSSwitchRecoveryRollbackWithJournal(")
-	if verify < 0 || committed < 0 || rollback < 0 {
-		t.Fatalf(
-			"verify=%d committed=%d rollback=%d", verify, committed, rollback,
-		)
+	adapter := strings.Join(strings.Fields(source[start:start+end]), "")
+	for _, wire := range []string{"dnsenginerecovery.Reconcile(", "VerifyTarget:verifyDNSSwitchJournalTarget", "Inverse:rollbackDNSSwitchJournal", "Read:func", "Write:func"} {
+		if !strings.Contains(adapter, wire) {
+			t.Fatal("shared recovery callback missing:", wire)
+		}
 	}
-	if verify > rollback || committed > rollback {
-		t.Fatal("a verified DNS engine target can reach the rollback")
-	}
-	reconcile := source[strings.Index(
-		source, "func reconcileExistingDNSEngineSwitchJournal(",
-	):]
+	reconcile := source[strings.Index(source, "func reconcileExistingDNSEngineSwitchJournal("):]
 	if !strings.Contains(reconcile, "FinalizeSwitch(") {
-		t.Fatal("the reconcile path does not finalize a committed journal")
+		t.Fatal("committed recovery no longer finalizes")
 	}
+	// Sequencing and rollback refusal are exercised by the shared package's
+	// fault tests rather than inferred from a source-order pattern here.
 }
 
 func TestRunningBINDAdoptionJournalClassifiesTheTakeoverByItsUnitPreimage(t *testing.T) {

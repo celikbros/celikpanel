@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -23,13 +24,13 @@ type SwitchDNSEngineV1Request = transport.SwitchDNSEngineV1Request
 type SwitchDNSEngineV1Response = transport.SwitchDNSEngineV1Response
 type DNSBackendReadinessResponse = transport.DNSBackendReadinessResponse
 
-type dnsEngineSwitchRecoveryOutcome string
+type dnsEngineSwitchRecoveryOutcome = dnsenginerecovery.Outcome
 
 const (
-	dnsEngineSwitchRecoveryAbsent     dnsEngineSwitchRecoveryOutcome = "absent"
-	dnsEngineSwitchRecoveryRolledBack dnsEngineSwitchRecoveryOutcome = "rolled-back"
-	dnsEngineSwitchRecoveryCommitted  dnsEngineSwitchRecoveryOutcome = "committed"
-	dnsEngineSwitchRecoveryFinalized  dnsEngineSwitchRecoveryOutcome = "finalized"
+	dnsEngineSwitchRecoveryAbsent     dnsEngineSwitchRecoveryOutcome = dnsenginerecovery.OutcomeAbsent
+	dnsEngineSwitchRecoveryRolledBack dnsEngineSwitchRecoveryOutcome = dnsenginerecovery.OutcomeRolledBack
+	dnsEngineSwitchRecoveryCommitted  dnsEngineSwitchRecoveryOutcome = dnsenginerecovery.OutcomeCommitted
+	dnsEngineSwitchRecoveryFinalized  dnsEngineSwitchRecoveryOutcome = dnsenginerecovery.OutcomeFinalized
 )
 
 const (

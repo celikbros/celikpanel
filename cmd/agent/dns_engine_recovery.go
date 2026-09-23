@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -813,76 +815,37 @@ type dnsSwitchRecoveryRollbackOps struct {
 	remove   func() error
 }
 
-func runDNSSwitchRecoveryRollbackWithJournal(
-	journal *dnsEngineSwitchJournal,
-	ops dnsSwitchRecoveryRollbackOps,
-) error {
-	if journal == nil || ops.write == nil || ops.rollback == nil ||
-		ops.remove == nil {
+func runDNSSwitchRecoveryRollbackWithJournal(journal *dnsEngineSwitchJournal, ops dnsSwitchRecoveryRollbackOps) error {
+	if journal == nil || ops.write == nil || ops.rollback == nil || ops.remove == nil {
 		return errors.New("invalid DNS switch recovery rollback operations")
 	}
-	journal.Phase = dnsSwitchPhaseRollingBack
-	if err := ops.write(*journal); err != nil {
-		return err
-	}
-	if err := ops.rollback(*journal); err != nil {
-		return err
-	}
-	journal.Phase = dnsSwitchPhaseRolledBack
-	if err := ops.write(*journal); err != nil {
-		return err
-	}
-	return ops.remove()
+	return dnsenginerecovery.Rollback(context.Background(), journal, dnsenginerecovery.Operations{
+		Write:   func(_ context.Context, j dnsengineartifact.SwitchJournalV1) error { return ops.write(j) },
+		Inverse: func(_ context.Context, j dnsengineartifact.SwitchJournalV1) error { return ops.rollback(j) },
+		Remove:  func(context.Context) error { return ops.remove() },
+	})
 }
 
 func (hostDNSEngineBackend) RecoverSwitch(
-	ctx context.Context,
-	target transport.DNSEngine,
-	qualifier string,
+	ctx context.Context, target transport.DNSEngine, qualifier string,
 	binding transport.ServiceMutationBinding,
 ) (dnsEngineSwitchRecoveryOutcome, error) {
-	journal, exists, err := readDNSEngineSwitchJournal()
-	if err != nil {
-		return dnsEngineSwitchRecoveryAbsent, err
-	}
-	if !exists {
-		finalized, finalizedErr := exactFinalizedDNSEngineSwitchProvenanceOnHost(
-			target, qualifier, binding,
-		)
-		if finalizedErr != nil {
-			return dnsEngineSwitchRecoveryAbsent, finalizedErr
-		}
-		if finalized {
-			return dnsEngineSwitchRecoveryFinalized, nil
-		}
-		return dnsEngineSwitchRecoveryAbsent, nil
-	}
-	if !exactSwitchJournalIdentity(journal, target, qualifier, binding) {
-		return dnsEngineSwitchRecoveryAbsent, errors.New("DNS engine switch journal belongs to another mutation")
-	}
-	if err := verifyDNSSwitchJournalTarget(ctx, journal); err == nil {
-		journal.Phase = dnsSwitchPhaseCommitted
-		if err := writeDNSEngineSwitchJournal(journal); err != nil {
-			return dnsEngineSwitchRecoveryAbsent, err
-		}
-		return dnsEngineSwitchRecoveryCommitted, nil
-	} else if journal.Phase == dnsSwitchPhaseTargetVerified || journal.Phase == dnsSwitchPhaseCommitted {
-		return dnsEngineSwitchRecoveryAbsent,
-			fmt.Errorf("verified DNS engine target no longer matches its journal: %w", err)
-	}
-	if err := runDNSSwitchRecoveryRollbackWithJournal(
-		&journal,
-		dnsSwitchRecoveryRollbackOps{
-			write: writeDNSEngineSwitchJournal,
-			rollback: func(current dnsEngineSwitchJournal) error {
-				return rollbackDNSSwitchJournal(ctx, current)
-			},
-			remove: removeDNSEngineSwitchJournal,
+	id := dnsengineartifact.SwitchIdentity{RequestID: binding.MutationRequestID, OwnerID: binding.MutationOwnerID, Target: target, Qualifier: qualifier}
+	outcome, err := dnsenginerecovery.Reconcile(ctx, dnsJournalPolicy(), id, dnsenginerecovery.Operations{
+		Read: func(context.Context) (dnsengineartifact.SwitchJournalV1, bool, error) {
+			return readDNSEngineSwitchJournal()
 		},
-	); err != nil {
-		return dnsEngineSwitchRecoveryAbsent, err
-	}
-	return dnsEngineSwitchRecoveryRolledBack, nil
+		ProveFinalized: func(context.Context, dnsengineartifact.SwitchIdentity) (bool, error) {
+			return exactFinalizedDNSEngineSwitchProvenanceOnHost(target, qualifier, binding)
+		},
+		VerifyTarget: verifyDNSSwitchJournalTarget,
+		Write: func(_ context.Context, j dnsengineartifact.SwitchJournalV1) error {
+			return writeDNSEngineSwitchJournal(j)
+		},
+		Inverse: rollbackDNSSwitchJournal,
+		Remove:  func(context.Context) error { return removeDNSEngineSwitchJournal() },
+	})
+	return dnsEngineSwitchRecoveryOutcome(outcome), err
 }
 
 func reconcileExistingDNSEngineSwitchJournal(ctx context.Context) error {

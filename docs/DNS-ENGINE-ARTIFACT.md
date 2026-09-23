@@ -244,3 +244,28 @@ The initial expanded run rejected one old worker-shape test's literal `qualifier
 placeholder; the test now supplies a valid canonical manifest qualifier, while
 new tests separately require malformed expected identities to be refused.
 No new native mutation entry point or lifecycle permission is introduced.
+### Shared switch recovery decision sequence
+
+P0.4, invariants 1/2/3/4: `internal/dnsenginerecovery` now owns the bounded
+decision order for the historical switch journal. It rejects another operation
+or a malformed journal before any native callback. It tries to prove the target
+before considering the inverse; a previously verified or committed target that
+now disagrees is left for owner review. A precommit inverse records
+`rolling-back`, runs the host inverse, records `rolled-back`, then removes the
+journal. Any failed checkpoint or inverse leaves evidence in place. The Agent
+uses this shared sequence with its existing target proof and native inverse.
+
+The journal remains v1; the new package creates no persistent schema. Existing
+accepted ledger/job identity and native host/publication locks still surround
+the Agent call. The package itself is not an independent native executor: it
+cannot acquire a lock, observe a worker, change a service or certify current DNS
+health. A future independent host adapter must prove those conditions with the
+same accepted operation and preserve owner edits. The selected recovery kit has
+not yet gained that adapter or a command to run it. Complete native historical
+interruption and signed update/automatic rollback acceptance remain open.
+
+Shared race tests exercise verified target, mismatch, committed conflict,
+precommit inverse, foreign identity, malformed before-images, inverse failure,
+checkpoint failure and failed removal. Agent DNS/BIND/PowerDNS race checks and
+`go vet` complete the scoped source validation. These checks do not constitute
+native installed-release fault acceptance; no installed server was changed.
