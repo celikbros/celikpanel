@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -72,6 +73,7 @@ func emit(event seedEvent) {
 func main() {
 	nonce := flag.String("nonce", "", "exact disposable guest nonce (64 lowercase hex characters)")
 	zone := flag.String("zone", "recovery-fixture.test", "canonical fixture zone below .test")
+	advanceOnly := flag.Bool("advance", false, "advance an already seeded disposable BIND zone to fixture generations 3 and 4")
 	timeout := flag.Duration("timeout", 15*time.Minute, "maximum seeding duration (1m to 30m)")
 	flag.Parse()
 	if flag.NArg() != 0 || *timeout < time.Minute || *timeout > 30*time.Minute {
@@ -80,7 +82,11 @@ func main() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
-	if err := seed(ctx, *nonce, *zone); err != nil {
+	run := seed
+	if *advanceOnly {
+		run = advance
+	}
+	if err := run(ctx, *nonce, *zone); err != nil {
 		emit(seedEvent{Event: "stopped", Detail: err.Error()})
 		os.Exit(1)
 	}
@@ -328,24 +334,24 @@ type publication struct {
 
 func parsePublication(raw []byte) (publication, error) {
 	var result publication
-	if err := json.Unmarshal(raw, &result.Fields); err != nil {
+	state, _, err := dnsengineartifact.DecodeStateDocument(raw)
+	if err != nil {
 		return result, err
 	}
-	var schema, engine string
-	var epoch int64
-	for name, target := range map[string]any{"schema": &schema, "engine": &engine, "engine_epoch": &epoch, "generation": &result.Generation} {
-		if err := json.Unmarshal(result.Fields[name], target); err != nil {
-			return result, fmt.Errorf("invalid publication field %s", name)
-		}
-	}
-	if serial, found := result.Fields["primary_catalog_serial"]; found {
-		if err := json.Unmarshal(serial, &result.CatalogSerial); err != nil {
-			return result, err
-		}
-	}
-	if schema != "celikpanel-dns-engine-state/v1" || engine != "bind" || epoch != 1 || !hex64.MatchString(result.Generation) {
+	if state.Engine != transport.DNSEngineBIND || state.EngineEpoch != 1 || !hex64.MatchString(state.Generation) {
 		return result, errors.New("publication is not the seeded BIND epoch")
 	}
+	// Compare semantic acquisition fields across old/new documents; retained
+	// ownership and snapshot bytes remain separately checked without rewriting.
+	canonical, err := dnsengineartifact.CanonicalV1(state)
+	if err != nil {
+		return result, err
+	}
+	if err := json.Unmarshal(canonical, &result.Fields); err != nil {
+		return result, err
+	}
+	result.Generation = state.Generation
+	result.CatalogSerial = uint64(state.PrimaryCatalogSerial)
 	delete(result.Fields, "generation")
 	delete(result.Fields, "primary_catalog_serial")
 	return result, nil
@@ -430,7 +436,15 @@ func seed(ctx context.Context, nonce, zone string) error {
 	if err != nil {
 		return err
 	}
-	acquisition, err := parsePublication(ownership)
+	ownerState, _, err := dnsengineartifact.DecodeOwnershipDocument(ownership)
+	if err != nil {
+		return err
+	}
+	ownerProjection, err := dnsengineartifact.CanonicalV1(ownerState)
+	if err != nil {
+		return err
+	}
+	acquisition, err := parsePublication(ownerProjection)
 	if err != nil {
 		return err
 	}
@@ -438,16 +452,62 @@ func seed(ctx context.Context, nonce, zone string) error {
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(ownership, state) {
-		return errors.New("fresh acquisition and state bytes differ before publication")
+	currentState, _, err := dnsengineartifact.DecodeStateDocument(state)
+	if err != nil || currentState != ownerState {
+		return errors.New("fresh acquisition and state semantics differ before publication")
 	}
 	digest := sha256.Sum256(ownership)
 	ownershipHash := hex.EncodeToString(digest[:])
 	emit(seedEvent{Event: "switch_complete", CellID: marker.CellID, Node: marker.Node, Zone: zone, RequestID: job.RequestID, OwnerID: job.OwnerID, Phase: job.Phase, Generation: acquisition.Generation, CatalogSerial: acquisition.CatalogSerial, OwnershipSHA256: ownershipHash, OwnershipUnchanged: true})
-	previous := acquisition
-	for generation := int64(1); generation <= 2; generation++ {
+	return publishFixtureZones(ctx, marker, nonce, zone, ownership, acquisition, 1, 2)
+}
+
+// advance keeps the actual old producer's acquisition bytes and current native
+// zone; only ordinary authenticated zone RPCs are sent to the selected Agent.
+func advance(ctx context.Context, nonce, zone string) error {
+	marker, err := guard(nonce)
+	if err != nil {
+		return err
+	}
+	canonical, err := hostname.CanonicalFQDN(zone)
+	if err != nil || canonical != zone || !strings.HasSuffix(zone, ".test") {
+		return errors.New("invalid fixture zone")
+	}
+	ownership, err := readProtected(filepath.Join(stateRoot, "dns-engine-ownership-bind.json"), 16384, false)
+	if err != nil {
+		return err
+	}
+	owner, _, err := dnsengineartifact.DecodeOwnershipDocument(ownership)
+	if err != nil {
+		return err
+	}
+	raw, err := readProtected(filepath.Join(stateRoot, "dns-engine-state.json"), 16384, false)
+	if err != nil {
+		return err
+	}
+	current, _, err := dnsengineartifact.DecodeStateDocument(raw)
+	if err != nil {
+		return err
+	}
+	if _, err := dnsengineartifact.CompareV1(owner, current); err != nil {
+		return err
+	}
+	previous, err := parsePublication(raw)
+	if err != nil {
+		return err
+	}
+	return publishFixtureZones(ctx, marker, nonce, zone, ownership, previous, 3, 4)
+}
+
+func publishFixtureZones(ctx context.Context, marker labMarker, nonce, zone string, ownership []byte, previous publication, first, last int64) error {
+	digest := sha256.Sum256(ownership)
+	ownershipHash := hex.EncodeToString(digest[:])
+	newIdentity := func(purpose, kind, target, qualifier string) transport.ServiceMutationBeginRequest {
+		return transport.ServiceMutationBeginRequest{RequestID: identity(nonce, marker.CellID, zone+"/"+purpose, "request"), OwnerID: identity(nonce, marker.CellID, zone+"/"+purpose, "owner"), Kind: kind, Target: target, PackageName: qualifier}
+	}
+	for generation := first; generation <= last; generation++ {
 		address := "192.0.2.10"
-		if generation == 2 {
+		if generation == last {
 			address = "192.0.2.11"
 		}
 		records := []transport.ZoneRecord{

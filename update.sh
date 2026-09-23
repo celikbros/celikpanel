@@ -128,13 +128,15 @@ check_bind_update_compatibility() {
 }
 
 # Read target/installed Agent bytes, never execute a historical capability flag.
-# Native renewal is preserved; an incompatible application is refused before stop.
+# Native renewal and DNS evidence are preserved; incompatibility is refused before stop.
 check_mail_application_compatibility() {
     local inspector="$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery"
     [[ -z ${RECOVERY_RUNTIME_ROOT:-} ]] || inspector="$CODE_ROOT/bin/recovery"
     run_update_idle_probe "$inspector" verify-agent-native-contract --bin "$TRUSTED_RELEASE_ROOT/bin" &&
     run_update_idle_probe "$inspector" verify-mail-application --bin "$BIN_DIR" &&
-        run_update_idle_probe "$inspector" verify-mail-application --bin "$TRUSTED_RELEASE_ROOT/bin"
+        run_update_idle_probe "$inspector" verify-mail-application --bin "$TRUSTED_RELEASE_ROOT/bin" &&
+    run_update_idle_probe "$inspector" verify-dns-application --bin "$BIN_DIR" --state-root "$AGENT_STATE_DIR" &&
+        run_update_idle_probe "$inspector" verify-dns-application --bin "$TRUSTED_RELEASE_ROOT/bin" --state-root "$AGENT_STATE_DIR"
 }
 
 # A recovered active capture exists only to obtain complete rollback material.
@@ -2855,7 +2857,7 @@ else
     # önce reddet. Aşağıda son kilit altında tekrar doğrula.
     preflight_bind_before_quiesce
     preflight_mutations_before_quiesce
-    check_mail_application_compatibility || die "application compatibility with independent mail renewal is unverified before coordinator downtime"
+    check_mail_application_compatibility || die "application compatibility with native mail/DNS evidence is unverified before coordinator downtime"
     mkdir -m 0700 -- "$stage_root"
     chown root:root -- "$stage_root"
     mkdir -m 0700 -- "$tmp_snap"
@@ -2999,7 +3001,7 @@ if ! check_bind_update_compatibility; then
     fail_before_active "managed BIND state changed before coordinator freeze"
 fi
 if ! check_mail_application_compatibility; then
-    fail_before_active "application compatibility with independent mail renewal changed before coordinator freeze"
+    fail_before_active "application compatibility with native mail/DNS evidence changed before coordinator freeze"
 fi
 
 if [[ "$transaction_phase" == quiesce ]]; then

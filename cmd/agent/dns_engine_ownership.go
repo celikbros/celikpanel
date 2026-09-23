@@ -13,6 +13,7 @@ import (
 	"sort"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -80,7 +81,7 @@ func readDNSEngineOwnership(
 	if err != nil {
 		return dnsEngineStateReceipt{}, false, err
 	}
-	state, err := decodeDNSEngineState(data)
+	state, _, err := dnsengineartifact.DecodeOwnershipDocument(data)
 	if err != nil {
 		return dnsEngineStateReceipt{}, false, err
 	}
@@ -92,15 +93,44 @@ func readDNSEngineOwnership(
 }
 
 func writeDNSEngineOwnership(state dnsEngineStateReceipt) error {
+	return writeDNSEngineOwnershipEncoded(state, dnsengineartifact.CanonicalOwnershipDocumentV2)
+}
+
+// Signed-update cleanup may finish an already committed historical journal.
+// It must not advance the retained DNS wire format beyond the rollback Agent's
+// capabilities merely because a new application binary is preparing to start.
+func writeDNSEngineOwnershipForSignedUpdate(state dnsEngineStateReceipt) error {
+	current, err := captureDNSEngineStateSnapshot(false)
+	if err != nil {
+		return err
+	}
+	observed, separated, err := dnsengineartifact.DecodeStateDocument(current.Data)
+	if err != nil {
+		return err
+	}
+	if observed != state {
+		return errors.New("DNS state changed before signed-update ownership publication")
+	}
+	if !separated {
+		return writeDNSEngineOwnershipEncoded(state, dnsengineartifact.CanonicalV1)
+	}
+	return writeDNSEngineOwnership(state)
+}
+
+func writeDNSEngineOwnershipEncoded(state dnsEngineStateReceipt, encode func(dnsEngineStateReceipt) ([]byte, error)) error {
 	path, err := dnsEngineOwnershipPath(state.Engine)
 	if err != nil {
 		return err
 	}
-	encoded, err := encodeDNSEngineState(state)
+	encoded, err := encode(state)
 	if err != nil {
 		return err
 	}
-	if err := secureWriteConfig(path, encoded, 0o600); err != nil {
+	before, err := captureDNSFileSnapshotForOwner(path, 0o600, true, serviceMutationRequiredOwnerUID, serviceMutationRequiredOwnerGID)
+	if err != nil {
+		return err
+	}
+	if err := secureWriteConfigReplacingSnapshotWithOwner(path, encoded, 0o600, &before, serviceMutationRequiredOwnerUID, serviceMutationRequiredOwnerGID); err != nil {
 		actual, exists, readErr := readDNSEngineOwnership(state.Engine)
 		if readErr == nil && exists && actual == state {
 			return nil

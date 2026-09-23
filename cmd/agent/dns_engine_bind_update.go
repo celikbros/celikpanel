@@ -85,7 +85,7 @@ func prepareBINDGenerationRootForSignedUpdateUnderExternalLock(
 				return readDNSEngineOwnership(transport.DNSEngineBIND)
 			},
 			readEngineOwnership: readDNSEngineOwnership,
-			writeOwnership:      writeDNSEngineOwnership,
+			writeOwnership:      writeDNSEngineOwnershipForSignedUpdate,
 			finalizeArtifacts:   finalizeCommittedDNSEngineSwitchArtifacts,
 			retireInstall:       retireDNSEngineInstallOwnership,
 			packageInstalled:    exactBINDPackageInstalledForSignedUpdate,

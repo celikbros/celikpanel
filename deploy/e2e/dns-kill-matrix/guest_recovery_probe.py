@@ -283,6 +283,47 @@ def canonical_state_bytes(state: dict[str, Any]) -> bytes:
     return (json.dumps(ordered, separators=(",", ":")) + "\n").encode()
 
 
+def decode_dns_document(value: Any, raw: bytes, role: str = "state") -> dict[str, Any]:
+    """Lab-only strict projection; hashes and snapshots always retain original bytes."""
+    if role not in {"state", "ownership"} or not isinstance(value, dict):
+        raise ProbeObservationError("invalid DNS document role or object")
+    if value.get("schema") == STATE_SCHEMA:
+        exact_keys(value, STATE_KEYS, {"schema", "mode", "engine", "engine_epoch", "source_revision",
+                   "manifest_qualifier", "mutation_request_id", "mutation_owner_id"}, "legacy DNS state")
+        if canonical_state_bytes(value) != raw:
+            raise ProbeObservationError("legacy DNS state is not canonical JSON")
+        return value
+    expected = f"celikpanel-dns-engine-{role}/v2"
+    exact_keys(value, {"schema", "acquisition", "publication"}, {"schema", "acquisition", "publication"}, "DNS document")
+    if value["schema"] != expected:
+        raise ProbeObservationError("DNS document schema or role differs")
+    fields = ("mode", "engine", "engine_epoch", "pair_role", "pair_local_ip", "pair_peer_ip",
+              "source_revision", "manifest_qualifier", "mutation_request_id", "mutation_owner_id")
+    required = set(fields) - {"pair_role", "pair_local_ip", "pair_peer_ip"}
+    a = exact_keys(value["acquisition"], {"schema", *fields}, {"schema", *required}, "DNS acquisition")
+    b = exact_keys(value["publication"], {"schema", "acquisition_sha256", "generation", "primary_catalog_serial"},
+                   {"schema", "acquisition_sha256"}, "DNS publication")
+    if a["schema"] != "celikpanel-dns-engine-acquisition/v1" or b["schema"] != "celikpanel-dns-engine-publication/v1":
+        raise ProbeObservationError("DNS component schema differs")
+    ordered_a = {"schema": a["schema"]}
+    for key in fields:
+        if key in required or a.get(key) not in (None, ""):
+            ordered_a[key] = a[key]
+    compact = lambda obj: (json.dumps(obj, separators=(",", ":")) + "\n").encode()
+    digest = hashlib.sha256(compact(ordered_a)).hexdigest()
+    if b["acquisition_sha256"] != digest:
+        raise ProbeObservationError("DNS publication is bound to another acquisition")
+    ordered_b = {"schema": b["schema"], "acquisition_sha256": digest}
+    for key in ("generation", "primary_catalog_serial"):
+        if b.get(key) not in (None, "", 0):
+            ordered_b[key] = b[key]
+    if raw != compact({"schema": expected, "acquisition": ordered_a, "publication": ordered_b}):
+        raise ProbeObservationError("DNS document is not canonical JSON")
+    projected = {"schema": STATE_SCHEMA, **{k: v for k, v in ordered_a.items() if k != "schema"}}
+    projected.update({k: v for k, v in ordered_b.items() if k not in {"schema", "acquisition_sha256"}})
+    return projected
+
+
 def optional_secure_json(
     path: Path, label: str, limit: int
 ) -> tuple[dict[str, Any] | None, str, bytes]:
@@ -295,7 +336,8 @@ def optional_secure_json(
     return read_secure_json(path, label, limit)
 
 
-def validate_ownership_state(value: Any, raw: bytes, engine: str, label: str) -> dict[str, Any]:
+def validate_ownership_state(value: Any, raw: bytes, engine: str, label: str, role: str = "ownership") -> dict[str, Any]:
+    value = decode_dns_document(value, raw, role)
     receipt = exact_keys(
         value, STATE_KEYS,
         {"schema", "mode", "engine", "engine_epoch", "source_revision",
@@ -304,8 +346,6 @@ def validate_ownership_state(value: Any, raw: bytes, engine: str, label: str) ->
     )
     if receipt.get("schema") != STATE_SCHEMA or receipt.get("engine") != engine:
         raise ProbeObservationError(f"{label} schema/engine differs from its path")
-    if raw != canonical_state_bytes(receipt):
-        raise ProbeObservationError(f"{label} is not canonical JSON")
     return receipt
 
 
@@ -623,6 +663,7 @@ def probe(args: argparse.Namespace, unit_runner: Callable[[str], str] = inspect_
     receipt: dict[str, Any] | None = None
     active_state: dict[str, Any] | None = None
     observed_state: dict[str, Any] | None = None
+    observed_projection: dict[str, Any] | None = None
     observed_state_bytes = b""
     unit_states: dict[str, str] | None = None
     try:
@@ -655,11 +696,10 @@ def probe(args: argparse.Namespace, unit_runner: Callable[[str], str] = inspect_
         )
         observed_state = raw
         observed_state_bytes = encoded
+        observed_projection = decode_dns_document(raw, encoded)
         if scenario is None or receipt is None:
             raise ProbeObservationError("cannot bind engine state without scenario/identity")
-        state = validate_state(raw, scenario, receipt)
-        if encoded != canonical_state_bytes(state):
-            raise ProbeObservationError("DNS engine state receipt is not canonical JSON")
+        state = validate_state(decode_dns_document(raw, encoded), scenario, receipt)
         active_state = state
         semantic["state_sha256"] = digest
         semantic["state"] = {
@@ -718,7 +758,7 @@ def probe(args: argparse.Namespace, unit_runner: Callable[[str], str] = inspect_
     if (
         active_engine
         and observed_state is not None
-        and observed_state.get("engine") != active_engine
+        and (observed_projection is None or observed_projection.get("engine") != active_engine)
     ):
         active_engine = ""
     outcome = "indeterminate"
@@ -737,6 +777,7 @@ def probe(args: argparse.Namespace, unit_runner: Callable[[str], str] = inspect_
                 observed_state_bytes,
                 active_engine,
                 "rolled-back source state receipt",
+                role="state",
             )
             validate_prior_source_receipt(
                 source_state, scenario, "rolled-back source state receipt"

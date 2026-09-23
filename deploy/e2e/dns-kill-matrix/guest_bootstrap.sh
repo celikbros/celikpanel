@@ -64,6 +64,19 @@ require_regular() {
     [[ $(stat -Lc '%h' -- "$path") == 1 ]] || die "expected a single-link file: $path"
 }
 
+# The role-specific v2 documents differ on the wire. Compare their strict
+# semantic projections; preserve each original digest in the fixture proof.
+verify_dns_receipt_pair() {
+    python3 - "$STATE_DIR/dns-engine-state.json" "$STATE_DIR/dns-engine-ownership-$1.json" <<'PYDNS'
+from pathlib import Path
+import json,runpy,sys
+reader=runpy.run_path('/opt/celikpanel/libexec/dns-kill-recovery-probe.py')['decode_dns_document']
+raw=[Path(p).read_bytes() for p in sys.argv[1:]]
+if reader(json.loads(raw[0]),raw[0]) != reader(json.loads(raw[1]),raw[1],'ownership'):
+    raise SystemExit('DNS source ownership differs from current state')
+PYDNS
+}
+
 inactive_unit_evidence() {
     local unit=$1 active_state sub_state main_pid control_pid
     active_state=$(systemctl show "$unit" --property=ActiveState --value) \
@@ -1634,7 +1647,7 @@ validate_normalized_pdns_source() {
     [[ $(sha256sum "$STATE_DIR/dns-engine-state.json" | cut -d' ' -f1) == "$state_sha" ]] \
         || die "PowerDNS normalization changed the adopted engine state"
     require_regular "$STATE_DIR/dns-engine-ownership-pdns.json"
-    cmp -s "$STATE_DIR/dns-engine-state.json" "$STATE_DIR/dns-engine-ownership-pdns.json" \
+    verify_dns_receipt_pair pdns \
         || die "PowerDNS normalization changed active source ownership"
     [[ ! -e $STATE_DIR/dns-engine-install-ownership-pdns.json && ! -L $STATE_DIR/dns-engine-install-ownership-pdns.json ]] \
         || die "PowerDNS normalization created source install ownership"
@@ -2033,7 +2046,10 @@ prepare_bind() {
         [[ $(stat -Lc '%U:%G:%a' "$SOURCE_SETUP_IDENTITY") == root:root:600 ]] || die "source setup trigger identity receipt metadata mismatch"
         python3 - "$SOURCE_SETUP_FILE" "$SOURCE_SETUP_IDENTITY" "$STATE_DIR/dns-engine-state.json" "$cell_id" <<'PY'
 import json, sys
-scenario, identity, state = (json.load(open(path, encoding="utf-8")) for path in sys.argv[1:4])
+scenario, identity = (json.load(open(path, encoding="utf-8")) for path in sys.argv[1:3])
+import runpy
+raw=open(sys.argv[3],'rb').read()
+state=runpy.run_path('/opt/celikpanel/libexec/dns-kill-recovery-probe.py')['decode_dns_document'](json.loads(raw),raw)
 cell_id = sys.argv[4]
 if identity.get("schema") != "celikpanel-dns-kill-matrix-trigger-identity/v1":
     raise SystemExit("source setup trigger identity schema mismatch")
@@ -2057,12 +2073,14 @@ PY
         require_regular "$STATE_DIR/dns-engine-state.json"
         python3 - "$STATE_DIR/dns-engine-state.json" <<'PY'
 import json, sys
-value = json.load(open(sys.argv[1], encoding='utf-8'))
+import runpy
+raw=open(sys.argv[1],'rb').read()
+value=runpy.run_path('/opt/celikpanel/libexec/dns-kill-recovery-probe.py')['decode_dns_document'](json.loads(raw),raw)
 if value.get('mode') != 'adopt' or value.get('engine') != 'pdns' or value.get('engine_epoch') != 1 or value.get('source_revision') != 0:
     raise SystemExit('managed PowerDNS state receipt has the wrong source identity')
 PY
         require_regular "$STATE_DIR/dns-engine-ownership-pdns.json"
-        cmp -s "$STATE_DIR/dns-engine-state.json" "$STATE_DIR/dns-engine-ownership-pdns.json" || die "adopted PowerDNS ownership differs from active source state"
+        verify_dns_receipt_pair pdns || die "adopted PowerDNS ownership differs from active source state"
         [[ ! -e $STATE_DIR/dns-engine-install-ownership-pdns.json && ! -L $STATE_DIR/dns-engine-install-ownership-pdns.json ]] || die "adopted PowerDNS source gained install ownership"
         [[ ! -e /etc/systemd/system/pdns.service && ! -L /etc/systemd/system/pdns.service ]] || die "adopted PowerDNS source retained the source-preinstall mask"
         require_apt_package_absent bind9

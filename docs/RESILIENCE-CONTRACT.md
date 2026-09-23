@@ -898,3 +898,27 @@ Alpha81 producer fixtures cover the transition's byte contract. See
 The operation-bound filesystem publisher, protected metadata/checkpoint protocol,
 independent DNS executor and native historical update/restore matrix remain open.
 This component contract is not an installed migration or closure of P0.4.
+
+
+### DNS document publication and application admission (2026-09-23)
+
+P0.4, invariants 1/2/3/4: [operation-bound DNS documents](DNS-ENGINE-ARTIFACT.md#operation-bound-document-publication)
+now separate acquisition/publication on disk in self-contained state/v2 and
+ownership/v2 documents, while preserving exact legacy frozen before-images.
+Existing accepted DNS operations use the same native proof and atomic publication
+barrier. Historical signed-update journal cleanup retains its current wire format.
+An independent read-only compatibility gate checks live DNS evidence against the
+exact target Agent before downtime and publication, including rollback targets.
+Application rollback preserves native DNS instead of restoring stale zones.
+
+Real SIGKILL/file inverse, old/new mixed input, owner-change refusal and build
+capability checks provide component evidence. The standalone DNS recovery
+executor, full signed application downgrade/automatic rollback matrix and wider
+native workload matrix remain open. No installed owner server was changed.
+
+[The native DNS document trial](../deploy/e2e/release-recovery/DNS-DOCUMENTS-BE.json)
+now verifies actual Alpha81-to-current ordinary zone publication on Debian/Arch,
+unchanged acquisition bytes, independent old-target refusal, and native BIND TCP/UDP
+answers after reboot without management binaries. All DNS receipt and ledger bytes
+survive exactly. It does not exercise signed UI update/automatic rollback or
+secondary transfer, so the remaining P0.4/P0.5 matrix stays open.

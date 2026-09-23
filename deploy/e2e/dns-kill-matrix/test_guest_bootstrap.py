@@ -722,8 +722,7 @@ CREATE TABLE supermasters (ip TEXT, nameserver TEXT, account TEXT);
                 cursor = body.index(fragment, cursor + 1)
         self.assertNotIn("CELIKPANEL_S1_DRIVER=pdns-switch", body)
         self.assertIn(
-            'cmp -s "$STATE_DIR/dns-engine-state.json" '
-            '"$STATE_DIR/dns-engine-ownership-pdns.json"',
+            'verify_dns_receipt_pair pdns',
             body,
         )
         normalization = shell.split("validate_normalized_pdns_source() {\n", 1)[1].split(

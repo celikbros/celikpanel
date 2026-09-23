@@ -256,7 +256,8 @@ func encodeDNSEngineState(state dnsEngineStateReceipt) ([]byte, error) {
 }
 
 func decodeDNSEngineState(data []byte) (dnsEngineStateReceipt, error) {
-	return dnsengineartifact.DecodeV1(data)
+	state, _, err := dnsengineartifact.DecodeStateDocument(data)
+	return state, err
 }
 
 func validateDNSEngineState(state dnsEngineStateReceipt) error {
@@ -297,7 +298,7 @@ func readExactDNSEngineState() (dnsEngineStateReceipt, bool, error) {
 }
 
 func writeDNSEngineState(state dnsEngineStateReceipt) error {
-	data, err := encodeDNSEngineState(state)
+	data, err := dnsengineartifact.CanonicalStateDocumentV2(state)
 	if err != nil {
 		return err
 	}

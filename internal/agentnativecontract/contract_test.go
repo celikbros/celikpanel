@@ -123,3 +123,27 @@ func TestExactMailRuntimeBinding(t *testing.T) {
 		t.Fatal("target without retention capability")
 	}
 }
+
+func TestDNSCapabilityPreservesHistoricalDeclarations(t *testing.T) {
+	c, err := New([]byte("agent"), strings.Repeat("a", 40))
+	if err != nil || c.DNSEvidencePolicy != DNSEvidencePolicy {
+		t.Fatal(c, err)
+	}
+	c.DNSEvidencePolicy = ""
+	old, err := Encode(c)
+	if err != nil || bytes.Contains(old, []byte("dns_evidence_policy")) {
+		t.Fatal("historical declaration changed", err)
+	}
+	parsed, err := Verify(old, []byte("agent"))
+	if err != nil || parsed.DNSEvidencePolicy != "" {
+		t.Fatal("historical Agent gained DNS support", err)
+	}
+	encoded, err := Encode(parsed)
+	if err != nil || !bytes.Equal(encoded, old) {
+		t.Fatal("historical bytes changed", err)
+	}
+	c.DNSEvidencePolicy = "unknown"
+	if _, err := Encode(c); err == nil {
+		t.Fatal("unknown DNS capability accepted")
+	}
+}

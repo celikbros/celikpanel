@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import runpy
 import ipaddress
 import json
 import os
@@ -27,6 +28,17 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, Mapping, Sequence
+
+
+_dns_probe_name = "dns-kill-recovery-probe.py" if Path(__file__).name == "dns-kill-run-cell.py" else "guest_recovery_probe.py"
+_dns_probe = runpy.run_path(str(Path(__file__).with_name(_dns_probe_name)))
+
+
+def decode_dns_document(value, raw, role="state"):
+    try:
+        return _dns_probe["decode_dns_document"](value, raw, role)
+    except _dns_probe["ProbeObservationError"] as exc:
+        raise ControllerError(str(exc)) from exc
 
 
 MATRIX_SCHEMA = "celikpanel/dns-kill-matrix/v1"
@@ -2603,6 +2615,7 @@ def validate_managed_source_state(
     scenario: Mapping[str, Any],
     expected_engine: str,
 ) -> dict[str, Any]:
+    state = decode_dns_document(state, raw)
     if not isinstance(state, dict):
         raise ControllerError("managed source state receipt is not an object")
     unknown = sorted(set(state) - DNS_STATE_KEYS)
@@ -2611,8 +2624,6 @@ def validate_managed_source_state(
         raise ControllerError(
             f"managed source state fields differ (unknown={unknown}, missing={missing})"
         )
-    if raw != canonical_dns_state_bytes(state):
-        raise ControllerError("managed source state receipt is not canonical production JSON")
     expected = {
         "schema": "celikpanel-dns-engine-state/v1",
         "engine": expected_engine,
@@ -2897,13 +2908,9 @@ def validate_socket_source_proof(
                 maximum=1 << 20,
             )
         )
-        if ownership != state:
+        if decode_dns_document(ownership, ownership_raw, "ownership") != decode_dns_document(state, state_raw):
             raise ControllerError(
                 f"managed {managed_engine} ownership receipt differs from active state"
-            )
-        if ownership_raw != state_raw or ownership_digest != state_digest:
-            raise ControllerError(
-                f"managed {managed_engine} ownership receipt bytes differ from active state"
             )
         ownership_evidence[f"ownership_{managed_engine}"] = {
             "path": managed_ownership_path,

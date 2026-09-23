@@ -280,6 +280,10 @@ func (state *runtimeState) validDirectory(stat unix.Stat_t, exactMode uint32) bo
 		stat.Mode&0o7022 == 0 && (exactMode == 0 || stat.Mode&0o7777 == exactMode)
 }
 func (state *runtimeState) openFile(parent *pinnedDirectory, base string, mode uint32, maxSize int64) (*pinnedFile, error) {
+	return state.openFileWithGID(parent, base, mode, maxSize, state.config.gid)
+}
+
+func (state *runtimeState) openFileWithGID(parent *pinnedDirectory, base string, mode uint32, maxSize int64, gid uint32) (*pinnedFile, error) {
 	fd, err := unix.Openat(int(parent.file.Fd()), base, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_NOATIME, 0)
 	if err != nil {
 		return nil, err
@@ -291,7 +295,7 @@ func (state *runtimeState) openFile(parent *pinnedDirectory, base string, mode u
 	}
 	state.files = append(state.files, file)
 	if unix.Fstat(fd, &file.stat) != nil || file.stat.Mode&unix.S_IFMT != unix.S_IFREG || file.stat.Mode&0o7777 != mode || file.stat.Uid != state.config.uid ||
-		file.stat.Gid != state.config.gid || file.stat.Nlink != 1 || file.stat.Size <= 0 || file.stat.Size > maxSize {
+		file.stat.Gid != gid || file.stat.Nlink != 1 || file.stat.Size <= 0 || file.stat.Size > maxSize {
 		return nil, fail(ReasonUnsafeMetadata)
 	}
 	return file, nil

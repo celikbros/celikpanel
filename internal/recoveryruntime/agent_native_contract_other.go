@@ -7,3 +7,5 @@ func InspectCompatibleMailAgent(string) (*CompatibleMailAgent, error) {
 }
 
 func CheckMailApplicationCompatibility(string) error { return fail(ReasonPlatformUnsupported) }
+
+func CheckDNSApplicationCompatibility(string, string) error { return fail(ReasonPlatformUnsupported) }

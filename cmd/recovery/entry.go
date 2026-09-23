@@ -14,6 +14,9 @@ import (
 // Native root or authorized sudo remains the recovery principal. The optional
 // owner view is loopback-only, temporary and read-only; it cannot dispatch work.
 func runEntry(args []string) int {
+	if len(args) > 0 && args[0] == "verify-dns-application" {
+		return dispatchDNSApplicationCompatibility(args, os.Geteuid(), recoveryruntime.CheckDNSApplicationCompatibility, func(message string) { fmt.Fprintln(os.Stderr, message) })
+	}
 	if len(args) > 0 && args[0] == "verify-agent-native-contract" {
 		return dispatchMailApplicationCompatibility(args, os.Geteuid(), recoveryruntime.VerifyAgentNativeContract, func(message string) { fmt.Fprintln(os.Stderr, message) })
 	}

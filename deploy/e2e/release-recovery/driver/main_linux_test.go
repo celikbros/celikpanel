@@ -12,7 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/transport"
+	"reflect"
 )
 
 func TestMarkerRejectsAnotherHostOrNonce(t *testing.T) {
@@ -189,5 +191,32 @@ func TestHeartbeatAllowsOnlyExactRegisteredPackageWorker(t *testing.T) {
 	job.WorkerStarted = ""
 	if err := runningJob(job, begin, false); err == nil {
 		t.Fatal("partial worker identity accepted")
+	}
+}
+
+func TestPublicationObserverAcceptsBothWireFormats(t *testing.T) {
+	old, err := os.ReadFile("../../../../internal/dnsengineartifact/testdata/alpha81-bind-zone-add.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := dnsengineartifact.DecodeV1(old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := dnsengineartifact.CanonicalStateDocumentV2(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := parsePublication(old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err := parsePublication(current)
+	if err != nil || !reflect.DeepEqual(before, after) {
+		t.Fatal("wire format changed observed ownership", err)
+	}
+	wrongRole, _ := dnsengineartifact.CanonicalOwnershipDocumentV2(state)
+	if _, err := parsePublication(wrongRole); err == nil {
+		t.Fatal("observer accepted wrong document role")
 	}
 }

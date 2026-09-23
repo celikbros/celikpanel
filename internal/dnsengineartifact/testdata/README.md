@@ -15,3 +15,8 @@ native daemon operation, installed migration or independent DNS recovery proof.
 The initial export-only driver had a Go integer type mismatch and did not run;
 its corrected driver emitted the retained bytes. No production source was fixed
 or altered in the historical archive.
+
+The four `v2-*` files are current-format cross-language goldens, projected from
+those retained Alpha81 semantic inputs. They are not historical producer output.
+The Go canonical writers must emit these exact bytes; the Python native-lab
+observer independently verifies the role, acquisition digest and canonical layout.

@@ -640,3 +640,20 @@ Geçmiş v1 kayıt baytları korunur; destek yeni isteğe bağlı Agent yetenek 
 açıkça belirtilir. [Kapsam ve 12 süreç kesintisi](MAIL-ENROLLMENT-RESERVATION.md)
 üretimde doğrulanmış kabul/çalıştırma ile tam gerçek sistem işlem kabulünün yerine
 geçmez. Bu bileşen testleri hiçbir P0 işini kapatmaz.
+
+
+### DNS belge yayımı ve uygulama uyumluluğu (23 Eylül 2026)
+
+P0.4 kapsamında DNS sahipliği ile değişen yayım bilgisi, state/v2 ve ownership/v2
+belgelerinde ayrı sürümlü kayıtlar olarak saklanır. Eski v1 günlük/snapshot
+baytları değiştirilmez; mevcut atomik yazıcı ve kabul edilmiş DNS işleminin
+kilit/kanıt sınırları korunur. Güncelleme hazırlığında eski bir işlemi tamamlama,
+DNS biçimini kendiliğinden ilerletmez. Bağımsız salt-okur uyumluluk denetimi,
+servisleri durdurmadan ve yayım öncesinde hedef Agent’ın canlı DNS kanıtını
+okuyabildiğini doğrular. Uygulama geri alma, sonraki DNS kayıtlarını eski snapshot
+ile ezmez; uyumsuz hedefi reddeder.
+
+[DNS geçiş sözleşmesi](DNS-ENGINE-ARTIFACT.md) süreç öldürme, birebir geri alma,
+eski/yeni karışık kayıt ve sahip değişikliği testlerini açıklar. Bağımsız DNS işlem
+kurtarıcısı ve bütün imzalı güncelleme/otomatik geri alma matrisi hâlâ açıktır.
+Bu değişiklik bütün mimari planın tamamlandığı anlamına gelmez.

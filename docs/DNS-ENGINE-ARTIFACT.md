@@ -52,9 +52,9 @@ BIND tree proofs, owner edits and rollback guards.
 
 This establishes a shared producer/reader and explicit semantic role boundary.
 The following work adds separate wire schemas and a lossless transition contract.
-Active Agent writers, switch journals and snapshot readers still use the legacy
-v1 disk layout. Installing a filesystem migration, independent DNS recovery and
-native old/new update/restore acceptance remains open. No installed server is
+The publication integration below activates self-contained v2 documents. Frozen
+v1 switch journals and snapshots remain readable and byte-preserving. Independent
+DNS recovery and full native old/new update/restore acceptance remain open. No installed server is
 changed by this source work.
 
 
@@ -91,16 +91,55 @@ three observed separated artifacts still exactly match the recorded proposal.
 It refuses a later publication instead of restoring old evidence over new work.
 Neither function reads/writes files or changes permissions or services.
 
-### Remaining filesystem transition
+### Operation-bound document publication
 
-Before activating this format, the publisher and independent recovery executor
-must bind the proposal to the accepted operation and protected source identities,
-prove native configuration under the common mutation barrier, retain metadata and
-before-images durably, and publish/recover with explicit checkpoints. Source and
-new-layout equality checks above are byte-level prerequisites, not replacements
-for that filesystem/authority proof. Old application compatibility and frozen
-switch/snapshot consumers must be covered before active writers change format.
-No pending historical journal or snapshot may be edited to appear migrated.
+The two existing atomically replaced file paths now support role-specific
+self-contained documents: `celikpanel-dns-engine-state/v2` carries current
+publication; `celikpanel-dns-engine-ownership/v2` carries the frozen ownership
+publication checkpoint. Each embeds the independently versioned acquisition and
+publication records. No untracked content object or second migration journal is
+introduced. Legacy v1 remains accepted in either historical role; v2 is
+role-specific. All four old/new ownership/current combinations are readable.
+
+Normal accepted DNS writers publish v2 through the existing metadata-checked
+snapshot/CAS atomic writer. Ownership now uses that same checked writer. Existing
+operation admission, native-tree verification, common exclusion and journal
+checkpoints continue to control publication. Reading does not migrate a file.
+Ordinary zone publication never refreshes the acquisition file to match it.
+
+Signed-update cleanup of an already committed historical journal is a distinct
+case: its ownership writer preserves the exact current state's wire format.
+It cannot introduce v2 merely while preparing an application to start, which
+would unnecessarily remove the historical rollback target's compatibility.
+Frozen journals and snapshots retain their original schema, metadata and bytes;
+DNS transaction compensation restores those bytes without re-encoding.
+
+### Application compatibility admission
+
+Current-source `agent-native-contract.json` optionally declares
+`dns_evidence_policy: separated-acquisition-publication-v2`, bound to exact Agent
+bytes. Historical declarations remain parseable without acquiring this claim.
+The producer must never be used to certify an old executable retroactively.
+
+The independent `verify-dns-application` reader inspects the live private state
+and both per-engine ownership files. It pins root-owned directories/files and
+rechecks contents, inode, mode, UID/GID and absence. Private root:service-group
+0600 files are retained without permission normalization. Wrong role/path,
+unknown schema, unsafe metadata, substituted files, changed target bytes and
+late evidence appearance refuse admission. Any v2 document requires a matching
+binary-bound capability; canonical v1-only/absent evidence adds no v2 requirement.
+
+Update checks installed and candidate compatibility before coordinator downtime
+and again under exclusion before publication. Rollback checks the target at both
+boundaries. **Application rollback checks current native DNS evidence**, not an
+old snapshot's DNS copy: application restoration retains native DNS and must not
+roll back later owner-managed zones. A historical Agent lacking v2 support is
+explicitly refused before stop; this is not automatic downgrade support.
+
+Independent DNS transaction recovery and the complete signed-update/automatic
+rollback matrix remain open. This uses the current Agent transaction executor;
+separate schemas and an independent read-only admission command do not establish
+an Agent-independent DNS mutation executor.
 
 ### Evidence and limits
 
@@ -121,3 +160,31 @@ Recorded local validation (Go 1.26.5, Linux): `go test -race
 'DNS|BIND|PDNS' -count=1` passed (15.456 s); `go vet` passed for both packages.
 The 20-second separated/legacy round-trip fuzz run passed 593,703 executions.
 These figures describe component checks, not native service interruption trials.
+
+### September 23 integration evidence
+
+New tests cover actual process SIGKILL before atomic rename and after publication,
+exact inverse to both legacy and v2 bytes, repeated restore, role-specific strict
+readers, mixed pairs and signed-update legacy-format preservation. The independent
+reader tests include target/source replacement, new previously absent evidence,
+owner metadata, unknown format and no mutation on refusal. Go canonical producer
+and Python lab observer share four golden documents; original Alpha81 fixtures
+are unchanged. Shell admission tests execute refusal before subsequent steps.
+
+The first full recovery-runtime race run reached the default ten-minute package
+timeout while executing its existing mail interruption matrix; it did not complete.
+The full rerun with a 30-minute limit passed in 787.122 seconds. The DNS Agent
+race suite passed in 20.431 seconds; shared document, capability, CLI, release
+producer and native-lab driver suites also passed. The Python DNS matrix suite
+and shell admission checks passed.
+
+[Debian and Arch native evidence](../deploy/e2e/release-recovery/DNS-DOCUMENTS-BE.json)
+uses the unmodified Alpha81 Agent to create standalone BIND and publish its zone.
+A fixture handoff to the current Agent performs two authenticated normal zone
+publications, producing state/v2 while retaining the original ownership/v1 bytes.
+TCP/UDP queries remain authoritative. After stopping/removing the Agent binary
+(Panel was absent) and QEMU reset, BIND still serves the same answers; both DNS
+receipts and the entire Agent ledger retain identical bytes. The independent
+reader refuses the unchanged historical Agent against live v2 evidence with
+exit 3 and no DNS rewrite. This is a native publication/continuity result, not
+signed application update, automatic rollback or independent DNS recovery proof.

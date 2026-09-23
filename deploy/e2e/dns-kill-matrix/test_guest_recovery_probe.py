@@ -292,3 +292,20 @@ class GuestRecoveryProbeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class DNSDocumentCompatibilityTest(unittest.TestCase):
+    def test_current_go_producer_goldens(self):
+        root=Path(__file__).resolve().parents[3]/"internal/dnsengineartifact/testdata"
+        for name in ("bind-zone-add", "pdns-adopted"):
+            old=json.loads((root/f"alpha81-{name}.json").read_bytes())
+            for role in ("state", "ownership"):
+                raw=(root/f"v2-{name}-{role}.json").read_bytes()
+                value=json.loads(raw)
+                self.assertEqual(probe.decode_dns_document(value,raw,role),old)
+                with self.assertRaises(probe.ProbeObservationError):
+                    probe.decode_dns_document(value,raw,"ownership" if role=="state" else "state")
+                for bad in (raw+b" ",raw.replace(b'"acquisition_sha256":"',b'"acquisition_sha256":"0',1),
+                            raw.replace(b'"acquisition":',b'"extra":0,"acquisition":',1),
+                            raw.replace(b'"schema":',b'"schema":"ignored","schema":',1)):
+                    with self.assertRaises(probe.ProbeObservationError):
+                        probe.decode_dns_document(json.loads(bad),bad,role)

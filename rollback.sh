@@ -2222,6 +2222,8 @@ mail_compatibility_inspector="$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recover
 [[ -z $RECOVERY_RUNTIME_ROOT ]] || mail_compatibility_inspector="$CODE_ROOT/bin/recovery"
 "$mail_compatibility_inspector" verify-mail-application --bin "$snap/bin" \
     || die "snapshot Agent compatibility with independent mail renewal is unverified; preserve native renewal and the snapshot"
+"$mail_compatibility_inspector" verify-dns-application --bin "$snap/bin" --state-root "$AGENT_STATE_DIR" \
+    || die "snapshot Agent DNS compatibility is unverified; preserve current DNS evidence and use a supported snapshot"
 
 # Every payload and the exact retained target release have now been proved.
 # Admit a mixed old/candidate vendor-unit set only for the restoration body.
@@ -2375,6 +2377,8 @@ esac
 # any payload restoration. Earlier compatibility is not continuing authority.
 "$mail_compatibility_inspector" verify-mail-application --bin "$snap/bin" \
     || die "snapshot Agent compatibility changed before the locked restore; preserve native renewal and this operation"
+"$mail_compatibility_inspector" verify-dns-application --bin "$snap/bin" --state-root "$AGENT_STATE_DIR" \
+    || die "snapshot Agent DNS compatibility is unverified; preserve current DNS evidence and use a supported snapshot"
 
 # A pre-ledger target had no private agent state directory. Refuse to erase any
 # unexpected post-upgrade state; the sole known transition artifact is the
