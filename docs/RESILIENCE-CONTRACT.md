@@ -854,3 +854,12 @@ an enabled/active native timer with management daemons stopped and Panel absent.
 Earlier setup steps and licensing are test prerequisites, not full wizard or
 production entitlement acceptance. Prior-release transitions, full workload and
 fault matrices remain open. No persistent schema or installed owner host changed.
+
+
+The [Debian counterpart](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-SETUP-RPC-DEBIAN-BE.json)
+passes the same single-dispatch/new-plan and existing-schedule preservation
+boundary. After reboot, 61 mail configuration/certificate files and all captured
+enrollment/ledger bytes remain unchanged; native SMTP/IMAP TLS serves the same
+system-trusted fixture certificate with management daemons stopped. This is a
+P0.4/P0.5 continuity proof for that trial, not delivery/authentication, new renewal,
+historical application rollback or full first-install/browser acceptance.

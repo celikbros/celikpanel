@@ -1,0 +1,149 @@
+{
+  "schema": "celikpanel-native-mail-enrollment-evidence/v1",
+  "date": "2026-09-23",
+  "platform": "debian13",
+  "disposable_vm_only": true,
+  "production_source": "56ae2934b266829103bb43e340b5fda7e4ef6829",
+  "production_files": {
+    "bin/agent": "212b4f82e8716ffdbb74314272b87fd3193e01500482ba6345a61eb3af87e58c",
+    "bin/agent-native-contract.json": "7dc78f1cd53eb697ce8ab2fb18e60e5be726181b5219fff2463cecef5113ac8d",
+    "bin/recovery": "a12b3b5ffb7b0bf3e103f8e8cb0bd398a554f5c1e4c87d655141f8641a36d625",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.service": "25d4a8c072b0769d70aa203dc938a5bab911a76aae4e8a3d88ecf6985ddd81ed",
+    "bin/mail-renewal-runtime/renew": "766d8afb85e74619768d0b3de4e71fcbebf0b823b29daf2b6fdc969e8d5953d7",
+    "bin/mail-renewal-runtime/runtime.manifest": "53f5036bf9c5685c24fe1d5a63d2caa628adeb02504ffbdaf099a40250fc91e0",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.timer": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "bin/mail-renewal-runtime/celikpanel-mail-host-cert": "27d30704ffcded789e741599e0f0f41d2cd3170e2fca084b3b63a06a8fc599cc"
+  },
+  "test_fixture": {
+    "source": "cmd/panel/server_setup_mail_enrollment_vm_test.go",
+    "sha256": "df6d3fc45d28a1a0ef1f5224875dc9cc5bf4c3ec3f8e60d7168b0e851da3e3d3",
+    "binary_sha256": "7b7a4a05d4219cf11fc85f4410864261c33dbcdf392c3ece73237ef2691ae97e",
+    "earlier_setup_steps": "fixture-completed; not native installation evidence",
+    "license": "test fixture; not live entitlement or signing acceptance"
+  },
+  "review": {
+    "existing_independent_schedule_preserved": true,
+    "native_dispatches": 0,
+    "result_lines": [
+      "    server_setup_mail_enrollment_vm_test.go:137: native_setup_review existing_generation=179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935 candidate_generation=e4f99be9a73d90d06337d3106637f9b0718d5067faba751128011155887e3cd4 enablement=enabled activity=active dispatches=0"
+    ]
+  },
+  "enrollment": {
+    "agent_stopped_after_trial": true,
+    "boot_id": "6174a212-50c6-4935-8404-e7f17153eca3",
+    "enrollment_dispatches": 1,
+    "fixture_sha256": "df6d3fc45d28a1a0ef1f5224875dc9cc5bf4c3ec3f8e60d7168b0e851da3e3d3",
+    "generation": "e4f99be9a73d90d06337d3106637f9b0718d5067faba751128011155887e3cd4",
+    "native_request": "63ef3924be92afd148255c7886f760f2",
+    "old_history_unchanged": true,
+    "review_dispatches": 0,
+    "scope": "fixture earlier steps and license; real review/start HTTP adapter, Agent IPC, independent helper and systemd",
+    "setup_request": "fb6d1d0d4fc193f756a6b9667634ccaa",
+    "source_commit": "56ae2934b266829103bb43e340b5fda7e4ef6829",
+    "terminal": "published",
+    "workload_files_preserved": 61,
+    "workload_map_sha256": "f579f02d08053d5a464dbbf74f0227d4059724b5d54f58ce4ec0b36c59fbca82"
+  },
+  "after_reboot": {
+    "after_boot": "bf6d6172-996e-4b70-8326-d3163c05bbcb",
+    "agent_binary_retained": true,
+    "before_boot": "6174a212-50c6-4935-8404-e7f17153eca3",
+    "independent_timer_enabled_active": true,
+    "management_daemons_started": false,
+    "native_request": "63ef3924be92afd148255c7886f760f2",
+    "panel_binary_present": false,
+    "receipt_and_ledger_bytes_unchanged": true,
+    "terminal": {
+      "attempt": 1,
+      "deadline_at": "2026-09-23T15:45:53.33751418Z",
+      "finished_at": "2026-09-23T15:45:57.50884256Z",
+      "kind": "mail_renewal_enrollment",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "owner_id": "90cabf6079306eb0346a3febeaf06c72",
+      "package_name": "mail-renewal-enrollment/v1:sha256:b98580766c04c404a0535fd5d6fba73cf1286c80e3672fedaa0a114856433afe",
+      "phase": "commit/mail-renewal-enrollment/v1/published/63ef3924be92afd148255c7886f760f2/b98580766c04c404a0535fd5d6fba73cf1286c80e3672fedaa0a114856433afe",
+      "request_id": "63ef3924be92afd148255c7886f760f2",
+      "started_at": "2026-09-23T15:45:53.33751418Z",
+      "status": "succeeded",
+      "target": "mail-renewal",
+      "updated_at": "2026-09-23T15:45:57.50884256Z"
+    },
+    "units": {
+      "celikpanel-agent.service": {
+        "ActiveState": "inactive",
+        "MainPID": "0",
+        "UnitFileState": ""
+      },
+      "celikpanel-mail-renewal.timer": {
+        "ActiveState": "active",
+        "UnitFileState": "enabled"
+      },
+      "celikpanel-native-setup-fixture.service": {
+        "ActiveState": "inactive",
+        "MainPID": "0",
+        "UnitFileState": ""
+      },
+      "celikpanel-panel.service": {
+        "ActiveState": "inactive",
+        "MainPID": "0",
+        "UnitFileState": ""
+      },
+      "dovecot.service": {
+        "ActiveState": "active",
+        "MainPID": "654",
+        "UnitFileState": "enabled"
+      },
+      "postfix.service": {
+        "ActiveState": "active",
+        "MainPID": "815",
+        "UnitFileState": "enabled"
+      }
+    },
+    "workload_files_unchanged": 61
+  },
+  "tls_before": {
+    "hostname": "mail.setup.celikpanel.test",
+    "imap_tls_system_trusted": true,
+    "mail_sent": false,
+    "mailbox_login": false,
+    "selected_leaf_sha256": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7",
+    "smtp_starttls_system_trusted": true
+  },
+  "tls_after": {
+    "hostname": "mail.setup.celikpanel.test",
+    "imap_tls_system_trusted": true,
+    "mail_sent": false,
+    "mailbox_login": false,
+    "selected_leaf_sha256": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7",
+    "smtp_starttls_system_trusted": true
+  },
+  "failed_attempts": [],
+  "evidence_root": "/var/tmp/cp-release-drill-20260922-be",
+  "evidence_sha256": {
+    "mail-setup-rpc-debian-postboot.json": "a9c60e1fc460832aecd4481641f30725260ffcbea3f84ddf3c9e71b718da9bb2",
+    "mail-setup-rpc-debian-tls-before.script": "34d53bb242dbce8f9096ed5d9d108d7f5d056863b13abc75682307cf424b0701",
+    "mail-setup-rpc-debian-native.log": "216a867f42ad75a46cf1cf0f13d3c4a36ddb8e893f2eab1224c6361087ae2047",
+    "mail-setup-rpc-debian-tls-before.json": "2523c7a7069cdc598be3050b1f5d89c04e764692f2f1206fb3d30b45a9f06f09",
+    "mail-setup-rpc-debian-native.script": "66c1482dda43e0745f17c7c43db08897b87dd0100e3d73257b26b2300d7582b6",
+    "mail-setup-rpc-debian-tls-after.json": "2523c7a7069cdc598be3050b1f5d89c04e764692f2f1206fb3d30b45a9f06f09",
+    "mail-setup-rpc-debian-postboot.script": "cd1dfc2aa68e165ae2a479f4e5cd3d1772c7328c524896e14703ab979209b46b",
+    "mail-setup-rpc-debian-tls-before.log": "396366e18578f4e036be63a6ceed329cfeaf24dcb05ce35706a941d943d341d6",
+    "mail-setup-rpc-debian-native.intent": "00ff25aa8453a7f5e1b1e66805b25a2e05d2b57649e4f461c48d16c077a33ba6",
+    "mail-setup-rpc-debian-native-result.json": "395a1daf9adb9598d2a2dd65f209b308817a07a5270717c2bded891af33166dc",
+    "mail-setup-rpc-debian-preboot.json": "cee80ef33478f157accb8c73be50653ba2122f77150b83444edd01d61f39e159",
+    "mail-setup-rpc-debian-postboot.log": "89d885ca388479a9803505c9a36e35773b22c7888a3935235f0d36f8c2b02acc",
+    "mail-setup-rpc-debian-tls-after.log": "396366e18578f4e036be63a6ceed329cfeaf24dcb05ce35706a941d943d341d6",
+    "mail-setup-rpc-debian-reset.intent": "fe13c57821015989f0f245bbd2be9e15f1ee7a6f61a29890e8c1b0b5d0861495",
+    "collected-mail-setup-rpc-debian-review.log": "50a57b4b10b0bb068b9a1aeeb98d7ac27d528644a7425c71e0d3f6c11e786b14",
+    "collected-mail-setup-rpc-debian-trial.log": "26f1c0a97af2f5b70fb247ce6c06e1e0b272a364cedc4afa2b9ba94775c3b723",
+    "collected-mail-setup-rpc-debian-agent.log": "002b8db571c7723091a39981508173b482945edd127118bf7af3f265cb63e95d"
+  },
+  "limitations": [
+    "Earlier setup steps and entitlement are fixture prerequisites; no full browser/first-install/ACME trial.",
+    "Recognized legacy bytes are an explicit fixture, not a historical application migration.",
+    "SMTP/IMAP TLS is system-trusted using the retained fixture CA; this is not new renewal, mail delivery or mailbox authentication evidence.",
+    "Completed enrollment reboot, not a new interrupted enrollment or application rollback trial.",
+    "Agent binary retained; management daemons stopped and Panel binary absent.",
+    "No production signing, owner-installed update or full P0 acceptance."
+  ]
+}

@@ -38,7 +38,13 @@ func (a *nativeEnrollmentSetupAgent) StartMailEnrollmentV1(req *transport.MailEn
 	return a.native.Call("Agent.StartMailEnrollmentV1", req, out)
 }
 func TestSetupMailEnrollmentNativeRPCDisposableVM(t *testing.T) {
-	if os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "arch-20260923-setup-rpc" {
+	node := ""
+	switch os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") {
+	case "arch-20260923-setup-rpc":
+		node = "arch"
+	case "debian13-20260923-setup-rpc":
+		node = "debian13"
+	default:
 		t.Skip("guarded disposable native fixture only")
 	}
 	if os.Geteuid() != 0 {
@@ -54,7 +60,7 @@ func TestSetupMailEnrollmentNativeRPCDisposableVM(t *testing.T) {
 		t.Fatal(err)
 	}
 	var marker map[string]string
-	if json.Unmarshal(raw, &marker) != nil || marker["schema"] != "celikpanel-release-recovery-lab/v1" || marker["node"] != "arch" {
+	if json.Unmarshal(raw, &marker) != nil || marker["schema"] != "celikpanel-release-recovery-lab/v1" || marker["node"] != node {
 		t.Fatal("wrong fixture")
 	}
 	uuid, err := os.ReadFile("/sys/class/dmi/id/product_uuid")

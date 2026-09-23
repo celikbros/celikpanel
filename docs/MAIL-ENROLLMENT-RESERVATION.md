@@ -731,3 +731,15 @@ full first-install/browser/ACME, historical release migration, Arch mail traffic
 or the complete P0 acceptance matrix. The first review attempt was rejected by
 the test executable's incorrectly linked build identity; it started no enrollment
 and is retained in the record. Only its test linker flag changed for the next read.
+
+
+The same [Debian native RPC/boot trial](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-SETUP-RPC-DEBIAN-BE.json)
+passed with production source `56ae293` and a separately hashed, Debian-enabled
+test guard. Native request `63ef3924be92afd148255c7886f760f2` was dispatched once;
+existing independent preview dispatched none. All earlier jobs stayed unchanged.
+Boot `bf6d6172-996e-4b70-8326-d3163c05bbcb` retained identical operation evidence
+and 61 existing mail configuration/certificate files. With management daemons
+stopped and Panel absent, Postfix/Dovecot stayed active and SMTP STARTTLS / IMAP
+TLS verified the same selected leaf using the host's existing fixture-CA trust.
+This extends the enrollment-chain/platform evidence. It does not prove mail
+message delivery, mailbox authentication, new renewal or full wizard acceptance.
