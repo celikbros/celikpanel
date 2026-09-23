@@ -42,8 +42,38 @@
     }
   },
   "limitations": [
-    "Busy-settling adapter correction is component-tested separately; no successful fresh production-helper enrollment is claimed for the corrected source.",
+    "Corrected source proves one fresh native helper enrollment on Arch; reboot dispatch, full workloads and RPC/UI admission are not tested here.",
     "Native helper start and continuation, not authenticated RPC or wizard UI dispatch.",
     "No actual mail plan or mail delivery was tested in this Arch fixture."
-  ]
+  ],
+  "corrected_trial": {
+    "source_commit": "2fc9a5902ba5dcd2e5f89f9e635007b67635d2ed",
+    "generation": "13146927a50653aef22c048027c170a0eebbed14b1f58321710d86a16c069093",
+    "operation": "7df0fdc49040edabb95900570ebf31ac",
+    "owner": "4a7b71651336991e96548594a7c75242",
+    "first_start_published": true,
+    "worker_exit": "success",
+    "timer": "active/enabled",
+    "prior_ledger_history_preserved": true,
+    "fixture_reset": "known stopped fixture files moved to retained before-image; daemon reloaded; new compatible Agent bytes/helper installed only in disposable VM",
+    "evidence": {
+      "mail-settle-native.intent": {
+        "sha256": "2e77450c1c3937b85a182f4ebf715a6f6d40837f8c0f9652df7e1c8170871d75",
+        "bytes": 1581
+      },
+      "mail-settle-native.script": {
+        "sha256": "4c81c4aae91e5da20cb2cecffe38915c68f13b5a27790abaa7276e339a419d72",
+        "bytes": 12672
+      },
+      "mail-settle-native-result.json": {
+        "sha256": "a6abc69fcb3b994ea03f87b552c6421ed22dedd3378f184791f75d66117d9858",
+        "bytes": 3298
+      },
+      "mail-settle-native-final.json": {
+        "sha256": "2f57e2dcaa4dd94829795088f41ce95ad8b28e9840616658db4df6c16a4dbb62",
+        "bytes": 3373
+      }
+    },
+    "receipt_count": 14
+  }
 }

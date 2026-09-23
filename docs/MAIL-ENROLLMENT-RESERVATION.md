@@ -315,8 +315,13 @@ is active/activating/deactivating. It neither repeats start/stop/reload nor chan
 admission or attempt records. Busy exhaustion remains busy; failed, overridden,
 stale or unreadable evidence is not retried as healthy. Cancellation terminates
 the wait. Owner guidance names a still-running invocation. Component regression
-checks cover these cases; a fresh corrected-helper native enrollment remains
-required. Existing v1 ledger and enrollment receipt schemas do not change.
+checks cover these cases. A subsequent source-bound native trial at
+`2fc9a5902ba5dcd2e5f89f9e635007b67635d2ed` completed fresh enrollment on its
+first start, including a successful detached worker exit and active/enabled
+timer. The fixture explicitly retained and removed its known stopped old unit
+files before the trial, preserved old ledger history, and installed the exact
+new helper and compatible Agent bytes; this is test preparation, not production
+migration or recovery. Existing v1 ledger and enrollment receipt schemas do not change.
 
 This advances P0.2 truthful observation and P0.5 enrollment only. Automatic boot
 continuation, production wizard admission, actual Arch mail workloads, previous

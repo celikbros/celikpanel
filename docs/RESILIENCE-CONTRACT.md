@@ -714,6 +714,8 @@ September 23 native enrollment follow-up: [owner handoff evidence](../deploy/e2e
 retains an initial Arch verification interruption during normal oneshot startup,
 then proves same-request owner continuation to publication and preservation of a
 later owner timer stop. A bounded read-only native settling adapter addresses the
-observed race with component tests. No fresh corrected-helper native success,
-automatic boot admission, full mail workload or P0 completion is claimed. See
+observed race with component tests; a subsequent exact-source Arch helper
+trial completes fresh admission on its first start with successful worker exit
+and active/enabled timer. Automatic boot admission, full mail workload and P0
+completion remain open. See
 [enrollment contract](MAIL-ENROLLMENT-RESERVATION.md#native-owner-handoff-and-transient-observation-2026-09-23).
