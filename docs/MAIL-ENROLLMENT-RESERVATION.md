@@ -442,3 +442,31 @@ contracts; Agent/recovery vet and independent-helper/test-binary builds passed.
 Native interrupted-boot evidence is not established by those component results.
 Production wizard admission, management-file-absent unfinished enrollment,
 previous-release migration and real mail renewal remain separate acceptance.
+
+
+### Native automatic boot evidence (2026-09-23)
+
+[Arch BE automatic boot](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-AUTOMATIC-BOOT-BE.json)
+uses production helper source `d3aab13bc22b085433c94b77fd47a2d56f182d3e`.
+A test-only producer uses the real common writer, scope, native executor and boot
+registration, then SIGKILLs itself after the actual timer start returns and
+before its receipt. The fixed installed production helper, not the test binary,
+automatically resumes after guarded QEMU reset. Request
+`1a60a47a049c80ea77d852625ce49873` reaches verified `published` with one boot
+attempt; prior jobs and pre-cut immutable records remain unchanged. No manual
+continuation or management daemon runs. Compatible Agent files remain present.
+
+A separate reset after durable native owner-disable and removal of Agent/Panel
+management files proves terminal boot no-op: timer stays disabled/inactive,
+ledger/receipts stay byte-identical and `/run/celikpanel` remains absent.
+The first fault fixture did not reach its unnecessary daemon-reload cut and the
+first owner-preference fixture omitted a durability flush before immediate
+power reset. Both are preserved as unproven trials, not silently counted as
+acceptance. The corrected timer-start cut and flushed owner-preference trial
+provide the results above. Initial SSH unavailability caused only another read.
+
+This closes automatic forward continuation at the lost native-start-reply/boot
+boundary and terminal owner-preference no-op on Arch. Inverse/early-admission
+boot cuts, Debian enrollment, pending continuation with management files absent,
+production setup admission, old-release migration and the wider P0 matrix remain
+open. No owner-installed panel was changed.

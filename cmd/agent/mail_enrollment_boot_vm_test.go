@@ -16,7 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// This test-only producer cuts after a real native reload, before its receipt.
+// This test-only producer cuts after a real native timer start, before its receipt.
 // Following reboot, only the installed production helper/native boot unit runs;
 // neither this test executable nor its fault hook is part of that continuation.
 func TestMailEnrollmentBootDisposableVM(t *testing.T) {
@@ -94,11 +94,11 @@ type mailBootCutNative struct {
 	t *testing.T
 }
 
-func (n mailBootCutNative) Reload(ctx context.Context) error {
-	if err := n.mailEnrollmentNativeHost.Reload(ctx); err != nil {
+func (n mailBootCutNative) StartTimer(ctx context.Context) error {
+	if err := n.mailEnrollmentNativeHost.StartTimer(ctx); err != nil {
 		return err
 	}
-	n.t.Log("boot_enrollment_cut=first_native_reload_returned")
+	n.t.Log("boot_enrollment_cut=native_timer_start_returned")
 	_ = unix.Kill(os.Getpid(), unix.SIGKILL)
 	panic("kill returned")
 }

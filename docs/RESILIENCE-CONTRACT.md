@@ -750,3 +750,14 @@ The [enrollment contract](MAIL-ENROLLMENT-RESERVATION.md#recorded-boot-continuat
 records the pre-reservation registration gap and retained-source requirement.
 Native interrupted-boot, production UI and the remaining P0 matrix stay open
 until their corresponding evidence is recorded.
+
+
+September 23 [Arch BE automatic enrollment boot evidence](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-AUTOMATIC-BOOT-BE.json)
+now closes one forward native boundary: SIGKILL after timer start, QEMU reset,
+production helper automatic continuation of the same reservation to verified
+publication with one durable attempt, no management daemon and retained prior
+history. A separate terminal reboot with management files absent preserves the
+owner-disabled timer and all evidence without recreating volatile runtime.
+Failed/inconclusive fixture preparations remain recorded. Inverse/early-admission
+boot, Debian enrollment, pending management-file absence, production UI and full
+P0 completion are not established by this result.

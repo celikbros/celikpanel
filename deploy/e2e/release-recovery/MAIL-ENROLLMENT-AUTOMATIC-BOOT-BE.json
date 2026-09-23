@@ -1,0 +1,187 @@
+{
+  "schema": "celikpanel-mail-enrollment-automatic-boot-evidence/v1",
+  "source_commit": "d3aab13bc22b085433c94b77fd47a2d56f182d3e",
+  "test_fixture_source_sha256": "0161b231aa3214f80d238634ef03c49cc069cd9aaa09d87ac25b9778a74bf52e",
+  "native_artifacts": {
+    "bin/agent": "09e7ad2a479d071c38377e7449185fb44edb080c349c22cec9b9baa165bd968a",
+    "bin/agent-native-contract.json": "05dbd26414ed50e70fba0c063b055565efe37bcbdd1a982f43da04eae73a5fea",
+    "bin/mail-renewal-runtime/celikpanel-mail-host-cert": "a06b84da331826cfc9a8385ce3d9a60a32a92a84f3c800d99d2a198d57c21b87",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.service": "60aacb4c610b7290671e53b4ecd49bfe1adf97ba2c9c4c85fee3dbb7116aa95f",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.timer": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "bin/mail-renewal-runtime/renew": "a68dd12b1b3b57173d99d33087fac7b8098c2f2683831caf56e9afd29408d39e",
+    "bin/mail-renewal-runtime/runtime.manifest": "4b822629d8da9fdede2ac5699a234a46e5284fb12c88b621c876da3044c312e7",
+    "bin/recovery": "1dd64093e5084b820ef129d056c4a58a6d7fd84584296a36646bec6be8ee28f6",
+    "boot-enrollment.test": "2fc74970ba824f92112867c9448ac71518fb5c054aab7d1c3830025b2fd1a5a0"
+  },
+  "platform": "guarded disposable Arch/systemd QEMU BE",
+  "operation": "1a60a47a049c80ea77d852625ce49873",
+  "generation": "179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935",
+  "cut": "native_timer_start_returned",
+  "cut_exit": -9,
+  "before_boot": "0449ff79-6715-4479-94bf-871cf79c8694",
+  "after_boot": "45a8316c-6271-4e34-b7e5-429d5f0cb654",
+  "automatic_boot_dispatch": true,
+  "manual_continuation": false,
+  "same_request_published": true,
+  "prior_history_and_immutable_evidence_unchanged": true,
+  "attempts": 1,
+  "panel_or_agent_daemon_started": false,
+  "compatible_agent_files_retained_for_pending_continuation": true,
+  "real_certificate_renewal": false,
+  "production_ui_admission": false,
+  "boot_journal": "Sep 23 13:08:59 dns-arch systemd[1]: Starting Continue recorded CelikPanel mail enrollment...\nSep 23 13:09:03 dns-arch systemd[1]: celikpanel-mail-enrollment-resume-1a60a47a049c80ea77d852625ce49873.service: Deactivated successfully.\nSep 23 13:09:03 dns-arch systemd[1]: Finished Continue recorded CelikPanel mail enrollment.\nSep 23 13:09:03 dns-arch systemd[1]: celikpanel-mail-enrollment-resume-1a60a47a049c80ea77d852625ce49873.service: Consumed 3.317s CPU time over 3.440s wall clock time, 256.7M memory peak.\nSep 23 13:09:24 dns-arch systemd[1]: Starting Deploy an already renewed mail host certificate...\nSep 23 13:09:24 dns-arch systemd[1]: celikpanel-mail-renewal.service: Deactivated successfully.\nSep 23 13:09:24 dns-arch systemd[1]: Finished Deploy an already renewed mail host certificate.\n",
+  "terminal_boot": {
+    "after_boot": "d4dcbf83-5ca1-448f-83b5-08e9a658460c",
+    "before_boot": "e3594d18-56c1-43be-bf64-0db612b3ac18",
+    "boot_unit_properties": "Result=success\nExecMainStartTimestamp=Wed 2026-09-23 13:14:29 UTC\nExecMainStatus=0\n",
+    "journal": "Sep 23 13:14:29 dns-arch systemd[1]: Starting Continue recorded CelikPanel mail enrollment...\nSep 23 13:14:29 dns-arch systemd[1]: celikpanel-mail-enrollment-resume-1a60a47a049c80ea77d852625ce49873.service: Deactivated successfully.\nSep 23 13:14:29 dns-arch systemd[1]: Finished Continue recorded CelikPanel mail enrollment.\n",
+    "ledger_and_receipts_unchanged": true,
+    "management_files_absent": true,
+    "operation": "1a60a47a049c80ea77d852625ce49873",
+    "owner_disabled_timer_preserved": true,
+    "volatile_runtime_absent": true
+  },
+  "earlier_trials": [
+    {
+      "result": "fixture cut not reached; operation actually completed",
+      "cause": "native manager already had the published unit loaded; unnecessary daemon-reload was correctly skipped",
+      "counted_as_fault_acceptance": false
+    },
+    {
+      "result": "first SSH observation unavailable during native boot; later read succeeded",
+      "mutation_retried": false
+    },
+    {
+      "result": "initial owner-disable/source-move preparation did not survive immediate power reset",
+      "cause": "fixture did not flush these native owner changes before QMP reset; prior inode/content reappeared, ledger and boot attempts unchanged",
+      "counted_as_owner_preference_acceptance": false,
+      "corrected_trial": "explicit fixture sync before reset; disabled timer, absent management files, unchanged ledger/receipts and no volatile runtime verified"
+    }
+  ],
+  "evidence": {
+    "mail-automatic-boot-native.intent": {
+      "sha256": "28ee1551b18200074c4e365033578ec56c8711d572cc089d619a24172e40c910",
+      "bytes": 1679
+    },
+    "mail-automatic-boot-native.log": {
+      "sha256": "85cc5a46c275954e1345047b15381ed043593976cdb42e0bb065df2778b574d1",
+      "bytes": 276
+    },
+    "mail-automatic-boot-native.script": {
+      "sha256": "58bf3ef6936ddc3219d0f7023cc4fdf1cbe81c6b14625cf29fedda1e382ee6e0",
+      "bytes": 9982
+    },
+    "mail-automatic-boot-v2-native-result.json": {
+      "sha256": "86e763a1ffd4950d73fede3f2881baad92d6e6c97448d73d6c27ff04968873a0",
+      "bytes": 7189
+    },
+    "mail-automatic-boot-v2-native.intent": {
+      "sha256": "4311cfc3e80b470687287483618c97a5117815d8f656c7ff5f227bbe56643531",
+      "bytes": 1777
+    },
+    "mail-automatic-boot-v2-native.log": {
+      "sha256": "636a12ef0ca8de73eefe330dbea998a9a69445534e303eda66381e239c8e01d9",
+      "bytes": 7189
+    },
+    "mail-automatic-boot-v2-native.script": {
+      "sha256": "a655c71724e4300cbb5ad7bb6399c17e6091a80a4c5d41f28f81b15e8615aefc",
+      "bytes": 10350
+    },
+    "mail-automatic-boot-v2-observe-ready.json": {
+      "sha256": "2ac3f1b5ca8e0804d0062b541709329f29c73172e77533cf1a41d22a9fa4ab4d",
+      "bytes": 5756
+    },
+    "mail-automatic-boot-v2-observe-ready.log": {
+      "sha256": "9d27643a7eb571e04ac591f6a6a8b6c3e2df391841e15c98f9dd6419214bf72a",
+      "bytes": 5756
+    },
+    "mail-automatic-boot-v2-observe-ready.script": {
+      "sha256": "75b41335b8d894bf4dcbcf910731ccf0c4b91bd41c60560b5dbdb488e703ad6d",
+      "bytes": 11226
+    },
+    "mail-automatic-boot-v2-observe.log": {
+      "sha256": "c59cfdcb381dc6fa99becb8c55a16e58ffd1615fa07b098aac22540ba1c3cd37",
+      "bytes": 100
+    },
+    "mail-automatic-boot-v2-observe.script": {
+      "sha256": "75b41335b8d894bf4dcbcf910731ccf0c4b91bd41c60560b5dbdb488e703ad6d",
+      "bytes": 11226
+    },
+    "mail-automatic-boot-v2-reset.intent": {
+      "sha256": "fb6665a628c65476b6d46447cabcf74926a433f927a2c2eb16e6abf566d066ba",
+      "bytes": 260
+    },
+    "mail-automatic-boot-v2-reset.result": {
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    "mail-automatic-terminal-before.json": {
+      "sha256": "836fdca4b85b89644740f7cc07779baf97697a08d50c230be31cc919895da530",
+      "bytes": 3179
+    },
+    "mail-automatic-terminal-before.script": {
+      "sha256": "feba71a1b3974a3940aa62910c17aefac8fbe645bbcac16d8869b5dcd5a2e175",
+      "bytes": 3505
+    },
+    "mail-automatic-terminal-diagnostic-details.log": {
+      "sha256": "be39422e8950a7570112cee67f537b4b26cf562b8177d703bb733c0063aa7805",
+      "bytes": 757
+    },
+    "mail-automatic-terminal-diagnostic.log": {
+      "sha256": "deb8fc1b75bd6d54143c3023eba1b5d9b4b51107c5f6573ac41710ec5a6cd100",
+      "bytes": 991
+    },
+    "mail-automatic-terminal-observe.log": {
+      "sha256": "e0d9d3195371114369f8765b5def811d8f14635e9ccee87f725914291e6d6b51",
+      "bytes": 88
+    },
+    "mail-automatic-terminal-observe.script": {
+      "sha256": "75920646c0f798addf3d77d7565d7fc9ed59592721f85655141923e36059a281",
+      "bytes": 4546
+    },
+    "mail-automatic-terminal-reset.intent": {
+      "sha256": "7d6497c447b660ee38ade6796e4bf2a8c8c8405410e7d3314549d7ba88d0834f",
+      "bytes": 205
+    },
+    "mail-automatic-terminal-reset.result": {
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    "mail-automatic-terminal-v2-before.json": {
+      "sha256": "7d8e6310b277501faefe4a62be3c1e20c79826dcb9dcd4c758901bd71c3844ad",
+      "bytes": 3179
+    },
+    "mail-automatic-terminal-v2-before.script": {
+      "sha256": "ebdf58295f74909c194f5d3824e195fdad82d55b4b6452bfa0d245b61854b66c",
+      "bytes": 3591
+    },
+    "mail-automatic-terminal-v2-observe.json": {
+      "sha256": "c13dc43114ce4ce428c059ef86dc341af64cbf090d819d5ac4cd61d77a5286f2",
+      "bytes": 761
+    },
+    "mail-automatic-terminal-v2-observe.log": {
+      "sha256": "a64682742016d54a6592f53f50b6c24d4f95fe395322dd2007479a41a9858770",
+      "bytes": 761
+    },
+    "mail-automatic-terminal-v2-observe.script": {
+      "sha256": "2b19d4351cb838f52115262605969124d79865611dd6c6f286dfdc4d2d05e721",
+      "bytes": 4546
+    },
+    "mail-automatic-terminal-v2-reset.intent": {
+      "sha256": "7d6497c447b660ee38ade6796e4bf2a8c8c8405410e7d3314549d7ba88d0834f",
+      "bytes": 205
+    },
+    "mail-automatic-terminal-v2-reset.result": {
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    }
+  },
+  "remaining": [
+    "pending continuation with compatible Agent files absent",
+    "reboot during inverse enrollment and early admission checkpoints",
+    "Debian initial enrollment boot",
+    "production UI admission and same-request owner continuation",
+    "old-release enrollment/migration compatibility",
+    "full P0 fault/workload matrix"
+  ]
+}
