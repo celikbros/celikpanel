@@ -569,6 +569,32 @@ func SourceStateFromSwitchJournal(
 	return state, true, nil
 }
 
+// ProveFrozenSwitchSourceState compares a current, validated state observation
+// with the journal's frozen source. It does not prove native service health,
+// ownership of filesystem objects, or authority to execute an inverse.
+func ProveFrozenSwitchSourceState(
+	journal SwitchJournalV1,
+	current StateV1,
+	currentExists bool,
+) (bool, error) {
+	source, sourceExists, err := SourceStateFromSwitchJournal(journal)
+	if err != nil {
+		return false, err
+	}
+	if currentExists {
+		if err := ValidateV1(current); err != nil {
+			return false, err
+		}
+	}
+	if sourceExists != currentExists {
+		return false, nil
+	}
+	if !sourceExists {
+		return true, nil
+	}
+	return current == source, nil
+}
+
 func (policy JournalPolicy) ValidatePDNSConfigSnapshotSet(
 	snapshots []FileSnapshot,
 ) error {

@@ -150,21 +150,11 @@ func proveDNSSwitchTargetAbsentForRecovery(
 	if err := verifyDNSSwitchSourceOwnership(journal); err != nil {
 		return false, err
 	}
-	source, sourceExists, err := sourceStateFromDNSSwitchJournal(journal)
-	if err != nil {
-		return false, err
-	}
 	current, currentExists, err := readDNSEngineState()
 	if err != nil {
 		return false, err
 	}
-	if sourceExists != currentExists {
-		return false, nil
-	}
-	if !sourceExists {
-		return true, nil
-	}
-	return reflect.DeepEqual(current, source), nil
+	return dnsengineartifact.ProveFrozenSwitchSourceState(journal, current, currentExists)
 }
 
 func verifyDNSSwitchJournalTarget(

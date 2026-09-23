@@ -302,3 +302,15 @@ target-verified or committed journal is refused. No journal schema or phase
 encoding changes. Race tests cover both crash-replay phases, a later passing
 target probe, and direct verified-target refusal. Native power-cut and
 independent executor acceptance remain open.
+
+### Shared frozen-source comparison
+
+P0.4, invariants 1/2/3: the pure source-state comparison used to admit a new
+inverse is now in dnsengineartifact.ProveFrozenSwitchSourceState. It decodes
+the frozen v1/v2-compatible source from the historical v1 switch journal,
+validates the current observation, and returns true only for exact source
+equality or verified mutual absence. Agent remains responsible for manifest
+reconstruction, ownership receipt and filesystem observation. The function is
+read-only and does not grant native mutation authority. All three Alpha81
+switch-journal fixtures and Agent DNS race tests pass. No schema bytes change;
+the independent executor and native fault matrix remain open.

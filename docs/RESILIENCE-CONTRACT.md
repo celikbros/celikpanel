@@ -965,3 +965,8 @@ P0.4 also preserves the v1 DNS switch decision across crash replay: a durable
 inverse phase cannot recommit, and a rolled-back phase cannot regress to
 rolling-back. Shared race tests cover the replay ordering. This is not yet
 independent native recovery acceptance.
+
+The exact frozen-source predicate is also shared in dnsengineartifact and
+tested against all three Alpha81 journal fixtures. Agent still owns the host
+observation and inverse; this is a reusable proof boundary, not independent
+DNS recovery.

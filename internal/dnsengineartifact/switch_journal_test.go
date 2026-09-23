@@ -225,3 +225,41 @@ func FuzzSwitchJournalDecode(f *testing.F) {
 		}
 	})
 }
+
+func TestProveFrozenSwitchSourceStateHistoricalJournals(t *testing.T) {
+	policy := journalTestPolicy()
+	for _, name := range []string{"alpha81-bind", "alpha81-pdns-switch", "alpha81-pdns-adopt"} {
+		t.Run(name, func(t *testing.T) {
+			j, err := policy.DecodeSwitchJournal(journalFixture(t, name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			source, exists, err := SourceStateFromSwitchJournal(j)
+			if err != nil {
+				t.Fatal(err)
+			}
+			proved, err := ProveFrozenSwitchSourceState(j, source, exists)
+			if err != nil || !proved {
+				t.Fatalf("frozen source not recognized: proved=%v err=%v", proved, err)
+			}
+			proved, err = ProveFrozenSwitchSourceState(j, source, !exists)
+			if err == nil && proved {
+				t.Fatal("source presence mismatch proved")
+			}
+			if exists {
+				foreign := source
+				foreign.MutationRequestID = strings.Repeat("f", 32)
+				proved, err = ProveFrozenSwitchSourceState(j, foreign, true)
+				if err != nil || proved {
+					t.Fatalf("foreign source proved: proved=%v err=%v", proved, err)
+				}
+				malformed := source
+				malformed.Schema = "unknown"
+				proved, err = ProveFrozenSwitchSourceState(j, malformed, true)
+				if err == nil || proved {
+					t.Fatalf("malformed observation proved: proved=%v err=%v", proved, err)
+				}
+			}
+		})
+	}
+}
