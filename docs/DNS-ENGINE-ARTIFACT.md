@@ -188,3 +188,12 @@ receipts and the entire Agent ledger retain identical bytes. The independent
 reader refuses the unchanged historical Agent against live v2 evidence with
 exit 3 and no DNS rewrite. This is a native publication/continuity result, not
 signed application update, automatic rollback or independent DNS recovery proof.
+
+
+The same marked Debian/Arch guests also accept the exact committed `fddd595`
+Agent with its matching native contract through the independent compatibility
+reader. The DNS receipts and mutation ledger remain byte-identical, BIND remains
+active, and neither management executable is installed or started. This is the
+positive counterpart of the historical-target refusal in
+[DNS-DOCUMENTS-BE.json](../deploy/e2e/release-recovery/DNS-DOCUMENTS-BE.json);
+it proves read-only target admission, not a signed update or rollback.

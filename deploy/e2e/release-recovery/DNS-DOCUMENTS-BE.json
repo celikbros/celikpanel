@@ -520,5 +520,43 @@
     "Upload mode argument corrected before guest provisioning.",
     "Debian lacked dig; bind9-dnsutils installed only for lab observation.",
     "Historical rejection assertion corrected to the actual CLI exitUnavailable code 3; no DNS change occurred."
-  ]
+  ],
+  "supported_current_target_admission": {
+    "source_commit": "fddd5955b96dc8b6fe604fb5d31c4a7021d4a18b",
+    "scope": "independent compatibility admission only; no service start or installed update",
+    "platforms": {
+      "debian13": {
+        "exit_code": 0,
+        "native_dns_files_unchanged": true,
+        "bind_active": true,
+        "panel_and_agent_absent": true,
+        "artifacts": {
+          "agent": "afce04dbb18fbc120259366e1bce75f83c48b87a0e9f5557d53d2662ad64542d",
+          "recovery": "f953805f550fa29b9c96e952553e4c45e103346d8ba8f686052cbaf2ff282831",
+          "agent-native-contract.json": "ff97f17317e447d677f95ddd2d7aa9513be280ee7c0b73ccae343698c284e9ed"
+        },
+        "before_after_sha256sum": [
+          "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84  /var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json",
+          "a5c5f52947d5219695a51fa99d64f591cbaf2a974b46f0d793eebdd68d066bae  /var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "bc273474b79189f8057affff81dade275c51ab2657ecbc7bd70abf4696326cee  /var/lib/celikpanel-agent-private/service-mutations.json"
+        ]
+      },
+      "arch": {
+        "exit_code": 0,
+        "native_dns_files_unchanged": true,
+        "bind_active": true,
+        "panel_and_agent_absent": true,
+        "artifacts": {
+          "agent": "afce04dbb18fbc120259366e1bce75f83c48b87a0e9f5557d53d2662ad64542d",
+          "recovery": "f953805f550fa29b9c96e952553e4c45e103346d8ba8f686052cbaf2ff282831",
+          "agent-native-contract.json": "ff97f17317e447d677f95ddd2d7aa9513be280ee7c0b73ccae343698c284e9ed"
+        },
+        "before_after_sha256sum": [
+          "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84  /var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json",
+          "a5c5f52947d5219695a51fa99d64f591cbaf2a974b46f0d793eebdd68d066bae  /var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "c443be696f591dae927e5b1ede96bd196964cba05c06beed62cd3ccb5f054a57  /var/lib/celikpanel-agent-private/service-mutations.json"
+        ]
+      }
+    }
+  }
 }
