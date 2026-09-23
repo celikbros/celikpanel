@@ -24,6 +24,13 @@ func protectedBuildGateOperations() []buildGateOperation {
 				return ""
 			}
 			return err.Error()
+		}}, {name: "ContinueMailEnrollmentV1", run: func(expected string) string {
+			var response transport.MailEnrollmentStartResponse
+			err := agent.ContinueMailEnrollmentV1(&transport.MailEnrollmentStartRequest{MailEnrollmentRequest: transport.MailEnrollmentRequest{RequestID: strings.Repeat("a", 32), OwnerID: strings.Repeat("b", 32), Generation: strings.Repeat("c", 64)}, ExpectedBuildCommit: expected}, &response)
+			if err == nil {
+				return ""
+			}
+			return err.Error()
 		}},
 		{
 			name: "ApplyVhost",

@@ -15,3 +15,7 @@ func (a *Agent) StartMailEnrollmentV1(req *transport.MailEnrollmentStartRequest,
 func (a *Agent) MailEnrollmentStatusV1(*transport.MailEnrollmentRequest, *transport.MailEnrollmentStatusResponse) error {
 	return mailHostLinuxOnly()
 }
+
+func (a *Agent) ContinueMailEnrollmentV1(req *transport.MailEnrollmentStartRequest, resp *transport.MailEnrollmentStartResponse) error {
+	return a.StartMailEnrollmentV1(req, resp)
+}

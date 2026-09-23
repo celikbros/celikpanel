@@ -761,3 +761,14 @@ owner-disabled timer and all evidence without recreating volatile runtime.
 Failed/inconclusive fixture preparations remain recorded. Inverse/early-admission
 boot, Debian enrollment, pending management-file absence, production UI and full
 P0 completion are not established by this result.
+
+
+September 23 accepted-setup continuation follow-up: the explicit administrator
+[mail enrollment continuation](MAIL-ENROLLMENT-RESERVATION.md#owner-continuation-from-the-accepted-setup-2026-09-23)
+retains P0.2/P0.3/P0.5 request/owner/kit authority through HTTP, authenticated RPC
+and the recorded-only native consumer. Missing evidence never admits a new job;
+terminal work is not replayed; lost replies are observed without automatic POST
+retry. No persisted schema changes. Race tests, real handler tests, UI runtime
+checks and local production-bundle TR/EN mobile/desktop checks pass. This is not
+production setup admission or old-release/native matrix completion. Remaining
+acceptance stays open.

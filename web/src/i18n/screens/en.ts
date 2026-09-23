@@ -6,6 +6,14 @@
 // Giris formu cizilmeden once degil, o ekranlarla birlikte getirilir.
 
 export const enScreens = {
+    "setup.kind.mail_enrollment": "Prepare independent mail certificate renewal",
+    "setup.mailEnrollment.continue": "Continue recorded operation",
+    "setup.mailEnrollment.checking": "Continuation requested. Checking the same operation; completion is not yet confirmed.",
+    "setup.mailEnrollment.unknown": "Continuation could not be confirmed. The same operation is still being checked. If this persists, inspect its technical details before continuing.",
+    "setup.guide.mailEnrollmentRecorded": "Mail renewal preparation is recorded; its final result is not yet verified. Checks continue automatically. If progress has stopped, the server administrator can resolve the reported cause and continue this recorded operation below.",
+    "setup.guide.mailEnrollmentRollback": "Mail renewal preparation is restoring its previous state. Checks continue automatically. If restoration has stopped, the server administrator can resolve the reported cause and continue the same restoration below.",
+    "setup.guide.mailEnrollmentUnknown": "The mail renewal result cannot yet be verified. Checks continue for the same request. If this persists, the server administrator should inspect the worker named in Technical details; do not start another setup.",
+    "setup.guide.mailEnrollmentFailed": "Mail renewal preparation did not complete. The server administrator should inspect the recorded result in Technical details before reviewing a new plan.",
     "setup.guide.progressIntro": "Follow the setup steps and their recorded results here.",
     "setup.guide.buildChangedTitle": "Review the remaining setup after the update",
     "setup.guide.buildChanged": "CelikPanel was updated after this plan was reviewed. Existing operation results and installed services are preserved. Review a revised plan for the remaining steps before starting them.",

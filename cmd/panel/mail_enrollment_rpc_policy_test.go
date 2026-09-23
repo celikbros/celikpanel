@@ -7,8 +7,10 @@ func TestMailEnrollmentRPCPoliciesSeparateObservationAndMutation(t *testing.T) {
 	if err != nil || read.effect != agentRPCEffectRead || read.capability != "" || read.timeout != agentRPCQuickReadTimeout {
 		t.Fatalf("read policy: %+v %v", read, err)
 	}
-	start, err := agentRPCPolicyForMethod("Agent.StartMailEnrollmentV1")
-	if err != nil || start.effect != agentRPCEffectHostMutation || start.capability != agentRPCCapabilityMail || start.timeout != agentRPCQuickReadTimeout {
-		t.Fatalf("start policy: %+v %v", start, err)
+	for _, method := range []string{"Agent.StartMailEnrollmentV1", "Agent.ContinueMailEnrollmentV1"} {
+		start, err := agentRPCPolicyForMethod(method)
+		if err != nil || start.effect != agentRPCEffectHostMutation || start.capability != agentRPCCapabilityMail || start.timeout != agentRPCQuickReadTimeout {
+			t.Fatalf("start policy: %+v %v", start, err)
+		}
 	}
 }

@@ -1,6 +1,6 @@
 import { setupPurposes, type ServerSetupCheck, type SetupPurpose } from './serverSetup';
 
-export interface SetupPlanStep { id: string; kind: 'infrastructure_dns' | 'access_dns' | 'dns' | 'dns_publisher' | 'dns_readiness' | 'service' | 'runtime' | 'mail_profile' | 'firewall' | 'panel_certificate' | 'mail_certificate' | 'verify'; target: string; qualifier?: string }
+export interface SetupPlanStep { id: string; kind: 'infrastructure_dns' | 'access_dns' | 'dns' | 'dns_publisher' | 'dns_readiness' | 'service' | 'runtime' | 'mail_profile' | 'mail_enrollment' | 'firewall' | 'panel_certificate' | 'mail_certificate' | 'verify'; target: string; qualifier?: string }
 export interface SetupInfrastructureDNSPlan {
     zone: string; existing_zone_id?: number; expected_digest: string;
     records: { name: string; type: string; content: string; ttl: number; action: 'add' | 'keep' }[];
@@ -28,7 +28,7 @@ export interface SetupExecutionContext {
     panel_domain: string; mail_hostname: string; dns_hosting_management: string;
     access_dns_ip?: string; infrastructure_dns?: SetupInfrastructureDNSPlan;
 }
-const kinds = ['infrastructure_dns', 'access_dns', 'dns', 'dns_publisher', 'dns_readiness', 'service', 'runtime', 'mail_profile', 'firewall', 'panel_certificate', 'mail_certificate', 'verify'];
+const kinds = ['infrastructure_dns', 'access_dns', 'dns', 'dns_publisher', 'dns_readiness', 'service', 'runtime', 'mail_profile', 'mail_enrollment', 'firewall', 'panel_certificate', 'mail_certificate', 'verify'];
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const identity = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
 function isStep(value: unknown): value is SetupPlanStep {
@@ -106,4 +106,10 @@ export function safeSetupPanelURL(raw: string | undefined, hostname: string): st
         return url.protocol === 'https:' && url.hostname === hostname.toLowerCase().replace(/\.$/, '') && !url.username && !url.password
             ? url.href : null;
     } catch { return null; }
+}
+
+// A visible recorded wait permits an explicit owner action, never a polling POST.
+export function continuableMailEnrollment(execution: ServerSetupExecution | null): SetupPlanStep | null {
+    if (!execution || execution.status !== 'running' || !['server_setup_mail_enrollment_running', 'server_setup_mail_enrollment_rollback'].includes(execution.error?.code || '')) return null;
+    return execution.steps.find(step => step.kind === 'mail_enrollment' && step.status === 'running' && step.id === execution.phase) || null;
 }

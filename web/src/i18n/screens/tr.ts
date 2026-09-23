@@ -3,6 +3,14 @@
 import type { ScreenKey } from './en';
 
 export const trScreens: Record<ScreenKey, string> = {
+    "setup.kind.mail_enrollment": "Bağımsız e-posta sertifikası yenilemeyi hazırla",
+    "setup.mailEnrollment.continue": "Kayıtlı işleme devam et",
+    "setup.mailEnrollment.checking": "Devam isteği gönderildi. Aynı işlem kontrol ediliyor; tamamlandığı henüz doğrulanmadı.",
+    "setup.mailEnrollment.unknown": "Devam isteğinin sonucu doğrulanamadı. Aynı işlem kontrol ediliyor. Bu durum sürerse devam etmeden önce teknik ayrıntıları inceleyin.",
+    "setup.guide.mailEnrollmentRecorded": "E-posta yenileme hazırlığı kayıtlı; son sonucu henüz doğrulanmadı. Kontroller otomatik sürer. İlerleme durmuşsa sunucu yöneticisi bildirilen nedeni giderip aşağıdan bu kayıtlı işleme devam edebilir.",
+    "setup.guide.mailEnrollmentRollback": "E-posta yenileme hazırlığı önceki duruma geri dönüyor. Kontroller otomatik sürer. Geri alma durmuşsa sunucu yöneticisi bildirilen nedeni giderip aşağıdan aynı geri alma işlemine devam edebilir.",
+    "setup.guide.mailEnrollmentUnknown": "E-posta yenileme sonucu henüz doğrulanamıyor. Aynı istek kontrol ediliyor. Bu durum sürerse sunucu yöneticisi Teknik ayrıntılarda adı verilen işçiyi incelemeli; başka kurulum başlatmayın.",
+    "setup.guide.mailEnrollmentFailed": "E-posta yenileme hazırlığı tamamlanmadı. Sunucu yöneticisi yeni planı incelemeden önce Teknik ayrıntılardaki kayıtlı sonucu incelemeli.",
     "setup.guide.progressIntro": "Kurulum adımlarını ve kaydedilen sonuçları buradan takip edin.",
     "setup.guide.buildChangedTitle": "Güncellemeden sonra kalan kurulumu inceleyin",
     "setup.guide.buildChanged": "Bu plan incelendikten sonra CelikPanel güncellendi. Mevcut işlem sonuçları ve kurulu servisler korunur. Kalan adımları başlatmadan önce güncel planı yeniden inceleyin.",

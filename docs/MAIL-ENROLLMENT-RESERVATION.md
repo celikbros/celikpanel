@@ -470,3 +470,45 @@ boundary and terminal owner-preference no-op on Arch. Inverse/early-admission
 boot cuts, Debian enrollment, pending continuation with management files absent,
 production setup admission, old-release migration and the wider P0 matrix remain
 open. No owner-installed panel was changed.
+
+
+### Owner continuation from the accepted setup (2026-09-23)
+
+P0.2/P0.3/P0.5 now have a same-operation owner action for the dormant enrollment
+step. POST `/api/v1/setup/mail-enrollment/continue` accepts only the current
+execution/step IDs. Administrator identity, current revision, immutable reviewed
+plan, persisted initial handoff fence, license, paired build and mail capability
+are checked before handoff. Request/owner/kit generation come from the saved
+plan; the browser cannot supply them. This endpoint never rewrites execution
+JSON or clears the initial fence while the existing runner is reconciling.
+
+`Agent.ContinueMailEnrollmentV1` requires matching recorded forward/inverse
+identity and the verified installed helper. The worker receives only the saved
+request ID, not new-intent owner/target arguments. Missing/conflicting evidence
+cannot become new admission if it changes after the Panel's observation. A
+terminal race performs no native work; the existing observer reports published
+versus restored. Unknown/lost handoff remains unknown; polling and remounting
+only read. Explicit continuation does not reset automatic or native budgets.
+No ledger, kit, boot-receipt or setup-plan schema transition is introduced.
+The added RPC is paired-build gated and Linux-only.
+
+TR/EN guidance distinguishes recorded preparation, inverse continuation,
+unverified outcome and known failure. The explicit continuation action appears
+only on the current recorded forward/inverse wait. The current reason/action
+precedes the step list. A recorded wait no longer falls through to a generic DNS
+failure. Native unit details remain available. Lack of a recorded initial
+admission does not expose this action or silently retry the original handoff.
+
+Evidence: race-enabled Agent/Panel continuation, exact-plan, build-gate and RPC
+policy tests pass, including real HTTP handlers, stale identities, client owner
+injection, missing fence, revision/license/build denial, terminal no-op and lost
+reply. Agent/Panel vet passes. All 80 setup runtime/guidance tests and the web
+production build/bundle budget pass. A local production-bundle browser fixture
+passes English/Turkish at 1440/390px: no overflow or page errors; lost POST reply
+retains the operation; reload issues no second mutation. Browser API responses
+are fixtures, not installed-server acceptance.
+
+This closes the supported UI continuation gap for an already admitted plan. It
+does not enable plan-builder admission, prove old-release migration or close the
+remaining native inverse/early-admission boot and Debian matrix. No installed
+panel was updated.

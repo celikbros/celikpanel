@@ -144,3 +144,60 @@ func TestMailEnrollmentRPCStatusNeverDispatchesOrConvertsUnknown(t *testing.T) {
 		}
 	}
 }
+
+func TestMailEnrollmentRPCContinuationCannotAdmitOrReplayTerminalWork(t *testing.T) {
+	for _, scenario := range []string{"forward", "rollback", "published", "restored", "absent", "owner", "request", "generation", "unknown", "read-error", "source-change", "lost-reply"} {
+		t.Run(scenario, func(t *testing.T) {
+			req := enrollmentRPCRequest()
+			proof := &enrollmentRPCProof{commit: req.ExpectedBuildCommit, digest: strings.Repeat("e", 64), changed: scenario == "source-change"}
+			inspect := func() (mailEnrollmentRPCInspection, error) {
+				return mailEnrollmentRPCInspection{proof, filepath.Join(mailrenewalkit.InstalledRoot, req.Generation, mailrenewalkit.BinaryName), req.Generation, proof.digest}, nil
+			}
+			observe := func(context.Context, *transport.MailEnrollmentRequest) (recoveryruntime.MailEnrollmentObservation, error) {
+				result := recoveryruntime.MailEnrollmentObservation{Found: true, Identity: servicemutationledger.MailEnrollmentIdentity{RequestID: req.RequestID, OwnerID: req.OwnerID, ScopeSHA256: strings.Repeat("f", 64)}, Generation: req.Generation, State: scenario}
+				switch scenario {
+				case "absent":
+					result.Found = false
+				case "owner":
+					result.Identity.OwnerID = strings.Repeat("f", 32)
+				case "request":
+					result.Identity.RequestID = strings.Repeat("f", 32)
+				case "generation":
+					result.Generation = strings.Repeat("f", 64)
+				case "source-change", "lost-reply":
+					result.State = "forward"
+				case "read-error":
+					return result, errors.New("private detail")
+				}
+				return result, nil
+			}
+			starts := 0
+			dispatch := func(_ context.Context, _ string, args []string) error {
+				starts++
+				if len(args) != 1 || args[0] != req.RequestID {
+					t.Fatal("continuation admitted new intent", args)
+				}
+				if scenario == "lost-reply" {
+					return errors.New("private detail")
+				}
+				return nil
+			}
+			var out transport.MailEnrollmentStartResponse
+			err := dispatchMailEnrollmentRPC(context.Background(), &req, &out, req.ExpectedBuildCommit, inspect, observe, dispatch, true)
+			pending := scenario == "forward" || scenario == "rollback" || scenario == "lost-reply"
+			terminal := scenario == "published" || scenario == "restored"
+			if starts != map[bool]int{true: 1, false: 0}[pending] || (err == nil) != (pending || terminal) {
+				t.Fatalf("starts=%d out=%+v err=%v", starts, out, err)
+			}
+			if terminal && out.Reason != "mail_enrollment_already_terminal" {
+				t.Fatal(out)
+			}
+			if scenario == "lost-reply" && out.Handoff != "unknown" {
+				t.Fatal(out)
+			}
+			if !proof.closed {
+				t.Fatal("source not closed")
+			}
+		})
+	}
+}

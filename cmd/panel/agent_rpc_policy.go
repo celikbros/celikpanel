@@ -178,7 +178,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.AddMailAccount Agent.ConfigureDKIMSigning Agent.ConfigureMailStack
 		Agent.ConfigureMailSubmission Agent.DeleteMailAccount Agent.DeleteMailDomain
 		Agent.EnsureDKIMKey Agent.ImportMailAccount Agent.PostfixQueueAction
-		Agent.SetMailPolicy Agent.SyncMailTLSV2 Agent.StartMailEnrollmentV1
+		Agent.SetMailPolicy Agent.SyncMailTLSV2 Agent.StartMailEnrollmentV1 Agent.ContinueMailEnrollmentV1
 		Agent.UpdateMailForwarding Agent.UpdateMailPassword Agent.UpdateMailQuota
 		Agent.WireMailFilters
 	`),
@@ -239,6 +239,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.PanelRenewalReadiness":       agentRPCQuickReadTimeout,
 	"Agent.MailEnrollmentStatusV1":      agentRPCQuickReadTimeout,
 	"Agent.StartMailEnrollmentV1":       agentRPCQuickReadTimeout,
+	"Agent.ContinueMailEnrollmentV1":    agentRPCQuickReadTimeout,
 	"Agent.MailHostCertificateStatus":   agentRPCQuickReadTimeout,
 	"Agent.FirewallStatus":              agentRPCQuickReadTimeout,
 	"Agent.GetCertificateInfo":          agentRPCQuickReadTimeout,

@@ -80,6 +80,12 @@ export function setupExecutionGuidance(execution: ServerSetupExecution): SetupEx
         const domain = phase === 'mail_certificate' ? context?.mail_hostname : context?.panel_domain;
         if (domain) result.messages.push(text('setup.guide.certificateDNS', { domain }));
         result.details.push(text('setup.guide.certificateChecks'));
+    } else if (phase === 'mail_enrollment') {
+        const code = execution.error?.code;
+        const key = code === 'server_setup_mail_enrollment_rollback' ? 'setup.guide.mailEnrollmentRollback'
+            : code === 'server_setup_mail_enrollment_running' ? 'setup.guide.mailEnrollmentRecorded'
+                : execution.status === 'failed' ? 'setup.guide.mailEnrollmentFailed' : 'setup.guide.mailEnrollmentUnknown';
+        result.messages.push(text(key));
     } else if (['service', 'runtime', 'mail_profile'].includes(phase)) {
         result.messages.push(text('setup.guide.component'));
     } else if (phase === 'firewall') {
