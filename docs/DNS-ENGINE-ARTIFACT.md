@@ -319,3 +319,9 @@ The source predicate also accepts a v1 switch journal with a canonical v2
 source-state before-image, then refuses a later publication generation as the
 same frozen source. This is component compatibility evidence, not an installed
 v1-to-v2 migration or native recovery trial.
+
+### Independent switch evidence observation (2026-09-24)
+
+P0.2/P0.4, constitution invariants 2 (owner control) and 3 (truthful state): the root-only `recovery dns-switch-status` command now reads the installed private switch journal and service mutation ledger without starting Panel or Agent. It uses the fixed installed path and the root-owned local `/etc/group` CelikPanel identity (no network NSS lookup), a bounded no-symlink/single-link file reader, the historical v1 journal codec and the existing ledger v1 codec. There is no schema or producer transition. The observer requires an exact accepted active job, expired active lease, registered-worker job, expired cancellation, or finalized receipt for the journal identity. Conflicting or unrecognized evidence is unknown and retains the files. A missing journal is reported only as a missing journal, never as completed DNS or healthy service.
+
+This is diagnosis, not a DNS switch recovery executor: each file is pinned while read, but there is no cross-file host lock, worker-liveness proof, native DNS verification, owner-edit protection, inverse or journal cleanup. The same operation must be rechecked under the host and publication locks before any recovery action. Focused tests cover historical Alpha81 journal binding, wrong owner/target/active identity, recorded worker, unexpired and expired cancellation, finalized receipt, malformed journal, local group ambiguity/symlinks and root-only command admission. Native interrupted-switch acceptance and the broader P0.2/P0.4 matrix remain open.

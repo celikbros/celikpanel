@@ -14,6 +14,10 @@ import (
 // Native root or authorized sudo remains the recovery principal. The optional
 // owner view is loopback-only, temporary and read-only; it cannot dispatch work.
 func runEntry(args []string) int {
+	if len(args) > 0 && args[0] == "dns-switch-status" {
+		return runDNSSwitchStatus(args, os.Geteuid(), os.Stdout, os.Stderr)
+	}
+
 	if len(args) > 0 && args[0] == "verify-dns-application" {
 		return dispatchDNSApplicationCompatibility(args, os.Geteuid(), recoveryruntime.CheckDNSApplicationCompatibility, func(message string) { fmt.Fprintln(os.Stderr, message) })
 	}
@@ -98,7 +102,7 @@ func dispatchEntry(args []string, uid int, observe func() int, execute func([]st
 	case len(args) == 5 && args[0] == "enroll-runtime" && args[1] == "--source" && args[3] == "--transaction-fd" && args[4] == "9" && filepath.IsAbs(args[2]) && filepath.Clean(args[2]) == args[2]:
 		err = enroll(args[2])
 	default:
-		report("Usage: recovery status --request-id <id> [--json] | view --request-id <id> [--port 2084] [--lang en|tr] | runtime-status [--json] [--lang en|tr] | version | recover [--retry --snapshot <exact pending snapshot>]")
+		report("Usage: recovery status --request-id <id> [--json] | view --request-id <id> [--port 2084] [--lang en|tr] | runtime-status [--json] [--lang en|tr] | dns-switch-status | version | recover [--retry --snapshot <exact pending snapshot>]")
 		return exitUsage
 	}
 	if err != nil {
