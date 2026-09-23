@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
 	"github.com/alicelik/celikpanel/internal/mailtlsconfig"
 	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
@@ -266,6 +267,8 @@ func independentMailRenewalWait(err error) bool {
 func mailEnrollmentReason(err error) string {
 	reason := "The recorded mail enrollment result could not be verified."
 	switch {
+	case errors.Is(err, mailrenewalkit.ErrScheduleBusy):
+		reason = "Mail enrollment is waiting for the native renewal service to finish its current invocation; no completion is claimed."
 	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
 		reason = "Mail enrollment observation was interrupted or timed out; the native result is unknown."
 	case errors.Is(err, servicemutationledger.ErrMailEnrollment):

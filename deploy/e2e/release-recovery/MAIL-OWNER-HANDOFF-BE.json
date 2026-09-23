@@ -1,0 +1,49 @@
+{
+  "schema": "celikpanel-mail-enrollment-owner-handoff-evidence/v1",
+  "source_commit": "ef53be5b7c3b7c93ccf81cb8dceffc5afd9da579",
+  "generation": "7685f538b3076827ea68a617b4540e78b4a0d44b4f0b419e6503385f5aa30125",
+  "operation": "9ed3312ffe7cab7571a8a74ee2f8e728",
+  "owner": "2e557675b394bf8ed77e367be3784c70",
+  "node": "arch",
+  "boot_id": "1594d0d3-fbd1-4af7-aece-6e13a96c679f",
+  "initial_handoff": "accepted; worker interrupted verification while timer-triggered service was activating",
+  "initial_terminal_receipt": false,
+  "same_request_owner_continuation": "published",
+  "terminal_owner_stop_preserved": true,
+  "fixture_initialized_ledger_and_runtime": true,
+  "management_daemons_started": false,
+  "agent_bytes_retained": true,
+  "full_mail_workload": false,
+  "boot_dispatch": false,
+  "evidence": {
+    "mail-rpc-native.intent": {
+      "sha256": "0b78cdc3e3ea7856f9a816b7e52af8a38fcb37176be17a0545157726099d5fd7",
+      "bytes": 5902
+    },
+    "mail-rpc-native.log": {
+      "sha256": "95fb3d89bd96065fdfc56f9d06f7a427dadcf5dced8094ec44196c037dfffa46",
+      "bytes": 15492
+    },
+    "mail-rpc-native-timeline.log": {
+      "sha256": "c9153daa60020fc32daab77649a73e3d52b88e9f7e80d132fa2fd31c43b5135d",
+      "bytes": 6458
+    },
+    "mail-rpc-native-failure-observation.log": {
+      "sha256": "d9adcb8e4ffa2da9a140020a010ec824f5ff63b323416acaac4e4e1d991d3b42",
+      "bytes": 6915
+    },
+    "mail-rpc-supported-continuation.json": {
+      "sha256": "7dc1f2172e2b6ca96f8b50aa37ba973e1e3c14cac80a0fe493dcd78b411bf837",
+      "bytes": 4560
+    },
+    "mail-rpc-terminal-owner-stop.json": {
+      "sha256": "3a527b9f52fdd0ea42e2556f3b09c2bbee6f139e4d15644fc0a12775f72cc07c",
+      "bytes": 3253
+    }
+  },
+  "limitations": [
+    "Busy-settling adapter correction is component-tested separately; no successful fresh production-helper enrollment is claimed for the corrected source.",
+    "Native helper start and continuation, not authenticated RPC or wizard UI dispatch.",
+    "No actual mail plan or mail delivery was tested in this Arch fixture."
+  ]
+}

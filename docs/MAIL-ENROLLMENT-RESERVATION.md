@@ -290,3 +290,34 @@ historical terminal results without management/runtime files, changed and mixed
 immutable evidence, source/bundle replacement, bounded IPC policy and the shared
 build gate. This is component/process and build evidence, not new native systemd
 or reboot acceptance. See the retained local build/test metadata for this source.
+
+
+### Native owner handoff and transient observation (2026-09-23)
+
+[Arch BE evidence](../deploy/e2e/release-recovery/MAIL-OWNER-HANDOFF-BE.json)
+uses actual helper source `ef53be5b7c3b7c93ccf81cb8dceffc5afd9da579` and the
+fixed systemd worker, without starting either management daemon. Initial root
+ledger and volatile lock identities were explicitly prepared by the fixture;
+this does not establish production initialization or reboot dispatch.
+
+The first start admitted one request and installed, enabled and started the
+native timer. It did **not** finish: the timer immediately invoked its oneshot,
+and final observation encountered the positively busy service. The service
+finished successfully 37 milliseconds after the worker reported uncertainty.
+The active reservation and all attempt records remained intact. Supported owner
+continuation of that exact request then published its verified result. After
+an explicit owner stop, terminal continuation preserved the stopped timer and
+left ledger bytes unchanged. The initial unsuccessful trial remains evidence.
+
+The native observation adapter now waits at most five seconds, reading only the
+fixed service properties every 100 milliseconds while the known loaded oneshot
+is active/activating/deactivating. It neither repeats start/stop/reload nor changes
+admission or attempt records. Busy exhaustion remains busy; failed, overridden,
+stale or unreadable evidence is not retried as healthy. Cancellation terminates
+the wait. Owner guidance names a still-running invocation. Component regression
+checks cover these cases; a fresh corrected-helper native enrollment remains
+required. Existing v1 ledger and enrollment receipt schemas do not change.
+
+This advances P0.2 truthful observation and P0.5 enrollment only. Automatic boot
+continuation, production wizard admission, actual Arch mail workloads, previous
+application rollback compatibility and the complete acceptance matrix remain open.

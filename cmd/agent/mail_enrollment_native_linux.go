@@ -21,7 +21,48 @@ import (
 type mailEnrollmentNativeHost struct{}
 
 func (mailEnrollmentNativeHost) ObserveUnit(ctx context.Context, unit string) ([]byte, error) {
-	return runMailEnrollmentSystemctl(ctx, "show", unit)
+	return observeSettledMailEnrollmentUnit(ctx, unit, 5*time.Second, 100*time.Millisecond, func(ctx context.Context, unit string) ([]byte, error) {
+		return runMailEnrollmentSystemctl(ctx, "show", unit)
+	})
+}
+
+// A newly started timer can immediately invoke its oneshot. Wait only for a
+// positively identified busy service, using read-only observations. Exhaustion
+// returns the last busy observation, not success; callers retain their exact
+// operation and all durable admission/attempt records. No native action repeats.
+func observeSettledMailEnrollmentUnit(ctx context.Context, unit string, budget, interval time.Duration, observe func(context.Context, string) ([]byte, error)) ([]byte, error) {
+	if ctx == nil || observe == nil || budget <= 0 || interval <= 0 {
+		return nil, mailrenewalkit.ErrScheduleObservation
+	}
+	bounded, cancel := context.WithTimeout(ctx, budget)
+	defer cancel()
+	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		raw, err := observe(bounded, unit)
+		if err != nil {
+			return nil, err
+		}
+		seen, err := mailrenewalkit.ParseUnitObservation(unit, raw)
+		if err != nil {
+			return nil, err
+		}
+		busy := seen.ActiveState == "active" || seen.ActiveState == "activating" || seen.ActiveState == "deactivating"
+		if unit != mailrenewalkit.ServiceName || !busy || seen.LoadState != "loaded" || seen.FragmentPath != "/etc/systemd/system/"+unit || seen.DropInPaths != "" || seen.NeedDaemonReload != "no" || seen.UnitFileState != "static" {
+			return raw, nil
+		}
+		timer := time.NewTimer(interval)
+		select {
+		case <-bounded.Done():
+			timer.Stop()
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			return raw, nil // Still busy; the shared validator keeps it a wait.
+		case <-timer.C:
+		}
+	}
 }
 func (mailEnrollmentNativeHost) Reload(ctx context.Context) error {
 	_, err := runMailEnrollmentSystemctl(ctx, "daemon-reload", "")

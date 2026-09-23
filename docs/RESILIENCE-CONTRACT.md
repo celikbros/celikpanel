@@ -708,3 +708,12 @@ installed management/runtime files. Agent IPC still requires its authenticated
 connection; no independent HTTP status availability is claimed. The new step is
 not yet offered by the plan builder. Native handoff/reboot, supported owner retry,
 boot dispatch and the remaining workload matrix stay open; no P0 is closed.
+
+
+September 23 native enrollment follow-up: [owner handoff evidence](../deploy/e2e/release-recovery/MAIL-OWNER-HANDOFF-BE.json)
+retains an initial Arch verification interruption during normal oneshot startup,
+then proves same-request owner continuation to publication and preservation of a
+later owner timer stop. A bounded read-only native settling adapter addresses the
+observed race with component tests. No fresh corrected-helper native success,
+automatic boot admission, full mail workload or P0 completion is claimed. See
+[enrollment contract](MAIL-ENROLLMENT-RESERVATION.md#native-owner-handoff-and-transient-observation-2026-09-23).
