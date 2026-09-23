@@ -127,7 +127,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.InstalledServiceIDsStrict Agent.ListBackups Agent.ListCronJobs Agent.ListFiles
 		Agent.ListNodeLTS Agent.ListNodeVersions Agent.ListServiceInstances
 		Agent.ListSystemSQLiteDatabases Agent.MailFilterWiringState Agent.MailHealth
-		Agent.NginxInspect Agent.PanelRenewalReadiness Agent.MailHostCertificateStatus Agent.MailEnrollmentStatusV1 Agent.MailEnrollmentSourceV1 Agent.PkgFamily
+		Agent.NginxInspect Agent.PanelRenewalReadiness Agent.MailHostCertificateStatus Agent.MailEnrollmentStatusV1 Agent.MailEnrollmentSourceV1 Agent.MailEnrollmentPreviewV1 Agent.PkgFamily
 		Agent.PostfixQueue Agent.ReadBackupChunk Agent.ReadFile
 		Agent.ReadSystemSQLiteSnapshotChunk Agent.RepoPackages Agent.ServiceCandidateVersion
 		Agent.ServiceJournal Agent.ServiceMutationReadiness Agent.SiteUsage Agent.Version Agent.VPNStatus
@@ -239,6 +239,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.PanelRenewalReadiness":       agentRPCQuickReadTimeout,
 	"Agent.MailEnrollmentStatusV1":      agentRPCQuickReadTimeout,
 	"Agent.MailEnrollmentSourceV1":      agentRPCQuickReadTimeout,
+	"Agent.MailEnrollmentPreviewV1":     agentRPCQuickReadTimeout,
 	"Agent.StartMailEnrollmentV1":       agentRPCQuickReadTimeout,
 	"Agent.ContinueMailEnrollmentV1":    agentRPCQuickReadTimeout,
 	"Agent.MailHostCertificateStatus":   agentRPCQuickReadTimeout,

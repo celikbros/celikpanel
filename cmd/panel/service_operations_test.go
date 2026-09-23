@@ -2719,3 +2719,8 @@ func TestServiceOperationRunnerFailureResultIsDurable(t *testing.T) {
 		t.Fatalf("raw failure leaked into result: %s", loaded.Result)
 	}
 }
+
+func (a *serviceOperationTestAgent) MailEnrollmentPreviewV1(req *transport.MailEnrollmentSourceRequest, out *transport.MailEnrollmentPreviewResponse) error {
+	*out = transport.MailEnrollmentPreviewResponse{MailEnrollmentSourceResponse: transport.MailEnrollmentSourceResponse{State: "verified", Generation: strings.Repeat("a", 64), BuildCommit: buildCommit, ObservedAt: time.Now().UTC()}, NativeMode: "absent", TimerEnablement: "absent", TimerActivity: "inactive"}
+	return nil
+}

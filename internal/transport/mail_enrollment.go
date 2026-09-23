@@ -38,3 +38,13 @@ type MailEnrollmentSourceResponse struct {
 	ObservedAt  time.Time `json:"observed_at"`
 	Reason      string    `json:"reason,omitempty"`
 }
+
+// Preview combines verified source with native before-state for review. An
+// independent schedule is retained, including the owner's disabled preference.
+type MailEnrollmentPreviewResponse struct {
+	MailEnrollmentSourceResponse
+	NativeMode         string `json:"native_mode,omitempty"`
+	ExistingGeneration string `json:"existing_generation,omitempty"`
+	TimerEnablement    string `json:"timer_enablement,omitempty"`
+	TimerActivity      string `json:"timer_activity,omitempty"`
+}

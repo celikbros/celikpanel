@@ -1183,3 +1183,18 @@ test('reviewed handoff retry is limited to verified absence on the current runni
  assert.equal(operations.retryableMailEnrollmentHandoff({...pending,phase:'other'}),null);
  assert.equal(operations.retryableMailEnrollmentHandoff({...pending,steps:[{...pending.steps[0],status:'succeeded'}]}),null);
 });
+
+
+test('review displays independent mail renewal without its internal kit digest or an automatic start',async()=>{
+ init('admin',{status:'draft',draft:primaryDraft()});
+ const base=fetch;
+ globalThis.fetch=async(url,options)=>url==='/api/v1/setup/plan'?Response.json(plan({steps:[{id:'cert',kind:'mail_certificate',target:'mail.example.com'},{id:'renewal',kind:'mail_enrollment',target:'mail-renewal',qualifier:'c'.repeat(64)},{id:'verify',kind:'verify',target:'web_mail'}]})):base(url,options);
+ try{
+  await mount();await submit();
+  const rendered=JSON.stringify(tree.toJSON());
+  assert.ok(rendered.includes('setup.kind.mail_enrollment'));
+  assert.ok(!rendered.includes('c'.repeat(64)));
+  assert.equal(findButton('setup.start').props.disabled,true);
+  assert.ok(!calls.some(call=>call.url==='/api/v1/setup/start'));
+ }finally{await cleanup();}
+});

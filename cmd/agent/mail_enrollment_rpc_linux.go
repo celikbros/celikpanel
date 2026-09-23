@@ -25,7 +25,7 @@ func validMailEnrollmentRequest(req *transport.MailEnrollmentRequest) bool {
 // StartMailEnrollmentV1 is an explicit authenticated IPC mutation. It hands off
 // to the independent worker; neither RPC return nor systemd acceptance is proof
 // of enrollment. The Panel must persist its dispatch intent BEFORE calling it.
-// This method is not advertised to setup until its native acceptance is complete.
+// New setup plans select its exact kit only after read-only native/source review.
 func (a *Agent) StartMailEnrollmentV1(req *transport.MailEnrollmentStartRequest, resp *transport.MailEnrollmentStartResponse) error {
 	return a.mailEnrollmentDispatchV1(req, resp, false)
 }

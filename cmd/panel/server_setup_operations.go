@@ -473,6 +473,16 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 		}
 		addStep("access_dns", draft.MailHostname, plan.ServerIP)
 		addStep("mail_certificate", draft.MailHostname, "")
+		var renewal transport.MailEnrollmentPreviewResponse
+		renewalErr := p.callAgentContext(ctx, "Agent.MailEnrollmentPreviewV1", &transport.MailEnrollmentSourceRequest{ExpectedBuildCommit: plan.BuildCommit}, &renewal)
+		generation, previewErr := setupMailEnrollmentPlanGeneration(renewal, plan.BuildCommit)
+		if renewalErr == nil && renewal.State == "waiting" && renewal.Reason == "mail_enrollment_native_busy" {
+			addBlocker("server_setup_mail_enrollment_busy")
+		} else if renewalErr != nil || previewErr != nil {
+			addBlocker("server_setup_mail_enrollment_unavailable")
+		} else if generation != "" {
+			addStep("mail_enrollment", "mail-renewal", generation)
+		}
 	}
 	addStep("verify", draft.Purpose, "")
 	plan.Steps = serverSetupDNSBootstrapSteps(draft, plan.Steps)

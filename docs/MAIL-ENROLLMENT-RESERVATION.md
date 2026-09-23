@@ -3,9 +3,19 @@
 P0.2/P0.3/P0.5; constitution: owner continuity, exact operation ownership,
 unknown is not absence, and verified terminal results. This is the private
 reservation boundary for the existing composite native enrollment executor.
-The explicit root-owner worker entry is described below; authenticated wizard
-admission and automatic boot dispatch are still open. This does not complete
-the resilience plan.
+The explicit root-owner worker, authenticated setup admission and automatic
+boot consumer share that boundary. The current implementation and acceptance
+limits are stated next; this does not complete the resilience plan.
+
+## Current implementation boundary — September 23
+
+New mail setup reviews now read the released helper and native before-state.
+Verified absent/recognized legacy renewal produces an explicit `mail_enrollment`
+step after the mail certificate and before final verification, bound to the
+reviewed kit generation. Existing independent schedules are preserved, including
+owner-disabled timers and their current kit. Older accepted plans are unchanged.
+This is source enablement, not a published release or full native wizard/update
+acceptance. The detailed historical slices below retain their original scope.
 
 ## One common durable owner
 
@@ -38,9 +48,9 @@ The private writer requires existing release fd9 then host fd8, then acquires
 the existing ledger publication lock. It reads an established private ledger;
 it does not initialize owner/group identity or start the general Agent recovery
 constructor. Exact owner intent and authenticated source must be supplied by the
-outer dispatcher on every call. The root-owner CLI below can invoke this
-boundary; RPC, renewal-hook and polling admission remain disabled. A digest or
-callback alone is not serialized owner authority.
+outer dispatcher on every call. The root-owner CLI and reviewed setup RPC can
+invoke this boundary. Renewal-hook and polling admission remain disabled. A
+digest or callback alone is not serialized owner authority.
 
 A pinned current Agent must explicitly declare
 `mail_enrollment_policy: retain-enrollment-ledger-v1`. This optional field extends
@@ -276,7 +286,7 @@ a missing/unreadable ledger is unknown, and neither result grants retry authorit
 The IPC status method still requires the ordinary authenticated Agent connection;
 this shared reader alone is not an Agent-independent HTTP recovery endpoint.
 
-**Enablement remains gated:** no new capability is advertised and the plan
+**Historical gate for this slice (superseded by the new-plan review below):** no new capability is advertised and the plan
 builder does not offer the new enrollment step. Existing accepted plans are not
 rewritten. Native dispatch/reboot acceptance, explicit UI continuation for an
 unconfirmed handoff, boot dispatch, volatile identity/lock restoration and the
@@ -652,3 +662,44 @@ cancellation and partial read cleanup. Agent/Panel vet passes. No persistent
 schema changes, plan-builder enablement or capability advertisement occurs in
 this slice. Native enrollment preflight and its plan review binding remain the
 next admission boundary; existing accepted plans are untouched.
+
+
+### New-plan native review and admission (2026-09-23)
+
+P0.2/P0.3/P0.4/P0.5: `MailEnrollmentPreviewV1` combines the verified source reader
+with a pinned, read-only native before-state. Absent ancestors are positively
+observed beneath protected no-follow directories, never created during review.
+Their later appearance invalidates the observation. Stray units/enable links,
+unknown metadata, owner edits, unsupported hooks, stale loaded state and native
+overrides prevent initial enrollment. The two fixed units use the shared native
+observation parser. A running renewal is an explicit wait, not a claimed failure.
+A verified independent schedule retains its generation and enabled/disabled,
+active/inactive owner preference; review does not repair or restart it.
+
+The new-plan builder accepts only verified, known-build, timed source/native
+results. For absent/legacy configuration it adds the exact generation in the
+existing step qualifier after certificate issuance. Existing accepted plans and
+their identities are never extended. The existing execution adapter persists its
+handoff fence before IPC, revalidates actual source/authority at dispatch and
+uses the same native reservation/boot/continuation contract. Review is no promise
+that a later owner edit can be overwritten. An unavailable preview blocks the
+new mail plan with TR/EN action guidance. A busy renewal asks the user to wait and
+review again. Internal kit digests remain in authoritative plans, not routine UI.
+No persisted schema, kit format or license policy changes. No static capability
+flag substitutes for the actual source/native inspection.
+
+Validation: race-enabled native preview/hook/executor/boot tests passed (25.642s);
+Agent RPC and Panel setup/build/policy regressions passed (1.423s / 379.661s).
+All 83 setup UI tests, production build/bundle budget and Agent/Panel/runtime vet
+passed. Logs are retained as `mail-preview-tests`, `mail-plan-admission-tests-final`,
+`mail-plan-admission-ui-tests-final`, `mail-plan-admission-ui-build-final` and
+`mail-plan-admission-vet` under the local evidence directory. The first broad
+run exposed a DNS test double omitting its paired build; the fixture now reports
+that identity, with production build checks unchanged. Preview tests cover no-follow missing ancestors, later
+creation, owner metadata, orphan native files, unknown/busy/overridden systemd,
+retained disabled schedules and paired source changes. HTTP/RPC and plan tests
+bind the kit, order the step, deny unsupported evidence and assert no host or
+execution mutation during review. The existing native forward/inverse/legacy
+boot records establish those bounded helper paths; they do not prove the entire
+new browser-to-native setup chain. Production publishing, full native wizard
+acceptance, previous-release compatibility and full P0 acceptance remain open.

@@ -8,7 +8,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-// No plan builder advertises this step until native handoff/reboot acceptance.
+// New reviewed plans bind independent renewal to a verified installed kit.
 // Existing accepted plans are never extended to acquire new enrollment authority.
 type serverSetupMailEnrollmentWait struct{ Code, Message string }
 
@@ -108,4 +108,30 @@ func advanceSetupMailEnrollment(ctx context.Context, req transport.MailEnrollmen
 		return false, setupMailEnrollmentWaiting("unknown", req.RequestID)
 	}
 	return false, setupMailEnrollmentWaiting("handoff", req.RequestID)
+}
+
+// A preview is a point-in-time read. Execution revalidates the installed source,
+// before-state and exact reviewed child authority under native exclusion.
+func setupMailEnrollmentPlanGeneration(preview transport.MailEnrollmentPreviewResponse, commit string) (string, error) {
+	validHex := func(value string, n int) bool {
+		return len(value) == n && strings.Trim(value, "0123456789abcdef") == ""
+	}
+	invalid := errors.New("independent mail renewal source or native configuration could not be verified")
+	if preview.State != "verified" || !validHex(commit, 40) || preview.BuildCommit != commit || !validHex(preview.Generation, 64) || preview.ObservedAt.IsZero() {
+		return "", invalid
+	}
+	switch preview.NativeMode {
+	case "absent", "legacy":
+		if preview.ExistingGeneration != "" || preview.TimerEnablement != "absent" || preview.TimerActivity != "inactive" {
+			return "", invalid
+		}
+		return preview.Generation, nil
+	case "independent":
+		if !validHex(preview.ExistingGeneration, 64) || (preview.TimerEnablement != "enabled" && preview.TimerEnablement != "disabled") || (preview.TimerActivity != "active" && preview.TimerActivity != "inactive") {
+			return "", invalid
+		}
+		return "", nil // Preserve the existing kit and the owner's timer preference.
+	default:
+		return "", invalid
+	}
 }

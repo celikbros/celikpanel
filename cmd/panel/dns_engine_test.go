@@ -328,6 +328,7 @@ func (agent *dnsEngineTestAgent) Version(
 	_ *transport.Empty,
 	response *transport.AgentVersionResponse,
 ) error {
+	response.Commit = strings.TrimSpace(buildCommit)
 	if agent.omitDNSCapabilities {
 		response.Capabilities = []string{transport.AgentCapabilityFirewallApplyV2}
 		return nil

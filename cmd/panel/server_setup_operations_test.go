@@ -14,6 +14,9 @@ import (
 
 func setupOperationFixture(t *testing.T) (serviceOperationTestFixture, serverSetupState) {
 	t.Helper()
+	oldCommit := buildCommit
+	buildCommit = strings.Repeat("a", 40)
+	t.Cleanup(func() { buildCommit = oldCommit })
 	f := newServiceOperationTestFixture(t)
 	f.panel.license = testPanelLicense(t, "active")
 	t.Setenv("CELIKPANEL_TLS_CERT", "")

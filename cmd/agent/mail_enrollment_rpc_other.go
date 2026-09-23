@@ -23,3 +23,7 @@ func (a *Agent) ContinueMailEnrollmentV1(req *transport.MailEnrollmentStartReque
 func (a *Agent) MailEnrollmentSourceV1(*transport.MailEnrollmentSourceRequest, *transport.MailEnrollmentSourceResponse) error {
 	return mailHostLinuxOnly()
 }
+
+func (a *Agent) MailEnrollmentPreviewV1(*transport.MailEnrollmentSourceRequest, *transport.MailEnrollmentPreviewResponse) error {
+	return mailHostLinuxOnly()
+}
