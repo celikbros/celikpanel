@@ -16,6 +16,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/processidentity"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
 
@@ -128,7 +129,16 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	case dnsenginerecovery.EvidenceLeaseExpired:
 		fmt.Fprintln(out, "The active ledger lease has expired. The server owner should inspect the original operation and native DNS service; do not start another switch. A compatible recovery executor must establish worker liveness and host ownership before the same operation can resume.")
 	case dnsenginerecovery.EvidenceWorkerRecorded:
-		fmt.Fprintln(out, "A worker is recorded, but its liveness is unknown. The server owner should check the existing operation in CelikPanel; if unavailable, inspect its process and native DNS service. Do not start a second switch. Recovery resumes only after the same worker and host state are verified.")
+		job := ledger.Jobs[observation.RequestID]
+		matches, probeErr := processidentity.Matches(job.WorkerPID, job.WorkerStarted)
+		switch {
+		case probeErr != nil:
+			fmt.Fprintln(out, "A worker is recorded, but its process identity could not be inspected. The server owner should check the same operation and native DNS service. Do not start another switch; recovery must prove worker and host state under the lock.")
+		case matches:
+			fmt.Fprintln(out, "The recorded worker process matched at this instant. The server owner should follow the same operation in CelikPanel. Do not start another switch; the worker may change after this observation.")
+		default:
+			fmt.Fprintln(out, "No process matching the recorded worker was observed at this instant. The server owner should inspect the same operation and native DNS service. A compatible recovery executor must recheck the worker and host locks before the operation resumes; do not start another switch.")
+		}
 	case dnsenginerecovery.EvidenceExpiredCancellation:
 		fmt.Fprintln(out, "The accepted lease expired and cancellation is recorded. The server owner should inspect the native DNS service and preserve both receipts. The same operation may resume only through a compatible recovery executor after host and worker checks.")
 	case dnsenginerecovery.EvidenceFinalized:
