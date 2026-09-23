@@ -136,7 +136,10 @@ func openMailEnableContext(operation, captureSHA string, fd int, paths mailCaptu
 // exact inode, target, protected metadata and absence of xattrs are required.
 // Only a rename-induced ctime change is permitted after the recorded move.
 func observeMailEnableLink(parent *pinnedDirectory) (promotionIdentity, bool, error) {
-	name := mailrenewalkit.TimerName
+	return observeMailEnableLinkAt(parent, mailrenewalkit.TimerName, mailEnableLinkTarget)
+}
+
+func observeMailEnableLinkAt(parent *pinnedDirectory, name, target string) (promotionIdentity, bool, error) {
 	var st, after unix.Stat_t
 	err := unix.Fstatat(int(parent.file.Fd()), name, &st, unix.AT_SYMLINK_NOFOLLOW)
 	if errors.Is(err, unix.ENOENT) {
@@ -145,12 +148,12 @@ func observeMailEnableLink(parent *pinnedDirectory) (promotionIdentity, bool, er
 	if err != nil {
 		return promotionIdentity{}, false, fail(ReasonReadFailed)
 	}
-	if st.Mode != unix.S_IFLNK|0777 || st.Uid != 0 || st.Gid != 0 || st.Nlink != 1 || st.Size != int64(len(mailEnableLinkTarget)) {
+	if st.Mode != unix.S_IFLNK|0777 || st.Uid != 0 || st.Gid != 0 || st.Nlink != 1 || st.Size != int64(len(target)) {
 		return promotionIdentity{}, false, fail(ReasonChanged)
 	}
-	buf := make([]byte, len(mailEnableLinkTarget)+1)
+	buf := make([]byte, len(target)+1)
 	n, err := unix.Readlinkat(int(parent.file.Fd()), name, buf)
-	if err != nil || string(buf[:n]) != mailEnableLinkTarget {
+	if err != nil || string(buf[:n]) != target {
 		return promotionIdentity{}, false, fail(ReasonChanged)
 	}
 	count, err := unix.Llistxattr(fmt.Sprintf("/proc/self/fd/%d/%s", parent.file.Fd(), name), nil)

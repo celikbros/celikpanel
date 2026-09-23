@@ -392,3 +392,53 @@ runtime** test for this source on Arch. It does not prove an unfinished enrollme
 through reboot, automatic boot dispatch, management-file-absent enrollment
 continuation, production wizard enablement or a real mail certificate renewal.
 The earlier failed descriptor trial is preserved alongside the passing trial.
+
+
+### Recorded boot continuation (2026-09-23)
+
+P0.1 bounded recovery and P0.5 independent native enrollment now have a boot
+consumer. Before the first common reservation/workload publication, explicit
+owner admission stages a per-request oneshot unit and its multi-user wants link.
+A separate `celikpanel-mail-enrollment-boot/v1` plan binds the owner, enrollment
+scope, exact unit/link inodes and protected parent directories. No renewal kit
+schema or common ledger schema changes. This is bootstrap registration, not
+permission for a boot-time process to admit a request. A cut before common
+admission leaves a harmless boot probe; the same explicit owner start can finish
+admission. Unreferenced private stages are preserved, not adopted or removed.
+
+The fixed content-addressed helper's `--boot-enrollment` reads the canonical
+ledger first. A missing request or a recorded terminal result does nothing;
+missing/malformed ledger is unknown. Only the exact pending forward/rollback
+reservation enters the existing release-lock, verified volatile runtime,
+host-lock and recorded-scope consumer. Boot never arms a missing registration,
+changes direction, fabricates an owner, restarts completed timers or starts an
+installed-panel update. Ordinary Panel/Agent daemons are unnecessary. Compatible
+retained Agent bytes/declaration are still required for unfinished enrollment.
+
+Before automatic native work the helper verifies the recorded boot unit/link
+and spends one immutable attempt receipt. The lifetime limit is three automatic
+attempts per operation, including killed attempts. A systemd activation runs
+once, bounded by the existing two-minute helper context and a three-minute unit
+limit; it does not loop or reset the budget on reboot. Exclusion contention
+before admission leaves evidence untouched and reports owner continuation.
+After exhaustion, preserve evidence, inspect the exact native unit and mail
+state, resolve the cause, and explicitly continue the same request. Owner
+continuation retains native action budgets and does not reset the boot budget.
+
+A completed boot registration cannot recreate an owner-removed enable link or
+replace an edited unit, including a byte-identical different inode. Terminal
+boot no-ops preserve later owner service preferences even without management
+binaries. Registration is retained for diagnosis; automatic cleanup is outside
+this slice. Older readers may reject the new optional receipt names; source/kit
+binding prevents silently executing a different-generation consumer.
+
+Component evidence: actual inherited-lock subprocess cuts at eight registration
+checkpoints, exact resume, owner unit/link/mode/inode/stage changes, missing
+paths, malformed/future/gapped attempts, absent arm, denied/cancelled authority,
+and bounded attempts. Boot selection covers forward/inverse, terminal no-op,
+missing request, malformed identity, and refusal of new-intent boot arguments.
+Race tests passed for enrollment boot/worker/runtime and existing timer-enable
+contracts; Agent/recovery vet and independent-helper/test-binary builds passed.
+Native interrupted-boot evidence is not established by those component results.
+Production wizard admission, management-file-absent unfinished enrollment,
+previous-release migration and real mail renewal remain separate acceptance.

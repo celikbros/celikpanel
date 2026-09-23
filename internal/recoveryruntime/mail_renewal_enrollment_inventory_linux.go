@@ -16,7 +16,7 @@ import (
 // adopted or deleted. A future attempt number/schema cannot evade the budget.
 func verifyMailEnrollmentInventory(c *mailFilesContext, operation string) error {
 	allowed := map[string]bool{}
-	for _, suffix := range []string{".json", ".files.json", ".files-rollback-intent.json", ".timer-enable.json", ".timer-enable-rollback-intent.json", ".timer-parent.json", ".timer-parent-ready.json", ".enrollment.json", ".enrollment-rollback-intent.json"} {
+	for _, suffix := range []string{".json", ".files.json", ".files-rollback-intent.json", ".timer-enable.json", ".timer-enable-rollback-intent.json", ".timer-parent.json", ".timer-parent-ready.json", ".enrollment.json", ".enrollment-rollback-intent.json", ".boot-plan.json", ".boot-armed.json", ".boot-attempt-1.json", ".boot-attempt-2.json", ".boot-attempt-3.json"} {
 		allowed[operation+suffix] = true
 	}
 	for _, side := range []string{"forward", "rollback"} {

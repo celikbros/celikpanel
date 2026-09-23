@@ -738,3 +738,15 @@ recorded authority; terminal verification succeeds with all durable ledger and
 scope bytes unchanged. The preceding `f586e74` descriptor mismatch refusal is
 retained. This is bounded owner-continuation acceptance only: automatic boot
 dispatch, unfinished enrollment recovery and full P0 acceptance remain open.
+
+
+September 23 recorded mail enrollment boot consumer: P0.1/P0.5 now include a
+per-request native boot unit, separate v1 boot-registration/attempt evidence,
+read-only terminal no-op and a three-attempt lifetime limit. It uses the same
+recorded reservation, source binding, volatile-runtime proof and exclusion as
+owner continuation; it cannot admit work or repair owner-edited registration.
+Component cuts/authority tests, race checks, vet and helper builds passed.
+The [enrollment contract](MAIL-ENROLLMENT-RESERVATION.md#recorded-boot-continuation-2026-09-23)
+records the pre-reservation registration gap and retained-source requirement.
+Native interrupted-boot, production UI and the remaining P0 matrix stay open
+until their corresponding evidence is recorded.

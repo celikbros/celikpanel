@@ -76,7 +76,10 @@ func mailEnrollmentWorkerUnitArgs(helper string, accepted []string) ([]string, e
 // Recorded owner continuation can restore absent volatile locks from verified
 // durable evidence under the release lock; existing owner paths are preserved.
 func runIndependentMailEnrollmentWorker(ctx context.Context, accepted []string) error {
-	if !mailRenewalOnlyBuild || os.Geteuid() != 0 || !validMailEnrollmentWorkerArgs(accepted) {
+	return runIndependentMailEnrollmentWorkerMode(ctx, accepted, false)
+}
+func runIndependentMailEnrollmentWorkerMode(ctx context.Context, accepted []string, automatic bool) error {
+	if !mailRenewalOnlyBuild || os.Geteuid() != 0 || !validMailEnrollmentWorkerArgs(accepted) || automatic && len(accepted) != 1 {
 		return servicemutationledger.ErrMailEnrollment
 	}
 	gid, ok := lookupGroupID("celikpanel")
@@ -84,6 +87,9 @@ func runIndependentMailEnrollmentWorker(ctx context.Context, accepted []string) 
 		return servicemutationledger.ErrMailEnrollment
 	}
 	args := []string{"--resume-enrollment", accepted[0]}
+	if automatic {
+		args[0] = "--boot-enrollment-under-lock"
+	}
 	if len(accepted) == 3 {
 		args = append([]string{"--enroll-under-lock"}, accepted...)
 	}

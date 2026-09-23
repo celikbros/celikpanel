@@ -34,27 +34,7 @@ func TestMailEnrollmentExecuteDisposableVM(t *testing.T) {
 			t.Fatal("management must be absent")
 		}
 	}
-	const markerPath = "/etc/celikpanel-release-recovery-lab"
-	var st unix.Stat_t
-	if unix.Lstat(markerPath, &st) != nil || st.Mode != unix.S_IFREG|0444 || st.Uid != 0 || st.Gid != 0 || st.Nlink != 1 || st.Size > 2048 {
-		t.Fatal("protected marker required")
-	}
-	raw, e := os.ReadFile(markerPath)
-	if e != nil {
-		t.Fatal(e)
-	}
-	var marker map[string]string
-	if json.Unmarshal(raw, &marker) != nil || marker["schema"] != "celikpanel-release-recovery-lab/v1" || marker["node"] != "arch" {
-		t.Fatal("wrong fixture")
-	}
-	uuid, e := os.ReadFile("/sys/class/dmi/id/product_uuid")
-	if e != nil || strings.ToLower(strings.TrimSpace(string(uuid))) != marker["vm_uuid"] {
-		t.Fatal("wrong VM identity")
-	}
-	virt, e := exec.Command("systemd-detect-virt", "--vm").Output()
-	if e != nil || (strings.TrimSpace(string(virt)) != "qemu" && strings.TrimSpace(string(virt)) != "kvm") {
-		t.Fatal("QEMU required")
-	}
+	requireMailEnrollmentVMIdentity(t)
 	operation, target, phase := os.Getenv("CP_MAIL_ENROLL_NATIVE_OPERATION"), os.Getenv("CP_MAIL_ENROLL_NATIVE_TARGET"), os.Getenv("CP_MAIL_ENROLL_NATIVE_PHASE")
 	if !validMutationIdentity(operation) || !recoveryruntime.ValidDigest(target) {
 		t.Fatal("exact operation and target required")
@@ -148,4 +128,29 @@ func (n *mailEnrollmentCutNative) StopTimer(ctx context.Context) error {
 		panic("kill returned")
 	}
 	return nil
+}
+
+func requireMailEnrollmentVMIdentity(t *testing.T) {
+	t.Helper()
+	const markerPath = "/etc/celikpanel-release-recovery-lab"
+	var st unix.Stat_t
+	if unix.Lstat(markerPath, &st) != nil || st.Mode != unix.S_IFREG|0444 || st.Uid != 0 || st.Gid != 0 || st.Nlink != 1 || st.Size > 2048 {
+		t.Fatal("protected marker required")
+	}
+	raw, e := os.ReadFile(markerPath)
+	if e != nil {
+		t.Fatal(e)
+	}
+	var marker map[string]string
+	if json.Unmarshal(raw, &marker) != nil || marker["schema"] != "celikpanel-release-recovery-lab/v1" || marker["node"] != "arch" {
+		t.Fatal("wrong fixture")
+	}
+	uuid, e := os.ReadFile("/sys/class/dmi/id/product_uuid")
+	if e != nil || strings.ToLower(strings.TrimSpace(string(uuid))) != marker["vm_uuid"] {
+		t.Fatal("wrong VM identity")
+	}
+	virt, e := exec.Command("systemd-detect-virt", "--vm").Output()
+	if e != nil || (strings.TrimSpace(string(virt)) != "qemu" && strings.TrimSpace(string(virt)) != "kvm") {
+		t.Fatal("QEMU required")
+	}
 }

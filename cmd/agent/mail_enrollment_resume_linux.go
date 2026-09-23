@@ -27,7 +27,11 @@ func resumeIndependentMailEnrollment(ctx context.Context, requestID string) erro
 // An explicit root-owner invocation supplies new intent. Recorded requests always
 // take the recorded path; even a repeated start cannot recreate their scope.
 func runIndependentMailEnrollment(ctx context.Context, requestID, ownerID, target string) error {
-	if ctx == nil || !validMutationIdentity(requestID) || !mailRenewalOnlyBuild || os.Geteuid() != 0 ||
+	return runIndependentMailEnrollmentMode(ctx, requestID, ownerID, target, false)
+}
+
+func runIndependentMailEnrollmentMode(ctx context.Context, requestID, ownerID, target string, automatic bool) error {
+	if ctx == nil || automatic && (ownerID != "" || target != "") || !validMutationIdentity(requestID) || !mailRenewalOnlyBuild || os.Geteuid() != 0 ||
 		(ownerID != "" && (!validMutationIdentity(ownerID) || !recoveryruntime.ValidDigest(target))) || (ownerID == "" && target != "") {
 		return servicemutationledger.ErrMailEnrollment
 	}
@@ -89,6 +93,15 @@ func runIndependentMailEnrollment(ctx context.Context, requestID, ownerID, targe
 	if err != nil {
 		return err
 	}
+	if automatic {
+		pending, err := mailEnrollmentBootPending(&ledger, requestID)
+		if err != nil {
+			return err
+		}
+		if !pending {
+			return nil
+		}
+	}
 	fresh, err := mailEnrollmentAdmission(&ledger, requestID, ownerID, target, kit.Generation)
 	if err != nil {
 		return err
@@ -107,6 +120,20 @@ func runIndependentMailEnrollment(ctx context.Context, requestID, ownerID, targe
 	}
 	if err != nil {
 		return err
+	}
+	// The boot unit is armed before the first common reservation/native effect.
+	// A power cut before reservation leaves only a harmless read-only boot probe;
+	// the same explicit owner start may finish admission. Recorded automatic work
+	// cannot arm units, admit new requests, reverse direction or replay terminals.
+	_, existingState, _ := servicemutationledger.RecordedMailEnrollment(&ledger, requestID)
+	if automatic {
+		if err = execution.ClaimBootAttempt(ctx); err != nil {
+			return err
+		}
+	} else if existingState != servicemutationledger.MailEnrollmentPublished && existingState != servicemutationledger.MailEnrollmentRestored {
+		if err = execution.ArmBoot(ctx); err != nil {
+			return err
+		}
 	}
 	authority := mailEnrollmentAuthority{identity: execution.Identity(), agent: agent, verifyIntent: func() error { return execution.RevalidateAuthority(ctx) }}
 	return executePreparedMailEnrollment(ctx, state, host, authority, execution, direction)

@@ -45,6 +45,24 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 		}
 		fmt.Fprintln(os.Stdout, "Mail enrollment worker accepted: "+args[1]+". Completion is not yet verified. Observe celikpanel-mail-enrollment-"+args[1]+".service; after interruption, continue this same request.")
 		return 0
+	case "--boot-enrollment", "--boot-enrollment-under-lock":
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if args[0] == "--boot-enrollment" {
+			err = runIndependentMailEnrollmentBoot(ctx, args[1])
+		} else {
+			err = runIndependentMailEnrollmentMode(ctx, args[1], "", "", true)
+		}
+		if err != nil {
+			var budget *recoveryruntime.MailEnrollmentBootBudget
+			if errors.As(err, &budget) {
+				fmt.Fprintln(os.Stderr, budget.Error())
+			} else {
+				fmt.Fprintln(os.Stderr, "Automatic mail enrollment continuation is not confirmed. The server owner must inspect celikpanel-mail-enrollment-resume-"+args[1]+".service and retained operation evidence, resolve the reported prerequisite, then use --continue-enrollment with this same request. No new enrollment was started.")
+			}
+			return 1
+		}
+		return 0
 	case "--enrollment-worker":
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
@@ -158,7 +176,7 @@ func validateIndependentMailEntry(args []string, euid int, environment []string)
 	if len(args) == 4 && (args[0] == "--start-enrollment" || args[0] == "--enrollment-worker" || args[0] == "--enroll-under-lock") && validMutationIdentity(args[1]) && validMutationIdentity(args[2]) && recoveryruntime.ValidDigest(args[3]) {
 		return nil
 	}
-	if len(args) == 2 && (args[0] == "--continue-enrollment" || args[0] == "--enrollment-worker") && validMutationIdentity(args[1]) {
+	if len(args) == 2 && (args[0] == "--continue-enrollment" || args[0] == "--enrollment-worker" || args[0] == "--boot-enrollment" || args[0] == "--boot-enrollment-under-lock") && validMutationIdentity(args[1]) {
 		return nil
 	}
 	if len(args) == 1 && (args[0] == "--process-pending" || args[0] == "--inspect-build-identity") {
