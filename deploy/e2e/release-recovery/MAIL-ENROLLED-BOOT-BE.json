@@ -73,5 +73,82 @@
         "bytes": 3172
       }
     }
+  },
+  "corrected_recorded_runtime_trial": {
+    "after_boot": "0449ff79-6715-4479-94bf-871cf79c8694",
+    "automatic_boot_dispatch": false,
+    "before_boot": "4f2dd9f5-9b75-47bd-95c7-97d7da0d672d",
+    "explicit_owner_continuation": true,
+    "generation": "189bfe5f9856b3eea04458fb30783fc56295c6680c0c224b3c1f7a9057de789e",
+    "handoff": "Mail enrollment worker accepted: 46740c8c196090c732a38428adcf7bf7. Completion is not yet verified. Observe celikpanel-mail-enrollment-46740c8c196090c732a38428adcf7bf7.service; after interruption, continue this same request.\n",
+    "journal": "Sep 23 10:16:56 dns-arch systemd[1]: Starting [systemd-run] /usr/libexec/celikpanel/mail-renewal/189bfe5f9856b3eea04458fb30783fc56295c6680c0c224b3c1f7a9057de789e/renew --enrollment-worker 46740c8c196090c732a38428adcf7bf7...\nSep 23 10:16:56 dns-arch systemd[1]: Started [systemd-run] /usr/libexec/celikpanel/mail-renewal/189bfe5f9856b3eea04458fb30783fc56295c6680c0c224b3c1f7a9057de789e/renew --enrollment-worker 46740c8c196090c732a38428adcf7bf7.\nSep 23 10:16:57 dns-arch renew[498]: Recorded mail renewal enrollment result verified: 46740c8c196090c732a38428adcf7bf7\nSep 23 10:16:57 dns-arch systemd[1]: celikpanel-mail-enrollment-46740c8c196090c732a38428adcf7bf7.service: Deactivated successfully.\nSep 23 10:16:57 dns-arch systemd[1]: celikpanel-mail-enrollment-46740c8c196090c732a38428adcf7bf7.service: Consumed 1.067s CPU time over 1.032s wall clock time, 181.5M memory peak.\n",
+    "ledger_unchanged": true,
+    "operation": "46740c8c196090c732a38428adcf7bf7",
+    "runtime": {
+      "/run/celikpanel": {
+        "gid": 969,
+        "links": 2,
+        "mode": 488,
+        "size": 80,
+        "uid": 0
+      },
+      "/run/celikpanel/service-mutation.lock": {
+        "gid": 969,
+        "links": 1,
+        "mode": 384,
+        "size": 0,
+        "uid": 0
+      },
+      "/run/celikpanel/service-mutation.lock.ledger-publication": {
+        "gid": 969,
+        "links": 1,
+        "mode": 384,
+        "size": 0,
+        "uid": 0
+      }
+    },
+    "runtime_absent_before": true,
+    "source_commit": "3af32e78675009b0ec76079dbef79eedd866d46a",
+    "scope": "explicit owner continuation of a terminal recorded enrollment after reboot, not unfinished-operation automatic recovery",
+    "native_files": {
+      "bin/agent": "23cbfdfbb3e0b608c9dc8d9209b27be215392e0a9c06e23fb73b27907fad5045",
+      "bin/agent-native-contract.json": "3ed820b85cd722f6e946ba768e5ddcac4be3cee5b320db32a3d8c45b71ac5184",
+      "bin/mail-renewal-runtime/celikpanel-mail-host-cert": "e61a2c52f152fec171483bba76932bf763eee844941a246c81b43620454a2282",
+      "bin/mail-renewal-runtime/celikpanel-mail-renewal.service": "f6b6eb9888f6a9b52366f941c6ee4563e029ca7d42a768ff8f5d324ee2e2b9a7",
+      "bin/mail-renewal-runtime/celikpanel-mail-renewal.timer": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+      "bin/mail-renewal-runtime/renew": "a13aed526ce1eadc0c3930a4bbbec89bcd779da695d97fde0a8bf7bc25488c7a",
+      "bin/mail-renewal-runtime/runtime.manifest": "7ffc4f43f7203b78f13c645669aa0357369a142bc8232b030c69a97c742b9cfb",
+      "bin/recovery": "d3f15168513cac7b7f1273c6ce235a82993d180d17789ae0a1d7384ed86ae70c"
+    },
+    "evidence": {
+      "mail-runtime-v2-native.intent": {
+        "sha256": "479c8831011fc1edb6eb3cdca2a0357c3db17f084c49f1a52b349b38a0eff493",
+        "bytes": 1587
+      },
+      "mail-runtime-v2-native-result.json": {
+        "sha256": "e7c10da947f3ddceba5974f055d3cc49dfa2e2cf105af2ca7e406e0ab0c71c97",
+        "bytes": 5241
+      },
+      "mail-runtime-v2-boot-before.json": {
+        "sha256": "6a3f06bee9d8301761293377bdd6153e3a504d6f2f582014450dd96e6434e2ed",
+        "bytes": 5878
+      },
+      "mail-runtime-v2-boot-reset.intent": {
+        "sha256": "92f178ea72ef63d2b358eb4c37835128a949c2057ff74931ed3cc74562de0cfc",
+        "bytes": 297
+      },
+      "mail-runtime-v2-boot-reset.result": {
+        "sha256": "7d076be6c2c4549a7ab26d2216cb96939824a17184e13ed3ec0efa33c7c18c48",
+        "bytes": 24
+      },
+      "mail-runtime-v2-boot-continue.script": {
+        "sha256": "ddf3080bf6b2cd1b28fa116f19d70aca8e979be9e77caecf8daecffcae0cd769",
+        "bytes": 9539
+      },
+      "mail-runtime-v2-boot-continue.json": {
+        "sha256": "87ad72b191d785e1452ae211e5ec6e4f05807eb72d4c662d6c7311aafcb347de",
+        "bytes": 1881
+      }
+    }
   }
 }

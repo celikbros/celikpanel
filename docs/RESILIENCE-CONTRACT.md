@@ -729,3 +729,12 @@ consumer now atomically restores an absent volatile directory and its two locks
 only after source, accepted scope and durable release exclusion are verified;
 existing owner paths are preserved. This boundary has component/process tests;
 its native interrupted-enrollment and automatic-dispatch acceptance remain open.
+
+
+September 23 recorded-runtime native follow-up: exact source `3af32e7` passes
+explicit owner continuation of a completed enrollment after an Arch reboot with
+`/run/celikpanel` absent. Both shared volatile locks are published from verified
+recorded authority; terminal verification succeeds with all durable ledger and
+scope bytes unchanged. The preceding `f586e74` descriptor mismatch refusal is
+retained. This is bounded owner-continuation acceptance only: automatic boot
+dispatch, unfinished enrollment recovery and full P0 acceptance remain open.

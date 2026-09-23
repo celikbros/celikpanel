@@ -375,3 +375,20 @@ description and absent transaction markers without requiring a Go-allocated fd t
 be number 9. The inherited API still requires fd9. Regression tests cover both
 contracts, an unlocked/different descriptor, all transaction markers and changed
 metadata. Corrected native continuation is recorded separately after verification.
+
+
+Corrected native proof at `3af32e78675009b0ec76079dbef79eedd866d46a`:
+Arch boot changed from `4f2dd9f5-9b75-47bd-95c7-97d7da0d672d` to the
+new boot recorded in the evidence. `/run/celikpanel` was positively absent
+before explicit owner continuation. The real installed helper then published the
+0750 root:celikpanel directory and both empty single-link 0600 root:celikpanel
+locks, verified the same terminal enrollment, and exited successfully. The
+entire common ledger and immutable enrollment files remained byte-identical;
+the native timer remained active. Management daemons were not started; compatible
+Agent bytes remained required for this enrollment authority check.
+
+This closes the bounded **terminal recorded continuation with absent volatile
+runtime** test for this source on Arch. It does not prove an unfinished enrollment
+through reboot, automatic boot dispatch, management-file-absent enrollment
+continuation, production wizard enablement or a real mail certificate renewal.
+The earlier failed descriptor trial is preserved alongside the passing trial.
