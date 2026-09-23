@@ -772,3 +772,13 @@ retry. No persisted schema changes. Race tests, real handler tests, UI runtime
 checks and local production-bundle TR/EN mobile/desktop checks pass. This is not
 production setup admission or old-release/native matrix completion. Remaining
 acceptance stays open.
+
+
+September 23 native inverse boot follow-up: [Arch BE](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-INVERSE-BOOT-BE.json)
+proves the unchanged installed helper automatically completes the same recorded
+mail enrollment rollback after a real timer-stop reply is lost and the VM resets.
+The result is known restored failure; original native absence, old jobs and
+immutable precut receipts are preserved. One automatic attempt, no postboot owner
+continuation and no management daemons. The test producer explicitly selected
+inverse intent before reset; automatic inverse selection and the remaining
+P0.1/P0.5 platform/early-admission/migration matrix remain open. No schema change.

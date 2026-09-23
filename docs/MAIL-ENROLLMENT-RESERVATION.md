@@ -512,3 +512,28 @@ This closes the supported UI continuation gap for an already admitted plan. It
 does not enable plan-builder admission, prove old-release migration or close the
 remaining native inverse/early-admission boot and Debian matrix. No installed
 panel was updated.
+
+
+### Native automatic inverse boot evidence (2026-09-23)
+
+[Arch BE inverse boot](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-INVERSE-BOOT-BE.json)
+uses the unchanged installed production helper from `d3aab13` and a separate
+fault-producing test executable. The fixture explicitly records rollback for
+`e4e5f42aa03057c658dbf512357b01f0`, then SIGKILLs after real systemd timer stop
+returns and before its receipt. After a guarded QEMU reset, the native boot unit
+finishes this same inverse with one automatic attempt. No postboot manual
+continuation or management daemon is used. The result remains a known failed
+enrollment with `mail_enrollment_restored`, not a claimed successful install.
+
+The original absence of the timer/service/hook/enable link is verified both on
+disk and in systemd. Other common jobs and every precut immutable receipt remain
+unchanged. The initial fixture attempt stopped at its assertion because the
+native adapter normalized an intentionally injected command error; that attempt
+is retained and not counted as inverse acceptance. The corrected fixture opened
+the same accepted scope rather than creating another request.
+
+This closes the selected lost-stop-reply inverse/boot boundary on Arch under
+P0.1/P0.5. It does not prove automatic selection of rollback after an arbitrary
+failure, early admission cuts, Debian enrollment boot, production plan admission,
+old-release migration or the full P0 matrix. Compatible Agent files remain
+required for unfinished enrollment; no owner-installed panel changed.

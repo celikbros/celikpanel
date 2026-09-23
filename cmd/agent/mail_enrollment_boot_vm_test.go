@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -20,6 +21,12 @@ import (
 // Following reboot, only the installed production helper/native boot unit runs;
 // neither this test executable nor its fault hook is part of that continuation.
 func TestMailEnrollmentBootDisposableVM(t *testing.T) {
+	runMailEnrollmentBootDisposableVM(t, false)
+}
+func TestMailEnrollmentRollbackBootDisposableVM(t *testing.T) {
+	runMailEnrollmentBootDisposableVM(t, true)
+}
+func runMailEnrollmentBootDisposableVM(t *testing.T, rollback bool) {
 	if os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "arch-20260923-boot" {
 		t.Skip("guarded Arch fixture only")
 	}
@@ -36,6 +43,9 @@ func TestMailEnrollmentBootDisposableVM(t *testing.T) {
 	}
 	intent := []byte("operation=" + request + "\nowner=" + owner + "\ntarget=" + target + "\n")
 	intentPath := "/root/celikpanel-release-recovery-lab/mail-boot-automatic.intent"
+	if rollback {
+		intentPath = "/root/celikpanel-release-recovery-lab/mail-boot-rollback-automatic.intent"
+	}
 	gid, ok := lookupGroupID("celikpanel")
 	if !ok || gid < 0 {
 		t.Fatal("retained owner group missing")
@@ -69,13 +79,29 @@ func TestMailEnrollmentBootDisposableVM(t *testing.T) {
 	}
 	const host = "/run/celikpanel/service-mutation.lock"
 	state := "/var/lib/celikpanel-agent-private"
-	binding := recoveryruntime.MailEnrollmentBinding{LedgerPath: filepath.Join(state, serviceMutationLedgerFileName), Owner: servicemutationledger.FileOwner{GID: uint32(gid)}, OwnerID: owner, HostLock: host, HostOwner: serviceMutationLockOwner(), VerifyAuthority: verify, Native: mailBootCutNative{t: t}}
+	native := &mailBootCutNative{t: t, rollback: rollback}
+	binding := recoveryruntime.MailEnrollmentBinding{LedgerPath: filepath.Join(state, serviceMutationLedgerFileName), Owner: servicemutationledger.FileOwner{GID: uint32(gid)}, OwnerID: owner, HostLock: host, HostOwner: serviceMutationLockOwner(), VerifyAuthority: verify, Native: native}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	if err = recoveryruntime.PrepareMailEnrollmentJournal(9); err != nil {
-		t.Fatal(err)
+	recordedInverse := os.Getenv("CP_MAIL_BOOT_RECORDED_INVERSE") == "1"
+	if recordedInverse && !rollback {
+		t.Fatal("recorded inverse requires inverse fixture")
 	}
-	execution, _, err := recoveryruntime.PrepareMailEnrollment(ctx, request, mailEnrollmentJournalRoot, proof, binding)
+	var execution *recoveryruntime.PreparedMailEnrollment
+	if recordedInverse {
+		// Exact already accepted scope. The executor verifies its common-ledger hash
+		// before persisting this explicit test-fixture inverse decision.
+		var raw []byte
+		raw, err = os.ReadFile(filepath.Join(mailEnrollmentJournalRoot, request+".enrollment.json"))
+		if err == nil {
+			execution, err = recoveryruntime.OpenPreparedMailEnrollment(ctx, raw, mailEnrollmentJournalRoot, binding)
+		}
+	} else {
+		if err = recoveryruntime.PrepareMailEnrollmentJournal(9); err != nil {
+			t.Fatal(err)
+		}
+		execution, _, err = recoveryruntime.PrepareMailEnrollment(ctx, request, mailEnrollmentJournalRoot, proof, binding)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +109,18 @@ func TestMailEnrollmentBootDisposableVM(t *testing.T) {
 		t.Fatal(err)
 	}
 	authority := mailEnrollmentAuthority{identity: execution.Identity(), agent: proof, verifyIntent: func() error { return execution.RevalidateAuthority(ctx) }}
-	if err = executePreparedMailEnrollment(ctx, state, host, authority, execution, "forward"); err != nil {
+	if !recordedInverse {
+		err = executePreparedMailEnrollment(ctx, state, host, authority, execution, "forward")
+	}
+	if rollback {
+		if !recordedInverse && (err == nil || !native.forwardInterrupted) {
+			t.Fatal("expected fixture forward interruption", err)
+		}
+		// Explicit test-fixture inverse intent. Production boot must consume this
+		// durable direction without initiating or selecting a new rollback itself.
+		err = executePreparedMailEnrollment(ctx, state, host, authority, execution, "rollback")
+	}
+	if err != nil {
 		t.Fatal(err)
 	}
 	t.Fatal("native cut was not reached")
@@ -91,14 +128,35 @@ func TestMailEnrollmentBootDisposableVM(t *testing.T) {
 
 type mailBootCutNative struct {
 	mailEnrollmentNativeHost
-	t *testing.T
+	t                  *testing.T
+	rollback           bool
+	forwardInterrupted bool
 }
 
-func (n mailBootCutNative) StartTimer(ctx context.Context) error {
+func (n *mailBootCutNative) StartTimer(ctx context.Context) error {
 	if err := n.mailEnrollmentNativeHost.StartTimer(ctx); err != nil {
 		return err
+	}
+	if n.rollback {
+		n.forwardInterrupted = true
+		n.t.Log("boot_enrollment_fixture=forward_reply_interrupted")
+		return errMailBootFixtureForwardCut
 	}
 	n.t.Log("boot_enrollment_cut=native_timer_start_returned")
 	_ = unix.Kill(os.Getpid(), unix.SIGKILL)
 	panic("kill returned")
+}
+
+var errMailBootFixtureForwardCut = errors.New("test fixture interrupted after actual native timer start")
+
+func (n *mailBootCutNative) StopTimer(ctx context.Context) error {
+	if err := n.mailEnrollmentNativeHost.StopTimer(ctx); err != nil {
+		return err
+	}
+	if n.rollback {
+		n.t.Log("boot_enrollment_cut=native_timer_stop_returned")
+		_ = unix.Kill(os.Getpid(), unix.SIGKILL)
+		panic("kill returned")
+	}
+	return nil
 }
