@@ -41,5 +41,37 @@
       "bytes": 1188
     }
   },
-  "first_ssh_observation": "SSH not yet available (exit 255); no mutation retried; later guarded read succeeded"
+  "first_ssh_observation": "SSH not yet available (exit 255); no mutation retried; later guarded read succeeded",
+  "recorded_runtime_failed_trial": {
+    "source_commit": "f586e74a996c4888c1c52ad62b967e97490cd21d",
+    "operation": "5217e73f6d9dbfae6361a8f935870b44",
+    "result": "refused before volatile publication; durable ledger unchanged",
+    "cause": "worker-owned release descriptor was passed to inherited-fd9-only verifier",
+    "evidence": {
+      "mail-runtime-native.intent": {
+        "sha256": "35554bf32dd70d44aacba0892673806a267d3b0a1d27375d75f7794464e18bae",
+        "bytes": 1587
+      },
+      "mail-runtime-boot-before.json": {
+        "sha256": "b60bcacd7962facae9f9c4994523d9636e67c7099da800894eefa40bf156044d",
+        "bytes": 5111
+      },
+      "mail-runtime-boot-reset.intent": {
+        "sha256": "3779f47f37793c78480415c7f66e931288a6d0f0514c2f8ef1de1b232442715b",
+        "bytes": 297
+      },
+      "mail-runtime-boot-reset.result": {
+        "sha256": "7d076be6c2c4549a7ab26d2216cb96939824a17184e13ed3ec0efa33c7c18c48",
+        "bytes": 24
+      },
+      "mail-runtime-boot-continue.script": {
+        "sha256": "06331e4bccaa9737b0c924869f59a7c16ef5f86dfe03fce4a355fb6761b20d61",
+        "bytes": 8824
+      },
+      "mail-runtime-boot-continue.log": {
+        "sha256": "0c8cb799ea9d7014a28d68e25b62ad6a52fdf156c7a49b0a66c3e7f29983993a",
+        "bytes": 3172
+      }
+    }
+  }
 }

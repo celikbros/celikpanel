@@ -364,3 +364,14 @@ authority failure, exact recorded identity and release-before-host ordering. Nat
 continuation using this new runtime publication, reboot during unfinished enrollment,
 production UI continuation and automatic boot dispatch remain open. This step
 advances P0.2/P0.3/P0.5; it does not close them or authorize an installed update.
+
+
+The first native recorded-runtime trial (`f586e74`) refused before publication
+because the worker-owned release descriptor was sent to the inherited-fd9-only
+preflight API. It left volatile runtime absent and the durable ledger unchanged;
+that failed trial remains in the boot evidence. The owner-held descriptor API
+now verifies the identical fixed transaction path, metadata, exclusive open-file
+description and absent transaction markers without requiring a Go-allocated fd to
+be number 9. The inherited API still requires fd9. Regression tests cover both
+contracts, an unlocked/different descriptor, all transaction markers and changed
+metadata. Corrected native continuation is recorded separately after verification.

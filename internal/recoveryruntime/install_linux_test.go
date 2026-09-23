@@ -292,3 +292,65 @@ func TestEnrollmentPublicationCrashChild(t *testing.T) {
 		t.Fatal("unknown fixture phase")
 	}
 }
+
+func TestHeldPreflightDescriptorPreservesInheritedContract(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("root fixture")
+	}
+	root, err := os.MkdirTemp("/run", "celikpanel-held-preflight-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(root)
+	if err = os.Chmod(root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "transaction.lock")
+	lock, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Close()
+	// Deliberately use a non-protocol descriptor, without overwriting runtime FDs.
+	fd, err := unix.FcntlInt(lock.Fd(), unix.F_DUPFD_CLOEXEC, 30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unix.Close(fd)
+	if err = verifyHeldPreflightBoundaryAt(root, fd); err == nil {
+		t.Fatal("unlocked descriptor accepted")
+	}
+	if err = unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err != nil {
+		t.Fatal(err)
+	}
+	if err = verifyHeldPreflightBoundaryAt(root, fd); err != nil {
+		t.Fatal(err)
+	}
+	if err = VerifyPreflightBoundary(fd); err == nil {
+		t.Fatal("inherited fd9 contract weakened")
+	}
+	for _, marker := range []string{"active", "quiesce.pending", "completion.pending", "scheduler-restore.pending"} {
+		p := filepath.Join(root, marker)
+		if err = os.WriteFile(p, []byte("retained"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err = verifyHeldPreflightBoundaryAt(root, fd); err == nil {
+			t.Fatal("active transaction ignored", marker)
+		}
+		os.Remove(p)
+	}
+	other, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Close()
+	if err = verifyHeldPreflightBoundaryAt(root, int(other.Fd())); err == nil {
+		t.Fatal("another open description adopted the held lock")
+	}
+	if err = os.Chmod(path, 0640); err != nil {
+		t.Fatal(err)
+	}
+	if err = verifyHeldPreflightBoundaryAt(root, fd); err == nil {
+		t.Fatal("changed owner metadata accepted")
+	}
+}

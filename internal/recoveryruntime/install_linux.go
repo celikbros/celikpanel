@@ -26,7 +26,20 @@ func VerifyPreflightBoundary(fd int) error {
 	if os.Geteuid() != 0 || fd != 9 {
 		return fail(ReasonUnsafeMetadata)
 	}
-	return verifyEnrollmentLock(transactionPath, fd)
+	return VerifyHeldPreflightBoundary(fd)
+}
+
+// VerifyHeldPreflightBoundary verifies a descriptor acquired by this process.
+// Unlike the inherited protocol entry, Go's allocator need not assign fd9. The
+// same fixed path, owner, empty-transaction and exclusive-flock proof applies.
+func VerifyHeldPreflightBoundary(fd int) error {
+	return verifyHeldPreflightBoundaryAt(transactionPath, fd)
+}
+func verifyHeldPreflightBoundaryAt(root string, fd int) error {
+	if os.Geteuid() != 0 || fd < 3 {
+		return fail(ReasonUnsafeMetadata)
+	}
+	return verifyEnrollmentLock(root, fd)
 }
 
 // Enroll installs the first compatible kit before coordinator quiescence. A

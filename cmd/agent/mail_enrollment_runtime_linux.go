@@ -30,7 +30,7 @@ func prepareRecordedMailEnrollmentRuntime(ctx context.Context, accepted []string
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	if err := recoveryruntime.VerifyPreflightBoundary(releaseFD); err != nil {
+	if err := recoveryruntime.VerifyHeldPreflightBoundary(releaseFD); err != nil {
 		return err
 	}
 	proof, err := recoveryruntime.InspectMailEnrollmentHelper("/opt/celikpanel/bin", mailrenewalkit.InstalledRoot)
@@ -59,7 +59,7 @@ func prepareRecordedMailEnrollmentRuntime(ctx context.Context, accepted []string
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if err := recoveryruntime.VerifyPreflightBoundary(releaseFD); err != nil {
+		if err := recoveryruntime.VerifyHeldPreflightBoundary(releaseFD); err != nil {
 			return err
 		}
 		if err := proof.Revalidate(); err != nil {
