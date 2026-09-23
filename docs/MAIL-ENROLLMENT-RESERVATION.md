@@ -703,3 +703,31 @@ execution mutation during review. The existing native forward/inverse/legacy
 boot records establish those bounded helper paths; they do not prove the entire
 new browser-to-native setup chain. Production publishing, full native wizard
 acceptance, previous-release compatibility and full P0 acceptance remain open.
+
+
+### Reviewed setup to native worker — September 23
+
+[Arch native RPC evidence](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-SETUP-RPC-BE.json)
+uses committed production Agent/helper source `56ae293`, authenticated Unix IPC,
+the production plan builder and start HTTP handler, SQLite execution/fence reload,
+and the existing independent systemd worker. The test fixture supplies the
+license and earlier completed setup prerequisites; those steps are not native
+installation or certificate issuance evidence.
+
+The real preview first observed the existing independent kit, and the plan
+performed zero enrollment dispatches. After an explicit isolated-fixture change
+to recognized legacy bytes, the new plan bound the actual installed kit, accepted
+one setup request, persisted its fence and dispatched exactly once. Repeated
+status reads after SQLite reload and after terminal publication never replayed
+that call. The native helper completed request `0d7bfde74638abdbd3dc60c015ac4bae`,
+with all earlier common-ledger jobs unchanged.
+
+After stopping the fixture Agent and resetting the guarded QEMU machine, boot
+`71b7013a-0f2b-454a-a7fd-217499453c88` retained every captured receipt and the exact
+common ledger bytes. The native timer was enabled/active; Panel was absent and
+all management daemons remained stopped. The compatible Agent file was retained.
+This proves the reviewed enrollment step and its completed boot behavior, not
+full first-install/browser/ACME, historical release migration, Arch mail traffic
+or the complete P0 acceptance matrix. The first review attempt was rejected by
+the test executable's incorrectly linked build identity; it started no enrollment
+and is retained in the record. Only its test linker flag changed for the next read.

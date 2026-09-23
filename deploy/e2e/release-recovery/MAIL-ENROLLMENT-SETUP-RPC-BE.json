@@ -1,0 +1,129 @@
+{
+  "schema": "celikpanel-native-mail-enrollment-evidence/v1",
+  "date": "2026-09-23",
+  "platform": "arch",
+  "disposable_vm_only": true,
+  "production_source": "56ae2934b266829103bb43e340b5fda7e4ef6829",
+  "production_files": {
+    "bin/agent": "212b4f82e8716ffdbb74314272b87fd3193e01500482ba6345a61eb3af87e58c",
+    "bin/agent-native-contract.json": "7dc78f1cd53eb697ce8ab2fb18e60e5be726181b5219fff2463cecef5113ac8d",
+    "bin/recovery": "a12b3b5ffb7b0bf3e103f8e8cb0bd398a554f5c1e4c87d655141f8641a36d625",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.service": "25d4a8c072b0769d70aa203dc938a5bab911a76aae4e8a3d88ecf6985ddd81ed",
+    "bin/mail-renewal-runtime/renew": "766d8afb85e74619768d0b3de4e71fcbebf0b823b29daf2b6fdc969e8d5953d7",
+    "bin/mail-renewal-runtime/runtime.manifest": "53f5036bf9c5685c24fe1d5a63d2caa628adeb02504ffbdaf099a40250fc91e0",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.timer": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "bin/mail-renewal-runtime/celikpanel-mail-host-cert": "27d30704ffcded789e741599e0f0f41d2cd3170e2fca084b3b63a06a8fc599cc"
+  },
+  "test_fixture": {
+    "source": "cmd/panel/server_setup_mail_enrollment_vm_test.go",
+    "sha256": "5b9bd6acb8fdc2f62c7e92b0ec25238d9a781f0d242ffe78e6bb1b14f7cd1b8b",
+    "binary_sha256": "110607e1f84c6799672949c8aa899aeacf5c5209d94155334cc5e1322132ac87",
+    "linker_identity": "github.com/alicelik/celikpanel/cmd/panel.buildCommit",
+    "earlier_setup_steps": "fixture-completed; not native installation evidence",
+    "license": "test fixture; not live entitlement or signing acceptance"
+  },
+  "review": {
+    "existing_independent_schedule_preserved": true,
+    "native_dispatches": 0,
+    "result_lines": [
+      "    server_setup_mail_enrollment_vm_test.go:131: native_setup_review existing_generation=179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935 candidate_generation=e4f99be9a73d90d06337d3106637f9b0718d5067faba751128011155887e3cd4 enablement=enabled activity=active dispatches=0"
+    ]
+  },
+  "enrollment": {
+    "agent_stopped_after_trial": true,
+    "boot_id": "6e88ef7f-73f3-4821-851a-18ac74864ffc",
+    "enrollment_dispatches": 1,
+    "fixture_sha256": "5b9bd6acb8fdc2f62c7e92b0ec25238d9a781f0d242ffe78e6bb1b14f7cd1b8b",
+    "generation": "e4f99be9a73d90d06337d3106637f9b0718d5067faba751128011155887e3cd4",
+    "native_request": "0d7bfde74638abdbd3dc60c015ac4bae",
+    "old_history_unchanged": true,
+    "review_dispatches": 0,
+    "scope": "fixture earlier steps and license; real review/start HTTP adapter, Agent IPC, independent helper and systemd",
+    "setup_request": "007168bfd26c195ffd1c4501bbdeb295",
+    "source_commit": "56ae2934b266829103bb43e340b5fda7e4ef6829",
+    "terminal": "published",
+    "test_binary_sha256": "110607e1f84c6799672949c8aa899aeacf5c5209d94155334cc5e1322132ac87"
+  },
+  "after_reboot": {
+    "after_boot": "71b7013a-0f2b-454a-a7fd-217499453c88",
+    "agent_binary_retained": true,
+    "before_boot": "6e88ef7f-73f3-4821-851a-18ac74864ffc",
+    "independent_timer_enabled_active": true,
+    "management_daemons_started": false,
+    "native_request": "0d7bfde74638abdbd3dc60c015ac4bae",
+    "panel_binary_present": false,
+    "receipt_and_ledger_bytes_unchanged": true,
+    "terminal": {
+      "attempt": 1,
+      "deadline_at": "2026-09-23T15:37:36.876604415Z",
+      "finished_at": "2026-09-23T15:37:40.714975174Z",
+      "kind": "mail_renewal_enrollment",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "owner_id": "d19b56d656201ab56f4d2263a7a8d51b",
+      "package_name": "mail-renewal-enrollment/v1:sha256:593f26ca4fe3e311f01444ee7e09c8e3462e05fab539c216d11ada17345fef1a",
+      "phase": "commit/mail-renewal-enrollment/v1/published/0d7bfde74638abdbd3dc60c015ac4bae/593f26ca4fe3e311f01444ee7e09c8e3462e05fab539c216d11ada17345fef1a",
+      "request_id": "0d7bfde74638abdbd3dc60c015ac4bae",
+      "started_at": "2026-09-23T15:37:36.876604415Z",
+      "status": "succeeded",
+      "target": "mail-renewal",
+      "updated_at": "2026-09-23T15:37:40.714975174Z"
+    },
+    "units": {
+      "celikpanel-agent.service": {
+        "ActiveState": "inactive",
+        "MainPID": "0",
+        "UnitFileState": ""
+      },
+      "celikpanel-mail-renewal.timer": {
+        "ActiveState": "active",
+        "UnitFileState": "enabled"
+      },
+      "celikpanel-native-setup-fixture.service": {
+        "ActiveState": "inactive",
+        "MainPID": "0",
+        "UnitFileState": ""
+      },
+      "celikpanel-panel.service": {
+        "ActiveState": "inactive",
+        "MainPID": "0",
+        "UnitFileState": ""
+      }
+    }
+  },
+  "failed_attempts": [
+    {
+      "stage": "read-only review intent",
+      "reason": "test executable linked main.buildCommit instead of the test package symbol; actual identity check refused",
+      "source_changed": false,
+      "native_enrollment_started": false,
+      "log": "=== RUN   TestSetupMailEnrollmentNativeRPCDisposableVM\n    server_setup_mail_enrollment_vm_test.go:83: exact fixture intent required <nil>\n--- FAIL: TestSetupMailEnrollmentNativeRPCDisposableVM (0.00s)\nFAIL\n"
+    }
+  ],
+  "evidence_root": "/var/tmp/cp-release-drill-20260922-be",
+  "evidence_sha256": {
+    "mail-setup-rpc-resume.script": "ae0ccfcfb34f47d5062070b02b509e42cd6ad5d9db684b50f98e4f7ccbb6ea2d",
+    "mail-setup-rpc-postboot.log": "d33642cfb935759aba187f692309d70daddc860e68176315b07174b3c95abb95",
+    "mail-setup-rpc-reset.intent": "ec4018494c99139c9e702a88be20f8b283791b8f79eda35a3a8e4d864fe8f24b",
+    "mail-setup-rpc-native.script": "7964fc32bcf59394fe200994e220b7bce85b3c4de4b47c492b2e001c44a806ab",
+    "mail-setup-rpc-first-failure-observation.log": "504424f4c02372a030ddb153e50d5a08dbad6364925c87ea3fc76accec0e0edf",
+    "mail-setup-rpc-postboot.json": "42faccf82b57fdd0bc968cb36e5ab2d8d07d922c0941295439d21ebff66247b2",
+    "mail-setup-rpc-native-result.json": "3216dd3f9ddd4b49240502099209dd3254ffd757d0ef49924529d769f15a4fd7",
+    "mail-setup-rpc-native.intent": "c8bf5d92fdd22eb8683202ecb9a67e80dc8d792bb4027ce3762693eca91b7ac1",
+    "mail-setup-rpc-resume.log": "668a18f00eb8d4ca8eabc77f8a0490aa25c4db382db29681887a44999bb62f17",
+    "mail-setup-rpc-preboot.json": "b3549b26cad10678460aa55a1830c2c474cb69926b0223ed02ab1ec90bd6d6c2",
+    "mail-setup-rpc-postboot.script": "7de9ae491f95885c5540a6c41161e40f3843cf659983017810ac82e453041bec",
+    "collected-mail-setup-rpc-review.log": "1c67a48c4e643964cefd497486f5039b115e2fd5df5f6dd6d272885f6342f4b4",
+    "collected-mail-setup-rpc-review-v2.log": "12a2391d36f96a2140f6e2626c34c8008af37da98e06d28ee006b55636cb8d9b",
+    "collected-mail-setup-rpc-trial.log": "826d965458cc230a6760b784e842ab3119e34f6dfce4591a8537bcc998348c85",
+    "collected-mail-setup-rpc-agent.log": "aaa82922e5dc0e578f5802d9c471642f25f8a1b1d9d02c1915d7bb394d428325"
+  },
+  "limitations": [
+    "No complete browser-to-ACME first-install trial.",
+    "Earlier setup steps and entitlement are fixture prerequisites.",
+    "Recognized legacy bytes are an explicit fixture, not an actual historical release install.",
+    "No Arch mail delivery/authentication or certificate renewal workload is claimed.",
+    "This reboot follows completed enrollment; interrupted enrollment boot is covered by separate scoped trials.",
+    "Agent binary is retained after daemon shutdown; Panel binary is absent.",
+    "No signed production release, owner-installed update or full P0 acceptance."
+  ]
+}

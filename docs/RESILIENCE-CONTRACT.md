@@ -841,3 +841,16 @@ a busy native renewal is a distinct wait. Missing parent observation is no-follo
 and never provisions directories. Existing accepted plans and persistent schemas
 are unchanged. Source/component checks plus earlier scoped native helper evidence
 do not establish the complete native wizard/update/rollback chain; P0 stays open.
+
+
+### Reviewed mail setup native handoff — September 23
+
+P0.2/P0.3/P0.5 now has [Arch native RPC/boot evidence](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-SETUP-RPC-BE.json):
+real source/native preview preserves the existing independent schedule; a new
+reviewed legacy enrollment reaches authenticated Agent IPC and the independent
+systemd worker once, with SQLite fence reload and repeated terminal reads.
+Following completed enrollment, QEMU reset retains identical receipts/ledger and
+an enabled/active native timer with management daemons stopped and Panel absent.
+Earlier setup steps and licensing are test prerequisites, not full wizard or
+production entitlement acceptance. Prior-release transitions, full workload and
+fault matrices remain open. No persistent schema or installed owner host changed.
