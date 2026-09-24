@@ -598,3 +598,25 @@ Agent/recovery suites and vet cover this point-in-time boundary. The installed
 binary's package bytes, named's loaded configuration, authoritative DNS
 answers, owner edits, worker exclusion, native inverse execution and the
 interrupted-switch fault matrix remain unproved. This is not P0.4 acceptance.
+### Shared native BIND include and disk observation (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: Agent production and the independent
+status reader now use one exact managed zone-include and active-comment
+predicate. The observer does not create the missing include: it accepts only
+the producer's already-present canonical block pointing at the selected
+layout's current/zones.conf path. A shared no-follow descriptor reader
+accepts only the fixed APT or pacman native config paths and their certified
+root-owned group/mode combinations, checks ACLs and hard links, and binds
+bytes to inode, owner and digest across two reads. APT options and anchor
+files must share one owner group. The selected immutable generation is
+rechecked after native config observation. Unknown, changed or unsafe
+configuration returns an owner action and no inverse.
+
+This is an on-disk anchor proof, not a claim that the APT main config includes
+that anchor, that named loaded these bytes, that it serves the selected
+generation or that DNS answers are correct. Existing owner edits outside the
+managed block and package binary integrity remain open. Journal/state
+schemas, native files and installed panels were not changed. Root-owned
+mode/group/symlink and missing/inert include tests, Agent/recovery suites
+and vet passed. Independent native inverse execution and the complete
+interrupted-switch acceptance matrix remain open.

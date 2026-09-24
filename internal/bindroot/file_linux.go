@@ -21,6 +21,7 @@ type FileIdentity struct {
 	Device uint64
 	Inode  uint64
 	Size   int64
+	GID    uint32
 	Digest [32]byte
 }
 
@@ -30,6 +31,39 @@ func ReadExactRootOwnedFileAt(
 	rootFD int,
 	absolutePath string,
 	label string,
+) ([]byte, FileIdentity, error) {
+	return readExactFileAt(rootFD, absolutePath, label, 0o644, []uint32{0})
+}
+
+// ReadExactBINDConfigAt uses the same no-follow descriptor reader for the
+// certified native config paths and package owner modes. It does not parse
+// or alter BIND configuration.
+func ReadExactBINDConfigAt(rootFD int, layout Layout, serviceGID uint32, absolutePath string) ([]byte, FileIdentity, error) {
+	if serviceGID == 0 {
+		return nil, FileIdentity{}, errors.New("BIND config service group is unknown")
+	}
+	switch layout {
+	case APT:
+		if absolutePath != "/etc/bind/named.conf.options" && absolutePath != "/etc/bind/named.conf.local" {
+			return nil, FileIdentity{}, errors.New("unsupported APT BIND config path")
+		}
+		return readExactFileAt(rootFD, absolutePath, "APT BIND config", 0o644, []uint32{0, serviceGID})
+	case Pacman:
+		if absolutePath != "/etc/named.conf" {
+			return nil, FileIdentity{}, errors.New("unsupported pacman BIND config path")
+		}
+		return readExactFileAt(rootFD, absolutePath, "pacman BIND config", 0o640, []uint32{serviceGID})
+	default:
+		return nil, FileIdentity{}, errors.New("unsupported BIND config layout")
+	}
+}
+
+func readExactFileAt(
+	rootFD int,
+	absolutePath string,
+	label string,
+	mode uint32,
+	allowedGIDs []uint32,
 ) ([]byte, FileIdentity, error) {
 	if !path.IsAbs(absolutePath) || path.Clean(absolutePath) != absolutePath ||
 		absolutePath == "/" {
@@ -85,11 +119,17 @@ func ReadExactRootOwnedFileAt(
 	if err := unix.Fstat(fd, &before); err != nil {
 		return nil, FileIdentity{}, fmt.Errorf("stat %s: %w", label, err)
 	}
-	if before.Mode&unix.S_IFMT != unix.S_IFREG || before.Uid != 0 || before.Gid != 0 ||
-		before.Mode&0o7777 != 0o0644 || before.Nlink != 1 ||
+	allowedGID := false
+	for _, gid := range allowedGIDs {
+		if before.Gid == gid {
+			allowedGID = true
+		}
+	}
+	if before.Mode&unix.S_IFMT != unix.S_IFREG || before.Uid != 0 || !allowedGID ||
+		before.Mode&0o7777 != mode || before.Nlink != 1 ||
 		before.Size < 1 || before.Size > exactRootFileMaxSize {
 		return nil, FileIdentity{},
-			fmt.Errorf("%s is not an exact root:root 0644 single-link regular file", label)
+			fmt.Errorf("%s is not an exact root-owned single-link regular file with the certified group and mode", label)
 	}
 	if err := RejectACL(fd, label); err != nil {
 		return nil, FileIdentity{}, err
@@ -111,7 +151,7 @@ func ReadExactRootOwnedFileAt(
 		return nil, FileIdentity{}, fmt.Errorf("%s changed while reading", label)
 	}
 	return data, FileIdentity{
-		Device: uint64(after.Dev), Inode: after.Ino, Size: after.Size,
+		Device: uint64(after.Dev), Inode: after.Ino, Size: after.Size, GID: after.Gid,
 		Digest: sha256.Sum256(data),
 	}, nil
 }

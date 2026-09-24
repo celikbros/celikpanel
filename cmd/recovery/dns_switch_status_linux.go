@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/bindconfig"
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/bindroot"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
@@ -24,6 +25,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/processidentity"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
+	"golang.org/x/sys/unix"
 )
 
 // The independent observer uses installed, fixed host paths. No environment
@@ -214,6 +216,66 @@ func verifyRunningExecutable(pid int, path string) (string, error) {
 	}
 	return started, nil
 }
+
+// A disk-level check of the exact managed zone include. It does not prove
+// that named loaded this anchor or the selected generation.
+func verifyInstalledBINDConfig(ctx context.Context, layout bindroot.Layout, serviceGID uint32) error {
+	if ctx == nil {
+		return errors.New("BIND config observation requires a context")
+	}
+	rootFD, err := unix.Open("/", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return fmt.Errorf("open BIND config root: %w", err)
+	}
+	defer unix.Close(rootFD)
+	before, err := observeBINDConfigAt(rootFD, layout, serviceGID)
+	if err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	after, err := observeBINDConfigAt(rootFD, layout, serviceGID)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(before, after) {
+		return errors.New("BIND native config changed during exact observation")
+	}
+	return nil
+}
+
+func observeBINDConfigAt(rootFD int, layout bindroot.Layout, serviceGID uint32) ([]bindroot.FileIdentity, error) {
+	var paths []string
+	var includePath string
+	switch layout {
+	case bindroot.APT:
+		paths = []string{"/etc/bind/named.conf.options", "/etc/bind/named.conf.local"}
+		includePath = "/var/cache/bind/celikpanel/current/zones.conf"
+	case bindroot.Pacman:
+		paths = []string{"/etc/named.conf"}
+		includePath = "/var/named/celikpanel/current/zones.conf"
+	default:
+		return nil, errors.New("unsupported native BIND config layout")
+	}
+	identities := make([]bindroot.FileIdentity, 0, len(paths))
+	for _, path := range paths {
+		raw, identity, err := bindroot.ReadExactBINDConfigAt(rootFD, layout, serviceGID, path)
+		if err != nil {
+			return nil, err
+		}
+		if path == paths[len(paths)-1] {
+			if err := bindconfig.VerifyExactZoneInclude(string(raw), includePath); err != nil {
+				return nil, fmt.Errorf("verify managed BIND zone include: %w", err)
+			}
+		}
+		identities = append(identities, identity)
+	}
+	if len(identities) == 2 && identities[0].GID != identities[1].GID {
+		return nil, errors.New("APT BIND config files have different owners")
+	}
+	return identities, nil
+}
 func verifyInstalledBINDRoot(ctx context.Context) error {
 	layout, gid, err := installedBINDLayout()
 	if err != nil {
@@ -366,6 +428,20 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				return exitUnavailable
 			}
 			fmt.Fprintln(out, "Systemd reported a stable running BIND MainPID, matching APT alias and no pending daemon reload; the process start token and executable inode matched twice. Installed package bytes, loaded named configuration, DNS answers and owner edits remain unproved.")
+			layout, serviceGID, layoutErr := installedBINDLayout()
+			if layoutErr != nil {
+				fmt.Fprintln(diagnostic, "Native BIND config owner is unknown. The server owner should inspect the service group and config before the same operation resumes; no inverse was started. "+layoutErr.Error())
+				return exitUnavailable
+			}
+			if configErr := verifyInstalledBINDConfig(context.Background(), layout, serviceGID); configErr != nil {
+				fmt.Fprintln(diagnostic, "Native BIND managed include is unknown or changed. The server owner should inspect the named configuration and selected generation before the same operation resumes; no inverse was started. "+configErr.Error())
+				return exitUnavailable
+			}
+			if bindErr := verifySelectedBINDTarget(context.Background(), observation.TargetGeneration, observation.TargetEpoch); bindErr != nil {
+				fmt.Fprintln(diagnostic, "Selected BIND generation changed around native config observation. The server owner should inspect named configuration and DNS answers before the same operation resumes; no inverse was started. "+bindErr.Error())
+				return exitUnavailable
+			}
+			fmt.Fprintln(out, "Native BIND config files retained the exact managed zone include across secure read-only observations. The main config may not load this anchor; named's loaded configuration and DNS answers remain unproved.")
 		}
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)

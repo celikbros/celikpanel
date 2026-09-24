@@ -984,3 +984,12 @@ identity proofs surround the process reads. See the
 No persisted schema or recovery admission changed. Loaded named config,
 authoritative answers, owner edits, independent inverse and the interrupted
 native fault matrix remain open; this does not close P0.4.
+The P0.4 native BIND disk observer now shares the Agent's exact managed
+zone-include predicate and a descriptor-based fixed-path reader for APT
+and pacman config owner modes. It refuses absent, inert, changed or unsafe
+managed includes and rereads the selected generation. See
+[the bounded config proof](DNS-ENGINE-ARTIFACT.md#shared-native-bind-include-and-disk-observation-2026-09-24).
+This changes no persisted schema or recovery admission. Main-config
+reachability, named's loaded config, authoritative answers, owner edits
+outside the managed block, independent inverse and native fault acceptance
+remain open; P0.4 is not complete.
