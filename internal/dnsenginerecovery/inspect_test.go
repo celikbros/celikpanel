@@ -157,7 +157,7 @@ func TestInspectEvidenceRecognizesReleasedUndecidedSwitch(t *testing.T) {
 	job.FinishedAt = job.UpdatedAt
 	job.LeaseExpiresAt = time.Time{}
 	observed, err := InspectEvidence(policy, journal, ledger, now)
-	if err != nil || observed.Status != EvidenceReleasedUndecided {
+	if err != nil || observed.Status != EvidenceReleasedUndecided || observed.ReleaseReason != dnsengineartifact.ReleasedUnsupportedHostCode {
 		t.Fatalf("released switch not observable: %+v, %v", observed, err)
 	}
 	job.ErrorCode = "other_failure"

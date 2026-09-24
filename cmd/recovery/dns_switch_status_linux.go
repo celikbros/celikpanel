@@ -617,7 +617,15 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	case dnsenginerecovery.EvidenceExpiredCancellation:
 		fmt.Fprintln(out, "The accepted lease expired and cancellation is recorded. The server owner should inspect the native DNS service and preserve both receipts. The same operation may resume only through a compatible recovery executor after host and worker checks.")
 	case dnsenginerecovery.EvidenceReleasedUndecided:
-		fmt.Fprintln(out, "The Agent released this exact interrupted DNS switch lease because host recovery could not decide it; the frozen journal remains. The server owner should inspect the native DNS authority and the recorded failure before resuming this same operation. This observation cannot authorize an inverse or a new switch.")
+		switch observation.ReleaseReason {
+		case dnsengineartifact.ReleasedUnsupportedHostCode:
+			fmt.Fprintln(out, "The Agent released this interrupted DNS switch lease because the host could not be inspected after restart. The server owner should inspect the host profile and native DNS authority, then retry observation of this same operation after the host is readable. The frozen journal remains; no inverse or new switch is authorized.")
+		case dnsengineartifact.ReleasedHostWindowCode:
+			fmt.Fprintln(out, "The Agent released this interrupted DNS switch lease because host startup did not finish within its recovery window. The server owner should confirm startup and native DNS authority, then retry observation of this same operation. The frozen journal remains; no inverse or new switch is authorized.")
+		default:
+			fmt.Fprintln(diagnostic, "The released DNS switch has an unknown reason. Preserve its journal and ledger for owner review; no inverse or new switch is authorized.")
+			return exitUnavailable
+		}
 	case dnsenginerecovery.EvidenceFinalized:
 		fmt.Fprintln(out, "The ledger records finalization while a journal remains. The server owner should inspect native DNS health and the retained journal; this observation alone does not authorize cleanup or a new switch.")
 	default:

@@ -61,6 +61,7 @@ type EvidenceObservation struct {
 	// Decoded-only observations leave it empty; it never admits a mutation.
 	EvidenceSHA256   string
 	Status           EvidenceStatus
+	ReleaseReason    string
 	RequestID        string
 	SourceEngine     string
 	TargetEngine     string
@@ -137,6 +138,7 @@ func InspectEvidence(policy dnsengineartifact.JournalPolicy, journal dnsenginear
 	}
 	if id.ReleasedUndecidedJob(ledger) {
 		observation.Status = EvidenceReleasedUndecided
+		observation.ReleaseReason = job.ErrorCode
 		return observation, nil
 	}
 	if err := id.ValidateFinalizedLedger(ledger); err == nil {

@@ -1097,3 +1097,9 @@ schema, write sequence, installed panel or native DNS service changed. Full
 affected package tests, adversarial classification tests and vet are scoped
 evidence. The independent inverse executor, worker/native/owner rechecks at
 effect time and interrupted-switch native matrix remain open.
+
+The same read-only released-interruption observation now carries only its
+validated reason code. Owner guidance distinguishes an unsupported or unreadable
+host from a startup window timeout and names the next native inspection.
+No error message, credential or arbitrary ledger text is displayed. This is
+diagnostic guidance, not authority to resume or mutate DNS.
