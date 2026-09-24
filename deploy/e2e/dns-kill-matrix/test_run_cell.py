@@ -1787,6 +1787,15 @@ class ControllerProtocolTest(unittest.TestCase):
         )
         self.assertIn('"external PowerDNS shared memory after query"', body)
 
+    def test_rolled_back_bind_accepts_exact_source_adoption_proof(self) -> None:
+        selected = cell("rolled-back", "after-write")
+        value = source_adoption_value(selected)
+        canonical = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode()
+        self.assertEqual(
+            run_cell.validate_source_adoption_document(value, canonical, selected),
+            value,
+        )
+
     def test_source_adoption_document_rejects_identity_and_target_drift(self) -> None:
         selected = cell("source-stopped")
         value = source_adoption_value(selected)

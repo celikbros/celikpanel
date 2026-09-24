@@ -1110,7 +1110,7 @@ def validate_source_adoption_document(
     if (
         cell.driver != "bind"
         or cell.role != "standalone"
-        or cell.phase not in {"source-stopped", "target-started"}
+        or cell.phase not in {"source-stopped", "target-started", "rolled-back"}
     ):
         raise ControllerError("source adoption proof escaped critical standalone BIND scope")
     expected = {
