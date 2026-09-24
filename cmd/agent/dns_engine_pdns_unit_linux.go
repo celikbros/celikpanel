@@ -3,16 +3,16 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 
 	"github.com/alicelik/celikpanel/internal/hostplatform"
+	"github.com/alicelik/celikpanel/internal/pdnsvendor"
 	"golang.org/x/sys/unix"
 )
 
-const certifiedPDNSUnitPackageOwner = "pdns-server: /usr/lib/systemd/system/pdns.service\n"
+const certifiedPDNSUnitPackageOwner = pdnsvendor.UnitPackageOwner
 
 func inspectHostPDNSVendorUnit(
 	ctx context.Context,
@@ -71,12 +71,7 @@ func verifyExactPDNSVendorPackageOwnership(
 	if err != nil {
 		return fmt.Errorf("verify PowerDNS unit package ownership: %w", err)
 	}
-	if string(output) != certifiedPDNSUnitPackageOwner {
-		return errors.New(
-			"PowerDNS unit is not owned by the exact pdns-server package",
-		)
-	}
-	return nil
+	return pdnsvendor.VerifyPackageOwner(output, nil)
 }
 
 func inspectPDNSVendorUnitAt(
@@ -94,13 +89,8 @@ func inspectPDNSVendorUnitAt(
 		if err != nil {
 			return bindSecureFileIdentity{}, err
 		}
-		debian := bytes.Equal(data, []byte(certifiedDebian13PDNSVendorUnit))
-		ubuntu := bytes.Equal(data, []byte(certifiedUbuntu2404PDNSVendorUnit))
-		if !debian && !ubuntu {
-			return bindSecureFileIdentity{},
-				errors.New(
-					"PowerDNS vendor unit bytes differ from the certified package unit",
-				)
+		if err := pdnsvendor.VerifyBytes(data); err != nil {
+			return bindSecureFileIdentity{}, err
 		}
 		return identity, nil
 	}

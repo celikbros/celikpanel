@@ -5,61 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/alicelik/celikpanel/internal/dnsunitidentity"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
+	"github.com/alicelik/celikpanel/internal/pdnsvendor"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
-	certifiedPDNSUnitPath = "/usr/lib/systemd/system/pdns.service"
-	certifiedPDNSExecArgv = "/usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no"
+	certifiedPDNSUnitPath           = pdnsvendor.UnitPath
+	certifiedPDNSExecArgv           = pdnsvendor.ExecArgv
+	certifiedDebian13PDNSVendorUnit = pdnsvendor.CertifiedDebian13Unit
+	certifiedDebianPDNSAfter        = pdnsvendor.CertifiedDebianAfter
+	certifiedUbuntuPDNSAfter        = pdnsvendor.CertifiedUbuntuAfter
 )
 
-const certifiedDebian13PDNSVendorUnit = "[Unit]\n" +
-	"Description=PowerDNS Authoritative Server\n" +
-	"Documentation=man:pdns_server(1) man:pdns_control(1)\n" +
-	"Documentation=https://doc.powerdns.com\n" +
-	"Wants=network-online.target\n" +
-	"After=network-online.target mysql.service mysqld.service postgresql.service slapd.service mariadb.service time-sync.target\n\n" +
-	"[Service]\n" +
-	"ExecStart=" + certifiedPDNSExecArgv + "\n" +
-	"SyslogIdentifier=pdns_server\n" +
-	"User=pdns\nGroup=pdns\nType=notify\nRestart=on-failure\nRestartSec=1\n" +
-	"StartLimitInterval=0\nRuntimeDirectory=pdns\n\n" +
-	"# Sandboxing\n" +
-	"CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_CHOWN\n" +
-	"AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_CHOWN\n" +
-	"LockPersonality=true\nNoNewPrivileges=true\nPrivateDevices=true\nPrivateTmp=true\n" +
-	"# Setting PrivateUsers=true prevents us from opening our sockets\n" +
-	"ProtectClock=true\nProtectControlGroups=true\nProtectHome=true\nProtectHostname=true\n" +
-	"ProtectKernelLogs=true\nProtectKernelModules=true\nProtectKernelTunables=true\n" +
-	"# ProtectSystem=full will disallow write access to /etc and /usr, possibly\n" +
-	"# not being able to write slaved-zones into sqlite3 or zonefiles.\n" +
-	"ProtectSystem=full\nRestrictAddressFamilies=AF_UNIX AF_INET AF_INET6\n" +
-	"RestrictNamespaces=true\nRestrictRealtime=true\nRestrictSUIDSGID=true\n" +
-	"SystemCallArchitectures=native\n" +
-	"SystemCallFilter=~ @clock @debug @module @mount @raw-io @reboot @swap @cpu-emulation @obsolete\n" +
-	"ProtectProc=invisible\nPrivateIPC=true\nRemoveIPC=true\nDevicePolicy=closed\n" +
-	"# Not enabled by default because it does not play well with LuaJIT\n" +
-	"# MemoryDenyWriteExecute=true\n\n" +
-	"[Install]\nWantedBy=multi-user.target\n"
-
-const (
-	certifiedDebianPDNSAfter = "After=network-online.target mysql.service mysqld.service postgresql.service slapd.service mariadb.service time-sync.target"
-	certifiedUbuntuPDNSAfter = "After=network-online.target mysqld.service postgresql.service slapd.service mariadb.service time-sync.target"
-)
-
-// Ubuntu 24.04 and Debian 13 ship the same hardened pdns.service contract.
-// Ubuntu omits only the obsolete mysql.service ordering alias. Select between
-// these reviewed package artifacts by exact bytes, never by os-release name.
-var certifiedUbuntu2404PDNSVendorUnit = strings.Replace(
-	certifiedDebian13PDNSVendorUnit,
-	certifiedDebianPDNSAfter,
-	certifiedUbuntuPDNSAfter,
-	1,
-)
+var certifiedUbuntu2404PDNSVendorUnit = pdnsvendor.CertifiedUbuntu2404Unit
 
 func certifyAPTPDNSCapabilities(profile hostplatform.Profile) error {
 	if profile.PackageManager != hostplatform.PackageManagerAPT ||

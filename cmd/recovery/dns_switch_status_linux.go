@@ -23,6 +23,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/hostmutationlock"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
+	"github.com/alicelik/celikpanel/internal/pdnsvendor"
 	"github.com/alicelik/celikpanel/internal/processidentity"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"golang.org/x/sys/unix"
@@ -192,6 +193,10 @@ func verifyInstalledPDNSRuntime(ctx context.Context) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("detect installed host profile: %w", err)
 	}
+	beforeVendor, err := pdnsvendor.InspectInstalledUnit(ctx, profile)
+	if err != nil {
+		return 0, err
+	}
 	beforeIdentity, err := dnsenginerecovery.ProbePDNSVendorIdentity(ctx, profile, dnsenginerecovery.SystemdPDNSIdentityRunner)
 	if err != nil {
 		return 0, err
@@ -222,7 +227,11 @@ func verifyInstalledPDNSRuntime(ctx context.Context) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if before != after || started != again || !reflect.DeepEqual(beforeIdentity, afterIdentity) {
+	afterVendor, err := pdnsvendor.InspectInstalledUnit(ctx, profile)
+	if err != nil {
+		return 0, err
+	}
+	if before != after || started != again || beforeVendor != afterVendor || !reflect.DeepEqual(beforeIdentity, afterIdentity) {
 		return 0, errors.New("PowerDNS native process identity changed during observation")
 	}
 	return before, nil
@@ -543,7 +552,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "PowerDNS process identity changed around listener observation. The server owner should inspect pdns.service and local DNS sockets before the same operation resumes; no inverse was started.")
 			return exitUnavailable
 		}
-		fmt.Fprintln(out, "The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. Vendor file bytes, database content, zone answers and recovery authority remain unproved.")
+		fmt.Fprintln(out, "The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. Database content, zone answers, loaded config and recovery authority remain unproved.")
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	switch observation.TargetReceipt {
