@@ -363,3 +363,16 @@ this common predicate before its existing native BIND/PowerDNS proofs. There is
 no journal or state schema transition. A matching receipt is not proof that the
 native daemon serves it; independent target verification and full native fault
 acceptance remain open.
+
+### Independent current-receipt observation
+
+P0.2/P0.4, invariants 2/3: the root-only DNS switch status reader now pins and
+validates the current state document as well as the accepted journal and ledger.
+It reports a missing receipt, an exact frozen journal target, or a different
+current receipt; malformed or symlinked state yields an unknown result and
+retains all evidence. `--quiesced` holds the existing release and host locks
+while all three files are read. The ordinary command remains an unlocked
+instantaneous observation. Even an exact target receipt does not prove native
+BIND/PowerDNS service, zone contents, absence of owner edits, or permission to
+run an inverse. No wire schema or installed server changes; the independent
+native executor and interrupted-service acceptance remain open.

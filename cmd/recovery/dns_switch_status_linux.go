@@ -150,6 +150,14 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		return exitOK
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
+	switch observation.TargetReceipt {
+	case dnsenginerecovery.TargetReceiptExact:
+		fmt.Fprintln(out, "The current DNS state receipt matched the frozen journal target at inspection time. The server owner must still verify native DNS service before recovery; this observation does not authorize a mutation.")
+	case dnsenginerecovery.TargetReceiptDifferent:
+		fmt.Fprintln(out, "The current DNS state receipt differs from the frozen journal target. Preserve both records and inspect owner changes and native DNS before the original operation resumes.")
+	case dnsenginerecovery.TargetReceiptAbsent:
+		fmt.Fprintln(out, "The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.")
+	}
 	if len(args) == 2 {
 		fmt.Fprintln(out, "Release and host mutation locks were held during this evidence read. Native DNS state and future worker liveness remain unproved.")
 	}

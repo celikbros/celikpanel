@@ -50,5 +50,21 @@ func InspectFiles(stateRoot string, owner servicemutationledger.FileOwner, polic
 	if err != nil {
 		return EvidenceObservation{}, true, err
 	}
+	stateRaw, stateExists, err := servicemutationledger.ReadFile(policy.StatePath, 64<<10, owner)
+	if err != nil {
+		return EvidenceObservation{}, true, fmt.Errorf("read current DNS state receipt: %w", err)
+	}
+	if !stateExists {
+		observation.TargetReceipt = TargetReceiptAbsent
+		return observation, true, nil
+	}
+	state, _, err := dnsengineartifact.DecodeStateDocument(stateRaw)
+	if err != nil {
+		return EvidenceObservation{}, true, fmt.Errorf("decode current DNS state receipt: %w", err)
+	}
+	observation.TargetReceipt = TargetReceiptDifferent
+	if dnsengineartifact.ExactSwitchTargetStateV1(state, journal) {
+		observation.TargetReceipt = TargetReceiptExact
+	}
 	return observation, true, nil
 }

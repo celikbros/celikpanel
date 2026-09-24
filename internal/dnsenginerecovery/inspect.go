@@ -22,12 +22,23 @@ const (
 	EvidenceFinalized           EvidenceStatus = "finalized-with-journal"
 )
 
+// TargetReceiptStatus describes only the currently observed state document.
+// Even an exact receipt is not a native DNS service proof or recovery admission.
+type TargetReceiptStatus string
+
+const (
+	TargetReceiptAbsent    TargetReceiptStatus = "absent"
+	TargetReceiptExact     TargetReceiptStatus = "exact-journal-target"
+	TargetReceiptDifferent TargetReceiptStatus = "different-from-journal-target"
+)
+
 type EvidenceObservation struct {
 	Status        EvidenceStatus
 	RequestID     string
 	Phase         string
 	WorkerPID     int
 	WorkerStarted string
+	TargetReceipt TargetReceiptStatus
 }
 
 // InspectEvidence binds a previously decoded canonical journal to a canonical

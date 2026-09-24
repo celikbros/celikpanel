@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
 
@@ -36,8 +37,60 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 		t.Fatal(err)
 	}
 	got, present, err := InspectFiles(root, owner, policy, now)
-	if err != nil || !present || got.Status != EvidenceActive {
-		t.Fatalf("valid files: %+v, %v, %v", got, present, err)
+	if err != nil || !present || got.Status != EvidenceActive || got.TargetReceipt != TargetReceiptAbsent {
+		t.Fatalf("valid files with absent state: %+v, %v, %v", got, present, err)
+	}
+	state := dnsengineartifact.StateV1{
+		Schema: dnsengineartifact.StateSchemaV1, Mode: journal.Mode,
+		Engine: journal.TargetEngine, EngineEpoch: journal.TargetEpoch,
+		Generation: journal.TargetGeneration, SourceRevision: journal.SourceRevision,
+		ManifestQualifier: journal.ManifestQualifier,
+		MutationRequestID: journal.MutationRequestID, MutationOwnerID: journal.MutationOwnerID,
+	}
+	stateRaw, err := dnsengineartifact.CanonicalV1(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(policy.StatePath, stateRaw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, present, err = InspectFiles(root, owner, policy, now)
+	if err != nil || !present || got.TargetReceipt != TargetReceiptExact {
+		t.Fatalf("exact target receipt: %+v, %v, %v", got, present, err)
+	}
+	state.MutationOwnerID = "ffffffffffffffffffffffffffffffff"
+	stateRaw, err = dnsengineartifact.CanonicalV1(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(policy.StatePath, stateRaw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, present, err = InspectFiles(root, owner, policy, now)
+	if err != nil || !present || got.TargetReceipt != TargetReceiptDifferent {
+		t.Fatalf("different target receipt: %+v, %v, %v", got, present, err)
+	}
+	if err := os.WriteFile(policy.StatePath, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, present, err := InspectFiles(root, owner, policy, now); err == nil || !present {
+		t.Fatalf("malformed current state was accepted: %v, %v", present, err)
+	}
+	if err := os.Remove(policy.StatePath); err != nil {
+		t.Fatal(err)
+	}
+	stateLinkTarget := filepath.Join(root, "state-link-target")
+	if err := os.WriteFile(stateLinkTarget, stateRaw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(stateLinkTarget, policy.StatePath); err != nil {
+		t.Fatal(err)
+	}
+	if _, present, err := InspectFiles(root, owner, policy, now); err == nil || !present {
+		t.Fatalf("symlinked current state was accepted: %v, %v", present, err)
+	}
+	if err := os.Remove(policy.StatePath); err != nil {
+		t.Fatal(err)
 	}
 	if _, _, err := InspectFiles(root, servicemutationledger.FileOwner{UID: 0, GID: 1}, policy, now); err == nil {
 		t.Fatal("different established owner accepted")
