@@ -187,6 +187,39 @@ func verifyInstalledBINDRuntime(ctx context.Context) (uint64, error) {
 	return beforeRuntime.MainPID, nil
 }
 
+func verifyInstalledPDNSRuntime(ctx context.Context) (uint64, error) {
+	profile, err := hostplatform.Detect()
+	if err != nil {
+		return 0, fmt.Errorf("detect installed host profile: %w", err)
+	}
+	before, err := dnsenginerecovery.ProbePDNSRuntime(ctx, profile, dnsenginerecovery.SystemdUnitRunner, dnsenginerecovery.SystemdPDNSRuntimeRunner)
+	if err != nil {
+		return 0, err
+	}
+	if uint64(int(before)) != before {
+		return 0, errors.New("PowerDNS MainPID exceeds native process range")
+	}
+	started, err := verifyRunningExecutable(int(before), "/usr/sbin/pdns_server")
+	if err != nil {
+		return 0, err
+	}
+	after, err := dnsenginerecovery.ProbePDNSRuntime(ctx, profile, dnsenginerecovery.SystemdUnitRunner, dnsenginerecovery.SystemdPDNSRuntimeRunner)
+	if err != nil {
+		return 0, err
+	}
+	if uint64(int(after)) != after {
+		return 0, errors.New("PowerDNS MainPID exceeds native process range")
+	}
+	again, err := verifyRunningExecutable(int(after), "/usr/sbin/pdns_server")
+	if err != nil {
+		return 0, err
+	}
+	if before != after || started != again {
+		return 0, errors.New("PowerDNS native process identity changed during observation")
+	}
+	return before, nil
+}
+
 // verifyNativeBINDExecutable ties systemd's PID to the current native file
 // inode and Linux process start token. It does not certify package bytes.
 func verifyNativeBINDExecutable(pid uint64, path string) (string, error) {
@@ -486,6 +519,23 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				fmt.Fprintln(out, "No primary BIND catalog SOA applies to this receipt. Live zone and transfer answers remain unproved.")
 			}
 		}
+	}
+	if observation.TargetEngine == "pdns" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
+		mainPID, runtimeErr := verifyInstalledPDNSRuntime(context.Background())
+		if runtimeErr != nil {
+			fmt.Fprintln(diagnostic, "Selected PowerDNS native service state is unknown. The server owner should inspect pdns.service, the stopped BIND units and pending daemon reload before the same operation resumes; no inverse was started. "+runtimeErr.Error())
+			return exitUnavailable
+		}
+		if listenerErr := dnsenginerecovery.ProbeAuthorityListeners(context.Background(), "pdns_server", mainPID, "", dnsenginerecovery.SSListenerRunner); listenerErr != nil {
+			fmt.Fprintln(diagnostic, "PowerDNS port-53 listener ownership is unknown. The server owner should inspect pdns.service and local DNS sockets before the same operation resumes; no inverse was started. "+listenerErr.Error())
+			return exitUnavailable
+		}
+		afterPID, runtimeErr := verifyInstalledPDNSRuntime(context.Background())
+		if runtimeErr != nil || afterPID != mainPID {
+			fmt.Fprintln(diagnostic, "PowerDNS process identity changed around listener observation. The server owner should inspect pdns.service and local DNS sockets before the same operation resumes; no inverse was started.")
+			return exitUnavailable
+		}
+		fmt.Fprintln(out, "The selected PowerDNS unit and native process identity matched across read-only observations; both public DNS transports belonged to its MainPID. Vendor unit, database content, zone answers and recovery authority remain unproved.")
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	switch observation.TargetReceipt {

@@ -688,3 +688,28 @@ secondary convergence, complete owner-change exclusion, independent
 inverse execution or interrupted native fault-matrix acceptance.
 Journal/state schemas, producer transition and recovery admission
 are unchanged; P0.4 remains open.
+
+### Independent selected PowerDNS runtime observation (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: an exact selected PowerDNS
+target now has a separate native process and listener observation in
+the root-only status reader. On a verified APT/systemd host, the
+reader twice requires pdns.service loaded, active and enabled, with
+named.service and bind9.service exactly inactive/disabled, absent or
+masked. It also requires both BIND MainPIDs to be zero/dead, one
+stable running PowerDNS MainPID, no pending daemon reload, a stable
+Linux process start token and the same inode as the fixed installed
+/usr/sbin/pdns_server file. The shared strict ss parser then requires
+both public port-53 transports to belong to that MainPID; process
+identity is rechecked afterward. An unknown or changed result stops
+the observation with owner guidance, without an inverse or another
+switch.
+
+This is not yet the Agent's full PowerDNS vendor/config/database
+proof. The independent reader does not certify the vendor unit or
+package bytes, the live SQLite database and zone records, loaded
+configuration, replication or owner edits. It does not admit or run
+native recovery. Historical journal v1, state receipts and current
+recovery decisions remain unchanged. Pure topology, parser and
+Agent/recovery tests plus vet are the scoped evidence; installed
+native interruption and inverse acceptance remain open.

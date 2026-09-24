@@ -61,3 +61,18 @@ func TestProbeBINDListenersRefusesUnknownAndOversizedResults(t *testing.T) {
 		t.Fatal("oversized inventory was accepted")
 	}
 }
+
+func TestProbeAuthorityListenersBindsPowerDNSProcess(t *testing.T) {
+	const output = "tcp LISTEN 0 4096 0.0.0.0:53 0.0.0.0:* users:((\"pdns_server\",pid=77,fd=1))\n" +
+		"udp UNCONN 0 0 0.0.0.0:53 0.0.0.0:* users:((\"pdns_server\",pid=77,fd=2))\n"
+	runner := func(context.Context) ([]byte, error) { return []byte(output), nil }
+	if err := ProbeAuthorityListeners(context.Background(), "pdns_server", 77, "", runner); err != nil {
+		t.Fatalf("PowerDNS listener observation: %v", err)
+	}
+	if err := ProbeAuthorityListeners(context.Background(), "named", 77, "", runner); err == nil {
+		t.Fatal("wrong process identity accepted")
+	}
+	if err := ProbeAuthorityListeners(context.Background(), "pdns_server", 78, "", runner); err == nil {
+		t.Fatal("wrong systemd PID accepted")
+	}
+}

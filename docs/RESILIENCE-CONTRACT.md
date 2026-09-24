@@ -1018,3 +1018,11 @@ different ss grammar. This is read-only and schema-neutral, with
 no recovery admission. Loaded config, answer/socket causality,
 member zones, AXFR, secondary convergence, owner changes,
 independent inverse and native fault acceptance remain open.
+
+The P0.4 independent status reader now also observes the selected
+PowerDNS target's APT/systemd unit topology, exact running PID and
+public DNS listeners. See the
+[bounded PowerDNS evidence](DNS-ENGINE-ARTIFACT.md#independent-selected-powerdns-runtime-observation-2026-09-24).
+It is read-only, schema-neutral and does not extend recovery admission.
+Vendor/config/database identity, zone answers, owner changes,
+independent inverse and native fault acceptance remain open.

@@ -52,6 +52,12 @@ func SSListenerRunner(ctx context.Context) ([]byte, error) {
 // ProbeBINDListeners compares two strict socket inventories against the
 // already-verified systemd MainPID. It is a point-in-time observation only.
 func ProbeBINDListeners(ctx context.Context, mainPID uint64, primaryIP string, runner BINDListenerRunner) error {
+	return ProbeAuthorityListeners(ctx, "named", mainPID, primaryIP, runner)
+}
+
+// ProbeAuthorityListeners binds a strictly parsed public socket inventory to
+// one previously verified systemd process. It is not mutation admission.
+func ProbeAuthorityListeners(ctx context.Context, process string, mainPID uint64, primaryIP string, runner BINDListenerRunner) error {
 	if ctx == nil || runner == nil || mainPID == 0 {
 		return errors.New("invalid BIND listener observation")
 	}
@@ -67,7 +73,7 @@ func ProbeBINDListeners(ctx context.Context, mainPID uint64, primaryIP string, r
 		if len(raw) > 64<<10 {
 			return errors.New("DNS listener output exceeds its bound")
 		}
-		identities, err := dnslistener.CanonicalPublicListeners(string(raw), "named", mainPID)
+		identities, err := dnslistener.CanonicalPublicListeners(string(raw), process, mainPID)
 		if err != nil {
 			return err
 		}

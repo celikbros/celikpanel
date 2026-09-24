@@ -35,9 +35,9 @@ func SystemdBINDRuntimeRunner(ctx context.Context, name string) ([]byte, error) 
 	return output.Bytes(), nil
 }
 
-func parseBINDRuntime(raw []byte) (dnsunitidentity.Processes, error) {
+func parseUnitRuntime(raw []byte) (dnsunitidentity.Processes, error) {
 	if len(raw) > 4096 {
-		return dnsunitidentity.Processes{}, errors.New("BIND runtime output exceeds its bound")
+		return dnsunitidentity.Processes{}, errors.New("DNS runtime output exceeds its bound")
 	}
 	lines := strings.Split(string(raw), "\n")
 	processLines := make([]string, 0, 3)
@@ -48,7 +48,7 @@ func parseBINDRuntime(raw []byte) (dnsunitidentity.Processes, error) {
 		}
 		if strings.HasPrefix(line, "NeedDaemonReload=") {
 			if reloadSeen || line != "NeedDaemonReload=no" {
-				return dnsunitidentity.Processes{}, errors.New("BIND unit has an unknown or pending daemon reload")
+				return dnsunitidentity.Processes{}, errors.New("DNS unit has an unknown or pending daemon reload")
 			}
 			reloadSeen = true
 			continue
@@ -56,9 +56,13 @@ func parseBINDRuntime(raw []byte) (dnsunitidentity.Processes, error) {
 		processLines = append(processLines, line)
 	}
 	if !reloadSeen {
-		return dnsunitidentity.Processes{}, errors.New("BIND unit daemon reload state is absent")
+		return dnsunitidentity.Processes{}, errors.New("DNS unit daemon reload state is absent")
 	}
-	processes, err := dnsunitidentity.ParseProcesses(strings.Join(processLines, "\n"))
+	return dnsunitidentity.ParseProcesses(strings.Join(processLines, "\n"))
+}
+
+func parseBINDRuntime(raw []byte) (dnsunitidentity.Processes, error) {
+	processes, err := parseUnitRuntime(raw)
 	if err != nil {
 		return dnsunitidentity.Processes{}, err
 	}
