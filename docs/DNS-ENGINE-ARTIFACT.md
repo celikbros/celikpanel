@@ -559,3 +559,22 @@ This is a disk and package observation: systemd's loaded unit, the live
 named process, managed BIND configuration, DNS answers, owner edits and
 worker exclusion remain unproved. Native inverse execution and the
 interrupted-switch fault matrix remain open.
+
+### Shared systemd BIND unit identity observation (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: the Agent's exact systemd
+identity parser and APT/pacman named-unit predicates now live in one
+shared package. The independent root-only DNS status reader uses a fixed,
+bounded systemctl show query for named.service; it verifies the canonical
+unit ID, aliases, vendor fragment path, absent drop-ins/source override,
+non-transient status and exact ExecStart path and arguments. An enabled
+APT bind9 alias must resolve to the same identity. Two identity reads
+must agree, surrounded by separate certified vendor-file and package
+proofs. Any unknown, changed or foreign identity returns owner guidance
+and no inverse. The historical journal and state schemas do not change.
+
+Agent identity tests, independent alias/drift/foreign-executable tests,
+Agent/recovery suites and vet pass. This observation does not prove the
+running process, NeedDaemonReload state, loaded named configuration,
+zone answers, absence of owner edits or worker exclusion. It does not
+admit automatic recovery or close the native interrupted-switch matrix.

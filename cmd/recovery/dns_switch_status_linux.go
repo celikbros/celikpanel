@@ -117,13 +117,26 @@ func installedBINDLayout() (bindroot.Layout, uint32, error) {
 	return layout, gid, nil
 }
 
-func verifyInstalledBINDVendor(ctx context.Context) error {
+func verifyInstalledBINDVendorAndUnit(ctx context.Context) error {
 	profile, err := hostplatform.Detect()
 	if err != nil {
 		return fmt.Errorf("detect installed host profile: %w", err)
 	}
-	_, err = bindroot.InspectInstalledVendor(ctx, profile)
-	return err
+	before, err := bindroot.InspectInstalledVendor(ctx, profile)
+	if err != nil {
+		return err
+	}
+	if _, err := dnsenginerecovery.ProbeBINDVendorIdentity(ctx, profile, dnsenginerecovery.SystemdBINDIdentityRunner); err != nil {
+		return err
+	}
+	after, err := bindroot.InspectInstalledVendor(ctx, profile)
+	if err != nil {
+		return err
+	}
+	if before != after {
+		return errors.New("BIND vendor files changed around the systemd identity observation")
+	}
+	return nil
 }
 
 func verifyInstalledBINDRoot(ctx context.Context) error {
@@ -267,11 +280,11 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			}
 			fmt.Fprintln(out, "Managed BIND root directory and package ownership matched on two read-only walks. This does not prove the selected generation, DNS answers, owner edits or recovery authority.")
 		}
-		if vendorErr := verifyInstalledBINDVendor(context.Background()); vendorErr != nil {
-			fmt.Fprintln(diagnostic, "Native BIND vendor unit or startup options are unknown. The server owner should inspect the named service unit, its package ownership and startup options before the same operation resumes; no inverse was started. "+vendorErr.Error())
+		if vendorErr := verifyInstalledBINDVendorAndUnit(context.Background()); vendorErr != nil {
+			fmt.Fprintln(diagnostic, "Native BIND vendor files or loaded systemd unit identity are unknown. The server owner should inspect the named service unit, its package ownership and startup options before the same operation resumes; no inverse was started. "+vendorErr.Error())
 			return exitUnavailable
 		}
-		fmt.Fprintln(out, "Certified BIND vendor unit and startup options matched across read-only package and file checks. This does not prove systemd loaded them or that named serves the selected generation.")
+		fmt.Fprintln(out, "Certified BIND vendor files and systemd unit identity matched across read-only checks. Process liveness, a pending daemon reload, loaded named configuration and DNS answers remain unproved.")
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	switch observation.TargetReceipt {
