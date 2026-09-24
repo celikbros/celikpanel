@@ -485,6 +485,7 @@ worker exclusion or inverse eligibility. Native execution and complete
 interrupted-switch acceptance therefore remain open. Focused root-drift,
 symlink, package-refusal and local-group tests and Agent/recovery suites cover
 this boundary; no installed panel was updated.
+
 ### Read-only selected BIND generation comparison (2026-09-24)
 
 P0.4, constitutional invariants 1/2/3: when the current state receipt
@@ -503,3 +504,22 @@ exclusion. PowerDNS native identity, complete recovery admission/execution
 and interrupted-switch fault acceptance remain open. Focused catalog-symlink
 and target-identity tests, recovery tests and vet pass; no installed panel was
 updated.
+
+### Shared BIND package ownership classification (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: Agent BIND preparation, its
+read-only update preflight and the root-only recovery observer now use the
+same exact APT and pacman package-owner parser. APT statoverride results
+distinguish an exact durable override, an absent override (exit 1 with no
+output), and conflicting or failed output. The Agent alone may create an
+absent override during its authorized preparation path; observation and
+preflight never do. Pacman accepts exactly one canonical bind ownership
+line. This removes a divergent interpretation of the native generation
+root without changing the journal, state receipts, phase transitions or
+recovery admission.
+
+Malformed, redirected and failed package proofs stop with an error; an
+independent observer reports unknown and an owner action. Shared-parser
+adversarial tests and Agent/recovery suites pass. Loaded named configuration,
+DNS answers, owner-edit detection, worker exclusion and native inverse
+execution remain open; this is not P0.4 acceptance.

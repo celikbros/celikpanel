@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/bindroot"
 	"golang.org/x/sys/unix"
 )
 
@@ -85,8 +86,8 @@ func verifyAPTBindRootMigrationCandidateAt(rootFD int, bindGID uint32, ops aptBI
 			return candidate, 0, err
 		}
 		owner, err := ops.owner()
-		if err != nil || string(owner) != aptBINDExactPackageOwnerLine {
-			return candidate, 0, errors.New("BIND cache parent is not the exact bind9 package-owned directory")
+		if err := bindroot.VerifyAPTPackageOwner(owner, err); err != nil {
+			return candidate, 0, fmt.Errorf("BIND cache parent: %w", err)
 		}
 		output, commandErr := ops.list()
 		state, err := classifyExactAPTBindStatOverride(output, commandErr)

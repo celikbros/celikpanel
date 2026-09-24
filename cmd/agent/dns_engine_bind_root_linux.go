@@ -20,8 +20,8 @@ const (
 	bindManagedRootMode            = uint32(0o0755)
 	bindDirectoryModeMask          = uint32(0o7777)
 	aptBINDStatOverrideTimeout     = 15 * time.Second
-	aptBINDExactStatOverrideLine   = "root bind 1775 /var/cache/bind\n"
-	aptBINDExactPackageOwnerLine   = "bind9: /var/cache/bind\n"
+	aptBINDExactStatOverrideLine   = bindroot.APTExactStatOverrideLine
+	aptBINDExactPackageOwnerLine   = bindroot.APTExactPackageOwnerLine
 	aptBINDStatOverrideOutputLimit = 4 << 10
 )
 
@@ -193,32 +193,18 @@ func aptBINDStatOverrideOperations(
 	}, nil
 }
 
-type aptBINDStatOverrideListState uint8
+type aptBINDStatOverrideListState = bindroot.APTStatOverrideState
 
 const (
-	aptBINDStatOverrideAbsent aptBINDStatOverrideListState = iota
-	aptBINDStatOverrideExact
+	aptBINDStatOverrideAbsent = bindroot.APTStatOverrideAbsent
+	aptBINDStatOverrideExact  = bindroot.APTStatOverrideExact
 )
-
-type commandExitCoder interface {
-	ExitCode() int
-}
 
 func classifyExactAPTBindStatOverride(
 	output []byte,
 	commandErr error,
 ) (aptBINDStatOverrideListState, error) {
-	if commandErr == nil && string(output) == aptBINDExactStatOverrideLine {
-		return aptBINDStatOverrideExact, nil
-	}
-	var exitCoder commandExitCoder
-	if len(output) == 0 && errors.As(commandErr, &exitCoder) &&
-		exitCoder.ExitCode() == 1 {
-		return aptBINDStatOverrideAbsent, nil
-	}
-	return aptBINDStatOverrideAbsent, errors.New(
-		"dpkg-statoverride returned a conflicting, redirected, or non-canonical /var/cache/bind result",
-	)
+	return bindroot.ClassifyAPTStatOverride(output, commandErr)
 }
 
 func verifyOrCreateExactAPTBindStatOverride(
@@ -232,15 +218,8 @@ func verifyOrCreateExactAPTBindStatOverride(
 		return errors.New("invalid APT BIND statoverride proof")
 	}
 	ownerOutput, ownerErr := ops.owner()
-	if ownerErr != nil {
-		return fmt.Errorf(
-			"verify /var/cache/bind package ownership: %w", ownerErr,
-		)
-	}
-	if string(ownerOutput) != aptBINDExactPackageOwnerLine {
-		return errors.New(
-			"/var/cache/bind is not the exact bind9 package-owned directory",
-		)
+	if err := bindroot.VerifyAPTPackageOwner(ownerOutput, ownerErr); err != nil {
+		return err
 	}
 	output, err := ops.list()
 	state, err := classifyExactAPTBindStatOverride(output, err)

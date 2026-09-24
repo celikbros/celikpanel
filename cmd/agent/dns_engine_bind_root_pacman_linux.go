@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/bindroot"
 	"golang.org/x/sys/unix"
 )
 
@@ -45,7 +46,6 @@ const (
 	pacmanBINDVendorParentMode      = uint32(0o1770)
 	pacmanBINDStockVendorParentMode = uint32(0o0770)
 	pacmanBINDServiceGroup          = "named"
-	pacmanBINDExactPackageOwnerHead = "/var/named/ is owned by bind "
 	pacmanBINDOwnerQueryTimeout     = 15 * time.Second
 )
 
@@ -164,20 +164,7 @@ func hostPacmanBINDOwnershipProof(
 // classifyExactPacmanBINDOwner yalnız "/var/named/ is owned by bind
 // <sürüm>\n" biçiminde tam bir satırı kabul eder, başkasını değil.
 func classifyExactPacmanBINDOwner(output []byte, commandErr error) error {
-	if commandErr != nil {
-		return fmt.Errorf("verify /var/named package ownership: %w", commandErr)
-	}
-	line := string(output)
-	if !strings.HasPrefix(line, pacmanBINDExactPackageOwnerHead) ||
-		!strings.HasSuffix(line, "\n") || strings.Count(line, "\n") != 1 {
-		return errors.New("/var/named is not the exact bind package-owned directory")
-	}
-	version := strings.TrimSuffix(strings.TrimPrefix(line, pacmanBINDExactPackageOwnerHead), "\n")
-	if version == "" || strings.ContainsAny(version, " \t") ||
-		strings.Trim(version, "0123456789.:-+abcdefghijklmnopqrstuvwxyz_") != "" {
-		return errors.New("/var/named package ownership version is not canonical")
-	}
-	return nil
+	return bindroot.VerifyPacmanPackageOwner(output, commandErr)
 }
 
 func ensurePacmanBindGenerationRootAtWithMode(

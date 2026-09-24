@@ -5,11 +5,9 @@ package bindroot
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -26,29 +24,21 @@ func ProveInstalledPackage(ctx context.Context, layout Layout) error {
 	switch layout {
 	case APT:
 		owner, err := runTrusted(proofCtx, []string{"/usr/bin/dpkg-query", "/usr/sbin/dpkg-query"}, "-S", "--", "/var/cache/bind")
-		if err != nil || string(owner) != "bind9: /var/cache/bind\n" {
-			return errors.New("/var/cache/bind is not the exact bind9 package-owned directory")
+		if err := VerifyAPTPackageOwner(owner, err); err != nil {
+			return err
 		}
 		override, err := runTrusted(proofCtx, []string{"/usr/sbin/dpkg-statoverride", "/usr/bin/dpkg-statoverride"}, "--list", "/var/cache/bind")
-		if err != nil || string(override) != "root bind 1775 /var/cache/bind\n" {
+		state, err := ClassifyAPTStatOverride(override, err)
+		if err != nil {
+			return err
+		}
+		if state != APTStatOverrideExact {
 			return errors.New("/var/cache/bind lacks the exact durable dpkg-statoverride")
 		}
 		return nil
 	case Pacman:
 		owner, err := runTrusted(proofCtx, []string{"/usr/bin/pacman", "/usr/sbin/pacman"}, "-Qo", "--", "/var/named")
-		if err != nil {
-			return fmt.Errorf("verify /var/named package ownership: %w", err)
-		}
-		line := string(owner)
-		const prefix = "/var/named/ is owned by bind "
-		if !strings.HasPrefix(line, prefix) || !strings.HasSuffix(line, "\n") || strings.Count(line, "\n") != 1 {
-			return errors.New("/var/named is not the exact bind package-owned directory")
-		}
-		version := strings.TrimSuffix(strings.TrimPrefix(line, prefix), "\n")
-		if version == "" || strings.ContainsAny(version, " \t") || strings.Trim(version, "0123456789.:-+abcdefghijklmnopqrstuvwxyz_") != "" {
-			return errors.New("/var/named package ownership version is not canonical")
-		}
-		return nil
+		return VerifyPacmanPackageOwner(owner, err)
 	default:
 		return errors.New("unsupported managed BIND generation root")
 	}
