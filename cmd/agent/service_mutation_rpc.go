@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 
 	"os"
 	"path/filepath"
@@ -1821,8 +1822,10 @@ func (m *serviceMutationManager) finishRuntimeTerminalLocked(
 	}
 	if runtime.job.Kind == "dns_engine_switch" && !success {
 		if err := m.removeTerminalRolledBackDNSEngineSwitchJournalLocked(runtime.job.RequestID); err != nil {
-			m.poisonLock = runtime.lock
-			return m.poisonLocked(fmt.Errorf("retire terminal DNS switch rollback journal: %w", err))
+			// The failed verdict is already durable. Retain an uncertain DNS
+			// journal for exact-operation review, but do not strand the global
+			// host lock or unrelated mutations over DNS-only cleanup.
+			log.Printf("Terminal DNS switch rollback journal was retained for owner review (request %s): %v", runtime.job.RequestID, err)
 		}
 	}
 	runtime.cancel()

@@ -731,3 +731,13 @@ veya yerel do?rulama belirsizse g?nl?k korunur, fakat genel i?lem y?neticisi
 kilitlenmez. Yeni DNS i?lemi kendi ?n kontrol?nde bu g?nl??? reddeder; ilgisiz
 sunucu i?lemleri kendi kilit yolunu kullanabilir. Yerel a??l?? testi bu s?n?r?
 denetler; ger?ek hizmet s?reklili?i kabul? de?ildir.
+
+
+P0.4, anayasal 1/2/3 ilkeleri: DNS geri alma isleminin kalici basarisizlik
+kaydi yazildiktan sonra gunlugun temizlenememesi artik butun Agent'i
+kilitlemez ve ortak sunucu islem kilidini tutmaz. Gunluk ve hata DNS'e ozel
+inceleme icin korunur; yeni DNS islemi bu belirsiz kaniti yine reddeder.
+Etkin islem ve acilista kalan islem ayni siniri kullanir. v1 gunluk ve
+defter semalari degismedi. Bilesen testi farkli sahipli gunlugun korundugunu,
+kalici sonucu ve sunucu kilidinin serbest kaldigini dogrular. Gercek yeniden
+baslatma, sahip degisikligi ve Agent'tan bagimsiz ters islem kabulu aciktir.

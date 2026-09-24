@@ -1148,3 +1148,14 @@ A new DNS operation still refuses that journal at its own preflight boundary;
 unrelated host operations retain their normal lock path. A local boot replay
 test checks that the host lock is released on unknown reproof. This is scoped
 component evidence, not proof of native workload continuity.
+
+
+P0.4, constitutional invariants 1/2/3: after an exact DNS rollback has a
+persisted failed ledger verdict, inability to retire its journal no longer
+poisons the whole Agent or retains the common host mutation lock. The journal
+and error remain available for DNS-specific review; new DNS work still refuses
+that unresolved checkpoint. Active terminal publication and boot orphan
+recovery use the same boundary. The v1 journal and ledger schemas are unchanged.
+A focused component test proves that a mismatched journal survives while the
+failed verdict is durable and the host lock becomes available. Native reboot,
+owner-edit and Agent-independent inverse acceptance remain open.

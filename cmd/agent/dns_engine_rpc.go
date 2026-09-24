@@ -1131,8 +1131,9 @@ func (m *serviceMutationManager) recoverPersistedDNSEngineSwitchLocked(
 		}
 		if outcome == dnsEngineSwitchRecoveryRolledBack {
 			if err := m.removeTerminalRolledBackDNSEngineSwitchJournalLocked(job.RequestID); err != nil {
-				m.poisonLock = lock
-				return true, m.poisonLocked(fmt.Errorf("retire terminal DNS switch rollback journal: %w", err))
+				// The orphan verdict is durable and the native inverse returned
+				// success. Keep the journal for DNS-specific reconciliation.
+				log.Printf("Terminal DNS switch rollback journal was retained for owner review (request %s): %v", job.RequestID, err)
 			}
 		}
 		return true, lock.Close()

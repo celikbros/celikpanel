@@ -167,3 +167,146 @@ func TestBootReplaysRetainedTerminalDNSRollbackBeforeCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A durable failed verdict is authoritative even when retirement of the
+// DNS-specific rollback checkpoint cannot be proved. Other host mutations
+// must retain their lock path; the checkpoint stays for DNS owner review.
+func TestTerminalDNSRollbackCleanupFailureDoesNotPoisonHost(t *testing.T) {
+	manager, root := newMutationTestManager(t)
+	job := beginMutationTestJob(t, manager)
+	raw, err := os.ReadFile(filepath.Join("..", "..", "internal", "dnsengineartifact", "testdata", "switch-journal", "alpha81-bind.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal, err := decodeDNSEngineSwitchJournal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal.MutationRequestID = job.RequestID
+	journal.Phase = dnsengineartifact.SwitchPhaseRolledBack
+	// A valid journal belonging to a different owner must never be removed.
+	if journal.MutationOwnerID == job.OwnerID {
+		journal.MutationOwnerID = "ffffffffffffffffffffffffffffffff"
+	}
+	encoded, err := encodeDNSEngineSwitchJournal(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journalPath := filepath.Join(root, "state", dnsEngineSwitchJournalFile)
+	if err := os.WriteFile(journalPath, encoded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager.mu.Lock()
+	job = manager.active.job
+	job.Kind = "dns_engine_switch"
+	job.Target = string(journal.TargetEngine)
+	job.PackageName = journal.ManifestQualifier
+	if err := manager.writeLocked(); err != nil {
+		manager.mu.Unlock()
+		t.Fatal(err)
+	}
+	err = manager.finishRuntimeTerminalLocked(manager.active, false,
+		"failed", "dns_engine_switch_failed", "Previous DNS state restored.")
+	poisoned, active := manager.poisoned, manager.active
+	manager.mu.Unlock()
+	if err != nil || poisoned != nil || active != nil {
+		t.Fatalf("DNS cleanup failure stranded host: err=%v poisoned=%v active=%v", err, poisoned, active)
+	}
+	if _, err := os.Stat(journalPath); err != nil {
+		t.Fatalf("uncertain DNS journal was discarded: %v", err)
+	}
+	ledgerRaw, err := os.ReadFile(filepath.Join(root, "state", serviceMutationLedgerFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	durable, err := decodeServiceMutationLedger(ledgerRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if durable.ActiveRequestID != "" || durable.Jobs[job.RequestID] == nil ||
+		durable.Jobs[job.RequestID].Status != servicemutationledger.StatusFailed {
+		t.Fatalf("durable terminal verdict missing: %+v", durable)
+	}
+	lock, err := acquireServiceMutationFileLock(filepath.Join(root, "service-mutation.lock"))
+	if err != nil {
+		t.Fatalf("DNS-only uncertainty retained the host lock: %v", err)
+	}
+	if err := lock.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBootDNSRollbackCleanupFailureDoesNotPoisonHost(t *testing.T) {
+	manager, root := newMutationTestManager(t)
+	job := beginMutationTestJob(t, manager)
+	raw, err := os.ReadFile(filepath.Join("..", "..", "internal", "dnsengineartifact", "testdata", "switch-journal", "alpha81-bind.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal, err := decodeDNSEngineSwitchJournal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal.MutationRequestID = job.RequestID
+	journal.MutationOwnerID = "ffffffffffffffffffffffffffffffff"
+	journal.Phase = dnsengineartifact.SwitchPhaseRolledBack
+	encoded, err := encodeDNSEngineSwitchJournal(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journalPath := filepath.Join(root, "state", dnsEngineSwitchJournalFile)
+	if err := os.WriteFile(journalPath, encoded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager.mu.Lock()
+	job = manager.active.job
+	job.Kind = "dns_engine_switch"
+	job.Target = string(journal.TargetEngine)
+	job.PackageName = journal.ManifestQualifier
+	if err := manager.writeLocked(); err != nil {
+		manager.mu.Unlock()
+		t.Fatal(err)
+	}
+	manager.active.cancel()
+	if err := manager.active.lock.Close(); err != nil {
+		manager.mu.Unlock()
+		t.Fatal(err)
+	}
+	manager.active = nil
+	manager.mu.Unlock()
+	lock, err := acquireServiceMutationFileLock(filepath.Join(root, "service-mutation.lock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend := &fakeDNSEngineBackend{recovery: dnsEngineSwitchRecoveryRolledBack}
+	useFakeDNSEngineBackend(t, backend)
+	manager.mu.Lock()
+	handled, err := manager.recoverPersistedDNSEngineSwitchLocked(job, lock)
+	poisoned := manager.poisoned
+	manager.mu.Unlock()
+	if !handled || err != nil || poisoned != nil || backend.recoverCalls != 1 {
+		t.Fatalf("boot cleanup held host: handled=%v err=%v poisoned=%v recovery=%d", handled, err, poisoned, backend.recoverCalls)
+	}
+	if _, err := os.Stat(journalPath); err != nil {
+		t.Fatalf("uncertain DNS journal was discarded: %v", err)
+	}
+	ledgerRaw, err := os.ReadFile(filepath.Join(root, "state", serviceMutationLedgerFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	durable, err := decodeServiceMutationLedger(ledgerRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if durable.ActiveRequestID != "" || durable.Jobs[job.RequestID] == nil ||
+		durable.Jobs[job.RequestID].Status != servicemutationledger.StatusFailed {
+		t.Fatalf("boot failed verdict missing: %+v", durable)
+	}
+	probe, err := acquireServiceMutationFileLock(filepath.Join(root, "service-mutation.lock"))
+	if err != nil {
+		t.Fatalf("boot DNS cleanup retained host lock: %v", err)
+	}
+	if err := probe.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
