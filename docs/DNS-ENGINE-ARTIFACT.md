@@ -639,3 +639,27 @@ binary integrity, live authoritative answers, independent inverse execution
 and interrupted-switch fault acceptance remain open. Parser adversarial
 tests, root-owned fixture tests, Agent/recovery suites and vet passed; no
 persisted schema or producer transition changed.
+### Bounded local primary catalog answer observation (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: for a selected BIND target
+with a verified primary pairing receipt, the independent status reader
+now asks the literal local primary IPv4 address for the receipt's exact
+catalog SOA over DNS/TCP without recursion. It first confirms that the
+address appears on a local interface, derives the expected catalog name
+from that address, and compares the authoritative SOA serial with the
+frozen receipt twice. The selected immutable generation is rechecked
+afterward. The shared DNS wire parser rejects non-authoritative,
+truncated, wrong-question, unrelated and malformed responses. Unknown
+address ownership, network failure, wrong serial or a changed target
+returns owner guidance and no inverse. Standalone and secondary BIND
+receipts have no local primary catalog; the reader reports this as a
+non-applicable check, not healthy DNS. No external provider, panel API,
+service mutation or installed-panel update is used.
+
+This proves one bounded local authoritative answer at two instants, not
+which PID owns the listener, a complete loaded config, member-zone
+content, AXFR, secondary convergence, owner changes or recovery
+authority. Shared parser and catalog-probe adversarial tests,
+Agent/recovery suites and vet pass. Journal/state schemas and recovery
+admission are unchanged; native inverse and interrupted-switch fault
+acceptance remain open.

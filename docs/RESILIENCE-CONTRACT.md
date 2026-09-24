@@ -999,3 +999,10 @@ predicate. The [main-config evidence](DNS-ENGINE-ARTIFACT.md#apt-bind-main-confi
 is read-only and schema-neutral. It is not a full BIND parse, named loaded
 config proof, DNS answer proof, independent inverse or native fault-matrix
 acceptance; P0.4 remains open.
+The P0.4 selected-primary observer can also compare the verified BIND
+catalog receipt with two authoritative DNS/TCP SOA answers from a
+locally owned literal address. See the
+[bounded answer evidence](DNS-ENGINE-ARTIFACT.md#bounded-local-primary-catalog-answer-observation-2026-09-24).
+This is read-only, schema-neutral and not recovery admission. Listener
+PID binding, member zones, AXFR, secondary convergence, loaded config
+and the native interrupted-switch matrix remain open.

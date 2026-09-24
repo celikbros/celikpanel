@@ -292,39 +292,39 @@ func verifyInstalledBINDRoot(ctx context.Context) error {
 // A matching selected generation is a stronger observation than a state
 // receipt, but remains distinct from the daemon's loaded configuration and
 // authoritative answers. No mutation or daemon reload is performed here.
-func verifySelectedBINDTarget(ctx context.Context, generation string, epoch int64) error {
+func verifySelectedBINDTarget(ctx context.Context, generation string, epoch int64) (binddns.Receipt, error) {
 	layout, gid, err := installedBINDLayout()
 	if err != nil {
-		return err
+		return binddns.Receipt{}, err
 	}
 	before, err := bindroot.VerifyInstalledCatalog(ctx, layout, gid)
 	if err != nil {
-		return err
+		return binddns.Receipt{}, err
 	}
 	publisher, err := binddns.NewOSPublisher(string(layout))
 	if err != nil {
-		return err
+		return binddns.Receipt{}, err
 	}
 	first, err := publisher.LoadCurrent()
 	if err != nil {
-		return fmt.Errorf("read selected managed BIND generation: %w", err)
+		return binddns.Receipt{}, fmt.Errorf("read selected managed BIND generation: %w", err)
 	}
 	receipt := first.CurrentReceipt()
 	if receipt.Generation != generation || receipt.EngineEpoch != epoch {
-		return errors.New("selected managed BIND generation differs from the frozen target")
+		return binddns.Receipt{}, errors.New("selected managed BIND generation differs from the frozen target")
 	}
 	second, err := publisher.LoadCurrent()
 	if err != nil {
-		return fmt.Errorf("reread selected managed BIND generation: %w", err)
+		return binddns.Receipt{}, fmt.Errorf("reread selected managed BIND generation: %w", err)
 	}
 	after, err := bindroot.VerifyInstalledCatalog(ctx, layout, gid)
 	if err != nil {
-		return err
+		return binddns.Receipt{}, err
 	}
 	if before != after || !reflect.DeepEqual(receipt, second.CurrentReceipt()) {
-		return errors.New("selected managed BIND generation changed during observation")
+		return binddns.Receipt{}, errors.New("selected managed BIND generation changed during observation")
 	}
-	return nil
+	return receipt, nil
 }
 
 type dnsObservationLocks struct {
@@ -409,8 +409,11 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 	}
 	if observation.SourceEngine == "bind" || observation.TargetEngine == "bind" {
+		var selectedReceipt binddns.Receipt
 		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
-			if bindErr := verifySelectedBINDTarget(context.Background(), observation.TargetGeneration, observation.TargetEpoch); bindErr != nil {
+			var bindErr error
+			selectedReceipt, bindErr = verifySelectedBINDTarget(context.Background(), observation.TargetGeneration, observation.TargetEpoch)
+			if bindErr != nil {
 				fmt.Fprintln(diagnostic, "Selected BIND generation is unknown or differs from the frozen target. The server owner should inspect the managed BIND generation, native configuration and DNS answers before the same operation resumes; no inverse was started. "+bindErr.Error())
 				return exitUnavailable
 			}
@@ -442,11 +445,26 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				fmt.Fprintln(diagnostic, "Native BIND managed include is unknown or changed. The server owner should inspect the named configuration and selected generation before the same operation resumes; no inverse was started. "+configErr.Error())
 				return exitUnavailable
 			}
-			if bindErr := verifySelectedBINDTarget(context.Background(), observation.TargetGeneration, observation.TargetEpoch); bindErr != nil {
+			if _, bindErr := verifySelectedBINDTarget(context.Background(), observation.TargetGeneration, observation.TargetEpoch); bindErr != nil {
 				fmt.Fprintln(diagnostic, "Selected BIND generation changed around native config observation. The server owner should inspect named configuration and DNS answers before the same operation resumes; no inverse was started. "+bindErr.Error())
 				return exitUnavailable
 			}
 			fmt.Fprintln(out, "Native BIND config files retained the exact managed zone include across secure read-only observations. When using APT, the main config also retained active includes. Named's loaded configuration and DNS answers remain unproved.")
+			catalogSeen, catalogErr := dnsenginerecovery.ProbeInstalledPrimaryCatalogAnswer(context.Background(), selectedReceipt)
+			if catalogErr != nil {
+				fmt.Fprintln(diagnostic, "Local authoritative primary catalog answer is unknown or differs from the selected BIND generation. The server owner should inspect the native DNS listener and catalog SOA before the same operation resumes; no inverse was started. "+catalogErr.Error())
+				return exitUnavailable
+			}
+			if catalogSeen {
+				againReceipt, bindErr := verifySelectedBINDTarget(context.Background(), observation.TargetGeneration, observation.TargetEpoch)
+				if bindErr != nil || !reflect.DeepEqual(selectedReceipt, againReceipt) {
+					fmt.Fprintln(diagnostic, "Selected BIND generation changed around the local catalog answer. The server owner should inspect the native DNS service before the same operation resumes; no inverse was started.")
+					return exitUnavailable
+				}
+				fmt.Fprintln(out, "The host's selected primary IP returned the frozen catalog's exact authoritative SOA serial twice over DNS/TCP. Listener PID, member zones, AXFR, loaded config and recovery authority remain unproved.")
+			} else {
+				fmt.Fprintln(out, "No primary BIND catalog SOA applies to this receipt. Live zone and transfer answers remain unproved.")
+			}
 		}
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
