@@ -65,7 +65,10 @@ func (tr *trace) operations() Operations {
 			tr.steps = append(tr.steps, "inverse")
 			return tr.inverseErr
 		},
-		Remove: func(context.Context) error { tr.steps = append(tr.steps, "remove"); return tr.removeErr },
+		Remove: func(_ context.Context, _ dnsengineartifact.SwitchJournalV1) error {
+			tr.steps = append(tr.steps, "remove")
+			return tr.removeErr
+		},
 	}
 }
 func TestReconcileExactOperationOrder(t *testing.T) {

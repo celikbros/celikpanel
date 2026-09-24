@@ -756,7 +756,7 @@ func runDNSSwitchRecoveryRollbackWithJournal(journal *dnsEngineSwitchJournal, op
 	return dnsenginerecovery.Rollback(context.Background(), journal, dnsenginerecovery.Operations{
 		Write:   func(_ context.Context, j dnsengineartifact.SwitchJournalV1) error { return ops.write(j) },
 		Inverse: func(_ context.Context, j dnsengineartifact.SwitchJournalV1) error { return ops.rollback(j) },
-		Remove:  func(context.Context) error { return ops.remove() },
+		Remove:  func(_ context.Context, _ dnsengineartifact.SwitchJournalV1) error { return ops.remove() },
 	})
 }
 
@@ -778,7 +778,9 @@ func (hostDNSEngineBackend) RecoverSwitch(
 			return writeDNSEngineSwitchJournal(j)
 		},
 		Inverse: rollbackDNSSwitchJournal,
-		Remove:  func(context.Context) error { return removeDNSEngineSwitchJournal() },
+		Remove: func(_ context.Context, journal dnsengineartifact.SwitchJournalV1) error {
+			return removeDNSEngineSwitchJournalIfExact(journal)
+		},
 	})
 	return dnsEngineSwitchRecoveryOutcome(outcome), err
 }

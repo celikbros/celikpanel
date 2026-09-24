@@ -819,3 +819,11 @@ The Agent still supplies the secure filesystem adapter and host lock.
 This extraction adds no independent native effects, lock acquisition,
 migration or new authority. Existing fault ordering and full Agent tests
 passed; native interrupted-switch acceptance remains open.
+
+The shared rollback sequence now passes its exact rolled-back journal to
+the remove callback. Agent removal re-reads that frozen checkpoint before
+unlinking the fixed journal path; another operation or phase is refused.
+An uncertain unlink is accepted only after absence readback. This closes a
+simple stale-path deletion, not a concurrent uncooperative owner rewrite
+between read and unlink. A filesystem-level conditional removal and native
+owner-edit fault trial remain open.

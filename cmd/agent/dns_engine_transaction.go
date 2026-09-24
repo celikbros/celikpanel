@@ -254,6 +254,13 @@ func writeDNSEngineSwitchJournalForFaultDriver(
 	)
 }
 
+func removeDNSEngineSwitchJournalIfExact(expected dnsEngineSwitchJournal) error {
+	return dnsenginerecovery.RemoveJournalCheckpoint(dnsJournalPolicy(), expected, dnsenginerecovery.JournalRemovalOps{
+		Read:   readDNSEngineSwitchJournal,
+		Remove: func() error { return secureRemoveConfig(dnsEngineSwitchJournalPath()) },
+	})
+}
+
 func removeDNSEngineSwitchJournal() error {
 	if err := secureRemoveConfig(dnsEngineSwitchJournalPath()); err != nil && !errors.Is(err, os.ErrNotExist) {
 		if _, exists, readErr := readDNSEngineSwitchJournal(); readErr == nil && !exists {

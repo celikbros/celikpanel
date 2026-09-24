@@ -29,7 +29,7 @@ type Operations struct {
 	ProveTargetAbsent func(context.Context, dnsengineartifact.SwitchJournalV1) (bool, error)
 	Write             func(context.Context, dnsengineartifact.SwitchJournalV1) error
 	Inverse           func(context.Context, dnsengineartifact.SwitchJournalV1) error
-	Remove            func(context.Context) error
+	Remove            func(context.Context, dnsengineartifact.SwitchJournalV1) error
 }
 
 // Reconcile preserves the original operation. Its caller proves the accepted
@@ -128,5 +128,5 @@ func Rollback(ctx context.Context, journal *dnsengineartifact.SwitchJournalV1, o
 			return err
 		}
 	}
-	return ops.Remove(ctx)
+	return ops.Remove(ctx, *journal)
 }

@@ -1116,3 +1116,10 @@ No v1 schema, phase transition or installed state changed. Fault-hook
 ordering, Agent/recovery package tests and vet are scoped evidence.
 Independent secure file publication, native inverse execution and the
 interrupted-switch fault matrix remain open.
+
+P0.4, invariants 1/2/4: DNS rollback journal removal now binds to the exact
+rolled-back checkpoint before unlink and confirms absence afterward.
+The v1 schema and phase order are unchanged. Shared removal fault tests,
+full Agent/recovery package tests and vet are scoped evidence. External
+owner rewrites between read and unlink, Agent-independent secure filesystem
+effects and native interruption trials remain open; P0.4 is not complete.
