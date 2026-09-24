@@ -14,47 +14,62 @@ import (
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
 
-// InspectFiles reads installed-format switch evidence from an established
-// private state root. It has no mutation authority and does not acquire locks;
-// callers that need a cross-file quiesced view hold the release and host locks.
+// SwitchEvidence pairs the canonical frozen journal with its exact ledger and
+// receipt observation from the same secured file reads. It is read-only data,
+// not authority to run an inverse. Callers must hold the required host locks,
+// recheck changing evidence and prove native state before any host effect.
+type SwitchEvidence struct {
+	Journal     dnsengineartifact.SwitchJournalV1
+	Observation EvidenceObservation
+}
+
+// InspectFiles preserves the read-only status API.
 func InspectFiles(stateRoot string, owner servicemutationledger.FileOwner, policy dnsengineartifact.JournalPolicy, now time.Time) (EvidenceObservation, bool, error) {
+	evidence, present, err := ReadSwitchEvidence(stateRoot, owner, policy, now)
+	return evidence.Observation, present, err
+}
+
+// ReadSwitchEvidence reads installed-format switch evidence from an established
+// private state root. It does not acquire locks or authorize mutation; callers
+// needing a cross-file quiesced view hold the release and host locks.
+func ReadSwitchEvidence(stateRoot string, owner servicemutationledger.FileOwner, policy dnsengineartifact.JournalPolicy, now time.Time) (SwitchEvidence, bool, error) {
 	if !filepath.IsAbs(stateRoot) || filepath.Clean(stateRoot) != stateRoot ||
 		!policy.RequireOwner || policy.StateUID != owner.UID || policy.StateGID != owner.GID ||
 		filepath.Dir(policy.StatePath) != stateRoot {
-		return EvidenceObservation{}, false, errors.New("DNS switch evidence root and established host policy disagree")
+		return SwitchEvidence{}, false, errors.New("DNS switch evidence root and established host policy disagree")
 	}
 	if err := policy.Validate(); err != nil {
-		return EvidenceObservation{}, false, err
+		return SwitchEvidence{}, false, err
 	}
 	journalRaw, exists, err := servicemutationledger.ReadFile(filepath.Join(stateRoot, "dns-engine-switch-journal.json"), dnsengineartifact.SwitchJournalLimit, owner)
 	if err != nil {
-		return EvidenceObservation{}, false, fmt.Errorf("read DNS switch journal: %w", err)
+		return SwitchEvidence{}, false, fmt.Errorf("read DNS switch journal: %w", err)
 	}
 	if !exists {
-		return EvidenceObservation{}, false, nil
+		return SwitchEvidence{}, false, nil
 	}
 	journal, err := policy.DecodeSwitchJournal(journalRaw)
 	if err != nil {
-		return EvidenceObservation{}, true, fmt.Errorf("decode DNS switch journal: %w", err)
+		return SwitchEvidence{}, true, fmt.Errorf("decode DNS switch journal: %w", err)
 	}
 	ledgerRaw, ledgerExists, err := servicemutationledger.ReadFile(filepath.Join(stateRoot, "service-mutations.json"), servicemutationledger.MaxSize, owner)
 	if err != nil {
-		return EvidenceObservation{}, true, fmt.Errorf("read DNS switch ledger: %w", err)
+		return SwitchEvidence{}, true, fmt.Errorf("read DNS switch ledger: %w", err)
 	}
 	if !ledgerExists {
-		return EvidenceObservation{}, true, errors.New("DNS switch ledger is absent while a journal remains")
+		return SwitchEvidence{}, true, errors.New("DNS switch ledger is absent while a journal remains")
 	}
 	ledger, err := servicemutationledger.Decode(ledgerRaw)
 	if err != nil {
-		return EvidenceObservation{}, true, fmt.Errorf("decode DNS switch ledger: %w", err)
+		return SwitchEvidence{}, true, fmt.Errorf("decode DNS switch ledger: %w", err)
 	}
 	observation, err := InspectEvidence(policy, journal, ledger, now)
 	if err != nil {
-		return EvidenceObservation{}, true, err
+		return SwitchEvidence{}, true, err
 	}
 	stateRaw, stateExists, err := servicemutationledger.ReadFile(policy.StatePath, 64<<10, owner)
 	if err != nil {
-		return EvidenceObservation{}, true, fmt.Errorf("read current DNS state receipt: %w", err)
+		return SwitchEvidence{}, true, fmt.Errorf("read current DNS state receipt: %w", err)
 	}
 	var state dnsengineartifact.StateV1
 	if !stateExists {
@@ -62,7 +77,7 @@ func InspectFiles(stateRoot string, owner servicemutationledger.FileOwner, polic
 	} else {
 		state, _, err = dnsengineartifact.DecodeStateDocument(stateRaw)
 		if err != nil {
-			return EvidenceObservation{}, true, fmt.Errorf("decode current DNS state receipt: %w", err)
+			return SwitchEvidence{}, true, fmt.Errorf("decode current DNS state receipt: %w", err)
 		}
 		observation.TargetReceipt = TargetReceiptDifferent
 		if dnsengineartifact.ExactSwitchTargetStateV1(state, journal) {
@@ -71,7 +86,7 @@ func InspectFiles(stateRoot string, owner servicemutationledger.FileOwner, polic
 	}
 	sourceMatches, err := dnsengineartifact.ProveFrozenSwitchSourceState(journal, state, stateExists)
 	if err != nil {
-		return EvidenceObservation{}, true, fmt.Errorf("compare frozen DNS source receipt: %w", err)
+		return SwitchEvidence{}, true, fmt.Errorf("compare frozen DNS source receipt: %w", err)
 	}
 	observation.SourceReceipt = SourceReceiptDifferent
 	if sourceMatches {
@@ -84,35 +99,35 @@ func InspectFiles(stateRoot string, owner servicemutationledger.FileOwner, polic
 	if journal.SourceEngine == "" {
 		observation.EvidenceSHA256 = switchEvidenceFingerprint(journalRaw, ledgerRaw, stateRaw, stateExists, nil, false)
 		observation.SourceOwnership = SourceOwnershipNotApplicable
-		return observation, true, nil
+		return SwitchEvidence{Journal: journal, Observation: observation}, true, nil
 	}
 	ownershipPath := filepath.Join(stateRoot, "dns-engine-ownership-"+string(journal.SourceEngine)+".json")
 	ownershipRaw, ownershipExists, err := servicemutationledger.ReadFile(ownershipPath, 64<<10, owner)
 	if err != nil {
-		return EvidenceObservation{}, true, fmt.Errorf("read DNS source ownership receipt: %w", err)
+		return SwitchEvidence{}, true, fmt.Errorf("read DNS source ownership receipt: %w", err)
 	}
 	if !ownershipExists {
 		observation.EvidenceSHA256 = switchEvidenceFingerprint(journalRaw, ledgerRaw, stateRaw, stateExists, nil, false)
 		observation.SourceOwnership = SourceOwnershipAbsent
-		return observation, true, nil
+		return SwitchEvidence{Journal: journal, Observation: observation}, true, nil
 	}
 	ownership, _, err := dnsengineartifact.DecodeOwnershipDocument(ownershipRaw)
 	if err != nil {
-		return EvidenceObservation{}, true, fmt.Errorf("decode DNS source ownership receipt: %w", err)
+		return SwitchEvidence{}, true, fmt.Errorf("decode DNS source ownership receipt: %w", err)
 	}
 	if ownership.Engine != journal.SourceEngine {
-		return EvidenceObservation{}, true, errors.New("DNS source ownership receipt engine differs from its path")
+		return SwitchEvidence{}, true, errors.New("DNS source ownership receipt engine differs from its path")
 	}
 	matches, err := dnsengineartifact.ProveFrozenSwitchSourceOwnership(journal, ownership, true)
 	if err != nil {
-		return EvidenceObservation{}, true, fmt.Errorf("compare frozen DNS source ownership receipt: %w", err)
+		return SwitchEvidence{}, true, fmt.Errorf("compare frozen DNS source ownership receipt: %w", err)
 	}
 	observation.EvidenceSHA256 = switchEvidenceFingerprint(journalRaw, ledgerRaw, stateRaw, stateExists, ownershipRaw, true)
 	observation.SourceOwnership = SourceOwnershipDifferent
 	if matches {
 		observation.SourceOwnership = SourceOwnershipExact
 	}
-	return observation, true, nil
+	return SwitchEvidence{Journal: journal, Observation: observation}, true, nil
 }
 
 // switchEvidenceFingerprint binds the exact installed evidence bytes observed

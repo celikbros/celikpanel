@@ -436,7 +436,8 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		defer locks.Close()
 	}
 	policy := installedDNSJournalPolicy(owner.GID)
-	observation, present, err := dnsenginerecovery.InspectFiles(root, owner, policy, time.Now().UTC())
+	evidence, present, err := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
+	observation := evidence.Observation
 	if err != nil {
 		fmt.Fprintln(diagnostic, "DNS switch evidence could not be verified. Preserve the private journal and ledger; the server owner must inspect their ownership, native DNS state and compatibility before the same operation resumes. "+err.Error())
 		return exitUnavailable
@@ -447,13 +448,15 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	}
 	units, unitErr := dnsenginerecovery.ProbeNativeUnits(context.Background(), observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
 	if len(args) == 2 && unitErr == nil {
-		again, stillPresent, readErr := dnsenginerecovery.InspectFiles(root, owner, policy, time.Now().UTC())
+		againEvidence, stillPresent, readErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
+		again := againEvidence.Observation
 		if readErr != nil || !stillPresent {
 			fmt.Fprintln(diagnostic, "DNS switch evidence changed or became unreadable during the quiesced observation. The server owner should inspect the existing operation and native DNS service, then retry after owner changes settle; no DNS operation was started.")
 			return exitUnavailable
 		}
 		againUnits, probeErr := dnsenginerecovery.ProbeNativeUnits(context.Background(), again.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
-		if probeErr != nil || !dnsenginerecovery.StableQuiescedObservation(observation, again, units, againUnits) {
+		if probeErr != nil || !reflect.DeepEqual(evidence.Journal, againEvidence.Journal) ||
+			!dnsenginerecovery.StableQuiescedObservation(observation, again, units, againUnits) {
 			fmt.Fprintln(diagnostic, "DNS switch evidence or native DNS unit properties changed during the quiesced observation. The server owner should inspect the existing operation and native DNS service, then retry after owner changes settle; no DNS operation was started.")
 			return exitUnavailable
 		}

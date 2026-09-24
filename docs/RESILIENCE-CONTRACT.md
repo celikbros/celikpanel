@@ -1075,3 +1075,14 @@ Process fault tests, exact orphan-exit startup, mismatched cancellation,
 Agent/recovery package tests and vet are scoped evidence. A complete
 Agent-independent native executor, owner-edit race proof and reboot/fault
 matrix remain open; P0.4 is not complete.
+
+P0.4, constitutional invariants 1/2/3: the independent DNS reader now returns
+the validated frozen journal paired with its exact accepted ledger and receipt
+observation from one bounded set of secured reads. A malformed ledger withholds
+the journal. Under the existing release and host locks, the quiesced status
+path compares that pair and native unit properties across two observations.
+No persisted schema or phase changed, no installed server was modified, and
+this read-only API supplies no inverse authority. Package tests and vet are
+scoped evidence; exact worker exclusion at execution time, owner-edit and
+loaded-native-state proof, an independent host-effects executor, and the
+interrupted-switch native matrix remain open.

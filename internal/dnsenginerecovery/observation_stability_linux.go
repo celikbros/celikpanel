@@ -15,3 +15,10 @@ func StableQuiescedObservation(before, after EvidenceObservation, beforeUnits, a
 		reflect.DeepEqual(before, after) &&
 		reflect.DeepEqual(beforeUnits, afterUnits)
 }
+
+// StableQuiescedSwitchEvidence also binds the decoded frozen journal to the
+// same two evidence observations. It remains an observation, not mutation authority.
+func StableQuiescedSwitchEvidence(before, after SwitchEvidence, beforeUnits, afterUnits []NativeUnitObservation) bool {
+	return reflect.DeepEqual(before.Journal, after.Journal) &&
+		StableQuiescedObservation(before.Observation, after.Observation, beforeUnits, afterUnits)
+}

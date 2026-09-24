@@ -37,3 +37,17 @@ func TestStableQuiescedObservationFailsClosedOnChangedEvidenceOrUnit(t *testing.
 		t.Fatal("missing exact-byte fingerprint accepted")
 	}
 }
+
+func TestStableQuiescedSwitchEvidenceBindsJournalAndObservation(t *testing.T) {
+	before := SwitchEvidence{Observation: EvidenceObservation{EvidenceSHA256: "verified"}}
+	before.Journal.Phase = "target-started"
+	units := []NativeUnitObservation{{Name: "named.service", LoadState: "loaded"}}
+	if !StableQuiescedSwitchEvidence(before, before, units, units) {
+		t.Fatal("stable paired evidence rejected")
+	}
+	changed := before
+	changed.Journal.Phase = "target-verified"
+	if StableQuiescedSwitchEvidence(before, changed, units, units) {
+		t.Fatal("changed frozen journal accepted despite unchanged observation")
+	}
+}

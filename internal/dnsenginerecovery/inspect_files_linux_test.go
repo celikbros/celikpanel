@@ -5,6 +5,7 @@ package dnsenginerecovery
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
@@ -37,6 +38,11 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 		t.Fatal(err)
 	}
 	got, present, err := InspectFiles(root, owner, policy, now)
+	paired, pairedPresent, pairedErr := ReadSwitchEvidence(root, owner, policy, now)
+	if pairedErr != nil || !pairedPresent || !reflect.DeepEqual(paired.Observation, got) ||
+		!reflect.DeepEqual(paired.Journal, journal) {
+		t.Fatalf("paired journal and observation diverged: present=%v err=%v", pairedPresent, pairedErr)
+	}
 	if got.EvidenceSHA256 == "" {
 		t.Fatal("missing installed evidence fingerprint")
 	}
@@ -138,6 +144,9 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 	}
 	if _, present, err := InspectFiles(root, owner, policy, now); err == nil || !present {
 		t.Fatalf("malformed ledger accepted: %v, %v", present, err)
+	}
+	if paired, present, err := ReadSwitchEvidence(root, owner, policy, now); err == nil || !present || !reflect.DeepEqual(paired, SwitchEvidence{}) {
+		t.Fatalf("malformed ledger returned a usable journal: %+v, %v, %v", paired, present, err)
 	}
 }
 func TestInspectFilesRejectsUnboundHostPolicy(t *testing.T) {
