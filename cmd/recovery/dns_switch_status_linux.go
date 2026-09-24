@@ -616,6 +616,8 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 	case dnsenginerecovery.EvidenceExpiredCancellation:
 		fmt.Fprintln(out, "The accepted lease expired and cancellation is recorded. The server owner should inspect the native DNS service and preserve both receipts. The same operation may resume only through a compatible recovery executor after host and worker checks.")
+	case dnsenginerecovery.EvidenceReleasedUndecided:
+		fmt.Fprintln(out, "The Agent released this exact interrupted DNS switch lease because host recovery could not decide it; the frozen journal remains. The server owner should inspect the native DNS authority and the recorded failure before resuming this same operation. This observation cannot authorize an inverse or a new switch.")
 	case dnsenginerecovery.EvidenceFinalized:
 		fmt.Fprintln(out, "The ledger records finalization while a journal remains. The server owner should inspect native DNS health and the retained journal; this observation alone does not authorize cleanup or a new switch.")
 	default:

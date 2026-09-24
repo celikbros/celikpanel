@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 )
 
@@ -97,10 +98,10 @@ func probeHostRecoveryReadiness() (hostRecoveryReadiness, error) {
 const (
 	// hostRecoveryReleasedUnsupportedCode: the host itself is the obstacle, and
 	// waiting was pointless.
-	hostRecoveryReleasedUnsupportedCode = "host_unsupported_after_restart"
+	hostRecoveryReleasedUnsupportedCode = dnsengineartifact.ReleasedUnsupportedHostCode
 	// hostRecoveryReleasedWindowCode: the host never finished starting inside
 	// the window the recovery is allowed to wait.
-	hostRecoveryReleasedWindowCode = "host_not_ready_within_recovery_window"
+	hostRecoveryReleasedWindowCode = dnsengineartifact.ReleasedHostWindowCode
 )
 
 // What releasing the ledger does NOT mean, said out loud. The ledger's lease is
@@ -119,13 +120,6 @@ const hostRecoveryUnsupportedMessage = "The agent restarted after an interrupted
 const hostRecoveryWindowMessage = "The agent restarted after an interrupted mutation and the host had not finished starting when the recovery window closed, " +
 	"so the mutation could not be decided. The ledger was released so the rest of the host stays usable. " +
 	hostRecoveryResidueSentence
-
-// releasedUndecidedHostRecoveryCode reports whether a ledger error code is one
-// of the two this file writes when it releases an undecided lease.
-func releasedUndecidedHostRecoveryCode(code string) bool {
-	return code == hostRecoveryReleasedUnsupportedCode ||
-		code == hostRecoveryReleasedWindowCode
-}
 
 // startupRecoveryNeedsTheHostLocked reports whether this reconciliation is
 // going to read the host at all. A ledger with nothing active and no durable
@@ -394,11 +388,7 @@ func (m *serviceMutationManager) recoverReleasedUndecidedDNSEngineSwitchLocked(
 		return false, nil
 	}
 	job := m.ledger.Jobs[journal.MutationRequestID]
-	if job == nil || job.Kind != "dns_engine_switch" ||
-		job.RequestID != journal.MutationRequestID ||
-		job.OwnerID != journal.MutationOwnerID ||
-		job.Status != serviceMutationStatusFailed ||
-		!releasedUndecidedHostRecoveryCode(job.ErrorCode) {
+	if job == nil || !(dnsengineartifact.SwitchIdentity{RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID, Target: journal.TargetEngine, Qualifier: journal.ManifestQualifier}).ReleasedUndecidedJob(m.ledger) {
 		return false, nil
 	}
 	// The host was already proved readable by the probe that let this

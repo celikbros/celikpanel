@@ -1086,3 +1086,14 @@ this read-only API supplies no inverse authority. Package tests and vet are
 scoped evidence; exact worker exclusion at execution time, owner-edit and
 loaded-native-state proof, an independent host-effects executor, and the
 interrupted-switch native matrix remain open.
+
+P0.4, constitutional invariants 1/2/3: an interrupted DNS switch whose boot
+recovery deliberately released an undecidable lease now has one exact shared
+terminal-job predicate. Agent replay and the independent status reader use the
+same identity, phase, reason, timestamp and no-worker checks. The reader reports
+this retained journal as a released interruption instead of treating it as
+foreign evidence; unrelated terminal failures still fail closed. No persisted
+schema, write sequence, installed panel or native DNS service changed. Full
+affected package tests, adversarial classification tests and vet are scoped
+evidence. The independent inverse executor, worker/native/owner rechecks at
+effect time and interrupted-switch native matrix remain open.

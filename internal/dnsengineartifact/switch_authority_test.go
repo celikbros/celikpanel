@@ -168,3 +168,36 @@ func TestSwitchAuthorityOrphanedWorkerIsExactHistoricalWait(t *testing.T) {
 		})
 	}
 }
+
+func TestSwitchAuthorityReleasedUndecidedJobIsExactHistoricalFailure(t *testing.T) {
+	id, job := switchAuthorityFixture(t)
+	job.Status = servicemutationledger.StatusFailed
+	job.Phase = "interrupted"
+	job.ErrorCode = ReleasedHostWindowCode
+	job.ErrorMessage = "Host startup did not complete; the switch journal remains."
+	job.FinishedAt = job.UpdatedAt
+	job.LeaseExpiresAt = time.Time{}
+	ledger := servicemutationledger.Ledger{Version: servicemutationledger.Version, Jobs: map[string]*transport.ServiceMutationJob{id.RequestID: &job}}
+	if !id.ReleasedUndecidedJob(ledger) {
+		t.Fatal("exact released interruption refused")
+	}
+	for name, mutate := range map[string]func(*servicemutationledger.Ledger){
+		"foreign owner":     func(l *servicemutationledger.Ledger) { l.Jobs[id.RequestID].OwnerID = strings.Repeat("f", 32) },
+		"foreign target":    func(l *servicemutationledger.Ledger) { l.Jobs[id.RequestID].Target = "pdns" },
+		"foreign reason":    func(l *servicemutationledger.Ledger) { l.Jobs[id.RequestID].ErrorCode = "other" },
+		"empty reason":      func(l *servicemutationledger.Ledger) { l.Jobs[id.RequestID].ErrorMessage = "" },
+		"different phase":   func(l *servicemutationledger.Ledger) { l.Jobs[id.RequestID].Phase = "completed" },
+		"live worker":       func(l *servicemutationledger.Ledger) { l.Jobs[id.RequestID].WorkerPID = 42 },
+		"active request":    func(l *servicemutationledger.Ledger) { l.ActiveRequestID = id.RequestID },
+		"other corrupt job": func(l *servicemutationledger.Ledger) { l.Jobs[strings.Repeat("f", 32)] = nil },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changedJob := job
+			changed := servicemutationledger.Ledger{Version: servicemutationledger.Version, Jobs: map[string]*transport.ServiceMutationJob{id.RequestID: &changedJob}}
+			mutate(&changed)
+			if id.ReleasedUndecidedJob(changed) {
+				t.Fatal("unrelated or contradictory terminal evidence accepted")
+			}
+		})
+	}
+}

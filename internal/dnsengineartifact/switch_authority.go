@@ -14,6 +14,9 @@ import (
 )
 
 const (
+	ReleasedUnsupportedHostCode = "host_unsupported_after_restart"
+	ReleasedHostWindowCode      = "host_not_ready_within_recovery_window"
+
 	SwitchPublishedPhasePrefix = "commit/dns-engine-switch/v1/published/"
 	SwitchFinalizedPhasePrefix = "commit/dns-engine-switch/v2/finalized/"
 )
@@ -202,4 +205,24 @@ func (id SwitchIdentity) OrphanedWorkerJob(job *transport.ServiceMutationJob) bo
 	}
 	parsed, err := strconv.ParseUint(started, 10, 64)
 	return err == nil && parsed > 0 && strconv.FormatUint(parsed, 10) == started
+}
+
+// ReleasedUndecidedJob identifies the exact terminal failure written when boot
+// recovery gives up an undecidable host lease but preserves the switch journal.
+// It is historical evidence, not permission to execute an inverse.
+func (id SwitchIdentity) ReleasedUndecidedJob(ledger servicemutationledger.Ledger) bool {
+	if id.Validate() != nil || servicemutationledger.Validate(&ledger) != nil || ledger.ActiveRequestID != "" {
+		return false
+	}
+	job := ledger.Jobs[id.RequestID]
+	return job != nil && job.RequestID == id.RequestID && job.OwnerID == id.OwnerID &&
+		job.Kind == "dns_engine_switch" && job.Target == string(id.Target) &&
+		job.PackageName == id.Qualifier &&
+		job.Status == servicemutationledger.StatusFailed && job.Phase == "interrupted" &&
+		(job.ErrorCode == ReleasedUnsupportedHostCode || job.ErrorCode == ReleasedHostWindowCode) &&
+		strings.TrimSpace(job.ErrorMessage) != "" && job.Attempt > 0 &&
+		!job.StartedAt.IsZero() && !job.UpdatedAt.IsZero() && !job.DeadlineAt.IsZero() &&
+		job.UpdatedAt.Equal(job.FinishedAt) && !job.UpdatedAt.Before(job.StartedAt) &&
+		job.DeadlineAt.After(job.StartedAt) && job.LeaseExpiresAt.IsZero() &&
+		job.WorkerPID == 0 && job.WorkerStarted == "" && job.WorkerCommand == ""
 }

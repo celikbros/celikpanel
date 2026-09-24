@@ -145,3 +145,23 @@ func TestInspectEvidenceRecognizesExactOrphanedDNSWorker(t *testing.T) {
 		t.Fatalf("foreign orphan wait accepted: %+v", got)
 	}
 }
+
+func TestInspectEvidenceRecognizesReleasedUndecidedSwitch(t *testing.T) {
+	policy, journal, ledger, now := inspectionFixture(t)
+	job := ledger.Jobs[journal.MutationRequestID]
+	ledger.ActiveRequestID = ""
+	job.Status = servicemutationledger.StatusFailed
+	job.Phase = "interrupted"
+	job.ErrorCode = dnsengineartifact.ReleasedUnsupportedHostCode
+	job.ErrorMessage = "Host could not be inspected; switch journal remains."
+	job.FinishedAt = job.UpdatedAt
+	job.LeaseExpiresAt = time.Time{}
+	observed, err := InspectEvidence(policy, journal, ledger, now)
+	if err != nil || observed.Status != EvidenceReleasedUndecided {
+		t.Fatalf("released switch not observable: %+v, %v", observed, err)
+	}
+	job.ErrorCode = "other_failure"
+	if observed, err := InspectEvidence(policy, journal, ledger, now); err == nil {
+		t.Fatalf("unrelated terminal failure accepted: %+v", observed)
+	}
+}
