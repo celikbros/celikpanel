@@ -74,8 +74,9 @@ func recordedWorkerGone(
 	if pid <= 0 || started == "" {
 		return false, errors.New("recorded worker identity is incomplete")
 	}
-	if _, err := strconv.ParseUint(started, 10, 64); err != nil {
-		return false, fmt.Errorf("recorded worker start identity is invalid: %w", err)
+	parsed, err := strconv.ParseUint(started, 10, 64)
+	if err != nil || parsed == 0 || strconv.FormatUint(parsed, 10) != started {
+		return false, errors.New("recorded worker start identity is not canonical")
 	}
 	if err := verifyProcFS(); err != nil {
 		return false, err

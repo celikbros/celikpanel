@@ -1059,3 +1059,19 @@ Unknown or changing state withholds database and later writes and retains
 the journal. This point-in-time proof cannot exclude a foreign writer or
 future owner start; independent recovery and native fault acceptance
 remain open.
+
+P0.4, constitutional invariants 1/2/3: Agent DNS switch startup no longer
+treats an unreadable registered worker as an exited worker. The common
+process-identity proof requires a kernel procfs, a canonical recorded start
+token, and a missing or replaced PID; unknown state retains the host lock
+and journal without running an inverse. The independent status reader uses
+the same point-in-time distinction. Agent recovery now also checks the
+shared exact accepted ledger identity before native reconciliation and
+across committed finalization. The historical Agent orphan-worker wait is
+recognized only with its exact DNS operation, worker, phase and reason;
+foreign or contradictory evidence stops before native effects. No
+journal/ledger/receipt schema, phase producer or installed server was changed.
+Process fault tests, exact orphan-exit startup, mismatched cancellation,
+Agent/recovery package tests and vet are scoped evidence. A complete
+Agent-independent native executor, owner-edit race proof and reboot/fault
+matrix remain open; P0.4 is not complete.

@@ -39,11 +39,13 @@ func TestRecordedWorkerGoneRequiresKernelProof(t *testing.T) {
 	if gone, err := RecordedWorkerGone(pid, token); err != nil || gone {
 		t.Fatalf("live worker was excluded: gone=%v err=%v", gone, err)
 	}
-	if gone, err := RecordedWorkerGone(pid, "0"); err != nil || !gone {
+	if gone, err := RecordedWorkerGone(pid, "1"); err != nil || !gone {
 		t.Fatalf("reused PID was not distinguished: gone=%v err=%v", gone, err)
 	}
-	if gone, err := RecordedWorkerGone(pid, "invalid"); err == nil || gone {
-		t.Fatalf("invalid start identity admitted: gone=%v err=%v", gone, err)
+	for _, invalid := range []string{"invalid", "000123", "0"} {
+		if gone, err := RecordedWorkerGone(pid, invalid); err == nil || gone {
+			t.Fatalf("invalid start identity %q admitted: gone=%v err=%v", invalid, gone, err)
+		}
 	}
 	if gone, err := RecordedWorkerGone(0, token); err == nil || gone {
 		t.Fatalf("unregistered worker admitted: gone=%v err=%v", gone, err)

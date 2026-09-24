@@ -200,6 +200,6 @@ func (id SwitchIdentity) OrphanedWorkerJob(job *transport.ServiceMutationJob) bo
 		len(command) > 64 || filepath.Base(command) != command {
 		return false
 	}
-	_, err := strconv.ParseUint(started, 10, 64)
-	return err == nil
+	parsed, err := strconv.ParseUint(started, 10, 64)
+	return err == nil && parsed > 0 && strconv.FormatUint(parsed, 10) == started
 }

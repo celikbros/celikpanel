@@ -783,3 +783,26 @@ a later owner restart, or establish independent recovery. No persisted
 schema or installed host was changed. Failed-stop, failed-readback, live
 PID, unit drift and ordered inverse tests are component evidence only;
 native interrupted-switch acceptance remains open.
+
+### Exact worker exclusion and orphaned switch authority (2026-09-25)
+
+A registered DNS switch worker now has three outcomes during Agent recovery:
+the exact process still lives, the kernel procfs proves that PID is absent or
+reused, or its identity is unknown. Unknown retains the operation's host lock
+and frozen journal and runs no native inverse. The independent read-only
+status command reports the same distinction without granting recovery
+authority. The procfs check is repeated if the process entry disappears
+during observation.
+
+Agent and independent evidence classification now share the exact accepted
+switch identity, including the historical waiting_for_orphaned_process
+record that Agent writes for its still-live worker. Only the matching request,
+owner, target, qualifier, worker identity, phase and reason are accepted.
+Agent checks that authority before native reconciliation and before publishing
+a recovered committed switch; an inconsistent cancellation is rejected before
+native effects. No persisted schema, installer or live server changed.
+
+Tests cover unreadable procfs/process state, live and exited workers, changed
+procfs, exact orphan completion and foreign cancellation evidence. These are
+component and local startup tests. They do not establish owner-edit exclusion,
+an Agent-independent native inverse or the interrupted-switch fault matrix.
