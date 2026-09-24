@@ -2302,3 +2302,39 @@ func TestVerifyPDNSPublicListenersRequiresPDNSTCPAndUDP(t *testing.T) {
 		t.Fatal("UDP-only PowerDNS listener set was accepted")
 	}
 }
+
+func TestDNSEngineSwitchRecoveryRetainsHostLockWhenRecordedWorkerIsUnverifiable(t *testing.T) {
+	request := canonicalSwitchRequest(t)
+	manager, _ := newMutationTestManager(t)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	defer releasePoisonedFirewallApplyTestManager(manager)
+	backend := &fakeDNSEngineBackend{}
+	useFakeDNSEngineBackend(t, backend)
+
+	manager.mu.Lock()
+	job := manager.ledger.Jobs[testMutationRequestID]
+	if manager.active == nil || job == nil {
+		manager.mu.Unlock()
+		t.Fatal("accepted operation lost its runtime or job")
+	}
+	job.WorkerPID = os.Getpid()
+	job.WorkerStarted = "unreadable-token"
+	job.WorkerCommand = "agent"
+	handled, err := manager.recoverPersistedDNSEngineSwitchLocked(job, manager.active.lock)
+	poisoned, retained := manager.poisoned, manager.poisonLock
+	manager.mu.Unlock()
+	if !handled || err == nil || poisoned == nil || retained == nil {
+		t.Fatalf("unknown worker was not retained: handled=%v err=%v poisoned=%v lock=%v", handled, err, poisoned, retained)
+	}
+	if backend.recoverCalls != 0 {
+		t.Fatalf("native recovery ran after unknown worker: %d", backend.recoverCalls)
+	}
+	if lock, lockErr := acquireServiceMutationFileLock(manager.lockPath); !errors.Is(lockErr, errServiceMutationHostBusy) {
+		if lock != nil {
+			_ = lock.Close()
+		}
+		t.Fatalf("unknown worker released host exclusion: %v", lockErr)
+	}
+}
