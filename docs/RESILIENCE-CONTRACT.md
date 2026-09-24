@@ -1108,3 +1108,11 @@ The independent DNS status command now prints the exact operation state and
 owner action before lengthy BIND/PowerDNS observations. If a later native
 probe fails, the owner still sees the retained operation and its next step.
 This changes output order only; the observer remains read-only.
+
+P0.4, invariants 2/4: DNS switch journal checkpoint encoding, uncertain-write
+readback and error preservation now live in the shared recovery package;
+the existing Agent producer calls that contract with its secure host adapter.
+No v1 schema, phase transition or installed state changed. Fault-hook
+ordering, Agent/recovery package tests and vet are scoped evidence.
+Independent secure file publication, native inverse execution and the
+interrupted-switch fault matrix remain open.

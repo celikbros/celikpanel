@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -210,52 +211,22 @@ func writeDNSEngineSwitchJournalWithOps(
 	read func() (dnsEngineSwitchJournal, bool, error),
 	faultHook func(string, dnsEngineSwitchJournal) error,
 ) error {
-	if persist == nil || read == nil {
-		return errors.New("DNS engine switch journal writer is incomplete")
-	}
-	encoded, err := encodeDNSEngineSwitchJournal(journal)
-	if err != nil {
-		return err
-	}
+	ops := dnsenginerecovery.JournalCheckpointOps{Persist: persist, Read: read}
 	if faultHook != nil {
-		if err := faultHook(dnsEngineSwitchJournalFaultBeforeWrite, journal); err != nil {
-			return fmt.Errorf(
-				"injected failure before DNS engine switch journal write for phase %q: %w",
-				journal.Phase, err,
-			)
-		}
-	}
-	if err := persist(encoded); err != nil {
-		verified, exists, readErr := read()
-		if readErr == nil && exists && reflect.DeepEqual(verified, journal) {
-			if faultHook != nil {
-				if hookErr := faultHook(dnsEngineSwitchJournalFaultAfterWrite, journal); hookErr != nil {
-					return fmt.Errorf(
-						"injected failure after DNS engine switch journal write for phase %q: %w",
-						journal.Phase, hookErr,
-					)
-				}
+		ops.BeforeWrite = func(j dnsengineartifact.SwitchJournalV1) error {
+			if err := faultHook(dnsEngineSwitchJournalFaultBeforeWrite, j); err != nil {
+				return fmt.Errorf("injected failure before DNS engine switch journal write for phase %q: %w", j.Phase, err)
 			}
 			return nil
 		}
-		return errors.Join(err, readErr)
-	}
-	if faultHook != nil {
-		if err := faultHook(dnsEngineSwitchJournalFaultAfterWrite, journal); err != nil {
-			return fmt.Errorf(
-				"injected failure after DNS engine switch journal write for phase %q: %w",
-				journal.Phase, err,
-			)
+		ops.AfterWrite = func(j dnsengineartifact.SwitchJournalV1) error {
+			if err := faultHook(dnsEngineSwitchJournalFaultAfterWrite, j); err != nil {
+				return fmt.Errorf("injected failure after DNS engine switch journal write for phase %q: %w", j.Phase, err)
+			}
+			return nil
 		}
 	}
-	verified, exists, err := read()
-	if err != nil || !exists || !reflect.DeepEqual(verified, journal) {
-		if err == nil {
-			err = errors.New("DNS engine switch journal readback mismatch")
-		}
-		return err
-	}
-	return nil
+	return dnsenginerecovery.WriteJournalCheckpoint(dnsJournalPolicy(), journal, ops)
 }
 
 func writeDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {

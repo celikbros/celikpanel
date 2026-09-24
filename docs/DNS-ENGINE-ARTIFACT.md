@@ -806,3 +806,16 @@ Tests cover unreadable procfs/process state, live and exited workers, changed
 procfs, exact orphan completion and foreign cancellation evidence. These are
 component and local startup tests. They do not establish owner-edit exclusion,
 an Agent-independent native inverse or the interrupted-switch fault matrix.
+
+### Shared durable journal checkpoint protocol (2026-09-25)
+
+P0.4, constitutional invariants 2/4: the Agent and a future independent
+executor use the same bounded v1 switch-journal checkpoint protocol.
+It validates and encodes the frozen journal, brackets the existing fault
+hooks, and requires exact secure readback. If publication reports an error
+after a rename, exact readback accepts that single checkpoint; absent or
+different bytes retain the error and the operation stays unresolved.
+The Agent still supplies the secure filesystem adapter and host lock.
+This extraction adds no independent native effects, lock acquisition,
+migration or new authority. Existing fault ordering and full Agent tests
+passed; native interrupted-switch acceptance remains open.
