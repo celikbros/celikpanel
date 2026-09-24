@@ -461,6 +461,37 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			return exitUnavailable
 		}
 	}
+	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
+	switch observation.Status {
+	case dnsenginerecovery.EvidenceLeaseExpired:
+		fmt.Fprintln(out, "The active ledger lease has expired. The server owner should inspect the original operation and native DNS service; do not start another switch. A compatible recovery executor must establish worker liveness and host ownership before the same operation can resume.")
+	case dnsenginerecovery.EvidenceWorkerRecorded, dnsenginerecovery.EvidenceOrphanedWorker:
+		gone, probeErr := processidentity.RecordedWorkerGone(observation.WorkerPID, observation.WorkerStarted)
+		switch {
+		case probeErr != nil:
+			fmt.Fprintln(out, "A worker is recorded, but its process identity could not be inspected. The server owner should check the same operation and native DNS service. Do not start another switch; recovery must prove worker and host state under the lock.")
+		case !gone:
+			fmt.Fprintln(out, "The recorded worker process matched at this instant. The server owner should follow the same operation in CelikPanel. Do not start another switch; the worker may change after this observation.")
+		default:
+			fmt.Fprintln(out, "No process matching the recorded worker was observed at this instant. The server owner should inspect the same operation and native DNS service. A compatible recovery executor must recheck the worker and host locks before the operation resumes; do not start another switch.")
+		}
+	case dnsenginerecovery.EvidenceExpiredCancellation:
+		fmt.Fprintln(out, "The accepted lease expired and cancellation is recorded. The server owner should inspect the native DNS service and preserve both receipts. The same operation may resume only through a compatible recovery executor after host and worker checks.")
+	case dnsenginerecovery.EvidenceReleasedUndecided:
+		switch observation.ReleaseReason {
+		case dnsengineartifact.ReleasedUnsupportedHostCode:
+			fmt.Fprintln(out, "The Agent released this interrupted DNS switch lease because the host could not be inspected after restart. The server owner should inspect the host profile and native DNS authority, then retry observation of this same operation after the host is readable. The frozen journal remains; no inverse or new switch is authorized.")
+		case dnsengineartifact.ReleasedHostWindowCode:
+			fmt.Fprintln(out, "The Agent released this interrupted DNS switch lease because host startup did not finish within its recovery window. The server owner should confirm startup and native DNS authority, then retry observation of this same operation. The frozen journal remains; no inverse or new switch is authorized.")
+		default:
+			fmt.Fprintln(diagnostic, "The released DNS switch has an unknown reason. Preserve its journal and ledger for owner review; no inverse or new switch is authorized.")
+			return exitUnavailable
+		}
+	case dnsenginerecovery.EvidenceFinalized:
+		fmt.Fprintln(out, "The ledger records finalization while a journal remains. The server owner should inspect native DNS health and the retained journal; this observation alone does not authorize cleanup or a new switch.")
+	default:
+		fmt.Fprintln(out, "The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.")
+	}
 	if observation.SourceEngine == "bind" || observation.TargetEngine == "bind" {
 		var selectedReceipt binddns.Receipt
 		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
@@ -557,7 +588,6 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 		fmt.Fprintln(out, "The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. Database content, zone answers, loaded config and recovery authority remain unproved.")
 	}
-	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	fmt.Fprintf(out, "Frozen native inverse shape: %s. This classification does not prove worker exclusion, owner authority or safe recovery execution.\n", observation.InverseKind)
 	switch observation.TargetReceipt {
 	case dnsenginerecovery.TargetReceiptExact:
@@ -600,36 +630,6 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		} else {
 			fmt.Fprintln(out, "Release and host mutation locks were held, but native unit state could not be confirmed. No stable DNS observation or recovery authority was established.")
 		}
-	}
-	switch observation.Status {
-	case dnsenginerecovery.EvidenceLeaseExpired:
-		fmt.Fprintln(out, "The active ledger lease has expired. The server owner should inspect the original operation and native DNS service; do not start another switch. A compatible recovery executor must establish worker liveness and host ownership before the same operation can resume.")
-	case dnsenginerecovery.EvidenceWorkerRecorded, dnsenginerecovery.EvidenceOrphanedWorker:
-		gone, probeErr := processidentity.RecordedWorkerGone(observation.WorkerPID, observation.WorkerStarted)
-		switch {
-		case probeErr != nil:
-			fmt.Fprintln(out, "A worker is recorded, but its process identity could not be inspected. The server owner should check the same operation and native DNS service. Do not start another switch; recovery must prove worker and host state under the lock.")
-		case !gone:
-			fmt.Fprintln(out, "The recorded worker process matched at this instant. The server owner should follow the same operation in CelikPanel. Do not start another switch; the worker may change after this observation.")
-		default:
-			fmt.Fprintln(out, "No process matching the recorded worker was observed at this instant. The server owner should inspect the same operation and native DNS service. A compatible recovery executor must recheck the worker and host locks before the operation resumes; do not start another switch.")
-		}
-	case dnsenginerecovery.EvidenceExpiredCancellation:
-		fmt.Fprintln(out, "The accepted lease expired and cancellation is recorded. The server owner should inspect the native DNS service and preserve both receipts. The same operation may resume only through a compatible recovery executor after host and worker checks.")
-	case dnsenginerecovery.EvidenceReleasedUndecided:
-		switch observation.ReleaseReason {
-		case dnsengineartifact.ReleasedUnsupportedHostCode:
-			fmt.Fprintln(out, "The Agent released this interrupted DNS switch lease because the host could not be inspected after restart. The server owner should inspect the host profile and native DNS authority, then retry observation of this same operation after the host is readable. The frozen journal remains; no inverse or new switch is authorized.")
-		case dnsengineartifact.ReleasedHostWindowCode:
-			fmt.Fprintln(out, "The Agent released this interrupted DNS switch lease because host startup did not finish within its recovery window. The server owner should confirm startup and native DNS authority, then retry observation of this same operation. The frozen journal remains; no inverse or new switch is authorized.")
-		default:
-			fmt.Fprintln(diagnostic, "The released DNS switch has an unknown reason. Preserve its journal and ledger for owner review; no inverse or new switch is authorized.")
-			return exitUnavailable
-		}
-	case dnsenginerecovery.EvidenceFinalized:
-		fmt.Fprintln(out, "The ledger records finalization while a journal remains. The server owner should inspect native DNS health and the retained journal; this observation alone does not authorize cleanup or a new switch.")
-	default:
-		fmt.Fprintln(out, "The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.")
 	}
 	if unitErr != nil {
 		return exitUnavailable

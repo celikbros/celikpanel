@@ -1103,3 +1103,8 @@ validated reason code. Owner guidance distinguishes an unsupported or unreadable
 host from a startup window timeout and names the next native inspection.
 No error message, credential or arbitrary ledger text is displayed. This is
 diagnostic guidance, not authority to resume or mutate DNS.
+
+The independent DNS status command now prints the exact operation state and
+owner action before lengthy BIND/PowerDNS observations. If a later native
+probe fails, the owner still sees the retained operation and its next step.
+This changes output order only; the observer remains read-only.
