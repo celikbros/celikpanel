@@ -736,3 +736,35 @@ proofs still govern Agent rollback. Historical Alpha81 fixture, contradictory
 unit-preimage and Agent/recovery tests cover this decision boundary.
 Independent native inverse execution and interrupted-switch fault acceptance
 remain open.
+### PowerDNS inverse stops at the first failed native step (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: the PowerDNS switch inverse now uses
+one shared ordered recovery sequence. It requires the target stop to succeed
+before touching the live SQLite database, then restores the frozen database,
+configuration, state receipt, target unit and source unit in order. A failed or
+interrupted step withholds all later effects and returns its exact cause; the
+existing rolling-back journal stays for the same operation's recovery. The
+Agent still supplies native effects, owner-aware preimage checks and final
+source verification.
+
+This changes no journal, receipt, ledger or phase schema and adds no
+independent mutation authority. An Agent-independent host adapter, native
+crash/reboot trials and full interrupted-switch fault matrix remain open.
+Injected failures at every boundary, cancellation after stop and Agent
+tests are the scoped evidence. They do not prove that a real failed
+database or unit restore will automatically finish after reboot.
+### Managed BIND inverse stops at a failed predecessor (2026-09-24)
+
+The managed BIND activation inverse now uses a separate shared ordered
+sequence: restore frozen target-unit state, owner-aware configuration,
+state receipt and source-unit state. A failed or interrupted predecessor
+withholds later effects and retains the same rolling-back journal. This
+does not apply to takeover of a running unmanaged owner BIND; that path
+keeps its existing restore-and-reload sequence. The target-unit preimage
+can itself be active in a managed reconfiguration, so this change proves
+ordering and failure isolation, not uninterrupted DNS service.
+
+No persisted schema, producer transition or installed host changes.
+Injected failure at every step and the Agent suite cover this component
+boundary. An independent native adapter, owner-edit and reboot fault
+matrix, and complete P0.4 acceptance remain open.

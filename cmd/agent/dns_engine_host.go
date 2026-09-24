@@ -16,6 +16,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/dnslistener"
 	"github.com/alicelik/celikpanel/internal/dnsunitidentity"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
@@ -2596,19 +2597,13 @@ func rollbackBINDActivationWithOps(
 	ctx context.Context,
 	ops bindRollbackActivationOps,
 ) error {
-	if ctx == nil || ops.restoreTarget == nil ||
-		ops.restoreConfigs == nil || ops.restoreState == nil ||
-		ops.restoreSource == nil {
-		return errors.New("invalid BIND activation rollback operations")
-	}
-	return errors.Join(
-		ops.restoreTarget(ctx),
-		ops.restoreConfigs(),
-		ops.restoreState(),
-		ops.restoreSource(ctx),
-	)
+	return dnsenginerecovery.RollbackBINDActivation(ctx, dnsenginerecovery.BINDActivationRollbackOps{
+		RestoreTarget:  ops.restoreTarget,
+		RestoreConfigs: ops.restoreConfigs,
+		RestoreState:   ops.restoreState,
+		RestoreSource:  ops.restoreSource,
+	})
 }
-
 func verifyOnlyBINDActive(
 	ctx context.Context,
 	profile hostplatform.Profile,

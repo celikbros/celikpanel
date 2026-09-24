@@ -1037,3 +1037,18 @@ remains read-only and does not admit or execute an inverse. Fixture and
 Agent/recovery tests cover this decision boundary. Worker exclusion, owner
 edit and native-state proof, an Agent-independent inverse executor and the
 interrupted-switch fault matrix remain open; P0.4 is not complete.
+P0.4, constitutional invariants 1/2/3: the PowerDNS switch rollback's
+native effects now run through a shared fail-stop sequence. A failed stop
+cannot be followed by live SQLite restoration; a failed or interrupted
+predecessor withholds later effects and leaves the same rolling-back journal
+for recovery. No journal/receipt/ledger schema or phase transition changed.
+Injected step-failure and cancellation tests plus the Agent suite verify
+this component boundary. Native crash/reboot continuation, independent
+host effects, owner-edit matrix and full P0.4 acceptance remain open.
+The same P0.4 fail-stop boundary now covers managed BIND activation
+rollback: a failed target-unit restore withholds configuration and state
+writes, and any later failure withholds its successors. Running unmanaged
+owner-BIND adoption retains its non-stopping inverse. The BIND target
+preimage may be active for managed reconfiguration; native continuity
+is not established by the ordered component test. No persisted schema
+changed. Independent native inverse and interruption trials remain open.

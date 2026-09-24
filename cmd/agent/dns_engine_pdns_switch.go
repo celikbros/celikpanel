@@ -19,6 +19,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -1429,20 +1430,14 @@ func rollbackPDNSSwitchWithOps(
 	ctx context.Context,
 	ops pdnsSwitchRollbackOps,
 ) error {
-	if ctx == nil || ops.stopTarget == nil ||
-		ops.restorePDNSDatabaseSnapshot == nil || ops.restoreConfigs == nil ||
-		ops.restoreState == nil || ops.restoreTarget == nil ||
-		ops.restoreSource == nil {
-		return errors.New("invalid PowerDNS switch rollback operations")
-	}
-	return errors.Join(
-		ops.stopTarget(ctx),
-		ops.restorePDNSDatabaseSnapshot(),
-		ops.restoreConfigs(),
-		ops.restoreState(),
-		ops.restoreTarget(ctx),
-		ops.restoreSource(ctx),
-	)
+	return dnsenginerecovery.RollbackPDNSSwitch(ctx, dnsenginerecovery.PDNSSwitchRollbackOps{
+		StopTarget:      ops.stopTarget,
+		RestoreDatabase: ops.restorePDNSDatabaseSnapshot,
+		RestoreConfigs:  ops.restoreConfigs,
+		RestoreState:    ops.restoreState,
+		RestoreTarget:   ops.restoreTarget,
+		RestoreSource:   ops.restoreSource,
+	})
 }
 
 func switchToPDNS(
