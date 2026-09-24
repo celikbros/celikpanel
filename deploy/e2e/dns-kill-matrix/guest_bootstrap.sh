@@ -468,15 +468,15 @@ install_bundle() {
 
     # The production panel refuses an empty user database. Create one
     # disposable administrator through the supported CLI. The password is
-    # derived in-memory from the fixture identity, sent only on stdin, and
-    # neither printed nor stored by this harness.
+    # derived in-memory from the fixture identity, sent only on the strict
+    # inherited-stdin JSON path, and neither printed nor stored by this harness.
     local admin_password
     admin_password="S1-$(printf '%s\0fixture-admin' "$cell_id" | sha256sum | cut -c1-32)x"
-    printf 's1-admin\ns1-admin@fixture.invalid\n%s\n' "$admin_password" | \
+    printf '{"username":"s1-admin","email":"s1-admin@fixture.invalid","password":"%s"}\n' "$admin_password" | \
         runuser -u celikpanel -- env \
             CELIKPANEL_DATA_DIR=/var/lib/celikpanel \
             CELIKPANEL_WEB_DIR=/opt/celikpanel/web \
-            /opt/celikpanel/bin/panel --create-admin >/dev/null
+            /opt/celikpanel/bin/panel --create-admin --admin-credentials-file=- >/dev/null
     unset admin_password
     [[ $(runuser -u celikpanel -- env CELIKPANEL_DATA_DIR=/var/lib/celikpanel \
         /opt/celikpanel/bin/panel --count-users) == 1 ]] \

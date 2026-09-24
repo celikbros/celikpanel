@@ -393,6 +393,15 @@ def load_plan(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any],
     return plan, cell, node
 
 
+def copy_guest_script(source: Path, destination: Path) -> None:
+    """Make Linux shebangs deterministic even from a CRLF checkout."""
+    raw = source.read_bytes()
+    normalized = raw.replace(b"\r\n", b"\n")
+    if b"\r" in normalized or not normalized.startswith(b"#!"):
+        raise BootstrapError(f"guest script has unsupported line endings or shebang: {source.name}")
+    destination.write_bytes(normalized)
+
+
 def bundle_files(args: argparse.Namespace, output: Path) -> tuple[list[Path], str]:
     sources = {
         "agent": regular_file(args.agent, "untagged agent", executable=True),
@@ -417,7 +426,10 @@ def bundle_files(args: argparse.Namespace, output: Path) -> tuple[list[Path], st
     staged: list[Path] = []
     for name, source in sources.items():
         destination = output / name
-        shutil.copyfile(source, destination)
+        if name in {"guest_bootstrap.sh", "guest_recovery_probe.py", "dns-kill-run-cell.py"}:
+            copy_guest_script(source, destination)
+        else:
+            shutil.copyfile(source, destination)
         os.chmod(destination, 0o700 if name == "guest_bootstrap.sh" else 0o600)
         staged.append(destination)
     web_tar = output / "web.tar"

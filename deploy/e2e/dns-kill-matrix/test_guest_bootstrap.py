@@ -192,6 +192,26 @@ class GuestBootstrapTest(unittest.TestCase):
                 cursor = body.index(fragment, cursor + 1)
         self.assertNotIn("agent socket remained after service stop", body)
 
+    def test_guest_script_bundle_normalizes_crlf_before_hashing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.py"
+            destination = root / "guest.py"
+            source.write_bytes(b"#!/usr/bin/env python3\r\nprint('ready')\r\n")
+            bootstrap.copy_guest_script(source, destination)
+            self.assertEqual(destination.read_bytes(), b"#!/usr/bin/env python3\nprint('ready')\n")
+            source.write_bytes(b"#!/usr/bin/env python3\rprint('bad')\n")
+            with self.assertRaises(bootstrap.BootstrapError):
+                bootstrap.copy_guest_script(source, destination)
+
+    def test_disposable_admin_uses_strict_inherited_stdin(self) -> None:
+        shell = Path(bootstrap.__file__).with_name("guest_bootstrap.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('--create-admin --admin-credentials-file=-', shell)
+        self.assertIn('{"username":"s1-admin","email":"s1-admin@fixture.invalid","password":"%s"}', shell)
+        self.assertNotIn("printf 's1-admin\\ns1-admin@fixture.invalid\\n%s\\n'", shell)
+
     def test_fresh_guest_creates_controller_required_dkim_directory(self) -> None:
         shell = Path(bootstrap.__file__).with_name("guest_bootstrap.sh").read_text(
             encoding="utf-8"
