@@ -628,6 +628,9 @@ Both probes must be valid and are compared by fingerprint. Their diagnostic
 that is active after rollback, and indeterminate state. Combining that with the
 controller's final DNS query produces `target_converged`,
 `rolled_back_source_serving`, `repeated_nonconvergence`, or `changed/race`.
+A source rollback classification requires matching state and ownership receipts,
+an exact durable failed mutation verdict with no worker or lease, no target
+ownership, and a retired switch journal. A source process alone is indeterminate.
 The probes observe recovery; they do not substitute for either retry. Only
 after the second attempt and probe does the controller restart the panel,
 require the agent to remain up, require a reachable panel TCP port, and require

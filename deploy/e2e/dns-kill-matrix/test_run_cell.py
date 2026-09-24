@@ -1277,7 +1277,7 @@ class ControllerProtocolTest(unittest.TestCase):
             with self.assertRaises(run_cell.BoundaryUnverified):
                 run_cell.validate_socket_boundary_identity(source_proof, poisoned)
 
-    def test_recovery_probe_must_converge_twice_to_same_fingerprint(self) -> None:
+    def test_recovery_probe_requires_stable_terminal_outcome(self) -> None:
         output = json.dumps(
             {
                 "schema": run_cell.RECOVERY_PROBE_SCHEMA,
@@ -1297,9 +1297,11 @@ class ControllerProtocolTest(unittest.TestCase):
             "recovery fingerprint changed on the second probe",
             run_cell.assess_recovery_probes(first, second),
         )
+        second["fingerprint"] = first["fingerprint"]
         second["converged"] = False
+        second["recovery_outcome"] = "indeterminate"
         self.assertIn(
-            "second recovery probe did not converge",
+            "second recovery probe is indeterminate",
             run_cell.assess_recovery_probes(first, second),
         )
 
@@ -1313,6 +1315,7 @@ class ControllerProtocolTest(unittest.TestCase):
             rolled_first, rolled_second, True
         )
         self.assertEqual(summary["classification"], "rolled_back_source_serving")
+        self.assertEqual(run_cell.assess_recovery_probes(rolled_first, rolled_second), [])
         self.assertTrue(summary["rolled_back_source_serving"])
         self.assertFalse(summary["target_converged"])
 

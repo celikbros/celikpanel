@@ -4185,12 +4185,12 @@ def assess_recovery_probes(first: Mapping[str, Any], second: Mapping[str, Any]) 
     errors: list[str] = []
     if not first.get("valid"):
         errors.append("first recovery probe is invalid")
-    elif not first.get("converged"):
-        errors.append("first recovery probe did not converge")
+    elif first.get("recovery_outcome") == "indeterminate":
+        errors.append("first recovery probe is indeterminate")
     if not second.get("valid"):
         errors.append("second recovery probe is invalid")
-    elif not second.get("converged"):
-        errors.append("second recovery probe did not converge")
+    elif second.get("recovery_outcome") == "indeterminate":
+        errors.append("second recovery probe is indeterminate")
     if first.get("valid") and second.get("valid") and first.get("fingerprint") != second.get(
         "fingerprint"
     ):

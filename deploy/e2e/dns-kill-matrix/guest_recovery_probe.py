@@ -588,6 +588,91 @@ def validate_ledger(value: Any, scenario: dict[str, Any], receipt: dict[str, Any
     return job
 
 
+def validate_rolled_back_source(
+    args: argparse.Namespace,
+    scenario: dict[str, Any],
+    receipt: dict[str, Any],
+    source_state: dict[str, Any],
+) -> None:
+    """Require the exact terminal failed switch, restored owner and retired journal."""
+    source = scenario["source_engine"]
+    target = scenario["target_engine"]
+    if source not in {"bind", "pdns"} or source == target:
+        raise ProbeObservationError("rollback has no distinct managed source")
+    value, _, raw = read_secure_json(
+        args.state.parent / f"dns-engine-ownership-{source}.json",
+        "rolled-back source ownership", 1 << 20,
+    )
+    ownership = validate_ownership_state(
+        value, raw, source, "rolled-back source ownership"
+    )
+    validate_prior_source_receipt(ownership, scenario, "rolled-back source ownership")
+    if ownership != source_state:
+        raise ProbeObservationError("rolled-back source state and ownership differ")
+    target_receipt, _, _ = optional_secure_json(
+        args.state.parent / f"dns-engine-ownership-{target}.json",
+        "rolled-back target ownership", 1 << 20,
+    )
+    if target_receipt is not None:
+        raise ProbeObservationError("rolled-back target still has ownership")
+    journal_exists, _ = journal_observation(args.journal)
+    if journal_exists:
+        raise ProbeObservationError("rolled-back switch journal remains")
+    ledger, _, _ = read_secure_json(args.ledger, "rolled-back mutation ledger", 1 << 20)
+    ledger = exact_keys(
+        ledger, LEDGER_KEYS, {"version", "jobs"}, "rolled-back mutation ledger"
+    )
+    if ledger.get("version") != 1 or ledger.get("active_request_id", "") != "":
+        raise ProbeObservationError("rolled-back mutation ledger is not idle")
+    jobs = ledger.get("jobs")
+    if not isinstance(jobs, dict):
+        raise ProbeObservationError("rolled-back mutation jobs are invalid")
+    job = exact_keys(
+        jobs.get(receipt["request_id"]), JOB_KEYS,
+        {"request_id", "owner_id", "kind", "target", "status", "phase",
+         "attempt", "started_at", "updated_at", "deadline_at"},
+        "rolled-back mutation job",
+    )
+    expected = {
+        "request_id": receipt["request_id"],
+        "owner_id": receipt["owner_id"],
+        "kind": "dns_engine_switch",
+        "target": target,
+        "package_name": receipt["manifest_qualifier"],
+        "status": "failed",
+    }
+    if (any(job.get(key) != value for key, value in expected.items())
+            or job.get("phase") not in {"failed", "interrupted"}
+            or not str(job.get("error_code", "")).strip()
+            or not str(job.get("error_message", "")).strip()):
+        raise ProbeObservationError("rolled-back mutation lacks its exact failed verdict")
+    if (isinstance(job.get("attempt"), bool)
+            or not isinstance(job.get("attempt"), int)
+            or job["attempt"] <= 0
+            or not zero_time(job.get("lease_expires_at"))
+            or job.get("worker_pid", 0) != 0
+            or str(job.get("worker_started", "")).strip()
+            or str(job.get("worker_command", "")).strip()):
+        raise ProbeObservationError("rolled-back mutation retains a worker or lease")
+    times: dict[str, dt.datetime] = {}
+    for field in ("started_at", "updated_at", "deadline_at", "finished_at"):
+        value = job.get(field)
+        if not isinstance(value, str) or not value:
+            raise ProbeObservationError(f"rolled-back mutation {field} is absent")
+        try:
+            parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ProbeObservationError(f"rolled-back mutation {field} is invalid") from exc
+        if parsed.year <= 1 or parsed.tzinfo is None:
+            raise ProbeObservationError(f"rolled-back mutation {field} is invalid")
+        times[field] = parsed
+    if (times["updated_at"] != times["finished_at"]
+            or times["updated_at"] < times["started_at"]
+            or times["deadline_at"] < times["started_at"]
+            or times["finished_at"] < times["started_at"]):
+        raise ProbeObservationError("rolled-back mutation timestamps are inconsistent")
+
+
 def journal_observation(path: Path) -> tuple[bool, dict[str, Any] | None]:
     try:
         info = path.lstat()
@@ -782,9 +867,12 @@ def probe(args: argparse.Namespace, unit_runner: Callable[[str], str] = inspect_
             validate_prior_source_receipt(
                 source_state, scenario, "rolled-back source state receipt"
             )
+            if receipt is None:
+                raise ProbeObservationError("rollback trigger identity is unavailable")
+            validate_rolled_back_source(args, scenario, receipt, source_state)
             outcome = "rolled_back_source_active"
-        except ProbeObservationError:
-            pass
+        except ProbeObservationError as exc:
+            errors.append(f"rolled-back source evidence: {exc}")
     semantic["active_dns_engine"] = active_engine
     semantic["recovery_outcome"] = outcome
     semantic["errors"] = sorted(errors)

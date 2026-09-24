@@ -261,10 +261,34 @@ class GuestRecoveryProbeTest(unittest.TestCase):
         write_json(self.identity, self.identity_value)
         write_state(self.state, source_state)
         write_state(self.root / "dns-engine-ownership-pdns.json", source_state)
+        self.job.update({
+            "target": "bind", "status": "failed", "phase": "interrupted",
+            "error_code": "dns_engine_switch_rolled_back_after_restart",
+            "error_message": "The interrupted switch was rolled back.",
+        })
+        write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
         result = probe.probe(self.args, self.units)
         self.assertFalse(result["converged"])
         self.assertEqual(result["active_dns_engine"], "pdns")
-        self.assertEqual(result["recovery_outcome"], "rolled_back_source_active")
+        self.assertEqual(result["recovery_outcome"], "rolled_back_source_active", result["detail"])
+
+        self.job["status"] = "running"
+        write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
+        self.assertEqual(probe.probe(self.args, self.units)["recovery_outcome"], "indeterminate")
+        self.job["status"] = "failed"
+        write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
+
+        write_json(self.journal, {"phase": "rolled-back"})
+        self.assertEqual(probe.probe(self.args, self.units)["recovery_outcome"], "indeterminate")
+        self.journal.unlink()
+
+        write_state(self.root / "dns-engine-ownership-bind.json", self.state_value)
+        self.assertEqual(probe.probe(self.args, self.units)["recovery_outcome"], "indeterminate")
+        (self.root / "dns-engine-ownership-bind.json").unlink()
+
+        changed_source = dict(source_state, mutation_request_id="8" * 32)
+        write_state(self.root / "dns-engine-ownership-pdns.json", changed_source)
+        self.assertEqual(probe.probe(self.args, self.units)["recovery_outcome"], "indeterminate")
 
     def test_unexpected_error_still_emits_the_exact_probe_shape(self) -> None:
         argv = [
