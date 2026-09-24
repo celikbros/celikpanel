@@ -540,3 +540,22 @@ The independent DNS status reader does not yet compare native BIND
 configuration with the selected generation or prove that named loaded it.
 Owner edits, DNS answers, worker exclusion and complete interrupted-switch
 acceptance remain open.
+
+### Independent BIND vendor-unit observation (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: the Agent and independent DNS
+status reader now use one certified APT/pacman BIND vendor-unit byte and
+host-profile contract, plus the same exact package-owner output parsers.
+When a retained switch involves BIND, the root-only status reader checks
+package ownership and reads the native named unit twice through the shared
+no-symlink, root-owned descriptor walk. On APT it also checks the exact
+/etc/default/named startup options. A failed or changing proof is unknown
+with an owner action; the reader starts no switch or inverse.
+
+The historical switch journal, state receipts, lease and phase schemas do
+not change. Existing Agent vendor-file fixtures, shared adversarial profile,
+package-output and file-drift tests, Agent/recovery suites and vet pass.
+This is a disk and package observation: systemd's loaded unit, the live
+named process, managed BIND configuration, DNS answers, owner edits and
+worker exclusion remain unproved. Native inverse execution and the
+interrupted-switch fault matrix remain open.

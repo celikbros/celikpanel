@@ -117,6 +117,15 @@ func installedBINDLayout() (bindroot.Layout, uint32, error) {
 	return layout, gid, nil
 }
 
+func verifyInstalledBINDVendor(ctx context.Context) error {
+	profile, err := hostplatform.Detect()
+	if err != nil {
+		return fmt.Errorf("detect installed host profile: %w", err)
+	}
+	_, err = bindroot.InspectInstalledVendor(ctx, profile)
+	return err
+}
+
 func verifyInstalledBINDRoot(ctx context.Context) error {
 	layout, gid, err := installedBINDLayout()
 	if err != nil {
@@ -258,6 +267,11 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			}
 			fmt.Fprintln(out, "Managed BIND root directory and package ownership matched on two read-only walks. This does not prove the selected generation, DNS answers, owner edits or recovery authority.")
 		}
+		if vendorErr := verifyInstalledBINDVendor(context.Background()); vendorErr != nil {
+			fmt.Fprintln(diagnostic, "Native BIND vendor unit or startup options are unknown. The server owner should inspect the named service unit, its package ownership and startup options before the same operation resumes; no inverse was started. "+vendorErr.Error())
+			return exitUnavailable
+		}
+		fmt.Fprintln(out, "Certified BIND vendor unit and startup options matched across read-only package and file checks. This does not prove systemd loaded them or that named serves the selected generation.")
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	switch observation.TargetReceipt {

@@ -20,48 +20,19 @@ type bindVendorFileContract struct {
 	environmentBytes []byte
 }
 
-const certifiedAPTBINDVendorUnit = "[Unit]\n" +
-	"Description=BIND Domain Name Server\n" +
-	"Documentation=man:named(8)\n" +
-	"After=network.target\nWants=nss-lookup.target\nBefore=nss-lookup.target\n\n" +
-	"[Service]\nType=notify\nEnvironmentFile=-/etc/default/named\n" +
-	"ExecStart=/usr/sbin/named -f $OPTIONS\n" +
-	"ExecReload=/usr/sbin/rndc reload\nExecStop=/usr/sbin/rndc stop\n" +
-	"Restart=on-failure\n\n[Install]\nWantedBy=multi-user.target\nAlias=bind9.service\n"
-
-const certifiedAPTBINDVendorEnvironment = "#\n# run resolvconf?\n" +
-	"RESOLVCONF=no\n\n# startup options for the server\nOPTIONS=\"-u bind\"\n"
-
-const certifiedPacmanBINDVendorUnit = "[Unit]\n" +
-	"Description=Internet domain name server\nAfter=network.target\n\n" +
-	"[Service]\nExecStart=/usr/bin/named -f -u named\n" +
-	"ExecReload=/usr/bin/kill -HUP $MAINPID\n\n" +
-	"[Install]\nWantedBy=multi-user.target\n"
+const certifiedAPTBINDVendorUnit = bindroot.CertifiedAPTBINDVendorUnit
+const certifiedAPTBINDVendorEnvironment = bindroot.CertifiedAPTBINDVendorEnvironment
+const certifiedPacmanBINDVendorUnit = bindroot.CertifiedPacmanBINDVendorUnit
 
 func bindVendorContract(profile hostplatform.Profile) (bindVendorFileContract, error) {
-	switch profile.PackageManager {
-	case hostplatform.PackageManagerAPT:
-		if err := certifyAPTBINDCapabilities(profile); err != nil {
-			return bindVendorFileContract{}, err
-		}
-		return bindVendorFileContract{
-			unitPath:         "/usr/lib/systemd/system/named.service",
-			environmentPath:  "/etc/default/named",
-			unitBytes:        []byte(certifiedAPTBINDVendorUnit),
-			environmentBytes: []byte(certifiedAPTBINDVendorEnvironment),
-		}, nil
-	case hostplatform.PackageManagerPacman:
-		if err := certifyPacmanBINDCapabilities(profile); err != nil {
-			return bindVendorFileContract{}, err
-		}
-		return bindVendorFileContract{
-			unitPath:  "/usr/lib/systemd/system/named.service",
-			unitBytes: []byte(certifiedPacmanBINDVendorUnit),
-		}, nil
-	default:
-		return bindVendorFileContract{},
-			errors.New("BIND vendor unit proof is unsupported on this package manager")
+	shared, err := bindroot.CertifiedVendorContract(profile)
+	if err != nil {
+		return bindVendorFileContract{}, err
 	}
+	return bindVendorFileContract{
+		unitPath: shared.UnitPath, environmentPath: shared.EnvironmentPath,
+		unitBytes: shared.UnitBytes, environmentBytes: shared.EnvironmentBytes,
+	}, nil
 }
 
 func inspectHostBINDVendorFiles(
@@ -140,19 +111,10 @@ func verifyExactAPTBINDVendorPackageOwnership(
 	if ctx == nil || lookup == nil {
 		return errors.New("invalid APT BIND vendor package ownership proof")
 	}
-	for _, file := range []struct {
-		path string
-		want string
-	}{
-		{path: "/usr/lib/systemd/system/named.service", want: "bind9: /usr/lib/systemd/system/named.service\n"},
-		{path: "/etc/default/named", want: "bind9: /etc/default/named\n"},
-	} {
-		output, err := lookup(ctx, file.path)
-		if err != nil {
-			return fmt.Errorf("verify BIND vendor package ownership for %s: %w", file.path, err)
-		}
-		if string(output) != file.want {
-			return fmt.Errorf("%s is not owned by the exact bind9 package", file.path)
+	for _, path := range []string{"/usr/lib/systemd/system/named.service", "/etc/default/named"} {
+		output, err := lookup(ctx, path)
+		if err := bindroot.VerifyAPTVendorOwner(path, output, err); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -167,13 +129,7 @@ func verifyExactPacmanBINDVendorPackageOwnership(
 	}
 	const unit = "/usr/lib/systemd/system/named.service"
 	output, err := lookup(ctx, unit)
-	if err != nil {
-		return fmt.Errorf("verify BIND vendor package ownership for %s: %w", unit, err)
-	}
-	if string(output) != "bind\n" {
-		return errors.New("BIND vendor unit is not owned by the exact bind package")
-	}
-	return nil
+	return bindroot.VerifyPacmanVendorOwner(unit, output, err)
 }
 
 // inspectBINDVendorFilesAt reads the package unit and its effective APT
