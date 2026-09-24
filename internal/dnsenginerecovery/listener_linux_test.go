@@ -1,0 +1,63 @@
+//go:build linux
+
+package dnsenginerecovery
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+)
+
+func TestProbeBINDListenersRejectsAmbiguousSocketOwnership(t *testing.T) {
+	const good = "tcp LISTEN 0 4096 72.62.38.15:53 0.0.0.0:* users:((\"named\",pid=123,fd=1))\n" +
+		"udp UNCONN 0 0 72.62.38.15:53 0.0.0.0:* users:((\"named\",pid=123,fd=2))\n"
+	tests := []struct {
+		name, first, second, address string
+		wantOK                       bool
+	}{
+		{"exact", good, good, "72.62.38.15", true},
+		{"wildcard", strings.ReplaceAll(good, "72.62.38.15:53", "0.0.0.0:53"), strings.ReplaceAll(good, "72.62.38.15:53", "0.0.0.0:53"), "72.62.38.15", true},
+		{"wrong-primary", good, good, "2.25.80.4", false},
+		{"wrong-pid", strings.ReplaceAll(good, "pid=123", "pid=124"), good, "72.62.38.15", false},
+		{"other-process", good + "tcp LISTEN 0 4096 2.25.80.4:53 0.0.0.0:* users:((\"pdns_server\",pid=90,fd=3))\n", good, "72.62.38.15", false},
+		{"missing-udp", strings.Split(good, "\n")[0] + "\n", good, "72.62.38.15", false},
+		{"changed-between-reads", good, strings.ReplaceAll(good, "72.62.38.15:53", "0.0.0.0:53"), "72.62.38.15", false},
+		{"ipv6-only", strings.ReplaceAll(good, "72.62.38.15:53", "[::]:53"), strings.ReplaceAll(good, "72.62.38.15:53", "[::]:53"), "72.62.38.15", false},
+		{"malformed", good + "tcp LISTEN 0 1 spoofed\n", good, "72.62.38.15", false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			calls := 0
+			runner := func(context.Context) ([]byte, error) {
+				calls++
+				if calls == 1 {
+					return []byte(test.first), nil
+				}
+				return []byte(test.second), nil
+			}
+			err := ProbeBINDListeners(context.Background(), 123, test.address, runner)
+			if (err == nil) != test.wantOK {
+				t.Fatalf("error = %v, wantOK = %t", err, test.wantOK)
+			}
+			if test.wantOK && calls != 2 {
+				t.Fatalf("runner calls = %d, want 2", calls)
+			}
+		})
+	}
+}
+
+func TestProbeBINDListenersRefusesUnknownAndOversizedResults(t *testing.T) {
+	const good = "tcp LISTEN 0 1 0.0.0.0:53 0.0.0.0:* users:((\"named\",pid=123,fd=1))\n" +
+		"udp UNCONN 0 0 0.0.0.0:53 0.0.0.0:* users:((\"named\",pid=123,fd=2))\n"
+	if err := ProbeBINDListeners(context.Background(), 123, "", func(context.Context) ([]byte, error) {
+		return nil, errors.New("ss failed")
+	}); err == nil {
+		t.Fatal("command error was accepted")
+	}
+	if err := ProbeBINDListeners(context.Background(), 123, "", func(context.Context) ([]byte, error) {
+		return []byte(good + strings.Repeat("x", 64<<10)), nil
+	}); err == nil {
+		t.Fatal("oversized inventory was accepted")
+	}
+}

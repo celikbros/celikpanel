@@ -1006,3 +1006,15 @@ locally owned literal address. See the
 This is read-only, schema-neutral and not recovery admission. Listener
 PID binding, member zones, AXFR, secondary convergence, loaded config
 and the native interrupted-switch matrix remain open.
+
+The P0.4 selected-BIND observer also compares the native TCP/UDP
+port-53 socket inventory with the verified systemd MainPID across
+two bounded reads and then rechecks the process identity. For a
+primary receipt it requires listeners on the local IPv4 address
+or the IPv4 wildcard. See the
+[bounded listener evidence](DNS-ENGINE-ARTIFACT.md#independent-bind-listener-inventory-observation-2026-09-24).
+The shared parser prevents the Agent and observer from accepting
+different ss grammar. This is read-only and schema-neutral, with
+no recovery admission. Loaded config, answer/socket causality,
+member zones, AXFR, secondary convergence, owner changes,
+independent inverse and native fault acceptance remain open.

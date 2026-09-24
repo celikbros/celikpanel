@@ -663,3 +663,28 @@ authority. Shared parser and catalog-probe adversarial tests,
 Agent/recovery suites and vet pass. Journal/state schemas and recovery
 admission are unchanged; native inverse and interrupted-switch fault
 acceptance remain open.
+
+### Independent BIND listener inventory observation (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: the Agent and the independent
+status reader now use one strict parser for the native port-53 socket
+inventory. For an exact selected BIND target, the reader checks that
+all public TCP and UDP listeners belong to the already verified
+named.service MainPID. A primary receipt additionally requires both
+transports on its literal local IPv4 address or the IPv4 wildcard.
+Two bounded read-only ss observations must agree; the systemd process,
+start token, native executable inode and unit identity are checked
+again afterward and after the primary catalog answer. A foreign process, changed listener set, missing
+transport, wrong local address, malformed output or unknown command
+result is reported as unknown with owner action. No second DNS
+mutation or installed-panel update is started.
+
+The exact 64 KiB output bound, fixed ss arguments, parser rejection
+cases and Agent/recovery suites are covered by local tests. The
+socket inventory and authoritative SOA answer are complementary
+point-in-time observations; they do not establish causal origin of
+the answer, loaded named configuration, member-zone content, AXFR,
+secondary convergence, complete owner-change exclusion, independent
+inverse execution or interrupted native fault-matrix acceptance.
+Journal/state schemas, producer transition and recovery admission
+are unchanged; P0.4 remains open.

@@ -16,6 +16,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnslistener"
 	"github.com/alicelik/celikpanel/internal/dnsunitidentity"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
@@ -4359,51 +4360,6 @@ func canonicalBINDPublicListeners(
 	)
 }
 
-func canonicalDNSAuthorityPublicListeners(
-	output string,
-	expectedProcess string,
-	expectedMainPID uint64,
-) ([]string, error) {
-	if expectedProcess == "" ||
-		strings.ContainsAny(expectedProcess, "\x00\r\n\t ,()\"") ||
-		expectedMainPID == 0 {
-		return nil, errors.New("invalid DNS authority process identity")
-	}
-	foundTCP, foundUDP := false, false
-	identities := make(map[string]struct{})
-	for _, line := range strings.Split(output, "\n") {
-		if line == "" {
-			continue
-		}
-		row, err := parseCanonicalDNSPort53ListenerRow(line)
-		if err != nil {
-			return nil, err
-		}
-		if row.address.IsLoopback() || row.address.IsLinkLocalUnicast() {
-			continue
-		}
-		if row.process != expectedProcess {
-			return nil, errors.New("an unexpected process is holding a public DNS listener")
-		}
-		if row.pid != expectedMainPID {
-			return nil, errors.New("a DNS authority listener PID differs from its systemd MainPID")
-		}
-		identities[fmt.Sprintf(
-			"%s|%s|%d", row.protocol, row.address.String(), row.pid,
-		)] = struct{}{}
-		if row.protocol == "tcp" {
-			foundTCP = true
-		} else {
-			foundUDP = true
-		}
-	}
-	if !foundTCP || !foundUDP {
-		return nil, errors.New("the DNS authority does not own both public TCP and UDP port 53 listeners")
-	}
-	result := make([]string, 0, len(identities))
-	for identity := range identities {
-		result = append(result, identity)
-	}
-	sort.Strings(result)
-	return result, nil
+func canonicalDNSAuthorityPublicListeners(output, expectedProcess string, expectedMainPID uint64) ([]string, error) {
+	return dnslistener.CanonicalPublicListeners(output, expectedProcess, expectedMainPID)
 }

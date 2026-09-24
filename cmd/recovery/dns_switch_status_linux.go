@@ -143,48 +143,48 @@ func verifyInstalledBINDVendorAndUnit(ctx context.Context) error {
 
 // A selected BIND target requires stable vendor and loaded systemd identity
 // around a read-only process observation.
-func verifyInstalledBINDRuntime(ctx context.Context) error {
+func verifyInstalledBINDRuntime(ctx context.Context) (uint64, error) {
 	profile, err := hostplatform.Detect()
 	if err != nil {
-		return fmt.Errorf("detect installed host profile: %w", err)
+		return 0, fmt.Errorf("detect installed host profile: %w", err)
 	}
 	beforeVendor, err := bindroot.InspectInstalledVendor(ctx, profile)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	beforeIdentity, err := dnsenginerecovery.ProbeBINDVendorIdentity(ctx, profile, dnsenginerecovery.SystemdBINDIdentityRunner)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	beforeRuntime, err := dnsenginerecovery.ProbeBINDVendorRuntime(ctx, profile, dnsenginerecovery.SystemdBINDRuntimeRunner)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	beforeStarted, err := verifyNativeBINDExecutable(beforeRuntime.MainPID, beforeIdentity.ExecStartPath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	afterRuntime, err := dnsenginerecovery.ProbeBINDVendorRuntime(ctx, profile, dnsenginerecovery.SystemdBINDRuntimeRunner)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	afterStarted, err := verifyNativeBINDExecutable(afterRuntime.MainPID, beforeIdentity.ExecStartPath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	afterIdentity, err := dnsenginerecovery.ProbeBINDVendorIdentity(ctx, profile, dnsenginerecovery.SystemdBINDIdentityRunner)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	afterVendor, err := bindroot.InspectInstalledVendor(ctx, profile)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if beforeVendor != afterVendor || !reflect.DeepEqual(beforeIdentity, afterIdentity) ||
 		beforeRuntime != afterRuntime || beforeStarted != afterStarted {
-		return errors.New("BIND vendor, loaded unit or process identity changed around the runtime observation")
+		return 0, errors.New("BIND vendor, loaded unit or process identity changed around the runtime observation")
 	}
-	return nil
+	return beforeRuntime.MainPID, nil
 }
 
 // verifyNativeBINDExecutable ties systemd's PID to the current native file
@@ -431,7 +431,8 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 		fmt.Fprintln(out, "Certified BIND vendor files and systemd unit identity matched across read-only checks. Process liveness, a pending daemon reload, loaded named configuration and DNS answers remain unproved.")
 		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
-			if runtimeErr := verifyInstalledBINDRuntime(context.Background()); runtimeErr != nil {
+			mainPID, runtimeErr := verifyInstalledBINDRuntime(context.Background())
+			if runtimeErr != nil {
 				fmt.Fprintln(diagnostic, "Selected BIND target has unknown running service state. The server owner should inspect named.service, its bind9 alias and any pending daemon reload before the same operation resumes; no inverse was started. "+runtimeErr.Error())
 				return exitUnavailable
 			}
@@ -450,6 +451,20 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				return exitUnavailable
 			}
 			fmt.Fprintln(out, "Native BIND config files retained the exact managed zone include across secure read-only observations. When using APT, the main config also retained active includes. Named's loaded configuration and DNS answers remain unproved.")
+			primaryIP := ""
+			if selectedReceipt.Pairing != nil && selectedReceipt.Pairing.Role == binddns.PairRolePrimary {
+				primaryIP = selectedReceipt.Pairing.LocalIP
+			}
+			if listenerErr := dnsenginerecovery.ProbeBINDListeners(context.Background(), mainPID, primaryIP, dnsenginerecovery.SSListenerRunner); listenerErr != nil {
+				fmt.Fprintln(diagnostic, "Native BIND port-53 listener ownership is unknown or differs from the verified service. The server owner should inspect named.service and local DNS sockets before the same operation resumes; no inverse was started. "+listenerErr.Error())
+				return exitUnavailable
+			}
+			afterListenerPID, runtimeErr := verifyInstalledBINDRuntime(context.Background())
+			if runtimeErr != nil || afterListenerPID != mainPID {
+				fmt.Fprintln(diagnostic, "BIND process identity changed around listener observation. The server owner should inspect named.service and local DNS sockets before the same operation resumes; no inverse was started.")
+				return exitUnavailable
+			}
+			fmt.Fprintln(out, "The local TCP and UDP port-53 listener inventory matched the verified named MainPID twice. This does not prove the daemon loaded the selected generation or that a DNS answer originated from that socket.")
 			catalogSeen, catalogErr := dnsenginerecovery.ProbeInstalledPrimaryCatalogAnswer(context.Background(), selectedReceipt)
 			if catalogErr != nil {
 				fmt.Fprintln(diagnostic, "Local authoritative primary catalog answer is unknown or differs from the selected BIND generation. The server owner should inspect the native DNS listener and catalog SOA before the same operation resumes; no inverse was started. "+catalogErr.Error())
@@ -461,7 +476,12 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 					fmt.Fprintln(diagnostic, "Selected BIND generation changed around the local catalog answer. The server owner should inspect the native DNS service before the same operation resumes; no inverse was started.")
 					return exitUnavailable
 				}
-				fmt.Fprintln(out, "The host's selected primary IP returned the frozen catalog's exact authoritative SOA serial twice over DNS/TCP. Listener PID, member zones, AXFR, loaded config and recovery authority remain unproved.")
+				afterAnswerPID, runtimeErr := verifyInstalledBINDRuntime(context.Background())
+				if runtimeErr != nil || afterAnswerPID != mainPID {
+					fmt.Fprintln(diagnostic, "BIND process identity changed around the local catalog answer. The server owner should inspect named.service and the catalog SOA before the same operation resumes; no inverse was started.")
+					return exitUnavailable
+				}
+				fmt.Fprintln(out, "The host's selected primary IP returned the frozen catalog's exact authoritative SOA serial twice over DNS/TCP. DNS-answer/socket causality, member zones, AXFR, loaded config and recovery authority remain unproved.")
 			} else {
 				fmt.Fprintln(out, "No primary BIND catalog SOA applies to this receipt. Live zone and transfer answers remain unproved.")
 			}
