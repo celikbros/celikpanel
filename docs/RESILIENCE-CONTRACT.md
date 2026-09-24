@@ -1123,3 +1123,12 @@ The v1 schema and phase order are unchanged. Shared removal fault tests,
 full Agent/recovery package tests and vet are scoped evidence. External
 owner rewrites between read and unlink, Agent-independent secure filesystem
 effects and native interruption trials remain open; P0.4 is not complete.
+
+Open P0.4/P0.3 crash boundary: the current Agent rollback sequence removes
+the rolled-back DNS switch journal before its outer mutation ledger records
+a terminal result. A crash in that interval can leave an accepted ledger
+request with no frozen journal; absence alone cannot prove native rollback.
+The exact-removal check above prevents stale-path deletion but does not
+close this ordering gap. Retain the final checkpoint through terminal
+publication, add idempotent cleanup tied to that receipt, then fault-test
+each boundary with native DNS and owner-edit probes before claiming recovery.
