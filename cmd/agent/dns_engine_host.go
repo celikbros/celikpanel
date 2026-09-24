@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -3251,11 +3250,7 @@ func parseDNSUnitIdentity(output string) (dnsUnitIdentity, error) {
 	return dnsunitidentity.Parse(output)
 }
 
-type dnsUnitProcesses struct {
-	MainPID    uint64
-	ControlPID uint64
-	SubState   string
-}
+type dnsUnitProcesses = dnsunitidentity.Processes
 
 func inspectDNSUnitProcesses(ctx context.Context, systemctl, unit string) (dnsUnitProcesses, error) {
 	return inspectDNSUnitProcessesWithRunner(ctx, systemctl, unit, runDNSSystemctl)
@@ -3285,46 +3280,7 @@ func inspectDNSUnitProcessesWithRunner(
 }
 
 func parseDNSUnitProcesses(output string) (dnsUnitProcesses, error) {
-	values := map[string]string{}
-	for _, line := range strings.Split(output, "\n") {
-		if line == "" {
-			continue
-		}
-		key, candidate, found := strings.Cut(line, "=")
-		if !found || (key != "MainPID" && key != "ControlPID" && key != "SubState") {
-			return dnsUnitProcesses{},
-				errors.New("systemctl returned an unexpected DNS unit process row")
-		}
-		if _, exists := values[key]; exists || candidate == "" {
-			return dnsUnitProcesses{}, errors.New("systemctl returned an ambiguous DNS unit process")
-		}
-		values[key] = candidate
-	}
-	if len(values) != 3 {
-		return dnsUnitProcesses{}, errors.New("systemctl returned incomplete DNS unit processes")
-	}
-	if values["SubState"] == "" {
-		return dnsUnitProcesses{}, errors.New("systemctl returned an empty DNS unit substate")
-	}
-	parse := func(name string) (uint64, error) {
-		value := values[name]
-		pid, err := strconv.ParseUint(value, 10, 64)
-		if err != nil || strconv.FormatUint(pid, 10) != value {
-			return 0, fmt.Errorf("systemctl returned a non-canonical %s", name)
-		}
-		return pid, nil
-	}
-	mainPID, err := parse("MainPID")
-	if err != nil {
-		return dnsUnitProcesses{}, err
-	}
-	controlPID, err := parse("ControlPID")
-	if err != nil {
-		return dnsUnitProcesses{}, err
-	}
-	return dnsUnitProcesses{
-		MainPID: mainPID, ControlPID: controlPID, SubState: values["SubState"],
-	}, nil
+	return dnsunitidentity.ParseProcesses(output)
 }
 
 func verifyDNSUnitProcessesStopped(processes dnsUnitProcesses) error {

@@ -974,3 +974,13 @@ DNS recovery.
 A component fixture further verifies v1 switch-journal/v2 source-document
 compatibility and rejects a later publication as the original frozen source.
 Installed migration and native rollback acceptance remain open.
+
+The P0.4 independent DNS observer now shares the Agent's exact systemd
+process parser and, for a selected BIND target, compares two running
+named/bind9 process observations, no-pending-reload state, the Linux process
+start token and the native executable inode. Vendor file and loaded unit
+identity proofs surround the process reads. See the
+[bounded evidence and tests](DNS-ENGINE-ARTIFACT.md#independent-selected-bind-runtime-observation-2026-09-24).
+No persisted schema or recovery admission changed. Loaded named config,
+authoritative answers, owner edits, independent inverse and the interrupted
+native fault matrix remain open; this does not close P0.4.

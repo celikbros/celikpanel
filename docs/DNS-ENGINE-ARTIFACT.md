@@ -578,3 +578,23 @@ Agent/recovery suites and vet pass. This observation does not prove the
 running process, NeedDaemonReload state, loaded named configuration,
 zone answers, absence of owner edits or worker exclusion. It does not
 admit automatic recovery or close the native interrupted-switch matrix.
+
+### Independent selected BIND runtime observation (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: for a retained switch whose target
+receipt and selected immutable BIND generation match the frozen target, the
+root-only status reader now uses the Agent's shared exact systemd DNS process
+parser. It requires named.service to report a nonzero MainPID, zero ControlPID,
+running SubState and no pending daemon reload. On APT, bind9.service must
+report the same process state. Two runtime observations must agree. The Linux
+process start token and /proc/PID/exe inode must match the current native
+named executable path twice; certified vendor files and loaded systemd unit
+identity surround those reads. Unknown, changed or foreign state stops with
+an owner action and no inverse. No journal/state schema, producer transition,
+native service configuration or installed panel changes were made.
+
+Focused alias, reload, PID-drift, malformed-property and foreign-inode tests,
+Agent/recovery suites and vet cover this point-in-time boundary. The installed
+binary's package bytes, named's loaded configuration, authoritative DNS
+answers, owner edits, worker exclusion, native inverse execution and the
+interrupted-switch fault matrix remain unproved. This is not P0.4 acceptance.

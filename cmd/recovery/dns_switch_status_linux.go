@@ -139,6 +139,81 @@ func verifyInstalledBINDVendorAndUnit(ctx context.Context) error {
 	return nil
 }
 
+// A selected BIND target requires stable vendor and loaded systemd identity
+// around a read-only process observation.
+func verifyInstalledBINDRuntime(ctx context.Context) error {
+	profile, err := hostplatform.Detect()
+	if err != nil {
+		return fmt.Errorf("detect installed host profile: %w", err)
+	}
+	beforeVendor, err := bindroot.InspectInstalledVendor(ctx, profile)
+	if err != nil {
+		return err
+	}
+	beforeIdentity, err := dnsenginerecovery.ProbeBINDVendorIdentity(ctx, profile, dnsenginerecovery.SystemdBINDIdentityRunner)
+	if err != nil {
+		return err
+	}
+	beforeRuntime, err := dnsenginerecovery.ProbeBINDVendorRuntime(ctx, profile, dnsenginerecovery.SystemdBINDRuntimeRunner)
+	if err != nil {
+		return err
+	}
+	beforeStarted, err := verifyNativeBINDExecutable(beforeRuntime.MainPID, beforeIdentity.ExecStartPath)
+	if err != nil {
+		return err
+	}
+	afterRuntime, err := dnsenginerecovery.ProbeBINDVendorRuntime(ctx, profile, dnsenginerecovery.SystemdBINDRuntimeRunner)
+	if err != nil {
+		return err
+	}
+	afterStarted, err := verifyNativeBINDExecutable(afterRuntime.MainPID, beforeIdentity.ExecStartPath)
+	if err != nil {
+		return err
+	}
+	afterIdentity, err := dnsenginerecovery.ProbeBINDVendorIdentity(ctx, profile, dnsenginerecovery.SystemdBINDIdentityRunner)
+	if err != nil {
+		return err
+	}
+	afterVendor, err := bindroot.InspectInstalledVendor(ctx, profile)
+	if err != nil {
+		return err
+	}
+	if beforeVendor != afterVendor || !reflect.DeepEqual(beforeIdentity, afterIdentity) ||
+		beforeRuntime != afterRuntime || beforeStarted != afterStarted {
+		return errors.New("BIND vendor, loaded unit or process identity changed around the runtime observation")
+	}
+	return nil
+}
+
+// verifyNativeBINDExecutable ties systemd's PID to the current native file
+// inode and Linux process start token. It does not certify package bytes.
+func verifyNativeBINDExecutable(pid uint64, path string) (string, error) {
+	if pid == 0 || uint64(int(pid)) != pid ||
+		(path != "/usr/sbin/named" && path != "/usr/bin/named") {
+		return "", errors.New("invalid BIND process or executable identity")
+	}
+	return verifyRunningExecutable(int(pid), path)
+}
+
+func verifyRunningExecutable(pid int, path string) (string, error) {
+	started, err := processidentity.StartToken(pid)
+	if err != nil {
+		return "", fmt.Errorf("read BIND process start identity: %w", err)
+	}
+	installed, err := os.Lstat(path)
+	if err != nil || !installed.Mode().IsRegular() {
+		return "", errors.New("installed BIND executable is absent or is not a regular file")
+	}
+	running, err := os.Stat(fmt.Sprintf("/proc/%d/exe", pid))
+	if err != nil || !os.SameFile(installed, running) {
+		return "", errors.New("running BIND executable differs from its installed native file")
+	}
+	again, err := processidentity.StartToken(pid)
+	if err != nil || started != again {
+		return "", errors.New("BIND process changed while its executable was inspected")
+	}
+	return started, nil
+}
 func verifyInstalledBINDRoot(ctx context.Context) error {
 	layout, gid, err := installedBINDLayout()
 	if err != nil {
@@ -285,6 +360,13 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			return exitUnavailable
 		}
 		fmt.Fprintln(out, "Certified BIND vendor files and systemd unit identity matched across read-only checks. Process liveness, a pending daemon reload, loaded named configuration and DNS answers remain unproved.")
+		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
+			if runtimeErr := verifyInstalledBINDRuntime(context.Background()); runtimeErr != nil {
+				fmt.Fprintln(diagnostic, "Selected BIND target has unknown running service state. The server owner should inspect named.service, its bind9 alias and any pending daemon reload before the same operation resumes; no inverse was started. "+runtimeErr.Error())
+				return exitUnavailable
+			}
+			fmt.Fprintln(out, "Systemd reported a stable running BIND MainPID, matching APT alias and no pending daemon reload; the process start token and executable inode matched twice. Installed package bytes, loaded named configuration, DNS answers and owner edits remain unproved.")
+		}
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	switch observation.TargetReceipt {
