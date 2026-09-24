@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -2300,6 +2301,82 @@ func TestVerifyPDNSPublicListenersRequiresPDNSTCPAndUDP(t *testing.T) {
 	}
 	if err := verifyPDNSPublicListeners(strings.Split(valid, "\n")[0], 10); err == nil {
 		t.Fatal("UDP-only PowerDNS listener set was accepted")
+	}
+}
+
+// An unknown native result after the recorded worker has exited may release
+// the global lease only when an exact frozen DNS journal remains. Missing
+// evidence still retains the lock because a later DNS preflight could not
+// distinguish a half-applied switch from a clean host.
+func TestDNSEngineSwitchBootUnknownReleasesOnlyWithExactJournal(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		removeProof bool
+	}{
+		{name: "exact frozen journal"},
+		{name: "missing journal", removeProof: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			request := canonicalSwitchRequest(t)
+			manager, root := newMutationTestManager(t)
+			beginMutationTestJobWithIdentity(t, manager, "dns_engine_switch", "bind", request.ManifestQualifier)
+			journal := persistActiveCommittedBINDStartupJournal(t, manager, root, request)
+			persistActiveDNSEngineSwitchStartupLedger(t, manager, journal, false, nil)
+			if tc.removeProof {
+				if err := removeDNSEngineSwitchJournal(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			abandonFirewallApplyTestRuntime(t, manager)
+			backend := &fakeDNSEngineBackend{recoverErr: errors.New("native DNS result unavailable")}
+			useFakeDNSEngineBackend(t, backend)
+			lock, err := acquireServiceMutationFileLock(manager.lockPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			manager.mu.Lock()
+			handled, recoverErr := manager.recoverPersistedDNSEngineSwitchLocked(manager.ledger.Jobs[request.MutationRequestID], lock)
+			poisoned := manager.poisoned
+			manager.mu.Unlock()
+			if !handled || backend.recoverCalls != 1 {
+				t.Fatalf("boot native recovery handled=%v calls=%d err=%v", handled, backend.recoverCalls, recoverErr)
+			}
+			if tc.removeProof {
+				t.Cleanup(func() { releasePoisonedFirewallApplyTestManager(manager) })
+				if recoverErr == nil || poisoned == nil || manager.poisonLock == nil {
+					t.Fatalf("missing journal released ambiguous DNS work: err=%v poisoned=%v", recoverErr, poisoned)
+				}
+				return
+			}
+			if recoverErr != nil || poisoned != nil {
+				t.Fatalf("exact journal stranded unrelated host work: err=%v poisoned=%v", recoverErr, poisoned)
+			}
+			if _, err := os.Stat(dnsEngineSwitchJournalPath()); err != nil {
+				t.Fatalf("unknown native result discarded exact journal: %v", err)
+			}
+			if err := reconcileExistingDNSEngineSwitchJournal(context.Background()); err == nil {
+				t.Fatal("a new DNS mutation accepted the retained uncertain journal")
+			}
+			raw, err := os.ReadFile(manager.ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			durable, err := decodeServiceMutationLedger(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			id := dnsengineartifact.SwitchIdentity{RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID, Target: journal.TargetEngine, Qualifier: journal.ManifestQualifier}
+			if !id.ReleasedUndecidedJob(durable) || durable.Jobs[id.RequestID].ErrorCode != dnsengineartifact.ReleasedNativeUnknownCode {
+				t.Fatalf("unknown native result lacks exact durable release: %+v", durable)
+			}
+			probe, err := acquireServiceMutationFileLock(manager.lockPath)
+			if err != nil {
+				t.Fatalf("DNS-only uncertainty retained global host lock: %v", err)
+			}
+			if err := probe.Close(); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 

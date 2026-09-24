@@ -16,6 +16,7 @@ import (
 const (
 	ReleasedUnsupportedHostCode = "host_unsupported_after_restart"
 	ReleasedHostWindowCode      = "host_not_ready_within_recovery_window"
+	ReleasedNativeUnknownCode   = "dns_native_recovery_unknown_after_restart"
 
 	SwitchPublishedPhasePrefix = "commit/dns-engine-switch/v1/published/"
 	SwitchFinalizedPhasePrefix = "commit/dns-engine-switch/v2/finalized/"
@@ -219,7 +220,8 @@ func (id SwitchIdentity) ReleasedUndecidedJob(ledger servicemutationledger.Ledge
 		job.Kind == "dns_engine_switch" && job.Target == string(id.Target) &&
 		job.PackageName == id.Qualifier &&
 		job.Status == servicemutationledger.StatusFailed && job.Phase == "interrupted" &&
-		(job.ErrorCode == ReleasedUnsupportedHostCode || job.ErrorCode == ReleasedHostWindowCode) &&
+		(job.ErrorCode == ReleasedUnsupportedHostCode || job.ErrorCode == ReleasedHostWindowCode ||
+			job.ErrorCode == ReleasedNativeUnknownCode) &&
 		strings.TrimSpace(job.ErrorMessage) != "" && job.Attempt > 0 &&
 		!job.StartedAt.IsZero() && !job.UpdatedAt.IsZero() && !job.DeadlineAt.IsZero() &&
 		job.UpdatedAt.Equal(job.FinishedAt) && !job.UpdatedAt.Before(job.StartedAt) &&

@@ -181,6 +181,11 @@ func TestSwitchAuthorityReleasedUndecidedJobIsExactHistoricalFailure(t *testing.
 	if !id.ReleasedUndecidedJob(ledger) {
 		t.Fatal("exact released interruption refused")
 	}
+	job.ErrorCode = ReleasedNativeUnknownCode
+	if !id.ReleasedUndecidedJob(ledger) {
+		t.Fatal("exact native-unknown release refused")
+	}
+	job.ErrorCode = ReleasedHostWindowCode
 	for name, mutate := range map[string]func(*servicemutationledger.Ledger){
 		"foreign owner":     func(l *servicemutationledger.Ledger) { l.Jobs[id.RequestID].OwnerID = strings.Repeat("f", 32) },
 		"foreign target":    func(l *servicemutationledger.Ledger) { l.Jobs[id.RequestID].Target = "pdns" },

@@ -1159,3 +1159,16 @@ recovery use the same boundary. The v1 journal and ledger schemas are unchanged.
 A focused component test proves that a mismatched journal survives while the
 failed verdict is durable and the host lock becomes available. Native reboot,
 owner-edit and Agent-independent inverse acceptance remain open.
+
+P0.4, constitutional invariants 1/2/3: if Agent startup cannot verify an
+interrupted DNS switch's native result, it may release only that dead worker's
+accepted ledger lease when a canonical frozen journal still matches request,
+owner, target and qualifier under the host lock. The new stable failure reason
+`dns_native_recovery_unknown_after_restart` is accepted by the existing
+released-undecided reader. The journal remains, new DNS work refuses it, and
+idle boot may retry the exact recovery; unrelated host work can continue.
+Missing, unreadable or mismatched journal evidence still retains fail-closed
+host exclusion. The historical v1 journal/ledger schemas are unchanged; only
+an additional terminal reason is recognized. Local exact/missing evidence and
+shared-authority tests pass. Native reboot/owner-edit trials and an
+Agent-independent inverse are still required for P0.4 acceptance.

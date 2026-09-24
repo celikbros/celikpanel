@@ -1085,8 +1085,20 @@ func (m *serviceMutationManager) recoverPersistedDNSEngineSwitchLocked(
 	cancel()
 	m.mu.Lock()
 	if recoveryErr != nil {
+		// A frozen, exact journal can retain DNS uncertainty after the
+		// accepted worker is proved gone. Release only that operation's
+		// global ledger lease; a new DNS switch still refuses the journal.
+		journalPath := filepath.Join(filepath.Dir(m.ledgerPath), dnsEngineSwitchJournalFile)
+		journal, exists, readErr := readDNSEngineSwitchJournalAt(journalPath)
+		if readErr == nil && exists && exactSwitchJournalIdentity(journal, target, job.PackageName, binding) {
+			log.Printf("Interrupted DNS switch native recovery is unknown; retain exact journal and release only its ledger lease (request %s): %v", job.RequestID, recoveryErr)
+			return true, m.releaseUndecidedHostMutationLeaseLocked(lock,
+				dnsengineartifact.ReleasedNativeUnknownCode,
+				"The interrupted DNS switch could not be verified after the Agent restarted. Its exact journal remains for DNS recovery, and new DNS changes are blocked. The server administrator should inspect the native DNS service and run recovery dns-switch-status --quiesced; after resolving the reported cause, restart the Agent to retry this same operation. Unrelated host changes can continue.",
+			)
+		}
 		m.poisonLock = lock
-		return true, m.poisonLocked(fmt.Errorf("recover DNS engine switch host transaction: %w", recoveryErr))
+		return true, m.poisonLocked(fmt.Errorf("recover DNS engine switch host transaction without an exact retained journal: %w", errors.Join(recoveryErr, readErr)))
 	}
 	if outcome == dnsEngineSwitchRecoveryFinalized {
 		journal := dnsEngineSwitchJournal{

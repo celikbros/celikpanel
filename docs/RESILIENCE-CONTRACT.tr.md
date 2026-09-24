@@ -741,3 +741,16 @@ Etkin islem ve acilista kalan islem ayni siniri kullanir. v1 gunluk ve
 defter semalari degismedi. Bilesen testi farkli sahipli gunlugun korundugunu,
 kalici sonucu ve sunucu kilidinin serbest kaldigini dogrular. Gercek yeniden
 baslatma, sahip degisikligi ve Agent'tan bagimsiz ters islem kabulu aciktir.
+
+P0.4, anayasal 1/2/3 ilkeleri: Agent acilisinda yarim kalan DNS gecisinin
+yerel sonucu dogrulanamazsa, yalniz bitmis iscinin kabul edilmis defter
+kirasi birakilabilir. Bunun icin donmus gunluk istek, sahip, hedef ve
+yeterlilik bilgileriyle tam eslesmeli ve ortak sunucu kilidi tutulmalidir.
+`dns_native_recovery_unknown_after_restart` kalici neden kodu eski
+belirsiz-birakilmis okuyucusunca taninir. Gunluk korunur, yeni DNS islemi
+durur, sonraki acilis ayni kurtarmayi deneyebilir; ilgisiz sunucu islemleri
+devam eder. Eksik, okunamayan veya uyusmayan gunlukte sunucu kilidi
+korunur. v1 gunluk/defter semalari degismedi; yalniz ek bir nihai neden
+tanindi. Yerel tam/eksik kanit ve ortak yetki testleri gecti. Gercek
+yeniden baslatma, sahip degisikligi ve Agent'tan bagimsiz ters islem
+kabulu halen aciktir.
