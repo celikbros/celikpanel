@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -137,5 +138,32 @@ func TestBootReplaysRetainedTerminalDNSRollbackBeforeCleanup(t *testing.T) {
 	}
 	if ledger.Jobs[job.RequestID].Status != servicemutationledger.StatusFailed {
 		t.Fatal("boot replay rewrote the terminal verdict")
+	}
+
+	// If native reproof is unknown at the next boot, the DNS journal stays
+	// frozen while unrelated host mutations retain their lock path.
+	if err := os.WriteFile(path, encoded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	backend.recoverErr = errors.New("native DNS state unavailable")
+	lock, err = acquireServiceMutationFileLock(filepath.Join(dir, "service-mutation.lock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.mu.Lock()
+	handled, recoveryErr = m.recoverReleasedUndecidedDNSEngineSwitchLocked(lock)
+	m.mu.Unlock()
+	if !handled || recoveryErr != nil || m.poisoned != nil {
+		t.Fatalf("unknown DNS reproof blocked unrelated management: handled=%v err=%v poisoned=%v", handled, recoveryErr, m.poisoned)
+	}
+	if _, statErr := os.Stat(path); statErr != nil {
+		t.Fatalf("unknown DNS reproof discarded journal: %v", statErr)
+	}
+	probe, err := acquireServiceMutationFileLock(filepath.Join(dir, "service-mutation.lock"))
+	if err != nil {
+		t.Fatalf("idle DNS uncertainty retained global host lock: %v", err)
+	}
+	if err := probe.Close(); err != nil {
+		t.Fatal(err)
 	}
 }

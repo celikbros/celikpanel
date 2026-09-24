@@ -1140,3 +1140,11 @@ Shared ordering, exact-ledger, secure cleanup, direct-producer and local boot
 replay tests are component evidence. A native kill/reboot trial at each boundary, owner-edit
 races, an Agent-independent inverse and complete update/rollback matrix remain
 open; P0.3 and P0.4 are not accepted as complete.
+
+P0.4, constitutional invariant 3 follow-up: idle boot reconciliation of a
+retained terminal DNS rollback keeps the journal and reports an unknown native
+reproof or unreadable evidence without poisoning the global mutation manager.
+A new DNS operation still refuses that journal at its own preflight boundary;
+unrelated host operations retain their normal lock path. A local boot replay
+test checks that the host lock is released on unknown reproof. This is scoped
+component evidence, not proof of native workload continuity.

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"path/filepath"
 	"time"
@@ -386,8 +385,8 @@ func (m *serviceMutationManager) recoverReleasedUndecidedDNSEngineSwitchLocked(
 		filepath.Join(filepath.Dir(m.ledgerPath), dnsEngineSwitchJournalFile),
 	)
 	if err != nil {
-		m.poisonLock = lock
-		return true, m.poisonLocked(fmt.Errorf("read DNS switch journal during boot: %w", err))
+		log.Printf("DNS switch journal could not be read during idle boot recovery; preserve it for owner review: %v", err)
+		return true, lock.Close()
 	}
 	if !exists {
 		return false, nil
@@ -413,10 +412,6 @@ func (m *serviceMutationManager) recoverReleasedUndecidedDNSEngineSwitchLocked(
 	cancel()
 	m.mu.Lock()
 	if recoverErr != nil {
-		if terminalRollback {
-			m.poisonLock = lock
-			return true, m.poisonLocked(fmt.Errorf("reprove terminal DNS switch rollback after boot: %w", recoverErr))
-		}
 		log.Printf(
 			"A DNS engine transaction released after an undecidable boot could not be reconciled yet; "+
 				"its reason is already recorded and the host stays usable: %v",
@@ -427,8 +422,8 @@ func (m *serviceMutationManager) recoverReleasedUndecidedDNSEngineSwitchLocked(
 	if outcome != dnsEngineSwitchRecoveryRolledBack &&
 		outcome != dnsEngineSwitchRecoveryCommitted &&
 		outcome != dnsEngineSwitchRecoveryFinalized {
-		m.poisonLock = lock
-		return true, m.poisonLocked(fmt.Errorf("released DNS switch recovery returned unsupported outcome %q", outcome))
+		log.Printf("Released DNS switch recovery returned unsupported outcome %q; journal retained for owner review", outcome)
+		return true, lock.Close()
 	}
 	if outcome == dnsEngineSwitchRecoveryCommitted ||
 		outcome == dnsEngineSwitchRecoveryFinalized {
@@ -451,8 +446,8 @@ func (m *serviceMutationManager) recoverReleasedUndecidedDNSEngineSwitchLocked(
 	}
 	if outcome == dnsEngineSwitchRecoveryRolledBack {
 		if err := m.removeTerminalRolledBackDNSEngineSwitchJournalLocked(journal.MutationRequestID); err != nil {
-			m.poisonLock = lock
-			return true, m.poisonLocked(fmt.Errorf("retire terminal DNS switch rollback journal after boot: %w", err))
+			log.Printf("Terminal DNS switch rollback journal could not be retired; preserve it for owner review: %v", err)
+			return true, lock.Close()
 		}
 	}
 	// No ledger receipt is written. That mutation already has a terminal one -
