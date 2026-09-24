@@ -52,7 +52,7 @@ func inspectionFixture(t *testing.T) (dnsengineartifact.JournalPolicy, dnsengine
 func TestInspectEvidenceBindsExactAcceptedJob(t *testing.T) {
 	policy, journal, ledger, now := inspectionFixture(t)
 	got, err := InspectEvidence(policy, journal, ledger, now)
-	if err != nil || got.Status != EvidenceActive || got.RequestID != journal.MutationRequestID || got.Phase != journal.Phase {
+	if err != nil || got.Status != EvidenceActive || got.RequestID != journal.MutationRequestID || got.Phase != journal.Phase || got.SourceEngine != string(journal.SourceEngine) || got.TargetEngine != string(journal.TargetEngine) {
 		t.Fatalf("valid pair: %+v, %v", got, err)
 	}
 	for name, mutate := range map[string]func(*servicemutationledger.Ledger){

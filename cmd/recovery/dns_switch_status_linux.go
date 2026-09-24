@@ -14,10 +14,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/bindroot"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/hostmutationlock"
+	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/processidentity"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
@@ -36,6 +38,10 @@ func installedDNSJournalPolicy(gid uint32) dnsengineartifact.JournalPolicy {
 }
 
 func localCelikPanelGroupID(path string) (uint32, error) {
+	return localServiceGroupID(path, "celikpanel")
+}
+
+func localServiceGroupID(path, group string) (uint32, error) {
 	// Local-only lookup keeps DNS recovery observation independent of NSS
 	// services that may themselves be unavailable during a DNS incident.
 	before, err := os.Lstat(path)
@@ -67,19 +73,46 @@ func localCelikPanelGroupID(path string) (uint32, error) {
 	var gid uint32
 	for _, line := range strings.Split(string(raw), "\n") {
 		fields := strings.Split(line, ":")
-		if len(fields) != 4 || fields[0] != "celikpanel" {
+		if fields[0] != group {
 			continue
 		}
+		if len(fields) != 4 || (group != "celikpanel" && (fields[1] != "x" || fields[3] != "")) {
+			return 0, errors.New("local service group record is unsafe")
+		}
 		number, err := strconv.ParseUint(fields[2], 10, 32)
-		if err != nil || number == 0 || found {
-			return 0, errors.New("local CelikPanel group identity is ambiguous")
+		if err != nil || number == 0 || number > uint64(1<<31-1) || strconv.FormatUint(number, 10) != fields[2] || found {
+			return 0, errors.New("local service group identity is ambiguous")
 		}
 		gid, found = uint32(number), true
 	}
 	if !found {
-		return 0, errors.New("local CelikPanel group is absent")
+		return 0, errors.New("local service group is absent")
 	}
 	return gid, nil
+}
+
+// This is a directory and package provenance observation only. It does not
+// establish which immutable generation named loaded or authorize an inverse.
+func verifyInstalledBINDRoot(ctx context.Context) error {
+	profile, err := hostplatform.Detect()
+	if err != nil {
+		return fmt.Errorf("detect installed host profile: %w", err)
+	}
+	var layout bindroot.Layout
+	var group string
+	switch profile.PackageManager {
+	case hostplatform.PackageManagerAPT:
+		layout, group = bindroot.APT, "bind"
+	case hostplatform.PackageManagerPacman:
+		layout, group = bindroot.Pacman, "named"
+	default:
+		return errors.New("this package family has no certified managed BIND root")
+	}
+	gid, err := localServiceGroupID("/etc/group", group)
+	if err != nil {
+		return fmt.Errorf("verify local BIND service group: %w", err)
+	}
+	return bindroot.VerifyInstalled(ctx, layout, gid)
 }
 
 type dnsObservationLocks struct {
@@ -162,6 +195,13 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "DNS switch evidence or native DNS unit properties changed during the quiesced observation. The server owner should inspect the existing operation and native DNS service, then retry after owner changes settle; no DNS operation was started.")
 			return exitUnavailable
 		}
+	}
+	if observation.SourceEngine == "bind" || observation.TargetEngine == "bind" {
+		if bindErr := verifyInstalledBINDRoot(context.Background()); bindErr != nil {
+			fmt.Fprintln(diagnostic, "Managed BIND root ownership is unknown. The server owner should inspect the native BIND directory, service group and package ownership before the same DNS operation resumes; no inverse was started. "+bindErr.Error())
+			return exitUnavailable
+		}
+		fmt.Fprintln(out, "Managed BIND root directory and package ownership matched on two read-only walks. This does not prove the loaded generation, DNS answers, owner edits or recovery authority.")
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	switch observation.TargetReceipt {

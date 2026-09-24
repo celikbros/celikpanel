@@ -120,3 +120,28 @@ func TestDNSObservationLocksKeepReleaseThenHostAndReleaseOnFailure(t *testing.T)
 	}
 	_ = heldRelease.Close()
 }
+
+func TestLocalBINDGroupRejectsNoncanonicalAndDuplicateRecords(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("root-owned group fixture requires root")
+	}
+	path := filepath.Join(t.TempDir(), "group")
+	check := func(data string, wantOK bool) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		gid, err := localServiceGroupID(path, "bind")
+		if wantOK && (err != nil || gid != 1234) {
+			t.Fatalf("canonical BIND group rejected: %d %v", gid, err)
+		}
+		if !wantOK && err == nil {
+			t.Fatalf("unsafe BIND group accepted: %q", data)
+		}
+	}
+	check("bind:x:1234:\n", true)
+	check("bind:x:1234:\nbind:x:1235:\n", false)
+	check("bind:x:01234:\n", false)
+	check("bind:x:1234:someone\n", false)
+	check("bind:x:1234:\nbind:malformed\n", false)
+}

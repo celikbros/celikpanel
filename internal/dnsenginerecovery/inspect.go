@@ -60,6 +60,8 @@ type EvidenceObservation struct {
 	EvidenceSHA256  string
 	Status          EvidenceStatus
 	RequestID       string
+	SourceEngine    string
+	TargetEngine    string
 	Phase           string
 	WorkerPID       int
 	WorkerStarted   string
@@ -87,7 +89,7 @@ func InspectEvidence(policy dnsengineartifact.JournalPolicy, journal dnsenginear
 	if job == nil {
 		return EvidenceObservation{}, errors.New("DNS switch journal has no matching accepted ledger job")
 	}
-	observation := EvidenceObservation{RequestID: id.RequestID, Phase: journal.Phase}
+	observation := EvidenceObservation{RequestID: id.RequestID, Phase: journal.Phase, SourceEngine: string(journal.SourceEngine), TargetEngine: string(journal.TargetEngine)}
 	unitNames := make(map[string]bool, len(journal.SourceUnitsBefore)+len(journal.TargetUnitsBefore))
 	for _, snapshots := range [][]dnsengineartifact.UnitSnapshot{journal.SourceUnitsBefore, journal.TargetUnitsBefore} {
 		for _, snapshot := range snapshots {

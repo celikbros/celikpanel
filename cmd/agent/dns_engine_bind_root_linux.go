@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/bindroot"
 	"golang.org/x/sys/unix"
 )
 
@@ -28,10 +29,7 @@ var errBINDAbandonedGenerationRoot = errors.New(
 	"the unreleased APT BIND generation root is unsupported",
 )
 
-type bindDirectoryIdentity struct {
-	Device uint64
-	Inode  uint64
-}
+type bindDirectoryIdentity = bindroot.Identity
 
 type aptBINDStatOverrideOps struct {
 	owner func() ([]byte, error)
@@ -623,158 +621,25 @@ func reverifyAPTBindGenerationRootAt(
 // validateExactBINDDirectoryFD kullanmayı sürdürür. Ayrım tam da budur:
 // kurduğumuz şeyi birebir doğrula, devraldığımız şeyde yalnız önemli olanı.
 func validateInheritedBINDAnchorFD(fd int, label string) (bindDirectoryIdentity, error) {
-	var stat unix.Stat_t
-	if err := unix.Fstat(fd, &stat); err != nil {
-		return bindDirectoryIdentity{}, fmt.Errorf("stat %s: %w", label, err)
-	}
-	if stat.Mode&unix.S_IFMT != unix.S_IFDIR {
-		return bindDirectoryIdentity{}, fmt.Errorf("%s is not a directory", label)
-	}
-	if stat.Uid != 0 || stat.Gid != 0 {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s has uid:gid %d:%d, want 0:0", label, stat.Uid, stat.Gid,
-		)
-	}
-	permissions := stat.Mode & 0o7777
-	if permissions&0o022 != 0 {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s has mode %04o and is group- or world-writable", label, permissions,
-		)
-	}
-	// These ancestors are shared system directories: the unprivileged services
-	// that live below them have to traverse them. A parent that is not
-	// world-traversable is not a stricter variant of a normal system path, it
-	// is an anomaly, and this policy deliberately keeps refusing it rather than
-	// widening into "anything root owns".
-	// Bu üst dizinler paylaşılan sistem dizinleridir: altlarında yaşayan
-	// yetkisiz servislerin onları geçmesi gerekir. Herkesçe geçilemeyen bir üst
-	// dizin, normal bir sistem yolunun daha katı bir çeşidi değil bir
-	// anormalliktir; bu politika "root neye sahipse kabul" noktasına genişlemek
-	// yerine onu reddetmeyi bilerek sürdürür.
-	if permissions&0o001 == 0 {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s has mode %04o and is not world-traversable", label, permissions,
-		)
-	}
-	if special := stat.Mode & uint32(unix.S_ISUID|unix.S_ISGID|unix.S_ISVTX); special != 0 {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s carries setuid, setgid or sticky bits", label,
-		)
-	}
-	if err := rejectBINDDirectoryACL(fd, label); err != nil {
-		return bindDirectoryIdentity{}, err
-	}
-	return bindDirectoryIdentity{
-		Device: uint64(stat.Dev),
-		Inode:  stat.Ino,
-	}, nil
+	return bindroot.ValidateInheritedAnchor(fd, label)
 }
 
-func openInheritedBINDAnchorAt(
-	parentFD int,
-	name string,
-	label string,
-) (int, bindDirectoryIdentity, error) {
-	fd, err := openBINDDirectoryAt(parentFD, name, label)
-	if err != nil {
-		return -1, bindDirectoryIdentity{}, err
-	}
-	identity, err := validateInheritedBINDAnchorFD(fd, label)
-	if err != nil {
-		unix.Close(fd)
-		return -1, bindDirectoryIdentity{}, err
-	}
-	return fd, identity, nil
+func openInheritedBINDAnchorAt(parentFD int, name, label string) (int, bindDirectoryIdentity, error) {
+	return bindroot.OpenInheritedAnchorAt(parentFD, name, label)
 }
 
-func openExactBINDDirectoryAt(
-	parentFD int,
-	name string,
-	uid, gid, mode uint32,
-	label string,
-) (int, bindDirectoryIdentity, error) {
-	fd, err := openBINDDirectoryAt(parentFD, name, label)
-	if err != nil {
-		return -1, bindDirectoryIdentity{}, err
-	}
-	identity, err := validateExactBINDDirectoryFD(fd, uid, gid, mode, label)
-	if err != nil {
-		unix.Close(fd)
-		return -1, bindDirectoryIdentity{}, err
-	}
-	return fd, identity, nil
+func openExactBINDDirectoryAt(parentFD int, name string, uid, gid, mode uint32, label string) (int, bindDirectoryIdentity, error) {
+	return bindroot.OpenExactDirectoryAt(parentFD, name, uid, gid, mode, label)
 }
 
 func openBINDDirectoryAt(parentFD int, name, label string) (int, error) {
-	if name == "" || name == "." || name == ".." {
-		return -1, fmt.Errorf("%s has an invalid path component", label)
-	}
-	fd, err := unix.Openat2(parentFD, name, &unix.OpenHow{
-		Flags: uint64(
-			unix.O_RDONLY | unix.O_DIRECTORY | unix.O_CLOEXEC | unix.O_NOFOLLOW,
-		),
-		Resolve: unix.RESOLVE_BENEATH |
-			unix.RESOLVE_NO_SYMLINKS |
-			unix.RESOLVE_NO_MAGICLINKS,
-	})
-	if errors.Is(err, unix.ENOSYS) {
-		return -1, fmt.Errorf("%s requires Linux openat2: %w", label, err)
-	}
-	if errors.Is(err, unix.ELOOP) || errors.Is(err, unix.EXDEV) {
-		return -1, fmt.Errorf("%s refused a symbolic link or path escape: %w", label, err)
-	}
-	if err != nil {
-		return -1, fmt.Errorf("open %s: %w", label, err)
-	}
-	return fd, nil
+	return bindroot.OpenDirectoryAt(parentFD, name, label)
 }
 
-func validateExactBINDDirectoryFD(
-	fd int,
-	uid, gid, mode uint32,
-	label string,
-) (bindDirectoryIdentity, error) {
-	var stat unix.Stat_t
-	if err := unix.Fstat(fd, &stat); err != nil {
-		return bindDirectoryIdentity{}, fmt.Errorf("stat %s: %w", label, err)
-	}
-	if stat.Mode&unix.S_IFMT != unix.S_IFDIR {
-		return bindDirectoryIdentity{}, fmt.Errorf("%s is not a directory", label)
-	}
-	if stat.Uid != uid || stat.Gid != gid {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s has uid:gid %d:%d, want %d:%d",
-			label, stat.Uid, stat.Gid, uid, gid,
-		)
-	}
-	if stat.Mode&bindDirectoryModeMask != mode {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s has mode %04o, want %04o",
-			label, stat.Mode&bindDirectoryModeMask, mode,
-		)
-	}
-	if err := rejectBINDDirectoryACL(fd, label); err != nil {
-		return bindDirectoryIdentity{}, err
-	}
-	return bindDirectoryIdentity{
-		Device: uint64(stat.Dev),
-		Inode:  stat.Ino,
-	}, nil
+func validateExactBINDDirectoryFD(fd int, uid, gid, mode uint32, label string) (bindDirectoryIdentity, error) {
+	return bindroot.ValidateExactDirectory(fd, uid, gid, mode, label)
 }
 
 func rejectBINDDirectoryACL(fd int, label string) error {
-	for _, name := range []string{
-		"system.posix_acl_access",
-		"system.posix_acl_default",
-	} {
-		size, err := unix.Fgetxattr(fd, name, nil)
-		if err == nil && size > 0 {
-			return fmt.Errorf("%s has an unsupported POSIX ACL", label)
-		}
-		if err != nil && !errors.Is(err, unix.ENODATA) &&
-			!errors.Is(err, unix.ENOTSUP) {
-			return fmt.Errorf("inspect %s ACL: %w", label, err)
-		}
-	}
-	return nil
+	return bindroot.RejectACL(fd, label)
 }

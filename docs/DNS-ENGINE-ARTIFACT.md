@@ -464,3 +464,24 @@ pairing comparison, but does not itself read the native tree or admit an
 inverse. Component boundary tests and the full Agent suite pass. Secure
 independent BIND-root verification, PowerDNS native proof, worker exclusion,
 native execution and interrupted-operation acceptance remain open.
+
+### Independent managed BIND root provenance observation (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: the Agent's no-symlink `openat2`,
+root-owner, exact-mode and ACL directory checks now call one shared
+`internal/bindroot` implementation. The root-only DNS status reader invokes
+that verifier for a switch involving BIND. It selects the installed APT or
+pacman layout through the supported host profile, reads the service GID from
+a bounded local `/etc/group`, proves exact package ownership (and APT's durable
+statoverride) with fixed trusted executables, and walks the native BIND root
+twice. An unsafe or unavailable proof returns **unknown** with owner action;
+it cannot imply that BIND is absent or authorize a new switch.
+
+No persisted schema or producer version changes; recovery remains read-only.
+The proof establishes directory-chain and package provenance at observation
+time. It does **not** establish the selected immutable generation, BIND's
+loaded configuration, zone answers, owner edits, PowerDNS native identity,
+worker exclusion or inverse eligibility. Native execution and complete
+interrupted-switch acceptance therefore remain open. Focused root-drift,
+symlink, package-refusal and local-group tests and Agent/recovery suites cover
+this boundary; no installed panel was updated.
