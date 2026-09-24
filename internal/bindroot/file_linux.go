@@ -44,7 +44,7 @@ func ReadExactBINDConfigAt(rootFD int, layout Layout, serviceGID uint32, absolut
 	}
 	switch layout {
 	case APT:
-		if absolutePath != "/etc/bind/named.conf.options" && absolutePath != "/etc/bind/named.conf.local" {
+		if absolutePath != "/etc/bind/named.conf" && absolutePath != "/etc/bind/named.conf.options" && absolutePath != "/etc/bind/named.conf.local" {
 			return nil, FileIdentity{}, errors.New("unsupported APT BIND config path")
 		}
 		return readExactFileAt(rootFD, absolutePath, "APT BIND config", 0o644, []uint32{0, serviceGID})

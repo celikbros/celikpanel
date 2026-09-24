@@ -250,7 +250,7 @@ func observeBINDConfigAt(rootFD int, layout bindroot.Layout, serviceGID uint32) 
 	var includePath string
 	switch layout {
 	case bindroot.APT:
-		paths = []string{"/etc/bind/named.conf.options", "/etc/bind/named.conf.local"}
+		paths = []string{"/etc/bind/named.conf", "/etc/bind/named.conf.options", "/etc/bind/named.conf.local"}
 		includePath = "/var/cache/bind/celikpanel/current/zones.conf"
 	case bindroot.Pacman:
 		paths = []string{"/etc/named.conf"}
@@ -264,6 +264,11 @@ func observeBINDConfigAt(rootFD int, layout bindroot.Layout, serviceGID uint32) 
 		if err != nil {
 			return nil, err
 		}
+		if layout == bindroot.APT && path == "/etc/bind/named.conf" {
+			if err := bindconfig.VerifyMainIncludes(string(raw)); err != nil {
+				return nil, fmt.Errorf("verify APT BIND main includes: %w", err)
+			}
+		}
 		if path == paths[len(paths)-1] {
 			if err := bindconfig.VerifyExactZoneInclude(string(raw), includePath); err != nil {
 				return nil, fmt.Errorf("verify managed BIND zone include: %w", err)
@@ -271,7 +276,7 @@ func observeBINDConfigAt(rootFD int, layout bindroot.Layout, serviceGID uint32) 
 		}
 		identities = append(identities, identity)
 	}
-	if len(identities) == 2 && identities[0].GID != identities[1].GID {
+	if len(identities) == 3 && identities[1].GID != identities[2].GID {
 		return nil, errors.New("APT BIND config files have different owners")
 	}
 	return identities, nil
@@ -441,7 +446,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				fmt.Fprintln(diagnostic, "Selected BIND generation changed around native config observation. The server owner should inspect named configuration and DNS answers before the same operation resumes; no inverse was started. "+bindErr.Error())
 				return exitUnavailable
 			}
-			fmt.Fprintln(out, "Native BIND config files retained the exact managed zone include across secure read-only observations. The main config may not load this anchor; named's loaded configuration and DNS answers remain unproved.")
+			fmt.Fprintln(out, "Native BIND config files retained the exact managed zone include across secure read-only observations. When using APT, the main config also retained active includes. Named's loaded configuration and DNS answers remain unproved.")
 		}
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)

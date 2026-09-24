@@ -25,6 +25,11 @@ func TestObserveBINDConfigAtRequiresExactActiveInclude(t *testing.T) {
 	}
 	options := filepath.Join(root, "etc/bind/named.conf.options")
 	anchor := filepath.Join(root, "etc/bind/named.conf.local")
+	main := filepath.Join(root, "etc/bind/named.conf")
+	mainConfig := "include \"/etc/bind/named.conf.options\";\ninclude \"/etc/bind/named.conf.local\";\n"
+	if err := os.WriteFile(main, []byte(mainConfig), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(options, []byte("options {};\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -42,6 +47,15 @@ func TestObserveBINDConfigAtRequiresExactActiveInclude(t *testing.T) {
 	defer unix.Close(fd)
 	if _, err := observeBINDConfigAt(fd, bindroot.APT, 12345); err != nil {
 		t.Fatalf("exact managed include rejected: %v", err)
+	}
+	if err := os.WriteFile(main, []byte("// "+mainConfig), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := observeBINDConfigAt(fd, bindroot.APT, 12345); err == nil {
+		t.Fatal("inert main include accepted")
+	}
+	if err := os.WriteFile(main, []byte(mainConfig), 0o644); err != nil {
+		t.Fatal(err)
 	}
 	for _, changed := range []string{
 		"// owner config\n",

@@ -993,3 +993,9 @@ This changes no persisted schema or recovery admission. Main-config
 reachability, named's loaded config, authoritative answers, owner edits
 outside the managed block, independent inverse and native fault acceptance
 remain open; P0.4 is not complete.
+The P0.4 APT disk observation additionally verifies active top-level main
+config includes of the options and managed local anchor with a shared lexical
+predicate. The [main-config evidence](DNS-ENGINE-ARTIFACT.md#apt-bind-main-config-include-reachability-2026-09-24)
+is read-only and schema-neutral. It is not a full BIND parse, named loaded
+config proof, DNS answer proof, independent inverse or native fault-matrix
+acceptance; P0.4 remains open.

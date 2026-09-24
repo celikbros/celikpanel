@@ -620,3 +620,22 @@ schemas, native files and installed panels were not changed. Root-owned
 mode/group/symlink and missing/inert include tests, Agent/recovery suites
 and vet passed. Independent native inverse execution and the complete
 interrupted-switch acceptance matrix remain open.
+### APT BIND main-config include reachability (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: the independent selected-BIND
+observer now reads the fixed /etc/bind/named.conf through the same no-follow,
+root-owned native-config reader. A shared lexical predicate requires exactly
+one active, top-level include of each APT options and local anchor file.
+Comments, quoted strings, nested blocks, malformed statements, absent and
+duplicate includes cannot stand in for those active statements. The secure
+main, options and anchor file identities must remain unchanged across the
+observer's two reads, and the selected generation is rechecked afterward.
+Pacman continues to use its one-file config layout. No files are rewritten,
+services reloaded, installed panels updated or recovery admission expanded.
+
+This is a bounded lexical on-disk path check, not a complete BIND grammar
+parse or proof that named loaded that file. Owner changes elsewhere, package
+binary integrity, live authoritative answers, independent inverse execution
+and interrupted-switch fault acceptance remain open. Parser adversarial
+tests, root-owned fixture tests, Agent/recovery suites and vet passed; no
+persisted schema or producer transition changed.
