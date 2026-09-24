@@ -172,7 +172,7 @@ func sourceStateFromDNSSwitchJournal(
 }
 
 func verifyDNSSwitchSourceOwnership(journal dnsEngineSwitchJournal) error {
-	expected, exists, err := sourceStateFromDNSSwitchJournal(journal)
+	_, exists, err := sourceStateFromDNSSwitchJournal(journal)
 	if err != nil || !exists {
 		return err
 	}
@@ -180,7 +180,11 @@ func verifyDNSSwitchSourceOwnership(journal dnsEngineSwitchJournal) error {
 	if err != nil {
 		return err
 	}
-	if !actualExists || !reflect.DeepEqual(actual, expected) {
+	matches, err := dnsengineartifact.ProveFrozenSwitchSourceOwnership(journal, actual, actualExists)
+	if err != nil {
+		return err
+	}
+	if !matches {
 		return errors.New("DNS source ownership receipt is absent or differs from the switch journal")
 	}
 	return nil

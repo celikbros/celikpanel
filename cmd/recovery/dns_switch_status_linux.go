@@ -167,6 +167,16 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	case dnsenginerecovery.SourceReceiptDifferent:
 		fmt.Fprintln(out, "The current DNS state receipt does not match the frozen journal source. Preserve the evidence and inspect native DNS and owner changes before the original operation resumes.")
 	}
+	switch observation.SourceOwnership {
+	case dnsenginerecovery.SourceOwnershipNotApplicable:
+		fmt.Fprintln(out, "The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.")
+	case dnsenginerecovery.SourceOwnershipAbsent:
+		fmt.Fprintln(out, "The frozen source ownership receipt is missing. The server owner must preserve the journal and inspect this engine's private ownership evidence before the original operation resumes; no inverse is admitted.")
+	case dnsenginerecovery.SourceOwnershipExact:
+		fmt.Fprintln(out, "The frozen source ownership receipt matches the journal. The server owner must still verify native DNS and worker exclusion before any recovery action.")
+	case dnsenginerecovery.SourceOwnershipDifferent:
+		fmt.Fprintln(out, "The source ownership receipt differs from the journal. Preserve both records and inspect owner changes before the original operation resumes; no inverse is admitted.")
+	}
 	units, unitErr := dnsenginerecovery.ProbeNativeUnits(context.Background(), observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
 	if unitErr != nil {
 		fmt.Fprintln(diagnostic, "Native DNS unit state is unknown. The server owner should inspect the named, bind9 and pdns systemd services before the original operation resumes; preserve the journal and do not start another switch. "+unitErr.Error())

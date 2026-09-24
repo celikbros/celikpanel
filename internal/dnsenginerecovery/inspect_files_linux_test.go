@@ -37,7 +37,7 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 		t.Fatal(err)
 	}
 	got, present, err := InspectFiles(root, owner, policy, now)
-	if err != nil || !present || got.Status != EvidenceActive || got.TargetReceipt != TargetReceiptAbsent || got.SourceReceipt != SourceReceiptMutualAbsence {
+	if err != nil || !present || got.Status != EvidenceActive || got.TargetReceipt != TargetReceiptAbsent || got.SourceReceipt != SourceReceiptMutualAbsence || got.SourceOwnership != SourceOwnershipNotApplicable {
 		t.Fatalf("valid files with absent state: %+v, %v, %v", got, present, err)
 	}
 	state := dnsengineartifact.StateV1{
@@ -183,18 +183,18 @@ func TestInspectFilesDistinguishesFrozenSourceFromForeignReceipt(t *testing.T) {
 		}
 	}
 	owner := servicemutationledger.FileOwner{UID: 0, GID: 0}
-	check := func(want SourceReceiptStatus, target TargetReceiptStatus) {
+	check := func(want SourceReceiptStatus, target TargetReceiptStatus, ownership SourceOwnershipStatus) {
 		t.Helper()
 		got, present, err := InspectFiles(root, owner, policy, now)
-		if err != nil || !present || got.SourceReceipt != want || got.TargetReceipt != target || len(got.NativeUnits) != 3 || got.NativeUnits[0] != "bind9.service" || got.NativeUnits[1] != "named.service" || got.NativeUnits[2] != "pdns.service" {
-			t.Fatalf("source/target classification: %+v, %v, %v; want %s/%s", got, present, err, want, target)
+		if err != nil || !present || got.SourceReceipt != want || got.TargetReceipt != target || got.SourceOwnership != ownership || len(got.NativeUnits) != 3 || got.NativeUnits[0] != "bind9.service" || got.NativeUnits[1] != "named.service" || got.NativeUnits[2] != "pdns.service" {
+			t.Fatalf("source/target/ownership classification: %+v, %v, %v; want %s/%s/%s", got, present, err, want, target, ownership)
 		}
 	}
-	check(SourceReceiptDifferent, TargetReceiptAbsent)
+	check(SourceReceiptDifferent, TargetReceiptAbsent, SourceOwnershipAbsent)
 	if err := os.WriteFile(policy.StatePath, journal.StateBefore.Data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	check(SourceReceiptExact, TargetReceiptDifferent)
+	check(SourceReceiptExact, TargetReceiptDifferent, SourceOwnershipAbsent)
 	source, _, err := dnsengineartifact.DecodeStateDocument(journal.StateBefore.Data)
 	if err != nil {
 		t.Fatal(err)
@@ -207,7 +207,7 @@ func TestInspectFilesDistinguishesFrozenSourceFromForeignReceipt(t *testing.T) {
 	if err := os.WriteFile(policy.StatePath, foreignRaw, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	check(SourceReceiptDifferent, TargetReceiptDifferent)
+	check(SourceReceiptDifferent, TargetReceiptDifferent, SourceOwnershipAbsent)
 	targetState := dnsengineartifact.StateV1{
 		Schema: dnsengineartifact.StateSchemaV1, Mode: journal.Mode,
 		Engine: journal.TargetEngine, EngineEpoch: journal.TargetEpoch,
@@ -222,5 +222,45 @@ func TestInspectFilesDistinguishesFrozenSourceFromForeignReceipt(t *testing.T) {
 	if err := os.WriteFile(policy.StatePath, targetRaw, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	check(SourceReceiptDifferent, TargetReceiptExact)
+	check(SourceReceiptDifferent, TargetReceiptExact, SourceOwnershipAbsent)
+	ownershipPath := filepath.Join(root, "dns-engine-ownership-bind.json")
+	ownershipSource, _, err := dnsengineartifact.DecodeStateDocument(journal.StateBefore.Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, encode := range []func(dnsengineartifact.StateV1) ([]byte, error){dnsengineartifact.CanonicalV1, dnsengineartifact.CanonicalOwnershipDocumentV2} {
+		ownershipRaw, err := encode(ownershipSource)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(ownershipPath, ownershipRaw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		check(SourceReceiptDifferent, TargetReceiptExact, SourceOwnershipExact)
+	}
+	if err := os.WriteFile(ownershipPath, foreignRaw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	check(SourceReceiptDifferent, TargetReceiptExact, SourceOwnershipDifferent)
+	if err := os.WriteFile(ownershipPath, targetRaw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, present, err := InspectFiles(root, owner, policy, now); err == nil || !present {
+		t.Fatalf("wrong-engine ownership became a different receipt: %v, %v", present, err)
+	}
+	if err := os.WriteFile(ownershipPath, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, present, err := InspectFiles(root, owner, policy, now); err == nil || !present {
+		t.Fatalf("malformed ownership became an absent receipt: %v, %v", present, err)
+	}
+	if err := os.Remove(ownershipPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(policy.StatePath, ownershipPath); err != nil {
+		t.Fatal(err)
+	}
+	if _, present, err := InspectFiles(root, owner, policy, now); err == nil || !present {
+		t.Fatalf("symlinked ownership became an absent receipt: %v, %v", present, err)
+	}
 }

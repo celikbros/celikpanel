@@ -79,5 +79,33 @@ func InspectFiles(stateRoot string, owner servicemutationledger.FileOwner, polic
 			observation.SourceReceipt = SourceReceiptMutualAbsence
 		}
 	}
+	if journal.SourceEngine == "" {
+		observation.SourceOwnership = SourceOwnershipNotApplicable
+		return observation, true, nil
+	}
+	ownershipPath := filepath.Join(stateRoot, "dns-engine-ownership-"+string(journal.SourceEngine)+".json")
+	ownershipRaw, ownershipExists, err := servicemutationledger.ReadFile(ownershipPath, 64<<10, owner)
+	if err != nil {
+		return EvidenceObservation{}, true, fmt.Errorf("read DNS source ownership receipt: %w", err)
+	}
+	if !ownershipExists {
+		observation.SourceOwnership = SourceOwnershipAbsent
+		return observation, true, nil
+	}
+	ownership, _, err := dnsengineartifact.DecodeOwnershipDocument(ownershipRaw)
+	if err != nil {
+		return EvidenceObservation{}, true, fmt.Errorf("decode DNS source ownership receipt: %w", err)
+	}
+	if ownership.Engine != journal.SourceEngine {
+		return EvidenceObservation{}, true, errors.New("DNS source ownership receipt engine differs from its path")
+	}
+	matches, err := dnsengineartifact.ProveFrozenSwitchSourceOwnership(journal, ownership, true)
+	if err != nil {
+		return EvidenceObservation{}, true, fmt.Errorf("compare frozen DNS source ownership receipt: %w", err)
+	}
+	observation.SourceOwnership = SourceOwnershipDifferent
+	if matches {
+		observation.SourceOwnership = SourceOwnershipExact
+	}
 	return observation, true, nil
 }

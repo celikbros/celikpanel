@@ -43,15 +43,27 @@ const (
 	SourceReceiptDifferent     SourceReceiptStatus = "different-from-journal-source"
 )
 
+// SourceOwnershipStatus describes the frozen source's per-engine ownership
+// receipt only. An exact match remains insufficient for a native inverse.
+type SourceOwnershipStatus string
+
+const (
+	SourceOwnershipNotApplicable SourceOwnershipStatus = "no-source-engine"
+	SourceOwnershipAbsent        SourceOwnershipStatus = "absent"
+	SourceOwnershipExact         SourceOwnershipStatus = "exact-journal-source"
+	SourceOwnershipDifferent     SourceOwnershipStatus = "different-from-journal-source"
+)
+
 type EvidenceObservation struct {
-	Status        EvidenceStatus
-	RequestID     string
-	Phase         string
-	WorkerPID     int
-	WorkerStarted string
-	TargetReceipt TargetReceiptStatus
-	SourceReceipt SourceReceiptStatus
-	NativeUnits   []string
+	Status          EvidenceStatus
+	RequestID       string
+	Phase           string
+	WorkerPID       int
+	WorkerStarted   string
+	TargetReceipt   TargetReceiptStatus
+	SourceReceipt   SourceReceiptStatus
+	SourceOwnership SourceOwnershipStatus
+	NativeUnits     []string
 }
 
 // InspectEvidence binds a previously decoded canonical journal to a canonical

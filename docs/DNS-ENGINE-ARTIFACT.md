@@ -409,3 +409,19 @@ A systemd `active` property does not establish authoritative DNS answers,
 transferred zones, selected BIND generation, PowerDNS database identity or
 absence of owner edits. This is diagnosis only; an independent native recovery
 executor and interrupted-operation acceptance remain open.
+### Independent frozen-source ownership observation
+
+P0.2/P0.4, constitutional invariants 1/2/3: the exact frozen-source
+ownership comparison is now shared by Agent and the independent status reader.
+The root-only reader obtains the source engine's per-engine receipt from the
+fixed private root with the established owner, no-symlink 0600 reader, then
+accepts the canonical v1 or separated v2 ownership document for its semantic
+projection. It reports no-source, missing, exact and different receipts
+separately; malformed, wrong-engine or symlinked evidence is unknown and
+retained. The Agent's existing inverse admission continues to require an exact
+source match, with no wire schema or producer transition. Historical Alpha81
+source, mixed v1/v2 ownership, changed owner and unsafe file tests pass.
+
+This observation is not proof of native BIND/PowerDNS configuration, zone
+answers, owner edits or worker exclusion. It cannot authorize an inverse;
+independent execution and installed fault acceptance remain open.
