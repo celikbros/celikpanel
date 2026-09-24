@@ -523,3 +523,20 @@ independent observer reports unknown and an owner action. Shared-parser
 adversarial tests and Agent/recovery suites pass. Loaded named configuration,
 DNS answers, owner-edit detection, worker exclusion and native inverse
 execution remain open; this is not P0.4 acceptance.
+
+### Shared secure native-file observation (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: the Agent's exact vendor-file
+reader for BIND and PowerDNS now calls the shared read-only bindroot
+descriptor walk. It still requires a trusted root descriptor, canonical
+absolute path, root-owned non-writable ancestors, no symlinks or ACLs, an
+exact root:root 0644 single-link regular file, bounded bytes, and matching
+before/after descriptor metadata. The Agent retains its exact package and byte
+comparisons. No journal or state schema changes, native writes, service
+reloads, recovery admission or inverse behavior were added. Existing
+Agent vendor-file adversarial tests and recovery tests pass.
+
+The independent DNS status reader does not yet compare native BIND
+configuration with the selected generation or prove that named loaded it.
+Owner edits, DNS answers, worker exclusion and complete interrupted-switch
+acceptance remain open.

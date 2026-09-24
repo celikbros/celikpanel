@@ -5,19 +5,13 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path"
-	"strings"
 
+	"github.com/alicelik/celikpanel/internal/bindroot"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"golang.org/x/sys/unix"
 )
-
-const bindVendorFileMaxSize = 64 << 10
 
 type bindVendorFileContract struct {
 	unitPath         string
@@ -249,89 +243,12 @@ func readExactRootOwnedBINDFileAt(
 	absolutePath string,
 	label string,
 ) ([]byte, bindSecureFileIdentity, error) {
-	if !path.IsAbs(absolutePath) || path.Clean(absolutePath) != absolutePath ||
-		absolutePath == "/" {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s path is not canonical", label)
-	}
-	if _, err := validateInheritedBINDAnchorFD(
-		rootFD, "BIND vendor filesystem root",
-	); err != nil {
+	data, observed, err := bindroot.ReadExactRootOwnedFileAt(rootFD, absolutePath, label)
+	if err != nil {
 		return nil, bindSecureFileIdentity{}, err
-	}
-	components := strings.Split(strings.TrimPrefix(absolutePath, "/"), "/")
-	if len(components) < 2 {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s path is incomplete", label)
-	}
-	currentFD, err := unix.FcntlInt(uintptr(rootFD), unix.F_DUPFD_CLOEXEC, 3)
-	if err != nil {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("duplicate BIND vendor root: %w", err)
-	}
-	defer unix.Close(currentFD)
-	for _, component := range components[:len(components)-1] {
-		// Vendor unit directories (/lib, /usr/lib, /etc/systemd/...) are
-		// distribution-owned ancestors, not directories this product created.
-		// Satıcı unit dizinleri (/lib, /usr/lib, /etc/systemd/...) dağıtıma ait
-		// üst dizinlerdir; bu ürünün oluşturduğu dizinler değildir.
-		nextFD, _, openErr := openInheritedBINDAnchorAt(
-			currentFD, component,
-			path.Join("/", strings.Join(components[:len(components)-1], "/")),
-		)
-		if openErr != nil {
-			return nil, bindSecureFileIdentity{}, openErr
-		}
-		unix.Close(currentFD)
-		currentFD = nextFD
-	}
-	leaf := components[len(components)-1]
-	fd, err := unix.Openat2(currentFD, leaf, &unix.OpenHow{
-		Flags: uint64(unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW | unix.O_NONBLOCK),
-		Resolve: unix.RESOLVE_BENEATH |
-			unix.RESOLVE_NO_SYMLINKS |
-			unix.RESOLVE_NO_MAGICLINKS,
-	})
-	if errors.Is(err, unix.ENOSYS) {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s requires Linux openat2: %w", label, err)
-	}
-	if err != nil {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("open %s: %w", label, err)
-	}
-	file := os.NewFile(uintptr(fd), absolutePath)
-	if file == nil {
-		_ = unix.Close(fd)
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("open %s handle", label)
-	}
-	defer file.Close()
-	var before unix.Stat_t
-	if err := unix.Fstat(fd, &before); err != nil {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("stat %s: %w", label, err)
-	}
-	if before.Mode&unix.S_IFMT != unix.S_IFREG || before.Uid != 0 || before.Gid != 0 ||
-		before.Mode&bindDirectoryModeMask != 0o0644 || before.Nlink != 1 ||
-		before.Size < 1 || before.Size > bindVendorFileMaxSize {
-		return nil, bindSecureFileIdentity{},
-			fmt.Errorf("%s is not an exact root:root 0644 single-link regular file", label)
-	}
-	if err := rejectBINDDirectoryACL(fd, label); err != nil {
-		return nil, bindSecureFileIdentity{}, err
-	}
-	data, err := io.ReadAll(io.LimitReader(file, bindVendorFileMaxSize+1))
-	if err != nil {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("read %s: %w", label, err)
-	}
-	if len(data) == 0 || len(data) > bindVendorFileMaxSize || int64(len(data)) != before.Size {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s size changed while reading", label)
-	}
-	var after unix.Stat_t
-	if err := unix.Fstat(fd, &after); err != nil {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("restat %s: %w", label, err)
-	}
-	if before.Dev != after.Dev || before.Ino != after.Ino || before.Size != after.Size ||
-		before.Uid != after.Uid || before.Gid != after.Gid || before.Mode != after.Mode ||
-		before.Nlink != after.Nlink || before.Mtim != after.Mtim || before.Ctim != after.Ctim {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s changed while reading", label)
 	}
 	return data, bindSecureFileIdentity{
-		Device: uint64(after.Dev), Inode: after.Ino, Size: after.Size,
-		Digest: sha256.Sum256(data),
+		Device: observed.Device, Inode: observed.Inode,
+		Size: observed.Size, Digest: observed.Digest,
 	}, nil
 }
