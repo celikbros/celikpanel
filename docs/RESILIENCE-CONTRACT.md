@@ -1027,3 +1027,13 @@ exact running PID and public DNS listeners. See the
 It is read-only, schema-neutral and does not extend recovery admission.
 Config/database identity, zone answers, owner changes,
 independent inverse and native fault acceptance remain open.
+P0.4, constitutional invariants 1/2/3: the Agent and independent DNS status
+reader now share the same immutable-journal native inverse classification.
+It separates running owner BIND adoption from the stop/start switch inverse,
+and PowerDNS adoption from its switch inverse. Manifest mismatch and
+contradictory BIND alias preimages fail closed. Historical v1 journal,
+receipt, ledger and phase schemas are unchanged; the independent reader
+remains read-only and does not admit or execute an inverse. Fixture and
+Agent/recovery tests cover this decision boundary. Worker exclusion, owner
+edit and native-state proof, an Agent-independent inverse executor and the
+interrupted-switch fault matrix remain open; P0.4 is not complete.

@@ -80,7 +80,7 @@ func TestCrashedRunningBINDTakeoverRecoversThroughTheAdoptionRollback(t *testing
 	}
 	body := source[start : start+end]
 
-	classify := strings.Index(body, "runningBINDAdoptionJournal(")
+	classify := strings.Index(body, "dnsenginerecovery.PlanNativeInverse(")
 	adopt := strings.Index(body, "recoverRunningBINDAdoptionJournal(")
 	if classify < 0 || adopt < 0 {
 		t.Fatalf(

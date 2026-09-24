@@ -21,19 +21,7 @@ import (
 func switchJournalManifest(
 	journal dnsEngineSwitchJournal,
 ) (mutationpayload.DNSEngineSwitchManifestCommitment, error) {
-	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
-		journal.Mode,
-		journal.SourceEngine, journal.TargetEngine,
-		journal.SourceEpoch, journal.TargetEpoch, journal.SourceRevision,
-		journal.Topology, journal.PairRole, journal.LocalIP, journal.LocalNS,
-		journal.PeerIP, journal.PeerNS, journal.Zones,
-	)
-	if err != nil || manifest.Qualifier != journal.ManifestQualifier ||
-		manifest.SnapshotBytes != journal.SnapshotBytes {
-		return mutationpayload.DNSEngineSwitchManifestCommitment{},
-			errors.New("DNS engine switch journal does not reconstruct its manifest")
-	}
-	return manifest, nil
+	return dnsengineartifact.SwitchJournalManifest(journal)
 }
 
 func switchJournalBinding(journal dnsEngineSwitchJournal) transport.ServiceMutationBinding {
@@ -390,24 +378,22 @@ func rollbackDNSSwitchJournal(
 	// PowerDNS dalı her zaman böyle dallandı; bu, BIND için aynı dallanmadır -
 	// iki biçimi ayıran olgu, ayrı bir tel kipi değil, günlüğün dondurduğu
 	// hedef birim ön-görüntüsüdür.
-	if journal.TargetEngine == transport.DNSEngineBIND {
-		adoption, err := runningBINDAdoptionJournal(manifest, journal)
+	inverseKind, err := dnsenginerecovery.PlanNativeInverse(journal)
+	if err != nil {
+		return err
+	}
+	if inverseKind == dnsenginerecovery.NativeInverseBINDRunningAdoption {
+		layout, err := bindLayout(profile)
 		if err != nil {
 			return err
 		}
-		if adoption {
-			layout, err := bindLayout(profile)
-			if err != nil {
-				return err
-			}
-			return recoverRunningBINDAdoptionJournal(
-				ctx, profile, layout, systemctl, journal,
-			)
-		}
+		return recoverRunningBINDAdoptionJournal(
+			ctx, profile, layout, systemctl, journal,
+		)
 	}
 	rollback := func() error {
-		switch journal.TargetEngine {
-		case transport.DNSEngineBIND:
+		switch inverseKind {
+		case dnsenginerecovery.NativeInverseBINDSwitch:
 			layout, err := bindLayout(profile)
 			if err != nil {
 				return err
@@ -451,10 +437,9 @@ func rollbackDNSSwitchJournal(
 				dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
 				dnsUnitSnapshotsMap(journal.SourceUnitsBefore),
 			)
-		case transport.DNSEnginePowerDNS:
-			if journal.Mode == transport.DNSEngineSwitchModeAdopt {
-				return rollbackPDNSAdoption(ctx, systemctl, manifest, journal)
-			}
+		case dnsenginerecovery.NativeInversePDNSAdoption:
+			return rollbackPDNSAdoption(ctx, systemctl, manifest, journal)
+		case dnsenginerecovery.NativeInversePDNSSwitch:
 			configs, err := pdnsConfigMutationFromJournal(ctx, manifest, journal)
 			if err != nil {
 				return err

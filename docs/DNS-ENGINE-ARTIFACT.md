@@ -719,3 +719,20 @@ native recovery. Historical journal v1, state receipts and current
 recovery decisions remain unchanged. Root-owned vendor fixture, topology, shared identity/parser and
 Agent/recovery tests plus vet are the scoped evidence; installed
 native interruption and inverse acceptance remain open.
+### Shared native DNS inverse classification (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: a validated historical switch
+journal now reconstructs its immutable manifest through one shared reader.
+Both the Agent rollback and the independent root-only status reader classify
+the frozen native inverse as BIND switch, running BIND adoption, PowerDNS
+switch or PowerDNS adoption. A running owner BIND is routed to the
+restore-and-reload adoption path, not the first-install stop path. Contradictory
+loaded BIND aliases and a manifest mismatch fail closed before that dispatch.
+
+The status reader reports the classification as an observation only. No
+journal, receipt, ledger or phase schema changes; no new admission, native
+writes or worker-exclusion mechanism. Existing owner edits and service-state
+proofs still govern Agent rollback. Historical Alpha81 fixture, contradictory
+unit-preimage and Agent/recovery tests cover this decision boundary.
+Independent native inverse execution and interrupted-switch fault acceptance
+remain open.

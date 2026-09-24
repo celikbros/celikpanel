@@ -70,6 +70,7 @@ type EvidenceObservation struct {
 	TargetReceipt    TargetReceiptStatus
 	SourceReceipt    SourceReceiptStatus
 	SourceOwnership  SourceOwnershipStatus
+	InverseKind      NativeInverseKind
 	NativeUnits      []string
 }
 
@@ -79,6 +80,10 @@ type EvidenceObservation struct {
 func InspectEvidence(policy dnsengineartifact.JournalPolicy, journal dnsengineartifact.SwitchJournalV1, ledger servicemutationledger.Ledger, now time.Time) (EvidenceObservation, error) {
 	if err := policy.ValidateSwitchJournal(journal); err != nil {
 		return EvidenceObservation{}, fmt.Errorf("DNS switch journal is not accepted: %w", err)
+	}
+	inverseKind, err := PlanNativeInverse(journal)
+	if err != nil {
+		return EvidenceObservation{}, fmt.Errorf("DNS switch native inverse cannot be classified: %w", err)
 	}
 	if err := servicemutationledger.Validate(&ledger); err != nil {
 		return EvidenceObservation{}, fmt.Errorf("DNS switch ledger is not accepted: %w", err)
@@ -91,7 +96,7 @@ func InspectEvidence(policy dnsengineartifact.JournalPolicy, journal dnsenginear
 	if job == nil {
 		return EvidenceObservation{}, errors.New("DNS switch journal has no matching accepted ledger job")
 	}
-	observation := EvidenceObservation{RequestID: id.RequestID, Phase: journal.Phase, SourceEngine: string(journal.SourceEngine), TargetEngine: string(journal.TargetEngine), TargetGeneration: journal.TargetGeneration, TargetEpoch: journal.TargetEpoch}
+	observation := EvidenceObservation{RequestID: id.RequestID, Phase: journal.Phase, SourceEngine: string(journal.SourceEngine), TargetEngine: string(journal.TargetEngine), TargetGeneration: journal.TargetGeneration, TargetEpoch: journal.TargetEpoch, InverseKind: inverseKind}
 	unitNames := make(map[string]bool, len(journal.SourceUnitsBefore)+len(journal.TargetUnitsBefore))
 	for _, snapshots := range [][]dnsengineartifact.UnitSnapshot{journal.SourceUnitsBefore, journal.TargetUnitsBefore} {
 		for _, snapshot := range snapshots {
