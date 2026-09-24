@@ -345,3 +345,10 @@ host lock and prove current evidence before acting. Historical journal bytes and
 phases do not change. Shared classification cases and existing Agent crash-point
 takeover tests pass; an independent native executor and installed interruption
 acceptance remain open. No installed server was changed.
+The shared `dnsenginerecovery.RecoverRunningBINDAdoption` sequence now orders the
+fresh runtime evidence capture, owner-aware current configuration proof,
+no-stop native inverse, generation-pointer restoration, and final running
+service proof. Agent supplies the existing native callbacks, so its crash-point
+behavior is unchanged. Any failing callback leaves the surrounding operation
+journal for recovery. This pure sequence still cannot establish host authority,
+worker exclusion, current native identity or an independent DNS executor.

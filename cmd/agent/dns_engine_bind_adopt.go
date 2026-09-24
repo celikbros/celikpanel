@@ -12,6 +12,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -918,30 +919,16 @@ type bindAdoptionRecoveryOps struct {
 // yeniden yükleme değişmemiş bir dosyayı yeniden okur ve defter, hiçbir sorunu
 // olmayan bir sunucu için tutulmak yerine bırakılır. Tek yol, tahmin edilecek
 // bir aşama yok.
-func recoverRunningBINDAdoptionJournalWithOps(
-	ops bindAdoptionRecoveryOps,
-) error {
-	if ops.captureEvidence == nil || ops.proveCurrent == nil ||
-		ops.rollback == nil || ops.restorePointer == nil ||
-		ops.verifyRestored == nil {
-		return errors.New("invalid BIND adoption recovery operations")
-	}
-	evidence, err := ops.captureEvidence()
-	if err != nil {
-		return fmt.Errorf(
-			"prove the interrupted takeover's BIND is still answering: %w", err,
-		)
-	}
-	if err := ops.proveCurrent(); err != nil {
-		return err
-	}
-	if err := ops.rollback(evidence); err != nil {
-		return err
-	}
-	if err := ops.restorePointer(); err != nil {
-		return err
-	}
-	return ops.verifyRestored(evidence)
+func recoverRunningBINDAdoptionJournalWithOps(ops bindAdoptionRecoveryOps) error {
+	return dnsenginerecovery.RecoverRunningBINDAdoption(
+		dnsenginerecovery.RunningBINDAdoptionOps[bindAdoptionRuntimeEvidence]{
+			CaptureEvidence: ops.captureEvidence,
+			ProveCurrent:    ops.proveCurrent,
+			Rollback:        ops.rollback,
+			RestorePointer:  ops.restorePointer,
+			VerifyRestored:  ops.verifyRestored,
+		},
+	)
 }
 
 func recoverRunningBINDAdoptionJournal(
