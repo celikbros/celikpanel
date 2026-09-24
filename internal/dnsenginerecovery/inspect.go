@@ -3,6 +3,7 @@ package dnsenginerecovery
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
@@ -50,6 +51,7 @@ type EvidenceObservation struct {
 	WorkerStarted string
 	TargetReceipt TargetReceiptStatus
 	SourceReceipt SourceReceiptStatus
+	NativeUnits   []string
 }
 
 // InspectEvidence binds a previously decoded canonical journal to a canonical
@@ -71,6 +73,16 @@ func InspectEvidence(policy dnsengineartifact.JournalPolicy, journal dnsenginear
 		return EvidenceObservation{}, errors.New("DNS switch journal has no matching accepted ledger job")
 	}
 	observation := EvidenceObservation{RequestID: id.RequestID, Phase: journal.Phase}
+	unitNames := make(map[string]bool, len(journal.SourceUnitsBefore)+len(journal.TargetUnitsBefore))
+	for _, snapshots := range [][]dnsengineartifact.UnitSnapshot{journal.SourceUnitsBefore, journal.TargetUnitsBefore} {
+		for _, snapshot := range snapshots {
+			unitNames[snapshot.Name] = true
+		}
+	}
+	for name := range unitNames {
+		observation.NativeUnits = append(observation.NativeUnits, name)
+	}
+	sort.Strings(observation.NativeUnits)
 	if ledger.ActiveRequestID == id.RequestID {
 		switch {
 		case id.ActiveJob(job):

@@ -186,7 +186,7 @@ func TestInspectFilesDistinguishesFrozenSourceFromForeignReceipt(t *testing.T) {
 	check := func(want SourceReceiptStatus, target TargetReceiptStatus) {
 		t.Helper()
 		got, present, err := InspectFiles(root, owner, policy, now)
-		if err != nil || !present || got.SourceReceipt != want || got.TargetReceipt != target {
+		if err != nil || !present || got.SourceReceipt != want || got.TargetReceipt != target || len(got.NativeUnits) != 3 || got.NativeUnits[0] != "bind9.service" || got.NativeUnits[1] != "named.service" || got.NativeUnits[2] != "pdns.service" {
 			t.Fatalf("source/target classification: %+v, %v, %v; want %s/%s", got, present, err, want, target)
 		}
 	}

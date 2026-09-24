@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -166,8 +167,17 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	case dnsenginerecovery.SourceReceiptDifferent:
 		fmt.Fprintln(out, "The current DNS state receipt does not match the frozen journal source. Preserve the evidence and inspect native DNS and owner changes before the original operation resumes.")
 	}
+	units, unitErr := dnsenginerecovery.ProbeNativeUnits(context.Background(), observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
+	if unitErr != nil {
+		fmt.Fprintln(diagnostic, "Native DNS unit state is unknown. The server owner should inspect the named, bind9 and pdns systemd services before the original operation resumes; preserve the journal and do not start another switch. "+unitErr.Error())
+	} else {
+		for _, unit := range units {
+			fmt.Fprintf(out, "Native unit %s: load=%s active=%s unit-file=%s.\n", unit.Name, unit.LoadState, unit.ActiveState, unit.UnitFileState)
+		}
+		fmt.Fprintln(out, "These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.")
+	}
 	if len(args) == 2 {
-		fmt.Fprintln(out, "Release and host mutation locks were held during this evidence read. Native DNS state and future worker liveness remain unproved.")
+		fmt.Fprintln(out, "Release and host mutation locks were held during this observation. Future worker liveness and DNS state remain unproved.")
 	}
 	switch observation.Status {
 	case dnsenginerecovery.EvidenceLeaseExpired:
@@ -188,6 +198,9 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(out, "The ledger records finalization while a journal remains. The server owner should inspect native DNS health and the retained journal; this observation alone does not authorize cleanup or a new switch.")
 	default:
 		fmt.Fprintln(out, "The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.")
+	}
+	if unitErr != nil {
+		return exitUnavailable
 	}
 	return exitOK
 }

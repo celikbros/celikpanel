@@ -390,3 +390,22 @@ zone health, worker exclusion, and owner edits before resuming the exact
 operation. Tests cover the historical Alpha81 BIND-to-PowerDNS journal and all
 source/target receipt combinations. Independent native execution and installed
 fault acceptance remain open.
+### Independent native unit observation
+
+P0.2/P0.4, constitutional invariants 2/3: the root-only DNS switch status
+command now extracts the fixed BIND/PowerDNS unit names from a validated
+historical journal and reads their current systemd load, active and unit-file
+states without Panel or Agent. The local runner accepts only named.service,
+bind9.service and pdns.service, uses a fixed systemctl executable, a bounded
+three-second property query per unit and strict property/alias parsing. Any
+missing, inconsistent or unavailable query makes native status unknown while
+the journal and ledger observations remain visible. The two installed lock
+files are held through the unit reads when `--quiesced` is requested; ordinary
+status remains a point-in-time observation. No journal/ledger/state schema or
+native service configuration changes. Tests exercise allowed aliases, unknown
+and malformed properties, duplicate/untrusted names, and partial failure.
+
+A systemd `active` property does not establish authoritative DNS answers,
+transferred zones, selected BIND generation, PowerDNS database identity or
+absence of owner edits. This is diagnosis only; an independent native recovery
+executor and interrupted-operation acceptance remain open.
