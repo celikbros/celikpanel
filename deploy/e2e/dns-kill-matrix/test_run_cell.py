@@ -1525,6 +1525,15 @@ class ControllerProtocolTest(unittest.TestCase):
                 source_provenance, "managed-bind"
             )
 
+    def test_rolled_back_bind_accepts_exact_managed_source_preinstall(self) -> None:
+        selected = cell("rolled-back", "after-write")
+        value = source_preinstall_value(selected)
+        canonical = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode()
+        self.assertEqual(
+            run_cell.validate_source_preinstall_document(value, canonical, selected),
+            value,
+        )
+
     def test_source_preinstall_document_rejects_every_identity_drift(self) -> None:
         selected = cell("source-stopped")
         value = source_preinstall_value(selected)

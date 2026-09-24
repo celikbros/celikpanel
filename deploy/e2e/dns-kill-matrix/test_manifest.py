@@ -146,9 +146,9 @@ class DNSKillMatrixManifestTest(unittest.TestCase):
             for cell in self.cells
             if cell["driver"] == "bind"
             and cell["status"] == "runnable"
-            and cell["boundary"]["phase"] in {"source-stopped", "target-started"}
+            and cell["boundary"]["phase"] in {"source-stopped", "target-started", "rolled-back"}
         ]
-        self.assertEqual(len(critical), 24)
+        self.assertEqual(len(critical), 36)
         for cell in critical:
             self.assertEqual(cell["placement"]["kill_host"], "debian-13", cell["id"])
             self.assertEqual(

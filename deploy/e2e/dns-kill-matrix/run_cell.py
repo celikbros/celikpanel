@@ -926,7 +926,7 @@ def validate_source_preinstall_document(
     if (
         cell.driver == "bind"
         and cell.role == "standalone"
-        and cell.phase in {"source-stopped", "target-started"}
+        and cell.phase in {"source-stopped", "target-started", "rolled-back"}
     ):
         scope = "managed-pdns-source-preparation-for-bind-only"
         measured_target_packages = [{"name": "bind9", "status": "absent"}]

@@ -276,6 +276,20 @@ class GuestBootstrapTest(unittest.TestCase):
                 "uninitialized",
             )
 
+    def test_rolled_back_bind_requires_managed_pdns_on_debian(self) -> None:
+        bootstrap.validate_bind_cell(
+            cell("debian13", "rolled-back",
+                 source_fixture_policy="managed-pdns-required"),
+            "debian13", "managed-pdns",
+        )
+        for node, source in (("debian13", "uninitialized"), ("arch", "managed-pdns")):
+            with self.subTest(node=node, source=source), self.assertRaises(bootstrap.BootstrapError):
+                bootstrap.validate_bind_cell(
+                    cell(node, "rolled-back",
+                         source_fixture_policy="managed-pdns-required"),
+                    node, source,
+                )
+
     def test_managed_pdns_rejects_wrong_fixture_policy(self) -> None:
         with self.assertRaises(bootstrap.BootstrapError):
             bootstrap.validate_bind_cell(

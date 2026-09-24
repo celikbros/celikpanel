@@ -41,6 +41,7 @@ readonly -a EARLY_UNINITIALIZED_PHASES=(
 readonly -a CRITICAL_MANAGED_PDNS_PHASES=(
     source-stopped
     target-started
+    rolled-back
 )
 
 array_contains() {

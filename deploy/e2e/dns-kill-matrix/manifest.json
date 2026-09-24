@@ -7497,10 +7497,10 @@
           "debian-13",
           "arch"
         ],
-        "kill_host": "arch",
-        "other_host": "debian-13",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "kill_host": "debian-13",
+        "other_host": "arch",
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "standalone",
       "status": "runnable"
@@ -7582,8 +7582,8 @@
         ],
         "kill_host": "debian-13",
         "other_host": "arch",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "standalone",
       "status": "runnable"
@@ -7665,8 +7665,8 @@
         ],
         "kill_host": "debian-13",
         "other_host": "arch",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "paired-primary",
       "status": "runnable"
@@ -7741,15 +7741,15 @@
       },
       "peer_reachability": "unreachable",
       "placement": {
-        "dns_peer_host": "debian-13",
+        "dns_peer_host": "arch",
         "eligible_kill_hosts": [
           "debian-13",
           "arch"
         ],
-        "kill_host": "arch",
-        "other_host": "debian-13",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "kill_host": "debian-13",
+        "other_host": "arch",
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "paired-primary",
       "status": "runnable"
@@ -7824,15 +7824,15 @@
       },
       "peer_reachability": "reachable",
       "placement": {
-        "dns_peer_host": "debian-13",
+        "dns_peer_host": "arch",
         "eligible_kill_hosts": [
           "debian-13",
           "arch"
         ],
-        "kill_host": "arch",
-        "other_host": "debian-13",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "kill_host": "debian-13",
+        "other_host": "arch",
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "paired-secondary",
       "status": "runnable"
@@ -7914,8 +7914,8 @@
         ],
         "kill_host": "debian-13",
         "other_host": "arch",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "paired-secondary",
       "status": "runnable"
@@ -7997,8 +7997,8 @@
         ],
         "kill_host": "debian-13",
         "other_host": "arch",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "standalone",
       "status": "runnable"
@@ -8078,10 +8078,10 @@
           "debian-13",
           "arch"
         ],
-        "kill_host": "arch",
-        "other_host": "debian-13",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "kill_host": "debian-13",
+        "other_host": "arch",
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "standalone",
       "status": "runnable"
@@ -8156,15 +8156,15 @@
       },
       "peer_reachability": "reachable",
       "placement": {
-        "dns_peer_host": "debian-13",
+        "dns_peer_host": "arch",
         "eligible_kill_hosts": [
           "debian-13",
           "arch"
         ],
-        "kill_host": "arch",
-        "other_host": "debian-13",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "kill_host": "debian-13",
+        "other_host": "arch",
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "paired-primary",
       "status": "runnable"
@@ -8246,8 +8246,8 @@
         ],
         "kill_host": "debian-13",
         "other_host": "arch",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "paired-primary",
       "status": "runnable"
@@ -8329,8 +8329,8 @@
         ],
         "kill_host": "debian-13",
         "other_host": "arch",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "paired-secondary",
       "status": "runnable"
@@ -8405,15 +8405,15 @@
       },
       "peer_reachability": "unreachable",
       "placement": {
-        "dns_peer_host": "debian-13",
+        "dns_peer_host": "arch",
         "eligible_kill_hosts": [
           "debian-13",
           "arch"
         ],
-        "kill_host": "arch",
-        "other_host": "debian-13",
-        "selection": "deterministic-parity-across-both-hosts",
-        "source_fixture_policy": "driver-specific"
+        "kill_host": "debian-13",
+        "other_host": "arch",
+        "selection": "genuine-managed-pdns-source-required",
+        "source_fixture_policy": "managed-pdns-required"
       },
       "role": "paired-secondary",
       "status": "runnable"
@@ -38840,7 +38840,7 @@
   "policy": {
     "gate_denominator": "The D-021 execution denominator is runnable cells. An unproven kill is recorded unverified at execution time and must never be counted passed.",
     "n_a": "Only source-proven impossible phase/role combinations are excluded. An uncertain combination must remain runnable with applicability=unverified.",
-    "platform_dimension": "Operating system is a placement constraint, not an extra matrix dimension. Certified PowerDNS and signed-update rollback cells run on Debian 13; BIND cells are otherwise spread across Debian 13 and Arch, but every source-stopped and target-started BIND cell runs on Debian with a genuine managed PowerDNS source. Early Arch BIND cells may use an explicitly proven uninitialized source and do not claim stopped-source coverage.",
+    "platform_dimension": "Operating system is a placement constraint, not an extra matrix dimension. Certified PowerDNS and signed-update rollback cells run on Debian 13; BIND cells are otherwise spread across Debian 13 and Arch, but each source-stopped, target-started, and rolled-back BIND cell runs on Debian with a genuine managed PowerDNS source. Early Arch BIND cells may use an explicitly proven uninitialized source and do not claim stopped-source coverage.",
     "standalone_peer_dimension": "Both peer labels remain runnable as invariance controls even though a standalone manifest carries no DNS peer.",
     "unreachable_timing": "For paired cells, make the peer unreachable only after exit 137 proves the boundary kill and before restarting the agent."
   },

@@ -25,7 +25,7 @@ SCENARIO_SCHEMA = "celikpanel-dns-kill-matrix-trigger/v1"
 CELL_RE = re.compile(r"[a-z0-9][a-z0-9_.-]{0,239}")
 SHA256_RE = re.compile(r"[0-9a-f]{64}")
 EARLY_UNINITIALIZED_PHASES = frozenset({"pre-intent", "intent", "target-staged"})
-CRITICAL_MANAGED_PDNS_PHASES = frozenset({"source-stopped", "target-started"})
+CRITICAL_MANAGED_PDNS_PHASES = frozenset({"source-stopped", "target-started", "rolled-back"})
 PDNS_ADOPT_PHASES = frozenset(
     {
         "pre-intent",
@@ -189,7 +189,7 @@ def validate_bind_cell(cell: dict[str, Any], node: str, source_fixture: str) -> 
         ):
             raise BootstrapError(
                 "managed PowerDNS source preinstall requires the managed fixture "
-                "policy and a critical source-stopped/target-started BIND cell "
+                "policy and a source-stopped/target-started/rolled-back BIND cell "
                 "on certified Debian"
             )
     else:

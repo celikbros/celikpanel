@@ -229,8 +229,8 @@ does not enter the BIND package-install heartbeat window.
 
 Current production code rejects PowerDNS target/adoption work outside the
 certified Debian+APT path (`cmd/agent/dns_engine_pdns_unit.go:63-71`). Therefore
-every critical BIND `source-stopped` and `target-started` cell is placed on
-Debian 13 and declares `source_fixture_policy: managed-pdns-required`. Prepare
+every critical BIND `source-stopped`, `target-started`, and `rolled-back`
+cell is placed on Debian 13 and declares `source_fixture_policy: managed-pdns-required`. Prepare
 one of those cells with `--node debian13 --source-fixture managed-pdns`.
 Bootstrap first proves the BIND target and both PowerDNS source packages absent.
 It refreshes APT, masks `pdns.service`, and installs only `pdns-server` plus
