@@ -376,3 +376,17 @@ instantaneous observation. Even an exact target receipt does not prove native
 BIND/PowerDNS service, zone contents, absence of owner edits, or permission to
 run an inverse. No wire schema or installed server changes; the independent
 native executor and interrupted-service acceptance remain open.
+### Independent frozen-source receipt observation
+
+P0.2/P0.4, constitutional invariants 2/3: the independent root-only DNS
+switch observer now uses the same frozen-source state predicate as the Agent.
+It distinguishes an exact pre-switch receipt, an absent first-install source
+with an absent current receipt, and a different current receipt. In particular,
+a foreign owner receipt is not reported as a successful inverse. The historical
+v1 journal and current state formats do not change, and no migration or native
+mutation is performed. A malformed or symlinked current receipt remains unknown.
+The owner must still establish native BIND/PowerDNS configuration, service and
+zone health, worker exclusion, and owner edits before resuming the exact
+operation. Tests cover the historical Alpha81 BIND-to-PowerDNS journal and all
+source/target receipt combinations. Independent native execution and installed
+fault acceptance remain open.

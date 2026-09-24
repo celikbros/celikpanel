@@ -32,6 +32,16 @@ const (
 	TargetReceiptDifferent TargetReceiptStatus = "different-from-journal-target"
 )
 
+// SourceReceiptStatus compares the current state document with the journal's
+// frozen source. It is only a receipt observation, not an inverse admission.
+type SourceReceiptStatus string
+
+const (
+	SourceReceiptMutualAbsence SourceReceiptStatus = "source-and-current-absent"
+	SourceReceiptExact         SourceReceiptStatus = "exact-journal-source"
+	SourceReceiptDifferent     SourceReceiptStatus = "different-from-journal-source"
+)
+
 type EvidenceObservation struct {
 	Status        EvidenceStatus
 	RequestID     string
@@ -39,6 +49,7 @@ type EvidenceObservation struct {
 	WorkerPID     int
 	WorkerStarted string
 	TargetReceipt TargetReceiptStatus
+	SourceReceipt SourceReceiptStatus
 }
 
 // InspectEvidence binds a previously decoded canonical journal to a canonical

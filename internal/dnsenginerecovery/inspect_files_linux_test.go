@@ -37,7 +37,7 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 		t.Fatal(err)
 	}
 	got, present, err := InspectFiles(root, owner, policy, now)
-	if err != nil || !present || got.Status != EvidenceActive || got.TargetReceipt != TargetReceiptAbsent {
+	if err != nil || !present || got.Status != EvidenceActive || got.TargetReceipt != TargetReceiptAbsent || got.SourceReceipt != SourceReceiptMutualAbsence {
 		t.Fatalf("valid files with absent state: %+v, %v, %v", got, present, err)
 	}
 	state := dnsengineartifact.StateV1{
@@ -55,7 +55,7 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 		t.Fatal(err)
 	}
 	got, present, err = InspectFiles(root, owner, policy, now)
-	if err != nil || !present || got.TargetReceipt != TargetReceiptExact {
+	if err != nil || !present || got.TargetReceipt != TargetReceiptExact || got.SourceReceipt != SourceReceiptDifferent {
 		t.Fatalf("exact target receipt: %+v, %v, %v", got, present, err)
 	}
 	state.MutationOwnerID = "ffffffffffffffffffffffffffffffff"
@@ -67,7 +67,7 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 		t.Fatal(err)
 	}
 	got, present, err = InspectFiles(root, owner, policy, now)
-	if err != nil || !present || got.TargetReceipt != TargetReceiptDifferent {
+	if err != nil || !present || got.TargetReceipt != TargetReceiptDifferent || got.SourceReceipt != SourceReceiptDifferent {
 		t.Fatalf("different target receipt: %+v, %v, %v", got, present, err)
 	}
 	if err := os.WriteFile(policy.StatePath, []byte("{}"), 0o600); err != nil {
@@ -145,4 +145,82 @@ func TestInspectFilesRejectsUnboundHostPolicy(t *testing.T) {
 	if _, _, err := InspectFiles(root, servicemutationledger.FileOwner{UID: 0, GID: 0}, policy, now); err == nil {
 		t.Fatal("host path mismatch accepted")
 	}
+}
+
+func TestInspectFilesDistinguishesFrozenSourceFromForeignReceipt(t *testing.T) {
+	policy, _, ledger, now := inspectionFixture(t)
+	fixture, err := os.ReadFile(filepath.Join("..", "dnsengineartifact", "testdata", "switch-journal", "alpha81-pdns-switch.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal, err := policy.DecodeSwitchJournal(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	if err := os.Chmod(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	policy.StatePath = filepath.Join(root, "dns-engine-state.json")
+	journal.StateBefore.Path = policy.StatePath
+	journalRaw, err := policy.EncodeSwitchJournal(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := ledger.Jobs[journal.MutationRequestID]
+	job.Target = string(journal.TargetEngine)
+	job.PackageName = journal.ManifestQualifier
+	ledgerRaw, err := servicemutationledger.Encode(&ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, data := range map[string][]byte{
+		"dns-engine-switch-journal.json": journalRaw,
+		"service-mutations.json":         ledgerRaw,
+	} {
+		if err := os.WriteFile(filepath.Join(root, name), data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	owner := servicemutationledger.FileOwner{UID: 0, GID: 0}
+	check := func(want SourceReceiptStatus, target TargetReceiptStatus) {
+		t.Helper()
+		got, present, err := InspectFiles(root, owner, policy, now)
+		if err != nil || !present || got.SourceReceipt != want || got.TargetReceipt != target {
+			t.Fatalf("source/target classification: %+v, %v, %v; want %s/%s", got, present, err, want, target)
+		}
+	}
+	check(SourceReceiptDifferent, TargetReceiptAbsent)
+	if err := os.WriteFile(policy.StatePath, journal.StateBefore.Data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	check(SourceReceiptExact, TargetReceiptDifferent)
+	source, _, err := dnsengineartifact.DecodeStateDocument(journal.StateBefore.Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source.MutationOwnerID = "ffffffffffffffffffffffffffffffff"
+	foreignRaw, err := dnsengineartifact.CanonicalV1(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(policy.StatePath, foreignRaw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	check(SourceReceiptDifferent, TargetReceiptDifferent)
+	targetState := dnsengineartifact.StateV1{
+		Schema: dnsengineartifact.StateSchemaV1, Mode: journal.Mode,
+		Engine: journal.TargetEngine, EngineEpoch: journal.TargetEpoch,
+		Generation: journal.TargetGeneration, SourceRevision: journal.SourceRevision,
+		ManifestQualifier: journal.ManifestQualifier,
+		MutationRequestID: journal.MutationRequestID, MutationOwnerID: journal.MutationOwnerID,
+	}
+	targetRaw, err := dnsengineartifact.CanonicalV1(targetState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(policy.StatePath, targetRaw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	check(SourceReceiptDifferent, TargetReceiptExact)
 }

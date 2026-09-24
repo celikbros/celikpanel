@@ -158,6 +158,14 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	case dnsenginerecovery.TargetReceiptAbsent:
 		fmt.Fprintln(out, "The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.")
 	}
+	switch observation.SourceReceipt {
+	case dnsenginerecovery.SourceReceiptExact:
+		fmt.Fprintln(out, "The current DNS state receipt exactly matches the frozen journal source. This does not prove the native DNS service was restored; the server owner must verify native DNS before resuming this operation.")
+	case dnsenginerecovery.SourceReceiptMutualAbsence:
+		fmt.Fprintln(out, "The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.")
+	case dnsenginerecovery.SourceReceiptDifferent:
+		fmt.Fprintln(out, "The current DNS state receipt does not match the frozen journal source. Preserve the evidence and inspect native DNS and owner changes before the original operation resumes.")
+	}
 	if len(args) == 2 {
 		fmt.Fprintln(out, "Release and host mutation locks were held during this evidence read. Native DNS state and future worker liveness remain unproved.")
 	}

@@ -54,17 +54,30 @@ func InspectFiles(stateRoot string, owner servicemutationledger.FileOwner, polic
 	if err != nil {
 		return EvidenceObservation{}, true, fmt.Errorf("read current DNS state receipt: %w", err)
 	}
+	var state dnsengineartifact.StateV1
 	if !stateExists {
 		observation.TargetReceipt = TargetReceiptAbsent
-		return observation, true, nil
+	} else {
+		state, _, err = dnsengineartifact.DecodeStateDocument(stateRaw)
+		if err != nil {
+			return EvidenceObservation{}, true, fmt.Errorf("decode current DNS state receipt: %w", err)
+		}
+		observation.TargetReceipt = TargetReceiptDifferent
+		if dnsengineartifact.ExactSwitchTargetStateV1(state, journal) {
+			observation.TargetReceipt = TargetReceiptExact
+		}
 	}
-	state, _, err := dnsengineartifact.DecodeStateDocument(stateRaw)
+	sourceMatches, err := dnsengineartifact.ProveFrozenSwitchSourceState(journal, state, stateExists)
 	if err != nil {
-		return EvidenceObservation{}, true, fmt.Errorf("decode current DNS state receipt: %w", err)
+		return EvidenceObservation{}, true, fmt.Errorf("compare frozen DNS source receipt: %w", err)
 	}
-	observation.TargetReceipt = TargetReceiptDifferent
-	if dnsengineartifact.ExactSwitchTargetStateV1(state, journal) {
-		observation.TargetReceipt = TargetReceiptExact
+	observation.SourceReceipt = SourceReceiptDifferent
+	if sourceMatches {
+		if stateExists {
+			observation.SourceReceipt = SourceReceiptExact
+		} else {
+			observation.SourceReceipt = SourceReceiptMutualAbsence
+		}
 	}
 	return observation, true, nil
 }
