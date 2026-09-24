@@ -447,3 +447,20 @@ Focused Linux tests cover state changes, each fingerprinted document/presence,
 classification changes and native unit drift; race tests and vet pass. An
 independent executor, worker exclusion under the mutation barrier, native
 configuration/answer proofs and interrupted-switch acceptance remain open.
+
+### Shared native BIND pairing target check (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: the Agent's target check for a
+verified BIND generation now calls a shared recovery predicate. The predicate
+requires the BIND target, supported standalone or paired topology, matching
+directional local/peer addresses and names, and the frozen primary catalog
+serial (or the fixed secondary initial serial). A changed native peer,
+journal peer or serial is not the accepted target. The Agent's surrounding
+generation, native configuration, zone and operation proofs remain in place.
+Historical journal/receipt wire schemas and recovery phases do not change.
+
+This extraction allows an eventual independent executor to apply the same
+pairing comparison, but does not itself read the native tree or admit an
+inverse. Component boundary tests and the full Agent suite pass. Secure
+independent BIND-root verification, PowerDNS native proof, worker exclusion,
+native execution and interrupted-operation acceptance remain open.

@@ -58,34 +58,6 @@ func exactDNSEngineStateForJournal(state dnsEngineStateReceipt, journal dnsEngin
 	return dnsengineartifact.ExactSwitchTargetStateV1(state, journal)
 }
 
-func exactBINDPairingForSwitchJournal(
-	receipt binddns.Receipt,
-	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
-	journal dnsEngineSwitchJournal,
-) bool {
-	if manifest.Topology != transport.DNSTopologyPaired {
-		return receipt.Pairing == nil && journal.PairRole == "" &&
-			journal.LocalIP == "" && journal.LocalNS == "" &&
-			journal.PeerIP == "" && journal.PeerNS == "" &&
-			journal.PrimaryCatalogSerial == 0
-	}
-	pairing := receipt.Pairing
-	if pairing == nil || pairing.Role != manifest.PairRole ||
-		pairing.LocalIP != manifest.LocalIP || pairing.LocalNS != manifest.LocalNS ||
-		pairing.PeerIP != manifest.PeerIP || pairing.PeerNS != manifest.PeerNS ||
-		journal.PairRole != manifest.PairRole ||
-		journal.LocalIP != manifest.LocalIP || journal.LocalNS != manifest.LocalNS ||
-		journal.PeerIP != manifest.PeerIP || journal.PeerNS != manifest.PeerNS {
-		return false
-	}
-	if pairing.Role == binddns.PairRolePrimary {
-		return journal.PrimaryCatalogSerial > 0 &&
-			pairing.CatalogSerial == journal.PrimaryCatalogSerial
-	}
-	return pairing.Role == binddns.PairRoleSecondary &&
-		journal.PrimaryCatalogSerial == 0 && pairing.CatalogSerial == 1
-}
-
 // proveDNSSwitchTargetAbsentForRecovery only admits a new inverse while the
 // authoritative state receipt still matches the journal's frozen source. A
 // failed runtime probe, a target receipt, or an unrelated owner's receipt is
@@ -154,7 +126,7 @@ func verifyDNSSwitchJournalTarget(
 		receipt := tree.CurrentReceipt()
 		if receipt.Generation != journal.TargetGeneration ||
 			receipt.EngineEpoch != journal.TargetEpoch ||
-			!exactBINDPairingForSwitchJournal(receipt, manifest, journal) {
+			!dnsenginerecovery.ExactBINDPairingForSwitchJournal(receipt, manifest, journal) {
 			return errors.New("BIND recovery target pairing differs from the journal")
 		}
 		legacyPairedTarget := isLegacyDNSEngineState(state) &&
