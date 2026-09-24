@@ -257,3 +257,18 @@ func TestRollbackRefusesVerifiedTarget(t *testing.T) {
 		}
 	}
 }
+
+func TestRollbackRemovalReceivesExactRolledBackCheckpoint(t *testing.T) {
+	policy, journal, id := switchFixture(t)
+	tr := &trace{journal: journal, exists: true, targetErr: errors.New("target unverified"), absent: true}
+	ops := tr.operations()
+	var removed dnsengineartifact.SwitchJournalV1
+	ops.Remove = func(_ context.Context, checkpoint dnsengineartifact.SwitchJournalV1) error {
+		removed = checkpoint
+		return nil
+	}
+	got, err := Reconcile(context.Background(), policy, id, ops)
+	if err != nil || got != OutcomeRolledBack || removed.Phase != dnsengineartifact.SwitchPhaseRolledBack || !reflect.DeepEqual(removed, tr.journal) {
+		t.Fatalf("removal lost final checkpoint: outcome=%s phase=%s err=%v", got, removed.Phase, err)
+	}
+}
