@@ -192,6 +192,10 @@ func verifyInstalledPDNSRuntime(ctx context.Context) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("detect installed host profile: %w", err)
 	}
+	beforeIdentity, err := dnsenginerecovery.ProbePDNSVendorIdentity(ctx, profile, dnsenginerecovery.SystemdPDNSIdentityRunner)
+	if err != nil {
+		return 0, err
+	}
 	before, err := dnsenginerecovery.ProbePDNSRuntime(ctx, profile, dnsenginerecovery.SystemdUnitRunner, dnsenginerecovery.SystemdPDNSRuntimeRunner)
 	if err != nil {
 		return 0, err
@@ -199,7 +203,7 @@ func verifyInstalledPDNSRuntime(ctx context.Context) (uint64, error) {
 	if uint64(int(before)) != before {
 		return 0, errors.New("PowerDNS MainPID exceeds native process range")
 	}
-	started, err := verifyRunningExecutable(int(before), "/usr/sbin/pdns_server")
+	started, err := verifyRunningExecutable(int(before), beforeIdentity.ExecStartPath)
 	if err != nil {
 		return 0, err
 	}
@@ -210,11 +214,15 @@ func verifyInstalledPDNSRuntime(ctx context.Context) (uint64, error) {
 	if uint64(int(after)) != after {
 		return 0, errors.New("PowerDNS MainPID exceeds native process range")
 	}
-	again, err := verifyRunningExecutable(int(after), "/usr/sbin/pdns_server")
+	again, err := verifyRunningExecutable(int(after), beforeIdentity.ExecStartPath)
 	if err != nil {
 		return 0, err
 	}
-	if before != after || started != again {
+	afterIdentity, err := dnsenginerecovery.ProbePDNSVendorIdentity(ctx, profile, dnsenginerecovery.SystemdPDNSIdentityRunner)
+	if err != nil {
+		return 0, err
+	}
+	if before != after || started != again || !reflect.DeepEqual(beforeIdentity, afterIdentity) {
 		return 0, errors.New("PowerDNS native process identity changed during observation")
 	}
 	return before, nil
@@ -535,7 +543,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "PowerDNS process identity changed around listener observation. The server owner should inspect pdns.service and local DNS sockets before the same operation resumes; no inverse was started.")
 			return exitUnavailable
 		}
-		fmt.Fprintln(out, "The selected PowerDNS unit and native process identity matched across read-only observations; both public DNS transports belonged to its MainPID. Vendor unit, database content, zone answers and recovery authority remain unproved.")
+		fmt.Fprintln(out, "The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. Vendor file bytes, database content, zone answers and recovery authority remain unproved.")
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	switch observation.TargetReceipt {

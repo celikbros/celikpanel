@@ -161,3 +161,20 @@ func ValidatePacmanBINDVendorIdentity(named Identity) error {
 	}
 	return nil
 }
+
+// ValidateAPTPDNSVendorIdentity is the exact installed PowerDNS unit
+// identity accepted by the APT adapter. Vendor file bytes are a separate
+// package-provenance proof.
+func ValidateAPTPDNSVendorIdentity(identity Identity) error {
+	const execArgv = "/usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no"
+	if identity.ID != "pdns.service" ||
+		!reflect.DeepEqual(identity.Names, []string{"pdns.service"}) ||
+		identity.FragmentPath != "/usr/lib/systemd/system/pdns.service" ||
+		len(identity.DropInPaths) != 0 || identity.SourcePath != "" ||
+		identity.Transient != "no" ||
+		identity.ExecStartPath != "/usr/sbin/pdns_server" ||
+		identity.ExecStartArgv != execArgv {
+		return errors.New("pdns.service does not resolve to the exact certified vendor identity")
+	}
+	return nil
+}

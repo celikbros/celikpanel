@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/dnsunitidentity"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -86,18 +87,7 @@ func runCertifiedPDNSTargetMutation(
 }
 
 func validatePDNSVendorUnitIdentity(identity dnsUnitIdentity) error {
-	if identity.ID != "pdns.service" ||
-		!reflect.DeepEqual(identity.Names, []string{"pdns.service"}) ||
-		identity.FragmentPath != certifiedPDNSUnitPath ||
-		len(identity.DropInPaths) != 0 || identity.SourcePath != "" ||
-		identity.Transient != "no" ||
-		identity.ExecStartPath != "/usr/sbin/pdns_server" ||
-		identity.ExecStartArgv != certifiedPDNSExecArgv {
-		return errors.New(
-			"pdns.service does not resolve to the exact certified vendor identity",
-		)
-	}
-	return nil
+	return dnsunitidentity.ValidateAPTPDNSVendorIdentity(identity)
 }
 
 type pdnsInactiveTargetSnapshot struct {

@@ -705,11 +705,14 @@ identity is rechecked afterward. An unknown or changed result stops
 the observation with owner guidance, without an inverse or another
 switch.
 
-This is not yet the Agent's full PowerDNS vendor/config/database
-proof. The independent reader does not certify the vendor unit or
-package bytes, the live SQLite database and zone records, loaded
+The reader now also shares the Agent's exact PowerDNS vendor unit identity
+predicate. It rejects a drop-in, transient unit, alternate ExecStart or
+different argv and compares the loaded systemd identity around the
+runtime observation. This is still not the Agent's full vendor/config/database
+proof. The independent reader does not certify package unit-file
+bytes, the live SQLite database and zone records, loaded
 configuration, replication or owner edits. It does not admit or run
 native recovery. Historical journal v1, state receipts and current
-recovery decisions remain unchanged. Pure topology, parser and
+recovery decisions remain unchanged. Pure topology, shared identity/parser and
 Agent/recovery tests plus vet are the scoped evidence; installed
 native interruption and inverse acceptance remain open.
