@@ -29,7 +29,6 @@ type Operations struct {
 	ProveTargetAbsent func(context.Context, dnsengineartifact.SwitchJournalV1) (bool, error)
 	Write             func(context.Context, dnsengineartifact.SwitchJournalV1) error
 	Inverse           func(context.Context, dnsengineartifact.SwitchJournalV1) error
-	Remove            func(context.Context, dnsengineartifact.SwitchJournalV1) error
 }
 
 // Reconcile preserves the original operation. Its caller proves the accepted
@@ -38,7 +37,7 @@ type Operations struct {
 // interpreting a failed observation as absence. Unknown results leave the
 // frozen journal in place for owner review.
 func Reconcile(ctx context.Context, policy dnsengineartifact.JournalPolicy, id dnsengineartifact.SwitchIdentity, ops Operations) (Outcome, error) {
-	if ctx == nil || id.Validate() != nil || policy.Validate() != nil || ops.Read == nil || ops.ProveFinalized == nil || ops.VerifyTarget == nil || ops.ProveTargetAbsent == nil || ops.Write == nil || ops.Inverse == nil || ops.Remove == nil {
+	if ctx == nil || id.Validate() != nil || policy.Validate() != nil || ops.Read == nil || ops.ProveFinalized == nil || ops.VerifyTarget == nil || ops.ProveTargetAbsent == nil || ops.Write == nil || ops.Inverse == nil {
 		return OutcomeAbsent, errors.New("invalid DNS switch recovery admission")
 	}
 	journal, exists, err := ops.Read(ctx)
@@ -98,11 +97,12 @@ func Reconcile(ctx context.Context, policy dnsengineartifact.JournalPolicy, id d
 	return OutcomeRolledBack, nil
 }
 
-// Rollback writes the missing checkpoints around the inverse. It never discards a
-// journal if the inverse or its final checkpoint cannot be verified/published.
+// Rollback writes the missing checkpoints around the inverse and retains the
+// rolled-back journal until the outer mutation ledger is durably terminal.
+// Cleanup is a separate exact-operation step after that publication.
 // Native callbacks must protect owner edits and prove the restored service.
 func Rollback(ctx context.Context, journal *dnsengineartifact.SwitchJournalV1, ops Operations) error {
-	if ctx == nil || journal == nil || ops.Write == nil || ops.Inverse == nil || ops.Remove == nil {
+	if ctx == nil || journal == nil || ops.Write == nil || ops.Inverse == nil {
 		return errors.New("invalid DNS switch recovery rollback operations")
 	}
 	if err := ctx.Err(); err != nil {
@@ -128,5 +128,5 @@ func Rollback(ctx context.Context, journal *dnsengineartifact.SwitchJournalV1, o
 			return err
 		}
 	}
-	return ops.Remove(ctx, *journal)
+	return nil
 }

@@ -165,3 +165,24 @@ func TestInspectEvidenceRecognizesReleasedUndecidedSwitch(t *testing.T) {
 		t.Fatalf("unrelated terminal failure accepted: %+v", observed)
 	}
 }
+
+func TestInspectEvidenceRecognizesTerminalRollbackWithoutAdmittingDifferentJob(t *testing.T) {
+	policy, journal, ledger, now := inspectionFixture(t)
+	journal.Phase = dnsengineartifact.SwitchPhaseRolledBack
+	job := ledger.Jobs[journal.MutationRequestID]
+	ledger.ActiveRequestID = ""
+	job.Status = servicemutationledger.StatusFailed
+	job.Phase = "interrupted"
+	job.ErrorCode = "dns_engine_switch_rolled_back_after_restart"
+	job.ErrorMessage = "Previous DNS state was restored."
+	job.FinishedAt = job.UpdatedAt
+	job.LeaseExpiresAt = time.Time{}
+	observed, err := InspectEvidence(policy, journal, ledger, now)
+	if err != nil || observed.Status != EvidenceTerminalRolledBack {
+		t.Fatalf("terminal rollback not classified: %+v, %v", observed, err)
+	}
+	job.OwnerID = strings.Repeat("f", 32)
+	if observed, err := InspectEvidence(policy, journal, ledger, now); err == nil {
+		t.Fatalf("foreign terminal verdict accepted: %+v", observed)
+	}
+}

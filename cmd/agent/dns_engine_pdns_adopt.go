@@ -822,9 +822,6 @@ func adoptPDNSOnCertifiedProfile(
 		if rollbackErr == nil {
 			journal.Phase = dnsSwitchPhaseRolledBack
 			journalErr = writeJournal(journal)
-			if journalErr == nil {
-				journalErr = removeDNSEngineSwitchJournal()
-			}
 		}
 		return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, journalErr, rollbackErr)
 	}

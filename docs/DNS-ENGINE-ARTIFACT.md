@@ -820,10 +820,13 @@ This extraction adds no independent native effects, lock acquisition,
 migration or new authority. Existing fault ordering and full Agent tests
 passed; native interrupted-switch acceptance remains open.
 
-The shared rollback sequence now passes its exact rolled-back journal to
-the remove callback. Agent removal re-reads that frozen checkpoint before
-unlinking the fixed journal path; another operation or phase is refused.
-An uncertain unlink is accepted only after absence readback. This closes a
-simple stale-path deletion, not a concurrent uncooperative owner rewrite
-between read and unlink. A filesystem-level conditional removal and native
-owner-edit fault trial remain open.
+The shared rollback sequence now retains its exact rolled-back journal;
+it does not unlink it before the outer mutation ledger publishes a failed
+terminal verdict. The direct BIND and PowerDNS switch/adoption producers retain the same checkpoint.
+The Agent's exact cleanup re-reads that checkpoint and
+requires the same request, owner, target and qualifier in the failed ledger
+job. An uncertain unlink is accepted only after absence readback. On boot,
+the retained checkpoint drives native inverse reproof before cleanup. This
+closes the early-discard interval at the component boundary, but a native
+kill/reboot matrix, owner-edit race trial, filesystem-level conditional
+removal and Agent-independent inverse remain open.

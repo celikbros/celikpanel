@@ -154,7 +154,7 @@ func TestPDNSSwitchSourceProofCASRejectsFreshReconfigureChanges(t *testing.T) {
 	}
 }
 
-func TestDirectPDNSSwitchRollbackRemovesJournalOnlyAfterFinalWrite(t *testing.T) {
+func TestDirectPDNSSwitchRollbackRetainsJournalAfterFinalWrite(t *testing.T) {
 	t.Run("final write failure retains journal", func(t *testing.T) {
 		writeErr := errors.New("durable final phase write failed")
 		journal := dnsEngineSwitchJournal{Phase: dnsSwitchPhaseRollingBack}
@@ -164,10 +164,6 @@ func TestDirectPDNSSwitchRollbackRemovesJournalOnlyAfterFinalWrite(t *testing.T)
 			func(current dnsEngineSwitchJournal) error {
 				order = append(order, "write:"+current.Phase)
 				return writeErr
-			},
-			func() error {
-				order = append(order, "remove")
-				return nil
 			},
 		)
 		if !errors.Is(err, writeErr) ||
@@ -180,7 +176,7 @@ func TestDirectPDNSSwitchRollbackRemovesJournalOnlyAfterFinalWrite(t *testing.T)
 		}
 	})
 
-	t.Run("successful final write precedes removal", func(t *testing.T) {
+	t.Run("successful final write retains checkpoint", func(t *testing.T) {
 		journal := dnsEngineSwitchJournal{Phase: dnsSwitchPhaseRollingBack}
 		var order []string
 		err := finishDNSSwitchRollbackJournal(
@@ -189,14 +185,10 @@ func TestDirectPDNSSwitchRollbackRemovesJournalOnlyAfterFinalWrite(t *testing.T)
 				order = append(order, "write:"+current.Phase)
 				return nil
 			},
-			func() error {
-				order = append(order, "remove")
-				return nil
-			},
 		)
 		if err != nil ||
 			strings.Join(order, ",") !=
-				"write:"+dnsSwitchPhaseRolledBack+",remove" {
+				"write:"+dnsSwitchPhaseRolledBack {
 			t.Fatalf("ordered finalization order=%v err=%v", order, err)
 		}
 	})

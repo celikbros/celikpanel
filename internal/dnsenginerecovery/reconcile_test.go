@@ -27,11 +27,11 @@ func switchFixture(t *testing.T) (dnsengineartifact.JournalPolicy, dnsenginearti
 }
 
 type trace struct {
-	steps                                                 []string
-	journal                                               dnsengineartifact.SwitchJournalV1
-	exists, finalized, absent                             bool
-	targetErr, absentErr, writeErr, inverseErr, removeErr error
-	writes                                                int
+	steps                                      []string
+	journal                                    dnsengineartifact.SwitchJournalV1
+	exists, finalized, absent                  bool
+	targetErr, absentErr, writeErr, inverseErr error
+	writes                                     int
 }
 
 func (tr *trace) operations() Operations {
@@ -65,10 +65,6 @@ func (tr *trace) operations() Operations {
 			tr.steps = append(tr.steps, "inverse")
 			return tr.inverseErr
 		},
-		Remove: func(_ context.Context, _ dnsengineartifact.SwitchJournalV1) error {
-			tr.steps = append(tr.steps, "remove")
-			return tr.removeErr
-		},
 	}
 }
 func TestReconcileExactOperationOrder(t *testing.T) {
@@ -83,7 +79,7 @@ func TestReconcileExactOperationOrder(t *testing.T) {
 		"no journal":         {false, false, nil, "", OutcomeAbsent, []string{"read", "finalized"}},
 		"finalized":          {false, true, nil, "", OutcomeFinalized, []string{"read", "finalized"}},
 		"target":             {true, false, nil, "", OutcomeCommitted, []string{"read", "verify", "write:committed"}},
-		"precommit inverse":  {true, false, errors.New("unverified"), "", OutcomeRolledBack, []string{"read", "verify", "prove-absent", "write:rolling-back", "inverse", "write:rolled-back", "remove"}},
+		"precommit inverse":  {true, false, errors.New("unverified"), "", OutcomeRolledBack, []string{"read", "verify", "prove-absent", "write:rolling-back", "inverse", "write:rolled-back"}},
 		"verified conflict":  {true, false, errors.New("changed"), dnsengineartifact.SwitchPhaseTargetVerified, OutcomeAbsent, []string{"read", "verify"}},
 		"committed conflict": {true, false, errors.New("changed"), dnsengineartifact.SwitchPhaseCommitted, OutcomeAbsent, []string{"read", "verify"}},
 	} {
@@ -144,16 +140,12 @@ func TestReconcileInterruptedInverseRetainsJournal(t *testing.T) {
 	for name, injected := range map[string]func(*trace){
 		"inverse fails":             func(tr *trace) { tr.inverseErr = errors.New("owner changed") },
 		"terminal checkpoint fails": func(tr *trace) { tr.writeErr = errors.New("rename uncertain") },
-		"removal fails":             func(tr *trace) { tr.removeErr = errors.New("unlink uncertain") },
 	} {
 		t.Run(name, func(t *testing.T) {
 			tr := &trace{journal: j, exists: true, targetErr: errors.New("target unverified"), absent: true}
 			injected(tr)
 			if got, err := Reconcile(context.Background(), p, id, tr.operations()); err == nil || got != OutcomeAbsent {
 				t.Fatal(got, err)
-			}
-			if tr.steps[len(tr.steps)-1] == "remove" && tr.removeErr == nil {
-				t.Fatal("discarded unresolved before image")
 			}
 			if tr.journal.Phase != dnsengineartifact.SwitchPhaseRollingBack && tr.journal.Phase != dnsengineartifact.SwitchPhaseRolledBack {
 				t.Fatal("lost durable rollback checkpoint")
@@ -226,11 +218,11 @@ func TestReconcileNeverRecommitsDurableInverse(t *testing.T) {
 	}{
 		"rolling back": {
 			phase: dnsengineartifact.SwitchPhaseRollingBack,
-			steps: []string{"read", "inverse", "write:rolled-back", "remove"},
+			steps: []string{"read", "inverse", "write:rolled-back"},
 		},
 		"rolled back": {
 			phase: dnsengineartifact.SwitchPhaseRolledBack,
-			steps: []string{"read", "inverse", "remove"},
+			steps: []string{"read", "inverse"},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -258,17 +250,11 @@ func TestRollbackRefusesVerifiedTarget(t *testing.T) {
 	}
 }
 
-func TestRollbackRemovalReceivesExactRolledBackCheckpoint(t *testing.T) {
+func TestRollbackRetainsExactRolledBackCheckpoint(t *testing.T) {
 	policy, journal, id := switchFixture(t)
 	tr := &trace{journal: journal, exists: true, targetErr: errors.New("target unverified"), absent: true}
-	ops := tr.operations()
-	var removed dnsengineartifact.SwitchJournalV1
-	ops.Remove = func(_ context.Context, checkpoint dnsengineartifact.SwitchJournalV1) error {
-		removed = checkpoint
-		return nil
-	}
-	got, err := Reconcile(context.Background(), policy, id, ops)
-	if err != nil || got != OutcomeRolledBack || removed.Phase != dnsengineartifact.SwitchPhaseRolledBack || !reflect.DeepEqual(removed, tr.journal) {
-		t.Fatalf("removal lost final checkpoint: outcome=%s phase=%s err=%v", got, removed.Phase, err)
+	got, err := Reconcile(context.Background(), policy, id, tr.operations())
+	if err != nil || got != OutcomeRolledBack || tr.journal.Phase != dnsengineartifact.SwitchPhaseRolledBack {
+		t.Fatalf("rollback lost final checkpoint: outcome=%s phase=%s err=%v", got, tr.journal.Phase, err)
 	}
 }

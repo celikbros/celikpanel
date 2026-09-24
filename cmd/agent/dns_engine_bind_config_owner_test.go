@@ -249,7 +249,6 @@ func TestBINDJournalRejectsMixedOwnershipEvidence(t *testing.T) {
 func TestBINDRollbackFailureRetainsRollingJournal(t *testing.T) {
 	journal := testBINDSwitchJournal(t)
 	writes := 0
-	removed := false
 	verified := false
 	err := runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
 		write: func(current dnsEngineSwitchJournal) error {
@@ -266,16 +265,12 @@ func TestBINDRollbackFailureRetainsRollingJournal(t *testing.T) {
 			verified = true
 			return nil
 		},
-		remove: func() error {
-			removed = true
-			return nil
-		},
 	})
 	if err == nil || journal.Phase != dnsSwitchPhaseRollingBack ||
-		writes != 1 || verified || removed {
+		writes != 1 || verified {
 		t.Fatalf(
-			"ambiguous rollback did not retain rolling journal: phase=%q writes=%d verified=%v removed=%v err=%v",
-			journal.Phase, writes, verified, removed, err,
+			"ambiguous rollback did not retain rolling journal: phase=%q writes=%d verified=%v err=%v",
+			journal.Phase, writes, verified, err,
 		)
 	}
 }
@@ -283,7 +278,6 @@ func TestBINDRollbackFailureRetainsRollingJournal(t *testing.T) {
 func TestBINDRollbackFinalPhaseWriteFailureRetainsJournal(t *testing.T) {
 	journal := testBINDSwitchJournal(t)
 	writes := 0
-	removed := false
 	err := runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
 		write: func(current dnsEngineSwitchJournal) error {
 			writes++
@@ -305,16 +299,29 @@ func TestBINDRollbackFinalPhaseWriteFailureRetainsJournal(t *testing.T) {
 		},
 		rollback: func() error { return nil },
 		verify:   func() error { return nil },
-		remove: func() error {
-			removed = true
-			return nil
-		},
 	})
-	if err == nil || writes != 2 || removed ||
+	if err == nil || writes != 2 ||
 		!strings.Contains(err.Error(), "final rolled-back journal write failure") {
 		t.Fatalf(
-			"failed final phase removed journal: writes=%d removed=%v err=%v",
-			writes, removed, err,
+			"failed final phase was accepted: writes=%d err=%v",
+			writes, err,
 		)
+	}
+}
+
+func TestBINDRollbackRetainsFinalCheckpointForTerminalLedger(t *testing.T) {
+	journal := testBINDSwitchJournal(t)
+	var phases []string
+	err := runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
+		write: func(current dnsEngineSwitchJournal) error {
+			phases = append(phases, current.Phase)
+			return nil
+		},
+		rollback: func() error { return nil },
+		verify:   func() error { return nil },
+	})
+	if err != nil || journal.Phase != dnsSwitchPhaseRolledBack ||
+		!reflect.DeepEqual(phases, []string{dnsSwitchPhaseRollingBack, dnsSwitchPhaseRolledBack}) {
+		t.Fatalf("BIND rollback checkpoint order=%v phase=%q err=%v", phases, journal.Phase, err)
 	}
 }

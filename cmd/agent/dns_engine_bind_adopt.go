@@ -1259,7 +1259,6 @@ func adoptRunningBIND(
 					rollbackCtx, profile, systemctl, configs, evidence,
 				)
 			},
-			remove: removeDNSEngineSwitchJournal,
 		})
 	}
 	attempt := 0

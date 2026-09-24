@@ -424,7 +424,6 @@ func TestDNSSwitchRecoveryRollbackRetainsJournalUntilVerified(t *testing.T) {
 	proofErr := errors.New("restored authority proof failed")
 	journal := dnsEngineSwitchJournal{Phase: dnsSwitchPhaseIntent}
 	var order []string
-	removed := false
 	err := runDNSSwitchRecoveryRollbackWithJournal(
 		&journal,
 		dnsSwitchRecoveryRollbackOps{
@@ -436,11 +435,6 @@ func TestDNSSwitchRecoveryRollbackRetainsJournalUntilVerified(t *testing.T) {
 				order = append(order, "rollback:"+current.Phase)
 				return proofErr
 			},
-			remove: func() error {
-				removed = true
-				order = append(order, "remove")
-				return nil
-			},
 		},
 	)
 	want := []string{
@@ -448,15 +442,15 @@ func TestDNSSwitchRecoveryRollbackRetainsJournalUntilVerified(t *testing.T) {
 		"rollback:" + dnsSwitchPhaseRollingBack,
 	}
 	if !errors.Is(err, proofErr) || !reflect.DeepEqual(order, want) ||
-		removed || journal.Phase != dnsSwitchPhaseRollingBack {
+		journal.Phase != dnsSwitchPhaseRollingBack {
 		t.Fatalf(
-			"failed proof did not retain rolling journal: phase=%q order=%v removed=%v err=%v",
-			journal.Phase, order, removed, err,
+			"failed proof did not retain rolling journal: phase=%q order=%v err=%v",
+			journal.Phase, order, err,
 		)
 	}
 }
 
-func TestDNSSwitchRecoveryRollbackRemovesOnlyAfterFinalPhase(t *testing.T) {
+func TestDNSSwitchRecoveryRollbackRetainsFinalPhase(t *testing.T) {
 	journal := dnsEngineSwitchJournal{Phase: dnsSwitchPhaseIntent}
 	var order []string
 	err := runDNSSwitchRecoveryRollbackWithJournal(
@@ -470,17 +464,12 @@ func TestDNSSwitchRecoveryRollbackRemovesOnlyAfterFinalPhase(t *testing.T) {
 				order = append(order, "rollback:"+current.Phase)
 				return nil
 			},
-			remove: func() error {
-				order = append(order, "remove")
-				return nil
-			},
 		},
 	)
 	want := []string{
 		"write:" + dnsSwitchPhaseRollingBack,
 		"rollback:" + dnsSwitchPhaseRollingBack,
 		"write:" + dnsSwitchPhaseRolledBack,
-		"remove",
 	}
 	if err != nil || !reflect.DeepEqual(order, want) ||
 		journal.Phase != dnsSwitchPhaseRolledBack {

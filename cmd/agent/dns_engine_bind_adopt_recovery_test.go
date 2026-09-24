@@ -141,8 +141,9 @@ func TestCommittedDNSEngineJournalUsesSharedRecoverySequence(t *testing.T) {
 		}
 	}
 	reconcile := source[strings.Index(source, "func reconcileExistingDNSEngineSwitchJournal("):]
-	if !strings.Contains(reconcile, "FinalizeSwitch(") {
-		t.Fatal("committed recovery no longer finalizes")
+	reconcile = reconcile[:strings.Index(reconcile, "\nvar (")]
+	if strings.Contains(reconcile, "RecoverSwitch(") || strings.Contains(reconcile, "FinalizeSwitch(") {
+		t.Fatal("a new DNS mutation may not replay a retained switch journal")
 	}
 	// Sequencing and rollback refusal are exercised by the shared package's
 	// fault tests rather than inferred from a source-order pattern here.

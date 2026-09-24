@@ -1,0 +1,141 @@
+//go:build linux
+
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
+	"github.com/alicelik/celikpanel/internal/transport"
+)
+
+func TestTerminalDNSRollbackJournalCleanupRequiresDurableExactVerdict(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "internal", "dnsengineartifact", "testdata", "switch-journal", "alpha81-bind.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal, err := decodeDNSEngineSwitchJournal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal.Phase = dnsengineartifact.SwitchPhaseRolledBack
+	encoded, err := encodeDNSEngineSwitchJournal(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 9, 23, 10, 0, 0, 0, time.UTC)
+	for _, tc := range []struct {
+		name        string
+		terminal    bool
+		foreign     bool
+		wantRemoved bool
+	}{
+		{name: "before terminal ledger publication"},
+		{name: "exact terminal verdict", terminal: true, wantRemoved: true},
+		{name: "foreign terminal verdict", terminal: true, foreign: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, dnsEngineSwitchJournalFile)
+			if err := os.WriteFile(path, encoded, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			job := &transport.ServiceMutationJob{
+				RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID,
+				Kind: "dns_engine_switch", Target: string(journal.TargetEngine),
+				PackageName: journal.ManifestQualifier, Status: servicemutationledger.StatusRunning,
+				Phase: "leased", Attempt: 1, StartedAt: now, UpdatedAt: now,
+				LeaseExpiresAt: now.Add(time.Minute), DeadlineAt: now.Add(time.Hour),
+			}
+			ledger := servicemutationledger.Ledger{Version: servicemutationledger.Version,
+				ActiveRequestID: job.RequestID,
+				Jobs:            map[string]*transport.ServiceMutationJob{job.RequestID: job},
+			}
+			if tc.terminal {
+				ledger.ActiveRequestID = ""
+				job.Status = servicemutationledger.StatusFailed
+				job.Phase = "failed"
+				job.ErrorCode = "dns_engine_switch_failed"
+				job.ErrorMessage = "Previous DNS state restored."
+				job.FinishedAt = job.UpdatedAt
+				job.LeaseExpiresAt = time.Time{}
+			}
+			if tc.foreign {
+				job.OwnerID = "ffffffffffffffffffffffffffffffff"
+			}
+			m := &serviceMutationManager{ledgerPath: filepath.Join(dir, "ledger.json"), ledger: ledger}
+			err := m.removeTerminalRolledBackDNSEngineSwitchJournalLocked(job.RequestID)
+			if tc.wantRemoved {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
+					t.Fatalf("exact terminal journal remains: %v", statErr)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatal("journal removed without exact durable verdict")
+			}
+			if _, statErr := os.Stat(path); statErr != nil {
+				t.Fatalf("unproven journal lost: %v", statErr)
+			}
+		})
+	}
+}
+
+func TestBootReplaysRetainedTerminalDNSRollbackBeforeCleanup(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "internal", "dnsengineartifact", "testdata", "switch-journal", "alpha81-bind.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal, err := decodeDNSEngineSwitchJournal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal.Phase = dnsengineartifact.SwitchPhaseRolledBack
+	encoded, err := encodeDNSEngineSwitchJournal(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, dnsEngineSwitchJournalFile)
+	if err := os.WriteFile(path, encoded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 9, 23, 10, 0, 0, 0, time.UTC)
+	job := &transport.ServiceMutationJob{
+		RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID,
+		Kind: "dns_engine_switch", Target: string(journal.TargetEngine),
+		PackageName: journal.ManifestQualifier, Status: servicemutationledger.StatusFailed,
+		Phase: "failed", ErrorCode: "dns_engine_switch_failed",
+		ErrorMessage: "Previous DNS state restored.", Attempt: 1,
+		StartedAt: now, UpdatedAt: now, FinishedAt: now, DeadlineAt: now.Add(time.Hour),
+	}
+	ledger := servicemutationledger.Ledger{Version: servicemutationledger.Version,
+		Jobs: map[string]*transport.ServiceMutationJob{job.RequestID: job},
+	}
+	m := &serviceMutationManager{ledgerPath: filepath.Join(dir, "ledger.json"), ledger: ledger}
+	lock, err := acquireServiceMutationFileLock(filepath.Join(dir, "service-mutation.lock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend := &fakeDNSEngineBackend{recovery: dnsEngineSwitchRecoveryRolledBack}
+	useFakeDNSEngineBackend(t, backend)
+	m.mu.Lock()
+	handled, recoveryErr := m.recoverReleasedUndecidedDNSEngineSwitchLocked(lock)
+	m.mu.Unlock()
+	if !handled || recoveryErr != nil || backend.recoverCalls != 1 {
+		t.Fatalf("boot recovery handled=%v err=%v native reproof=%d", handled, recoveryErr, backend.recoverCalls)
+	}
+	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
+		t.Fatalf("terminal journal remained after replay: %v", statErr)
+	}
+	if ledger.Jobs[job.RequestID].Status != servicemutationledger.StatusFailed {
+		t.Fatal("boot replay rewrote the terminal verdict")
+	}
+}

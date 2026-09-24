@@ -201,3 +201,33 @@ func TestSwitchAuthorityReleasedUndecidedJobIsExactHistoricalFailure(t *testing.
 		})
 	}
 }
+
+func TestSwitchAuthorityTerminalRolledBackJobRequiresExactFailedVerdict(t *testing.T) {
+	id, job := switchAuthorityFixture(t)
+	job.Status = servicemutationledger.StatusFailed
+	job.Phase = "failed"
+	job.ErrorCode = "dns_engine_switch_failed"
+	job.ErrorMessage = "The previous DNS state was restored."
+	job.FinishedAt = job.UpdatedAt
+	job.LeaseExpiresAt = time.Time{}
+	ledger := servicemutationledger.Ledger{Version: servicemutationledger.Version, Jobs: map[string]*transport.ServiceMutationJob{id.RequestID: &job}}
+	if !id.TerminalRolledBackJob(ledger) {
+		t.Fatal("exact failed verdict refused")
+	}
+	for name, mutate := range map[string]func(*transport.ServiceMutationJob){
+		"owner":           func(j *transport.ServiceMutationJob) { j.OwnerID = strings.Repeat("f", 32) },
+		"target":          func(j *transport.ServiceMutationJob) { j.Target = "pdns" },
+		"phase":           func(j *transport.ServiceMutationJob) { j.Phase = "completed" },
+		"live worker":     func(j *transport.ServiceMutationJob) { j.WorkerPID = 42 },
+		"missing failure": func(j *transport.ServiceMutationJob) { j.ErrorCode = "" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := job
+			mutate(&changed)
+			ledger.Jobs[id.RequestID] = &changed
+			if id.TerminalRolledBackJob(ledger) {
+				t.Fatal("different verdict accepted")
+			}
+		})
+	}
+}

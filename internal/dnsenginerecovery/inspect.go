@@ -23,6 +23,7 @@ const (
 	EvidenceExpiredCancellation EvidenceStatus = "expired-cancellation"
 	EvidenceFinalized           EvidenceStatus = "finalized-with-journal"
 	EvidenceReleasedUndecided   EvidenceStatus = "released-undecided-with-journal"
+	EvidenceTerminalRolledBack  EvidenceStatus = "terminal-rolled-back-with-journal"
 )
 
 // TargetReceiptStatus describes only the currently observed state document.
@@ -134,6 +135,11 @@ func InspectEvidence(policy dnsengineartifact.JournalPolicy, journal dnsenginear
 		default:
 			return EvidenceObservation{}, errors.New("DNS switch journal and active ledger job disagree")
 		}
+		return observation, nil
+	}
+	if journal.Phase == dnsengineartifact.SwitchPhaseRolledBack && id.TerminalRolledBackJob(ledger) {
+		observation.Status = EvidenceTerminalRolledBack
+		observation.ReleaseReason = job.ErrorCode
 		return observation, nil
 	}
 	if id.ReleasedUndecidedJob(ledger) {

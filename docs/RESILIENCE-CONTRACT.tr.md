@@ -709,3 +709,19 @@ ters işlem hâlâ Agent'ta; bu bağımsız DNS kurtarması değildir.
 Bileşen testi v1 geçiş günlüğünün v2 kaynak belgesiyle uyumunu da doğruluyor;
 sonraki yayımı dondurulmuş kaynak saymıyor. Kurulu sistem geçişi ve gerçek
 geri alma kabulü hâlâ açık.
+
+### DNS geri alma g?nl??? ile nihai i?lem kayd? s?ras? ? 25 Eyl?l 2026
+
+P0.4/P0.3 ve anayasal 1/2/4 ilkeleri kapsam?nda Agent, geri al?nm?? DNS
+ge?i? g?nl???n? i?lem defterinin ayn? iste?e ait kal?c? ba?ar?s?zl?k sonucu
+yaz?lana kadar saklar. Do?rudan BIND ge?i?i/devralmas? ile PowerDNS
+ge?i?i/devralmas? da g?nl??? korur. Sonu?tan sonra yaln?z birebir e?le?en
+g?nl?k silinir.
+Aradaki yeniden ba?latmada Agent yerel ters i?lemi yeniden do?rular; yeni
+bir DNS i?lemi ?nceki g?nl??? yaln?z okur ve kendi yetkisiyle kurtarmaya
+?al??madan durur. Ba??ms?z salt-okur durum arac? bu kalm?? kan?t? tan?r
+fakat de?i?iklik yetkisi vermez.
+v1 g?nl?k ve defter ?emalar? de?i?medi; mevcut evrelerin kal?c?l?k s?ras?
+de?i?ti. Bile?en ve Agent testleri bu s?n?r? denetler. Ger?ek s?re? ?ld?rme
+ve yeniden ba?latma matrisi, sahip de?i?ikli?i yar??lar? ve Agent'tan ba??ms?z
+yerel ters i?lem h?l? a??kt?r; P0.3/P0.4 tamamlanm?? say?lmaz.

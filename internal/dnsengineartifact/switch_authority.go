@@ -226,3 +226,25 @@ func (id SwitchIdentity) ReleasedUndecidedJob(ledger servicemutationledger.Ledge
 		job.DeadlineAt.After(job.StartedAt) && job.LeaseExpiresAt.IsZero() &&
 		job.WorkerPID == 0 && job.WorkerStarted == "" && job.WorkerCommand == ""
 }
+
+// TerminalRolledBackJob recognizes a durable failed verdict for the exact
+// switch. It is historical evidence only: native source health still requires
+// reproof under the host lock before the retained journal can be removed.
+func (id SwitchIdentity) TerminalRolledBackJob(ledger servicemutationledger.Ledger) bool {
+	if id.Validate() != nil || servicemutationledger.Validate(&ledger) != nil ||
+		ledger.ActiveRequestID != "" {
+		return false
+	}
+	job := ledger.Jobs[id.RequestID]
+	return job != nil && job.RequestID == id.RequestID && job.OwnerID == id.OwnerID &&
+		job.Kind == "dns_engine_switch" && job.Target == string(id.Target) &&
+		job.PackageName == id.Qualifier &&
+		job.Status == servicemutationledger.StatusFailed &&
+		(job.Phase == "failed" || job.Phase == "interrupted") &&
+		strings.TrimSpace(job.ErrorCode) != "" && strings.TrimSpace(job.ErrorMessage) != "" &&
+		job.Attempt > 0 && !job.StartedAt.IsZero() && !job.UpdatedAt.IsZero() &&
+		!job.DeadlineAt.IsZero() && job.UpdatedAt.Equal(job.FinishedAt) &&
+		!job.UpdatedAt.Before(job.StartedAt) &&
+		!job.DeadlineAt.Before(job.StartedAt) && job.LeaseExpiresAt.IsZero() &&
+		job.WorkerPID == 0 && job.WorkerStarted == "" && job.WorkerCommand == ""
+}

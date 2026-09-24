@@ -113,16 +113,12 @@ func validatePDNSSwitchSourceProofCAS(
 func finishDNSSwitchRollbackJournal(
 	journal *dnsEngineSwitchJournal,
 	write func(dnsEngineSwitchJournal) error,
-	remove func() error,
 ) error {
-	if journal == nil || write == nil || remove == nil {
+	if journal == nil || write == nil {
 		return errors.New("invalid DNS switch rollback journal operations")
 	}
 	journal.Phase = dnsSwitchPhaseRolledBack
-	if err := write(*journal); err != nil {
-		return err
-	}
-	return remove()
+	return write(*journal)
 }
 
 var pdnsReconfigureDataTables = []string{
@@ -1853,7 +1849,6 @@ func switchToPDNSOnCertifiedProfile(
 				finishDNSSwitchRollbackJournal(
 					&journal,
 					writeJournal,
-					removeDNSEngineSwitchJournal,
 				),
 			)
 		}

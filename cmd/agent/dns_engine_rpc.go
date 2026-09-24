@@ -1125,11 +1125,17 @@ func (m *serviceMutationManager) recoverPersistedDNSEngineSwitchLocked(
 			return true, m.poisonLocked(errors.New("DNS engine switch recovery returned an unsupported outcome"))
 		}
 		writeErr := m.finishPersistedOrphanLocked(job, code, message)
-		if m.poisoned != nil {
+		if writeErr != nil {
 			m.poisonLock = lock
-			return true, writeErr
+			return true, m.poisonLocked(fmt.Errorf("publish DNS switch rollback verdict: %w", writeErr))
 		}
-		return true, errors.Join(writeErr, lock.Close())
+		if outcome == dnsEngineSwitchRecoveryRolledBack {
+			if err := m.removeTerminalRolledBackDNSEngineSwitchJournalLocked(job.RequestID); err != nil {
+				m.poisonLock = lock
+				return true, m.poisonLocked(fmt.Errorf("retire terminal DNS switch rollback journal: %w", err))
+			}
+		}
+		return true, lock.Close()
 	}
 
 	journalPath := filepath.Join(
@@ -1776,4 +1782,24 @@ func publishFinalizedDNSEngineSwitchTerminal(
 	m.active = nil
 	m.trimHistoryLocked(runtime.job.RequestID)
 	return nil
+}
+
+// removeTerminalRolledBackDNSEngineSwitchJournalLocked runs only after a
+// verified native inverse and durable failed ledger publication. A mismatch
+// keeps the frozen source for the next boot or owner review.
+func (m *serviceMutationManager) removeTerminalRolledBackDNSEngineSwitchJournalLocked(requestID string) error {
+	path := filepath.Join(filepath.Dir(m.ledgerPath), dnsEngineSwitchJournalFile)
+	journal, exists, err := readDNSEngineSwitchJournalAt(path)
+	if err != nil || !exists {
+		return err
+	}
+	id := dnsengineartifact.SwitchIdentity{
+		RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID,
+		Target: journal.TargetEngine, Qualifier: journal.ManifestQualifier,
+	}
+	if journal.Phase != dnsengineartifact.SwitchPhaseRolledBack ||
+		journal.MutationRequestID != requestID || !id.TerminalRolledBackJob(m.ledger) {
+		return errors.New("DNS switch rollback journal lacks its exact terminal ledger verdict")
+	}
+	return removeDNSEngineSwitchJournalIfExactAt(path, journal)
 }

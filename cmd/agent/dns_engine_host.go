@@ -128,7 +128,6 @@ type bindSwitchRollbackJournalOps struct {
 	write    func(dnsEngineSwitchJournal) error
 	rollback func() error
 	verify   func() error
-	remove   func() error
 }
 
 func runBINDRollbackWithJournal(
@@ -136,7 +135,7 @@ func runBINDRollbackWithJournal(
 	ops bindSwitchRollbackJournalOps,
 ) error {
 	if journal == nil || ops.write == nil || ops.rollback == nil ||
-		ops.verify == nil || ops.remove == nil {
+		ops.verify == nil {
 		return errors.New("invalid BIND rollback journal operations")
 	}
 	journal.Phase = dnsSwitchPhaseRollingBack
@@ -149,9 +148,6 @@ func runBINDRollbackWithJournal(
 		journal.Phase = dnsSwitchPhaseRolledBack
 		finalWriteErr := ops.write(*journal)
 		journalErr = errors.Join(journalErr, finalWriteErr)
-		if finalWriteErr == nil {
-			journalErr = errors.Join(journalErr, ops.remove())
-		}
 	}
 	return errors.Join(journalErr, rollbackErr)
 }
@@ -1609,7 +1605,6 @@ func (hostDNSEngineBackend) Switch(
 					rollbackCtx, profile, systemctl, manifest, journal,
 				)
 			},
-			remove: removeDNSEngineSwitchJournal,
 		})
 	}
 	attempt := 0

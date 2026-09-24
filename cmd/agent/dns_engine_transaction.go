@@ -254,10 +254,12 @@ func writeDNSEngineSwitchJournalForFaultDriver(
 	)
 }
 
-func removeDNSEngineSwitchJournalIfExact(expected dnsEngineSwitchJournal) error {
+func removeDNSEngineSwitchJournalIfExactAt(path string, expected dnsEngineSwitchJournal) error {
 	return dnsenginerecovery.RemoveJournalCheckpoint(dnsJournalPolicy(), expected, dnsenginerecovery.JournalRemovalOps{
-		Read:   readDNSEngineSwitchJournal,
-		Remove: func() error { return secureRemoveConfig(dnsEngineSwitchJournalPath()) },
+		Read: func() (dnsEngineSwitchJournal, bool, error) {
+			return readDNSEngineSwitchJournalAt(path)
+		},
+		Remove: func() error { return secureRemoveConfig(path) },
 	})
 }
 

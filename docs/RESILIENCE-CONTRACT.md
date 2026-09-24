@@ -1124,11 +1124,19 @@ full Agent/recovery package tests and vet are scoped evidence. External
 owner rewrites between read and unlink, Agent-independent secure filesystem
 effects and native interruption trials remain open; P0.4 is not complete.
 
-Open P0.4/P0.3 crash boundary: the current Agent rollback sequence removes
-the rolled-back DNS switch journal before its outer mutation ledger records
-a terminal result. A crash in that interval can leave an accepted ledger
-request with no frozen journal; absence alone cannot prove native rollback.
-The exact-removal check above prevents stale-path deletion but does not
-close this ordering gap. Retain the final checkpoint through terminal
-publication, add idempotent cleanup tied to that receipt, then fault-test
-each boundary with native DNS and owner-edit probes before claiming recovery.
+P0.4/P0.3, constitutional invariants 1/2/4: Agent rollback now persists the
+rolled-back DNS switch checkpoint and retains the frozen source until the exact
+mutation ledger verdict is durably failed. The direct BIND switch/adoption and PowerDNS switch/adoption rollback producers
+also retain this checkpoint. The running terminal path then removes only that
+exact checkpoint; boot recovery recognizes the same failed operation,
+reproves the native inverse and completes removal after an interrupted terminal
+publication. A different owner, target, request, phase or missing verdict
+withholds cleanup. A new DNS mutation only observes a retained prior switch
+journal and refuses; it cannot replay that previous operation under its own
+lease. The independent reader classifies a retained terminal
+rollback without granting mutation authority. The historical v1 journal and
+ledger schemas are unchanged; the ordering between their existing phases changed.
+Shared ordering, exact-ledger, secure cleanup, direct-producer and local boot
+replay tests are component evidence. A native kill/reboot trial at each boundary, owner-edit
+races, an Agent-independent inverse and complete update/rollback matrix remain
+open; P0.3 and P0.4 are not accepted as complete.

@@ -746,17 +746,15 @@ func targetSnapshotWasActive(journal dnsEngineSwitchJournal, unit string) bool {
 type dnsSwitchRecoveryRollbackOps struct {
 	write    func(dnsEngineSwitchJournal) error
 	rollback func(dnsEngineSwitchJournal) error
-	remove   func() error
 }
 
 func runDNSSwitchRecoveryRollbackWithJournal(journal *dnsEngineSwitchJournal, ops dnsSwitchRecoveryRollbackOps) error {
-	if journal == nil || ops.write == nil || ops.rollback == nil || ops.remove == nil {
+	if journal == nil || ops.write == nil || ops.rollback == nil {
 		return errors.New("invalid DNS switch recovery rollback operations")
 	}
 	return dnsenginerecovery.Rollback(context.Background(), journal, dnsenginerecovery.Operations{
 		Write:   func(_ context.Context, j dnsengineartifact.SwitchJournalV1) error { return ops.write(j) },
 		Inverse: func(_ context.Context, j dnsengineartifact.SwitchJournalV1) error { return ops.rollback(j) },
-		Remove:  func(_ context.Context, _ dnsengineartifact.SwitchJournalV1) error { return ops.remove() },
 	})
 }
 
@@ -778,34 +776,19 @@ func (hostDNSEngineBackend) RecoverSwitch(
 			return writeDNSEngineSwitchJournal(j)
 		},
 		Inverse: rollbackDNSSwitchJournal,
-		Remove: func(_ context.Context, journal dnsengineartifact.SwitchJournalV1) error {
-			return removeDNSEngineSwitchJournalIfExact(journal)
-		},
 	})
 	return dnsEngineSwitchRecoveryOutcome(outcome), err
 }
 
-func reconcileExistingDNSEngineSwitchJournal(ctx context.Context) error {
+func reconcileExistingDNSEngineSwitchJournal(_ context.Context) error {
 	journal, exists, err := readDNSEngineSwitchJournal()
 	if err != nil || !exists {
 		return err
 	}
-	binding := switchJournalBinding(journal)
-	outcome, err := (hostDNSEngineBackend{}).RecoverSwitch(
-		ctx, journal.TargetEngine, journal.ManifestQualifier, binding,
-	)
-	if err != nil {
-		return err
-	}
-	if outcome == dnsEngineSwitchRecoveryCommitted {
-		return (hostDNSEngineBackend{}).FinalizeSwitch(
-			ctx, journal.TargetEngine, journal.ManifestQualifier, binding,
-		)
-	}
-	if outcome != dnsEngineSwitchRecoveryRolledBack {
-		return errors.New("DNS engine switch journal recovery made no progress")
-	}
-	return nil
+	// A new DNS mutation has no authority over the retained old operation.
+	// Startup recovery must bind the journal to that operation's ledger and
+	// reprove native state under its own host lock.
+	return fmt.Errorf("DNS engine switch request %s retains a %s journal; recover that exact operation before another DNS mutation", journal.MutationRequestID, journal.Phase)
 }
 
 var (

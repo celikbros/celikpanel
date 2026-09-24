@@ -1819,6 +1819,12 @@ func (m *serviceMutationManager) finishRuntimeTerminalLocked(
 	); err != nil {
 		return err
 	}
+	if runtime.job.Kind == "dns_engine_switch" && !success {
+		if err := m.removeTerminalRolledBackDNSEngineSwitchJournalLocked(runtime.job.RequestID); err != nil {
+			m.poisonLock = runtime.lock
+			return m.poisonLocked(fmt.Errorf("retire terminal DNS switch rollback journal: %w", err))
+		}
+	}
 	runtime.cancel()
 	lockErr := runtime.lock.Close()
 	m.active = nil

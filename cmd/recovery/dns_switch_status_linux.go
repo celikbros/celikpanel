@@ -487,6 +487,8 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "The released DNS switch has an unknown reason. Preserve its journal and ledger for owner review; no inverse or new switch is authorized.")
 			return exitUnavailable
 		}
+	case dnsenginerecovery.EvidenceTerminalRolledBack:
+		fmt.Fprintln(out, "The ledger records a failed DNS switch and its rolled-back journal is retained. The server owner should inspect the same operation and native DNS service. On a compatible Agent restart, the original inverse is re-proved under the host lock before this exact journal is retired; do not start another switch while it remains.")
 	case dnsenginerecovery.EvidenceFinalized:
 		fmt.Fprintln(out, "The ledger records finalization while a journal remains. The server owner should inspect native DNS health and the retained journal; this observation alone does not authorize cleanup or a new switch.")
 	default:
