@@ -245,9 +245,13 @@ func agentRPCMethodsWithBuildCommitField(t *testing.T) []string {
 		method := agentType.Method(index)
 		// V1 is a stable zero-touch mixed-version stub. It deliberately keeps
 		// the old wire request shape but never reaches the build gate or host.
+		// Mail enrollment source and preview are read-only inspections with
+		// separate build-identity tests, not protected host mutations.
 		if method.Name == "IssuePanelCertificate" ||
 			method.Name == "ReconcileMailTLSMutation" ||
-			method.Name == "SecureMailTLS" {
+			method.Name == "SecureMailTLS" ||
+			method.Name == "MailEnrollmentSourceV1" ||
+			method.Name == "MailEnrollmentPreviewV1" {
 			continue
 		}
 		if method.Type.NumIn() != 3 {
