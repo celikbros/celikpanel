@@ -768,3 +768,18 @@ No persisted schema, producer transition or installed host changes.
 Injected failure at every step and the Agent suite cover this component
 boundary. An independent native adapter, owner-edit and reboot fault
 matrix, and complete P0.4 acceptance remain open.
+### PowerDNS stop readback before database inverse (2026-09-24)
+
+The ordered PowerDNS rollback now has an explicit read-only stop proof between
+the native systemctl stop result and the SQLite restore. The Agent reads
+pdns.service unit state and process properties twice, requiring inactive
+state, zero MainPID/ControlPID, dead SubState and identical unit/process
+observations. Failure or drift retains the accepted rollback journal and
+withholds the database and all later effects. This avoids interpreting a
+successful stop command alone as proof the database is no longer served.
+
+The proof is point-in-time. It does not exclude a foreign database writer,
+a later owner restart, or establish independent recovery. No persisted
+schema or installed host was changed. Failed-stop, failed-readback, live
+PID, unit drift and ordered inverse tests are component evidence only;
+native interrupted-switch acceptance remains open.

@@ -11,6 +11,7 @@ import (
 // RollbackPDNSSwitch, and retain the accepted journal until terminal proof.
 type PDNSSwitchRollbackOps struct {
 	StopTarget      func(context.Context) error
+	VerifyStopped   func(context.Context) error
 	RestoreDatabase func() error
 	RestoreConfigs  func() error
 	RestoreState    func() error
@@ -23,7 +24,8 @@ type PDNSSwitchRollbackOps struct {
 // effects are also withheld after any failed or interrupted predecessor;
 // recovery resumes the same journal after fresh owner/native proofs.
 func RollbackPDNSSwitch(ctx context.Context, ops PDNSSwitchRollbackOps) error {
-	if ctx == nil || ops.StopTarget == nil || ops.RestoreDatabase == nil ||
+	if ctx == nil || ops.StopTarget == nil || ops.VerifyStopped == nil ||
+		ops.RestoreDatabase == nil ||
 		ops.RestoreConfigs == nil || ops.RestoreState == nil ||
 		ops.RestoreTarget == nil || ops.RestoreSource == nil {
 		return errors.New("invalid PowerDNS switch rollback operations")
@@ -33,6 +35,7 @@ func RollbackPDNSSwitch(ctx context.Context, ops PDNSSwitchRollbackOps) error {
 		run  func() error
 	}{
 		{"stop target", func() error { return ops.StopTarget(ctx) }},
+		{"verify target stopped", func() error { return ops.VerifyStopped(ctx) }},
 		{"restore database", ops.RestoreDatabase},
 		{"restore configs", ops.RestoreConfigs},
 		{"restore state", ops.RestoreState},

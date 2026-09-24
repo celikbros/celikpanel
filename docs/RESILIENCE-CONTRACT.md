@@ -1052,3 +1052,10 @@ owner-BIND adoption retains its non-stopping inverse. The BIND target
 preimage may be active for managed reconfiguration; native continuity
 is not established by the ordered component test. No persisted schema
 changed. Independent native inverse and interruption trials remain open.
+The PowerDNS fail-stop inverse also requires two matching inactive
+pdns.service and zero-PID/dead process readbacks after systemctl stop
+and before SQLite restoration. A command exit code alone is insufficient.
+Unknown or changing state withholds database and later writes and retains
+the journal. This point-in-time proof cannot exclude a foreign writer or
+future owner start; independent recovery and native fault acceptance
+remain open.

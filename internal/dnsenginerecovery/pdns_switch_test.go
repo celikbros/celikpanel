@@ -15,6 +15,7 @@ func TestPDNSSwitchRollbackNeverWritesAfterFailedStop(t *testing.T) {
 			calls = append(calls, "stop")
 			return boom
 		},
+		VerifyStopped:   func(context.Context) error { calls = append(calls, "verify-stopped"); return nil },
 		RestoreDatabase: func() error { calls = append(calls, "database"); return nil },
 		RestoreConfigs:  func() error { calls = append(calls, "configs"); return nil },
 		RestoreState:    func() error { calls = append(calls, "state"); return nil },
@@ -30,7 +31,7 @@ func TestPDNSSwitchRollbackNeverWritesAfterFailedStop(t *testing.T) {
 }
 
 func TestPDNSSwitchRollbackStopsAtEveryFailedPredecessor(t *testing.T) {
-	names := []string{"stop", "database", "configs", "state", "target", "source"}
+	names := []string{"stop", "verify-stopped", "database", "configs", "state", "target", "source"}
 	for failAt := range names {
 		t.Run(names[failAt], func(t *testing.T) {
 			boom := errors.New("injected failure")
@@ -44,6 +45,7 @@ func TestPDNSSwitchRollbackStopsAtEveryFailedPredecessor(t *testing.T) {
 			}
 			ops := PDNSSwitchRollbackOps{
 				StopTarget:      func(context.Context) error { return run("stop") },
+				VerifyStopped:   func(context.Context) error { return run("verify-stopped") },
 				RestoreDatabase: func() error { return run("database") },
 				RestoreConfigs:  func() error { return run("configs") },
 				RestoreState:    func() error { return run("state") },
@@ -66,6 +68,7 @@ func TestPDNSSwitchRollbackCancellationWithholdsDatabaseRestore(t *testing.T) {
 	var touched bool
 	ops := PDNSSwitchRollbackOps{
 		StopTarget:      func(context.Context) error { cancel(); return nil },
+		VerifyStopped:   func(context.Context) error { return nil },
 		RestoreDatabase: func() error { touched = true; return nil },
 		RestoreConfigs:  func() error { return nil },
 		RestoreState:    func() error { return nil },

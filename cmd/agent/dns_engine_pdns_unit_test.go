@@ -89,6 +89,7 @@ func TestPDNSSwitchAndAdoptionRollbackPreserveCallerDeadline(t *testing.T) {
 				<-commandCtx.Done()
 				return commandCtx.Err()
 			},
+			verifyStopped:               func(context.Context) error { return nil },
 			restorePDNSDatabaseSnapshot: func() error { return nil },
 			restoreConfigs:              func() error { return nil },
 			restoreState:                func() error { return nil },

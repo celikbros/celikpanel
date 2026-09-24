@@ -1351,6 +1351,64 @@ func startPDNSTargetWithOps(
 	})
 }
 
+type pdnsRollbackStoppedProofOps struct {
+	inspectUnit      func(context.Context) (bindInstallUnitState, error)
+	inspectProcesses func(context.Context) (dnsUnitProcesses, error)
+}
+
+func verifyPDNSStoppedBeforeDatabaseRestoreWithOps(
+	ctx context.Context,
+	ops pdnsRollbackStoppedProofOps,
+) error {
+	if ctx == nil || ops.inspectUnit == nil || ops.inspectProcesses == nil {
+		return errors.New("PowerDNS stopped proof requires native unit and process observers")
+	}
+	observe := func() (bindInstallUnitState, dnsUnitProcesses, error) {
+		if err := ctx.Err(); err != nil {
+			return bindInstallUnitState{}, dnsUnitProcesses{}, err
+		}
+		unit, err := ops.inspectUnit(ctx)
+		if err != nil {
+			return bindInstallUnitState{}, dnsUnitProcesses{}, err
+		}
+		if unit.name != "pdns.service" || unit.activeState != "inactive" {
+			return bindInstallUnitState{}, dnsUnitProcesses{},
+				errors.New("PowerDNS target is not an inactive pdns.service")
+		}
+		processes, err := ops.inspectProcesses(ctx)
+		if err != nil {
+			return bindInstallUnitState{}, dnsUnitProcesses{}, err
+		}
+		if err := verifyDNSUnitProcessesStopped(processes); err != nil {
+			return bindInstallUnitState{}, dnsUnitProcesses{}, err
+		}
+		return unit, processes, nil
+	}
+	beforeUnit, beforeProcesses, err := observe()
+	if err != nil {
+		return err
+	}
+	afterUnit, afterProcesses, err := observe()
+	if err != nil {
+		return err
+	}
+	if beforeUnit != afterUnit || beforeProcesses != afterProcesses {
+		return errors.New("PowerDNS target unit or process changed during stopped proof")
+	}
+	return nil
+}
+
+func verifyPDNSStoppedBeforeDatabaseRestore(ctx context.Context, systemctl string) error {
+	guard := dnsSystemdStateGuard(systemctl)
+	return verifyPDNSStoppedBeforeDatabaseRestoreWithOps(ctx, pdnsRollbackStoppedProofOps{
+		inspectUnit: func(proofCtx context.Context) (bindInstallUnitState, error) {
+			return guard.inspect(proofCtx, "pdns.service")
+		},
+		inspectProcesses: func(proofCtx context.Context) (dnsUnitProcesses, error) {
+			return inspectDNSUnitProcesses(proofCtx, systemctl, "pdns.service")
+		},
+	})
+}
 func rollbackPDNSSwitch(
 	ctx context.Context,
 	systemctl string,
@@ -1379,6 +1437,9 @@ func rollbackPDNSSwitch(
 							return err
 						},
 					)
+				},
+				verifyStopped: func(proofCtx context.Context) error {
+					return verifyPDNSStoppedBeforeDatabaseRestore(proofCtx, systemctl)
 				},
 				restorePDNSDatabaseSnapshot: func() error {
 					return restorePDNSDatabase(journal)
@@ -1419,6 +1480,7 @@ func rollbackPDNSSwitchAfterConfigProof(
 
 type pdnsSwitchRollbackOps struct {
 	stopTarget                  func(context.Context) error
+	verifyStopped               func(context.Context) error
 	restorePDNSDatabaseSnapshot func() error
 	restoreConfigs              func() error
 	restoreState                func() error
@@ -1432,6 +1494,7 @@ func rollbackPDNSSwitchWithOps(
 ) error {
 	return dnsenginerecovery.RollbackPDNSSwitch(ctx, dnsenginerecovery.PDNSSwitchRollbackOps{
 		StopTarget:      ops.stopTarget,
+		VerifyStopped:   ops.verifyStopped,
 		RestoreDatabase: ops.restorePDNSDatabaseSnapshot,
 		RestoreConfigs:  ops.restoreConfigs,
 		RestoreState:    ops.restoreState,
