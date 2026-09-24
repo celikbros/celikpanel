@@ -1165,7 +1165,8 @@ interrupted DNS switch's native result, it may release only that dead worker's
 accepted ledger lease when a canonical frozen journal still matches request,
 owner, target and qualifier under the host lock. The new stable failure reason
 `dns_native_recovery_unknown_after_restart` is accepted by the existing
-released-undecided reader. The journal remains, new DNS work refuses it, and
+released-undecided reader and gets explicit owner guidance in the read-only
+`recovery dns-switch-status` command. The journal remains, new DNS work refuses it, and
 idle boot may retry the exact recovery; unrelated host work can continue.
 Missing, unreadable or mismatched journal evidence still retains fail-closed
 host exclusion. The historical v1 journal/ledger schemas are unchanged; only

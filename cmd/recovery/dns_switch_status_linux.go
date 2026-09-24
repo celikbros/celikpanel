@@ -483,6 +483,8 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(out, "The Agent released this interrupted DNS switch lease because the host could not be inspected after restart. The server owner should inspect the host profile and native DNS authority, then retry observation of this same operation after the host is readable. The frozen journal remains; no inverse or new switch is authorized.")
 		case dnsengineartifact.ReleasedHostWindowCode:
 			fmt.Fprintln(out, "The Agent released this interrupted DNS switch lease because host startup did not finish within its recovery window. The server owner should confirm startup and native DNS authority, then retry observation of this same operation. The frozen journal remains; no inverse or new switch is authorized.")
+		case dnsengineartifact.ReleasedNativeUnknownCode:
+			fmt.Fprintln(out, "The Agent could not verify the interrupted DNS switch's native result after restart. The server owner should inspect the DNS service and the original operation, resolve the reported native error, then restart the Agent to retry that same journal. The journal remains and blocks a new DNS switch; this read-only status does not authorize an inverse.")
 		default:
 			fmt.Fprintln(diagnostic, "The released DNS switch has an unknown reason. Preserve its journal and ledger for owner review; no inverse or new switch is authorized.")
 			return exitUnavailable
