@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"golang.org/x/sys/unix"
 )
@@ -18,6 +19,49 @@ func VerifyInstalled(ctx context.Context, layout Layout, serviceGID uint32) erro
 	}
 	defer unix.Close(rootFD)
 	return VerifyAt(rootFD, layout, serviceGID, func() error { return ProveInstalledPackage(ctx, layout) })
+}
+
+// VerifyInstalledCatalog proves the root and the real generation catalog. The
+// returned inode identity lets a caller reject replacement across a tree read.
+// The caller must still verify the selected immutable generation itself.
+type CatalogIdentity struct {
+	chain   chain
+	catalog Identity
+}
+
+func VerifyInstalledCatalog(ctx context.Context, layout Layout, serviceGID uint32) (CatalogIdentity, error) {
+	if err := VerifyInstalled(ctx, layout, serviceGID); err != nil {
+		return CatalogIdentity{}, err
+	}
+	rootFD, err := unix.Open("/", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return CatalogIdentity{}, fmt.Errorf("open BIND filesystem root: %w", err)
+	}
+	defer unix.Close(rootFD)
+	parentChain, err := inspectAt(rootFD, layout, serviceGID)
+	if err != nil {
+		return CatalogIdentity{}, err
+	}
+	catalog, err := catalogIdentityAt(rootFD, layout)
+	if err != nil {
+		return CatalogIdentity{}, err
+	}
+	return CatalogIdentity{chain: parentChain, catalog: catalog}, nil
+}
+func catalogIdentityAt(rootFD int, layout Layout) (Identity, error) {
+	if layout != APT && layout != Pacman {
+		return Identity{}, errors.New("unsupported managed BIND generation root")
+	}
+	relative := strings.TrimPrefix(string(layout), "/") + "/generations"
+	catalogFD, err := unix.Openat2(rootFD, relative, &unix.OpenHow{
+		Flags:   uint64(unix.O_RDONLY | unix.O_DIRECTORY | unix.O_CLOEXEC | unix.O_NOFOLLOW),
+		Resolve: unix.RESOLVE_BENEATH | unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_MAGICLINKS,
+	})
+	if err != nil {
+		return Identity{}, fmt.Errorf("open managed BIND generation catalog: %w", err)
+	}
+	defer unix.Close(catalogFD)
+	return ValidateExactDirectory(catalogFD, 0, 0, 0o755, string(layout)+"/generations")
 }
 
 type Layout string

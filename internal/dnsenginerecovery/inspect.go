@@ -57,18 +57,20 @@ const (
 type EvidenceObservation struct {
 	// EvidenceSHA256 fingerprints the exact installed bytes read by InspectFiles.
 	// Decoded-only observations leave it empty; it never admits a mutation.
-	EvidenceSHA256  string
-	Status          EvidenceStatus
-	RequestID       string
-	SourceEngine    string
-	TargetEngine    string
-	Phase           string
-	WorkerPID       int
-	WorkerStarted   string
-	TargetReceipt   TargetReceiptStatus
-	SourceReceipt   SourceReceiptStatus
-	SourceOwnership SourceOwnershipStatus
-	NativeUnits     []string
+	EvidenceSHA256   string
+	Status           EvidenceStatus
+	RequestID        string
+	SourceEngine     string
+	TargetEngine     string
+	TargetGeneration string
+	TargetEpoch      int64
+	Phase            string
+	WorkerPID        int
+	WorkerStarted    string
+	TargetReceipt    TargetReceiptStatus
+	SourceReceipt    SourceReceiptStatus
+	SourceOwnership  SourceOwnershipStatus
+	NativeUnits      []string
 }
 
 // InspectEvidence binds a previously decoded canonical journal to a canonical
@@ -89,7 +91,7 @@ func InspectEvidence(policy dnsengineartifact.JournalPolicy, journal dnsenginear
 	if job == nil {
 		return EvidenceObservation{}, errors.New("DNS switch journal has no matching accepted ledger job")
 	}
-	observation := EvidenceObservation{RequestID: id.RequestID, Phase: journal.Phase, SourceEngine: string(journal.SourceEngine), TargetEngine: string(journal.TargetEngine)}
+	observation := EvidenceObservation{RequestID: id.RequestID, Phase: journal.Phase, SourceEngine: string(journal.SourceEngine), TargetEngine: string(journal.TargetEngine), TargetGeneration: journal.TargetGeneration, TargetEpoch: journal.TargetEpoch}
 	unitNames := make(map[string]bool, len(journal.SourceUnitsBefore)+len(journal.TargetUnitsBefore))
 	for _, snapshots := range [][]dnsengineartifact.UnitSnapshot{journal.SourceUnitsBefore, journal.TargetUnitsBefore} {
 		for _, snapshot := range snapshots {

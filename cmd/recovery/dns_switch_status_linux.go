@@ -9,11 +9,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/bindroot"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
@@ -93,10 +95,10 @@ func localServiceGroupID(path, group string) (uint32, error) {
 
 // This is a directory and package provenance observation only. It does not
 // establish which immutable generation named loaded or authorize an inverse.
-func verifyInstalledBINDRoot(ctx context.Context) error {
+func installedBINDLayout() (bindroot.Layout, uint32, error) {
 	profile, err := hostplatform.Detect()
 	if err != nil {
-		return fmt.Errorf("detect installed host profile: %w", err)
+		return "", 0, fmt.Errorf("detect installed host profile: %w", err)
 	}
 	var layout bindroot.Layout
 	var group string
@@ -106,13 +108,59 @@ func verifyInstalledBINDRoot(ctx context.Context) error {
 	case hostplatform.PackageManagerPacman:
 		layout, group = bindroot.Pacman, "named"
 	default:
-		return errors.New("this package family has no certified managed BIND root")
+		return "", 0, errors.New("this package family has no certified managed BIND root")
 	}
 	gid, err := localServiceGroupID("/etc/group", group)
 	if err != nil {
-		return fmt.Errorf("verify local BIND service group: %w", err)
+		return "", 0, fmt.Errorf("verify local BIND service group: %w", err)
+	}
+	return layout, gid, nil
+}
+
+func verifyInstalledBINDRoot(ctx context.Context) error {
+	layout, gid, err := installedBINDLayout()
+	if err != nil {
+		return err
 	}
 	return bindroot.VerifyInstalled(ctx, layout, gid)
+}
+
+// A matching selected generation is a stronger observation than a state
+// receipt, but remains distinct from the daemon's loaded configuration and
+// authoritative answers. No mutation or daemon reload is performed here.
+func verifySelectedBINDTarget(ctx context.Context, generation string, epoch int64) error {
+	layout, gid, err := installedBINDLayout()
+	if err != nil {
+		return err
+	}
+	before, err := bindroot.VerifyInstalledCatalog(ctx, layout, gid)
+	if err != nil {
+		return err
+	}
+	publisher, err := binddns.NewOSPublisher(string(layout))
+	if err != nil {
+		return err
+	}
+	first, err := publisher.LoadCurrent()
+	if err != nil {
+		return fmt.Errorf("read selected managed BIND generation: %w", err)
+	}
+	receipt := first.CurrentReceipt()
+	if receipt.Generation != generation || receipt.EngineEpoch != epoch {
+		return errors.New("selected managed BIND generation differs from the frozen target")
+	}
+	second, err := publisher.LoadCurrent()
+	if err != nil {
+		return fmt.Errorf("reread selected managed BIND generation: %w", err)
+	}
+	after, err := bindroot.VerifyInstalledCatalog(ctx, layout, gid)
+	if err != nil {
+		return err
+	}
+	if before != after || !reflect.DeepEqual(receipt, second.CurrentReceipt()) {
+		return errors.New("selected managed BIND generation changed during observation")
+	}
+	return nil
 }
 
 type dnsObservationLocks struct {
@@ -197,11 +245,19 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 	}
 	if observation.SourceEngine == "bind" || observation.TargetEngine == "bind" {
-		if bindErr := verifyInstalledBINDRoot(context.Background()); bindErr != nil {
-			fmt.Fprintln(diagnostic, "Managed BIND root ownership is unknown. The server owner should inspect the native BIND directory, service group and package ownership before the same DNS operation resumes; no inverse was started. "+bindErr.Error())
-			return exitUnavailable
+		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
+			if bindErr := verifySelectedBINDTarget(context.Background(), observation.TargetGeneration, observation.TargetEpoch); bindErr != nil {
+				fmt.Fprintln(diagnostic, "Selected BIND generation is unknown or differs from the frozen target. The server owner should inspect the managed BIND generation, native configuration and DNS answers before the same operation resumes; no inverse was started. "+bindErr.Error())
+				return exitUnavailable
+			}
+			fmt.Fprintln(out, "Managed BIND root and selected immutable generation matched the frozen target across two read-only observations. The daemon's loaded configuration, DNS answers, owner edits and recovery authority remain unproved.")
+		} else {
+			if bindErr := verifyInstalledBINDRoot(context.Background()); bindErr != nil {
+				fmt.Fprintln(diagnostic, "Managed BIND root ownership is unknown. The server owner should inspect the native BIND directory, service group and package ownership before the same DNS operation resumes; no inverse was started. "+bindErr.Error())
+				return exitUnavailable
+			}
+			fmt.Fprintln(out, "Managed BIND root directory and package ownership matched on two read-only walks. This does not prove the selected generation, DNS answers, owner edits or recovery authority.")
 		}
-		fmt.Fprintln(out, "Managed BIND root directory and package ownership matched on two read-only walks. This does not prove the loaded generation, DNS answers, owner edits or recovery authority.")
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	switch observation.TargetReceipt {

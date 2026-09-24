@@ -58,6 +58,25 @@ func TestVerifyAtRejectsUnsafeNativeRootAndPackageProof(t *testing.T) {
 	if err := unix.Chmod(parent, 0o1775); err != nil {
 		t.Fatal(err)
 	}
+	catalog := filepath.Join(child, "generations")
+	if err := os.Mkdir(catalog, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := catalogIdentityAt(fd, APT); err != nil {
+		t.Fatalf("real catalog rejected: %v", err)
+	}
+	if err := os.Remove(catalog); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(parent, catalog); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := catalogIdentityAt(fd, APT); err == nil {
+		t.Fatal("symlinked catalog accepted")
+	}
+	if err := os.Remove(catalog); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Remove(child); err != nil {
 		t.Fatal(err)
 	}

@@ -485,3 +485,21 @@ worker exclusion or inverse eligibility. Native execution and complete
 interrupted-switch acceptance therefore remain open. Focused root-drift,
 symlink, package-refusal and local-group tests and Agent/recovery suites cover
 this boundary; no installed panel was updated.
+### Read-only selected BIND generation comparison (2026-09-24)
+
+P0.4, constitutional invariants 1/2/3: when the current state receipt
+exactly matches a frozen BIND switch target, independent DNS status now also
+checks the real root-owned `generations` catalog without symlink traversal,
+loads the complete selected generation through the existing receipt/hash
+verifier twice, and compares generation ID and engine epoch with the frozen
+journal. Root, package and catalog proofs surround both reads; a changed or
+unreadable tree is **unknown**, with an owner action and no inverse. This adds
+no persisted schema or producer transition and never selects a generation or
+reloads BIND.
+
+A verified selected tree still does not prove which configuration `named`
+loaded, DNS answers, transfer health, absence of owner edits or worker
+exclusion. PowerDNS native identity, complete recovery admission/execution
+and interrupted-switch fault acceptance remain open. Focused catalog-symlink
+and target-identity tests, recovery tests and vet pass; no installed panel was
+updated.
