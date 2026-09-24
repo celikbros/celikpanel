@@ -328,3 +328,20 @@ This is diagnosis, not a DNS switch recovery executor: each file is pinned while
 The worker start-token parser now lives in `internal/processidentity` and is shared by the Agent and independent observer. For a recorded worker, the command reports whether the PID/start token matched at inspection time, did not match, or could not be read. The Agent's existing boolean guard retains its previous behavior. A matching instant is not a durable liveness proof or recovery admission; PID/process state and the ledger may change immediately afterwards.
 For a coordinated read, `recovery dns-switch-status --quiesced` takes the existing release lock and then the host mutation lock nonblocking, in the same order as installed workers, before reading either receipt. A busy or missing lock is reported as an unmet observation requirement; no new lock is created and no mutation runs. A local two-flock test verifies that a busy host lock releases the previously acquired release lock and a busy release lock stops before host acquisition. The default command remains an unlocked status snapshot that can report while an operation is active. Neither mode grants native recovery authority, and an owner edit outside those locks can still change state.
 The independent command now calls the same `dnsenginerecovery.InspectFiles` reader used by its private-directory tests. The reader binds its root to the trusted journal policy and established numeric owner, reads bounded canonical journal and ledger bytes, and distinguishes a missing journal from a present journal with missing, malformed or symlinked ledger evidence. This preserves an unknown result instead of silently interpreting corrupt or incomplete files as no operation. The local file test does not establish installed-server or native DNS health.
+
+### Running owner BIND takeover classification
+
+P0.4 and owner-control invariants 1/2: the historical first-install BIND takeover
+is now classified by `internal/dnsengineartifact`, and the Agent delegates to
+that same predicate. Its exact initial standalone manifest and frozen
+`named.service`/`bind9.service` preimage distinguish an already-running owner
+BIND from an ordinary switch. A running takeover must preserve the native DNS
+unit during inverse recovery; contradictory or incomplete unit evidence fails
+closed instead of selecting a potentially service-stopping inverse.
+
+This moves a recovery decision, not the recovery authority or native inverse.
+The caller must still validate the v1 journal and accepted operation under the
+host lock and prove current evidence before acting. Historical journal bytes and
+phases do not change. Shared classification cases and existing Agent crash-point
+takeover tests pass; an independent native executor and installed interruption
+acceptance remain open. No installed server was changed.

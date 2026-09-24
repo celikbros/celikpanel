@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -158,18 +159,8 @@ type bindAdoptionRuntimeEvidence struct {
 // adopt_unmanaged taahhüdüdür: kaynak motoru olmayan, 0'dan 1'e çağ, tek
 // sunuculu bir ilk BIND etkinleştirmesi; sıradan bir geçiş olarak gönderilir,
 // çünkü devralmanın yeniden kullandığı işlem odur.
-func adoptableRunningBINDManifest(
-	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
-	stateExists bool,
-) bool {
-	return !stateExists &&
-		manifest.Mode == transport.DNSEngineSwitchModeSwitch &&
-		manifest.TargetEngine == transport.DNSEngineBIND &&
-		manifest.SourceEngine == "" &&
-		manifest.SourceEpoch == 0 && manifest.TargetEpoch == 1 &&
-		manifest.Topology == transport.DNSTopologyStandalone &&
-		manifest.PairRole == "" && manifest.LocalIP == "" &&
-		manifest.LocalNS == "" && manifest.PeerIP == "" && manifest.PeerNS == ""
+func adoptableRunningBINDManifest(manifest mutationpayload.DNSEngineSwitchManifestCommitment, stateExists bool) bool {
+	return dnsengineartifact.AdoptableRunningBINDManifest(manifest, stateExists)
 }
 
 // runningBINDAdoptionSelected decides between the two halves of the takeover on
@@ -876,67 +867,8 @@ func verifyRestoredRunningBINDAdoption(
 // uyuşmadığını söyleyen bir ön-görüntü, bu kodun okuyamadığı bir durumdur - ve
 // R-019 ailesindeki çıkmazlar tam da böyle bir durumu tahmin etmekten doğdu -
 // bu yüzden kapalı düşer ve bulduğunu adlandırır.
-func runningBINDAdoptionJournal(
-	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
-	journal dnsEngineSwitchJournal,
-) (bool, error) {
-	if journal.TargetEngine != transport.DNSEngineBIND ||
-		!adoptableRunningBINDManifest(manifest, false) {
-		return false, nil
-	}
-	units := make(map[string]dnsUnitSnapshot, len(journal.TargetUnitsBefore))
-	names := make([]string, 0, len(journal.TargetUnitsBefore))
-	for _, snapshot := range journal.TargetUnitsBefore {
-		if _, duplicate := units[snapshot.Name]; duplicate {
-			return false, fmt.Errorf(
-				"BIND takeover journal cannot be classified: its target unit "+
-					"preimage names %s twice", snapshot.Name,
-			)
-		}
-		units[snapshot.Name] = snapshot
-		names = append(names, snapshot.Name)
-	}
-	named, hasNamed := units["named.service"]
-	alias, hasAlias := units["bind9.service"]
-	if !hasNamed || !hasAlias || len(units) != 2 {
-		found := "nothing"
-		if len(names) != 0 {
-			found = strings.Join(names, ", ")
-		}
-		return false, fmt.Errorf(
-			"BIND takeover journal cannot be classified: its target unit "+
-				"preimage names %s, not bind9.service and named.service", found,
-		)
-	}
-	namedActive := named.ActiveState == "active"
-	aliasActive := alias.ActiveState == "active"
-	if !namedActive && !aliasActive {
-		return false, nil
-	}
-	// named.service and bind9.service are one unit and its distribution alias
-	// on every layout the product supports, so they agree unless one of them is
-	// not on this host at all. A disagreement between two loaded units is not a
-	// takeover this code can read.
-	//
-	// named.service ile bind9.service, ürünün desteklediği her yerleşimde bir
-	// birim ve onun dağıtım takma adıdır; dolayısıyla biri bu sunucuda hiç
-	// yoksa dışında uyuşurlar. Yüklü iki birim arasındaki bir uyuşmazlık, bu
-	// kodun okuyabileceği bir devralma değildir.
-	if namedActive != aliasActive {
-		quiet := named
-		if namedActive {
-			quiet = alias
-		}
-		if quiet.LoadState != "not-found" {
-			return false, fmt.Errorf(
-				"BIND takeover journal cannot be classified: named.service was "+
-					"%q and bind9.service was %q before the mutation, and %s is "+
-					"loaded on this host", named.ActiveState, alias.ActiveState,
-				quiet.Name,
-			)
-		}
-	}
-	return true, nil
+func runningBINDAdoptionJournal(manifest mutationpayload.DNSEngineSwitchManifestCommitment, journal dnsEngineSwitchJournal) (bool, error) {
+	return dnsengineartifact.RunningBINDAdoptionJournal(manifest, journal)
 }
 
 type bindAdoptionRecoveryOps struct {
