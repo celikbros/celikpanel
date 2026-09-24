@@ -352,3 +352,14 @@ service proof. Agent supplies the existing native callbacks, so its crash-point
 behavior is unchanged. Any failing callback leaves the surrounding operation
 journal for recovery. This pure sequence still cannot establish host authority,
 worker exclusion, current native identity or an independent DNS executor.
+
+### Shared switch target receipt comparison
+
+P0.4, invariants 1/2/3: `ExactSwitchTargetStateV1` now owns the Agent's
+historical state-versus-journal comparison, including the verified/committed
+legacy paired-tuple exception and reinstall's original tenure mode. A changed
+owner, generation or modern paired endpoint is not the same target. Agent uses
+this common predicate before its existing native BIND/PowerDNS proofs. There is
+no journal or state schema transition. A matching receipt is not proof that the
+native daemon serves it; independent target verification and full native fault
+acceptance remain open.
