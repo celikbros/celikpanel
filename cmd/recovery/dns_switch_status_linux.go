@@ -601,7 +601,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	switch observation.Status {
 	case dnsenginerecovery.EvidenceLeaseExpired:
 		fmt.Fprintln(out, "The active ledger lease has expired. The server owner should inspect the original operation and native DNS service; do not start another switch. A compatible recovery executor must establish worker liveness and host ownership before the same operation can resume.")
-	case dnsenginerecovery.EvidenceWorkerRecorded:
+	case dnsenginerecovery.EvidenceWorkerRecorded, dnsenginerecovery.EvidenceOrphanedWorker:
 		gone, probeErr := processidentity.RecordedWorkerGone(observation.WorkerPID, observation.WorkerStarted)
 		switch {
 		case probeErr != nil:

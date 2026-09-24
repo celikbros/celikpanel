@@ -19,6 +19,7 @@ const (
 	EvidenceActive              EvidenceStatus = "accepted-active"
 	EvidenceLeaseExpired        EvidenceStatus = "active-lease-expired"
 	EvidenceWorkerRecorded      EvidenceStatus = "worker-recorded"
+	EvidenceOrphanedWorker      EvidenceStatus = "orphaned-worker-recorded"
 	EvidenceExpiredCancellation EvidenceStatus = "expired-cancellation"
 	EvidenceFinalized           EvidenceStatus = "finalized-with-journal"
 )
@@ -120,6 +121,10 @@ func InspectEvidence(policy dnsengineartifact.JournalPolicy, journal dnsenginear
 			}
 		case id.ActiveJobWithRegisteredWorker(job):
 			observation.Status = EvidenceWorkerRecorded
+			observation.WorkerPID = job.WorkerPID
+			observation.WorkerStarted = job.WorkerStarted
+		case id.OrphanedWorkerJob(job):
+			observation.Status = EvidenceOrphanedWorker
 			observation.WorkerPID = job.WorkerPID
 			observation.WorkerStarted = job.WorkerStarted
 		case id.ExpiredCancellingJob(job, now):

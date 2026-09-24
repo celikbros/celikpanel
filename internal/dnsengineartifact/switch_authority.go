@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -170,4 +171,35 @@ func (id SwitchIdentity) ValidateFinalizedLedger(ledger servicemutationledger.Le
 		return errors.New("DNS engine ledger lacks its exact finalized receipt")
 	}
 	return nil
+}
+
+// OrphanedWorkerJob accepts only the durable waiting state written after the
+// original Agent observed this exact switch worker still alive. It is evidence
+// of the same operation, never proof that the worker has since stopped.
+func (id SwitchIdentity) OrphanedWorkerJob(job *transport.ServiceMutationJob) bool {
+	if id.Validate() != nil || job == nil ||
+		job.RequestID != id.RequestID || job.OwnerID != id.OwnerID ||
+		job.Kind != "dns_engine_switch" || job.Target != string(id.Target) ||
+		job.PackageName != id.Qualifier ||
+		job.Status != servicemutationledger.StatusOrphaned ||
+		job.Phase != "waiting_for_orphaned_process" ||
+		job.ErrorCode != "agent_restart_worker_alive" ||
+		job.ErrorMessage != "The previous DNS engine switch worker is still alive." ||
+		job.Attempt <= 0 || job.WorkerPID <= 0 ||
+		job.StartedAt.IsZero() || job.UpdatedAt.IsZero() ||
+		job.LeaseExpiresAt.IsZero() || job.DeadlineAt.IsZero() ||
+		!job.FinishedAt.IsZero() || job.UpdatedAt.Before(job.StartedAt) ||
+		job.LeaseExpiresAt.Before(job.StartedAt) ||
+		job.DeadlineAt.Before(job.LeaseExpiresAt) {
+		return false
+	}
+	started := strings.TrimSpace(job.WorkerStarted)
+	command := strings.TrimSpace(job.WorkerCommand)
+	if started == "" || started != job.WorkerStarted ||
+		command == "" || command != job.WorkerCommand ||
+		len(command) > 64 || filepath.Base(command) != command {
+		return false
+	}
+	_, err := strconv.ParseUint(started, 10, 64)
+	return err == nil
 }

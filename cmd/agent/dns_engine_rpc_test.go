@@ -1358,9 +1358,9 @@ func TestDNSEngineSwitchStartupExpiredLeaseMismatchFailsClosed(
 				t.Fatalf("mismatched startup manager=%+v err=%v", reloaded, err)
 			}
 			defer releasePoisonedFirewallApplyTestManager(reloaded)
-			if backend.recoverCalls != 1 || backend.finalizeCalls != 0 {
+			if backend.recoverCalls != 0 || backend.finalizeCalls != 0 {
 				t.Fatalf(
-					"mismatch reached finalization: recover=%d finalize=%d",
+					"mismatched authority reached recovery: recover=%d finalize=%d",
 					backend.recoverCalls, backend.finalizeCalls,
 				)
 			}
@@ -2336,5 +2336,43 @@ func TestDNSEngineSwitchRecoveryRetainsHostLockWhenRecordedWorkerIsUnverifiable(
 			_ = lock.Close()
 		}
 		t.Fatalf("unknown worker released host exclusion: %v", lockErr)
+	}
+}
+
+func TestDNSEngineSwitchStartupFinalizesExactOrphanedWorkerAfterExit(t *testing.T) {
+	request := canonicalSwitchRequest(t)
+	manager, root := newMutationTestManager(t)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	journal := persistActiveCommittedBINDStartupJournal(t, manager, root, request)
+	persistActiveDNSEngineSwitchStartupLedger(t, manager, journal, false, func(job *ServiceMutationJob) {
+		job.Status = serviceMutationStatusOrphaned
+		job.Phase = "waiting_for_orphaned_process"
+		job.ErrorCode = "agent_restart_worker_alive"
+		job.ErrorMessage = "The previous DNS engine switch worker is still alive."
+		job.WorkerPID = int(^uint(0) >> 1)
+		job.WorkerStarted = "123"
+		job.WorkerCommand = "agent"
+	})
+	abandonFirewallApplyTestRuntime(t, manager)
+	backend := &fakeDNSEngineBackend{
+		recovery:     dnsEngineSwitchRecoveryCommitted,
+		finalizeHook: removeDNSEngineSwitchJournal,
+	}
+	useFakeDNSEngineBackend(t, backend)
+
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil || reloaded == nil {
+		t.Fatalf("exact orphan recovery: manager=%+v err=%v", reloaded, err)
+	}
+	job := reloaded.status(testMutationRequestID)
+	if backend.recoverCalls != 1 || backend.finalizeCalls != 1 ||
+		job == nil || job.Status != serviceMutationStatusSucceeded ||
+		reloaded.poisoned != nil {
+		t.Fatalf("orphaned worker did not finalize: recover=%d finalize=%d job=%+v poisoned=%v",
+			backend.recoverCalls, backend.finalizeCalls, job, reloaded.poisoned)
 	}
 }

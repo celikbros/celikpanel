@@ -136,3 +136,34 @@ func TestSwitchAuthorityFinalizedLedgerCannotBorrowAnotherOutcome(t *testing.T) 
 		})
 	}
 }
+
+func TestSwitchAuthorityOrphanedWorkerIsExactHistoricalWait(t *testing.T) {
+	id, job := switchAuthorityFixture(t)
+	job.Status = servicemutationledger.StatusOrphaned
+	job.Phase = "waiting_for_orphaned_process"
+	job.ErrorCode = "agent_restart_worker_alive"
+	job.ErrorMessage = "The previous DNS engine switch worker is still alive."
+	job.WorkerPID, job.WorkerStarted, job.WorkerCommand = 123, "456", "apt-get"
+	job.UpdatedAt = job.LeaseExpiresAt.Add(time.Second)
+	if !id.OrphanedWorkerJob(&job) {
+		t.Fatal("exact historical worker wait refused after lease expiry")
+	}
+	for name, mutate := range map[string]func(*transport.ServiceMutationJob){
+		"other owner":      func(j *transport.ServiceMutationJob) { j.OwnerID = strings.Repeat("f", 32) },
+		"other phase":      func(j *transport.ServiceMutationJob) { j.Phase = "host_state_unverified" },
+		"other reason":     func(j *transport.ServiceMutationJob) { j.ErrorCode = "other" },
+		"other message":    func(j *transport.ServiceMutationJob) { j.ErrorMessage = "other" },
+		"missing worker":   func(j *transport.ServiceMutationJob) { j.WorkerPID = 0 },
+		"unreadable token": func(j *transport.ServiceMutationJob) { j.WorkerStarted = "clock-token" },
+		"unsafe command":   func(j *transport.ServiceMutationJob) { j.WorkerCommand = "/bin/apt-get" },
+		"terminal":         func(j *transport.ServiceMutationJob) { j.FinishedAt = j.UpdatedAt },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := job
+			mutate(&changed)
+			if id.OrphanedWorkerJob(&changed) {
+				t.Fatal("different orphan evidence accepted")
+			}
+		})
+	}
+}

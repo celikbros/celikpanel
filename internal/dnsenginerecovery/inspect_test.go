@@ -125,3 +125,23 @@ func TestInspectEvidenceFinalizedAndCorruptJournal(t *testing.T) {
 		t.Fatal("corrupt journal accepted")
 	}
 }
+
+func TestInspectEvidenceRecognizesExactOrphanedDNSWorker(t *testing.T) {
+	policy, journal, ledger, now := inspectionFixture(t)
+	job := ledger.Jobs[journal.MutationRequestID]
+	job.Status = servicemutationledger.StatusOrphaned
+	job.Phase = "waiting_for_orphaned_process"
+	job.ErrorCode = "agent_restart_worker_alive"
+	job.ErrorMessage = "The previous DNS engine switch worker is still alive."
+	job.WorkerPID, job.WorkerStarted, job.WorkerCommand = 123, "456", "apt-get"
+	job.UpdatedAt = job.LeaseExpiresAt.Add(time.Second)
+	got, err := InspectEvidence(policy, journal, ledger, now.Add(2*time.Minute))
+	if err != nil || got.Status != EvidenceOrphanedWorker ||
+		got.WorkerPID != 123 || got.WorkerStarted != "456" {
+		t.Fatalf("exact orphan wait not observed: %+v, %v", got, err)
+	}
+	job.ErrorCode = "other"
+	if got, err := InspectEvidence(policy, journal, ledger, now.Add(2*time.Minute)); err == nil {
+		t.Fatalf("foreign orphan wait accepted: %+v", got)
+	}
+}

@@ -925,21 +925,13 @@ func (m *serviceMutationManager) exactActiveCommittedDNSEngineSwitchLocked(
 		return fmt.Errorf("validate active DNS engine ledger during recovery: %w", err)
 	}
 	job := m.ledger.Jobs[journal.MutationRequestID]
+	id := dnsengineartifact.SwitchIdentity{
+		RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID,
+		Target: manifest.TargetEngine, Qualifier: manifest.Qualifier,
+	}
 	if m.ledger.ActiveRequestID != journal.MutationRequestID ||
-		(!exactActiveDNSEngineSwitchJob(
-			job,
-			journal.MutationRequestID,
-			journal.MutationOwnerID,
-			manifest.TargetEngine,
-			manifest.Qualifier,
-		) && !exactExpiredCancellingDNSEngineSwitchJob(
-			job,
-			journal.MutationRequestID,
-			journal.MutationOwnerID,
-			manifest.TargetEngine,
-			manifest.Qualifier,
-			m.now(),
-		)) {
+		!(id.ActiveJob(job) || id.ActiveJobWithRegisteredWorker(job) ||
+			id.ExpiredCancellingJob(job, m.now()) || id.OrphanedWorkerJob(job)) {
 		return errors.New("committed DNS engine recovery lost its exact active ledger identity")
 	}
 	return nil
@@ -1046,6 +1038,17 @@ func (m *serviceMutationManager) recoverPersistedDNSEngineSwitchLocked(
 	if !transport.ValidDNSEngine(target) || !mutationpayload.ValidDNSEngineSwitchQualifier(job.PackageName) {
 		m.poisonLock = lock
 		return true, m.poisonLocked(errors.New("active DNS engine switch has an invalid durable identity"))
+	}
+	id := dnsengineartifact.SwitchIdentity{
+		RequestID: job.RequestID, OwnerID: job.OwnerID,
+		Target: target, Qualifier: job.PackageName,
+	}
+	if m.ledger.ActiveRequestID != job.RequestID ||
+		m.ledger.Jobs[job.RequestID] != job ||
+		!(id.ActiveJob(job) || id.ActiveJobWithRegisteredWorker(job) ||
+			id.ExpiredCancellingJob(job, m.now()) || id.OrphanedWorkerJob(job)) {
+		m.poisonLock = lock
+		return true, m.poisonLocked(errors.New("DNS engine switch recovery lacks its exact accepted ledger job"))
 	}
 	if job.WorkerPID != 0 || job.WorkerStarted != "" || job.WorkerCommand != "" {
 		gone, probeErr := processidentity.RecordedWorkerGone(job.WorkerPID, job.WorkerStarted)
