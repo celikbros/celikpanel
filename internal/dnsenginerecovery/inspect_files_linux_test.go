@@ -37,6 +37,10 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 		t.Fatal(err)
 	}
 	got, present, err := InspectFiles(root, owner, policy, now)
+	if got.EvidenceSHA256 == "" {
+		t.Fatal("missing installed evidence fingerprint")
+	}
+	initialFingerprint := got.EvidenceSHA256
 	if err != nil || !present || got.Status != EvidenceActive || got.TargetReceipt != TargetReceiptAbsent || got.SourceReceipt != SourceReceiptMutualAbsence || got.SourceOwnership != SourceOwnershipNotApplicable {
 		t.Fatalf("valid files with absent state: %+v, %v, %v", got, present, err)
 	}
@@ -55,7 +59,7 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 		t.Fatal(err)
 	}
 	got, present, err = InspectFiles(root, owner, policy, now)
-	if err != nil || !present || got.TargetReceipt != TargetReceiptExact || got.SourceReceipt != SourceReceiptDifferent {
+	if err != nil || !present || got.EvidenceSHA256 == initialFingerprint || got.TargetReceipt != TargetReceiptExact || got.SourceReceipt != SourceReceiptDifferent {
 		t.Fatalf("exact target receipt: %+v, %v, %v", got, present, err)
 	}
 	state.MutationOwnerID = "ffffffffffffffffffffffffffffffff"
@@ -262,5 +266,24 @@ func TestInspectFilesDistinguishesFrozenSourceFromForeignReceipt(t *testing.T) {
 	}
 	if _, present, err := InspectFiles(root, owner, policy, now); err == nil || !present {
 		t.Fatalf("symlinked ownership became an absent receipt: %v, %v", present, err)
+	}
+}
+
+func TestSwitchEvidenceFingerprintDistinguishesEveryDocumentAndPresence(t *testing.T) {
+	base := switchEvidenceFingerprint([]byte("journal"), []byte("ledger"), nil, false, nil, false)
+	for _, variant := range []struct {
+		name string
+		sum  string
+	}{
+		{"journal bytes", switchEvidenceFingerprint([]byte("changed"), []byte("ledger"), nil, false, nil, false)},
+		{"ledger bytes", switchEvidenceFingerprint([]byte("journal"), []byte("changed"), nil, false, nil, false)},
+		{"state presence", switchEvidenceFingerprint([]byte("journal"), []byte("ledger"), nil, true, nil, false)},
+		{"state bytes", switchEvidenceFingerprint([]byte("journal"), []byte("ledger"), []byte("state"), true, nil, false)},
+		{"ownership presence", switchEvidenceFingerprint([]byte("journal"), []byte("ledger"), nil, false, nil, true)},
+		{"ownership bytes", switchEvidenceFingerprint([]byte("journal"), []byte("ledger"), nil, false, []byte("owner"), true)},
+	} {
+		if variant.sum == base || len(variant.sum) != 64 {
+			t.Fatalf("%s did not change the bounded evidence fingerprint", variant.name)
+		}
 	}
 }

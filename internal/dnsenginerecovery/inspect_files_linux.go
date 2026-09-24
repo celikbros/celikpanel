@@ -3,6 +3,8 @@
 package dnsenginerecovery
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -80,6 +82,7 @@ func InspectFiles(stateRoot string, owner servicemutationledger.FileOwner, polic
 		}
 	}
 	if journal.SourceEngine == "" {
+		observation.EvidenceSHA256 = switchEvidenceFingerprint(journalRaw, ledgerRaw, stateRaw, stateExists, nil, false)
 		observation.SourceOwnership = SourceOwnershipNotApplicable
 		return observation, true, nil
 	}
@@ -89,6 +92,7 @@ func InspectFiles(stateRoot string, owner servicemutationledger.FileOwner, polic
 		return EvidenceObservation{}, true, fmt.Errorf("read DNS source ownership receipt: %w", err)
 	}
 	if !ownershipExists {
+		observation.EvidenceSHA256 = switchEvidenceFingerprint(journalRaw, ledgerRaw, stateRaw, stateExists, nil, false)
 		observation.SourceOwnership = SourceOwnershipAbsent
 		return observation, true, nil
 	}
@@ -103,9 +107,32 @@ func InspectFiles(stateRoot string, owner servicemutationledger.FileOwner, polic
 	if err != nil {
 		return EvidenceObservation{}, true, fmt.Errorf("compare frozen DNS source ownership receipt: %w", err)
 	}
+	observation.EvidenceSHA256 = switchEvidenceFingerprint(journalRaw, ledgerRaw, stateRaw, stateExists, ownershipRaw, true)
 	observation.SourceOwnership = SourceOwnershipDifferent
 	if matches {
 		observation.SourceOwnership = SourceOwnershipExact
 	}
 	return observation, true, nil
+}
+
+// switchEvidenceFingerprint binds the exact installed evidence bytes observed
+// across separate secured reads. Presence and lengths keep absent and empty
+// documents distinct. This detects changes during observation; it is not a
+// signed receipt, native-state proof or recovery authority.
+func switchEvidenceFingerprint(journal, ledger, state []byte, stateExists bool, ownership []byte, ownershipExists bool) string {
+	sum := sha256.New()
+	for _, part := range []struct {
+		name   string
+		raw    []byte
+		exists bool
+	}{
+		{"journal", journal, true},
+		{"ledger", ledger, true},
+		{"state", state, stateExists},
+		{"ownership", ownership, ownershipExists},
+	} {
+		fmt.Fprintf(sum, "%s:%t:%d:", part.name, part.exists, len(part.raw))
+		_, _ = sum.Write(part.raw)
+	}
+	return hex.EncodeToString(sum.Sum(nil))
 }

@@ -55,6 +55,9 @@ const (
 )
 
 type EvidenceObservation struct {
+	// EvidenceSHA256 fingerprints the exact installed bytes read by InspectFiles.
+	// Decoded-only observations leave it empty; it never admits a mutation.
+	EvidenceSHA256  string
 	Status          EvidenceStatus
 	RequestID       string
 	Phase           string

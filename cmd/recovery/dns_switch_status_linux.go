@@ -150,6 +150,19 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(out, "No DNS switch journal was observed. This does not prove historical completion or current DNS health. The server owner should inspect the native DNS service and the panel's operation status before starting another switch.")
 		return exitOK
 	}
+	units, unitErr := dnsenginerecovery.ProbeNativeUnits(context.Background(), observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
+	if len(args) == 2 && unitErr == nil {
+		again, stillPresent, readErr := dnsenginerecovery.InspectFiles(root, owner, policy, time.Now().UTC())
+		if readErr != nil || !stillPresent {
+			fmt.Fprintln(diagnostic, "DNS switch evidence changed or became unreadable during the quiesced observation. The server owner should inspect the existing operation and native DNS service, then retry after owner changes settle; no DNS operation was started.")
+			return exitUnavailable
+		}
+		againUnits, probeErr := dnsenginerecovery.ProbeNativeUnits(context.Background(), again.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
+		if probeErr != nil || !dnsenginerecovery.StableQuiescedObservation(observation, again, units, againUnits) {
+			fmt.Fprintln(diagnostic, "DNS switch evidence or native DNS unit properties changed during the quiesced observation. The server owner should inspect the existing operation and native DNS service, then retry after owner changes settle; no DNS operation was started.")
+			return exitUnavailable
+		}
+	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	switch observation.TargetReceipt {
 	case dnsenginerecovery.TargetReceiptExact:
@@ -177,7 +190,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	case dnsenginerecovery.SourceOwnershipDifferent:
 		fmt.Fprintln(out, "The source ownership receipt differs from the journal. Preserve both records and inspect owner changes before the original operation resumes; no inverse is admitted.")
 	}
-	units, unitErr := dnsenginerecovery.ProbeNativeUnits(context.Background(), observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
+
 	if unitErr != nil {
 		fmt.Fprintln(diagnostic, "Native DNS unit state is unknown. The server owner should inspect the named, bind9 and pdns systemd services before the original operation resumes; preserve the journal and do not start another switch. "+unitErr.Error())
 	} else {
@@ -187,7 +200,11 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(out, "These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.")
 	}
 	if len(args) == 2 {
-		fmt.Fprintln(out, "Release and host mutation locks were held during this observation. Future worker liveness and DNS state remain unproved.")
+		if unitErr == nil {
+			fmt.Fprintln(out, "Release and host mutation locks were held; evidence bytes and native unit properties matched across two reads. Future worker liveness, DNS answers, owner edits and recovery authority remain unproved.")
+		} else {
+			fmt.Fprintln(out, "Release and host mutation locks were held, but native unit state could not be confirmed. No stable DNS observation or recovery authority was established.")
+		}
 	}
 	switch observation.Status {
 	case dnsenginerecovery.EvidenceLeaseExpired:

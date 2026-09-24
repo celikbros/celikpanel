@@ -425,3 +425,25 @@ source, mixed v1/v2 ownership, changed owner and unsafe file tests pass.
 This observation is not proof of native BIND/PowerDNS configuration, zone
 answers, owner edits or worker exclusion. It cannot authorize an inverse;
 independent execution and installed fault acceptance remain open.
+
+### Quiesced switch evidence stability (2026-09-24)
+
+P0.2/P0.4, constitutional invariants 2/3: the independent root-only DNS
+observer now fingerprints the exact installed journal, ledger, current state
+and source-ownership bytes, including file presence, after their secured reads.
+With `--quiesced`, it reads the evidence and native systemd unit properties
+twice while holding the existing release and host locks. A changed byte,
+classification or unit property, or an unavailable second read, yields an
+unknown result and actionable owner guidance before an earlier snapshot is
+printed as stable. The unlocked status command remains an instantaneous
+diagnostic. Existing journal/ledger/state/ownership wire schemas and producers
+do not change; no migration or native mutation is performed.
+
+The locks only coordinate CelikPanel actors. Matching samples cannot exclude
+an intervening owner edit that returns to the same bytes, changes to unobserved
+native DNS configuration or zones, later changes, or a surviving worker.
+This observation therefore does not admit an inverse or certify service health.
+Focused Linux tests cover state changes, each fingerprinted document/presence,
+classification changes and native unit drift; race tests and vet pass. An
+independent executor, worker exclusion under the mutation barrier, native
+configuration/answer proofs and interrupted-switch acceptance remain open.
