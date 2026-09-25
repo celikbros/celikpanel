@@ -97,3 +97,22 @@ func TestProbePDNSDatabasePreimageRejectsPathReplacementAfterRead(t *testing.T) 
 		t.Fatal("accepted replacement with identical database bytes")
 	}
 }
+func TestInspectPDNSDatabaseFilePresenceAndDigest(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pdns.sqlite3")
+	exists, size, digest, err := InspectPDNSDatabaseFile(context.Background(), path, true)
+	if err != nil || exists || size != 0 || digest != "" {
+		t.Fatalf("absent database: exists=%t size=%d digest=%q err=%v", exists, size, digest, err)
+	}
+	if _, _, _, err := InspectPDNSDatabaseFile(context.Background(), path, false); err == nil {
+		t.Fatal("accepted an absent required database")
+	}
+	data := []byte("exact native database")
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(data)
+	exists, size, digest, err = InspectPDNSDatabaseFile(context.Background(), path, false)
+	if err != nil || !exists || size != int64(len(data)) || digest != hex.EncodeToString(sum[:]) {
+		t.Fatalf("present database: exists=%t size=%d digest=%q err=%v", exists, size, digest, err)
+	}
+}

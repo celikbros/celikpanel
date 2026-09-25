@@ -2,12 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"os/user"
@@ -1035,30 +1032,7 @@ func pdnsSwitchBackupPath(requestID string) string {
 }
 
 func inspectPDNSDatabaseFile(path string, allowAbsent bool) (bool, int64, string, error) {
-	info, err := os.Lstat(path)
-	if errors.Is(err, os.ErrNotExist) && allowAbsent {
-		return false, 0, "", nil
-	}
-	if err != nil {
-		return false, 0, "", err
-	}
-	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Size() <= 0 {
-		return false, 0, "", errors.New("PowerDNS database path is not a safe regular file")
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return false, 0, "", err
-	}
-	defer file.Close()
-	digest := sha256.New()
-	written, err := io.Copy(digest, file)
-	if err != nil || written != info.Size() {
-		if err == nil {
-			err = errors.New("PowerDNS database changed while it was hashed")
-		}
-		return false, 0, "", err
-	}
-	return true, written, hex.EncodeToString(digest.Sum(nil)), nil
+	return dnsenginerecovery.InspectPDNSDatabaseFile(context.Background(), path, allowAbsent)
 }
 
 func setPDNSDatabaseOwnership(path string) error {
