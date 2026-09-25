@@ -1298,3 +1298,13 @@ The [shared-reader PowerDNS native regression](../deploy/e2e/dns-kill-matrix/NAT
 The [native PowerDNS quiesced-observer trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-QUIESCED-OBSERVER-20260925.md) repeated that cell with the independent root-only command immediately after proven exit 137 and before Agent restart. The retained rolling-back adoption journal, frozen database bytes, stable `pdns.service` process and TCP/UDP port-53 ownership were observed under the release and host locks. A later pre-retry observation found no journal after Agent startup; the same request converged forward through Agent retry, with 31/31 healthy post-recovery samples. This is point-in-time diagnostic evidence, not safe independent inverse execution, SQLite/zone proof or new matrix coverage. Persisted schemas are unchanged and P0.4 stays open.
 
 P0.2/P0.4, constitutional invariants 2/3: the root-only DNS observer now passes one 30-second deadline through its context-aware native unit, process, listener, generation and database probes instead of starting each with an unbounded background context. Exhaustion returns unavailable with owner guidance, leaving the accepted operation and native DNS untouched; the inner PowerDNS adoption proof keeps its shorter ten-second limit. Persisted schemas and Agent behavior are unchanged. This bounds those probes, not every possible file/output stall, and does not establish independent recovery execution or P0.4 completion.
+
+P0.2/P0.4 follow-up, invariants 2/3/6: the independent DNS status CLI now
+accepts an exact request ID only with its quiesced lock mode. If the switch
+journal has already retired, it double-reads the canonical ledger and reports
+only that request's recorded status; a different active mutation or changing,
+missing or invalid evidence remains unavailable. This narrows a demonstrated
+post-Agent-start visibility gap without interpreting journal absence as
+success or running an inverse. The journal/ledger schema stays v1. Focused
+package tests pass; native trial of the new exact-request path and the
+independent inverse/fault matrix are still open.

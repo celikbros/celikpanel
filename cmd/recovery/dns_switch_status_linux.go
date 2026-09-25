@@ -436,7 +436,8 @@ func rolledBackInactiveTargetUnit(evidence dnsenginerecovery.SwitchEvidence) (st
 }
 
 func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
-	if (len(args) != 1 && !(len(args) == 2 && args[1] == "--quiesced")) || args[0] != "dns-switch-status" {
+	quiesced, requestID, validArgs := parseDNSSwitchStatusArgs(args)
+	if !validArgs {
 		return exitUsage
 	}
 	if uid != 0 {
@@ -452,7 +453,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	defer cancelObservation()
 	root := hostingpath.ServiceMutationStateRoot()
 	owner := servicemutationledger.FileOwner{UID: 0, GID: groupID}
-	if len(args) == 2 {
+	if quiesced {
 		locks, lockErr := acquireDNSObservationLocks(
 			"/var/lib/celikpanel-release-transaction/transaction.lock",
 			"/run/celikpanel/service-mutation.lock",
@@ -476,11 +477,24 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		return exitUnavailable
 	}
 	if !present {
+		if requestID != "" {
+			status, readErr := readJournalAbsentDNSJob(observationCtx, root, owner, requestID)
+			if readErr != nil {
+				fmt.Fprintln(diagnostic, "The exact DNS request could not be verified without its journal. Preserve the private evidence and inspect the original operation and native DNS service; no DNS operation was started. "+readErr.Error())
+				return exitUnavailable
+			}
+			fmt.Fprintf(out, "No DNS switch journal was observed for request %s. Its exact ledger job records status %s. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.\n", requestID, status)
+			return exitOK
+		}
 		fmt.Fprintln(out, "No DNS switch journal was observed. This does not prove historical completion or current DNS health. The server owner should inspect the native DNS service and the panel's operation status before starting another switch.")
 		return exitOK
 	}
+	if requestID != "" && evidence.Journal.MutationRequestID != requestID {
+		fmt.Fprintln(diagnostic, "A different DNS switch journal is present. Preserve its exact operation and inspect it before continuing; no DNS operation was started.")
+		return exitUnavailable
+	}
 	units, unitErr := dnsenginerecovery.ProbeNativeUnits(observationCtx, observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
-	if len(args) == 2 && unitErr == nil {
+	if quiesced && unitErr == nil {
 		againEvidence, stillPresent, readErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
 		again := againEvidence.Observation
 		if readErr != nil || !stillPresent {
@@ -496,7 +510,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		evidence = againEvidence
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
-	if len(args) == 2 {
+	if quiesced {
 		switch observation.Status {
 		case dnsenginerecovery.EvidenceActive,
 			dnsenginerecovery.EvidenceLeaseExpired,
@@ -553,7 +567,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	default:
 		fmt.Fprintln(out, "The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.")
 	}
-	if len(args) == 2 {
+	if quiesced {
 		if stoppedName, required := rolledBackInactiveTargetUnit(evidence); required {
 			if stopErr := dnsenginerecovery.ProbeStoppedUnit(
 				observationCtx, stoppedName,
@@ -668,7 +682,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 		fmt.Fprintln(out, "The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. This process/socket observation does not establish database content, zone answers, loaded config or recovery authority.")
 	}
-	if len(args) == 2 && evidence.Journal.Mode == transport.DNSEngineSwitchModeAdopt {
+	if quiesced && evidence.Journal.Mode == transport.DNSEngineSwitchModeAdopt {
 		proofCtx, cancel := context.WithTimeout(observationCtx, 10*time.Second)
 		defer cancel()
 		if proofErr := dnsenginerecovery.ProbePDNSDatabasePreimage(
@@ -743,7 +757,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 		fmt.Fprintln(out, "These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.")
 	}
-	if len(args) == 2 {
+	if quiesced {
 		if unitErr == nil {
 			fmt.Fprintln(out, "Release and host mutation locks were held; evidence bytes and native unit properties matched across two reads. Future worker liveness, DNS answers, owner edits and recovery authority remain unproved.")
 		} else {

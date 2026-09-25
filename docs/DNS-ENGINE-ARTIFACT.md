@@ -972,3 +972,23 @@ This is an observation of file bytes and native process/socket ownership at one 
 ### Bounded independent DNS observation (2026-09-25)
 
 P0.2/P0.4, constitutional invariants 2/3: the independent `recovery dns-switch-status` native probes now share one 30-second context deadline, including both quiesced unit reads, stopped-target checks, BIND and PowerDNS process/listener checks, and the shorter adoption database preimage check. A deadline reached during evidence reading or after the final probe returns an unknown/unavailable observation with owner guidance; it never becomes a successful DNS operation. File readers remain individually size/metadata bounded, and the lock is nonblocking. This changes no journal, ledger or receipt format and grants no inverse authority. The deadline does not bound output-writer stalls or owner edits outside the locks; native fault/reboot and independent inverse acceptance remain open.
+
+### Exact DNS request status after journal retirement (2026-09-25)
+
+P0.2/P0.4, constitutional invariants 2/3/6: the root/sudo
+`recovery dns-switch-status --quiesced --request-id <32-hex-id>` observer can
+report the recorded status of one exact DNS switch job when its private switch
+journal is absent. It takes the existing release and host locks, verifies
+journal absence around two byte-identical secure reads of the canonical
+service-mutation ledger v1, validates the DNS switch operation identity and
+rejects a different active mutation. A present journal must match the selected
+request. Missing, changing, malformed or unrelated evidence is unavailable,
+not a DNS result. The output omits unbounded phase and error text and says that
+ledger status does not prove native DNS health, completed recovery or inverse
+authority. Without a request ID, the existing missing-journal message remains
+unchanged. No persisted format or producer changes; there is no host mutation.
+Linux package tests cover identity, unrelated active work, malformed scope and
+journal presence. The native quiesced PowerDNS trial observed a journal
+retiring after ordinary Agent startup, but this new exact-request path has not
+yet been exercised in a disposable native VM. Agent-independent inverse,
+owner-edit/reboot fault acceptance and complete P0.4 remain open.
