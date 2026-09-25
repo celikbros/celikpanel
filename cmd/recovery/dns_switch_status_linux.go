@@ -691,6 +691,15 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "The PowerDNS adoption manifest could not be reconstructed from its frozen journal. Preserve the original operation for owner review; no recovery mutation was started. "+manifestErr.Error())
 			return exitUnavailable
 		}
+		pdnsGID, groupErr := localServiceGroupID("/etc/group", "pdns")
+		if groupErr != nil {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption service group is unknown. The server owner should inspect the native pdns group before the same operation resumes; no recovery mutation was started. "+groupErr.Error())
+			return exitUnavailable
+		}
+		if configErr := dnsenginerecovery.ProbeInstalledPDNSAdoptionConfigs(proofCtx, policy, evidence.Journal.ConfigBefore, pdnsGID); configErr != nil {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption configuration no longer matches its frozen file, owner or path evidence. The server owner should inspect native PowerDNS configuration and preserve the original operation; no recovery mutation was started. "+configErr.Error())
+			return exitUnavailable
+		}
 		if proofErr := dnsenginerecovery.ProbePDNSAdoptionDatabase(
 			proofCtx, policy.PDNSDatabasePath,
 			evidence.Journal.PDNSLiveSize, evidence.Journal.PDNSLiveSHA256, manifest,
@@ -725,6 +734,14 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "PowerDNS adoption listener ownership changed around the answer observation. Preserve the original operation and inspect native DNS; no recovery mutation was started. "+listenerErr.Error())
 			return exitUnavailable
 		}
+		if againGID, groupErr := localServiceGroupID("/etc/group", "pdns"); groupErr != nil || againGID != pdnsGID {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption service group changed around the native answer observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
+			return exitUnavailable
+		}
+		if configErr := dnsenginerecovery.ProbeInstalledPDNSAdoptionConfigs(proofCtx, policy, evidence.Journal.ConfigBefore, pdnsGID); configErr != nil {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption configuration changed around the native answer observation. Preserve the original operation and inspect native DNS; no recovery mutation was started. "+configErr.Error())
+			return exitUnavailable
+		}
 		if proofErr := dnsenginerecovery.ProbePDNSDatabasePreimage(
 			proofCtx, policy.PDNSDatabasePath,
 			evidence.Journal.PDNSLiveSize, evidence.Journal.PDNSLiveSHA256,
@@ -739,7 +756,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "PowerDNS adoption evidence changed around the native preimage observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
 			return exitUnavailable
 		}
-		fmt.Fprintf(out, "The installed PowerDNS database bytes and read-only SQLite zone/peer/integrity transaction matched the frozen adoption manifest; the verified native process owned local TCP/UDP port 53 between secured reads. At that endpoint, %d active frozen zones returned exact authoritative SOA serials over TCP and UDP; %d deleted-zone absence claims remain unproved. Other records, loaded config, later owner edits and inverse authority remain unproved.\n", activeSOA, deletedSOA)
+		fmt.Fprintf(out, "The installed PowerDNS config files, owners and paths, database bytes and read-only SQLite zone/peer/integrity transaction matched the frozen adoption manifest; the verified native process owned local TCP/UDP port 53 between secured reads. At that endpoint, %d active frozen zones returned exact authoritative SOA serials over TCP and UDP; %d deleted-zone absence claims remain unproved. Other records, loaded config, later owner edits and inverse authority remain unproved.\n", activeSOA, deletedSOA)
 	}
 	fmt.Fprintf(out, "Frozen native inverse shape: %s. This classification does not prove worker exclusion, owner authority or safe recovery execution.\n", observation.InverseKind)
 	switch observation.TargetReceipt {

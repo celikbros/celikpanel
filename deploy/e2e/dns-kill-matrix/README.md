@@ -127,6 +127,10 @@ repeats the same interrupted adoption cell. The independent quiesced reader
 matches the frozen active-zone SOA serial through authoritative UDP and TCP
 answers at a verified local native listener. It adds no inverse authority or
 new matrix cell.
+The [native PowerDNS config observer trial](NATIVE-PDNS-CONFIG-OBSERVER-20260925.md)
+repeats the same interrupted adoption cell with exact on-disk config owner,
+mode, ACL, path and byte proof around the live SOA observation. It adds no
+inverse authority or matrix cell.
 ## QEMU fixture provisioning
 
 `fixture.py` provisions one Debian 13 guest and one Arch guest on a **Linux
