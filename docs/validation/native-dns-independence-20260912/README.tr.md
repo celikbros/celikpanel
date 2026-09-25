@@ -22,7 +22,7 @@ Bu kayıt kaynak doğrulamasıdır; kurulu panel güncellemesi veya sürüm yay�
   değiştirme, aktarım ve DNS hizmetlerini yeniden başlatma,
   yönetim hizmetleri olmadan gözlendi. Katalog üyesinin kaldırılması doğrulanmadı. Kanıt: `native-proof.json`.
 
-**Düzeltme, 25 Eylül 2026:** Saklanan `native-proof.json` içindeki katalogdan çıkarma sorgusu `status: REFUSED`, `ANSWER: 0` ve yetkili yanıt bayrağının yokluğunu gösteriyor. Bu, ikincilin bölgeyi kaldırdığını kanıtlamaz; erişim kuralı bölge hâlâ yüklüyken de sorguyu reddedebilir. Bölge ekleme, A kaydı değişikliği, aktarım ve DNS hizmetlerinin yeniden başlaması sınırlı kanıt olarak kalır; ikincilde bölge kaldırma **doğrulanmamıştır**. Eski yoklamanın gevşek başarı koşulu artık kapalı başarısız olur. Kaldırma iddiası için yerel katalog ve ikincil bölge durumu ayrıca kanıtlanmalıdır; yalnız DNS yanıtı yeterli değildir.
+**Düzeltme, 25 Eylül 2026:** Saklanan [ham kanıttaki](native-proof.json) katalogdan çıkarma sorgusu `status: REFUSED`, `ANSWER: 0` ve yetkili yanıt bayrağının yokluğunu gösteriyor. [Makinece okunabilir değerlendirme](native-proof-assessment.json) kabulü başarısız sayar. Bu, ikincilin bölgeyi kaldırdığını kanıtlamaz; erişim kuralı bölge hâlâ yüklüyken de sorguyu reddedebilir. Bölge ekleme, A kaydı değişikliği, aktarım ve DNS hizmetlerinin yeniden başlaması sınırlı kanıt olarak kalır; ikincilde bölge kaldırma **doğrulanmamıştır**. Eski yoklamanın gevşek başarı koşulu artık kapalı başarısız olur. Kaldırma iddiası için yerel katalog ve ikincil bölge durumu ayrıca kanıtlanmalıdır; yalnız DNS yanıtı yeterli değildir.
 
 `native-probe.py` bu test ortamına özel yoklamadır. Yalnızca belirtilen yerel QEMU
 kökünü, localhost SSH yönlendirmelerini ve önceden doğrulanmış sunucu anahtarlarını
