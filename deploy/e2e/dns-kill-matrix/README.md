@@ -69,6 +69,9 @@ boundaries. They cover five runnable cells; the rest of the matrix is still open
 The [BIND inverse guard regression](NATIVE-BIND-STOP-GUARD-20260925.md)
 repeats one of those cells with the required native stop proof; it adds no
 new matrix coverage.
+The [shared stop guard regression](NATIVE-SHARED-STOP-GUARD-20260925.md)
+repeats that same cell after extraction into `dnsenginerecovery`. It also adds
+no new matrix coverage.
 
 ## QEMU fixture provisioning
 
