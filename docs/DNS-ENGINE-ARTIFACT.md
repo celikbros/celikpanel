@@ -1037,3 +1037,24 @@ operation; no host effect occurs. The existing v1 formats and recovery behavior
 remain unchanged. Linux package tests and vet pass. This is a point-in-time
 observer guard, not owner-edit exclusion or independent inverse admission;
 those and the remaining native fault matrix keep P0.4 open.
+### Exact PowerDNS adoption state receipt inverse primitive (2026-09-25)
+
+P0.4 and constitutional invariants 1/2/3: the shared recovery package now
+has a narrow Linux removal primitive for a rolling-back or rolled-back
+PowerDNS adoption whose frozen source state was absent. It validates the
+accepted v1 journal against its caller-supplied trusted path policy, reads the
+current private receipt securely, and removes it only if it semantically names
+the exact target request, owner, epoch and manifest. The removal itself uses
+the existing byte-exact, no-symlink, single-link CAS unlink with directory
+sync and absence readback. A changed or foreign receipt, unsafe path or
+nonrollback phase is retained; an already absent receipt is an idempotent
+no-op, never proof that native DNS was restored.
+
+This helper is not wired to the recovery CLI. Its caller must still hold the
+release and host locks, establish ledger authority and worker exclusion,
+reprove native PowerDNS before and after the write, durably publish the
+rolled-back journal and terminal ledger result, and retire the exact journal.
+Journal, ledger, ownership and state formats remain v1. Linux tests cover
+exact removal, retry, foreign owner/request/epoch, symlink and wrong phase.
+Agent-independent inverse execution, owner-edit/reboot native trials and the
+remaining P0.4 matrix remain open.

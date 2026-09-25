@@ -1335,3 +1335,12 @@ locks. A mismatch or non-excluded worker fails closed and retains the same
 journal. Persisted schemas stay v1 and this adds no inverse authority. Linux
 package tests and vet pass; later owner edits and Agent-independent recovery
 execution remain open.
+P0.4, constitutional invariants 1/2/3: a shared Linux primitive can now
+remove only an exact target state receipt during a frozen PowerDNS adoption
+rollback. It uses the established private-path owner policy and byte-exact
+CAS unlink; foreign or edited receipts are retained and absence is only an
+idempotent no-op. Existing v1 schemas do not change. Linux tests cover exact,
+foreign, symlinked and wrong-phase cases. The primitive has no standalone
+authority or CLI route: locks, worker exclusion, native source reproof,
+checkpoint/ledger publication and reboot/owner-edit matrix coverage still
+separate it from an Agent-independent inverse. P0.4 remains open.
