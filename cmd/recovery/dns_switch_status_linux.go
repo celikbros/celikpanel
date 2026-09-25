@@ -448,6 +448,8 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(diagnostic, "The installed CelikPanel group could not be verified from local /etc/group. The server owner must inspect that file before recovery observation can resume. "+groupErr.Error())
 		return exitUnavailable
 	}
+	observationCtx, cancelObservation := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelObservation()
 	root := hostingpath.ServiceMutationStateRoot()
 	owner := servicemutationledger.FileOwner{UID: 0, GID: groupID}
 	if len(args) == 2 {
@@ -469,11 +471,15 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(diagnostic, "DNS switch evidence could not be verified. Preserve the private journal and ledger; the server owner must inspect their ownership, native DNS state and compatibility before the same operation resumes. "+err.Error())
 		return exitUnavailable
 	}
+	if observationCtx.Err() != nil {
+		fmt.Fprintln(diagnostic, "DNS observation exceeded its deadline. Preserve the same operation and retry after native service responsiveness is restored; no DNS operation was started.")
+		return exitUnavailable
+	}
 	if !present {
 		fmt.Fprintln(out, "No DNS switch journal was observed. This does not prove historical completion or current DNS health. The server owner should inspect the native DNS service and the panel's operation status before starting another switch.")
 		return exitOK
 	}
-	units, unitErr := dnsenginerecovery.ProbeNativeUnits(context.Background(), observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
+	units, unitErr := dnsenginerecovery.ProbeNativeUnits(observationCtx, observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
 	if len(args) == 2 && unitErr == nil {
 		againEvidence, stillPresent, readErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
 		again := againEvidence.Observation
@@ -481,7 +487,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "DNS switch evidence changed or became unreadable during the quiesced observation. The server owner should inspect the existing operation and native DNS service, then retry after owner changes settle; no DNS operation was started.")
 			return exitUnavailable
 		}
-		againUnits, probeErr := dnsenginerecovery.ProbeNativeUnits(context.Background(), again.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
+		againUnits, probeErr := dnsenginerecovery.ProbeNativeUnits(observationCtx, again.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
 		if probeErr != nil || !reflect.DeepEqual(evidence.Journal, againEvidence.Journal) ||
 			!dnsenginerecovery.StableQuiescedObservation(observation, again, units, againUnits) {
 			fmt.Fprintln(diagnostic, "DNS switch evidence or native DNS unit properties changed during the quiesced observation. The server owner should inspect the existing operation and native DNS service, then retry after owner changes settle; no DNS operation was started.")
@@ -550,7 +556,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	if len(args) == 2 {
 		if stoppedName, required := rolledBackInactiveTargetUnit(evidence); required {
 			if stopErr := dnsenginerecovery.ProbeStoppedUnit(
-				context.Background(), stoppedName,
+				observationCtx, stoppedName,
 				dnsenginerecovery.SystemdUnitRunner,
 				dnsenginerecovery.SystemdPDNSRuntimeRunner,
 			); stopErr != nil {
@@ -570,26 +576,26 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		var selectedReceipt binddns.Receipt
 		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
 			var bindErr error
-			selectedReceipt, bindErr = verifySelectedBINDTarget(context.Background(), observation.TargetGeneration, observation.TargetEpoch)
+			selectedReceipt, bindErr = verifySelectedBINDTarget(observationCtx, observation.TargetGeneration, observation.TargetEpoch)
 			if bindErr != nil {
 				fmt.Fprintln(diagnostic, "Selected BIND generation is unknown or differs from the frozen target. The server owner should inspect the managed BIND generation, native configuration and DNS answers before the same operation resumes; no inverse was started. "+bindErr.Error())
 				return exitUnavailable
 			}
 			fmt.Fprintln(out, "Managed BIND root and selected immutable generation matched the frozen target across two read-only observations. The daemon's loaded configuration, DNS answers, owner edits and recovery authority remain unproved.")
 		} else {
-			if bindErr := verifyInstalledBINDRoot(context.Background()); bindErr != nil {
+			if bindErr := verifyInstalledBINDRoot(observationCtx); bindErr != nil {
 				fmt.Fprintln(diagnostic, "Managed BIND root ownership is unknown. The server owner should inspect the native BIND directory, service group and package ownership before the same DNS operation resumes; no inverse was started. "+bindErr.Error())
 				return exitUnavailable
 			}
 			fmt.Fprintln(out, "Managed BIND root directory and package ownership matched on two read-only walks. This does not prove the selected generation, DNS answers, owner edits or recovery authority.")
 		}
-		if vendorErr := verifyInstalledBINDVendorAndUnit(context.Background()); vendorErr != nil {
+		if vendorErr := verifyInstalledBINDVendorAndUnit(observationCtx); vendorErr != nil {
 			fmt.Fprintln(diagnostic, "Native BIND vendor files or loaded systemd unit identity are unknown. The server owner should inspect the named service unit, its package ownership and startup options before the same operation resumes; no inverse was started. "+vendorErr.Error())
 			return exitUnavailable
 		}
 		fmt.Fprintln(out, "Certified BIND vendor files and systemd unit identity matched across read-only checks. Process liveness, a pending daemon reload, loaded named configuration and DNS answers remain unproved.")
 		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
-			mainPID, runtimeErr := verifyInstalledBINDRuntime(context.Background())
+			mainPID, runtimeErr := verifyInstalledBINDRuntime(observationCtx)
 			if runtimeErr != nil {
 				fmt.Fprintln(diagnostic, "Selected BIND target has unknown running service state. The server owner should inspect named.service, its bind9 alias and any pending daemon reload before the same operation resumes; no inverse was started. "+runtimeErr.Error())
 				return exitUnavailable
@@ -600,11 +606,11 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				fmt.Fprintln(diagnostic, "Native BIND config owner is unknown. The server owner should inspect the service group and config before the same operation resumes; no inverse was started. "+layoutErr.Error())
 				return exitUnavailable
 			}
-			if configErr := verifyInstalledBINDConfig(context.Background(), layout, serviceGID); configErr != nil {
+			if configErr := verifyInstalledBINDConfig(observationCtx, layout, serviceGID); configErr != nil {
 				fmt.Fprintln(diagnostic, "Native BIND managed include is unknown or changed. The server owner should inspect the named configuration and selected generation before the same operation resumes; no inverse was started. "+configErr.Error())
 				return exitUnavailable
 			}
-			if _, bindErr := verifySelectedBINDTarget(context.Background(), observation.TargetGeneration, observation.TargetEpoch); bindErr != nil {
+			if _, bindErr := verifySelectedBINDTarget(observationCtx, observation.TargetGeneration, observation.TargetEpoch); bindErr != nil {
 				fmt.Fprintln(diagnostic, "Selected BIND generation changed around native config observation. The server owner should inspect named configuration and DNS answers before the same operation resumes; no inverse was started. "+bindErr.Error())
 				return exitUnavailable
 			}
@@ -613,28 +619,28 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			if selectedReceipt.Pairing != nil && selectedReceipt.Pairing.Role == binddns.PairRolePrimary {
 				primaryIP = selectedReceipt.Pairing.LocalIP
 			}
-			if listenerErr := dnsenginerecovery.ProbeBINDListeners(context.Background(), mainPID, primaryIP, dnsenginerecovery.SSListenerRunner); listenerErr != nil {
+			if listenerErr := dnsenginerecovery.ProbeBINDListeners(observationCtx, mainPID, primaryIP, dnsenginerecovery.SSListenerRunner); listenerErr != nil {
 				fmt.Fprintln(diagnostic, "Native BIND port-53 listener ownership is unknown or differs from the verified service. The server owner should inspect named.service and local DNS sockets before the same operation resumes; no inverse was started. "+listenerErr.Error())
 				return exitUnavailable
 			}
-			afterListenerPID, runtimeErr := verifyInstalledBINDRuntime(context.Background())
+			afterListenerPID, runtimeErr := verifyInstalledBINDRuntime(observationCtx)
 			if runtimeErr != nil || afterListenerPID != mainPID {
 				fmt.Fprintln(diagnostic, "BIND process identity changed around listener observation. The server owner should inspect named.service and local DNS sockets before the same operation resumes; no inverse was started.")
 				return exitUnavailable
 			}
 			fmt.Fprintln(out, "The local TCP and UDP port-53 listener inventory matched the verified named MainPID twice. This does not prove the daemon loaded the selected generation or that a DNS answer originated from that socket.")
-			catalogSeen, catalogErr := dnsenginerecovery.ProbeInstalledPrimaryCatalogAnswer(context.Background(), selectedReceipt)
+			catalogSeen, catalogErr := dnsenginerecovery.ProbeInstalledPrimaryCatalogAnswer(observationCtx, selectedReceipt)
 			if catalogErr != nil {
 				fmt.Fprintln(diagnostic, "Local authoritative primary catalog answer is unknown or differs from the selected BIND generation. The server owner should inspect the native DNS listener and catalog SOA before the same operation resumes; no inverse was started. "+catalogErr.Error())
 				return exitUnavailable
 			}
 			if catalogSeen {
-				againReceipt, bindErr := verifySelectedBINDTarget(context.Background(), observation.TargetGeneration, observation.TargetEpoch)
+				againReceipt, bindErr := verifySelectedBINDTarget(observationCtx, observation.TargetGeneration, observation.TargetEpoch)
 				if bindErr != nil || !reflect.DeepEqual(selectedReceipt, againReceipt) {
 					fmt.Fprintln(diagnostic, "Selected BIND generation changed around the local catalog answer. The server owner should inspect the native DNS service before the same operation resumes; no inverse was started.")
 					return exitUnavailable
 				}
-				afterAnswerPID, runtimeErr := verifyInstalledBINDRuntime(context.Background())
+				afterAnswerPID, runtimeErr := verifyInstalledBINDRuntime(observationCtx)
 				if runtimeErr != nil || afterAnswerPID != mainPID {
 					fmt.Fprintln(diagnostic, "BIND process identity changed around the local catalog answer. The server owner should inspect named.service and the catalog SOA before the same operation resumes; no inverse was started.")
 					return exitUnavailable
@@ -646,16 +652,16 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 	}
 	if observation.TargetEngine == "pdns" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
-		mainPID, runtimeErr := verifyInstalledPDNSRuntime(context.Background())
+		mainPID, runtimeErr := verifyInstalledPDNSRuntime(observationCtx)
 		if runtimeErr != nil {
 			fmt.Fprintln(diagnostic, "Selected PowerDNS native service state is unknown. The server owner should inspect pdns.service, the stopped BIND units and pending daemon reload before the same operation resumes; no inverse was started. "+runtimeErr.Error())
 			return exitUnavailable
 		}
-		if listenerErr := dnsenginerecovery.ProbeAuthorityListeners(context.Background(), "pdns_server", mainPID, "", dnsenginerecovery.SSListenerRunner); listenerErr != nil {
+		if listenerErr := dnsenginerecovery.ProbeAuthorityListeners(observationCtx, "pdns_server", mainPID, "", dnsenginerecovery.SSListenerRunner); listenerErr != nil {
 			fmt.Fprintln(diagnostic, "PowerDNS port-53 listener ownership is unknown. The server owner should inspect pdns.service and local DNS sockets before the same operation resumes; no inverse was started. "+listenerErr.Error())
 			return exitUnavailable
 		}
-		afterPID, runtimeErr := verifyInstalledPDNSRuntime(context.Background())
+		afterPID, runtimeErr := verifyInstalledPDNSRuntime(observationCtx)
 		if runtimeErr != nil || afterPID != mainPID {
 			fmt.Fprintln(diagnostic, "PowerDNS process identity changed around listener observation. The server owner should inspect pdns.service and local DNS sockets before the same operation resumes; no inverse was started.")
 			return exitUnavailable
@@ -663,7 +669,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(out, "The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. This process/socket observation does not establish database content, zone answers, loaded config or recovery authority.")
 	}
 	if len(args) == 2 && evidence.Journal.Mode == transport.DNSEngineSwitchModeAdopt {
-		proofCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		proofCtx, cancel := context.WithTimeout(observationCtx, 10*time.Second)
 		defer cancel()
 		if proofErr := dnsenginerecovery.ProbePDNSDatabasePreimage(
 			proofCtx, policy.PDNSDatabasePath,
@@ -745,6 +751,10 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 	}
 	if unitErr != nil {
+		return exitUnavailable
+	}
+	if observationCtx.Err() != nil {
+		fmt.Fprintln(diagnostic, "DNS observation exceeded its deadline. Preserve the same operation and retry after native service responsiveness is restored; no DNS operation was started.")
 		return exitUnavailable
 	}
 	return exitOK
