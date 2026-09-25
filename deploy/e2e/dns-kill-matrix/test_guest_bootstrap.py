@@ -17,6 +17,7 @@ import unittest
 from unittest import mock
 
 import guest_bootstrap as bootstrap
+import native_bind_peer
 import run_cell
 
 
@@ -231,6 +232,41 @@ class GuestBootstrapTest(unittest.TestCase):
         self.assertEqual(scenario["source_epoch"], 0)
         self.assertEqual(scenario["source_revision"], 0)
         self.assertEqual(scenario["target_epoch"], 1)
+
+    def test_paired_primary_scenario_uses_distinct_guest_addresses(self) -> None:
+        selected = cell("arch", "intent", role="paired-primary")
+        bootstrap.validate_bind_cell(selected, "arch", "uninitialized")
+        scenario = bootstrap.bind_scenario(
+            "uninitialized", role="paired-primary", node="arch"
+        )
+        self.assertEqual(scenario["topology"], "paired")
+        self.assertEqual(scenario["pair_role"], "primary")
+        self.assertEqual(scenario["local_ip"], "192.0.2.11")
+        self.assertEqual(scenario["peer_ip"], "192.0.2.10")
+        records = scenario["zones"][0]["records"]
+        tuples = {
+            (record["name"], record["type"], record["content"]) for record in records
+        }
+        self.assertIn(("ns2.s1-kill.test", "A", "192.0.2.10"), tuples)
+        self.assertIn(("s1-kill.test", "NS", "ns2.s1-kill.test"), tuples)
+
+    def test_paired_primary_rejects_preexisting_source(self) -> None:
+        selected = cell("arch", "intent", role="paired-primary")
+        with self.assertRaises(bootstrap.BootstrapError):
+            bootstrap.validate_bind_cell(selected, "arch", "managed-pdns")
+        with self.assertRaises(bootstrap.BootstrapError):
+            bootstrap.bind_scenario("managed-pdns", role="paired-primary", node="arch")
+        with self.assertRaises(bootstrap.BootstrapError):
+            bootstrap.bind_scenario("uninitialized", role="paired-primary", node="debian13")
+
+    def test_native_bind_peer_config_subscribes_to_exact_primary_catalog(self) -> None:
+        config = native_bind_peer.secondary_config("192.0.2.11", "192.0.2.10")
+        self.assertIn('zone "catalog-c000020b.celikpanel.invalid"', config)
+        self.assertIn("default-primaries { 192.0.2.11; }", config)
+        self.assertIn("listen-on { 127.0.0.1; 192.0.2.10; }", config)
+        self.assertIn("recursion no;", config)
+        with self.assertRaises(bootstrap.BootstrapError):
+            native_bind_peer.secondary_config("192.0.2.11", "192.0.2.11")
 
     def test_shell_source_policy_arrays_match_python_constants(self) -> None:
         shell = Path(bootstrap.__file__).with_name("guest_bootstrap.sh").read_text(

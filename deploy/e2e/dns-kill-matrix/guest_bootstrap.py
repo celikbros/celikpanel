@@ -189,8 +189,11 @@ def load_manifest_cell(manifest_path: Path, cell_id: str) -> dict[str, Any]:
 
 
 def validate_bind_cell(cell: dict[str, Any], node: str, source_fixture: str) -> None:
-    if cell.get("driver") != "bind" or cell.get("role") != "standalone":
-        raise BootstrapError("this milestone prepares only standalone BIND target cells")
+    if cell.get("driver") != "bind" or cell.get("role") not in {
+        "standalone",
+        "paired-primary",
+    }:
+        raise BootstrapError("BIND bootstrap supports standalone or paired-primary only")
     placement = cell.get("placement", {})
     expected_node = NODE_FOR_PLACEMENT.get(placement.get("kill_host"))
     if node != expected_node:
@@ -201,6 +204,9 @@ def validate_bind_cell(cell: dict[str, Any], node: str, source_fixture: str) -> 
     source_policy = placement.get("source_fixture_policy")
     if source_policy not in SOURCE_FIXTURE_POLICIES:
         raise BootstrapError("BIND source fixture policy is not canonical")
+    if cell.get("role") == "paired-primary":
+        if node != "arch" or source_fixture != "uninitialized":
+            raise BootstrapError("paired-primary bootstrap requires an uninitialized Arch source")
     if source_fixture == "uninitialized":
         if (
             source_policy
@@ -315,13 +321,48 @@ def zone_snapshot() -> dict[str, Any]:
     }
 
 
-def bind_scenario(source_fixture: str) -> dict[str, Any]:
+def bind_scenario(
+    source_fixture: str, *, role: str = "standalone", node: str = "debian13"
+) -> dict[str, Any]:
     if source_fixture == "uninitialized":
         source_engine, source_epoch, target_epoch, revision = "", 0, 1, 0
     elif source_fixture == "managed-pdns":
         source_engine, source_epoch, target_epoch, revision = "pdns", 1, 2, 0
     else:
         raise BootstrapError("unsupported source fixture")
+    if role not in {"standalone", "paired-primary"}:
+        raise BootstrapError("unsupported BIND topology in guest scenario")
+    if node not in {"arch", "debian13"}:
+        raise BootstrapError("unsupported BIND fixture node")
+    if role == "paired-primary" and (node != "arch" or source_fixture != "uninitialized"):
+        raise BootstrapError("paired-primary scenario requires an uninitialized Arch source")
+    local_ip = "192.0.2.11" if node == "arch" else "192.0.2.10"
+    peer_ip = "192.0.2.10" if node == "arch" else "192.0.2.11"
+    zone = zone_snapshot()
+    if role == "paired-primary":
+        for record in zone["records"]:
+            if record["type"] == "A":
+                record["content"] = local_ip
+        zone["records"].extend(
+            [
+                {
+                    "name": ZONE_NAME,
+                    "type": "NS",
+                    "content": "ns2.s1-kill.test",
+                    "ttl": 3600,
+                    "prio": 0,
+                    "disabled": False,
+                },
+                {
+                    "name": "ns2.s1-kill.test",
+                    "type": "A",
+                    "content": peer_ip,
+                    "ttl": 300,
+                    "prio": 0,
+                    "disabled": False,
+                },
+            ]
+        )
     return {
         "schema": SCENARIO_SCHEMA,
         "driver": "bind",
@@ -332,8 +373,19 @@ def bind_scenario(source_fixture: str) -> dict[str, Any]:
         "source_epoch": source_epoch,
         "target_epoch": target_epoch,
         "source_revision": revision,
-        "topology": "standalone",
-        "zones": [zone_snapshot()],
+        "topology": "paired" if role == "paired-primary" else "standalone",
+        **(
+            {
+                "pair_role": "primary",
+                "local_ip": local_ip,
+                "local_ns": "ns1.s1-kill.test",
+                "peer_ip": peer_ip,
+                "peer_ns": "ns2.s1-kill.test",
+            }
+            if role == "paired-primary"
+            else {}
+        ),
+        "zones": [zone],
     }
 
 
@@ -570,7 +622,9 @@ def prepare(args: argparse.Namespace) -> None:
     _, cell, node = load_plan(args)
     if args.action == "prepare-bind":
         validate_bind_cell(cell, args.node, args.source_fixture)
-        scenario = bind_scenario(args.source_fixture)
+        scenario = bind_scenario(
+            args.source_fixture, role=cell["role"], node=args.node
+        )
         guest_action = "prepare-bind"
     elif args.action == "prepare-pdns-adopt":
         validate_pdns_adopt_cell(cell, args.node, args.source_fixture)

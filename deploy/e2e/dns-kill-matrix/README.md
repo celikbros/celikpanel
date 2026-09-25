@@ -298,6 +298,25 @@ bindable and that no authoritative answer was observed; the controller does
 not query an unrelated local resolver for this empty source. It does not
 pretend that this shape covers stopped-source recovery.
 
+For an Arch `paired-primary` BIND cell with an uninitialized source, prepare
+the Debian guest as a standard native catalog secondary **before** starting
+the primary operation. After both guests pass `wait-ssh`, run:
+
+```sh
+CELL=bind__intent__after-write__paired-primary__peer-reachable
+python3 deploy/e2e/dns-kill-matrix/native_bind_peer.py \
+  --work-root "$ROOT" --cell-id "$CELL" \
+  --identity-file "$HOME/.ssh/id_ed25519" --execute
+```
+
+This fixture-only helper installs Debian `bind9`, writes its native
+`/etc/bind/named.conf`, validates it, and enables `named.service`. It installs
+no CelikPanel binary on the secondary. Debian package repositories must be
+reachable. Then use the Arch `install`, `prepare-bind`, and `run-prepared`
+commands above with the paired cell ID. The primary must observe the member
+zone on the secondary before the switch can finish; SSH reachability alone is
+insufficient. The bounded [current-image pair result](NATIVE-BIND-PAIR-CURRENT-20260925.md)
+does not certify other paired roles or engines.
 The standalone Debian adoption cells use a distinct measured path. For
 `pdns-adopt__intent__after-write__standalone__peer-reachable`, for example:
 
