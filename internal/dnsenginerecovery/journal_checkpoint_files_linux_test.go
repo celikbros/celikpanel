@@ -3,6 +3,8 @@
 package dnsenginerecovery
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -83,5 +85,54 @@ func TestReplaceRollbackJournalPhaseRefusesForeignOwnerEvidenceAndBackwardsPhase
 				t.Fatal("unsafe checkpoint accepted")
 			}
 		})
+	}
+}
+
+func TestReconcileResumesExactJournalAfterInterruptedIndependentCheckpoint(t *testing.T) {
+	policy, owner, journal, path := rollbackCheckpointFixture(t)
+	id := dnsengineartifact.SwitchIdentity{RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID, Target: journal.TargetEngine, Qualifier: journal.ManifestQualifier}
+	read := func(context.Context) (dnsengineartifact.SwitchJournalV1, bool, error) {
+		raw, exists, err := servicemutationledger.ReadFile(path, dnsengineartifact.SwitchJournalLimit, owner)
+		if err != nil || !exists {
+			return dnsengineartifact.SwitchJournalV1{}, exists, err
+		}
+		current, err := policy.DecodeSwitchJournal(raw)
+		return current, err == nil, err
+	}
+	failInverse := true
+	calls := 0
+	ops := Operations{
+		Read:              read,
+		ProveFinalized:    func(context.Context, dnsengineartifact.SwitchIdentity) (bool, error) { return false, nil },
+		VerifyTarget:      func(context.Context, dnsengineartifact.SwitchJournalV1) error { return errors.New("target unverified") },
+		ProveTargetAbsent: func(context.Context, dnsengineartifact.SwitchJournalV1) (bool, error) { return true, nil },
+		Write: func(_ context.Context, before, after dnsengineartifact.SwitchJournalV1) error {
+			return ReplaceRollbackJournalPhase(policy, owner, before, after)
+		},
+		Inverse: func(_ context.Context, current dnsengineartifact.SwitchJournalV1) error {
+			calls++
+			if current.Phase != dnsengineartifact.SwitchPhaseRollingBack {
+				t.Fatal("inverse has no durable intent")
+			}
+			if failInverse {
+				return errors.New("native inverse unknown")
+			}
+			return nil
+		},
+	}
+	if outcome, err := Reconcile(context.Background(), policy, id, ops); err == nil || outcome != OutcomeAbsent {
+		t.Fatalf("interrupted inverse accepted: %s %v", outcome, err)
+	}
+	current, exists, err := read(context.Background())
+	if err != nil || !exists || current.Phase != dnsengineartifact.SwitchPhaseRollingBack {
+		t.Fatalf("interrupted inverse lost checkpoint: %s %v %v", current.Phase, exists, err)
+	}
+	failInverse = false
+	if outcome, err := Reconcile(context.Background(), policy, id, ops); err != nil || outcome != OutcomeRolledBack || calls != 2 {
+		t.Fatalf("same operation did not resume: %s %v calls=%d", outcome, err, calls)
+	}
+	current, exists, err = read(context.Background())
+	if err != nil || !exists || current.Phase != dnsengineartifact.SwitchPhaseRolledBack {
+		t.Fatalf("terminal checkpoint missing: %s %v %v", current.Phase, exists, err)
 	}
 }

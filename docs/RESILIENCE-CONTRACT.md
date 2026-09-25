@@ -1215,3 +1215,12 @@ scoped evidence. The independent CLI remains read-only: it does not yet prove
 native inverse admission, perform host effects or publish terminal ledger
 results. External owner races and the native interrupted/reboot matrix remain
 open; P0.4 is not complete.
+
+
+P0.4 follow-up: the shared DNS recovery write callback now carries exact
+before/after journals. A local filesystem-backed test proves interrupted
+`rolling-back` retention and same-request `rolled-back` publication through
+the independent checkpoint adapter. Agent/recovery package tests and vet pass.
+This changes no installed format or native service effect. The Agent's existing
+writer remains in place; a separate independently admitted inverse executor,
+owner-edit/reboot trials and full matrix are still required.

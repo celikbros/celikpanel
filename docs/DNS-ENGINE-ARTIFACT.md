@@ -909,3 +909,12 @@ directory replacement. Full affected Agent/recovery tests and vet passed. This
 is a publication primitive, not a callable independent inverse. It cannot
 serialize uncooperative administrator root edits outside the host locks; native
 owner-edit/reboot trials, the inverse executor and complete matrix remain open.
+
+The shared `Reconcile`/`Rollback` phase writer now receives both the observed
+preimage and requested next journal. This makes the exact replacement adapter
+usable without reconstructing the old phase from mutable caller state. A
+filesystem-backed interruption test retains `rolling-back` after an injected
+inverse error, then resumes the same request and persists `rolled-back`.
+The Agent's existing secure writer is still its production adapter; this API
+change does not claim native inverse execution in the independent CLI. The
+v1 format and phase names are unchanged.

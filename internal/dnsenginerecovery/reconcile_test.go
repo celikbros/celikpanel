@@ -52,7 +52,10 @@ func (tr *trace) operations() Operations {
 			tr.steps = append(tr.steps, "prove-absent")
 			return tr.absent, tr.absentErr
 		},
-		Write: func(_ context.Context, j dnsengineartifact.SwitchJournalV1) error {
+		Write: func(_ context.Context, before, j dnsengineartifact.SwitchJournalV1) error {
+			if before.Phase != tr.journal.Phase {
+				return errors.New("wrong durable preimage")
+			}
 			tr.steps = append(tr.steps, "write:"+j.Phase)
 			tr.writes++
 			if tr.writeErr != nil && tr.writes == 2 {
