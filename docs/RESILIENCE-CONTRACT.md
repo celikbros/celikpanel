@@ -1354,3 +1354,13 @@ unknown outcome for the same operation rather than claiming success. Linux
 tests pass, including a real live-process rejection. This primitive is not
 wired to a CLI and grants no independent inverse authority; lock ownership,
 native inverse proof, reboot and owner-edit acceptance remain open.
+P0.4, constitutional invariants 1/2/3: an already durable PowerDNS adoption
+rollback now has a shared fail-stop sequence across exact state removal,
+native-source reproof, rolled-back checkpoint, terminal ledger publication
+and exact journal retirement. It rereads accepted evidence and checks the
+recorded worker before effects, rejecting changed receipts or status. Injected
+failures at each durable boundary resume the same request in unit tests. The
+coordinator accepts callbacks and is not a callable independent executor:
+installed-path binding, both locks, native proof and the reboot/owner-edit
+matrix still need integration and field evidence. Existing v1 formats remain
+unchanged and P0.4 stays open.

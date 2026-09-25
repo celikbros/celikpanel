@@ -1077,3 +1077,24 @@ publication. No schema changes or installed-host actions occurred. Linux tests
 cover exact closure, retained journal, foreign journal/job, duplicate verdict
 and a genuinely live recorded worker. Native reboot/owner-edit trials and the
 Agent-independent executor remain open; P0.4 is not complete.
+### PowerDNS adoption inverse transaction sequence (2026-09-25)
+
+P0.4 and constitutional invariants 1/2/3: the shared recovery package now
+has a fail-stop coordinator for an already durable PowerDNS adoption rollback.
+It requires a stable exact evidence reread and worker exclusion around native
+source proof, removes only the exact target state receipt, verifies source
+absence and native PowerDNS again, checkpoints `rolled-back`, publishes the
+same job's failed ledger verdict, then re-proves native service before retiring
+the exact journal. A failure leaves the last durable checkpoint for a repeat
+of that request. An unexpected target receipt, journal phase, engine/epoch,
+ledger status or owner change stops before the next effect.
+
+The coordinator receives privileged callbacks; it does not acquire locks,
+choose rollback from an uncertain target, or expose a recovery CLI. The
+existing v1 state/journal/ledger formats are unchanged. In-memory interruption
+tests cover the state, phase, ledger and cleanup boundaries with same-request
+continuation; the exact Linux state and ledger CAS adapters have separate
+filesystem tests. Wiring fixed installed paths, native proof, release/host
+locks and worker exclusion into a supported owner command, then passing
+disposable native interruption/reboot/owner-edit trials, remain open. P0.4 is
+not complete.
