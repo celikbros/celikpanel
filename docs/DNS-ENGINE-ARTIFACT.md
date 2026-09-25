@@ -853,3 +853,23 @@ one repeated matrix cell, not new coverage. This guard does not
 exclude an independent owner restart after the read, detect a stray process
 outside systemd's MainPID/ControlPID, provide an Agent-independent executor or
 prove the native owner-edit/reboot matrix. P0.4 remains open.
+
+
+### Shared native DNS stopped-target observation (2026-09-25)
+
+P0.4, constitutional invariants 1/2/3: BIND first-activation rollback and
+PowerDNS switch rollback now use one read-only
+`dnsenginerecovery.VerifyStoppedUnit` predicate. Their fixed-name systemd
+adapters supply two observations of the target's unit properties and
+MainPID/ControlPID/SubState. Only matching inactive/dead/zero-PID observations
+let their existing inverse sequences proceed to configuration or database
+restoration. A changed, unknown or active unit leaves the original rolling-back
+journal for the same operation. There is no journal, ledger, DNS receipt or
+installer schema transition.
+
+The shared-package and complete Agent tests plus vet passed. The earlier
+[real Debian BIND interruption](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-STOP-GUARD-20260925.md)
+tested the preceding identical Agent guard, before this extraction; it is not
+native acceptance of the new shared wiring. The predicate does not inspect
+cgroup descendants, exclude later owner starts, prove DNS answers or supply
+an Agent-independent host-effects executor. P0.4 remains open.

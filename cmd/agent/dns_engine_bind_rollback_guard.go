@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 )
 
 // A newly activated BIND target must be inactive, with dead SubState and zero
@@ -13,42 +15,26 @@ func verifyBINDTargetStoppedBeforeConfigRestoreWithOps(
 	inspectUnit func(context.Context) (bindInstallUnitState, error),
 	inspectProcesses func(context.Context) (dnsUnitProcesses, error),
 ) error {
-	if ctx == nil || inspectUnit == nil || inspectProcesses == nil {
+	if inspectUnit == nil || inspectProcesses == nil {
 		return errors.New("BIND target stop proof requires native unit and process observers")
 	}
-	observe := func() (bindInstallUnitState, dnsUnitProcesses, error) {
-		if err := ctx.Err(); err != nil {
-			return bindInstallUnitState{}, dnsUnitProcesses{}, err
-		}
-		unit, err := inspectUnit(ctx)
-		if err != nil {
-			return bindInstallUnitState{}, dnsUnitProcesses{}, err
-		}
-		if unit.name != "named.service" || unit.activeState != "inactive" {
-			return bindInstallUnitState{}, dnsUnitProcesses{},
-				errors.New("BIND target is not an inactive named.service")
-		}
-		processes, err := inspectProcesses(ctx)
-		if err != nil {
-			return bindInstallUnitState{}, dnsUnitProcesses{}, err
-		}
-		if err := verifyDNSUnitProcessesStopped(processes); err != nil {
-			return bindInstallUnitState{}, dnsUnitProcesses{}, err
-		}
-		return unit, processes, nil
-	}
-	beforeUnit, beforeProcesses, err := observe()
-	if err != nil {
-		return err
-	}
-	afterUnit, afterProcesses, err := observe()
-	if err != nil {
-		return err
-	}
-	if beforeUnit != afterUnit || beforeProcesses != afterProcesses {
-		return errors.New("BIND target unit or process changed during stopped proof")
-	}
-	return nil
+	return dnsenginerecovery.VerifyStoppedUnit(ctx, "named.service",
+		func(proofCtx context.Context) (dnsenginerecovery.StoppedUnitObservation, error) {
+			unit, err := inspectUnit(proofCtx)
+			if err != nil {
+				return dnsenginerecovery.StoppedUnitObservation{}, err
+			}
+			processes, err := inspectProcesses(proofCtx)
+			if err != nil {
+				return dnsenginerecovery.StoppedUnitObservation{}, err
+			}
+			return dnsenginerecovery.StoppedUnitObservation{
+				Name: unit.name, LoadState: unit.loadState,
+				ActiveState: unit.activeState, UnitFileState: unit.unitFileState,
+				MainPID: processes.MainPID, ControlPID: processes.ControlPID,
+				SubState: processes.SubState,
+			}, nil
+		})
 }
 
 func verifyBINDTargetStoppedBeforeConfigRestore(ctx context.Context, systemctl string) error {

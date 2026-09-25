@@ -1356,42 +1356,26 @@ func verifyPDNSStoppedBeforeDatabaseRestoreWithOps(
 	ctx context.Context,
 	ops pdnsRollbackStoppedProofOps,
 ) error {
-	if ctx == nil || ops.inspectUnit == nil || ops.inspectProcesses == nil {
+	if ops.inspectUnit == nil || ops.inspectProcesses == nil {
 		return errors.New("PowerDNS stopped proof requires native unit and process observers")
 	}
-	observe := func() (bindInstallUnitState, dnsUnitProcesses, error) {
-		if err := ctx.Err(); err != nil {
-			return bindInstallUnitState{}, dnsUnitProcesses{}, err
-		}
-		unit, err := ops.inspectUnit(ctx)
-		if err != nil {
-			return bindInstallUnitState{}, dnsUnitProcesses{}, err
-		}
-		if unit.name != "pdns.service" || unit.activeState != "inactive" {
-			return bindInstallUnitState{}, dnsUnitProcesses{},
-				errors.New("PowerDNS target is not an inactive pdns.service")
-		}
-		processes, err := ops.inspectProcesses(ctx)
-		if err != nil {
-			return bindInstallUnitState{}, dnsUnitProcesses{}, err
-		}
-		if err := verifyDNSUnitProcessesStopped(processes); err != nil {
-			return bindInstallUnitState{}, dnsUnitProcesses{}, err
-		}
-		return unit, processes, nil
-	}
-	beforeUnit, beforeProcesses, err := observe()
-	if err != nil {
-		return err
-	}
-	afterUnit, afterProcesses, err := observe()
-	if err != nil {
-		return err
-	}
-	if beforeUnit != afterUnit || beforeProcesses != afterProcesses {
-		return errors.New("PowerDNS target unit or process changed during stopped proof")
-	}
-	return nil
+	return dnsenginerecovery.VerifyStoppedUnit(ctx, "pdns.service",
+		func(proofCtx context.Context) (dnsenginerecovery.StoppedUnitObservation, error) {
+			unit, err := ops.inspectUnit(proofCtx)
+			if err != nil {
+				return dnsenginerecovery.StoppedUnitObservation{}, err
+			}
+			processes, err := ops.inspectProcesses(proofCtx)
+			if err != nil {
+				return dnsenginerecovery.StoppedUnitObservation{}, err
+			}
+			return dnsenginerecovery.StoppedUnitObservation{
+				Name: unit.name, LoadState: unit.loadState,
+				ActiveState: unit.activeState, UnitFileState: unit.unitFileState,
+				MainPID: processes.MainPID, ControlPID: processes.ControlPID,
+				SubState: processes.SubState,
+			}, nil
+		})
 }
 
 func verifyPDNSStoppedBeforeDatabaseRestore(ctx context.Context, systemctl string) error {

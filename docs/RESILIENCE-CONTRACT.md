@@ -1185,3 +1185,12 @@ journal and blocks later effects. The historical v1 artifacts do not change.
 The focused and DNS/BIND/PowerDNS package tests pass; owner restarts, stray
 processes, independent inverse execution and native interrupted recovery
 remain open.
+
+
+P0.4 shared native stop proof: BIND and PowerDNS inverses now consume one
+fixed-unit, two-observation inactive/dead/zero-MainPID/ControlPID predicate.
+This eliminates divergent Agent decisions and gives a future independent
+executor the same read-only stop rule. The v1 evidence schemas and recovery
+checkpoints are unchanged. Full Agent/shared-package tests and vet pass;
+native post-extraction interruption, cgroup/owner-restart exclusion and
+Agent-independent host effects remain open.
