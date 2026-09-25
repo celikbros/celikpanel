@@ -1058,3 +1058,22 @@ Journal, ledger, ownership and state formats remain v1. Linux tests cover
 exact removal, retry, foreign owner/request/epoch, symlink and wrong phase.
 Agent-independent inverse execution, owner-edit/reboot native trials and the
 remaining P0.4 matrix remain open.
+### Exact independent DNS rollback ledger verdict primitive (2026-09-25)
+
+P0.4 and constitutional invariants 1/2/3: the shared Linux recovery package
+can now publish one terminal failed verdict for an exact active DNS switch
+whose durable journal is already `rolled-back`. It checks canonical journal
+bytes before and after publication, decodes the exact active v1 ledger job,
+rechecks the recorded worker against kernel procfs, and uses byte-exact CAS
+replacement with directory sync/readback. Only the matching job is closed;
+the frozen journal remains for separate native reproof and exact retirement.
+A live worker, different active job, changed journal, unsafe evidence or a
+second publication is refused. A journal change after the ledger CAS produces
+an unknown result with the terminal ledger retained for reconciliation.
+
+This is a low-level publication primitive, not an owner recovery command.
+The caller must still hold both locks and prove the native inverse before
+publication. No schema changes or installed-host actions occurred. Linux tests
+cover exact closure, retained journal, foreign journal/job, duplicate verdict
+and a genuinely live recorded worker. Native reboot/owner-edit trials and the
+Agent-independent executor remain open; P0.4 is not complete.

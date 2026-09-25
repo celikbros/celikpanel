@@ -1344,3 +1344,13 @@ foreign, symlinked and wrong-phase cases. The primitive has no standalone
 authority or CLI route: locks, worker exclusion, native source reproof,
 checkpoint/ledger publication and reboot/owner-edit matrix coverage still
 separate it from an Agent-independent inverse. P0.4 remains open.
+P0.4, constitutional invariants 1/2/3: the independent recovery package now
+has a byte-exact v1 ledger CAS publisher for a previously proved rolled-back
+DNS journal. It verifies the exact active job and excludes its recorded worker
+through kernel procfs before clearing only that job's lease; the journal is
+retained for separate native reproof and retirement. Changed evidence, a
+foreign job or a live worker fails closed. A post-CAS journal change leaves an
+unknown outcome for the same operation rather than claiming success. Linux
+tests pass, including a real live-process rejection. This primitive is not
+wired to a CLI and grants no independent inverse authority; lock ownership,
+native inverse proof, reboot and owner-edit acceptance remain open.
