@@ -59,6 +59,10 @@ unverified. In particular, a cell without a proven exit-137 kill is unverified,
 never passed. The execution report's D-021 denominator is the runnable cell
 count, not the 510-cell raw inventory.
 
+The first clean-bundle native BIND rollback-boundary trial is recorded in
+[NATIVE-BIND-ROLLBACK-20260925.md](NATIVE-BIND-ROLLBACK-20260925.md). It covers
+one runnable cell; the rest of the matrix is still open.
+
 ## QEMU fixture provisioning
 
 `fixture.py` provisions one Debian 13 guest and one Arch guest on a **Linux
