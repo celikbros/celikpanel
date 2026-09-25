@@ -64,6 +64,8 @@ func completeInstalledPDNSAdoptionInverse(ctx context.Context, requestID string)
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
 	if os.Geteuid() != 0 {
 		return errors.New("PowerDNS adoption inverse requires root or authorized sudo")
 	}
