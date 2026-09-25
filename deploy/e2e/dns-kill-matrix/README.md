@@ -59,12 +59,13 @@ unverified. In particular, a cell without a proven exit-137 kill is unverified,
 never passed. The execution report's D-021 denominator is the runnable cell
 count, not the 510-cell raw inventory.
 
-Four clean-bundle native BIND trials are recorded at the
+Five clean-bundle native BIND trials are recorded at the
 [rollback after-write](NATIVE-BIND-ROLLBACK-20260925.md),
 [rollback before-write](NATIVE-BIND-ROLLBACK-BEFORE-WRITE-20260925.md),
-[source-stopped after-write](NATIVE-BIND-SOURCE-STOPPED-20260925.md) and
+[source-stopped after-write](NATIVE-BIND-SOURCE-STOPPED-20260925.md),
+[source-stopped before-write](NATIVE-BIND-SOURCE-BEFORE-WRITE-20260925.md) and
 [target-started after-write](NATIVE-BIND-TARGET-STARTED-20260925.md)
-boundaries. They cover four runnable cells; the rest of the matrix is still open.
+boundaries. They cover five runnable cells; the rest of the matrix is still open.
 
 ## QEMU fixture provisioning
 
@@ -302,6 +303,27 @@ hashes for the third. It fails closed for `managed-bind` and
 `legacy-pdns-secondary` until equally strict fixture producers are
 implemented. Those remaining cells are harness-blocked/unverified; they must
 not be counted as passed or failed.
+
+After a supported fixture is prepared, run its exact generated controller array
+without copying or editing a guest launcher:
+
+```sh
+python3 "$BOOTSTRAP" run-prepared --work-root "$ROOT" --cell-id "$CELL" \
+  --node debian13 --identity-file "$HOME/.ssh/id_ed25519" \
+  --source-fixture managed-pdns
+python3 "$BOOTSTRAP" run-prepared --work-root "$ROOT" --cell-id "$CELL" \
+  --node debian13 --identity-file "$HOME/.ssh/id_ed25519" \
+  --source-fixture managed-pdns --execute
+```
+
+The first invocation is a dry run. Execution uses only the fixture's SSH
+destination and known-hosts policy. In the guest it requires the root-owned,
+single-link, mode-0600 controller argv file, verifies the exact cell ID,
+and runs the existing controller as root with primary group celikpanel under
+the production path and language environment. It preserves the controller's
+0/1/2/64 exit status. The controller still enforces create-new result
+artifacts, so rerunning an already measured cell is refused rather than
+starting a second mutation.
 
 Installed runtime separation is deliberate:
 

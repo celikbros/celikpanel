@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -48,6 +49,35 @@ STAGE_PREFIX = "/var/tmp/celikpanel-dns-kill-bootstrap-"
 ZONE_NAME = "s1-kill.test"
 QUERY_NAME = "www.s1-kill.test"
 
+
+RUN_PREPARED_CODE = r"""import json
+import os
+import stat
+import sys
+
+path = "/var/lib/celikpanel-dns-kill-matrix/controller-argv.json"
+fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+try:
+    info = os.fstat(fd)
+    if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
+            or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1):
+        raise SystemExit("prepared controller argv has unsafe ownership")
+    with os.fdopen(fd, "r", encoding="utf-8") as handle:
+        fd = -1
+        argv = json.load(handle)
+finally:
+    if fd >= 0:
+        os.close(fd)
+if (not isinstance(argv, list) or len(argv) < 4
+        or any(not isinstance(value, str) or chr(0) in value for value in argv)
+        or argv[0] != "/opt/celikpanel/libexec/dns-kill-run-cell.py"
+        or argv.count("--cell-id") != 1):
+    raise SystemExit("prepared controller argv has unexpected shape")
+index = argv.index("--cell-id")
+if index + 1 >= len(argv) or argv[index + 1] != sys.argv[1]:
+    raise SystemExit("prepared controller argv belongs to another cell")
+os.execv(argv[0], argv)
+"""
 
 class BootstrapError(RuntimeError):
     pass
@@ -625,6 +655,24 @@ def prepare(args: argparse.Namespace) -> None:
         )
 
 
+def run_prepared(args: argparse.Namespace) -> int:
+    _, cell, node = load_plan(args)
+    validate_supported_cell(cell, args.node, args.source_fixture)
+    identity = identity_file(args.identity_file)
+    remote = (
+        "sudo /usr/sbin/runuser -u root -g celikpanel -- /usr/bin/env -i "
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin "
+        "LANG=C.UTF-8 /usr/bin/python3 -c "
+        + shlex.quote(RUN_PREPARED_CODE)
+        + " "
+        + shlex.quote(args.cell_id)
+    )
+    command = ssh_base(node, identity) + [remote]
+    if not args.execute:
+        print(json.dumps(command))
+        return 0
+    return subprocess.run(command, check=False).returncode
+
 def common_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--work-root", required=True, type=Path)
     parser.add_argument("--cell-id", required=True)
@@ -663,6 +711,8 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     common_parser(current)
     current = subparsers.add_parser("prepare-pdns-adopt")
     common_parser(current)
+    current = subparsers.add_parser("run-prepared")
+    common_parser(current)
     return parser.parse_args(argv)
 
 
@@ -675,6 +725,8 @@ def main(argv: Iterable[str] | None = None) -> int:
             install(args)
         elif args.action in {"prepare-bind", "prepare-pdns-adopt"}:
             prepare(args)
+        elif args.action == "run-prepared":
+            return run_prepared(args)
         else:
             raise BootstrapError("unsupported action")
         return 0

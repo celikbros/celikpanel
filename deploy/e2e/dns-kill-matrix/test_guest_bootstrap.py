@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
 import socket
 import sqlite3
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -942,6 +944,72 @@ CREATE TABLE supermasters (ip TEXT, nameserver TEXT, account TEXT);
                     archive.getnames(), ["assets", "assets/app.js", "index.html"]
                 )
 
+
+class PreparedCellRunnerTest(unittest.TestCase):
+    def test_runner_is_dry_by_default_and_preserves_controller_exit(self) -> None:
+        cell_id = "bind__rolled-back__after-write__standalone__peer-reachable"
+        args = mock.Mock(
+            cell_id=cell_id,
+            node="debian13",
+            source_fixture="managed-pdns",
+            identity_file=Path("/tmp/test-key"),
+            execute=False,
+        )
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, {}, {})),
+            mock.patch.object(bootstrap, "validate_supported_cell"),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch.object(bootstrap.subprocess, "run") as run,
+            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+        ):
+            self.assertEqual(bootstrap.run_prepared(args), 0)
+            command = json.loads(output.getvalue())
+            self.assertEqual(command[:2], ["ssh", "guest"])
+            self.assertIn("runuser -u root -g celikpanel", command[-1])
+            self.assertIn("env -i PATH=", command[-1])
+            self.assertIn(cell_id, command[-1])
+            run.assert_not_called()
+            args.execute = True
+            run.return_value = subprocess.CompletedProcess(command, 2)
+            self.assertEqual(bootstrap.run_prepared(args), 2)
+            run.assert_called_once_with(command, check=False)
+
+    @unittest.skipUnless(
+        sys.platform == "linux" and hasattr(os, "geteuid") and os.geteuid() == 0,
+        "prepared argv owner proof requires a root Linux fixture",
+    )
+    def test_guest_program_checks_file_and_cell_before_exec(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prepared = root / "controller-argv.json"
+            executable = root / "run-cell.py"
+            executable.write_text(
+                "#!/usr/bin/env python3\nraise SystemExit(17)\n", encoding="utf-8"
+            )
+            executable.chmod(0o700)
+            code = bootstrap.RUN_PREPARED_CODE.replace(
+                "/var/lib/celikpanel-dns-kill-matrix/controller-argv.json",
+                str(prepared),
+            ).replace(
+                "/opt/celikpanel/libexec/dns-kill-run-cell.py", str(executable)
+            )
+            prepared.write_text(
+                json.dumps([str(executable), "--cell-id", "expected", "--result", "x"]),
+                encoding="utf-8",
+            )
+            prepared.chmod(0o600)
+            command = [sys.executable, "-c", code, "expected"]
+            self.assertEqual(subprocess.run(command, check=False).returncode, 17)
+            self.assertEqual(
+                subprocess.run(command[:-1] + ["wrong"], check=False, capture_output=True).returncode,
+                1,
+            )
+            prepared.chmod(0o644)
+            self.assertEqual(
+                subprocess.run(command, check=False, capture_output=True).returncode,
+                1,
+            )
 
 if __name__ == "__main__":
     unittest.main()
