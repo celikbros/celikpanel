@@ -107,3 +107,60 @@ func TestInstalledPDNSInverseDoesNotTreatDeletedZoneAsProvedAbsent(t *testing.T)
 		t.Fatal("deleted-zone absence was inferred from SQL rather than native answers")
 	}
 }
+func TestInstalledPDNSInverseDeletedZoneStopsBeforeDurableEffects(t *testing.T) {
+	request := strings.Repeat("a", 32)
+	journal := dnsengineartifact.SwitchJournalV1{
+		Mode:              transport.DNSEngineSwitchModeAdopt,
+		SourceEngine:      "",
+		TargetEngine:      transport.DNSEnginePowerDNS,
+		Phase:             dnsengineartifact.SwitchPhaseRollingBack,
+		MutationRequestID: request,
+	}
+	evidence := dnsenginerecovery.SwitchEvidence{
+		Journal: journal,
+		Observation: dnsenginerecovery.EvidenceObservation{
+			EvidenceSHA256:  "exact-secured-bytes",
+			RequestID:       request,
+			Phase:           journal.Phase,
+			TargetEngine:    string(journal.TargetEngine),
+			InverseKind:     dnsenginerecovery.NativeInversePDNSAdoption,
+			SourceOwnership: dnsenginerecovery.SourceOwnershipNotApplicable,
+			TargetReceipt:   dnsenginerecovery.TargetReceiptExact,
+			SourceReceipt:   dnsenginerecovery.SourceReceiptDifferent,
+			Status:          dnsenginerecovery.EvidenceActive,
+		},
+	}
+	effects := 0
+	ops := dnsenginerecovery.PDNSAdoptionInverseOps{
+		Read: func(context.Context) (dnsenginerecovery.SwitchEvidence, bool, error) {
+			return evidence, true, nil
+		},
+		ExcludeWorker: func(context.Context, dnsenginerecovery.SwitchEvidence) error { return nil },
+		ProveNative: func(context.Context, dnsengineartifact.SwitchJournalV1) error {
+			return requirePDNSAdoptionInverseNativeProof(pdnsAdoptionNativeProof{ActiveSOA: 1, DeletedSOA: 1})
+		},
+		RemoveState: func(context.Context, dnsengineartifact.SwitchJournalV1) error {
+			effects++
+			return nil
+		},
+		WritePhase: func(context.Context, dnsengineartifact.SwitchJournalV1, dnsengineartifact.SwitchJournalV1) error {
+			effects++
+			return nil
+		},
+		PublishFailed: func(context.Context, dnsengineartifact.SwitchJournalV1) error {
+			effects++
+			return nil
+		},
+		RemoveJournal: func(context.Context, dnsengineartifact.SwitchJournalV1) error {
+			effects++
+			return nil
+		},
+	}
+	err := dnsenginerecovery.CompletePDNSAdoptionInverse(context.Background(), ops)
+	if err == nil || !strings.Contains(err.Error(), "deleted-zone authority is absent") {
+		t.Fatalf("unproved deleted-zone authority was admitted: %v", err)
+	}
+	if effects != 0 {
+		t.Fatalf("unproved deleted-zone authority reached %d durable effects", effects)
+	}
+}
