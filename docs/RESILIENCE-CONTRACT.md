@@ -1436,3 +1436,5 @@ converged forward with 31/31 healthy post-recovery samples. This is native
 wire compatibility and Agent-mediated recovery evidence, not independent
 inverse or post-kill observer proof. No persisted schema or supported
 recovery authority changed; P0.4 remains open.
+
+P0.4, constitutional invariants 1/2/3: the [native deleted-child quiesced observer trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-DELETED-OBSERVER-20260925.md) repeated an existing PowerDNS adoption SIGKILL cell. Before Agent restart, the independent read-only observer held the release/host locks and verified one active parent plus 1/1 frozen deleted child through strict UDP/TCP SOA answers, bracketed by native process, listener, config, database, journal and receipt rereads. The later ordinary same-request retry converged forward, with 31/31 healthy samples. This establishes bounded post-kill observation for the tested source; it neither authorizes an inverse nor proves reboot, owner-edit or complete native rollback acceptance. Persisted v1 schemas are unchanged and P0.4 stays open.

@@ -105,6 +105,12 @@ Agent-mediated forward convergence. The optional preparation switch is
 remains the existing single active zone. This does not add matrix phase
 coverage or prove the independent post-kill inverse.
 
+The [deleted-child quiesced observer trial](NATIVE-PDNS-DELETED-OBSERVER-20260925.md)
+repeats that same cell with the independent read-only status at the proven
+post-kill boundary. It verified one active parent and the absent child over
+UDP and TCP before Agent restart. It does not execute an inverse or add
+phase coverage.
+
 The [shared PowerDNS rollback regression](NATIVE-PDNS-ADOPTION-SHARED-ROLLBACK-20260925.md)
 repeats that cell after the Agent adopted the shared fail-stop rollback sequence.
 It adds no matrix coverage or independent recovery proof.
