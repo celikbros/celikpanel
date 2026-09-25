@@ -26,6 +26,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/pdnsvendor"
 	"github.com/alicelik/celikpanel/internal/processidentity"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
+	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/sys/unix"
 )
 
@@ -250,7 +251,7 @@ func verifyNativeBINDExecutable(pid uint64, path string) (string, error) {
 func verifyRunningExecutable(pid int, path string) (string, error) {
 	started, err := processidentity.StartToken(pid)
 	if err != nil {
-		return "", fmt.Errorf("read BIND process start identity: %w", err)
+		return "", fmt.Errorf("read native DNS process start identity: %w", err)
 	}
 	installed, err := os.Lstat(path)
 	if err != nil || !installed.Mode().IsRegular() {
@@ -258,11 +259,11 @@ func verifyRunningExecutable(pid int, path string) (string, error) {
 	}
 	running, err := os.Stat(fmt.Sprintf("/proc/%d/exe", pid))
 	if err != nil || !os.SameFile(installed, running) {
-		return "", errors.New("running BIND executable differs from its installed native file")
+		return "", errors.New("running native DNS executable differs from its installed file")
 	}
 	again, err := processidentity.StartToken(pid)
 	if err != nil || started != again {
-		return "", errors.New("BIND process changed while its executable was inspected")
+		return "", errors.New("native DNS process changed while its executable was inspected")
 	}
 	return started, nil
 }
@@ -659,7 +660,46 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "PowerDNS process identity changed around listener observation. The server owner should inspect pdns.service and local DNS sockets before the same operation resumes; no inverse was started.")
 			return exitUnavailable
 		}
-		fmt.Fprintln(out, "The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. Database content, zone answers, loaded config and recovery authority remain unproved.")
+		fmt.Fprintln(out, "The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. This process/socket observation does not establish database content, zone answers, loaded config or recovery authority.")
+	}
+	if len(args) == 2 && evidence.Journal.Mode == transport.DNSEngineSwitchModeAdopt {
+		proofCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if proofErr := dnsenginerecovery.ProbePDNSDatabasePreimage(
+			proofCtx, policy.PDNSDatabasePath,
+			evidence.Journal.PDNSLiveSize, evidence.Journal.PDNSLiveSHA256,
+		); proofErr != nil {
+			fmt.Fprintln(diagnostic, "The PowerDNS adoption database could not be matched to the frozen journal. The server owner should inspect the native database and the original operation; preserve the journal and do not start another DNS switch. No recovery mutation was started. "+proofErr.Error())
+			return exitUnavailable
+		}
+		mainPID, runtimeErr := verifyInstalledPDNSRuntime(proofCtx)
+		if runtimeErr != nil {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption source process identity is unknown. The server owner should inspect pdns.service and the stopped BIND units before the same operation resumes; no recovery mutation was started. "+runtimeErr.Error())
+			return exitUnavailable
+		}
+		if listenerErr := dnsenginerecovery.ProbeAuthorityListeners(proofCtx, "pdns_server", mainPID, "", dnsenginerecovery.SSListenerRunner); listenerErr != nil {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption source listener ownership is unknown. The server owner should inspect local TCP/UDP port 53 and pdns.service; no recovery mutation was started. "+listenerErr.Error())
+			return exitUnavailable
+		}
+		if again, runtimeErr := verifyInstalledPDNSRuntime(proofCtx); runtimeErr != nil || again != mainPID {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption source process changed around the listener observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
+			return exitUnavailable
+		}
+		if proofErr := dnsenginerecovery.ProbePDNSDatabasePreimage(
+			proofCtx, policy.PDNSDatabasePath,
+			evidence.Journal.PDNSLiveSize, evidence.Journal.PDNSLiveSHA256,
+		); proofErr != nil {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption database changed around the native process observation. Preserve the original operation and inspect native DNS; no recovery mutation was started. "+proofErr.Error())
+			return exitUnavailable
+		}
+		againEvidence, stillPresent, readErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
+		if readErr != nil || !stillPresent ||
+			evidence.Observation.EvidenceSHA256 != againEvidence.Observation.EvidenceSHA256 ||
+			!reflect.DeepEqual(evidence.Journal, againEvidence.Journal) {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption evidence changed around the native preimage observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
+			return exitUnavailable
+		}
+		fmt.Fprintln(out, "The installed PowerDNS database bytes matched the frozen adoption preimage twice; the verified native process owned local TCP/UDP port 53 between reads. SQLite transaction state, zone answers, loaded config, later owner edits and inverse authority remain unproved.")
 	}
 	fmt.Fprintf(out, "Frozen native inverse shape: %s. This classification does not prove worker exclusion, owner authority or safe recovery execution.\n", observation.InverseKind)
 	switch observation.TargetReceipt {
