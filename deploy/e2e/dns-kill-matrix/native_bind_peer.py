@@ -63,12 +63,31 @@ def prepare(args: argparse.Namespace) -> None:
     primary_ip, secondary_ip, secondary = pair_addresses(plan, cell)
     identity = bootstrap.identity_file(args.identity_file)
     remote_path = bootstrap.stage_name(args.cell_id) + ".peer.conf"
+    ssh = bootstrap.ssh_base(secondary, identity)
+    marker_command = ssh + ["cat /etc/celikpanel-dns-kill-matrix"]
+    expected_marker = (
+        "schema=celikpanel/dns-kill-fixture-plan/v1\n"
+        f"cell_id={args.cell_id}\nnode=debian13\n"
+    )
+    if args.execute:
+        marker = subprocess.run(
+            marker_command, check=True, capture_output=True, text=True
+        )
+        if marker.stdout != expected_marker:
+            raise bootstrap.BootstrapError(
+                "peer guest marker does not match the selected disposable cell"
+            )
+    else:
+        bootstrap.run(marker_command, execute=False)
+    bootstrap.run(
+        ssh + ["test ! -e /opt/celikpanel/bin/agent && test ! -e /opt/celikpanel/bin/panel"],
+        execute=args.execute,
+    )
     with tempfile.TemporaryDirectory(prefix="celikpanel-bind-peer-") as temporary:
         config_path = Path(temporary) / "named.conf"
         config_path.write_text(
             secondary_config(primary_ip, secondary_ip), encoding="ascii", newline="\n"
         )
-        ssh = bootstrap.ssh_base(secondary, identity)
         bootstrap.run(ssh + ["sudo apt-get update -qq"], execute=args.execute)
         bootstrap.run(
             ssh + ["sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq bind9"],
