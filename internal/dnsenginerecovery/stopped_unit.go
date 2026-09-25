@@ -37,9 +37,9 @@ func VerifyStoppedUnit(
 		if err != nil {
 			return StoppedUnitObservation{}, err
 		}
-		if seen.Name != name || seen.ActiveState != "inactive" ||
+		if seen.Name != name || seen.LoadState != "loaded" || seen.ActiveState != "inactive" ||
 			seen.MainPID != 0 || seen.ControlPID != 0 || seen.SubState != "dead" {
-			return StoppedUnitObservation{}, errors.New("DNS target is not inactive/dead with zero systemd main and control PIDs")
+			return StoppedUnitObservation{}, errors.New("DNS target is not a loaded inactive/dead unit with zero systemd main and control PIDs")
 		}
 		return seen, nil
 	}

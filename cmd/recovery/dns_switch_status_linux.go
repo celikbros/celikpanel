@@ -408,6 +408,32 @@ func acquireDNSObservationLocks(releasePath, hostPath string, hostOwner hostmuta
 	locks.host = host
 	return locks, nil
 }
+
+// A terminal retained inverse may have restored an originally inactive target.
+// This is a read-only diagnostic selection from already validated evidence;
+// it never grants permission to retire the journal or alter native DNS.
+func rolledBackInactiveTargetUnit(evidence dnsenginerecovery.SwitchEvidence) (string, bool) {
+	if evidence.Observation.Status != dnsenginerecovery.EvidenceTerminalRolledBack ||
+		evidence.Journal.Phase != dnsengineartifact.SwitchPhaseRolledBack {
+		return "", false
+	}
+	var name string
+	switch evidence.Observation.InverseKind {
+	case dnsenginerecovery.NativeInverseBINDSwitch:
+		name = "named.service"
+	case dnsenginerecovery.NativeInversePDNSSwitch:
+		name = "pdns.service"
+	default:
+		return "", false
+	}
+	for _, unit := range evidence.Journal.TargetUnitsBefore {
+		if unit.Name == name && unit.ActiveState == "inactive" {
+			return name, true
+		}
+	}
+	return "", false
+}
+
 func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	if (len(args) != 1 && !(len(args) == 2 && args[1] == "--quiesced")) || args[0] != "dns-switch-status" {
 		return exitUsage
@@ -495,6 +521,25 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(out, "The ledger records finalization while a journal remains. The server owner should inspect native DNS health and the retained journal; this observation alone does not authorize cleanup or a new switch.")
 	default:
 		fmt.Fprintln(out, "The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.")
+	}
+	if len(args) == 2 {
+		if stoppedName, required := rolledBackInactiveTargetUnit(evidence); required {
+			if stopErr := dnsenginerecovery.ProbeStoppedUnit(
+				context.Background(), stoppedName,
+				dnsenginerecovery.SystemdUnitRunner,
+				dnsenginerecovery.SystemdPDNSRuntimeRunner,
+			); stopErr != nil {
+				fmt.Fprintln(diagnostic, "The retained DNS rollback target could not be proved stopped. The server owner should inspect the native unit and preserve the same journal; no recovery mutation was started. "+stopErr.Error())
+				return exitUnavailable
+			}
+			againEvidence, stillPresent, readErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
+			if readErr != nil || !stillPresent || evidence.Observation.EvidenceSHA256 != againEvidence.Observation.EvidenceSHA256 ||
+				!reflect.DeepEqual(evidence.Journal, againEvidence.Journal) {
+				fmt.Fprintln(diagnostic, "DNS rollback evidence changed around the native stopped-target observation. Preserve the accepted journal and retry after the owner change settles; no recovery mutation was started.")
+				return exitUnavailable
+			}
+			fmt.Fprintf(out, "The retained rollback target %s was inactive/dead with zero systemd main/control PIDs in two native reads. This point-in-time observation does not prove cgroup emptiness, DNS health, owner-edit exclusion or recovery authority.\n", stoppedName)
+		}
 	}
 	if observation.SourceEngine == "bind" || observation.TargetEngine == "bind" {
 		var selectedReceipt binddns.Receipt

@@ -873,3 +873,7 @@ tested the preceding identical Agent guard, before this extraction; it is not
 native acceptance of the new shared wiring. The predicate does not inspect
 cgroup descendants, exclude later owner starts, prove DNS answers or supply
 an Agent-independent host-effects executor. P0.4 remains open.
+
+### Quiesced retained-rollback stop diagnosis (2026-09-25)
+
+P0.4 and constitutional invariants 1/2/3: the independent `recovery dns-switch-status --quiesced` observer now selects only an exact terminal rolled-back BIND or PowerDNS switch whose frozen target unit was originally inactive. Under the existing release and host locks, it reads that fixed native unit and its process properties twice. A loaded, matching inactive/dead unit with zero systemd main/control PIDs yields a point-in-time diagnostic; a missing unit, pending daemon reload, active process, changing observation or changing journal/receipt fails closed and retains the journal. The ordinary status command is unchanged. This adds no host effect, inverse authority, journal/ledger/receipt schema transition or automatic retry. Package tests and vet are scoped evidence; cgroup descendants, later owner edits, native DNS health and an Agent-independent recovery executor remain open.

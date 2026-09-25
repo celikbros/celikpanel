@@ -1194,3 +1194,5 @@ executor the same read-only stop rule. The v1 evidence schemas and recovery
 checkpoints are unchanged. Full Agent/shared-package tests and vet pass;
 native post-extraction interruption, cgroup/owner-restart exclusion and
 Agent-independent host effects remain open.
+
+P0.4, constitutional invariants 1/2/3: the root-only independent `recovery dns-switch-status --quiesced` command can now give a bounded, fixed-unit, two-read stopped-target observation for a retained terminal DNS rollback with an originally inactive target. Missing/changed systemd or persisted evidence remains unknown; the journal is retained and no native mutation is started. Existing persisted schemas and the Agent's same-operation inverse behavior are unchanged. Package tests and vet establish this read-only path only. Cgroup emptiness, owner edits after observation, an Agent-independent native inverse and the native fault/reboot matrix remain unproven.
