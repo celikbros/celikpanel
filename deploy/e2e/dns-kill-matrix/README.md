@@ -88,6 +88,11 @@ The [PowerDNS adoption rolled-back/before-write trial](NATIVE-PDNS-ADOPTION-ROLL
 adds a second `pdns-adopt` cell. Its terminal classification was forward
 `target_converged`, so it does not prove source rollback or journal retirement.
 
+The [PowerDNS pre-retry startup observation](NATIVE-PDNS-PRE-RETRY-OBSERVATION-20260925.md)
+repeats that adoption rollback cell with a read-only probe before the same-request
+retry. The pre-retry result was indeterminate; only the retry converged forward.
+It adds no new matrix cell and does not prove automatic recovery.
+
 ## QEMU fixture provisioning
 
 `fixture.py` provisions one Debian 13 guest and one Arch guest on a **Linux
@@ -672,6 +677,15 @@ exactly one JSON object to stdout:
   "detail": "converged"
 }
 ```
+
+For socket cells, a separate read-only `recovery.pre_retry_probe` is taken
+after the ordinary Agent socket and exact request identity are proven, but
+before either same-request RPC retry. Its `indeterminate` outcome is a
+recorded startup observation, not evidence of successful rollback and not a
+failed retry probe. A valid observation is required for a verified cell; the
+two post-retry probes still determine final convergence. This separates
+Agent startup behavior from recovery caused by retry. Existing result v1
+artifacts without this additive field retain their original meaning.
 
 Both probes must be valid and are compared by fingerprint. Their diagnostic
 `recovery_outcome` distinguishes exact target convergence, an exact prior source

@@ -5683,6 +5683,16 @@ def run_cell(settings: Settings) -> int:
                     "owner_id": identity_receipt["owner_id"],
                     "manifest_qualifier": identity_receipt["manifest_qualifier"],
                 }
+                # Observe startup recovery before the same-request RPC can change it.
+                # An indeterminate outcome is evidence, not a failed retry probe.
+                pre_retry_probe = run_recovery_probe(
+                    settings, ordinary, transcript, 0
+                )
+                recovery["pre_retry_probe"] = pre_retry_probe
+                if not pre_retry_probe.get("valid"):
+                    verification_failures.append(
+                        "pre-retry startup recovery observation is invalid"
+                    )
                 for ordinal in (1, 2):
                     retry_report, error = checked_command(
                         settings,

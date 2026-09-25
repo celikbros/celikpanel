@@ -691,6 +691,10 @@ class ControllerProtocolTest(unittest.TestCase):
             ),
         )
         self.assertLess(
+            socket_flow.index("pre_retry_probe = run_recovery_probe("),
+            socket_flow.index('f"post-restart-rpc-retry-{ordinal}"'),
+        )
+        self.assertLess(
             socket_flow.index(
                 "run_recovery_probe(settings, ordinary, transcript, ordinal)"
             ),

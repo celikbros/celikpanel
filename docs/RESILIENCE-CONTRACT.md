@@ -192,6 +192,16 @@ The P0 identifiers above are the tracked work items. Evidence is updated through
 
 P0.4 native DNS fault evidence now includes seven scoped standalone BIND cells. Six Debian 13 cells used a real managed PowerDNS source at source-stopped, target-started and rolled-back before/after-write boundaries. A separate [Arch target-staged/before-write cell](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-TARGET-STAGED-ARCH-20260925.md) used a proved uninitialized source. Every trial proved exit 137, same-request Agent-mediated convergence to BIND, authoritative UDP/TCP answers and 30 seconds of Agent/Panel/DNS post-recovery health. See the [DNS kill-matrix reports](../deploy/e2e/dns-kill-matrix/README.md). The persisted DNS switch journal v1 and recovery probe v1 are unchanged. These cells do not prove uninterrupted DNS during the cut, pre-existing source restoration on Arch, paired-peer behavior, reboot/power-loss recovery, owner-edit safety or an Agent-independent inverse; P0.4 and the remaining runnable matrix remain open.
 
+The [PowerDNS pre-retry native observation](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-PRE-RETRY-OBSERVATION-20260925.md)
+separates ordinary Agent startup from the same-request recovery RPC. At the
+`rolled-back:before-write` kill boundary, the first observation after Agent
+restart was valid but indeterminate: PowerDNS was active, the engine state
+receipt was absent and the ledger was failed/interrupted. Two later retries
+converged forward. This is scoped evidence that post-retry success cannot
+be counted as independent startup rollback. Result v1 adds an optional harness
+field; persisted DNS and probe schemas do not change. Agent-independent
+inverse execution and owner-native terminal recovery remain open under P0.4.
+
 Every PR changing lifecycle, persisted evidence, access gates, recovery or native
 service ownership must cite affected P0/invariants, before/after behavior,
 compatibility and rollback implications, and exact acceptance evidence. A change
