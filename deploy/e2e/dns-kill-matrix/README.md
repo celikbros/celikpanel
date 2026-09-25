@@ -90,6 +90,9 @@ adds a second `pdns-adopt` cell. Its terminal classification was forward
 The [shared PowerDNS rollback regression](NATIVE-PDNS-ADOPTION-SHARED-ROLLBACK-20260925.md)
 repeats that cell after the Agent adopted the shared fail-stop rollback sequence.
 It adds no matrix coverage or independent recovery proof.
+The [shared database reader native regression](NATIVE-PDNS-SHARED-READER-20260925.md)
+repeats the same adoption rollback cell with the consolidated Agent reader.
+It does not exercise the independent quiesced observer.
 
 The [PowerDNS pre-retry startup observation](NATIVE-PDNS-PRE-RETRY-OBSERVATION-20260925.md)
 repeats that adoption rollback cell with a read-only probe before the same-request
