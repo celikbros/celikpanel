@@ -25,33 +25,44 @@ func QueryAuthoritativeSOAUDP(ctx context.Context, endpoint, zone string) (uint3
 }
 
 func queryAuthoritativeSOA(ctx context.Context, network, endpoint, zone string) (uint32, error) {
+	message, id, err := querySOAPacket(ctx, network, endpoint, zone)
+	if err != nil {
+		return 0, err
+	}
+	return parseAuthoritativeSOA(message, id, zone)
+}
+
+func querySOAPacket(ctx context.Context, network, endpoint, zone string) ([]byte, uint16, error) {
+	if ctx == nil {
+		return nil, 0, errors.New("DNS SOA query requires a context")
+	}
 	if network != "tcp" && network != "udp" {
-		return 0, errors.New("unsupported DNS transport")
+		return nil, 0, errors.New("unsupported DNS transport")
 	}
 	host, port, err := net.SplitHostPort(endpoint)
 	portNumber, portErr := strconv.Atoi(port)
 	if err != nil || net.ParseIP(host) == nil || portErr != nil || portNumber < 1 || portNumber > 65535 {
-		return 0, errors.New("DNS endpoint must be a literal IP and port")
+		return nil, 0, errors.New("DNS endpoint must be a literal IP and port")
 	}
 	if !canonicalHostname(zone) {
-		return 0, errors.New("DNS zone must be canonical")
+		return nil, 0, errors.New("DNS zone must be canonical")
 	}
 	query, id, err := buildQuery(zone) // SOA with recursion disabled.
 	if err != nil {
-		return 0, err
+		return nil, 0, err
 	}
 	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	conn, err := (&net.Dialer{}).DialContext(probeCtx, network, endpoint)
 	if err != nil {
-		return 0, err
+		return nil, 0, err
 	}
 	defer conn.Close()
 	stop := context.AfterFunc(probeCtx, func() { _ = conn.Close() })
 	defer stop()
 	deadline, _ := probeCtx.Deadline()
 	if err := conn.SetDeadline(deadline); err != nil {
-		return 0, err
+		return nil, 0, err
 	}
 	var message []byte
 	if network == "tcp" {
@@ -59,35 +70,35 @@ func queryAuthoritativeSOA(ctx context.Context, network, endpoint, zone string) 
 		binary.BigEndian.PutUint16(frame, uint16(len(query)))
 		copy(frame[2:], query)
 		if _, err := io.Copy(conn, bytes.NewReader(frame)); err != nil {
-			return 0, err
+			return nil, 0, err
 		}
 		var size [2]byte
 		if _, err := io.ReadFull(conn, size[:]); err != nil {
-			return 0, err
+			return nil, 0, err
 		}
 		length := int(binary.BigEndian.Uint16(size[:]))
 		if length < 12 || length > 16384 {
-			return 0, errors.New("DNS SOA response exceeds its bounded frame")
+			return nil, 0, errors.New("DNS SOA response exceeds its bounded frame")
 		}
 		message = make([]byte, length)
 		if _, err := io.ReadFull(conn, message); err != nil {
-			return 0, err
+			return nil, 0, err
 		}
 	} else {
 		if _, err := conn.Write(query); err != nil {
-			return 0, err
+			return nil, 0, err
 		}
 		buffer := make([]byte, 16385)
 		n, err := conn.Read(buffer)
 		if err != nil {
-			return 0, err
+			return nil, 0, err
 		}
 		if n > 16384 {
-			return 0, errors.New("DNS SOA response exceeds its bounded datagram")
+			return nil, 0, errors.New("DNS SOA response exceeds its bounded datagram")
 		}
 		message = buffer[:n]
 	}
-	return parseAuthoritativeSOA(message, id, zone)
+	return message, id, nil
 }
 
 func parseAuthoritativeSOA(message []byte, id uint16, zone string) (uint32, error) {

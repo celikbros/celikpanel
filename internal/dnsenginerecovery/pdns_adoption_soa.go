@@ -35,21 +35,66 @@ func ProbeInstalledPDNSAdoptionSOA(ctx context.Context, endpoint string, manifes
 	return ProbePDNSAdoptionSOA(ctx, endpoint, manifest, installedAdoptionSOAQuery)
 }
 
+// AdoptionDeletedSOAQuery proves an exact negative SOA response at one literal
+// endpoint and transport. Success is a point-in-time absence proof only.
+type AdoptionDeletedSOAQuery func(context.Context, string, string, string) error
+
+// ProbeInstalledPDNSAdoptionDeletedSOA checks every frozen deleted zone over
+// both transports. It needs the caller's separately verified native listener.
+func ProbeInstalledPDNSAdoptionDeletedSOA(ctx context.Context, endpoint string, manifest mutationpayload.DNSEngineSwitchManifestCommitment) (int, error) {
+	return ProbePDNSAdoptionDeletedSOA(ctx, endpoint, manifest, dnswire.QueryDeletedZoneSOA)
+}
+
+func ProbePDNSAdoptionDeletedSOA(ctx context.Context, endpoint string, manifest mutationpayload.DNSEngineSwitchManifestCommitment, query AdoptionDeletedSOAQuery) (int, error) {
+	if query == nil {
+		return 0, errors.New("deleted-zone authority probe is unavailable")
+	}
+	if err := validateAdoptionSOAInputs(ctx, endpoint, manifest); err != nil {
+		return 0, err
+	}
+	verified := 0
+	for _, zone := range manifest.Zones {
+		if !zone.Delete {
+			continue
+		}
+		for _, network := range []string{"udp", "tcp"} {
+			if err := ctx.Err(); err != nil {
+				return verified, err
+			}
+			if err := query(ctx, network, endpoint, zone.Domain); err != nil {
+				return verified, fmt.Errorf("verify %s deleted-zone absence for %s: %w", network, zone.Domain, err)
+			}
+		}
+		verified++
+	}
+	return verified, nil
+}
+
+func validateAdoptionSOAInputs(ctx context.Context, endpoint string, manifest mutationpayload.DNSEngineSwitchManifestCommitment) error {
+	if ctx == nil || manifest.Mode != transport.DNSEngineSwitchModeAdopt ||
+		manifest.SourceEngine != "" || manifest.TargetEngine != transport.DNSEnginePowerDNS {
+		return errors.New("PowerDNS adoption answer proof received an invalid manifest")
+	}
+	host, port, splitErr := net.SplitHostPort(endpoint)
+	ip := net.ParseIP(host)
+	if splitErr != nil || ip == nil || ip.To4() == nil || ip.To4().String() != host ||
+		ip.IsLoopback() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() || port != "53" {
+		return errors.New("PowerDNS adoption answer endpoint is not a concrete local IPv4 port 53")
+	}
+	return ctx.Err()
+}
+
 // ProbePDNSAdoptionSOA compares live UDP and TCP authority for every active
 // frozen zone. Deleted-zone absence and other record contents remain separate
 // proofs; their count is returned so a caller cannot claim full zone coverage.
 // The operation must already have a trusted journal and a verified native
 // process/listener at endpoint. This never authorizes an inverse.
 func ProbePDNSAdoptionSOA(ctx context.Context, endpoint string, manifest mutationpayload.DNSEngineSwitchManifestCommitment, query AdoptionSOAQuery) (active, deleted int, err error) {
-	if ctx == nil || query == nil || manifest.Mode != transport.DNSEngineSwitchModeAdopt ||
-		manifest.SourceEngine != "" || manifest.TargetEngine != transport.DNSEnginePowerDNS {
-		return 0, 0, errors.New("PowerDNS adoption answer proof received an invalid manifest")
+	if query == nil {
+		return 0, 0, errors.New("active-zone authority probe is unavailable")
 	}
-	host, port, splitErr := net.SplitHostPort(endpoint)
-	ip := net.ParseIP(host)
-	if splitErr != nil || ip == nil || ip.To4() == nil || ip.To4().String() != host ||
-		ip.IsLoopback() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() || port != "53" {
-		return 0, 0, errors.New("PowerDNS adoption answer endpoint is not a concrete local IPv4 port 53")
+	if err := validateAdoptionSOAInputs(ctx, endpoint, manifest); err != nil {
+		return 0, 0, err
 	}
 	for _, zone := range manifest.Zones {
 		if zone.Delete {

@@ -56,8 +56,8 @@ func excludeInstalledDNSInverseWorker(ctx context.Context, evidence dnsenginerec
 // source that is currently proved on the wire. A database row absence does not
 // prove that the running daemon has stopped serving a deleted zone.
 func requirePDNSAdoptionInverseNativeProof(proof pdnsAdoptionNativeProof) error {
-	if proof.DeletedSOA != 0 {
-		return errors.New("PowerDNS adoption inverse cannot prove deleted-zone authority is absent")
+	if proof.DeletedSOA < 0 || proof.DeletedSOAVerified < 0 || proof.DeletedSOA != proof.DeletedSOAVerified {
+		return errors.New("PowerDNS adoption inverse lacks exact deleted-zone absence proof")
 	}
 	return nil
 }

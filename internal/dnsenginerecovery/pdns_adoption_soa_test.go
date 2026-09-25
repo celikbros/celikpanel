@@ -54,3 +54,37 @@ func TestProbePDNSAdoptionSOABindsBothTransportsAndReportsDeletionGap(t *testing
 		t.Fatal("malformed frozen SOA admitted")
 	}
 }
+
+func TestProbePDNSAdoptionDeletedSOARequiresBothTransportProofs(t *testing.T) {
+	manifest := mutationpayload.DNSEngineSwitchManifestCommitment{
+		Mode: transport.DNSEngineSwitchModeAdopt, TargetEngine: transport.DNSEnginePowerDNS,
+		Zones: []transport.DNSEngineSwitchZoneSnapshot{{Domain: "gone.example.test", Delete: true}},
+	}
+	var calls []string
+	query := func(_ context.Context, network, endpoint, zone string) error {
+		if endpoint != "192.0.2.10:53" || zone != "gone.example.test" {
+			t.Fatalf("unexpected negative query: %s %s", endpoint, zone)
+		}
+		calls = append(calls, network)
+		return nil
+	}
+	verified, err := ProbePDNSAdoptionDeletedSOA(context.Background(), "192.0.2.10:53", manifest, query)
+	if err != nil || verified != 1 || len(calls) != 2 || calls[0] != "udp" || calls[1] != "tcp" {
+		t.Fatalf("deleted proof=%d calls=%v err=%v", verified, calls, err)
+	}
+	for _, failed := range []string{"udp", "tcp"} {
+		verified, err := ProbePDNSAdoptionDeletedSOA(context.Background(), "192.0.2.10:53", manifest,
+			func(_ context.Context, network, _, _ string) error {
+				if network == failed {
+					return errors.New("not proved")
+				}
+				return nil
+			})
+		if err == nil || verified != 0 {
+			t.Fatalf("%s unavailable negative proof admitted: verified=%d err=%v", failed, verified, err)
+		}
+	}
+	if _, err := ProbePDNSAdoptionDeletedSOA(context.Background(), "127.0.0.1:53", manifest, query); err == nil {
+		t.Fatal("loopback negative endpoint was accepted")
+	}
+}

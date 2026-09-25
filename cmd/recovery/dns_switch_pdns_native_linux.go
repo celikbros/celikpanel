@@ -18,8 +18,9 @@ import (
 // PowerDNS source observation. It is shared by status and a future narrowly
 // admitted inverse; it never grants mutation authority by itself.
 type pdnsAdoptionNativeProof struct {
-	ActiveSOA  int
-	DeletedSOA int
+	ActiveSOA          int
+	DeletedSOA         int
+	DeletedSOAVerified int
 }
 
 func proveOnlyPDNSActiveUnits(units []dnsenginerecovery.NativeUnitObservation) error {
@@ -84,6 +85,10 @@ func proveInstalledPDNSAdoptionNative(
 	if err != nil {
 		return pdnsAdoptionNativeProof{}, fmt.Errorf("verify frozen authoritative PowerDNS SOA answers: %w", err)
 	}
+	deletedVerified, err := dnsenginerecovery.ProbeInstalledPDNSAdoptionDeletedSOA(ctx, net.JoinHostPort(address, "53"), manifest)
+	if err != nil || deletedVerified != deletedSOA {
+		return pdnsAdoptionNativeProof{}, errors.Join(errors.New("verify frozen deleted-zone absence over UDP and TCP"), err)
+	}
 	if again, err := verifyInstalledPDNSRuntime(ctx); err != nil || again != mainPID {
 		return pdnsAdoptionNativeProof{}, errors.Join(errors.New("native PowerDNS process changed around SOA observation"), err)
 	}
@@ -106,5 +111,5 @@ func proveInstalledPDNSAdoptionNative(
 	if err := ctx.Err(); err != nil {
 		return pdnsAdoptionNativeProof{}, err
 	}
-	return pdnsAdoptionNativeProof{ActiveSOA: activeSOA, DeletedSOA: deletedSOA}, nil
+	return pdnsAdoptionNativeProof{ActiveSOA: activeSOA, DeletedSOA: deletedSOA, DeletedSOAVerified: deletedVerified}, nil
 }

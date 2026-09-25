@@ -106,6 +106,9 @@ func TestInstalledPDNSInverseDoesNotTreatDeletedZoneAsProvedAbsent(t *testing.T)
 	if err := requirePDNSAdoptionInverseNativeProof(pdnsAdoptionNativeProof{ActiveSOA: 1, DeletedSOA: 1}); err == nil {
 		t.Fatal("deleted-zone absence was inferred from SQL rather than native answers")
 	}
+	if err := requirePDNSAdoptionInverseNativeProof(pdnsAdoptionNativeProof{ActiveSOA: 1, DeletedSOA: 1, DeletedSOAVerified: 1}); err != nil {
+		t.Fatalf("fully counted native negative answers rejected: %v", err)
+	}
 }
 func TestInstalledPDNSInverseDeletedZoneStopsBeforeDurableEffects(t *testing.T) {
 	request := strings.Repeat("a", 32)
@@ -157,7 +160,7 @@ func TestInstalledPDNSInverseDeletedZoneStopsBeforeDurableEffects(t *testing.T) 
 		},
 	}
 	err := dnsenginerecovery.CompletePDNSAdoptionInverse(context.Background(), ops)
-	if err == nil || !strings.Contains(err.Error(), "deleted-zone authority is absent") {
+	if err == nil || !strings.Contains(err.Error(), "exact deleted-zone absence proof") {
 		t.Fatalf("unproved deleted-zone authority was admitted: %v", err)
 	}
 	if effects != 0 {

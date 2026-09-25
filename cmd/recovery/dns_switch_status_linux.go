@@ -697,7 +697,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "PowerDNS adoption evidence changed around the native source observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
 			return exitUnavailable
 		}
-		fmt.Fprintf(out, "The installed PowerDNS config files, owners and paths, database bytes and read-only SQLite zone/peer/integrity transaction matched the frozen adoption manifest; the verified native process was the sole active DNS authority and owned local TCP/UDP port 53 between secured reads. At that endpoint, %d active frozen zones returned exact authoritative SOA serials over TCP and UDP; %d deleted-zone absence claims remain unproved. Other records, loaded config, later owner edits and inverse authority remain unproved.\n", native.ActiveSOA, native.DeletedSOA)
+		fmt.Fprintf(out, "The installed PowerDNS config files, owners and paths, database bytes and read-only SQLite zone/peer/integrity transaction matched the frozen adoption manifest; the verified native process was the sole active DNS authority and owned local TCP/UDP port 53 between secured reads. At that endpoint, %d active frozen zones returned exact authoritative SOA serials over TCP and UDP; %d/%d frozen deleted zones returned exact negative SOA answers over TCP and UDP. Other records, loaded config, later owner edits and inverse authority remain unproved.\n", native.ActiveSOA, native.DeletedSOAVerified, native.DeletedSOA)
 	}
 	fmt.Fprintf(out, "Frozen native inverse shape: %s. This classification does not prove worker exclusion, owner authority or safe recovery execution.\n", observation.InverseKind)
 	switch observation.TargetReceipt {
