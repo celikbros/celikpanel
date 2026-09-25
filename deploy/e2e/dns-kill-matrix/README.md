@@ -84,6 +84,9 @@ The [PowerDNS external-adoption intent/after-write trial](NATIVE-PDNS-ADOPTION-I
 adds the first runnable `pdns-adopt` cell with a sealed real external authority.
 It proves same-request forward convergence after a SIGKILL, not the later
 rollback or management-absent recovery boundaries.
+The [PowerDNS adoption rolled-back/before-write trial](NATIVE-PDNS-ADOPTION-ROLLBACK-20260925.md)
+adds a second `pdns-adopt` cell. Its terminal classification was forward
+`target_converged`, so it does not prove source rollback or journal retirement.
 
 ## QEMU fixture provisioning
 
