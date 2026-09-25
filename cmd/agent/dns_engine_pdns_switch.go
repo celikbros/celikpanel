@@ -1350,14 +1350,15 @@ func startPDNSTargetWithOps(
 type pdnsRollbackStoppedProofOps struct {
 	inspectUnit      func(context.Context) (bindInstallUnitState, error)
 	inspectProcesses func(context.Context) (dnsUnitProcesses, error)
+	inspectCgroup    func(context.Context) error
 }
 
 func verifyPDNSStoppedBeforeDatabaseRestoreWithOps(
 	ctx context.Context,
 	ops pdnsRollbackStoppedProofOps,
 ) error {
-	if ops.inspectUnit == nil || ops.inspectProcesses == nil {
-		return errors.New("PowerDNS stopped proof requires native unit and process observers")
+	if ops.inspectUnit == nil || ops.inspectProcesses == nil || ops.inspectCgroup == nil {
+		return errors.New("PowerDNS stopped proof requires native unit, process and cgroup observers")
 	}
 	return dnsenginerecovery.VerifyStoppedUnit(ctx, "pdns.service",
 		func(proofCtx context.Context) (dnsenginerecovery.StoppedUnitObservation, error) {
@@ -1367,6 +1368,9 @@ func verifyPDNSStoppedBeforeDatabaseRestoreWithOps(
 			}
 			processes, err := ops.inspectProcesses(proofCtx)
 			if err != nil {
+				return dnsenginerecovery.StoppedUnitObservation{}, err
+			}
+			if err := ops.inspectCgroup(proofCtx); err != nil {
 				return dnsenginerecovery.StoppedUnitObservation{}, err
 			}
 			return dnsenginerecovery.StoppedUnitObservation{
@@ -1386,6 +1390,9 @@ func verifyPDNSStoppedBeforeDatabaseRestore(ctx context.Context, systemctl strin
 		},
 		inspectProcesses: func(proofCtx context.Context) (dnsUnitProcesses, error) {
 			return inspectDNSUnitProcesses(proofCtx, systemctl, "pdns.service")
+		},
+		inspectCgroup: func(proofCtx context.Context) error {
+			return dnsenginerecovery.ProbeEmptyUnitCgroup(proofCtx, "pdns.service", dnsenginerecovery.SystemdCgroupUnitRunner, dnsenginerecovery.NativeCgroupEvents)
 		},
 	})
 }

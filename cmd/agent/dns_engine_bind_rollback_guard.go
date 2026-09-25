@@ -8,14 +8,15 @@ import (
 )
 
 // A newly activated BIND target must be inactive, with dead SubState and zero
-// systemd MainPID/ControlPID, before its configuration preimage is restored.
-// This does not prove an empty cgroup or exclude an independent owner restart.
+// systemd MainPID/ControlPID and an empty/absent native cgroup, before its
+// configuration preimage is restored. This cannot exclude a later owner restart.
 func verifyBINDTargetStoppedBeforeConfigRestoreWithOps(
 	ctx context.Context,
 	inspectUnit func(context.Context) (bindInstallUnitState, error),
 	inspectProcesses func(context.Context) (dnsUnitProcesses, error),
+	inspectCgroup func(context.Context) error,
 ) error {
-	if inspectUnit == nil || inspectProcesses == nil {
+	if inspectUnit == nil || inspectProcesses == nil || inspectCgroup == nil {
 		return errors.New("BIND target stop proof requires native unit and process observers")
 	}
 	return dnsenginerecovery.VerifyStoppedUnit(ctx, "named.service",
@@ -26,6 +27,9 @@ func verifyBINDTargetStoppedBeforeConfigRestoreWithOps(
 			}
 			processes, err := inspectProcesses(proofCtx)
 			if err != nil {
+				return dnsenginerecovery.StoppedUnitObservation{}, err
+			}
+			if err := inspectCgroup(proofCtx); err != nil {
 				return dnsenginerecovery.StoppedUnitObservation{}, err
 			}
 			return dnsenginerecovery.StoppedUnitObservation{
@@ -46,6 +50,9 @@ func verifyBINDTargetStoppedBeforeConfigRestore(ctx context.Context, systemctl s
 		},
 		func(proofCtx context.Context) (dnsUnitProcesses, error) {
 			return inspectDNSUnitProcesses(proofCtx, systemctl, "named.service")
+		},
+		func(proofCtx context.Context) error {
+			return dnsenginerecovery.ProbeEmptyUnitCgroup(proofCtx, "named.service", dnsenginerecovery.SystemdCgroupUnitRunner, dnsenginerecovery.NativeCgroupEvents)
 		},
 	)
 }

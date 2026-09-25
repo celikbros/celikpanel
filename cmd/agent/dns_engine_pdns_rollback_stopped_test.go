@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -31,10 +32,26 @@ func TestPDNSRollbackRequiresStableDeadTargetBeforeDatabaseRestore(t *testing.T)
 				inspectProcesses: func(context.Context) (dnsUnitProcesses, error) {
 					return tc.processes, nil
 				},
+				inspectCgroup: func(context.Context) error { return nil },
 			})
 			if (err != nil) != tc.wantError {
 				t.Fatalf("stopped proof error = %v; want error %t", err, tc.wantError)
 			}
 		})
+	}
+	stopped := bindInstallUnitState{name: "pdns.service", loadState: "loaded", activeState: "inactive", unitFileState: "enabled"}
+	reads := 0
+	if err := verifyPDNSStoppedBeforeDatabaseRestoreWithOps(context.Background(), pdnsRollbackStoppedProofOps{
+		inspectUnit:      func(context.Context) (bindInstallUnitState, error) { return stopped, nil },
+		inspectProcesses: func(context.Context) (dnsUnitProcesses, error) { return dnsUnitProcesses{SubState: "dead"}, nil },
+		inspectCgroup: func(context.Context) error {
+			reads++
+			if reads == 2 {
+				return errors.New("cgroup populated")
+			}
+			return nil
+		},
+	}); err == nil {
+		t.Fatal("PowerDNS cgroup becoming populated was accepted")
 	}
 }

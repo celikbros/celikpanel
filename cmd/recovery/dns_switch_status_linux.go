@@ -538,7 +538,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				fmt.Fprintln(diagnostic, "DNS rollback evidence changed around the native stopped-target observation. Preserve the accepted journal and retry after the owner change settles; no recovery mutation was started.")
 				return exitUnavailable
 			}
-			fmt.Fprintf(out, "The retained rollback target %s was inactive/dead with zero systemd main/control PIDs in two native reads. This point-in-time observation does not prove cgroup emptiness, DNS health, owner-edit exclusion or recovery authority.\n", stoppedName)
+			fmt.Fprintf(out, "The retained rollback target %s was a loaded inactive/dead unit with zero systemd main/control PIDs and an empty or absent native cgroup in two reads. This point-in-time observation does not prove later owner-edit exclusion, DNS health or recovery authority.\n", stoppedName)
 		}
 	}
 	if observation.SourceEngine == "bind" || observation.TargetEngine == "bind" {

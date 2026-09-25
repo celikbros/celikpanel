@@ -11,13 +11,21 @@ import (
 // ProbeStoppedUnit binds the shared stop predicate to the independent,
 // fixed-name systemd readers. It makes no native change and is not recovery
 // admission without exact operation, worker, owner and lock proofs.
-func ProbeStoppedUnit(
+func ProbeStoppedUnit(ctx context.Context, name string, unitRunner NativeUnitRunner, runtimeRunner BINDRuntimeRunner) error {
+	return probeStoppedUnitWithCgroup(ctx, name, unitRunner, runtimeRunner,
+		func(proofCtx context.Context, unit string) error {
+			return ProbeEmptyUnitCgroup(proofCtx, unit, SystemdCgroupUnitRunner, NativeCgroupEvents)
+		})
+}
+
+func probeStoppedUnitWithCgroup(
 	ctx context.Context,
 	name string,
 	unitRunner NativeUnitRunner,
 	runtimeRunner BINDRuntimeRunner,
+	cgroup func(context.Context, string) error,
 ) error {
-	if ctx == nil || unitRunner == nil || runtimeRunner == nil ||
+	if ctx == nil || unitRunner == nil || runtimeRunner == nil || cgroup == nil ||
 		(name != "named.service" && name != "pdns.service") {
 		return errors.New("invalid independent DNS stopped-unit probe")
 	}
@@ -34,6 +42,9 @@ func ProbeStoppedUnit(
 			processes, err := parseUnitRuntime(raw)
 			if err != nil {
 				return StoppedUnitObservation{}, fmt.Errorf("decode DNS target process state: %w", err)
+			}
+			if err := cgroup(proofCtx, name); err != nil {
+				return StoppedUnitObservation{}, fmt.Errorf("prove DNS target cgroup empty: %w", err)
 			}
 			unit := units[0]
 			return StoppedUnitObservation{

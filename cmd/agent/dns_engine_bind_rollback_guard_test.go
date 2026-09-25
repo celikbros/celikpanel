@@ -15,11 +15,13 @@ func TestBINDRollbackTargetStopProof(t *testing.T) {
 		return stopped, nil
 	}
 	inspectProcesses := func(context.Context) (dnsUnitProcesses, error) { return processes, nil }
-	if err := verifyBINDTargetStoppedBeforeConfigRestoreWithOps(context.Background(), inspectUnit, inspectProcesses); err != nil {
+	cgroupCalls := 0
+	inspectCgroup := func(context.Context) error { cgroupCalls++; return nil }
+	if err := verifyBINDTargetStoppedBeforeConfigRestoreWithOps(context.Background(), inspectUnit, inspectProcesses, inspectCgroup); err != nil {
 		t.Fatal(err)
 	}
-	if calls != 2 {
-		t.Fatalf("unit observations = %d, want two", calls)
+	if calls != 2 || cgroupCalls != 2 {
+		t.Fatalf("unit/cgroup observations = %d/%d, want two each", calls, cgroupCalls)
 	}
 	for _, tc := range []struct {
 		name      string
@@ -37,6 +39,7 @@ func TestBINDRollbackTargetStopProof(t *testing.T) {
 				context.Background(),
 				func(context.Context) (bindInstallUnitState, error) { return tc.unit, nil },
 				func(context.Context) (dnsUnitProcesses, error) { return tc.processes, nil },
+				inspectCgroup,
 			); err == nil {
 				t.Fatal("unsafe target was accepted")
 			}
@@ -54,6 +57,7 @@ func TestBINDRollbackTargetStopProof(t *testing.T) {
 			return next, nil
 		},
 		inspectProcesses,
+		inspectCgroup,
 	); err == nil {
 		t.Fatal("changed unit was accepted")
 	}
@@ -68,12 +72,24 @@ func TestBINDRollbackTargetStopProof(t *testing.T) {
 			}
 			return processes, nil
 		},
+		inspectCgroup,
 	); err == nil {
 		t.Fatal("process appearing between reads was accepted")
 	}
+	cgroupReads := 0
+	if err := verifyBINDTargetStoppedBeforeConfigRestoreWithOps(context.Background(), inspectUnit, inspectProcesses,
+		func(context.Context) error {
+			cgroupReads++
+			if cgroupReads == 2 {
+				return errors.New("cgroup populated")
+			}
+			return nil
+		}); err == nil {
+		t.Fatal("target cgroup becoming populated was accepted")
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := verifyBINDTargetStoppedBeforeConfigRestoreWithOps(ctx, inspectUnit, inspectProcesses); !errors.Is(err, context.Canceled) {
+	if err := verifyBINDTargetStoppedBeforeConfigRestoreWithOps(ctx, inspectUnit, inspectProcesses, inspectCgroup); !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled proof = %v", err)
 	}
 }

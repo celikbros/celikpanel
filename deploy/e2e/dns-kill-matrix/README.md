@@ -73,6 +73,8 @@ new matrix coverage.
 The [shared stop guard regression](NATIVE-SHARED-STOP-GUARD-20260925.md)
 repeats that same cell after extraction into `dnsenginerecovery`. It also adds
 no new matrix coverage.
+The [cgroup stop guard regression](NATIVE-DNS-CGROUP-GUARD-20260925.md)
+repeats it with cgroup-v2 population checks. It adds no matrix coverage.
 
 ## QEMU fixture provisioning
 
