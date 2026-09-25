@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/dnswire"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -322,6 +323,7 @@ type dnsSOAProbeResult struct {
 	Authoritative      bool
 	RCode              int
 	AnswerCount        int
+	ExactDeletedZone   bool // Set only after the shared full-packet negative SOA validator succeeds.
 	SOASerials         []uint32
 	AnswerSOAOwners    []string
 	AuthoritySOAOwners []string
@@ -458,7 +460,7 @@ func verifyDNSZoneAuthoritiesAt(
 			}
 			if zone.Delete {
 				if !validDeletedDNSZoneProof(zone.Domain, result) {
-					return fmt.Errorf("deleted zone %s remains authoritative over %s", zone.Domain, network)
+					return fmt.Errorf("deleted zone %s absence could not be verified over %s", zone.Domain, network)
 				}
 				continue
 			}
@@ -472,11 +474,9 @@ func verifyDNSZoneAuthoritiesAt(
 }
 
 func validDeletedDNSZoneProof(domain string, result dnsSOAProbeResult) bool {
-	if result.AnswerCount != 0 || len(result.SOASerials) != 0 || len(result.AnswerSOAOwners) != 0 {
+	if !result.ExactDeletedZone || !result.Authoritative || result.AnswerCount != 0 ||
+		len(result.SOASerials) != 0 || len(result.AnswerSOAOwners) != 0 {
 		return false
-	}
-	if !result.Authoritative {
-		return result.RCode == dnsRCodeNameError || result.RCode == dnsRCodeRefused
 	}
 	if result.RCode != dnsRCodeNameError && result.RCode != dnsRCodeNoError {
 		return false
@@ -681,6 +681,7 @@ func parseDNSZoneSOAResponse(message []byte, id uint16, domain string) (dnsSOAPr
 	if offset != len(message) {
 		return dnsSOAProbeResult{}, errors.New("DNS response contains trailing bytes")
 	}
+	result.ExactDeletedZone = dnswire.ValidateDeletedZoneSOAResponse(message, id, domain) == nil
 	return result, nil
 }
 

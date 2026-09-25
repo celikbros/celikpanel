@@ -15,6 +15,12 @@ func QueryDeletedZoneSOA(ctx context.Context, network, endpoint, zone string) er
 	if err != nil {
 		return err
 	}
+	return ValidateDeletedZoneSOAResponse(message, id, zone)
+}
+
+// ValidateDeletedZoneSOAResponse applies the same strict wire proof to a reply
+// already obtained by another bounded SOA probe.
+func ValidateDeletedZoneSOAResponse(message []byte, id uint16, zone string) error {
 	return parseDeletedZoneSOAResponse(message, id, zone)
 }
 

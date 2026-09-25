@@ -594,10 +594,14 @@ func TestDeletedChildRejectsChildApexAuthoritativeSOA(t *testing.T) {
 			t.Fatalf("rcode=%d child-apex negative authority was accepted", rcode)
 		}
 	}
-	if !validDeletedDNSZoneProof(domain, dnsSOAProbeResult{RCode: dnsRCodeRefused}) {
-		t.Fatal("non-authoritative REFUSED deletion proof regressed")
+	if validDeletedDNSZoneProof(domain, testNegativeSOAResponse(t, domain, "example.test", dnsRCodeRefused)) {
+		t.Fatal("authoritative REFUSED with a parent SOA passed deletion proof")
+	}
+	if validDeletedDNSZoneProof(domain, dnsSOAProbeResult{RCode: dnsRCodeRefused}) {
+		t.Fatal("non-authoritative REFUSED passed as deletion proof")
 	}
 }
+
 func TestSOAResponseBindsQuestionAndRejectsForeignAnswers(t *testing.T) {
 	const domain = "example.test"
 	query, id, err := buildDNSZoneSOAQuery(domain)
@@ -607,8 +611,8 @@ func TestSOAResponseBindsQuestionAndRejectsForeignAnswers(t *testing.T) {
 	base := append([]byte(nil), query...)
 	binary.BigEndian.PutUint16(base[2:4], dnsResponseQR|dnsRCodeRefused)
 	result, err := parseDNSZoneSOAResponse(base, id, domain)
-	if err != nil || !validDeletedDNSZoneProof(domain, result) {
-		t.Fatalf("exact no-answer response rejected: %+v %v", result, err)
+	if err != nil || validDeletedDNSZoneProof(domain, result) {
+		t.Fatalf("REFUSED no-answer response passed deletion proof: %+v %v", result, err)
 	}
 
 	for _, tc := range []struct {

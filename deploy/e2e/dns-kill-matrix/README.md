@@ -111,6 +111,12 @@ post-kill boundary. It verified one active parent and the absent child over
 UDP and TCP before Agent restart. It does not execute an inverse or add
 phase coverage.
 
+The [corrected Agent deleted-zone parity trial](NATIVE-PDNS-AGENT-DELETION-PARITY-20260925.md)
+repeats the same cell with Agent completion using the shared strict negative-SOA
+validator. It passed the proven kill, independent 1/1 deleted-child proof,
+same-request convergence and 31/31 healthy samples. It adds no phase coverage
+or independent inverse.
+
 The [shared PowerDNS rollback regression](NATIVE-PDNS-ADOPTION-SHARED-ROLLBACK-20260925.md)
 repeats that cell after the Agent adopted the shared fail-stop rollback sequence.
 It adds no matrix coverage or independent recovery proof.

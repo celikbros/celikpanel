@@ -298,7 +298,7 @@ func verifyDeletedDNSZoneAt(
 		result, err := probe(probeCtx, network, address, domain)
 		cancel()
 		if err != nil || !validDeletedDNSZoneProof(domain, result) {
-			return errors.New("deleted DNS zone remains served by the peer")
+			return errors.New("deleted DNS zone absence could not be verified at the peer")
 		}
 	}
 	return nil
