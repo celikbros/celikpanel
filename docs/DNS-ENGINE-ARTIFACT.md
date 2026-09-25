@@ -845,7 +845,11 @@ restoration and final native proof. The v1 journal, state and ledger schemas
 and their publication order are unchanged. The same accepted operation can
 retry its inverse after the native issue is resolved.
 
-Focused and wider DNS/BIND/PowerDNS package tests passed. This guard does not
+Focused and wider DNS/BIND/PowerDNS package tests passed. The scoped
+[Debian native regression](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-STOP-GUARD-20260925.md)
+repeated a real SIGKILL before the rolled-back journal write and passed
+same-request target convergence and 30-second DNS/management health. It is
+one repeated matrix cell, not new coverage. This guard does not
 exclude an independent owner restart after the read, detect a stray process
 outside systemd's MainPID/ControlPID, provide an Agent-independent executor or
 prove the native owner-edit/reboot matrix. P0.4 remains open.

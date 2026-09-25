@@ -66,6 +66,9 @@ Five clean-bundle native BIND trials are recorded at the
 [source-stopped before-write](NATIVE-BIND-SOURCE-BEFORE-WRITE-20260925.md) and
 [target-started after-write](NATIVE-BIND-TARGET-STARTED-20260925.md)
 boundaries. They cover five runnable cells; the rest of the matrix is still open.
+The [BIND inverse guard regression](NATIVE-BIND-STOP-GUARD-20260925.md)
+repeats one of those cells with the required native stop proof; it adds no
+new matrix coverage.
 
 ## QEMU fixture provisioning
 
