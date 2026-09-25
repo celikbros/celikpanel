@@ -93,6 +93,12 @@ repeats that adoption rollback cell with a read-only probe before the same-reque
 retry. The pre-retry result was indeterminate; only the retry converged forward.
 It adds no new matrix cell and does not prove automatic recovery.
 
+The [managed-source pre-retry serving trial](NATIVE-DNS-PRE-RETRY-SERVING-20260925.md)
+repeats the BIND rollback cell and proves exact prior PowerDNS rollback plus
+authoritative UDP/TCP answers before the same-request retry. It demonstrates
+Agent-mediated startup recovery at that boundary, not an Agent-independent
+inverse, and adds no new matrix cell.
+
 ## QEMU fixture provisioning
 
 `fixture.py` provisions one Debian 13 guest and one Arch guest on a **Linux
@@ -682,8 +688,12 @@ For socket cells, a separate read-only `recovery.pre_retry_probe` is taken
 after the ordinary Agent socket and exact request identity are proven, but
 before either same-request RPC retry. Its `indeterminate` outcome is a
 recorded startup observation, not evidence of successful rollback and not a
-failed retry probe. A valid observation is required for a verified cell; the
-two post-retry probes still determine final convergence. This separates
+failed retry probe. A valid observation is required for a verified cell.
+The controller also records an authoritative UDP/TCP query before retry;
+only an exact `rolled_back_source_active` outcome plus a successful query
+sets `pre_retry_source_serving`. That query is diagnostic and does not
+change the final safety verdict. The two post-retry probes still determine
+final convergence. This separates
 Agent startup behavior from recovery caused by retry. Existing result v1
 artifacts without this additive field retain their original meaning.
 

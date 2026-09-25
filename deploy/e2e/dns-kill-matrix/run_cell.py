@@ -5693,6 +5693,24 @@ def run_cell(settings: Settings) -> int:
                     verification_failures.append(
                         "pre-retry startup recovery observation is invalid"
                     )
+                pre_retry_dns, _ = endpoint_check(
+                    "dns-before-retry",
+                    lambda: query_authoritative_dns(
+                        settings.dns_address,
+                        settings.dns_port,
+                        settings.dns_name,
+                        settings.dns_type,
+                        settings.dns_timeout,
+                    ),
+                    transcript,
+                )
+                recovery["pre_retry_dns"] = pre_retry_dns
+                recovery["pre_retry_source_serving"] = bool(
+                    pre_retry_probe.get("valid")
+                    and pre_retry_probe.get("recovery_outcome")
+                    == "rolled_back_source_active"
+                    and pre_retry_dns.get("ok")
+                )
                 for ordinal in (1, 2):
                     retry_report, error = checked_command(
                         settings,

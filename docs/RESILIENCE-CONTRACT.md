@@ -202,6 +202,15 @@ be counted as independent startup rollback. Result v1 adds an optional harness
 field; persisted DNS and probe schemas do not change. Agent-independent
 inverse execution and owner-native terminal recovery remain open under P0.4.
 
+The [managed-source pre-retry native trials](../deploy/e2e/dns-kill-matrix/NATIVE-DNS-PRE-RETRY-SERVING-20260925.md)
+resolve that observation for a source with existing state and ownership
+receipts. At the same `rolled-back:before-write` BIND boundary, ordinary
+Agent startup restored and verified the prior PowerDNS state, exact failed
+ledger verdict and retired journal before any retry. A second trial proved
+authoritative UDP/TCP DNS answers at that point. The same request then
+converged forward to BIND. This is scoped Agent-mediated startup rollback,
+not Agent-independent recovery or continuous-service proof; P0.4 stays open.
+
 Every PR changing lifecycle, persisted evidence, access gates, recovery or native
 service ownership must cite affected P0/invariants, before/after behavior,
 compatibility and rollback implications, and exact acceptance evidence. A change
