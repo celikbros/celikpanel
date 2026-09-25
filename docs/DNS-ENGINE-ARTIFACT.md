@@ -822,7 +822,7 @@ sequence that an independent executor can use after establishing its own
 accepted operation, lock and native owner proofs. The sequence proves the
 existing authoritative configuration, restores only the frozen engine-state
 snapshot, and verifies the restored PowerDNS authority. Cancellation is
-checked before every step. Failure withholds successors and retains the
+checked before and after every step. Failure withholds successors and retains the
 same rolling-back journal for exact replay. This extraction neither grants
 an independent CLI authority nor changes native service lifecycle, v1
 journal/ledger/state bytes or the installed host.

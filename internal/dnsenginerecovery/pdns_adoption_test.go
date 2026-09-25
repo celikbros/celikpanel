@@ -56,6 +56,16 @@ func TestRollbackPDNSAdoptionFailStopAndCancellation(t *testing.T) {
 	if !errors.Is(err, context.Canceled) || !reflect.DeepEqual(calls, []string{"prove", "restore"}) {
 		t.Fatalf("cancelled restore still verified: %v, %v", calls, err)
 	}
+	ctx, cancel = context.WithCancel(context.Background())
+	calls = nil
+	err = RollbackPDNSAdoption(ctx, PDNSAdoptionRollbackOps{
+		ProveConfigs:   func(context.Context) error { calls = append(calls, "prove"); return nil },
+		RestoreState:   func(context.Context) error { calls = append(calls, "restore"); return nil },
+		VerifyRestored: func(context.Context) error { calls = append(calls, "verify"); cancel(); return nil },
+	})
+	if !errors.Is(err, context.Canceled) || !reflect.DeepEqual(calls, []string{"prove", "restore", "verify"}) {
+		t.Fatalf("cancelled final proof reported success: %v, %v", calls, err)
+	}
 }
 
 func TestRollbackPDNSAdoptionRejectsMissingEffects(t *testing.T) {

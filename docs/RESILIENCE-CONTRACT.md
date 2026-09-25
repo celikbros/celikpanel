@@ -1282,7 +1282,7 @@ native fault matrix keep P0.4 open.
 P0.4, constitutional invariants 1/2/3: PowerDNS adoption rollback now uses
 one shared fail-stop sequence for owner-aware config proof, frozen state
 restoration and native source verification. Context cancellation is checked
-before each effect; errors withhold later steps and retain the same journal.
+before and after each effect; errors withhold later steps and retain the same journal.
 The Agent supplies its existing certified host callbacks. No v1 document,
 phase, installed host or native PowerDNS lifecycle changed. Focused order,
 failure and cancellation tests plus the affected Linux Agent suite are scoped

@@ -36,6 +36,9 @@ func RollbackPDNSAdoption(ctx context.Context, ops PDNSAdoptionRollbackOps) erro
 		if err := step.run(ctx); err != nil {
 			return fmt.Errorf("PowerDNS adoption rollback %s: %w", step.name, err)
 		}
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("PowerDNS adoption rollback interrupted after %s: %w", step.name, err)
+		}
 	}
 	return nil
 }
