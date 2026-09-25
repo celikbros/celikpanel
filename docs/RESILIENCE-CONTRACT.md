@@ -1398,3 +1398,12 @@ journal available for same-request continuation. The subsequent retry reaches
 the terminal failed verdict and journal retirement in focused tests. This is
 in-memory checkpoint evidence only; it does not replace native process-kill or
 reboot acceptance, and no CLI action was enabled.
+
+P0.4/P0.5, constitutional invariants 1/2/3: the shared read-only native
+Certbot source reader now retries only a transient Linux openat2 EAGAIN at most
+three times. A successful descriptor still passes the same path, owner, inode,
+revision, trust and byte checks; persistent uncertainty and every other
+resolver error fail closed without issuance, renewal, publication or cleanup.
+No persisted schema/version or recovery authority changes. Focused repeated
+Linux reader/Agent tests and vet pass. This does not establish independent
+renewal or the remaining native fault/owner-edit matrix.

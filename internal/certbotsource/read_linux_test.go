@@ -4,11 +4,13 @@ package certbotsource
 
 import (
 	"bytes"
-	"golang.org/x/sys/unix"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 func sourceFixture(t *testing.T, purpose string) (Reader, string, string) {
@@ -101,4 +103,44 @@ func TestNativeGenerationMismatchAndOwnerKeyChangeRefused(t *testing.T) {
 			t.Fatal("owner change silently normalized")
 		}
 	})
+}
+
+func TestSecureResolverRetriesTransientLookupWithoutTrustFallback(t *testing.T) {
+	reader, _, lineage := sourceFixture(t, "panel")
+	calls := 0
+	reader.Openat2 = func(dirfd int, name string, how *unix.OpenHow) (int, error) {
+		calls++
+		if calls <= 2 {
+			return -1, unix.EAGAIN
+		}
+		return unix.Openat2(dirfd, name, how)
+	}
+	cert, key, err := reader.ReadPair(lineage)
+	if err != nil || !bytes.Equal(cert, []byte("fullchain-fixture")) || !bytes.Equal(key, []byte("privkey-fixture")) {
+		t.Fatalf("secure retry did not read the proved pair: %v", err)
+	}
+	if calls <= 2 {
+		t.Fatalf("secure resolver did not retry transient EAGAIN: %d calls", calls)
+	}
+
+	for _, tc := range []struct {
+		name string
+		err  error
+		want int
+	}{
+		{name: "persistent uncertainty", err: unix.EAGAIN, want: 3},
+		{name: "permission denied", err: unix.EACCES, want: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			reader.Openat2 = func(int, string, *unix.OpenHow) (int, error) {
+				calls++
+				return -1, tc.err
+			}
+			fd, err := reader.OpenAt(-1, "fixed", unix.O_RDONLY, ResolveRoot)
+			if fd != -1 || !errors.Is(err, tc.err) || calls != tc.want {
+				t.Fatalf("fd=%d err=%v calls=%d, want %v after %d attempts", fd, err, calls, tc.err, tc.want)
+			}
+		})
+	}
 }

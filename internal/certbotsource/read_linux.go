@@ -324,11 +324,23 @@ func (r Reader) OpenAt(directoryFD int, relative string, flags int, resolve uint
 	if r.Openat2 == nil {
 		return -1, errors.New("secure certificate source resolver is unavailable")
 	}
-	fd, err := r.Openat2(directoryFD, relative, &unix.OpenHow{
-		Flags: uint64(flags), Resolve: resolve,
-	})
-	if errors.Is(err, unix.ENOSYS) {
-		return -1, fmt.Errorf("secure panel certificate source access requires Linux openat2: %w", err)
+	how := &unix.OpenHow{Flags: uint64(flags), Resolve: resolve}
+	// openat2 can report EAGAIN when it cannot prove a RESOLVE_BENEATH
+	// lookup did not race with a path change. Retry only that transient
+	// kernel result; every successful descriptor still undergoes the
+	// ownership, identity and byte checks in this reader.
+	for attempt := 0; attempt < 3; attempt++ {
+		fd, err := r.Openat2(directoryFD, relative, how)
+		if errors.Is(err, unix.ENOSYS) {
+			return -1, fmt.Errorf("secure panel certificate source access requires Linux openat2: %w", err)
+		}
+		if !errors.Is(err, unix.EAGAIN) {
+			return fd, err
+		}
+		if fd >= 0 {
+			unix.Close(fd)
+			return -1, errors.New("secure certificate source resolver returned a descriptor with EAGAIN")
+		}
 	}
-	return fd, err
+	return -1, fmt.Errorf("secure panel certificate source lookup remained uncertain: %w", unix.EAGAIN)
 }
