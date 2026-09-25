@@ -6,9 +6,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"reflect"
+	"sort"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/dnslistener"
@@ -58,33 +60,75 @@ func ProbeBINDListeners(ctx context.Context, mainPID uint64, primaryIP string, r
 // ProbeAuthorityListeners binds a strictly parsed public socket inventory to
 // one previously verified systemd process. It is not mutation admission.
 func ProbeAuthorityListeners(ctx context.Context, process string, mainPID uint64, primaryIP string, runner BINDListenerRunner) error {
+	_, err := observeAuthorityListeners(ctx, process, mainPID, primaryIP, runner)
+	return err
+}
+
+// ProbeAuthorityIPv4Address selects a concrete local address covered by the
+// same verified TCP and UDP listener inventory. It observes rather than
+// reserving the address; the caller must recheck process/listeners afterwards.
+func ProbeAuthorityIPv4Address(ctx context.Context, process string, mainPID uint64, runner BINDListenerRunner) (string, error) {
+	identities, err := observeAuthorityListeners(ctx, process, mainPID, "", runner)
+	if err != nil {
+		return "", err
+	}
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+	return selectAuthorityIPv4Address(identities, mainPID, addresses)
+}
+
+func selectAuthorityIPv4Address(identities []string, mainPID uint64, addresses []net.Addr) (string, error) {
+	var matched []string
+	seen := make(map[string]bool)
+	for _, address := range addresses {
+		ipnet, ok := address.(*net.IPNet)
+		if !ok || ipnet.IP.To4() == nil || ipnet.IP.IsLoopback() ||
+			ipnet.IP.IsUnspecified() || ipnet.IP.IsLinkLocalUnicast() {
+			continue
+		}
+		ip := ipnet.IP.To4().String()
+		if !seen[ip] && dnslistener.HasIPv4Listener(identities, ip, mainPID) {
+			matched = append(matched, ip)
+			seen[ip] = true
+		}
+	}
+	if len(matched) == 0 {
+		return "", errors.New("no concrete local IPv4 address is covered by the verified DNS authority listeners")
+	}
+	sort.Strings(matched)
+	return matched[0], nil
+}
+
+func observeAuthorityListeners(ctx context.Context, process string, mainPID uint64, primaryIP string, runner BINDListenerRunner) ([]string, error) {
 	if ctx == nil || runner == nil || mainPID == 0 {
-		return errors.New("invalid BIND listener observation")
+		return nil, errors.New("invalid BIND listener observation")
 	}
 	var first []string
 	for attempt := range 2 {
 		if err := ctx.Err(); err != nil {
-			return err
+			return nil, err
 		}
 		raw, err := runner(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if len(raw) > 64<<10 {
-			return errors.New("DNS listener output exceeds its bound")
+			return nil, errors.New("DNS listener output exceeds its bound")
 		}
 		identities, err := dnslistener.CanonicalPublicListeners(string(raw), process, mainPID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if primaryIP != "" && !dnslistener.HasIPv4Listener(identities, primaryIP, mainPID) {
-			return errors.New("BIND does not own TCP and UDP port 53 on the primary IPv4 address")
+			return nil, errors.New("BIND does not own TCP and UDP port 53 on the primary IPv4 address")
 		}
 		if attempt == 0 {
 			first = identities
 		} else if !reflect.DeepEqual(first, identities) {
-			return errors.New("BIND listener inventory changed during observation")
+			return nil, errors.New("BIND listener inventory changed during observation")
 		}
 	}
-	return nil
+	return first, nil
 }

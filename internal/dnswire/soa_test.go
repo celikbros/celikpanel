@@ -158,3 +158,69 @@ func TestAuthoritativeSOARejectsResolverNamesAndHonorsDeadline(t *testing.T) {
 		t.Fatal("SOA query ignored its parent deadline")
 	}
 }
+
+func TestAuthoritativeSOAUDPQueriesExactLiteralEndpoint(t *testing.T) {
+	listener, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	response, _, _ := soaTestResponse(t)
+	querySeen := make(chan []byte, 1)
+	go func() {
+		buffer := make([]byte, 512)
+		_ = listener.SetReadDeadline(time.Now().Add(3 * time.Second))
+		n, peer, readErr := listener.ReadFrom(buffer)
+		if readErr != nil || n < 12 {
+			return
+		}
+		query := append([]byte(nil), buffer[:n]...)
+		querySeen <- query
+		copy(response[:2], query[:2])
+		_, _ = listener.WriteTo(response, peer)
+	}()
+	serial, err := QueryAuthoritativeSOAUDP(context.Background(), listener.LocalAddr().String(), soaTestZone)
+	if err != nil || serial != 7 {
+		t.Fatalf("UDP SOA failed: serial=%d err=%v", serial, err)
+	}
+	select {
+	case query := <-querySeen:
+		name, after, err := decodeDNSName(query, 12)
+		if err != nil || name != soaTestZone+"." || binary.BigEndian.Uint16(query[2:4]) != 0 || binary.BigEndian.Uint16(query[after:after+2]) != 6 {
+			t.Fatalf("UDP query did not use nonrecursive exact SOA: %x", query)
+		}
+	default:
+		t.Fatal("literal DNS endpoint did not receive UDP query")
+	}
+}
+
+func TestAuthoritativeSOAUDPRejectsTruncatedAnswerAndHonorsDeadline(t *testing.T) {
+	listener, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	response, _, _ := soaTestResponse(t)
+	go func() {
+		buffer := make([]byte, 512)
+		n, peer, readErr := listener.ReadFrom(buffer)
+		if readErr != nil || n < 12 {
+			return
+		}
+		copy(response[:2], buffer[:2])
+		binary.BigEndian.PutUint16(response[2:4], 0x8600)
+		_, _ = listener.WriteTo(response, peer)
+	}()
+	if _, err := QueryAuthoritativeSOAUDP(context.Background(), listener.LocalAddr().String(), soaTestZone); err == nil {
+		t.Fatal("truncated UDP answer accepted")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
+	defer cancel()
+	started := time.Now()
+	if _, err := QueryAuthoritativeSOAUDP(ctx, listener.LocalAddr().String(), soaTestZone); err == nil {
+		t.Fatal("unresponsive UDP endpoint passed")
+	}
+	if time.Since(started) > time.Second {
+		t.Fatal("UDP SOA query ignored its parent deadline")
+	}
+}

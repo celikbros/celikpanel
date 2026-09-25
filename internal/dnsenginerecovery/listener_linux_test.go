@@ -5,6 +5,7 @@ package dnsenginerecovery
 import (
 	"context"
 	"errors"
+	"net"
 	"strings"
 	"testing"
 )
@@ -74,5 +75,35 @@ func TestProbeAuthorityListenersBindsPowerDNSProcess(t *testing.T) {
 	}
 	if err := ProbeAuthorityListeners(context.Background(), "pdns_server", 78, "", runner); err == nil {
 		t.Fatal("wrong systemd PID accepted")
+	}
+}
+
+func TestSelectAuthorityIPv4AddressRequiresLocalSocketCoverage(t *testing.T) {
+	address := func(value string) net.Addr {
+		ip, subnet, err := net.ParseCIDR(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		subnet.IP = ip
+		return subnet
+	}
+	candidates := []net.Addr{address("127.0.0.1/8"), address("192.0.2.11/24"), address("192.0.2.10/24")}
+	ids := []string{"tcp|0.0.0.0|123", "udp|0.0.0.0|123"}
+	selected, err := selectAuthorityIPv4Address(ids, 123, candidates)
+	if err != nil || selected != "192.0.2.10" {
+		t.Fatalf("wildcard listener selection = %q, %v", selected, err)
+	}
+	for _, test := range []struct {
+		name string
+		ids  []string
+		pid  uint64
+	}{
+		{"wrong-pid", ids, 124},
+		{"missing-udp", []string{"tcp|0.0.0.0|123"}, 123},
+		{"different-address", []string{"tcp|192.0.2.12|123", "udp|192.0.2.12|123"}, 123},
+	} {
+		if chosen, err := selectAuthorityIPv4Address(test.ids, test.pid, candidates); err == nil {
+			t.Fatalf("%s accepted %q", test.name, chosen)
+		}
 	}
 }

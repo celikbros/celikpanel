@@ -122,6 +122,11 @@ locks, the independent read-only observer matches frozen database bytes,
 zone and peer rows, SQLite integrity and native port-53 ownership. It
 does not authorize an independent inverse or add matrix coverage.
 
+The [native PowerDNS SOA observer trial](NATIVE-PDNS-SOA-OBSERVER-20260925.md)
+repeats the same interrupted adoption cell. The independent quiesced reader
+matches the frozen active-zone SOA serial through authoritative UDP and TCP
+answers at a verified local native listener. It adds no inverse authority or
+new matrix cell.
 ## QEMU fixture provisioning
 
 `fixture.py` provisions one Debian 13 guest and one Arch guest on a **Linux

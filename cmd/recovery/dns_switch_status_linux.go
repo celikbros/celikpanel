@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -706,8 +707,22 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "PowerDNS adoption source listener ownership is unknown. The server owner should inspect local TCP/UDP port 53 and pdns.service; no recovery mutation was started. "+listenerErr.Error())
 			return exitUnavailable
 		}
+		address, addressErr := dnsenginerecovery.ProbeAuthorityIPv4Address(proofCtx, "pdns_server", mainPID, dnsenginerecovery.SSListenerRunner)
+		if addressErr != nil {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption has no verified concrete local IPv4 answer endpoint. The server owner should inspect pdns.service and its TCP/UDP port-53 bindings; no recovery mutation was started. "+addressErr.Error())
+			return exitUnavailable
+		}
+		activeSOA, deletedSOA, answerErr := dnsenginerecovery.ProbeInstalledPDNSAdoptionSOA(proofCtx, net.JoinHostPort(address, "53"), manifest)
+		if answerErr != nil {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption live authoritative SOA answers could not be matched to the frozen journal over TCP and UDP. The server owner should inspect native DNS answers and the original operation; preserve the journal and do not start another DNS switch. No recovery mutation was started. "+answerErr.Error())
+			return exitUnavailable
+		}
 		if again, runtimeErr := verifyInstalledPDNSRuntime(proofCtx); runtimeErr != nil || again != mainPID {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption source process changed around the listener observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
+			fmt.Fprintln(diagnostic, "PowerDNS adoption source process changed around the answer observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
+			return exitUnavailable
+		}
+		if listenerErr := dnsenginerecovery.ProbeAuthorityListeners(proofCtx, "pdns_server", mainPID, "", dnsenginerecovery.SSListenerRunner); listenerErr != nil {
+			fmt.Fprintln(diagnostic, "PowerDNS adoption listener ownership changed around the answer observation. Preserve the original operation and inspect native DNS; no recovery mutation was started. "+listenerErr.Error())
 			return exitUnavailable
 		}
 		if proofErr := dnsenginerecovery.ProbePDNSDatabasePreimage(
@@ -724,7 +739,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "PowerDNS adoption evidence changed around the native preimage observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
 			return exitUnavailable
 		}
-		fmt.Fprintln(out, "The installed PowerDNS database bytes and read-only SQLite zone/peer/integrity transaction matched the frozen adoption manifest; the verified native process owned local TCP/UDP port 53 between secured reads. Live zone answers, loaded config, later owner edits and inverse authority remain unproved.")
+		fmt.Fprintf(out, "The installed PowerDNS database bytes and read-only SQLite zone/peer/integrity transaction matched the frozen adoption manifest; the verified native process owned local TCP/UDP port 53 between secured reads. At that endpoint, %d active frozen zones returned exact authoritative SOA serials over TCP and UDP; %d deleted-zone absence claims remain unproved. Other records, loaded config, later owner edits and inverse authority remain unproved.\n", activeSOA, deletedSOA)
 	}
 	fmt.Fprintf(out, "Frozen native inverse shape: %s. This classification does not prove worker exclusion, owner authority or safe recovery execution.\n", observation.InverseKind)
 	switch observation.TargetReceipt {
@@ -764,7 +779,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	}
 	if quiesced {
 		if unitErr == nil {
-			fmt.Fprintln(out, "Release and host mutation locks were held; evidence bytes and native unit properties matched across two reads. Future worker liveness, DNS answers, owner edits and recovery authority remain unproved.")
+			fmt.Fprintln(out, "Release and host mutation locks were held; evidence bytes and native unit properties matched across two reads. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.")
 		} else {
 			fmt.Fprintln(out, "Release and host mutation locks were held, but native unit state could not be confirmed. No stable DNS observation or recovery authority was established.")
 		}

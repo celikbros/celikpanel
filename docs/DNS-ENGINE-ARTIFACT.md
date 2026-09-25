@@ -1013,3 +1013,9 @@ trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-SQL-OBSERVER-20260925.md)
 passed at one interrupted adoption rollback boundary. Live authoritative
 answer/loaded-config proof at the observation instant, owner-edit race, and
 Agent-independent inverse remain open. P0.4 is not complete.
+
+### Read-only PowerDNS adoption answer proof (2026-09-25)
+
+P0.4 and constitutional invariants 1/2/3: the quiesced independent observer now selects a concrete local IPv4 address covered by the already-verified native PowerDNS TCP/UDP port-53 listener inventory. It reconstructs the accepted adoption manifest, extracts each active zone's single enabled apex SOA serial, and requires an exact nonrecursive authoritative answer over both UDP and TCP at that literal endpoint. Missing, truncated, ambiguous, wrong-serial or timed-out answers return unavailable and leave the original operation and native DNS untouched. Deleted-zone absence is explicitly counted as unproved. Process identity, listeners, exact database bytes and private journal are rechecked after the queries under the existing release and host locks. This narrows observation only; no independent inverse is admitted.
+
+The existing state, ownership, journal and ledger schemas remain v1, with no new producer or migration. Linux unit tests cover endpoint selection, transport-specific serial mismatch, invalid frozen SOA, truncation and deadlines. A [disposable native SOA observer trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-SOA-OBSERVER-20260925.md) passed at one SIGKILL boundary before Agent restart. Other record values, deleted-zone absence, loaded config, answer/socket causality, later owner edits and an Agent-independent inverse remain open. P0.4 is not complete.
