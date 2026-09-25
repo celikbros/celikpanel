@@ -796,7 +796,34 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	}
 	if quiesced {
 		if unitErr == nil {
-			fmt.Fprintln(out, "Release and host mutation locks were held; evidence bytes and native unit properties matched across two reads. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.")
+			// Native probes can take several seconds. Recheck the operation,
+			// worker and units before reporting a stable quiesced result.
+			// This remains observation, not inverse authority.
+			finalEvidence, finalPresent, finalErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
+			finalUnits, finalUnitErr := dnsenginerecovery.ProbeNativeUnits(observationCtx, observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
+			if finalErr != nil || !finalPresent || finalUnitErr != nil ||
+				!dnsenginerecovery.StableQuiescedSwitchEvidence(evidence, finalEvidence, units, finalUnits) {
+				fmt.Fprintln(diagnostic, "DNS evidence or native units changed during the final quiesced observation. Preserve the original operation and inspect owner changes before retrying; no recovery mutation was started.")
+				return exitUnavailable
+			}
+			if observation.Status == dnsenginerecovery.EvidenceActive ||
+				observation.Status == dnsenginerecovery.EvidenceLeaseExpired ||
+				observation.Status == dnsenginerecovery.EvidenceWorkerRecorded ||
+				observation.Status == dnsenginerecovery.EvidenceOrphanedWorker ||
+				observation.Status == dnsenginerecovery.EvidenceExpiredCancellation {
+				id := dnsengineartifact.SwitchIdentity{
+					RequestID: evidence.Journal.MutationRequestID,
+					OwnerID:   evidence.Journal.MutationOwnerID,
+					Target:    evidence.Journal.TargetEngine,
+					Qualifier: evidence.Journal.ManifestQualifier,
+				}
+				worker, workerErr := dnsenginerecovery.InspectAcceptedWorker(id, &finalEvidence.AcceptedJob, time.Now().UTC())
+				if workerErr != nil || worker == dnsenginerecovery.WorkerStillAlive {
+					fmt.Fprintln(diagnostic, "The accepted DNS worker could not be excluded after native checks. Preserve the operation and inspect its process before retrying; no recovery mutation was started.")
+					return exitUnavailable
+				}
+			}
+			fmt.Fprintln(out, "Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.")
 		} else {
 			fmt.Fprintln(out, "Release and host mutation locks were held, but native unit state could not be confirmed. No stable DNS observation or recovery authority was established.")
 		}

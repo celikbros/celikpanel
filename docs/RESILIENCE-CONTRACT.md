@@ -1327,3 +1327,11 @@ open.
 P0.4, constitutional invariants 1/2/3: the independent quiesced PowerDNS adoption observer now binds the frozen active-zone SOA serials to live nonrecursive authoritative UDP and TCP replies at a concrete local IPv4 endpoint covered by the verified native listener inventory. It brackets that point-in-time answer check with process, listener, database-byte and journal rereads under existing locks. Unknown answers fail closed; deleted-zone absence and other records are explicitly unproved. The installed state/journal/ledger and DNS receipt schemas remain v1, recovery behavior remains read-only, and no independent inverse authority is added. Linux tests and [one disposable SIGKILL native trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-SOA-OBSERVER-20260925.md) pass. Owner-edit race exclusion, loaded configuration, other/deleted record proof, independent inverse execution and the full interruption matrix remain open; P0.4 is not complete.
 
 P0.4, constitutional invariants 1/2/3: the independent quiesced PowerDNS adoption observer now reads the journal-frozen native config files through fixed no-symlink descriptor paths. It verifies exact bytes, root/pdns ownership, mode, ACL absence, parent integrity and stable identities twice before and after the live SOA answer. Unknown or owner-changed configuration fails closed with the same accepted operation retained. No persisted schema/version transition or recovery write authority is added. Linux security tests and [one disposable native SIGKILL trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-CONFIG-OBSERVER-20260925.md) pass. Loaded configuration, later owner edits, independent inverse execution and the remaining DNS fault matrix are still unproved; P0.4 remains open.
+
+P0.4, constitutional invariants 2/3: after native DNS observations, the
+independent quiesced status reader now rechecks exact accepted evidence,
+systemd unit properties and the recorded worker while holding release and host
+locks. A mismatch or non-excluded worker fails closed and retains the same
+journal. Persisted schemas stay v1 and this adds no inverse authority. Linux
+package tests and vet pass; later owner edits and Agent-independent recovery
+execution remain open.

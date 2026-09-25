@@ -1025,3 +1025,15 @@ The existing state, ownership, journal and ledger schemas remain v1, with no new
 P0.4 and constitutional invariants 1/2/3: the root-only quiesced DNS observer now compares the accepted adoption journal's fixed PowerDNS config snapshot set with the installed files using no-symlink descriptor walks. It requires exact root-owned non-ACL parent directories, the local `pdns` service group, regular single-link files, frozen bytes, mode and ownership, and stable path/inode metadata over two secure passes. It repeats the group and config proof around the native UDP/TCP SOA observation. A changed, missing, symlinked or unexpectedly present config returns unavailable with owner guidance; the accepted operation and native DNS remain untouched. This proves on-disk configuration only, not the daemon's loaded configuration or independent inverse authority.
 
 The journal, state, ownership and ledger remain v1; no producer, migration, installed host or recovery write transition changed. Linux owner/symlink/parent-edit tests and [one disposable native SIGKILL trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-CONFIG-OBSERVER-20260925.md) pass. Loaded-config proof, later owner-edit exclusion, secure Agent-independent inverse and remaining native fault coverage remain open. P0.4 is not complete.
+
+### Final quiesced DNS observation after native probes (2026-09-25)
+
+P0.4 and constitutional invariants 2/3: the independent root-only status command
+now repeats the accepted journal/ledger/receipt read and native systemd unit
+inventory after its longer read-only DNS probes. It also rechecks the exact
+recorded worker before reporting a stable quiesced observation. A changed
+receipt, unit or live/unknown worker returns unavailable and preserves the
+operation; no host effect occurs. The existing v1 formats and recovery behavior
+remain unchanged. Linux package tests and vet pass. This is a point-in-time
+observer guard, not owner-edit exclusion or independent inverse admission;
+those and the remaining native fault matrix keep P0.4 open.
