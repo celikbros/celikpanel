@@ -337,7 +337,20 @@ def bind_scenario(source_fixture: str) -> dict[str, Any]:
     }
 
 
-def pdns_adoption_source_setup_scenario() -> dict[str, Any]:
+def pdns_adoption_source_setup_scenario(
+    *, include_deleted_child: bool = False
+) -> dict[str, Any]:
+    zones = [zone_snapshot()]
+    if include_deleted_child:
+        zones.append({
+            "ordinal": 1,
+            "domain": "old.s1-kill.test",
+            "desired_generation": 1,
+            "delete": True,
+            "zone_type": "NATIVE",
+            "records": [],
+            "zone_qualifier": "",
+        })
     return {
         "schema": SCENARIO_SCHEMA,
         "driver": "pdns-adopt",
@@ -349,7 +362,7 @@ def pdns_adoption_source_setup_scenario() -> dict[str, Any]:
         "target_epoch": 1,
         "source_revision": 0,
         "topology": "standalone",
-        "zones": [zone_snapshot()],
+        "zones": zones,
     }
 
 
@@ -561,7 +574,9 @@ def prepare(args: argparse.Namespace) -> None:
         guest_action = "prepare-bind"
     elif args.action == "prepare-pdns-adopt":
         validate_pdns_adopt_cell(cell, args.node, args.source_fixture)
-        scenario = pdns_adoption_source_setup_scenario()
+        scenario = pdns_adoption_source_setup_scenario(
+            include_deleted_child=args.include_deleted_child
+        )
         guest_action = "prepare-pdns-adopt"
     else:
         raise BootstrapError("unsupported preparation action")
@@ -711,6 +726,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     common_parser(current)
     current = subparsers.add_parser("prepare-pdns-adopt")
     common_parser(current)
+    current.add_argument("--include-deleted-child", action="store_true")
     current = subparsers.add_parser("run-prepared")
     common_parser(current)
     return parser.parse_args(argv)

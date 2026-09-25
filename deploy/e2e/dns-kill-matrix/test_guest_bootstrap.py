@@ -361,6 +361,31 @@ class GuestBootstrapTest(unittest.TestCase):
         self.assertEqual(scenario["source_revision"], 0)
         self.assertTrue(scenario["zones"])
 
+    def test_deleted_child_is_opt_in_and_parent_remains_authoritative(self) -> None:
+        ordinary = bootstrap.pdns_adoption_source_setup_scenario()
+        with_deleted = bootstrap.pdns_adoption_source_setup_scenario(
+            include_deleted_child=True
+        )
+        self.assertEqual(len(ordinary["zones"]), 1)
+        self.assertEqual(with_deleted["zones"][0], ordinary["zones"][0])
+        self.assertEqual(with_deleted["zones"][1], {
+            "ordinal": 1,
+            "domain": "old.s1-kill.test",
+            "desired_generation": 1,
+            "delete": True,
+            "zone_type": "NATIVE",
+            "records": [],
+            "zone_qualifier": "",
+        })
+        args = bootstrap.parse_args([
+            "prepare-pdns-adopt", "--work-root", "/tmp/fixture",
+            "--cell-id", "pdns-adopt__intent__after-write__standalone__peer-reachable",
+            "--node", "debian13", "--identity-file", "/tmp/key",
+            "--source-fixture", "external-pdns-adoption",
+            "--include-deleted-child",
+        ])
+        self.assertTrue(args.include_deleted_child)
+
     def test_pdns_adopt_cell_requires_exact_debian_external_preimage(self) -> None:
         selected = cell(
             "debian13", "intent", driver="pdns-adopt"

@@ -843,8 +843,8 @@ for key, expected in expected_header.items():
 if set(scenario) != set(expected_header) | {"zones"}:
     raise SystemExit("external PowerDNS scenario fields differ")
 zones = scenario["zones"]
-if not isinstance(zones, list) or len(zones) != 1:
-    raise SystemExit("external PowerDNS scenario requires one exact zone")
+if not isinstance(zones, list) or len(zones) not in (1, 2):
+    raise SystemExit("external PowerDNS scenario requires one active zone and at most one deleted child")
 zone = zones[0]
 expected_zone = {
     "ordinal": 0,
@@ -878,6 +878,16 @@ expected_zone = {
 }
 if zone != expected_zone:
     raise SystemExit("external PowerDNS zone differs from the exact adoption fixture")
+if len(zones) == 2 and zones[1] != {
+    "ordinal": 1,
+    "domain": "old.s1-kill.test",
+    "desired_generation": 1,
+    "delete": True,
+    "zone_type": "NATIVE",
+    "records": [],
+    "zone_qualifier": "",
+}:
+    raise SystemExit("external PowerDNS deleted child differs from the exact adoption fixture")
 fd = os.open(database_path, os.O_CREAT | os.O_EXCL | os.O_RDWR, 0o600)
 os.close(fd)
 with open(schema_path, encoding="utf-8") as handle:

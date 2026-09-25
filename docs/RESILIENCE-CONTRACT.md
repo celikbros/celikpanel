@@ -1426,3 +1426,13 @@ P0.4 native PowerDNS adoption matrix progress: the [target-verified/after-write 
 P0.4, constitutional invariants 1/3: the Agent's active-zone SOA packet parser now rejects an exact SOA accompanied by an extra answer record. This aligns its production wire acceptance with the independent reader's single-answer rule; malformed or ambiguous authority fails before the existing verification can mark a zone ready. The persisted DNS state/journal/ledger schemas remain v1 and recovery still retains the accepted operation without launching another mutation. A raw-packet regression and the full Agent package tests pass. The native trials above used the preceding parser build, and neither this test nor those trials establish deleted-zone absence, an Agent-independent inverse, reboot or owner-edit acceptance; P0.4 remains open.
 
 P0.4, constitutional invariants 1/2/3: the independent quiesced PowerDNS adoption native proof now checks every frozen deleted zone over UDP and TCP at its already verified local daemon endpoint. Its shared bounded SOA wire exchange accepts deletion only when an exact nonrecursive child SOA question receives no answer and one authoritative strict-parent SOA (NXDOMAIN or NODATA). REFUSED and non-authoritative NXDOMAIN are unknown because access policy or referral could produce them while a child zone remains loaded. The database row proof, native process/listener/config rereads and exact journal/ledger observation still bracket this point-in-time answer. A missing or mismatched negative proof retains the operation and starts no host effect. The dormant inverse gate requires the full verified deleted-zone count, but no supported inverse CLI is exposed. Persisted v1 schemas are unchanged. Focused adversarial DNS packet, observer and recovery tests pass; real native deleted-zone interruption, loaded-config proof, owner-edit/reboot behavior and Agent/independent negative-answer parity remain open, so P0.4 is not complete.
+
+P0.4, constitutional invariants 1/2/3: the optional
+[real PowerDNS deleted-child trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-DELETED-CHILD-20260925.md)
+repeated the adoption intent/after-write SIGKILL cell with an active parent
+and a frozen deleted child. Real UDP/TCP SOA probes accepted the absent child
+and rejected the active parent before and after the cut. The same request
+converged forward with 31/31 healthy post-recovery samples. This is native
+wire compatibility and Agent-mediated recovery evidence, not independent
+inverse or post-kill observer proof. No persisted schema or supported
+recovery authority changed; P0.4 remains open.
