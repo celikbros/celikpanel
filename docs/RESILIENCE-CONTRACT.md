@@ -1243,3 +1243,5 @@ Agent/recovery package tests and vet passed. The independent command still
 needs a proved failed ledger verdict and native inverse under host locks before
 it can call this adapter; native interruption and owner-edit acceptance remain
 open.
+
+The [shared phase checkpoint native regression](../deploy/e2e/dns-kill-matrix/NATIVE-DNS-PHASE-CHECKPOINT-20260925.md) at `e13ce5e` repeated the BIND rolled-back/before-write cell: exit 137, same-request BIND convergence and 31/31 healthy Agent/Panel/authoritative UDP+TCP samples. It adds no matrix coverage and does not exercise the independent exact-file adapters or prove an Agent-independent inverse. P0.4 remains open.
