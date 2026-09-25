@@ -75,6 +75,11 @@ repeats that same cell after extraction into `dnsenginerecovery`. It also adds
 no new matrix coverage.
 The [cgroup stop guard regression](NATIVE-DNS-CGROUP-GUARD-20260925.md)
 repeats it with cgroup-v2 population checks. It adds no matrix coverage.
+The [shared phase checkpoint regression](NATIVE-DNS-PHASE-CHECKPOINT-20260925.md)
+also repeats the rolled-back/before-write cell and adds no matrix coverage.
+The [Arch target-staged/before-write trial](NATIVE-BIND-TARGET-STAGED-ARCH-20260925.md)
+adds one new early-phase runnable cell with a proved uninitialized source. Seven
+runnable BIND cells have now passed; the remaining matrix stays open.
 
 ## QEMU fixture provisioning
 
