@@ -887,3 +887,25 @@ The shared stopped-unit predicate now also rechecks context cancellation after e
 P0.4 and constitutional invariants 1/2/3: both Agent DNS inverses and the independent quiesced rollback-status reader now require a fixed `named.service` or `pdns.service` systemd identity in `system.slice` and a cgroup-v2 `populated 0` event, or a missing service cgroup paired with an empty systemd `ControlGroup`. This is checked in each of the two loaded/inactive/dead/zero-PID observations before a stopped target's config/database restoration. A present populated group, foreign slice or cgroup, missing v2 controllers, malformed events, disappearing reported group, or changing observation fails closed and retains the same journal. No new phase, ledger, journal or DNS receipt schema was introduced. The stop observation does not exclude a later owner restart or itself authorize any independent host effect.
 
 Affected package tests and vet passed. The [native cgroup regression](../deploy/e2e/dns-kill-matrix/NATIVE-DNS-CGROUP-GUARD-20260925.md) repeated one existing Debian 13 BIND interruption with exit 137, same-request convergence and 31/31 healthy post-recovery samples. Real active/stopped systemd/cgroup-v2 field shapes were inspected after that result. Deliberate native cgroup population during inverse, owner-edit race, independent inverse execution and the remaining matrix are still open.
+
+### Independent rollback checkpoint publication boundary (2026-09-25)
+
+P0.4 and constitutional invariants 1/2/4: the shared recovery package now
+provides `ReplaceRollbackJournalPhase` for an already established v1 DNS switch
+journal. It permits only an exact frozen-journal transition into `rolling-back`
+or from `rolling-back` to `rolled-back`. The Linux evidence adapter requires
+the established 0700 directory and 0600 single-link file owner, compares the
+complete preimage, publishes a synced temporary file by atomic rename, syncs
+the directory and securely reads the exact result. Missing, foreign, unsafe or
+changed evidence is retained; it is never created or normalized. An uncertain
+post-publication error is reconciled by the existing exact journal readback.
+The caller still has to hold the release and host locks and prove the accepted
+ledger job and native inverse. No installed journal, ledger or DNS receipt
+schema, phase name or Agent producer path changed.
+
+Focused adversarial tests cover absent/changed evidence, symlink and hardlink
+paths, wrong owner, untrusted directory and prepublication content/inode/
+directory replacement. Full affected Agent/recovery tests and vet passed. This
+is a publication primitive, not a callable independent inverse. It cannot
+serialize uncooperative administrator root edits outside the host locks; native
+owner-edit/reboot trials, the inverse executor and complete matrix remain open.

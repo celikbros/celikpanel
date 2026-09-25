@@ -1202,3 +1202,16 @@ The post-extraction native BIND regression at commit `d4b8c0e` repeated one exis
 P0.4 native matrix progress: the `bind__target-started__before-write__standalone__peer-reachable` cell now passed on a fresh Debian 13 managed-PowerDNS source: exit 137, same-request BIND convergence, and 31/31 healthy Agent/Panel/authoritative UDP+TCP samples over 30 seconds. The [native report](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-TARGET-STARTED-BEFORE-WRITE-20260925.md) brings the passed runnable BIND count to six. It leaves paired DNS, power loss/reboot, owner edits, uninterrupted cutover and independent inverse acceptance open; P0.4 is not complete.
 
 P0.4, constitutional invariants 1/2/3: BIND and PowerDNS Agent inverses and the independent read-only DNS rollback observer now share a fixed-unit cgroup-v2 population check in each stopped-target observation. The existing journal, ledger and DNS receipt schemas are unchanged; unknown/foreign/populated cgroup state retains the same operation without config or database restoration. Component tests and [one repeated native BIND trial](../deploy/e2e/dns-kill-matrix/NATIVE-DNS-CGROUP-GUARD-20260925.md) passed. That trial adds no new matrix cell and does not prove native rejection of an injected descendant, owner-restart exclusion, paired/reboot behavior or an Agent-independent inverse. P0.4 remains open.
+
+
+P0.4, constitutional invariants 1/2/4: a Linux exact-preimage atomic writer
+and the shared `ReplaceRollbackJournalPhase` adapter now supply the narrow
+durable journal checkpoint boundary required by a future Agent-independent
+DNS inverse. It refuses a missing or changed 0600 journal and any transition
+outside `rolling-back` or `rolled-back`, and exact readback resolves uncertain
+publication. V1 journal, ledger and receipt schemas are unchanged. Focused
+adversarial filesystem/phase tests, Agent/recovery package tests and vet are
+scoped evidence. The independent CLI remains read-only: it does not yet prove
+native inverse admission, perform host effects or publish terminal ledger
+results. External owner races and the native interrupted/reboot matrix remain
+open; P0.4 is not complete.
