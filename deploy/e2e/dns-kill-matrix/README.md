@@ -59,13 +59,14 @@ unverified. In particular, a cell without a proven exit-137 kill is unverified,
 never passed. The execution report's D-021 denominator is the runnable cell
 count, not the 510-cell raw inventory.
 
-Five clean-bundle native BIND trials are recorded at the
+Six clean-bundle native BIND trials are recorded at the
 [rollback after-write](NATIVE-BIND-ROLLBACK-20260925.md),
 [rollback before-write](NATIVE-BIND-ROLLBACK-BEFORE-WRITE-20260925.md),
 [source-stopped after-write](NATIVE-BIND-SOURCE-STOPPED-20260925.md),
 [source-stopped before-write](NATIVE-BIND-SOURCE-BEFORE-WRITE-20260925.md) and
-[target-started after-write](NATIVE-BIND-TARGET-STARTED-20260925.md)
-boundaries. They cover five runnable cells; the rest of the matrix is still open.
+[target-started after-write](NATIVE-BIND-TARGET-STARTED-20260925.md) and
+[target-started before-write](NATIVE-BIND-TARGET-STARTED-BEFORE-WRITE-20260925.md)
+boundaries. They cover six runnable cells; the rest of the matrix is still open.
 The [BIND inverse guard regression](NATIVE-BIND-STOP-GUARD-20260925.md)
 repeats one of those cells with the required native stop proof; it adds no
 new matrix coverage.
