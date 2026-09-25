@@ -1364,3 +1364,14 @@ coordinator accepts callbacks and is not a callable independent executor:
 installed-path binding, both locks, native proof and the reboot/owner-edit
 matrix still need integration and field evidence. Existing v1 formats remain
 unchanged and P0.4 stays open.
+P0.4, constitutional invariants 1/2/3: the independent quiesced PowerDNS
+adoption observer now uses a shared read-only native-source proof that rejects
+other journal shapes before probing systemd. It verifies inactive BIND units,
+active PowerDNS, frozen configuration/database/SQL, process and sole public
+TCP/UDP DNS listeners, and live authoritative active-zone SOA over both
+transports, with before/after observations under the release and host locks.
+Unknown or changed evidence retains the same accepted operation. Persisted v1
+formats and recovery write authority are unchanged. Affected Linux tests and
+vet pass; this refactor has no new native trial. Loaded configuration,
+deleted-zone absence, later owner edits, independent inverse execution and the
+remaining fault/reboot matrix keep P0.4 open.

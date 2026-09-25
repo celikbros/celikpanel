@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -684,79 +683,21 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(out, "The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. This process/socket observation does not establish database content, zone answers, loaded config or recovery authority.")
 	}
 	if quiesced && evidence.Journal.Mode == transport.DNSEngineSwitchModeAdopt {
-		proofCtx, cancel := context.WithTimeout(observationCtx, 10*time.Second)
+		proofCtx, cancel := context.WithTimeout(observationCtx, 15*time.Second)
 		defer cancel()
-		manifest, manifestErr := dnsengineartifact.SwitchJournalManifest(evidence.Journal)
-		if manifestErr != nil {
-			fmt.Fprintln(diagnostic, "The PowerDNS adoption manifest could not be reconstructed from its frozen journal. Preserve the original operation for owner review; no recovery mutation was started. "+manifestErr.Error())
-			return exitUnavailable
-		}
-		pdnsGID, groupErr := localServiceGroupID("/etc/group", "pdns")
-		if groupErr != nil {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption service group is unknown. The server owner should inspect the native pdns group before the same operation resumes; no recovery mutation was started. "+groupErr.Error())
-			return exitUnavailable
-		}
-		if configErr := dnsenginerecovery.ProbeInstalledPDNSAdoptionConfigs(proofCtx, policy, evidence.Journal.ConfigBefore, pdnsGID); configErr != nil {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption configuration no longer matches its frozen file, owner or path evidence. The server owner should inspect native PowerDNS configuration and preserve the original operation; no recovery mutation was started. "+configErr.Error())
-			return exitUnavailable
-		}
-		if proofErr := dnsenginerecovery.ProbePDNSAdoptionDatabase(
-			proofCtx, policy.PDNSDatabasePath,
-			evidence.Journal.PDNSLiveSize, evidence.Journal.PDNSLiveSHA256, manifest,
-		); proofErr != nil {
-			fmt.Fprintln(diagnostic, "The PowerDNS adoption database or its zone rows could not be matched to the frozen journal. The server owner should inspect the native database and original operation; preserve the journal and do not start another DNS switch. No recovery mutation was started. "+proofErr.Error())
-			return exitUnavailable
-		}
-		mainPID, runtimeErr := verifyInstalledPDNSRuntime(proofCtx)
-		if runtimeErr != nil {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption source process identity is unknown. The server owner should inspect pdns.service and the stopped BIND units before the same operation resumes; no recovery mutation was started. "+runtimeErr.Error())
-			return exitUnavailable
-		}
-		if listenerErr := dnsenginerecovery.ProbeAuthorityListeners(proofCtx, "pdns_server", mainPID, "", dnsenginerecovery.SSListenerRunner); listenerErr != nil {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption source listener ownership is unknown. The server owner should inspect local TCP/UDP port 53 and pdns.service; no recovery mutation was started. "+listenerErr.Error())
-			return exitUnavailable
-		}
-		address, addressErr := dnsenginerecovery.ProbeAuthorityIPv4Address(proofCtx, "pdns_server", mainPID, dnsenginerecovery.SSListenerRunner)
-		if addressErr != nil {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption has no verified concrete local IPv4 answer endpoint. The server owner should inspect pdns.service and its TCP/UDP port-53 bindings; no recovery mutation was started. "+addressErr.Error())
-			return exitUnavailable
-		}
-		activeSOA, deletedSOA, answerErr := dnsenginerecovery.ProbeInstalledPDNSAdoptionSOA(proofCtx, net.JoinHostPort(address, "53"), manifest)
-		if answerErr != nil {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption live authoritative SOA answers could not be matched to the frozen journal over TCP and UDP. The server owner should inspect native DNS answers and the original operation; preserve the journal and do not start another DNS switch. No recovery mutation was started. "+answerErr.Error())
-			return exitUnavailable
-		}
-		if again, runtimeErr := verifyInstalledPDNSRuntime(proofCtx); runtimeErr != nil || again != mainPID {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption source process changed around the answer observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
-			return exitUnavailable
-		}
-		if listenerErr := dnsenginerecovery.ProbeAuthorityListeners(proofCtx, "pdns_server", mainPID, "", dnsenginerecovery.SSListenerRunner); listenerErr != nil {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption listener ownership changed around the answer observation. Preserve the original operation and inspect native DNS; no recovery mutation was started. "+listenerErr.Error())
-			return exitUnavailable
-		}
-		if againGID, groupErr := localServiceGroupID("/etc/group", "pdns"); groupErr != nil || againGID != pdnsGID {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption service group changed around the native answer observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
-			return exitUnavailable
-		}
-		if configErr := dnsenginerecovery.ProbeInstalledPDNSAdoptionConfigs(proofCtx, policy, evidence.Journal.ConfigBefore, pdnsGID); configErr != nil {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption configuration changed around the native answer observation. Preserve the original operation and inspect native DNS; no recovery mutation was started. "+configErr.Error())
-			return exitUnavailable
-		}
-		if proofErr := dnsenginerecovery.ProbePDNSDatabasePreimage(
-			proofCtx, policy.PDNSDatabasePath,
-			evidence.Journal.PDNSLiveSize, evidence.Journal.PDNSLiveSHA256,
-		); proofErr != nil {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption database changed around the native process observation. Preserve the original operation and inspect native DNS; no recovery mutation was started. "+proofErr.Error())
+		native, nativeErr := proveInstalledPDNSAdoptionNative(proofCtx, policy, evidence.Journal)
+		if nativeErr != nil {
+			fmt.Fprintln(diagnostic, "The native PowerDNS adoption source could not be matched to its frozen journal. The server owner should inspect the named, bind9 and pdns services, native configuration, database and authoritative DNS answers; preserve the same operation and do not start another switch. No recovery mutation was started. "+nativeErr.Error())
 			return exitUnavailable
 		}
 		againEvidence, stillPresent, readErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
 		if readErr != nil || !stillPresent ||
 			evidence.Observation.EvidenceSHA256 != againEvidence.Observation.EvidenceSHA256 ||
 			!reflect.DeepEqual(evidence.Journal, againEvidence.Journal) {
-			fmt.Fprintln(diagnostic, "PowerDNS adoption evidence changed around the native preimage observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
+			fmt.Fprintln(diagnostic, "PowerDNS adoption evidence changed around the native source observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
 			return exitUnavailable
 		}
-		fmt.Fprintf(out, "The installed PowerDNS config files, owners and paths, database bytes and read-only SQLite zone/peer/integrity transaction matched the frozen adoption manifest; the verified native process owned local TCP/UDP port 53 between secured reads. At that endpoint, %d active frozen zones returned exact authoritative SOA serials over TCP and UDP; %d deleted-zone absence claims remain unproved. Other records, loaded config, later owner edits and inverse authority remain unproved.\n", activeSOA, deletedSOA)
+		fmt.Fprintf(out, "The installed PowerDNS config files, owners and paths, database bytes and read-only SQLite zone/peer/integrity transaction matched the frozen adoption manifest; the verified native process was the sole active DNS authority and owned local TCP/UDP port 53 between secured reads. At that endpoint, %d active frozen zones returned exact authoritative SOA serials over TCP and UDP; %d deleted-zone absence claims remain unproved. Other records, loaded config, later owner edits and inverse authority remain unproved.\n", native.ActiveSOA, native.DeletedSOA)
 	}
 	fmt.Fprintf(out, "Frozen native inverse shape: %s. This classification does not prove worker exclusion, owner authority or safe recovery execution.\n", observation.InverseKind)
 	switch observation.TargetReceipt {

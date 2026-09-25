@@ -1098,3 +1098,21 @@ filesystem tests. Wiring fixed installed paths, native proof, release/host
 locks and worker exclusion into a supported owner command, then passing
 disposable native interruption/reboot/owner-edit trials, remain open. P0.4 is
 not complete.
+### Shared read-only PowerDNS adoption source proof (2026-09-25)
+
+P0.4, constitutional invariants 1/2/3: the quiesced DNS observer now calls one
+bounded native-source proof for an exact PowerDNS adoption journal. It requires
+`named.service` and `bind9.service` inactive, `pdns.service` loaded and active,
+then checks the frozen native config and service group, database bytes and SQL
+rows, certified PowerDNS process, sole public TCP/UDP port-53 listener, and
+active-zone authoritative SOA answers over both transports. It brackets the
+answer with repeated process, listener, config, database and systemd reads; the
+caller rereads the accepted journal, ledger and receipt under the existing
+release and host locks. A mismatch reports unavailable and keeps the operation.
+
+This refactor shares the proof with a future narrowly admitted owner recovery
+executor; it does not add a CLI effect or permit an inverse. The state, journal
+and ledger remain v1 with no producer or migration change. Focused Linux tests
+and vet pass; no fresh disposable native trial has been run for this refactor.
+Loaded config, deleted-zone absence, later owner edits, independent inverse
+execution and the full interruption/reboot matrix remain open. P0.4 is open.
