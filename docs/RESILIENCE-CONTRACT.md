@@ -1386,8 +1386,11 @@ PowerDNS proof, worker exclusion and exact state/journal/ledger CAS effects.
 The coordinator additionally rechecks terminal evidence and worker exclusion
 after its final native proof, so a late owner edit retains the journal. No CLI
 route, installed-host change, producer/schema transition or Agent behavior is
-introduced. Focused Linux tests and vet pass, including a final owner-edit
-race. Native interruption/reboot and owner-edit acceptance must pass before
+introduced. The dormant inverse now refuses a frozen zone deletion because
+the shared proof has no native deleted-zone absence check; SQL row absence
+is insufficient to admit a host effect. Focused Linux tests and vet pass,
+including a final owner-edit race. Native interruption/reboot and owner-edit
+acceptance must pass before
 exposing a supported recovery command; P0.4 remains open.
 P0.4, constitutional invariants 2/3: injected cancellation immediately after
 the adoption inverse's state, phase and ledger effect callbacks leaves the exact

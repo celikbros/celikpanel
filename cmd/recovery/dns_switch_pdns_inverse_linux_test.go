@@ -98,3 +98,12 @@ func TestInstalledPDNSInverseCancellationStopsBeforeHostAccess(t *testing.T) {
 		t.Fatalf("cancelled inverse reached installed paths: %v", err)
 	}
 }
+
+func TestInstalledPDNSInverseDoesNotTreatDeletedZoneAsProvedAbsent(t *testing.T) {
+	if err := requirePDNSAdoptionInverseNativeProof(pdnsAdoptionNativeProof{ActiveSOA: 1}); err != nil {
+		t.Fatalf("fully counted active-zone proof rejected: %v", err)
+	}
+	if err := requirePDNSAdoptionInverseNativeProof(pdnsAdoptionNativeProof{ActiveSOA: 1, DeletedSOA: 1}); err == nil {
+		t.Fatal("deleted-zone absence was inferred from SQL rather than native answers")
+	}
+}

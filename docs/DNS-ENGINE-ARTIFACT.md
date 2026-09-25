@@ -1133,7 +1133,10 @@ edit retains the journal. Each effect remains a bounded exact CAS operation.
 There is deliberately no CLI dispatch for this adapter yet. This code has not
 been exercised against a disposable native adoption rollback with injected
 interruptions and reboot, and it must not be used on installed servers. The
-state, journal and ledger remain v1; no schema, migration or Agent behavior
+dormant inverse now refuses a frozen deletion until native absence is proved;
+SQL row absence alone cannot show that a running daemon stopped answering.
+The read-only observer still reports the unproved deletion count. The state,
+journal and ledger remain v1; no schema, migration or Agent behavior
 changed. Linux tests cover accepted/foreign/unknown-worker and terminal shapes,
 invalid request admission, and a final owner-edit race. Package tests and vet
 pass. Native reboot, owner-edit and full interruption acceptance remain open;

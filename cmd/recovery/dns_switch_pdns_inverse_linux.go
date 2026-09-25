@@ -52,6 +52,16 @@ func excludeInstalledDNSInverseWorker(ctx context.Context, evidence dnsenginerec
 	return ctx.Err()
 }
 
+// requirePDNSAdoptionInverseNativeProof admits only the part of the frozen
+// source that is currently proved on the wire. A database row absence does not
+// prove that the running daemon has stopped serving a deleted zone.
+func requirePDNSAdoptionInverseNativeProof(proof pdnsAdoptionNativeProof) error {
+	if proof.DeletedSOA != 0 {
+		return errors.New("PowerDNS adoption inverse cannot prove deleted-zone authority is absent")
+	}
+	return nil
+}
+
 // completeInstalledPDNSAdoptionInverse binds the already durable rollback
 // decision to fixed installed paths and the native owner PowerDNS proof. It is
 // intentionally not exposed as a CLI command until disposable native
@@ -101,8 +111,11 @@ func completeInstalledPDNSAdoptionInverse(ctx context.Context, requestID string)
 		},
 		ExcludeWorker: excludeInstalledDNSInverseWorker,
 		ProveNative: func(ctx context.Context, journal dnsengineartifact.SwitchJournalV1) error {
-			_, err := proveInstalledPDNSAdoptionNative(ctx, policy, journal)
-			return err
+			proof, err := proveInstalledPDNSAdoptionNative(ctx, policy, journal)
+			if err != nil {
+				return err
+			}
+			return requirePDNSAdoptionInverseNativeProof(proof)
 		},
 		RemoveState: func(ctx context.Context, journal dnsengineartifact.SwitchJournalV1) error {
 			if err := ctx.Err(); err != nil {
