@@ -1288,3 +1288,5 @@ phase, installed host or native PowerDNS lifecycle changed. Focused order,
 failure and cancellation tests plus the affected Linux Agent suite are scoped
 evidence. An independently admitted native executor, owner-edit race drills
 and the interrupted-switch matrix remain open; P0.4 is not complete.
+
+The [shared PowerDNS rollback native regression](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-ADOPTION-SHARED-ROLLBACK-20260925.md) at commit `4044707` repeated the existing adoption rolled-back/before-write cell: proved exit 137, retained `rolling-back` journal, same-request forward convergence, and 31/31 healthy Agent/Panel/authoritative UDP+TCP DNS samples. This verifies the changed Agent path at one boundary; it adds no matrix coverage and does not establish a completed inverse, independent executor, cancellation race or P0.4 acceptance.

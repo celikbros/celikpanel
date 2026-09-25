@@ -87,6 +87,9 @@ rollback or management-absent recovery boundaries.
 The [PowerDNS adoption rolled-back/before-write trial](NATIVE-PDNS-ADOPTION-ROLLBACK-20260925.md)
 adds a second `pdns-adopt` cell. Its terminal classification was forward
 `target_converged`, so it does not prove source rollback or journal retirement.
+The [shared PowerDNS rollback regression](NATIVE-PDNS-ADOPTION-SHARED-ROLLBACK-20260925.md)
+repeats that cell after the Agent adopted the shared fail-stop rollback sequence.
+It adds no matrix coverage or independent recovery proof.
 
 The [PowerDNS pre-retry startup observation](NATIVE-PDNS-PRE-RETRY-OBSERVATION-20260925.md)
 repeats that adoption rollback cell with a read-only probe before the same-request
