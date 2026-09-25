@@ -667,6 +667,28 @@ class ControllerProtocolTest(unittest.TestCase):
                         os.path.abspath("identity.json"), selected, request_id
                     )
 
+    def test_native_dns_observer_uses_exact_request_without_mutation(self) -> None:
+        request_id = "a" * 32
+        base = ("/opt/celikpanel/bin/recovery", "dns-switch-status", "--quiesced")
+        expected = (*base, "--request-id", request_id)
+        settings = mock.Mock(
+            native_dns_status_command=base,
+            request_id=request_id,
+            recovery_timeout=5.0,
+            command_cwd="/",
+        )
+        completed = run_cell.CommandResult(expected, 0, b"failed\n", False, 0.1)
+        with mock.patch.object(
+            run_cell, "run_bounded_command", return_value=completed
+        ) as runner:
+            result = run_cell.run_native_dns_status(
+                settings, {}, mock.Mock(), "before-retry"
+            )
+        self.assertEqual(runner.call_args.args[0], expected)
+        self.assertEqual(runner.call_args.args[1], "native-dns-status-before-retry")
+        self.assertTrue(result["observed"])
+        self.assertEqual(result["command"]["argv"], list(expected))
+
     def test_recovery_precedes_final_liveness_in_controller_source(self) -> None:
         source = MODULE_PATH.read_text(encoding="utf-8")
         flow = source[source.index("def run_cell(settings:") :]

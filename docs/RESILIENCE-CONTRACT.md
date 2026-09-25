@@ -1306,5 +1306,5 @@ only that request's recorded status; a different active mutation or changing,
 missing or invalid evidence remains unavailable. This narrows a demonstrated
 post-Agent-start visibility gap without interpreting journal absence as
 success or running an inverse. The journal/ledger schema stays v1. Focused
-package tests pass; native trial of the new exact-request path and the
-independent inverse/fault matrix are still open.
+package tests and [one disposable native exact-request trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-EXACT-REQUEST-20260925.md)
+pass; the independent inverse/fault matrix is still open.

@@ -988,7 +988,7 @@ ledger status does not prove native DNS health, completed recovery or inverse
 authority. Without a request ID, the existing missing-journal message remains
 unchanged. No persisted format or producer changes; there is no host mutation.
 Linux package tests cover identity, unrelated active work, malformed scope and
-journal presence. The native quiesced PowerDNS trial observed a journal
-retiring after ordinary Agent startup, but this new exact-request path has not
-yet been exercised in a disposable native VM. Agent-independent inverse,
+journal presence. A fresh [native exact-request trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-EXACT-REQUEST-20260925.md)
+observed the retained journal before Agent restart and the same failed ledger
+job after ordinary Agent startup retired that journal. Agent-independent inverse,
 owner-edit/reboot fault acceptance and complete P0.4 remain open.

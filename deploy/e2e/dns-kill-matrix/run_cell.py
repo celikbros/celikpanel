@@ -4910,9 +4910,12 @@ def run_native_dns_status(
 ) -> dict[str, Any]:
     if settings.native_dns_status_command is None:
         return {"configured": False}
+    observer_argv = settings.native_dns_status_command + (
+        "--request-id", settings.request_id
+    )
     try:
         command = run_bounded_command(
-            settings.native_dns_status_command,
+            observer_argv,
             "native-dns-status-" + stage,
             settings.recovery_timeout,
             environment,

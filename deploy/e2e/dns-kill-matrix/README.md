@@ -109,6 +109,13 @@ authoritative UDP/TCP answers before the same-request retry. It demonstrates
 Agent-mediated startup recovery at that boundary, not an Agent-independent
 inverse, and adds no new matrix cell.
 
+The [exact-request PowerDNS observer trial](NATIVE-PDNS-EXACT-REQUEST-20260925.md)
+repeats the adoption rollback cell with the same fixed read-only observer
+bound to its verified request ID. It observes the retained journal before
+Agent restart and the failed ledger job after Agent startup retires that
+journal, before the same-request retry. It adds no matrix coverage or
+independent inverse claim.
+
 ## QEMU fixture provisioning
 
 `fixture.py` provisions one Debian 13 guest and one Arch guest on a **Linux
