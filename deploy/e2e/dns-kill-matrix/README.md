@@ -91,6 +91,10 @@ The [PowerDNS adoption target-verified/before-write trial](NATIVE-PDNS-ADOPTION-
 adds a third `pdns-adopt` cell with proven exit 137, same-request forward
 convergence, and 31/31 healthy Agent/Panel/UDP+TCP DNS samples. Independent
 inverse, reboot, owner-edit and uninterrupted-DNS acceptance remain open.
+The [PowerDNS adoption target-verified/after-write trial](NATIVE-PDNS-ADOPTION-TARGET-VERIFIED-AFTER-WRITE-20260925.md)
+adds a fourth `pdns-adopt` cell with the retained journal at `target-verified`,
+exit 137, same-request forward convergence and 31/31 healthy post-recovery
+samples. It does not prove independent inverse or the remaining fault matrix.
 The [shared PowerDNS rollback regression](NATIVE-PDNS-ADOPTION-SHARED-ROLLBACK-20260925.md)
 repeats that cell after the Agent adopted the shared fail-stop rollback sequence.
 It adds no matrix coverage or independent recovery proof.
