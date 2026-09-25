@@ -1407,3 +1407,14 @@ resolver error fail closed without issuance, renewal, publication or cleanup.
 No persisted schema/version or recovery authority changes. Focused repeated
 Linux reader/Agent tests and vet pass. This does not establish independent
 renewal or the remaining native fault/owner-edit matrix.
+
+P0.4, constitutional invariants 1/3: the Agent's existing native DNS SOA
+reply parser now requires the exact single question, query type/class, ordinary
+opcode and bounded record count. Its deleted-zone proof rejects any answer
+record, including a non-SOA answer, rather than inferring absence from an SOA
+list alone. Wrong or ambiguous wire evidence fails the existing verification
+without another mutation. The switch journal, ledger and DNS artifact schemas
+remain v1; no independent inverse or new recovery command is enabled. Focused
+raw-packet regressions, full Agent package tests and vet pass. Shared
+Agent/independent negative-answer semantics and native deletion, interruption,
+reboot and owner-edit acceptance remain open.

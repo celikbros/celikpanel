@@ -590,3 +590,50 @@ func TestDeletedChildRejectsChildApexAuthoritativeSOA(t *testing.T) {
 		t.Fatal("non-authoritative REFUSED deletion proof regressed")
 	}
 }
+func TestSOAResponseBindsQuestionAndRejectsForeignAnswers(t *testing.T) {
+	const domain = "example.test"
+	query, id, err := buildDNSZoneSOAQuery(domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := append([]byte(nil), query...)
+	binary.BigEndian.PutUint16(base[2:4], dnsResponseQR|dnsRCodeRefused)
+	result, err := parseDNSZoneSOAResponse(base, id, domain)
+	if err != nil || !validDeletedDNSZoneProof(domain, result) {
+		t.Fatalf("exact no-answer response rejected: %+v %v", result, err)
+	}
+
+	for _, tc := range []struct {
+		name   string
+		change func([]byte)
+	}{
+		{name: "wrong question name", change: func(b []byte) { b[13] = 'x' }},
+		{name: "wrong question type", change: func(b []byte) { b[len(b)-3] = dnsTypeSOA + 1 }},
+		{name: "wrong question class", change: func(b []byte) { b[len(b)-1] = dnsClassIN + 1 }},
+		{name: "missing question", change: func(b []byte) { binary.BigEndian.PutUint16(b[4:6], 0) }},
+		{name: "extra question", change: func(b []byte) { binary.BigEndian.PutUint16(b[4:6], 2) }},
+		{name: "wrong opcode", change: func(b []byte) { binary.BigEndian.PutUint16(b[2:4], dnsResponseQR|0x0800|dnsRCodeRefused) }},
+		{name: "excess record count", change: func(b []byte) { binary.BigEndian.PutUint16(b[6:8], 257) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			message := append([]byte(nil), base...)
+			tc.change(message)
+			if _, err := parseDNSZoneSOAResponse(message, id, domain); err == nil {
+				t.Fatal("mismatched DNS response was accepted")
+			}
+		})
+	}
+
+	withAnswer := append([]byte(nil), base...)
+	binary.BigEndian.PutUint16(withAnswer[6:8], 1)
+	withAnswer = append(withAnswer,
+		0xc0, 0x0c, 0, 1, 0, dnsClassIN, 0, 0, 0, 60, 0, 4, 192, 0, 2, 10,
+	)
+	result, err = parseDNSZoneSOAResponse(withAnswer, id, domain)
+	if err != nil || result.AnswerCount != 1 {
+		t.Fatalf("bounded A answer was not parsed: %+v %v", result, err)
+	}
+	if validDeletedDNSZoneProof(domain, result) {
+		t.Fatal("deleted-zone proof accepted a non-SOA answer")
+	}
+}

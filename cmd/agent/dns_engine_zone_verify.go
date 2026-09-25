@@ -321,6 +321,7 @@ func verifyPDNSPairingAuthority(
 type dnsSOAProbeResult struct {
 	Authoritative      bool
 	RCode              int
+	AnswerCount        int
 	SOASerials         []uint32
 	AnswerSOAOwners    []string
 	AuthoritySOAOwners []string
@@ -471,7 +472,7 @@ func verifyDNSZoneAuthoritiesAt(
 }
 
 func validDeletedDNSZoneProof(domain string, result dnsSOAProbeResult) bool {
-	if len(result.SOASerials) != 0 || len(result.AnswerSOAOwners) != 0 {
+	if result.AnswerCount != 0 || len(result.SOASerials) != 0 || len(result.AnswerSOAOwners) != 0 {
 		return false
 	}
 	if !result.Authoritative {
@@ -593,24 +594,32 @@ func parseDNSZoneSOAResponse(message []byte, id uint16, domain string) (dnsSOAPr
 		return dnsSOAProbeResult{}, errors.New("DNS response identity mismatch")
 	}
 	flags := binary.BigEndian.Uint16(message[2:4])
-	if flags&dnsResponseQR == 0 || flags&dnsResponseTC != 0 {
+	if flags&dnsResponseQR == 0 || flags&dnsResponseTC != 0 || flags&0x7800 != 0 {
 		return dnsSOAProbeResult{}, errors.New("DNS response is not a complete answer")
 	}
 	offset := 12
 	questions := int(binary.BigEndian.Uint16(message[4:6]))
+	if questions != 1 {
+		return dnsSOAProbeResult{}, errors.New("DNS response must contain the exact one SOA question")
+	}
 	answers := int(binary.BigEndian.Uint16(message[6:8]))
 	authorities := int(binary.BigEndian.Uint16(message[8:10]))
 	additionals := int(binary.BigEndian.Uint16(message[10:12]))
-	for range questions {
-		_, next, err := decodeDNSName(message, offset)
-		if err != nil || next+4 > len(message) {
-			return dnsSOAProbeResult{}, errors.New("DNS response has an invalid question")
-		}
-		offset = next + 4
+	question, next, err := decodeDNSName(message, offset)
+	if err != nil || next+4 > len(message) ||
+		strings.ToLower(strings.TrimSuffix(question, ".")) != domain ||
+		binary.BigEndian.Uint16(message[next:next+2]) != dnsTypeSOA ||
+		binary.BigEndian.Uint16(message[next+2:next+4]) != dnsClassIN {
+		return dnsSOAProbeResult{}, errors.New("DNS response question differs from the exact SOA request")
+	}
+	offset = next + 4
+	if answers+authorities+additionals > 256 {
+		return dnsSOAProbeResult{}, errors.New("DNS response contains too many resource records")
 	}
 	result := dnsSOAProbeResult{
 		Authoritative: flags&dnsResponseAA != 0,
 		RCode:         int(flags & dnsResponseRCode),
+		AnswerCount:   answers,
 	}
 	parseRecords := func(count, section int) error {
 		for range count {
