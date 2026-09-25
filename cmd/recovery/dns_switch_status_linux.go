@@ -685,11 +685,16 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	if quiesced && evidence.Journal.Mode == transport.DNSEngineSwitchModeAdopt {
 		proofCtx, cancel := context.WithTimeout(observationCtx, 10*time.Second)
 		defer cancel()
-		if proofErr := dnsenginerecovery.ProbePDNSDatabasePreimage(
+		manifest, manifestErr := dnsengineartifact.SwitchJournalManifest(evidence.Journal)
+		if manifestErr != nil {
+			fmt.Fprintln(diagnostic, "The PowerDNS adoption manifest could not be reconstructed from its frozen journal. Preserve the original operation for owner review; no recovery mutation was started. "+manifestErr.Error())
+			return exitUnavailable
+		}
+		if proofErr := dnsenginerecovery.ProbePDNSAdoptionDatabase(
 			proofCtx, policy.PDNSDatabasePath,
-			evidence.Journal.PDNSLiveSize, evidence.Journal.PDNSLiveSHA256,
+			evidence.Journal.PDNSLiveSize, evidence.Journal.PDNSLiveSHA256, manifest,
 		); proofErr != nil {
-			fmt.Fprintln(diagnostic, "The PowerDNS adoption database could not be matched to the frozen journal. The server owner should inspect the native database and the original operation; preserve the journal and do not start another DNS switch. No recovery mutation was started. "+proofErr.Error())
+			fmt.Fprintln(diagnostic, "The PowerDNS adoption database or its zone rows could not be matched to the frozen journal. The server owner should inspect the native database and original operation; preserve the journal and do not start another DNS switch. No recovery mutation was started. "+proofErr.Error())
 			return exitUnavailable
 		}
 		mainPID, runtimeErr := verifyInstalledPDNSRuntime(proofCtx)
@@ -719,7 +724,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "PowerDNS adoption evidence changed around the native preimage observation. Preserve the original operation and inspect native DNS; no recovery mutation was started.")
 			return exitUnavailable
 		}
-		fmt.Fprintln(out, "The installed PowerDNS database bytes matched the frozen adoption preimage twice; the verified native process owned local TCP/UDP port 53 between reads. SQLite transaction state, zone answers, loaded config, later owner edits and inverse authority remain unproved.")
+		fmt.Fprintln(out, "The installed PowerDNS database bytes and read-only SQLite zone/peer/integrity transaction matched the frozen adoption manifest; the verified native process owned local TCP/UDP port 53 between secured reads. Live zone answers, loaded config, later owner edits and inverse authority remain unproved.")
 	}
 	fmt.Fprintf(out, "Frozen native inverse shape: %s. This classification does not prove worker exclusion, owner authority or safe recovery execution.\n", observation.InverseKind)
 	switch observation.TargetReceipt {

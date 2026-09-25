@@ -116,6 +116,12 @@ Agent restart and the failed ledger job after Agent startup retires that
 journal, before the same-request retry. It adds no matrix coverage or
 independent inverse claim.
 
+The [native PowerDNS SQL observer trial](NATIVE-PDNS-SQL-OBSERVER-20260925.md)
+repeats the adoption rollback cell after a proven SIGKILL. Under the host
+locks, the independent read-only observer matches frozen database bytes,
+zone and peer rows, SQLite integrity and native port-53 ownership. It
+does not authorize an independent inverse or add matrix coverage.
+
 ## QEMU fixture provisioning
 
 `fixture.py` provisions one Debian 13 guest and one Arch guest on a **Linux

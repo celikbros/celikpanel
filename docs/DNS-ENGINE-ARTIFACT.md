@@ -992,3 +992,24 @@ journal presence. A fresh [native exact-request trial](../deploy/e2e/dns-kill-ma
 observed the retained journal before Agent restart and the same failed ledger
 job after ordinary Agent startup retired that journal. Agent-independent inverse,
 owner-edit/reboot fault acceptance and complete P0.4 remain open.
+
+### Shared PowerDNS adoption row proof (2026-09-25)
+
+P0.4, constitutional invariants 1/2/3: the Agent's existing read-only
+PowerDNS adoption transaction check now calls a shared SQL verifier. The
+independent root-only `recovery dns-switch-status --quiesced` observer
+reconstructs the frozen journal manifest and runs the same zone, peer-row and
+SQLite `quick_check` comparison inside a read-only transaction, bracketed by
+secure exact database-byte reads. A changed row, extra authority, malformed
+database or unsafe database path returns unavailable and retains the original
+operation. The installed state, journal, ledger and DNS receipt schemas are
+unchanged; this observation writes no DNS record and grants no inverse authority.
+
+Affected Agent, recovery and shared-package tests plus vet pass. Real SQLite
+tests accept an exact zone and refuse a later record edit even when its new
+database digest is supplied; they also reject an unowned extra zone, wrong
+frozen digest and symlinked path. A [disposable native SQL observer
+trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-SQL-OBSERVER-20260925.md)
+passed at one interrupted adoption rollback boundary. Live authoritative
+answer/loaded-config proof at the observation instant, owner-edit race, and
+Agent-independent inverse remain open. P0.4 is not complete.

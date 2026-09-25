@@ -1308,3 +1308,18 @@ post-Agent-start visibility gap without interpreting journal absence as
 success or running an inverse. The journal/ledger schema stays v1. Focused
 package tests and [one disposable native exact-request trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-EXACT-REQUEST-20260925.md)
 pass; the independent inverse/fault matrix is still open.
+
+P0.4, constitutional invariants 1/2/3: the read-only PowerDNS adoption
+database verification is now shared between Agent and the independent
+quiesced DNS observer. The observer reconstructs the journal's exact manifest,
+checks zones, peer rows and SQLite integrity in a read-only transaction, and
+brackets that transaction with secure frozen-byte reads. The existing v1
+journal/ledger/state formats and Agent mutation path are unchanged. A
+mismatch preserves the same operation and reports an unavailable result;
+neither a matching transaction nor the status CLI authorizes a native inverse.
+Affected package tests, vet and real SQLite changed-row/extra-zone/path tests
+pass. One [disposable native SQL observer
+trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-SQL-OBSERVER-20260925.md)
+passes after an adoption rollback SIGKILL. Owner-edit races, live DNS answers
+at that observation instant and Agent-independent inverse execution remain
+open.
