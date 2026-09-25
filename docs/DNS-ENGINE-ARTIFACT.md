@@ -815,6 +815,18 @@ procfs, exact orphan completion and foreign cancellation evidence. These are
 component and local startup tests. They do not establish owner-edit exclusion,
 an Agent-independent native inverse or the interrupted-switch fault matrix.
 
+### Shared PowerDNS adoption inverse sequence (2026-09-25)
+
+The Agent now calls the same bounded fail-stop PowerDNS adoption rollback
+sequence that an independent executor can use after establishing its own
+accepted operation, lock and native owner proofs. The sequence proves the
+existing authoritative configuration, restores only the frozen engine-state
+snapshot, and verifies the restored PowerDNS authority. Cancellation is
+checked before every step. Failure withholds successors and retains the
+same rolling-back journal for exact replay. This extraction neither grants
+an independent CLI authority nor changes native service lifecycle, v1
+journal/ledger/state bytes or the installed host.
+
 ### Shared durable journal checkpoint protocol (2026-09-25)
 
 P0.4, constitutional invariants 2/4: the Agent and a future independent

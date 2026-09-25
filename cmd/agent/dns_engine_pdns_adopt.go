@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -619,53 +620,22 @@ func rollbackPDNSAdoptionOnCertifiedProfile(
 	journal dnsEngineSwitchJournal,
 	configs pdnsAdoptionConfigEvidence,
 ) error {
-	return rollbackPDNSAdoptionAfterConfigProof(
-		func() error {
-			return configs.verify(ctx, profile, manifest)
-		},
-		func() error {
-			return rollbackPDNSAdoptionWithOps(
-				ctx,
-				func() error {
-					return restoreDNSEngineStateSnapshot(journal.StateBefore)
-				},
-				func(verifyCtx context.Context) error {
-					return verifyPDNSAdoptionEvidenceOnCertifiedProfile(
-						verifyCtx, profile, systemctl, manifest, journal,
-						&configs, pdnsAdoptionEvidenceRollback,
-					)
-				},
-			)
+	return dnsenginerecovery.RollbackPDNSAdoption(
+		ctx, dnsenginerecovery.PDNSAdoptionRollbackOps{
+			ProveConfigs: func(proofCtx context.Context) error {
+				return configs.verify(proofCtx, profile, manifest)
+			},
+			RestoreState: func(context.Context) error {
+				return restoreDNSEngineStateSnapshot(journal.StateBefore)
+			},
+			VerifyRestored: func(verifyCtx context.Context) error {
+				return verifyPDNSAdoptionEvidenceOnCertifiedProfile(
+					verifyCtx, profile, systemctl, manifest, journal,
+					&configs, pdnsAdoptionEvidenceRollback,
+				)
+			},
 		},
 	)
-}
-
-func rollbackPDNSAdoptionAfterConfigProof(
-	proveConfigs func() error,
-	rollback func() error,
-) error {
-	if proveConfigs == nil || rollback == nil {
-		return errors.New("PowerDNS adoption rollback requires config proof")
-	}
-	if err := proveConfigs(); err != nil {
-		return err
-	}
-	return rollback()
-}
-
-func rollbackPDNSAdoptionWithOps(
-	ctx context.Context,
-	restoreState func() error,
-	verifyRestored func(context.Context) error,
-) error {
-	if ctx == nil || restoreState == nil || verifyRestored == nil {
-		return errors.New("invalid PowerDNS adoption rollback operations")
-	}
-	restoreErr := restoreState()
-	if restoreErr != nil {
-		return restoreErr
-	}
-	return verifyRestored(ctx)
 }
 
 func adoptPDNS(

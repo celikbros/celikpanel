@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -604,26 +603,6 @@ func TestPDNSAdoptionJournalEvidenceUsesRuntimeOwnerPolicy(t *testing.T) {
 		context.Background(), profile, manifest, fake.ops(),
 	); err == nil {
 		t.Fatal("recovery accepted owner metadata different from its journal")
-	}
-}
-
-func TestPDNSAdoptionRollbackProvesConfigBeforeStateRestoration(t *testing.T) {
-	var order []string
-	err := rollbackPDNSAdoptionAfterConfigProof(
-		func() error { order = append(order, "proof"); return nil },
-		func() error { order = append(order, "rollback"); return nil },
-	)
-	if err != nil || !reflect.DeepEqual(order, []string{"proof", "rollback"}) {
-		t.Fatalf("rollback order=%v err=%v", order, err)
-	}
-	order = nil
-	proofErr := errors.New("unsafe config")
-	err = rollbackPDNSAdoptionAfterConfigProof(
-		func() error { order = append(order, "proof"); return proofErr },
-		func() error { order = append(order, "rollback"); return nil },
-	)
-	if !errors.Is(err, proofErr) || !reflect.DeepEqual(order, []string{"proof"}) {
-		t.Fatalf("rollback ran without config proof: order=%v err=%v", order, err)
 	}
 }
 
