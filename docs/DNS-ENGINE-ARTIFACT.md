@@ -925,3 +925,20 @@ cannot cause the same call to start the inverse; an uncertain terminal write
 leaves the caller at `rolling-back` and requires re-reading persisted evidence.
 Focused failure-injection tests cover both boundaries. This does not change
 v1 data or replace the remaining native interruption trials.
+
+### Exact terminal journal retirement boundary (2026-09-25)
+
+P0.4 and constitutional invariants 1/2/4: the shared recovery package now
+has an Agent-independent adapter for retiring an exact `rolled-back` v1 DNS
+switch journal. It uses the same private-directory and single-link 0600 owner
+contract as checkpoint publication, compares the entire preimage, unlinks by
+its trusted directory descriptor, syncs that directory and reads back absence.
+Missing, modified, hard-linked, symlinked, foreign-owner or nonterminal
+journals remain for review. The existing uncertain-unlink protocol verifies
+absence, but the caller must separately prove the exact failed ledger verdict,
+host locks and restored native DNS before cleanup. No new persisted format or
+phase is introduced.
+
+Adversarial filesystem and terminal-phase tests, affected Agent/recovery tests
+and vet pass. This adapter is not yet called by an independent CLI and does not
+complete a native inverse or its reboot/owner-edit matrix. P0.4 remains open.

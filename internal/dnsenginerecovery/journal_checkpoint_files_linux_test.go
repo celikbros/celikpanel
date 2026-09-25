@@ -136,3 +136,34 @@ func TestReconcileResumesExactJournalAfterInterruptedIndependentCheckpoint(t *te
 		t.Fatalf("terminal checkpoint missing: %s %v %v", current.Phase, exists, err)
 	}
 }
+
+func TestRemoveExactRollbackJournalRequiresTerminalExactCheckpoint(t *testing.T) {
+	policy, owner, before, path := rollbackCheckpointFixture(t)
+	if err := RemoveExactRollbackJournal(policy, owner, before); err == nil {
+		t.Fatal("nonterminal rollback journal was retired")
+	}
+	rolling := before
+	rolling.Phase = dnsengineartifact.SwitchPhaseRollingBack
+	if err := ReplaceRollbackJournalPhase(policy, owner, before, rolling); err != nil {
+		t.Fatal(err)
+	}
+	rolled := rolling
+	rolled.Phase = dnsengineartifact.SwitchPhaseRolledBack
+	if err := ReplaceRollbackJournalPhase(policy, owner, rolling, rolled); err != nil {
+		t.Fatal(err)
+	}
+	foreign := rolled
+	foreign.MutationOwnerID = "other"
+	if err := RemoveExactRollbackJournal(policy, owner, foreign); err == nil {
+		t.Fatal("foreign journal retired")
+	}
+	if err := RemoveExactRollbackJournal(policy, owner, rolled); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(path); !os.IsNotExist(err) {
+		t.Fatalf("terminal journal still present: %v", err)
+	}
+	if err := RemoveExactRollbackJournal(policy, owner, rolled); err == nil {
+		t.Fatal("missing journal treated as a second successful cleanup")
+	}
+}

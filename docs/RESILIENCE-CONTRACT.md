@@ -1232,3 +1232,14 @@ must read the exact persisted journal; neither inverse admission nor terminal
 success is inferred from memory. Focused first/terminal-write tests and the
 Agent package suite pass. This is a component boundary, not native recovery
 acceptance or P0.4 completion.
+
+
+P0.4, constitutional invariants 1/2/4: exact terminal DNS journal retirement
+now has a shared Linux private-evidence adapter with full-preimage comparison,
+trusted descriptor unlink, directory sync and absence readback. It refuses
+foreign or unsafe evidence and permits only a `rolled-back` checkpoint. This
+changes no v1 schema or Agent producer. Focused adversarial tests, wider
+Agent/recovery package tests and vet passed. The independent command still
+needs a proved failed ledger verdict and native inverse under host locks before
+it can call this adapter; native interruption and owner-edit acceptance remain
+open.
