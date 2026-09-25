@@ -1385,3 +1385,9 @@ route, installed-host change, producer/schema transition or Agent behavior is
 introduced. Focused Linux tests and vet pass, including a final owner-edit
 race. Native interruption/reboot and owner-edit acceptance must pass before
 exposing a supported recovery command; P0.4 remains open.
+P0.4, constitutional invariants 2/3: injected cancellation immediately after
+the adoption inverse's state, phase and ledger effect callbacks leaves the exact
+journal available for same-request continuation. The subsequent retry reaches
+the terminal failed verdict and journal retirement in focused tests. This is
+in-memory checkpoint evidence only; it does not replace native process-kill or
+reboot acceptance, and no CLI action was enabled.

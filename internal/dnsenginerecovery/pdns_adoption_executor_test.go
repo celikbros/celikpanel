@@ -17,6 +17,8 @@ type adoptionInverseFixture struct {
 	removed                  bool
 	failAt                   string
 	mutateAfterTerminalProof bool
+	cancelAt                 string
+	cancel                   context.CancelFunc
 	calls                    []string
 }
 
@@ -36,6 +38,9 @@ func newAdoptionInverseFixture() *adoptionInverseFixture {
 func (f *adoptionInverseFixture) ops() PDNSAdoptionInverseOps {
 	call := func(name string) error {
 		f.calls = append(f.calls, name)
+		if f.cancelAt == name && f.cancel != nil {
+			f.cancel()
+		}
 		if f.failAt == name {
 			return errors.New("injected interruption")
 		}
@@ -216,5 +221,29 @@ func TestCompletePDNSAdoptionInverseRetainsJournalAfterOwnerEditDuringFinalProof
 		if call == "cleanup" {
 			t.Fatal("cleanup ran after owner edit")
 		}
+	}
+}
+
+func TestCompletePDNSAdoptionInverseCancellationKeepsRetryableCheckpoint(t *testing.T) {
+	for _, boundary := range []string{"state", "phase", "ledger"} {
+		t.Run(boundary, func(t *testing.T) {
+			fixture := newAdoptionInverseFixture()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			fixture.cancelAt, fixture.cancel = boundary, cancel
+			if err := CompletePDNSAdoptionInverse(ctx, fixture.ops()); !errors.Is(err, context.Canceled) {
+				t.Fatalf("cancellation did not stop at %s: %v", boundary, err)
+			}
+			if fixture.removed {
+				t.Fatal("journal retired after cancellation")
+			}
+			fixture.cancelAt, fixture.cancel = "", nil
+			if err := CompletePDNSAdoptionInverse(context.Background(), fixture.ops()); err != nil {
+				t.Fatalf("same request did not resume: %v", err)
+			}
+			if !fixture.removed || !fixture.terminal {
+				t.Fatal("retry did not reach terminal rollback")
+			}
+		})
 	}
 }
