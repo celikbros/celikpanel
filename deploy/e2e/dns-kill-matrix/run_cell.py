@@ -2585,6 +2585,15 @@ def validate_source_normalization_provenance(
     }
 
 
+def validate_adopted_source_state_checkpoint(
+    adoption_receipts: Mapping[str, Any], state_digest: str
+) -> None:
+    if adoption_receipts["state_sha256"] != state_digest:
+        raise ControllerError(
+            "source adoption engine-state hash differs from current source"
+        )
+
+
 def canonical_dns_state_bytes(state: Mapping[str, Any]) -> bytes:
     ordered: dict[str, Any] = {
         key: state[key] for key in ("schema", "mode", "engine", "engine_epoch")
@@ -2920,15 +2929,13 @@ def validate_socket_source_proof(
             "identity": ownership,
         }
         if source_fixture == "managed-pdns":
-            adoption_receipts = adoption_provenance["production_receipts"]
-            if (
-                adoption_receipts["state_sha256"] != state_digest
-                or adoption_receipts["active_ownership_sha256"]
-                != ownership_digest
-            ):
-                raise ControllerError(
-                    "source adoption receipt hashes differ from production state"
-                )
+            # Adoption is a historical checkpoint. Source normalization may
+            # rewrite ownership, while the engine-state bytes must stay fixed.
+            # The current ownership has already been compared semantically to
+            # the current state above, and normalization has its own proof.
+            validate_adopted_source_state_checkpoint(
+                adoption_provenance["production_receipts"], state_digest
+            )
         for (kind, engine), candidate in ownership_paths.items():
             if kind == "ownership" and engine == managed_engine:
                 continue

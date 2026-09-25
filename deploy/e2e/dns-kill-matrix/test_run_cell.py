@@ -1787,6 +1787,15 @@ class ControllerProtocolTest(unittest.TestCase):
         )
         self.assertIn('"external PowerDNS shared memory after query"', body)
 
+    def test_adoption_checkpoint_keeps_state_hash_across_ownership_normalization(self) -> None:
+        checkpoint = {
+            "state_sha256": "a" * 64,
+            "active_ownership_sha256": "a" * 64,
+        }
+        run_cell.validate_adopted_source_state_checkpoint(checkpoint, "a" * 64)
+        with self.assertRaises(run_cell.ControllerError):
+            run_cell.validate_adopted_source_state_checkpoint(checkpoint, "b" * 64)
+
     def test_rolled_back_bind_accepts_exact_source_adoption_proof(self) -> None:
         selected = cell("rolled-back", "after-write")
         value = source_adoption_value(selected)
