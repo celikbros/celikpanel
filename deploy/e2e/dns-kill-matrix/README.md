@@ -80,6 +80,10 @@ also repeats the rolled-back/before-write cell and adds no matrix coverage.
 The [Arch target-staged/before-write trial](NATIVE-BIND-TARGET-STAGED-ARCH-20260925.md)
 adds one new early-phase runnable cell with a proved uninitialized source. Seven
 runnable BIND cells have now passed; the remaining matrix stays open.
+The [PowerDNS external-adoption intent/after-write trial](NATIVE-PDNS-ADOPTION-INTENT-20260925.md)
+adds the first runnable `pdns-adopt` cell with a sealed real external authority.
+It proves same-request forward convergence after a SIGKILL, not the later
+rollback or management-absent recovery boundaries.
 
 ## QEMU fixture provisioning
 

@@ -1245,3 +1245,5 @@ it can call this adapter; native interruption and owner-edit acceptance remain
 open.
 
 The [shared phase checkpoint native regression](../deploy/e2e/dns-kill-matrix/NATIVE-DNS-PHASE-CHECKPOINT-20260925.md) at `e13ce5e` repeated the BIND rolled-back/before-write cell: exit 137, same-request BIND convergence and 31/31 healthy Agent/Panel/authoritative UDP+TCP samples. It adds no matrix coverage and does not exercise the independent exact-file adapters or prove an Agent-independent inverse. P0.4 remains open.
+
+P0.4 native PowerDNS adoption progress: the [external-source intent/after-write trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-ADOPTION-INTENT-20260925.md) passed on a fresh Debian 13 guest with an unreceipted authoritative PowerDNS/SQLite source: exit 137, same-request adoption convergence and 31/31 healthy post-recovery Agent/Panel/UDP+TCP DNS samples. This is one new runnable `pdns-adopt` cell; it does not establish rollback at later phases, owner-edit/reboot behavior or an Agent-independent inverse. P0.4 remains open.
