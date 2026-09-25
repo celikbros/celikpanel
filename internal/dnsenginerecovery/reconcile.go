@@ -69,9 +69,9 @@ func Reconcile(ctx context.Context, policy dnsengineartifact.JournalPolicy, id d
 		return OutcomeRolledBack, nil
 	}
 	if err = ops.VerifyTarget(ctx, journal); err == nil {
-		before := journal
-		journal.Phase = dnsengineartifact.SwitchPhaseCommitted
-		if err = ops.Write(ctx, before, journal); err != nil {
+		next := journal
+		next.Phase = dnsengineartifact.SwitchPhaseCommitted
+		if err = ops.Write(ctx, journal, next); err != nil {
 			return OutcomeAbsent, err
 		}
 		return OutcomeCommitted, nil
@@ -115,21 +115,23 @@ func Rollback(ctx context.Context, journal *dnsengineartifact.SwitchJournalV1, o
 	case dnsengineartifact.SwitchPhaseRollingBack, dnsengineartifact.SwitchPhaseRolledBack:
 		// Resume the accepted inverse without regressing its durable phase.
 	default:
-		before := *journal
-		journal.Phase = dnsengineartifact.SwitchPhaseRollingBack
-		if err := ops.Write(ctx, before, *journal); err != nil {
+		next := *journal
+		next.Phase = dnsengineartifact.SwitchPhaseRollingBack
+		if err := ops.Write(ctx, *journal, next); err != nil {
 			return err
 		}
+		*journal = next
 	}
 	if err := ops.Inverse(ctx, *journal); err != nil {
 		return err
 	}
 	if journal.Phase != dnsengineartifact.SwitchPhaseRolledBack {
-		before := *journal
-		journal.Phase = dnsengineartifact.SwitchPhaseRolledBack
-		if err := ops.Write(ctx, before, *journal); err != nil {
+		next := *journal
+		next.Phase = dnsengineartifact.SwitchPhaseRolledBack
+		if err := ops.Write(ctx, *journal, next); err != nil {
 			return err
 		}
+		*journal = next
 	}
 	return nil
 }

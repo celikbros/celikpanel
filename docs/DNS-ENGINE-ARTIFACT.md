@@ -918,3 +918,10 @@ inverse error, then resumes the same request and persists `rolled-back`.
 The Agent's existing secure writer is still its production adapter; this API
 change does not claim native inverse execution in the independent CLI. The
 v1 format and phase names are unchanged.
+
+The shared rollback sequence now changes its in-memory journal phase only after
+the checkpoint writer returns a verified success. An uncertain first write
+cannot cause the same call to start the inverse; an uncertain terminal write
+leaves the caller at `rolling-back` and requires re-reading persisted evidence.
+Focused failure-injection tests cover both boundaries. This does not change
+v1 data or replace the remaining native interruption trials.

@@ -1224,3 +1224,11 @@ the independent checkpoint adapter. Agent/recovery package tests and vet pass.
 This changes no installed format or native service effect. The Agent's existing
 writer remains in place; a separate independently admitted inverse executor,
 owner-edit/reboot trials and full matrix are still required.
+
+
+P0.4 checkpoint safety: shared rollback no longer advances its caller's
+in-memory phase when the durable writer reports uncertainty. The next attempt
+must read the exact persisted journal; neither inverse admission nor terminal
+success is inferred from memory. Focused first/terminal-write tests and the
+Agent package suite pass. This is a component boundary, not native recovery
+acceptance or P0.4 completion.

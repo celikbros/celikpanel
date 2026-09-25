@@ -261,3 +261,38 @@ func TestRollbackRetainsExactRolledBackCheckpoint(t *testing.T) {
 		t.Fatalf("rollback lost final checkpoint: outcome=%s phase=%s err=%v", got, tr.journal.Phase, err)
 	}
 }
+
+func TestRollbackDoesNotAdvanceCallerJournalOnUncertainCheckpoint(t *testing.T) {
+	_, fixture, _ := switchFixture(t)
+	for _, failAt := range []int{1, 2} {
+		journal := fixture
+		writes := 0
+		inverseCalls := 0
+		ops := Operations{
+			Write: func(_ context.Context, before, after dnsengineartifact.SwitchJournalV1) error {
+				writes++
+				if writes == failAt {
+					return errors.New("checkpoint uncertain")
+				}
+				if before.Phase == after.Phase {
+					t.Fatal("checkpoint did not advance")
+				}
+				return nil
+			},
+			Inverse: func(context.Context, dnsengineartifact.SwitchJournalV1) error {
+				inverseCalls++
+				return nil
+			},
+		}
+		if err := Rollback(context.Background(), &journal, ops); err == nil {
+			t.Fatalf("write %d failure was accepted", failAt)
+		}
+		want := fixture.Phase
+		if failAt == 2 {
+			want = dnsengineartifact.SwitchPhaseRollingBack
+		}
+		if journal.Phase != want || inverseCalls != failAt-1 {
+			t.Fatalf("write %d advanced uncertain phase: got=%s want=%s inverse=%d", failAt, journal.Phase, want, inverseCalls)
+		}
+	}
+}
