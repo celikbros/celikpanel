@@ -808,3 +808,5 @@ controller checks with:
 ```sh
 python3 deploy/e2e/dns-kill-matrix/test_run_cell.py
 ```
+
+The [management-absent PowerDNS reboot trial](NATIVE-PDNS-MANAGEMENT-ABSENT-BOOT-20260925.md) repeats the corrected-Agent deleted-child adoption path in a fresh disposable Debian/Arch pair. After same-request convergence, direct authoritative UDP/TCP tests passed before and after one orderly Debian reboot with Panel and Agent units disabled/stopped and their normal executable paths absent. Native pdns.service stayed enabled and active. This adds a bounded P0.5 DNS serving result, not another kill-matrix phase or proof of full panel removal, paired transfer, other workloads, owner edits or independent inverse.

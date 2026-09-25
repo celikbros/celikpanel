@@ -358,3 +358,5 @@ configuration disagreement/unknown observation now stops before certificate
 staging; pending source and existing native settings are retained. No persisted
 schema migration. Post-publication owner-safe recovery and independent renewal
 remain open; this bounded change does not close P0.4/P0.5.
+
+The [disposable management-absent PowerDNS reboot trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-MANAGEMENT-ABSENT-BOOT-20260925.md) passed one native serving slice: after corrected-Agent same-request adoption recovery, the active parent and deleted child answered the required authoritative UDP/TCP SOA probes before and after an orderly Debian reboot. Panel and Agent units were disabled/stopped and their standard executable paths absent during reboot; native pdns.service remained enabled and active. Other CelikPanel files were retained. This is not complete removal, pair transfer, owner-edit or other-workload proof, and P0.5 remains open.
