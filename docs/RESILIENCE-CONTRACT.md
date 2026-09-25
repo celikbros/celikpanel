@@ -1451,3 +1451,20 @@ P0.5, constitutional invariants 3/6 — Historical DNS-pair evidence correction 
 
 P0.5, constitutional invariants 3/6: the [archived native DNS pair reboot recheck](../deploy/e2e/dns-kill-matrix/NATIVE-DNS-PAIR-ARCHIVED-BOOT-RECHECK-20260925.md) is a failed acceptance attempt. Fresh child overlays of the September 12 BIND/PowerDNS pair both reached emergency mode after the archived celikpanel-firewall-restore.service failed and network-pre.target failed by dependency. SSH and paired DNS could not be checked. This does not establish a current-image firewall defect or management-absent pair continuity. The old parents remained unchanged and the child overlays were removed; a current-image paired boot/transfer/removal trial remains open.
 P0.4/P0.5, constitutional invariants 1/3/6: the [current-image native BIND pair trial](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-CURRENT-20260925.md) added an honest paired-primary fixture with a panel-free Debian BIND catalog secondary. The first run refused to complete without an actual secondary; with one installed, the intent/after-write SIGKILL cell proved same-request target convergence and native catalog/member AXFR. After disabling primary Agent/Panel and rebooting both guests, native BIND remained active and both answered the member A record authoritatively over UDP/TCP. No persisted schema or production recovery authority changed. This does not prove removal, PowerDNS interoperability, catalog-member deletion, renewal, owner edits or the remaining P0.4/P0.5 matrix; both items remain open.
+
+P0.4/P0.5, constitutional invariants 1/2/3/6: the BIND/PowerDNS
+engine-neutral paired deletion verifier now treats a source-bound peer AXFR
+REFUSED, NOTAUTH or NXDOMAIN as `no transfer`, never as proof that the zone
+was unloaded. Completion additionally requires an exact authoritative
+strict-parent negative SOA for the deleted name from the peer over both UDP
+and TCP, with the local socket IPv4 matching the catalog transfer source.
+Ambiguous or access-denied answers retain the same accepted V3 zone
+operation for verification; they do not launch a second mutation or claim
+success. The persisted DNS zone/engine/journal schemas and native service
+ownership do not change. Focused and full Agent package tests exercise the
+successful composite proof and REFUSED/TCP-only/wrong-source failure paths. This is a
+fail-closed source correction, not a native deletion acceptance trial. A peer
+that does not serve a suitable parent zone may remain pending until an
+independent owner-verifiable native zone-state path is implemented. The
+current-image paired add/transfer/reboot trial above used the previous
+deletion verifier and did not perform a deletion; P0.4/P0.5 remain open.

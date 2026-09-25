@@ -193,7 +193,7 @@ func completeDNSV3PrimaryPropagation(
 		select {
 		case <-proofCtx.Done():
 			if plan.Changed.Delete {
-				return errors.New("paired DNS deletion did not converge")
+				return errors.New("paired DNS deletion is unverified; the peer administrator must check native zone state and DNS access, then retry verification of the same operation")
 			}
 			return errors.New("paired DNS primary propagation did not converge")
 		case <-time.After(250 * time.Millisecond):
@@ -251,21 +251,29 @@ func verifyDNSV3PrimaryPropagationAt(
 	if !plan.Changed.Delete {
 		return nil
 	}
-	return verifyPeerDeletedDNSZoneAt(
+	if err := verifyPeerZoneNoTransferAt(
 		ctx, authority, plan.Changed.Domain, peerZoneAXFR,
+	); err != nil {
+		return err
+	}
+	// An AXFR refusal alone can also mean that a still-loaded zone denies
+	// transfer. Require independent authoritative negative SOA answers over
+	// both transports before calling a peer deletion complete.
+	return verifyDeletedDNSZoneAt(
+		ctx, authority.sourceIP, authority.peerIP, plan.Changed.Domain, soa,
 	)
 }
 
-func verifyPeerDeletedDNSZoneAt(
+func verifyPeerZoneNoTransferAt(
 	ctx context.Context,
 	authority dnsPeerAXFRAuthority,
 	domain string,
 	probe dnsBoundZoneAXFRProbe,
 ) error {
-	// The opaque authority is issued only after this source address completed
-	// an exact AXFR of the same peer's catalog. Managed BIND secondaries expose
-	// that catalog and every member through one inherited peer-only ACL;
-	// managed PowerDNS consumers use the same peer-only allow-axfr-ips value.
+	// The opaque authority is issued only after an exact AXFR of this peer's
+	// catalog from the same source address. A negative zone AXFR rules out a
+	// transfer on that path, not a loaded zone with a different transfer ACL.
+	// The caller must also prove authoritative negative SOA over UDP and TCP.
 	if probe == nil || authority.catalogSerial == 0 ||
 		!canonicalPairReadinessIPv4(authority.sourceIP) ||
 		!canonicalPairReadinessIPv4(authority.peerIP) ||
@@ -278,18 +286,19 @@ func verifyPeerDeletedDNSZoneAt(
 	state, err := probe(
 		ctx, authority.sourceIP, authority.peerIP, domain,
 	)
-	if err != nil || state != dnsZoneAXFRAbsent {
-		return errors.New("deleted DNS zone remains served by the peer")
+	if err != nil || state != dnsZoneAXFRNoTransfer {
+		return errors.New("peer DNS zone transfer is still present or unverified; check the peer native zone and transfer policy")
 	}
 	return nil
 }
 
 func verifyDeletedDNSZoneAt(
 	ctx context.Context,
-	address, domain string,
+	source, address, domain string,
 	probe dnsZoneSOAProbe,
 ) error {
-	if probe == nil || !canonicalPairReadinessIPv4(address) ||
+	if probe == nil || !canonicalPairReadinessIPv4(source) ||
+		!canonicalPairReadinessIPv4(address) || source == address ||
 		!serviceMutationCanonicalFQDN(domain) {
 		return errors.New("deleted DNS zone proof identity is invalid")
 	}
@@ -297,8 +306,8 @@ func verifyDeletedDNSZoneAt(
 		probeCtx, cancel := context.WithTimeout(ctx, dnsProbeTimeout)
 		result, err := probe(probeCtx, network, address, domain)
 		cancel()
-		if err != nil || !validDeletedDNSZoneProof(domain, result) {
-			return errors.New("deleted DNS zone absence could not be verified at the peer")
+		if err != nil || result.LocalIP != source || !validDeletedDNSZoneProof(domain, result) {
+			return errors.New("peer DNS zone removal is unverified; check the peer native zone and query access, then verify the same operation")
 		}
 	}
 	return nil

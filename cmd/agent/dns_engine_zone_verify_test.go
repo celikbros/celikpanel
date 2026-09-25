@@ -422,14 +422,14 @@ func testZoneAXFRMessage(
 	return message, id
 }
 
-func TestParseDNSZoneAXFRStateAcceptsOnlyExactNegativeAbsence(t *testing.T) {
+func TestParseDNSZoneAXFRStateClassifiesNegativeAsNoTransfer(t *testing.T) {
 	const domain = "gone.example.test"
 	for _, rcode := range []uint16{
 		dnsRCodeRefused, dnsRCodeNotAuth, dnsRCodeNameError,
 	} {
 		message, id := testZoneAXFRMessage(t, domain, rcode, false)
 		state, err := parseDNSZoneAXFRState(message, id, domain)
-		if err != nil || state != dnsZoneAXFRAbsent {
+		if err != nil || state != dnsZoneAXFRNoTransfer {
 			t.Fatalf("rcode=%d state=%d err=%v", rcode, state, err)
 		}
 	}

@@ -320,6 +320,7 @@ func verifyPDNSPairingAuthority(
 }
 
 type dnsSOAProbeResult struct {
+	LocalIP            string // Local socket IPv4, observed outside the DNS packet.
 	Authoritative      bool
 	RCode              int
 	AnswerCount        int
@@ -546,7 +547,18 @@ func queryDNSZoneSOA(
 	default:
 		return dnsSOAProbeResult{}, errors.New("unsupported DNS probe network")
 	}
-	return parseDNSZoneSOAResponse(response, id, domain)
+	result, err := parseDNSZoneSOAResponse(response, id, domain)
+	if err != nil {
+		return dnsSOAProbeResult{}, err
+	}
+	localHost, _, err := net.SplitHostPort(connection.LocalAddr().String())
+	if err != nil {
+		return dnsSOAProbeResult{}, errors.New("DNS probe local endpoint is invalid")
+	}
+	if local := net.ParseIP(localHost).To4(); local != nil {
+		result.LocalIP = local.String()
+	}
+	return result, nil
 }
 
 func buildDNSZoneSOAQuery(domain string) ([]byte, uint16, error) {

@@ -227,7 +227,7 @@ func TestBINDV3LastMemberDeleteProofIsNonVacuous(t *testing.T) {
 	if err != nil || !primary || len(plan.Evidence.Members) != 0 {
 		t.Fatalf("primary=%v plan=%+v err=%v", primary, plan, err)
 	}
-	localCalls, peerCatalogCalls, catalogSOACalls, zoneCalls := 0, 0, 0, 0
+	localCalls, peerCatalogCalls, catalogSOACalls, deletedSOACalls, zoneCalls := 0, 0, 0, 0, 0
 	localCatalog := func(
 		ctx context.Context, address, domain string,
 	) (dnsCatalogAXFRResult, error) {
@@ -247,14 +247,26 @@ func TestBINDV3LastMemberDeleteProofIsNonVacuous(t *testing.T) {
 	soa := func(
 		_ context.Context, network, address, domain string,
 	) (dnsSOAProbeResult, error) {
-		catalogSOACalls++
-		if address != plan.Evidence.PeerIP || domain != plan.Evidence.Domain ||
+		if address != plan.Evidence.PeerIP ||
 			(network != "udp" && network != "tcp") {
-			return dnsSOAProbeResult{}, errors.New("unexpected catalog SOA identity")
+			return dnsSOAProbeResult{}, errors.New("unexpected SOA identity")
 		}
+		if domain == plan.Evidence.Domain {
+			catalogSOACalls++
+			return dnsSOAProbeResult{
+				Authoritative: true, RCode: dnsRCodeNoError,
+				SOASerials: []uint32{8},
+			}, nil
+		}
+		if domain != plan.Changed.Domain {
+			return dnsSOAProbeResult{}, errors.New("unexpected deleted-zone SOA identity")
+		}
+		deletedSOACalls++
 		return dnsSOAProbeResult{
-			Authoritative: true, RCode: dnsRCodeNoError,
-			SOASerials: []uint32{8},
+			LocalIP:          plan.Evidence.LocalIP,
+			ExactDeletedZone: true, Authoritative: true,
+			RCode:              dnsRCodeNameError,
+			AuthoritySOAOwners: []string{"example.test"},
 		}, nil
 	}
 	zoneAXFR := func(
@@ -265,18 +277,56 @@ func TestBINDV3LastMemberDeleteProofIsNonVacuous(t *testing.T) {
 			domain != plan.Changed.Domain {
 			return dnsZoneAXFRIndeterminate, errors.New("unexpected deleted-zone identity")
 		}
-		return dnsZoneAXFRAbsent, nil
+		return dnsZoneAXFRNoTransfer, nil
 	}
 	if err := verifyDNSV3PrimaryPropagationAt(
 		context.Background(), plan, soa, localCatalog, peerCatalog, zoneAXFR,
 	); err != nil {
 		t.Fatal(err)
 	}
-	if localCalls != 1 || peerCatalogCalls != 1 || catalogSOACalls != 2 || zoneCalls != 1 {
+	if localCalls != 1 || peerCatalogCalls != 1 || catalogSOACalls != 2 ||
+		deletedSOACalls != 2 || zoneCalls != 1 {
 		t.Fatalf(
-			"local=%d peer=%d soa=%d zone=%d",
-			localCalls, peerCatalogCalls, catalogSOACalls, zoneCalls,
+			"local=%d peer=%d catalogSOA=%d deletedSOA=%d zone=%d",
+			localCalls, peerCatalogCalls, catalogSOACalls, deletedSOACalls, zoneCalls,
 		)
+	}
+	if err := verifyDNSV3PrimaryPropagationAt(
+		context.Background(), plan,
+		func(ctx context.Context, network, address, domain string) (dnsSOAProbeResult, error) {
+			if domain == plan.Changed.Domain {
+				return dnsSOAProbeResult{RCode: dnsRCodeRefused}, nil
+			}
+			return soa(ctx, network, address, domain)
+		},
+		localCatalog, peerCatalog, zoneAXFR,
+	); err == nil {
+		t.Fatal("AXFR refusal with a refused SOA query falsely proved peer deletion")
+	}
+	if err := verifyDNSV3PrimaryPropagationAt(
+		context.Background(), plan,
+		func(ctx context.Context, network, address, domain string) (dnsSOAProbeResult, error) {
+			if domain == plan.Changed.Domain && network == "tcp" {
+				return dnsSOAProbeResult{RCode: dnsRCodeRefused}, nil
+			}
+			return soa(ctx, network, address, domain)
+		},
+		localCatalog, peerCatalog, zoneAXFR,
+	); err == nil {
+		t.Fatal("UDP-only negative SOA falsely proved peer deletion")
+	}
+	if err := verifyDNSV3PrimaryPropagationAt(
+		context.Background(), plan,
+		func(ctx context.Context, network, address, domain string) (dnsSOAProbeResult, error) {
+			result, err := soa(ctx, network, address, domain)
+			if domain == plan.Changed.Domain {
+				result.LocalIP = "192.0.2.99"
+			}
+			return result, err
+		},
+		localCatalog, peerCatalog, zoneAXFR,
+	); err == nil {
+		t.Fatal("negative SOA from a different local source falsely proved peer deletion")
 	}
 	if err := verifyDNSV3PrimaryPropagationAt(
 		context.Background(), plan, soa, localCatalog, peerCatalog,

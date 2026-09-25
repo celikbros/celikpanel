@@ -46,7 +46,7 @@ func absentTestPeerZoneAXFR(
 		if source != evidence.LocalIP || address != evidence.PeerIP {
 			return dnsZoneAXFRIndeterminate, errors.New("unexpected peer zone AXFR")
 		}
-		return dnsZoneAXFRAbsent, nil
+		return dnsZoneAXFRNoTransfer, nil
 	}
 }
 
@@ -243,7 +243,8 @@ func TestVerifyPDNSV3PropagationProvesZeroMemberCatalog(t *testing.T) {
 		}
 		if domain == plan.Changed.Domain {
 			return dnsSOAProbeResult{
-				Authoritative: true, RCode: dnsRCodeNameError,
+				LocalIP:          evidence.LocalIP,
+				ExactDeletedZone: true, Authoritative: true, RCode: dnsRCodeNameError,
 				AuthoritySOAOwners: []string{"example.test"},
 			}, nil
 		}
@@ -364,13 +365,24 @@ func TestVerifyPDNSV3DeletionProofIsEngineNeutralAndSourceBound(t *testing.T) {
 				_ context.Context, network, address, domain string,
 			) (dnsSOAProbeResult, error) {
 				soaCalls++
-				if address != evidence.PeerIP || domain != evidence.Domain ||
+				if address != evidence.PeerIP ||
 					(network != "udp" && network != "tcp") {
 					return dnsSOAProbeResult{}, errors.New("unexpected SOA proof")
 				}
+				if domain == evidence.Domain {
+					return dnsSOAProbeResult{
+						Authoritative: true, RCode: dnsRCodeNoError,
+						SOASerials: []uint32{8},
+					}, nil
+				}
+				if domain != plan.Changed.Domain {
+					return dnsSOAProbeResult{}, errors.New("unexpected deleted-zone SOA proof")
+				}
 				return dnsSOAProbeResult{
-					Authoritative: true, RCode: dnsRCodeNoError,
-					SOASerials: []uint32{8},
+					LocalIP:          evidence.LocalIP,
+					ExactDeletedZone: true, Authoritative: true,
+					RCode:              dnsRCodeNameError,
+					AuthoritySOAOwners: []string{"example.test"},
 				}, nil
 			}
 			zoneCalls := 0
@@ -382,7 +394,7 @@ func TestVerifyPDNSV3DeletionProofIsEngineNeutralAndSourceBound(t *testing.T) {
 					domain != plan.Changed.Domain {
 					return dnsZoneAXFRIndeterminate, errors.New("unexpected zone AXFR")
 				}
-				return dnsZoneAXFRAbsent, nil
+				return dnsZoneAXFRNoTransfer, nil
 			}
 			if err := verifyPDNSV3PropagationAt(
 				context.Background(), plan, soa, localAXFR,
@@ -390,7 +402,7 @@ func TestVerifyPDNSV3DeletionProofIsEngineNeutralAndSourceBound(t *testing.T) {
 			); err != nil {
 				t.Fatal(err)
 			}
-			if peerCatalogCalls != 1 || soaCalls != 2 || zoneCalls != 1 {
+			if peerCatalogCalls != 1 || soaCalls != 4 || zoneCalls != 1 {
 				t.Fatalf(
 					"catalog=%d soa=%d zone=%d",
 					peerCatalogCalls, soaCalls, zoneCalls,
@@ -423,7 +435,7 @@ func TestVerifyPDNSV3DeletionNeverProbesZoneWithoutPeerCatalogAuthority(t *testi
 		context.Context, string, string, string,
 	) (dnsZoneAXFRState, error) {
 		zoneCalled = true
-		return dnsZoneAXFRAbsent, nil
+		return dnsZoneAXFRNoTransfer, nil
 	}
 	if err := verifyPDNSV3PropagationAt(
 		context.Background(), plan,

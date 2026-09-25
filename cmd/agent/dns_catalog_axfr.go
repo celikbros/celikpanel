@@ -47,7 +47,9 @@ type dnsZoneAXFRState uint8
 const (
 	dnsZoneAXFRIndeterminate dnsZoneAXFRState = iota
 	dnsZoneAXFRPresent
-	dnsZoneAXFRAbsent
+	// NoTransfer includes REFUSED, NOTAUTH and NXDOMAIN. None proves that
+	// the zone is unloaded; verify authoritative negative SOA separately.
+	dnsZoneAXFRNoTransfer
 )
 
 type dnsBoundZoneAXFRProbe func(
@@ -305,7 +307,7 @@ func parseDNSZoneAXFRState(
 	if offset != len(message) {
 		return dnsZoneAXFRIndeterminate, errors.New("peer zone AXFR response contains trailing bytes")
 	}
-	return dnsZoneAXFRAbsent, nil
+	return dnsZoneAXFRNoTransfer, nil
 }
 
 func skipDNSResourceRecord(message []byte, offset int) (string, int, error) {
