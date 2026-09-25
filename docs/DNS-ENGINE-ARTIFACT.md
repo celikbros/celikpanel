@@ -1113,7 +1113,9 @@ release and host locks. A mismatch reports unavailable and keeps the operation.
 This refactor shares the proof with a future narrowly admitted owner recovery
 executor; it does not add a CLI effect or permit an inverse. The state, journal
 and ledger remain v1 with no producer or migration change. Focused Linux tests
-and vet pass; no fresh disposable native trial has been run for this refactor.
+and vet pass. One [disposable native SIGKILL trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-SHARED-NATIVE-PROOF-20260925.md)
+repeated an existing adoption rollback cell and proved the read-only shared
+source observation before Agent restart; it did not call the dormant inverse.
 Loaded config, deleted-zone absence, later owner edits, independent inverse
 execution and the full interruption/reboot matrix remain open. P0.4 is open.
 ### Installed-path PowerDNS adoption inverse binding (2026-09-25)

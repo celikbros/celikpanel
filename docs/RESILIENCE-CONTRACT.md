@@ -1372,7 +1372,11 @@ TCP/UDP DNS listeners, and live authoritative active-zone SOA over both
 transports, with before/after observations under the release and host locks.
 Unknown or changed evidence retains the same accepted operation. Persisted v1
 formats and recovery write authority are unchanged. Affected Linux tests and
-vet pass; this refactor has no new native trial. Loaded configuration,
+vet pass; a [disposable native SIGKILL observer trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-SHARED-NATIVE-PROOF-20260925.md)
+repeated one existing adoption cell and proved the read-only shared source
+observation before Agent restart, followed by 31/31 healthy Agent/Panel/DNS
+samples after same-request forward convergence. It adds no matrix coverage.
+Loaded configuration,
 deleted-zone absence, later owner edits, independent inverse execution and the
 remaining fault/reboot matrix keep P0.4 open.
 P0.4, constitutional invariants 1/2/3/6: a dormant independent PowerDNS

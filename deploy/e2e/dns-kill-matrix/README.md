@@ -131,6 +131,12 @@ The [native PowerDNS config observer trial](NATIVE-PDNS-CONFIG-OBSERVER-20260925
 repeats the same interrupted adoption cell with exact on-disk config owner,
 mode, ACL, path and byte proof around the live SOA observation. It adds no
 inverse authority or matrix cell.
+
+The [shared PowerDNS native-source proof trial](NATIVE-PDNS-SHARED-NATIVE-PROOF-20260925.md)
+repeats that cell after a proven SIGKILL. It verifies the combined read-only
+native source observation before Agent restart and 31/31 healthy post-retry
+samples. It does not execute an independent inverse or add matrix coverage.
+
 ## QEMU fixture provisioning
 
 `fixture.py` provisions one Debian 13 guest and one Arch guest on a **Linux
