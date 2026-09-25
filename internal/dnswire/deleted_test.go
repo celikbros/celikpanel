@@ -1,8 +1,11 @@
 package dnswire
 
 import (
+	"context"
 	"encoding/binary"
+	"net"
 	"testing"
+	"time"
 )
 
 func deletedSOATestReply(t *testing.T, zone string, flags uint16, parent string) ([]byte, uint16) {
@@ -74,5 +77,43 @@ func TestDeletedZoneSOARequiresExactNegativeWireEvidence(t *testing.T) {
 	}
 	if err := parseDeletedZoneSOAResponse(message[:len(message)-1], id+1, zone); err == nil {
 		t.Fatal("wrong request ID passed as deleted-zone proof")
+	}
+}
+
+func TestDeletedZoneSOAQueriesLiteralUDPWithoutRecursion(t *testing.T) {
+	const zone = "mail.example.test"
+	listener, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	querySeen := make(chan []byte, 1)
+	response, _ := deletedSOATestReply(t, zone, 0x8403, "example.test")
+	go func() {
+		buffer := make([]byte, 512)
+		_ = listener.SetReadDeadline(time.Now().Add(3 * time.Second))
+		n, peer, err := listener.ReadFrom(buffer)
+		if err != nil || n < 12 {
+			return
+		}
+		query := append([]byte(nil), buffer[:n]...)
+		querySeen <- query
+		copy(response[:2], query[:2])
+		_, _ = listener.WriteTo(response, peer)
+	}()
+	if err := QueryDeletedZoneSOA(context.Background(), "udp", listener.LocalAddr().String(), zone); err != nil {
+		t.Fatalf("exact parent negative answer rejected: %v", err)
+	}
+	select {
+	case query := <-querySeen:
+		name, next, err := decodeDNSName(query, 12)
+		if err != nil || name != zone+"." || next+4 != len(query) ||
+			binary.BigEndian.Uint16(query[2:4]) != 0 ||
+			binary.BigEndian.Uint16(query[next:next+2]) != 6 ||
+			binary.BigEndian.Uint16(query[next+2:next+4]) != classIN {
+			t.Fatalf("negative proof did not send an exact nonrecursive SOA query: %x", query)
+		}
+	default:
+		t.Fatal("literal UDP endpoint did not receive the query")
 	}
 }
