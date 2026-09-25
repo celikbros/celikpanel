@@ -59,9 +59,10 @@ unverified. In particular, a cell without a proven exit-137 kill is unverified,
 never passed. The execution report's D-021 denominator is the runnable cell
 count, not the 510-cell raw inventory.
 
-The first clean-bundle native BIND rollback-boundary trial is recorded in
-[NATIVE-BIND-ROLLBACK-20260925.md](NATIVE-BIND-ROLLBACK-20260925.md). It covers
-one runnable cell; the rest of the matrix is still open.
+The first two clean-bundle native BIND rollback-boundary trials are recorded in
+[after-write](NATIVE-BIND-ROLLBACK-20260925.md) and
+[before-write](NATIVE-BIND-ROLLBACK-BEFORE-WRITE-20260925.md). They cover
+two runnable cells; the rest of the matrix is still open.
 
 ## QEMU fixture provisioning
 
