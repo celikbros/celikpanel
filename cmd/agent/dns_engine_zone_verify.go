@@ -674,6 +674,10 @@ func parseDNSZoneSOAResponse(message []byte, id uint16, domain string) (dnsSOAPr
 	if err := parseRecords(additionals, 2); err != nil {
 		return dnsSOAProbeResult{}, err
 	}
+	if len(result.SOASerials) != 0 &&
+		(answers != 1 || len(result.AnswerSOAOwners) != 1 || result.AnswerSOAOwners[0] != domain) {
+		return dnsSOAProbeResult{}, errors.New("DNS response includes an extra or foreign answer beside the exact SOA")
+	}
 	if offset != len(message) {
 		return dnsSOAProbeResult{}, errors.New("DNS response contains trailing bytes")
 	}

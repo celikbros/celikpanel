@@ -516,6 +516,14 @@ func TestParseDNSZoneSOAResponseRejectsWrongSerialShape(t *testing.T) {
 	if err != nil || !result.Authoritative || len(result.SOASerials) != 1 || result.SOASerials[0] != 2026081601 {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
+	withExtraAnswer := append([]byte(nil), response...)
+	binary.BigEndian.PutUint16(withExtraAnswer[6:8], 2)
+	withExtraAnswer = append(withExtraAnswer,
+		0xc0, 0x0c, 0, 1, 0, dnsClassIN, 0, 0, 0, 60, 0, 4, 192, 0, 2, 10,
+	)
+	if _, err := parseDNSZoneSOAResponse(withExtraAnswer, id, "example.test"); err == nil {
+		t.Fatal("exact SOA with an extra A answer was accepted")
+	}
 	response[len(response)-1] = 1 // numeric tail remains structurally valid; serial is unchanged.
 	if _, err := parseDNSZoneSOAResponse(response[:len(response)-1], id, "example.test"); err == nil {
 		t.Fatal("truncated SOA response was accepted")
