@@ -83,4 +83,13 @@ func TestVerifyStoppedUnitRequiresTwoExactNativeObservations(t *testing.T) {
 	); !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled proof = %v", err)
 	}
+	ctxDuringRead, cancelDuringRead := context.WithCancel(context.Background())
+	if err := VerifyStoppedUnit(ctxDuringRead, "named.service",
+		func(context.Context) (StoppedUnitObservation, error) {
+			cancelDuringRead()
+			return stopped, nil
+		},
+	); !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled native observation was accepted: %v", err)
+	}
 }
