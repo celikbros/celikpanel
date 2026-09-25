@@ -1268,3 +1268,13 @@ The [shared phase checkpoint native regression](../deploy/e2e/dns-kill-matrix/NA
 P0.4 native PowerDNS adoption progress: the [external-source intent/after-write trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-ADOPTION-INTENT-20260925.md) passed on a fresh Debian 13 guest with an unreceipted authoritative PowerDNS/SQLite source: exit 137, same-request adoption convergence and 31/31 healthy post-recovery Agent/Panel/UDP+TCP DNS samples. This is one new runnable `pdns-adopt` cell; it does not establish rollback at later phases, owner-edit/reboot behavior or an Agent-independent inverse. P0.4 remains open.
 
 The [PowerDNS adoption rolled-back/before-write native trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-ADOPTION-ROLLBACK-20260925.md) also passed exit-137 and 31/31 post-recovery health checks from a retained `rolling-back` journal. The same request converged **forward** to PowerDNS; it did not prove native inverse completion or terminal journal cleanup. This adds a second `pdns-adopt` cell while P0.4 independent recovery and later-phase acceptance remain open.
+
+P0.4, constitutional invariants 1/2/3: the exact accepted DNS switch worker
+check is now shared by Agent boot recovery and the independent locked status
+reader. The secured reader carries the matching ledger job with its frozen
+journal; malformed or foreign running/cancelling/orphaned jobs and unknown
+procfs state fail closed before a worker is called absent. A live worker stays
+distinct from an exited one. No persisted v1 schema or native effect changed.
+Linux recovery/Agent package tests are scoped evidence. The status reader is
+still read-only; owner edits, an Agent-independent inverse and the remaining
+native fault matrix keep P0.4 open.

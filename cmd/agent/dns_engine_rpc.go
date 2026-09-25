@@ -13,7 +13,6 @@ import (
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
-	"github.com/alicelik/celikpanel/internal/processidentity"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -1050,28 +1049,24 @@ func (m *serviceMutationManager) recoverPersistedDNSEngineSwitchLocked(
 		m.poisonLock = lock
 		return true, m.poisonLocked(errors.New("DNS engine switch recovery lacks its exact accepted ledger job"))
 	}
-	if job.WorkerPID != 0 || job.WorkerStarted != "" || job.WorkerCommand != "" {
-		gone, probeErr := processidentity.RecordedWorkerGone(job.WorkerPID, job.WorkerStarted)
-		if probeErr != nil {
+	worker, workerErr := dnsenginerecovery.InspectAcceptedWorker(id, job, m.now())
+	if workerErr != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(workerErr)
+	}
+	if worker == dnsenginerecovery.WorkerStillAlive {
+		before := cloneServiceMutationLedger(m.ledger)
+		job.Status = serviceMutationStatusOrphaned
+		job.Phase = "waiting_for_orphaned_process"
+		job.ErrorCode = "agent_restart_worker_alive"
+		job.ErrorMessage = "The previous DNS engine switch worker is still alive."
+		job.UpdatedAt = m.now()
+		writeErr := m.persistLedgerMutationLocked(before)
+		if m.poisoned != nil {
 			m.poisonLock = lock
-			return true, m.poisonLocked(fmt.Errorf(
-				"recorded DNS engine switch worker cannot be excluded: %w", probeErr,
-			))
+			return true, writeErr
 		}
-		if !gone {
-			before := cloneServiceMutationLedger(m.ledger)
-			job.Status = serviceMutationStatusOrphaned
-			job.Phase = "waiting_for_orphaned_process"
-			job.ErrorCode = "agent_restart_worker_alive"
-			job.ErrorMessage = "The previous DNS engine switch worker is still alive."
-			job.UpdatedAt = m.now()
-			writeErr := m.persistLedgerMutationLocked(before)
-			if m.poisoned != nil {
-				m.poisonLock = lock
-				return true, writeErr
-			}
-			return true, errors.Join(writeErr, lock.Close())
-		}
+		return true, errors.Join(writeErr, lock.Close())
 	}
 	binding := transport.ServiceMutationBinding{
 		MutationRequestID: job.RequestID,

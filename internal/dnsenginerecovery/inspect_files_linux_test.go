@@ -40,7 +40,8 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 	got, present, err := InspectFiles(root, owner, policy, now)
 	paired, pairedPresent, pairedErr := ReadSwitchEvidence(root, owner, policy, now)
 	if pairedErr != nil || !pairedPresent || !reflect.DeepEqual(paired.Observation, got) ||
-		!reflect.DeepEqual(paired.Journal, journal) {
+		!reflect.DeepEqual(paired.Journal, journal) ||
+		!reflect.DeepEqual(paired.AcceptedJob, *ledger.Jobs[journal.MutationRequestID]) {
 		t.Fatalf("paired journal and observation diverged: present=%v err=%v", pairedPresent, pairedErr)
 	}
 	if got.EvidenceSHA256 == "" {

@@ -802,6 +802,14 @@ Agent checks that authority before native reconciliation and before publishing
 a recovered committed switch; an inconsistent cancellation is rejected before
 native effects. No persisted schema, installer or live server changed.
 
+The secured evidence reader now carries a value copy of that exact accepted
+ledger job alongside the frozen journal. Agent boot recovery and the locked
+independent status path call one worker-exclusion predicate for running,
+expired, cancelling and orphaned jobs. It refuses mismatched job shapes and
+unknown process identity before reporting absence; a still-live worker is
+reported separately. The status path remains read-only, and this point-in-time
+predicate cannot grant an inverse or exclude a later owner restart.
+
 Tests cover unreadable procfs/process state, live and exited workers, changed
 procfs, exact orphan completion and foreign cancellation evidence. These are
 component and local startup tests. They do not establish owner-edit exclusion,

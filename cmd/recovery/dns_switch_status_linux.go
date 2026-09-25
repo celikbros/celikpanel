@@ -486,8 +486,32 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "DNS switch evidence or native DNS unit properties changed during the quiesced observation. The server owner should inspect the existing operation and native DNS service, then retry after owner changes settle; no DNS operation was started.")
 			return exitUnavailable
 		}
+		evidence = againEvidence
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
+	if len(args) == 2 {
+		switch observation.Status {
+		case dnsenginerecovery.EvidenceActive,
+			dnsenginerecovery.EvidenceLeaseExpired,
+			dnsenginerecovery.EvidenceWorkerRecorded,
+			dnsenginerecovery.EvidenceOrphanedWorker,
+			dnsenginerecovery.EvidenceExpiredCancellation:
+			id := dnsengineartifact.SwitchIdentity{
+				RequestID: evidence.Journal.MutationRequestID,
+				OwnerID:   evidence.Journal.MutationOwnerID,
+				Target:    evidence.Journal.TargetEngine,
+				Qualifier: evidence.Journal.ManifestQualifier,
+			}
+			worker, workerErr := dnsenginerecovery.InspectAcceptedWorker(
+				id, &evidence.AcceptedJob, time.Now().UTC(),
+			)
+			if workerErr != nil {
+				fmt.Fprintln(diagnostic, "The exact DNS switch worker could not be excluded under the release and host locks. Preserve the operation and inspect its native process before recovery; no DNS change was started. "+workerErr.Error())
+				return exitUnavailable
+			}
+			fmt.Fprintf(out, "Quiesced worker observation: %s. This is only a point-in-time process check; it does not authorize a DNS inverse.\n", worker)
+		}
+	}
 	switch observation.Status {
 	case dnsenginerecovery.EvidenceLeaseExpired:
 		fmt.Fprintln(out, "The active ledger lease has expired. The server owner should inspect the original operation and native DNS service; do not start another switch. A compatible recovery executor must establish worker liveness and host ownership before the same operation can resume.")

@@ -12,6 +12,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // SwitchEvidence pairs the canonical frozen journal with its exact ledger and
@@ -21,6 +22,9 @@ import (
 type SwitchEvidence struct {
 	Journal     dnsengineartifact.SwitchJournalV1
 	Observation EvidenceObservation
+	// AcceptedJob is a value copy from the same secured ledger read. It is
+	// evidence for worker exclusion, not a lease or mutation authority.
+	AcceptedJob transport.ServiceMutationJob
 }
 
 // InspectFiles preserves the read-only status API.
@@ -67,6 +71,7 @@ func ReadSwitchEvidence(stateRoot string, owner servicemutationledger.FileOwner,
 	if err != nil {
 		return SwitchEvidence{}, true, err
 	}
+	job := *ledger.Jobs[journal.MutationRequestID]
 	stateRaw, stateExists, err := servicemutationledger.ReadFile(policy.StatePath, 64<<10, owner)
 	if err != nil {
 		return SwitchEvidence{}, true, fmt.Errorf("read current DNS state receipt: %w", err)
@@ -99,7 +104,7 @@ func ReadSwitchEvidence(stateRoot string, owner servicemutationledger.FileOwner,
 	if journal.SourceEngine == "" {
 		observation.EvidenceSHA256 = switchEvidenceFingerprint(journalRaw, ledgerRaw, stateRaw, stateExists, nil, false)
 		observation.SourceOwnership = SourceOwnershipNotApplicable
-		return SwitchEvidence{Journal: journal, Observation: observation}, true, nil
+		return SwitchEvidence{Journal: journal, Observation: observation, AcceptedJob: job}, true, nil
 	}
 	ownershipPath := filepath.Join(stateRoot, "dns-engine-ownership-"+string(journal.SourceEngine)+".json")
 	ownershipRaw, ownershipExists, err := servicemutationledger.ReadFile(ownershipPath, 64<<10, owner)
@@ -109,7 +114,7 @@ func ReadSwitchEvidence(stateRoot string, owner servicemutationledger.FileOwner,
 	if !ownershipExists {
 		observation.EvidenceSHA256 = switchEvidenceFingerprint(journalRaw, ledgerRaw, stateRaw, stateExists, nil, false)
 		observation.SourceOwnership = SourceOwnershipAbsent
-		return SwitchEvidence{Journal: journal, Observation: observation}, true, nil
+		return SwitchEvidence{Journal: journal, Observation: observation, AcceptedJob: job}, true, nil
 	}
 	ownership, _, err := dnsengineartifact.DecodeOwnershipDocument(ownershipRaw)
 	if err != nil {
@@ -127,7 +132,7 @@ func ReadSwitchEvidence(stateRoot string, owner servicemutationledger.FileOwner,
 	if matches {
 		observation.SourceOwnership = SourceOwnershipExact
 	}
-	return SwitchEvidence{Journal: journal, Observation: observation}, true, nil
+	return SwitchEvidence{Journal: journal, Observation: observation, AcceptedJob: job}, true, nil
 }
 
 // switchEvidenceFingerprint binds the exact installed evidence bytes observed
