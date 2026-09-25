@@ -6,7 +6,9 @@ A secondary DNS server with hosting can now use owner-managed DNS records withou
 
 The setup wizard preserves editable inputs and the current step within the browser tab across reloads and remounts. Returning to Review fetches a fresh plan and clears the start confirmation. It never starts setup automatically. Closing the tab ends the local recovery checkpoint; a changed server-side draft revision prevents restoration of stale inputs.
 
-Validation: 399 frontend tests, production build and bundle checks, panel and BIND tests, focused race tests, and Turkish/English browser checks at desktop and mobile widths. A disposable BIND-primary/PowerDNS-secondary pair continued catalog discovery, zone transfer, owner record changes, service restarts and catalog removal with both panel and agent disabled and their binaries absent. This was a DNS service test, not a complete host reboot or panel-uninstall certification.
+Validation: 399 frontend tests, production build and bundle checks, panel and BIND tests, focused race tests, and Turkish/English browser checks at desktop and mobile widths. A disposable BIND-primary/PowerDNS-secondary pair continued catalog discovery, zone transfer, owner record changes and service restarts with both panel and agent disabled and their binaries absent. This was a DNS service test, not a complete host reboot or panel-uninstall certification.
+
+**September 25 evidence correction:** The historical catalog-removal check saw a non-authoritative `REFUSED` reply. That response did not prove secondary zone removal; the [native DNS evidence](validation/native-dns-independence-20260912/README.md) now marks that part unverified. The add, transfer, record-change and daemon-restart observations remain.
 
 The [owner-independence audit](OWNER-INDEPENDENCE.md) records remaining mail certificate renewal, firewall boot restoration and data/runtime retention dependencies. This release does not claim that removing CelikPanel and its agent is safe for every workload. See [native DNS evidence](validation/native-dns-independence-20260912/README.md) and [wizard recovery evidence](validation/setup-editor-recovery-20260912/README.md).
 

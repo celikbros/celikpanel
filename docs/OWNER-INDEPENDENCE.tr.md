@@ -48,10 +48,12 @@ manuel/otomatik taslak yollarını ve BIND birincil–PowerDNS ikincil çiftini 
 İki geçici Debian 13 makinesinde yönetim hizmetleri durduruldu; standart konumdaki
 çalıştırılabilir dosyalar testin kanıt dizinine taşındı. Birincil, CelikPanel include
 satırı içermeyen normal bir BIND yapılandırmasına geçirildi. Katalogdan bölge ekleme,
-kayıt değiştirme, DNS hizmetlerini yeniden başlatma ve katalogdan bölge kaldırma,
-panel API'si olmadan PowerDNS'e yansıdı. Bu, test edilen çiftin DNS işletimini
+kayıt değiştirme ve DNS hizmetlerini yeniden başlatma,
+panel API'si olmadan PowerDNS'te gözlendi; katalogdan çıkarma doğrulanmadı. Bu, test edilen çiftin DNS işletimini
 kanıtlar; bütün hosting hizmetlerinin kaldırma veya makineyi yeniden başlatma
 bağımsızlığını kanıtlamaz.
+
+**Kanıt düzeltmesi (25 Eylül 2026):** İkincilde katalogdan çıkarma sonrası alınan eski yanıt `REFUSED` idi ve yetkili bir yanıt değildi. Bu, PowerDNS'in üye bölgeyi kaldırdığını kanıtlamaz. Yerel ekleme/değiştirme/aktarım/yeniden başlatma gözlemleri geçerlidir; bölge kaldırma ve çiftin yönetim olmadan yeniden açılması açık kalır. [Düzeltilmiş test kaydına](validation/native-dns-independence-20260912/README.tr.md) bakın.
 
 ## Bağımlılık incelemesi ve kalan işler
 

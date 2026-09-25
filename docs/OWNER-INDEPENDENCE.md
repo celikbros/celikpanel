@@ -49,9 +49,11 @@ disposable Debian 13 guests, both management services were stopped and their
 standard binary paths removed by moving the binaries to a fixture evidence
 directory. The primary was changed to a plain owner-written BIND configuration
 with no CelikPanel include. Native catalog addition, record change, daemon
-restarts and catalog removal propagated to PowerDNS without a panel API.
+restarts were observed in PowerDNS without a panel API; catalog removal was not verified.
 This establishes DNS operation for that tested pair, not full hosting removal
 or whole-host reboot independence.
+
+**Evidence correction (September 25, 2026):** The historical secondary catalog-removal response was `REFUSED` without an authoritative answer. It does not prove that PowerDNS unloaded the member zone. The native add/update/transfer/restart observations remain valid; zone removal and management-absent reboot of the pair remain open. See the [corrected fixture record](validation/native-dns-independence-20260912/README.md).
 
 ## Dependency audit and required follow-up
 

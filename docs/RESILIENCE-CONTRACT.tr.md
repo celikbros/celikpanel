@@ -758,3 +758,5 @@ korunur. v1 gunluk/defter semalari degismedi; yalniz ek bir nihai neden
 tanindi. Yerel tam/eksik kanit ve ortak yetki testleri gecti. Gercek
 yeniden baslatma, sahip degisikligi ve Agent'tan bagimsiz ters islem
 kabulu halen aciktir.
+
+P0.5, anayasanın 3/6 ilkeleri — Tarihsel DNS çifti kanıtı düzeltmesi (25 Eylül 2026): 12 Eylül BIND birincil/PowerDNS ikincil testinde katalog üyesi çıkarıldıktan sonra status: REFUSED, sıfır yanıt ve yetkili bayrağının yokluğu kaydedilmişken sonuç başarılı işaretlenmişti. Bu yanıt, ikincil bölgenin kaldırıldığını kanıtlamaz. Ham kanıt korunmuştur; eski test artık belirsizlikte başarısız olur ve İngilizce/Türkçe doğrulama, sahip bağımsızlığı ve Alpha72 sürüm notları kaldırmayı doğrulanmamış sayar. Yerel ekleme/değiştirme/aktarım/DNS hizmeti yeniden başlatma gözlemleri sınırlı kanıt olarak kalır. Bu P0.5 parçasını kapatmak için yeni bir yönetimsiz çift testinde katalogdan çıkarma sonrası ikincilin yerel bölge durumu ve yeniden açılış kanıtlanmalıdır. Kalıcı şema, üretim kurtarma yetkisi ve kurulu sunucu değişmedi.

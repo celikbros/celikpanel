@@ -57,14 +57,10 @@ for name,unit in [('dnsprimary','named'),('dnssecondary','pdns')]:
 proof['stages'].append({'stage':'restart both DNS daemons without management binaries','answer':wait_answer(101,'192.0.2.81')})
 print('PASS native daemon restart',flush=True)
 install_files({'/var/lib/bind/owner/catalog.zone':catalog_text(101,False)})
-for attempt in range(35):
-    out=ssh('dnssecondary',f'dig @192.0.2.20 {zone} SOA +norecurse +noall +comments +answer')
-    if 'ANSWER: 0' in out and ' aa;' not in out:break
-    time.sleep(2)
-else:raise RuntimeError('native catalog did not remove member: '+out)
-proof['stages'].append({'stage':'native catalog removes member','answer':out})
-for name in nodes:
-    ssh(name,"test ! -e /opt/celikpanel/bin/agent && ! systemctl is-active --quiet celikpanel-agent.service && ! systemctl is-active --quiet celikpanel-panel.service")
-proof['passed']=True
-(root/'native-proof.json').write_text(json.dumps(proof,indent=2)+'\n')
-print('PASS native removal; all evidence saved',flush=True)
+out=ssh('dnssecondary',f'dig @192.0.2.20 {zone} SOA +norecurse +noall +comments +answer +authority')
+proof['stages'].append({'stage':'catalog removal requested; secondary absence unverified','answer':out})
+# A REFUSED or non-authoritative empty answer can come from access policy while
+# the child zone still exists. This historical fixture has no independent native
+# zone-state and strict negative-SOA proof, so it must not certify deletion.
+(root/'native-proof-recheck.json').write_text(json.dumps(proof,indent=2)+'\n')
+raise RuntimeError('secondary zone removal is unverified: verify the catalog change and independent secondary zone state; REFUSED is insufficient')
