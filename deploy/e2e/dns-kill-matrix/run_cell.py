@@ -4291,6 +4291,7 @@ class Settings:
     dns_timeout: float
     stability_seconds: float
     stability_interval: float
+    native_dns_status_command: tuple[str, ...] | None = None
 
 
 def inspect_command_executable(
@@ -4705,6 +4706,17 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
         commands["socket_identity_contract"] = socket_trigger_retry_contract(
             settings.trigger_command, settings.recovery_command
         )
+    if settings.native_dns_status_command is not None:
+        if settings.trigger_mode != "socket" or settings.native_dns_status_command != (
+            "/opt/celikpanel/bin/recovery", "dns-switch-status", "--quiesced"
+        ):
+            raise ControllerError("native DNS status must be the fixed quiesced recovery command")
+        observer = inspect_command_executable(
+            settings.native_dns_status_command, "native DNS status", require_regular_path=True
+        )
+        if observer["uid"] != 0 or observer["mode"] != "0755":
+            raise ControllerError("native DNS status executable must be root-owned 0755")
+        commands["native_dns_status"] = observer
     if settings.peer_partition_command is not None:
         commands["peer_partition"] = inspect_command_executable(
             settings.peer_partition_command, "peer partition"
@@ -4888,6 +4900,35 @@ def run_recovery_probe(
             "error": str(exc),
         }
     return decode_recovery_probe(command, ordinal)
+
+
+def run_native_dns_status(
+    settings: Settings,
+    environment: Mapping[str, str],
+    transcript: Transcript,
+    stage: str,
+) -> dict[str, Any]:
+    if settings.native_dns_status_command is None:
+        return {"configured": False}
+    try:
+        command = run_bounded_command(
+            settings.native_dns_status_command,
+            "native-dns-status-" + stage,
+            settings.recovery_timeout,
+            environment,
+            settings.command_cwd,
+            transcript,
+        )
+    except (ControllerError, OSError) as exc:
+        transcript.event("native-dns-status-error", stage=stage, error=str(exc))
+        return {"configured": True, "observed": False, "error": str(exc)}
+    report = command.report()
+    return {
+        "configured": True,
+        "observed": command.returncode == 0 and not command.truncated,
+        "command": report,
+        "output": command.output.decode("utf-8", errors="replace"),
+    }
 
 
 def checked_command(
@@ -5560,6 +5601,10 @@ def run_cell(settings: Settings) -> int:
                 "applicable": False,
                 "reason": "standalone cell",
             }
+        if settings.trigger_mode == "socket" and settings.native_dns_status_command is not None:
+            result["native_post_kill_status"] = run_native_dns_status(
+                settings, ordinary, transcript, "post-kill"
+            )
         recovery_attempts: list[dict[str, Any]] = []
         recovery_probes: list[dict[str, Any]] = []
         recovery: dict[str, Any]
@@ -5689,6 +5734,9 @@ def run_cell(settings: Settings) -> int:
                     settings, ordinary, transcript, 0
                 )
                 recovery["pre_retry_probe"] = pre_retry_probe
+                recovery["native_pre_retry_status"] = run_native_dns_status(
+                    settings, ordinary, transcript, "before-retry"
+                )
                 if not pre_retry_probe.get("valid"):
                     verification_failures.append(
                         "pre-retry startup recovery observation is invalid"
@@ -6018,6 +6066,10 @@ def build_argument_parser() -> argparse.ArgumentParser:
         "--recovery-probe-command", required=True, help="JSON argv array"
     )
     parser.add_argument(
+        "--native-dns-status-command",
+        help="JSON argv array for the fixed read-only quiesced recovery observer",
+    )
+    parser.add_argument(
         "--peer-partition-command",
         help=(
             "guest-side link-down rendezvous/check JSON argv array; "
@@ -6115,6 +6167,10 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         dns_timeout=args.dns_timeout,
         stability_seconds=args.stability_seconds,
         stability_interval=args.stability_interval,
+        native_dns_status_command=(
+            parse_command_json(args.native_dns_status_command, "native DNS status command")
+            if args.native_dns_status_command is not None else None
+        ),
     )
 
 

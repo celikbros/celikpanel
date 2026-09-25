@@ -93,6 +93,10 @@ It adds no matrix coverage or independent recovery proof.
 The [shared database reader native regression](NATIVE-PDNS-SHARED-READER-20260925.md)
 repeats the same adoption rollback cell with the consolidated Agent reader.
 It does not exercise the independent quiesced observer.
+The [native quiesced PowerDNS observer trial](NATIVE-PDNS-QUIESCED-OBSERVER-20260925.md)
+repeats that cell and records the independent read-only status immediately after
+the proven kill, before Agent restart. It matches the frozen database bytes and
+native process/listeners at that point but does not execute an inverse or add a cell.
 
 The [PowerDNS pre-retry startup observation](NATIVE-PDNS-PRE-RETRY-OBSERVATION-20260925.md)
 repeats that adoption rollback cell with a read-only probe before the same-request

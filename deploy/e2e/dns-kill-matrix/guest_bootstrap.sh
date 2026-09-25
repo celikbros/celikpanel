@@ -1975,6 +1975,12 @@ argv = [
     "--stability-seconds", "30",
     "--stability-interval", "1",
 ]
+native_observer = "/opt/celikpanel/bin/recovery"
+if os.path.isfile(native_observer):
+    argv.extend([
+        "--native-dns-status-command",
+        compact([native_observer, "dns-switch-status", "--quiesced"]),
+    ])
 with open(sys.argv[1], "w", encoding="utf-8") as handle:
     json.dump(argv, handle, indent=2)
     handle.write("\n")

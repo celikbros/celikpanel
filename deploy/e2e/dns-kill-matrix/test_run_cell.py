@@ -672,6 +672,10 @@ class ControllerProtocolTest(unittest.TestCase):
         flow = source[source.index("def run_cell(settings:") :]
         self.assertGreaterEqual(flow.count("for ordinal in (1, 2):"), 2)
         self.assertLess(
+            flow.index('result["native_post_kill_status"]'),
+            flow.index('"agent-restart"'),
+        )
+        self.assertLess(
             flow.index('f"startup-recovery-attempt-{ordinal}"'),
             flow.index("run_recovery_probe(settings, ordinary, transcript, ordinal)"),
         )
@@ -696,6 +700,10 @@ class ControllerProtocolTest(unittest.TestCase):
         )
         self.assertLess(
             socket_flow.index("pre_retry_probe = run_recovery_probe("),
+            socket_flow.index('f"post-restart-rpc-retry-{ordinal}"'),
+        )
+        self.assertLess(
+            socket_flow.index("run_native_dns_status("),
             socket_flow.index('f"post-restart-rpc-retry-{ordinal}"'),
         )
         self.assertLess(
