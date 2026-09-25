@@ -123,7 +123,14 @@ func CompletePDNSAdoptionInverse(ctx context.Context, ops PDNSAdoptionInverseOps
 	if err := ops.ProveNative(ctx, terminal.Journal); err != nil {
 		return fmt.Errorf("reprove owner PowerDNS before journal retirement: %w", err)
 	}
-	if err := ops.RemoveJournal(ctx, terminal.Journal); err != nil {
+	final, err := read()
+	if err != nil || !samePDNSAdoptionInverseEvidence(terminal, final) {
+		return errors.Join(errors.New("PowerDNS adoption evidence changed before journal retirement"), err)
+	}
+	if err := ops.ExcludeWorker(ctx, final); err != nil {
+		return fmt.Errorf("recheck accepted DNS worker before journal retirement: %w", err)
+	}
+	if err := ops.RemoveJournal(ctx, final.Journal); err != nil {
 		return fmt.Errorf("retire exact DNS rollback journal: %w", err)
 	}
 	return ctx.Err()

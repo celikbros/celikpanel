@@ -1116,3 +1116,23 @@ and ledger remain v1 with no producer or migration change. Focused Linux tests
 and vet pass; no fresh disposable native trial has been run for this refactor.
 Loaded config, deleted-zone absence, later owner edits, independent inverse
 execution and the full interruption/reboot matrix remain open. P0.4 is open.
+### Installed-path PowerDNS adoption inverse binding (2026-09-25)
+
+P0.4, constitutional invariants 1/2/3/6: the recovery binary now has a dormant
+adapter that binds the accepted PowerDNS adoption inverse transaction to the
+fixed installed journal, state and ledger paths. It requires an exact request
+ID, local root-owned CelikPanel group, release-then-host lock acquisition,
+secured evidence reads, recorded-worker exclusion and the shared native
+PowerDNS source proof before the exact state, phase, ledger and journal effects.
+The sequence also rereads exact terminal evidence and excludes the worker after
+its last native proof and immediately before journal retirement; a late owner
+edit retains the journal. Each effect remains a bounded exact CAS operation.
+
+There is deliberately no CLI dispatch for this adapter yet. This code has not
+been exercised against a disposable native adoption rollback with injected
+interruptions and reboot, and it must not be used on installed servers. The
+state, journal and ledger remain v1; no schema, migration or Agent behavior
+changed. Linux tests cover accepted/foreign/unknown-worker and terminal shapes,
+invalid request admission, and a final owner-edit race. Package tests and vet
+pass. Native reboot, owner-edit and full interruption acceptance remain open;
+P0.4 is not complete.

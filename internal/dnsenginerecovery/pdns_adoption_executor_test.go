@@ -11,12 +11,13 @@ import (
 )
 
 type adoptionInverseFixture struct {
-	journal      dnsengineartifact.SwitchJournalV1
-	statePresent bool
-	terminal     bool
-	removed      bool
-	failAt       string
-	calls        []string
+	journal                  dnsengineartifact.SwitchJournalV1
+	statePresent             bool
+	terminal                 bool
+	removed                  bool
+	failAt                   string
+	mutateAfterTerminalProof bool
+	calls                    []string
 }
 
 func newAdoptionInverseFixture() *adoptionInverseFixture {
@@ -71,7 +72,15 @@ func (f *adoptionInverseFixture) ops() PDNSAdoptionInverseOps {
 			return SwitchEvidence{Journal: f.journal, Observation: observed}, true, nil
 		},
 		ExcludeWorker: func(context.Context, SwitchEvidence) error { return call("worker") },
-		ProveNative:   func(context.Context, dnsengineartifact.SwitchJournalV1) error { return call("native") },
+		ProveNative: func(context.Context, dnsengineartifact.SwitchJournalV1) error {
+			if err := call("native"); err != nil {
+				return err
+			}
+			if f.terminal && f.mutateAfterTerminalProof {
+				f.journal.MutationOwnerID = "cccccccccccccccccccccccccccccccc"
+			}
+			return nil
+		},
 		RemoveState: func(context.Context, dnsengineartifact.SwitchJournalV1) error {
 			if err := call("state"); err != nil {
 				return err
@@ -191,5 +200,21 @@ func TestCompletePDNSAdoptionInverseRejectsUnsupportedOrChangedEvidence(t *testi
 				}
 			}
 		})
+	}
+}
+
+func TestCompletePDNSAdoptionInverseRetainsJournalAfterOwnerEditDuringFinalProof(t *testing.T) {
+	fixture := newAdoptionInverseFixture()
+	fixture.mutateAfterTerminalProof = true
+	if err := CompletePDNSAdoptionInverse(context.Background(), fixture.ops()); err == nil {
+		t.Fatal("owner edit after final native proof was accepted")
+	}
+	if fixture.removed || !fixture.terminal {
+		t.Fatal("changed journal was retired or terminal checkpoint lost")
+	}
+	for _, call := range fixture.calls {
+		if call == "cleanup" {
+			t.Fatal("cleanup ran after owner edit")
+		}
 	}
 }

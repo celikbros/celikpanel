@@ -1375,3 +1375,13 @@ formats and recovery write authority are unchanged. Affected Linux tests and
 vet pass; this refactor has no new native trial. Loaded configuration,
 deleted-zone absence, later owner edits, independent inverse execution and the
 remaining fault/reboot matrix keep P0.4 open.
+P0.4, constitutional invariants 1/2/3/6: a dormant independent PowerDNS
+adoption inverse adapter now binds the shared transaction sequence to fixed
+installed paths, release/host locks, secured exact-request evidence, native
+PowerDNS proof, worker exclusion and exact state/journal/ledger CAS effects.
+The coordinator additionally rechecks terminal evidence and worker exclusion
+after its final native proof, so a late owner edit retains the journal. No CLI
+route, installed-host change, producer/schema transition or Agent behavior is
+introduced. Focused Linux tests and vet pass, including a final owner-edit
+race. Native interruption/reboot and owner-edit acceptance must pass before
+exposing a supported recovery command; P0.4 remains open.
