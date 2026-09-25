@@ -1175,3 +1175,13 @@ host exclusion. The historical v1 journal/ledger schemas are unchanged; only
 an additional terminal reason is recognized. Local exact/missing evidence and
 shared-authority tests pass. Native reboot/owner-edit trials and an
 Agent-independent inverse are still required for P0.4 acceptance.
+
+
+P0.4 BIND inverse stop boundary: the Agent now requires two matching
+inactive/dead/zero MainPID/ControlPID observations of a newly activated
+named.service after restoring its unit preimage and before rewriting native
+BIND configuration. Uncertain or active state retains the accepted rollback
+journal and blocks later effects. The historical v1 artifacts do not change.
+The focused and DNS/BIND/PowerDNS package tests pass; owner restarts, stray
+processes, independent inverse execution and native interrupted recovery
+remain open.

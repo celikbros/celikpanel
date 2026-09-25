@@ -830,3 +830,22 @@ the retained checkpoint drives native inverse reproof before cleanup. This
 closes the early-discard interval at the component boundary, but a native
 kill/reboot matrix, owner-edit race trial, filesystem-level conditional
 removal and Agent-independent inverse remain open.
+
+
+### BIND first-activation inverse stop guard (2026-09-25)
+
+P0.4, constitutional invariants 1/2/3: restoring a BIND target unit to its
+inactive preimage no longer proceeds directly to configuration restoration.
+The Agent now makes two native observations of named.service's inactive state,
+dead SubState and zero MainPID/ControlPID after the unit restore. A failed or
+changing observation leaves the rolling-back journal in place and withholds
+configuration and source-state writes. The running-BIND preimage path is not
+subject to this stopped-target guard; it retains the existing owner-aware
+restoration and final native proof. The v1 journal, state and ledger schemas
+and their publication order are unchanged. The same accepted operation can
+retry its inverse after the native issue is resolved.
+
+Focused and wider DNS/BIND/PowerDNS package tests passed. This guard does not
+exclude an independent owner restart after the read, detect a stray process
+outside systemd's MainPID/ControlPID, provide an Agent-independent executor or
+prove the native owner-edit/reboot matrix. P0.4 remains open.

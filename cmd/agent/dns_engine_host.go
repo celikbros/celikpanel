@@ -2564,6 +2564,16 @@ func rollbackBINDActivation(
 				commandCtx, systemctl, targetBefore, true,
 			)
 		},
+		verifyTargetBeforeConfig: func(proofCtx context.Context) error {
+			before, ok := targetBefore["named.service"]
+			if !ok {
+				return errors.New("BIND target snapshot lacks named.service")
+			}
+			if before.ActiveState == "active" {
+				return nil
+			}
+			return verifyBINDTargetStoppedBeforeConfigRestore(proofCtx, systemctl)
+		},
 		restoreConfigs: func() error {
 			return runBINDMutationWithMaskParentProof(
 				verifyBINDMaskParentMetadata,
@@ -2582,10 +2592,11 @@ func rollbackBINDActivation(
 }
 
 type bindRollbackActivationOps struct {
-	restoreTarget  func(context.Context) error
-	restoreConfigs func() error
-	restoreState   func() error
-	restoreSource  func(context.Context) error
+	restoreTarget            func(context.Context) error
+	verifyTargetBeforeConfig func(context.Context) error
+	restoreConfigs           func() error
+	restoreState             func() error
+	restoreSource            func(context.Context) error
 }
 
 func rollbackBINDActivationWithOps(
@@ -2593,10 +2604,11 @@ func rollbackBINDActivationWithOps(
 	ops bindRollbackActivationOps,
 ) error {
 	return dnsenginerecovery.RollbackBINDActivation(ctx, dnsenginerecovery.BINDActivationRollbackOps{
-		RestoreTarget:  ops.restoreTarget,
-		RestoreConfigs: ops.restoreConfigs,
-		RestoreState:   ops.restoreState,
-		RestoreSource:  ops.restoreSource,
+		RestoreTarget:            ops.restoreTarget,
+		VerifyTargetBeforeConfig: ops.verifyTargetBeforeConfig,
+		RestoreConfigs:           ops.restoreConfigs,
+		RestoreState:             ops.restoreState,
+		RestoreSource:            ops.restoreSource,
 	})
 }
 func verifyOnlyBINDActive(

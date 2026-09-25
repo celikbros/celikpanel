@@ -11,10 +11,11 @@ func TestBINDActivationRollbackDoesNotRewriteConfigAfterFailedTargetRestore(t *t
 	boom := errors.New("target unit could still be running")
 	var calls []string
 	ops := BINDActivationRollbackOps{
-		RestoreTarget:  func(context.Context) error { calls = append(calls, "target"); return boom },
-		RestoreConfigs: func() error { calls = append(calls, "configs"); return nil },
-		RestoreState:   func() error { calls = append(calls, "state"); return nil },
-		RestoreSource:  func(context.Context) error { calls = append(calls, "source"); return nil },
+		RestoreTarget:            func(context.Context) error { calls = append(calls, "target"); return boom },
+		VerifyTargetBeforeConfig: func(context.Context) error { calls = append(calls, "verify"); return nil },
+		RestoreConfigs:           func() error { calls = append(calls, "configs"); return nil },
+		RestoreState:             func() error { calls = append(calls, "state"); return nil },
+		RestoreSource:            func(context.Context) error { calls = append(calls, "source"); return nil },
 	}
 	if err := RollbackBINDActivation(context.Background(), ops); !errors.Is(err, boom) {
 		t.Fatalf("failed target restore was lost: %v", err)
@@ -25,7 +26,7 @@ func TestBINDActivationRollbackDoesNotRewriteConfigAfterFailedTargetRestore(t *t
 }
 
 func TestBINDActivationRollbackStopsAtEveryFailedPredecessor(t *testing.T) {
-	names := []string{"target", "configs", "state", "source"}
+	names := []string{"target", "verify", "configs", "state", "source"}
 	for failAt := range names {
 		t.Run(names[failAt], func(t *testing.T) {
 			boom := errors.New("injected failure")
@@ -38,10 +39,11 @@ func TestBINDActivationRollbackStopsAtEveryFailedPredecessor(t *testing.T) {
 				return nil
 			}
 			ops := BINDActivationRollbackOps{
-				RestoreTarget:  func(context.Context) error { return run("target") },
-				RestoreConfigs: func() error { return run("configs") },
-				RestoreState:   func() error { return run("state") },
-				RestoreSource:  func(context.Context) error { return run("source") },
+				RestoreTarget:            func(context.Context) error { return run("target") },
+				VerifyTargetBeforeConfig: func(context.Context) error { return run("verify") },
+				RestoreConfigs:           func() error { return run("configs") },
+				RestoreState:             func() error { return run("state") },
+				RestoreSource:            func(context.Context) error { return run("source") },
 			}
 			if err := RollbackBINDActivation(context.Background(), ops); !errors.Is(err, boom) {
 				t.Fatalf("rollback failure was lost: %v", err)

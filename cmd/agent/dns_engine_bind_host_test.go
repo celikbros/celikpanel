@@ -45,8 +45,9 @@ func TestRollbackBINDActivationPreservesCallerDeadline(t *testing.T) {
 			<-commandCtx.Done()
 			return commandCtx.Err()
 		},
-		restoreConfigs: func() error { return nil },
-		restoreState:   func() error { return nil },
+		verifyTargetBeforeConfig: func(context.Context) error { return nil },
+		restoreConfigs:           func() error { return nil },
+		restoreState:             func() error { return nil },
 		restoreSource: func(commandCtx context.Context) error {
 			return commandCtx.Err()
 		},
