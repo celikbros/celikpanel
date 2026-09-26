@@ -47,5 +47,44 @@ class NativeBindPeerTest(unittest.TestCase):
                 mutating_run.assert_not_called()
 
 
+    def test_parent_negative_fixture_is_explicit_and_cell_bound(self) -> None:
+        ordinary = peer.secondary_config("192.0.2.11", "192.0.2.10")
+        parent = peer.secondary_config("192.0.2.11", "192.0.2.10", True)
+        self.assertNotIn('zone "test"', ordinary)
+        self.assertIn('zone "test"', parent)
+        self.assertIn("allow-transfer { 192.0.2.11; };", ordinary)
+        self.assertIn('file "/etc/bind/celikpanel-fixture-parent.zone"', parent)
+        self.assertIn("ns IN A 192.0.2.10", peer.parent_zone("192.0.2.10"))
+
+        with tempfile.TemporaryDirectory() as temporary:
+            args = argparse.Namespace(
+                work_root=Path(temporary),
+                cell_id="bind__intent__before-write__paired-primary__peer-reachable",
+                manifest=Path(temporary) / "manifest.json",
+                identity_file=Path(temporary) / "key",
+                authoritative_parent=True,
+                execute=True,
+            )
+            plan = {
+                "nodes": {
+                    "arch": {"peer": {"address": "192.0.2.11/24"}},
+                    "debian13": {"peer": {"address": "192.0.2.10/24"}},
+                }
+            }
+            cell = {
+                "driver": "bind",
+                "role": "paired-primary",
+                "placement": {"kill_host": "arch"},
+            }
+            with (
+                mock.patch.object(peer.fixture, "load_cell_plan", return_value=plan),
+                mock.patch.object(bootstrap, "load_manifest_cell", return_value=cell),
+                mock.patch.object(bootstrap, "validate_bind_cell"),
+                mock.patch.object(bootstrap, "run") as mutating_run,
+            ):
+                with self.assertRaises(bootstrap.BootstrapError):
+                    peer.prepare(args)
+                mutating_run.assert_not_called()
+
 if __name__ == "__main__":
     unittest.main()

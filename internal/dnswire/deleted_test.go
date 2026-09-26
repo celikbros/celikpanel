@@ -42,6 +42,7 @@ func TestDeletedZoneSOARequiresExactNegativeWireEvidence(t *testing.T) {
 		{name: "non-authoritative REFUSED", flags: 0x8005},
 		{name: "non-authoritative NXDOMAIN", flags: 0x8003},
 		{name: "authoritative parent NXDOMAIN", flags: 0x8403, parent: "example.test", valid: true},
+		{name: "authoritative single-label parent NXDOMAIN", flags: 0x8403, parent: "test", valid: true},
 		{name: "authoritative parent NODATA", flags: 0x8400, parent: "example.test", valid: true},
 		{name: "child still authoritative", flags: 0x8403, parent: zone},
 		{name: "unrelated authority", flags: 0x8403, parent: "other.test"},

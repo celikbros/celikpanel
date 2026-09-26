@@ -14,13 +14,13 @@ import fixture
 import guest_bootstrap as bootstrap
 
 
-def secondary_config(primary_ip: str, secondary_ip: str) -> str:
+def secondary_config(primary_ip: str, secondary_ip: str, authoritative_parent: bool = False) -> str:
     primary = ipaddress.IPv4Address(primary_ip)
     secondary = ipaddress.IPv4Address(secondary_ip)
     if primary == secondary:
         raise bootstrap.BootstrapError("DNS pair must use distinct peer addresses")
     catalog = "catalog-" + primary.packed.hex() + ".celikpanel.invalid"
-    return (
+    base = (
         "options {\n"
         '    directory "/var/cache/bind";\n'
         f"    listen-on {{ 127.0.0.1; {secondary}; }};\n"
@@ -35,7 +35,27 @@ def secondary_config(primary_ip: str, secondary_ip: str) -> str:
         f'zone "{catalog}" {{\n'
         "    type secondary;\n"
         f"    primaries {{ {primary}; }};\n"
+        f"    allow-transfer {{ {primary}; }};\n"
         "};\n"
+    )
+    if not authoritative_parent:
+        return base
+    return base + (
+        'zone "test" {\n'
+        "    type primary;\n"
+        '    file "/etc/bind/celikpanel-fixture-parent.zone";\n'
+        "    allow-transfer { none; };\n"
+        "};\n"
+    )
+
+
+def parent_zone(secondary_ip: str) -> str:
+    secondary = ipaddress.IPv4Address(secondary_ip)
+    return (
+        "$TTL 60\n"
+        "@ IN SOA ns.test. hostmaster.test. ( 1 3600 600 604800 60 )\n"
+        "@ IN NS ns.test.\n"
+        f"ns IN A {secondary}\n"
     )
 
 
@@ -61,6 +81,13 @@ def prepare(args: argparse.Namespace) -> None:
     cell = bootstrap.load_manifest_cell(args.manifest, args.cell_id)
     bootstrap.validate_bind_cell(cell, "arch", "uninitialized")
     primary_ip, secondary_ip, secondary = pair_addresses(plan, cell)
+    authoritative_parent = getattr(args, "authoritative_parent", False)
+    if authoritative_parent and args.cell_id != (
+        "bind__intent__after-write__paired-primary__peer-reachable"
+    ):
+        raise bootstrap.BootstrapError(
+            "the parent-negative proof belongs only to the exact paired deletion cell"
+        )
     identity = bootstrap.identity_file(args.identity_file)
     remote_path = bootstrap.stage_name(args.cell_id) + ".peer.conf"
     ssh = bootstrap.ssh_base(secondary, identity)
@@ -85,9 +112,13 @@ def prepare(args: argparse.Namespace) -> None:
     )
     with tempfile.TemporaryDirectory(prefix="celikpanel-bind-peer-") as temporary:
         config_path = Path(temporary) / "named.conf"
+        parent_path = Path(temporary) / "celikpanel-fixture-parent.zone"
         config_path.write_text(
-            secondary_config(primary_ip, secondary_ip), encoding="ascii", newline="\n"
+            secondary_config(primary_ip, secondary_ip, authoritative_parent),
+            encoding="ascii", newline="\n"
         )
+        if authoritative_parent:
+            parent_path.write_text(parent_zone(secondary_ip), encoding="ascii", newline="\n")
         bootstrap.run(ssh + ["sudo apt-get update -qq"], execute=args.execute)
         bootstrap.run(
             ssh + ["sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq bind9"],
@@ -98,14 +129,30 @@ def prepare(args: argparse.Namespace) -> None:
             + [str(config_path), bootstrap.remote_destination(secondary, remote_path)],
             execute=args.execute,
         )
+        parent_remote_path = remote_path + ".parent.zone"
+        if authoritative_parent:
+            bootstrap.run(
+                bootstrap.scp_base(secondary, identity)
+                + [str(parent_path), bootstrap.remote_destination(secondary, parent_remote_path)],
+                execute=args.execute,
+            )
+        parent_install = ""
+        if authoritative_parent:
+            parent_install = (
+                f" && sudo install -m 0644 -o root -g root {parent_remote_path} "
+                "/etc/bind/celikpanel-fixture-parent.zone"
+                " && sudo named-checkzone test /etc/bind/celikpanel-fixture-parent.zone"
+            )
         bootstrap.run(
             ssh + [
                 f"sudo install -m 0644 -o root -g root {remote_path} /etc/bind/named.conf"
-                " && sudo named-checkconf /etc/bind/named.conf"
-                " && sudo systemctl enable --now named.service"
-                " && sudo systemctl restart named.service"
-                " && systemctl is-active --quiet named.service"
-                f" && rm -- {remote_path}"
+                + parent_install
+                + " && sudo named-checkconf /etc/bind/named.conf"
+                + " && sudo systemctl enable --now named.service"
+                + " && sudo systemctl restart named.service"
+                + " && systemctl is-active --quiet named.service"
+                + f" && rm -- {remote_path}"
+                + (f" {parent_remote_path}" if authoritative_parent else "")
             ],
             execute=args.execute,
         )
@@ -125,6 +172,7 @@ def main() -> None:
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--cell-id", required=True)
     parser.add_argument("--identity-file", type=Path, required=True)
+    parser.add_argument("--authoritative-parent", action="store_true")
     parser.add_argument(
         "--manifest", type=Path, default=Path(__file__).with_name("manifest.json")
     )

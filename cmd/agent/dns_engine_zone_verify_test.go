@@ -586,6 +586,14 @@ func TestDeletedChildAcceptsAuthoritativeParentNegativeOverUDPAndTCP(t *testing.
 	}
 }
 
+func TestDeletedChildAcceptsSingleLabelParentNegative(t *testing.T) {
+	const domain = "s1-kill.test"
+	result := testNegativeSOAResponse(t, domain, "test", dnsRCodeNameError)
+	if !validDeletedDNSZoneProof(domain, result) {
+		t.Fatalf("valid authoritative parent proof rejected: %+v", result)
+	}
+}
+
 func TestDeletedChildRejectsChildApexAuthoritativeSOA(t *testing.T) {
 	domain := "mail.example.test"
 	for _, rcode := range []int{dnsRCodeNameError, dnsRCodeNoError} {

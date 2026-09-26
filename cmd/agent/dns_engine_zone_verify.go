@@ -15,6 +15,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/dnswire"
+	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -649,7 +650,7 @@ func parseDNSZoneSOAResponse(message []byte, id uint16, domain string) (dnsSOAPr
 			}
 			if recordType == dnsTypeSOA && recordClass == dnsClassIN {
 				owner := strings.ToLower(strings.TrimSuffix(name, "."))
-				if !serviceMutationCanonicalFQDN(owner) {
+				if hostname.Validate(owner) != nil {
 					return errors.New("DNS SOA owner is not canonical")
 				}
 				_, serialOffset, err := decodeDNSName(message, rdataOffset)

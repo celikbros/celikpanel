@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/hostname"
 )
 
 // QueryDeletedZoneSOA proves a frozen zone's apex is no longer served by the
@@ -57,7 +59,7 @@ func parseDeletedZoneSOAResponse(message []byte, id uint16, zone string) error {
 		return errors.New("deleted-zone parent SOA is malformed")
 	}
 	parent := strings.ToLower(strings.TrimSuffix(owner, "."))
-	if !canonicalHostname(parent) || parent == zone || !strings.HasSuffix(zone, "."+parent) ||
+	if hostname.Validate(parent) != nil || parent == zone || !strings.HasSuffix(zone, "."+parent) ||
 		binary.BigEndian.Uint16(message[header:header+2]) != 6 ||
 		binary.BigEndian.Uint16(message[header+2:header+4]) != classIN {
 		return errors.New("deleted-zone response does not identify a strict parent SOA")
