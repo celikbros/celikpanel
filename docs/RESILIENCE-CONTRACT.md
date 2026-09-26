@@ -1473,3 +1473,14 @@ P0.4/P0.5, constitutional invariants 1/3/6: the [fresh native BIND peer deletion
 P0.4/P0.5, constitutional invariants 1/2/3/6: the [managed BIND V3 deletion and management-absent reboot trial](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-PENDING-20260926.md) exposed a primary DNS outage when rollback paired proof failed after native secondary catalog removal. The correction uses the immutable primary catalog receipt and receipt-addressed local AXFR for local deletion evidence, leaves native BIND active when a locally restored rollback is peer-unverified, and permits exact peer proof to supersede optional NOTIFY failure. A fresh real V3 delete advanced both native BIND catalogs to serial 2, removed the secondary zone, preserved one exact pending mutation, and survived reboot with Agent/Panel disabled on the disposable primary. The secondary's `rndc zonestatus` proved the zone was not loaded; `REFUSED` alone did not. No persisted schema or native service ownership changed. Exact peer proof and completion, other failure cells, owner edits, PowerDNS and complete native workload/renewal acceptance remain open; P0.4/P0.5 are not closed.
 
 P0.4/P0.5, constitutional invariants 1/2/3/6: the [terminal native BIND V3 deletion trial](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md) adds a parent-authoritative disposable secondary with catalog AXFR limited to the primary. Two strict SOA validators now accept a syntactically valid one-label authority parent while still requiring a canonical child FQDN, exact ancestor and complete authoritative negative wire proof. The clean Arch/Debian pair passed the real SIGKILL cell; production V3 deletion then reached `verified_published/succeeded`, native secondary removal and management-disabled reboot continuity. No persisted schema or recovery authority changed. Parentless deletion, other engines and the full fault/workload matrix remain open; P0.4/P0.5 are not complete.
+
+P0.4, constitutional invariants 1/2 and D-024: paired V3 propagation timeout
+guidance now names the last fixed proof boundary (plan, catalog pair, peer zone
+transfer or peer zone SOA) while retaining the peer administrator's next action
+and same-operation verification. It does not persist raw probe errors, DNS
+answers or credentials. The accepted mutation remains pending; polling does
+not start another mutation. No persisted schema, authority, recovery executor
+or native service ownership changed. A focused regression tests each deletion
+boundary and secret exclusion; the Agent package tests pass. This status-only
+change has not been rerun in the native pair. Parentless deletion, other engines
+and the full P0.4 matrix remain open.

@@ -449,3 +449,56 @@ func TestVerifyPDNSV3DeletionNeverProbesZoneWithoutPeerCatalogAuthority(t *testi
 		t.Fatalf("err=%v zoneCalled=%v", err, zoneCalled)
 	}
 }
+
+func TestCompleteDNSV3DeletionNamesLastFailedProofWithoutProbeDetails(t *testing.T) {
+	evidence := testPDNSPrimaryPropagationEvidence(8, nil, nil)
+	plan := dnsV3PrimaryPropagationPlan{
+		Evidence: evidence,
+		Changed:  expectedDNSZoneAuthority{Domain: "gone.example.test", Delete: true},
+	}
+	localAXFR := func(context.Context, string, string) (dnsCatalogAXFRResult, error) {
+		return dnsCatalogAXFRResult{Serial: evidence.Serial}, nil
+	}
+	for _, test := range []struct {
+		name  string
+		check dnsV3ProofCheck
+	}{
+		{name: "catalog", check: dnsV3ProofCatalogPair},
+		{name: "transfer", check: dnsV3ProofZoneTransfer},
+		{name: "soa", check: dnsV3ProofZoneSOA},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			soa := func(_ context.Context, _, _, domain string) (dnsSOAProbeResult, error) {
+				if domain == evidence.Domain {
+					return dnsSOAProbeResult{
+						Authoritative: true, RCode: dnsRCodeNoError,
+						SOASerials: []uint32{evidence.Serial},
+					}, nil
+				}
+				return dnsSOAProbeResult{}, errors.New("secret-provider-token")
+			}
+			peerCatalog := exactTestPeerCatalogAXFR(evidence)
+			if test.check == dnsV3ProofCatalogPair {
+				peerCatalog = func(context.Context, string, string, string) (dnsCatalogAXFRResult, error) {
+					return dnsCatalogAXFRResult{}, errors.New("secret-provider-token")
+				}
+			}
+			peerZone := absentTestPeerZoneAXFR(evidence)
+			if test.check == dnsV3ProofZoneTransfer {
+				peerZone = func(context.Context, string, string, string) (dnsZoneAXFRState, error) {
+					return dnsZoneAXFRPresent, errors.New("secret-provider-token")
+				}
+			}
+			err := completeDNSV3PrimaryPropagationAt(
+				ctx, plan, soa, localAXFR, peerCatalog, peerZone,
+			)
+			if err == nil || !strings.Contains(err.Error(), "check="+string(test.check)) ||
+				!strings.Contains(err.Error(), "retry verification of the same operation") ||
+				strings.Contains(err.Error(), "secret-provider-token") {
+				t.Fatalf("unsafe or unactionable pending guidance: %v", err)
+			}
+		})
+	}
+}

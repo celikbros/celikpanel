@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -180,12 +181,25 @@ func completeDNSV3PrimaryPropagation(
 	ctx context.Context,
 	plan dnsV3PrimaryPropagationPlan,
 ) error {
+	return completeDNSV3PrimaryPropagationAt(
+		ctx, plan, probeDNSZoneSOA, probeDNSCatalogAXFR,
+		probeDNSBoundCatalogAXFR, probeDNSBoundZoneAXFR,
+	)
+}
+
+func completeDNSV3PrimaryPropagationAt(
+	ctx context.Context,
+	plan dnsV3PrimaryPropagationPlan,
+	soa dnsZoneSOAProbe,
+	localAXFR dnsCatalogAXFRProbe,
+	peerCatalogAXFR dnsBoundCatalogAXFRProbe,
+	peerZoneAXFR dnsBoundZoneAXFRProbe,
+) error {
 	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()
 	for {
-		err := verifyDNSV3PrimaryPropagationAt(
-			proofCtx, plan, probeDNSZoneSOA, probeDNSCatalogAXFR,
-			probeDNSBoundCatalogAXFR, probeDNSBoundZoneAXFR,
+		check, err := verifyDNSV3PrimaryPropagationCheckAt(
+			proofCtx, plan, soa, localAXFR, peerCatalogAXFR, peerZoneAXFR,
 		)
 		if err == nil {
 			return nil
@@ -193,14 +207,13 @@ func completeDNSV3PrimaryPropagation(
 		select {
 		case <-proofCtx.Done():
 			if plan.Changed.Delete {
-				return errors.New("paired DNS deletion is unverified; the peer administrator must check native zone state and DNS access, then retry verification of the same operation")
+				return fmt.Errorf("paired DNS deletion is unverified (check=%s); the peer administrator must check native zone state and DNS access, then retry verification of the same operation", check)
 			}
-			return errors.New("paired DNS primary propagation did not converge")
+			return fmt.Errorf("paired DNS primary propagation did not converge (check=%s)", check)
 		case <-time.After(250 * time.Millisecond):
 		}
 	}
 }
-
 func verifyPDNSV3PropagationAt(
 	ctx context.Context,
 	plan pdnsV3PropagationPlan,
@@ -223,6 +236,16 @@ func verifyPDNSV3PropagationAt(
 	)
 }
 
+type dnsV3ProofCheck string
+
+const (
+	dnsV3ProofPlan         dnsV3ProofCheck = "plan"
+	dnsV3ProofCatalogPair  dnsV3ProofCheck = "catalog_pair"
+	dnsV3ProofZoneTransfer dnsV3ProofCheck = "peer_zone_transfer"
+	dnsV3ProofZoneSOA      dnsV3ProofCheck = "peer_zone_soa"
+	dnsV3ProofVerified     dnsV3ProofCheck = "verified"
+)
+
 func verifyDNSV3PrimaryPropagationAt(
 	ctx context.Context,
 	plan dnsV3PrimaryPropagationPlan,
@@ -231,8 +254,24 @@ func verifyDNSV3PrimaryPropagationAt(
 	peerCatalogAXFR dnsBoundCatalogAXFRProbe,
 	peerZoneAXFR dnsBoundZoneAXFRProbe,
 ) error {
+	_, err := verifyDNSV3PrimaryPropagationCheckAt(
+		ctx, plan, soa, localAXFR, peerCatalogAXFR, peerZoneAXFR,
+	)
+	return err
+}
+
+// The fixed check identifies the proof boundary without putting probe errors,
+// peer output, addresses, or other untrusted material in the pending operation.
+func verifyDNSV3PrimaryPropagationCheckAt(
+	ctx context.Context,
+	plan dnsV3PrimaryPropagationPlan,
+	soa dnsZoneSOAProbe,
+	localAXFR dnsCatalogAXFRProbe,
+	peerCatalogAXFR dnsBoundCatalogAXFRProbe,
+	peerZoneAXFR dnsBoundZoneAXFRProbe,
+) (dnsV3ProofCheck, error) {
 	if err := validateDNSV3PrimaryPropagationPlan(plan); err != nil {
-		return err
+		return dnsV3ProofPlan, err
 	}
 	var authority dnsPeerAXFRAuthority
 	var err error
@@ -246,24 +285,26 @@ func verifyDNSV3PrimaryPropagationAt(
 		)
 	}
 	if err != nil {
-		return err
+		return dnsV3ProofCatalogPair, err
 	}
 	if !plan.Changed.Delete {
-		return nil
+		return dnsV3ProofVerified, nil
 	}
 	if err := verifyPeerZoneNoTransferAt(
 		ctx, authority, plan.Changed.Domain, peerZoneAXFR,
 	); err != nil {
-		return err
+		return dnsV3ProofZoneTransfer, err
 	}
 	// An AXFR refusal alone can also mean that a still-loaded zone denies
 	// transfer. Require independent authoritative negative SOA answers over
 	// both transports before calling a peer deletion complete.
-	return verifyDeletedDNSZoneAt(
+	if err := verifyDeletedDNSZoneAt(
 		ctx, authority.sourceIP, authority.peerIP, plan.Changed.Domain, soa,
-	)
+	); err != nil {
+		return dnsV3ProofZoneSOA, err
+	}
+	return dnsV3ProofVerified, nil
 }
-
 func verifyPeerZoneNoTransferAt(
 	ctx context.Context,
 	authority dnsPeerAXFRAuthority,
