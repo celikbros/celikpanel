@@ -1,6 +1,6 @@
 # CelikPanel Yol Haritası
 
-*Son güncelleme: 14 Eylül 2026 · [English](ROADMAP.md)*
+*Son güncelleme: 26 Eylül 2026 · [English](ROADMAP.md)*
 
 ---
 
@@ -66,6 +66,68 @@ Sistemin mümkün olan her arızayı kendiliğinden gidereceği vaat edilmez.
 
 ---
 
+## Neredeyiz — 26 Eylül 2026
+
+**Güncel öncelik: ürünü genişletmeden önce D-025 mimari dayanıklılık işini tamamlamak.**
+Bu inceleme, yerel kaynağın `f253d318` commit'ine kadarki durumunu ve saklanan kabul
+raporlarını kapsar. Frankfurt/Boston'un yeniden incelendiği, yeni sürüm yayımlandığı
+veya değişikliklerin kurulu olduğu anlamına gelmez. P0.1–P0.5'in tamamı **kısmi**;
+hiçbiri kapanmış değil. Anayasa gereksinimleri ve mevcut iş kimlikleri değişmedi.
+
+### Kanıtlanan kapsam ve kalan işler
+
+| Mevcut iş | Belirli kapsamda uygulanan veya doğrulanan | Kapatmak için gereken |
+|---|---|---|
+| P0.1 — Gerçek güncelleme/geri alma | Arch/Debian üzerinde gerçek eski sürüme dönüş; sonraki şema geçişi ve kurtarma deneylerinde gerçek Alpha64 schema38 verisi. [Kanıt](deploy/e2e/release-recovery/ISOLATED-DATABASE.md). | Desteklenen güncelleme/arıza/hizmet matrisi ve üretim imzalı aday kabulü tamamlanmalı; seçili aşamanın geçmesi bütün güncellemenin kabulü değildir. |
+| P0.2 — Erişim ve doğru durum | Bağımsız, kimlik doğrulamalı kurtarma/durum girişi; seçili CLI, HTTP ve tarayıcı sonuçları eşleşiyor. Gerçek açılış beklemesinde tekrarlar aynı işlemi koruyor. [Kanıt](deploy/e2e/release-recovery/BOUND-WORKER.md). | Gerçek bekleme/hata/yeniden bağlanma durumları, bilinen hatanın korunması, beklerken tarayıcı erişimi ve üretim güven zinciriyle kullanıcının başlattığı güncelleme yolu. |
+| P0.3 — Bağımsız kurtarma | Ayrı korunan kurtarma kodu/verisi, ayrı kopyada DB dönüşümü ve atomik yayın; geri alma sırasında seçili kesintiler ve yeniden açılış sonrasında kesinti anındaki satırlar korunarak otomatik kurtarma. [İki arızalı deney](deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md). | Kalan kontrol noktaları, eksik yedek yakalama, dosya izin/sahiplik geçişleri, eski sürüm uyumu ve güvenli temizlik. Sonunda kurtulma, kesintisiz hizmet veya güç kaybı dayanıklılığı değildir. |
+| P0.4 — Ortak DNS/TLS sözleşmeleri | DNS sahiplenme/yayın rolleri ayrıldı; ortak TLS ve DNS okuyucuları, bağımsız DNS gözlemi ve seçili Agent aracılı arıza kurtarması mevcut. [Sözleşme](docs/DNS-ENGINE-ARTIFACT.md). | Desteklenen **Agent'tan bağımsız DNS geri alma yürütmesi**, gerçek kesinti/sahip değişikliği kabulü, bütün üretici/geri yükleme geçişleri ve yetkili üst bölge bulunmayan ikincilde silme kanıtı. Henüz kullanıma açılmayan ters işlem kodu ve salt-okur gözlem bu açığı kapatmaz. |
+| P0.5 — Hizmet bağımsızlığı | Sınırlı güvenlik duvarı/posta yenileme ve devreye alma kurtarması; raporda belirtilen yönetimsiz veya yönetim devre dışı açılışlarda tek PowerDNS ve BIND/BIND çiftinin hizmet vermesi. [Posta kanıtı](deploy/e2e/release-recovery/MAIL-ENROLLMENT-MANAGEMENT-ABSENT-BE.json); [DNS kanıtı](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md). | Farklı DNS motorlarının çiftleri, tam kurulum/devreye alma ve eski uygulama uyumu; desteklendiği söylenen her yönetimsiz/kaldırılmış durumda web/DB/posta/cron/yenileme/güvenlik duvarı kontrolleri. Yönetimi devre dışı bırakmak, tamamen kaldırmak değildir. |
+
+Ayrıntılı [kabul kaydı](docs/RESILIENCE-CONTRACT.tr.md), başarısız denemeleri ve
+kesin sınırları korur. Yeni kanıt mevcut P0 maddesini günceller;
+yeni bir mimari plan başlatmaz.
+
+### Son DNS sonuçları ve sınırları
+
+- [Yönetilen BIND V3 silme işlemi](deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md), yetkili üst bölge sunan, panelsiz ikincille doğrulanmış sonuca ulaştı. Yerel bölge kaldırılması yeniden açılışta korundu. Üst bölge kanıtı yokken silme beklemede kalıyor; yalnız `REFUSED` yokluk kanıtı sayılmıyor.
+- [Çift sunucuda target-staged/after-write](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md), gerçek SIGKILL, aynı isteğin Agent aracılığıyla kurtarılması, ikincile aktarım ve yönetim devre dışıyken yeniden açılışı geçti. Yeniden açılış gözlemleri, özet değeri alınan arıza arşivinden ayrı belgelenmiştir.
+- [PowerDNS sahip değişikliği reddi](deploy/e2e/dns-kill-matrix/NATIVE-PDNS-OWNER-EDIT-20260925.md), sonlandırma sonrası sahibin düzenlemesini, günlüğü ve çalışan DNS hizmetini korudu. Bu sınırlı ret kanıtıdır; her değişiklik anındaki yarış güvenliği veya bağımsız geri alma değildir.
+- [DNS envanterinde](deploy/e2e/dns-kill-matrix/README.md) 510 ham birleşim var: 268 uygulanabilir/çalıştırılabilir, 242 gerekçeli kapsam dışı. **268, geçen test veya hazır deney ortamı sayısı değildir.** Yönetilen BIND ve eski ikincil kaynak hazırlayıcıları, çift sunucunun sonraki aşamaları ve çalıştırılmamış hücreler açık. Aynı hücrenin tekrarı aşama kapsamını artırmaz.
+- 12 Eylül farklı motorlu çiftin silme iddiası düzeltildi: olumsuz DNS yanıtı yeterli kanıt değildi. Yeni BIND/BIND başarısı, geçmiş BIND/PowerDNS kabulünü kapatmıyor.
+
+### Sıradaki işler ve bağımlılık sırası
+
+| Sıra | Mevcut plandaki iş | Bitiş kanıtı |
+|---|---|---|
+| 1 | P0.4: bağımsız DNS kurtarma yolunu, yerel sahip değişikliği reddi ve kesintide sürdürülebilir devamıyla tamamla. | Geçici gerçek sistemdeki arıza, normal Agent/Panel yokken desteklenen sahip kurtarma yoluyla giderilir; kurtarma kesintisi/yeniden açılış aynı işlemi korur, sahibin değişiklikleri bozulmaz. |
+| 2 | P0.4/P0.5: eksik kaynak/ikincil deney ortamlarını ve üst bölge ya da uzak panel gerektirmeyen uygulanabilir silme doğrulamasını tamamla. | Desteklenen gerçek birincil/ikincil birleşimleri ekleme/düzenleme/silme, yüklenen yerel bölge durumu ve yeniden açılışı kanıtlar; belirsizlikte aynı işleme yönelik uygulanabilir kurtarma yolu sunulur. Deney altyapısı açığı kapsam dışı sayılamaz. |
+| 3 | P0.1–P0.5: kalan uçtan uca güncelleme, erişim, şema, TLS/devreye alma ve hizmet matrisini kapat. | Kullanıcının arayüzden güncelleme başlatması, başarısız aday, otomatik geri alma, kurtarmadaki ikinci arıza, kimlik doğrulamalı yönlendirme ve korunan hizmetler tek işlemde doğrulanır. İddia edilen her platform/sürüm birleşiminin kanıtı saklanır. |
+| 4 | Kesin adayın sürüm incelemesi ve kısa kullanıcı test yolu. | Gerekli kabul işleri kapanır veya bilinçli olarak dar kapsamlı sürümün açık sınırları belirtilir. İmzalı dosyalar ve kurtarma uyumu doğrulanır; kurulu panel güncellemesini yalnız kullanıcı başlatır. |
+
+Yeni test eklemeden önce hangi açık kabulün kapanacağı belirtilir.
+Geçen deney, ancak ilgili değişiklik veya adı konmuş belirsizlik nedeniyle tekrarlanır.
+Kanıt saklanıp kontrol edildikten sonra geçici konuklar durdurulur ve doğrulanmış
+geçici diskleri temizlenir; kurtarma malzemesi ve sahibin verisi korunur.
+
+**Bitiş tarihi:** mevcut kanıtla belirlenmiş değil. Kalan uygulama ve deney altyapısı
+açıkları varken güvenilir yüzde veya kesin tarih verilemiyor. Bağımsız DNS yolu ve
+eksik deney kapsamı doğrulandığında süre yeniden değerlendirilir; bitiş, küçük
+commit sayısına değil mevcut kabul koşullarının karşılanmasına bağlıdır.
+
+### Yapay zekâ asistanı aşaması — işlem/kurtarma temelinden sonra
+
+Kullanıcının istediği yapay zekâ asistanı planda: gözlenen durumu açıklayacak,
+kullanıcının yetkilendirdiği panel işlerini aynı türlenmiş ve kapsamı sınırlı
+işlem API'leriyle yapmasına yardımcı olacak. Planı gösterecek, izinleri koruyacak,
+işlem kimliğini kaybetmeyecek ve doğrulanmış sonucu bildirecek. Kabul deneyleri;
+izin reddini, kullanılamayan hizmeti, kesilen isteği ve ikinci değişiklik üretmeyen
+tekrarı kapsamalı. Sınırsız root, eksik kanıt uydurma, lisans atlama veya kurulu
+panel güncellemesi başlatma yetkisi almayacak. Yapay zekâ entegrasyonu kuralları
+belli kurtarmanın yerine geçmez; bu incelemede uygulanmış sayılmıyor.
+
+---
+
 ## Sürüm Merdiveni
 
 Aşağıdaki sürüm merdiveni önceki aşamaların tarihsel kaydıdır. Geçmiş başarılı
@@ -89,7 +151,7 @@ Varış noktası: **v1.0 — bir yabancının temiz VPS'e dakikalar içinde kura
 (açık TCP agent, SQL injection, kimlik doğrulama yok) ve arayüz sahte veriyle dolu.
 Karar verildi: devam, sıfırdan yazma yok.
 
-### ✅ v0.1 — Güvenli Çekirdek + Kanıtlı Golden Path *(3–10 Temmuz 2026 — mevcut sürüm, v0.1.0)*
+### ✅ v0.1 — Güvenli Çekirdek + Kanıtlı Golden Path *(3–10 Temmuz 2026 — tarihsel v0.1.0 aşaması)*
 Sekiz gün, dört cephe, hepsi push'lu:
 - **Güvenlik (Faz 0):** agent Unix socket + token arkasında · oturum kimliği (argon2id) + 2FA/TOTP ·
   SQL injection temizliği · CSRF/başlıklar/hız sınırı · gosec yüksekleri kapandı · sızmış parola etkisiz.
@@ -111,7 +173,7 @@ Sekiz gün, dört cephe, hepsi push'lu:
 
 **Çıkış ölçütü karşılandı:** golden path uçtan uca kanıtlı (Ubuntu) · panel kendi güncellemesini taşıyor · alfa modeli işliyor.
 
-### 🔶 v0.2 — Alfa Tamam: Debian Yeniden-Kanıtı *(← BURADAYIZ, sürüyor)*
+### 🔶 v0.2 — Alfa Tamam: Debian Yeniden-Kanıtı *(tarihsel aşama; güncel öncelik yukarıda)*
 Aynı golden path, üretim VPS'inde (Debian 13) **tamamen panel tıklamalarıyla** yeniden kanıtlanacak:
 - ✅ Yalnız-panel kurulum (sıfır ek paket) · ✅ PowerDNS panelden kuruldu ·
   ✅ yönetim sayfası dürüst (config görünürlüğü, çalışan onarım)
@@ -711,7 +773,7 @@ Sadelik hayır diyebilmektir. Bunlar **bilerek** yok — ve retlerin çoğu ür�
 
 ---
 
-## Neredeyiz — 29 Ağustos 2026
+## Tarihsel Durum — 29 Ağustos 2026
 
 **Sürüm:** artık tek kaynaklı — sürüm ve commit bağlama anında HER İKİ binary'ye gömülüyor,
 `/api/v1/panel/version` sunuyor, panelin alt bilgisi oradan okuyor ve panel ile agent farklı yapıdaysa

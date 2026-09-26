@@ -1,6 +1,6 @@
 # CelikPanel Roadmap
 
-*Last updated: September 14, 2026 · [Türkçe](ROADMAP.tr.md)*
+*Last updated: September 26, 2026 · [Türkçe](ROADMAP.tr.md)*
 
 ---
 
@@ -66,6 +66,68 @@ operation. No system is promised to recover autonomously from every possible fau
 
 ---
 
+## Where We Are — September 26, 2026
+
+**Current priority: finish D-025 architectural resilience before expanding the product.**
+This review covers the local source through `f253d318` and the retained acceptance
+reports. It is not a new inspection of Frankfurt/Boston, a published release, or
+proof that these changes are installed. P0.1–P0.5 are all **partial**; none is closed.
+The constitutional requirements and their identifiers remain unchanged.
+
+### Evidence and remaining work
+
+| Existing item | Implemented or demonstrated within a stated scope | Still required for closure |
+|---|---|---|
+| P0.1 — Native update/rollback | Real old-release restoration on Arch/Debian; genuine Alpha64 schema38 data used in later migration and recovery trials. [Evidence](deploy/e2e/release-recovery/ISOLATED-DATABASE.md). | Complete the supported update/fault/workload matrix and production-signed candidate admission; a successful selected checkpoint is not whole-update acceptance. |
+| P0.2 — Access and truthful status | Independent authenticated recovery/status entrypoint; selected CLI, HTTP and browser terminal results agree. Native boot-wait retries retain the same operation. [Evidence](deploy/e2e/release-recovery/BOUND-WORKER.md). | Native waiting/error/reconnect cases, preservation of known failures, browser access during waits and the owner-initiated update path with production trust. |
+| P0.3 — Independent recovery | Separately retained recovery code/data, isolated DB migration and atomic publication; selected cuts during rollback and reboot recover automatically with cut-time rows preserved. [Two-fault evidence](deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md). | Remaining checkpoints, incomplete capture, metadata transitions, old-version compatibility and safe cleanup. Eventual recovery is not uninterrupted service or power-loss durability. |
+| P0.4 — Shared DNS/TLS contracts | DNS acquisition/publication roles separated; shared TLS and DNS readers; independent DNS observation and selected Agent-mediated fault recovery. [Contract](docs/DNS-ENGINE-ARTIFACT.md). | Supported **Agent-independent DNS inverse execution**, native interruption/owner-edit acceptance, complete producer/restore transitions, and peer deletion proof when no authoritative parent is available. Dormant inverse code and read-only observation do not close this gap. |
+| P0.5 — Native service independence | Scoped firewall/mail renewal and enrollment recovery; standalone PowerDNS and BIND/BIND pair serving after management-absent or management-disabled reboot, as specified in each report. [Mail evidence](deploy/e2e/release-recovery/MAIL-ENROLLMENT-MANAGEMENT-ABSENT-BE.json); [DNS evidence](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md). | Cross-engine DNS pair combinations, full setup/enrollment and old-application compatibility, and web/DB/mail/cron/renewal/firewall checks under every claimed management-absence/removal mode. Disabled management is not full removal. |
+
+The detailed [acceptance register](docs/RESILIENCE-CONTRACT.md) retains failed
+attempts and exact boundaries. New evidence updates an existing P0 item; it does
+not create a replacement architecture plan.
+
+### Latest DNS results and their limits
+
+- [Managed BIND V3 deletion](deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md) reached a verified terminal result with a parent-authoritative, panel-free secondary. Native removal survived reboot. Without that parent proof, deletion remains pending; `REFUSED` alone never proves absence.
+- [Paired target-staged/after-write](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md) passed a real SIGKILL, same-request Agent recovery, secondary transfer and subsequent management-disabled reboot. Reboot observations are documented separately from its sealed fault archive.
+- [PowerDNS owner-edit refusal](deploy/e2e/dns-kill-matrix/NATIVE-PDNS-OWNER-EDIT-20260925.md) preserved a post-kill owner edit, the journal and native serving. It proves bounded refusal, not concurrent-edit safety at every effect or an independent inverse.
+- The [DNS inventory](deploy/e2e/dns-kill-matrix/README.md) has 510 raw combinations: 268 applicable/runnable and 242 explicit N/A. **268 is not a passed-test count or a ready-fixture count.** Missing managed-BIND and legacy-secondary fixture producers, later paired phases and unexecuted cells remain open. Repeating a measured cell does not increase phase coverage.
+- The September 12 cross-engine removal claim was corrected: its negative reply was insufficient evidence. New BIND/BIND success does not retroactively close BIND/PowerDNS acceptance.
+
+### Next work, in dependency order
+
+| Order | Work within the existing plan | Exit evidence |
+|---|---|---|
+| 1 | P0.4: finish the supported independent DNS recovery path, including native owner-change refusal and interruption-safe continuation. | A disposable native failure is recovered through the supported owner path with ordinary Agent/Panel unavailable; the exact operation survives recovery interruption/reboot and owner edits remain intact. |
+| 2 | P0.4/P0.5: complete missing source/peer fixtures and practical deletion verification without requiring a parent zone or a remote panel. | Real supported primary/secondary combinations prove add/edit/delete, native loaded-zone state and reboot; uncertainty gives an actionable same-operation recovery path. Do not reclassify fixture gaps as N/A. |
+| 3 | P0.1–P0.5: close the remaining end-to-end update, access, schema, TLS/enrollment and workload matrix. | Owner UI update admission, failed candidate, automatic rollback, a second recovery fault, authenticated guidance and preserved native workloads agree on one operation. Each claimed platform/version combination has retained evidence. |
+| 4 | Release review of the exact candidate and a short owner test path. | All required acceptance items are closed, or a deliberately scoped release states its still-open limits. Verify signed artifacts and recovery compatibility; only the user starts installed-panel updates. |
+
+Each slice must identify the open acceptance it closes before more tests are added.
+Repeat a passing trial only after a relevant change or to resolve a named uncertainty.
+After retaining and checking evidence, stop disposable guests and remove their
+verified temporary overlays; preserve recovery material and owner data.
+
+**Completion date:** not established by current evidence. Remaining implementation
+and fixture gaps prevent an honest percentage or fixed finish date. Re-estimate
+after the independent DNS path and missing fixture scope are verified; completion
+requires the existing acceptance gates, not a growing count of small commits.
+
+### AI assistant milestone — after the operation/recovery foundation
+
+The user-requested AI assistant remains planned: explain observed state and help
+the user carry out authorized panel actions through the same typed, scoped
+operation APIs. It must show the plan, honor permissions, retain the operation ID
+and report verified results. Acceptance must include denied permissions, unavailable
+services, interrupted requests and retry without duplicate effects. It receives
+neither unrestricted root execution nor authority to invent missing evidence,
+bypass licensing or initiate installed-panel updates. AI integration is not a
+substitute for deterministic recovery and is not claimed implemented by this review.
+
+---
+
 ## The Version Ladder
 
 The version ladder below is a historical record of earlier milestones. Its past
@@ -89,7 +151,7 @@ The July 17 update worked three new requirements into the ladder — not a vague
 (open TCP agent, SQL injection, no authentication) and a UI full of fake data.
 Decision made: continue, no rewrite.
 
-### ✅ v0.1 — Secure Core + Proven Golden Path *(July 3–10, 2026 — current release, v0.1.0)*
+### ✅ v0.1 — Secure Core + Proven Golden Path *(July 3–10, 2026 — historical v0.1.0 milestone)*
 Eight days, four fronts, all pushed:
 - **Security (Phase 0):** agent behind Unix socket + token · session identity (argon2id) + 2FA/TOTP ·
   SQL injection cleanup · CSRF/headers/rate limit · gosec highs closed · leaked passwords neutralized.
@@ -111,7 +173,7 @@ Eight days, four fronts, all pushed:
 
 **Exit criterion met:** golden path proven end-to-end (Ubuntu) · the panel carries its own updates · the alpha model works.
 
-### 🔶 v0.2 — Alpha Complete: The Debian Re-Proof *(← WE ARE HERE, in progress)*
+### 🔶 v0.2 — Alpha Complete: The Debian Re-Proof *(historical milestone; current priority above)*
 The same golden path, re-proven on the production VPS (Debian 13) **entirely with panel clicks**:
 - ✅ Panel-only install (zero extra packages) · ✅ PowerDNS installed from the panel ·
   ✅ honest management page (config visibility, working repair)
@@ -749,7 +811,7 @@ product itself:
 
 ---
 
-## Where We Are — August 29, 2026
+## Historical Snapshot — August 29, 2026
 
 **Version:** now single-sourced — version and commit are linked into BOTH binaries, served from
 `/api/v1/panel/version`, read back by the panel footer, and a panel/agent build mismatch raises a
