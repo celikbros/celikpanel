@@ -23,6 +23,11 @@ const (
 	switchRecoveryTimeout  = 30 * time.Second
 )
 
+// ErrRollbackPeerUnverified is returned only after the exact prior pointer, daemon reload,
+// durable state and local authority have been restored. It preserves native
+// service availability while reporting that the paired peer is still divergent.
+var ErrRollbackPeerUnverified = errors.New("BIND rollback peer authority remains unverified")
+
 // Publisher stages immutable, root-owned BIND generations and atomically
 // changes the current symlink. Cross-process serialization remains the agent's
 // service-mutation lock responsibility; mu protects callers sharing an object.
@@ -638,6 +643,9 @@ func (publisher *Publisher) Switch(
 		}
 		rollbackErr := apply(recoveryCtx)
 		if rollbackErr != nil {
+			if errors.Is(rollbackErr, ErrRollbackPeerUnverified) {
+				return errors.Join(activationErr, fmt.Errorf("prior BIND generation is locally restored but paired authority is unverified: %w", rollbackErr))
+			}
 			// A failed reapply leaves the daemon's in-memory view ambiguous even
 			// though the durable pointer is back on the prior generation. Give the
 			// explicit fail-closed action its own detached bounded window; the

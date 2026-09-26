@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
@@ -156,14 +157,12 @@ func completeManagedBINDV3PropagationAtWithLegacy(
 	if complete == nil {
 		return errors.New("BIND peer propagation proof is unavailable")
 	}
-	if err := prepareBINDV3PrimaryPropagationAt(
-		ctx, plan, run,
-	); err != nil {
-		return dnsZoneV3RecoveryPending(err)
-	}
+	notifyErr := prepareBINDV3PrimaryPropagationAt(ctx, plan, run)
 	if err := complete(ctx, plan); err != nil {
-		return dnsZoneV3RecoveryPending(err)
+		return dnsZoneV3RecoveryPending(errors.Join(notifyErr, err))
 	}
+	// A native BIND NOTIFY (or peer refresh) can already have transferred the
+	// catalog. Exact peer proof is sufficient even when optional rndc failed.
 	return nil
 }
 
@@ -272,8 +271,11 @@ func verifyRestoredBINDV3GenerationAt(
 		return errors.New("BIND rollback pairing authority is invalid")
 	}
 	ready, err := verifyPrimary(ctx, tree)
-	if err != nil || !ready {
-		return errors.New("BIND rollback did not restore exact paired authority")
+	if err != nil {
+		return fmt.Errorf("%w: %v", binddns.ErrRollbackPeerUnverified, err)
+	}
+	if !ready {
+		return binddns.ErrRollbackPeerUnverified
 	}
 	return nil
 }
@@ -284,7 +286,7 @@ func verifyRestoredBINDV3Generation(
 	previous binddns.Receipt,
 ) error {
 	return verifyRestoredBINDV3GenerationAt(
-		ctx, tree, previous, verifyDNSZoneAuthorities, bindPrimaryPairReady,
+		ctx, tree, previous, verifyBINDV3Authorities, bindPrimaryPairReady,
 	)
 }
 
@@ -296,7 +298,10 @@ func verifyRestoredBINDV3GenerationForState(
 	state dnsEngineStateReceipt,
 ) error {
 	return verifyRestoredBINDV3GenerationAt(
-		ctx, tree, previous, verifyDNSZoneAuthorities,
+		ctx, tree, previous,
+		func(verifyCtx context.Context, expected []expectedDNSZoneAuthority) error {
+			return verifyBINDV3AuthoritiesForTree(verifyCtx, tree, expected)
+		},
 		func(verifyCtx context.Context, verified binddns.VerifiedTree) (bool, error) {
 			return bindPrimaryPairReadyForState(verifyCtx, root, verified, state)
 		},

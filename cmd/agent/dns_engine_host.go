@@ -965,7 +965,7 @@ func (hostDNSEngineBackend) Sync(
 		return applyVerifiedBINDV3GenerationAt(
 			applyCtx, attempt, currentTree, receipt, generation.ReceiptValue,
 			func(verifyCtx context.Context) error {
-				return verifyDNSZoneManifestAuthority(verifyCtx, []transport.DNSEngineSwitchZoneSnapshot{{
+				return verifyBINDV3ZoneManifestAuthorityForTree(verifyCtx, currentTree, []transport.DNSEngineSwitchZoneSnapshot{{
 					Domain: commitment.Domain, DesiredGeneration: commitment.DesiredGeneration,
 					Delete: commitment.Delete, ZoneType: commitment.ZoneType,
 					Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
@@ -1197,7 +1197,7 @@ func (hostDNSEngineBackend) RecoverZone(
 	if err := verifyOnlyBINDActive(ctx, profile, systemctl); err != nil {
 		return false, err
 	}
-	if err := verifyDNSZoneAuthorities(ctx, []expectedDNSZoneAuthority{expected}); err != nil {
+	if err := verifyBINDV3AuthoritiesForTree(ctx, tree, []expectedDNSZoneAuthority{expected}); err != nil {
 		return false, err
 	}
 	if state != nextState {

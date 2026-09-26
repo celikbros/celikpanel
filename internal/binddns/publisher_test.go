@@ -773,3 +773,37 @@ func containsString(values []string, want string) bool {
 	}
 	return false
 }
+func TestPublisherKeepsVerifiedLocalRollbackServingWhenPeerIsUnverified(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	first := publisherGeneration(t, 1, "192.0.2.1")
+	second := publisherGeneration(t, 2, "192.0.2.2")
+	for _, generation := range []Generation{first, second} {
+		if err := publisher.Stage(context.Background(), generation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := publisher.Activate(first.ID); err != nil {
+		t.Fatal(err)
+	}
+	applyCalls, emptyCalls := 0, 0
+	err := publisher.Switch(context.Background(), second.ID, func(context.Context) error {
+		applyCalls++
+		if applyCalls == 1 {
+			return errors.New("target verification failed")
+		}
+		return ErrRollbackPeerUnverified
+	}, func(context.Context) error {
+		emptyCalls++
+		return nil
+	})
+	if !errors.Is(err, ErrRollbackPeerUnverified) {
+		t.Fatalf("rollback did not preserve peer gap: %v", err)
+	}
+	if applyCalls != 2 || emptyCalls != 0 {
+		t.Fatalf("apply=%d empty=%d, want 2/0", applyCalls, emptyCalls)
+	}
+	if current, exists, currentErr := publisher.Current(); currentErr != nil || !exists || current != first.ID {
+		t.Fatalf("current=%q exists=%v err=%v", current, exists, currentErr)
+	}
+}

@@ -533,3 +533,31 @@ func TestBINDV3LocalApplyRollbackUsesOnlyExactPriorTreeAndState(t *testing.T) {
 		t.Fatal("rollback claimed exact prior authority after peer advanced")
 	}
 }
+func TestBINDV3NativePairProofCanCompleteWithoutRNDC(t *testing.T) {
+	tree, _ := testBINDV3PrimaryTree(
+		t, 8, testBINDV3Snapshot(t, "example.test", 3, 42, false),
+	)
+	calls := 0
+	err := completeManagedBINDV3PropagationAt(
+		context.Background(), tree, "example.test",
+		func(context.Context, ...string) error { return errors.New("rndc key not configured") },
+		func(context.Context, dnsV3PrimaryPropagationPlan) error {
+			calls++
+			return nil
+		},
+	)
+	if err != nil || calls != 1 {
+		t.Fatalf("native pair proof err=%v calls=%d", err, calls)
+	}
+	err = completeManagedBINDV3PropagationAt(
+		context.Background(), tree, "example.test",
+		func(context.Context, ...string) error { return errors.New("rndc key not configured") },
+		func(context.Context, dnsV3PrimaryPropagationPlan) error {
+			return errors.New("peer catalog is stale")
+		},
+	)
+	var pending *dnsZoneV3RecoveryPendingError
+	if !errors.As(err, &pending) {
+		t.Fatalf("unverified peer did not remain pending: %v", err)
+	}
+}

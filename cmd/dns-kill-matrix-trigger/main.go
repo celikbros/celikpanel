@@ -157,6 +157,8 @@ func main() {
 		runRPCSwitchCommand(os.Args[2:], true)
 	case "rpc-normalize-pdns":
 		runRPCNormalizePDNSCommand(os.Args[2:])
+	case "rpc-delete-v3":
+		runRPCDeleteV3Command(os.Args[2:])
 	default:
 		usageError(fmt.Sprintf("unsupported subcommand %q", os.Args[1]))
 	}
@@ -166,7 +168,7 @@ func usageError(message string) {
 	_, _ = fmt.Fprintln(os.Stderr, message)
 	_, _ = fmt.Fprintln(
 		os.Stderr,
-		"usage: dns-kill-matrix-trigger {rpc-switch|rpc-retry} --scenario FILE --identity-receipt FILE [--timeout 45m] | rpc-normalize-pdns --scenario FILE --normalization-receipt FILE [--timeout 45m]",
+		"usage: dns-kill-matrix-trigger {rpc-switch|rpc-retry} --scenario FILE --identity-receipt FILE [--timeout 45m] | rpc-normalize-pdns --scenario FILE --normalization-receipt FILE [--timeout 45m] | rpc-delete-v3 --scenario FILE --identity-receipt FILE [--timeout 2m]",
 	)
 	os.Exit(exitUsage)
 }
