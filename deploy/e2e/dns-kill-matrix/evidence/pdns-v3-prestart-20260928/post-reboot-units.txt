@@ -1,0 +1,14 @@
+MainPID=0
+Id=pdns.service
+ActiveState=inactive
+UnitFileState=masked
+
+MainPID=0
+Id=celikpanel-agent.service
+ActiveState=inactive
+UnitFileState=disabled
+
+MainPID=0
+Id=celikpanel-panel.service
+ActiveState=inactive
+UnitFileState=disabled

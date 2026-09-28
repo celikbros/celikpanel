@@ -109,3 +109,50 @@ is not a completed implementation claim.
 requirement does not authorize assistant-side live changes or panel updates.
 The user must continue to initiate installed-panel updates in CelikPanel as
 specified in [AGENTS.md](../AGENTS.md).
+
+### Optional BIND peer deletion guidance (P0.2/P0.4, September 26, 2026)
+
+A locally committed V3 BIND deletion that needs native proof on a parentless
+secondary retains the exact operation in `propagation-pending`. The Agent now
+classifies selected owner enrollment, authenticated inspection, native
+observation, challenge-journal and changed-evidence uncertainty with a bounded
+`dns_peer_*` code. The code is stored in the existing service mutation ledger
+v1 `error_code` field and returned in an optional V3 RPC `pending_code` field.
+There is no ledger version or phase migration. Older generic pending receipts
+and unrecognized codes remain **unknown**, never proof of a missing service or
+deleted zone. Peer output, SSH errors and credentials are not persisted or shown.
+
+The Panel exposes a reviewed reason only after reconciling the exact pending
+Agent job; a typed transport response alone cannot authorize user guidance.
+The DNS publication error and domain-deletion 202 response carry the optional
+reason, with English/Turkish guidance naming the actor, action and
+same-operation retry. The Domains screen treats 202 as pending, keeps an
+on-screen explanation and offers a read-only status check. The status check
+never retries deletion or starts another mutation; any later user-initiated
+delete request must reconcile the accepted V3 lease and exact Agent job. A changed owner configuration
+or unreconciled challenge remains pending for owner review. The selected
+request/response and guidance tests do not prove the full native peer matrix.
+
+The zone GET still returns 404 after a deleted zone leaves the panel database.
+A separate tenant-authorized `GET /api/v1/domains/{id}/deletion-status` now
+restores guidance on the Domains screen for a domain whose deletion marker
+survives. It reads the marker, desired DNS deletion, current BIND engine,
+V3 lease and exact pending Agent job without reconciling or mutating anything.
+The endpoint rereads the saved identity after Agent status. Missing, mismatched,
+foreign, stale and unrecognized evidence yields an explicit unknown status and
+no reviewed reason; a missing deletion marker yields 204. It does not infer a missing service from a failed
+probe or absent zone. The response adds no persisted schema fields. Once the
+domain row is deleted, this endpoint is intentionally unavailable.
+
+This bounded status path and component/authz tests do not establish the full
+native peer matrix or close P0.2/P0.4. A running operation can still become
+unknown while the Agent is unreachable, and no GET resumes mutation.
+
+On an exact pending recovery, a reviewed reason is carried into the durable
+recovering attempt. A lease expiry with no new peer result, or Agent startup
+reconciliation with no newer classified result, retains that reason; a new
+reviewed result may replace it. An unrecognized older code stays generic.
+A completion wave permits one native challenge. If authenticated inspection
+is inconclusive, it returns the reviewed pending reason immediately, rather
+than letting later DNS polls mask it with a generic final check. These changes
+reuse the ledger v1 fields and do not broaden mutation authority.

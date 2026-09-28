@@ -1,0 +1,1 @@
+Recorded DNS switch request d3179958e0c9b3014f0a40dd146d2211: The original switch failed; owner recovery recorded a rollback to the verified previous state. This is a point-in-time ledger observation, not proof of current DNS service health. The server owner should inspect the native DNS service before starting another switch; no operation was started.

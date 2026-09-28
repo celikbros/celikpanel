@@ -1,0 +1,1073 @@
+ M .github/workflows/ci.yml
+ M Makefile
+ M ROADMAP.md
+ M ROADMAP.tr.md
+ M bootstrap-prebuilt-update.sh
+ M bootstrap-update.sh
+ M cmd/agent/bind_install_guard.go
+ M cmd/agent/config_secure_linux.go
+ M cmd/agent/dns_catalog_axfr.go
+ M cmd/agent/dns_catalog_axfr_test.go
+ M cmd/agent/dns_cluster_rpc_test.go
+ M cmd/agent/dns_engine_bind_adopt.go
+ M cmd/agent/dns_engine_bind_adopt_recovery_test.go
+ M cmd/agent/dns_engine_bind_adopt_test.go
+ M cmd/agent/dns_engine_bind_config.go
+ M cmd/agent/dns_engine_bind_config_owner.go
+ M cmd/agent/dns_engine_bind_config_owner_test.go
+ M cmd/agent/dns_engine_bind_propagation.go
+ M cmd/agent/dns_engine_bind_propagation_test.go
+ M cmd/agent/dns_engine_bind_update.go
+ M cmd/agent/dns_engine_bind_update_preflight.go
+ M cmd/agent/dns_engine_bind_update_preflight_linux_test.go
+ M cmd/agent/dns_engine_catalog_handoff.go
+ M cmd/agent/dns_engine_host.go
+ M cmd/agent/dns_engine_kill_matrix_linux.go
+ M cmd/agent/dns_engine_kill_matrix_linux_test.go
+ M cmd/agent/dns_engine_pdns.go
+ M cmd/agent/dns_engine_pdns_catalog.go
+ M cmd/agent/dns_engine_pdns_catalog_test.go
+ M cmd/agent/dns_engine_pdns_install.go
+ M cmd/agent/dns_engine_pdns_install_test.go
+ M cmd/agent/dns_engine_pdns_propagation.go
+ M cmd/agent/dns_engine_pdns_switch.go
+ M cmd/agent/dns_engine_pdns_test.go
+ M cmd/agent/dns_engine_recovery.go
+ M cmd/agent/dns_engine_rpc.go
+ M cmd/agent/dns_engine_rpc_test.go
+ M cmd/agent/dns_engine_transaction.go
+ M cmd/agent/dns_engine_transaction_test.go
+ M cmd/agent/dns_engine_zone_verify.go
+ M cmd/agent/dns_engine_zone_verify_test.go
+ M cmd/agent/dns_pair_readiness.go
+ M cmd/agent/dns_zone_v3_pending_lifecycle_linux_test.go
+ M cmd/agent/service_mutation_package_probe_test.go
+ M cmd/agent/service_mutation_rpc.go
+ M cmd/agent/service_mutation_test_ownership_linux_test.go
+ M cmd/dns-kill-matrix-trigger/main.go
+ M cmd/dns-kill-matrix-trigger/main_test.go
+ M cmd/dns-kill-matrix-trigger/zone_delete_trial.go
+ M cmd/dns-kill-matrix-trigger/zone_delete_trial_test.go
+ M cmd/panel/dns_engine.go
+ M cmd/panel/dns_engine_test.go
+ M cmd/panel/dns_setup_test.go
+ M cmd/panel/dns_sync_v3.go
+ M cmd/panel/domain_delete_saga.go
+ M cmd/panel/domain_dns_handlers.go
+ M cmd/panel/main.go
+ M cmd/panel/server_setup.go
+ M cmd/panel/server_setup_infrastructure_dns_test.go
+ M cmd/panel/server_setup_test.go
+ M cmd/panel/team_member_authz.go
+ M cmd/recovery/dns_switch_job_linux.go
+ M cmd/recovery/dns_switch_job_linux_test.go
+ M cmd/recovery/dns_switch_pdns_inverse_linux.go
+ M cmd/recovery/dns_switch_pdns_inverse_linux_test.go
+ M cmd/recovery/dns_switch_pdns_native_linux.go
+ M cmd/recovery/dns_switch_status_linux.go
+ M cmd/recovery/dns_switch_status_linux_test.go
+ M cmd/recovery/entry.go
+ M cmd/recovery/promotion_entry.go
+ M cmd/recovery/promotion_entry_test.go
+ M deploy/e2e/dns-kill-matrix/README.md
+ M deploy/e2e/dns-kill-matrix/guest_bootstrap.py
+ M deploy/e2e/dns-kill-matrix/guest_bootstrap.sh
+ M deploy/e2e/dns-kill-matrix/guest_recovery_probe.py
+ M deploy/e2e/dns-kill-matrix/native_bind_peer.py
+ M deploy/e2e/dns-kill-matrix/run_cell.py
+ M deploy/e2e/dns-kill-matrix/test_guest_bootstrap.py
+ M deploy/e2e/dns-kill-matrix/test_guest_recovery_probe.py
+ M deploy/e2e/dns-kill-matrix/test_native_bind_peer.py
+ M deploy/e2e/dns-kill-matrix/test_run_cell.py
+ M deploy/test-release-recovery-contract.sh
+ M docs/DNS-ENGINE-ARTIFACT.md
+ M docs/OPERATION-GUIDANCE.md
+ M docs/RESILIENCE-CONTRACT.md
+ M docs/RESILIENCE-CONTRACT.tr.md
+ M docs/SERVER-SETUP-STATUS.md
+ M docs/SERVER-SETUP-STATUS.tr.md
+ M internal/agentnativecontract/contract.go
+ M internal/agentnativecontract/contract_test.go
+ M internal/bindconfig/zone_include.go
+ M internal/binddns/publisher.go
+ M internal/binddns/publisher_test.go
+ M internal/bindroot/config_file_linux_test.go
+ M internal/bindroot/file_linux.go
+ M internal/dnsengineartifact/documents.go
+ M internal/dnsengineartifact/records.go
+ M internal/dnsengineartifact/roles.go
+ M internal/dnsengineartifact/state.go
+ M internal/dnsengineartifact/switch_journal.go
+ M internal/dnsengineartifact/switch_target_state.go
+ M internal/dnsenginerecovery/cgroup_linux.go
+ M internal/dnsenginerecovery/cgroup_linux_test.go
+ M internal/dnsenginerecovery/journal_checkpoint_files_linux.go
+ M internal/dnsenginerecovery/journal_checkpoint_files_linux_test.go
+ M internal/dnsenginerecovery/pdns_adoption_executor.go
+ M internal/dnsenginerecovery/pdns_adoption_executor_test.go
+ M internal/dnsenginerecovery/pdns_adoption_soa.go
+ M internal/dnsenginerecovery/reconcile.go
+ M internal/dnsenginerecovery/reconcile_test.go
+ M internal/dnsenginerecovery/stopped_unit.go
+ M internal/dnsenginerecovery/stopped_unit_linux.go
+ M internal/dnsenginerecovery/stopped_unit_test.go
+ M internal/dnsenginerecovery/vendor_runtime_linux.go
+ M internal/dnsenginerecovery/vendor_runtime_linux_test.go
+ M internal/hostcmd/privileged_command_guard_test.go
+ M internal/recoveryruntime/dns_application_compatibility_linux.go
+ M internal/recoveryruntime/dns_application_compatibility_linux_test.go
+ M internal/recoveryruntime/promotion_linux.go
+ M internal/recoveryruntime/promotion_linux_test.go
+ M internal/transport/dns_contracts.go
+ M update.sh
+ M web/scripts/check-bundle-budget.mjs
+ M web/src/components/DNSEngineCard.tsx
+ M web/src/components/Domains.tsx
+ M web/src/components/ServerSetup.tsx
+ M web/src/i18n/dnsEngine.ts
+ M web/src/i18n/en.ts
+ M web/src/i18n/screens/en.ts
+ M web/src/i18n/screens/tr.ts
+ M web/src/i18n/tr.ts
+?? .agents/skills/impeccable/SKILL.md
+?? .agents/skills/impeccable/agents/impeccable_asset_producer.toml
+?? .agents/skills/impeccable/agents/impeccable_documenter.toml
+?? .agents/skills/impeccable/agents/impeccable_finish_reviewer.toml
+?? .agents/skills/impeccable/agents/impeccable_manual_edit_applier.toml
+?? .agents/skills/impeccable/agents/openai.yaml
+?? .agents/skills/impeccable/reference/adapt.md
+?? .agents/skills/impeccable/reference/adapt.native.md
+?? .agents/skills/impeccable/reference/android.md
+?? .agents/skills/impeccable/reference/animate.md
+?? .agents/skills/impeccable/reference/audit.md
+?? .agents/skills/impeccable/reference/audit.native.md
+?? .agents/skills/impeccable/reference/bolder.md
+?? .agents/skills/impeccable/reference/clarify.md
+?? .agents/skills/impeccable/reference/colorize.md
+?? .agents/skills/impeccable/reference/craft-floor.md
+?? .agents/skills/impeccable/reference/craft.md
+?? .agents/skills/impeccable/reference/critique.md
+?? .agents/skills/impeccable/reference/degraded/asset-producer.md
+?? .agents/skills/impeccable/reference/degraded/documenter.md
+?? .agents/skills/impeccable/reference/degraded/finish-reviewer.md
+?? .agents/skills/impeccable/reference/degraded/manual-edit-applier.md
+?? .agents/skills/impeccable/reference/delight.md
+?? .agents/skills/impeccable/reference/distill.md
+?? .agents/skills/impeccable/reference/doctor.md
+?? .agents/skills/impeccable/reference/document.md
+?? .agents/skills/impeccable/reference/extract.md
+?? .agents/skills/impeccable/reference/harden.md
+?? .agents/skills/impeccable/reference/hooks.md
+?? .agents/skills/impeccable/reference/init.md
+?? .agents/skills/impeccable/reference/ios.md
+?? .agents/skills/impeccable/reference/layout.md
+?? .agents/skills/impeccable/reference/live-setup.md
+?? .agents/skills/impeccable/reference/live.md
+?? .agents/skills/impeccable/reference/new-work.md
+?? .agents/skills/impeccable/reference/onboard.md
+?? .agents/skills/impeccable/reference/operate.md
+?? .agents/skills/impeccable/reference/optimize.md
+?? .agents/skills/impeccable/reference/overdrive.md
+?? .agents/skills/impeccable/reference/polish.md
+?? .agents/skills/impeccable/reference/quieter.md
+?? .agents/skills/impeccable/reference/routing.md
+?? .agents/skills/impeccable/reference/shape.md
+?? .agents/skills/impeccable/reference/typeset.md
+?? .agents/skills/impeccable/reference/visualize.md
+?? .agents/skills/impeccable/scripts/command-metadata.json
+?? .agents/skills/impeccable/scripts/concept-seed.mjs
+?? .agents/skills/impeccable/scripts/context-signals.mjs
+?? .agents/skills/impeccable/scripts/context.mjs
+?? .agents/skills/impeccable/scripts/critique-storage.mjs
+?? .agents/skills/impeccable/scripts/detect-csp.mjs
+?? .agents/skills/impeccable/scripts/detect.mjs
+?? .agents/skills/impeccable/scripts/detector/browser/injected/index.mjs
+?? .agents/skills/impeccable/scripts/detector/cli/main.mjs
+?? .agents/skills/impeccable/scripts/detector/design-system.mjs
+?? .agents/skills/impeccable/scripts/detector/detect-antipatterns-browser.js
+?? .agents/skills/impeccable/scripts/detector/detect-antipatterns.mjs
+?? .agents/skills/impeccable/scripts/detector/engines/browser/detect-url.mjs
+?? .agents/skills/impeccable/scripts/detector/engines/regex/detect-text.mjs
+?? .agents/skills/impeccable/scripts/detector/engines/static-html/css-cascade.mjs
+?? .agents/skills/impeccable/scripts/detector/engines/static-html/detect-html.mjs
+?? .agents/skills/impeccable/scripts/detector/engines/visual/screenshot-contrast.mjs
+?? .agents/skills/impeccable/scripts/detector/findings.mjs
+?? .agents/skills/impeccable/scripts/detector/node/file-system.mjs
+?? .agents/skills/impeccable/scripts/detector/profile/profiler.mjs
+?? .agents/skills/impeccable/scripts/detector/registry/antipatterns.mjs
+?? .agents/skills/impeccable/scripts/detector/rules/checks.mjs
+?? .agents/skills/impeccable/scripts/detector/shared/color.mjs
+?? .agents/skills/impeccable/scripts/detector/shared/constants.mjs
+?? .agents/skills/impeccable/scripts/detector/shared/fonts.mjs
+?? .agents/skills/impeccable/scripts/detector/shared/inline-ignores.mjs
+?? .agents/skills/impeccable/scripts/detector/shared/page.mjs
+?? .agents/skills/impeccable/scripts/doctor.mjs
+?? .agents/skills/impeccable/scripts/embed-prompt.mjs
+?? .agents/skills/impeccable/scripts/generate-image.mjs
+?? .agents/skills/impeccable/scripts/hook-admin.mjs
+?? .agents/skills/impeccable/scripts/hook-before-edit.mjs
+?? .agents/skills/impeccable/scripts/hook-lib.mjs
+?? .agents/skills/impeccable/scripts/hook.mjs
+?? .agents/skills/impeccable/scripts/lib/artifact-schema.mjs
+?? .agents/skills/impeccable/scripts/lib/composition-catalog.mjs
+?? .agents/skills/impeccable/scripts/lib/concept-catalog.mjs
+?? .agents/skills/impeccable/scripts/lib/design-parser.mjs
+?? .agents/skills/impeccable/scripts/lib/impeccable-config.mjs
+?? .agents/skills/impeccable/scripts/lib/impeccable-paths.mjs
+?? .agents/skills/impeccable/scripts/lib/is-generated.mjs
+?? .agents/skills/impeccable/scripts/lib/open-system-browser.mjs
+?? .agents/skills/impeccable/scripts/lib/provider.mjs
+?? .agents/skills/impeccable/scripts/lib/roll-selection.mjs
+?? .agents/skills/impeccable/scripts/lib/staleness-deep.mjs
+?? .agents/skills/impeccable/scripts/lib/staleness-notice.mjs
+?? .agents/skills/impeccable/scripts/lib/staleness.mjs
+?? .agents/skills/impeccable/scripts/lib/surface-briefs.mjs
+?? .agents/skills/impeccable/scripts/lib/target-args.mjs
+?? .agents/skills/impeccable/scripts/lib/target-slug.mjs
+?? .agents/skills/impeccable/scripts/lib/template-extensions.mjs
+?? .agents/skills/impeccable/scripts/live-accept.mjs
+?? .agents/skills/impeccable/scripts/live-browser-dom.js
+?? .agents/skills/impeccable/scripts/live-browser-session.js
+?? .agents/skills/impeccable/scripts/live-browser.js
+?? .agents/skills/impeccable/scripts/live-commit-manual-edits.mjs
+?? .agents/skills/impeccable/scripts/live-complete.mjs
+?? .agents/skills/impeccable/scripts/live-copy-edit-agent.mjs
+?? .agents/skills/impeccable/scripts/live-discard-manual-edits.mjs
+?? .agents/skills/impeccable/scripts/live-inject.mjs
+?? .agents/skills/impeccable/scripts/live-insert.mjs
+?? .agents/skills/impeccable/scripts/live-manual-edit-evidence.mjs
+?? .agents/skills/impeccable/scripts/live-poll.mjs
+?? .agents/skills/impeccable/scripts/live-resume.mjs
+?? .agents/skills/impeccable/scripts/live-server.mjs
+?? .agents/skills/impeccable/scripts/live-status.mjs
+?? .agents/skills/impeccable/scripts/live-target.mjs
+?? .agents/skills/impeccable/scripts/live-wrap.mjs
+?? .agents/skills/impeccable/scripts/live.mjs
+?? .agents/skills/impeccable/scripts/live/accept-css.mjs
+?? .agents/skills/impeccable/scripts/live/accept-verify.mjs
+?? .agents/skills/impeccable/scripts/live/browser-script-parts.mjs
+?? .agents/skills/impeccable/scripts/live/completion.mjs
+?? .agents/skills/impeccable/scripts/live/event-validation.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/astro.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/detect-utils.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/index.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/journal.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/nextjs.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/nuxt.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/script-src.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/static-html.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/sveltekit.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/tag-strategy.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/tanstack-start.mjs
+?? .agents/skills/impeccable/scripts/live/frameworks/vite-generic.mjs
+?? .agents/skills/impeccable/scripts/live/generation-preflight.mjs
+?? .agents/skills/impeccable/scripts/live/insert-ui.mjs
+?? .agents/skills/impeccable/scripts/live/instructions.mjs
+?? .agents/skills/impeccable/scripts/live/manual-apply.mjs
+?? .agents/skills/impeccable/scripts/live/manual-edit-routes.mjs
+?? .agents/skills/impeccable/scripts/live/manual-edits-buffer.mjs
+?? .agents/skills/impeccable/scripts/live/poll-lanes.mjs
+?? .agents/skills/impeccable/scripts/live/roots.mjs
+?? .agents/skills/impeccable/scripts/live/session-store.mjs
+?? .agents/skills/impeccable/scripts/live/source-lock.mjs
+?? .agents/skills/impeccable/scripts/live/source-search.mjs
+?? .agents/skills/impeccable/scripts/live/svelte-ast.mjs
+?? .agents/skills/impeccable/scripts/live/svelte-component.mjs
+?? .agents/skills/impeccable/scripts/live/sveltekit-adapter.mjs
+?? .agents/skills/impeccable/scripts/live/tanstack-adapter.mjs
+?? .agents/skills/impeccable/scripts/live/ui-surfaces.mjs
+?? .agents/skills/impeccable/scripts/live/vocabulary.mjs
+?? .agents/skills/impeccable/scripts/modern-screenshot.umd.js
+?? .agents/skills/impeccable/scripts/palette.mjs
+?? .agents/skills/impeccable/scripts/pin.mjs
+?? .agents/skills/impeccable/scripts/serve-question.mjs
+?? .agents/skills/impeccable/scripts/surface-brief.mjs
+?? .attic/2026-08-30/dkim-0751-attempt-REJECTED.patch
+?? .attic/2026-08-30/server_lifecycle-partial-startup-gate.patch
+?? .attic/add_vm_receipt.py
+?? .attic/bind-adoption-inverse-20260927/build-kit.sh
+?? .attic/bind-adoption-inverse-20260927/build.sh
+?? .attic/bind-adoption-inverse-20260927/cli-cut.py
+?? .attic/bind-adoption-inverse-20260927/control-proof.py
+?? .attic/bind-adoption-inverse-20260927/debug-cli.py
+?? .attic/bind-adoption-inverse-20260927/debug-control.py
+?? .attic/bind-adoption-inverse-20260927/edit-executor.py
+?? .attic/bind-adoption-inverse-20260927/enroll.sh
+?? .attic/bind-adoption-inverse-20260927/finish-trial.py
+?? .attic/bind-adoption-inverse-20260927/fresh-fixture.sh
+?? .attic/bind-adoption-inverse-20260927/guest-python.sh
+?? .attic/bind-adoption-inverse-20260927/inspect-receipt.py
+?? .attic/bind-adoption-inverse-20260927/inspect.py
+?? .attic/bind-adoption-inverse-20260927/owner-edit.py
+?? .attic/bind-adoption-inverse-20260927/prep-local-scripts.py
+?? .attic/bind-adoption-inverse-20260927/prepare-trial-scripts.py
+?? .attic/bind-adoption-inverse-20260927/preserve-debug.sh
+?? .attic/bind-adoption-inverse-20260927/preserve-final.sh
+?? .attic/bind-adoption-inverse-20260927/probe-aa.py
+?? .attic/bind-adoption-inverse-20260927/read-only-binaries.py
+?? .attic/bind-adoption-inverse-20260927/read-only-inventory.py
+?? .attic/bind-adoption-inverse-20260927/read-only-layout.py
+?? .attic/bind-adoption-inverse-20260927/read-result.py
+?? .attic/bind-adoption-inverse-20260927/recreate-result-dir.py
+?? .attic/bind-adoption-inverse-20260927/refine-guard.py
+?? .attic/bind-adoption-inverse-20260927/refine-tests.py
+?? .attic/bind-adoption-inverse-20260927/refresh-controller.sh
+?? .attic/bind-adoption-inverse-20260927/refresh-trigger.sh
+?? .attic/bind-adoption-inverse-20260927/reset-unaccepted-trial.py
+?? .attic/bind-adoption-inverse-20260927/run-final.sh
+?? .attic/bind-adoption-inverse-20260927/state-tests.py
+?? .attic/bind-adoption-inverse-20260927/status-guidance.py
+?? .attic/bind-adoption-inverse-20260927/terminal-proof.py
+?? .attic/bind-adoption-inverse-20260927/upload-controller.sh
+?? .attic/bind-adoption-inverse-20260927/verify-final.sh
+?? .attic/bind-adoption-inverse-20260927/wire-cli.py
+?? .attic/bind-adoption-inverse-20260927/wire-inverse.py
+?? .attic/bind-source-inverse-20260927/before-reboot.py
+?? .attic/bind-source-inverse-20260927/build-kit.sh
+?? .attic/bind-source-inverse-20260927/build.sh
+?? .attic/bind-source-inverse-20260927/cli-cut.py
+?? .attic/bind-source-inverse-20260927/enroll.sh
+?? .attic/bind-source-inverse-20260927/finish-run.sh
+?? .attic/bind-source-inverse-20260927/fresh-fixture.sh
+?? .attic/bind-source-inverse-20260927/guest-python.sh
+?? .attic/bind-source-inverse-20260927/inspect-journal-shape.py
+?? .attic/bind-source-inverse-20260927/inspect-layout.sh
+?? .attic/bind-source-inverse-20260927/inspect.sh
+?? .attic/bind-source-inverse-20260927/owner-edit.py
+?? .attic/bind-source-inverse-20260927/preserve-fifth.sh
+?? .attic/bind-source-inverse-20260927/preserve-final.sh
+?? .attic/bind-source-inverse-20260927/preserve-first.sh
+?? .attic/bind-source-inverse-20260927/preserve-fourth.sh
+?? .attic/bind-source-inverse-20260927/preserve-second.sh
+?? .attic/bind-source-inverse-20260927/preserve-third.sh
+?? .attic/bind-source-inverse-20260927/probe-aa.py
+?? .attic/bind-source-inverse-20260927/reboot-retry.py
+?? .attic/bind-source-inverse-20260927/reboot-trial.sh
+?? .attic/bind-source-inverse-20260927/refresh-fixture-candidate.sh
+?? .attic/bind-source-inverse-20260927/run-final.sh
+?? .attic/bind-source-inverse-20260927/schema-inspect.py
+?? .attic/bind-source-inverse-20260927/verify-evidence.py
+?? .attic/create_final_mail_validation.py
+?? .attic/create_vm_resume.py
+?? .attic/final_mail_validation.sh
+?? .attic/fix_evidence_filename.py
+?? .attic/fix_mail_snapshot_queue.py
+?? .attic/fix_queue_test.py
+?? .attic/fix_remote_client_close.py
+?? .attic/fix_remote_import_inherit.py
+?? .attic/fix_vm_lock.py
+?? .attic/fix_vm_receipt_args.py
+?? .attic/hostcert_audit.py
+?? .attic/hostcert_foundation.py
+?? .attic/hostcert_integrate.py
+?? .attic/hostcert_moretests.py
+?? .attic/hostcert_readonly.py
+?? .attic/hostcert_register.py
+?? .attic/hostcert_renewal_identity.py
+?? .attic/hostcert_supervise.py
+?? .attic/hostcert_test_generate.py
+?? .attic/integrate_remote_consumers1.py
+?? .attic/integrate_remote_consumers2.py
+?? .attic/integrate_remote_consumers3.py
+?? .attic/integrate_remote_mail_apply.py
+?? .attic/mail_vm_acceptance.sh
+?? .attic/mail_vm_ownership.py
+?? .attic/mail_vm_receipt.sh
+?? .attic/mail_vm_resume.sh
+?? .attic/remote_dns_dependents.py
+?? .attic/setup_dns_receipttest.py
+?? .attic/setup_firewall_receipt.py
+?? .attic/setup_license_host.py
+?? .claude/skills/impeccable/SKILL.md
+?? .claude/skills/impeccable/reference/adapt.md
+?? .claude/skills/impeccable/reference/adapt.native.md
+?? .claude/skills/impeccable/reference/android.md
+?? .claude/skills/impeccable/reference/animate.md
+?? .claude/skills/impeccable/reference/audit.md
+?? .claude/skills/impeccable/reference/audit.native.md
+?? .claude/skills/impeccable/reference/bolder.md
+?? .claude/skills/impeccable/reference/clarify.md
+?? .claude/skills/impeccable/reference/colorize.md
+?? .claude/skills/impeccable/reference/craft-floor.md
+?? .claude/skills/impeccable/reference/craft.md
+?? .claude/skills/impeccable/reference/critique.md
+?? .claude/skills/impeccable/reference/degraded/asset-producer.md
+?? .claude/skills/impeccable/reference/degraded/documenter.md
+?? .claude/skills/impeccable/reference/degraded/finish-reviewer.md
+?? .claude/skills/impeccable/reference/degraded/manual-edit-applier.md
+?? .claude/skills/impeccable/reference/delight.md
+?? .claude/skills/impeccable/reference/distill.md
+?? .claude/skills/impeccable/reference/doctor.md
+?? .claude/skills/impeccable/reference/document.md
+?? .claude/skills/impeccable/reference/extract.md
+?? .claude/skills/impeccable/reference/harden.md
+?? .claude/skills/impeccable/reference/hooks.md
+?? .claude/skills/impeccable/reference/init.md
+?? .claude/skills/impeccable/reference/ios.md
+?? .claude/skills/impeccable/reference/layout.md
+?? .claude/skills/impeccable/reference/live-setup.md
+?? .claude/skills/impeccable/reference/live.md
+?? .claude/skills/impeccable/reference/new-work.md
+?? .claude/skills/impeccable/reference/onboard.md
+?? .claude/skills/impeccable/reference/operate.md
+?? .claude/skills/impeccable/reference/optimize.md
+?? .claude/skills/impeccable/reference/overdrive.md
+?? .claude/skills/impeccable/reference/polish.md
+?? .claude/skills/impeccable/reference/quieter.md
+?? .claude/skills/impeccable/reference/routing.md
+?? .claude/skills/impeccable/reference/shape.md
+?? .claude/skills/impeccable/reference/typeset.md
+?? .claude/skills/impeccable/reference/visualize.md
+?? .claude/skills/impeccable/scripts/command-metadata.json
+?? .claude/skills/impeccable/scripts/concept-seed.mjs
+?? .claude/skills/impeccable/scripts/context-signals.mjs
+?? .claude/skills/impeccable/scripts/context.mjs
+?? .claude/skills/impeccable/scripts/critique-storage.mjs
+?? .claude/skills/impeccable/scripts/detect-csp.mjs
+?? .claude/skills/impeccable/scripts/detect.mjs
+?? .claude/skills/impeccable/scripts/detector/browser/injected/index.mjs
+?? .claude/skills/impeccable/scripts/detector/cli/main.mjs
+?? .claude/skills/impeccable/scripts/detector/design-system.mjs
+?? .claude/skills/impeccable/scripts/detector/detect-antipatterns-browser.js
+?? .claude/skills/impeccable/scripts/detector/detect-antipatterns.mjs
+?? .claude/skills/impeccable/scripts/detector/engines/browser/detect-url.mjs
+?? .claude/skills/impeccable/scripts/detector/engines/regex/detect-text.mjs
+?? .claude/skills/impeccable/scripts/detector/engines/static-html/css-cascade.mjs
+?? .claude/skills/impeccable/scripts/detector/engines/static-html/detect-html.mjs
+?? .claude/skills/impeccable/scripts/detector/engines/visual/screenshot-contrast.mjs
+?? .claude/skills/impeccable/scripts/detector/findings.mjs
+?? .claude/skills/impeccable/scripts/detector/node/file-system.mjs
+?? .claude/skills/impeccable/scripts/detector/profile/profiler.mjs
+?? .claude/skills/impeccable/scripts/detector/registry/antipatterns.mjs
+?? .claude/skills/impeccable/scripts/detector/rules/checks.mjs
+?? .claude/skills/impeccable/scripts/detector/shared/color.mjs
+?? .claude/skills/impeccable/scripts/detector/shared/constants.mjs
+?? .claude/skills/impeccable/scripts/detector/shared/fonts.mjs
+?? .claude/skills/impeccable/scripts/detector/shared/inline-ignores.mjs
+?? .claude/skills/impeccable/scripts/detector/shared/page.mjs
+?? .claude/skills/impeccable/scripts/doctor.mjs
+?? .claude/skills/impeccable/scripts/embed-prompt.mjs
+?? .claude/skills/impeccable/scripts/generate-image.mjs
+?? .claude/skills/impeccable/scripts/hook-admin.mjs
+?? .claude/skills/impeccable/scripts/hook-before-edit.mjs
+?? .claude/skills/impeccable/scripts/hook-lib.mjs
+?? .claude/skills/impeccable/scripts/hook.mjs
+?? .claude/skills/impeccable/scripts/lib/artifact-schema.mjs
+?? .claude/skills/impeccable/scripts/lib/composition-catalog.mjs
+?? .claude/skills/impeccable/scripts/lib/concept-catalog.mjs
+?? .claude/skills/impeccable/scripts/lib/design-parser.mjs
+?? .claude/skills/impeccable/scripts/lib/impeccable-config.mjs
+?? .claude/skills/impeccable/scripts/lib/impeccable-paths.mjs
+?? .claude/skills/impeccable/scripts/lib/is-generated.mjs
+?? .claude/skills/impeccable/scripts/lib/open-system-browser.mjs
+?? .claude/skills/impeccable/scripts/lib/provider.mjs
+?? .claude/skills/impeccable/scripts/lib/roll-selection.mjs
+?? .claude/skills/impeccable/scripts/lib/staleness-deep.mjs
+?? .claude/skills/impeccable/scripts/lib/staleness-notice.mjs
+?? .claude/skills/impeccable/scripts/lib/staleness.mjs
+?? .claude/skills/impeccable/scripts/lib/surface-briefs.mjs
+?? .claude/skills/impeccable/scripts/lib/target-args.mjs
+?? .claude/skills/impeccable/scripts/lib/target-slug.mjs
+?? .claude/skills/impeccable/scripts/lib/template-extensions.mjs
+?? .claude/skills/impeccable/scripts/live-accept.mjs
+?? .claude/skills/impeccable/scripts/live-browser-dom.js
+?? .claude/skills/impeccable/scripts/live-browser-session.js
+?? .claude/skills/impeccable/scripts/live-browser.js
+?? .claude/skills/impeccable/scripts/live-commit-manual-edits.mjs
+?? .claude/skills/impeccable/scripts/live-complete.mjs
+?? .claude/skills/impeccable/scripts/live-copy-edit-agent.mjs
+?? .claude/skills/impeccable/scripts/live-discard-manual-edits.mjs
+?? .claude/skills/impeccable/scripts/live-inject.mjs
+?? .claude/skills/impeccable/scripts/live-insert.mjs
+?? .claude/skills/impeccable/scripts/live-manual-edit-evidence.mjs
+?? .claude/skills/impeccable/scripts/live-poll.mjs
+?? .claude/skills/impeccable/scripts/live-resume.mjs
+?? .claude/skills/impeccable/scripts/live-server.mjs
+?? .claude/skills/impeccable/scripts/live-status.mjs
+?? .claude/skills/impeccable/scripts/live-target.mjs
+?? .claude/skills/impeccable/scripts/live-wrap.mjs
+?? .claude/skills/impeccable/scripts/live.mjs
+?? .claude/skills/impeccable/scripts/live/accept-css.mjs
+?? .claude/skills/impeccable/scripts/live/accept-verify.mjs
+?? .claude/skills/impeccable/scripts/live/browser-script-parts.mjs
+?? .claude/skills/impeccable/scripts/live/completion.mjs
+?? .claude/skills/impeccable/scripts/live/event-validation.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/astro.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/detect-utils.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/index.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/journal.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/nextjs.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/nuxt.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/script-src.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/static-html.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/sveltekit.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/tag-strategy.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/tanstack-start.mjs
+?? .claude/skills/impeccable/scripts/live/frameworks/vite-generic.mjs
+?? .claude/skills/impeccable/scripts/live/generation-preflight.mjs
+?? .claude/skills/impeccable/scripts/live/insert-ui.mjs
+?? .claude/skills/impeccable/scripts/live/instructions.mjs
+?? .claude/skills/impeccable/scripts/live/manual-apply.mjs
+?? .claude/skills/impeccable/scripts/live/manual-edit-routes.mjs
+?? .claude/skills/impeccable/scripts/live/manual-edits-buffer.mjs
+?? .claude/skills/impeccable/scripts/live/poll-lanes.mjs
+?? .claude/skills/impeccable/scripts/live/roots.mjs
+?? .claude/skills/impeccable/scripts/live/session-store.mjs
+?? .claude/skills/impeccable/scripts/live/source-lock.mjs
+?? .claude/skills/impeccable/scripts/live/source-search.mjs
+?? .claude/skills/impeccable/scripts/live/svelte-ast.mjs
+?? .claude/skills/impeccable/scripts/live/svelte-component.mjs
+?? .claude/skills/impeccable/scripts/live/sveltekit-adapter.mjs
+?? .claude/skills/impeccable/scripts/live/tanstack-adapter.mjs
+?? .claude/skills/impeccable/scripts/live/ui-surfaces.mjs
+?? .claude/skills/impeccable/scripts/live/vocabulary.mjs
+?? .claude/skills/impeccable/scripts/modern-screenshot.umd.js
+?? .claude/skills/impeccable/scripts/palette.mjs
+?? .claude/skills/impeccable/scripts/pin.mjs
+?? .claude/skills/impeccable/scripts/serve-question.mjs
+?? .claude/skills/impeccable/scripts/surface-brief.mjs
+?? .codex/hooks.json
+?? .github/agents/impeccable-asset-producer.agent.md
+?? .github/agents/impeccable-documenter.agent.md
+?? .github/agents/impeccable-finish-reviewer.agent.md
+?? .github/agents/impeccable-manual-edit-applier.agent.md
+?? .github/hooks/impeccable.json
+?? .github/skills/impeccable/SKILL.md
+?? .github/skills/impeccable/reference/adapt.md
+?? .github/skills/impeccable/reference/adapt.native.md
+?? .github/skills/impeccable/reference/android.md
+?? .github/skills/impeccable/reference/animate.md
+?? .github/skills/impeccable/reference/audit.md
+?? .github/skills/impeccable/reference/audit.native.md
+?? .github/skills/impeccable/reference/bolder.md
+?? .github/skills/impeccable/reference/clarify.md
+?? .github/skills/impeccable/reference/colorize.md
+?? .github/skills/impeccable/reference/craft-floor.md
+?? .github/skills/impeccable/reference/craft.md
+?? .github/skills/impeccable/reference/critique.md
+?? .github/skills/impeccable/reference/degraded/asset-producer.md
+?? .github/skills/impeccable/reference/degraded/documenter.md
+?? .github/skills/impeccable/reference/degraded/finish-reviewer.md
+?? .github/skills/impeccable/reference/degraded/manual-edit-applier.md
+?? .github/skills/impeccable/reference/delight.md
+?? .github/skills/impeccable/reference/distill.md
+?? .github/skills/impeccable/reference/doctor.md
+?? .github/skills/impeccable/reference/document.md
+?? .github/skills/impeccable/reference/extract.md
+?? .github/skills/impeccable/reference/harden.md
+?? .github/skills/impeccable/reference/hooks.md
+?? .github/skills/impeccable/reference/init.md
+?? .github/skills/impeccable/reference/ios.md
+?? .github/skills/impeccable/reference/layout.md
+?? .github/skills/impeccable/reference/live-setup.md
+?? .github/skills/impeccable/reference/live.md
+?? .github/skills/impeccable/reference/new-work.md
+?? .github/skills/impeccable/reference/onboard.md
+?? .github/skills/impeccable/reference/operate.md
+?? .github/skills/impeccable/reference/optimize.md
+?? .github/skills/impeccable/reference/overdrive.md
+?? .github/skills/impeccable/reference/polish.md
+?? .github/skills/impeccable/reference/quieter.md
+?? .github/skills/impeccable/reference/routing.md
+?? .github/skills/impeccable/reference/shape.md
+?? .github/skills/impeccable/reference/typeset.md
+?? .github/skills/impeccable/reference/visualize.md
+?? .github/skills/impeccable/scripts/command-metadata.json
+?? .github/skills/impeccable/scripts/concept-seed.mjs
+?? .github/skills/impeccable/scripts/context-signals.mjs
+?? .github/skills/impeccable/scripts/context.mjs
+?? .github/skills/impeccable/scripts/critique-storage.mjs
+?? .github/skills/impeccable/scripts/detect-csp.mjs
+?? .github/skills/impeccable/scripts/detect.mjs
+?? .github/skills/impeccable/scripts/detector/browser/injected/index.mjs
+?? .github/skills/impeccable/scripts/detector/cli/main.mjs
+?? .github/skills/impeccable/scripts/detector/design-system.mjs
+?? .github/skills/impeccable/scripts/detector/detect-antipatterns-browser.js
+?? .github/skills/impeccable/scripts/detector/detect-antipatterns.mjs
+?? .github/skills/impeccable/scripts/detector/engines/browser/detect-url.mjs
+?? .github/skills/impeccable/scripts/detector/engines/regex/detect-text.mjs
+?? .github/skills/impeccable/scripts/detector/engines/static-html/css-cascade.mjs
+?? .github/skills/impeccable/scripts/detector/engines/static-html/detect-html.mjs
+?? .github/skills/impeccable/scripts/detector/engines/visual/screenshot-contrast.mjs
+?? .github/skills/impeccable/scripts/detector/findings.mjs
+?? .github/skills/impeccable/scripts/detector/node/file-system.mjs
+?? .github/skills/impeccable/scripts/detector/profile/profiler.mjs
+?? .github/skills/impeccable/scripts/detector/registry/antipatterns.mjs
+?? .github/skills/impeccable/scripts/detector/rules/checks.mjs
+?? .github/skills/impeccable/scripts/detector/shared/color.mjs
+?? .github/skills/impeccable/scripts/detector/shared/constants.mjs
+?? .github/skills/impeccable/scripts/detector/shared/fonts.mjs
+?? .github/skills/impeccable/scripts/detector/shared/inline-ignores.mjs
+?? .github/skills/impeccable/scripts/detector/shared/page.mjs
+?? .github/skills/impeccable/scripts/doctor.mjs
+?? .github/skills/impeccable/scripts/embed-prompt.mjs
+?? .github/skills/impeccable/scripts/generate-image.mjs
+?? .github/skills/impeccable/scripts/hook-admin.mjs
+?? .github/skills/impeccable/scripts/hook-before-edit.mjs
+?? .github/skills/impeccable/scripts/hook-lib.mjs
+?? .github/skills/impeccable/scripts/hook.mjs
+?? .github/skills/impeccable/scripts/lib/artifact-schema.mjs
+?? .github/skills/impeccable/scripts/lib/composition-catalog.mjs
+?? .github/skills/impeccable/scripts/lib/concept-catalog.mjs
+?? .github/skills/impeccable/scripts/lib/design-parser.mjs
+?? .github/skills/impeccable/scripts/lib/impeccable-config.mjs
+?? .github/skills/impeccable/scripts/lib/impeccable-paths.mjs
+?? .github/skills/impeccable/scripts/lib/is-generated.mjs
+?? .github/skills/impeccable/scripts/lib/open-system-browser.mjs
+?? .github/skills/impeccable/scripts/lib/provider.mjs
+?? .github/skills/impeccable/scripts/lib/roll-selection.mjs
+?? .github/skills/impeccable/scripts/lib/staleness-deep.mjs
+?? .github/skills/impeccable/scripts/lib/staleness-notice.mjs
+?? .github/skills/impeccable/scripts/lib/staleness.mjs
+?? .github/skills/impeccable/scripts/lib/surface-briefs.mjs
+?? .github/skills/impeccable/scripts/lib/target-args.mjs
+?? .github/skills/impeccable/scripts/lib/target-slug.mjs
+?? .github/skills/impeccable/scripts/lib/template-extensions.mjs
+?? .github/skills/impeccable/scripts/live-accept.mjs
+?? .github/skills/impeccable/scripts/live-browser-dom.js
+?? .github/skills/impeccable/scripts/live-browser-session.js
+?? .github/skills/impeccable/scripts/live-browser.js
+?? .github/skills/impeccable/scripts/live-commit-manual-edits.mjs
+?? .github/skills/impeccable/scripts/live-complete.mjs
+?? .github/skills/impeccable/scripts/live-copy-edit-agent.mjs
+?? .github/skills/impeccable/scripts/live-discard-manual-edits.mjs
+?? .github/skills/impeccable/scripts/live-inject.mjs
+?? .github/skills/impeccable/scripts/live-insert.mjs
+?? .github/skills/impeccable/scripts/live-manual-edit-evidence.mjs
+?? .github/skills/impeccable/scripts/live-poll.mjs
+?? .github/skills/impeccable/scripts/live-resume.mjs
+?? .github/skills/impeccable/scripts/live-server.mjs
+?? .github/skills/impeccable/scripts/live-status.mjs
+?? .github/skills/impeccable/scripts/live-target.mjs
+?? .github/skills/impeccable/scripts/live-wrap.mjs
+?? .github/skills/impeccable/scripts/live.mjs
+?? .github/skills/impeccable/scripts/live/accept-css.mjs
+?? .github/skills/impeccable/scripts/live/accept-verify.mjs
+?? .github/skills/impeccable/scripts/live/browser-script-parts.mjs
+?? .github/skills/impeccable/scripts/live/completion.mjs
+?? .github/skills/impeccable/scripts/live/event-validation.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/astro.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/detect-utils.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/index.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/journal.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/nextjs.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/nuxt.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/script-src.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/static-html.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/sveltekit.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/tag-strategy.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/tanstack-start.mjs
+?? .github/skills/impeccable/scripts/live/frameworks/vite-generic.mjs
+?? .github/skills/impeccable/scripts/live/generation-preflight.mjs
+?? .github/skills/impeccable/scripts/live/insert-ui.mjs
+?? .github/skills/impeccable/scripts/live/instructions.mjs
+?? .github/skills/impeccable/scripts/live/manual-apply.mjs
+?? .github/skills/impeccable/scripts/live/manual-edit-routes.mjs
+?? .github/skills/impeccable/scripts/live/manual-edits-buffer.mjs
+?? .github/skills/impeccable/scripts/live/poll-lanes.mjs
+?? .github/skills/impeccable/scripts/live/roots.mjs
+?? .github/skills/impeccable/scripts/live/session-store.mjs
+?? .github/skills/impeccable/scripts/live/source-lock.mjs
+?? .github/skills/impeccable/scripts/live/source-search.mjs
+?? .github/skills/impeccable/scripts/live/svelte-ast.mjs
+?? .github/skills/impeccable/scripts/live/svelte-component.mjs
+?? .github/skills/impeccable/scripts/live/sveltekit-adapter.mjs
+?? .github/skills/impeccable/scripts/live/tanstack-adapter.mjs
+?? .github/skills/impeccable/scripts/live/ui-surfaces.mjs
+?? .github/skills/impeccable/scripts/live/vocabulary.mjs
+?? .github/skills/impeccable/scripts/modern-screenshot.umd.js
+?? .github/skills/impeccable/scripts/palette.mjs
+?? .github/skills/impeccable/scripts/pin.mjs
+?? .github/skills/impeccable/scripts/serve-question.mjs
+?? .github/skills/impeccable/scripts/surface-brief.mjs
+?? .impeccable/review-final/checks.json
+?? .impeccable/review-final/desktop-en-hero.jpg
+?? .impeccable/review-final/desktop-hero.jpg
+?? .impeccable/review-final/desktop-technical.png
+?? .impeccable/review-final/desktop.png
+?? .impeccable/review-final/mobile-en-hero.jpg
+?? .impeccable/review-final/mobile-hero.jpg
+?? .impeccable/review-final/mobile-technical.png
+?? .impeccable/review-final/mobile.png
+?? .impeccable/review-final/recovery-offline-20260923-b/en-1440.png
+?? .impeccable/review-final/recovery-offline-20260923-b/result.json
+?? .impeccable/review-final/recovery-offline-20260923-b/tr-390.png
+?? .impeccable/review-final/recovery-offline-20260923-final/en-1440.png
+?? .impeccable/review-final/recovery-offline-20260923-final/result.json
+?? .impeccable/review-final/recovery-offline-20260923-final/tr-390.png
+?? .impeccable/review-final/user-1920-en-hero.jpg
+?? .impeccable/review-final/user-1920-hero.jpg
+?? .impeccable/review-final/user-1920-technical.png
+?? .impeccable/review-final/user-1920.png
+?? .impeccable/review/checks.json
+?? .impeccable/review/desktop-hero.jpg
+?? .impeccable/review/desktop-technical.png
+?? .impeccable/review/desktop.png
+?? .impeccable/review/mobile-hero.jpg
+?? .impeccable/review/mobile-technical.png
+?? .impeccable/review/mobile.png
+?? .impeccable/review/user-1920-hero.jpg
+?? .impeccable/review/user-1920-technical.png
+?? .impeccable/review/user-1920.png
+?? cmd/agent/dns_engine_bind_adoption_guidance_test.go
+?? cmd/agent/dns_engine_bind_adoption_install.go
+?? cmd/agent/dns_engine_bind_adoption_install_linux.go
+?? cmd/agent/dns_engine_bind_adoption_install_linux_test.go
+?? cmd/agent/dns_engine_bind_adoption_install_stub.go
+?? cmd/agent/dns_engine_bind_adoption_install_test.go
+?? cmd/agent/dns_engine_bind_adoption_inverse_linux.go
+?? cmd/agent/dns_engine_bind_adoption_inverse_linux_test.go
+?? cmd/agent/dns_engine_bind_adoption_inverse_stub.go
+?? cmd/agent/dns_engine_bind_adoption_runtime.go
+?? cmd/agent/dns_engine_bind_adoption_runtime_test.go
+?? cmd/agent/dns_engine_bind_inverse_intent.go
+?? cmd/agent/dns_engine_bind_inverse_plan_linux.go
+?? cmd/agent/dns_engine_bind_inverse_plan_linux_test.go
+?? cmd/agent/dns_engine_bind_inverse_plan_stub.go
+?? cmd/agent/dns_engine_bind_inverse_runtime_linux.go
+?? cmd/agent/dns_engine_bind_inverse_runtime_stub.go
+?? cmd/agent/dns_engine_deletion_observation_test.go
+?? cmd/agent/dns_engine_owner_edit_recovery_test.go
+?? cmd/agent/dns_engine_pdns_catalog_native_test.go
+?? cmd/agent/dns_engine_pdns_forward_v3_linux.go
+?? cmd/agent/dns_engine_pdns_forward_v3_linux_test.go
+?? cmd/agent/dns_engine_pdns_forward_v3_other.go
+?? cmd/agent/dns_engine_pdns_fresh_v3_linux.go
+?? cmd/agent/dns_engine_pdns_fresh_v3_linux_test.go
+?? cmd/agent/dns_engine_pdns_inverse_plan_linux.go
+?? cmd/agent/dns_engine_pdns_inverse_plan_linux_test.go
+?? cmd/agent/dns_engine_pdns_v3_native_trial_linux_test.go
+?? cmd/agent/dns_engine_pdns_v3_parentless_native_trial_linux_test.go
+?? cmd/agent/dns_engine_pdns_v3_zone_native_trial_linux_test.go
+?? cmd/agent/dns_engine_pdns_v3_zone_verify.go
+?? cmd/agent/dns_engine_pdns_v3_zone_verify_test.go
+?? cmd/agent/dns_engine_peer_native_linux.go
+?? cmd/agent/dns_engine_peer_native_linux_test.go
+?? cmd/agent/dns_engine_peer_native_stub.go
+?? cmd/agent/dns_engine_peer_pdns_binding_linux.go
+?? cmd/agent/dns_engine_peer_pdns_binding_linux_test.go
+?? cmd/agent/dns_engine_peer_pdns_linux.go
+?? cmd/agent/dns_engine_peer_pdns_linux_test.go
+?? cmd/agent/dns_engine_peer_pending.go
+?? cmd/agent/dns_engine_peer_pending_test.go
+?? cmd/agent/dns_engine_peer_request.go
+?? cmd/agent/dns_engine_peer_request_test.go
+?? cmd/agent/dns_engine_v2_reader_test.go
+?? cmd/agent/dns_engine_v3_archive_linux.go
+?? cmd/agent/dns_engine_v3_archive_linux_test.go
+?? cmd/agent/dns_engine_v3_archive_other.go
+?? cmd/agent/dns_engine_v4_forward_phase_test.go
+?? cmd/agent/dns_engine_v4_recovery_compatibility_test.go
+?? cmd/bind-peer-inspect/README.md
+?? cmd/bind-peer-inspect/main_linux.go
+?? cmd/bind-peer-inspect/main_linux_test.go
+?? cmd/bind-peer-inspect/main_other.go
+?? cmd/dns-kill-matrix-trigger/pdns_peer_v3_recover.go
+?? cmd/dns-kill-matrix-trigger/pdns_peer_v3_recover_test.go
+?? cmd/dns-kill-matrix-trigger/pdns_peer_v3_trial.go
+?? cmd/dns-kill-matrix-trigger/pdns_peer_v3_trial_test.go
+?? cmd/dns-peer-enroll/README.md
+?? cmd/dns-peer-enroll/main_linux.go
+?? cmd/panel/dns_peer_pending_guidance.go
+?? cmd/panel/dns_peer_pending_guidance_test.go
+?? cmd/panel/domain_deletion_status.go
+?? cmd/panel/domain_deletion_status_test.go
+?? cmd/pdns-peer-inspect/main_linux.go
+?? cmd/pdns-peer-inspect/main_linux_test.go
+?? cmd/pdns-peer-inspect/main_other.go
+?? cmd/recovery/dns_bind_adoption_inverse_linux.go
+?? cmd/recovery/dns_bind_adoption_inverse_linux_test.go
+?? cmd/recovery/dns_bind_adoption_native_linux.go
+?? cmd/recovery/dns_switch_bind_capability.go
+?? cmd/recovery/dns_switch_bind_capability_test.go
+?? cmd/recovery/dns_switch_bind_inverse_linux.go
+?? cmd/recovery/dns_switch_bind_inverse_linux_test.go
+?? cmd/recovery/dns_switch_bind_native_linux.go
+?? cmd/recovery/dns_switch_owner_inverse_linux.go
+?? cmd/recovery/dns_switch_owner_inverse_linux_test.go
+?? cmd/recovery/dns_switch_owner_inverse_stub.go
+?? cmd/recovery/dns_switch_pdns_fresh_prestart_v3_linux.go
+?? cmd/recovery/dns_switch_pdns_fresh_prestart_v3_linux_test.go
+?? cmd/recovery/dns_switch_pdns_fresh_v3_linux.go
+?? cmd/recovery/dns_switch_pdns_fresh_v3_linux_test.go
+?? cmd/recovery/dns_switch_pdns_fresh_version_v3_linux.go
+?? cmd/recovery/dns_switch_pdns_fresh_version_v3_linux_test.go
+?? cmd/recovery/dns_switch_pdns_inverse_native_trial_linux_test.go
+?? cmd/recovery/dns_switch_pdns_target_assess_v4_linux.go
+?? cmd/recovery/dns_switch_pdns_target_assess_v4_linux_test.go
+?? cmd/recovery/dns_switch_pdns_target_decision_v4_linux.go
+?? cmd/recovery/dns_switch_pdns_target_decision_v4_linux_test.go
+?? cmd/recovery/dns_switch_pdns_target_inverse_v4_linux.go
+?? cmd/recovery/dns_switch_pdns_target_inverse_v4_linux_test.go
+?? cmd/recovery/dns_switch_pdns_target_native_inverse_v4_linux.go
+?? cmd/recovery/dns_switch_pdns_target_native_inverse_v4_linux_test.go
+?? cmd/recovery/dns_switch_pdns_target_units_v4_linux.go
+?? cmd/recovery/dns_switch_pdns_target_units_v4_linux_test.go
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-ADOPTION-OWNER-CLI-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-INSPECTOR-CHANNEL-20260926.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-INSPECTOR-CHANNEL.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-ABSENT-REBOOT-STAGE2-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-AUTHORITY-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-CURRENT-SOURCE-SMOKE-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-PEER-STAGE2-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-SSH-STAGE2-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-OWNER-EDIT-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-OWNER-EDIT-CORRECTION-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-PDNS-BIND-PEER-STAGE2-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-PDNS-INDEPENDENT-INVERSE-20260926.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-PDNS-PDNS-PEER-PREP-20260927.md
+?? deploy/e2e/dns-kill-matrix/NATIVE-PDNS-PROTECTED-OWNER-CLI-20260926.md
+?? deploy/e2e/dns-kill-matrix/authorize_native_parentless.py
+?? deploy/e2e/dns-kill-matrix/authorize_native_v3.py
+?? deploy/e2e/dns-kill-matrix/evidence/authority-20260927/postboot.json
+?? deploy/e2e/dns-kill-matrix/evidence/authority-20260927/preboot.json
+?? deploy/e2e/dns-kill-matrix/evidence/authority-current-source-20260927/postboot.json
+?? deploy/e2e/dns-kill-matrix/evidence/authority-current-source-20260927/preboot.json
+?? deploy/e2e/dns-kill-matrix/evidence/authority-current-source-20260927/repeat-postboot-units.txt
+?? deploy/e2e/dns-kill-matrix/evidence/authority-current-source-20260927/repeat-postboot.json
+?? deploy/e2e/dns-kill-matrix/evidence/authority-current-source-20260927/repeat-preboot-units.txt
+?? deploy/e2e/dns-kill-matrix/evidence/authority-current-source-20260927/repeat-preboot.json
+?? deploy/e2e/dns-kill-matrix/evidence/owner-bind-debian-20260928/README.md
+?? deploy/e2e/dns-kill-matrix/evidence/owner-bind-debian-20260928/SHA256SUMS
+?? deploy/e2e/dns-kill-matrix/evidence/owner-bind-debian-20260928/native-trial.txt
+?? deploy/e2e/dns-kill-matrix/evidence/owner-bind-debian-20260928/owner-cli-status.txt
+?? deploy/e2e/dns-kill-matrix/evidence/owner-bind-enrollment-20260928/README.md
+?? deploy/e2e/dns-kill-matrix/evidence/owner-bind-enrollment-20260928/SHA256SUMS
+?? deploy/e2e/dns-kill-matrix/evidence/owner-bind-resume-20260928/README.md
+?? deploy/e2e/dns-kill-matrix/evidence/owner-bind-resume-20260928/SHA256SUMS
+?? deploy/e2e/dns-kill-matrix/evidence/owner-bind-resume-20260928/native-binaries.sha256
+?? deploy/e2e/dns-kill-matrix/evidence/owner-bind-resume-20260928/owner-edit-refusal.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/README.md
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/SHA256SUMS
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/inspection-after-reboot.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/post-deletion-inspection.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/primary-engine-state.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/primary-ledger.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/secondary-after-reboot.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/secondary-native.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/secondary-zone-status.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-master-bind-20260928/contract.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-master-bind-20260928/debian-primary.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-master-bind-20260928/measure_primary.py
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-master-bind-20260928/peer-observation.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-native-transform-20260927/arch-stopped-wal.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-native-transform-20260927/arch.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-native-transform-20260927/contract.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-native-transform-20260927/debian13-stopped-wal.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-native-transform-20260927/debian13.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-native-transform-20260927/measure.py
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-native-transform-20260927/stopped_view.py
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/SHA256SUMS
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt7-archive.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt7-ledger.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt7-state.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt8-archive.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt8-ledger.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt8-ownership.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt8-state.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt9-archive.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt9-boundary.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt9-ledger.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt9-state.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/attempt9-systemd-cut.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/observe7-post.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/observe7-pre.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/observe8-post.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/observe8-pre.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/observe8-reboot.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/observe9-post.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/observe9-pre.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/attempt1-units.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/attempt2-units.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/post-reboot-units.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/systemd-cut.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/terminal-ledger.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-recorded-status-20260928/README.md
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-recorded-status-20260928/post-reboot-status.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/SHA256SUMS
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/attempt10-ledger-pending.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/attempt11-boots.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/attempt11-ledger.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/attempt11-primary-services.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/attempt11-primary-soa.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/attempt11-secondary-services.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/attempt11-secondary-soa.txt
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/attempt11-state.json
+?? deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/attempt11-systemd-cut.txt
+?? deploy/e2e/dns-kill-matrix/native_bind_inspector_channel.py
+?? deploy/e2e/dns-kill-matrix/native_bind_inspector_forced.sh
+?? deploy/e2e/dns-kill-matrix/native_bind_inspector_sshd.conf
+?? deploy/e2e/dns-kill-matrix/native_bind_owner_edit.py
+?? deploy/e2e/dns-kill-matrix/native_bind_owner_reconcile.py
+?? deploy/e2e/dns-kill-matrix/native_bind_pdns_authority.py
+?? deploy/e2e/dns-kill-matrix/native_bind_pdns_authority_probe.py
+?? deploy/e2e/dns-kill-matrix/native_pdns_bind_peer.py
+?? deploy/e2e/dns-kill-matrix/native_pdns_inspector_channel.py
+?? deploy/e2e/dns-kill-matrix/native_pdns_inspector_forced.sh
+?? deploy/e2e/dns-kill-matrix/native_pdns_inspector_sshd.conf
+?? deploy/e2e/dns-kill-matrix/native_pdns_inspector_transport_check.py
+?? deploy/e2e/dns-kill-matrix/native_pdns_pdns_pair.py
+?? deploy/e2e/dns-kill-matrix/native_pdns_pdns_primary_probe.py
+?? deploy/e2e/dns-kill-matrix/native_pdns_peer.py
+?? deploy/e2e/dns-kill-matrix/native_pdns_peer_probe.py
+?? deploy/e2e/dns-kill-matrix/owner-bind-probe/main.go
+?? deploy/e2e/dns-kill-matrix/pdns_inspector_diagnostic.go
+?? deploy/e2e/dns-kill-matrix/pdns_inspector_transport_diagnostic.go
+?? deploy/e2e/dns-kill-matrix/test_native_bind_inspector_channel.py
+?? deploy/e2e/dns-kill-matrix/test_native_bind_pdns_authority.py
+?? deploy/e2e/dns-kill-matrix/test_native_pdns_bind_peer.py
+?? deploy/e2e/dns-kill-matrix/test_native_pdns_pdns_pair.py
+?? deploy/e2e/dns-kill-matrix/test_native_pdns_peer.py
+?? deploy/e2e/dns-kill-matrix/testdata/late-bind-v2-producer-shape.json
+?? deploy/test-dns-owner-tools-package.sh
+?? docs/DNS-PEER-INSPECTION-GUIDANCE-GAP.md
+?? docs/PDNS-PRIMARY-SWITCH-V3-DESIGN.md
+?? internal/bindconfig/bind_adoption_static.go
+?? internal/bindconfig/bind_adoption_static_test.go
+?? internal/bindconfig/debian_inverse_includes.go
+?? internal/bindconfig/debian_inverse_includes_test.go
+?? internal/bindconfig/zone_include_test.go
+?? internal/bindconfigrestore/restore.go
+?? internal/bindconfigrestore/restore_test.go
+?? internal/bindpeerinspector/inspector.go
+?? internal/bindpeerinspector/inspector_linux_test.go
+?? internal/bindpeerinspector/native_linux.go
+?? internal/bindpeerinspector/native_other.go
+?? internal/bindpeerinspector/policy_linux.go
+?? internal/bindpeerinspector/policy_linux_test.go
+?? internal/bindpeerinspector/policy_other.go
+?? internal/bindroot/config_parent_linux.go
+?? internal/dnsengineartifact/bind_adoption_source.go
+?? internal/dnsengineartifact/bind_adoption_source_test.go
+?? internal/dnsengineartifact/fresh_primary_forward_v3.go
+?? internal/dnsengineartifact/fresh_primary_forward_v3_test.go
+?? internal/dnsengineartifact/state_v3.go
+?? internal/dnsengineartifact/state_v3_integration_test.go
+?? internal/dnsengineartifact/switch_journal_v2.go
+?? internal/dnsengineartifact/switch_journal_v2_test.go
+?? internal/dnsengineartifact/switch_journal_v3.go
+?? internal/dnsengineartifact/switch_journal_v3_builder.go
+?? internal/dnsengineartifact/switch_journal_v3_test.go
+?? internal/dnsengineartifact/switch_journal_v4.go
+?? internal/dnsengineartifact/switch_journal_v4_test.go
+?? internal/dnsengineartifact/testdata/switch-journal/v2-bind-apt.json
+?? internal/dnsenginerecovery/bind_adoption_install_receipt_linux.go
+?? internal/dnsenginerecovery/bind_adoption_install_receipt_linux_test.go
+?? internal/dnsenginerecovery/bind_adoption_inverse_admission_linux.go
+?? internal/dnsenginerecovery/bind_adoption_inverse_executor_linux_test.go
+?? internal/dnsenginerecovery/bind_adoption_source_linux.go
+?? internal/dnsenginerecovery/bind_adoption_source_linux_test.go
+?? internal/dnsenginerecovery/bind_adoption_state_linux.go
+?? internal/dnsenginerecovery/bind_adoption_state_linux_test.go
+?? internal/dnsenginerecovery/bind_switch_config_classification_linux.go
+?? internal/dnsenginerecovery/bind_switch_config_classification_linux_test.go
+?? internal/dnsenginerecovery/bind_switch_config_probe_linux.go
+?? internal/dnsenginerecovery/bind_switch_config_probe_linux_test.go
+?? internal/dnsenginerecovery/bind_switch_config_restore_linux.go
+?? internal/dnsenginerecovery/bind_switch_config_restore_linux_test.go
+?? internal/dnsenginerecovery/bind_switch_inverse_admission_linux.go
+?? internal/dnsenginerecovery/bind_switch_inverse_admission_linux_test.go
+?? internal/dnsenginerecovery/bind_switch_inverse_executor_linux.go
+?? internal/dnsenginerecovery/bind_switch_inverse_executor_linux_test.go
+?? internal/dnsenginerecovery/bind_switch_state_linux.go
+?? internal/dnsenginerecovery/bind_switch_state_linux_test.go
+?? internal/dnsenginerecovery/bind_unchanged_config_linux.go
+?? internal/dnsenginerecovery/bind_unchanged_config_linux_test.go
+?? internal/dnsenginerecovery/pdns_fresh_checkpoint_v3_linux.go
+?? internal/dnsenginerecovery/pdns_fresh_checkpoint_v3_linux_test.go
+?? internal/dnsenginerecovery/pdns_fresh_config_v3_linux.go
+?? internal/dnsenginerecovery/pdns_fresh_native_v3_linux.go
+?? internal/dnsenginerecovery/pdns_fresh_target_v3_linux.go
+?? internal/dnsenginerecovery/pdns_managed_bind_source_v4_linux.go
+?? internal/dnsenginerecovery/pdns_managed_bind_source_v4_linux_test.go
+?? internal/dnsenginerecovery/pdns_source_proof_linux.go
+?? internal/dnsenginerecovery/pdns_source_proof_linux_test.go
+?? internal/dnsenginerecovery/pdns_switch_rollback_recognition_linux.go
+?? internal/dnsenginerecovery/pdns_switch_rollback_recognition_linux_test.go
+?? internal/dnsenginerecovery/pdns_target_candidate_v4_linux.go
+?? internal/dnsenginerecovery/pdns_target_candidate_v4_linux_test.go
+?? internal/dnsenginerecovery/pdns_target_config_probe_v4_linux.go
+?? internal/dnsenginerecovery/pdns_target_config_probe_v4_linux_test.go
+?? internal/dnsenginerecovery/pdns_target_config_restore_files_v4_linux.go
+?? internal/dnsenginerecovery/pdns_target_config_restore_files_v4_linux_test.go
+?? internal/dnsenginerecovery/pdns_target_config_restore_v4_linux.go
+?? internal/dnsenginerecovery/pdns_target_config_restore_v4_linux_test.go
+?? internal/dnsenginerecovery/pdns_target_rename_inverse_v4_linux.go
+?? internal/dnsenginerecovery/pdns_target_rename_inverse_v4_linux_test.go
+?? internal/dnsenginerecovery/pdns_target_stage_inverse_v4_linux.go
+?? internal/dnsenginerecovery/pdns_target_stage_inverse_v4_linux_test.go
+?? internal/dnsenginerecovery/pdns_target_stage_probe_v4_linux.go
+?? internal/dnsenginerecovery/pdns_target_stage_probe_v4_linux_test.go
+?? internal/dnsenginerecovery/reconcile_v3_test.go
+?? internal/dnspeerenrollment/doc.go
+?? internal/dnspeerenrollment/enrollment_linux.go
+?? internal/dnspeerenrollment/enrollment_linux_test.go
+?? internal/dnspeerenrollment/enrollment_other.go
+?? internal/dnspeerenrollment/owner_writer_linux.go
+?? internal/dnspeerenrollment/owner_writer_linux_test.go
+?? internal/dnspeerenrollowner/secondary_account_linux.go
+?? internal/dnspeerenrollowner/secondary_linux.go
+?? internal/dnspeerenrollowner/secondary_linux_test.go
+?? internal/dnspeerenrollowner/secondary_resume_linux_test.go
+?? internal/dnspeerenrollowner/secondary_resume_native_linux_test.go
+?? internal/dnspeerenrollowner/secondary_sshd_linux.go
+?? internal/dnspeerenrollowner/secondary_sshd_linux_test.go
+?? internal/dnspeerjournal/doc.go
+?? internal/dnspeerjournal/record.go
+?? internal/dnspeerjournal/store_linux.go
+?? internal/dnspeerjournal/store_linux_test.go
+?? internal/dnspeerjournal/store_stub.go
+?? internal/dnspeerproof/doc.go
+?? internal/dnspeerproof/proof.go
+?? internal/dnspeerproof/proof_test.go
+?? internal/dnspeertransport/transport_linux.go
+?? internal/dnspeertransport/transport_linux_test.go
+?? internal/dnsunitrestore/restore.go
+?? internal/dnsunitrestore/restore_test.go
+?? internal/hostmutationlock/owner_recovery_linux.go
+?? internal/hostmutationlock/owner_recovery_linux_test.go
+?? internal/pdnsnative/catalog_transition.go
+?? internal/pdnsnative/catalog_transition_test.go
+?? internal/pdnsnative/recorded_transition.go
+?? internal/pdnsnative/recorded_transition_test.go
+?? internal/pdnsnative/sqlite_snapshot.go
+?? internal/pdnsnative/sqlite_snapshot_test.go
+?? internal/pdnspeerenrollment/doc.go
+?? internal/pdnspeerenrollment/enrollment_linux.go
+?? internal/pdnspeerenrollment/enrollment_linux_test.go
+?? internal/pdnspeerenrollment/enrollment_other.go
+?? internal/pdnspeerinspector/README.md
+?? internal/pdnspeerinspector/inspector.go
+?? internal/pdnspeerinspector/inspector_test.go
+?? internal/pdnspeerinspector/native_linux.go
+?? internal/pdnspeerinspector/native_linux_test.go
+?? internal/pdnspeerinspector/policy_linux.go
+?? internal/pdnspeerinspector/policy_linux_test.go
+?? internal/pdnspeerinspector/protocol.go
+?? internal/pdnspeerinspector/protocol_test.go
+?? internal/pdnspeerjournal/doc.go
+?? internal/pdnspeerjournal/record.go
+?? internal/pdnspeerjournal/store_linux.go
+?? internal/pdnspeerjournal/store_linux_test.go
+?? internal/pdnspeerjournal/store_stub.go
+?? internal/pdnspeerproof/proof.go
+?? internal/pdnspeerproof/proof_test.go
+?? internal/pdnspeertransport/transport_linux.go
+?? internal/pdnspeertransport/transport_linux_test.go
+?? internal/recoveryruntime/bind_source_support_linux.go
+?? internal/recoveryruntime/bind_source_support_linux_test.go
+?? internal/recoveryruntime/dns_v3_compatibility_linux_test.go
+?? internal/recoveryruntime/dns_v4_compatibility_linux_test.go
+?? internal/secureconfigwriter/writer_linux.go
+?? internal/secureconfigwriter/writer_linux_test.go
+?? internal/servicemutationledger/archive_linux.go
+?? internal/servicemutationledger/archive_linux_test.go
+?? internal/servicemutationledger/dns_zone_v3_peer_operation.go
+?? internal/servicemutationledger/dns_zone_v3_peer_operation_test.go
+?? internal/transport/dns_peer_pending_codes.go
+?? web/src/lib/domainDeletionPending.ts
+?? web/tests/domain-deletion-pending.test.mjs

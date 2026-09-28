@@ -1,0 +1,7 @@
+﻿ActiveState=active
+MainPID=5753
+catalog-c000020a.celikpanel.invalid. 60	IN SOA	invalid. invalid. 1790607757 60 30 3600 30
+catalog-c000020a.celikpanel.invalid. 60	IN NS	invalid.
+version.catalog-c000020a.celikpanel.invalid. 0 IN TXT "2"
+catalog-c000020a.celikpanel.invalid. 60	IN SOA	invalid. invalid. 1790607757 60 30 3600 30
+{"state":"configured","reason":"local policy and SSH configuration verified; live authentication is unproven","next_action":"Run one authenticated read-only inspector exchange from the reviewed primary before relying on deletion proof","primary_ip":"192.0.2.10","peer_ip":"192.0.2.11","catalog_name":"catalog-c000020a.celikpanel.invalid","primary_key_sha256":"ce3b3474a450fb972584590d53b8a63aac8da02059221c0bb8a332249ed8d942"}

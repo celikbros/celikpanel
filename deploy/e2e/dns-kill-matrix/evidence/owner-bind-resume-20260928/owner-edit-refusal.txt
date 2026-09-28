@@ -1,0 +1,13 @@
+9909b9e59e0be38faa9d4679a94407478090722cf2d7a2762d562a2be2fde2c3  /etc/ssh/sshd_config
+9909b9e59e0be38faa9d4679a94407478090722cf2d7a2762d562a2be2fde2c3  /etc/ssh/sshd_config
+celikpeer:x:969:
+969
+active
+wsl : sshd_config differs from the recorded original and publication; preserve the owner edit
+At line:2 char:1
++ wsl -e ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o Us ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (sshd_config dif... the owner edit:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+{"state":"disabled","reason":"primary key is not authorized","next_action":"Run secondary-resume with the reviewed pair, key and inspector to finish enrollment; leave it disabled if revocation was intentional","primary_ip":"192.0.2.10","peer_ip":"192.0.2.11","catalog_name":"catalog-c000020a.celikpanel.invalid"}

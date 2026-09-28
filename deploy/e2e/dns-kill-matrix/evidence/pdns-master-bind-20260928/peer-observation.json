@@ -1,0 +1,125 @@
+{
+  "captured_utc": "2026-09-27T21:04:33.163536+00:00",
+  "commands": {
+    "arch_catalog_axfr": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer +tcp @127.0.0.1 catalog-c000020a.celikpanel.invalid AXFR",
+      "exit": 0,
+      "node": "arch",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 3368\n;; flags: qr aa; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 13e5919a7d274770010000006ab984e6de9905992285372d (good)\n;; ANSWER SECTION:\ncatalog-c000020a.celikpanel.invalid. 60\tIN SOA\tinvalid. invalid. 1790542951 60 30 3600 30\ncatalog-c000020a.celikpanel.invalid. 60\tIN NS\tinvalid.\nversion.catalog-c000020a.celikpanel.invalid. 0 IN TXT \"2\"\nlf5eijnqp9ob8kmq5mv0vhjaevtcfuus.zones.catalog-c000020a.celikpanel.invalid. 0 IN PTR s1-kill.test.\ncatalog-c000020a.celikpanel.invalid. 60\tIN SOA\tinvalid. invalid. 1790542951 60 30 3600 30\n\n"
+    },
+    "arch_log": {
+      "command": "sudo journalctl -u named.service --no-pager -n 80",
+      "exit": 0,
+      "node": "arch",
+      "stderr": "",
+      "stdout": "Sep 27 21:00:16 dns-arch named[4914]: adjusted limit on open files from 1024 to 524288\nSep 27 21:00:16 dns-arch named[4914]: found 2 CPUs, using 2 worker threads\nSep 27 21:00:16 dns-arch named[4914]: DNSSEC algorithms: RSASHA1 NSEC3RSASHA1 RSASHA256 RSASHA512 ECDSAP256SHA256 ECDSAP384SHA384 ED25519 ED448\nSep 27 21:00:16 dns-arch named[4914]: DS algorithms: SHA-1 SHA-256 SHA-384\nSep 27 21:00:16 dns-arch named[4914]: HMAC algorithms: HMAC-MD5 HMAC-SHA1 HMAC-SHA224 HMAC-SHA256 HMAC-SHA384 HMAC-SHA512\nSep 27 21:00:16 dns-arch named[4914]: TKEY mode 2 support (Diffie-Hellman): no\nSep 27 21:00:16 dns-arch named[4914]: TKEY mode 3 support (GSS-API): yes\nSep 27 21:00:16 dns-arch named[4914]: the initial working directory is '/'\nSep 27 21:00:16 dns-arch named[4914]: loading configuration from '/etc/named.conf'\nSep 27 21:00:16 dns-arch named[4914]: the working directory is now '/var/named'\nSep 27 21:00:16 dns-arch named[4914]: looking for GeoIP2 databases in '/usr/share/GeoIP'\nSep 27 21:00:16 dns-arch named[4914]: using default UDP/IPv4 port range: [32768, 60999]\nSep 27 21:00:16 dns-arch named[4914]: using default UDP/IPv6 port range: [32768, 60999]\nSep 27 21:00:16 dns-arch named[4914]: listening on IPv4 interface lo, 127.0.0.1#53\nSep 27 21:00:16 dns-arch named[4914]: listening on IPv4 interface peer0, 192.0.2.11#53\nSep 27 21:00:16 dns-arch named[4914]: Disabling periodic interface re-scans timer\nSep 27 21:00:16 dns-arch named[4914]: generating session key for dynamic DNS\nSep 27 21:00:16 dns-arch named[4914]: loading NZD configs from '_default.nzd' for view '_default'\nSep 27 21:00:16 dns-arch named[4914]: using built-in root key for view _default\nSep 27 21:00:16 dns-arch named[4914]: set up managed keys zone for view _default, file 'managed-keys.bind'\nSep 27 21:00:16 dns-arch named[4914]: configuring command channel from '/etc/rndc.key'\nSep 27 21:00:16 dns-arch named[4914]: command channel listening on 127.0.0.1#953\nSep 27 21:00:16 dns-arch named[4914]: configuring command channel from '/etc/rndc.key'\nSep 27 21:00:16 dns-arch named[4914]: command channel listening on ::1#953\nSep 27 21:00:16 dns-arch named[4914]: managed-keys-zone: loaded serial 0\nSep 27 21:00:16 dns-arch named[4914]: all zones loaded\nSep 27 21:00:16 dns-arch named[4914]: FIPS mode is disabled\nSep 27 21:00:16 dns-arch named[4914]: running\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:500:1::53#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:503:c27::2:30#53\nSep 27 21:00:16 dns-arch named[4914]: zone catalog-c000020a.celikpanel.invalid/IN: refresh: failure trying primary 192.0.2.10#53 (source 0.0.0.0#0): connection refused\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:500:2f::f#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:500:2d::d#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:503:ba3e::2:30#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:500:2::c#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:500:a8::e#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:7fe::53#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2801:1b8:10::b#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:500:12::d0d#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:7fd::1#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:dc3::35#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53\nSep 27 21:00:16 dns-arch named[4914]: network unreachable resolving './NS/IN': 2001:500:9f::42#53\nSep 27 21:00:16 dns-arch named[4914]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.\nSep 27 21:00:16 dns-arch named[4914]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.\nSep 27 21:01:13 dns-arch named[4914]: zone catalog-c000020a.celikpanel.invalid/IN: refresh: failure trying primary 192.0.2.10#53 (source 0.0.0.0#0): connection refused\nSep 27 21:02:31 dns-arch named[4914]: client @0x7fc7aee9b000 192.0.2.10#14529: received notify for zone 's1-kill.test': NOTAUTH\nSep 27 21:02:31 dns-arch named[4914]: client @0x7fc7aee9cc00 192.0.2.10#14529: received notify for zone 'catalog-c000020a.celikpanel.invalid'\nSep 27 21:02:31 dns-arch named[4914]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#14529: no serial\nSep 27 21:02:31 dns-arch named[4914]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.\nSep 27 21:02:31 dns-arch named[4914]: 0x7fc7ac23d000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53\nSep 27 21:02:31 dns-arch named[4914]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790542951\nSep 27 21:02:31 dns-arch named[4914]: 0x7fc7ac23d000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success\nSep 27 21:02:31 dns-arch named[4914]: 0x7fc7ac23d000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 5 records, 365 bytes, 0.046 secs (7934 bytes/sec) (serial 1790542951)\nSep 27 21:02:31 dns-arch named[4914]: catz: catalog-c000020a.celikpanel.invalid: reload start\nSep 27 21:02:31 dns-arch named[4914]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790542951\nSep 27 21:02:31 dns-arch named[4914]: catz: adding zone 's1-kill.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success\nSep 27 21:02:31 dns-arch named[4914]: catz: catalog-c000020a.celikpanel.invalid: reload done: success\nSep 27 21:02:31 dns-arch named[4914]: zone s1-kill.test/IN: Transfer started.\nSep 27 21:02:31 dns-arch named[4914]: 0x7fc7af31a000: transfer of 's1-kill.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53\nSep 27 21:02:31 dns-arch named[4914]: zone s1-kill.test/IN: transferred serial 2026083101\nSep 27 21:02:31 dns-arch named[4914]: 0x7fc7af31a000: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer status: success\nSep 27 21:02:31 dns-arch named[4914]: 0x7fc7af31a000: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 7 records, 313 bytes, 0.044 secs (7113 bytes/sec) (serial 2026083101)\nSep 27 21:02:31 dns-arch named[4914]: zone s1-kill.test/IN: sending notifies (serial 2026083101)\nSep 27 21:03:11 dns-arch named[4914]: client @0x7fc7ac263000 127.0.0.1#48452 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790542951)\nSep 27 21:03:11 dns-arch named[4914]: client @0x7fc7ac263000 127.0.0.1#48452 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 265 bytes, 0.001 secs (265000 bytes/sec) (serial 1790542951)\nSep 27 21:04:10 dns-arch named[4914]: client @0x7fc7ac263000 127.0.0.1#48941 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790542951)\nSep 27 21:04:10 dns-arch named[4914]: client @0x7fc7ac263000 127.0.0.1#48941 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 265 bytes, 0.001 secs (265000 bytes/sec) (serial 1790542951)\n"
+    },
+    "arch_tcp_A": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer +tcp @127.0.0.1 www.s1-kill.test A",
+      "exit": 0,
+      "node": "arch",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 31379\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: c6eb6efe32a48d7f010000006ab984e64b3ae928e5d393c2 (good)\n;; ANSWER SECTION:\nwww.s1-kill.test.\t300\tIN\tA\t192.0.2.10\n\n"
+    },
+    "arch_tcp_SOA": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer +tcp @127.0.0.1 s1-kill.test SOA",
+      "exit": 0,
+      "node": "arch",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 28313\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: ba0b00f7ca692bea010000006ab984e5ba6db5aac862971a (good)\n;; ANSWER SECTION:\ns1-kill.test.\t\t3600\tIN\tSOA\tns1.s1-kill.test. hostmaster.s1-kill.test. 2026083101 10800 3600 604800 3600\n\n"
+    },
+    "arch_udp_A": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer @127.0.0.1 www.s1-kill.test A",
+      "exit": 0,
+      "node": "arch",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 371\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 28ff198d8d84f27c010000006ab984e5226994e5753d9143 (good)\n;; ANSWER SECTION:\nwww.s1-kill.test.\t300\tIN\tA\t192.0.2.10\n\n"
+    },
+    "arch_udp_SOA": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer @127.0.0.1 s1-kill.test SOA",
+      "exit": 0,
+      "node": "arch",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54620\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 24a32aeec257bf49010000006ab984e5ef9e38acb708aab6 (good)\n;; ANSWER SECTION:\ns1-kill.test.\t\t3600\tIN\tSOA\tns1.s1-kill.test. hostmaster.s1-kill.test. 2026083101 10800 3600 604800 3600\n\n"
+    },
+    "arch_unit": {
+      "command": "systemctl show named.service -p Id -p ActiveState -p SubState -p MainPID -p UnitFileState",
+      "exit": 0,
+      "node": "arch",
+      "stderr": "",
+      "stdout": "Id=named.service\nActiveState=active\nSubState=running\nUnitFileState=enabled\nMainPID=4914\n"
+    },
+    "arch_version": {
+      "command": "pacman -Q bind bind-tools; named -V | head -n 2; sha256sum /usr/bin/named /etc/named.conf",
+      "exit": 1,
+      "node": "arch",
+      "stderr": "sha256sum: /etc/named.conf: Permission denied\n",
+      "stdout": "bind 9.20.29-1\nbind 9.20.29-1\nBIND 9.20.29 (Stable Release) <id:c3d4465>\nrunning on Linux x86_64 7.1.8-arch1-3 #1 SMP PREEMPT_DYNAMIC Tue, 11 Aug 2026 09:16:08 +0000 (Arch Linux)\nc573c05d42de3aec8cdea2530245eb6762d91511e1a3418ba27ea6ed0111205d  /usr/bin/named\n"
+    },
+    "arch_version_root": {
+      "command": "sudo sha256sum /usr/bin/named /etc/named.conf; pacman -Q bind",
+      "exit": 0,
+      "node": "arch",
+      "stderr": "",
+      "stdout": "c573c05d42de3aec8cdea2530245eb6762d91511e1a3418ba27ea6ed0111205d  /usr/bin/named\nb0cb30473a30e3ccf11ba43cb44ed92112ffb48648c80559ec1b9bcf1b86e6c0  /etc/named.conf\nbind 9.20.29-1\n"
+    },
+    "arch_zones": {
+      "command": "sudo rndc zonestatus catalog-c000020a.celikpanel.invalid; sudo rndc zonestatus s1-kill.test",
+      "exit": 1,
+      "node": "arch",
+      "stderr": "rndc: neither /etc/rndc.conf nor /etc/rndc.key was found\nrndc: neither /etc/rndc.conf nor /etc/rndc.key was found\n",
+      "stdout": ""
+    },
+    "debian_catalog_axfr": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer +tcp @192.0.2.10 catalog-c000020a.celikpanel.invalid AXFR",
+      "exit": 0,
+      "node": "debian",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOTAUTH, id: 64926\n;; flags: qr aa; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; Transfer failed.\n"
+    },
+    "debian_tcp_A": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer +tcp @192.0.2.10 www.s1-kill.test A",
+      "exit": 0,
+      "node": "debian",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 4854\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nwww.s1-kill.test.\t300\tIN\tA\t192.0.2.10\n\n"
+    },
+    "debian_tcp_SOA": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer +tcp @192.0.2.10 s1-kill.test SOA",
+      "exit": 0,
+      "node": "debian",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 53813\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\ns1-kill.test.\t\t3600\tIN\tSOA\tns1.s1-kill.test. hostmaster.s1-kill.test. 2026083101 10800 3600 604800 3600\n\n"
+    },
+    "debian_udp_A": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer @192.0.2.10 www.s1-kill.test A",
+      "exit": 0,
+      "node": "debian",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 57315\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\nwww.s1-kill.test.\t300\tIN\tA\t192.0.2.10\n\n"
+    },
+    "debian_udp_SOA": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer @192.0.2.10 s1-kill.test SOA",
+      "exit": 0,
+      "node": "debian",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 3135\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\ns1-kill.test.\t\t3600\tIN\tSOA\tns1.s1-kill.test. hostmaster.s1-kill.test. 2026083101 10800 3600 604800 3600\n\n"
+    },
+    "debian_unit": {
+      "command": "systemctl show pdns.service -p Id -p ActiveState -p SubState -p MainPID -p UnitFileState; pdns_server --version 2>&1 | head -n 2",
+      "exit": 0,
+      "node": "debian",
+      "stderr": "",
+      "stdout": "MainPID=1662\nId=pdns.service\nActiveState=active\nSubState=running\nUnitFileState=disabled\nbash: line 1: pdns_server: command not found\n"
+    },
+    "primary_catalog_axfr_from_arch": {
+      "command": "dig +time=2 +tries=1 +norecurse +noall +comments +answer +tcp @192.0.2.10 catalog-c000020a.celikpanel.invalid AXFR",
+      "exit": 0,
+      "node": "arch",
+      "stderr": "",
+      "stdout": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 27811\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\ncatalog-c000020a.celikpanel.invalid. 60\tIN SOA\tinvalid. invalid. 1790542951 60 30 3600 30\n\n;; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 27811\n;; flags: qr aa; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\ncatalog-c000020a.celikpanel.invalid. 60\tIN NS\tinvalid.\nversion.catalog-c000020a.celikpanel.invalid. 0 IN TXT \"2\"\nlf5eijnqp9ob8kmq5mv0vhjaevtcfuus.zones.catalog-c000020a.celikpanel.invalid. 0 IN PTR s1-kill.test.\n\n;; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 27811\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n;; ANSWER SECTION:\ncatalog-c000020a.celikpanel.invalid. 60\tIN SOA\tinvalid. invalid. 1790542951 60 30 3600 30\n\n"
+    }
+  },
+  "schema": "celikpanel/fixture-native-primary-peer/v1"
+}

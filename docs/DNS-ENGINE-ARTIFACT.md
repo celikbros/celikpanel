@@ -993,6 +993,23 @@ observed the retained journal before Agent restart and the same failed ledger
 job after ordinary Agent startup retired that journal. Agent-independent inverse,
 owner-edit/reboot fault acceptance and complete P0.4 remain open.
 
+### Journal-free historical DNS switch receipt after reboot (2026-09-28)
+
+P0.2/P0.4, D-025 invariants 2/3: root can now request
+`recovery dns-switch-status --request-id <32-hex-id>` without `--quiesced` to
+read **only a terminal historical ledger result when no switch journal exists**.
+It performs the same bounded, ownership-checked double reads of the canonical
+ledger v1 and journal, validates the exact switch identity, rejects any active
+ledger request and refuses nonterminal, changing or malformed evidence. It
+creates no volatile lock and never probes or claims current native DNS health.
+The fixed rollback code and exact message distinguish the original failed
+switch from its separately recorded successful owner rollback; unknown text is
+not echoed. A present journal still requires the existing `--quiesced` path.
+No persisted schema, producer, native service or recovery decision changed.
+Focused Linux tests and vet passed. The preceding [native inverse
+trial](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md)
+found the missing-lock problem. A separate [post-reboot status trial](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-recorded-status-20260928/README.md) used that exact canonical terminal ledger in a fresh disposable Debian VM; the read returned the same historical verdict after reboot without creating the missing lock. This was a materialized ledger, not a repeated producer/inverse or installed-kit test. It grants no inverse authority; P0.4 remains open.
+
 ### Shared PowerDNS adoption row proof (2026-09-25)
 
 P0.4, constitutional invariants 1/2/3: the Agent's existing read-only
@@ -1147,3 +1164,120 @@ Agent/independent deleted-zone wire parity (P0.4, invariants 1/2/3): normal Agen
 A [fresh native Agent/independent deletion-parity trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-AGENT-DELETION-PARITY-20260925.md) exercised the corrected Agent against a real parent/absent-child PowerDNS source after SIGKILL. The independent observer proved 1/1 deleted children before Agent restart; the ordinary same-request retry converged forward and 31/31 health samples passed. This closes the specific native parity gap for that reply and boundary, not the REFUSED owner-policy matrix, independent inverse, reboot or owner-edit acceptance. Persisted v1 formats remain unchanged.
 
 A [fresh disposable PowerDNS owner-edit trial](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-OWNER-EDIT-20260925.md) now exercises a static post-SIGKILL native config edit. The independent fixed quiesced observer and ordinary Agent retries refuse the changed bytes, retaining the owner comment and accepted journal while native DNS stays active. The test-only controller injection is recorded; production binaries and persisted v1 formats did not change. This proves one fail-closed boundary, not a concurrent effect-point race or independent inverse authority.
+
+### Owner recovery for an interrupted external PowerDNS adoption (2026-09-26)
+
+For an already accepted **external PowerDNS adoption** that was interrupted and
+has an exact request ID, the server owner may first inspect the operation with:
+
+```sh
+sudo /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id <32-lowercase-hex-request-id>
+```
+
+The status command is read-only. Use its result when available; after reboot it
+may report that `/run` lock state is missing. In that case, the owner recovery
+command below recreates only its required runtime lock path while holding the
+release lock. Run it only for this exact accepted, interrupted adoption:
+
+```sh
+sudo /usr/libexec/celikpanel/recovery recover-dns-pdns-adoption --request-id <32-lowercase-hex-request-id>
+```
+
+Use the same request ID shown by the accepted operation. Do not start a new DNS
+switch or update to retry it. Unknown, conflicting, changed or owner-edited
+evidence fails closed and is retained for diagnosis; do not work around that
+refusal or replace the request ID. A response that reports only a historical
+retry/verdict does not prove present DNS health. Check the native PowerDNS
+service, configuration and authoritative DNS answers separately after recovery.
+
+The [bounded Debian 13 native acceptance](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-PROTECTED-OWNER-CLI-20260926.md) has now passed for this
+selected external PowerDNS adoption path on the same protected candidate: after
+an actual CLI interruption and reboot, the exact request completed with a
+terminal ledger verdict and journal retirement; a historical retry explicitly
+reported current health as unknown. A separate same-candidate owner-edit trial
+failed closed while preserving the edit and evidence, and native PowerDNS
+continued authoritative UDP/TCP answers. The tested worktree was dirty and this
+is not release-grade signed-candidate provenance. Other DNS inverse kinds, the
+full fault/workload matrix, other platforms and overall P0.4 remain open. No
+installed server was changed. The retained report SHA-256 is `8147b644ea9024630a4a1a5b90bb423193d49a9119ed35e47ceeb499754272e7`.
+
+### Owner recovery for an interrupted PowerDNS-to-BIND switch (2026-09-27)
+
+P0.4, constitutional invariants 1/2/3/6: the protected owner command now supports
+one additional inverse: an accepted standalone Debian/apt switch from managed
+PowerDNS to initially inactive BIND, already durably in `rolling-back` or
+`rolled-back`. It requires a V2 journal with exact config before/after images,
+the unchanged fixed Debian main/include envelope, and frozen PowerDNS config
+and logical database proof. Legacy V1 and older incomplete V2 evidence remain
+readable; this command does not manufacture their missing recovery material.
+
+```sh
+sudo /usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id <32-lowercase-hex-request-id> --lang en
+```
+
+Use only the request ID of the accepted interrupted switch. The selected
+protected runtime must advertise `celikpanel-bind-source-inverse/v1` before
+the producer publishes this V2 intent. Its lease prevents incompatible runtime
+replacement during the operation; retained source-proof V2 journals require
+the `bind-source-inverse-plan-v2` application contract.
+
+The inverse excludes the recorded worker under release/host locks, checks
+native ownership and owner changes, stops only the operation's BIND target,
+restores the exact configuration/pointer/source receipt, and re-enables the
+frozen PowerDNS unit. It never restores or rewrites the PowerDNS database.
+Terminal publication requires fresh native PowerDNS and authoritative UDP/TCP
+proof. Evidence is retained on refusal; do not delete it or start a new switch
+to bypass a conflict. A retry after journal retirement reports the historical
+verdict with current health unknown and makes no new DNS change.
+
+The [Debian 13 native trial](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md)
+proved a real late producer SIGKILL while BIND served and PowerDNS was stopped,
+preserved an unreloaded owner config edit, interrupted the protected inverse
+after its durable restored checkpoint, and completed the same request after
+an orderly reboot with Panel and Agent disabled. This is bounded local
+worktree evidence, not signed-release, power-loss, continuous-service or
+all-platform acceptance. Running-BIND adoption, PowerDNS switch/reinstall,
+Arch, paired and empty-source variants remain outside this command's scope.
+
+### Running-BIND adoption owner inverse scope (2026-09-27)
+
+The protected `recover-dns-bind-adoption` command has one bounded native acceptance result: rollback of an interrupted adoption from an initially running owner-managed BIND service on Debian 13 with a static default-view zone. The V2 inverse plan requires `SourceBIND` and excludes `SourcePDNS`. Admission is separately gated by `check-bind-adoption-inverse-v1`, and the new source evidence uses `bind-adoption-inverse-plan-v2`; the existing V1 or BIND-target V2 PowerDNS-source plan is not authority for SourceBIND restoration. The plan binds owner configuration, source zone file bytes/metadata and authoritative SOA serials over UDP and TCP; it does not prove the full zone RRset. Recovery restores owner configuration and generation through reload without stopping or restarting `named`.
+
+The [final native trial](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-ADOPTION-OWNER-CLI-20260927.md) proves producer exit 137 at `rolling-back/after-write`, refusal of one same-serial owner zone edit while retaining the pending install receipt and other evidence, protected CLI interruption after durable `rolled-back`, same-request terminal recovery, and a historical retry with no effects/current health unknown. The final read-only probe validly observed `rolled_back_source_active` with `converged=false`; the controller handoff itself remains unverified because its matrix assertion expects forward convergence. Named stayed active at the same process identity; separate UDP/TCP A checks were authoritative. The earlier archive with SHA `6c9dcc30c2edb7c96b43c287efce461b8586170b38116a3272ca4235484d5a05` is provisional due to an adopted-present installation ownership receipt. The final archive SHA is `aa296895caa0dd73bdaea881e64c7dbd6ab2ab52a3e676cfe0397014e2511707`. No reboot, continuous-availability, other layout/topology or signed-release acceptance is claimed; PowerDNS switch/reinstall inverses and overall item 1/P0.4 remain open.
+
+### Standalone BIND to PowerDNS V4 recovery code scope (2026-09-27)
+
+P0.4, constitutional invariants 1/2/3/6: source now contains a V4 frozen
+candidate proof and a protected owner recovery command for one narrow cut:
+standalone managed BIND was initially serving, and PowerDNS was inactive,
+disabled, and had no prior database. The accepted operation is at a pre-activation `intent`,
+`target-staged`, `source-stopped`, or `target-enable-intent` checkpoint, or an
+already durable rollback decision. The owner command proves the exact native
+state and excluded worker, writes a phase-only rollback decision, and rereads
+it before any inverse effect. After `source-stopped`, an exact candidate renamed to the live database name
+can be returned to the private path if PowerDNS is inactive, has no process
+or port-53 listener, and the candidate's bytes and metadata remain exact.
+This is a pre-start *journal* cut; current evidence cannot prove that the
+daemon never ran historically. A stopped but enabled target is admitted only
+from a durable V4 `target-enable-intent` checkpoint; the distinct
+`rolling-back-target-enable` decision first returns its unit to the frozen
+disabled state. A running or owner-modified target remains unknown and is not
+forced through this path. The V4 candidate uses the root-private Agent state
+directory with same-filesystem staging; the journal binds its
+inode, metadata and bytes, the managed BIND generation/receipt, and the
+owner-aware PowerDNS configuration after-image. The owner CLI replays the exact
+configuration and unit restoration, candidate removal, and terminal journal /
+ledger publication under the installed recovery runtime.
+
+The Agent's V4 forward journal writer rejects a direct `source-stopped` to
+`target-started` transition: `target-enable-intent` must be durably recorded
+first. Generic rollback cannot consume either V4 enable-intent phase.
+The quiesced owner status command identifies the same-request protected CLI for
+admitted pre-start V4 phases. Live workers, a running or changed target, and
+owner changes cause refusal; status polling makes no DNS mutation.
+
+This V4 producer helper is not connected to the normal switch producer. No
+native interruption/reboot trial, post-start or committed PowerDNS recovery, signed
+release trial, or production acceptance has been performed for this path. V1/V2
+and V3 contracts remain distinct. This is implemented source code only; P0.4
+and its PowerDNS-target inverse acceptance remain open.

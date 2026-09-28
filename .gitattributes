@@ -38,3 +38,6 @@ docs/validation/** -text -whitespace
 # Historical native configuration fixtures are compared byte-for-byte.
 internal/mailtlsconfig/testdata/*.conf text eol=lf
 internal/mailtlsconfig/testdata/*.map text eol=lf
+
+# Retained native-trial evidence must keep its recorded byte hashes.
+deploy/e2e/dns-kill-matrix/evidence/** -text -whitespace

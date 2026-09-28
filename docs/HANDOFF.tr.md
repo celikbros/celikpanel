@@ -1,5 +1,7 @@
 # Mühendislik Devri
 
+> Güncel devir: [28 Eylül 2026 teknik durum ve kalan işler](HANDOFF-2026-09-28.tr.md). Aşağıdaki 30 Ağustos kaydı tarihseldir; bugünkü sürüm veya canlı durum değildir.
+
 *Referans güncellemesi: 30 Ağustos 2026 · [English](HANDOFF.md)*
 
 Bu belge, CelikPanel'i devralacak mühendislik ekibinin başlangıç noktasıdır.

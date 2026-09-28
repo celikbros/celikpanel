@@ -315,7 +315,11 @@ no CelikPanel binary on the secondary. Debian package repositories must be
 reachable. Then use the Arch `install`, `prepare-bind`, and `run-prepared`
 commands above with the paired cell ID. The primary must observe the member
 zone on the secondary before the switch can finish; SSH reachability alone is
-insufficient. The bounded [current-image pair result](NATIVE-BIND-PAIR-CURRENT-20260925.md)
+insufficient. The separate [native BIND inspector channel fixture](NATIVE-BIND-INSPECTOR-CHANNEL.md)
+exercises owner-enrolled, pinned SSH observation in this pair. Its
+[serial-1 observation](NATIVE-BIND-INSPECTOR-CHANNEL-20260926.md) safely
+refused loaded-zone absence; production Agent V3 deletion acceptance remains open.
+The bounded [current-image pair result](NATIVE-BIND-PAIR-CURRENT-20260925.md)
 does not certify other paired roles or engines.
 The standalone Debian adoption cells use a distinct measured path. For
 `pdns-adopt__intent__after-write__standalone__peer-reachable`, for example:
@@ -412,16 +416,99 @@ ownership, proves all transitional/target receipts are absent, and repeats its
 own authoritative UDP+TCP query before launching the tagged agent. No source
 engine-state or ownership receipt is hand-written.
 
-The current guest source-proof producer is complete for three exact shapes:
+The previously exercised guest source-proof producer covered three exact shapes:
 `uninitialized` BIND, `managed-pdns` BIND at the two critical stopped-source
 phases, and standalone Debian `external-pdns-adoption`. The controller requires
 `absent-by-proof` provenance for the first; production setup-adoption hashes
 plus source-preinstall/source-adoption hashes for the second; and
 `harness-external-pdns-preimage` plus source-preinstall/external-preimage
-hashes for the third. It fails closed for `managed-bind` and
-`legacy-pdns-secondary` until equally strict fixture producers are
-implemented. Those remaining cells are harness-blocked/unverified; they must
-not be counted as passed or failed.
+hashes for the third. A fourth source producer now prepares standalone
+Debian managed-bind for pdns-switch through a real untagged Agent BIND switch,
+then binds the measured scenario to the exact setup identity, engine state,
+active ownership and native UDP/TCP answer. Select
+prepare-pdns-switch --node debian13 --source-fixture managed-bind for such a
+cell. The paired Debian-primary scenario derives the measured BIND-to-PowerDNS
+switch and its setup BIND switch from the same zone, NS records and peer
+addresses. The [first bounded BIND to PowerDNS trial](NATIVE-BIND-PDNS-PEER-STAGE2-20260927.md)
+proved initial transfer and a terminal V3 edit but left deletion pending without
+authenticated native absence proof. The [owner-enrolled SSH follow-up](NATIVE-BIND-PDNS-SSH-STAGE2-20260927.md)
+initially recorded pending on its own delete request, then recovered that request to a
+terminal receipt using authenticated PowerDNS loaded-zone absence, re-added the
+member under a distinct request, and proved authoritative UDP/TCP after both
+guests rebooted with primary management disabled. A [separate fresh absent-zone reboot trial](NATIVE-BIND-PDNS-ABSENT-REBOOT-STAGE2-20260927.md)
+proved the terminal delete and PowerDNS's native unloaded-zone state persisted
+after both guests rebooted with primary management disabled. Measured
+kill-matrix phases remain open. A DNS REFUSED response alone is
+insufficient removal evidence. Legacy-pdns-secondary remains harness-blocked/unverified. The SSH enrollment used here is fixture-only; the production Agent has a reader, but an ordinary owner enrollment action has not been demonstrated (see [guidance gap](../../../docs/DNS-PEER-INSPECTION-GUIDANCE-GAP.md)).
+
+The exact Debian paired-primary `pdns-switch__intent__after-write__paired-primary__peer-reachable`
+cell also accepts `prepare-pdns-switch --node debian13 --source-fixture uninitialized`.
+That path proves an empty 0/0 source, stages one `MASTER` member, and leaves
+the Arch BIND peer native; pass `--source-fixture uninitialized` to
+`native_pdns_bind_peer.py prepare`. It is fixture preparation only.
+The [fresh PowerDNS V3 prestart inverse trial](evidence/pdns-v3-prestart-20260928/README.md) independently restored one real `target-enable-intent`/`after-write` SIGKILL cut before PowerDNS start on disposable Debian. Two earlier runs safely refused and led to narrow cgroup/listener proof corrections. The clean rollback verdict and inactive/masked native target survived a management-disabled reboot. The original switch job remains failed, the new journal-free exact-request receipt path has [a separate materialized-ledger Debian reboot trial](evidence/pdns-v3-recorded-status-20260928/README.md) but no producer/inverse replay in that overlay, and P0.4/P0.5 remain open.
+
+The fresh PowerDNS-primary V3 poststart path now has one bounded disposable
+fault/reboot result; see [the retained evidence](evidence/pdns-v3-native-20260928/README.md).
+The [fresh V3 zone lifecycle trial](evidence/pdns-v3-zone-20260928/README.md) adds terminal child-zone add/edit/delete/re-add and two management-disabled guest reboots. Parentless peer deletion still waits for authenticated native absence proof. The public paired-primary mutation remains blocked while ordinary owner enrollment, independent inverse, later fault cuts and owner edits are unproven.
+
+The Stage 2 cross-engine fixture has a bounded native path for a Debian
+managed-BIND primary and a panel-free Arch PowerDNS secondary; see the linked
+trial above for exact receipts and open acceptance work. The
+paired `prepare-pdns-switch` scenario uses the same zone, pair role, addresses,
+and NS records as its production managed-BIND source setup. After `guest_bootstrap.py install` on Debian and before
+`prepare-pdns-switch`, run `native_pdns_peer.py prepare` with the same work
+root, cell ID, identity and `--execute` to provision the isolated Arch peer.
+The first native attempt used the reverse order and production refused the
+managed-BIND source because its member had not converged on the peer; that
+failed attempt is not acceptance evidence. The peer bootstrap checks the guest marker and absence of management
+binaries, installs Arch's packaged PowerDNS and SQLite backend, initializes a
+CONSUMER row for the exact primary catalog, starts the native `pdns.service`,
+and waits for production BIND's first publication and NOTIFY. The peer must
+be prepared before the Debian managed-BIND source switch, which requires
+native secondary convergence before it can complete. The fixture permits
+catalog AXFR only from the paired primary and loopback; production V3 pair
+proof requires the primary to read the peer catalog. This remains outside a
+completed kill-matrix cell.
+
+For the exact disposable Frankfurt/Boston authority shape, pass `--authority-acceptance`
+to the paired `prepare-pdns-switch` step. Then run `native_bind_pdns_authority.py`
+with the same work root, cell ID and identity and `--execute`. It checks
+both native endpoints over UDP/TCP for exact SOA, apex NS and host A answers;
+repeat it after disabling management and rebooting both guests, supplying
+the earlier boot IDs. [The bounded native result](NATIVE-BIND-PDNS-AUTHORITY-20260927.md)
+does not prove later mutation propagation or installed-panel recovery.
+
+`native_pdns_peer.py observe --expect present --address 192.0.2.10` reads the
+Arch SQLite catalog/member rows and member A record, compares the primary
+catalog AXFR membership, and requires authoritative UDP and TCP answers from
+PowerDNS. Repeat with the expected address after an edit. After an authorized
+production member delete, use `--expect absent`; it requires no member in the
+primary catalog AXFR, no loaded member row or record on the secondary, and no
+old A answer. A negative DNS reply alone does not pass. Repeat the same
+observation after an orderly guest reboot to establish native loading. These
+observations must be retained with the exact production add/edit/delete
+operation receipts and reboot transcript before claiming acceptance. The probe
+is read-only and does not create those operations or reboot a guest. The first linked trial supplies initial loading, edit, delete-native-state
+and reboot observations, but its exact deletion remained pending with
+`dns_peer_enrollment_required`. The subsequent owner-enrolled SSH trial supplies
+a terminal same-request delete recovery and a distinct terminal re-add, plus
+native presence after management-disabled reboot. The separate absent-state reboot trial proves native absence after reboot
+for a fresh deletion; neither trial completes a measured fault cell.
+
+The [bounded PowerDNS-primary to panel-free BIND-secondary trial](NATIVE-PDNS-BIND-PEER-STAGE2-20260927.md)
+adds the inverse engine combination, but is a failed acceptance attempt. Initial
+BIND catalog transfer and authoritative secondary answers passed. One
+BIND-to-PowerDNS switch then failed exact producer base-record validation; its
+rollback could not confirm the staged target, leaving the exact ledger request
+`running` and DNS services on the disposable primary inactive while the BIND
+secondary continued serving its prior data. The raw evidence is retained and
+neither operation was retried. Resolve the SOA/catalog mismatch and rollback
+verification failure, then prove the switch reaches a safe terminal result and
+primary service remains available before counting this combination. The separate owner-enrolled SSH trial now provides exact-operation recovery,
+PowerDNS loaded-zone absence proof and a distinct re-add for the BIND-primary
+path; Stage 2 still needs the integrated PowerDNS-primary setup admission,
+remaining supported pair combinations and measured fault phases.
 
 After a supported fixture is prepared, run its exact generated controller array
 without copying or editing a guest launcher:

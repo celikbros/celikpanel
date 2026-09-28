@@ -1,0 +1,42 @@
+{
+  "assertions": {
+    "authoritative_equal_udp_tcp_SOA_A": true,
+    "bind_catalog_transfer_success": true,
+    "bind_member_transfer_success": true,
+    "catalog_axfr_equal": true,
+    "catalog_serial": 1790542951,
+    "daemon_changes_sql_main_and_creates_wal_shm": true,
+    "main_inode_preserved_rename_start": true,
+    "member_serial": 2026083101,
+    "panel_agent_absent_on_peer": true,
+    "producer_member_ptr": true,
+    "staged_member_type": "MASTER"
+  },
+  "evidence_sha256": {
+    "debian-primary.json": "8d3e0348a93d307f81e937c2975474728b5aa05963dc03641b94cd14c45e5f37",
+    "measure_primary.py": "224f31d8c2bc467fad3b762fe0315dc6a21ff1a9ebe3e33e25e901cd2bfd2ad4",
+    "peer-observation.json": "2cff2bc10206980b48eba25eb940eb63aaa4eef26c715ded85c2a2db6f7ef6f3"
+  },
+  "limits": [
+    "Staged SQL originated in a fixture, not current product mutation code.",
+    "The first generic peer observer rejected PowerDNS-generated PTR owner due its deterministic sha224-hex assumption; direct AXFR, BIND logs and UDP/TCP proof are captured instead.",
+    "No source-engine switch, product receipt, reboot, rollback, or owner-change test was performed.",
+    "Native daemon transformations require V3 admission/validation and WAL-aware evidence handling."
+  ],
+  "native_transition": {
+    "main_inode": 131425,
+    "producer_ptr_owner": "lf5eijnqp9ob8kmq5mv0vhjaevtcfuus.zones.catalog-c000020a.celikpanel.invalid.",
+    "running_catalog_last_check": 1,
+    "running_catalog_metadata_kind": "CATALOG-HASH",
+    "running_catalog_soa": "invalid invalid 1790542951 60 30 3600 30",
+    "running_member_last_check": 2026083101,
+    "sqlite_main_sha256_running": "9699f716ac92aba262e5f5c90534ce27614979593778a3658f048db1f2fb5a68",
+    "sqlite_main_sha256_staged": "d156d5013f04de6de37c925ded4640d55f0a2b2f3b18837fea683ee29cd27a3c",
+    "staged_catalog_last_check": null,
+    "staged_catalog_metadata": [],
+    "staged_catalog_soa": "invalid. invalid. 1 60 30 3600 30",
+    "staged_member_last_check": null
+  },
+  "schema": "celikpanel/pdns-primary-bind-secondary-native-proof/v1",
+  "scope": "One fresh disposable Debian13 PowerDNS 4.9.17 primary and Arch BIND 9.20.29 secondary; no panel/agent; not a product update or rollback proof"
+}

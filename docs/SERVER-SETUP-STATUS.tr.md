@@ -9,6 +9,18 @@ veya Boston, Frankfurt ya da başka bir sunucuya kurulduğunu söylemez.
 Eski dağıtım talimatlarından bağımsız olarak [AGENTS.md](../AGENTS.md) gereğince
 kurulu panel güncellemelerini kullanıcı CelikPanel'in kendi arayüzünden başlatır.
 
+## Güvenli ilk DNS seçimi — 28 Eylül 2026
+
+Yeni yerel DNS kurulum taslağı, desteklenen çiftli birincil yol olan BIND'i
+seçiyor. Önceden varsayılan PowerDNS birincildi; aynı seçim kurulum ve DNS
+motoru kabul kapılarında reddediliyordu. Yeni taslakta motor alanı boşsa BIND
+seçilir. Kaydedilmiş açık PowerDNS tercihi korunur ve ayrı kabul çalışması
+bitene dek inceleme aşamasında engellenir; kabul edilmiş işlem planı değişmez.
+Yeni kurulum HTTP yanıtı, taslak normalleştirmesi ve kayıtlı açık tercih için
+Panel regresyon testi; ayrıca tüm Panel paketi testleri ve arayüz tip denetimi
+yerelde geçti. Kalıcı şema veya kurulu sunucular değişmedi. P0.4/P0.5 ve
+çiftli PowerDNS birincil kapısı açık iş olarak kalıyor.
+
 ## İşlem yönlendirmesi genişletmesi — 13 Eylül 2026
 
 Alpha.73 kaynak adayı; incelenmiş plandan ilerleme bilgisi, DNS rolüne göre sonraki
