@@ -8,6 +8,48 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-026 · DNS engine recovery: refuse the unrecoverable switch, accept same-operation recovery for first installs
+
+*September 29, 2026 · Owner decision on the handoff's item 1 (DNS recovery contract)*
+
+A read-only audit of the source at `e9d1019d` bound every DNS engine mutation
+the product can start to one of three states: passed with native evidence,
+named gap, or unsupported. One path fell into a fourth, unacceptable state:
+switching a **serving BIND** source to a **PowerDNS** target on a standalone
+host or a paired secondary was still reachable from the engine card. It wrote
+the legacy V1 journal, its only recovery was the Agent's own inverse, the V4
+pre-start inverse and its owner CLI had no producer wired to them, and no
+native interruption trial existed. The existing gate covered only the paired
+primary.
+
+**Decision 1.** The BIND→PowerDNS engine switch is unsupported in this
+release, for every topology. Panel preview/commit, server setup and the Agent
+RPC refuse it before any mutation with the blocker
+`bind_source_pdns_switch_unsupported`, and the screen states the reason, that
+BIND keeps serving, and the next action (install PowerDNS on a host without a
+DNS engine, or wait for a release that names the switch as supported).
+Fresh PowerDNS installs, PowerDNS→BIND switches, PowerDNS adoption and
+reconfiguration, BIND reinstall and every installed server are unchanged.
+Reopening the gate requires a wired producer, a pre-start and post-start
+Agent-independent inverse, and native interruption evidence — not removing the
+check.
+
+**Decision 2.** For a first engine install (BIND or PowerDNS, any role) the
+prior state is "no DNS engine"; there is no owner data to restore. Recovery
+through the Agent on the same operation identity at the next start, with the
+read-only status command and the screen naming the owner's next action, is the
+accepted contract for this release. An Agent-independent owner CLI is not
+required for first installs. What remains for item 1 is evidence, not code:
+native interruption cells for fresh standalone PowerDNS, fresh paired
+secondary (BIND and PowerDNS), and the post-start cut on fresh BIND.
+
+Decision 1 narrows promised scope and is stated in release notes as an
+explicit unsupported operation, not silently. Neither decision changes an
+installed server, the license policy, owner-operated recovery or user-only
+installed-panel updates.
+
+---
+
 ## D-025 · Resilience is a core contract, not an incident patch
 
 *September 14, 2026 · Owner-requested constitutional audit; required direction, implementation open*

@@ -1281,3 +1281,29 @@ native interruption/reboot trial, post-start or committed PowerDNS recovery, sig
 release trial, or production acceptance has been performed for this path. V1/V2
 and V3 contracts remain distinct. This is implemented source code only; P0.4
 and its PowerDNS-target inverse acceptance remain open.
+
+### Serving-BIND to PowerDNS switch refused for every topology (2026-09-29)
+
+P0.4, constitutional invariants 2/4 and
+[D-026](DECISIONS.md#d-026--dns-engine-recovery-refuse-the-unrecoverable-switch-accept-same-operation-recovery-for-first-installs):
+a switch whose recorded source engine is BIND and whose target is PowerDNS is
+now refused before any preview token, snapshot or Agent mutation, for
+standalone hosts and paired secondaries as well as the paired primary that
+`pdns_primary_switch_paused` already covered. The Panel emits the blocker
+`bind_source_pdns_switch_unsupported` from `dnsEnginePreviewBlockers` (also
+reached by server setup); the Agent rejects the canonical manifest in
+`SwitchDNSEngineV1` before the mutation step claim and again in the host
+backend before journal reconciliation. The screen states that BIND keeps
+serving, that nothing changed, and that PowerDNS can be installed on a host
+without a DNS engine.
+
+Reason: the reachable producer for that path was the V1 switch journal, whose
+only recovery is the Agent's own inverse; the V4 pre-start proof and its owner
+CLI above have no producer wired to them; no native interruption trial exists.
+Fresh PowerDNS installs (empty source), PowerDNS-to-BIND switches, PowerDNS
+adoption and secondary reconfiguration, BIND reinstall and installed servers
+are unchanged. Startup recovery of an already-persisted V1 journal is not
+routed through this gate. Removing the check is not the way to reopen the
+path; a wired producer, pre-start and post-start Agent-independent inverses and
+native evidence are. The [acceptance register](DNS-RECOVERY-ACCEPTANCE.md)
+tracks the remaining rows.

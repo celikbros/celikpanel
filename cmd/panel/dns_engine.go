@@ -1220,6 +1220,16 @@ func dnsEnginePreviewBlockers(
 		snapshot.Topology == transport.DNSTopologyPaired &&
 		snapshot.PairRole == transport.DNSPairRolePrimary {
 		blockers = addDNSEngineBlocker(blockers, "pdns_primary_switch_paused")
+	} else if (action == "switch" || action == "install") &&
+		target == transport.DNSEnginePowerDNS &&
+		snapshot.ActiveEngine != nil &&
+		*snapshot.ActiveEngine == transport.DNSEngineBIND {
+		// Replacing a serving BIND source with PowerDNS is unsupported in this
+		// release for every topology: an interrupted switch has no
+		// Agent-independent recovery. Refuse before any token or mutation so
+		// BIND keeps serving. "install" is included because an absent PowerDNS
+		// runtime still makes this a switch away from the active BIND source.
+		blockers = addDNSEngineBlocker(blockers, "bind_source_pdns_switch_unsupported")
 	}
 	reinstall := action == dnsEngineActionReinstall
 	actualSource := transport.DNSEngine("")

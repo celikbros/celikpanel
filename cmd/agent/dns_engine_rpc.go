@@ -1304,6 +1304,10 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 		response.Error = pdnsPairedPrimarySwitchPausedReason
 		return nil
 	}
+	if bindSourcePDNSSwitchUnsupported(commitment) {
+		response.Error = bindSourcePDNSSwitchUnsupportedReason
+		return nil
+	}
 	ctx, finishStep, err := a.requiredServiceMutationStep(
 		request.ServiceMutationBinding,
 		newServiceMutationStepClaim(

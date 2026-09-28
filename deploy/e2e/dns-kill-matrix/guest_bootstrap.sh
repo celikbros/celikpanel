@@ -46,6 +46,26 @@ readonly -a CRITICAL_MANAGED_PDNS_PHASES=(
     target-started
     rolled-back
 )
+# Fresh installs (prior state: no DNS engine). BIND standalone adds only the
+# driver-specific post-start target-verified cut; critical BIND phases remain
+# managed-pdns-required. Fresh standalone PowerDNS writes every V1 phase.
+readonly -a FRESH_BIND_STANDALONE_PHASES=(
+    pre-intent
+    intent
+    target-staged
+    target-verified
+)
+readonly -a FRESH_PDNS_STANDALONE_PHASES=(
+    pre-intent
+    intent
+    target-staged
+    source-stopped
+    target-started
+    target-verified
+    committed
+    rolling-back
+    rolled-back
+)
 
 array_contains() {
     local needle=$1
@@ -55,6 +75,15 @@ array_contains() {
         [[ $candidate == "$needle" ]] && return 0
     done
     return 1
+}
+
+standalone_cell_matches_phase() {
+    local driver=$1 cell_id=$2 boundary_phase=$3
+    if [[ $boundary_phase == pre-intent ]]; then
+        [[ $cell_id =~ ^${driver}__pre-intent__standalone__peer-(reachable|unreachable)$ ]]
+    else
+        [[ $cell_id =~ ^${driver}__${boundary_phase}__(before|after)-write__standalone__peer-(reachable|unreachable)$ ]]
+    fi
 }
 
 require_simple_value() {
@@ -2093,14 +2122,33 @@ prepare_fresh_pdns_primary() {
        $node == debian13 && $boundary_phase == intent &&
        $source_fixture_policy == driver-specific ]] ||
         die "fresh PowerDNS primary requires the exact disposable intent cell"
+    prepare_fresh_pdns_source "$cell_id" "$node" "$stage" primary
+}
+
+prepare_fresh_pdns_standalone() {
+    local cell_id=$1 node=$2 boundary_phase=$3 source_fixture_policy=$4 stage=$5
+    [[ $node == debian13 && $source_fixture_policy == driver-specific ]] ||
+        die "fresh standalone PowerDNS requires the certified Debian driver-specific placement"
+    array_contains "$boundary_phase" "${FRESH_PDNS_STANDALONE_PHASES[@]}" ||
+        die "fresh standalone PowerDNS has an unsupported boundary phase"
+    standalone_cell_matches_phase pdns-switch "$cell_id" "$boundary_phase" ||
+        die "fresh standalone PowerDNS cell ID differs from its boundary phase"
+    prepare_fresh_pdns_source "$cell_id" "$node" "$stage" standalone
+}
+
+prepare_fresh_pdns_source() {
+    local cell_id=$1 node=$2 stage=$3 fresh_role=$4
+    [[ $fresh_role == primary || $fresh_role == standalone ]] ||
+        die "fresh PowerDNS source role is unsupported"
     verify_fixture_identity "$cell_id" "$node"
     verify_os "$node"
     require_regular "$stage/scenario.json"
     [[ ! -e $stage/source-setup-bind.json && ! -L $stage/source-setup-bind.json ]] ||
         die "fresh PowerDNS source must not include BIND setup"
     install -m 0600 -o root -g root "$stage/scenario.json" "$SCENARIO_FILE"
-    python3 - "$SCENARIO_FILE" <<'PYFRESHPDNS'
-import json, sys
+    FRESH_PDNS_ROLE=$fresh_role python3 - "$SCENARIO_FILE" <<'PYFRESHPDNS'
+import json, os, sys
+role = os.environ["FRESH_PDNS_ROLE"]
 scenario = json.load(open(sys.argv[1], encoding="utf-8"))
 expected = {
     "schema": "celikpanel-dns-kill-matrix-trigger/v1",
@@ -2112,20 +2160,24 @@ expected = {
     "source_epoch": 0,
     "target_epoch": 1,
     "source_revision": 0,
-    "topology": "paired",
-    "pair_role": "primary",
-    "local_ip": "192.0.2.10",
-    "local_ns": "ns1.s1-kill.test",
-    "peer_ip": "192.0.2.11",
-    "peer_ns": "ns2.s1-kill.test",
+    "topology": "paired" if role == "primary" else "standalone",
 }
+if role == "primary":
+    expected.update({
+        "pair_role": "primary",
+        "local_ip": "192.0.2.10",
+        "local_ns": "ns1.s1-kill.test",
+        "peer_ip": "192.0.2.11",
+        "peer_ns": "ns2.s1-kill.test",
+    })
 if set(scenario) != set(expected) | {"zones"} or any(
     scenario.get(key) != value for key, value in expected.items()
 ):
-    raise SystemExit("fresh PowerDNS primary scenario identity differs")
+    raise SystemExit(f"fresh PowerDNS {role} scenario identity differs")
 zones = scenario["zones"]
-if not isinstance(zones, list) or len(zones) != 1 or zones[0].get("domain") != "s1-kill.test" or zones[0].get("zone_type") != "MASTER" or zones[0].get("delete") is not False:
-    raise SystemExit("fresh PowerDNS primary requires one transferable MASTER member")
+zone_type = "MASTER" if role == "primary" else "NATIVE"
+if not isinstance(zones, list) or len(zones) != 1 or zones[0].get("domain") != "s1-kill.test" or zones[0].get("zone_type") != zone_type or zones[0].get("delete") is not False:
+    raise SystemExit(f"fresh PowerDNS {role} requires one {zone_type} member")
 PYFRESHPDNS
     install -d -m 0700 -o root -g root "$MEASURED_IDENTITY_DIR"
     [[ ! -e $MEASURED_IDENTITY && ! -L $MEASURED_IDENTITY ]] ||
@@ -2151,7 +2203,11 @@ prepare_pdns_switch() {
     local source_fixture_policy=$5 stage=$6
     require_simple_value "cell id" "$cell_id" '^[a-z0-9][a-z0-9_.-]{0,239}$'
     if [[ $source_fixture == uninitialized ]]; then
-        prepare_fresh_pdns_primary "$cell_id" "$node" "$boundary_phase" "$source_fixture_policy" "$stage"
+        if [[ $cell_id == pdns-switch__*__standalone__peer-* ]]; then
+            prepare_fresh_pdns_standalone "$cell_id" "$node" "$boundary_phase" "$source_fixture_policy" "$stage"
+        else
+            prepare_fresh_pdns_primary "$cell_id" "$node" "$boundary_phase" "$source_fixture_policy" "$stage"
+        fi
         return
     fi
     [[ $node == debian13 && $source_fixture == managed-bind &&
@@ -2334,8 +2390,10 @@ prepare_bind() {
     local address
     address=$(global_ipv4)
     if [[ $source_fixture == uninitialized ]]; then
-        array_contains "$boundary_phase" "${EARLY_UNINITIALIZED_PHASES[@]}" \
-            || die "uninitialized source cannot claim a stopped-source-or-later boundary"
+        array_contains "$boundary_phase" "${EARLY_UNINITIALIZED_PHASES[@]}" || {
+            array_contains "$boundary_phase" "${FRESH_BIND_STANDALONE_PHASES[@]}" &&
+                standalone_cell_matches_phase bind "$cell_id" "$boundary_phase"
+        } || die "uninitialized source cannot claim a stopped-source-or-later boundary outside standalone target-verified"
         [[ $source_fixture_policy == driver-specific ||
            $source_fixture_policy == uninitialized-permitted-noncritical ]] \
             || die "uninitialized source fixture policy is incompatible"

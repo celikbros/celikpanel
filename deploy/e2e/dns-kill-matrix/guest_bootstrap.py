@@ -27,6 +27,24 @@ CELL_RE = re.compile(r"[a-z0-9][a-z0-9_.-]{0,239}")
 SHA256_RE = re.compile(r"[0-9a-f]{64}")
 EARLY_UNINITIALIZED_PHASES = frozenset({"pre-intent", "intent", "target-staged"})
 CRITICAL_MANAGED_PDNS_PHASES = frozenset({"source-stopped", "target-started", "rolled-back"})
+# A fresh BIND install (prior state: no DNS engine, D-026) writes every forward
+# phase. Standalone target-verified is a post-start cut whose manifest policy is
+# driver-specific, so the proved empty source is its honest fixture there.
+# source-stopped, target-started and rolled-back stay managed-pdns-required by
+# matrix design (generate_manifest.py host_placement), not by product limit.
+FRESH_BIND_STANDALONE_PHASES = EARLY_UNINITIALIZED_PHASES | frozenset({"target-verified"})
+PDNS_SWITCH_PHASES = frozenset(
+    {
+        "pre-intent", "intent", "target-staged", "source-stopped",
+        "target-started", "target-verified", "committed",
+        "rolling-back", "rolled-back",
+    }
+)
+# A fresh standalone PowerDNS install uses the V1 journal writer in
+# switchToPDNSOnCertifiedProfile: source-stopped runs a no-op stop of the
+# inactive target and still writes its phase; rollback phases follow the
+# tagged target-staged precursor. Every matrix phase is therefore real.
+FRESH_PDNS_STANDALONE_PHASES = PDNS_SWITCH_PHASES
 PDNS_ADOPT_PHASES = frozenset(
     {
         "pre-intent",
@@ -241,14 +259,19 @@ def validate_bind_cell(cell: dict[str, Any], node: str, source_fixture: str) -> 
         if node != "arch" or source_fixture != "uninitialized":
             raise BootstrapError("paired-primary bootstrap requires an uninitialized Arch source")
     if source_fixture == "uninitialized":
+        allowed_phases = (
+            FRESH_BIND_STANDALONE_PHASES
+            if cell.get("role") == "standalone"
+            else EARLY_UNINITIALIZED_PHASES
+        )
         if (
             source_policy
             not in {"driver-specific", "uninitialized-permitted-noncritical"}
-            or phase not in EARLY_UNINITIALIZED_PHASES
+            or phase not in allowed_phases
         ):
             raise BootstrapError(
                 "uninitialized source requires a driver-supported fixture policy "
-                "and an early BIND phase"
+                "and an early BIND phase or standalone target-verified"
             )
     elif source_fixture == "owner-bind":
         if not (
@@ -333,15 +356,17 @@ def validate_pdns_switch_cell(
         or source_fixture not in {"managed-bind", "uninitialized"}
     ):
         raise BootstrapError("PowerDNS switch requires the certified Debian placement")
-    if source_fixture == "uninitialized" and (
-        cell.get("role") != "paired-primary" or cell.get("boundary", {}).get("phase") != "intent"
+    phase = cell.get("boundary", {}).get("phase")
+    if source_fixture == "uninitialized" and not (
+        (cell.get("role") == "paired-primary" and phase == "intent")
+        or (cell.get("role") == "standalone" and phase in FRESH_PDNS_STANDALONE_PHASES)
     ):
-        raise BootstrapError("fresh PowerDNS fixture is limited to paired-primary intent")
-    if cell.get("boundary", {}).get("phase") not in {
-        "pre-intent", "intent", "target-staged", "source-stopped",
-        "target-started", "target-verified", "committed",
-        "rolling-back", "rolled-back",
-    }:
+        # Fresh paired-primary continues on the separate V3 path, which the
+        # product pauses outside its exact disposable intent trial.
+        raise BootstrapError(
+            "fresh PowerDNS fixture is limited to standalone cells and paired-primary intent"
+        )
+    if phase not in PDNS_SWITCH_PHASES:
         raise BootstrapError("PowerDNS switch fixture has an unsupported matrix phase")
 
 
@@ -349,9 +374,7 @@ def pdns_switch_scenario(*, role: str = "standalone", authority_acceptance: bool
                          source_fixture: str = "managed-bind") -> dict[str, Any]:
     if role not in {"standalone", "paired-primary"}:
         raise BootstrapError("unsupported PowerDNS switch source role")
-    if source_fixture not in {"managed-bind", "uninitialized"} or (
-        source_fixture == "uninitialized" and role != "paired-primary"
-    ):
+    if source_fixture not in {"managed-bind", "uninitialized"}:
         raise BootstrapError("unsupported PowerDNS switch source fixture")
     source = bind_scenario(
         "uninitialized", role=role, node="debian13",
@@ -359,7 +382,9 @@ def pdns_switch_scenario(*, role: str = "standalone", authority_acceptance: bool
         authority_acceptance=authority_acceptance,
     )
     zones = source["zones"]
-    if source_fixture == "uninitialized":
+    if source_fixture == "uninitialized" and role == "paired-primary":
+        # Only a fresh paired producer requires transferable MASTER members;
+        # a fresh standalone install keeps the ordinary NATIVE snapshot.
         zones = [{**zone, "zone_type": "MASTER"} for zone in zones]
     return {
         "schema": SCENARIO_SCHEMA,

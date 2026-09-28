@@ -296,7 +296,11 @@ switch journal, both engines' ownership/install receipts, and all three DNS
 units are absent/inactive. It also records that global UDP and TCP port 53 are
 bindable and that no authoritative answer was observed; the controller does
 not query an unrelated local resolver for this empty source. It does not
-pretend that this shape covers stopped-source recovery.
+pretend that this shape covers stopped-source recovery. `prepare-bind` accepts
+this empty source at `pre-intent`, `intent` and `target-staged` for standalone
+and Arch paired-primary cells, and additionally at standalone
+`target-verified` (both edges, either placement host) as a first-install
+post-start cut; see [Fresh-install cells](#fresh-install-cells-d-026).
 
 For an Arch `paired-primary` BIND cell with an uninitialized source, prepare
 the Debian guest as a standard native catalog secondary **before** starting
@@ -446,6 +450,8 @@ cell also accepts `prepare-pdns-switch --node debian13 --source-fixture uninitia
 That path proves an empty 0/0 source, stages one `MASTER` member, and leaves
 the Arch BIND peer native; pass `--source-fixture uninitialized` to
 `native_pdns_bind_peer.py prepare`. It is fixture preparation only.
+Every standalone `pdns-switch` cell also accepts `--source-fixture
+uninitialized`; see [Fresh-install cells](#fresh-install-cells-d-026).
 The [fresh PowerDNS V3 prestart inverse trial](evidence/pdns-v3-prestart-20260928/README.md) independently restored one real `target-enable-intent`/`after-write` SIGKILL cut before PowerDNS start on disposable Debian. Two earlier runs safely refused and led to narrow cgroup/listener proof corrections. The clean rollback verdict and inactive/masked native target survived a management-disabled reboot. The original switch job remains failed, the new journal-free exact-request receipt path has [a separate materialized-ledger Debian reboot trial](evidence/pdns-v3-recorded-status-20260928/README.md) but no producer/inverse replay in that overlay, and P0.4/P0.5 remain open.
 
 The fresh PowerDNS-primary V3 poststart path now has one bounded disposable
@@ -589,6 +595,56 @@ unchanged non-convergence repeats the same fingerprint while changing recovery
 state does not. It reports exact target convergence, exact prior-source
 rollback activity, or indeterminate recovery separately from the independent
 UDP/TCP serving assertion.
+
+### Fresh-install cells (D-026)
+
+Owner decision D-026 (`docs/DECISIONS.md`) accepts same-operation Agent
+recovery for a first engine install, whose prior state is "no DNS engine". Its
+remaining evidence is native interruption of fresh standalone PowerDNS, fresh
+paired secondaries, and a post-start cut on fresh BIND. The harness prepares
+these proved-empty (`uninitialized`, `absent-by-proof`) shapes:
+
+- Every standalone `pdns-switch` cell: all 17 boundaries for both peer labels
+  (34 cells), Debian 13, `driver-specific`. The scenario has an empty 0/0
+  source, target epoch 1, no pair identity and one `NATIVE` `s1-kill.test`
+  member. The guest checks that exact identity, proves the empty source and
+  stops only the coordinators. Production writes V1 phases for this path. At
+  `source-stopped` it stops the inactive `pdns.service` as a no-op before
+  writing. Rollback phases follow the tagged `target-staged` precursor.
+  PowerDNS packages are installed inside the measured operation.
+- Standalone `bind` at `target-verified`, both edges and both peer labels
+  (4 cells), on the manifest's Arch or Debian placement. `before-write` cuts
+  after BIND started and the state receipt was persisted while the journal is
+  still `target-started`; `after-write` leaves the journal at `target-verified`.
+
+```sh
+CELL=pdns-switch__target-started__after-write__standalone__peer-reachable
+python3 "$BOOTSTRAP" prepare-pdns-switch --work-root "$ROOT" --cell-id "$CELL" \
+  --node debian13 --identity-file "$HOME/.ssh/id_ed25519" \
+  --source-fixture uninitialized --execute
+```
+
+Still not preparable with an empty source:
+
+- BIND `source-stopped`, `target-started` and `rolled-back`. Fresh BIND
+  writes these phases, but the manifest places them as
+  `managed-pdns-required` and the controller refuses any other source.
+  Recording a fresh run there needs a separately labelled matrix coordinate.
+  That is a design decision, not a harness gap.
+- Standalone BIND `committed` and `rolling-back`. The fresh path reaches them,
+  but this change does not admit them.
+- Every `paired-secondary` cell. It needs a panel-free native primary serving
+  the product catalog `catalog-<hex(peer)>.celikpanel.invalid` and its
+  members, with AXFR and NOTIFY to the guest. The four native peer helpers
+  only act as secondaries/consumers of a production primary on the kill host.
+  The trigger also rejects the fresh PowerDNS paired-secondary manifest under
+  `pdns-switch`, because it has the legacy reconfiguration shape.
+- `pdns-switch` paired-primary beyond the exact intent cell. Fresh
+  paired-primary continues on the separate V3 path, and the Agent pauses
+  paired-primary PowerDNS switching.
+
+A prepared cell is not a measured result. The 268-runnable denominator is
+unchanged, and admission here adds no passed or native-evidence cell.
 
 Run the offline guest checks with:
 

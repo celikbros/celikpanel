@@ -8,6 +8,45 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-026 · DNS motoru kurtarması: kurtarılamayan geçişi reddet, ilk kurulumda aynı işlemle kurtarmayı kabul et
+
+*29 Eylül 2026 · Devirdeki 1. madde (DNS kurtarma sözleşmesi) için kullanıcı kararı*
+
+`e9d1019d` kaynağının salt-okur denetimi, ürünün başlatabildiği her DNS motoru
+değişikliğini üç durumdan birine bağladı: gerçek sistem kanıtıyla geçti, adı
+belli eksik, desteklenmiyor. Bir yol kabul edilemez dördüncü duruma düştü:
+**çalışan BIND** kaynağını tek sunucuda veya çiftin ikincilinde **PowerDNS**
+hedefine çevirmek motor kartından hâlâ başlatılabiliyordu. Bu yol eski V1
+günlüğünü yazıyor, tek kurtarması Agent'ın kendi ters işlemi, V4 başlangıç
+öncesi ters işlem ve sahip komutu üreticiye bağlı değil ve gerçek sistemde
+kesinti denemesi yok. Mevcut kapı yalnız çiftli birinciyi kapatıyordu.
+
+**Karar 1.** BIND→PowerDNS motor geçişi bu sürümde her topolojide
+desteklenmiyor. Panel önizleme/onay, sunucu kurulumu ve Agent RPC'si bunu
+değişiklik başlamadan `bind_source_pdns_switch_unsupported` engeliyle reddeder;
+ekran nedeni, BIND'in hizmete devam ettiğini ve sonraki adımı (PowerDNS'i DNS
+motoru olmayan bir sunucuya kurmak ya da geçişi destekleyen sürümü beklemek)
+söyler. Boş sunucuya PowerDNS kurulumu, PowerDNS→BIND geçişi, PowerDNS
+devralma/yeniden yapılandırma, BIND yeniden kurulumu ve kurulu sunucular
+değişmez. Kapıyı yeniden açmak için üreticinin bağlanması, başlangıç öncesi ve
+sonrası Agent'tan bağımsız ters işlem ve gerçek kesinti kanıtı gerekir;
+denetimi kaldırmak çözüm değildir.
+
+**Karar 2.** İlk motor kurulumunda (BIND veya PowerDNS, her rol) önceki durum
+"DNS motoru yok"tur; geri yüklenecek sahip verisi yoktur. Sonraki açılışta
+Agent'ın aynı işlem kimliğiyle kurtarması, salt-okur durum komutu ve ekranın
+sahibe sonraki adımı söylemesi bu sürümün kabul edilen sözleşmesidir. İlk
+kurulumlar için Agent'tan bağımsız sahip komutu şart değildir. 1. madde için
+kalan iş kod değil kanıttır: boş tek sunucu PowerDNS, boş çift ikincil (BIND ve
+PowerDNS) ve boş BIND'de başlangıç sonrası kesinti hücreleri.
+
+Karar 1 vaat edilen kapsamı daraltır ve sürüm notlarında açıkça desteklenmeyen
+işlem olarak yazılır; sessizce yapılmaz. İki karar da kurulu sunucuyu, lisans
+politikasını, sahibin kendi kurtarmasını ve panel güncellemesini yalnız
+kullanıcının başlatması kuralını değiştirmez.
+
+---
+
 ## D-025 · Dayanıklılık, olay yaması değil temel çalışma sözleşmesidir
 
 *14 Eylül 2026 · Kullanıcının istediği anayasa incelemesi; bağlayıcı yön, uygulama açık*

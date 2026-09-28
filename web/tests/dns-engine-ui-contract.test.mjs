@@ -1149,6 +1149,23 @@ test('backend blocker text is discarded and paired or DNSSEC support is never in
   assert.match(settings, /engine\?\.state === 'switching'/);
 });
 
+// A serving BIND source cannot be switched to PowerDNS in this release. The
+// panel's refusal code must map to copy that says BIND keeps serving and names
+// the supported alternative, in both locales.
+test('the BIND-to-PowerDNS switch refusal is the panel code with actionable copy in both locales', () => {
+  const panelSource = readFileSync(
+    new URL('../../cmd/panel/dns_engine.go', import.meta.url),
+    'utf8',
+  );
+  assert.ok(panelSource.includes('"bind_source_pdns_switch_unsupported"'));
+  assert.match(card,
+    /bind_source_pdns_switch_unsupported: 'dnsEngine\.blocker\.bindSourcePdnsSwitchUnsupported'/);
+  const key = 'dnsEngine.blocker.bindSourcePdnsSwitchUnsupported';
+  assert.equal(copy.split(`'${key}'`).length - 1, 2, `${key} must exist in both locales`);
+  assert.match(copy, /BIND keeps serving; nothing was changed\. To run PowerDNS, install it on a server that has no DNS engine yet/);
+  assert.match(copy, /BIND hizmet vermeye devam ediyor; hiçbir şey değiştirilmedi\./);
+});
+
 test('fresh servers stage an exact DNS identity before the first engine install', () => {
   assert.match(settings, /const \[engineRefreshKey, setEngineRefreshKey\] = useState\(0\)/);
   assert.match(settings, /const settingsFlow = dnsEngineSettingsFlow\(engine\)/);

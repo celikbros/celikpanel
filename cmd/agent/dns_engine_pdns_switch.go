@@ -34,6 +34,19 @@ func pdnsPairedPrimarySwitchPaused(
 		manifest.PairRole == transport.DNSPairRolePrimary
 }
 
+const bindSourcePDNSSwitchUnsupportedReason = "switching a serving BIND source to PowerDNS is unsupported in this release: an interrupted switch has no Agent-independent recovery; BIND keeps serving and nothing was changed; install PowerDNS on a host without a DNS engine instead"
+
+// bindSourcePDNSSwitchUnsupported refuses BIND-to-PowerDNS switches for every
+// topology: that path writes a legacy V1 journal whose only recovery is the
+// Agent's own inverse. Fresh PowerDNS installs carry no source engine.
+func bindSourcePDNSSwitchUnsupported(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return manifest.Mode == transport.DNSEngineSwitchModeSwitch &&
+		manifest.SourceEngine == transport.DNSEngineBIND &&
+		manifest.TargetEngine == transport.DNSEnginePowerDNS
+}
+
 func isPDNSPairSecondaryReconfigureManifest(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 ) bool {

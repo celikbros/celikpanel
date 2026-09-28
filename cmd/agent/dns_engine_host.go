@@ -1257,6 +1257,10 @@ func (hostDNSEngineBackend) Switch(
 		return transport.SwitchDNSEngineV1Response{},
 			errors.New(pdnsPairedPrimarySwitchPausedReason)
 	}
+	if bindSourcePDNSSwitchUnsupported(manifest) {
+		return transport.SwitchDNSEngineV1Response{},
+			errors.New(bindSourcePDNSSwitchUnsupportedReason)
+	}
 	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}

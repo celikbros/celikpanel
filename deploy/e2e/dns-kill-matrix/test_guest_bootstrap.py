@@ -344,6 +344,8 @@ class GuestBootstrapTest(unittest.TestCase):
             "CRITICAL_MANAGED_PDNS_PHASES": (
                 bootstrap.CRITICAL_MANAGED_PDNS_PHASES
             ),
+            "FRESH_BIND_STANDALONE_PHASES": bootstrap.FRESH_BIND_STANDALONE_PHASES,
+            "FRESH_PDNS_STANDALONE_PHASES": bootstrap.FRESH_PDNS_STANDALONE_PHASES,
         }
         for name, python_values in expected.items():
             with self.subTest(name=name):
@@ -1438,13 +1440,15 @@ class PreparedCellRunnerTest(unittest.TestCase):
         )
         for candidate in (
             cell("debian13", "target-started", driver="pdns-switch", role="paired-primary"),
-            cell("debian13", "intent", driver="pdns-switch"),
+            cell("debian13", "intent", driver="pdns-switch", role="paired-secondary"),
             cell("arch", "intent", driver="pdns-switch", role="paired-primary"),
         ):
             with self.assertRaises(bootstrap.BootstrapError):
                 bootstrap.validate_pdns_switch_cell(candidate, "debian13", "uninitialized")
         with self.assertRaises(bootstrap.BootstrapError):
-            bootstrap.pdns_switch_scenario(source_fixture="uninitialized")
+            bootstrap.pdns_switch_scenario(
+                role="paired-secondary", source_fixture="uninitialized"
+            )
 
     def test_managed_bind_source_requires_standalone_debian_switch(self) -> None:
         selected = cell("debian13", "intent", driver="pdns-switch")
@@ -1458,10 +1462,331 @@ class PreparedCellRunnerTest(unittest.TestCase):
         )
         for candidate, node, fixture in (
             (cell("arch", "intent", driver="pdns-switch"), "arch", "managed-bind"),
-            (selected, "debian13", "uninitialized"),
+            (cell("arch", "intent", driver="pdns-switch"), "arch", "uninitialized"),
+            (selected, "debian13", "owner-bind"),
         ):
             with self.assertRaises(bootstrap.BootstrapError):
                 bootstrap.validate_pdns_switch_cell(candidate, node, fixture)
+
+
+class FreshInstallCellTest(unittest.TestCase):
+    """D-026 first-install cells: the prior state is no DNS engine."""
+
+    MANIFEST_PATH = Path(bootstrap.__file__).with_name("manifest.json")
+    SHELL_PATH = Path(bootstrap.__file__).with_name("guest_bootstrap.sh")
+    NEW_BIND_PHASES = frozenset({"target-verified"})
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.manifest = json.loads(cls.MANIFEST_PATH.read_text(encoding="utf-8"))
+        cls.runnable = [
+            raw for raw in cls.manifest["cells"] if raw["status"] == "runnable"
+        ]
+        cls.shell = cls.SHELL_PATH.read_text(encoding="utf-8")
+
+    @staticmethod
+    def node(raw: dict) -> str:
+        return bootstrap.NODE_FOR_PLACEMENT[raw["placement"]["kill_host"]]
+
+    def fresh_admitted(self, raw: dict) -> bool:
+        try:
+            bootstrap.validate_supported_cell(raw, self.node(raw), "uninitialized")
+        except bootstrap.BootstrapError:
+            return False
+        return True
+
+    def newly_admitted(self) -> list[dict]:
+        return [
+            raw for raw in self.runnable
+            if raw["role"] == "standalone" and (
+                raw["driver"] == "pdns-switch"
+                or (raw["driver"] == "bind"
+                    and raw["boundary"]["phase"] in self.NEW_BIND_PHASES)
+            )
+        ]
+
+    @staticmethod
+    def fresh_scenario(raw: dict, node: str) -> dict:
+        if raw["driver"] == "pdns-switch":
+            return bootstrap.pdns_switch_scenario(
+                role=raw["role"], source_fixture="uninitialized"
+            )
+        return bootstrap.bind_scenario("uninitialized", role=raw["role"], node=node)
+
+    def bash(self) -> str:
+        bash = (
+            Path("C:/Program Files/Git/bin/bash.exe")
+            if os.name == "nt" else shutil.which("bash")
+        )
+        if not bash or not Path(bash).is_file():
+            self.skipTest("bash is unavailable for the shell guard contract")
+        return str(bash)
+
+    def shell_function(self, name: str) -> str:
+        body = self.shell.split(f"\n{name}() {{\n", 1)[1].split("\n}\n", 1)[0]
+        return f"{name}() {{\n{body}\n}}\n"
+
+    def shell_array(self, name: str) -> str:
+        body = self.shell.split(f"readonly -a {name}=(\n", 1)[1].split("\n)\n", 1)[0]
+        return f"{name}=(\n{body}\n)\n"
+
+    def test_every_new_cell_is_admitted_on_its_manifest_placement(self) -> None:
+        cells = self.newly_admitted()
+        self.assertEqual(
+            sum(raw["driver"] == "pdns-switch" for raw in cells), 34
+        )
+        self.assertEqual(sum(raw["driver"] == "bind" for raw in cells), 4)
+        for raw in cells:
+            with self.subTest(cell_id=raw["id"]):
+                self.assertEqual(raw["placement"]["source_fixture_policy"], "driver-specific")
+                if raw["driver"] == "pdns-switch":
+                    self.assertEqual(raw["placement"]["kill_host"], "debian-13")
+                self.assertTrue(self.fresh_admitted(raw))
+
+    def test_fresh_refusals_that_remain_are_exact(self) -> None:
+        for raw in self.runnable:
+            if raw["driver"] not in {"bind", "pdns-switch"} or not self.fresh_admitted(raw):
+                continue
+            phase = raw["boundary"]["phase"]
+            with self.subTest(cell_id=raw["id"]):
+                self.assertNotEqual(raw["role"], "paired-secondary")
+                if raw["driver"] == "bind":
+                    self.assertNotIn(phase, bootstrap.CRITICAL_MANAGED_PDNS_PHASES)
+                    allowed = (
+                        bootstrap.FRESH_BIND_STANDALONE_PHASES
+                        if raw["role"] == "standalone"
+                        else bootstrap.EARLY_UNINITIALIZED_PHASES
+                    )
+                    self.assertIn(phase, allowed)
+                elif raw["role"] == "paired-primary":
+                    self.assertEqual(phase, "intent")
+        for cell_id in (
+            "bind__target-started__after-write__standalone__peer-reachable",
+            "bind__target-started__before-write__standalone__peer-unreachable",
+            "bind__source-stopped__after-write__standalone__peer-reachable",
+            "bind__rolled-back__after-write__standalone__peer-reachable",
+            "bind__committed__after-write__standalone__peer-reachable",
+            "bind__rolling-back__before-write__standalone__peer-reachable",
+            "bind__target-verified__after-write__paired-secondary__peer-reachable",
+            "bind__intent__after-write__paired-secondary__peer-reachable",
+            "pdns-switch__intent__after-write__paired-secondary__peer-reachable",
+            "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+        ):
+            raw = next(item for item in self.runnable if item["id"] == cell_id)
+            with self.subTest(refused=cell_id):
+                self.assertFalse(self.fresh_admitted(raw))
+        with self.assertRaises(bootstrap.BootstrapError):
+            bootstrap.bind_scenario("uninitialized", role="paired-secondary")
+        with self.assertRaises(bootstrap.BootstrapError):
+            bootstrap.validate_pdns_switch_cell(
+                cell("arch", "intent", driver="pdns-switch"), "arch", "uninitialized"
+            )
+
+    def test_fresh_standalone_powerdns_scenario_is_empty_native_source(self) -> None:
+        scenario = bootstrap.pdns_switch_scenario(source_fixture="uninitialized")
+        self.assertEqual(
+            (scenario["driver"], scenario["source_fixture"], scenario["source_engine"],
+             scenario["source_epoch"], scenario["target_engine"],
+             scenario["target_epoch"], scenario["source_revision"],
+             scenario["topology"]),
+            ("pdns-switch", "uninitialized", "", 0, "pdns", 1, 0, "standalone"),
+        )
+        for key in ("pair_role", "local_ip", "local_ns", "peer_ip", "peer_ns"):
+            self.assertNotIn(key, scenario)
+        self.assertEqual([zone["zone_type"] for zone in scenario["zones"]], ["NATIVE"])
+        self.assertEqual(
+            scenario["zones"],
+            bootstrap.bind_scenario("uninitialized", node="debian13")["zones"],
+        )
+
+    def test_controller_accepts_each_new_fresh_scenario_and_predecessor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            for index, raw in enumerate(self.newly_admitted()):
+                with self.subTest(cell_id=raw["id"]):
+                    path = Path(temporary) / f"scenario-{index}.json"
+                    path.write_bytes(bootstrap.json_bytes(
+                        self.fresh_scenario(raw, self.node(raw))
+                    ))
+                    os.chmod(path, 0o600)
+                    selected = run_cell.CellSpec.from_manifest(self.manifest, raw["id"])
+                    value, _ = run_cell.validate_source_scenario(str(path), selected)
+                    self.assertEqual(value["source_fixture"], "uninitialized")
+                    run_cell.expected_journal_phase(selected)
+            refused = "bind__target-started__after-write__standalone__peer-reachable"
+            path = Path(temporary) / "refused.json"
+            path.write_bytes(bootstrap.json_bytes(
+                bootstrap.bind_scenario("uninitialized", node="debian13")
+            ))
+            os.chmod(path, 0o600)
+            with self.assertRaisesRegex(run_cell.ControllerError, "managed PowerDNS source"):
+                run_cell.validate_source_scenario(
+                    str(path), run_cell.CellSpec.from_manifest(self.manifest, refused)
+                )
+
+    def dry_prepare(self, raw: dict, action: str) -> tuple[list, dict]:
+        args = mock.Mock(
+            action=action, cell_id=raw["id"], node=self.node(raw),
+            source_fixture="uninitialized", identity_file=Path("/tmp/test-key"),
+            execute=False, authority_acceptance=False,
+        )
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch.object(bootstrap, "scp_base", return_value=["scp"]),
+            mock.patch.object(bootstrap, "remote_destination",
+                              side_effect=lambda _node, path: "guest:" + path),
+            mock.patch.object(bootstrap.subprocess, "run") as run,
+            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+        ):
+            bootstrap.prepare(args)
+            run.assert_not_called()
+        lines = [json.loads(line) for line in output.getvalue().splitlines()]
+        return lines[:-1], lines[-1]
+
+    def test_dry_run_prepares_every_new_fresh_cell(self) -> None:
+        for raw in self.newly_admitted():
+            action = (
+                "prepare-pdns-switch" if raw["driver"] == "pdns-switch" else "prepare-bind"
+            )
+            with self.subTest(cell_id=raw["id"]):
+                commands, summary = self.dry_prepare(raw, action)
+                self.assertEqual(len(commands), 3)
+                self.assertEqual(commands[1][-1], "guest:" + bootstrap.stage_name(raw["id"]) + "/")
+                self.assertEqual(commands[2][-1], (
+                    f"sudo /bin/bash {bootstrap.stage_name(raw['id'])}/guest_bootstrap.sh "
+                    f"{action} {raw['id']} {self.node(raw)} {raw['boundary']['phase']} "
+                    f"uninitialized driver-specific {bootstrap.stage_name(raw['id'])}"
+                ))
+                self.assertEqual(summary["uploaded"], "scenario.json")
+                self.assertIsNone(summary["source_preinstall_proof"])
+                self.assertFalse(summary["setup_adoption_rpc_used"])
+        for cell_id, action in (
+            ("bind__target-started__after-write__standalone__peer-reachable", "prepare-bind"),
+            ("bind__committed__after-write__standalone__peer-reachable", "prepare-bind"),
+            ("pdns-switch__intent__after-write__paired-secondary__peer-reachable",
+             "prepare-pdns-switch"),
+        ):
+            raw = next(item for item in self.runnable if item["id"] == cell_id)
+            with self.subTest(refused=cell_id), self.assertRaises(bootstrap.BootstrapError):
+                self.dry_prepare(raw, action)
+
+    def test_shell_bind_fresh_gate_executes_exactly(self) -> None:
+        snippet = self.shell.split("prepare_bind() {\n", 1)[1].split(
+            "    if [[ $source_fixture == uninitialized ]]; then\n", 1
+        )[1].split("\n        [[ $source_fixture_policy == driver-specific ||", 1)[0]
+        script = (
+            "set -euo pipefail\ndie() { exit 1; }\n"
+            + self.shell_array("EARLY_UNINITIALIZED_PHASES")
+            + self.shell_array("FRESH_BIND_STANDALONE_PHASES")
+            + self.shell_function("array_contains")
+            + self.shell_function("standalone_cell_matches_phase")
+            + 'cell_id=$1\nboundary_phase=$2\n' + snippet + "\necho admitted\n"
+        )
+        cases = (
+            ("bind__target-verified__after-write__standalone__peer-reachable", "target-verified", 0),
+            ("bind__target-verified__before-write__standalone__peer-unreachable", "target-verified", 0),
+            ("bind__intent__after-write__paired-primary__peer-reachable", "intent", 0),
+            ("bind__pre-intent__standalone__peer-reachable", "pre-intent", 0),
+            ("bind__target-verified__after-write__paired-secondary__peer-reachable", "target-verified", 1),
+            ("bind__target-started__after-write__standalone__peer-reachable", "target-started", 1),
+            ("bind__committed__after-write__standalone__peer-reachable", "committed", 1),
+            ("bind__intent__after-write__standalone__peer-reachable", "target-verified", 1),
+        )
+        bash = self.bash()
+        for cell_id, phase, expected in cases:
+            with self.subTest(cell_id=cell_id, phase=phase):
+                result = subprocess.run(
+                    [bash, "-c", script, "test", cell_id, phase],
+                    check=False, capture_output=True, text=True,
+                )
+                self.assertEqual(result.returncode, expected, result.stderr)
+
+    def test_shell_pdns_switch_fresh_dispatch_executes_exactly(self) -> None:
+        # Keep only the fresh-source dispatch; the managed-BIND remainder
+        # carries a heredoc and is outside this contract.
+        head = "\n        return\n    fi\n"
+        dispatch = (
+            "prepare_pdns_switch() {\n"
+            + self.shell.split("\nprepare_pdns_switch() {\n", 1)[1].split(head, 1)[0]
+            + head + "    exit 99\n}\n"
+        )
+        script = (
+            "set -euo pipefail\ndie() { exit 1; }\n"
+            + self.shell_array("FRESH_PDNS_STANDALONE_PHASES")
+            + self.shell_function("array_contains")
+            + self.shell_function("require_simple_value")
+            + self.shell_function("standalone_cell_matches_phase")
+            + self.shell_function("prepare_fresh_pdns_primary")
+            + self.shell_function("prepare_fresh_pdns_standalone")
+            + 'prepare_fresh_pdns_source() { echo "fresh:$4"; }\n'
+            + dispatch
+            + 'prepare_pdns_switch "$1" "$2" "$3" uninitialized "$4" /nonexistent\n'
+        )
+        cases = [
+            (
+                "pdns-switch__pre-intent__standalone__peer-unreachable"
+                if phase == "pre-intent"
+                else f"pdns-switch__{phase}__after-write__standalone__peer-reachable",
+                "debian13", phase, "driver-specific", 0, "fresh:standalone",
+            )
+            for phase in sorted(bootstrap.FRESH_PDNS_STANDALONE_PHASES)
+        ] + [
+            ("pdns-switch__rolled-back__before-write__standalone__peer-unreachable",
+             "debian13", "rolled-back", "driver-specific", 0, "fresh:standalone"),
+            ("pdns-switch__intent__after-write__paired-primary__peer-reachable",
+             "debian13", "intent", "driver-specific", 0, "fresh:primary"),
+            ("pdns-switch__intent__after-write__standalone__peer-reachable",
+             "arch", "intent", "driver-specific", 1, ""),
+            ("pdns-switch__intent__after-write__standalone__peer-reachable",
+             "debian13", "intent", "managed-pdns-required", 1, ""),
+            ("pdns-switch__intent__after-write__standalone__peer-reachable",
+             "debian13", "committed", "driver-specific", 1, ""),
+            ("pdns-switch__intent__after-write__paired-secondary__peer-reachable",
+             "debian13", "intent", "driver-specific", 1, ""),
+            ("pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+             "debian13", "target-started", "driver-specific", 1, ""),
+        ]
+        bash = self.bash()
+        for cell_id, node, phase, policy, expected, output in cases:
+            with self.subTest(cell_id=cell_id, node=node, phase=phase, policy=policy):
+                result = subprocess.run(
+                    [bash, "-c", script, "test", cell_id, node, phase, policy],
+                    check=False, capture_output=True, text=True,
+                )
+                self.assertEqual(result.returncode, expected, result.stderr)
+                self.assertEqual(result.stdout.strip(), output)
+
+    def test_guest_fresh_pdns_scenario_check_matches_python_renderer(self) -> None:
+        program = self.shell.split("<<'PYFRESHPDNS'\n", 1)[1].split(
+            "\nPYFRESHPDNS\n", 1
+        )[0]
+        scenarios = {
+            "standalone": bootstrap.pdns_switch_scenario(source_fixture="uninitialized"),
+            "primary": bootstrap.pdns_switch_scenario(
+                role="paired-primary", source_fixture="uninitialized"
+            ),
+            "managed-bind": bootstrap.pdns_switch_scenario(),
+        }
+        cases = (
+            ("standalone", "standalone", 0),
+            ("primary", "primary", 0),
+            ("standalone", "primary", 1),
+            ("primary", "standalone", 1),
+            ("standalone", "managed-bind", 1),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            for role, name, expected in cases:
+                with self.subTest(role=role, scenario=name):
+                    path = Path(temporary) / f"{name}.json"
+                    path.write_bytes(bootstrap.json_bytes(scenarios[name]))
+                    result = subprocess.run(
+                        [sys.executable, "-c", program, str(path)],
+                        check=False, capture_output=True, text=True,
+                        env={**os.environ, "FRESH_PDNS_ROLE": role},
+                    )
+                    self.assertEqual(result.returncode, expected, result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
