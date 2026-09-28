@@ -102,8 +102,14 @@ func parseDNSCgroupIdentity(name string, raw []byte) (string, error) {
 		fields[key] = value
 	}
 	canonical := "/system.slice/" + name
-	if len(fields) != 3 || fields["Id"] != name || fields["Slice"] != "system.slice" ||
-		(fields["ControlGroup"] != "" && fields["ControlGroup"] != canonical) {
+	// systemd reports an empty Slice and ControlGroup for a persistently
+	// masked, inactive unit whose cgroup has never existed. The caller also
+	// proves the stopped unit state and the kernel cgroup's absence twice.
+	slice := fields["Slice"]
+	group := fields["ControlGroup"]
+	if len(fields) != 3 || fields["Id"] != name ||
+		(slice != "system.slice" && !(slice == "" && group == "")) ||
+		(group != "" && group != canonical) {
 		return "", errors.New("DNS service cgroup identity differs from the fixed system slice")
 	}
 	return fields["ControlGroup"], nil
@@ -158,6 +164,9 @@ func ProbeEmptyUnitCgroup(ctx context.Context, name string, show NativeCgroupUni
 			return errors.New("DNS cgroup disappeared while systemd still reports it")
 		}
 		return ctx.Err()
+	}
+	if controlGroup == "" {
+		return errors.New("DNS cgroup exists while systemd reports no control group")
 	}
 	if err := parseDNSCgroupEvents(events); err != nil {
 		return err

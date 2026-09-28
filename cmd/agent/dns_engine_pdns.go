@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -159,6 +160,16 @@ func buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
 		manifest, primaryCatalogSerial,
 	); err != nil {
 		return err
+	}
+	// A fresh paired producer transfers only primary member zones. A NATIVE
+	// member exists in SQLite but is absent from PowerDNS's catalog AXFR.
+	if manifest.SourceEngine == "" && manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary {
+		for _, zone := range manifest.Zones {
+			if !zone.Delete && zone.ZoneType != "MASTER" {
+				return errors.New("fresh PowerDNS primary catalog requires MASTER member zones")
+			}
+		}
 	}
 	db, err := initializePDNSEngineDB(ctx, path)
 	if err != nil {
@@ -547,8 +558,9 @@ func applyPDNSV3ZoneDatabaseForState(
 			return err
 		}
 		if state.PairRole == transport.DNSPairRolePrimary {
-			serial, err := readExactPDNSProducerSerialTx(
+			serial, err := readExactPDNSProducerSerialModeTx(
 				ctx, tx, state.PairLocalIP,
+				state.NativeCatalogV3 == dnsengineartifact.NativeCatalogDebian49V3,
 			)
 			if err != nil || serial < state.PrimaryCatalogSerial {
 				if err == nil {
@@ -561,8 +573,9 @@ func applyPDNSV3ZoneDatabaseForState(
 	// Snapshot before apply: deleting a zone also deletes the row that carries
 	// its catalog membership, so post-state alone cannot decide whether the
 	// producer SOA serial must advance.
-	previousCatalog, err := reconcilePDNSBINDCatalogFromSnapshotTx(
+	previousCatalog, err := reconcilePDNSBINDCatalogFromSnapshotModeTx(
 		ctx, tx, catalogEnabled, identity.LocalIP, nil,
+		state.NativeCatalogV3 == dnsengineartifact.NativeCatalogDebian49V3,
 	)
 	if err != nil {
 		return fmt.Errorf("snapshot managed PowerDNS catalog: %w", err)
@@ -577,8 +590,9 @@ func applyPDNSV3ZoneDatabaseForState(
 	if catalogEnabled {
 		previous = &previousCatalog
 	}
-	after, err := reconcilePDNSBINDCatalogFromSnapshotTx(
+	after, err := reconcilePDNSBINDCatalogFromSnapshotModeTx(
 		ctx, tx, catalogEnabled, identity.LocalIP, previous,
+		state.NativeCatalogV3 == dnsengineartifact.NativeCatalogDebian49V3,
 	)
 	if err != nil {
 		return fmt.Errorf("reconcile managed PowerDNS catalog: %w", err)
@@ -914,8 +928,9 @@ func readPDNSV3ZoneSnapshot(
 			return transport.DNSEngineSwitchZoneSnapshot{}, false, err
 		}
 		if state.PairRole == transport.DNSPairRolePrimary {
-			serial, err := readExactPDNSProducerSerialTx(
+			serial, err := readExactPDNSProducerSerialModeTx(
 				ctx, tx, state.PairLocalIP,
+				state.NativeCatalogV3 == dnsengineartifact.NativeCatalogDebian49V3,
 			)
 			if err != nil || serial < state.PrimaryCatalogSerial {
 				if err == nil {

@@ -531,18 +531,23 @@ func attachInfrastructureDNSAgent(t *testing.T, p *Panel, agent *dnsZoneV3TestAg
 	p.agentClient = transport.NewReconnectingClientWithContextConnector(raw, connector)
 	t.Cleanup(func() { _ = raw.Close() })
 }
-func TestServerSetupInfrastructureDNSNativePowerDNSPrimary(t *testing.T) {
-	p, agent, plan, step := infrastructureDNSRuntimeFixtureEngine(t, "pdns")
-	if done, err := p.runServerSetupInfrastructureDNS(context.Background(), plan, step); err != nil || !done {
-		t.Fatalf("PowerDNS done=%v err=%v", done, err)
+func TestServerSetupInfrastructureDNSBlocksUnpreparedPowerDNSPrimary(t *testing.T) {
+	p := newDNSPanelForTest(t)
+	p.license = testPanelLicense(t, "active")
+	seedSetupDNSOwner(t, p)
+	d := infrastructureDNSTestDraft()
+	d.DNSEngine = "pdns"
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, p, agent)
+	t.Setenv("CELIKPANEL_SERVER_IP", d.LocalIP)
+	if err := p.startServerSetupDNS(context.Background(), d, strings.Repeat("a", 32), serviceOperationActor{UserID: 1});
+		err == nil || !strings.Contains(err.Error(), "pdns_primary_switch_paused") {
+		t.Fatalf("PowerDNS paired primary first install was not blocked: %v", err)
 	}
-	if len(agent.requests) != 1 || agent.requests[0].Engine != transport.DNSEnginePowerDNS {
-		t.Fatal("publication did not bind native PowerDNS engine")
-	}
-	if done, err := p.runServerSetupInfrastructureDNS(context.Background(), plan, step); err != nil || !done {
-		t.Fatal(err)
-	}
-	if len(agent.requests) != 1 {
-		t.Fatal("PowerDNS duplicated exact publication")
+	agent.mu.Lock()
+	switchCalls := agent.switchCalls
+	agent.mu.Unlock()
+	if switchCalls != 0 {
+		t.Fatalf("unsupported first install reached Agent: calls=%d", switchCalls)
 	}
 }

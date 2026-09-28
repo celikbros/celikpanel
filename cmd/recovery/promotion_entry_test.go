@@ -4,6 +4,7 @@ import (
 	"errors"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/recoveryruntime"
@@ -191,5 +192,43 @@ func TestOwnerRetryPreservesTupleThroughSelectedLauncherWithoutPromotion(t *test
 	})
 	if err != nil || !reflect.DeepEqual(runtime.args, args) {
 		t.Fatal(err, runtime.args)
+	}
+}
+
+func TestOwnerPDNSInverseRequiresSelectedRuntimeWithoutPromoting(t *testing.T) {
+	args := []string{"recover-dns-pdns-adoption", "--request-id", strings.Repeat("a", 32)}
+	if !launcherDispatchCommand(args) {
+		t.Fatal("owner DNS inverse bypassed the selected recovery runtime")
+	}
+	runtime := &fakeLauncherRuntime{}
+	err := dispatchLauncherWith(args, launcherDependencies{
+		isEntry:  func() (bool, error) { return true, nil },
+		pending:  func() (bool, error) { t.Fatal("DNS inverse must not select a new kit"); return false, nil },
+		resume:   func() error { t.Fatal("DNS inverse must not resume promotion"); return nil },
+		selected: func() (launcherRuntime, error) { return runtime, nil },
+	})
+	if err != nil || !reflect.DeepEqual(runtime.args, args) {
+		t.Fatal(err, runtime.args)
+	}
+}
+
+func TestBINDAdoptionCommandsDispatchToSelectedRuntimeWithoutPromotion(t *testing.T) {
+	for _, args := range [][]string{
+		{"recover-dns-bind-adoption", "--request-id", strings.Repeat("a", 32)},
+		{"check-bind-adoption-inverse-v1"},
+	} {
+		if !launcherDispatchCommand(args) {
+			t.Fatalf("new BIND adoption command bypassed selected runtime: %v", args)
+		}
+		runtime := &fakeLauncherRuntime{}
+		err := dispatchLauncherWith(args, launcherDependencies{
+			isEntry:  func() (bool, error) { return true, nil },
+			pending:  func() (bool, error) { t.Fatal("adoption dispatch must not select a new kit"); return false, nil },
+			resume:   func() error { t.Fatal("adoption dispatch must not resume promotion"); return nil },
+			selected: func() (launcherRuntime, error) { return runtime, nil },
+		})
+		if err != nil || !reflect.DeepEqual(runtime.args, args) {
+			t.Fatalf("selected adoption dispatch args=%v got=%v err=%v", args, runtime.args, err)
+		}
 	}
 }

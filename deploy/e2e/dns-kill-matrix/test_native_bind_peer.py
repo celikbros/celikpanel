@@ -52,7 +52,8 @@ class NativeBindPeerTest(unittest.TestCase):
         parent = peer.secondary_config("192.0.2.11", "192.0.2.10", True)
         self.assertNotIn('zone "test"', ordinary)
         self.assertIn('zone "test"', parent)
-        self.assertIn("allow-transfer { 192.0.2.11; };", ordinary)
+        self.assertIn("allow-transfer { 192.0.2.11; 127.0.0.1; };", ordinary)
+        self.assertEqual(ordinary.count("127.0.0.1; };"), 1)
         self.assertIn('file "/etc/bind/celikpanel-fixture-parent.zone"', parent)
         self.assertIn("ns IN A 192.0.2.10", peer.parent_zone("192.0.2.10"))
 

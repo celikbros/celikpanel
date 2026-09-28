@@ -20,6 +20,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/bindroot"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
+	"github.com/alicelik/celikpanel/internal/dnsunitidentity"
 	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/hostmutationlock"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
@@ -146,6 +147,14 @@ func verifyInstalledBINDVendorAndUnit(ctx context.Context) error {
 // A selected BIND target requires stable vendor and loaded systemd identity
 // around a read-only process observation.
 func verifyInstalledBINDRuntime(ctx context.Context) (uint64, error) {
+	return verifyInstalledBINDRuntimeForAlias(ctx, false)
+}
+
+func verifyInstalledBINDAdoptionRuntime(ctx context.Context, aliasAbsent bool) (uint64, error) {
+	return verifyInstalledBINDRuntimeForAlias(ctx, aliasAbsent)
+}
+
+func verifyInstalledBINDRuntimeForAlias(ctx context.Context, aliasAbsent bool) (uint64, error) {
 	profile, err := hostplatform.Detect()
 	if err != nil {
 		return 0, fmt.Errorf("detect installed host profile: %w", err)
@@ -158,7 +167,11 @@ func verifyInstalledBINDRuntime(ctx context.Context) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	beforeRuntime, err := dnsenginerecovery.ProbeBINDVendorRuntime(ctx, profile, dnsenginerecovery.SystemdBINDRuntimeRunner)
+	probeRuntime := func() (dnsunitidentity.Processes, error) {
+		return dnsenginerecovery.ProbeBINDAdoptionRuntime(ctx, profile, aliasAbsent,
+			dnsenginerecovery.SystemdBINDRuntimeRunner, dnsenginerecovery.SystemdUnitRunner)
+	}
+	beforeRuntime, err := probeRuntime()
 	if err != nil {
 		return 0, err
 	}
@@ -166,7 +179,7 @@ func verifyInstalledBINDRuntime(ctx context.Context) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	afterRuntime, err := dnsenginerecovery.ProbeBINDVendorRuntime(ctx, profile, dnsenginerecovery.SystemdBINDRuntimeRunner)
+	afterRuntime, err := probeRuntime()
 	if err != nil {
 		return 0, err
 	}
@@ -453,6 +466,21 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	defer cancelObservation()
 	root := hostingpath.ServiceMutationStateRoot()
 	owner := servicemutationledger.FileOwner{UID: 0, GID: groupID}
+	if requestID != "" && !quiesced {
+		ledger, err := readJournalAbsentDNSLedger(observationCtx, root, owner, requestID)
+		if err != nil {
+			fmt.Fprintln(diagnostic, "The exact DNS request has no stable journal-free ledger record. Preserve its evidence and use --quiesced after the release and host locks are available; no DNS operation was started. "+err.Error())
+			return exitUnavailable
+		}
+		verdict, err := recordedDNSJobVerdict(ledger, requestID)
+		if err != nil {
+			fmt.Fprintln(diagnostic, "The exact DNS request is not a terminal historical record. Inspect the active operation and use --quiesced when its locks are available; no DNS operation was started. "+err.Error())
+			return exitUnavailable
+		}
+		fmt.Fprintf(out, "Recorded DNS switch request %s: %s This is a point-in-time ledger observation, not proof of current DNS service health. The server owner should inspect the native DNS service before starting another switch; no operation was started.\n", requestID, verdict)
+		return exitOK
+	}
+
 	if quiesced {
 		locks, lockErr := acquireDNSObservationLocks(
 			"/var/lib/celikpanel-release-transaction/transaction.lock",
@@ -510,6 +538,13 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		evidence = againEvidence
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
+	if dnsenginerecovery.ValidateRunningBINDAdoptionInverseEvidence(evidence) == nil {
+		fmt.Fprintf(out, "This running BIND adoption retains a rollback decision. The server owner can continue that exact no-stop inverse with: /usr/libexec/celikpanel/recovery recover-dns-bind-adoption --request-id %s. The command rechecks locks, worker exclusion and owner changes; this status check does not start recovery.\n", observation.RequestID)
+	}
+
+	if quiesced && pdnsTargetV4OwnerRecoveryCandidate(evidence) {
+		fmt.Fprintf(out, "If this V4 PowerDNS-target switch stopped, the server owner can attempt the same-request pre-start inverse with: /usr/libexec/celikpanel/recovery recover-dns-pdns-target-staged --request-id %s. The command checks the accepted worker, exact candidate, native units and owner changes; a running or changed target is refused and its evidence is preserved. This status check does not start recovery.\n", observation.RequestID)
+	}
 	if quiesced {
 		switch observation.Status {
 		case dnsenginerecovery.EvidenceActive,
@@ -777,4 +812,33 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		return exitUnavailable
 	}
 	return exitOK
+}
+
+func pdnsTargetV4OwnerRecoveryCandidate(e dnsenginerecovery.SwitchEvidence) bool {
+	j, o := e.Journal, e.Observation
+	if j.Schema != dnsengineartifact.SwitchJournalSchemaV4 ||
+		j.PDNSTargetPlan == nil || j.PDNSTargetPlan.Candidate == nil ||
+		o.InverseKind != dnsenginerecovery.NativeInversePDNSSwitch ||
+		o.RequestID != j.MutationRequestID || o.Phase != j.Phase {
+		return false
+	}
+	switch o.Status {
+	case dnsenginerecovery.EvidenceActive, dnsenginerecovery.EvidenceLeaseExpired,
+		dnsenginerecovery.EvidenceWorkerRecorded, dnsenginerecovery.EvidenceOrphanedWorker,
+		dnsenginerecovery.EvidenceExpiredCancellation:
+	case dnsenginerecovery.EvidenceTerminalRolledBack:
+		if j.Phase != dnsengineartifact.SwitchPhaseRolledBack {
+			return false
+		}
+	default:
+		return false
+	}
+	switch j.Phase {
+	case dnsengineartifact.SwitchPhaseIntent, dnsengineartifact.SwitchPhaseTargetStaged,
+		dnsengineartifact.SwitchPhaseSourceStopped, dnsengineartifact.SwitchPhaseTargetEnableIntent,
+		dnsengineartifact.SwitchPhaseRollingBack, dnsengineartifact.SwitchPhaseRollingBackTargetEnable,
+		dnsengineartifact.SwitchPhaseRolledBack:
+		return true
+	}
+	return false
 }

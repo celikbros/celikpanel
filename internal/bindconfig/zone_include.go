@@ -10,6 +10,10 @@ const (
 	zonesMarkerEnd   = "// END CELIKPANEL MANAGED BIND ZONES"
 )
 
+// ErrManagedZoneIncludeModified identifies an owner edit inside the panel's
+// managed span. Callers must preserve the file and stop automatic mutation.
+var ErrManagedZoneIncludeModified = errors.New("existing CelikPanel BIND zone include was modified")
+
 // VerifyExactZoneInclude accepts only a configuration already carrying the
 // producer's exact active managed include; it never prepares or writes one.
 func VerifyExactZoneInclude(config, includePath string) error {
@@ -53,7 +57,7 @@ func ManagedZoneInclude(config, includePath string) (string, error) {
 			end++
 		}
 		if config[start:end] != block {
-			return "", errors.New("existing CelikPanel BIND zone include was modified")
+			return "", ErrManagedZoneIncludeModified
 		}
 		return config, nil
 	}

@@ -37,6 +37,8 @@ var teamMemberDomainRequirements = map[teamMemberRouteKey]teamMemberDomainRequir
 	{kind: "mail", method: http.MethodOptions}:    {capability: core.TeamCapabilityMail, mode: core.TeamPermissionView},
 	{kind: "mail-health", method: http.MethodGet}: {capability: core.TeamCapabilityMail, mode: core.TeamPermissionView},
 
+	{kind: "deletion-status", method: http.MethodGet}: {capability: core.TeamCapabilityDNS, mode: core.TeamPermissionView},
+
 	{kind: "dns", method: http.MethodGet}:     {capability: core.TeamCapabilityDNS, mode: core.TeamPermissionView},
 	{kind: "dns", method: http.MethodPost}:    {capability: core.TeamCapabilityDNS, mode: core.TeamPermissionManage},
 	{kind: "dns", method: http.MethodPut}:     {capability: core.TeamCapabilityDNS, mode: core.TeamPermissionManage},

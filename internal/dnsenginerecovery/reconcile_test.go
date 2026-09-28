@@ -296,3 +296,14 @@ func TestRollbackDoesNotAdvanceCallerJournalOnUncertainCheckpoint(t *testing.T) 
 		}
 	}
 }
+
+func TestGenericRollbackRefusesV4EnableIntentPhases(t *testing.T) {
+	_, journal, _ := switchFixture(t)
+	for _, phase := range []string{dnsengineartifact.SwitchPhaseTargetEnableIntent, dnsengineartifact.SwitchPhaseRollingBackTargetEnable} {
+		tr := &trace{journal: journal, exists: true}
+		tr.journal.Phase = phase
+		if err := Rollback(context.Background(), &tr.journal, tr.operations()); err == nil || len(tr.steps) != 0 {
+			t.Fatalf("generic rollback consumed special phase %s: err=%v steps=%v", phase, err, tr.steps)
+		}
+	}
+}

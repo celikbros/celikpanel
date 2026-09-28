@@ -60,6 +60,23 @@ func Reconcile(ctx context.Context, policy dnsengineartifact.JournalPolicy, id d
 	if journal.MutationRequestID != id.RequestID || journal.MutationOwnerID != id.OwnerID || journal.TargetEngine != id.Target || journal.ManifestQualifier != id.Qualifier {
 		return OutcomeAbsent, errors.New("DNS engine switch journal belongs to another mutation")
 	}
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		// A committed V3 request may have been interrupted between durable
+		// archive publication, exact active retirement and ledger success.
+		// Reprove its native target; FinalizeSwitch archives/retires under the
+		// same accepted request. No V3 precommit phase gains forward or inverse authority here.
+		if journal.Phase != dnsengineartifact.SwitchPhaseCommitted {
+			return OutcomeAbsent, errors.New("v3 fresh PowerDNS primary requires its independent native recovery; preserve the journal and target")
+		}
+		if err := ops.VerifyTarget(ctx, journal); err != nil {
+			return OutcomeAbsent, fmt.Errorf("committed v3 native target no longer matches its journal: %w", err)
+		}
+		return OutcomeCommitted, nil
+	}
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV4 &&
+		(journal.Phase == dnsengineartifact.SwitchPhaseTargetEnableIntent || journal.Phase == dnsengineartifact.SwitchPhaseRollingBackTargetEnable) {
+		return OutcomeAbsent, errors.New("PowerDNS enable-intent checkpoint requires the protected V4 owner recovery path")
+	}
 	// A durable inverse decision is monotonic. Re-observing the target cannot
 	// turn an interrupted or completed rollback into a committed switch.
 	if journal.Phase == dnsengineartifact.SwitchPhaseRollingBack || journal.Phase == dnsengineartifact.SwitchPhaseRolledBack {
@@ -110,6 +127,8 @@ func Rollback(ctx context.Context, journal *dnsengineartifact.SwitchJournalV1, o
 		return err
 	}
 	switch journal.Phase {
+	case dnsengineartifact.SwitchPhaseTargetEnableIntent, dnsengineartifact.SwitchPhaseRollingBackTargetEnable:
+		return errors.New("PowerDNS enable-intent checkpoint requires the protected V4 owner recovery path")
 	case dnsengineartifact.SwitchPhaseTargetVerified, dnsengineartifact.SwitchPhaseCommitted:
 		return errors.New("verified DNS switch target cannot enter automatic rollback")
 	case dnsengineartifact.SwitchPhaseRollingBack, dnsengineartifact.SwitchPhaseRolledBack:

@@ -2029,7 +2029,7 @@ func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
 	}
 }
 
-func TestDNSEnginePairedIdentitySurvivesBINDToPowerDNS(t *testing.T) {
+func TestDNSEnginePairedPrimaryPowerDNSRefusalPreservesBIND(t *testing.T) {
 	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
 	panel := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, panel, "paired")
@@ -2057,84 +2057,53 @@ func TestDNSEnginePairedIdentitySurvivesBINDToPowerDNS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	agent.durableMutationRPCFixture.mu.Lock()
+	beforeJobs := len(agent.durableMutationRPCFixture.jobs)
+	agent.durableMutationRPCFixture.mu.Unlock()
 	pdnsPreview, recorder := requestDNSEnginePreview(
 		t, panel, transport.DNSEnginePowerDNS,
 		string(transport.DNSEngineBIND), bindState.Revision,
 	)
-	if recorder.Code != http.StatusOK || len(pdnsPreview.Blockers) != 0 ||
-		pdnsPreview.Topology != transport.DNSTopologyPaired {
-		t.Fatalf("PowerDNS preview=%+v status=%d body=%s",
+	if recorder.Code != http.StatusOK ||
+		!hasDNSEngineBlocker(pdnsPreview, "pdns_primary_switch_paused") ||
+		pdnsPreview.PreviewToken != "" {
+		t.Fatalf("PowerDNS paused preview=%+v status=%d body=%s",
 			pdnsPreview, recorder.Code, recorder.Body.String())
 	}
-	if commit := commitDNSEngineSwitch(
+	commit := commitDNSEngineSwitch(
 		t, panel, strings.Repeat("7", 32), transport.DNSEnginePowerDNS,
 		string(transport.DNSEngineBIND), bindState.Revision,
-		pdnsPreview.PreviewToken, true,
-	); commit.Code != http.StatusOK {
-		t.Fatalf("PowerDNS commit status=%d body=%s", commit.Code, commit.Body.String())
+		strings.Repeat("c", 32), true,
+	)
+	if commit.Code != http.StatusConflict ||
+		!strings.Contains(commit.Body.String(), "pdns_primary_switch_paused") {
+		t.Fatalf("PowerDNS paused commit status=%d body=%s",
+			commit.Code, commit.Body.String())
 	}
-	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
-	if err != nil {
+	after, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil || after != bindState {
+		t.Fatalf("BIND source state changed: before=%+v after=%+v err=%v",
+			bindState, after, err)
+	}
+	var switchCount int
+	if err := panel.db.GetDB().QueryRowContext(context.Background(),
+		"SELECT count(*) FROM dns_engine_switch_snapshots").Scan(&switchCount); err != nil {
 		t.Fatal(err)
 	}
-	if state.ActiveEngine != transport.DNSEnginePowerDNS ||
-		state.Topology != transport.DNSTopologyPaired ||
-		state.PairRole != transport.DNSPairRolePrimary ||
-		state.LocalIP != "192.0.2.10" || state.PeerIP != "192.0.2.20" ||
-		state.LocalNS != "ns1.celikhost.com" || state.PeerNS != "ns2.celikhost.com" {
-		t.Fatalf("reverse paired state=%+v", state)
+	if switchCount != 1 {
+		t.Fatalf("paused PowerDNS switch created a snapshot: count=%d", switchCount)
 	}
 	agent.mu.Lock()
-	last := agent.switchRequests[len(agent.switchRequests)-1]
-	agent.mu.Unlock()
-	if last.TargetEngine != transport.DNSEnginePowerDNS ||
-		last.Topology != transport.DNSTopologyPaired ||
-		last.PairRole != transport.DNSPairRolePrimary {
-		t.Fatalf("reverse paired request=%+v", last)
-	}
-	noop := httptest.NewRecorder()
-	panel.handleDNSSetup(noop, dnsSetupAdminRequest(
-		`{"ns1":"ns1.celikhost.com","ns2":"ns2.celikhost.com","role":"paired","peer_ip":"192.0.2.20","peer_ns":"ns2.celikhost.com"}`,
-	))
-	if noop.Code != http.StatusOK {
-		t.Fatalf("exact paired identity retry status=%d body=%s",
-			noop.Code, noop.Body.String())
-	}
-	afterNoop, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if afterNoop != state {
-		t.Fatalf("exact paired identity retry changed state: before=%+v after=%+v",
-			state, afterNoop)
-	}
-	locked := httptest.NewRecorder()
-	panel.handleDNSSetup(locked, dnsSetupAdminRequest(
-		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"paired","peer_ip":"192.0.2.30","peer_ns":"ns4.example.net"}`,
-	))
-	if locked.Code != http.StatusConflict {
-		t.Fatalf("paired identity mutation status=%d body=%s",
-			locked.Code, locked.Body.String())
-	}
-	var lockedBody apiErrorBody
-	if err := json.Unmarshal(locked.Body.Bytes(), &lockedBody); err != nil ||
-		lockedBody.Code != errCodeDNSPairIdentityLocked {
-		t.Fatalf("paired identity refusal=%+v err=%v body=%s",
-			lockedBody, err, locked.Body.String())
-	}
-	afterLocked, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if afterLocked != state {
-		t.Fatalf("paired identity refusal changed state: before=%+v after=%+v",
-			state, afterLocked)
-	}
-	agent.mu.Lock()
+	bind := agent.runtimes[transport.DNSEngineBIND]
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
 	switchCalls := agent.switchCalls
 	agent.mu.Unlock()
-	if switchCalls != 2 {
-		t.Fatalf("paired identity refusal changed host: switch calls=%d", switchCalls)
+	agent.durableMutationRPCFixture.mu.Lock()
+	afterJobs := len(agent.durableMutationRPCFixture.jobs)
+	agent.durableMutationRPCFixture.mu.Unlock()
+	if switchCalls != 1 || afterJobs != beforeJobs || !bind.Running || pdns.Running {
+		t.Fatalf("paused PowerDNS switch changed serving authority: calls=%d jobs=%d/%d BIND=%+v PDNS=%+v",
+			switchCalls, afterJobs, beforeJobs, bind, pdns)
 	}
 }
 

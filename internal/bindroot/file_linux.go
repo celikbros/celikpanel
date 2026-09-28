@@ -44,10 +44,14 @@ func ReadExactBINDConfigAt(rootFD int, layout Layout, serviceGID uint32, absolut
 	}
 	switch layout {
 	case APT:
-		if absolutePath != "/etc/bind/named.conf" && absolutePath != "/etc/bind/named.conf.options" && absolutePath != "/etc/bind/named.conf.local" {
+		if absolutePath != "/etc/bind/named.conf" && absolutePath != "/etc/bind/named.conf.options" && absolutePath != "/etc/bind/named.conf.local" && absolutePath != "/etc/bind/named.conf.default-zones" && absolutePath != "/etc/bind/named.conf.root-hints" {
 			return nil, FileIdentity{}, errors.New("unsupported APT BIND config path")
 		}
-		return readExactFileAt(rootFD, absolutePath, "APT BIND config", 0o644, []uint32{0, serviceGID})
+		return readExactFileAtWithParent(rootFD, absolutePath, "APT BIND config", 0o644, []uint32{0, serviceGID},
+			func(parentFD int) error {
+				_, err := InspectConfigParentFD(parentFD, APT, serviceGID)
+				return err
+			})
 	case Pacman:
 		if absolutePath != "/etc/named.conf" {
 			return nil, FileIdentity{}, errors.New("unsupported pacman BIND config path")
@@ -59,11 +63,18 @@ func ReadExactBINDConfigAt(rootFD int, layout Layout, serviceGID uint32, absolut
 }
 
 func readExactFileAt(
+	rootFD int, absolutePath, label string, mode uint32, allowedGIDs []uint32,
+) ([]byte, FileIdentity, error) {
+	return readExactFileAtWithParent(rootFD, absolutePath, label, mode, allowedGIDs, nil)
+}
+
+func readExactFileAtWithParent(
 	rootFD int,
 	absolutePath string,
 	label string,
 	mode uint32,
 	allowedGIDs []uint32,
+	inspectFinalParent func(int) error,
 ) ([]byte, FileIdentity, error) {
 	if !path.IsAbs(absolutePath) || path.Clean(absolutePath) != absolutePath ||
 		absolutePath == "/" {
@@ -83,13 +94,23 @@ func readExactFileAt(
 		return nil, FileIdentity{}, fmt.Errorf("duplicate BIND vendor root: %w", err)
 	}
 	defer unix.Close(currentFD)
-	for _, component := range components[:len(components)-1] {
-		// Vendor unit directories (/lib, /usr/lib, /etc/systemd/...) are
-		// distribution-owned ancestors, not directories this product created.
-		nextFD, _, openErr := OpenInheritedAnchorAt(
-			currentFD, component,
-			path.Join("/", strings.Join(components[:len(components)-1], "/")),
-		)
+	for index, component := range components[:len(components)-1] {
+		labelPath := path.Join("/", strings.Join(components[:index+1], "/"))
+		var nextFD int
+		var openErr error
+		if index == len(components)-2 && inspectFinalParent != nil {
+			// Only the certified APT /etc/bind parent may use root:bind
+			// setgid metadata. Every earlier ancestor stays root-trusted.
+			nextFD, openErr = OpenDirectoryAt(currentFD, component, labelPath)
+			if openErr == nil {
+				openErr = inspectFinalParent(nextFD)
+			}
+			if openErr != nil && nextFD >= 0 {
+				unix.Close(nextFD)
+			}
+		} else {
+			nextFD, _, openErr = OpenInheritedAnchorAt(currentFD, component, labelPath)
+		}
 		if openErr != nil {
 			return nil, FileIdentity{}, openErr
 		}

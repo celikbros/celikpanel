@@ -48,6 +48,9 @@ ROLLBACK_PRECURSOR_SCHEMA = (
 )
 ROLLBACK_PRECURSOR_ACTION = "returned-injected-error"
 JOURNAL_SCHEMA = "celikpanel-dns-engine-switch-journal/v1"
+BIND_HANDOFF_JOURNAL_SCHEMA = "celikpanel-dns-engine-switch-journal/v2"
+BIND_HANDOFF_CELL = "bind__rolling-back__after-write__standalone__peer-reachable"
+PDNS_HANDOFF_CELL = "pdns-adopt__rolling-back__after-write__standalone__peer-reachable"
 PROOF_SCHEMA = "celikpanel/dns-kill-proof/v1"
 RESULT_SCHEMA = "celikpanel/dns-kill-result/v1"
 RECOVERY_PROBE_SCHEMA = "celikpanel/dns-kill-recovery-probe/v1"
@@ -57,6 +60,12 @@ SOURCE_PREINSTALL_PROOF_PATH = (
     "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-pdns.json"
 )
 SOURCE_ADOPTION_SCHEMA = "celikpanel/dns-kill-source-adoption/v2"
+MANAGED_BIND_SETUP_SCENARIO_PATH = (
+    "/var/lib/celikpanel-dns-kill-matrix/source-setup-bind.json"
+)
+MANAGED_BIND_SETUP_IDENTITY_PATH = (
+    "/var/lib/celikpanel-dns-kill-matrix/source-setup-bind-identity.json"
+)
 SOURCE_ADOPTION_PROOF_PATH = (
     "/var/lib/celikpanel-dns-kill-matrix/source-adoption-pdns.json"
 )
@@ -79,6 +88,9 @@ TRIGGER_IDENTITY_RECEIPT_SCHEMA = (
 TRIGGER_OWNER_NAMESPACE = "celikpanel/dns-kill-matrix-owner/v1"
 
 SELECTOR_PREFIX = "CELIKPANEL_DNS_KILL_MATRIX_"
+LATER_BIND_ROLLBACK_SELECTOR = (
+    "CELIKPANEL_DNS_KILL_MATRIX_ROLLBACK_PRECURSOR"
+)
 EXTERNAL_LOCK_FD_ENV = "CELIKPANEL_MUTATION_LOCK_FD"
 SELECTOR_NAMES = (
     "CELIKPANEL_DNS_KILL_MATRIX_CELL_ID",
@@ -135,6 +147,10 @@ ROLLBACK_PRECURSOR_PHASES = {
 
 class ControllerError(RuntimeError):
     """A fail-closed controller or post-kill assertion failure."""
+
+
+class NativeRecoveryHandoff(Exception):
+    """Proven kill handed to an explicit, guest-only independent recovery trial."""
 
 
 class BoundaryUnverified(ControllerError):
@@ -786,7 +802,7 @@ SCENARIO_REQUIRED_KEYS = {
     "zones",
 }
 SOURCE_FIXTURE_DRIVERS = {
-    "bind": {"uninitialized", "managed-pdns"},
+    "bind": {"uninitialized", "managed-pdns", "owner-bind"},
     "pdns-switch": {"uninitialized", "managed-bind"},
     "pdns-adopt": {"external-pdns-adoption"},
     "pdns-secondary-reconfigure": {"legacy-pdns-secondary"},
@@ -794,6 +810,7 @@ SOURCE_FIXTURE_DRIVERS = {
 SOURCE_FIXTURE_ENGINES = {
     "uninitialized": "",
     "managed-pdns": "pdns",
+    "owner-bind": "bind",
     "managed-bind": "bind",
     "external-pdns-adoption": "pdns",
     "legacy-pdns-secondary": "pdns",
@@ -926,7 +943,10 @@ def validate_source_preinstall_document(
     if (
         cell.driver == "bind"
         and cell.role == "standalone"
-        and cell.phase in {"source-stopped", "target-started", "rolled-back"}
+        and (
+            cell.phase in {"source-stopped", "target-started", "rolled-back"}
+            or is_bind_handoff_cell(cell)
+        )
     ):
         scope = "managed-pdns-source-preparation-for-bind-only"
         measured_target_packages = [{"name": "bind9", "status": "absent"}]
@@ -1005,7 +1025,12 @@ def validate_source_setup_provenance(
     origin = proof.get("receipt_origin")
     scenario_hash = proof.get("source_setup_scenario_sha256")
     identity_hash = proof.get("source_setup_identity_receipt_sha256")
-    if source_fixture == "managed-pdns":
+    if source_fixture == "managed-bind":
+        if origin != "production-bind-switch":
+            raise ControllerError("managed BIND source has the wrong production origin")
+        if not valid_sha256(scenario_hash) or not valid_sha256(identity_hash):
+            raise ControllerError("managed BIND source lacks setup hashes")
+    elif source_fixture == "managed-pdns":
         if origin != "production-pdns-adopt-normalized":
             raise ControllerError(
                 "managed PowerDNS source proof has the wrong receipt origin"
@@ -1023,6 +1048,13 @@ def validate_source_setup_provenance(
             raise ControllerError(
                 "external PowerDNS source has invalid harness preimage provenance"
             )
+    elif source_fixture == "owner-bind":
+        if (
+            origin != "harness-native-bind"
+            or scenario_hash != "absent"
+            or identity_hash != "absent"
+        ):
+            raise ControllerError("owner BIND source has invalid native fixture provenance")
     elif source_fixture == "uninitialized":
         if (
             origin != "absent-by-proof"
@@ -1048,13 +1080,13 @@ def validate_source_preinstall_provenance(
 ) -> dict[str, Any]:
     claimed_path = proof.get("source_preinstall_proof_path")
     claimed_hash = proof.get("source_preinstall_proof_sha256")
-    if source_fixture == "uninitialized":
+    if source_fixture in {"uninitialized", "owner-bind", "managed-bind"}:
         if claimed_path != "absent" or claimed_hash != "absent":
             raise ControllerError(
-                "uninitialized source proof has invalid absent preinstall provenance"
+                f"{source_fixture} source proof has invalid absent preinstall provenance"
             )
         require_absent_path(
-            SOURCE_PREINSTALL_PROOF_PATH, "uninitialized source preinstall proof"
+            SOURCE_PREINSTALL_PROOF_PATH, f"{source_fixture} source preinstall proof"
         )
         return {
             "path": "absent",
@@ -1110,7 +1142,10 @@ def validate_source_adoption_document(
     if (
         cell.driver != "bind"
         or cell.role != "standalone"
-        or cell.phase not in {"source-stopped", "target-started", "rolled-back"}
+        or (
+            cell.phase not in {"source-stopped", "target-started", "rolled-back"}
+            and not is_bind_handoff_cell(cell)
+        )
     ):
         raise ControllerError("source adoption proof escaped critical standalone BIND scope")
     expected = {
@@ -1314,7 +1349,7 @@ def validate_source_adoption_provenance(
 ) -> dict[str, Any]:
     claimed_path = proof.get("source_adoption_proof_path")
     claimed_hash = proof.get("source_adoption_proof_sha256")
-    if source_fixture in {"uninitialized", "external-pdns-adoption"}:
+    if source_fixture in {"uninitialized", "owner-bind", "external-pdns-adoption", "managed-bind"}:
         if claimed_path != "absent" or claimed_hash != "absent":
             raise ControllerError(
                 f"{source_fixture} source proof has invalid absent adoption provenance"
@@ -2175,7 +2210,7 @@ def validate_source_normalization_provenance(
 ) -> dict[str, Any]:
     claimed_path = proof.get("source_normalization_identity_receipt_path")
     claimed_hash = proof.get("source_normalization_identity_receipt_sha256")
-    if source_fixture in {"uninitialized", "external-pdns-adoption"}:
+    if source_fixture in {"uninitialized", "owner-bind", "external-pdns-adoption", "managed-bind"}:
         if claimed_path != "absent" or claimed_hash != "absent":
             raise ControllerError(
                 f"{source_fixture} source proof has invalid absent normalization provenance"
@@ -2714,6 +2749,81 @@ def secure_json_with_digest(
     return decode_json(raw, label), raw, hashlib.sha256(raw).hexdigest(), status
 
 
+def validate_managed_bind_setup(
+    proof: Mapping[str, Any], cell: CellSpec,
+    measured_scenario: Mapping[str, Any], state: Mapping[str, Any]
+) -> None:
+    if cell.driver != "pdns-switch" or cell.role not in {"standalone", "paired-primary"}:
+        raise ControllerError("managed BIND producer has no proof for this driver or role")
+    scenario, _raw, digest, _ = secure_json_with_digest(
+        MANAGED_BIND_SETUP_SCENARIO_PATH, "managed BIND setup scenario", maximum=1 << 20
+    )
+    if digest != proof["source_setup_scenario_sha256"]:
+        raise ControllerError("managed BIND setup scenario hash changed")
+    expected_scenario = {
+        "schema": SCENARIO_SCHEMA,
+        "driver": "bind",
+        "source_fixture": "uninitialized",
+        "mode": "switch",
+        "source_engine": "",
+        "target_engine": "bind",
+        "source_epoch": 0,
+        "target_epoch": 1,
+        "source_revision": 0,
+        "topology": "paired" if cell.role == "paired-primary" else "standalone",
+    }
+    pair = ({"pair_role": "primary", "local_ip": "192.0.2.10",
+             "local_ns": "ns1.s1-kill.test", "peer_ip": "192.0.2.11",
+             "peer_ns": "ns2.s1-kill.test"}
+            if cell.role == "paired-primary" else {})
+    expected_scenario.update(pair)
+    if not isinstance(scenario, dict) or set(scenario) != set(expected_scenario) | {"zones"}:
+        raise ControllerError("managed BIND setup scenario shape differs")
+    if any(scenario[key] != value for key, value in expected_scenario.items()):
+        raise ControllerError("managed BIND setup scenario identity differs")
+    if any(measured_scenario.get(key) != value for key, value in pair.items()):
+        raise ControllerError("managed BIND pair differs from measured switch source")
+    if scenario["zones"] != measured_scenario.get("zones"):
+        raise ControllerError("managed BIND setup zone differs from measured switch source")
+    if not isinstance(scenario["zones"], list) or len(scenario["zones"]) != 1:
+        raise ControllerError("managed BIND setup has no exact source zone")
+    request_id = hashlib.sha256(
+        (cell.cell_id + "\0source-bind-switch").encode()
+    ).hexdigest()[:32]
+    receipt, receipt_raw, receipt_digest, _ = secure_json_with_digest(
+        MANAGED_BIND_SETUP_IDENTITY_PATH,
+        "managed BIND setup identity", maximum=1 << 20
+    )
+    if receipt_digest != proof["source_setup_identity_receipt_sha256"]:
+        raise ControllerError("managed BIND setup identity hash changed")
+    if not isinstance(receipt, dict) or set(receipt) != {
+        "schema", "cell_id", "driver", "source_fixture", "request_id",
+        "owner_id", "manifest_qualifier",
+    }:
+        raise ControllerError("managed BIND setup identity shape differs")
+    expected_identity = {
+        "schema": TRIGGER_IDENTITY_RECEIPT_SCHEMA,
+        "cell_id": cell.cell_id,
+        "driver": "bind",
+        "source_fixture": "uninitialized",
+        "request_id": request_id,
+        "owner_id": deterministic_trigger_owner(cell.cell_id, request_id),
+        "manifest_qualifier": state["manifest_qualifier"],
+    }
+    if receipt != expected_identity or (
+        json.dumps(receipt, separators=(",", ":")) + "\n"
+    ).encode() != receipt_raw:
+        raise ControllerError("managed BIND setup identity is not the exact production receipt")
+    if (
+        state.get("mode") != "switch"
+        or state.get("mutation_request_id") != request_id
+        or state.get("mutation_owner_id") != receipt["owner_id"]
+        or state.get("engine") != "bind"
+        or state.get("engine_epoch") != 1
+    ):
+        raise ControllerError("managed BIND state is not bound to its setup operation")
+
+
 def validate_source_scenario(
     path: str, cell: CellSpec
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -2754,8 +2864,9 @@ def validate_source_scenario(
     )
     if value.get("source_engine", "") != expected_source_engine:
         raise ControllerError("source scenario engine differs from its fixture")
-    if source_fixture == "uninitialized" and (
-        value["source_epoch"] != 0 or value["source_revision"] != 0
+    if source_fixture in {"uninitialized", "owner-bind"} and (
+        value["source_epoch"] != 0 or value["target_epoch"] != 1
+        or value["source_revision"] != 0
     ):
         raise ControllerError("uninitialized scenario is not an exact empty 0/0 source")
     if source_fixture in MANAGED_SOURCE_FIXTURES and value["source_epoch"] < 1:
@@ -2799,6 +2910,84 @@ def scenario_boundary_journal_identity(
         "topology": scenario["topology"],
         "pair_role": pair_role,
     }
+
+
+def validate_owner_bind_native_source() -> dict[str, Any]:
+    if os.geteuid() != 0:
+        raise ControllerError("owner BIND source proof requires root controller identity")
+    paths = {
+        "main": "/etc/bind/named.conf",
+        "options": "/etc/bind/named.conf.options",
+        "local": "/etc/bind/named.conf.local",
+        "leaf": "/etc/bind/named.conf.root-hints",
+        "zone": "/etc/bind/db.owner.test",
+    }
+    evidence: dict[str, Any] = {}
+    for label, native_path in paths.items():
+        raw, status = secure_read_bytes(
+            native_path, f"owner BIND {label}",
+            maximum=1 << 20, required_mode=0o644, required_uid=0,
+        )
+        evidence[label] = {
+            "path": native_path,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+            "device": status.st_dev,
+            "inode": status.st_ino,
+        }
+        if label == "main":
+            expected = (
+                'include "/etc/bind/named.conf.options";',
+                'include "/etc/bind/named.conf.local";',
+                'include "/etc/bind/named.conf.root-hints";',
+            )
+            if tuple(line.strip() for line in raw.decode("utf-8").splitlines()
+                     if line.strip() and not line.lstrip().startswith("//")) != expected:
+                raise ControllerError("owner BIND main include envelope differs")
+        elif label == "local":
+            if raw != b'zone "owner.test" IN { type master; file "/etc/bind/db.owner.test"; allow-update { none; }; };\n':
+                raise ControllerError("owner BIND local source zone declaration differs")
+        elif label == "options":
+            if raw != b'options { directory "/var/cache/bind"; recursion no; listen-on { any; }; listen-on-v6 { none; }; };\n':
+                raise ControllerError("owner BIND source options differ")
+        elif label == "zone":
+            if b"$INCLUDE" in raw.upper() or b"192.0.2.10" not in raw:
+                raise ControllerError("owner BIND source zone file is unsafe")
+    require_absent_path("/etc/bind/db.owner.test.jnl", "owner BIND dynamic journal")
+    for argv, expected in (
+        (["/usr/bin/dpkg-query", "-W", "-f=${Status}", "--", "bind9"], b"install ok installed"),
+        (["/usr/bin/named-checkconf", "-l", "/etc/bind/named.conf"], None),
+    ):
+        try:
+            completed = subprocess.run(
+                argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, timeout=5,
+                env={"PATH": DEFAULT_COMMAND_PATH, "LC_ALL": "C"},
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise ControllerError(f"inspect owner BIND native source: {exc}") from exc
+        if completed.returncode != 0 or completed.stderr:
+            raise ControllerError("owner BIND package or native inventory check failed")
+        if expected is not None and completed.stdout != expected:
+            raise ControllerError("owner BIND package status differs")
+        if expected is None:
+            lines = completed.stdout.decode("ascii").splitlines()
+            names = sorted(
+                [fields[0], fields[1], fields[2],
+                 "master" if fields[3] == "primary" else fields[3]]
+                for fields in (line.split() for line in lines)
+                if len(fields) == 4
+            )
+            if len(names) != len(lines):
+                raise ControllerError("owner BIND inventory line has unsupported shape")
+            expected_names = sorted([
+                ["owner.test", "IN", "_default", "master"],
+                [".", "IN", "_default", "hint"],
+            ])
+            if names != expected_names:
+                raise ControllerError("owner BIND native zone inventory differs")
+            evidence["inventory"] = lines
+    return evidence
 
 
 def validate_socket_source_proof(
@@ -2928,6 +3117,8 @@ def validate_socket_source_proof(
             "inode": ownership_status.st_ino,
             "identity": ownership,
         }
+        if source_fixture == "managed-bind":
+            validate_managed_bind_setup(proof, cell, scenario, state)
         if source_fixture == "managed-pdns":
             # Adoption is a historical checkpoint. Source normalization may
             # rewrite ownership, while the engine-state bytes must stay fixed.
@@ -2956,7 +3147,7 @@ def validate_socket_source_proof(
         ):
             raise ControllerError("unmanaged source proof unexpectedly claims an engine-state receipt")
         state_evidence = {"path": "", "sha256": "", "identity": None}
-        if source_fixture in {"uninitialized", "external-pdns-adoption"}:
+        if source_fixture in {"uninitialized", "owner-bind", "external-pdns-adoption"}:
             require_absent_path(
                 state_path, f"{source_fixture} source engine-state receipt"
             )
@@ -2973,6 +3164,10 @@ def validate_socket_source_proof(
                     "exists": False,
                 }
 
+    owner_bind_evidence = (
+        validate_owner_bind_native_source()
+        if source_fixture == "owner-bind" else None
+    )
     authoritative = proof.get("authoritative_preflight")
     authoritative_keys = {"claimed", "address", "port", "name", "type", "udp", "tcp"}
     if not isinstance(authoritative, dict) or set(authoritative) != authoritative_keys:
@@ -2992,6 +3187,7 @@ def validate_socket_source_proof(
     if (
         not isinstance(proof_name, str)
         or proof_name.rstrip(".").lower() != dns_name.rstrip(".").lower()
+        or (source_fixture == "owner-bind" and proof_name != "www.owner.test")
     ):
         raise ControllerError("source proof authoritative name differs from the cell")
     port53 = proof.get("uninitialized_global_port53")
@@ -3036,6 +3232,7 @@ def validate_socket_source_proof(
         "source_adoption_proof": adoption_provenance,
         "external_pdns_preimage": external_pdns_preimage,
         "source_normalization": normalization_provenance,
+        "owner_bind_native_source": owner_bind_evidence,
         "authoritative_preflight": authoritative,
         "uninitialized_global_port53": port53,
         "topology": scenario["topology"],
@@ -3092,6 +3289,8 @@ def tagged_agent_environment(
     mutation_lock: str,
     agent_socket: str,
     agent_token_file: str,
+    *,
+    bind_rollback_after_target_started: bool = False,
 ) -> dict[str, str]:
     result = production_command_environment(
         base, state_dir, mutation_lock, agent_socket, agent_token_file
@@ -3108,9 +3307,15 @@ def tagged_agent_environment(
             SELECTOR_NAMES[7]: str(ready_fd),
         }
     )
+    expected = set(SELECTOR_NAMES)
+    if bind_rollback_after_target_started:
+        if not is_bind_handoff_cell(cell):
+            raise ControllerError("later BIND rollback selector requires the exact handoff cell")
+        result[LATER_BIND_ROLLBACK_SELECTOR] = "target-started"
+        expected.add(LATER_BIND_ROLLBACK_SELECTOR)
     present = {key for key in result if key.startswith(SELECTOR_PREFIX)}
-    if present != set(SELECTOR_NAMES):
-        raise ControllerError("tagged agent environment does not contain exactly eight selectors")
+    if present != expected:
+        raise ControllerError("tagged agent environment has unexpected fault selectors")
     return result
 
 
@@ -3542,7 +3747,13 @@ def read_ready_nonce(
     raise BoundaryUnverified(f"boundary hook did not fire within {timeout} seconds")
 
 
-def rollback_precursor_phase(cell: CellSpec) -> str | None:
+def rollback_precursor_phase(
+    cell: CellSpec, *, bind_rollback_after_target_started: bool = False
+) -> str | None:
+    if bind_rollback_after_target_started:
+        if not is_bind_handoff_cell(cell):
+            raise ControllerError("later BIND rollback precursor requires the exact handoff cell")
+        return "target-started"
     if cell.phase not in ("rolling-back", "rolled-back"):
         return None
     return ROLLBACK_PRECURSOR_PHASES.get(cell.driver)
@@ -3577,6 +3788,23 @@ def expected_journal_phase(cell: CellSpec) -> str | None:
         raise ControllerError(f"no journal predecessor rule for {cell.phase}") from exc
 
 
+def is_bind_handoff_cell(cell: CellSpec) -> bool:
+    return (
+        cell.cell_id == BIND_HANDOFF_CELL
+        and cell.driver == "bind"
+        and cell.phase == "rolling-back"
+        and cell.edge == "after-write"
+        and cell.point == "after_write"
+        and cell.role == "standalone"
+        and cell.peer_reachability == "reachable"
+        and cell.source_fixture_policy == "driver-specific"
+    )
+
+
+def expected_journal_schema(cell: CellSpec) -> str:
+    return BIND_HANDOFF_JOURNAL_SCHEMA if is_bind_handoff_cell(cell) else JOURNAL_SCHEMA
+
+
 def validate_observed_journal(
     cell: CellSpec,
     observed: Mapping[str, Any],
@@ -3585,7 +3813,7 @@ def validate_observed_journal(
     *,
     expected_phase: str | None = None,
 ) -> None:
-    if observed.get("schema") != JOURNAL_SCHEMA:
+    if observed.get("schema") != expected_journal_schema(cell):
         raise BoundaryUnverified("marker observed an unexpected journal schema")
     wanted_phase = cell.phase if expected_phase is None else expected_phase
     if observed.get("phase") != wanted_phase:
@@ -3633,8 +3861,12 @@ def validate_rollback_precursor(
     request_id: str,
     journal_path: str,
     expected_journal_identity: Mapping[str, Any],
+    *,
+    bind_rollback_after_target_started: bool = False,
 ) -> None:
-    precursor_phase = rollback_precursor_phase(cell)
+    precursor_phase = rollback_precursor_phase(
+        cell, bind_rollback_after_target_started=bind_rollback_after_target_started
+    )
     if precursor_phase is None:
         if "rollback_precursor" in marker:
             raise BoundaryUnverified(
@@ -3722,6 +3954,8 @@ def validate_marker(
     start_ticks: str,
     journal_path: str,
     expected_journal_identity: Mapping[str, Any],
+    *,
+    bind_rollback_after_target_started: bool = False,
 ) -> dict[str, Any]:
     marker, _ = secure_read_json(
         path,
@@ -3773,6 +4007,7 @@ def validate_marker(
         request_id,
         journal_path,
         expected_journal_identity,
+        bind_rollback_after_target_started=bind_rollback_after_target_started,
     )
     return marker
 
@@ -3782,7 +4017,14 @@ def validate_journal_disk_state(
     expected_phase: str | None,
     request_id: str,
     expected_identity: Mapping[str, Any],
+    *,
+    cell: CellSpec | None = None,
+    bind_rollback_after_target_started: bool = False,
 ) -> dict[str, Any]:
+    if bind_rollback_after_target_started and (
+        cell is None or not is_bind_handoff_cell(cell)
+    ):
+        raise ControllerError("later BIND disk proof requires the exact handoff cell")
     if expected_phase is None:
         try:
             os.lstat(journal_path)
@@ -3794,8 +4036,97 @@ def validate_journal_disk_state(
     journal, status = secure_read_json(journal_path, "DNS switch journal")
     if not isinstance(journal, dict):
         raise BoundaryUnverified("DNS switch journal root is not an object")
-    if journal.get("schema") != JOURNAL_SCHEMA:
+    want_schema = expected_journal_schema(cell) if cell is not None else JOURNAL_SCHEMA
+    if journal.get("schema") != want_schema:
         raise BoundaryUnverified("DNS switch journal schema differs")
+    if cell is not None and is_bind_handoff_cell(cell):
+        plan = journal.get("inverse_plan")
+        source_engine = journal.get("source_engine", "")
+        source_key = "source_bind" if source_engine == "" else "source_pdns"
+        source = plan.get(source_key) if isinstance(plan, dict) else None
+        if (
+            not isinstance(plan, dict)
+            or plan.get("kind") != "bind-switch-config/v1"
+            or plan.get("host_layout") != "apt"
+            or not isinstance(plan.get("config_after"), list)
+            or len(plan["config_after"]) != 2
+            or not valid_sha256(plan.get("digest"))
+            or not isinstance(source, dict)
+            or (source_engine == "pdns" and source.get("kind") != "pdns-source/v1")
+            or (source_engine == "" and source.get("kind") != "bind-adoption-source/v1")
+        ):
+            raise BoundaryUnverified("BIND handoff journal lacks a V2 frozen source proof")
+        if bind_rollback_after_target_started:
+            if (
+                not isinstance(plan, dict)
+                or set(plan) != {
+                    "kind", "host_layout", "config_after",
+                    "bind_unchanged_config", source_key, "digest",
+                }
+                or plan.get("kind") != "bind-switch-config/v1"
+                or plan.get("host_layout") != "apt"
+                or not isinstance(plan.get("config_after"), list)
+                or len(plan["config_after"]) != 2
+                or not isinstance(plan.get("bind_unchanged_config"), list)
+                or len(plan["bind_unchanged_config"]) != 2
+                or [item.get("path") for item in plan["bind_unchanged_config"]
+                    if isinstance(item, dict)] not in [
+                    ["/etc/bind/named.conf", "/etc/bind/named.conf.default-zones"],
+                    ["/etc/bind/named.conf", "/etc/bind/named.conf.root-hints"],
+                ]
+                or not valid_sha256(plan.get("digest"))
+                or not isinstance(source, dict)
+            ):
+                raise BoundaryUnverified("later BIND rollback lacks its full V2 source envelope")
+            if source_engine == "pdns":
+                if (
+                    set(source) != {"kind", "config_before", "database"}
+                    or source.get("kind") != "pdns-source/v1"
+                    or not isinstance(source.get("config_before"), list)
+                    or [item.get("path") for item in source["config_before"]
+                        if isinstance(item, dict)] != [
+                        "/etc/powerdns/pdns.conf",
+                        "/etc/powerdns/pdns.d/celikpanel-cluster.conf",
+                        "/etc/powerdns/pdns.d/celikpanel.conf",
+                    ]
+                    or not isinstance(source.get("database"), dict)
+                    or set(source["database"]) != {
+                        "path", "logical_sha256", "mode", "uid", "gid", "device", "inode",
+                    }
+                    or source["database"].get("path") != "/var/lib/powerdns/pdns.sqlite3"
+                    or not valid_sha256(source["database"].get("logical_sha256"))
+                ):
+                    raise BoundaryUnverified("BIND handoff lacks frozen PowerDNS source proof")
+            elif source_engine == "":
+                if (
+                    set(source) != {"kind", "files", "zones"}
+                    or source.get("kind") != "bind-adoption-source/v1"
+                    or not isinstance(source.get("files"), list)
+                    or len(source["files"]) < 2
+                    or not isinstance(source.get("zones"), list)
+                    or len(source["zones"]) < 2
+                    or not any(
+                        isinstance(zone, dict)
+                        and zone.get("name") == "owner.test"
+                        and zone.get("class") == "IN"
+                        and zone.get("type") in {"master", "primary"}
+                        and zone.get("file") == "/etc/bind/db.owner.test"
+                        and isinstance(zone.get("soa_serial"), int)
+                        for zone in source["zones"]
+                    )
+                    or not any(
+                        isinstance(item, dict)
+                        and item.get("path") == "/etc/bind/db.owner.test"
+                        and valid_sha256(item.get("sha256"))
+                        and item.get("uid") == 0
+                        for item in source["files"]
+                    )
+                    or journal.get("state_before", {}).get("exists") is not False
+                    or journal.get("target_units_before") is None
+                ):
+                    raise BoundaryUnverified("BIND handoff lacks frozen running-owner source proof")
+            else:
+                raise BoundaryUnverified("BIND handoff has unsupported source engine")
     if journal.get("phase") != expected_phase:
         raise BoundaryUnverified(
             f"DNS switch journal phase {journal.get('phase')!r}, want {expected_phase!r}"
@@ -4068,6 +4399,32 @@ def inspect_dns_unit_states(
     return states
 
 
+def prove_later_bind_target_before_kill(
+    settings: Settings, environment: Mapping[str, str]
+) -> dict[str, Any]:
+    if not settings.bind_rollback_after_target_started or not is_bind_handoff_cell(settings.cell):
+        raise ControllerError("later BIND target proof requires the exact opt-in cell")
+    target_units = inspect_dns_unit_states(settings.command_timeout, environment)
+    if (
+        target_units.get("bind9.service") != "active"
+        or target_units.get("pdns.service") != "inactive"
+    ):
+        raise BoundaryUnverified(
+            f"later BIND rollback cut lacks exclusive active BIND target: {target_units}"
+        )
+    try:
+        target_dns = query_authoritative_dns(
+            settings.dns_address, settings.dns_port,
+            "www.s1-kill.test",
+            settings.dns_type, settings.dns_timeout,
+        )
+    except (ControllerError, OSError) as exc:
+        raise BoundaryUnverified(
+            f"later BIND rollback cut lacks authoritative target DNS: {exc}"
+        ) from exc
+    return {"units": target_units, "authoritative": target_dns}
+
+
 def inspect_restarted_agent_process(
     timeout: float, environment: Mapping[str, str], expected_gid: int
 ) -> dict[str, Any]:
@@ -4292,6 +4649,8 @@ class Settings:
     stability_seconds: float
     stability_interval: float
     native_dns_status_command: tuple[str, ...] | None = None
+    stop_after_kill_for_independent_recovery: bool = False
+    bind_rollback_after_target_started: bool = False
 
 
 def inspect_command_executable(
@@ -4646,6 +5005,27 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
             "peer-partition command is valid only for paired unreachable cells"
         )
     expected_journal_phase(settings.cell)
+    if settings.bind_rollback_after_target_started and not (
+        settings.stop_after_kill_for_independent_recovery
+        and is_bind_handoff_cell(settings.cell)
+        and settings.trigger_mode == "socket"
+        and settings.source_proof_path is not None
+    ):
+        raise ControllerError(
+            "later BIND rollback precursor requires the exact independent handoff"
+        )
+    if settings.stop_after_kill_for_independent_recovery and not (
+        (settings.cell.cell_id == PDNS_HANDOFF_CELL or is_bind_handoff_cell(settings.cell))
+        and settings.cell.driver in ("pdns-adopt", "bind")
+        and settings.cell.phase == "rolling-back"
+        and settings.cell.edge == "after-write"
+        and settings.cell.role == "standalone"
+        and settings.cell.peer_reachability == "reachable"
+        and settings.trigger_mode == "socket"
+    ):
+        raise ControllerError(
+            "independent recovery handoff requires the exact PowerDNS adoption or BIND switch rollback cell"
+        )
     if settings.trigger_mode == "startup":
         if (
             settings.cell.driver != "signed-update-finalize"
@@ -5313,6 +5693,7 @@ def run_cell(settings: Settings) -> int:
             settings.mutation_lock,
             settings.agent_socket,
             settings.agent_token_file,
+            bind_rollback_after_target_started=settings.bind_rollback_after_target_started,
         )
         result["command_environment"] = {
             "production": {
@@ -5466,6 +5847,7 @@ def run_cell(settings: Settings) -> int:
             tagged_start_ticks,
             settings.journal_path,
             boundary_identity,
+            bind_rollback_after_target_started=settings.bind_rollback_after_target_started,
         )
         stopped = wait_for_stopped_process(
             tagged, tagged_start_ticks, settings.stop_timeout
@@ -5476,7 +5858,16 @@ def run_cell(settings: Settings) -> int:
             disk_phase,
             settings.request_id,
             boundary_identity,
+            cell=settings.cell,
+            bind_rollback_after_target_started=settings.bind_rollback_after_target_started,
         )
+        if settings.bind_rollback_after_target_started:
+            target_before_kill = prove_later_bind_target_before_kill(settings, ordinary)
+            result["target_dns_before_kill"] = target_before_kill
+            transcript.event(
+                "later-bind-rollback-target-proven-before-kill",
+                **target_before_kill,
+            )
         marker_sha256 = sha256_file(settings.marker_path)
         result["boundary_marker"] = marker
         result["journal_at_boundary"] = journal_disk
@@ -5608,6 +5999,14 @@ def run_cell(settings: Settings) -> int:
             result["native_post_kill_status"] = run_native_dns_status(
                 settings, ordinary, transcript, "post-kill"
             )
+        if settings.stop_after_kill_for_independent_recovery:
+            result["independent_recovery_handoff"] = {
+                "classification": "unverified_for_matrix",
+                "reason": "native inverse trial begins only after this producer-generated SIGKILL",
+                "request_id": settings.request_id,
+                "post_kill_probe": run_recovery_probe(settings, ordinary, transcript, 0),
+            }
+            raise NativeRecoveryHandoff()
         recovery_attempts: list[dict[str, Any]] = []
         recovery_probes: list[dict[str, Any]] = []
         recovery: dict[str, Any]
@@ -5976,6 +6375,14 @@ def run_cell(settings: Settings) -> int:
         result["safety_status"], result["status"] = classify_cell_status(
             safety_failures, verification_failures
         )
+    except NativeRecoveryHandoff:
+        transcript.event(
+            "independent-recovery-handoff",
+            request_id=settings.request_id,
+            kill_proven=kill_proven,
+        )
+        result["status"] = "unverified"
+        result["safety_status"] = "unverified"
     except (
         BoundaryUnverified,
         ControllerError,
@@ -6034,6 +6441,16 @@ def run_cell(settings: Settings) -> int:
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", required=True)
+    parser.add_argument(
+        "--stop-after-kill-for-independent-recovery",
+        action="store_true",
+        help="guest-only PowerDNS adoption or BIND switch rollback handoff; does not count as a passed matrix cell",
+    )
+    parser.add_argument(
+        "--bind-rollback-after-target-started",
+        action="store_true",
+        help="test-only exact BIND handoff: inject rollback after target-started",
+    )
     parser.add_argument("--cell-id", required=True)
     parser.add_argument("--request-id", required=True)
     parser.add_argument("--nonce", required=True)
@@ -6170,6 +6587,8 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         dns_timeout=args.dns_timeout,
         stability_seconds=args.stability_seconds,
         stability_interval=args.stability_interval,
+        stop_after_kill_for_independent_recovery=args.stop_after_kill_for_independent_recovery,
+        bind_rollback_after_target_started=args.bind_rollback_after_target_started,
         native_dns_status_command=(
             parse_command_json(args.native_dns_status_command, "native DNS status command")
             if args.native_dns_status_command is not None else None

@@ -26,6 +26,25 @@ func VerifyStoppedUnit(
 	name string,
 	observe func(context.Context) (StoppedUnitObservation, error),
 ) error {
+	return verifyStoppedUnitClass(ctx, name, observe, false)
+}
+
+// VerifyStoppedPDNSPersistentMask proves the exact sealed package-install state.
+// It is used only by the fresh V3 inverse after the frozen journal has admitted
+// the package guard's owned persistent mask.
+func VerifyStoppedPDNSPersistentMask(
+	ctx context.Context,
+	observe func(context.Context) (StoppedUnitObservation, error),
+) error {
+	return verifyStoppedUnitClass(ctx, "pdns.service", observe, true)
+}
+
+func verifyStoppedUnitClass(
+	ctx context.Context,
+	name string,
+	observe func(context.Context) (StoppedUnitObservation, error),
+	persistentMask bool,
+) error {
 	if ctx == nil || observe == nil || (name != "named.service" && name != "pdns.service") {
 		return errors.New("DNS stopped proof requires a fixed native unit observer")
 	}
@@ -40,9 +59,16 @@ func VerifyStoppedUnit(
 		if err := ctx.Err(); err != nil {
 			return StoppedUnitObservation{}, err
 		}
-		if seen.Name != name || seen.LoadState != "loaded" || seen.ActiveState != "inactive" ||
+		if seen.Name != name || seen.ActiveState != "inactive" ||
 			seen.MainPID != 0 || seen.ControlPID != 0 || seen.SubState != "dead" {
-			return StoppedUnitObservation{}, errors.New("DNS target is not a loaded inactive/dead unit with zero systemd main and control PIDs")
+			return StoppedUnitObservation{}, errors.New("DNS target is not an inactive/dead unit with zero systemd main and control PIDs")
+		}
+		if persistentMask {
+			if seen.LoadState != "masked" || seen.UnitFileState != "masked" {
+				return StoppedUnitObservation{}, errors.New("PowerDNS target lacks its exact persistent mask")
+			}
+		} else if seen.LoadState != "loaded" {
+			return StoppedUnitObservation{}, errors.New("DNS target is not a loaded unit")
 		}
 		return seen, nil
 	}

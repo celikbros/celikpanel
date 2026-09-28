@@ -120,6 +120,7 @@ type SyncDNSZoneV3Request struct {
 type SyncDNSZoneV3Response struct {
 	Synced            bool      `json:"synced"`
 	RecoveryPending   bool      `json:"recovery_pending,omitempty"`
+	PendingCode       string    `json:"pending_code,omitempty"`
 	Engine            DNSEngine `json:"engine"`
 	EngineEpoch       int64     `json:"engine_epoch"`
 	AppliedGeneration int64     `json:"applied_generation"`
@@ -138,6 +139,7 @@ type RecoverDNSZoneV3Request struct {
 type RecoverDNSZoneV3Response struct {
 	Recovered       bool   `json:"recovered"`
 	RecoveryPending bool   `json:"recovery_pending,omitempty"`
+	PendingCode     string `json:"pending_code,omitempty"`
 	Error           string `json:"error,omitempty"`
 }
 

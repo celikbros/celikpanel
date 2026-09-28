@@ -34,9 +34,15 @@ type StateV1 struct {
 	ManifestQualifier    string              `json:"manifest_qualifier"`
 	MutationRequestID    string              `json:"mutation_request_id"`
 	MutationOwnerID      string              `json:"mutation_owner_id"`
+	// NativeCatalogV3 is carried only by the explicit state-v3 document.
+	// Legacy state-v1 and separated state-v2 wire bytes never acquire it.
+	NativeCatalogV3 string `json:"-"`
 }
 
 func CanonicalV1(state StateV1) ([]byte, error) {
+	if state.NativeCatalogV3 != "" {
+		return nil, errors.New("native PowerDNS state requires a v3 document")
+	}
 	if err := ValidateV1(state); err != nil {
 		return nil, err
 	}
@@ -88,6 +94,7 @@ func acquisitionFromV1(state StateV1) AcquisitionV1 {
 		PairRole: state.PairRole, PairLocalIP: state.PairLocalIP, PairPeerIP: state.PairPeerIP,
 		SourceRevision: state.SourceRevision, ManifestQualifier: state.ManifestQualifier,
 		MutationRequestID: state.MutationRequestID, MutationOwnerID: state.MutationOwnerID,
+		NativeCatalogV3: state.NativeCatalogV3,
 	}
 }
 

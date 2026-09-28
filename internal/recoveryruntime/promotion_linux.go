@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"golang.org/x/sys/unix"
 )
@@ -25,6 +26,11 @@ import (
 const promotionSchema = "celikpanel/recovery-promotion/v1"
 const promotionReceiptSchema = "celikpanel/recovery-promotion-committed/v1"
 const maxPromotionRecord = 16384
+
+var errPromotionActiveDNSV2 = errors.New("active v2 BIND switch journal requires a recovery runtime with proved v2 reader compatibility; preserve the DNS operation and selected runtime")
+
+// A private native-fixture path seam; production always uses the protected Agent state.
+var promotionDNSJournalRoot = hostingpath.ServiceMutationStateRoot()
 
 type promotionPaths struct {
 	enrollmentPaths
@@ -461,12 +467,20 @@ func promoteAt(request PromotionRequest, fd int, paths promotionPaths, checkpoin
 	if selected.Digest == source.Digest {
 		return selected.Revalidate()
 	}
+	// Refuse retained v2 evidence before installing an inert replacement kit;
+	// the pre-exchange resume check below remains the final observed boundary.
+	if err := refuseUnprovedDNSV2Promotion(promotionDNSJournalRoot); err != nil {
+		return err
+	}
 	target, err := installPromotionBundle(source, paths)
 	if err != nil {
 		return err
 	}
 	defer target.Close()
 	if err := runPromotionCompatibility(paths, target, request.Mode, fd, check); err != nil {
+		return err
+	}
+	if err := refuseUnprovedDNSV2Promotion(promotionDNSJournalRoot); err != nil {
 		return err
 	}
 	if err := createTrustedDirectories(paths.promotions); err != nil {
@@ -667,6 +681,12 @@ func resumePromotionAt(fd int, paths promotionPaths, checkpoint func(string), ch
 		return err
 	}
 	if !launcherNew {
+		// Once the launcher has been exchanged, finishing the selected pair is
+		// recovery of an existing effect. Before that first exchange, refuse
+		// unproved v2 evidence without changing either entry object.
+		if err := refuseUnprovedDNSV2Promotion(promotionDNSJournalRoot); err != nil {
+			return err
+		}
 		if err := exchangePromotion(paths, proof, fd, true); err != nil {
 			return err
 		}
@@ -841,6 +861,78 @@ func runPromotionCompatibility(paths promotionPaths, target *Runtime, mode strin
 	}
 	return verifyPromotionBoundary(paths, fd)
 }
+
+// This bounded read-only gate prevents a stable active v2 DNS journal from
+// crossing an unproved recovery-runtime promotion. The release lock does not
+// serialize ordinary DNS mutations; a future capability-bound promotion must
+// also hold the host mutation lock through its entry exchange.
+func refuseUnprovedDNSV2Promotion(root string) error {
+	if os.Geteuid() != 0 {
+		return fail(ReasonUnsafeMetadata)
+	}
+	state := &runtimeState{config: resolveConfig{anchor: "/", uid: 0, gid: 0, protectedDirectoryGroups: true}}
+	defer state.close()
+	parent, absent, err := optionalMailHookParent(state, root)
+	if err != nil {
+		return err
+	}
+	if absent != nil {
+		if err := state.revalidate(); err != nil {
+			return err
+		}
+		return absent()
+	}
+	if parent.stat.Mode&07777 != 0700 {
+		return fail(ReasonUnsafeMetadata)
+	}
+	const name = "dns-engine-switch-journal.json"
+	var stat unix.Stat_t
+	if err := unix.Fstatat(int(parent.file.Fd()), name, &stat, unix.AT_SYMLINK_NOFOLLOW); errors.Is(err, unix.ENOENT) {
+		if err := state.revalidate(); err != nil {
+			return err
+		}
+		return requireMailPathAbsent(parent, name)
+	} else if err != nil {
+		return asReadError(err)
+	}
+	file, err := state.openFileWithGID(parent, name, 0600, dnsengineartifact.SwitchJournalLimit, stat.Gid)
+	if err != nil {
+		return asReadError(err)
+	}
+	if !sameFile(stat, file.stat) {
+		return fail(ReasonChanged)
+	}
+	if err := refusePromotionXattrs(file); err != nil {
+		return err
+	}
+	raw, err := file.readBounded()
+	if err != nil {
+		return err
+	}
+	file.digest = Digest(raw)
+	policy := dnsengineartifact.JournalPolicy{
+		StatePath: filepath.Join(root, "dns-engine-state.json"), StateUID: 0, StateGID: stat.Gid, RequireOwner: true,
+		PDNSMainPath:     "/etc/powerdns/pdns.conf",
+		PDNSManagedPath:  "/etc/powerdns/pdns.d/celikpanel.conf",
+		PDNSClusterPath:  "/etc/powerdns/pdns.d/celikpanel-cluster.conf",
+		PDNSDatabasePath: "/var/lib/powerdns/pdns.sqlite3",
+	}
+	journal, err := policy.DecodeSwitchJournal(raw)
+	if err != nil {
+		return fail(ReasonUnsupported)
+	}
+	if err := state.revalidate(); err != nil {
+		return err
+	}
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV4 {
+		return errors.New("active v4 PowerDNS target journal requires a proved independent recovery runtime; preserve this operation before promotion")
+	}
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV2 {
+		return errPromotionActiveDNSV2
+	}
+	return nil
+}
+
 func promotionCheckerEnvironment() []string {
 	return append(dispatchEnvironment(), "CELIKPANEL_DATA_DIR=/var/lib/celikpanel", "CELIKPANEL_AGENT_STATE_DIR="+hostingpath.ServiceMutationStateRoot(), "CELIKPANEL_MUTATION_LOCK=/run/celikpanel/service-mutation.lock")
 }

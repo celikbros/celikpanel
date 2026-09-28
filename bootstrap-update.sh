@@ -356,6 +356,11 @@ echo "==> Building matching panel and agent / Eşleşen panel ve agent derleniyo
     run_clean "$go_bin" build -tags celikpanel_mail_renewal -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/mail-renewal ./cmd/agent
     run_clean "$go_bin" run ./deploy/mail-renewal/bundle --binary bin/mail-renewal --output mail-renewal-runtime
     rm -- bin/mail-renewal
+    # Offline owner tools only: never enroll a peer as part of a panel update.
+    mkdir -m 0755 -- dns-owner-tools
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o dns-owner-tools/dns-peer-enroll ./cmd/dns-peer-enroll
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o dns-owner-tools/bind-peer-inspect ./cmd/bind-peer-inspect
+    cp -- cmd/dns-peer-enroll/README.md dns-owner-tools/README.md
     cp -- firewall-runtime/celikpanel-firewall-restore.service deploy/systemd/celikpanel-firewall-restore.service
 )
 
@@ -391,6 +396,8 @@ chmod 0755 \
     "$incomplete_root/bin/agent-checker" \
     "$incomplete_root/bin/panel-checker" \
     "$incomplete_root/firewall-runtime/restore" \
+    "$incomplete_root/dns-owner-tools/dns-peer-enroll" \
+    "$incomplete_root/dns-owner-tools/bind-peer-inspect" \
     "$incomplete_root/mail-renewal-runtime/renew" \
     "$incomplete_root/mail-renewal-runtime/celikpanel-mail-host-cert" \
     "$incomplete_root/recovery-runtime/bin/recovery" \

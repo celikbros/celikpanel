@@ -7,6 +7,15 @@ import "github.com/alicelik/celikpanel/internal/transport"
 // tuple; that exception applies only after target verification or commit. A
 // matching receipt alone does not prove the generation tree or running DNS.
 func ExactSwitchTargetStateV1(state StateV1, journal SwitchJournalV1) bool {
+	if journal.Schema == SwitchJournalSchemaV3 {
+		if journal.PDNSFreshPlan == nil || journal.PDNSFreshPlan.Native == nil ||
+			state.NativeCatalogV3 != NativeCatalogDebian49V3 ||
+			state.PrimaryCatalogSerial != journal.PDNSFreshPlan.Native.Observed.NativeSerial {
+			return false
+		}
+	} else if state.NativeCatalogV3 != "" {
+		return false
+	}
 	legacyState := state.PairRole == "" && state.PairLocalIP == "" &&
 		state.PairPeerIP == "" && state.PrimaryCatalogSerial == 0
 	legacyTarget := legacyState &&
@@ -20,7 +29,8 @@ func ExactSwitchTargetStateV1(state StateV1, journal SwitchJournalV1) bool {
 	if legacyTarget || (state.PairRole == "" && state.PrimaryCatalogSerial == 0) {
 		pairAddressesMatch = state.PairLocalIP == "" && state.PairPeerIP == ""
 	}
-	catalogSerialMatches := state.PrimaryCatalogSerial == journal.PrimaryCatalogSerial ||
+	catalogSerialMatches := (journal.Schema == SwitchJournalSchemaV3 && journal.PDNSFreshPlan != nil && journal.PDNSFreshPlan.Native != nil && state.PrimaryCatalogSerial == journal.PDNSFreshPlan.Native.Observed.NativeSerial) ||
+		state.PrimaryCatalogSerial == journal.PrimaryCatalogSerial ||
 		(legacyTarget && state.PrimaryCatalogSerial == 0)
 	// A reinstall repairs the same tenure and writes its original switch mode.
 	journalTenureMode := journal.Mode

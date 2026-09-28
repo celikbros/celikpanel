@@ -215,13 +215,20 @@ func (p *Panel) writeDomainDeletionPending(
 ) {
 	log.Printf("domain deletion pending for %s at %s: %v", domain, stage, cause)
 	p.audit(r, "domain.delete.pending:"+domain+":"+stage, "domain", domainID)
-	w.WriteHeader(http.StatusAccepted)
-	_ = json.NewEncoder(w).Encode(map[string]string{
+	response := map[string]string{
 		"status":  domainDeletionPendingStatus,
 		"domain":  domain,
 		"stage":   stage,
 		"message": "Deletion is incomplete but retryable. Retry this deletion.",
-	})
+	}
+	if stage == "dns_cleanup" {
+		if guidance, ok := dnsPeerPendingAPIError(cause); ok {
+			response["reason"] = guidance.Reason
+			response["message"] = guidance.Error
+		}
+	}
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // removeDomainDNSForDeletion first commits the local PowerDNS-zone removal.

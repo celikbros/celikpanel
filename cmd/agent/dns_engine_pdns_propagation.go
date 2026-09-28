@@ -12,19 +12,32 @@ import (
 type pdnsControlRunner func(context.Context, ...string) error
 
 type pdnsV3PropagationPlan struct {
-	Primary  bool
-	Legacy   bool
-	Evidence dnsPrimaryCatalogEvidence
-	Changed  expectedDNSZoneAuthority
+	State     dnsEngineStateReceipt
+	Primary   bool
+	Legacy    bool
+	Evidence  dnsPrimaryCatalogEvidence
+	Changed   expectedDNSZoneAuthority
+	Operation dnsV3DeletionOperation
+}
+
+// The exact accepted V3 mutation is carried from its durable zone receipt.
+// Native peer proof is unavailable unless all of these fields are verified.
+type dnsV3DeletionOperation struct {
+	RequestID  string
+	OwnerID    string
+	Generation int64
+	Qualifier  string
 }
 
 // dnsV3PrimaryPropagationPlan is engine-neutral durable authority evidence for
 // one primary-side V3 mutation. Both managed BIND and PowerDNS must prove this
 // exact catalog/member state at the peer before reporting terminal success.
 type dnsV3PrimaryPropagationPlan struct {
-	Evidence dnsPrimaryCatalogEvidence
-	Changed  expectedDNSZoneAuthority
-	Legacy   bool
+	SourceState dnsEngineStateReceipt
+	Evidence    dnsPrimaryCatalogEvidence
+	Changed     expectedDNSZoneAuthority
+	Legacy      bool
+	Operation   dnsV3DeletionOperation
 }
 
 func trustedPDNSControl(ctx context.Context, args ...string) error {
@@ -48,6 +61,7 @@ func prepareManagedPDNSV3Propagation(
 	ctx context.Context,
 	zone transport.DNSEngineSwitchZoneSnapshot,
 	state dnsEngineStateReceipt,
+	binding transport.ServiceMutationBinding,
 ) (pdnsV3PropagationPlan, error) {
 	expected, err := expectedDNSZoneAuthorities(
 		[]transport.DNSEngineSwitchZoneSnapshot{zone},
@@ -61,7 +75,13 @@ func prepareManagedPDNSV3Propagation(
 			errors.New("PowerDNS paired primary evidence is unavailable")
 	}
 	plan := pdnsV3PropagationPlan{
-		Primary: primary, Evidence: evidence, Changed: expected[0],
+		State: state, Primary: primary, Evidence: evidence, Changed: expected[0],
+		Operation: dnsV3DeletionOperation{
+			RequestID:  binding.MutationRequestID,
+			OwnerID:    binding.MutationOwnerID,
+			Generation: zone.DesiredGeneration,
+			Qualifier:  zone.ZoneQualifier,
+		},
 	}
 	if primary && state.PairRole == `` {
 		if state.PrimaryCatalogSerial != 0 {
@@ -128,9 +148,10 @@ func preparePDNSV3PropagationAt(
 
 func validatePDNSPrimaryPropagationPlan(plan pdnsV3PropagationPlan) error {
 	return validateDNSV3PrimaryPropagationPlan(dnsV3PrimaryPropagationPlan{
-		Evidence: plan.Evidence,
-		Changed:  plan.Changed,
-		Legacy:   plan.Legacy,
+		Evidence:  plan.Evidence,
+		Changed:   plan.Changed,
+		Legacy:    plan.Legacy,
+		Operation: plan.Operation,
 	})
 }
 
@@ -170,9 +191,11 @@ func completePDNSV3Propagation(
 		return nil
 	}
 	err := completeDNSV3PrimaryPropagation(ctx, dnsV3PrimaryPropagationPlan{
-		Evidence: plan.Evidence,
-		Changed:  plan.Changed,
-		Legacy:   plan.Legacy,
+		SourceState: plan.State,
+		Evidence:    plan.Evidence,
+		Changed:     plan.Changed,
+		Legacy:      plan.Legacy,
+		Operation:   plan.Operation,
 	})
 	return dnsZoneV3RecoveryPending(err)
 }
@@ -181,10 +204,38 @@ func completeDNSV3PrimaryPropagation(
 	ctx context.Context,
 	plan dnsV3PrimaryPropagationPlan,
 ) error {
-	return completeDNSV3PrimaryPropagationAt(
+	return completeDNSV3PrimaryPropagationWithNativeAt(
+		ctx, plan, probeDNSZoneSOA, probeDNSPDNSCatalogAXFR,
+		probeDNSBoundPDNSCatalogAXFR, probeDNSBoundZoneAXFR,
+		verifyEnrolledDNSPeerDeletion,
+	)
+}
+
+// A managed BIND primary may use one explicitly owner-enrolled native BIND or
+// PowerDNS secondary inspector when parent-authoritative deletion proof is unavailable.
+// A PowerDNS primary uses the same strict authenticated native fallback.
+func completeBINDDNSV3PrimaryPropagation(
+	ctx context.Context,
+	plan dnsV3PrimaryPropagationPlan,
+) error {
+	return completeDNSV3PrimaryPropagationWithNativeAt(
 		ctx, plan, probeDNSZoneSOA, probeDNSCatalogAXFR,
 		probeDNSBoundCatalogAXFR, probeDNSBoundZoneAXFR,
+		verifyEnrolledDNSPeerDeletion,
 	)
+}
+
+// Select by the frozen source engine, never by the daemon answering the AXFR:
+// a BIND secondary preserves the PowerDNS producer's catalog PTR names/TTLs.
+func catalogAXFRProbesForSourceEngine(engine transport.DNSEngine) (dnsCatalogAXFRProbe, dnsBoundCatalogAXFRProbe, error) {
+	switch engine {
+	case transport.DNSEngineBIND:
+		return probeDNSCatalogAXFR, probeDNSBoundCatalogAXFR, nil
+	case transport.DNSEnginePowerDNS:
+		return probeDNSPDNSCatalogAXFR, probeDNSBoundPDNSCatalogAXFR, nil
+	default:
+		return nil, nil, errors.New("DNS catalog producer engine is unavailable")
+	}
 }
 
 func completeDNSV3PrimaryPropagationAt(
@@ -195,19 +246,69 @@ func completeDNSV3PrimaryPropagationAt(
 	peerCatalogAXFR dnsBoundCatalogAXFRProbe,
 	peerZoneAXFR dnsBoundZoneAXFRProbe,
 ) error {
+	return completeDNSV3PrimaryPropagationWithNativeAt(ctx, plan, soa, localAXFR, peerCatalogAXFR, peerZoneAXFR, nil)
+}
+
+func completeDNSV3PrimaryPropagationWithNativeAt(
+	ctx context.Context,
+	plan dnsV3PrimaryPropagationPlan,
+	soa dnsZoneSOAProbe,
+	localAXFR dnsCatalogAXFRProbe,
+	peerCatalogAXFR dnsBoundCatalogAXFRProbe,
+	peerZoneAXFR dnsBoundZoneAXFRProbe,
+	native dnsNativePeerDeletionProof,
+) error {
 	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()
+	// One completion wave may retry ordinary DNS observations while the peer
+	// catches up, but it mints at most one durable native challenge and opens
+	// at most one SSH inspection. A later owner retry is a new ledger attempt.
+	nativeAttempted := false
+	var nativePending error
+	nativeOnce := native
+	if native != nil {
+		nativeOnce = func(ctx context.Context, authority dnsPeerAXFRAuthority, plan dnsV3PrimaryPropagationPlan) error {
+			if nativeAttempted {
+				return errors.New("native peer inspection was already attempted for this completion")
+			}
+			nativeAttempted = true
+			raw := native(ctx, authority, plan)
+			if raw == nil {
+				return nil
+			}
+			code := pendingDNSPeerCode(raw)
+			if code == "" {
+				code = transport.DNSPeerPendingNativeUnknown
+			}
+			nativePending = pendingBINDPeer(code)
+			return nativePending
+		}
+	}
 	for {
-		check, err := verifyDNSV3PrimaryPropagationCheckAt(
-			proofCtx, plan, soa, localAXFR, peerCatalogAXFR, peerZoneAXFR,
+		check, err := verifyDNSV3PrimaryPropagationCheckWithNativeAt(
+			proofCtx, plan, soa, localAXFR, peerCatalogAXFR, peerZoneAXFR, nativeOnce,
 		)
 		if err == nil {
 			return nil
 		}
+		if nativePending != nil {
+			// One authenticated inspection is permitted per completion wave.
+			// Once it is inconclusive, later DNS retries cannot repeat that
+			// challenge and must not replace its reviewed reason with a
+			// different final check just before the deadline.
+			return errors.Join(
+				fmt.Errorf("paired DNS deletion is unverified (check=%s); the peer administrator must check native zone state and DNS access, then retry verification of the same operation", dnsV3ProofNativePeer),
+				nativePending,
+			)
+		}
 		select {
 		case <-proofCtx.Done():
 			if plan.Changed.Delete {
-				return fmt.Errorf("paired DNS deletion is unverified (check=%s); the peer administrator must check native zone state and DNS access, then retry verification of the same operation", check)
+				reason := fmt.Errorf("paired DNS deletion is unverified (check=%s); the peer administrator must check native zone state and DNS access, then retry verification of the same operation", check)
+				if check == dnsV3ProofNativePeer && nativePending != nil {
+					return errors.Join(reason, nativePending)
+				}
+				return reason
 			}
 			return fmt.Errorf("paired DNS primary propagation did not converge (check=%s)", check)
 		case <-time.After(250 * time.Millisecond):
@@ -228,9 +329,10 @@ func verifyPDNSV3PropagationAt(
 	return verifyDNSV3PrimaryPropagationAt(
 		ctx,
 		dnsV3PrimaryPropagationPlan{
-			Evidence: plan.Evidence,
-			Changed:  plan.Changed,
-			Legacy:   plan.Legacy,
+			Evidence:  plan.Evidence,
+			Changed:   plan.Changed,
+			Legacy:    plan.Legacy,
+			Operation: plan.Operation,
 		},
 		soa, localAXFR, peerCatalogAXFR, peerZoneAXFR,
 	)
@@ -243,6 +345,7 @@ const (
 	dnsV3ProofCatalogPair  dnsV3ProofCheck = "catalog_pair"
 	dnsV3ProofZoneTransfer dnsV3ProofCheck = "peer_zone_transfer"
 	dnsV3ProofZoneSOA      dnsV3ProofCheck = "peer_zone_soa"
+	dnsV3ProofNativePeer   dnsV3ProofCheck = "peer_native_zone"
 	dnsV3ProofVerified     dnsV3ProofCheck = "verified"
 )
 
@@ -262,6 +365,10 @@ func verifyDNSV3PrimaryPropagationAt(
 
 // The fixed check identifies the proof boundary without putting probe errors,
 // peer output, addresses, or other untrusted material in the pending operation.
+type dnsNativePeerDeletionProof func(
+	context.Context, dnsPeerAXFRAuthority, dnsV3PrimaryPropagationPlan,
+) error
+
 func verifyDNSV3PrimaryPropagationCheckAt(
 	ctx context.Context,
 	plan dnsV3PrimaryPropagationPlan,
@@ -269,6 +376,23 @@ func verifyDNSV3PrimaryPropagationCheckAt(
 	localAXFR dnsCatalogAXFRProbe,
 	peerCatalogAXFR dnsBoundCatalogAXFRProbe,
 	peerZoneAXFR dnsBoundZoneAXFRProbe,
+) (dnsV3ProofCheck, error) {
+	return verifyDNSV3PrimaryPropagationCheckWithNativeAt(
+		ctx, plan, soa, localAXFR, peerCatalogAXFR, peerZoneAXFR, nil,
+	)
+}
+
+// An optional native peer proof can close the parentless REFUSED case.
+// The production callback is fail-closed unless the owner enrolled a pinned
+// inspector and the current V3 runtime retains exact durable authority.
+func verifyDNSV3PrimaryPropagationCheckWithNativeAt(
+	ctx context.Context,
+	plan dnsV3PrimaryPropagationPlan,
+	soa dnsZoneSOAProbe,
+	localAXFR dnsCatalogAXFRProbe,
+	peerCatalogAXFR dnsBoundCatalogAXFRProbe,
+	peerZoneAXFR dnsBoundZoneAXFRProbe,
+	native dnsNativePeerDeletionProof,
 ) (dnsV3ProofCheck, error) {
 	if err := validateDNSV3PrimaryPropagationPlan(plan); err != nil {
 		return dnsV3ProofPlan, err
@@ -295,13 +419,27 @@ func verifyDNSV3PrimaryPropagationCheckAt(
 	); err != nil {
 		return dnsV3ProofZoneTransfer, err
 	}
-	// An AXFR refusal alone can also mean that a still-loaded zone denies
-	// transfer. Require independent authoritative negative SOA answers over
-	// both transports before calling a peer deletion complete.
-	if err := verifyDeletedDNSZoneAt(
+	// An AXFR refusal alone can also mean a still-loaded zone denies transfer.
+	// Require parent-negative SOA on both transports, or empty REFUSED plus an
+	// independently authenticated native loaded-zone inspection. Contradictory
+	// positive DNS answers never reach the native fallback.
+	observation, err := observeDeletedDNSZoneAt(
 		ctx, authority.sourceIP, authority.peerIP, plan.Changed.Domain, soa,
-	); err != nil {
+	)
+	if err != nil {
 		return dnsV3ProofZoneSOA, err
+	}
+	if observation == dnsDeletedZoneEmptyRefused {
+		if native == nil {
+			return dnsV3ProofZoneSOA, errors.New("peer native deletion proof is not configured")
+		}
+		if err := native(ctx, authority, plan); err != nil {
+			code := pendingDNSPeerCode(err)
+			if code == "" {
+				code = transport.DNSPeerPendingNativeUnknown
+			}
+			return dnsV3ProofNativePeer, pendingBINDPeer(code)
+		}
 	}
 	return dnsV3ProofVerified, nil
 }
@@ -338,18 +476,53 @@ func verifyDeletedDNSZoneAt(
 	source, address, domain string,
 	probe dnsZoneSOAProbe,
 ) error {
+	state, err := observeDeletedDNSZoneAt(ctx, source, address, domain, probe)
+	if err != nil || state != dnsDeletedZoneParentNegative {
+		return errors.New("peer DNS zone removal is unverified; check the peer native zone and query access, then verify the same operation")
+	}
+	return nil
+}
+
+type dnsDeletedZoneSOAState uint8
+
+const (
+	dnsDeletedZoneUnknown dnsDeletedZoneSOAState = iota
+	dnsDeletedZoneParentNegative
+	dnsDeletedZoneEmptyRefused
+)
+
+// observeDeletedDNSZoneAt distinguishes an authoritative parent-negative
+// answer from BIND's normal empty REFUSED for a removed parentless zone. A
+// REFUSED result is never sufficient by itself: a separate authenticated
+// native peer observation must prove that the exact zone is unloaded.
+func observeDeletedDNSZoneAt(
+	ctx context.Context,
+	source, address, domain string,
+	probe dnsZoneSOAProbe,
+) (dnsDeletedZoneSOAState, error) {
 	if probe == nil || !canonicalPairReadinessIPv4(source) ||
 		!canonicalPairReadinessIPv4(address) || source == address ||
 		!serviceMutationCanonicalFQDN(domain) {
-		return errors.New("deleted DNS zone proof identity is invalid")
+		return dnsDeletedZoneUnknown, errors.New("deleted DNS zone proof identity is invalid")
 	}
+	state := dnsDeletedZoneParentNegative
 	for _, network := range []string{"udp", "tcp"} {
 		probeCtx, cancel := context.WithTimeout(ctx, dnsProbeTimeout)
 		result, err := probe(probeCtx, network, address, domain)
 		cancel()
-		if err != nil || result.LocalIP != source || !validDeletedDNSZoneProof(domain, result) {
-			return errors.New("peer DNS zone removal is unverified; check the peer native zone and query access, then verify the same operation")
+		if err != nil || result.LocalIP != source {
+			return dnsDeletedZoneUnknown, errors.New("peer DNS zone response is unavailable or unbound")
 		}
+		if validDeletedDNSZoneProof(domain, result) {
+			continue
+		}
+		if result.RCode == dnsRCodeRefused && !result.Authoritative &&
+			result.AnswerCount == 0 && len(result.SOASerials) == 0 &&
+			len(result.AnswerSOAOwners) == 0 && len(result.AuthoritySOAOwners) == 0 {
+			state = dnsDeletedZoneEmptyRefused
+			continue
+		}
+		return dnsDeletedZoneUnknown, errors.New("peer DNS zone returned a contradictory or unverifiable answer")
 	}
-	return nil
+	return state, nil
 }

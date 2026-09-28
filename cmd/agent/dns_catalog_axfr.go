@@ -22,9 +22,11 @@ const (
 	dnsTypeAXFR               = 252
 	dnsCatalogAXFRTTL         = 60
 	dnsCatalogMemberLabelSize = 56
-	dnsCatalogAXFRMaxBytes    = 16 << 20
-	dnsCatalogAXFRMaxMessages = 4096
-	dnsCatalogAXFRMaxMembers  = 65536
+	// PowerDNS 4.9 emits a 32-character base32hex catalog member identifier.
+	dnsPDNSCatalogMemberLabelSize = 32
+	dnsCatalogAXFRMaxBytes        = 16 << 20
+	dnsCatalogAXFRMaxMessages     = 4096
+	dnsCatalogAXFRMaxMembers      = 65536
 )
 
 type dnsCatalogAXFRResult struct {
@@ -32,11 +34,19 @@ type dnsCatalogAXFRResult struct {
 	Members []string
 }
 
+type dnsCatalogAXFRProducer uint8
+
+const (
+	dnsCatalogAXFRBIND dnsCatalogAXFRProducer = iota
+	dnsCatalogAXFRPowerDNS
+)
+
 type dnsCatalogAXFRProbe func(
 	context.Context, string, string,
 ) (dnsCatalogAXFRResult, error)
 
 var probeDNSCatalogAXFR dnsCatalogAXFRProbe = queryDNSCatalogAXFR
+var probeDNSPDNSCatalogAXFR dnsCatalogAXFRProbe = queryDNSPDNSCatalogAXFR
 
 type dnsBoundCatalogAXFRProbe func(
 	context.Context, string, string, string,
@@ -57,8 +67,9 @@ type dnsBoundZoneAXFRProbe func(
 ) (dnsZoneAXFRState, error)
 
 var (
-	probeDNSBoundCatalogAXFR dnsBoundCatalogAXFRProbe = queryDNSBoundCatalogAXFR
-	probeDNSBoundZoneAXFR    dnsBoundZoneAXFRProbe    = queryDNSBoundZoneAXFR
+	probeDNSBoundCatalogAXFR     dnsBoundCatalogAXFRProbe = queryDNSBoundCatalogAXFR
+	probeDNSBoundPDNSCatalogAXFR dnsBoundCatalogAXFRProbe = queryDNSBoundPDNSCatalogAXFR
+	probeDNSBoundZoneAXFR        dnsBoundZoneAXFRProbe    = queryDNSBoundZoneAXFR
 )
 
 func buildDNSCatalogAXFRQuery(domain string) ([]byte, uint16, error) {
@@ -83,7 +94,13 @@ func queryDNSCatalogAXFR(
 	ctx context.Context,
 	address, catalog string,
 ) (dnsCatalogAXFRResult, error) {
-	return queryDNSCatalogAXFRFrom(ctx, "", address, catalog)
+	return queryDNSCatalogAXFRFrom(ctx, "", address, catalog, dnsCatalogAXFRBIND)
+}
+
+func queryDNSPDNSCatalogAXFR(
+	ctx context.Context, address, catalog string,
+) (dnsCatalogAXFRResult, error) {
+	return queryDNSCatalogAXFRFrom(ctx, "", address, catalog, dnsCatalogAXFRPowerDNS)
 }
 
 func queryDNSBoundCatalogAXFR(
@@ -94,12 +111,23 @@ func queryDNSBoundCatalogAXFR(
 		!canonicalPairReadinessIPv4(address) || source == address {
 		return dnsCatalogAXFRResult{}, errors.New("peer catalog AXFR identity is invalid")
 	}
-	return queryDNSCatalogAXFRFrom(ctx, source, address, catalog)
+	return queryDNSCatalogAXFRFrom(ctx, source, address, catalog, dnsCatalogAXFRBIND)
+}
+
+func queryDNSBoundPDNSCatalogAXFR(
+	ctx context.Context, source, address, catalog string,
+) (dnsCatalogAXFRResult, error) {
+	if !canonicalPairReadinessIPv4(source) ||
+		!canonicalPairReadinessIPv4(address) || source == address {
+		return dnsCatalogAXFRResult{}, errors.New("peer catalog AXFR identity is invalid")
+	}
+	return queryDNSCatalogAXFRFrom(ctx, source, address, catalog, dnsCatalogAXFRPowerDNS)
 }
 
 func queryDNSCatalogAXFRFrom(
 	ctx context.Context,
 	source, address, catalog string,
+	producer dnsCatalogAXFRProducer,
 ) (dnsCatalogAXFRResult, error) {
 	if !serviceMutationCanonicalFQDN(catalog) {
 		return dnsCatalogAXFRResult{}, errors.New("BIND catalog AXFR identity is invalid")
@@ -111,7 +139,7 @@ func queryDNSCatalogAXFRFrom(
 		return dnsCatalogAXFRResult{}, err
 	}
 	defer connection.Close()
-	return readDNSCatalogAXFR(connection, id, catalog)
+	return readDNSCatalogAXFRWithProducer(connection, id, catalog, producer)
 }
 
 func readDNSCatalogAXFR(
@@ -119,7 +147,13 @@ func readDNSCatalogAXFR(
 	id uint16,
 	catalog string,
 ) (dnsCatalogAXFRResult, error) {
-	state, err := newDNSCatalogAXFRState(id, catalog)
+	return readDNSCatalogAXFRWithProducer(reader, id, catalog, dnsCatalogAXFRBIND)
+}
+
+func readDNSCatalogAXFRWithProducer(
+	reader io.Reader, id uint16, catalog string, producer dnsCatalogAXFRProducer,
+) (dnsCatalogAXFRResult, error) {
+	state, err := newDNSCatalogAXFRStateWithProducer(id, catalog, producer)
 	if err != nil {
 		return dnsCatalogAXFRResult{}, err
 	}
@@ -326,6 +360,7 @@ func skipDNSResourceRecord(message []byte, offset int) (string, int, error) {
 type dnsCatalogAXFRState struct {
 	id           uint16
 	catalog      string
+	producer     dnsCatalogAXFRProducer
 	questionSeen bool
 	opened       bool
 	closed       bool
@@ -338,12 +373,20 @@ type dnsCatalogAXFRState struct {
 }
 
 func newDNSCatalogAXFRState(id uint16, catalog string) (*dnsCatalogAXFRState, error) {
+	return newDNSCatalogAXFRStateWithProducer(id, catalog, dnsCatalogAXFRBIND)
+}
+
+func newDNSCatalogAXFRStateWithProducer(id uint16, catalog string, producer dnsCatalogAXFRProducer) (*dnsCatalogAXFRState, error) {
+	if producer != dnsCatalogAXFRBIND && producer != dnsCatalogAXFRPowerDNS {
+		return nil, errors.New("catalog AXFR producer is invalid")
+	}
 	if !serviceMutationCanonicalFQDN(catalog) {
 		return nil, errors.New("BIND catalog AXFR identity is invalid")
 	}
 	return &dnsCatalogAXFRState{
 		id:           id,
 		catalog:      catalog,
+		producer:     producer,
 		recordOwners: make(map[string]bool),
 		members:      make(map[string]bool),
 	}, nil
@@ -403,7 +446,12 @@ func (state *dnsCatalogAXFRState) parseMessage(message []byte) error {
 		if end < rdataOffset || end > len(message) {
 			return errors.New("BIND catalog AXFR record exceeds its message")
 		}
-		if recordClass != dnsClassIN || ttl != dnsCatalogAXFRTTL {
+		expectedTTL := uint32(dnsCatalogAXFRTTL)
+		if state.producer == dnsCatalogAXFRPowerDNS &&
+			(recordType == dnsTypeTXT || recordType == dnsTypePTR) {
+			expectedTTL = 0
+		}
+		if recordClass != dnsClassIN || ttl != expectedTTL {
 			return errors.New("BIND catalog AXFR record class or TTL is not exact")
 		}
 		if !state.opened && recordType != dnsTypeSOA {
@@ -463,7 +511,7 @@ func (state *dnsCatalogAXFRState) parseMessage(message []byte) error {
 			member := strings.TrimSuffix(memberRaw, ".")
 			if err != nil || memberEnd != end || memberRaw != member+"." ||
 				!serviceMutationCanonicalFQDN(member) || member == state.catalog ||
-				!exactDNSCatalogMemberOwner(owner, state.catalog, member) {
+				!state.exactMemberOwner(owner, member) {
 				return errors.New("BIND catalog AXFR member PTR is not exact")
 			}
 			if state.members[member] {
@@ -484,6 +532,26 @@ func (state *dnsCatalogAXFRState) parseMessage(message []byte) error {
 		return errors.New("BIND catalog AXFR response contains trailing bytes")
 	}
 	return nil
+}
+
+func (state *dnsCatalogAXFRState) exactMemberOwner(owner, member string) bool {
+	if state.producer == dnsCatalogAXFRBIND {
+		return exactDNSCatalogMemberOwner(owner, state.catalog, member)
+	}
+	suffix := ".zones." + state.catalog
+	if !strings.HasSuffix(owner, suffix) {
+		return false
+	}
+	label := strings.TrimSuffix(owner, suffix)
+	if len(label) != dnsPDNSCatalogMemberLabelSize || strings.Contains(label, ".") {
+		return false
+	}
+	for _, value := range []byte(label) {
+		if (value < '0' || value > '9') && (value < 'a' || value > 'v') {
+			return false
+		}
+	}
+	return true
 }
 
 func (state *dnsCatalogAXFRState) claimRecordOwner(owner string) error {

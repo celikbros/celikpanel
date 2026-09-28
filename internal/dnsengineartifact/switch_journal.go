@@ -24,16 +24,21 @@ import (
 // Consumers must separately prove the accepted ledger binding, host ownership,
 // native target state and unchanged source under the mutation lock.
 const (
-	SwitchJournalSchemaV1     = "celikpanel-dns-engine-switch-journal/v1"
-	SwitchJournalLimit        = 96 << 20
-	SwitchPhaseIntent         = "intent"
-	SwitchPhaseTargetStaged   = "target-staged"
-	SwitchPhaseSourceStopped  = "source-stopped"
-	SwitchPhaseTargetStarted  = "target-started"
-	SwitchPhaseTargetVerified = "target-verified"
-	SwitchPhaseCommitted      = "committed"
-	SwitchPhaseRollingBack    = "rolling-back"
-	SwitchPhaseRolledBack     = "rolled-back"
+	SwitchJournalSchemaV1              = "celikpanel-dns-engine-switch-journal/v1"
+	SwitchJournalSchemaV2              = "celikpanel-dns-engine-switch-journal/v2"
+	SwitchJournalSchemaV3              = "celikpanel-dns-engine-switch-journal/v3"
+	SwitchJournalSchemaV4              = "celikpanel-dns-engine-switch-journal/v4"
+	SwitchJournalLimit                 = 96 << 20
+	SwitchPhaseIntent                  = "intent"
+	SwitchPhaseTargetStaged            = "target-staged"
+	SwitchPhaseSourceStopped           = "source-stopped"
+	SwitchPhaseTargetEnableIntent      = "target-enable-intent"
+	SwitchPhaseTargetStarted           = "target-started"
+	SwitchPhaseTargetVerified          = "target-verified"
+	SwitchPhaseCommitted               = "committed"
+	SwitchPhaseRollingBack             = "rolling-back"
+	SwitchPhaseRollingBackTargetEnable = "rolling-back-target-enable"
+	SwitchPhaseRolledBack              = "rolled-back"
 )
 
 // JournalPolicy is supplied by a trusted host adapter, never by journal content.
@@ -90,6 +95,36 @@ type UnitSnapshot struct {
 	UnitFileState string `json:"unit_file_state"`
 }
 
+// BINDSwitchInversePlanV2 freezes the exact post-write configuration before
+// the first BIND config effect. Its digest binds the full immutable journal,
+// not just these files. A v1 journal has no inverse plan.
+type BINDSwitchInversePlanV2 struct {
+	Kind                string                     `json:"kind"`
+	HostLayout          string                     `json:"host_layout"`
+	ConfigAfter         []FileSnapshot             `json:"config_after"`
+	BINDUnchangedConfig []FileSnapshot             `json:"bind_unchanged_config,omitempty"`
+	SourcePDNS          *PDNSSourceProofV2         `json:"source_pdns,omitempty"`
+	SourceBIND          *BINDAdoptionSourceProofV1 `json:"source_bind,omitempty"`
+	Digest              string                     `json:"digest"`
+}
+
+// PDNSSourceProofV2 freezes the source that must remain available after a
+// PowerDNS-to-BIND switch. Recovery observes this database and never restores it.
+type PDNSSourceProofV2 struct {
+	Kind         string                    `json:"kind"`
+	ConfigBefore []FileSnapshot            `json:"config_before"`
+	Database     PDNSSourceDatabaseProofV1 `json:"database"`
+}
+
+type PDNSSourceDatabaseProofV1 struct {
+	Path          string `json:"path"`
+	LogicalSHA256 string `json:"logical_sha256"`
+	Mode          uint32 `json:"mode"`
+	UID           uint32 `json:"uid"`
+	GID           uint32 `json:"gid"`
+	Device        uint64 `json:"device"`
+	Inode         uint64 `json:"inode"`
+}
 type SwitchJournalV1 struct {
 	Schema               string                                  `json:"schema"`
 	Phase                string                                  `json:"phase"`
@@ -116,6 +151,9 @@ type SwitchJournalV1 struct {
 	HadPrevious          bool                                    `json:"had_previous_generation"`
 	StateBefore          FileSnapshot                            `json:"state_before"`
 	ConfigBefore         []FileSnapshot                          `json:"config_before"`
+	InversePlan          *BINDSwitchInversePlanV2                `json:"inverse_plan,omitempty"`
+	PDNSTargetPlan       *PDNSTargetInversePlanV4                `json:"pdns_target_plan,omitempty"`
+	PDNSFreshPlan        *PDNSFreshPrimaryPlanV3                 `json:"pdns_fresh_plan,omitempty"`
 	TargetUnitsBefore    []UnitSnapshot                          `json:"target_units_before"`
 	SourceUnitsBefore    []UnitSnapshot                          `json:"source_units_before"`
 	PDNSCandidatePath    string                                  `json:"pdns_candidate_path,omitempty"`
@@ -129,9 +167,9 @@ type SwitchJournalV1 struct {
 func ValidSwitchPhase(value string) bool {
 	switch value {
 	case SwitchPhaseIntent, SwitchPhaseTargetStaged,
-		SwitchPhaseSourceStopped, SwitchPhaseTargetStarted,
+		SwitchPhaseSourceStopped, SwitchPhaseTargetEnableIntent, SwitchPhaseTargetStarted,
 		SwitchPhaseTargetVerified, SwitchPhaseCommitted,
-		SwitchPhaseRollingBack, SwitchPhaseRolledBack:
+		SwitchPhaseRollingBack, SwitchPhaseRollingBackTargetEnable, SwitchPhaseRolledBack:
 		return true
 	default:
 		return false
@@ -253,7 +291,8 @@ func (policy JournalPolicy) ValidateSwitchJournal(journal SwitchJournalV1) error
 	if err := policy.Validate(); err != nil {
 		return err
 	}
-	if journal.Schema != SwitchJournalSchemaV1 || !ValidSwitchPhase(journal.Phase) ||
+	if (journal.Schema != SwitchJournalSchemaV1 && journal.Schema != SwitchJournalSchemaV2 && journal.Schema != SwitchJournalSchemaV3 && journal.Schema != SwitchJournalSchemaV4) ||
+		!ValidSwitchPhase(journal.Phase) ||
 		(journal.Mode != transport.DNSEngineSwitchModeSwitch &&
 			journal.Mode != transport.DNSEngineSwitchModeAdopt &&
 			journal.Mode != transport.DNSEngineSwitchModeReinstall) ||
@@ -261,6 +300,28 @@ func (policy JournalPolicy) ValidateSwitchJournal(journal SwitchJournalV1) error
 		!servicemutationledger.ValidIdentity(journal.MutationOwnerID) ||
 		!mutationpayload.ValidDNSEngineSwitchQualifier(journal.ManifestQualifier) {
 		return errors.New("DNS engine switch journal identity is invalid")
+	}
+	if journal.Schema != SwitchJournalSchemaV4 && journal.Schema != SwitchJournalSchemaV3 && (journal.Phase == SwitchPhaseTargetEnableIntent || journal.Phase == SwitchPhaseRollingBackTargetEnable) {
+		return errors.New("PowerDNS enable-intent checkpoint requires a V3 or V4 journal")
+	}
+	if journal.Schema == SwitchJournalSchemaV1 && (journal.InversePlan != nil || journal.PDNSTargetPlan != nil || journal.PDNSFreshPlan != nil) {
+		return errors.New("v1 DNS switch journal contains v2 inverse evidence")
+	}
+	if journal.Schema == SwitchJournalSchemaV2 {
+		if journal.InversePlan == nil || journal.PDNSTargetPlan != nil || journal.PDNSFreshPlan != nil {
+			return errors.New("v2 DNS switch journal lacks its immutable inverse plan")
+		}
+		if journal.TargetEngine != transport.DNSEngineBIND ||
+			journal.Mode != transport.DNSEngineSwitchModeSwitch {
+			return errors.New("v2 DNS switch journal has no supported BIND inverse")
+		}
+	}
+	if journal.Schema == SwitchJournalSchemaV4 && (journal.PDNSTargetPlan == nil || journal.InversePlan != nil || journal.PDNSFreshPlan != nil ||
+		journal.Mode != transport.DNSEngineSwitchModeSwitch || journal.TargetEngine != transport.DNSEnginePowerDNS) {
+		return errors.New("v4 DNS switch journal lacks its isolated PowerDNS target plan")
+	}
+	if journal.Schema == SwitchJournalSchemaV3 && (journal.PDNSFreshPlan == nil || journal.InversePlan != nil || journal.PDNSTargetPlan != nil) {
+		return errors.New("v3 DNS switch journal lacks its fresh PowerDNS target plan")
 	}
 	commitment, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
 		journal.Mode,
@@ -357,7 +418,11 @@ func (policy JournalPolicy) ValidateSwitchJournal(journal SwitchJournalV1) error
 		if journal.TargetGeneration != "" || journal.HadPrevious || journal.PreviousGeneration != "" {
 			return errors.New("PowerDNS switch journal contains BIND generation state")
 		}
-		if journal.PDNSCandidatePath != filepath.Clean(policy.pdnsCandidatePath(journal.MutationRequestID)) ||
+		wantCandidate := policy.pdnsCandidatePath(journal.MutationRequestID)
+		if journal.Schema == SwitchJournalSchemaV4 || journal.Schema == SwitchJournalSchemaV3 {
+			wantCandidate = policy.pdnsCandidatePathV4(journal.MutationRequestID)
+		}
+		if journal.PDNSCandidatePath != filepath.Clean(wantCandidate) ||
 			journal.PDNSBackupPath != filepath.Clean(policy.pdnsBackupPath(journal.MutationRequestID)) {
 			return errors.New("PowerDNS switch journal staging paths are invalid")
 		}
@@ -399,7 +464,16 @@ func (policy JournalPolicy) ValidateSwitchJournal(journal SwitchJournalV1) error
 		!UnitSnapshotNamesEqual(journal.SourceUnitsBefore, wantSource) {
 		return errors.New("DNS engine switch journal unit snapshot set is incomplete")
 	}
-	return nil
+	if journal.Schema == SwitchJournalSchemaV1 {
+		return nil
+	}
+	if journal.Schema == SwitchJournalSchemaV4 {
+		return policy.ValidatePDNSTargetInversePlanV4(journal)
+	}
+	if journal.Schema == SwitchJournalSchemaV3 {
+		return policy.ValidatePDNSFreshPrimaryPlanV3(journal)
+	}
+	return policy.ValidateBINDSwitchInversePlanV2(journal)
 }
 
 func (policy JournalPolicy) ValidatePDNSAdoptionJournal(journal SwitchJournalV1) error {

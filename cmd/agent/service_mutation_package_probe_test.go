@@ -13,7 +13,8 @@ import (
 // Native mail acceptance retains the real package-manager and readiness probes.
 // Its test entrypoint separately refuses non-QEMU or installed-panel hosts.
 func TestMain(m *testing.M) {
-	if os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "debian13-20260911" {
+	nativeV3 := runtime.GOOS == "linux" && os.Getenv("CELIKPANEL_V3_NATIVE_TRIAL") == "pdns-switch__intent__after-write__paired-primary__peer-reachable"
+	if !nativeV3 && os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "debian13-20260911" {
 		packageManagerMutationBusyProbe = func() (bool, error) { return false, nil }
 	}
 	// The same isolation, for the other thing these tests read off the machine:
@@ -36,7 +37,7 @@ func TestMain(m *testing.M) {
 	// acilisinin bitip bitmedigi. On test dosyasi yoneticiyi bu sekilde yeniden
 	// yukluyor; onlari tek tek sabitlemek, bu kod tabaninin surekli buldugu
 	// hatanin ayni olurdu. Varsayilan burada, bir kez.
-	if os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "debian13-20260911" {
+	if !nativeV3 && os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "debian13-20260911" {
 		hostRecoveryProbe = func() (hostRecoveryReadiness, error) { return hostRecoveryDecideNow, nil }
 	}
 	// Unit tests exercise the mutation coordinator on portability builds, where

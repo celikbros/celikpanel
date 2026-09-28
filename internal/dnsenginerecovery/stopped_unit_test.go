@@ -93,3 +93,39 @@ func TestVerifyStoppedUnitRequiresTwoExactNativeObservations(t *testing.T) {
 		t.Fatalf("cancelled native observation was accepted: %v", err)
 	}
 }
+
+func TestVerifyStoppedPDNSPersistentMaskRequiresExactStableNativeEvidence(t *testing.T) {
+	sealed := StoppedUnitObservation{Name: "pdns.service", LoadState: "masked", ActiveState: "inactive", UnitFileState: "masked", SubState: "dead"}
+	reads := 0
+	if err := VerifyStoppedPDNSPersistentMask(context.Background(), func(context.Context) (StoppedUnitObservation, error) {
+		reads++
+		return sealed, nil
+	}); err != nil || reads != 2 {
+		t.Fatalf("sealed stop proof err=%v reads=%d", err, reads)
+	}
+	for _, change := range []func(*StoppedUnitObservation){
+		func(s *StoppedUnitObservation) { s.LoadState = "loaded" },
+		func(s *StoppedUnitObservation) { s.UnitFileState = "masked-runtime" },
+		func(s *StoppedUnitObservation) { s.ActiveState = "active" },
+		func(s *StoppedUnitObservation) { s.MainPID = 7 },
+		func(s *StoppedUnitObservation) { s.ControlPID = 9 },
+		func(s *StoppedUnitObservation) { s.SubState = "stop-sigterm" },
+	} {
+		seen := sealed
+		change(&seen)
+		if err := VerifyStoppedPDNSPersistentMask(context.Background(), func(context.Context) (StoppedUnitObservation, error) { return seen, nil }); err == nil {
+			t.Fatalf("unsafe masked unit accepted: %+v", seen)
+		}
+	}
+	reads = 0
+	if err := VerifyStoppedPDNSPersistentMask(context.Background(), func(context.Context) (StoppedUnitObservation, error) {
+		reads++
+		seen := sealed
+		if reads == 2 {
+			seen.UnitFileState = "masked-runtime"
+		}
+		return seen, nil
+	}); err == nil {
+		t.Fatal("mask changed between observations")
+	}
+}

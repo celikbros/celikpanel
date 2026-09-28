@@ -325,3 +325,13 @@ func TestBINDRollbackRetainsFinalCheckpointForTerminalLedger(t *testing.T) {
 		t.Fatalf("BIND rollback checkpoint order=%v phase=%q err=%v", phases, journal.Phase, err)
 	}
 }
+
+func TestBINDAdoptionCompensationRefusesOwnerSourceEditBeforeWrite(t *testing.T) {
+	before := dnsFileSnapshot{Path: "/etc/bind/named.conf.local"}
+	err := rollbackBINDConfigWrites(bindConfigOwnerPolicy{}, []bindConfigWriteReceipt{{before: before, after: before}}, nil, func() error {
+		return errors.New("frozen owner zone changed")
+	})
+	if err == nil || !strings.Contains(err.Error(), "frozen owner zone changed") {
+		t.Fatalf("compensation wrote after source changed: %v", err)
+	}
+}

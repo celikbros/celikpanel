@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 )
 
 const dnsKillMatrixHelperProcessEnv = "CELIKPANEL_DNS_KILL_MATRIX_TEST_HELPER"
@@ -108,6 +110,154 @@ func TestDNSKillMatrixConfigFromEnvironment(t *testing.T) {
 	preIntent[dnsKillMatrixEnvPhase] = dnsKillMatrixPreIntentPhase
 	if _, active, err := dnsKillMatrixConfigFromEnvironment(testDNSKillMatrixLookup(preIntent)); !active || err != nil {
 		t.Fatalf("pre-intent selector active=%v err=%v", active, err)
+	}
+}
+
+func TestDNSKillMatrixLaterBINDBoundaryIsExplicitAndExact(t *testing.T) {
+	values := testDNSKillMatrixEnvironment(filepath.Join(t.TempDir(), "boundary.json"))
+	values[dnsKillMatrixEnvCellID] = dnsKillMatrixBindHandoffCell
+	values[dnsKillMatrixEnvDriver] = dnsEngineSwitchFaultDriverBIND
+	values[dnsKillMatrixEnvPoint] = dnsEngineSwitchJournalFaultAfterWrite
+	values[dnsKillMatrixEnvPhase] = dnsSwitchPhaseRollingBack
+	values[dnsKillMatrixEnvRollbackPrecursor] = dnsSwitchPhaseTargetStarted
+	config, active, err := dnsKillMatrixConfigFromEnvironment(testDNSKillMatrixLookup(values))
+	if err != nil || !active || config.RollbackPrecursor != dnsSwitchPhaseTargetStarted {
+		t.Fatalf("later BIND selector = (%+v, %v, %v)", config, active, err)
+	}
+	spec, required := dnsKillMatrixRollbackPrecursorFor(config)
+	if !required || spec.Point != dnsEngineSwitchJournalFaultAfterWrite ||
+		spec.Phase != dnsSwitchPhaseTargetStarted {
+		t.Fatalf("later BIND precursor = (%+v, %v)", spec, required)
+	}
+	for _, change := range []struct{ key, value string }{
+		{dnsKillMatrixEnvCellID, "bind__rolling-back__before-write__standalone__peer-reachable"},
+		{dnsKillMatrixEnvDriver, dnsEngineSwitchFaultDriverPDNSSwitch},
+		{dnsKillMatrixEnvPoint, dnsEngineSwitchJournalFaultBeforeWrite},
+		{dnsKillMatrixEnvPhase, dnsSwitchPhaseRolledBack},
+		{dnsKillMatrixEnvRollbackPrecursor, dnsSwitchPhaseTargetStaged},
+		{dnsKillMatrixEnvRollbackPrecursor, ""},
+	} {
+		bad := cloneDNSKillMatrixEnvironment(values)
+		bad[change.key] = change.value
+		if _, active, err := dnsKillMatrixConfigFromEnvironment(testDNSKillMatrixLookup(bad)); !active || err == nil {
+			t.Fatalf("nonexact later BIND selector %s=%s active=%v err=%v", change.key, change.value, active, err)
+		}
+	}
+	bad := cloneDNSKillMatrixEnvironment(values)
+	for key := range bad {
+		if key != dnsKillMatrixEnvRollbackPrecursor {
+			delete(bad, key)
+		}
+	}
+	if _, active, err := dnsKillMatrixConfigFromEnvironment(testDNSKillMatrixLookup(bad)); !active || err == nil {
+		t.Fatalf("isolated optional selector active=%v err=%v", active, err)
+	}
+	delete(values, dnsKillMatrixEnvRollbackPrecursor)
+	config, active, err = dnsKillMatrixConfigFromEnvironment(testDNSKillMatrixLookup(values))
+	if err != nil || !active || config.RollbackPrecursor != "" {
+		t.Fatalf("default BIND selector = (%+v, %v, %v)", config, active, err)
+	}
+	spec, required = dnsKillMatrixRollbackPrecursorFor(config)
+	if !required || spec.Phase != dnsSwitchPhaseTargetStaged {
+		t.Fatalf("default BIND precursor = (%+v, %v)", spec, required)
+	}
+}
+
+func TestDNSKillMatrixLaterBINDRequiresV2SourceProofBeforeFault(t *testing.T) {
+	config := dnsKillMatrixConfig{
+		CellID:            dnsKillMatrixBindHandoffCell,
+		Driver:            dnsEngineSwitchFaultDriverBIND,
+		Point:             dnsEngineSwitchJournalFaultAfterWrite,
+		Phase:             dnsSwitchPhaseRollingBack,
+		RequestID:         strings.Repeat("1", 32),
+		RollbackPrecursor: dnsSwitchPhaseTargetStarted,
+	}
+	runtime := &dnsKillMatrixRuntime{config: config}
+	journal := dnsEngineSwitchJournal{
+		Schema:            dnsEngineSwitchJournalSchema,
+		Phase:             dnsSwitchPhaseTargetStarted,
+		MutationRequestID: config.RequestID,
+		SourceEngine:      "pdns",
+	}
+	for _, selected := range []struct {
+		name    string
+		journal dnsEngineSwitchJournal
+	}{
+		{"legacy v1", journal},
+		{"v2 without inverse source", func() dnsEngineSwitchJournal {
+			copy := journal
+			copy.Schema = dnsengineartifact.SwitchJournalSchemaV2
+			return copy
+		}()},
+		{"v2 incomplete source envelope", func() dnsEngineSwitchJournal {
+			copy := journal
+			copy.Schema = dnsengineartifact.SwitchJournalSchemaV2
+			copy.InversePlan = &dnsengineartifact.BINDSwitchInversePlanV2{
+				SourcePDNS: &dnsengineartifact.PDNSSourceProofV2{},
+			}
+			return copy
+		}()},
+	} {
+		t.Run(selected.name, func(t *testing.T) {
+			err := runtime.validateObservation(
+				config.Driver, config.Point, selected.journal, "rollback precursor",
+			)
+			if err == nil || !strings.Contains(err.Error(), "V2 frozen PowerDNS or owner BIND source proof") {
+				t.Fatalf("unproved later BIND source error = %v", err)
+			}
+		})
+	}
+}
+
+func TestDNSKillMatrixLaterBINDAcceptsOnlyBoundedOwnerSourceEnvelope(t *testing.T) {
+	journal := dnsEngineSwitchJournal{
+		Schema: dnsengineartifact.SwitchJournalSchemaV2,
+		Mode:   "switch", TargetEngine: "bind", TargetEpoch: 1,
+		Topology:     "standalone",
+		ConfigBefore: make([]dnsengineartifact.FileSnapshot, 2),
+		InversePlan: &dnsengineartifact.BINDSwitchInversePlanV2{
+			BINDUnchangedConfig: make([]dnsengineartifact.FileSnapshot, 2),
+			SourceBIND: &dnsengineartifact.BINDAdoptionSourceProofV1{
+				Files: []dnsengineartifact.BINDAdoptionSourceFileV1{{Path: "/etc/bind/db.owner.test"}},
+				Zones: []dnsengineartifact.BINDAdoptionSourceZoneV1{{Name: "owner.test"}},
+			},
+		},
+	}
+	if !dnsKillMatrixLaterBINDFrozenSourceProof(journal) {
+		t.Fatal("exact owner BIND envelope was refused before full V2 validation")
+	}
+	config := dnsKillMatrixConfig{Driver: dnsEngineSwitchFaultDriverBIND,
+		Point:             dnsEngineSwitchJournalFaultAfterWrite,
+		RollbackPrecursor: dnsSwitchPhaseTargetStarted,
+	}
+	if err := (&dnsKillMatrixRuntime{config: config}).validateObservation(
+		config.Driver, config.Point, journal, "rollback precursor",
+	); err == nil {
+		t.Fatal("incomplete owner BIND source bypassed full V2 validation")
+	}
+	for _, tc := range []struct {
+		name string
+		edit func(*dnsEngineSwitchJournal)
+	}{
+		{"source-pdns", func(j *dnsEngineSwitchJournal) { j.InversePlan.SourcePDNS = &dnsengineartifact.PDNSSourceProofV2{} }},
+		{"missing-source-file", func(j *dnsEngineSwitchJournal) { j.InversePlan.SourceBIND.Files = nil }},
+		{"managed-state", func(j *dnsEngineSwitchJournal) { j.StateBefore.Exists = true }},
+		{"source-epoch", func(j *dnsEngineSwitchJournal) { j.SourceEpoch = 1 }},
+		{"source-revision", func(j *dnsEngineSwitchJournal) { j.SourceRevision = 1 }},
+		{"pair-identity", func(j *dnsEngineSwitchJournal) { j.LocalIP = "192.0.2.10" }},
+		{"paired", func(j *dnsEngineSwitchJournal) { j.Topology = "paired" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			unsafe := journal
+			plan := *journal.InversePlan
+			proof := *plan.SourceBIND
+			plan.SourceBIND = &proof
+			unsafe.InversePlan = &plan
+			tc.edit(&unsafe)
+			if dnsKillMatrixLaterBINDFrozenSourceProof(unsafe) {
+				t.Fatal("incomplete owner BIND envelope was accepted")
+			}
+		})
 	}
 }
 

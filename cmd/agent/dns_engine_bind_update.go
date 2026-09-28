@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -668,6 +669,12 @@ func recoverDNSEngineSwitchJournalForSignedUpdate(
 	}
 	if err := validateDNSEngineSwitchJournal(firstJournal); err != nil {
 		return false, fmt.Errorf("validate signed-update DNS engine switch journal: %w", err)
+	}
+	if firstJournal.Schema == dnsengineartifact.SwitchJournalSchemaV4 {
+		return false, errors.New("active v4 PowerDNS target journal cannot be reconciled by signed-update recovery; preserve it for exact owner recovery")
+	}
+	if firstJournal.Schema == dnsengineartifact.SwitchJournalSchemaV2 {
+		return false, errors.New("active v2 BIND switch journal cannot be reconciled by this signed-update recovery; preserve it for exact owner recovery")
 	}
 	if firstJournal.Phase == dnsSwitchPhaseCommitted {
 		return recoverCommittedDNSEngineSwitchJournalForSignedUpdate(

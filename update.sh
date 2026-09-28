@@ -2146,6 +2146,10 @@ preflight_completion_material_admission
 if [[ $release_marker_count -eq 0 ]]; then
     [[ -z $RECOVERY_RUNTIME_ROOT ]] \
         || die "independent recovery cannot initiate a new update"
+    # Reject a stale or conflicting source sequence before promotion of the
+    # separately retained recovery runtime can change host recovery bytes.
+    # The later check still re-proves the foundation immediately before intent.
+    preflight_release_recovery_foundation
     prepare_independent_recovery_runtime
     # The candidate sequence/commit and every already-bound foundation byte
     # are proven before guard/drop-in publication can change the host.

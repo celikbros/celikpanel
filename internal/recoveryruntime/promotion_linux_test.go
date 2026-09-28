@@ -4,6 +4,7 @@ package recoveryruntime
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"golang.org/x/sys/unix"
 )
 
@@ -55,6 +57,42 @@ func promotionFixture(t *testing.T, root string) (promotionPaths, string, string
 	}
 	return paths, old, target
 }
+func promotionActiveV2JournalFixture(t *testing.T, root string) {
+	t.Helper()
+	if err := os.Mkdir(root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	golden, err := os.ReadFile(filepath.Join("..", "dnsengineartifact", "testdata", "switch-journal", "v2-bind-apt.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var journal dnsengineartifact.SwitchJournalV1
+	if err := json.Unmarshal(golden, &journal); err != nil {
+		t.Fatal(err)
+	}
+	after := journal.InversePlan.ConfigAfter
+	journal.Schema = dnsengineartifact.SwitchJournalSchemaV1
+	journal.InversePlan = nil
+	journal.StateBefore.Path = filepath.Join(root, "dns-engine-state.json")
+	policy := dnsengineartifact.JournalPolicy{
+		StatePath: journal.StateBefore.Path, StateUID: 0, StateGID: 0, RequireOwner: true,
+		PDNSMainPath:     "/etc/powerdns/pdns.conf",
+		PDNSManagedPath:  "/etc/powerdns/pdns.d/celikpanel.conf",
+		PDNSClusterPath:  "/etc/powerdns/pdns.d/celikpanel-cluster.conf",
+		PDNSDatabasePath: "/var/lib/powerdns/pdns.sqlite3",
+	}
+	planned, err := policy.BuildBINDSwitchInverseJournalV2(journal, "apt", after)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wire, err := policy.EncodeSwitchJournal(planned)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "dns-engine-switch-journal.json"), wire, 0600); err != nil {
+		t.Fatal(err)
+	}
+}
 func acceptPromotionCheck(string, string) error { return nil }
 func fixtureIdentity(t *testing.T, path string) unix.Stat_t {
 	t.Helper()
@@ -85,7 +123,7 @@ func TestPromotionInheritedLock(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("native root fixture")
 	}
-	cases := []string{"success", "same-target", "next-promotion", "bad-checker", "bad-source", "active", "no-lock", "pending-enroll", "foreign-target", "owner-selector", "owner-launcher", "corrupt-old-kit", "corrupt-target-kit", "corrupt-intent", "orphan-receipt", "unknown-journal", "unsafe-journal", "bad-stage", "history-isolated", "resume-rechecks", "active-handoff", "completion-handoff", "ambiguous-handoff", "foreign-fd", "launcher-xattr", "selector-xattr", "replay-xattr", "owner-acquire", "owner-foreign-fd", "owner-epoll-fd", "owner-busy-foreign-fd", "owner-active-foreign-fd", "unknown-transaction", "retired-loss"}
+	cases := []string{"success", "active-dns-v2", "active-dns-v2-resume", "same-target", "next-promotion", "bad-checker", "bad-source", "active", "no-lock", "pending-enroll", "foreign-target", "owner-selector", "owner-launcher", "corrupt-old-kit", "corrupt-target-kit", "corrupt-intent", "orphan-receipt", "unknown-journal", "unsafe-journal", "bad-stage", "history-isolated", "resume-rechecks", "active-handoff", "completion-handoff", "ambiguous-handoff", "foreign-fd", "launcher-xattr", "selector-xattr", "replay-xattr", "owner-acquire", "owner-foreign-fd", "owner-epoll-fd", "owner-busy-foreign-fd", "owner-active-foreign-fd", "unknown-transaction", "retired-loss"}
 	for _, scenario := range cases {
 		t.Run(scenario, func(t *testing.T) {
 			root, err := os.MkdirTemp("/run", "celikpanel-promotion-test-")
@@ -118,6 +156,14 @@ func TestPromotionChild(t *testing.T) {
 	}
 	paths, _, target := promotionFixture(t, root)
 	scenario := os.Getenv("CP_PROMOTION_CASE")
+	if scenario == "active-dns-v2" || scenario == "active-dns-v2-resume" {
+		previous := promotionDNSJournalRoot
+		promotionDNSJournalRoot = filepath.Join(root, "dns-private")
+		defer func() { promotionDNSJournalRoot = previous }()
+		if scenario == "active-dns-v2" {
+			promotionActiveV2JournalFixture(t, promotionDNSJournalRoot)
+		}
+	}
 	if status, err := inspectPromotionAt(paths); err != nil || status.Phase != "none" {
 		t.Fatal("initial observation", status, err)
 	}
@@ -155,7 +201,24 @@ func TestPromotionChild(t *testing.T) {
 		checker = func(string, string) error { return fail(ReasonUnsupported) }
 	}
 	oldLauncher = fixtureIdentity(t, paths.launcher)
-	if scenario == "no-lock" || scenario == "active" || scenario == "bad-source" || scenario == "bad-checker" || scenario == "launcher-xattr" || scenario == "selector-xattr" || scenario == "unknown-transaction" {
+	if scenario == "active-dns-v2-resume" {
+		err := promoteAt(request, 9, paths, func(phase string) {
+			if phase == "intent_published" {
+				promotionActiveV2JournalFixture(t, promotionDNSJournalRoot)
+			}
+		}, checker)
+		if !errors.Is(err, errPromotionActiveDNSV2) {
+			t.Fatalf("pre-exchange resume did not refuse v2: %v", err)
+		}
+		if !bytes.Equal(oldSelection, readFixture(t, paths.selection)) || !sameFile(oldLauncher, fixtureIdentity(t, paths.launcher)) {
+			t.Fatal("entry changed on pre-exchange refusal")
+		}
+		if err := resumePromotionAt(9, paths, nil, checker); !errors.Is(err, errPromotionActiveDNSV2) {
+			t.Fatalf("retry consumed active v2 journal: %v", err)
+		}
+		return
+	}
+	if scenario == "no-lock" || scenario == "active" || scenario == "active-dns-v2" || scenario == "bad-source" || scenario == "bad-checker" || scenario == "launcher-xattr" || scenario == "selector-xattr" || scenario == "unknown-transaction" {
 		if err := promoteAt(request, 9, paths, nil, checker); err == nil {
 			t.Fatal("unsafe promotion accepted")
 		}

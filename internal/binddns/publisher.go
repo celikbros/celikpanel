@@ -405,6 +405,19 @@ func (publisher *Publisher) LoadCurrent() (VerifiedTree, error) {
 	return tree, err
 }
 
+// LoadGeneration verifies one immutable generation independently of the current
+// pointer. Recovery uses this when a failed switch has already restored that
+// pointer while the target daemon may still be serving the staged generation.
+func (publisher *Publisher) LoadGeneration(id string) (VerifiedTree, error) {
+	if !validDigest(id) {
+		return VerifiedTree{}, errors.New("invalid BIND generation identity")
+	}
+	publisher.mu.Lock()
+	defer publisher.mu.Unlock()
+	tree, _, _, err := publisher.readGeneration(path.Join(publisher.root, "generations", id), id)
+	return tree, err
+}
+
 // Current returns the verified generation ID selected by the current symlink.
 func (publisher *Publisher) Current() (string, bool, error) {
 	publisher.mu.Lock()

@@ -568,6 +568,7 @@ func TestDNSEngineSwitchJournalFaultHookBracketsDurableWrite(t *testing.T) {
 	got := strings.Join(events, ",")
 	want := strings.Join([]string{
 		dnsEngineSwitchJournalFaultBeforeWrite,
+		"read",
 		"persist",
 		dnsEngineSwitchJournalFaultAfterWrite,
 		"read",
@@ -610,12 +611,13 @@ func TestDNSEngineSwitchJournalFaultHookBracketsAcceptedPersistError(t *testing.
 	got := strings.Join(events, ",")
 	want := strings.Join([]string{
 		dnsEngineSwitchJournalFaultBeforeWrite,
+		"read",
 		"persist",
 		"read",
 		dnsEngineSwitchJournalFaultAfterWrite,
 	}, ",")
-	if got != want || readCalls != 1 {
-		t.Fatalf("accepted persist-error events = %q reads=%d, want %q/1", got, readCalls, want)
+	if got != want || readCalls != 2 {
+		t.Fatalf("accepted persist-error events = %q reads=%d, want %q/2", got, readCalls, want)
 	}
 }
 
@@ -646,6 +648,7 @@ func TestDNSEngineSwitchJournalFaultHookRejectsPersistErrorMismatch(t *testing.T
 	got := strings.Join(events, ",")
 	want := strings.Join([]string{
 		dnsEngineSwitchJournalFaultBeforeWrite,
+		"read",
 		"persist",
 		"read",
 	}, ",")
@@ -690,14 +693,14 @@ func TestDNSEngineSwitchJournalFaultHookFailureOrdering(t *testing.T) {
 			if !errors.Is(err, injected) {
 				t.Fatalf("journal boundary error = %v, want injected sentinel", err)
 			}
-			wantPersist, wantExists := 0, false
+			wantPersist, wantRead, wantExists := 0, 0, false
 			if point == dnsEngineSwitchJournalFaultAfterWrite {
-				wantPersist, wantExists = 1, true
+				wantPersist, wantRead, wantExists = 1, 1, true
 			}
-			if persistCalls != wantPersist || readCalls != 0 || exists != wantExists {
+			if persistCalls != wantPersist || readCalls != wantRead || exists != wantExists {
 				t.Fatalf(
-					"boundary %s left persist=%d read=%d exists=%v, want %d/0/%v",
-					point, persistCalls, readCalls, exists, wantPersist, wantExists,
+					"boundary %s left persist=%d read=%d exists=%v, want %d/%d/%v",
+					point, persistCalls, readCalls, exists, wantPersist, wantRead, wantExists,
 				)
 			}
 		})
@@ -709,6 +712,7 @@ func TestDNSEngineSwitchJournalAfterWritePreservesRollbackPrecursorSentinel(
 ) {
 	journal := testBINDSwitchJournal(t)
 	persisted := false
+	reads := 0
 	err := writeDNSEngineSwitchJournalWithOps(
 		journal,
 		func([]byte) error {
@@ -716,7 +720,10 @@ func TestDNSEngineSwitchJournalAfterWritePreservesRollbackPrecursorSentinel(
 			return nil
 		},
 		func() (dnsEngineSwitchJournal, bool, error) {
-			t.Fatal("after-write injection must return before journal readback")
+			reads++
+			if reads != 1 {
+				t.Fatal("after-write injection must return before journal readback")
+			}
 			return dnsEngineSwitchJournal{}, false, nil
 		},
 		func(point string, _ dnsEngineSwitchJournal) error {
@@ -729,8 +736,8 @@ func TestDNSEngineSwitchJournalAfterWritePreservesRollbackPrecursorSentinel(
 			return nil
 		},
 	)
-	if !persisted || !errors.Is(err, dnsEngineSwitchRollbackPrecursorError) {
-		t.Fatalf("persisted=%v error=%v, want durable sentinel", persisted, err)
+	if !persisted || reads != 1 || !errors.Is(err, dnsEngineSwitchRollbackPrecursorError) {
+		t.Fatalf("persisted=%v reads=%d error=%v, want durable sentinel", persisted, reads, err)
 	}
 }
 

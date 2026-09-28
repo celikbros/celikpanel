@@ -54,6 +54,22 @@ func TestDNSCgroupProofRequiresFixedEmptyNativeGroup(t *testing.T) {
 			absent := func(context.Context, string) ([]byte, error) {
 				return []byte("Id=" + name + "\nSlice=system.slice\nControlGroup=\n"), nil
 			}
+			masked := func(context.Context, string) ([]byte, error) {
+				return []byte("Id=" + name + "\nSlice=\nControlGroup=\n"), nil
+			}
+			noGroup := func(context.Context, string) ([]byte, bool, error) { return nil, false, nil }
+			if err := ProbeEmptyUnitCgroup(context.Background(), name, masked, noGroup); err != nil {
+				t.Fatalf("masked inactive unit with absent native cgroup refused: %v", err)
+			}
+			if err := ProbeEmptyUnitCgroup(context.Background(), name, masked, empty); err == nil {
+				t.Fatal("empty systemd identity accepted a present native cgroup")
+			}
+			foreignMasked := func(context.Context, string) ([]byte, error) {
+				return []byte("Id=" + name + "\nSlice=\nControlGroup=/system.slice/" + name + "\n"), nil
+			}
+			if err := ProbeEmptyUnitCgroup(context.Background(), name, foreignMasked, noGroup); err == nil {
+				t.Fatal("empty slice accepted a reported nonempty control group")
+			}
 			if err := ProbeEmptyUnitCgroup(context.Background(), name, absent,
 				func(context.Context, string) ([]byte, bool, error) { return nil, false, nil }); err != nil {
 				t.Fatal(err)

@@ -424,8 +424,10 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const publisherEndpoint = remoteDNSEndpoint(draft.dns_publisher_endpoint || '');
     const dnsSelectionError: TranslationKey | null = isDNS && draft.dns_mode !== 'local'
         ? 'setup.components.localDNSRequired'
-        : automaticPublisher && !publisherEndpoint
-            ? 'setup.publisher.endpointRequired' : null;
+        : draft.dns_mode === 'local' && draft.dns_role === 'primary' && draft.dns_engine === 'pdns'
+            ? 'setup.pdnsPrimaryPaused'
+            : automaticPublisher && !publisherEndpoint
+                ? 'setup.publisher.endpointRequired' : null;
     const isMail = ['postfix', 'dovecot', 'rspamd', 'roundcube'].some(id => selectedComponents.has(id));
     const isNode = selectedComponents.has('node');
     const nextPath = setupNextPath(snapshot.draft.purpose, customized ? selectedComponents : undefined);
@@ -543,7 +545,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                                 </fieldset>
                             </div>
                             {dnsNames.mismatch && <div role="alert" className="space-y-2 rounded-lg border border-warning-mark/40 bg-warning-mark/10 p-4 text-sm"><p>{t('setup.dnsMappingMismatch')}</p><p className="break-all">{t('setup.savedPeerName')}: {draft.peer_ns || '—'}</p><Button type="button" disabled={!draft[dnsNames.peerKey].trim()} onClick={() => change('peer_ns', draft[dnsNames.peerKey])}>{t('setup.useDisplayedPeer')}</Button></div>}
-                            <div className="max-w-sm"><SetupSelect name="dns_engine" label={t('setup.engine')} value={draft.dns_engine} onChange={value => change('dns_engine', value as 'bind' | 'pdns')}><option value="pdns">PowerDNS</option><option value="bind">BIND</option></SetupSelect></div>
+                            <div className="max-w-sm"><SetupSelect name="dns_engine" label={t('setup.engine')} value={draft.dns_engine} onChange={value => change('dns_engine', value as 'bind' | 'pdns')}><option value="bind">BIND</option><option value="pdns">PowerDNS</option></SetupSelect></div>
                             <p className="text-sm leading-6 text-fg-muted">{t('setup.dnsStartPrimary')}</p>
                             <details className="text-sm text-fg-muted"><summary className="cursor-pointer font-medium text-primary">{t('setup.dnsPairDetails')}</summary><p className="mt-3 leading-6">{t('setup.dnsPairOrder')}</p><p className="mt-3 leading-6">{t('setup.dnsNativePeerHelp')}</p></details>
                         </div>}

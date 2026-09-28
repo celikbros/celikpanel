@@ -66,7 +66,7 @@ type serverSetupState struct {
 }
 
 func defaultServerSetupDraft() serverSetupDraft {
-	return serverSetupDraft{Purpose: "web", DNSMode: "local", DNSEngine: "pdns", DNSRole: "primary", Database: "mariadb"}
+	return serverSetupDraft{Purpose: "web", DNSMode: "local", DNSEngine: "bind", DNSRole: "primary", Database: "mariadb"}
 }
 
 // Drafts may be incomplete; review validates the complete executable plan.
@@ -95,7 +95,7 @@ func canonicalServerSetupDraft(d serverSetupDraft) (serverSetupDraft, error) {
 		}
 	}
 	if d.DNSEngine == "" {
-		d.DNSEngine = "pdns"
+		d.DNSEngine = "bind"
 	}
 	if d.DNSRole == "" {
 		d.DNSRole = "primary"

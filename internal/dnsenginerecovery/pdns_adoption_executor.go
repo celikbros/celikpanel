@@ -133,7 +133,9 @@ func CompletePDNSAdoptionInverse(ctx context.Context, ops PDNSAdoptionInverseOps
 	if err := ops.RemoveJournal(ctx, final.Journal); err != nil {
 		return fmt.Errorf("retire exact DNS rollback journal: %w", err)
 	}
-	return ctx.Err()
+	// The terminal receipt is published and the exact journal retired. A
+	// cancellation after that final durable effect cannot be retried.
+	return nil
 }
 
 func activeDNSInverseStatus(status EvidenceStatus) bool {

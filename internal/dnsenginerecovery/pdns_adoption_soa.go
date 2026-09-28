@@ -149,3 +149,8 @@ func frozenAdoptionSOASerial(zone transport.DNSEngineSwitchZoneSnapshot) (uint32
 	}
 	return serial, nil
 }
+
+// FrozenSwitchSOASerial extracts the exact enabled apex SOA committed by a switch.
+func FrozenSwitchSOASerial(zone transport.DNSEngineSwitchZoneSnapshot) (uint32, error) {
+	return frozenAdoptionSOASerial(zone)
+}

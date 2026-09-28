@@ -195,6 +195,57 @@ release_recovery_publish_manifest "$SOURCE_ROOT" "$RUNNER" "$SERVICE" "$TIMER" \
 release_recovery_verify_foundation "$SOURCE_ROOT" "$RUNNER" "$SERVICE" "$TIMER" \
     "$START_GUARD" "$AGENT_DROPIN" "$PANEL_DROPIN" "$MANIFEST" "$SYSTEMCTL"
 
+# Run the actual early-update branch against the committed foundation. The
+# recovery runtime promotion is a sentinel effect here; the sequence comparison
+# uses the real installed manifest and trusted candidate source parser.
+python3 - "$REPO_ROOT/update.sh" "$TEST_ROOT/update-early-preflight.sh" <<'PY'
+from pathlib import Path
+import sys
+source = Path(sys.argv[1]).read_text()
+start = source.index('if [[ $release_marker_count -eq 0 ]]; then', source.index('preflight_completion_material_admission\n'))
+end = source.index('release_txn_clear_stale_start_authorization', start)
+Path(sys.argv[2]).write_text(source[start:end])
+PY
+eval "$(extract_function_source "$REPO_ROOT/update.sh" preflight_release_recovery_foundation)"
+run_early_candidate_branch() (
+    set -Eeuo pipefail
+    TRUSTED_RELEASE_ROOT=$SOURCE_ROOT
+    RELEASE_RECOVERY_RUNNER=$RUNNER
+    RELEASE_RECOVERY_UNIT=$SERVICE
+    RELEASE_RECOVERY_TIMER=$TIMER
+    RELEASE_TRANSACTION_HELPER=$START_GUARD
+    RELEASE_RECOVERY_AGENT_DROPIN=$AGENT_DROPIN
+    RELEASE_RECOVERY_PANEL_DROPIN=$PANEL_DROPIN
+    RELEASE_RECOVERY_MANIFEST=$MANIFEST
+    SYSTEMCTL_BIN=$SYSTEMCTL
+    release_marker_count=0
+    RELEASE_TRANSACTION_ROOT=$TEST_ROOT/early-transaction
+    RELEASE_TRANSACTION_RUNTIME_ROOT=$TEST_ROOT/early-runtime
+    RELEASE_TRANSACTION_FD=9
+    UNIT_DIR=$TEST_ROOT/etc/systemd/system
+    RECOVERY_RUNTIME_ROOT=
+    prepare_independent_recovery_runtime() { : >"$TEST_ROOT/early-runtime-promoted"; }
+    publish_release_recovery_intent() { : >"$TEST_ROOT/early-intent-published"; }
+    release_txn_install_and_verify_unit_guards() { : >"$TEST_ROOT/early-guards-installed"; }
+    publish_release_recovery_foundation() { : >"$TEST_ROOT/early-foundation-published"; }
+    die() { printf 'early candidate rejected: %s\n' "$*" >&2; exit 93; }
+    source "$TEST_ROOT/update-early-preflight.sh"
+)
+cp -- "$SOURCE_ROOT/deploy/release-sequence-policy" "$TEST_ROOT/original-sequence-policy"
+sed -i -e 's/^current=51$/current=50/' -e 's/^previous=50$/previous=49/' \
+    "$SOURCE_ROOT/deploy/release-sequence-policy"
+expect_failure stale-early-candidate run_early_candidate_branch
+grep -F 'foundation downgrade is refused' "$TEST_ROOT/stale-early-candidate.stderr" >/dev/null ||
+    fail 'stale update candidate was rejected for the wrong reason'
+for effect in early-runtime-promoted early-intent-published early-guards-installed early-foundation-published; do
+    [[ ! -e $TEST_ROOT/$effect ]] || fail "stale candidate reached $effect"
+done
+cp -- "$TEST_ROOT/original-sequence-policy" "$SOURCE_ROOT/deploy/release-sequence-policy"
+run_early_candidate_branch
+for effect in early-runtime-promoted early-intent-published early-guards-installed early-foundation-published; do
+    [[ -e $TEST_ROOT/$effect ]] || fail "valid candidate did not reach $effect"
+done
+printf 'PASS: stale source sequence stops before recovery runtime promotion\n'
 # Exercise both production commit callers, not only the post-publication
 # verifier.  Effective service or timer overrides must abort immediately after
 # daemon-reload and before any recovery enable/start/status action.

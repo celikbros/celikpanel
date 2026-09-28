@@ -37,9 +37,9 @@ import (
 // them. What it proves instead is the mirror image and is no weaker - the
 // running BIND is the vendor unit, it is the sole public port-53 authority on
 // this host, and the process that holds those sockets is the unit's own main
-// process. verifyOnlyBINDActive is that proof; it is the switch's post-start
-// proof, reused here before the mutation because a running adoption starts
-// where a switch finishes.
+// process. The adoption-specific proof accepts either Debian's exact vendor
+// bind9.service alias or its genuinely absent state while requiring the vendor
+// named.service and public listeners to remain exact before every mutation.
 //
 // Two decisions this file makes, and why.
 //
@@ -373,14 +373,9 @@ func captureBINDAdoptionRuntimeEvidence(
 		return bindAdoptionRuntimeEvidence{},
 			errors.New("BIND adoption runtime evidence requires a context")
 	}
-	if err := verifyOnlyBINDActive(ctx, profile, systemctl); err != nil {
-		return bindAdoptionRuntimeEvidence{}, fmt.Errorf(
-			"prove the adopted BIND is the only DNS authority on this host: %w", err,
-		)
-	}
 	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
 	defer cancel()
-	topology, err := inspectVerifiedBINDRuntimeTopology(proofCtx, profile, systemctl)
+	topology, err := captureAdoptedBINDRuntimeTopology(proofCtx, profile, systemctl)
 	if err != nil {
 		return bindAdoptionRuntimeEvidence{}, err
 	}
@@ -398,6 +393,16 @@ func captureBINDAdoptionRuntimeEvidence(
 	if len(listeners) == 0 {
 		return bindAdoptionRuntimeEvidence{},
 			errors.New("the adopted BIND holds no public port-53 listener")
+	}
+	stableListeners, err := adoptedBINDPublicListeners(
+		proofCtx, topology.namedProcesses.MainPID,
+	)
+	if err != nil {
+		return bindAdoptionRuntimeEvidence{}, err
+	}
+	if !reflect.DeepEqual(listeners, stableListeners) {
+		return bindAdoptionRuntimeEvidence{},
+			errors.New("the adopted BIND public listener set moved during proof")
 	}
 	return bindAdoptionRuntimeEvidence{topology: topology, listeners: listeners}, nil
 }
@@ -756,23 +761,44 @@ func rollbackRunningBINDAdoption(
 	evidence bindAdoptionRuntimeEvidence,
 	stateBefore dnsFileSnapshot,
 	targetBefore map[string]dnsUnitState,
+	sourceGuard ...func() error,
 ) error {
 	if ctx == nil {
 		return errors.New("rollback BIND adoption requires a bounded context")
+	}
+	guard := func() error {
+		if len(sourceGuard) != 0 && sourceGuard[0] != nil {
+			return sourceGuard[0]()
+		}
+		return nil
 	}
 	return rollbackRunningBINDAdoptionWithOps(bindAdoptionRollbackOps{
 		restoreConfigs: func() error {
 			return runBINDMutationWithMaskParentProof(
 				verifyBINDMaskParentMetadata,
-				func() error { return configs.restore(ctx) },
+				func() error {
+					if err := guard(); err != nil {
+						return err
+					}
+					if len(sourceGuard) != 0 && sourceGuard[0] != nil {
+						return restoreBINDAdoptionWithSourceGuard(ctx, configs, guard)
+					}
+					return configs.restore(ctx)
+				},
 			)
 		},
 		reload: func() error {
+			if err := guard(); err != nil {
+				return err
+			}
 			return reloadAdoptedBIND(
 				ctx, systemctl, "named.service", evidence.topology.namedProcesses,
 			)
 		},
 		verifyConfigs: func() error {
+			if err := guard(); err != nil {
+				return err
+			}
 			return verifyBINDConfigMutationPreimage(ctx, configs)
 		},
 		verifyRuntime: func() error {
@@ -938,6 +964,9 @@ func recoverRunningBINDAdoptionJournal(
 	systemctl string,
 	journal dnsEngineSwitchJournal,
 ) error {
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV2 {
+		return errors.New("v2 running BIND adoption requires selected independent no-stop recovery; preserve the journal and native service for owner recovery")
+	}
 	if ctx == nil {
 		return errors.New("recover BIND adoption requires a bounded context")
 	}
@@ -1048,7 +1077,27 @@ func verifyRestoredUnmanagedRunningBINDTarget(
 			)
 		}
 	}
-	return verifyOnlyBINDActive(ctx, profile, systemctl)
+	return verifyOnlyAdoptedBINDActive(ctx, profile, systemctl)
+}
+
+// Debian may have a serving named.service with no bind9.service alias. Neither
+// supported preimage needs a unit enable/disable effect during adoption.
+func validateBINDIndependentAdoptionUnitPreimage(units map[string]dnsUnitState) error {
+	named, namedOK := units["named.service"]
+	alias, aliasOK := units["bind9.service"]
+	if len(units) != 2 || !namedOK || !aliasOK ||
+		named.Name != "named.service" || named.LoadState != "loaded" ||
+		named.ActiveState != "active" || named.UnitFileState != "enabled" {
+		return errors.New("independent BIND adoption requires an active enabled named.service with an exact Debian alias preimage; the server owner must reconcile service state and retry")
+	}
+	presentAlias := alias.Name == "bind9.service" && alias.LoadState == "loaded" &&
+		alias.ActiveState == "active" && alias.UnitFileState == "enabled"
+	absentAlias := alias.Name == "bind9.service" && alias.LoadState == "not-found" &&
+		alias.ActiveState == "inactive" && alias.UnitFileState == ""
+	if !presentAlias && !absentAlias {
+		return errors.New("independent BIND adoption found an unsupported bind9.service alias state; the server owner must reconcile service state and retry")
+	}
+	return nil
 }
 
 func adoptRunningBIND(
@@ -1080,6 +1129,41 @@ func adoptRunningBIND(
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	if _, exists, err := readDNSEngineInstallOwnership(transport.DNSEngineBIND); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	} else if exists {
+		return transport.SwitchDNSEngineV1Response{}, errors.New(
+			"independent BIND adoption requires an absent install ownership receipt; the server owner must reconcile the existing receipt before retrying",
+		)
+	}
+	if _, exists, err := readDNSEngineOwnership(transport.DNSEnginePowerDNS); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	} else if exists {
+		return transport.SwitchDNSEngineV1Response{}, errors.New(
+			"independent BIND adoption requires absent PowerDNS ownership; the server owner must reconcile the existing receipt before retrying",
+		)
+	}
+	if _, exists, err := readDNSEngineInstallOwnership(transport.DNSEnginePowerDNS); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	} else if exists {
+		return transport.SwitchDNSEngineV1Response{}, errors.New(
+			"independent BIND adoption requires absent PowerDNS install ownership; the server owner must reconcile the existing receipt before retrying",
+		)
+	}
+	if profile.PackageManager != hostplatform.PackageManagerAPT ||
+		manifest.Topology != transport.DNSTopologyStandalone {
+		return transport.SwitchDNSEngineV1Response{}, errors.New(
+			"independent running BIND adoption currently supports only standalone Debian hosts; the server owner must keep the existing BIND configuration and use a supported recovery release before retrying",
+		)
+	}
+	verifyRecoveryRuntime, closeRecoveryRuntime, err := prepareBINDAdoptionIndependentRuntime(ctx)
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	defer closeRecoveryRuntime()
+	if err := verifyRecoveryRuntime(); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	if err := verifyBINDMaskParentMetadata(); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, fmt.Errorf(
 			"preflight BIND mask parent: %w", err,
@@ -1107,9 +1191,7 @@ func adoptRunningBIND(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := enableAdoptedBINDUnitIfNeeded(
-		ctx, systemctl, layout.Unit, targetBefore[layout.Unit],
-	); err != nil {
+	if err := validateBINDIndependentAdoptionUnitPreimage(targetBefore); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	evidence, err := captureBINDAdoptionRuntimeEvidence(ctx, profile, systemctl)
@@ -1148,21 +1230,11 @@ func adoptRunningBIND(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := publishDNSEngineSourceOwnership(
-		manifest, state, stateExists,
-	); err != nil {
-		return transport.SwitchDNSEngineV1Response{}, err
-	}
-	// The packages are already here; this mutation takes them under management
-	// without installing anything, and that is the AdoptedPresent provenance
-	// the stopped shape lands on too.
-	//
-	// Paketler zaten burada; bu mutasyon hiçbir şey kurmadan onları yönetimine
-	// alır ve bu, durmuş biçimin de indiği AdoptedPresent kökenidir.
-	if err := assumeExistingDNSEnginePackageOwnership(
-		transport.DNSEngineBIND, profile.PackageManager,
-		layout.Packages, manifest, binding,
-	); err != nil {
+	adoptionInstallReceipt, err := newDNSEngineInstallOwnership(
+		transport.DNSEngineBIND, profile.PackageManager, layout.Packages,
+		nil, manifest, binding,
+	)
+	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	var publisher *binddns.Publisher
@@ -1217,6 +1289,13 @@ func adoptRunningBIND(
 		TargetUnitsBefore: dnsUnitStateMapSnapshots(targetBefore),
 		SourceUnitsBefore: []dnsUnitSnapshot{},
 	}
+	journal, err = prepareBINDIndependentAdoptionJournal(ctx, profile, journal, configs, layout.MainConfig, evidence)
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if err := verifyRecoveryRuntime(); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	if err := validateDNSEngineSwitchJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1241,23 +1320,52 @@ func adoptRunningBIND(
 	// bu yüzden kurtarılacak başka bir şey yoktur.
 	if err := mutateBINDAdoptionAfterProof(
 		ctx, profile, systemctl, configs, evidence,
-		func() error { return writeJournal(journal) },
+		func() error {
+			if err := verifyRecoveryRuntime(); err != nil {
+				return err
+			}
+			if err := verifyBINDAdoptionFrozenSource(ctx, journal, evidence); err != nil {
+				return err
+			}
+			return writeJournal(journal)
+		},
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollbackAndJournal := func(rollbackCtx context.Context) error {
+		if err := verifyExactRunningBINDAdoptionInstall(adoptionInstallReceipt); err != nil {
+			return err
+		}
 		return runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
 			write: writeJournal,
 			rollback: func() error {
 				return rollbackRunningBINDAdoption(
 					rollbackCtx, profile, systemctl, configs, evidence,
 					stateBefore, targetBefore,
+					func() error {
+						if err := verifyRecoveryRuntime(); err != nil {
+							return err
+						}
+						if err := evidence.verify(rollbackCtx, profile, systemctl); err != nil {
+							return err
+						}
+						return verifyBINDAdoptionFrozenSource(rollbackCtx, journal, evidence)
+					},
 				)
 			},
 			verify: func() error {
-				return verifyRestoredRunningBINDAdoption(
+				if err := verifyRestoredRunningBINDAdoption(
 					rollbackCtx, profile, systemctl, configs, evidence,
-				)
+				); err != nil {
+					return err
+				}
+				if err := verifyRecoveryRuntime(); err != nil {
+					return err
+				}
+				if err := verifyBINDAdoptionFrozenSource(rollbackCtx, journal, evidence); err != nil {
+					return err
+				}
+				return retireExactRunningBINDAdoptionInstall(journal, adoptionInstallReceipt)
 			},
 		})
 	}
@@ -1267,12 +1375,39 @@ func adoptRunningBIND(
 		if attempt > 1 {
 			return rollbackAndJournal(applyCtx)
 		}
+		if err := verifyRecoveryRuntime(); err != nil {
+			return err
+		}
+		if err := verifyBINDAdoptionFrozenSource(applyCtx, journal, evidence); err != nil {
+			return err
+		}
+		if err := publishDNSEngineSourceOwnership(
+			manifest, state, stateExists,
+		); err != nil {
+			return err
+		}
+		// The packages are already here; this mutation takes them under management
+		// without installing anything, and that is the AdoptedPresent provenance
+		// the stopped shape lands on too.
+		//
+		// Paketler zaten burada; bu mutasyon hiçbir şey kurmadan onları yönetimine
+		// alır ve bu, durmuş biçimin de indiği AdoptedPresent kökenidir.
+		if err := publishNewRunningBINDAdoptionInstall(adoptionInstallReceipt); err != nil {
+			return err
+		}
 		if err := mutateBINDAdoptionAfterProof(
 			applyCtx, profile, systemctl, configs, evidence,
 			func() error {
 				return runBINDMutationWithMaskParentProof(
 					verifyBINDMaskParentMetadata,
-					func() error { return configs.apply(applyCtx) },
+					func() error {
+						return applyBINDAdoptionWithFrozenSource(applyCtx, configs, journal, evidence, func() error {
+							if err := verifyRecoveryRuntime(); err != nil {
+								return err
+							}
+							return evidence.verify(applyCtx, profile, systemctl)
+						})
+					},
 				)
 			},
 		); err != nil {
@@ -1301,6 +1436,15 @@ func adoptRunningBIND(
 		}
 		journal.Phase = dnsSwitchPhaseSourceStopped
 		if err := writeJournal(journal); err != nil {
+			return err
+		}
+		if err := verifyRecoveryRuntime(); err != nil {
+			return err
+		}
+		if err := verifyBINDAdoptionFrozenSource(applyCtx, journal, evidence); err != nil {
+			return err
+		}
+		if err := evidence.verify(applyCtx, profile, systemctl); err != nil {
 			return err
 		}
 		if err := reloadAdoptedBIND(

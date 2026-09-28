@@ -383,9 +383,13 @@ func primaryCatalogSerialFromSource(
 			probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
 		)
 	} else {
+		producerAXFR := probeDNSCatalogAXFR
+		if manifest.SourceEngine == transport.DNSEnginePowerDNS {
+			producerAXFR = probeDNSPDNSCatalogAXFR
+		}
 		verifyErr = verifyPrimaryCatalogHandoffEvidenceAt(
 			ctx, evidence, manifest, serial,
-			probeDNSZoneSOA, probeDNSCatalogAXFR,
+			probeDNSZoneSOA, producerAXFR,
 		)
 	}
 	if verifyErr != nil {
@@ -412,9 +416,13 @@ func verifyCompletedPrimaryCatalogTarget(
 	if err != nil {
 		return err
 	}
+	producerAXFR := probeDNSCatalogAXFR
+	if manifest.TargetEngine == transport.DNSEnginePowerDNS {
+		producerAXFR = probeDNSPDNSCatalogAXFR
+	}
 	return verifyPrimaryCatalogHandoffEvidenceAt(
 		ctx, evidence, manifest, state.PrimaryCatalogSerial,
-		probeDNSZoneSOA, probeDNSCatalogAXFR,
+		probeDNSZoneSOA, producerAXFR,
 	)
 }
 

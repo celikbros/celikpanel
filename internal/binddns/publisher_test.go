@@ -807,3 +807,30 @@ func TestPublisherKeepsVerifiedLocalRollbackServingWhenPeerIsUnverified(t *testi
 		t.Fatalf("current=%q exists=%v err=%v", current, exists, currentErr)
 	}
 }
+
+func TestLoadGenerationVerifiesTargetIndependentOfCurrent(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	generation := publisherGeneration(t, 1, "192.0.2.1")
+	if err := publisher.Stage(context.Background(), generation); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists, err := publisher.Current(); err != nil || exists {
+		t.Fatalf("unexpected selected generation: %v, %v", exists, err)
+	}
+	verified, err := publisher.LoadGeneration(generation.ID)
+	if err != nil || verified.CurrentReceipt().Generation != generation.ID {
+		t.Fatalf("independent generation proof: %v", err)
+	}
+	if _, exists, err := publisher.Current(); err != nil || exists {
+		t.Fatalf("load changed pointer: %v, %v", exists, err)
+	}
+	if _, err := publisher.LoadGeneration("../current"); err == nil {
+		t.Fatal("unsafe generation ID accepted")
+	}
+	base := "/var/lib/celikpanel/bind/generations/" + generation.ID
+	filesystem.nodes[base+"/zones.conf"].data = []byte("owner change")
+	if _, err := publisher.LoadGeneration(generation.ID); err == nil {
+		t.Fatal("modified immutable generation accepted")
+	}
+}

@@ -20,6 +20,7 @@ type AcquisitionV1 struct {
 	ManifestQualifier string              `json:"manifest_qualifier"`
 	MutationRequestID string              `json:"mutation_request_id"`
 	MutationOwnerID   string              `json:"mutation_owner_id"`
+	NativeCatalogV3   string              `json:"-"`
 }
 
 // PublicationV1 is changeable configuration evidence within that tenure. It

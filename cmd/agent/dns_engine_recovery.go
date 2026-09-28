@@ -184,7 +184,17 @@ func verifyDNSSwitchJournalTarget(
 				ctx, systemctl, manifest, journal, pdnsAdoptionEvidenceTarget,
 			)
 		}
-		if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		if journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+			if err := verifyFreshPDNSNativeVersionV3(ctx, profile); err != nil {
+				return err
+			}
+			if err := dnsenginerecovery.VerifyRecordedFreshPrimaryNativeV3(ctx, dnsJournalPolicy(), journal); err != nil {
+				return err
+			}
+			if err := verifyPDNSStateManifestReceipt(ctx, state); err != nil {
+				return err
+			}
+		} else if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
 			ctx, pdnsDBPath(), manifest, binding, journal.PrimaryCatalogSerial,
 		); err != nil {
 			return err
@@ -346,6 +356,21 @@ func rollbackDNSSwitchJournal(
 	ctx context.Context,
 	journal dnsEngineSwitchJournal,
 ) error {
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		return errors.New("v3 fresh PowerDNS primary requires independent native recovery; preserve the journal and target")
+	}
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV4 {
+		return errors.New("v4 PowerDNS target journal requires its independent inverse adapter; preserve the journal and native DNS for exact owner recovery")
+	}
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV2 {
+		if journal.InversePlan != nil && journal.InversePlan.SourceBIND != nil {
+			if journal.Phase == dnsengineartifact.SwitchPhaseRollingBack || journal.Phase == dnsengineartifact.SwitchPhaseRolledBack {
+				return fmt.Errorf("running BIND adoption needs independent no-stop recovery; the server owner must run /usr/libexec/celikpanel/recovery recover-dns-bind-adoption --request-id %s; preserve the journal, ledger and native DNS until that exact request is reconciled", journal.MutationRequestID)
+			}
+			return fmt.Errorf("running BIND adoption has no durable rollback decision at phase %s; preserve the journal, ledger and native DNS, then inspect the exact DNS switch status for request %s before choosing recovery", journal.Phase, journal.MutationRequestID)
+		}
+		return errors.New("v2 BIND switch journal requires its independent inverse adapter; preserve the journal and native DNS for owner recovery")
+	}
 	manifest, err := switchJournalManifest(journal)
 	if err != nil {
 		return err
@@ -763,11 +788,19 @@ func (hostDNSEngineBackend) RecoverSwitch(
 	binding transport.ServiceMutationBinding,
 ) (dnsEngineSwitchRecoveryOutcome, error) {
 	id := dnsengineartifact.SwitchIdentity{RequestID: binding.MutationRequestID, OwnerID: binding.MutationOwnerID, Target: target, Qualifier: qualifier}
+	if journal, exists, readErr := readDNSEngineSwitchJournal(); readErr != nil {
+		return dnsenginerecovery.OutcomeAbsent, readErr
+	} else if exists && journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		return recoverFreshPrimaryForwardV3(ctx, id, journal)
+	}
 	outcome, err := dnsenginerecovery.Reconcile(ctx, dnsJournalPolicy(), id, dnsenginerecovery.Operations{
 		Read: func(context.Context) (dnsengineartifact.SwitchJournalV1, bool, error) {
 			return readDNSEngineSwitchJournal()
 		},
 		ProveFinalized: func(context.Context, dnsengineartifact.SwitchIdentity) (bool, error) {
+			if proven, v3, err := exactArchivedFreshPrimaryProvenanceV3(ctx, target, qualifier, binding); v3 || err != nil {
+				return proven, err
+			}
 			return exactFinalizedDNSEngineSwitchProvenanceOnHost(target, qualifier, binding)
 		},
 		VerifyTarget:      verifyDNSSwitchJournalTarget,
@@ -797,6 +830,17 @@ var (
 )
 
 func finalizeCommittedDNSEngineSwitchArtifacts(journal dnsEngineSwitchJournal) error {
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		if journal.Phase != dnsSwitchPhaseCommitted || journal.PDNSFreshPlan == nil || journal.PDNSFreshPlan.Native == nil {
+			return errors.New("v3 retirement requires a committed native receipt")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), dnsRuntimeInspectionTimeout)
+		defer cancel()
+		if err := dnsenginerecovery.VerifyRecordedFreshPrimaryNativeV3(ctx, dnsJournalPolicy(), journal); err != nil {
+			return err
+		}
+		return verifyFreshPrimaryArtifactsAbsentV3(journal)
+	}
 	if journal.TargetEngine != transport.DNSEnginePowerDNS ||
 		journal.Mode != transport.DNSEngineSwitchModeSwitch {
 		return nil
@@ -820,9 +864,10 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 		return err
 	}
 	if !exists {
-		finalized, finalizedErr := exactFinalizedDNSEngineSwitchProvenanceOnHost(
-			target, qualifier, binding,
-		)
+		finalized, v3, finalizedErr := exactArchivedFreshPrimaryProvenanceV3(ctx, target, qualifier, binding)
+		if !v3 && finalizedErr == nil {
+			finalized, finalizedErr = exactFinalizedDNSEngineSwitchProvenanceOnHost(target, qualifier, binding)
+		}
 		if finalizedErr != nil {
 			return fmt.Errorf(
 				"prove journal-free finalized DNS engine switch: %w",
@@ -875,7 +920,15 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 	} else if installExists || !ownershipExists {
 		return errors.New("committed DNS engine ownership handoff is incomplete")
 	}
-	if err := removeDNSEngineSwitchJournal(); err != nil {
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		state, stateExists, err := readDNSEngineState()
+		if err != nil || !stateExists {
+			return errors.Join(errors.New("v3 committed state is absent before archive"), err)
+		}
+		if err := archiveCommittedFreshPrimaryV3(ctx, journal, state); err != nil {
+			return err
+		}
+	} else if err := removeDNSEngineSwitchJournal(); err != nil {
 		return err
 	}
 	_, journalExists, err := readDNSEngineSwitchJournal()
@@ -885,9 +938,10 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 	if journalExists {
 		return errors.New("DNS engine switch journal remains after finalization")
 	}
-	finalized, err := exactFinalizedDNSEngineSwitchProvenanceOnHost(
-		target, qualifier, binding,
-	)
+	finalized, v3, err := exactArchivedFreshPrimaryProvenanceV3(ctx, target, qualifier, binding)
+	if !v3 && err == nil {
+		finalized, err = exactFinalizedDNSEngineSwitchProvenanceOnHost(target, qualifier, binding)
+	}
 	if err != nil {
 		return fmt.Errorf("reprove finalized DNS engine host provenance: %w", err)
 	}

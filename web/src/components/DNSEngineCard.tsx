@@ -164,6 +164,7 @@ function clearDNSOperationMarker(requestID: string): void {
 const knownBlockerKeys = {
     dns_identity_required: 'dnsEngine.blocker.identityRequired',
     paired_topology_unsupported: 'dnsEngine.blocker.pairedTopology',
+    pdns_primary_switch_paused: 'dnsEngine.blocker.pdnsPrimarySwitchPaused',
     dnssec_unsupported: 'dnsEngine.blocker.dnssec',
     pending_zone_sync: 'dnsEngine.blocker.pendingZones',
     operation_running: 'dnsEngine.blocker.operationRunning',

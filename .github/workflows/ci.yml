@@ -44,6 +44,12 @@ jobs:
           }
       - run: go build ./...
       - run: go vet ./...
+      - name: Verify optional DNS owner tools archive
+        run: |
+          make dns-owner-tools
+          bash deploy/test-dns-owner-tools-package.sh
+      - name: Verify native recovery executable identity on real root-owned files
+        run: sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./cmd/recovery -run TestFreshPDNSExecutableProofV3 -count=1
       # A helper is only advice; this step is the part that is not. The same
       # defect - a privileged command fails, its output is discarded, the
       # operator is handed "exit status 1" - was found on three real machines

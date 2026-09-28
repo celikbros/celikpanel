@@ -56,7 +56,15 @@ func bindV3PrimaryPropagationPlan(
 		}
 		return dnsV3PrimaryPropagationPlan{}, false, err
 	}
-	plan := dnsV3PrimaryPropagationPlan{Evidence: evidence, Changed: changed}
+	plan := dnsV3PrimaryPropagationPlan{
+		Evidence: evidence, Changed: changed,
+		Operation: dnsV3DeletionOperation{
+			RequestID:  zone.MutationRequestID,
+			OwnerID:    zone.MutationOwnerID,
+			Generation: zone.DesiredGeneration,
+			Qualifier:  zone.Qualifier,
+		},
+	}
 	if err := validateDNSV3PrimaryPropagationPlan(plan); err != nil {
 		return dnsV3PrimaryPropagationPlan{}, false, err
 	}
@@ -102,7 +110,7 @@ func completeManagedBINDV3Propagation(
 ) error {
 	return completeManagedBINDV3PropagationAt(
 		ctx, tree, domain, trustedBINDControl,
-		completeDNSV3PrimaryPropagation,
+		completeBINDDNSV3PrimaryPropagation,
 	)
 }
 
@@ -121,7 +129,7 @@ func completeManagedBINDV3PropagationForState(
 	}
 	return completeManagedBINDV3PropagationAtWithLegacy(
 		ctx, tree, domain, legacy, trustedBINDControl,
-		completeDNSV3PrimaryPropagation,
+		completeBINDDNSV3PrimaryPropagation,
 	)
 }
 

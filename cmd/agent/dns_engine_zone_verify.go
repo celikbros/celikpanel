@@ -275,7 +275,7 @@ func verifyPDNSPairingAuthority(
 		if err != nil {
 			return err
 		}
-		catalog, err := probeDNSCatalogAXFR(ctx, localAddress, domain)
+		catalog, err := probeDNSPDNSCatalogAXFR(ctx, localAddress, domain)
 		if err != nil {
 			return errors.New("PowerDNS primary catalog is unavailable")
 		}

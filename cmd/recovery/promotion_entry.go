@@ -70,7 +70,7 @@ func launcherDispatchCommand(args []string) bool {
 		return true
 	}
 	switch args[0] {
-	case "recover", "--verify-final-state", "verify-compatibility",
+	case "recover", "recover-dns-pdns-adoption", ownerPDNSTargetInverseV4Command, ownerPDNSFreshPrestartV3Command, "recover-dns-bind-switch", "recover-dns-bind-adoption", "check-bind-source-inverse-v1", "check-bind-adoption-inverse-v1", "--verify-final-state", "verify-compatibility",
 		"verify-material-support", "prepare-recovery-material", "material-root", "completion-material-root", "verify-installed-completion", "database-policy", "verify-database-support",
 		"restore-resource", "publish-resource", "verify-firewall-unit":
 		return true

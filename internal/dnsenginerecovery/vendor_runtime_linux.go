@@ -116,3 +116,56 @@ func ProbeBINDVendorRuntime(ctx context.Context, profile hostplatform.Profile, r
 	}
 	return second, nil
 }
+
+// ProbeBINDAdoptionRuntime admits the Debian owner server whose bind9.service
+// alias was absent before adoption. It reads only named's running process and
+// re-proves the exact absent alias around both observations. Managed BIND and
+// switch paths continue to require ProbeBINDVendorRuntime's active alias.
+func ProbeBINDAdoptionRuntime(ctx context.Context, profile hostplatform.Profile, aliasAbsent bool, runtime BINDRuntimeRunner, unit NativeUnitRunner) (dnsunitidentity.Processes, error) {
+	if !aliasAbsent {
+		return ProbeBINDVendorRuntime(ctx, profile, runtime)
+	}
+	if ctx == nil || runtime == nil || unit == nil ||
+		profile.PackageManager != hostplatform.PackageManagerAPT ||
+		profile.DistroFamily != hostplatform.DistroFamilyDebian ||
+		profile.ServiceManager != hostplatform.ServiceManagerSystemd {
+		return dnsunitidentity.Processes{}, errors.New("absent-alias BIND adoption runtime requires a verified Debian systemd host")
+	}
+	if _, err := bindroot.CertifiedVendorContract(profile); err != nil {
+		return dnsunitidentity.Processes{}, err
+	}
+	checkAlias := func() error {
+		states, err := ProbeNativeUnits(ctx, []string{"bind9.service"}, unit)
+		if err != nil {
+			return err
+		}
+		if len(states) != 1 || states[0].Name != "bind9.service" ||
+			states[0].LoadState != "not-found" || states[0].ActiveState != "inactive" || states[0].UnitFileState != "" {
+			return errors.New("BIND adoption alias appeared or changed during runtime proof")
+		}
+		return nil
+	}
+	var first dnsunitidentity.Processes
+	for attempt := 0; attempt < 2; attempt++ {
+		if err := checkAlias(); err != nil {
+			return dnsunitidentity.Processes{}, err
+		}
+		raw, err := runtime(ctx, "named.service")
+		if err != nil {
+			return dnsunitidentity.Processes{}, err
+		}
+		current, err := parseBINDRuntime(raw)
+		if err != nil {
+			return dnsunitidentity.Processes{}, err
+		}
+		if err := checkAlias(); err != nil {
+			return dnsunitidentity.Processes{}, err
+		}
+		if attempt == 0 {
+			first = current
+		} else if current != first {
+			return dnsunitidentity.Processes{}, errors.New("owner BIND named process changed during absent-alias observation")
+		}
+	}
+	return first, ctx.Err()
+}

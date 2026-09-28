@@ -575,6 +575,10 @@ export const enScreens = {
     'domains.confirmDelete': 'Delete {name}? This cannot be undone.',
     'domains.loadFailed': 'Failed to load domains',
     'domains.deleted': 'Domain {name} deleted',
+    'domains.deletionPending': 'Deletion is still pending, but its reason could not be verified. Check the status again. If it remains unknown, ask the server administrator to inspect the saved operation before retrying.',
+    'domains.deletionWaiting': 'Deletion of {name} is waiting',
+    'domains.retryDeletion': 'Retry this deletion',
+    'domains.checkDeletionStatus': 'Check deletion status',
 
     'services.subtitle': 'Everything installed on this server — services, runtimes and tools',
     'services.col.service': 'Service',
@@ -2154,6 +2158,7 @@ export const enScreens = {
     'setup.peerRole': "DNS role (automatic)",
     'setup.detectedIPHelp': "Reported by this server. You can correct this address.",
     'setup.dnsMappingMismatch': "The saved peer nameserver differs from the name shown for the other server. Check the names before continuing.",
+    'setup.pdnsPrimaryPaused': 'PowerDNS primary in a DNS pair is not ready. Keep DNS running; select BIND primary. Review a new plan when support is available.',
     'setup.savedPeerName': "Saved peer nameserver",
     'setup.useDisplayedPeer': "Use the name shown for the other server",
     "setup.dnsStartPrimary": "Start the primary, then prepare the secondary without waiting for the primary’s entire setup to finish.",

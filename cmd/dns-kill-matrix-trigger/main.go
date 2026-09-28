@@ -159,6 +159,12 @@ func main() {
 		runRPCNormalizePDNSCommand(os.Args[2:])
 	case "rpc-delete-v3":
 		runRPCDeleteV3Command(os.Args[2:])
+	case "rpc-delete-v3-recover":
+		runRPCDeleteV3RecoverCommand(os.Args[2:])
+	case "rpc-pdns-peer-v3":
+		runRPCPDNSPeerV3Command(os.Args[2:])
+	case "rpc-pdns-peer-v3-recover":
+		runRPCPDNSPeerV3RecoverCommand(os.Args[2:])
 	default:
 		usageError(fmt.Sprintf("unsupported subcommand %q", os.Args[1]))
 	}
@@ -168,7 +174,7 @@ func usageError(message string) {
 	_, _ = fmt.Fprintln(os.Stderr, message)
 	_, _ = fmt.Fprintln(
 		os.Stderr,
-		"usage: dns-kill-matrix-trigger {rpc-switch|rpc-retry} --scenario FILE --identity-receipt FILE [--timeout 45m] | rpc-normalize-pdns --scenario FILE --normalization-receipt FILE [--timeout 45m] | rpc-delete-v3 --scenario FILE --identity-receipt FILE [--timeout 2m]",
+		"usage: dns-kill-matrix-trigger {rpc-switch|rpc-retry} --scenario FILE --identity-receipt FILE [--timeout 45m] | rpc-normalize-pdns --scenario FILE --normalization-receipt FILE [--timeout 45m] | rpc-delete-v3 --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-delete-v3-recover --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-pdns-peer-v3 --step {edit|delete|add} [--timeout 2m]",
 	)
 	os.Exit(exitUsage)
 }
@@ -964,7 +970,7 @@ func validateDriverManifest(
 	case "bind":
 		if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
 			manifest.TargetEngine != transport.DNSEngineBIND ||
-			(sourceFixture != "uninitialized" && sourceFixture != "managed-pdns") {
+			(sourceFixture != "uninitialized" && sourceFixture != "managed-pdns" && sourceFixture != "owner-bind") {
 			return errors.New("bind driver requires a BIND switch manifest")
 		}
 	case "pdns-switch":
@@ -1004,6 +1010,17 @@ func validateSourceFixture(
 			manifest.SourceEngine != "" || manifest.SourceEpoch != 0 ||
 			manifest.SourceRevision != 0 {
 			return errors.New("uninitialized source fixture requires an exact empty 0/0 source identity")
+		}
+	case "owner-bind":
+		if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+			manifest.SourceEngine != "" || manifest.SourceEpoch != 0 ||
+			manifest.TargetEngine != transport.DNSEngineBIND ||
+			manifest.TargetEpoch != 1 || manifest.SourceRevision != 0 ||
+			manifest.Topology != transport.DNSTopologyStandalone ||
+			manifest.PairRole != "" || manifest.LocalIP != "" ||
+			manifest.LocalNS != "" || manifest.PeerIP != "" ||
+			manifest.PeerNS != "" || len(manifest.Zones) == 0 {
+			return errors.New("owner-bind fixture requires an exact initial standalone BIND adoption commitment")
 		}
 	case "managed-pdns":
 		if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||

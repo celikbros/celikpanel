@@ -83,3 +83,51 @@ func TestProbeBINDVendorRuntimeRejectsUnknowns(t *testing.T) {
 		t.Fatal("nil context accepted")
 	}
 }
+
+func TestProbeBINDAdoptionRuntimeAcceptsExactAbsentAliasOnly(t *testing.T) {
+	profile := hostplatform.Profile{DistroFamily: hostplatform.DistroFamilyDebian,
+		PackageManager: hostplatform.PackageManagerAPT, ServiceManager: hostplatform.ServiceManagerSystemd}
+	absent := []byte("Id=bind9.service\nNames=bind9.service\nLoadState=not-found\nActiveState=inactive\nUnitFileState=\n")
+	loaded := []byte("Id=named.service\nNames=named.service bind9.service\nLoadState=loaded\nActiveState=inactive\nUnitFileState=disabled\n")
+	runtimeCalls, unitCalls := 0, 0
+	runtime := func(_ context.Context, name string) ([]byte, error) {
+		runtimeCalls++
+		if name != "named.service" {
+			t.Fatalf("missing alias runtime queried: %s", name)
+		}
+		return bindRuntimeFixture("1234", "no"), nil
+	}
+	unit := func(_ context.Context, name string) ([]byte, error) {
+		unitCalls++
+		if name != "bind9.service" {
+			t.Fatalf("unexpected unit: %s", name)
+		}
+		return absent, nil
+	}
+	got, err := ProbeBINDAdoptionRuntime(context.Background(), profile, true, runtime, unit)
+	if err != nil || got.MainPID != 1234 || runtimeCalls != 2 || unitCalls != 4 {
+		t.Fatalf("named-only runtime proof: %+v %v calls=%d/%d", got, err, runtimeCalls, unitCalls)
+	}
+	unitCalls = 0
+	_, err = ProbeBINDAdoptionRuntime(context.Background(), profile, true, runtime, func(ctx context.Context, name string) ([]byte, error) {
+		unitCalls++
+		if unitCalls == 2 {
+			return loaded, nil
+		}
+		return absent, nil
+	})
+	if err == nil {
+		t.Fatal("alias appearing during named process read was accepted")
+	}
+	runtimeCalls = 0
+	_, err = ProbeBINDAdoptionRuntime(context.Background(), profile, true, func(_ context.Context, name string) ([]byte, error) {
+		runtimeCalls++
+		if runtimeCalls == 2 {
+			return bindRuntimeFixture("5678", "no"), nil
+		}
+		return bindRuntimeFixture("1234", "no"), nil
+	}, unit)
+	if err == nil {
+		t.Fatal("named process change was accepted")
+	}
+}

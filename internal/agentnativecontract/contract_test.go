@@ -147,3 +147,32 @@ func TestDNSCapabilityPreservesHistoricalDeclarations(t *testing.T) {
 		t.Fatal("unknown DNS capability accepted")
 	}
 }
+
+func TestDNSSwitchJournalCapabilityIsExplicitAndBound(t *testing.T) {
+	agent := []byte("candidate agent")
+	c, err := New(agent, strings.Repeat("a", 40))
+	if err != nil || c.DNSSwitchJournalPolicy != DNSSwitchAdoptionJournalPolicy {
+		t.Fatal("current producer must bind adoption-aware v2 reader", err)
+	}
+	c.DNSSwitchJournalPolicy = ""
+	old, err := Encode(c)
+	if err != nil || bytes.Contains(old, []byte("dns_switch_journal_policy")) {
+		t.Fatal("historical contract bytes changed", err)
+	}
+	c.DNSSwitchJournalPolicy = DNSSwitchJournalPolicy
+	raw, err := Encode(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := Verify(raw, agent)
+	if err != nil || parsed.DNSSwitchJournalPolicy != DNSSwitchJournalPolicy {
+		t.Fatal("exact Agent capability not bound", err)
+	}
+	if _, err := Verify(raw, []byte("other agent")); err == nil {
+		t.Fatal("foreign Agent gained v2 capability")
+	}
+	c.DNSSwitchJournalPolicy = "unsupported"
+	if _, err := Encode(c); err == nil {
+		t.Fatal("unknown v2 reader claim accepted")
+	}
+}

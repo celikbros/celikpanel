@@ -194,6 +194,8 @@ func matchDomainSubroute(r *http.Request) (domainSubroute, bool) {
 	switch key {
 	case "":
 		match.kind, match.methods = "delete", []string{http.MethodDelete}
+	case "deletion-status":
+		match.kind, match.methods = "deletion-status", []string{http.MethodGet}
 	case "hosting":
 		match.kind, match.methods = "hosting", []string{http.MethodGet, http.MethodPut}
 	case "app/status", "app/logs":
@@ -297,6 +299,8 @@ func (p *Panel) handleDomainSubroute(w http.ResponseWriter, r *http.Request) {
 	switch match.kind {
 	case "delete":
 		p.handleDeleteDomain(w, r)
+	case "deletion-status":
+		p.handleDomainDeletionStatus(w, r, match.domainID)
 	case "hosting":
 		p.handleDomainHosting(w, r, match.domainID)
 	case "app":

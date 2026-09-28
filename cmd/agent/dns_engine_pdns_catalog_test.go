@@ -397,12 +397,12 @@ func TestVerifyManagedPDNSCatalogRequiresExactLiveSerial(t *testing.T) {
 	}
 
 	oldPurge := dnsClusterPurge
-	oldProbe := probeDNSCatalogAXFR
+	oldProbe := probeDNSPDNSCatalogAXFR
 	dnsClusterPurge = func(context.Context, string) ([]byte, error) {
 		return nil, nil
 	}
 	liveSerial := uint32(2)
-	probeDNSCatalogAXFR = func(
+	probeDNSPDNSCatalogAXFR = func(
 		_ context.Context,
 		address string,
 		domain string,
@@ -416,7 +416,7 @@ func TestVerifyManagedPDNSCatalogRequiresExactLiveSerial(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		dnsClusterPurge = oldPurge
-		probeDNSCatalogAXFR = oldProbe
+		probeDNSPDNSCatalogAXFR = oldProbe
 	})
 	if err := verifyManagedPDNSBINDCatalogLive(context.Background()); err != nil {
 		t.Fatalf("exact live catalog rejected: %v", err)
@@ -624,5 +624,56 @@ func TestPDNSCatalogSerialExhaustionFailsClosed(t *testing.T) {
 	}
 	if leaked != 0 {
 		t.Fatal("serial exhaustion committed the new member")
+	}
+}
+
+func TestNativeV3PDNSCatalogZoneMutationPreservesNormalizedSOA(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "pdns.sqlite3")
+	db, err := initializePDNSEngineDB(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	seedManagedPDNSCatalog(t, path, "192.0.2.10")
+	catalog, err := binddns.CatalogDomain("192.0.2.10")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE records SET content = REPLACE(content, 'invalid. invalid.', 'invalid invalid') WHERE name = ? AND type = 'SOA'`, catalog); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	if _, err := readExactPDNSProducerSerialTx(ctx, tx, "192.0.2.10"); err == nil {
+		t.Fatal("legacy serial reader accepted native PowerDNS RDATA")
+	}
+	if serial, err := readExactPDNSProducerSerialModeTx(ctx, tx, "192.0.2.10", true); err != nil || serial != 1 {
+		t.Fatalf("native serial=%d err=%v", serial, err)
+	}
+	before, err := reconcilePDNSBINDCatalogFromSnapshotModeTx(ctx, tx, true, "192.0.2.10", nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commitment := pdnsCatalogTestCommitment(t, "native-v3.test", 1, false, testPDNSEngineRecords("native-v3.test"))
+	if err := applyPDNSV3ZoneTx(ctx, tx, commitment, testPDNSEngineBinding(), true); err != nil {
+		t.Fatal(err)
+	}
+	after, err := reconcilePDNSBINDCatalogFromSnapshotModeTx(ctx, tx, true, "192.0.2.10", &before, true)
+	if err != nil || after.Serial != 2 || !reflect.DeepEqual(after.Members, []string{"native-v3.test"}) {
+		t.Fatalf("native catalog after add=%+v err=%v", after, err)
+	}
+	var soa string
+	if err := tx.QueryRowContext(ctx, `SELECT content FROM records WHERE name = ? AND type = 'SOA'`, catalog).Scan(&soa); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(soa, "invalid invalid 2 ") {
+		t.Fatalf("catalog SOA reverted from native form: %q", soa)
+	}
+	if serial, err := readExactPDNSProducerSerialModeTx(ctx, tx, "192.0.2.10", true); err != nil || serial != 2 {
+		t.Fatalf("native serial after membership=%d err=%v", serial, err)
 	}
 }

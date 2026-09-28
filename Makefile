@@ -18,11 +18,11 @@ SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 LDFLAGS := -s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT)
 DIST    := celikpanel-$(VERSION)
 
-.PHONY: all build check-go test vet panel agent agent-native-contract schema17-bridge firewall-restore firewall-runtime mail-renewal mail-renewal-runtime recovery recovery-agent-checker recovery-panel-checker recovery-runtime distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
+.PHONY: all build check-go test vet dns-owner-tools panel agent agent-native-contract schema17-bridge firewall-restore firewall-runtime mail-renewal mail-renewal-runtime recovery recovery-agent-checker recovery-panel-checker recovery-runtime distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
 
 all: build
 
-build: panel agent-native-contract schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime web ## Build binaries and frontend
+build: panel agent-native-contract schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime dns-owner-tools web ## Build binaries and frontend
 
 check-go: ## Require the exact reviewed Go compiler without auto-download
 	@actual="$$(env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" env GOVERSION 2>/dev/null)" || { \
@@ -63,6 +63,12 @@ mail-renewal: check-go ## Build the independent one-shot mail renewal consumer
 
 mail-renewal-runtime: mail-renewal ## Assemble offline native renewal files; no enrollment
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/mail-renewal/bundle --binary bin/mail-renewal --output bin/mail-renewal-runtime
+
+dns-owner-tools: check-go ## Build optional owner tools; no installation or enrollment
+	mkdir -p bin/dns-owner-tools
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/dns-peer-enroll ./cmd/dns-peer-enroll
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/bind-peer-inspect ./cmd/bind-peer-inspect
+	cp cmd/dns-peer-enroll/README.md bin/dns-owner-tools/README.md
 
 recovery: check-go ## Build the independent owner recovery CLI
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/recovery ./cmd/recovery
@@ -108,6 +114,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	cp -r bin/recovery-runtime dist/$(DIST)/recovery-runtime
 	cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime
 	cp -r bin/mail-renewal-runtime dist/$(DIST)/mail-renewal-runtime
+	cp -r bin/dns-owner-tools dist/$(DIST)/dns-owner-tools
 	cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/$(DIST)/deploy/systemd/celikpanel-firewall-restore.service
 	cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
 	cp download-portal/get.sh dist/$(DIST)/libexec/get.sh
@@ -121,6 +128,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	chmod 0755 dist/$(DIST)/update.sh dist/$(DIST)/rollback.sh
 	chmod 0755 dist/$(DIST)/libexec/get.sh
 	chmod 0755 dist/$(DIST)/firewall-runtime/restore
+	chmod 0755 dist/$(DIST)/dns-owner-tools/dns-peer-enroll dist/$(DIST)/dns-owner-tools/bind-peer-inspect
 	chmod 0755 dist/$(DIST)/mail-renewal-runtime/renew dist/$(DIST)/mail-renewal-runtime/celikpanel-mail-host-cert
 	chmod 0755 dist/$(DIST)/deploy/write-release-manifest.sh
 	chmod 0755 dist/$(DIST)/recovery-runtime/bin/recovery dist/$(DIST)/recovery-runtime/bin/agent-checker dist/$(DIST)/recovery-runtime/bin/panel-checker dist/$(DIST)/recovery-runtime/bin/schema17-bridge

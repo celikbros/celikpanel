@@ -452,7 +452,7 @@ func TestRestoredUnmanagedBINDProofNamesEveryOwnershipItRefuses(t *testing.T) {
 		"layout.GenerationRoot",
 		"bindOptionsMarkerBegin",
 		"bindZonesMarkerBegin",
-		"verifyOnlyBINDActive(",
+		"verifyOnlyAdoptedBINDActive(",
 	} {
 		if !strings.Contains(body, required) {
 			t.Errorf("the restored unmanaged BIND proof lost %s", required)

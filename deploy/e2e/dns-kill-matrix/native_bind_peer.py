@@ -35,7 +35,7 @@ def secondary_config(primary_ip: str, secondary_ip: str, authoritative_parent: b
         f'zone "{catalog}" {{\n'
         "    type secondary;\n"
         f"    primaries {{ {primary}; }};\n"
-        f"    allow-transfer {{ {primary}; }};\n"
+        f"    allow-transfer {{ {primary}; 127.0.0.1; }};\n"
         "};\n"
     )
     if not authoritative_parent:

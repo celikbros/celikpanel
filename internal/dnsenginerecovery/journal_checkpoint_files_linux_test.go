@@ -167,3 +167,24 @@ func TestRemoveExactRollbackJournalRequiresTerminalExactCheckpoint(t *testing.T)
 		t.Fatal("missing journal treated as a second successful cleanup")
 	}
 }
+
+func TestRollbackJournalPhaseV4EnableIntentIsNarrow(t *testing.T) {
+	for _, tc := range []struct {
+		schema, before, after string
+		want                  bool
+	}{
+		{dnsengineartifact.SwitchJournalSchemaV4, dnsengineartifact.SwitchPhaseTargetEnableIntent, dnsengineartifact.SwitchPhaseRollingBackTargetEnable, true},
+		{dnsengineartifact.SwitchJournalSchemaV4, dnsengineartifact.SwitchPhaseRollingBackTargetEnable, dnsengineartifact.SwitchPhaseRolledBack, true},
+		{dnsengineartifact.SwitchJournalSchemaV4, dnsengineartifact.SwitchPhaseTargetEnableIntent, dnsengineartifact.SwitchPhaseRollingBack, false},
+		{dnsengineartifact.SwitchJournalSchemaV4, dnsengineartifact.SwitchPhaseRollingBackTargetEnable, dnsengineartifact.SwitchPhaseRollingBack, false},
+		{dnsengineartifact.SwitchJournalSchemaV4, dnsengineartifact.SwitchPhaseTargetStarted, dnsengineartifact.SwitchPhaseRollingBackTargetEnable, false},
+		{dnsengineartifact.SwitchJournalSchemaV1, dnsengineartifact.SwitchPhaseTargetEnableIntent, dnsengineartifact.SwitchPhaseRollingBackTargetEnable, false},
+	} {
+		before := dnsengineartifact.SwitchJournalV1{Schema: tc.schema, Phase: tc.before}
+		after := before
+		after.Phase = tc.after
+		if got := allowedRollbackJournalPhase(before, after); got != tc.want {
+			t.Fatalf("%s %s -> %s allowed=%t, want %t", tc.schema, tc.before, tc.after, got, tc.want)
+		}
+	}
+}

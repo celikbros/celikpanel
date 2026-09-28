@@ -462,12 +462,12 @@ func powerDNSPrimaryPairReady(
 	}
 	if state.PairRole == "" && state.PrimaryCatalogSerial == 0 {
 		_, err = verifyDNSLegacyPrimaryPairReadyAuthorityAt(
-			ctx, evidence, probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+			ctx, evidence, probeDNSZoneSOA, probeDNSBoundPDNSCatalogAXFR,
 		)
 	} else {
 		err = verifyDNSPrimaryPairReadyAt(
-			ctx, evidence, probeDNSZoneSOA, probeDNSCatalogAXFR,
-			probeDNSBoundCatalogAXFR,
+			ctx, evidence, probeDNSZoneSOA, probeDNSPDNSCatalogAXFR,
+			probeDNSBoundPDNSCatalogAXFR,
 		)
 	}
 	if err != nil {

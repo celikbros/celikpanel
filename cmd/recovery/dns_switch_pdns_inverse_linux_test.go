@@ -5,6 +5,8 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -165,5 +167,108 @@ func TestInstalledPDNSInverseDeletedZoneStopsBeforeDurableEffects(t *testing.T) 
 	}
 	if effects != 0 {
 		t.Fatalf("unproved deleted-zone authority reached %d durable effects", effects)
+	}
+}
+
+func TestJournalAbsentPDNSInverseRequiresExactHistoricalOwnerVerdict(t *testing.T) {
+	request := strings.Repeat("a", 32)
+	now := time.Now().UTC().Truncate(time.Second)
+	job := transport.ServiceMutationJob{
+		RequestID: request, OwnerID: strings.Repeat("b", 32),
+		Kind: "dns_engine_switch", Target: string(transport.DNSEnginePowerDNS),
+		PackageName: "dns-engine-switch/v1:sha256:" + strings.Repeat("c", 64),
+		Status:      servicemutationledger.StatusFailed, Phase: "interrupted", Attempt: 1,
+		StartedAt: now.Add(-time.Minute), UpdatedAt: now, DeadlineAt: now.Add(time.Hour),
+		FinishedAt: now, ErrorCode: "dns_engine_switch_rolled_back_by_owner_recovery",
+		ErrorMessage: "The interrupted DNS engine switch was rolled back to the verified previous state.",
+	}
+	ledger := servicemutationledger.Ledger{
+		Version: servicemutationledger.Version,
+		Jobs:    map[string]*transport.ServiceMutationJob{request: &job},
+	}
+	if err := classifyJournalAbsentPDNSInverseLedger(ledger, request); err != nil {
+		t.Fatalf("exact terminal owner verdict rejected: %v", err)
+	}
+	if err := classifyJournalAbsentPDNSInverseLedger(ledger, strings.Repeat("d", 32)); err == nil {
+		t.Fatal("foreign request accepted")
+	}
+	for name, mutate := range map[string]func(*transport.ServiceMutationJob){
+		"other target":    func(j *transport.ServiceMutationJob) { j.Target = "bind" },
+		"other kind":      func(j *transport.ServiceMutationJob) { j.Kind = "dns_zone_sync" },
+		"wrong owner":     func(j *transport.ServiceMutationJob) { j.OwnerID = "invalid" },
+		"other phase":     func(j *transport.ServiceMutationJob) { j.Phase = "failed" },
+		"other code":      func(j *transport.ServiceMutationJob) { j.ErrorCode = "interrupted" },
+		"other message":   func(j *transport.ServiceMutationJob) { j.ErrorMessage = "unknown" },
+		"worker retained": func(j *transport.ServiceMutationJob) { j.WorkerPID = 1 },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := job
+			mutate(&changed)
+			other := servicemutationledger.Ledger{
+				Version: servicemutationledger.Version,
+				Jobs:    map[string]*transport.ServiceMutationJob{request: &changed},
+			}
+			if err := classifyJournalAbsentPDNSInverseLedger(other, request); err == nil {
+				t.Fatal("unknown or foreign terminal job accepted")
+			}
+		})
+	}
+}
+
+func TestJournalAbsentPDNSInverseOutcomeSeparatesTerminalHistoryFromUnknown(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Chmod(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	owner := servicemutationledger.FileOwner{UID: uint32(os.Getuid()), GID: uint32(os.Getgid())}
+	request := strings.Repeat("a", 32)
+	now := time.Now().UTC().Truncate(time.Second)
+	job := &transport.ServiceMutationJob{
+		RequestID: request, OwnerID: strings.Repeat("b", 32),
+		Kind: "dns_engine_switch", Target: string(transport.DNSEnginePowerDNS),
+		PackageName: "dns-engine-switch/v1:sha256:" + strings.Repeat("c", 64),
+		Status:      servicemutationledger.StatusFailed, Phase: "interrupted", Attempt: 1,
+		StartedAt: now.Add(-time.Minute), UpdatedAt: now, DeadlineAt: now.Add(time.Hour),
+		FinishedAt: now, ErrorCode: "dns_engine_switch_rolled_back_by_owner_recovery",
+		ErrorMessage: "The interrupted DNS engine switch was rolled back to the verified previous state.",
+	}
+	ledger := &servicemutationledger.Ledger{
+		Version: servicemutationledger.Version,
+		Jobs:    map[string]*transport.ServiceMutationJob{request: job},
+	}
+	ledgerPath := filepath.Join(root, "service-mutations.json")
+	write := func() {
+		t.Helper()
+		raw, err := servicemutationledger.Encode(ledger)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(ledgerPath, raw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write()
+	err := journalAbsentPDNSInverseOutcome(context.Background(), root, owner, request)
+	if !errors.Is(err, errPDNSInverseTerminalLedgerObserved) {
+		t.Fatalf("exact retired-journal history was not distinguished: %v", err)
+	}
+	if err == nil || !strings.Contains(err.Error(), "inspect native PowerDNS") {
+		t.Fatalf("historical verdict was falsely reported as current service success: %v", err)
+	}
+	if err := journalAbsentPDNSInverseOutcome(context.Background(), root, owner, strings.Repeat("d", 32)); errors.Is(err, errPDNSInverseTerminalLedgerObserved) {
+		t.Fatal("foreign request received the exact terminal classification")
+	}
+	job.ErrorCode = "generic_failure"
+	write()
+	if err := journalAbsentPDNSInverseOutcome(context.Background(), root, owner, request); errors.Is(err, errPDNSInverseTerminalLedgerObserved) {
+		t.Fatal("generic failed job was mistaken for owner recovery")
+	}
+	job.ErrorCode = "dns_engine_switch_rolled_back_by_owner_recovery"
+	write()
+	if err := os.WriteFile(filepath.Join(root, "dns-engine-switch-journal.json"), []byte("unexpected"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := journalAbsentPDNSInverseOutcome(context.Background(), root, owner, request); errors.Is(err, errPDNSInverseTerminalLedgerObserved) {
+		t.Fatal("present journal was treated as retired")
 	}
 }

@@ -1361,6 +1361,68 @@ func TestBuildPDNSPairedPrimaryPublishesEngineNeutralCatalog(t *testing.T) {
 	}
 }
 
+func TestFreshPDNSPairedPrimaryCandidateRequiresTransferableMembers(t *testing.T) {
+	const domain = "s1-kill.test"
+	binding := testPDNSEngineBinding()
+	makeManifest := func(zoneType string) mutationpayload.DNSEngineSwitchManifestCommitment {
+		zone, err := mutationpayload.CanonicalDNSZoneSyncV3(
+			transport.DNSEnginePowerDNS, 1, 1, domain, false, zoneType,
+			testPDNSEngineRecords(domain),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
+			transport.DNSEngineSwitchModeSwitch,
+			"", transport.DNSEnginePowerDNS,
+			0, 1, 0, transport.DNSTopologyPaired,
+			transport.DNSPairRolePrimary, "192.0.2.10", "ns1.example.test",
+			"192.0.2.11", "ns2.example.test",
+			[]transport.DNSEngineSwitchZoneSnapshot{{
+				Domain: domain, DesiredGeneration: 1, ZoneType: zoneType,
+				Records: zone.Records, ZoneQualifier: zone.Qualifier,
+			}},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return manifest
+	}
+	bad := filepath.Join(t.TempDir(), "native.sqlite3")
+	if err := buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
+		context.Background(), bad, makeManifest("NATIVE"), binding, 1,
+	); err == nil {
+		t.Fatal("fresh primary accepted a NATIVE member that PowerDNS omits from catalog AXFR")
+	}
+	if _, err := os.Lstat(bad); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("rejected candidate created a database: %v", err)
+	}
+	good := filepath.Join(t.TempDir(), "master.sqlite3")
+	manifest := makeManifest("MASTER")
+	if err := buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
+		context.Background(), good, manifest, binding, 1,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		context.Background(), good, manifest, binding, 1,
+	); err != nil {
+		t.Fatal(err)
+	}
+	db, err := openPDNSEngineDB(good, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var zoneType, catalog string
+	if err := db.QueryRow(`SELECT type, catalog FROM domains WHERE name = ?`, domain).Scan(&zoneType, &catalog); err != nil {
+		t.Fatal(err)
+	}
+	if zoneType != "MASTER" || catalog != "catalog-c000020a.celikpanel.invalid" {
+		t.Fatalf("fresh primary member type=%q catalog=%q", zoneType, catalog)
+	}
+}
+
 func TestPDNSPrimaryCatalogMaximumSwitchThenMembershipFailsClosed(t *testing.T) {
 	prepareManagedPDNSCatalogConfig(t)
 	domain := "existing.test"

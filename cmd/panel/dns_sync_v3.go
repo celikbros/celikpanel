@@ -67,10 +67,23 @@ type dnsZoneExistingLegacyLeaseError struct {
 	State dnsZoneSyncState
 }
 
-type dnsZoneV3PropagationPendingError struct{}
+type dnsZoneV3PropagationPendingError struct {
+	Code  string
+	Exact bool // set only after reconciling the accepted Agent job
+}
 
 func (*dnsZoneV3PropagationPendingError) Error() string {
 	return "DNS zone publication is waiting for exact paired propagation recovery"
+}
+
+// The exact Agent job is authoritative after a lost RPC response. Older generic
+// pending receipts and unrecognized codes remain unknown.
+func dnsZoneV3PendingCodeFromJob(job *agentMutationJob) string {
+	if job != nil && job.Status == agentMutationPending &&
+		transport.ValidDNSPeerPendingCode(job.ErrorCode) {
+		return job.ErrorCode
+	}
+	return ""
 }
 
 var errDNSZoneV3PropagationDeferred = errors.New(
@@ -845,9 +858,9 @@ func (p *Panel) recoverPendingDNSZoneV3(
 			return false, err
 		}
 		return false, &dnsAgentPublicationError{Err: fmt.Errorf(
-			"%w: %v",
+			"%w: %w",
 			errDNSZoneV3PropagationDeferred,
-			errors.Join(callErr, &dnsZoneV3PropagationPendingError{}),
+			errors.Join(&dnsZoneV3PropagationPendingError{Code: dnsZoneV3PendingCodeFromJob(job), Exact: true}, callErr),
 		)}
 	}
 	if agentMutationActive(job.Status) {
@@ -904,7 +917,7 @@ func (p *Panel) settleDNSZoneSyncV3CallError(
 		exact, recoverErr := p.recoverPendingDNSZoneV3(ctx, lease)
 		if recoverErr != nil {
 			return false, false, &dnsAgentPublicationError{Err: errors.Join(
-				callErr, recoverErr,
+				recoverErr, callErr,
 			)}
 		}
 		return exact, !exact, nil

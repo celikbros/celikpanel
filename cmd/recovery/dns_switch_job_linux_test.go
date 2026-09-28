@@ -20,6 +20,7 @@ func TestDNSSwitchStatusExactRequestArgs(t *testing.T) {
 		{"dns-switch-status"},
 		{"dns-switch-status", "--quiesced"},
 		{"dns-switch-status", "--quiesced", "--request-id", id},
+		{"dns-switch-status", "--request-id", id},
 		{"dns-switch-status", "--request-id", id, "--quiesced"},
 	} {
 		_, gotID, ok := parseDNSSwitchStatusArgs(args)
@@ -30,7 +31,6 @@ func TestDNSSwitchStatusExactRequestArgs(t *testing.T) {
 	for _, args := range [][]string{
 		nil,
 		{"other"},
-		{"dns-switch-status", "--request-id", id},
 		{"dns-switch-status", "--quiesced", "--request-id"},
 		{"dns-switch-status", "--quiesced", "--request-id", strings.Repeat("A", 32)},
 		{"dns-switch-status", "--quiesced", "--quiesced"},
@@ -43,6 +43,35 @@ func TestDNSSwitchStatusExactRequestArgs(t *testing.T) {
 	}
 }
 
+func TestRecordedDNSJobVerdictRequiresTerminalExactRollback(t *testing.T) {
+	id := strings.Repeat("a", 32)
+	job := &transport.ServiceMutationJob{
+		RequestID: id, Kind: "dns_engine_switch", Status: servicemutationledger.StatusFailed,
+		ErrorCode:    "dns_engine_switch_rolled_back_by_owner_recovery",
+		ErrorMessage: "The interrupted DNS engine switch was rolled back to the verified previous state.",
+	}
+	ledger := servicemutationledger.Ledger{Jobs: map[string]*transport.ServiceMutationJob{id: job}}
+	if verdict, err := recordedDNSJobVerdict(ledger, id); err != nil || !strings.Contains(verdict, "owner recovery recorded a rollback") {
+		t.Fatalf("exact rollback verdict: %q, %v", verdict, err)
+	}
+	job.ErrorMessage = "changed"
+	if verdict, err := recordedDNSJobVerdict(ledger, id); err != nil || strings.Contains(verdict, "rollback") {
+		t.Fatalf("unverified rollback inferred: %q, %v", verdict, err)
+	}
+	job.Status = servicemutationledger.StatusRunning
+	if _, err := recordedDNSJobVerdict(ledger, id); err == nil {
+		t.Fatal("nonterminal request accepted")
+	}
+	job.Status = servicemutationledger.StatusFailed
+	ledger.ActiveRequestID = id
+	if _, err := recordedDNSJobVerdict(ledger, id); err == nil {
+		t.Fatal("active request accepted")
+	}
+	ledger.ActiveRequestID = ""
+	if _, err := recordedDNSJobVerdict(ledger, strings.Repeat("b", 32)); err == nil {
+		t.Fatal("unrelated request accepted")
+	}
+}
 func TestJournalAbsentExactDNSJobReportsOnlyRecordedStatus(t *testing.T) {
 	root := t.TempDir()
 	if err := os.Chmod(root, 0o700); err != nil {

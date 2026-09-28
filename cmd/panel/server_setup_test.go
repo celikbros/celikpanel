@@ -10,6 +10,32 @@ import (
 	"testing"
 )
 
+func TestFreshSetupDefaultsToSupportedPairedPrimary(t *testing.T) {
+	fresh := defaultServerSetupDraft()
+	if fresh.DNSMode != "local" || fresh.DNSRole != "primary" || fresh.DNSEngine != "bind" {
+		t.Fatalf("fresh setup must select the supported primary engine: %+v", fresh)
+	}
+	canonical, err := canonicalServerSetupDraft(serverSetupDraft{Purpose: "web", DNSMode: "local", DNSRole: "primary"})
+	if err != nil || canonical.DNSEngine != "bind" {
+		t.Fatalf("omitted engine selected a blocked primary: %+v %v", canonical, err)
+	}
+	f := newServiceOperationTestFixture(t)
+	initial := httptest.NewRecorder()
+	f.panel.handleServerSetup(initial, serviceOperationAdminRequest(t, http.MethodGet, serverSetupPath, "", f.userID))
+	var initialState serverSetupState
+	if initial.Code != http.StatusOK || json.Unmarshal(initial.Body.Bytes(), &initialState) != nil ||
+		initialState.Draft.DNSEngine != "bind" {
+		t.Fatalf("fresh setup API selected a blocked primary: status=%d body=%s", initial.Code, initial.Body.String())
+	}
+	if _, err := f.database.GetDB().Exec(`UPDATE server_setup_state SET status='draft',revision=1,draft_json=? WHERE id=1`, `{"purpose":"web","dns_mode":"local","dns_role":"primary","dns_engine":"pdns","database":"mariadb"}`); err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := f.panel.loadServerSetup(context.Background())
+	if err != nil || persisted.Draft.DNSEngine != "pdns" || persisted.Revision != 1 {
+		t.Fatalf("an existing explicit PowerDNS draft was rewritten: %+v %v", persisted, err)
+	}
+}
+
 func TestServerSetupStateRoutingAndCheapRead(t *testing.T) {
 	f := newServiceOperationTestFixture(t)
 	probes := 0

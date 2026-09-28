@@ -60,7 +60,7 @@ func prepareDNSClusterRuntimeTest(t *testing.T) string {
 	oldRestart := dnsClusterRestart
 	oldRetrieve := dnsClusterRetrieve
 	oldPurge := dnsClusterPurge
-	oldCatalogProbe := probeDNSCatalogAXFR
+	oldCatalogProbe := probeDNSPDNSCatalogAXFR
 	oldApply := dnsClusterApplyAutoprimaryTx
 	oldSetType := dnsClusterSetLocalZoneTypeTx
 	oldRequiredOwnerUID := dnsClusterConfigRequiredOwnerUID
@@ -74,7 +74,7 @@ func prepareDNSClusterRuntimeTest(t *testing.T) string {
 		dnsClusterRestart = oldRestart
 		dnsClusterRetrieve = oldRetrieve
 		dnsClusterPurge = oldPurge
-		probeDNSCatalogAXFR = oldCatalogProbe
+		probeDNSPDNSCatalogAXFR = oldCatalogProbe
 		dnsClusterApplyAutoprimaryTx = oldApply
 		dnsClusterSetLocalZoneTypeTx = oldSetType
 		dnsClusterConfigRequiredOwnerUID = oldRequiredOwnerUID
@@ -102,7 +102,7 @@ func prepareDNSClusterRuntimeTest(t *testing.T) string {
 	dnsClusterRestart = func(context.Context) ([]byte, error) { return nil, nil }
 	dnsClusterRetrieve = func(context.Context, string) ([]byte, error) { return nil, nil }
 	dnsClusterPurge = func(context.Context, string) ([]byte, error) { return nil, nil }
-	probeDNSCatalogAXFR = func(_ context.Context, _ string, domain string) (dnsCatalogAXFRResult, error) {
+	probeDNSPDNSCatalogAXFR = func(_ context.Context, _ string, domain string) (dnsCatalogAXFRResult, error) {
 		db, err := openPDNSEngineDB(pdnsDBPath(), true)
 		if err != nil {
 			return dnsCatalogAXFRResult{}, err

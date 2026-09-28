@@ -35,49 +35,76 @@ func parseDNSSwitchStatusArgs(args []string) (quiesced bool, requestID string, v
 			return false, "", false
 		}
 	}
-	if requestID != "" && !quiesced {
-		return false, "", false
-	}
+
 	return quiesced, requestID, true
 }
 
 // readJournalAbsentDNSJob reports only the status of an exact, well-formed
 // ledger job. It never infers the native DNS result from a missing journal.
-// The caller holds the release and host locks; repeated secure reads reject
-// an observed journal/ledger transition during this point-in-time report.
+// The quiesced caller holds release and host locks. Recorded-only status does
+// not; it uses the same repeated secure reads for a point-in-time receipt.
 func readJournalAbsentDNSJob(ctx context.Context, stateRoot string, owner servicemutationledger.FileOwner, requestID string) (string, error) {
+	ledger, err := readJournalAbsentDNSLedger(ctx, stateRoot, owner, requestID)
+	if err != nil {
+		return "", err
+	}
+	return ledger.Jobs[requestID].Status, nil
+}
+
+// recordedDNSJobVerdict returns only an exact terminal ledger observation. It
+// cannot prove native DNS state, grant recovery authority, or hide an active job.
+func recordedDNSJobVerdict(ledger servicemutationledger.Ledger, requestID string) (string, error) {
+	if ledger.ActiveRequestID != "" {
+		return "", errors.New("a host mutation is active in the ledger")
+	}
+	job := ledger.Jobs[requestID]
+	if job == nil || (job.Status != servicemutationledger.StatusFailed && job.Status != servicemutationledger.StatusSucceeded) {
+		return "", errors.New("the exact DNS switch has no terminal ledger result")
+	}
+	if job.Status == servicemutationledger.StatusFailed &&
+		job.ErrorCode == "dns_engine_switch_rolled_back_by_owner_recovery" &&
+		job.ErrorMessage == "The interrupted DNS engine switch was rolled back to the verified previous state." {
+		return "The original switch failed; owner recovery recorded a rollback to the verified previous state.", nil
+	}
+	return "The original switch has terminal status " + job.Status + ".", nil
+}
+
+// readJournalAbsentDNSLedger keeps the same secured, stable read used by status.
+// It reports the canonical ledger only; callers must separately classify its
+// exact terminal verdict and cannot infer native recovery from journal absence.
+func readJournalAbsentDNSLedger(ctx context.Context, stateRoot string, owner servicemutationledger.FileOwner, requestID string) (servicemutationledger.Ledger, error) {
 	if !servicemutationledger.ValidIdentity(requestID) {
-		return "", errors.New("invalid DNS request identity")
+		return servicemutationledger.Ledger{}, errors.New("invalid DNS request identity")
 	}
 	journalPath := filepath.Join(stateRoot, "dns-engine-switch-journal.json")
 	ledgerPath := filepath.Join(stateRoot, "service-mutations.json")
 	journal, present, err := servicemutationledger.ReadFile(journalPath, dnsengineartifact.SwitchJournalLimit, owner)
 	if err != nil {
-		return "", fmt.Errorf("verify absent DNS switch journal: %w", err)
+		return servicemutationledger.Ledger{}, fmt.Errorf("verify absent DNS switch journal: %w", err)
 	}
 	if present || len(journal) != 0 {
-		return "", errors.New("DNS switch journal is present")
+		return servicemutationledger.Ledger{}, errors.New("DNS switch journal is present")
 	}
 	if err := ctx.Err(); err != nil {
-		return "", err
+		return servicemutationledger.Ledger{}, err
 	}
 	raw, present, err := servicemutationledger.ReadFile(ledgerPath, servicemutationledger.MaxSize, owner)
 	if err != nil {
-		return "", fmt.Errorf("read exact DNS mutation ledger: %w", err)
+		return servicemutationledger.Ledger{}, fmt.Errorf("read exact DNS mutation ledger: %w", err)
 	}
 	if !present {
-		return "", errors.New("DNS mutation ledger is absent")
+		return servicemutationledger.Ledger{}, errors.New("DNS mutation ledger is absent")
 	}
 	ledger, err := servicemutationledger.Decode(raw)
 	if err != nil {
-		return "", fmt.Errorf("decode exact DNS mutation ledger: %w", err)
+		return servicemutationledger.Ledger{}, fmt.Errorf("decode exact DNS mutation ledger: %w", err)
 	}
 	if ledger.ActiveRequestID != "" && ledger.ActiveRequestID != requestID {
-		return "", errors.New("another host mutation is active in the ledger")
+		return servicemutationledger.Ledger{}, errors.New("another host mutation is active in the ledger")
 	}
 	job := ledger.Jobs[requestID]
 	if job == nil || job.Kind != "dns_engine_switch" {
-		return "", errors.New("exact DNS switch job is absent from the mutation ledger")
+		return servicemutationledger.Ledger{}, errors.New("exact DNS switch job is absent from the mutation ledger")
 	}
 	id := dnsengineartifact.SwitchIdentity{
 		RequestID: job.RequestID,
@@ -86,18 +113,18 @@ func readJournalAbsentDNSJob(ctx context.Context, stateRoot string, owner servic
 		Qualifier: job.PackageName,
 	}
 	if err := id.Validate(); err != nil {
-		return "", errors.New("exact DNS switch job has an invalid operation identity")
+		return servicemutationledger.Ledger{}, errors.New("exact DNS switch job has an invalid operation identity")
 	}
 	again, againPresent, err := servicemutationledger.ReadFile(ledgerPath, servicemutationledger.MaxSize, owner)
 	if err != nil || !againPresent || !bytes.Equal(raw, again) {
-		return "", errors.New("DNS mutation ledger changed during observation")
+		return servicemutationledger.Ledger{}, errors.New("DNS mutation ledger changed during observation")
 	}
 	_, journalPresent, err := servicemutationledger.ReadFile(journalPath, dnsengineartifact.SwitchJournalLimit, owner)
 	if err != nil || journalPresent {
-		return "", errors.New("DNS switch journal changed during observation")
+		return servicemutationledger.Ledger{}, errors.New("DNS switch journal changed during observation")
 	}
 	if err := ctx.Err(); err != nil {
-		return "", err
+		return servicemutationledger.Ledger{}, err
 	}
-	return job.Status, nil
+	return ledger, nil
 }

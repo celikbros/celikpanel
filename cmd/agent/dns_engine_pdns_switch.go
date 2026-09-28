@@ -16,11 +16,23 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+const pdnsPairedPrimarySwitchPausedReason = "PowerDNS paired-primary switch is paused pending native catalog and rollback support; leave any current DNS engine serving and review another DNS plan"
+
+func pdnsPairedPrimarySwitchPaused(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return manifest.Mode == transport.DNSEngineSwitchModeSwitch &&
+		manifest.TargetEngine == transport.DNSEnginePowerDNS &&
+		manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary
+}
 
 func isPDNSPairSecondaryReconfigureManifest(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
@@ -1509,7 +1521,14 @@ func switchToPDNSOnCertifiedProfile(
 		if err := validateEngineStateCatalogContract(manifest, state); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
-		if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		if state.NativeCatalogV3 == dnsengineartifact.NativeCatalogDebian49V3 {
+			if err := verifyFreshPDNSNativeVersionV3(ctx, profile); err != nil {
+				return transport.SwitchDNSEngineV1Response{}, err
+			}
+			if err := verifyPDNSStateManifestReceipt(ctx, state); err != nil {
+				return transport.SwitchDNSEngineV1Response{}, err
+			}
+		} else if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
 			ctx, pdnsDBPath(), manifest, binding, state.PrimaryCatalogSerial,
 		); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
@@ -1587,6 +1606,20 @@ func switchToPDNSOnCertifiedProfile(
 			missing = append(missing, packageName)
 		}
 	}
+	freshPairedPrimaryV3 := manifest.SourceEngine == "" && !stateExists &&
+		manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary
+	var freshTargetBeforePackages dnsUnitSnapshot
+	if freshPairedPrimaryV3 {
+		beforePackages, captureErr := captureDNSUnitSnapshots(ctx, systemctl, []string{"pdns.service"})
+		if captureErr != nil {
+			return transport.SwitchDNSEngineV1Response{}, captureErr
+		}
+		freshTargetBeforePackages = beforePackages[0]
+		if err := validateFreshPDNSTargetBeforePackagesV3(freshTargetBeforePackages); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+	}
 	if err := verifyBINDMaskParentMetadata(); err != nil {
 		return transport.SwitchDNSEngineV1Response{},
 			fmt.Errorf("preflight DNS systemd parent: %w", err)
@@ -1650,11 +1683,19 @@ func switchToPDNSOnCertifiedProfile(
 			ctx, !stateExists && manifest.SourceEngine == "",
 			func() error {
 				return installOwnedDNSEnginePackages(installReceipt, func() error {
-					_, installErr := installPDNSPackagesWithGuard(ctx, systemctl, func() (string, error) {
+					install := func() (string, error) {
 						return installPackagesWithCandidateContext(
 							ctx, string(profile.PackageManager), missing, "",
 						)
-					})
+					}
+					var installErr error
+					if freshPairedPrimaryV3 {
+						_, installErr = installPDNSPackagesWithGuard(
+							ctx, systemctl, install, freshTargetBeforePackages,
+						)
+					} else {
+						_, installErr = installPDNSPackagesWithGuard(ctx, systemctl, install)
+					}
 					return installErr
 				})
 			},
@@ -1682,6 +1723,13 @@ func switchToPDNSOnCertifiedProfile(
 	targetBefore, err := captureDNSUnitSnapshots(ctx, systemctl, []string{"pdns.service"})
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if freshPairedPrimaryV3 {
+		if err := validateFreshPDNSTargetAfterPackagesV3(
+			freshTargetBeforePackages, targetBefore[0], len(missing) != 0,
+		); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
 	}
 	sourceUnits := []string{}
 	if manifest.SourceEngine == transport.DNSEngineBIND {
@@ -1728,6 +1776,15 @@ func switchToPDNSOnCertifiedProfile(
 	}
 	if liveExists {
 		journal.PDNSBackupSHA256, journal.PDNSBackupSize = liveHash, liveSize
+	}
+	if freshPairedPrimaryV3 {
+		if err := verifyFreshPDNSNativeVersionV3(ctx, profile); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		journal, err = prepareFreshPDNSPrimaryIntentV3(profile, journal, configs)
+		if err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
 	}
 	writeIntent := func() error {
 		actualState, actualExists, err := readDNSEngineState()
@@ -1786,6 +1843,11 @@ func switchToPDNSOnCertifiedProfile(
 		}
 	} else if err := writeIntent(); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if freshPairedPrimaryV3 {
+		return continueFreshPDNSPrimaryV3(
+			ctx, profile, systemctl, manifest, binding, configs, journal, writeJournal,
+		)
 	}
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
 		journal.Phase = dnsSwitchPhaseRollingBack

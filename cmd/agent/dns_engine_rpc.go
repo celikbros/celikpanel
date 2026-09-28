@@ -46,9 +46,13 @@ const (
 )
 
 // dnsZoneV3RecoveryPendingError is emitted only after the exact local V3 host
-// receipt is durable. It is never used for staging, activation, or local
-// authority failures, which remain ordinary terminal attempt failures.
-type dnsZoneV3RecoveryPendingError struct{ err error }
+// receipt is durable. It covers exact post-publication peer uncertainty and
+// an owner-modified managed BIND span for the exact committed deletion.
+// Staging, activation, and unrelated local authority failures remain terminal.
+type dnsZoneV3RecoveryPendingError struct {
+	err  error
+	code string
+}
 
 func (e *dnsZoneV3RecoveryPendingError) Error() string { return e.err.Error() }
 func (e *dnsZoneV3RecoveryPendingError) Unwrap() error { return e.err }
@@ -57,7 +61,7 @@ func dnsZoneV3RecoveryPending(err error) error {
 	if err == nil {
 		return nil
 	}
-	return &dnsZoneV3RecoveryPendingError{err: err}
+	return &dnsZoneV3RecoveryPendingError{err: err, code: pendingDNSPeerCode(err)}
 }
 
 type dnsZoneV3RecoveryAmbiguousError struct{ err error }
@@ -131,11 +135,11 @@ func (a *Agent) DNSBackendReadiness(_ *transport.Empty, response *DNSBackendRead
 	// have claimed it is stuck, and the screen says a foreign DNS server was
 	// found. Carry the hold so the panel can tell a stuck transaction from an
 	// intruder.
-	// Motor durumunu bildirip her mutasyonun reddedildiğini gizleyen bir hazırlık
-	// yoklaması, panelin yanlış teşhis koymasına yol açar: panelin kurduğu bir
-	// motor, onu sahiplenecek işlem takılıyken Managed=false görünür ve ekran
-	// yabancı bir DNS sunucusu bulunduğunu söyler. Tutmayı taşı ki panel takılmış
-	// bir işlemi davetsiz bir misafirden ayırabilsin.
+	// Motor durumunu bildirip her mutasyonun reddedildiÄŸini gizleyen bir hazÄ±rlÄ±k
+	// yoklamasÄ±, panelin yanlÄ±ÅŸ teÅŸhis koymasÄ±na yol aÃ§ar: panelin kurduÄŸu bir
+	// motor, onu sahiplenecek iÅŸlem takÄ±lÄ±yken Managed=false gÃ¶rÃ¼nÃ¼r ve ekran
+	// yabancÄ± bir DNS sunucusu bulunduÄŸunu sÃ¶yler. TutmayÄ± taÅŸÄ± ki panel takÄ±lmÄ±ÅŸ
+	// bir iÅŸlemi davetsiz bir misafirden ayÄ±rabilsin.
 	readiness.MutationHold = agentMutationHold()
 	*response = readiness
 	return nil
@@ -192,7 +196,7 @@ func (a *Agent) SyncDNSZoneV3(request *SyncDNSZoneV3Request, response *SyncDNSZo
 		var pending *dnsZoneV3RecoveryPendingError
 		if errors.As(err, &pending) {
 			if pendingErr := publishDNSZoneSyncV3Pending(
-				ctx, commitment.Domain, commitment.Qualifier,
+				ctx, commitment.Domain, commitment.Qualifier, pending.code,
 			); pendingErr != nil {
 				poisonErr := poisonDNSZoneSyncV3ProtocolViolation(
 					ctx, commitment.Domain, commitment.Qualifier, pendingErr,
@@ -203,6 +207,7 @@ func (a *Agent) SyncDNSZoneV3(request *SyncDNSZoneV3Request, response *SyncDNSZo
 			}
 			log.Printf("%s zone publication remains pending for %s at epoch %d: %v", commitment.Engine, commitment.Domain, commitment.EngineEpoch, err)
 			response.RecoveryPending = true
+			response.PendingCode = pending.code
 			response.Engine = request.Engine
 			response.EngineEpoch = request.EngineEpoch
 			response.AppliedGeneration = commitment.DesiredGeneration
@@ -290,7 +295,7 @@ func (a *Agent) RecoverDNSZoneV3(
 		}
 		log.Printf("DNS zone V3 recovery remains pending for %s: %v", request.Domain, recoverErr)
 		if pendingErr := publishDNSZoneSyncV3Pending(
-			ctx, request.Domain, request.Qualifier,
+			ctx, request.Domain, request.Qualifier, pending.code,
 		); pendingErr != nil {
 			poisonErr := poisonDNSZoneSyncV3ProtocolViolation(
 				ctx, request.Domain, request.Qualifier, pendingErr,
@@ -300,6 +305,7 @@ func (a *Agent) RecoverDNSZoneV3(
 			return nil
 		}
 		response.RecoveryPending = true
+		response.PendingCode = pending.code
 		return nil
 	}
 	if !exact {
@@ -435,7 +441,7 @@ func poisonDNSZoneSyncV3ProtocolViolation(
 	))
 }
 
-func publishDNSZoneSyncV3Pending(ctx context.Context, domain, qualifier string) error {
+func publishDNSZoneSyncV3Pending(ctx context.Context, domain, qualifier, code string) error {
 	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
 	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
 		return errors.New("DNS zone V3 pending publication requires a durable execution tracker")
@@ -469,7 +475,7 @@ func publishDNSZoneSyncV3Pending(ctx context.Context, domain, qualifier string) 
 	if err != nil {
 		return err
 	}
-	if err := m.finishRuntimeDNSZoneV3PendingLocked(runtime, phase); err != nil {
+	if err := m.finishRuntimeDNSZoneV3PendingLocked(runtime, phase, code); err != nil {
 		if m.poisoned == nil && m.active == runtime {
 			return m.poisonLocked(fmt.Errorf(
 				"persist pending DNS zone V3 receipt: %w", err,
@@ -516,7 +522,12 @@ func publishDNSZoneSyncV3Terminal(ctx context.Context, domain, qualifier string)
 	}
 	m, runtime := tracker.manager, tracker.runtime
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	locked := true
+	defer func() {
+		if locked {
+			m.mu.Unlock()
+		}
+	}()
 	if err := m.healthErrorLocked(); err != nil {
 		return err
 	}
@@ -547,6 +558,15 @@ func publishDNSZoneSyncV3Terminal(ctx context.Context, domain, qualifier string)
 			return m.poisonLocked(fmt.Errorf("persist terminal DNS zone V3 receipt: %w", err))
 		}
 		return err
+	}
+	terminal := *job
+	m.mu.Unlock()
+	locked = false
+	if err := retireTerminalPDNSPeerChallenge(m.ledgerPath, m.lockPath, &terminal); err != nil {
+		log.Printf("Terminal PowerDNS peer challenge remains for owner review: %v", err)
+	}
+	if err := retireTerminalBINDPeerChallenge(m.ledgerPath, m.lockPath, &terminal); err != nil {
+		log.Printf("Terminal DNS zone V3 challenge remains for owner review: %v", err)
 	}
 	return nil
 }
@@ -609,7 +629,7 @@ func (m *serviceMutationManager) recoverPersistedDNSZoneSyncV3Locked(
 	if verifyErr != nil {
 		var pendingErr *dnsZoneV3RecoveryPendingError
 		if errors.As(verifyErr, &pendingErr) {
-			return true, m.finishPersistedDNSZoneSyncV3PendingLocked(job, lock)
+			return true, m.finishPersistedDNSZoneSyncV3PendingLocked(job, lock, pendingErr.code)
 		}
 		m.poisonLock = lock
 		return true, m.poisonLocked(fmt.Errorf("recover DNS zone V3 host receipt: %w", verifyErr))
@@ -662,6 +682,7 @@ func (m *serviceMutationManager) recoverPersistedDNSZoneSyncV3Locked(
 func (m *serviceMutationManager) finishPersistedDNSZoneSyncV3PendingLocked(
 	job *ServiceMutationJob,
 	lock *serviceMutationFileLock,
+	code string,
 ) error {
 	if job == nil || lock == nil || job.Kind != "dns_zone_sync" ||
 		!serviceMutationCanonicalFQDN(job.Target) ||
@@ -683,9 +704,17 @@ func (m *serviceMutationManager) finishPersistedDNSZoneSyncV3PendingLocked(
 	}
 	before := cloneServiceMutationLedger(m.ledger)
 	now := m.now()
+	// A recovering job carries the previous reviewed pending code durably.
+	// If startup gets no newer classified peer result, retain that reason.
+	if code == "" {
+		state, _, _, _, phaseErr := parseDNSZoneSyncV3Phase(job.Phase)
+		if phaseErr == nil && state == dnsZoneSyncV3Recovering {
+			code = job.ErrorCode
+		}
+	}
 	job.Status = serviceMutationStatusPending
 	job.Phase = phase
-	job.ErrorCode = "dns_zone_v3_propagation_pending"
+	job.ErrorCode = dnsZoneV3PendingLedgerCode(code)
 	job.ErrorMessage =
 		"The exact local DNS publication is waiting for paired propagation recovery."
 	job.UpdatedAt = now
@@ -1271,6 +1300,10 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 		response.Error = "DNS engine switch request is not the exact canonical manifest"
 		return nil
 	}
+	if pdnsPairedPrimarySwitchPaused(commitment) {
+		response.Error = pdnsPairedPrimarySwitchPausedReason
+		return nil
+	}
 	ctx, finishStep, err := a.requiredServiceMutationStep(
 		request.ServiceMutationBinding,
 		newServiceMutationStepClaim(
@@ -1420,7 +1453,7 @@ func exactActiveDNSEngineSwitchRuntimeLocked(
 // finalizing guard is already held. It differs from the strict proof in one
 // way: the owning mutation's registered package worker is an acceptable ledger
 // shape. Admission, abort reproof, and terminal publication keep the strict
-// worker-free proof — a worker at those boundaries is genuinely wrong.
+// worker-free proof â€” a worker at those boundaries is genuinely wrong.
 //
 // This exists because the entire backend switch runs inside the finalizing
 // interval, and installing packages there durably registers apt-get/pacman as
@@ -1429,17 +1462,17 @@ func exactActiveDNSEngineSwitchRuntimeLocked(
 // the install poisoned the manager and cancelled the switch (kill-matrix run 8,
 // risk R-017).
 //
-// exactGuardedDNSEngineSwitchRuntimeLocked, YALNIZCA sonlanma nöbeti zaten
-// tutulurken kullanılan kanıttır. Katı kanıttan tek farkı: sahibi olan
-// mutasyonun kayıtlı paket işçisi kabul edilebilir bir defter biçimidir.
-// Kabul, iptal yeniden-kanıtı ve uç yayın, katı işçisiz kanıtı korur — o
-// sınırlarda bir işçi gerçekten yanlıştır.
+// exactGuardedDNSEngineSwitchRuntimeLocked, YALNIZCA sonlanma nÃ¶beti zaten
+// tutulurken kullanÄ±lan kanÄ±ttÄ±r. KatÄ± kanÄ±ttan tek farkÄ±: sahibi olan
+// mutasyonun kayÄ±tlÄ± paket iÅŸÃ§isi kabul edilebilir bir defter biÃ§imidir.
+// Kabul, iptal yeniden-kanÄ±tÄ± ve uÃ§ yayÄ±n, katÄ± iÅŸÃ§isiz kanÄ±tÄ± korur â€” o
+// sÄ±nÄ±rlarda bir iÅŸÃ§i gerÃ§ekten yanlÄ±ÅŸtÄ±r.
 //
-// Bunun var olma sebebi: arka uç geçişinin tamamı sonlanma aralığında koşar ve
-// orada paket kurmak apt-get/pacman'i işin tek işçisi olarak kalıcı kaydeder.
-// Katı kanıt bu meşru, beklenen durumu rakip bir mutasyon olarak okudu; bu
-// yüzden kurulum sırasında gelen sıradan beş saniyelik panel kalp atışı
-// yöneticiyi zehirleyip geçişi iptal etti (kill-matrix koşu 8, risk R-017).
+// Bunun var olma sebebi: arka uÃ§ geÃ§iÅŸinin tamamÄ± sonlanma aralÄ±ÄŸÄ±nda koÅŸar ve
+// orada paket kurmak apt-get/pacman'i iÅŸin tek iÅŸÃ§isi olarak kalÄ±cÄ± kaydeder.
+// KatÄ± kanÄ±t bu meÅŸru, beklenen durumu rakip bir mutasyon olarak okudu; bu
+// yÃ¼zden kurulum sÄ±rasÄ±nda gelen sÄ±radan beÅŸ saniyelik panel kalp atÄ±ÅŸÄ±
+// yÃ¶neticiyi zehirleyip geÃ§iÅŸi iptal etti (kill-matrix koÅŸu 8, risk R-017).
 func exactGuardedDNSEngineSwitchRuntimeLocked(
 	m *serviceMutationManager,
 	runtime *serviceMutationRuntime,
@@ -1653,32 +1686,32 @@ func exactActiveDNSEngineSwitchJob(
 
 // exactActiveDNSEngineSwitchJobWithRegisteredWorker accepts the owning job's
 // registered worker by SHAPE alone: positive PID, canonical trimmed
-// basename-only command of at most 64 bytes, non-empty start token, and — with
-// the three worker fields cleared — exactly the strict job shape.
+// basename-only command of at most 64 bytes, non-empty start token, and â€” with
+// the three worker fields cleared â€” exactly the strict job shape.
 //
 // Deliberately NO liveness probe. Registration can only ever write this sole
 // worker slot while this same runtime is active with one authorized step, so
 // the fields are attributable to this mutation by construction; whether the
 // process still runs is not this proof's question. Probing /proc here would
-// reintroduce the reap window — cmd.Wait() reaps the child before
+// reintroduce the reap window â€” cmd.Wait() reaps the child before
 // tracker.clear() removes the durable identity, and a guard landing between
 // the two would see a correctly dead worker and poison a healthy switch. A
 // dead-but-registered worker is a legal instant of the ledger's lifecycle;
 // clear() removes it on the very next transition.
 //
-// exactActiveDNSEngineSwitchJobWithRegisteredWorker, sahibi olan işin kayıtlı
-// işçisini YALNIZCA biçimiyle kabul eder: pozitif PID, kırpılmış ve yalnız
-// taban addan oluşan en çok 64 baytlık komut, boş olmayan başlangıç belirteci
-// ve — üç işçi alanı temizlendiğinde — tam olarak katı iş biçimi.
+// exactActiveDNSEngineSwitchJobWithRegisteredWorker, sahibi olan iÅŸin kayÄ±tlÄ±
+// iÅŸÃ§isini YALNIZCA biÃ§imiyle kabul eder: pozitif PID, kÄ±rpÄ±lmÄ±ÅŸ ve yalnÄ±z
+// taban addan oluÅŸan en Ã§ok 64 baytlÄ±k komut, boÅŸ olmayan baÅŸlangÄ±Ã§ belirteci
+// ve â€” Ã¼Ã§ iÅŸÃ§i alanÄ± temizlendiÄŸinde â€” tam olarak katÄ± iÅŸ biÃ§imi.
 //
-// Bilerek canlılık sondası YOK. Kayıt, bu tek işçi yuvasını ancak aynı çalışma
-// zamanı tek yetkili adımla etkinken yazabilir; dolayısıyla alanlar yapısal
-// olarak bu mutasyona aittir ve sürecin hâlâ koşup koşmadığı bu kanıtın sorusu
-// değildir. Burada /proc'u yoklamak toplama penceresini geri getirirdi:
-// cmd.Wait() çocuğu, tracker.clear() kalıcı kimliği silmeden önce toplar ve
-// ikisinin arasına düşen bir bekçi, doğru biçimde ölmüş bir işçiyi görüp
-// sağlıklı bir geçişi zehirlerdi. Ölü-ama-kayıtlı işçi, defterin yaşam
-// döngüsünün meşru bir ânıdır; clear() onu bir sonraki geçişte kaldırır.
+// Bilerek canlÄ±lÄ±k sondasÄ± YOK. KayÄ±t, bu tek iÅŸÃ§i yuvasÄ±nÄ± ancak aynÄ± Ã§alÄ±ÅŸma
+// zamanÄ± tek yetkili adÄ±mla etkinken yazabilir; dolayÄ±sÄ±yla alanlar yapÄ±sal
+// olarak bu mutasyona aittir ve sÃ¼recin hÃ¢lÃ¢ koÅŸup koÅŸmadÄ±ÄŸÄ± bu kanÄ±tÄ±n sorusu
+// deÄŸildir. Burada /proc'u yoklamak toplama penceresini geri getirirdi:
+// cmd.Wait() Ã§ocuÄŸu, tracker.clear() kalÄ±cÄ± kimliÄŸi silmeden Ã¶nce toplar ve
+// ikisinin arasÄ±na dÃ¼ÅŸen bir bekÃ§i, doÄŸru biÃ§imde Ã¶lmÃ¼ÅŸ bir iÅŸÃ§iyi gÃ¶rÃ¼p
+// saÄŸlÄ±klÄ± bir geÃ§iÅŸi zehirlerdi. Ã–lÃ¼-ama-kayÄ±tlÄ± iÅŸÃ§i, defterin yaÅŸam
+// dÃ¶ngÃ¼sÃ¼nÃ¼n meÅŸru bir Ã¢nÄ±dÄ±r; clear() onu bir sonraki geÃ§iÅŸte kaldÄ±rÄ±r.
 func exactActiveDNSEngineSwitchJobWithRegisteredWorker(
 	job *ServiceMutationJob,
 	requestID, ownerID string,

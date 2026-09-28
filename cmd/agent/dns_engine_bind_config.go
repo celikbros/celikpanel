@@ -17,6 +17,8 @@ const (
 	bindOptionsMarkerEnd   = "// END CELIKPANEL MANAGED BIND OPTIONS"
 )
 
+var errManagedBINDOptionsModified = errors.New("existing CelikPanel BIND options were modified")
+
 func managedBINDZoneInclude(config, includePath string) (string, error) {
 	return bindconfig.ManagedZoneInclude(config, includePath)
 }
@@ -87,7 +89,7 @@ func managedBINDOptions(config, transferPeer string, pairing ...*binddns.Pairing
 		actual := config[start:actualEnd]
 		base := strings.TrimSuffix(strings.TrimPrefix(baseBlock, "\n\t"), "\n")
 		if actual != canonical && actual != legacy && !(catalog != "" && actual == base) {
-			return "", errors.New("existing CelikPanel BIND options were modified")
+			return "", errManagedBINDOptionsModified
 		}
 		body := bindOptionsBodyWithoutManagedSpan(
 			config, open, close, start, actualEnd,

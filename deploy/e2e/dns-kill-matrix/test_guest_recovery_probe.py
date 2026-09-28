@@ -290,6 +290,46 @@ class GuestRecoveryProbeTest(unittest.TestCase):
         write_state(self.root / "dns-engine-ownership-pdns.json", changed_source)
         self.assertEqual(probe.probe(self.args, self.units)["recovery_outcome"], "indeterminate")
 
+    def test_owner_bind_rollback_requires_absent_receipts_failed_ledger_and_active_units(self) -> None:
+        self.scenario_value.update({
+            "driver": "bind", "source_fixture": "owner-bind", "target_engine": "bind",
+        })
+        self.identity_value.update({"driver": "bind", "source_fixture": "owner-bind"})
+        write_json(self.scenario, self.scenario_value)
+        write_json(self.identity, self.identity_value)
+        self.state.unlink()
+        (self.root / "dns-engine-ownership-pdns.json").unlink()
+        self.job.update({
+            "target": "bind", "status": "failed", "phase": "interrupted",
+            "error_code": "dns_engine_switch_rolled_back_after_restart",
+            "error_message": "The interrupted switch was rolled back.",
+        })
+        write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
+        units = lambda unit: "active" if unit in {"named.service", "bind9.service"} else "inactive"
+        first = probe.probe(self.args, units)
+        self.assertFalse(first["converged"])
+        self.assertEqual(first["recovery_outcome"], "rolled_back_source_active", first["detail"])
+        self.assertEqual(first["active_dns_engine"], "bind")
+        self.assertEqual(first["fingerprint"], probe.probe(self.args, units)["fingerprint"])
+        self.assertIn("must prove DNS serving", first["detail"])
+
+        for label, change, restore in (
+            ("state", lambda: write_state(self.state, self.state_value), lambda: self.state.unlink()),
+            ("owner receipt", lambda: write_state(self.root / "dns-engine-ownership-bind.json", self.state_value),
+             lambda: (self.root / "dns-engine-ownership-bind.json").unlink()),
+            ("journal", lambda: write_json(self.journal, {"phase": "rolling-back"}), lambda: self.journal.unlink()),
+        ):
+            with self.subTest(label=label):
+                change()
+                self.assertEqual(probe.probe(self.args, units)["recovery_outcome"], "indeterminate")
+                restore()
+        self.job["status"] = "running"
+        write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
+        self.assertEqual(probe.probe(self.args, units)["recovery_outcome"], "indeterminate")
+        self.job["status"] = "failed"
+        write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
+        self.assertEqual(probe.probe(self.args, lambda unit: "inactive")["recovery_outcome"], "indeterminate")
+
     def test_unexpected_error_still_emits_the_exact_probe_shape(self) -> None:
         argv = [
             "guest-recovery-probe",

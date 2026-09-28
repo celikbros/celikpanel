@@ -122,11 +122,11 @@ type dnsEngineSnapshot struct {
 	// snapshot so the gates that decide what may be offered can read the fact
 	// itself rather than the word derived from it. R-050.
 	//
-	// mutationHold, agent'ın kalıcı mutasyonları reddetme sebebidir; kabul
+	// mutationHold, agent'Ã„Â±n kalÃ„Â±cÃ„Â± mutasyonlarÃ„Â± reddetme sebebidir; kabul
 	// ediyorsa "" olur. Sunumda bir motorun detay kodunu zaten
-	// "mutations_held" yapan şey odur; neyin önerilebileceğine karar veren
-	// kapılar ondan türetilen kelimeyi değil olgunun kendisini okusun diye
-	// anlık görüntüde taşınır. R-050.
+	// "mutations_held" yapan Ã…Å¸ey odur; neyin ÃƒÂ¶nerilebileceÃ„Å¸ine karar veren
+	// kapÃ„Â±lar ondan tÃƒÂ¼retilen kelimeyi deÃ„Å¸il olgunun kendisini okusun diye
+	// anlÃ„Â±k gÃƒÂ¶rÃƒÂ¼ntÃƒÂ¼de taÃ…Å¸Ã„Â±nÃ„Â±r. R-050.
 	mutationHold string
 }
 
@@ -154,10 +154,10 @@ type dnsEngineSwitchPreview struct {
 	// value CelikPanel will set. It is structured because the browser renders
 	// it as a list; a sentence could not be read as one (register R-042).
 	//
-	// AdoptedDirectives, devralmanın bu sunucunun kendi seçenek bloğunda neyi
-	// değiştirdiğidir; direktif başına bir kayıt, her birinde bulunan değer ve
-	// CelikPanel'in koyacağı değer. Yapılandırılmıştır, çünkü tarayıcı onu bir
-	// liste olarak çizer; bir cümle liste olarak okunamazdı (defter R-042).
+	// AdoptedDirectives, devralmanÃ„Â±n bu sunucunun kendi seÃƒÂ§enek bloÃ„Å¸unda neyi
+	// deÃ„Å¸iÃ…Å¸tirdiÃ„Å¸idir; direktif baÃ…Å¸Ã„Â±na bir kayÃ„Â±t, her birinde bulunan deÃ„Å¸er ve
+	// CelikPanel'in koyacaÃ„Å¸Ã„Â± deÃ„Å¸er. YapÃ„Â±landÃ„Â±rÃ„Â±lmÃ„Â±Ã…Å¸tÃ„Â±r, ÃƒÂ§ÃƒÂ¼nkÃƒÂ¼ tarayÃ„Â±cÃ„Â± onu bir
+	// liste olarak ÃƒÂ§izer; bir cÃƒÂ¼mle liste olarak okunamazdÃ„Â± (defter R-042).
 	AdoptedDirectives []dnsEngineAdoptedDirective `json:"adopted_directives,omitempty"`
 	// ViewFinding is why a takeover of this server cannot happen at all: its
 	// DNS configuration declares views, or a file that configuration includes
@@ -165,10 +165,10 @@ type dnsEngineSwitchPreview struct {
 	// the operator cannot act on is the defect the takeover work exists to fix
 	// (register R-044).
 	//
-	// ViewFinding, bu sunucunun devralınmasının neden hiç olamayacağıdır: DNS
-	// yapılandırması view bildiriyordur ya da o yapılandırmanın dahil ettiği bir
-	// dosya okunamamıştır. Bakılacak tek yeri taşır; çünkü operatörün üzerinde
-	// işlem yapamayacağı bir ret, devralma işinin düzeltmek için var olduğu
+	// ViewFinding, bu sunucunun devralÃ„Â±nmasÃ„Â±nÃ„Â±n neden hiÃƒÂ§ olamayacaÃ„Å¸Ã„Â±dÃ„Â±r: DNS
+	// yapÃ„Â±landÃ„Â±rmasÃ„Â± view bildiriyordur ya da o yapÃ„Â±landÃ„Â±rmanÃ„Â±n dahil ettiÃ„Å¸i bir
+	// dosya okunamamÃ„Â±Ã…Å¸tÃ„Â±r. BakÃ„Â±lacak tek yeri taÃ…Å¸Ã„Â±r; ÃƒÂ§ÃƒÂ¼nkÃƒÂ¼ operatÃƒÂ¶rÃƒÂ¼n ÃƒÂ¼zerinde
+	// iÃ…Å¸lem yapamayacaÃ„Å¸Ã„Â± bir ret, devralma iÃ…Å¸inin dÃƒÂ¼zeltmek iÃƒÂ§in var olduÃ„Å¸u
 	// kusurdur (defter R-044).
 	ViewFinding *dnsEngineViewFinding `json:"view_finding,omitempty"`
 }
@@ -193,11 +193,11 @@ type dnsEngineSwitchRequest struct {
 	// the two together would let a click meant for the first stand in for the
 	// second.
 	//
-	// AdoptionAcknowledged, DowntimeAcknowledged'in başka adı değildir. Kesinti
-	// "yanıtlar bir an duraklayabilir" der; bu ise "burada sizin kurmadığınız
-	// bir DNS sunucusu yeniden yapılandırılacak ve panelin bilmediği ne varsa
-	// sunmayı bırakacak" der. İkisini birleştirmek, birincisi için yapılan bir
-	// tıklamanın ikincisinin yerine geçmesine izin verirdi.
+	// AdoptionAcknowledged, DowntimeAcknowledged'in baÃ…Å¸ka adÃ„Â± deÃ„Å¸ildir. Kesinti
+	// "yanÃ„Â±tlar bir an duraklayabilir" der; bu ise "burada sizin kurmadÃ„Â±Ã„Å¸Ã„Â±nÃ„Â±z
+	// bir DNS sunucusu yeniden yapÃ„Â±landÃ„Â±rÃ„Â±lacak ve panelin bilmediÃ„Å¸i ne varsa
+	// sunmayÃ„Â± bÃ„Â±rakacak" der. Ã„Â°kisini birleÃ…Å¸tirmek, birincisi iÃƒÂ§in yapÃ„Â±lan bir
+	// tÃ„Â±klamanÃ„Â±n ikincisinin yerine geÃƒÂ§mesine izin verirdi.
 	AdoptionAcknowledged bool `json:"adoption_acknowledged"`
 }
 
@@ -292,9 +292,9 @@ func readDNSEngineDBState(ctx context.Context, query dnsZoneStateQuery) (dnsEngi
 // The mutation hold travels with readiness rather than through a second probe:
 // two round trips can disagree, and a presentation built from a disagreeing pair
 // is exactly the class of bug this file keeps producing.
-// Mutasyon tutması ikinci bir yoklamayla değil hazırlıkla birlikte gelir: iki
-// tur birbiriyle çelişebilir ve çelişen bir çiftten kurulan bir sunum, tam da bu
-// dosyanın üretmeye devam ettiği hata sınıfıdır.
+// Mutasyon tutmasÃ„Â± ikinci bir yoklamayla deÃ„Å¸il hazÃ„Â±rlÃ„Â±kla birlikte gelir: iki
+// tur birbiriyle ÃƒÂ§eliÃ…Å¸ebilir ve ÃƒÂ§eliÃ…Å¸en bir ÃƒÂ§iftten kurulan bir sunum, tam da bu
+// dosyanÃ„Â±n ÃƒÂ¼retmeye devam ettiÃ„Å¸i hata sÃ„Â±nÃ„Â±fÃ„Â±dÃ„Â±r.
 func validateDNSBackendReadiness(
 	response transport.DNSBackendReadinessResponse,
 ) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, string, error) {
@@ -472,17 +472,17 @@ func (p *Panel) dnsEngineDNSSECCount(
 // is free-form by contract, carries the correction. Inventing a status here
 // would be rejected by the frontend validator.
 //
-// mutationHold, agent'ın kalıcı mutasyonları reddetme sebebini taşır; kabul
-// ediyorsa "" olur. Burada tek bir şeyi değiştirir ve önemli olan da odur:
-// panelin kurduğu bir motor, onu sahiplenecek işlem takılıyken Managed=false
-// görünür ve bu olmadan ekran yabancı bir DNS sunucusu bildirir. "Kendi
-// değişiklik sistemimiz tutuluyor" ile "başkası bir DNS sunucusu kurmuş" zıt
-// teşhislerdir; birincisi doğruyken operatörü ikincisinin peşine göndermek bir
-// öğleden sonrayı yok eder.
+// mutationHold, agent'Ã„Â±n kalÃ„Â±cÃ„Â± mutasyonlarÃ„Â± reddetme sebebini taÃ…Å¸Ã„Â±r; kabul
+// ediyorsa "" olur. Burada tek bir Ã…Å¸eyi deÃ„Å¸iÃ…Å¸tirir ve ÃƒÂ¶nemli olan da odur:
+// panelin kurduÃ„Å¸u bir motor, onu sahiplenecek iÃ…Å¸lem takÃ„Â±lÃ„Â±yken Managed=false
+// gÃƒÂ¶rÃƒÂ¼nÃƒÂ¼r ve bu olmadan ekran yabancÃ„Â± bir DNS sunucusu bildirir. "Kendi
+// deÃ„Å¸iÃ…Å¸iklik sistemimiz tutuluyor" ile "baÃ…Å¸kasÃ„Â± bir DNS sunucusu kurmuÃ…Å¸" zÃ„Â±t
+// teÃ…Å¸hislerdir; birincisi doÃ„Å¸ruyken operatÃƒÂ¶rÃƒÂ¼ ikincisinin peÃ…Å¸ine gÃƒÂ¶ndermek bir
+// ÃƒÂ¶Ã„Å¸leden sonrayÃ„Â± yok eder.
 //
-// Durum mevcut kapalı kümenin içinde kalır; düzeltmeyi, sözleşme gereği serbest
-// biçimli olan detay kodu taşır. Burada yeni bir durum uydurmak, arayüz
-// doğrulayıcısı tarafından reddedilirdi.
+// Durum mevcut kapalÃ„Â± kÃƒÂ¼menin iÃƒÂ§inde kalÃ„Â±r; dÃƒÂ¼zeltmeyi, sÃƒÂ¶zleÃ…Å¸me gereÃ„Å¸i serbest
+// biÃƒÂ§imli olan detay kodu taÃ…Å¸Ã„Â±r. Burada yeni bir durum uydurmak, arayÃƒÂ¼z
+// doÃ„Å¸rulayÃ„Â±cÃ„Â±sÃ„Â± tarafÃ„Â±ndan reddedilirdi.
 func deriveDNSEnginePresentation(
 	state dnsEngineDBState,
 	runtimes map[transport.DNSEngine]transport.DNSBackendRuntimeState,
@@ -603,15 +603,15 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	// installed but not yet adopted is still probed: its zones may well be
 	// signed, and that is exactly what the blocker exists for.
 	//
-	// Etkin motoru ve kurulu PowerDNS'i olmayan sunucuda bir bölgeyi
-	// imzalamış olabilecek hiçbir şey ve sorulacak bir arka uç yoktur. Yine
-	// de sormak, önceden var olan her bölgeyi "DNSSEC hazırlığı
-	// kullanılamıyor"a çeviriyordu; sunum bunu "degraded" bildiriyor ve ilk
-	// kurulum önizlemesi dnssec_unsupported, target_unavailable ve
-	// source_degraded ile aynı anda reddediyordu (S-8 T1 Arch'ta, aynı
-	// biçimde Debian'da yeniden üretildi; defter R-029, üçüncü kat).
-	// Kurulu ama henüz devralınmamış eski bir PowerDNS yine sorgulanır:
-	// bölgeleri pekâlâ imzalı olabilir; engelleyici tam bunun için vardır.
+	// Etkin motoru ve kurulu PowerDNS'i olmayan sunucuda bir bÃƒÂ¶lgeyi
+	// imzalamÃ„Â±Ã…Å¸ olabilecek hiÃƒÂ§bir Ã…Å¸ey ve sorulacak bir arka uÃƒÂ§ yoktur. Yine
+	// de sormak, ÃƒÂ¶nceden var olan her bÃƒÂ¶lgeyi "DNSSEC hazÃ„Â±rlÃ„Â±Ã„Å¸Ã„Â±
+	// kullanÃ„Â±lamÃ„Â±yor"a ÃƒÂ§eviriyordu; sunum bunu "degraded" bildiriyor ve ilk
+	// kurulum ÃƒÂ¶nizlemesi dnssec_unsupported, target_unavailable ve
+	// source_degraded ile aynÃ„Â± anda reddediyordu (S-8 T1 Arch'ta, aynÃ„Â±
+	// biÃƒÂ§imde Debian'da yeniden ÃƒÂ¼retildi; defter R-029, ÃƒÂ¼ÃƒÂ§ÃƒÂ¼ncÃƒÂ¼ kat).
+	// Kurulu ama henÃƒÂ¼z devralÃ„Â±nmamÃ„Â±Ã…Å¸ eski bir PowerDNS yine sorgulanÃ„Â±r:
+	// bÃƒÂ¶lgeleri pekÃƒÂ¢lÃƒÂ¢ imzalÃ„Â± olabilir; engelleyici tam bunun iÃƒÂ§in vardÃ„Â±r.
 	probeDNSSEC := state.ActiveEngine == transport.DNSEnginePowerDNS ||
 		(state.ActiveEngine == "" && runtimeErr == nil &&
 			runtimes[transport.DNSEnginePowerDNS].Installed)
@@ -776,7 +776,7 @@ func (p *Panel) callSyncDNSZoneV3(
 	}
 	if response.Error != "" {
 		if response.Synced || response.RecoveryPending ||
-			response.Engine != "" || response.EngineEpoch != 0 ||
+			response.PendingCode != "" || response.Engine != "" || response.EngineEpoch != 0 ||
 			response.AppliedGeneration != 0 {
 			return errors.New("agent returned a mixed DNS publication failure response")
 		}
@@ -785,12 +785,13 @@ func (p *Panel) callSyncDNSZoneV3(
 	if response.RecoveryPending {
 		if response.Synced || response.Engine != request.Engine ||
 			response.EngineEpoch != request.EngineEpoch ||
-			response.AppliedGeneration != request.DesiredGeneration {
+			response.AppliedGeneration != request.DesiredGeneration ||
+			(response.PendingCode != "" && !transport.ValidDNSPeerPendingCode(response.PendingCode)) {
 			return errors.New("agent returned an invalid pending DNS publication receipt")
 		}
-		return &dnsZoneV3PropagationPendingError{}
+		return &dnsZoneV3PropagationPendingError{Code: response.PendingCode}
 	}
-	if !response.Synced ||
+	if response.PendingCode != "" || !response.Synced ||
 		response.Engine != request.Engine ||
 		response.EngineEpoch != request.EngineEpoch ||
 		response.AppliedGeneration != request.DesiredGeneration {
@@ -821,18 +822,19 @@ func (p *Panel) callRecoverDNSZoneV3(
 		return err
 	}
 	if response.Error != "" {
-		if response.Recovered || response.RecoveryPending {
+		if response.Recovered || response.RecoveryPending || response.PendingCode != "" {
 			return errors.New("agent returned a mixed DNS zone recovery failure response")
 		}
 		return errors.New("agent could not verify the exact DNS zone recovery")
 	}
 	if response.RecoveryPending {
-		if response.Recovered {
+		if response.Recovered || (response.PendingCode != "" &&
+			!transport.ValidDNSPeerPendingCode(response.PendingCode)) {
 			return errors.New("agent returned a mixed DNS zone recovery response")
 		}
-		return &dnsZoneV3PropagationPendingError{}
+		return &dnsZoneV3PropagationPendingError{Code: response.PendingCode}
 	}
-	if !response.Recovered {
+	if response.PendingCode != "" || !response.Recovered {
 		return errors.New("agent did not confirm the exact DNS zone recovery")
 	}
 	return nil
@@ -845,19 +847,19 @@ func (p *Panel) callRecoverDNSZoneV3(
 // Calling it "install" and then refusing it as target_already_active and
 // source_degraded told the operator the truth twice and offered nothing.
 //
-// dnsEngineActionReinstall, motor ekranının sunacak yolu olmayan onarımı
-// adlandırır: defter bir motorun bu sunucunun sahibi olduğunu söyler ve
-// sunucuda o motorun kopyası yoktur. Geri yüklenmiş bir kontrol düzleminin
-// taze sunucudaki görüntüsü, eski bir sunucuda ise panelin arkasından paket
-// kaldırmanın görüntüsü budur. Buna "kurulum" deyip target_already_active ve
-// source_degraded ile reddetmek, operatöre doğruyu iki kez söyleyip hiçbir yol
+// dnsEngineActionReinstall, motor ekranÃ„Â±nÃ„Â±n sunacak yolu olmayan onarÃ„Â±mÃ„Â±
+// adlandÃ„Â±rÃ„Â±r: defter bir motorun bu sunucunun sahibi olduÃ„Å¸unu sÃƒÂ¶yler ve
+// sunucuda o motorun kopyasÃ„Â± yoktur. Geri yÃƒÂ¼klenmiÃ…Å¸ bir kontrol dÃƒÂ¼zleminin
+// taze sunucudaki gÃƒÂ¶rÃƒÂ¼ntÃƒÂ¼sÃƒÂ¼, eski bir sunucuda ise panelin arkasÃ„Â±ndan paket
+// kaldÃ„Â±rmanÃ„Â±n gÃƒÂ¶rÃƒÂ¼ntÃƒÂ¼sÃƒÂ¼ budur. Buna "kurulum" deyip target_already_active ve
+// source_degraded ile reddetmek, operatÃƒÂ¶re doÃ„Å¸ruyu iki kez sÃƒÂ¶yleyip hiÃƒÂ§bir yol
 // vermiyordu.
 const dnsEngineActionReinstall = "reinstall_active"
 
 // reinstallableActiveDNSEngine is the host shape the reinstall repairs: the
 // durable ledger names this engine as the authority at a real epoch, the
 // topology is standalone, the readiness probe answered, and the engine is not
-// serving. Whether its packages are on disk is not part of the question — an
+// serving. Whether its packages are on disk is not part of the question Ã¢â‚¬â€ an
 // absent engine and one whose packages a failed attempt already installed need
 // the same repair, and the second is what the first leaves behind. Requiring
 // the runtime to be wholly absent would offer the retry only until the first
@@ -869,20 +871,20 @@ const dnsEngineActionReinstall = "reinstall_active"
 // the active epoch and nothing authoritative is listening, so the reinstall
 // cannot run against a server the panel does not own.
 //
-// reinstallableActiveDNSEngine, yeniden kurulumun onardığı sunucu biçimidir:
-// kalıcı defter bu motoru gerçek bir çağda yetki sahibi olarak adlandırır,
-// topoloji tek sunucudur, hazırlık yoklaması cevap vermiştir ve motor hizmet
-// vermiyordur. Paketlerinin diskte olup olmaması sorunun parçası değildir —
-// olmayan bir motor ile paketlerini düşmüş bir denemenin kurduğu motor aynı
-// onarımı ister; ikincisi zaten birincisinin geride bıraktığıdır. Çalışma
-// zamanının tamamen yok olmasını istemek, yeniden denemeyi yalnız ilk deneme
-// ilerleme kaydedene kadar sunardı: paketin bir başarısızlıktan sağ çıktığı
-// sunucuda ilk kurulumun düştüğü tuzak (defter R-028/R-029).
+// reinstallableActiveDNSEngine, yeniden kurulumun onardÃ„Â±Ã„Å¸Ã„Â± sunucu biÃƒÂ§imidir:
+// kalÃ„Â±cÃ„Â± defter bu motoru gerÃƒÂ§ek bir ÃƒÂ§aÃ„Å¸da yetki sahibi olarak adlandÃ„Â±rÃ„Â±r,
+// topoloji tek sunucudur, hazÃ„Â±rlÃ„Â±k yoklamasÃ„Â± cevap vermiÃ…Å¸tir ve motor hizmet
+// vermiyordur. Paketlerinin diskte olup olmamasÃ„Â± sorunun parÃƒÂ§asÃ„Â± deÃ„Å¸ildir Ã¢â‚¬â€
+// olmayan bir motor ile paketlerini dÃƒÂ¼Ã…Å¸mÃƒÂ¼Ã…Å¸ bir denemenin kurduÃ„Å¸u motor aynÃ„Â±
+// onarÃ„Â±mÃ„Â± ister; ikincisi zaten birincisinin geride bÃ„Â±raktÃ„Â±Ã„Å¸Ã„Â±dÃ„Â±r. Ãƒâ€¡alÃ„Â±Ã…Å¸ma
+// zamanÃ„Â±nÃ„Â±n tamamen yok olmasÃ„Â±nÃ„Â± istemek, yeniden denemeyi yalnÃ„Â±z ilk deneme
+// ilerleme kaydedene kadar sunardÃ„Â±: paketin bir baÃ…Å¸arÃ„Â±sÃ„Â±zlÃ„Â±ktan saÃ„Å¸ ÃƒÂ§Ã„Â±ktÃ„Â±Ã„Å¸Ã„Â±
+// sunucuda ilk kurulumun dÃƒÂ¼Ã…Å¸tÃƒÂ¼Ã„Å¸ÃƒÂ¼ tuzak (defter R-028/R-029).
 //
-// Gevşetilmeyen şey kanıttır. Panel yalnız neyin sunulacağına karar verir;
-// agent, motorun sahiplik makbuzu onu etkin çağda adlandırmadıkça ve yetki
-// taşıyan hiçbir şey dinlemiyor olmadıkça bağımsız olarak reddeder; dolayısıyla
-// yeniden kurulum, panelin sahibi olmadığı bir sunucuda çalışamaz.
+// GevÃ…Å¸etilmeyen Ã…Å¸ey kanÃ„Â±ttÃ„Â±r. Panel yalnÃ„Â±z neyin sunulacaÃ„Å¸Ã„Â±na karar verir;
+// agent, motorun sahiplik makbuzu onu etkin ÃƒÂ§aÃ„Å¸da adlandÃ„Â±rmadÃ„Â±kÃƒÂ§a ve yetki
+// taÃ…Å¸Ã„Â±yan hiÃƒÂ§bir Ã…Å¸ey dinlemiyor olmadÃ„Â±kÃƒÂ§a baÃ„Å¸Ã„Â±msÃ„Â±z olarak reddeder; dolayÃ„Â±sÃ„Â±yla
+// yeniden kurulum, panelin sahibi olmadÃ„Â±Ã„Å¸Ã„Â± bir sunucuda ÃƒÂ§alÃ„Â±Ã…Å¸amaz.
 func reinstallableActiveDNSEngine(
 	snapshot dnsEngineSnapshot,
 	target transport.DNSEngine,
@@ -904,7 +906,7 @@ func reinstallableActiveDNSEngine(
 // ledger entry naming it. The preview called that "switch" and then refused it
 // with target_unavailable and unmanaged_dns_detected, the service screens sent
 // the operator back to the screen that refuses, and the only way out was to
-// purge the package over SSH — which the product forbids (register R-038).
+// purge the package over SSH Ã¢â‚¬â€ which the product forbids (register R-038).
 //
 // The refusal had the facts right and the conclusion wrong. What is missing is
 // not a proof, it is consent: adopting replaces that server's configuration
@@ -916,24 +918,24 @@ func reinstallableActiveDNSEngine(
 // proves independently that the target is not serving and that it owns every
 // byte it writes.
 //
-// dnsEngineActionAdoptUnmanaged, CelikPanel'in kurmadığı bir DNS sunucusunun
-// açık ve bilgilendirilmiş devralınmasını adlandırır. Sunucu biçimi sıradandır
-// ve bugüne kadar çıkmazdı: bir sağlayıcı imajı ya da bir operatör motorun
-// paketlerini diske koymuştur, hiçbir şey yapılandırılmamıştır, hiçbir şey
-// hizmet vermemektedir ve panelin defterinde onu adlandıran bir kayıt yoktur.
-// Önizleme buna "switch" deyip target_unavailable ve unmanaged_dns_detected ile
-// reddediyor, servis ekranları operatörü reddeden ekrana geri gönderiyor ve tek
-// çıkış paketi SSH ile kaldırmak oluyordu — ürünün yasakladığı şey (defter
+// dnsEngineActionAdoptUnmanaged, CelikPanel'in kurmadÃ„Â±Ã„Å¸Ã„Â± bir DNS sunucusunun
+// aÃƒÂ§Ã„Â±k ve bilgilendirilmiÃ…Å¸ devralÃ„Â±nmasÃ„Â±nÃ„Â± adlandÃ„Â±rÃ„Â±r. Sunucu biÃƒÂ§imi sÃ„Â±radandÃ„Â±r
+// ve bugÃƒÂ¼ne kadar ÃƒÂ§Ã„Â±kmazdÃ„Â±: bir saÃ„Å¸layÃ„Â±cÃ„Â± imajÃ„Â± ya da bir operatÃƒÂ¶r motorun
+// paketlerini diske koymuÃ…Å¸tur, hiÃƒÂ§bir Ã…Å¸ey yapÃ„Â±landÃ„Â±rÃ„Â±lmamÃ„Â±Ã…Å¸tÃ„Â±r, hiÃƒÂ§bir Ã…Å¸ey
+// hizmet vermemektedir ve panelin defterinde onu adlandÃ„Â±ran bir kayÃ„Â±t yoktur.
+// Ãƒâ€“nizleme buna "switch" deyip target_unavailable ve unmanaged_dns_detected ile
+// reddediyor, servis ekranlarÃ„Â± operatÃƒÂ¶rÃƒÂ¼ reddeden ekrana geri gÃƒÂ¶nderiyor ve tek
+// ÃƒÂ§Ã„Â±kÃ„Â±Ã…Å¸ paketi SSH ile kaldÃ„Â±rmak oluyordu Ã¢â‚¬â€ ÃƒÂ¼rÃƒÂ¼nÃƒÂ¼n yasakladÃ„Â±Ã„Å¸Ã„Â± Ã…Å¸ey (defter
 // R-038).
 //
-// Ret, olguları doğru, sonucu yanlış kuruyordu. Eksik olan bir kanıt değil,
-// rızadır: devralma o sunucunun yapılandırmasını panelinkiyle değiştirir ve
-// bugün sunduğu, panelin bilmediği her şey sunulmaz olur. Bu yüzden panel
-// devralmayı adıyla anar, bunu düz sözlerle söyler ve kesinti onayından ayrı
-// kendi onayını ister; çünkü operatör başka bir şeye rıza göstermektedir. Başka
-// hiçbir şey gevşemez: commit sıradan ilk kurulum işlemini çalıştırır ve agent,
-// hedefin hizmet vermediğini ve yazdığı her baytın sahibi olduğunu bağımsız
-// olarak yine kanıtlar.
+// Ret, olgularÃ„Â± doÃ„Å¸ru, sonucu yanlÃ„Â±Ã…Å¸ kuruyordu. Eksik olan bir kanÃ„Â±t deÃ„Å¸il,
+// rÃ„Â±zadÃ„Â±r: devralma o sunucunun yapÃ„Â±landÃ„Â±rmasÃ„Â±nÃ„Â± panelinkiyle deÃ„Å¸iÃ…Å¸tirir ve
+// bugÃƒÂ¼n sunduÃ„Å¸u, panelin bilmediÃ„Å¸i her Ã…Å¸ey sunulmaz olur. Bu yÃƒÂ¼zden panel
+// devralmayÃ„Â± adÃ„Â±yla anar, bunu dÃƒÂ¼z sÃƒÂ¶zlerle sÃƒÂ¶yler ve kesinti onayÃ„Â±ndan ayrÃ„Â±
+// kendi onayÃ„Â±nÃ„Â± ister; ÃƒÂ§ÃƒÂ¼nkÃƒÂ¼ operatÃƒÂ¶r baÃ…Å¸ka bir Ã…Å¸eye rÃ„Â±za gÃƒÂ¶stermektedir. BaÃ…Å¸ka
+// hiÃƒÂ§bir Ã…Å¸ey gevÃ…Å¸emez: commit sÃ„Â±radan ilk kurulum iÃ…Å¸lemini ÃƒÂ§alÃ„Â±Ã…Å¸tÃ„Â±rÃ„Â±r ve agent,
+// hedefin hizmet vermediÃ„Å¸ini ve yazdÃ„Â±Ã„Å¸Ã„Â± her baytÃ„Â±n sahibi olduÃ„Å¸unu baÃ„Å¸Ã„Â±msÃ„Â±z
+// olarak yine kanÃ„Â±tlar.
 const dnsEngineActionAdoptUnmanaged = "adopt_unmanaged"
 
 // adoptableUnmanagedDNSEngine is the exact host shape the takeover answers:
@@ -943,7 +945,7 @@ const dnsEngineActionAdoptUnmanaged = "adopt_unmanaged"
 // The stopped half (R-038) is the shape the agent's first-install transaction
 // already accepts unchanged: nothing is listening, so the switch proofs pass as
 // written. The running half (R-039) is a server that is answering queries right
-// now, and it is a different operation with different evidence — the agent
+// now, and it is a different operation with different evidence Ã¢â‚¬â€ the agent
 // adopts it in place, never stopping or starting it, so the switch's
 // not-serving proof and its port-53 pre-mutation guard are neither relaxed nor
 // reached. Both halves are one action and one acknowledgement, because the
@@ -959,29 +961,29 @@ const dnsEngineActionAdoptUnmanaged = "adopt_unmanaged"
 // listener belonging to a running engine, so port53Conflict still means only
 // "some other owner holds the port", which is still refused here.
 //
-// adoptableUnmanagedDNSEngine, devralmanın yanıtladığı kesin sunucu biçimidir:
-// diskte BIND, kayıtlı kalıcı yetki yok, panel hiçbirinin sahibi değil ve
-// yayımlanacak kayıtlı tek sunucu kimliği var. Bu biçimin iki yarısını da
-// yanıtlar.
+// adoptableUnmanagedDNSEngine, devralmanÃ„Â±n yanÃ„Â±tladÃ„Â±Ã„Å¸Ã„Â± kesin sunucu biÃƒÂ§imidir:
+// diskte BIND, kayÃ„Â±tlÃ„Â± kalÃ„Â±cÃ„Â± yetki yok, panel hiÃƒÂ§birinin sahibi deÃ„Å¸il ve
+// yayÃ„Â±mlanacak kayÃ„Â±tlÃ„Â± tek sunucu kimliÃ„Å¸i var. Bu biÃƒÂ§imin iki yarÃ„Â±sÃ„Â±nÃ„Â± da
+// yanÃ„Â±tlar.
 //
-// Durmuş yarı (R-038), agent'ın ilk kurulum işleminin değişmeden kabul ettiği
-// biçimdir: dinleyen bir şey yoktur, dolayısıyla geçiş kanıtları yazıldığı gibi
-// geçer. Çalışan yarı (R-039), şu anda sorgu yanıtlayan bir sunucudur ve kanıtı
-// başka olan başka bir işlemdir — agent onu yerinde devralır, hiç durdurmaz ve
-// başlatmaz; böylece geçişin hizmet-vermiyor kanıtı ile 53 numaralı bağlantı
-// noktası ön-mutasyon koruması ne gevşetilir ne de o yola girilir. İki yarı tek
-// eylem ve tek onaydır; çünkü operatör aynı şeye rıza gösterir: bu sunucunun
-// yapılandırması CelikPanel'inki olur.
+// DurmuÃ…Å¸ yarÃ„Â± (R-038), agent'Ã„Â±n ilk kurulum iÃ…Å¸leminin deÃ„Å¸iÃ…Å¸meden kabul ettiÃ„Å¸i
+// biÃƒÂ§imdir: dinleyen bir Ã…Å¸ey yoktur, dolayÃ„Â±sÃ„Â±yla geÃƒÂ§iÃ…Å¸ kanÃ„Â±tlarÃ„Â± yazÃ„Â±ldÃ„Â±Ã„Å¸Ã„Â± gibi
+// geÃƒÂ§er. Ãƒâ€¡alÃ„Â±Ã…Å¸an yarÃ„Â± (R-039), Ã…Å¸u anda sorgu yanÃ„Â±tlayan bir sunucudur ve kanÃ„Â±tÃ„Â±
+// baÃ…Å¸ka olan baÃ…Å¸ka bir iÃ…Å¸lemdir Ã¢â‚¬â€ agent onu yerinde devralÃ„Â±r, hiÃƒÂ§ durdurmaz ve
+// baÃ…Å¸latmaz; bÃƒÂ¶ylece geÃƒÂ§iÃ…Å¸in hizmet-vermiyor kanÃ„Â±tÃ„Â± ile 53 numaralÃ„Â± baÃ„Å¸lantÃ„Â±
+// noktasÃ„Â± ÃƒÂ¶n-mutasyon korumasÃ„Â± ne gevÃ…Å¸etilir ne de o yola girilir. Ã„Â°ki yarÃ„Â± tek
+// eylem ve tek onaydÃ„Â±r; ÃƒÂ§ÃƒÂ¼nkÃƒÂ¼ operatÃƒÂ¶r aynÃ„Â± Ã…Å¸eye rÃ„Â±za gÃƒÂ¶sterir: bu sunucunun
+// yapÃ„Â±landÃ„Â±rmasÃ„Â± CelikPanel'inki olur.
 //
-// Running artık bir ret sebebi değildir; ama önizlemenin taşıması gereken bir
-// olgu olmayı sürdürür, çünkü iki yarının bedeli farklıdır ve etkiler bunu
-// söyler. Güvenilirdir; çünkü agent'ın hazırlık yoklaması birim topolojisi
-// karışık, mühürsüz maskeli ya da düşmüş bir BIND için hiç cevap vermez;
-// çalışma zamanı hatası birkaç satır aşağıda target_unavailable olur. Çalışan
-// bir hedef 53 numaralı bağlantı noktasını da çekişmeli yapmaz: hazırlık
-// yoklaması çalışan bir motorun dinleyicisine izin verir, dolayısıyla
-// port53Conflict hâlâ yalnız "bağlantı noktasını başka bir sahip tutuyor"
-// demektir ve burada hâlâ reddedilir.
+// Running artÃ„Â±k bir ret sebebi deÃ„Å¸ildir; ama ÃƒÂ¶nizlemenin taÃ…Å¸Ã„Â±masÃ„Â± gereken bir
+// olgu olmayÃ„Â± sÃƒÂ¼rdÃƒÂ¼rÃƒÂ¼r, ÃƒÂ§ÃƒÂ¼nkÃƒÂ¼ iki yarÃ„Â±nÃ„Â±n bedeli farklÃ„Â±dÃ„Â±r ve etkiler bunu
+// sÃƒÂ¶yler. GÃƒÂ¼venilirdir; ÃƒÂ§ÃƒÂ¼nkÃƒÂ¼ agent'Ã„Â±n hazÃ„Â±rlÃ„Â±k yoklamasÃ„Â± birim topolojisi
+// karÃ„Â±Ã…Å¸Ã„Â±k, mÃƒÂ¼hÃƒÂ¼rsÃƒÂ¼z maskeli ya da dÃƒÂ¼Ã…Å¸mÃƒÂ¼Ã…Å¸ bir BIND iÃƒÂ§in hiÃƒÂ§ cevap vermez;
+// ÃƒÂ§alÃ„Â±Ã…Å¸ma zamanÃ„Â± hatasÃ„Â± birkaÃƒÂ§ satÃ„Â±r aÃ…Å¸aÃ„Å¸Ã„Â±da target_unavailable olur. Ãƒâ€¡alÃ„Â±Ã…Å¸an
+// bir hedef 53 numaralÃ„Â± baÃ„Å¸lantÃ„Â± noktasÃ„Â±nÃ„Â± da ÃƒÂ§ekiÃ…Å¸meli yapmaz: hazÃ„Â±rlÃ„Â±k
+// yoklamasÃ„Â± ÃƒÂ§alÃ„Â±Ã…Å¸an bir motorun dinleyicisine izin verir, dolayÃ„Â±sÃ„Â±yla
+// port53Conflict hÃƒÂ¢lÃƒÂ¢ yalnÃ„Â±z "baÃ„Å¸lantÃ„Â± noktasÃ„Â±nÃ„Â± baÃ…Å¸ka bir sahip tutuyor"
+// demektir ve burada hÃƒÂ¢lÃƒÂ¢ reddedilir.
 func adoptableUnmanagedDNSEngine(
 	snapshot dnsEngineSnapshot,
 	target transport.DNSEngine,
@@ -1002,12 +1004,12 @@ func adoptableUnmanagedDNSEngine(
 	// stands this host is the panel's and busy, which is what the engine
 	// card's mutations_held blocker already says.
 	//
-	// R-050. Panelin kurduğu bir BIND, onu sahiplenecek işlem tutulurken
-	// Managed=false okunur; bu da tam olarak aşağıdaki biçimdir. O hâlde
-	// devralma, panelin kendi yarım işi için önerilirdi ve operatörün okuduğu
-	// cümle - "CelikPanel'in kurmadığı bir DNS sunucusu" - panelin kurduğu bir
-	// sunucu hakkında yanlış olurdu. Commit zaten reddedilirdi; kusur olan
-	// tekliftir. Tutma sürdükçe bu sunucu panelindir ve meşguldür.
+	// R-050. Panelin kurduÃ„Å¸u bir BIND, onu sahiplenecek iÃ…Å¸lem tutulurken
+	// Managed=false okunur; bu da tam olarak aÃ…Å¸aÃ„Å¸Ã„Â±daki biÃƒÂ§imdir. O hÃƒÂ¢lde
+	// devralma, panelin kendi yarÃ„Â±m iÃ…Å¸i iÃƒÂ§in ÃƒÂ¶nerilirdi ve operatÃƒÂ¶rÃƒÂ¼n okuduÃ„Å¸u
+	// cÃƒÂ¼mle - "CelikPanel'in kurmadÃ„Â±Ã„Å¸Ã„Â± bir DNS sunucusu" - panelin kurduÃ„Å¸u bir
+	// sunucu hakkÃ„Â±nda yanlÃ„Â±Ã…Å¸ olurdu. Commit zaten reddedilirdi; kusur olan
+	// tekliftir. Tutma sÃƒÂ¼rdÃƒÂ¼kÃƒÂ§e bu sunucu panelindir ve meÃ…Å¸guldÃƒÂ¼r.
 	if snapshot.mutationHold != "" {
 		return false
 	}
@@ -1027,14 +1029,14 @@ func adoptableUnmanagedDNSEngine(
 	// no active engine recorded, a stopped unmanaged BIND reads "unconfigured"
 	// and a running one reads "unmanaged". Both are the takeover's shape. Only
 	// those two are accepted, and "unmanaged" only when it is this target that
-	// is running — otherwise the word is describing some other engine.
+	// is running Ã¢â‚¬â€ otherwise the word is describing some other engine.
 	//
-	// Sunum durumu türetilmiştir, yetkili değildir ve aynı sunucu için yalnız
-	// Running'e bakarak farklı bir kelime türetir: kayıtlı etkin motor yokken
-	// durmuş panel dışı bir BIND "unconfigured", çalışanı "unmanaged" okunur.
-	// İkisi de devralmanın biçimidir. Yalnız bu ikisi kabul edilir ve
-	// "unmanaged" yalnız çalışan bu hedefken; aksi hâlde kelime başka bir
-	// motoru anlatıyordur.
+	// Sunum durumu tÃƒÂ¼retilmiÃ…Å¸tir, yetkili deÃ„Å¸ildir ve aynÃ„Â± sunucu iÃƒÂ§in yalnÃ„Â±z
+	// Running'e bakarak farklÃ„Â± bir kelime tÃƒÂ¼retir: kayÃ„Â±tlÃ„Â± etkin motor yokken
+	// durmuÃ…Å¸ panel dÃ„Â±Ã…Å¸Ã„Â± bir BIND "unconfigured", ÃƒÂ§alÃ„Â±Ã…Å¸anÃ„Â± "unmanaged" okunur.
+	// Ã„Â°kisi de devralmanÃ„Â±n biÃƒÂ§imidir. YalnÃ„Â±z bu ikisi kabul edilir ve
+	// "unmanaged" yalnÃ„Â±z ÃƒÂ§alÃ„Â±Ã…Å¸an bu hedefken; aksi hÃƒÂ¢lde kelime baÃ…Å¸ka bir
+	// motoru anlatÃ„Â±yordur.
 	switch snapshot.State {
 	case dnsEngineStateUnconfigured:
 	case dnsEngineStateUnmanaged:
@@ -1047,8 +1049,8 @@ func adoptableUnmanagedDNSEngine(
 	// "No engine is active" is the register's own wording and is proven here
 	// directly rather than inferred from the presentation string.
 	//
-	// "Hiçbir motor etkin değil", defterin kendi ifadesidir ve burada sunum
-	// dizesinden çıkarsanmak yerine doğrudan kanıtlanır.
+	// "HiÃƒÂ§bir motor etkin deÃ„Å¸il", defterin kendi ifadesidir ve burada sunum
+	// dizesinden ÃƒÂ§Ã„Â±karsanmak yerine doÃ„Å¸rudan kanÃ„Â±tlanÃ„Â±r.
 	for engine, other := range snapshot.runtime {
 		if engine != target && other.Running {
 			return false
@@ -1127,23 +1129,23 @@ func dnsEngineImpacts(
 	// which is worse than a false cost: it invites the operator to refuse a
 	// safe change, or to go and rescue zones that were never in danger.
 	//
-	// Devralma hiçbir şey kurmaz ve hiçbir şey durdurmaz; ikisini de saymaz.
-	// Saydığı şey, operatörün gerçekten rıza gösterdiği kısımdır.
+	// Devralma hiÃƒÂ§bir Ã…Å¸ey kurmaz ve hiÃƒÂ§bir Ã…Å¸ey durdurmaz; ikisini de saymaz.
+	// SaydÃ„Â±Ã„Å¸Ã„Â± Ã…Å¸ey, operatÃƒÂ¶rÃƒÂ¼n gerÃƒÂ§ekten rÃ„Â±za gÃƒÂ¶sterdiÃ„Å¸i kÃ„Â±sÃ„Â±mdÃ„Â±r.
 	//
-	// İki yarının bedeli farklıdır ve biri diğerinin bedelini iddia etmemeli.
-	// Durmuş yarı, kapalı bir sunucuyu başlatır ve bilinmeyen bölgeleri zaten
-	// yanıtlanmıyordur. Çalışan yarı sunucuyu hiç durdurmaz: BIND
-	// yapılandırmasını yerinde yeniden okur, süreç ve soketleri yaşamayı
-	// sürdürür; dolayısıyla olan şey başlatma değil yeniden yüklemedir ve
-	// olmayan bir kesintiyi vaat etmek yanlış bir bedel olurdu.
+	// Ã„Â°ki yarÃ„Â±nÃ„Â±n bedeli farklÃ„Â±dÃ„Â±r ve biri diÃ„Å¸erinin bedelini iddia etmemeli.
+	// DurmuÃ…Å¸ yarÃ„Â±, kapalÃ„Â± bir sunucuyu baÃ…Å¸latÃ„Â±r ve bilinmeyen bÃƒÂ¶lgeleri zaten
+	// yanÃ„Â±tlanmÃ„Â±yordur. Ãƒâ€¡alÃ„Â±Ã…Å¸an yarÃ„Â± sunucuyu hiÃƒÂ§ durdurmaz: BIND
+	// yapÃ„Â±landÃ„Â±rmasÃ„Â±nÃ„Â± yerinde yeniden okur, sÃƒÂ¼reÃƒÂ§ ve soketleri yaÃ…Å¸amayÃ„Â±
+	// sÃƒÂ¼rdÃƒÂ¼rÃƒÂ¼r; dolayÃ„Â±sÃ„Â±yla olan Ã…Å¸ey baÃ…Å¸latma deÃ„Å¸il yeniden yÃƒÂ¼klemedir ve
+	// olmayan bir kesintiyi vaat etmek yanlÃ„Â±Ã…Å¸ bir bedel olurdu.
 	//
-	// Çalışan yarı, yabancı bölgeleri de korur. CelikPanel'in BIND nesli
-	// eklemelidir - sunucunun kendi dosyalarına bir include ve bir seçenek
-	// bloğu ekler, hiçbir bölge bildirimini silmez - dolayısıyla bu sunucunun
-	// bugün yanıtladığı bir bölge, devralmadan sonra da yönetilmeden
-	// yanıtlanmayı sürdürür. Orada "sunulmaz olur" demek yanlış bir kayıp
-	// olurdu; bu, yanlış bedelden kötüdür: operatörü güvenli bir değişikliği
-	// reddetmeye ya da hiç tehlikede olmayan bölgeleri kurtarmaya çağırır.
+	// Ãƒâ€¡alÃ„Â±Ã…Å¸an yarÃ„Â±, yabancÃ„Â± bÃƒÂ¶lgeleri de korur. CelikPanel'in BIND nesli
+	// eklemelidir - sunucunun kendi dosyalarÃ„Â±na bir include ve bir seÃƒÂ§enek
+	// bloÃ„Å¸u ekler, hiÃƒÂ§bir bÃƒÂ¶lge bildirimini silmez - dolayÃ„Â±sÃ„Â±yla bu sunucunun
+	// bugÃƒÂ¼n yanÃ„Â±tladÃ„Â±Ã„Å¸Ã„Â± bir bÃƒÂ¶lge, devralmadan sonra da yÃƒÂ¶netilmeden
+	// yanÃ„Â±tlanmayÃ„Â± sÃƒÂ¼rdÃƒÂ¼rÃƒÂ¼r. Orada "sunulmaz olur" demek yanlÃ„Â±Ã…Å¸ bir kayÃ„Â±p
+	// olurdu; bu, yanlÃ„Â±Ã…Å¸ bedelden kÃƒÂ¶tÃƒÂ¼dÃƒÂ¼r: operatÃƒÂ¶rÃƒÂ¼ gÃƒÂ¼venli bir deÃ„Å¸iÃ…Å¸ikliÃ„Å¸i
+	// reddetmeye ya da hiÃƒÂ§ tehlikede olmayan bÃƒÂ¶lgeleri kurtarmaya ÃƒÂ§aÃ„Å¸Ã„Â±rÃ„Â±r.
 	if action == dnsEngineActionAdoptUnmanaged {
 		if targetRunning {
 			return []string{
@@ -1160,9 +1162,9 @@ func dnsEngineImpacts(
 	// stop_source or brief_dns_interruption here would promise a cost that
 	// cannot be paid twice: the outage already happened.
 	//
-	// Hiçbir şey hizmet vermiyor; dolayısıyla duracak ve kesilecek bir şey de
+	// HiÃƒÂ§bir Ã…Å¸ey hizmet vermiyor; dolayÃ„Â±sÃ„Â±yla duracak ve kesilecek bir Ã…Å¸ey de
 	// yok. Burada stop_source ya da brief_dns_interruption saymak, iki kez
-	// ödenemeyecek bir bedel vaat etmek olurdu: kesinti çoktan yaşandı.
+	// ÃƒÂ¶denemeyecek bir bedel vaat etmek olurdu: kesinti ÃƒÂ§oktan yaÃ…Å¸andÃ„Â±.
 	if action == dnsEngineActionReinstall {
 		return []string{
 			"install_target", "validate_target", "publish_zones", "start_target",
@@ -1214,6 +1216,11 @@ func dnsEnginePreviewBlockers(
 ) []dnsEnginePreviewBlocker {
 	blockers := make([]dnsEnginePreviewBlocker, 0, 8)
 	action := dnsEngineAction(snapshot, target)
+	if (action == "switch" || action == "install") && target == transport.DNSEnginePowerDNS &&
+		snapshot.Topology == transport.DNSTopologyPaired &&
+		snapshot.PairRole == transport.DNSPairRolePrimary {
+		blockers = addDNSEngineBlocker(blockers, "pdns_primary_switch_paused")
+	}
 	reinstall := action == dnsEngineActionReinstall
 	actualSource := transport.DNSEngine("")
 	if snapshot.ActiveEngine != nil {
@@ -1242,13 +1249,13 @@ func dnsEnginePreviewBlockers(
 	// there means the source has not caught up, and a switch must not copy an
 	// unsettled zone set.
 	//
-	// İlk kurulumun kaynak motoru yoktur; bölgeleri yapısı gereği bekler:
-	// onları uygulamış olabilecek hiçbir şey yoktur ve kurulumun kendisi her
-	// bölgeyi istenen neslinde yayımlayıp commit'te uygulandı işaretler. Bunu
-	// engelleyici saymak, önce alan adı eklenmiş her sunucuda ilk motor
-	// kurulumunu ulaşılamaz kılıyordu (S-7 T1, defter R-029). Kaynak motor
-	// etkinken engelleyici kalır: orada bekleme, kaynağın yetişmediği
-	// anlamına gelir ve geçiş oturmamış bir bölge kümesini kopyalamamalıdır.
+	// Ã„Â°lk kurulumun kaynak motoru yoktur; bÃƒÂ¶lgeleri yapÃ„Â±sÃ„Â± gereÃ„Å¸i bekler:
+	// onlarÃ„Â± uygulamÃ„Â±Ã…Å¸ olabilecek hiÃƒÂ§bir Ã…Å¸ey yoktur ve kurulumun kendisi her
+	// bÃƒÂ¶lgeyi istenen neslinde yayÃ„Â±mlayÃ„Â±p commit'te uygulandÃ„Â± iÃ…Å¸aretler. Bunu
+	// engelleyici saymak, ÃƒÂ¶nce alan adÃ„Â± eklenmiÃ…Å¸ her sunucuda ilk motor
+	// kurulumunu ulaÃ…Å¸Ã„Â±lamaz kÃ„Â±lÃ„Â±yordu (S-7 T1, defter R-029). Kaynak motor
+	// etkinken engelleyici kalÃ„Â±r: orada bekleme, kaynaÃ„Å¸Ã„Â±n yetiÃ…Å¸mediÃ„Å¸i
+	// anlamÃ„Â±na gelir ve geÃƒÂ§iÃ…Å¸ oturmamÃ„Â±Ã…Å¸ bir bÃƒÂ¶lge kÃƒÂ¼mesini kopyalamamalÃ„Â±dÃ„Â±r.
 	//
 	// A reinstall has no source that could catch up either: the engine the
 	// pending zones are waiting for does not exist on this host. The reinstall
@@ -1256,11 +1263,11 @@ func dnsEnginePreviewBlockers(
 	// first install does, so a pending zone is the reason to run it rather than
 	// a reason to refuse it.
 	//
-	// Yeniden kurulumun da yetişebilecek bir kaynağı yoktur: bekleyen
-	// bölgelerin beklediği motor bu sunucuda mevcut değildir. Yeniden
-	// kurulumun kendisi her bölgeyi istenen neslinde ilk kurulumla birebir
-	// aynı biçimde yeniden yayımlar; dolayısıyla bekleyen bir bölge, onu
-	// reddetme değil çalıştırma sebebidir.
+	// Yeniden kurulumun da yetiÃ…Å¸ebilecek bir kaynaÃ„Å¸Ã„Â± yoktur: bekleyen
+	// bÃƒÂ¶lgelerin beklediÃ„Å¸i motor bu sunucuda mevcut deÃ„Å¸ildir. Yeniden
+	// kurulumun kendisi her bÃƒÂ¶lgeyi istenen neslinde ilk kurulumla birebir
+	// aynÃ„Â± biÃƒÂ§imde yeniden yayÃ„Â±mlar; dolayÃ„Â±sÃ„Â±yla bekleyen bir bÃƒÂ¶lge, onu
+	// reddetme deÃ„Å¸il ÃƒÂ§alÃ„Â±Ã…Å¸tÃ„Â±rma sebebidir.
 	if action != "adopt" && !reinstall && snapshot.ActiveEngine != nil &&
 		snapshot.PendingZoneCount > 0 {
 		blockers = addDNSEngineBlocker(blockers, "pending_zone_sync")
@@ -1280,9 +1287,9 @@ func dnsEnginePreviewBlockers(
 	// engine you are recorded as running is not on this machine": there, being
 	// the active engine is the whole reason the operator may reinstall it.
 	//
-	// target_already_active, "zaten çalıştırdığınız motora geçmek istediniz"
-	// için doğru retdir. "Çalıştırdığınız kayıtlı motor bu makinede yok" için
-	// yanlış retdir: orada etkin motor olmak, operatörün onu yeniden
+	// target_already_active, "zaten ÃƒÂ§alÃ„Â±Ã…Å¸tÃ„Â±rdÃ„Â±Ã„Å¸Ã„Â±nÃ„Â±z motora geÃƒÂ§mek istediniz"
+	// iÃƒÂ§in doÃ„Å¸ru retdir. "Ãƒâ€¡alÃ„Â±Ã…Å¸tÃ„Â±rdÃ„Â±Ã„Å¸Ã„Â±nÃ„Â±z kayÃ„Â±tlÃ„Â± motor bu makinede yok" iÃƒÂ§in
+	// yanlÃ„Â±Ã…Å¸ retdir: orada etkin motor olmak, operatÃƒÂ¶rÃƒÂ¼n onu yeniden
 	// kurabilmesinin ta kendisidir.
 	if !reinstall && snapshot.ActiveEngine != nil &&
 		*snapshot.ActiveEngine == target {
@@ -1306,20 +1313,20 @@ func dnsEnginePreviewBlockers(
 	// agent still proves ownership at the active epoch before it touches
 	// anything, so nothing is taken on trust here.
 	//
-	// unmanaged_dns_detected, "buraya başka biri bir DNS sunucusu kurmuş"
-	// demektir. Hiçbir şey hizmet vermezken, panelin kendi defterinin bu
-	// sunucudaki yetki sahibi olarak kaydettiği motor hakkında bunu söyleyemez:
-	// paketler ya panelin kendi yarım kalmış kurulumudur ya da panelin zaten
-	// sahibi olduğu sunucunun durdurulmuş bir kopyasıdır; her ikisinde de onarım
-	// yeniden kurulumdur. Agent, hiçbir şeye dokunmadan önce etkin çağdaki
-	// sahipliği yine de kanıtlar; burada hiçbir şey güvene bırakılmaz.
+	// unmanaged_dns_detected, "buraya baÃ…Å¸ka biri bir DNS sunucusu kurmuÃ…Å¸"
+	// demektir. HiÃƒÂ§bir Ã…Å¸ey hizmet vermezken, panelin kendi defterinin bu
+	// sunucudaki yetki sahibi olarak kaydettiÃ„Å¸i motor hakkÃ„Â±nda bunu sÃƒÂ¶yleyemez:
+	// paketler ya panelin kendi yarÃ„Â±m kalmÃ„Â±Ã…Å¸ kurulumudur ya da panelin zaten
+	// sahibi olduÃ„Å¸u sunucunun durdurulmuÃ…Å¸ bir kopyasÃ„Â±dÃ„Â±r; her ikisinde de onarÃ„Â±m
+	// yeniden kurulumdur. Agent, hiÃƒÂ§bir Ã…Å¸eye dokunmadan ÃƒÂ¶nce etkin ÃƒÂ§aÃ„Å¸daki
+	// sahipliÃ„Å¸i yine de kanÃ„Â±tlar; burada hiÃƒÂ§bir Ã…Å¸ey gÃƒÂ¼vene bÃ„Â±rakÃ„Â±lmaz.
 	// The takeover is the answer to unmanaged_dns_detected, not something the
 	// blocker may refuse: adoptableUnmanagedDNSEngine has already proven the
 	// exact shape, and the action itself carries the operator's consent to it.
 	//
-	// Devralma, unmanaged_dns_detected'in cevabıdır; engelleyicinin
-	// reddedebileceği bir şey değil: adoptableUnmanagedDNSEngine kesin biçimi
-	// çoktan kanıtlamıştır ve eylemin kendisi operatörün buna rızasını taşır.
+	// Devralma, unmanaged_dns_detected'in cevabÃ„Â±dÃ„Â±r; engelleyicinin
+	// reddedebileceÃ„Å¸i bir Ã…Å¸ey deÃ„Å¸il: adoptableUnmanagedDNSEngine kesin biÃƒÂ§imi
+	// ÃƒÂ§oktan kanÃ„Â±tlamÃ„Â±Ã…Å¸tÃ„Â±r ve eylemin kendisi operatÃƒÂ¶rÃƒÂ¼n buna rÃ„Â±zasÃ„Â±nÃ„Â± taÃ…Å¸Ã„Â±r.
 	if !reinstall && action != dnsEngineActionAdoptUnmanaged &&
 		targetRuntime.Installed && !targetRuntime.Managed {
 		blockers = addDNSEngineBlocker(blockers, "unmanaged_dns_detected")
@@ -1351,9 +1358,9 @@ func dnsEnginePreviewBlockers(
 		// to it. Refusing here left the only repair unreachable behind a
 		// description of the thing being repaired.
 		//
-		// Bozulmuş durum, yeniden kurulumun engeli değil ön koşuludur. Burada
-		// reddetmek, tek onarımı, onarılan şeyin tarifinin arkasında
-		// ulaşılamaz bırakıyordu.
+		// BozulmuÃ…Å¸ durum, yeniden kurulumun engeli deÃ„Å¸il ÃƒÂ¶n koÃ…Å¸uludur. Burada
+		// reddetmek, tek onarÃ„Â±mÃ„Â±, onarÃ„Â±lan Ã…Å¸eyin tarifinin arkasÃ„Â±nda
+		// ulaÃ…Å¸Ã„Â±lamaz bÃ„Â±rakÃ„Â±yordu.
 		if !reinstall {
 			blockers = addDNSEngineBlocker(blockers, "source_degraded")
 		}
@@ -1364,11 +1371,11 @@ func dnsEnginePreviewBlockers(
 		// the action carries the operator's consent to it. Without this the
 		// preview would name the takeover and block it in the same breath.
 		//
-		// Çalışan panel dışı bir motor, bu durumun anlattığı şeyin ta
-		// kendisidir ve devralma, bu dalın reddedebileceği bir şey değil onun
-		// cevabıdır: adoptableUnmanagedDNSEngine kesin biçimi çoktan
-		// kanıtlamıştır ve eylem operatörün rızasını taşır. Bu olmadan
-		// önizleme devralmayı aynı nefeste hem adlandırır hem engellerdi.
+		// Ãƒâ€¡alÃ„Â±Ã…Å¸an panel dÃ„Â±Ã…Å¸Ã„Â± bir motor, bu durumun anlattÃ„Â±Ã„Å¸Ã„Â± Ã…Å¸eyin ta
+		// kendisidir ve devralma, bu dalÃ„Â±n reddedebileceÃ„Å¸i bir Ã…Å¸ey deÃ„Å¸il onun
+		// cevabÃ„Â±dÃ„Â±r: adoptableUnmanagedDNSEngine kesin biÃƒÂ§imi ÃƒÂ§oktan
+		// kanÃ„Â±tlamÃ„Â±Ã…Å¸tÃ„Â±r ve eylem operatÃƒÂ¶rÃƒÂ¼n rÃ„Â±zasÃ„Â±nÃ„Â± taÃ…Å¸Ã„Â±r. Bu olmadan
+		// ÃƒÂ¶nizleme devralmayÃ„Â± aynÃ„Â± nefeste hem adlandÃ„Â±rÃ„Â±r hem engellerdi.
 		if action == dnsEngineActionAdoptUnmanaged {
 			break
 		}
@@ -1530,9 +1537,9 @@ func (p *Panel) buildDNSEngineManifest(
 	// and an epoch bump would tell the host it is serving a tenure it never
 	// started.
 	//
-	// Yeniden kurulum onardığı çağı yeniden kullanır. Diğer her kip çağı bir
-	// artırır çünkü yetki el değiştirir; burada değiştirmez ve çağı artırmak
-	// sunucuya hiç başlamadığı bir dönemi sunduğunu söylemek olurdu.
+	// Yeniden kurulum onardÃ„Â±Ã„Å¸Ã„Â± ÃƒÂ§aÃ„Å¸Ã„Â± yeniden kullanÃ„Â±r. DiÃ„Å¸er her kip ÃƒÂ§aÃ„Å¸Ã„Â± bir
+	// artÃ„Â±rÃ„Â±r ÃƒÂ§ÃƒÂ¼nkÃƒÂ¼ yetki el deÃ„Å¸iÃ…Å¸tirir; burada deÃ„Å¸iÃ…Å¸tirmez ve ÃƒÂ§aÃ„Å¸Ã„Â± artÃ„Â±rmak
+	// sunucuya hiÃƒÂ§ baÃ…Å¸lamadÃ„Â±Ã„Å¸Ã„Â± bir dÃƒÂ¶nemi sunduÃ„Å¸unu sÃƒÂ¶ylemek olurdu.
 	targetEpoch := state.EngineEpoch + 1
 	switch mode {
 	case transport.DNSEngineSwitchModeReinstall:
@@ -1711,11 +1718,11 @@ func (p *Panel) makeDNSEnginePreview(
 	// gets the directive and the line on the screen they are standing on rather
 	// than a failed commit later (register R-042).
 	//
-	// Devralmanın bu sunucunun kendi seçenek bloğunda neyi değiştirdiği ve
-	// bunlardan birinin, sunucunun kendi deyimi olarak okuyamadığı bir şey olup
-	// olmadığı. Ret burada, daha bir belirteç yokken kaldırılır; böylece operatör
-	// direktifi ve satırı, sonradan düşen bir commit yerine üzerinde durduğu
-	// ekranda alır (defter R-042).
+	// DevralmanÃ„Â±n bu sunucunun kendi seÃƒÂ§enek bloÃ„Å¸unda neyi deÃ„Å¸iÃ…Å¸tirdiÃ„Å¸i ve
+	// bunlardan birinin, sunucunun kendi deyimi olarak okuyamadÃ„Â±Ã„Å¸Ã„Â± bir Ã…Å¸ey olup
+	// olmadÃ„Â±Ã„Å¸Ã„Â±. Ret burada, daha bir belirteÃƒÂ§ yokken kaldÃ„Â±rÃ„Â±lÃ„Â±r; bÃƒÂ¶ylece operatÃƒÂ¶r
+	// direktifi ve satÃ„Â±rÃ„Â±, sonradan dÃƒÂ¼Ã…Å¸en bir commit yerine ÃƒÂ¼zerinde durduÃ„Å¸u
+	// ekranda alÃ„Â±r (defter R-042).
 	adoptedDirectives := []dnsEngineAdoptedDirective(nil)
 	viewFinding := (*dnsEngineViewFinding)(nil)
 	if action == dnsEngineActionAdoptUnmanaged {
@@ -1732,10 +1739,10 @@ func (p *Panel) makeDNSEnginePreview(
 		// This is decided here, with the options list, because both refusals
 		// belong on the same screen at the same moment (register R-044).
 		//
-		// View ile yapılandırılmış bir sunucu henüz hiç devralınamaz;
-		// yapılandırması CelikPanel tarafından bütünüyle okunamayan bir sunucu
-		// da öyle. Buna, seçenek listesiyle birlikte burada karar verilir;
-		// çünkü iki ret de aynı anda aynı ekrana aittir (defter R-044).
+		// View ile yapÃ„Â±landÃ„Â±rÃ„Â±lmÃ„Â±Ã…Å¸ bir sunucu henÃƒÂ¼z hiÃƒÂ§ devralÃ„Â±namaz;
+		// yapÃ„Â±landÃ„Â±rmasÃ„Â± CelikPanel tarafÃ„Â±ndan bÃƒÂ¼tÃƒÂ¼nÃƒÂ¼yle okunamayan bir sunucu
+		// da ÃƒÂ¶yle. Buna, seÃƒÂ§enek listesiyle birlikte burada karar verilir;
+		// ÃƒÂ§ÃƒÂ¼nkÃƒÂ¼ iki ret de aynÃ„Â± anda aynÃ„Â± ekrana aittir (defter R-044).
 		viewFinding = dnsEngineViewFindingOf(
 			snapshot.runtime[request.TargetEngine],
 		)
@@ -1761,10 +1768,10 @@ func (p *Panel) makeDNSEnginePreview(
 	// no outage to acknowledge. Asking for the acknowledgement anyway would
 	// make the operator confirm a cost the change does not have.
 	//
-	// Yeniden kurulum bir kaynak motoru adlandırır çünkü o motor sunucunun
-	// sahibidir; ama ondan çalışan hiçbir şey yoktur: kesilecek hizmet, dolayısıyla
-	// onaylanacak kesinti de yoktur. Yine de onay istemek, operatöre değişikliğin
-	// taşımadığı bir bedeli onaylatmak olurdu.
+	// Yeniden kurulum bir kaynak motoru adlandÃ„Â±rÃ„Â±r ÃƒÂ§ÃƒÂ¼nkÃƒÂ¼ o motor sunucunun
+	// sahibidir; ama ondan ÃƒÂ§alÃ„Â±Ã…Å¸an hiÃƒÂ§bir Ã…Å¸ey yoktur: kesilecek hizmet, dolayÃ„Â±sÃ„Â±yla
+	// onaylanacak kesinti de yoktur. Yine de onay istemek, operatÃƒÂ¶re deÃ„Å¸iÃ…Å¸ikliÃ„Å¸in
+	// taÃ…Å¸Ã„Â±madÃ„Â±Ã„Å¸Ã„Â± bir bedeli onaylatmak olurdu.
 	requiresAck := (hasSource || action == "reconfigure") &&
 		action != dnsEngineActionReinstall
 	preview := dnsEngineSwitchPreview{
@@ -1791,15 +1798,15 @@ func (p *Panel) makeDNSEnginePreview(
 	// consumed; handing one out anyway meant the commit answered "preview
 	// expired or no longer matches this request" for a preview that had
 	// neither expired nor changed. The operator was sent to look for a race
-	// that never happened, while the real answer — the named blockers — was
+	// that never happened, while the real answer Ã¢â‚¬â€ the named blockers Ã¢â‚¬â€ was
 	// already on screen. No token, no false trail.
 	//
-	// Engellenmiş önizleme önbelleğe hiç girmiyordu; dolayısıyla belirteci de
-	// hiç tüketilemezdi. Yine de bir belirteç vermek, ne süresi dolmuş ne de
-	// değişmiş bir önizleme için commit'in "önizlemenin süresi doldu ya da bu
-	// isteğe artık uymuyor" demesi anlamına geliyordu. Operatör hiç yaşanmamış
-	// bir yarışı aramaya gönderiliyor, gerçek cevap — adı konmuş engelleyiciler
-	// — zaten ekranda duruyordu. Belirteç yok, yanlış iz yok.
+	// EngellenmiÃ…Å¸ ÃƒÂ¶nizleme ÃƒÂ¶nbelleÃ„Å¸e hiÃƒÂ§ girmiyordu; dolayÃ„Â±sÃ„Â±yla belirteci de
+	// hiÃƒÂ§ tÃƒÂ¼ketilemezdi. Yine de bir belirteÃƒÂ§ vermek, ne sÃƒÂ¼resi dolmuÃ…Å¸ ne de
+	// deÃ„Å¸iÃ…Å¸miÃ…Å¸ bir ÃƒÂ¶nizleme iÃƒÂ§in commit'in "ÃƒÂ¶nizlemenin sÃƒÂ¼resi doldu ya da bu
+	// isteÃ„Å¸e artÃ„Â±k uymuyor" demesi anlamÃ„Â±na geliyordu. OperatÃƒÂ¶r hiÃƒÂ§ yaÃ…Å¸anmamÃ„Â±Ã…Å¸
+	// bir yarÃ„Â±Ã…Å¸Ã„Â± aramaya gÃƒÂ¶nderiliyor, gerÃƒÂ§ek cevap Ã¢â‚¬â€ adÃ„Â± konmuÃ…Å¸ engelleyiciler
+	// Ã¢â‚¬â€ zaten ekranda duruyordu. BelirteÃƒÂ§ yok, yanlÃ„Â±Ã…Å¸ iz yok.
 	if len(blockers) != 0 {
 		preview.PreviewToken = ""
 		return preview, nil
@@ -1892,10 +1899,10 @@ func validateInitialBINDInstallReconcileScope(
 	// Leaving it outside this scope would give the one shape R-038 exists for
 	// a failure with no repair, which is the wedge, not the fix.
 	//
-	// Devralma, paketleri zaten orada olan bir ilk kurulumdur: aynı kip, aynı
-	// yok kaynak, aynı 0'dan 1'e çağ, aynı hedef. Onu bu kapsamın dışında
-	// bırakmak, R-038'in var olma sebebi olan biçime onarımsız bir
-	// başarısızlık verirdi; bu düzeltme değil, tam da o çıkmazdır.
+	// Devralma, paketleri zaten orada olan bir ilk kurulumdur: aynÃ„Â± kip, aynÃ„Â±
+	// yok kaynak, aynÃ„Â± 0'dan 1'e ÃƒÂ§aÃ„Å¸, aynÃ„Â± hedef. Onu bu kapsamÃ„Â±n dÃ„Â±Ã…Å¸Ã„Â±nda
+	// bÃ„Â±rakmak, R-038'in var olma sebebi olan biÃƒÂ§ime onarÃ„Â±msÃ„Â±z bir
+	// baÃ…Å¸arÃ„Â±sÃ„Â±zlÃ„Â±k verirdi; bu dÃƒÂ¼zeltme deÃ„Å¸il, tam da o ÃƒÂ§Ã„Â±kmazdÃ„Â±r.
 	if persisted.Mode != transport.DNSEngineSwitchModeSwitch ||
 		(persisted.Action != "install" &&
 			persisted.Action != dnsEngineActionAdoptUnmanaged) ||
@@ -3259,19 +3266,19 @@ func (p *Panel) verifyDNSEngineRollbackRuntime(
 		// exactly the state a rollback exists to prevent. Another engine
 		// running is refused for the same reason it always was.
 		//
-		// Başarısız bir devralma sunucuyu bulduğu gibi bırakmalıdır ve onu iki
-		// biçimden birinde bulmuş olabilir. Durmuş biçimde çalışan bir şey
-		// yoktu; şimdi de çalışan bir şey olmamalı. Çalışan biçimde
-		// operatörün kendi DNS sunucusu panel dışı olarak yanıt veriyordu ve
-		// hâlâ yanıt veriyor olmalıdır - yerinde devralmanın bütün anlamı bir
-		// başarısızlığın kesintiye mal olmamasıdır; burada sessizlik istemek
-		// doğru sonucu reddeder ve çalışmış bir geri almadan sonra sunucuyu
-		// çıkmaza sokardı.
+		// BaÃ…Å¸arÃ„Â±sÃ„Â±z bir devralma sunucuyu bulduÃ„Å¸u gibi bÃ„Â±rakmalÃ„Â±dÃ„Â±r ve onu iki
+		// biÃƒÂ§imden birinde bulmuÃ…Å¸ olabilir. DurmuÃ…Å¸ biÃƒÂ§imde ÃƒÂ§alÃ„Â±Ã…Å¸an bir Ã…Å¸ey
+		// yoktu; Ã…Å¸imdi de ÃƒÂ§alÃ„Â±Ã…Å¸an bir Ã…Å¸ey olmamalÃ„Â±. Ãƒâ€¡alÃ„Â±Ã…Å¸an biÃƒÂ§imde
+		// operatÃƒÂ¶rÃƒÂ¼n kendi DNS sunucusu panel dÃ„Â±Ã…Å¸Ã„Â± olarak yanÃ„Â±t veriyordu ve
+		// hÃƒÂ¢lÃƒÂ¢ yanÃ„Â±t veriyor olmalÃ„Â±dÃ„Â±r - yerinde devralmanÃ„Â±n bÃƒÂ¼tÃƒÂ¼n anlamÃ„Â± bir
+		// baÃ…Å¸arÃ„Â±sÃ„Â±zlÃ„Â±Ã„Å¸Ã„Â±n kesintiye mal olmamasÃ„Â±dÃ„Â±r; burada sessizlik istemek
+		// doÃ„Å¸ru sonucu reddeder ve ÃƒÂ§alÃ„Â±Ã…Å¸mÃ„Â±Ã…Å¸ bir geri almadan sonra sunucuyu
+		// ÃƒÂ§Ã„Â±kmaza sokardÃ„Â±.
 		//
-		// Reddedilen şey YÖNETİLEN dönen bir hedeftir: o, devralmanın bulduğu
-		// sunucu değildir, yarım kalmış bir devralmadır ve geri almanın
-		// önlemek için var olduğu durumun ta kendisidir. Başka bir motorun
-		// çalışması, her zamanki sebeple reddedilir.
+		// Reddedilen Ã…Å¸ey YÃƒâ€“NETÃ„Â°LEN dÃƒÂ¶nen bir hedeftir: o, devralmanÃ„Â±n bulduÃ„Å¸u
+		// sunucu deÃ„Å¸ildir, yarÃ„Â±m kalmÃ„Â±Ã…Å¸ bir devralmadÃ„Â±r ve geri almanÃ„Â±n
+		// ÃƒÂ¶nlemek iÃƒÂ§in var olduÃ„Å¸u durumun ta kendisidir. BaÃ…Å¸ka bir motorun
+		// ÃƒÂ§alÃ„Â±Ã…Å¸masÃ„Â±, her zamanki sebeple reddedilir.
 		target := runtimes[persisted.TargetEngine]
 		if persisted.SourceEngine != "" ||
 			persisted.TargetEngine != transport.DNSEngineBIND ||
@@ -3545,18 +3552,18 @@ func writeDNSEngineChangeNotCommitted(w http.ResponseWriter, switchErr error) {
 }
 
 // writeDNSEngineMutationsHeld names the hold. Everything else about a held
-// agent is already true of an unverified outcome — the change did not complete
-// and state must be refreshed — but the operator's next action is different:
+// agent is already true of an unverified outcome Ã¢â‚¬â€ the change did not complete
+// and state must be refreshed Ã¢â‚¬â€ but the operator's next action is different:
 // nothing will retry on its own, the agent's health is the problem, and the
 // hold code says which health problem. The message is fixed English and the
 // code is one of the stable MutationHold* values; no internal error text is
 // forwarded.
-// writeDNSEngineMutationsHeld tutulmayı adlandırır. Tutulan bir agent hakkında
-// geri kalan her şey doğrulanmamış bir sonuç için zaten geçerlidir — değişiklik
-// tamamlanmadı ve durum yenilenmeli — ama operatörün bir sonraki adımı
-// farklıdır: hiçbir şey kendiliğinden yeniden denemeyecek, sorun agent'ın
-// sağlığıdır ve tutulma kodu hangi sağlık sorunu olduğunu söyler. Mesaj sabit
-// İngilizcedir, kod kararlı MutationHold* değerlerinden biridir; hiçbir iç hata
+// writeDNSEngineMutationsHeld tutulmayÃ„Â± adlandÃ„Â±rÃ„Â±r. Tutulan bir agent hakkÃ„Â±nda
+// geri kalan her Ã…Å¸ey doÃ„Å¸rulanmamÃ„Â±Ã…Å¸ bir sonuÃƒÂ§ iÃƒÂ§in zaten geÃƒÂ§erlidir Ã¢â‚¬â€ deÃ„Å¸iÃ…Å¸iklik
+// tamamlanmadÃ„Â± ve durum yenilenmeli Ã¢â‚¬â€ ama operatÃƒÂ¶rÃƒÂ¼n bir sonraki adÃ„Â±mÃ„Â±
+// farklÃ„Â±dÃ„Â±r: hiÃƒÂ§bir Ã…Å¸ey kendiliÃ„Å¸inden yeniden denemeyecek, sorun agent'Ã„Â±n
+// saÃ„Å¸lÃ„Â±Ã„Å¸Ã„Â±dÃ„Â±r ve tutulma kodu hangi saÃ„Å¸lÃ„Â±k sorunu olduÃ„Å¸unu sÃƒÂ¶yler. Mesaj sabit
+// Ã„Â°ngilizcedir, kod kararlÃ„Â± MutationHold* deÃ„Å¸erlerinden biridir; hiÃƒÂ§bir iÃƒÂ§ hata
 // metni iletilmez.
 func writeDNSEngineMutationsHeld(w http.ResponseWriter, hold string) {
 	writeCodedErrorDetails(
@@ -3612,19 +3619,19 @@ func (p *Panel) matchingDNSEngineSwitchReplay(
 // writeUnknownDNSEnginePreviewConflict answers a commit whose preview token the
 // panel does not hold. There are two reasons for that and they need different
 // words. A preview that was granted and then aged out, or one overtaken by
-// another change, really has expired. A preview the panel refused to issue —
-// because the change was blocked — never entered the cache at all, and telling
+// another change, really has expired. A preview the panel refused to issue Ã¢â‚¬â€
+// because the change was blocked Ã¢â‚¬â€ never entered the cache at all, and telling
 // its operator the preview "expired" sent them hunting for a timing problem
 // while the actual reason sat unread in the blocker list. Name the blockers.
 //
 // writeUnknownDNSEnginePreviewConflict, panelin elinde belirteci bulunmayan bir
-// commit'i yanıtlar. Bunun iki sebebi vardır ve farklı sözler gerektirirler.
-// Verilmiş sonra zaman aşımına uğramış ya da başka bir değişiklikle geçilmiş
-// bir önizlemenin süresi gerçekten dolmuştur. Panelin — değişiklik engellendiği
-// için — vermeyi reddettiği önizleme ise önbelleğe hiç girmemiştir; operatörüne
-// önizlemenin "süresi doldu" demek, gerçek sebep engelleyici listesinde
-// okunmadan dururken onu bir zamanlama sorununun peşine gönderiyordu.
-// Engelleyicileri adıyla söyle.
+// commit'i yanÃ„Â±tlar. Bunun iki sebebi vardÃ„Â±r ve farklÃ„Â± sÃƒÂ¶zler gerektirirler.
+// VerilmiÃ…Å¸ sonra zaman aÃ…Å¸Ã„Â±mÃ„Â±na uÃ„Å¸ramÃ„Â±Ã…Å¸ ya da baÃ…Å¸ka bir deÃ„Å¸iÃ…Å¸iklikle geÃƒÂ§ilmiÃ…Å¸
+// bir ÃƒÂ¶nizlemenin sÃƒÂ¼resi gerÃƒÂ§ekten dolmuÃ…Å¸tur. Panelin Ã¢â‚¬â€ deÃ„Å¸iÃ…Å¸iklik engellendiÃ„Å¸i
+// iÃƒÂ§in Ã¢â‚¬â€ vermeyi reddettiÃ„Å¸i ÃƒÂ¶nizleme ise ÃƒÂ¶nbelleÃ„Å¸e hiÃƒÂ§ girmemiÃ…Å¸tir; operatÃƒÂ¶rÃƒÂ¼ne
+// ÃƒÂ¶nizlemenin "sÃƒÂ¼resi doldu" demek, gerÃƒÂ§ek sebep engelleyici listesinde
+// okunmadan dururken onu bir zamanlama sorununun peÃ…Å¸ine gÃƒÂ¶nderiyordu.
+// Engelleyicileri adÃ„Â±yla sÃƒÂ¶yle.
 func (p *Panel) writeUnknownDNSEnginePreviewConflict(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -3662,9 +3669,9 @@ func (p *Panel) handleDNSEngineSwitch(
 	// If startup could not reconcile interrupted service operations, the durable
 	// state this switch would build on is unknown. Refuse with the stored cause
 	// rather than starting a second transaction on top of an unresolved one.
-	// Açılış yarım kalmış servis işlemlerini uzlaştıramadıysa, bu geçişin
-	// üzerine kuracağı kalıcı durum bilinmiyor. Çözülmemiş bir işlemin üstüne
-	// ikincisini başlatmak yerine saklanan sebeple reddet.
+	// AÃƒÂ§Ã„Â±lÃ„Â±Ã…Å¸ yarÃ„Â±m kalmÃ„Â±Ã…Å¸ servis iÃ…Å¸lemlerini uzlaÃ…Å¸tÃ„Â±ramadÃ„Â±ysa, bu geÃƒÂ§iÃ…Å¸in
+	// ÃƒÂ¼zerine kuracaÃ„Å¸Ã„Â± kalÃ„Â±cÃ„Â± durum bilinmiyor. Ãƒâ€¡ÃƒÂ¶zÃƒÂ¼lmemiÃ…Å¸ bir iÃ…Å¸lemin ÃƒÂ¼stÃƒÂ¼ne
+	// ikincisini baÃ…Å¸latmak yerine saklanan sebeple reddet.
 	if !p.requireSubsystemOperational(w, degradedSubsystemServiceOperations) {
 		return
 	}

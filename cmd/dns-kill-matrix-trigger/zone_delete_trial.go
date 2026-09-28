@@ -124,6 +124,154 @@ func runRPCDeleteV3Command(arguments []string) {
 	}
 }
 
+// Recovery is deliberately a different command: it can only resume the
+// existing pending V3 identity. It never reissues SyncDNSZoneV3 or invents an
+// owner/request ID from a fresh mutation.
+func runRPCDeleteV3RecoverCommand(arguments []string) {
+	flags := flag.NewFlagSet("rpc-delete-v3-recover", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	scenarioPath := flags.String("scenario", "", "exact fixture scenario")
+	identityPath := flags.String("identity-receipt", "", "prior switch identity receipt")
+	timeout := flags.Duration("timeout", 2*time.Minute, "bounded recovery time")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() != 0 ||
+		*scenarioPath == "" || *identityPath == "" || *timeout <= 0 {
+		usageError("rpc-delete-v3-recover arguments are invalid")
+	}
+	receipt, err := readIdentityReceipt(*identityPath)
+	if err != nil {
+		emitAndExit(triggerEvent{Event: "delete-recover-identity-rejected", Error: err.Error()}, exitUsage)
+	}
+	source, switchRequest, err := loadScenario(*scenarioPath, "bind")
+	if err != nil {
+		emitAndExit(triggerEvent{Event: "delete-recover-scenario-rejected", Error: err.Error()}, exitUsage)
+	}
+	request, begin, err := deletionTrialRequest(source, switchRequest, receipt)
+	if err != nil {
+		emitAndExit(triggerEvent{Event: "delete-recover-trial-rejected", Error: err.Error()}, exitUsage)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+	result, err := runRPCDeleteV3Recover(ctx, request, begin, callProductionAgent)
+	if err != nil {
+		result.Outcome = "unverified_exact_operation"
+		result.Error = err.Error()
+	}
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		emitAndExit(triggerEvent{Event: "delete-recover-result-encode-failed", Error: err.Error()}, exitUncertain)
+	}
+	_, _ = os.Stdout.Write(append(encoded, '\n'))
+	if result.Error != "" {
+		os.Exit(exitUncertain)
+	}
+}
+
+func deletionTrialPendingPhase(begin transport.ServiceMutationBeginRequest) string {
+	return "commit/dns-zone-sync/v3/propagation-pending/" + begin.RequestID + "/" + deletionTrialDomain + "/" + begin.PackageName
+}
+
+func deletionTrialRecoveringPhase(begin transport.ServiceMutationBeginRequest) string {
+	return "commit/dns-zone-sync/v3/recovering/" + begin.RequestID + "/" + deletionTrialDomain + "/" + begin.PackageName
+}
+
+func deletionTrialPublishedPhase(begin transport.ServiceMutationBeginRequest) string {
+	return "commit/dns-zone-sync/v3/published/" + begin.RequestID + "/" + deletionTrialDomain + "/" + begin.PackageName
+}
+
+func exactPendingDeletionJob(job *transport.ServiceMutationJob, begin transport.ServiceMutationBeginRequest) bool {
+	return jobIdentityMatches(job, begin) && job.Status == "pending" &&
+		job.Phase == deletionTrialPendingPhase(begin) && job.Attempt > 0 &&
+		!job.StartedAt.IsZero() && !job.UpdatedAt.IsZero() &&
+		!job.DeadlineAt.IsZero() && !job.FinishedAt.IsZero() &&
+		!job.FinishedAt.Before(job.StartedAt) && !job.UpdatedAt.After(job.FinishedAt) &&
+		job.WorkerPID == 0 && job.WorkerStarted == "" && job.WorkerCommand == "" &&
+		job.LeaseExpiresAt.IsZero()
+}
+
+// The production Agent publishes the V3 terminal receipt itself. This helper
+// never calls Finish; pending/unknown leaves the same durable job pending.
+func runRPCDeleteV3Recover(ctx context.Context, request transport.SyncDNSZoneV3Request, begin transport.ServiceMutationBeginRequest, call rpcCallFunc) (deletionTrialResult, error) {
+	result := deletionTrialResult{
+		Schema: "celikpanel-dns-v3-native-delete-trial/v1", CellID: deletionTrialCell,
+		RequestID: begin.RequestID, OwnerID: begin.OwnerID, Qualifier: begin.PackageName,
+	}
+	if call == nil || ctx == nil || !validMutationIdentity(begin.RequestID) ||
+		!validMutationIdentity(begin.OwnerID) || request.Domain != deletionTrialDomain ||
+		!request.Delete || request.DesiredGeneration != 2 ||
+		request.MutationRequestID != begin.RequestID ||
+		request.MutationOwnerID != begin.OwnerID ||
+		begin.Kind != mutationKindDNSZoneSync || begin.Target != deletionTrialDomain ||
+		begin.Resume {
+		return result, errors.New("invalid exact native deletion recovery")
+	}
+	var before transport.ServiceMutationResponse
+	if err := call(ctx, "Agent.ServiceMutationStatus", &transport.ServiceMutationStatusRequest{RequestID: begin.RequestID}, &before); err != nil {
+		return result, fmt.Errorf("inspect exact pending deletion: %w", err)
+	}
+	if err := responseError(before); err != nil {
+		return result, fmt.Errorf("inspect exact pending deletion: %w", err)
+	}
+	if !exactPendingDeletionJob(before.Job, begin) {
+		return result, errors.New("exact V3 deletion is not pending at its reviewed propagation phase")
+	}
+	result.JobStatus, result.JobPhase = before.Job.Status, before.Job.Phase
+	resume := begin
+	resume.Resume = true
+	var started transport.ServiceMutationResponse
+	if err := call(ctx, "Agent.BeginServiceMutation", &resume, &started); err != nil {
+		return result, fmt.Errorf("resume exact deletion: %w", err)
+	}
+	if err := responseError(started); err != nil {
+		return result, fmt.Errorf("resume exact deletion: %w", err)
+	}
+	if err := validateRunningJob(started.Job, begin, false); err != nil ||
+		started.Job.Phase != deletionTrialRecoveringPhase(begin) {
+		return result, errors.New("resumed deletion lacks its exact recovering phase and lease")
+	}
+	heartbeatCtx, stopHeartbeat := context.WithCancel(ctx)
+	done := startHeartbeat(heartbeatCtx, begin, heartbeatIntervalDefault, call)
+	recovery := transport.RecoverDNSZoneV3Request{
+		ServiceMutationBinding: request.ServiceMutationBinding,
+		Domain:                 deletionTrialDomain, Qualifier: begin.PackageName,
+	}
+	var recovered transport.RecoverDNSZoneV3Response
+	callErr := call(ctx, "Agent.RecoverDNSZoneV3", &recovery, &recovered)
+	stopHeartbeat()
+	heartbeat := <-done
+	result.Heartbeats = heartbeat.count
+	var observed transport.ServiceMutationResponse
+	statusErr := call(ctx, "Agent.ServiceMutationStatus", &transport.ServiceMutationStatusRequest{RequestID: begin.RequestID}, &observed)
+	if statusErr != nil {
+		return result, fmt.Errorf("deletion recovery result unobserved: %w", statusErr)
+	}
+	if err := responseError(observed); err != nil {
+		return result, fmt.Errorf("deletion recovery status unavailable: %w", err)
+	}
+	if observed.Job == nil || !jobIdentityMatches(observed.Job, begin) {
+		return result, errors.New("deletion recovery status does not match the accepted operation")
+	}
+	result.JobStatus, result.JobPhase = observed.Job.Status, observed.Job.Phase
+	if callErr != nil {
+		return result, fmt.Errorf("V3 recovery RPC outcome unknown: %w", callErr)
+	}
+	if recovered.Error != "" {
+		return result, errors.New("V3 recovery was refused; preserve the exact job for owner review")
+	}
+	if recovered.RecoveryPending && !recovered.Recovered &&
+		exactPendingDeletionJob(observed.Job, begin) {
+		result.Outcome = "pending_exact_operation"
+		return result, nil
+	}
+	if recovered.Recovered && !recovered.RecoveryPending {
+		if err := validateSucceededJobAtPhase(observed.Job, begin, deletionTrialPublishedPhase(begin)); err != nil {
+			return result, err
+		}
+		result.Outcome = "verified_published"
+		return result, nil
+	}
+	return result, errors.New("V3 recovery response or durable status is mixed or unverified")
+}
+
 // Kept injectable so local tests can assert that pending does not call Finish.
 func runRPCDeleteV3(ctx context.Context, request transport.SyncDNSZoneV3Request, begin transport.ServiceMutationBeginRequest, call rpcCallFunc) (deletionTrialResult, error) {
 	result := deletionTrialResult{

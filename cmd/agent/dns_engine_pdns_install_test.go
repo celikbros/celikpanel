@@ -43,3 +43,34 @@ func TestPDNSPackageInstallMasksAndStopsBeforePackageHooks(t *testing.T) {
 		}
 	}
 }
+
+func TestFreshV3PackageGuardRejectsChangedOrOwnerMaskedPreimage(t *testing.T) {
+	original := dnsUnitSnapshot{Name: "pdns.service", LoadState: "not-found", ActiveState: "inactive"}
+	for _, tc := range []struct {
+		name string
+		unit fakeBINDInstallUnit
+	}{
+		{"changed-to-installed", fakeBINDInstallUnit{loadState: "loaded", unitFileState: "disabled"}},
+		{"owner-masked", fakeBINDInstallUnit{loadState: "masked", unitFileState: "masked", masked: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			unit := tc.unit
+			systemd := newFakeBINDInstallSystemd(map[string]*fakeBINDInstallUnit{"pdns.service": &unit})
+			recoveries := 0
+			called := false
+			_, err := installPDNSPackagesWithGuardOpsExact(
+				context.Background(), "/usr/bin/systemctl",
+				func() (string, error) { called = true; return "", nil },
+				fakeBINDInstallGuardOps(systemd, &recoveries), &original,
+			)
+			if err == nil || called {
+				t.Fatalf("changed preimage reached install: err=%v called=%t", err, called)
+			}
+			for _, command := range systemd.commands {
+				if !strings.HasPrefix(command, "show ") {
+					t.Fatalf("changed preimage caused systemd mutation: %v", systemd.commands)
+				}
+			}
+		})
+	}
+}

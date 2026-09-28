@@ -158,8 +158,12 @@ func TestBINDV3PrimaryPropagationPlanCoversAddUpdateAndDelete(t *testing.T) {
 			}
 			if plan.Changed.Delete != test.deleted ||
 				plan.Changed.Serial != test.zoneSerial ||
-				plan.Evidence.Serial != test.catalogSerial {
-				t.Fatalf("unexpected plan=%+v", plan)
+				plan.Evidence.Serial != test.catalogSerial ||
+				plan.Operation.RequestID != zone.MutationRequestID ||
+				plan.Operation.OwnerID != zone.MutationOwnerID ||
+				plan.Operation.Generation != zone.DesiredGeneration ||
+				plan.Operation.Qualifier != zone.Qualifier {
+				t.Fatalf("unexpected plan or lost exact mutation=%+v", plan)
 			}
 			if test.deleted {
 				if len(plan.Evidence.Members) != 0 || len(plan.Evidence.MemberSerials) != 0 {

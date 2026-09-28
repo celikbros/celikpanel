@@ -15,7 +15,7 @@ import (
 )
 
 // pdnsAdoptionNativeProof describes only a read-only, point-in-time owner
-// PowerDNS source observation. It is shared by status and a future narrowly
+// PowerDNS source observation. It is shared by status and the narrowly
 // admitted inverse; it never grants mutation authority by itself.
 type pdnsAdoptionNativeProof struct {
 	ActiveSOA          int

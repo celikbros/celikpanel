@@ -21,14 +21,23 @@ type documentV2 struct {
 }
 
 func CanonicalStateDocumentV2(state StateV1) ([]byte, error) {
+	if state.NativeCatalogV3 != "" {
+		return CanonicalStateDocumentV3(state)
+	}
 	return canonicalDocumentV2(StateDocumentSchemaV2, state)
 }
 
 func CanonicalOwnershipDocumentV2(state StateV1) ([]byte, error) {
+	if state.NativeCatalogV3 != "" {
+		return CanonicalOwnershipDocumentV3(state)
+	}
 	return canonicalDocumentV2(OwnershipDocumentSchemaV2, state)
 }
 
 func canonicalDocumentV2(schema string, state StateV1) ([]byte, error) {
+	if state.NativeCatalogV3 != "" {
+		return nil, errors.New("native PowerDNS marker requires state-v3 document")
+	}
 	a, p, err := SeparateV1(state)
 	if err != nil {
 		return nil, err
@@ -40,9 +49,29 @@ func canonicalDocumentV2(schema string, state StateV1) ([]byte, error) {
 // v1 projection and whether the file uses separated records. Legacy bytes are
 // never normalized or rewritten by a read. Cross-role v2 documents are refused.
 func DecodeStateDocument(data []byte) (StateV1, bool, error) {
+	var header struct {
+		Schema string `json:"schema"`
+	}
+	if err := json.Unmarshal(data, &header); err != nil {
+		return StateV1{}, false, err
+	}
+	if header.Schema == StateDocumentSchemaV3 {
+		state, err := DecodeStateDocumentV3(data)
+		return state, err == nil, err
+	}
 	return decodeDocument(data, StateDocumentSchemaV2)
 }
 func DecodeOwnershipDocument(data []byte) (StateV1, bool, error) {
+	var header struct {
+		Schema string `json:"schema"`
+	}
+	if err := json.Unmarshal(data, &header); err != nil {
+		return StateV1{}, false, err
+	}
+	if header.Schema == OwnershipDocumentSchemaV3 {
+		state, err := DecodeOwnershipDocumentV3(data)
+		return state, err == nil, err
+	}
 	return decodeDocument(data, OwnershipDocumentSchemaV2)
 }
 func decodeDocument(data []byte, schema string) (StateV1, bool, error) {

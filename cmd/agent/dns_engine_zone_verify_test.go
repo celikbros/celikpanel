@@ -208,18 +208,21 @@ func TestVerifyBINDPrimaryProvesPowerDNSSecondaryMembers(t *testing.T) {
 func TestVerifyPDNSPairingAuthoritySupportsMixedPeers(t *testing.T) {
 	previousSOA := probeDNSZoneSOA
 	previousAXFR := probeDNSCatalogAXFR
+	previousPDNSAXFR := probeDNSPDNSCatalogAXFR
 	previousLocal := dnsPairLocalProofAddress
 	previousHostAddresses := dnsPairHostOwnedAddresses
 	dnsPairLocalProofAddress = func() (string, error) { return "192.0.2.10", nil }
 	dnsPairHostOwnedAddresses = func() ([]string, error) {
 		return []string{"192.0.2.10"}, nil
 	}
-	probeDNSCatalogAXFR = func(_ context.Context, address, _ string) (dnsCatalogAXFRResult, error) {
+	catalogProbe := func(_ context.Context, address, _ string) (dnsCatalogAXFRResult, error) {
 		if address != "192.0.2.10" && address != "192.0.2.20" {
 			t.Fatalf("catalog address=%q", address)
 		}
 		return dnsCatalogAXFRResult{Serial: 11, Members: []string{"example.test"}}, nil
 	}
+	probeDNSCatalogAXFR = catalogProbe
+	probeDNSPDNSCatalogAXFR = catalogProbe
 	probeDNSZoneSOA = func(_ context.Context, _, _, domain string) (dnsSOAProbeResult, error) {
 		serial := uint32(2026081601)
 		if strings.HasPrefix(domain, "catalog-") {
@@ -232,6 +235,7 @@ func TestVerifyPDNSPairingAuthoritySupportsMixedPeers(t *testing.T) {
 	t.Cleanup(func() {
 		probeDNSZoneSOA = previousSOA
 		probeDNSCatalogAXFR = previousAXFR
+		probeDNSPDNSCatalogAXFR = previousPDNSAXFR
 		dnsPairLocalProofAddress = previousLocal
 		dnsPairHostOwnedAddresses = previousHostAddresses
 	})

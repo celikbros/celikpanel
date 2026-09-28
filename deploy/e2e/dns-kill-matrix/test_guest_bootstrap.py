@@ -7,6 +7,7 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import socket
 import sqlite3
 import subprocess
@@ -215,6 +216,71 @@ class GuestBootstrapTest(unittest.TestCase):
         self.assertIn('{"username":"s1-admin","email":"s1-admin@fixture.invalid","password":"%s"}', shell)
         self.assertNotIn("printf 's1-admin\\ns1-admin@fixture.invalid\\n%s\\n'", shell)
 
+    @unittest.skipUnless(
+        sys.platform == "linux" and hasattr(os, "geteuid") and os.geteuid() == 0,
+        "release lock fixture metadata requires a root Linux fixture",
+    )
+    def test_release_transaction_lock_is_idempotent_and_rejects_unsafe_state(self) -> None:
+        shell = Path(bootstrap.__file__).with_name("guest_bootstrap.sh").read_text(
+            encoding="utf-8"
+        )
+        program = shell.split("# FIXTURE_RELEASE_TRANSACTION_LOCK\n", 1)[1].split(
+            "\nPYRELEASELOCK\n", 1
+        )[0]
+
+        def invoke(directory: Path) -> subprocess.CompletedProcess[str]:
+            scoped = program.replace(
+                '"/var/lib/celikpanel-release-transaction"', repr(str(directory))
+            )
+            return subprocess.run(
+                [sys.executable, "-c", scoped, str(directory)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            directory = root / "release"
+            self.assertEqual(invoke(directory).returncode, 0)
+            lock = directory / "transaction.lock"
+            initial = lock.stat()
+            self.assertEqual(initial.st_uid, 0)
+            self.assertEqual(initial.st_gid, 0)
+            self.assertEqual(initial.st_mode & 0o777, 0o600)
+            self.assertEqual(initial.st_size, 0)
+            self.assertEqual(initial.st_nlink, 1)
+            self.assertEqual(directory.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(invoke(directory).returncode, 0)
+            self.assertEqual(lock.stat().st_ino, initial.st_ino)
+
+            lock.chmod(0o644)
+            self.assertNotEqual(invoke(directory).returncode, 0)
+            self.assertEqual(lock.stat().st_mode & 0o777, 0o644)
+            lock.chmod(0o600)
+            lock.write_bytes(b"owner-data")
+            self.assertNotEqual(invoke(directory).returncode, 0)
+            self.assertEqual(lock.read_bytes(), b"owner-data")
+            lock.write_bytes(b"")
+
+            outside = root / "hardlink"
+            os.link(lock, outside)
+            self.assertNotEqual(invoke(directory).returncode, 0)
+            outside.unlink()
+            lock.unlink()
+            lock.symlink_to(outside)
+            self.assertNotEqual(invoke(directory).returncode, 0)
+            self.assertTrue(lock.is_symlink())
+            lock.unlink()
+
+            directory.chmod(0o755)
+            self.assertNotEqual(invoke(directory).returncode, 0)
+            self.assertEqual(directory.stat().st_mode & 0o777, 0o755)
+            directory.rmdir()
+            directory.symlink_to(root, target_is_directory=True)
+            self.assertNotEqual(invoke(directory).returncode, 0)
+            self.assertTrue(directory.is_symlink())
+
     def test_fresh_guest_creates_controller_required_dkim_directory(self) -> None:
         shell = Path(bootstrap.__file__).with_name("guest_bootstrap.sh").read_text(
             encoding="utf-8"
@@ -284,6 +350,56 @@ class GuestBootstrapTest(unittest.TestCase):
                 shell_values = self.shell_canonical_array(shell, name)
                 self.assertEqual(len(shell_values), len(set(shell_values)))
                 self.assertEqual(frozenset(shell_values), python_values)
+
+    def test_shell_managed_pdns_bind_boundary_gate_is_exact(self) -> None:
+        shell = Path(bootstrap.__file__).with_name("guest_bootstrap.sh").read_text(
+            encoding="utf-8"
+        )
+        helper = shell.split("managed_pdns_bind_boundary_allowed() {\n", 1)[1].split(
+            "\n}\n\nprepare_bind() {", 1
+        )[0]
+        array = shell.split("readonly -a CRITICAL_MANAGED_PDNS_PHASES=(\n", 1)[1].split(
+            "\n)", 1
+        )[0]
+        contains = shell.split("array_contains() {\n", 1)[1].split("\n}", 1)[0]
+        script = (
+            "CRITICAL_MANAGED_PDNS_PHASES=(\n" + array + "\n)\n"
+            + "array_contains() {\n" + contains + "\n}\n"
+            + "managed_pdns_bind_boundary_allowed() {\n" + helper + "\n}\n"
+            + 'managed_pdns_bind_boundary_allowed "$1" "$2" "$3"\n'
+        )
+        bind_body = shell.split("prepare_bind() {\n", 1)[1].split(
+            "\n}\n\nprepare_pdns_adopt() {", 1
+        )[0]
+        self.assertIn(
+            'managed_pdns_bind_boundary_allowed "$cell_id" "$boundary_phase" "$source_fixture_policy"',
+            bind_body,
+        )
+        bash = (
+            Path("C:/Program Files/Git/bin/bash.exe")
+            if os.name == "nt" else shutil.which("bash")
+        )
+        if not bash or not Path(bash).is_file():
+            self.skipTest("bash is unavailable for the shell guard contract")
+        cases = (
+            (bootstrap.INDEPENDENT_BIND_HANDOFF_CELL, "rolling-back", "driver-specific", 0),
+            (bootstrap.INDEPENDENT_BIND_HANDOFF_CELL, "rolling-back", "managed-pdns-required", 1),
+            ("bind__rolling-back__before-write__standalone__peer-reachable",
+             "rolling-back", "driver-specific", 1),
+            ("bind__rolling-back__after-write__paired-primary__peer-reachable",
+             "rolling-back", "driver-specific", 1),
+            ("bind__source-stopped__before-write__standalone__peer-reachable",
+             "source-stopped", "managed-pdns-required", 0),
+            ("bind__source-stopped__before-write__standalone__peer-reachable",
+             "source-stopped", "driver-specific", 1),
+        )
+        for cell_id, phase, policy, expected in cases:
+            with self.subTest(cell_id=cell_id, phase=phase, policy=policy):
+                result = subprocess.run(
+                    [str(bash), "-c", script, "test", cell_id, phase, policy],
+                    check=False, capture_output=True, text=True,
+                )
+                self.assertEqual(result.returncode, expected, result.stderr)
 
     def test_shell_prepare_accepts_exact_manifest_policy_argument(self) -> None:
         shell = Path(bootstrap.__file__).with_name("guest_bootstrap.sh").read_text(
@@ -939,6 +1055,27 @@ CREATE TABLE supermasters (ip TEXT, nameserver TEXT, account TEXT);
         self.assertEqual(recovery_probe[0], "/opt/celikpanel/libexec/dns-kill-recovery-probe.py")
         self.assertEqual(len(recovery_probe), 13)
 
+    def test_owner_bind_source_is_only_exact_debian_handoff(self) -> None:
+        selected = cell("debian13", "rolling-back", source_fixture_policy="driver-specific")
+        selected["id"] = bootstrap.INDEPENDENT_BIND_HANDOFF_CELL
+        selected["boundary"]["edge"] = "after-write"
+        selected["fault_selector"] = {"phase": "rolling-back", "point": "after_write"}
+        selected["peer_reachability"] = "reachable"
+        bootstrap.validate_bind_cell(selected, "debian13", "owner-bind")
+        scenario = bootstrap.bind_scenario("owner-bind")
+        self.assertEqual(
+            (scenario["source_engine"], scenario["source_epoch"],
+             scenario["target_epoch"], scenario["source_revision"]),
+            ("", 0, 1, 0),
+        )
+        for changed in (
+            {**selected, "id": "foreign"},
+            {**selected, "role": "paired-primary"},
+            {**selected, "placement": {**selected["placement"], "source_fixture_policy": "managed-pdns-required"}},
+        ):
+            with self.assertRaises(bootstrap.BootstrapError):
+                bootstrap.validate_bind_cell(changed, "debian13", "owner-bind")
+
     def test_managed_pdns_to_bind_preserves_source_revision(self) -> None:
         scenario = bootstrap.bind_scenario("managed-pdns")
         self.assertEqual(scenario["source_engine"], "pdns")
@@ -1015,6 +1152,7 @@ class PreparedCellRunnerTest(unittest.TestCase):
             source_fixture="managed-pdns",
             identity_file=Path("/tmp/test-key"),
             execute=False,
+            stop_after_kill_for_independent_recovery=False,
         )
         with (
             mock.patch.object(bootstrap, "load_plan", return_value=({}, {}, {})),
@@ -1035,6 +1173,186 @@ class PreparedCellRunnerTest(unittest.TestCase):
             run.return_value = subprocess.CompletedProcess(command, 2)
             self.assertEqual(bootstrap.run_prepared(args), 2)
             run.assert_called_once_with(command, check=False)
+
+    def test_bind_independent_handoff_requires_exact_managed_source_cell(self) -> None:
+        cell_id = bootstrap.INDEPENDENT_BIND_HANDOFF_CELL
+        selected = bootstrap.load_manifest_cell(
+            Path(bootstrap.__file__).with_name("manifest.json"), cell_id
+        )
+        bootstrap.validate_bind_cell(selected, "debian13", "managed-pdns")
+        args = mock.Mock(
+            cell_id=cell_id, node="debian13", source_fixture="managed-pdns",
+            identity_file=Path("/tmp/test-key"), execute=False,
+            stop_after_kill_for_independent_recovery=True,
+        )
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {})),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+        ):
+            self.assertEqual(bootstrap.run_prepared(args), 0)
+        self.assertTrue(json.loads(output.getvalue())[-1].endswith(
+            cell_id + " " + bootstrap.INDEPENDENT_PDNS_HANDOFF_FLAG
+        ))
+        for change in (
+            {"fault_selector": {"phase": "rolling-back", "point": "before_write"}},
+            {"role": "paired-primary"},
+        ):
+            wrong = dict(selected, **change)
+            with mock.patch.object(bootstrap, "load_plan", return_value=({}, wrong, {})):
+                with self.assertRaises(bootstrap.BootstrapError):
+                    bootstrap.run_prepared(args)
+        args.source_fixture = "external-pdns-adoption"
+        with mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {})):
+            with self.assertRaises(bootstrap.BootstrapError):
+                bootstrap.run_prepared(args)
+
+    def test_later_bind_rollback_requires_exact_prepared_handoff(self) -> None:
+        cell_id = bootstrap.INDEPENDENT_BIND_HANDOFF_CELL
+        selected = bootstrap.load_manifest_cell(
+            Path(bootstrap.__file__).with_name("manifest.json"), cell_id
+        )
+        args = mock.Mock(
+            cell_id=cell_id, node="debian13", source_fixture="managed-pdns",
+            identity_file=Path("/tmp/test-key"), execute=False,
+            stop_after_kill_for_independent_recovery=True,
+            bind_rollback_after_target_started=True,
+        )
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {})),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+        ):
+            self.assertEqual(bootstrap.run_prepared(args), 0)
+        self.assertTrue(json.loads(output.getvalue())[-1].endswith(
+            cell_id + " " + bootstrap.INDEPENDENT_PDNS_HANDOFF_FLAG
+            + " " + bootstrap.LATER_BIND_ROLLBACK_FLAG
+        ))
+
+        args.source_fixture = "owner-bind"
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {})),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+        ):
+            self.assertEqual(bootstrap.run_prepared(args), 0)
+        self.assertTrue(json.loads(output.getvalue())[-1].endswith(
+            cell_id + " " + bootstrap.INDEPENDENT_PDNS_HANDOFF_FLAG
+            + " " + bootstrap.LATER_BIND_ROLLBACK_FLAG
+        ))
+
+        args.source_fixture = "managed-pdns"
+        args.stop_after_kill_for_independent_recovery = False
+        with mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {})):
+            with self.assertRaises(bootstrap.BootstrapError):
+                bootstrap.run_prepared(args)
+        args.stop_after_kill_for_independent_recovery = True
+        args.source_fixture = "external-pdns-adoption"
+        with mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {})):
+            with self.assertRaises(bootstrap.BootstrapError):
+                bootstrap.run_prepared(args)
+        self.assertIn(
+            'sys.argv[3] != later_flag',
+            bootstrap.RUN_PREPARED_CODE,
+        )
+
+    def test_independent_handoff_is_limited_to_canonical_adoption_rollback(self) -> None:
+        cell_id = bootstrap.INDEPENDENT_PDNS_HANDOFF_CELL
+        selected = bootstrap.load_manifest_cell(
+            Path(bootstrap.__file__).with_name("manifest.json"), cell_id
+        )
+        args = mock.Mock(
+            cell_id=cell_id,
+            node="debian13",
+            source_fixture="external-pdns-adoption",
+            identity_file=Path("/tmp/test-key"),
+            execute=False,
+            stop_after_kill_for_independent_recovery=True,
+        )
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {})),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+        ):
+            self.assertEqual(bootstrap.run_prepared(args), 0)
+            command = json.loads(output.getvalue())
+        self.assertTrue(
+            command[-1].endswith(
+                cell_id + " " + bootstrap.INDEPENDENT_PDNS_HANDOFF_FLAG
+            )
+        )
+
+        wrong = dict(selected)
+        wrong["fault_selector"] = {"phase": "rolling-back", "point": "before_write"}
+        with mock.patch.object(bootstrap, "load_plan", return_value=({}, wrong, {})):
+            with self.assertRaisesRegex(bootstrap.BootstrapError, "exact Debian PowerDNS"):
+                bootstrap.run_prepared(args)
+        args.source_fixture = "managed-pdns"
+        with mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {})):
+            with self.assertRaises(bootstrap.BootstrapError):
+                bootstrap.run_prepared(args)
+
+    @unittest.skipUnless(
+        sys.platform == "linux" and hasattr(os, "geteuid") and os.geteuid() == 0,
+        "prepared argv owner proof requires a root Linux fixture",
+    )
+    def test_guest_handoff_adds_only_scoped_flag_to_owned_controller_argv(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prepared = root / "controller-argv.json"
+            captured = root / "captured.json"
+            executable = root / "run-cell.py"
+            executable.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json, sys\n"
+                f"open({str(captured)!r}, 'w').write(json.dumps(sys.argv))\n",
+                encoding="utf-8",
+            )
+            executable.chmod(0o700)
+            code = bootstrap.RUN_PREPARED_CODE.replace(
+                "/var/lib/celikpanel-dns-kill-matrix/controller-argv.json",
+                str(prepared),
+            ).replace(
+                "/opt/celikpanel/libexec/dns-kill-run-cell.py", str(executable)
+            )
+            cell_id = bootstrap.INDEPENDENT_PDNS_HANDOFF_CELL
+            base = [str(executable), "--cell-id", cell_id, "--trigger-mode", "socket"]
+            prepared.write_text(json.dumps(base), encoding="utf-8")
+            prepared.chmod(0o600)
+            command = [
+                sys.executable,
+                "-c",
+                code,
+                cell_id,
+                bootstrap.INDEPENDENT_PDNS_HANDOFF_FLAG,
+            ]
+            self.assertEqual(subprocess.run(command, check=False).returncode, 0)
+            self.assertEqual(
+                json.loads(captured.read_text(encoding="utf-8")),
+                base + [bootstrap.INDEPENDENT_PDNS_HANDOFF_FLAG],
+            )
+            self.assertEqual(json.loads(prepared.read_text(encoding="utf-8")), base)
+            for wrong in (
+                command[:-2]
+                + [
+                    "bind__rolling-back__after-write__standalone__peer-reachable",
+                    bootstrap.INDEPENDENT_PDNS_HANDOFF_FLAG,
+                ],
+                command[:-1] + ["--unexpected"],
+            ):
+                self.assertNotEqual(
+                    subprocess.run(wrong, check=False, capture_output=True).returncode,
+                    0,
+                )
+            prepared.write_text(json.dumps(base[:-1] + ["subprocess"]), encoding="utf-8")
+            self.assertNotEqual(
+                subprocess.run(command, check=False, capture_output=True).returncode,
+                0,
+            )
 
     @unittest.skipUnless(
         sys.platform == "linux" and hasattr(os, "geteuid") and os.geteuid() == 0,
@@ -1071,6 +1389,79 @@ class PreparedCellRunnerTest(unittest.TestCase):
                 subprocess.run(command, check=False, capture_output=True).returncode,
                 1,
             )
+
+    def test_paired_bind_to_powerdns_scenario_preserves_catalog_identity(self) -> None:
+        source = bootstrap.bind_scenario(
+            "uninitialized", role="paired-primary", node="debian13",
+            allow_debian_paired_source=True,
+        )
+        measured = bootstrap.pdns_switch_scenario(role="paired-primary")
+        self.assertEqual(source["topology"], "paired")
+        self.assertEqual(measured["topology"], "paired")
+        self.assertEqual(measured["zones"], source["zones"])
+        for key, value in {
+            "pair_role": "primary",
+            "local_ip": "192.0.2.10",
+            "peer_ip": "192.0.2.11",
+            "local_ns": "ns1.s1-kill.test",
+            "peer_ns": "ns2.s1-kill.test",
+        }.items():
+            self.assertEqual(source[key], value)
+            self.assertEqual(measured[key], value)
+        records = source["zones"][0]["records"]
+        self.assertIn(
+            {"name": "ns2.s1-kill.test", "type": "A", "content": "192.0.2.11",
+             "ttl": 300, "prio": 0, "disabled": False},
+            records,
+        )
+        with self.assertRaises(bootstrap.BootstrapError):
+            bootstrap.pdns_switch_scenario(role="paired-secondary")
+        selected = cell("debian13", "intent", driver="pdns-switch", role="paired-primary")
+        bootstrap.validate_pdns_switch_cell(selected, "debian13", "managed-bind")
+
+    def test_fresh_paired_powerdns_primary_has_empty_source_and_master_member(self) -> None:
+        selected = cell("debian13", "intent", driver="pdns-switch", role="paired-primary")
+        bootstrap.validate_pdns_switch_cell(selected, "debian13", "uninitialized")
+        scenario = bootstrap.pdns_switch_scenario(
+            role="paired-primary", source_fixture="uninitialized"
+        )
+        self.assertEqual(
+            (scenario["source_engine"], scenario["source_epoch"],
+             scenario["target_engine"], scenario["target_epoch"]),
+            ("", 0, "pdns", 1),
+        )
+        self.assertEqual(scenario["pair_role"], "primary")
+        self.assertEqual(scenario["zones"][0]["zone_type"], "MASTER")
+        self.assertEqual(
+            scenario["zones"][0]["records"],
+            bootstrap.pdns_switch_scenario(role="paired-primary")["zones"][0]["records"],
+        )
+        for candidate in (
+            cell("debian13", "target-started", driver="pdns-switch", role="paired-primary"),
+            cell("debian13", "intent", driver="pdns-switch"),
+            cell("arch", "intent", driver="pdns-switch", role="paired-primary"),
+        ):
+            with self.assertRaises(bootstrap.BootstrapError):
+                bootstrap.validate_pdns_switch_cell(candidate, "debian13", "uninitialized")
+        with self.assertRaises(bootstrap.BootstrapError):
+            bootstrap.pdns_switch_scenario(source_fixture="uninitialized")
+
+    def test_managed_bind_source_requires_standalone_debian_switch(self) -> None:
+        selected = cell("debian13", "intent", driver="pdns-switch")
+        bootstrap.validate_pdns_switch_cell(selected, "debian13", "managed-bind")
+        measured = bootstrap.pdns_switch_scenario()
+        source = bootstrap.bind_scenario("uninitialized", node="debian13")
+        self.assertEqual(measured["zones"], source["zones"])
+        self.assertEqual(
+            (measured["source_engine"], measured["source_epoch"], measured["target_engine"]),
+            ("bind", 1, "pdns"),
+        )
+        for candidate, node, fixture in (
+            (cell("arch", "intent", driver="pdns-switch"), "arch", "managed-bind"),
+            (selected, "debian13", "uninitialized"),
+        ):
+            with self.assertRaises(bootstrap.BootstrapError):
+                bootstrap.validate_pdns_switch_cell(candidate, node, fixture)
 
 if __name__ == "__main__":
     unittest.main()

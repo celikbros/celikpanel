@@ -1,4 +1,4 @@
-//go:build linux
+//go:build linux && !celikpanel_dns_v3_native
 
 package main
 

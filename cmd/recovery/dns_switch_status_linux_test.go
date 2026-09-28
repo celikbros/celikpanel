@@ -5,6 +5,8 @@ package main
 import (
 	"bytes"
 	"errors"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostmutationlock"
 	"os"
 	"path/filepath"
@@ -144,4 +146,37 @@ func TestLocalBINDGroupRejectsNoncanonicalAndDuplicateRecords(t *testing.T) {
 	check("bind:x:01234:\n", false)
 	check("bind:x:1234:someone\n", false)
 	check("bind:x:1234:\nbind:malformed\n", false)
+}
+
+func TestPDNSTargetV4OwnerRecoveryHintIsPhaseAndStatusBounded(t *testing.T) {
+	e := dnsenginerecovery.SwitchEvidence{
+		Journal: dnsengineartifact.SwitchJournalV1{
+			Schema:            dnsengineartifact.SwitchJournalSchemaV4,
+			Phase:             dnsengineartifact.SwitchPhaseTargetEnableIntent,
+			MutationRequestID: strings.Repeat("a", 32),
+			PDNSTargetPlan: &dnsengineartifact.PDNSTargetInversePlanV4{
+				Candidate: &dnsengineartifact.PDNSTargetCandidateProofV4{},
+			},
+		},
+		Observation: dnsenginerecovery.EvidenceObservation{
+			RequestID:   strings.Repeat("a", 32),
+			Phase:       dnsengineartifact.SwitchPhaseTargetEnableIntent,
+			Status:      dnsenginerecovery.EvidenceActive,
+			InverseKind: dnsenginerecovery.NativeInversePDNSSwitch,
+		},
+	}
+	if !pdnsTargetV4OwnerRecoveryCandidate(e) {
+		t.Fatal("exact interrupted pre-start request lacks owner guidance")
+	}
+	for _, phase := range []string{dnsengineartifact.SwitchPhaseTargetStarted, dnsengineartifact.SwitchPhaseCommitted} {
+		e.Journal.Phase, e.Observation.Phase = phase, phase
+		if pdnsTargetV4OwnerRecoveryCandidate(e) {
+			t.Fatalf("post-start phase %s offered pre-start inverse", phase)
+		}
+	}
+	e.Journal.Phase, e.Observation.Phase = dnsengineartifact.SwitchPhaseRollingBackTargetEnable, dnsengineartifact.SwitchPhaseRollingBackTargetEnable
+	e.Observation.Status = dnsenginerecovery.EvidenceReleasedUndecided
+	if pdnsTargetV4OwnerRecoveryCandidate(e) {
+		t.Fatal("released-undecided job offered unsupported inverse")
+	}
 }

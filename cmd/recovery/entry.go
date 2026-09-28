@@ -48,6 +48,28 @@ func runEntry(args []string) int {
 			return exitUnavailable
 		}
 	}
+
+	if len(args) > 0 && args[0] == bindAdoptionInverseCapabilityCommand {
+		return dispatchBINDAdoptionInverseCapability(args, os.Geteuid(), os.Stdout, os.Stderr)
+	}
+	if len(args) > 0 && args[0] == "recover-dns-bind-adoption" {
+		return runOwnerBINDAdoptionInverse(args, os.Geteuid(), os.Stdout, os.Stderr)
+	}
+	if len(args) > 0 && args[0] == bindSourceInverseCapabilityCommand {
+		return dispatchBINDSourceInverseCapability(args, os.Geteuid(), os.Stdout, os.Stderr)
+	}
+	if len(args) > 0 && args[0] == "recover-dns-bind-switch" {
+		return runOwnerBINDSwitchInverse(args, os.Geteuid(), os.Stdout, os.Stderr)
+	}
+	if len(args) > 0 && args[0] == "recover-dns-pdns-adoption" {
+		return runOwnerPDNSAdoptionInverse(args, os.Geteuid(), os.Stdout, os.Stderr)
+	}
+	if len(args) > 0 && args[0] == ownerPDNSFreshPrestartV3Command {
+		return runOwnerPDNSFreshPrestartV3(args, os.Geteuid(), os.Stdout, os.Stderr)
+	}
+	if len(args) > 0 && args[0] == ownerPDNSTargetInverseV4Command {
+		return runOwnerPDNSTargetInverseV4(args, os.Geteuid(), os.Stdout, os.Stderr)
+	}
 	if len(args) > 0 && args[0] == "verify-firewall-unit" {
 		return dispatchFirewallUnitVerification(args, os.Geteuid(), recoveryruntime.VerifyFirewallUnit, func(message string) { fmt.Fprintln(os.Stderr, message) })
 	}
@@ -102,7 +124,7 @@ func dispatchEntry(args []string, uid int, observe func() int, execute func([]st
 	case len(args) == 5 && args[0] == "enroll-runtime" && args[1] == "--source" && args[3] == "--transaction-fd" && args[4] == "9" && filepath.IsAbs(args[2]) && filepath.Clean(args[2]) == args[2]:
 		err = enroll(args[2])
 	default:
-		report("Usage: recovery status --request-id <id> [--json] | view --request-id <id> [--port 2084] [--lang en|tr] | runtime-status [--json] [--lang en|tr] | dns-switch-status [--quiesced [--request-id <id>]] | version | recover [--retry --snapshot <exact pending snapshot>]")
+		report("Usage: recovery status --request-id <id> [--json] | view --request-id <id> [--port 2084] [--lang en|tr] | runtime-status [--json] [--lang en|tr] | dns-switch-status [--quiesced] [--request-id <id>] | recover-dns-pdns-adoption --request-id <id> | recover-dns-bind-adoption --request-id <id> | recover-dns-bind-switch --request-id <id> [--lang en|tr] | version | recover [--retry --snapshot <exact pending snapshot>]")
 		return exitUsage
 	}
 	if err != nil {

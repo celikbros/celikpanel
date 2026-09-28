@@ -119,6 +119,7 @@ func CombineV1(acquisition AcquisitionRecordV1, publication PublicationRecordV1)
 		SourceRevision: a.SourceRevision, ManifestQualifier: a.ManifestQualifier,
 		MutationRequestID: a.MutationRequestID, MutationOwnerID: a.MutationOwnerID,
 		Generation: p.Generation, PrimaryCatalogSerial: p.PrimaryCatalogSerial,
+		NativeCatalogV3: a.NativeCatalogV3,
 	}
 	if err := ValidateV1(state); err != nil {
 		return StateV1{}, err

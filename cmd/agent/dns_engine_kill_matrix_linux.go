@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"golang.org/x/sys/unix"
 )
 
@@ -24,14 +25,16 @@ const (
 	dnsKillMatrixRollbackPrecursorSchema = "celikpanel-dns-kill-matrix-rollback-precursor/v1"
 	dnsKillMatrixRollbackPrecursorAction = "returned-injected-error"
 
-	dnsKillMatrixEnvCellID    = "CELIKPANEL_DNS_KILL_MATRIX_CELL_ID"
-	dnsKillMatrixEnvDriver    = "CELIKPANEL_DNS_KILL_MATRIX_DRIVER"
-	dnsKillMatrixEnvPoint     = "CELIKPANEL_DNS_KILL_MATRIX_POINT"
-	dnsKillMatrixEnvPhase     = "CELIKPANEL_DNS_KILL_MATRIX_PHASE"
-	dnsKillMatrixEnvRequestID = "CELIKPANEL_DNS_KILL_MATRIX_REQUEST_ID"
-	dnsKillMatrixEnvNonce     = "CELIKPANEL_DNS_KILL_MATRIX_NONCE"
-	dnsKillMatrixEnvMarker    = "CELIKPANEL_DNS_KILL_MATRIX_MARKER"
-	dnsKillMatrixEnvReadyFD   = "CELIKPANEL_DNS_KILL_MATRIX_READY_FD"
+	dnsKillMatrixEnvCellID            = "CELIKPANEL_DNS_KILL_MATRIX_CELL_ID"
+	dnsKillMatrixEnvDriver            = "CELIKPANEL_DNS_KILL_MATRIX_DRIVER"
+	dnsKillMatrixEnvPoint             = "CELIKPANEL_DNS_KILL_MATRIX_POINT"
+	dnsKillMatrixEnvPhase             = "CELIKPANEL_DNS_KILL_MATRIX_PHASE"
+	dnsKillMatrixEnvRequestID         = "CELIKPANEL_DNS_KILL_MATRIX_REQUEST_ID"
+	dnsKillMatrixEnvNonce             = "CELIKPANEL_DNS_KILL_MATRIX_NONCE"
+	dnsKillMatrixEnvMarker            = "CELIKPANEL_DNS_KILL_MATRIX_MARKER"
+	dnsKillMatrixEnvReadyFD           = "CELIKPANEL_DNS_KILL_MATRIX_READY_FD"
+	dnsKillMatrixEnvRollbackPrecursor = "CELIKPANEL_DNS_KILL_MATRIX_ROLLBACK_PRECURSOR"
+	dnsKillMatrixBindHandoffCell      = "bind__rolling-back__after-write__standalone__peer-reachable"
 
 	dnsKillMatrixPreIntentPhase = "pre-intent"
 	dnsKillMatrixMaxCellID      = 192
@@ -55,14 +58,15 @@ var (
 )
 
 type dnsKillMatrixConfig struct {
-	CellID    string
-	Driver    string
-	Point     string
-	Phase     string
-	RequestID string
-	Nonce     string
-	Marker    string
-	ReadyFD   int
+	CellID            string
+	Driver            string
+	Point             string
+	Phase             string
+	RequestID         string
+	Nonce             string
+	Marker            string
+	ReadyFD           int
+	RollbackPrecursor string
 }
 
 type dnsKillMatrixObservedJournal struct {
@@ -196,8 +200,13 @@ func dnsKillMatrixConfigFromEnvironment(
 		present[name] = ok
 		active = active || ok
 	}
+	precursor, precursorPresent := lookup(dnsKillMatrixEnvRollbackPrecursor)
+	active = active || precursorPresent
 	if !active {
 		return dnsKillMatrixConfig{}, false, nil
+	}
+	if precursorPresent && precursor == "" {
+		return dnsKillMatrixConfig{}, true, fmt.Errorf("%s must not be empty", dnsKillMatrixEnvRollbackPrecursor)
 	}
 	missing := make([]string, 0, len(dnsKillMatrixEnvironment))
 	for _, name := range dnsKillMatrixEnvironment {
@@ -216,14 +225,15 @@ func dnsKillMatrixConfigFromEnvironment(
 		return dnsKillMatrixConfig{}, true, err
 	}
 	config := dnsKillMatrixConfig{
-		CellID:    values[dnsKillMatrixEnvCellID],
-		Driver:    values[dnsKillMatrixEnvDriver],
-		Point:     values[dnsKillMatrixEnvPoint],
-		Phase:     values[dnsKillMatrixEnvPhase],
-		RequestID: values[dnsKillMatrixEnvRequestID],
-		Nonce:     values[dnsKillMatrixEnvNonce],
-		Marker:    values[dnsKillMatrixEnvMarker],
-		ReadyFD:   readyFD,
+		CellID:            values[dnsKillMatrixEnvCellID],
+		Driver:            values[dnsKillMatrixEnvDriver],
+		Point:             values[dnsKillMatrixEnvPoint],
+		Phase:             values[dnsKillMatrixEnvPhase],
+		RequestID:         values[dnsKillMatrixEnvRequestID],
+		Nonce:             values[dnsKillMatrixEnvNonce],
+		Marker:            values[dnsKillMatrixEnvMarker],
+		ReadyFD:           readyFD,
+		RollbackPrecursor: precursor,
 	}
 	if err := dnsKillMatrixValidateConfig(config); err != nil {
 		return dnsKillMatrixConfig{}, true, err
@@ -267,6 +277,13 @@ func dnsKillMatrixValidateConfig(config dnsKillMatrixConfig) error {
 	}
 	if config.ReadyFD < 3 {
 		return fmt.Errorf("%s must not name a standard file descriptor", dnsKillMatrixEnvReadyFD)
+	}
+	if config.RollbackPrecursor != "" && !(config.RollbackPrecursor == dnsSwitchPhaseTargetStarted &&
+		config.CellID == dnsKillMatrixBindHandoffCell &&
+		config.Driver == dnsEngineSwitchFaultDriverBIND &&
+		config.Point == dnsEngineSwitchJournalFaultAfterWrite &&
+		config.Phase == dnsSwitchPhaseRollingBack) {
+		return fmt.Errorf("%s is not valid for the exact BIND recovery handoff", dnsKillMatrixEnvRollbackPrecursor)
 	}
 	return nil
 }
@@ -360,6 +377,12 @@ func dnsKillMatrixRollbackPrecursorFor(
 		config.Phase != dnsSwitchPhaseRolledBack {
 		return dnsKillMatrixRollbackPrecursorSpec{}, false
 	}
+	if config.RollbackPrecursor == dnsSwitchPhaseTargetStarted {
+		return dnsKillMatrixRollbackPrecursorSpec{
+			Point: dnsEngineSwitchJournalFaultAfterWrite,
+			Phase: dnsSwitchPhaseTargetStarted,
+		}, true
+	}
 	switch config.Driver {
 	case dnsEngineSwitchFaultDriverBIND,
 		dnsEngineSwitchFaultDriverPDNSSwitch,
@@ -404,6 +427,31 @@ func dnsKillMatrixObservedJournalFor(
 	}
 }
 
+// The late BIND fault only arms after a complete V2 inverse-source envelope.
+// Full journal validation below binds every source byte and identity before the
+// fault is published; this gate preserves the earlier, specific refusal.
+func dnsKillMatrixLaterBINDFrozenSourceProof(journal dnsEngineSwitchJournal) bool {
+	if journal.Schema != dnsengineartifact.SwitchJournalSchemaV2 ||
+		journal.InversePlan == nil ||
+		len(journal.InversePlan.BINDUnchangedConfig) != 2 {
+		return false
+	}
+	plan := journal.InversePlan
+	if journal.SourceEngine == "pdns" {
+		return plan.SourcePDNS != nil && plan.SourceBIND == nil &&
+			len(plan.SourcePDNS.ConfigBefore) == 3
+	}
+	return journal.SourceEngine == "" && plan.SourcePDNS == nil &&
+		plan.SourceBIND != nil && len(plan.SourceBIND.Files) > 0 &&
+		len(plan.SourceBIND.Zones) > 0 && len(journal.ConfigBefore) == 2 &&
+		journal.Mode == "switch" && journal.TargetEngine == "bind" &&
+		journal.SourceEpoch == 0 && journal.TargetEpoch == 1 &&
+		journal.SourceRevision == 0 && journal.Topology == "standalone" &&
+		journal.PairRole == "" && journal.LocalIP == "" &&
+		journal.LocalNS == "" && journal.PeerIP == "" &&
+		journal.PeerNS == "" && !journal.StateBefore.Exists
+}
+
 func (runtime *dnsKillMatrixRuntime) validateObservation(
 	driver string,
 	point string,
@@ -422,11 +470,16 @@ func (runtime *dnsKillMatrixRuntime) validateObservation(
 			label, driver,
 		)
 	}
-	if journal.Schema != dnsEngineSwitchJournalSchema {
+	if journal.Schema != dnsEngineSwitchJournalSchema &&
+		!(driver == dnsEngineSwitchFaultDriverBIND && journal.Schema == dnsengineartifact.SwitchJournalSchemaV2) {
 		return fmt.Errorf(
 			"DNS kill-matrix journal schema mismatch at %s: observed %q",
 			label, journal.Schema,
 		)
+	}
+	if runtime.config.RollbackPrecursor == dnsSwitchPhaseTargetStarted &&
+		!dnsKillMatrixLaterBINDFrozenSourceProof(journal) {
+		return fmt.Errorf("DNS kill-matrix later BIND rollback requires V2 frozen PowerDNS or owner BIND source proof at %s", label)
 	}
 	if point == dnsEngineSwitchJournalFaultPreIntent {
 		if !validMutationIdentity(journal.MutationOwnerID) {

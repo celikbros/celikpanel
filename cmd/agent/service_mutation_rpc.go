@@ -110,6 +110,7 @@ type serviceMutationRuntime struct {
 	dnsZoneSyncV3AppliedPhase           string
 	dnsZoneSyncV3Recovery               bool
 	dnsZoneSyncV3PendingPhase           string
+	dnsZoneSyncV3PreviousPendingCode    string
 	panelCertificateIssuePublishedPhase string
 	mailHostCertificatePublishedPhase   string
 	mailHostCertificateCommittedPhase   string
@@ -1000,6 +1001,7 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 	}
 	pendingRecovery := false
 	pendingPhase := ""
+	pendingCode := ""
 	recoveringPhase := ""
 	if previous != nil {
 		if !serviceMutationIdentityMatches(previous, request) {
@@ -1023,6 +1025,7 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 			}
 			pendingRecovery = true
 			pendingPhase = previous.Phase
+			pendingCode = dnsZoneV3PendingLedgerCode(previous.ErrorCode)
 			recoveringPhase, parseErr = formatDNSZoneSyncV3Phase(
 				dnsZoneSyncV3Recovering,
 				previous.RequestID,
@@ -1090,6 +1093,7 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		PackageName:    request.PackageName,
 		Status:         serviceMutationStatusRunning,
 		Phase:          phase,
+		ErrorCode:      pendingCode,
 		Attempt:        attempt,
 		StartedAt:      startedAt,
 		UpdatedAt:      now,
@@ -1097,12 +1101,13 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		DeadlineAt:     deadline,
 	}
 	runtime := &serviceMutationRuntime{
-		job:                       job,
-		lock:                      lock,
-		ctx:                       ctx,
-		cancel:                    cancel,
-		dnsZoneSyncV3Recovery:     pendingRecovery,
-		dnsZoneSyncV3PendingPhase: pendingPhase,
+		job:                              job,
+		lock:                             lock,
+		ctx:                              ctx,
+		cancel:                           cancel,
+		dnsZoneSyncV3Recovery:            pendingRecovery,
+		dnsZoneSyncV3PendingPhase:        pendingPhase,
+		dnsZoneSyncV3PreviousPendingCode: pendingCode,
 	}
 	before := cloneServiceMutationLedger(m.ledger)
 	m.ledger.ActiveRequestID = job.RequestID
@@ -1727,6 +1732,7 @@ func (m *serviceMutationManager) finishRuntimeAfterFailureLocked(
 func (m *serviceMutationManager) finishRuntimeDNSZoneV3PendingLocked(
 	runtime *serviceMutationRuntime,
 	phase string,
+	reasonCode ...string,
 ) error {
 	if runtime == nil || runtime.job == nil {
 		return errors.New("DNS zone V3 pending runtime is required")
@@ -1752,7 +1758,11 @@ func (m *serviceMutationManager) finishRuntimeDNSZoneV3PendingLocked(
 	now := m.now()
 	runtime.job.Status = serviceMutationStatusPending
 	runtime.job.Phase = phase
-	runtime.job.ErrorCode = "dns_zone_v3_propagation_pending"
+	code := runtime.dnsZoneSyncV3PreviousPendingCode
+	if len(reasonCode) == 1 {
+		code = reasonCode[0]
+	}
+	runtime.job.ErrorCode = dnsZoneV3PendingLedgerCode(code)
 	runtime.job.ErrorMessage =
 		"The exact local DNS publication is waiting for paired propagation recovery."
 	runtime.job.UpdatedAt = now

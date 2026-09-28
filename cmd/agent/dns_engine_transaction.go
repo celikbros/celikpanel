@@ -13,6 +13,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
+	"github.com/alicelik/celikpanel/internal/dnsunitrestore"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -211,7 +212,51 @@ func writeDNSEngineSwitchJournalWithOps(
 	read func() (dnsEngineSwitchJournal, bool, error),
 	faultHook func(string, dnsEngineSwitchJournal) error,
 ) error {
-	ops := dnsenginerecovery.JournalCheckpointOps{Persist: persist, Read: read}
+	if read == nil || persist == nil {
+		return errors.New("DNS engine switch journal checkpoint operations are incomplete")
+	}
+	// The read runs after the before-write fault boundary but before the first
+	// filesystem effect. This prevents v1 from replacing an unresolved v2
+	// inverse plan even if a higher-level admission check was bypassed.
+	guardedPersist := func(encoded []byte) error {
+		current, exists, err := read()
+		if err != nil {
+			return fmt.Errorf("inspect DNS switch journal before checkpoint: %w", err)
+		}
+		if exists && (current.Schema == dnsengineartifact.SwitchJournalSchemaV3 ||
+			journal.Schema == dnsengineartifact.SwitchJournalSchemaV3) {
+			if !dnsengineartifact.SameImmutablePDNSFreshPrimaryPlanV3(current, journal) {
+				return errors.New("v3 PowerDNS fresh-primary evidence changed before checkpoint; preserve the journal for owner recovery")
+			}
+			if !dnsengineartifact.ValidPDNSFreshPrimaryForwardPhaseTransitionV3(current, journal) {
+				return errors.New("v3 PowerDNS fresh-primary phase skipped or reversed a durable checkpoint; preserve the journal for owner recovery")
+			}
+		} else if exists && (current.Schema == dnsengineartifact.SwitchJournalSchemaV4 ||
+			journal.Schema == dnsengineartifact.SwitchJournalSchemaV4) {
+			if !dnsengineartifact.SameImmutablePDNSTargetInversePlanV4(current, journal) {
+				return errors.New("v4 PowerDNS inverse plan changed before checkpoint; preserve the journal for owner recovery")
+			}
+			if !dnsengineartifact.ValidPDNSTargetForwardPhaseTransitionV4(current, journal) {
+				return errors.New("v4 PowerDNS forward phase skipped or reversed a durable checkpoint; preserve the journal for owner recovery")
+			}
+		} else if exists && (current.Schema == dnsengineartifact.SwitchJournalSchemaV2 ||
+			journal.Schema == dnsengineartifact.SwitchJournalSchemaV2) {
+			if !dnsengineartifact.SameImmutableBINDSwitchInversePlanV2(current, journal) {
+				return errors.New("v2 DNS switch inverse plan changed before checkpoint; preserve the journal for owner recovery")
+			}
+		} else if !exists && journal.Schema == dnsengineartifact.SwitchJournalSchemaV2 &&
+			journal.Phase != dnsSwitchPhaseIntent {
+			return errors.New("v2 DNS switch journal requires a fresh intent checkpoint")
+		}
+		if !exists && journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 && journal.Phase != dnsSwitchPhaseIntent {
+			return errors.New("v3 DNS switch journal requires an empty durable intent checkpoint")
+		}
+		if !exists && journal.Schema == dnsengineartifact.SwitchJournalSchemaV4 && journal.Phase != dnsSwitchPhaseIntent {
+			return errors.New("v4 DNS switch journal requires a fresh frozen-candidate intent checkpoint")
+		}
+		return persist(encoded)
+	}
+	ops := dnsenginerecovery.JournalCheckpointOps{Persist: guardedPersist, Read: read}
 	if faultHook != nil {
 		ops.BeforeWrite = func(j dnsengineartifact.SwitchJournalV1) error {
 			if err := faultHook(dnsEngineSwitchJournalFaultBeforeWrite, j); err != nil {
@@ -563,19 +608,8 @@ func restoreDNSUnitSnapshots(ctx context.Context, systemctl string, snapshots []
 // bind9.service" koşturup "Unit bind9.service does not exist" ile düştü (S-8
 // T5, defter R-031). Önce gerçek birimi geri yüklemek takma adı yeniden
 // yaratır; sonra takma adı etkinleştirmek tam bir no-op okumadır.
-func dnsUnitRestoreRank(name string) int {
-	if name == "bind9.service" {
-		return 1
-	}
-	return 0
-}
-
 func orderDNSUnitSnapshotsForRestore(snapshots []dnsUnitSnapshot) []dnsUnitSnapshot {
-	ordered := append([]dnsUnitSnapshot(nil), snapshots...)
-	sort.SliceStable(ordered, func(i, j int) bool {
-		return dnsUnitRestoreRank(ordered[i].Name) < dnsUnitRestoreRank(ordered[j].Name)
-	})
-	return ordered
+	return dnsunitrestore.Order(snapshots)
 }
 
 func restoreDNSUnitSnapshotsWithGuard(
@@ -586,20 +620,20 @@ func restoreDNSUnitSnapshotsWithGuard(
 	if guard == nil {
 		return errors.New("DNS unit snapshot restore requires a systemd guard")
 	}
-	for _, snapshot := range orderDNSUnitSnapshotsForRestore(snapshots) {
+	owned := make(map[string]bool, len(snapshots))
+	for _, snapshot := range snapshots {
 		if err := validateDNSUnitSnapshot(snapshot); err != nil {
 			return err
 		}
-		state := bindInstallUnitState{
-			name: snapshot.Name, loadState: snapshot.LoadState,
-			activeState: snapshot.ActiveState, unitFileState: snapshot.UnitFileState,
-		}
-		guard.before = append(guard.before, state)
-		if !state.masked() {
-			guard.ownedMask[state.name] = true
+		if snapshot.LoadState != "masked" {
+			owned[snapshot.Name] = true
 		}
 	}
-	return guard.restore(ctx)
+	return dnsunitrestore.Restore(ctx, snapshots, owned, dnsunitrestore.Ops{
+		Systemctl:        guard.systemctl,
+		VerifyMaskParent: guard.ops.verifyMaskParent,
+		RunSystemd:       guard.ops.runSystemd,
+	})
 }
 
 // Host paths and ownership come from the installed adapter, never from the

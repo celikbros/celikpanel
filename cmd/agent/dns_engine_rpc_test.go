@@ -201,6 +201,57 @@ func pairedZeroZoneSwitchRequest(t *testing.T) SwitchDNSEngineV1Request {
 	}
 }
 
+func TestPDNSPairedPrimarySwitchRefusedBeforeAgentMutationClaim(t *testing.T) {
+	manifest := testPairedPDNSSwitchManifest(t, transport.DNSPairRolePrimary, nil)
+	request := SwitchDNSEngineV1Request{
+		ServiceMutationBinding: testPDNSEngineBinding(),
+		Mode:                   manifest.Mode, SourceEngine: manifest.SourceEngine,
+		TargetEngine: manifest.TargetEngine, SourceEpoch: manifest.SourceEpoch,
+		TargetEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
+		Topology: manifest.Topology, PairRole: manifest.PairRole,
+		LocalIP: manifest.LocalIP, LocalNS: manifest.LocalNS,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		Zones: manifest.Zones, SnapshotBytes: manifest.SnapshotBytes,
+		ManifestQualifier: manifest.Qualifier,
+	}
+	backend := &fakeDNSEngineBackend{}
+	useFakeDNSEngineBackend(t, backend)
+	var response SwitchDNSEngineV1Response
+	if err := (&Agent{}).SwitchDNSEngineV1(&request, &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != pdnsPairedPrimarySwitchPausedReason || backend.switchCalls != 0 {
+		t.Fatalf("Agent accepted unsupported switch: response=%+v calls=%d", response, backend.switchCalls)
+	}
+	if _, err := (hostDNSEngineBackend{}).Switch(
+		context.Background(), manifest, request.ServiceMutationBinding,
+	); err == nil || err.Error() != pdnsPairedPrimarySwitchPausedReason {
+		t.Fatalf("host backend reached source or profile work: %v", err)
+	}
+	for _, change := range []struct {
+		name string
+		edit func(*mutationpayload.DNSEngineSwitchManifestCommitment)
+	}{
+		{"standalone", func(m *mutationpayload.DNSEngineSwitchManifestCommitment) {
+			m.Topology, m.PairRole = transport.DNSTopologyStandalone, ""
+		}},
+		{"secondary", func(m *mutationpayload.DNSEngineSwitchManifestCommitment) {
+			m.PairRole = transport.DNSPairRoleSecondary
+		}},
+		{"BIND target", func(m *mutationpayload.DNSEngineSwitchManifestCommitment) {
+			m.TargetEngine = transport.DNSEngineBIND
+		}},
+	} {
+		t.Run(change.name, func(t *testing.T) {
+			other := manifest
+			change.edit(&other)
+			if pdnsPairedPrimarySwitchPaused(other) {
+				t.Fatal("unrelated DNS transition was blocked")
+			}
+		})
+	}
+}
+
 func TestSwitchDNSEnginePublishesExactTerminalReceipt(t *testing.T) {
 	request := canonicalSwitchRequest(t)
 	manager, _ := newMutationTestManager(t)

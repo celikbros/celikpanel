@@ -37,6 +37,17 @@ PDNS_ADOPT_PHASES = frozenset(
         "rolled-back",
     }
 )
+INDEPENDENT_PDNS_HANDOFF_CELL = (
+    "pdns-adopt__rolling-back__after-write__standalone__peer-reachable"
+)
+INDEPENDENT_BIND_HANDOFF_CELL = (
+    "bind__rolling-back__after-write__standalone__peer-reachable"
+)
+INDEPENDENT_HANDOFF_CELLS = frozenset({
+    INDEPENDENT_PDNS_HANDOFF_CELL, INDEPENDENT_BIND_HANDOFF_CELL,
+})
+INDEPENDENT_PDNS_HANDOFF_FLAG = "--stop-after-kill-for-independent-recovery"
+LATER_BIND_ROLLBACK_FLAG = "--bind-rollback-after-target-started"
 SOURCE_FIXTURE_POLICIES = frozenset(
     {
         "driver-specific",
@@ -76,6 +87,28 @@ if (not isinstance(argv, list) or len(argv) < 4
 index = argv.index("--cell-id")
 if index + 1 >= len(argv) or argv[index + 1] != sys.argv[1]:
     raise SystemExit("prepared controller argv belongs to another cell")
+if len(sys.argv) not in (2, 3, 4):
+    raise SystemExit("unexpected prepared controller invocation")
+if len(sys.argv) >= 3:
+    handoff_flag = "--stop-after-kill-for-independent-recovery"
+    if (sys.argv[1] not in {
+                "pdns-adopt__rolling-back__after-write__standalone__peer-reachable",
+                "bind__rolling-back__after-write__standalone__peer-reachable",
+            }
+            or sys.argv[2] != handoff_flag
+            or handoff_flag in argv
+            or argv.count("--trigger-mode") != 1):
+        raise SystemExit("independent recovery handoff is not valid for prepared cell")
+    trigger_index = argv.index("--trigger-mode")
+    if argv[trigger_index + 1:trigger_index + 2] != ["socket"]:
+        raise SystemExit("independent recovery handoff requires a socket trigger")
+    argv.append(handoff_flag)
+if len(sys.argv) == 4:
+    later_flag = "--bind-rollback-after-target-started"
+    if (sys.argv[1] != "bind__rolling-back__after-write__standalone__peer-reachable"
+            or sys.argv[3] != later_flag or later_flag in argv):
+        raise SystemExit("later BIND rollback requires the exact handoff cell")
+    argv.append(later_flag)
 os.execv(argv[0], argv)
 """
 
@@ -217,15 +250,42 @@ def validate_bind_cell(cell: dict[str, Any], node: str, source_fixture: str) -> 
                 "uninitialized source requires a driver-supported fixture policy "
                 "and an early BIND phase"
             )
+    elif source_fixture == "owner-bind":
+        if not (
+            node == "debian13"
+            and source_policy == "driver-specific"
+            and cell.get("id") == INDEPENDENT_BIND_HANDOFF_CELL
+            and cell.get("role") == "standalone"
+            and cell.get("peer_reachability") == "reachable"
+            and phase == "rolling-back"
+            and cell.get("boundary", {}).get("edge") == "after-write"
+            and cell.get("fault_selector") == {
+                "phase": "rolling-back", "point": "after_write",
+            }
+        ):
+            raise BootstrapError("owner BIND requires the exact Debian standalone rollback handoff cell")
     elif source_fixture == "managed-pdns":
         if (
-            source_policy != "managed-pdns-required"
-            or node != "debian13"
-            or phase not in CRITICAL_MANAGED_PDNS_PHASES
+            node != "debian13"
+            or not (
+                (source_policy == "managed-pdns-required"
+                 and phase in CRITICAL_MANAGED_PDNS_PHASES)
+                or (
+                    source_policy == "driver-specific"
+                    and phase == "rolling-back"
+                    and cell.get("id") == INDEPENDENT_BIND_HANDOFF_CELL
+                    and cell.get("role") == "standalone"
+                    and cell.get("peer_reachability") == "reachable"
+                    and cell.get("boundary", {}).get("edge") == "after-write"
+                    and cell.get("fault_selector") == {
+                        "phase": "rolling-back", "point": "after_write",
+                    }
+                )
+            )
         ):
             raise BootstrapError(
                 "managed PowerDNS source preinstall requires the managed fixture "
-                "policy and a source-stopped/target-started/rolled-back BIND cell "
+                "policy and a supported critical BIND cell "
                 "on certified Debian"
             )
     else:
@@ -259,6 +319,66 @@ def validate_pdns_adopt_cell(
         )
 
 
+
+def validate_pdns_switch_cell(
+    cell: dict[str, Any], node: str, source_fixture: str
+) -> None:
+    if cell.get("driver") != "pdns-switch" or cell.get("role") not in {"standalone", "paired-primary"}:
+        raise BootstrapError("PowerDNS switch fixture supports standalone or paired-primary only")
+    placement = cell.get("placement", {})
+    if (
+        node != "debian13"
+        or NODE_FOR_PLACEMENT.get(placement.get("kill_host")) != node
+        or placement.get("source_fixture_policy") != "driver-specific"
+        or source_fixture not in {"managed-bind", "uninitialized"}
+    ):
+        raise BootstrapError("PowerDNS switch requires the certified Debian placement")
+    if source_fixture == "uninitialized" and (
+        cell.get("role") != "paired-primary" or cell.get("boundary", {}).get("phase") != "intent"
+    ):
+        raise BootstrapError("fresh PowerDNS fixture is limited to paired-primary intent")
+    if cell.get("boundary", {}).get("phase") not in {
+        "pre-intent", "intent", "target-staged", "source-stopped",
+        "target-started", "target-verified", "committed",
+        "rolling-back", "rolled-back",
+    }:
+        raise BootstrapError("PowerDNS switch fixture has an unsupported matrix phase")
+
+
+def pdns_switch_scenario(*, role: str = "standalone", authority_acceptance: bool = False,
+                         source_fixture: str = "managed-bind") -> dict[str, Any]:
+    if role not in {"standalone", "paired-primary"}:
+        raise BootstrapError("unsupported PowerDNS switch source role")
+    if source_fixture not in {"managed-bind", "uninitialized"} or (
+        source_fixture == "uninitialized" and role != "paired-primary"
+    ):
+        raise BootstrapError("unsupported PowerDNS switch source fixture")
+    source = bind_scenario(
+        "uninitialized", role=role, node="debian13",
+        allow_debian_paired_source=role == "paired-primary",
+        authority_acceptance=authority_acceptance,
+    )
+    zones = source["zones"]
+    if source_fixture == "uninitialized":
+        zones = [{**zone, "zone_type": "MASTER"} for zone in zones]
+    return {
+        "schema": SCENARIO_SCHEMA,
+        "driver": "pdns-switch",
+        "source_fixture": source_fixture,
+        "mode": "switch",
+        "source_engine": "bind" if source_fixture == "managed-bind" else "",
+        "target_engine": "pdns",
+        "source_epoch": 1 if source_fixture == "managed-bind" else 0,
+        "target_epoch": 2 if source_fixture == "managed-bind" else 1,
+        "source_revision": 0,
+        "topology": source["topology"],
+        **({
+            key: source[key]
+            for key in ("pair_role", "local_ip", "local_ns", "peer_ip", "peer_ns")
+        } if role == "paired-primary" else {}),
+        "zones": zones,
+    }
+
 def validate_supported_cell(
     cell: dict[str, Any], node: str, source_fixture: str
 ) -> None:
@@ -267,6 +387,8 @@ def validate_supported_cell(
         validate_bind_cell(cell, node, source_fixture)
     elif driver == "pdns-adopt":
         validate_pdns_adopt_cell(cell, node, source_fixture)
+    elif driver == "pdns-switch":
+        validate_pdns_switch_cell(cell, node, source_fixture)
     else:
         raise BootstrapError(
             f"guest bootstrap does not yet prepare driver {driver!r}"
@@ -321,21 +443,49 @@ def zone_snapshot() -> dict[str, Any]:
     }
 
 
+def authority_zone_snapshot() -> dict[str, Any]:
+    """Additional isolated zone modelling Frankfurt/Boston delegation."""
+    return {
+        "ordinal": 1, "domain": "celikhost.com", "desired_generation": 1,
+        "delete": False, "zone_type": "NATIVE", "zone_qualifier": "",
+        "records": [
+            {"name": "celikhost.com", "type": "SOA",
+             "content": "ns1.celikhost.com hostmaster.celikhost.com 2026092701 10800 3600 604800 3600",
+             "ttl": 3600, "prio": 0, "disabled": False},
+            *({"name": "celikhost.com", "type": "NS", "content": ns,
+               "ttl": 3600, "prio": 0, "disabled": False}
+              for ns in ("ns1.celikhost.com", "ns2.celikhost.com")),
+            *({"name": name + ".celikhost.com", "type": "A", "content": address,
+               "ttl": 300, "prio": 0, "disabled": False}
+              for name, address in (("ns1", "192.0.2.10"), ("ns2", "192.0.2.11"),
+                                    ("frankfurt", "192.0.2.10"), ("boston", "192.0.2.11"))),
+        ],
+    }
+
+
 def bind_scenario(
-    source_fixture: str, *, role: str = "standalone", node: str = "debian13"
+    source_fixture: str, *, role: str = "standalone", node: str = "debian13",
+    allow_debian_paired_source: bool = False, authority_acceptance: bool = False,
 ) -> dict[str, Any]:
     if source_fixture == "uninitialized":
         source_engine, source_epoch, target_epoch, revision = "", 0, 1, 0
     elif source_fixture == "managed-pdns":
         source_engine, source_epoch, target_epoch, revision = "pdns", 1, 2, 0
+    elif source_fixture == "owner-bind":
+        source_engine, source_epoch, target_epoch, revision = "", 0, 1, 0
     else:
         raise BootstrapError("unsupported source fixture")
     if role not in {"standalone", "paired-primary"}:
         raise BootstrapError("unsupported BIND topology in guest scenario")
     if node not in {"arch", "debian13"}:
         raise BootstrapError("unsupported BIND fixture node")
-    if role == "paired-primary" and (node != "arch" or source_fixture != "uninitialized"):
+    if role == "paired-primary" and (
+        source_fixture != "uninitialized"
+        or (node != "arch" and not (node == "debian13" and allow_debian_paired_source))
+    ):
         raise BootstrapError("paired-primary scenario requires an uninitialized Arch source")
+    if authority_acceptance and (role != "paired-primary" or node != "debian13"):
+        raise BootstrapError("authority acceptance requires the Debian paired primary")
     local_ip = "192.0.2.11" if node == "arch" else "192.0.2.10"
     peer_ip = "192.0.2.10" if node == "arch" else "192.0.2.11"
     zone = zone_snapshot()
@@ -385,7 +535,7 @@ def bind_scenario(
             if role == "paired-primary"
             else {}
         ),
-        "zones": [zone],
+        "zones": [zone, authority_zone_snapshot()] if authority_acceptance else [zone],
     }
 
 
@@ -632,6 +782,12 @@ def prepare(args: argparse.Namespace) -> None:
             include_deleted_child=args.include_deleted_child
         )
         guest_action = "prepare-pdns-adopt"
+    elif args.action == "prepare-pdns-switch":
+        validate_pdns_switch_cell(cell, args.node, args.source_fixture)
+        scenario = pdns_switch_scenario(
+            role=cell["role"], authority_acceptance=args.authority_acceptance,
+            source_fixture=args.source_fixture)
+        guest_action = "prepare-pdns-switch"
     else:
         raise BootstrapError("unsupported preparation action")
     source_policy = cell["placement"]["source_fixture_policy"]
@@ -651,6 +807,14 @@ def prepare(args: argparse.Namespace) -> None:
         if args.source_fixture == "managed-pdns":
             source_setup = temporary_path / "source-setup-pdns.json"
             source_setup.write_bytes(json_bytes(pdns_adoption_source_setup_scenario()))
+            uploads.append(source_setup)
+        elif args.source_fixture == "managed-bind":
+            source_setup = temporary_path / "source-setup-bind.json"
+            source_setup.write_bytes(json_bytes(bind_scenario(
+                "uninitialized", role=cell["role"], node="debian13",
+                allow_debian_paired_source=cell["role"] == "paired-primary",
+                authority_acceptance=args.authority_acceptance,
+            )))
             uploads.append(source_setup)
         names = " ".join(path.name for path in uploads)
         run(
@@ -727,6 +891,52 @@ def prepare(args: argparse.Namespace) -> None:
 def run_prepared(args: argparse.Namespace) -> int:
     _, cell, node = load_plan(args)
     validate_supported_cell(cell, args.node, args.source_fixture)
+    if args.source_fixture == "owner-bind" and not (
+        args.stop_after_kill_for_independent_recovery
+        and getattr(args, "bind_rollback_after_target_started", False) is True
+    ):
+        raise BootstrapError("owner BIND handoff requires the target-started rollback precursor")
+    if args.stop_after_kill_for_independent_recovery and not (
+        args.cell_id in INDEPENDENT_HANDOFF_CELLS
+        and cell.get("id") == args.cell_id
+        and cell.get("driver") == (
+            "pdns-adopt" if args.cell_id == INDEPENDENT_PDNS_HANDOFF_CELL else "bind"
+        )
+        and cell.get("role") == "standalone"
+        and cell.get("peer_reachability") == "reachable"
+        and cell.get("boundary", {}).get("phase") == "rolling-back"
+        and cell.get("boundary", {}).get("edge") == "after-write"
+        and cell.get("fault_selector")
+        == {"phase": "rolling-back", "point": "after_write"}
+        and args.node == "debian13"
+        and (
+            args.source_fixture == "external-pdns-adoption"
+            if args.cell_id == INDEPENDENT_PDNS_HANDOFF_CELL
+            else args.source_fixture in {"managed-pdns", "owner-bind"}
+        )
+    ):
+        raise BootstrapError(
+            "independent recovery handoff requires an exact Debian PowerDNS "
+            "adoption or BIND switch rollback cell"
+        )
+    if getattr(args, "bind_rollback_after_target_started", False) is True and not (
+        args.stop_after_kill_for_independent_recovery
+        and args.cell_id == INDEPENDENT_BIND_HANDOFF_CELL
+        and cell.get("id") == args.cell_id
+        and cell.get("driver") == "bind"
+        and cell.get("role") == "standalone"
+        and cell.get("peer_reachability") == "reachable"
+        and cell.get("boundary") == {
+            "edge": "after-write", "name": "rolling-back:after-write",
+            "phase": "rolling-back",
+        }
+        and cell.get("fault_selector") == {
+            "phase": "rolling-back", "point": "after_write",
+        }
+        and args.node == "debian13"
+        and args.source_fixture in {"managed-pdns", "owner-bind"}
+    ):
+        raise BootstrapError("later BIND rollback requires the exact Debian handoff cell")
     identity = identity_file(args.identity_file)
     remote = (
         "sudo /usr/sbin/runuser -u root -g celikpanel -- /usr/bin/env -i "
@@ -735,6 +945,16 @@ def run_prepared(args: argparse.Namespace) -> int:
         + shlex.quote(RUN_PREPARED_CODE)
         + " "
         + shlex.quote(args.cell_id)
+        + (
+            " " + shlex.quote(INDEPENDENT_PDNS_HANDOFF_FLAG)
+            if args.stop_after_kill_for_independent_recovery
+            else ""
+        )
+        + (
+            " " + shlex.quote(LATER_BIND_ROLLBACK_FLAG)
+            if getattr(args, "bind_rollback_after_target_started", False) is True
+            else ""
+        )
     )
     command = ssh_base(node, identity) + [remote]
     if not args.execute:
@@ -754,6 +974,8 @@ def common_parser(parser: argparse.ArgumentParser) -> None:
         choices=(
             "uninitialized",
             "managed-pdns",
+            "owner-bind",
+            "managed-bind",
             "external-pdns-adoption",
         ),
     )
@@ -781,8 +1003,13 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     current = subparsers.add_parser("prepare-pdns-adopt")
     common_parser(current)
     current.add_argument("--include-deleted-child", action="store_true")
+    current = subparsers.add_parser("prepare-pdns-switch")
+    common_parser(current)
+    current.add_argument("--authority-acceptance", action="store_true")
     current = subparsers.add_parser("run-prepared")
     common_parser(current)
+    current.add_argument(INDEPENDENT_PDNS_HANDOFF_FLAG, action="store_true")
+    current.add_argument(LATER_BIND_ROLLBACK_FLAG, action="store_true")
     return parser.parse_args(argv)
 
 
@@ -793,7 +1020,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             raise BootstrapError("fixture guest bootstrap execution requires the Linux QEMU host")
         if args.action == "install":
             install(args)
-        elif args.action in {"prepare-bind", "prepare-pdns-adopt"}:
+        elif args.action in {"prepare-bind", "prepare-pdns-adopt", "prepare-pdns-switch"}:
             prepare(args)
         elif args.action == "run-prepared":
             return run_prepared(args)

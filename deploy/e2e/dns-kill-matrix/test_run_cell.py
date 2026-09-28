@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 import socket
@@ -15,6 +16,7 @@ import unittest
 from dataclasses import replace
 from unittest import mock
 from pathlib import Path
+import guest_bootstrap
 
 
 MODULE_PATH = Path(__file__).with_name("run_cell.py")
@@ -532,6 +534,94 @@ class ControllerProtocolTest(unittest.TestCase):
                 os.path.abspath("mutation.lock"),
                 os.path.abspath("agent.sock"),
                 os.path.abspath("agent.token"),
+            )
+
+    def test_later_bind_rollback_selector_precursor_and_target_proof(self) -> None:
+        selected = replace(
+            cell("rolling-back", "after-write"),
+            cell_id=run_cell.BIND_HANDOFF_CELL,
+        )
+        self.assertEqual(run_cell.rollback_precursor_phase(selected), "target-staged")
+        self.assertEqual(
+            run_cell.rollback_precursor_phase(
+                selected, bind_rollback_after_target_started=True
+            ),
+            "target-started",
+        )
+        args = (
+            {"PATH": "/usr/bin"}, selected, "1" * 32, "a" * 32,
+            os.path.abspath("marker.json"), 9, os.path.abspath("state"),
+            os.path.abspath("mutation.lock"), os.path.abspath("agent.sock"),
+            os.path.abspath("agent.token"),
+        )
+        tagged = run_cell.tagged_agent_environment(
+            *args, bind_rollback_after_target_started=True
+        )
+        self.assertEqual(
+            tagged[run_cell.LATER_BIND_ROLLBACK_SELECTOR], "target-started"
+        )
+        with self.assertRaises(run_cell.ControllerError):
+            run_cell.tagged_agent_environment(
+                args[0], cell("rolling-back", "after-write"), *args[2:],
+                bind_rollback_after_target_started=True,
+            )
+        identity = boundary_identity()
+        journal_path = os.path.abspath("journal.json")
+        marker = marker_value(
+            selected, os.path.abspath("marker.json"), journal_path, identity
+        )
+        marker["observed_journal"]["schema"] = run_cell.BIND_HANDOFF_JOURNAL_SCHEMA
+        add_rollback_precursor(marker, selected, journal_path, identity)
+        precursor = marker["rollback_precursor"]
+        precursor["phase"] = "target-started"
+        precursor["observed_journal"]["phase"] = "target-started"
+        precursor["observed_journal"]["schema"] = run_cell.BIND_HANDOFF_JOURNAL_SCHEMA
+        run_cell.validate_rollback_precursor(
+            marker, selected, "1" * 32, journal_path, identity,
+            bind_rollback_after_target_started=True,
+        )
+        with self.assertRaises(run_cell.BoundaryUnverified):
+            run_cell.validate_rollback_precursor(
+                marker, selected, "1" * 32, journal_path, identity
+            )
+        settings = mock.Mock(
+            cell=selected, bind_rollback_after_target_started=True,
+            command_timeout=1.0, dns_address="192.0.2.10", dns_port=53,
+            dns_name="www.s1-kill.test", dns_type="A", dns_timeout=1.0,
+        )
+        units = {
+            "bind9.service": "active", "named.service": "active",
+            "pdns.service": "inactive",
+        }
+        dns = {"udp": {"answers": 1}, "tcp": {"answers": 1}}
+        with mock.patch.object(
+            run_cell, "inspect_dns_unit_states", return_value=units
+        ), mock.patch.object(
+            run_cell, "query_authoritative_dns", return_value=dns
+        ) as query:
+            proof = run_cell.prove_later_bind_target_before_kill(
+                settings, {"PATH": "/usr/bin"}
+            )
+        self.assertEqual(proof, {"units": units, "authoritative": dns})
+        query.assert_called_once()
+        with mock.patch.object(
+            run_cell, "inspect_dns_unit_states",
+            return_value=dict(units, **{"pdns.service": "active"}),
+        ), mock.patch.object(
+            run_cell, "query_authoritative_dns"
+        ) as query, self.assertRaises(run_cell.BoundaryUnverified):
+            run_cell.prove_later_bind_target_before_kill(
+                settings, {"PATH": "/usr/bin"}
+            )
+        query.assert_not_called()
+        with mock.patch.object(
+            run_cell, "inspect_dns_unit_states", return_value=units
+        ), mock.patch.object(
+            run_cell, "query_authoritative_dns",
+            side_effect=run_cell.ControllerError("not authoritative"),
+        ), self.assertRaises(run_cell.BoundaryUnverified):
+            run_cell.prove_later_bind_target_before_kill(
+                settings, {"PATH": "/usr/bin"}
             )
 
     def test_startup_mode_is_narrowly_gated_and_has_no_trigger_command(self) -> None:
@@ -1563,6 +1653,129 @@ class ControllerProtocolTest(unittest.TestCase):
                 source_provenance, "managed-bind"
             )
 
+    def test_bind_handoff_full_managed_source_preflight(self) -> None:
+        selected = replace(
+            cell("rolling-back", "after-write"),
+            cell_id=run_cell.BIND_HANDOFF_CELL,
+        )
+        scenario_path = os.path.abspath("scenario.json")
+        proof_path = os.path.abspath("source-proof.json")
+        identity_path = os.path.abspath("measured/identity.json")
+        state_dir = os.path.abspath("state")
+        journal_path = os.path.join(state_dir, "dns-engine-switch-journal.json")
+        state_path = os.path.join(state_dir, "dns-engine-state.json")
+        ownership_path = os.path.join(state_dir, "dns-engine-ownership-pdns.json")
+        scenario = guest_bootstrap.bind_scenario("managed-pdns")
+        scenario_evidence = {"sha256": "1" * 64}
+        state = {
+            "schema": "celikpanel-dns-engine-state/v1",
+            "mode": "adopt", "engine": "pdns", "engine_epoch": 1,
+            "source_revision": 0,
+            "manifest_qualifier": "dns-engine-switch/v1:sha256:" + "2" * 64,
+            "mutation_request_id": "3" * 32,
+            "mutation_owner_id": "4" * 32,
+        }
+        state_raw = run_cell.canonical_dns_state_bytes(state)
+        state_digest = hashlib.sha256(state_raw).hexdigest()
+        preinstall = source_preinstall_value(selected)
+        adoption = source_adoption_value(selected)
+        adoption["production_receipts"]["state_sha256"] = state_digest
+        adoption["production_receipts"]["active_ownership_sha256"] = state_digest
+        schema_raw = b"package schema"
+        adoption["database"]["schema_sha256"] = hashlib.sha256(schema_raw).hexdigest()
+        preinstall_raw = (json.dumps(preinstall, indent=2, sort_keys=True) + "\n").encode()
+        adoption_raw = (json.dumps(adoption, indent=2, sort_keys=True) + "\n").encode()
+        preinstall_digest = hashlib.sha256(preinstall_raw).hexdigest()
+        adoption_digest = hashlib.sha256(adoption_raw).hexdigest()
+        proof = {
+            "schema": run_cell.SOURCE_PROOF_SCHEMA,
+            "cell_id": selected.cell_id,
+            "source_fixture": "managed-pdns",
+            "scenario_sha256": scenario_evidence["sha256"],
+            "identity_receipt_path": identity_path,
+            "identity_receipt_preexisting": False,
+            "engine": "pdns", "engine_epoch": 1, "source_revision": 0,
+            "serving_before_tagged_agent": True,
+            "engine_state_receipt_path": state_path,
+            "engine_state_receipt_sha256": state_digest,
+            "engine_state_identity": state,
+            "authoritative_preflight": {
+                "claimed": True, "address": "192.0.2.10", "port": 53,
+                "name": "www.s1-kill.test", "type": "A",
+                "udp": True, "tcp": True,
+            },
+            "uninitialized_global_port53": {
+                "udp_bindable": False, "tcp_bindable": False,
+                "authoritative_answer_observed": False,
+            },
+            "receipt_origin": "production-pdns-adopt-normalized",
+            "source_setup_scenario_sha256": adoption["source_setup_scenario_sha256"],
+            "source_setup_identity_receipt_sha256": adoption["source_setup_identity_receipt_sha256"],
+            "source_preinstall_proof_path": run_cell.SOURCE_PREINSTALL_PROOF_PATH,
+            "source_preinstall_proof_sha256": preinstall_digest,
+            "source_adoption_proof_path": run_cell.SOURCE_ADOPTION_PROOF_PATH,
+            "source_adoption_proof_sha256": adoption_digest,
+            "external_pdns_preimage_path": "absent",
+            "external_pdns_preimage_sha256": "absent",
+            "source_normalization_identity_receipt_path": run_cell.SOURCE_NORMALIZATION_IDENTITY_PATH,
+            "source_normalization_identity_receipt_sha256": "5" * 64,
+        }
+        proof_raw = (json.dumps(proof, indent=2, sort_keys=True) + "\n").encode()
+        status = mock.Mock(st_dev=1, st_ino=2, st_mode=0o100600, st_gid=0)
+        documents = {
+            proof_path: (proof, proof_raw),
+            run_cell.SOURCE_PREINSTALL_PROOF_PATH: (preinstall, preinstall_raw),
+            run_cell.SOURCE_ADOPTION_PROOF_PATH: (adoption, adoption_raw),
+            state_path: (state, state_raw),
+            ownership_path: (state, state_raw),
+        }
+        visited = []
+        def read_document(path: str, _label: str, **_kwargs: object):
+            visited.append(path)
+            value, raw = documents[path]
+            return value, raw, hashlib.sha256(raw).hexdigest(), status
+        with mock.patch.object(
+            run_cell, "validate_source_scenario", return_value=(scenario, scenario_evidence)
+        ), mock.patch.object(
+            run_cell, "secure_json_with_digest", side_effect=read_document
+        ), mock.patch.object(
+            run_cell, "secure_read_bytes", return_value=(schema_raw, status)
+        ), mock.patch.object(
+            run_cell, "validate_source_normalization_provenance",
+            return_value={"path": run_cell.SOURCE_NORMALIZATION_IDENTITY_PATH},
+        ), mock.patch.object(
+            run_cell, "require_absent_path"
+        ), mock.patch.object(
+            run_cell.os, "geteuid", return_value=0, create=True
+        ):
+            observed = run_cell.validate_socket_source_proof(
+                proof_path, selected, scenario_path, identity_path, state_dir,
+                journal_path, "192.0.2.10", 53, "www.s1-kill.test", "A",
+            )
+        self.assertIn(run_cell.SOURCE_PREINSTALL_PROOF_PATH, visited)
+        self.assertIn(run_cell.SOURCE_ADOPTION_PROOF_PATH, visited)
+        self.assertEqual(observed["source_preinstall_proof"]["sha256"], preinstall_digest)
+        self.assertEqual(observed["source_adoption_proof"]["sha256"], adoption_digest)
+        self.assertEqual(observed["source_fixture"], "managed-pdns")
+        for wrong in (
+            replace(selected, cell_id="bind__rolling-back__before-write__standalone__peer-reachable"),
+            replace(selected, source_fixture_policy="managed-pdns-required"),
+            replace(selected, role="paired-primary"),
+        ):
+            with self.subTest(wrong=wrong):
+                bad_preinstall = source_preinstall_value(wrong)
+                bad_raw = (json.dumps(bad_preinstall, indent=2, sort_keys=True) + "\n").encode()
+                with self.assertRaises(run_cell.ControllerError):
+                    run_cell.validate_source_preinstall_document(bad_preinstall, bad_raw, wrong)
+                bad_adoption = source_adoption_value(wrong)
+                bad_adoption_raw = (
+                    json.dumps(bad_adoption, indent=2, sort_keys=True) + "\n"
+                ).encode()
+                with self.assertRaises(run_cell.ControllerError):
+                    run_cell.validate_source_adoption_document(
+                        bad_adoption, bad_adoption_raw, wrong
+                    )
+
     def test_rolled_back_bind_accepts_exact_managed_source_preinstall(self) -> None:
         selected = cell("rolled-back", "after-write")
         value = source_preinstall_value(selected)
@@ -2036,6 +2249,30 @@ class ControllerProtocolTest(unittest.TestCase):
         changed["records"][-1]["content"] = "192.0.2.11"
         self.assertNotEqual(run_cell._canonical_pdns_v3_qualifier(1, changed), qualifier)
 
+    def test_owner_bind_normalization_requires_exact_absence(self) -> None:
+        proof = {
+            "source_normalization_identity_receipt_path": "absent",
+            "source_normalization_identity_receipt_sha256": "absent",
+        }
+        with mock.patch.object(run_cell, "require_absent_path") as require_absent:
+            evidence = run_cell.validate_source_normalization_provenance(
+                proof, "owner-bind", cell("rolling-back"), {}, "state", "127.0.0.1"
+            )
+        self.assertEqual(evidence, {"path": "absent", "sha256": "absent", "exists": False})
+        require_absent.assert_called_once_with(
+            run_cell.SOURCE_NORMALIZATION_IDENTITY_PATH,
+            "owner-bind source normalization identity receipt",
+        )
+        for field, invalid in (
+            ("source_normalization_identity_receipt_path", run_cell.SOURCE_NORMALIZATION_IDENTITY_PATH),
+            ("source_normalization_identity_receipt_sha256", "a" * 64),
+        ):
+            unsafe = dict(proof, **{field: invalid})
+            with self.subTest(field=field), self.assertRaises(run_cell.ControllerError):
+                run_cell.validate_source_normalization_provenance(
+                    unsafe, "owner-bind", cell("rolling-back"), {}, "state", "127.0.0.1"
+                )
+
     def test_source_normalization_binds_receipt_ledger_and_private_schema(self) -> None:
         selected = cell("target-started")
         zone = source_normalization_zone()
@@ -2482,6 +2719,211 @@ class ControllerProtocolTest(unittest.TestCase):
                 os.close(lock_fd)
 
 
+    def test_owner_bind_native_preflight_rejects_extra_inventory(self) -> None:
+        data = {
+            "/etc/bind/named.conf":
+                b'include "/etc/bind/named.conf.options";\ninclude "/etc/bind/named.conf.local";\ninclude "/etc/bind/named.conf.root-hints";\n',
+            "/etc/bind/named.conf.options":
+                b'options { directory "/var/cache/bind"; recursion no; listen-on { any; }; listen-on-v6 { none; }; };\n',
+            "/etc/bind/named.conf.local":
+                b'zone "owner.test" IN { type master; file "/etc/bind/db.owner.test"; allow-update { none; }; };\n',
+            "/etc/bind/named.conf.root-hints":
+                b'zone "." { type hint; file "/usr/share/dns/root.hints"; };\n',
+            "/etc/bind/db.owner.test": b'www IN A 192.0.2.10\n',
+        }
+        def read(path: str, *_args: object, **_kwargs: object) -> tuple[bytes, object]:
+            return data[path], mock.Mock(st_dev=1, st_ino=2)
+        native = b"owner.test IN _default master\n. IN _default hint\n"
+        def command(argv: list[str], **_kwargs: object) -> object:
+            return mock.Mock(returncode=0, stderr=b"",
+                             stdout=b"install ok installed" if argv[0] == "/usr/bin/dpkg-query" else native)
+        with mock.patch.object(run_cell.os, "geteuid", return_value=0, create=True), mock.patch.object(
+            run_cell, "secure_read_bytes", side_effect=read
+        ), mock.patch.object(run_cell, "require_absent_path"), mock.patch.object(
+            run_cell.subprocess, "run", side_effect=command
+        ):
+            result = run_cell.validate_owner_bind_native_source()
+            self.assertEqual(result["inventory"], native.decode().splitlines())
+            native = native + b"foreign.test IN _default master\n"
+            with self.assertRaises(run_cell.ControllerError):
+                run_cell.validate_owner_bind_native_source()
+
+    def test_owner_bind_handoff_requires_exact_source_bind_envelope(self) -> None:
+        selected = replace(cell("rolling-back", "after-write"),
+                           cell_id=run_cell.BIND_HANDOFF_CELL)
+        identity = boundary_identity()
+        identity.update(source_engine="", source_epoch=0, target_epoch=1,
+                        source_revision=0)
+        observed = observed_journal_value(
+            selected, "rolling-back", "/tmp/journal.json", identity
+        )
+        observed["schema"] = run_cell.BIND_HANDOFF_JOURNAL_SCHEMA
+        source = {
+            "kind": "bind-adoption-source/v1",
+            "files": [
+                {"path": "/etc/bind/db.owner.test", "sha256": "a" * 64,
+                 "uid": 0},
+                {"path": "/usr/share/dns/root.hints", "sha256": "b" * 64,
+                 "uid": 0},
+            ],
+            "zones": [
+                {"name": "owner.test", "class": "IN", "type": "master",
+                 "file": "/etc/bind/db.owner.test", "soa_serial": 7},
+                {"name": ".", "class": "IN", "type": "hint",
+                 "file": "/usr/share/dns/root.hints", "soa_serial": 0},
+            ],
+        }
+        plan = {
+            "kind": "bind-switch-config/v1", "host_layout": "apt",
+            "config_after": [{}, {}],
+            "bind_unchanged_config": [
+                {"path": "/etc/bind/named.conf"},
+                {"path": "/etc/bind/named.conf.root-hints"},
+            ],
+            "source_bind": source, "digest": "c" * 64,
+        }
+        journal = dict(observed, inverse_plan=plan,
+                       state_before={"exists": False},
+                       target_units_before=[
+                           {"name": "bind9.service", "active_state": "active"},
+                           {"name": "named.service", "active_state": "active"},
+                       ])
+        status = mock.Mock(st_dev=1, st_ino=2, st_mode=0o100600)
+        with mock.patch.object(run_cell, "secure_read_json",
+                               return_value=(journal, status)), mock.patch.object(
+                               run_cell, "sha256_file", return_value="d" * 64):
+            run_cell.validate_journal_disk_state(
+                "/tmp/journal.json", "rolling-back", "1" * 32,
+                identity, cell=selected, bind_rollback_after_target_started=True,
+            )
+        for bad in (
+            dict(journal, inverse_plan={**plan, "source_bind": None}),
+            dict(journal, inverse_plan={**plan, "source_pdns": {}}),
+            dict(journal, state_before={"exists": True}),
+        ):
+            with mock.patch.object(run_cell, "secure_read_json",
+                                   return_value=(bad, status)), self.assertRaises(
+                                   run_cell.BoundaryUnverified):
+                run_cell.validate_journal_disk_state(
+                    "/tmp/journal.json", "rolling-back", "1" * 32,
+                    identity, cell=selected, bind_rollback_after_target_started=True,
+                )
+
+    def test_bind_handoff_v2_marker_and_source_proof_are_exactly_scoped(self) -> None:
+        selected = replace(
+            cell("rolling-back", "after-write"),
+            cell_id=run_cell.BIND_HANDOFF_CELL,
+        )
+        identity = boundary_identity()
+        observed = observed_journal_value(
+            selected, "rolling-back", "/tmp/journal.json", identity
+        )
+        observed["schema"] = run_cell.BIND_HANDOFF_JOURNAL_SCHEMA
+        run_cell.validate_observed_journal(
+            selected, observed, "1" * 32, identity
+        )
+        with self.assertRaises(run_cell.BoundaryUnverified):
+            run_cell.validate_observed_journal(
+                cell("rolling-back", "after-write"),
+                observed, "1" * 32, identity
+            )
+        old = dict(observed, schema=run_cell.JOURNAL_SCHEMA)
+        with self.assertRaises(run_cell.BoundaryUnverified):
+            run_cell.validate_observed_journal(
+                selected, old, "1" * 32, identity
+            )
+        plan = {
+            "kind": "bind-switch-config/v1", "host_layout": "apt",
+            "config_after": [{}, {}], "digest": "a" * 64,
+            "source_pdns": {
+                "kind": "pdns-source/v1", "config_before": [{}],
+                "database": {"logical_sha256": "b" * 64},
+            },
+        }
+        journal = dict(observed, inverse_plan=plan)
+        status = mock.Mock(st_dev=1, st_ino=2, st_mode=0o100600)
+        with mock.patch.object(
+            run_cell, "secure_read_json", return_value=(journal, status)
+        ), mock.patch.object(run_cell, "sha256_file", return_value="c" * 64):
+            proof = run_cell.validate_journal_disk_state(
+                "/tmp/journal.json", "rolling-back", "1" * 32,
+                identity, cell=selected,
+            )
+            self.assertEqual(proof["observed_phase"], "rolling-back")
+            for bad in (
+                dict(journal, inverse_plan=None),
+                dict(journal, inverse_plan={**plan, "source_pdns": None}),
+                dict(journal, schema=run_cell.JOURNAL_SCHEMA),
+            ):
+                with mock.patch.object(
+                    run_cell, "secure_read_json", return_value=(bad, status)
+                ), self.assertRaises(run_cell.BoundaryUnverified):
+                    run_cell.validate_journal_disk_state(
+                        "/tmp/journal.json", "rolling-back", "1" * 32,
+                        identity, cell=selected,
+                    )
+            # Shape captured from the actual Debian V2 producer at the late
+            # target-started rollback boundary, before the disposable VM reset.
+            producer = json.loads(
+                (Path(__file__).with_name("testdata")
+                 / "late-bind-v2-producer-shape.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(producer["phase"], "rolling-back")
+            self.assertEqual(producer["schema"], run_cell.BIND_HANDOFF_JOURNAL_SCHEMA)
+            full_plan = {
+                **plan,
+                "config_after": [{"path": path} for path in producer["config_after_paths"]],
+                "bind_unchanged_config": [
+                    {"path": path} for path in producer["unchanged_paths"]
+                ],
+                "source_pdns": {
+                    **plan["source_pdns"],
+                    "config_before": [
+                        {"path": path} for path in producer["source_paths"]
+                    ],
+                    "database": {
+                        "path": producer["database_path"],
+                        "logical_sha256": "b" * 64, "mode": 416,
+                        "uid": 100, "gid": 100, "device": 1, "inode": 2,
+                    },
+                },
+            }
+            self.assertEqual(set(full_plan), set(producer["plan_keys"]))
+            self.assertEqual(set(full_plan["source_pdns"]), set(producer["source_keys"]))
+            self.assertEqual(set(full_plan["source_pdns"]["database"]),
+                             set(producer["database_keys"]))
+            full_journal = dict(journal, inverse_plan=full_plan)
+            with mock.patch.object(
+                run_cell, "secure_read_json", return_value=(full_journal, status)
+            ):
+                run_cell.validate_journal_disk_state(
+                    "/tmp/journal.json", "rolling-back", "1" * 32,
+                    identity, cell=selected,
+                    bind_rollback_after_target_started=True,
+                )
+            for bad_plan in (
+                plan,
+                {**full_plan, "bind_unchanged_config": []},
+                {**full_plan, "source_pdns": {
+                    **full_plan["source_pdns"], "config_before": [],
+                }},
+                {**full_plan, "source_pdns": {
+                    **full_plan["source_pdns"],
+                    "config_before": list(reversed(
+                        full_plan["source_pdns"]["config_before"]
+                    )),
+                }},
+            ):
+                with mock.patch.object(
+                    run_cell, "secure_read_json",
+                    return_value=(dict(journal, inverse_plan=bad_plan), status),
+                ), self.assertRaises(run_cell.BoundaryUnverified):
+                    run_cell.validate_journal_disk_state(
+                        "/tmp/journal.json", "rolling-back", "1" * 32,
+                        identity, cell=selected,
+                        bind_rollback_after_target_started=True,
+                    )
+
 class DNSProbeTest(unittest.TestCase):
     @staticmethod
     def _response(query: bytes) -> bytes:
@@ -2565,6 +3007,100 @@ class DNSProbeTest(unittest.TestCase):
         with self.assertRaises(run_cell.ControllerError):
             run_cell.validate_dns_response(raw, 7, "udp")
 
+
+    @unittest.skipUnless(hasattr(os, "geteuid"), "secure fixture files require POSIX ownership")
+    def test_managed_bind_paired_setup_binds_role_addresses_and_zone(self) -> None:
+        selected = cell(driver="pdns-switch", role="paired-primary")
+        measured = guest_bootstrap.pdns_switch_scenario(role="paired-primary")
+        source = guest_bootstrap.bind_scenario(
+            "uninitialized", role="paired-primary", node="debian13",
+            allow_debian_paired_source=True,
+        )
+        request_id = hashlib.sha256(
+            (selected.cell_id + "\0source-bind-switch").encode()
+        ).hexdigest()[:32]
+        owner_id = run_cell.deterministic_trigger_owner(selected.cell_id, request_id)
+        state = {
+            "mode": "switch", "engine": "bind", "engine_epoch": 1,
+            "mutation_request_id": request_id, "mutation_owner_id": owner_id,
+            "manifest_qualifier": "dns-engine-switch/v1:sha256:" + "a" * 64,
+        }
+        receipt = {
+            "schema": run_cell.TRIGGER_IDENTITY_RECEIPT_SCHEMA,
+            "cell_id": selected.cell_id, "driver": "bind",
+            "source_fixture": "uninitialized", "request_id": request_id,
+            "owner_id": owner_id, "manifest_qualifier": state["manifest_qualifier"],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = Path(directory, "source.json")
+            receipt_path = Path(directory, "identity.json")
+            source_raw = (json.dumps(source, indent=2, sort_keys=True) + "\n").encode()
+            source_path.write_bytes(source_raw)
+            receipt_raw = (json.dumps(receipt, separators=(",", ":")) + "\n").encode()
+            receipt_path.write_bytes(receipt_raw)
+            source_path.chmod(0o600)
+            receipt_path.chmod(0o600)
+            proof = {
+                "source_setup_scenario_sha256": hashlib.sha256(source_raw).hexdigest(),
+                "source_setup_identity_receipt_sha256": hashlib.sha256(receipt_raw).hexdigest(),
+            }
+            with mock.patch.object(run_cell, "MANAGED_BIND_SETUP_SCENARIO_PATH", str(source_path)), mock.patch.object(
+                run_cell, "MANAGED_BIND_SETUP_IDENTITY_PATH", str(receipt_path)
+            ):
+                run_cell.validate_managed_bind_setup(proof, selected, measured, state)
+                forged = dict(source, peer_ip="192.0.2.12")
+                forged_raw = (json.dumps(forged, indent=2, sort_keys=True) + "\n").encode()
+                source_path.write_bytes(forged_raw)
+                proof["source_setup_scenario_sha256"] = hashlib.sha256(forged_raw).hexdigest()
+                with self.assertRaises(run_cell.ControllerError):
+                    run_cell.validate_managed_bind_setup(proof, selected, measured, state)
+
+    @unittest.skipUnless(hasattr(os, "geteuid"), "secure fixture files require POSIX ownership")
+    def test_managed_bind_setup_refuses_forged_operation_identity(self) -> None:
+        selected = cell(driver="pdns-switch")
+        measured = guest_bootstrap.pdns_switch_scenario()
+        source = guest_bootstrap.bind_scenario("uninitialized", node="debian13")
+        request_id = hashlib.sha256(
+            (selected.cell_id + "\0source-bind-switch").encode()
+        ).hexdigest()[:32]
+        owner_id = run_cell.deterministic_trigger_owner(selected.cell_id, request_id)
+        state = {
+            "mode": "switch", "engine": "bind", "engine_epoch": 1,
+            "mutation_request_id": request_id, "mutation_owner_id": owner_id,
+            "manifest_qualifier": "dns-engine-switch/v1:sha256:" + "a" * 64,
+        }
+        receipt = {
+            "schema": run_cell.TRIGGER_IDENTITY_RECEIPT_SCHEMA,
+            "cell_id": selected.cell_id,
+            "driver": "bind",
+            "source_fixture": "uninitialized",
+            "request_id": request_id,
+            "owner_id": owner_id,
+            "manifest_qualifier": state["manifest_qualifier"],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = Path(directory, "source.json")
+            receipt_path = Path(directory, "identity.json")
+            source_raw = (json.dumps(source, indent=2, sort_keys=True) + "\n").encode()
+            source_path.write_bytes(source_raw)
+            receipt_raw = (json.dumps(receipt, separators=(",", ":")) + "\n").encode()
+            receipt_path.write_bytes(receipt_raw)
+            source_path.chmod(0o600)
+            receipt_path.chmod(0o600)
+            proof = {
+                "source_setup_scenario_sha256": hashlib.sha256(source_raw).hexdigest(),
+                "source_setup_identity_receipt_sha256": hashlib.sha256(receipt_raw).hexdigest(),
+            }
+            with mock.patch.object(run_cell, "MANAGED_BIND_SETUP_SCENARIO_PATH", str(source_path)), mock.patch.object(
+                run_cell, "MANAGED_BIND_SETUP_IDENTITY_PATH", str(receipt_path)
+            ):
+                run_cell.validate_managed_bind_setup(proof, selected, measured, state)
+                forged = dict(receipt, owner_id="f" * 32)
+                forged_raw = (json.dumps(forged, separators=(",", ":")) + "\n").encode()
+                receipt_path.write_bytes(forged_raw)
+                proof["source_setup_identity_receipt_sha256"] = hashlib.sha256(forged_raw).hexdigest()
+                with self.assertRaises(run_cell.ControllerError):
+                    run_cell.validate_managed_bind_setup(proof, selected, measured, state)
 
 if __name__ == "__main__":
     unittest.main()

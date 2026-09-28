@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+
+	"github.com/alicelik/celikpanel/internal/bindconfigrestore"
 )
 
 type bindConfigOwnerPolicy struct {
@@ -358,8 +360,9 @@ type bindConfigWriteReceipt struct {
 }
 
 type bindConfigApplyOps struct {
-	write       func(string, []byte, os.FileMode, *dnsFileSnapshot) error
-	beforeFinal func()
+	write              func(string, []byte, os.FileMode, *dnsFileSnapshot) error
+	beforeCompensation func() error
+	beforeFinal        func()
 }
 
 type bindConfigRestoreOps struct {
@@ -386,9 +389,15 @@ func rollbackBINDConfigWrites(
 	policy bindConfigOwnerPolicy,
 	written []bindConfigWriteReceipt,
 	expectedFull []dnsFileSnapshot,
+	beforeCompensation ...func() error,
 ) error {
 	var rollbackErr error
 	for index := len(written) - 1; index >= 0; index-- {
+		if len(beforeCompensation) != 0 && beforeCompensation[0] != nil {
+			if err := beforeCompensation[0](); err != nil {
+				return errors.Join(rollbackErr, err)
+			}
+		}
 		receipt := written[index]
 		if err := secureWriteBINDConfigReplacingSnapshot(
 			receipt.after.Path,
@@ -463,7 +472,7 @@ func (mutation bindConfigMutation) applyOwnerAwareWithPolicyAndOps(
 			return errors.Join(
 				fmt.Errorf("write managed BIND configuration %s: %w", path, err),
 				captureErr,
-				rollbackBINDConfigWrites(policy, written, mutation.originalSnapshots()),
+				rollbackBINDConfigWrites(policy, written, mutation.originalSnapshots(), ops.beforeCompensation),
 			)
 		}
 		written = append(written, bindConfigWriteReceipt{before: before, after: desired})
@@ -471,7 +480,7 @@ func (mutation bindConfigMutation) applyOwnerAwareWithPolicyAndOps(
 		if err != nil {
 			return errors.Join(
 				err,
-				rollbackBINDConfigWrites(policy, written, mutation.originalSnapshots()),
+				rollbackBINDConfigWrites(policy, written, mutation.originalSnapshots(), ops.beforeCompensation),
 			)
 		}
 		written[len(written)-1].after = after
@@ -482,7 +491,7 @@ func (mutation bindConfigMutation) applyOwnerAwareWithPolicyAndOps(
 	if err := verifyBINDConfigSnapshotSetExact(policy, mutation.desiredSnapshots()); err != nil {
 		return errors.Join(
 			err,
-			rollbackBINDConfigWrites(policy, written, mutation.originalSnapshots()),
+			rollbackBINDConfigWrites(policy, written, mutation.originalSnapshots(), ops.beforeCompensation),
 		)
 	}
 	return nil
@@ -511,34 +520,21 @@ func (mutation bindConfigMutation) restoreOwnerAwareWithPolicyAndOps(
 	if ops.write == nil {
 		return errors.New("BIND config restore writer is required")
 	}
-	current, err := mutation.captureOwnerAwareCurrentWithPolicy(policy, false)
-	if err != nil {
+	before := mutation.originalSnapshots()
+	if err := policy.validateSnapshots(before); err != nil {
 		return err
 	}
-	var restoreErr error
-	for index := len(mutation.paths) - 1; index >= 0; index-- {
-		path := mutation.paths[index]
-		before := mutation.snapshots[path]
-		actual := current[path]
-		if reflect.DeepEqual(actual, before) {
-			continue
-		}
-		if err := ops.write(
-			path, before.Data, os.FileMode(before.Mode), &actual,
-		); err != nil {
-			restoreErr = errors.Join(restoreErr, err)
-			continue
-		}
-		if _, err := readBackBINDConfigReplacement(policy, before); err != nil {
-			restoreErr = errors.Join(restoreErr, err)
-		}
-	}
-	if ops.beforeFinal != nil {
-		ops.beforeFinal()
-	}
-	restoreErr = errors.Join(
-		restoreErr,
-		verifyBINDConfigSnapshotSetExact(policy, mutation.originalSnapshots()),
-	)
-	return restoreErr
+	return bindconfigrestore.Restore(context.Background(), before, mutation.desiredSnapshots(), bindconfigrestore.Operations{
+		Read: func(context.Context) ([]dnsFileSnapshot, error) {
+			return captureBINDConfigSnapshotSet(policy)
+		},
+		Write: func(_ context.Context, current, desired dnsFileSnapshot) error {
+			if err := ops.write(desired.Path, desired.Data, os.FileMode(desired.Mode), &current); err != nil {
+				return err
+			}
+			_, err := readBackBINDConfigReplacement(policy, desired)
+			return err
+		},
+		BeforeFinal: ops.beforeFinal,
+	})
 }

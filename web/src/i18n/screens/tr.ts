@@ -549,6 +549,10 @@ export const trScreens: Record<ScreenKey, string> = {
     'domains.confirmDelete': '{name} silinsin mi? Bu geri alınamaz.',
     'domains.loadFailed': 'Alan adları yüklenemedi',
     'domains.deleted': '{name} silindi',
+    'domains.deletionPending': 'Silme işlemi hâlâ bekliyor, ancak nedeni doğrulanamadı. Durumu yeniden kontrol edin. Belirsizlik sürerse yeniden denemeden önce sunucu yöneticisinden kayıtlı işlemi incelemesini isteyin.',
+    'domains.deletionWaiting': '{name} için silme işlemi bekliyor',
+    'domains.retryDeletion': 'Bu silme işlemini yeniden dene',
+    'domains.checkDeletionStatus': 'Silme durumunu kontrol et',
 
     'services.subtitle': 'Bu sunucuda kurulu her şey — servisler, çalışma ortamları ve araçlar',
     'services.col.service': 'Servis',
@@ -2142,6 +2146,7 @@ export const trScreens: Record<ScreenKey, string> = {
     'setup.peerRole': "DNS rolü (otomatik)",
     'setup.detectedIPHelp': "Sunucunun bildirdiği adres. Gerekirse değiştirebilirsiniz.",
     'setup.dnsMappingMismatch': "Kayıtlı karşı sunucu adı, diğer sunucu için gösterilen adla farklı. Devam etmeden önce adları kontrol edin.",
+    'setup.pdnsPrimaryPaused': 'DNS çiftinde PowerDNS birincil geçişi hazır değil. DNS’i çalışır bırakın; BIND birincil seçin. Destek geldiğinde planı yeniden inceleyin.',
     'setup.savedPeerName': "Kayıtlı karşı sunucu adı",
     'setup.useDisplayedPeer': "Diğer sunucu için gösterilen adı kullan",
     "setup.dnsStartPrimary": "Birincili başlatın, ardından birincilin tüm kurulumunun bitmesini beklemeden ikincili hazırlayın.",

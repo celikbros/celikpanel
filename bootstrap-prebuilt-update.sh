@@ -925,6 +925,12 @@ if [[ -d "$SOURCE_ROOT/firewall-runtime" ]]; then
     chmod 0755 -- "$SOURCE_ROOT/firewall-runtime/restore"
 fi
 
+# Additive offline owner tools; historical releases may omit the whole directory.
+# This only restores executable modes in the verified staging tree. No enrollment.
+if [[ -d "$SOURCE_ROOT/dns-owner-tools" ]]; then
+    chmod 0755 -- "$SOURCE_ROOT/dns-owner-tools/dns-peer-enroll" "$SOURCE_ROOT/dns-owner-tools/bind-peer-inspect"
+fi
+
 if [[ -d "$SOURCE_ROOT/mail-renewal-runtime" ]]; then
     chmod 0755 -- "$SOURCE_ROOT/mail-renewal-runtime/renew" "$SOURCE_ROOT/mail-renewal-runtime/celikpanel-mail-host-cert"
 fi

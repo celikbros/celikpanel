@@ -3,6 +3,7 @@
 package recoveryruntime
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +29,10 @@ func TestDNSApplicationCompatibilityPreservesNativeEvidence(t *testing.T) {
 		{"file-mode", false}, {"file-link", false}, {"hardlink", false}, {"foreign-owner", false}, {"parent-mode", false},
 		{"late-current-change", false}, {"late-current-replacement", false}, {"late-absent-file", false},
 		{"late-parent-replacement", false}, {"late-target-change", false}, {"late-absent-root", false},
+		{"v1-switch-old-agent", true}, {"v2-switch-compatible", true}, {"v2-switch-old-agent", false},
+		{"v2-switch-historical-agent", false}, {"v2-switch-unknown-contract", false},
+		{"v2-switch-corrupt", false}, {"v2-switch-symlink", false}, {"v2-switch-hardlink", false},
+		{"late-v2-switch-change", false}, {"late-v2-switch-absent", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -57,14 +62,22 @@ func TestDNSApplicationCompatibilityPreservesNativeEvidence(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			c.DNSSwitchJournalPolicy = ""
 			if tc.name == "old-policy" {
 				c.DNSEvidencePolicy = ""
 			}
+			if tc.name == "v2-switch-compatible" || tc.name == "late-v2-switch-change" {
+				c.DNSSwitchJournalPolicy = agentnativecontract.DNSSwitchJournalPolicy
+			}
+
 			contract, err := agentnativecontract.Encode(c)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if tc.name != "historical-agent" {
+			if tc.name == "v2-switch-unknown-contract" {
+				contract = bytes.Replace(contract, []byte(`"dns_evidence_policy"`), []byte(`"dns_switch_journal_policy":"unsupported","dns_evidence_policy"`), 1)
+			}
+			if tc.name != "historical-agent" && tc.name != "v2-switch-historical-agent" {
 				put(filepath.Join(bin, agentnativecontract.FileName), contract, 0644)
 			}
 			owner, err := os.ReadFile("../dnsengineartifact/testdata/alpha81-bind-acquisition.json")
@@ -86,6 +99,63 @@ func TestDNSApplicationCompatibilityPreservesNativeEvidence(t *testing.T) {
 			statePath, ownerPath := filepath.Join(private, "dns-engine-state.json"), filepath.Join(private, "dns-engine-ownership-bind.json")
 			put(statePath, newCurrent, 0600)
 			put(ownerPath, newOwner, 0600)
+			journalPath := filepath.Join(private, "dns-engine-switch-journal.json")
+			if strings.Contains(tc.name, "switch") {
+				policy := dnsengineartifact.JournalPolicy{
+					StatePath: statePath, StateUID: 0, StateGID: 0, RequireOwner: true,
+					PDNSMainPath:     "/etc/powerdns/pdns.conf",
+					PDNSManagedPath:  "/etc/powerdns/pdns.d/celikpanel.conf",
+					PDNSClusterPath:  "/etc/powerdns/pdns.d/celikpanel-cluster.conf",
+					PDNSDatabasePath: "/var/lib/powerdns/pdns.sqlite3",
+				}
+				fixture, err := os.ReadFile("../dnsengineartifact/testdata/switch-journal/alpha81-bind.json")
+				if err != nil {
+					t.Fatal(err)
+				}
+				journal, err := policy.DecodeSwitchJournal(bytes.Replace(fixture, []byte("/var/lib/celikpanel-agent-private/dns-engine-state.json"), []byte(statePath), 1))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if tc.name != "v1-switch-old-agent" && tc.name != "late-v2-switch-absent" {
+					journal.Phase = dnsengineartifact.SwitchPhaseIntent
+					journal.ConfigBefore = []dnsengineartifact.FileSnapshot{
+						{Path: "/etc/bind/named.conf.local", Exists: true, Mode: 0o644, OwnerKnown: true, GID: 42, Data: []byte("before local"), SHA256: dnsengineartifact.DigestBytes([]byte("before local"))},
+						{Path: "/etc/bind/named.conf.options", Exists: true, Mode: 0o644, OwnerKnown: true, GID: 42, Data: []byte("before options"), SHA256: dnsengineartifact.DigestBytes([]byte("before options"))},
+					}
+					after := append([]dnsengineartifact.FileSnapshot(nil), journal.ConfigBefore...)
+					for i := range after {
+						after[i].Data = []byte("after")
+						after[i].SHA256 = dnsengineartifact.DigestBytes(after[i].Data)
+					}
+					journal, err = policy.BuildBINDSwitchInverseJournalV2(journal, "apt", after)
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+				encoded, err := policy.EncodeSwitchJournal(journal)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if tc.name != "late-v2-switch-absent" {
+					put(journalPath, encoded, 0600)
+				}
+				if tc.name == "v2-switch-corrupt" {
+					put(journalPath, []byte("{}\n"), 0600)
+				}
+				if tc.name == "v2-switch-symlink" {
+					if err := os.Remove(journalPath); err != nil {
+						t.Fatal(err)
+					}
+					if err := os.Symlink(statePath, journalPath); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if tc.name == "v2-switch-hardlink" {
+					if err := os.Link(journalPath, filepath.Join(root, "journal-hardlink")); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
 			var late func()
 			switch tc.name {
 			case "absent-root", "late-absent-root":
@@ -176,6 +246,10 @@ func TestDNSApplicationCompatibilityPreservesNativeEvidence(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
+			case "late-v2-switch-change":
+				late = func() { put(journalPath, []byte("{}\\n"), 0600) }
+			case "late-v2-switch-absent":
+				late = func() { put(journalPath, []byte("{}\\n"), 0600) }
 			case "late-target-change":
 				late = func() { put(filepath.Join(bin, "agent"), []byte("late owner binary"), 0755) }
 			}
@@ -195,5 +269,26 @@ func TestDNSApplicationCompatibilityPreservesNativeEvidence(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestBINDSourceJournalRequiresCompatibleApplication(t *testing.T) {
+	for _, policy := range []string{"", "unsupported", agentnativecontract.DNSSwitchJournalPolicy, agentnativecontract.DNSSwitchSourceJournalPolicy, agentnativecontract.DNSSwitchAdoptionJournalPolicy} {
+		for _, source := range []bool{false, true} {
+			for _, adoption := range []bool{false, true} {
+				want := false
+				switch policy {
+				case agentnativecontract.DNSSwitchJournalPolicy:
+					want = !source && !adoption
+				case agentnativecontract.DNSSwitchSourceJournalPolicy:
+					want = !adoption
+				case agentnativecontract.DNSSwitchAdoptionJournalPolicy:
+					want = true
+				}
+				if got := supportsBINDJournalPolicy(policy, source, adoption); got != want {
+					t.Fatalf("policy %q source %v adoption %v: got %v want %v", policy, source, adoption, got, want)
+				}
+			}
+		}
 	}
 }

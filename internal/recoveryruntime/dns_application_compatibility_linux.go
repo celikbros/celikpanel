@@ -13,6 +13,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var errDNSSwitchJournalApplication = errors.New("active DNS switch journal requires an Agent that reads the exact v2 BIND inverse plan; preserve the evidence and choose a compatible release")
+var errDNSSwitchJournalApplicationV4 = errors.New("active v4 PowerDNS target journal requires a proved independent recovery runtime; preserve the evidence and choose a compatible release")
+
+var errDNSApplicationV3 = errors.New("v3 PowerDNS evidence requires an explicitly compatible Agent and independent recovery runtime; preserve the evidence and choose a compatible release")
+
 var errDNSApplication = errors.New("DNS evidence requires an Agent with separated acquisition/publication support; preserve the evidence and choose a compatible release")
 
 // CheckDNSApplicationCompatibility observes protected DNS evidence and target
@@ -38,6 +43,11 @@ func checkDNSApplicationCompatibility(bin, root string, beforeRevalidate func())
 		absences = append(absences, absence)
 	}
 	required := false
+	requireSwitchV2 := false
+	requireSwitchV4 := false
+	requireFreshV3 := false
+	requireSourceProof := false
+	requireAdoptionProof := false
 	if parent != nil {
 		// Private evidence can retain its historical root:service group. Mode 0600
 		// gives that group no access. Pin it exactly; never normalize group metadata.
@@ -51,6 +61,7 @@ func checkDNSApplicationCompatibility(bin, root string, beforeRevalidate func())
 			{"dns-engine-state.json", ""},
 			{"dns-engine-ownership-bind.json", transport.DNSEngineBIND},
 			{"dns-engine-ownership-pdns.json", transport.DNSEnginePowerDNS},
+			{"dns-engine-switch-journal.json", ""},
 		} {
 			var st unix.Stat_t
 			if e := unix.Fstatat(int(parent.file.Fd()), entry.name, &st, unix.AT_SYMLINK_NOFOLLOW); errors.Is(e, unix.ENOENT) {
@@ -60,7 +71,11 @@ func checkDNSApplicationCompatibility(bin, root string, beforeRevalidate func())
 			} else if e != nil {
 				return asReadError(e)
 			}
-			file, e := state.openFileWithGID(parent, entry.name, 0600, 64<<10, st.Gid)
+			limit := int64(64 << 10)
+			if entry.name == "dns-engine-switch-journal.json" {
+				limit = dnsengineartifact.SwitchJournalLimit
+			}
+			file, e := state.openFileWithGID(parent, entry.name, 0600, limit, st.Gid)
 			if e != nil {
 				return asReadError(e)
 			}
@@ -75,6 +90,25 @@ func checkDNSApplicationCompatibility(bin, root string, beforeRevalidate func())
 				return e
 			}
 			file.digest = Digest(raw)
+			if entry.name == "dns-engine-switch-journal.json" {
+				policy := dnsengineartifact.JournalPolicy{
+					StatePath: filepath.Join(root, "dns-engine-state.json"), StateUID: 0, StateGID: st.Gid, RequireOwner: true,
+					PDNSMainPath:     "/etc/powerdns/pdns.conf",
+					PDNSManagedPath:  "/etc/powerdns/pdns.d/celikpanel.conf",
+					PDNSClusterPath:  "/etc/powerdns/pdns.d/celikpanel-cluster.conf",
+					PDNSDatabasePath: "/var/lib/powerdns/pdns.sqlite3",
+				}
+				journal, decodeErr := policy.DecodeSwitchJournal(raw)
+				if decodeErr != nil {
+					return fail(ReasonUnsupported)
+				}
+				requireSwitchV2 = journal.Schema == dnsengineartifact.SwitchJournalSchemaV2
+				requireSwitchV4 = journal.Schema == dnsengineartifact.SwitchJournalSchemaV4
+				requireFreshV3 = requireFreshV3 || journal.Schema == dnsengineartifact.SwitchJournalSchemaV3
+				requireSourceProof = requireSwitchV2 && journal.InversePlan != nil && journal.InversePlan.SourcePDNS != nil
+				requireAdoptionProof = requireSwitchV2 && journal.InversePlan != nil && journal.InversePlan.SourceBIND != nil
+				continue
+			}
 			var receipt dnsengineartifact.StateV1
 			var separated bool
 			if entry.engine == "" {
@@ -86,18 +120,30 @@ func checkDNSApplicationCompatibility(bin, root string, beforeRevalidate func())
 				return fail(ReasonUnsupported)
 			}
 			required = required || separated
+			requireFreshV3 = requireFreshV3 || receipt.NativeCatalogV3 != ""
 		}
 	}
+	// V3 has no accepted application/recovery compatibility declaration yet.
+	// A legacy separated-evidence marker cannot stand in for that contract.
+	if requireFreshV3 {
+		return errDNSApplicationV3
+	}
 	var target *CompatibleMailAgent
-	if required {
+	if required || requireSwitchV2 {
 		target, err = InspectCompatibleMailAgent(bin)
 		if err != nil {
 			return err
 		}
 		defer target.Close()
-		if target.Contract.DNSEvidencePolicy != agentnativecontract.DNSEvidencePolicy {
+		if required && target.Contract.DNSEvidencePolicy != agentnativecontract.DNSEvidencePolicy {
 			return errDNSApplication
 		}
+		if requireSwitchV2 && !supportsBINDJournalPolicy(target.Contract.DNSSwitchJournalPolicy, requireSourceProof, requireAdoptionProof) {
+			return errDNSSwitchJournalApplication
+		}
+	}
+	if requireSwitchV4 {
+		return errDNSSwitchJournalApplicationV4
 	}
 	if beforeRevalidate != nil {
 		beforeRevalidate()
@@ -116,4 +162,17 @@ func checkDNSApplicationCompatibility(bin, root string, beforeRevalidate func())
 		}
 	}
 	return state.revalidate()
+}
+
+func supportsBINDJournalPolicy(policy string, sourceProof, adoptionProof bool) bool {
+	switch policy {
+	case agentnativecontract.DNSSwitchAdoptionJournalPolicy:
+		return true
+	case agentnativecontract.DNSSwitchSourceJournalPolicy:
+		return !adoptionProof
+	case agentnativecontract.DNSSwitchJournalPolicy:
+		return !sourceProof && !adoptionProof
+	default:
+		return false
+	}
 }

@@ -921,3 +921,122 @@ func TestDNSZoneV3NewestSuccessSurvivesPendingHistoryPressure(t *testing.T) {
 		t.Fatal("history trim retained the later-dated old terminal over the protected published receipt")
 	}
 }
+
+func TestDNSZoneV3NativePendingReasonPersistsAcrossLedgerReload(t *testing.T) {
+	manager, _ := newMutationTestManager(t)
+	installGlobalMutationTestManager(t, manager)
+	backend := exactPendingDNSZoneV3Backend()
+	backend.syncFn = func(ctx context.Context,
+		commitment mutationpayload.DNSZoneSyncV3Commitment,
+		_ transport.ServiceMutationBinding) (string, error) {
+		if err := markDNSZoneSyncV3Applied(ctx, commitment.Domain, commitment.Qualifier); err != nil {
+			return "", err
+		}
+		return "", dnsZoneV3RecoveryPending(pendingBINDPeer(transport.DNSPeerPendingInspectionUnknown))
+	}
+	request, _, job := runInitialDNSZoneV3Pending(t, manager, backend)
+	if job.ErrorCode != transport.DNSPeerPendingInspectionUnknown {
+		t.Fatalf("pending job code=%q", job.ErrorCode)
+	}
+	var status ServiceMutationResponse
+	if err := (&Agent{}).ServiceMutationStatus(&ServiceMutationStatusRequest{
+		RequestID: request.MutationRequestID,
+	}, &status); err != nil {
+		t.Fatal(err)
+	}
+	if status.Job == nil || status.Job.ErrorCode != job.ErrorCode {
+		t.Fatalf("status job=%+v", status.Job)
+	}
+	durable, err := manager.loadLedgerFromDisk()
+	if err != nil || durable.Jobs[request.MutationRequestID] == nil ||
+		durable.Jobs[request.MutationRequestID].ErrorCode != job.ErrorCode {
+		t.Fatalf("durable pending code=%+v err=%v", durable, err)
+	}
+	resumed, err := manager.begin(&ServiceMutationBeginRequest{
+		RequestID:   request.MutationRequestID,
+		OwnerID:     request.MutationOwnerID,
+		Kind:        "dns_zone_sync",
+		Target:      job.Target,
+		PackageName: job.PackageName,
+		Resume:      true,
+	})
+	if err != nil || resumed == nil || resumed.Status != serviceMutationStatusRunning {
+		t.Fatalf("begin exact pending recovery=%+v err=%v", resumed, err)
+	}
+	manager.mu.Lock()
+	runtime := manager.active
+	manager.mu.Unlock()
+	manager.now = func() time.Time { return resumed.DeadlineAt.Add(time.Hour) }
+	manager.expire(runtime)
+	preserved := manager.status(request.MutationRequestID)
+	if preserved == nil || preserved.Status != serviceMutationStatusPending ||
+		preserved.Attempt != 2 ||
+		preserved.ErrorCode != transport.DNSPeerPendingInspectionUnknown ||
+		backend.recoverCalls != 0 {
+		t.Fatalf("expired without recovery erased reviewed reason: job=%+v recovery calls=%d",
+			preserved, backend.recoverCalls)
+	}
+	durable, err = manager.loadLedgerFromDisk()
+	if err != nil || durable.Jobs[request.MutationRequestID] == nil ||
+		durable.Jobs[request.MutationRequestID].ErrorCode !=
+			transport.DNSPeerPendingInspectionUnknown {
+		t.Fatalf("durable resumed pending code=%+v err=%v", durable, err)
+	}
+}
+
+func TestDNSZoneV3NativePendingReasonSurvivesAgentRestartDuringRecovery(t *testing.T) {
+	manager, root := newMutationTestManager(t)
+	installGlobalMutationTestManager(t, manager)
+	backend := exactPendingDNSZoneV3Backend()
+	backend.syncFn = func(ctx context.Context,
+		commitment mutationpayload.DNSZoneSyncV3Commitment,
+		_ transport.ServiceMutationBinding) (string, error) {
+		if err := markDNSZoneSyncV3Applied(ctx, commitment.Domain, commitment.Qualifier); err != nil {
+			return "", err
+		}
+		return "", dnsZoneV3RecoveryPending(pendingBINDPeer(transport.DNSPeerPendingInspectionUnknown))
+	}
+	_, commitment, pending := runInitialDNSZoneV3Pending(t, manager, backend)
+	if pending.ErrorCode != transport.DNSPeerPendingInspectionUnknown {
+		t.Fatalf("initial pending reason=%q", pending.ErrorCode)
+	}
+	resumed, err := manager.begin(&ServiceMutationBeginRequest{
+		RequestID: testMutationRequestID, OwnerID: testMutationOwnerID,
+		Kind: "dns_zone_sync", Target: commitment.Domain,
+		PackageName: commitment.Qualifier, Resume: true,
+	})
+	if err != nil || resumed == nil ||
+		resumed.ErrorCode != transport.DNSPeerPendingInspectionUnknown {
+		t.Fatalf("durable recovering reason=%+v err=%v", resumed, err)
+	}
+	abandonFirewallApplyTestRuntime(t, manager)
+	backend.recoverFn = func(context.Context, string, string,
+		transport.ServiceMutationBinding) (bool, error) {
+		return false, dnsZoneV3RecoveryPending(errors.New("peer result still unknown"))
+	}
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := reloaded.status(testMutationRequestID)
+	if backend.recoverCalls != 1 || job == nil ||
+		job.Status != serviceMutationStatusPending ||
+		job.ErrorCode != transport.DNSPeerPendingInspectionUnknown {
+		t.Fatalf("restart erased reviewed reason: calls=%d job=%+v",
+			backend.recoverCalls, job)
+	}
+}
+
+func TestDNSZoneV3GenericPendingReasonRemainsUnknown(t *testing.T) {
+	if got := dnsZoneV3PendingLedgerCode(""); got != "dns_zone_v3_propagation_pending" {
+		t.Fatalf("legacy pending code=%q", got)
+	}
+	if got := dnsZoneV3PendingLedgerCode("untrusted peer output"); got != "dns_zone_v3_propagation_pending" {
+		t.Fatalf("untrusted pending code=%q", got)
+	}
+	if got := pendingDNSPeerCode(errors.New("private remote output")); got != "" {
+		t.Fatalf("untyped peer output acquired a reason=%q", got)
+	}
+}

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/bindconfig"
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
@@ -1042,6 +1043,34 @@ func (hostDNSEngineBackend) Sync(
 	return generation.ID, nil
 }
 
+// pendingExactBINDV3OwnerEdit never repairs an owner-modified managed span.
+// A pending result is allowed only for the exact durable deletion tombstone;
+// unrelated configuration failures retain the fail-closed recovery path.
+func pendingExactBINDV3OwnerEdit(
+	state dnsEngineStateReceipt,
+	receipt binddns.Receipt,
+	tree binddns.VerifiedTree,
+	domain, qualifier string,
+	binding transport.ServiceMutationBinding,
+	configErr error,
+) error {
+	if !errors.Is(configErr, bindconfig.ErrManagedZoneIncludeModified) &&
+		!errors.Is(configErr, errManagedBINDOptionsModified) {
+		return nil
+	}
+	if state.Generation == "" || state.Generation != receipt.Generation ||
+		receipt.Pairing == nil || receipt.Pairing.Role != binddns.PairRolePrimary ||
+		binding.MutationRequestID == "" || binding.MutationOwnerID == "" {
+		return nil
+	}
+	zone, _, found := tree.Zone(domain)
+	if !found || !zone.Delete || zone.Qualifier != qualifier ||
+		zone.MutationRequestID != binding.MutationRequestID ||
+		zone.MutationOwnerID != binding.MutationOwnerID {
+		return nil
+	}
+	return dnsZoneV3RecoveryPending(pendingBINDPeer(transport.DNSPeerPendingOwnerEditUnknown))
+}
 func (hostDNSEngineBackend) RecoverZone(
 	ctx context.Context,
 	domain, qualifier string,
@@ -1123,6 +1152,11 @@ func (hostDNSEngineBackend) RecoverZone(
 	} else if err := verifyManagedBINDRuntimeConfigExact(
 		ctx, layout, receipt, false,
 	); err != nil {
+		if pending := pendingExactBINDV3OwnerEdit(
+			state, receipt, tree, domain, qualifier, binding, err,
+		); pending != nil {
+			return false, pending
+		}
 		return false, err
 	}
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
@@ -1219,6 +1253,10 @@ func (hostDNSEngineBackend) Switch(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
 ) (transport.SwitchDNSEngineV1Response, error) {
+	if pdnsPairedPrimarySwitchPaused(manifest) {
+		return transport.SwitchDNSEngineV1Response{},
+			errors.New(pdnsPairedPrimarySwitchPausedReason)
+	}
 	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1385,6 +1423,15 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	verifyRecoveryRuntime, closeRecoveryRuntime, err := prepareBINDIndependentRuntime(ctx, profile, dnsEngineSwitchJournal{
+		Mode: manifest.Mode, SourceEngine: manifest.SourceEngine, TargetEngine: manifest.TargetEngine,
+		Topology: manifest.Topology, StateBefore: dnsFileSnapshot{Exists: stateExists},
+		TargetUnitsBefore: dnsUnitStateMapSnapshots(targetBefore), SourceUnitsBefore: dnsUnitStateMapSnapshots(sourceBefore),
+	})
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	defer closeRecoveryRuntime()
 	missing := make([]string, 0, len(layout.Packages))
 	for _, packageName := range layout.Packages {
 		installed, packageErr := exactDNSEnginePackageInstalled(
@@ -1586,10 +1633,22 @@ func (hostDNSEngineBackend) Switch(
 		TargetUnitsBefore: dnsUnitStateMapSnapshots(targetBefore),
 		SourceUnitsBefore: dnsUnitStateMapSnapshots(sourceBefore),
 	}
+	if err := verifyRecoveryRuntime(); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	journal, err = prepareBINDIndependentInverseJournal(ctx, profile, journal, configs)
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	if err := verifyBINDConfigMutationPreimage(ctx, configs); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := writeJournal(journal); err != nil {
+	if err := publishBINDIntentAfterIndependentSourceProof(
+		journal,
+		func() error { return verifyDNSEngineSwitchSource(ctx, profile, manifest, state, stateExists) },
+		func() error { return verifyBINDIndependentSourceProof(ctx, journal) },
+		func() error { return writeJournal(journal) },
+	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollbackAndJournal := func(rollbackCtx context.Context) error {
@@ -1598,6 +1657,9 @@ func (hostDNSEngineBackend) Switch(
 			rollback: func() error {
 				return rollbackBINDActivation(
 					rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
+					func(proofCtx context.Context) error {
+						return verifyBINDIndependentSourceProof(proofCtx, journal)
+					},
 				)
 			},
 			verify: func() error {
@@ -1630,6 +1692,11 @@ func (hostDNSEngineBackend) Switch(
 			return err
 		}
 		if manifest.SourceEngine == transport.DNSEnginePowerDNS {
+			// The accepted projection was checked against this frozen source
+			// before intent. Recheck the exact frozen evidence before stopping it.
+			if err := verifyBINDIndependentSourceProof(applyCtx, journal); err != nil {
+				return err
+			}
 			var output []byte
 			if err := runBINDMutationWithMaskParentProof(
 				verifyBINDMaskParentMetadata,
@@ -2554,9 +2621,24 @@ func rollbackBINDActivation(
 	configs bindConfigMutation,
 	stateBefore dnsFileSnapshot,
 	targetBefore, sourceBefore map[string]dnsUnitState,
+	verifySource ...func(context.Context) error,
 ) error {
 	if ctx == nil {
 		return errors.New("rollback BIND activation requires a bounded context")
+	}
+	proveSource := func(proofCtx context.Context) error {
+		for _, verify := range verifySource {
+			if verify == nil {
+				return errors.New("rollback BIND source proof is missing")
+			}
+			if err := verify(proofCtx); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := proveSource(ctx); err != nil {
+		return err
 	}
 	return rollbackBINDActivationWithOps(ctx, bindRollbackActivationOps{
 		restoreTarget: func(commandCtx context.Context) error {
@@ -2584,6 +2666,9 @@ func rollbackBINDActivation(
 			return restoreDNSEngineStateSnapshot(stateBefore)
 		},
 		restoreSource: func(commandCtx context.Context) error {
+			if err := proveSource(commandCtx); err != nil {
+				return err
+			}
 			return restoreDNSUnitStates(
 				commandCtx, systemctl, sourceBefore, false,
 			)
@@ -2840,7 +2925,7 @@ func syncPDNSV3Zone(
 		Delete: commitment.Delete, ZoneType: commitment.ZoneType,
 		Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
 	}
-	propagation, err := prepareManagedPDNSV3Propagation(ctx, zone, state)
+	propagation, err := prepareManagedPDNSV3Propagation(ctx, zone, state, binding)
 	if err != nil {
 		var pending *dnsZoneV3RecoveryPendingError
 		if errors.As(err, &pending) {
@@ -2851,9 +2936,7 @@ func syncPDNSV3Zone(
 	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
 		return "", dnsZoneV3RecoveryAmbiguous(err)
 	}
-	if err := verifyDNSZoneManifestAuthority(
-		ctx, []transport.DNSEngineSwitchZoneSnapshot{zone},
-	); err != nil {
+	if err := verifyPDNSV3PublishedZoneAuthority(ctx, state, zone, binding); err != nil {
 		return "", dnsZoneV3RecoveryAmbiguous(err)
 	}
 	if err := completePDNSV3Propagation(ctx, propagation); err != nil {
@@ -2891,11 +2974,11 @@ func recoverPDNSV3Zone(
 	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
 		return false, err
 	}
-	propagation, err := prepareManagedPDNSV3Propagation(ctx, snapshot, state)
+	propagation, err := prepareManagedPDNSV3Propagation(ctx, snapshot, state, binding)
 	if err != nil {
 		return false, err
 	}
-	if err := verifyDNSZoneManifestAuthority(ctx, []transport.DNSEngineSwitchZoneSnapshot{snapshot}); err != nil {
+	if err := verifyPDNSV3PublishedZoneAuthority(ctx, state, snapshot, binding); err != nil {
 		return false, err
 	}
 	if err := completePDNSV3Propagation(ctx, propagation); err != nil {

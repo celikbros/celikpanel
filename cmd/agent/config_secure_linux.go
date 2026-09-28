@@ -3,9 +3,6 @@
 package main
 
 import (
-	"bytes"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/bindroot"
+	"github.com/alicelik/celikpanel/internal/secureconfigwriter"
 	"golang.org/x/sys/unix"
 )
 
@@ -148,27 +147,11 @@ func inspectBINDConfigParentFD(
 	parentFD int,
 	policy bindConfigOwnerPolicy,
 ) (unix.Stat_t, error) {
-	var stat unix.Stat_t
-	if err := unix.Fstat(parentFD, &stat); err != nil {
-		return unix.Stat_t{}, fmt.Errorf("stat BIND config parent: %w", err)
+	layout := bindroot.Pacman
+	if policy.apt {
+		layout = bindroot.APT
 	}
-	allowedGID := stat.Gid == 0 || (policy.apt && stat.Gid == policy.bindGID)
-	permissions := stat.Mode & 0o777
-	special := stat.Mode & (unix.S_ISUID | unix.S_ISGID | unix.S_ISVTX)
-	accessPermissions := uint32(0o005)
-	if policy.apt && stat.Gid == policy.bindGID {
-		accessPermissions = 0o050
-	}
-	if stat.Mode&unix.S_IFMT != unix.S_IFDIR || stat.Uid != 0 || !allowedGID ||
-		permissions&0o700 != 0o700 || permissions&0o022 != 0 ||
-		permissions&accessPermissions != accessPermissions ||
-		(special != 0 && (!policy.apt || special != unix.S_ISGID)) {
-		return unix.Stat_t{}, errors.New("BIND config parent directory has unsafe ownership or mode")
-	}
-	if err := rejectBINDDirectoryACL(parentFD, "BIND config parent directory"); err != nil {
-		return unix.Stat_t{}, err
-	}
-	return stat, nil
+	return bindroot.InspectConfigParentFD(parentFD, layout, policy.bindGID)
 }
 
 func verifyBINDConfigParentFD(
@@ -297,254 +280,27 @@ func secureWriteConfigReplacingSnapshotWithOptions(
 	expected *dnsFileSnapshot,
 	options secureConfigWriteOptions,
 ) error {
-	requiredOwner := options.requiredOwner
-	if requiredOwner != nil && expected == nil {
-		return errors.New("managed configuration owner-controlled replacement requires an exact preimage")
-	}
-	if requiredOwner != nil && options.publishedOwner != nil {
-		return errors.New("managed configuration cannot take two conflicting owner contracts")
-	}
-	if expected != nil {
-		if err := validateDNSFileSnapshotIntegrity(*expected); err != nil {
-			return err
-		}
-		if expected.Path != filepath.Clean(path) ||
-			(expected.Exists &&
-				(expected.Mode != uint32(mode.Perm()) || !expected.OwnerKnown)) ||
-			(!expected.Exists && requiredOwner == nil) {
-			return errors.New("managed configuration replacement preimage is invalid")
-		}
-		if requiredOwner != nil && expected.Exists &&
-			(expected.UID != requiredOwner.uid || expected.GID != requiredOwner.gid) {
-			return errors.New("managed configuration replacement preimage owner differs from the required contract")
+	var parentValidator func(int) (unix.Stat_t, error)
+	if options.parentPolicy != nil {
+		policy := *options.parentPolicy
+		parentValidator = func(fd int) (unix.Stat_t, error) {
+			return inspectBINDConfigParentFD(fd, policy)
 		}
 	}
-	relative, err := secureConfigRelativePath(path)
-	if err != nil {
-		return err
-	}
-	rootFD, err := openSecureConfigRoot()
-	if err != nil {
-		return err
-	}
-	defer unix.Close(rootFD)
-
-	parent := filepath.Dir(relative)
-	base := filepath.Base(relative)
-	parentFD, err := unix.Openat2(rootFD, parent, &unix.OpenHow{
-		Flags:   uint64(unix.O_RDONLY | unix.O_DIRECTORY | unix.O_CLOEXEC | unix.O_NOFOLLOW),
-		Resolve: secureConfigResolve,
-	})
-	if err != nil {
-		return secureConfigOpenError("write managed configuration", path, err)
-	}
-	defer unix.Close(parentFD)
-	parentPolicy := options.parentPolicy
-	var parentBefore unix.Stat_t
-	if parentPolicy != nil {
-		parentBefore, err = inspectBINDConfigParentFD(parentFD, *parentPolicy)
-		if err != nil {
-			return err
-		}
-	}
-
-	fileMode := uint32(mode.Perm())
-	ownerUID, ownerGID := -1, -1
-	var existingStat unix.Stat_t
-	existingExists := false
-	existingFD, err := unix.Openat2(parentFD, base, &unix.OpenHow{
-		Flags:   uint64(unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW | unix.O_NONBLOCK),
-		Resolve: secureConfigResolve,
-	})
-	if err == nil {
-		if err := unix.Fstat(existingFD, &existingStat); err != nil {
-			unix.Close(existingFD)
-			return fmt.Errorf("stat managed configuration %s: %w", path, err)
-		}
-		if existingStat.Mode&unix.S_IFMT != unix.S_IFREG ||
-			(expected != nil && existingStat.Nlink != 1) {
-			unix.Close(existingFD)
-			return configPathRefusal("write managed configuration refused for non-regular file: %s", path)
-		}
-		if expected != nil && !expected.Exists {
-			unix.Close(existingFD)
-			return errors.New("managed configuration replacement preimage appeared")
-		}
-		existingExists = true
-		fileMode = existingStat.Mode & 0o777
-		ownerUID, ownerGID = int(existingStat.Uid), int(existingStat.Gid)
-		if expected != nil {
-			if fileMode != expected.Mode || existingStat.Uid != expected.UID ||
-				existingStat.Gid != expected.GID {
-				unix.Close(existingFD)
-				return errors.New("managed configuration replacement ownership or mode changed")
-			}
-			existing := os.NewFile(uintptr(existingFD), path+" (replacement preimage)")
-			if existing == nil {
-				unix.Close(existingFD)
-				return errors.New("managed configuration replacement preimage has an invalid descriptor")
-			}
-			existingData, readErr := io.ReadAll(existing)
-			var afterRead unix.Stat_t
-			statErr := unix.Fstat(existingFD, &afterRead)
-			closeErr := existing.Close()
-			if readErr != nil || statErr != nil || closeErr != nil {
-				return errors.Join(readErr, statErr, closeErr)
-			}
-			if !sameSecureConfigStat(existingStat, afterRead) ||
-				digestDNSBytes(existingData) != expected.SHA256 ||
-				!bytes.Equal(existingData, expected.Data) {
-				return errors.New("managed configuration replacement preimage changed")
-			}
-		} else {
-			unix.Close(existingFD)
-		}
-	} else if !errors.Is(err, unix.ENOENT) {
-		return secureConfigOpenError("inspect managed configuration", path, err)
-	} else if expected != nil && expected.Exists {
-		return errors.New("managed configuration replacement preimage disappeared")
-	}
-	if requiredOwner != nil {
-		ownerUID = int(requiredOwner.uid)
-		ownerGID = int(requiredOwner.gid)
+	var requiredOwner, publishedOwner *secureconfigwriter.Owner
+	if options.requiredOwner != nil {
+		requiredOwner = &secureconfigwriter.Owner{UID: options.requiredOwner.uid, GID: options.requiredOwner.gid}
 	}
 	if options.publishedOwner != nil {
-		ownerUID = int(options.publishedOwner.uid)
-		ownerGID = int(options.publishedOwner.gid)
+		publishedOwner = &secureconfigwriter.Owner{UID: options.publishedOwner.uid, GID: options.publishedOwner.gid}
 	}
-
-	var tempName string
-	var fd int
-	for attempt := 0; attempt < 16; attempt++ {
-		random := make([]byte, 12)
-		if _, err := rand.Read(random); err != nil {
-			return fmt.Errorf("prepare atomic managed configuration write %s: %w", path, err)
-		}
-		tempName = "." + base + ".celikpanel-" + hex.EncodeToString(random)
-		fd, err = unix.Openat(parentFD, tempName,
-			unix.O_WRONLY|unix.O_CREAT|unix.O_EXCL|unix.O_CLOEXEC|unix.O_NOFOLLOW,
-			fileMode)
-		if errors.Is(err, unix.EEXIST) {
-			continue
-		}
-		break
-	}
-	if err != nil {
-		return secureConfigOpenError("create atomic managed configuration", path, err)
-	}
-	if fd < 0 {
-		return fmt.Errorf("create atomic managed configuration %s: no unique temporary name", path)
-	}
-	published := false
-	defer func() {
-		if !published {
-			_ = unix.Unlinkat(parentFD, tempName, 0)
-		}
-	}()
-
-	file := os.NewFile(uintptr(fd), path+" (atomic replacement)")
-	if file == nil {
-		unix.Close(fd)
-		return fmt.Errorf("write managed configuration %s: invalid file descriptor", path)
-	}
-	closed := false
-	defer func() {
-		if !closed {
-			_ = file.Close()
-		}
-	}()
-	if ownerUID >= 0 {
-		if err := unix.Fchown(fd, ownerUID, ownerGID); err != nil {
-			return fmt.Errorf("preserve managed configuration ownership %s: %w", path, err)
-		}
-	}
-	if err := unix.Fchmod(fd, fileMode); err != nil {
-		return fmt.Errorf("preserve managed configuration mode %s: %w", path, err)
-	}
-	if _, err := io.Copy(file, bytes.NewReader(content)); err != nil {
-		return fmt.Errorf("write managed configuration %s: %w", path, err)
-	}
-	if err := file.Sync(); err != nil {
-		return fmt.Errorf("sync managed configuration %s: %w", path, err)
-	}
-	var tempStat unix.Stat_t
-	if err := unix.Fstat(fd, &tempStat); err != nil {
-		return fmt.Errorf("stat atomic managed configuration %s: %w", path, err)
-	}
-	ownerMismatch := ownerUID >= 0 &&
-		(int(tempStat.Uid) != ownerUID || int(tempStat.Gid) != ownerGID)
-	if tempStat.Mode&unix.S_IFMT != unix.S_IFREG || tempStat.Nlink != 1 ||
-		tempStat.Mode&0o777 != fileMode || ownerMismatch {
-		return errors.New("atomic managed configuration metadata differs from the exact contract")
-	}
-	if err := file.Close(); err != nil {
-		return fmt.Errorf("close managed configuration %s: %w", path, err)
-	}
-	closed = true
-	if existingExists {
-		currentFD, openErr := unix.Openat2(parentFD, base, &unix.OpenHow{
-			Flags:   uint64(unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW | unix.O_NONBLOCK),
-			Resolve: secureConfigResolve,
-		})
-		if openErr != nil {
-			return secureConfigOpenError("reprove managed configuration", path, openErr)
-		}
-		var currentStat unix.Stat_t
-		statErr := unix.Fstat(currentFD, &currentStat)
-		closeErr := unix.Close(currentFD)
-		if statErr != nil || closeErr != nil {
-			return errors.Join(statErr, closeErr)
-		}
-		if !sameSecureConfigStat(existingStat, currentStat) {
-			return errors.New("managed configuration changed before atomic replacement")
-		}
-	}
-	if options.beforeFinalParentProof != nil {
-		options.beforeFinalParentProof()
-	}
-	if parentPolicy != nil {
-		parentAfter, err := inspectBINDConfigParentFD(parentFD, *parentPolicy)
-		if err != nil {
-			return err
-		}
-		if parentBefore.Dev != parentAfter.Dev || parentBefore.Ino != parentAfter.Ino ||
-			parentBefore.Mode != parentAfter.Mode || parentBefore.Uid != parentAfter.Uid ||
-			parentBefore.Gid != parentAfter.Gid || parentBefore.Nlink != parentAfter.Nlink {
-			return errors.New("BIND config parent directory changed before atomic replacement")
-		}
-		currentParentFD, openErr := unix.Openat2(rootFD, parent, &unix.OpenHow{
-			Flags:   uint64(unix.O_RDONLY | unix.O_DIRECTORY | unix.O_CLOEXEC | unix.O_NOFOLLOW),
-			Resolve: secureConfigResolve,
-		})
-		if openErr != nil {
-			return secureConfigOpenError("reprove BIND config parent", path, openErr)
-		}
-		currentParent, inspectErr := inspectBINDConfigParentFD(currentParentFD, *parentPolicy)
-		closeErr := unix.Close(currentParentFD)
-		if inspectErr != nil || closeErr != nil {
-			return errors.Join(inspectErr, closeErr)
-		}
-		if currentParent.Dev != parentAfter.Dev || currentParent.Ino != parentAfter.Ino ||
-			currentParent.Mode != parentAfter.Mode || currentParent.Uid != parentAfter.Uid ||
-			currentParent.Gid != parentAfter.Gid || currentParent.Nlink != parentAfter.Nlink {
-			return errors.New("BIND config parent path changed before atomic replacement")
-		}
-	}
-	if expected != nil && !expected.Exists {
-		err = unix.Renameat2(
-			parentFD, tempName, parentFD, base, unix.RENAME_NOREPLACE,
-		)
-	} else {
-		err = unix.Renameat(parentFD, tempName, parentFD, base)
-	}
-	if err != nil {
-		return secureConfigOpenError("publish atomic managed configuration", path, err)
-	}
-	published = true
-	if err := unix.Fsync(parentFD); err != nil {
-		return fmt.Errorf("sync managed configuration directory %s: %w", filepath.Dir(path), err)
-	}
-	return nil
+	return secureconfigwriter.Write(path, content, mode, expected, secureconfigwriter.Options{
+		RequiredOwner:          requiredOwner,
+		PublishedOwner:         publishedOwner,
+		ParentValidator:        parentValidator,
+		BeforeFinalParentProof: options.beforeFinalParentProof,
+		PathRefused:            errConfigPathRefused,
+	})
 }
 
 func secureRemoveConfig(path string) error {

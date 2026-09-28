@@ -16,12 +16,16 @@ import (
 // checkpoint adapter. Its caller must already hold the release and DNS host
 // locks, prove the accepted operation and native inverse admission, and supply
 // the exact journal it observed. It cannot create a missing journal or advance
-// any phase except the two rollback checkpoints. It does not run the inverse.
+// any phase except the bounded rollback checkpoints, including the V4-only
+// target-enable decision. It does not run the inverse.
 func ReplaceRollbackJournalPhase(
 	policy dnsengineartifact.JournalPolicy,
 	owner servicemutationledger.FileOwner,
 	before, after dnsengineartifact.SwitchJournalV1,
 ) error {
+	if before.Schema == dnsengineartifact.SwitchJournalSchemaV3 || after.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		return errors.New("v3 fresh PowerDNS primary requires its independent rollback checkpoint adapter")
+	}
 	if !policy.RequireOwner || policy.StateUID != owner.UID || policy.StateGID != owner.GID ||
 		filepath.Base(policy.StatePath) != "dns-engine-state.json" {
 		return errors.New("DNS rollback checkpoint host owner or state path is untrusted")
@@ -34,14 +38,7 @@ func ReplaceRollbackJournalPhase(
 	if err != nil {
 		return err
 	}
-	allowed := before.Phase != dnsengineartifact.SwitchPhaseTargetVerified &&
-		before.Phase != dnsengineartifact.SwitchPhaseCommitted &&
-		before.Phase != dnsengineartifact.SwitchPhaseRolledBack &&
-		after.Phase == dnsengineartifact.SwitchPhaseRollingBack
-	if before.Phase == dnsengineartifact.SwitchPhaseRollingBack &&
-		after.Phase == dnsengineartifact.SwitchPhaseRolledBack {
-		allowed = true
-	}
+	allowed := allowedRollbackJournalPhase(before, after)
 	unchanged := before
 	unchanged.Phase = after.Phase
 	if !allowed || !reflect.DeepEqual(unchanged, after) {
@@ -64,4 +61,26 @@ func ReplaceRollbackJournalPhase(
 			return journal, err == nil, err
 		},
 	})
+}
+
+func allowedRollbackJournalPhase(before, after dnsengineartifact.SwitchJournalV1) bool {
+	if before.Schema == dnsengineartifact.SwitchJournalSchemaV4 {
+		switch {
+		case before.Phase == dnsengineartifact.SwitchPhaseTargetEnableIntent &&
+			after.Phase == dnsengineartifact.SwitchPhaseRollingBackTargetEnable:
+			return true
+		case before.Phase == dnsengineartifact.SwitchPhaseRollingBackTargetEnable &&
+			after.Phase == dnsengineartifact.SwitchPhaseRolledBack:
+			return true
+		}
+	}
+	if before.Phase == dnsengineartifact.SwitchPhaseRollingBack {
+		return after.Phase == dnsengineartifact.SwitchPhaseRolledBack
+	}
+	return before.Phase != dnsengineartifact.SwitchPhaseTargetVerified &&
+		before.Phase != dnsengineartifact.SwitchPhaseCommitted &&
+		before.Phase != dnsengineartifact.SwitchPhaseRolledBack &&
+		before.Phase != dnsengineartifact.SwitchPhaseTargetEnableIntent &&
+		before.Phase != dnsengineartifact.SwitchPhaseRollingBackTargetEnable &&
+		after.Phase == dnsengineartifact.SwitchPhaseRollingBack
 }

@@ -247,3 +247,17 @@ func TestCompletePDNSAdoptionInverseCancellationKeepsRetryableCheckpoint(t *test
 		})
 	}
 }
+
+func TestCompletePDNSAdoptionInverseCancellationAfterJournalRetirementIsComplete(t *testing.T) {
+	fixture := newAdoptionInverseFixture()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fixture.cancelAt, fixture.cancel = "cleanup", cancel
+	if err := CompletePDNSAdoptionInverse(ctx, fixture.ops()); err != nil {
+		t.Fatalf("completed terminal cleanup was reported as retryable failure: %v", err)
+	}
+	if !fixture.removed || !fixture.terminal || fixture.statePresent ||
+		fixture.journal.Phase != dnsengineartifact.SwitchPhaseRolledBack {
+		t.Fatal("cancellation at terminal cleanup lost a durable inverse effect")
+	}
+}
