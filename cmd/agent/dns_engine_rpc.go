@@ -135,11 +135,11 @@ func (a *Agent) DNSBackendReadiness(_ *transport.Empty, response *DNSBackendRead
 	// have claimed it is stuck, and the screen says a foreign DNS server was
 	// found. Carry the hold so the panel can tell a stuck transaction from an
 	// intruder.
-	// Motor durumunu bildirip her mutasyonun reddedildiÄŸini gizleyen bir hazÄ±rlÄ±k
-	// yoklamasÄ±, panelin yanlÄ±ÅŸ teÅŸhis koymasÄ±na yol aÃ§ar: panelin kurduÄŸu bir
-	// motor, onu sahiplenecek iÅŸlem takÄ±lÄ±yken Managed=false gÃ¶rÃ¼nÃ¼r ve ekran
-	// yabancÄ± bir DNS sunucusu bulunduÄŸunu sÃ¶yler. TutmayÄ± taÅŸÄ± ki panel takÄ±lmÄ±ÅŸ
-	// bir iÅŸlemi davetsiz bir misafirden ayÄ±rabilsin.
+	// Motor durumunu bildirip her mutasyonun reddedildiğini gizleyen bir hazırlık
+	// yoklaması, panelin yanlış teşhis koymasına yol açar: panelin kurduğu bir
+	// motor, onu sahiplenecek işlem takılıyken Managed=false görünür ve ekran
+	// yabancı bir DNS sunucusu bulunduğunu söyler. Tutmayı taşı ki panel takılmış
+	// bir işlemi davetsiz bir misafirden ayırabilsin.
 	readiness.MutationHold = agentMutationHold()
 	*response = readiness
 	return nil
@@ -1453,7 +1453,7 @@ func exactActiveDNSEngineSwitchRuntimeLocked(
 // finalizing guard is already held. It differs from the strict proof in one
 // way: the owning mutation's registered package worker is an acceptable ledger
 // shape. Admission, abort reproof, and terminal publication keep the strict
-// worker-free proof â€” a worker at those boundaries is genuinely wrong.
+// worker-free proof — a worker at those boundaries is genuinely wrong.
 //
 // This exists because the entire backend switch runs inside the finalizing
 // interval, and installing packages there durably registers apt-get/pacman as
@@ -1462,17 +1462,17 @@ func exactActiveDNSEngineSwitchRuntimeLocked(
 // the install poisoned the manager and cancelled the switch (kill-matrix run 8,
 // risk R-017).
 //
-// exactGuardedDNSEngineSwitchRuntimeLocked, YALNIZCA sonlanma nÃ¶beti zaten
-// tutulurken kullanÄ±lan kanÄ±ttÄ±r. KatÄ± kanÄ±ttan tek farkÄ±: sahibi olan
-// mutasyonun kayÄ±tlÄ± paket iÅŸÃ§isi kabul edilebilir bir defter biÃ§imidir.
-// Kabul, iptal yeniden-kanÄ±tÄ± ve uÃ§ yayÄ±n, katÄ± iÅŸÃ§isiz kanÄ±tÄ± korur â€” o
-// sÄ±nÄ±rlarda bir iÅŸÃ§i gerÃ§ekten yanlÄ±ÅŸtÄ±r.
+// exactGuardedDNSEngineSwitchRuntimeLocked, YALNIZCA sonlanma nöbeti zaten
+// tutulurken kullanılan kanıttır. Katı kanıttan tek farkı: sahibi olan
+// mutasyonun kayıtlı paket işçisi kabul edilebilir bir defter biçimidir.
+// Kabul, iptal yeniden-kanıtı ve uç yayın, katı işçisiz kanıtı korur — o
+// sınırlarda bir işçi gerçekten yanlıştır.
 //
-// Bunun var olma sebebi: arka uÃ§ geÃ§iÅŸinin tamamÄ± sonlanma aralÄ±ÄŸÄ±nda koÅŸar ve
-// orada paket kurmak apt-get/pacman'i iÅŸin tek iÅŸÃ§isi olarak kalÄ±cÄ± kaydeder.
-// KatÄ± kanÄ±t bu meÅŸru, beklenen durumu rakip bir mutasyon olarak okudu; bu
-// yÃ¼zden kurulum sÄ±rasÄ±nda gelen sÄ±radan beÅŸ saniyelik panel kalp atÄ±ÅŸÄ±
-// yÃ¶neticiyi zehirleyip geÃ§iÅŸi iptal etti (kill-matrix koÅŸu 8, risk R-017).
+// Bunun var olma sebebi: arka uç geçişinin tamamı sonlanma aralığında koşar ve
+// orada paket kurmak apt-get/pacman'i işin tek işçisi olarak kalıcı kaydeder.
+// Katı kanıt bu meşru, beklenen durumu rakip bir mutasyon olarak okudu; bu
+// yüzden kurulum sırasında gelen sıradan beş saniyelik panel kalp atışı
+// yöneticiyi zehirleyip geçişi iptal etti (kill-matrix koşu 8, risk R-017).
 func exactGuardedDNSEngineSwitchRuntimeLocked(
 	m *serviceMutationManager,
 	runtime *serviceMutationRuntime,
@@ -1686,32 +1686,32 @@ func exactActiveDNSEngineSwitchJob(
 
 // exactActiveDNSEngineSwitchJobWithRegisteredWorker accepts the owning job's
 // registered worker by SHAPE alone: positive PID, canonical trimmed
-// basename-only command of at most 64 bytes, non-empty start token, and â€” with
-// the three worker fields cleared â€” exactly the strict job shape.
+// basename-only command of at most 64 bytes, non-empty start token, and — with
+// the three worker fields cleared — exactly the strict job shape.
 //
 // Deliberately NO liveness probe. Registration can only ever write this sole
 // worker slot while this same runtime is active with one authorized step, so
 // the fields are attributable to this mutation by construction; whether the
 // process still runs is not this proof's question. Probing /proc here would
-// reintroduce the reap window â€” cmd.Wait() reaps the child before
+// reintroduce the reap window — cmd.Wait() reaps the child before
 // tracker.clear() removes the durable identity, and a guard landing between
 // the two would see a correctly dead worker and poison a healthy switch. A
 // dead-but-registered worker is a legal instant of the ledger's lifecycle;
 // clear() removes it on the very next transition.
 //
-// exactActiveDNSEngineSwitchJobWithRegisteredWorker, sahibi olan iÅŸin kayÄ±tlÄ±
-// iÅŸÃ§isini YALNIZCA biÃ§imiyle kabul eder: pozitif PID, kÄ±rpÄ±lmÄ±ÅŸ ve yalnÄ±z
-// taban addan oluÅŸan en Ã§ok 64 baytlÄ±k komut, boÅŸ olmayan baÅŸlangÄ±Ã§ belirteci
-// ve â€” Ã¼Ã§ iÅŸÃ§i alanÄ± temizlendiÄŸinde â€” tam olarak katÄ± iÅŸ biÃ§imi.
+// exactActiveDNSEngineSwitchJobWithRegisteredWorker, sahibi olan işin kayıtlı
+// işçisini YALNIZCA biçimiyle kabul eder: pozitif PID, kırpılmış ve yalnız
+// taban addan oluşan en çok 64 baytlık komut, boş olmayan başlangıç belirteci
+// ve — üç işçi alanı temizlendiğinde — tam olarak katı iş biçimi.
 //
-// Bilerek canlÄ±lÄ±k sondasÄ± YOK. KayÄ±t, bu tek iÅŸÃ§i yuvasÄ±nÄ± ancak aynÄ± Ã§alÄ±ÅŸma
-// zamanÄ± tek yetkili adÄ±mla etkinken yazabilir; dolayÄ±sÄ±yla alanlar yapÄ±sal
-// olarak bu mutasyona aittir ve sÃ¼recin hÃ¢lÃ¢ koÅŸup koÅŸmadÄ±ÄŸÄ± bu kanÄ±tÄ±n sorusu
+// Bilerek canlılık sondası YOK. Kayıt, bu tek işçi yuvasını ancak aynı çalışma
+// zamanı tek yetkili adımla etkinken yazabilir; dolayısıyla alanlar yapısal
+// olarak bu mutasyona aittir ve sürecin hâlâ koşup koşmadığı bu kanıtın sorusu
 // deÄŸildir. Burada /proc'u yoklamak toplama penceresini geri getirirdi:
-// cmd.Wait() Ã§ocuÄŸu, tracker.clear() kalÄ±cÄ± kimliÄŸi silmeden Ã¶nce toplar ve
-// ikisinin arasÄ±na dÃ¼ÅŸen bir bekÃ§i, doÄŸru biÃ§imde Ã¶lmÃ¼ÅŸ bir iÅŸÃ§iyi gÃ¶rÃ¼p
-// saÄŸlÄ±klÄ± bir geÃ§iÅŸi zehirlerdi. Ã–lÃ¼-ama-kayÄ±tlÄ± iÅŸÃ§i, defterin yaÅŸam
-// dÃ¶ngÃ¼sÃ¼nÃ¼n meÅŸru bir Ã¢nÄ±dÄ±r; clear() onu bir sonraki geÃ§iÅŸte kaldÄ±rÄ±r.
+// cmd.Wait() çocuğu, tracker.clear() kalıcı kimliği silmeden önce toplar ve
+// ikisinin arasına düşen bir bekçi, doğru biçimde ölmüş bir işçiyi görüp
+// sağlıklı bir geçişi zehirlerdi. Ölü-ama-kayıtlı işçi, defterin yaşam
+// döngüsünün meşru bir ânıdır; clear() onu bir sonraki geçişte kaldırır.
 func exactActiveDNSEngineSwitchJobWithRegisteredWorker(
 	job *ServiceMutationJob,
 	requestID, ownerID string,

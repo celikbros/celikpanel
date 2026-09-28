@@ -203,9 +203,6 @@ Yukarıdaki P0 kimlikleri, takip edilen iş kalemleridir. Özet 26 Eylül'de gö
 | P0.2 | Kısmi — türlenmiş erişim, Agent bağımsız başlangıç gözlemi ve yerel kurtarma girişi uygulandı | [Erişim/gözlem kabulü](RECOVERY-ACCESS.tr.md) ve [bağımsız kurtarma ortamı](RECOVERY-RUNTIME.tr.md). Root/sudo durum ve kurtarma yolu Panel/Agent başlangıcına veya lisansa bağlı değildir. [Yerel AJ](../deploy/e2e/release-recovery/BOUND-WORKER.tr.md), tek kullanımlık Debian şema42→42 deneyinde gerçek worker sonlandırmasını, otomatik kurtarma sırasında yeniden başlatmayı, doğrulanmış geri almayı ve CLI/kimlik doğrulamalı HTTP/tarayıcı nihai sonuçlarının eşleşmesini kanıtlar. [Yerel AK](../deploy/e2e/release-recovery/BOOT-WAIT.tr.md), gerçek `starting` yönlendirmesini root CLI üzerinde ve aynı isteğin zamanlayıcıyla geri almaya ulaşmasını da kanıtlar. Diğer beklemeler, önceden bilinen hatanın gerçek beklemede korunması, beklerken HTTP/tarayıcı erişimi, arayüzden güncelleme başlatma, üretim imzası ve tam kesinti/erişim matrisi açıktır. |
 | P0.3 | Kısmi — bağımsız kod/veri, atomik yayın ve seçili gerçek kurtarma SIGKILL/reboot sınırları geçti | [Bağımsız çalışma ortamı](../deploy/e2e/release-recovery/INDEPENDENT-RUNTIME.tr.md) ve [veri kabulü](../deploy/e2e/release-recovery/RECOVERY-MATERIAL.tr.md): saklanan adayın üç dosyası yokken Arch payload_restored SIGKILL ve Debian runtime_verified reboot aynı geri almayı otomatik tamamladı. Seçili kit geçişinin ayrı [kaynak sözleşmesi](RECOVERY-RUNTIME-PROMOTION.tr.md) ve [gerçek sistem kabul kaydı](../deploy/e2e/release-recovery/RUNTIME-PROMOTION.tr.md) vardır; Ayrı Arch/Debian deneyleri, başlatıcı geçişindeki kesintiden sonra sahip devamını ve kit geçişinden sonra otomatik uygulama geri almasını kanıtlar. Önceki başarısız deneyler kayıtlı kalır; bu sınırlı sonuçlar P0.3’ü kapatmaz. [İleri tamamlama verisi v2](RECOVERY-FORWARD-COMPLETION.tr.md), veritabanı hazır kontrol noktasından sonra üç saklanan aday dosyası yokken [sınırlı Arch/Debian gerçek sistem kabulüne](../deploy/e2e/release-recovery/FORWARD-COMPLETION.tr.md) sahiptir. [Ayrı kopyada veritabanı dönüşümü v3](RECOVERY-ISOLATED-DATABASE.tr.md), aday ayrı kopyayı dönüştürürken normal güncellemeyi active tutar; bağımsız doğrulamadan sonra atomik yayımlar. [Sınırlı gerçek Q/R kabulü](../deploy/e2e/release-recovery/ISOLATED-DATABASE.tr.md), gerçek Alpha64/schema38 başlangıcını kapsar: Arch ilk DB çalışma kopyasını koruyarak otomatik geri alır; Debian gerçek 38→42 dönüşümünü ve saklanan üç aday dosyasının kaybını otomatik tamamlar. Son kaynağa ait ayrı R kanıtı, 55 tablonun eski satırlarını ve yayın kayıtlarını doğrular. Ayrı [gerçek WAL kesintisi kanıtı](../deploy/e2e/release-recovery/NATIVE-WAL.tr.md), Debian ve Arch üzerinde dolu schema38 verisiyle tek bir fiziksel, commit edilmemiş yazma sınırını ve ardından aynı işlemin otomatik geri alınmasını kaydeder. WAL kanıtı tek başına dolu domain verisinin başarılı 38→42 dönüşümünü kanıtlamaz. Sonraki [gerçek exchange kabulü](../deploy/e2e/release-recovery/NATIVE-DATABASE-EXCHANGE.tr.md), Arch U ve Debian W üzerinde değiştirilen çiftte bu dönüşümü ve yayın makbuzundan önce ters exchange ile otomatik geri almayı doğrular; 55 eski tablo ve kesinti anındaki bütün satırlar korunur. Önceki belirsiz Debian U/V denemeleri kayıtlı kalır. Ayrı [Debian X iki kesintili kabulü](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md), gerçek exchange kesintisinden sonra yerel geri almayı payload_restored noktasında VM yeniden başlatmasıyla keser. İlk açılış denemesi systemd starting durumundayken başarısız olur; mevcut zamanlayıcı tekrar çalışıp aynı geri almayı tamamlar ve kesinti anındaki 99 satır korunur. Başarısız deneme saklanır. Bu sonunda otomatik kurtarma kanıtıdır; kesintisiz hizmet veya güç kaybı dayanıklılığı değildir. Sonraki [Arch Z kabulü](../deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.tr.md#z-arch-gerçek-sistem-kabulü), aynı iki kesinti sınırını geçer: erken açılıştaki iki hata korunur, mevcut zamanlayıcı aynı geri almayı tamamlar ve 100 eski satır değişmeden kalır. Z, başlangıçtaki çekirdek paketi yükseltmesini ve yeniden başlatma sonrasındaki farklı çalışan çekirdeği de kaydeder; güvenlik duvarı/VPN hazır oluşu iddia edilmez. Önceki Y hazırlık hatası korunur ve gerçek kesinti deneyi sayılmaz. Kalan arıza/gerçek hizmet matrisi kapanmaz. [WAL ve dolu SQL deney önkoşulları](../deploy/e2e/release-recovery/WAL-FIXTURE.tr.md), kontrollü yazıcı ve özel kopya testlerini ayrı tutar; gerçek sistem kabulü değildir. Önceki v2 deneyleri bu yeni sınırı kanıtlamaz. Tam aşama matrisi, imzalı kabul, eksik yedek veri bağımsızlığı, metadata geçişleri ve temizleme açıktır. |
 | P0.4 | Kısmi - ortak DNS/TLS sözleşmeleri ve bağımsız DNS gözlemi; seçili Agent aracılı kurtarma ve sınırlı korumalı sahip CLI ters işlem kanıtları | [Posta sözleşmesi](MAIL-CERTIFICATE-ARTIFACT.md), [DNS sözleşmesi](DNS-ENGINE-ARTIFACT.md) ve [DNS deney dizini](../deploy/e2e/dns-kill-matrix/README.md) üretici, sahip değişikliği ve arıza kanıtlarının kesin kapsamını korur. Yetkili üst bölge varken [BIND V3 silme](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md) geçti. Debian sahip CLI kanıtı harici PowerDNS devralmasını, yönetilen PowerDNS-BIND geçişi geri almasını ve statik bir çalışan-BIND devralma geri almasını kapsar. Diğer ters işlem türleri ve platform/topoloji varyantları, bu dilimlerin dışındaki kesintili yerel temizlik, bütün üretici/geri yükleme geçişleri, üst bölgesiz ikincilde silme kanıtı ve tam DNS arıza matrisi açıktır. P0.4 açık kalır. |
-Âlem tÃÂ¼rleri ve platform/topoloji varyantlarÃÂ±, bu dilimlerin dÃÂ±Ã
-ÂÃÂ±ndaki kesintili yerel temizlik, tÃÂ¼m ÃÂ¼retici/geri yÃÂ¼kleme geÃÂ§iÃ
-Âleri, ÃÂ¼st bÃÂ¶lgesiz ikincilde silme kanÃÂ±tÃÂ± ve tam DNS arÃÂ±za matrisi aÃÂ§ÃÂ±ktÃÂ±r. P0.4 aÃÂ§ÃÂ±k kalÃÂ±r. |
 | P0.5 | Kısmi — sınırlı güvenlik duvarı/posta bağımsızlığı ve yeniden açılışta yerel DNS hizmeti | [Güvenlik duvarı](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md), [yönetimsiz posta devreye alma](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-MANAGEMENT-ABSENT-BE.json), [tek PowerDNS açılışı](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-MANAGEMENT-ABSENT-BOOT-20260925.md) ve [BIND çifti kesinti/açılışı](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md) sınırlı kanıt sağlar. Tam gerçek sihirbaz/devreye alma kabulü, eski uygulamaya geri alma uyumu, farklı DNS motoru birleşimleri, Arch posta ve tam hizmet/yönetimsiz çalışma matrisi açık. Yönetimin devre dışı olması, çalıştırılabilir dosyaların yokluğu ve tam kaldırma ayrı koşullardır; genel kaldırma desteği iddia edilmez. |
 
 P0.4 gerçek DNS kesinti kanıtına, gerçek yönetilen PowerDNS kaynağıyla beş tek sunuculu BIND hücresi eklendi: source-stopped/before-write, source-stopped/after-write, target-started/after-write, rolled-back/before-write ve rolled-back/after-write. Temiz Debian 13 deneylerinin her biri 137 ile öldürmeyi, aynı isteğin Agent aracılığıyla BIND durumuna toparlanmasını, yetkili UDP/TCP DNS yanıtlarını ve kurtarma sonrasında 30 saniye Agent/Panel/DNS sağlığını doğruladı. [DNS kesinti matrisi raporları](../deploy/e2e/dns-kill-matrix/README.md) kapsamı ve dosya özetlerini verir. Kalıcı DNS geçiş günlüğü v1 ve kurtarma gözlemi v1 değişmedi. Bu beş hücre, geçiş sırasında kesintisiz DNS, çift sunucu, yeniden başlatma/güç kaybı, sunucu sahibi değişikliği veya Agent bağımsız ters işlem kanıtı değildir; P0.4 ve kalan çalıştırılabilir matris açıktır.
@@ -715,27 +712,27 @@ Bileşen testi v1 geçiş günlüğünün v2 kaynak belgesiyle uyumunu da doğru
 sonraki yayımı dondurulmuş kaynak saymıyor. Kurulu sistem geçişi ve gerçek
 geri alma kabulü hâlâ açık.
 
-### DNS geri alma g?nl??? ile nihai i?lem kayd? s?ras? ? 25 Eyl?l 2026
+### DNS geri alma günlüğü ile nihai işlem kaydı sırası — 25 Eylül 2026
 
-P0.4/P0.3 ve anayasal 1/2/4 ilkeleri kapsam?nda Agent, geri al?nm?? DNS
-ge?i? g?nl???n? i?lem defterinin ayn? iste?e ait kal?c? ba?ar?s?zl?k sonucu
-yaz?lana kadar saklar. Do?rudan BIND ge?i?i/devralmas? ile PowerDNS
-ge?i?i/devralmas? da g?nl??? korur. Sonu?tan sonra yaln?z birebir e?le?en
-g?nl?k silinir.
-Aradaki yeniden ba?latmada Agent yerel ters i?lemi yeniden do?rular; yeni
-bir DNS i?lemi ?nceki g?nl??? yaln?z okur ve kendi yetkisiyle kurtarmaya
-?al??madan durur. Ba??ms?z salt-okur durum arac? bu kalm?? kan?t? tan?r
-fakat de?i?iklik yetkisi vermez.
-v1 g?nl?k ve defter ?emalar? de?i?medi; mevcut evrelerin kal?c?l?k s?ras?
-de?i?ti. Bile?en ve Agent testleri bu s?n?r? denetler. Ger?ek s?re? ?ld?rme
-ve yeniden ba?latma matrisi, sahip de?i?ikli?i yar??lar? ve Agent'tan ba??ms?z
-yerel ters i?lem h?l? a??kt?r; P0.3/P0.4 tamamlanm?? say?lmaz.
+P0.4/P0.3 ve anayasal 1/2/4 ilkeleri kapsamında Agent, geri alınmış DNS
+geçiş günlüğünü işlem defterinin aynı isteğe ait kalıcı başarısızlık sonucu
+yazılana kadar saklar. Doğrudan BIND geçişi/devralması ile PowerDNS
+geçişi/devralması da günlüğü korur. Sonuçtan sonra yalnız birebir eşleşen
+günlük silinir.
+Aradaki yeniden başlatmada Agent yerel ters işlemi yeniden doğrular; yeni
+bir DNS işlemi önceki günlüğü yalnız okur ve kendi yetkisiyle kurtarmaya
+çalışmadan durur. Bağımsız salt-okur durum aracı bu kalmış kanıtı tanır
+fakat değişiklik yetkisi vermez.
+v1 günlük ve defter şemaları değişmedi; mevcut evrelerin kalıcılık sırası
+değişti. Bileşen ve Agent testleri bu sınırı denetler. Gerçek süreç öldürme
+ve yeniden başlatma matrisi, sahip değişikliği yarışları ve Agent'tan bağımsız
+yerel ters işlem hâlâ açıktır; P0.3/P0.4 tamamlanmış sayılmaz.
 
-P0.4 ve anayasal 3. ilke: bo?ta a??l?? kurtarmas?nda DNS g?nl??? okunamazsa
-veya yerel do?rulama belirsizse g?nl?k korunur, fakat genel i?lem y?neticisi
-kilitlenmez. Yeni DNS i?lemi kendi ?n kontrol?nde bu g?nl??? reddeder; ilgisiz
-sunucu i?lemleri kendi kilit yolunu kullanabilir. Yerel a??l?? testi bu s?n?r?
-denetler; ger?ek hizmet s?reklili?i kabul? de?ildir.
+P0.4 ve anayasal 3. ilke: boşta açılış kurtarmasında DNS günlüğü okunamazsa
+veya yerel doğrulama belirsizse günlük korunur, fakat genel işlem yöneticisi
+kilitlenmez. Yeni DNS işlemi kendi ön kontrolünde bu günlüğü reddeder; ilgisiz
+sunucu işlemleri kendi kilit yolunu kullanabilir. Yerel açılış testi bu sınırı
+denetler; gerçek hizmet sürekliliği kabulü değildir.
 
 
 P0.4, anayasal 1/2/3 ilkeleri: DNS geri alma isleminin kalici basarisizlik
