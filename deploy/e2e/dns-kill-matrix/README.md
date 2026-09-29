@@ -946,6 +946,42 @@ closed in this build", the controller exits **4**, `run-prepared` passes 4
 through without a peer verdict, and nothing is counted as a failure. Any
 other answer stops the cell before the trigger as `unverified`.
 
+The gate probe runs **inside `run-prepared` only**. A prepared guest keeps
+`celikpanel-agent.service` stopped by design (`coordinator-stop-proof.json`),
+so a standalone `dns-kill-trigger rpc-gate-probe` there has no socket to ask
+(batch 8, `c01-pri-intent/gate-probe-prepared-guest.txt`). The standalone
+probe now says so instead of a bare connection error: gate `unknown`, detail
+"the Agent is not running on this prepared guest; the controller probes the
+gate itself after it starts the Agent", on stderr the same sentence, and exit
+**69** (distinct from 75, an uncertain RPC failure). It never starts the
+Agent. `rpc-host-readiness` (below) answers the same way.
+
+**Idle host before the measured operation** (batch 8 `c08`: the Agent refused
+`BeginServiceMutation` with `HOST_MUTATION_BUSY` 0.1 s after it started, the
+gate probe had answered `open` 0.1 s earlier, and no cut happened). After an
+open gate and before the scenario trigger, the controller polls
+`dns-kill-trigger rpc-host-readiness` once per second: one read-only
+`Agent.ServiceMutationReadiness` call, the Agent's own advisory copy of the
+idle check that `BeginServiceMutation` repeats under its lease (ledger active
+request, host mutation lock, package manager). It proceeds after two
+consecutive idle answers. For every busy answer it records the Agent's typed
+code and reason (`panel_operation_active`, `agent_mutation_active`,
+`host_lock_busy`, `package_manager_active`, `state_unverified`), when it was
+first and last seen, and a read-only snapshot of what was running: the
+ledger's active request and job (kind, target, status, phase, times), the
+package-manager processes and the holders of the package-manager locks the
+Agent's probe reads (from `/proc/locks`), and the pacman lock file. Bounded by
+`--host-idle-timeout` (default 120 s). If the host never becomes idle the cell
+ends `unverified` before any mutation, with `result.host_idle_before_trigger`
+naming what was running and for how long. It never begins, finishes or
+cancels anything; ServiceMutationStatus is not used here because it may
+resolve a persisted orphan. Two idle answers narrow, but do not close, the
+race with a startup task that begins its own lease right after them; the
+trigger now prints and records the Agent's typed `reason` (and
+`mutation_hold`) with code and message (`agent response code=... reason=...
+error=...`; event fields `agent_error_code`, `agent_reason`,
+`mutation_hold`), so a refusal that still happens names its cause.
+
 **Pass definitions** (on the unchanged socket flow; D-021 safety and 31
 samples in every forward flow):
 
@@ -987,11 +1023,60 @@ samples in every forward flow):
   `<cell directory>/fresh-primary-peer/peer-verdict.json` and returns the
   combined exit.
 
+  *How the pair is judged (corrected after batch 8).* The expected RRsets are
+  read from the very scenario document the cell publishes
+  (`/var/lib/celikpanel-dns-kill-matrix/scenario.json`, zone `s1-kill.test`:
+  its SOA serial and its `www.s1-kill.test` A records), never from
+  `--dns-address`. `--dns-address` is only where the controller sends the
+  primary's queries (the QEMU management address, `10.0.2.15` in batch 8);
+  the zone's `www` A is the primary's address on the isolated peer link
+  (`192.0.2.10`). Batch 8 compared the answer with `--dns-address` and failed
+  seven cells whose answers were correct. Both servers, UDP and TCP, must
+  return the scenario's member SOA serial and `www` A; the catalog SOA serial
+  must be equal on both servers and equal to the state receipt's. An
+  unreadable scenario is `unknown`, never a pass. `result.fresh_primary_v3.pair`
+  records `expected` (the scenario records and its sha256), `query_targets`
+  (the address each server was queried at) and `observations` (per server and
+  query: server, port, name, type and, per transport, the flags, RCODE and the
+  full answer section with owner, type, TTL and RDATA as text), so expected
+  versus observed can be read without the code. The same check runs after a
+  reboot.
+
 Optional `--reboot-after-recovery [--disable-management-before-reboot]`
 after a passing forward flow reboots **both guests**: the host reboots the
 native secondary first, then the primary; the resumed controller repeats the
 pair check, then the existing post-reboot checks (management disabled: DNS
 alone, 31 samples judging only DNS).
+
+**Zone lifecycle with the reboot** (`--zone-lifecycle --reboot-after-recovery
+[--disable-management-before-reboot]`; batch 8 had to refuse the full
+combination). Defined order:
+
+1. complete pass verdict of the guest controller; it then suspends on the
+   same boot (checkpoint 1, stage `zone-lifecycle-before-reboot`, **exit 5**),
+   with management still running and nothing disabled;
+2. on the QEMU host: the pair verdict (`peer-verdict.json`) and the zone
+   lifecycle below through the Agent's zone RPCs (`zone-lifecycle.json`);
+3. `run-prepared` continues the suspended run with
+   `--zone-lifecycle-outcome=passed|not-passed` (same boot required). After a
+   lifecycle that did not pass the controller writes its result with the
+   reboot not run and management left running; the host returns the worst of
+   the guest, pair and lifecycle exits;
+4. after a passed lifecycle the controller reads the zone set as it now
+   stands on both servers (the re-added child `s2.s1-kill.test`: SOA serial
+   `2026092803`, `www` A `192.0.2.10`, equal on both, UDP and TCP), then
+   records the port-53 authority, **disables management** (when requested)
+   and asks for the reboot (checkpoint 2, exit 3);
+5. both guests reboot (secondary first); the resumed controller runs the DNS
+   checks: the pair as above **and** the child zone on both servers with the
+   serials read before the reboot, then the post-reboot window (DNS alone
+   when management was disabled). On the host,
+   `fresh-primary-peer/peer-verdict-after-reboot.json` requires both catalogs
+   to list the member and the child and `observe-child --step re-add` to
+   agree.
+
+Without `--reboot-after-recovery`, `--zone-lifecycle` still runs after the
+combined pass as before.
 
 **Owner edit** (`run-prepared --owner-edit {config,sql}`; guest flags
 `--owner-edit-config` / `--owner-edit-sql`). Between the proven kill and the
@@ -1076,6 +1161,9 @@ python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" \
   --reboot-after-recovery --disable-management-before-reboot --execute
 # Instead, on a post-start cell with the zone lifecycle (Agent kept running):
 #   run-prepared "${COMMON[@]}" --zone-lifecycle --execute
+# Zone lifecycle first, then management disabled and both guests rebooted:
+#   run-prepared "${COMMON[@]}" --zone-lifecycle \
+#     --reboot-after-recovery --disable-management-before-reboot --execute
 # Owner edit (post-start: config or sql; pre-start: config):
 #   run-prepared "${COMMON[@]}" --owner-edit sql --execute
 # Agent-released owner recovery (pre-start cells; enroll the runtime first):
@@ -1086,8 +1174,10 @@ python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" \
 ```
 
 Exit codes: 0 passed, 1 verified deviation, 2 unknown, 3 reboot requested
-(handled by `run-prepared`), 4 gate closed in this build, 64 refused before
-any mutation.
+(handled by `run-prepared`), 4 gate closed in this build, 5 zone lifecycle
+requested before the reboot (handled by `run-prepared`), 64 refused before
+any mutation. The standalone `rpc-gate-probe` / `rpc-host-readiness` exit 69
+when no Agent listens on the socket.
 
 Run the offline guest checks with:
 

@@ -193,6 +193,16 @@ REBOOT_EVEN_IF_FAILED_FLAG = "--reboot-even-if-failed"
 # the DNS daemon must then serve alone and the second window judges only DNS.
 DISABLE_MANAGEMENT_FLAG = "--disable-management-before-reboot"
 RESUME_FLAG = "--resume-after-reboot"
+# Fresh paired PowerDNS primary with --zone-lifecycle and --reboot-after-recovery:
+# after a complete pass the controller suspends with ZONE_LIFECYCLE_REQUESTED_EXIT
+# (same boot, management running); run-prepared runs the pair verdict and the
+# zone lifecycle, then continues the run with ZONE_LIFECYCLE_OUTCOME_PREFIX +
+# passed|not-passed; a passed lifecycle is followed by disabling management
+# (when requested), the reboot of both guests and DNS checks that include the
+# re-added child zone.
+ZONE_LIFECYCLE_BEFORE_REBOOT_FLAG = "--zone-lifecycle-before-reboot"
+ZONE_LIFECYCLE_OUTCOME_PREFIX = "--zone-lifecycle-outcome="
+ZONE_LIFECYCLE_REQUESTED_EXIT = 5
 # Fresh paired PowerDNS primary: owner edit between the kill and the Agent
 # restart (run-prepared --owner-edit {config,sql}), and the Agent-released
 # owner recovery of a pre-start config edit.
@@ -221,6 +231,7 @@ PREPARED_FLAG_ORDER = (
     REBOOT_AFTER_RECOVERY_FLAG,
     REBOOT_EVEN_IF_FAILED_FLAG,
     DISABLE_MANAGEMENT_FLAG,
+    ZONE_LIFECYCLE_BEFORE_REBOOT_FLAG,
     RESUME_FLAG,
 )
 RECOVERY_KIT_NAME = "recovery-kit.tar.gz"
@@ -285,13 +296,17 @@ reboot_before = "--reboot-before-owner-command"
 reboot_after = "--reboot-after-recovery"
 even_if_failed = "--reboot-even-if-failed"
 disable = "--disable-management-before-reboot"
+lifecycle = "--zone-lifecycle-before-reboot"
 resume = "--resume-after-reboot"
 order = [handoff, later, owner, startup, owner_config, owner_sql, owner_release, directives,
          peer_bind, peer_pdns, retry, reboot_before, reboot_after, even_if_failed, disable,
-         resume]
+         lifecycle, resume]
 label_prefix = "--peer-catalog-member-label="
+outcome_prefix = "--zone-lifecycle-outcome="
 labels = [flag for flag in flags if flag.startswith(label_prefix)]
-plain = [flag for flag in flags if not flag.startswith(label_prefix)]
+outcomes = [flag for flag in flags if flag.startswith(outcome_prefix)]
+plain = [flag for flag in flags
+         if not flag.startswith(label_prefix) and not flag.startswith(outcome_prefix)]
 if (len(sys.argv) < 2 or len(set(plain)) != len(plain)
         or any(flag not in order for flag in plain)
         or plain != [flag for flag in order if flag in plain]):
@@ -303,8 +318,13 @@ if labels:
             or not cell.startswith("pdns-switch__") or "__paired-secondary__" not in cell
             or not chosen & {"--peer-catalog-format-bind", "--peer-catalog-format-pdns-native"}):
         raise SystemExit("the peer catalog member label applies only to a PowerDNS paired secondary")
+if outcomes and (len(outcomes) != 1 or lifecycle not in chosen or resume in chosen
+                 or outcomes[0][len(outcome_prefix):] not in ("passed", "not-passed")
+                 or flags[-1] != outcomes[0]):
+    raise SystemExit("the zone lifecycle outcome continues only a run suspended for it")
 if (any(flag in argv for flag in order) or "--reboot-dir" in argv
-        or any(item.startswith(label_prefix) for item in argv)):
+        or any(item.startswith(label_prefix) or item.startswith(outcome_prefix)
+               for item in argv)):
     raise SystemExit("prepared controller argv already carries a mode flag")
 bind_handoff = "bind__rolling-back__after-write__standalone__peer-reachable"
 handoff_cells = {
@@ -345,6 +365,10 @@ if chosen & {owner_config, owner_sql} and (
         not fresh_primary or {owner_config, owner_sql} <= chosen
         or chosen & {handoff, later, owner, startup, retry, reboot_before, reboot_after}):
     raise SystemExit("one owner edit applies only to a fresh paired PowerDNS primary cell without reboot")
+if lifecycle in chosen and (not fresh_primary or reboot_after not in chosen
+                            or chosen & {owner_config, owner_sql}):
+    raise SystemExit("the zone lifecycle before the reboot applies only to a fresh paired "
+                     "PowerDNS primary cell with the after-recovery reboot")
 if owner_release in chosen and owner_config not in chosen:
     raise SystemExit("the owner release recovery needs the owner configuration edit")
 if directives in chosen and cell != "bind__target-staged__after-write__standalone__peer-reachable":
@@ -1782,8 +1806,18 @@ def prepared_flags(
         DISABLE_MANAGEMENT_FLAG: (
             getattr(args, "disable_management_before_reboot", False) is True
         ),
+        ZONE_LIFECYCLE_BEFORE_REBOOT_FLAG: zone_lifecycle_before_reboot(args),
     }
     return [flag for flag in PREPARED_FLAG_ORDER if selected.get(flag)]
+
+
+def zone_lifecycle_before_reboot(args: argparse.Namespace) -> bool:
+    """--zone-lifecycle with --reboot-after-recovery: the lifecycle runs first."""
+
+    return (
+        getattr(args, "zone_lifecycle", False) is True
+        and getattr(args, "reboot_after_recovery", False) is True
+    )
 
 
 def prepared_remote(cell_id: str, flags: Iterable[str]) -> str:
@@ -1946,6 +1980,10 @@ def run_prepared(args: argparse.Namespace) -> int:
         command, resume_command = commands(
             MEMBER_LABEL_PLACEHOLDER if needs_member_label else None
         )
+        if fresh_primary and zone_lifecycle_before_reboot(args):
+            print(json.dumps(command))
+            print_fresh_primary_lifecycle_plan(args, node, identity, flags, resume_command)
+            return 0
         if fresh_primary:
             print(json.dumps(command))
             if resume_command is not None:
@@ -2014,6 +2052,12 @@ def run_prepared(args: argparse.Namespace) -> int:
             member_label = peer_member_label(peer_before)
     command, resume_command = commands(member_label)
     returncode = subprocess.run(command, check=False).returncode
+    before_reboot: dict[str, Any] | None = None
+    if fresh_primary and zone_lifecycle_before_reboot(args) and (
+        returncode == ZONE_LIFECYCLE_REQUESTED_EXIT
+    ):
+        returncode, before_reboot = run_zone_lifecycle_before_reboot(
+            args, plan, node, identity, flags)
     reboots = 0
     while returncode == REBOOT_REQUESTED_EXIT and resume_command is not None:
         if reboots >= reboots_allowed:
@@ -2037,7 +2081,7 @@ def run_prepared(args: argparse.Namespace) -> int:
         reboots += 1
         returncode = subprocess.run(resume_command, check=False).returncode
     if fresh_primary:
-        return finish_fresh_primary_run(args, plan, returncode)
+        return finish_fresh_primary_run(args, plan, returncode, before_reboot=before_reboot)
     if peer_engine is not None:
         return finish_peer_verdict(
             args, plan, peer_engine, peer_before, returncode, peer_catalog_format
@@ -2286,10 +2330,10 @@ def validate_fresh_primary_run(
         raise BootstrapError(
             "--owner-release-recovery needs --owner-edit config on a pre-start cell; "
             "nothing was started")
-    if lifecycle and getattr(args, "disable_management_before_reboot", False) is True:
-        raise BootstrapError(
-            "--zone-lifecycle needs the running Agent; it cannot follow "
-            f"{DISABLE_MANAGEMENT_FLAG}; nothing was started")
+    # --zone-lifecycle with --reboot-after-recovery [--disable-management-before-
+    # reboot] runs in a defined order: pass verdict -> zone lifecycle (Agent
+    # running) -> disable management -> reboot both guests -> DNS checks that
+    # include the zone set after the lifecycle (ZONE_LIFECYCLE_BEFORE_REBOOT_FLAG).
 
 
 ZONE_LIFECYCLE_STEPS = ("add", "edit", "delete", "re-add")
@@ -2430,8 +2474,90 @@ def run_zone_lifecycle(
     return {"passed": 0, "failed": 1}.get(status, 2)
 
 
+def worst_exit(*codes: int | None) -> int:
+    """Combine 0/1/2 verdict exits: any failure wins, then any unverified."""
+
+    present = [code for code in codes if code is not None]
+    for code in present:
+        if code not in (0, 1, 2):
+            return code
+    if 1 in present:
+        return 1
+    if 2 in present:
+        return 2
+    return 0
+
+
+def run_zone_lifecycle_before_reboot(
+    args: argparse.Namespace, plan: dict[str, Any], node: dict[str, Any],
+    identity: Path, flags: list[str],
+) -> tuple[int, dict[str, Any]]:
+    """Pair verdict and zone lifecycle while the Agent runs, then continue.
+
+    The guest controller suspended after a complete pass (exit 5, same boot,
+    nothing disabled). The host judges the pair, runs the lifecycle through
+    the Agent's zone RPCs and continues the suspended run with the outcome;
+    the controller then disables management (when requested) and asks for the
+    reboot (exit 3), or, after a lifecycle that did not pass, writes its
+    result without a reboot.
+    """
+
+    # The guest has no exit yet: it suspended after a complete pass (exit 5).
+    peer = finish_fresh_primary_peer_verdict(args, plan, 0, suspended_for_lifecycle=True)
+    lifecycle = run_zone_lifecycle(args, plan) if peer == 0 else None
+    outcome = "passed" if peer == 0 and lifecycle == 0 else "not-passed"
+    record = {"peer_verdict_exit": peer, "lifecycle_exit": lifecycle, "outcome": outcome}
+    print(json.dumps({"zone_lifecycle_before_reboot": record}, sort_keys=True))
+    continuation = ssh_base(node, identity) + [
+        prepared_remote(args.cell_id, list(flags) + [ZONE_LIFECYCLE_OUTCOME_PREFIX + outcome])
+    ]
+    return subprocess.run(continuation, check=False).returncode, record
+
+
+def print_fresh_primary_lifecycle_plan(
+    args: argparse.Namespace, node: dict[str, Any], identity: Path, flags: list[str],
+    resume_command: list[str] | None,
+) -> None:
+    """Dry run of the defined order (nothing is run)."""
+
+    print(json.dumps({
+        "on_exit": GATE_CLOSED_EXIT,
+        "result": "gate closed in this build; nothing after the probe runs",
+    }))
+    print(json.dumps({
+        "on_exit": ZONE_LIFECYCLE_REQUESTED_EXIT,
+        "order": [
+            "complete pass verdict (guest controller, then suspended on the same boot)",
+            "pair verdict: native_pdns_bind_peer.py observe --address "
+            + fresh_primary_expected_www(),
+            *(f"zone lifecycle step {step} (Agent running) + observe-child --step {step}"
+              for step in ZONE_LIFECYCLE_STEPS),
+            "continue the guest run with the lifecycle outcome",
+            *([f"{DISABLE_MANAGEMENT_FLAG}: stop and disable Panel and Agent"]
+              if getattr(args, "disable_management_before_reboot", False) is True else []),
+            "reboot both guests (native BIND secondary first)",
+            "resumed controller: DNS checks with the re-added child zone on both servers",
+            "host: pair verdict after the reboot with the child zone "
+            f"({FRESH_PRIMARY_EVIDENCE_DIRECTORY}/peer-verdict-after-reboot.json)",
+        ],
+        "continue": ssh_base(node, identity) + [prepared_remote(
+            args.cell_id, list(flags) + [ZONE_LIFECYCLE_OUTCOME_PREFIX + "<passed|not-passed>"])],
+    }))
+    if resume_command is not None:
+        print(json.dumps({
+            "on_exit": REBOOT_REQUESTED_EXIT,
+            "reboot": [
+                {"node": "arch", "role": "native BIND secondary", "first": True},
+                {"node": args.node, "role": "fresh PowerDNS primary"},
+            ],
+            "method": fixture.REBOOT_METHOD,
+            "then": resume_command,
+        }))
+
+
 def finish_fresh_primary_run(
-    args: argparse.Namespace, plan: dict[str, Any], guest_returncode: int
+    args: argparse.Namespace, plan: dict[str, Any], guest_returncode: int,
+    *, before_reboot: dict[str, Any] | None = None,
 ) -> int:
     """Gate-closed pass-through, host-side pair verdict, optional lifecycle."""
 
@@ -2449,24 +2575,67 @@ def finish_fresh_primary_run(
         # The hold flow is judged on the guest; the install is deliberately
         # not completed, so there is no pair to transfer.
         return guest_returncode
+    if before_reboot is not None:
+        # The lifecycle already ran before the reboot. A lifecycle that did
+        # not pass ended the guest run without a reboot; otherwise the pair
+        # and the re-added child are judged again after the reboot.
+        if before_reboot["outcome"] != "passed":
+            return worst_exit(guest_returncode, before_reboot["peer_verdict_exit"],
+                              before_reboot["lifecycle_exit"])
+        if guest_returncode not in (0, 1, 2):
+            return guest_returncode
+        return finish_fresh_primary_peer_verdict(
+            args, plan, guest_returncode, child_step="re-add",
+            evidence_name="peer-verdict-after-reboot.json")
+    if zone_lifecycle_before_reboot(args) and guest_returncode in (0, 1, 2):
+        # The controller did not suspend for the lifecycle (its pre-reboot
+        # verdict was not a pass, or a diagnostic reboot ran): no lifecycle.
+        return finish_fresh_primary_peer_verdict(args, plan, guest_returncode)
     combined = finish_fresh_primary_peer_verdict(args, plan, guest_returncode)
     if combined == 0 and getattr(args, "zone_lifecycle", False) is True:
         return run_zone_lifecycle(args, plan)
     return combined
 
 
+def fresh_primary_expected_www() -> str:
+    """www.s1-kill.test A of the scenario the fresh paired primary publishes."""
+
+    scenario = pdns_switch_scenario(role="paired-primary", source_fixture="uninitialized")
+    addresses = [
+        record["content"] for zone in scenario["zones"] if zone["domain"] == ZONE_NAME
+        for record in zone["records"] if record["name"] == QUERY_NAME and record["type"] == "A"
+    ]
+    if len(addresses) != 1:
+        raise BootstrapError("the fresh primary scenario does not publish exactly one www A")
+    return addresses[0]
+
+
 def finish_fresh_primary_peer_verdict(
-    args: argparse.Namespace, plan: dict[str, Any], guest_returncode: int
+    args: argparse.Namespace, plan: dict[str, Any], guest_returncode: int,
+    *, child_step: str | None = None, evidence_name: str = "peer-verdict.json",
+    suspended_for_lifecycle: bool = False,
 ) -> int:
+    """The secondary serves the primary's catalog and member (and child).
+
+    ``child_step`` (after the zone lifecycle): the catalogs list the child as
+    well and observe-child judges the child's answers at that step.
+    """
+
     import native_pdns_bind_peer  # noqa: PLC0415 - imports this module
 
-    observation, error = observe_until_converged(
-        lambda: native_pdns_bind_peer.observe(argparse.Namespace(
+    def namespace(**extra: Any) -> argparse.Namespace:
+        return argparse.Namespace(
             work_root=args.work_root, cell_id=args.cell_id, source_fixture="uninitialized",
-            identity_file=args.identity_file, manifest=args.manifest,
-            address="192.0.2.10", execute=True,
-        ))
-    )
+            identity_file=args.identity_file, manifest=args.manifest, execute=True, **extra)
+
+    def observe_all() -> dict[str, Any]:
+        member = native_pdns_bind_peer.observe(namespace(
+            address=fresh_primary_expected_www(), with_child=child_step is not None))
+        if child_step is None:
+            return member
+        return {**member, "child": native_pdns_bind_peer.observe_child(namespace(step=child_step))}
+
+    observation, error = observe_until_converged(observe_all)
     status = "passed" if error is None else (
         "failed" if error.startswith("mismatch:") else "unverified")
     record = {
@@ -2477,13 +2646,17 @@ def finish_fresh_primary_peer_verdict(
         "error": error,
         "observation": observation,
         "combined_exit": combine_paired_secondary_exit(guest_returncode, status),
+        "child_step": child_step,
+        "guest_controller_suspended_for_zone_lifecycle": suspended_for_lifecycle,
         "note": (
             "The native BIND secondary loaded this primary's PowerDNS PRODUCER catalog and "
             "member and answers them authoritatively over UDP and TCP exactly as the "
             "primary does."
+            + (f" After the zone lifecycle ({child_step}) the catalogs also list the child "
+               "zone and both servers answer it as that step published." if child_step else "")
         ),
     }
-    write_peer_evidence(plan, "peer-verdict.json", record, execute=True,
+    write_peer_evidence(plan, evidence_name, record, execute=True,
                         directory_name=FRESH_PRIMARY_EVIDENCE_DIRECTORY)
     print(json.dumps(record, sort_keys=True))
     return record["combined_exit"]

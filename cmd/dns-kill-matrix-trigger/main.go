@@ -52,6 +52,9 @@ const (
 	exitUsage       = 64
 	exitUncertain   = 75
 	exitDefiniteErr = 1
+	// No Agent listens on the socket (a prepared guest keeps it stopped by
+	// design); distinct from exitUncertain so a caller can tell the two apart.
+	exitAgentAbsent = 69
 )
 
 var errSwitchOutcomeUncertain = errors.New(
@@ -88,6 +91,22 @@ type triggerEvent struct {
 	TargetEngine      string `json:"target_engine,omitempty"`
 	HeartbeatCount    int    `json:"heartbeat_count,omitempty"`
 	Error             string `json:"error,omitempty"`
+	// The Agent's typed refusal, when the error is one: code, reason (one of
+	// the HostMutationReason* codes) and mutation hold, recorded verbatim.
+	AgentErrorCode string `json:"agent_error_code,omitempty"`
+	AgentReason    string `json:"agent_reason,omitempty"`
+	MutationHold   string `json:"mutation_hold,omitempty"`
+}
+
+// withAgentRefusal copies the Agent's typed refusal fields out of err.
+func (event triggerEvent) withAgentRefusal(err error) triggerEvent {
+	var refusal *agentResponseError
+	if errors.As(err, &refusal) {
+		event.AgentErrorCode = refusal.Code
+		event.AgentReason = refusal.Reason
+		event.MutationHold = refusal.Hold
+	}
+	return event
 }
 
 type identityReceipt struct {
@@ -167,6 +186,8 @@ func main() {
 		runRPCPDNSPeerV3RecoverCommand(os.Args[2:])
 	case "rpc-gate-probe":
 		runRPCGateProbeCommand(os.Args[2:])
+	case "rpc-host-readiness":
+		runRPCHostReadinessCommand(os.Args[2:])
 	case "rpc-unrelated-begin":
 		runRPCUnrelatedBeginCommand(os.Args[2:])
 	case "rpc-pdns-primary-zone-v3":
@@ -182,7 +203,7 @@ func usageError(message string) {
 	_, _ = fmt.Fprintln(os.Stderr, message)
 	_, _ = fmt.Fprintln(
 		os.Stderr,
-		"usage: dns-kill-matrix-trigger {rpc-switch|rpc-retry} --scenario FILE --identity-receipt FILE [--timeout 45m] | rpc-normalize-pdns --scenario FILE --normalization-receipt FILE [--timeout 45m] | rpc-delete-v3 --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-delete-v3-recover --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-pdns-peer-v3 --step {edit|delete|add} [--timeout 2m] | rpc-gate-probe --scenario FILE [--timeout 15s] | rpc-unrelated-begin [--timeout 30s] | rpc-pdns-primary-zone-v3 --scenario FILE --identity-receipt FILE --step {add|edit|delete|re-add} [--timeout 2m] | rpc-pdns-primary-zone-v3-recover --scenario FILE --identity-receipt FILE --step delete [--timeout 2m]",
+		"usage: dns-kill-matrix-trigger {rpc-switch|rpc-retry} --scenario FILE --identity-receipt FILE [--timeout 45m] | rpc-normalize-pdns --scenario FILE --normalization-receipt FILE [--timeout 45m] | rpc-delete-v3 --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-delete-v3-recover --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-pdns-peer-v3 --step {edit|delete|add} [--timeout 2m] | rpc-gate-probe --scenario FILE [--timeout 15s] | rpc-host-readiness [--timeout 15s] | rpc-unrelated-begin [--timeout 30s] | rpc-pdns-primary-zone-v3 --scenario FILE --identity-receipt FILE --step {add|edit|delete|re-add} [--timeout 2m] | rpc-pdns-primary-zone-v3-recover --scenario FILE --identity-receipt FILE --step delete [--timeout 2m]",
 	)
 	os.Exit(exitUsage)
 }
@@ -255,7 +276,7 @@ func runRPCSwitchCommand(arguments []string, retry bool) {
 			TargetEngine:      string(request.TargetEngine),
 			HeartbeatCount:    result.heartbeatCount,
 			Error:             err.Error(),
-		}, code)
+		}.withAgentRefusal(err), code)
 	}
 	emit(triggerEvent{
 		Event: commandName + "-complete", Driver: loaded.Driver,
@@ -1732,9 +1753,32 @@ func jobIdentityMatches(
 		job.PackageName == identity.PackageName
 }
 
+// agentResponseError is the Agent's typed refusal: code, the reason that
+// refines it (HOST_MUTATION_BUSY: panel_operation_active,
+// agent_mutation_active, host_lock_busy, package_manager_active or
+// state_unverified), the mutation hold and the message. Batch 8 c08 recorded
+// only code and message, so the cause of a busy refusal was not established.
+type agentResponseError struct {
+	Code    string
+	Reason  string
+	Hold    string
+	Message string
+}
+
+func (e *agentResponseError) Error() string {
+	text := fmt.Sprintf("agent response code=%q reason=%q", e.Code, e.Reason)
+	if e.Hold != "" {
+		text += fmt.Sprintf(" mutation_hold=%q", e.Hold)
+	}
+	return text + fmt.Sprintf(" error=%q", e.Message)
+}
+
 func responseError(response transport.ServiceMutationResponse) error {
 	if response.ErrorCode != "" || response.Error != "" {
-		return fmt.Errorf("agent response code=%q error=%q", response.ErrorCode, response.Error)
+		return &agentResponseError{
+			Code: response.ErrorCode, Reason: response.Reason,
+			Hold: response.MutationHold, Message: response.Error,
+		}
 	}
 	return nil
 }

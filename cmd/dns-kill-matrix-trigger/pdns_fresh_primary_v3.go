@@ -169,9 +169,20 @@ func runRPCGateProbeCommand(arguments []string) {
 			Error: "the gate probe applies only to the fresh paired PowerDNS primary cells",
 		}, exitUsage)
 	}
+	// A prepared guest keeps the Agent stopped by design: say so, with its own
+	// exit code, instead of a bare connection error (batch 8 standalone probe).
+	socket := transport.AgentSocketPath()
+	if agentSocketAbsent(socket, nil) {
+		writeResultAndExit(
+			gateProbeAgentAbsent(cellID, request.ManifestQualifier, socket, nil), exitAgentAbsent)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 	result, err := runGateProbe(ctx, cellID, request, callProductionAgent)
+	if err != nil && agentSocketAbsent(socket, err) {
+		writeResultAndExit(
+			gateProbeAgentAbsent(cellID, request.ManifestQualifier, socket, err), exitAgentAbsent)
+	}
 	if err != nil {
 		result.Detail = result.Detail + ": " + err.Error()
 	}

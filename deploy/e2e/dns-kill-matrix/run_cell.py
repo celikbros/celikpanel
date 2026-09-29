@@ -241,7 +241,16 @@ SS_EXECUTABLE = "/usr/bin/ss"
 REBOOT_REQUESTED_EXIT = 3
 REBOOT_BEFORE_OWNER_COMMAND = "before-owner-command"
 REBOOT_AFTER_RECOVERY = "after-recovery"
-REBOOT_STAGES = (REBOOT_BEFORE_OWNER_COMMAND, REBOOT_AFTER_RECOVERY)
+# Fresh paired PowerDNS primary with --zone-lifecycle-before-reboot: after a
+# complete pass the controller suspends at this stage (checkpoint, exit
+# ZONE_LIFECYCLE_REQUESTED_EXIT, no reboot) so the host runs the zone
+# lifecycle with the Agent still running; the host then continues the same
+# boot with --zone-lifecycle-outcome=..., which disables management (when
+# requested) and asks for the after-recovery reboot.
+ZONE_LIFECYCLE_BEFORE_REBOOT = "zone-lifecycle-before-reboot"
+ZONE_LIFECYCLE_REQUESTED_EXIT = 5
+ZONE_LIFECYCLE_OUTCOMES = ("passed", "not-passed")
+REBOOT_STAGES = (REBOOT_BEFORE_OWNER_COMMAND, REBOOT_AFTER_RECOVERY, ZONE_LIFECYCLE_BEFORE_REBOOT)
 REBOOT_CHECKPOINT_SCHEMA = "celikpanel/dns-kill-reboot-checkpoint/v1"
 REBOOT_RESUMED_SCHEMA = "celikpanel/dns-kill-reboot-resumed/v1"
 FIXTURE_MARKER_PATH = "/etc/celikpanel-dns-kill-matrix"
@@ -1111,6 +1120,36 @@ FRESH_PRIMARY_V3_CATALOG = "catalog-c000020a.celikpanel.invalid"
 FRESH_PRIMARY_V3_PEER_IP = "192.0.2.11"
 FRESH_PRIMARY_V3_STATE_SCHEMA = "celikpanel-dns-engine-state/v3"
 FRESH_PRIMARY_V3_NATIVE_CATALOG = "pdns-fresh-paired-primary/debian-4.9/v1"
+# The child zone of the zone lifecycle as it stands after its last step
+# (re-add). Mirrors cmd/dns-kill-matrix-trigger freshPrimaryZoneSteps and
+# freshPrimaryZoneRecords (pinned by test_fresh_primary_v3.py against the Go
+# source): SOA serial 2026092803, www A 192.0.2.10, no `changed` record.
+FRESH_PRIMARY_V3_CHILD_ZONE = "s2.s1-kill.test"
+FRESH_PRIMARY_V3_CHILD_QUERY = "www.s2.s1-kill.test"
+FRESH_PRIMARY_V3_CHILD_AFTER_LIFECYCLE = {"soa_serial": [2026092803], "www_a": ["192.0.2.10"]}
+# Before the measured BeginServiceMutation: wait (read-only) until the Agent's
+# own advisory readiness (Agent.ServiceMutationReadiness, the idle check that
+# BeginServiceMutation repeats) reports the host idle.
+HOST_READINESS_SCHEMA = "celikpanel/dns-kill-matrix-host-readiness/v1"
+HOST_IDLE_TIMEOUT_DEFAULT = 120.0
+HOST_IDLE_POLL_SECONDS = 1.0
+# Consecutive idle answers required before the trigger starts: a startup
+# reconciler of the freshly started Agent may begin its own lease right after
+# the socket appears (batch 8 c08 hypothesis). This narrows, not closes, that
+# race; the trigger records the Agent's typed reason if Begin is still refused.
+HOST_IDLE_SETTLE_ANSWERS = 2
+# The same process names and lock files the Agent's package-manager probe
+# reads (cmd/agent service_mutation_lock_linux.go); recorded, read-only.
+PACKAGE_MANAGER_PROCESSES = frozenset({
+    "apt", "apt-get", "dpkg", "dpkg-deb", "pacman", "makepkg", "dnf", "dnf5", "yum",
+    "microdnf", "rpm", "rpmdb", "packagekitd", "packagekit", "pkcon",
+    "dnfdaemon-server", "dnfdaemon-serve",
+})
+PACKAGE_MANAGER_LOCK_PATHS = (
+    "/var/lib/dpkg/lock-frontend", "/var/lib/dpkg/lock", "/var/cache/apt/archives/lock",
+    "/var/lib/rpm/.rpm.lock", "/usr/lib/sysimage/rpm/.rpm.lock",
+)
+PACMAN_LOCK_PATH = "/var/lib/pacman/db.lck"
 RESTART_BEFORE_SWITCH_COMMIT = "agent_restarted_before_dns_engine_switch_commit"
 # The owner-edit variant edits, between the kill and the Agent restart:
 #   config: appends FRESH_PRIMARY_V3_CONFIG_EDIT_LINE (one comment line) to the
@@ -5538,6 +5577,13 @@ class Settings:
     owner_release_recovery: bool = False
     # Stopped-BIND takeover prepared with --owner-directives.
     expect_owner_directives: bool = False
+    # Fresh paired PowerDNS primary with --zone-lifecycle and a reboot: the
+    # host runs the zone lifecycle before the reboot (ZONE_LIFECYCLE_BEFORE_REBOOT)
+    # and continues the suspended run with the lifecycle's outcome.
+    zone_lifecycle_before_reboot: bool = False
+    zone_lifecycle_outcome: str | None = None
+    # Bounded read-only wait for an idle host before the measured Begin.
+    host_idle_timeout: float = HOST_IDLE_TIMEOUT_DEFAULT
 
 
 def inspect_command_executable(
@@ -5839,6 +5885,12 @@ def reboot_keeps_target_started_precursor(settings: Settings) -> bool:
     )
 
 
+def continues_suspended_run(settings: Settings) -> bool:
+    """Resume after a reboot, or continuation after the host's zone lifecycle."""
+
+    return settings.resume_after_reboot or getattr(settings, "zone_lifecycle_outcome", None) is not None
+
+
 def validate_reboot_settings(settings: Settings) -> None:
     wants = settings.reboot_before_owner_command or settings.reboot_after_recovery
     if getattr(settings, "reboot_even_if_failed", False) and not settings.reboot_after_recovery:
@@ -5851,6 +5903,25 @@ def validate_reboot_settings(settings: Settings) -> None:
         raise ControllerError(
             "--disable-management-before-reboot requires --reboot-after-recovery on the "
             "rpc-retry flow (not the owner-inverse flow)"
+        )
+    lifecycle = getattr(settings, "zone_lifecycle_before_reboot", False) is True
+    outcome = getattr(settings, "zone_lifecycle_outcome", None)
+    if lifecycle and not (
+        settings.reboot_after_recovery
+        and is_fresh_primary_v3_cell(settings.cell)
+        and getattr(settings, "owner_edit", None) is None
+    ):
+        raise ControllerError(
+            "--zone-lifecycle-before-reboot applies only to a fresh paired PowerDNS primary "
+            "cell with --reboot-after-recovery and without an owner edit; nothing was started"
+        )
+    if outcome is not None and (
+        not lifecycle or settings.resume_after_reboot or outcome not in ZONE_LIFECYCLE_OUTCOMES
+    ):
+        raise ControllerError(
+            "--zone-lifecycle-outcome continues a run suspended by "
+            "--zone-lifecycle-before-reboot on the same boot; it excludes "
+            "--resume-after-reboot. Nothing was continued"
         )
     if not wants:
         if settings.resume_after_reboot or settings.reboot_dir is not None:
@@ -5889,7 +5960,7 @@ def validate_reboot_settings(settings: Settings) -> None:
         raise ControllerError(
             "--reboot-before-owner-command requires --owner-inverse-after-restart"
         )
-    if not settings.resume_after_reboot:
+    if not continues_suspended_run(settings):
         for ordinal in (1, 2):
             for label, path in reboot_checkpoint_paths(settings.reboot_dir, ordinal).items():
                 require_new_output_path(path, f"reboot {label} {ordinal}")
@@ -5902,6 +5973,9 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
         )
     if not valid_lower_hex(settings.nonce, 32, 128):
         raise ControllerError("nonce must be 32 to 128 lowercase hexadecimal characters")
+    idle_timeout = getattr(settings, "host_idle_timeout", HOST_IDLE_TIMEOUT_DEFAULT)
+    if not isinstance(idle_timeout, (int, float)) or not 0 < idle_timeout <= 3600:
+        raise ControllerError("--host-idle-timeout must be between 0 and 3600 seconds")
     require_real_directory(settings.command_cwd, "command working directory")
     require_real_directory(settings.state_dir, "agent state directory")
     require_clean_absolute(settings.mutation_lock, "mutation lock")
@@ -5918,7 +5992,7 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
     require_clean_absolute(settings.journal_path, "DNS switch journal")
     require_real_directory(os.path.dirname(settings.journal_path), "journal parent")
     validate_reboot_settings(settings)
-    if settings.resume_after_reboot:
+    if continues_suspended_run(settings):
         # The marker, proof and first transcript exist and are bound to the
         # checkpoint by hash; only the final result is still new. The agent
         # socket belongs to the Agent the boot started.
@@ -6176,6 +6250,7 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
             (SS_EXECUTABLE,), "socket statistics"
         )
         commands["gate_probe"] = list(fresh_primary_gate_probe_argv(settings))
+        commands["host_readiness"] = list(host_readiness_argv(settings))
     if getattr(settings, "owner_release_recovery", False):
         owner = inspect_command_executable(
             (OWNER_RECOVERY_EXECUTABLE,), "owner recovery", require_regular_path=True
@@ -9242,6 +9317,8 @@ def settings_fingerprint(settings: Settings) -> str:
 
     value = dataclasses.asdict(settings)
     value.pop("resume_after_reboot")
+    # The continuation after the host's zone lifecycle adds only its outcome.
+    value.pop("zone_lifecycle_outcome")
     return hashlib.sha256(
         json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -9413,6 +9490,17 @@ def load_pending_reboot_checkpoint(settings: Settings) -> tuple[int, dict[str, A
     return ordinal, checkpoint
 
 
+SUSPENDED_EXITS = (REBOOT_REQUESTED_EXIT, ZONE_LIFECYCLE_REQUESTED_EXIT)
+
+
+def suspended_exit(request: RebootRequested) -> int:
+    """Exit 5 asks the host for the zone lifecycle (same boot), 3 for a reboot."""
+
+    if request.stage == ZONE_LIFECYCLE_BEFORE_REBOOT:
+        return ZONE_LIFECYCLE_REQUESTED_EXIT
+    return REBOOT_REQUESTED_EXIT
+
+
 def request_reboot(
     settings: Settings, stage: str, result: dict[str, Any], state: Mapping[str, Any]
 ) -> None:
@@ -9533,6 +9621,37 @@ def maybe_request_reboot_after_recovery(
             }
             return
         diagnostic = True
+    if (
+        not diagnostic
+        and getattr(settings, "zone_lifecycle_before_reboot", False) is True
+        and state.get("zone_lifecycle") is None
+    ):
+        # Defined order: pass verdict -> zone lifecycle (Agent running, run by
+        # the host through the Agent's zone RPCs) -> disable management ->
+        # reboot. Suspend on this boot; nothing is disabled or rebooted yet.
+        boot = read_guest_boot_identity(settings.cell.cell_id)
+        result["zone_lifecycle_before_reboot"] = {
+            "requested": True,
+            "order": [
+                "complete pass verdict", "zone lifecycle (host, Agent running)",
+                "disable management (when requested)", "reboot both guests",
+                "DNS checks including the zone set after the lifecycle",
+            ],
+        }
+        raise RebootRequested(ZONE_LIFECYCLE_BEFORE_REBOOT, {**state, "boot": boot})
+    request_after_recovery_reboot(settings, result, environment, state, diagnostic=diagnostic)
+
+
+def request_after_recovery_reboot(
+    settings: Settings,
+    result: dict[str, Any],
+    environment: Mapping[str, str],
+    state: Mapping[str, Any],
+    *,
+    diagnostic: bool,
+) -> None:
+    """Observe the authority, disable management if requested, ask for the reboot."""
+
     authority_before = observe_serving_authority(settings, environment)
     management_before = observe_management_units(settings, environment)
     disabled: dict[str, Any] | None = None
@@ -9829,6 +9948,14 @@ def _verify_after_recovery_reboot(
         report["fresh_primary_pair"] = pair
         failures.extend(f"after reboot: pair: {item}" for item in pair["failures"])
         unknown.extend(f"after reboot: pair: {item}" for item in pair["unknown"])
+        lifecycle = state.get("zone_lifecycle")
+        if isinstance(lifecycle, dict) and lifecycle.get("outcome") == "passed":
+            # The zone set as it stands after the lifecycle: the re-added
+            # child on both servers, as read before the reboot.
+            child = check_fresh_primary_child(settings, lifecycle.get("child_before_reboot"))
+            report["fresh_primary_child"] = child
+            failures.extend(f"after reboot: zone set: {item}" for item in child["failures"])
+            unknown.extend(f"after reboot: zone set: {item}" for item in child["unknown"])
     if state.get("management_disabled") is True:
         verify_dns_alone_after_reboot(
             settings, state, report=report, result=result, transcript=transcript,
@@ -10123,6 +10250,12 @@ def resume_cell(settings: Settings) -> int:
     clean_base_environment = minimal_command_environment(os.environ)
     command_evidence = validate_settings(settings)
     ordinal, checkpoint = load_pending_reboot_checkpoint(settings)
+    if checkpoint["stage"] == ZONE_LIFECYCLE_BEFORE_REBOOT:
+        raise ControllerError(
+            f"reboot checkpoint {ordinal} waits for the host's zone lifecycle on the same "
+            "boot, not for a reboot; continue it with --zone-lifecycle-outcome. Nothing "
+            "was resumed"
+        )
     boot = read_guest_boot_identity(settings.cell.cell_id)
     boot_before = checkpoint["boot"]
     if boot["product_uuid"] != boot_before.get("product_uuid"):
@@ -10260,7 +10393,154 @@ def resume_cell(settings: Settings) -> int:
             boot=reboot_request.state["boot"],
             transcripts=transcripts,
         )
-        return REBOOT_REQUESTED_EXIT
+        return suspended_exit(reboot_request)
+    atomic_write_new_json(settings.result_path, result)
+    return {"passed": 0, "failed": 1, "unverified": 2}[result["status"]]
+
+
+def continue_after_zone_lifecycle(settings: Settings) -> int:
+    """Continue a run the controller suspended for the host's zone lifecycle.
+
+    Same boot only: the lifecycle and the pre-reboot observation belong to it.
+    A lifecycle that did not pass ends the run here, with the reboot not run
+    and the pre-reboot verdict kept; the host combines the lifecycle's own
+    verdict. A passed lifecycle is followed by this guest's own reading of
+    the child zone on both servers, then the unchanged after-recovery reboot
+    request (authority before, management disabled when requested). Nothing
+    here starts, cancels or retries a mutation.
+    """
+
+    validate_controller_identity()
+    clean_base_environment = minimal_command_environment(os.environ)
+    command_evidence = validate_settings(settings)
+    ordinal, checkpoint = load_pending_reboot_checkpoint(settings)
+    if checkpoint["stage"] != ZONE_LIFECYCLE_BEFORE_REBOOT:
+        raise ControllerError(
+            f"reboot checkpoint {ordinal} is at stage {checkpoint['stage']!r}, not the zone "
+            "lifecycle; nothing was continued"
+        )
+    boot = read_guest_boot_identity(settings.cell.cell_id)
+    boot_before = checkpoint["boot"]
+    if (
+        boot["product_uuid"] != boot_before.get("product_uuid")
+        or boot["boot_id"] != boot_before.get("boot_id")
+    ):
+        raise ControllerError(
+            "the guest rebooted or changed since it suspended for the zone lifecycle; the "
+            "lifecycle and the pre-reboot observation belong to one boot. Nothing was "
+            "continued"
+        )
+    if settings.reboot_dir is None:
+        raise ControllerError("continuation requires the explicit --reboot-dir")
+    paths = reboot_checkpoint_paths(settings.reboot_dir, ordinal)
+    outcome = settings.zone_lifecycle_outcome
+    record = {
+        "ordinal": ordinal,
+        "stage": checkpoint["stage"],
+        "boot_id": boot["boot_id"],
+        "product_uuid": boot["product_uuid"],
+        "checkpoint": {"path": paths["checkpoint"], "sha256": sha256_file(paths["checkpoint"])},
+        "continued_at": utc_now(),
+        "zone_lifecycle_outcome": outcome,
+    }
+    # Consumed exactly once, like a resume.
+    atomic_write_new_json(paths["resumed"], {"schema": REBOOT_RESUMED_SCHEMA, **record})
+    transcript = Transcript(paths["transcript"])
+    result: dict[str, Any] = checkpoint["result"]
+    failures = checkpoint["failures"]
+    safety_failures: list[str] = list(failures["safety"])
+    verification_failures: list[str] = list(failures["verification"])
+    diagnostic_failures: list[str] = list(failures["diagnostic"])
+    kill_proven = bool(checkpoint["kill_proven"])
+    lifecycle = result.setdefault("zone_lifecycle_before_reboot", {})
+    lifecycle.update({"outcome": outcome, "continuation": record})
+    result.setdefault("resumed_commands", []).append(command_evidence)
+    reboot_request: RebootRequested | None = None
+    try:
+        transcript.event("continued-after-zone-lifecycle", **record)
+        state = {key: value for key, value in checkpoint["state"].items() if key != "boot"}
+        if outcome != "passed":
+            result["reboot_after_recovery"] = {
+                "run": False,
+                "reason": (
+                    f"the host's zone lifecycle before the reboot ended {outcome!r} (its "
+                    "verdict is judged on the host, zone-lifecycle.json); the reboot is "
+                    "defined only after a passing lifecycle and was not run; management "
+                    "was left running"
+                ),
+            }
+        else:
+            child = check_fresh_primary_child(settings)
+            lifecycle["child_before_reboot"] = child
+            if child["failures"] or child["unknown"]:
+                verification_failures.extend(
+                    f"zone set before reboot unknown: {item}" for item in child["unknown"])
+                if child["failures"]:
+                    verification_failures.extend(
+                        f"zone set before reboot: {item}" for item in child["failures"])
+                result["status"] = "failed" if child["failures"] else "unverified"
+                result["reboot_after_recovery"] = {
+                    "run": False,
+                    "reason": (
+                        "this guest's own reading of the zone set after the lifecycle does "
+                        "not match the lifecycle's last step; the reboot was not run"
+                    ),
+                }
+            else:
+                request_after_recovery_reboot(
+                    settings, result, clean_base_environment,
+                    {**state, "zone_lifecycle": {
+                        "outcome": outcome,
+                        "child_before_reboot": {
+                            "primary": child["primary"], "secondary": child["secondary"],
+                        },
+                    }},
+                    diagnostic=False,
+                )
+    except RebootRequested as request:
+        reboot_request = request
+        transcript.event("reboot-requested", stage=request.stage)
+    except (ControllerError, OSError, subprocess.SubprocessError) as exc:
+        transcript.event("cell-error", error_type=type(exc).__name__, error=str(exc),
+                         kill_proven=kill_proven)
+        verification_failures.append(str(exc))
+        result["status"] = "unverified"
+        result["safety_status"] = "unverified"
+    finally:
+        result["kill_proven"] = kill_proven
+        result["failures"] = safety_failures
+        result["safety_failures"] = safety_failures
+        result["verification_failures"] = verification_failures
+        result["diagnostic_failures"] = diagnostic_failures
+        result["finished_at"] = utc_now()
+        transcript.event(
+            "cell-suspended-for-reboot" if reboot_request is not None else "cell-finish",
+            status=result.get("status"),
+            safety_status=result.get("safety_status"),
+            kill_proven=kill_proven,
+            safety_failures=safety_failures,
+            verification_failures=verification_failures,
+            diagnostic_failures=diagnostic_failures,
+        )
+        transcript.close()
+    transcripts = list(checkpoint["transcripts"]) + [
+        {"path": paths["transcript"], "sha256": sha256_file(paths["transcript"])}
+    ]
+    result["transcripts_after_reboot"] = transcripts[1:]
+    if reboot_request is not None:
+        write_reboot_checkpoint(
+            settings,
+            ordinal + 1,
+            reboot_request,
+            result,
+            kill_proven=kill_proven,
+            safety_failures=safety_failures,
+            verification_failures=verification_failures,
+            diagnostic_failures=diagnostic_failures,
+            boot=reboot_request.state["boot"],
+            transcripts=transcripts,
+        )
+        return suspended_exit(reboot_request)
     atomic_write_new_json(settings.result_path, result)
     return {"passed": 0, "failed": 1, "unverified": 2}[result["status"]]
 
@@ -10409,6 +10689,149 @@ def query_dns_rrset(
     return results
 
 
+DNS_TYPE_NAMES = {value: name for name, value in DNS_TYPES.items()}
+
+
+def _read_dns_name(message: bytes, offset: int) -> tuple[str, int]:
+    """One (possibly compressed) domain name as text, and the offset after it."""
+
+    labels: list[str] = []
+    cursor = offset
+    after: int | None = None
+    jumps = 0
+    while True:
+        if cursor >= len(message):
+            raise ControllerError("DNS name is truncated")
+        length = message[cursor]
+        if length & 0xC0 == 0xC0:
+            if cursor + 1 >= len(message):
+                raise ControllerError("DNS name pointer is truncated")
+            if after is None:
+                after = cursor + 2
+            jumps += 1
+            if jumps > 32:
+                raise ControllerError("DNS name compression loops")
+            cursor = ((length & 0x3F) << 8) | message[cursor + 1]
+            continue
+        if length & 0xC0:
+            raise ControllerError("DNS name has an unsupported label type")
+        cursor += 1
+        if length == 0:
+            break
+        if cursor + length > len(message):
+            raise ControllerError("DNS label is truncated")
+        labels.append(message[cursor:cursor + length].decode("ascii", errors="replace"))
+        cursor += length
+    return (".".join(labels) + ".") if labels else ".", after if after is not None else cursor
+
+
+def _dns_rdata_text(message: bytes, offset: int, length: int, rtype: int) -> str:
+    data = message[offset:offset + length]
+    if rtype == DNS_TYPES["A"] and length == 4:
+        return str(ipaddress.IPv4Address(data))
+    if rtype == DNS_TYPES["AAAA"] and length == 16:
+        return str(ipaddress.IPv6Address(data))
+    if rtype == DNS_TYPES["NS"]:
+        return _read_dns_name(message, offset)[0]
+    if rtype == DNS_TYPES["SOA"]:
+        mname, cursor = _read_dns_name(message, offset)
+        rname, cursor = _read_dns_name(message, cursor)
+        if cursor + 20 > offset + length:
+            raise ControllerError("SOA data is truncated")
+        numbers = struct.unpack("!IIIII", message[cursor:cursor + 20])
+        return " ".join([mname, rname, *(str(number) for number in numbers)])
+    return "\\# " + str(length) + (" " + data.hex() if data else "")
+
+
+def parse_dns_answer_section(
+    raw: bytes, transaction_id: int, qtype: str, transport: str
+) -> dict[str, Any]:
+    """The full answer section of an authoritative reply plus the judged values.
+
+    ``values`` is exactly what parse_dns_rrset returns for the same reply (SOA
+    serials or A addresses); ``answers`` lists every answer record as text so a
+    reader sees expected versus observed without the code.
+    """
+
+    header = validate_dns_response(raw, transaction_id, transport)
+    offset = _skip_dns_name(raw, 12) + 4
+    answers: list[dict[str, Any]] = []
+    for _ in range(header["answers"]):
+        owner, offset = _read_dns_name(raw, offset)
+        if offset + 10 > len(raw):
+            raise ControllerError(f"{transport} DNS answer is truncated")
+        rtype, rclass, ttl, length = struct.unpack("!HHIH", raw[offset:offset + 10])
+        offset += 10
+        if offset + length > len(raw):
+            raise ControllerError(f"{transport} DNS answer data is truncated")
+        answers.append({
+            "name": owner,
+            "type": DNS_TYPE_NAMES.get(rtype, f"TYPE{rtype}"),
+            "class": "IN" if rclass == 1 else f"CLASS{rclass}",
+            "ttl": ttl,
+            "rdata": _dns_rdata_text(raw, offset, length, rtype),
+        })
+        offset += length
+    return {
+        "transport": transport,
+        "aa": bool(header["flags"] & 0x0400),
+        "rcode": header["flags"] & 0x000F,
+        "answer_count": header["answers"],
+        "authority_count": header["authority"],
+        "additional_count": header["additional"],
+        "answers": answers,
+        "values": parse_dns_rrset(raw, transaction_id, qtype, transport),
+    }
+
+
+def _dns_exchange(
+    address: str, port: int, name: str, qtype: str, timeout: float, transport: str
+) -> tuple[bytes, int]:
+    parsed = ipaddress.ip_address(address)
+    family = socket.AF_INET if parsed.version == 4 else socket.AF_INET6
+    destination: tuple[Any, ...] = (
+        (address, port) if family == socket.AF_INET else (address, port, 0, 0)
+    )
+    transaction_id = secrets.randbelow(65535) + 1
+    query = build_dns_query(name, qtype, transaction_id)
+    if transport == "udp":
+        with socket.socket(family, socket.SOCK_DGRAM) as udp:
+            udp.settimeout(timeout)
+            udp.connect(destination)
+            udp.sendall(query)
+            return udp.recv(65535), transaction_id
+    with socket.socket(family, socket.SOCK_STREAM) as tcp:
+        tcp.settimeout(timeout)
+        tcp.connect(destination)
+        tcp.sendall(struct.pack("!H", len(query)) + query)
+        length = struct.unpack("!H", _recv_exact(tcp, 2))[0]
+        if length == 0:
+            raise ControllerError("TCP DNS response has zero length")
+        return _recv_exact(tcp, length), transaction_id
+
+
+def query_dns_observation(
+    address: str, port: int, name: str, qtype: str, timeout: float
+) -> dict[str, Any]:
+    """Where the query went and the full answer section, UDP and TCP.
+
+    Raises like query_dns_rrset when a reply is not an authoritative answer;
+    the judged values are under ``<transport>.values``.
+    """
+
+    observation: dict[str, Any] = {
+        "server": address, "port": port, "qname": name, "qtype": qtype,
+    }
+    for transport in ("udp", "tcp"):
+        raw, transaction_id = _dns_exchange(address, port, name, qtype, timeout, transport)
+        observation[transport] = parse_dns_answer_section(raw, transaction_id, qtype, transport)
+    return observation
+
+
+def observation_values(observation: Mapping[str, Any]) -> dict[str, list[Any]]:
+    return {transport: list(observation[transport]["values"]) for transport in ("udp", "tcp")}
+
+
 def peer_catalog_name(peer_ip: str) -> str:
     """binddns.CatalogDomain: catalog-<hex(IPv4)>.celikpanel.invalid."""
 
@@ -10478,6 +10901,9 @@ def check_secondary_serving(settings: Settings, peer_ip: str) -> dict[str, Any]:
         )
         return report
     secondary = report["secondary"]
+    # Expected RDATA here is the native primary peer's zone (native_primary_peer
+    # member_zone_records: www A is the primary's peer-link address, peer_ip),
+    # not --dns-address, which is only where this guest is queried.
     for transport in ("udp", "tcp"):
         if secondary["soa"][transport] != [PAIRED_SECONDARY_PRIMARY_SERIAL]:
             report["failures"].append(
@@ -11079,6 +11505,206 @@ def run_fresh_primary_gate_probe(
     return report
 
 
+def host_readiness_argv(settings: Settings) -> tuple[str, ...]:
+    if settings.trigger_command is None:
+        raise ControllerError("the host readiness probe needs the socket trigger executable")
+    seconds = max(1, min(15, int(settings.endpoint_timeout) or 15))
+    return (settings.trigger_command[0], "rpc-host-readiness", "--timeout", f"{seconds}s")
+
+
+def decode_host_readiness(command: CommandResult) -> dict[str, Any]:
+    """ready is True/False only with exit 0 and the exact schema; else None."""
+
+    report: dict[str, Any] = {"returncode": command.returncode, "ready": None}
+    try:
+        value = _last_json_line(command.output, "host readiness probe")
+    except ControllerError as exc:
+        return {**report, "error": str(exc)}
+    if value.get("schema") != HOST_READINESS_SCHEMA or command.returncode != 0 or not isinstance(
+        value.get("ready"), bool
+    ):
+        return {**report, "error": str(value.get("error") or "the readiness answer is not exact"),
+                "answer": value}
+    report.update({
+        "ready": value["ready"], "code": value.get("code", ""), "reason": value.get("reason", ""),
+    })
+    return report
+
+
+def _proc_comm(proc_root: str, pid: str) -> str | None:
+    try:
+        with open(os.path.join(proc_root, pid, "comm"), encoding="utf-8", errors="replace") as stream:
+            return stream.read(64).rstrip("\r\n")
+    except OSError:
+        return None
+
+
+def observe_host_activity(
+    state_dir: str, *, proc_root: str = "/proc",
+    lock_paths: Sequence[str] = PACKAGE_MANAGER_LOCK_PATHS,
+    pacman_lock: str = PACMAN_LOCK_PATH,
+) -> dict[str, Any]:
+    """Read-only: what could be holding the host (never starts or stops anything).
+
+    The ledger's active request and its job, the package-manager processes and
+    the holders of the package-manager locks the Agent's own probe reads
+    (from /proc/locks), and the pacman lock file.
+    """
+
+    report: dict[str, Any] = {"unknown": []}
+    path = os.path.join(state_dir, "service-mutations.json")
+    try:
+        ledger, _ = secure_read_json(
+            path, "service-mutation ledger", maximum=1 << 20, required_mode=0o600,
+            required_uid=0,
+        )
+        active = ledger.get("active_request_id", "") if isinstance(ledger, dict) else ""
+        report["ledger_active_request_id"] = active
+        job = (ledger.get("jobs") or {}).get(active) if active and isinstance(ledger, dict) else None
+        if isinstance(job, dict):
+            report["ledger_active_job"] = {
+                key: job.get(key) for key in (
+                    "kind", "target", "package_name", "status", "phase", "attempt",
+                    "started_at", "updated_at", "lease_expires_at", "worker_pid",
+                )
+            }
+    except (ControllerError, OSError, AttributeError) as exc:
+        report["unknown"].append(f"service-mutation ledger: {exc}")
+    processes: list[dict[str, Any]] = []
+    try:
+        for pid in sorted((name for name in os.listdir(proc_root) if name.isdecimal()), key=int):
+            comm = _proc_comm(proc_root, pid)
+            if comm in PACKAGE_MANAGER_PROCESSES:
+                processes.append({"pid": int(pid), "comm": comm})
+    except OSError as exc:
+        report["unknown"].append(f"process table: {exc}")
+    report["package_manager_processes"] = processes
+    inodes: dict[tuple[int, int, int], str] = {}
+    for lock in lock_paths:
+        try:
+            status = os.stat(lock)
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            report["unknown"].append(f"{lock}: {exc}")
+            continue
+        inodes[(os.major(status.st_dev), os.minor(status.st_dev), status.st_ino)] = lock
+    holders: list[dict[str, Any]] = []
+    try:
+        with open(os.path.join(proc_root, "locks"), encoding="ascii", errors="replace") as stream:
+            for line in stream:
+                fields = line.split()
+                # "1: POSIX  ADVISORY  WRITE 1234 08:01:131090 0 EOF"
+                device = next((field for field in fields if field.count(":") == 2), None)
+                if device is None or len(fields) < 5:
+                    continue
+                major, minor, inode = device.split(":")
+                try:
+                    key = (int(major, 16), int(minor, 16), int(inode))
+                    pid = fields[fields.index(device) - 1]
+                except ValueError:
+                    continue
+                if key in inodes:
+                    holders.append({"path": inodes[key], "pid": int(pid) if pid.isdecimal() else pid,
+                                    "comm": _proc_comm(proc_root, pid), "lock": " ".join(fields[1:4])})
+    except OSError as exc:
+        report["unknown"].append(f"/proc/locks: {exc}")
+    report["package_manager_lock_holders"] = holders
+    report["pacman_lock_present"] = os.path.lexists(pacman_lock)
+    return report
+
+
+def wait_for_host_idle(
+    settings: Settings,
+    environment: Mapping[str, str],
+    transcript: Any,
+    *,
+    probe: Any = None,
+    activity: Any = None,
+    clock: Any = time.monotonic,
+    sleep: Any = time.sleep,
+) -> dict[str, Any]:
+    """Bounded, read-only wait for the Agent to report the host idle.
+
+    Uses the product's own advisory Agent.ServiceMutationReadiness (the idle
+    check BeginServiceMutation repeats: ledger active request, host lock,
+    package manager). Records what was running and for how long. Requires
+    HOST_IDLE_SETTLE_ANSWERS consecutive idle answers. Never begins, finishes
+    or cancels anything.
+    """
+
+    if probe is None:
+        def probe() -> dict[str, Any]:
+            try:
+                command = run_bounded_command(
+                    host_readiness_argv(settings), "host-readiness", settings.command_timeout,
+                    environment, settings.command_cwd, transcript,
+                )
+            except (ControllerError, OSError) as exc:
+                return {"ready": None, "error": f"the readiness probe did not run: {exc}"}
+            return decode_host_readiness(command)
+    if activity is None:
+        def activity() -> dict[str, Any]:
+            return observe_host_activity(settings.state_dir)
+    timeout = float(getattr(settings, "host_idle_timeout", HOST_IDLE_TIMEOUT_DEFAULT))
+    started = clock()
+    report: dict[str, Any] = {
+        "timeout_seconds": timeout, "settle_answers": HOST_IDLE_SETTLE_ANSWERS,
+        "source": "Agent.ServiceMutationReadiness (read-only) and /proc, ledger reads",
+        "polls": 0, "idle": False, "busy": [],
+    }
+    consecutive = 0
+    current: dict[str, Any] | None = None
+    while True:
+        answer = probe()
+        report["polls"] += 1
+        elapsed = round(clock() - started, 3)
+        if answer.get("ready") is True:
+            consecutive += 1
+            current = None
+            if consecutive >= HOST_IDLE_SETTLE_ANSWERS:
+                report.update({"idle": True, "waited_seconds": elapsed})
+                break
+        else:
+            consecutive = 0
+            key = (answer.get("code"), answer.get("reason"), answer.get("error"))
+            if current is None or current["key"] != key:
+                current = {
+                    "key": key, "code": answer.get("code"), "reason": answer.get("reason"),
+                    "error": answer.get("error"), "first_seen_seconds": elapsed,
+                    "activity": activity(),
+                }
+                report["busy"].append(current)
+            current["last_seen_seconds"] = elapsed
+        if clock() - started >= timeout:
+            report["waited_seconds"] = round(clock() - started, 3)
+            break
+        sleep(HOST_IDLE_POLL_SECONDS)
+    for item in report["busy"]:
+        item.pop("key", None)
+        item["seconds"] = round(item.get("last_seen_seconds", 0) - item["first_seen_seconds"], 3)
+    if not report["idle"]:
+        report["last_activity"] = activity()
+    transcript.event("host-idle-wait", **{k: v for k, v in report.items() if k != "busy"},
+                     busy=report["busy"])
+    return report
+
+
+def host_idle_refusal(report: Mapping[str, Any]) -> str:
+    seen = "; ".join(
+        f"{item.get('reason') or item.get('code') or 'unknown'}"
+        + (f" ({item['error']})" if item.get("error") else "")
+        + f" for {item.get('seconds', 0)} s"
+        for item in report.get("busy", [])
+    ) or "no idle answer"
+    return (
+        f"the host did not become idle within {report.get('timeout_seconds')} seconds before "
+        f"the measured operation ({seen}); nothing was started or cancelled, so the cut was "
+        "never reached. Next step: read host_idle_before_trigger in result.json (what was "
+        "running), let that task finish, then run the cell again on a fresh fixture"
+    )
+
+
 def _snapshot_sha256(snapshot: Mapping[str, Any]) -> str | None:
     digest = snapshot.get("sha256")
     if isinstance(digest, str) and valid_sha256(digest):
@@ -11405,46 +12031,144 @@ def observe_fresh_primary_restart(
     return report
 
 
-def check_fresh_primary_pair(settings: Settings) -> dict[str, Any]:
-    """The native BIND secondary answers with this primary's data (UDP and TCP).
+def fresh_primary_expected_pair(scenario: Mapping[str, Any]) -> dict[str, Any]:
+    """The member records the prepared scenario publishes (pure).
 
-    Polls up to the endpoint timeout for the secondary to transfer; the
-    primary's own answers are judged at once.
+    The pass definition compares both servers' answers with these records;
+    --dns-address is only where the controller sends the primary's queries.
+    """
+
+    zones = [
+        zone for zone in scenario.get("zones") or []
+        if isinstance(zone, dict) and zone.get("domain") == PAIRED_SECONDARY_ZONE
+        and zone.get("delete") is not True
+    ]
+    if len(zones) != 1:
+        raise ControllerError(
+            f"the scenario does not define exactly one published {PAIRED_SECONDARY_ZONE} zone")
+    records = [record for record in zones[0].get("records") or [] if isinstance(record, dict)]
+
+    def matching(name: str, kind: str) -> list[dict[str, Any]]:
+        return [
+            record for record in records
+            if str(record.get("name", "")).rstrip(".").lower() == name
+            and record.get("type") == kind and record.get("disabled") is not True
+        ]
+
+    soa = matching(PAIRED_SECONDARY_ZONE, "SOA")
+    www = matching(PAIRED_SECONDARY_QUERY, "A")
+    if len(soa) != 1 or not www:
+        raise ControllerError(
+            f"the scenario zone has {len(soa)} SOA and {len(www)} {PAIRED_SECONDARY_QUERY} A "
+            "records; the pass definition needs one SOA and at least one A")
+    fields = str(soa[0].get("content", "")).split()
+    try:
+        serial = int(fields[2])
+        addresses = sorted(str(ipaddress.IPv4Address(str(item.get("content")))) for item in www)
+    except (IndexError, ValueError) as exc:
+        raise ControllerError(f"the scenario's member records are not exact: {exc}") from exc
+    return {
+        "source": f"scenario zones[domain={PAIRED_SECONDARY_ZONE}].records",
+        "member_soa": [serial],
+        "www_a": addresses,
+        "records": [
+            {key: record.get(key) for key in ("name", "type", "content", "ttl")}
+            for record in soa + www
+        ],
+    }
+
+
+def load_fresh_primary_expected_pair(settings: Settings) -> dict[str, Any]:
+    """Expected RRsets from the very scenario document the cell publishes."""
+
+    if settings.trigger_command is None:
+        raise ControllerError("the pair check needs the socket trigger's scenario")
+    path = socket_trigger_retry_contract(
+        settings.trigger_command, settings.recovery_command)["scenario_path"]
+    scenario, evidence = validate_source_scenario(path, settings.cell)
+    expected = fresh_primary_expected_pair(scenario)
+    expected["scenario"] = {"path": evidence["path"], "sha256": evidence["sha256"]}
+    return expected
+
+
+FRESH_PRIMARY_PAIR_QUERIES = (
+    ("member_soa", PAIRED_SECONDARY_ZONE, "SOA"),
+    ("www_a", PAIRED_SECONDARY_QUERY, "A"),
+    ("catalog_soa", FRESH_PRIMARY_V3_CATALOG, "SOA"),
+)
+
+
+def _observe_server(address: str, queries: Sequence[tuple[str, str, str]], timeout: float
+                    ) -> dict[str, Any]:
+    return {label: query_dns_observation(address, 53, name, kind, timeout)
+            for label, name, kind in queries}
+
+
+def _server_values(observed: Mapping[str, Any]) -> dict[str, dict[str, list[Any]]]:
+    return {label: observation_values(item) for label, item in observed.items()}
+
+
+def check_fresh_primary_pair(
+    settings: Settings, expected: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    """Both servers answer the scenario's member records (UDP and TCP).
+
+    Expected RRsets come from the prepared scenario (member SOA serial and
+    www A), never from --dns-address, which is only the address the primary's
+    queries are sent to. The catalog SOA serial must be equal on both servers
+    and equal to the state receipt's. Polls up to the endpoint timeout for the
+    secondary to transfer; the primary's answers are judged at once. Every
+    query records its server address and full answer section.
     """
 
     report: dict[str, Any] = {"failures": [], "unknown": []}
     timeout = settings.dns_timeout
     local, peer = settings.dns_address, FRESH_PRIMARY_V3_PEER_IP
-    queries = (
-        ("member_soa", PAIRED_SECONDARY_ZONE, "SOA"),
-        ("www_a", PAIRED_SECONDARY_QUERY, "A"),
-        ("catalog_soa", FRESH_PRIMARY_V3_CATALOG, "SOA"),
-    )
-
-    def observe(address: str) -> dict[str, Any]:
-        return {label: query_dns_rrset(address, 53, name, kind, timeout)
-                for label, name, kind in queries}
-
+    report["query_targets"] = {
+        "primary": local, "secondary": peer,
+        "note": "addresses the queries were sent to; the expected answers are the scenario's",
+    }
+    if expected is None:
+        try:
+            expected = load_fresh_primary_expected_pair(settings)
+        except (ControllerError, OSError) as exc:
+            report["unknown"].append(f"the scenario's expected records could not be read: {exc}")
+            expected = None
+    report["expected"] = dict(expected) if expected is not None else None
     try:
-        primary = observe(local)
-        report["primary"] = primary
+        primary_observed = _observe_server(local, FRESH_PRIMARY_PAIR_QUERIES, timeout)
     except (ControllerError, OSError) as exc:
-        report["failures"].append(f"the primary does not answer authoritatively: {exc}")
+        report["failures"].append(
+            f"the primary (queried at {local}) does not answer authoritatively: {exc}")
         return report
-    for transport in ("udp", "tcp"):
-        if primary["member_soa"][transport] != [PAIRED_SECONDARY_PRIMARY_SERIAL]:
-            report["failures"].append(
-                f"primary {transport} member SOA {primary['member_soa'][transport]}")
-        if primary["www_a"][transport] != [local]:
-            report["failures"].append(f"primary {transport} www A {primary['www_a'][transport]}")
+    primary = _server_values(primary_observed)
+    report["primary"] = primary
+    report["observations"] = {"primary": primary_observed}
+
+    def judge(role: str, address: str, values: Mapping[str, Any]) -> None:
+        for transport in ("udp", "tcp"):
+            if expected is not None:
+                for label in ("member_soa", "www_a"):
+                    if values[label][transport] != expected[label]:
+                        report["failures"].append(
+                            f"{role} {transport} {label} {values[label][transport]} (queried at "
+                            f"{address}); the scenario publishes {expected[label]}")
+            if values["catalog_soa"][transport] != primary["catalog_soa"]["udp"]:
+                report["failures"].append(
+                    f"{role} {transport} catalog SOA {values['catalog_soa'][transport]} (queried "
+                    f"at {address}) differs from the primary's {primary['catalog_soa']['udp']}")
+
+    judge("primary", local, primary)
     deadline = time.monotonic() + settings.endpoint_timeout
     attempts = 0
     secondary: dict[str, Any] | None = None
+    secondary_observed: dict[str, Any] | None = None
     last_error = ""
     while True:
         attempts += 1
         try:
-            secondary = observe(peer)
+            secondary_observed = _observe_server(peer, FRESH_PRIMARY_PAIR_QUERIES, timeout)
+            secondary = _server_values(secondary_observed)
             if secondary == primary:
                 break
         except (ControllerError, OSError) as exc:
@@ -11454,20 +12178,114 @@ def check_fresh_primary_pair(settings: Settings) -> dict[str, Any]:
         time.sleep(1.0)
     report["secondary_attempts"] = attempts
     report["secondary"] = secondary
+    report["observations"]["secondary"] = secondary_observed
     if secondary is None:
         report["failures"].append(
-            f"the native BIND secondary does not answer authoritatively: {last_error}")
-    elif secondary != primary:
-        report["failures"].append("the secondary's member or catalog answers differ from the primary's")
+            f"the native BIND secondary (queried at {peer}) does not answer "
+            f"authoritatively: {last_error}")
+    else:
+        judge("secondary", peer, secondary)
+        if secondary != primary:
+            report["failures"].append(
+                "the secondary's member or catalog answers differ from the primary's")
     try:
         state = read_dns_state_optional(settings.state_dir)
         report["state_catalog_serial"] = state.get("semantic", {}).get("primary_catalog_serial")
-        if report["state_catalog_serial"] is not None and primary["catalog_soa"]["udp"] != [
-            report["state_catalog_serial"]
-        ]:
-            report["failures"].append("the served catalog serial differs from the state receipt")
+        if report["state_catalog_serial"] is None:
+            report["unknown"].append("the DNS state receipt names no primary catalog serial")
+        else:
+            for transport in ("udp", "tcp"):
+                if primary["catalog_soa"][transport] != [report["state_catalog_serial"]]:
+                    report["failures"].append(
+                        f"the primary's {transport} catalog serial "
+                        f"{primary['catalog_soa'][transport]} differs from the state "
+                        f"receipt's {report['state_catalog_serial']}")
     except ControllerError as exc:
         report["unknown"].append(f"DNS state receipt: {exc}")
+    return report
+
+
+FRESH_PRIMARY_CHILD_QUERIES = (
+    ("soa_serial", FRESH_PRIMARY_V3_CHILD_ZONE, "SOA"),
+    ("www_a", FRESH_PRIMARY_V3_CHILD_QUERY, "A"),
+)
+
+
+def check_fresh_primary_child(
+    settings: Settings, baseline: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    """The zone set after the lifecycle: the re-added child on both servers.
+
+    Expected: FRESH_PRIMARY_V3_CHILD_AFTER_LIFECYCLE (the lifecycle's last
+    step), identical on primary and secondary over UDP and TCP, SOA serials
+    equal between the two; with ``baseline`` (the reading taken before the
+    reboot) also equal to it. Polls the secondary up to the endpoint timeout.
+    """
+
+    report: dict[str, Any] = {
+        "failures": [], "unknown": [],
+        "expected": {"zone": FRESH_PRIMARY_V3_CHILD_ZONE, **FRESH_PRIMARY_V3_CHILD_AFTER_LIFECYCLE,
+                     "source": "zone lifecycle last step (re-add)"},
+        "query_targets": {"primary": settings.dns_address, "secondary": FRESH_PRIMARY_V3_PEER_IP},
+    }
+    timeout = settings.dns_timeout
+    observed: dict[str, Any] = {}
+
+    def values_at(address: str) -> dict[str, Any]:
+        item = _observe_server(address, FRESH_PRIMARY_CHILD_QUERIES, timeout)
+        observed[address] = item
+        return _server_values(item)
+
+    try:
+        primary = values_at(settings.dns_address)
+    except (ControllerError, OSError) as exc:
+        report["failures"].append(
+            f"the primary (queried at {settings.dns_address}) does not answer "
+            f"{FRESH_PRIMARY_V3_CHILD_ZONE} authoritatively: {exc}")
+        report["observations"] = observed
+        return report
+    deadline = time.monotonic() + settings.endpoint_timeout
+    secondary: dict[str, Any] | None = None
+    last_error = ""
+    attempts = 0
+    while True:
+        attempts += 1
+        try:
+            secondary = values_at(FRESH_PRIMARY_V3_PEER_IP)
+            if secondary == primary:
+                break
+        except (ControllerError, OSError) as exc:
+            last_error = str(exc)
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(1.0)
+    report.update({"primary": primary, "secondary": secondary,
+                   "secondary_attempts": attempts, "observations": observed})
+    if secondary is None:
+        report["failures"].append(
+            f"the native BIND secondary (queried at {FRESH_PRIMARY_V3_PEER_IP}) does not "
+            f"answer {FRESH_PRIMARY_V3_CHILD_ZONE} authoritatively: {last_error}")
+    for role, address, values in (
+        ("primary", settings.dns_address, primary),
+        ("secondary", FRESH_PRIMARY_V3_PEER_IP, secondary),
+    ):
+        if values is None:
+            continue
+        for label, wanted in FRESH_PRIMARY_V3_CHILD_AFTER_LIFECYCLE.items():
+            for transport in ("udp", "tcp"):
+                if values[label][transport] != wanted:
+                    report["failures"].append(
+                        f"{role} {transport} {FRESH_PRIMARY_V3_CHILD_ZONE} {label} "
+                        f"{values[label][transport]} (queried at {address}); the lifecycle's "
+                        f"last step publishes {wanted}")
+        if baseline is not None and isinstance(baseline.get(role), dict):
+            if values != baseline[role]:
+                report["failures"].append(
+                    f"{role} {FRESH_PRIMARY_V3_CHILD_ZONE} answers changed across the reboot: "
+                    f"{baseline[role]} -> {values}")
+    if secondary is not None and secondary != primary:
+        report["failures"].append(
+            f"the secondary's {FRESH_PRIMARY_V3_CHILD_ZONE} answers differ from the primary's")
     return report
 
 
@@ -12448,6 +13266,13 @@ def run_cell(settings: Settings) -> int:
                         "the fresh paired-primary gate could not be established before any "
                         f"mutation: {gate.get('detail')}"
                     )
+                # Batch 8 c08: Begin was refused HOST_MUTATION_BUSY 0.1 s after
+                # the Agent started. Wait, read-only and bounded, for the
+                # Agent to report the host idle; never start or cancel.
+                idle = wait_for_host_idle(settings, ordinary, transcript)
+                result["host_idle_before_trigger"] = idle
+                if not idle["idle"]:
+                    raise ControllerError(host_idle_refusal(idle))
             trigger = start_async_command(
                 settings.trigger_command,
                 ordinary,
@@ -13288,7 +14113,7 @@ def run_cell(settings: Settings) -> int:
             boot=reboot_request.state["boot"],
             transcripts=[result["transcript"]],
         )
-        return REBOOT_REQUESTED_EXIT
+        return suspended_exit(reboot_request)
     atomic_write_new_json(settings.result_path, result)
     if gate_closed is not None:
         return GATE_CLOSED_EXIT
@@ -13418,6 +14243,30 @@ def build_argument_parser() -> argparse.ArgumentParser:
         help=(
             "stopped-BIND takeover prepared with --owner-directives: prove the owner's "
             "directives before launch and the byte-identical rollback before the retry"
+        ),
+    )
+    parser.add_argument(
+        "--zone-lifecycle-before-reboot", action="store_true",
+        help=(
+            "fresh paired PowerDNS primary with --reboot-after-recovery: after a "
+            "complete pass suspend with exit 5 (no reboot) so the host runs the zone "
+            "lifecycle with the Agent running; the host continues with "
+            "--zone-lifecycle-outcome, then management is disabled (if requested) "
+            "and the reboot follows"
+        ),
+    )
+    parser.add_argument(
+        "--zone-lifecycle-outcome", choices=ZONE_LIFECYCLE_OUTCOMES, default=None,
+        help=(
+            "continue the run suspended at the zone-lifecycle stage on the same boot "
+            "with the host's lifecycle outcome"
+        ),
+    )
+    parser.add_argument(
+        "--host-idle-timeout", type=float, default=HOST_IDLE_TIMEOUT_DEFAULT,
+        help=(
+            "fresh paired PowerDNS primary: seconds to wait (read-only) for the Agent "
+            "to report the host idle before the measured BeginServiceMutation"
         ),
     )
     parser.add_argument(
@@ -13580,6 +14429,9 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         owner_edit=args.owner_edit,
         owner_release_recovery=args.owner_release_recovery,
         expect_owner_directives=args.expect_owner_directives,
+        zone_lifecycle_before_reboot=args.zone_lifecycle_before_reboot,
+        zone_lifecycle_outcome=args.zone_lifecycle_outcome,
+        host_idle_timeout=args.host_idle_timeout,
         native_dns_status_command=(
             parse_command_json(args.native_dns_status_command, "native DNS status command")
             if args.native_dns_status_command is not None else None
@@ -13599,9 +14451,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_argument_parser().parse_args(argv)
     try:
         settings = settings_from_args(args)
-        exit_code = (
-            resume_cell(settings) if settings.resume_after_reboot else run_cell(settings)
-        )
+        if settings.resume_after_reboot:
+            exit_code = resume_cell(settings)
+        elif settings.zone_lifecycle_outcome is not None:
+            exit_code = continue_after_zone_lifecycle(settings)
+        else:
+            exit_code = run_cell(settings)
     except (ControllerError, OSError, subprocess.SubprocessError) as exc:
         print(
             json.dumps(
@@ -13622,13 +14477,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "cell_id": settings.cell.cell_id,
                 "exit_code": exit_code,
                 "result": (
-                    settings.result_path if exit_code != REBOOT_REQUESTED_EXIT else None
+                    settings.result_path if exit_code not in SUSPENDED_EXITS else None
                 ),
                 "proof": settings.proof_path if exit_code not in (2, GATE_CLOSED_EXIT) else None,
                 "transcript": settings.transcript_path,
                 **(
                     {"reboot_requested": True, "reboot_dir": settings.reboot_dir}
                     if exit_code == REBOOT_REQUESTED_EXIT
+                    else {"zone_lifecycle_requested": True, "reboot_dir": settings.reboot_dir}
+                    if exit_code == ZONE_LIFECYCLE_REQUESTED_EXIT
                     else {}
                 ),
             },

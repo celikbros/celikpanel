@@ -433,29 +433,39 @@ class JudgementTest(unittest.TestCase):
         self.assertTrue(judge(700, [1])["failures"])
 
     def test_pair_check_requires_the_secondary_to_mirror_the_primary(self) -> None:
+        # The primary is queried at the QEMU management address; the expected
+        # www A is the scenario's record (batch 8 failed on this distinction).
         member = {"udp": [2026083101], "tcp": [2026083101]}
         www = {"udp": ["192.0.2.10"], "tcp": ["192.0.2.10"]}
         catalog = {"udp": [1790588837], "tcp": [1790588837]}
+        expected = {"member_soa": [2026083101], "www_a": ["192.0.2.10"]}
+
+        def observed(address, name, kind, values):
+            return {"server": address, "port": 53, "qname": name, "qtype": kind,
+                    **{transport: {"values": values[transport], "answers": []}
+                       for transport in ("udp", "tcp")}}
 
         def answers(secondary_www):
             def query(address, port, name, kind, timeout):
                 if name == run_cell.FRESH_PRIMARY_V3_CATALOG:
-                    return catalog
+                    return observed(address, name, kind, catalog)
                 if kind == "SOA":
-                    return member
-                return www if address == "192.0.2.10" else secondary_www
+                    return observed(address, name, kind, member)
+                return observed(address, name, kind,
+                                www if address == "10.0.2.15" else secondary_www)
             return query
 
         state = {"exists": True, "semantic": {"primary_catalog_serial": 1790588837}}
         with tempfile.TemporaryDirectory() as root:
-            selected = settings(root, v3("committed", "after-write"))
-            with mock.patch.object(run_cell, "query_dns_rrset", side_effect=answers(www)), \
+            selected = settings(root, v3("committed", "after-write"), dns_address="10.0.2.15")
+            with mock.patch.object(run_cell, "query_dns_observation", side_effect=answers(www)), \
                     mock.patch.object(run_cell, "read_dns_state_optional", return_value=state):
-                self.assertEqual(run_cell.check_fresh_primary_pair(selected)["failures"], [])
+                self.assertEqual(
+                    run_cell.check_fresh_primary_pair(selected, expected)["failures"], [])
             other = {"udp": ["192.0.2.99"], "tcp": ["192.0.2.99"]}
-            with mock.patch.object(run_cell, "query_dns_rrset", side_effect=answers(other)), \
+            with mock.patch.object(run_cell, "query_dns_observation", side_effect=answers(other)), \
                     mock.patch.object(run_cell, "read_dns_state_optional", return_value=state):
-                self.assertTrue(run_cell.check_fresh_primary_pair(selected)["failures"])
+                self.assertTrue(run_cell.check_fresh_primary_pair(selected, expected)["failures"])
 
     def test_release_message_must_be_typed_and_name_the_next_step(self) -> None:
         typed = ("The first install of PowerDNS as the paired primary found that the PowerDNS "
@@ -765,6 +775,8 @@ class HostTest(unittest.TestCase):
             (pre, {"owner_edit": "config", "owner_release_recovery": True}, False),
             (post, {"owner_edit": "sql"}, False),
             (post, {"zone_lifecycle": True}, True),
+            # Defined order since batch 8: the lifecycle runs before the reboot.
+            (post, {"zone_lifecycle": True, "disable_management_before_reboot": True}, True),
         )
         for raw, changes, reboot in ok:
             bootstrap.validate_fresh_primary_run(self.args(raw, **changes), raw, reboot)
@@ -773,8 +785,6 @@ class HostTest(unittest.TestCase):
             (journal_free, {"owner_edit": "config"}, False, "no journal"),
             (post, {"owner_edit": "config"}, True, "no reboot"),
             (post, {"owner_edit": "config", "owner_release_recovery": True}, False, "pre-start"),
-            (post, {"zone_lifecycle": True, "disable_management_before_reboot": True}, True,
-             "running Agent"),
             (post, {"source_fixture": "managed-bind"}, False, "uninitialized"),
             (raw_cell(TAKEOVER_CELL), {"owner_edit": "config"}, False, "apply only"),
             (post, {"owner_directives": True}, False, "takeover cell"),

@@ -425,7 +425,14 @@ Full text: README "Fresh paired PowerDNS primary cells (row 6, journal V3)".*
   rollback, PowerDNS MainPID history and the daemon's catalog re-stamp
   recorded); then the pair: the BIND secondary answers member and catalog as
   the primary does, over UDP/TCP, and `native_pdns_bind_peer.py observe`
-  agrees on the host. Reboot of both guests optional.
+  agrees on the host. Reboot of both guests optional. Since batch 8 the pair's
+  expected RRsets come from the published scenario, not from `--dns-address`
+  (the address the primary is queried at), and every query records its
+  server and full answer section; see README "How the pair is judged".
+- **Idle host**: before the measured Begin the controller waits (read-only,
+  `rpc-host-readiness`, default 120 s) for the Agent to report the host idle,
+  recording what was running; never idle ends the cell `unverified` before
+  any mutation.
 - **Owner edit** (`--owner-edit config|sql`): the Agent refuses at that
   boundary with its typed guidance, journal/database/edit kept, DNS-only hold
   proved through the public RPC (`rpc-unrelated-begin`).
@@ -437,7 +444,10 @@ Full text: README "Fresh paired PowerDNS primary cells (row 6, journal V3)".*
   --step {add,edit,delete,re-add}` for `s2.s1-kill.test`, observed on both
   servers after each step (`native_pdns_bind_peer.py observe-child`); a
   pending deletion stops for the owner's `dns-peer-enroll --engine bind`, then
-  `rpc-pdns-primary-zone-v3-recover`.
+  `rpc-pdns-primary-zone-v3-recover`. With `--reboot-after-recovery
+  [--disable-management-before-reboot]` the lifecycle runs before the reboot
+  (pass verdict, lifecycle with the Agent running, disable management, reboot
+  both guests, DNS checks including the re-added child on both servers).
 - **Prerequisite outside the harness**: the tagged Agent's kill hook accepts
   only V1 (and BIND V2) journals at the selected boundary
   (`cmd/agent/dns_engine_kill_matrix_linux.go:511`); a V3 cut needs it to

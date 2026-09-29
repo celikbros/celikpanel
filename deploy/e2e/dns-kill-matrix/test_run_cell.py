@@ -4802,7 +4802,9 @@ class V2RefusalAndStartupRollbackTest(unittest.TestCase):
         self.assertLess(flow.index("write_reboot_checkpoint("),
                         flow.index("atomic_write_new_json(settings.result_path, result)"))
         main = source[source.index("def main(argv"):]
-        self.assertIn("resume_cell(settings) if settings.resume_after_reboot", main)
+        self.assertIn(
+            "if settings.resume_after_reboot:\n            exit_code = resume_cell(settings)", main)
+        self.assertIn("exit_code = continue_after_zone_lifecycle(settings)", main)
         parser = run_cell.build_argument_parser()
         for flag in ("--reboot-before-owner-command", "--reboot-after-recovery",
                      "--resume-after-reboot", "--reboot-dir",

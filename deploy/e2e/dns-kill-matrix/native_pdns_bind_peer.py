@@ -272,8 +272,16 @@ def observe_child(args: argparse.Namespace) -> dict:
 
 
 def observe(args: argparse.Namespace) -> dict:
+    """Both servers serve the same catalog and member answers.
+
+    ``args.address`` is the scenario's www A (the expected RDATA, not a query
+    target). With ``args.with_child`` (after the zone lifecycle's re-add) the
+    catalogs must list the child zone as well; observe-child judges its answers.
+    """
+
     primary_ip, secondary_ip, peer, identity = selected(args)
     expected_address = str(ipaddress.IPv4Address(args.address))
+    members_expected = {ZONE, CHILD} if getattr(args, "with_child", False) is True else {ZONE}
     ssh = bootstrap.ssh_base(peer, identity)
     verify_guest(ssh, args.cell_id, args.execute)
     remote_read(ssh, "systemctl is-active --quiet named.service", args.execute)
@@ -283,8 +291,14 @@ def observe(args: argparse.Namespace) -> dict:
     if args.execute:
         source_serial, source_members = parse_catalog_axfr(source, catalog, producer="powerdns")
         loaded_serial, loaded_members = parse_catalog_axfr(loaded, catalog, producer="powerdns")
-        if (source_serial, source_members) != (loaded_serial, loaded_members) or source_members != {ZONE}:
-            raise ValueError("loaded BIND catalog differs from the PowerDNS primary")
+        if (source_serial, source_members) != (loaded_serial, loaded_members) or (
+            source_members != members_expected
+        ):
+            raise ValueError(
+                "loaded BIND catalog differs from the PowerDNS primary or the expected "
+                f"members {sorted(members_expected)}: primary {source_serial} "
+                f"{sorted(source_members)}, loaded {loaded_serial} {sorted(loaded_members)}")
+    answers: dict = {}
     for name, kind in ((ZONE, "SOA"), (QUERY, "A")):
         source_data = None
         for ip in (primary_ip, secondary_ip):
@@ -293,6 +307,8 @@ def observe(args: argparse.Namespace) -> dict:
                 if not args.execute:
                     continue
                 data = authoritative_data(reply, name, kind)
+                # Server queried and the answer's RDATA, for expected-vs-observed.
+                answers[f"{ip}/{'tcp' if tcp else 'udp'}/{name}/{kind}"] = list(data)
                 if source_data is None:
                     source_data = data
                 elif data != source_data:
@@ -304,7 +320,8 @@ def observe(args: argparse.Namespace) -> dict:
         "primary_ip": primary_ip, "secondary_ip": secondary_ip, "catalog": catalog,
         "catalog_serial": source_serial if args.execute else None,
         "catalog_members": sorted(source_members) if args.execute else None,
-        "member": ZONE, "address": expected_address,
+        "member": ZONE, "address": expected_address, "answers": answers,
+        "catalog_members_expected": sorted(members_expected),
         "authoritative_udp_tcp": args.execute,
         "management_installed_on_secondary": False, "execute": args.execute,
     }
@@ -321,6 +338,8 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, default=Path(__file__).with_name("manifest.json"))
     parser.add_argument("--address", help="expected member A address for observe")
     parser.add_argument("--step", choices=tuple(CHILD_STEPS), help="lifecycle step for observe-child")
+    parser.add_argument("--with-child", action="store_true",
+                        help="observe: the catalogs also list the lifecycle's child zone")
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
     if (args.action == "observe") != (args.address is not None):
