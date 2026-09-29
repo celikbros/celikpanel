@@ -237,14 +237,88 @@ sınırları: 27,2 sn, 8,8 sn ve 25,9 sn (sonuncusu iki yeniden başlatmayı
 çevreleyen işi kapsar, ama yeniden başlatmaların kendisi değerlendirilmez);
 kaydedildi, sınırlandırılmadı.
 
-4. ve 5. gruplardan sonraki kaynak değişiklikleri, yalnızca bileşen
-testleri, gerçek sistemde yeniden koşu bekliyor: kesim sınırı durdurma,
-eksik-işaretçi onarımı ve işaretçi sıralaması (`c04d8a2b`); kalıcı bir geri
-alma kararı olmadan ters işlem yok, tüketilen PowerDNS üye seçenekleri,
-daemon yazdıktan sonra boş bir PowerDNS ikincilinin geri alınması,
-güvenli-kapalı bir mutasyon yöneticisi yerine yalnızca-DNS bekletmesi,
-eksik bir işaretçiyi adlandıran durum (sonraki commit); düzenek uyumu
-(`86c3fa20`, `2ac6dcbe`).
+**30 Eylül 2026, 8. grup, boş çift PowerDNS birincili** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/batch8-pdns-primary-20260930/README.md),
+kabul dalı `accept/pdns-primary-gate-open` commit `916e1577`, kapı açık; ana
+dal kapıyı kapalı tutuyor; genel Agent RPC'si üzerinden on hücre, her biri
+bir kez çalıştırıldı, düzenek geçici çözümü yok, yeniden çalıştırma yok).
+Satır 6. İkisi geçti, yedisi tek bir yanlış düzenek beklentisinde düştü,
+biri doğrulanmadı. Kesim sınırı dokuz kesintinin tümünde tutundu.
+
+| Hücre | Gözlemlenen ürün davranışı | Karar |
+|---|---|---|
+| `intent`, `target-staged`, `target-enable-intent` durumundaki başlangıç öncesi kesintiler | yeniden başlatılan Agent kurulumu kendisi geri aldı, günlüğü emekliye ayırdı, birim koruma-maskeli bekleme durumuna geri döndü; veritabanı, aday, makbuz veya dinleyici yok; aynı-istek yeniden denemesi yakınsadı; gerçek BIND ikincili birincil ile tam olarak aynı yanıtı verdi | **düştü (düzenek)**: eş denetimi, birincilin `www` A kaydını bölgenin kaydı yerine konuğun yönetim adresiyle karşılaştırdı |
+| `intent` before-write durumunda günlük öncesi kesinti | iş, commit öncesi yeniden başlatma koduyla sona erdi; yeniden deneme yakınsadı | **düştü (düzenek)**, aynı neden |
+| `target-started`, `target-verified`, `committed` durumundaki başlangıç sonrası kesintiler | yalnızca ileri yönde; aynı istek başarılı oldu; PowerDNS sürecini korudu | **düştü (düzenek)**, aynı neden; bölge yaşam döngüsü ve yeniden başlatmalar çalışmadı çünkü bunlar geçen bir kararın ardından gelir |
+| kill ile Agent'ın yeniden başlaması arasında sahip SQL düzenlemesi, başlangıç sonrası | reddedildi; günlük ve veritabanı korundu; sahibin satırı korundu; ilgisiz bir mutasyon başlayabilirdi | **geçti** |
+| `recover-dns-pdns-fresh-prestart` tarafından tamamlanan, Agent tarafından serbest bırakılmış başlangıç öncesi kurtarma | çıkış 0, kurulum öncesi durum, ledger Agent'ın serbest bırakmasıyla bayt-özdeş, yeniden çalıştırma çıkış 0 | **geçti** |
+| başlangıç öncesi bir hücrede sahip yapılandırma düzenlemesi | Agent, herhangi bir mutasyondan önce `HOST_MUTATION_BUSY` yanıtı verdi; kesinti yok | **doğrulanmadı**; neden belirlenemedi |
+
+Gözlemlenen katalog yeniden damgalaması: üst veri olmadan hazırlanan seri
+numarası 1; ilk başlangıçta daemon bir `CATALOG-HASH` satırı ekledi ve
+üretici SOA'yı bir epoch seri numarasına yeniden damgaladı; durum makbuzu ve
+her iki sunucunun sunduğu seri numaraları buna eşitti. Kaydedilen
+yönlendirme eksiği: iki sahip-düzenleme hücresinde `dns-switch-status`,
+reddedilen sahip değişikliğini adlandırmıyor. Kaynakta `cc2d430b` ile
+kapatıldı (yalnızca bileşen testleri).
+
+**30 Eylül 2026, çift 1, ürün akışı, keşif amaçlı** ([kanıt](../deploy/e2e/dns-pair-acceptance/evidence/pair1-20260930/README.md),
+ürün `aa6b9380`, gerçek kurulumcuyla kurulan iki CelikPanel sunucusu,
+D-027'nin yalnızca test amaçlı lisansı, lisans hizmetine bağlanılmadı).
+Satır 2, 3, 5, 17. Hiçbir topoloji bölge işlemlerine ulaşmadı; her durma bir
+sürücü hatasıydı ve bu çalıştırma hiçbir satırı geçirmiyor.
+
+| Topoloji (birincil / ikincil) | Ulaşılan | Durma noktası |
+|---|---|---|
+| BIND / BIND | her iki sunucuda da kurulum, lisanslama, ilk yapılandırma; ikincil kataloğu aldı | sürücü, bir ikincilde `pair_ready` bekledi; ürün orada `secondary_ready` raporluyor |
+| BIND / PowerDNS | aynı | aynı |
+| PowerDNS / BIND | plan `pdns_primary_switch_paused` ile reddedildi; geride hiçbir şey kalmadı | o derlemede kapı beklendiği gibi kapalı |
+
+Ürün bulgusu: sunucu yeniden başlatması gerektiren bir çekirdek (kernel)
+yükseltmesinden sonra, kurulum planı yeniden başlatmayı adlandırmak yerine
+HTTP 500 yanıtı verdi. Kaynakta `a751e46a` ile kapatıldı
+(`host_restart_required` ve diğer türlenmiş güvenlik duvarı engelleyicileri);
+yalnızca bileşen testleri.
+
+**30 Eylül 2026, çift 2, ürün akışı, keşif amaçlı** ([kanıt](../deploy/e2e/dns-pair-acceptance/evidence/pair2-20260930/README.md),
+kapı açıkken ürün `916e1577`, sürücü `13213343`). Satır 2, 3, 5, 6, 17.
+Hiçbir topoloji bölge işlemlerine ulaşmadı; bu çalıştırma hiçbir satırı
+geçirmiyor.
+
+| Topoloji (birincil / ikincil) | Ulaşılan | Durma noktası |
+|---|---|---|
+| BIND / BIND | her iki sunucuda da ilk yapılandırma; ikincilde `secondary_ready: true` | sürücü kuralı, birincilde `secondary_ready: false` değerini gerektiriyordu; ürün bu alanı bir birincilde atlıyor. `184f633b` içinde düzeltildi. |
+| BIND / PowerDNS | aynı | aynı |
+| PowerDNS / BIND | plan hiçbir engelleyici olmadan kabul edildi; PowerDNS kuruldu | **ürün kusuru**: bölgesi olmayan, boş çift PowerDNS birincili kendi katalog denetiminde başarısız oldu (boş liste, yok olanla karşılaştırıldı). 8. grup bu yolu yalnızca bir bölge varken ölçmüştü. |
+
+Aynı çalıştırmadan ek ürün bulguları: sihirbaz, Agent doğrulanmış bir hata
+kaydetmişken 45 dakika boyunca açık uçlu bir "sonuç bilinmiyor" gösterdi; bir
+ikincildeki arka plan kurulumu, yalnızca HTTP istekleri lisans durumunu
+yenilediği için `license_required` değerini bir kez okudu; müşteri arşivi
+test kanıtı içeriyordu. Dördü de kaynakta `8a548090` ile kapatıldı (yalnızca
+bileşen testleri): katalog denetimi sıfır üyeyi kabul ediyor; sihirbaz
+doğrulanmış bir hatayı, bir kurtarma bekletmesini, bir geri almayı veya beş
+dakikayla sınırlı bilinmeyen bir sonucu adlandırıyor; arka plan kurulumu,
+herhangi bir politika değişikliği olmadan HTTP kapısıyla aynı lisans
+yenilemesini kullanıyor; kanıt ve düzenek testleri arşivden budanıyor ve bir
+koruma bunları reddediyor.
+
+4. ve 5. gruplardan sonra listelenen kaynak değişikliklerinin gerçek
+sistemdeki kapsamı:
+
+| Değişiklik | İlk karşılayan gerçek sistem çalıştırması |
+|---|---|
+| kesim sınırı durdurma (`c04d8a2b`) | 6a. grup, her hücre |
+| tüketilen PowerDNS üye seçenekleri; daemon yazdıktan sonra boş bir PowerDNS ikincilinin geri alınması (`66db850c`) | 6b. grup |
+| güvenli-kapalı bir mutasyon yöneticisi yerine yalnızca-DNS bekletmesi (`66db850c`) | 8. grup, sahip SQL düzenlemesi hücresi |
+| eksik-işaretçi onarımı ve işaretçi sıralaması (`c04d8a2b`) | yok: düzeltilmiş kancayla işaretçi artık kaybolmuyor, bu yüzden onarımın kendisi yalnızca bileşen testlerine sahip |
+| `target-verified` yazması hata döndürdüğünde ama kalıcı olduğunda ileri yönde tamamlanma; eksik bir işaretçiyi adlandıran durum (`66db850c`) | yok; yalnızca bileşen testleri |
+
+`8a548090` itibarıyla gerçek sistemde yeniden koşu bekleyenler: başlangıçtan
+önce ve sonra sıfır bölgeli boş çift PowerDNS birincili; bölge ekleme,
+düzenleme, silme ve yeniden ekleme, silme kanıtı, sahip kaydı ve yönetim
+kapalıyken yeniden açılış boyunca üç ürün akışı; sihirbaz durumları ve
+gerçek bir sunucuda sunucu yeniden başlatma engelleyicisi;
+`dpkg-statoverride` kararından sonra yeniden kurulum.
 
 ## 1. maddeyi ne kapattı
 

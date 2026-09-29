@@ -245,15 +245,62 @@ Catalog re-stamp as observed: staged serial 1 with no metadata; at first
 start the daemon added one `CATALOG-HASH` row and re-stamped the producer SOA
 to an epoch serial; the state receipt and both servers' served serials
 equalled it. Guidance gap recorded: `dns-switch-status` in the two owner-edit
-cells does not name the owner change that was refused.
+cells does not name the owner change that was refused. Closed in source by
+`cc2d430b` (component tests only).
 
-Source changes after batches 4 and 5, component tests only, native re-run
-pending: boundary stop, missing-pointer repair and pointer ordering
-(`c04d8a2b`); no inverse without a durable rollback decision, consumed
-PowerDNS member options, rollback of a fresh PowerDNS secondary after the
-daemon wrote, DNS-only hold instead of a fail-closed mutation manager, status
-naming a missing pointer (next commit); harness alignment (`86c3fa20`,
-`2ac6dcbe`).
+**2026-09-30, pair 1, product flow, exploratory** ([evidence](../deploy/e2e/dns-pair-acceptance/evidence/pair1-20260930/README.md),
+product `aa6b9380`, two CelikPanel servers installed by the real installer,
+test-only license of D-027, no license service contacted). Rows 2, 3, 5, 17.
+No topology reached the zone operations; every stop was a driver fault, and
+the run passes no row.
+
+| Topology (primary / secondary) | Reached | Stopped at |
+|---|---|---|
+| BIND / BIND | install, license, setup on both servers; the secondary took the catalog | driver waited for `pair_ready` on a secondary; the product reports `secondary_ready` there |
+| BIND / PowerDNS | same | same |
+| PowerDNS / BIND | plan refused with `pdns_primary_switch_paused`; nothing left behind | gate closed in that build, as expected |
+
+Product finding: after a kernel upgrade that needs a host restart, the setup
+plan answered HTTP 500 instead of naming the restart. Closed in source by
+`a751e46a` (`host_restart_required` and the other typed firewall blockers);
+component tests only.
+
+**2026-09-30, pair 2, product flow, exploratory** ([evidence](../deploy/e2e/dns-pair-acceptance/evidence/pair2-20260930/README.md),
+product `916e1577` with the gate open, driver `13213343`). Rows 2, 3, 5, 6,
+17. No topology reached the zone operations; the run passes no row.
+
+| Topology (primary / secondary) | Reached | Stopped at |
+|---|---|---|
+| BIND / BIND | setup on both servers; secondary `secondary_ready: true` | driver rule demanded `secondary_ready: false` on the primary; the product omits the field on a primary. Corrected in `184f633b`. |
+| BIND / PowerDNS | same | same |
+| PowerDNS / BIND | plan admitted with no blocker; PowerDNS installed | **product defect**: a fresh paired PowerDNS primary with no zones failed its own catalog check (empty list compared with an absent one). Batch 8 had only measured this path with a zone present. |
+
+Further product findings from the same run: the wizard showed an open-ended
+"result unknown" for 45 minutes while the Agent had recorded a verified
+failure; background setup on a secondary read `license_required` once,
+because only HTTP requests refreshed the license state; the customer archive
+contained test evidence. All four are closed in source by `8a548090`
+(component tests only): the catalog check accepts zero members; the wizard
+names a verified failure, a recovery hold, a rollback, or an unknown result
+bounded at five minutes; background setup uses the same license refresh as
+the HTTP gate with no policy change; evidence and harness tests are pruned
+from the archive and a guard refuses them.
+
+Native coverage of the source changes listed after batches 4 and 5:
+
+| Change | First native run that exercised it |
+|---|---|
+| boundary stop (`c04d8a2b`) | batch 6a, every cell |
+| consumed PowerDNS member options; rollback of a fresh PowerDNS secondary after the daemon wrote (`66db850c`) | batch 6b |
+| DNS-only hold instead of a fail-closed mutation manager (`66db850c`) | batch 8, owner SQL edit cell |
+| missing-pointer repair and pointer ordering (`c04d8a2b`) | none: with the fixed hook the pointer no longer goes missing, so the repair itself has component tests only |
+| forward completion when the `target-verified` write returned an error but is durable; status naming a missing pointer (`66db850c`) | none; component tests only |
+
+Native re-run pending as of `8a548090`: fresh paired PowerDNS primary with
+zero zones, before and after start; the three product flows through zone add,
+edit, delete and re-add, deletion proof, owner enrollment and the
+management-disabled reboot; the wizard states and the host-restart blocker on
+a real host; reinstall after the `dpkg-statoverride` decision.
 
 ## What closed item 1
 
