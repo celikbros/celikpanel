@@ -730,8 +730,9 @@ class ProbeTest(unittest.TestCase):
         catalog = probe.catalog_name("192.0.2.11")
         native = CatalogFormatTest().native_stream(catalog)
 
-        def axfr(address, name, timeout=8.0, producer=probe.PRODUCER_BIND):
-            return probe.read_catalog_axfr_stream(native, QUERY_ID, name, producer)
+        def axfr(address, name, timeout=8.0, producer=probe.PRODUCER_BIND, labels_out=None):
+            return probe.read_catalog_axfr_stream(native, QUERY_ID, name, producer,
+                                                  labels_out=labels_out)
 
         def rrset(address, name, qtype, *, tcp, timeout=4.0):
             value = 1790542951 if name == catalog else (
@@ -745,7 +746,7 @@ class ProbeTest(unittest.TestCase):
                 mock.patch.object(probe, "query_catalog_axfr", side_effect=axfr), \
                 mock.patch.object(probe, "query_rrset", side_effect=rrset), \
                 mock.patch.object(probe, "read_service_journal", return_value=journal), \
-                mock.patch.object(probe, "read_pdns_catalog_rows",
+                mock.patch.object(probe, "native_versions", return_value={"stub": True}),                 mock.patch.object(probe, "read_pdns_catalog_rows",
                                   return_value={"read": True, "domains": []}) as rows:
             result = probe.observe("pdns", "192.0.2.11", "192.0.2.10", catalog,
                                    ["s1-kill.test"], [], True, catalog_format="pdns-native",
@@ -754,11 +755,42 @@ class ProbeTest(unittest.TestCase):
                               result["catalog_format"]),
                              ("powerdns", "PowerDNS", "pdns-native"))
             self.assertEqual(result["catalog_serial"], 1790542951)
+            # The unique label a PowerDNS consumer stores on the member row.
+            self.assertEqual(result["catalog_member_labels"],
+                             {"s1-kill.test": "lf5eijnqp9ob8kmq5mv0vhjaevtcfuus"})
+            self.assertEqual(result["native_versions"], {"stub": True})
             self.assertTrue(all(result["transfers_to_secondary"].values()))
             rows.assert_called_once_with("/var/lib/powerdns/pdns.sqlite3", catalog)
             with self.assertRaisesRegex(ValueError, "--catalog-format bind"):
                 probe.observe("pdns", "192.0.2.11", "192.0.2.10", catalog, ["s1-kill.test"],
                               [], False, catalog_format="bind")
+
+    def test_native_versions_on_the_arch_peer(self) -> None:
+        # Batch 5: PowerDNS 5.1.4 on the Arch peer.
+        def run(argv, **kwargs):
+            if argv[0] == "/usr/bin/pacman":
+                return subprocess.CompletedProcess(
+                    argv, 0, {"bind": "bind 9.20.29-1", "powerdns": "powerdns 5.1.4-4"}[argv[-1]], "")
+            return subprocess.CompletedProcess(argv, 0, "", "PowerDNS Authoritative Server 5.1.4")
+
+        exists = {"/usr/bin/pacman": True, "/usr/sbin/pdns_server": True}
+        with mock.patch.object(probe.subprocess, "run", side_effect=run), \
+                mock.patch.object(probe.os.path, "exists",
+                                  side_effect=lambda path: exists.get(path, False)):
+            report = probe.native_versions()
+        self.assertEqual(report["package_manager"], "pacman")
+        self.assertEqual(report["packages"], {"bind": "9.20.29-1", "powerdns": "5.1.4-4"})
+        self.assertIn("5.1.4", report["daemons"]["pdns_server"]["output"])
+        self.assertNotIn("named", report["daemons"])
+
+    def test_member_labels_are_the_served_node_labels(self) -> None:
+        catalog = probe.catalog_name("192.0.2.11")
+        labels: dict = {"stale": "x"}
+        stream = framed(message(catalog, axfr_records(peer.catalog_records("192.0.2.11"))))
+        probe.read_catalog_axfr_stream(stream, QUERY_ID, catalog, labels_out=labels)
+        self.assertEqual(labels, {"s1-kill.test": probe.catalog_member_label("s1-kill.test")})
+        self.assertEqual(labels["s1-kill.test"],
+                         "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a")
 
     def test_pdns_catalog_rows_are_read_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

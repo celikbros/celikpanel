@@ -28,6 +28,31 @@ sys.modules[SPEC.name] = run_cell
 SPEC.loader.exec_module(run_cell)
 
 
+def v2_state_document(
+    *, engine: str, engine_epoch: int, qualifier: str, request_id: str, owner_id: str,
+    mode: str = "switch", source_revision: int = 0, generation: str = "c" * 64,
+) -> tuple[dict, bytes]:
+    """The canonical v2 DNS state receipt the product writes (acquisition/publication)."""
+
+    def compact(value: object) -> bytes:
+        return (json.dumps(value, separators=(",", ":")) + "\n").encode()
+
+    acquisition = {
+        "schema": "celikpanel-dns-engine-acquisition/v1", "mode": mode, "engine": engine,
+        "engine_epoch": engine_epoch, "source_revision": source_revision,
+        "manifest_qualifier": qualifier, "mutation_request_id": request_id,
+        "mutation_owner_id": owner_id,
+    }
+    publication = {
+        "schema": "celikpanel-dns-engine-publication/v1",
+        "acquisition_sha256": hashlib.sha256(compact(acquisition)).hexdigest(),
+        "generation": generation,
+    }
+    value = {"schema": "celikpanel-dns-engine-state/v2", "acquisition": acquisition,
+             "publication": publication}
+    return value, compact(value)
+
+
 def cell(
     phase: str = "intent",
     edge: str = "before-write",
@@ -3705,6 +3730,7 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
             observe_bind_guard_masks=mock.Mock(side_effect=guest.guard_masks),
             generation_tree_present=mock.Mock(side_effect=lambda path: guest.d["tree_after"]),
             record_bind_rollback_leftovers=mock.Mock(return_value={"judged": False}),
+            record_native_versions=mock.Mock(return_value={"packages": {}, "daemons": {}}),
         )
         patches.update(extra or {})
         return mock.patch.multiple(run_cell, **patches)
@@ -4940,16 +4966,16 @@ class DNSProbeTest(unittest.TestCase):
             (selected.cell_id + "\0source-bind-switch").encode()
         ).hexdigest()[:32]
         owner_id = run_cell.deterministic_trigger_owner(selected.cell_id, request_id)
-        state = {
-            "mode": "switch", "engine": "bind", "engine_epoch": 1,
-            "mutation_request_id": request_id, "mutation_owner_id": owner_id,
-            "manifest_qualifier": "dns-engine-switch/v1:sha256:" + "a" * 64,
-        }
+        qualifier = "dns-engine-switch/v1:sha256:" + "a" * 64
+        state, state_raw = v2_state_document(
+            engine="bind", engine_epoch=1, qualifier=qualifier,
+            request_id=request_id, owner_id=owner_id,
+        )
         receipt = {
             "schema": run_cell.TRIGGER_IDENTITY_RECEIPT_SCHEMA,
             "cell_id": selected.cell_id, "driver": "bind",
             "source_fixture": "uninitialized", "request_id": request_id,
-            "owner_id": owner_id, "manifest_qualifier": state["manifest_qualifier"],
+            "owner_id": owner_id, "manifest_qualifier": qualifier,
         }
         with tempfile.TemporaryDirectory() as directory:
             source_path = Path(directory, "source.json")
@@ -4967,13 +4993,13 @@ class DNSProbeTest(unittest.TestCase):
             with mock.patch.object(run_cell, "MANAGED_BIND_SETUP_SCENARIO_PATH", str(source_path)), mock.patch.object(
                 run_cell, "MANAGED_BIND_SETUP_IDENTITY_PATH", str(receipt_path)
             ):
-                run_cell.validate_managed_bind_setup(proof, selected, measured, state)
+                run_cell.validate_managed_bind_setup(proof, selected, measured, state, state_raw)
                 forged = dict(source, peer_ip="192.0.2.12")
                 forged_raw = (json.dumps(forged, indent=2, sort_keys=True) + "\n").encode()
                 source_path.write_bytes(forged_raw)
                 proof["source_setup_scenario_sha256"] = hashlib.sha256(forged_raw).hexdigest()
                 with self.assertRaises(run_cell.ControllerError):
-                    run_cell.validate_managed_bind_setup(proof, selected, measured, state)
+                    run_cell.validate_managed_bind_setup(proof, selected, measured, state, state_raw)
 
     @unittest.skipUnless(hasattr(os, "geteuid"), "secure fixture files require POSIX ownership")
     def test_managed_bind_setup_refuses_forged_operation_identity(self) -> None:
@@ -4984,11 +5010,11 @@ class DNSProbeTest(unittest.TestCase):
             (selected.cell_id + "\0source-bind-switch").encode()
         ).hexdigest()[:32]
         owner_id = run_cell.deterministic_trigger_owner(selected.cell_id, request_id)
-        state = {
-            "mode": "switch", "engine": "bind", "engine_epoch": 1,
-            "mutation_request_id": request_id, "mutation_owner_id": owner_id,
-            "manifest_qualifier": "dns-engine-switch/v1:sha256:" + "a" * 64,
-        }
+        qualifier = "dns-engine-switch/v1:sha256:" + "a" * 64
+        state, state_raw = v2_state_document(
+            engine="bind", engine_epoch=1, qualifier=qualifier,
+            request_id=request_id, owner_id=owner_id,
+        )
         receipt = {
             "schema": run_cell.TRIGGER_IDENTITY_RECEIPT_SCHEMA,
             "cell_id": selected.cell_id,
@@ -4996,7 +5022,7 @@ class DNSProbeTest(unittest.TestCase):
             "source_fixture": "uninitialized",
             "request_id": request_id,
             "owner_id": owner_id,
-            "manifest_qualifier": state["manifest_qualifier"],
+            "manifest_qualifier": qualifier,
         }
         with tempfile.TemporaryDirectory() as directory:
             source_path = Path(directory, "source.json")
@@ -5014,13 +5040,114 @@ class DNSProbeTest(unittest.TestCase):
             with mock.patch.object(run_cell, "MANAGED_BIND_SETUP_SCENARIO_PATH", str(source_path)), mock.patch.object(
                 run_cell, "MANAGED_BIND_SETUP_IDENTITY_PATH", str(receipt_path)
             ):
-                run_cell.validate_managed_bind_setup(proof, selected, measured, state)
+                run_cell.validate_managed_bind_setup(proof, selected, measured, state, state_raw)
                 forged = dict(receipt, owner_id="f" * 32)
                 forged_raw = (json.dumps(forged, separators=(",", ":")) + "\n").encode()
                 receipt_path.write_bytes(forged_raw)
                 proof["source_setup_identity_receipt_sha256"] = hashlib.sha256(forged_raw).hexdigest()
                 with self.assertRaises(run_cell.ControllerError):
-                    run_cell.validate_managed_bind_setup(proof, selected, measured, state)
+                    run_cell.validate_managed_bind_setup(proof, selected, measured, state, state_raw)
+
+
+BATCH5_C6 = (Path(__file__).with_name("evidence") / "batch5-paired-first-20260929"
+             / "c6-reinstall" / "raw")
+
+
+class ManagedBindSetupV2ReceiptTest(unittest.TestCase):
+    """Batch 5 cell c6: the reinstall setup reads the product's v2 state receipt."""
+
+    def copy(self, directory: str, name: str, source: Path) -> Path:
+        target = Path(directory, name)
+        target.write_bytes(source.read_bytes())
+        target.chmod(0o600)
+        return target
+
+    def test_real_v2_receipt_from_the_reinstall_cell(self) -> None:
+        manifest = json.loads(MANIFEST_TEXT)
+        selected = run_cell.CellSpec.from_manifest(
+            manifest, "bind__target-staged__after-write__standalone__peer-reachable")
+        fixture = BATCH5_C6 / "fixture"
+        state_raw = (BATCH5_C6 / "state" / "dns-engine-state.json").read_bytes()
+        state = json.loads(state_raw)
+        self.assertEqual(state["schema"], "celikpanel-dns-engine-state/v2")
+        self.assertNotIn("manifest_qualifier", state)  # the flat read raised KeyError
+        proof = json.loads((fixture / "source-proof.json").read_bytes())
+        measured = json.loads((fixture / "scenario.json").read_bytes())
+        self.assertEqual(measured["source_fixture"], run_cell.MANAGED_BIND_ABSENT)
+        with tempfile.TemporaryDirectory() as directory:
+            scenario_path = self.copy(directory, "setup.json", fixture / "source-setup-bind.json")
+            identity_path = self.copy(directory, "identity.json",
+                                      fixture / "source-setup-bind-identity.json")
+            with mock.patch.multiple(
+                run_cell, MANAGED_BIND_SETUP_SCENARIO_PATH=str(scenario_path),
+                MANAGED_BIND_SETUP_IDENTITY_PATH=str(identity_path),
+            ):
+                run_cell.validate_managed_bind_setup(proof, selected, measured, state, state_raw)
+                # Any change of the receipt bytes is refused, not a KeyError.
+                tampered = state_raw.replace(b'"engine_epoch":1', b'"engine_epoch":2')
+                with self.assertRaises(run_cell.ControllerError):
+                    run_cell.validate_managed_bind_setup(
+                        proof, selected, measured, json.loads(tampered), tampered)
+                with self.assertRaises(run_cell.ControllerError):
+                    run_cell.validate_managed_bind_setup(
+                        proof, selected, measured, state, state_raw.rstrip(b"\n"))
+                flat = run_cell.decode_dns_document(state, state_raw)
+                self.assertEqual(flat["engine"], "bind")
+                with self.assertRaises(run_cell.ControllerError):
+                    run_cell.validate_managed_bind_setup(
+                        proof, selected, measured, flat,
+                        (json.dumps(flat) + "\n").encode())
+        # The same shared projection is what validate_managed_source_state reads.
+        run_cell.validate_managed_source_state(
+            state, state_raw, dict(measured, source_epoch=1, source_revision=0), "bind")
+
+    def test_no_flat_state_receipt_reads_remain(self) -> None:
+        source = MODULE_PATH.read_text(encoding="utf-8")
+        body = source[source.index("def validate_managed_bind_setup("):
+                      source.index("def validate_source_scenario(")]
+        self.assertIn("state = decode_dns_document(state_document, state_raw)", body)
+        self.assertNotIn('state["', body)
+        shell = Path(__file__).with_name("guest_bootstrap.sh").read_text(encoding="utf-8")
+        # Every shell read of the state receipt's identity goes through the
+        # probe's shared decoder.
+        self.assertEqual(shell.count("['decode_dns_document'](json.loads(raw),raw)"), 2)
+
+
+class NativeVersionsTest(unittest.TestCase):
+    def test_versions_are_recorded_before_and_after(self) -> None:
+        outputs = {
+            "bind9": "ii  1:9.20.29-1~deb13u1", "bind9-libs": "ii  1:9.20.29-1~deb13u1",
+            "bind9-host": "ii  1:9.20.29-1~deb13u1", "pdns-server": "ii  4.9.17-0+deb13u1",
+        }
+
+        def run(argv, **kwargs):
+            if argv[0] == "/usr/bin/dpkg-query":
+                text = outputs.get(argv[-1])
+                if text is None:
+                    return mock.Mock(returncode=1, stdout=b"dpkg-query: no packages found")
+                return mock.Mock(returncode=0, stdout=text.encode())
+            return mock.Mock(returncode=0, stdout=b"BIND 9.20.29-1~deb13u1-Debian (Stable Release)")
+
+        exists = {"/usr/bin/dpkg-query": True, "/usr/sbin/named": True,
+                  "/usr/sbin/pdns_server": False, "/usr/bin/pacman": False}
+        with mock.patch.object(run_cell.subprocess, "run", side_effect=run), \
+                mock.patch.object(run_cell.os.path, "exists",
+                                  side_effect=lambda path: exists.get(path, False)):
+            report = run_cell.record_native_versions({}, 5.0)
+        self.assertEqual(report["package_manager"], "dpkg")
+        self.assertEqual(report["packages"]["pdns-server"], "4.9.17-0+deb13u1")
+        self.assertIsNone(report["packages"]["pdns-backend-sqlite3"])
+        self.assertIn("9.20.29", report["daemons"]["named"]["output"])
+        self.assertNotIn("pdns_server", report["daemons"])
+        source = MODULE_PATH.read_text(encoding="utf-8")
+        flow = source[source.index("def run_cell(settings:"):]
+        self.assertLess(flow.index('"before": record_native_versions('),
+                        flow.index("tagged = start_tagged_agent("))
+        self.assertLess(flow.index('["after"] = record_native_versions('),
+                        flow.index('result["complete_verdict"] = pre_reboot_verdict('))
+        owner = source[source.index("def run_owner_inverse_after_restart("):]
+        self.assertLess(owner.index('["after"] = record_native_versions('),
+                        owner.index("maybe_request_reboot_after_recovery("))
 
 
 class OwnerFlowHelpers:

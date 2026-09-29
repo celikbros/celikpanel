@@ -78,6 +78,11 @@ DEFAULT_PEER_CATALOG_FORMAT = {"bind": "bind", "pdns": "pdns-native"}
 PEER_CATALOG_BIND_FLAG = "--peer-catalog-format-bind"
 PEER_CATALOG_PDNS_FLAG = "--peer-catalog-format-pdns-native"
 PEER_CATALOG_FLAGS = {"bind": PEER_CATALOG_BIND_FLAG, "pdns-native": PEER_CATALOG_PDNS_FLAG}
+# A PowerDNS consumer writes {"consumer": {"unique": "<label>."}} on the
+# consumed member row; the label is the member's node label in the peer's
+# catalog: SHA-224 hex (BIND format) or 32-character base32hex (PowerDNS).
+PEER_CATALOG_MEMBER_LABEL_PREFIX = "--peer-catalog-member-label="
+MEMBER_LABEL_RE = re.compile(r"[0-9a-f]{56}|[0-9a-v]{32}")
 SECONDARY_LOCAL_NS = "ns2.s1-kill.test"
 SECONDARY_PEER_NS = "ns1.s1-kill.test"
 PRIMARY_MEMBER_SOA_SERIAL = 2026083101
@@ -211,6 +216,7 @@ QUERY_NAME = "www.s1-kill.test"
 
 RUN_PREPARED_CODE = r"""import json
 import os
+import re
 import stat
 import sys
 
@@ -251,12 +257,22 @@ disable = "--disable-management-before-reboot"
 resume = "--resume-after-reboot"
 order = [handoff, later, owner, startup, peer_bind, peer_pdns, retry, reboot_before,
          reboot_after, even_if_failed, disable, resume]
-if (len(sys.argv) < 2 or len(set(flags)) != len(flags)
-        or any(flag not in order for flag in flags)
-        or flags != [flag for flag in order if flag in flags]):
+label_prefix = "--peer-catalog-member-label="
+labels = [flag for flag in flags if flag.startswith(label_prefix)]
+plain = [flag for flag in flags if not flag.startswith(label_prefix)]
+if (len(sys.argv) < 2 or len(set(plain)) != len(plain)
+        or any(flag not in order for flag in plain)
+        or plain != [flag for flag in order if flag in plain]):
     raise SystemExit("unexpected prepared controller invocation")
-chosen = set(flags)
-if any(flag in argv for flag in order) or "--reboot-dir" in argv:
+chosen = set(plain)
+if labels:
+    value = labels[0][len(label_prefix):]
+    if (len(labels) != 1 or not re.fullmatch("[0-9a-f]{56}|[0-9a-v]{32}", value)
+            or not cell.startswith("pdns-switch__") or "__paired-secondary__" not in cell
+            or not chosen & {"--peer-catalog-format-bind", "--peer-catalog-format-pdns-native"}):
+        raise SystemExit("the peer catalog member label applies only to a PowerDNS paired secondary")
+if (any(flag in argv for flag in order) or "--reboot-dir" in argv
+        or any(item.startswith(label_prefix) for item in argv)):
     raise SystemExit("prepared controller argv already carries a mode flag")
 bind_handoff = "bind__rolling-back__after-write__standalone__peer-reachable"
 handoff_cells = {
@@ -1798,14 +1814,29 @@ def run_prepared(args: argparse.Namespace) -> int:
     )
     identity = identity_file(args.identity_file)
     flags = prepared_flags(args, peer_catalog_format)
-    command = ssh_base(node, identity) + [prepared_remote(args.cell_id, flags)]
     reboots_allowed = int(reboot_before) + int(reboot_after)
-    resume_command = (
-        ssh_base(node, identity) + [prepared_remote(args.cell_id, flags + [RESUME_FLAG])]
-        if reboots_allowed
-        else None
+    # A PowerDNS secondary stores the member's unique label of the peer's
+    # catalog on the consumed member row; the controller judges that value
+    # against the label the peer probe read right before it (execute only).
+    needs_member_label = (
+        peer_engine is not None and cell.get("driver") == "pdns-switch"
     )
+
+    def commands(label: str | None) -> tuple[list[str], list[str] | None]:
+        selected = with_member_label(flags, label) if needs_member_label else list(flags)
+        command = ssh_base(node, identity) + [prepared_remote(args.cell_id, selected)]
+        resume = (
+            ssh_base(node, identity)
+            + [prepared_remote(args.cell_id, selected + [RESUME_FLAG])]
+            if reboots_allowed
+            else None
+        )
+        return command, resume
+
     if not args.execute:
+        command, resume_command = commands(
+            MEMBER_LABEL_PLACEHOLDER if needs_member_label else None
+        )
         if peer_engine is not None:
             print(json.dumps({
                 "before_controller": "native_primary_peer.py observe",
@@ -1836,10 +1867,14 @@ def run_prepared(args: argparse.Namespace) -> int:
             }))
         return 0
     peer_before: dict[str, Any] | None = None
+    member_label: str | None = None
     if peer_engine is not None:
         peer_before = observe_peer_before_controller(
             args, plan, peer_engine, peer_catalog_format
         )
+        if needs_member_label:
+            member_label = peer_member_label(peer_before)
+    command, resume_command = commands(member_label)
     returncode = subprocess.run(command, check=False).returncode
     reboots = 0
     while returncode == REBOOT_REQUESTED_EXIT and resume_command is not None:
@@ -1861,6 +1896,37 @@ def run_prepared(args: argparse.Namespace) -> int:
             args, plan, peer_engine, peer_before, returncode, peer_catalog_format
         )
     return returncode
+
+
+MEMBER_LABEL_PLACEHOLDER = "<label from peer-before-kill.json>"
+
+
+def peer_member_label(observation: Any) -> str:
+    """The member's unique label in the catalog the peer serves (peer probe)."""
+
+    labels = observation.get("catalog_member_labels") if isinstance(observation, dict) else None
+    label = labels.get(ZONE_NAME) if isinstance(labels, dict) else None
+    if not isinstance(label, str) or MEMBER_LABEL_RE.fullmatch(label) is None:
+        raise BootstrapError(
+            "the native primary peer observation names no unique catalog label for "
+            f"{ZONE_NAME}; the PowerDNS secondary's consumed member row cannot be "
+            "judged. Nothing was started"
+        )
+    return label
+
+
+def with_member_label(flags: list[str], label: str | None) -> list[str]:
+    """Insert --peer-catalog-member-label=<label> right after the format flag."""
+
+    if label is None:
+        raise BootstrapError("a PowerDNS paired secondary needs the peer's member label")
+    token = PEER_CATALOG_MEMBER_LABEL_PREFIX + label
+    selected = list(flags)
+    for index, flag in enumerate(selected):
+        if flag in (PEER_CATALOG_BIND_FLAG, PEER_CATALOG_PDNS_FLAG):
+            selected.insert(index + 1, token)
+            return selected
+    raise BootstrapError("the member label needs a peer catalog format flag")
 
 
 def observe_peer_before_controller(

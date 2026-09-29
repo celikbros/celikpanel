@@ -231,6 +231,7 @@ PEER_CATALOG_LOG_RE = re.compile(
     r"this operation reads it in that format"
 )
 PEER_CATALOG_CHANGED_TEXT = "peer catalog producer changed during the operation"
+MEMBER_LABEL_RE = re.compile(r"[0-9a-f]{56}|[0-9a-v]{32}")
 JOURNALCTL_EXECUTABLE = "/usr/bin/journalctl"
 SS_EXECUTABLE = "/usr/bin/ss"
 # Reboot during recovery. The controller runs inside the guest, so a reboot
@@ -3245,8 +3246,15 @@ def secure_json_with_digest(
 
 def validate_managed_bind_setup(
     proof: Mapping[str, Any], cell: CellSpec,
-    measured_scenario: Mapping[str, Any], state: Mapping[str, Any]
+    measured_scenario: Mapping[str, Any], state_document: Mapping[str, Any],
+    state_raw: bytes,
 ) -> None:
+    # The product writes the v2 state receipt (acquisition / publication);
+    # every key below is read from the shared strict projection, which also
+    # accepts the canonical legacy v1 document. Batch 5 cell c6 read the v2
+    # document as a flat v1 object and stopped with KeyError before any
+    # measured mutation.
+    state = decode_dns_document(state_document, state_raw)
     removed_engine = measured_scenario.get("source_fixture") == MANAGED_BIND_ABSENT
     if removed_engine:
         # Row 14: the same production fresh BIND switch produced the managed
@@ -3308,7 +3316,7 @@ def validate_managed_bind_setup(
         "source_fixture": "uninitialized",
         "request_id": request_id,
         "owner_id": deterministic_trigger_owner(cell.cell_id, request_id),
-        "manifest_qualifier": state["manifest_qualifier"],
+        "manifest_qualifier": state.get("manifest_qualifier"),
     }
     if receipt != expected_identity or (
         json.dumps(receipt, separators=(",", ":")) + "\n"
@@ -3674,7 +3682,7 @@ def validate_socket_source_proof(
             "identity": ownership,
         }
         if source_fixture in {"managed-bind", MANAGED_BIND_ABSENT}:
-            validate_managed_bind_setup(proof, cell, scenario, state)
+            validate_managed_bind_setup(proof, cell, scenario, state, state_raw)
         if source_fixture == "managed-pdns":
             # Adoption is a historical checkpoint. Source normalization may
             # rewrite ownership, while the engine-state bytes must stay fixed.
@@ -5405,6 +5413,9 @@ class Settings:
     # "bind" or "pdns-native": the catalog format the native primary peer of a
     # fresh paired-secondary cell serves (--peer-catalog-format-*).
     peer_catalog_format: str | None = None
+    # The consumed member's unique label in the catalog the peer serves, as
+    # the peer probe read it (PowerDNS paired secondaries only).
+    peer_catalog_member_label: str | None = None
     retry_switch_after_rollback: bool = False
     reboot_even_if_failed: bool = False
 
@@ -5947,6 +5958,12 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
         raise ControllerError(
             "--peer-catalog-format-bind / --peer-catalog-format-pdns-native apply only "
             "to the admitted fresh paired-secondary cells"
+        )
+    if getattr(settings, "peer_catalog_member_label", None) is not None and not (
+        is_admitted_paired_secondary(settings.cell) and settings.cell.driver == "pdns-switch"
+    ):
+        raise ControllerError(
+            "--peer-catalog-member-label applies only to fresh PowerDNS paired secondaries"
         )
     if settings.trigger_mode == "startup":
         if (
@@ -7671,6 +7688,66 @@ def owner_inverse_owner_files(
     )
 
 
+NATIVE_VERSION_PACKAGES = {
+    "dpkg": ("bind9", "bind9-libs", "bind9-host", "pdns-server", "pdns-backend-sqlite3"),
+    "pacman": ("bind", "powerdns"),
+}
+NATIVE_VERSION_DAEMONS = {
+    "named": ("/usr/sbin/named", "-v"),
+    "pdns_server": ("/usr/sbin/pdns_server", "--version"),
+}
+
+
+def record_native_versions(
+    environment: Mapping[str, str], timeout: float
+) -> dict[str, Any]:
+    """Read only: installed BIND/PowerDNS package versions and daemon banners.
+
+    Recorded, never judged (packages are installed or upgraded inside the
+    measured operation, so they are taken before the tagged Agent and after
+    recovery).
+    """
+
+    def output(argv: Sequence[str]) -> dict[str, Any]:
+        try:
+            completed = subprocess.run(
+                list(argv), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, env=dict(environment), check=False,
+                timeout=timeout,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            return {"error": str(exc)}
+        return {
+            "returncode": completed.returncode,
+            "output": completed.stdout[:512].decode("utf-8", errors="replace").strip(),
+        }
+
+    report: dict[str, Any] = {"at": utc_now(), "packages": {}, "daemons": {}}
+    if os.path.exists("/usr/bin/dpkg-query"):
+        report["package_manager"] = "dpkg"
+        for name in NATIVE_VERSION_PACKAGES["dpkg"]:
+            row = output(["/usr/bin/dpkg-query", "-W", "-f=${db:Status-Abbrev} ${Version}", name])
+            parts = str(row.get("output", "")).split()
+            report["packages"][name] = (
+                parts[1] if row.get("returncode") == 0 and len(parts) == 2
+                and parts[0].startswith("ii") else None
+            )
+    elif os.path.exists("/usr/bin/pacman"):
+        report["package_manager"] = "pacman"
+        for name in NATIVE_VERSION_PACKAGES["pacman"]:
+            row = output(["/usr/bin/pacman", "-Q", name])
+            parts = str(row.get("output", "")).split()
+            report["packages"][name] = (
+                parts[1] if row.get("returncode") == 0 and len(parts) == 2 else None
+            )
+    else:
+        report["package_manager"] = None
+    for label, argv in NATIVE_VERSION_DAEMONS.items():
+        if os.path.exists(argv[0]):
+            report["daemons"][label] = output(argv)
+    return report
+
+
 def record_recovery_status(
     settings: Settings,
     environment: Mapping[str, str],
@@ -8930,6 +9007,9 @@ def run_owner_inverse_after_restart(
         flow.request_reboot_before_owner_command()
     flow.owner_steps()
     flow.finish()
+    result.setdefault("native_versions", {})["after"] = record_native_versions(
+        owner_environment, settings.command_timeout
+    )
     result["complete_verdict"] = pre_reboot_verdict(result, flow.state())
     maybe_request_reboot_after_recovery(
         settings, result, owner_environment, flow.state()
@@ -9472,7 +9552,8 @@ def verify_dns_alone_after_reboot(
         failures.extend(f"after reboot: {item}" for item in serving["failures"])
         unknown.extend(f"after reboot: {item}" for item in serving["unknown"])
         if settings.cell.driver == "pdns-switch":
-            rows = check_pdns_secondary_rows(peer_ip)
+            rows = check_pdns_secondary_rows(
+                peer_ip, getattr(settings, "peer_catalog_member_label", None))
             report["pdns_secondary_rows"] = rows
             failures.extend(f"after reboot: {item}" for item in rows["failures"])
             unknown.extend(f"after reboot: {item}" for item in rows["unknown"])
@@ -10065,6 +10146,19 @@ def refuse_unadmitted_paired_secondary(settings: Settings) -> None:
             "(guest_bootstrap.py run-prepared passes the prepared one); the Agent's log "
             "line naming the accepted format is judged against it. Nothing was started"
         )
+    label = getattr(settings, "peer_catalog_member_label", None)
+    if cell.driver == "pdns-switch":
+        if not isinstance(label, str) or MEMBER_LABEL_RE.fullmatch(label) is None:
+            raise ControllerError(
+                "a fresh PowerDNS paired secondary needs --peer-catalog-member-label: the "
+                "member's unique label in the catalog the peer serves (run-prepared passes "
+                "the one the peer probe read); the consumed member row is judged against "
+                "it. Nothing was started"
+            )
+    elif label is not None:
+        raise ControllerError(
+            "--peer-catalog-member-label applies only to fresh PowerDNS paired secondaries"
+        )
 
 
 def _skip_dns_name(message: bytes, offset: int) -> int:
@@ -10231,7 +10325,62 @@ def check_secondary_serving(settings: Settings, peer_ip: str) -> dict[str, Any]:
     return report
 
 
-def check_pdns_secondary_rows(peer_ip: str) -> dict[str, Any]:
+def judge_consumed_member_options(
+    options: str, expected_label: str | None
+) -> tuple[list[str], list[str], dict[str, Any]]:
+    """The consumed member row's ``options`` (pure; offline-tested).
+
+    Native PowerDNS 4.9.17 writes {"consumer": {"unique": "<label>."}} on a
+    member it consumed from a catalog (batch 5 cells c3/c4). Accepted, as the
+    product is being changed to accept: empty, or exactly that object - strict
+    JSON, no duplicate or extra keys - whose single ``consumer.unique`` is the
+    member's unique label in the catalog the peer serves (from the peer probe)
+    followed by the root dot. Anything else is a verified failure; a non-empty
+    value without a known expected label is unknown.
+    """
+
+    record: dict[str, Any] = {"value": options, "expected_label": expected_label}
+    if options == "":
+        record["shape"] = "empty"
+        return [], [], record
+
+    def strict(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        seen: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in seen:
+                raise ValueError(f"duplicate key {key!r}")
+            seen[key] = item
+        return seen
+
+    try:
+        value = json.loads(options, object_pairs_hook=strict)
+    except ValueError as exc:
+        record["shape"] = "invalid"
+        return [f"the consumed member options are not strict JSON: {exc}"], [], record
+    consumer = value.get("consumer") if isinstance(value, dict) else None
+    unique = consumer.get("unique") if isinstance(consumer, dict) else None
+    if (
+        not isinstance(value, dict) or set(value) != {"consumer"}
+        or not isinstance(consumer, dict) or set(consumer) != {"unique"}
+        or not isinstance(unique, str)
+    ):
+        record["shape"] = "unexpected"
+        return [f"the consumed member options are not exactly consumer.unique: {options!r}"], [], record
+    record["shape"] = "consumer.unique"
+    record["unique"] = unique
+    if expected_label is None:
+        return [], ["the peer's member label is unknown; consumer.unique was not judged"], record
+    if unique != expected_label + ".":
+        return [
+            f"the consumed member's consumer.unique {unique!r} is not the member's label "
+            f"{expected_label + '.'!r} in the catalog the peer serves"
+        ], [], record
+    return [], [], record
+
+
+def check_pdns_secondary_rows(
+    peer_ip: str, expected_member_label: str | None = None
+) -> dict[str, Any]:
     """PowerDNS secondary SQL state (dns_engine_pdns_catalog.go:54-188)."""
 
     report: dict[str, Any] = {"failures": [], "unknown": []}
@@ -10268,12 +10417,18 @@ def check_pdns_secondary_rows(peer_ip: str) -> dict[str, Any]:
         and members[0][2] == peer_ip
         and members[0][3] in {"", PDNS_PEER_CATALOG_ACCOUNT}
         and members[0][4] == catalog
-        and members[0][5] == ""
     ):
         report["failures"].append(
             f"the member is not exactly one secondary zone {PAIRED_SECONDARY_ZONE} "
             f"from {peer_ip} in catalog {catalog}: {members}"
         )
+    if len(members) == 1:
+        failures, unknown, record = judge_consumed_member_options(
+            members[0][5], expected_member_label
+        )
+        report["member_options"] = record
+        report["failures"].extend(failures)
+        report["unknown"].extend(unknown)
     if soa_rows != 1:
         report["failures"].append(
             f"the secondary member holds {soa_rows} SOA records; it is not loaded"
@@ -10536,7 +10691,8 @@ def judge_fixture_pass_definition(
     if paired:
         parts["secondary_serving"] = check_secondary_serving(settings, peer_ip)
         if settings.cell.driver == "pdns-switch":
-            parts["pdns_secondary_rows"] = check_pdns_secondary_rows(peer_ip)
+            parts["pdns_secondary_rows"] = check_pdns_secondary_rows(
+                peer_ip, getattr(settings, "peer_catalog_member_label", None))
         parts["peer_catalog_format_log"] = judge_peer_catalog_format_log(
             collect_agent_peer_catalog_log(
                 settings, environment, peer_ip,
@@ -10789,6 +10945,9 @@ def run_cell(settings: Settings) -> int:
                 source_proof["source_fixture"], source_unit_states
             )
             result["source_dns_units_before_tagged_agent"] = source_unit_states
+            result["native_versions"] = {
+                "before": record_native_versions(clean_base_environment, settings.command_timeout)
+            }
             transcript.event(
                 "source-dns-units-proven-before-tagged-agent",
                 source_fixture=source_proof["source_fixture"],
@@ -11663,6 +11822,9 @@ def run_cell(settings: Settings) -> int:
             settings, result, clean_base_environment, peer_ip, verification_failures
         )
         judge_recovery_status_reads(result)
+        result.setdefault("native_versions", {})["after"] = record_native_versions(
+            clean_base_environment, settings.command_timeout
+        )
         # ``status`` stays the D-021 verdict; this is the complete one
         # (classification, retries, probes) the reboot gate also uses.
         result["complete_verdict"] = pre_reboot_verdict(result, {"flow": "rpc-retry"})
@@ -11852,6 +12014,14 @@ def build_argument_parser() -> argparse.ArgumentParser:
         dest="peer_catalog_format", action="store_const", const="pdns-native",
         help="fresh paired-secondary cells: the native primary serves its PowerDNS PRODUCER catalog",
     )
+    parser.add_argument(
+        "--peer-catalog-member-label", default=None,
+        help=(
+            "fresh PowerDNS paired-secondary cells: the member's unique label in the "
+            "catalog the native primary serves, as its probe read it; the consumed "
+            "member row's options must be empty or exactly that consumer.unique"
+        ),
+    )
     parser.add_argument("--cell-id", required=True)
     parser.add_argument("--request-id", required=True)
     parser.add_argument("--nonce", required=True)
@@ -11998,6 +12168,7 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         expect_agent_startup_rollback=args.expect_agent_startup_rollback,
         disable_management_before_reboot=args.disable_management_before_reboot,
         peer_catalog_format=args.peer_catalog_format,
+        peer_catalog_member_label=args.peer_catalog_member_label,
         retry_switch_after_rollback=args.retry_switch_after_rollback,
         reboot_even_if_failed=args.reboot_even_if_failed,
         native_dns_status_command=(

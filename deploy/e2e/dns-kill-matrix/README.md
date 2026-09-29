@@ -752,7 +752,15 @@ operation. The peer probe ports that selection and reports
 `catalog_producer` (`bind`/`powerdns`), `agent_catalog_format_name`
 (`BIND`/`PowerDNS`) and, for PowerDNS, a read-only view of the `domains` rows
 and the catalog's `domainmetadata` kinds; it refuses an observation whose
-producer differs from the prepared format. Order, all driven by the bootstrap:
+producer differs from the prepared format. It also reports each member's node
+label (`catalog_member_labels`) and, recorded only, the native versions on the
+peer (`native_versions`: `pacman -Q bind powerdns` or `dpkg-query` rows, and
+the `named -v` / `pdns_server --version` banners). The controller records the
+guest's versions under `native_versions.before` (before the tagged Agent) and
+`native_versions.after` (after recovery), because the measured operation
+installs or upgrades packages. Batch 5 ran PowerDNS 5.1.4 and BIND 9.20.29 on
+the Arch peer against PowerDNS 4.9.17 and BIND 9.20.29 on the Debian guest.
+Order, all driven by the bootstrap:
 
 1. `prepare-*` runs `native_primary_peer.py prepare --engine <peer>
    --catalog-format <format>` on the peer guest, then one baseline `observe`,
@@ -788,7 +796,20 @@ copied from the standalone flow):
 - PowerDNS secondary: exactly one `CONSUMER` row for
   `catalog-<hex(peer)>.celikpanel.invalid` with `master` = primary and account
   `celikpanel-peer-catalog-v1`, and `s1-kill.test` as a `SLAVE`/`SECONDARY`
-  zone from the primary in that catalog, holding its SOA;
+  zone from the primary in that catalog, holding its SOA. The member row's
+  `options` must be empty or exactly `{"consumer": {"unique": "<label>."}}`
+  (strict JSON, no duplicate or extra keys), where `<label>` is the member's
+  node label in the catalog the peer serves: native PowerDNS 4.9.17 writes
+  that value on a consumed member (batch 5 cells `c3`/`c4`,
+  `{"consumer": {"unique": "b076e924….849a."}}`, the SHA-224 label of
+  `s1-kill.test` in the BIND-format catalog). The label comes from the peer
+  probe's catalog read right before the controller (`catalog_member_labels`
+  in `peer-before-kill.json`); `run-prepared` passes it to the controller as
+  `--peer-catalog-member-label=<label>` (the only valued guest-program token,
+  56 hex or 32 base32hex characters, PowerDNS paired secondaries only; the
+  controller refuses such a cell without it before any mutation). The value
+  is recorded (`pdns_secondary_rows.member_options`); anything else is a
+  verified failure;
 - the Agent's log line "the paired primary at `<peer>` serves catalog
   `<catalog>` in the `<BIND|PowerDNS>` catalog format" (tagged Agent output in
   the transcript, and the restarted Agent's `celikpanel-agent.service`
@@ -1901,6 +1922,13 @@ and ownership receipts must be byte-identical before and after the removal,
 no install receipt may appear, both BIND units must be `not-found`, and port
 53 bindable. The measured request is the Panel's `reinstall_active` manifest:
 mode `reinstall`, source = target = `bind`, epochs 1 to 1, the same zone.
+The controller binds the setup operation to the retained state receipt
+through the shared strict decoder (`decode_dns_document`), which reads the
+product's v2 receipt (`acquisition`/`publication`, canonical bytes) and the
+canonical legacy v1 one. Batch 5 cell `c6` read the v2 receipt as a flat v1
+object and stopped with `KeyError: 'manifest_qualifier'` before any measured
+mutation; the reinstall path has therefore not run natively yet. The offline
+test uses that cell's real receipt, setup scenario, identity and source proof.
 
 Pass definition: proven exit 137 with the V1 journal (mode `reinstall`) at
 `target-staged`; at the cut the install receipt names `bind9` in

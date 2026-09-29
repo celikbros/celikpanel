@@ -245,6 +245,9 @@ class CatalogAXFRState:
         self.version_seen = False
         self.record_owners: set[str] = set()
         self.members: set[str] = set()
+        # member -> its unique label under .zones (what a PowerDNS consumer
+        # stores as {"consumer": {"unique": "<label>."}} on the member row).
+        self.member_labels: dict[str, str] = {}
 
     def _claim(self, owner: str) -> None:
         if owner in self.record_owners:
@@ -374,6 +377,7 @@ class CatalogAXFRState:
                 if member in self.members:
                     raise CatalogAXFRError("BIND catalog AXFR contains a duplicate member")
                 self.members.add(member)
+                self.member_labels[member] = owner[: -len(".zones." + self.catalog)]
                 if len(self.members) > AXFR_MAX_MEMBERS:
                     raise CatalogAXFRError("BIND catalog AXFR exceeds the member limit")
             elif record_type == DNS_TYPE_APL:
@@ -396,11 +400,15 @@ class CatalogAXFRState:
 
 
 def read_catalog_axfr_stream(
-    stream: bytes, query_id: int, catalog: str, producer: str = PRODUCER_BIND
+    stream: bytes, query_id: int, catalog: str, producer: str = PRODUCER_BIND,
+    labels_out: dict[str, str] | None = None,
 ) -> tuple[int, list[str]]:
     """readDNSCatalogAXFRWithProducer over an in-memory TCP byte stream."""
 
     state = CatalogAXFRState(query_id, catalog, producer)
+    if labels_out is not None:
+        labels_out.clear()
+        state.member_labels = labels_out
     offset = 0
     total = 0
     for _ in range(AXFR_MAX_MESSAGES):
@@ -476,10 +484,14 @@ def _read_exact(connection: socket.socket, size: int) -> bytes:
 
 
 def query_catalog_axfr(address: str, catalog: str, timeout: float = 8.0,
-                       producer: str = PRODUCER_BIND) -> tuple[int, list[str]]:
+                       producer: str = PRODUCER_BIND,
+                       labels_out: dict[str, str] | None = None) -> tuple[int, list[str]]:
     query_id = _random_id()
     query = build_query(catalog, DNS_TYPE_AXFR, query_id)
     state = CatalogAXFRState(query_id, catalog, producer)
+    if labels_out is not None:
+        labels_out.clear()
+        state.member_labels = labels_out
     with socket.create_connection((address, 53), timeout=timeout) as connection:
         connection.sendall(struct.pack("!H", len(query)) + query)
         total = 0
@@ -601,6 +613,62 @@ def file_digest(path: str) -> str | None:
         return None
 
 
+VERSION_PACKAGES = {
+    "pacman": ("bind", "powerdns"),
+    "dpkg": ("bind9", "bind9-libs", "pdns-server", "pdns-backend-sqlite3"),
+}
+VERSION_COMMANDS = {
+    "named": ("/usr/sbin/named", "-v"),
+    "pdns_server": ("/usr/sbin/pdns_server", "--version"),
+}
+
+
+def _bounded_output(argv: list[str]) -> dict:
+    try:
+        completed = subprocess.run(
+            argv, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+            timeout=10, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"error": str(exc)}
+    text = (completed.stdout + completed.stderr).strip()
+    return {"returncode": completed.returncode, "output": text[:512]}
+
+
+def native_versions() -> dict:
+    """Read only: installed BIND/PowerDNS package versions and daemon banners.
+
+    Recorded, never judged: which native versions served on this side (for
+    example PowerDNS 5.1.4 on the Arch peer against 4.9.17 on the Debian guest).
+    """
+
+    report: dict = {"packages": {}, "daemons": {}}
+    if os.path.exists("/usr/bin/pacman"):
+        report["package_manager"] = "pacman"
+        for name in VERSION_PACKAGES["pacman"]:
+            result = _bounded_output(["/usr/bin/pacman", "-Q", name])
+            parts = result.get("output", "").split()
+            report["packages"][name] = (
+                parts[1] if result.get("returncode") == 0 and len(parts) == 2 else None
+            )
+    elif os.path.exists("/usr/bin/dpkg-query"):
+        report["package_manager"] = "dpkg"
+        for name in VERSION_PACKAGES["dpkg"]:
+            result = _bounded_output(
+                ["/usr/bin/dpkg-query", "-W", "-f=${db:Status-Abbrev} ${Version}", name])
+            parts = result.get("output", "").split()
+            report["packages"][name] = (
+                parts[1] if result.get("returncode") == 0 and len(parts) == 2
+                and parts[0].startswith("ii") else None
+            )
+    else:
+        report["package_manager"] = None
+    for label, argv in VERSION_COMMANDS.items():
+        if os.path.exists(argv[0]):
+            report["daemons"][label] = _bounded_output(list(argv))
+    return report
+
+
 def unit_active(unit: str) -> bool:
     return subprocess.run(
         ["systemctl", "is-active", "--quiet", unit], check=False
@@ -680,8 +748,10 @@ def observe(engine: str, primary: str, secondary: str, catalog: str,
         raise ValueError(f"native {unit} is inactive")
     if any(unit_active(other) for other in FOREIGN_UNITS[engine]):
         raise ValueError("another DNS engine is active on the native primary peer")
+    member_labels: dict[str, str] = {}
     serial, members, producer = select_peer_catalog(
-        lambda selected: query_catalog_axfr("127.0.0.1", catalog, producer=selected),
+        lambda selected: query_catalog_axfr(
+            "127.0.0.1", catalog, producer=selected, labels_out=member_labels),
         catalog,
     )
     if producer != expected_producer:
@@ -730,6 +800,10 @@ def observe(engine: str, primary: str, secondary: str, catalog: str,
         "catalog_format": catalog_format,
         "catalog_producer": producer,
         "agent_catalog_format_name": AGENT_PRODUCER_NAMES[producer],
+        # member -> its unique label in the served catalog; a PowerDNS
+        # secondary records it on the consumed member row.
+        "catalog_member_labels": dict(sorted(member_labels.items())),
+        "native_versions": native_versions(),
         "pdns_catalog_rows": (
             read_pdns_catalog_rows(pdns_database, catalog)
             if engine == "pdns" and pdns_database else None

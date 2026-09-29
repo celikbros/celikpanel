@@ -264,7 +264,12 @@ The files below are outside this change. In order:
    product writes: one `CONSUMER` row for the peer catalog with `master` =
    primary and account `celikpanel-peer-catalog-v1`
    (`dns_engine_pdns_catalog.go:54-96`), and the member loaded as `SLAVE`
-   with `master` = primary and `catalog` = the catalog name.
+   with `master` = primary and `catalog` = the catalog name. The member's
+   `options` must be empty or exactly `{"consumer": {"unique": "<label>."}}`
+   with `<label>` the member's node label in the catalog the peer serves (as
+   the peer probe read it, passed as `--peer-catalog-member-label`); native
+   PowerDNS 4.9.17 wrote that value in batch 5 (`c3`, `c4`), which the
+   product's readiness check refused at that time.
 
 ### (c) One zone-sync interruption cell on a pair (row 17)
 

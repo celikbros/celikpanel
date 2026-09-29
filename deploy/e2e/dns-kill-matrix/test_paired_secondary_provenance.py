@@ -202,10 +202,26 @@ class AdmissionTest(unittest.TestCase):
                 ):
                     run_cell.refuse_unadmitted_paired_secondary(settings_for(root, spec(cell_id)))
             admitted = spec("pdns-switch__rolled-back__before-write__paired-secondary__peer-reachable")
+            label = "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a"
             for catalog_format in ("bind", "pdns-native"):
                 run_cell.refuse_unadmitted_paired_secondary(
-                    settings_for(root, admitted, peer_catalog_format=catalog_format)
+                    settings_for(root, admitted, peer_catalog_format=catalog_format,
+                                 peer_catalog_member_label=label)
                 )
+            # A PowerDNS secondary needs the peer's member label; a BIND one refuses it.
+            for value in (None, "B076", "x" * 56):
+                with self.assertRaisesRegex(run_cell.ControllerError,
+                                            "--peer-catalog-member-label"):
+                    run_cell.refuse_unadmitted_paired_secondary(settings_for(
+                        root, admitted, peer_catalog_format="bind",
+                        peer_catalog_member_label=value))
+            bind_secondary = spec("bind__intent__after-write__paired-secondary__peer-reachable")
+            run_cell.refuse_unadmitted_paired_secondary(
+                settings_for(root, bind_secondary, peer_catalog_format="bind"))
+            with self.assertRaisesRegex(run_cell.ControllerError, "only to fresh PowerDNS"):
+                run_cell.refuse_unadmitted_paired_secondary(settings_for(
+                    root, bind_secondary, peer_catalog_format="bind",
+                    peer_catalog_member_label=label))
             # The prepared peer catalog format is required: the Agent's log
             # line naming the accepted format is judged against it.
             with self.assertRaisesRegex(run_cell.ControllerError, "--peer-catalog-format-bind"):
@@ -213,6 +229,7 @@ class AdmissionTest(unittest.TestCase):
             with self.assertRaisesRegex(run_cell.ControllerError, "rpc-retry flow"):
                 run_cell.refuse_unadmitted_paired_secondary(
                     settings_for(root, admitted, expect_agent_startup_rollback=True,
+                                 peer_catalog_member_label=label,
                                  peer_catalog_format="bind")
                 )
             # The reconfiguration driver is untouched by this admission.
@@ -370,7 +387,8 @@ class DNSContentTest(unittest.TestCase):
         self.assertIn("does not answer", report["failures"][0])
 
     def pdns_database(self, root: str, *, account: str = "celikpanel-peer-catalog-v1",
-                      member_type: str = "SLAVE", soa: bool = True) -> str:
+                      member_type: str = "SLAVE", soa: bool = True,
+                      options: str | None = None) -> str:
         path = os.path.join(root, "pdns.sqlite3")
         connection = sqlite3.connect(path)
         connection.executescript(
@@ -387,8 +405,9 @@ class DNSContentTest(unittest.TestCase):
             (catalog, "192.0.2.11", account),
         )
         connection.execute(
-            "INSERT INTO domains(name,type,master,catalog) VALUES('s1-kill.test', ?, ?, ?)",
-            (member_type, "192.0.2.11", catalog),
+            "INSERT INTO domains(name,type,master,catalog,options) "
+            "VALUES('s1-kill.test', ?, ?, ?, ?)",
+            (member_type, "192.0.2.11", catalog, options),
         )
         if soa:
             connection.execute(
@@ -417,6 +436,54 @@ class DNSContentTest(unittest.TestCase):
                     self.assertIn(text, failure)
         with mock.patch.object(run_cell, "PDNS_DATABASE_PATH", "/nonexistent/pdns.sqlite3"):
             self.assertTrue(run_cell.check_pdns_secondary_rows("192.0.2.11")["unknown"])
+
+    # Batch 5 cells c3/c4: native PowerDNS 4.9.17 on the Debian guest wrote
+    # exactly this on the consumed member row (secondary-state-post-collect.txt).
+    EVIDENCE_LABEL = "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a"
+    EVIDENCE_OPTIONS = (
+        '{"consumer": {"unique": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a."}}'
+    )
+
+    def test_consumed_member_options_accept_only_the_peer_label(self) -> None:
+        # The BIND-format label is the SHA-224 member label the peer serves.
+        self.assertEqual(native_primary_peer.probe.catalog_member_label("s1-kill.test"),
+                         self.EVIDENCE_LABEL)
+        judge = run_cell.judge_consumed_member_options
+        self.assertEqual(judge("", self.EVIDENCE_LABEL)[:2], ([], []))
+        failures, unknown, record = judge(self.EVIDENCE_OPTIONS, self.EVIDENCE_LABEL)
+        self.assertEqual((failures, unknown), ([], []))
+        self.assertEqual(record["unique"], self.EVIDENCE_LABEL + ".")
+        self.assertEqual(record["value"], self.EVIDENCE_OPTIONS)
+        # Without the peer's label a non-empty value cannot be judged.
+        self.assertEqual(judge(self.EVIDENCE_OPTIONS, None)[0], [])
+        self.assertTrue(judge(self.EVIDENCE_OPTIONS, None)[1])
+        other = "lf5eijnqp9ob8kmq5mv0vhjaevtcfuus"
+        for value, text in (
+            (self.EVIDENCE_OPTIONS.replace("849a.", "849b."), "is not the member's label"),
+            (self.EVIDENCE_OPTIONS.replace("849a.", "849a"), "is not the member's label"),
+            ('{"consumer": {"unique": "' + other + '."}}', "is not the member's label"),
+            ('{"consumer": {"unique": "' + self.EVIDENCE_LABEL + '.", "coo": "x."}}',
+             "not exactly consumer.unique"),
+            ('{"consumer": {"unique": "' + self.EVIDENCE_LABEL + '."}, "producer": {}}',
+             "not exactly consumer.unique"),
+            ('{"consumer": {"unique": 1}}', "not exactly consumer.unique"),
+            ('["consumer"]', "not exactly consumer.unique"),
+            ('{"consumer": {"unique": "a.", "unique": "' + self.EVIDENCE_LABEL + '."}}',
+             "duplicate key"),
+            ("consumer.unique=" + self.EVIDENCE_LABEL, "not strict JSON"),
+        ):
+            with self.subTest(value=value):
+                failures, _, _ = judge(value, self.EVIDENCE_LABEL)
+                self.assertTrue(failures)
+                self.assertIn(text, failures[0])
+        with tempfile.TemporaryDirectory() as root:
+            path = self.pdns_database(root, options=self.EVIDENCE_OPTIONS)
+            with mock.patch.object(run_cell, "PDNS_DATABASE_PATH", path):
+                report = run_cell.check_pdns_secondary_rows("192.0.2.11", self.EVIDENCE_LABEL)
+                self.assertEqual((report["failures"], report["unknown"]), ([], []))
+                self.assertEqual(report["member_options"]["shape"], "consumer.unique")
+                report = run_cell.check_pdns_secondary_rows("192.0.2.11", other)
+                self.assertIn("is not the member's label", report["failures"][0])
 
     def test_preflight_requires_the_peer_catalog_and_no_pdns_database(self) -> None:
         with tempfile.TemporaryDirectory() as root:
@@ -1174,6 +1241,7 @@ class HostOrchestrationTest(unittest.TestCase):
         observation = {"config_sha256": {"/etc/powerdns/pdns.conf": "1" * 64},
                        "catalog_serial": 1790542951, "catalog_members": ["s1-kill.test"],
                        "catalog_producer": "powerdns", "catalog_format": "pdns-native",
+                       "catalog_member_labels": {"s1-kill.test": "lf5eijnqp9ob8kmq5mv0vhjaevtcfuus"},
                        "member_soa": {}, "www_a": ["192.0.2.11"],
                        "transfers_to_secondary": {"catalog": True, "s1-kill.test": True}}
         written: dict[str, object] = {}
@@ -1202,7 +1270,11 @@ class HostOrchestrationTest(unittest.TestCase):
             self.assertEqual(sorted(written), ["peer-before-kill.json", "peer-verdict.json"])
             self.assertTrue(run.call_args_list[0].args[0][-1].endswith(
                 f"{bootstrap.PEER_CATALOG_PDNS_FLAG} "
+                f"{bootstrap.PEER_CATALOG_MEMBER_LABEL_PREFIX}lf5eijnqp9ob8kmq5mv0vhjaevtcfuus "
                 "--reboot-after-recovery --disable-management-before-reboot"))
+            # The resume command carries the same label.
+            self.assertIn(bootstrap.PEER_CATALOG_MEMBER_LABEL_PREFIX + "lf5eijnqp9ob8kmq5mv0vhjaevtcfuus",
+                          run.call_args_list[1].args[0][-1])
             verdict = written["peer-verdict.json"]
             self.assertEqual(verdict["guest_controller_exit"], guest_exit)
             self.assertEqual(verdict["peer_catalog_format"], "pdns-native")
@@ -1226,6 +1298,85 @@ class HostOrchestrationTest(unittest.TestCase):
                     self.assertRaisesRegex(bootstrap.BootstrapError, text):
                 bootstrap.run_prepared(args)
             run.assert_not_called()
+
+    def test_member_label_comes_from_the_peer_probe_and_reaches_the_guest(self) -> None:
+        label = "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a"
+        self.assertEqual(bootstrap.peer_member_label(
+            {"catalog_member_labels": {"s1-kill.test": label}}), label)
+        for observation in (None, {}, {"catalog_member_labels": {"s1-kill.test": "Z" * 32}},
+                            {"catalog_member_labels": {"other.test": label}}):
+            with self.subTest(observation=observation), \
+                    self.assertRaisesRegex(bootstrap.BootstrapError, "unique catalog label"):
+                bootstrap.peer_member_label(observation)
+        flags = [bootstrap.PEER_CATALOG_BIND_FLAG, bootstrap.REBOOT_AFTER_RECOVERY_FLAG]
+        self.assertEqual(bootstrap.with_member_label(flags, label), [
+            bootstrap.PEER_CATALOG_BIND_FLAG,
+            bootstrap.PEER_CATALOG_MEMBER_LABEL_PREFIX + label,
+            bootstrap.REBOOT_AFTER_RECOVERY_FLAG,
+        ])
+        with self.assertRaises(bootstrap.BootstrapError):
+            bootstrap.with_member_label([bootstrap.REBOOT_AFTER_RECOVERY_FLAG], label)
+        # Dry run: a PowerDNS secondary shows where the label goes; a BIND one has none.
+        for raw, has_label in ((raw_cell(self.SECONDARY), True), (raw_cell(
+                "bind__intent__after-write__paired-secondary__peer-reachable"), False)):
+            args = self.args(raw, action="run-prepared", node=node_of(raw),
+                             peer_engine="bind")
+            with self.subTest(cell=raw["id"]), \
+                    mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})), \
+                    mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/k")), \
+                    mock.patch.object(bootstrap, "ssh_base", return_value=["ssh"]), \
+                    mock.patch.object(bootstrap.subprocess, "run") as run, \
+                    mock.patch("sys.stdout", new_callable=io.StringIO) as output:
+                self.assertEqual(bootstrap.run_prepared(args), 0)
+                run.assert_not_called()
+            command = json.loads(output.getvalue().splitlines()[1])[-1]
+            tail = command[command.rindex(" " + raw["id"]):]  # the guest-program flags
+            self.assertEqual(bootstrap.PEER_CATALOG_MEMBER_LABEL_PREFIX in tail, has_label)
+        # The guest program admits one exact label token for a PowerDNS secondary only.
+        code = bootstrap.RUN_PREPARED_CODE
+        self.assertIn('label_prefix = "--peer-catalog-member-label="', code)
+        self.assertIn('"[0-9a-f]{56}|[0-9a-v]{32}"', code)
+        self.assertIn('not cell.startswith("pdns-switch__")', code)
+
+    @unittest.skipUnless(sys.platform == "linux" and hasattr(os, "geteuid")
+                         and os.geteuid() == 0, "prepared argv proof requires root")
+    def test_guest_program_accepts_one_exact_member_label(self) -> None:
+        label = "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prepared, captured = root / "controller-argv.json", root / "captured.json"
+            executable = root / "run-cell.py"
+            executable.write_text(
+                "#!/usr/bin/env python3\nimport json, sys\n"
+                f"open({str(captured)!r}, 'w').write(json.dumps(sys.argv))\n", encoding="utf-8")
+            executable.chmod(0o700)
+            code = bootstrap.RUN_PREPARED_CODE.replace(
+                "/var/lib/celikpanel-dns-kill-matrix/controller-argv.json", str(prepared)
+            ).replace("/opt/celikpanel/libexec/dns-kill-run-cell.py", str(executable))
+
+            def run(cell_id: str, *flags: str):
+                base = [str(executable), "--cell-id", cell_id, "--trigger-mode", "socket",
+                        "--result", "/var/lib/x/results/c/result.json"]
+                prepared.write_text(json.dumps(base), encoding="utf-8")
+                prepared.chmod(0o600)
+                captured.unlink(missing_ok=True)
+                done = subprocess.run([sys.executable, "-c", code, cell_id, *flags],
+                                      check=False, capture_output=True)
+                if done.returncode != 0:
+                    return None
+                return json.loads(captured.read_text(encoding="utf-8"))[len(base):]
+
+            token = bootstrap.PEER_CATALOG_MEMBER_LABEL_PREFIX + label
+            pdns = bootstrap.PEER_CATALOG_PDNS_FLAG
+            self.assertEqual(run(self.SECONDARY, pdns, token), [pdns, token])
+            for cell_id, flags in (
+                (self.SECONDARY, (token,)),
+                (self.SECONDARY, (pdns, token, token)),
+                (self.SECONDARY, (pdns, bootstrap.PEER_CATALOG_MEMBER_LABEL_PREFIX + "x")),
+                ("bind__intent__after-write__paired-secondary__peer-reachable", (pdns, token)),
+            ):
+                with self.subTest(flags=flags):
+                    self.assertIsNone(run(cell_id, *flags))
 
     def test_peer_catalog_format_resolution(self) -> None:
         raw = raw_cell(self.SECONDARY)
