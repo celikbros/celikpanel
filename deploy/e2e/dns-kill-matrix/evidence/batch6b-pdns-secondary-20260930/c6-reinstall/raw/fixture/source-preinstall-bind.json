@@ -1,0 +1,40 @@
+{
+  "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+  "dns_install_ownership_bind": {
+    "exists": false
+  },
+  "dns_journal_absent": true,
+  "dns_ownership_bind": {
+    "exists": true,
+    "sha256": "b5eef3763cdb12a4bcd029ed1da3d0979e621c3788ba079aada98a07bf1c6793"
+  },
+  "dns_state": {
+    "exists": true,
+    "sha256": "4992553da814068112774ebe8206feffb8621fbae8399d2e5c0dfdcdddad0b1f"
+  },
+  "global_udp_tcp_53_bindable": true,
+  "owner_files": {},
+  "package": {
+    "name": "bind9",
+    "status": "absent",
+    "version": ""
+  },
+  "pdns_receipts_absent": true,
+  "preparation": "production fresh BIND switch, then systemctl disable --now named.service and apt-get purge bind9; receipts kept",
+  "product_rewrites_on_takeover": [],
+  "schema": "celikpanel/dns-kill-source-preinstall-bind/v1",
+  "scope": "managed-bind-engine-removed-for-reinstall",
+  "source_fixture": "managed-bind-absent",
+  "units": {
+    "bind9.service": {
+      "active_state": "inactive",
+      "load_state": "not-found",
+      "unit_file_state": ""
+    },
+    "named.service": {
+      "active_state": "inactive",
+      "load_state": "not-found",
+      "unit_file_state": ""
+    }
+  }
+}

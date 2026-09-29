@@ -1,0 +1,131 @@
+2026-09-29T16:07:17Z
+repository HEAD at run time: 6f2fb028494a71f8ad396ba0abb57d06d962e451
+6f2fb028494a71f8ad396ba0abb57d06d962e451
+go version go1.26.5 linux/amd64
+go1.26.5
+
+https://proxy.golang.org,direct
+/root/go/pkg/mod
+3694af9c4b532126a0743a5aaca4bac1f90ebaf31ba7ffbe65c5ded5e016c22d
+== artifacts
+069faac5882ee85847364465c5b4425780da089c4aa848e9d021a77b9c03c431  /root/cp-b6b-artifacts/agent
+d9b53961dcb45fd94c0c860b5a2b176b09e41b484ea4358705f63ded93eedcfb  /root/cp-b6b-artifacts/agent.kill
+fd902ecb1bba7dc9dc7493c8d7c32e4d897c5f4abe8c3cc024bb4c3132b0bbb6  /root/cp-b6b-artifacts/panel
+5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693  /root/cp-b6b-artifacts/dns-kill-trigger
+dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  /root/cp-b6b-artifacts/recovery
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  /root/cp-b6b-artifacts/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  /root/cp-b6b-artifacts/panel-checker
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  /root/cp-b6b-artifacts/schema17-bridge
+== recovery-runtime
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  ./bin/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  ./bin/panel-checker
+dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  ./bin/recovery
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  ./bin/schema17-bridge
+6645927653114b4d59fbf6e29147f12920ceaec058d0ecc7b92faa71fd1bf6c3  ./deploy/panel-tls-snapshot.sh
+391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004  ./deploy/recovery/runtime-entry.sh
+f499446812b90aee362112743f4e491d5ecfa40511a510d08cbb006babdd48b0  ./deploy/release-recovery-foundation.sh
+db3e2dd23d4b81d9e533354e5d345d26eb43b7943ba20cf7b4ba19fac20cea1e  ./deploy/release-recovery-observation.sh
+4543920d5cc7a4d76c5c3ff91e8a03f4f02bd0e005577b40dc5c740af32c8257  ./deploy/release-transaction-guard.sh
+f163b496a8f48ae55a12658f34125f666c45672eccc4b27c03d58b7367848fc2  ./deploy/release-unit-transition.sh
+cbe3841aef57c62d0242a2957f728100fceca84a7a23135d51156562006ac822  ./rollback.sh
+3694af9c4b532126a0743a5aaca4bac1f90ebaf31ba7ffbe65c5ded5e016c22d  ./runtime.manifest
+dea6eafb9608e1b956e8fee7ddc85908e649056fa6727be9c373cec233154db8  ./update.sh
+ff9abfa1db719155d83024a1840c2782f4f5dce7868547d648b352db98fd7890  /root/cp-b6b-tools/oi-smstatus
+6f5e1c0dd5b3ccdccb0fbceb6d0927993834f3a603073b46b8d9819ac37891f2  /root/cp-b6b-tools/overlay.json
+57823885e8778d4fa5f67b3458042fc1f0cab7cb3a0603af00ec2bd202d85077  /root/cp-b6b-tools/smstatus.go
+/root/cp-b6b-artifacts/agent: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+== comparison with the 94cd124b batch-6a build (/root/cp-b6a-artifacts)
+DIFFERENT agent
+DIFFERENT agent.kill
+DIFFERENT panel
+IDENTICAL dns-kill-trigger
+DIFFERENT recovery
+IDENTICAL agent-checker
+IDENTICAL panel-checker
+IDENTICAL schema17-bridge
+DIFFERENT recovery-runtime/runtime.manifest
+3c3
+< c494c3025c051ceea9b382e26de7da29a66c5ba6a3332de86294b57eb06cb324  ./bin/recovery
+---
+> dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  ./bin/recovery
+12c12
+< 3b6955c553c54295e2c27f51ecc2394366c209dd8862aa4d26208b4f8d44ce0e  ./runtime.manifest
+---
+> 3694af9c4b532126a0743a5aaca4bac1f90ebaf31ba7ffbe65c5ded5e016c22d  ./runtime.manifest
+recovery-runtime tree DIFFERENT
+IDENTICAL oi-smstatus
+web-dist IDENTICAL
+== changed paths 94cd124b..6f2fb028 (non-test Go and harness)
+ .../cp-b6a-watch/journal-at-at-kill-proof.json     |    1 +
+ .../raw/watch/cp-b6a-watch/snap-at-kill-proof.txt  |  140 +
+ .../raw/watch/cp-b6a-watch/snap-start.txt          |   92 +
+ .../raw/watch/cp-b6a-watch/timeline.log            |  250 +
+ .../run-prepared-dryrun-early.log                  |    4 +
+ .../c12-bindsec-pdnsnative/run-prepared-dryrun.log |    4 +
+ .../c12-bindsec-pdnsnative/run-prepared.log        |    4 +
+ .../c12-bindsec-pdnsnative/run-prepared.rc         |    1 +
+ .../secondary-state-post-collect.txt               |  199 +
+ .../secondary-state-pre-run.txt                    |   50 +
+ .../service-mutation-status-post-collect.json      |    1 +
+ .../c12-bindsec-pdnsnative/smstatus.stderr         |    1 +
+ .../c12-bindsec-pdnsnative/start.json              |   83 +
+ .../c12-bindsec-pdnsnative/stop.json               |    6 +
+ .../c12-bindsec-pdnsnative/teardown.json           |    7 +
+ .../versions-post-collect-guest.txt                |   22 +
+ .../versions-post-collect-other.txt                |   15 +
+ .../versions-pre-run-guest.txt                     |   16 +
+ .../versions-pre-run-other.txt                     |   15 +
+ .../c12-bindsec-pdnsnative/wait-ssh.json           |   45 +
+ .../c12-bindsec-pdnsnative/work-root.txt           |    1 +
+ deploy/e2e/dns-kill-matrix/guest_bootstrap.py      |   86 +-
+ .../dns-kill-matrix/native_primary_peer_probe.py   |   80 +-
+ deploy/e2e/dns-kill-matrix/run_cell.py             |  185 +-
+ .../dns-kill-matrix/test_native_primary_peer.py    |   38 +-
+ .../test_paired_secondary_provenance.py            |  159 +-
+ deploy/e2e/dns-kill-matrix/test_run_cell.py        |  159 +-
+ deploy/e2e/dns-pair-acceptance/README.md           |  303 +
+ deploy/e2e/dns-pair-acceptance/dns_checks.py       |  174 +
+ deploy/e2e/dns-pair-acceptance/evidence.py         |  211 +
+ deploy/e2e/dns-pair-acceptance/fakes.py            |  371 +
+ deploy/e2e/dns-pair-acceptance/guest_probe.py      |  504 ++
+ deploy/e2e/dns-pair-acceptance/guests.py           |  184 +
+ deploy/e2e/dns-pair-acceptance/guidance.py         |  444 ++
+ deploy/e2e/dns-pair-acceptance/install_steps.py    |  188 +
+ deploy/e2e/dns-pair-acceptance/pair_acceptance.py  | 1370 ++++
+ deploy/e2e/dns-pair-acceptance/panel_api.py        |  325 +
+ deploy/e2e/dns-pair-acceptance/redaction.py        |  220 +
+ .../e2e/dns-pair-acceptance/scripts/build-dist.sh  |   53 +
+ .../dns-pair-acceptance/scripts/offline-tests.sh   |    7 +
+ .../dns-pair-acceptance/scripts/prepare-guests.sh  |   31 +
+ .../dns-pair-acceptance/scripts/run-topology.sh    |   31 +
+ deploy/e2e/dns-pair-acceptance/scripts/teardown.sh |   21 +
+ deploy/e2e/dns-pair-acceptance/test_dns_probe.py   |  207 +
+ deploy/e2e/dns-pair-acceptance/test_guests.py      |  241 +
+ deploy/e2e/dns-pair-acceptance/test_guidance.py    |  182 +
+ deploy/e2e/dns-pair-acceptance/test_panel_api.py   |  177 +
+ .../dns-pair-acceptance/test_redaction_evidence.py |  211 +
+ deploy/e2e/dns-pair-acceptance/test_sequence.py    |  315 +
+ deploy/e2e/dns-pair-acceptance/topology.py         |  159 +
+ .../agent_release_fresh_prestart_test.go           |   92 +
+ internal/dnsenginerecovery/bind_target_pointer.go  |  180 +
+ .../dnsenginerecovery/bind_target_pointer_test.go  |  124 +
+ internal/dnsenginerecovery/inprocess_rollback.go   |  122 +
+ .../dnsenginerecovery/inprocess_rollback_test.go   |  110 +
+ .../dnsenginerecovery/pdns_adoption_executor.go    |   25 +
+ .../pdns_target_stage_probe_v4_linux_test.go       |    4 +-
+ internal/pdnsnative/catalog_transition.go          |   10 +-
+ internal/pdnsnative/catalog_transition_test.go     |    4 +
+ 1516 files changed, 171092 insertions(+), 345 deletions(-)
+== harness file hashes
+a0ae7f57f58304688a085e94a14845b5f49f5dbaaa698f5bba3343b2912be168  fixture.py
+a9b1a99e408d1f133f577352e28b47dd3462680453b9ed7b5fb80e98bd462536  guest_bootstrap.py
+461f29a6993a81d6aabe18493263ad392fe6ce5c66193b02cc7d35a3c7648544  guest_bootstrap.sh
+53796d64677c725f9f57f61fcafc0f6e67ebc63797c68c8033a75581b9d2d906  run_cell.py
+366663ecc1ebe6926de3371740805e69753f5af0b5afc5eeda295fba4ec14066  guest_recovery_probe.py
+99d87fbe604bbbe202ad7cbe36348b7aab7d23652396bc6a2e14d4880f05bbf2  native_primary_peer.py
+1cffcba844cf55aea440f95446ad11dfe93607f44a643c96ad58c1940f67aef3  native_primary_peer_probe.py
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  manifest.json
+2026-09-29T16:07:58Z
+BUILD-OK

@@ -1,0 +1,21 @@
+wall=2026-09-29T16:13:55.340386675Z boot_id=62dc1b48-3e3a-4734-9edf-33546935d7b9
+os=Debian GNU/Linux 13 (trixie) kernel=6.12.105+deb13-cloud-amd64
+== dpkg-query
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+pdns-backend  un 
+pdns-backend-bind  un 
+pdns-backend-sqlite3 4.9.17-0+deb13u1 ii 
+pdns-server 4.9.17-0+deb13u1 ii 
+python3 3.13.5-1 ii 
+systemd 257.13-1~deb13u1 ii 
+== named -v
+== pdns_server --version
+Sep 29 16:13:55 PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+Sep 29 16:13:55 Using 64-bits mode. Built using gcc 14.2.0.
+== management binaries
+069faac5882ee85847364465c5b4425780da089c4aa848e9d021a77b9c03c431  /opt/celikpanel/bin/agent
+d9b53961dcb45fd94c0c860b5a2b176b09e41b484ea4358705f63ded93eedcfb  /opt/celikpanel/bin/agent.kill
+5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693  /opt/celikpanel/bin/dns-kill-trigger
+fd902ecb1bba7dc9dc7493c8d7c32e4d897c5f4abe8c3cc024bb4c3132b0bbb6  /opt/celikpanel/bin/panel
+sha256sum: /usr/libexec/celikpanel/recovery: No such file or directory

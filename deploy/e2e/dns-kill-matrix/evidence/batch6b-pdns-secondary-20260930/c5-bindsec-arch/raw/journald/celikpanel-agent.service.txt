@@ -1,0 +1,25 @@
+2026-09-29T16:33:11.994518+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-29T16:33:12.018255+00:00 dns-arch agent[1087]: 2026/09/29 16:33:12 Starting CelikPanel Agent...
+2026-09-29T16:33:12.026027+00:00 dns-arch agent[1087]: 2026/09/29 16:33:12 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T16:33:12.026121+00:00 dns-arch agent[1087]: 2026/09/29 16:33:12 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T16:33:22.027197+00:00 dns-arch agent[1087]: 2026/09/29 16:33:22 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:33:32.034687+00:00 dns-arch agent[1087]: 2026/09/29 16:33:32 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:33:32.604746+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-09-29T16:33:32.605519+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T16:33:32.605784+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+2026-09-29T16:34:43.699118+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-29T16:34:43.713948+00:00 dns-arch agent[7359]: 2026/09/29 16:34:43 Starting CelikPanel Agent...
+2026-09-29T16:34:44.942183+00:00 dns-arch agent[7359]: 2026/09/29 16:34:44 Local port-53 listeners accepted as the systemd-resolved stub resolver (unit cgroup and address proved; not DNS authority): tcp|127.0.0.53|systemd-resolve|3521|systemd-resolved.service, tcp|127.0.0.54|systemd-resolve|3521|systemd-resolved.service, udp|127.0.0.53|systemd-resolve|3521|systemd-resolved.service, udp|127.0.0.54|systemd-resolve|3521|systemd-resolved.service.
+2026-09-29T16:34:44.986839+00:00 dns-arch agent[7359]: 2026/09/29 16:34:44 Local port-53 listeners accepted as the systemd-resolved stub resolver (unit cgroup and address proved; not DNS authority): tcp|127.0.0.53|systemd-resolve|3521|systemd-resolved.service, tcp|127.0.0.54|systemd-resolve|3521|systemd-resolved.service, udp|127.0.0.53|systemd-resolve|3521|systemd-resolved.service, udp|127.0.0.54|systemd-resolve|3521|systemd-resolved.service.
+2026-09-29T16:34:45.138976+00:00 dns-arch agent[7359]: 2026/09/29 16:34:45 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T16:34:45.138976+00:00 dns-arch agent[7359]: 2026/09/29 16:34:45 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:34:46.248657+00:00 dns-arch agent[7359]: 2026/09/29 16:34:46 DNS engine change d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-29T16:34:55.139272+00:00 dns-arch agent[7359]: 2026/09/29 16:34:55 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:34:56.229388+00:00 dns-arch agent[7359]: 2026/09/29 16:34:56 DNS engine change completion d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-29T16:35:05.140461+00:00 dns-arch agent[7359]: 2026/09/29 16:35:05 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:35:15.145115+00:00 dns-arch agent[7359]: 2026/09/29 16:35:15 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:35:25.139330+00:00 dns-arch agent[7359]: 2026/09/29 16:35:25 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:35:29.406382+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-09-29T16:35:29.407741+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T16:35:29.407993+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+2026-09-29T16:35:29.408300+00:00 dns-arch systemd[1]: celikpanel-agent.service: Consumed 3.119s CPU time over 45.708s wall clock time, 25.6M memory peak.

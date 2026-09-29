@@ -1,0 +1,87 @@
+wall=2026-09-29T16:31:49.787415674Z boot_id=585401c9-422b-472b-8415-9bca9a1f87e6
+== named.service
+MainPID=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== bind9.service
+MainPID=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== pdns.service
+MainPID=3956
+ExecMainStartTimestamp=Tue 2026-09-29 16:30:54 UTC
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+== celikpanel-agent.service
+MainPID=4596
+ExecMainStartTimestamp=Tue 2026-09-29 16:30:59 UTC
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+== celikpanel-panel.service
+MainPID=5013
+ExecMainStartTimestamp=Tue 2026-09-29 16:31:01 UTC
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=3956,fd=6))    
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=3956,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=18))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=21))
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=3956,fd=7))    
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=19))
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=3956,fd=8))    
+== rndc: not run (rndc absent or named inactive)
+== named-checkconf -l
+== managed BIND files (/var/cache/bind, no follow)
+find: ‘/var/cache/bind’: No such file or directory
+== secondary zone files (regular files under /var/cache/bind), metadata, hash, text
+== PowerDNS database
+total 236
+drwxr-xr-x  2 pdns pdns  4096 2026-09-29 16:30:54.761162954 +0000 .
+drwxr-xr-x 28 root root  4096 2026-09-29 16:30:46.736026215 +0000 ..
+-rw-r-----  1 pdns pdns 98304 2026-09-29 16:30:54.757162415 +0000 pdns.sqlite3
+-rw-r-----  1 pdns pdns 32768 2026-09-29 16:30:55.057202759 +0000 pdns.sqlite3-shm
+-rw-r-----  1 pdns pdns 94792 2026-09-29 16:30:55.057202759 +0000 pdns.sqlite3-wal
+da3811af3dc643d9578d89d02e5061c939ca5250ed2ebb592cf974dd2018ee4b  /var/lib/powerdns/pdns.sqlite3
+domains columns: ['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+domain: {"id": 1, "name": "catalog-c000020b.celikpanel.invalid", "master": "192.0.2.11", "last_check": 1790699455, "type": "CONSUMER", "notified_serial": null, "account": "celikpanel-peer-catalog-v1", "options": null, "catalog": null}
+domain: {"id": 2, "name": "s1-kill.test", "master": "192.0.2.11", "last_check": 1790699455, "type": "SLAVE", "notified_serial": null, "account": "", "options": "{\"consumer\": {\"unique\": \"tlhnkturltuku63bhersj40lbi0vkdvt.\"}}", "catalog": "catalog-c000020b.celikpanel.invalid"}
+record: ["catalog-c000020b.celikpanel.invalid", "catalog-c000020b.celikpanel.invalid", "NS", "invalid", 60]
+record: ["catalog-c000020b.celikpanel.invalid", "catalog-c000020b.celikpanel.invalid", "SOA", "invalid invalid 1790699402 60 30 3600 30", 60]
+record: ["catalog-c000020b.celikpanel.invalid", "tlhnkturltuku63bhersj40lbi0vkdvt.zones.catalog-c000020b.celikpanel.invalid", "PTR", "s1-kill.test", 0]
+record: ["catalog-c000020b.celikpanel.invalid", "version.catalog-c000020b.celikpanel.invalid", "TXT", "\"2\"", 0]
+record: ["catalog-c000020b.celikpanel.invalid", "zones.catalog-c000020b.celikpanel.invalid", null, null, null]
+record: ["s1-kill.test", "ns1.s1-kill.test", "A", "192.0.2.11", 300]
+record: ["s1-kill.test", "ns2.s1-kill.test", "A", "192.0.2.10", 300]
+record: ["s1-kill.test", "s1-kill.test", "NS", "ns1.s1-kill.test", 3600]
+record: ["s1-kill.test", "s1-kill.test", "NS", "ns2.s1-kill.test", 3600]
+record: ["s1-kill.test", "s1-kill.test", "SOA", "ns1.s1-kill.test hostmaster.s1-kill.test 2026083101 10800 3600 604800 3600", 3600]
+record: ["s1-kill.test", "www.s1-kill.test", "A", "192.0.2.11", 300]
+== pdns journal (transfer/notify/catalog lines, all boots)
+2026-09-29T16:30:54.765183+00:00 dns-debian13 pdns_server[3956]: Primary/secondary communicator launching
+2026-09-29T16:30:54.818548+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-29T16:30:54.818548+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone create zone 's1-kill.test'
+2026-09-29T16:30:54.848706+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-29T16:30:54.865330+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 1790699402
+2026-09-29T16:30:54.917392+00:00 dns-debian13 pdns_server[3956]: Retrieval request for zone 'catalog-c000020b.celikpanel.invalid' from primary '192.0.2.11' received from operator
+2026-09-29T16:30:54.940179+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T16:30:55.004995+00:00 dns-debian13 pdns_server[3956]: Cache clear request for 'catalog-c000020b.celikpanel.invalid$' received from operator
+2026-09-29T16:30:55.034752+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T16:30:55.072038+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 1790699402
+== named journal (transfer/notify/catalog/zone lines, all boots)
+== agent journal: catalog/producer lines (all boots)
+2026-09-29T16:30:59.592974+00:00 dns-debian13 agent[4596]: 2026/09/29 16:30:59 DNS engine change recovery ff8a6f95e86a444b474385bd5018d3ab: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-29T16:31:00.519036+00:00 dns-debian13 agent[4596]: 2026/09/29 16:31:00 DNS engine change completion ff8a6f95e86a444b474385bd5018d3ab: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format

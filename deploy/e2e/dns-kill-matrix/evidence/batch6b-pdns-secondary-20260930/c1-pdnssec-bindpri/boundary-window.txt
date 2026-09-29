@@ -1,0 +1,3 @@
+marker 2026-09-29T16:12:20.529740+00:00 kill 2026-09-29T16:12:20.552997+00:00 window_ms 23.3
+timestamped lines parsed: {'journal': 178, 'mtime': 32}
+native entries inside [marker, SIGKILL]: 0

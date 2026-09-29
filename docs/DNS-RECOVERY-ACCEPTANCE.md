@@ -188,6 +188,25 @@ the adoption `rolled-back` cell names the owner command although the Agent
 then finishes by itself. One run per cell shows the boundary held in these
 runs; it does not prove the race impossible.
 
+**2026-09-30, batch 6b** ([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/README.md),
+source `6f2fb028`; eight cells, each run once, no harness workaround, no
+re-run): seven passed, one unverified. The boundary held in every cell that
+had a kill.
+
+| Row | Cell | Result |
+|---|---|---|
+| 5 | fresh PowerDNS secondary, `target-started` after-write, against a native BIND primary and against a native PowerDNS primary publishing its own catalog; reboot with management disabled | **passed** both, peer verdicts passed. The restarted Agent rolled back a database the daemon had written into, then the retry converged. |
+| 5 | fresh PowerDNS secondary, `target-staged` after-write; `target-verified` before-write (recovery went forward); `rolling-back` after-write | **passed** |
+| 3 | fresh BIND secondary on Arch, `target-staged` before-write, against a PowerDNS primary with its native catalog; reboot with management disabled | **passed** |
+| 12 | takeover of a stopped unmanaged BIND, stock options | **passed**; the owner-directive retry case is not exercised |
+| 14 | BIND reinstall after the owner purged `bind9` | **unverified, product defect before any journal**: the managed BIND setup registers a `dpkg-statoverride` for `/var/cache/bind` by group name; the purge removed the `bind` group and left the override, so dpkg refuses to unpack any package on that host until the owner removes it |
+
+Native answers: a PowerDNS 4.9.17 consumer writes `{"consumer": {"unique":
+"<label>."}}` into a consumed member's `options`, with the member label of
+whichever catalog format the primary serves, and writes no metadata,
+comments or keys for consumed members; the consumer row itself keeps
+`options` and `catalog` NULL.
+
 Source changes after batches 4 and 5, component tests only, native re-run
 pending: boundary stop, missing-pointer repair and pointer ordering
 (`c04d8a2b`); no inverse without a durable rollback decision, consumed

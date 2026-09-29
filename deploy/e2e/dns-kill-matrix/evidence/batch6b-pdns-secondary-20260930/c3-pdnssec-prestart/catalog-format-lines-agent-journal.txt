@@ -1,0 +1,2 @@
+2026-09-29T16:25:42.613189+00:00 dns-debian13 agent[3471]: 2026/09/29 16:25:42 DNS engine change 10e89db02af20a520fae4c3d996b9376: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format
+2026-09-29T16:25:51.497213+00:00 dns-debian13 agent[3471]: 2026/09/29 16:25:51 DNS engine change completion 10e89db02af20a520fae4c3d996b9376: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format

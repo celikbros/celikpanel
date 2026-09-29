@@ -1,0 +1,58 @@
+wall=2026-09-29T16:34:02.602683180Z boot_id=08796219-8946-4faa-bd99-d7a1885c8db8
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+NAME="Debian GNU/Linux"
+VERSION_ID="13"
+VERSION="13 (trixie)"
+6.12.105+deb13-cloud-amd64
+== packages
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+pdns-backend  un 
+pdns-backend-bind  un 
+pdns-backend-sqlite3 4.9.17-0+deb13u1 ii 
+pdns-server 4.9.17-0+deb13u1 ii 
+python3 3.13.5-1 ii 
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+User=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+== pdns.service
+MainPID=1371
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 16:33:30 UTC
+User=pdns
+LoadState=loaded
+ActiveState=active
+SubState=running
+FragmentPath=/usr/lib/systemd/system/pdns.service
+UnitFileState=enabled
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=1371,fd=6))    
+udp UNCONN 0      0          127.0.0.1:53 0.0.0.0:* users:(("pdns_server",pid=1371,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=365,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=365,fd=18))
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=1371,fd=8))    
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=365,fd=21))
+tcp LISTEN 0      128        127.0.0.1:53 0.0.0.0:* users:(("pdns_server",pid=1371,fd=7))    
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=365,fd=19))
+== management binaries
+ls: cannot access '/opt/celikpanel/bin': No such file or directory
+== config and zone file hashes
+sha256sum: /etc/named.conf: No such file or directory
+sha256sum: /var/named/celikpanel-fixture-catalog.zone: No such file or directory
+sha256sum: /var/named/celikpanel-fixture-member.zone: No such file or directory
+e7db5609171629cf0645b75db633e51e5da9c120b660380ac30fdccea15d75ae  /etc/powerdns/pdns.conf
+e852d29d4854e349e361fe72022c9ef376d6fb82a0577679e38f836a7a5d1678  /var/lib/powerdns/pdns.sqlite3
+domain: {"id": 1, "name": "s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026083101, "account": "celikpanel-fixture-native-primary", "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+domain: {"id": 2, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1, "account": "celikpanel-fixture-native-primary", "options": null, "catalog": null}
+== peer DNS sampler state
+MainPID=0
+ActiveState=inactive
+SubState=dead
+wc: /var/tmp/cp-b6b-peerloop/samples.log: No such file or directory

@@ -1,0 +1,50 @@
+{
+  "boundary_journal_identity": {
+    "manifest_qualifier": "dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2",
+    "mode": "switch",
+    "mutation_owner_id": "b5c9a8cb3393d0cc355c877bc730ac6b",
+    "pair_role": "secondary",
+    "source_engine": "",
+    "source_epoch": 0,
+    "source_revision": 0,
+    "target_engine": "bind",
+    "target_epoch": 1,
+    "topology": "paired"
+  },
+  "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+  "driver": "bind",
+  "exit_code": 137,
+  "identity_evidence": {
+    "device": 34,
+    "inode": 49109,
+    "kind": "scenario-trigger-receipt",
+    "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+    "sha256": "534d3e96c9588c6678f2fe5045043f4793ce7c8c3e03f8f70c36fd2597a7fd59"
+  },
+  "journal_at_boundary": {
+    "device": 34,
+    "exists": true,
+    "expected_phase": "intent",
+    "inode": 78941,
+    "mode": "0600",
+    "observed_phase": "intent",
+    "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+    "sha256": "7927dd723c934f1234c2226111b9b2111dcd833a95f4939c041bdab9e5250bb1"
+  },
+  "kill_proven": true,
+  "marker_path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__before-write__paired-secondary__peer-reachable/boundary-marker.json",
+  "marker_sha256": "bfd0337603f20e3269683ce44805be74332344a92153f08700478f425aa100f7",
+  "nonce": "df15f07cbb5a4179c5c90536556260b6463d20363d2e169f625e40a32199e7f3",
+  "peer_reachability": "reachable",
+  "phase": "target-staged",
+  "pid": 1620,
+  "point": "before_write",
+  "process_start_ticks": "8124",
+  "proved_at": "2026-09-29T16:34:43.663850Z",
+  "raw_returncode": -9,
+  "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+  "role": "paired-secondary",
+  "schema": "celikpanel/dns-kill-proof/v1",
+  "state_before_signal": "T",
+  "trigger_mode": "socket"
+}

@@ -1,0 +1,76 @@
+{
+  "action": "observe-native-primary-peer",
+  "catalog_format": "bind",
+  "cell_id": "pdns-switch__target-staged__after-write__paired-secondary__peer-reachable",
+  "engine": "bind",
+  "execute": true,
+  "observation": {
+    "agent_catalog_format_name": "BIND",
+    "catalog": "catalog-c000020b.celikpanel.invalid",
+    "catalog_format": "bind",
+    "catalog_member_labels": {
+      "s1-kill.test": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a"
+    },
+    "catalog_members": [
+      "s1-kill.test"
+    ],
+    "catalog_parser": "agent-peer-catalog-selection",
+    "catalog_producer": "bind",
+    "catalog_serial": 1,
+    "config_sha256": {
+      "/etc/named.conf": "21577e68a877007a0de2bdcf480c2bdb378cf1018224a04d07226aae566e4b5a",
+      "/var/named/celikpanel-fixture-catalog.zone": "93559a165a0d0365b48386ff2ebff9102c8686c5159a95ec32d931b511200aa9",
+      "/var/named/celikpanel-fixture-member.zone": "5ff975bd7a41e5d708ae7579487debf23a4f9b50d7facb4b1d0b30335bf6a3d1"
+    },
+    "engine": "bind",
+    "management_installed_on_primary": false,
+    "member_soa": {
+      "s1-kill.test": {
+        "authoritative_udp_tcp": true,
+        "serial": 2026083101
+      }
+    },
+    "native_service_active": true,
+    "native_versions": {
+      "daemons": {
+        "named": {
+          "output": "BIND 9.20.29 (Stable Release) <id:c3d4465>",
+          "returncode": 0
+        }
+      },
+      "package_manager": "pacman",
+      "packages": {
+        "bind": "9.20.29-1",
+        "powerdns": null
+      }
+    },
+    "pdns_catalog_rows": null,
+    "primary_ip": "192.0.2.11",
+    "schema": "celikpanel/native-primary-peer-observation/v1",
+    "secondary_ip": "192.0.2.10",
+    "transfer_notify_log": [
+      "zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 1)",
+      "zone s1-kill.test/IN: sending notifies (serial 2026083101)",
+      "zone s1-kill.test/IN: sending notify to 192.0.2.10#53",
+      "zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53",
+      "zone s1-kill.test/IN: notify to 192.0.2.10#53 failed: connection refused: retrying over TCP",
+      "zone s1-kill.test/IN: sending notify to 192.0.2.10#53",
+      "zone catalog-c000020b.celikpanel.invalid/IN: notify to 192.0.2.10#53 failed: connection refused: retrying over TCP",
+      "zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53",
+      "zone s1-kill.test/IN: notify to 192.0.2.10#53 failed: connection refused",
+      "zone catalog-c000020b.celikpanel.invalid/IN: notify to 192.0.2.10#53 failed: connection refused",
+      "client @0x7f6339e4d000 127.0.0.1#46102 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f6339e4d000 127.0.0.1#46102 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f6339e50800 127.0.0.1#32820 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f6339e50800 127.0.0.1#32820 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)"
+    ],
+    "transfers_to_secondary": {
+      "catalog-c000020b.celikpanel.invalid": false,
+      "s1-kill.test": false
+    },
+    "unit": "named.service",
+    "www_a": [
+      "192.0.2.11"
+    ]
+  }
+}

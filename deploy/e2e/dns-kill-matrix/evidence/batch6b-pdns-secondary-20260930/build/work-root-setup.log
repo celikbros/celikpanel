@@ -1,0 +1,76 @@
+=== work root /var/tmp/cp-b6b-0930
+{
+  "action": "init-root",
+  "dry_run": false,
+  "marker": "/var/tmp/cp-b6b-0930/.celikpanel-dns-kill-matrix-root",
+  "work_root": "/var/tmp/cp-b6b-0930"
+}
+total 875868
+drwx------  2 root root      4096 Sep 29 19:08 .
+drwx------  4 root root      4096 Sep 29 19:08 ..
+-r--r--r-- 15 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 15 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+{
+  "action": "verify-images",
+  "verified": {
+    "arch": "/var/tmp/cp-b6b-0930/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+    "debian13": "/var/tmp/cp-b6b-0930/images/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+  }
+}
+069faac5882ee85847364465c5b4425780da089c4aa848e9d021a77b9c03c431  /var/tmp/cp-b6b-0930/artifacts/agent
+d9b53961dcb45fd94c0c860b5a2b176b09e41b484ea4358705f63ded93eedcfb  /var/tmp/cp-b6b-0930/artifacts/agent.kill
+fd902ecb1bba7dc9dc7493c8d7c32e4d897c5f4abe8c3cc024bb4c3132b0bbb6  /var/tmp/cp-b6b-0930/artifacts/panel
+5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693  /var/tmp/cp-b6b-0930/artifacts/dns-kill-trigger
+dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  /var/tmp/cp-b6b-0930/artifacts/recovery
+3694af9c4b532126a0743a5aaca4bac1f90ebaf31ba7ffbe65c5ded5e016c22d  /var/tmp/cp-b6b-0930/artifacts/recovery-runtime/runtime.manifest
+=== work root /var/tmp/cp-b6b-0930/r2
+{
+  "action": "init-root",
+  "dry_run": false,
+  "marker": "/var/tmp/cp-b6b-0930/r2/.celikpanel-dns-kill-matrix-root",
+  "work_root": "/var/tmp/cp-b6b-0930/r2"
+}
+total 875868
+drwx------  2 root root      4096 Sep 29 19:08 .
+drwx------  4 root root      4096 Sep 29 19:08 ..
+-r--r--r-- 16 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 16 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+{
+  "action": "verify-images",
+  "verified": {
+    "arch": "/var/tmp/cp-b6b-0930/r2/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+    "debian13": "/var/tmp/cp-b6b-0930/r2/images/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+  }
+}
+069faac5882ee85847364465c5b4425780da089c4aa848e9d021a77b9c03c431  /var/tmp/cp-b6b-0930/r2/artifacts/agent
+d9b53961dcb45fd94c0c860b5a2b176b09e41b484ea4358705f63ded93eedcfb  /var/tmp/cp-b6b-0930/r2/artifacts/agent.kill
+fd902ecb1bba7dc9dc7493c8d7c32e4d897c5f4abe8c3cc024bb4c3132b0bbb6  /var/tmp/cp-b6b-0930/r2/artifacts/panel
+5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693  /var/tmp/cp-b6b-0930/r2/artifacts/dns-kill-trigger
+dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  /var/tmp/cp-b6b-0930/r2/artifacts/recovery
+3694af9c4b532126a0743a5aaca4bac1f90ebaf31ba7ffbe65c5ded5e016c22d  /var/tmp/cp-b6b-0930/r2/artifacts/recovery-runtime/runtime.manifest
+758ac96acaaf0f9e55f5347ad9885da5ede7710cd1f7c54667d95c0c60cd60a0  /var/tmp/cp-b6b-0930/id_ed25519.pub
+758ac96acaaf0f9e55f5347ad9885da5ede7710cd1f7c54667d95c0c60cd60a0  /var/tmp/cp-b6b-0930/r2/id_ed25519.pub
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  deploy/e2e/dns-kill-matrix/manifest.json
+/var/tmp/cp-b6b-0930:
+total 108
+drwx------   6 root root  4096 Sep 29 19:08 .
+drwxrwxrwt 373 root root 73728 Sep 29 19:08 ..
+drwxr-xr-x   3 root root  4096 Sep 29 19:07 artifacts
+-rw-------   1 root root    36 Sep 29 19:08 .celikpanel-dns-kill-matrix-root
+drwx------   2 root root  4096 Sep 29 19:08 cells
+-rw-------   1 root root   399 Sep 29 19:08 id_ed25519
+-rw-r--r--   1 root root    93 Sep 29 19:08 id_ed25519.pub
+drwx------   2 root root  4096 Sep 29 19:08 images
+drwx------   5 root root  4096 Sep 29 19:08 r2
+
+/var/tmp/cp-b6b-0930/r2:
+total 32
+drwx------ 5 root root 4096 Sep 29 19:08 .
+drwx------ 6 root root 4096 Sep 29 19:08 ..
+drwxr-xr-x 3 root root 4096 Sep 29 19:07 artifacts
+-rw------- 1 root root   36 Sep 29 19:08 .celikpanel-dns-kill-matrix-root
+drwx------ 2 root root 4096 Sep 29 19:08 cells
+-rw------- 1 root root  399 Sep 29 19:08 id_ed25519
+-rw-r--r-- 1 root root   93 Sep 29 19:08 id_ed25519.pub
+drwx------ 2 root root 4096 Sep 29 19:08 images
+SETUP-OK

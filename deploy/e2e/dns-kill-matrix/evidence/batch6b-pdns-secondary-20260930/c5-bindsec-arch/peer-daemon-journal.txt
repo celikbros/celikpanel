@@ -1,0 +1,122 @@
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 0879621989464faabd99d7a1885c8db8 Tue 2026-09-29 16:32:44 UTC Tue 2026-09-29 16:37:47 UTC
+== journalctl -u pdns.service
+2026-09-29T16:33:30.877028+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-29T16:33:30.961207+00:00 dns-debian13 pdns_server[1371]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-29T16:33:30.961517+00:00 dns-debian13 pdns_server[1371]: [gsqlite3] This is the gsqlite3 backend version 4.9.17 reporting
+2026-09-29T16:33:30.961517+00:00 dns-debian13 pdns_server[1371]: This is a standalone pdns
+2026-09-29T16:33:30.961567+00:00 dns-debian13 pdns_server[1371]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T16:33:30.961674+00:00 dns-debian13 pdns_server[1371]: UDP server bound to 127.0.0.1:53
+2026-09-29T16:33:30.961674+00:00 dns-debian13 pdns_server[1371]: UDP server bound to 192.0.2.10:53
+2026-09-29T16:33:30.961733+00:00 dns-debian13 pdns_server[1371]: TCP server bound to 127.0.0.1:53
+2026-09-29T16:33:30.961751+00:00 dns-debian13 pdns_server[1371]: TCP server bound to 192.0.2.10:53
+2026-09-29T16:33:30.961919+00:00 dns-debian13 pdns_server[1371]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T16:33:30.961919+00:00 dns-debian13 pdns_server[1371]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T16:33:30.961919+00:00 dns-debian13 pdns_server[1371]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T16:33:31.052420+00:00 dns-debian13 pdns_server[1371]: Not validating response for security status update, this is a non-release version
+2026-09-29T16:33:31.071049+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:33:31.072176+00:00 dns-debian13 pdns_server[1371]: Creating backend connection for TCP
+2026-09-29T16:33:31.072176+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:33:31.072506+00:00 dns-debian13 pdns_server[1371]: About to create 3 backend threads for UDP
+2026-09-29T16:33:31.072376+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T16:33:31.073325+00:00 dns-debian13 pdns_server[1371]: Primary/secondary communicator launching
+2026-09-29T16:33:31.073586+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:33:31.073770+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:33:31.073996+00:00 dns-debian13 pdns_server[1371]: new CATALOG-HASH 'scQkAg7PR5gq1OskqFoNNpTm8t46f1dxSdRwIkj5RAI=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T16:33:31.106607+00:00 dns-debian13 pdns_server[1371]: 2 domains for which we are primary or consumer needs notifications
+2026-09-29T16:33:31.123320+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:33:31.159773+00:00 dns-debian13 pdns_server[1371]: Queued notification of domain 's1-kill.test' to 192.0.2.11:53
+2026-09-29T16:33:31.159773+00:00 dns-debian13 pdns_server[1371]: Queued also-notification of domain 's1-kill.test' to 192.0.2.11:53
+2026-09-29T16:33:31.166138+00:00 dns-debian13 pdns_server[1371]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-29T16:33:31.166216+00:00 dns-debian13 pdns_server[1371]: Queued also-notification of domain 'catalog-c000020a.celikpanel.invalid' to 192.0.2.11:53
+2026-09-29T16:33:31.173292+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:33:31.224647+00:00 dns-debian13 pdns_server[1371]: Done launching threads, ready to distribute questions
+2026-09-29T16:33:31.536160+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:57148', transfer initiated
+2026-09-29T16:33:31.536160+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:57148', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:33:31.536886+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:33:31.537456+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:57148', AXFR finished
+2026-09-29T16:33:31.537671+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:57154', transfer initiated
+2026-09-29T16:33:31.537671+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:57154', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:33:31.538015+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:33:31.538653+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:57154', AXFR finished
+2026-09-29T16:33:31.538721+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 127.0.0.1:57148 died because of network error: Reading data: Connection reset by peer
+2026-09-29T16:34:04.812437+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:43242', transfer initiated
+2026-09-29T16:34:04.812437+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:43242', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:04.812899+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:04.813132+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:43242', AXFR finished
+2026-09-29T16:34:04.813473+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 127.0.0.1:43242 died because of network error: Reading data: Connection reset by peer
+2026-09-29T16:34:04.813648+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:43252', transfer initiated
+2026-09-29T16:34:04.813648+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:43252', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:04.813876+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:04.814149+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:43252', AXFR finished
+2026-09-29T16:34:05.182011+00:00 dns-debian13 pdns_server[1371]: Notification for s1-kill.test to 192.0.2.11:53 failed after retries
+2026-09-29T16:34:05.182011+00:00 dns-debian13 pdns_server[1371]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:53 failed after retries
+2026-09-29T16:34:06.003059+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:52248', transfer initiated
+2026-09-29T16:34:06.003059+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:52248', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:06.003795+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:06.004174+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:52248', AXFR finished
+2026-09-29T16:34:06.043877+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 192.0.2.11:52248 died because of network error: Reading data: Connection reset by peer
+2026-09-29T16:34:06.043995+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:52256', transfer initiated
+2026-09-29T16:34:06.043995+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:52256', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:06.044331+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:06.044722+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:52256', AXFR finished
+2026-09-29T16:34:31.189645+00:00 dns-debian13 pdns_server[1371]: no primary or producer domains need notifications
+2026-09-29T16:34:46.161702+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:43432', transfer initiated
+2026-09-29T16:34:46.161702+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:43432', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:46.162662+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:46.163096+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:43432', AXFR finished
+2026-09-29T16:34:46.203636+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 192.0.2.11:43432 died because of network error: Reading data: Connection reset by peer
+2026-09-29T16:34:46.204334+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:43448', transfer initiated
+2026-09-29T16:34:46.204334+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:43448', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:46.204780+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:46.205084+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:43448', AXFR finished
+2026-09-29T16:34:52.961137+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34302', transfer initiated
+2026-09-29T16:34:52.961137+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34302', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:52.961656+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:52.962167+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34302', AXFR finished
+2026-09-29T16:34:53.007219+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 's1-kill.test', client '192.0.2.11:34306', transfer initiated
+2026-09-29T16:34:53.007219+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 's1-kill.test', client '192.0.2.11:34306', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:53.007693+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:53.007983+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 's1-kill.test', client '192.0.2.11:34306', AXFR finished
+2026-09-29T16:34:55.587774+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34310', transfer initiated
+2026-09-29T16:34:55.587774+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34310', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:55.588753+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:55.589159+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34310', AXFR finished
+2026-09-29T16:34:55.631423+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 192.0.2.11:34310 died because of network error: Reading data: Connection reset by peer
+2026-09-29T16:34:55.632020+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34324', transfer initiated
+2026-09-29T16:34:55.632020+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34324', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:55.632360+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:55.632674+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34324', AXFR finished
+2026-09-29T16:34:56.145513+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34336', transfer initiated
+2026-09-29T16:34:56.145513+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34336', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:56.145906+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:56.146299+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34336', AXFR finished
+2026-09-29T16:34:56.181956+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 192.0.2.11:34336 died because of network error: Reading data: Connection reset by peer
+2026-09-29T16:34:56.182646+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34340', transfer initiated
+2026-09-29T16:34:56.182646+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34340', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:34:56.183000+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:34:56.183326+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34340', AXFR finished
+2026-09-29T16:34:57.968238+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 192.0.2.11:34302 died because of network error: Timeout reading data
+2026-09-29T16:34:58.018072+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 192.0.2.11:34306 died because of network error: Timeout reading data
+2026-09-29T16:35:31.207930+00:00 dns-debian13 pdns_server[1371]: no primary or producer domains need notifications
+2026-09-29T16:35:46.354846+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:35689', transfer initiated
+2026-09-29T16:35:46.354846+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:35689', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:35:46.355300+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:35:46.355480+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:35689', AXFR finished
+2026-09-29T16:35:46.400850+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 's1-kill.test', client '192.0.2.11:35691', transfer initiated
+2026-09-29T16:35:46.400850+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 's1-kill.test', client '192.0.2.11:35691', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:35:46.401260+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:35:46.401555+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 's1-kill.test', client '192.0.2.11:35691', AXFR finished
+2026-09-29T16:35:51.360797+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 192.0.2.11:35689 died because of network error: Timeout reading data
+2026-09-29T16:35:51.406848+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 192.0.2.11:35691 died because of network error: Timeout reading data
+2026-09-29T16:36:31.223809+00:00 dns-debian13 pdns_server[1371]: no primary or producer domains need notifications
+2026-09-29T16:37:31.247469+00:00 dns-debian13 pdns_server[1371]: no primary or producer domains need notifications
+2026-09-29T16:37:33.187836+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:54738', transfer initiated
+2026-09-29T16:37:33.187836+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:54738', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:37:33.187836+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:37:33.187836+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:54738', AXFR finished
+2026-09-29T16:37:33.188797+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:54746', transfer initiated
+2026-09-29T16:37:33.188797+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:54746', allowed: client IP is in allow-axfr-ips
+2026-09-29T16:37:33.189018+00:00 dns-debian13 pdns_server[1371]: TCP Connection Thread for client 127.0.0.1:54738 died because of network error: Reading data: Connection reset by peer
+2026-09-29T16:37:33.189218+00:00 dns-debian13 pdns_server[1371]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T16:37:33.189535+00:00 dns-debian13 pdns_server[1371]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '127.0.0.1:54746', AXFR finished

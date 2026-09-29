@@ -1,0 +1,127 @@
+wall=2026-09-29T16:44:05.880425158Z boot_id=e39a73d5-b1af-4fcc-9991-aa8df3e14b3f
+== /etc/bind/named.conf
+cat: /etc/bind/named.conf: No such file or directory
+== /etc/bind/named.conf.local
+cat: /etc/bind/named.conf.local: No such file or directory
+== /etc/bind/named.conf.options
+cat: /etc/bind/named.conf.options: No such file or directory
+== /etc/named.conf
+cat: /etc/named.conf: No such file or directory
+== /var/cache/bind/celikpanel (ls -la, no follow)
+ls: cannot access '/var/named/celikpanel': No such file or directory
+ls: cannot access '/var/named/celikpanel/generations': No such file or directory
+/var/cache/bind/celikpanel:
+total 16
+drwxr-xr-x 3 root root 4096 2026-09-29 16:40:30.062641078 +0000 .
+drwxrwxr-t 3 root  104 4096 2026-09-29 16:40:38.898686208 +0000 ..
+lrwxrwxrwx 1 root root   76 2026-09-29 16:40:30.058641052 +0000 current -> generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c
+drwxr-xr-x 3 root root 4096 2026-09-29 16:40:29.790639213 +0000 generations
+
+/var/cache/bind/celikpanel/generations:
+total 12
+drwxr-xr-x 3 root root 4096 2026-09-29 16:40:29.790639213 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-29 16:40:30.062641078 +0000 ..
+dr-xr-xr-x 3 root root 4096 2026-09-29 16:40:29.762639018 +0000 ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c
+== find /var/cache/bind /var/named -maxdepth 3 (symlinks shown)
+drwxrwxr-t root:104 /var/cache/bind -> 
+-rw-r--r-- 103:104 /var/cache/bind/tmp-fdwQ4HcX4R -> 
+-rw-r--r-- 103:104 /var/cache/bind/managed-keys.bind.jnl -> 
+drwxr-xr-x root:root /var/cache/bind/celikpanel -> 
+lrwxrwxrwx root:root /var/cache/bind/celikpanel/current -> generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c
+drwxr-xr-x root:root /var/cache/bind/celikpanel/generations -> 
+dr-xr-xr-x root:root /var/cache/bind/celikpanel/generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c -> 
+find: ‘/var/named’: No such file or directory
+== /run candidates
+ls: cannot access '/run/bind': No such file or directory
+-rw------- 1 root celikpanel   0 2026-09-29 16:39:34.257067528 +0000 /run/celikpanel-panel-cert.lock
+
+/run/celikpanel:
+total 0
+drwxr-x---  2 root celikpanel 100 2026-09-29 16:41:46.225677254 +0000 .
+drwxr-xr-x 24 root root       640 2026-09-29 16:44:05.861727262 +0000 ..
+srw-rw----  1 root celikpanel   0 2026-09-29 16:41:46.225677254 +0000 agent.sock
+-rw-------  1 root celikpanel   0 2026-09-29 16:39:32.457067528 +0000 service-mutation.lock
+-rw-------  1 root celikpanel   0 2026-09-29 16:39:32.457067528 +0000 service-mutation.lock.ledger-publication
+
+/run/named:
+total 4
+drwxrwxr-x  2 root  104  60 2026-09-29 16:40:38.898686208 +0000 .
+drwxr-xr-x 24 root root 640 2026-09-29 16:44:05.861727262 +0000 ..
+-rw-r--r--  1  103  104   5 2026-09-29 16:40:33.882663760 +0000 named.pid
+== zones.conf of staged generation
+// Managed by CelikPanel. DO NOT EDIT.
+// Immutable generation: ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c; engine epoch: 1
+zone "s1-kill.test" {
+	type master;
+	file "/var/cache/bind/celikpanel/generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c/zones/4b853b537823a50fa36969a0deee07ba6fb754cea71a7db8039e4b77ef7bf4d9.zone";
+};
+cat: '/var/named/celikpanel/generations/*/zones.conf': No such file or directory
+== agent journal (DNS lines, all boots)
+2026-09-29T16:39:34.230585+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T16:39:34.260871+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:34 Starting CelikPanel Agent...
+2026-09-29T16:39:34.262679+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:34 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T16:39:34.262679+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:34 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T16:39:44.269328+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:44 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:39:54.263017+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:54 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:04.263798+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:04 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:14.263010+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:14 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:24.262969+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:24 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:24.618310+00:00 dns-debian13 addgroup[1819]: Selecting GID from range 100 to 999 ...
+2026-09-29T16:40:24.621091+00:00 dns-debian13 addgroup[1819]: Adding group `bind' (GID 104) ...
+2026-09-29T16:40:24.665580+00:00 dns-debian13 groupadd[1822]: group added to /etc/group: name=bind, GID=104
+2026-09-29T16:40:24.681979+00:00 dns-debian13 groupadd[1822]: group added to /etc/gshadow: name=bind
+2026-09-29T16:40:24.682990+00:00 dns-debian13 groupadd[1822]: new group: name=bind, GID=104
+2026-09-29T16:40:24.713287+00:00 dns-debian13 adduser[1827]: Selecting UID from range 100 to 999 ...
+2026-09-29T16:40:24.715579+00:00 dns-debian13 adduser[1827]: Adding system user `bind' (UID 103) ...
+2026-09-29T16:40:24.717335+00:00 dns-debian13 adduser[1827]: Adding new user `bind' (UID 103) with group `bind' ...
+2026-09-29T16:40:24.759470+00:00 dns-debian13 useradd[1831]: new user: name=bind, UID=103, GID=104, home=/var/cache/bind, shell=/usr/sbin/nologin, from=none
+2026-09-29T16:40:24.796287+00:00 dns-debian13 adduser[1827]: Not creating home directory `/var/cache/bind' as requested.
+2026-09-29T16:40:34.263795+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:34 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:42.890450+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T16:40:42.891285+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T16:40:42.891565+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T16:40:42.891773+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 8.737s CPU time, 436.6M memory peak.
+== ledger job
+{
+ "version": 1,
+ "jobs": {
+  "67beea28f7bb2d005105c97169966302": {
+   "request_id": "67beea28f7bb2d005105c97169966302",
+   "owner_id": "9b53e61cc6549ab6cc59c768a252db02",
+   "kind": "dns_engine_switch",
+   "target": "bind",
+   "package_name": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+   "status": "succeeded",
+   "phase": "commit/dns-engine-switch/v2/finalized/67beea28f7bb2d005105c97169966302/dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+   "attempt": 1,
+   "started_at": "2026-09-29T16:39:47.452126236Z",
+   "updated_at": "2026-09-29T16:40:38.201726345Z",
+   "lease_expires_at": "0001-01-01T00:00:00Z",
+   "deadline_at": "2026-09-29T17:24:47.452126236Z",
+   "finished_at": "2026-09-29T16:40:38.201726345Z"
+  },
+  "b66cbdc5c51b25639364f76a7113a214": {
+   "request_id": "b66cbdc5c51b25639364f76a7113a214",
+   "owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+   "kind": "dns_engine_switch",
+   "target": "bind",
+   "package_name": "dns-engine-switch/v1:sha256:41bd8da70c8a5c7930b325c9a956deae6877ed407fd58f11d475d8b4ffd0fb95",
+   "status": "failed",
+   "phase": "failed",
+   "attempt": 1,
+   "started_at": "2026-09-29T16:41:46.276846621Z",
+   "updated_at": "2026-09-29T16:41:49.819254302Z",
+   "lease_expires_at": "0001-01-01T00:00:00Z",
+   "deadline_at": "2026-09-29T17:26:46.276846621Z",
+   "finished_at": "2026-09-29T16:41:49.819254302Z",
+   "error_code": "dns_kill_matrix_trigger_failed",
+   "error_message": "The DNS kill-matrix trigger ended before a verified target receipt."
+  }
+ }
+}
+== journal phase
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import json;d=json.load(open("/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"));print(d.get("schema"),d.get("phase"),d.get("request_id"))
+                            ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json'

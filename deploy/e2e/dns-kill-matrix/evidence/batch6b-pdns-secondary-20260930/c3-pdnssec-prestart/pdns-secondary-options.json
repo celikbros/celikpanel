@@ -1,0 +1,46 @@
+{
+  "records": [
+    {
+      "path": "fixture_pass_definition.pdns_secondary_rows",
+      "value": {
+        "domains": [
+          [
+            "catalog-c000020b.celikpanel.invalid",
+            "CONSUMER",
+            "192.0.2.11",
+            "celikpanel-peer-catalog-v1",
+            "",
+            ""
+          ],
+          [
+            "s1-kill.test",
+            "SLAVE",
+            "192.0.2.11",
+            "",
+            "catalog-c000020b.celikpanel.invalid",
+            "{\"consumer\": {\"unique\": \"b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.\"}}"
+          ]
+        ],
+        "failures": [],
+        "member_options": {
+          "expected_label": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a",
+          "shape": "consumer.unique",
+          "unique": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.",
+          "value": "{\"consumer\": {\"unique\": \"b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.\"}}"
+        },
+        "member_soa_rows": 1,
+        "unknown": []
+      }
+    },
+    {
+      "path": "fixture_pass_definition.pdns_secondary_rows.member_options",
+      "value": {
+        "expected_label": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a",
+        "shape": "consumer.unique",
+        "unique": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.",
+        "value": "{\"consumer\": {\"unique\": \"b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.\"}}"
+      }
+    }
+  ],
+  "source": "result.json (verbatim sub-objects)"
+}

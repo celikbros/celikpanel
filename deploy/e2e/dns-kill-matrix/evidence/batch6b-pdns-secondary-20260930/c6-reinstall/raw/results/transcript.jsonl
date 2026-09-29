@@ -1,0 +1,33 @@
+CONTROLLER {"at": "2026-09-29T16:41:46.177833Z", "engine": "bind", "engine_epoch": 1, "engine_state_receipt_sha256": "4992553da814068112774ebe8206feffb8621fbae8399d2e5c0dfdcdddad0b1f", "event": "source-proof-proven", "path": "/var/lib/celikpanel-dns-kill-matrix/source-proof.json", "scenario_sha256": "f18e2ec897aedd295700f1fec1d9fa628d07a48de7a18d465e1ef9a32d571bec", "serving_before_tagged_agent": false, "sha256": "42d847e325da5d2c3d3c92d8dd68e97e97b042d64db4c08525e945b134848e1d", "source_fixture": "managed-bind-absent", "source_revision": 0}
+CONTROLLER {"at": "2026-09-29T16:41:46.177882Z", "engine_state_receipt_absent": true, "event": "source-dns-preflight-not-applicable", "source_fixture": "managed-bind-absent", "switch_journal_absent": true}
+CONTROLLER {"at": "2026-09-29T16:41:46.222127Z", "event": "source-dns-units-proven-before-tagged-agent", "source_fixture": "managed-bind-absent", "states": {"bind9.service": "inactive", "named.service": "inactive", "pdns.service": "inactive"}}
+CONTROLLER {"at": "2026-09-29T16:41:46.222281Z", "event": "uninitialized-global-port53-proven-immediately-before-tagged-agent", "observation": {"address": "10.0.2.15", "authoritative_answer_observed": false, "port": 53, "tcp_bindable": true, "udp_bindable": true}}
+CONTROLLER {"at": "2026-09-29T16:41:46.222300Z", "cell_id": "bind__target-staged__after-write__standalone__peer-reachable", "event": "cell-start", "initial_state": {"exists": false}, "nonce": "e45719a35061f363739b952e0d548c7cf3ae5bacbe3def26dc2702807f966cb6", "request_id": "b66cbdc5c51b25639364f76a7113a214", "trigger_mode": "socket"}
+CONTROLLER {"argv": ["/opt/celikpanel/bin/agent.kill"], "asynchronous": true, "at": "2026-09-29T16:41:46.222358Z", "event": "command-start", "inherited_external_lock_fd": null, "inherited_ready_fd": 5, "label": "tagged-agent", "selector_names": ["CELIKPANEL_DNS_KILL_MATRIX_CELL_ID", "CELIKPANEL_DNS_KILL_MATRIX_DRIVER", "CELIKPANEL_DNS_KILL_MATRIX_POINT", "CELIKPANEL_DNS_KILL_MATRIX_PHASE", "CELIKPANEL_DNS_KILL_MATRIX_REQUEST_ID", "CELIKPANEL_DNS_KILL_MATRIX_NONCE", "CELIKPANEL_DNS_KILL_MATRIX_MARKER", "CELIKPANEL_DNS_KILL_MATRIX_READY_FD"]}
+CONTROLLER {"at": "2026-09-29T16:41:46.224509Z", "event": "tagged-agent-identity", "pid": 4479, "process_identity": {"gids": [989, 989, 989, 989], "pid": 4479, "uids": [0, 0, 0, 0], "umask": "0027"}, "process_start_ticks": "19266"}
+2026/09/29 16:41:46 Starting CelikPanel Agent...
+2026/09/29 16:41:46 Agent listening on unix socket /run/celikpanel/agent.sock
+2026/09/29 16:41:46 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+CONTROLLER {"argv": ["/opt/celikpanel/bin/dns-kill-trigger", "rpc-switch", "--scenario", "/var/lib/celikpanel-dns-kill-matrix/scenario.json", "--identity-receipt", "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json", "--timeout", "45m"], "asynchronous": true, "at": "2026-09-29T16:41:46.249977Z", "event": "command-start", "label": "scenario-trigger"}
+{"event":"rpc-switch-start","driver":"bind","source_fixture":"managed-bind-absent","identity_receipt":"/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json","request_id":"b66cbdc5c51b25639364f76a7113a214","owner_id":"9e83eec8b6a4a0b03f5b3f5f0859a4b9","manifest_qualifier":"dns-engine-switch/v1:sha256:41bd8da70c8a5c7930b325c9a956deae6877ed407fd58f11d475d8b4ffd0fb95","target_engine":"bind"}
+2026/09/29 16:41:49 DNS engine switch to bind at epoch 1 failed: install BIND in no-start mode: exit status 100: Reading package lists...
+Building dependency tree...
+Reading state information...
+Suggested packages:
+  bind9-doc bind9-dnsutils ufw
+The following NEW packages will be installed:
+  bind9
+0 upgraded, 1 newly installed, 0 to remove and 32 not upgraded.
+Need to get 0 B/257 kB of archives.
+After this operation, 914 kB of additional disk space will be used.
+dpkg: unrecoverable fatal error, aborting:
+ unknown system group 'bind' in statoverride file; the system group got removed
+before the override, which is most probably a packaging bug, to recover you
+can remove the override manually with dpkg-statoverride
+E: Sub-process /usr/bin/dpkg returned an error code (2)
+{"event":"rpc-switch-ended","driver":"bind","source_fixture":"managed-bind-absent","identity_receipt":"/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json","request_id":"b66cbdc5c51b25639364f76a7113a214","owner_id":"9e83eec8b6a4a0b03f5b3f5f0859a4b9","manifest_qualifier":"dns-engine-switch/v1:sha256:41bd8da70c8a5c7930b325c9a956deae6877ed407fd58f11d475d8b4ffd0fb95","target_engine":"bind","error":"agent rejected DNS switch: DNS engine switch did not complete; inspect the agent log"}
+CONTROLLER {"at": "2026-09-29T16:41:49.872877Z", "event": "command-finish", "label": "scenario-trigger", "returncode": 1}
+CONTROLLER {"at": "2026-09-29T16:41:49.872953Z", "detected_at": "2026-09-29T16:41:49.872944Z", "event": "scenario-trigger-exited-before-boundary", "exit_code": 1, "raw_returncode": 1, "reason": "scenario trigger exited before boundary notification with exit code 1 (raw 1)", "tagged_agent_cleanup_requested": true, "tagged_agent_pid": 4479, "tagged_agent_process_start_ticks": "19266"}
+CONTROLLER {"at": "2026-09-29T16:41:49.874464Z", "event": "cleanup-killed", "label": "tagged-agent", "pid": 4479}
+CONTROLLER {"at": "2026-09-29T16:41:49.874538Z", "error": "scenario trigger exited before boundary notification with exit code 1 (raw 1)", "error_type": "TriggerExitedBeforeBoundary", "event": "cell-error", "kill_proven": false}
+CONTROLLER {"at": "2026-09-29T16:41:49.874579Z", "diagnostic_failures": [], "event": "cell-finish", "kill_proven": false, "safety_failures": [], "safety_status": "unverified", "status": "unverified", "verification_failures": ["scenario trigger exited before boundary notification with exit code 1 (raw 1)"]}

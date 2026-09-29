@@ -1,0 +1,1906 @@
+{
+  "agent_startup_rollback": null,
+  "boundary_marker": {
+    "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+    "driver": "bind",
+    "marker": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__before-write__paired-secondary__peer-reachable/boundary-marker.json",
+    "nonce": "df15f07cbb5a4179c5c90536556260b6463d20363d2e169f625e40a32199e7f3",
+    "observed_driver": "bind",
+    "observed_journal": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2",
+      "mode": "switch",
+      "mutation_owner_id": "b5c9a8cb3393d0cc355c877bc730ac6b",
+      "mutation_request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+      "pair_role": "secondary",
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "phase": "target-staged",
+      "schema": "celikpanel-dns-engine-switch-journal/v1",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "bind",
+      "target_epoch": 1,
+      "topology": "paired"
+    },
+    "phase": "target-staged",
+    "pid": 1620,
+    "point": "before_write",
+    "process_start_ticks": "8124",
+    "ready_fd": 5,
+    "recorded_at": "2026-09-29T16:34:43.639608885Z",
+    "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+    "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+  },
+  "complete_verdict": {
+    "passed": true,
+    "reasons": [],
+    "required_classification": [
+      "target_converged"
+    ],
+    "safety_status": "passed",
+    "status": "passed"
+  },
+  "diagnostic_failures": [],
+  "dns_outage": null,
+  "expectation": null,
+  "failures": [],
+  "flow_ambiguities": null,
+  "flow_failures": null,
+  "flow_status": null,
+  "journal_at_boundary": {
+    "device": 34,
+    "exists": true,
+    "expected_phase": "intent",
+    "inode": 78941,
+    "mode": "0600",
+    "observed_phase": "intent",
+    "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+    "sha256": "7927dd723c934f1234c2226111b9b2111dcd833a95f4939c041bdab9e5250bb1"
+  },
+  "kill": {
+    "delivered_at": "2026-09-29T16:34:43.662617Z",
+    "exit_code": 137,
+    "pid": 1620,
+    "proc_entry_absent_after_reap": true,
+    "process_start_ticks": "8124",
+    "raw_returncode": -9,
+    "signal": "SIGKILL",
+    "signal_number": 9,
+    "state_before_signal": "T"
+  },
+  "kill_proven": true,
+  "management_disabled_before_reboot": {
+    "command": {
+      "argv": [
+        "/usr/bin/systemctl",
+        "disable",
+        "--now",
+        "celikpanel-panel.service",
+        "celikpanel-agent.service"
+      ],
+      "returncode": 0,
+      "stderr": "Removed '/etc/systemd/system/multi-user.target.wants/celikpanel-agent.service'.\nRemoved '/etc/systemd/system/multi-user.target.wants/celikpanel-panel.service'.\n"
+    },
+    "failures": [],
+    "units": {
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      },
+      "unknown": []
+    },
+    "unknown": []
+  },
+  "owner_inverse_failures": null,
+  "owner_inverse_native_at_boundary": null,
+  "pre_reboot_verdict": {
+    "passed": true,
+    "reasons": [],
+    "required_classification": [
+      "target_converged"
+    ],
+    "safety_status": "passed",
+    "status": "passed"
+  },
+  "provenance_boundary": null,
+  "reboot_after_recovery": {
+    "authority_after_boot": {
+      "at": "2026-09-29T16:37:02.266435Z",
+      "authority": {
+        "answer_counts": {
+          "tcp": 1,
+          "udp": 1
+        },
+        "answered": true,
+        "engines": {
+          "tcp": [
+            "bind"
+          ],
+          "udp": [
+            "bind"
+          ]
+        }
+      },
+      "dns": {
+        "answered": true,
+        "at": "2026-09-29T16:37:02.297612Z",
+        "result": {
+          "tcp": {
+            "additional": 2,
+            "answers": 1,
+            "authority": 2,
+            "bytes": 118,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 2,
+            "answers": 1,
+            "authority": 2,
+            "bytes": 118,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        }
+      },
+      "evidence": {
+        "install_ownership_bind": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json"
+        },
+        "install_ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json"
+        },
+        "journal": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        },
+        "ledger": {
+          "device": 34,
+          "exists": true,
+          "inode": 79291,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "sha256": "eac27f64399780d8a9cb10102479c8ca6b1aa4b9a17bffb5cc548d1901f6b60f",
+          "size": 738
+        },
+        "ownership_bind": {
+          "device": 34,
+          "exists": true,
+          "inode": 79290,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json",
+          "sha256": "4a1ee6d3b3cd5816c5cde75a9988d8f6f013f540f2876190aedbadde54776248",
+          "size": 722
+        },
+        "ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json"
+        },
+        "state": {
+          "device": 34,
+          "exists": true,
+          "inode": 79287,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "sha256": "5bed495a195d0bd2e7ce6e41c088c9f3b2a4a19451dc3c08ecb3911c45db9bc6",
+          "size": 718
+        }
+      },
+      "named_processes": [
+        365
+      ],
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              365
+            ],
+            "state": "LISTEN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              365
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              365
+            ],
+            "state": "UNCONN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              365
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "state": {
+        "semantic": {
+          "engine": "bind",
+          "engine_epoch": 1,
+          "generation": "f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227",
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2",
+          "mode": "switch",
+          "mutation_owner_id": "b5c9a8cb3393d0cc355c877bc730ac6b",
+          "mutation_request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+          "pair_local_ip": "192.0.2.11",
+          "pair_peer_ip": "192.0.2.10",
+          "pair_role": "secondary",
+          "schema": "celikpanel-dns-engine-state/v1",
+          "source_revision": 0
+        },
+        "sha256": "5bed495a195d0bd2e7ce6e41c088c9f3b2a4a19451dc3c08ecb3911c45db9bc6"
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "inactive",
+          "LoadState": "not-found",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": ""
+        },
+        "named.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "365",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "pdns.service": {
+          "ActiveState": "inactive",
+          "LoadState": "not-found",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": ""
+        }
+      },
+      "unknown": []
+    },
+    "authority_after_window": {
+      "at": "2026-09-29T16:37:32.309739Z",
+      "authority": {
+        "answer_counts": {
+          "tcp": 1,
+          "udp": 1
+        },
+        "answered": true,
+        "engines": {
+          "tcp": [
+            "bind"
+          ],
+          "udp": [
+            "bind"
+          ]
+        }
+      },
+      "dns": {
+        "answered": true,
+        "at": "2026-09-29T16:37:32.340711Z",
+        "result": {
+          "tcp": {
+            "additional": 2,
+            "answers": 1,
+            "authority": 2,
+            "bytes": 118,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 2,
+            "answers": 1,
+            "authority": 2,
+            "bytes": 118,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        }
+      },
+      "evidence": {
+        "install_ownership_bind": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json"
+        },
+        "install_ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json"
+        },
+        "journal": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        },
+        "ledger": {
+          "device": 34,
+          "exists": true,
+          "inode": 79291,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "sha256": "eac27f64399780d8a9cb10102479c8ca6b1aa4b9a17bffb5cc548d1901f6b60f",
+          "size": 738
+        },
+        "ownership_bind": {
+          "device": 34,
+          "exists": true,
+          "inode": 79290,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json",
+          "sha256": "4a1ee6d3b3cd5816c5cde75a9988d8f6f013f540f2876190aedbadde54776248",
+          "size": 722
+        },
+        "ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json"
+        },
+        "state": {
+          "device": 34,
+          "exists": true,
+          "inode": 79287,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "sha256": "5bed495a195d0bd2e7ce6e41c088c9f3b2a4a19451dc3c08ecb3911c45db9bc6",
+          "size": 718
+        }
+      },
+      "named_processes": [
+        365
+      ],
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              365
+            ],
+            "state": "LISTEN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              365
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              365
+            ],
+            "state": "UNCONN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              365
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "state": {
+        "semantic": {
+          "engine": "bind",
+          "engine_epoch": 1,
+          "generation": "f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227",
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2",
+          "mode": "switch",
+          "mutation_owner_id": "b5c9a8cb3393d0cc355c877bc730ac6b",
+          "mutation_request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+          "pair_local_ip": "192.0.2.11",
+          "pair_peer_ip": "192.0.2.10",
+          "pair_role": "secondary",
+          "schema": "celikpanel-dns-engine-state/v1",
+          "source_revision": 0
+        },
+        "sha256": "5bed495a195d0bd2e7ce6e41c088c9f3b2a4a19451dc3c08ecb3911c45db9bc6"
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "inactive",
+          "LoadState": "not-found",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": ""
+        },
+        "named.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "365",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "pdns.service": {
+          "ActiveState": "inactive",
+          "LoadState": "not-found",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": ""
+        }
+      },
+      "unknown": []
+    },
+    "boot": {
+      "boot_id_after": "2367c89a-1523-4631-8513-2fede3653047",
+      "boot_id_before": "859ac82f-3c17-4e75-9982-906f87ff71cf",
+      "checkpoint": {
+        "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__before-write__paired-secondary__peer-reachable/reboot-checkpoint-1.json",
+        "sha256": "5c00b1fbdc1ba966b8d4559aecd0b273aa0c911bb514b26bb8baf37295d22b98"
+      },
+      "ordinal": 1,
+      "product_uuid": "93161804-66ca-53be-b2e9-fea2ee1e1dea",
+      "resumed_at": "2026-09-29T16:37:02.234793Z",
+      "stage": "after-recovery"
+    },
+    "failures": [],
+    "management_disabled": true,
+    "management_units": {
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      },
+      "unknown": []
+    },
+    "run": true,
+    "safety_assertions": {
+      "agent_stayed_running": "not-applicable: management disabled",
+      "dns_engine_serving": true,
+      "panel_started": "not-applicable: management disabled"
+    },
+    "secondary_serving": {
+      "failures": [],
+      "primary": {
+        "soa": {
+          "tcp": [
+            2026083101
+          ],
+          "udp": [
+            2026083101
+          ]
+        },
+        "www_a": {
+          "tcp": [
+            "192.0.2.10"
+          ],
+          "udp": [
+            "192.0.2.10"
+          ]
+        }
+      },
+      "secondary": {
+        "soa": {
+          "tcp": [
+            2026083101
+          ],
+          "udp": [
+            2026083101
+          ]
+        },
+        "www_a": {
+          "tcp": [
+            "192.0.2.10"
+          ],
+          "udp": [
+            "192.0.2.10"
+          ]
+        }
+      },
+      "unknown": []
+    },
+    "stability": {
+      "dns_only": true,
+      "duration_seconds": 30.0,
+      "elapsed_seconds": 30.01173,
+      "interval_seconds": 1.0,
+      "sample_count": 31,
+      "samples": [
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:02.297987Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 1,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.009438968000011982,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:03.298150Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 2,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.0076216630000089935,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:04.298335Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 3,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.010086775999994302,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:05.298134Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 4,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.043273690999996006,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:06.298416Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 5,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.009817212000001518,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:07.298302Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 6,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.055097684000003255,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:08.298565Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 7,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.016084409000001187,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:09.298404Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 8,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.258181852000007,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:10.298623Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 9,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008910239000002207,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:11.298188Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 10,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.0078493759999958,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:12.298426Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 11,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008277359999993905,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:13.298293Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 12,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.010715361999999118,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:14.298176Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 13,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.042293207000000166,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:15.298603Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 14,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.012612533999998732,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:16.298351Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 15,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.009765904999994746,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:17.298188Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 16,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.0075641279999985045,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:18.298251Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 17,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008966028000003234,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:19.298171Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 18,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007560132999998359,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:20.298357Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 19,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008854432000006796,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:21.298243Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 20,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.04417755499999032,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:22.298233Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 21,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008629308999999807,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:23.298127Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 22,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007610446999990472,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:24.298174Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 23,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008621211000004791,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:25.300689Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 24,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.021357010000002674,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:26.299385Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 25,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.01854128299999047,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:27.298242Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 26,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.011122080999996342,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:28.298161Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 27,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.04691396699999473,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:29.298145Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 28,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.0077310850000031905,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:30.298209Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 29,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008327577000002861,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:31.298167Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 30,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007835197000005678,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "at": "2026-09-29T16:37:32.298186Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 31,
+          "panel": {
+            "judged": false,
+            "reason": "management disabled"
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.010286530000001903,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        }
+      ]
+    },
+    "status": "passed",
+    "unknown": []
+  },
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "target_converged",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": false,
+    "same_fingerprint": true,
+    "target_converged": true
+  },
+  "recovery_status_read_failures": null,
+  "recovery_status_reads": {
+    "after-recovery": {
+      "available": false,
+      "judged": "made no mutation only",
+      "reason": "the recovery launcher is not enrolled; enroll it with guest_bootstrap.py enroll-recovery-runtime before prepare",
+      "stage": "after-recovery"
+    },
+    "before-recovery": {
+      "available": false,
+      "judged": "made no mutation only",
+      "reason": "the recovery launcher is not enrolled; enroll it with guest_bootstrap.py enroll-recovery-runtime before prepare",
+      "stage": "before-recovery"
+    }
+  },
+  "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+  "retry_switch_after_rollback": null,
+  "safety_failures": [],
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {},
+  "variant": null,
+  "verification_failures": []
+}

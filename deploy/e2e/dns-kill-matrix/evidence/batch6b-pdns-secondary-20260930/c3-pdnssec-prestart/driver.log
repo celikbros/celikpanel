@@ -1,0 +1,19 @@
+### 2026-09-29T16:22:31.992Z start-cell c3-pdnssec-prestart pdns-switch__target-staged__after-write__paired-secondary__peer-reachable node=debian13 other=arch fixture=uninitialized prep=prepare-pdns-switch enroll=0 root=/var/tmp/cp-b6b-0930 peer=bind format=bind flags=
+### 2026-09-29T16:22:31.994Z prepare
+### 2026-09-29T16:22:33.122Z early-admission-dry-run
+### 2026-09-29T16:22:33.321Z start
+### 2026-09-29T16:22:33.616Z wait-ssh
+### 2026-09-29T16:23:33.686Z guest-identity
+### 2026-09-29T16:23:34.638Z install
+### 2026-09-29T16:23:47.306Z prepare-pdns-switch
+### 2026-09-29T16:24:51.371Z pre-run-snapshot
+### 2026-09-29T16:25:21.486Z start-peer-dns-sampler
+peerloop start rc=0
+Running as unit: cp-b6b-peerloop.service; invocation ID: 97963b3a31af456282f62136dcaee9aa
+### 2026-09-29T16:25:22.149Z start-watcher
+Running as unit: cp-b6b-watch.service; invocation ID: 71b53737da544ee5873d1e67971a4e8b
+### 2026-09-29T16:25:22.916Z prepared-ok
+### 2026-09-29T16:25:22.921Z run-prepared-dry-run flags=
+### 2026-09-29T16:25:23.025Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T16:26:25.766Z done-run rc=0

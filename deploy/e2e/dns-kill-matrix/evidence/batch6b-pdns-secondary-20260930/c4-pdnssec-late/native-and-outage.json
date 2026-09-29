@@ -1,0 +1,111 @@
+{
+  "agent_startup_rollback": null,
+  "boundary_marker": {
+    "cell_id": "pdns-switch__target-verified__before-write__paired-secondary__peer-reachable",
+    "driver": "pdns-switch",
+    "marker": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-verified__before-write__paired-secondary__peer-reachable/boundary-marker.json",
+    "nonce": "2e3ad4072d28467320f1251dceebe18bbf498fa67a5c04f31a14790f90e8b60f",
+    "observed_driver": "pdns-switch",
+    "observed_journal": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:5b4cce0a4c9c4a6b21dc2646f1f3356bf9af25fd65fc617b854ce6cce4b2481a",
+      "mode": "switch",
+      "mutation_owner_id": "ea46d2776f7ce2c26db86d7a318bc4bb",
+      "mutation_request_id": "ff8a6f95e86a444b474385bd5018d3ab",
+      "pair_role": "secondary",
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "phase": "target-verified",
+      "schema": "celikpanel-dns-engine-switch-journal/v1",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "pdns",
+      "target_epoch": 1,
+      "topology": "paired"
+    },
+    "phase": "target-verified",
+    "pid": 1776,
+    "point": "before_write",
+    "process_start_ticks": "20136",
+    "ready_fd": 5,
+    "recorded_at": "2026-09-29T16:30:59.308571272Z",
+    "request_id": "ff8a6f95e86a444b474385bd5018d3ab",
+    "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+  },
+  "complete_verdict": {
+    "passed": true,
+    "reasons": [],
+    "required_classification": [
+      "target_converged"
+    ],
+    "safety_status": "passed",
+    "status": "passed"
+  },
+  "diagnostic_failures": [],
+  "dns_outage": null,
+  "expectation": null,
+  "failures": [],
+  "flow_ambiguities": null,
+  "flow_failures": null,
+  "flow_status": null,
+  "journal_at_boundary": {
+    "device": 65025,
+    "exists": true,
+    "expected_phase": "target-started",
+    "inode": 131598,
+    "mode": "0600",
+    "observed_phase": "target-started",
+    "request_id": "ff8a6f95e86a444b474385bd5018d3ab",
+    "sha256": "7828412ef1fbe17f9708c70e7deddb4b39911da84cc3e17c05763ece25b51144"
+  },
+  "kill": {
+    "delivered_at": "2026-09-29T16:30:59.340089Z",
+    "exit_code": 137,
+    "pid": 1776,
+    "proc_entry_absent_after_reap": true,
+    "process_start_ticks": "20136",
+    "raw_returncode": -9,
+    "signal": "SIGKILL",
+    "signal_number": 9,
+    "state_before_signal": "T"
+  },
+  "kill_proven": true,
+  "management_disabled_before_reboot": null,
+  "owner_inverse_failures": null,
+  "owner_inverse_native_at_boundary": null,
+  "pre_reboot_verdict": null,
+  "provenance_boundary": null,
+  "reboot_after_recovery": null,
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "target_converged",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": false,
+    "same_fingerprint": true,
+    "target_converged": true
+  },
+  "recovery_status_read_failures": null,
+  "recovery_status_reads": {
+    "after-recovery": {
+      "available": false,
+      "judged": "made no mutation only",
+      "reason": "the recovery launcher is not enrolled; enroll it with guest_bootstrap.py enroll-recovery-runtime before prepare",
+      "stage": "after-recovery"
+    },
+    "before-recovery": {
+      "available": false,
+      "judged": "made no mutation only",
+      "reason": "the recovery launcher is not enrolled; enroll it with guest_bootstrap.py enroll-recovery-runtime before prepare",
+      "stage": "before-recovery"
+    }
+  },
+  "request_id": "ff8a6f95e86a444b474385bd5018d3ab",
+  "retry_switch_after_rollback": null,
+  "safety_failures": [],
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {},
+  "variant": null,
+  "verification_failures": []
+}

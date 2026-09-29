@@ -1,0 +1,1 @@
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch6b/runcell.sh c6-reinstall bind__target-staged__after-write__standalone__peer-reachable managed-bind-absent prepare-bind 1 /var/tmp/cp-b6b-0930 debian13 none none --reboot-after-recovery

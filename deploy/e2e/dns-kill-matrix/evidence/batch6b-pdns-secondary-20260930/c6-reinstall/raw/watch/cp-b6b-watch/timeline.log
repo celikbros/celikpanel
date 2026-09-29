@@ -1,0 +1,29 @@
+16:41:45.448997001 CHANGE journal none -> absent
+16:41:45.460546708 CHANGE ledger none -> 27fcd8d42dde8be90aa907b57f763908c3ecdcc6fc4cf897f72ca01a64f3a18f
+16:41:45.468799303 CHANGE state none -> 4992553da814068112774ebe8206feffb8621fbae8399d2e5c0dfdcdddad0b1f
+16:41:45.472001892 CHANGE pdnsdb none -> absent
+16:41:45.478226374 POINTER /var/cache/bind/celikpanel mtime=2026-09-29 16:40:30.062641078 +0000 ino=131569 /var/cache/bind/celikpanel/current mtime=2026-09-29 16:40:30.058641052 +0000 ino=131577 -> '/var/cache/bind/celikpanel/current' -> 'generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c' 
+16:41:45.479628966 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=
+16:41:45.759544633 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=
+16:41:46.053997748 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=
+16:41:46.351413321 CHANGE ledger 27fcd8d42dde8be90aa907b57f763908c3ecdcc6fc4cf897f72ca01a64f3a18f -> 6a05d528bfc710c258fc6021cda34243bbb81bed27ba897f53a2057153e56076
+16:41:46.369050795 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=4479,
+16:41:46.699622079 CHANGE ledger 6a05d528bfc710c258fc6021cda34243bbb81bed27ba897f53a2057153e56076 -> 4e751957fd1f71e23deeba22ba93e614e6fed12c2ba82cbfe7cfab9648765f67
+16:41:46.709712088 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=4479,4605,
+16:41:46.986615342 CHANGE ledger 4e751957fd1f71e23deeba22ba93e614e6fed12c2ba82cbfe7cfab9648765f67 -> d80d65f7040c005e05c343c5ba5ea98c2457246e37c896b42f46a70c4f325bc5
+16:41:46.995608247 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=4479,
+16:41:47.282538433 CHANGE ledger d80d65f7040c005e05c343c5ba5ea98c2457246e37c896b42f46a70c4f325bc5 -> 1ae9588ce092ea7a4ccc156a6f0270b898ba2b495895d37a64c221fd1ac5fbf8
+16:41:47.295706847 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=4479,4773,
+16:41:47.587304815 CHANGE ledger 1ae9588ce092ea7a4ccc156a6f0270b898ba2b495895d37a64c221fd1ac5fbf8 -> 956e591ee3717db7c6032b4c9fc92c9074901df910db35cb85ba3c053f70c7b5
+16:41:47.598014918 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=4479,4853,
+16:41:47.889985044 CHANGE ledger 956e591ee3717db7c6032b4c9fc92c9074901df910db35cb85ba3c053f70c7b5 -> 6f41e49d464c04b6202dd2deef39d79dd09c323919cf6a19b170ed3a52eb1bbe
+16:41:47.903581948 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=4479,4865,
+16:41:48.202157921 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=4479,4865,
+16:41:48.508290310 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=4479,
+16:41:48.800275464 CHANGE ledger 6f41e49d464c04b6202dd2deef39d79dd09c323919cf6a19b170ed3a52eb1bbe -> 143cca59995bcb61e2db61070dbcd70132d554f541940b6c4707505bac9539f8
+16:41:48.811560958 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=4479,5056,
+16:41:49.183157771 CHANGE ledger 143cca59995bcb61e2db61070dbcd70132d554f541940b6c4707505bac9539f8 -> 91d97b121c89c38629f8447a31ac6a9bf0b3199858d0d9dc3da663c11afecdc1
+16:41:49.213330486 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=4479,
+16:41:49.877223886 CHANGE ledger 91d97b121c89c38629f8447a31ac6a9bf0b3199858d0d9dc3da663c11afecdc1 -> 936aed0584c7bee5d02eda8c818c9d56fde0f3a48e25c0ca713f6b36f2d2f29c
+16:41:49.887877920 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=
+done

@@ -1,0 +1,198 @@
+{
+  "after_recovery": {
+    "agent_catalog_format_name": "BIND",
+    "catalog": "catalog-c000020b.celikpanel.invalid",
+    "catalog_format": "bind",
+    "catalog_member_labels": {
+      "s1-kill.test": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a"
+    },
+    "catalog_members": [
+      "s1-kill.test"
+    ],
+    "catalog_parser": "agent-peer-catalog-selection",
+    "catalog_producer": "bind",
+    "catalog_serial": 1,
+    "config_sha256": {
+      "/etc/named.conf": "21577e68a877007a0de2bdcf480c2bdb378cf1018224a04d07226aae566e4b5a",
+      "/var/named/celikpanel-fixture-catalog.zone": "93559a165a0d0365b48386ff2ebff9102c8686c5159a95ec32d931b511200aa9",
+      "/var/named/celikpanel-fixture-member.zone": "5ff975bd7a41e5d708ae7579487debf23a4f9b50d7facb4b1d0b30335bf6a3d1"
+    },
+    "engine": "bind",
+    "management_installed_on_primary": false,
+    "member_soa": {
+      "s1-kill.test": {
+        "authoritative_udp_tcp": true,
+        "serial": 2026083101
+      }
+    },
+    "native_service_active": true,
+    "native_versions": {
+      "daemons": {
+        "named": {
+          "output": "BIND 9.20.29 (Stable Release) <id:c3d4465>",
+          "returncode": 0
+        }
+      },
+      "package_manager": "pacman",
+      "packages": {
+        "bind": "9.20.29-1",
+        "powerdns": null
+      }
+    },
+    "pdns_catalog_rows": null,
+    "primary_ip": "192.0.2.11",
+    "schema": "celikpanel/native-primary-peer-observation/v1",
+    "secondary_ip": "192.0.2.10",
+    "transfer_notify_log": [
+      "zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 1)",
+      "zone s1-kill.test/IN: sending notifies (serial 2026083101)",
+      "zone s1-kill.test/IN: sending notify to 192.0.2.10#53",
+      "zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53",
+      "zone s1-kill.test/IN: notify to 192.0.2.10#53 failed: connection refused: retrying over TCP",
+      "zone s1-kill.test/IN: sending notify to 192.0.2.10#53",
+      "zone catalog-c000020b.celikpanel.invalid/IN: notify to 192.0.2.10#53 failed: connection refused: retrying over TCP",
+      "zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53",
+      "zone s1-kill.test/IN: notify to 192.0.2.10#53 failed: connection refused",
+      "zone catalog-c000020b.celikpanel.invalid/IN: notify to 192.0.2.10#53 failed: connection refused",
+      "client @0x7f4ae8c33000 127.0.0.1#48704 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c33000 127.0.0.1#48704 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 127.0.0.1#46588 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 127.0.0.1#46588 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#51094 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#51094 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#52722 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#52722 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#52732 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#52732 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#52738 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#52738 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#42785 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#42785 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#52746 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#52746 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#42891 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)",
+      "client @0x7f4ae8c36800 192.0.2.10#42891 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)",
+      "client @0x7f4ae8c36800 192.0.2.10#52762 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#52762 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#52776 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#52776 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#52792 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#52792 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#52806 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#52806 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#38259 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#38259 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#54986 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#54986 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#58195 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)",
+      "client @0x7f4ae8c36800 192.0.2.10#58195 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)",
+      "client @0x7f4aec0e6800 192.0.2.10#34537 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#34537 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4aec0e6800 192.0.2.10#37783 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)",
+      "client @0x7f4aec0e6800 192.0.2.10#37783 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)",
+      "client @0x7f4ae8c36800 192.0.2.10#55000 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#55000 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#55010 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#55010 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#55030 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#55030 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#55040 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 192.0.2.10#55040 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4aec0e6800 127.0.0.1#47492 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4aec0e6800 127.0.0.1#47492 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)"
+    ],
+    "transfers_to_secondary": {
+      "catalog-c000020b.celikpanel.invalid": true,
+      "s1-kill.test": true
+    },
+    "unit": "named.service",
+    "www_a": [
+      "192.0.2.11"
+    ]
+  },
+  "before_controller": {
+    "agent_catalog_format_name": "BIND",
+    "catalog": "catalog-c000020b.celikpanel.invalid",
+    "catalog_format": "bind",
+    "catalog_member_labels": {
+      "s1-kill.test": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a"
+    },
+    "catalog_members": [
+      "s1-kill.test"
+    ],
+    "catalog_parser": "agent-peer-catalog-selection",
+    "catalog_producer": "bind",
+    "catalog_serial": 1,
+    "config_sha256": {
+      "/etc/named.conf": "21577e68a877007a0de2bdcf480c2bdb378cf1018224a04d07226aae566e4b5a",
+      "/var/named/celikpanel-fixture-catalog.zone": "93559a165a0d0365b48386ff2ebff9102c8686c5159a95ec32d931b511200aa9",
+      "/var/named/celikpanel-fixture-member.zone": "5ff975bd7a41e5d708ae7579487debf23a4f9b50d7facb4b1d0b30335bf6a3d1"
+    },
+    "engine": "bind",
+    "management_installed_on_primary": false,
+    "member_soa": {
+      "s1-kill.test": {
+        "authoritative_udp_tcp": true,
+        "serial": 2026083101
+      }
+    },
+    "native_service_active": true,
+    "native_versions": {
+      "daemons": {
+        "named": {
+          "output": "BIND 9.20.29 (Stable Release) <id:c3d4465>",
+          "returncode": 0
+        }
+      },
+      "package_manager": "pacman",
+      "packages": {
+        "bind": "9.20.29-1",
+        "powerdns": null
+      }
+    },
+    "pdns_catalog_rows": null,
+    "primary_ip": "192.0.2.11",
+    "schema": "celikpanel/native-primary-peer-observation/v1",
+    "secondary_ip": "192.0.2.10",
+    "transfer_notify_log": [
+      "zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 1)",
+      "zone s1-kill.test/IN: sending notifies (serial 2026083101)",
+      "zone s1-kill.test/IN: sending notify to 192.0.2.10#53",
+      "zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53",
+      "zone s1-kill.test/IN: notify to 192.0.2.10#53 failed: connection refused: retrying over TCP",
+      "zone s1-kill.test/IN: sending notify to 192.0.2.10#53",
+      "zone catalog-c000020b.celikpanel.invalid/IN: notify to 192.0.2.10#53 failed: connection refused: retrying over TCP",
+      "zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53",
+      "zone s1-kill.test/IN: notify to 192.0.2.10#53 failed: connection refused",
+      "zone catalog-c000020b.celikpanel.invalid/IN: notify to 192.0.2.10#53 failed: connection refused",
+      "client @0x7f4ae8c33000 127.0.0.1#48704 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c33000 127.0.0.1#48704 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)",
+      "client @0x7f4ae8c36800 127.0.0.1#46588 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)",
+      "client @0x7f4ae8c36800 127.0.0.1#46588 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)"
+    ],
+    "transfers_to_secondary": {
+      "catalog-c000020b.celikpanel.invalid": false,
+      "s1-kill.test": false
+    },
+    "unit": "named.service",
+    "www_a": [
+      "192.0.2.11"
+    ]
+  },
+  "cell_id": "pdns-switch__target-started__after-write__paired-secondary__peer-reachable",
+  "combined_exit": 0,
+  "failures": [],
+  "guest_controller_exit": 0,
+  "note": "The peer serves the catalog in the format named by peer_catalog_format (pdns-native: PowerDNS's own PRODUCER catalog). The guest controller separately judges that the Agent logged accepting that same format.",
+  "observation_error": null,
+  "peer_catalog_format": "bind",
+  "peer_catalog_producer_expected": "bind",
+  "peer_engine": "bind",
+  "require_secondary_transfer": {
+    "error": null,
+    "passed": true
+  },
+  "schema": "celikpanel/dns-kill-paired-secondary-peer-verdict/v1",
+  "status": "passed",
+  "unknown": []
+}

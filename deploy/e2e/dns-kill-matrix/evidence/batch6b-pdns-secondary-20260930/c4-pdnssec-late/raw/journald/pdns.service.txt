@@ -1,0 +1,27 @@
+2026-09-29T16:30:54.642173+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-29T16:30:54.729124+00:00 dns-debian13 pdns_server[3956]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-29T16:30:54.729625+00:00 dns-debian13 pdns_server[3956]: This is a standalone pdns
+2026-09-29T16:30:54.729625+00:00 dns-debian13 pdns_server[3956]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T16:30:54.729999+00:00 dns-debian13 pdns_server[3956]: UDP server bound to 10.0.2.15:53
+2026-09-29T16:30:54.729999+00:00 dns-debian13 pdns_server[3956]: UDP server bound to 192.0.2.10:53
+2026-09-29T16:30:54.730071+00:00 dns-debian13 pdns_server[3956]: TCP server bound to 10.0.2.15:53
+2026-09-29T16:30:54.730071+00:00 dns-debian13 pdns_server[3956]: TCP server bound to 192.0.2.10:53
+2026-09-29T16:30:54.730200+00:00 dns-debian13 pdns_server[3956]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T16:30:54.730200+00:00 dns-debian13 pdns_server[3956]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T16:30:54.730200+00:00 dns-debian13 pdns_server[3956]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T16:30:54.765183+00:00 dns-debian13 pdns_server[3956]: Primary/secondary communicator launching
+2026-09-29T16:30:54.765698+00:00 dns-debian13 pdns_server[3956]: Creating backend connection for TCP
+2026-09-29T16:30:54.766285+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T16:30:54.766639+00:00 dns-debian13 pdns_server[3956]: About to create 3 backend threads for UDP
+2026-09-29T16:30:54.818548+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-29T16:30:54.818548+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone create zone 's1-kill.test'
+2026-09-29T16:30:54.848706+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-29T16:30:54.865330+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 1790699402
+2026-09-29T16:30:54.917392+00:00 dns-debian13 pdns_server[3956]: Retrieval request for zone 'catalog-c000020b.celikpanel.invalid' from primary '192.0.2.11' received from operator
+2026-09-29T16:30:54.918058+00:00 dns-debian13 pdns_server[3956]: Done launching threads, ready to distribute questions
+2026-09-29T16:30:54.940179+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T16:30:54.966510+00:00 dns-debian13 pdns_server[3956]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T16:30:55.004995+00:00 dns-debian13 pdns_server[3956]: Cache clear request for 'catalog-c000020b.celikpanel.invalid$' received from operator
+2026-09-29T16:30:55.034752+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T16:30:55.069983+00:00 dns-debian13 pdns_server[3956]: Cache clear request for 's1-kill.test$' received from operator
+2026-09-29T16:30:55.072038+00:00 dns-debian13 pdns_server[3956]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 1790699402
