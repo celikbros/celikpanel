@@ -1,0 +1,14 @@
+c01-v2-ts-bw bind__target-started__before-write__standalone__peer-reachable
+c02-v2-ss-bw bind__source-stopped__before-write__standalone__peer-reachable
+c03-v2-rb-bw bind__rolled-back__before-write__standalone__peer-reachable
+c04-v2-tg-bw-unr bind__target-staged__before-write__standalone__peer-unreachable
+c05-v2-ss-aw-rb2 bind__source-stopped__after-write__standalone__peer-reachable
+c06-takeover-dir bind__target-staged__after-write__standalone__peer-reachable
+c07-fresh-bind-in bind__intent__after-write__standalone__peer-reachable
+c08-fresh-pdns-in pdns-switch__intent__after-write__standalone__peer-reachable
+c09-fresh-pdns-cm pdns-switch__committed__after-write__standalone__peer-reachable
+c10-fresh-pdns-tv pdns-switch__target-verified__after-write__standalone__peer-reachable
+c11-sec-bind-in bind__intent__after-write__paired-secondary__peer-reachable
+c12-sec-pdns-in pdns-switch__intent__after-write__paired-secondary__peer-reachable
+c13-sec-pdns-cm pdns-switch__committed__after-write__paired-secondary__peer-reachable
+c14-sec-pdns-rb pdns-switch__rolled-back__after-write__paired-secondary__peer-reachable

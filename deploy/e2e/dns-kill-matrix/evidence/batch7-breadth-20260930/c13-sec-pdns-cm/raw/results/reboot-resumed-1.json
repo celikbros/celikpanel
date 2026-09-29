@@ -1,0 +1,13 @@
+{
+  "boot_id_after": "8a31517f-9a10-4e33-98a9-9b791475a699",
+  "boot_id_before": "738d32f4-3fae-4343-8a92-8fd45b2b33fd",
+  "checkpoint": {
+    "path": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__committed__after-write__paired-secondary__peer-reachable/reboot-checkpoint-1.json",
+    "sha256": "fadb187a6e320ff8ff997d5a1518376bb746354dd83a9a40ff22845dc428f94b"
+  },
+  "ordinal": 1,
+  "product_uuid": "e38a58fc-b79d-5a6b-aa01-b4535c8c407d",
+  "resumed_at": "2026-09-29T19:54:37.983032Z",
+  "schema": "celikpanel/dns-kill-reboot-resumed/v1",
+  "stage": "after-recovery"
+}

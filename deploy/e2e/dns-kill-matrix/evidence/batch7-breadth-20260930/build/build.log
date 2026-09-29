@@ -1,0 +1,123 @@
+2026-09-29T18:51:37Z
+repository HEAD at run time: dbd6a6b6dfd059045bf149bb680876cd28316c23
+dbd6a6b6dfd059045bf149bb680876cd28316c23
+go version go1.26.5 linux/amd64
+go1.26.5
+
+https://proxy.golang.org,direct
+/root/go/pkg/mod
+3694af9c4b532126a0743a5aaca4bac1f90ebaf31ba7ffbe65c5ded5e016c22d
+== artifacts
+cf4472afdb5ef30794f611f738e4b4380211b6fbbf1ae382a8084974293a472f  /root/cp-b7-artifacts/agent
+55c19fffb0761ea804702a169cf50f25d6a104d2353e9e2a0cf28df1ef29255c  /root/cp-b7-artifacts/agent.kill
+2693917d4ef6922ca85820d0f1df8f06f1dab4bfdc6bee9a067b5a001a0d1f39  /root/cp-b7-artifacts/panel
+4f664ff3d78feac44ccf678279efc947346927e432ec3a9535856fd931e46798  /root/cp-b7-artifacts/dns-kill-trigger
+dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  /root/cp-b7-artifacts/recovery
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  /root/cp-b7-artifacts/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  /root/cp-b7-artifacts/panel-checker
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  /root/cp-b7-artifacts/schema17-bridge
+== recovery-runtime
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  ./bin/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  ./bin/panel-checker
+dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  ./bin/recovery
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  ./bin/schema17-bridge
+6645927653114b4d59fbf6e29147f12920ceaec058d0ecc7b92faa71fd1bf6c3  ./deploy/panel-tls-snapshot.sh
+391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004  ./deploy/recovery/runtime-entry.sh
+f499446812b90aee362112743f4e491d5ecfa40511a510d08cbb006babdd48b0  ./deploy/release-recovery-foundation.sh
+db3e2dd23d4b81d9e533354e5d345d26eb43b7943ba20cf7b4ba19fac20cea1e  ./deploy/release-recovery-observation.sh
+4543920d5cc7a4d76c5c3ff91e8a03f4f02bd0e005577b40dc5c740af32c8257  ./deploy/release-transaction-guard.sh
+f163b496a8f48ae55a12658f34125f666c45672eccc4b27c03d58b7367848fc2  ./deploy/release-unit-transition.sh
+cbe3841aef57c62d0242a2957f728100fceca84a7a23135d51156562006ac822  ./rollback.sh
+3694af9c4b532126a0743a5aaca4bac1f90ebaf31ba7ffbe65c5ded5e016c22d  ./runtime.manifest
+dea6eafb9608e1b956e8fee7ddc85908e649056fa6727be9c373cec233154db8  ./update.sh
+ff9abfa1db719155d83024a1840c2782f4f5dce7868547d648b352db98fd7890  /root/cp-b7-tools/oi-smstatus
+051991de1a84415a56b9d10a5ec4d89b4ca4d7d8894bc33913c402cd9a728ae9  /root/cp-b7-tools/overlay.json
+57823885e8778d4fa5f67b3458042fc1f0cab7cb3a0603af00ec2bd202d85077  /root/cp-b7-tools/smstatus.go
+/root/cp-b7-artifacts/agent: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+== comparison with the 6f2fb028 batch-6b build (/root/cp-b6b-artifacts)
+DIFFERENT agent
+DIFFERENT agent.kill
+DIFFERENT panel
+DIFFERENT dns-kill-trigger
+IDENTICAL recovery
+IDENTICAL agent-checker
+IDENTICAL panel-checker
+IDENTICAL schema17-bridge
+IDENTICAL recovery-runtime/runtime.manifest
+recovery-runtime tree IDENTICAL
+IDENTICAL oi-smstatus
+web-dist IDENTICAL
+== changed paths 6f2fb028..dbd6a6b6 (non-test Go and harness)
+ .../api/0011-get-api-v1-panel-license.json         |   83 +
+ .../license-status-before-primary.json             |   15 +
+ .../05-license-primary/license-status-primary.json |   19 +
+ .../api/0012-get-api-v1-license-access.json        |   73 +
+ .../api/0013-get-api-v1-panel-license.json         |   79 +
+ .../api/0014-post-api-v1-panel-license.json        |   94 +
+ .../api/0015-get-api-v1-license-access.json        |   73 +
+ .../api/0016-get-api-v1-panel-license.json         |   83 +
+ .../license-status-before-secondary.json           |   15 +
+ .../license-status-secondary.json                  |   19 +
+ .../api/0017-get-api-v1-setup.json                 |   93 +
+ .../api/0018-put-api-v1-setup-guidance.json        |  103 +
+ .../api/0019-get-api-v1-dns-engine.json            |   89 +
+ .../api/0020-put-api-v1-setup.json                 |  120 +
+ .../api/0021-post-api-v1-setup-plan.json           |  151 +
+ .../api/0022-get-api-v1-setup.json                 |   93 +
+ .../api/0023-get-api-v1-dns-engine.json            |   89 +
+ .../07-setup-review-primary/plan-primary.json      |   78 +
+ .../refused-plan-state-primary.json                |   80 +
+ .../api/0024-get-api-v1-setup.json                 |   93 +
+ .../api/0025-put-api-v1-setup-guidance.json        |  103 +
+ .../api/0026-get-api-v1-dns-engine.json            |   89 +
+ .../api/0027-put-api-v1-setup.json                 |  120 +
+ .../api/0028-post-api-v1-setup-plan.json           |  149 +
+ .../api/0029-post-api-v1-setup-start.json          |  134 +
+ ...-setup-operation-request-id-1996b441877841.json |  139 +
+ .../execution-secondary-000.json                   |   76 +
+ .../plan-secondary.json                            |   76 +
+ deploy/e2e/dns-pair-acceptance/fakes.py            |   46 +-
+ deploy/e2e/dns-pair-acceptance/guidance.py         |   55 +-
+ deploy/e2e/dns-pair-acceptance/pair_acceptance.py  |  168 +-
+ .../e2e/dns-pair-acceptance/scripts/build-dist.sh  |   96 +-
+ .../dns-pair-acceptance/scripts/run-topology.sh    |    4 +-
+ deploy/e2e/dns-pair-acceptance/test_guidance.py    |   37 +-
+ deploy/e2e/dns-pair-acceptance/test_sequence.py    |  117 +-
+ deploy/release-acceptance-license-guard.sh         |  123 +
+ deploy/test-dns-owner-tools-package.sh             |    6 +-
+ deploy/test-release-acceptance-license-guard.sh    |  137 +
+ deploy/test-signed-release-manifest-contract.sh    |   16 +
+ deploy/write-release-manifest.sh                   |    7 +
+ deploy/write-signed-release-manifest.sh            |   11 +
+ .../owner_writer_exclusion_linux_test.go           |   42 +
+ internal/dnspeerenrollment/owner_writer_linux.go   |   22 +
+ internal/dnspeerenrollowner/engine_linux.go        |  282 ++
+ internal/dnspeerenrollowner/engine_linux_test.go   |  291 ++
+ .../dnspeerenrollowner/secondary_account_linux.go  |   22 +-
+ internal/dnspeerenrollowner/secondary_linux.go     |  216 +-
+ .../dnspeerenrollowner/secondary_sshd_linux.go     |  146 +-
+ internal/licensing/acceptance_fixture.go           |  392 ++
+ internal/licensing/acceptance_fixture_test.go      |  305 ++
+ internal/licensing/acceptance_off.go               |   22 +
+ internal/licensing/acceptance_off_test.go          |   69 +
+ internal/licensing/acceptance_owner_linux.go       |   17 +
+ internal/licensing/acceptance_owner_other.go       |   13 +
+ internal/licensing/acceptance_sources_test.go      |  118 +
+ internal/licensing/license.go                      |   27 +
+ internal/pdnspeerenrollment/owner_writer_linux.go  |  288 ++
+ .../pdnspeerenrollment/owner_writer_linux_test.go  |  185 +
+ internal/pdnspeerenrollment/owner_writer_other.go  |   30 +
+ 2155 files changed, 179029 insertions(+), 357 deletions(-)
+== harness file hashes
+a0ae7f57f58304688a085e94a14845b5f49f5dbaaa698f5bba3343b2912be168  fixture.py
+016ee2039f5bf02d2a96fcbe7524681c56d9ff47220d7b355ec555a5824f482a  guest_bootstrap.py
+c734d19d6ebfce9c0cc955f81b44f02c9ef39c433d56a53b198c9c0cd097047c  guest_bootstrap.sh
+3c15b7d175ec6908367e141382e28ff00c1ab91d03edca5dddde25e5780d1ad8  run_cell.py
+ef5a749a1f7d9015261d54a75c266aa7a6be5d68bb29c9d08d36e5a93a3b54ed  guest_recovery_probe.py
+99d87fbe604bbbe202ad7cbe36348b7aab7d23652396bc6a2e14d4880f05bbf2  native_primary_peer.py
+1cffcba844cf55aea440f95446ad11dfe93607f44a643c96ad58c1940f67aef3  native_primary_peer_probe.py
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  manifest.json
+2026-09-29T18:51:55Z
+BUILD-OK

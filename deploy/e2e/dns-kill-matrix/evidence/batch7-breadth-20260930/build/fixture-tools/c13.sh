@@ -1,0 +1,1 @@
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch7/runcell.sh c13-sec-pdns-cm pdns-switch__committed__after-write__paired-secondary__peer-reachable uninitialized prepare-pdns-switch 0 /var/tmp/cp-b7-0930 debian13 pdns pdns-native --reboot-after-recovery --disable-management-before-reboot

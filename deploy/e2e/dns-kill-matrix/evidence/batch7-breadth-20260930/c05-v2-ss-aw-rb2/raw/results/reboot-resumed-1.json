@@ -1,0 +1,13 @@
+{
+  "boot_id_after": "c455c062-74f6-41af-876f-faa76f25125b",
+  "boot_id_before": "c783bff0-850e-45b0-b0b8-6c6374c320fd",
+  "checkpoint": {
+    "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__source-stopped__after-write__standalone__peer-reachable/reboot-checkpoint-1.json",
+    "sha256": "2ae3186f07fc5c79c0bf25b0c2195c066a509ccd05bed0623dd82a9f9231ac67"
+  },
+  "ordinal": 1,
+  "product_uuid": "0eedddc7-7cb4-58cf-86a3-59fb5092a19b",
+  "resumed_at": "2026-09-29T19:12:32.381959Z",
+  "schema": "celikpanel/dns-kill-reboot-resumed/v1",
+  "stage": "before-owner-command"
+}

@@ -1,0 +1,32 @@
+2026-09-29T19:07:42.859870+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-29T19:07:42.938944+00:00 dns-debian13 pdns_server[1766]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-29T19:07:42.939267+00:00 dns-debian13 pdns_server[1766]: This is a standalone pdns
+2026-09-29T19:07:42.939267+00:00 dns-debian13 pdns_server[1766]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T19:07:42.939581+00:00 dns-debian13 pdns_server[1766]: UDP server bound to 10.0.2.15:53
+2026-09-29T19:07:42.939618+00:00 dns-debian13 pdns_server[1766]: TCP server bound to 10.0.2.15:53
+2026-09-29T19:07:42.939781+00:00 dns-debian13 pdns_server[1766]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T19:07:42.939781+00:00 dns-debian13 pdns_server[1766]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T19:07:42.939781+00:00 dns-debian13 pdns_server[1766]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T19:07:42.970896+00:00 dns-debian13 pdns_server[1766]: Creating backend connection for TCP
+2026-09-29T19:07:42.972276+00:00 dns-debian13 pdns_server[1766]: About to create 3 backend threads for UDP
+2026-09-29T19:07:42.971282+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T19:07:43.123097+00:00 dns-debian13 pdns_server[1766]: Done launching threads, ready to distribute questions
+2026-09-29T19:07:52.421988+00:00 dns-debian13 systemd[1]: Stopping pdns.service - PowerDNS Authoritative Server...
+2026-09-29T19:07:52.424791+00:00 dns-debian13 systemd[1]: pdns.service: Deactivated successfully.
+2026-09-29T19:07:52.425072+00:00 dns-debian13 systemd[1]: Stopped pdns.service - PowerDNS Authoritative Server.
+2026-09-29T19:07:52.428963+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-29T19:07:52.499529+00:00 dns-debian13 pdns_server[3083]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-29T19:07:52.499948+00:00 dns-debian13 pdns_server[3083]: This is a standalone pdns
+2026-09-29T19:07:52.499948+00:00 dns-debian13 pdns_server[3083]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T19:07:52.500283+00:00 dns-debian13 pdns_server[3083]: UDP server bound to 10.0.2.15:53
+2026-09-29T19:07:52.500283+00:00 dns-debian13 pdns_server[3083]: UDP server bound to 192.0.2.10:53
+2026-09-29T19:07:52.500356+00:00 dns-debian13 pdns_server[3083]: TCP server bound to 10.0.2.15:53
+2026-09-29T19:07:52.500356+00:00 dns-debian13 pdns_server[3083]: TCP server bound to 192.0.2.10:53
+2026-09-29T19:07:52.500499+00:00 dns-debian13 pdns_server[3083]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T19:07:52.500499+00:00 dns-debian13 pdns_server[3083]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T19:07:52.500499+00:00 dns-debian13 pdns_server[3083]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T19:07:52.542346+00:00 dns-debian13 pdns_server[3083]: Creating backend connection for TCP
+2026-09-29T19:07:52.542483+00:00 dns-debian13 pdns_server[3083]: About to create 3 backend threads for UDP
+2026-09-29T19:07:52.542823+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T19:07:52.693236+00:00 dns-debian13 pdns_server[3083]: Done launching threads, ready to distribute questions
+2026-09-29T19:07:54.274453+00:00 dns-debian13 pdns_server[3083]: Cache clear request for 's1-kill.test$' received from operator

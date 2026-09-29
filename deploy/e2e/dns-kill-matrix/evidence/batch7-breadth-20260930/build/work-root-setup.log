@@ -1,0 +1,37 @@
+=== 2026-09-29T18:52:12Z work root /var/tmp/cp-b7-0930
+{
+  "action": "init-root",
+  "dry_run": false,
+  "marker": "/var/tmp/cp-b7-0930/.celikpanel-dns-kill-matrix-root",
+  "work_root": "/var/tmp/cp-b7-0930"
+}
+total 875868
+drwx------  2 root root      4096 Sep 29 21:52 .
+drwx------  4 root root      4096 Sep 29 21:52 ..
+-r--r--r-- 18 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 18 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+{
+  "action": "verify-images",
+  "verified": {
+    "arch": "/var/tmp/cp-b7-0930/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+    "debian13": "/var/tmp/cp-b7-0930/images/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+  }
+}
+cf4472afdb5ef30794f611f738e4b4380211b6fbbf1ae382a8084974293a472f  /var/tmp/cp-b7-0930/artifacts/agent
+55c19fffb0761ea804702a169cf50f25d6a104d2353e9e2a0cf28df1ef29255c  /var/tmp/cp-b7-0930/artifacts/agent.kill
+2693917d4ef6922ca85820d0f1df8f06f1dab4bfdc6bee9a067b5a001a0d1f39  /var/tmp/cp-b7-0930/artifacts/panel
+4f664ff3d78feac44ccf678279efc947346927e432ec3a9535856fd931e46798  /var/tmp/cp-b7-0930/artifacts/dns-kill-trigger
+dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  /var/tmp/cp-b7-0930/artifacts/recovery
+3694af9c4b532126a0743a5aaca4bac1f90ebaf31ba7ffbe65c5ded5e016c22d  /var/tmp/cp-b7-0930/artifacts/recovery-runtime/runtime.manifest
+ed2f0fb7f85efac2a80bca258e370e50c1d2a728d6d253254c32f97d6c8f97cb  /var/tmp/cp-b7-0930/id_ed25519.pub
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  deploy/e2e/dns-kill-matrix/manifest.json
+total 104
+drwx------   5 root root  4096 Sep 29 21:52 .
+drwxrwxrwt 371 root root 73728 Sep 29 21:52 ..
+drwxr-xr-x   3 root root  4096 Sep 29 21:51 artifacts
+-rw-------   1 root root    36 Sep 29 21:52 .celikpanel-dns-kill-matrix-root
+drwx------   2 root root  4096 Sep 29 21:52 cells
+-rw-------   1 root root   399 Sep 29 21:52 id_ed25519
+-rw-r--r--   1 root root    92 Sep 29 21:52 id_ed25519.pub
+drwx------   2 root root  4096 Sep 29 21:52 images
+SETUP-OK /var/tmp/cp-b7-0930

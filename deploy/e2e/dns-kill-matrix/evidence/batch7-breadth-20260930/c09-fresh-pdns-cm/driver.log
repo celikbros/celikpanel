@@ -1,0 +1,17 @@
+### 2026-09-29T19:30:38.406Z start-cell c09-fresh-pdns-cm pdns-switch__committed__after-write__standalone__peer-reachable node=debian13 other=arch fixture=uninitialized prep=prepare-pdns-switch enroll=1 root=/var/tmp/cp-b7-0930 peer=none format=none flags=--reboot-after-recovery
+### 2026-09-29T19:30:38.408Z prepare
+### 2026-09-29T19:30:39.458Z early-admission-dry-run
+### 2026-09-29T19:30:39.611Z start
+### 2026-09-29T19:30:39.920Z wait-ssh
+### 2026-09-29T19:31:38.751Z guest-identity
+### 2026-09-29T19:31:39.467Z install
+### 2026-09-29T19:31:49.884Z enroll-recovery-runtime
+### 2026-09-29T19:31:56.872Z prepare-pdns-switch
+### 2026-09-29T19:31:58.107Z pre-run-snapshot
+### 2026-09-29T19:33:00.307Z start-watcher
+Running as unit: cp-b7-watch.service; invocation ID: 37b00545e7bb469c9b660f8d92e391aa
+### 2026-09-29T19:33:01.052Z prepared-ok
+### 2026-09-29T19:33:01.057Z run-prepared-dry-run flags=--reboot-after-recovery
+### 2026-09-29T19:33:01.160Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T19:34:46.988Z done-run rc=0

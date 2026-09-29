@@ -207,6 +207,24 @@ whichever catalog format the primary serves, and writes no metadata,
 comments or keys for consumed members; the consumer row itself keeps
 `options` and `catalog` NULL.
 
+**2026-09-30, batch 7, breadth** ([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch7-breadth-20260930/README.md),
+source `dbd6a6b6`; fourteen cells on the Debian 13 kill guest, each run once,
+no harness workaround, no re-run): **all fourteen passed**; the boundary held
+in every cell.
+
+| Row | Cells | Result |
+|---|---|---|
+| 7 | V2 PowerDNS → BIND before-write edges: `target-staged` (peer-unreachable placement), `source-stopped`, `target-started`, `rolled-back`; and `source-stopped` after-write with a reboot before the owner command, a reboot after recovery and the same switch retried as a new request | passed; first native run of the before-write edges; the retried switch completed forward after two reboots |
+| 12 | takeover of a stopped unmanaged BIND carrying owner `recursion` / `allow-transfer` directives, reboot after recovery | passed; owner files were back to the sealed preimage before the retry and the same-request retry converged through the takeover |
+| 1 | fresh BIND `intent` after-write, reboot | passed |
+| 4 | fresh PowerDNS `intent`, `target-verified`, `committed` after-write, reboot | passed |
+| 3 | fresh BIND secondary `intent` after-write against a PowerDNS primary with its native catalog, management-disabled reboot | passed |
+| 5 | fresh PowerDNS secondary `intent`, `committed`, `rolled-back` after-write against BIND and PowerDNS primaries, management-disabled reboot | passed |
+
+Measured PowerDNS outage upper bounds in the post-stop V2 cells: 27.2 s,
+8.8 s and 25.9 s (the last includes two reboots' surrounding work but not the
+reboots themselves are judged); recorded, not bounded.
+
 Source changes after batches 4 and 5, component tests only, native re-run
 pending: boundary stop, missing-pointer repair and pointer ordering
 (`c04d8a2b`); no inverse without a durable rollback decision, consumed

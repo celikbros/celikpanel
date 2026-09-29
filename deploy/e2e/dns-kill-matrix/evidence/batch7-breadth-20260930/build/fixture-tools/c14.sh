@@ -1,0 +1,1 @@
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch7/runcell.sh c14-sec-pdns-rb pdns-switch__rolled-back__after-write__paired-secondary__peer-reachable uninitialized prepare-pdns-switch 0 /var/tmp/cp-b7-0930 debian13 bind bind --reboot-after-recovery --disable-management-before-reboot

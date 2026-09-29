@@ -1,0 +1,22 @@
+ff9abfa1db719155d83024a1840c2782f4f5dce7868547d648b352db98fd7890  /root/oi-smstatus
+{
+  "observed_at": "2026-09-29T19:39:50.350285223Z",
+  "request_id": "72f6ebea00ee980e1a01b52c1d91ef09",
+  "response": {
+    "job": {
+      "request_id": "72f6ebea00ee980e1a01b52c1d91ef09",
+      "owner_id": "8612763e2ec8c44a5cda936b26c98082",
+      "kind": "dns_engine_switch",
+      "target": "pdns",
+      "package_name": "dns-engine-switch/v1:sha256:e5c11a68da6220fd4f40774ded9dda73181c50c0cdb756baa06991e27c180e5e",
+      "status": "succeeded",
+      "phase": "commit/dns-engine-switch/v2/finalized/72f6ebea00ee980e1a01b52c1d91ef09/dns-engine-switch/v1:sha256:e5c11a68da6220fd4f40774ded9dda73181c50c0cdb756baa06991e27c180e5e",
+      "attempt": 1,
+      "started_at": "2026-09-29T19:37:59.575234875Z",
+      "updated_at": "2026-09-29T19:38:24.477733664Z",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "deadline_at": "2026-09-29T20:22:59.575234875Z",
+      "finished_at": "2026-09-29T19:38:24.477733664Z"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+request 2e20f38e90945d59e420d45b4671f51f controller 2026-09-29T19:27:41.074270Z -> 2026-09-29T19:29:47.499986Z
+status passed safety passed class target_converged fp 72a2eb7b
+kill pid 1721 state T at 2026-09-29T19:28:22.510100Z exit 137 reaped True
+marker 2026-09-29T19:28:22.478873855Z journal intent 3accf567
+trigger rc 75
+ retry 1 rc 0 dur 6.440285 err None
+ retry 2 rc 0 dur 0.003767 err None
+ probe 1 target_converged 72a2eb7b pdns | 
+ probe 2 target_converged 72a2eb7b pdns | 
+stability 31 ok 31 2026-09-29T19:28:30.279810Z 2026-09-29T19:29:00.279930Z
+ reboot {"ordinal": 1, "point": null, "boot_id_before": "f4648c1e-8d80-454a-a4e9-4bdba6441188", "boot_id_after": "05eb15f5-be5a-48a2-b056-b798870c2889", "product_uuid": "7a4f8d0e-7198-5cd5-a93e-202954bfff3a"}
+reboot_after_recovery run True status passed failures [] unknown [] window 31 ok 31 dns_only False
+  authority_after_boot {"at": "2026-09-29T19:29:17.412999Z", "authority": {"answer_counts": {"tcp": 1, "udp": 1}, "answered": true, "engines": {"tcp": ["pdns"], "udp": ["pdns"]}}, "dns": {"answered": true, "at": "2026-09-29T19:29:17.452272Z", "result": {"tcp": {"additional": 0, "answers": 1, "authority": 0, "bytes": 50, "flags": 33792, "questions": 1, "transport": "tcp"}, "udp": {"additional": 0, "answers": 1, "authorit
+ status-read after-recovery: available=True rc=0 mutated=False :: No DNS switch journal was observed for request 2e20f38e90945d59e420d45b4671f51f. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+ status-read before-recovery: available=True rc=0 mutated=False :: DNS switch request 2e20f38e90945d59e420d45b4671f51f: accepted-active (journal phase intent). / No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id 2e20f38e90945d59e420d45b4671f51f. This status check does not start recovery.

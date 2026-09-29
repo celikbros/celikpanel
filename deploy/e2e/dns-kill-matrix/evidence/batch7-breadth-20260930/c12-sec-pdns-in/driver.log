@@ -1,0 +1,19 @@
+### 2026-09-29T19:45:48.210Z start-cell c12-sec-pdns-in pdns-switch__intent__after-write__paired-secondary__peer-reachable node=debian13 other=arch fixture=uninitialized prep=prepare-pdns-switch enroll=0 root=/var/tmp/cp-b7-0930 peer=bind format=bind flags=--reboot-after-recovery --disable-management-before-reboot
+### 2026-09-29T19:45:48.211Z prepare
+### 2026-09-29T19:45:49.180Z early-admission-dry-run
+### 2026-09-29T19:45:49.292Z start
+### 2026-09-29T19:45:49.590Z wait-ssh
+### 2026-09-29T19:46:46.243Z guest-identity
+### 2026-09-29T19:46:46.922Z install
+### 2026-09-29T19:46:56.462Z prepare-pdns-switch
+### 2026-09-29T19:47:52.593Z pre-run-snapshot
+### 2026-09-29T19:48:22.768Z start-peer-dns-sampler
+Running as unit: cp-b7-peerloop.service; invocation ID: 82567ecfb5924f2c90db4eb27b1be970
+peerloop start rc=0
+### 2026-09-29T19:48:23.356Z start-watcher
+Running as unit: cp-b7-watch.service; invocation ID: c2ddd4824f8844568889acda0cca713a
+### 2026-09-29T19:48:24.138Z prepared-ok
+### 2026-09-29T19:48:24.144Z run-prepared-dry-run flags=--reboot-after-recovery --disable-management-before-reboot
+### 2026-09-29T19:48:24.278Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T19:50:36.146Z done-run rc=0

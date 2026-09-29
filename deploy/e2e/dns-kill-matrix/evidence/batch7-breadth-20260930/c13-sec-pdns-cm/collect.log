@@ -1,0 +1,18 @@
+### collect 2026-09-29T19:55:12.110272675Z
+last watcher dir: /var/tmp/cp-b7-watch-boot2
+request id: 1acc99ed989f5e41e80d18d32ce795bf
+ownerpost rc=0
+smstatus rc=1
+probe rc=0
+pdnsdb rc=0
+secstate rc=0
+peer journal rc=0
+peerloop rc=0 lines=46
+cell directory: /var/tmp/cp-b7-0930/cells/d9d96e140a8fe2bdff42eaa9
+total 44
+drwx------ 2 root root  4096 Sep 29 22:55 .
+drwxr-xr-x 3 root root  4096 Sep 29 22:55 ..
+-rw------- 1 root root  4320 Sep 29 22:53 peer-before-kill.json
+-rw------- 1 root root  4520 Sep 29 22:53 peer-prepared.json
+-rw------- 1 root root 18494 Sep 29 22:55 peer-verdict.json
+tar rc=0 size=1515520

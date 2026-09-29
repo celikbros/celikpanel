@@ -1,0 +1,21 @@
+wall=2026-09-29T19:11:40.944735563Z boot_id=c783bff0-850e-45b0-b0b8-6c6374c320fd
+os=Debian GNU/Linux 13 (trixie) kernel=6.12.105+deb13-cloud-amd64
+== dpkg-query
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+pdns-backend  un 
+pdns-backend-bind  un 
+pdns-backend-sqlite3 4.9.17-0+deb13u1 ii 
+pdns-server 4.9.17-0+deb13u1 ii 
+python3 3.13.5-1 ii 
+systemd 257.13-1~deb13u1 ii 
+== named -v
+== pdns_server --version
+Sep 29 19:11:40 PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+Sep 29 19:11:40 Using 64-bits mode. Built using gcc 14.2.0.
+== management binaries
+cf4472afdb5ef30794f611f738e4b4380211b6fbbf1ae382a8084974293a472f  /opt/celikpanel/bin/agent
+55c19fffb0761ea804702a169cf50f25d6a104d2353e9e2a0cf28df1ef29255c  /opt/celikpanel/bin/agent.kill
+4f664ff3d78feac44ccf678279efc947346927e432ec3a9535856fd931e46798  /opt/celikpanel/bin/dns-kill-trigger
+2693917d4ef6922ca85820d0f1df8f06f1dab4bfdc6bee9a067b5a001a0d1f39  /opt/celikpanel/bin/panel
+dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  /usr/libexec/celikpanel/recovery
