@@ -167,8 +167,18 @@ func releasedPDNSAdoptionJournal(t *testing.T, h releasedInverseHost) dnsenginea
 // the PowerDNS ownership receipt still matches the frozen source.
 func releasedBINDSwitchJournal(t *testing.T, h releasedInverseHost) dnsengineartifact.SwitchJournalV1 {
 	t.Helper()
+	return releasedBINDSwitchJournalWithTargets(t, h, nil)
+}
+
+// releasedBINDSwitchJournalWithTargets freezes targets as the BIND unit
+// preimage when it is non-nil; nil keeps the fixture's absent units.
+func releasedBINDSwitchJournalWithTargets(t *testing.T, h releasedInverseHost, targets []dnsengineartifact.UnitSnapshot) dnsengineartifact.SwitchJournalV1 {
+	t.Helper()
 	base := readSwitchJournalFixture(t, "alpha81-bind.json")
 	base.Phase = dnsengineartifact.SwitchPhaseIntent
+	if targets != nil {
+		base.TargetUnitsBefore = targets
+	}
 	local := []byte("// local before\n")
 	base.ConfigBefore = []dnsengineartifact.FileSnapshot{
 		releasedConfigSnapshot("/etc/bind/named.conf.local", 42, local),

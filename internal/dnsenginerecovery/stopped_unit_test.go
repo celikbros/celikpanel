@@ -3,6 +3,7 @@ package dnsenginerecovery
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -262,4 +263,113 @@ func TestVerifyStoppedFreshSourceTargetAcceptsOnlyNeverServedStates(t *testing.T
 		func(context.Context) error { cancel(); return nil }); !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled listener proof = %v", err)
 	}
+}
+
+func TestVerifyStoppedNeverStartedTargetAcceptsOnlyPreStartStates(t *testing.T) {
+	with := func(load, file string) StoppedUnitObservation {
+		return StoppedUnitObservation{Name: "named.service", LoadState: load, ActiveState: "inactive", UnitFileState: file, SubState: "dead"}
+	}
+	constant := func(seen StoppedUnitObservation) func(context.Context) (StoppedUnitObservation, error) {
+		return func(context.Context) (StoppedUnitObservation, error) { return seen, nil }
+	}
+	for _, tc := range []struct {
+		name       string
+		seen       StoppedUnitObservation
+		extraReads int
+	}{
+		{"absent", with("not-found", ""), 2},
+		{"guard-persistent-mask", with("masked", "masked"), 2},
+		// A loaded target keeps exactly VerifyStoppedUnit's proof: the V2
+		// journal cannot say whether it started, so no extra condition and
+		// no relaxed one apply.
+		{"loaded", with("loaded", "disabled"), 0},
+	} {
+		t.Run("accept/"+tc.name, func(t *testing.T) {
+			extra := 0
+			got, err := VerifyStoppedNeverStartedTarget(context.Background(), "named.service", constant(tc.seen),
+				func(context.Context) error { extra++; return nil })
+			if err != nil || got != tc.seen || extra != tc.extraReads {
+				t.Fatalf("got %+v err=%v source-only reads=%d, want %d", got, err, extra, tc.extraReads)
+			}
+		})
+	}
+	for _, tc := range []struct {
+		name string
+		seen StoppedUnitObservation
+	}{
+		{"runtime-mask", with("masked", "masked-runtime")},
+		{"absent-with-file-state", with("not-found", "disabled")},
+		{"error-load-state", with("error", "")},
+		{"active", func() StoppedUnitObservation { s := with("masked", "masked"); s.ActiveState = "active"; return s }()},
+		{"main-pid", func() StoppedUnitObservation { s := with("masked", "masked"); s.MainPID = 4242; return s }()},
+		{"control-pid", func() StoppedUnitObservation { s := with("not-found", ""); s.ControlPID = 7; return s }()},
+		{"transition", func() StoppedUnitObservation { s := with("masked", "masked"); s.SubState = "start-pre"; return s }()},
+		{"wrong-unit", func() StoppedUnitObservation { s := with("masked", "masked"); s.Name = "bind9.service"; return s }()},
+	} {
+		t.Run("refuse/"+tc.name, func(t *testing.T) {
+			if _, err := VerifyStoppedNeverStartedTarget(context.Background(), "named.service", constant(tc.seen),
+				func(context.Context) error { return nil }); err == nil {
+				t.Fatalf("unsafe never-started state accepted: %+v", tc.seen)
+			}
+		})
+	}
+	for name, sourceErr := range map[string]error{
+		"named-process":                errors.New("a named process (PID 4242) exists beside the stopped DNS target"),
+		"listener-not-owned-by-source": errors.New("an unexpected process is holding a public DNS listener"),
+	} {
+		for _, seen := range []StoppedUnitObservation{with("masked", "masked"), with("not-found", "")} {
+			t.Run("refuse/"+name+"/"+seen.LoadState, func(t *testing.T) {
+				if _, err := VerifyStoppedNeverStartedTarget(context.Background(), "named.service", constant(seen),
+					func(context.Context) error { return sourceErr }); err == nil || !strings.Contains(err.Error(), sourceErr.Error()) {
+					t.Fatalf("source-only failure not enforced: %v", err)
+				}
+			})
+		}
+	}
+	t.Run("refuse/changed-between-reads", func(t *testing.T) {
+		reads := 0
+		if _, err := VerifyStoppedNeverStartedTarget(context.Background(), "named.service",
+			func(context.Context) (StoppedUnitObservation, error) {
+				reads++
+				if reads == 2 {
+					return with("loaded", "disabled"), nil
+				}
+				return with("masked", "masked"), nil
+			}, func(context.Context) error { return nil }); err == nil {
+			t.Fatal("unit lifted from the mask between reads was accepted")
+		}
+	})
+	t.Run("refuse/source-only-late-failure", func(t *testing.T) {
+		calls := 0
+		if _, err := VerifyStoppedNeverStartedTarget(context.Background(), "named.service", constant(with("masked", "masked")),
+			func(context.Context) error {
+				calls++
+				if calls == 2 {
+					return errors.New("a named process appeared")
+				}
+				return nil
+			}); err == nil {
+			t.Fatal("second-read source-only failure was accepted")
+		}
+	})
+	t.Run("refuse/invalid-admission", func(t *testing.T) {
+		if _, err := VerifyStoppedNeverStartedTarget(context.Background(), "named.service", constant(with("masked", "masked")), nil); err == nil {
+			t.Fatal("missing source-only observer accepted")
+		}
+		if _, err := VerifyStoppedNeverStartedTarget(context.Background(), "pdns.service",
+			constant(StoppedUnitObservation{Name: "pdns.service", LoadState: "masked", ActiveState: "inactive", UnitFileState: "masked", SubState: "dead"}),
+			func(context.Context) error { return nil }); err == nil {
+			t.Fatal("never-started BIND class admitted pdns.service")
+		}
+	})
+	// Every other class is unchanged: a started target (or any journal
+	// outside the never-started shape) still requires LoadState=loaded.
+	t.Run("default-class-still-requires-loaded", func(t *testing.T) {
+		for _, seen := range []StoppedUnitObservation{with("masked", "masked"), with("not-found", "")} {
+			if err := VerifyStoppedUnit(context.Background(), "named.service", constant(seen)); err == nil ||
+				err.Error() != "DNS target is not a loaded unit" {
+				t.Fatalf("loaded-unit proof accepted %+v: %v", seen, err)
+			}
+		}
+	})
 }

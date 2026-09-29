@@ -5,6 +5,8 @@ package dnsenginerecovery
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -109,5 +111,97 @@ func TestIndependentStoppedUnitProbeUsesFixedNativeEvidence(t *testing.T) {
 		func(context.Context, string) error { t.Fatal("cgroup ran after malformed runtime"); return nil },
 	); err == nil {
 		t.Fatal("oversized process observation was accepted")
+	}
+}
+
+func TestNeverStartedBINDTargetProbeReadsMaskedUnitNatively(t *testing.T) {
+	unit := "Id=named.service\nNames=named.service\nLoadState=masked\nActiveState=inactive\nUnitFileState=masked\n"
+	runtime := "MainPID=0\nControlPID=0\nSubState=dead\nNeedDaemonReload=no\n"
+	unitRunner := func(_ context.Context, name string) ([]byte, error) {
+		if name != "named.service" {
+			t.Fatalf("unexpected unit %s", name)
+		}
+		return []byte(unit), nil
+	}
+	runtimeRunner := func(context.Context, string) ([]byte, error) { return []byte(runtime), nil }
+	cgroup := func(context.Context, string) error { return nil }
+	sourceOnly := 0
+	seen, err := ProbeStoppedNeverStartedBINDTarget(context.Background(), unitRunner, runtimeRunner, cgroup,
+		func(context.Context) error { sourceOnly++; return nil })
+	if err != nil || seen.LoadState != "masked" || sourceOnly != 2 {
+		t.Fatalf("guard-masked target refused: %+v %v (source-only reads %d)", seen, err, sourceOnly)
+	}
+	// The unchanged loaded-unit proof still refuses the same native reading.
+	if err := ProbeStoppedUnitWithCgroup(context.Background(), "named.service", unitRunner, runtimeRunner, cgroup); err == nil ||
+		!strings.Contains(err.Error(), "not a loaded unit") {
+		t.Fatalf("default proof accepted a masked unit: %v", err)
+	}
+	if _, err := ProbeStoppedNeverStartedBINDTarget(context.Background(), unitRunner, runtimeRunner,
+		func(context.Context, string) error { return errors.New("DNS service cgroup still contains processes") },
+		func(context.Context) error { return nil }); err == nil {
+		t.Fatal("populated cgroup accepted")
+	}
+	if _, err := ProbeStoppedNeverStartedBINDTarget(context.Background(), unitRunner, runtimeRunner, cgroup, nil); err == nil {
+		t.Fatal("missing source-only proof accepted")
+	}
+}
+
+func TestNamedProcessInventoryRefusesAnyNamedProcess(t *testing.T) {
+	root := t.TempDir()
+	write := func(pid, comm string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Join(root, pid), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, pid, "comm"), []byte(comm+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("1", "systemd")
+	write("3066", "pdns_server")
+	write("370", "systemd-resolve")
+	if err := os.MkdirAll(filepath.Join(root, "self"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "999"), 0o755); err != nil { // exited during the scan
+		t.Fatal(err)
+	}
+	procfs := func(string) error { return nil }
+	if err := probeNoProcessComm(context.Background(), root, "named", procfs); err != nil {
+		t.Fatalf("clean inventory refused: %v", err)
+	}
+	write("4242", "named")
+	if err := probeNoProcessComm(context.Background(), root, "named", procfs); err == nil || !strings.Contains(err.Error(), "4242") {
+		t.Fatalf("named process accepted: %v", err)
+	}
+	if err := probeNoProcessComm(context.Background(), root, "named", func(string) error { return errors.New("not procfs") }); err == nil {
+		t.Fatal("unverified procfs accepted")
+	}
+}
+
+func TestBINDSwitchTargetObservationsRequireTwoIdenticalTypedReads(t *testing.T) {
+	masked := func(name string) []byte {
+		return []byte("Id=" + name + "\nNames=" + name + "\nLoadState=masked\nUnitFileState=masked\nFragmentPath=/etc/systemd/system/" + name + "\nDropInPaths=\nSourcePath=\nTransient=no\n")
+	}
+	got, err := ProbeBINDSwitchTargetObservations(context.Background(), func(_ context.Context, name string) ([]byte, error) {
+		return masked(name), nil
+	})
+	if err != nil || len(got) != 2 || got[0].ID != "named.service" || got[1].ID != "bind9.service" {
+		t.Fatalf("masked target observations: %+v %v", got, err)
+	}
+	reads := 0
+	if _, err := ProbeBINDSwitchTargetObservations(context.Background(), func(_ context.Context, name string) ([]byte, error) {
+		reads++
+		if reads > 2 && name == "named.service" {
+			return []byte("Id=named.service\nNames=named.service\nLoadState=not-found\nUnitFileState=\nFragmentPath=\n"), nil
+		}
+		return masked(name), nil
+	}); err == nil {
+		t.Fatal("target class changed between reads was accepted")
+	}
+	if _, err := ProbeBINDSwitchTargetObservations(context.Background(), func(_ context.Context, name string) ([]byte, error) {
+		return masked("pdns.service"), nil
+	}); err == nil {
+		t.Fatal("observation naming another unit was accepted")
 	}
 }

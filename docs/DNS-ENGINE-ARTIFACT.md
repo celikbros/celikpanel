@@ -1387,3 +1387,58 @@ keeps the stored blocking text. The stored job is never modified.
 
 Evidence at this commit is component tests only; the native
 `--owner-inverse-after-restart` cells have not run.
+
+### V2 BIND switch inverse accepts a never-started, guard-sealed target (2026-09-29)
+
+P0.4, D-026; constitutional invariants 1, 2, 4, 5, 6; D-024. No schema or
+version change.
+
+The first native run of the owner-inverse-after-restart flow on `7ad24282`
+([evidence](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-20260929/README.md))
+failed in both cells with safety passed: the owner command was admitted and
+then refused at native verification with `DNS target is not a loaded unit`.
+At `intent` and `target-staged` the product has already installed `bind9` and
+the package guard holds `named.service` and `bind9.service` under its
+persistent mask; BIND has never started. The owner-side stopped-target proof
+required `LoadState=loaded` and the unit-identity reader could not represent
+a masked unit. Until then `recover-dns-bind-switch` had only ever completed
+for a target that had started.
+
+The V2 journal does not record the phase that preceded the rollback decision
+(`phase` is overwritten with `rolling-back`), and a recorded `source-stopped`
+would not prove the target never started, because activation runs between
+that write and `target-started`. The never-started class is therefore proven
+by journal plus native state, not phase history: the journal passes the
+unchanged inactive-BIND switch predicate and froze both target units as
+`not-found` (this operation created BIND), and both units are either absent or
+under the guard's persistent mask with each link proven root-owned and
+pointing to `/dev/null`. Activation lifts that mask before enable/start and
+nothing in the operation re-creates it, so a present guard mask is the
+evidence. Known limit: a target an owner started and masked again would be
+admitted; every stopped and source-only proof still applies and the mask is
+kept.
+
+For that class the stopped proof accepts absent or persistently masked,
+inactive/dead, zero main/control PIDs, empty cgroup, two identical reads; a
+runtime mask is refused. Each read also proves the source alone serves: no
+process named `named`, and either PowerDNS is active and every public port-53
+listener belongs to its verified main PID, or PowerDNS is inactive and no
+public listener exists. A loaded target keeps exactly the previous proof.
+`dnsunitidentity.ParseTargetObservation` adds typed loaded / persistent-mask /
+absent observations; the strict `Parse` and its callers are unchanged.
+
+Inverse effects at pre-start cuts: the guard mask and the installed package
+stay as rollback standby (the target unit restore is skipped only when both
+units are guard-sealed); configuration this operation wrote is restored
+owner-aware; the pointer is restored; a running PowerDNS whose unit reads its
+exact frozen preimage receives no `systemctl` call; a stopped source is
+restored and started; then the `rolled-back` checkpoint and journal
+retirement. The PowerDNS state and ownership receipts are not replaced.
+
+Not changed and recorded as open: the staged immutable BIND generation tree
+remains on disk after rollback; the `bind9-host`/`bind9-libs` upgrade is not
+reversed; status for a V2 journal that has not yet reached `rolling-back`
+still reports a masked target as unknown; listener proofs ignore loopback and
+link-local sockets; the `named` scan matches the kernel command name only;
+Arch is covered by code reading only. Evidence at this commit is component
+tests; the two failed cells must be re-run on the fixed source.

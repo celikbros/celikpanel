@@ -70,7 +70,34 @@ const (
 	stoppedUnitLoaded stoppedUnitClass = iota
 	stoppedUnitPDNSPersistentMask
 	stoppedUnitFreshSource
+	stoppedUnitNeverStartedTarget
 )
+
+// VerifyStoppedNeverStartedTarget proves the BIND target of a V2
+// PowerDNS-to-BIND switch inverse stopped when the caller has established,
+// from the journal (both target units frozen absent) and the native mask
+// proof, that it may be in a state a target has only before its first start.
+// A loaded unit gets exactly VerifyStoppedUnit's proof and no extra condition,
+// because a V2 journal does not record whether the target started before the
+// rollback decision. The two pre-start states are admitted only here: absent
+// (not-found, empty unit-file state) and the package guard's persistent mask
+// (masked/masked); a runtime-only mask is refused. For those two, each of the
+// two identical inactive/dead zero-PID observations must also pass
+// sourceOnly, which proves no named process exists and every public port-53
+// listener belongs to the source PowerDNS unit (or that none exists while the
+// source is stopped). The proof is point-in-time and cannot exclude an
+// independent owner restart. It returns the second observation.
+func VerifyStoppedNeverStartedTarget(
+	ctx context.Context,
+	name string,
+	observe func(context.Context) (StoppedUnitObservation, error),
+	sourceOnly func(context.Context) error,
+) (StoppedUnitObservation, error) {
+	if sourceOnly == nil {
+		return StoppedUnitObservation{}, errors.New("never-started DNS target proof requires a source-only DNS observer")
+	}
+	return verifyStoppedUnitObservation(ctx, name, observe, stoppedUnitNeverStartedTarget, sourceOnly)
+}
 
 func freshSourceStoppedLoadState(seen StoppedUnitObservation) bool {
 	switch seen.LoadState {
@@ -92,9 +119,22 @@ func verifyStoppedUnitClass(
 	class stoppedUnitClass,
 	noListener func(context.Context) error,
 ) error {
+	_, err := verifyStoppedUnitObservation(ctx, name, observe, class, noListener)
+	return err
+}
+
+func verifyStoppedUnitObservation(
+	ctx context.Context,
+	name string,
+	observe func(context.Context) (StoppedUnitObservation, error),
+	class stoppedUnitClass,
+	noListener func(context.Context) error,
+) (StoppedUnitObservation, error) {
+	extra := class == stoppedUnitFreshSource || class == stoppedUnitNeverStartedTarget
 	if ctx == nil || observe == nil || (name != "named.service" && name != "pdns.service") ||
-		(class == stoppedUnitFreshSource) != (noListener != nil) {
-		return errors.New("DNS stopped proof requires a fixed native unit observer")
+		extra != (noListener != nil) ||
+		(class == stoppedUnitNeverStartedTarget && name != "named.service") {
+		return StoppedUnitObservation{}, errors.New("DNS stopped proof requires a fixed native unit observer")
 	}
 	read := func() (StoppedUnitObservation, error) {
 		if err := ctx.Err(); err != nil {
@@ -126,6 +166,20 @@ func verifyStoppedUnitClass(
 			if err := ctx.Err(); err != nil {
 				return StoppedUnitObservation{}, err
 			}
+		case stoppedUnitNeverStartedTarget:
+			if seen.LoadState == "loaded" {
+				break
+			}
+			if !(seen.LoadState == "not-found" && seen.UnitFileState == "") &&
+				!(seen.LoadState == "masked" && seen.UnitFileState == "masked") {
+				return StoppedUnitObservation{}, errors.New("never-started DNS target is neither absent, persistently masked nor loaded")
+			}
+			if err := noListener(ctx); err != nil {
+				return StoppedUnitObservation{}, fmt.Errorf("prove only the source DNS authority serves beside the never-started target: %w", err)
+			}
+			if err := ctx.Err(); err != nil {
+				return StoppedUnitObservation{}, err
+			}
 		default:
 			if seen.LoadState != "loaded" {
 				return StoppedUnitObservation{}, errors.New("DNS target is not a loaded unit")
@@ -135,14 +189,14 @@ func verifyStoppedUnitClass(
 	}
 	before, err := read()
 	if err != nil {
-		return err
+		return StoppedUnitObservation{}, err
 	}
 	after, err := read()
 	if err != nil {
-		return err
+		return StoppedUnitObservation{}, err
 	}
 	if before != after {
-		return errors.New("DNS target unit or process changed during stopped proof")
+		return StoppedUnitObservation{}, errors.New("DNS target unit or process changed during stopped proof")
 	}
-	return nil
+	return after, nil
 }

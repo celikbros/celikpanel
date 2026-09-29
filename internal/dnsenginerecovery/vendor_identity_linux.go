@@ -156,3 +156,69 @@ func ProbePDNSVendorIdentity(ctx context.Context, profile hostplatform.Profile, 
 	}
 	return second, nil
 }
+
+// SystemdBINDTargetRunner reads the fixed target properties
+// dnsunitidentity.ParseTargetObservation classifies, for named.service and
+// bind9.service only. It never reloads or changes a service.
+func SystemdBINDTargetRunner(ctx context.Context, name string) ([]byte, error) {
+	if ctx == nil || (name != "named.service" && name != "bind9.service") {
+		return nil, errors.New("unsupported BIND target unit query")
+	}
+	queryCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(queryCtx, "/usr/bin/systemctl", "show", name,
+		"--property="+dnsunitidentity.TargetObservationProperties, "--no-pager")
+	output := &boundedUnitOutput{}
+	cmd.Stdout = output
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("read BIND target unit %s: %w", name, err)
+	}
+	return output.Bytes(), nil
+}
+
+// ProbeBINDSwitchTargetObservations reads named.service and bind9.service
+// twice as typed target observations and requires identical readings. It is
+// for the V2 PowerDNS-to-BIND inverse and its status only: a loaded
+// observation still needs the unchanged vendor identity proof, and a masked
+// one the caller's persistent-mask link proof. It grants no authority.
+func ProbeBINDSwitchTargetObservations(ctx context.Context, runner BINDIdentityRunner) ([]dnsunitidentity.TargetObservation, error) {
+	if ctx == nil || runner == nil {
+		return nil, errors.New("invalid BIND target unit observation")
+	}
+	read := func() ([]dnsunitidentity.TargetObservation, error) {
+		observations := make([]dnsunitidentity.TargetObservation, 0, 2)
+		for _, name := range []string{"named.service", "bind9.service"} {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			raw, err := runner(ctx, name)
+			if err != nil {
+				return nil, err
+			}
+			if len(raw) > 4096 {
+				return nil, errors.New("BIND target unit observation exceeds its bound")
+			}
+			observation, err := dnsunitidentity.ParseTargetObservation(string(raw))
+			if err != nil {
+				return nil, fmt.Errorf("parse %s target observation: %w", name, err)
+			}
+			if observation.ID != name && observation.State != dnsunitidentity.TargetLoaded {
+				return nil, fmt.Errorf("%s target observation names another unit", name)
+			}
+			observations = append(observations, observation)
+		}
+		return observations, nil
+	}
+	first, err := read()
+	if err != nil {
+		return nil, err
+	}
+	second, err := read()
+	if err != nil {
+		return nil, err
+	}
+	if !reflect.DeepEqual(first, second) {
+		return nil, errors.New("BIND target unit observation changed between reads")
+	}
+	return second, nil
+}

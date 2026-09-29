@@ -178,3 +178,105 @@ func ValidateAPTPDNSVendorIdentity(identity Identity) error {
 	}
 	return nil
 }
+
+// TargetState is the systemd load class of a DNS switch target unit.
+type TargetState uint8
+
+const (
+	// TargetLoaded carries the strict Identity that Parse accepts.
+	TargetLoaded TargetState = iota + 1
+	// TargetPersistentMask is a persistent mask under /etc/systemd/system;
+	// systemd exposes no service command for it.
+	TargetPersistentMask
+	// TargetAbsent is a unit name systemd cannot load (not-found).
+	TargetAbsent
+)
+
+// TargetObservation is one parsed reading of a DNS switch target unit. A
+// loaded unit carries the strict Identity; a persistently masked or absent
+// unit is represented as an explicit, typed never-started observation instead
+// of an incomplete identity. The type only records what systemd reported: a
+// caller must prove from its own evidence that such a target may be in that
+// state, and must separately prove the mask link and the stopped runtime.
+type TargetObservation struct {
+	State        TargetState
+	ID           string
+	FragmentPath string
+	Identity     Identity
+}
+
+// TargetObservationProperties are the properties ParseTargetObservation reads.
+const TargetObservationProperties = "Id,Names,LoadState,UnitFileState,FragmentPath,DropInPaths,SourcePath,Transient,ExecStart"
+
+// ParseTargetObservation classifies a systemctl show reading of exactly
+// TargetObservationProperties. A loaded unit is parsed by the unchanged Parse
+// and must carry all seven identity properties. A masked unit is accepted only
+// as a persistent mask whose fragment is /etc/systemd/system/<Id>; a runtime
+// mask ("masked-runtime" or a /run fragment) is refused. A not-found unit must
+// have an empty unit-file state and no fragment. Neither may report drop-ins,
+// a source path, a transient unit or a service command.
+func ParseTargetObservation(output string) (TargetObservation, error) {
+	values := map[string]string{}
+	identityLines := make([]string, 0, 7)
+	for _, line := range strings.Split(output, "\n") {
+		if line == "" {
+			continue
+		}
+		key, value, found := strings.Cut(line, "=")
+		if !found {
+			return TargetObservation{}, errors.New("systemctl returned a malformed DNS target unit observation")
+		}
+		switch key {
+		case "Id", "Names", "FragmentPath", "DropInPaths", "SourcePath", "Transient", "ExecStart":
+			identityLines = append(identityLines, line)
+		case "LoadState", "UnitFileState":
+		default:
+			return TargetObservation{}, errors.New("systemctl returned an unexpected DNS target unit property")
+		}
+		if _, duplicate := values[key]; duplicate {
+			return TargetObservation{}, errors.New("systemctl returned an ambiguous DNS target unit observation")
+		}
+		values[key] = value
+	}
+	for _, key := range []string{"Id", "Names", "LoadState", "UnitFileState"} {
+		if _, present := values[key]; !present {
+			return TargetObservation{}, errors.New("systemctl returned an incomplete DNS target unit observation")
+		}
+	}
+	id := values["Id"]
+	if values["LoadState"] == "loaded" {
+		identity, err := Parse(strings.Join(identityLines, "\n"))
+		if err != nil {
+			return TargetObservation{}, err
+		}
+		if identity.ID != id {
+			return TargetObservation{}, errors.New("systemctl returned an inconsistent DNS target unit identity")
+		}
+		return TargetObservation{State: TargetLoaded, ID: id, FragmentPath: identity.FragmentPath, Identity: identity}, nil
+	}
+	if id == "" || strings.ContainsAny(id, "/ \t") || values["Names"] != id {
+		return TargetObservation{}, errors.New("systemctl returned a non-canonical never-started DNS target name")
+	}
+	for _, key := range []string{"DropInPaths", "SourcePath", "ExecStart"} {
+		if values[key] != "" {
+			return TargetObservation{}, fmt.Errorf("never-started DNS target unexpectedly reports %s", key)
+		}
+	}
+	if transient, present := values["Transient"]; present && transient != "no" {
+		return TargetObservation{}, errors.New("never-started DNS target is not a persistent unit")
+	}
+	switch values["LoadState"] {
+	case "masked":
+		if values["UnitFileState"] != "masked" || values["FragmentPath"] != "/etc/systemd/system/"+id {
+			return TargetObservation{}, errors.New("masked DNS target is not a persistent /etc/systemd/system mask")
+		}
+		return TargetObservation{State: TargetPersistentMask, ID: id, FragmentPath: values["FragmentPath"]}, nil
+	case "not-found":
+		if values["UnitFileState"] != "" || values["FragmentPath"] != "" {
+			return TargetObservation{}, errors.New("absent DNS target reports unit-file state or a fragment")
+		}
+		return TargetObservation{State: TargetAbsent, ID: id}, nil
+	default:
+		return TargetObservation{}, errors.New("DNS target unit is neither loaded, persistently masked nor absent")
+	}
+}

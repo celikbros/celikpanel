@@ -144,6 +144,86 @@ func verifyInstalledBINDVendorAndUnit(ctx context.Context) error {
 	return nil
 }
 
+func neverStartedTargetStateText(loadState string) string {
+	switch loadState {
+	case "masked":
+		return "a persistently masked (package guard)"
+	case "not-found":
+		return "an absent (not-found)"
+	default:
+		return "a loaded"
+	}
+}
+
+// observeInstalledNeverStartedBINDTarget is the status-side unit identity
+// observation for a V2 PowerDNS-to-BIND journal that froze both BIND units
+// absent. A loaded named.service keeps the unchanged vendor identity proof. A
+// persistently masked or absent named.service is read as a typed never-started
+// observation: masked requires both units under the persistent mask, each link
+// proved root-owned to /dev/null, and stable vendor files; absent requires both
+// units absent. It returns the owner-facing line, or "" for the loaded case
+// that prints the existing text.
+func observeInstalledNeverStartedBINDTarget(ctx context.Context) (string, error) {
+	return observeNeverStartedBINDTarget(ctx, dnsenginerecovery.SystemdBINDTargetRunner,
+		verifyInstalledBINDVendorAndUnit, bindInversePersistentMask,
+		func() error {
+			profile, err := hostplatform.Detect()
+			if err != nil {
+				return err
+			}
+			before, err := bindroot.InspectInstalledVendor(ctx, profile)
+			if err != nil {
+				return err
+			}
+			after, err := bindroot.InspectInstalledVendor(ctx, profile)
+			if err != nil {
+				return err
+			}
+			if before != after {
+				return errors.New("BIND vendor files changed around masked unit observation")
+			}
+			return nil
+		})
+}
+
+func observeNeverStartedBINDTarget(
+	ctx context.Context, runner dnsenginerecovery.BINDIdentityRunner,
+	loaded func(context.Context) error, maskProof func(string) error, vendorFiles func() error,
+) (string, error) {
+	if ctx == nil || runner == nil || loaded == nil || maskProof == nil || vendorFiles == nil {
+		return "", errors.New("never-started BIND target observation lacks its readers")
+	}
+	observations, err := dnsenginerecovery.ProbeBINDSwitchTargetObservations(ctx, runner)
+	if err != nil {
+		return "", err
+	}
+	named, alias := observations[0], observations[1]
+	switch named.State {
+	case dnsunitidentity.TargetLoaded:
+		return "", loaded(ctx)
+	case dnsunitidentity.TargetPersistentMask:
+		if alias.State != dnsunitidentity.TargetPersistentMask {
+			return "", errors.New("named.service is masked but bind9.service is not under the package guard's persistent mask")
+		}
+		for _, unit := range []string{"named.service", "bind9.service"} {
+			if err := maskProof(unit); err != nil {
+				return "", err
+			}
+		}
+		if err := vendorFiles(); err != nil {
+			return "", err
+		}
+		return "BIND never started for this operation: named.service and bind9.service are under the package guard's persistent mask (root-owned links to /dev/null) and the installed BIND vendor files were stable across two reads. The package stays installed as rollback standby. Process state, DNS answers and recovery authority are proved by the owner recovery command, not by this observation.", nil
+	case dnsunitidentity.TargetAbsent:
+		if alias.State != dnsunitidentity.TargetAbsent {
+			return "", errors.New("named.service is absent but bind9.service is not")
+		}
+		return "BIND never started for this operation: named.service and bind9.service are absent (not-found) in two reads. Process state, DNS answers and recovery authority are proved by the owner recovery command, not by this observation.", nil
+	default:
+		return "", errors.New("BIND target unit class is unknown")
+	}
+}
+
 // A selected BIND target requires stable vendor and loaded systemd identity
 // around a read-only process observation.
 func verifyInstalledBINDRuntime(ctx context.Context) (uint64, error) {
@@ -572,11 +652,27 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	}
 	if quiesced {
 		if stoppedName, required := rolledBackInactiveTargetUnit(evidence); required {
-			if stopErr := dnsenginerecovery.ProbeStoppedUnit(
-				observationCtx, stoppedName,
-				dnsenginerecovery.SystemdUnitRunner,
-				dnsenginerecovery.SystemdPDNSRuntimeRunner,
-			); stopErr != nil {
+			stoppedState := "a loaded"
+			var stopErr error
+			if stoppedName == "named.service" && dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(evidence.Journal) {
+				var seen dnsenginerecovery.StoppedUnitObservation
+				seen, stopErr = dnsenginerecovery.ProbeStoppedNeverStartedBINDTarget(
+					observationCtx, dnsenginerecovery.SystemdUnitRunner,
+					dnsenginerecovery.SystemdPDNSRuntimeRunner,
+					func(ctx context.Context, unit string) error {
+						return dnsenginerecovery.ProbeEmptyUnitCgroup(ctx, unit, dnsenginerecovery.SystemdCgroupUnitRunner, dnsenginerecovery.NativeCgroupEvents)
+					},
+					installedBINDTargetSourceOnlyDNS,
+				)
+				stoppedState = neverStartedTargetStateText(seen.LoadState)
+			} else {
+				stopErr = dnsenginerecovery.ProbeStoppedUnit(
+					observationCtx, stoppedName,
+					dnsenginerecovery.SystemdUnitRunner,
+					dnsenginerecovery.SystemdPDNSRuntimeRunner,
+				)
+			}
+			if stopErr != nil {
 				fmt.Fprintln(diagnostic, "The retained DNS rollback target could not be proved stopped. The server owner should inspect the native unit and preserve the same journal; no recovery mutation was started. "+stopErr.Error())
 				return exitUnavailable
 			}
@@ -586,7 +682,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				fmt.Fprintln(diagnostic, "DNS rollback evidence changed around the native stopped-target observation. Preserve the accepted journal and retry after the owner change settles; no recovery mutation was started.")
 				return exitUnavailable
 			}
-			fmt.Fprintf(out, "The retained rollback target %s was a loaded inactive/dead unit with zero systemd main/control PIDs and an empty or absent native cgroup in two reads. This point-in-time observation does not prove later owner-edit exclusion, DNS health or recovery authority.\n", stoppedName)
+			fmt.Fprintf(out, "The retained rollback target %s was %s inactive/dead unit with zero systemd main/control PIDs and an empty or absent native cgroup in two reads. This point-in-time observation does not prove later owner-edit exclusion, DNS health or recovery authority.\n", stoppedName, stoppedState)
 		}
 	}
 	if observation.SourceEngine == "bind" || observation.TargetEngine == "bind" {
@@ -606,11 +702,23 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			}
 			fmt.Fprintln(out, "Managed BIND root directory and package ownership matched on two read-only walks. This does not prove the selected generation, DNS answers, owner edits or recovery authority.")
 		}
-		if vendorErr := verifyInstalledBINDVendorAndUnit(observationCtx); vendorErr != nil {
+		neverStarted := ""
+		var vendorErr error
+		if observation.TargetReceipt != dnsenginerecovery.TargetReceiptExact &&
+			dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(evidence.Journal) {
+			neverStarted, vendorErr = observeInstalledNeverStartedBINDTarget(observationCtx)
+		} else {
+			vendorErr = verifyInstalledBINDVendorAndUnit(observationCtx)
+		}
+		if vendorErr != nil {
 			fmt.Fprintln(diagnostic, "Native BIND vendor files or loaded systemd unit identity are unknown. The server owner should inspect the named service unit, its package ownership and startup options before the same operation resumes; no inverse was started. "+vendorErr.Error())
 			return exitUnavailable
 		}
-		fmt.Fprintln(out, "Certified BIND vendor files and systemd unit identity matched across read-only checks. Process liveness, a pending daemon reload, loaded named configuration and DNS answers remain unproved.")
+		if neverStarted != "" {
+			fmt.Fprintln(out, neverStarted)
+		} else {
+			fmt.Fprintln(out, "Certified BIND vendor files and systemd unit identity matched across read-only checks. Process liveness, a pending daemon reload, loaded named configuration and DNS answers remain unproved.")
+		}
 		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
 			mainPID, runtimeErr := verifyInstalledBINDRuntime(observationCtx)
 			if runtimeErr != nil {

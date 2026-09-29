@@ -15,6 +15,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/bindroot"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
+	"github.com/alicelik/celikpanel/internal/dnsunitidentity"
 	"github.com/alicelik/celikpanel/internal/dnsunitrestore"
 	"github.com/alicelik/celikpanel/internal/dnswire"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
@@ -127,11 +128,93 @@ func bindInversePointer(ctx context.Context, j dnsengineartifact.SwitchJournalV1
 func bindInverseUnits(ctx context.Context) ([]dnsenginerecovery.NativeUnitObservation, error) {
 	return dnsenginerecovery.ProbeNativeUnits(ctx, bindInverseUnitNames, dnsenginerecovery.SystemdUnitRunner)
 }
-func bindInverseStoppedTarget(ctx context.Context) error {
-	if err := dnsenginerecovery.ProbeStoppedUnit(ctx, "named.service", dnsenginerecovery.SystemdUnitRunner, dnsenginerecovery.SystemdBINDRuntimeRunner); err != nil {
+
+// bindSwitchNativeHost is the native half of recover-dns-bind-switch as
+// injectable observers and effects. installedBINDSwitchNativeHost binds the
+// fixed installed readers and writers; the assess and restore sequences below
+// never choose them from journal content.
+type bindSwitchNativeHost struct {
+	sourceProof       func(context.Context, dnsengineartifact.SwitchJournalV1) error
+	layout            func() (bindroot.Layout, uint32, error)
+	unchangedConfig   func(context.Context, dnsengineartifact.SwitchJournalV1, bindroot.Layout, uint32) error
+	pointer           func(context.Context, dnsengineartifact.SwitchJournalV1, bindroot.Layout, uint32) (bool, error)
+	configs           func(context.Context, dnsengineartifact.SwitchJournalV1, bindroot.Layout, uint32) (bool, error)
+	unitRunner        dnsenginerecovery.NativeUnitRunner
+	runtimeRunner     dnsenginerecovery.BINDRuntimeRunner
+	cgroup            func(context.Context, string) error
+	sourceOnly        func(context.Context) error
+	vendor            func(context.Context, dnsengineartifact.SwitchJournalV1, []dnsenginerecovery.NativeUnitObservation) error
+	pdnsRuntime       func(context.Context) (uint64, error)
+	answers           func(context.Context, dnsengineartifact.SwitchJournalV1, uint64) error
+	activePredecessor func(context.Context, dnsengineartifact.SwitchJournalV1, bindroot.Layout, uint32) error
+	maskParent        func() error
+	runSystemd        func(context.Context, string, ...string) ([]byte, error)
+	restoreConfigs    func(context.Context, dnsengineartifact.SwitchJournalV1, bindroot.Layout, uint32) error
+	restorePointer    func(dnsengineartifact.SwitchJournalV1, bindroot.Layout) error
+	restoreReceipt    func(dnsengineartifact.SwitchJournalV1) error
+}
+
+func installedBINDSwitchNativeHost(policy dnsengineartifact.JournalPolicy, owner servicemutationledger.FileOwner) bindSwitchNativeHost {
+	return bindSwitchNativeHost{
+		sourceProof: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1) error {
+			return bindInverseSourceProof(ctx, policy, j)
+		},
+		layout: installedBINDLayout,
+		unchangedConfig: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1, layout bindroot.Layout, gid uint32) error {
+			return bindInverseUnchangedConfig(ctx, policy, j, layout, gid)
+		},
+		pointer: bindInversePointer,
+		configs: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1, layout bindroot.Layout, gid uint32) (bool, error) {
+			return bindInverseConfigs(ctx, policy, j, layout, gid)
+		},
+		unitRunner:    dnsenginerecovery.SystemdUnitRunner,
+		runtimeRunner: dnsenginerecovery.SystemdBINDRuntimeRunner,
+		cgroup: func(ctx context.Context, unit string) error {
+			return dnsenginerecovery.ProbeEmptyUnitCgroup(ctx, unit, dnsenginerecovery.SystemdCgroupUnitRunner, dnsenginerecovery.NativeCgroupEvents)
+		},
+		sourceOnly:  installedBINDTargetSourceOnlyDNS,
+		vendor:      verifyInstalledBINDSwitchVendorForJournal,
+		pdnsRuntime: verifyInstalledPDNSRuntime,
+		answers:     bindInverseAnswers,
+		activePredecessor: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1, layout bindroot.Layout, gid uint32) error {
+			return bindInverseActivePredecessorProof(ctx, policy, j, layout, gid)
+		},
+		maskParent: bindInverseMaskParent,
+		runSystemd: bindInverseSystemd,
+		restoreConfigs: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1, layout bindroot.Layout, gid uint32) error {
+			return dnsenginerecovery.RestoreInstalledBINDSwitchConfigsV2(ctx, policy, j, layout, gid)
+		},
+		restorePointer: func(j dnsengineartifact.SwitchJournalV1, layout bindroot.Layout) error {
+			p, err := binddns.NewOSPublisher(string(layout))
+			if err != nil {
+				return err
+			}
+			return p.RestorePointer(j.TargetGeneration, j.PreviousGeneration, j.HadPrevious)
+		},
+		restoreReceipt: func(j dnsengineartifact.SwitchJournalV1) error {
+			return dnsenginerecovery.RestoreExactBINDSwitchSourceReceipt(policy, owner, j)
+		},
+	}
+}
+
+func (h bindSwitchNativeHost) units(ctx context.Context) ([]dnsenginerecovery.NativeUnitObservation, error) {
+	return dnsenginerecovery.ProbeNativeUnits(ctx, bindInverseUnitNames, h.unitRunner)
+}
+
+// stoppedTarget proves named.service stopped before and after each inverse
+// effect. A journal admitted by BINDSwitchNeverStartedTargetJournal also
+// accepts the two pre-start states (absent, the guard's persistent mask) with
+// the source-only DNS proof; a loaded unit, and every other journal, keeps
+// the unchanged loaded-unit proof.
+func (h bindSwitchNativeHost) stoppedTarget(ctx context.Context, j dnsengineartifact.SwitchJournalV1) error {
+	if dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(j) {
+		if _, err := dnsenginerecovery.ProbeStoppedNeverStartedBINDTarget(ctx, h.unitRunner, h.runtimeRunner, h.cgroup, h.sourceOnly); err != nil {
+			return err
+		}
+	} else if err := dnsenginerecovery.ProbeStoppedUnitWithCgroup(ctx, "named.service", h.unitRunner, h.runtimeRunner, h.cgroup); err != nil {
 		return err
 	}
-	units, err := bindInverseUnits(ctx)
+	units, err := h.units(ctx)
 	if err != nil {
 		return err
 	}
@@ -140,9 +223,36 @@ func bindInverseStoppedTarget(ctx context.Context) error {
 	}
 	return ctx.Err()
 }
+
+func (h bindSwitchNativeHost) restoreUnits(ctx context.Context, snapshots []dnsengineartifact.UnitSnapshot) error {
+	return bindInverseRestoreUnitsWith(ctx, snapshots, h.maskParent, h.runSystemd)
+}
+
+// bindInverseGuardSealedTarget reports the one never-started target state the
+// inverse retains: both BIND units still under the package guard's persistent
+// mask (masked/masked, inactive) for a journal that froze them absent. The
+// caller must also hold the vendor proof, which proves each mask link.
+func bindInverseGuardSealedTarget(units []dnsenginerecovery.NativeUnitObservation, j dnsengineartifact.SwitchJournalV1) bool {
+	if len(units) != 3 || !dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(j) ||
+		units[0].Name != "named.service" || units[1].Name != "bind9.service" {
+		return false
+	}
+	for _, unit := range units[:2] {
+		if unit.LoadState != "masked" || unit.UnitFileState != "masked" || unit.ActiveState != "inactive" {
+			return false
+		}
+	}
+	return true
+}
+
 func bindInverseTargetPreimage(units []dnsenginerecovery.NativeUnitObservation, j dnsengineartifact.SwitchJournalV1) bool {
 	if len(units) != 3 {
 		return false
+	}
+	// The package and its guard mask stay installed as rollback standby for a
+	// target this operation created and never activated.
+	if bindInverseGuardSealedTarget(units, j) {
+		return true
 	}
 	for _, saved := range j.TargetUnitsBefore {
 		found := false
@@ -403,56 +513,60 @@ func bindInverseActivePredecessorProof(ctx context.Context, policy dnsenginearti
 }
 
 func assessInstalledBINDSwitchNative(ctx context.Context, policy dnsengineartifact.JournalPolicy, j dnsengineartifact.SwitchJournalV1) (dnsenginerecovery.BINDSwitchNativeState, error) {
-	if err := bindInverseSourceProof(ctx, policy, j); err != nil {
+	return assessBINDSwitchNative(ctx, installedBINDSwitchNativeHost(policy, servicemutationledger.FileOwner{}), j)
+}
+
+func assessBINDSwitchNative(ctx context.Context, h bindSwitchNativeHost, j dnsengineartifact.SwitchJournalV1) (dnsenginerecovery.BINDSwitchNativeState, error) {
+	if err := h.sourceProof(ctx, j); err != nil {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, err
 	}
-	layout, gid, err := installedBINDLayout()
+	layout, gid, err := h.layout()
 	if err != nil {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, err
 	}
 	if !bindInversePlanLayoutMatches(layout, j.InversePlan.HostLayout) {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, errors.New("installed BIND layout differs from frozen plan")
 	}
-	if err := bindInverseUnchangedConfig(ctx, policy, j, layout, gid); err != nil {
+	if err := h.unchangedConfig(ctx, j, layout, gid); err != nil {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, err
 	}
-	target, err := bindInversePointer(ctx, j, layout, gid)
+	target, err := h.pointer(ctx, j, layout, gid)
 	if err != nil {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, err
 	}
-	configsBefore, err := bindInverseConfigs(ctx, policy, j, layout, gid)
+	configsBefore, err := h.configs(ctx, j, layout, gid)
 	if err != nil {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, err
 	}
-	units, err := bindInverseUnits(ctx)
+	units, err := h.units(ctx)
 	if err != nil {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, err
 	}
 	if err := bindInverseAllowedNativeUnits(units, j); err != nil {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, err
 	}
-	if err := verifyInstalledBINDSwitchVendorForUnits(ctx, units); err != nil {
+	if err := h.vendor(ctx, j, units); err != nil {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, fmt.Errorf("BIND vendor unit: %w", err)
 	}
 	if !target && configsBefore && bindInverseTargetPreimage(units, j) && bindInverseSourcePreimage(units, j) {
-		if err := bindInverseStoppedTarget(ctx); err != nil {
+		if err := h.stoppedTarget(ctx, j); err != nil {
 			return dnsenginerecovery.BINDSwitchNativeUnknown, err
 		}
-		pid, err := verifyInstalledPDNSRuntime(ctx)
+		pid, err := h.pdnsRuntime(ctx)
 		if err != nil {
 			return dnsenginerecovery.BINDSwitchNativeUnknown, err
 		}
-		if err := bindInverseAnswers(ctx, j, pid); err != nil {
+		if err := h.answers(ctx, j, pid); err != nil {
 			return dnsenginerecovery.BINDSwitchNativeUnknown, err
 		}
-		if err := bindInverseSourceProof(ctx, policy, j); err != nil {
+		if err := h.sourceProof(ctx, j); err != nil {
 			return dnsenginerecovery.BINDSwitchNativeUnknown, err
 		}
-		again, err := bindInverseUnits(ctx)
+		again, err := h.units(ctx)
 		if err != nil || !reflect.DeepEqual(units, again) {
 			return dnsenginerecovery.BINDSwitchNativeUnknown, errors.Join(errors.New("native units changed during source proof"), err)
 		}
-		if err := bindInverseUnchangedConfig(ctx, policy, j, layout, gid); err != nil {
+		if err := h.unchangedConfig(ctx, j, layout, gid); err != nil {
 			return dnsenginerecovery.BINDSwitchNativeUnknown, err
 		}
 		return dnsenginerecovery.BINDSwitchNativeRestored, nil
@@ -462,20 +576,91 @@ func assessInstalledBINDSwitchNative(ctx context.Context, policy dnsengineartifa
 	}
 	if !target {
 		if units[0].ActiveState == "active" {
-			if err := bindInverseActivePredecessorProof(ctx, policy, j, layout, gid); err != nil {
+			if err := h.activePredecessor(ctx, j, layout, gid); err != nil {
 				return dnsenginerecovery.BINDSwitchNativeUnknown, err
 			}
-		} else if err := bindInverseStoppedTarget(ctx); err != nil {
+		} else if err := h.stoppedTarget(ctx, j); err != nil {
 			return dnsenginerecovery.BINDSwitchNativeUnknown, err
 		}
 	}
 	if units[2].ActiveState != "inactive" && units[2].ActiveState != "active" {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, errors.New("source PowerDNS unit is in an unknown state")
 	}
-	if err := bindInverseUnchangedConfig(ctx, policy, j, layout, gid); err != nil {
+	if err := h.unchangedConfig(ctx, j, layout, gid); err != nil {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, err
 	}
 	return dnsenginerecovery.BINDSwitchNativeNeedsRestore, nil
+}
+
+// installedBINDTargetSourceOnlyDNS is the installed source-only proof beside a
+// never-started BIND target: no named process, and every public port-53
+// listener belongs to the running source pdns_server MainPID, or no public
+// listener exists while the source PowerDNS unit is stopped.
+func installedBINDTargetSourceOnlyDNS(ctx context.Context) error {
+	return proveBINDTargetSourceOnlyDNS(ctx, bindTargetSourceOnlyDNSOps{
+		noNamedProcess: dnsenginerecovery.ProbeNoNamedProcess,
+		sourceUnit: func(ctx context.Context) (dnsenginerecovery.NativeUnitObservation, error) {
+			units, err := dnsenginerecovery.ProbeNativeUnits(ctx, []string{"pdns.service"}, dnsenginerecovery.SystemdUnitRunner)
+			if err != nil {
+				return dnsenginerecovery.NativeUnitObservation{}, err
+			}
+			return units[0], nil
+		},
+		sourcePID: verifyInstalledPDNSRuntime,
+		listeners: dnsenginerecovery.SSListenerRunner,
+	})
+}
+
+type bindTargetSourceOnlyDNSOps struct {
+	noNamedProcess func(context.Context) error
+	sourceUnit     func(context.Context) (dnsenginerecovery.NativeUnitObservation, error)
+	sourcePID      func(context.Context) (uint64, error)
+	listeners      dnsenginerecovery.BINDListenerRunner
+}
+
+// proveBINDTargetSourceOnlyDNS reuses the existing listener inventories: the
+// authority proof that every public listener is the verified PowerDNS MainPID
+// (with both TCP and UDP present), and the V4 no-public-listener proof for a
+// stopped source. Loopback and link-local sockets are ignored by both, as by
+// the fresh-install rule.
+func proveBINDTargetSourceOnlyDNS(ctx context.Context, ops bindTargetSourceOnlyDNSOps) error {
+	if ctx == nil || ops.noNamedProcess == nil || ops.sourceUnit == nil || ops.sourcePID == nil || ops.listeners == nil {
+		return errors.New("never-started BIND target source-only proof is incomplete")
+	}
+	if err := ops.noNamedProcess(ctx); err != nil {
+		return err
+	}
+	source, err := ops.sourceUnit(ctx)
+	if err != nil {
+		return err
+	}
+	switch source.ActiveState {
+	case "active":
+		pid, err := ops.sourcePID(ctx)
+		if err != nil {
+			return err
+		}
+		if err := dnsenginerecovery.ProbeAuthorityListeners(ctx, "pdns_server", pid, "", ops.listeners); err != nil {
+			return fmt.Errorf("public port-53 listeners are not only the source PowerDNS: %w", err)
+		}
+	case "inactive":
+		for range 2 {
+			rows, err := ops.listeners(ctx)
+			if err != nil {
+				return err
+			}
+			if err := requireNoPublicDNSPort53ListenersV4(rows); err != nil {
+				return err
+			}
+		}
+	default:
+		return errors.New("source PowerDNS unit is neither active nor inactive beside the never-started BIND target")
+	}
+	again, err := ops.sourceUnit(ctx)
+	if err != nil || again != source {
+		return errors.Join(errors.New("source PowerDNS unit changed during the source-only DNS proof"), err)
+	}
+	return ops.noNamedProcess(ctx)
 }
 
 func openBINDInverseMaskParent() (int, error) {
@@ -580,6 +765,45 @@ func bindInverseVendorProofForUnits(
 	}
 	return loadedProof()
 }
+
+// verifyInstalledBINDSwitchVendorForJournal adds the absent never-started
+// target to the vendor proof: for a journal that froze both BIND units absent
+// and both still read not-found, the typed target observation (twice, both
+// absent) replaces the loaded identity that such a unit does not have. Every
+// other state keeps verifyInstalledBINDSwitchVendorForUnits.
+func verifyInstalledBINDSwitchVendorForJournal(ctx context.Context, j dnsengineartifact.SwitchJournalV1, units []dnsenginerecovery.NativeUnitObservation) error {
+	if bindInverseAbsentTarget(units, j) {
+		return verifyBINDTargetAbsent(ctx, dnsenginerecovery.SystemdBINDTargetRunner)
+	}
+	return verifyInstalledBINDSwitchVendorForUnits(ctx, units)
+}
+
+func bindInverseAbsentTarget(units []dnsenginerecovery.NativeUnitObservation, j dnsengineartifact.SwitchJournalV1) bool {
+	if len(units) != 3 || !dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(j) ||
+		units[0].Name != "named.service" || units[1].Name != "bind9.service" {
+		return false
+	}
+	for _, unit := range units[:2] {
+		if unit.LoadState != "not-found" || unit.UnitFileState != "" || unit.ActiveState != "inactive" {
+			return false
+		}
+	}
+	return true
+}
+
+func verifyBINDTargetAbsent(ctx context.Context, runner dnsenginerecovery.BINDIdentityRunner) error {
+	observations, err := dnsenginerecovery.ProbeBINDSwitchTargetObservations(ctx, runner)
+	if err != nil {
+		return err
+	}
+	for _, observation := range observations {
+		if observation.State != dnsunitidentity.TargetAbsent {
+			return errors.New("BIND target units are not both absent")
+		}
+	}
+	return nil
+}
+
 func verifyInstalledBINDSwitchVendorForUnits(ctx context.Context, units []dnsenginerecovery.NativeUnitObservation) error {
 	return bindInverseVendorProofForUnits(units, bindInversePersistentMask,
 		func() error {
@@ -616,14 +840,14 @@ func bindInverseSystemd(ctx context.Context, path string, args ...string) ([]byt
 	}
 	return out, err
 }
-func bindInverseRestoreUnits(ctx context.Context, snapshots []dnsengineartifact.UnitSnapshot) error {
+func bindInverseRestoreUnitsWith(ctx context.Context, snapshots []dnsengineartifact.UnitSnapshot, maskParent func() error, run func(context.Context, string, ...string) ([]byte, error)) error {
 	owned := map[string]bool{}
 	for _, s := range snapshots {
 		if s.LoadState != "masked" {
 			owned[s.Name] = true
 		}
 	}
-	return dnsunitrestore.Restore(ctx, snapshots, owned, dnsunitrestore.Ops{Systemctl: "/usr/bin/systemctl", VerifyMaskParent: bindInverseMaskParent, RunSystemd: bindInverseSystemd})
+	return dnsunitrestore.Restore(ctx, snapshots, owned, dnsunitrestore.Ops{Systemctl: "/usr/bin/systemctl", VerifyMaskParent: maskParent, RunSystemd: run})
 }
 func restoreBINDTargetAfterUnchangedProof(prove func() error, restore func() error) error {
 	if prove == nil || restore == nil {
@@ -635,118 +859,137 @@ func restoreBINDTargetAfterUnchangedProof(prove func() error, restore func() err
 	return restore()
 }
 func restoreInstalledBINDSwitchNative(ctx context.Context, policy dnsengineartifact.JournalPolicy, owner servicemutationledger.FileOwner, j dnsengineartifact.SwitchJournalV1) error {
-	units, err := bindInverseUnits(ctx)
+	return restoreBINDSwitchNative(ctx, installedBINDSwitchNativeHost(policy, owner), j)
+}
+
+func restoreBINDSwitchNative(ctx context.Context, h bindSwitchNativeHost, j dnsengineartifact.SwitchJournalV1) error {
+	units, err := h.units(ctx)
 	if err != nil {
 		return err
 	}
 	if err := bindInverseAllowedNativeUnits(units, j); err != nil {
 		return err
 	}
-	if err := bindInverseSourceProof(ctx, policy, j); err != nil {
+	if err := h.sourceProof(ctx, j); err != nil {
 		return err
 	}
-	if err := verifyInstalledBINDSwitchVendorForUnits(ctx, units); err != nil {
+	if err := h.vendor(ctx, j, units); err != nil {
 		return fmt.Errorf("BIND vendor unit: %w", err)
 	}
-	layout, gid, err := installedBINDLayout()
+	layout, gid, err := h.layout()
 	if err != nil {
 		return err
 	}
 	if !bindInversePlanLayoutMatches(layout, j.InversePlan.HostLayout) {
 		return errors.New("BIND layout changed")
 	}
-	if _, err := bindInversePointer(ctx, j, layout, gid); err != nil {
+	if _, err := h.pointer(ctx, j, layout, gid); err != nil {
 		return err
 	}
-	if _, err := bindInverseConfigs(ctx, policy, j, layout, gid); err != nil {
+	if _, err := h.configs(ctx, j, layout, gid); err != nil {
 		return err
 	}
 	if err := restoreBINDTargetAfterUnchangedProof(
 		func() error {
-			if err := bindInverseUnchangedConfig(ctx, policy, j, layout, gid); err != nil {
+			if err := h.unchangedConfig(ctx, j, layout, gid); err != nil {
 				return err
 			}
-			current, err := bindInverseUnits(ctx)
+			current, err := h.units(ctx)
 			if err != nil {
 				return err
 			}
 			if err := bindInverseAllowedNativeUnits(current, j); err != nil {
 				return err
 			}
-			if err := verifyInstalledBINDSwitchVendorForUnits(ctx, current); err != nil {
+			if err := h.vendor(ctx, j, current); err != nil {
 				return err
 			}
-			pointerTarget, err := bindInversePointer(ctx, j, layout, gid)
+			pointerTarget, err := h.pointer(ctx, j, layout, gid)
 			if err != nil {
 				return err
 			}
 			if !pointerTarget && current[0].ActiveState == "active" {
-				return bindInverseActivePredecessorProof(ctx, policy, j, layout, gid)
+				return h.activePredecessor(ctx, j, layout, gid)
 			}
 			return nil
 		},
-		func() error { return bindInverseRestoreUnits(ctx, j.TargetUnitsBefore) },
+		func() error {
+			// A target this operation created and never activated keeps the
+			// installed package and the guard's persistent mask as rollback
+			// standby; dnsunitrestore would unmask and disable it because its
+			// frozen preimage is absent. No systemctl call is made for it.
+			current, err := h.units(ctx)
+			if err != nil {
+				return err
+			}
+			if bindInverseGuardSealedTarget(current, j) {
+				return nil
+			}
+			return h.restoreUnits(ctx, j.TargetUnitsBefore)
+		},
 	); err != nil {
 		return fmt.Errorf("restore target BIND unit preimage: %w", err)
 	}
-	if err := bindInverseStoppedTarget(ctx); err != nil {
+	if err := h.stoppedTarget(ctx, j); err != nil {
 		return fmt.Errorf("prove stopped target BIND cgroup: %w", err)
 	}
-	units, err = bindInverseUnits(ctx)
+	units, err = h.units(ctx)
 	if err != nil {
 		return err
 	}
 	if err := bindInverseAllowedNativeUnits(units, j); err != nil {
 		return err
 	}
-	if err := verifyInstalledBINDSwitchVendorForUnits(ctx, units); err != nil {
+	if err := h.vendor(ctx, j, units); err != nil {
 		return fmt.Errorf("BIND vendor unit after target restore: %w", err)
 	}
-	if err := bindInverseUnchangedConfig(ctx, policy, j, layout, gid); err != nil {
+	if err := h.unchangedConfig(ctx, j, layout, gid); err != nil {
 		return err
 	}
-	if err := dnsenginerecovery.RestoreInstalledBINDSwitchConfigsV2(ctx, policy, j, layout, gid); err != nil {
+	if err := h.restoreConfigs(ctx, j, layout, gid); err != nil {
 		return err
 	}
-	if err := bindInverseStoppedTarget(ctx); err != nil {
+	if err := h.stoppedTarget(ctx, j); err != nil {
 		return err
 	}
-	p, err := binddns.NewOSPublisher(string(layout))
-	if err != nil {
+	if err := h.unchangedConfig(ctx, j, layout, gid); err != nil {
 		return err
 	}
-	if err := bindInverseUnchangedConfig(ctx, policy, j, layout, gid); err != nil {
+	if err := h.restorePointer(j, layout); err != nil {
 		return err
 	}
-	if err := p.RestorePointer(j.TargetGeneration, j.PreviousGeneration, j.HadPrevious); err != nil {
-		return err
-	}
-	if target, err := bindInversePointer(ctx, j, layout, gid); err != nil || target {
+	if target, err := h.pointer(ctx, j, layout, gid); err != nil || target {
 		return errors.Join(errors.New("BIND predecessor pointer was not restored"), err)
 	}
-	if err := bindInverseUnchangedConfig(ctx, policy, j, layout, gid); err != nil {
+	if err := h.unchangedConfig(ctx, j, layout, gid); err != nil {
 		return err
 	}
-	if err := dnsenginerecovery.RestoreExactBINDSwitchSourceReceipt(policy, owner, j); err != nil {
+	if err := h.restoreReceipt(j); err != nil {
 		return err
 	}
-	units, err = bindInverseUnits(ctx)
+	units, err = h.units(ctx)
 	if err != nil {
 		return err
 	}
 	if err := bindInverseAllowedNativeUnits(units, j); err != nil {
 		return err
 	}
-	if err := bindInverseSourceProof(ctx, policy, j); err != nil {
+	if err := h.sourceProof(ctx, j); err != nil {
 		return err
 	}
-	if err := bindInverseUnchangedConfig(ctx, policy, j, layout, gid); err != nil {
+	if err := h.unchangedConfig(ctx, j, layout, gid); err != nil {
 		return err
 	}
-	if err := bindInverseRestoreUnits(ctx, j.SourceUnitsBefore); err != nil {
-		return fmt.Errorf("restore source PowerDNS unit preimage: %w", err)
+	// A source PowerDNS unit that still reads its exact frozen preimage (it
+	// was never stopped: intent or target-staged) gets no systemctl call; the
+	// assessment below re-proves its runtime, listeners and answers. A stopped
+	// source is restored to its frozen enabled/active preimage.
+	if !bindInverseSourcePreimage(units, j) {
+		if err := h.restoreUnits(ctx, j.SourceUnitsBefore); err != nil {
+			return fmt.Errorf("restore source PowerDNS unit preimage: %w", err)
+		}
 	}
-	state, err := assessInstalledBINDSwitchNative(ctx, policy, j)
+	state, err := assessBINDSwitchNative(ctx, h, j)
 	if err != nil || state != dnsenginerecovery.BINDSwitchNativeRestored {
 		return errors.Join(errors.New("restored native PowerDNS source could not be proved"), err)
 	}

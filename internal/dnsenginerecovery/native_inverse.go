@@ -60,6 +60,33 @@ func InactiveBINDSwitchInverseJournal(j dnsengineartifact.SwitchJournalV1) error
 	return nil
 }
 
+// BINDSwitchNeverStartedTargetJournal reports whether the owner
+// PowerDNS-to-BIND inverse journal (InactiveBINDSwitchInverseJournal) froze
+// both BIND target units absent, so this operation created them. Only then
+// may the inverse accept the pre-start target states, absent or the package
+// guard's persistent mask, and only after proving them natively.
+//
+// A V2 journal does not record the phase that preceded its rollback decision:
+// the Agent's startup Reconcile and its in-process rollback both overwrite the
+// forward phase with rolling-back, and a startup decision is written for any
+// pre-verified phase because the state receipt stays the source until
+// target-verified. This predicate therefore does not prove the target never
+// started. The inverse relies on native evidence instead: activation lifts the
+// guard's persistent mask before it enables or starts named, and neither the
+// forward path nor a rollback of this operation re-creates it for an absent
+// preimage. A loaded target keeps the unchanged loaded-unit proof.
+func BINDSwitchNeverStartedTargetJournal(j dnsengineartifact.SwitchJournalV1) bool {
+	if InactiveBINDSwitchInverseJournal(j) != nil {
+		return false
+	}
+	for _, unit := range j.TargetUnitsBefore {
+		if unit.LoadState != "not-found" || unit.UnitFileState != "" || unit.ActiveState != "inactive" {
+			return false
+		}
+	}
+	return true
+}
+
 // PDNSAdoptionInverseJournal is the journal-only part of the owner PowerDNS
 // adoption inverse admission (recover-dns-pdns-adoption). The secured evidence
 // admission applies it before its observation checks. It names a command only;
