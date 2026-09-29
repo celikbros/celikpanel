@@ -59,6 +59,9 @@ export interface DNSEngineSnapshot {
     topology: DNSTopology;
     pair_role?: DNSPairRole;
     pair_ready?: boolean;
+    // Present only for an active paired secondary. An older Panel omits it
+    // ("not reported"), so it stays optional on read.
+    secondary_ready?: boolean;
     dnssec_zone_count: number;
     zone_count: number;
     pending_zone_count: number;
@@ -318,6 +321,7 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         || (value.pair_role !== undefined
             && value.pair_role !== 'primary' && value.pair_role !== 'secondary')
         || (value.pair_ready !== undefined && typeof value.pair_ready !== 'boolean')
+        || (value.secondary_ready !== undefined && typeof value.secondary_ready !== 'boolean')
         || !isNonNegativeInteger(value.dnssec_zone_count)
         || !isNonNegativeInteger(value.zone_count)
         || !isNonNegativeInteger(value.pending_zone_count)
@@ -376,6 +380,8 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         && (value.pair_role !== undefined || value.pair_ready !== undefined)) return null;
     if (value.pair_ready === true && value.pair_role !== 'primary') return null;
     if (activePair && value.pair_role === 'secondary' && value.pair_ready !== false) return null;
+    if (value.secondary_ready !== undefined
+        && (!activePair || value.pair_role !== 'secondary' || value.pair_ready === true)) return null;
 
     return {
         revision: value.revision,
@@ -387,6 +393,7 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
             ? { pair_role: value.pair_role }
             : {}),
         ...(typeof value.pair_ready === 'boolean' ? { pair_ready: value.pair_ready } : {}),
+        ...(typeof value.secondary_ready === 'boolean' ? { secondary_ready: value.secondary_ready } : {}),
         dnssec_zone_count: value.dnssec_zone_count,
         zone_count: value.zone_count,
         pending_zone_count: value.pending_zone_count,

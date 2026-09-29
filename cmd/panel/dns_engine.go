@@ -105,11 +105,7 @@ type dnsEngineSnapshot struct {
 	Topology         string                      `json:"topology"`
 	PairRole         string                      `json:"pair_role,omitempty"`
 	PairReady        *bool                       `json:"pair_ready,omitempty"`
-	// SecondaryReady is the Agent's proof that this active paired SECONDARY
-	// consumes the primary's catalog. Present exactly for an active paired
-	// secondary (Decision D, 2026-09-30); false when the proof is absent or
-	// the runtime is unknown. pair_ready stays false on a secondary.
-	SecondaryReady *bool `json:"secondary_ready,omitempty"`
+	SecondaryReady   *bool                       `json:"secondary_ready,omitempty"`
 	DNSSECZoneCount  int                         `json:"dnssec_zone_count"`
 	ZoneCount        int                         `json:"zone_count"`
 	PendingZoneCount int                         `json:"pending_zone_count"`
@@ -642,6 +638,10 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	if state.ActiveEngine != "" && state.Topology == transport.DNSTopologyPaired {
 		ready := runtimes[state.ActiveEngine].PairReady
 		pairReady = &ready
+		// secondary_ready is the Agent's proof that this active paired
+		// SECONDARY consumes the primary's catalog (Decision D,
+		// 2026-09-30): present exactly for an active paired secondary, false
+		// when unproven; pair_ready stays false on a secondary.
 		if state.PairRole == transport.DNSPairRoleSecondary {
 			// An unknown runtime (runtimeErr) leaves the zero value: false.
 			consumes := runtimes[state.ActiveEngine].SecondaryReady && !ready
@@ -664,7 +664,7 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 		Revision: state.Revision, EngineEpoch: state.EngineEpoch,
 		ActiveEngine: enginePointer(state.ActiveEngine),
 		State:        presentationState, Topology: topology, PairRole: pairRole,
-		PairReady:       pairReady, SecondaryReady: secondaryReady,
+		PairReady: pairReady, SecondaryReady: secondaryReady,
 		DNSSECZoneCount: dnssecCount, ZoneCount: zoneCount,
 		PendingZoneCount: pendingCount, OperationID: state.CurrentSwitchID,
 		Operation: operation,

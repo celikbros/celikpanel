@@ -55,6 +55,7 @@ const codeKey: Record<string, TranslationKey> = {
     server_setup_existing_dns_requires_migration: 'setup.blocker.migration',
     pdns_primary_switch_paused: 'setup.pdnsPrimaryPaused',
     server_setup_dns_failed: 'setup.blocker.dnsIdentity',
+    server_setup_dns_rolled_back: 'setup.guide.dnsRolledBack',
     server_setup_access_dns_required: 'setup.infrastructure.accessRequired',
     server_setup_access_dns_mismatch: 'setup.infrastructure.accessMismatch',
     server_setup_primary_dns_required: 'setup.infrastructure.primaryRequired',

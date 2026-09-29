@@ -2268,6 +2268,7 @@ export const trScreens: Record<ScreenKey, string> = {
     "setup.blocker.panelTLS": "Panel adresiyle eşleşen geçerli ve güvenilir bir HTTPS sertifikası ayarlayın.",
     "setup.blocker.renewal": "Panel sertifikasının otomatik yenilenmesi doğrulanmadı. Panel HTTPS ayarlarını açın.",
     "setup.blocker.firewall": "Kalıcı güvenlik duvarı politikası ve yönetim erişimi doğrulanmalıdır.",
+    "setup.guide.dnsRolledBack": "DNS motoru kurulumu tamamlanmadı ve geri alındı: çalışan bir DNS motoru yok, kurulan paketler durdurulmuş olarak saklandı. Başka hiçbir şey değiştirilmedi. Yeni planı gözden geçirip bu DNS adımını yeniden başlatın.",
     "setup.blocker.hostRestart": "Bu sunucu güncellendi ve güvenlik duvarı denetlenebilmeden önce yeniden başlatılmalı. Sunucuyu yeniden başlatın, ardından kurulumu yeniden açın; taslağınız kaldığı yerden sürer, hiçbir şey değiştirilmedi.",
     "setup.blocker.firewallKernel": "Güvenlik duvarı motoru bu sunucunun çekirdeğine ulaşamadı, bu yüzden güvenlik duvarı denetlenemedi. Hiçbir şey değiştirilmedi. Sunucu yöneticisi sunucuyu yeniden başlatır ya da nftables çekirdek desteğini denetler (neden Teknik ayrıntılar altında), ardından kurulumu yeniden açar.",
     "setup.blocker.firewallEngine": "Kaydedilmiş bir güvenlik duvarı politikası var ama nftables kurulu değil, bu yüzden güvenlik duvarı denetlenemedi. Hiçbir şey değiştirilmedi. Sunucu yöneticisi nftables'ı Bileşenler'den kurar, ardından kurulumu yeniden açar.",

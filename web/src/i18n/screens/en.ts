@@ -2280,6 +2280,7 @@ export const enScreens = {
     "setup.blocker.panelTLS": "Set a valid, trusted panel HTTPS certificate matching the panel address.",
     "setup.blocker.renewal": "Automatic panel certificate renewal has not been verified. Open panel HTTPS settings.",
     "setup.blocker.firewall": "The permanent firewall policy and management access need verification.",
+    "setup.guide.dnsRolledBack": "The DNS engine installation did not complete and was undone: no DNS engine is running, and the installed packages were kept stopped. Nothing else was changed. Review a new plan and start this DNS step again.",
     "setup.blocker.hostRestart": "This server was updated and must be restarted before its firewall can be checked. Restart the server, then open setup again; your draft continues and nothing was changed.",
     "setup.blocker.firewallKernel": "The firewall engine could not reach this server's kernel, so the firewall could not be checked. Nothing was changed. The server administrator restarts the server or checks its nftables kernel support (reason under Technical details), then opens setup again.",
     "setup.blocker.firewallEngine": "A saved firewall policy exists but nftables is not installed, so the firewall could not be checked. Nothing was changed. The server administrator installs nftables from Components, then opens setup again.",
