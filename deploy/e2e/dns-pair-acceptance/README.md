@@ -5,7 +5,9 @@ against source `66db850c`; updated offline for `6f2fb028` (server-side
 PowerDNS-primary plan blocker) and the test-only acceptance license seam; first
 native run `evidence/pair1-20260930/` (tested commit `aa6b9380`, every topology
 stopped on harness defects); corrected offline on 2026-09-30 from that run (see
-"Corrections after pair1"). The corrections themselves have not run natively:
+"Corrections after pair1"); second native run `evidence/pair2-20260930/`
+(product `916e1577`, driver `13213343`) and corrected offline again the same day
+(see "Corrections after pair2"). The pair2 corrections have not run natively:
 nothing outside `evidence/` is native evidence.*
 
 The kill matrix drives the Agent RPC with a panel-free peer. This driver
@@ -24,25 +26,34 @@ isolated peer link.
 |---|---|---|
 | any | **blocked-product at `license-*`** (blocker L1) | continues |
 | `pdns-primary/bind-secondary` | — | **refused-by-product-gate** at `setup-review-primary`: the server plan carries `pdns_primary_switch_paused` while the gate is closed; the secondary's waiting guidance is still checked |
-| `bind-primary/pdns-secondary` | — | full flow, including owner enrollment with `dns-peer-enroll --engine pdns` if the product asks for it; **but see D1 below** |
-| `bind/bind` (control) | — | full flow, including owner enrollment with `dns-peer-enroll` if the product asks for it; **but see D1 below** |
+| `pdns-primary/bind-secondary`, gate open (`916e1577`) | — | pair2 t3: `setup-start-primary` failed inside the product (P-A); with this driver it now stops after `--unknown-state-limit-seconds` (default 300) as `failed`, cause `product`, with an "open-ended unknown" D-024 finding |
+| `bind-primary/pdns-secondary` | — | full flow, including owner enrollment with `dns-peer-enroll --engine pdns` if the product asks for it; a build without `secondary_ready` ends `blocked-product` at `pair-ready` |
+| `bind/bind` (control) | — | full flow, including owner enrollment with `dns-peer-enroll` if the product asks for it; a build without `secondary_ready` ends `blocked-product` at `pair-ready` |
 
 The last two columns are what the code does, not observed results. An
 `acceptance-fixture` run never evidences license behaviour (see below).
 
-**D1 cannot pass against the pair1 build.** The owner's pass rule D1
-(`pair_contract.py`) needs `secondary_ready` in `GET /api/v1/dns/engine`: primary
-`pair_ready === true` and `secondary_ready === false`, secondary
-`secondary_ready === true` and `pair_ready === false`. Every captured payload of
-the pair1 build (`aa6b9380`) carries `pair_role` and `pair_ready` only; the
-secondary's consumption proof `SecondaryReady` exists in the Agent runtime
-contract (`internal/transport/dns_contracts.go` ~218, read by
-`cmd/panel/setup_dns.go` ~98) but `dnsEngineSnapshot`
-(`cmd/panel/dns_engine.go` ~100-113, filled at ~636) does not serialize it. Until
-a build serializes that field, both topologies above fail at `pair-ready` after
-the stable-state window (about 5 minutes per Panel), with both payloads and the
-reason "secondary_ready absent ... this build does not serialize it". The
-driver does not substitute another proof; that is an owner decision.
+**D1, corrected after pair2 (the pair2 specification was wrong for the
+primary).** The rule mirrors the product and its web client (Decision D,
+2026-09-30): `secondary_ready` is serialized exactly on an active paired
+secondary (`cmd/panel/dns_engine.go` ~108 `secondary_ready,omitempty`, filled at
+~637-649), "the primary payload has no such key"
+(`cmd/panel/dns_engine_test.go` ~2003), and the web client refuses a snapshot
+that carries it anywhere else (`web/src/lib/dnsEngineContract.ts` ~383):
+
+| Role | Ready when (`pair_contract.pair_readiness`) |
+|---|---|
+| primary | `pair_role == "primary"`, `pair_ready === true`, `secondary_ready` **absent**; carrying the key at all (any value) is a contract violation and fails |
+| secondary | `pair_role == "secondary"`, `secondary_ready === true`, `pair_ready === false` |
+
+Both also need `active_engine` = the role's engine, `topology: paired`,
+`state: ready`, and a snapshot the web client accepts. A build that predates the
+field (pair1, `aa6b9380`: no `secondary_ready` on an active paired secondary) is
+reported as "this build does not report secondary readiness" with the verdict
+`blocked-product`, not as a plain failure, and without waiting (the product
+serializes the field on every active paired secondary, so its absence there is
+final for that build). pair2's captures (`916e1577`) satisfy the rule on all
+three readable Panels (`fixtures/pair2/`).
 
 ### Blocker L1: license activation cannot complete offline
 
@@ -132,6 +143,29 @@ it exposed are corrected. None of this has run natively.
 | License service silence | Per Panel, read-only: no journal line may contain `celikpanel.net` or the refusing transport's error text; an acceptance-fixture run fails `collect` otherwise. | `license_service_journal_check` |
 | Pending-deletion text for a PowerDNS secondary | When it lacks `--engine pdns` / `--catalog-account`, a D-024 observation is recorded; the run continues. | `Driver.pending_deletion_engine_observation` |
 
+### Corrections after pair2 (offline, 2026-09-30)
+
+pair2 (`evidence/pair2-20260930/README.md`) stopped t1/t2 on the wrong primary
+rule (H-A) and t3 inside the product (P-A), and showed two D-024 states the
+driver rated actionable (P-B, P-C). None of this has run natively.
+
+| Item | Change | Where |
+|---|---|---|
+| H-A primary rule | The corrected D1 above; the reader also mirrors `dnsEngineContract.ts` ~383 (a `secondary_ready` outside an active paired secondary is refused). A secondary without the field is `blocked-product` ("this build does not report secondary readiness") and ends the wait at once (`pc.readiness_final`). Stale "this build does not serialize it" texts are gone. | `pair_contract.py`, `Driver.wait_pair_readiness`, `Driver.pair_ready`, `Driver.management_return` |
+| Captured pair2 fixtures | `fixtures/pair2/`: engine snapshots of the BIND primary (t1 debian13), BIND secondary (t1 arch) and PowerDNS secondary (t2 debian13); t3's first running read and its first `server_setup_reconciling` read; t1's `license_required` read; the active fixture license status. Minimal, redacted, source path recorded. The fake Panel serves the pair2 bodies by default (`api_secondary_ready=True`) and the pair1 bodies otherwise; a ready paired PowerDNS primary was never captured, so it is derived from the BIND primary. | `fixtures/pair2/`, `fakes.py`, `test_pair_contract.py` |
+| P-B time bound on a coded unknown state | A setup state whose error code is in `guidance.UNKNOWN_STATE_CODES` (see below) may last `--unknown-state-limit-seconds` (default 300) continuously; then the poll stops (`stop: unknown-limit`), the payload is written to `open-ended-unknown-<role>.json`, a finding `d024-open-ended-unknown-<step>-<node>` (kind `product`, principle D-024) records the code, the EN/TR title and texts shown, first observation, duration, reads and limit, and the step fails with `cause: product` (`result.json` `overall_cause: product` when that is the only failure cause). Applies to `setup-start-*`, the setup wait inside `pair-ready` and `setup-secondary-before-primary`. Classification is by code, never by wording. | `panel_api.PanelClient.poll` (`bounded`, `bound_seconds`), `Driver.open_ended_unknown` |
+| P-B contradictory guidance | The role text deliberately lets the owner start the secondary while the primary's setup is still progressing, so an ordinary `running` or `pending` DNS step is only recorded (step check `peer_start_guidance_observations`, with the DNS step status and code). A D-024 finding `d024-contradictory-peer-start-<step>-<node>` (kind `product`; recorded only, the run continues) is raised only when the shown role guidance instructs starting the secondary against this server while the primary's `dns` step is in a state where the secondary cannot succeed (`guidance.dns_blocking_state`): the step `failed`; a listed unknown state (`UNKNOWN_STATE_CODES`); `waiting` with a code at the DNS step (phase `dns`/`dns_readiness`, or the current step is the `dns` step); a rolled-back result (`server_setup_dns_rolled_back`). Every observation keeps the DNS step status, error code and the blocking reason. Matched by text key: the keys `setupExecutionGuidance` picks for `dns_role === 'primary'` are read from the product's `lib/serverSetupGuidance.ts` at run time and intersected with `guidance.PEER_START_INSTRUCTION_KEYS` (`setup.guide.startSecondary`); a build that no longer shows it records `not-used-by-this-build`. | `guidance.role_guidance_keys`, `guidance.peer_start_keys`, `Driver.check_peer_start_guidance` |
+| P-C transient license wait | Every setup read showing `license_required` (error code, or `waiting` at phase `license`; also an HTTP body with that code) is recorded with timestamps and the `GET /api/v1/panel/license` status read immediately after it through the same read-only poll view (`result.json` `license_required_observations`, step check of the same name). If that status is `active`, a finding `d024-license-required-while-active-<step>-<node>` (kind `product`, D-024, "setup reported license required while the license was active") collects the observations; the run is not failed on it and continues. | `Driver._setup_reader`, `Driver.license_required_seen` |
+| Texts from the product commit | Every guidance text, the wizard `codeKey` map and the role keys come from `Config.web_src`: the driver's own `web/src` only when its checkout is exactly `--dist-commit` with an unmodified `web/src`; otherwise `--product-web-src <dir>` is required, must contain `i18n/`, `components/ServerSetup.tsx`, `lib/serverSetupGuidance.ts` and a `PRODUCT-COMMIT` marker naming `--dist-commit`. A driver extracted with `git archive` (no repository) always needs it. `build-dist.sh` exports `<dist>/product-web-src/` with the marker and records it in `dist.json`; `run-topology.sh` passes it; `export-product-web-src.sh` adds it to a dist built earlier. `run.json`/`result.json` record the source (`config.web_src`, `web_src_provenance`). | `pair_acceptance.resolve_product_web_src`, `scripts/*.sh` |
+| Evidence in the dist | `build-dist.sh` records how many archive entries lie under any `evidence/` directory and under `deploy/e2e/` (entries, files, directories, first 10 paths) in `<dist>/archive-evidence-entries.json` and as counts in `dist.json` `archive_observation`. Observation only; nothing is refused on it (pair2's archive shipped kill-matrix evidence; the product is being fixed separately). | `scripts/build-dist.sh` |
+
+**Unknown-state codes** (`guidance.UNKNOWN_STATE_CODES`, data): currently only
+`server_setup_reconciling`, whose wizard text (`setup.guide.confirm`, title
+`setup.guide.confirmTitle`) says the result is not confirmed and "Do not start
+it again", with no actor and no other next action. Add a code only after
+reading what the wizard shows for it; a code is counted only while the setup
+status is not `succeeded`/`failed`.
+
 Correction to pair1 P1's wording: for a failed plan, `ServerSetup.tsx`
 (`review()`, `if (!response.ok) throw new Error(t('setup.planFailed'))`) shows
 `setup.planFailed` ("The plan could not be verified. Check the inputs and try
@@ -173,8 +207,8 @@ field (`refused_plan_left_nothing`). Otherwise the verdict is
 | `install_steps.py` | Command text for `install.sh` staging/credentials and `dns-peer-enroll` |
 | `topology.py` | Topologies and OS placement |
 | `evidence.py`, `redaction.py` | Create-new evidence tree, `result.json`, `SHA256SUMS`; secret redaction |
-| `fakes.py`, `test_*.py`, `fixtures/pair1/` | Offline tests only; the fixtures are minimal copies of captured pair1 exchanges |
-| `scripts/*.sh` | Host scripts (build, prepare, run, teardown, offline tests) |
+| `fakes.py`, `test_*.py`, `fixtures/pair1/`, `fixtures/pair2/` | Offline tests only; the fixtures are minimal copies of captured pair1 and pair2 exchanges |
+| `scripts/*.sh` | Host scripts (build, product `web/src` export, prepare, run, teardown, offline tests) |
 
 ## Design
 
@@ -205,7 +239,7 @@ as a browser does (`cmd/panel/security.go:49-90`); there is no CSRF token.
 | license | `GET /api/v1/license/access`; locked: `GET /api/v1/setup` → 403; owner-key: `POST /api/v1/panel/license`; acceptance-fixture: `GET /api/v1/panel/license`, `POST` with the fixture key once, both GETs again |
 | setup review | `GET /api/v1/setup`, `PUT /api/v1/setup/guidance` (guided), `GET /api/v1/dns/engine`, `PUT /api/v1/setup` (purpose `dns`, `dns_mode` `local`, engine, role, `ns1`/`ns2`/`peer_ns`, `local_ip`/`peer_ip`, `panel_domain`; optional `infrastructure_dns`), `POST /api/v1/setup/plan`; on a gate blocker the read-only `GET /api/v1/setup` and `GET /api/v1/dns/engine` again |
 | setup start | `POST /api/v1/setup/start` **once** with a fixed `request_id`, then `GET /api/v1/setup/operation?request_id=` every 3 s (ServerSetup.tsx). The secondary starts only after the primary's `dns` step succeeded, as in the accepted precedent |
-| pair ready | `GET /api/v1/dns/engine` on both Panels until D1 holds for the role (with `active_engine`, `topology=paired`, `state=ready`); a stable snapshot that does not satisfy it stops early; then the setup operation until it settles |
+| pair ready | `GET /api/v1/dns/engine` on both Panels until D1 holds for the role (with `active_engine`, `topology=paired`, `state=ready`); a stable snapshot that does not satisfy it stops early, a secondary without `secondary_ready` at once; then the setup operation until it settles. A `license_required` setup read is followed by one `GET /api/v1/panel/license` |
 | zone add / re-add | `POST /api/v1/domains/create {project_type: dnsonly, ssl_type: none}`, `GET /api/v1/domains`, `GET .../dns/zone`, `GET .../dns/records` |
 | record add | `POST /api/v1/domains/{id}/dns/records` |
 | record edit | `--edit-method ui-replace` (default): `DELETE .../dns/records?id=` then `POST`, which is all the Domains screen offers; `api-put`: the API-only `PUT .../dns/records` |
@@ -235,6 +269,17 @@ the shown text and the payload. A non-OK plan records `setup.planFailed` (what
 the wizard shows) plus the `apiErrorText` view; a non-OK start records
 `setup.reconnecting`/`setup.uncertain` (or `setup.conflict` for the review
 codes), reconciles the exact request once by a read and stops.
+
+Per-read actionability cannot see a state that is specific but endless or
+that contradicts its own verified cause (pair2 P-B, P-C). Three further checks
+cover what pair2 showed: a listed unknown code is bounded in time (the
+open-ended unknown finding fails the step, cause `product`); a primary telling
+the owner to start the secondary while its own DNS step failed, is unknown,
+waits at the DNS step or was rolled back is a recorded finding (ordinary
+progress is not);
+a `license_required` read is paired with the license status read right after it
+and recorded as a product finding when that status is active. The last two do
+not fail the run.
 
 **Owner enrollment (BIND or PowerDNS secondary).** As an owner would, over SSH
 as root, from the `dns-owner-tools/` of the staged release
@@ -275,32 +320,38 @@ step).
 | login-* | 200, session cookie, `/auth/me` role `admin` |
 | license-* | license usable (`can_use_panel`); locked → `blocked-product` with actionable guidance; acceptance-fixture: the status names the fixture label, this cell and node, `state: active` |
 | setup-review-* | fresh setup, draft saved, plan HTTP 200 and `can_start`; plan blocker `pdns_primary_switch_paused` → `refused-by-product-gate` with the exact shown text, only if the refused plan left draft and DNS identity unchanged; a non-OK plan or other blockers fail with the shown text, and fail D-024 when that text is generic |
-| setup-start-* | one start (a non-OK start fails with the shown text); the plan's `dns` step succeeded; every waiting/failed state actionable; an unchanged non-running state stops the wait early |
-| pair-ready | D1 on both Panels, from the snapshot the web client accepts: **primary** `active_engine` = its engine, `topology: paired`, `state: ready`, `pair_role: primary`, `pair_ready === true`, `secondary_ready === false`; **secondary** the same with `pair_role: secondary`, `secondary_ready === true`, `pair_ready === false`. Anything else (including an absent field) fails with the payload; a snapshot identical for the stable window fails early. Then setup settles as succeeded or waiting at a non-DNS phase (public hostname/certificate); no DNS/firewall/service step failed |
+| setup-start-* | one start (a non-OK start fails with the shown text); the plan's `dns` step succeeded; every waiting/failed state actionable; an unchanged non-running state stops the wait early; a listed unknown state lasting `--unknown-state-limit-seconds` fails with cause `product` (open-ended unknown) |
+| pair-ready | D1 on both Panels, from the snapshot the web client accepts: **primary** `active_engine` = its engine, `topology: paired`, `state: ready`, `pair_role: primary`, `pair_ready === true`, `secondary_ready` absent (present with any value: contract violation, fails); **secondary** the same with `pair_role: secondary`, `secondary_ready === true`, `pair_ready === false`. A secondary without `secondary_ready` and nothing else wrong: `blocked-product` ("this build does not report secondary readiness"), unless another check failed. Anything else fails with the payload; a snapshot identical for the stable window fails early. Then setup settles as succeeded or waiting at a non-DNS phase (public hostname/certificate); no DNS/firewall/service step failed; an open-ended unknown fails with cause `product` |
 | zone-add / zone-readd | domain listed with a zone; from both guests, both servers answer SOA and NS authoritatively over UDP and TCP with one serial; the Panel's A/AAAA records are served; native state present on both; catalog lists the member. Re-add: new domain ID and no old record |
 | record-add / record-edit | publication 200; the exact A RRset on both servers, both transports; serial advanced |
 | zone-delete | a terminal 200 (directly, or after owner enrollment and one retry of the same deletion); the Panel no longer lists it; no authoritative answer from either server; **and** native absence on both (BIND: exact `rndc zonestatus` "no matching zone ... in any view" and no zone file; PowerDNS: no `domains` row and not in `pdns_control list-zones`); **and** the primary's catalog no longer lists the member. DNS REFUSED alone never passes |
 | independence-reboot | as described above |
-| management-return | as described above |
+| management-return | as described above; D1 as at `pair-ready` (an unreported `secondary_ready` is `blocked-product`) |
 | collect | always runs; journald of Panel/Agent/named/bind9/pdns (all boots), versions, unit state and ledger digest, only for guests whose identity was verified; per Panel the license-service journal check (acceptance-fixture: any line with `celikpanel.net` or "the acceptance test build never contacts the license service" fails the step) |
 
 Overall: any `failed` → `failed`; else any `blocked-product` →
 `blocked-product`; else a gate refusal → `refused-by-product-gate` (a valid,
 truthful outcome); else a step that never ran → `incomplete`; else `passed`.
+For `failed`, `overall_cause` is `product` when every failed step carries
+`cause: product` (a verified product defect such as an open-ended unknown),
+`unclassified` when none does, `mixed` otherwise; `failure_causes` lists them.
+Findings (`kind: product`, principle D-024) never change the overall verdict by
+themselves; the open-ended unknown does because it also fails its step.
 
 ## Evidence
 
 `<evidence-root>/<run-label>-<UTC timestamp>/`, create-new only:
 `run.json`, `steps/NN-<step>/api/NNNN-<method>-<path>.json` (redacted
 request/response pairs), `dns-*.json`, `native-*.json`, `catalog-*.json`,
-`plan-*.json`, `execution-*.json`, `engine-ready-<role>.json`,
+`plan-*.json`, `execution-*.json`, `open-ended-unknown-<role>.json`, `engine-ready-<role>.json`,
 `engine-return-<role>.json`, `owner-enrollment-transcript.json`,
 `installer-restart-notice.txt`, `owner-restart-after-install.json`,
 `ledger-*.json`, `panel-truth-*.json`, `install-sh.txt`, `guests/<node>/…`
 (including `license-service-journal-check.json`),
 `result.json` (schema `celikpanel/dns-pair-acceptance-result/v1`, per-step
-verdict/reason/guidance/checks, `findings`, `product_blockers`,
-`owner_steps`, `license_service_journal_check`, `native_evidence: false` until
+verdict/reason/cause/guidance/checks, `overall_cause`, `failure_causes`,
+`findings`, `product_blockers`, `owner_steps`, `license_service_journal_check`,
+`license_required_observations`, `native_evidence: false` until
 a reviewer says otherwise, `license_mode`, `native_evidence_scope`, and for
 acceptance-fixture runs `license_status`) and `SHA256SUMS`. The run directory is
 `<label>-<yyyymmddthhmmssz>` (lowercase).
@@ -316,7 +367,8 @@ All commands are scripts (no inline `$`). From Windows PowerShell:
 # 0. Offline tests (no guest)
 wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/offline-tests.sh"
 
-# 1. Build web/dist for the commit on Windows first (cd web; npm run build), then the dist archive:
+# 1. Build web/dist for the commit on Windows first (cd web; npm run build), then the dist archive
+#    (also writes <dist>/product-web-src/ and archive-evidence-entries.json):
 wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/build-dist.sh" <commit>
 
 # 2. Guests for one topology and run label (fixture.py, unmodified)
@@ -336,41 +388,48 @@ wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dn
 wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/run-topology.sh" bind/bind debian13 r1 /var/tmp/cp-pair-accept/dist/<commit>-acceptance-license/dist.json --license-mode acceptance-fixture
 ```
 
-### Re-running the three pair1 topologies
+### Re-running the three topologies against a product build `<commit>`
 
 The driver runs from this directory (the scripts' default `CELIKPANEL_REPO` is
-the Windows checkout under `/mnt/c`), so the corrected driver is used without a
-run-copy patch; the product archive still comes from `git archive <commit>`.
-`<commit>` is the full product commit under test and `<dist.json>` is
-`/var/tmp/cp-pair-accept/dist/<commit>-acceptance-license/dist.json`. For
-`aa6b9380` that directory already exists from pair1 (`build-dist.sh` refuses to
-reuse it; use its `dist.json`). Labels must differ from pair1's cells, which
-remain on the host (t1 used r1/r2, t2 and t3 used r1). pair1 placement:
-t1 BIND debian13 / BIND arch, t2 BIND arch / PowerDNS debian13, t3 PowerDNS
-debian13 / BIND arch.
+the Windows checkout under `/mnt/c`); the product archive comes from
+`git archive <commit>` and the guidance texts from that commit's `web/src`
+(`<dist>/product-web-src`, passed by `run-topology.sh`). `<commit>` is the full
+product commit under test; `<dist>` is
+`/var/tmp/cp-pair-accept/dist/<commit>-acceptance-license`. Build `web/dist` for
+`<commit>` first (pair2 README "Builds"). `build-dist.sh` refuses to reuse an
+existing `<dist>`: for a commit already built before this change (pair2's
+`916e1577933f37fb168818242befe02e01ce2122`), run only
+`export-product-web-src.sh <commit> <dist>` instead of step 1. Labels must differ from
+the cells left on the host (pair1: r1, r2; pair2: p2t1, p2t2, p2t3). Placement
+as in pair1/pair2: t1 BIND debian13 / BIND arch, t2 BIND arch / PowerDNS
+debian13, t3 PowerDNS debian13 / BIND arch.
 
 ```powershell
 wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/offline-tests.sh"
+# 1. product archive and its web/src (or, for an existing <dist>: export-product-web-src.sh <commit> <dist>)
+wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/build-dist.sh" --acceptance-license <commit>
 # t1 control, BIND/BIND
-wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/prepare-guests.sh" bind/bind debian13 r3
-wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/run-topology.sh" bind/bind debian13 r3 <dist.json> --license-mode acceptance-fixture
-wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/teardown.sh" bind/bind debian13 r3
+wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/prepare-guests.sh" bind/bind debian13 p3t1
+wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/run-topology.sh" bind/bind debian13 p3t1 <dist>/dist.json --license-mode acceptance-fixture
 # t2 BIND primary / PowerDNS secondary
-wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/prepare-guests.sh" bind-primary/pdns-secondary auto r2
-wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/run-topology.sh" bind-primary/pdns-secondary auto r2 <dist.json> --license-mode acceptance-fixture
-wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/teardown.sh" bind-primary/pdns-secondary auto r2
-# t3 PowerDNS primary / BIND secondary (expected: refused-by-product-gate while the gate is closed)
-wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/prepare-guests.sh" pdns-primary/bind-secondary auto r2
-wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/run-topology.sh" pdns-primary/bind-secondary auto r2 <dist.json> --license-mode acceptance-fixture
-wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/teardown.sh" pdns-primary/bind-secondary auto r2
+wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/prepare-guests.sh" bind-primary/pdns-secondary auto p3t2
+wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/run-topology.sh" bind-primary/pdns-secondary auto p3t2 <dist>/dist.json --license-mode acceptance-fixture
+# t3 PowerDNS primary / BIND secondary
+wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/prepare-guests.sh" pdns-primary/bind-secondary auto p3t3
+wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/run-topology.sh" pdns-primary/bind-secondary auto p3t3 <dist>/dist.json --license-mode acceptance-fixture
 ```
 
 Copy each run's evidence directory out of `/var/tmp/cp-pair-accept/evidence/`
-before `teardown.sh`. With a product build that does not serialize
-`secondary_ready` (every build up to and including `aa6b9380`), t1 and t2 are
-expected to end `failed` at `pair-ready` after about 5 minutes per Panel (D1,
-above); t3 does not depend on D1. `--stable-stop-seconds N` changes the stable
-window (0 restores waiting for the full `--setup-timeout`).
+before `teardown.sh <topology> <placement> <label>`. Expected with the pair2
+product (`916e1577`): t1 and t2 pass `pair-ready` (all three captures satisfy
+the corrected D1) and continue into the zone lifecycle; t3 stops at
+`setup-start-primary` about `--unknown-state-limit-seconds` after the first
+`server_setup_reconciling` read, `failed`, cause `product` (P-A remains
+unfixed in that build). A build before `secondary_ready` (up to `aa6b9380`)
+ends t1/t2 `blocked-product` at `pair-ready`. `--stable-stop-seconds N` changes
+the stable window (0 restores waiting for the full `--setup-timeout`);
+`--unknown-state-limit-seconds N` changes the unknown-state bound (must be
+positive).
 
 Other topologies: `pdns-primary/bind-secondary auto rN` and the control
 `bind/bind arch rN` or `bind/bind debian13 rN` (placement is explicit for the
@@ -425,10 +484,28 @@ the full step/API plan without contacting anything.
   cannot read it and Go was not changed for it. The journal check proves only
   that no line names `celikpanel.net` or the refusing transport's error: an
   attempt whose error was never logged leaves no line.
-- The later steps against a real Panel under D1: offline, they pass only
-  because the fake serializes `secondary_ready` (`api_secondary_ready=True`),
-  which no build does yet. A paired PowerDNS primary snapshot was never
-  captured (the plan was refused); the fake derives it from the BIND primary.
+- The later steps against a real Panel: offline they run on the pair2
+  captures, but no run has reached `zone-add` natively. A ready paired PowerDNS
+  primary snapshot was never captured (pair1: refused; pair2: failed inside the
+  product); the fake derives it from the BIND primary.
+- That the unknown-state list is complete: only `server_setup_reconciling` is
+  listed; other codes that mean "result not known yet" are not bounded until
+  someone reads their wizard text and adds them. The bound is continuous time
+  in one listed state as seen by the driver's polls (a failed read neither
+  starts nor ends a span).
+- That every contradictory text is caught: the check covers one key list for
+  the primary (`setup.guide.startSecondary`) and only the blocking DNS states
+  listed above. A code that blocks the DNS step without being a failure, a
+  listed unknown code, a DNS-step wait or the rolled-back code is not caught;
+  ordinary `running`/`pending` reads (pair2 t1/t2 showed the same text there,
+  as the product intends) are recorded without a finding.
+- The license mechanism behind P-C: the status read after a `license_required`
+  read is itself an HTTP request, which by the pair2 reading refreshes the
+  verification; the finding shows the contradiction the owner saw, not its
+  cause.
+- That `--product-web-src` is the product's: the driver checks the marker, not
+  the file contents; `build-dist.sh` and `export-product-web-src.sh` write it
+  from `git archive <commit>`, never from a working tree.
 - The PowerDNS owner enrollment path (H2) natively: pair1 never reached
   `zone-delete`, and `dns-peer-enroll --engine pdns` has component tests only.
 - A good stable-state window: 5 minutes is the owner's example. A product
@@ -439,8 +516,8 @@ the full step/API plan without contacting anything.
 
 ## Offline tests
 
-`scripts/offline-tests.sh` (105 tests; Python 3.13.5 in WSL `CelikPanel-S2-Debian`,
-2026-09-30): redaction and the
+`scripts/offline-tests.sh` (126 tests; Python 3.13.5 in WSL
+`CelikPanel-S2-Debian`, 2026-09-30): redaction and the
 evidence writer (including refusal to write a surviving secret and
 `SHA256SUMS` tamper detection); topology/OS placement; the API client against
 scripted responses (Origin/cookie handling, TOTP refusal, gate refusal body,
@@ -455,18 +532,30 @@ block, owner-key activation, acceptance-fixture activation and evidence scope,
 acceptance archive/label refusals, the server-side PowerDNS-primary plan
 blocker, a refused plan that leaves changes behind, the gate opened, D-024
 failure, ledger change on management return, unverified guest untouched).
-Added after pair1: `test_pair_contract.py` loads the captured pair1 payloads
-(`fixtures/pair1/`) and asserts the readers accept every captured DNS engine
-snapshot, that D1 fails on them only for the unserialized `secondary_ready`,
-that a secondary with `pair_ready: true` is refused, every other D1
-combination, and that the fake's bodies equal the captures; sequences for the
-pair1 API shape (pair-ready fails early with both payloads), a secondary
-reporting `pair_ready: true`, a changing state waited for beyond the stable
-window, the exact pair1 plan 500 `INTERNAL` (setup.planFailed shown, product
-finding with payload), a start 5xx, the installer's required and recommended
-restart notices, PowerDNS-secondary enrollment with `--engine pdns`,
-`--catalog-account` and `pdns-peer-inspect` plus the D-024 observation,
-BIND-secondary enrollment with exactly one retry, and the license-service
-journal check; guidance for `err.INTERNAL`, a bare status and generic server
-text; poll stable stop versus change and in-progress; the probe's
-`domains.account`; the lowercase run ID and run label.
+Added after pair1: the captured pair1 payloads (`fixtures/pair1/`); a secondary
+reporting `pair_ready: true`; a changing state waited for beyond the stable
+window; the exact pair1 plan 500 `INTERNAL`; a start 5xx; the installer's
+restart notices; PowerDNS- and BIND-secondary enrollment; the license-service
+journal check; generic-text guidance; poll stable stop versus change and
+in-progress; the probe's `domains.account`; the lowercase run ID and label.
+Added after pair2: the pair2 captures (`fixtures/pair2/`) are accepted by the
+reader and pass the corrected D1 for the BIND primary and both secondaries; the
+pair1 build is `blocked-product` at once (primary passes, secondary "does not
+report secondary readiness"); a primary carrying `secondary_ready` (true or
+false) is a contract violation; the fakes equal both capture sets; the poll's
+unknown-state bound (stops while the value changes; a clear read restarts the
+span; a failed read does not); t3's captured reconciling read ends
+`setup-start-primary` failed, cause `product`, with the open-ended unknown
+finding (EN/TR text, payload file, duration), a configurable limit and a
+reconciling state that resolves within it passing; the contradictory
+start-secondary finding with its step statuses, and none when the product's
+`serverSetupGuidance.ts` no longer shows that key; the contradictory
+check's narrowing (ordinary running read and pending step: no finding; t3's
+reconciling read, a failed and a rolled-back DNS step: finding; a wait at the
+DNS step versus a license wait before it); t1's captured
+`license_required` read with an active license (finding, run passes) and with
+an unverified one (recorded, no finding); `--product-web-src` resolution
+(differing or unknown driver commit, modified `web/src`, marker mismatch or
+missing, missing files, same clean commit); `--unknown-state-limit-seconds`
+validation; the build script's archive observation run on a synthetic archive
+and its `web/src` export and hand-over to `run-topology.sh`.

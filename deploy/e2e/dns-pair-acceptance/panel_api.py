@@ -122,8 +122,8 @@ class ReadOnlyView:
     def __init__(self, client: "PanelClient") -> None:
         self._client = client
 
-    def get(self, path: str, *, timeout: float = 40) -> Response:
-        return self._client.request("GET", path, timeout=timeout)
+    def get(self, path: str, *, timeout: float = 40, purpose: str | None = None) -> Response:
+        return self._client.request("GET", path, timeout=timeout, purpose=purpose)
 
     def __getattr__(self, name: str) -> Any:
         raise PollMutationError(f"poll readers may only GET (attempted {name!r})")
@@ -278,6 +278,8 @@ class PanelClient:
         stable_after: float | None = None,
         stable_polls: int = 5,
         settled: Callable[[Any], bool] | None = None,
+        bounded: Callable[[Any], str | None] | None = None,
+        bound_seconds: float | None = None,
     ) -> tuple[bool, Any, int]:
         """Read until ``done``; returns (done, last value, number of reads).
 
@@ -289,8 +291,16 @@ class PanelClient:
         been identical for at least ``stable_polls`` consecutive reads spanning
         at least ``stable_after`` seconds while ``settled(value)`` holds (a
         product-declared in-progress value never counts). ``timeout`` then only
-        bounds a value that keeps changing. ``last_poll`` records why the poll
-        stopped: ``done``, ``stable`` or ``timeout``.
+        bounds a value that keeps changing.
+
+        ``bounded`` / ``bound_seconds`` (D-024 time bound): ``bounded(value)``
+        names the unknown state a value is in (``None`` otherwise). Once the
+        same unknown state has been read continuously for ``bound_seconds``,
+        the poll stops, not done, whether the value changes or not. A read
+        that fails (``poll_error``) neither starts nor ends such a span.
+
+        ``last_poll`` records why the poll stopped: ``done``, ``stable``,
+        ``unknown-limit`` or ``timeout``.
         """
 
         started = self.clock()
@@ -300,6 +310,9 @@ class PanelClient:
         reads = 0
         identical = 0
         stable_since = started
+        unknown: str | None = None
+        unknown_since = started
+        unknown_reads = 0
         with self.polling() as view:
             while True:
                 try:
@@ -318,9 +331,22 @@ class PanelClient:
                     identical += 1
                 previous = marker
                 elapsed = round(self.clock() - started, 3)
-                if not (isinstance(last, dict) and "poll_error" in last) and done(last):
+                failed_read = isinstance(last, dict) and "poll_error" in last
+                if not failed_read and done(last):
                     self.last_poll = {"stop": "done", "reads": reads, "elapsed_seconds": elapsed}
                     return True, last, reads
+                if bounded is not None and bound_seconds is not None and not failed_read:
+                    current = bounded(last)
+                    if current != unknown:
+                        unknown, unknown_since, unknown_reads = current, self.clock(), 0
+                    if current is not None:
+                        unknown_reads += 1
+                    lasted = round(self.clock() - unknown_since, 3)
+                    if unknown is not None and lasted >= bound_seconds:
+                        self.last_poll = {"stop": "unknown-limit", "reads": reads, "elapsed_seconds": elapsed,
+                                          "unknown_state": unknown, "unknown_seconds": lasted,
+                                          "unknown_reads": unknown_reads, "unknown_limit": bound_seconds}
+                        return False, last, reads
                 steady = round(self.clock() - stable_since, 3)
                 if stable_after is not None and identical >= stable_polls and steady >= stable_after \
                         and (settled is None or settled(last)):

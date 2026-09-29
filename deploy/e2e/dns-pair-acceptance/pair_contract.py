@@ -2,27 +2,33 @@
 
 ``read_engine_snapshot`` mirrors what the web client accepts from
 ``GET /api/v1/dns/engine`` (``web/src/lib/dnsEngineContract.ts``, the pair
-rules around lines 355-378) plus the Panel's own refusal of a runtime that
+rules around lines 370-384) plus the Panel's own refusal of a runtime that
 claims both proofs (``cmd/panel/dns_engine.go`` ~315). A snapshot the web
 client would refuse is never a pass.
 
-``pair_readiness`` is the owner's pass rule D1 (2026-09-30), applied at
-``pair-ready`` and at ``management-return``:
+``pair_readiness`` is the owner's pass rule D1, applied at ``pair-ready`` and
+at ``management-return``. Corrected after pair2 (2026-09-30) to the product
+contract (Decision D): ``secondary_ready`` is serialized exactly on an active
+paired secondary and never on a primary (``cmd/panel/dns_engine.go`` ~108
+``secondary_ready,omitempty`` and ~637-649; ``cmd/panel/dns_engine_test.go``
+~2003 "the primary payload has no such key"), and the web client refuses a
+primary snapshot that carries it (``dnsEngineContract.ts`` ~383):
 
-* primary:   ``pair_role == "primary"``,   ``pair_ready is True``,  ``secondary_ready is False``
+* primary:   ``pair_role == "primary"``,   ``pair_ready is True``, ``secondary_ready`` ABSENT
 * secondary: ``pair_role == "secondary"``, ``secondary_ready is True``, ``pair_ready is False``
 
 plus the common facts (``active_engine`` is the role's engine, ``topology`` is
-``paired``, ``state`` is ``ready``). Any other combination fails, including an
-absent field: ``True``/``False`` are compared exactly, never by truthiness.
+``paired``, ``state`` is ``ready``). ``True``/``False`` are compared exactly,
+never by truthiness. A primary payload carrying ``secondary_ready`` at all
+(any value) is a contract violation and fails.
 
-Field names are the ones the API serializes. The pair1 captured payloads
-(``fixtures/pair1/engine-*.json``) carry ``pair_role`` and ``pair_ready``; they
-carry **no** ``secondary_ready``: that proof exists in the Agent runtime
-contract (``internal/transport/dns_contracts.go`` ~218 ``SecondaryReady``,
-used by ``cmd/panel/setup_dns.go`` ~98) but ``dnsEngineSnapshot``
-(``cmd/panel/dns_engine.go`` ~100-113) does not serialize it. Against such a
-build D1 cannot pass for either role, and the verdict says exactly that.
+A build that predates the field (the pair1 build ``aa6b9380``) serializes no
+``secondary_ready`` on an active paired secondary. That is not a plain
+failure: the verdict carries ``blocked`` = ``BLOCKED_NOT_REPORTED`` ("this
+build does not report secondary readiness") and the step records
+``blocked-product``. Because the product serializes the field on every active
+paired secondary, its absence there is final for that build and the wait stops
+at once.
 """
 
 from __future__ import annotations
@@ -43,17 +49,24 @@ ENGINE_PROGRESS = frozenset({"running", "rolling_back"})
 OBSERVED_KEYS = ("active_engine", "state", "topology", PAIR_ROLE, PAIR_READY, SECONDARY_READY, "revision",
                  "engine_epoch")
 RULE = {
-    "primary": "pair_role == primary, pair_ready === true, secondary_ready === false",
+    "primary": "pair_role == primary, pair_ready === true, secondary_ready absent",
     "secondary": "pair_role == secondary, secondary_ready === true, pair_ready === false",
 }
+# Exact values D1 requires; ABSENT means the key must not be in the payload at all.
 EXPECTED = {
-    "primary": {PAIR_READY: True, SECONDARY_READY: False},
+    "primary": {PAIR_READY: True, SECONDARY_READY: ABSENT},
     "secondary": {SECONDARY_READY: True, PAIR_READY: False},
 }
-NOT_SERIALIZED = (
-    "absent from GET /api/v1/dns/engine: this build does not serialize it (cmd/panel/dns_engine.go "
-    "dnsEngineSnapshot has pair_role and pair_ready only; SecondaryReady lives in the Agent runtime, "
-    "internal/transport/dns_contracts.go)"
+BLOCKED_NOT_REPORTED = "secondary-readiness-not-reported"
+NOT_REPORTED = (
+    "secondary_ready is absent from GET /api/v1/dns/engine on an active paired secondary: this build does not "
+    "report secondary readiness (the product serializes it on every active paired secondary, "
+    "cmd/panel/dns_engine.go secondary_ready omitempty; this build predates it)"
+)
+PRIMARY_CARRIES_FIELD = (
+    "secondary_ready is present on a primary ({value!r}): the product never serializes it there "
+    "(cmd/panel/dns_engine_test.go: the primary payload has no such key) and the web client refuses such a "
+    "snapshot (web/src/lib/dnsEngineContract.ts); contract violation"
 )
 
 
@@ -111,6 +124,10 @@ def read_engine_snapshot(body: Any) -> dict[str, Any]:
     # cmd/panel/dns_engine.go ~315 - a runtime claiming both proofs is refused.
     if body.get(PAIR_READY) is True and body.get(SECONDARY_READY) is True:
         raise ContractError("pair_ready and secondary_ready are both true (Panel refuses such a runtime)")
+    # dnsEngineContract.ts:383-384 - secondary_ready belongs to an active paired secondary only.
+    if SECONDARY_READY in body and (not active_pair or body.get(PAIR_ROLE) != "secondary"
+                                    or body.get(PAIR_READY) is True):
+        raise ContractError("secondary_ready outside an active paired secondary (web client refuses it)")
     return {key: body.get(key, ABSENT) for key in OBSERVED_KEYS}
 
 
@@ -121,16 +138,23 @@ def observed(body: Any) -> dict[str, Any]:
 
 
 def pair_readiness(body: Any, *, role: str, engine: str) -> dict[str, Any]:
-    """D1 verdict for one Panel's snapshot; ``passed`` only for the exact combination."""
+    """D1 verdict for one Panel's snapshot; ``passed`` only for the exact combination.
+
+    ``blocked`` is set (to ``BLOCKED_NOT_REPORTED``) only when the single
+    thing missing is ``secondary_ready`` on an otherwise ready active paired
+    secondary: a build that predates the field, reported as ``blocked-product``.
+    """
 
     if role not in ROLES:
         raise ValueError(f"unknown pair role {role!r}")
     reasons: list[str] = []
     absent: list[str] = []
+    verdict: dict[str, Any] = {"passed": False, "role": role, "engine": engine, "rule": RULE[role],
+                               "observed": observed(body), "reasons": reasons, "absent_fields": absent,
+                               "blocked": None}
     if not isinstance(body, dict) or "poll_error" in body:
         reasons.append(f"no DNS engine snapshot: {body.get('poll_error') if isinstance(body, dict) else body!r}")
-        return {"passed": False, "role": role, "engine": engine, "rule": RULE[role], "observed": observed(body),
-                "reasons": reasons, "absent_fields": absent}
+        return verdict
     try:
         read_engine_snapshot(body)
     except ContractError as exc:
@@ -138,15 +162,30 @@ def pair_readiness(body: Any, *, role: str, engine: str) -> dict[str, Any]:
     for key, want in (("active_engine", engine), ("topology", "paired"), ("state", "ready"), (PAIR_ROLE, role)):
         if body.get(key, ABSENT) != want:
             reasons.append(f"{key} is {body.get(key, ABSENT)!r}, expected {want!r}")
+    not_reported = False
     for key, want in EXPECTED[role].items():
-        if key not in body:
+        if want is ABSENT:
+            if key in body:
+                reasons.append(PRIMARY_CARRIES_FIELD.format(value=body[key]))
+        elif key not in body:
             absent.append(key)
-            reasons.append(f"{key} {NOT_SERIALIZED if key == SECONDARY_READY else 'is absent'}; "
-                           f"D1 requires {key} === {str(want).lower()}")
+            if key == SECONDARY_READY:
+                not_reported = True
+                reasons.append(NOT_REPORTED)
+            else:
+                reasons.append(f"{key} is absent; D1 requires {key} === {str(want).lower()}")
         elif body[key] is not want:
             reasons.append(f"{key} is {body[key]!r}, D1 requires {key} === {str(want).lower()}")
-    return {"passed": not reasons, "role": role, "engine": engine, "rule": RULE[role], "observed": observed(body),
-            "reasons": reasons, "absent_fields": absent}
+    verdict["passed"] = not reasons
+    if not_reported and reasons == [NOT_REPORTED]:
+        verdict["blocked"] = BLOCKED_NOT_REPORTED
+    return verdict
+
+
+def readiness_final(verdict: dict[str, Any]) -> bool:
+    """True when waiting cannot change the verdict: passed, or this build does not report the field."""
+
+    return bool(verdict.get("passed") or verdict.get("blocked"))
 
 
 def engine_settled(body: Any) -> bool:

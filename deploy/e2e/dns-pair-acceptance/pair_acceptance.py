@@ -24,6 +24,8 @@ import datetime as dt
 import hashlib
 import json
 import secrets
+import shutil
+import subprocess
 import sys
 import tarfile
 import time
@@ -112,7 +114,13 @@ STATIC_FINDINGS = (
 
 
 class StepFailed(Exception):
-    pass
+    cause = ""
+
+
+class ProductFailure(StepFailed):
+    """A verified product defect stopped the step (the run fails with cause ``product``)."""
+
+    cause = "product"
 
 
 class GateRefused(Exception):
@@ -134,6 +142,9 @@ class StepRecord:
     title: str
     verdict: str = "not-run"
     reason: str = ""
+    # Why a failed step failed, when the driver knows: "product" (a product
+    # defect the driver verified, e.g. an open-ended unknown state); "" otherwise.
+    cause: str = ""
     started_at: str | None = None
     finished_at: str | None = None
     guidance: list[dict[str, Any]] = field(default_factory=list)
@@ -150,6 +161,7 @@ class StepRecord:
             "title": self.title,
             "verdict": self.verdict,
             "reason": self.reason,
+            "cause": self.cause,
             "started_at": self.started_at,
             "finished_at": self.finished_at,
             "evidence_directory": self.directory,
@@ -183,6 +195,12 @@ class Config:
     # product-declared in-progress state. None disables it.
     stable_stop_seconds: float | None = 300.0
     stable_stop_polls: int = 5
+    # D-024 (pair2 t3): the longest a listed unknown/reconciling setup state
+    # (guidance.UNKNOWN_STATE_CODES) may last before it is a product finding.
+    unknown_state_limit: float = 300.0
+    # The product's web/src the texts come from ("" = the driver's own checkout).
+    web_src: str = ""
+    web_src_provenance: dict[str, Any] = field(default_factory=dict)
 
     def public(self) -> dict[str, Any]:
         return {
@@ -202,7 +220,11 @@ class Config:
                 "setup": self.setup_timeout, "dns": self.dns_timeout,
                 "deletion": self.deletion_timeout, "reboot": self.reboot_timeout,
                 "stable_stop_seconds": self.stable_stop_seconds, "stable_stop_polls": self.stable_stop_polls,
+                "unknown_state_limit_seconds": self.unknown_state_limit,
             },
+            "unknown_state_codes": list(gd.UNKNOWN_STATE_CODES),
+            "web_src": self.web_src or str(gd.WEB_SRC),
+            "web_src_provenance": self.web_src_provenance or {"source": "driver checkout"},
         }
 
 
@@ -318,6 +340,10 @@ class Driver:
         # restart request, dns-peer-enroll), recorded as owner actions.
         self.owner_steps: list[dict[str, Any]] = []
         self.license_journal: dict[str, dict[str, Any]] = {}
+        self.web_src = Path(config.web_src) if config.web_src else gd.WEB_SRC
+        # Every license_required setup read, with the license status read right after it.
+        self.license_required_observations: list[dict[str, Any]] = []
+        self._peer_start: dict[str, Any] | None = None
 
     # -- step machinery ---------------------------------------------------------
 
@@ -343,7 +369,7 @@ class Driver:
         except StepSkipped as exc:
             record.verdict, record.reason = "skipped", str(exc)
         except StepFailed as exc:
-            record.verdict, record.reason = "failed", str(exc)
+            record.verdict, record.reason, record.cause = "failed", str(exc), exc.cause
         except PollMutationError as exc:
             record.verdict, record.reason = "failed", f"driver safety: {exc}"
         except (PanelError, OSError, ValueError, KeyError, TypeError) as exc:
@@ -457,6 +483,8 @@ class Driver:
 
     def finalize(self) -> dict[str, Any]:
         verdicts = [step.verdict for step in self.steps]
+        overall = ev.overall_status(verdicts)
+        causes = sorted({step.cause or "unclassified" for step in self.steps if step.verdict == "failed"})
         result = {
             "schema": ev.RESULT_SCHEMA,
             "driver": DRIVER_SCHEMA,
@@ -469,8 +497,12 @@ class Driver:
             "topology": self.topology.as_dict(),
             "config": self.config.public(),
             "steps": [step.as_dict() for step in self.steps],
-            "overall": ev.overall_status(verdicts),
+            "overall": overall,
+            # "product" only when every failed step failed on a verified product defect.
+            "overall_cause": (None if overall != "failed" else causes[0] if len(causes) == 1 else "mixed"),
+            "failure_causes": causes,
             "findings": self.findings,
+            "license_required_observations": self.license_required_observations,
             "product_blockers": self.blockers,
             "owner_steps": self.owner_steps,
             "license_service_journal_check": self.license_journal,
@@ -570,8 +602,10 @@ class Driver:
                             label: str) -> dict[str, Any]:
         """Poll GET /api/v1/dns/engine until D1 holds for this role (pair_contract.pair_readiness).
 
-        Stops early once the snapshot is stable and settled; the payload of the
-        last read is always recorded.
+        Stops at once when the verdict cannot change (``pc.readiness_final``:
+        an active paired secondary of a build that does not report
+        ``secondary_ready``), early once the snapshot is stable and settled;
+        the payload of the last read is always recorded.
         """
 
         def read(view: Any) -> Any:
@@ -581,18 +615,21 @@ class Driver:
             return response.json()
 
         done, snapshot, _ = client.poll(
-            read, lambda body: pc.pair_readiness(body, role=role.role, engine=role.engine)["passed"],
+            read, lambda body: pc.readiness_final(pc.pair_readiness(body, role=role.role, engine=role.engine)),
             timeout=timeout, interval=max(self.config.poll_interval, 5.0), **self.stable_stop(pc.engine_settled))
         verdict = pc.pair_readiness(snapshot, role=role.role, engine=role.engine)
         verdict["poll"] = dict(getattr(client, "last_poll", {}) or {}, timeout=timeout)
         verdict["payload_file"] = self.record(f"engine-{label}-{role.role}.json", snapshot)
         record.checks[f"pair_readiness_{label}_{role.role}"] = verdict
-        if done != verdict["passed"]:
+        if done != pc.readiness_final(verdict):
             raise StepFailed(f"{role.node}: pair readiness verdict changed between poll and record")
         return verdict
 
     def readiness_failure(self, role: topo.Role, verdict: dict[str, Any]) -> str:
         poll = verdict.get("poll") or {}
+        if verdict.get("blocked") == pc.BLOCKED_NOT_REPORTED:
+            return (f"{role.node}: this build does not report secondary readiness (D1: {verdict['rule']}); "
+                    f"{'; '.join(verdict['reasons'])}; payload {verdict['payload_file']}: {verdict['observed']}")
         if poll.get("stop") == "stable":
             why = (f"stopped early: the snapshot was identical for {poll.get('identical_reads')} reads over "
                    f"{poll.get('stable_seconds')}s and does not satisfy the rule")
@@ -866,7 +903,7 @@ class Driver:
                 self.add_guidance(record, item, context="draft save refused")
                 raise StepFailed(f"draft save returned HTTP {saved.status}")
             state = saved.json() or {}
-            code_keys = gd.wizard_code_keys()
+            code_keys = gd.wizard_code_keys(self.web_src / gd.WEB_SRC_FILES["wizard"])
             record.checks["wizard_code_key_pdns_primary"] = code_keys.get(gd.PDNS_PRIMARY_GATE_CODE)
             selection = gd.setup_selection_error(draft)
             if selection:
@@ -925,13 +962,160 @@ class Driver:
         if changes:
             raise StepFailed(f"the refused plan left changes behind: {changes}")
 
-    def _setup_reader(self, request_id: str) -> Callable[[Any], Any]:
+    def _setup_reader(self, request_id: str, record: StepRecord | None = None,
+                      role: topo.Role | None = None) -> Callable[[Any], Any]:
         def read(view: Any) -> Any:
             response = view.get(f"/api/v1/setup/operation?request_id={request_id}")
             if response.status != 200:
+                body = response.json()
+                if record is not None and role is not None and isinstance(body, dict) \
+                        and body.get("code") == gd.LICENSE_REQUIRED_CODE:
+                    self.license_required_seen(view, record, role, f"setup operation HTTP {response.status}", body)
                 return {"poll_error": f"HTTP {response.status}"}
-            return response.json()
+            value = response.json()
+            if record is not None and role is not None and gd.license_required_state(value):
+                self.license_required_seen(view, record, role, "setup execution", value)
+            return value
         return read
+
+    def license_required_seen(self, view: Any, record: StepRecord, role: topo.Role, source: str,
+                              payload: Any) -> None:
+        """pair2 P-C: record a license_required read and the license status read right after it.
+
+        Read-only (the poll's view). When the license status at that moment is
+        active, the product told the owner a license is required while it was
+        active: a D-024 product finding that does not fail the run.
+        """
+
+        observed_at = now_iso()
+        status = view.get("/api/v1/panel/license", purpose="LicensePanel status after license_required (read-only)")
+        body = status.json()
+        entry = {
+            "observed_at": observed_at,
+            "license_status_read_at": now_iso(),
+            "step": record.id,
+            "node": role.node,
+            "role": role.role,
+            "source": source,
+            "setup_state": ({k: payload.get(k) for k in ("status", "phase", "error")}
+                            if isinstance(payload, dict) else payload),
+            "license_status_http": status.status,
+            "license_status": _license_summary(body),
+        }
+        self.license_required_observations.append(entry)
+        record.checks.setdefault("license_required_observations", []).append(entry)
+        if status.status != 200 or not isinstance(body, dict) or body.get("state") != "active":
+            return
+        finding_id = f"d024-license-required-while-active-{record.id}-{role.node}"
+        finding = next((f for f in self.findings if f.get("id") == finding_id), None)
+        if finding is None:
+            item = gd.setup_execution_guidance(self.translator, payload) if isinstance(payload, dict) \
+                and "status" in payload else gd.api_error_guidance(self.translator, 403, payload)
+            finding = {
+                "id": finding_id,
+                "kind": "product",
+                "principle": "D-024",
+                "step": record.id,
+                "node": role.node,
+                "text": "setup reported license required while the license was active",
+                "shown": item.get("shown"),
+                "title": item.get("title"),
+                "observations": [],
+                "effect": "recorded only; the run continues",
+            }
+            self.findings.append(finding)
+        finding["observations"].append(entry)
+
+    def unknown_bound(self) -> dict[str, Any]:
+        return {"bounded": gd.unknown_state_code, "bound_seconds": self.config.unknown_state_limit}
+
+    def open_ended_unknown(self, record: StepRecord, role: topo.Role, execution: Any, poll: dict[str, Any]) -> str:
+        """D-024 (pair2 P-B): a listed unknown state outlasted the limit; record it and stop waiting."""
+
+        code = poll.get("unknown_state")
+        item = gd.setup_execution_guidance(self.translator, execution) if isinstance(execution, dict) else {}
+        first = next((g.get("observed_at") for g in record.guidance
+                      if isinstance(g.get("code"), str) and g["code"].split(":")[0] == code), None)
+        payload_file = self.record(f"open-ended-unknown-{role.role}.json", execution)
+        finding = {
+            "id": f"d024-open-ended-unknown-{record.id}-{role.node}",
+            "kind": "product",
+            "principle": "D-024",
+            "step": record.id,
+            "node": role.node,
+            "code": code,
+            "text": (f"open-ended unknown: setup stayed at {code} (result not confirmed) for "
+                     f"{poll.get('unknown_seconds')}s over {poll.get('unknown_reads')} reads; the text shown names "
+                     "no reason, no actor and no next action other than not starting it again"),
+            "lasted_seconds": poll.get("unknown_seconds"),
+            "reads": poll.get("unknown_reads"),
+            "limit_seconds": poll.get("unknown_limit"),
+            "first_observed_at": first,
+            "stopped_at": now_iso(),
+            "title": item.get("title"),
+            "message_keys": item.get("message_keys"),
+            "shown": item.get("shown"),
+            "details": item.get("details"),
+            "payload_file": payload_file,
+            "payload": execution,
+        }
+        self.findings.append(finding)
+        record.checks.setdefault("open_ended_unknown", []).append(
+            {k: finding[k] for k in ("node", "code", "lasted_seconds", "reads", "limit_seconds", "payload_file")})
+        return (f"{role.node}: setup stayed in the unknown state {code} for {poll.get('unknown_seconds')}s "
+                f"(limit {poll.get('unknown_limit')}s); open-ended unknown (D-024), stopped waiting; payload "
+                f"{payload_file}; shown: {' | '.join((item.get('shown') or {}).get('en') or [])}")
+
+    def peer_start(self) -> dict[str, Any]:
+        if self._peer_start is None:
+            self._peer_start = gd.peer_start_keys(self.web_src / gd.WEB_SRC_FILES["setup_guidance"], "primary")
+        return self._peer_start
+
+    def check_peer_start_guidance(self, record: StepRecord, role: topo.Role, execution: dict[str, Any],
+                                  item: dict[str, Any]) -> None:
+        """pair2 t3: the primary told the owner to start the secondary while its own DNS step could not serve.
+
+        The role text deliberately allows starting the secondary while the
+        primary's setup is still progressing, so an ordinary running/pending
+        DNS step is only recorded (``peer_start_guidance_observations``). The
+        finding is raised only for a blocking DNS state
+        (``guidance.dns_blocking_state``: failed, a listed unknown state, a
+        waiting state at the DNS step, a rolled-back DNS result).
+        """
+
+        resolved = self.peer_start()
+        record.checks.setdefault("peer_start_guidance_keys", {k: resolved[k] for k in ("state", "keys", "role_keys")})
+        shown_keys = [key for key in item.get("message_keys") or [] if key in resolved["keys"]]
+        if not shown_keys:
+            return
+        blocking = gd.dns_blocking_state(execution)
+        entry = {"observed_at": item.get("observed_at") or now_iso(), "status": execution.get("status"),
+                 "phase": execution.get("phase"), "dns_step_status": gd.dns_step_status(execution),
+                 "error_code": (execution.get("error") or {}).get("code") if isinstance(execution.get("error"), dict)
+                 else None, "blocking": blocking, "keys": shown_keys}
+        record.checks.setdefault("peer_start_guidance_observations", []).append(entry)
+        if blocking is None:
+            return
+        finding_id = f"d024-contradictory-peer-start-{record.id}-{role.node}"
+        finding = next((f for f in self.findings if f.get("id") == finding_id), None)
+        if finding is None:
+            finding = {
+                "id": finding_id,
+                "kind": "product",
+                "principle": "D-024",
+                "step": record.id,
+                "node": role.node,
+                "text": ("the primary's guidance told the owner to start the secondary against this server while "
+                         "the primary's own DNS step was in a state where the secondary cannot succeed (failed, "
+                         "result unknown, waiting at the DNS step, or rolled back)"),
+                "keys": shown_keys,
+                "shown": {language: [text for key, text in zip(item.get("message_keys") or [], texts)
+                                     if key in shown_keys] for language, texts in (item.get("shown") or {}).items()},
+                "observations": [],
+                "effect": "recorded only; the run continues",
+            }
+            self.findings.append(finding)
+        finding["observations"].append(entry)
 
     def _observe_execution(self, record: StepRecord, role: topo.Role) -> Callable[[Any], None]:
         def changed(execution: Any) -> None:
@@ -942,6 +1126,8 @@ class Driver:
             item["phase"] = execution.get("phase")
             item["status"] = execution.get("status")
             self.add_guidance(record, item, context=f"setup execution on {role.node}")
+            if role.role == "primary":
+                self.check_peer_start_guidance(record, role, execution, record.guidance[-1])
         return changed
 
     def setup_start(self, record: StepRecord, role: topo.Role) -> None:
@@ -961,10 +1147,11 @@ class Driver:
                 # Reconcile the exact request by reads; never re-POST blindly.
                 record.checks["start_outcome"] = f"unknown, reconciling: {exc}"
             done, execution, reads = client.poll(
-                self._setup_reader(request_id),
+                self._setup_reader(request_id, record, role),
                 lambda ex: isinstance(ex, dict) and (ex.get("status") in {"failed", "succeeded"} or _dns_step_done(ex)),
                 timeout=self.config.setup_timeout, interval=self.config.poll_interval,
                 on_change=self._observe_execution(record, role), **self.stable_stop(pc.setup_settled),
+                **self.unknown_bound(),
             )
             poll = dict(client.last_poll)
         record.checks["polls"] = reads
@@ -972,6 +1159,8 @@ class Driver:
         self.executions[role.role] = execution if isinstance(execution, dict) else {}
         if not isinstance(execution, dict) or execution.get("request_id") not in (None, request_id):
             raise StepFailed("setup operation could not be reconciled to the exact request")
+        if poll.get("stop") == "unknown-limit":
+            raise ProductFailure(self.open_ended_unknown(record, role, execution, poll))
         if not done:
             self.require_actionable(record)
             if poll.get("stop") == "stable":
@@ -1014,12 +1203,15 @@ class Driver:
             if response.status not in (200, 202):
                 self.start_refused(record, role, client, response, request_id, "secondary setup start refused")
             done, execution, reads = client.poll(
-                self._setup_reader(request_id),
+                self._setup_reader(request_id, record, role),
                 lambda ex: isinstance(ex, dict) and (ex.get("status") in {"failed", "succeeded", "waiting"}),
                 timeout=min(self.config.setup_timeout, 1800), interval=self.config.poll_interval,
-                on_change=self._observe_execution(record, role),
+                on_change=self._observe_execution(record, role), **self.unknown_bound(),
             )
+            poll = dict(client.last_poll)
         record.checks["secondary_final"] = {k: (execution or {}).get(k) for k in ("status", "phase", "error")}
+        if poll.get("stop") == "unknown-limit":
+            raise ProductFailure(self.open_ended_unknown(record, role, execution, poll))
         if not done:
             raise StepFailed("secondary setup did not reach a waiting or terminal state")
         self.require_actionable(record)
@@ -1030,29 +1222,40 @@ class Driver:
         Both Panels are always read, so a failure records both payloads. A
         stable snapshot that does not satisfy D1 stops the wait early
         (pair1: t1 r2 waited 45 minutes on an unchanging secondary snapshot).
+        A secondary of a build that does not report ``secondary_ready`` is
+        ``blocked-product`` when nothing else failed.
         """
 
         P, S = self.topology.primary, self.topology.secondary
         deadline_total = self.config.setup_timeout
         results: dict[str, Any] = {}
         failures: list[str] = []
+        product_failures: list[str] = []
+        blocked: list[str] = []
         for role in (P, S):
             with self.panel(role) as client:
                 verdict = self.wait_pair_readiness(record, role, client, timeout=deadline_total, label="ready")
                 results[role.role] = verdict["observed"]
+                if verdict.get("blocked"):
+                    blocked.append(self.readiness_failure(role, verdict))
+                    continue
                 if not verdict["passed"]:
                     failures.append(self.readiness_failure(role, verdict))
                     continue
                 settled, execution, _ = client.poll(
-                    self._setup_reader(self.request_ids[role.role]),
+                    self._setup_reader(self.request_ids[role.role], record, role),
                     lambda ex: isinstance(ex, dict) and (ex.get("status") in {"failed", "succeeded"}
                                                           or (ex.get("status") == "waiting" and ex.get("phase") in NON_DNS_SETUP_PHASES)),
                     timeout=deadline_total, interval=self.config.poll_interval,
                     on_change=self._observe_execution(record, role), **self.stable_stop(pc.setup_settled),
+                    **self.unknown_bound(),
                 )
                 self.executions[role.role] = execution
                 record.checks[f"setup_{role.role}_final"] = {k: (execution or {}).get(k) for k in ("status", "phase", "error")}
                 record.checks[f"setup_{role.role}_poll"] = dict(client.last_poll)
+                if client.last_poll.get("stop") == "unknown-limit":
+                    product_failures.append(self.open_ended_unknown(record, role, execution, client.last_poll))
+                    continue
                 if not settled:
                     failures.append(f"{role.node} setup did not settle ({client.last_poll.get('stop')}): "
                                     f"{record.checks[f'setup_{role.role}_final']}")
@@ -1072,7 +1275,11 @@ class Driver:
         self.snapshots["engine_ready"] = results
         self.require_actionable(record)
         if failures:
-            raise StepFailed(" | ".join(failures))
+            raise StepFailed(" | ".join(failures + product_failures + blocked))
+        if product_failures:
+            raise ProductFailure(" | ".join(product_failures + blocked))
+        if blocked:
+            raise ProductBlocked(" | ".join(blocked))
 
     def zone_add(self, record: StepRecord, *, readd: bool = False) -> None:
         zone = self.topology.zone
@@ -1415,14 +1622,19 @@ class Driver:
             if tls.get("leaf_sha256") != self.pins.get(role.node):
                 raise StepFailed(f"{role.node}: panel TLS leaf changed or panel did not return: {tls}")
         failures = []
+        blocked = []
         for role in (P, S):
             with self.panel(role) as client:
                 client.login(ADMIN_USERNAME, self.passwords[role.node])
                 verdict = self.wait_pair_readiness(record, role, client, timeout=240, label="return")
-                if not verdict["passed"]:
+                if verdict.get("blocked"):
+                    blocked.append(self.readiness_failure(role, verdict))
+                elif not verdict["passed"]:
                     failures.append(self.readiness_failure(role, verdict))
         if failures:
-            raise StepFailed("after management returned: " + " | ".join(failures))
+            raise StepFailed("after management returned: " + " | ".join(failures + blocked))
+        if blocked:
+            raise ProductBlocked("after management returned: " + " | ".join(blocked))
         truth = self._panel_truth(record, "after-return")
         prior = self.snapshots.get("before_disable") or {}
         differences = []
@@ -1559,8 +1771,9 @@ API_SEQUENCE = [
     ("setup-review", "GET /api/v1/setup, PUT /api/v1/setup/guidance, PUT /api/v1/setup, POST /api/v1/setup/plan"),
     ("setup-start", "POST /api/v1/setup/start (once, fixed request_id), poll GET /api/v1/setup/operation?request_id="),
     ("pair-ready", "poll GET /api/v1/dns/engine on both Panels until D1 holds (primary: pair_ready true, "
-                   "secondary_ready false; secondary: secondary_ready true, pair_ready false); a stable snapshot "
-                   "that does not satisfy it stops early; poll setup operation until settled"),
+                   "secondary_ready absent; secondary: secondary_ready true, pair_ready false); a stable snapshot "
+                   "that does not satisfy it stops early; a secondary without secondary_ready is blocked-product "
+                   "(this build does not report secondary readiness); poll setup operation until settled"),
     ("zone-add", "POST /api/v1/domains/create {project_type:dnsonly}, GET /api/v1/domains, GET .../dns/zone, GET .../dns/records"),
     ("record-add", "POST /api/v1/domains/{id}/dns/records"),
     ("record-edit", "ui-replace: DELETE .../dns/records?id= then POST; api-put: PUT .../dns/records"),
@@ -1596,9 +1809,13 @@ def build_plan(args: argparse.Namespace, topology: topo.Topology) -> dict[str, A
             "pdns-primary/bind-secondary is expected to end refused-by-product-gate "
             "(server plan blocker pdns_primary_switch_paused) while its gate is closed; --license-mode none is "
             "expected to end blocked-product at license; acceptance-fixture runs do not evidence license behaviour; "
-            "D1 needs secondary_ready in GET /api/v1/dns/engine, which the pair1 build (aa6b9380) does not serialize, "
-            "so such a build fails pair-ready after the stable-state window"
+            "D1 needs secondary_ready on the secondary's GET /api/v1/dns/engine and none on the primary's; a build "
+            "that does not report it (pair1, aa6b9380) ends pair-ready blocked-product; a listed unknown setup "
+            "state (" + ", ".join(gd.UNKNOWN_STATE_CODES) + ") lasting longer than "
+            f"{args.unknown_state_limit_seconds:g}s fails the step with cause product (D-024 open-ended unknown)"
         ),
+        "unknown_state_limit_seconds": args.unknown_state_limit_seconds,
+        "unknown_state_codes": list(gd.UNKNOWN_STATE_CODES),
         "safety": [
             "guests are reached only through the fixture plan's loopback SSH ports",
             "every mutating guest command re-checks the SMBIOS UUID and fixture marker",
@@ -1623,6 +1840,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         current.add_argument("--license-mode", choices=LICENSE_MODES, default="none")
         current.add_argument("--edit-method", choices=EDIT_METHODS, default="ui-replace")
         current.add_argument("--infrastructure-dns", action="store_true")
+        current.add_argument("--unknown-state-limit-seconds", type=float, default=300.0,
+                             help="D-024: how long a listed unknown/reconciling setup state may last before it is "
+                                  "recorded as an open-ended unknown and the step fails with cause product")
         if name == "run":
             current.add_argument("--identity-file", type=Path, required=True)
             current.add_argument("--dist-archive", type=Path, required=True)
@@ -1643,6 +1863,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             current.add_argument("--stable-stop-seconds", type=float, default=300.0,
                                  help="stop a wait once the polled state is unchanged this long and still fails "
                                       "its rule (0 disables)")
+            current.add_argument("--product-web-src", type=Path,
+                                 help="the PRODUCT commit's web/src (build-dist.sh exports it next to the dist, "
+                                      "with PRODUCT-COMMIT); required when the product commit differs from the "
+                                      "driver's checkout")
             current.add_argument("--execute", action="store_true")
     return parser.parse_args(argv)
 
@@ -1664,6 +1888,70 @@ def validate_run_args(args: argparse.Namespace) -> None:
         raise SystemExit("local tunnel ports must differ")
     if args.stable_stop_seconds < 0:
         raise SystemExit("--stable-stop-seconds must be 0 (disabled) or positive")
+    if args.unknown_state_limit_seconds <= 0:
+        raise SystemExit("--unknown-state-limit-seconds must be positive (D-024 needs a bound)")
+    args.web_src_provenance = resolve_product_web_src(args)
+
+
+PRODUCT_COMMIT_MARKER = "PRODUCT-COMMIT"
+
+
+def driver_checkout(root: Path = gd.REPO) -> dict[str, Any]:
+    """The commit of the driver's own checkout and whether its web/src is unmodified (None when unknown).
+
+    A driver extracted from ``git archive`` has no repository: its commit is
+    unknown and a run must name the product's texts with --product-web-src.
+    """
+
+    git = shutil.which("git")
+    if git is None or not (root / ".git").exists():
+        return {"commit": None, "web_src_clean": None}
+    base = [git, "-c", "safe.directory=*", "-C", str(root)]
+    try:
+        head = subprocess.run(base + ["rev-parse", "HEAD"], capture_output=True, text=True, timeout=30, check=True)
+        dirty = subprocess.run(base + ["status", "--porcelain", "--", "web/src"], capture_output=True, text=True,
+                               timeout=60, check=True)
+    except (OSError, subprocess.SubprocessError):
+        return {"commit": None, "web_src_clean": None}
+    return {"commit": head.stdout.strip() or None, "web_src_clean": not dirty.stdout.strip()}
+
+
+def resolve_product_web_src(args: argparse.Namespace, checkout: Callable[[], dict[str, Any]] | None = None
+                            ) -> dict[str, Any]:
+    """Where the guidance texts come from: always the product commit's web/src.
+
+    Without --product-web-src the driver's own web/src is used only when its
+    checkout is exactly the product commit with web/src unmodified. With it,
+    the directory must hold the files the driver reads and a PRODUCT-COMMIT
+    marker (written by build-dist.sh) naming --dist-commit.
+    """
+
+    commit = args.dist_commit
+    if args.product_web_src is None:
+        own = (checkout or driver_checkout)()
+        if own["commit"] == commit and own["web_src_clean"]:
+            return {"source": "driver checkout", "web_src": str(gd.WEB_SRC), "commit": commit}
+        raise SystemExit(
+            f"the product build is commit {commit} but the driver's checkout is {own['commit'] or 'unknown'}"
+            f"{'' if own['web_src_clean'] in (True, None) else ' with a modified web/src'}; the guidance texts must "
+            "come from the product: pass --product-web-src <dir> (scripts/build-dist.sh exports it as "
+            "<dist>/product-web-src and records it in dist.json; run-topology.sh passes it)")
+    web_src = args.product_web_src.resolve()
+    missing = gd.missing_web_src_files(web_src)
+    if missing:
+        raise SystemExit(f"--product-web-src {web_src} lacks {missing}")
+    marker = web_src / PRODUCT_COMMIT_MARKER
+    try:
+        recorded = marker.read_text(encoding="ascii").split()
+    except (OSError, UnicodeDecodeError):
+        raise SystemExit(f"--product-web-src {web_src} has no readable {PRODUCT_COMMIT_MARKER} marker "
+                         "(scripts/build-dist.sh writes it); the texts' commit cannot be established") from None
+    if not recorded or recorded[0] != commit:
+        raise SystemExit(f"--product-web-src {web_src} is from commit {recorded[0] if recorded else 'unknown'}, "
+                         f"the product build is {commit}")
+    args.product_web_src = web_src
+    return {"source": "--product-web-src", "web_src": str(web_src), "commit": commit,
+            "marker": PRODUCT_COMMIT_MARKER}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1679,9 +1967,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.action == "plan" or not args.execute:
         if args.action == "run":
             validate_run_args(args)
+            plan["web_src"] = args.web_src_provenance
         print(json.dumps(plan, indent=2, sort_keys=True))
         return 0
     validate_run_args(args)
+    plan["web_src"] = args.web_src_provenance
     return execute_run(args, topology, plan)
 
 
@@ -1709,12 +1999,14 @@ def execute_run(args: argparse.Namespace, topology: topo.Topology, plan: dict[st
         dist_root=identity["root"], dist_sha256=identity["sha256"], dist_commit=identity["commit"],
         dist_tree=identity["tree"], setup_timeout=args.setup_timeout, dns_timeout=args.dns_timeout,
         reboot_timeout=args.reboot_timeout, stable_stop_seconds=args.stable_stop_seconds or None,
+        unknown_state_limit=args.unknown_state_limit_seconds,
+        web_src=args.web_src_provenance["web_src"], web_src_provenance=args.web_src_provenance,
     )
     redactor = Redactor(keys.values())
     writer = ev.EvidenceWriter(args.evidence_root.resolve(), run_id, redactor)
     writer.write_json("run.json", {"schema": ev.RUN_SCHEMA, "plan": plan, "config": config.public(),
                                    "cell_directory": fixture_plan["cell_directory"]})
-    translator = gd.Translator(gd.load_catalog())
+    translator = gd.Translator(gd.load_catalog(Path(config.web_src) / gd.WEB_SRC_FILES["i18n"]))
     guests = guest_module.Guests(fixture_plan, args.identity_file)
     ports = {"debian13": args.local_port_debian13, "arch": args.local_port_arch}
 

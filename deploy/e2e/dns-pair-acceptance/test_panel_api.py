@@ -171,6 +171,49 @@ class PanelClientTest(unittest.TestCase):
         self.assertEqual(self.client.last_poll["stop"], "timeout", "a running step is progress, not a settled state")
         self.assertEqual(self.now, 900)
 
+    def test_poll_bounds_a_listed_unknown_state_even_while_it_changes(self) -> None:
+        # D-024 time bound: an unknown state is stopped at the limit although it is
+        # "running" (never stable-stopped) and although other fields change.
+        path = "/api/v1/setup/operation?request_id=r"
+        unknown = [ok({"status": "running", "error": {"code": "server_setup_reconciling"}, "n": i}) for i in range(200)]
+        self.script.on("GET", path, [ok({"status": "running", "n": -1})] + unknown)
+
+        def bounded(value: dict) -> str | None:
+            return (value.get("error") or {}).get("code")
+
+        done, last, reads = self.client.poll(lambda view: view.get(path).json(), lambda value: False,
+                                             timeout=2700, interval=5, stable_after=300,
+                                             settled=lambda value: value.get("status") != "running",
+                                             bounded=bounded, bound_seconds=300)
+        self.assertFalse(done)
+        poll = self.client.last_poll
+        self.assertEqual((poll["stop"], poll["unknown_state"], poll["unknown_limit"]),
+                         ("unknown-limit", "server_setup_reconciling", 300))
+        self.assertEqual(poll["unknown_seconds"], 300)
+        self.assertEqual(poll["unknown_reads"], 61)
+        self.assertEqual(self.now, 305, "the span starts at the first unknown read (t=5)")
+
+    def test_poll_unknown_span_restarts_when_the_state_leaves_it(self) -> None:
+        path = "/api/v1/setup/operation?request_id=r"
+        unknown = ok({"status": "running", "error": {"code": "server_setup_reconciling"}})
+        clear = ok({"status": "running"})
+        failed_read = Response(502, [("Content-Type", "application/json")], b'{"error":"bad gateway"}')
+        # 40 unknown reads (200 s), one clear read, then unknown again with a failed read inside.
+        self.script.on("GET", path, [unknown] * 40 + [clear] + [unknown] * 10 + [failed_read] + [unknown] * 200)
+
+        def read(view):  # noqa: ANN001, ANN202
+            response = view.get(path)
+            return response.json() if response.status == 200 else {"poll_error": f"HTTP {response.status}"}
+
+        done, last, reads = self.client.poll(read, lambda value: False, timeout=2700, interval=5,
+                                             bounded=lambda value: (value.get("error") or {}).get("code"),
+                                             bound_seconds=300)
+        self.assertEqual(self.client.last_poll["stop"], "unknown-limit")
+        # The clear read at t=200 ends the first span; the second starts at t=205 and a failed
+        # read does not reset it, so the limit is reached at t=505.
+        self.assertEqual(self.now, 505)
+        self.assertEqual(self.client.last_poll["unknown_reads"], 60)
+
     def test_lost_mutation_response_is_unknown_not_retried(self) -> None:
         self.script.on("POST", "/api/v1/setup/start", TimeoutError("read timed out"))
         with self.assertRaises(UnknownOutcome):

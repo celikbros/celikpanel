@@ -10,6 +10,15 @@
 # neutralised with NPM=true, exactly as the kill-matrix batches reuse web/dist.
 # Output: /var/tmp/cp-pair-accept/dist/<commit>/ with the archive and dist.json.
 #
+# Also written next to the archive (pair2 corrections):
+# - product-web-src/: the commit's web/src with a PRODUCT-COMMIT marker
+#   ("<commit> <tree>"). The driver resolves every guidance text from it
+#   (--product-web-src; run-topology.sh passes it from dist.json), so the texts
+#   are the PRODUCT's even when the driver comes from another commit.
+# - archive-evidence-entries.json: how many archive entries lie under any
+#   evidence/ directory and under deploy/e2e/ (a recorded observation only;
+#   nothing is refused on it). The counts are also in dist.json.
+#
 # --acceptance-license (test only; driver --license-mode acceptance-fixture):
 # first the ordinary make dist runs and must pass its own packaging checks,
 # including the acceptance-license guard. Then a separate archive is derived
@@ -51,6 +60,11 @@ src=$out/src
 [[ -f $REPO/web/dist/index.html ]] || { echo "build web/dist for $full first" >&2; exit 2; }
 mkdir -p "$src"
 git -c safe.directory='*' -C "$REPO" archive "$full" | tar -x -C "$src"
+# The product's own texts for the driver, exported before anything is built.
+[[ -f $src/web/src/components/ServerSetup.tsx ]] || { echo "commit $full has no web/src" >&2; exit 2; }
+mkdir -p "$out/product-web-src"
+cp -a "$src/web/src/." "$out/product-web-src/"
+printf '%s %s\n' "$full" "$tree" > "$out/product-web-src/PRODUCT-COMMIT"
 mkdir -p "$src/web/dist"
 cp -a "$REPO/web/dist/." "$src/web/dist/"
 ( cd "$src/web/dist" && find . -type f -print0 | sort -z | xargs -0 sha256sum ) > "$out/web-dist.sha256"
@@ -114,13 +128,57 @@ else
 fi
 sha=$(sha256sum "$archive" | cut -d' ' -f1)
 "$GO" version > "$out/go-version.txt"
+# Observation only (pair2 operator did this by hand): archive entries under any
+# evidence/ directory and under deploy/e2e/. The product is fixed separately.
+python3 - "$archive" "$sha" > "$out/archive-evidence-entries.json" <<'PY'
+import json, sys, tarfile
+archive, sha = sys.argv[1:]
+total = 0
+groups = {"under_evidence_dir": [], "under_deploy_e2e": []}
+with tarfile.open(archive, "r:gz") as bundle:
+    for member in bundle:
+        total += 1
+        name = member.name.lstrip("./").rstrip("/")
+        relative = name.split("/", 1)[1] if "/" in name else ""
+        parts = relative.split("/") if relative else []
+        kind = "file" if member.isfile() else "dir" if member.isdir() else "other"
+        if "evidence" in parts[:-1]:
+            groups["under_evidence_dir"].append((relative, kind))
+        if relative.startswith("deploy/e2e/"):
+            groups["under_deploy_e2e"].append((relative, kind))
+document = {
+    "schema": "celikpanel/dns-pair-acceptance-archive-observation/v1",
+    "archive": archive,
+    "sha256": sha,
+    "total_entries": total,
+    "note": "recorded observation only; entries are counted, nothing is refused on them",
+}
+for key, entries in groups.items():
+    document[key] = {
+        "entries": len(entries),
+        "files": sum(1 for _, kind in entries if kind == "file"),
+        "directories": sum(1 for _, kind in entries if kind == "dir"),
+        "sample": sorted(path for path, _ in entries)[:10],
+    }
+json.dump(document, sys.stdout, indent=2, sort_keys=True)
+sys.stdout.write("\n")
+PY
 license_mode=customer
 [[ $acceptance -eq 0 ]] || license_mode=acceptance-fixture
-python3 - "$out/dist.json" "$archive" "$sha" "$full" "$tree" "$version" "$license_mode" <<'PY'
+python3 - "$out/dist.json" "$archive" "$sha" "$full" "$tree" "$version" "$license_mode" "$out" <<'PY'
 import json, sys
-path, archive, sha, commit, tree, version, license_mode = sys.argv[1:]
+path, archive, sha, commit, tree, version, license_mode, out = sys.argv[1:]
+with open(out + "/archive-evidence-entries.json", encoding="utf-8") as handle:
+    observed = json.load(handle)
 document = {"archive": archive, "sha256": sha, "commit": commit, "tree": tree,
-            "version": version, "root": "celikpanel-" + version}
+            "version": version, "root": "celikpanel-" + version,
+            "product_web_src": out + "/product-web-src", "product_web_src_commit": commit,
+            "archive_observation": {
+                "file": out + "/archive-evidence-entries.json",
+                "total_entries": observed["total_entries"],
+                "entries_under_evidence_dirs": observed["under_evidence_dir"]["entries"],
+                "entries_under_deploy_e2e": observed["under_deploy_e2e"]["entries"],
+                "note": observed["note"]}}
 if license_mode == "acceptance-fixture":
     document.update({"license_mode": "acceptance-fixture", "panel_build_tags": "acceptance_license",
                      "release": False,

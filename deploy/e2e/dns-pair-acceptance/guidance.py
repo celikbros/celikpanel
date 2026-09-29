@@ -4,7 +4,8 @@ D-024 (docs/OPERATION-GUIDANCE.md) requires every waiting or failed state to
 name the reason, who must act, the next action and how work resumes. The
 driver cannot look at a browser, so it applies the web UI's own selection
 rules to the exact API payloads and resolves the result through the shipped
-translation catalogues in ``web/src/i18n``:
+translation catalogues in ``web/src/i18n`` (the product's ``web/src`` when a
+run passes ``--product-web-src``; the driver's own checkout otherwise):
 
 * ``api_error_guidance``  - ``apiErrorText`` (web/src/lib/apiError.ts):
   ``err.<code>.<reason>``, then ``err.<code>``, then the server message.
@@ -40,7 +41,16 @@ from pathlib import Path
 from typing import Any, Iterable
 
 REPO = Path(__file__).resolve().parents[3]
-I18N_ROOT = REPO / "web" / "src" / "i18n"
+# The driver's own checkout. A run whose product build comes from another
+# commit passes --product-web-src (the product's web/src, exported next to the
+# dist by scripts/build-dist.sh) so every text below is the PRODUCT's.
+WEB_SRC = REPO / "web" / "src"
+I18N_ROOT = WEB_SRC / "i18n"
+WEB_SRC_FILES = {
+    "i18n": "i18n",
+    "wizard": "components/ServerSetup.tsx",
+    "setup_guidance": "lib/serverSetupGuidance.ts",
+}
 ENTRY_RE = re.compile(
     r"""^\s*(?P<kq>['"])(?P<key>[A-Za-z0-9_.:-]+)(?P=kq)\s*:\s*"""
     r"""(?P<quote>['"])(?P<text>(?:\\.|(?!(?P=quote)).)*)(?P=quote)\s*,?\s*$"""
@@ -85,6 +95,19 @@ REVIEWED_DNS_PEER_REASONS = frozenset(
         "dns_peer_owner_edit_unknown",
     }
 )
+
+# D-024 time bound (pair2 t3): codes that mean "the result is not known yet /
+# being reconciled". The wizard's text for them names no actor and no next
+# action other than "do not start it again", which is acceptable only for a
+# bounded time (--unknown-state-limit-seconds, default 300). Data, not
+# wording: add a code here only after reading what the wizard shows for it.
+UNKNOWN_STATE_CODES = ("server_setup_reconciling",)
+LICENSE_REQUIRED_CODE = "license_required"
+# Role guidance that instructs the owner to start or point the peer at this
+# server, by text key (pair2 t3: shown while the primary's own DNS step had not
+# succeeded). Only keys the product wizard actually uses for that role at run
+# time (role_guidance_keys) are checked.
+PEER_START_INSTRUCTION_KEYS = {"primary": ("setup.guide.startSecondary",)}
 
 # Reviewed actor for codes whose owner the product text names. Anything not
 # listed is recorded as "stated in text" and left to the human reviewer.
@@ -482,7 +505,10 @@ def deletion_pending_guidance(translator: Translator, status: int, body: Any, *,
     return result
 
 
-WIZARD_SOURCE = REPO / "web" / "src" / "components" / "ServerSetup.tsx"
+WIZARD_SOURCE = WEB_SRC / WEB_SRC_FILES["wizard"]
+GUIDANCE_SOURCE = WEB_SRC / WEB_SRC_FILES["setup_guidance"]
+ROLE_KEY_RE = re.compile(r"dns_role\s*===\s*'primary'\s*\?\s*'(?P<primary>[A-Za-z0-9_.]+)'"
+                         r"\s*:\s*'(?P<secondary>[A-Za-z0-9_.]+)'")
 WIZARD_CODE_MAP_RE = re.compile(r"const codeKey: Record<string, TranslationKey> = \{(?P<body>.*?)\n\};", re.S)
 WIZARD_CODE_ENTRY_RE = re.compile(r"^\s*(?P<code>[A-Za-z0-9_]+)\s*:\s*'(?P<key>[A-Za-z0-9_.]+)'\s*,?\s*$", re.M)
 PDNS_PRIMARY_GATE_CODE = "pdns_primary_switch_paused"
@@ -537,3 +563,105 @@ def preview_blocker_guidance(translator: Translator, blockers: list[Any]) -> dic
     messages = [_item(key_by_code.get(code, f"dnsEngine.blocker.{code}")) for code in codes]
     return _finish(translator, source="dns-engine-preview", state="unmet-prerequisite",
                    code=codes[0] if codes else None, reason=None, title=None, messages=messages, details=[])
+
+
+# ---------------------------------------------------------------------------
+# Product web source, unknown states, license and role guidance (pair2)
+# ---------------------------------------------------------------------------
+
+def missing_web_src_files(web_src: Path) -> list[str]:
+    """Files the driver reads from a product ``web/src``; empty when all exist."""
+
+    return [relative for relative in WEB_SRC_FILES.values() if not (Path(web_src) / relative).exists()]
+
+
+def _error_code(execution: Any) -> str | None:
+    if not isinstance(execution, dict) or not isinstance(execution.get("error"), dict):
+        return None
+    code = execution["error"].get("code")
+    return code.split(":")[0] if isinstance(code, str) and code else None
+
+
+def unknown_state_code(execution: Any) -> str | None:
+    """The listed unknown/reconciling code of a non-terminal setup state, else None."""
+
+    if not isinstance(execution, dict) or execution.get("status") in {"succeeded", "failed"}:
+        return None
+    code = _error_code(execution)
+    return code if code in UNKNOWN_STATE_CODES else None
+
+
+def license_required_state(execution: Any) -> bool:
+    """A setup state that tells the owner a license is required (code or the license phase)."""
+
+    if not isinstance(execution, dict):
+        return False
+    return _error_code(execution) == LICENSE_REQUIRED_CODE or (
+        execution.get("status") == "waiting" and execution.get("phase") == "license")
+
+
+def dns_step_status(execution: Any) -> str | None:
+    if not isinstance(execution, dict):
+        return None
+    return next((step.get("status") for step in execution.get("steps") or []
+                 if isinstance(step, dict) and step.get("kind") == "dns"), None)
+
+
+DNS_PHASES = frozenset({"dns", "dns_readiness"})
+DNS_ROLLED_BACK_CODE = "server_setup_dns_rolled_back"
+
+
+def dns_blocking_state(execution: Any) -> str | None:
+    """Why the primary's own DNS step cannot let a secondary succeed now, or None.
+
+    The product's role text deliberately lets the owner start the secondary
+    while the primary's setup is still progressing, so an ordinary ``running``
+    or ``pending`` DNS step is not a contradiction. Blocking are: the DNS step
+    ``failed``; a listed unknown state (``UNKNOWN_STATE_CODES``); a
+    ``waiting`` state with a code at the DNS step (phase ``dns`` /
+    ``dns_readiness`` or the current step is the ``dns`` step); a rolled-back
+    DNS result (``server_setup_dns_rolled_back``). Never once the DNS step
+    succeeded.
+    """
+
+    if not isinstance(execution, dict):
+        return None
+    dns_status = dns_step_status(execution)
+    if dns_status == "succeeded":
+        return None
+    code = _error_code(execution)
+    if code == DNS_ROLLED_BACK_CODE:
+        return f"dns-rolled-back:{code}"
+    if dns_status == "failed":
+        return f"dns-step-failed:{code or 'no-code'}"
+    unknown = unknown_state_code(execution)
+    if unknown:
+        return f"unknown:{unknown}"
+    if execution.get("status") == "waiting" and code:
+        steps = [step for step in execution.get("steps") or [] if isinstance(step, dict)]
+        current = next((step for step in steps if step.get("status") == "failed"), None) or next(
+            (step for step in steps if step.get("status") in {"running", "waiting"}), None)
+        if execution.get("phase") in DNS_PHASES or (current or {}).get("kind") == "dns":
+            return f"dns-waiting:{code}"
+    return None
+
+
+def role_guidance_keys(source: Path = GUIDANCE_SOURCE) -> dict[str, list[str]]:
+    """Text keys ``setupExecutionGuidance`` picks by ``context.dns_role``, read from the shipped source."""
+
+    try:
+        text = Path(source).read_text(encoding="utf-8")
+    except OSError:
+        return {"primary": [], "secondary": []}
+    matches = list(ROLE_KEY_RE.finditer(text))
+    return {"primary": [m.group("primary") for m in matches], "secondary": [m.group("secondary") for m in matches]}
+
+
+def peer_start_keys(source: Path = GUIDANCE_SOURCE, role: str = "primary") -> dict[str, Any]:
+    """The instruction keys to check for ``role``: listed AND used by the product wizard for that role."""
+
+    role_keys = role_guidance_keys(source)
+    listed = PEER_START_INSTRUCTION_KEYS.get(role, ())
+    keys = [key for key in listed if key in role_keys.get(role, [])]
+    return {"source": str(source), "role": role, "role_keys": role_keys.get(role, []), "listed": list(listed),
+            "keys": keys, "state": "resolved" if keys else "not-used-by-this-build"}

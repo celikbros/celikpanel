@@ -5,13 +5,19 @@ small state machine speaking the Panel API subset the driver uses, including
 its CSRF (Origin) and session checks; ``FakeGuests`` answers the probe
 commands from the same world and records every guest command.
 
-The DNS engine card bodies are the real pair1 captures in
-``fixtures/pair1/`` (copied, minimal, redacted; the evidence tree is never read
-at test time). A pair1-build secondary reports ``pair_ready: false`` and no
-build serializes ``secondary_ready``; ``api_secondary_ready=True`` adds that
-field (primary ``false``, secondary ``true``) for tests that need the flow
-beyond ``pair-ready`` under D1. It is a stated assumption about a later API,
-not something the pair1 build returned.
+The DNS engine card bodies are real captures (copied, minimal, redacted; the
+evidence tree is never read at test time):
+
+* ``api_secondary_ready=True`` (default in the sequence tests): the pair2
+  build ``916e1577`` (``fixtures/pair2/``). The secondary carries
+  ``secondary_ready: true`` and ``pair_ready: false``; the primary carries
+  ``pair_ready: true`` and no ``secondary_ready`` key (product contract).
+* ``api_secondary_ready=False``: the pair1 build ``aa6b9380``
+  (``fixtures/pair1/``), which serializes no ``secondary_ready`` anywhere.
+
+An execution-script entry may carry ``"_license_state"``: when that entry is
+served, the Panel's license status reports that state from then on (the key
+itself is not returned).
 """
 
 from __future__ import annotations
@@ -31,7 +37,9 @@ from panel_api import PanelClient, Response
 COOKIE = "fake-session-cookie-value-0123456789"
 FIXTURE_KEY = "CPK-acce57f1c7" + "0" * 54
 FIXTURE_LABEL = "ACCEPTANCE FIXTURE \u2014 NOT FOR PRODUCTION"
-FIXTURES = Path(__file__).resolve().parent / "fixtures" / "pair1"
+FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures"
+FIXTURES = FIXTURE_ROOT / "pair1"
+FIXTURES_PAIR2 = FIXTURE_ROOT / "pair2"
 CAPTURED_ENGINE = {
     ("primary", "bind"): "engine-bind-primary-paired.json",
     ("secondary", "bind"): "engine-bind-secondary-paired.json",
@@ -42,26 +50,27 @@ HOST_PUB = "ssh-ed25519 " + base64.b64encode(
     bytes.fromhex("0000000b7373682d6564323535313900000020") + bytes(range(32))).decode()
 
 
-def captured(name: str) -> dict[str, Any]:
-    """One captured pair1 exchange (``fixtures/pair1/<name>``)."""
+def captured(name: str, run: str = "pair1") -> dict[str, Any]:
+    """One captured exchange (``fixtures/<run>/<name>``)."""
 
-    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+    return json.loads((FIXTURE_ROOT / run / name).read_text(encoding="utf-8"))
 
 
-def captured_engine(role: str, engine: str) -> dict[str, Any]:
-    """The real pair1 ``GET /api/v1/dns/engine`` body for a paired role and engine.
+def captured_engine(role: str, engine: str, run: str = "pair2") -> dict[str, Any]:
+    """The real ``GET /api/v1/dns/engine`` body of that run for a paired role and engine.
 
-    pair1 never showed a paired PowerDNS primary (the server plan refused it),
-    so that one is the captured BIND primary with the engine entries and the
-    operation target swapped; every other body is returned exactly as captured.
+    Neither run showed a ready paired PowerDNS primary (pair1: refused by the
+    server plan; pair2 t3: failed inside the product), so that one is the
+    captured BIND primary with the engine entries and the operation target
+    swapped; every other body is returned exactly as captured.
     """
 
     name = CAPTURED_ENGINE.get((role, engine))
     if name:
-        return captured(name)["body"]
+        return captured(name, run)["body"]
     if (role, engine) != ("primary", "pdns"):
         raise ValueError(f"no captured engine body for {role}/{engine}")
-    body = captured(CAPTURED_ENGINE[("primary", "bind")])["body"]
+    body = captured(CAPTURED_ENGINE[("primary", "bind")], run)["body"]
     body["active_engine"] = "pdns"
     body["operation"]["target_engine"] = "pdns"
     for entry in body["engines"]:
@@ -100,8 +109,9 @@ class FakePanel:
                  api_secondary_ready: bool = False, engine_script: list[dict] | None = None,
                  plan_response: tuple[int, Any] | None = None, start_response: tuple[int, Any] | None = None) -> None:
         self.node, self.role, self.engine, self.world = node, role, engine, world
-        # False: exactly the pair1 API (no secondary_ready). True: the D1 field is serialized.
+        # False: exactly the pair1 API (no secondary_ready). True: the pair2 API (on the secondary only).
         self.api_secondary_ready = api_secondary_ready
+        self.license_state_override: str | None = None
         # Explicit engine bodies per poll (after setup start); the last one repeats.
         self.engine_script = engine_script
         self.engine_polls = 0
@@ -179,6 +189,9 @@ class FakePanel:
     def license_status(self) -> dict[str, Any]:
         status: dict[str, Any] = {"state": "active" if self.licensed else "missing", "observation": "known",
                                   "can_provision": self.licensed}
+        if self.licensed and self.license_state_override:
+            status.update({"state": self.license_state_override, "can_provision": False,
+                           "observation": "unknown"})
         if self.licensed:
             status.update({"product": "celikpanel-acceptance-fixture", "license_id": "acceptance-fixture",
                            "expires_at": 1790000000, "offline_until": 1789000060})
@@ -198,6 +211,8 @@ class FakePanel:
         index = min(self.polls, len(script) - 1)
         self.polls += 1
         value = json.loads(json.dumps(script[index]))
+        if "_license_state" in value:
+            self.license_state_override = value.pop("_license_state")
         value.update({"id": "exec-" + self.node, "request_id": self.started["request_id"], "plan_id": "plan-" + self.node})
         return value
 
@@ -208,9 +223,7 @@ class FakePanel:
             body = json.loads(json.dumps(self.engine_script[min(self.engine_polls, len(self.engine_script) - 1)]))
             self.engine_polls += 1
             return body
-        body = captured_engine(self.role, self.engine)
-        if self.api_secondary_ready:
-            body["secondary_ready"] = self.role == "secondary"
+        body = captured_engine(self.role, self.engine, "pair2" if self.api_secondary_ready else "pair1")
         body["zone_count"] = len(self.domains)
         return body
 

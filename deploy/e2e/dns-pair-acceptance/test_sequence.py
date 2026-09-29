@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 import tempfile
 import unittest
@@ -57,15 +58,15 @@ class Harness:
                  engine_scripts: dict | None = None, plan_responses: dict | None = None,
                  start_responses: dict | None = None, installer_stdout: dict | None = None,
                  journals: dict | None = None, setup_timeout: float = 600,
-                 stable_stop_seconds: float | None = 300.0) -> None:
+                 stable_stop_seconds: float | None = 300.0, unknown_state_limit: float = 300.0) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name).resolve()
         self.topology = topo.resolve(topology_name, primary_node=primary_node)
         self.world = fakes.World()
         P, S = self.topology.primary, self.topology.secondary
         cell = self.topology.cell_id("t1") if license_mode == "acceptance-fixture" else None
-        # api_secondary_ready=True: the fake serializes secondary_ready (D1's field). The pair1
-        # build does not; tests of that exact API pass api_secondary_ready=False.
+        # api_secondary_ready=True: the pair2 build's API (secondary_ready on the secondary only).
+        # The pair1 build serializes it nowhere; tests of that exact API pass api_secondary_ready=False.
         common = {"acceptance_cell": cell, "acceptance_label": acceptance_label,
                   "pdns_primary_gate_open": pdns_primary_gate_open,
                   "refused_plan_side_effect": refused_plan_side_effect,
@@ -97,7 +98,8 @@ class Harness:
                            edit_method=edit_method, dist_archive=Path("/nonexistent/celikpanel.tar.gz"),
                            dist_root=DIST["root"], dist_sha256=DIST["sha256"], dist_commit=DIST["commit"],
                            dist_tree=DIST["tree"], setup_timeout=setup_timeout, dns_timeout=20, deletion_timeout=60,
-                           poll_interval=3, dns_interval=2, stable_stop_seconds=stable_stop_seconds)
+                           poll_interval=3, dns_interval=2, stable_stop_seconds=stable_stop_seconds,
+                           unknown_state_limit=unknown_state_limit)
         if license_mode == "owner-key":
             for key in config.license_keys.values():
                 self.redactor.register(key)
@@ -391,31 +393,53 @@ class SequenceTest(unittest.TestCase):
 
     # -- pair1 corrections ----------------------------------------------------
 
-    def test_pair1_api_shape_fails_pair_ready_early_with_both_payloads(self) -> None:
-        # The exact pair1 bodies: no secondary_ready anywhere. D1 cannot pass; the
-        # driver must stop once the snapshot is stable, not wait out the timeout.
+    def test_pair1_build_is_blocked_product_at_pair_ready_without_waiting(self) -> None:
+        # The exact pair1 bodies: no secondary_ready anywhere. The primary satisfies the
+        # corrected D1 (the key must be absent there); the secondary's build does not
+        # report secondary readiness: blocked-product at once, not a failure after a wait.
         h = self.harness("bind/bind", primary_node="debian13", api_secondary_ready=False, setup_timeout=2700)
         result = h.run()
-        self.assertEqual(result["overall"], "failed")
+        self.assertEqual(result["overall"], "blocked-product")
+        self.assertIsNone(result["overall_cause"])
         step = h.step("pair-ready")
-        self.assertEqual(step["verdict"], "failed")
-        self.assertIn("stopped early", step["reason"])
-        self.assertIn("secondary_ready", step["reason"])
-        self.assertLess(h.clock.now, 2700, "a stable failing state must not be waited out")
-        for role, node in (("primary", "debian13"), ("secondary", "arch")):
-            verdict = step["checks"][f"pair_readiness_ready_{role}"]
-            self.assertFalse(verdict["passed"])
-            self.assertEqual(verdict["absent_fields"], ["secondary_ready"])
-            self.assertEqual(verdict["poll"]["stop"], "stable")
-            self.assertGreaterEqual(verdict["poll"]["stable_seconds"], 300)
+        self.assertEqual(step["verdict"], "blocked-product")
+        self.assertIn("this build does not report secondary readiness", step["reason"])
+        self.assertLess(h.clock.now, 300, "an unreported field is final at once; no stable window is waited")
+        primary = step["checks"]["pair_readiness_ready_primary"]
+        self.assertTrue(primary["passed"], primary["reasons"])
+        secondary = step["checks"]["pair_readiness_ready_secondary"]
+        self.assertFalse(secondary["passed"])
+        self.assertEqual(secondary["blocked"], "secondary-readiness-not-reported")
+        self.assertEqual(secondary["poll"]["stop"], "done")
+        for role in ("primary", "secondary"):
             recorded = json.loads((h.writer.directory / step["evidence_directory"] / f"engine-ready-{role}.json")
                                   .read_text(encoding="utf-8"))
             self.assertEqual(recorded, fakes.captured(fakes.CAPTURED_ENGINE[(role, "bind")])["body"] | {"zone_count": 0})
         self.assertEqual(h.verdicts()["zone-add"], "not-run")
 
+    def test_pair2_build_passes_pair_ready_on_the_captured_shapes(self) -> None:
+        for topology_name, node in (("bind/bind", "debian13"), ("bind-primary/pdns-secondary", None)):
+            h = self.harness(topology_name, primary_node=node)
+            result = h.run()
+            self.assertEqual(result["overall"], "passed", h.step("pair-ready")["reason"])
+            step = h.step("pair-ready")
+            self.assertEqual(step["checks"]["pair_readiness_ready_primary"]["observed"]["secondary_ready"], "<absent>")
+            self.assertIs(step["checks"]["pair_readiness_ready_secondary"]["observed"]["secondary_ready"], True)
+
+    def test_primary_carrying_secondary_ready_fails_pair_ready(self) -> None:
+        wrong = fakes.captured_engine("primary", "bind") | {"secondary_ready": False}
+        h = self.harness("bind/bind", primary_node="debian13", engine_scripts={"primary": [wrong]},
+                         stable_stop_seconds=30)
+        result = h.run()
+        self.assertEqual(result["overall"], "failed")
+        step = h.step("pair-ready")
+        self.assertEqual(step["verdict"], "failed")
+        self.assertIn("contract violation", step["reason"])
+        self.assertTrue(step["checks"]["pair_readiness_ready_secondary"]["passed"])
+
     def test_secondary_reporting_pair_ready_true_fails_d1(self) -> None:
         # The old fake's shape, which the real product never returns (dnsEngineContract.ts:377).
-        wrong = fakes.captured_engine("secondary", "bind") | {"pair_ready": True, "secondary_ready": True}
+        wrong = fakes.captured_engine("secondary", "bind") | {"pair_ready": True}
         h = self.harness("bind/bind", primary_node="debian13", engine_scripts={"secondary": [wrong]})
         result = h.run()
         self.assertEqual(result["overall"], "failed")
@@ -538,6 +562,141 @@ class SequenceTest(unittest.TestCase):
         check = result["license_service_journal_check"]["debian13"]
         self.assertEqual((check["host_line_count"], check["refusal_line_count"]), (1, 1))
 
+    # -- pair2 corrections ----------------------------------------------------
+
+    def t3_script(self, reconciling_reads: int | None = None) -> list[dict]:
+        running = fakes.captured("setup-operation-primary-running-dns.json", "pair2")["body"]
+        reconciling = fakes.captured("setup-operation-primary-reconciling.json", "pair2")["body"]
+        if reconciling_reads is None:
+            return [running, reconciling]
+        done = json.loads(json.dumps(reconciling))
+        done.pop("error")
+        done["steps"][0]["status"] = "succeeded"
+        done["phase"] = "02-service"
+        return [running] + [reconciling] * reconciling_reads + [done]
+
+    def test_open_ended_unknown_setup_state_is_a_product_failure(self) -> None:
+        # pair2 t3: server_setup_reconciling for 45 minutes; now bounded (default 300 s).
+        h = self.harness("pdns-primary/bind-secondary", pdns_primary_gate_open=True, primary_script=self.t3_script(),
+                         setup_timeout=2700)
+        result = h.run()
+        self.assertEqual(result["overall"], "failed")
+        self.assertEqual(result["overall_cause"], "product")
+        step = h.step("setup-start-primary")
+        self.assertEqual((step["verdict"], step["cause"]), ("failed", "product"))
+        self.assertIn("open-ended unknown", step["reason"])
+        self.assertEqual(step["checks"]["poll_stop"]["stop"], "unknown-limit")
+        self.assertLess(h.clock.now, 400, "the unknown state is bounded, not waited out for the setup timeout")
+        finding = next(f for f in result["findings"] if f["id"] == "d024-open-ended-unknown-setup-start-primary-debian13")
+        self.assertEqual((finding["kind"], finding["principle"], finding["code"]),
+                         ("product", "D-024", "server_setup_reconciling"))
+        self.assertGreaterEqual(finding["lasted_seconds"], 300)
+        self.assertEqual(finding["limit_seconds"], 300)
+        self.assertIsNotNone(finding["first_observed_at"])
+        self.assertEqual(finding["shown"]["en"][0], TRANSLATOR.text("setup.guide.confirm"))
+        self.assertEqual(finding["shown"]["tr"][0], TRANSLATOR.text("setup.guide.confirm", language="tr"))
+        self.assertEqual(finding["payload"]["error"]["code"], "server_setup_reconciling")
+        self.assertTrue((h.writer.directory / finding["payload_file"]).is_file())
+        self.assertEqual(h.verdicts()["setup-review-secondary"], "not-run")
+        self.assertEqual(h.panels["debian13"].start_count, 1, "polling never re-starts setup")
+
+    def test_unknown_state_limit_is_configurable_and_a_resolved_unknown_passes(self) -> None:
+        h = self.harness("pdns-primary/bind-secondary", pdns_primary_gate_open=True, primary_script=self.t3_script(),
+                         setup_timeout=2700, unknown_state_limit=60)
+        h.run()
+        finding = next(f for f in h.result["findings"] if f["id"].startswith("d024-open-ended-unknown"))
+        self.assertGreaterEqual(finding["lasted_seconds"], 60)
+        self.assertLess(finding["lasted_seconds"], 70)
+        # 20 reads x 3 s of reconciling that then resolves: within the bound, no finding.
+        h = self.harness("pdns-primary/bind-secondary", pdns_primary_gate_open=True,
+                         primary_script=self.t3_script(reconciling_reads=20), setup_timeout=2700)
+        result = h.run()
+        self.assertEqual(h.verdicts()["setup-start-primary"], "passed", h.step("setup-start-primary")["reason"])
+        self.assertFalse(any(f["id"].startswith("d024-open-ended-unknown") for f in result["findings"]))
+
+    def test_primary_start_secondary_text_while_its_dns_result_is_unknown(self) -> None:
+        # t3: the captured reconciling read is a blocking DNS state -> finding; the
+        # ordinary first running read before it is recorded only.
+        h = self.harness("pdns-primary/bind-secondary", pdns_primary_gate_open=True, primary_script=self.t3_script(),
+                         setup_timeout=2700)
+        result = h.run()
+        finding = next(f for f in result["findings"]
+                       if f["id"] == "d024-contradictory-peer-start-setup-start-primary-debian13")
+        self.assertEqual((finding["kind"], finding["principle"]), ("product", "D-024"))
+        self.assertEqual(finding["keys"], ["setup.guide.startSecondary"])
+        self.assertEqual(finding["shown"]["en"], [TRANSLATOR.text("setup.guide.startSecondary")])
+        self.assertEqual(finding["shown"]["tr"], [TRANSLATOR.text("setup.guide.startSecondary", language="tr")])
+        states = [(o["dns_step_status"], o["error_code"], o["blocking"]) for o in finding["observations"]]
+        self.assertEqual(states, [("running", "server_setup_reconciling", "unknown:server_setup_reconciling")])
+        step = h.step("setup-start-primary")
+        recorded = [(o["dns_step_status"], o["error_code"], o["blocking"])
+                    for o in step["checks"]["peer_start_guidance_observations"]]
+        self.assertEqual(recorded, [("running", None, None)] + states)
+        check = step["checks"]["peer_start_guidance_keys"]
+        self.assertEqual(check["keys"], ["setup.guide.startSecondary"])
+        self.assertIn("setup.guide.startSecondary", check["role_keys"])
+
+    def test_primary_start_secondary_text_during_ordinary_progress_is_not_a_finding(self) -> None:
+        # The role text deliberately allows starting the secondary while the primary's
+        # setup is progressing: a running DNS step is recorded, never a finding.
+        h = self.harness("bind/bind", primary_node="arch")
+        result = h.run()
+        self.assertEqual(result["overall"], "passed")
+        self.assertFalse(any(f["id"].startswith("d024-contradictory-peer-start") for f in result["findings"]))
+        observed = h.step("setup-start-primary")["checks"]["peer_start_guidance_observations"]
+        self.assertEqual([(o["dns_step_status"], o["blocking"]) for o in observed], [("running", None)])
+
+    def test_primary_start_secondary_text_after_its_dns_step_failed(self) -> None:
+        reconciling = fakes.captured("setup-operation-primary-reconciling.json", "pair2")["body"]
+        for code, blocking in (("server_setup_dns_failed", "dns-step-failed:server_setup_dns_failed"),
+                               ("server_setup_dns_rolled_back", "dns-rolled-back:server_setup_dns_rolled_back")):
+            failed = json.loads(json.dumps(reconciling))
+            failed.update({"status": "failed", "error": {"code": code, "message": "DNS setup did not complete."}})
+            failed["steps"][0]["status"] = "failed"
+            h = self.harness("pdns-primary/bind-secondary", pdns_primary_gate_open=True, primary_script=[failed])
+            result = h.run()
+            self.assertEqual(h.verdicts()["setup-start-primary"], "failed")
+            finding = next(f for f in result["findings"]
+                           if f["id"] == "d024-contradictory-peer-start-setup-start-primary-debian13")
+            self.assertEqual([(o["status"], o["dns_step_status"], o["error_code"], o["blocking"])
+                              for o in finding["observations"]], [("failed", "failed", code, blocking)])
+
+    def secondary_license_script(self, license_state: str | None = None) -> list[dict]:
+        script = fakes.default_execution_script("secondary")
+        required = fakes.captured("setup-operation-secondary-license-required.json", "pair2")["body"]
+        if license_state:
+            required = dict(required, _license_state=license_state)
+        return script[:2] + [required] + script[2:]
+
+    def test_license_required_while_the_license_is_active_is_recorded_and_the_run_continues(self) -> None:
+        h = self.harness("bind/bind", primary_node="debian13", licensed=False, license_mode="acceptance-fixture",
+                         secondary_script=self.secondary_license_script())
+        result = h.run()
+        self.assertEqual(result["overall"], "passed", json.dumps(
+            [(s["id"], s["verdict"], s["reason"]) for s in result["steps"]], indent=1))
+        observations = result["license_required_observations"]
+        self.assertEqual(len(observations), 1)
+        entry = observations[0]
+        self.assertEqual((entry["step"], entry["node"], entry["source"]), ("pair-ready", "arch", "setup execution"))
+        self.assertEqual(entry["setup_state"]["error"]["code"], "license_required")
+        self.assertEqual((entry["license_status_http"], entry["license_status"]["state"]), (200, "active"))
+        self.assertLessEqual(entry["observed_at"], entry["license_status_read_at"])
+        finding = next(f for f in result["findings"] if f["id"] == "d024-license-required-while-active-pair-ready-arch")
+        self.assertEqual((finding["kind"], finding["principle"]), ("product", "D-024"))
+        self.assertEqual(finding["text"], "setup reported license required while the license was active")
+        self.assertEqual(finding["shown"]["en"], [TRANSLATOR.text("setup.guide.license")])
+        self.assertEqual(len(finding["observations"]), 1)
+        self.assertNotIn(b"CPK-", h.evidence_blob())
+
+    def test_license_required_with_an_unverified_license_is_recorded_without_a_finding(self) -> None:
+        h = self.harness("bind/bind", primary_node="debian13", licensed=False, license_mode="acceptance-fixture",
+                         secondary_script=self.secondary_license_script("verification_unavailable"))
+        result = h.run()
+        self.assertEqual(len(result["license_required_observations"]), 1)
+        self.assertEqual(result["license_required_observations"][0]["license_status"]["state"],
+                         "verification_unavailable")
+        self.assertFalse(any(f["id"].startswith("d024-license-required-while-active") for f in result["findings"]))
+
 
 class IdentityRefusalTest(unittest.TestCase):
     def test_unverified_guest_is_never_touched(self) -> None:
@@ -620,18 +779,37 @@ class CliTest(unittest.TestCase):
                                       "--work-root", "/var/tmp/cp-pair"]), 2)
         self.assertIn("run label must be lowercase", err.getvalue())
 
+    def product_web_src(self, commit: str | None) -> Path:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name) / "product-web-src"
+        shutil.copytree(gd.WEB_SRC / "i18n", root / "i18n")
+        for relative in ("components/ServerSetup.tsx", "lib/serverSetupGuidance.ts"):
+            (root / relative).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(gd.WEB_SRC / relative, root / relative)
+        if commit is not None:
+            (root / pa.PRODUCT_COMMIT_MARKER).write_text(commit + "\n", encoding="ascii")
+        return root
+
+    def base_run(self) -> list[str]:
+        return ["run", "--topology", "bind/bind", "--primary-node", "arch", "--run-label", "r1",
+                "--work-root", "/var/tmp/cp-pair", "--identity-file", "/nonexistent/id",
+                "--dist-archive", "/nonexistent/a.tar.gz", "--dist-sha256", "a" * 64, "--dist-commit", "b" * 40,
+                "--dist-tree", "c" * 40, "--evidence-root", "/nonexistent/evidence"]
+
     def test_run_without_execute_is_dry_and_license_flags_are_checked(self) -> None:
         import contextlib
         import io
 
-        base = ["run", "--topology", "bind/bind", "--primary-node", "arch", "--run-label", "r1",
-                "--work-root", "/var/tmp/cp-pair", "--identity-file", "/nonexistent/id",
-                "--dist-archive", "/nonexistent/a.tar.gz", "--dist-sha256", "a" * 64, "--dist-commit", "b" * 40,
-                "--dist-tree", "c" * 40, "--evidence-root", "/nonexistent/evidence"]
+        base = self.base_run() + ["--product-web-src", str(self.product_web_src("b" * 40))]
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             self.assertEqual(pa.main(base), 0)
-        self.assertTrue(json.loads(out.getvalue())["dry_run"])
+        plan = json.loads(out.getvalue())
+        self.assertTrue(plan["dry_run"])
+        self.assertEqual((plan["web_src"]["source"], plan["web_src"]["commit"]), ("--product-web-src", "b" * 40))
+        self.assertEqual(plan["unknown_state_limit_seconds"], 300)
+        self.assertEqual(plan["unknown_state_codes"], ["server_setup_reconciling"])
         with self.assertRaises(SystemExit) as refused:
             pa.main(base + ["--license-mode", "owner-key"])
         self.assertIn("allow-license-service", str(refused.exception))
@@ -651,6 +829,118 @@ class CliTest(unittest.TestCase):
         with self.assertRaises(SystemExit) as refused:
             pa.main(base + ["--stable-stop-seconds", "-1"])
         self.assertIn("stable-stop-seconds", str(refused.exception))
+        for bad in ("0", "-5"):
+            with self.assertRaises(SystemExit) as refused:
+                pa.main(base + ["--unknown-state-limit-seconds", bad])
+            self.assertIn("unknown-state-limit-seconds", str(refused.exception))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(pa.main(base + ["--unknown-state-limit-seconds", "120"]), 0)
+        self.assertEqual(json.loads(out.getvalue())["unknown_state_limit_seconds"], 120)
+
+    def test_guidance_texts_come_from_the_product_commit(self) -> None:
+        import contextlib
+        import io
+
+        original = pa.driver_checkout
+        self.addCleanup(setattr, pa, "driver_checkout", original)
+        # A driver from another commit (or from git archive: unknown) needs the product's web/src.
+        for checkout in ({"commit": "d" * 40, "web_src_clean": True}, {"commit": None, "web_src_clean": None}):
+            pa.driver_checkout = lambda checkout=checkout: checkout
+            with self.assertRaises(SystemExit) as refused:
+                pa.main(self.base_run())
+            self.assertIn("--product-web-src", str(refused.exception))
+        # Same commit but a modified web/src: still refused.
+        pa.driver_checkout = lambda: {"commit": "b" * 40, "web_src_clean": False}
+        with self.assertRaises(SystemExit) as refused:
+            pa.main(self.base_run())
+        self.assertIn("modified web/src", str(refused.exception))
+        # Same commit, clean: the driver's own texts are the product's.
+        pa.driver_checkout = lambda: {"commit": "b" * 40, "web_src_clean": True}
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(pa.main(self.base_run()), 0)
+        self.assertEqual(json.loads(out.getvalue())["web_src"]["source"], "driver checkout")
+        # --product-web-src must name the product commit and hold the files the driver reads.
+        pa.driver_checkout = lambda: {"commit": "d" * 40, "web_src_clean": True}
+        with self.assertRaises(SystemExit) as refused:
+            pa.main(self.base_run() + ["--product-web-src", str(self.product_web_src("e" * 40))])
+        self.assertIn("is from commit " + "e" * 40, str(refused.exception))
+        with self.assertRaises(SystemExit) as refused:
+            pa.main(self.base_run() + ["--product-web-src", str(self.product_web_src(None))])
+        self.assertIn("PRODUCT-COMMIT", str(refused.exception))
+        incomplete = self.product_web_src("b" * 40)
+        (incomplete / "lib/serverSetupGuidance.ts").unlink()
+        with self.assertRaises(SystemExit) as refused:
+            pa.main(self.base_run() + ["--product-web-src", str(incomplete)])
+        self.assertIn("lib/serverSetupGuidance.ts", str(refused.exception))
+
+    def test_driver_reads_texts_from_its_configured_web_src(self) -> None:
+        # A product whose wizard no longer shows the start-secondary key for the primary:
+        # the contradictory-guidance check has nothing to match (keys come from web/src).
+        root = self.product_web_src("b" * 40)
+        guidance = root / "lib/serverSetupGuidance.ts"
+        guidance.write_text(guidance.read_text(encoding="utf-8").replace(
+            "'setup.guide.startSecondary'", "'setup.guide.pairUnverified'"), encoding="utf-8")
+        h = Harness("bind/bind", primary_node="arch")
+        self.addCleanup(h.close)
+        h.driver.web_src = root
+        result = h.run()
+        self.assertEqual(result["overall"], "passed")
+        check = h.step("setup-start-primary")["checks"]["peer_start_guidance_keys"]
+        self.assertEqual((check["state"], check["keys"]), ("not-used-by-this-build", []))
+        self.assertFalse(any(f["id"].startswith("d024-contradictory-peer-start") for f in result["findings"]))
+
+
+class BuildScriptTest(unittest.TestCase):
+    SCRIPTS = HERE / "scripts"
+
+    def test_archive_observation_counts_evidence_and_e2e_entries(self) -> None:
+        import io
+        import subprocess
+        import tarfile
+
+        text = (self.SCRIPTS / "build-dist.sh").read_text(encoding="utf-8")
+        start = text.index('> "$out/archive-evidence-entries.json" <<\'PY\'\n') + len(
+            '> "$out/archive-evidence-entries.json" <<\'PY\'\n')
+        snippet = text[start:text.index("\nPY\n", start)]
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        archive = Path(temporary.name) / "a.tar.gz"
+        root = "celikpanel-v0.0.0-test"
+        members = [f"{root}/", f"{root}/bin/panel", f"{root}/deploy/", f"{root}/deploy/e2e/",
+                   f"{root}/deploy/e2e/dns-kill-matrix/fixture.py",
+                   f"{root}/deploy/e2e/dns-kill-matrix/evidence/", f"{root}/deploy/e2e/dns-kill-matrix/evidence/b6/x.sqlite3",
+                   f"{root}/docs/evidence/", f"{root}/docs/evidence/note.md", f"{root}/evidence.md"]
+        with tarfile.open(archive, "w:gz") as bundle:
+            for name in members:
+                info = tarfile.TarInfo(name.rstrip("/"))
+                if name.endswith("/"):
+                    info.type = tarfile.DIRTYPE
+                    bundle.addfile(info)
+                else:
+                    info.size = 1
+                    bundle.addfile(info, io.BytesIO(b"x"))
+        completed = subprocess.run([sys.executable, "-", str(archive), "f" * 64], input=snippet, text=True,
+                                   capture_output=True, check=True)
+        observed = json.loads(completed.stdout)
+        self.assertEqual(observed["total_entries"], len(members))
+        self.assertEqual((observed["under_evidence_dir"]["entries"], observed["under_evidence_dir"]["files"]), (2, 2))
+        self.assertEqual(observed["under_evidence_dir"]["sample"],
+                         ["deploy/e2e/dns-kill-matrix/evidence/b6/x.sqlite3", "docs/evidence/note.md"])
+        self.assertEqual((observed["under_deploy_e2e"]["entries"], observed["under_deploy_e2e"]["files"]), (3, 2))
+        self.assertIn("observation only", observed["note"])
+
+    def test_build_exports_product_web_src_and_run_passes_it(self) -> None:
+        build = (self.SCRIPTS / "build-dist.sh").read_text(encoding="utf-8")
+        self.assertIn('cp -a "$src/web/src/." "$out/product-web-src/"', build)
+        self.assertIn('> "$out/product-web-src/PRODUCT-COMMIT"', build)
+        self.assertIn('"product_web_src": out + "/product-web-src"', build)
+        self.assertEqual(pa.PRODUCT_COMMIT_MARKER, "PRODUCT-COMMIT")
+        run = (self.SCRIPTS / "run-topology.sh").read_text(encoding="utf-8")
+        self.assertIn("web_args=(--product-web-src \"$web_src\")", run)
+        for path in self.SCRIPTS.iterdir():
+            self.assertNotIn(b"\r", path.read_bytes(), path.name)
 
 
 if __name__ == "__main__":
