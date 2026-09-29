@@ -1,0 +1,80 @@
+{
+  "dns_engine_after": {
+    "active_engine": null,
+    "dnssec_zone_count": 0,
+    "engine_epoch": 0,
+    "engines": [
+      {
+        "id": "pdns",
+        "installed": false,
+        "managed": false,
+        "running": false,
+        "status": "available"
+      },
+      {
+        "id": "bind",
+        "installed": false,
+        "managed": false,
+        "running": false,
+        "status": "available"
+      }
+    ],
+    "pending_zone_count": 0,
+    "revision": 0,
+    "state": "unconfigured",
+    "topology": "unconfigured",
+    "zone_count": 0
+  },
+  "dns_engine_before": {
+    "active_engine": null,
+    "dnssec_zone_count": 0,
+    "engine_epoch": 0,
+    "engines": [
+      {
+        "id": "pdns",
+        "installed": false,
+        "managed": false,
+        "running": false,
+        "status": "available"
+      },
+      {
+        "id": "bind",
+        "installed": false,
+        "managed": false,
+        "running": false,
+        "status": "available"
+      }
+    ],
+    "pending_zone_count": 0,
+    "revision": 0,
+    "state": "unconfigured",
+    "topology": "unconfigured",
+    "zone_count": 0
+  },
+  "setup": {
+    "checks": [],
+    "draft": {
+      "database": "",
+      "dns_engine": "pdns",
+      "dns_mode": "local",
+      "dns_role": "primary",
+      "local_ip": "192.0.2.10",
+      "mail_hostname": "",
+      "node_version": "",
+      "ns1": "ns1.ns-accept.test",
+      "ns2": "ns2.ns-accept.test",
+      "panel_domain": "panel-debian13.ns-accept.test",
+      "peer_ip": "192.0.2.11",
+      "peer_ns": "ns2.ns-accept.test",
+      "purpose": "dns",
+      "remote_dns_connection_id": ""
+    },
+    "guidance": "guided",
+    "origin": "fresh",
+    "required": true,
+    "revision": 2,
+    "server_ip": "192.0.2.10",
+    "status": "draft",
+    "version": 1
+  }
+}

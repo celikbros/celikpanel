@@ -1,0 +1,429 @@
+cell: pair-accept__pdns-debian13__bind-arch__r1
+{
+  "action": "init-root",
+  "dry_run": false,
+  "marker": "/var/tmp/cp-pair-accept/work/.celikpanel-dns-kill-matrix-root",
+  "work_root": "/var/tmp/cp-pair-accept/work"
+}
+{
+  "action": "fetch",
+  "downloads": [
+    {
+      "bytes": 340262912,
+      "command": [
+        "curl",
+        "--fail",
+        "--location",
+        "--proto",
+        "=https",
+        "--proto-redir",
+        "=https",
+        "--output",
+        "/var/tmp/cp-pair-accept/work/images/.debian-13-genericcloud-amd64-20260826-2582.qcow2.download",
+        "https://cloud.debian.org/images/cloud/trixie/20260826-2582/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+      ],
+      "digest": {
+        "algorithm": "sha512",
+        "value": "184761b0dad0f9ace02f9298050ca96ce3caa39a461a47706d47ff9698b59933918b91b40177fbd4d392f6446af8b4d18ecb94caca988169b19641606bf34003"
+      },
+      "image": "debian13",
+      "target": "/var/tmp/cp-pair-accept/work/images/debian-13-genericcloud-amd64-20260826-2582.qcow2",
+      "temporary": "/var/tmp/cp-pair-accept/work/images/.debian-13-genericcloud-amd64-20260826-2582.qcow2.download",
+      "url": "https://cloud.debian.org/images/cloud/trixie/20260826-2582/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+    },
+    {
+      "bytes": 556609024,
+      "command": [
+        "curl",
+        "--fail",
+        "--location",
+        "--proto",
+        "=https",
+        "--proto-redir",
+        "=https",
+        "--output",
+        "/var/tmp/cp-pair-accept/work/images/.Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2.download",
+        "https://geo.mirror.pkgbuild.com/images/v20260815.573966/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2"
+      ],
+      "digest": {
+        "algorithm": "sha256",
+        "value": "5d8be8d28cfd290f051b0f67df0a6874596ad23de3f3f18b90c91aeb758eb878"
+      },
+      "image": "arch",
+      "target": "/var/tmp/cp-pair-accept/work/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+      "temporary": "/var/tmp/cp-pair-accept/work/images/.Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2.download",
+      "url": "https://geo.mirror.pkgbuild.com/images/v20260815.573966/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2"
+    }
+  ],
+  "dry_run": false
+}
+{
+  "action": "verify-images",
+  "verified": {
+    "arch": "/var/tmp/cp-pair-accept/work/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+    "debian13": "/var/tmp/cp-pair-accept/work/images/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+  }
+}
+Formatting '/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-pair-accept/work/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-pair-accept/work/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{
+  "cell_directory": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38",
+  "cell_id": "pair-accept__pdns-debian13__bind-arch__r1",
+  "dry_run": false,
+  "host_requirements": {
+    "accelerator": "kvm",
+    "daemonization": "qemu-daemonize",
+    "os": "linux",
+    "qmp_transport": "unix"
+  },
+  "nodes": {
+    "arch": {
+      "base": {
+        "bytes": 556609024,
+        "digest": {
+          "algorithm": "sha256",
+          "value": "5d8be8d28cfd290f051b0f67df0a6874596ad23de3f3f18b90c91aeb758eb878"
+        },
+        "path": "/var/tmp/cp-pair-accept/work/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2"
+      },
+      "cloud_init": {
+        "meta-data": "instance-id: dns-kill-5b95c5dc3e2dc40da690\nlocal-hostname: dns-arch\n",
+        "network-config": "version: 2\nethernets:\n  mgmt:\n    match:\n      macaddress: \"52:54:00:13:00:11\"\n    set-name: mgmt0\n    dhcp4: true\n    dhcp6: false\n    optional: false\n  peer:\n    match:\n      macaddress: \"52:54:00:53:00:11\"\n    set-name: peer0\n    dhcp4: false\n    dhcp6: false\n    addresses:\n      - 192.0.2.11/24\n    optional: false\n",
+        "user-data": "#cloud-config\nusers:\n  - default\n  - name: celik\n    gecos: CelikPanel kill matrix\n    groups: [wheel]\n    sudo: [\"ALL=(ALL) NOPASSWD:ALL\"]\n    shell: /bin/bash\n    lock_passwd: true\n    ssh_authorized_keys:\n      - \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILAK8UhMFVoQU43Ab7LOHsXR4rHxkqmbLuqm1Wr3zM9m cp-pair-accept\"\ndisable_root: true\nssh_pwauth: false\npackage_update: false\npackage_upgrade: false\nwrite_files:\n  - path: /etc/celikpanel-dns-kill-matrix\n    owner: root:root\n    permissions: '0444'\n    content: |\n      schema=celikpanel/dns-kill-fixture-plan/v1\n      cell_id=pair-accept__pdns-debian13__bind-arch__r1\n      node=arch\nruncmd:\n  - [systemctl, enable, --now, sshd.service]\n  - [touch, /etc/celikpanel-dns-kill-matrix-ready]\nfinal_message: \"CelikPanel DNS kill fixture ready\"\n"
+      },
+      "hostname": "dns-arch",
+      "management": {
+        "mac": "52:54:00:13:00:11",
+        "mode": "qemu-user-nat",
+        "ssh_host": "127.0.0.1",
+        "ssh_port": 2202
+      },
+      "overlay_command": [
+        "qemu-img",
+        "create",
+        "-f",
+        "qcow2",
+        "-F",
+        "qcow2",
+        "-b",
+        "/var/tmp/cp-pair-accept/work/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/overlay.qcow2",
+        "24G"
+      ],
+      "paths": {
+        "directory": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch",
+        "overlay": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/overlay.qcow2",
+        "pid": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/qemu.pid",
+        "qmp": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/qmp.sock",
+        "seed_directory": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/seed",
+        "seed_iso": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/seed.iso",
+        "serial": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/serial.log"
+      },
+      "peer": {
+        "address": "192.0.2.11/24",
+        "device_id": "peer-link",
+        "mac": "52:54:00:53:00:11",
+        "transport": "loopback-socket",
+        "transport_port": 23053
+      },
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-name",
+        "dns-kill-arch",
+        "-uuid",
+        "774c9fc8-71c7-5cf9-a3e4-172f413c2960",
+        "-accel",
+        "kvm",
+        "-cpu",
+        "host",
+        "-smp",
+        "2",
+        "-m",
+        "4096",
+        "-drive",
+        "file=/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/overlay.qcow2,if=virtio,format=qcow2,cache=none,discard=unmap",
+        "-drive",
+        "file=/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/seed.iso,if=virtio,format=raw,media=cdrom,readonly=on",
+        "-netdev",
+        "user,id=mgmt,hostfwd=tcp:127.0.0.1:2202-:22",
+        "-device",
+        "virtio-net-pci,netdev=mgmt,id=mgmt-link,mac=52:54:00:13:00:11",
+        "-netdev",
+        "socket,id=peer,connect=127.0.0.1:23053",
+        "-device",
+        "virtio-net-pci,netdev=peer,id=peer-link,mac=52:54:00:53:00:11",
+        "-qmp",
+        "unix:/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/qemu.pid",
+        "-serial",
+        "file:/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/serial.log",
+        "-display",
+        "none",
+        "-monitor",
+        "none",
+        "-daemonize"
+      ],
+      "seed_command": [
+        "genisoimage",
+        "-quiet",
+        "-output",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/seed.iso",
+        "-volid",
+        "cidata",
+        "-joliet",
+        "-rock",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/seed/user-data",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/seed/meta-data",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/seed/network-config"
+      ]
+    },
+    "debian13": {
+      "base": {
+        "bytes": 340262912,
+        "digest": {
+          "algorithm": "sha512",
+          "value": "184761b0dad0f9ace02f9298050ca96ce3caa39a461a47706d47ff9698b59933918b91b40177fbd4d392f6446af8b4d18ecb94caca988169b19641606bf34003"
+        },
+        "path": "/var/tmp/cp-pair-accept/work/images/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+      },
+      "cloud_init": {
+        "meta-data": "instance-id: dns-kill-cae7065a204acec79cee\nlocal-hostname: dns-debian13\n",
+        "network-config": "version: 2\nethernets:\n  mgmt:\n    match:\n      macaddress: \"52:54:00:13:00:10\"\n    set-name: mgmt0\n    dhcp4: true\n    dhcp6: false\n    optional: false\n  peer:\n    match:\n      macaddress: \"52:54:00:53:00:10\"\n    set-name: peer0\n    dhcp4: false\n    dhcp6: false\n    addresses:\n      - 192.0.2.10/24\n    optional: false\n",
+        "user-data": "#cloud-config\nusers:\n  - default\n  - name: celik\n    gecos: CelikPanel kill matrix\n    groups: [sudo]\n    sudo: [\"ALL=(ALL) NOPASSWD:ALL\"]\n    shell: /bin/bash\n    lock_passwd: true\n    ssh_authorized_keys:\n      - \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILAK8UhMFVoQU43Ab7LOHsXR4rHxkqmbLuqm1Wr3zM9m cp-pair-accept\"\ndisable_root: true\nssh_pwauth: false\npackage_update: false\npackage_upgrade: false\nwrite_files:\n  - path: /etc/celikpanel-dns-kill-matrix\n    owner: root:root\n    permissions: '0444'\n    content: |\n      schema=celikpanel/dns-kill-fixture-plan/v1\n      cell_id=pair-accept__pdns-debian13__bind-arch__r1\n      node=debian13\nruncmd:\n  - [systemctl, enable, --now, ssh.service]\n  - [touch, /etc/celikpanel-dns-kill-matrix-ready]\nfinal_message: \"CelikPanel DNS kill fixture ready\"\n"
+      },
+      "hostname": "dns-debian13",
+      "management": {
+        "mac": "52:54:00:13:00:10",
+        "mode": "qemu-user-nat",
+        "ssh_host": "127.0.0.1",
+        "ssh_port": 2201
+      },
+      "overlay_command": [
+        "qemu-img",
+        "create",
+        "-f",
+        "qcow2",
+        "-F",
+        "qcow2",
+        "-b",
+        "/var/tmp/cp-pair-accept/work/images/debian-13-genericcloud-amd64-20260826-2582.qcow2",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/overlay.qcow2",
+        "24G"
+      ],
+      "paths": {
+        "directory": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13",
+        "overlay": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/overlay.qcow2",
+        "pid": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/qemu.pid",
+        "qmp": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/qmp.sock",
+        "seed_directory": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/seed",
+        "seed_iso": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/seed.iso",
+        "serial": "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/serial.log"
+      },
+      "peer": {
+        "address": "192.0.2.10/24",
+        "device_id": "peer-link",
+        "mac": "52:54:00:53:00:10",
+        "transport": "loopback-socket",
+        "transport_port": 23053
+      },
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-name",
+        "dns-kill-debian13",
+        "-uuid",
+        "c88a5d06-a8ff-5102-9b4c-6a490bdbe9fc",
+        "-accel",
+        "kvm",
+        "-cpu",
+        "host",
+        "-smp",
+        "2",
+        "-m",
+        "4096",
+        "-drive",
+        "file=/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/overlay.qcow2,if=virtio,format=qcow2,cache=none,discard=unmap",
+        "-drive",
+        "file=/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/seed.iso,if=virtio,format=raw,media=cdrom,readonly=on",
+        "-netdev",
+        "user,id=mgmt,hostfwd=tcp:127.0.0.1:2201-:22",
+        "-device",
+        "virtio-net-pci,netdev=mgmt,id=mgmt-link,mac=52:54:00:13:00:10",
+        "-netdev",
+        "socket,id=peer,listen=127.0.0.1:23053",
+        "-device",
+        "virtio-net-pci,netdev=peer,id=peer-link,mac=52:54:00:53:00:10",
+        "-qmp",
+        "unix:/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/qemu.pid",
+        "-serial",
+        "file:/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/serial.log",
+        "-display",
+        "none",
+        "-monitor",
+        "none",
+        "-daemonize"
+      ],
+      "seed_command": [
+        "genisoimage",
+        "-quiet",
+        "-output",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/seed.iso",
+        "-volid",
+        "cidata",
+        "-joliet",
+        "-rock",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/seed/user-data",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/seed/meta-data",
+        "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/seed/network-config"
+      ]
+    }
+  },
+  "peer_link_policy": {
+    "change_requires": {
+      "cell_id": "pair-accept__pdns-debian13__bind-arch__r1",
+      "exit_code": 137,
+      "kill_proven": true,
+      "schema": "celikpanel/dns-kill-proof/v1"
+    },
+    "initial": "up",
+    "qmp_device": "peer-link"
+  },
+  "schema": "celikpanel/dns-kill-fixture-plan/v1",
+  "start_order": [
+    "debian13",
+    "arch"
+  ],
+  "work_root": "/var/tmp/cp-pair-accept/work"
+}
+{
+  "action": "start",
+  "cell_id": "pair-accept__pdns-debian13__bind-arch__r1",
+  "commands": [
+    [
+      "qemu-system-x86_64",
+      "-name",
+      "dns-kill-debian13",
+      "-uuid",
+      "c88a5d06-a8ff-5102-9b4c-6a490bdbe9fc",
+      "-accel",
+      "kvm",
+      "-cpu",
+      "host",
+      "-smp",
+      "2",
+      "-m",
+      "4096",
+      "-drive",
+      "file=/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/overlay.qcow2,if=virtio,format=qcow2,cache=none,discard=unmap",
+      "-drive",
+      "file=/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/seed.iso,if=virtio,format=raw,media=cdrom,readonly=on",
+      "-netdev",
+      "user,id=mgmt,hostfwd=tcp:127.0.0.1:2201-:22",
+      "-device",
+      "virtio-net-pci,netdev=mgmt,id=mgmt-link,mac=52:54:00:13:00:10",
+      "-netdev",
+      "socket,id=peer,listen=127.0.0.1:23053",
+      "-device",
+      "virtio-net-pci,netdev=peer,id=peer-link,mac=52:54:00:53:00:10",
+      "-qmp",
+      "unix:/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/qmp.sock,server=on,wait=off",
+      "-pidfile",
+      "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/qemu.pid",
+      "-serial",
+      "file:/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/debian13/serial.log",
+      "-display",
+      "none",
+      "-monitor",
+      "none",
+      "-daemonize"
+    ],
+    [
+      "qemu-system-x86_64",
+      "-name",
+      "dns-kill-arch",
+      "-uuid",
+      "774c9fc8-71c7-5cf9-a3e4-172f413c2960",
+      "-accel",
+      "kvm",
+      "-cpu",
+      "host",
+      "-smp",
+      "2",
+      "-m",
+      "4096",
+      "-drive",
+      "file=/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/overlay.qcow2,if=virtio,format=qcow2,cache=none,discard=unmap",
+      "-drive",
+      "file=/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/seed.iso,if=virtio,format=raw,media=cdrom,readonly=on",
+      "-netdev",
+      "user,id=mgmt,hostfwd=tcp:127.0.0.1:2202-:22",
+      "-device",
+      "virtio-net-pci,netdev=mgmt,id=mgmt-link,mac=52:54:00:13:00:11",
+      "-netdev",
+      "socket,id=peer,connect=127.0.0.1:23053",
+      "-device",
+      "virtio-net-pci,netdev=peer,id=peer-link,mac=52:54:00:53:00:11",
+      "-qmp",
+      "unix:/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/qmp.sock,server=on,wait=off",
+      "-pidfile",
+      "/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/qemu.pid",
+      "-serial",
+      "file:/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/arch/serial.log",
+      "-display",
+      "none",
+      "-monitor",
+      "none",
+      "-daemonize"
+    ]
+  ],
+  "dry_run": false
+}
+{
+  "action": "wait-ssh",
+  "cell_id": "pair-accept__pdns-debian13__bind-arch__r1",
+  "commands": {
+    "arch": [
+      "ssh",
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=5",
+      "-o",
+      "StrictHostKeyChecking=accept-new",
+      "-o",
+      "HashKnownHosts=no",
+      "-o",
+      "UserKnownHostsFile=/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/ssh-known-hosts",
+      "-i",
+      "/var/tmp/cp-pair-accept/id_ed25519",
+      "-p",
+      "2202",
+      "celik@127.0.0.1",
+      "cloud-init status --wait >/dev/null && test -e /var/lib/cloud/instance/boot-finished && test -e /etc/celikpanel-dns-kill-matrix-ready"
+    ],
+    "debian13": [
+      "ssh",
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=5",
+      "-o",
+      "StrictHostKeyChecking=accept-new",
+      "-o",
+      "HashKnownHosts=no",
+      "-o",
+      "UserKnownHostsFile=/var/tmp/cp-pair-accept/work/cells/b3a4008b1ccda36c38384f38/ssh-known-hosts",
+      "-i",
+      "/var/tmp/cp-pair-accept/id_ed25519",
+      "-p",
+      "2201",
+      "celik@127.0.0.1",
+      "cloud-init status --wait >/dev/null && test -e /var/lib/cloud/instance/boot-finished && test -e /etc/celikpanel-dns-kill-matrix-ready"
+    ]
+  },
+  "dry_run": false
+}
+PREPARED
+prepare exit 0

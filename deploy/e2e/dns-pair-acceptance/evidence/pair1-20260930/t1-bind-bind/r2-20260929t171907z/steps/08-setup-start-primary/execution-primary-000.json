@@ -1,0 +1,72 @@
+{
+  "context": {
+    "access_dns_ip": "192.0.2.10",
+    "dns_engine": "bind",
+    "dns_hosting_management": "",
+    "dns_mode": "local",
+    "dns_role": "primary",
+    "local_ip": "192.0.2.10",
+    "local_nameserver": "ns1.ns-accept.test",
+    "mail_hostname": "",
+    "panel_domain": "panel-debian13.ns-accept.test",
+    "peer_ip": "192.0.2.11",
+    "peer_nameserver": "ns2.ns-accept.test"
+  },
+  "id": "960144a2fed56368b3d2bc82c5cedc45",
+  "panel_url": "https://panel-debian13.ns-accept.test:2083/",
+  "phase": "01-dns",
+  "plan_id": "3a7ca321591c6266f0ff2c0e795a3a42",
+  "request_id": "960144a2fed56368b3d2bc82c5cedc45",
+  "status": "running",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "owner_id": "12f15531bed5b5c1c30693a112b72efd",
+      "request_id": "cf55b449d7a5f4ffa1d128fa40cc731a",
+      "status": "running",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "owner_id": "3cbaecdd9fe1ee444d7e327f0244f4d7",
+      "request_id": "d13e9f0462f085db553b76eeb4dc8030",
+      "status": "pending",
+      "target": "certbot"
+    },
+    {
+      "id": "03-firewall",
+      "kind": "firewall",
+      "owner_id": "75f96546995f816a202666e66e5d15a3",
+      "request_id": "48f97b8efc89b57cf281ceb2e601be59",
+      "status": "pending",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "04-access_dns",
+      "kind": "access_dns",
+      "owner_id": "598e16dadb7701d7252215d5d3c61deb",
+      "qualifier": "192.0.2.10",
+      "request_id": "450cffdabda59d9596ef8a44db75737b",
+      "status": "pending",
+      "target": "panel-debian13.ns-accept.test"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "owner_id": "ec2fb79c3bac603cded8bc7d8675deea",
+      "request_id": "07b193250c90f20641f707509ecda6dc",
+      "status": "pending",
+      "target": "panel-debian13.ns-accept.test"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "owner_id": "087c579cc73c0ceb059d04b7cf92a153",
+      "request_id": "eb27e1a3eea94b92cf157c2dd3098ca5",
+      "status": "pending",
+      "target": "dns"
+    }
+  ]
+}

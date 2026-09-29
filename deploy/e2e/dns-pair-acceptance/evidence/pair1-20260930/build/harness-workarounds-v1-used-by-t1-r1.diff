@@ -1,0 +1,279 @@
+diff -ru -x __pycache__ src/deploy/e2e/dns-pair-acceptance/fakes.py src-patched/deploy/e2e/dns-pair-acceptance/fakes.py
+--- src/deploy/e2e/dns-pair-acceptance/fakes.py	2026-09-29 19:38:48.000000000 +0300
++++ src-patched/deploy/e2e/dns-pair-acceptance/fakes.py	2026-09-29 20:13:45.311646096 +0300
+@@ -366,8 +366,13 @@
+             zone = options["zone"][0]
+             role = self.topology.role_for_node(node)
+             holds = zone in self.world.zones if role.role == "primary" else zone in self.world.secondary_holds
+-            return {"command": "native", "engine": options["engine"][0], "zone": zone,
+-                    "native_state": "present" if holds else "absent", "zone_files": []}
++            value = {"command": "native", "engine": options["engine"][0], "zone": zone,
++                     "native_state": "present" if holds else "absent", "zone_files": []}
++            if options["engine"][0] == "pdns" and role.role == "secondary" and options.get("catalog"):
++                # pair1 harness workaround: the catalog CONSUMER account the owner enrollment reads.
++                value["database"] = {"read": True, "domains": [
++                    {"name": options["catalog"][0], "type": "CONSUMER", "account": "celikpanel-peer-catalog-v1"}]}
++            return value
+         if command == "catalog":
+             return {"command": "catalog", "transferred": True, "serial": 7,
+                     "members": sorted(z + "." for z in self.world.catalog_members)}
+diff -ru -x __pycache__ src/deploy/e2e/dns-pair-acceptance/guest_probe.py src-patched/deploy/e2e/dns-pair-acceptance/guest_probe.py
+--- src/deploy/e2e/dns-pair-acceptance/guest_probe.py	2026-09-29 19:38:48.000000000 +0300
++++ src-patched/deploy/e2e/dns-pair-acceptance/guest_probe.py	2026-09-29 20:13:45.320423426 +0300
+@@ -317,6 +317,12 @@
+                     "AND type IS NOT NULL ORDER BY name, type, content LIMIT 500",
+                     (target[0][0],),
+                 ).fetchall()
++            # pair1 harness workaround: the domain account (PowerDNS schema column), read-only, for
++            # the owner enrollment's --catalog-account; absent column -> no accounts reported.
++            try:
++                accounts = dict(connection.execute("SELECT id, COALESCE(account,'') FROM domains").fetchall())
++            except sqlite3.Error:
++                accounts = {}
+         finally:
+             connection.close()
+     except sqlite3.Error as exc:
+@@ -326,7 +332,7 @@
+         "database": database,
+         "domains": [
+             {"name": row[1], "type": row[2], "master": row[3], "catalog": row[4],
+-             "options_present": bool(row[5])}
++             "options_present": bool(row[5]), **({"account": accounts[row[0]]} if row[0] in accounts else {})}
+             for row in domains
+         ],
+         "zone_row_present": bool(target),
+diff -ru -x __pycache__ src/deploy/e2e/dns-pair-acceptance/install_steps.py src-patched/deploy/e2e/dns-pair-acceptance/install_steps.py
+--- src/deploy/e2e/dns-pair-acceptance/install_steps.py	2026-09-29 19:38:48.000000000 +0300
++++ src-patched/deploy/e2e/dns-pair-acceptance/install_steps.py	2026-09-29 20:13:45.329065211 +0300
+@@ -132,17 +132,30 @@
+ 
+ 
+ # ---------------------------------------------------------------------------
+-# Owner enrollment (cmd/dns-peer-enroll, BIND secondaries only)
++# Owner enrollment (cmd/dns-peer-enroll; --engine bind|pdns)
++# pair1 harness workaround: engine selector added (dns-peer-enroll supports
++# --engine pdns since a47b4a40); BIND command text is unchanged.
+ # ---------------------------------------------------------------------------
+ 
++ENROLL_ENGINES = ("bind", "pdns")
++INSPECTORS = {"bind": "bind-peer-inspect", "pdns": "pdns-peer-inspect"}
++CATALOG_ACCOUNT_RE = re.compile(r"[a-z0-9_-]{1,128}")  # dnspeerenrollowner.validCatalogAccount
++
++
++def _engine_arg(engine: str) -> str:
++    if engine not in ENROLL_ENGINES:
++        raise InstallError(f"unknown enrollment engine {engine}")
++    return " --engine pdns" if engine == "pdns" else ""
++
++
+ def owner_tool(root_name: str, name: str) -> str:
+-    if name not in {"dns-peer-enroll", "bind-peer-inspect"}:
++    if name not in {"dns-peer-enroll", "bind-peer-inspect", "pdns-peer-inspect"}:
+         raise InstallError(f"unknown owner tool {name}")
+     return f"{dist_root(root_name)}/{OWNER_TOOLS}/{name}"
+ 
+ 
+-def enroll_primary_prepare(root_name: str) -> str:
+-    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} primary-prepare"
++def enroll_primary_prepare(root_name: str, engine: str = "bind") -> str:
++    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} primary-prepare{_engine_arg(engine)}"
+ 
+ 
+ def write_primary_public_key(path: str = "/root/celikpanel-primary-inspector.pub") -> str:
+@@ -157,32 +170,40 @@
+ 
+ 
+ def enroll_secondary_install(root_name: str, *, primary_ip: str, peer_ip: str, catalog: str,
+-                             public_key_path: str = "/root/celikpanel-primary-inspector.pub") -> str:
++                             public_key_path: str = "/root/celikpanel-primary-inspector.pub",
++                             engine: str = "bind", catalog_account: str = "") -> str:
++    extra = ""
++    if engine == "pdns":
++        if CATALOG_ACCOUNT_RE.fullmatch(catalog_account) is None:
++            raise InstallError("a PowerDNS secondary needs the catalog consumer zone's account")
++        extra = f" --catalog-account {shlex.quote(catalog_account)}"
++    elif catalog_account:
++        raise InstallError("--catalog-account is PowerDNS only")
+     return (
+-        f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} secondary-install "
++        f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} secondary-install{_engine_arg(engine)} "
+         f"--primary-ip {shlex.quote(primary_ip)} --peer-ip {shlex.quote(peer_ip)} "
+-        f"--catalog {shlex.quote(catalog)} --primary-public-key {shlex.quote(public_key_path)} "
+-        f"--inspector {shlex.quote(owner_tool(root_name, 'bind-peer-inspect'))}"
++        f"--catalog {shlex.quote(catalog)}{extra} --primary-public-key {shlex.quote(public_key_path)} "
++        f"--inspector {shlex.quote(owner_tool(root_name, INSPECTORS[engine]))}"
+     )
+ 
+ 
+-def enroll_secondary_host_key(root_name: str) -> str:
+-    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} secondary-host-key"
++def enroll_secondary_host_key(root_name: str, engine: str = "bind") -> str:
++    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} secondary-host-key{_engine_arg(engine)}"
+ 
+ 
+ def enroll_primary_activate(root_name: str, *, credential_id: str, primary_ip: str, peer_ip: str,
+-                            catalog: str, host_key_sha256: str) -> str:
++                            catalog: str, host_key_sha256: str, engine: str = "bind") -> str:
+     if not re.fullmatch(r"[0-9a-f]{16,64}", credential_id) or not HEX64.fullmatch(host_key_sha256):
+         raise InstallError("credential ID or host-key digest is malformed")
+     return (
+-        f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} primary-activate "
++        f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} primary-activate{_engine_arg(engine)} "
+         f"--credential-id {credential_id} --primary-ip {shlex.quote(primary_ip)} "
+         f"--peer-ip {shlex.quote(peer_ip)} --catalog {shlex.quote(catalog)} "
+         f"--host-key-sha256 {host_key_sha256}"
+     )
+ 
+ 
+-def enroll_status(root_name: str, side: str) -> str:
++def enroll_status(root_name: str, side: str, engine: str = "bind") -> str:
+     if side not in {"primary", "secondary"}:
+         raise InstallError("status side must be primary or secondary")
+-    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} {side}-status"
++    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} {side}-status{_engine_arg(engine)}"
+diff -ru -x __pycache__ src/deploy/e2e/dns-pair-acceptance/pair_acceptance.py src-patched/deploy/e2e/dns-pair-acceptance/pair_acceptance.py
+--- src/deploy/e2e/dns-pair-acceptance/pair_acceptance.py	2026-09-29 19:38:48.000000000 +0300
++++ src-patched/deploy/e2e/dns-pair-acceptance/pair_acceptance.py	2026-09-29 20:13:45.337752367 +0300
+@@ -1066,36 +1066,27 @@
+         P, S = self.topology.primary, self.topology.secondary
+         catalog = dc.catalog_name(P.address)
+         # Native state first, so the evidence shows what the secondary held while pending.
++        pending_native: dict[str, dict[str, Any]] = {}
+         for role in (P, S):
+-            self.record(f"native-pending-{role.role}.json",
+-                        self.probe(role.node, "native", "--engine", role.engine, "--zone", self.topology.zone,
+-                                   "--catalog", catalog))
+-        if S.engine != "bind":
+-            blocker = {
+-                "id": "E1-no-powerdns-owner-enrollment",
+-                "text": "The product asks the owner to enroll the inspection channel for the PowerDNS "
+-                        "secondary, but no owner-facing enrollment exists for PowerDNS: dns-peer-enroll "
+-                        "installs only the BIND inspector, and the Agent's PowerDNS reader has no writer.",
+-                "sources": [
+-                    "cmd/agent/dns_engine_peer_pdns_linux.go:57,118 (emits dns_peer_enrollment_required)",
+-                    "cmd/dns-peer-enroll/main_linux.go:3-4,99-120 (secondary-install takes a BIND inspector)",
+-                    "internal/pdnspeerenrollment/enrollment_linux.go:28,120 (reader only; compare "
+-                    "internal/dnspeerenrollment/owner_writer_linux.go:42-44)",
+-                    "Makefile:67-71 (dns-owner-tools packages bind-peer-inspect only)",
+-                    "docs/DNS-PEER-INSPECTION-GUIDANCE-GAP.md 'Ordinary owner enrollment is still missing'",
+-                ],
+-                "smallest_product_change": (
+-                    "Add an owner writer to internal/pdnspeerenrollment mirroring "
+-                    "internal/dnspeerenrollment/owner_writer_linux.go (prepare/activate/revoke of "
+-                    "pdns-peer-inspection-v1.json), an engine selector on dns-peer-enroll "
+-                    "secondary-install/primary-activate that installs pdns-peer-inspect, and package "
+-                    "pdns-peer-inspect in the dns-owner-tools target."
+-                ),
+-            }
+-            if blocker not in self.blockers:
+-                self.blockers.append(blocker)
+-            raise ProductBlocked("deletion needs owner enrollment for a PowerDNS secondary and the product has "
+-                                 "no owner enrollment tool for it (blocker E1-no-powerdns-owner-enrollment)")
++            pending_native[role.role] = self.probe(role.node, "native", "--engine", role.engine, "--zone",
++                                                   self.topology.zone, "--catalog", catalog)
++            self.record(f"native-pending-{role.role}.json", pending_native[role.role])
++        # pair1 harness workaround: the E1 ProductBlocked branch for a PowerDNS secondary was removed
++        # because dns-peer-enroll accepts --engine pdns since a47b4a40 (packaged pdns-peer-inspect).
++        # The owner reads the catalog CONSUMER zone's account from the secondary's own PowerDNS
++        # database (read-only probe above), as cmd/dns-peer-enroll/README.md asks.
++        engine = S.engine
++        catalog_account = ""
++        if engine == "pdns":
++            rows = ((pending_native["secondary"].get("database") or {}).get("domains") or [])
++            accounts = [row.get("account", "") for row in rows if isinstance(row, dict)
++                        and str(row.get("name", "")).rstrip(".").lower() == catalog.rstrip(".").lower()
++                        and row.get("type") == "CONSUMER"]
++            record.checks["pdns_catalog_consumer_account"] = accounts
++            if len(accounts) != 1 or not accounts[0]:
++                raise StepFailed(f"PowerDNS secondary has no single catalog CONSUMER zone account for {catalog}: "
++                                 f"{accounts}")
++            catalog_account = accounts[0]
+         root = self.config.dist_root
+         transcript: list[dict[str, Any]] = []
+ 
+@@ -1112,13 +1103,14 @@
+             except (ValueError, IndexError):
+                 return {}
+ 
+-        prepared = owner(P.node, inst.enroll_primary_prepare(root))
++        prepared = owner(P.node, inst.enroll_primary_prepare(root, engine))
+         public_key = prepared.get("public_key", "")
+         if not public_key.startswith("ssh-ed25519 "):
+             raise StepFailed("primary-prepare returned no Ed25519 public key")
+         owner(S.node, inst.write_primary_public_key(), stdin=(public_key.strip() + "\n").encode())
+-        owner(S.node, inst.enroll_secondary_install(root, primary_ip=P.address, peer_ip=S.address, catalog=catalog))
+-        host_key = owner(S.node, inst.enroll_secondary_host_key(root)).get("host_key_sha256", "")
++        owner(S.node, inst.enroll_secondary_install(root, primary_ip=P.address, peer_ip=S.address, catalog=catalog,
++                                                    engine=engine, catalog_account=catalog_account))
++        host_key = owner(S.node, inst.enroll_secondary_host_key(root, engine)).get("host_key_sha256", "")
+         # Independent review through the fixture's pinned SSH channel.
+         pub = self.guests.run(S.node, "cat /etc/ssh/ssh_host_ed25519_key.pub", mutating=False, check=False)
+         reviewed = pubkey_digest(_decode(pub.stdout))
+@@ -1133,11 +1125,12 @@
+             raise StepFailed("secondary host-key digest failed independent review; not activating")
+         owner(P.node, inst.enroll_primary_activate(root, credential_id=prepared.get("credential_id", ""),
+                                                    primary_ip=P.address, peer_ip=S.address, catalog=catalog,
+-                                                   host_key_sha256=host_key))
+-        owner(P.node, inst.enroll_status(root, "primary"))
+-        owner(S.node, inst.enroll_status(root, "secondary"))
++                                                   host_key_sha256=host_key, engine=engine))
++        owner(P.node, inst.enroll_status(root, "primary", engine))
++        owner(S.node, inst.enroll_status(root, "secondary", engine))
+         self.record("owner-enrollment-transcript.json", transcript)
+-        record.checks["owner_enrollment"] = "completed with dns-peer-enroll (BIND secondary)"
++        label = "PowerDNS" if engine == "pdns" else "BIND"
++        record.checks["owner_enrollment"] = f"completed with dns-peer-enroll ({label} secondary)"
+ 
+     def zone_readd(self, record: StepRecord) -> None:
+         self.zone_add(record, readd=True)
+@@ -1446,7 +1439,9 @@
+     if args.license_mode == "owner-key":
+         for role, path in (("primary", args.license_key_file_primary), ("secondary", args.license_key_file_secondary)):
+             keys[role] = path.read_text(encoding="ascii").strip()
+-    run_id = f"{args.run_label}-{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
++    # pair1 harness workaround: evidence.RUN_ID_RE admits only lowercase; the original
++    # '%Y%m%dT%H%M%SZ' run id was refused by EvidenceWriter before any guest was touched.
++    run_id = f"{args.run_label}-{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dt%H%M%Sz')}"
+     config = Config(
+         run_id=run_id, run_label=args.run_label, license_mode=args.license_mode, license_keys=keys,
+         edit_method=args.edit_method, infrastructure_dns=args.infrastructure_dns,
+diff -ru -x __pycache__ src/deploy/e2e/dns-pair-acceptance/test_sequence.py src-patched/deploy/e2e/dns-pair-acceptance/test_sequence.py
+--- src/deploy/e2e/dns-pair-acceptance/test_sequence.py	2026-09-29 19:38:48.000000000 +0300
++++ src-patched/deploy/e2e/dns-pair-acceptance/test_sequence.py	2026-09-29 20:13:45.346615002 +0300
+@@ -273,21 +273,29 @@
+         self.assertIn("Customer panel build", result["native_evidence_scope"])
+         self.assertNotIn("license_status", result)
+ 
+-    def test_pdns_secondary_pending_deletion_is_blocked_product(self) -> None:
++    def test_pdns_secondary_enrollment_then_one_retry(self) -> None:
++        # pair1 harness workaround: replaces the E1 blocked-product expectation (dns-peer-enroll
++        # supports --engine pdns since a47b4a40).
+         pending = (202, {"status": "deletion_pending", "domain": "pair-accept.example", "stage": "dns_cleanup",
+                          "message": "pending", "reason": "dns_peer_enrollment_required"})
+         h = self.harness("bind-primary/pdns-secondary", delete_script=[pending])
+         result = h.run()
+-        self.assertEqual(result["overall"], "blocked-product")
+-        self.assertEqual(h.verdicts()["zone-delete"], "blocked-product")
+-        self.assertEqual(h.verdicts()["zone-readd"], "not-run")
++        self.assertEqual(result["overall"], "passed", h.step("zone-delete")["reason"])
++        self.assertEqual(result["product_blockers"], [])
++        commands = [c[1] for c in h.guests.commands if "dns-peer-enroll" in c[1]]
++        self.assertEqual([c.split()[3] for c in commands],
++                         ["primary-prepare", "secondary-install", "secondary-host-key", "primary-activate",
++                          "primary-status", "secondary-status"])
++        self.assertTrue(all("--engine pdns" in c for c in commands))
++        install = next(c for c in commands if "secondary-install" in c)
++        self.assertIn("--catalog-account celikpanel-peer-catalog-v1", install)
++        self.assertIn("/dns-owner-tools/pdns-peer-inspect", install)
+         step = h.step("zone-delete")
+-        self.assertTrue(all(g["actionable"] for g in step["guidance"]))
+-        self.assertEqual(result["product_blockers"][0]["id"], "E1-no-powerdns-owner-enrollment")
++        self.assertEqual(step["checks"]["owner_enrollment"], "completed with dns-peer-enroll (PowerDNS secondary)")
+         directory = h.writer.directory / step["evidence_directory"]
+         self.assertTrue((directory / "native-pending-secondary.json").is_file())
+         deletes = [c for c in h.panels["arch"].unsafe_calls if c[0] == "DELETE" and c[1] == "/api/v1/domains/10"]
+-        self.assertEqual(len(deletes), 1, "no retry without an owner action")
++        self.assertEqual(len(deletes), 2)
+ 
+     def test_bind_secondary_enrollment_then_one_retry(self) -> None:
+         pending = (202, {"status": "deletion_pending", "domain": "pair-accept.example", "stage": "dns_cleanup",

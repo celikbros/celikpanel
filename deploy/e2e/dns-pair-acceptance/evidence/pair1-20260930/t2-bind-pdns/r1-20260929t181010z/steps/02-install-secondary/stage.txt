@@ -1,0 +1,4 @@
+STAGED=/var/backups/celikpanel MODE=700 OWNER=root:root
+STAGED=/var/backups/celikpanel/pair-accept MODE=700 OWNER=root:root
+STAGED=/var/backups/celikpanel/pair-accept/candidate.tar.gz MODE=600 OWNER=root:root
+STAGED=/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57 MODE=755 OWNER=root:root

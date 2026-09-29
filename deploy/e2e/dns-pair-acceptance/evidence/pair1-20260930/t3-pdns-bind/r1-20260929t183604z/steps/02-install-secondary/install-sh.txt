@@ -1,0 +1,96 @@
+[1;36m==> Small prerequisites (curl, tar, xz, nftables, iproute2) / Küçük ön gereksinimler (curl, tar, xz, nftables, iproute2)[0m
+[32m    ✓ ready / hazır[0m
+[1;36m==> Running kernel / Calisan cekirdek[0m
+[33m    This server must be RESTARTED before its firewall or VPN can work: it is running kernel 7.1.8-arch1-3, whose modules are no longer on disk / Guvenlik duvari veya VPN calisabilmesi icin bu sunucu YENIDEN BASLATILMALI: modulleri artik diskte olmayan 7.1.8-arch1-3 cekirdegiyle calisiyor[0m
+[1;36m==> Automatic security patches / Otomatik güvenlik yamaları[0m
+[33m    The pacman ecosystem has no managed security-only channel — automatic patches were not configured; keep the system current with 'pacman -Syu' / Pacman ekosisteminde yönetilen güvenlik-yalnız kanal yok — otomatik yama kurulmadı; sistemi 'pacman -Syu' ile güncel tutun[0m
+[1;36m==> Service user and group / Servis kullanıcısı ve grubu[0m
+[32m    ✓ celikpanel:celikpanel[0m
+[1;36m==> Panel configuration /etc/celikpanel/panel.env / Panel yapılandırması /etc/celikpanel/panel.env[0m
+[32m    ✓ ready / hazır[0m
+[32m    ✓ Using the prebuilt release (bin/ + web/dist) / Önceden derlenmiş sürüm kullanılıyor (bin/ + web/dist)[0m
+[1;36m==> Installing files under /opt/celikpanel / Dosyalar /opt/celikpanel altına kuruluyor[0m
+[32m    ✓ installed / kuruldu[0m
+[1;36m==> Data directory /var/lib/celikpanel / Veri dizini /var/lib/celikpanel[0m
+[32m    ✓ ready / hazır[0m
+[1;36m==> systemd services / systemd servisleri[0m
+2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2
+adf92d4e8e4b3a13676633a6f00e07aaf2195c2bff4def027cab6d81de596c0f
+[32m    ✓ installed / kuruldu[0m
+[1;36m==> Starting the agent / Agent başlatılıyor[0m
+[32m    ✓ agent is running / agent çalışıyor[0m
+[1;36m==> Creating the first administrator / İlk yönetici oluşturuluyor[0m
+Created administrator / Yönetici oluşturuldu.
+[32m    ✓ administrator is ready / yönetici hazır[0m
+[1;36m==> Starting the panel / Panel başlatılıyor[0m
+[32m    ✓ panel is running / panel çalışıyor[0m
+[1;36m==> Protecting the initial panel certificate / Ilk panel sertifikasi korumaya aliniyor[0m
+[32m    ✓ initial panel certificate is protected / ilk panel sertifikasi korundu[0m
+
+[1;32mCelikPanel was installed successfully. / CelikPanel başarıyla kuruldu.[0m
+    Panel:  https://SUNUCU_IP:2083
+    Services / Servisler: systemctl status celikpanel-agent celikpanel-panel
+    Logs / Günlükler: journalctl -u celikpanel-panel -f
+
+[1;31mRESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN[0m
+    This server is running kernel 7.1.8-arch1-3, whose modules are no longer on disk:
+    the prerequisite step upgraded the kernel and replaced them. Until this server
+    is restarted it cannot load nftables or WireGuard, so turning the firewall on
+    or installing the VPN will fail. Everything else is installed and running.
+        reboot
+
+    Bu sunucu, modulleri artik diskte olmayan 7.1.8-arch1-3 cekirdegiyle calisiyor:
+    on gereksinim adimi cekirdegi yukseltti ve modulleri degistirdi. Sunucu
+    yeniden baslatilana kadar nftables veya WireGuard yuklenemez; guvenlik
+    duvarini acmak veya VPN kurmak hata verir. Geri kalan her sey kurulu.
+        reboot
+
+--- stderr ---
+warning: ca-certificates-20240618-1 is up to date -- skipping
+2026/09/29 18:39:16 Starting CelikPanel Agent...
+2026/09/29 18:39:16 Service mutation ledger initialized
+2026/09/29 18:39:17 Starting CelikPanel Backend...
+2026/09/29 18:39:17 Applied migration: 001_full_schema.sql
+2026/09/29 18:39:17 Applied migration: 002_auth.sql
+2026/09/29 18:39:17 Applied migration: 003_authz.sql
+2026/09/29 18:39:17 Applied migration: 004_accounts.sql
+2026/09/29 18:39:17 Applied migration: 005_projects.sql
+2026/09/29 18:39:17 Applied migration: 006_drop_placeholder_admin.sql
+2026/09/29 18:39:17 Applied migration: 007_service_scan_cache.sql
+2026/09/29 18:39:17 Applied migration: 008_site_usage.sql
+2026/09/29 18:39:17 Applied migration: 009_mail_catch_all.sql
+2026/09/29 18:39:17 Applied migration: 010_subdomains.sql
+2026/09/29 18:39:17 Applied migration: 011_entitlements.sql
+2026/09/29 18:39:17 Applied migration: 012_totp.sql
+2026/09/29 18:39:17 Applied migration: 013_backup_schedules.sql
+2026/09/29 18:39:17 Applied migration: 014_vpn_peers.sql
+2026/09/29 18:39:17 Applied migration: 015_ssl_secure_mail.sql
+2026/09/29 18:39:17 Applied migration: 016_metrics.sql
+2026/09/29 18:39:17 Applied migration: 017_panel_settings.sql
+2026/09/29 18:39:17 Applied migration: 018_hostname_namespace.sql
+2026/09/29 18:39:17 Applied migration: 019_hsts_retirement.sql
+2026/09/29 18:39:17 Applied migration: 020_ssl_lineage_identity.sql
+2026/09/29 18:39:17 Applied migration: 021_service_operations.sql
+2026/09/29 18:39:17 Applied migration: 022_service_operation_request_id.sql
+2026/09/29 18:39:17 Applied migration: 023_store_offerings.sql
+2026/09/29 18:39:17 Applied migration: 024_vpn_peer_state.sql
+2026/09/29 18:39:17 Applied migration: 025_auth_epoch.sql
+2026/09/29 18:39:17 Applied migration: 026_backup_schedule_status.sql
+2026/09/29 18:39:17 Applied migration: 027_backup_schedule_job_key.sql
+2026/09/29 18:39:17 Applied migration: 028_application_install_operations.sql
+2026/09/29 18:39:17 Applied migration: 029_additional_users.sql
+2026/09/29 18:39:17 Applied migration: 030_domain_deletion_operations.sql
+2026/09/29 18:39:17 Applied migration: 031_service_operation_data.sql
+2026/09/29 18:39:17 Applied migration: 032_dns_zone_sync_state.sql
+2026/09/29 18:39:17 Applied migration: 033_dns_engine_state.sql
+2026/09/29 18:39:17 Applied migration: 034_dns_engine_publication_switch_guard.sql
+2026/09/29 18:39:17 Applied migration: 035_dns_zone_generation_high_water.sql
+2026/09/29 18:39:17 Applied migration: 036_bind_paired_engine.sql
+2026/09/29 18:39:17 Applied migration: 037_dns_pair_identity_immutable.sql
+2026/09/29 18:39:17 Applied migration: 038_database_admin_account.sql
+2026/09/29 18:39:17 Applied migration: 039_server_setup_state.sql
+2026/09/29 18:39:17 Applied migration: 040_dns_management.sql
+2026/09/29 18:39:17 Applied migration: 041_server_setup_execution.sql
+2026/09/29 18:39:17 Applied migration: 042_remote_dns_publish.sql
+2026/09/29 18:39:17 Successfully applied 42 migrations
+2026/09/29 18:39:17 Starting CelikPanel Backend...

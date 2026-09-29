@@ -1,0 +1,21 @@
+{
+  "binaries": {
+    "/opt/celikpanel/bin/agent": null,
+    "/opt/celikpanel/bin/panel": null
+  },
+  "command": "versions",
+  "daemons": {},
+  "kernel": "6.12.105+deb13-cloud-amd64",
+  "os_release": {
+    "ID": "debian",
+    "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+    "VERSION_ID": "13"
+  },
+  "packages": {
+    "bind9": null,
+    "bind9-libs": "ii  1:9.20.26-1~deb13u1",
+    "pdns-backend-sqlite3": null,
+    "pdns-server": null
+  },
+  "returncode": 0
+}

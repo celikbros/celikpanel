@@ -1,0 +1,77 @@
+{
+  "outcome": "response",
+  "panel": "arch",
+  "purpose": "ServerSetup review",
+  "request": {
+    "body": {
+      "revision": 2
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28444"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:28444"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/setup/plan"
+  },
+  "response": {
+    "elapsed_seconds": 0.653,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Tue, 29 Sep 2026 17:15:52 GMT"
+      ],
+      [
+        "Content-Length",
+        "52"
+      ]
+    ],
+    "json": {
+      "code": "INTERNAL",
+      "error": "internal server error"
+    },
+    "status": 500,
+    "text": null
+  }
+}

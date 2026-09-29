@@ -1,0 +1,154 @@
+{
+  "cell_directory": "/var/tmp/cp-pair-accept/work/cells/31d24793f80cd893407ac7f0",
+  "config": {
+    "dist_archive": "/var/tmp/cp-pair-accept/dist/aa6b93808e57c5586e513601953b4db07ef6328f-acceptance-license/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57-acceptance-license.tar.gz",
+    "dist_commit": "aa6b93808e57c5586e513601953b4db07ef6328f",
+    "dist_root": "celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57",
+    "dist_sha256": "ab5f211ce42df68894ee667bd217cd7d05be08a9e2db1b7c45555bdf31621832",
+    "dist_tree": "9fba2e53bc58572daa6a68b1e8122b4921550a92",
+    "edit_method": "ui-replace",
+    "infrastructure_dns": false,
+    "license_keys_supplied_for": [],
+    "license_mode": "acceptance-fixture",
+    "run_id": "r2-20260929t171907z",
+    "run_label": "r2",
+    "skip_security_updates": false,
+    "timeouts": {
+      "deletion": 300,
+      "dns": 240,
+      "reboot": 900,
+      "setup": 2700
+    }
+  },
+  "plan": {
+    "cell_id": "pair-accept__bind-debian13__bind-arch__r2",
+    "dry_run": true,
+    "edit_method": "ui-replace",
+    "expected_outcome_note": "pdns-primary/bind-secondary is expected to end refused-by-product-gate (server plan blocker pdns_primary_switch_paused) while its gate is closed; --license-mode none is expected to end blocked-product at license; acceptance-fixture runs do not evidence license behaviour",
+    "fixture_commands": [
+      [
+        "python3",
+        "deploy/e2e/dns-kill-matrix/fixture.py",
+        "prepare",
+        "--work-root",
+        "/var/tmp/cp-pair-accept/work",
+        "--cell-id",
+        "pair-accept__bind-debian13__bind-arch__r2",
+        "--ssh-public-key",
+        "<identity>.pub",
+        "--execute"
+      ],
+      [
+        "python3",
+        "deploy/e2e/dns-kill-matrix/fixture.py",
+        "start",
+        "--work-root",
+        "/var/tmp/cp-pair-accept/work",
+        "--cell-id",
+        "pair-accept__bind-debian13__bind-arch__r2",
+        "--execute"
+      ],
+      [
+        "python3",
+        "deploy/e2e/dns-kill-matrix/fixture.py",
+        "wait-ssh",
+        "--work-root",
+        "/var/tmp/cp-pair-accept/work",
+        "--cell-id",
+        "pair-accept__bind-debian13__bind-arch__r2",
+        "--identity-file",
+        "<identity>",
+        "--execute"
+      ]
+    ],
+    "license_mode": "acceptance-fixture",
+    "native_evidence_scope": "License behaviour is NOT evidenced by this run. Both panels were built with the acceptance_license test tag and ran on the acceptance fixture license, which exists only in that build: no customer license, no license service contact, and no activation, renewal, expiry or rejection path of the product. Only the DNS pair product flow after licensing is in scope for review.",
+    "safety": [
+      "guests are reached only through the fixture plan's loopback SSH ports",
+      "every mutating guest command re-checks the SMBIOS UUID and fixture marker",
+      "the Panel is reached through a loopback SSH tunnel with a pinned TLS leaf",
+      "status polls cannot issue unsafe HTTP methods",
+      "secrets are redacted before capture and a surviving registered secret aborts the write"
+    ],
+    "schema": "celikpanel/dns-pair-acceptance-driver/v1",
+    "steps": [
+      {
+        "api": "POST /api/v1/auth/login, GET /api/v1/auth/me, GET /api/v1/panel/availability",
+        "step": "login"
+      },
+      {
+        "api": "GET /api/v1/license/access; locked: GET /api/v1/setup -> 403 license_required; owner-key: POST /api/v1/panel/license {action:activate}; acceptance-fixture: GET /api/v1/panel/license (label), POST {action:activate, fixture key} once, GET both again",
+        "step": "license"
+      },
+      {
+        "api": "GET /api/v1/setup, PUT /api/v1/setup/guidance, PUT /api/v1/setup, POST /api/v1/setup/plan",
+        "step": "setup-review"
+      },
+      {
+        "api": "POST /api/v1/setup/start (once, fixed request_id), poll GET /api/v1/setup/operation?request_id=",
+        "step": "setup-start"
+      },
+      {
+        "api": "poll GET /api/v1/dns/engine until paired+pair_ready; poll setup operation until settled",
+        "step": "pair-ready"
+      },
+      {
+        "api": "POST /api/v1/domains/create {project_type:dnsonly}, GET /api/v1/domains, GET .../dns/zone, GET .../dns/records",
+        "step": "zone-add"
+      },
+      {
+        "api": "POST /api/v1/domains/{id}/dns/records",
+        "step": "record-add"
+      },
+      {
+        "api": "ui-replace: DELETE .../dns/records?id= then POST; api-put: PUT .../dns/records",
+        "step": "record-edit"
+      },
+      {
+        "api": "DELETE /api/v1/domains/{id}; 202 -> GET .../deletion-status (read-only); owner enrollment (dns-peer-enroll) then the same DELETE once",
+        "step": "zone-delete"
+      },
+      {
+        "api": "POST /api/v1/domains/create",
+        "step": "zone-readd"
+      },
+      {
+        "api": "systemctl disable --now panel+agent; fixture reboot of both; native serving checks",
+        "step": "independence-reboot"
+      },
+      {
+        "api": "systemctl enable --now agent+panel; login; read-only GETs; ledger digest unchanged",
+        "step": "management-return"
+      }
+    ],
+    "topology": {
+      "control": true,
+      "infra_zone": "ns-accept.test",
+      "name": "bind/bind",
+      "primary": {
+        "address": "192.0.2.10",
+        "engine": "bind",
+        "nameserver": "ns1.ns-accept.test",
+        "node": "debian13",
+        "os": "debian-13",
+        "peer_address": "192.0.2.11",
+        "peer_nameserver": "ns2.ns-accept.test",
+        "peer_node": "arch",
+        "role": "primary"
+      },
+      "secondary": {
+        "address": "192.0.2.11",
+        "engine": "bind",
+        "nameserver": "ns2.ns-accept.test",
+        "node": "arch",
+        "os": "arch",
+        "peer_address": "192.0.2.10",
+        "peer_nameserver": "ns1.ns-accept.test",
+        "peer_node": "debian13",
+        "role": "secondary"
+      },
+      "zone": "pair-accept.test"
+    }
+  },
+  "schema": "celikpanel/dns-pair-acceptance-run/v1"
+}

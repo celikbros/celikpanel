@@ -1,0 +1,93 @@
+{
+  "outcome": "response",
+  "panel": "debian13",
+  "purpose": "ServerSetupGate after refused plan",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/setup"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Tue, 29 Sep 2026 18:40:59 GMT"
+      ],
+      [
+        "Content-Length",
+        "480"
+      ]
+    ],
+    "json": {
+      "checks": [],
+      "draft": {
+        "database": "",
+        "dns_engine": "pdns",
+        "dns_mode": "local",
+        "dns_role": "primary",
+        "local_ip": "192.0.2.10",
+        "mail_hostname": "",
+        "node_version": "",
+        "ns1": "ns1.ns-accept.test",
+        "ns2": "ns2.ns-accept.test",
+        "panel_domain": "panel-debian13.ns-accept.test",
+        "peer_ip": "192.0.2.11",
+        "peer_ns": "ns2.ns-accept.test",
+        "purpose": "dns",
+        "remote_dns_connection_id": ""
+      },
+      "guidance": "guided",
+      "origin": "fresh",
+      "required": true,
+      "revision": 2,
+      "server_ip": "192.0.2.10",
+      "status": "draft",
+      "version": 1
+    },
+    "status": 200,
+    "text": null
+  }
+}
