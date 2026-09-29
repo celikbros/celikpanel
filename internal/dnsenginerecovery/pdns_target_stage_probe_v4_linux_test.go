@@ -45,7 +45,9 @@ func TestPDNSTargetV4CandidateAbsenceRequiresPrivateRootDirectory(t *testing.T) 
 		t.Skip("root-owned candidate fixture requires root")
 	}
 	root := t.TempDir()
-	if err := os.Chmod(root, 0o700); err != nil { t.Fatal(err) }
+	if err := os.Chmod(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	path := filepath.Join(root, ".celikpanel-switch-0123456789abcdef0123456789abcdef.sqlite3")
 	if err := verifyPDNSTargetAbsentV4(path, true); err != nil {
 		t.Fatalf("private empty candidate rejected: %v", err)

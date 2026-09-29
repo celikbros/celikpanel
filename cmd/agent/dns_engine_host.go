@@ -126,29 +126,43 @@ type bindConfigSnapshotReader func(
 ) (dnsFileSnapshot, error)
 
 type bindSwitchRollbackJournalOps struct {
+	read     func() (dnsEngineSwitchJournal, bool, error)
 	write    func(dnsEngineSwitchJournal) error
 	rollback func() error
 	verify   func() error
 }
 
+// runBINDRollbackWithJournal runs the in-process BIND inverse only after the
+// rollback decision is durable (decideDNSSwitchInProcessRollback): a journal
+// already at target-verified or committed is never rolled back, and a
+// rolling-back write that cannot be proved durable starts no inverse effect.
 func runBINDRollbackWithJournal(
 	journal *dnsEngineSwitchJournal,
 	ops bindSwitchRollbackJournalOps,
 ) error {
-	if journal == nil || ops.write == nil || ops.rollback == nil ||
-		ops.verify == nil {
+	if journal == nil || ops.read == nil || ops.write == nil ||
+		ops.rollback == nil || ops.verify == nil {
 		return errors.New("invalid BIND rollback journal operations")
 	}
-	journal.Phase = dnsSwitchPhaseRollingBack
-	journalErr := ops.write(*journal)
+	decided, err := decideDNSSwitchInProcessRollback(
+		*journal, dnsSwitchInProcessJournalOps{read: ops.read, write: ops.write},
+		errors.New("BIND switch rollback was requested"),
+	)
+	if err != nil {
+		return err
+	}
+	*journal = decided
 	rollbackErr := ops.rollback()
 	if rollbackErr == nil {
 		rollbackErr = ops.verify()
 	}
-	if rollbackErr == nil {
-		journal.Phase = dnsSwitchPhaseRolledBack
-		finalWriteErr := ops.write(*journal)
-		journalErr = errors.Join(journalErr, finalWriteErr)
+	var journalErr error
+	if rollbackErr == nil && journal.Phase != dnsSwitchPhaseRolledBack {
+		next := *journal
+		next.Phase = dnsSwitchPhaseRolledBack
+		if journalErr = ops.write(next); journalErr == nil {
+			*journal = next
+		}
 	}
 	return errors.Join(journalErr, rollbackErr)
 }
@@ -1673,9 +1687,12 @@ func (hostDNSEngineBackend) Switch(
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	journalOps := dnsSwitchInProcessJournalOps{
+		read: readDNSEngineSwitchJournal, write: writeJournal,
+	}
 	rollbackAndJournal := func(rollbackCtx context.Context) error {
 		return runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
-			write: writeJournal,
+			read: journalOps.read, write: journalOps.write,
 			rollback: func() error {
 				proveSource := func(proofCtx context.Context) error {
 					return verifyBINDIndependentSourceProof(proofCtx, journal)
@@ -1704,12 +1721,7 @@ func (hostDNSEngineBackend) Switch(
 			},
 		})
 	}
-	attempt := 0
-	apply := func(applyCtx context.Context) error {
-		attempt++
-		if attempt > 1 {
-			return rollbackAndJournal(applyCtx)
-		}
+	applyForward := func(applyCtx context.Context) error {
 		if err := runBINDMutationWithMaskParentProof(
 			verifyBINDMaskParentMetadata,
 			func() error { return configs.apply(applyCtx) },
@@ -1800,16 +1812,24 @@ func (hostDNSEngineBackend) Switch(
 		}
 		return nil
 	}
-	recoverEmpty := func(recoveryCtx context.Context) error {
-		return rollbackAndJournal(recoveryCtx)
-	}
 	if err := verifyBINDConfigMutationPreimage(ctx, configs); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	// A failed forward step reaches the publisher, whose failed-apply path
+	// restores the pointer and runs the inverse, only after the rollback
+	// decision is durable. A durable verified target, or a decision that could
+	// not be recorded, leaves the pointer and the target in place; the error
+	// is returned and the same-request recovery takes over.
 	if err := runBINDMutationWithMaskParentProof(
 		verifyBINDMaskParentMetadata,
 		func() error {
-			return publisher.Switch(ctx, generation.ID, apply, recoverEmpty)
+			return runBINDSwitchWithRollbackGate(
+				ctx,
+				func(switchCtx context.Context, apply, recoverEmpty func(context.Context) error) error {
+					return publisher.Switch(switchCtx, generation.ID, apply, recoverEmpty)
+				},
+				&journal, journalOps, applyForward, rollbackAndJournal,
+			)
 		},
 	); err != nil {
 		removeStagedBINDGenerationAfterFailedSwitch(ctx, journal)

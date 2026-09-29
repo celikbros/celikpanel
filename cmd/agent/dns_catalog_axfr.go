@@ -32,6 +32,10 @@ const (
 type dnsCatalogAXFRResult struct {
 	Serial  uint32
 	Members []string
+	// MemberLabels maps each member to the unique label that owns its PTR
+	// under zones.<catalog> in this transfer. A PowerDNS catalog consumer
+	// records that label in the consumed member's options. In-memory only.
+	MemberLabels map[string]string
 	// Producer is the catalog format this transfer was accepted in. It is
 	// in-memory evidence for one operation and is never persisted.
 	Producer dnsCatalogAXFRProducer
@@ -401,6 +405,7 @@ type dnsCatalogAXFRState struct {
 	versionSeen  bool
 	recordOwners map[string]bool
 	members      map[string]bool
+	memberLabels map[string]string
 }
 
 func newDNSCatalogAXFRState(id uint16, catalog string) (*dnsCatalogAXFRState, error) {
@@ -420,6 +425,7 @@ func newDNSCatalogAXFRStateWithProducer(id uint16, catalog string, producer dnsC
 		producer:     producer,
 		recordOwners: make(map[string]bool),
 		members:      make(map[string]bool),
+		memberLabels: make(map[string]string),
 	}, nil
 }
 
@@ -564,6 +570,7 @@ func (state *dnsCatalogAXFRState) parseMessage(message []byte) error {
 				return errors.New("BIND catalog AXFR contains a duplicate member")
 			}
 			state.members[member] = true
+			state.memberLabels[member] = strings.TrimSuffix(owner, ".zones."+state.catalog)
 			if len(state.members) > dnsCatalogAXFRMaxMembers {
 				return errors.New("BIND catalog AXFR exceeds the member limit")
 			}
@@ -630,9 +637,13 @@ func (state *dnsCatalogAXFRState) result() (dnsCatalogAXFRResult, error) {
 	if !state.nsSeen || !state.versionSeen {
 		return dnsCatalogAXFRResult{}, errors.New("BIND catalog AXFR base records are incomplete")
 	}
-	result := dnsCatalogAXFRResult{Serial: state.serial, Producer: state.producer}
+	result := dnsCatalogAXFRResult{
+		Serial: state.serial, Producer: state.producer,
+		MemberLabels: make(map[string]string, len(state.members)),
+	}
 	for member := range state.members {
 		result.Members = append(result.Members, member)
+		result.MemberLabels[member] = state.memberLabels[member]
 	}
 	sort.Strings(result.Members)
 	return result, nil

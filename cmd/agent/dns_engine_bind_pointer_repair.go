@@ -5,12 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
-	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -156,12 +154,18 @@ type bindTargetPointerRepairOps struct {
 // bindTargetPointerRepairApplies admits only BIND switch journals that already
 // recorded a verified target and name its exact generation.
 func bindTargetPointerRepairApplies(journal dnsEngineSwitchJournal) bool {
-	return journal.TargetEngine == transport.DNSEngineBIND &&
-		(journal.Schema == dnsengineartifact.SwitchJournalSchemaV1 ||
-			journal.Schema == dnsengineartifact.SwitchJournalSchemaV2) &&
-		(journal.Phase == dnsSwitchPhaseTargetVerified ||
-			journal.Phase == dnsSwitchPhaseCommitted) &&
-		validDNSGeneration(journal.TargetGeneration)
+	return dnsenginerecovery.VerifiedBINDTargetPointerJournal(journal)
+}
+
+// bindTargetPointerRefusalKinds maps the shared read-only classification
+// (dnsenginerecovery.ClassifyBINDTargetPointer, also used by dns-switch-status)
+// to the Agent's refusal text.
+var bindTargetPointerRefusalKinds = map[dnsenginerecovery.BINDTargetPointerKind]bindTargetPointerRefusalKind{
+	dnsenginerecovery.BINDTargetPointerUnreadable:           bindTargetPointerUnreadable,
+	dnsenginerecovery.BINDTargetPointerSelectsOther:         bindTargetPointerSelectsOther,
+	dnsenginerecovery.BINDTargetPointerRecordsChanged:       bindTargetPointerRecordsChanged,
+	dnsenginerecovery.BINDTargetPointerGenerationUnverified: bindTargetPointerGenerationUnverified,
+	dnsenginerecovery.BINDTargetPointerConfigChanged:        bindTargetPointerConfigChanged,
 }
 
 func repairMissingBINDTargetPointerWithOps(
@@ -176,45 +180,41 @@ func repairMissingBINDTargetPointerWithOps(
 		ops.restore == nil || ops.logf == nil {
 		return false, errors.New("BIND target pointer repair operations are incomplete")
 	}
+	finding, err := dnsenginerecovery.ClassifyBINDTargetPointer(
+		journal.TargetGeneration,
+		dnsenginerecovery.BINDTargetPointerChecks{
+			Current:               ops.current,
+			AnchorIncludesPointer: ops.anchorIncludesPointer,
+			VerifyRecords:         ops.verifyRecords,
+			LoadTarget:            ops.loadTarget,
+			VerifyConfig:          ops.verifyConfig,
+		},
+	)
+	if err != nil {
+		return false, err
+	}
 	refuse := func(kind bindTargetPointerRefusalKind, cause error) *bindTargetPointerRefusal {
 		return &bindTargetPointerRefusal{
 			kind: kind, requestID: journal.MutationRequestID,
 			pointer: ops.pointerPath, generation: journal.TargetGeneration,
+			selected: finding.Selected, bootBlocked: finding.BootBlocked,
 			cause: cause,
 		}
 	}
-	current, exists, err := ops.current()
-	if err != nil {
-		return false, refuse(bindTargetPointerUnreadable, err)
-	}
-	if exists {
-		if current == journal.TargetGeneration {
-			// The pointer is not what failed; keep the original verdict.
-			return false, nil
+	switch finding.Kind {
+	case dnsenginerecovery.BINDTargetPointerSelectsTarget:
+		// The pointer is not what failed; keep the original verdict.
+		return false, nil
+	case dnsenginerecovery.BINDTargetPointerRepairable:
+	default:
+		kind, known := bindTargetPointerRefusalKinds[finding.Kind]
+		if !known {
+			return false, fmt.Errorf("unknown BIND target pointer finding %d", finding.Kind)
 		}
-		refusal := refuse(bindTargetPointerSelectsOther, binddns.ErrCurrentPointerSelectsOther)
-		refusal.selected = current
-		return false, refusal
-	}
-	bootBlocked, anchorErr := ops.anchorIncludesPointer()
-	bootBlocked = bootBlocked && anchorErr == nil
-	refuseMissing := func(kind bindTargetPointerRefusalKind, cause error) (bool, error) {
-		refusal := refuse(kind, cause)
-		refusal.bootBlocked = bootBlocked
-		return false, refusal
-	}
-	if err := ops.verifyRecords(); err != nil {
-		return refuseMissing(bindTargetPointerRecordsChanged, err)
-	}
-	receipt, err := ops.loadTarget()
-	if err != nil {
-		return refuseMissing(bindTargetPointerGenerationUnverified, err)
-	}
-	if err := ops.verifyConfig(receipt); err != nil {
-		return refuseMissing(bindTargetPointerConfigChanged, err)
+		return false, refuse(kind, finding.Cause)
 	}
 	if err := ops.restore(); err != nil {
-		return refuseMissing(bindTargetPointerRestoreFailed, err)
+		return false, refuse(bindTargetPointerRestoreFailed, err)
 	}
 	ops.logf(
 		"DNS switch recovery for request %s restored BIND's missing generation pointer %s to generation %s, which this operation had already verified; the full target check now runs again.",
@@ -249,19 +249,11 @@ func repairMissingBINDTargetPointer(
 	if err != nil {
 		return false, err
 	}
-	includePath := filepath.ToSlash(filepath.Join(layout.GenerationRoot, "current", "zones.conf"))
 	legacyPairedTarget := false
 	return repairMissingBINDTargetPointerWithOps(journal, bindTargetPointerRepairOps{
-		pointerPath: filepath.Join(layout.GenerationRoot, "current"),
-		current:     publisher.Current,
-		anchorIncludesPointer: func() (bool, error) {
-			data, err := os.ReadFile(layout.AnchorConfig)
-			if err != nil {
-				return false, err
-			}
-			withInclude, err := managedBINDZoneInclude(string(data), includePath)
-			return err == nil && withInclude == string(data), err
-		},
+		pointerPath:           filepath.Join(layout.GenerationRoot, "current"),
+		current:               publisher.Current,
+		anchorIncludesPointer: bindAnchorIncludesCurrentPointer(layout),
 		verifyRecords: func() error {
 			if err := verifyDNSSwitchSourceOwnership(journal); err != nil {
 				return err
@@ -304,11 +296,16 @@ func repairMissingBINDTargetPointer(
 }
 
 // releasedDNSSwitchUnknownMessage is the panel receipt text for a released,
-// undecided DNS switch. A refused BIND pointer repair has its own text.
+// undecided DNS switch. A refused BIND pointer repair and an unrecorded BIND
+// target without its pointer have their own texts.
 func releasedDNSSwitchUnknownMessage(recoveryErr error) string {
 	var refusal *bindTargetPointerRefusal
 	if errors.As(recoveryErr, &refusal) {
 		return refusal.ledgerMessage()
+	}
+	var unrecorded *bindUnrecordedTargetRefusal
+	if errors.As(recoveryErr, &unrecorded) {
+		return unrecorded.ledgerMessage()
 	}
 	return "The interrupted DNS switch could not be verified after the Agent restarted. Its exact journal remains for DNS recovery, and new DNS changes are blocked. The server administrator should inspect the native DNS service and run recovery dns-switch-status --quiesced; after resolving the reported cause, restart the Agent to retry this same operation. Unrelated host changes can continue."
 }

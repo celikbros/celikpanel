@@ -165,6 +165,14 @@ Native answers: PowerDNS does write a non-empty `options` value on consumed
 member rows; a BIND secondary does load the member from a PowerDNS primary
 serving a BIND-format catalog.
 
+Source changes after batches 4 and 5, component tests only, native re-run
+pending: boundary stop, missing-pointer repair and pointer ordering
+(`c04d8a2b`); no inverse without a durable rollback decision, consumed
+PowerDNS member options, rollback of a fresh PowerDNS secondary after the
+daemon wrote, DNS-only hold instead of a fail-closed mutation manager, status
+naming a missing pointer (next commit); harness alignment (`86c3fa20`,
+`2ac6dcbe`).
+
 ## What closed item 1
 
 Item 1's exit condition is: for supported interruptions the same operation

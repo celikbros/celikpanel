@@ -384,33 +384,37 @@ func verifyPDNSAdoptionTransactionBinding(
 	)
 }
 
+// transitionPDNSAdoptionJournalToRollback records the adoption's rollback
+// decision before any inverse effect. The journal on disk decides, not the
+// phase last written: only this operation's journal at intent is moved to
+// rolling-back, an already durable rolling-back or rolled-back journal resumes,
+// and a durable target-verified or committed journal, an unreadable or foreign
+// journal, or a rolling-back write that cannot be proved durable returns a
+// *dnsSwitchInProcessHandoffError and admits no inverse.
 func transitionPDNSAdoptionJournalToRollback(
 	expected dnsEngineSwitchJournal,
 	read func() (dnsEngineSwitchJournal, bool, error),
 	write func(dnsEngineSwitchJournal) error,
+	cause error,
 ) (dnsEngineSwitchJournal, error) {
 	if read == nil || write == nil {
 		return dnsEngineSwitchJournal{},
 			errors.New("PowerDNS adoption rollback journal access is unavailable")
 	}
-	if expected.Phase != dnsSwitchPhaseIntent {
-		return dnsEngineSwitchJournal{},
-			errors.New("PowerDNS adoption rollback can start only from intent")
-	}
 	actual, exists, err := read()
-	if err != nil {
-		return dnsEngineSwitchJournal{}, err
+	if err == nil && exists {
+		switch actual.Phase {
+		case dnsSwitchPhaseIntent, dnsSwitchPhaseRollingBack, dnsSwitchPhaseRolledBack,
+			dnsSwitchPhaseTargetVerified, dnsSwitchPhaseCommitted:
+		default:
+			return dnsEngineSwitchJournal{}, &dnsSwitchInProcessHandoffError{cause: errors.Join(
+				cause, fmt.Errorf("PowerDNS adoption journal is at phase %s, which has no rollback decision", actual.Phase),
+			)}
+		}
 	}
-	if !exists || !reflect.DeepEqual(actual, expected) {
-		return dnsEngineSwitchJournal{},
-			errors.New("PowerDNS adoption rollback journal identity changed")
-	}
-	next := expected
-	next.Phase = dnsSwitchPhaseRollingBack
-	if err := write(next); err != nil {
-		return dnsEngineSwitchJournal{}, err
-	}
-	return next, nil
+	return decideDNSSwitchInProcessRollback(
+		expected, dnsSwitchInProcessJournalOps{read: read, write: write}, cause,
+	)
 }
 
 func handlePDNSAdoptionIntentJournalWriteError(
@@ -757,28 +761,26 @@ func adoptPDNSOnCertifiedProfile(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
-		rollingBack, transitionErr := transitionPDNSAdoptionJournalToRollback(
-			journal, readDNSEngineSwitchJournal, writeJournal,
+		return transport.SwitchDNSEngineV1Response{}, runGatedDNSSwitchRollback(
+			&journal, cause, gatedDNSSwitchRollbackOps{
+				decide: func(current dnsEngineSwitchJournal, cause error) (dnsEngineSwitchJournal, error) {
+					return transitionPDNSAdoptionJournalToRollback(
+						current, readDNSEngineSwitchJournal, writeJournal, cause,
+					)
+				},
+				inverse: func(decided dnsEngineSwitchJournal) error {
+					recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
+					if contextErr != nil {
+						return contextErr
+					}
+					defer cancel()
+					return rollbackPDNSAdoptionOnCertifiedProfile(
+						recoveryCtx, profile, systemctl, manifest, decided, configs,
+					)
+				},
+				write: writeJournal,
+			},
 		)
-		if transitionErr != nil {
-			return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, transitionErr)
-		}
-		journal = rollingBack
-		var journalErr error
-		recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
-		if contextErr != nil {
-			return transport.SwitchDNSEngineV1Response{},
-				errors.Join(cause, journalErr, contextErr)
-		}
-		defer cancel()
-		rollbackErr := rollbackPDNSAdoptionOnCertifiedProfile(
-			recoveryCtx, profile, systemctl, manifest, journal, configs,
-		)
-		if rollbackErr == nil {
-			journal.Phase = dnsSwitchPhaseRolledBack
-			journalErr = writeJournal(journal)
-		}
-		return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, journalErr, rollbackErr)
 	}
 	if err := mutatePDNSAdoptionAfterConfigProof(
 		ctx, profile, manifest, configs,
@@ -814,10 +816,20 @@ func adoptPDNSOnCertifiedProfile(
 		return rollback(err)
 	}
 	journal.Phase = dnsSwitchPhaseTargetVerified
+	var verifiedWriteErr error
 	if err := mutatePDNSAdoptionAfterConfigProof(
 		ctx, profile, manifest, configs,
-		func() error { return writeJournal(journal) },
+		func() error {
+			verifiedWriteErr = writeJournal(journal)
+			return verifiedWriteErr
+		},
 	); err != nil {
+		if verifiedWriteErr != nil {
+			// The write may be durable although it reported failure; the
+			// rollback gate reads the journal back and goes forward when it
+			// is, and takes the rollback decision only from intent.
+			return rollback(err)
+		}
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	journal.Phase = dnsSwitchPhaseCommitted

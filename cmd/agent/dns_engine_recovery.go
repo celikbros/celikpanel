@@ -49,7 +49,9 @@ func exactDNSEngineStateForJournal(state dnsEngineStateReceipt, journal dnsEngin
 // proveDNSSwitchTargetAbsentForRecovery only admits a new inverse while the
 // authoritative state receipt still matches the journal's frozen source. A
 // failed runtime probe, a target receipt, or an unrelated owner's receipt is
-// not evidence that rollback is safe.
+// not evidence that rollback is safe. One narrow exception: a V1 first BIND
+// install (no source to damage) whose unrecorded target receipt is present and
+// whose generation pointer is absent (admitUnrecordedBINDTargetWithoutPointer).
 func proveDNSSwitchTargetAbsentForRecovery(
 	ctx context.Context,
 	journal dnsEngineSwitchJournal,
@@ -67,7 +69,16 @@ func proveDNSSwitchTargetAbsentForRecovery(
 	if err != nil {
 		return false, err
 	}
-	return dnsengineartifact.ProveFrozenSwitchSourceState(journal, current, currentExists)
+	proved, err := dnsengineartifact.ProveFrozenSwitchSourceState(journal, current, currentExists)
+	if err != nil || proved {
+		return proved, err
+	}
+	// The only admission beyond the frozen source: a first BIND install whose
+	// unrecorded target lost its pointer (dns_engine_bind_unrecorded_target.go).
+	return admitUnrecordedBINDTargetWithoutPointer(
+		journal, current, currentExists,
+		func() (unrecordedBINDTargetOps, error) { return hostUnrecordedBINDTargetOps(ctx) },
+	)
 }
 
 func verifyDNSSwitchJournalTarget(

@@ -935,9 +935,15 @@ func verifyLegacyPDNSConsumerSourceTx(
 			continue
 		}
 		if (zoneType != "SLAVE" && zoneType != "SECONDARY") ||
-			master != manifest.PeerIP || catalog != peerDomain || options != "" ||
+			master != manifest.PeerIP || catalog != peerDomain ||
 			(account != "" && account != pdnsPeerCatalogAccount) {
 			return errors.New("legacy PowerDNS consumer contains foreign member authority")
+		}
+		// The consumer records the member's unique catalog label in options.
+		if err := verifyPDNSConsumedMemberOptions(
+			options, peerCatalog.MemberLabels[name],
+		); err != nil {
+			return fmt.Errorf("legacy PowerDNS consumer contains foreign member authority: member %s: %w", name, err)
 		}
 		members = append(members, name)
 	}
@@ -1162,7 +1168,18 @@ func restorePDNSDatabase(journal dnsEngineSwitchJournal) error {
 		binding := transport.ServiceMutationBinding{
 			MutationRequestID: journal.MutationRequestID, MutationOwnerID: journal.MutationOwnerID,
 		}
-		if canonicalErr != nil || verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		if canonicalErr != nil {
+			return errors.New("PowerDNS rollback live database is not the staged target")
+		}
+		if freshPDNSPairSecondaryRollbackJournal(journal) {
+			// A fresh secondary's daemon writes consumer state into the
+			// candidate; admit exactly that, read-only and offline.
+			if err := verifyFreshPDNSSecondaryRollbackDatabase(
+				context.Background(), live, manifest, binding,
+			); err != nil {
+				return fmt.Errorf("PowerDNS rollback kept the live database %s, because it holds more than the staged catalog consumer and what that consumer transferred: %w; the owner's data is never deleted - inspect the database and contact support with request id %s", live, err, journal.MutationRequestID)
+			}
+		} else if verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
 			context.Background(), live, manifest, binding,
 			journal.PrimaryCatalogSerial,
 		) != nil {
@@ -1927,37 +1944,42 @@ func switchToPDNSOnCertifiedProfile(
 			ctx, profile, systemctl, manifest, binding, configs, journal, writeJournal,
 		)
 	}
+	// The inverse runs only after the rollback decision is durable; a journal
+	// already durably at target-verified goes forward instead, and an
+	// undecided rollback starts no inverse effect (decideDNSSwitchInProcessRollback).
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
-		journal.Phase = dnsSwitchPhaseRollingBack
-		journalErr := writeJournal(journal)
-		recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
-		rollbackErr := contextErr
-		if contextErr == nil {
-			defer cancel()
-			rollbackErr = runDNSMutationWithSystemdParentProof(
-				verifyBINDMaskParentMetadata,
-				func() error {
-					return rollbackPDNSSwitch(
-						recoveryCtx, systemctl, journal, configs,
+		return transport.SwitchDNSEngineV1Response{}, runGatedDNSSwitchRollback(
+			&journal, cause, gatedDNSSwitchRollbackOps{
+				decide: func(current dnsEngineSwitchJournal, cause error) (dnsEngineSwitchJournal, error) {
+					return decideDNSSwitchInProcessRollback(
+						current,
+						dnsSwitchInProcessJournalOps{read: readDNSEngineSwitchJournal, write: writeJournal},
+						cause,
 					)
 				},
-			)
-			if rollbackErr == nil {
-				rollbackErr = verifyRestoredDNSSwitchSource(
-					recoveryCtx, profile, systemctl, manifest, journal,
-				)
-			}
-		}
-		if rollbackErr == nil {
-			journalErr = errors.Join(
-				journalErr,
-				finishDNSSwitchRollbackJournal(
-					&journal,
-					writeJournal,
-				),
-			)
-		}
-		return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, journalErr, rollbackErr)
+				inverse: func(decided dnsEngineSwitchJournal) error {
+					recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
+					if contextErr != nil {
+						return contextErr
+					}
+					defer cancel()
+					if err := runDNSMutationWithSystemdParentProof(
+						verifyBINDMaskParentMetadata,
+						func() error {
+							return rollbackPDNSSwitch(
+								recoveryCtx, systemctl, decided, configs,
+							)
+						},
+					); err != nil {
+						return err
+					}
+					return verifyRestoredDNSSwitchSource(
+						recoveryCtx, profile, systemctl, manifest, decided,
+					)
+				},
+				write: writeJournal,
+			},
+		)
 	}
 	if err := configs.verifyOwnerAwarePreimage(ctx); err != nil {
 		return rollback(err)
@@ -2077,7 +2099,11 @@ func switchToPDNSOnCertifiedProfile(
 	}
 	journal.Phase = dnsSwitchPhaseTargetVerified
 	if err := writeJournal(journal); err != nil {
-		return transport.SwitchDNSEngineV1Response{}, err
+		// The write may be durable although it reported failure. The
+		// rollback gate reads the journal back: a durable target-verified
+		// goes forward through same-request recovery, an earlier phase takes
+		// the rollback decision.
+		return rollback(err)
 	}
 	journal.Phase = dnsSwitchPhaseCommitted
 	if err := writeJournal(journal); err != nil {

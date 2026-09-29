@@ -1651,3 +1651,64 @@ rollback; `recovery dns-switch-status` does not yet name the missing-pointer
 case; a journal before `target-verified` that holds the target state receipt
 and no pointer can exist only on hosts that crashed with an older Agent and
 is not repaired.
+
+### Durable rollback decision, PowerDNS secondary consumer state, DNS-only hold (2026-09-29)
+
+P0.4; constitutional invariants 1-6; D-024, D-025, D-026. No schema or
+version change. Component tests only at this commit; native cells must be
+re-run.
+
+**No inverse without a durable decision.** For every switch and adoption
+driver the in-process failure path re-reads the journal and decides from what
+is on disk, never from the phase it last tried to write. At `target-verified`
+or `committed` the operation goes forward through the same recovery path and
+is finalized; at `rolling-back` or `rolled-back` the decision already exists;
+at an earlier phase `rolling-back` is written and the inverse runs only if
+that exact phase is then on disk; an absent, unreadable or foreign journal is
+handed to recovery with the evidence kept. Before this change both rollbacks
+ran the full inverse even when the `rolling-back` write failed, and a write
+error at `target-verified` that was nevertheless durable led to a rolled-back
+host under a verified journal.
+
+**Consumed PowerDNS member options.** Native PowerDNS 4.9.17 writes
+`{"consumer": {"unique": "<label>."}}` into `options` of a consumed catalog
+member. The Agent required the field empty, so a fresh PowerDNS secondary
+whose daemon had already transferred the member and was answering
+authoritatively was refused
+([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch5-paired-first-20260929/README.md)).
+The field must now be empty or exactly that object, one key per level, string
+value, bounded, equal to the member's label in the peer catalog plus the
+trailing dot. The label is kept in memory from the catalog transfer for
+either producer.
+
+**Rollback of a fresh PowerDNS secondary after the daemon wrote.** For an
+empty-source paired-secondary journal, after the target is proven stopped,
+the live database is removed only when it is the staged candidate plus
+consumer transfers: schema equal to a freshly initialized candidate; this
+operation's manifest receipt; exactly one consumer row as staged; every other
+domain a secondary of the peer assigned to that consumer, named by a PTR in
+the database's own catalog copy, with options as above; no orphan records;
+comments, metadata, keys, TSIG keys, autoprimaries and the legacy receipts
+table empty. Anything else keeps the database and names what was found. If
+PowerDNS writes metadata for consumed members this rule refuses; that is an
+open native question.
+
+**DNS-only hold.** When a switch fails and its native result cannot be
+verified while the exact journal is readable, the Agent now writes the same
+terminal release a restarted Agent writes, keeps the journal so the DNS
+preflight refuses further DNS changes, and releases the host lock so
+unrelated mutations proceed. In the native run no ledger write had been
+attempted or ambiguous; the whole mutation manager had gone fail-closed by
+choice. A missing or unreadable journal, or a release write that may have
+published, still fails closed.
+
+**Status and older hosts.** `dns-switch-status` names a missing or foreign
+BIND pointer in plain words, read-only, and says whether `named` can start
+after a reboot. A V1 first-install journal before `target-verified` that holds
+the target state receipt and no pointer, possible only after a crash with an
+older Agent's ordering, is rolled back to no DNS engine under the existing
+proofs; every shape with a source is refused with text that says so.
+
+Open: the fail-closed sentinel text still reads "after an ambiguous ledger
+write"; a failed finalize still fails closed; the in-process path with an
+unreadable journal still fails closed until a restart.

@@ -1374,12 +1374,15 @@ func adoptRunningBIND(
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	journalOps := dnsSwitchInProcessJournalOps{
+		read: readDNSEngineSwitchJournal, write: writeJournal,
+	}
 	rollbackAndJournal := func(rollbackCtx context.Context) error {
 		if err := verifyExactRunningBINDAdoptionInstall(adoptionInstallReceipt); err != nil {
 			return err
 		}
 		return runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
-			write: writeJournal,
+			read: journalOps.read, write: journalOps.write,
 			rollback: func() error {
 				return rollbackRunningBINDAdoption(
 					rollbackCtx, profile, systemctl, configs, evidence,
@@ -1411,12 +1414,7 @@ func adoptRunningBIND(
 			},
 		})
 	}
-	attempt := 0
-	apply := func(applyCtx context.Context) error {
-		attempt++
-		if attempt > 1 {
-			return rollbackAndJournal(applyCtx)
-		}
+	applyForward := func(applyCtx context.Context) error {
 		if err := verifyRecoveryRuntime(); err != nil {
 			return err
 		}
@@ -1536,13 +1534,18 @@ func adoptRunningBIND(
 		journal.Phase = dnsSwitchPhaseTargetVerified
 		return writeJournal(journal)
 	}
-	recoverEmpty := func(recoveryCtx context.Context) error {
-		return rollbackAndJournal(recoveryCtx)
-	}
+	// As in the BIND switch: a failed forward step reaches the publisher's
+	// pointer restore and inverse only after a durable rollback decision.
 	if err := runBINDMutationWithMaskParentProof(
 		verifyBINDMaskParentMetadata,
 		func() error {
-			return publisher.Switch(ctx, generation.ID, apply, recoverEmpty)
+			return runBINDSwitchWithRollbackGate(
+				ctx,
+				func(switchCtx context.Context, apply, recoverEmpty func(context.Context) error) error {
+					return publisher.Switch(switchCtx, generation.ID, apply, recoverEmpty)
+				},
+				&journal, journalOps, applyForward, rollbackAndJournal,
+			)
 		},
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err

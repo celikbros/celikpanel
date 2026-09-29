@@ -762,9 +762,27 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			}
 		}
 	}
+	// A missing or foreign generation pointer is named in plain words before
+	// the selected-generation checks, which cannot pass without it.
+	pointerProblem := false
+	if bindPointerStatusApplies(evidence) {
+		finding, pointerPath, pointerErr := observeInstalledBINDTargetPointer(observationCtx, evidence)
+		if pointerErr != nil {
+			fmt.Fprintln(diagnostic, "BIND's generation pointer could not be classified. The server owner should inspect the managed BIND directory and its current pointer before the same operation resumes; no inverse was started. "+pointerErr.Error())
+			return exitUnavailable
+		}
+		text := bindTargetPointerStatusText(evidence.Journal, bindPointerStatus{
+			pointerPath: pointerPath, finding: finding,
+			namedState: namedUnitState(units, unitErr),
+		})
+		if text != "" {
+			fmt.Fprintln(out, text)
+			pointerProblem = true
+		}
+	}
 	if observation.SourceEngine == "bind" || observation.TargetEngine == "bind" {
 		var selectedReceipt binddns.Receipt
-		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
+		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact && !pointerProblem {
 			var bindErr error
 			selectedReceipt, bindErr = verifySelectedBINDTarget(observationCtx, observation.TargetGeneration, observation.TargetEpoch)
 			if bindErr != nil {
@@ -803,7 +821,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		} else {
 			fmt.Fprintln(out, "Certified BIND vendor files and systemd unit identity matched across read-only checks. Process liveness, a pending daemon reload, loaded named configuration and DNS answers remain unproved.")
 		}
-		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact {
+		if observation.TargetEngine == "bind" && observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact && !pointerProblem {
 			mainPID, runtimeErr := verifyInstalledBINDRuntime(observationCtx)
 			if runtimeErr != nil {
 				fmt.Fprintln(diagnostic, "Selected BIND target has unknown running service state. The server owner should inspect named.service, its bind9 alias and any pending daemon reload before the same operation resumes; no inverse was started. "+runtimeErr.Error())
@@ -971,6 +989,11 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(diagnostic, "DNS observation exceeded its deadline. Preserve the same operation and retry after native service responsiveness is restored; no DNS operation was started.")
 		return exitUnavailable
 	}
+	if pointerProblem {
+		// The pointer text above is the answer; the selected generation it
+		// names as missing or foreign was not verified.
+		return exitUnavailable
+	}
 	return exitOK
 }
 
@@ -1086,12 +1109,12 @@ func releasedDNSSwitchGuidance(e dnsenginerecovery.SwitchEvidence) (text string,
 	case dnsengineartifact.ReleasedNativeUnknownCode:
 		switch ownerDNSRecoveryCommand(e) {
 		case ownerBINDSwitchInverseCommand, ownerBINDAdoptionInverseCommand, ownerPDNSAdoptionInverseCommand:
-			return "The Agent restarted, could not complete this DNS switch rollback itself, released its lease and kept the journal. The server owner continues the same rollback with the owner recovery command named above; it rechecks locks, owner changes and native DNS before any change. The journal blocks a new DNS switch until that command retires it; this read-only status does not start recovery.", true
+			return "The Agent could not complete this DNS switch rollback itself (during the operation or after a restart), released its lease and kept the journal. The server owner continues the same rollback with the owner recovery command named above; it rechecks locks, owner changes and native DNS before any change. The journal blocks a new DNS switch until that command retires it; this read-only status does not start recovery.", true
 		}
 		if !agentRetriesReleasedDNSJournal(e.Journal) {
-			return fmt.Sprintf("The Agent restarted, could not complete this DNS switch rollback, released its lease and kept the journal. The Agent does not run this journal's rollback itself, so another restart will not finish it, and no owner recovery command accepts this released journal. Keep the journal and ledger and contact support with request id %s. The journal blocks a new DNS switch; this read-only status does not authorize an inverse.", e.Observation.RequestID), true
+			return fmt.Sprintf("The Agent could not complete this DNS switch rollback (during the operation or after a restart), released its lease and kept the journal. The Agent does not run this journal's rollback itself, so another restart will not finish it, and no owner recovery command accepts this released journal. Keep the journal and ledger and contact support with request id %s. The journal blocks a new DNS switch; this read-only status does not authorize an inverse.", e.Observation.RequestID), true
 		}
-		return "The Agent could not verify the interrupted DNS switch's native result after restart. The server owner should inspect the DNS service and the original operation, resolve the reported native error, then restart the Agent to retry that same journal. The journal remains and blocks a new DNS switch; this read-only status does not authorize an inverse.", true
+		return "The Agent could not verify this DNS switch's native result (during the operation or after a restart) and released only its lease. The server owner should inspect the DNS service and the original operation, resolve the reported native error, then restart the Agent to retry that same journal. The journal remains and blocks a new DNS switch; this read-only status does not authorize an inverse.", true
 	}
 	return "The released DNS switch has an unknown reason. Preserve its journal and ledger for owner review; no inverse or new switch is authorized.", false
 }

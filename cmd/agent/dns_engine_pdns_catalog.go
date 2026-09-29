@@ -160,10 +160,18 @@ func verifyPDNSPairSecondaryTx(
 		}
 		if (zoneType != "SLAVE" && zoneType != "SECONDARY") ||
 			master != manifest.PeerIP || memberCatalog != catalogDomain ||
-			(account != "" && account != pdnsPeerCatalogAccount) ||
-			options != "" {
+			(account != "" && account != pdnsPeerCatalogAccount) {
 			return 0, errors.New(
 				"PowerDNS secondary candidate contains foreign catalog authority",
+			)
+		}
+		// The consumer records the member's unique catalog label in options.
+		if err := verifyPDNSConsumedMemberOptions(
+			options, catalog.MemberLabels[name],
+		); err != nil {
+			return 0, fmt.Errorf(
+				"PowerDNS secondary candidate contains foreign catalog authority: member %s: %w",
+				name, err,
 			)
 		}
 		members = append(members, name)

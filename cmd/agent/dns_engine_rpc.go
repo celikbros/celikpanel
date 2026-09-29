@@ -1347,11 +1347,30 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 		ctx, commitment, request.ServiceMutationBinding,
 	)
 	if err != nil {
-		abortErr := releaseDNSEngineSwitchCriticalGuardAfterProvenAbort(
+		outcome, abortErr := reproveDNSEngineSwitchAfterInProcessFailure(
 			ctx, commitment.TargetEngine, commitment.Qualifier,
-			request.ServiceMutationBinding,
+			request.ServiceMutationBinding, true,
 		)
 		if abortErr != nil {
+			// A native DNS result that cannot be verified is a DNS-only
+			// uncertainty: hold the DNS operation with its exact journal and
+			// release only this request's lease, as the restarted Agent does.
+			// Everything else keeps the fail-closed manager.
+			released, releaseErr := releaseUnverifiedDNSEngineSwitchKeepingJournal(
+				ctx, commitment.TargetEngine, commitment.Qualifier,
+				request.ServiceMutationBinding, abortErr,
+			)
+			if released {
+				log.Printf(
+					"DNS engine switch to %s at epoch %d did not complete and its native result could not be verified; its exact journal is retained and blocks DNS changes, and only this request's lease was released so unrelated changes can continue: %v",
+					commitment.TargetEngine, commitment.TargetEpoch, errors.Join(err, abortErr),
+				)
+				response.Error = "DNS engine switch outcome could not be verified; inspect the agent log"
+				return nil
+			}
+			if releaseErr != nil {
+				abortErr = errors.Join(abortErr, releaseErr)
+			}
 			poisonErr := poisonUnfinalizedDNSEngineSwitch(
 				ctx, commitment.TargetEngine, commitment.Qualifier,
 				request.ServiceMutationBinding, errors.Join(err, abortErr),
@@ -1363,9 +1382,22 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 			response.Error = "DNS engine switch outcome could not be verified; inspect the agent log"
 			return nil
 		}
-		log.Printf("DNS engine switch to %s at epoch %d failed: %v", commitment.TargetEngine, commitment.TargetEpoch, err)
-		response.Error = "DNS engine switch did not complete; inspect the agent log"
-		return nil
+		if outcome != dnsEngineSwitchRecoveryCommitted {
+			log.Printf("DNS engine switch to %s at epoch %d failed: %v", commitment.TargetEngine, commitment.TargetEpoch, err)
+			response.Error = "DNS engine switch did not complete; inspect the agent log"
+			return nil
+		}
+		// Same-request recovery verified the target the journal recorded and
+		// wrote committed. A verified target is never ended as a failure or
+		// rolled back because a checkpoint write reported failure after it
+		// became durable; it is finalized forward exactly as a clean success
+		// is, with the critical guard still set.
+		log.Printf("DNS engine switch to %s at epoch %d reported a failure after its target was durably verified; same-request recovery re-verified the target and finalization continues: %v", commitment.TargetEngine, commitment.TargetEpoch, err)
+		result = transport.SwitchDNSEngineV1Response{
+			Applied: true, ActiveEngine: commitment.TargetEngine,
+			ActiveEpoch: commitment.TargetEpoch, AppliedZones: len(commitment.Zones),
+			Detail: "the verified DNS engine target was re-verified by same-request recovery and finalized",
+		}
 	}
 	if !result.Applied || result.ActiveEngine != commitment.TargetEngine ||
 		result.ActiveEpoch != commitment.TargetEpoch ||
@@ -1568,25 +1600,45 @@ func releaseDNSEngineSwitchCriticalGuardAfterProvenAbort(
 	qualifier string,
 	binding transport.ServiceMutationBinding,
 ) error {
+	_, err := reproveDNSEngineSwitchAfterInProcessFailure(
+		ctx, target, qualifier, binding, false,
+	)
+	return err
+}
+
+// reproveDNSEngineSwitchAfterInProcessFailure runs the same-request recovery
+// (RecoverSwitch, the decision a restarted Agent takes) after the backend
+// returned an error. Absent or rolled-back clears the critical guard. With
+// acceptCommitted, a committed outcome - the target the journal recorded as
+// verified was re-verified and committed - is returned with a nil error and
+// the guard kept for forward finalization; otherwise it is ambiguous.
+func reproveDNSEngineSwitchAfterInProcessFailure(
+	ctx context.Context,
+	target transport.DNSEngine,
+	qualifier string,
+	binding transport.ServiceMutationBinding,
+	acceptCommitted bool,
+) (dnsEngineSwitchRecoveryOutcome, error) {
+	const unknown = dnsEngineSwitchRecoveryAbsent
 	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
 	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
-		return errors.New("DNS engine abort recovery requires a durable execution tracker")
+		return unknown, errors.New("DNS engine abort recovery requires a durable execution tracker")
 	}
 	m, runtime := tracker.manager, tracker.runtime
 	m.mu.Lock()
 	if err := m.healthErrorLocked(); err != nil {
 		m.mu.Unlock()
-		return err
+		return unknown, err
 	}
 	if err := exactActiveDNSEngineSwitchRuntimeLocked(
 		m, runtime, target, qualifier, binding,
 	); err != nil {
 		m.mu.Unlock()
-		return err
+		return unknown, err
 	}
 	if !runtime.dnsEngineSwitchFinalizing {
 		m.mu.Unlock()
-		return errors.New("DNS engine abort recovery lost its critical guard")
+		return unknown, errors.New("DNS engine abort recovery lost its critical guard")
 	}
 	m.mu.Unlock()
 
@@ -1601,31 +1653,135 @@ func releaseDNSEngineSwitchCriticalGuardAfterProvenAbort(
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if err := m.healthErrorLocked(); err != nil {
-		return errors.Join(recoveryErr, err)
+		return unknown, errors.Join(recoveryErr, err)
 	}
 	if err := exactActiveDNSEngineSwitchRuntimeLocked(
 		m, runtime, target, qualifier, binding,
 	); err != nil {
-		return errors.Join(recoveryErr, err)
+		return unknown, errors.Join(recoveryErr, err)
 	}
 	if !runtime.dnsEngineSwitchFinalizing {
-		return errors.Join(
+		return unknown, errors.Join(
 			recoveryErr,
 			errors.New("DNS engine abort recovery critical guard changed during host reproof"),
 		)
 	}
 	if recoveryErr != nil {
-		return fmt.Errorf("reprove DNS engine switch abort: %w", recoveryErr)
+		return unknown, &dnsSwitchNativeRecoveryUnknownError{
+			err: fmt.Errorf("reprove DNS engine switch abort: %w", recoveryErr),
+		}
+	}
+	if acceptCommitted && outcome == dnsEngineSwitchRecoveryCommitted {
+		// Keep the critical guard: the caller finalizes forward under it.
+		return outcome, nil
 	}
 	if outcome != dnsEngineSwitchRecoveryAbsent &&
 		outcome != dnsEngineSwitchRecoveryRolledBack {
-		return fmt.Errorf(
+		return unknown, fmt.Errorf(
 			"DNS engine switch abort reproof returned ambiguous outcome %q",
 			outcome,
 		)
 	}
 	runtime.dnsEngineSwitchFinalizing = false
-	return nil
+	return outcome, nil
+}
+
+// dnsSwitchNativeRecoveryUnknownError is a same-request recovery that
+// returned an error while the manager, the exact runtime and its critical
+// guard were intact: only the native DNS result is unknown.
+type dnsSwitchNativeRecoveryUnknownError struct{ err error }
+
+func (unknown *dnsSwitchNativeRecoveryUnknownError) Error() string { return unknown.err.Error() }
+func (unknown *dnsSwitchNativeRecoveryUnknownError) Unwrap() error { return unknown.err }
+
+// releasedDNSSwitchInProcessUnknownMessage is the panel receipt for a switch
+// whose native result could not be verified during the operation itself.
+func releasedDNSSwitchInProcessUnknownMessage(recoveryErr error) string {
+	var refusal *bindTargetPointerRefusal
+	var unrecorded *bindUnrecordedTargetRefusal
+	if errors.As(recoveryErr, &refusal) || errors.As(recoveryErr, &unrecorded) {
+		return releasedDNSSwitchUnknownMessage(recoveryErr)
+	}
+	return "The DNS engine switch did not complete and its native result could not be verified. Its exact journal remains for DNS recovery, and new DNS changes are blocked. The server administrator should inspect the native DNS service and run recovery dns-switch-status --quiesced; after resolving the reported cause, restart the Agent to retry this same operation. Unrelated host changes can continue."
+}
+
+// releaseUnverifiedDNSEngineSwitchKeepingJournal ends the stage-3 blast
+// radius of an unverifiable DNS switch (invariant 3). When the only unknown
+// is the native DNS result (cause is a dnsSwitchNativeRecoveryUnknownError),
+// the manager is healthy, this exact runtime still holds its critical guard,
+// and this operation's exact journal is readable on disk, it records the same
+// terminal release a restarted Agent records
+// (dnsengineartifact.ReleasedNativeUnknownCode, phase interrupted), keeps the
+// journal - which refuses every later DNS mutation until the same request is
+// reconciled - and releases the host lock so unrelated mutations proceed.
+// The next Agent start reconciles the released journal
+// (recoverReleasedUndecidedDNSEngineSwitchLocked). It returns false, and
+// changes nothing, in every other case; a ledger write that may have
+// published leaves the manager fail-closed as before.
+func releaseUnverifiedDNSEngineSwitchKeepingJournal(
+	ctx context.Context,
+	target transport.DNSEngine,
+	qualifier string,
+	binding transport.ServiceMutationBinding,
+	cause error,
+) (bool, error) {
+	var unknown *dnsSwitchNativeRecoveryUnknownError
+	if !errors.As(cause, &unknown) {
+		return false, nil
+	}
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
+		return false, nil
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.healthErrorLocked() != nil || !runtime.dnsEngineSwitchFinalizing ||
+		exactActiveDNSEngineSwitchRuntimeLocked(m, runtime, target, qualifier, binding) != nil {
+		return false, nil
+	}
+	journal, exists, err := readDNSEngineSwitchJournalAt(
+		filepath.Join(filepath.Dir(m.ledgerPath), dnsEngineSwitchJournalFile),
+	)
+	if err != nil || !exists || !exactSwitchJournalIdentity(journal, target, qualifier, binding) {
+		return false, nil
+	}
+	// The terminal release a restarted Agent writes
+	// (finishPersistedOrphanLocked), applied to the live runtime. Unlike
+	// finishRuntimeTerminalLocked it never retires the journal: a rolled-back
+	// journal whose re-proof just failed is not proof of a restored source.
+	before := cloneServiceMutationLedger(m.ledger)
+	now := m.now()
+	job := runtime.job
+	job.Status = serviceMutationStatusFailed
+	job.Phase = "interrupted"
+	job.ErrorCode = dnsengineartifact.ReleasedNativeUnknownCode
+	job.ErrorMessage = releasedDNSSwitchInProcessUnknownMessage(unknown.err)
+	job.UpdatedAt = now
+	job.FinishedAt = now
+	job.LeaseExpiresAt = time.Time{}
+	job.WorkerPID = 0
+	job.WorkerStarted = ""
+	job.WorkerCommand = ""
+	m.ledger.ActiveRequestID = ""
+	if err := m.persistLedgerMutationProtectedLocked(before, job.RequestID); err != nil {
+		// Not published: the ledger was restored and the caller keeps the
+		// fail-closed path. Possibly published: the write poisoned the
+		// manager; the host lock stays with this runtime.
+		if m.poisoned != nil && m.poisonLock == nil {
+			m.poisonLock = runtime.lock
+		}
+		return false, fmt.Errorf("release unverifiable DNS engine switch lease: %w", err)
+	}
+	runtime.dnsEngineSwitchFinalizing = false
+	runtime.cancel()
+	lockErr := runtime.lock.Close()
+	m.active = nil
+	m.trimHistoryLocked(job.RequestID)
+	if lockErr != nil {
+		log.Printf("DNS engine switch %s was released as unverifiable but its host lock did not close cleanly: %v", job.RequestID, lockErr)
+	}
+	return true, nil
 }
 
 // protectCommittedDNSEngineSwitchFinalizationLocked preserves the critical

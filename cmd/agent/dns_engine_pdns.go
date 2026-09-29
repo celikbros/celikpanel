@@ -811,48 +811,11 @@ func verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
 			return err
 		}
 	}
-	var engine string
-	var epoch, sourceRevision, zoneCount, snapshotBytes int64
-	var requestID, ownerID, qualifier, schema string
-	if err := tx.QueryRowContext(ctx, `
-		SELECT engine, engine_epoch, request_id, owner_id, qualifier,
-		 source_revision, zone_count, snapshot_bytes, schema
-		FROM celikpanel_dns_engine_manifest_receipt WHERE singleton = 1
-	`).Scan(&engine, &epoch, &requestID, &ownerID, &qualifier,
-		&sourceRevision, &zoneCount, &snapshotBytes, &schema); err != nil {
+	if err := verifyPDNSSwitchManifestReceiptTx(ctx, tx, manifest, binding); err != nil {
 		return err
 	}
-	if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
-		engine != string(transport.DNSEnginePowerDNS) || epoch != manifest.TargetEpoch ||
-		requestID != binding.MutationRequestID || ownerID != binding.MutationOwnerID ||
-		qualifier != manifest.Qualifier || sourceRevision != manifest.SourceRevision ||
-		zoneCount != int64(len(manifest.Zones)) || snapshotBytes != manifest.SnapshotBytes ||
-		schema != pdnsManifestSchema {
-		return errors.New("PowerDNS switch manifest receipt mismatch")
-	}
-	for _, zone := range manifest.Zones {
-		commitment, err := mutationpayload.CanonicalDNSZoneSyncV3(
-			transport.DNSEnginePowerDNS, manifest.TargetEpoch,
-			zone.DesiredGeneration, zone.Domain, zone.Delete, zone.ZoneType, zone.Records,
-		)
-		if err != nil {
-			return err
-		}
-		receipt, found, err := readPDNSV3ReceiptTx(ctx, tx, zone.Domain)
-		if err != nil || !found {
-			if err == nil {
-				err = errors.New("PowerDNS switch zone receipt is missing")
-			}
-			return err
-		}
-		if receipt.EngineEpoch != manifest.TargetEpoch || receipt.RequestID != binding.MutationRequestID ||
-			receipt.OwnerID != binding.MutationOwnerID || receipt.Qualifier != commitment.Qualifier ||
-			receipt.DesiredGeneration != commitment.DesiredGeneration {
-			return errors.New("PowerDNS switch zone receipt mismatch")
-		}
-		if err := verifyPDNSV3ZoneTx(ctx, tx, commitment); err != nil {
-			return err
-		}
+	if err := verifyPDNSSwitchManifestZonesTx(ctx, tx, manifest, binding); err != nil {
+		return err
 	}
 	var receiptCount, domainCount int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM celikpanel_dns_zone_sync_v3_receipts`).Scan(&receiptCount); err != nil {
@@ -901,6 +864,71 @@ func verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
 		return errors.New("PowerDNS switch database contains unreceipted zones")
 	}
 	return tx.Commit()
+}
+
+// verifyPDNSSwitchManifestReceiptTx proves the singleton manifest receipt the
+// switch candidate was built with.
+func verifyPDNSSwitchManifestReceiptTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+) error {
+	var engine string
+	var epoch, sourceRevision, zoneCount, snapshotBytes int64
+	var requestID, ownerID, qualifier, schema string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT engine, engine_epoch, request_id, owner_id, qualifier,
+		 source_revision, zone_count, snapshot_bytes, schema
+		FROM celikpanel_dns_engine_manifest_receipt WHERE singleton = 1
+	`).Scan(&engine, &epoch, &requestID, &ownerID, &qualifier,
+		&sourceRevision, &zoneCount, &snapshotBytes, &schema); err != nil {
+		return err
+	}
+	if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+		engine != string(transport.DNSEnginePowerDNS) || epoch != manifest.TargetEpoch ||
+		requestID != binding.MutationRequestID || ownerID != binding.MutationOwnerID ||
+		qualifier != manifest.Qualifier || sourceRevision != manifest.SourceRevision ||
+		zoneCount != int64(len(manifest.Zones)) || snapshotBytes != manifest.SnapshotBytes ||
+		schema != pdnsManifestSchema {
+		return errors.New("PowerDNS switch manifest receipt mismatch")
+	}
+	return nil
+}
+
+// verifyPDNSSwitchManifestZonesTx proves every manifest zone's receipt and
+// exact rows as the candidate staged them.
+func verifyPDNSSwitchManifestZonesTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+) error {
+	for _, zone := range manifest.Zones {
+		commitment, err := mutationpayload.CanonicalDNSZoneSyncV3(
+			transport.DNSEnginePowerDNS, manifest.TargetEpoch,
+			zone.DesiredGeneration, zone.Domain, zone.Delete, zone.ZoneType, zone.Records,
+		)
+		if err != nil {
+			return err
+		}
+		receipt, found, err := readPDNSV3ReceiptTx(ctx, tx, zone.Domain)
+		if err != nil || !found {
+			if err == nil {
+				err = errors.New("PowerDNS switch zone receipt is missing")
+			}
+			return err
+		}
+		if receipt.EngineEpoch != manifest.TargetEpoch || receipt.RequestID != binding.MutationRequestID ||
+			receipt.OwnerID != binding.MutationOwnerID || receipt.Qualifier != commitment.Qualifier ||
+			receipt.DesiredGeneration != commitment.DesiredGeneration {
+			return errors.New("PowerDNS switch zone receipt mismatch")
+		}
+		if err := verifyPDNSV3ZoneTx(ctx, tx, commitment); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func readPDNSV3ZoneSnapshot(

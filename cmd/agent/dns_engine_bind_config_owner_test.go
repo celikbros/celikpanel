@@ -250,7 +250,9 @@ func TestBINDRollbackFailureRetainsRollingJournal(t *testing.T) {
 	journal := testBINDSwitchJournal(t)
 	writes := 0
 	verified := false
+	durable := journal
 	err := runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
+		read: func() (dnsEngineSwitchJournal, bool, error) { return durable, true, nil },
 		write: func(current dnsEngineSwitchJournal) error {
 			writes++
 			if current.Phase != dnsSwitchPhaseRollingBack {
@@ -278,7 +280,9 @@ func TestBINDRollbackFailureRetainsRollingJournal(t *testing.T) {
 func TestBINDRollbackFinalPhaseWriteFailureRetainsJournal(t *testing.T) {
 	journal := testBINDSwitchJournal(t)
 	writes := 0
+	durable := journal
 	err := runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
+		read: func() (dnsEngineSwitchJournal, bool, error) { return durable, true, nil },
 		write: func(current dnsEngineSwitchJournal) error {
 			writes++
 			switch writes {
@@ -312,7 +316,9 @@ func TestBINDRollbackFinalPhaseWriteFailureRetainsJournal(t *testing.T) {
 func TestBINDRollbackRetainsFinalCheckpointForTerminalLedger(t *testing.T) {
 	journal := testBINDSwitchJournal(t)
 	var phases []string
+	durable := journal
 	err := runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
+		read: func() (dnsEngineSwitchJournal, bool, error) { return durable, true, nil },
 		write: func(current dnsEngineSwitchJournal) error {
 			phases = append(phases, current.Phase)
 			return nil

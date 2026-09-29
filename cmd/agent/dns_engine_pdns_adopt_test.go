@@ -690,7 +690,7 @@ func TestPDNSAdoptionRollbackNeverOverwritesDifferentJournal(t *testing.T) {
 	if _, err := transitionPDNSAdoptionJournalToRollback(
 		expected,
 		func() (dnsEngineSwitchJournal, bool, error) { return foreign, true, nil },
-		write,
+		write, errors.New("test rollback cause"),
 	); err == nil {
 		t.Fatal("rollback accepted a different current adoption journal")
 	}
@@ -708,6 +708,7 @@ func TestPDNSAdoptionRollbackNeverOverwritesDifferentJournal(t *testing.T) {
 			}
 			return nil
 		},
+		errors.New("test rollback cause"),
 	)
 	if err != nil || next.Phase != dnsSwitchPhaseRollingBack || writes != 1 {
 		t.Fatalf("exact rollback transition failed: next=%+v writes=%d err=%v", next, writes, err)
