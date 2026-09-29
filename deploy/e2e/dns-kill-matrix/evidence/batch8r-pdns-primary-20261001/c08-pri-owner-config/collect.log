@@ -1,0 +1,16 @@
+### collect 2026-09-29T23:37:17.560993425Z
+last watcher dir: /var/tmp/cp-b8r-watch
+request id: dbf9982f7d79645b1cc9ddfa99573f41
+ownerpost rc=0
+smstatus rc=0
+probe rc=0
+pdnsdb rc=0
+bindsec rc=0
+peer journal rc=0
+peerloop rc=0 lines=15
+cell directory: /var/tmp/cp-b8r-1001/r2/cells/7fc4eccb599d2ce9b7d2a44c
+no fresh-primary-peer directory
+23:36:30.504837138 start boot_id=e568c9bb-719d-491f-8eea-6e7f4ecf4924
+23:36:30.512458164 CHANGE pdnsdb none -> absent pdns=0/inactive/
+done
+tar rc=0 size=655360

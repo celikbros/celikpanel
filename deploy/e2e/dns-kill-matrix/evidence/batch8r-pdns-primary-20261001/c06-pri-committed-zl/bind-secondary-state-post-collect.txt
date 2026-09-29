@@ -1,0 +1,242 @@
+wall=2026-09-29T23:27:15.110600638Z boot_id=584a24a0-0f99-47b8-9d71-58226887d5a4
+== named.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+MainPID=4964
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 23:24:23 UTC
+== ss 53
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4964,fd=24))
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4964,fd=23))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4964,fd=18))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4964,fd=17))
+udp UNCONN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1482,fd=26))
+udp UNCONN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1482,fd=24))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4964,fd=21))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4964,fd=19))
+tcp LISTEN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1482,fd=25))
+tcp LISTEN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1482,fd=27))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4964,fd=26))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4964,fd=25))
+== management binaries (must be absent)
+ls: cannot access '/opt/celikpanel': No such file or directory
+== /etc/named.conf
+-rw-r----- 1 root named 510 2026-09-29 23:24:23.451132022 +0000 /etc/named.conf
+b0cb30473a30e3ccf11ba43cb44ed92112ffb48648c80559ec1b9bcf1b86e6c0  /etc/named.conf
+== rndc status
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus catalog-c000020a.celikpanel.invalid
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone catalog-c000020a.celikpanel.invalid
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus s2.s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone s2.s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== loaded catalog (AXFR from 127.0.0.1, read-only)
+catalog-c000020a.celikpanel.invalid. 60	IN SOA	invalid. invalid. 1790724398 60 30 3600 30
+catalog-c000020a.celikpanel.invalid. 60	IN NS	invalid.
+version.catalog-c000020a.celikpanel.invalid. 0 IN TXT "2"
+shifui338l9fm0tkccnvcbfi24v8r5vj.zones.catalog-c000020a.celikpanel.invalid. 0 IN PTR s2.s1-kill.test.
+tlhnkturltuku63bhersj40lbi0vkdvt.zones.catalog-c000020a.celikpanel.invalid. 0 IN PTR s1-kill.test.
+catalog-c000020a.celikpanel.invalid. 60	IN SOA	invalid. invalid. 1790724398 60 30 3600 30
+== catalog members (PTR rdata under zones.catalog-c000020a.celikpanel.invalid)
+shifui338l9fm0tkccnvcbfi24v8r5vj.zones.catalog-c000020a.celikpanel.invalid. s2.s1-kill.test.
+tlhnkturltuku63bhersj40lbi0vkdvt.zones.catalog-c000020a.celikpanel.invalid. s1-kill.test.
+== loaded s1-kill.test SOA (127.0.0.1)
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 34127
+;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3
+; EDNS: version: 0, flags:; udp: 1232
+;s1-kill.test.			IN	SOA
+s1-kill.test.		3600	IN	SOA	ns1.s1-kill.test. hostmaster.s1-kill.test. 2026083101 10800 3600 604800 3600
+== loaded s2.s1-kill.test SOA (127.0.0.1)
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 46942
+;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+; EDNS: version: 0, flags:; udp: 1232
+;s2.s1-kill.test.		IN	SOA
+s2.s1-kill.test.	300	IN	SOA	ns1.s1-kill.test. hostmaster.s1-kill.test. 2026092803 10800 3600 604800 3600
+== /var/named tree (no follow)
+drwxrwx--- root:named 250 2026-09-29T23:26:46.2236083700 /var/named -> 
+-rw-r----- root:named 466 2026-09-16T14:52:07.0000000000 /var/named/127.0.0.zone -> 
+-rw------- named:named 8192 2026-09-29T23:24:23.7415482240 /var/named/_default.nzd -> 
+-rw-r--r-- named:named 485 2026-09-29T23:27:03.1810350000 /var/named/celikpanel-fixture-catalog.zone -> 
+-rw-r----- root:named 506 2026-09-16T14:52:07.0000000000 /var/named/localhost.ip6.zone -> 
+-rw-r----- root:named 517 2026-09-16T14:52:07.0000000000 /var/named/localhost.zone -> 
+-rw-r--r-- named:named 1411 2026-09-29T23:24:51.7615218380 /var/named/managed-keys.bind -> 
+-rw-r--r-- named:named 1336 2026-09-29T23:24:23.9132169180 /var/named/managed-keys.bind.jnl -> 
+== transferred zone files (newer than /etc/named.conf): metadata, hash, content
+-- /var/named/_default.nzd
+size=8192 mode=600 owner=named:named mtime=2026-09-29 23:24:23.741548224 +0000
+e01847f8afdf44e574920f3f79a05dc514e5dc0627f6f27dddd0520bde4d6797  /var/named/_default.nzd
+-- /var/named/celikpanel-fixture-catalog.zone
+size=485 mode=644 owner=named:named mtime=2026-09-29 23:27:03.181035000 +0000
+3a2ac90e36e3da4a7a0809bf1498984a47eb8832b31b5754f6f5f1600883e6cb  /var/named/celikpanel-fixture-catalog.zone
+(zone catalog-c000020a.celikpanel.invalid, format raw)
+catalog-c000020a.celikpanel.invalid.	      60 IN SOA		invalid. invalid. 1790724398 60 30 3600 30
+catalog-c000020a.celikpanel.invalid.	      60 IN NS		invalid.
+version.catalog-c000020a.celikpanel.invalid.  0	IN TXT		"2"
+shifui338l9fm0tkccnvcbfi24v8r5vj.zones.catalog-c000020a.celikpanel.invalid. 0 IN PTR s2.s1-kill.test.
+tlhnkturltuku63bhersj40lbi0vkdvt.zones.catalog-c000020a.celikpanel.invalid. 0 IN PTR s1-kill.test.
+-- /var/named/managed-keys.bind
+size=1411 mode=644 owner=named:named mtime=2026-09-29 23:24:51.761521838 +0000
+c36bd8c925eea1d7d79ce5d563244adf74b35bee3332fe8864f6b520946f2367  /var/named/managed-keys.bind
+-- /var/named/managed-keys.bind.jnl
+size=1336 mode=644 owner=named:named mtime=2026-09-29 23:24:23.913216918 +0000
+5ffb1102749ee5d22a4a0c3beb32b582eb65d4c71e0d3b98956b798297325b6a  /var/named/managed-keys.bind.jnl
+== named journal (transfer/notify/catalog/zone lines, all boots)
+2026-09-29T23:26:24.153954+00:00 dns-arch named[4964]: 0x7fc5fb31a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 6 records, 415 bytes, 0.042 secs (9880 bytes/sec) (serial 1790724336)
+2026-09-29T23:26:24.153961+00:00 dns-arch named[4964]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-29T23:26:24.154302+00:00 dns-arch named[4964]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790724336
+2026-09-29T23:26:24.154389+00:00 dns-arch named[4964]: catz: adding zone 's2.s1-kill.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-29T23:26:24.162400+00:00 dns-arch named[4964]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-29T23:26:24.166304+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: Transfer started.
+2026-09-29T23:26:24.167012+00:00 dns-arch named[4964]: 0x7fc5f7b10000: transfer of 's2.s1-kill.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T23:26:24.210693+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: transferred serial 2026092801
+2026-09-29T23:26:24.210708+00:00 dns-arch named[4964]: 0x7fc5f7b10000: transfer of 's2.s1-kill.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T23:26:24.210713+00:00 dns-arch named[4964]: 0x7fc5f7b10000: transfer of 's2.s1-kill.test/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 4 records, 272 bytes, 0.043 secs (6325 bytes/sec) (serial 2026092801)
+2026-09-29T23:26:24.617245+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#39565 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724336)
+2026-09-29T23:26:24.617582+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#39565 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 276 bytes, 0.001 secs (276000 bytes/sec) (serial 1790724336)
+2026-09-29T23:26:25.961531+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 127.0.0.1#59949 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724336)
+2026-09-29T23:26:25.962361+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 127.0.0.1#59949 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 315 bytes, 0.001 secs (315000 bytes/sec) (serial 1790724336)
+2026-09-29T23:26:27.107801+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:27.107940+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:27.110458+00:00 dns-arch named[4964]: client @0x7fc5fb2e6800 192.0.2.10#16559: received notify for zone 's2.s1-kill.test'
+2026-09-29T23:26:27.110528+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:31.133586+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:31.133694+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:31.133787+00:00 dns-arch named[4964]: client @0x7fc5fb2e6800 192.0.2.10#16559: received notify for zone 's2.s1-kill.test'
+2026-09-29T23:26:31.133791+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:31.135554+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: Transfer started.
+2026-09-29T23:26:31.177318+00:00 dns-arch named[4964]: 0x7fc5f7b1d000: transfer of 's2.s1-kill.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T23:26:31.222533+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: transferred serial 2026092802
+2026-09-29T23:26:31.222573+00:00 dns-arch named[4964]: 0x7fc5f7b1d000: transfer of 's2.s1-kill.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T23:26:31.222578+00:00 dns-arch named[4964]: 0x7fc5f7b1d000: transfer of 's2.s1-kill.test/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 5 records, 296 bytes, 0.045 secs (6577 bytes/sec) (serial 2026092802)
+2026-09-29T23:26:31.469413+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#52963 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724336)
+2026-09-29T23:26:31.469730+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#52963 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 276 bytes, 0.001 secs (276000 bytes/sec) (serial 1790724336)
+2026-09-29T23:26:32.116694+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:32.117357+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:32.123330+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 's2.s1-kill.test'
+2026-09-29T23:26:32.123373+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:33.554467+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 127.0.0.1#35955 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724336)
+2026-09-29T23:26:33.555200+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 127.0.0.1#35955 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 315 bytes, 0.001 secs (315000 bytes/sec) (serial 1790724336)
+2026-09-29T23:26:34.123908+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:34.123932+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:34.124015+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 's2.s1-kill.test'
+2026-09-29T23:26:34.124020+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:36.169945+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#16559: received notify for zone 's2.s1-kill.test'
+2026-09-29T23:26:36.169974+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:36.170411+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:36.170417+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:36.213628+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-29T23:26:36.214174+00:00 dns-arch named[4964]: 0x7fc5fb31a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T23:26:36.258646+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790724396
+2026-09-29T23:26:36.258756+00:00 dns-arch named[4964]: 0x7fc5fb31a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T23:26:36.258765+00:00 dns-arch named[4964]: 0x7fc5fb31a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 6 records, 415 bytes, 0.044 secs (9431 bytes/sec) (serial 1790724396)
+2026-09-29T23:26:36.258775+00:00 dns-arch named[4964]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-29T23:26:36.259111+00:00 dns-arch named[4964]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790724396
+2026-09-29T23:26:36.259251+00:00 dns-arch named[4964]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-29T23:26:37.170757+00:00 dns-arch named[4964]: client @0x7fc5fb2e6800 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:37.170801+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:37.173252+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-29T23:26:37.173919+00:00 dns-arch named[4964]: 0x7fc5fb31a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T23:26:37.218278+00:00 dns-arch named[4964]: catz: catalog-c000020a.celikpanel.invalid: new zone version came too soon, deferring update for 5 seconds
+2026-09-29T23:26:37.218338+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790724397
+2026-09-29T23:26:37.218360+00:00 dns-arch named[4964]: 0x7fc5fb31a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T23:26:37.218366+00:00 dns-arch named[4964]: 0x7fc5fb31a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 5 records, 365 bytes, 0.044 secs (8295 bytes/sec) (serial 1790724397)
+2026-09-29T23:26:38.257641+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#47643 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724397)
+2026-09-29T23:26:38.258203+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#47643 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 226 bytes, 0.001 secs (226000 bytes/sec) (serial 1790724397)
+2026-09-29T23:26:38.629493+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#43389 (s2.s1-kill.test): zone transfer 's2.s1-kill.test/AXFR/IN' denied
+2026-09-29T23:26:38.969492+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#54769 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724397)
+2026-09-29T23:26:38.969716+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#54769 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 226 bytes, 0.001 secs (226000 bytes/sec) (serial 1790724397)
+2026-09-29T23:26:39.189619+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:39.189668+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:39.189741+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 's2.s1-kill.test'
+2026-09-29T23:26:39.189747+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:39.233564+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: refresh: unexpected rcode (NXDOMAIN) from primary 192.0.2.10#53 (source 0.0.0.0#0)
+2026-09-29T23:26:39.277537+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#56123 (s2.s1-kill.test): zone transfer 's2.s1-kill.test/AXFR/IN' denied
+2026-09-29T23:26:39.617632+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#45445 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724397)
+2026-09-29T23:26:39.617864+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#45445 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 226 bytes, 0.001 secs (226000 bytes/sec) (serial 1790724397)
+2026-09-29T23:26:39.921702+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#43967 (s2.s1-kill.test): zone transfer 's2.s1-kill.test/AXFR/IN' denied
+2026-09-29T23:26:40.172758+00:00 dns-arch named[4964]: client @0x7fc5fb2e6800 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:40.172805+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:40.265579+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#59581 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724397)
+2026-09-29T23:26:40.265943+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#59581 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 226 bytes, 0.001 secs (226000 bytes/sec) (serial 1790724397)
+2026-09-29T23:26:40.617599+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#36987 (s2.s1-kill.test): zone transfer 's2.s1-kill.test/AXFR/IN' denied
+2026-09-29T23:26:40.985706+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#42525 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724397)
+2026-09-29T23:26:40.986185+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#42525 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 226 bytes, 0.001 secs (226000 bytes/sec) (serial 1790724397)
+2026-09-29T23:26:41.175144+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:41.175179+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:41.175517+00:00 dns-arch named[4964]: client @0x7fc5fb2e6800 192.0.2.10#16559: received notify for zone 's2.s1-kill.test'
+2026-09-29T23:26:41.175527+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:41.187265+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#43785 (s2.s1-kill.test): zone transfer 's2.s1-kill.test/AXFR/IN' denied
+2026-09-29T23:26:41.187461+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: refresh: unexpected rcode (NXDOMAIN) from primary 192.0.2.10#53 (source 0.0.0.0#0)
+2026-09-29T23:26:41.551206+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#41283 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724397)
+2026-09-29T23:26:41.552978+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#41283 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 226 bytes, 0.002 secs (113000 bytes/sec) (serial 1790724397)
+2026-09-29T23:26:41.921617+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#41315 (s2.s1-kill.test): zone transfer 's2.s1-kill.test/AXFR/IN' denied
+2026-09-29T23:26:42.218762+00:00 dns-arch named[4964]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-29T23:26:42.218988+00:00 dns-arch named[4964]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790724397
+2026-09-29T23:26:42.219110+00:00 dns-arch named[4964]: catz: deleting zone 's2.s1-kill.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-29T23:26:42.219283+00:00 dns-arch named[4964]: catz: catz_delzone_cb: zone 's2.s1-kill.test' deleted
+2026-09-29T23:26:42.219385+00:00 dns-arch named[4964]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-29T23:26:42.281650+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#42909 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724397)
+2026-09-29T23:26:42.281819+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#42909 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 226 bytes, 0.001 secs (226000 bytes/sec) (serial 1790724397)
+2026-09-29T23:26:42.589637+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#37601 (s2.s1-kill.test): bad zone transfer request: 's2.s1-kill.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-29T23:26:43.664425+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 127.0.0.1#45470 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724397)
+2026-09-29T23:26:43.664614+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 127.0.0.1#45470 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 265 bytes, 0.001 secs (265000 bytes/sec) (serial 1790724397)
+2026-09-29T23:26:45.174629+00:00 dns-arch named[4964]: client @0x7fc5fb2e6800 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:45.174675+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:46.175000+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:46.175041+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:46.175111+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 's2.s1-kill.test': NOTAUTH
+2026-09-29T23:26:46.176159+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-29T23:26:46.176620+00:00 dns-arch named[4964]: 0x7fc5fb31a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T23:26:46.218419+00:00 dns-arch named[4964]: catz: catalog-c000020a.celikpanel.invalid: new zone version came too soon, deferring update for 2 seconds
+2026-09-29T23:26:46.218480+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790724398
+2026-09-29T23:26:46.218503+00:00 dns-arch named[4964]: 0x7fc5fb31a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T23:26:46.218526+00:00 dns-arch named[4964]: 0x7fc5fb31a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 6 records, 415 bytes, 0.042 secs (9880 bytes/sec) (serial 1790724398)
+2026-09-29T23:26:46.573722+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#39227 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724398)
+2026-09-29T23:26:46.573992+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#39227 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 276 bytes, 0.001 secs (276000 bytes/sec) (serial 1790724398)
+2026-09-29T23:26:47.193762+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#47383 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724398)
+2026-09-29T23:26:47.194166+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#47383 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 276 bytes, 0.001 secs (276000 bytes/sec) (serial 1790724398)
+2026-09-29T23:26:47.825917+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#45817 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724398)
+2026-09-29T23:26:47.826224+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 192.0.2.10#45817 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 276 bytes, 0.001 secs (276000 bytes/sec) (serial 1790724398)
+2026-09-29T23:26:48.185601+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:48.185640+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:48.185715+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 's2.s1-kill.test': NOTAUTH
+2026-09-29T23:26:48.218951+00:00 dns-arch named[4964]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-29T23:26:48.219017+00:00 dns-arch named[4964]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790724398
+2026-09-29T23:26:48.219280+00:00 dns-arch named[4964]: catz: adding zone 's2.s1-kill.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-29T23:26:48.219616+00:00 dns-arch named[4964]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-29T23:26:48.222023+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: Transfer started.
+2026-09-29T23:26:48.222557+00:00 dns-arch named[4964]: 0x7fc5f7b1d000: transfer of 's2.s1-kill.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T23:26:48.266392+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: transferred serial 2026092803
+2026-09-29T23:26:48.266436+00:00 dns-arch named[4964]: 0x7fc5f7b1d000: transfer of 's2.s1-kill.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T23:26:48.266443+00:00 dns-arch named[4964]: 0x7fc5f7b1d000: transfer of 's2.s1-kill.test/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 4 records, 272 bytes, 0.044 secs (6181 bytes/sec) (serial 2026092803)
+2026-09-29T23:26:48.445759+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#51189 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724398)
+2026-09-29T23:26:48.446089+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 192.0.2.10#51189 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 276 bytes, 0.001 secs (276000 bytes/sec) (serial 1790724398)
+2026-09-29T23:26:49.185758+00:00 dns-arch named[4964]: client @0x7fc5fb2e6800 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:49.185774+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:49.185827+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#16559: received notify for zone 's2.s1-kill.test'
+2026-09-29T23:26:49.185835+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:49.813736+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 127.0.0.1#45471 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724398)
+2026-09-29T23:26:49.814069+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 127.0.0.1#45471 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 315 bytes, 0.001 secs (315000 bytes/sec) (serial 1790724398)
+2026-09-29T23:26:54.178847+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:54.178924+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:26:54.179634+00:00 dns-arch named[4964]: client @0x7fc5fb2e6800 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:26:54.179640+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: refresh in progress, refresh check queued
+2026-09-29T23:26:54.179667+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#16559: received notify for zone 's2.s1-kill.test'
+2026-09-29T23:26:54.179671+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:27:03.181231+00:00 dns-arch named[4964]: client @0x7fc5fb30c000 192.0.2.10#16559: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:27:03.181275+00:00 dns-arch named[4964]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:27:03.181761+00:00 dns-arch named[4964]: client @0x7fc5fb2e3000 192.0.2.10#16559: received notify for zone 's2.s1-kill.test'
+2026-09-29T23:27:03.181767+00:00 dns-arch named[4964]: zone s2.s1-kill.test/IN: notify from 192.0.2.10#16559: no serial
+2026-09-29T23:27:15.226857+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 127.0.0.1#58441 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724398)
+2026-09-29T23:27:15.227094+00:00 dns-arch named[4964]: client @0x7fc5fb30dc00 127.0.0.1#58441 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 315 bytes, 0.001 secs (315000 bytes/sec) (serial 1790724398)
+2026-09-29T23:27:15.240400+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 127.0.0.1#58449 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790724398)
+2026-09-29T23:27:15.240597+00:00 dns-arch named[4964]: client @0x7fc5f7a23800 127.0.0.1#58449 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 315 bytes, 0.001 secs (315000 bytes/sec) (serial 1790724398)

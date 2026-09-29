@@ -1,0 +1,3 @@
+/var/tmp/cp-b8r-1001
+/var/tmp/cp-b8r-1001/r2
+/var/tmp/cp-b8r-1001/r3

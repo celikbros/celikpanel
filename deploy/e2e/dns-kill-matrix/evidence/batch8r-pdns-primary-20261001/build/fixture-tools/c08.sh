@@ -1,0 +1,1 @@
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/runcell.sh c08-pri-owner-config pdns-switch__target-staged__after-write__paired-primary__peer-reachable /var/tmp/cp-b8r-1001/r2 0 --owner-edit config

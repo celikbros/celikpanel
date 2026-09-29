@@ -1,0 +1,21 @@
+== c01-pri-intent pdns-switch__intent__after-write__paired-primary__peer-reachable
+  status=passed safety=passed class=target_converged complete=True RUN_PREPARED_RC=0 kill_proven=True
+  request=f7cf73e30b9546f05c8855ec680b1412 controller 2026-09-29T22:54:49.215903Z -> 2026-09-29T22:58:10.496975Z gate=open agent_error='a valid durable service mutation lease is required'
+  boundary=intent disk=intent sha=f4c97eb08744 marker=2026-09-29T22:55:03.26045924Z kill=2026-09-29T22:55:03.271564Z pid=1927 state=T exit=137 trigger_rc=75
+  failures v=[] s=[] d=[]
+  fp.failures=[] fp.unknown=[]
+  restart: variant=pre-start code=dns_engine_switch_rolled_back_after_restart status=failed attempt=1 retired=True msg='The interrupted DNS engine switch was rolled back to the verified previous state.'
+  pre_install failures=[] unknown=[] unit={'LoadState': 'masked', 'UnitFileState': 'masked', 'ActiveState': 'inactive', 'MainPID': '0'} db=[]
+  agent names owner command: False
+  pair primary={"catalog_soa": {"tcp": [1790722508], "udp": [1790722508]}, "member_soa": {"tcp": [2026083101], "udp": [2026083101]}, "www_a": {"tcp": ["192.0.2.10"], "udp": ["192.0.2.10"]}} secondary_equal=True state_serial=1790722508
+  cut: variant=pre-start pid=0 files={'candidate': False, 'database': False, 'state': False} sealed=False staged_serial=1 native_serial=None unit_before={'active_state': 'inactive', 'load_state': 'masked', 'name': 'pdns.service', 'unit_file_state': 'masked'}
+  status-read after-recovery avail=True rc=0 mutated=False :: 'No DNS switch journal was observed for request f7cf73e30b9546f05c8855ec680b1412. Its exact ledger job records status succeeded. This is a point-in-time ledger o'
+  status-read before-recovery avail=True rc=0 mutated=False :: 'DNS switch request f7cf73e30b9546f05c8855ec680b1412: accepted-active (journal phase intent).\nIf PowerDNS never started for this fresh paired primary, the server'
+  reboot_after_recovery run=True status=passed reason=None
+  retry 1 rc=0 dur=7.267966
+  retry 2 rc=0 dur=0.009176
+  probe 1 target_converged 43a2cc0a9ab0
+  probe 2 target_converged 43a2cc0a9ab0
+  stability n=31
+  peer status=passed combined=0 guest_exit=0 error=None serial=1790722508 members=['s1-kill.test']
+  smstatus: substring not found

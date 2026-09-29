@@ -1,0 +1,31 @@
+wall=2026-09-29T23:24:27.690141+00:00
+{"server": "192.0.2.10", "qname": "s1-kill.test", "qtype": "SOA", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "192.0.2.10", "qname": "s1-kill.test", "qtype": "SOA", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "192.0.2.10", "qname": "www.s1-kill.test", "qtype": "A", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "192.0.2.10", "qname": "www.s1-kill.test", "qtype": "A", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "192.0.2.10", "qname": "catalog-c000020a.celikpanel.invalid", "qtype": "SOA", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "192.0.2.10", "qname": "catalog-c000020a.celikpanel.invalid", "qtype": "SOA", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "192.0.2.10", "qname": "s2.s1-kill.test", "qtype": "SOA", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "192.0.2.10", "qname": "s2.s1-kill.test", "qtype": "SOA", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "192.0.2.10", "qname": "www.s2.s1-kill.test", "qtype": "A", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "192.0.2.10", "qname": "www.s2.s1-kill.test", "qtype": "A", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "192.0.2.11", "qname": "s1-kill.test", "qtype": "SOA", "transport": "udp", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": []}
+{"server": "192.0.2.11", "qname": "s1-kill.test", "qtype": "SOA", "transport": "tcp", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": []}
+{"server": "192.0.2.11", "qname": "www.s1-kill.test", "qtype": "A", "transport": "udp", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": []}
+{"server": "192.0.2.11", "qname": "www.s1-kill.test", "qtype": "A", "transport": "tcp", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": []}
+{"server": "192.0.2.11", "qname": "catalog-c000020a.celikpanel.invalid", "qtype": "SOA", "transport": "udp", "id_match": true, "aa": false, "tc": false, "rcode": 2, "answers": []}
+{"server": "192.0.2.11", "qname": "catalog-c000020a.celikpanel.invalid", "qtype": "SOA", "transport": "tcp", "id_match": true, "aa": false, "tc": false, "rcode": 2, "answers": []}
+{"server": "192.0.2.11", "qname": "s2.s1-kill.test", "qtype": "SOA", "transport": "udp", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": []}
+{"server": "192.0.2.11", "qname": "s2.s1-kill.test", "qtype": "SOA", "transport": "tcp", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": []}
+{"server": "192.0.2.11", "qname": "www.s2.s1-kill.test", "qtype": "A", "transport": "udp", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": []}
+{"server": "192.0.2.11", "qname": "www.s2.s1-kill.test", "qtype": "A", "transport": "tcp", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": []}
+{"server": "127.0.0.1", "qname": "s1-kill.test", "qtype": "SOA", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "127.0.0.1", "qname": "s1-kill.test", "qtype": "SOA", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "127.0.0.1", "qname": "www.s1-kill.test", "qtype": "A", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "127.0.0.1", "qname": "www.s1-kill.test", "qtype": "A", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "127.0.0.1", "qname": "catalog-c000020a.celikpanel.invalid", "qtype": "SOA", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "127.0.0.1", "qname": "catalog-c000020a.celikpanel.invalid", "qtype": "SOA", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "127.0.0.1", "qname": "s2.s1-kill.test", "qtype": "SOA", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "127.0.0.1", "qname": "s2.s1-kill.test", "qtype": "SOA", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "127.0.0.1", "qname": "www.s2.s1-kill.test", "qtype": "A", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "127.0.0.1", "qname": "www.s2.s1-kill.test", "qtype": "A", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}

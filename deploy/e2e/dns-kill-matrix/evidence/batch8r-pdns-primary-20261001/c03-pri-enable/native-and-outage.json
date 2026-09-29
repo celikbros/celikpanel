@@ -1,0 +1,145 @@
+{
+  "agent_startup_rollback": null,
+  "boundary_marker": {
+    "cell_id": "pdns-switch__source-stopped__after-write__paired-primary__peer-reachable",
+    "driver": "pdns-switch",
+    "marker": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__source-stopped__after-write__paired-primary__peer-reachable/boundary-marker.json",
+    "nonce": "886528af128d02bd5c12fb355949bbfff065bab3ae7b567a50ec2adcbab1c8f8",
+    "observed_driver": "pdns-switch",
+    "observed_journal": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5",
+      "mode": "switch",
+      "mutation_owner_id": "7f2b66524990ac128d47fad3d930a90e",
+      "mutation_request_id": "4b3fdfacc972232747641c9d5b38ce1e",
+      "pair_role": "primary",
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "phase": "target-enable-intent",
+      "schema": "celikpanel-dns-engine-switch-journal/v3",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "pdns",
+      "target_epoch": 1,
+      "topology": "paired"
+    },
+    "phase": "target-enable-intent",
+    "pid": 1899,
+    "point": "after_write",
+    "process_start_ticks": "18299",
+    "ready_fd": 5,
+    "recorded_at": "2026-09-29T23:07:36.982477384Z",
+    "request_id": "4b3fdfacc972232747641c9d5b38ce1e",
+    "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+  },
+  "complete_verdict": {
+    "passed": true,
+    "reasons": [],
+    "required_classification": [
+      "target_converged"
+    ],
+    "safety_status": "passed",
+    "status": "passed"
+  },
+  "diagnostic_failures": [],
+  "dns_outage": null,
+  "expectation": null,
+  "failures": [],
+  "flow_ambiguities": null,
+  "flow_failures": null,
+  "flow_status": null,
+  "journal_at_boundary": {
+    "device": 65025,
+    "exists": true,
+    "expected_phase": "target-enable-intent",
+    "inode": 131619,
+    "mode": "0600",
+    "observed_phase": "target-enable-intent",
+    "request_id": "4b3fdfacc972232747641c9d5b38ce1e",
+    "sha256": "a0c2d360ac59d6196b9229d27e338e652efdcc536bdb1078ca981920f812b9a3"
+  },
+  "kill": {
+    "delivered_at": "2026-09-29T23:07:36.991689Z",
+    "exit_code": 137,
+    "pid": 1899,
+    "proc_entry_absent_after_reap": true,
+    "process_start_ticks": "18299",
+    "raw_returncode": -9,
+    "signal": "SIGKILL",
+    "signal_number": 9,
+    "state_before_signal": "T"
+  },
+  "kill_proven": true,
+  "management_disabled_before_reboot": null,
+  "owner_inverse_failures": null,
+  "owner_inverse_native_at_boundary": null,
+  "pre_reboot_verdict": null,
+  "provenance_boundary": null,
+  "reboot_after_recovery": null,
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "target_converged",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": false,
+    "same_fingerprint": true,
+    "target_converged": true
+  },
+  "recovery_status_read_failures": null,
+  "recovery_status_reads": {
+    "after-recovery": {
+      "available": true,
+      "changed_evidence": [],
+      "command": {
+        "argv": [
+          "/usr/libexec/celikpanel/recovery",
+          "dns-switch-status",
+          "--quiesced",
+          "--request-id",
+          "4b3fdfacc972232747641c9d5b38ce1e"
+        ],
+        "duration_seconds": 0.008218,
+        "output": "No DNS switch journal was observed for request 4b3fdfacc972232747641c9d5b38ce1e. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.\n",
+        "output_bytes": 315,
+        "output_sha256": "e3bb87b6ba9dbed285c5e0ea559d509be1e227a90f764606301ba0efb529d302",
+        "output_truncated": false,
+        "ran": true,
+        "returncode": 0
+      },
+      "judged": "made no mutation only",
+      "mutated": false,
+      "stage": "after-recovery"
+    },
+    "before-recovery": {
+      "available": true,
+      "changed_evidence": [],
+      "command": {
+        "argv": [
+          "/usr/libexec/celikpanel/recovery",
+          "dns-switch-status",
+          "--quiesced",
+          "--request-id",
+          "4b3fdfacc972232747641c9d5b38ce1e"
+        ],
+        "duration_seconds": 0.064344,
+        "output": "DNS switch request 4b3fdfacc972232747641c9d5b38ce1e: accepted-active (journal phase target-enable-intent).\nIf PowerDNS never started for this fresh paired primary, the server owner can restore the pre-start state with: /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id 4b3fdfacc972232747641c9d5b38ce1e. The command checks locks, the accepted worker, native units, configuration and the staged candidate; a started or changed target is refused and its evidence is preserved. This status check does not start recovery.\nQuiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.\nThe accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.\nFrozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.\nThe current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.\nThe journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.\nThe switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.\nNative unit pdns.service: load=masked active=inactive unit-file=masked.\nThese systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.\nRelease and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.\n",
+        "output_bytes": 2073,
+        "output_sha256": "22676c2d588bf3cd051fa3292e3abd833a606524b25b2ae3fdbba60bbb68f64c",
+        "output_truncated": false,
+        "ran": true,
+        "returncode": 0
+      },
+      "judged": "made no mutation only",
+      "mutated": false,
+      "stage": "before-recovery"
+    }
+  },
+  "request_id": "4b3fdfacc972232747641c9d5b38ce1e",
+  "retry_switch_after_rollback": null,
+  "safety_failures": [],
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {},
+  "variant": null,
+  "verification_failures": []
+}

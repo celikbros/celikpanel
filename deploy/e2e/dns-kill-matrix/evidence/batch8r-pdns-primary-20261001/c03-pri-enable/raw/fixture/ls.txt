@@ -1,0 +1,33 @@
+/var/lib/celikpanel-dns-kill-matrix:
+total 1412
+drwx------  4 root root    4096 2026-09-29 23:06:31.118086428 +0000 .
+drwxr-xr-x 29 root root    4096 2026-09-29 23:07:33.628211097 +0000 ..
+-rw-------  1 root root    3302 2026-09-29 23:06:30.954085840 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 23:06:31.106086385 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 23:05:26.728188713 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 23:05:18.964188713 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 23:07:24.680385658 +0000 measured
+drwx------  3 root root    4096 2026-09-29 23:06:30.922085720 +0000 results
+-rw-------  1 root root    1846 2026-09-29 23:06:30.734085016 +0000 scenario.json
+-rw-------  1 root root    1451 2026-09-29 23:06:30.882085570 +0000 source-proof.json
+
+/var/lib/celikpanel-dns-kill-matrix/measured:
+total 12
+drwx------ 2 root root       4096 2026-09-29 23:07:24.680385658 +0000 .
+drwx------ 4 root root       4096 2026-09-29 23:06:31.118086428 +0000 ..
+-rw------- 1 root celikpanel  411 2026-09-29 23:07:24.672385829 +0000 trigger-identity.json
+
+/var/lib/celikpanel-dns-kill-matrix/results:
+total 12
+drwx------ 3 root root 4096 2026-09-29 23:06:30.922085720 +0000 .
+drwx------ 4 root root 4096 2026-09-29 23:06:31.118086428 +0000 ..
+drwx------ 2 root root 4096 2026-09-29 23:08:17.683641619 +0000 pdns-switch__source-stopped__after-write__paired-primary__peer-reachable
+
+/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__source-stopped__after-write__paired-primary__peer-reachable:
+total 176
+drwx------ 2 root root        4096 2026-09-29 23:08:17.683641619 +0000 .
+drwx------ 3 root root        4096 2026-09-29 23:06:30.922085720 +0000 ..
+-rw------- 1 root celikpanel  1296 2026-09-29 23:07:36.976153162 +0000 boundary-marker.json
+-rw------- 1 root celikpanel  1916 2026-09-29 23:07:36.988152959 +0000 kill-proof.json
+-rw------- 1 root celikpanel 85009 2026-09-29 23:08:17.679641657 +0000 result.json
+-rw------- 1 root celikpanel 74274 2026-09-29 23:08:17.671641737 +0000 transcript.jsonl

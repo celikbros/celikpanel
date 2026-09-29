@@ -1,0 +1,19 @@
+### collect 2026-09-29T23:03:46.179552966Z
+last watcher dir: /var/tmp/cp-b8r-watch
+request id: dbf9982f7d79645b1cc9ddfa99573f41
+ownerpost rc=0
+smstatus rc=0
+probe rc=0
+pdnsdb rc=0
+bindsec rc=0
+peer journal rc=0
+peerloop rc=0 lines=32
+cell directory: /var/tmp/cp-b8r-1001/cells/7fc4eccb599d2ce9b7d2a44c
+total 12
+drwx------ 2 root root 4096 Sep 30 02:03 .
+drwxr-xr-x 3 root root 4096 Sep 30 02:04 ..
+-rw------- 1 root root 2239 Sep 30 02:03 peer-verdict.json
+23:03:04.764192204 CHANGE pdnsdb absent -> de8c61e70d43174763408c29912356bc61b593460b2525427b85e8390932b66c pdns=0/inactive/
+23:03:07.353603079 CHANGE pdnsdb de8c61e70d43174763408c29912356bc61b593460b2525427b85e8390932b66c -> 602f55dda904185e1d239277657b3887adf56d83c80c68aae2d10dd996ea2be5 pdns=5104/active/
+done
+tar rc=0 size=1617920

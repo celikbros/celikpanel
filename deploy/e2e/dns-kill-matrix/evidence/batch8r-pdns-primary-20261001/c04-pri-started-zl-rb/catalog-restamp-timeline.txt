@@ -1,0 +1,249 @@
+== dbwatch timeline
+23:12:06.111468681 start boot_id=b513fe66-5a33-4250-bd7d-c3b1c6c3786b
+23:12:06.119910631 CHANGE pdnsdb none -> absent pdns=0/inactive/
+23:12:19.775499386 CHANGE pdnsdb absent -> b839d8635e5c7e37093fe785884cf681484ebf9e0f19b8cb1a4c9bbfd00374d1 pdns=0/inactive/
+23:12:22.381831856 CHANGE pdnsdb b839d8635e5c7e37093fe785884cf681484ebf9e0f19b8cb1a4c9bbfd00374d1 -> 2dfa474683b8ca32e8d47beae3019937f6ec8f7a1f8cb483f94333972cc0330a pdns=4125/active/
+23:13:13.650913899 CHANGE pdnsdb 2dfa474683b8ca32e8d47beae3019937f6ec8f7a1f8cb483f94333972cc0330a -> 30a24301bc396fca86bb62fbe507ca6e0918fb41da458849ef6b669bc783471d pdns=4125/active/
+23:13:19.811595832 CHANGE pdnsdb 30a24301bc396fca86bb62fbe507ca6e0918fb41da458849ef6b669bc783471d -> 4f240044f623004864feef222240f95a6b11678a4ef503b86853bf0d9fcdaaf3 pdns=4125/active/
+23:13:22.387657608 CHANGE pdnsdb 4f240044f623004864feef222240f95a6b11678a4ef503b86853bf0d9fcdaaf3 -> 3fd1307066c7e559b2210b9739cfe1d9eda1b42ba069654fb1a48d4474864bfb pdns=4125/active/
+23:13:25.469736220 CHANGE pdnsdb 3fd1307066c7e559b2210b9739cfe1d9eda1b42ba069654fb1a48d4474864bfb -> c3f71d036eca62ee8227bbfb305a5dda6557f8441f8c2306fd9b711492caf3b2 pdns=4125/active/
+23:13:33.071530332 CHANGE pdnsdb c3f71d036eca62ee8227bbfb305a5dda6557f8441f8c2306fd9b711492caf3b2 -> 3f2b0c3d51a425ad8c55c7c6d7ce892cac57682de4b4e24a6d46554901f078b1 pdns=4125/active/
+23:14:22.807485285 CHANGE pdnsdb 3f2b0c3d51a425ad8c55c7c6d7ce892cac57682de4b4e24a6d46554901f078b1 -> 25c19807cbe1a29770861cef3fb5c3d7359aade788be06a231604c1e887b56d4 pdns=4125/active/
+== agent journal 00:00:00..23:59:59
+2026-09-29T23:10:05.490465+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T23:10:05.525800+00:00 dns-debian13 agent[1196]: 2026/09/29 23:10:05 Starting CelikPanel Agent...
+2026-09-29T23:10:05.527685+00:00 dns-debian13 agent[1196]: 2026/09/29 23:10:05 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T23:10:05.527816+00:00 dns-debian13 agent[1196]: 2026/09/29 23:10:05 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T23:10:15.529026+00:00 dns-debian13 agent[1196]: 2026/09/29 23:10:15 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:10:25.537812+00:00 dns-debian13 agent[1196]: 2026/09/29 23:10:25 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:10:35.537523+00:00 dns-debian13 agent[1196]: 2026/09/29 23:10:35 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:10:45.539053+00:00 dns-debian13 agent[1196]: 2026/09/29 23:10:45 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:10:55.528805+00:00 dns-debian13 agent[1196]: 2026/09/29 23:10:55 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:11:05.536869+00:00 dns-debian13 agent[1196]: 2026/09/29 23:11:05 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:11:14.483310+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T23:11:14.484115+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T23:11:14.484434+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T23:12:22.205368+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T23:12:22.238490+00:00 dns-debian13 agent[4184]: 2026/09/29 23:12:22 Starting CelikPanel Agent...
+2026-09-29T23:12:38.359302+00:00 dns-debian13 agent[4184]: 2026/09/29 23:12:38 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T23:12:38.359637+00:00 dns-debian13 agent[4184]: 2026/09/29 23:12:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:12:48.359908+00:00 dns-debian13 agent[4184]: 2026/09/29 23:12:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:12:58.359951+00:00 dns-debian13 agent[4184]: 2026/09/29 23:12:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:13:08.360855+00:00 dns-debian13 agent[4184]: 2026/09/29 23:13:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:13:18.359523+00:00 dns-debian13 agent[4184]: 2026/09/29 23:13:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:13:28.360324+00:00 dns-debian13 agent[4184]: 2026/09/29 23:13:28 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T23:13:38.146274+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T23:13:38.148084+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T23:13:38.148308+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T23:13:38.148597+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 18.791s CPU time, 31.3M memory peak.
+== pdns journal 00:00:00..23:59:59
+2026-09-29T23:12:21.931506+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-29T23:12:22.020072+00:00 dns-debian13 pdns_server[4125]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-29T23:12:22.020448+00:00 dns-debian13 pdns_server[4125]: This is a standalone pdns
+2026-09-29T23:12:22.023125+00:00 dns-debian13 pdns_server[4125]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T23:12:22.023125+00:00 dns-debian13 pdns_server[4125]: UDP server bound to 10.0.2.15:53
+2026-09-29T23:12:22.023125+00:00 dns-debian13 pdns_server[4125]: UDP server bound to 192.0.2.10:53
+2026-09-29T23:12:22.023125+00:00 dns-debian13 pdns_server[4125]: TCP server bound to 10.0.2.15:53
+2026-09-29T23:12:22.023125+00:00 dns-debian13 pdns_server[4125]: TCP server bound to 192.0.2.10:53
+2026-09-29T23:12:22.023125+00:00 dns-debian13 pdns_server[4125]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T23:12:22.023125+00:00 dns-debian13 pdns_server[4125]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T23:12:22.023125+00:00 dns-debian13 pdns_server[4125]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T23:12:22.052587+00:00 dns-debian13 pdns_server[4125]: Creating backend connection for TCP
+2026-09-29T23:12:22.053969+00:00 dns-debian13 pdns_server[4125]: Primary/secondary communicator launching
+2026-09-29T23:12:22.054293+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T23:12:22.056304+00:00 dns-debian13 pdns_server[4125]: new CATALOG-HASH 'scQkAg7PR5gq1OskqFoNNpTm8t46f1dxSdRwIkj5RAI=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:12:22.056304+00:00 dns-debian13 pdns_server[4125]: About to create 3 backend threads for UDP
+2026-09-29T23:12:22.205954+00:00 dns-debian13 pdns_server[4125]: Done launching threads, ready to distribute questions
+2026-09-29T23:12:22.217843+00:00 dns-debian13 pdns_server[4125]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-29T23:12:22.224108+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34726', transfer initiated
+2026-09-29T23:12:22.285523+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 's1-kill.test', client '192.0.2.11:34731', transfer initiated
+2026-09-29T23:12:22.979202+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:52732', transfer initiated
+2026-09-29T23:12:23.030614+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:52756', transfer initiated
+2026-09-29T23:12:23.221414+00:00 dns-debian13 pdns_server[4125]: Received unsuccessful notification report for 's1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-29T23:12:24.352198+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:52758', transfer initiated
+2026-09-29T23:12:24.401169+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:52770', transfer initiated
+2026-09-29T23:12:25.843715+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:52772', transfer initiated
+2026-09-29T23:12:25.893462+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:52778', transfer initiated
+2026-09-29T23:12:27.247397+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:52780', transfer initiated
+2026-09-29T23:12:27.283275+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:52796', transfer initiated
+2026-09-29T23:12:28.600400+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:52798', transfer initiated
+2026-09-29T23:12:28.649057+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:52816', transfer initiated
+2026-09-29T23:12:29.978097+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54728', transfer initiated
+2026-09-29T23:12:30.029156+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54740', transfer initiated
+2026-09-29T23:12:32.762051+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54748', transfer initiated
+2026-09-29T23:12:32.812686+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54768', transfer initiated
+2026-09-29T23:12:34.276900+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54772', transfer initiated
+2026-09-29T23:12:34.329636+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54802', transfer initiated
+2026-09-29T23:12:35.744602+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54816', transfer initiated
+2026-09-29T23:12:35.789422+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54826', transfer initiated
+2026-09-29T23:12:37.116039+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54838', transfer initiated
+2026-09-29T23:12:37.172410+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54872', transfer initiated
+2026-09-29T23:12:37.665604+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54878', transfer initiated
+2026-09-29T23:12:37.720145+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54910', transfer initiated
+2026-09-29T23:12:38.297034+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54916', transfer initiated
+2026-09-29T23:12:38.347271+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54940', transfer initiated
+2026-09-29T23:13:10.081510+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:57286', transfer initiated
+2026-09-29T23:13:13.190228+00:00 dns-debian13 pdns_server[4125]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-29T23:13:13.214851+00:00 dns-debian13 pdns_server[4125]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-29T23:13:13.234015+00:00 dns-debian13 pdns_server[4125]: Notification request to host 192.0.2.11 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-29T23:13:13.246744+00:00 dns-debian13 pdns_server[4125]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:57344', transfer initiated with serial 1790723542
+2026-09-29T23:13:13.247950+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:57344', transfer initiated
+2026-09-29T23:13:13.255270+00:00 dns-debian13 pdns_server[4125]: Notification request to host 192.0.2.11 for zone 's2.s1-kill.test' received from operator
+2026-09-29T23:13:13.299457+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 's2.s1-kill.test', client '192.0.2.11:57352', transfer initiated
+2026-09-29T23:13:14.242377+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:14.399759+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:47284', transfer initiated
+2026-09-29T23:13:15.243902+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:13:15.545333+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:51427', transfer initiated
+2026-09-29T23:13:17.245077+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:18.247796+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:13:19.330510+00:00 dns-debian13 pdns_server[4125]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-29T23:13:19.349702+00:00 dns-debian13 pdns_server[4125]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-29T23:13:19.369110+00:00 dns-debian13 pdns_server[4125]: Notification request to host 192.0.2.11 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-29T23:13:19.387514+00:00 dns-debian13 pdns_server[4125]: Notification request to host 192.0.2.11 for zone 's2.s1-kill.test' received from operator
+2026-09-29T23:13:20.293903+00:00 dns-debian13 pdns_server[4125]: IXFR-out zone 's2.s1-kill.test', client '192.0.2.11:51517', transfer initiated with serial 2026092801
+2026-09-29T23:13:20.294064+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 's2.s1-kill.test', client '192.0.2.11:51517', transfer initiated
+2026-09-29T23:13:20.626539+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:37168', transfer initiated
+2026-09-29T23:13:21.249449+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:21.249449+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:13:21.651495+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:51582', transfer initiated
+2026-09-29T23:13:22.249729+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:22.251088+00:00 dns-debian13 pdns_server[4125]: new CATALOG-HASH 'VBxbS526j5gGt4705TyEPqz69gbB2KpVy+CrJ5q4Ea4=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:13:22.271620+00:00 dns-debian13 pdns_server[4125]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-29T23:13:22.275624+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:13:22.341910+00:00 dns-debian13 pdns_server[4125]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:51583', transfer initiated with serial 1790723543
+2026-09-29T23:13:22.342058+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:51583', transfer initiated
+2026-09-29T23:13:24.278053+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:24.278053+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:13:25.149574+00:00 dns-debian13 pdns_server[4125]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-29T23:13:25.181058+00:00 dns-debian13 pdns_server[4125]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-29T23:13:25.213212+00:00 dns-debian13 pdns_server[4125]: Notification request to host 192.0.2.11 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-29T23:13:25.280524+00:00 dns-debian13 pdns_server[4125]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:32799', transfer initiated with serial 1790723602
+2026-09-29T23:13:25.280881+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:32799', transfer initiated
+2026-09-29T23:13:26.201478+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:37208', transfer initiated
+2026-09-29T23:13:26.278176+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:26.895893+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:37234', transfer initiated
+2026-09-29T23:13:27.599506+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:37248', transfer initiated
+2026-09-29T23:13:28.315968+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:37264', transfer initiated
+2026-09-29T23:13:29.285815+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:29.285815+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:13:29.285815+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:30.487582+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:32891', transfer initiated
+2026-09-29T23:13:31.283647+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:32.283975+00:00 dns-debian13 pdns_server[4125]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-29T23:13:32.283975+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:13:32.758831+00:00 dns-debian13 pdns_server[4125]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-29T23:13:32.784585+00:00 dns-debian13 pdns_server[4125]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-29T23:13:32.807486+00:00 dns-debian13 pdns_server[4125]: Notification request to host 192.0.2.11 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-29T23:13:32.825982+00:00 dns-debian13 pdns_server[4125]: Notification request to host 192.0.2.11 for zone 's2.s1-kill.test' received from operator
+2026-09-29T23:13:33.286750+00:00 dns-debian13 pdns_server[4125]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:32932', transfer initiated with serial 1790723603
+2026-09-29T23:13:33.288423+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:32932', transfer initiated
+2026-09-29T23:13:33.339191+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 's2.s1-kill.test', client '192.0.2.11:32933', transfer initiated
+2026-09-29T23:13:33.807700+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:58878', transfer initiated
+2026-09-29T23:13:34.284736+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:34.284736+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:34.284736+00:00 dns-debian13 pdns_server[4125]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-29T23:13:34.284736+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:13:34.876890+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:32963', transfer initiated
+2026-09-29T23:13:37.285320+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:37.285320+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:13:38.285511+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:13:38.285511+00:00 dns-debian13 pdns_server[4125]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:13:47.297672+00:00 dns-debian13 pdns_server[4125]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:0 failed after retries
+2026-09-29T23:13:48.291664+00:00 dns-debian13 pdns_server[4125]: Notification for s2.s1-kill.test to 192.0.2.11:0 failed after retries
+2026-09-29T23:13:54.293169+00:00 dns-debian13 pdns_server[4125]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:0 failed after retries
+2026-09-29T23:13:54.293169+00:00 dns-debian13 pdns_server[4125]: Notification for s2.s1-kill.test to 192.0.2.11:0 failed after retries
+2026-09-29T23:13:56.980734+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 's2.s1-kill.test', client '192.0.2.11:58829', transfer initiated
+2026-09-29T23:13:56.981527+00:00 dns-debian13 pdns_server[4125]: AXFR-out zone 's1-kill.test', client '192.0.2.11:58830', transfer initiated
+2026-09-29T23:13:59.294161+00:00 dns-debian13 pdns_server[4125]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:0 failed after retries
+2026-09-29T23:14:07.295972+00:00 dns-debian13 pdns_server[4125]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:0 failed after retries
+2026-09-29T23:14:07.295972+00:00 dns-debian13 pdns_server[4125]: Notification for s2.s1-kill.test to 192.0.2.11:0 failed after retries
+2026-09-29T23:14:37.613522+00:00 dns-debian13 systemd[1]: Stopping pdns.service - PowerDNS Authoritative Server...
+2026-09-29T23:14:37.717611+00:00 dns-debian13 systemd[1]: pdns.service: Deactivated successfully.
+2026-09-29T23:14:37.717926+00:00 dns-debian13 systemd[1]: Stopped pdns.service - PowerDNS Authoritative Server.
+2026-09-29T23:14:49.302023+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-29T23:14:49.521383+00:00 dns-debian13 pdns_server[640]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-29T23:14:49.525796+00:00 dns-debian13 pdns_server[640]: This is a standalone pdns
+2026-09-29T23:14:49.526461+00:00 dns-debian13 pdns_server[640]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T23:14:49.526859+00:00 dns-debian13 pdns_server[640]: UDP server bound to 10.0.2.15:53
+2026-09-29T23:14:49.526859+00:00 dns-debian13 pdns_server[640]: UDP server bound to 192.0.2.10:53
+2026-09-29T23:14:49.526927+00:00 dns-debian13 pdns_server[640]: TCP server bound to 10.0.2.15:53
+2026-09-29T23:14:49.526927+00:00 dns-debian13 pdns_server[640]: TCP server bound to 192.0.2.10:53
+2026-09-29T23:14:49.528352+00:00 dns-debian13 pdns_server[640]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T23:14:49.528352+00:00 dns-debian13 pdns_server[640]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T23:14:49.528352+00:00 dns-debian13 pdns_server[640]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T23:14:49.569973+00:00 dns-debian13 pdns_server[640]: Primary/secondary communicator launching
+2026-09-29T23:14:49.573245+00:00 dns-debian13 pdns_server[640]: Creating backend connection for TCP
+2026-09-29T23:14:49.574148+00:00 dns-debian13 pdns_server[640]: About to create 3 backend threads for UDP
+2026-09-29T23:14:49.574146+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T23:14:49.724949+00:00 dns-debian13 pdns_server[640]: Done launching threads, ready to distribute questions
+2026-09-29T23:15:24.810917+00:00 dns-debian13 pdns_server[640]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:41569', transfer initiated
+2026-09-29T23:15:27.187517+00:00 dns-debian13 pdns_server[640]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:42923', transfer initiated
+== peer sampler cat serial transitions
+######## 	2026-09-29T23:12:04.522680+00:00 	10:cat:udp=ERR(TimeoutError)
+11:cat:udp=noaa/rc2/	2026-09-29T23:12:11.546171+00:00 	10:cat:udp=ERR(TimeoutError)
+11:cat:udp=noaa/rc2/	2026-09-29T23:12:18.560870+00:00 	10:cat:udp=ERR(TimeoutError)
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:24.662420+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:26.909657+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:29.135399+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:31.382386+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:33.665549+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:35.897594+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:38.143097+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:40.368489+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:42.605369+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:44.836851+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:47.048146+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:49.290385+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:51.529173+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:53.759092+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:55.997830+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:12:58.203204+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:13:00.430674+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:13:02.667095+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:13:04.897149+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:13:07.091712+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:13:09.359227+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:13:11.625400+00:00 	10:cat:udp=aa/rc0/1790723542
+11:cat:udp=aa/rc0/1790723542	2026-09-29T23:13:13.848474+00:00 	10:cat:udp=aa/rc0/1790723543
+11:cat:udp=aa/rc0/1790723543	2026-09-29T23:13:16.075143+00:00 	10:cat:udp=aa/rc0/1790723543
+11:cat:udp=aa/rc0/1790723543	2026-09-29T23:13:18.351553+00:00 	10:cat:udp=aa/rc0/1790723543
+11:cat:udp=aa/rc0/1790723543	2026-09-29T23:13:20.575193+00:00 	10:cat:udp=aa/rc0/1790723543
+11:cat:udp=aa/rc0/1790723543	2026-09-29T23:13:22.890911+00:00 	10:cat:udp=aa/rc0/1790723602
+11:cat:udp=aa/rc0/1790723602	2026-09-29T23:13:25.037849+00:00 	10:cat:udp=aa/rc0/1790723602
+11:cat:udp=aa/rc0/1790723602	2026-09-29T23:13:27.263885+00:00 	10:cat:udp=aa/rc0/1790723603
+11:cat:udp=aa/rc0/1790723603	2026-09-29T23:13:29.549328+00:00 	10:cat:udp=aa/rc0/1790723603
+11:cat:udp=aa/rc0/1790723603	2026-09-29T23:13:31.888004+00:00 	10:cat:udp=aa/rc0/1790723603
+11:cat:udp=aa/rc0/1790723603	2026-09-29T23:13:34.123092+00:00 	10:cat:udp=aa/rc0/1790723604
+11:cat:udp=aa/rc0/1790723604	2026-09-29T23:13:36.437143+00:00 	10:cat:udp=aa/rc0/1790723604
+11:cat:udp=aa/rc0/1790723604	######## 	2026-09-29T23:14:36.331037+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:14:38.558354+00:00 
+10:cat:udp=ERR(TimeoutError)	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:14:49.660943+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:14:52.891100+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:14:55.112587+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:14:57.337515+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:14:59.582275+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:01.810631+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:04.038989+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:06.263941+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:08.512577+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:10.861615+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:13.350570+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:15.540952+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:17.761279+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:19.985802+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:22.213961+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:24.414708+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:26.646891+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:28.878190+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:31.099240+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:33.331396+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:35.562867+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:37.791092+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:40.020602+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:42.247674+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:44.479133+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:46.707532+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:48.932166+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:51.255336+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	2026-09-29T23:15:53.653027+00:00 
+10:cat:udp=aa/rc0/1790723604	11:cat:udp=aa/rc0/1790723604	
