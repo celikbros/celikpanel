@@ -18,10 +18,19 @@ translation catalogues in ``web/src/i18n``:
 * ``plan_blocker_guidance`` - the review's server plan blockers through the
   wizard's ``codeKey`` map (``failureText``), read from the shipped source.
 
-A state is *actionable* only when it carries a stable machine code and the
-UI resolves it to a specific, non-generic translated message. A generic
-fallback ("setup.guide.unknown", "domains.deletionPending", a raw server
-string without a code) on a blocked or pending state fails the step.
+* ``setup_plan_failure_guidance`` / ``setup_start_failure_guidance`` - what
+  the wizard shows when ``POST /api/v1/setup/plan`` or ``/setup/start`` is not
+  OK (``ServerSetup.tsx`` ``review``/``start``), with the ``apiErrorText`` view
+  of the same body alongside.
+
+A state is *actionable* only when it carries a stable, specific machine code
+and the UI resolves it to a specific, non-generic translated message. A
+generic fallback on a blocked, failed or pending state fails the step:
+``err.INTERNAL`` (code ``INTERNAL``, "internal server error"),
+``setup.planFailed``, ``setup.blocker.unknown``, ``setup.guide.unknown``,
+``domains.deletionPending`` (an empty or unreviewed reason), a raw server
+string without a code, or a bare HTTP status. "Try again / check the logs"
+names no reason, actor or next action (D-024).
 """
 
 from __future__ import annotations
@@ -49,8 +58,20 @@ GENERIC_KEYS = frozenset(
         "dns.recordAddFailed",
         "dns.recordDeleteFailed",
         "dns.zonePublishFailed",
+        # apiErrorText for code INTERNAL: "The server hit an internal error. Try
+        # again; if it persists, check the panel logs." No reason, actor or step.
+        "err.INTERNAL",
+        # ServerSetup.tsx review(): any non-OK plan response, whatever its body.
+        "setup.planFailed",
     }
 )
+# Machine codes that name no cause. A state carrying only one of these is
+# treated like a state without a code (cmd/panel writeServerError: 500
+# {"code":"INTERNAL","error":"internal server error"}).
+GENERIC_CODES = frozenset({"INTERNAL"})
+GENERIC_MESSAGES = frozenset({"internal server error"})
+START_REVIEW_CODES = frozenset({"server_setup_review_required", "server_setup_review_stale",
+                                "server_setup_plan_blocked"})
 # Framing sentences that point at another message ("read the error below");
 # they never count as the specific guidance on their own.
 FRAMING_KEYS = frozenset({"setup.guide.failed", "setup.guide.confirm", "setup.guide.monitoring"})
@@ -160,8 +181,13 @@ def _finish(
     specific = [key for key in keys if key not in GENERIC_KEYS | FRAMING_KEYS and translator.has(key)]
     if state in {"progress", "succeeded"}:
         actionable, why = True, "no action required in this state"
+    elif not code and not raw_message and not keys:
+        actionable, why = False, "bare HTTP status: no code, reason or text"
     elif not code:
         actionable, why = False, "blocked/pending state has no stable machine code"
+    elif code in GENERIC_CODES:
+        actionable, why = False, (f"generic error code {code}: names no reason, no actor and no next action; "
+                                  "retrying or reading logs is not guidance")
     elif not specific:
         actionable, why = False, "UI would show only generic or untranslated text"
     else:
@@ -199,6 +225,9 @@ def api_error_guidance(translator: Translator, status: int, body: Any, *, pendin
     elif code and translator.has(f"err.{code}"):
         key = f"err.{code}"
     messages = [_item(key)] if key else []
+    if not key and not message and status >= 400:
+        # apiErrorText's last fallback for an empty or uncoded body.
+        messages = [_item("common.error")]
     if status < 400 and not pending:
         state = "succeeded"
     elif status == 403 and code == "license_required":
@@ -216,9 +245,62 @@ def api_error_guidance(translator: Translator, status: int, body: Any, *, pendin
     if not key and message:
         # apiErrorText falls back to the server's own sentence; record it as shown.
         result["shown"] = {"en": [message], "tr": [message]}
+    if state not in {"progress", "succeeded"} and not code and not (message or "").strip():
+        result["actionable_reason"] = f"bare HTTP status {status}: no code, reason or text"
+    elif state not in {"progress", "succeeded"} and not code and (message or "").strip().lower() in GENERIC_MESSAGES:
+        result["actionable_reason"] = f"generic server text {message!r} without a code"
     result["http_status"] = status
     result["action_path"] = body.get("action") if isinstance(body.get("action"), str) else None
     return result
+
+
+def _with_api_view(result: dict[str, Any], api: dict[str, Any], status: int) -> dict[str, Any]:
+    result["http_status"] = status
+    result["api_error_keys"] = api["message_keys"]
+    result["api_error_text"] = api["shown"]
+    return result
+
+
+def setup_plan_failure_guidance(translator: Translator, status: int, body: Any) -> dict[str, Any]:
+    """``ServerSetup.tsx`` ``review()``: ``if (!response.ok) throw new Error(t('setup.planFailed'))``.
+
+    The wizard shows ``setup.planFailed`` for every non-OK plan response and
+    never reads its body, so the owner sees the same generic sentence for a
+    500 ``INTERNAL`` as for anything else. ``api_error_text`` records what
+    ``apiErrorText`` would show for that body elsewhere (``err.INTERNAL`` for
+    the pair1 case). Neither names the reason, the actor or the next action.
+    """
+
+    api = api_error_guidance(translator, status, body)
+    state = api["state"] if api["state"] not in {"progress", "succeeded"} else "verified-failure"
+    result = _finish(translator, source="setup-plan-review", state=state, code=api["code"], reason=api["reason"],
+                     title=None, messages=[_item("setup.planFailed")], details=[], raw_message=api["raw_message"])
+    if api["code"] in GENERIC_CODES or not api["code"]:
+        result["actionable_reason"] = (f"the wizard shows only setup.planFailed for HTTP {status}; the body carries "
+                                       f"{'code ' + api['code'] if api['code'] else 'no code'}: "
+                                       "no reason, no actor, no next action")
+    return _with_api_view(result, api, status)
+
+
+def setup_start_failure_guidance(translator: Translator, status: int, body: Any) -> dict[str, Any]:
+    """``ServerSetup.tsx`` ``start()`` for a non-OK response.
+
+    409 with a review code returns to the access step with ``setup.conflict``;
+    anything else is reconciled by reads, and until an execution is found the
+    wizard shows ``setup.reconnecting`` / ``setup.uncertain`` (an unknown
+    result). The body's code decides whether a cause exists at all.
+    """
+
+    api = api_error_guidance(translator, status, body)
+    code = api["code"]
+    if status == 409 and code in START_REVIEW_CODES:
+        result = _finish(translator, source="setup-start", state="unmet-prerequisite", code=code, reason=api["reason"],
+                         title=None, messages=[_item("setup.conflict")], details=[], raw_message=api["raw_message"])
+    else:
+        result = _finish(translator, source="setup-start", state="unknown", code=code, reason=api["reason"],
+                         title="setup.reconnecting", messages=[_item("setup.uncertain")], details=[],
+                         raw_message=api["raw_message"])
+    return _with_api_view(result, api, status)
 
 
 # ---------------------------------------------------------------------------

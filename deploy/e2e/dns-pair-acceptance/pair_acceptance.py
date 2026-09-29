@@ -39,6 +39,7 @@ import dns_checks as dc  # noqa: E402
 import evidence as ev  # noqa: E402
 import guidance as gd  # noqa: E402
 import install_steps as inst  # noqa: E402
+import pair_contract as pc  # noqa: E402
 import topology as topo  # noqa: E402
 from panel_api import (  # noqa: E402
     PanelClient,
@@ -77,7 +78,9 @@ RECORD_ADDRESSES = ("198.51.100.10", "198.51.100.20")
 RECORD_TTL = 300
 # DNS engine card fields that would show a staged DNS identity or pairing.
 DNS_IDENTITY_KEYS = ("revision", "active_engine", "engine_epoch", "state", "topology", "pair_role", "pair_ready",
-                     "local_nameserver", "peer_nameserver", "local_ip", "peer_ip", "identity")
+                     "secondary_ready", "local_nameserver", "peer_nameserver", "local_ip", "peer_ip", "identity")
+ENGINE_SUMMARY_KEYS = ("active_engine", "state", "topology", "pair_role", "pair_ready", "secondary_ready",
+                       "zone_count", "pending_zone_count")
 NON_DNS_SETUP_PHASES = frozenset({"access_dns", "panel_certificate", "verification", "verify"})
 JOURNAL_UNITS = (
     "celikpanel-panel.service",
@@ -88,6 +91,15 @@ JOURNAL_UNITS = (
 )
 DNS_UNIT = {("bind", "debian13"): "named.service", ("bind", "arch"): "named.service",
             ("pdns", "debian13"): "pdns.service"}
+# Item 6 (pair1): the acceptance seam counts refused license-service attempts
+# only inside the Panel process (licensing.AcceptanceLicenseServiceDialAttempts)
+# and exposes the counter nowhere. The driver cannot read it; it reads the
+# Panel journal instead (read-only) for the license service host and for the
+# refusing transport's exact error text (internal/licensing/acceptance_fixture.go).
+LICENSE_SERVICE_HOST = "celikpanel.net"
+LICENSE_REFUSAL_TEXT = "the acceptance test build never contacts the license service"
+ACCEPTANCE_BANNER_TEXT = "this panel was built with the acceptance_license test tag"
+PANEL_UNIT = "celikpanel-panel.service"
 STATIC_FINDINGS = (
     {
         "id": "ui-record-edit-is-delete-add",
@@ -166,6 +178,11 @@ class Config:
     reboot_timeout: int = 900
     poll_interval: float = 3.0
     dns_interval: float = 2.0
+    # Item 5 (pair1): stop waiting once the polled state is identical for
+    # stable_stop_polls reads spanning stable_stop_seconds and it is not a
+    # product-declared in-progress state. None disables it.
+    stable_stop_seconds: float | None = 300.0
+    stable_stop_polls: int = 5
 
     def public(self) -> dict[str, Any]:
         return {
@@ -184,6 +201,7 @@ class Config:
             "timeouts": {
                 "setup": self.setup_timeout, "dns": self.dns_timeout,
                 "deletion": self.deletion_timeout, "reboot": self.reboot_timeout,
+                "stable_stop_seconds": self.stable_stop_seconds, "stable_stop_polls": self.stable_stop_polls,
             },
         }
 
@@ -296,6 +314,10 @@ class Driver:
         self.started_at = now_iso()
         self.identity_ok: set[str] = set()
         self.license_status: dict[str, dict[str, Any]] = {}
+        # Steps the server owner performs in the product flow (install.sh's
+        # restart request, dns-peer-enroll), recorded as owner actions.
+        self.owner_steps: list[dict[str, Any]] = []
+        self.license_journal: dict[str, dict[str, Any]] = {}
 
     # -- step machinery ---------------------------------------------------------
 
@@ -345,7 +367,7 @@ class Driver:
         directory = self.current.directory if self.current else "steps/unscoped"
         self.evidence.api_exchange(directory, exchange)
 
-    def add_guidance(self, record: StepRecord, item: dict[str, Any], *, context: str) -> None:
+    def add_guidance(self, record: StepRecord, item: dict[str, Any], *, context: str, payload: Any = None) -> None:
         entry = dict(item)
         entry["context"] = context
         entry["observed_at"] = now_iso()
@@ -354,6 +376,21 @@ class Driver:
             record.checks.setdefault("d024_failures", []).append(
                 {"context": context, "code": entry.get("code"), "why": entry["actionable_reason"]}
             )
+            # A generic or missing explanation is a product finding (D-024), with
+            # what the owner would see and the payload that produced it.
+            self.findings.append({
+                "id": f"d024-no-actionable-guidance-{record.id}",
+                "kind": "product",
+                "step": record.id,
+                "context": context,
+                "state": entry["state"],
+                "code": entry.get("code"),
+                "http_status": entry.get("http_status"),
+                "why": entry["actionable_reason"],
+                "shown": entry.get("shown"),
+                "api_error_text": entry.get("api_error_text"),
+                "payload": payload,
+            })
 
     def require_actionable(self, record: StepRecord) -> None:
         failures = record.checks.get("d024_failures")
@@ -435,6 +472,8 @@ class Driver:
             "overall": ev.overall_status(verdicts),
             "findings": self.findings,
             "product_blockers": self.blockers,
+            "owner_steps": self.owner_steps,
+            "license_service_journal_check": self.license_journal,
         }
         if self.config.license_mode == "acceptance-fixture":
             result["license_status"] = self.license_status
@@ -516,11 +555,51 @@ class Driver:
                 response = client.get("/api/v1/dns/engine", timeout=40, purpose="DNSEngineCard snapshot")
                 snapshot[role.role] = {"status": response.status, "body": response.json()}
         record.checks[f"engine_{label}"] = {
-            role: {key: (value.get("body") or {}).get(key) for key in (
-                "active_engine", "state", "topology", "pair_role", "pair_ready", "zone_count", "pending_zone_count")}
+            role: {key: (value.get("body") or {}).get(key, pc.ABSENT) for key in ENGINE_SUMMARY_KEYS}
             for role, value in snapshot.items()
         }
         return snapshot
+
+    def stable_stop(self, settled: Callable[[Any], bool]) -> dict[str, Any]:
+        if not self.config.stable_stop_seconds:
+            return {}
+        return {"stable_after": self.config.stable_stop_seconds, "stable_polls": self.config.stable_stop_polls,
+                "settled": settled}
+
+    def wait_pair_readiness(self, record: StepRecord, role: topo.Role, client: Any, *, timeout: float,
+                            label: str) -> dict[str, Any]:
+        """Poll GET /api/v1/dns/engine until D1 holds for this role (pair_contract.pair_readiness).
+
+        Stops early once the snapshot is stable and settled; the payload of the
+        last read is always recorded.
+        """
+
+        def read(view: Any) -> Any:
+            response = view.get("/api/v1/dns/engine", timeout=40)
+            if response.status != 200:
+                return {"poll_error": f"HTTP {response.status}", "body": response.json()}
+            return response.json()
+
+        done, snapshot, _ = client.poll(
+            read, lambda body: pc.pair_readiness(body, role=role.role, engine=role.engine)["passed"],
+            timeout=timeout, interval=max(self.config.poll_interval, 5.0), **self.stable_stop(pc.engine_settled))
+        verdict = pc.pair_readiness(snapshot, role=role.role, engine=role.engine)
+        verdict["poll"] = dict(getattr(client, "last_poll", {}) or {}, timeout=timeout)
+        verdict["payload_file"] = self.record(f"engine-{label}-{role.role}.json", snapshot)
+        record.checks[f"pair_readiness_{label}_{role.role}"] = verdict
+        if done != verdict["passed"]:
+            raise StepFailed(f"{role.node}: pair readiness verdict changed between poll and record")
+        return verdict
+
+    def readiness_failure(self, role: topo.Role, verdict: dict[str, Any]) -> str:
+        poll = verdict.get("poll") or {}
+        if poll.get("stop") == "stable":
+            why = (f"stopped early: the snapshot was identical for {poll.get('identical_reads')} reads over "
+                   f"{poll.get('stable_seconds')}s and does not satisfy the rule")
+        else:
+            why = f"not satisfied within {poll.get('timeout')}s"
+        return (f"{role.node} Panel does not show a ready paired {role.engine} {role.role} (D1: {verdict['rule']}); "
+                f"{why}: {'; '.join(verdict['reasons'])}; payload {verdict['payload_file']}: {verdict['observed']}")
 
     # -- steps ------------------------------------------------------------------
 
@@ -582,11 +661,57 @@ class Driver:
         self.record_text("postinstall.txt", _decode(check.stdout) + _decode(check.stderr))
         if check.returncode != 0:
             raise StepFailed("installed services or install.complete marker are missing")
+        notice = inst.installer_restart_notice(_decode(installed.stdout))
+        record.checks["installer_restart_notice"] = notice["state"]
+        if notice["state"] == "recommended":
+            # Nothing is broken; the owner may restart later. Recorded, not acted on.
+            self.record_text("installer-restart-notice.txt", notice["text"])
+        elif notice["state"] == "required":
+            self.owner_restart_after_install(record, role, notice)
         tls = self.probe(role.node, "tls")
         self.record("tls-pin.json", tls)
         if "leaf_sha256" not in tls:
             raise StepFailed(f"panel TLS leaf could not be read on the guest: {tls}")
         self.pins[role.node] = tls["leaf_sha256"]
+
+    def owner_restart_after_install(self, record: StepRecord, role: topo.Role, notice: dict[str, str]) -> None:
+        """install.sh said the server must be restarted; the owner does that before using the panel.
+
+        pair1 (H3): Arch replaced the running kernel's modules, so nftables
+        could not load and setup's firewall check failed with a generic 500.
+        The restart goes through the fixture's identity-checked orderly reboot
+        (fixture.reboot_guest: SMBIOS UUID and marker re-checked, new boot ID).
+        """
+
+        self.record_text("installer-restart-notice.txt", notice["text"])
+        reboot = self.guests.reboot(role.node, self.config.reboot_timeout)
+        self.record("owner-restart-after-install.json", reboot)
+        boot_ids = [reboot.get("boot_id_before"), reboot.get("boot_id_after")]
+        owner_step = {
+            "step": record.id,
+            "node": role.node,
+            "actor": "server owner",
+            "action": "restart the server as install.sh asked (fixture orderly reboot, guest identity re-checked)",
+            "trigger": notice["banner"],
+            "installer_text": notice["text"],
+            "boot_ids": boot_ids,
+        }
+        self.owner_steps.append(owner_step)
+        record.checks["owner_restart_after_install"] = owner_step
+        if not boot_ids[0] or boot_ids[0] == boot_ids[1]:
+            raise StepFailed(f"{role.node}: the owner restart did not produce a new boot ({boot_ids})")
+        deadline = self.clock() + 180
+        while True:
+            check = self.guests.run(role.node, inst.postinstall_check(), mutating=False, check=False)
+            if check.returncode == 0 or self.clock() >= deadline:
+                break
+            self.sleep(3)
+        self.record_text("postinstall-after-restart.txt", _decode(check.stdout) + _decode(check.stderr))
+        if check.returncode != 0:
+            raise StepFailed(f"{role.node}: installed services are not active after the owner restart")
+        deadline = self.clock() + 180
+        while "leaf_sha256" not in self.probe(role.node, "tls") and self.clock() < deadline:
+            self.sleep(3)
 
     def login(self, record: StepRecord, role: topo.Role) -> None:
         with self.panel(role) as client:
@@ -764,8 +889,24 @@ class Driver:
                     raise StepFailed("the plan carries pdns_primary_switch_paused but says can_start=true")
                 raise GateRefused("PowerDNS primary refused by the server plan (pdns_primary_switch_paused); shown: "
                                   + " | ".join(item["shown"]["en"]))
-            if plan_response.status != 200 or not plan.get("can_start"):
-                raise StepFailed(f"reviewed plan cannot start: HTTP {plan_response.status} blockers={plan.get('blockers')}")
+            if plan_response.status != 200:
+                # What the owner sees: ServerSetup.tsx shows setup.planFailed for any non-OK
+                # plan response (pair1 P1: 500 {"code":"INTERNAL"} after an unrestarted kernel).
+                item = gd.setup_plan_failure_guidance(self.translator, plan_response.status, plan_response.json())
+                self.add_guidance(record, item, context="server plan review failed (ServerSetup review)",
+                                  payload={"request": "POST /api/v1/setup/plan", "http_status": plan_response.status,
+                                           "body": plan_response.json()})
+                record.checks["plan_failure_shown"] = item["shown"]
+                verdict = "actionable" if item["actionable"] else f"D-024: not actionable ({item['actionable_reason']})"
+                raise StepFailed(f"reviewed plan returned HTTP {plan_response.status} "
+                                 f"{plan.get('code') if isinstance(plan, dict) else ''}; the owner sees "
+                                 f"{item['shown']['en']} / {item['shown']['tr']}; {verdict}")
+            if not plan.get("can_start"):
+                item = gd.plan_blocker_guidance(self.translator, blockers, code_keys)
+                self.add_guidance(record, item, context="server plan blockers (ServerSetup review)",
+                                  payload={"blockers": blockers})
+                raise StepFailed(f"reviewed plan cannot start: blockers={blockers}; shown {item['shown']['en']}"
+                                 + ("" if item["actionable"] else f"; D-024: {item['actionable_reason']}"))
             self.executions[f"plan-{role.role}"] = plan
 
     def refused_plan_left_nothing(self, record: StepRecord, role: topo.Role, client: Any,
@@ -815,9 +956,7 @@ class Driver:
                                        {"plan_id": plan["id"], "request_id": request_id, "confirmed": True},
                                        purpose="ServerSetup start (once)", timeout=120)
                 if response.status not in (200, 202):
-                    item = gd.api_error_guidance(self.translator, response.status, response.json())
-                    self.add_guidance(record, item, context="setup start refused")
-                    raise StepFailed(f"setup start returned HTTP {response.status}")
+                    self.start_refused(record, role, client, response, request_id, "setup start refused")
             except UnknownOutcome as exc:
                 # Reconcile the exact request by reads; never re-POST blindly.
                 record.checks["start_outcome"] = f"unknown, reconciling: {exc}"
@@ -825,17 +964,41 @@ class Driver:
                 self._setup_reader(request_id),
                 lambda ex: isinstance(ex, dict) and (ex.get("status") in {"failed", "succeeded"} or _dns_step_done(ex)),
                 timeout=self.config.setup_timeout, interval=self.config.poll_interval,
-                on_change=self._observe_execution(record, role),
+                on_change=self._observe_execution(record, role), **self.stable_stop(pc.setup_settled),
             )
+            poll = dict(client.last_poll)
         record.checks["polls"] = reads
+        record.checks["poll_stop"] = poll
         self.executions[role.role] = execution if isinstance(execution, dict) else {}
         if not isinstance(execution, dict) or execution.get("request_id") not in (None, request_id):
             raise StepFailed("setup operation could not be reconciled to the exact request")
         if not done:
+            self.require_actionable(record)
+            if poll.get("stop") == "stable":
+                raise StepFailed(f"setup DNS step did not finish: the operation was unchanged for "
+                                 f"{poll.get('stable_seconds')}s at status {execution.get('status')} phase "
+                                 f"{execution.get('phase')} ({(execution.get('error') or {}).get('code')})")
             raise StepFailed(f"setup DNS step did not finish within {self.config.setup_timeout}s")
         self.require_actionable(record)
         if execution.get("status") == "failed" and not _dns_step_done(execution):
             raise StepFailed(f"setup failed before its DNS step: {execution.get('error')}")
+
+    def start_refused(self, record: StepRecord, role: topo.Role, client: Any, response: Any, request_id: str,
+                      context: str) -> None:
+        """A non-2xx start: record what the wizard shows, reconcile the exact request once by a read, stop."""
+
+        body = response.json()
+        item = gd.setup_start_failure_guidance(self.translator, response.status, body)
+        self.add_guidance(record, item, context=context,
+                          payload={"request": "POST /api/v1/setup/start", "http_status": response.status, "body": body})
+        with client.polling() as view:
+            reconciled = view.get(f"/api/v1/setup/operation?request_id={request_id}")
+        record.checks["start_refused"] = {"http_status": response.status, "shown": item["shown"],
+                                          "reconcile_http_status": reconciled.status,
+                                          "execution_exists": isinstance(reconciled.json(), dict)}
+        verdict = "actionable" if item["actionable"] else f"D-024: not actionable ({item['actionable_reason']})"
+        raise StepFailed(f"setup start on {role.node} returned HTTP {response.status}; the owner sees "
+                         f"{item['shown']['en']}; {verdict}")
 
     def secondary_without_primary(self, record: StepRecord) -> None:
         """Gate path: the secondary's own setup must explain the missing primary (D-024)."""
@@ -849,9 +1012,7 @@ class Driver:
                                    {"plan_id": plan["id"], "request_id": request_id, "confirmed": True},
                                    purpose="ServerSetup start (once)", timeout=120)
             if response.status not in (200, 202):
-                item = gd.api_error_guidance(self.translator, response.status, response.json())
-                self.add_guidance(record, item, context="secondary setup start refused")
-                raise StepFailed(f"secondary setup start returned HTTP {response.status}")
+                self.start_refused(record, role, client, response, request_id, "secondary setup start refused")
             done, execution, reads = client.poll(
                 self._setup_reader(request_id),
                 lambda ex: isinstance(ex, dict) and (ex.get("status") in {"failed", "succeeded", "waiting"}),
@@ -864,39 +1025,42 @@ class Driver:
         self.require_actionable(record)
 
     def pair_ready(self, record: StepRecord) -> None:
+        """D1 on both Panels (pair_contract), then each setup settles.
+
+        Both Panels are always read, so a failure records both payloads. A
+        stable snapshot that does not satisfy D1 stops the wait early
+        (pair1: t1 r2 waited 45 minutes on an unchanging secondary snapshot).
+        """
+
         P, S = self.topology.primary, self.topology.secondary
         deadline_total = self.config.setup_timeout
         results: dict[str, Any] = {}
+        failures: list[str] = []
         for role in (P, S):
             with self.panel(role) as client:
-                def engine_ready(view: Any, role: topo.Role = role) -> Any:
-                    response = view.get("/api/v1/dns/engine", timeout=40)
-                    return response.json() if response.status == 200 else {"poll_error": f"HTTP {response.status}"}
-                ready, snapshot, _ = client.poll(
-                    engine_ready,
-                    lambda body, role=role: isinstance(body, dict) and body.get("active_engine") == role.engine
-                    and body.get("topology") == "paired" and body.get("pair_role") == role.role
-                    and body.get("pair_ready") is True and body.get("state") == "ready",
-                    timeout=deadline_total, interval=max(self.config.poll_interval, 5.0),
-                )
-                results[role.role] = snapshot
-                if not ready:
-                    raise StepFailed(f"{role.node} Panel never showed a ready paired {role.engine} {role.role}: "
-                                     f"{ {k: (snapshot or {}).get(k) for k in ('active_engine', 'state', 'topology', 'pair_role', 'pair_ready')} }")
+                verdict = self.wait_pair_readiness(record, role, client, timeout=deadline_total, label="ready")
+                results[role.role] = verdict["observed"]
+                if not verdict["passed"]:
+                    failures.append(self.readiness_failure(role, verdict))
+                    continue
                 settled, execution, _ = client.poll(
                     self._setup_reader(self.request_ids[role.role]),
                     lambda ex: isinstance(ex, dict) and (ex.get("status") in {"failed", "succeeded"}
                                                           or (ex.get("status") == "waiting" and ex.get("phase") in NON_DNS_SETUP_PHASES)),
                     timeout=deadline_total, interval=self.config.poll_interval,
-                    on_change=self._observe_execution(record, role),
+                    on_change=self._observe_execution(record, role), **self.stable_stop(pc.setup_settled),
                 )
                 self.executions[role.role] = execution
                 record.checks[f"setup_{role.role}_final"] = {k: (execution or {}).get(k) for k in ("status", "phase", "error")}
+                record.checks[f"setup_{role.role}_poll"] = dict(client.last_poll)
                 if not settled:
-                    raise StepFailed(f"{role.node} setup did not settle")
+                    failures.append(f"{role.node} setup did not settle ({client.last_poll.get('stop')}): "
+                                    f"{record.checks[f'setup_{role.role}_final']}")
+                    continue
                 failed_steps = [s for s in (execution.get("steps") or []) if s.get("status") == "failed"]
                 if execution.get("status") == "failed" and any(s.get("kind") in {"dns", "infrastructure_dns", "firewall", "service"} for s in failed_steps):
-                    raise StepFailed(f"{role.node} setup failed at {[s.get('id') for s in failed_steps]}: {execution.get('error')}")
+                    failures.append(f"{role.node} setup failed at {[s.get('id') for s in failed_steps]}: {execution.get('error')}")
+                    continue
                 if execution.get("status") != "succeeded":
                     self.findings.append({
                         "id": f"setup-not-complete-offline-{role.role}",
@@ -905,8 +1069,10 @@ class Driver:
                                 "certificate cannot complete on an isolated host. The DNS pair steps completed.",
                     })
         self.record("engine-ready.json", results)
-        self.require_actionable(record)
         self.snapshots["engine_ready"] = results
+        self.require_actionable(record)
+        if failures:
+            raise StepFailed(" | ".join(failures))
 
     def zone_add(self, record: StepRecord, *, readd: bool = False) -> None:
         zone = self.topology.zone
@@ -1003,6 +1169,7 @@ class Driver:
         if outcome["state"] == "pending":
             reason = outcome.get("reason")
             if reason == "dns_peer_enrollment_required":
+                self.pending_deletion_engine_observation(record)
                 self._owner_enrollment(record)
                 with self.panel(self.topology.primary) as client:
                     retry = client.delete(f"/api/v1/domains/{domain_id}",
@@ -1062,40 +1229,63 @@ class Driver:
         self.add_guidance(record, item, context=context)
         return {"state": "error", "http_status": response.status}
 
+    def pending_deletion_engine_observation(self, record: StepRecord) -> None:
+        """Item 7 (pair1 P3): record, never fail, when the pending-deletion text for a
+        PowerDNS secondary does not name the engine selector the owner tool needs."""
+
+        if self.topology.secondary.engine != "pdns":
+            return
+        texts = [item for item in record.guidance if item.get("reason") == "dns_peer_enrollment_required"]
+        if not texts:
+            return
+        shown = texts[0].get("shown") or {}
+        english = " ".join(shown.get("en") or [])
+        missing = [flag for flag in ("--engine pdns", "--catalog-account") if flag not in english]
+        if not missing:
+            return
+        observation = {
+            "id": "d024-observation-pending-deletion-pdns-engine-selector",
+            "kind": "observation",
+            "step": record.id,
+            "text": "The pending-deletion guidance shown for a PowerDNS secondary does not name "
+                    f"{' / '.join(missing)}, which cmd/dns-peer-enroll/README.md requires on every command for a "
+                    "PowerDNS secondary. Recorded for the owner's wording decision; the run continues.",
+            "missing": missing,
+            "message_keys": texts[0].get("message_keys"),
+            "shown": shown,
+        }
+        record.checks.setdefault("d024_observations", []).append(observation)
+        if observation not in self.findings:
+            self.findings.append(observation)
+
     def _owner_enrollment(self, record: StepRecord) -> None:
+        """What the product asks both owners to do: dns-peer-enroll with the secondary's engine.
+
+        A PowerDNS secondary uses --engine pdns on every command, the packaged
+        pdns-peer-inspect, and --catalog-account read read-only from the
+        secondary's own PowerDNS database (the catalog CONSUMER row).
+        """
+
         P, S = self.topology.primary, self.topology.secondary
         catalog = dc.catalog_name(P.address)
         # Native state first, so the evidence shows what the secondary held while pending.
+        pending_native: dict[str, dict[str, Any]] = {}
         for role in (P, S):
-            self.record(f"native-pending-{role.role}.json",
-                        self.probe(role.node, "native", "--engine", role.engine, "--zone", self.topology.zone,
-                                   "--catalog", catalog))
-        if S.engine != "bind":
-            blocker = {
-                "id": "E1-no-powerdns-owner-enrollment",
-                "text": "The product asks the owner to enroll the inspection channel for the PowerDNS "
-                        "secondary, but no owner-facing enrollment exists for PowerDNS: dns-peer-enroll "
-                        "installs only the BIND inspector, and the Agent's PowerDNS reader has no writer.",
-                "sources": [
-                    "cmd/agent/dns_engine_peer_pdns_linux.go:57,118 (emits dns_peer_enrollment_required)",
-                    "cmd/dns-peer-enroll/main_linux.go:3-4,99-120 (secondary-install takes a BIND inspector)",
-                    "internal/pdnspeerenrollment/enrollment_linux.go:28,120 (reader only; compare "
-                    "internal/dnspeerenrollment/owner_writer_linux.go:42-44)",
-                    "Makefile:67-71 (dns-owner-tools packages bind-peer-inspect only)",
-                    "docs/DNS-PEER-INSPECTION-GUIDANCE-GAP.md 'Ordinary owner enrollment is still missing'",
-                ],
-                "smallest_product_change": (
-                    "Add an owner writer to internal/pdnspeerenrollment mirroring "
-                    "internal/dnspeerenrollment/owner_writer_linux.go (prepare/activate/revoke of "
-                    "pdns-peer-inspection-v1.json), an engine selector on dns-peer-enroll "
-                    "secondary-install/primary-activate that installs pdns-peer-inspect, and package "
-                    "pdns-peer-inspect in the dns-owner-tools target."
-                ),
-            }
-            if blocker not in self.blockers:
-                self.blockers.append(blocker)
-            raise ProductBlocked("deletion needs owner enrollment for a PowerDNS secondary and the product has "
-                                 "no owner enrollment tool for it (blocker E1-no-powerdns-owner-enrollment)")
+            pending_native[role.role] = self.probe(role.node, "native", "--engine", role.engine, "--zone",
+                                                   self.topology.zone, "--catalog", catalog)
+            self.record(f"native-pending-{role.role}.json", pending_native[role.role])
+        engine = S.engine
+        catalog_account = ""
+        if engine == "pdns":
+            rows = ((pending_native["secondary"].get("database") or {}).get("domains") or [])
+            accounts = [row.get("account", "") for row in rows if isinstance(row, dict)
+                        and str(row.get("name", "")).rstrip(".").lower() == catalog.rstrip(".").lower()
+                        and str(row.get("type", "")).upper() == "CONSUMER"]
+            record.checks["pdns_catalog_consumer_account"] = accounts
+            if len(accounts) != 1 or not accounts[0]:
+                raise StepFailed(f"the PowerDNS secondary has no single catalog CONSUMER zone account for {catalog}: "
+                                 f"{accounts}; the owner cannot fill --catalog-account")
+            catalog_account = accounts[0]
         root = self.config.dist_root
         transcript: list[dict[str, Any]] = []
 
@@ -1112,13 +1302,14 @@ class Driver:
             except (ValueError, IndexError):
                 return {}
 
-        prepared = owner(P.node, inst.enroll_primary_prepare(root))
+        prepared = owner(P.node, inst.enroll_primary_prepare(root, engine))
         public_key = prepared.get("public_key", "")
         if not public_key.startswith("ssh-ed25519 "):
             raise StepFailed("primary-prepare returned no Ed25519 public key")
         owner(S.node, inst.write_primary_public_key(), stdin=(public_key.strip() + "\n").encode())
-        owner(S.node, inst.enroll_secondary_install(root, primary_ip=P.address, peer_ip=S.address, catalog=catalog))
-        host_key = owner(S.node, inst.enroll_secondary_host_key(root)).get("host_key_sha256", "")
+        owner(S.node, inst.enroll_secondary_install(root, primary_ip=P.address, peer_ip=S.address, catalog=catalog,
+                                                    engine=engine, catalog_account=catalog_account))
+        host_key = owner(S.node, inst.enroll_secondary_host_key(root, engine)).get("host_key_sha256", "")
         # Independent review through the fixture's pinned SSH channel.
         pub = self.guests.run(S.node, "cat /etc/ssh/ssh_host_ed25519_key.pub", mutating=False, check=False)
         reviewed = pubkey_digest(_decode(pub.stdout))
@@ -1133,11 +1324,21 @@ class Driver:
             raise StepFailed("secondary host-key digest failed independent review; not activating")
         owner(P.node, inst.enroll_primary_activate(root, credential_id=prepared.get("credential_id", ""),
                                                    primary_ip=P.address, peer_ip=S.address, catalog=catalog,
-                                                   host_key_sha256=host_key))
-        owner(P.node, inst.enroll_status(root, "primary"))
-        owner(S.node, inst.enroll_status(root, "secondary"))
+                                                   host_key_sha256=host_key, engine=engine))
+        owner(P.node, inst.enroll_status(root, "primary", engine))
+        owner(S.node, inst.enroll_status(root, "secondary", engine))
         self.record("owner-enrollment-transcript.json", transcript)
-        record.checks["owner_enrollment"] = "completed with dns-peer-enroll (BIND secondary)"
+        label = "PowerDNS" if engine == "pdns" else "BIND"
+        record.checks["owner_enrollment"] = f"completed with dns-peer-enroll ({label} secondary)"
+        self.owner_steps.append({
+            "step": record.id,
+            "node": f"{P.node}+{S.node}",
+            "actor": "primary administrator together with the secondary owner",
+            "action": f"dns-peer-enroll{' --engine pdns' if engine == 'pdns' else ''}: primary-prepare, "
+                      "secondary-install, secondary-host-key (independently reviewed), primary-activate, status",
+            "trigger": "deletion pending: dns_peer_enrollment_required",
+            "transcript": "owner-enrollment-transcript.json",
+        })
 
     def zone_readd(self, record: StepRecord) -> None:
         self.zone_add(record, readd=True)
@@ -1189,8 +1390,7 @@ class Driver:
                     setup = view.get(f"/api/v1/setup/operation?request_id={self.request_ids.get(role.role, '')}")
             engine_body = engine.json() or {}
             truth[role.role] = {
-                "engine": {k: engine_body.get(k) for k in ("active_engine", "state", "topology", "pair_role",
-                                                           "pair_ready", "zone_count", "pending_zone_count")},
+                "engine": {k: engine_body.get(k, pc.ABSENT) for k in ENGINE_SUMMARY_KEYS},
                 "domains": sorted(row.get("domain_name") for row in (domains.json() or []) if isinstance(row, dict)),
                 "setup": {k: (setup.json() or {}).get(k) for k in ("id", "status", "phase")} if setup.status == 200 else setup.status,
             }
@@ -1212,24 +1412,21 @@ class Driver:
                 self.sleep(3)
             if tls.get("leaf_sha256") != self.pins.get(role.node):
                 raise StepFailed(f"{role.node}: panel TLS leaf changed or panel did not return: {tls}")
+        failures = []
         for role in (P, S):
             with self.panel(role) as client:
                 client.login(ADMIN_USERNAME, self.passwords[role.node])
-                ready, snapshot, _ = client.poll(
-                    lambda view: view.get("/api/v1/dns/engine", timeout=40).json(),
-                    lambda body, role=role: isinstance(body, dict) and body.get("pair_ready") is True,
-                    timeout=240, interval=5,
-                )
-                record.checks[f"engine_{role.role}_after_return"] = {k: (snapshot or {}).get(k) for k in (
-                    "active_engine", "state", "topology", "pair_role", "pair_ready")}
-                if not ready:
-                    raise StepFailed(f"{role.node}: Panel did not show a ready pair after management returned")
+                verdict = self.wait_pair_readiness(record, role, client, timeout=240, label="return")
+                if not verdict["passed"]:
+                    failures.append(self.readiness_failure(role, verdict))
+        if failures:
+            raise StepFailed("after management returned: " + " | ".join(failures))
         truth = self._panel_truth(record, "after-return")
         prior = self.snapshots.get("before_disable") or {}
         differences = []
         for role_name, value in truth.items():
             expected = prior.get(role_name) or {}
-            for key in ("active_engine", "topology", "pair_role", "pair_ready"):
+            for key in ("active_engine", "topology", "pair_role", "pair_ready", "secondary_ready"):
                 if value["engine"].get(key) != (expected.get("engine") or {}).get(key):
                     differences.append(f"{role_name}.{key}: {expected.get('engine', {}).get(key)} -> {value['engine'].get(key)}")
             if value["domains"] != expected.get("domains"):
@@ -1256,17 +1453,63 @@ class Driver:
                 record.checks[f"collected_{node}"] = False
                 continue
             for unit in JOURNAL_UNITS:
+                read = True
                 try:
                     text = self.guests.journal(node, unit)
                 except Exception as exc:  # noqa: BLE001 - collection is best effort and says so
+                    read = False
                     text = f"journal collection failed: {type(exc).__name__}: {exc}"
                 self.evidence.write_text(f"guests/{node}/journal-{unit}.txt", text or "(empty)")
+                if unit == PANEL_UNIT:
+                    check = license_service_journal_check(text if read else None)
+                    self.license_journal[node] = check
+                    record.checks[f"license_service_journal_{node}"] = {
+                        k: v for k, v in check.items() if not k.endswith("_lines")}
+                    self.evidence.write_json(f"guests/{node}/license-service-journal-check.json", check)
             for command in ("versions", "management", "ledger"):
                 try:
                     value = self.probe(node, command)
                 except Exception as exc:  # noqa: BLE001
                     value = {"error": f"{type(exc).__name__}: {exc}"}
                 self.evidence.write_json(f"guests/{node}/{command}.json", value)
+        if self.config.license_mode == "acceptance-fixture":
+            contacted = {node: {"host_lines": check["host_line_count"], "refusal_lines": check["refusal_line_count"]}
+                         for node, check in self.license_journal.items() if check["state"] == "contact-or-attempt-seen"}
+            if contacted:
+                raise StepFailed(f"acceptance fixture build: the Panel journal names the license service or its "
+                                 f"refusing transport: {contacted}")
+
+
+def license_service_journal_check(text: str | None) -> dict[str, Any]:
+    """Read-only proxy for the in-process refused-connection counter (item 6).
+
+    ``licensing.AcceptanceLicenseServiceDialAttempts`` is not exposed by any
+    API or log, so the driver cannot read it. Instead: no Panel journal line
+    may contain the license service host or the refusing transport's exact
+    error text. The limit: an attempt whose error was never logged leaves no
+    line, so a clean journal is necessary, not sufficient.
+    """
+
+    if text is None:
+        return {"state": "unknown", "why": "the Panel journal could not be collected", "host": LICENSE_SERVICE_HOST,
+                "refusal_text": LICENSE_REFUSAL_TEXT, "host_line_count": None, "refusal_line_count": None,
+                "acceptance_banner_count": None, "host_lines": [], "refusal_lines": []}
+    lines = text.splitlines()
+    host = [line for line in lines if LICENSE_SERVICE_HOST in line.lower()]
+    refusal = [line for line in lines if LICENSE_REFUSAL_TEXT in line]
+    return {
+        "state": "contact-or-attempt-seen" if host or refusal else "no-line-found",
+        "why": "journal lines naming the license service host or the refusing transport's error",
+        "host": LICENSE_SERVICE_HOST,
+        "refusal_text": LICENSE_REFUSAL_TEXT,
+        "journal_lines": len(lines),
+        "host_line_count": len(host),
+        "refusal_line_count": len(refusal),
+        "acceptance_banner_count": sum(ACCEPTANCE_BANNER_TEXT in line for line in lines),
+        "host_lines": host[:5],
+        "refusal_lines": refusal[:5],
+        "limit": "the in-process counter is not exposed; an unlogged attempt leaves no journal line",
+    }
 
 
 def _decode(value: Any) -> str:
@@ -1313,15 +1556,18 @@ API_SEQUENCE = [
                 "/api/v1/panel/license (label), POST {action:activate, fixture key} once, GET both again"),
     ("setup-review", "GET /api/v1/setup, PUT /api/v1/setup/guidance, PUT /api/v1/setup, POST /api/v1/setup/plan"),
     ("setup-start", "POST /api/v1/setup/start (once, fixed request_id), poll GET /api/v1/setup/operation?request_id="),
-    ("pair-ready", "poll GET /api/v1/dns/engine until paired+pair_ready; poll setup operation until settled"),
+    ("pair-ready", "poll GET /api/v1/dns/engine on both Panels until D1 holds (primary: pair_ready true, "
+                   "secondary_ready false; secondary: secondary_ready true, pair_ready false); a stable snapshot "
+                   "that does not satisfy it stops early; poll setup operation until settled"),
     ("zone-add", "POST /api/v1/domains/create {project_type:dnsonly}, GET /api/v1/domains, GET .../dns/zone, GET .../dns/records"),
     ("record-add", "POST /api/v1/domains/{id}/dns/records"),
     ("record-edit", "ui-replace: DELETE .../dns/records?id= then POST; api-put: PUT .../dns/records"),
     ("zone-delete", "DELETE /api/v1/domains/{id}; 202 -> GET .../deletion-status (read-only); owner enrollment "
-                    "(dns-peer-enroll) then the same DELETE once"),
+                    "(dns-peer-enroll, --engine pdns for a PowerDNS secondary) then the same DELETE once"),
     ("zone-readd", "POST /api/v1/domains/create"),
     ("independence-reboot", "systemctl disable --now panel+agent; fixture reboot of both; native serving checks"),
-    ("management-return", "systemctl enable --now agent+panel; login; read-only GETs; ledger digest unchanged"),
+    ("management-return", "systemctl enable --now agent+panel; login; read-only GETs (D1 again); ledger digest "
+                          "unchanged"),
 ]
 
 
@@ -1347,7 +1593,9 @@ def build_plan(args: argparse.Namespace, topology: topo.Topology) -> dict[str, A
         "expected_outcome_note": (
             "pdns-primary/bind-secondary is expected to end refused-by-product-gate "
             "(server plan blocker pdns_primary_switch_paused) while its gate is closed; --license-mode none is "
-            "expected to end blocked-product at license; acceptance-fixture runs do not evidence license behaviour"
+            "expected to end blocked-product at license; acceptance-fixture runs do not evidence license behaviour; "
+            "D1 needs secondary_ready in GET /api/v1/dns/engine, which the pair1 build (aa6b9380) does not serialize, "
+            "so such a build fails pair-ready after the stable-state window"
         ),
         "safety": [
             "guests are reached only through the fixture plan's loopback SSH ports",
@@ -1390,6 +1638,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             current.add_argument("--setup-timeout", type=float, default=2700)
             current.add_argument("--dns-timeout", type=float, default=240)
             current.add_argument("--reboot-timeout", type=int, default=900)
+            current.add_argument("--stable-stop-seconds", type=float, default=300.0,
+                                 help="stop a wait once the polled state is unchanged this long and still fails "
+                                      "its rule (0 disables)")
             current.add_argument("--execute", action="store_true")
     return parser.parse_args(argv)
 
@@ -1409,6 +1660,8 @@ def validate_run_args(args: argparse.Namespace) -> None:
                          "the acceptance fixture build never contacts the license service")
     if len({args.local_port_debian13, args.local_port_arch}) != 2:
         raise SystemExit("local tunnel ports must differ")
+    if args.stable_stop_seconds < 0:
+        raise SystemExit("--stable-stop-seconds must be 0 (disabled) or positive")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1446,14 +1699,14 @@ def execute_run(args: argparse.Namespace, topology: topo.Topology, plan: dict[st
     if args.license_mode == "owner-key":
         for role, path in (("primary", args.license_key_file_primary), ("secondary", args.license_key_file_secondary)):
             keys[role] = path.read_text(encoding="ascii").strip()
-    run_id = f"{args.run_label}-{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+    run_id = ev.make_run_id(args.run_label, dt.datetime.now(dt.timezone.utc))
     config = Config(
         run_id=run_id, run_label=args.run_label, license_mode=args.license_mode, license_keys=keys,
         edit_method=args.edit_method, infrastructure_dns=args.infrastructure_dns,
         skip_security_updates=args.skip_security_updates, dist_archive=args.dist_archive,
         dist_root=identity["root"], dist_sha256=identity["sha256"], dist_commit=identity["commit"],
         dist_tree=identity["tree"], setup_timeout=args.setup_timeout, dns_timeout=args.dns_timeout,
-        reboot_timeout=args.reboot_timeout,
+        reboot_timeout=args.reboot_timeout, stable_stop_seconds=args.stable_stop_seconds or None,
     )
     redactor = Redactor(keys.values())
     writer = ev.EvidenceWriter(args.evidence_root.resolve(), run_id, redactor)

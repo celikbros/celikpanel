@@ -132,17 +132,66 @@ def postinstall_check() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Owner enrollment (cmd/dns-peer-enroll, BIND secondaries only)
+# The installer's closing restart notice (install.sh print_kernel_reboot_closing)
 # ---------------------------------------------------------------------------
 
+RESTART_REQUIRED_BANNER = "RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN"
+RESTART_RECOMMENDED_BANNER = "A RESTART IS RECOMMENDED / YENIDEN BASLATMA ONERILIR"
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def installer_restart_notice(stdout: str) -> dict[str, str]:
+    """Which restart notice install.sh printed, and its exact text (ANSI colour removed).
+
+    ``required``: the running kernel's modules are gone (nftables/WireGuard
+    cannot load) and the owner must restart before using the panel.
+    ``recommended``: a newer kernel is installed; nothing is broken.
+    """
+
+    lines = [ANSI_RE.sub("", line).rstrip() for line in stdout.splitlines()]
+    for state, banner in (("required", RESTART_REQUIRED_BANNER), ("recommended", RESTART_RECOMMENDED_BANNER)):
+        for index, line in enumerate(lines):
+            if line.strip() != banner:
+                continue
+            block = [line.strip()]
+            for following in lines[index + 1:index + 24]:
+                if following and not following.startswith("    "):
+                    break
+                block.append(following)
+            while block and not block[-1].strip():
+                block.pop()
+            return {"state": state, "banner": banner, "text": "\n".join(block)}
+    return {"state": "none", "banner": "", "text": ""}
+
+
+# ---------------------------------------------------------------------------
+# Owner enrollment (cmd/dns-peer-enroll; --engine bind|pdns)
+#
+# cmd/dns-peer-enroll/README.md: every subcommand accepts --engine bind|pdns
+# (default bind, so BIND command text is unchanged); a PowerDNS secondary needs
+# --engine pdns on every command on both hosts, the packaged pdns-peer-inspect,
+# and --catalog-account with the account stored for the catalog CONSUMER zone.
+# ---------------------------------------------------------------------------
+
+ENROLL_ENGINES = ("bind", "pdns")
+INSPECTORS = {"bind": "bind-peer-inspect", "pdns": "pdns-peer-inspect"}
+CATALOG_ACCOUNT_RE = re.compile(r"[a-z0-9_-]{1,128}")  # dnspeerenrollowner.validCatalogAccount
+
+
+def _engine_arg(engine: str) -> str:
+    if engine not in ENROLL_ENGINES:
+        raise InstallError(f"unknown enrollment engine {engine}")
+    return " --engine pdns" if engine == "pdns" else ""
+
+
 def owner_tool(root_name: str, name: str) -> str:
-    if name not in {"dns-peer-enroll", "bind-peer-inspect"}:
+    if name not in {"dns-peer-enroll", *INSPECTORS.values()}:
         raise InstallError(f"unknown owner tool {name}")
     return f"{dist_root(root_name)}/{OWNER_TOOLS}/{name}"
 
 
-def enroll_primary_prepare(root_name: str) -> str:
-    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} primary-prepare"
+def enroll_primary_prepare(root_name: str, engine: str = "bind") -> str:
+    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} primary-prepare{_engine_arg(engine)}"
 
 
 def write_primary_public_key(path: str = "/root/celikpanel-primary-inspector.pub") -> str:
@@ -157,32 +206,40 @@ chmod 0600 {path}
 
 
 def enroll_secondary_install(root_name: str, *, primary_ip: str, peer_ip: str, catalog: str,
-                             public_key_path: str = "/root/celikpanel-primary-inspector.pub") -> str:
+                             public_key_path: str = "/root/celikpanel-primary-inspector.pub",
+                             engine: str = "bind", catalog_account: str = "") -> str:
+    extra = ""
+    if engine == "pdns":
+        if CATALOG_ACCOUNT_RE.fullmatch(catalog_account) is None:
+            raise InstallError("a PowerDNS secondary needs the catalog CONSUMER zone's account")
+        extra = f" --catalog-account {shlex.quote(catalog_account)}"
+    elif catalog_account:
+        raise InstallError("--catalog-account is PowerDNS only")
     return (
-        f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} secondary-install "
+        f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} secondary-install{_engine_arg(engine)} "
         f"--primary-ip {shlex.quote(primary_ip)} --peer-ip {shlex.quote(peer_ip)} "
-        f"--catalog {shlex.quote(catalog)} --primary-public-key {shlex.quote(public_key_path)} "
-        f"--inspector {shlex.quote(owner_tool(root_name, 'bind-peer-inspect'))}"
+        f"--catalog {shlex.quote(catalog)}{extra} --primary-public-key {shlex.quote(public_key_path)} "
+        f"--inspector {shlex.quote(owner_tool(root_name, INSPECTORS[engine]))}"
     )
 
 
-def enroll_secondary_host_key(root_name: str) -> str:
-    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} secondary-host-key"
+def enroll_secondary_host_key(root_name: str, engine: str = "bind") -> str:
+    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} secondary-host-key{_engine_arg(engine)}"
 
 
 def enroll_primary_activate(root_name: str, *, credential_id: str, primary_ip: str, peer_ip: str,
-                            catalog: str, host_key_sha256: str) -> str:
+                            catalog: str, host_key_sha256: str, engine: str = "bind") -> str:
     if not re.fullmatch(r"[0-9a-f]{16,64}", credential_id) or not HEX64.fullmatch(host_key_sha256):
         raise InstallError("credential ID or host-key digest is malformed")
     return (
-        f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} primary-activate "
+        f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} primary-activate{_engine_arg(engine)} "
         f"--credential-id {credential_id} --primary-ip {shlex.quote(primary_ip)} "
         f"--peer-ip {shlex.quote(peer_ip)} --catalog {shlex.quote(catalog)} "
         f"--host-key-sha256 {host_key_sha256}"
     )
 
 
-def enroll_status(root_name: str, side: str) -> str:
+def enroll_status(root_name: str, side: str, engine: str = "bind") -> str:
     if side not in {"primary", "secondary"}:
         raise InstallError("status side must be primary or secondary")
-    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} {side}-status"
+    return f"sudo -n {owner_tool(root_name, 'dns-peer-enroll')} {side}-status{_engine_arg(engine)}"

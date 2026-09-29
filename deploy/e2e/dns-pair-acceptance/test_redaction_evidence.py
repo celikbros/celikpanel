@@ -207,5 +207,27 @@ class TopologyTest(unittest.TestCase):
         self.assertEqual(json.loads(json.dumps(value.as_dict()))["secondary"]["os"], "debian-13")
 
 
+class RunIdTest(unittest.TestCase):
+    """H1 (pair1): the driver's run ID must be what EvidenceWriter admits."""
+
+    def test_run_id_is_lowercase_and_accepted(self) -> None:
+        import datetime as dt
+
+        when = dt.datetime(2026, 9, 29, 17, 19, 7, tzinfo=dt.timezone.utc)
+        run_id = evidence.make_run_id("r2", when)
+        self.assertEqual(run_id, "r2-20260929t171907z")
+        with tempfile.TemporaryDirectory() as directory:
+            writer = evidence.EvidenceWriter(Path(directory).resolve(), run_id, Redactor())
+            self.assertTrue(writer.directory.is_dir())
+            with self.assertRaises(evidence.EvidenceError):
+                evidence.EvidenceWriter(Path(directory).resolve(), "r2-20260929T171907Z", Redactor())
+        with self.assertRaises(evidence.EvidenceError):
+            evidence.make_run_id("R2", when)
+        with self.assertRaises(evidence.EvidenceError):
+            evidence.make_run_id("r2", when.replace(tzinfo=None))
+        local = when.astimezone(dt.timezone(dt.timedelta(hours=3)))
+        self.assertEqual(evidence.make_run_id("r2", local), run_id)
+
+
 if __name__ == "__main__":
     unittest.main()

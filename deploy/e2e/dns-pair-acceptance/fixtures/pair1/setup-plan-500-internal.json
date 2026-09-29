@@ -1,0 +1,15 @@
+{
+  "body": {
+    "code": "INTERNAL",
+    "error": "internal server error"
+  },
+  "method": "POST",
+  "note": "t1 r1: arch secondary plan review before the owner restart (P1)",
+  "panel": "arch",
+  "path": "/api/v1/setup/plan",
+  "request_body": {
+    "revision": 2
+  },
+  "source": "deploy/e2e/dns-pair-acceptance/evidence/pair1-20260930/t1-bind-bind/r1-20260929t171353z/steps/09-setup-review-secondary/api/0034-post-api-v1-setup-plan.json",
+  "status": 500
+}

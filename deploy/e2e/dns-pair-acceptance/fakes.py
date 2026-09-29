@@ -4,6 +4,14 @@
 small state machine speaking the Panel API subset the driver uses, including
 its CSRF (Origin) and session checks; ``FakeGuests`` answers the probe
 commands from the same world and records every guest command.
+
+The DNS engine card bodies are the real pair1 captures in
+``fixtures/pair1/`` (copied, minimal, redacted; the evidence tree is never read
+at test time). A pair1-build secondary reports ``pair_ready: false`` and no
+build serializes ``secondary_ready``; ``api_secondary_ready=True`` adds that
+field (primary ``false``, secondary ``true``) for tests that need the flow
+beyond ``pair-ready`` under D1. It is a stated assumption about a later API,
+not something the pair1 build returned.
 """
 
 from __future__ import annotations
@@ -14,6 +22,7 @@ import hashlib
 import json
 import subprocess
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -22,8 +31,44 @@ from panel_api import PanelClient, Response
 COOKIE = "fake-session-cookie-value-0123456789"
 FIXTURE_KEY = "CPK-acce57f1c7" + "0" * 54
 FIXTURE_LABEL = "ACCEPTANCE FIXTURE \u2014 NOT FOR PRODUCTION"
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "pair1"
+CAPTURED_ENGINE = {
+    ("primary", "bind"): "engine-bind-primary-paired.json",
+    ("secondary", "bind"): "engine-bind-secondary-paired.json",
+    ("secondary", "pdns"): "engine-pdns-secondary-paired.json",
+}
+PDNS_CATALOG_ACCOUNT = "celikpanel-peer-catalog-v1"
 HOST_PUB = "ssh-ed25519 " + base64.b64encode(
     bytes.fromhex("0000000b7373682d6564323535313900000020") + bytes(range(32))).decode()
+
+
+def captured(name: str) -> dict[str, Any]:
+    """One captured pair1 exchange (``fixtures/pair1/<name>``)."""
+
+    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+def captured_engine(role: str, engine: str) -> dict[str, Any]:
+    """The real pair1 ``GET /api/v1/dns/engine`` body for a paired role and engine.
+
+    pair1 never showed a paired PowerDNS primary (the server plan refused it),
+    so that one is the captured BIND primary with the engine entries and the
+    operation target swapped; every other body is returned exactly as captured.
+    """
+
+    name = CAPTURED_ENGINE.get((role, engine))
+    if name:
+        return captured(name)["body"]
+    if (role, engine) != ("primary", "pdns"):
+        raise ValueError(f"no captured engine body for {role}/{engine}")
+    body = captured(CAPTURED_ENGINE[("primary", "bind")])["body"]
+    body["active_engine"] = "pdns"
+    body["operation"]["target_engine"] = "pdns"
+    for entry in body["engines"]:
+        active = entry["id"] == "pdns"
+        entry.update({"installed": active, "managed": active, "running": active,
+                      "status": "active" if active else "available"})
+    return body
 
 
 def json_response(status: int, body: Any, headers: list | None = None) -> Response:
@@ -51,8 +96,17 @@ class FakePanel:
                  plan_can_start: bool = True, execution_script: list[dict] | None = None,
                  delete_script: list[tuple[int, dict]] | None = None, zone: str = "pair-accept.example",
                  peer_node: str = "", acceptance_cell: str | None = None, acceptance_label: bool = True,
-                 pdns_primary_gate_open: bool = False, refused_plan_side_effect: bool = False) -> None:
+                 pdns_primary_gate_open: bool = False, refused_plan_side_effect: bool = False,
+                 api_secondary_ready: bool = False, engine_script: list[dict] | None = None,
+                 plan_response: tuple[int, Any] | None = None, start_response: tuple[int, Any] | None = None) -> None:
         self.node, self.role, self.engine, self.world = node, role, engine, world
+        # False: exactly the pair1 API (no secondary_ready). True: the D1 field is serialized.
+        self.api_secondary_ready = api_secondary_ready
+        # Explicit engine bodies per poll (after setup start); the last one repeats.
+        self.engine_script = engine_script
+        self.engine_polls = 0
+        self.plan_response = plan_response
+        self.start_response = start_response
         self.licensed = licensed
         # acceptance_cell: the panel is the acceptance_license test build on a
         # guest whose marker names this cell (internal/licensing/acceptance_fixture.go).
@@ -147,6 +201,19 @@ class FakePanel:
         value.update({"id": "exec-" + self.node, "request_id": self.started["request_id"], "plan_id": "plan-" + self.node})
         return value
 
+    def engine_body(self) -> dict[str, Any]:
+        if self.started is None:
+            return captured("engine-unconfigured.json")["body"]
+        if self.engine_script is not None:
+            body = json.loads(json.dumps(self.engine_script[min(self.engine_polls, len(self.engine_script) - 1)]))
+            self.engine_polls += 1
+            return body
+        body = captured_engine(self.role, self.engine)
+        if self.api_secondary_ready:
+            body["secondary_ready"] = self.role == "secondary"
+        body["zone_count"] = len(self.domains)
+        return body
+
     def route(self, method: str, route: str, query: dict, payload: Any) -> Response:
         if route == "/api/v1/setup" and method == "GET":
             return json_response(200, self.state())
@@ -161,6 +228,11 @@ class FakePanel:
             self.revision += 1
             self.status = "draft"
             return json_response(200, self.state())
+        if route == "/api/v1/setup/plan" and method == "POST" and self.plan_response is not None:
+            return json_response(*self.plan_response)
+        if route == "/api/v1/setup/start" and method == "POST" and self.start_response is not None:
+            self.start_count += 1
+            return json_response(*self.start_response)
         if route == "/api/v1/setup/plan" and method == "POST":
             blockers = []
             if self.draft.get("dns_engine") == "pdns" and self.draft.get("dns_role") == "primary" \
@@ -185,12 +257,7 @@ class FakePanel:
                 return json_response(200, None)
             return json_response(200, self.execution())
         if route == "/api/v1/dns/engine":
-            ready = self.started is not None
-            return json_response(200, {"revision": 3, "active_engine": self.engine if ready else None,
-                                       "state": "ready" if ready else "unconfigured",
-                                       "topology": "paired" if ready else "unconfigured",
-                                       "pair_role": self.role if ready else None, "pair_ready": ready,
-                                       "zone_count": len(self.world.zones), "pending_zone_count": 0})
+            return json_response(200, self.engine_body())
         if route == "/api/v1/domains/create" and method == "POST":
             domain_id = self.next_id
             self.next_id += 1
@@ -282,11 +349,14 @@ def default_execution_script(role: str) -> list[dict]:
 
 
 class FakeGuests:
-    def __init__(self, world: World, topology: Any) -> None:
+    def __init__(self, world: World, topology: Any, *, installer_stdout: dict[str, str] | None = None,
+                 journals: dict[tuple[str, str], str] | None = None) -> None:
         self.world = world
         self.topology = topology
         self.commands: list[tuple[str, str, bool]] = []
         self.plan = None
+        self.installer_stdout = installer_stdout or {}
+        self.journals = journals or {}
         for role in topology.roles:
             world.management.setdefault(role.node, True)
             world.boot.setdefault(role.node, 1)
@@ -310,13 +380,15 @@ class FakeGuests:
             stdout = json.dumps({"host_key_sha256": digest}).encode()
         elif command.startswith("cat /etc/ssh/ssh_host_ed25519_key.pub"):
             stdout = (HOST_PUB + " root@guest\n").encode()
+        elif "exec /bin/bash ./install.sh" in command:
+            stdout = self.installer_stdout.get(node, "CelikPanel installed\n").encode()
         elif "primary-activate" in command:
             self.world.enrolled = True
             stdout = json.dumps({"state": "configured", "enrollment_id": "e" * 32}).encode()
         return subprocess.CompletedProcess([command], 0, stdout, b"")
 
     def journal(self, node: str, unit: str, *, boots: str = "all") -> str:
-        return f"{node} {unit} journal line\n"
+        return self.journals.get((node, unit), f"{node} {unit} journal line\n")
 
     def disable_management(self, node: str) -> None:
         self.commands.append((node, "disable-management", True))
@@ -329,6 +401,7 @@ class FakeGuests:
             self.world.bump(node)
 
     def reboot(self, node: str, timeout: int = 900) -> dict[str, Any]:
+        self.commands.append((node, "reboot", True))
         before = self.world.boot[node]
         self.world.boot[node] += 1
         return {"node": node, "boot_id_before": str(before), "boot_id_after": str(self.world.boot[node])}
@@ -366,8 +439,15 @@ class FakeGuests:
             zone = options["zone"][0]
             role = self.topology.role_for_node(node)
             holds = zone in self.world.zones if role.role == "primary" else zone in self.world.secondary_holds
-            return {"command": "native", "engine": options["engine"][0], "zone": zone,
-                    "native_state": "present" if holds else "absent", "zone_files": []}
+            value = {"command": "native", "engine": options["engine"][0], "zone": zone,
+                     "native_state": "present" if holds else "absent", "zone_files": []}
+            if options["engine"][0] == "pdns" and options.get("catalog"):
+                # guest_probe pdns_rows: the catalog row with its account column (read-only).
+                kind = "CONSUMER" if role.role == "secondary" else "PRODUCER"
+                value["database"] = {"read": True, "domains": [
+                    {"name": options["catalog"][0], "type": kind, "master": "", "catalog": "",
+                     "options_present": False, "account": PDNS_CATALOG_ACCOUNT}]}
+            return value
         if command == "catalog":
             return {"command": "catalog", "transferred": True, "serial": 7,
                     "members": sorted(z + "." for z in self.world.catalog_members)}

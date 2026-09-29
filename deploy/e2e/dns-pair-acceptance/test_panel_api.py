@@ -142,6 +142,35 @@ class PanelClientTest(unittest.TestCase):
         self.assertFalse(done)
         self.assertEqual(reads, 4)
 
+    def test_poll_stops_early_on_a_stable_failing_value(self) -> None:
+        self.script.on("GET", "/api/v1/dns/engine", ok({"pair_ready": False}))
+        done, last, reads = self.client.poll(lambda view: view.get("/api/v1/dns/engine").json(),
+                                             lambda value: value["pair_ready"], timeout=2700, interval=5,
+                                             stable_after=300, stable_polls=5)
+        self.assertFalse(done)
+        self.assertEqual(self.client.last_poll["stop"], "stable")
+        self.assertEqual(self.client.last_poll["stable_seconds"], 300)
+        self.assertEqual(reads, 61)
+        self.assertEqual(self.now, 300)
+
+    def test_poll_keeps_waiting_while_the_value_changes_or_is_in_progress(self) -> None:
+        self.script.on("GET", "/api/v1/dns/engine", [ok({"pair_ready": False, "revision": i}) for i in range(100)]
+                       + [ok({"pair_ready": True, "revision": 100})])
+        done, last, reads = self.client.poll(lambda view: view.get("/api/v1/dns/engine").json(),
+                                             lambda value: value["pair_ready"], timeout=2700, interval=5,
+                                             stable_after=300)
+        self.assertTrue(done)
+        self.assertEqual(self.client.last_poll["stop"], "done")
+        self.assertEqual(reads, 101)
+        self.now = 0.0
+        self.script.on("GET", "/api/v1/setup/operation?request_id=r", ok({"status": "running"}))
+        done, last, reads = self.client.poll(lambda view: view.get("/api/v1/setup/operation?request_id=r").json(),
+                                             lambda value: False, timeout=900, interval=5, stable_after=300,
+                                             settled=lambda value: value.get("status") != "running")
+        self.assertFalse(done)
+        self.assertEqual(self.client.last_poll["stop"], "timeout", "a running step is progress, not a settled state")
+        self.assertEqual(self.now, 900)
+
     def test_lost_mutation_response_is_unknown_not_retried(self) -> None:
         self.script.on("POST", "/api/v1/setup/start", TimeoutError("read timed out"))
         with self.assertRaises(UnknownOutcome):

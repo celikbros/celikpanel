@@ -1,0 +1,46 @@
+{
+  "body": {
+    "active_engine": "bind",
+    "dnssec_zone_count": 0,
+    "engine_epoch": 1,
+    "engines": [
+      {
+        "id": "pdns",
+        "installed": false,
+        "managed": false,
+        "running": false,
+        "status": "available"
+      },
+      {
+        "id": "bind",
+        "installed": true,
+        "managed": true,
+        "running": true,
+        "status": "active"
+      }
+    ],
+    "operation": {
+      "id": "766c6896874badddd7b0887b3f4cc3ab",
+      "phase": "committed",
+      "request_id": "d0bb30072e0772ca57b2f7d8b8877856",
+      "started_at": "2026-09-29T17:23:06Z",
+      "status": "succeeded",
+      "target_engine": "bind",
+      "updated_at": "2026-09-29T17:23:15Z"
+    },
+    "pair_ready": false,
+    "pair_role": "secondary",
+    "pending_zone_count": 0,
+    "revision": 3,
+    "state": "ready",
+    "topology": "paired",
+    "zone_count": 0
+  },
+  "method": "GET",
+  "note": "t1 r2: BIND secondary (arch), identical for the whole 45 min pair-ready wait",
+  "panel": "arch",
+  "path": "/api/v1/dns/engine",
+  "request_body": null,
+  "source": "deploy/e2e/dns-pair-acceptance/evidence/pair1-20260930/t1-bind-bind/r2-20260929t171907z/steps/11-pair-ready/api/0043-get-api-v1-dns-engine.json",
+  "status": 200
+}

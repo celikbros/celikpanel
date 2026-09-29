@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 import unittest
@@ -69,6 +70,65 @@ class ApiErrorTest(unittest.TestCase):
     def test_unknown_license_observation(self) -> None:
         item = gd.api_error_guidance(T, 503, {"error": "x", "code": "LICENSE_VERIFICATION_UNAVAILABLE"})
         self.assertEqual(item["state"], "unknown")
+
+
+class GenericGuidanceTest(unittest.TestCase):
+    """Item 4 (pair1): generic error text is never actionable guidance (D-024)."""
+
+    PAIR1_PLAN_500 = json.loads((HERE / "fixtures" / "pair1" / "setup-plan-500-internal.json").read_text(encoding="utf-8"))
+
+    def test_err_internal_is_not_actionable(self) -> None:
+        item = gd.api_error_guidance(T, 500, {"code": "INTERNAL", "error": "internal server error"})
+        self.assertEqual(item["message_keys"], ["err.INTERNAL"])
+        self.assertEqual(item["shown"]["en"], [CATALOG["en"]["err.INTERNAL"]])
+        self.assertEqual(item["state"], "verified-failure")
+        self.assertFalse(item["actionable"])
+        self.assertIn("generic error code INTERNAL", item["actionable_reason"])
+
+    def test_exact_pair1_plan_500_shows_setup_plan_failed(self) -> None:
+        exchange = self.PAIR1_PLAN_500
+        self.assertEqual((exchange["method"], exchange["path"], exchange["status"]), ("POST", "/api/v1/setup/plan", 500))
+        self.assertEqual(exchange["body"], {"code": "INTERNAL", "error": "internal server error"})
+        item = gd.setup_plan_failure_guidance(T, exchange["status"], exchange["body"])
+        # ServerSetup.tsx review(): the wizard never reads the body of a failed plan.
+        self.assertEqual(item["message_keys"], ["setup.planFailed"])
+        self.assertEqual(item["shown"]["en"], [CATALOG["en"]["setup.planFailed"]])
+        self.assertEqual(item["shown"]["tr"], [CATALOG["tr"]["setup.planFailed"]])
+        self.assertEqual(item["api_error_keys"], ["err.INTERNAL"])
+        self.assertEqual(item["api_error_text"]["tr"], [CATALOG["tr"]["err.INTERNAL"]])
+        self.assertEqual((item["code"], item["http_status"]), ("INTERNAL", 500))
+        self.assertFalse(item["actionable"])
+        self.assertIn("setup.planFailed", item["actionable_reason"])
+
+    def test_plan_failure_is_generic_even_with_a_specific_code(self) -> None:
+        item = gd.setup_plan_failure_guidance(T, 409, {"code": "setup_conflict", "error": "x"})
+        self.assertFalse(item["actionable"])
+
+    def test_bare_http_status_and_generic_server_text(self) -> None:
+        bare = gd.api_error_guidance(T, 500, None)
+        self.assertFalse(bare["actionable"])
+        self.assertIn("bare HTTP status 500", bare["actionable_reason"])
+        self.assertEqual(bare["message_keys"], ["common.error"])
+        uncoded = gd.api_error_guidance(T, 500, {"error": "internal server error"})
+        self.assertFalse(uncoded["actionable"])
+        self.assertIn("generic server text", uncoded["actionable_reason"])
+
+    def test_generic_blocker_and_empty_reason(self) -> None:
+        blocker = gd.plan_blocker_guidance(T, ["something_new"], gd.wizard_code_keys())
+        self.assertEqual(blocker["message_keys"], ["setup.blocker.unknown"])
+        self.assertFalse(blocker["actionable"])
+        pending = gd.deletion_pending_guidance(T, 202, {"status": "deletion_pending", "stage": "dns_cleanup",
+                                                        "reason": "", "message": "m"})
+        self.assertFalse(pending["actionable"])
+
+    def test_start_failure_views(self) -> None:
+        internal = gd.setup_start_failure_guidance(T, 500, {"code": "INTERNAL", "error": "internal server error"})
+        self.assertEqual((internal["state"], internal["title_key"]), ("unknown", "setup.reconnecting"))
+        self.assertEqual(internal["message_keys"], ["setup.uncertain"])
+        self.assertFalse(internal["actionable"])
+        review = gd.setup_start_failure_guidance(T, 409, {"code": "server_setup_review_stale", "error": "x"})
+        self.assertEqual(review["message_keys"], ["setup.conflict"])
+        self.assertTrue(review["actionable"])
 
 
 class SetupExecutionTest(unittest.TestCase):

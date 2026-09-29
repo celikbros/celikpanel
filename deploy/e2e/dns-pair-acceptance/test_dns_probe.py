@@ -113,6 +113,25 @@ class NativeTest(unittest.TestCase):
                     mock.patch.object(gp, "bounded", return_value={"returncode": 1, "output": "denied"}):
                 self.assertEqual(gp.native_command("pdns", "other.example", None)["native_state"], "absent-by-database")
 
+    def test_pdns_rows_report_the_domain_account(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database = os.path.join(directory, "pdns.sqlite3")
+            connection = sqlite3.connect(database)
+            connection.executescript(
+                "CREATE TABLE domains (id INTEGER PRIMARY KEY, name TEXT, master TEXT, type TEXT, catalog TEXT, "
+                "options TEXT, account TEXT);"
+                "CREATE TABLE records (id INTEGER PRIMARY KEY, domain_id INT, name TEXT, type TEXT, content TEXT, ttl INT);"
+                "INSERT INTO domains VALUES (1, 'catalog-c000020a.celikpanel.invalid', '192.0.2.10', 'CONSUMER', '', "
+                "'', 'celikpanel-peer-catalog-v1');"
+            )
+            connection.commit()
+            connection.close()
+            rows = gp.pdns_rows("catalog-c000020a.celikpanel.invalid", database)
+            self.assertEqual(rows["domains"][0]["account"], "celikpanel-peer-catalog-v1")
+            self.assertEqual(rows["domains"][0]["type"], "CONSUMER")
+            with open(database, "rb") as handle:
+                self.assertTrue(handle.read(16).startswith(b"SQLite format 3"))
+
     def test_bind_native_requires_no_zone_files(self) -> None:
         with mock.patch.object(gp, "rndc_zone_state", return_value={"state": "unloaded"}), \
                 mock.patch.object(gp, "bind_zone_files", return_value=["/var/cache/bind/celikpanel/x/pair-accept.example.zone"]):

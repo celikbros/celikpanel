@@ -9,8 +9,12 @@ on ``debian13``; BIND may run on either guest.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
+# One run label names one fixture cell and prefixes the evidence run ID; both
+# checkers (fixture CELL_ID_RE, evidence RUN_ID_RE) admit lowercase only.
+RUN_LABEL_RE = re.compile(r"[a-z0-9][a-z0-9-]{0,31}")
 NODE_ADDRESSES = {"debian13": "192.0.2.10", "arch": "192.0.2.11"}
 NODE_OS = {"debian13": "debian-13", "arch": "arch"}
 ENGINES = ("bind", "pdns")
@@ -61,6 +65,8 @@ class Topology:
 
     def cell_id(self, run_label: str) -> str:
         # fixture.validate_cell_id requires "__" and [a-z0-9_-]; one run = one cell.
+        if RUN_LABEL_RE.fullmatch(run_label) is None:
+            raise TopologyError(f"run label must be lowercase letters, digits and '-' (at most 32): {run_label!r}")
         engines = f"{self.primary.engine}-{self.primary.node}__{self.secondary.engine}-{self.secondary.node}"
         return f"pair-accept__{engines}__{run_label}"
 

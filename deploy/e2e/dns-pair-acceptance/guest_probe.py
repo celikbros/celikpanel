@@ -317,6 +317,13 @@ def pdns_rows(zone: str, database: str = PDNS_DATABASE) -> dict:
                     "AND type IS NOT NULL ORDER BY name, type, content LIMIT 500",
                     (target[0][0],),
                 ).fetchall()
+            # The domain account (PowerDNS schema column), read-only: the owner
+            # enrollment's --catalog-account is the catalog CONSUMER row's value
+            # (cmd/dns-peer-enroll/README.md). No column -> no account reported.
+            try:
+                accounts = dict(connection.execute("SELECT id, COALESCE(account,'') FROM domains").fetchall())
+            except sqlite3.Error:
+                accounts = {}
         finally:
             connection.close()
     except sqlite3.Error as exc:
@@ -326,7 +333,7 @@ def pdns_rows(zone: str, database: str = PDNS_DATABASE) -> dict:
         "database": database,
         "domains": [
             {"name": row[1], "type": row[2], "master": row[3], "catalog": row[4],
-             "options_present": bool(row[5])}
+             "options_present": bool(row[5]), **({"account": accounts[row[0]]} if row[0] in accounts else {})}
             for row in domains
         ],
         "zone_row_present": bool(target),

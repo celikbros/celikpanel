@@ -21,6 +21,7 @@ redaction aborts the write rather than reaching disk.
 
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import json
 import os
@@ -53,6 +54,24 @@ OVERALL = ("passed", "failed", "refused-by-product-gate", "blocked-product", "in
 
 class EvidenceError(RuntimeError):
     pass
+
+
+RUN_TIMESTAMP_FORMAT = "%Y%m%dt%H%M%Sz"  # lowercase t/z: RUN_ID_RE admits no uppercase
+
+
+def make_run_id(run_label: str, when: dt.datetime) -> str:
+    """``<label>-<UTC yyyymmddThhmmssZ in lowercase>``; the one producer of run IDs.
+
+    pair1 (H1): the driver produced ``...T...Z`` and ``EvidenceWriter`` refused
+    it before any guest was touched. Producer and checker now share this rule.
+    """
+
+    if when.tzinfo is None:
+        raise EvidenceError("run timestamp must be timezone-aware")
+    run_id = f"{run_label}-{when.astimezone(dt.timezone.utc).strftime(RUN_TIMESTAMP_FORMAT)}"
+    if RUN_ID_RE.fullmatch(run_id) is None:
+        raise EvidenceError(f"invalid run id: {run_id!r}")
+    return run_id
 
 
 def slug(value: str, limit: int = 48) -> str:

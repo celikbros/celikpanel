@@ -153,6 +153,7 @@ class PanelClient:
         self.cookie: str | None = None
         self._polling = 0
         self.mutations: list[dict[str, Any]] = []
+        self.last_poll: dict[str, Any] = {}
 
     # -- core -----------------------------------------------------------------
 
@@ -274,18 +275,31 @@ class PanelClient:
         interval: float = 3.0,
         on_change: Callable[[Any], None] | None = None,
         key: Callable[[Any], Any] = lambda value: json.dumps(value, sort_keys=True, default=str),
+        stable_after: float | None = None,
+        stable_polls: int = 5,
+        settled: Callable[[Any], bool] | None = None,
     ) -> tuple[bool, Any, int]:
         """Read until ``done``; returns (done, last value, number of reads).
 
         The reader only ever sees a :class:`ReadOnlyView`, and the client
         refuses unsafe methods while this runs, so a poll cannot start a
         mutation even indirectly.
+
+        ``stable_after`` (seconds): stop early, not done, once the value has
+        been identical for at least ``stable_polls`` consecutive reads spanning
+        at least ``stable_after`` seconds while ``settled(value)`` holds (a
+        product-declared in-progress value never counts). ``timeout`` then only
+        bounds a value that keeps changing. ``last_poll`` records why the poll
+        stopped: ``done``, ``stable`` or ``timeout``.
         """
 
-        deadline = self.clock() + timeout
+        started = self.clock()
+        deadline = started + timeout
         last: Any = None
         previous: Any = object()
         reads = 0
+        identical = 0
+        stable_since = started
         with self.polling() as view:
             while True:
                 try:
@@ -296,12 +310,27 @@ class PanelClient:
                     last = {"poll_error": str(exc)}
                 reads += 1
                 marker = key(last)
-                if on_change is not None and marker != previous:
-                    on_change(last)
+                if marker != previous:
+                    if on_change is not None:
+                        on_change(last)
+                    identical, stable_since = 1, self.clock()
+                else:
+                    identical += 1
                 previous = marker
+                elapsed = round(self.clock() - started, 3)
                 if not (isinstance(last, dict) and "poll_error" in last) and done(last):
+                    self.last_poll = {"stop": "done", "reads": reads, "elapsed_seconds": elapsed}
                     return True, last, reads
+                steady = round(self.clock() - stable_since, 3)
+                if stable_after is not None and identical >= stable_polls and steady >= stable_after \
+                        and (settled is None or settled(last)):
+                    self.last_poll = {"stop": "stable", "reads": reads, "elapsed_seconds": elapsed,
+                                      "identical_reads": identical, "stable_seconds": steady,
+                                      "stable_after": stable_after}
+                    return False, last, reads
                 if self.clock() >= deadline:
+                    self.last_poll = {"stop": "timeout", "reads": reads, "elapsed_seconds": elapsed,
+                                      "identical_reads": identical, "stable_seconds": steady}
                     return False, last, reads
                 self.sleep(interval)
 
