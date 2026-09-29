@@ -401,7 +401,47 @@ of a PowerDNS producer, parses with the PowerDNS policy),
 `TestNativeFreshPDNSPrimaryV3*` (`cmd/agent/dns_engine_pdns_v3_*native_trial_linux_test.go`),
 the owner CLI `recover-dns-pdns-fresh-prestart`, and the evidence in
 `evidence/pdns-v3-{native,prestart,zone,recorded-status}-20260928/`.
-`validate_pdns_switch_cell` still limits a fresh paired primary to `intent`.
+
+### Public-RPC harness for row 6 (2026-09-30)
+
+*Offline tests only; no guest started; the gate stays closed in the product.
+Full text: README "Fresh paired PowerDNS primary cells (row 6, journal V3)".*
+
+- **Cells**: the 12 peer-reachable `pdns-switch__<phase>__{before,after}-write__paired-primary__peer-reachable`
+  for `intent`, `target-staged`, `source-stopped` (selects the V3
+  `target-enable-intent` write), `target-started`, `target-verified`,
+  `committed`; `--source-fixture uninitialized`, Debian 13 primary, Arch
+  panel-free BIND secondary (`native_pdns_bind_peer.py`, the peer the
+  2026-09-28 V3 trials used). Manifest unchanged. Everything else paired-primary
+  is refused before any mutation.
+- **Gate**: `dns-kill-trigger rpc-gate-probe` (SwitchDNSEngineV1 without a
+  lease) runs after the tagged Agent is up and before the trigger; the pause
+  reason means "gate closed in this build" (result `gate-closed`, exit 4, no
+  failure). Items 1-3 above are what the admitted cells, run with a build
+  whose gate is open, are meant to produce.
+- **Pass definitions**: pre-journal (`intent:before-write`), pre-start (the
+  restarted Agent rolls the install back by itself to the pre-install state,
+  then the same-request retry converges) and post-start (forward only, no
+  rollback, PowerDNS MainPID history and the daemon's catalog re-stamp
+  recorded); then the pair: the BIND secondary answers member and catalog as
+  the primary does, over UDP/TCP, and `native_pdns_bind_peer.py observe`
+  agrees on the host. Reboot of both guests optional.
+- **Owner edit** (`--owner-edit config|sql`): the Agent refuses at that
+  boundary with its typed guidance, journal/database/edit kept, DNS-only hold
+  proved through the public RPC (`rpc-unrelated-begin`).
+  `--owner-release-recovery` (pre-start config edit): owner revert,
+  `dns-switch-status` naming `recover-dns-pdns-fresh-prestart`, the command,
+  pre-install state, ledger byte-identical to the Agent's release, re-run
+  exit 0.
+- **Zone lifecycle** (row 17 on this primary): `rpc-pdns-primary-zone-v3
+  --step {add,edit,delete,re-add}` for `s2.s1-kill.test`, observed on both
+  servers after each step (`native_pdns_bind_peer.py observe-child`); a
+  pending deletion stops for the owner's `dns-peer-enroll --engine bind`, then
+  `rpc-pdns-primary-zone-v3-recover`.
+- **Prerequisite outside the harness**: the tagged Agent's kill hook accepts
+  only V1 (and BIND V2) journals at the selected boundary
+  (`cmd/agent/dns_engine_kill_matrix_linux.go:511`); a V3 cut needs it to
+  accept `SwitchJournalSchemaV3` for `pdns-switch`.
 Worth checking before reuse: `native_pdns_pdns_primary_probe.py` parses the
 product's `PRODUCER` catalog with the default `bind` policy of
 `parse_catalog_axfr`, which requires SHA-224 labels; if PowerDNS emits

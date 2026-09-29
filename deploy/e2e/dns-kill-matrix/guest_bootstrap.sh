@@ -93,6 +93,17 @@ readonly -a FRESH_PDNS_SECONDARY_PHASES=(
     rolling-back
     rolled-back
 )
+# Fresh paired PowerDNS PRIMARY (journal V3): the phases whose V3 journal
+# write carries the kill hook (run_cell.py FRESH_PRIMARY_V3_BOUNDARIES;
+# source-stopped selects target-enable-intent). Peer-reachable only.
+readonly -a FRESH_PDNS_PRIMARY_PHASES=(
+    intent
+    target-staged
+    source-stopped
+    target-started
+    target-verified
+    committed
+)
 SOURCE_PREINSTALL_BIND_PROOF=/var/lib/celikpanel-dns-kill-matrix/source-preinstall-bind.json
 PEER_PRIMARY_PREFLIGHT=/var/lib/celikpanel-dns-kill-matrix/peer-primary-preflight.json
 
@@ -123,6 +134,12 @@ secondary_cell_matches_phase() {
     else
         [[ $cell_id =~ ^${driver}__${boundary_phase}__(before|after)-write__paired-secondary__peer-reachable$ ]]
     fi
+}
+
+primary_cell_matches_phase() {
+    # Only peer-reachable paired-primary cells have a pass definition.
+    local driver=$1 cell_id=$2 boundary_phase=$3
+    [[ $cell_id =~ ^${driver}__${boundary_phase}__(before|after)-write__paired-primary__peer-reachable$ ]]
 }
 
 require_simple_value() {
@@ -2322,10 +2339,12 @@ prepare_fresh_pdns_secondary() {
 
 prepare_fresh_pdns_primary() {
     local cell_id=$1 node=$2 boundary_phase=$3 source_fixture_policy=$4 stage=$5
-    [[ $cell_id == pdns-switch__intent__after-write__paired-primary__peer-reachable &&
-       $node == debian13 && $boundary_phase == intent &&
-       $source_fixture_policy == driver-specific ]] ||
-        die "fresh PowerDNS primary requires the exact disposable intent cell"
+    [[ $node == debian13 && $source_fixture_policy == driver-specific ]] ||
+        die "fresh PowerDNS primary requires the certified Debian driver-specific placement"
+    array_contains "$boundary_phase" "${FRESH_PDNS_PRIMARY_PHASES[@]}" ||
+        die "fresh PowerDNS primary has no hooked V3 journal write at this boundary phase"
+    primary_cell_matches_phase pdns-switch "$cell_id" "$boundary_phase" ||
+        die "fresh PowerDNS primary cell must be an exact peer-reachable cell"
     prepare_fresh_pdns_source "$cell_id" "$node" "$stage" primary
 }
 
@@ -2717,10 +2736,39 @@ require_bind_unit_state() {
         die "$unit is not $load/$active/$file_state"
 }
 
+add_owner_bind_directives() {
+    # The owner's own authoritative directives in the stopped BIND's options:
+    # exactly `recursion no;` and `allow-transfer { none; };`, one tab-indented
+    # line each, right after the single `options {` line of
+    # /etc/bind/named.conf.options (run_cell.py OWNER_BIND_DIRECTIVES). The
+    # takeover reads them as part of what it replaces (register R-042).
+    local options=/etc/bind/named.conf.options
+    python3 - "$options" <<'PYOWNERDIRECTIVES'
+import os, sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+lines = text.splitlines(keepends=True)
+anchors = [index for index, line in enumerate(lines) if line == "options {\n"]
+if len(anchors) != 1:
+    raise SystemExit("owner BIND options must carry exactly one `options {` line")
+if any(line.strip().startswith(("recursion", "allow-transfer")) for line in lines):
+    raise SystemExit("owner BIND options already carry a recursion or allow-transfer directive")
+lines[anchors[0] + 1:anchors[0] + 1] = ["\trecursion no;\n", "\tallow-transfer { none; };\n"]
+info = os.stat(path)
+with open(path, "w", encoding="utf-8", newline="\n") as handle:
+    handle.write("".join(lines))
+    handle.flush()
+    os.fsync(handle.fileno())
+os.chown(path, info.st_uid, info.st_gid)
+os.chmod(path, info.st_mode & 0o7777)
+PYOWNERDIRECTIVES
+    /usr/bin/named-checkconf /etc/bind/named.conf || die "owner BIND directives do not parse"
+}
+
 prepare_unmanaged_bind_stopped_source() {
     # Row 12 preimage: BIND installed by the owner (or the image), then
     # stopped and disabled by the owner; CelikPanel has never managed it.
-    local cell_id=$1 address=$2
+    local cell_id=$1 address=$2 stage=${3:-}
     [[ -x /usr/bin/apt-get && -x /usr/bin/dpkg-query ]] || die "stopped BIND takeover fixture requires Debian APT"
     assert_no_source_engine "$address"
     require_apt_package_absent bind9
@@ -2743,9 +2791,16 @@ prepare_unmanaged_bind_stopped_source() {
     require_regular /etc/bind/named.conf
     require_regular /etc/bind/named.conf.options
     require_regular /etc/bind/named.conf.local
+    local preparation="apt-get install bind9 under a guard mask, unmask, systemctl disable named.service; no CelikPanel receipt"
+    if [[ -n $stage && -e $stage/owner-bind-directives ]]; then
+        [[ -f $stage/owner-bind-directives && ! -L $stage/owner-bind-directives &&
+           ! -s $stage/owner-bind-directives ]] ||
+            die "owner directives request is not an empty regular file"
+        add_owner_bind_directives
+        preparation="$preparation; owner directives recursion no and allow-transfer none added to named.conf.options"
+    fi
     assert_no_source_engine "$address"
-    write_source_preinstall_bind_proof "$cell_id" unmanaged-bind-stopped \
-        "apt-get install bind9 under a guard mask, unmask, systemctl disable named.service; no CelikPanel receipt"
+    write_source_preinstall_bind_proof "$cell_id" unmanaged-bind-stopped "$preparation"
 }
 
 prepare_managed_bind_absent_source() {
@@ -2885,7 +2940,7 @@ prepare_bind() {
             || die "$source_fixture is prepared only for the Debian target-staged after-write standalone cell"
         verify_provenance_bind_scenario "$source_fixture"
         if [[ $source_fixture == unmanaged-bind-stopped ]]; then
-            prepare_unmanaged_bind_stopped_source "$cell_id" "$address"
+            prepare_unmanaged_bind_stopped_source "$cell_id" "$address" "$stage"
         else
             prepare_managed_bind_absent_source "$cell_id" "$address" "$stage"
         fi

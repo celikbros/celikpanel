@@ -1092,6 +1092,72 @@ PAIRED_SECONDARY_QUERY = "www.s1-kill.test"
 PAIRED_SECONDARY_PRIMARY_SERIAL = 2026083101
 PDNS_PEER_CATALOG_ACCOUNT = "celikpanel-peer-catalog-v1"
 PDNS_DATABASE_PATH = "/var/lib/powerdns/pdns.sqlite3"
+# Fresh paired PowerDNS PRIMARY (register row 6, journal V3) against the
+# panel-free native BIND secondary of native_pdns_bind_peer.py. The producer
+# (cmd/agent/dns_engine_pdns_fresh_v3_linux.go continueFreshPDNSPrimaryV3 and
+# the intent write in dns_engine_pdns_switch.go) writes intent, target-staged,
+# target-enable-intent, target-started (twice: after the start, then with the
+# native observation), target-verified and committed through
+# writeDNSEngineSwitchJournalForFaultDriver, so each carries the before/after
+# write hook. Its rollback and forward recovery checkpoints use
+# ReplaceFreshPrimaryJournalV3 and carry none. The manifest keeps its eight V1
+# phases; V3 writes no source-stopped (there is no source) and puts
+# target-enable-intent in that slot, so the source-stopped coordinate selects
+# the target-enable-intent write. The hook fires once, at the first matching
+# write: target-started selects the write before the native observation.
+FRESH_PRIMARY_V3_JOURNAL_SCHEMA = "celikpanel-dns-engine-switch-journal/v3"
+FRESH_PRIMARY_V3_OWNER_COMMAND = "recover-dns-pdns-fresh-prestart"
+FRESH_PRIMARY_V3_CATALOG = "catalog-c000020a.celikpanel.invalid"
+FRESH_PRIMARY_V3_PEER_IP = "192.0.2.11"
+FRESH_PRIMARY_V3_STATE_SCHEMA = "celikpanel-dns-engine-state/v3"
+FRESH_PRIMARY_V3_NATIVE_CATALOG = "pdns-fresh-paired-primary/debian-4.9/v1"
+RESTART_BEFORE_SWITCH_COMMIT = "agent_restarted_before_dns_engine_switch_commit"
+# The owner-edit variant edits, between the kill and the Agent restart:
+#   config: appends FRESH_PRIMARY_V3_CONFIG_EDIT_LINE (one comment line) to the
+#           owner's /etc/powerdns/pdns.conf, in place, keeping mode and owner;
+#   sql:    inserts FRESH_PRIMARY_V3_SQL_EDIT (one TXT record of the member
+#           zone) into the live /var/lib/powerdns/pdns.sqlite3.
+FRESH_PRIMARY_V3_CONFIG_EDIT_PATH = "/etc/powerdns/pdns.conf"
+FRESH_PRIMARY_V3_CONFIG_EDIT_LINE = (
+    "# owner note: edited by the server owner during an interrupted install "
+    "(dns-kill-matrix {request_id})\n"
+)
+FRESH_PRIMARY_V3_SQL_EDIT = {
+    "name": "owner-note.s1-kill.test",
+    "type": "TXT",
+    "content": '"edited by the server owner (dns-kill-matrix {request_id})"',
+    "ttl": 300,
+}
+OWNER_EDIT_KINDS = ("config", "sql")
+
+
+@dataclass(frozen=True)
+class FreshPrimaryV3Boundary:
+    """One admitted manifest phase of the fresh paired PowerDNS primary."""
+
+    # The V3 journal phase the tagged Agent's hook selects and observes.
+    journal_phase: str
+    # The phase on disk at the before-write cut (None: no journal yet).
+    disk_before_write: str | None
+    # "pre-journal": no journal, the restarted Agent only finishes the job;
+    # "pre-start": PowerDNS never started, the Agent rolls the install back;
+    # "post-start": PowerDNS started, forward only.
+    before_write_variant: str
+    after_write_variant: str
+
+
+FRESH_PRIMARY_V3_BOUNDARIES = {
+    "intent": FreshPrimaryV3Boundary("intent", None, "pre-journal", "pre-start"),
+    "target-staged": FreshPrimaryV3Boundary("target-staged", "intent", "pre-start", "pre-start"),
+    "source-stopped": FreshPrimaryV3Boundary(
+        "target-enable-intent", "target-staged", "pre-start", "pre-start"),
+    "target-started": FreshPrimaryV3Boundary(
+        "target-started", "target-enable-intent", "post-start", "post-start"),
+    "target-verified": FreshPrimaryV3Boundary(
+        "target-verified", "target-started", "post-start", "post-start"),
+    "committed": FreshPrimaryV3Boundary(
+        "committed", "target-verified", "post-start", "post-start"),
+}
 DNS_STATE_KEYS = {
     "schema",
     "mode",
@@ -3866,7 +3932,7 @@ def tagged_agent_environment(
             SELECTOR_NAMES[0]: cell.cell_id,
             SELECTOR_NAMES[1]: cell.driver,
             SELECTOR_NAMES[2]: cell.point,
-            SELECTOR_NAMES[3]: cell.phase,
+            SELECTOR_NAMES[3]: selector_phase(cell),
             SELECTOR_NAMES[4]: request_id,
             SELECTOR_NAMES[5]: nonce,
             SELECTOR_NAMES[6]: marker_path,
@@ -4325,7 +4391,51 @@ def rollback_precursor_phase(
     return ROLLBACK_PRECURSOR_PHASES.get(cell.driver)
 
 
+def fresh_primary_v3_boundary(cell: CellSpec) -> FreshPrimaryV3Boundary | None:
+    """The admitted V3 boundary of a fresh paired PowerDNS primary cell, or None."""
+
+    if (
+        cell.driver != "pdns-switch"
+        or cell.role != "paired-primary"
+        or cell.peer_reachability != "reachable"
+        or cell.edge not in ("before-write", "after-write")
+        or cell.point != cell.edge.replace("-", "_")
+        or cell.source_fixture_policy != "driver-specific"
+        or cell.cell_id
+        != f"pdns-switch__{cell.phase}__{cell.edge}__paired-primary__peer-reachable"
+    ):
+        return None
+    return FRESH_PRIMARY_V3_BOUNDARIES.get(cell.phase)
+
+
+def is_fresh_primary_v3_cell(cell: CellSpec) -> bool:
+    return fresh_primary_v3_boundary(cell) is not None
+
+
+def fresh_primary_v3_variant(cell: CellSpec) -> str:
+    boundary = fresh_primary_v3_boundary(cell)
+    if boundary is None:
+        raise ControllerError("fresh paired PowerDNS primary variant requires an admitted V3 cell")
+    return (
+        boundary.before_write_variant if cell.edge == "before-write"
+        else boundary.after_write_variant
+    )
+
+
+def selector_phase(cell: CellSpec) -> str:
+    """The journal phase the tagged Agent's fault hook selects for this cell."""
+
+    boundary = fresh_primary_v3_boundary(cell)
+    return cell.phase if boundary is None else boundary.journal_phase
+
+
 def expected_journal_phase(cell: CellSpec) -> str | None:
+    boundary = fresh_primary_v3_boundary(cell)
+    if boundary is not None:
+        return (
+            boundary.disk_before_write if cell.edge == "before-write"
+            else boundary.journal_phase
+        )
     if cell.edge == "window" or (cell.edge == "before-write" and cell.phase == "intent"):
         return None
     if cell.edge == "after-write":
@@ -4456,6 +4566,8 @@ def expected_journal_schema(
         profile = owner_inverse_profile(cell)
         if profile is not None:
             return profile.journal_schema
+    if is_fresh_primary_v3_cell(cell):
+        return FRESH_PRIMARY_V3_JOURNAL_SCHEMA
     return BIND_HANDOFF_JOURNAL_SCHEMA if is_bind_handoff_cell(cell) else JOURNAL_SCHEMA
 
 
@@ -4472,7 +4584,7 @@ def validate_observed_journal(
         cell, owner_inverse_after_restart=owner_inverse_after_restart
     ):
         raise BoundaryUnverified("marker observed an unexpected journal schema")
-    wanted_phase = cell.phase if expected_phase is None else expected_phase
+    wanted_phase = selector_phase(cell) if expected_phase is None else expected_phase
     if observed.get("phase") != wanted_phase:
         raise BoundaryUnverified("marker observed another in-memory phase")
     if observed.get("mutation_request_id") != request_id:
@@ -4632,7 +4744,7 @@ def validate_marker(
         "driver": cell.driver,
         "observed_driver": cell.driver,
         "point": cell.point,
-        "phase": cell.phase,
+        "phase": selector_phase(cell),
         "request_id": request_id,
         "nonce": nonce,
         "marker": path,
@@ -5418,6 +5530,14 @@ class Settings:
     peer_catalog_member_label: str | None = None
     retry_switch_after_rollback: bool = False
     reboot_even_if_failed: bool = False
+    # Fresh paired PowerDNS primary: "config" or "sql" owner edit between the
+    # kill and the Agent restart (--owner-edit-config / --owner-edit-sql).
+    owner_edit: str | None = None
+    # Pre-start owner-edit cells only: after the Agent's release the owner
+    # reverts the edit and runs recover-dns-pdns-fresh-prestart.
+    owner_release_recovery: bool = False
+    # Stopped-BIND takeover prepared with --owner-directives.
+    expect_owner_directives: bool = False
 
 
 def inspect_command_executable(
@@ -5756,13 +5876,14 @@ def validate_reboot_settings(settings: Settings) -> None:
             "adoption owner-inverse cell)"
         )
     if settings.cell.role != "standalone" and not (
-        is_admitted_paired_secondary(settings.cell)
+        (is_admitted_paired_secondary(settings.cell) or is_fresh_primary_v3_cell(settings.cell))
         and not settings.reboot_before_owner_command
     ):
         raise ControllerError(
             "reboot steps are limited to standalone cells and the admitted fresh "
-            "paired-secondary cells (whose native primary keeps serving): only the "
-            "kill guest is rebooted"
+            "paired-secondary cells (whose native primary keeps serving) or fresh paired "
+            "PowerDNS primary cells (the host reboots the native secondary with this "
+            "guest)"
         )
     if settings.reboot_before_owner_command and not settings.owner_inverse_after_restart:
         raise ControllerError(
@@ -6047,6 +6168,23 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
         commands["socket_statistics"] = inspect_command_executable(
             (SS_EXECUTABLE,), "socket statistics"
         )
+    if is_fresh_primary_v3_cell(settings.cell) and settings.trigger_mode == "socket":
+        commands["journalctl"] = inspect_command_executable(
+            (JOURNALCTL_EXECUTABLE,), "journalctl"
+        )
+        commands["socket_statistics"] = inspect_command_executable(
+            (SS_EXECUTABLE,), "socket statistics"
+        )
+        commands["gate_probe"] = list(fresh_primary_gate_probe_argv(settings))
+    if getattr(settings, "owner_release_recovery", False):
+        owner = inspect_command_executable(
+            (OWNER_RECOVERY_EXECUTABLE,), "owner recovery", require_regular_path=True
+        )
+        if owner["uid"] != 0 or int(owner["mode"], 8) & 0o022:
+            raise ControllerError(
+                "owner recovery executable must be root-owned and not group/world writable"
+            )
+        commands["owner_recovery"] = owner
     if settings.owner_inverse_after_restart:
         owner = inspect_command_executable(
             (OWNER_RECOVERY_EXECUTABLE,), "owner recovery", require_regular_path=True
@@ -6323,9 +6461,12 @@ def run_stability_window(
     peer_ip: str,
     *,
     dns_only: bool = False,
+    judge_dns: bool = True,
 ) -> tuple[dict[str, Any], list[str], list[str]]:
     """31 samples over 30 s. ``dns_only``: management is deliberately disabled,
     so Agent and Panel are recorded as not applicable and only DNS is judged.
+    ``judge_dns=False``: this host has no DNS engine by design (a held or
+    rolled-back first install); DNS is sampled and recorded, never judged.
 
     The count is fixed, stability_samples_count() (duration / interval + 1),
     and sample N is scheduled at start + (N - 1) * interval. The earlier
@@ -6364,7 +6505,7 @@ def run_stability_window(
             transcript,
         )
         sample["dns"] = dns
-        if error:
+        if error and judge_dns:
             failures.append(f"stability sample {ordinal}: {error}")
         if settings.cell.role != "standalone":
             peer, peer_error = observe_peer_once(
@@ -6390,6 +6531,7 @@ def run_stability_window(
         "sample_count": count,
         "elapsed_seconds": round(time.monotonic() - started, 6),
         "dns_only": dns_only,
+        "dns_judged": judge_dns,
         "samples": samples,
     }, failures, peer_verification_failures
 
@@ -9665,6 +9807,13 @@ def _verify_after_recovery_reboot(
     management = observe_management_units(settings, owner_environment)
     report["management_units"] = management
     unknown.extend(management["unknown"])
+    if is_fresh_primary_v3_cell(settings.cell):
+        # Both guests rebooted: the native BIND secondary must again serve
+        # the member and catalog with this primary's data.
+        pair = check_fresh_primary_pair(settings)
+        report["fresh_primary_pair"] = pair
+        failures.extend(f"after reboot: pair: {item}" for item in pair["failures"])
+        unknown.extend(f"after reboot: pair: {item}" for item in pair["unknown"])
     if state.get("management_disabled") is True:
         verify_dns_alone_after_reboot(
             settings, state, report=report, result=result, transcript=transcript,
@@ -10723,6 +10872,1084 @@ def judge_fixture_pass_definition(
         result["status"] = "unverified"
 
 
+# ---------------------------------------------------------------------------
+# Fresh paired PowerDNS PRIMARY through the public Agent RPC (register row 6,
+# journal V3; docs/DNS-ENGINE-ARTIFACT.md "Fresh paired PowerDNS primary:
+# recovery policy and single gate"). Admitted: the 12 Debian peer-reachable
+# pdns-switch paired-primary cells of FRESH_PRIMARY_V3_BOUNDARIES with the
+# uninitialized source, against the panel-free native BIND secondary of
+# native_pdns_bind_peer.py. Pass definitions, by variant of the cut:
+#   pre-journal (intent:before-write): no journal; the restarted Agent only
+#     finishes the job (RESTART_BEFORE_SWITCH_COMMIT); nothing to undo;
+#   pre-start (intent/target-staged after-write, target-enable-intent both
+#     edges, PowerDNS stopped): the restarted Agent rolls the install back by
+#     itself (AGENT_ROLLED_BACK_AFTER_RESTART), retires the journal and leaves
+#     the pre-install state (unit at its frozen standby, never started,
+#     candidate and database absent, configuration as before, no state
+#     receipt, no DNS engine) and names no owner command;
+#   post-start (target-started and later): forward only; the restarted Agent
+#     completes the same request (finalized receipt), a rollback is a failed
+#     expectation, PowerDNS keeps its MainPID, the daemon's catalog serial
+#     re-stamp is recorded.
+# Then the same-request rpc-retry converges (two probes target_converged) and
+# the pair holds: the native BIND secondary answers the member and the
+# catalog with the primary's data, over UDP and TCP; 31 samples.
+# Owner edit (--owner-edit-config / --owner-edit-sql) replaces the retry flow:
+# the Agent refuses at that boundary (AGENT_RELEASED_NATIVE_UNKNOWN with the
+# typed guidance), journal and database kept, the edit byte-preserved, and an
+# unrelated lease can still begin (DNS-only hold). --owner-release-recovery
+# (pre-start config edit only) then reverts the edit as the owner would and
+# runs the owner command the status check names.
+# ---------------------------------------------------------------------------
+
+GATE_CLOSED_EXIT = 4
+GENERIC_RELEASE_PREFIX = (
+    "The interrupted DNS switch could not be verified after the Agent restarted."
+)
+
+
+class FreshPrimaryHoldFinished(Exception):
+    """The owner-edit hold flow ended the cell; the result is already judged."""
+
+
+class FreshPrimaryGateClosed(Exception):
+    """The binaries under test keep the fresh paired-primary gate closed."""
+
+    def __init__(self, report: Mapping[str, Any]):
+        super().__init__(str(report.get("detail", "gate closed")))
+        self.report = dict(report)
+
+
+def refuse_unadmitted_fresh_primary(settings: Settings) -> None:
+    """Pre-mutation refusal of every paired-primary shape without a pass definition."""
+
+    cell = settings.cell
+    owner_edit = getattr(settings, "owner_edit", None)
+    release = getattr(settings, "owner_release_recovery", False) is True
+    if not (cell.driver == "pdns-switch" and cell.role == "paired-primary"):
+        if owner_edit is not None or release:
+            raise ControllerError(
+                "--owner-edit-* and --owner-release-recovery apply only to the fresh paired "
+                "PowerDNS primary cells; nothing was started"
+            )
+        return
+    boundary = fresh_primary_v3_boundary(cell)
+    if boundary is None:
+        if cell.peer_reachability != "reachable":
+            reason = (
+                "paired-primary peer-unreachable cells have no pass definition yet (the "
+                "V3 pair check needs the secondary)"
+            )
+        else:
+            reason = (
+                f"the V3 producer writes no hooked {cell.phase} boundary (admitted: "
+                + ", ".join(
+                    f"{phase}->{item.journal_phase}"
+                    for phase, item in FRESH_PRIMARY_V3_BOUNDARIES.items()
+                )
+                + "); rollback checkpoints carry no kill hook"
+            )
+        raise ControllerError(
+            f"fresh paired PowerDNS primary cell {cell.cell_id}: {reason}. Nothing was started"
+        )
+    if (
+        settings.trigger_mode != "socket"
+        or settings.owner_inverse_after_restart
+        or settings.stop_after_kill_for_independent_recovery
+        or settings.expect_agent_startup_rollback
+        or settings.retry_switch_after_rollback
+        or settings.bind_rollback_after_target_started
+        or getattr(settings, "peer_catalog_format", None) is not None
+        or getattr(settings, "peer_catalog_member_label", None) is not None
+        or getattr(settings, "expect_owner_directives", False)
+    ):
+        raise ControllerError(
+            "a fresh paired PowerDNS primary cell runs only on its own socket flow "
+            "(no owner-inverse, handoff, startup-rollback, retry-after-rollback or "
+            "paired-secondary flags); nothing was started"
+        )
+    variant = fresh_primary_v3_variant(cell)
+    if owner_edit is not None:
+        if owner_edit not in OWNER_EDIT_KINDS:
+            raise ControllerError(f"unsupported owner edit {owner_edit!r}")
+        if variant == "pre-journal":
+            raise ControllerError(
+                "intent:before-write has no journal: an owner edit there is not refused at a "
+                "recovery boundary; nothing was started"
+            )
+        if owner_edit == "sql" and variant != "post-start":
+            raise ControllerError(
+                "--owner-edit-sql needs the live PowerDNS database, which exists only after "
+                "PowerDNS started (post-start cells); nothing was started"
+            )
+        if settings.reboot_after_recovery or settings.reboot_before_owner_command:
+            raise ControllerError(
+                "the owner-edit hold flow has no reboot step; nothing was started"
+            )
+    if release and (owner_edit != "config" or variant != "pre-start"):
+        raise ControllerError(
+            "--owner-release-recovery needs --owner-edit-config on a pre-start cell "
+            "(intent/target-staged after-write, source-stopped either edge): only there "
+            "does recover-dns-pdns-fresh-prestart apply; nothing was started"
+        )
+
+
+def fresh_primary_gate_probe_argv(settings: Settings) -> tuple[str, ...]:
+    if settings.trigger_command is None:
+        raise ControllerError("the gate probe needs the socket trigger executable")
+    contract = socket_trigger_retry_contract(settings.trigger_command, settings.recovery_command)
+    seconds = max(1, int(settings.endpoint_timeout))
+    return (
+        settings.trigger_command[0], "rpc-gate-probe",
+        "--scenario", contract["scenario_path"], "--timeout", f"{seconds}s",
+    )
+
+
+def _last_json_line(output: bytes, label: str) -> dict[str, Any]:
+    lines = [line for line in output.decode("utf-8", errors="replace").splitlines() if line.strip()]
+    if not lines:
+        raise ControllerError(f"{label} printed no result")
+    try:
+        value = json.loads(lines[-1])
+    except json.JSONDecodeError as exc:
+        raise ControllerError(f"{label} result is not JSON: {exc}") from exc
+    if not isinstance(value, dict):
+        raise ControllerError(f"{label} result is not an object")
+    return value
+
+
+def decode_gate_probe(command: CommandResult) -> dict[str, Any]:
+    """closed/open are proven only with exit 0 and the exact probe schema."""
+
+    report: dict[str, Any] = {"command": command.report()}
+    try:
+        value = _last_json_line(command.output, "gate probe")
+    except ControllerError as exc:
+        return {**report, "gate": "unknown", "detail": str(exc)}
+    report.update({
+        "gate": value.get("gate", "unknown"),
+        "agent_error": value.get("agent_error", ""),
+        "detail": value.get("detail", ""),
+        "manifest_qualifier": value.get("manifest_qualifier"),
+    })
+    if (
+        value.get("schema") != "celikpanel/dns-kill-matrix-gate-probe/v1"
+        or report["gate"] not in ("closed", "open")
+        or command.returncode != 0
+    ):
+        report["gate"] = "unknown"
+    return report
+
+
+def run_fresh_primary_gate_probe(
+    settings: Settings, environment: Mapping[str, str], transcript: Transcript
+) -> dict[str, Any]:
+    try:
+        command = run_bounded_command(
+            fresh_primary_gate_probe_argv(settings), "fresh-primary-gate-probe",
+            settings.command_timeout, environment, settings.command_cwd, transcript,
+        )
+    except (ControllerError, OSError) as exc:
+        return {"gate": "unknown", "detail": f"the gate probe did not run: {exc}"}
+    report = decode_gate_probe(command)
+    transcript.event("fresh-primary-gate-probe", **{k: v for k, v in report.items() if k != "command"})
+    return report
+
+
+def _snapshot_sha256(snapshot: Mapping[str, Any]) -> str | None:
+    digest = snapshot.get("sha256")
+    if isinstance(digest, str) and valid_sha256(digest):
+        return digest
+    data = snapshot.get("data")
+    if isinstance(data, str):
+        import base64  # noqa: PLC0415 - only journals with inline data need it
+
+        try:
+            return hashlib.sha256(base64.b64decode(data, validate=True)).hexdigest()
+        except ValueError:
+            return None
+    return None
+
+
+def fresh_primary_journal_facts(journal: Mapping[str, Any]) -> dict[str, Any]:
+    """The V3 journal facts the recovery judgements need (read only)."""
+
+    plan = journal.get("pdns_fresh_plan") if isinstance(journal.get("pdns_fresh_plan"), dict) else {}
+    native = plan.get("native") if isinstance(plan.get("native"), dict) else None
+    observed = native.get("observed") if native and isinstance(native.get("observed"), dict) else {}
+    configs = []
+    for item in journal.get("config_before") or []:
+        if isinstance(item, dict) and isinstance(item.get("path"), str):
+            configs.append({
+                "path": item["path"],
+                "exists": item.get("exists") is True,
+                "sha256": _snapshot_sha256(item) if item.get("exists") is True else None,
+            })
+    units = [
+        item for item in journal.get("target_units_before") or [] if isinstance(item, dict)
+    ]
+    return {
+        "schema": journal.get("schema"),
+        "phase": journal.get("phase"),
+        "candidate_path": journal.get("pdns_candidate_path", ""),
+        "candidate_sealed": isinstance(plan.get("candidate"), dict),
+        "config_before": configs,
+        "target_unit_before": units[0] if len(units) == 1 else None,
+        "primary_catalog_serial": journal.get("primary_catalog_serial"),
+        "native_serial": observed.get("NativeSerial"),
+        "native_source_serial": observed.get("SourceSerial"),
+    }
+
+
+def _file_presence(path: str) -> dict[str, Any]:
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        return {"path": path, "exists": False}
+    if not stat.S_ISREG(info.st_mode):
+        return {"path": path, "exists": True, "regular": False}
+    return {"path": path, "exists": True, "regular": True, "size": info.st_size,
+            "sha256": sha256_file(path), "uid": info.st_uid, "gid": info.st_gid,
+            "mode": f"{stat.S_IMODE(info.st_mode):04o}"}
+
+
+def observe_fresh_primary_cut(
+    settings: Settings, environment: Mapping[str, str], journal_disk: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Read only, after the SIGKILL and before any Agent restart."""
+
+    report: dict[str, Any] = {
+        "variant": fresh_primary_v3_variant(settings.cell),
+        "journal_phase_selected": selector_phase(settings.cell),
+        "journal_at_boundary": dict(journal_disk),
+        "unknown": [],
+    }
+    if journal_disk.get("exists"):
+        try:
+            journal, _ = secure_read_json(settings.journal_path, "V3 switch journal at the cut")
+            if not isinstance(journal, dict):
+                raise ControllerError("V3 journal root is not an object")
+            report["journal"] = fresh_primary_journal_facts(journal)
+        except ControllerError as exc:
+            report["unknown"].append(f"V3 journal at the cut: {exc}")
+    try:
+        report["pdns_unit"] = read_unit_properties(
+            "pdns.service", settings.endpoint_timeout, environment)
+        raw_pid = report["pdns_unit"].get("MainPID", "")
+        report["pdns_main_pid"] = int(raw_pid) if raw_pid.isdecimal() else None
+    except ControllerError as exc:
+        report["unknown"].append(str(exc))
+    candidate = (report.get("journal") or {}).get("candidate_path") or ""
+    report["files"] = {
+        "database": _file_presence(PDNS_DATABASE_PATH),
+        **({"candidate": _file_presence(candidate)} if candidate else {}),
+        "state": _file_presence(os.path.join(settings.state_dir, "dns-engine-state.json")),
+    }
+    return report
+
+
+def judge_fresh_primary_pre_install(
+    settings: Settings, environment: Mapping[str, str], cut: Mapping[str, Any]
+) -> dict[str, Any]:
+    """The pre-install state a rolled-back first install must leave."""
+
+    report: dict[str, Any] = {"failures": [], "unknown": []}
+    state_path = os.path.join(settings.state_dir, "dns-engine-state.json")
+    if os.path.lexists(state_path):
+        report["failures"].append("a DNS engine state receipt exists after the rollback")
+    facts = cut.get("journal") or {}
+    try:
+        unit = read_unit_properties("pdns.service", settings.endpoint_timeout, environment)
+        report["pdns_unit"] = unit
+        frozen = facts.get("target_unit_before")
+        standby = (unit.get("LoadState"), unit.get("UnitFileState"))
+        if unit.get("ActiveState") != "inactive" or unit.get("MainPID") != "0":
+            report["failures"].append(f"PowerDNS is not stopped: {unit}")
+        if isinstance(frozen, dict):
+            wanted = (frozen.get("load_state"), frozen.get("unit_file_state"))
+            if standby != wanted:
+                report["failures"].append(
+                    f"PowerDNS unit is {standby}, not its frozen standby {wanted}")
+        elif standby not in {("masked", "masked"), ("loaded", "disabled")}:
+            report["failures"].append(
+                f"PowerDNS unit {standby} is neither the guard mask nor loaded/disabled")
+    except ControllerError as exc:
+        report["unknown"].append(str(exc))
+    paths = [PDNS_DATABASE_PATH + suffix for suffix in ("", "-wal", "-shm", "-journal")]
+    candidate = facts.get("candidate_path") or ""
+    if candidate:
+        paths.extend(candidate + suffix for suffix in ("", "-wal", "-shm", "-journal"))
+    present = [path for path in paths if os.path.lexists(path)]
+    report["database_paths_present"] = present
+    if present:
+        report["failures"].append(f"candidate or database files remain: {present}")
+    configs = []
+    for item in facts.get("config_before") or []:
+        current = _file_presence(item["path"])
+        entry = {"path": item["path"], "want_exists": item["exists"],
+                 "want_sha256": item["sha256"], "exists": current["exists"],
+                 "sha256": current.get("sha256")}
+        configs.append(entry)
+        if item["exists"] != current["exists"]:
+            report["failures"].append(f"{item['path']} presence differs from before the install")
+        elif item["exists"] and item["sha256"] is None:
+            report["unknown"].append(f"{item['path']} has no recorded preimage digest")
+        elif item["exists"] and current.get("sha256") != item["sha256"]:
+            report["failures"].append(f"{item['path']} is not restored to its preimage")
+    report["config_before"] = configs
+    if not facts and fresh_primary_v3_variant(settings.cell) != "pre-journal":
+        report["unknown"].append("the V3 journal facts of the cut were not read")
+    try:
+        units = inspect_dns_unit_states(settings.endpoint_timeout, environment)
+        report["dns_units"] = units
+        active = sorted(unit for unit, value in units.items() if value == "active")
+        if active:
+            report["failures"].append(f"a DNS engine unit is active: {active}")
+    except ControllerError as exc:
+        report["unknown"].append(str(exc))
+    try:
+        listeners = observe_port53_listeners(settings, environment)
+        report["port53_listeners"] = listeners
+        if listeners["tcp"] or listeners["udp"]:
+            report["failures"].append(f"a port-53 listener answers at the DNS address: {listeners}")
+    except ControllerError as exc:
+        report["unknown"].append(str(exc))
+    return report
+
+
+def read_fresh_primary_state(settings: Settings) -> dict[str, Any]:
+    path = os.path.join(settings.state_dir, "dns-engine-state.json")
+    value, raw, digest, _ = secure_json_with_digest(
+        path, "V3 DNS state receipt", maximum=64 << 10)
+    if not isinstance(value, dict):
+        raise ControllerError("V3 DNS state receipt is not an object")
+    return {
+        "sha256": digest,
+        "schema": value.get("schema"),
+        "native_catalog": value.get("native_catalog"),
+        "semantic": decode_dns_document(value, raw),
+    }
+
+
+def fresh_primary_catalog_serials(settings: Settings) -> dict[str, Any]:
+    report: dict[str, Any] = {}
+    for label, address in (("primary", settings.dns_address), ("secondary", FRESH_PRIMARY_V3_PEER_IP)):
+        try:
+            report[label] = query_dns_rrset(
+                address, 53, FRESH_PRIMARY_V3_CATALOG, "SOA", settings.dns_timeout)
+        except (ControllerError, OSError) as exc:
+            report[label] = {"error": str(exc)}
+    return report
+
+
+def judge_fresh_primary_forward(
+    settings: Settings,
+    environment: Mapping[str, str],
+    transcript: Transcript,
+    cut: Mapping[str, Any],
+    since_epoch: int,
+) -> dict[str, Any]:
+    """Forward completion after a post-start cut: state, PID history, re-stamp."""
+
+    report: dict[str, Any] = {"failures": [], "unknown": []}
+    facts = cut.get("journal") or {}
+    try:
+        state = read_fresh_primary_state(settings)
+        report["state"] = state
+        semantic = state["semantic"]
+        if state["schema"] != FRESH_PRIMARY_V3_STATE_SCHEMA or (
+            state["native_catalog"] != FRESH_PRIMARY_V3_NATIVE_CATALOG
+        ):
+            report["failures"].append(
+                f"the state receipt is not the V3 native-catalog document: {state['schema']}")
+        if semantic.get("engine") != "pdns" or semantic.get("pair_role") != "primary" or (
+            semantic.get("mutation_request_id") != settings.request_id
+        ):
+            report["failures"].append("the state receipt is not this request's PowerDNS primary")
+        state_serial = semantic.get("primary_catalog_serial")
+    except ControllerError as exc:
+        report["failures"].append(f"no V3 state receipt after forward completion: {exc}")
+        state_serial = None
+    pid_at_cut = cut.get("pdns_main_pid")
+    try:
+        pid_now = read_unit_main_pid("pdns.service", settings.endpoint_timeout, environment)
+    except ControllerError as exc:
+        pid_now = None
+        report["unknown"].append(str(exc))
+    report["pdns_pid_history"] = {"at_cut": pid_at_cut, "after_recovery": pid_now}
+    if isinstance(pid_at_cut, int) and pid_at_cut > 0 and pid_now is not None and pid_now != pid_at_cut:
+        report["unknown"].append(
+            f"PowerDNS MainPID changed from {pid_at_cut} to {pid_now}; forward recovery never "
+            "starts or stops PowerDNS, so the pdns.service journal is retained for review")
+        report["pdns_journal"] = capture_pdns_journal(
+            settings, environment, transcript, since_epoch, "fresh-primary-forward")
+    elif not (isinstance(pid_at_cut, int) and pid_at_cut > 0):
+        report["unknown"].append(f"PowerDNS had no MainPID at the post-start cut: {pid_at_cut}")
+    served = fresh_primary_catalog_serials(settings)
+    primary_serial = served.get("primary", {}).get("udp")
+    report["catalog_restamp"] = {
+        "staged_serial": facts.get("primary_catalog_serial"),
+        "native_serial_at_cut": facts.get("native_serial"),
+        "state_serial": state_serial,
+        "served": served,
+        "restamped": isinstance(state_serial, int) and state_serial > 1,
+    }
+    if isinstance(state_serial, int):
+        if primary_serial != [state_serial]:
+            report["failures"].append(
+                f"the primary serves catalog serial {primary_serial}, the state records {state_serial}")
+        if state_serial <= 1:
+            report["failures"].append("the state records the staged catalog serial, not the daemon's")
+    return report
+
+
+def observe_fresh_primary_restart(
+    settings: Settings,
+    environment: Mapping[str, str],
+    transcript: Transcript,
+    identity_receipt: Mapping[str, Any] | None,
+    cut: Mapping[str, Any],
+    since_epoch: int,
+) -> dict[str, Any]:
+    """What the restarted Agent did with the cut, judged before any rpc-retry."""
+
+    variant = fresh_primary_v3_variant(settings.cell)
+    report: dict[str, Any] = {"variant": variant, "failures": [], "unknown": []}
+    release = wait_for_agent_release(settings, transcript)
+    report["release"] = release
+    if not release["released"]:
+        report["unknown"].append(
+            f"the restarted Agent still held the request after {settings.recovery_timeout} seconds")
+    elif identity_receipt is None:
+        report["unknown"].append("the request identity receipt was not proven")
+    else:
+        identity = {
+            "request_id": settings.request_id,
+            "owner_id": identity_receipt["owner_id"],
+            "manifest_qualifier": identity_receipt["manifest_qualifier"],
+        }
+        job = release["job"] or {}
+        if variant == "pre-start":
+            report["failures"].extend(classify_agent_startup_rollback(
+                release["ledger"], release["job"], identity, target="pdns"))
+        elif variant == "pre-journal":
+            report["failures"].extend(_terminal_job_errors(
+                release["ledger"], release["job"], identity, RESTART_BEFORE_SWITCH_COMMIT,
+                "Agent restart before the V3 journal", "pdns"))
+        else:
+            finalized = (
+                "commit/dns-engine-switch/v2/finalized/" + settings.request_id + "/"
+                + identity["manifest_qualifier"]
+            )
+            if job.get("error_code") == AGENT_ROLLED_BACK_AFTER_RESTART:
+                report["failures"].append(
+                    "the restarted Agent rolled back a PowerDNS that had started; the policy is "
+                    "forward only")
+            elif job.get("status") != "succeeded" or job.get("phase") != finalized:
+                report["failures"].append(
+                    "the restarted Agent did not complete the same request forward: "
+                    f"status={job.get('status')!r} code={job.get('error_code', '')!r}")
+    try:
+        os.lstat(settings.journal_path)
+    except FileNotFoundError:
+        report["journal_retired"] = True
+    except OSError as exc:
+        report["unknown"].append(f"inspect switch journal: {exc}")
+    else:
+        report["journal_retired"] = False
+        report["failures"].append(
+            "the restarted Agent kept the V3 journal; no rpc-retry is run over a retained journal")
+    if variant == "post-start":
+        forward = judge_fresh_primary_forward(settings, environment, transcript, cut, since_epoch)
+        report["forward"] = forward
+    else:
+        forward = judge_fresh_primary_pre_install(settings, environment, cut)
+        report["pre_install"] = forward
+    report["failures"].extend(forward["failures"])
+    report["unknown"].extend(forward["unknown"])
+    if variant == "pre-start":
+        refusal = find_agent_owner_refusal(
+            settings, environment, transcript, since_epoch,
+            command=FRESH_PRIMARY_V3_OWNER_COMMAND, poll=False)
+        report["agent_journal_owner_command"] = refusal
+        if "unknown" in refusal:
+            report["unknown"].append(f"Agent journal could not be read: {refusal['unknown']}")
+        elif refusal["observed"]:
+            report["failures"].append(
+                f"the Agent named {FRESH_PRIMARY_V3_OWNER_COMMAND}: it did not roll back by itself")
+    report["retry_allowed"] = not report["failures"] and not report["unknown"]
+    transcript.event("fresh-primary-restart-observed", report=report)
+    return report
+
+
+def check_fresh_primary_pair(settings: Settings) -> dict[str, Any]:
+    """The native BIND secondary answers with this primary's data (UDP and TCP).
+
+    Polls up to the endpoint timeout for the secondary to transfer; the
+    primary's own answers are judged at once.
+    """
+
+    report: dict[str, Any] = {"failures": [], "unknown": []}
+    timeout = settings.dns_timeout
+    local, peer = settings.dns_address, FRESH_PRIMARY_V3_PEER_IP
+    queries = (
+        ("member_soa", PAIRED_SECONDARY_ZONE, "SOA"),
+        ("www_a", PAIRED_SECONDARY_QUERY, "A"),
+        ("catalog_soa", FRESH_PRIMARY_V3_CATALOG, "SOA"),
+    )
+
+    def observe(address: str) -> dict[str, Any]:
+        return {label: query_dns_rrset(address, 53, name, kind, timeout)
+                for label, name, kind in queries}
+
+    try:
+        primary = observe(local)
+        report["primary"] = primary
+    except (ControllerError, OSError) as exc:
+        report["failures"].append(f"the primary does not answer authoritatively: {exc}")
+        return report
+    for transport in ("udp", "tcp"):
+        if primary["member_soa"][transport] != [PAIRED_SECONDARY_PRIMARY_SERIAL]:
+            report["failures"].append(
+                f"primary {transport} member SOA {primary['member_soa'][transport]}")
+        if primary["www_a"][transport] != [local]:
+            report["failures"].append(f"primary {transport} www A {primary['www_a'][transport]}")
+    deadline = time.monotonic() + settings.endpoint_timeout
+    attempts = 0
+    secondary: dict[str, Any] | None = None
+    last_error = ""
+    while True:
+        attempts += 1
+        try:
+            secondary = observe(peer)
+            if secondary == primary:
+                break
+        except (ControllerError, OSError) as exc:
+            last_error = str(exc)
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(1.0)
+    report["secondary_attempts"] = attempts
+    report["secondary"] = secondary
+    if secondary is None:
+        report["failures"].append(
+            f"the native BIND secondary does not answer authoritatively: {last_error}")
+    elif secondary != primary:
+        report["failures"].append("the secondary's member or catalog answers differ from the primary's")
+    try:
+        state = read_dns_state_optional(settings.state_dir)
+        report["state_catalog_serial"] = state.get("semantic", {}).get("primary_catalog_serial")
+        if report["state_catalog_serial"] is not None and primary["catalog_soa"]["udp"] != [
+            report["state_catalog_serial"]
+        ]:
+            report["failures"].append("the served catalog serial differs from the state receipt")
+    except ControllerError as exc:
+        report["unknown"].append(f"DNS state receipt: {exc}")
+    return report
+
+
+def judge_fresh_primary_pass_definition(
+    settings: Settings,
+    result: dict[str, Any],
+    restart: Mapping[str, Any] | None,
+    verification_failures: list[str],
+) -> None:
+    if not is_fresh_primary_v3_cell(settings.cell):
+        return
+    report: dict[str, Any] = {
+        "definition": "fresh-paired-primary-v3",
+        "variant": fresh_primary_v3_variant(settings.cell),
+        "failures": [],
+        "unknown": [],
+    }
+    if restart is None:
+        report["unknown"].append("the restarted Agent's handling of the cut was never observed")
+    else:
+        report["restart"] = restart
+        report["failures"].extend(restart["failures"])
+        report["unknown"].extend(restart["unknown"])
+    classification = (result.get("recovery_outcome") or {}).get("classification")
+    if classification != "target_converged":
+        report["failures"].append(f"the same request did not converge forward: {classification}")
+    pair = check_fresh_primary_pair(settings)
+    report["pair"] = pair
+    report["failures"].extend(f"pair: {item}" for item in pair["failures"])
+    report["unknown"].extend(f"pair: {item}" for item in pair["unknown"])
+    result["fresh_primary_v3"] = report
+    verification_failures.extend(f"fresh primary unknown: {item}" for item in report["unknown"])
+    if report["failures"]:
+        result["status"] = "failed"
+    elif report["unknown"] and result.get("status") == "passed":
+        result["status"] = "unverified"
+
+
+def apply_owner_config_edit(settings: Settings, cut: Mapping[str, Any]) -> dict[str, Any]:
+    """Append one comment line to the owner's pdns.conf, in place."""
+
+    path = FRESH_PRIMARY_V3_CONFIG_EDIT_PATH
+    tracked = [item["path"] for item in (cut.get("journal") or {}).get("config_before") or []]
+    if path not in tracked:
+        raise ControllerError(
+            f"{path} is not in the V3 journal's configuration preimage {tracked}; the edit "
+            "would not exercise the product's owner-change check")
+    before, status = secure_read_bytes(path, "owner PowerDNS configuration", maximum=1 << 20)
+    line = FRESH_PRIMARY_V3_CONFIG_EDIT_LINE.format(request_id=settings.request_id).encode()
+    flags = os.O_WRONLY | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+    fd = os.open(path, flags)
+    try:
+        if os.write(fd, line) != len(line):
+            raise ControllerError("the owner configuration edit was written partially")
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    after, after_status = secure_read_bytes(path, "edited owner PowerDNS configuration", maximum=1 << 20)
+    if after != before + line or (after_status.st_uid, after_status.st_gid, after_status.st_mode) != (
+        status.st_uid, status.st_gid, status.st_mode
+    ):
+        raise ControllerError("the owner configuration edit did not land exactly")
+    return {
+        "kind": "config", "path": path, "appended": line.decode(),
+        "before_sha256": hashlib.sha256(before).hexdigest(), "before_size": len(before),
+        "after_sha256": hashlib.sha256(after).hexdigest(), "after_size": len(after),
+        "uid": status.st_uid, "gid": status.st_gid, "mode": f"{stat.S_IMODE(status.st_mode):04o}",
+    }
+
+
+def _owner_sql_row(settings: Settings) -> dict[str, Any]:
+    edit = FRESH_PRIMARY_V3_SQL_EDIT
+    return {**edit, "content": edit["content"].format(request_id=settings.request_id)}
+
+
+def apply_owner_sql_edit(settings: Settings) -> dict[str, Any]:
+    """Insert one TXT record of the member zone into the live database."""
+
+    row = _owner_sql_row(settings)
+    before = _file_presence(PDNS_DATABASE_PATH)
+    if not before.get("exists"):
+        raise ControllerError("the live PowerDNS database is absent; the SQL owner edit has no target")
+    connection = sqlite3.connect(
+        f"file:{PDNS_DATABASE_PATH}?mode=rw", uri=True, timeout=10, isolation_level=None)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        domains = connection.execute(
+            "SELECT id FROM domains WHERE name = ?", (PAIRED_SECONDARY_ZONE,)).fetchall()
+        if len(domains) != 1:
+            connection.execute("ROLLBACK")
+            raise ControllerError(f"the member zone has {len(domains)} domain rows")
+        cursor = connection.execute(
+            "INSERT INTO records (domain_id, name, type, content, ttl, prio, disabled, auth) "
+            "VALUES (?, ?, ?, ?, ?, 0, 0, 1)",
+            (domains[0][0], row["name"], row["type"], row["content"], row["ttl"]),
+        )
+        record_id = cursor.lastrowid
+        connection.execute("COMMIT")
+    finally:
+        connection.close()
+    return {
+        "kind": "sql", "path": PDNS_DATABASE_PATH, "domain_id": domains[0][0],
+        "record_id": record_id, "row": row, "database_before": before,
+        "database_after": _file_presence(PDNS_DATABASE_PATH),
+    }
+
+
+def read_owner_sql_row(record_id: int) -> dict[str, Any] | None:
+    connection = sqlite3.connect(f"file:{PDNS_DATABASE_PATH}?mode=ro", uri=True, timeout=10)
+    try:
+        found = connection.execute(
+            "SELECT name, type, content, ttl FROM records WHERE id = ?", (record_id,)).fetchall()
+    finally:
+        connection.close()
+    if len(found) != 1:
+        return None
+    name, kind, content, ttl = found[0]
+    return {"name": name, "type": kind, "content": content, "ttl": ttl}
+
+
+def judge_owner_edit_preserved(settings: Settings, edit: Mapping[str, Any]) -> list[str]:
+    if edit["kind"] == "config":
+        current = _file_presence(edit["path"])
+        if current.get("sha256") != edit["after_sha256"]:
+            return [f"the owner's configuration edit was not preserved: {current}"]
+        return []
+    try:
+        row = read_owner_sql_row(int(edit["record_id"]))
+    except (sqlite3.Error, ValueError) as exc:
+        raise ControllerError(f"read the owner's SQL row: {exc}") from exc
+    return [] if row == edit["row"] else [f"the owner's SQL row was not preserved: {row}"]
+
+
+def revert_owner_config_edit(edit: Mapping[str, Any]) -> dict[str, Any]:
+    """The owner takes the comment line back out (truncate to the old size)."""
+
+    path = edit["path"]
+    current, _ = secure_read_bytes(path, "edited owner PowerDNS configuration", maximum=1 << 20)
+    if hashlib.sha256(current).hexdigest() != edit["after_sha256"]:
+        raise ControllerError("the owner configuration changed since the edit; not reverted")
+    fd = os.open(path, os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0))
+    try:
+        os.ftruncate(fd, int(edit["before_size"]))
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    reverted = _file_presence(path)
+    if reverted.get("sha256") != edit["before_sha256"]:
+        raise ControllerError("the owner configuration revert did not restore the old bytes")
+    return {"path": path, "sha256": reverted["sha256"], "size": reverted["size"]}
+
+
+def run_unrelated_begin_probe(
+    settings: Settings, environment: Mapping[str, str], transcript: Transcript
+) -> dict[str, Any]:
+    """DNS-only hold: an unrelated lease begins (and is finished failed)."""
+
+    if settings.trigger_command is None:
+        return {"verdict": "unknown", "detail": "no trigger executable"}
+    argv = (settings.trigger_command[0], "rpc-unrelated-begin", "--timeout", "30s")
+    try:
+        command = run_bounded_command(
+            argv, "fresh-primary-unrelated-begin", settings.command_timeout,
+            environment, settings.command_cwd, transcript)
+    except (ControllerError, OSError) as exc:
+        return {"verdict": "unknown", "detail": str(exc)}
+    report: dict[str, Any] = {"command": command.report()}
+    try:
+        report["result"] = _last_json_line(command.output, "unrelated begin probe")
+    except ControllerError as exc:
+        return {**report, "verdict": "unknown", "detail": str(exc)}
+    begun = report["result"].get("begun") is True and report["result"].get("finished") is True
+    if command.returncode == 0 and begun:
+        report["verdict"] = "dns-only"
+    elif command.returncode == 1 and report["result"].get("begun") is False:
+        report["verdict"] = "blocked"
+    else:
+        report["verdict"] = "unknown"
+    return report
+
+
+def judge_release_message(message: str, request_id: str) -> list[str]:
+    """Non-generic and names the next step; the wording itself is not judged."""
+
+    problems = []
+    if not message.strip() or message.startswith(GENERIC_RELEASE_PREFIX):
+        problems.append("the release carries the generic message, not the typed V3 guidance")
+    if "Next step" not in message:
+        problems.append("the release message names no next step")
+    if request_id not in message:
+        problems.append("the release message does not name the request")
+    return problems
+
+
+def run_fresh_primary_hold_flow(
+    settings: Settings,
+    *,
+    result: dict[str, Any],
+    transcript: Transcript,
+    ordinary: Mapping[str, str],
+    owner_environment: Mapping[str, str],
+    controller_identity: Mapping[str, Any],
+    identity_receipt: Mapping[str, Any],
+    cut: Mapping[str, Any],
+    old_socket_identity: tuple[int, int] | None,
+    safety_failures: list[str],
+    verification_failures: list[str],
+    diagnostic_failures: list[str],
+) -> None:
+    """Owner edit at the cut: the Agent refuses and holds only DNS."""
+
+    variant = fresh_primary_v3_variant(settings.cell)
+    flow: dict[str, Any] = {"variant": variant, "owner_edit": settings.owner_edit,
+                            "failures": [], "unknown": []}
+    result["fresh_primary_v3_hold"] = flow
+    failures: list[str] = flow["failures"]
+    unknown: list[str] = flow["unknown"]
+    if settings.owner_edit == "config":
+        edit = apply_owner_config_edit(settings, cut)
+    else:
+        edit = apply_owner_sql_edit(settings)
+    flow["edit"] = edit
+    transcript.event("fresh-primary-owner-edit", edit=edit)
+    since_epoch = int(time.time()) - 1
+    restart, error = checked_command(
+        settings, settings.agent_restart_command, "agent-restart", settings.command_timeout,
+        ordinary, transcript)
+    flow["agent_restart"] = restart
+    if error:
+        diagnostic_failures.append(error)
+    agent_ready, error = endpoint_check(
+        "agent-ready-after-owner-edit",
+        lambda: wait_for_unix_socket(
+            settings.agent_socket, settings.endpoint_timeout, previous_identity=old_socket_identity),
+        transcript,
+    )
+    agent_identity: tuple[int, int] | None = None
+    if error:
+        safety_failures.append(error)
+    else:
+        detail = agent_ready["detail"]
+        agent_identity = (int(detail[0]), int(detail[1]))
+        agent_ready["detail"] = {"device": detail[0], "inode": detail[1]}
+    flow["agent_ready"] = agent_ready
+    release = wait_for_agent_release(settings, transcript)
+    flow["release"] = release
+    identity = {
+        "request_id": settings.request_id,
+        "owner_id": identity_receipt["owner_id"],
+        "manifest_qualifier": identity_receipt["manifest_qualifier"],
+    }
+    if not release["released"]:
+        unknown.append("the restarted Agent still held the request")
+    else:
+        failures.extend(classify_agent_release(
+            release["ledger"], release["job"], identity, target="pdns"))
+        message = str((release["job"] or {}).get("error_message", ""))
+        flow["release_message"] = message
+        failures.extend(judge_release_message(message, settings.request_id))
+    journal = _file_presence(settings.journal_path)
+    flow["journal_after_release"] = journal
+    boundary_sha = (cut.get("journal_at_boundary") or {}).get("sha256")
+    if not journal.get("exists"):
+        failures.append("the Agent retired the V3 journal although it refused the owner change")
+    elif boundary_sha and journal.get("sha256") != boundary_sha:
+        failures.append("the V3 journal changed although the Agent refused before any effect")
+    if variant == "post-start":
+        database = _file_presence(PDNS_DATABASE_PATH)
+        flow["database_after_release"] = database
+        if not database.get("exists"):
+            failures.append("the PowerDNS database was not kept")
+    else:
+        flow["files_after_release"] = {
+            label: _file_presence(item["path"])
+            for label, item in (cut.get("files") or {}).items() if item.get("path")
+        }
+    try:
+        failures.extend(judge_owner_edit_preserved(settings, edit))
+    except ControllerError as exc:
+        unknown.append(str(exc))
+    probe = run_unrelated_begin_probe(settings, ordinary, transcript)
+    flow["unrelated_begin"] = probe
+    if probe["verdict"] == "blocked":
+        failures.append("an unrelated lease was refused: the hold is not DNS-only")
+    elif probe["verdict"] != "dns-only":
+        unknown.append(f"the DNS-only hold could not be established: {probe.get('detail', probe)}")
+    if settings.owner_release_recovery:
+        run_fresh_primary_owner_release(
+            settings, flow, edit=edit, cut=cut, transcript=transcript,
+            owner_environment=owner_environment)
+    panel_restart, error = checked_command(
+        settings, settings.panel_restart_command, "panel-restart", settings.command_timeout,
+        ordinary, transcript)
+    flow["panel_restart"] = panel_restart
+    if error:
+        diagnostic_failures.append(error)
+    panel_check, error = endpoint_check(
+        "panel-after-restart",
+        lambda: (wait_for_tcp(settings.panel_address, settings.panel_port, settings.endpoint_timeout)
+                 or {"address": settings.panel_address, "port": settings.panel_port}),
+        transcript,
+    )
+    flow["panel"] = panel_check
+    if error:
+        safety_failures.append(error)
+    judge_dns = variant == "post-start"
+    if agent_identity is not None:
+        stability, stability_failures, peer_failures = run_stability_window(
+            settings, agent_identity, transcript, FRESH_PRIMARY_V3_PEER_IP, judge_dns=judge_dns)
+        result["stability"] = stability
+        safety_failures.extend(stability_failures)
+        verification_failures.extend(peer_failures)
+    else:
+        result["stability"] = {"samples": [], "error": "the Agent socket was not ready"}
+        safety_failures.append("stability window could not establish a stable agent identity")
+    flow["dns_judged"] = judge_dns
+    flow["dns_not_judged_reason"] = (
+        None if judge_dns else
+        "PowerDNS never started and the install was not completed: this host has no DNS "
+        "engine by design at a held or rolled-back first install"
+    )
+    result.setdefault("native_versions", {})["after"] = record_native_versions(
+        owner_environment, settings.command_timeout)
+    verification_failures.extend(f"fresh primary hold unknown: {item}" for item in unknown)
+    result["safety_status"], result["status"] = classify_cell_status(
+        safety_failures, verification_failures)
+    if failures:
+        result["status"] = "failed"
+    flow["status"] = "failed" if failures else ("unverified" if unknown else "passed")
+    transcript.event("fresh-primary-hold-finished", flow=flow)
+
+
+def run_fresh_primary_owner_release(
+    settings: Settings,
+    flow: dict[str, Any],
+    *,
+    edit: Mapping[str, Any],
+    cut: Mapping[str, Any],
+    transcript: Transcript,
+    owner_environment: Mapping[str, str],
+) -> None:
+    """The owner reverts the edit and finishes the Agent-released install."""
+
+    failures: list[str] = flow["failures"]
+    unknown: list[str] = flow["unknown"]
+    owner: dict[str, Any] = {}
+    flow["owner_release_recovery"] = owner
+    try:
+        _, released_job = read_request_ledger(settings.state_dir, settings.request_id)
+        ledger_before = _file_presence(os.path.join(settings.state_dir, "service-mutations.json"))
+    except ControllerError as exc:
+        unknown.append(f"ledger before the owner command: {exc}")
+        return
+    owner["released_job"] = released_job
+    try:
+        owner["revert"] = revert_owner_config_edit(edit)
+    except (ControllerError, OSError) as exc:
+        unknown.append(f"the owner edit could not be reverted: {exc}")
+        return
+    status = record_recovery_status(settings, owner_environment, transcript, "owner-release")
+    owner["status"] = status
+    output = str((status.get("command") or {}).get("output", ""))
+    if not status.get("available"):
+        unknown.append(f"the recovery launcher is unavailable: {status.get('reason')}")
+        return
+    if "unknown" in status or not (status.get("command") or {}).get("ran"):
+        unknown.append(f"dns-switch-status could not be read: {status.get('unknown', status)}")
+        return
+    if status.get("mutated"):
+        failures.append(f"dns-switch-status changed private evidence: {status['changed_evidence']}")
+    needle = f"{FRESH_PRIMARY_V3_OWNER_COMMAND} --request-id {settings.request_id}"
+    if needle not in output:
+        failures.append(f"dns-switch-status --quiesced does not name {needle}")
+        return
+    argv = (OWNER_RECOVERY_EXECUTABLE, FRESH_PRIMARY_V3_OWNER_COMMAND,
+            "--request-id", settings.request_id)
+    command = run_owner_command(settings, argv, "owner-fresh-prestart", owner_environment, transcript)
+    owner["command"] = _public(command)
+    if not command.get("ran"):
+        unknown.append(f"the owner command did not run: {command.get('unknown')}")
+        return
+    if command.get("returncode") != 0:
+        failures.append(f"{FRESH_PRIMARY_V3_OWNER_COMMAND} exited {command.get('returncode')}")
+    if os.path.lexists(settings.journal_path):
+        failures.append("the owner command left the V3 journal")
+    pre_install = judge_fresh_primary_pre_install(settings, owner_environment, cut)
+    owner["pre_install"] = pre_install
+    failures.extend(f"after the owner command: {item}" for item in pre_install["failures"])
+    unknown.extend(f"after the owner command: {item}" for item in pre_install["unknown"])
+    try:
+        _, job_after = read_request_ledger(settings.state_dir, settings.request_id)
+        ledger_after = _file_presence(os.path.join(settings.state_dir, "service-mutations.json"))
+    except ControllerError as exc:
+        unknown.append(f"ledger after the owner command: {exc}")
+        return
+    owner["ledger"] = {"before": ledger_before, "after": ledger_after}
+    if job_after != released_job or ledger_after.get("sha256") != ledger_before.get("sha256"):
+        failures.append("the ledger is not byte-identical to the Agent's release")
+    before_rerun = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+    rerun = run_owner_command(settings, argv, "owner-fresh-prestart-rerun", owner_environment, transcript)
+    owner["rerun"] = _public(rerun)
+    after_rerun = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+    if not rerun.get("ran"):
+        unknown.append(f"the owner command re-run did not run: {rerun.get('unknown')}")
+    elif rerun.get("returncode") != 0:
+        failures.append(f"the owner command re-run exited {rerun.get('returncode')}")
+    changed = changed_private_evidence(before_rerun, after_rerun)
+    if changed:
+        failures.append(f"the owner command re-run changed private evidence: {changed}")
+
+
+def record_dpkg_statoverrides(environment: Mapping[str, str], timeout: float) -> dict[str, Any]:
+    """Recorded, never judged: `dpkg-statoverride --list` (reinstall cell)."""
+
+    argv = ["/usr/bin/dpkg-statoverride", "--list"]
+    try:
+        completed = subprocess.run(
+            argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            env=dict(environment), check=False, timeout=timeout)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"at": utc_now(), "judged": False, "argv": argv, "error": str(exc)}
+    return {
+        "at": utc_now(), "judged": False, "argv": argv, "returncode": completed.returncode,
+        "stdout": completed.stdout[:MAX_COMMAND_OUTPUT].decode("utf-8", errors="replace"),
+        "stderr": completed.stderr[:4096].decode("utf-8", errors="replace"),
+    }
+
+
+# The stopped-BIND takeover prepared with --owner-directives
+# (guest_bootstrap.sh add_owner_bind_directives): these exact lines follow the
+# single `options {` line of /etc/bind/named.conf.options.
+OWNER_BIND_DIRECTIVES = ("\trecursion no;\n", "\tallow-transfer { none; };\n")
+OWNER_BIND_OPTIONS_PATH = "/etc/bind/named.conf.options"
+
+
+def prove_owner_bind_directives(source_proof: Mapping[str, Any]) -> dict[str, Any]:
+    """Before launch: the owner's directives are in the sealed preimage."""
+
+    raw, _ = secure_read_bytes(OWNER_BIND_OPTIONS_PATH, "owner BIND options", maximum=1 << 20)
+    text = raw.decode("utf-8", errors="strict")
+    block = "options {\n" + "".join(OWNER_BIND_DIRECTIVES)
+    if text.count(block) != 1:
+        raise ControllerError(
+            "the owner BIND options do not carry the prepared directives; prepare with "
+            "--owner-directives. Nothing was started")
+    sealed = (source_proof.get("source_preinstall_proof", {}).get("owner_files", {})
+              .get(OWNER_BIND_OPTIONS_PATH, {}))
+    digest = hashlib.sha256(raw).hexdigest()
+    if sealed.get("sha256") != digest:
+        raise ControllerError(
+            "the owner BIND options differ from the sealed preinstall proof. Nothing was started")
+    return {"path": OWNER_BIND_OPTIONS_PATH, "sha256": digest,
+            "directives": [line.strip() for line in OWNER_BIND_DIRECTIVES]}
+
+
+def judge_takeover_rollback_owner_files(source_proof: Mapping[str, Any]) -> dict[str, Any]:
+    """After the Agent's startup rollback, before the retry: every owner file,
+    the two the takeover rewrites included, is byte-identical to the preimage."""
+
+    report: dict[str, Any] = {"failures": [], "unknown": [], "files": {}}
+    files = source_proof.get("source_preinstall_proof", {}).get("owner_files", {})
+    if not files:
+        report["unknown"].append("the sealed preinstall proof names no owner files")
+    for path, before in sorted(files.items()):
+        try:
+            after = hash_owner_file(path)
+        except ControllerError as exc:
+            report["failures"].append(f"owner file {path} is gone or unreadable: {exc}")
+            continue
+        report["files"][path] = {"before": before.get("sha256"), "after": after.get("sha256")}
+        if after.get("sha256") != before.get("sha256"):
+            report["failures"].append(f"owner file {path} is not restored byte-identically")
+    return report
+
+
+def judge_owner_directives_takeover(
+    result: dict[str, Any], verification_failures: list[str]
+) -> None:
+    """Takeover with owner directives: rollback restored every owner file
+    byte-identically before the retry, and the same request then converged
+    (the retry made the same takeover decision; the exclusive mode would have
+    refused the owner's directives). The final options file is recorded."""
+
+    report = dict(result.get("owner_bind_directives") or {})
+    before_retry = (result.get("recovery") or {}).get("owner_files_before_retry")
+    failures: list[str] = []
+    unknown: list[str] = []
+    if before_retry is None:
+        unknown.append("the owner files were not observed between the rollback and the retry")
+    else:
+        failures.extend(before_retry["failures"])
+        unknown.extend(before_retry["unknown"])
+    classification = (result.get("recovery_outcome") or {}).get("classification")
+    if classification != "target_converged":
+        failures.append(f"the same-request retry did not converge: {classification}")
+    report["after_convergence"] = _file_presence(OWNER_BIND_OPTIONS_PATH)
+    report["failures"], report["unknown"] = failures, unknown
+    result["owner_bind_directives"] = report
+    verification_failures.extend(f"owner directives unknown: {item}" for item in unknown)
+    if failures:
+        result["status"] = "failed"
+    elif unknown and result.get("status") == "passed":
+        result["status"] = "unverified"
+
+
 V2_MANAGED_PDNS_REFUSAL = (
     "this standalone BIND cell with a managed PowerDNS source makes the current "
     "producer write the V2 frozen-source journal, whose inverse the restarted "
@@ -10792,6 +12019,7 @@ def run_cell(settings: Settings) -> int:
     command_evidence = validate_settings(settings)
     refuse_unrunnable_v2_cells(settings)
     refuse_unadmitted_paired_secondary(settings)
+    refuse_unadmitted_fresh_primary(settings)
     production_paths = validate_production_runtime_paths(
         settings.agent_token_file, controller_identity["effective_gid"]
     )
@@ -10806,6 +12034,7 @@ def run_cell(settings: Settings) -> int:
             "phase": settings.cell.phase,
             "edge": settings.cell.edge,
             "point": settings.cell.point,
+            "journal_phase": selector_phase(settings.cell),
         },
         "request_id": settings.request_id,
         "nonce": settings.nonce,
@@ -10849,6 +12078,9 @@ def run_cell(settings: Settings) -> int:
     boundary_identity: dict[str, Any] | None = None
     reboot_request: RebootRequested | None = None
     startup_rollback: dict[str, Any] | None = None
+    fresh_primary_cut: dict[str, Any] | None = None
+    fresh_primary_restart: dict[str, Any] | None = None
+    gate_closed: FreshPrimaryGateClosed | None = None
     try:
         if settings.trigger_mode == "startup":
             external_lock_fd, external_lock = acquire_external_mutation_lock(
@@ -10886,6 +12118,27 @@ def run_cell(settings: Settings) -> int:
             )
             result["source_proof"] = source_proof
             peer_ip = source_proof["peer_ip"]
+            if (
+                is_fresh_primary_v3_cell(settings.cell)
+                and source_proof["source_fixture"] != "uninitialized"
+            ):
+                raise ControllerError(
+                    "the fresh paired PowerDNS primary cells run only from the proved-empty "
+                    "uninitialized source; nothing was started"
+                )
+            if settings.expect_owner_directives:
+                if source_proof["source_fixture"] != UNMANAGED_BIND_STOPPED:
+                    raise ControllerError(
+                        "--expect-owner-directives applies only to the stopped-BIND takeover "
+                        "fixture; nothing was started"
+                    )
+                result["owner_bind_directives"] = prove_owner_bind_directives(source_proof)
+            if source_proof["source_fixture"] == MANAGED_BIND_ABSENT:
+                result["dpkg_statoverride"] = {
+                    "before": record_dpkg_statoverrides(
+                        clean_base_environment, settings.command_timeout
+                    )
+                }
             transcript.event(
                 "source-proof-proven",
                 path=source_proof["path"],
@@ -11129,6 +12382,18 @@ def run_cell(settings: Settings) -> int:
             }
             if settings.trigger_command is None:
                 raise ControllerError("socket trigger command disappeared after validation")
+            if is_fresh_primary_v3_cell(settings.cell):
+                # Before any mutation: the binaries under test decide whether
+                # the fresh paired primary is admitted at all.
+                gate = run_fresh_primary_gate_probe(settings, ordinary, transcript)
+                result["gate_probe"] = gate
+                if gate["gate"] == "closed":
+                    raise FreshPrimaryGateClosed(gate)
+                if gate["gate"] != "open":
+                    raise ControllerError(
+                        "the fresh paired-primary gate could not be established before any "
+                        f"mutation: {gate.get('detail')}"
+                    )
             trigger = start_async_command(
                 settings.trigger_command,
                 ordinary,
@@ -11421,6 +12686,34 @@ def run_cell(settings: Settings) -> int:
                 diagnostic_failures=diagnostic_failures,
             )
             raise OwnerInverseFlowFinished()
+        if is_fresh_primary_v3_cell(settings.cell):
+            fresh_primary_cut = observe_fresh_primary_cut(
+                settings, clean_base_environment, journal_disk
+            )
+            result["fresh_primary_v3_cut"] = fresh_primary_cut
+            transcript.event("fresh-primary-cut-observed", report=fresh_primary_cut)
+            if settings.owner_edit is not None:
+                if identity_receipt is None:
+                    raise ControllerError("the owner-edit flow lost its proven request identity")
+                run_fresh_primary_hold_flow(
+                    settings,
+                    result=result,
+                    transcript=transcript,
+                    ordinary=ordinary,
+                    owner_environment=clean_base_environment,
+                    controller_identity=controller_identity,
+                    identity_receipt=identity_receipt,
+                    cut=fresh_primary_cut,
+                    old_socket_identity=old_socket_identity,
+                    safety_failures=safety_failures,
+                    verification_failures=verification_failures,
+                    diagnostic_failures=diagnostic_failures,
+                )
+                raise FreshPrimaryHoldFinished()
+        if settings.expect_owner_directives:
+            # Recorded: the takeover's first attempt reached this cut, so it
+            # adopted (did not refuse) the owner's directives.
+            result["owner_bind_directives"]["at_cut"] = _file_presence(OWNER_BIND_OPTIONS_PATH)
         recovery_attempts: list[dict[str, Any]] = []
         recovery_probes: list[dict[str, Any]] = []
         recovery: dict[str, Any]
@@ -11594,6 +12887,20 @@ def run_cell(settings: Settings) -> int:
                         agent_restart_epoch,
                     )
                     retry_allowed = startup_rollback["retry_allowed"]
+                if fresh_primary_cut is not None:
+                    fresh_primary_restart = observe_fresh_primary_restart(
+                        settings,
+                        clean_base_environment,
+                        transcript,
+                        identity_receipt,
+                        fresh_primary_cut,
+                        agent_restart_epoch,
+                    )
+                    retry_allowed = fresh_primary_restart["retry_allowed"]
+                if settings.expect_owner_directives:
+                    recovery["owner_files_before_retry"] = judge_takeover_rollback_owner_files(
+                        result["source_proof"]
+                    )
                 for ordinal in (1, 2):
                     if not retry_allowed:
                         break
@@ -11821,6 +13128,15 @@ def run_cell(settings: Settings) -> int:
         judge_fixture_pass_definition(
             settings, result, clean_base_environment, peer_ip, verification_failures
         )
+        judge_fresh_primary_pass_definition(
+            settings, result, fresh_primary_restart, verification_failures
+        )
+        if settings.expect_owner_directives:
+            judge_owner_directives_takeover(result, verification_failures)
+        if "dpkg_statoverride" in result:
+            result["dpkg_statoverride"]["after"] = record_dpkg_statoverrides(
+                clean_base_environment, settings.command_timeout
+            )
         judge_recovery_status_reads(result)
         result.setdefault("native_versions", {})["after"] = record_native_versions(
             clean_base_environment, settings.command_timeout
@@ -11843,6 +13159,21 @@ def run_cell(settings: Settings) -> int:
         transcript.event("reboot-requested", stage=request.stage)
     except OwnerInverseFlowFinished:
         pass
+    except FreshPrimaryHoldFinished:
+        pass
+    except FreshPrimaryGateClosed as closed:
+        gate_closed = closed
+        result["status"] = "gate-closed"
+        result["safety_status"] = "not-run"
+        result["gate_closed"] = {
+            "message": (
+                "gate closed in this build: the Agent under test refuses the fresh paired "
+                "PowerDNS primary before any mutation; this is not a failure. Run the cell "
+                "with binaries built from the commit that opens the gate."
+            ),
+            "probe": closed.report,
+        }
+        transcript.event("fresh-primary-gate-closed", probe=closed.report)
     except NativeRecoveryHandoff:
         transcript.event(
             "independent-recovery-handoff",
@@ -11917,6 +13248,8 @@ def run_cell(settings: Settings) -> int:
         )
         return REBOOT_REQUESTED_EXIT
     atomic_write_new_json(settings.result_path, result)
+    if gate_closed is not None:
+        return GATE_CLOSED_EXIT
     return {"passed": 0, "failed": 1, "unverified": 2}[result["status"]]
 
 
@@ -12013,6 +13346,37 @@ def build_argument_parser() -> argparse.ArgumentParser:
         "--peer-catalog-format-pdns-native",
         dest="peer_catalog_format", action="store_const", const="pdns-native",
         help="fresh paired-secondary cells: the native primary serves its PowerDNS PRODUCER catalog",
+    )
+    owner_edit = parser.add_mutually_exclusive_group()
+    owner_edit.add_argument(
+        "--owner-edit-config", dest="owner_edit", action="store_const", const="config",
+        help=(
+            "fresh paired PowerDNS primary: after the kill and before the Agent restart, "
+            "append one owner comment line to /etc/powerdns/pdns.conf; the Agent must "
+            "refuse at that boundary and hold only DNS"
+        ),
+    )
+    owner_edit.add_argument(
+        "--owner-edit-sql", dest="owner_edit", action="store_const", const="sql",
+        help=(
+            "fresh paired PowerDNS primary, post-start cells: insert one owner TXT record "
+            "of the member zone into the live database instead"
+        ),
+    )
+    parser.add_argument(
+        "--owner-release-recovery", action="store_true",
+        help=(
+            "with --owner-edit-config on a pre-start cell: after the Agent's release the "
+            "owner reverts the edit, reads dns-switch-status and runs "
+            "recover-dns-pdns-fresh-prestart"
+        ),
+    )
+    parser.add_argument(
+        "--expect-owner-directives", action="store_true",
+        help=(
+            "stopped-BIND takeover prepared with --owner-directives: prove the owner's "
+            "directives before launch and the byte-identical rollback before the retry"
+        ),
     )
     parser.add_argument(
         "--peer-catalog-member-label", default=None,
@@ -12171,6 +13535,9 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         peer_catalog_member_label=args.peer_catalog_member_label,
         retry_switch_after_rollback=args.retry_switch_after_rollback,
         reboot_even_if_failed=args.reboot_even_if_failed,
+        owner_edit=args.owner_edit,
+        owner_release_recovery=args.owner_release_recovery,
+        expect_owner_directives=args.expect_owner_directives,
         native_dns_status_command=(
             parse_command_json(args.native_dns_status_command, "native DNS status command")
             if args.native_dns_status_command is not None else None
@@ -12215,7 +13582,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "result": (
                     settings.result_path if exit_code != REBOOT_REQUESTED_EXIT else None
                 ),
-                "proof": settings.proof_path if exit_code != 2 else None,
+                "proof": settings.proof_path if exit_code not in (2, GATE_CLOSED_EXIT) else None,
                 "transcript": settings.transcript_path,
                 **(
                     {"reboot_requested": True, "reboot_dir": settings.reboot_dir}

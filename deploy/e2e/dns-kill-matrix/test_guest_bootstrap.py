@@ -1474,8 +1474,17 @@ class PreparedCellRunnerTest(unittest.TestCase):
             scenario["zones"][0]["records"],
             bootstrap.pdns_switch_scenario(role="paired-primary")["zones"][0]["records"],
         )
+        # Row 6: every hooked V3 write is admitted, peer-reachable only.
+        for phase in sorted(bootstrap.FRESH_PDNS_PRIMARY_PHASES):
+            bootstrap.validate_pdns_switch_cell(
+                cell("debian13", phase, driver="pdns-switch", role="paired-primary"),
+                "debian13", "uninitialized",
+            )
+        unreachable = cell("debian13", "target-started", driver="pdns-switch", role="paired-primary")
+        unreachable["peer_reachability"] = "unreachable"
         for candidate in (
-            cell("debian13", "target-started", driver="pdns-switch", role="paired-primary"),
+            unreachable,
+            cell("debian13", "rolling-back", driver="pdns-switch", role="paired-primary"),
             cell("debian13", "intent", driver="pdns-switch", role="paired-secondary"),
             cell("arch", "intent", driver="pdns-switch", role="paired-primary"),
         ):
@@ -1611,7 +1620,9 @@ class FreshInstallCellTest(unittest.TestCase):
                     )
                     self.assertIn(phase, allowed)
                 elif raw["role"] == "paired-primary":
-                    self.assertEqual(phase, "intent")
+                    # Row 6: the hooked V3 writes, peer-reachable only.
+                    self.assertTrue(bootstrap.fresh_pdns_primary_cell(raw), raw["id"])
+                    self.assertIn(phase, bootstrap.FRESH_PDNS_PRIMARY_PHASES)
         for cell_id in (
             "bind__target-started__after-write__standalone__peer-reachable",
             "bind__target-started__before-write__standalone__peer-unreachable",
@@ -1623,7 +1634,10 @@ class FreshInstallCellTest(unittest.TestCase):
             "bind__committed__after-write__paired-secondary__peer-reachable",
             "bind__source-stopped__after-write__paired-secondary__peer-reachable",
             "pdns-switch__intent__after-write__paired-secondary__peer-unreachable",
-            "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+            "pdns-switch__target-started__after-write__paired-primary__peer-unreachable",
+            "pdns-switch__rolling-back__after-write__paired-primary__peer-reachable",
+            "pdns-switch__rolled-back__before-write__paired-primary__peer-reachable",
+            "pdns-switch__pre-intent__paired-primary__peer-reachable",
         ):
             raw = next(item for item in self.runnable if item["id"] == cell_id)
             with self.subTest(refused=cell_id):
@@ -1778,6 +1792,8 @@ class FreshInstallCellTest(unittest.TestCase):
             + self.shell_function("standalone_cell_matches_phase")
             + self.shell_array("FRESH_PDNS_SECONDARY_PHASES")
             + self.shell_function("secondary_cell_matches_phase")
+            + self.shell_array("FRESH_PDNS_PRIMARY_PHASES")
+            + self.shell_function("primary_cell_matches_phase")
             + self.shell_function("prepare_fresh_pdns_primary")
             + self.shell_function("prepare_fresh_pdns_standalone")
             + self.shell_function("prepare_fresh_pdns_secondary")
@@ -1811,7 +1827,15 @@ class FreshInstallCellTest(unittest.TestCase):
             ("pdns-switch__intent__after-write__paired-secondary__peer-unreachable",
              "debian13", "intent", "driver-specific", 1, ""),
             ("pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+             "debian13", "target-started", "driver-specific", 0, "fresh:primary"),
+            ("pdns-switch__source-stopped__before-write__paired-primary__peer-reachable",
+             "debian13", "source-stopped", "driver-specific", 0, "fresh:primary"),
+            ("pdns-switch__target-started__after-write__paired-primary__peer-unreachable",
              "debian13", "target-started", "driver-specific", 1, ""),
+            ("pdns-switch__rolling-back__after-write__paired-primary__peer-reachable",
+             "debian13", "rolling-back", "driver-specific", 1, ""),
+            ("pdns-switch__committed__after-write__paired-primary__peer-reachable",
+             "arch", "committed", "driver-specific", 1, ""),
         ]
         bash = self.bash()
         for cell_id, node, phase, policy, expected, output in cases:

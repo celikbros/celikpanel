@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Prepare and observe an Arch BIND consumer of a Debian PowerDNS catalog.
 
-Only the exact disposable paired-primary switch cell is accepted. Preparation
-does not require the primary to exist yet; observation requires both native
-servers to publish the same catalog and authoritative member answers.
+Accepted: the exact disposable paired-primary intent cell (either source), and
+every admitted fresh paired PowerDNS primary cell (journal V3,
+guest_bootstrap.fresh_pdns_primary_cell) with the uninitialized source.
+Preparation does not require the primary to exist yet; observation requires
+both native servers to publish the same catalog and authoritative member
+answers. observe-child follows the zone lifecycle of the accepted primary.
 """
 
 from __future__ import annotations
@@ -24,10 +27,27 @@ from native_pdns_peer_probe import parse_catalog_axfr
 CELL = "pdns-switch__intent__after-write__paired-primary__peer-reachable"
 ZONE = "s1-kill.test"
 QUERY = "www." + ZONE
+# The child zone of the fresh primary's zone lifecycle (cmd/dns-kill-matrix-
+# trigger rpc-pdns-primary-zone-v3): serial per step; edit adds `changed`.
+CHILD = "s2." + ZONE
+CHILD_QUERY = "www." + CHILD
+CHILD_CHANGED = "changed." + CHILD
+CHILD_STEPS = {
+    "add": {"present": True, "serial": "2026092801", "changed": False},
+    "edit": {"present": True, "serial": "2026092802", "changed": True},
+    "delete": {"present": False},
+    "re-add": {"present": True, "serial": "2026092803", "changed": False},
+}
 
 
-def pair_addresses(plan: dict, cell: dict) -> tuple[str, str, dict]:
-    if cell.get("id") != CELL or (
+def accepted_cell(cell: dict, source_fixture: str) -> bool:
+    if cell.get("id") == CELL:
+        return True
+    return source_fixture == "uninitialized" and bootstrap.fresh_pdns_primary_cell(cell)
+
+
+def pair_addresses(plan: dict, cell: dict, source_fixture: str = "managed-bind") -> tuple[str, str, dict]:
+    if not accepted_cell(cell, source_fixture) or (
         cell.get("driver"), cell.get("role"), cell.get("placement", {}).get("kill_host")
     ) != ("pdns-switch", "paired-primary", "debian-13"):
         raise bootstrap.BootstrapError("fixture requires the exact Debian PowerDNS primary cell")
@@ -72,13 +92,17 @@ def secondary_config(primary_ip: str, secondary_ip: str) -> str:
 
 
 def selected(args: argparse.Namespace) -> tuple[str, str, dict, Path]:
-    if args.cell_id != CELL:
+    if args.cell_id != CELL and args.source_fixture != "uninitialized":
         raise bootstrap.BootstrapError("only the exact disposable cross-engine cell is supported")
     root = args.work_root.resolve(strict=True)
     plan = fixture.load_cell_plan(root, args.cell_id)
     cell = bootstrap.load_manifest_cell(args.manifest, args.cell_id)
+    if not accepted_cell(cell, args.source_fixture):
+        raise bootstrap.BootstrapError(
+            "only the exact disposable cross-engine cell or an admitted fresh paired "
+            "PowerDNS primary cell is supported")
     bootstrap.validate_pdns_switch_cell(cell, "debian13", args.source_fixture)
-    primary_ip, secondary_ip, peer = pair_addresses(plan, cell)
+    primary_ip, secondary_ip, peer = pair_addresses(plan, cell, args.source_fixture)
     return primary_ip, secondary_ip, peer, bootstrap.identity_file(args.identity_file)
 
 
@@ -150,7 +174,7 @@ def remote_read(ssh: list[str], command: str, execute: bool) -> str:
 
 def dig_command(ip: str, name: str, kind: str, tcp: bool = False) -> str:
     ipaddress.IPv4Address(ip)
-    if name not in {ZONE, QUERY, catalog_name("192.0.2.10")} or kind not in {"SOA", "A", "AXFR"}:
+    if name not in {ZONE, QUERY, catalog_name("192.0.2.10"), CHILD, CHILD_QUERY, CHILD_CHANGED} or kind not in {"SOA", "A", "AXFR"}:
         raise bootstrap.BootstrapError("unsupported fixture DNS query")
     return (
         "dig +time=2 +tries=1 +norecurse +noall +comments +answer "
@@ -168,6 +192,83 @@ def authoritative_data(reply: str, name: str, kind: str) -> tuple[str, ...]:
     if index + 2 >= len(rows[0]) or rows[0][index + 1] != kind:
         raise ValueError("native member record type differs")
     return tuple(rows[0][index + 2:])
+
+
+def authoritative_negative(reply: str) -> None:
+    """An authoritative NXDOMAIN (the served parent denies the child)."""
+
+    if "status: NXDOMAIN" not in reply or re.search(r"flags: qr aa\b", reply) is None:
+        raise ValueError("the negative answer is not an authoritative NXDOMAIN")
+
+
+def soa_serial(data: tuple[str, ...]) -> str:
+    if len(data) != 7:
+        raise ValueError("SOA data is not exact")
+    return data[2]
+
+
+def observe_child(args: argparse.Namespace) -> dict:
+    """After one lifecycle step: both servers answer the child as expected.
+
+    Present: identical authoritative SOA (the step's serial) and www A from
+    primary and secondary over UDP and TCP; `changed` only after edit; the
+    child in both the primary's and the loaded catalog. Absent: both servers
+    return an authoritative NXDOMAIN for the child SOA from the served parent,
+    and neither catalog lists the child. Catalog serials are recorded.
+    """
+
+    expected = CHILD_STEPS.get(args.step)
+    if expected is None:
+        raise bootstrap.BootstrapError(f"unsupported lifecycle step {args.step!r}")
+    primary_ip, secondary_ip, peer, identity = selected(args)
+    ssh = bootstrap.ssh_base(peer, identity)
+    verify_guest(ssh, args.cell_id, args.execute)
+    remote_read(ssh, "systemctl is-active --quiet named.service", args.execute)
+    catalog = catalog_name(primary_ip)
+    source = remote_read(ssh, dig_command(primary_ip, catalog, "AXFR", True), args.execute)
+    loaded = remote_read(ssh, dig_command("127.0.0.1", catalog, "AXFR", True), args.execute)
+    members = {ZONE, CHILD} if expected["present"] else {ZONE}
+    report: dict = {
+        "action": "observe-child-native-pdns-bind-peer", "cell_id": args.cell_id,
+        "step": args.step, "child": CHILD, "expected": expected, "execute": args.execute,
+    }
+    if args.execute:
+        source_serial, source_members = parse_catalog_axfr(source, catalog, producer="powerdns")
+        loaded_serial, loaded_members = parse_catalog_axfr(loaded, catalog, producer="powerdns")
+        report["catalog"] = {"primary_serial": source_serial, "loaded_serial": loaded_serial,
+                             "primary_members": sorted(source_members),
+                             "loaded_members": sorted(loaded_members)}
+        if (source_serial, source_members) != (loaded_serial, loaded_members) or source_members != members:
+            raise ValueError("the loaded BIND catalog differs from the PowerDNS primary or the step")
+    answers: dict = {}
+    for ip in (primary_ip, secondary_ip):
+        for tcp in (False, True):
+            key = f"{ip}/{'tcp' if tcp else 'udp'}"
+            soa = remote_read(ssh, dig_command(ip, CHILD, "SOA", tcp), args.execute)
+            if not args.execute:
+                continue
+            if not expected["present"]:
+                authoritative_negative(soa)
+                answers[key] = {"soa": "NXDOMAIN"}
+                continue
+            serial = soa_serial(authoritative_data(soa, CHILD, "SOA"))
+            www = authoritative_data(
+                remote_read(ssh, dig_command(ip, CHILD_QUERY, "A", tcp), args.execute),
+                CHILD_QUERY, "A")
+            changed_reply = remote_read(ssh, dig_command(ip, CHILD_CHANGED, "A", tcp), args.execute)
+            if expected["changed"]:
+                changed = authoritative_data(changed_reply, CHILD_CHANGED, "A")
+            else:
+                authoritative_negative(changed_reply)
+                changed = None
+            if serial != expected["serial"] or www != ("192.0.2.10",) or (
+                expected["changed"] and changed != ("192.0.2.10",)
+            ):
+                raise ValueError(f"{key} child answers differ from the step: {serial} {www} {changed}")
+            answers[key] = {"soa_serial": serial, "www_a": list(www),
+                            "changed_a": list(changed) if changed else None}
+    report["answers"] = answers
+    return report
 
 
 def observe(args: argparse.Namespace) -> dict:
@@ -211,7 +312,7 @@ def observe(args: argparse.Namespace) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("prepare", "observe"))
+    parser.add_argument("action", choices=("prepare", "observe", "observe-child"))
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--cell-id", required=True)
     parser.add_argument("--source-fixture", choices=("managed-bind", "uninitialized"),
@@ -219,12 +320,16 @@ def main() -> None:
     parser.add_argument("--identity-file", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, default=Path(__file__).with_name("manifest.json"))
     parser.add_argument("--address", help="expected member A address for observe")
+    parser.add_argument("--step", choices=tuple(CHILD_STEPS), help="lifecycle step for observe-child")
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
     if (args.action == "observe") != (args.address is not None):
         parser.error("--address is required exactly for observe")
+    if (args.action == "observe-child") != (args.step is not None):
+        parser.error("--step is required exactly for observe-child")
+    actions = {"prepare": prepare, "observe": observe, "observe-child": observe_child}
     try:
-        print(json.dumps(prepare(args) if args.action == "prepare" else observe(args), sort_keys=True))
+        print(json.dumps(actions[args.action](args), sort_keys=True))
     except (bootstrap.BootstrapError, fixture.FixtureError, OSError, ValueError,
             KeyError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         parser.error(str(exc))

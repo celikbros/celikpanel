@@ -475,11 +475,14 @@ after both guests rebooted with primary management disabled. Measured
 kill-matrix phases remain open. A DNS REFUSED response alone is
 insufficient removal evidence. Legacy-pdns-secondary remains harness-blocked/unverified. The SSH enrollment used here is fixture-only; the production Agent has a reader, but an ordinary owner enrollment action has not been demonstrated (see [guidance gap](../../../docs/DNS-PEER-INSPECTION-GUIDANCE-GAP.md)).
 
-The exact Debian paired-primary `pdns-switch__intent__after-write__paired-primary__peer-reachable`
-cell also accepts `prepare-pdns-switch --node debian13 --source-fixture uninitialized`.
+The Debian paired-primary cells admitted in
+[Fresh paired PowerDNS primary cells](#fresh-paired-powerdns-primary-cells-row-6-journal-v3)
+(12 peer-reachable V3 boundaries, previously only
+`pdns-switch__intent__after-write__paired-primary__peer-reachable`) accept
+`prepare-pdns-switch --node debian13 --source-fixture uninitialized`.
 That path proves an empty 0/0 source, stages one `MASTER` member, and leaves
 the Arch BIND peer native; pass `--source-fixture uninitialized` to
-`native_pdns_bind_peer.py prepare`. It is fixture preparation only.
+`native_pdns_bind_peer.py prepare`.
 Every standalone `pdns-switch` cell also accepts `--source-fixture
 uninitialized`; see [Fresh-install cells](#fresh-install-cells-d-026).
 The [fresh PowerDNS V3 prestart inverse trial](evidence/pdns-v3-prestart-20260928/README.md) independently restored one real `target-enable-intent`/`after-write` SIGKILL cut before PowerDNS start on disposable Debian. Two earlier runs safely refused and led to narrow cgroup/listener proof corrections. The clean rollback verdict and inactive/masked native target survived a management-disabled reboot. The original switch job remains failed, the new journal-free exact-request receipt path has [a separate materialized-ledger Debian reboot trial](evidence/pdns-v3-recorded-status-20260928/README.md) but no producer/inverse replay in that overlay, and P0.4/P0.5 remain open.
@@ -689,9 +692,11 @@ Still not preparable with an empty source:
   [Fresh paired-secondary cells](#fresh-paired-secondary-cells-rows-3-and-5):
   every `peer-unreachable` twin, BIND `committed`/`rolling-back`, and the
   BIND `managed-pdns-required` phases.
-- `pdns-switch` paired-primary beyond the exact intent cell. Fresh
-  paired-primary continues on the separate V3 path, and the Agent pauses
-  paired-primary PowerDNS switching.
+- `pdns-switch` paired-primary outside the 12 admitted V3 cells of
+  [Fresh paired PowerDNS primary cells](#fresh-paired-powerdns-primary-cells-row-6-journal-v3)
+  (peer-unreachable twins, `pre-intent`, `rolling-back`, `rolled-back`). The
+  Agent keeps pausing paired-primary PowerDNS switching until its gate opens;
+  the controller detects that before any mutation.
 
 A prepared cell is not a measured result. The 268-runnable denominator is
 unchanged, and admission here adds no passed or native-evidence cell.
@@ -874,11 +879,222 @@ served serial of a PowerDNS producer (the harness reads it, it does not
 predict it), whether PowerDNS writes its own `domainmetadata` for the
 producer (recorded), and whether it serves `invalid.` SOA/NS rows unchanged.
 
+### Fresh paired PowerDNS primary cells (row 6, journal V3)
+
+*2026-09-30. Offline tests only (`test_fresh_primary_v3.py`, the trigger's
+`pdns_fresh_primary_v3_test.go`). No guest was started, nothing ran with
+`--execute`, no row changes state, and the product gate stays closed. Policy:
+docs/DNS-ENGINE-ARTIFACT.md "Fresh paired PowerDNS primary: recovery policy and
+single gate (2026-09-30)".*
+
+The Debian 13 guest under test becomes a CelikPanel **PowerDNS primary** on a
+host with no DNS engine (`--source-fixture uninitialized`), through the public
+`Agent.BeginServiceMutation` + `Agent.SwitchDNSEngineV1` RPC and the V3
+journal. Its peer is the panel-free native **BIND secondary** on Arch
+(`native_pdns_bind_peer.py`, the peer of the 2026-09-28 V3 trials), which
+consumes the primary's native `PRODUCER` catalog and loads the member.
+
+**Admitted: 12 cells**, peer-reachable only,
+`pdns-switch__<phase>__{before,after}-write__paired-primary__peer-reachable`.
+The V3 producer writes its journal through the hooked writer at intent,
+target-staged, target-enable-intent, target-started (twice: after the start,
+then with the native observation), target-verified and committed
+(`cmd/agent/dns_engine_pdns_switch.go` intent write,
+`dns_engine_pdns_fresh_v3_linux.go` `continueFreshPDNSPrimaryV3`). Its rollback
+and forward-recovery checkpoints use `ReplaceFreshPrimaryJournalV3` and carry
+no hook. The manifest is unchanged (still 510 cells, 268 runnable): V3 writes
+no `source-stopped` (there is no source), so that coordinate selects
+`target-enable-intent`; the hook fires once, at the first matching write.
+
+| Manifest phase | Hook selects | On disk at `before-write` | Variant (before / after) |
+|---|---|---|---|
+| `intent` | `intent` | no journal | pre-journal / pre-start |
+| `target-staged` | `target-staged` | `intent` | pre-start / pre-start |
+| `source-stopped` | `target-enable-intent` | `target-staged` | pre-start / pre-start |
+| `target-started` | `target-started` (first write) | `target-enable-intent`, PowerDNS started | post-start / post-start |
+| `target-verified` | `target-verified` | `target-started` | post-start / post-start |
+| `committed` | `committed` | `target-verified` | post-start / post-start |
+
+The controller sends that phase as `CELIKPANEL_DNS_KILL_MATRIX_PHASE`, expects
+it in the marker, requires schema `celikpanel-dns-engine-switch-journal/v3`
+on disk and records it as `result.boundary.journal_phase`.
+
+Refused before any mutation, with the reason: every `peer-unreachable` twin,
+`pre-intent`, `rolling-back`, `rolled-back`, any source other than
+`uninitialized`, and the owner-inverse, handoff, startup-rollback,
+retry-after-rollback and paired-secondary flags.
+
+**Product prerequisite for native runs (not in this harness's scope).** The
+tagged Agent's kill-matrix hook still accepts only the V1 journal (and V2 for
+the BIND driver) at the selected boundary:
+`cmd/agent/dns_engine_kill_matrix_linux.go:511`
+(`dnsKillMatrixRuntime.validateObservation`). With a V3 journal it returns
+an error instead of publishing the marker, so the producer fails after a real
+mutation and the cell ends `unverified` at the boundary. The 2026-09-28 V3
+trials used their own test hook (`dns_engine_pdns_v3_native_trial_linux_test.go`).
+The build under test must accept `SwitchJournalSchemaV3` for the
+`pdns-switch` driver before any of these cells can reach its cut.
+
+**Gate probe.** The product gate constants are closed. Right after the tagged
+Agent's socket is up and before the scenario trigger starts, the controller
+runs `dns-kill-trigger rpc-gate-probe --scenario <scenario> --timeout 60s`: an
+exact `SwitchDNSEngineV1` call **without a lease**. A closed gate answers with
+the Agent's pause reason before its lease check; an open gate reaches the
+lease check and is refused there. Neither creates a ledger job or touches the
+host. Closed: the result is `status: gate-closed` with the message "gate
+closed in this build", the controller exits **4**, `run-prepared` passes 4
+through without a peer verdict, and nothing is counted as a failure. Any
+other answer stops the cell before the trigger as `unverified`.
+
+**Pass definitions** (on the unchanged socket flow; D-021 safety and 31
+samples in every forward flow):
+
+- *pre-journal* (`intent:before-write`): proven exit 137 with no journal; the
+  restarted Agent finishes the job with
+  `agent_restarted_before_dns_engine_switch_commit` and there is nothing to
+  undo; then the pre-install checks below.
+- *pre-start* (`intent`/`target-staged` after-write, `source-stopped` both
+  edges): the ordinary Agent is restarted and rolls the install back **by
+  itself**: terminal `dns_engine_switch_rolled_back_after_restart` with no
+  lease, journal retired, and the pre-install state: `pdns.service` inactive
+  with MainPID 0 and at its frozen standby (`target_units_before` of the cut
+  journal: the package guard mask, or loaded/disabled), the database and the
+  staged candidate (plus `-wal`/`-shm`/`-journal`) absent, every
+  `config_before` file of the cut journal back to its recorded digest (or
+  absent), no DNS state receipt, no DNS unit active and no port-53 listener at
+  the DNS address; the Agent's journal must not name
+  `recover-dns-pdns-fresh-prestart`. A retained journal stops the retries.
+- *post-start* (`target-started` and later): forward only. The restarted
+  Agent completes the same request (the finalized v2 receipt); a rollback
+  verdict or a release is a failed expectation. The V3 state document
+  (`celikpanel-dns-engine-state/v3`, native catalog
+  `pdns-fresh-paired-primary/debian-4.9/v1`) exists for this request.
+  PowerDNS MainPID history is recorded (cut, after recovery); a change is
+  `unverified` and the `pdns.service` journal is retained. The daemon's
+  catalog re-stamp is recorded: staged serial (1), native serial at the cut
+  when the journal had it, the state's serial and the served catalog SOA; the
+  served serial must equal the state's and exceed 1.
+- then, for every forward variant: two same-request `rpc-retry` and two
+  probes ending `target_converged` (the probe now reads the v3 state and
+  ownership documents), and the **pair**: the primary answers `s1-kill.test`
+  SOA `2026083101` and `www` A `192.0.2.10` over UDP and TCP, and the native
+  BIND secondary (`192.0.2.11`) answers the member **and** the catalog SOA
+  exactly as the primary does (polled up to the endpoint timeout while it
+  transfers); the served catalog serial equals the state receipt's. On the
+  QEMU host `run-prepared` then runs `native_pdns_bind_peer.py observe`
+  (primary catalog AXFR equals the secondary's loaded catalog, the member
+  answers authoritatively and identically on both over UDP/TCP) into
+  `<cell directory>/fresh-primary-peer/peer-verdict.json` and returns the
+  combined exit.
+
+Optional `--reboot-after-recovery [--disable-management-before-reboot]`
+after a passing forward flow reboots **both guests**: the host reboots the
+native secondary first, then the primary; the resumed controller repeats the
+pair check, then the existing post-reboot checks (management disabled: DNS
+alone, 31 samples judging only DNS).
+
+**Owner edit** (`run-prepared --owner-edit {config,sql}`; guest flags
+`--owner-edit-config` / `--owner-edit-sql`). Between the proven kill and the
+Agent restart the controller edits as the owner would:
+
+- `config`: appends exactly one line, `# owner note: edited by the server
+  owner during an interrupted install (dns-kill-matrix <request id>)`, to
+  `/etc/powerdns/pdns.conf` in place (mode and owner kept). The path must be
+  in the cut journal's `config_before`;
+- `sql` (post-start cells only; the database is live only after the start):
+  inserts one row into `records` of `/var/lib/powerdns/pdns.sqlite3`:
+  `owner-note.s1-kill.test TXT "edited by the server owner (dns-kill-matrix
+  <request id>)"`, TTL 300, for the member's domain id.
+
+Pass: the Agent refuses at that boundary and releases only this request
+(`dns_native_recovery_unknown_after_restart`); its ledger message is the
+typed guidance (not the generic release text, names "Next step" and the
+request; the wording is not judged); the journal is kept byte-identical to
+the cut; the live database is kept (post-start); the owner's edit is
+byte-preserved (file digest, or the exact row); **DNS-only hold**: `dns-kill-
+trigger rpc-unrelated-begin` begins an unrelated lease (`service_install` /
+`nginx`, derived request id) and finishes it failed with no host effect
+(the product's own `manager.begin` unrelated-mutation check, through the
+public RPC). No `rpc-retry` runs over the retained journal. Agent and Panel
+liveness and 31 samples; DNS is judged only on post-start cells (a held
+first install that never started has no DNS engine by design; the samples are
+recorded). Pre-journal cells refuse an owner edit (no journal to hold).
+
+**Agent-released owner recovery** (`--owner-release-recovery`, only with
+`--owner-edit config` on a pre-start cell): after the release the owner
+removes the line again (truncates to the old size, digest checked), reads
+`recovery dns-switch-status --quiesced --request-id <id>` (must name
+`recover-dns-pdns-fresh-prestart --request-id <id>` and change no private
+evidence), runs `recover-dns-pdns-fresh-prestart --request-id <id>` (exit 0),
+then: journal retired, the pre-install state above, the ledger byte-identical
+to the one after the Agent's release (the released job unchanged), and an
+identical re-run exits 0 without changing any private evidence. The recovery
+runtime must be enrolled (`enroll-recovery-runtime` now admits these cells).
+
+**Zone lifecycle on the accepted primary** (`run-prepared --zone-lifecycle`,
+after a combined pass; or later `guest_bootstrap.py zone-lifecycle`). Four
+exact requests through the Panel's zone-sync V3 RPCs
+(`BeginServiceMutation dns_zone_sync` / `SyncDNSZoneV3` /
+`FinishServiceMutation`), trigger `rpc-pdns-primary-zone-v3 --step
+{add,edit,delete,re-add}`, for the child `s2.s1-kill.test` (MASTER, engine
+pdns epoch 1, generations 1-4, SOA serials 2026092801/02/03, `changed` A only
+at edit), each only after its predecessor published and never begun twice.
+After each step `native_pdns_bind_peer.py observe-child` requires, with
+retries while the secondary transfers: both catalogs equal and listing the
+child exactly when present; identical authoritative SOA serial and `www` A
+on both servers over UDP/TCP; `changed` present only after edit; after
+delete, an authoritative NXDOMAIN from the served parent on both. Catalog
+serials are recorded per step (the daemon re-stamp during publication). If
+the Agent keeps the deletion pending (for example
+`dns_peer_enrollment_required`), the lifecycle stops with the Agent's code;
+the server owner enrolls the native BIND secondary for inspection
+(`dns-peer-enroll --engine bind`, as the Agent's message names; not automated
+here), then `zone-lifecycle --recover-delete` resumes the same request with
+`rpc-pdns-primary-zone-v3-recover` (`RecoverDNSZoneV3`, never a second
+delete) and re-adds. Evidence: `fresh-primary-peer/zone-lifecycle*.json`.
+
+```sh
+# On the Arch Linux QEMU host, from a tree with this harness change and
+# binaries built from the commit that opens the gate (and accepts the V3
+# journal in the kill-matrix hook). Fresh cell directory per run.
+KEY=$HOME/.ssh/id_ed25519
+CELL=pdns-switch__source-stopped__after-write__paired-primary__peer-reachable
+COMMON=(--work-root "$ROOT" --cell-id "$CELL" --node debian13 \
+        --identity-file "$KEY" --source-fixture uninitialized)
+PEER=(--work-root "$ROOT" --cell-id "$CELL" --identity-file "$KEY" \
+      --source-fixture uninitialized)
+python3 "$FIXTURE" prepare --work-root "$ROOT" --cell-id "$CELL" --ssh-public-key "$KEY.pub" --execute
+python3 "$FIXTURE" start --work-root "$ROOT" --cell-id "$CELL" --execute
+python3 "$FIXTURE" wait-ssh --work-root "$ROOT" --cell-id "$CELL" --identity-file "$KEY" --execute
+python3 "$BOOTSTRAP" install "${COMMON[@]}" --agent "$ART/agent" \
+  --tagged-agent "$ART/agent.kill" --panel "$ART/panel" \
+  --trigger "$ART/dns-kill-trigger" --web-dir "$PWD/web/dist" --execute
+python3 deploy/e2e/dns-kill-matrix/native_pdns_bind_peer.py prepare "${PEER[@]}" --execute
+python3 "$BOOTSTRAP" prepare-pdns-switch "${COMMON[@]}" --execute
+# Forward flow (pre-start/post-start by cell), both guests rebooted after it:
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" \
+  --reboot-after-recovery --disable-management-before-reboot --execute
+# Instead, on a post-start cell with the zone lifecycle (Agent kept running):
+#   run-prepared "${COMMON[@]}" --zone-lifecycle --execute
+# Owner edit (post-start: config or sql; pre-start: config):
+#   run-prepared "${COMMON[@]}" --owner-edit sql --execute
+# Agent-released owner recovery (pre-start cells; enroll the runtime first):
+#   python3 "$BOOTSTRAP" enroll-recovery-runtime "${COMMON[@]}" --recovery-runtime "$ART/recovery-runtime" --execute
+#   run-prepared "${COMMON[@]}" --owner-edit config --owner-release-recovery --execute
+# After a pending deletion and the owner's enrollment:
+#   python3 "$BOOTSTRAP" zone-lifecycle "${COMMON[@]}" --recover-delete --execute
+```
+
+Exit codes: 0 passed, 1 verified deviation, 2 unknown, 3 reboot requested
+(handled by `run-prepared`), 4 gate closed in this build, 64 refused before
+any mutation.
+
 Run the offline guest checks with:
 
 ```sh
 python3 deploy/e2e/dns-kill-matrix/test_guest_bootstrap.py
 python3 deploy/e2e/dns-kill-matrix/test_guest_recovery_probe.py
+python3 deploy/e2e/dns-kill-matrix/test_fresh_primary_v3.py
 ```
 
 The base images are immutable, but Debian/Arch package repositories are not
@@ -1904,13 +2120,28 @@ Pass definition:
   `bind.keys`, `db.*`, `zones.rfc1918`, `/etc/default/named`) must be
   byte-identical.
 
-Known product risk this cell exercises (from code reading, unverified): if the
-restarted Agent rolls the cut back, the `adopted_present` install receipt
-survives, and the same-request retry then selects the exclusive options
-authority instead of the takeover authority. With Debian's stock
-`named.conf.options` (no `recursion`/`allow-*` directives) that should still
-converge; owner-set directives would be refused. This cell does not add such
-directives, so it does not exercise that refusal.
+Owner directives (2026-09-30, `prepare-bind --owner-directives`, then
+`run-prepared --owner-directives`). The retry-after-rollback directive case:
+the product now keeps the takeover decision for a same-request retry whose
+only receipt is this request's own `adopted_present` install receipt
+(`sameRequestAdoptedPresentBINDInstall`, cmd/agent/dns_engine_bind_adopt.go);
+before that the retry chose the exclusive authority and refused owner
+directives. Preparation, as the owner: after the stopped BIND is in place and
+before `source-preinstall-bind.json` is sealed, the guest inserts exactly two
+tab-indented lines, `recursion no;` and `allow-transfer { none; };`, right
+after the single `options {` line of `/etc/bind/named.conf.options`, and
+`named-checkconf` must accept it (refused if the file already carries either
+directive or has no single `options {` line). The preparation text in the
+proof names the edit. The controller (`--expect-owner-directives`) proves the
+block is in the file and that the file equals the sealed preimage before the
+tagged Agent starts; at the cut it records the rewritten options (reaching the
+cut is the first attempt's adoption: the exclusive authority refuses these
+directives before the journal); after the Agent's restart and **before** the
+retry every owner file of the preimage, `named.conf.options` and
+`named.conf.local` included, must be byte-identical (the rollback restored
+them); the same-request retry must then converge (`target_converged`), which
+only the takeover decision allows. The converged options file is recorded,
+not judged. Without the flag the cell is unchanged.
 
 **Reinstall (row 14), `--source-fixture managed-bind-absent`.** Preparation:
 a real untagged production fresh BIND switch (same zone as the measured
@@ -1944,6 +2175,14 @@ journal and releases the job; the retry is then refused over the retained
 journal. If that holds natively, this cell ends `failed` or `unverified` and
 is a product finding, not a harness defect.
 
+Batch 6b follow-up (2026-09-30): the preparation's `apt-get purge bind9` is
+the owner's action and leaves a stale dpkg statoverride that blocked dpkg in
+the measured reinstall; the product is being changed to repair its own
+override. The preparation is deliberately unchanged (the override is not
+pre-cleaned). The controller records `dpkg-statoverride --list` before the
+tagged Agent (`result.dpkg_statoverride.before`) and after recovery
+(`.after`), output and exit code only, never judged.
+
 Both cells accept `--reboot-after-recovery` (and
 `--disable-management-before-reboot`) after a passing flow.
 
@@ -1957,6 +2196,9 @@ python3 "$BOOTSTRAP" install "${COMMON[@]}" --agent "$ART/agent" \
   --trigger "$ART/dns-kill-trigger" --web-dir "$PWD/web/dist" --execute
 python3 "$BOOTSTRAP" prepare-bind "${COMMON[@]}" --execute
 python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --execute
+# Row 12 with the owner's directives (fresh cell directory):
+#   prepare-bind "${COMMON[@]}" --owner-directives --execute
+#   run-prepared "${COMMON[@]}" --owner-directives --execute
 ```
 
 The [management-absent PowerDNS reboot trial](NATIVE-PDNS-MANAGEMENT-ABSENT-BOOT-20260925.md) repeats the corrected-Agent deleted-child adoption path in a fresh disposable Debian/Arch pair. After same-request convergence, direct authoritative UDP/TCP tests passed before and after one orderly Debian reboot with Panel and Agent units disabled/stopped and their normal executable paths absent. Native pdns.service stayed enabled and active. This adds a bounded P0.5 DNS serving result, not another kill-matrix phase or proof of full panel removal, paired transfer, other workloads, owner edits or independent inverse.

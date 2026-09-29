@@ -20,6 +20,7 @@ OUTPUT_SCHEMA = "celikpanel/dns-kill-recovery-probe/v1"
 SCENARIO_SCHEMA = "celikpanel-dns-kill-matrix-trigger/v1"
 IDENTITY_SCHEMA = "celikpanel-dns-kill-matrix-trigger-identity/v1"
 STATE_SCHEMA = "celikpanel-dns-engine-state/v1"
+NATIVE_CATALOG_V3 = "pdns-fresh-paired-primary/debian-4.9/v1"
 CELL_RE = re.compile(r"[a-z0-9][a-z0-9_.:-]{0,191}")
 IDENTITY_RE = re.compile(r"[0-9a-f]{32}")
 QUALIFIER_RE = re.compile(r"dns-engine-switch/v1:sha256:[0-9a-f]{64}")
@@ -323,10 +324,18 @@ def decode_dns_document(value: Any, raw: bytes, role: str = "state") -> dict[str
         if canonical_state_bytes(value) != raw:
             raise ProbeObservationError("legacy DNS state is not canonical JSON")
         return value
-    expected = f"celikpanel-dns-engine-{role}/v2"
-    exact_keys(value, {"schema", "acquisition", "publication"}, {"schema", "acquisition", "publication"}, "DNS document")
+    # The fresh paired PowerDNS primary publishes the v3 document: the v2
+    # records plus the native catalog tenure marker, last
+    # (internal/dnsengineartifact/state_v3.go). The projection is the same
+    # semantic state; the marker is checked, not projected.
+    native = value.get("schema") == f"celikpanel-dns-engine-{role}/v3"
+    expected = f"celikpanel-dns-engine-{role}/v3" if native else f"celikpanel-dns-engine-{role}/v2"
+    keys = {"schema", "acquisition", "publication"} | ({"native_catalog"} if native else set())
+    exact_keys(value, keys, keys, "DNS document")
     if value["schema"] != expected:
         raise ProbeObservationError("DNS document schema or role differs")
+    if native and value["native_catalog"] != NATIVE_CATALOG_V3:
+        raise ProbeObservationError("DNS v3 document names an unsupported native catalog tenure")
     fields = ("mode", "engine", "engine_epoch", "pair_role", "pair_local_ip", "pair_peer_ip",
               "source_revision", "manifest_qualifier", "mutation_request_id", "mutation_owner_id")
     required = set(fields) - {"pair_role", "pair_local_ip", "pair_peer_ip"}
@@ -347,7 +356,10 @@ def decode_dns_document(value: Any, raw: bytes, role: str = "state") -> dict[str
     for key in ("generation", "primary_catalog_serial"):
         if b.get(key) not in (None, "", 0):
             ordered_b[key] = b[key]
-    if raw != compact({"schema": expected, "acquisition": ordered_a, "publication": ordered_b}):
+    document = {"schema": expected, "acquisition": ordered_a, "publication": ordered_b}
+    if native:
+        document["native_catalog"] = NATIVE_CATALOG_V3
+    if raw != compact(document):
         raise ProbeObservationError("DNS document is not canonical JSON")
     projected = {"schema": STATE_SCHEMA, **{k: v for k, v in ordered_a.items() if k != "schema"}}
     projected.update({k: v for k, v in ordered_b.items() if k not in {"schema", "acquisition_sha256"}})

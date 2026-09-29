@@ -446,6 +446,57 @@ class GuestRecoveryProbeTest(unittest.TestCase):
         self.assertEqual(value["active_dns_engine"], "")
 
 
+class FreshPrimaryV3DocumentTest(unittest.TestCase):
+    """The v3 state/ownership documents of a fresh paired PowerDNS primary.
+
+    Bytes are the canonical documents of the 2026-09-28 V3 trial
+    (evidence/pdns-v3-native-20260928/attempt8-*.json), inlined.
+    """
+
+    ACQUISITION = (
+        '{"schema":"celikpanel-dns-engine-acquisition/v1","mode":"switch","engine":"pdns",'
+        '"engine_epoch":1,"pair_role":"primary","pair_local_ip":"192.0.2.10",'
+        '"pair_peer_ip":"192.0.2.11","source_revision":0,"manifest_qualifier":'
+        '"dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5",'
+        '"mutation_request_id":"0e777d90e3a842b3403797a8dc79a83d",'
+        '"mutation_owner_id":"ac77276bcf8c2ed95f1a9df7197670ae"}'
+    )
+    PUBLICATION = (
+        '{"schema":"celikpanel-dns-engine-publication/v1","acquisition_sha256":'
+        '"dd7e5e2ae5ed35646cff6c04de48871290712d137ded00d3bec4b608ea1f4b2a",'
+        '"primary_catalog_serial":1790588837}'
+    )
+
+    def raw(self, role: str) -> bytes:
+        return (
+            '{"schema":"celikpanel-dns-engine-' + role + '/v3","acquisition":' + self.ACQUISITION
+            + ',"publication":' + self.PUBLICATION
+            + ',"native_catalog":"pdns-fresh-paired-primary/debian-4.9/v1"}\n'
+        ).encode()
+
+    def test_v3_documents_project_to_the_same_semantic_state(self) -> None:
+        state = probe.decode_dns_document(json.loads(self.raw("state")), self.raw("state"), "state")
+        ownership = probe.decode_dns_document(
+            json.loads(self.raw("ownership")), self.raw("ownership"), "ownership")
+        self.assertEqual(state, ownership)
+        self.assertEqual(state["primary_catalog_serial"], 1790588837)
+        self.assertEqual(state["pair_role"], "primary")
+        self.assertNotIn("native_catalog", state)
+
+    def test_v3_documents_refuse_role_marker_and_order_drift(self) -> None:
+        raw = self.raw("state")
+        with self.assertRaises(probe.ProbeObservationError):
+            probe.decode_dns_document(json.loads(raw), raw, "ownership")
+        for bad in (
+            raw.replace(b"debian-4.9/v1", b"debian-4.9/v2"),
+            raw.replace(b',"native_catalog":"pdns-fresh-paired-primary/debian-4.9/v1"', b""),
+            raw.replace(b'"schema":"celikpanel-dns-engine-state/v3"', b'"schema":"celikpanel-dns-engine-state/v2"'),
+            raw + b" ",
+        ):
+            with self.assertRaises(probe.ProbeObservationError):
+                probe.decode_dns_document(json.loads(bad), bad, "state")
+
+
 if __name__ == "__main__":
     unittest.main()
 

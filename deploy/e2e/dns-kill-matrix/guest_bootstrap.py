@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 from typing import Any, Iterable
 
 import fixture
@@ -66,6 +67,18 @@ FRESH_PDNS_STANDALONE_PHASES = PDNS_SWITCH_PHASES
 # their own pass definition derived from the paired Reconcile behaviour.
 FRESH_BIND_SECONDARY_PHASES = EARLY_UNINITIALIZED_PHASES | frozenset({"target-verified"})
 FRESH_PDNS_SECONDARY_PHASES = PDNS_SWITCH_PHASES
+# Fresh paired PowerDNS PRIMARY (register row 6, journal V3): the phases whose
+# V3 journal write carries the kill hook (run_cell.py
+# FRESH_PRIMARY_V3_BOUNDARIES; source-stopped selects target-enable-intent).
+# Peer-reachable only; the native BIND secondary is native_pdns_bind_peer.py.
+FRESH_PDNS_PRIMARY_PHASES = frozenset(
+    {"intent", "target-staged", "source-stopped", "target-started",
+     "target-verified", "committed"}
+)
+# (phase, edge) -> variant, mirrored from run_cell.py FRESH_PRIMARY_V3_BOUNDARIES.
+FRESH_PDNS_PRIMARY_POST_START_PHASES = frozenset(
+    {"target-started", "target-verified", "committed"}
+)
 PAIRED_SECONDARY_DRIVERS = frozenset({"bind", "pdns-switch"})
 PEER_ENGINES = ("bind", "pdns")
 # Catalog producer the native primary peer serves (native_primary_peer.py
@@ -180,6 +193,16 @@ REBOOT_EVEN_IF_FAILED_FLAG = "--reboot-even-if-failed"
 # the DNS daemon must then serve alone and the second window judges only DNS.
 DISABLE_MANAGEMENT_FLAG = "--disable-management-before-reboot"
 RESUME_FLAG = "--resume-after-reboot"
+# Fresh paired PowerDNS primary: owner edit between the kill and the Agent
+# restart (run-prepared --owner-edit {config,sql}), and the Agent-released
+# owner recovery of a pre-start config edit.
+OWNER_EDIT_FLAGS = {"config": "--owner-edit-config", "sql": "--owner-edit-sql"}
+OWNER_RELEASE_FLAG = "--owner-release-recovery"
+# Stopped-BIND takeover prepared with --owner-directives.
+OWNER_DIRECTIVES_FLAG = "--expect-owner-directives"
+OWNER_DIRECTIVES_STAGE_NAME = "owner-bind-directives"
+GATE_CLOSED_EXIT = 4
+FRESH_PRIMARY_EVIDENCE_DIRECTORY = "fresh-primary-peer"
 REBOOT_REQUESTED_EXIT = 3
 # Canonical order of the flags the host passes to the guest program.
 PREPARED_FLAG_ORDER = (
@@ -187,6 +210,10 @@ PREPARED_FLAG_ORDER = (
     LATER_BIND_ROLLBACK_FLAG,
     OWNER_INVERSE_FLAG,
     STARTUP_ROLLBACK_FLAG,
+    OWNER_EDIT_FLAGS["config"],
+    OWNER_EDIT_FLAGS["sql"],
+    OWNER_RELEASE_FLAG,
+    OWNER_DIRECTIVES_FLAG,
     PEER_CATALOG_BIND_FLAG,
     PEER_CATALOG_PDNS_FLAG,
     RETRY_SWITCH_FLAG,
@@ -247,6 +274,10 @@ handoff = "--stop-after-kill-for-independent-recovery"
 later = "--bind-rollback-after-target-started"
 owner = "--owner-inverse-after-restart"
 startup = "--expect-agent-startup-rollback"
+owner_config = "--owner-edit-config"
+owner_sql = "--owner-edit-sql"
+owner_release = "--owner-release-recovery"
+directives = "--expect-owner-directives"
 peer_bind = "--peer-catalog-format-bind"
 peer_pdns = "--peer-catalog-format-pdns-native"
 retry = "--retry-switch-after-rollback"
@@ -255,8 +286,9 @@ reboot_after = "--reboot-after-recovery"
 even_if_failed = "--reboot-even-if-failed"
 disable = "--disable-management-before-reboot"
 resume = "--resume-after-reboot"
-order = [handoff, later, owner, startup, peer_bind, peer_pdns, retry, reboot_before,
-         reboot_after, even_if_failed, disable, resume]
+order = [handoff, later, owner, startup, owner_config, owner_sql, owner_release, directives,
+         peer_bind, peer_pdns, retry, reboot_before, reboot_after, even_if_failed, disable,
+         resume]
 label_prefix = "--peer-catalog-member-label="
 labels = [flag for flag in flags if flag.startswith(label_prefix)]
 plain = [flag for flag in flags if not flag.startswith(label_prefix)]
@@ -307,7 +339,18 @@ if disable in chosen and (reboot_after not in chosen or owner in chosen):
     raise SystemExit("disabling management requires the after-recovery reboot of the rpc-retry flow")
 if resume in chosen and not chosen & {reboot_before, reboot_after}:
     raise SystemExit("resume requires the reboot flag of the suspended run")
-if chosen & {handoff, owner, startup, reboot_before, reboot_after}:
+fresh_primary = (cell.startswith("pdns-switch__")
+                 and cell.endswith("__paired-primary__peer-reachable"))
+if chosen & {owner_config, owner_sql} and (
+        not fresh_primary or {owner_config, owner_sql} <= chosen
+        or chosen & {handoff, later, owner, startup, retry, reboot_before, reboot_after}):
+    raise SystemExit("one owner edit applies only to a fresh paired PowerDNS primary cell without reboot")
+if owner_release in chosen and owner_config not in chosen:
+    raise SystemExit("the owner release recovery needs the owner configuration edit")
+if directives in chosen and cell != "bind__target-staged__after-write__standalone__peer-reachable":
+    raise SystemExit("owner directives apply only to the stopped-BIND takeover cell")
+if chosen & {handoff, owner, startup, reboot_before, reboot_after, owner_config, owner_sql,
+             directives}:
     if argv.count("--trigger-mode") != 1:
         raise SystemExit("prepared controller mode requires one trigger mode")
     trigger_index = argv.index("--trigger-mode")
@@ -459,6 +502,37 @@ def early_managed_pdns_bind_cell(
             "phase": phase, "point": edge.replace("-", "_"),
         }
     )
+
+
+def fresh_pdns_primary_cell(cell: dict[str, Any]) -> bool:
+    """An exact admitted fresh paired PowerDNS primary cell (journal V3)."""
+
+    boundary = cell.get("boundary", {})
+    phase, edge = boundary.get("phase"), boundary.get("edge")
+    return (
+        cell.get("driver") == "pdns-switch"
+        and cell.get("role") == "paired-primary"
+        and cell.get("peer_reachability") == "reachable"
+        and phase in FRESH_PDNS_PRIMARY_PHASES
+        and edge in ("before-write", "after-write")
+        and cell.get("id") == f"pdns-switch__{phase}__{edge}__paired-primary__peer-reachable"
+        and cell.get("fault_selector") == {"phase": phase, "point": edge.replace("-", "_")}
+        and cell.get("placement", {}).get("source_fixture_policy") == "driver-specific"
+        and cell.get("placement", {}).get("kill_host") == "debian-13"
+    )
+
+
+def fresh_pdns_primary_variant(cell: dict[str, Any]) -> str:
+    """pre-journal, pre-start or post-start, as run_cell.py judges the cut."""
+
+    if not fresh_pdns_primary_cell(cell):
+        raise BootstrapError("not an admitted fresh paired PowerDNS primary cell")
+    boundary = cell["boundary"]
+    if boundary["phase"] == "intent" and boundary["edge"] == "before-write":
+        return "pre-journal"
+    if boundary["phase"] in FRESH_PDNS_PRIMARY_POST_START_PHASES:
+        return "post-start"
+    return "pre-start"
 
 
 def paired_secondary_cell(cell: dict[str, Any]) -> bool:
@@ -665,13 +739,18 @@ def validate_pdns_switch_cell(
         raise BootstrapError("PowerDNS switch requires the certified Debian placement")
     phase = cell.get("boundary", {}).get("phase")
     if source_fixture == "uninitialized" and not (
-        (cell.get("role") == "paired-primary" and phase == "intent")
+        (
+            cell.get("role") == "paired-primary"
+            and phase in FRESH_PDNS_PRIMARY_PHASES
+            and cell.get("peer_reachability") != "unreachable"
+        )
         or (cell.get("role") == "standalone" and phase in FRESH_PDNS_STANDALONE_PHASES)
     ):
-        # Fresh paired-primary continues on the separate V3 path, which the
-        # product pauses outside its exact disposable intent trial.
+        # Fresh paired-primary runs on the V3 journal: only its hooked writes
+        # are cells, and only against a reachable native secondary.
         raise BootstrapError(
-            "fresh PowerDNS fixture is limited to standalone cells and paired-primary intent"
+            "fresh PowerDNS fixture is limited to standalone cells and the peer-reachable "
+            "paired-primary V3 phases " + ", ".join(sorted(FRESH_PDNS_PRIMARY_PHASES))
         )
     if phase not in PDNS_SWITCH_PHASES:
         raise BootstrapError("PowerDNS switch fixture has an unsupported matrix phase")
@@ -1208,10 +1287,11 @@ def write_recovery_kit(runtime: Path, target: Path) -> None:
 def validate_enrollment_cell(cell: dict[str, Any], node: str, source_fixture: str) -> None:
     """Any supported standalone cell may carry the recovery runtime."""
 
-    if cell.get("role") != "standalone":
+    if cell.get("role") != "standalone" and not fresh_pdns_primary_cell(cell):
         raise BootstrapError(
-            "enroll-recovery-runtime applies to standalone cells (only the kill guest "
-            f"is enrolled); {cell.get('id')} is {cell.get('role')}"
+            "enroll-recovery-runtime applies to standalone cells and the fresh paired "
+            "PowerDNS primary cells (only the kill guest is enrolled); "
+            f"{cell.get('id')} is {cell.get('role')}"
         )
     validate_supported_cell(cell, node, source_fixture)
 
@@ -1386,7 +1466,8 @@ def peer_namespace(
 
 
 def write_peer_evidence(
-    plan: dict[str, Any], name: str, value: Any, *, execute: bool
+    plan: dict[str, Any], name: str, value: Any, *, execute: bool,
+    directory_name: str = PEER_EVIDENCE_DIRECTORY,
 ) -> str | None:
     """Create-new host-side evidence beside the fixture plan (never replaced)."""
 
@@ -1395,7 +1476,9 @@ def write_peer_evidence(
         return None
     if re.fullmatch(r"[a-z0-9-]{1,64}\.json", name) is None:
         raise BootstrapError("peer evidence name is not canonical")
-    directory = Path(plan["cell_directory"]) / PEER_EVIDENCE_DIRECTORY
+    if directory_name not in (PEER_EVIDENCE_DIRECTORY, FRESH_PRIMARY_EVIDENCE_DIRECTORY):
+        raise BootstrapError("peer evidence directory is not canonical")
+    directory = Path(plan["cell_directory"]) / directory_name
     try:
         directory.mkdir(mode=0o700)
     except FileExistsError:
@@ -1487,6 +1570,21 @@ def prepare(args: argparse.Namespace) -> None:
         scenario_path = temporary_path / "scenario.json"
         scenario_path.write_bytes(json_bytes(scenario))
         uploads = [scenario_path]
+        if getattr(args, "owner_directives", False) is True:
+            if not (
+                args.action == "prepare-bind"
+                and args.source_fixture == UNMANAGED_BIND_STOPPED
+                and args.cell_id == PROVENANCE_BIND_CELLS[UNMANAGED_BIND_STOPPED]
+            ):
+                raise BootstrapError(
+                    "--owner-directives applies only to prepare-bind of the stopped-BIND "
+                    "takeover cell; nothing was prepared"
+                )
+            # The guest inserts OWNER_BIND_DIRECTIVES itself; this empty file
+            # only asks for it (guest_bootstrap.sh add_owner_bind_directives).
+            request = temporary_path / OWNER_DIRECTIVES_STAGE_NAME
+            request.write_bytes(b"")
+            uploads.append(request)
         if args.source_fixture == MANAGED_BIND_ABSENT:
             # The managed BIND is produced by a real untagged fresh BIND switch
             # with the same zone, then its engine is removed (receipts kept).
@@ -1671,6 +1769,10 @@ def prepared_flags(
         LATER_BIND_ROLLBACK_FLAG: getattr(args, "bind_rollback_after_target_started", False) is True,
         OWNER_INVERSE_FLAG: getattr(args, "owner_inverse_after_restart", False) is True,
         STARTUP_ROLLBACK_FLAG: getattr(args, "expect_agent_startup_rollback", False) is True,
+        OWNER_EDIT_FLAGS["config"]: getattr(args, "owner_edit", None) == "config",
+        OWNER_EDIT_FLAGS["sql"]: getattr(args, "owner_edit", None) == "sql",
+        OWNER_RELEASE_FLAG: getattr(args, "owner_release_recovery", False) is True,
+        OWNER_DIRECTIVES_FLAG: getattr(args, "owner_directives", False) is True,
         PEER_CATALOG_BIND_FLAG: peer_catalog_format == "bind",
         PEER_CATALOG_PDNS_FLAG: peer_catalog_format == "pdns-native",
         RETRY_SWITCH_FLAG: getattr(args, "retry_switch_after_rollback", False) is True,
@@ -1794,16 +1896,23 @@ def run_prepared(args: argparse.Namespace) -> int:
             "rpc-retry flow (not the owner-inverse flow)"
         )
     # A paired secondary reboots only itself; its native primary peer keeps
-    # serving, which is exactly the "secondary keeps serving" check.
+    # serving, which is exactly the "secondary keeps serving" check. A fresh
+    # paired PowerDNS primary reboots both guests: the native secondary first.
+    fresh_primary = fresh_pdns_primary_cell(cell)
     if (reboot_before or reboot_after) and (
         args.stop_after_kill_for_independent_recovery
-        or (cell.get("role") != "standalone" and not paired_secondary_cell(cell))
+        or (
+            cell.get("role") != "standalone"
+            and not paired_secondary_cell(cell)
+            and not fresh_primary
+        )
         or (reboot_before and cell.get("role") != "standalone")
     ):
         raise BootstrapError(
-            "reboot steps need a standalone or admitted paired-secondary cell "
-            "without the independent handoff"
+            "reboot steps need a standalone, admitted paired-secondary or fresh paired "
+            "PowerDNS primary cell without the independent handoff"
         )
+    validate_fresh_primary_run(args, cell, reboot_after or reboot_before)
     peer_engine = require_peer_engine(cell, getattr(args, "peer_engine", None))
     peer_catalog_format = require_peer_catalog_format(
         cell, peer_engine, getattr(args, "peer_catalog_format", None)
@@ -1837,6 +1946,35 @@ def run_prepared(args: argparse.Namespace) -> int:
         command, resume_command = commands(
             MEMBER_LABEL_PLACEHOLDER if needs_member_label else None
         )
+        if fresh_primary:
+            print(json.dumps(command))
+            if resume_command is not None:
+                print(json.dumps({
+                    "on_exit": REBOOT_REQUESTED_EXIT,
+                    "reboot": [
+                        {"node": "arch", "role": "native BIND secondary", "first": True},
+                        {"node": args.node, "role": "fresh PowerDNS primary"},
+                    ],
+                    "method": fixture.REBOOT_METHOD,
+                    "then": resume_command,
+                }))
+            print(json.dumps({
+                "on_exit": GATE_CLOSED_EXIT,
+                "result": "gate closed in this build; nothing after the probe runs",
+            }))
+            if not isinstance(getattr(args, "owner_edit", None), str):
+                print(json.dumps({
+                    "after_controller": "native_pdns_bind_peer.py observe --address 192.0.2.10",
+                    "evidence": f"{FRESH_PRIMARY_EVIDENCE_DIRECTORY}/peer-verdict.json",
+                }))
+            if getattr(args, "zone_lifecycle", False) is True:
+                for step in ZONE_LIFECYCLE_STEPS:
+                    print(json.dumps({
+                        "zone_lifecycle_step": step,
+                        "primary": ssh_base(node, identity) + [zone_lifecycle_remote(step)],
+                        "observe": f"native_pdns_bind_peer.py observe-child --step {step}",
+                    }))
+            return 0
         if peer_engine is not None:
             print(json.dumps({
                 "before_controller": "native_primary_peer.py observe",
@@ -1885,12 +2023,21 @@ def run_prepared(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
+        if fresh_primary:
+            # Both guests: the panel-free native secondary first, while this
+            # primary still serves, then the primary itself.
+            peer_receipt = fixture.reboot_guest(
+                plan, "arch", identity, getattr(args, "reboot_timeout", 600)
+            )
+            print(json.dumps({"peer_reboot": peer_receipt}, sort_keys=True))
         receipt = fixture.reboot_guest(
             plan, args.node, identity, getattr(args, "reboot_timeout", 600)
         )
         print(json.dumps(receipt, sort_keys=True))
         reboots += 1
         returncode = subprocess.run(resume_command, check=False).returncode
+    if fresh_primary:
+        return finish_fresh_primary_run(args, plan, returncode)
     if peer_engine is not None:
         return finish_peer_verdict(
             args, plan, peer_engine, peer_before, returncode, peer_catalog_format
@@ -2093,6 +2240,270 @@ def finish_peer_verdict(
     print(json.dumps(record, sort_keys=True))
     return record["combined_exit"]
 
+def validate_fresh_primary_run(
+    args: argparse.Namespace, cell: dict[str, Any], reboot: bool
+) -> None:
+    """Fresh paired PowerDNS primary flags, refused before anything runs."""
+
+    owner_edit = getattr(args, "owner_edit", None)
+    if not isinstance(owner_edit, str):
+        owner_edit = None  # argparse default (or an absent attribute)
+    release = getattr(args, "owner_release_recovery", False) is True
+    lifecycle = getattr(args, "zone_lifecycle", False) is True
+    directives = getattr(args, "owner_directives", False) is True
+    if directives and not (
+        args.source_fixture == UNMANAGED_BIND_STOPPED
+        and cell.get("id") == PROVENANCE_BIND_CELLS[UNMANAGED_BIND_STOPPED]
+    ):
+        raise BootstrapError(
+            "--owner-directives applies only to the stopped-BIND takeover cell it was "
+            "prepared for; nothing was started"
+        )
+    if not fresh_pdns_primary_cell(cell):
+        if owner_edit is not None or release or lifecycle:
+            raise BootstrapError(
+                "--owner-edit, --owner-release-recovery and --zone-lifecycle apply only to "
+                "the fresh paired PowerDNS primary cells; nothing was started"
+            )
+        return
+    if args.source_fixture != "uninitialized" or args.node != "debian13":
+        raise BootstrapError(
+            "the fresh paired PowerDNS primary runs only on Debian 13 from the uninitialized "
+            "source; nothing was started"
+        )
+    variant = fresh_pdns_primary_variant(cell)
+    if owner_edit is not None:
+        if variant == "pre-journal":
+            raise BootstrapError("intent:before-write has no journal to hold; nothing was started")
+        if owner_edit == "sql" and variant != "post-start":
+            raise BootstrapError(
+                "--owner-edit sql needs the live database of a started PowerDNS (post-start "
+                "cells); nothing was started")
+        if reboot or lifecycle:
+            raise BootstrapError(
+                "the owner-edit hold has no reboot or zone lifecycle step; nothing was started")
+    if release and (owner_edit != "config" or variant != "pre-start"):
+        raise BootstrapError(
+            "--owner-release-recovery needs --owner-edit config on a pre-start cell; "
+            "nothing was started")
+    if lifecycle and getattr(args, "disable_management_before_reboot", False) is True:
+        raise BootstrapError(
+            "--zone-lifecycle needs the running Agent; it cannot follow "
+            f"{DISABLE_MANAGEMENT_FLAG}; nothing was started")
+
+
+ZONE_LIFECYCLE_STEPS = ("add", "edit", "delete", "re-add")
+
+
+def observe_until_converged(
+    observe: Any, *, attempts: int = 30, delay: float = 2.0, sleep: Any = time.sleep
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Read-only peer observation, repeated while the secondary may still be
+    transferring (NOTIFY/refresh). Only the last result counts: a mismatch
+    still present after every attempt is a verified deviation ("mismatch:"),
+    an observation that could not be taken is unknown."""
+
+    error: str | None = None
+    for attempt in range(attempts):
+        try:
+            return observe(), None
+        except ValueError as exc:
+            error = f"mismatch: {exc}"
+        except (BootstrapError, fixture.FixtureError, OSError, KeyError,
+                subprocess.SubprocessError) as exc:
+            error = f"{type(exc).__name__}: {exc}"
+        if attempt + 1 < attempts:
+            sleep(delay)
+    return None, error
+
+
+def zone_lifecycle_remote(step: str, *, recover: bool = False) -> str:
+    """The Panel's zone-sync V3 RPCs through the trigger, as root:celikpanel."""
+
+    if step not in ZONE_LIFECYCLE_STEPS or (recover and step != "delete"):
+        raise BootstrapError(f"unsupported zone lifecycle step {step!r}")
+    command = "rpc-pdns-primary-zone-v3-recover" if recover else "rpc-pdns-primary-zone-v3"
+    return (
+        "sudo /usr/sbin/runuser -u root -g celikpanel -- /usr/bin/env -i "
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8 "
+        "CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock "
+        "CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token "
+        f"/opt/celikpanel/bin/dns-kill-trigger {command} "
+        "--scenario /var/lib/celikpanel-dns-kill-matrix/scenario.json "
+        "--identity-receipt /var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json "
+        f"--step {shlex.quote(step)} --timeout 2m"
+    )
+
+
+def decode_zone_step(stdout: str) -> dict[str, Any]:
+    lines = [line for line in stdout.splitlines() if line.strip()]
+    if not lines:
+        return {"outcome": "unknown", "error": "the zone step printed no result"}
+    try:
+        value = json.loads(lines[-1])
+    except json.JSONDecodeError as exc:
+        return {"outcome": "unknown", "error": f"zone step result is not JSON: {exc}"}
+    if not isinstance(value, dict) or value.get("schema") != (
+        "celikpanel/dns-kill-matrix-pdns-primary-zone-v3/v1"
+    ):
+        return {"outcome": "unknown", "error": "zone step result has another schema", "raw": value}
+    return value
+
+
+def judge_zone_step(step: str, value: dict[str, Any], observation_error: str | None) -> str:
+    """passed / pending / failed / unverified for one lifecycle step (pure)."""
+
+    outcome = value.get("outcome")
+    if outcome == "verified_published":
+        if observation_error is None:
+            return "passed"
+        return "failed" if observation_error.startswith("mismatch:") else "unverified"
+    if outcome == "pending_exact_operation" and step == "delete":
+        return "pending"
+    if outcome in ("refused", "mixed", "refused_predecessor", "refused_existing"):
+        return "failed"
+    return "unverified"
+
+
+def run_zone_lifecycle(
+    args: argparse.Namespace, plan: dict[str, Any], *, recover_delete: bool = False
+) -> int:
+    """Add, edit, delete, re-add one child zone of the accepted primary.
+
+    Each step is one exact V3 request; after each the native BIND secondary
+    must answer as the primary does (deletion: both authoritative NXDOMAIN
+    from the served parent, and the child gone from both catalogs). A pending
+    deletion stops the lifecycle and names the owner's next step.
+    """
+
+    import native_pdns_bind_peer  # noqa: PLC0415 - imports this module
+
+    node = plan["nodes"][args.node]
+    identity = identity_file(args.identity_file)
+    steps = ["delete", "re-add"] if recover_delete else list(ZONE_LIFECYCLE_STEPS)
+    record: dict[str, Any] = {
+        "schema": "celikpanel/dns-kill-fresh-primary-zone-lifecycle/v1",
+        "cell_id": args.cell_id, "recover_delete": recover_delete, "steps": [],
+    }
+    status = "passed"
+    for step in steps:
+        recover = recover_delete and step == "delete"
+        remote = zone_lifecycle_remote(step, recover=recover)
+        completed = subprocess.run(
+            ssh_base(node, identity) + [remote], check=False, capture_output=True,
+            text=True, timeout=300,
+        )
+        value = decode_zone_step(completed.stdout)
+        observation, observation_error = None, None
+        if value.get("outcome") == "verified_published":
+            observation, observation_error = observe_until_converged(
+                lambda: native_pdns_bind_peer.observe_child(argparse.Namespace(
+                    work_root=args.work_root, cell_id=args.cell_id,
+                    source_fixture="uninitialized", identity_file=args.identity_file,
+                    manifest=args.manifest, step=step, execute=True,
+                ))
+            )
+        verdict = judge_zone_step(step, value, observation_error)
+        entry = {
+            "step": step, "recover": recover, "returncode": completed.returncode,
+            "result": value, "observation": observation,
+            "observation_error": observation_error, "verdict": verdict,
+        }
+        if verdict == "pending":
+            entry["next_step"] = (
+                "the Agent kept the deletion pending (" + str(value.get("job_error_code", ""))
+                + "): the server owner enrolls the native BIND secondary for inspection "
+                "(dns-peer-enroll --engine bind on both guests, as the Agent's message "
+                "names), then runs guest_bootstrap.py zone-lifecycle --recover-delete; no "
+                "second deletion is ever requested"
+            )
+        record["steps"].append(entry)
+        print(json.dumps(entry, sort_keys=True))
+        if verdict != "passed":
+            status = {"failed": "failed", "pending": "pending"}.get(verdict, "unverified")
+            break
+    record["status"] = status
+    write_peer_evidence(
+        plan, "zone-lifecycle-recover.json" if recover_delete else "zone-lifecycle.json",
+        record, execute=True, directory_name=FRESH_PRIMARY_EVIDENCE_DIRECTORY,
+    )
+    return {"passed": 0, "failed": 1}.get(status, 2)
+
+
+def finish_fresh_primary_run(
+    args: argparse.Namespace, plan: dict[str, Any], guest_returncode: int
+) -> int:
+    """Gate-closed pass-through, host-side pair verdict, optional lifecycle."""
+
+    if guest_returncode == GATE_CLOSED_EXIT:
+        print(json.dumps({
+            "cell_id": args.cell_id, "status": "gate-closed",
+            "message": (
+                "gate closed in this build: the Agent under test refused the fresh paired "
+                "PowerDNS primary before any mutation. This is not a failure; rebuild from "
+                "the commit that opens the gate and run the cell again on a fresh fixture."
+            ),
+        }, sort_keys=True))
+        return GATE_CLOSED_EXIT
+    if isinstance(getattr(args, "owner_edit", None), str):
+        # The hold flow is judged on the guest; the install is deliberately
+        # not completed, so there is no pair to transfer.
+        return guest_returncode
+    combined = finish_fresh_primary_peer_verdict(args, plan, guest_returncode)
+    if combined == 0 and getattr(args, "zone_lifecycle", False) is True:
+        return run_zone_lifecycle(args, plan)
+    return combined
+
+
+def finish_fresh_primary_peer_verdict(
+    args: argparse.Namespace, plan: dict[str, Any], guest_returncode: int
+) -> int:
+    import native_pdns_bind_peer  # noqa: PLC0415 - imports this module
+
+    observation, error = observe_until_converged(
+        lambda: native_pdns_bind_peer.observe(argparse.Namespace(
+            work_root=args.work_root, cell_id=args.cell_id, source_fixture="uninitialized",
+            identity_file=args.identity_file, manifest=args.manifest,
+            address="192.0.2.10", execute=True,
+        ))
+    )
+    status = "passed" if error is None else (
+        "failed" if error.startswith("mismatch:") else "unverified")
+    record = {
+        "schema": "celikpanel/dns-kill-fresh-primary-peer-verdict/v1",
+        "cell_id": args.cell_id,
+        "guest_controller_exit": guest_returncode,
+        "status": status,
+        "error": error,
+        "observation": observation,
+        "combined_exit": combine_paired_secondary_exit(guest_returncode, status),
+        "note": (
+            "The native BIND secondary loaded this primary's PowerDNS PRODUCER catalog and "
+            "member and answers them authoritatively over UDP and TCP exactly as the "
+            "primary does."
+        ),
+    }
+    write_peer_evidence(plan, "peer-verdict.json", record, execute=True,
+                        directory_name=FRESH_PRIMARY_EVIDENCE_DIRECTORY)
+    print(json.dumps(record, sort_keys=True))
+    return record["combined_exit"]
+
+
+def zone_lifecycle_action(args: argparse.Namespace) -> int:
+    plan, cell, _ = load_plan(args)
+    if not fresh_pdns_primary_cell(cell) or args.source_fixture != "uninitialized":
+        raise BootstrapError("zone-lifecycle applies only to the fresh paired PowerDNS primary cells")
+    if not args.execute:
+        node = plan["nodes"][args.node]
+        identity = identity_file(args.identity_file)
+        steps = ["delete", "re-add"] if args.recover_delete else list(ZONE_LIFECYCLE_STEPS)
+        for step in steps:
+            print(json.dumps(ssh_base(node, identity) + [zone_lifecycle_remote(
+                step, recover=args.recover_delete and step == "delete")]))
+        return 0
+    return run_zone_lifecycle(args, plan, recover_delete=args.recover_delete)
+
+
 def common_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--work-root", required=True, type=Path)
     parser.add_argument("--cell-id", required=True)
@@ -2148,6 +2559,14 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     )
     current = subparsers.add_parser("prepare-bind")
     common_parser(current)
+    current.add_argument(
+        "--owner-directives", action="store_true",
+        help=(
+            "stopped-BIND takeover only: the owner writes `recursion no;` and "
+            "`allow-transfer { none; };` into the stopped BIND's options before the "
+            "measured operation"
+        ),
+    )
     current = subparsers.add_parser("prepare-pdns-adopt")
     common_parser(current)
     current.add_argument("--include-deleted-child", action="store_true")
@@ -2189,6 +2608,41 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
         "--reboot-timeout", type=int, default=600,
         help="seconds for each guest reboot (fixture.reboot_guest)",
     )
+    current.add_argument(
+        "--owner-edit", choices=tuple(OWNER_EDIT_FLAGS), default=None,
+        help=(
+            "fresh paired PowerDNS primary: the owner edits pdns.conf (config) or inserts "
+            "a member-zone row into the live database (sql, post-start cells) between the "
+            "kill and the Agent restart; the Agent must refuse and hold only DNS"
+        ),
+    )
+    current.add_argument(
+        "--owner-release-recovery", action="store_true",
+        help=(
+            "with --owner-edit config on a pre-start cell: the owner reverts the edit and "
+            "finishes the Agent-released install with recover-dns-pdns-fresh-prestart"
+        ),
+    )
+    current.add_argument(
+        "--zone-lifecycle", action="store_true",
+        help=(
+            "fresh paired PowerDNS primary: after a passed run, add, edit, delete and "
+            "re-add one child zone through the Agent's zone-sync V3 RPCs"
+        ),
+    )
+    current.add_argument(
+        "--owner-directives", action="store_true",
+        help="stopped-BIND takeover prepared with --owner-directives",
+    )
+    current = subparsers.add_parser("zone-lifecycle")
+    common_parser(current)
+    current.add_argument(
+        "--recover-delete", action="store_true",
+        help=(
+            "resume the pending deletion (same request, RecoverDNSZoneV3) after the owner "
+            "enrollment, then re-add"
+        ),
+    )
     current = subparsers.add_parser("enroll-recovery-runtime")
     common_parser(current)
     current.add_argument("--recovery-runtime", required=True, type=Path)
@@ -2206,6 +2660,8 @@ def main(argv: Iterable[str] | None = None) -> int:
             prepare(args)
         elif args.action == "run-prepared":
             return run_prepared(args)
+        elif args.action == "zone-lifecycle":
+            return zone_lifecycle_action(args)
         elif args.action == "enroll-recovery-runtime":
             enroll_recovery_runtime(args)
         else:

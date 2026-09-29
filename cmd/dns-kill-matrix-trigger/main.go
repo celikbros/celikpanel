@@ -165,6 +165,14 @@ func main() {
 		runRPCPDNSPeerV3Command(os.Args[2:])
 	case "rpc-pdns-peer-v3-recover":
 		runRPCPDNSPeerV3RecoverCommand(os.Args[2:])
+	case "rpc-gate-probe":
+		runRPCGateProbeCommand(os.Args[2:])
+	case "rpc-unrelated-begin":
+		runRPCUnrelatedBeginCommand(os.Args[2:])
+	case "rpc-pdns-primary-zone-v3":
+		runRPCFreshPrimaryZoneCommand(os.Args[2:], false)
+	case "rpc-pdns-primary-zone-v3-recover":
+		runRPCFreshPrimaryZoneCommand(os.Args[2:], true)
 	default:
 		usageError(fmt.Sprintf("unsupported subcommand %q", os.Args[1]))
 	}
@@ -174,7 +182,7 @@ func usageError(message string) {
 	_, _ = fmt.Fprintln(os.Stderr, message)
 	_, _ = fmt.Fprintln(
 		os.Stderr,
-		"usage: dns-kill-matrix-trigger {rpc-switch|rpc-retry} --scenario FILE --identity-receipt FILE [--timeout 45m] | rpc-normalize-pdns --scenario FILE --normalization-receipt FILE [--timeout 45m] | rpc-delete-v3 --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-delete-v3-recover --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-pdns-peer-v3 --step {edit|delete|add} [--timeout 2m]",
+		"usage: dns-kill-matrix-trigger {rpc-switch|rpc-retry} --scenario FILE --identity-receipt FILE [--timeout 45m] | rpc-normalize-pdns --scenario FILE --normalization-receipt FILE [--timeout 45m] | rpc-delete-v3 --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-delete-v3-recover --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-pdns-peer-v3 --step {edit|delete|add} [--timeout 2m] | rpc-gate-probe --scenario FILE [--timeout 15s] | rpc-unrelated-begin [--timeout 30s] | rpc-pdns-primary-zone-v3 --scenario FILE --identity-receipt FILE --step {add|edit|delete|re-add} [--timeout 2m] | rpc-pdns-primary-zone-v3-recover --scenario FILE --identity-receipt FILE --step delete [--timeout 2m]",
 	)
 	os.Exit(exitUsage)
 }
