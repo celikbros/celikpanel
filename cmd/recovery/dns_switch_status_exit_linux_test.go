@@ -21,7 +21,8 @@ import (
 // Batch 7 (source dbd6a6b6): before recovery, `dns-switch-status --quiesced`
 // printed "accepted-active ... No owner recovery command applies" for a V1
 // first install in both engines, but exited 3 for BIND (c06, c07) and 0 for
-// PowerDNS (c08-c10). The BIND exit came from the unit identity step: the
+// PowerDNS (c08-c10). Both engines now print their Agent-recovered guidance
+// instead of that line. The BIND exit came from the unit identity step: the
 // strict loaded-unit reader cannot read the install guard's masked
 // named.service ("parse named.service identity: systemctl returned incomplete
 // DNS unit identity"), so the BIND observation was not classified; PowerDNS
@@ -158,11 +159,16 @@ const (
 	acceptedRecordedLine = "The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.\n"
 )
 
-// batch7PDNSBeforeRecovery is c08's retained stdout (source dbd6a6b6) with its
-// request id replaced: the PowerDNS text of this class is unchanged since.
-func batch7PDNSBeforeRecovery(phase string) string {
+// expectedPDNSBeforeActivation is c08's retained stdout (source dbd6a6b6)
+// with its request id replaced and one line changed: batch 7 printed the
+// generic "No owner recovery command applies ... contact support with request
+// id ..." line, although the restarted Agent then rolled the install back by
+// itself and the same request ran forward on retry (batch 7 c08, batch 6a
+// c03). That line is now the Agent-recovered first-install guidance; every
+// other line is batch 7's.
+func expectedPDNSBeforeActivation(phase string) string {
 	return "DNS switch request " + ownerGuidanceRequest + ": accepted-active (journal phase " + phase + ").\n" +
-		"No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id " + ownerGuidanceRequest + ". This status check does not start recovery.\n" +
+		pdnsV1FirstInstallAgentRecoveredGuidance(phase, false, ownerGuidanceRequest) +
 		quiescedNoWorkerLine + acceptedRecordedLine +
 		"Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.\n" +
 		beforeActivationTail("pdns.service")
@@ -203,7 +209,7 @@ func TestDNSSwitchStatusSameJournalClassExitsEquallyForBothEngines(t *testing.T)
 			if bind.strictUsed != 0 {
 				t.Fatal("the strict loaded-unit identity reader, which cannot read the guard mask, was used")
 			}
-			if want := batch7PDNSBeforeRecovery(phase); pdnsOut != want {
+			if want := expectedPDNSBeforeActivation(phase); pdnsOut != want {
 				t.Fatalf("PowerDNS text changed:\n got: %q\nwant: %q", pdnsOut, want)
 			}
 			if want := expectedBINDBeforeActivation(phase); bindOut != want {

@@ -1155,6 +1155,10 @@ func ownerDNSRecoveryGuidance(e dnsenginerecovery.SwitchEvidence, quiesced bool)
 		dnsenginerecovery.BINDV1AgentRecoveredJournal(e.Journal) {
 		return bindV1AgentRecoveredGuidance(e.Journal.Phase, e.Journal.Mode, e.Journal.SourceEngine == "", request)
 	}
+	if request == e.Journal.MutationRequestID && activeDNSSwitchStatus(e.Observation.Status) &&
+		dnsenginerecovery.PDNSV1FirstInstallAgentRecoveredJournal(e.Journal) {
+		return pdnsV1FirstInstallAgentRecoveredGuidance(e.Journal.Phase, e.Journal.Topology == transport.DNSTopologyPaired, request)
+	}
 	return fmt.Sprintf("No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id %s. This status check does not start recovery.\n", request)
 }
 
@@ -1176,6 +1180,42 @@ func bindV1AgentRecoveredGuidance(phase, mode string, firstInstall bool, request
 		"No owner recovery command applies, and none is needed: the CelikPanel Agent resolves this same request. "+
 		"While its worker is running it continues by itself. If CelikPanel shows no progress, the server owner restarts the Agent (systemctl restart celikpanel-agent); at start it re-checks this request and, unless the target verifies, rolls it back to the recorded state from before the operation and records it as failed (dns_engine_switch_rolled_back_after_restart). "+
 		"CelikPanel then reports the change as not committed and it can be requested again. If the rollback cannot be proved, the journal is kept and this check, rerun with --quiesced --request-id %s, names the next step. This status check does not start recovery.\n",
+		operation, phase, request)
+}
+
+// pdnsV1FirstInstallAgentRecoveredGuidance explains an active V1 PowerDNS
+// first install (standalone or paired secondary). The CelikPanel Agent, not
+// the owner, acts: a live worker continues; a restarted Agent reconciles the
+// same request. Before target-started the state receipt does not exist yet,
+// so the Agent rolls the install back; at target-started it completes the
+// install when the target verifies and rolls it back otherwise; from
+// target-verified it only goes forward. No owner command admits these
+// journals, and none is needed.
+func pdnsV1FirstInstallAgentRecoveredGuidance(phase string, pairedSecondary bool, request string) string {
+	operation := "This PowerDNS installation"
+	if pairedSecondary {
+		operation = "This PowerDNS secondary installation"
+	}
+	const rollback = "rolls the install back: it stops PowerDNS, returns its configuration, database and unit state to what was recorded before the operation, proves that no managed DNS service answers on port 53, and records the request as failed (dns_engine_switch_rolled_back_after_restart)"
+	const finish = "This status check changed nothing and does not start recovery.\n"
+	switch phase {
+	case dnsengineartifact.SwitchPhaseTargetVerified, dnsengineartifact.SwitchPhaseCommitted:
+		return fmt.Sprintf("%s has reached its verified target (journal phase %s); from here it is completed, never rolled back. "+
+			"No owner recovery command applies, and none is needed: the CelikPanel Agent completes this same request. "+
+			"While its worker is running it finishes by itself. If CelikPanel shows no progress, the server owner restarts the Agent (systemctl restart celikpanel-agent); at start it verifies PowerDNS against this journal again, records the request as succeeded and retires the journal. "+
+			"Nothing needs to be started again; starting the same change again only confirms it. If PowerDNS no longer matches the journal, the Agent keeps the journal and does not roll it back, and this check, rerun with --quiesced --request-id %s, names the next step. "+finish,
+			operation, phase, request)
+	case dnsengineartifact.SwitchPhaseTargetStarted:
+		return fmt.Sprintf("%s has started PowerDNS but has not recorded its verification (journal phase %s), and no rollback decision is recorded. "+
+			"No owner recovery command applies, and none is needed: the CelikPanel Agent resolves this same request. "+
+			"While its worker is running it continues by itself. If CelikPanel shows no progress, the server owner restarts the Agent (systemctl restart celikpanel-agent); at start it verifies PowerDNS against this journal: if it matches, the Agent completes the install and records the request as succeeded; otherwise it "+rollback+". "+
+			"After a rollback CelikPanel reports the change as not committed, and the same change can be started again. If the Agent can prove neither the target nor the rollback, it keeps the journal, and this check, rerun with --quiesced --request-id %s, names the next step. "+finish,
+			operation, phase, request)
+	}
+	return fmt.Sprintf("%s has not recorded a PowerDNS start (journal phase %s), and no rollback decision is recorded. "+
+		"No owner recovery command applies, and none is needed: the CelikPanel Agent resolves this same request. "+
+		"While its worker is running it continues by itself. If CelikPanel shows no progress, the server owner restarts the Agent (systemctl restart celikpanel-agent); at start it re-checks this request and "+rollback+". "+
+		"CelikPanel then reports the change as not committed, and the same change can be started again. If the rollback cannot be proved, the journal is kept, and this check, rerun with --quiesced --request-id %s, names the next step. "+finish,
 		operation, phase, request)
 }
 

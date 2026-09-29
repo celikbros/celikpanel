@@ -184,6 +184,53 @@ func BINDV1BeforeActivationJournal(j dnsengineartifact.SwitchJournalV1) bool {
 	return j.Phase != dnsengineartifact.SwitchPhaseTargetStarted && BINDV1AgentRecoveredJournal(j)
 }
 
+// PDNSV1FirstInstallAgentRecoveredJournal reports a V1 PowerDNS first install
+// the restarted Agent resolves by itself: switch mode, no source engine, no
+// source epoch and no prior engine state receipt, standalone or paired
+// secondary, with pdns.service not active before the operation, at a forward
+// phase (intent through committed). The Agent's Reconcile verifies the target
+// first: a verified target (always from target-verified, and from
+// target-started when the state receipt was already written) goes forward to
+// committed and is finalized as succeeded; otherwise the absent state receipt
+// proves the frozen empty source, the Agent records the rollback decision,
+// runs the V1 PowerDNS inverse and proves that no managed DNS authority
+// remains, and the ledger records dns_engine_switch_rolled_back_after_restart.
+// A verified target is never rolled back. Excluded: the V3 paired primary, the
+// paired-secondary reconfiguration of an active PowerDNS (its rollback proof
+// has its own rules), journals with a source engine or a prior state receipt,
+// adoption and every decided phase. It is a read-only classification for
+// status guidance and grants no recovery or native mutation authority.
+func PDNSV1FirstInstallAgentRecoveredJournal(j dnsengineartifact.SwitchJournalV1) bool {
+	if j.Schema != dnsengineartifact.SwitchJournalSchemaV1 ||
+		j.TargetEngine != transport.DNSEnginePowerDNS ||
+		j.Mode != transport.DNSEngineSwitchModeSwitch ||
+		j.SourceEngine != "" || j.SourceEpoch != 0 || j.StateBefore.Exists {
+		return false
+	}
+	switch {
+	case j.Topology == transport.DNSTopologyStandalone:
+	case j.Topology == transport.DNSTopologyPaired && j.PairRole == transport.DNSPairRoleSecondary:
+	default:
+		return false
+	}
+	switch j.Phase {
+	case dnsengineartifact.SwitchPhaseIntent, dnsengineartifact.SwitchPhaseTargetStaged,
+		dnsengineartifact.SwitchPhaseSourceStopped, dnsengineartifact.SwitchPhaseTargetStarted,
+		dnsengineartifact.SwitchPhaseTargetVerified, dnsengineartifact.SwitchPhaseCommitted:
+	default:
+		return false
+	}
+	// An active pdns.service preimage is the Agent's own discriminator of the
+	// paired-secondary reconfiguration, which shares this manifest shape.
+	for _, unit := range j.TargetUnitsBefore {
+		if unit.ActiveState == "active" {
+			return false
+		}
+	}
+	_, err := dnsengineartifact.SwitchJournalManifest(j)
+	return err == nil
+}
+
 // PDNSAdoptionInverseJournal is the journal-only part of the owner PowerDNS
 // adoption inverse admission (recover-dns-pdns-adoption). The secured evidence
 // admission applies it before its observation checks. It names a command only;
