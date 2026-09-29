@@ -1,0 +1,25 @@
+{
+  "dns_outage": null,
+  "expectation": null,
+  "flow_ambiguities": null,
+  "flow_failures": null,
+  "flow_status": null,
+  "owner_inverse_failures": null,
+  "owner_inverse_native_at_boundary": null,
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "repeated_nonconvergence",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": true,
+    "rolled_back_source_serving": false,
+    "same_fingerprint": true,
+    "target_converged": false
+  },
+  "request_id": "abd7cb29722819ec4117f95c8deddce5",
+  "safety_status": "failed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "failed",
+  "step_records": {},
+  "variant": null
+}

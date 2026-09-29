@@ -1,0 +1,151 @@
+wall=2026-09-29T13:00:43.910381400Z boot_id=510e917a-4a6e-4b07-94cd-63660b5609a1
+== pdns.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== named.service
+MainPID=2405
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:00:43 UTC
+ExecMainPID=2405
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:00:43 UTC
+InvocationID=7af60630eccb4baba02e00771e806550
+== bind9.service
+MainPID=2405
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:00:43 UTC
+ExecMainPID=2405
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:00:43 UTC
+InvocationID=7af60630eccb4baba02e00771e806550
+== celikpanel-agent.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:00:17 UTC
+ExecMainPID=1561
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:00:17 UTC
+InvocationID=5095b9fbeb6e4fad81417fa913773a00
+== celikpanel-panel.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:00:17 UTC
+ExecMainPID=1572
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:00:17 UTC
+InvocationID=9e30cda346524d2ea4ecccec70cf4f45
+== named/pdns processes
+2405 /usr/sbin/named -f -u bind
+== boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 510e917a4a6e4b0794cd63660b5609a1 Tue 2026-09-29 12:59:16 UTC Tue 2026-09-29 13:00:43 UTC
+== packages
+dpkg-query: no packages found matching pdns-server
+dpkg-query: no packages found matching pdns-backend-sqlite3
+bind9 1:9.20.29-1~deb13u1 ii 
+bind9-host 1:9.20.29-1~deb13u1 ii 
+bind9-libs 1:9.20.29-1~deb13u1 ii 
+bind9-utils 1:9.20.29-1~deb13u1 ii 
+== pdns_server --version
+bash: line 6: /usr/sbin/pdns_server: No such file or directory
+== state dir
+total 12
+drwx------  2 root celikpanel 4096 2026-09-29 13:00:15.304028459 +0000 .
+drwxr-xr-x 29 root root       4096 2026-09-29 13:00:38.456058197 +0000 ..
+-rw-------  1 root celikpanel   23 2026-09-29 13:00:15.292028459 +0000 service-mutations.json
+177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211  service-mutations.json
+== fixture dir
+total 1412
+drwx------  4 root root    4096 2026-09-29 13:00:43.624065980 +0000 .
+drwxr-xr-x 29 root root    4096 2026-09-29 13:00:38.456058197 +0000 ..
+-rw-------  1 root root    3222 2026-09-29 13:00:43.460065770 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 13:00:43.612065965 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 13:00:22.924028459 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 13:00:15.236028459 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 13:00:30.904040972 +0000 measured
+drwx------  3 root root    4096 2026-09-29 13:00:43.428065730 +0000 results
+-rw-------  1 root root    1312 2026-09-29 13:00:30.900040960 +0000 scenario.json
+-rw-------  1 root root    1439 2026-09-29 13:00:43.408065704 +0000 source-proof.json
+== recovery launcher
+total 18448
+drwx------ 3 root root     4096 2026-09-29 13:00:29.848037818 +0000 .
+drwxr-xr-x 9 root root     4096 2026-09-29 13:00:29.064035343 +0000 ..
+-rwxr-xr-x 1 root root 18877680 2026-09-29 13:00:29.772037578 +0000 recovery
+drwx------ 3 root root     4096 2026-09-29 13:00:29.080035394 +0000 recovery-runtimes
+5268ed0058dc8d7619df2cbeb16661ef71eab8cf75a488746194c4104e92dde6  /usr/libexec/celikpanel/recovery
+== owner files
+ls: cannot access '/etc/powerdns': No such file or directory
+ls: cannot access '/etc/powerdns/pdns.d': No such file or directory
+ls: cannot access '/var/lib/powerdns': No such file or directory
+sha256sum: /etc/powerdns/pdns.conf: No such file or directory
+sha256sum: '/etc/powerdns/pdns.d/*': No such file or directory
+sha256sum: /var/lib/powerdns/pdns.sqlite3: No such file or directory
+== bind dirs
+total 32
+drwxr-sr-x  2 root bind 4096 2026-09-29 13:00:42.308064240 +0000 .
+drwxr-xr-x 70 root root 4096 2026-09-29 13:00:41.172062616 +0000 ..
+-rw-r--r--  1 root bind  160 2026-09-29 13:00:42.304064234 +0000 db.owner.test
+-rw-r--r--  1 root bind  455 2026-09-16 13:42:29.000000000 +0000 named.conf
+-rw-r--r--  1 root bind   95 2026-09-29 13:00:42.308064240 +0000 named.conf.local
+-rw-r--r--  1 root bind  100 2026-09-29 13:00:42.312064245 +0000 named.conf.options
+-rw-r--r--  1 root bind  116 2026-09-16 13:42:29.000000000 +0000 named.conf.root-hints
+-rw-r-----  1 bind bind  100 2026-09-29 13:00:38.476058233 +0000 rndc.key
+== /etc/bind file hashes
+16bd35accfc6ff7203289ab7a3f5b9803a607319bda4317a01d54b06e9ef159b  /etc/bind/db.owner.test
+50c296bb3ae376b6fdde1f092ebf228056d38e525b53dc3415b7945136af14b7  /etc/bind/named.conf
+c4d525a8045948ec7166101eb43a77bb629922901c4d2a081320d11f711be454  /etc/bind/named.conf.local
+4ff8a966b1f515dadb2262c0cb80d458c8ac6700af25d6f5a89a43b686286d0e  /etc/bind/named.conf.options
+7f4afbc7ea88cc94fe849d622a2d8e2a7b8863089cc7909e75cb77ba8e682d87  /etc/bind/named.conf.root-hints
+105532f6fe4d7303817ad7cf8cd2663b81aedb8df3e0b0ec6b7df6d01e7a42e4  /etc/bind/rndc.key
+== /etc/bind inodes
+131565 1 root:bind 644 160 2026-09-29T13:00:42.3040642340 /etc/bind/db.owner.test
+131540 1 root:bind 644 455 2026-09-16T13:42:29.0000000000 /etc/bind/named.conf
+131541 1 root:bind 644 95 2026-09-29T13:00:42.3080642400 /etc/bind/named.conf.local
+131542 1 root:bind 644 100 2026-09-29T13:00:42.3120642450 /etc/bind/named.conf.options
+131543 1 root:bind 644 116 2026-09-16T13:42:29.0000000000 /etc/bind/named.conf.root-hints
+131533 1 bind:bind 640 100 2026-09-29T13:00:38.4760582330 /etc/bind/rndc.key
+== /var/cache/bind tree
+drwxrwxr-x root:bind 4096 2026-09-29T13:00:43.1320653510 /var/cache/bind
+-rw-r--r-- bind:bind 1336 2026-09-29T13:00:43.3480656270 /var/cache/bind/managed-keys.bind.jnl
+== named-checkconf -l
+owner.test IN _default master
+. IN _default hint
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("named",pid=2405,fd=29))         
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("named",pid=2405,fd=28))         
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("named",pid=2405,fd=25))         
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("named",pid=2405,fd=24))         
+udp UNCONN 0      0          127.0.0.1:53 0.0.0.0:* users:(("named",pid=2405,fd=19))         
+udp UNCONN 0      0          127.0.0.1:53 0.0.0.0:* users:(("named",pid=2405,fd=18))         
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+tcp LISTEN 0      10         127.0.0.1:53 0.0.0.0:* users:(("named",pid=2405,fd=22))         
+tcp LISTEN 0      10         127.0.0.1:53 0.0.0.0:* users:(("named",pid=2405,fd=20))         
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+tcp LISTEN 0      10         10.0.2.15:53 0.0.0.0:* users:(("named",pid=2405,fd=27))         
+tcp LISTEN 0      10         10.0.2.15:53 0.0.0.0:* users:(("named",pid=2405,fd=26))         
+tcp LISTEN 0      10        192.0.2.10:53 0.0.0.0:* users:(("named",pid=2405,fd=31))         
+tcp LISTEN 0      10        192.0.2.10:53 0.0.0.0:* users:(("named",pid=2405,fd=30))         
+== pdns journal tail
+-- No entries --

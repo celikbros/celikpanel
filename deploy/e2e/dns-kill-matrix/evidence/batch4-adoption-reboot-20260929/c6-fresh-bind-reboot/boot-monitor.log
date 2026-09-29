@@ -1,0 +1,4 @@
+2026-09-29T13:25:36.890157044Z boot 1 8d62d8ed-e425-40b6-bf32-87d86bed9c6a (watcher /var/tmp/cp-b4-watch)
+2026-09-29T13:26:44.018763405Z boot 2 37d4ff75-4438-4a53-a25e-4f902e43eb9d (watcher /var/tmp/cp-b4-watch-boot2)
+Running as unit: cp-b4-watch-boot2.service; invocation ID: 30463895234847748ac3a2f0f4c19afa
+watcher start rc=0

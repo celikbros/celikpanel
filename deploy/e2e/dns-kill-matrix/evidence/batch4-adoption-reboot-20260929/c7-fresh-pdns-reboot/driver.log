@@ -1,0 +1,14 @@
+### 2026-09-29T13:33:27.569Z start-cell c7-fresh-pdns-reboot pdns-switch__target-started__after-write__standalone__peer-reachable debian13 fixture=uninitialized prep=prepare-pdns-switch enroll=0 flags=--reboot-after-recovery
+### 2026-09-29T13:33:27.571Z prepare
+### 2026-09-29T13:33:28.517Z start
+### 2026-09-29T13:33:28.754Z wait-ssh
+### 2026-09-29T13:34:23.300Z guest-identity
+### 2026-09-29T13:34:23.675Z install
+### 2026-09-29T13:34:32.374Z prepare-pdns-switch
+### 2026-09-29T13:34:33.217Z pre-run-snapshot
+### 2026-09-29T13:35:34.231Z start-watcher
+Running as unit: cp-b4-watch.service; invocation ID: a985f1dbf9f847eeb98fcfd5011426b7
+### 2026-09-29T13:35:35.019Z run-prepared-dry-run
+### 2026-09-29T13:35:35.115Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T13:37:14.000Z done-run rc=0

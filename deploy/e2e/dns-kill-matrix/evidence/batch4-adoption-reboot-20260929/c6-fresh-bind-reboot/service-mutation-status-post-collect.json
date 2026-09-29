@@ -1,0 +1,24 @@
+ff9abfa1db719155d83024a1840c2782f4f5dce7868547d648b352db98fd7890  /root/oi-smstatus
+{
+  "observed_at": "2026-09-29T13:27:20.577284763Z",
+  "request_id": "abd7cb29722819ec4117f95c8deddce5",
+  "response": {
+    "job": {
+      "request_id": "abd7cb29722819ec4117f95c8deddce5",
+      "owner_id": "eeef1011b4741550aa5dc946fd43eddc",
+      "kind": "dns_engine_switch",
+      "target": "bind",
+      "package_name": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+      "status": "failed",
+      "phase": "interrupted",
+      "attempt": 1,
+      "started_at": "2026-09-29T13:25:37.434420364Z",
+      "updated_at": "2026-09-29T13:25:57.479055567Z",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "deadline_at": "2026-09-29T14:10:37.434420364Z",
+      "finished_at": "2026-09-29T13:25:57.479055567Z",
+      "error_code": "dns_native_recovery_unknown_after_restart",
+      "error_message": "The interrupted DNS switch could not be verified after the Agent restarted. Its exact journal remains for DNS recovery, and new DNS changes are blocked. The server administrator should inspect the native DNS service and run recovery dns-switch-status --quiesced; after resolving the reported cause, restart the Agent to retry this same operation. Unrelated host changes can continue."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+wall=2026-09-29T13:35:04.130420+00:00
+{"qname": "s1-kill.test", "qtype": "SOA", "transport": "udp", "server": "10.0.2.15", "error": "timed out"}
+{"qname": "s1-kill.test", "qtype": "SOA", "transport": "tcp", "server": "10.0.2.15", "error": "[Errno 111] Connection refused"}
+{"qname": "s1-kill.test", "qtype": "SOA", "transport": "udp", "server": "192.0.2.10", "error": "timed out"}
+{"qname": "s1-kill.test", "qtype": "SOA", "transport": "tcp", "server": "192.0.2.10", "error": "[Errno 111] Connection refused"}
+{"qname": "s1-kill.test", "qtype": "SOA", "transport": "udp", "server": "127.0.0.1", "error": "timed out"}
+{"qname": "s1-kill.test", "qtype": "SOA", "transport": "tcp", "server": "127.0.0.1", "error": "[Errno 111] Connection refused"}
+{"qname": "owner.test", "qtype": "SOA", "transport": "udp", "server": "10.0.2.15", "error": "timed out"}
+{"qname": "owner.test", "qtype": "SOA", "transport": "tcp", "server": "10.0.2.15", "error": "[Errno 111] Connection refused"}
+{"qname": "owner.test", "qtype": "SOA", "transport": "udp", "server": "192.0.2.10", "error": "timed out"}
+{"qname": "owner.test", "qtype": "SOA", "transport": "tcp", "server": "192.0.2.10", "error": "[Errno 111] Connection refused"}
+{"qname": "owner.test", "qtype": "SOA", "transport": "udp", "server": "127.0.0.1", "error": "timed out"}
+{"qname": "owner.test", "qtype": "SOA", "transport": "tcp", "server": "127.0.0.1", "error": "[Errno 111] Connection refused"}

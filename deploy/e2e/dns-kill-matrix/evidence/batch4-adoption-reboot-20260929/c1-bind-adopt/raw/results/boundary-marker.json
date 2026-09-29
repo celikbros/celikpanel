@@ -1,0 +1,52 @@
+{
+  "schema": "celikpanel-dns-kill-matrix-boundary/v1",
+  "cell_id": "bind__rolling-back__after-write__standalone__peer-reachable",
+  "driver": "bind",
+  "observed_driver": "bind",
+  "point": "after_write",
+  "phase": "rolling-back",
+  "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+  "nonce": "dc713b5c3e425b19c07a8d9b1dc8d67f4c7d6c40abe65f90133a5c79edb55f9c",
+  "marker": "/var/lib/celikpanel-dns-kill-matrix/results/bind__rolling-back__after-write__standalone__peer-reachable/boundary-marker.json",
+  "ready_fd": 5,
+  "pid": 2735,
+  "process_start_ticks": "9304",
+  "recorded_at": "2026-09-29T13:00:52.608326641Z",
+  "observed_journal": {
+    "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+    "schema": "celikpanel-dns-engine-switch-journal/v2",
+    "phase": "rolling-back",
+    "mode": "switch",
+    "mutation_request_id": "8b14693eaf9461f13a415d5e637b6d91",
+    "mutation_owner_id": "5c95b5f9a011e3da58a54873fc3ef9d4",
+    "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+    "target_engine": "bind",
+    "source_epoch": 0,
+    "target_epoch": 1,
+    "source_revision": 0,
+    "topology": "standalone"
+  },
+  "rollback_precursor": {
+    "schema": "celikpanel-dns-kill-matrix-rollback-precursor/v1",
+    "driver": "bind",
+    "observed_driver": "bind",
+    "point": "after_write",
+    "phase": "target-started",
+    "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+    "action": "returned-injected-error",
+    "observed_journal": {
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "schema": "celikpanel-dns-engine-switch-journal/v2",
+      "phase": "target-started",
+      "mode": "switch",
+      "mutation_request_id": "8b14693eaf9461f13a415d5e637b6d91",
+      "mutation_owner_id": "5c95b5f9a011e3da58a54873fc3ef9d4",
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+      "target_engine": "bind",
+      "source_epoch": 0,
+      "target_epoch": 1,
+      "source_revision": 0,
+      "topology": "standalone"
+    }
+  }
+}

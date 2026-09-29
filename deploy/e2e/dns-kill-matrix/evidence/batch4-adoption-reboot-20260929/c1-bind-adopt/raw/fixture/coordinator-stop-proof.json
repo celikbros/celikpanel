@@ -1,0 +1,42 @@
+{
+  "active_kernel_entries_after": [],
+  "active_kernel_entries_before": [],
+  "active_kernel_entries_pre_unlink": [],
+  "decision": "removed-verified-stale-socket",
+  "expected_socket": {
+    "gid": 989,
+    "group": "celikpanel",
+    "link_count": 1,
+    "mode": "0660",
+    "owner": "root",
+    "type": "socket",
+    "uid": 0
+  },
+  "reason": "removed exact inactive root:celikpanel 0660 socket and proved absence",
+  "schema": "celikpanel/dns-kill-coordinator-stop-proof/v1",
+  "socket_after": null,
+  "socket_before": {
+    "device": 25,
+    "gid": 989,
+    "inode": 2106,
+    "link_count": 1,
+    "mode": "0660",
+    "type": "socket",
+    "uid": 0
+  },
+  "socket_path": "/run/celikpanel/agent.sock",
+  "units": {
+    "celikpanel-agent.service": {
+      "active_state": "inactive",
+      "control_pid": 0,
+      "main_pid": 0,
+      "sub_state": "dead"
+    },
+    "celikpanel-panel.service": {
+      "active_state": "inactive",
+      "control_pid": 0,
+      "main_pid": 0,
+      "sub_state": "dead"
+    }
+  }
+}

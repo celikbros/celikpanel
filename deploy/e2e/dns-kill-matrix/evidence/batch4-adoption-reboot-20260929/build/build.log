@@ -1,0 +1,91 @@
+2026-09-29T12:54:31Z
+repository HEAD at run time: f7a844f707658176c0f308853eca80e53cf5549d
+8f86bdad86edfe0b8a550f65a8ae052741ec6f13
+go version go1.26.5 linux/amd64
+go1.26.5
+
+https://proxy.golang.org,direct
+/root/go/pkg/mod
+a682b35afd664df01436b6dfb25040afda352dff7e4557586665e90a93245646
+== artifacts
+4f8c628646b7efa2c143102f845b9e13b02d7c36a85e9a93d1e9f049e1bfa5b7  /root/cp-b4-artifacts/agent
+f1074078381976313e0833dcce7dd8b751e5a4b5e039f1388260792d1ee5c8ba  /root/cp-b4-artifacts/agent.kill
+793fb81b95fa96f438a216831a146e0869934ce31318881857d3352ffb92e472  /root/cp-b4-artifacts/panel
+173fbb615805aa29f8faa6ee67cdd7bc81d9d8a4d4c671829a93c1d55a3f5f31  /root/cp-b4-artifacts/dns-kill-trigger
+5268ed0058dc8d7619df2cbeb16661ef71eab8cf75a488746194c4104e92dde6  /root/cp-b4-artifacts/recovery
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  /root/cp-b4-artifacts/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  /root/cp-b4-artifacts/panel-checker
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  /root/cp-b4-artifacts/schema17-bridge
+== recovery-runtime
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  ./bin/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  ./bin/panel-checker
+5268ed0058dc8d7619df2cbeb16661ef71eab8cf75a488746194c4104e92dde6  ./bin/recovery
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  ./bin/schema17-bridge
+6645927653114b4d59fbf6e29147f12920ceaec058d0ecc7b92faa71fd1bf6c3  ./deploy/panel-tls-snapshot.sh
+391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004  ./deploy/recovery/runtime-entry.sh
+f499446812b90aee362112743f4e491d5ecfa40511a510d08cbb006babdd48b0  ./deploy/release-recovery-foundation.sh
+db3e2dd23d4b81d9e533354e5d345d26eb43b7943ba20cf7b4ba19fac20cea1e  ./deploy/release-recovery-observation.sh
+4543920d5cc7a4d76c5c3ff91e8a03f4f02bd0e005577b40dc5c740af32c8257  ./deploy/release-transaction-guard.sh
+f163b496a8f48ae55a12658f34125f666c45672eccc4b27c03d58b7367848fc2  ./deploy/release-unit-transition.sh
+cbe3841aef57c62d0242a2957f728100fceca84a7a23135d51156562006ac822  ./rollback.sh
+a682b35afd664df01436b6dfb25040afda352dff7e4557586665e90a93245646  ./runtime.manifest
+dea6eafb9608e1b956e8fee7ddc85908e649056fa6727be9c373cec233154db8  ./update.sh
+/root/cp-b4-artifacts/recovery-runtime:
+total 372
+drwxr-xr-x 4 root root   4096 Sep 29 15:54 .
+drwxr-xr-x 3 root root   4096 Sep 29 15:54 ..
+drwxr-xr-x 2 root root   4096 Sep 29 15:54 bin
+drwxr-xr-x 3 root root   4096 Sep 29 15:54 deploy
+-rwxr-xr-x 1 root root 149798 Sep 29 15:54 rollback.sh
+-rw-r--r-- 1 root root   1152 Sep 29 15:54 runtime.manifest
+-rwxr-xr-x 1 root root 207390 Sep 29 15:54 update.sh
+
+/root/cp-b4-artifacts/recovery-runtime/bin:
+total 48176
+drwxr-xr-x 2 root root     4096 Sep 29 15:54 .
+drwxr-xr-x 4 root root     4096 Sep 29 15:54 ..
+-rwxr-xr-x 1 root root  7013300 Sep 29 15:54 agent-checker
+-rwxr-xr-x 1 root root 13962693 Sep 29 15:54 panel-checker
+-rwxr-xr-x 1 root root 18877680 Sep 29 15:54 recovery
+-rwxr-xr-x 1 root root  9464898 Sep 29 15:54 schema17-bridge
+
+/root/cp-b4-artifacts/recovery-runtime/deploy:
+total 248
+drwxr-xr-x 3 root root   4096 Sep 29 15:54 .
+drwxr-xr-x 4 root root   4096 Sep 29 15:54 ..
+-rw-r--r-- 1 root root  73919 Sep 29 15:54 panel-tls-snapshot.sh
+drwxr-xr-x 2 root root   4096 Sep 29 15:54 recovery
+-rw-r--r-- 1 root root  29356 Sep 29 15:54 release-recovery-foundation.sh
+-rw-r--r-- 1 root root  13646 Sep 29 15:54 release-recovery-observation.sh
+-rw-r--r-- 1 root root 100613 Sep 29 15:54 release-transaction-guard.sh
+-rw-r--r-- 1 root root   9422 Sep 29 15:54 release-unit-transition.sh
+
+/root/cp-b4-artifacts/recovery-runtime/deploy/recovery:
+total 60
+drwxr-xr-x 2 root root  4096 Sep 29 15:54 .
+drwxr-xr-x 3 root root  4096 Sep 29 15:54 ..
+-rwxr-xr-x 1 root root 51414 Sep 29 15:54 runtime-entry.sh
+ff9abfa1db719155d83024a1840c2782f4f5dce7868547d648b352db98fd7890  /root/cp-b4-tools/oi-smstatus
+75586a7e92fa069cd00d96c0a224c96ab54c4792ee6ec6be4644152b12873d29  /root/cp-b4-tools/overlay.json
+57823885e8778d4fa5f67b3458042fc1f0cab7cb3a0603af00ec2bd202d85077  /root/cp-b4-tools/smstatus.go
+/root/cp-b4-artifacts/agent: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+/root/cp-b4-artifacts/recovery: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/recovery
+	mod	github.com/alicelik/celikpanel	(devel)	
+== comparison with the 411398d9 build (/root/cp-oi2-artifacts)
+IDENTICAL agent
+IDENTICAL agent.kill
+IDENTICAL panel
+DIFFERENT dns-kill-trigger
+IDENTICAL recovery
+IDENTICAL agent-checker
+IDENTICAL panel-checker
+IDENTICAL schema17-bridge
+IDENTICAL recovery-runtime/runtime.manifest
+recovery-runtime tree IDENTICAL
+IDENTICAL oi-smstatus
+web-dist IDENTICAL
+2026-09-29T12:54:41Z
+BUILD-OK

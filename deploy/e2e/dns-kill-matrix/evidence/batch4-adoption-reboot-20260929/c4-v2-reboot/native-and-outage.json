@@ -1,0 +1,389 @@
+{
+  "dns_outage": {
+    "judged": false,
+    "last_source_answer_before_cut_at": "2026-09-29T13:15:40.891681Z",
+    "measured_from": {
+      "seconds": "source_serving_again_at minus source_stopped_at",
+      "source_serving_again_at": "first authoritative UDP+TCP answer observed by the controller after the owner command returned; an upper bound, the command may restore service earlier",
+      "source_stopped_at": "pdns.service unit journal: first systemd stopping entry since the pre-cut observation"
+    },
+    "pdns_started_after_stop_at": "2026-09-29T13:17:26.319695Z",
+    "seconds": 93.80846,
+    "source_serving_again_at": "2026-09-29T13:17:29.248003Z",
+    "source_stopped_at": "2026-09-29T13:15:55.439543Z"
+  },
+  "expectation": {
+    "bind_active_after_restart": true,
+    "native_checks_after_owner_command": true,
+    "pdns_inactive_after_restart": true,
+    "pdns_pid_continuity_from_cut": false,
+    "source_serving_after_restart": false
+  },
+  "flow_ambiguities": [],
+  "flow_failures": [],
+  "flow_status": "passed",
+  "owner_inverse_failures": [],
+  "owner_inverse_native_at_boundary": {
+    "at": "2026-09-29T13:15:59.945697Z",
+    "dns": {
+      "answered": true,
+      "at": "2026-09-29T13:15:59.993861Z",
+      "result": {
+        "tcp": {
+          "additional": 1,
+          "answers": 1,
+          "authority": 1,
+          "bytes": 84,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "tcp"
+        },
+        "udp": {
+          "additional": 1,
+          "answers": 1,
+          "authority": 1,
+          "bytes": 84,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "udp"
+        }
+      }
+    },
+    "named_processes": [
+      7759
+    ],
+    "port53_listeners": {
+      "tcp": [
+        {
+          "local": "10.0.2.15:53",
+          "pids": [
+            7759
+          ],
+          "state": "LISTEN"
+        },
+        {
+          "local": "10.0.2.15:53",
+          "pids": [
+            7759
+          ],
+          "state": "LISTEN"
+        }
+      ],
+      "udp": [
+        {
+          "local": "10.0.2.15:53",
+          "pids": [
+            7759
+          ],
+          "state": "UNCONN"
+        },
+        {
+          "local": "10.0.2.15:53",
+          "pids": [
+            7759
+          ],
+          "state": "UNCONN"
+        }
+      ]
+    },
+    "units": {
+      "bind9.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "MainPID": "7759",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      },
+      "named.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "MainPID": "7759",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      },
+      "pdns.service": {
+        "ActiveState": "inactive",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "SubState": "dead",
+        "UnitFileState": "disabled"
+      }
+    },
+    "unknown": []
+  },
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "rolled_back_source_serving",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": true,
+    "same_fingerprint": true,
+    "target_converged": false
+  },
+  "request_id": "341e457da7b4b5e6fb7949e666307ef2",
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {
+    "steps.after_owner_command.native": {
+      "at": "2026-09-29T13:17:29.248078Z",
+      "dns": {
+        "answered": true,
+        "at": "2026-09-29T13:17:29.282682Z",
+        "result": {
+          "tcp": {
+            "additional": 0,
+            "answers": 1,
+            "authority": 0,
+            "bytes": 50,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 0,
+            "answers": 1,
+            "authority": 0,
+            "bytes": 50,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        }
+      },
+      "named_processes": [],
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              7578
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              7578
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "inactive",
+          "LoadState": "not-found",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": ""
+        },
+        "named.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        },
+        "pdns.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "7578",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "unknown": []
+    },
+    "steps.after_owner_command.pdns_main_pid": {
+      "after_owner_command": 7578,
+      "changed": true,
+      "judged": false,
+      "pre_cut": 3078,
+      "reason": "the source was stopped before the cut; the inverse starts it again"
+    },
+    "steps.after_owner_command.source.pdns_main_pid": 7578,
+    "steps.after_reboot.native": {
+      "at": "2026-09-29T13:17:20.951272Z",
+      "dns": {
+        "answered": true,
+        "at": "2026-09-29T13:17:20.988745Z",
+        "result": {
+          "tcp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 84,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 84,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        }
+      },
+      "named_processes": [
+        654
+      ],
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              654
+            ],
+            "state": "LISTEN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              654
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              654
+            ],
+            "state": "UNCONN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              654
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "654",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "named.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "654",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "pdns.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      },
+      "unknown": []
+    },
+    "steps.after_stability.source.pdns_main_pid": 7578,
+    "steps.agent_restarted.native": {
+      "at": "2026-09-29T13:16:00.130963Z",
+      "dns": {
+        "answered": true,
+        "at": "2026-09-29T13:16:00.181462Z",
+        "result": {
+          "tcp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 84,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 84,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        }
+      },
+      "named_processes": [
+        7759
+      ],
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              7759
+            ],
+            "state": "LISTEN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              7759
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              7759
+            ],
+            "state": "UNCONN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              7759
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "7759",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "named.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "7759",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "pdns.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      },
+      "unknown": []
+    },
+    "steps.rerun.source.pdns_main_pid": 7578
+  },
+  "variant": "critical"
+}

@@ -1,0 +1,5 @@
+/var/lib/celikpanel-agent-private:
+total 12
+drwx------  2 root celikpanel 4096 2026-09-29 13:04:43.624755008 +0000 .
+drwxr-xr-x 29 root root       4096 2026-09-29 13:03:37.628272438 +0000 ..
+-rw-------  1 root celikpanel 1045 2026-09-29 13:04:39.387558478 +0000 service-mutations.json

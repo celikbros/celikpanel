@@ -1,0 +1,14 @@
+### 2026-09-29T13:23:30.078Z start-cell c6-fresh-bind-reboot bind__target-verified__after-write__standalone__peer-reachable debian13 fixture=uninitialized prep=prepare-bind enroll=0 flags=--reboot-after-recovery
+### 2026-09-29T13:23:30.079Z prepare
+### 2026-09-29T13:23:30.990Z start
+### 2026-09-29T13:23:31.201Z wait-ssh
+### 2026-09-29T13:24:25.687Z guest-identity
+### 2026-09-29T13:24:26.056Z install
+### 2026-09-29T13:24:34.542Z prepare-bind
+### 2026-09-29T13:24:35.292Z pre-run-snapshot
+### 2026-09-29T13:25:36.265Z start-watcher
+Running as unit: cp-b4-watch.service; invocation ID: f546697f86724d0885f76d3d71ae53a0
+### 2026-09-29T13:25:36.891Z run-prepared-dry-run
+### 2026-09-29T13:25:36.974Z run-prepared
+RUN_PREPARED_RC=1
+### 2026-09-29T13:27:16.218Z done-run rc=1

@@ -1,0 +1,142 @@
+wall=2026-09-29T13:29:25.018008906Z boot_id=37d4ff75-4438-4a53-a25e-4f902e43eb9d
+== /etc/bind/named.conf
+// This is the primary configuration file for the BIND DNS server named.
+//
+// Please read /usr/share/doc/bind9/README.Debian for information on the
+// structure of BIND configuration files in Debian, *BEFORE* you customize
+// this configuration file.
+//
+// If you are just adding zones, please do that in /etc/bind/named.conf.local
+
+include "/etc/bind/named.conf.options";
+include "/etc/bind/named.conf.local";
+include "/etc/bind/named.conf.root-hints";
+== /etc/bind/named.conf.local
+//
+// Do any local configuration here
+//
+
+
+// BEGIN CELIKPANEL MANAGED BIND ZONES
+include "/var/cache/bind/celikpanel/current/zones.conf";
+// END CELIKPANEL MANAGED BIND ZONES
+== /etc/bind/named.conf.options
+options {
+	directory "/var/cache/bind";
+
+	// BEGIN CELIKPANEL MANAGED BIND OPTIONS
+	recursion no;
+	allow-recursion { none; };
+	allow-query-cache { none; };
+	allow-transfer { none; };
+	// END CELIKPANEL MANAGED BIND OPTIONS
+};
+== /var/cache/bind/celikpanel (ls -la, no follow)
+/var/cache/bind/celikpanel:
+total 12
+drwxr-xr-x 3 root root 4096 2026-09-29 13:25:57.288382752 +0000 .
+drwxrwxr-t 3 root bind 4096 2026-09-29 13:26:30.848172575 +0000 ..
+drwxr-xr-x 3 root root 4096 2026-09-29 13:25:51.168568569 +0000 generations
+
+/var/cache/bind/celikpanel/generations:
+total 12
+drwxr-xr-x 3 root root 4096 2026-09-29 13:25:51.168568569 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-29 13:25:57.288382752 +0000 ..
+dr-xr-xr-x 3 root root 4096 2026-09-29 13:25:51.156568992 +0000 a6e189e7e07ccd1eb5cbfdc82b8d5f3c8e53b777041dd169c6b77a56be08c47f
+== find /var/cache/bind -maxdepth 3 (symlinks shown)
+drwxrwxr-t root:bind /var/cache/bind -> 
+-rw-r--r-- bind:bind /var/cache/bind/managed-keys.bind.jnl -> 
+drwxr-xr-x root:root /var/cache/bind/celikpanel -> 
+drwxr-xr-x root:root /var/cache/bind/celikpanel/generations -> 
+dr-xr-xr-x root:root /var/cache/bind/celikpanel/generations/a6e189e7e07ccd1eb5cbfdc82b8d5f3c8e53b777041dd169c6b77a56be08c47f -> 
+-rw-r--r-- bind:bind /var/cache/bind/managed-keys.bind -> 
+== /run candidates
+ls: cannot access '/run/bind': No such file or directory
+-rw------- 1 root celikpanel   0 2026-09-29 13:26:42.132000000 +0000 /run/celikpanel-panel-cert.lock
+
+/run/celikpanel:
+total 0
+drwxr-x---  2 root celikpanel 100 2026-09-29 13:26:42.128000000 +0000 .
+drwxr-xr-x 24 root root       600 2026-09-29 13:29:24.984787278 +0000 ..
+srw-rw----  1 root celikpanel   0 2026-09-29 13:26:42.128000000 +0000 agent.sock
+-rw-------  1 root celikpanel   0 2026-09-29 13:26:42.044000000 +0000 service-mutation.lock
+-rw-------  1 root celikpanel   0 2026-09-29 13:26:42.044000000 +0000 service-mutation.lock.ledger-publication
+
+/run/named:
+total 0
+drwxrwxr-x  2 root bind  40 2026-09-29 13:26:38.964000000 +0000 .
+drwxr-xr-x 24 root root 600 2026-09-29 13:29:24.984787278 +0000 ..
+== zones.conf of staged generation
+// Managed by CelikPanel. DO NOT EDIT.
+// Immutable generation: a6e189e7e07ccd1eb5cbfdc82b8d5f3c8e53b777041dd169c6b77a56be08c47f; engine epoch: 1
+zone "s1-kill.test" {
+	type master;
+	file "/var/cache/bind/celikpanel/generations/a6e189e7e07ccd1eb5cbfdc82b8d5f3c8e53b777041dd169c6b77a56be08c47f/zones/4b853b537823a50fa36969a0deee07ba6fb754cea71a7db8039e4b77ef7bf4d9.zone";
+};
+== agent journal (DNS lines, all boots)
+2026-09-29T13:24:28.668611+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:24:28.694418+00:00 dns-debian13 agent[1194]: 2026/09/29 13:24:28 Starting CelikPanel Agent...
+2026-09-29T13:24:28.695471+00:00 dns-debian13 agent[1194]: 2026/09/29 13:24:28 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T13:24:28.695598+00:00 dns-debian13 agent[1194]: 2026/09/29 13:24:28 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T13:24:35.131413+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T13:24:35.131956+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T13:24:35.132208+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:25:57.322313+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:25:57.360289+00:00 dns-debian13 agent[5146]: 2026/09/29 13:25:57 Starting CelikPanel Agent...
+2026-09-29T13:25:57.479100+00:00 dns-debian13 agent[5146]: 2026/09/29 13:25:57 Interrupted DNS switch native recovery is unknown; retain exact journal and release only its ledger lease (request abd7cb29722819ec4117f95c8deddce5): verified DNS engine target no longer matches its journal: file does not exist
+2026-09-29T13:25:57.489866+00:00 dns-debian13 agent[5146]: 2026/09/29 13:25:57 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T13:25:57.489968+00:00 dns-debian13 agent[5146]: 2026/09/29 13:25:57 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:26:07.491214+00:00 dns-debian13 agent[5146]: 2026/09/29 13:26:07 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:26:17.490416+00:00 dns-debian13 agent[5146]: 2026/09/29 13:26:17 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:26:27.490966+00:00 dns-debian13 agent[5146]: 2026/09/29 13:26:27 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:26:31.298362+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T13:26:31.307453+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T13:26:31.308043+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:26:41.906737+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:26:42.046949+00:00 dns-debian13 agent[637]: 2026/09/29 13:26:42 Starting CelikPanel Agent...
+2026-09-29T13:26:42.115361+00:00 dns-debian13 agent[637]: 2026/09/29 13:26:42 Startup recovery is waiting for this host to finish starting before it decides the interrupted mutation: detect host platform: systemd is not ready: systemd state "starting" exited with status 1
+2026-09-29T13:26:42.129138+00:00 dns-debian13 agent[637]: 2026/09/29 13:26:42 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T13:26:42.134645+00:00 dns-debian13 agent[637]: 2026/09/29 13:26:42 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:26:45.457024+00:00 dns-debian13 agent[637]: 2026/09/29 13:26:45 A DNS engine transaction released after an undecidable boot could not be reconciled yet; its reason is already recorded and the host stays usable: verified DNS engine target no longer matches its journal: file does not exist
+2026-09-29T13:26:45.457024+00:00 dns-debian13 agent[637]: 2026/09/29 13:26:45 Startup recovery decided the interrupted mutation after the host finished starting.
+2026-09-29T13:26:52.135110+00:00 dns-debian13 agent[637]: 2026/09/29 13:26:52 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:27:02.135702+00:00 dns-debian13 agent[637]: 2026/09/29 13:27:02 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:27:12.135680+00:00 dns-debian13 agent[637]: 2026/09/29 13:27:12 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:27:22.135151+00:00 dns-debian13 agent[637]: 2026/09/29 13:27:22 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:27:32.144141+00:00 dns-debian13 agent[637]: 2026/09/29 13:27:32 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:27:42.135225+00:00 dns-debian13 agent[637]: 2026/09/29 13:27:42 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:27:52.144262+00:00 dns-debian13 agent[637]: 2026/09/29 13:27:52 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:28:02.135217+00:00 dns-debian13 agent[637]: 2026/09/29 13:28:02 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:28:12.135914+00:00 dns-debian13 agent[637]: 2026/09/29 13:28:12 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:28:22.135029+00:00 dns-debian13 agent[637]: 2026/09/29 13:28:22 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:28:32.135321+00:00 dns-debian13 agent[637]: 2026/09/29 13:28:32 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:28:42.135694+00:00 dns-debian13 agent[637]: 2026/09/29 13:28:42 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:28:52.135205+00:00 dns-debian13 agent[637]: 2026/09/29 13:28:52 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:29:02.145103+00:00 dns-debian13 agent[637]: 2026/09/29 13:29:02 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:29:12.135623+00:00 dns-debian13 agent[637]: 2026/09/29 13:29:12 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:29:22.143385+00:00 dns-debian13 agent[637]: 2026/09/29 13:29:22 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+== ledger job
+{
+ "version": 1,
+ "jobs": {
+  "abd7cb29722819ec4117f95c8deddce5": {
+   "request_id": "abd7cb29722819ec4117f95c8deddce5",
+   "owner_id": "eeef1011b4741550aa5dc946fd43eddc",
+   "kind": "dns_engine_switch",
+   "target": "bind",
+   "package_name": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+   "status": "failed",
+   "phase": "interrupted",
+   "attempt": 1,
+   "started_at": "2026-09-29T13:25:37.434420364Z",
+   "updated_at": "2026-09-29T13:25:57.479055567Z",
+   "lease_expires_at": "0001-01-01T00:00:00Z",
+   "deadline_at": "2026-09-29T14:10:37.434420364Z",
+   "finished_at": "2026-09-29T13:25:57.479055567Z",
+   "error_code": "dns_native_recovery_unknown_after_restart",
+   "error_message": "The interrupted DNS switch could not be verified after the Agent restarted. Its exact journal remains for DNS recovery, and new DNS changes are blocked. The server administrator should inspect the native DNS service and run recovery dns-switch-status --quiesced; after resolving the reported cause, restart the Agent to retry this same operation. Unrelated host changes can continue."
+  }
+ }
+}
+== journal phase
+celikpanel-dns-engine-switch-journal/v1 target-verified None
