@@ -1,0 +1,17 @@
+### 2026-09-29T15:16:25.336Z start-cell c08-pdns-adopt-rb pdns-adopt__rolled-back__after-write__standalone__peer-reachable node=debian13 other=arch fixture=external-pdns-adoption prep=prepare-pdns-adopt enroll=1 root=/var/tmp/cp-b6a-0929 peer=none format=none flags=--expect-agent-startup-rollback --reboot-after-recovery
+### 2026-09-29T15:16:25.337Z prepare
+### 2026-09-29T15:16:26.192Z early-admission-dry-run
+### 2026-09-29T15:16:26.314Z start
+### 2026-09-29T15:16:26.567Z wait-ssh
+### 2026-09-29T15:17:23.703Z guest-identity
+### 2026-09-29T15:17:24.504Z install
+### 2026-09-29T15:17:35.048Z enroll-recovery-runtime
+### 2026-09-29T15:17:43.148Z prepare-pdns-adopt
+### 2026-09-29T15:17:57.052Z pre-run-snapshot
+### 2026-09-29T15:18:39.840Z start-watcher
+Running as unit: cp-b6a-watch.service; invocation ID: 1fb5e548037146b698e5a0ed8cb1d8a0
+### 2026-09-29T15:18:40.745Z prepared-ok
+### 2026-09-29T15:18:40.753Z run-prepared-dry-run flags=--expect-agent-startup-rollback --reboot-after-recovery
+### 2026-09-29T15:18:40.887Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T15:20:15.338Z done-run rc=0

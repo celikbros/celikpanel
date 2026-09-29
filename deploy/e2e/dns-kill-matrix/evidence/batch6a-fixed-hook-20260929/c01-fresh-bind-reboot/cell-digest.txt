@@ -1,0 +1,15 @@
+request abd7cb29722819ec4117f95c8deddce5 controller 2026-09-29T14:40:38.192359Z -> 2026-09-29T14:42:17.356910Z
+status passed safety passed class target_converged fp 13b3b367
+kill pid 1699 state T at 2026-09-29T14:40:55.005066Z exit 137 reaped True
+marker 2026-09-29T14:40:54.996723523Z journal target-verified 4d6af030
+trigger rc 75
+ retry 1 rc 0 dur 0.007909 err None
+ retry 2 rc 0 dur 0.003844 err None
+ probe 1 target_converged 13b3b367 bind | 
+ probe 2 target_converged 13b3b367 bind | 
+stability 31 ok 31 2026-09-29T14:40:57.818740Z 2026-09-29T14:41:27.820256Z
+ reboot {"ordinal": 1, "point": null, "boot_id_before": "4109eeb3-3a3e-4db9-9d27-4ab7b19df89a", "boot_id_after": "8fa954b0-14e2-47f7-ae16-b7cc68726e4a", "product_uuid": "823ecf93-e470-5cfb-8dd1-fe7801f3393d"}
+reboot_after_recovery run True status passed failures [] unknown [] window 31 ok 31 dns_only False
+  authority_after_boot {"at": "2026-09-29T14:41:47.268427Z", "authority": {"answer_counts": {"tcp": 1, "udp": 1}, "answered": true, "engines": {"tcp": ["bind"], "udp": ["bind"]}}, "dns": {"answered": true, "at": "2026-09-29T14:41:47.310987Z", "result": {"tcp": {"additional": 1, "answers": 1, "authority": 1, "bytes": 84, "flags": 33792, "questions": 1, "transport": "tcp"}, "udp": {"additional": 1, "answers": 1, "authorit
+ status-read after-recovery: available=True rc=0 mutated=False :: No DNS switch journal was observed for request abd7cb29722819ec4117f95c8deddce5. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+ status-read before-recovery: available=True rc=0 mutated=False :: DNS switch request abd7cb29722819ec4117f95c8deddce5: accepted-active (journal phase target-verified). / No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id abd7cb29722819ec4117f95c8deddce5. This status check does not start recovery

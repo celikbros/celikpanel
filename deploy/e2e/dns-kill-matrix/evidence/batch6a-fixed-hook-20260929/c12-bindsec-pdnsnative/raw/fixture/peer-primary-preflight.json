@@ -1,0 +1,9 @@
+{
+  "authoritative_tcp": true,
+  "authoritative_udp": true,
+  "catalog": "catalog-c000020b.celikpanel.invalid",
+  "catalog_soa_serial": 1790696284,
+  "observed_from": "guest-under-test",
+  "peer_ip": "192.0.2.11",
+  "schema": "celikpanel/dns-kill-peer-primary-preflight/v1"
+}

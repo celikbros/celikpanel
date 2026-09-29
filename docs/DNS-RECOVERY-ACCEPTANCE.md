@@ -165,6 +165,29 @@ Native answers: PowerDNS does write a non-empty `options` value on consumed
 member rows; a BIND secondary does load the member from a PowerDNS primary
 serving a BIND-format catalog.
 
+**2026-09-29, batch 6a, fixed boundary hook** ([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch6a-fixed-hook-20260929/README.md),
+source `94cd124b`; twelve cells, each run once, no harness workaround, no
+re-run): **all twelve passed.** No native mutation fell between the kill
+marker and the SIGKILL in any cell.
+
+| Row | Cell | Result |
+|---|---|---|
+| 1 | fresh BIND `target-verified` after-write (Debian) and before-write (Arch), reboot after recovery | passed; the cell that lost DNS in batch 4 kept its pointer and served after the reboot |
+| 4 | fresh PowerDNS `target-staged` and `target-started` after-write, reboot after recovery | passed |
+| 7 | V2 PowerDNS → BIND `target-staged` and `target-started`, Agent running, reboot before the owner command (post-stop cell) and after recovery, then the same switch again as a new request | passed; BIND ended guard-masked in both, staged generation removed, re-run exit 0, the retried switch completed forward with the mask lifted |
+| 11 | running-BIND adoption, owner command with the Agent running, reboot before the command and after recovery | passed |
+| 13 | PowerDNS adoption at `rolled-back` and at `intent`, restarted Agent finishes by itself | passed |
+| 12 | takeover of a stopped unmanaged BIND, reboot after recovery | passed |
+| 3 | fresh BIND secondary against a native BIND primary, and against a native PowerDNS 5.1.4 primary publishing its own PRODUCER catalog; reboot with management disabled | passed both; the Agent logged the catalog format it accepted (BIND, PowerDNS) and the peer verdicts passed |
+
+Not exercised by that batch: the missing-pointer repair (the pointer stayed
+intact), any PowerDNS secondary, reinstall. Observed and not judged: the
+status read before a takeover exits 3 because the reader cannot classify an
+owner-installed, disabled `named.service`; the status read before recovery of
+the adoption `rolled-back` cell names the owner command although the Agent
+then finishes by itself. One run per cell shows the boundary held in these
+runs; it does not prove the race impossible.
+
 Source changes after batches 4 and 5, component tests only, native re-run
 pending: boundary stop, missing-pointer repair and pointer ordering
 (`c04d8a2b`); no inverse without a durable rollback decision, consumed

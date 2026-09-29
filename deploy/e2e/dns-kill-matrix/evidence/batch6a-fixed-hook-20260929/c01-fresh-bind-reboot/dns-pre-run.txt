@@ -1,0 +1,13 @@
+wall=2026-09-29T14:39:36.620343+00:00
+{"qname": "www.s1-kill.test", "transport": "udp", "server": "10.0.2.15", "error": "timed out"}
+{"qname": "www.s1-kill.test", "transport": "tcp", "server": "10.0.2.15", "error": "[Errno 111] Connection refused"}
+{"qname": "www.s1-kill.test", "transport": "udp", "server": "192.0.2.10", "error": "timed out"}
+{"qname": "www.s1-kill.test", "transport": "tcp", "server": "192.0.2.10", "error": "[Errno 111] Connection refused"}
+{"qname": "www.s1-kill.test", "transport": "udp", "server": "127.0.0.1", "error": "timed out"}
+{"qname": "www.s1-kill.test", "transport": "tcp", "server": "127.0.0.1", "error": "[Errno 111] Connection refused"}
+{"qname": "www.owner.test", "transport": "udp", "server": "10.0.2.15", "error": "timed out"}
+{"qname": "www.owner.test", "transport": "tcp", "server": "10.0.2.15", "error": "[Errno 111] Connection refused"}
+{"qname": "www.owner.test", "transport": "udp", "server": "192.0.2.10", "error": "timed out"}
+{"qname": "www.owner.test", "transport": "tcp", "server": "192.0.2.10", "error": "[Errno 111] Connection refused"}
+{"qname": "www.owner.test", "transport": "udp", "server": "127.0.0.1", "error": "timed out"}
+{"qname": "www.owner.test", "transport": "tcp", "server": "127.0.0.1", "error": "[Errno 111] Connection refused"}

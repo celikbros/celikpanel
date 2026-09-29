@@ -1,0 +1,26 @@
+2026-09-29T15:31:05.486816+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T15:31:05.517579+00:00 dns-debian13 agent[1196]: 2026/09/29 15:31:05 Starting CelikPanel Agent...
+2026-09-29T15:31:05.519522+00:00 dns-debian13 agent[1196]: 2026/09/29 15:31:05 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T15:31:05.519743+00:00 dns-debian13 agent[1196]: 2026/09/29 15:31:05 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T15:31:15.530488+00:00 dns-debian13 agent[1196]: 2026/09/29 15:31:15 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T15:31:25.521076+00:00 dns-debian13 agent[1196]: 2026/09/29 15:31:25 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T15:31:35.521199+00:00 dns-debian13 agent[1196]: 2026/09/29 15:31:35 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T15:31:45.521326+00:00 dns-debian13 agent[1196]: 2026/09/29 15:31:45 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T15:31:55.521696+00:00 dns-debian13 agent[1196]: 2026/09/29 15:31:55 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T15:32:05.520857+00:00 dns-debian13 agent[1196]: 2026/09/29 15:32:05 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T15:32:08.568679+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T15:32:08.569440+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T15:32:08.569666+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T15:33:34.344958+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T15:33:34.366907+00:00 dns-debian13 agent[8155]: 2026/09/29 15:33:34 Starting CelikPanel Agent...
+2026-09-29T15:33:35.043036+00:00 dns-debian13 agent[8155]: 2026/09/29 15:33:35 DNS engine change recovery 2228e0de67c2e95ae9675187f214d1b5: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format
+2026-09-29T15:33:36.919924+00:00 dns-debian13 agent[8155]: 2026/09/29 15:33:36 DNS engine change completion 2228e0de67c2e95ae9675187f214d1b5: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format
+2026-09-29T15:33:37.078934+00:00 dns-debian13 agent[8155]: 2026/09/29 15:33:37 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T15:33:37.079060+00:00 dns-debian13 agent[8155]: 2026/09/29 15:33:37 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T15:33:47.079671+00:00 dns-debian13 agent[8155]: 2026/09/29 15:33:47 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T15:33:57.079945+00:00 dns-debian13 agent[8155]: 2026/09/29 15:33:57 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T15:34:07.080242+00:00 dns-debian13 agent[8155]: 2026/09/29 15:34:07 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T15:34:08.221277+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T15:34:08.223571+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T15:34:08.223955+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T15:34:08.224260+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 1.978s CPU time, 18M memory peak.

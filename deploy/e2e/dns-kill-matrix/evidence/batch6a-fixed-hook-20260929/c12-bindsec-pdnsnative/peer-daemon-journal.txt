@@ -1,0 +1,117 @@
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 75cf6d92e03544ca83b05038054514c4 Tue 2026-09-29 15:35:42 UTC Tue 2026-09-29 15:40:36 UTC
+== journalctl -u pdns.service
+2026-09-29T15:38:04.801351+00:00 dns-arch systemd[1]: Starting PowerDNS Authoritative Server...
+2026-09-29T15:38:04.850155+00:00 dns-arch pdns_server[4957]: Loading '/usr/lib/powerdns/libgsqlite3backend.so'
+2026-09-29T15:38:04.850575+00:00 dns-arch pdns_server[4957]: [gsqlite3] This is the gsqlite3 backend version 5.1.4 reporting
+2026-09-29T15:38:04.850575+00:00 dns-arch pdns_server[4957]: This is a standalone pdns
+2026-09-29T15:38:04.852122+00:00 dns-arch pdns_server[4957]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T15:38:04.852186+00:00 dns-arch pdns_server[4957]: UDP server bound to 127.0.0.1:53
+2026-09-29T15:38:04.852202+00:00 dns-arch pdns_server[4957]: UDP server bound to 192.0.2.11:53
+2026-09-29T15:38:04.852214+00:00 dns-arch pdns_server[4957]: TCP server bound to 127.0.0.1:53
+2026-09-29T15:38:04.852224+00:00 dns-arch pdns_server[4957]: TCP server bound to 192.0.2.11:53
+2026-09-29T15:38:04.852370+00:00 dns-arch pdns_server[4957]: PowerDNS Authoritative Server 5.1.4 (C) PowerDNS.COM BV
+2026-09-29T15:38:04.852370+00:00 dns-arch pdns_server[4957]: Using 64-bits mode. Built using gcc 16.2.1 20260810.
+2026-09-29T15:38:04.852370+00:00 dns-arch pdns_server[4957]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T15:38:04.933074+00:00 dns-arch pdns_server[4957]: Polled security status of version 5.1.4 at startup, no known issues reported: OK
+2026-09-29T15:38:04.954079+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:04.955271+00:00 dns-arch pdns_server[4957]: Creating backend connection for TCP
+2026-09-29T15:38:04.955351+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:04.956509+00:00 dns-arch pdns_server[4957]: Primary/secondary communicator launching
+2026-09-29T15:38:04.956509+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:04.956509+00:00 dns-arch pdns_server[4957]: new CATALOG-HASH 'k0BnZ4Pbx03xy2PWSsia0AOpKJ7tYjouxTOAWeZ2BLY=' for zone 'catalog-c000020b.celikpanel.invalid'
+2026-09-29T15:38:04.955563+00:00 dns-arch systemd[1]: Started PowerDNS Authoritative Server.
+2026-09-29T15:38:04.956820+00:00 dns-arch pdns_server[4957]: About to create 3 backend threads for UDP
+2026-09-29T15:38:04.957182+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:04.971606+00:00 dns-arch pdns_server[4957]: 2 domains for which we are primary or producer needs notifications
+2026-09-29T15:38:05.007464+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:05.057907+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:05.107405+00:00 dns-arch pdns_server[4957]: Done launching threads, ready to distribute questions
+2026-09-29T15:38:05.122803+00:00 dns-arch pdns_server[4957]: Queued notification of domain 's1-kill.test' to 192.0.2.10:53
+2026-09-29T15:38:05.122803+00:00 dns-arch pdns_server[4957]: Queued also-notification of domain 's1-kill.test' to 192.0.2.10:53
+2026-09-29T15:38:05.127289+00:00 dns-arch pdns_server[4957]: Unable to queue notification of domain 'catalog-c000020b.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-29T15:38:05.127331+00:00 dns-arch pdns_server[4957]: Queued also-notification of domain 'catalog-c000020b.celikpanel.invalid' to 192.0.2.10:53
+2026-09-29T15:38:05.543681+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36036', transfer initiated
+2026-09-29T15:38:05.543681+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36036', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:38:05.544111+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:05.544413+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36036', AXFR finished
+2026-09-29T15:38:05.544801+00:00 dns-arch pdns_server[4957]: TCP Connection Thread for client 127.0.0.1:36036 died because of network error: Reading data: Connection reset by peer
+2026-09-29T15:38:05.544921+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36048', transfer initiated
+2026-09-29T15:38:05.544921+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36048', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:38:05.545350+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:05.545928+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36048', AXFR finished
+2026-09-29T15:38:38.557509+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:45962', transfer initiated
+2026-09-29T15:38:38.557509+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:45962', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:38:38.558282+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:38.558982+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:45962', AXFR finished
+2026-09-29T15:38:38.559023+00:00 dns-arch pdns_server[4957]: TCP Connection Thread for client 127.0.0.1:45962 died because of network error: Reading data: Connection reset by peer
+2026-09-29T15:38:38.559719+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:45978', transfer initiated
+2026-09-29T15:38:38.559719+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:45978', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:38:38.559822+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:38.560462+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:45978', AXFR finished
+2026-09-29T15:38:39.142317+00:00 dns-arch pdns_server[4957]: Notification for s1-kill.test to 192.0.2.10:53 failed after retries
+2026-09-29T15:38:39.142317+00:00 dns-arch pdns_server[4957]: Notification for catalog-c000020b.celikpanel.invalid to 192.0.2.10:53 failed after retries
+2026-09-29T15:38:39.829317+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:53240', transfer initiated
+2026-09-29T15:38:39.829317+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:53240', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:38:39.829779+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:39.830178+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:53240', AXFR finished
+2026-09-29T15:38:39.877384+00:00 dns-arch pdns_server[4957]: TCP Connection Thread for client 192.0.2.10:53240 died because of network error: Reading data: Connection reset by peer
+2026-09-29T15:38:39.921379+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:53248', transfer initiated
+2026-09-29T15:38:39.921379+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:53248', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:38:39.922118+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:39.922591+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:53248', AXFR finished
+2026-09-29T15:38:59.381948+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39240', transfer initiated
+2026-09-29T15:38:59.381948+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39240', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:38:59.383026+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:59.385212+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39240', AXFR finished
+2026-09-29T15:38:59.477434+00:00 dns-arch pdns_server[4957]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39247', transfer initiated
+2026-09-29T15:38:59.477434+00:00 dns-arch pdns_server[4957]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39247', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:38:59.478013+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:38:59.478450+00:00 dns-arch pdns_server[4957]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39247', AXFR finished
+2026-09-29T15:39:03.277588+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39254', transfer initiated
+2026-09-29T15:39:03.277588+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39254', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:39:03.278247+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:39:03.278446+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39254', AXFR finished
+2026-09-29T15:39:03.321537+00:00 dns-arch pdns_server[4957]: TCP Connection Thread for client 192.0.2.10:39254 died because of network error: Reading data: Connection reset by peer
+2026-09-29T15:39:03.369527+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39256', transfer initiated
+2026-09-29T15:39:03.369527+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39256', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:39:03.369974+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:39:03.370316+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39256', AXFR finished
+2026-09-29T15:39:04.306095+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39280', transfer initiated
+2026-09-29T15:39:04.306095+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39280', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:39:04.307116+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:39:04.307116+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39280', AXFR finished
+2026-09-29T15:39:04.350004+00:00 dns-arch pdns_server[4957]: TCP Connection Thread for client 192.0.2.10:39280 died because of network error: Reading data: Connection reset by peer
+2026-09-29T15:39:04.393834+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39284', transfer initiated
+2026-09-29T15:39:04.393834+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39284', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:39:04.394344+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:39:04.395773+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39284', AXFR finished
+2026-09-29T15:39:04.480078+00:00 dns-arch pdns_server[4957]: TCP Connection Thread for client 192.0.2.10:39247 died because of network error: Timeout reading data
+2026-09-29T15:39:05.149759+00:00 dns-arch pdns_server[4957]: no primary or producer domains need notifications
+2026-09-29T15:39:05.233906+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39306', transfer initiated
+2026-09-29T15:39:05.233906+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39306', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:39:05.234412+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:39:05.234845+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39306', AXFR finished
+2026-09-29T15:39:05.277831+00:00 dns-arch pdns_server[4957]: TCP Connection Thread for client 192.0.2.10:39306 died because of network error: Reading data: Connection reset by peer
+2026-09-29T15:39:05.321668+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39312', transfer initiated
+2026-09-29T15:39:05.321668+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39312', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:39:05.322274+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:39:05.322274+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39312', AXFR finished
+2026-09-29T15:39:51.208489+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:33130', transfer initiated
+2026-09-29T15:39:51.208489+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:33130', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:39:51.209946+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:39:51.209946+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:33130', AXFR finished
+2026-09-29T15:39:51.296456+00:00 dns-arch pdns_server[4957]: AXFR-out zone 's1-kill.test', client '192.0.2.10:33131', transfer initiated
+2026-09-29T15:39:51.296456+00:00 dns-arch pdns_server[4957]: AXFR-out zone 's1-kill.test', client '192.0.2.10:33131', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:39:51.296892+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:39:51.297257+00:00 dns-arch pdns_server[4957]: AXFR-out zone 's1-kill.test', client '192.0.2.10:33131', AXFR finished
+2026-09-29T15:40:05.203515+00:00 dns-arch pdns_server[4957]: no primary or producer domains need notifications
+2026-09-29T15:40:27.524621+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:42648', transfer initiated
+2026-09-29T15:40:27.524621+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:42648', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:40:27.525011+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:40:27.525395+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:42648', AXFR finished
+2026-09-29T15:40:27.525891+00:00 dns-arch pdns_server[4957]: TCP Connection Thread for client 127.0.0.1:42648 died because of network error: Reading data: Connection reset by peer
+2026-09-29T15:40:27.526004+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:42654', transfer initiated
+2026-09-29T15:40:27.526004+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:42654', allowed: client IP is in allow-axfr-ips
+2026-09-29T15:40:27.526246+00:00 dns-arch pdns_server[4957]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T15:40:27.526471+00:00 dns-arch pdns_server[4957]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:42654', AXFR finished

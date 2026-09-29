@@ -1,0 +1,16 @@
+request 18400bad79662787153c9583ba87bc0e controller 2026-09-29T15:18:41.423976Z -> 2026-09-29T15:20:14.152257Z
+status passed safety passed class target_converged fp 9b95ed86
+kill pid 2180 state T at 2026-09-29T15:18:45.856216Z exit 137 reaped True
+marker 2026-09-29T15:18:45.844658423Z journal rolled-back 2af7b7b6
+trigger rc 75
+ retry 1 rc 0 dur 5.150733 err None
+ retry 2 rc 0 dur 0.008903 err None
+ probe 1 target_converged 9b95ed86 pdns | 
+ probe 2 target_converged 9b95ed86 pdns | 
+stability 31 ok 31 2026-09-29T15:18:54.142628Z 2026-09-29T15:19:24.142797Z
+ reboot {"ordinal": 1, "point": null, "boot_id_before": "60e1b12c-ed60-46a8-b062-e88168d0ba22", "boot_id_after": "b6a39942-1df1-4fc3-b0e3-3878c5e6e90f", "product_uuid": "c5b40a86-d845-5ab7-8326-ec3ed8a1e5ad"}
+reboot_after_recovery run True status passed failures [] unknown [] window 31 ok 31 dns_only False
+  authority_after_boot {"at": "2026-09-29T15:19:43.984669Z", "authority": {"answer_counts": {"tcp": 1, "udp": 1}, "answered": true, "engines": {"tcp": ["pdns"], "udp": ["pdns"]}}, "dns": {"answered": true, "at": "2026-09-29T15:19:44.073906Z", "result": {"tcp": {"additional": 0, "answers": 1, "authority": 0, "bytes": 50, "flags": 33792, "questions": 1, "transport": "tcp"}, "udp": {"additional": 0, "answers": 1, "authorit
+ status-read after-recovery: available=True rc=0 mutated=False :: No DNS switch journal was observed for request 18400bad79662787153c9583ba87bc0e. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+ status-read before-recovery: available=True rc=0 mutated=False :: DNS switch request 18400bad79662787153c9583ba87bc0e: accepted-active (journal phase rolled-back). / This PowerDNS adoption retains a rollback decision. The server owner can continue that exact inverse with: /usr/libexec/celikpanel/recovery recover-dns-pdns-adoption --request-id 18400bad79662787153c9583ba87bc0e. The command rechecks locks, worker exclusion, the owner's PowerDNS configuration and da
+agent_startup_rollback {"status": null, "failures": [], "unknown": []} job {"status": "failed", "phase": "interrupted", "error_code": "dns_engine_switch_rolled_back_after_restart"}

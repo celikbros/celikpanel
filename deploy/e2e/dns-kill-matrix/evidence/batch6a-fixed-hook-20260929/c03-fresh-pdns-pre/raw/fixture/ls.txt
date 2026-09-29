@@ -1,0 +1,36 @@
+/var/lib/celikpanel-dns-kill-matrix:
+total 1412
+drwx------  4 root root    4096 2026-09-29 14:50:52.146763167 +0000 .
+drwxr-xr-x 29 root root    4096 2026-09-29 14:52:02.827819987 +0000 ..
+-rw-------  1 root root    3272 2026-09-29 14:50:51.982844558 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 14:50:52.134769975 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 14:50:44.506844558 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 14:50:35.206844558 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 14:51:55.493893886 +0000 measured
+drwx------  3 root root    4096 2026-09-29 14:50:51.954844558 +0000 results
+-rw-------  1 root root    1322 2026-09-29 14:50:51.774844558 +0000 scenario.json
+-rw-------  1 root root    1446 2026-09-29 14:50:51.878844558 +0000 source-proof.json
+
+/var/lib/celikpanel-dns-kill-matrix/measured:
+total 12
+drwx------ 2 root root       4096 2026-09-29 14:51:55.493893886 +0000 .
+drwx------ 4 root root       4096 2026-09-29 14:50:52.146763167 +0000 ..
+-rw------- 1 root celikpanel  406 2026-09-29 14:51:55.489893790 +0000 trigger-identity.json
+
+/var/lib/celikpanel-dns-kill-matrix/results:
+total 12
+drwx------ 3 root root 4096 2026-09-29 14:50:51.954844558 +0000 .
+drwx------ 4 root root 4096 2026-09-29 14:50:52.146763167 +0000 ..
+drwx------ 2 root root 4096 2026-09-29 14:53:30.228405352 +0000 pdns-switch__target-staged__after-write__standalone__peer-reachable
+
+/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-staged__after-write__standalone__peer-reachable:
+total 260
+drwx------ 2 root root         4096 2026-09-29 14:53:30.228405352 +0000 .
+drwx------ 3 root root         4096 2026-09-29 14:50:51.954844558 +0000 ..
+-rw------- 1 root celikpanel   1248 2026-09-29 14:52:06.228647065 +0000 boundary-marker.json
+-rw------- 1 root celikpanel   1884 2026-09-29 14:52:06.240649830 +0000 kill-proof.json
+-rw------- 1 root celikpanel  67697 2026-09-29 14:52:42.702165981 +0000 reboot-checkpoint-1.json
+-rw------- 1 root celikpanel    581 2026-09-29 14:52:59.588000000 +0000 reboot-resumed-1.json
+-rw------- 1 root celikpanel 104170 2026-09-29 14:53:30.220405352 +0000 result.json
+-rw------- 1 root celikpanel  22693 2026-09-29 14:53:30.216405352 +0000 transcript-after-reboot-1.jsonl
+-rw------- 1 root celikpanel  43682 2026-09-29 14:52:42.694165209 +0000 transcript.jsonl

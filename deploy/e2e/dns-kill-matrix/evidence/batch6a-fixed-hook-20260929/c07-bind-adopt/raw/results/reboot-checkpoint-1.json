@@ -1,0 +1,1095 @@
+{
+  "boot": {
+    "boot_id": "53efc75d-f29a-42ee-97e7-570985fd0e73",
+    "fixture_marker": {
+      "cell_id": "bind__rolling-back__after-write__standalone__peer-reachable",
+      "node": "debian13",
+      "schema": "celikpanel/dns-kill-fixture-plan/v1"
+    },
+    "product_uuid": "0aad1005-2e54-5e63-bb6b-4be2ffcdaf52"
+  },
+  "cell_id": "bind__rolling-back__after-write__standalone__peer-reachable",
+  "failures": {
+    "diagnostic": [],
+    "safety": [],
+    "verification": []
+  },
+  "kill_proven": true,
+  "nonce": "dc713b5c3e425b19c07a8d9b1dc8d67f4c7d6c40abe65f90133a5c79edb55f9c",
+  "ordinal": 1,
+  "proof": {
+    "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__rolling-back__after-write__standalone__peer-reachable/kill-proof.json",
+    "sha256": "7398a2c253b4dfaf57bab3bd00add5dbc0c3d507c0a4c984276e2a602e00b5a1"
+  },
+  "recorded_at": "2026-09-29T15:12:48.467619Z",
+  "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+  "result": {
+    "boundary": {
+      "edge": "after-write",
+      "phase": "rolling-back",
+      "point": "after_write"
+    },
+    "boundary_marker": {
+      "cell_id": "bind__rolling-back__after-write__standalone__peer-reachable",
+      "driver": "bind",
+      "marker": "/var/lib/celikpanel-dns-kill-matrix/results/bind__rolling-back__after-write__standalone__peer-reachable/boundary-marker.json",
+      "nonce": "dc713b5c3e425b19c07a8d9b1dc8d67f4c7d6c40abe65f90133a5c79edb55f9c",
+      "observed_driver": "bind",
+      "observed_journal": {
+        "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+        "mode": "switch",
+        "mutation_owner_id": "5c95b5f9a011e3da58a54873fc3ef9d4",
+        "mutation_request_id": "8b14693eaf9461f13a415d5e637b6d91",
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+        "phase": "rolling-back",
+        "schema": "celikpanel-dns-engine-switch-journal/v2",
+        "source_epoch": 0,
+        "source_revision": 0,
+        "target_engine": "bind",
+        "target_epoch": 1,
+        "topology": "standalone"
+      },
+      "phase": "rolling-back",
+      "pid": 2408,
+      "point": "after_write",
+      "process_start_ticks": "9137",
+      "ready_fd": 5,
+      "recorded_at": "2026-09-29T15:12:48.117740177Z",
+      "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+      "rollback_precursor": {
+        "action": "returned-injected-error",
+        "driver": "bind",
+        "observed_driver": "bind",
+        "observed_journal": {
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+          "mode": "switch",
+          "mutation_owner_id": "5c95b5f9a011e3da58a54873fc3ef9d4",
+          "mutation_request_id": "8b14693eaf9461f13a415d5e637b6d91",
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+          "phase": "target-started",
+          "schema": "celikpanel-dns-engine-switch-journal/v2",
+          "source_epoch": 0,
+          "source_revision": 0,
+          "target_engine": "bind",
+          "target_epoch": 1,
+          "topology": "standalone"
+        },
+        "phase": "target-started",
+        "point": "after_write",
+        "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+        "schema": "celikpanel-dns-kill-matrix-rollback-precursor/v1"
+      },
+      "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+    },
+    "cell_id": "bind__rolling-back__after-write__standalone__peer-reachable",
+    "command_environment": {
+      "fault_selector_names": [
+        "CELIKPANEL_DNS_KILL_MATRIX_CELL_ID",
+        "CELIKPANEL_DNS_KILL_MATRIX_DRIVER",
+        "CELIKPANEL_DNS_KILL_MATRIX_POINT",
+        "CELIKPANEL_DNS_KILL_MATRIX_PHASE",
+        "CELIKPANEL_DNS_KILL_MATRIX_REQUEST_ID",
+        "CELIKPANEL_DNS_KILL_MATRIX_NONCE",
+        "CELIKPANEL_DNS_KILL_MATRIX_MARKER",
+        "CELIKPANEL_DNS_KILL_MATRIX_READY_FD"
+      ],
+      "inherited_caller_names": [
+        "LANG",
+        "PATH"
+      ],
+      "production": {
+        "CELIKPANEL_AGENT_SOCKET": "/run/celikpanel/agent.sock",
+        "CELIKPANEL_AGENT_STATE_DIR": "/var/lib/celikpanel-agent-private",
+        "CELIKPANEL_AGENT_TOKEN_FILE": "/etc/celikpanel/agent.token",
+        "CELIKPANEL_DKIM_DIR": "/etc/celikpanel/dkim",
+        "CELIKPANEL_MUTATION_LOCK": "/run/celikpanel/service-mutation.lock",
+        "CELIKPANEL_RUNTIMES_DIR": "/opt/celikpanel/runtimes",
+        "LANG": "C.UTF-8",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    },
+    "commands": {
+      "agent_restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-agent.service"
+        ],
+        "device": 65025,
+        "inode": 4848,
+        "mode": "0755",
+        "path": "/usr/bin/systemctl",
+        "resolved_path": "/usr/bin/systemctl",
+        "sha256": "848c70d7e2c2f43f4f93287897ac8946e8eda45e7daa5f2975d9728071856b1a",
+        "uid": 0
+      },
+      "journalctl": {
+        "argv": [
+          "/usr/bin/journalctl"
+        ],
+        "device": 65025,
+        "inode": 4843,
+        "mode": "0755",
+        "path": "/usr/bin/journalctl",
+        "resolved_path": "/usr/bin/journalctl",
+        "sha256": "6ad392fc8f1a10ac892fdb328e67761944c32707db5e97602cb84eed502e47f1",
+        "uid": 0
+      },
+      "owner_recovery": {
+        "argv": [
+          "/usr/libexec/celikpanel/recovery"
+        ],
+        "device": 65025,
+        "inode": 131476,
+        "mode": "0755",
+        "path": "/usr/libexec/celikpanel/recovery",
+        "resolved_path": "/usr/libexec/celikpanel/recovery",
+        "sha256": "c494c3025c051ceea9b382e26de7da29a66c5ba6a3332de86294b57eb06cb324",
+        "uid": 0
+      },
+      "panel_restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-panel.service"
+        ],
+        "device": 65025,
+        "inode": 4848,
+        "mode": "0755",
+        "path": "/usr/bin/systemctl",
+        "resolved_path": "/usr/bin/systemctl",
+        "sha256": "848c70d7e2c2f43f4f93287897ac8946e8eda45e7daa5f2975d9728071856b1a",
+        "uid": 0
+      },
+      "recovery": {
+        "argv": [
+          "/opt/celikpanel/bin/dns-kill-trigger",
+          "rpc-retry",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--timeout",
+          "45m"
+        ],
+        "device": 65025,
+        "inode": 131312,
+        "mode": "0755",
+        "path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "resolved_path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "sha256": "5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693",
+        "uid": 0
+      },
+      "recovery_probe": {
+        "argv": [
+          "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+          "--cell-id",
+          "bind__rolling-back__after-write__standalone__peer-reachable",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--ledger",
+          "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "--state",
+          "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "--journal",
+          "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        ],
+        "device": 65025,
+        "inode": 131313,
+        "mode": "0755",
+        "path": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "resolved_path": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "sha256": "366663ecc1ebe6926de3371740805e69753f5af0b5afc5eeda295fba4ec14066",
+        "uid": 0
+      },
+      "scenario_trigger": {
+        "argv": [
+          "/opt/celikpanel/bin/dns-kill-trigger",
+          "rpc-switch",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--timeout",
+          "45m"
+        ],
+        "device": 65025,
+        "inode": 131312,
+        "mode": "0755",
+        "path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "resolved_path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "sha256": "5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693",
+        "uid": 0
+      },
+      "socket_identity_contract": {
+        "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "operation_timeout": "45m",
+        "scenario_path": "/var/lib/celikpanel-dns-kill-matrix/scenario.json"
+      },
+      "socket_statistics": {
+        "argv": [
+          "/usr/bin/ss"
+        ],
+        "device": 65025,
+        "inode": 12850,
+        "mode": "0755",
+        "path": "/usr/bin/ss",
+        "resolved_path": "/usr/bin/ss",
+        "sha256": "772cf51fcd75313f9d1f16dbe45ac456904bb79a75367f79f0fedfec04e1e5fc",
+        "uid": 0
+      },
+      "tagged_agent": {
+        "argv": [
+          "/opt/celikpanel/bin/agent.kill"
+        ],
+        "device": 65025,
+        "inode": 131310,
+        "mode": "0755",
+        "path": "/opt/celikpanel/bin/agent.kill",
+        "resolved_path": "/opt/celikpanel/bin/agent.kill",
+        "sha256": "43b000fce1e8e65d602f54562a5c10566b4b24df93bcb96ab5a60cb7b955e793",
+        "uid": 0
+      }
+    },
+    "controller_identity": {
+      "effective_gid": 989,
+      "effective_group": "celikpanel",
+      "effective_uid": 0,
+      "expected_umask": "0027"
+    },
+    "diagnostic_failures": [],
+    "driver": "bind",
+    "failures": [],
+    "finished_at": "2026-09-29T15:12:48.463211Z",
+    "initial_journal": {
+      "exists": false
+    },
+    "journal_at_boundary": {
+      "device": 65025,
+      "exists": true,
+      "expected_phase": "rolling-back",
+      "inode": 131592,
+      "mode": "0600",
+      "observed_phase": "rolling-back",
+      "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+      "sha256": "d71d8395457a71bfcf7dcc09a86a571244ade7e42b3ed768acc77cc7025c35f7"
+    },
+    "kill": {
+      "delivered_at": "2026-09-29T15:12:48.215622Z",
+      "exit_code": 137,
+      "pid": 2408,
+      "proc_entry_absent_after_reap": true,
+      "process_start_ticks": "9137",
+      "raw_returncode": -9,
+      "signal": "SIGKILL",
+      "signal_number": 9,
+      "state_before_signal": "T"
+    },
+    "kill_proven": true,
+    "nonce": "dc713b5c3e425b19c07a8d9b1dc8d67f4c7d6c40abe65f90133a5c79edb55f9c",
+    "owner_inverse_after_restart": {
+      "expectation": {
+        "bind_active_after_restart": false,
+        "native_checks_after_owner_command": false,
+        "pdns_inactive_after_restart": false,
+        "pdns_pid_continuity_from_cut": true,
+        "source_serving_after_restart": true
+      },
+      "mode": "owner-inverse-after-restart",
+      "owner_command": [
+        "/usr/libexec/celikpanel/recovery",
+        "recover-dns-bind-adoption",
+        "--request-id",
+        "8b14693eaf9461f13a415d5e637b6d91"
+      ],
+      "pre_cut_named_main_pid": 2042,
+      "profile": "bind-adoption-v2",
+      "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+      "status_command": [
+        "/usr/libexec/celikpanel/recovery",
+        "dns-switch-status",
+        "--quiesced",
+        "--request-id",
+        "8b14693eaf9461f13a415d5e637b6d91"
+      ],
+      "step2_journal_phase": "rolling-back",
+      "steps": {
+        "agent_restarted": {
+          "agent_journal_refusal": {
+            "attempts": 1,
+            "command": {
+              "argv": [
+                "/usr/bin/journalctl",
+                "--no-pager",
+                "--quiet",
+                "--output=cat",
+                "--unit=celikpanel-agent.service",
+                "--since=@1790694767"
+              ],
+              "duration_seconds": 0.005232,
+              "output_bytes": 895,
+              "output_sha256": "8ecb9a213f13b11548a42294972ec91d3ade9e08356e4603f818fa0309dd6d19",
+              "output_truncated": false,
+              "returncode": 0
+            },
+            "matching_lines": [
+              "2026/09/29 15:12:48 Interrupted DNS switch native recovery is unknown; retain exact journal and release only its ledger lease (request 8b14693eaf9461f13a415d5e637b6d91): running BIND adoption needs independent no-stop recovery; the owner recovery command for this rollback is /usr/libexec/celikpanel/recovery recover-dns-bind-adoption --request-id 8b14693eaf9461f13a415d5e637b6d91, which the server owner runs when recovery dns-switch-status --quiesced --request-id 8b14693eaf9461f13a415d5e637b6d91 names it; preserve the journal, ledger and native DNS until that exact request is reconciled"
+            ],
+            "needle": "recover-dns-bind-adoption --request-id 8b14693eaf9461f13a415d5e637b6d91",
+            "observed": true
+          },
+          "agent_process": {
+            "gids": [
+              989,
+              989,
+              989,
+              989
+            ],
+            "pid": 4371,
+            "uids": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "umask": "0027"
+          },
+          "agent_ready": {
+            "detail": {
+              "device": 25,
+              "inode": 2667
+            },
+            "ok": true
+          },
+          "evidence_before_reboot": {
+            "install_ownership_bind": {
+              "device": 65025,
+              "exists": true,
+              "inode": 131596,
+              "mode": "0600",
+              "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json",
+              "sha256": "8b8c78c24e7ddb2764cda5d6611711f18974788a49843ac2cb089f8fe3a3af28",
+              "size": 388
+            },
+            "install_ownership_pdns": {
+              "exists": false,
+              "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json"
+            },
+            "journal": {
+              "device": 65025,
+              "exists": true,
+              "inode": 131592,
+              "mode": "0600",
+              "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+              "sha256": "d71d8395457a71bfcf7dcc09a86a571244ade7e42b3ed768acc77cc7025c35f7",
+              "size": 5202
+            },
+            "ledger": {
+              "device": 65025,
+              "exists": true,
+              "inode": 131612,
+              "mode": "0600",
+              "path": "/var/lib/celikpanel-agent-private/service-mutations.json",
+              "sha256": "0c7c0a5c399990da0971fe4639c9bdf03a1c76f40e5e00c8894296b220c048e0",
+              "size": 1045
+            },
+            "ownership_bind": {
+              "exists": false,
+              "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json"
+            },
+            "ownership_pdns": {
+              "exists": false,
+              "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json"
+            },
+            "state": {
+              "exists": false,
+              "path": "/var/lib/celikpanel-agent-private/dns-engine-state.json"
+            }
+          },
+          "journal": {
+            "device": 65025,
+            "exists": true,
+            "expected_phase": "rolling-back",
+            "inode": 131592,
+            "mode": "0600",
+            "observed_phase": "rolling-back",
+            "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+            "sha256": "d71d8395457a71bfcf7dcc09a86a571244ade7e42b3ed768acc77cc7025c35f7"
+          },
+          "ledger_after_release": {
+            "device": 65025,
+            "exists": true,
+            "inode": 131612,
+            "mode": "0600",
+            "path": "/var/lib/celikpanel-agent-private/service-mutations.json",
+            "sha256": "0c7c0a5c399990da0971fe4639c9bdf03a1c76f40e5e00c8894296b220c048e0",
+            "size": 1045
+          },
+          "pre_owner_probe": {
+            "active_dns_engine": "bind",
+            "argv": [
+              "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+              "--cell-id",
+              "bind__rolling-back__after-write__standalone__peer-reachable",
+              "--scenario",
+              "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+              "--identity-receipt",
+              "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+              "--ledger",
+              "/var/lib/celikpanel-agent-private/service-mutations.json",
+              "--state",
+              "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+              "--journal",
+              "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+            ],
+            "converged": false,
+            "detail": "DNS engine switch journal remains after recovery",
+            "duration_seconds": 0.065867,
+            "fingerprint": "3722b06ef921a7c320b90b09a21b707d1b740000e5e2f695f6fea45f7d9dc543",
+            "ordinal": 0,
+            "output_bytes": 272,
+            "output_sha256": "15d860bb0640ca745d2f56c769d259dc1da798cbc9f5a5c1e56013c820903452",
+            "output_truncated": false,
+            "recovery_outcome": "indeterminate",
+            "returncode": 0,
+            "valid": true
+          },
+          "release": {
+            "job": {
+              "attempt": 1,
+              "deadline_at": "2026-09-29T15:57:41.616108909Z",
+              "error_code": "dns_native_recovery_unknown_after_restart",
+              "error_message": "The interrupted DNS switch could not be verified after the Agent restarted. Its exact journal remains for DNS recovery, and new DNS changes are blocked. The server administrator should inspect the native DNS service and run recovery dns-switch-status --quiesced; after resolving the reported cause, restart the Agent to retry this same operation. Unrelated host changes can continue.",
+              "finished_at": "2026-09-29T15:12:48.287578821Z",
+              "kind": "dns_engine_switch",
+              "lease_expires_at": "0001-01-01T00:00:00Z",
+              "owner_id": "5c95b5f9a011e3da58a54873fc3ef9d4",
+              "package_name": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+              "phase": "interrupted",
+              "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+              "started_at": "2026-09-29T15:12:41.616108909Z",
+              "status": "failed",
+              "target": "bind",
+              "updated_at": "2026-09-29T15:12:48.287578821Z"
+            },
+            "ledger": {
+              "active_request_id": "",
+              "sha256": "0c7c0a5c399990da0971fe4639c9bdf03a1c76f40e5e00c8894296b220c048e0"
+            },
+            "reads": 1,
+            "released": true
+          },
+          "restart_epoch": 1790694767,
+          "source": {
+            "at": "2026-09-29T15:12:48.346281Z",
+            "dns": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 82,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 82,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "dns_answered_at": "2026-09-29T15:12:48.396639Z",
+            "errors": [],
+            "named_main_pid": 2042,
+            "named_main_pid_changed": false,
+            "named_main_pid_expected": 2042,
+            "ok": true,
+            "port53_listeners": {
+              "tcp": [
+                {
+                  "local": "10.0.2.15:53",
+                  "pids": [
+                    2042
+                  ],
+                  "state": "LISTEN"
+                },
+                {
+                  "local": "10.0.2.15:53",
+                  "pids": [
+                    2042
+                  ],
+                  "state": "LISTEN"
+                }
+              ],
+              "udp": [
+                {
+                  "local": "10.0.2.15:53",
+                  "pids": [
+                    2042
+                  ],
+                  "state": "UNCONN"
+                },
+                {
+                  "local": "10.0.2.15:53",
+                  "pids": [
+                    2042
+                  ],
+                  "state": "UNCONN"
+                }
+              ]
+            },
+            "units": {
+              "bind9.service": "active",
+              "named.service": "active",
+              "pdns.service": "inactive"
+            },
+            "unknown": []
+          }
+        }
+      },
+      "variant": "pre-start"
+    },
+    "owner_inverse_preflight": {
+      "capability": {
+        "argv": [
+          "/usr/libexec/celikpanel/recovery",
+          "check-bind-adoption-inverse-v1"
+        ],
+        "duration_seconds": 0.217642,
+        "output_bytes": 36,
+        "output_sha256": "90b1fd1133d4e9b8371f9a924a97e89b5c0d6312699cf058149b945ff3866138",
+        "output_truncated": false,
+        "returncode": 0
+      },
+      "observed_at_epoch": 1790694761,
+      "source": {
+        "at": "2026-09-29T15:12:41.531026Z",
+        "dns": {
+          "tcp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 82,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 82,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        },
+        "dns_answered_at": "2026-09-29T15:12:41.573910Z",
+        "errors": [],
+        "named_main_pid": 2042,
+        "named_main_pid_changed": false,
+        "named_main_pid_expected": null,
+        "ok": true,
+        "port53_listeners": {
+          "tcp": [
+            {
+              "local": "10.0.2.15:53",
+              "pids": [
+                2042
+              ],
+              "state": "LISTEN"
+            },
+            {
+              "local": "10.0.2.15:53",
+              "pids": [
+                2042
+              ],
+              "state": "LISTEN"
+            }
+          ],
+          "udp": [
+            {
+              "local": "10.0.2.15:53",
+              "pids": [
+                2042
+              ],
+              "state": "UNCONN"
+            },
+            {
+              "local": "10.0.2.15:53",
+              "pids": [
+                2042
+              ],
+              "state": "UNCONN"
+            }
+          ]
+        },
+        "units": {
+          "bind9.service": "active",
+          "named.service": "active",
+          "pdns.service": "inactive"
+        },
+        "unknown": []
+      },
+      "state": {
+        "exists": false
+      }
+    },
+    "owner_inverse_source_at_boundary": {
+      "at": "2026-09-29T15:12:48.128974Z",
+      "dns": {
+        "tcp": {
+          "additional": 1,
+          "answers": 1,
+          "authority": 1,
+          "bytes": 82,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "tcp"
+        },
+        "udp": {
+          "additional": 1,
+          "answers": 1,
+          "authority": 1,
+          "bytes": 82,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "udp"
+        }
+      },
+      "dns_answered_at": "2026-09-29T15:12:48.186263Z",
+      "errors": [],
+      "named_main_pid": 2042,
+      "named_main_pid_changed": false,
+      "named_main_pid_expected": null,
+      "ok": true,
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              2042
+            ],
+            "state": "LISTEN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              2042
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              2042
+            ],
+            "state": "UNCONN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              2042
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "units": {
+        "bind9.service": "active",
+        "named.service": "active",
+        "pdns.service": "inactive"
+      },
+      "unknown": []
+    },
+    "peer_after_kill": {
+      "applicable": false,
+      "reason": "standalone cell"
+    },
+    "peer_before_tagged_agent": {
+      "applicable": false,
+      "reason": "standalone cell"
+    },
+    "peer_reachability": "reachable",
+    "production_paths": {
+      "agent_token": {
+        "device": 65025,
+        "gid": 989,
+        "inode": 131426,
+        "mode": "0640",
+        "path": "/etc/celikpanel/agent.token",
+        "size": 65,
+        "uid": 0
+      },
+      "dkim_directory": {
+        "device": 65025,
+        "inode": 131306,
+        "path": "/etc/celikpanel/dkim"
+      },
+      "runtimes_directory": {
+        "device": 65025,
+        "inode": 131302,
+        "path": "/opt/celikpanel/runtimes"
+      }
+    },
+    "proof": {
+      "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__rolling-back__after-write__standalone__peer-reachable/kill-proof.json",
+      "sha256": "7398a2c253b4dfaf57bab3bd00add5dbc0c3d507c0a4c984276e2a602e00b5a1"
+    },
+    "ready_pipe": {
+      "bytes": 65,
+      "fd": 5,
+      "payload_sha256": "9f7b51146ed2f5149ea396f7b6cd27c8ec4d8d482ba22b73329ab8f1b496413e"
+    },
+    "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+    "role": "standalone",
+    "safety_failures": [],
+    "safety_status": "unverified",
+    "scenario_trigger_returncode": 75,
+    "schema": "celikpanel/dns-kill-result/v1",
+    "source_dns_before_tagged_agent": {
+      "queried": true,
+      "result": {
+        "tcp": {
+          "additional": 1,
+          "answers": 1,
+          "authority": 1,
+          "bytes": 82,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "tcp"
+        },
+        "udp": {
+          "additional": 1,
+          "answers": 1,
+          "authority": 1,
+          "bytes": 82,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "udp"
+        }
+      }
+    },
+    "source_dns_units_before_tagged_agent": {
+      "bind9.service": "active",
+      "named.service": "active",
+      "pdns.service": "inactive"
+    },
+    "source_proof": {
+      "authoritative_preflight": {
+        "address": "10.0.2.15",
+        "claimed": true,
+        "name": "www.owner.test",
+        "port": 53,
+        "tcp": true,
+        "type": "A",
+        "udp": true
+      },
+      "cell_id": "bind__rolling-back__after-write__standalone__peer-reachable",
+      "device": 65025,
+      "engine": "bind",
+      "engine_epoch": 0,
+      "engine_state_receipt": {
+        "identity": null,
+        "path": "",
+        "sha256": ""
+      },
+      "external_pdns_preimage": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+      "identity_receipt_preexisting": false,
+      "inode": 131567,
+      "mode": "0600",
+      "owner_bind_native_source": {
+        "inventory": [
+          "owner.test IN _default master",
+          ". IN _default hint"
+        ],
+        "leaf": {
+          "device": 65025,
+          "inode": 131543,
+          "path": "/etc/bind/named.conf.root-hints",
+          "sha256": "7f4afbc7ea88cc94fe849d622a2d8e2a7b8863089cc7909e75cb77ba8e682d87"
+        },
+        "local": {
+          "device": 65025,
+          "inode": 131541,
+          "path": "/etc/bind/named.conf.local",
+          "sha256": "c4d525a8045948ec7166101eb43a77bb629922901c4d2a081320d11f711be454"
+        },
+        "main": {
+          "device": 65025,
+          "inode": 131540,
+          "path": "/etc/bind/named.conf",
+          "sha256": "50c296bb3ae376b6fdde1f092ebf228056d38e525b53dc3415b7945136af14b7"
+        },
+        "options": {
+          "device": 65025,
+          "inode": 131542,
+          "path": "/etc/bind/named.conf.options",
+          "sha256": "4ff8a966b1f515dadb2262c0cb80d458c8ac6700af25d6f5a89a43b686286d0e"
+        },
+        "zone": {
+          "device": 65025,
+          "inode": 131565,
+          "path": "/etc/bind/db.owner.test",
+          "sha256": "16bd35accfc6ff7203289ab7a3f5b9803a607319bda4317a01d54b06e9ef159b"
+        }
+      },
+      "path": "/var/lib/celikpanel-dns-kill-matrix/source-proof.json",
+      "peer_ip": "",
+      "receipt_origin": "harness-native-bind",
+      "scenario": {
+        "device": 65025,
+        "inode": 131479,
+        "mode": "0600",
+        "path": "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "sha256": "0ba060402215216b6608fcc318b79fed743c4b0621942f225df5e6bc3cc01545"
+      },
+      "scenario_identity": {
+        "mode": "switch",
+        "pair_role": "",
+        "source_engine": "",
+        "source_epoch": 0,
+        "source_revision": 0,
+        "target_engine": "bind",
+        "target_epoch": 1,
+        "topology": "standalone"
+      },
+      "schema": "celikpanel/dns-kill-source-proof/v1",
+      "serving_before_tagged_agent": true,
+      "sha256": "6e08111c4043b611d52e999e40fcde9c6daa5bd0fd54e51c139fa2d8d0349881",
+      "source_adoption_proof": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "source_fixture": "owner-bind",
+      "source_normalization": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "source_ownership_receipts": {
+        "install_bind": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json"
+        },
+        "install_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json"
+        },
+        "ownership_bind": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json"
+        },
+        "ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json"
+        }
+      },
+      "source_preinstall_proof": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "source_revision": 0,
+      "source_setup_identity_receipt_sha256": "absent",
+      "source_setup_scenario_sha256": "absent",
+      "topology": "standalone",
+      "uninitialized_global_port53": {
+        "authoritative_answer_observed": false,
+        "tcp_bindable": false,
+        "udp_bindable": false
+      }
+    },
+    "started_at": "2026-09-29T15:12:41.272401Z",
+    "status": "unverified",
+    "tagged_agent": {
+      "pid": 2408,
+      "process_identity": {
+        "gids": [
+          989,
+          989,
+          989,
+          989
+        ],
+        "pid": 2408,
+        "uids": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "umask": "0027"
+      },
+      "process_start_ticks": "9137",
+      "socket_identity": {
+        "device": 25,
+        "inode": 2638
+      }
+    },
+    "target_dns_before_kill": {
+      "authoritative": {
+        "tcp": {
+          "additional": 1,
+          "answers": 1,
+          "authority": 1,
+          "bytes": 84,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "tcp"
+        },
+        "udp": {
+          "additional": 1,
+          "answers": 1,
+          "authority": 1,
+          "bytes": 84,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "udp"
+        }
+      },
+      "units": {
+        "bind9.service": "active",
+        "named.service": "active",
+        "pdns.service": "inactive"
+      }
+    },
+    "timeouts_seconds": {
+      "boundary": 2700.0,
+      "command": 2700.0,
+      "dns": 5.0,
+      "endpoint": 60.0,
+      "kill": 15.0,
+      "recovery": 2700.0,
+      "stability": 30.0,
+      "stability_interval": 1.0,
+      "startup": 60.0,
+      "stop": 15.0
+    },
+    "transcript": {
+      "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__rolling-back__after-write__standalone__peer-reachable/transcript.jsonl",
+      "sha256": "c77908d8121cfa4b904fde75bf0e16078d12bd228582610aac4640db5f2372a5"
+    },
+    "trigger_identity_receipt": {
+      "cell_id": "bind__rolling-back__after-write__standalone__peer-reachable",
+      "device": 65025,
+      "driver": "bind",
+      "inode": 131574,
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+      "mode": "0600",
+      "owner_id": "5c95b5f9a011e3da58a54873fc3ef9d4",
+      "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+      "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+      "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+      "sha256": "fbdd7eb4020a74ac0c7b3e30ef44ee8de2faf38b2fc863b91874814a899069a5",
+      "source_fixture": "owner-bind"
+    },
+    "trigger_mode": "socket",
+    "uninitialized_global_port53_before_tagged_agent": {
+      "applicable": false,
+      "reason": "source DNS engine is intentionally serving or startup recovery mode"
+    },
+    "verification_failures": []
+  },
+  "schema": "celikpanel/dns-kill-reboot-checkpoint/v1",
+  "settings_sha256": "7dc407ab4be2e1b2029a36f1e1bb5ead92b6241ce2425f4c3efc7ed92b62e536",
+  "stage": "before-owner-command",
+  "state": {
+    "agent_identity": [
+      25,
+      2667
+    ],
+    "agent_process": {
+      "gids": [
+        989,
+        989,
+        989,
+        989
+      ],
+      "pid": 4371,
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "umask": "0027"
+    },
+    "agent_ready": {
+      "detail": {
+        "device": 25,
+        "inode": 2667
+      },
+      "ok": true
+    },
+    "ambiguities": [],
+    "boot": {
+      "boot_id": "53efc75d-f29a-42ee-97e7-570985fd0e73",
+      "fixture_marker": {
+        "cell_id": "bind__rolling-back__after-write__standalone__peer-reachable",
+        "node": "debian13",
+        "schema": "celikpanel/dns-kill-fixture-plan/v1"
+      },
+      "product_uuid": "0aad1005-2e54-5e63-bb6b-4be2ffcdaf52"
+    },
+    "boundary_identity": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+      "mode": "switch",
+      "mutation_owner_id": "5c95b5f9a011e3da58a54873fc3ef9d4",
+      "pair_role": "",
+      "source_engine": "",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "bind",
+      "target_epoch": 1,
+      "topology": "standalone"
+    },
+    "failures": [],
+    "flow": "owner-inverse",
+    "identity": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+      "owner_id": "5c95b5f9a011e3da58a54873fc3ef9d4",
+      "request_id": "8b14693eaf9461f13a415d5e637b6d91"
+    },
+    "old_socket_identity": [
+      25,
+      2638
+    ],
+    "pid_reference": 2042,
+    "prerequisites_met": true,
+    "probes": [],
+    "restarts": {
+      "agent-restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-agent.service"
+        ],
+        "duration_seconds": 0.016709,
+        "output_bytes": 0,
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "output_truncated": false,
+        "returncode": 0
+      }
+    }
+  },
+  "transcripts": [
+    {
+      "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__rolling-back__after-write__standalone__peer-reachable/transcript.jsonl",
+      "sha256": "c77908d8121cfa4b904fde75bf0e16078d12bd228582610aac4640db5f2372a5"
+    }
+  ]
+}

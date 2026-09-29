@@ -1,0 +1,15 @@
+wall=2026-09-29T15:38:07.548432827Z boot_id=75cf6d92-e035-44ca-83b0-5038054514c4
+os=Arch Linux kernel=7.1.8-arch1-3
+== pacman -Q
+error: package 'bind' was not found
+powerdns 5.1.4-4
+python 3.14.7-1
+systemd 262-1
+linux 7.2.7.arch1-1
+== named -v
+== pdns_server --version
+Sep 29 15:38:07 Loading '/usr/lib/powerdns/libbindbackend.so'
+Sep 29 15:38:07 Loading '/usr/lib/powerdns/libgeoipbackend.so'
+== management binaries
+sha256sum: '/opt/celikpanel/bin/*': No such file or directory
+sha256sum: /usr/libexec/celikpanel/recovery: No such file or directory

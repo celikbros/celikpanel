@@ -1,0 +1,13 @@
+request 6db68749d7b24c88419ecbda31e11413 controller 2026-09-29T15:23:35.798379Z -> 2026-09-29T15:24:16.812349Z
+status passed safety passed class target_converged fp c75d51e5
+kill pid 2156 state T at 2026-09-29T15:23:38.689786Z exit 137 reaped True
+marker 2026-09-29T15:23:38.679143098Z journal intent 1bb120a6
+trigger rc 75
+ retry 1 rc 0 dur 5.053375 err None
+ retry 2 rc 0 dur 0.00804 err None
+ probe 1 target_converged c75d51e5 pdns | 
+ probe 2 target_converged c75d51e5 pdns | 
+stability 31 ok 31 2026-09-29T15:23:46.809106Z 2026-09-29T15:24:16.809392Z
+ status-read after-recovery: available=True rc=0 mutated=False :: No DNS switch journal was observed for request 6db68749d7b24c88419ecbda31e11413. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+ status-read before-recovery: available=True rc=0 mutated=False :: DNS switch request 6db68749d7b24c88419ecbda31e11413: accepted-active (journal phase intent). / No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id 6db68749d7b24c88419ecbda31e11413. This status check does not start recovery.
+agent_startup_rollback {"status": null, "failures": [], "unknown": []} job {"status": "failed", "phase": "interrupted", "error_code": "dns_engine_switch_rolled_back_after_restart"}

@@ -1,0 +1,2529 @@
+{
+  "boot": {
+    "boot_id": "fa9dbff3-5af8-4440-bcdc-b0c478a9c1a9",
+    "fixture_marker": {
+      "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+      "node": "debian13",
+      "schema": "celikpanel/dns-kill-fixture-plan/v1"
+    },
+    "product_uuid": "35d4420c-020f-5f6b-a5ed-8beaab32730a"
+  },
+  "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+  "failures": {
+    "diagnostic": [],
+    "safety": [],
+    "verification": []
+  },
+  "kill_proven": true,
+  "nonce": "e45719a35061f363739b952e0d548c7cf3ae5bacbe3def26dc2702807f966cb6",
+  "ordinal": 1,
+  "proof": {
+    "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__after-write__standalone__peer-reachable/kill-proof.json",
+    "sha256": "2b9f0520b74f52e1e547525ee8a6f864618b93612ffc20222042c5137458ba2e"
+  },
+  "recorded_at": "2026-09-29T15:28:44.625913Z",
+  "request_id": "b66cbdc5c51b25639364f76a7113a214",
+  "result": {
+    "boundary": {
+      "edge": "after-write",
+      "phase": "target-staged",
+      "point": "after_write"
+    },
+    "boundary_marker": {
+      "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+      "driver": "bind",
+      "marker": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__after-write__standalone__peer-reachable/boundary-marker.json",
+      "nonce": "e45719a35061f363739b952e0d548c7cf3ae5bacbe3def26dc2702807f966cb6",
+      "observed_driver": "bind",
+      "observed_journal": {
+        "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+        "mode": "switch",
+        "mutation_owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+        "mutation_request_id": "b66cbdc5c51b25639364f76a7113a214",
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+        "phase": "target-staged",
+        "schema": "celikpanel-dns-engine-switch-journal/v1",
+        "source_epoch": 0,
+        "source_revision": 0,
+        "target_engine": "bind",
+        "target_epoch": 1,
+        "topology": "standalone"
+      },
+      "phase": "target-staged",
+      "pid": 2423,
+      "point": "after_write",
+      "process_start_ticks": "14815",
+      "ready_fd": 5,
+      "recorded_at": "2026-09-29T15:28:01.251917495Z",
+      "request_id": "b66cbdc5c51b25639364f76a7113a214",
+      "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+    },
+    "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+    "command_environment": {
+      "fault_selector_names": [
+        "CELIKPANEL_DNS_KILL_MATRIX_CELL_ID",
+        "CELIKPANEL_DNS_KILL_MATRIX_DRIVER",
+        "CELIKPANEL_DNS_KILL_MATRIX_POINT",
+        "CELIKPANEL_DNS_KILL_MATRIX_PHASE",
+        "CELIKPANEL_DNS_KILL_MATRIX_REQUEST_ID",
+        "CELIKPANEL_DNS_KILL_MATRIX_NONCE",
+        "CELIKPANEL_DNS_KILL_MATRIX_MARKER",
+        "CELIKPANEL_DNS_KILL_MATRIX_READY_FD"
+      ],
+      "inherited_caller_names": [
+        "LANG",
+        "PATH"
+      ],
+      "production": {
+        "CELIKPANEL_AGENT_SOCKET": "/run/celikpanel/agent.sock",
+        "CELIKPANEL_AGENT_STATE_DIR": "/var/lib/celikpanel-agent-private",
+        "CELIKPANEL_AGENT_TOKEN_FILE": "/etc/celikpanel/agent.token",
+        "CELIKPANEL_DKIM_DIR": "/etc/celikpanel/dkim",
+        "CELIKPANEL_MUTATION_LOCK": "/run/celikpanel/service-mutation.lock",
+        "CELIKPANEL_RUNTIMES_DIR": "/opt/celikpanel/runtimes",
+        "LANG": "C.UTF-8",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    },
+    "commands": {
+      "agent_restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-agent.service"
+        ],
+        "device": 65025,
+        "inode": 4848,
+        "mode": "0755",
+        "path": "/usr/bin/systemctl",
+        "resolved_path": "/usr/bin/systemctl",
+        "sha256": "848c70d7e2c2f43f4f93287897ac8946e8eda45e7daa5f2975d9728071856b1a",
+        "uid": 0
+      },
+      "panel_restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-panel.service"
+        ],
+        "device": 65025,
+        "inode": 4848,
+        "mode": "0755",
+        "path": "/usr/bin/systemctl",
+        "resolved_path": "/usr/bin/systemctl",
+        "sha256": "848c70d7e2c2f43f4f93287897ac8946e8eda45e7daa5f2975d9728071856b1a",
+        "uid": 0
+      },
+      "recovery": {
+        "argv": [
+          "/opt/celikpanel/bin/dns-kill-trigger",
+          "rpc-retry",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--timeout",
+          "45m"
+        ],
+        "device": 65025,
+        "inode": 131312,
+        "mode": "0755",
+        "path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "resolved_path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "sha256": "5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693",
+        "uid": 0
+      },
+      "recovery_probe": {
+        "argv": [
+          "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+          "--cell-id",
+          "bind__target-staged__after-write__standalone__peer-reachable",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--ledger",
+          "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "--state",
+          "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "--journal",
+          "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        ],
+        "device": 65025,
+        "inode": 131313,
+        "mode": "0755",
+        "path": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "resolved_path": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "sha256": "366663ecc1ebe6926de3371740805e69753f5af0b5afc5eeda295fba4ec14066",
+        "uid": 0
+      },
+      "scenario_trigger": {
+        "argv": [
+          "/opt/celikpanel/bin/dns-kill-trigger",
+          "rpc-switch",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--timeout",
+          "45m"
+        ],
+        "device": 65025,
+        "inode": 131312,
+        "mode": "0755",
+        "path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "resolved_path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "sha256": "5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693",
+        "uid": 0
+      },
+      "socket_identity_contract": {
+        "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "operation_timeout": "45m",
+        "scenario_path": "/var/lib/celikpanel-dns-kill-matrix/scenario.json"
+      },
+      "tagged_agent": {
+        "argv": [
+          "/opt/celikpanel/bin/agent.kill"
+        ],
+        "device": 65025,
+        "inode": 131310,
+        "mode": "0755",
+        "path": "/opt/celikpanel/bin/agent.kill",
+        "resolved_path": "/opt/celikpanel/bin/agent.kill",
+        "sha256": "43b000fce1e8e65d602f54562a5c10566b4b24df93bcb96ab5a60cb7b955e793",
+        "uid": 0
+      }
+    },
+    "complete_verdict": {
+      "passed": true,
+      "reasons": [],
+      "required_classification": [
+        "target_converged"
+      ],
+      "safety_status": "passed",
+      "status": "passed"
+    },
+    "controller_identity": {
+      "effective_gid": 989,
+      "effective_group": "celikpanel",
+      "effective_uid": 0,
+      "expected_umask": "0027"
+    },
+    "diagnostic_failures": [],
+    "driver": "bind",
+    "failures": [],
+    "finished_at": "2026-09-29T15:28:44.621141Z",
+    "fixture_pass_definition": {
+      "bind_authority": {
+        "authority": {
+          "answer_counts": {
+            "tcp": 1,
+            "udp": 1
+          },
+          "answered": true,
+          "engines": {
+            "tcp": [
+              "bind"
+            ],
+            "udp": [
+              "bind"
+            ]
+          }
+        },
+        "failures": [],
+        "unknown": []
+      },
+      "boundary": {
+        "failures": [],
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json",
+        "receipt": {
+          "adopted_present": true,
+          "engine": "bind",
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+          "missing_before": [],
+          "mutation_owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+          "mutation_request_id": "b66cbdc5c51b25639364f76a7113a214",
+          "package_manager": "apt",
+          "packages": [
+            "bind9"
+          ],
+          "schema": "celikpanel-dns-engine-install-ownership/v1"
+        },
+        "sha256": "f2d3f83b0d858824fb8ffc25597f1fb722e879f89c231aad5d4f72bb52268317",
+        "source_fixture": "unmanaged-bind-stopped",
+        "unknown": []
+      },
+      "definition": "unmanaged-bind-stopped",
+      "failures": [],
+      "owner_files": {
+        "failures": [],
+        "judged_byte_identical": {
+          "/etc/bind/named.conf": {
+            "after": {
+              "gid": 104,
+              "mode": "0644",
+              "sha256": "50c296bb3ae376b6fdde1f092ebf228056d38e525b53dc3415b7945136af14b7",
+              "size": 455,
+              "uid": 0
+            },
+            "before": {
+              "gid": 104,
+              "mode": "0644",
+              "sha256": "50c296bb3ae376b6fdde1f092ebf228056d38e525b53dc3415b7945136af14b7",
+              "size": 455,
+              "uid": 0
+            }
+          },
+          "/etc/bind/named.conf.root-hints": {
+            "after": {
+              "gid": 104,
+              "mode": "0644",
+              "sha256": "7f4afbc7ea88cc94fe849d622a2d8e2a7b8863089cc7909e75cb77ba8e682d87",
+              "size": 116,
+              "uid": 0
+            },
+            "before": {
+              "gid": 104,
+              "mode": "0644",
+              "sha256": "7f4afbc7ea88cc94fe849d622a2d8e2a7b8863089cc7909e75cb77ba8e682d87",
+              "size": 116,
+              "uid": 0
+            }
+          },
+          "/etc/bind/rndc.key": {
+            "after": {
+              "gid": 104,
+              "mode": "0640",
+              "sha256": "963d48bdaa59bed321d0cb11df2623ea59e937a7e8d9937efeb82f6b99651612",
+              "size": 100,
+              "uid": 103
+            },
+            "before": {
+              "gid": 104,
+              "mode": "0640",
+              "sha256": "963d48bdaa59bed321d0cb11df2623ea59e937a7e8d9937efeb82f6b99651612",
+              "size": 100,
+              "uid": 103
+            }
+          },
+          "/etc/default/named": {
+            "after": {
+              "gid": 0,
+              "mode": "0644",
+              "sha256": "b825c0739a949b3dff55d2587d94df934a3a16384d5a9d0b1a2e0e969b8fca42",
+              "size": 86,
+              "uid": 0
+            },
+            "before": {
+              "gid": 0,
+              "mode": "0644",
+              "sha256": "b825c0739a949b3dff55d2587d94df934a3a16384d5a9d0b1a2e0e969b8fca42",
+              "size": 86,
+              "uid": 0
+            }
+          }
+        },
+        "rewritten_by_documented_takeover": {
+          "/etc/bind/named.conf.local": {
+            "after": {
+              "gid": 104,
+              "mode": "0644",
+              "sha256": "379603f9c5a40b777f68c697343697b8ad6a29f7cc9dbdd44f79469116524277",
+              "size": 176,
+              "uid": 0
+            },
+            "before": {
+              "gid": 104,
+              "mode": "0644",
+              "sha256": "63963de797ff06ede5645c4169084128f1a6a11e1aa43ec9b4971751ceedc18e",
+              "size": 42,
+              "uid": 0
+            }
+          },
+          "/etc/bind/named.conf.options": {
+            "after": {
+              "gid": 104,
+              "mode": "0644",
+              "sha256": "18a5f47ba9404711a122381207c1f19cb2830afc443b19d48ed40ec927f9ee89",
+              "size": 226,
+              "uid": 0
+            },
+            "before": {
+              "gid": 104,
+              "mode": "0644",
+              "sha256": "f1c37414f29088ef439527a855356c888e83fec06dcc762f878a4c24d45c59e4",
+              "size": 43,
+              "uid": 0
+            }
+          }
+        },
+        "unknown": []
+      },
+      "unknown": []
+    },
+    "initial_journal": {
+      "exists": false
+    },
+    "journal_at_boundary": {
+      "device": 65025,
+      "exists": true,
+      "expected_phase": "target-staged",
+      "inode": 131542,
+      "mode": "0600",
+      "observed_phase": "target-staged",
+      "request_id": "b66cbdc5c51b25639364f76a7113a214",
+      "sha256": "8d2ef8770c01545856bbfc1e178db40fa6f8b720629ea99efba83dd1d45c1d47"
+    },
+    "kill": {
+      "delivered_at": "2026-09-29T15:28:01.260738Z",
+      "exit_code": 137,
+      "pid": 2423,
+      "proc_entry_absent_after_reap": true,
+      "process_start_ticks": "14815",
+      "raw_returncode": -9,
+      "signal": "SIGKILL",
+      "signal_number": 9,
+      "state_before_signal": "T"
+    },
+    "kill_proven": true,
+    "nonce": "e45719a35061f363739b952e0d548c7cf3ae5bacbe3def26dc2702807f966cb6",
+    "peer_after_kill": {
+      "applicable": false,
+      "reason": "standalone cell"
+    },
+    "peer_before_tagged_agent": {
+      "applicable": false,
+      "reason": "standalone cell"
+    },
+    "peer_reachability": "reachable",
+    "post_restart": {
+      "agent": {
+        "detail": {
+          "device": 25,
+          "inode": 3201
+        },
+        "ok": true
+      },
+      "dns": {
+        "detail": {
+          "tcp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 84,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 84,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        },
+        "ok": true
+      },
+      "panel": {
+        "detail": {
+          "address": "127.0.0.1",
+          "port": 2083
+        },
+        "ok": true
+      }
+    },
+    "pre_reboot_verdict": {
+      "passed": true,
+      "reasons": [],
+      "required_classification": [
+        "target_converged"
+      ],
+      "safety_status": "passed",
+      "status": "passed"
+    },
+    "production_paths": {
+      "agent_token": {
+        "device": 65025,
+        "gid": 989,
+        "inode": 131426,
+        "mode": "0640",
+        "path": "/etc/celikpanel/agent.token",
+        "size": 65,
+        "uid": 0
+      },
+      "dkim_directory": {
+        "device": 65025,
+        "inode": 131306,
+        "path": "/etc/celikpanel/dkim"
+      },
+      "runtimes_directory": {
+        "device": 65025,
+        "inode": 131302,
+        "path": "/opt/celikpanel/runtimes"
+      }
+    },
+    "proof": {
+      "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__after-write__standalone__peer-reachable/kill-proof.json",
+      "sha256": "2b9f0520b74f52e1e547525ee8a6f864618b93612ffc20222042c5137458ba2e"
+    },
+    "provenance_boundary": {
+      "failures": [],
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json",
+      "receipt": {
+        "adopted_present": true,
+        "engine": "bind",
+        "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+        "missing_before": [],
+        "mutation_owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+        "mutation_request_id": "b66cbdc5c51b25639364f76a7113a214",
+        "package_manager": "apt",
+        "packages": [
+          "bind9"
+        ],
+        "schema": "celikpanel-dns-engine-install-ownership/v1"
+      },
+      "sha256": "f2d3f83b0d858824fb8ffc25597f1fb722e879f89c231aad5d4f72bb52268317",
+      "source_fixture": "unmanaged-bind-stopped",
+      "unknown": []
+    },
+    "ready_pipe": {
+      "bytes": 65,
+      "fd": 5,
+      "payload_sha256": "8d5f14ede63c5a5f21201c6c81aa5087f9640e3fd92ff1df6f6123ad22691d28"
+    },
+    "recovery": {
+      "agent_ready": {
+        "detail": {
+          "device": 25,
+          "inode": 3201
+        },
+        "ok": true
+      },
+      "attempts": [
+        {
+          "command": {
+            "argv": [
+              "/opt/celikpanel/bin/dns-kill-trigger",
+              "rpc-retry",
+              "--scenario",
+              "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+              "--identity-receipt",
+              "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+              "--timeout",
+              "45m"
+            ],
+            "duration_seconds": 10.278508,
+            "output_bytes": 837,
+            "output_sha256": "33a847739205e8bd743886d0e2eec79ec2d3d51bb7123608e8accaf43aa70fb5",
+            "output_truncated": false,
+            "returncode": 0
+          },
+          "error": null,
+          "identity_receipt_after": {
+            "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+            "device": 65025,
+            "driver": "bind",
+            "inode": 131573,
+            "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+            "mode": "0600",
+            "owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+            "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+            "request_id": "b66cbdc5c51b25639364f76a7113a214",
+            "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+            "sha256": "9e8bd585185ff2f135b3365425c39a5fdaa6356b0ab1d4a68ee517ffb195a595",
+            "source_fixture": "unmanaged-bind-stopped"
+          },
+          "ordinal": 1
+        },
+        {
+          "command": {
+            "argv": [
+              "/opt/celikpanel/bin/dns-kill-trigger",
+              "rpc-retry",
+              "--scenario",
+              "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+              "--identity-receipt",
+              "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+              "--timeout",
+              "45m"
+            ],
+            "duration_seconds": 0.007966,
+            "output_bytes": 817,
+            "output_sha256": "c7905938deeb7ab350eb571d4df24d2924f3bac6d429f747a3dfd8ccd59d0e0e",
+            "output_truncated": false,
+            "returncode": 0
+          },
+          "error": null,
+          "identity_receipt_after": {
+            "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+            "device": 65025,
+            "driver": "bind",
+            "inode": 131573,
+            "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+            "mode": "0600",
+            "owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+            "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+            "request_id": "b66cbdc5c51b25639364f76a7113a214",
+            "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+            "sha256": "9e8bd585185ff2f135b3365425c39a5fdaa6356b0ab1d4a68ee517ffb195a595",
+            "source_fixture": "unmanaged-bind-stopped"
+          },
+          "ordinal": 2
+        }
+      ],
+      "identity": {
+        "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+        "driver": "bind",
+        "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+        "owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+        "request_id": "b66cbdc5c51b25639364f76a7113a214"
+      },
+      "mode": "rpc-retry",
+      "native_pre_retry_status": {
+        "configured": false
+      },
+      "pre_retry_dns": {
+        "error": "[Errno 111] Connection refused",
+        "ok": false
+      },
+      "pre_retry_probe": {
+        "active_dns_engine": "",
+        "argv": [
+          "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+          "--cell-id",
+          "bind__target-staged__after-write__standalone__peer-reachable",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--ledger",
+          "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "--state",
+          "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "--journal",
+          "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        ],
+        "converged": false,
+        "detail": "BIND target/source unit state is not converged: {'bind9.service': 'inactive', 'named.service': 'inactive', 'pdns.service': 'inactive'}; DNS engine state receipt is unavailable: [Errno 2] No such file or directory: '/var/lib/celikpanel-agent-private/dns-engine-state.json'; cannot validate DNS ownership residue without scenario/active state; measured mutation job is not finalized: {'status': {'want': 'succeeded', 'got': 'failed'}, 'phase': {'want': 'commit/dns-engine-switch/v2/finalized/b66cbdc5c51b25639364f76a7113a214/dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965', 'got': 'interrupted'}}",
+        "duration_seconds": 0.120504,
+        "fingerprint": "2b366077484aa9d807ed0b5e12219bfd0f8061d01ec3fabc160eea63c72b12ed",
+        "ordinal": 0,
+        "output_bytes": 860,
+        "output_sha256": "32377f67cfbbf4c7b3e5f9d4834a992b4f57e3aed9704af24e3e2aa4cb5465e8",
+        "output_truncated": false,
+        "recovery_outcome": "indeterminate",
+        "returncode": 0,
+        "valid": true
+      },
+      "pre_retry_source_serving": false,
+      "timing": "after replacement agent socket, before panel restart and final liveness"
+    },
+    "recovery_outcome": {
+      "changed_or_racy": false,
+      "classification": "target_converged",
+      "dns_serving_after_restart": true,
+      "probe_pair_valid": true,
+      "repeated_nonconvergence": false,
+      "rolled_back_source_serving": false,
+      "same_fingerprint": true,
+      "target_converged": true
+    },
+    "recovery_probes": [
+      {
+        "active_dns_engine": "bind",
+        "argv": [
+          "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+          "--cell-id",
+          "bind__target-staged__after-write__standalone__peer-reachable",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--ledger",
+          "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "--state",
+          "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "--journal",
+          "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        ],
+        "converged": true,
+        "detail": "converged",
+        "duration_seconds": 0.115295,
+        "fingerprint": "bac6f937ed7c9600f90f4ffea0d574d60f98cd732ab18c0f9903e7dc86b5dace",
+        "ordinal": 1,
+        "output_bytes": 235,
+        "output_sha256": "a51f771e0d412116f2a27735e60b4d1a77188be89eb9ecae3b961f3fde0e991a",
+        "output_truncated": false,
+        "recovery_outcome": "target_converged",
+        "returncode": 0,
+        "valid": true
+      },
+      {
+        "active_dns_engine": "bind",
+        "argv": [
+          "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+          "--cell-id",
+          "bind__target-staged__after-write__standalone__peer-reachable",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--ledger",
+          "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "--state",
+          "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "--journal",
+          "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        ],
+        "converged": true,
+        "detail": "converged",
+        "duration_seconds": 0.117642,
+        "fingerprint": "bac6f937ed7c9600f90f4ffea0d574d60f98cd732ab18c0f9903e7dc86b5dace",
+        "ordinal": 2,
+        "output_bytes": 235,
+        "output_sha256": "a51f771e0d412116f2a27735e60b4d1a77188be89eb9ecae3b961f3fde0e991a",
+        "output_truncated": false,
+        "recovery_outcome": "target_converged",
+        "returncode": 0,
+        "valid": true
+      }
+    ],
+    "recovery_status_reads": {
+      "after-recovery": {
+        "available": true,
+        "changed_evidence": [],
+        "command": {
+          "argv": [
+            "/usr/libexec/celikpanel/recovery",
+            "dns-switch-status",
+            "--quiesced",
+            "--request-id",
+            "b66cbdc5c51b25639364f76a7113a214"
+          ],
+          "duration_seconds": 0.009038,
+          "output": "No DNS switch journal was observed for request b66cbdc5c51b25639364f76a7113a214. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.\n",
+          "output_bytes": 315,
+          "output_sha256": "d2091fca34aca0409432047cb8948cbf50cd0bde924032a650f944d2dde9e1a8",
+          "output_truncated": false,
+          "ran": true,
+          "returncode": 0
+        },
+        "judged": "made no mutation only",
+        "mutated": false,
+        "stage": "after-recovery"
+      },
+      "before-recovery": {
+        "available": true,
+        "changed_evidence": [],
+        "command": {
+          "argv": [
+            "/usr/libexec/celikpanel/recovery",
+            "dns-switch-status",
+            "--quiesced",
+            "--request-id",
+            "b66cbdc5c51b25639364f76a7113a214"
+          ],
+          "duration_seconds": 0.220412,
+          "output": "DNS switch request b66cbdc5c51b25639364f76a7113a214: accepted-active (journal phase target-staged).\nNo owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id b66cbdc5c51b25639364f76a7113a214. This status check does not start recovery.\nQuiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.\nThe accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.\nManaged BIND root directory and package ownership matched on two read-only walks. This does not prove the selected generation, DNS answers, owner edits or recovery authority.\nNative BIND vendor files or loaded systemd unit identity are unknown. The server owner should inspect the named service unit, its package ownership and startup options before the same operation resumes; no inverse was started. parse named.service identity: systemctl returned incomplete DNS unit identity\n",
+          "output_bytes": 1293,
+          "output_sha256": "d1c9b306a2f4344398c47a95014030bab566896ac48798e848ca42b3048199c7",
+          "output_truncated": false,
+          "ran": true,
+          "returncode": 3
+        },
+        "judged": "made no mutation only",
+        "mutated": false,
+        "stage": "before-recovery"
+      }
+    },
+    "request_id": "b66cbdc5c51b25639364f76a7113a214",
+    "restarted_agent_process": {
+      "gids": [
+        989,
+        989,
+        989,
+        989
+      ],
+      "pid": 3492,
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "umask": "0027"
+    },
+    "restarts": {
+      "agent-restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-agent.service"
+        ],
+        "duration_seconds": 0.068141,
+        "output_bytes": 0,
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "output_truncated": false,
+        "returncode": 0
+      },
+      "panel-restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-panel.service"
+        ],
+        "duration_seconds": 0.017011,
+        "output_bytes": 0,
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "output_truncated": false,
+        "returncode": 0
+      }
+    },
+    "role": "standalone",
+    "safety_assertions": {
+      "agent_stayed_running": true,
+      "dns_engine_serving": true,
+      "kill_proven": true,
+      "panel_started": true
+    },
+    "safety_failures": [],
+    "safety_status": "passed",
+    "scenario_trigger_returncode": 75,
+    "schema": "celikpanel/dns-kill-result/v1",
+    "source_dns_before_tagged_agent": {
+      "queried": false,
+      "reason": "exact uninitialized source; avoid querying an unrelated resolver"
+    },
+    "source_dns_units_before_tagged_agent": {
+      "bind9.service": "inactive",
+      "named.service": "inactive",
+      "pdns.service": "inactive"
+    },
+    "source_proof": {
+      "authoritative_preflight": {
+        "address": "10.0.2.15",
+        "claimed": false,
+        "name": "www.s1-kill.test",
+        "port": 53,
+        "tcp": false,
+        "type": "A",
+        "udp": false
+      },
+      "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+      "device": 65025,
+      "engine": "",
+      "engine_epoch": 0,
+      "engine_state_receipt": {
+        "identity": null,
+        "path": "",
+        "sha256": ""
+      },
+      "external_pdns_preimage": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+      "identity_receipt_preexisting": false,
+      "inode": 131566,
+      "mode": "0600",
+      "owner_bind_native_source": null,
+      "path": "/var/lib/celikpanel-dns-kill-matrix/source-proof.json",
+      "peer_ip": "",
+      "receipt_origin": "harness-owner-bind-installed-stopped",
+      "scenario": {
+        "device": 65025,
+        "inode": 131479,
+        "mode": "0600",
+        "path": "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "sha256": "8d4363dcd4f3ce1d6d4d14705f7298ac54fc843c86e458e96f32781e96899fd6"
+      },
+      "scenario_identity": {
+        "mode": "switch",
+        "pair_role": "",
+        "source_engine": "",
+        "source_epoch": 0,
+        "source_revision": 0,
+        "target_engine": "bind",
+        "target_epoch": 1,
+        "topology": "standalone"
+      },
+      "schema": "celikpanel/dns-kill-source-proof/v1",
+      "serving_before_tagged_agent": false,
+      "sha256": "8756b893124f9f90998b265cf24c55c094ed3217625d0aac566c64a668d1a615",
+      "source_adoption_proof": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "source_fixture": "unmanaged-bind-stopped",
+      "source_normalization": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "source_ownership_receipts": {
+        "install_bind": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json"
+        },
+        "install_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json"
+        },
+        "ownership_bind": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json"
+        },
+        "ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json"
+        }
+      },
+      "source_preinstall_proof": {
+        "device": 65025,
+        "inode": 131565,
+        "live_package": {
+          "name": "bind9",
+          "status": "install ok installed",
+          "version": "1:9.20.29-1~deb13u1"
+        },
+        "owner_files": {
+          "/etc/bind/named.conf": {
+            "gid": 104,
+            "mode": "0644",
+            "sha256": "50c296bb3ae376b6fdde1f092ebf228056d38e525b53dc3415b7945136af14b7",
+            "size": 455,
+            "uid": 0
+          },
+          "/etc/bind/named.conf.local": {
+            "gid": 104,
+            "mode": "0644",
+            "sha256": "63963de797ff06ede5645c4169084128f1a6a11e1aa43ec9b4971751ceedc18e",
+            "size": 42,
+            "uid": 0
+          },
+          "/etc/bind/named.conf.options": {
+            "gid": 104,
+            "mode": "0644",
+            "sha256": "f1c37414f29088ef439527a855356c888e83fec06dcc762f878a4c24d45c59e4",
+            "size": 43,
+            "uid": 0
+          },
+          "/etc/bind/named.conf.root-hints": {
+            "gid": 104,
+            "mode": "0644",
+            "sha256": "7f4afbc7ea88cc94fe849d622a2d8e2a7b8863089cc7909e75cb77ba8e682d87",
+            "size": 116,
+            "uid": 0
+          },
+          "/etc/bind/rndc.key": {
+            "gid": 104,
+            "mode": "0640",
+            "sha256": "963d48bdaa59bed321d0cb11df2623ea59e937a7e8d9937efeb82f6b99651612",
+            "size": 100,
+            "uid": 103
+          },
+          "/etc/default/named": {
+            "gid": 0,
+            "mode": "0644",
+            "sha256": "b825c0739a949b3dff55d2587d94df934a3a16384d5a9d0b1a2e0e969b8fca42",
+            "size": 86,
+            "uid": 0
+          }
+        },
+        "package": {
+          "name": "bind9",
+          "status": "install ok installed",
+          "version": "1:9.20.29-1~deb13u1"
+        },
+        "path": "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-bind.json",
+        "product_rewrites_on_takeover": [
+          "/etc/bind/named.conf.local",
+          "/etc/bind/named.conf.options"
+        ],
+        "schema": "celikpanel/dns-kill-source-preinstall-bind/v1",
+        "scope": "owner-installed-stopped-bind-for-takeover",
+        "sha256": "076e6f4015930f812796f304db74e294443226492e206ffec11fa7e4f5112756",
+        "units": {
+          "bind9.service": {
+            "active_state": "inactive",
+            "load_state": "not-found",
+            "unit_file_state": ""
+          },
+          "named.service": {
+            "active_state": "inactive",
+            "load_state": "loaded",
+            "unit_file_state": "disabled"
+          }
+        }
+      },
+      "source_revision": 0,
+      "source_setup_identity_receipt_sha256": "absent",
+      "source_setup_scenario_sha256": "absent",
+      "topology": "standalone",
+      "uninitialized_global_port53": {
+        "authoritative_answer_observed": false,
+        "tcp_bindable": true,
+        "udp_bindable": true
+      }
+    },
+    "stability": {
+      "dns_only": false,
+      "duration_seconds": 30.0,
+      "elapsed_seconds": 30.002208,
+      "interval_seconds": 1.0,
+      "sample_count": 31,
+      "samples": [
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:14.518710Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 1,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:15.518876Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 2,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:16.519421Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 3,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:17.518960Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 4,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:18.519149Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 5,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:19.518965Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 6,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:20.519396Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 7,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:21.518943Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 8,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:22.518961Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 9,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:23.518961Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 10,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:24.519110Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 11,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:25.518956Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 12,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:26.518993Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 13,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:27.519049Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 14,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:28.518893Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 15,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:29.519125Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 16,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:30.518913Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 17,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:31.519106Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 18,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:32.518937Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 19,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:33.518969Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 20,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:34.519139Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 21,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:35.519047Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 22,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:36.519062Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 23,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:37.519393Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 24,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:38.518899Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 25,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:39.518898Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 26,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:40.519065Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 27,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:41.518889Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 28,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:42.519085Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 29,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:43.519038Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 30,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 25,
+              "inode": 3201
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T15:28:44.518903Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 1,
+                "answers": 1,
+                "authority": 1,
+                "bytes": 84,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 31,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          }
+        }
+      ]
+    },
+    "started_at": "2026-09-29T15:27:57.435899Z",
+    "status": "passed",
+    "tagged_agent": {
+      "pid": 2423,
+      "process_identity": {
+        "gids": [
+          989,
+          989,
+          989,
+          989
+        ],
+        "pid": 2423,
+        "uids": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "umask": "0027"
+      },
+      "process_start_ticks": "14815",
+      "socket_identity": {
+        "device": 25,
+        "inode": 2683
+      }
+    },
+    "timeouts_seconds": {
+      "boundary": 2700.0,
+      "command": 2700.0,
+      "dns": 5.0,
+      "endpoint": 60.0,
+      "kill": 15.0,
+      "recovery": 2700.0,
+      "stability": 30.0,
+      "stability_interval": 1.0,
+      "startup": 60.0,
+      "stop": 15.0
+    },
+    "transcript": {
+      "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__after-write__standalone__peer-reachable/transcript.jsonl",
+      "sha256": "cd98563f586244f72b3eabc41b4be9419531e6bb5f554d2bf4008b7e7ccdf4c8"
+    },
+    "trigger_identity_receipt": {
+      "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+      "device": 65025,
+      "driver": "bind",
+      "inode": 131573,
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+      "mode": "0600",
+      "owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+      "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+      "request_id": "b66cbdc5c51b25639364f76a7113a214",
+      "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+      "sha256": "9e8bd585185ff2f135b3365425c39a5fdaa6356b0ab1d4a68ee517ffb195a595",
+      "source_fixture": "unmanaged-bind-stopped"
+    },
+    "trigger_mode": "socket",
+    "uninitialized_global_port53_before_tagged_agent": {
+      "address": "10.0.2.15",
+      "authoritative_answer_observed": false,
+      "port": 53,
+      "tcp_bindable": true,
+      "udp_bindable": true
+    },
+    "verification_failures": []
+  },
+  "schema": "celikpanel/dns-kill-reboot-checkpoint/v1",
+  "settings_sha256": "9519c09b98660fb0a53af17066b4b7a77e64c6c5961f7a75934aac53d19d2deb",
+  "stage": "after-recovery",
+  "state": {
+    "agent_identity": [
+      25,
+      3201
+    ],
+    "authority_before": {
+      "at": "2026-09-29T15:28:44.566592Z",
+      "authority": {
+        "answer_counts": {
+          "tcp": 1,
+          "udp": 1
+        },
+        "answered": true,
+        "engines": {
+          "tcp": [
+            "bind"
+          ],
+          "udp": [
+            "bind"
+          ]
+        }
+      },
+      "dns": {
+        "answered": true,
+        "at": "2026-09-29T15:28:44.603033Z",
+        "result": {
+          "tcp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 84,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 84,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        }
+      },
+      "evidence": {
+        "install_ownership_bind": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json"
+        },
+        "install_ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json"
+        },
+        "journal": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        },
+        "ledger": {
+          "device": 65025,
+          "exists": true,
+          "inode": 131625,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "sha256": "c0b59c041e8839f50926be74fa887bafe412a8001247cbdd2207c20bc2da74b5",
+          "size": 741
+        },
+        "ownership_bind": {
+          "device": 65025,
+          "exists": true,
+          "inode": 131626,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json",
+          "sha256": "7fdc8cbce39175cb238b8b51733376a48eb934b93487784fa44efbb153a21d6a",
+          "size": 641
+        },
+        "ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json"
+        },
+        "state": {
+          "device": 65025,
+          "exists": true,
+          "inode": 131628,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "sha256": "fbdf1fbb016dbf9c42442e9ee82d4748631b6f0d32e258dce2288fa6e915653d",
+          "size": 637
+        }
+      },
+      "named_processes": [
+        5711
+      ],
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              5711
+            ],
+            "state": "LISTEN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              5711
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              5711
+            ],
+            "state": "UNCONN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              5711
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "state": {
+        "semantic": {
+          "engine": "bind",
+          "engine_epoch": 1,
+          "generation": "895b81c7731b93aa00d5883bc78be70b2fbe0449895f9db8157f05592e01222f",
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+          "mode": "switch",
+          "mutation_owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+          "mutation_request_id": "b66cbdc5c51b25639364f76a7113a214",
+          "schema": "celikpanel-dns-engine-state/v1",
+          "source_revision": 0
+        },
+        "sha256": "fbdf1fbb016dbf9c42442e9ee82d4748631b6f0d32e258dce2288fa6e915653d"
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "5711",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "named.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "5711",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "pdns.service": {
+          "ActiveState": "inactive",
+          "LoadState": "not-found",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": ""
+        }
+      },
+      "unknown": []
+    },
+    "boot": {
+      "boot_id": "fa9dbff3-5af8-4440-bcdc-b0c478a9c1a9",
+      "fixture_marker": {
+        "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+        "node": "debian13",
+        "schema": "celikpanel/dns-kill-fixture-plan/v1"
+      },
+      "product_uuid": "35d4420c-020f-5f6b-a5ed-8beaab32730a"
+    },
+    "diagnostic_reboot": false,
+    "flow": "rpc-retry",
+    "management_before": {
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "3492",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "6767",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "unknown": []
+    },
+    "management_disabled": false,
+    "peer_ip": ""
+  },
+  "transcripts": [
+    {
+      "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__after-write__standalone__peer-reachable/transcript.jsonl",
+      "sha256": "cd98563f586244f72b3eabc41b4be9419531e6bb5f554d2bf4008b7e7ccdf4c8"
+    }
+  ]
+}

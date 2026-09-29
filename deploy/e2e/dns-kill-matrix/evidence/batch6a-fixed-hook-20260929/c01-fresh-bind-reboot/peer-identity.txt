@@ -1,0 +1,19 @@
+NAME="Arch Linux"
+PRETTY_NAME="Arch Linux"
+ID=arch
+BUILD_ID=rolling
+ANSI_COLOR="38;2;23;147;209"
+HOME_URL="https://archlinux.org/"
+DOCUMENTATION_URL="https://wiki.archlinux.org/"
+SUPPORT_URL="https://bbs.archlinux.org/"
+BUG_REPORT_URL="https://gitlab.archlinux.org/groups/archlinux/-/issues"
+PRIVACY_POLICY_URL="https://terms.archlinux.org/docs/privacy-policy/"
+LOGO=archlinux-logo
+Linux dns-arch 7.1.8-arch1-3 #1 SMP PREEMPT_DYNAMIC Tue, 11 Aug 2026 09:16:08 +0000 x86_64 GNU/Linux
+boot_id=f6f7c073-04cd-48f6-b620-b71febb74882
+machine_id=93fb4d5b9e685c05bc92263099a2ab15
+product_uuid=93fb4d5b-9e68-5c05-bc92-263099a2ab15
+schema=celikpanel/dns-kill-fixture-plan/v1
+cell_id=bind__target-verified__after-write__standalone__peer-reachable
+node=arch
+Tue Sep 29 14:39:18 UTC 2026

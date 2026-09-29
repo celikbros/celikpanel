@@ -1,0 +1,17 @@
+### 2026-09-29T14:43:16.577Z start-cell c02-fresh-bind-arch bind__target-verified__before-write__standalone__peer-reachable node=arch other=debian13 fixture=uninitialized prep=prepare-bind enroll=1 root=/var/tmp/cp-b6a-0929 peer=none format=none flags=--reboot-after-recovery
+### 2026-09-29T14:43:16.579Z prepare
+### 2026-09-29T14:43:17.676Z early-admission-dry-run
+### 2026-09-29T14:43:17.843Z start
+### 2026-09-29T14:43:18.178Z wait-ssh
+### 2026-09-29T14:44:15.434Z guest-identity
+### 2026-09-29T14:44:16.159Z install
+### 2026-09-29T14:44:25.033Z enroll-recovery-runtime
+### 2026-09-29T14:44:31.962Z prepare-bind
+### 2026-09-29T14:44:33.022Z pre-run-snapshot
+### 2026-09-29T14:45:35.064Z start-watcher
+Running as unit: cp-b6a-watch.service; invocation ID: d8b4d500c7854e0089bf6462a2c4bfeb
+### 2026-09-29T14:45:36.069Z prepared-ok
+### 2026-09-29T14:45:36.075Z run-prepared-dry-run flags=--reboot-after-recovery
+### 2026-09-29T14:45:36.214Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T14:48:30.399Z done-run rc=0

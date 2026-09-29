@@ -1,0 +1,17 @@
+### 2026-09-29T15:04:40.203Z start-cell c06-v2-poststop bind__target-started__after-write__standalone__peer-reachable node=debian13 other=arch fixture=managed-pdns prep=prepare-bind enroll=1 root=/var/tmp/cp-b6a-0929 peer=none format=none flags=--owner-inverse-after-restart --reboot-before-owner-command --reboot-after-recovery --retry-switch-after-rollback
+### 2026-09-29T15:04:40.204Z prepare
+### 2026-09-29T15:04:41.026Z early-admission-dry-run
+### 2026-09-29T15:04:41.122Z start
+### 2026-09-29T15:04:41.349Z wait-ssh
+### 2026-09-29T15:05:35.961Z guest-identity
+### 2026-09-29T15:05:37.692Z install
+### 2026-09-29T15:05:46.164Z enroll-recovery-runtime
+### 2026-09-29T15:05:52.666Z prepare-bind
+### 2026-09-29T15:06:15.726Z pre-run-snapshot
+### 2026-09-29T15:06:37.521Z start-watcher
+Running as unit: cp-b6a-watch.service; invocation ID: b02b0cead7684b2d8da03abb09fa9b04
+### 2026-09-29T15:06:38.224Z prepared-ok
+### 2026-09-29T15:06:38.229Z run-prepared-dry-run flags=--owner-inverse-after-restart --reboot-before-owner-command --reboot-after-recovery --retry-switch-after-rollback
+### 2026-09-29T15:06:38.325Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T15:10:32.363Z done-run rc=0

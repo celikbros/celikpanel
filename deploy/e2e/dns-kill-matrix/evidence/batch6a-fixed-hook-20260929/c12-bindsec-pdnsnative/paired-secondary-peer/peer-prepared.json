@@ -1,0 +1,95 @@
+{
+  "catalog_format": "pdns-native",
+  "cell_id": "bind__target-verified__after-write__paired-secondary__peer-reachable",
+  "engine": "pdns",
+  "observe": {
+    "action": "observe-native-primary-peer",
+    "catalog_format": "pdns-native",
+    "cell_id": "bind__target-verified__after-write__paired-secondary__peer-reachable",
+    "engine": "pdns",
+    "execute": true,
+    "observation": {
+      "agent_catalog_format_name": "PowerDNS",
+      "catalog": "catalog-c000020b.celikpanel.invalid",
+      "catalog_format": "pdns-native",
+      "catalog_members": [
+        "s1-kill.test"
+      ],
+      "catalog_parser": "agent-peer-catalog-selection",
+      "catalog_producer": "powerdns",
+      "catalog_serial": 1790696284,
+      "config_sha256": {
+        "/etc/powerdns/pdns.conf": "b9e32d0b8af1297ec10603784b6699f0e736e5731bf615e4ca3b2c90b116e9aa"
+      },
+      "engine": "pdns",
+      "management_installed_on_primary": false,
+      "member_soa": {
+        "s1-kill.test": {
+          "authoritative_udp_tcp": true,
+          "serial": 2026083101
+        }
+      },
+      "native_service_active": true,
+      "pdns_catalog_rows": {
+        "catalog_metadata_kinds": [
+          "CATALOG-HASH"
+        ],
+        "domains": [
+          [
+            "catalog-c000020b.celikpanel.invalid",
+            "PRODUCER",
+            "",
+            "celikpanel-fixture-native-primary"
+          ],
+          [
+            "s1-kill.test",
+            "MASTER",
+            "catalog-c000020b.celikpanel.invalid",
+            "celikpanel-fixture-native-primary"
+          ]
+        ],
+        "read": true
+      },
+      "primary_ip": "192.0.2.11",
+      "schema": "celikpanel/native-primary-peer-observation/v1",
+      "secondary_ip": "192.0.2.10",
+      "transfer_notify_log": [
+        "Queued notification of domain 's1-kill.test' to 192.0.2.10:53",
+        "Queued also-notification of domain 's1-kill.test' to 192.0.2.10:53",
+        "Unable to queue notification of domain 'catalog-c000020b.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!",
+        "Queued also-notification of domain 'catalog-c000020b.celikpanel.invalid' to 192.0.2.10:53",
+        "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36036', transfer initiated",
+        "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36036', allowed: client IP is in allow-axfr-ips",
+        "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36036', AXFR finished",
+        "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36048', transfer initiated",
+        "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36048', allowed: client IP is in allow-axfr-ips",
+        "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36048', AXFR finished"
+      ],
+      "transfers_to_secondary": {
+        "catalog-c000020b.celikpanel.invalid": false,
+        "s1-kill.test": false
+      },
+      "unit": "pdns.service",
+      "www_a": [
+        "192.0.2.11"
+      ]
+    }
+  },
+  "prepare": {
+    "action": "prepare-native-primary-peer",
+    "catalog": "catalog-c000020b.celikpanel.invalid",
+    "catalog_format": "pdns-native",
+    "catalog_members": [
+      "s1-kill.test"
+    ],
+    "catalog_producer": "powerdns",
+    "catalog_serial": 1,
+    "cell_id": "bind__target-verified__after-write__paired-secondary__peer-reachable",
+    "engine": "pdns",
+    "execute": true,
+    "management_installed_on_primary": false,
+    "primary_ip": "192.0.2.11",
+    "primary_node": "arch",
+    "secondary_ip": "192.0.2.10"
+  }
+}
