@@ -362,6 +362,7 @@ func newHostBINDPublisher(
 func (hostDNSEngineBackend) Readiness(
 	ctx context.Context,
 ) (transport.DNSBackendReadinessResponse, error) {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS readiness check")
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
 		return transport.DNSBackendReadinessResponse{}, err
@@ -842,6 +843,7 @@ func (hostDNSEngineBackend) Sync(
 	commitment mutationpayload.DNSZoneSyncV3Commitment,
 	binding transport.ServiceMutationBinding,
 ) (string, error) {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS zone change "+binding.MutationRequestID)
 	engine := transport.DNSEngine(commitment.Engine)
 	if engine != transport.DNSEngineBIND && engine != transport.DNSEnginePowerDNS {
 		return "", errors.New("DNS V3 publication engine is unsupported")
@@ -1076,6 +1078,7 @@ func (hostDNSEngineBackend) RecoverZone(
 	domain, qualifier string,
 	binding transport.ServiceMutationBinding,
 ) (bool, error) {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS zone recovery "+binding.MutationRequestID)
 	state, exists, err := readDNSEngineState()
 	if err != nil || !exists {
 		return false, err
@@ -1253,6 +1256,7 @@ func (hostDNSEngineBackend) Switch(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
 ) (transport.SwitchDNSEngineV1Response, error) {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS engine change "+binding.MutationRequestID)
 	if pdnsPairedPrimarySwitchPaused(manifest) {
 		return transport.SwitchDNSEngineV1Response{},
 			errors.New(pdnsPairedPrimarySwitchPausedReason)
@@ -1366,7 +1370,7 @@ func (hostDNSEngineBackend) Switch(
 	// istediği tek şey, operatörün kendi seçenek direktiflerini değiştirdiğinin
 	// parçası olarak okuma izniydir; buna, soruyu karıştıracak hiçbir makbuzumuz
 	// daha yokken burada karar verilir.
-	optionsAuthority, err := bindSwitchOptionsAuthority(manifest, stateExists)
+	optionsAuthority, err := bindSwitchOptionsAuthority(manifest, stateExists, binding)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1404,13 +1408,8 @@ func (hostDNSEngineBackend) Switch(
 	}
 	if manifest.Topology == transport.DNSTopologyPaired &&
 		manifest.PairRole == transport.DNSPairRoleSecondary {
-		catalogDomain, err := binddns.CatalogDomain(manifest.PeerIP)
-		if err != nil {
+		if err := requireBINDSecondaryPeerCatalog(ctx, manifest); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
-		}
-		if _, err := probeDNSCatalogAXFR(ctx, manifest.PeerIP, catalogDomain); err != nil {
-			return transport.SwitchDNSEngineV1Response{},
-				errors.New("paired primary catalog is unavailable")
 		}
 	}
 	targetBefore, err := captureDNSUnitStates(
@@ -1456,6 +1455,25 @@ func (hostDNSEngineBackend) Switch(
 		return transport.SwitchDNSEngineV1Response{}, fmt.Errorf(
 			"preflight BIND mask parent: %w", err,
 		)
+	}
+	// A takeover-shaped request that is refused the operator's options (the
+	// exclusive mode) must be refused before it rebinds a surviving install
+	// receipt to itself below; otherwise its own retry would find that
+	// receipt and decide differently. This read-only check is the same one the
+	// configuration step repeats later.
+	//
+	// Operatörün seçeneklerini reddeden (dışlayıcı kipteki) devralma biçimli
+	// bir istek, aşağıda hayatta kalan bir kurulum makbuzunu kendine yeniden
+	// bağlamadan önce reddedilmelidir; yoksa kendi yeniden denemesi o makbuzu
+	// bulur ve farklı karar verir. Bu salt-okur denetim, yapılandırma adımının
+	// sonra tekrarladığı denetimin aynısıdır.
+	if len(missing) == 0 && optionsAuthority == bindOptionsExclusive &&
+		adoptableRunningBINDManifest(manifest, stateExists) {
+		if _, err := prepareBINDConfigMutationWithAuthority(
+			ctx, layout, "", bindOptionsExclusive,
+		); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
 	}
 	if err := publishDNSEngineSourceOwnership(
 		manifest, state, stateExists,
@@ -1815,6 +1833,23 @@ func (hostDNSEngineBackend) Switch(
 		ActiveEpoch: manifest.TargetEpoch, AppliedZones: len(manifest.Zones),
 		Detail: "BIND is the verified active authoritative DNS engine",
 	}, nil
+}
+
+// requireBINDSecondaryPeerCatalog is a BIND secondary's pre-intent proof that
+// its primary's catalog is readable. The primary may be BIND or PowerDNS, so
+// either known catalog format is accepted (see dns_peer_catalog.go).
+func requireBINDSecondaryPeerCatalog(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	catalogDomain, err := binddns.CatalogDomain(manifest.PeerIP)
+	if err != nil {
+		return err
+	}
+	if _, err := queryDNSPeerCatalogAXFR(ctx, manifest.PeerIP, catalogDomain); err != nil {
+		return dnsPeerCatalogReadError("paired primary catalog is unavailable", err)
+	}
+	return nil
 }
 
 func bindConfigMutationSnapshots(configs bindConfigMutation) []dnsFileSnapshot {

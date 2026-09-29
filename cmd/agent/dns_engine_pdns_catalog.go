@@ -44,9 +44,10 @@ func peerPDNSCatalog(
 	if err != nil {
 		return dnsCatalogAXFRResult{}, "", err
 	}
-	catalog, err := probeDNSCatalogAXFR(ctx, manifest.PeerIP, domain)
+	catalog, err := queryDNSPeerCatalogAXFR(ctx, manifest.PeerIP, domain)
 	if err != nil || catalog.Serial == 0 {
-		return dnsCatalogAXFRResult{}, "", errors.New("paired primary catalog is unavailable")
+		return dnsCatalogAXFRResult{}, "",
+			dnsPeerCatalogReadError("paired primary catalog is unavailable", err)
 	}
 	return catalog, domain, nil
 }

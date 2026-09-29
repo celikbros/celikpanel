@@ -22,6 +22,22 @@ import (
 const ownerPDNSFreshPrestartV3Command = "recover-dns-pdns-fresh-prestart"
 
 func runOwnerPDNSFreshPrestartV3(args []string, uid int, out, diagnostic io.Writer) int {
+	return dispatchOwnerPDNSFreshPrestartV3(args, uid, func(ctx context.Context, request string) error {
+		runtime, err := recoveryruntime.VerifiedLauncherRuntime()
+		if err != nil {
+			return err
+		}
+		defer runtime.Close()
+		if err := runtime.VerifyExecutingBinary(); err != nil {
+			return err
+		}
+		return completeInstalledFreshPDNSPrestartV3(ctx, request)
+	}, out, diagnostic)
+}
+
+func dispatchOwnerPDNSFreshPrestartV3(
+	args []string, uid int, inverse func(context.Context, string) error, out, diagnostic io.Writer,
+) int {
 	if len(args) != 3 || args[0] != ownerPDNSFreshPrestartV3Command || args[1] != "--request-id" ||
 		!servicemutationledger.ValidIdentity(args[2]) {
 		fmt.Fprintln(diagnostic, "Usage: recovery recover-dns-pdns-fresh-prestart --request-id <32 lowercase hex characters>")
@@ -31,20 +47,23 @@ func runOwnerPDNSFreshPrestartV3(args []string, uid int, out, diagnostic io.Writ
 		fmt.Fprintln(diagnostic, "Run as root or authorized sudo; no DNS operation was started.")
 		return exitNotOwner
 	}
-	runtime, err := recoveryruntime.VerifiedLauncherRuntime()
-	if err == nil {
-		defer runtime.Close()
-		err = runtime.VerifyExecutingBinary()
-	}
-	if err == nil {
-		err = completeInstalledFreshPDNSPrestartV3(context.Background(), args[2])
-	}
-	if err != nil {
-		fmt.Fprintln(diagnostic, "Fresh PowerDNS prestart recovery did not reach a terminal verdict. Preserve the journal and ledger; inspect recovery dns-switch-status --quiesced --request-id "+args[2]+". A running or changed target requires forward reconciliation, not deletion. Reason: "+err.Error())
+	request := args[2]
+	if inverse == nil {
+		fmt.Fprintln(diagnostic, "The independent DNS recovery executor is unavailable. Preserve the same request and its evidence; inspect the installed recovery runtime before retrying.")
 		return exitUnavailable
 	}
-	fmt.Fprintln(out, "The exact fresh PowerDNS prestart operation was restored and its rollback verdict recorded.")
-	return exitOK
+	err := inverse(context.Background(), request)
+	if err == nil {
+		if _, writeErr := fmt.Fprintln(out, "The exact fresh PowerDNS prestart operation was restored and its rollback verdict recorded."); writeErr != nil {
+			return exitOutput
+		}
+		return exitOK
+	}
+	if code, complete := writeOwnCompletedPDNSInverse(err, "en", request, out); complete {
+		return code
+	}
+	fmt.Fprintln(diagnostic, "Fresh PowerDNS prestart recovery did not reach a terminal verdict. Preserve the journal and ledger; inspect recovery dns-switch-status --quiesced --request-id "+request+". A running or changed target requires forward reconciliation, not deletion. Reason: "+err.Error())
+	return exitUnavailable
 }
 
 func completeInstalledFreshPDNSPrestartV3(parent context.Context, request string) error {
@@ -94,7 +113,12 @@ func completeInstalledFreshPDNSPrestartV3(parent context.Context, request string
 		if err != nil {
 			return e, err
 		}
-		if !present || e.Journal.MutationRequestID != request || e.Journal.Schema != dnsengineartifact.SwitchJournalSchemaV3 {
+		if !present {
+			// A re-run after the journal was retired: only the exact
+			// owner-recovery verdict of this request counts as complete.
+			return dnsenginerecovery.SwitchEvidence{}, journalAbsentPDNSInverseOutcome(ctx, root, owner, request)
+		}
+		if e.Journal.MutationRequestID != request || e.Journal.Schema != dnsengineartifact.SwitchJournalSchemaV3 {
 			return dnsenginerecovery.SwitchEvidence{}, errors.New("exact v3 request journal is absent or owned by another operation")
 		}
 		if err := excludeInstalledDNSInverseWorker(ctx, e); err != nil {
@@ -188,11 +212,33 @@ func completeInstalledFreshPDNSPrestartV3(parent context.Context, request string
 	if shape, err = assess(j); err != nil || (shape != freshPDNSRecoveryRestoredV3 && shape != freshPDNSRecoveryIntentCleanV3) {
 		return errors.Join(errors.New("v3 restored native state changed before terminal verdict"), err)
 	}
-	if err := dnsenginerecovery.PublishExactDNSRollbackVerdict(policy, owner, j, time.Now().UTC()); err != nil {
+	current, err := read()
+	if err != nil || !reflect.DeepEqual(current.Journal, j) {
+		return errors.Join(errors.New("v3 journal changed before terminal verdict"), err)
+	}
+	if err := publishFreshPDNSPrestartVerdictV3(current, func() error {
+		return dnsenginerecovery.PublishExactDNSRollbackVerdict(policy, owner, j, time.Now().UTC())
+	}); err != nil {
 		return err
 	}
 	if err := verifyLocks(); err != nil {
 		return err
 	}
 	return dnsenginerecovery.RemoveExactRollbackJournal(policy, owner, j)
+}
+
+// publishFreshPDNSPrestartVerdictV3 publishes this command's rollback verdict
+// for an active job. A terminal job beside the rolled-back journal is kept
+// only when it is exactly an owner recovery run's verdict: an earlier run of
+// this command published it and was interrupted before retiring the journal.
+// Any other terminal result, such as the Agent's release, is refused.
+func publishFreshPDNSPrestartVerdictV3(current dnsenginerecovery.SwitchEvidence, publish func() error) error {
+	if current.Observation.Status != dnsenginerecovery.EvidenceTerminalRolledBack {
+		return publish()
+	}
+	if current.Journal.Phase != dnsengineartifact.SwitchPhaseRolledBack ||
+		!ownerRecoveryRollbackVerdictJob(current.AcceptedJob) {
+		return errors.New("the terminal ledger result of this v3 request was not recorded by an owner recovery run; this command does not retire its journal")
+	}
+	return nil
 }

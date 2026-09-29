@@ -156,8 +156,14 @@ func verifyBINDPairingAuthority(
 	if err := requireHostOwnedDNSPairAddress(pairing.LocalIP); err != nil {
 		return err
 	}
+	// A primary reads its own BIND catalog; a secondary reads the catalog its
+	// primary produced, which may be BIND's or PowerDNS's format.
+	axfr := probeDNSCatalogAXFR
+	if pairing.Role == binddns.PairRoleSecondary {
+		axfr = queryDNSPeerCatalogAXFR
+	}
 	return verifyBINDPairingAuthorityAt(
-		ctx, receipt, pairing.LocalIP, probeDNSZoneSOA, probeDNSCatalogAXFR,
+		ctx, receipt, pairing.LocalIP, probeDNSZoneSOA, axfr,
 	)
 }
 
@@ -202,7 +208,7 @@ func verifyBINDPairingAuthorityAt(
 	}
 	peerCatalog, err := axfr(ctx, pairing.PeerIP, pairing.PeerCatalog)
 	if err != nil {
-		return errors.New("BIND peer catalog is not available")
+		return dnsPeerCatalogReadError("BIND peer catalog is not available", err)
 	}
 	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()

@@ -522,6 +522,21 @@ func parseLiveZones(raw string) (map[string]struct{}, error) {
 	}
 	return zones, nil
 }
+
+// nativePDNSCatalogLabel is the 32-character base32hex member label a
+// PowerDNS catalog producer chooses instead of BIND's SHA-224 label.
+func nativePDNSCatalogLabel(label string) bool {
+	if len(label) != 32 {
+		return false
+	}
+	for _, value := range []byte(label) {
+		if (value < '0' || value > '9') && (value < 'a' || value > 'v') {
+			return false
+		}
+	}
+	return true
+}
+
 func readCatalogDatabase(ctx context.Context, path string, dev, ino uint64, r pdnspeerproof.RequestV1, p OwnerPolicyV1) (uint32, []string, bool, error) {
 	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro")
 	if err != nil {
@@ -560,15 +575,32 @@ func readCatalogDatabase(ctx context.Context, path string, dev, ino uint64, r pd
 	var serial uint32
 	var members []string
 	var soa, ns, version int
-	rows, err := tx.QueryContext(ctx, "SELECT name,type,content FROM records WHERE domain_id=? ORDER BY name,type,content", id)
+	// The consumed catalog is the CelikPanel primary's: BIND serves its
+	// rendered zone (TTL 60, SHA-224 member labels), PowerDNS its native
+	// producer (TTL 0 version/member records, base32hex labels). Exactly one
+	// of the two is accepted, consistently for every version and member row.
+	metadataTTL := int64(-2)
+	seenLabels := map[string]bool{}
+	rows, err := tx.QueryContext(ctx, "SELECT name,type,content,COALESCE(ttl,-1) FROM records WHERE domain_id=? ORDER BY name,type,content", id)
 	if err != nil {
 		return 0, nil, false, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var name, typ, content string
-		if rows.Scan(&name, &typ, &content) != nil {
+		var ttl int64
+		if rows.Scan(&name, &typ, &content, &ttl) != nil {
 			return 0, nil, false, errors.New("PowerDNS catalog record malformed")
+		}
+		if typ == "TXT" || typ == "PTR" {
+			if ttl != 0 && ttl != 60 {
+				return 0, nil, false, errors.New("PowerDNS catalog metadata TTL is unsupported")
+			}
+			if metadataTTL == -2 {
+				metadataTTL = ttl
+			} else if ttl != metadataTTL {
+				return 0, nil, false, errors.New("PowerDNS catalog metadata TTLs disagree")
+			}
 		}
 		switch typ {
 		case "SOA":
@@ -601,10 +633,13 @@ func readCatalogDatabase(ctx context.Context, path string, dev, ino uint64, r pd
 				return 0, nil, false, errors.New("PowerDNS catalog PTR owner invalid")
 			}
 			member := content
-			label, e := binddns.CatalogMemberLabel(member)
-			if e != nil || name != label+suffix {
+			label := strings.TrimSuffix(name, suffix)
+			deterministic, e := binddns.CatalogMemberLabel(member)
+			validLabel := (ttl == 60 && label == deterministic) || (ttl == 0 && nativePDNSCatalogLabel(label))
+			if e != nil || !validLabel || seenLabels[label] {
 				return 0, nil, false, errors.New("PowerDNS catalog PTR digest invalid")
 			}
+			seenLabels[label] = true
 			members = append(members, member)
 		default:
 			if name != "zones."+r.CatalogName || typ != "" || content != "" {

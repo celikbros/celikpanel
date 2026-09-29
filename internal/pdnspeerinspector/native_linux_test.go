@@ -62,7 +62,7 @@ func TestExactCatalogDatabaseAndMemberAbsence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	statements := []string{"CREATE TABLE domains(id INTEGER PRIMARY KEY,name TEXT,type TEXT,master TEXT,account TEXT,catalog TEXT)", "CREATE TABLE records(domain_id INTEGER,name TEXT,type TEXT,content TEXT)", "INSERT INTO domains VALUES(1,'catalog-c000020a.celikpanel.invalid','CONSUMER','192.0.2.10','fixture-pdns-peer',NULL)", "INSERT INTO records VALUES(1,'catalog-c000020a.celikpanel.invalid','SOA','invalid invalid 2 60 30 3600 30')", "INSERT INTO records VALUES(1,'catalog-c000020a.celikpanel.invalid','NS','invalid')", "INSERT INTO records VALUES(1,'version.catalog-c000020a.celikpanel.invalid','TXT','\"2\"')"}
+	statements := []string{"CREATE TABLE domains(id INTEGER PRIMARY KEY,name TEXT,type TEXT,master TEXT,account TEXT,catalog TEXT)", "CREATE TABLE records(domain_id INTEGER,name TEXT,type TEXT,content TEXT,ttl INTEGER)", "INSERT INTO domains VALUES(1,'catalog-c000020a.celikpanel.invalid','CONSUMER','192.0.2.10','fixture-pdns-peer',NULL)", "INSERT INTO records VALUES(1,'catalog-c000020a.celikpanel.invalid','SOA','invalid invalid 2 60 30 3600 30',60)", "INSERT INTO records VALUES(1,'catalog-c000020a.celikpanel.invalid','NS','invalid',60)", "INSERT INTO records VALUES(1,'version.catalog-c000020a.celikpanel.invalid','TXT','\"2\"',60)"}
 	for _, statement := range statements {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)

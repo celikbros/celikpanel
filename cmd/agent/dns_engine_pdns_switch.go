@@ -982,12 +982,14 @@ func readLegacyPDNSPeerCatalogAuthority(
 	}
 	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()
-	peerCatalog, err := probeDNSBoundCatalogAXFR(
+	peerCatalog, err := queryDNSBoundPeerCatalogAXFR(
 		proofCtx, manifest.LocalIP, manifest.PeerIP, peerDomain,
 	)
 	if err != nil || peerCatalog.Serial == 0 ||
 		!sort.StringsAreSorted(peerCatalog.Members) {
-		return dnsCatalogAXFRResult{}, errors.New("legacy PowerDNS peer producer catalog is not exact")
+		return dnsCatalogAXFRResult{}, dnsPeerCatalogReadError(
+			"legacy PowerDNS peer producer catalog is not exact", err,
+		)
 	}
 	for index, member := range peerCatalog.Members {
 		if !serviceMutationCanonicalFQDN(member) || member == peerDomain ||

@@ -103,6 +103,15 @@ type pdnsInverseAfterEffect func(pdnsInverseDurableEffect)
 // of current native DNS health or of the retired frozen journal's preimage.
 var errPDNSInverseTerminalLedgerObserved = errors.New("exact DNS rollback verdict is recorded but the retired journal prevents native preimage reproof")
 
+// ownerRecoveryRollbackVerdictJob recognizes the exact terminal verdict that
+// PublishExactDNSRollbackVerdict records for an owner recovery run.
+func ownerRecoveryRollbackVerdictJob(job transport.ServiceMutationJob) bool {
+	return job.Status == servicemutationledger.StatusFailed &&
+		job.Phase == "interrupted" &&
+		job.ErrorCode == "dns_engine_switch_rolled_back_by_owner_recovery" &&
+		job.ErrorMessage == "The interrupted DNS engine switch was rolled back to the verified previous state."
+}
+
 func classifyJournalAbsentPDNSInverseLedger(ledger servicemutationledger.Ledger, requestID string) error {
 	job := ledger.Jobs[requestID]
 	if job == nil {

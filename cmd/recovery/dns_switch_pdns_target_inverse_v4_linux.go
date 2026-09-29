@@ -62,6 +62,9 @@ func dispatchOwnerPDNSTargetInverseV4(args []string, uid int, inverse func(conte
 		return exitUnavailable
 	}
 	if err := inverse(context.Background(), request); err != nil {
+		if code, complete := writeOwnCompletedPDNSInverse(err, lang, request, out); complete {
+			return code
+		}
 		fmt.Fprintln(diagnostic, translated(lang, "The staged PowerDNS target rollback could not be proved. Inspect recovery dns-switch-status --quiesced --request-id "+request+"; preserve the journal and ledger, resolve the reported condition and retry this same request. Reason: ", "Hazırlanmış PowerDNS hedefi geri alması kanıtlanamadı. recovery dns-switch-status --quiesced --request-id "+request+" çıktısını inceleyin; günlüğü ve işlem kaydını koruyun, bildirilen durumu giderip aynı isteği yeniden deneyin. Neden: ")+err.Error())
 		return exitUnavailable
 	}

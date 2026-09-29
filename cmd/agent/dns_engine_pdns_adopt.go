@@ -295,6 +295,10 @@ const (
 	pdnsAdoptionEvidencePreflight pdnsAdoptionEvidenceStage = iota + 1
 	pdnsAdoptionEvidenceTarget
 	pdnsAdoptionEvidenceRollback
+	// pdnsAdoptionEvidenceRolledBack re-proves a V1 adoption whose inverse
+	// effects are already complete (journal at rolled-back). It performs no
+	// effect; only terminal publication and journal retirement remain.
+	pdnsAdoptionEvidenceRolledBack
 )
 
 func validatePDNSAdoptionTransactionBinding(
@@ -342,6 +346,20 @@ func validatePDNSAdoptionTransactionBinding(
 		}
 		if stateExists {
 			return errors.New("PowerDNS adoption rollback did not restore the empty source receipt")
+		}
+	case pdnsAdoptionEvidenceRolledBack:
+		// V2 journals never reach the Agent's adoption inverse; this stage is
+		// V1-only so a rolled-back V1 journal is re-proved with exactly the
+		// checks the rolling-back stage applies, and nothing is restored.
+		if expectedJournal.Schema != dnsengineartifact.SwitchJournalSchemaV1 ||
+			expectedJournal.Phase != dnsSwitchPhaseRolledBack {
+			return errors.New("PowerDNS adoption rolled-back journal is not an exact V1 checkpoint")
+		}
+		if !journalExists || !reflect.DeepEqual(actualJournal, expectedJournal) {
+			return errors.New("PowerDNS adoption rollback journal identity changed")
+		}
+		if stateExists {
+			return errors.New("PowerDNS adoption rolled-back journal has a DNS engine receipt; the empty source receipt was not kept")
 		}
 	default:
 		return errors.New("PowerDNS adoption evidence stage is unsupported")
@@ -523,6 +541,30 @@ func rollbackPDNSAdoption(
 	)
 }
 
+// pdnsAdoptionRollbackStage selects the Agent's adoption rollback proof. At
+// rolling-back the Agent restores the empty source receipt and proves the
+// owner's PowerDNS. At rolled-back the inverse effects of this exact operation
+// are already durable: a restarted Agent re-proves the restored source with
+// the same checks and changes nothing, then its caller publishes the terminal
+// verdict (or keeps an already terminal one) and retires the journal. Only V1
+// journals reach this inverse; V2 stays with the owner recovery command.
+func pdnsAdoptionRollbackStage(
+	journal dnsEngineSwitchJournal,
+) (stage pdnsAdoptionEvidenceStage, restore bool, err error) {
+	switch journal.Phase {
+	case dnsSwitchPhaseRollingBack:
+		return pdnsAdoptionEvidenceRollback, true, nil
+	case dnsSwitchPhaseRolledBack:
+		if journal.Schema != dnsengineartifact.SwitchJournalSchemaV1 {
+			return 0, false, errors.New("PowerDNS adoption rolled-back journal is not V1; only the owner recovery command may finish it")
+		}
+		return pdnsAdoptionEvidenceRolledBack, false, nil
+	default:
+		// The rollback-stage binding refuses any other phase, as before.
+		return pdnsAdoptionEvidenceRollback, true, nil
+	}
+}
+
 func rollbackPDNSAdoptionOnCertifiedProfile(
 	ctx context.Context,
 	profile hostplatform.Profile,
@@ -531,22 +573,54 @@ func rollbackPDNSAdoptionOnCertifiedProfile(
 	journal dnsEngineSwitchJournal,
 	configs pdnsAdoptionConfigEvidence,
 ) error {
-	return dnsenginerecovery.RollbackPDNSAdoption(
-		ctx, dnsenginerecovery.PDNSAdoptionRollbackOps{
-			ProveConfigs: func(proofCtx context.Context) error {
-				return configs.verify(proofCtx, profile, manifest)
-			},
-			RestoreState: func(context.Context) error {
-				return restoreDNSEngineStateSnapshot(journal.StateBefore)
-			},
-			VerifyRestored: func(verifyCtx context.Context) error {
-				return verifyPDNSAdoptionEvidenceOnCertifiedProfile(
-					verifyCtx, profile, systemctl, manifest, journal,
-					&configs, pdnsAdoptionEvidenceRollback,
-				)
-			},
+	ops, err := pdnsAdoptionRollbackOps(
+		journal,
+		func(proofCtx context.Context) error {
+			return configs.verify(proofCtx, profile, manifest)
+		},
+		func() error { return restoreDNSEngineStateSnapshot(journal.StateBefore) },
+		func(verifyCtx context.Context, stage pdnsAdoptionEvidenceStage) error {
+			return verifyPDNSAdoptionEvidenceOnCertifiedProfile(
+				verifyCtx, profile, systemctl, manifest, journal,
+				&configs, stage,
+			)
 		},
 	)
+	if err != nil {
+		return err
+	}
+	return dnsenginerecovery.RollbackPDNSAdoption(ctx, ops)
+}
+
+// pdnsAdoptionRollbackOps binds the Agent's adoption rollback steps to the
+// journal's stage: the state receipt is restored only at rolling-back, and the
+// restored-source proof runs with the stage pdnsAdoptionRollbackStage selects.
+func pdnsAdoptionRollbackOps(
+	journal dnsEngineSwitchJournal,
+	proveConfigs func(context.Context) error,
+	restoreState func() error,
+	verifyRestored func(context.Context, pdnsAdoptionEvidenceStage) error,
+) (dnsenginerecovery.PDNSAdoptionRollbackOps, error) {
+	if proveConfigs == nil || restoreState == nil || verifyRestored == nil {
+		return dnsenginerecovery.PDNSAdoptionRollbackOps{},
+			errors.New("PowerDNS adoption rollback operations are incomplete")
+	}
+	stage, restore, err := pdnsAdoptionRollbackStage(journal)
+	if err != nil {
+		return dnsenginerecovery.PDNSAdoptionRollbackOps{}, err
+	}
+	return dnsenginerecovery.PDNSAdoptionRollbackOps{
+		ProveConfigs: proveConfigs,
+		RestoreState: func(context.Context) error {
+			if !restore {
+				return nil
+			}
+			return restoreState()
+		},
+		VerifyRestored: func(verifyCtx context.Context) error {
+			return verifyRestored(verifyCtx, stage)
+		},
+	}, nil
 }
 
 func adoptPDNS(

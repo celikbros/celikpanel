@@ -1544,3 +1544,56 @@ never-started target with the typed observation and names the next step
 truthfully: restart the Agent, which records the decision for the same
 request, then re-run the status check. It names no owner inverse command at
 that phase.
+
+### Peer catalog producer, adoption at rolled-back, takeover retry (2026-09-29)
+
+P0.4; constitutional invariants 1, 2, 3, 4, 6; D-022, D-024. No schema or
+version change: the accepted catalog producer lives in memory only. Component
+tests only at this commit.
+
+**Peer catalog producer.** A CelikPanel secondary validated the paired
+primary's catalog in the BIND format only, while a CelikPanel PowerDNS primary
+publishes PowerDNS's native catalog, so a pair with a PowerDNS primary and a
+CelikPanel secondary could not be installed; earlier trials used panel-free
+secondaries and did not reach this check. Every read of the PEER's catalog
+(install preflight, readiness, zone verification, legacy secondary,
+deletion-proof inspection on a PowerDNS peer) now tries the BIND format and,
+only when the refusal is one the two formats encode differently (version or
+member TTL, a member label of the other producer's shape), the PowerDNS format
+on a fresh transfer. Both keep their strict bounds. Network errors, refused
+transfers and refusals common to both formats are not retried. If both refuse,
+the error names both reasons. The accepted producer is pinned per operation
+and logged once; a later read in the same operation that sees the other
+format fails. Reads of the LOCAL engine's own catalog keep their explicit
+producer. Open native questions: whether PowerDNS writes a non-empty
+`options` value on consumed member rows, whether a PowerDNS consumer
+re-serves a consumed catalog with the original TTLs and owner names. Open
+code question, not changed: three call sites check a legacy PowerDNS
+primary's own catalog, as the peer re-serves it, with the BIND policy.
+
+**PowerDNS adoption at `rolled-back`.** The restarted Agent's binding check
+accepted only `rolling-back`, so a V1 adoption journal already at
+`rolled-back` failed on every boot. For V1 journals the Agent now re-runs the
+same proofs it used to write that checkpoint (config, unit snapshots,
+database bytes and content, sole PowerDNS process and listeners, SOA answers),
+restores nothing, keeps or publishes the same terminal verdict and retires the
+journal. V2 stays owner-only. The V1 paired-secondary PowerDNS reconfiguration
+has the same `rolling-back`-only proof and is not changed.
+
+**Status text at `rolled-back`.** `dns-switch-status` no longer promises that
+an Agent restart will resolve a journal the Agent cannot finish; it words the
+next step per journal class and names an owner command only when that
+command's own admission accepts the journal.
+
+**Stopped-BIND takeover retry.** A retry of the same request treated the
+adopted-present install receipt written by its own first attempt as
+CelikPanel authority and selected the exclusive options mode, refusing
+operator directives the first attempt had adopted. An adopted-present receipt
+bound to the exact request no longer counts as authority, so the retry makes
+the same adoption decision. A new request after a rolled-back takeover still
+sees the surviving receipt as managed standby.
+
+**Completed re-runs** of `recover-dns-pdns-fresh-prestart` and
+`recover-dns-pdns-target-staged` exit 0 only when the ledger holds this
+request's own owner-recovery verdict and the journal is retired; both paths
+remain behind product gates.

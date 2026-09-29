@@ -836,6 +836,7 @@ func (hostDNSEngineBackend) RecoverSwitch(
 	ctx context.Context, target transport.DNSEngine, qualifier string,
 	binding transport.ServiceMutationBinding,
 ) (dnsEngineSwitchRecoveryOutcome, error) {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS engine change recovery "+binding.MutationRequestID)
 	id := dnsengineartifact.SwitchIdentity{RequestID: binding.MutationRequestID, OwnerID: binding.MutationOwnerID, Target: target, Qualifier: qualifier}
 	if journal, exists, readErr := readDNSEngineSwitchJournal(); readErr != nil {
 		return dnsenginerecovery.OutcomeAbsent, readErr
@@ -908,6 +909,7 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 	qualifier string,
 	binding transport.ServiceMutationBinding,
 ) error {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS engine change completion "+binding.MutationRequestID)
 	journal, exists, err := readDNSEngineSwitchJournal()
 	if err != nil {
 		return err

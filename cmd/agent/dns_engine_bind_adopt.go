@@ -221,9 +221,29 @@ func runningBINDAdoptionSelected(
 // allow-query-cache ve allow-transfer direktiflerinin değiştirilenin parçası
 // olarak mı okunacağı (defter R-042) yoksa reddedileceği mi. Hiçbir kanıt buna
 // dallanmaz.
+//
+// A retry of the same request must make the same decision as its first
+// attempt (DNS recovery acceptance register, row 12). That first attempt,
+// finding the operator's BIND packages already present, writes an
+// adopted-present install receipt bound to this request, and a rollback
+// keeps it (it retires only after a committed finalize). That receipt records
+// what the takeover itself found - packages CelikPanel did not install - so
+// it is not authority that predates this request and does not turn the retry
+// into the exclusive mode. A receipt of another request, or one recording
+// that CelikPanel installed the packages, still does.
+//
+// Aynı isteğin yeniden denemesi ilk denemeyle aynı kararı vermelidir (DNS
+// kurtarma kabul kaydı, satır 12). İlk deneme operatörün BIND paketlerini
+// zaten kurulu bulunca bu isteğe bağlı, "zaten vardı" diyen bir kurulum
+// makbuzu yazar ve geri alma onu korur. O makbuz devralmanın kendisinin
+// bulduğunu kaydeder - CelikPanel'in kurmadığı paketler - bu yüzden bu
+// isteğin öncesine ait bir yetki değildir. Başka bir isteğin makbuzu ya da
+// paketleri CelikPanel'in kurduğunu kaydeden bir makbuz yine dışlayıcı kipi
+// seçer.
 func stoppedBINDTakeoverSelected(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	stateExists bool,
+	binding transport.ServiceMutationBinding,
 ) (bool, error) {
 	if !adoptableRunningBINDManifest(manifest, stateExists) {
 		return false, nil
@@ -233,12 +253,33 @@ func stoppedBINDTakeoverSelected(
 	); err != nil || exists {
 		return false, err
 	}
-	if _, exists, err := readDNSEngineInstallOwnership(
-		transport.DNSEngineBIND,
-	); err != nil || exists {
+	receipt, exists, err := readDNSEngineInstallOwnership(transport.DNSEngineBIND)
+	if err != nil {
 		return false, err
 	}
+	if exists && !sameRequestAdoptedPresentBINDInstall(receipt, manifest, binding) {
+		return false, nil
+	}
 	return true, nil
+}
+
+// sameRequestAdoptedPresentBINDInstall recognizes exactly the install receipt
+// this request's own earlier attempt wrote when BIND's packages were already
+// on the host: same engine, request, owner and manifest qualifier, and an
+// adoption that installed nothing.
+func sameRequestAdoptedPresentBINDInstall(
+	receipt dnsEngineInstallOwnershipReceipt,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+) bool {
+	return validateDNSEngineInstallOwnership(receipt) == nil &&
+		receipt.Engine == transport.DNSEngineBIND &&
+		receipt.AdoptedPresent && len(receipt.MissingBefore) == 0 &&
+		validMutationIdentity(binding.MutationRequestID) &&
+		validMutationIdentity(binding.MutationOwnerID) &&
+		receipt.MutationRequestID == binding.MutationRequestID &&
+		receipt.MutationOwnerID == binding.MutationOwnerID &&
+		receipt.ManifestQualifier == manifest.Qualifier
 }
 
 // bindSwitchOptionsAuthority is the one place the transaction decides whether a
@@ -249,8 +290,9 @@ func stoppedBINDTakeoverSelected(
 func bindSwitchOptionsAuthority(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	stateExists bool,
+	binding transport.ServiceMutationBinding,
 ) (bindOptionsAuthority, error) {
-	takeover, err := stoppedBINDTakeoverSelected(manifest, stateExists)
+	takeover, err := stoppedBINDTakeoverSelected(manifest, stateExists, binding)
 	if err != nil {
 		return bindOptionsExclusive, err
 	}
