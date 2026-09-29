@@ -109,6 +109,46 @@ Carried to item 2, open, not reclassified:
 
 Closing item 1 does not close P0.4.
 
+## Item 2 progress log
+
+Entries are dated results against the carried list above. A row's state cell
+in the register changes only when its native evidence exists.
+
+**2026-09-29, batch 4** ([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch4-adoption-reboot-20260929/README.md),
+source `8f86bdad`, product binaries identical to `411398d9`; seven standalone
+Debian 13 cells, each run once):
+
+| Row | Cell | Result |
+|---|---|---|
+| 11 | running-BIND adoption, owner command with the Agent running | **passed**: owner's `named` kept its PID, owner files identical. Reboot not exercised (flag not admitted for this cell). |
+| 13 | PowerDNS adoption, `intent`, restarted Agent rolls back by itself, reboot after recovery | **passed**: retry converged, second window 31/31. |
+| 13 | PowerDNS adoption, `rolled-back`, owner command | **failed (harness)**: product side looked correct; the recovery probe cannot classify an external-PowerDNS rollback that ends without a state receipt. Since `3cc2de22` the Agent finishes this cut itself, so the cell's pass definition changes. |
+| 7 | V2 PowerDNS → BIND `target-started`, reboot between the Agent's decision and the owner command, reboot after recovery | **passed**: journal and ledger unchanged across the first reboot; PowerDNS serving after the second; outage upper bound 93.8 s including the reboot. |
+| 7 | V2 PowerDNS → BIND `rolled-back` after-write | **passed**. |
+| 4 | fresh PowerDNS `target-started`, reboot after recovery | **passed**: second window 31/31. |
+| 1 | fresh BIND `target-verified` after-write, reboot after recovery | **failed (safety)**: the `current` pointer was removed between the kill marker and the SIGKILL; the restarted Agent could neither verify nor roll back and released the job as unknown; `named` served from memory until the reboot, then failed to start; DNS refused 31/31. |
+
+Findings from that batch, all open until re-run natively:
+
+- the tagged kill hook can let the calling goroutine run into the product's
+  error path before the process stops, so a cut may land past its named
+  boundary. Retained cells whose hook is followed by a mutating error path
+  must be re-run once the hook is fixed; until then the row 1 and row 4
+  after-write passes carry that caveat;
+- independent of the hook, the product cannot repair a verified BIND target
+  whose pointer is missing, and the publisher's error path removes the pointer
+  while BIND may still be enabled. A reboot in that state takes DNS down;
+- the controller rebooted after a flow whose retries and probes had failed;
+- `recovery dns-switch-status` was not available in cells without an enrolled
+  recovery runtime.
+
+Source changes the same day, component tests only, native re-run pending:
+rollback standby and staged-generation removal (`f7a844f7`); either peer
+catalog producer accepted by a secondary, V1 adoption finished by the Agent at
+`rolled-back`, takeover retry (`3cc2de22`); harness for fresh paired-secondary
+cells against a panel-free native primary of either engine, takeover and
+reinstall fixtures (`883102c1`, `7ce3827e`).
+
 ## What closed item 1
 
 Item 1's exit condition is: for supported interruptions the same operation
