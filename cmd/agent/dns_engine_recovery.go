@@ -352,12 +352,51 @@ func runDNSSwitchRollbackWithMaskParentProof(
 	return rollback()
 }
 
+// The refusals below name the owner-run recovery command, if any, using the
+// journal-shape part of that command's own admission. The Agent then releases
+// its lease, which can change which command the ledger status admits, so the
+// BIND switch and PowerDNS adoption texts defer to dns-switch-status for the
+// final answer. None of this text starts or authorizes a recovery.
+//
+// Aşağıdaki retler, varsa sunucu sahibinin çalıştıracağı kurtarma komutunu o
+// komutun kendi kabul koşulunun günlük biçimi kısmıyla adlandırır. Agent
+// ardından kiralamayı bırakır; bu, defter durumunun hangi komutu kabul
+// edeceğini değiştirebilir. Bu yüzden BIND geçişi ve PowerDNS devralma
+// metinleri son sözü dns-switch-status'a bırakır. Metin kurtarma başlatmaz.
+
+func freshPrimaryPrestartRefusalV3(journal dnsEngineSwitchJournal, reason string) error {
+	if dnsenginerecovery.FreshPrimaryPrestartJournalV3(journal) {
+		return fmt.Errorf("%s; if PowerDNS never started, the server owner can restore the pre-start state with /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id %s, which refuses a started or changed target; preserve the journal and target until that exact request is reconciled", reason, journal.MutationRequestID)
+	}
+	return fmt.Errorf("%s; no owner recovery command applies at phase %s; preserve the journal and target, and contact support with request id %s", reason, journal.Phase, journal.MutationRequestID)
+}
+
+func bindSwitchOwnerRecoveryRefusal(journal dnsEngineSwitchJournal) error {
+	const reason = "v2 BIND switch journal requires its independent inverse adapter"
+	id := journal.MutationRequestID
+	if dnsenginerecovery.InactiveBINDSwitchInverseJournal(journal) == nil {
+		return fmt.Errorf("%s; the owner recovery command for this PowerDNS-to-BIND rollback is /usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id %s, which the server owner runs when recovery dns-switch-status --quiesced --request-id %s names it; preserve the journal, ledger and native DNS until that exact request is reconciled", reason, id, id)
+	}
+	return fmt.Errorf("%s; no owner recovery command applies to this journal's recorded shape at phase %s; preserve the journal, ledger and native DNS, and contact support with request id %s", reason, journal.Phase, id)
+}
+
+func withPDNSAdoptionOwnerRecovery(kind dnsenginerecovery.NativeInverseKind, journal dnsEngineSwitchJournal, err error) error {
+	if err == nil || kind != dnsenginerecovery.NativeInversePDNSAdoption {
+		return err
+	}
+	id := journal.MutationRequestID
+	if dnsenginerecovery.PDNSAdoptionInverseJournal(journal) == nil {
+		return fmt.Errorf("%w; the owner recovery command for this PowerDNS adoption rollback is /usr/libexec/celikpanel/recovery recover-dns-pdns-adoption --request-id %s, which the server owner runs when recovery dns-switch-status --quiesced --request-id %s names it; preserve the journal, ledger and native DNS until that exact request is reconciled", err, id, id)
+	}
+	return fmt.Errorf("%w; no owner recovery command applies to this PowerDNS adoption journal at phase %s; preserve the journal, ledger and native DNS, and contact support with request id %s", err, journal.Phase, id)
+}
+
 func rollbackDNSSwitchJournal(
 	ctx context.Context,
 	journal dnsEngineSwitchJournal,
 ) error {
 	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
-		return errors.New("v3 fresh PowerDNS primary requires independent native recovery; preserve the journal and target")
+		return freshPrimaryPrestartRefusalV3(journal, "v3 fresh PowerDNS primary requires independent native recovery")
 	}
 	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV4 {
 		return errors.New("v4 PowerDNS target journal requires its independent inverse adapter; preserve the journal and native DNS for exact owner recovery")
@@ -369,7 +408,7 @@ func rollbackDNSSwitchJournal(
 			}
 			return fmt.Errorf("running BIND adoption has no durable rollback decision at phase %s; preserve the journal, ledger and native DNS, then inspect the exact DNS switch status for request %s before choosing recovery", journal.Phase, journal.MutationRequestID)
 		}
-		return errors.New("v2 BIND switch journal requires its independent inverse adapter; preserve the journal and native DNS for owner recovery")
+		return bindSwitchOwnerRecoveryRefusal(journal)
 	}
 	manifest, err := switchJournalManifest(journal)
 	if err != nil {
@@ -478,11 +517,11 @@ func rollbackDNSSwitchJournal(
 	if err := runDNSSwitchRollbackWithMaskParentProof(
 		journal, verifyBINDMaskParentMetadata, rollback,
 	); err != nil {
-		return err
+		return withPDNSAdoptionOwnerRecovery(inverseKind, journal, err)
 	}
-	return verifyRestoredDNSSwitchSource(
+	return withPDNSAdoptionOwnerRecovery(inverseKind, journal, verifyRestoredDNSSwitchSource(
 		ctx, profile, systemctl, manifest, journal,
-	)
+	))
 }
 
 func verifyNoManagedDNSAuthority(

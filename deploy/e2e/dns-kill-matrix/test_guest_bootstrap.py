@@ -346,6 +346,9 @@ class GuestBootstrapTest(unittest.TestCase):
             ),
             "FRESH_BIND_STANDALONE_PHASES": bootstrap.FRESH_BIND_STANDALONE_PHASES,
             "FRESH_PDNS_STANDALONE_PHASES": bootstrap.FRESH_PDNS_STANDALONE_PHASES,
+            "EARLY_MANAGED_PDNS_BIND_PHASES": (
+                bootstrap.EARLY_MANAGED_PDNS_BIND_PHASES
+            ),
         }
         for name, python_values in expected.items():
             with self.subTest(name=name):
@@ -363,10 +366,18 @@ class GuestBootstrapTest(unittest.TestCase):
         array = shell.split("readonly -a CRITICAL_MANAGED_PDNS_PHASES=(\n", 1)[1].split(
             "\n)", 1
         )[0]
+        early = shell.split("readonly -a EARLY_MANAGED_PDNS_BIND_PHASES=(\n", 1)[1].split(
+            "\n)", 1
+        )[0]
         contains = shell.split("array_contains() {\n", 1)[1].split("\n}", 1)[0]
+        matches = shell.split("standalone_cell_matches_phase() {\n", 1)[1].split(
+            "\n}\n", 1
+        )[0]
         script = (
             "CRITICAL_MANAGED_PDNS_PHASES=(\n" + array + "\n)\n"
+            + "EARLY_MANAGED_PDNS_BIND_PHASES=(\n" + early + "\n)\n"
             + "array_contains() {\n" + contains + "\n}\n"
+            + "standalone_cell_matches_phase() {\n" + matches + "\n}\n"
             + "managed_pdns_bind_boundary_allowed() {\n" + helper + "\n}\n"
             + 'managed_pdns_bind_boundary_allowed "$1" "$2" "$3"\n'
         )
@@ -394,6 +405,28 @@ class GuestBootstrapTest(unittest.TestCase):
              "source-stopped", "managed-pdns-required", 0),
             ("bind__source-stopped__before-write__standalone__peer-reachable",
              "source-stopped", "driver-specific", 1),
+            ("bind__intent__after-write__standalone__peer-reachable",
+             "intent", "driver-specific", 0),
+            ("bind__intent__before-write__standalone__peer-unreachable",
+             "intent", "driver-specific", 0),
+            ("bind__target-staged__after-write__standalone__peer-reachable",
+             "target-staged", "driver-specific", 0),
+            ("bind__target-staged__before-write__standalone__peer-unreachable",
+             "target-staged", "driver-specific", 0),
+            ("bind__intent__after-write__standalone__peer-reachable",
+             "intent", "managed-pdns-required", 1),
+            ("bind__intent__after-write__standalone__peer-reachable",
+             "intent", "uninitialized-permitted-noncritical", 1),
+            ("bind__intent__after-write__paired-primary__peer-reachable",
+             "intent", "driver-specific", 1),
+            ("bind__intent__after-write__standalone__peer-reachable",
+             "target-staged", "driver-specific", 1),
+            ("bind__pre-intent__standalone__peer-reachable",
+             "pre-intent", "driver-specific", 1),
+            ("bind__target-verified__after-write__standalone__peer-reachable",
+             "target-verified", "driver-specific", 1),
+            ("bind__committed__after-write__standalone__peer-reachable",
+             "committed", "driver-specific", 1),
         )
         for cell_id, phase, policy, expected in cases:
             with self.subTest(cell_id=cell_id, phase=phase, policy=policy):
@@ -494,11 +527,14 @@ class GuestBootstrapTest(unittest.TestCase):
                 cell("arch", "intent"), "arch", "managed-pdns"
             )
 
-    def test_managed_pdns_preinstall_is_critical_boundary_only(self) -> None:
+    def test_managed_pdns_preinstall_is_critical_or_exact_early_cell_only(self) -> None:
         bootstrap.validate_bind_cell(
             cell("debian13", "target-started"), "debian13", "managed-pdns"
         )
-        for phase in ("pre-intent", "intent", "target-staged", "committed"):
+        # The synthetic cell has no exact ID or fault selector, so the early
+        # intent/target-staged admission (EarlyManagedPDNSBindCellTest) cannot
+        # apply to it.
+        for phase in ("pre-intent", "intent", "target-staged", "target-verified", "committed"):
             with self.subTest(phase=phase), self.assertRaises(bootstrap.BootstrapError):
                 bootstrap.validate_bind_cell(
                     cell("debian13", phase), "debian13", "managed-pdns"
@@ -1786,6 +1822,221 @@ class FreshInstallCellTest(unittest.TestCase):
                         env={**os.environ, "FRESH_PDNS_ROLE": role},
                     )
                     self.assertEqual(result.returncode, expected, result.stderr)
+
+
+class EarlyManagedPDNSBindCellTest(unittest.TestCase):
+    """Managed PowerDNS source at standalone Debian intent/target-staged BIND.
+
+    Fixture admission only: the controller still refuses these cells (see
+    test_controller_gap_is_explicit), so nothing here is native evidence.
+    """
+
+    MANIFEST_PATH = Path(bootstrap.__file__).with_name("manifest.json")
+    ADMITTED = frozenset({
+        "bind__intent__before-write__standalone__peer-unreachable",
+        "bind__intent__after-write__standalone__peer-reachable",
+        "bind__target-staged__before-write__standalone__peer-unreachable",
+        "bind__target-staged__after-write__standalone__peer-reachable",
+    })
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.manifest = json.loads(cls.MANIFEST_PATH.read_text(encoding="utf-8"))
+        cls.runnable = [
+            raw for raw in cls.manifest["cells"] if raw["status"] == "runnable"
+        ]
+
+    def raw(self, cell_id: str) -> dict:
+        return next(item for item in self.runnable if item["id"] == cell_id)
+
+    @staticmethod
+    def node(raw: dict) -> str:
+        return bootstrap.NODE_FOR_PLACEMENT[raw["placement"]["kill_host"]]
+
+    @staticmethod
+    def admitted(raw: dict, node: str) -> bool:
+        try:
+            bootstrap.validate_bind_cell(raw, node, "managed-pdns")
+        except bootstrap.BootstrapError:
+            return False
+        return True
+
+    def test_exactly_the_debian_standalone_early_cells_are_newly_admitted(self) -> None:
+        early = [
+            raw for raw in self.runnable
+            if raw["driver"] == "bind"
+            and raw["boundary"]["phase"] in bootstrap.EARLY_MANAGED_PDNS_BIND_PHASES
+        ]
+        admitted = {
+            raw["id"] for raw in early
+            if any(self.admitted(raw, node) for node in ("arch", "debian13"))
+        }
+        self.assertEqual(admitted, self.ADMITTED)
+        for cell_id in self.ADMITTED:
+            raw = self.raw(cell_id)
+            with self.subTest(cell_id=cell_id):
+                self.assertEqual(raw["placement"]["kill_host"], "debian-13")
+                self.assertEqual(
+                    raw["placement"]["source_fixture_policy"], "driver-specific"
+                )
+                self.assertFalse(self.admitted(raw, "arch"))
+                # The empty source stays admitted on the same cells.
+                bootstrap.validate_bind_cell(raw, "debian13", "uninitialized")
+
+    def test_other_managed_pdns_refusals_remain(self) -> None:
+        for cell_id in (
+            "bind__intent__after-write__standalone__peer-unreachable",
+            "bind__target-staged__before-write__standalone__peer-reachable",
+            "bind__intent__after-write__paired-primary__peer-unreachable",
+            "bind__target-staged__after-write__paired-secondary__peer-reachable",
+            "bind__pre-intent__standalone__peer-reachable",
+            "bind__target-verified__after-write__standalone__peer-reachable",
+            "bind__committed__after-write__standalone__peer-reachable",
+            "bind__rolling-back__before-write__standalone__peer-reachable",
+        ):
+            raw = self.raw(cell_id)
+            with self.subTest(refused=cell_id):
+                self.assertFalse(self.admitted(raw, self.node(raw)))
+        selected = self.raw("bind__intent__after-write__standalone__peer-reachable")
+        for change in (
+            {"placement": {**selected["placement"],
+                           "source_fixture_policy": "managed-pdns-required"}},
+            {"placement": {**selected["placement"],
+                           "source_fixture_policy": "uninitialized-permitted-noncritical"}},
+            {"role": "paired-primary"},
+            {"id": "bind__intent__after-write__standalone__peer-unreachable"},
+            {"fault_selector": {"phase": "intent", "point": "before_write"}},
+            {"boundary": {**selected["boundary"], "edge": "window"}},
+        ):
+            with self.subTest(change=sorted(change)), self.assertRaises(
+                bootstrap.BootstrapError
+            ):
+                bootstrap.validate_bind_cell(
+                    dict(selected, **change), "debian13", "managed-pdns"
+                )
+        # Critical placements keep their managed-pdns-required admission.
+        bootstrap.validate_bind_cell(
+            self.raw("bind__source-stopped__after-write__standalone__peer-reachable"),
+            "debian13", "managed-pdns",
+        )
+
+    def dry_prepare(self, raw: dict) -> tuple[list, dict]:
+        args = mock.Mock(
+            action="prepare-bind", cell_id=raw["id"], node=self.node(raw),
+            source_fixture="managed-pdns", identity_file=Path("/tmp/test-key"),
+            execute=False, authority_acceptance=False,
+        )
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch.object(bootstrap, "scp_base", return_value=["scp"]),
+            mock.patch.object(bootstrap, "remote_destination",
+                              side_effect=lambda _node, path: "guest:" + path),
+            mock.patch.object(bootstrap.subprocess, "run") as run,
+            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+        ):
+            bootstrap.prepare(args)
+            run.assert_not_called()
+        lines = [json.loads(line) for line in output.getvalue().splitlines()]
+        return lines[:-1], lines[-1]
+
+    def test_dry_run_prepares_each_cell_on_the_unchanged_managed_path(self) -> None:
+        for cell_id in sorted(self.ADMITTED):
+            raw = self.raw(cell_id)
+            stage = bootstrap.stage_name(cell_id)
+            with self.subTest(cell_id=cell_id):
+                commands, summary = self.dry_prepare(raw)
+                self.assertEqual(len(commands), 3)
+                self.assertEqual(commands[2][-1], (
+                    f"sudo /bin/bash {stage}/guest_bootstrap.sh prepare-bind "
+                    f"{cell_id} debian13 {raw['boundary']['phase']} "
+                    f"managed-pdns driver-specific {stage}"
+                ))
+                self.assertEqual(summary["uploaded"], "scenario.json source-setup-pdns.json")
+                self.assertTrue(summary["setup_adoption_rpc_used"])
+                self.assertEqual(
+                    summary["source_preinstall_proof"],
+                    "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-pdns.json",
+                )
+                self.assertEqual(
+                    summary["source_adoption_proof"],
+                    "/var/lib/celikpanel-dns-kill-matrix/source-adoption-pdns.json",
+                )
+        with self.assertRaises(bootstrap.BootstrapError):
+            self.dry_prepare(
+                self.raw("bind__intent__after-write__standalone__peer-unreachable")
+            )
+
+    def test_controller_scenario_and_predecessor_accept_managed_source(self) -> None:
+        expected_phase = {
+            "bind__intent__before-write__standalone__peer-unreachable": None,
+            "bind__intent__after-write__standalone__peer-reachable": "intent",
+            "bind__target-staged__before-write__standalone__peer-unreachable": "intent",
+            "bind__target-staged__after-write__standalone__peer-reachable": "target-staged",
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "scenario.json"
+            path.write_bytes(bootstrap.json_bytes(bootstrap.bind_scenario("managed-pdns")))
+            os.chmod(path, 0o600)
+            for cell_id in sorted(self.ADMITTED):
+                with self.subTest(cell_id=cell_id):
+                    selected = run_cell.CellSpec.from_manifest(self.manifest, cell_id)
+                    value, _ = run_cell.validate_source_scenario(str(path), selected)
+                    self.assertEqual(
+                        (value["source_fixture"], value["source_engine"],
+                         value["source_epoch"], value["target_epoch"]),
+                        ("managed-pdns", "pdns", 1, 2),
+                    )
+                    self.assertEqual(
+                        run_cell.expected_journal_phase(selected), expected_phase[cell_id]
+                    )
+
+    def test_controller_gap_is_explicit(self) -> None:
+        """The controller cannot run these cells yet; see README.
+
+        It expects the V1 journal although this source makes the producer write
+        V2, admits the managed source proofs only at critical phases, and offers
+        no post-kill handoff or owner-CLI step for these phases.
+        """
+
+        value = {key: None for key in run_cell.SOURCE_PREINSTALL_KEYS}
+        raw = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        for cell_id in sorted(self.ADMITTED):
+            selected = run_cell.CellSpec.from_manifest(self.manifest, cell_id)
+            with self.subTest(cell_id=cell_id):
+                self.assertEqual(
+                    run_cell.expected_journal_schema(selected), run_cell.JOURNAL_SCHEMA
+                )
+                self.assertFalse(run_cell.is_bind_handoff_cell(selected))
+                with self.assertRaisesRegex(run_cell.ControllerError, "escaped its exact"):
+                    run_cell.validate_source_preinstall_document(value, raw, selected)
+
+    def test_run_prepared_has_no_handoff_for_early_cells(self) -> None:
+        raw = self.raw("bind__target-staged__after-write__standalone__peer-reachable")
+        args = mock.Mock(
+            cell_id=raw["id"], node="debian13", source_fixture="managed-pdns",
+            identity_file=Path("/tmp/test-key"), execute=False,
+            stop_after_kill_for_independent_recovery=False,
+            bind_rollback_after_target_started=False,
+        )
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch.object(bootstrap.subprocess, "run") as run,
+            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+        ):
+            self.assertEqual(bootstrap.run_prepared(args), 0)
+            run.assert_not_called()
+        command = json.loads(output.getvalue())
+        self.assertTrue(command[-1].endswith(" " + raw["id"]))
+        args.stop_after_kill_for_independent_recovery = True
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+            self.assertRaises(bootstrap.BootstrapError),
+        ):
+            bootstrap.run_prepared(args)
 
 
 if __name__ == "__main__":

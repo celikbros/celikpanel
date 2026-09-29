@@ -122,18 +122,15 @@ func assessInstalledFreshPrimaryV3(ctx context.Context, policy dnsengineartifact
 			if !freshPDNSAllAbsentV3(policy.StatePath) {
 				return unknown, errors.New("v3 unstarted target unexpectedly has a state receipt")
 			}
-			if (j.Phase != dnsengineartifact.SwitchPhaseIntent && j.Phase != dnsengineartifact.SwitchPhaseRollingBack && j.Phase != dnsengineartifact.SwitchPhaseRolledBack) || !allBefore ||
+			if !dnsenginerecovery.FreshPrimaryPrestartJournalV3(j) || !allBefore ||
 				units[2].UnitFileState != j.TargetUnitsBefore[0].UnitFileState ||
 				!freshPDNSAllAbsentV3(j.PDNSCandidatePath, policy.PDNSDatabasePath, policy.PDNSDatabasePath+"-wal", policy.PDNSDatabasePath+"-shm", policy.PDNSDatabasePath+"-journal") {
 				return unknown, errors.New("v3 unsealed intent has unknown native effects")
 			}
 			shape = freshPDNSRecoveryIntentCleanV3
 		} else {
-			if j.PDNSFreshPlan.Native != nil || (j.Phase != dnsengineartifact.SwitchPhaseTargetStaged &&
-				j.Phase != dnsengineartifact.SwitchPhaseTargetEnableIntent &&
-				j.Phase != dnsengineartifact.SwitchPhaseRollingBack &&
-				j.Phase != dnsengineartifact.SwitchPhaseRollingBackTargetEnable &&
-				j.Phase != dnsengineartifact.SwitchPhaseRolledBack) {
+			// The same pre-start shape names this owner command in dns-switch-status.
+			if !dnsenginerecovery.FreshPrimaryPrestartJournalV3(j) {
 				return unknown, errors.New("v3 stopped target lacks a bounded prestart decision")
 			}
 			if (j.Phase == dnsengineartifact.SwitchPhaseRollingBack ||

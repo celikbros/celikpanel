@@ -46,6 +46,13 @@ readonly -a CRITICAL_MANAGED_PDNS_PHASES=(
     target-started
     rolled-back
 )
+# Standalone Debian intent/target-staged BIND cells are driver-specific in the
+# manifest; a genuine managed PowerDNS source is admitted there too, so the
+# measured switch writes its V2 frozen-source journal before the target starts.
+readonly -a EARLY_MANAGED_PDNS_BIND_PHASES=(
+    intent
+    target-staged
+)
 # Fresh installs (prior state: no DNS engine). BIND standalone adds only the
 # driver-specific post-start target-verified cut; critical BIND phases remain
 # managed-pdns-required. Fresh standalone PowerDNS writes every V1 phase.
@@ -2364,6 +2371,11 @@ managed_pdns_bind_boundary_allowed() {
         [[ $source_fixture_policy == managed-pdns-required ]]
         return
     fi
+    if array_contains "$boundary_phase" "${EARLY_MANAGED_PDNS_BIND_PHASES[@]}"; then
+        [[ $source_fixture_policy == driver-specific ]] &&
+            standalone_cell_matches_phase bind "$cell_id" "$boundary_phase"
+        return
+    fi
     [[ $cell_id == bind__rolling-back__after-write__standalone__peer-reachable &&
        $boundary_phase == rolling-back &&
        $source_fixture_policy == driver-specific ]]
@@ -2410,7 +2422,7 @@ prepare_bind() {
         [[ $node == debian13 ]] \
             || die "managed PowerDNS source can only be established on certified Debian 13"
         managed_pdns_bind_boundary_allowed "$cell_id" "$boundary_phase" "$source_fixture_policy" \
-            || die "managed PowerDNS source preinstall requires a supported critical BIND boundary and its exact fixture policy"
+            || die "managed PowerDNS source preinstall requires a supported critical or early standalone BIND boundary and its exact fixture policy"
         require_regular "$stage/source-setup-pdns.json"
         install -m 0600 -o root -g root "$stage/source-setup-pdns.json" "$SOURCE_SETUP_FILE"
         assert_no_source_engine "$address"

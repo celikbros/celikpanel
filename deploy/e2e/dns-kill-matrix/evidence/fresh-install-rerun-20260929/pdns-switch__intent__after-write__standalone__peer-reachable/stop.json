@@ -1,0 +1,6 @@
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__intent__after-write__standalone__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}

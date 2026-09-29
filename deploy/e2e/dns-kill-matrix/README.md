@@ -367,6 +367,32 @@ certified Debian+APT path (`cmd/agent/dns_engine_pdns_unit.go:63-71`). Therefore
 every critical BIND `source-stopped`, `target-started`, and `rolled-back`
 cell is placed on Debian 13 and declares `source_fixture_policy: managed-pdns-required`. Prepare
 one of those cells with `--node debian13 --source-fixture managed-pdns`.
+
+The same unchanged managed PowerDNS preparation is also admitted for the four
+standalone BIND cells that the manifest places on Debian 13 with
+`driver-specific` policy at `intent` and `target-staged`:
+`bind__intent__after-write__standalone__peer-reachable`,
+`bind__intent__before-write__standalone__peer-unreachable`,
+`bind__target-staged__after-write__standalone__peer-reachable` and
+`bind__target-staged__before-write__standalone__peer-unreachable`. An empty
+source stays admitted there too. With a serving PowerDNS source on certified
+Debian the measured switch writes the V2 frozen-source journal from `intent`
+on, so these cells are meant to show the Agent-decides / owner-executes
+rollback split before BIND ever started. The Arch-placed early cells, paired
+roles, `pre-intent` and every other phase stay refused for `managed-pdns`.
+`intent:before-write` cuts before any journal exists, so it cannot show a
+rollback decision.
+
+This is fixture admission only. `run_cell.py` cannot run these four cells yet
+and refuses them before the tagged Agent starts: it admits the managed source
+preinstall and adoption proofs only at `source-stopped`, `target-started`,
+`rolled-back` or the exact rolling-back handoff cell; it expects the V1
+journal schema for every cell except that handoff cell; its
+`--stop-after-kill-for-independent-recovery` stop is limited to the two
+rolling-back handoff cells; and it has no step that restarts the Agent to
+record the refused `rolling-back` decision and then runs the owner
+`recover-dns-bind-switch` command. Those controller changes define what a
+pass means and are not part of this admission.
 Bootstrap first proves the BIND target and both PowerDNS source packages absent.
 It refreshes APT, masks `pdns.service`, and installs only `pdns-server` plus
 `pdns-backend-sqlite3` outside the service-mutation ledger. Before the

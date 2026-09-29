@@ -538,13 +538,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		evidence = againEvidence
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
-	if dnsenginerecovery.ValidateRunningBINDAdoptionInverseEvidence(evidence) == nil {
-		fmt.Fprintf(out, "This running BIND adoption retains a rollback decision. The server owner can continue that exact no-stop inverse with: /usr/libexec/celikpanel/recovery recover-dns-bind-adoption --request-id %s. The command rechecks locks, worker exclusion and owner changes; this status check does not start recovery.\n", observation.RequestID)
-	}
-
-	if quiesced && pdnsTargetV4OwnerRecoveryCandidate(evidence) {
-		fmt.Fprintf(out, "If this V4 PowerDNS-target switch stopped, the server owner can attempt the same-request pre-start inverse with: /usr/libexec/celikpanel/recovery recover-dns-pdns-target-staged --request-id %s. The command checks the accepted worker, exact candidate, native units and owner changes; a running or changed target is refused and its evidence is preserved. This status check does not start recovery.\n", observation.RequestID)
-	}
+	fmt.Fprint(out, ownerDNSRecoveryGuidance(evidence, quiesced))
 	if quiesced {
 		switch observation.Status {
 		case dnsenginerecovery.EvidenceActive,
@@ -812,6 +806,59 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		return exitUnavailable
 	}
 	return exitOK
+}
+
+// ownerDNSRecoveryCommand names the single owner-run recovery command whose
+// own evidence admission accepts this secured observation. The predicates are
+// the ones those commands apply; each command still rechecks the locks, the
+// accepted worker, owner changes and native state before any effect. An empty
+// result means no owner command applies to the recorded shape and status.
+func ownerDNSRecoveryCommand(e dnsenginerecovery.SwitchEvidence) string {
+	switch {
+	case dnsenginerecovery.ValidateRunningBINDAdoptionInverseEvidence(e) == nil:
+		return ownerBINDAdoptionInverseCommand
+	case dnsenginerecovery.ValidateInactiveBINDSwitchInverseEvidence(e) == nil:
+		return ownerBINDSwitchInverseCommand
+	case dnsenginerecovery.ValidatePDNSAdoptionInverseEvidence(e) == nil:
+		return ownerPDNSAdoptionInverseCommand
+	case freshPDNSPrestartV3OwnerRecoveryCandidate(e):
+		return ownerPDNSFreshPrestartV3Command
+	case pdnsTargetV4OwnerRecoveryCandidate(e):
+		return ownerPDNSTargetInverseV4Command
+	}
+	return ""
+}
+
+// ownerDNSRecoveryGuidance is read-only text: it names the command and the
+// exact request, and never starts or authorizes recovery itself.
+func ownerDNSRecoveryGuidance(e dnsenginerecovery.SwitchEvidence, quiesced bool) string {
+	request := e.Observation.RequestID
+	switch ownerDNSRecoveryCommand(e) {
+	case ownerBINDAdoptionInverseCommand:
+		return fmt.Sprintf("This running BIND adoption retains a rollback decision. The server owner can continue that exact no-stop inverse with: /usr/libexec/celikpanel/recovery recover-dns-bind-adoption --request-id %s. The command rechecks locks, worker exclusion and owner changes; this status check does not start recovery.\n", request)
+	case ownerBINDSwitchInverseCommand:
+		return fmt.Sprintf("This PowerDNS-to-BIND switch retains a rollback decision. The server owner can continue that exact inverse with: /usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id %s. The command rechecks locks, worker exclusion, the frozen PowerDNS source and owner changes; this status check does not start recovery.\n", request)
+	case ownerPDNSAdoptionInverseCommand:
+		return fmt.Sprintf("This PowerDNS adoption retains a rollback decision. The server owner can continue that exact inverse with: /usr/libexec/celikpanel/recovery recover-dns-pdns-adoption --request-id %s. The command rechecks locks, worker exclusion, the owner's PowerDNS configuration and database and owner changes; this status check does not start recovery.\n", request)
+	case ownerPDNSFreshPrestartV3Command:
+		return fmt.Sprintf("If PowerDNS never started for this fresh paired primary, the server owner can restore the pre-start state with: /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id %s. The command checks locks, the accepted worker, native units, configuration and the staged candidate; a started or changed target is refused and its evidence is preserved. This status check does not start recovery.\n", request)
+	case ownerPDNSTargetInverseV4Command:
+		if !quiesced {
+			return fmt.Sprintf("This V4 PowerDNS-target switch may be recoverable by the server owner. Rerun this check with --quiesced --request-id %s; it names the exact command only after the release and host locks are held. This status check does not start recovery.\n", request)
+		}
+		return fmt.Sprintf("If this V4 PowerDNS-target switch stopped, the server owner can attempt the same-request pre-start inverse with: /usr/libexec/celikpanel/recovery recover-dns-pdns-target-staged --request-id %s. The command checks the accepted worker, exact candidate, native units and owner changes; a running or changed target is refused and its evidence is preserved. This status check does not start recovery.\n", request)
+	}
+	return fmt.Sprintf("No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id %s. This status check does not start recovery.\n", request)
+}
+
+// freshPDNSPrestartV3OwnerRecoveryCandidate is the evidence gate of
+// recover-dns-pdns-fresh-prestart: the exact V3 request journal with the
+// pre-start shape assessInstalledFreshPrimaryV3 requires. Whether PowerDNS
+// started is a native fact that only the command proves under its locks.
+func freshPDNSPrestartV3OwnerRecoveryCandidate(e dnsenginerecovery.SwitchEvidence) bool {
+	return e.Observation.RequestID == e.Journal.MutationRequestID &&
+		e.Observation.Phase == e.Journal.Phase &&
+		dnsenginerecovery.FreshPrimaryPrestartJournalV3(e.Journal)
 }
 
 func pdnsTargetV4OwnerRecoveryCandidate(e dnsenginerecovery.SwitchEvidence) bool {

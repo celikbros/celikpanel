@@ -42,7 +42,7 @@ func recoverFreshPrimaryForwardV3(ctx context.Context, id dnsengineartifact.Swit
 	case dnsengineartifact.SwitchPhaseTargetEnableIntent, dnsengineartifact.SwitchPhaseTargetStarted,
 		dnsengineartifact.SwitchPhaseTargetVerified, dnsengineartifact.SwitchPhaseCommitted:
 	default:
-		return dnsenginerecovery.OutcomeAbsent, errors.New("v3 phase has no poststart forward authority")
+		return dnsenginerecovery.OutcomeAbsent, freshPrimaryPrestartRefusalV3(journal, "v3 phase has no poststart forward authority")
 	}
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {

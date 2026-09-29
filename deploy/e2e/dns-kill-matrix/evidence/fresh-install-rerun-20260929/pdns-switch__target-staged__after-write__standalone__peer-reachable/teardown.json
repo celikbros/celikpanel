@@ -1,0 +1,7 @@
+{
+  "action": "teardown",
+  "cell_id": "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+  "dry_run": false,
+  "target": "/var/tmp/cp-d026b-0929/cells/ea50b1c15b9bfebef43214b0",
+  "warning": "recursive deletion is confined to this validated cell directory"
+}

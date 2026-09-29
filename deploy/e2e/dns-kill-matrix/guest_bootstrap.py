@@ -33,6 +33,14 @@ CRITICAL_MANAGED_PDNS_PHASES = frozenset({"source-stopped", "target-started", "r
 # source-stopped, target-started and rolled-back stay managed-pdns-required by
 # matrix design (generate_manifest.py host_placement), not by product limit.
 FRESH_BIND_STANDALONE_PHASES = EARLY_UNINITIALIZED_PHASES | frozenset({"target-verified"})
+# Early PowerDNS -> BIND cuts, before the target ever started. The manifest
+# places the standalone Debian cells at these phases as driver-specific, so an
+# empty source is honest there and a genuine managed PowerDNS source is equally
+# admissible: on certified Debian it makes the producer write the V2 frozen
+# source journal from intent on (prepareBINDIndependentInverseJournal). The
+# preparation path is the unchanged managed-pdns one. Earlier exclusion was
+# only "not implemented"; Arch placements and paired roles stay refused.
+EARLY_MANAGED_PDNS_BIND_PHASES = frozenset({"intent", "target-staged"})
 PDNS_SWITCH_PHASES = frozenset(
     {
         "pre-intent", "intent", "target-staged", "source-stopped",
@@ -239,6 +247,28 @@ def load_manifest_cell(manifest_path: Path, cell_id: str) -> dict[str, Any]:
     return cell
 
 
+def early_managed_pdns_bind_cell(
+    cell: dict[str, Any], phase: Any, source_policy: Any
+) -> bool:
+    """Exact standalone intent/target-staged BIND cell for a managed source."""
+
+    boundary = cell.get("boundary", {})
+    edge = boundary.get("edge")
+    peer = cell.get("peer_reachability")
+    return (
+        source_policy == "driver-specific"
+        and phase in EARLY_MANAGED_PDNS_BIND_PHASES
+        and cell.get("driver") == "bind"
+        and cell.get("role") == "standalone"
+        and edge in {"before-write", "after-write"}
+        and peer in {"reachable", "unreachable"}
+        and cell.get("id") == f"bind__{phase}__{edge}__standalone__peer-{peer}"
+        and cell.get("fault_selector") == {
+            "phase": phase, "point": edge.replace("-", "_"),
+        }
+    )
+
+
 def validate_bind_cell(cell: dict[str, Any], node: str, source_fixture: str) -> None:
     if cell.get("driver") != "bind" or cell.get("role") not in {
         "standalone",
@@ -293,6 +323,7 @@ def validate_bind_cell(cell: dict[str, Any], node: str, source_fixture: str) -> 
             or not (
                 (source_policy == "managed-pdns-required"
                  and phase in CRITICAL_MANAGED_PDNS_PHASES)
+                or early_managed_pdns_bind_cell(cell, phase, source_policy)
                 or (
                     source_policy == "driver-specific"
                     and phase == "rolling-back"
@@ -308,8 +339,8 @@ def validate_bind_cell(cell: dict[str, Any], node: str, source_fixture: str) -> 
         ):
             raise BootstrapError(
                 "managed PowerDNS source preinstall requires the managed fixture "
-                "policy and a supported critical BIND cell "
-                "on certified Debian"
+                "policy and a supported critical BIND cell, or a driver-specific "
+                "standalone intent/target-staged BIND cell, on certified Debian"
             )
     else:
         raise BootstrapError(f"unsupported BIND source fixture {source_fixture!r}")

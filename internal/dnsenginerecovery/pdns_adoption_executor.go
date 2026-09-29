@@ -7,7 +7,6 @@ import (
 	"reflect"
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
-	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // PDNSAdoptionInverseOps are effects supplied by a privileged owner recovery
@@ -147,14 +146,19 @@ func activeDNSInverseStatus(status EvidenceStatus) bool {
 	return false
 }
 
+// ValidatePDNSAdoptionInverseEvidence is the evidence admission used by
+// CompletePDNSAdoptionInverse. Read-only observers use it to name the owner
+// command; its success grants no lock, worker or native mutation authority.
+func ValidatePDNSAdoptionInverseEvidence(evidence SwitchEvidence) error {
+	return validatePDNSAdoptionInverseEvidence(evidence)
+}
+
 func validatePDNSAdoptionInverseEvidence(evidence SwitchEvidence) error {
 	journal, observed := evidence.Journal, evidence.Observation
-	if journal.Mode != transport.DNSEngineSwitchModeAdopt ||
-		journal.SourceEngine != "" || journal.TargetEngine != transport.DNSEnginePowerDNS ||
-		journal.StateBefore.Exists ||
-		(journal.Phase != dnsengineartifact.SwitchPhaseRollingBack &&
-			journal.Phase != dnsengineartifact.SwitchPhaseRolledBack) ||
-		observed.InverseKind != NativeInversePDNSAdoption ||
+	if err := PDNSAdoptionInverseJournal(journal); err != nil {
+		return err
+	}
+	if observed.InverseKind != NativeInversePDNSAdoption ||
 		observed.RequestID != journal.MutationRequestID ||
 		observed.Phase != journal.Phase ||
 		observed.SourceEngine != string(journal.SourceEngine) ||
