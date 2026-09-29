@@ -1,0 +1,77 @@
+{
+  "context": {
+    "access_dns_ip": "192.0.2.11",
+    "dns_engine": "bind",
+    "dns_hosting_management": "",
+    "dns_mode": "local",
+    "dns_role": "secondary",
+    "local_ip": "192.0.2.11",
+    "local_nameserver": "ns2.ns-accept.test",
+    "mail_hostname": "",
+    "panel_domain": "panel-arch.ns-accept.test",
+    "peer_ip": "192.0.2.10",
+    "peer_nameserver": "ns1.ns-accept.test"
+  },
+  "error": {
+    "code": "license_required",
+    "message": "Activate the license to continue the remaining setup steps. Existing services keep running."
+  },
+  "id": "bbc6c79f1117e6122165ef4acd52753c",
+  "panel_url": "https://panel-arch.ns-accept.test:2083/",
+  "phase": "license",
+  "plan_id": "04cf63a4d25ab1fc8599e3ca3d265fd2",
+  "request_id": "bbc6c79f1117e6122165ef4acd52753c",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "owner_id": "c27dc894d9e8f5c339b25b30dc173363",
+      "request_id": "141b506e90ddc573bf5bc3a7c0ef53d3",
+      "status": "succeeded",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "operation_id": "add99d301dd15791e5e7926f01a73538",
+      "owner_id": "23b8013e208e1d2ee7c463570d4317b5",
+      "request_id": "1b26a820eb79898b011637129eab920d",
+      "status": "succeeded",
+      "target": "certbot"
+    },
+    {
+      "id": "03-firewall",
+      "kind": "firewall",
+      "owner_id": "9dc5642d4208a54bba2692b9915099c7",
+      "request_id": "3f2d8cfe39f8b16cba788014b22d9f00",
+      "status": "succeeded",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "04-access_dns",
+      "kind": "access_dns",
+      "owner_id": "aaeecec740f084676c04aeda6a46b08b",
+      "qualifier": "192.0.2.11",
+      "request_id": "8249835cd4e7e6072854e2507ee53ec4",
+      "status": "running",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "owner_id": "e9567cba6db5621b57e2832776d574a1",
+      "request_id": "75d07663a62a37bbe7d78163a33e4cfa",
+      "status": "pending",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "owner_id": "5c3743873dc40cabf04a4715ac81c716",
+      "request_id": "f2a0984f409c5a3a45d6b310df051784",
+      "status": "pending",
+      "target": "dns"
+    }
+  ]
+}

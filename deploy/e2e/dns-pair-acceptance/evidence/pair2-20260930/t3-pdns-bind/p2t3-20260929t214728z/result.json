@@ -1,0 +1,705 @@
+{
+  "config": {
+    "dist_archive": "/var/tmp/cp-pair-accept/dist/916e1577933f37fb168818242befe02e01ce2122-acceptance-license/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f-acceptance-license.tar.gz",
+    "dist_commit": "916e1577933f37fb168818242befe02e01ce2122",
+    "dist_root": "celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f",
+    "dist_sha256": "a950b1e6d4449d6ea096735f6a1b28705033ad89ecf3e7034c206247029ef248",
+    "dist_tree": "4a1ad4336ffd72fadac4f6fc0c810eb434b842b5",
+    "edit_method": "ui-replace",
+    "infrastructure_dns": false,
+    "license_keys_supplied_for": [],
+    "license_mode": "acceptance-fixture",
+    "run_id": "p2t3-20260929t214728z",
+    "run_label": "p2t3",
+    "skip_security_updates": false,
+    "timeouts": {
+      "deletion": 300,
+      "dns": 240,
+      "reboot": 900,
+      "setup": 2700,
+      "stable_stop_polls": 5,
+      "stable_stop_seconds": 300.0
+    }
+  },
+  "driver": "celikpanel/dns-pair-acceptance-driver/v1",
+  "findings": [
+    {
+      "id": "ui-record-edit-is-delete-add",
+      "text": "The Domains DNS screen has no edit form: web/src/components/DomainDNSManager.tsx calls only POST and DELETE on /dns/records; PUT /dns/records (cmd/panel/domain_dns_handlers.go handleUpdateDNSRecord) is API-only. --edit-method selects which one this run exercised."
+    }
+  ],
+  "finished_at": "2026-09-29T22:36:18.127062Z",
+  "license_mode": "acceptance-fixture",
+  "license_service_journal_check": {
+    "arch": {
+      "acceptance_banner_count": 3,
+      "host": "celikpanel.net",
+      "host_line_count": 0,
+      "host_lines": [],
+      "journal_lines": 39,
+      "limit": "the in-process counter is not exposed; an unlogged attempt leaves no journal line",
+      "refusal_line_count": 0,
+      "refusal_lines": [],
+      "refusal_text": "the acceptance test build never contacts the license service",
+      "state": "no-line-found",
+      "why": "journal lines naming the license service host or the refusing transport's error"
+    },
+    "debian13": {
+      "acceptance_banner_count": 2,
+      "host": "celikpanel.net",
+      "host_line_count": 0,
+      "host_lines": [],
+      "journal_lines": 26,
+      "limit": "the in-process counter is not exposed; an unlogged attempt leaves no journal line",
+      "refusal_line_count": 0,
+      "refusal_lines": [],
+      "refusal_text": "the acceptance test build never contacts the license service",
+      "state": "no-line-found",
+      "why": "journal lines naming the license service host or the refusing transport's error"
+    }
+  },
+  "license_status": {
+    "primary": {
+      "acceptance_cell": "pair-accept__pdns-debian13__bind-arch__p2t3",
+      "acceptance_guest": "verified",
+      "acceptance_node": "debian13",
+      "acceptance_smbios_uuid": "not readable by the panel service user",
+      "can_provision": true,
+      "expires_at": 1791323468,
+      "license_id": "acceptance-fixture",
+      "license_kind": "acceptance_fixture",
+      "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+      "license_service": "not contacted: acceptance test build",
+      "observation": "known",
+      "offline_until": 1790718728,
+      "product": "celikpanel-acceptance-fixture",
+      "state": "active"
+    },
+    "secondary": {
+      "acceptance_cell": "pair-accept__pdns-debian13__bind-arch__p2t3",
+      "acceptance_guest": "verified",
+      "acceptance_node": "arch",
+      "acceptance_smbios_uuid": "not readable by the panel service user",
+      "can_provision": true,
+      "expires_at": 1791323469,
+      "license_id": "acceptance-fixture",
+      "license_kind": "acceptance_fixture",
+      "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+      "license_service": "not contacted: acceptance test build",
+      "observation": "known",
+      "offline_until": 1790718729,
+      "product": "celikpanel-acceptance-fixture",
+      "state": "active"
+    }
+  },
+  "native_evidence": false,
+  "native_evidence_note": "result of one disposable run; a reviewer decides what it proves",
+  "native_evidence_scope": "License behaviour is NOT evidenced by this run. Both panels were built with the acceptance_license test tag and ran on the acceptance fixture license, which exists only in that build: no customer license, no license service contact, and no activation, renewal, expiry or rejection path of the product. Only the DNS pair product flow after licensing is in scope for review.",
+  "overall": "failed",
+  "owner_steps": [
+    {
+      "action": "restart the server as install.sh asked (fixture orderly reboot, guest identity re-checked)",
+      "actor": "server owner",
+      "boot_ids": [
+        "41bfd145-3c0c-405d-b0b8-0fbbbd896691",
+        "227f8267-ff17-49d5-959f-1bb9009e29dc"
+      ],
+      "installer_text": "RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN\n    This server is running kernel 7.1.8-arch1-3, whose modules are no longer on disk:\n    the prerequisite step upgraded the kernel and replaced them. Until this server\n    is restarted it cannot load nftables or WireGuard, so turning the firewall on\n    or installing the VPN will fail. Everything else is installed and running.\n        reboot\n\n    Bu sunucu, modulleri artik diskte olmayan 7.1.8-arch1-3 cekirdegiyle calisiyor:\n    on gereksinim adimi cekirdegi yukseltti ve modulleri degistirdi. Sunucu\n    yeniden baslatilana kadar nftables veya WireGuard yuklenemez; guvenlik\n    duvarini acmak veya VPN kurmak hata verir. Geri kalan her sey kurulu.\n        reboot",
+      "node": "arch",
+      "step": "install-secondary",
+      "trigger": "RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN"
+    }
+  ],
+  "product_blockers": [],
+  "schema": "celikpanel/dns-pair-acceptance-result/v1",
+  "started_at": "2026-09-29T21:47:28.098966Z",
+  "steps": [
+    {
+      "checks": {
+        "dist": {
+          "acceptance_license_build": true,
+          "commit": "916e1577933f37fb168818242befe02e01ce2122",
+          "root": "celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f",
+          "sha256": "a950b1e6d4449d6ea096735f6a1b28705033ad89ecf3e7034c206247029ef248",
+          "tree": "4a1ad4336ffd72fadac4f6fc0c810eb434b842b5"
+        },
+        "guest_identity": {
+          "arch": {
+            "cell_id": "pair-accept__pdns-debian13__bind-arch__p2t3",
+            "node": "arch",
+            "product_uuid": "26492459-1561-5f00-8714-cc90b8532231",
+            "schema": "celikpanel/dns-kill-fixture-plan/v1"
+          },
+          "debian13": {
+            "cell_id": "pair-accept__pdns-debian13__bind-arch__p2t3",
+            "node": "debian13",
+            "product_uuid": "36e63398-f1af-58d3-b084-1077a441c79f",
+            "schema": "celikpanel/dns-kill-fixture-plan/v1"
+          }
+        }
+      },
+      "evidence_directory": "steps/00-preflight",
+      "finished_at": "2026-09-29T21:47:31.552922Z",
+      "guidance": [],
+      "id": "preflight",
+      "index": 0,
+      "reason": "",
+      "started_at": "2026-09-29T21:47:28.099007Z",
+      "title": "Disposable guest identity, pristine layout, artifact identity",
+      "verdict": "passed"
+    },
+    {
+      "checks": {
+        "installer_exit": 0,
+        "installer_restart_notice": "none"
+      },
+      "evidence_directory": "steps/01-install-primary",
+      "finished_at": "2026-09-29T21:48:02.750413Z",
+      "guidance": [],
+      "id": "install-primary",
+      "index": 1,
+      "reason": "",
+      "started_at": "2026-09-29T21:47:31.552977Z",
+      "title": "Customer installer on debian13 (pdns primary)",
+      "verdict": "passed"
+    },
+    {
+      "checks": {
+        "installer_exit": 0,
+        "installer_restart_notice": "required",
+        "owner_restart_after_install": {
+          "action": "restart the server as install.sh asked (fixture orderly reboot, guest identity re-checked)",
+          "actor": "server owner",
+          "boot_ids": [
+            "41bfd145-3c0c-405d-b0b8-0fbbbd896691",
+            "227f8267-ff17-49d5-959f-1bb9009e29dc"
+          ],
+          "installer_text": "RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN\n    This server is running kernel 7.1.8-arch1-3, whose modules are no longer on disk:\n    the prerequisite step upgraded the kernel and replaced them. Until this server\n    is restarted it cannot load nftables or WireGuard, so turning the firewall on\n    or installing the VPN will fail. Everything else is installed and running.\n        reboot\n\n    Bu sunucu, modulleri artik diskte olmayan 7.1.8-arch1-3 cekirdegiyle calisiyor:\n    on gereksinim adimi cekirdegi yukseltti ve modulleri degistirdi. Sunucu\n    yeniden baslatilana kadar nftables veya WireGuard yuklenemez; guvenlik\n    duvarini acmak veya VPN kurmak hata verir. Geri kalan her sey kurulu.\n        reboot",
+          "node": "arch",
+          "step": "install-secondary",
+          "trigger": "RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN"
+        }
+      },
+      "evidence_directory": "steps/02-install-secondary",
+      "finished_at": "2026-09-29T21:51:01.282952Z",
+      "guidance": [],
+      "id": "install-secondary",
+      "index": 2,
+      "reason": "",
+      "started_at": "2026-09-29T21:48:02.750556Z",
+      "title": "Customer installer on arch (bind secondary)",
+      "verdict": "passed"
+    },
+    {
+      "checks": {
+        "availability": {
+          "schema": "celikpanel-panel-availability/v1",
+          "state": "ready"
+        },
+        "identity": {
+          "effective_role": "admin",
+          "role": "admin",
+          "username": "owner"
+        }
+      },
+      "evidence_directory": "steps/03-login-primary",
+      "finished_at": "2026-09-29T21:51:04.264509Z",
+      "guidance": [],
+      "id": "login-primary",
+      "index": 3,
+      "reason": "",
+      "started_at": "2026-09-29T21:51:01.283060Z",
+      "title": "First administrator signs in on debian13",
+      "verdict": "passed"
+    },
+    {
+      "checks": {
+        "availability": {
+          "schema": "celikpanel-panel-availability/v1",
+          "state": "ready"
+        },
+        "identity": {
+          "effective_role": "admin",
+          "role": "admin",
+          "username": "owner"
+        }
+      },
+      "evidence_directory": "steps/04-login-secondary",
+      "finished_at": "2026-09-29T21:51:07.002328Z",
+      "guidance": [],
+      "id": "login-secondary",
+      "index": 4,
+      "reason": "",
+      "started_at": "2026-09-29T21:51:04.264586Z",
+      "title": "First administrator signs in on arch",
+      "verdict": "passed"
+    },
+    {
+      "checks": {
+        "activation_posts": 1,
+        "license_access_after": {
+          "can_use_panel": true,
+          "observation": "known",
+          "state": "active",
+          "valid_until": 1790718728
+        },
+        "license_access_before": {
+          "can_use_panel": false,
+          "observation": "known",
+          "state": "missing",
+          "valid_until": 0
+        },
+        "license_status": {
+          "acceptance_cell": "pair-accept__pdns-debian13__bind-arch__p2t3",
+          "acceptance_guest": "verified",
+          "acceptance_node": "debian13",
+          "acceptance_smbios_uuid": "not readable by the panel service user",
+          "can_provision": true,
+          "expires_at": 1791323468,
+          "license_id": "acceptance-fixture",
+          "license_kind": "acceptance_fixture",
+          "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+          "license_service": "not contacted: acceptance test build",
+          "observation": "known",
+          "offline_until": 1790718728,
+          "product": "celikpanel-acceptance-fixture",
+          "state": "active"
+        },
+        "license_status_before": {
+          "acceptance_cell": "pair-accept__pdns-debian13__bind-arch__p2t3",
+          "acceptance_guest": "verified",
+          "acceptance_node": "debian13",
+          "acceptance_smbios_uuid": "not readable by the panel service user",
+          "can_provision": false,
+          "license_kind": "acceptance_fixture",
+          "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+          "license_service": "not contacted: acceptance test build",
+          "observation": "known",
+          "state": "missing"
+        }
+      },
+      "evidence_directory": "steps/05-license-primary",
+      "finished_at": "2026-09-29T21:51:09.529319Z",
+      "guidance": [],
+      "id": "license-primary",
+      "index": 5,
+      "reason": "",
+      "started_at": "2026-09-29T21:51:07.002407Z",
+      "title": "Panel license state on debian13",
+      "verdict": "passed"
+    },
+    {
+      "checks": {
+        "activation_posts": 1,
+        "license_access_after": {
+          "can_use_panel": true,
+          "observation": "known",
+          "state": "active",
+          "valid_until": 1790718729
+        },
+        "license_access_before": {
+          "can_use_panel": false,
+          "observation": "known",
+          "state": "missing",
+          "valid_until": 0
+        },
+        "license_status": {
+          "acceptance_cell": "pair-accept__pdns-debian13__bind-arch__p2t3",
+          "acceptance_guest": "verified",
+          "acceptance_node": "arch",
+          "acceptance_smbios_uuid": "not readable by the panel service user",
+          "can_provision": true,
+          "expires_at": 1791323469,
+          "license_id": "acceptance-fixture",
+          "license_kind": "acceptance_fixture",
+          "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+          "license_service": "not contacted: acceptance test build",
+          "observation": "known",
+          "offline_until": 1790718729,
+          "product": "celikpanel-acceptance-fixture",
+          "state": "active"
+        },
+        "license_status_before": {
+          "acceptance_cell": "pair-accept__pdns-debian13__bind-arch__p2t3",
+          "acceptance_guest": "verified",
+          "acceptance_node": "arch",
+          "acceptance_smbios_uuid": "not readable by the panel service user",
+          "can_provision": false,
+          "license_kind": "acceptance_fixture",
+          "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+          "license_service": "not contacted: acceptance test build",
+          "observation": "known",
+          "state": "missing"
+        }
+      },
+      "evidence_directory": "steps/06-license-secondary",
+      "finished_at": "2026-09-29T21:51:09.903434Z",
+      "guidance": [],
+      "id": "license-secondary",
+      "index": 6,
+      "reason": "",
+      "started_at": "2026-09-29T21:51:09.529416Z",
+      "title": "Panel license state on arch",
+      "verdict": "passed"
+    },
+    {
+      "checks": {
+        "plan": {
+          "blockers": [],
+          "can_start": true,
+          "id": "3393bede8637de3f492b1933a7d812ce",
+          "purpose": "dns"
+        },
+        "plan_steps": [
+          [
+            "01-dns",
+            "dns",
+            "local"
+          ],
+          [
+            "02-service",
+            "service",
+            "certbot"
+          ],
+          [
+            "03-firewall",
+            "firewall",
+            "enable_and_persist"
+          ],
+          [
+            "04-access_dns",
+            "access_dns",
+            "panel-debian13.ns-accept.test"
+          ],
+          [
+            "05-panel_certificate",
+            "panel_certificate",
+            "panel-debian13.ns-accept.test"
+          ],
+          [
+            "06-verify",
+            "verify",
+            "dns"
+          ]
+        ],
+        "setup_before": {
+          "guidance": "undecided",
+          "origin": "fresh",
+          "required": true,
+          "revision": 0,
+          "status": "new"
+        },
+        "wizard_code_key_pdns_primary": "setup.pdnsPrimaryPaused"
+      },
+      "evidence_directory": "steps/07-setup-review-primary",
+      "finished_at": "2026-09-29T21:51:11.467881Z",
+      "guidance": [],
+      "id": "setup-review-primary",
+      "index": 7,
+      "reason": "",
+      "started_at": "2026-09-29T21:51:09.903504Z",
+      "title": "Wizard draft and reviewed plan on the primary",
+      "verdict": "passed"
+    },
+    {
+      "checks": {
+        "poll_stop": {
+          "elapsed_seconds": 2702.297,
+          "identical_reads": 891,
+          "reads": 896,
+          "stable_seconds": 2686.924,
+          "stop": "timeout"
+        },
+        "polls": 896
+      },
+      "evidence_directory": "steps/08-setup-start-primary",
+      "finished_at": "2026-09-29T22:36:14.628103Z",
+      "guidance": [
+        {
+          "actionable": true,
+          "actionable_reason": "no action required in this state",
+          "actor": "stated in text",
+          "code": null,
+          "context": "setup execution on debian13",
+          "detail_keys": [
+            "setup.guide.pairChecks",
+            "setup.guide.nativeDNS",
+            "setup.guide.monitoring"
+          ],
+          "details": {
+            "en": [
+              "If both servers are configured, check that their roles, names and IP addresses match, DNS answers on TCP/UDP port 53, and zone transfers are allowed for the correct peer. Public nameserver A/AAAA records and transferred zone versions must also agree.",
+              "The DNS services exchange zones using standard DNS protocols. A remote panel connection is not required for those transfers.",
+              "This active operation is checked again automatically. You can close the page and return to this operation. A failed operation needs the recovery action shown; refreshing the page does not restart it."
+            ],
+            "tr": [
+              "İki sunucu da yapılandırıldıysa rollerin, adların ve IP adreslerinin eşleştiğini, DNS’in TCP/UDP 53 portunda yanıt verdiğini ve doğru eş sunucuya bölge aktarımı izni verildiğini kontrol edin. Genel nameserver A/AAAA kayıtları ve aktarılan bölge sürümleri de eşleşmelidir.",
+              "DNS servisleri bölgeleri standart DNS protokolleriyle aktarır. Bu aktarım için uzak panele bağlantı gerekmez.",
+              "Bu etkin işlem otomatik olarak yeniden kontrol edilir. Sayfayı kapatıp aynı işleme dönebilirsiniz. Başarısız bir işlem için gösterilen kurtarma adımı gerekir; sayfayı yenilemek işlemi yeniden başlatmaz."
+            ]
+          },
+          "message_keys": [
+            "setup.guide.primary",
+            "setup.guide.startSecondary"
+          ],
+          "observed_at": "2026-09-29T21:51:12.348277Z",
+          "phase": "01-dns",
+          "raw_message": null,
+          "reason": null,
+          "shown": {
+            "en": [
+              "This server is Primary: ns1.ns-accept.test (192.0.2.10). Its expected Secondary is ns2.ns-accept.test (192.0.2.11).",
+              "If the secondary has not been configured, start its DNS setup now using this server as its primary. Do not wait for this server’s entire setup to finish before preparing the other server."
+            ],
+            "tr": [
+              "Bu sunucu Birincil: ns1.ns-accept.test (192.0.2.10). Beklenen İkincil sunucu: ns2.ns-accept.test (192.0.2.11).",
+              "İkincil sunucu henüz yapılandırılmadıysa DNS kurulumunu şimdi başlatın ve birincil olarak bu sunucuyu gösterin. Diğer sunucuyu hazırlamak için bu sunucudaki kurulumun tamamen bitmesini beklemeyin."
+            ]
+          },
+          "source": "setup-execution",
+          "state": "progress",
+          "status": "running",
+          "title": "What happens at this step",
+          "title_key": "setup.guide.runningTitle"
+        },
+        {
+          "actionable": true,
+          "actionable_reason": "specific translated guidance for a stable code",
+          "actor": "stated in text",
+          "code": "server_setup_reconciling",
+          "context": "setup execution on debian13",
+          "detail_keys": [
+            "setup.guide.pairChecks",
+            "setup.guide.nativeDNS",
+            "setup.guide.monitoring"
+          ],
+          "details": {
+            "en": [
+              "If both servers are configured, check that their roles, names and IP addresses match, DNS answers on TCP/UDP port 53, and zone transfers are allowed for the correct peer. Public nameserver A/AAAA records and transferred zone versions must also agree.",
+              "The DNS services exchange zones using standard DNS protocols. A remote panel connection is not required for those transfers.",
+              "This active operation is checked again automatically. You can close the page and return to this operation. A failed operation needs the recovery action shown; refreshing the page does not restart it."
+            ],
+            "tr": [
+              "İki sunucu da yapılandırıldıysa rollerin, adların ve IP adreslerinin eşleştiğini, DNS’in TCP/UDP 53 portunda yanıt verdiğini ve doğru eş sunucuya bölge aktarımı izni verildiğini kontrol edin. Genel nameserver A/AAAA kayıtları ve aktarılan bölge sürümleri de eşleşmelidir.",
+              "DNS servisleri bölgeleri standart DNS protokolleriyle aktarır. Bu aktarım için uzak panele bağlantı gerekmez.",
+              "Bu etkin işlem otomatik olarak yeniden kontrol edilir. Sayfayı kapatıp aynı işleme dönebilirsiniz. Başarısız bir işlem için gösterilen kurtarma adımı gerekir; sayfayı yenilemek işlemi yeniden başlatmaz."
+            ]
+          },
+          "message_keys": [
+            "setup.guide.confirm",
+            "setup.guide.primary",
+            "setup.guide.startSecondary"
+          ],
+          "observed_at": "2026-09-29T21:51:27.696459Z",
+          "phase": "01-dns",
+          "raw_message": null,
+          "reason": null,
+          "shown": {
+            "en": [
+              "The last operation’s result has not been confirmed yet. CelikPanel is checking the saved result; it cannot yet say whether that step finished. Do not start it again.",
+              "This server is Primary: ns1.ns-accept.test (192.0.2.10). Its expected Secondary is ns2.ns-accept.test (192.0.2.11).",
+              "If the secondary has not been configured, start its DNS setup now using this server as its primary. Do not wait for this server’s entire setup to finish before preparing the other server."
+            ],
+            "tr": [
+              "Son işlemin sonucu henüz doğrulanamadı. CelikPanel kayıtlı sonucu kontrol ediyor; bu adımın tamamlandığı henüz kesin değil. İşlemi yeniden başlatmayın.",
+              "Bu sunucu Birincil: ns1.ns-accept.test (192.0.2.10). Beklenen İkincil sunucu: ns2.ns-accept.test (192.0.2.11).",
+              "İkincil sunucu henüz yapılandırılmadıysa DNS kurulumunu şimdi başlatın ve birincil olarak bu sunucuyu gösterin. Diğer sunucuyu hazırlamak için bu sunucudaki kurulumun tamamen bitmesini beklemeyin."
+            ]
+          },
+          "source": "setup-execution",
+          "state": "unknown",
+          "status": "running",
+          "title": "Checking the last operation’s result",
+          "title_key": "setup.guide.confirmTitle"
+        }
+      ],
+      "id": "setup-start-primary",
+      "index": 8,
+      "reason": "setup DNS step did not finish within 2700s",
+      "started_at": "2026-09-29T21:51:11.467930Z",
+      "title": "Start the reviewed primary plan; wait for its DNS step",
+      "verdict": "failed"
+    },
+    {
+      "checks": {},
+      "evidence_directory": "steps/09-setup-review-secondary",
+      "finished_at": null,
+      "guidance": [],
+      "id": "setup-review-secondary",
+      "index": 9,
+      "reason": "prerequisite step(s) setup-start-primary=failed",
+      "started_at": null,
+      "title": "Wizard draft and reviewed plan on the secondary",
+      "verdict": "not-run"
+    },
+    {
+      "checks": {},
+      "evidence_directory": "steps/10-setup-start-secondary",
+      "finished_at": null,
+      "guidance": [],
+      "id": "setup-start-secondary",
+      "index": 10,
+      "reason": "prerequisite step(s) setup-review-secondary=not-run",
+      "started_at": null,
+      "title": "Start the reviewed secondary plan; wait for its DNS step",
+      "verdict": "not-run"
+    },
+    {
+      "checks": {},
+      "evidence_directory": "steps/11-pair-ready",
+      "finished_at": null,
+      "guidance": [],
+      "id": "pair-ready",
+      "index": 11,
+      "reason": "prerequisite step(s) setup-start-primary=failed, setup-start-secondary=not-run",
+      "started_at": null,
+      "title": "Both Panels show the paired engines ready; setup settles",
+      "verdict": "not-run"
+    },
+    {
+      "checks": {},
+      "evidence_directory": "steps/12-zone-add",
+      "finished_at": null,
+      "guidance": [],
+      "id": "zone-add",
+      "index": 12,
+      "reason": "prerequisite step(s) pair-ready=not-run",
+      "started_at": null,
+      "title": "Add the domain on the primary",
+      "verdict": "not-run"
+    },
+    {
+      "checks": {},
+      "evidence_directory": "steps/13-record-add",
+      "finished_at": null,
+      "guidance": [],
+      "id": "record-add",
+      "index": 13,
+      "reason": "prerequisite step(s) zone-add=not-run",
+      "started_at": null,
+      "title": "Add an A record",
+      "verdict": "not-run"
+    },
+    {
+      "checks": {},
+      "evidence_directory": "steps/14-record-edit",
+      "finished_at": null,
+      "guidance": [],
+      "id": "record-edit",
+      "index": 14,
+      "reason": "prerequisite step(s) record-add=not-run",
+      "started_at": null,
+      "title": "Edit the A record (ui-replace)",
+      "verdict": "not-run"
+    },
+    {
+      "checks": {},
+      "evidence_directory": "steps/15-zone-delete",
+      "finished_at": null,
+      "guidance": [],
+      "id": "zone-delete",
+      "index": 15,
+      "reason": "prerequisite step(s) record-edit=not-run",
+      "started_at": null,
+      "title": "Delete the domain; prove secondary absence",
+      "verdict": "not-run"
+    },
+    {
+      "checks": {},
+      "evidence_directory": "steps/16-zone-readd",
+      "finished_at": null,
+      "guidance": [],
+      "id": "zone-readd",
+      "index": 16,
+      "reason": "prerequisite step(s) zone-delete=not-run",
+      "started_at": null,
+      "title": "Re-add the domain",
+      "verdict": "not-run"
+    },
+    {
+      "checks": {},
+      "evidence_directory": "steps/17-independence-reboot",
+      "finished_at": null,
+      "guidance": [],
+      "id": "independence-reboot",
+      "index": 17,
+      "reason": "prerequisite step(s) zone-readd=not-run",
+      "started_at": null,
+      "title": "Management disabled on both; reboot; DNS serves alone",
+      "verdict": "not-run"
+    },
+    {
+      "checks": {},
+      "evidence_directory": "steps/18-management-return",
+      "finished_at": null,
+      "guidance": [],
+      "id": "management-return",
+      "index": 18,
+      "reason": "prerequisite step(s) independence-reboot=not-run",
+      "started_at": null,
+      "title": "Management re-enabled; Panel shows the truth without mutating",
+      "verdict": "not-run"
+    },
+    {
+      "checks": {
+        "license_service_journal_arch": {
+          "acceptance_banner_count": 3,
+          "host": "celikpanel.net",
+          "host_line_count": 0,
+          "limit": "the in-process counter is not exposed; an unlogged attempt leaves no journal line",
+          "refusal_line_count": 0,
+          "refusal_text": "the acceptance test build never contacts the license service",
+          "state": "no-line-found",
+          "why": "journal lines naming the license service host or the refusing transport's error"
+        },
+        "license_service_journal_debian13": {
+          "acceptance_banner_count": 2,
+          "host": "celikpanel.net",
+          "host_line_count": 0,
+          "limit": "the in-process counter is not exposed; an unlogged attempt leaves no journal line",
+          "refusal_line_count": 0,
+          "refusal_text": "the acceptance test build never contacts the license service",
+          "state": "no-line-found",
+          "why": "journal lines naming the license service host or the refusing transport's error"
+        }
+      },
+      "evidence_directory": "steps/19-collect",
+      "finished_at": "2026-09-29T22:36:18.127006Z",
+      "guidance": [],
+      "id": "collect",
+      "index": 19,
+      "reason": "",
+      "started_at": "2026-09-29T22:36:14.628216Z",
+      "title": "Journals, versions and native state from both guests",
+      "verdict": "passed"
+    }
+  ],
+  "topology": {
+    "control": false,
+    "infra_zone": "ns-accept.test",
+    "name": "pdns-primary/bind-secondary",
+    "primary": {
+      "address": "192.0.2.10",
+      "engine": "pdns",
+      "nameserver": "ns1.ns-accept.test",
+      "node": "debian13",
+      "os": "debian-13",
+      "peer_address": "192.0.2.11",
+      "peer_nameserver": "ns2.ns-accept.test",
+      "peer_node": "arch",
+      "role": "primary"
+    },
+    "secondary": {
+      "address": "192.0.2.11",
+      "engine": "bind",
+      "nameserver": "ns2.ns-accept.test",
+      "node": "arch",
+      "os": "arch",
+      "peer_address": "192.0.2.10",
+      "peer_nameserver": "ns1.ns-accept.test",
+      "peer_node": "debian13",
+      "role": "secondary"
+    },
+    "zone": "pair-accept.test"
+  }
+}

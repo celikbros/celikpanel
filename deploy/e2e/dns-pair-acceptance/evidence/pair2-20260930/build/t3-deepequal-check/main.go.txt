@@ -1,0 +1,16 @@
+package main
+
+import (
+	"fmt"
+	"reflect"
+	"sort"
+)
+
+// Mirrors cmd/agent/dns_engine_pdns_catalog.go:1453-1467 at 916e1577 for a manifest with no zones.
+func main() {
+	expectedMembers := make([]string, 0, 0) // dns_engine_pdns.go:834 with len(manifest.Zones)==0
+	actual := make([]string, 0)             // no catalog member rows
+	expected := append([]string(nil), expectedMembers...)
+	sort.Strings(expected)
+	fmt.Printf("expected==nil:%v actual==nil:%v DeepEqual:%v\n", expected == nil, actual == nil, reflect.DeepEqual(actual, expected))
+}

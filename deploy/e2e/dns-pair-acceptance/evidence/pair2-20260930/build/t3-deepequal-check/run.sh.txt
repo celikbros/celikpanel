@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+cd /tmp && rm -rf cp-pair2-deepeq && mkdir cp-pair2-deepeq && cp "/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/pair2/deepeq/main.go" cp-pair2-deepeq/ && cd cp-pair2-deepeq && GOTOOLCHAIN=local GOFLAGS=-mod=mod /opt/celikpanel-test-toolchains/go1.26.5/go/bin/go run main.go; cd /tmp && rm -rf cp-pair2-deepeq

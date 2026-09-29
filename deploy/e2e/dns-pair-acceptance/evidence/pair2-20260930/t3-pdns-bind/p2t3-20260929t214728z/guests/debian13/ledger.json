@@ -1,0 +1,18 @@
+{
+  "bytes": 685,
+  "command": "ledger",
+  "jobs": [
+    {
+      "attempt": 1,
+      "error_code": "service_operation_failed",
+      "kind": "dns_engine_switch",
+      "phase": "failed",
+      "request_id": "e22a036c50b3f5279571c099de8f2400",
+      "status": "failed",
+      "updated_at": "2026-09-29T21:51:25.999980731Z"
+    }
+  ],
+  "present": true,
+  "returncode": 0,
+  "sha256": "0630d7552c9ce49fe751a59a1473d146de15cb9787595153bcc4d59df99e08b7"
+}

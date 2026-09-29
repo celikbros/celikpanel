@@ -1,0 +1,18 @@
+{
+  "binaries": {
+    "/opt/celikpanel/bin/agent": "a6b57f6141b224dc325e4b922e7b644be90e58d3c98ee24128d0ca065f9e0e8e",
+    "/opt/celikpanel/bin/panel": "0691b678b4657a8f7136fbfe76b2b60ed25271c87c6b4f8ba94b9138fc0ee9e5"
+  },
+  "command": "versions",
+  "daemons": {},
+  "kernel": "7.2.7-arch1-1",
+  "os_release": {
+    "ID": "arch",
+    "PRETTY_NAME": "Arch Linux"
+  },
+  "packages": {
+    "bind": null,
+    "powerdns": null
+  },
+  "returncode": 0
+}

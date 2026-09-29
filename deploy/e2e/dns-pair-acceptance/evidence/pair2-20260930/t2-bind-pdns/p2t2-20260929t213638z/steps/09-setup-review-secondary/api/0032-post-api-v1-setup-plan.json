@@ -1,0 +1,149 @@
+{
+  "outcome": "response",
+  "panel": "debian13",
+  "purpose": "ServerSetup review",
+  "request": {
+    "body": {
+      "revision": 2
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:28443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/setup/plan"
+  },
+  "response": {
+    "elapsed_seconds": 0.619,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Tue, 29 Sep 2026 21:40:29 GMT"
+      ],
+      [
+        "Content-Length",
+        "1164"
+      ]
+    ],
+    "json": {
+      "actor": {
+        "IP": "127.0.0.1",
+        "UserAgent": "",
+        "UserID": 2
+      },
+      "blockers": [],
+      "build_commit": "916e1577933f37fb168818242befe02e01ce2122",
+      "can_start": true,
+      "contact_email": "owner@ns-accept.test",
+      "draft": {
+        "database": "",
+        "dns_engine": "pdns",
+        "dns_mode": "local",
+        "dns_role": "secondary",
+        "local_ip": "192.0.2.10",
+        "mail_hostname": "",
+        "node_version": "",
+        "ns1": "ns1.ns-accept.test",
+        "ns2": "ns2.ns-accept.test",
+        "panel_domain": "panel-debian13.ns-accept.test",
+        "peer_ip": "192.0.2.11",
+        "peer_ns": "ns1.ns-accept.test",
+        "purpose": "dns",
+        "remote_dns_connection_id": ""
+      },
+      "id": "be25d8c906f1b54d869f45897fd4e889",
+      "persist_firewall": true,
+      "preserve_ssh": true,
+      "purpose": "dns",
+      "revision": 2,
+      "server_ip": "192.0.2.10",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "target": "local"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "target": "certbot"
+        },
+        {
+          "id": "03-firewall",
+          "kind": "firewall",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "04-access_dns",
+          "kind": "access_dns",
+          "qualifier": "192.0.2.10",
+          "target": "panel-debian13.ns-accept.test"
+        },
+        {
+          "id": "05-panel_certificate",
+          "kind": "panel_certificate",
+          "target": "panel-debian13.ns-accept.test"
+        },
+        {
+          "id": "06-verify",
+          "kind": "verify",
+          "target": "dns"
+        }
+      ],
+      "tcp_ports": [
+        22,
+        53,
+        80,
+        2083
+      ],
+      "udp_ports": [
+        53
+      ],
+      "version": 1
+    },
+    "status": 200,
+    "text": null
+  }
+}
