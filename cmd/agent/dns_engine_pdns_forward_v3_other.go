@@ -15,3 +15,7 @@ import (
 func recoverFreshPrimaryForwardV3(context.Context, dnsengineartifact.SwitchIdentity, dnsEngineSwitchJournal) (dnsEngineSwitchRecoveryOutcome, error) {
 	return dnsenginerecovery.OutcomeAbsent, errors.New("v3 fresh PowerDNS forward recovery requires the supported Linux native executor")
 }
+
+func recoverFreshPrimaryV3(context.Context, dnsengineartifact.SwitchIdentity, dnsEngineSwitchJournal) (dnsEngineSwitchRecoveryOutcome, error) {
+	return dnsenginerecovery.OutcomeAbsent, errors.New("v3 fresh PowerDNS recovery requires the supported Linux native executor")
+}

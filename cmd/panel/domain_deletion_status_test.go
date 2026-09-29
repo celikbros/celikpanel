@@ -14,9 +14,14 @@ import (
 
 func seedExactDeletionStatus(t *testing.T, p *Panel) (int, dnsZoneEngineLease) {
 	t.Helper()
+	return seedExactDeletionStatusForEngine(t, p, transport.DNSEngineBIND)
+}
+
+func seedExactDeletionStatusForEngine(t *testing.T, p *Panel, engine transport.DNSEngine) (int, dnsZoneEngineLease) {
+	t.Helper()
 	const domain = "pending-deletion.example.test"
 	id, _ := seedDomainDeletionLedger(t, p, domain, "dnsonly")
-	switchDNSEngineIdentityForTest(t, p, transport.DNSEngineBIND)
+	switchDNSEngineIdentityForTest(t, p, engine)
 	engineState, err := readDNSEngineDBState(t.Context(), p.db.GetDB())
 	if err != nil {
 		t.Fatal(err)
@@ -25,7 +30,7 @@ func seedExactDeletionStatus(t *testing.T, p *Panel) (int, dnsZoneEngineLease) {
 		t.Fatal(err)
 	}
 	lease := dnsZoneEngineLease{
-		ZoneName: domain, Engine: transport.DNSEngineBIND, EngineEpoch: engineState.EngineEpoch,
+		ZoneName: domain, Engine: engine, EngineEpoch: engineState.EngineEpoch,
 		RequestID: strings.Repeat("a", 32), OwnerID: strings.Repeat("b", 32),
 		DesiredGeneration: 2, DesiredAction: "delete", DesiredZoneType: "MASTER",
 		Qualifier: "dns-zone-sync/v3:sha256:" + strings.Repeat("c", 64),
@@ -159,5 +164,30 @@ func TestDomainDeletionStatusMarkerAndTenantAuthorization(t *testing.T) {
 	if w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &body) != nil ||
 		body.Status != "unknown" || body.Reason != "" || body.Stage != "unknown" {
 		t.Fatalf("generic pending status=%d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// A PowerDNS primary holds a parentless deletion pending with the same typed
+// peer codes; the read-only status keeps that reason after a page reload.
+func TestDomainDeletionStatusKeepsPowerDNSPrimaryPendingReason(t *testing.T) {
+	p := newDNSPanelForTest(t)
+	id, lease := seedExactDeletionStatusForEngine(t, p, transport.DNSEnginePowerDNS)
+	agent := newDNSZoneV3TestAgent()
+	agent.durableMutationRPCFixture.jobs = map[string]*ServiceOperationMutationJob{}
+	phase, err := dnsZoneSyncV3PendingPhase(lease.identity())
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent.durableMutationRPCFixture.jobs[lease.RequestID] = &ServiceOperationMutationJob{
+		RequestID: lease.RequestID, OwnerID: lease.OwnerID,
+		Kind: "dns_zone_sync", Target: lease.ZoneName, PackageName: lease.Qualifier,
+		Status: agentMutationPending, Phase: phase,
+		ErrorCode: transport.DNSPeerPendingEnrollmentRequired,
+	}
+	attachDNSZoneV3TestAgent(t, p, agent)
+	status, body := readDeletionStatusForTest(t, p, id)
+	if status != http.StatusOK || body.Status != domainDeletionPendingStatus ||
+		body.Reason != transport.DNSPeerPendingEnrollmentRequired {
+		t.Fatalf("PowerDNS primary pending status=%d body=%+v", status, body)
 	}
 }

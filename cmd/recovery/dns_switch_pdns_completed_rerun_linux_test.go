@@ -17,7 +17,8 @@ import (
 // Item 5: recover-dns-pdns-fresh-prestart and recover-dns-pdns-target-staged
 // answer a re-run after an earlier owner run completed the same request with
 // exit 0 and the completed text, exactly as the other three commands do. The
-// Agent's reconciled release is not their own evidence and keeps exit 3.
+// fresh-prestart command also admits the Agent's release, so its reconciled
+// re-run exits 0; for the V4 command that release keeps exit 3.
 func TestFreshPrestartAndTargetStagedCompletedRerunExitZero(t *testing.T) {
 	id := strings.Repeat("e", 32)
 	completed := fmt.Errorf("%w: request %s; inspect native PowerDNS before treating current service as recovered",
@@ -56,11 +57,24 @@ func TestFreshPrestartAndTargetStagedCompletedRerunExitZero(t *testing.T) {
 			if !strings.Contains(out.String(), health) {
 				t.Fatalf("completed text does not disclaim current health: %q", out.String())
 			}
-			for _, refused := range []error{
-				releasedDNSInverseReconciledOutcome(id),
+			refusedErrors := []error{
 				errors.New("exact v3 request journal is absent or owned by another operation"),
 				errors.New("unknown native proof"),
-			} {
+			}
+			if tc.name == "fresh-prestart" {
+				// recover-dns-pdns-fresh-prestart admits the Agent's release, so
+				// its reconciled re-run is complete (exit 0), as for the V1/V2
+				// owner inverses.
+				out.Reset()
+				diagnostic.Reset()
+				if got := tc.dispatch(releasedDNSInverseReconciledOutcome(id), &out, &diagnostic); got != exitOK ||
+					diagnostic.Len() != 0 || strings.TrimSpace(out.String()) != releasedDNSInverseReconciledText(tc.lang, id) {
+					t.Fatalf("reconciled release re-run exit=%d out=%q diagnostic=%q", got, out.String(), diagnostic.String())
+				}
+			} else {
+				refusedErrors = append(refusedErrors, releasedDNSInverseReconciledOutcome(id))
+			}
+			for _, refused := range refusedErrors {
 				out.Reset()
 				diagnostic.Reset()
 				if got := tc.dispatch(refused, &out, &diagnostic); got != exitUnavailable || out.Len() != 0 ||
@@ -80,7 +94,8 @@ func TestFreshPrestartAndTargetStagedCompletedRerunExitZero(t *testing.T) {
 // A fresh-prestart run interrupted after its verdict and before journal
 // retirement leaves a rolled-back journal beside its own terminal verdict:
 // the re-run keeps that verdict (no second publication) and retires the
-// journal. Any other terminal result is refused before retirement.
+// journal. The Agent's deliberate release is kept the same way; any other
+// terminal result is refused before retirement.
 func TestFreshPrestartVerdictKeepsOnlyItsOwnTerminalResult(t *testing.T) {
 	base := rolledBackTerminal(ownerGuidanceFreshPrestartEvidence())
 	for _, tc := range []struct {
@@ -99,9 +114,16 @@ func TestFreshPrestartVerdictKeepsOnlyItsOwnTerminalResult(t *testing.T) {
 			e.AcceptedJob = ownerRecoveryVerdictTestJob()
 			return e
 		}, false, false},
-		{"agent release refused", func() dnsenginerecovery.SwitchEvidence {
+		{"agent release kept without publication", func() dnsenginerecovery.SwitchEvidence {
 			e := ownerGuidanceReleased(base, dnsengineartifact.ReleasedNativeUnknownCode)
 			e.Observation.Status = dnsenginerecovery.EvidenceTerminalRolledBack
+			return e
+		}, false, false},
+		{"agent rolled-back verdict refused", func() dnsenginerecovery.SwitchEvidence {
+			e := ownerGuidanceReleased(base, dnsengineartifact.ReleasedNativeUnknownCode)
+			e.Observation.Status = dnsenginerecovery.EvidenceTerminalRolledBack
+			e.AcceptedJob.ErrorCode = "dns_engine_switch_rolled_back_after_restart"
+			e.Observation.ReleaseReason = e.AcceptedJob.ErrorCode
 			return e
 		}, true, false},
 		{"terminal before checkpoint refused", func() dnsenginerecovery.SwitchEvidence {

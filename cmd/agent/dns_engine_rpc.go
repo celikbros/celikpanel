@@ -1699,7 +1699,9 @@ func (unknown *dnsSwitchNativeRecoveryUnknownError) Unwrap() error { return unkn
 func releasedDNSSwitchInProcessUnknownMessage(recoveryErr error) string {
 	var refusal *bindTargetPointerRefusal
 	var unrecorded *bindUnrecordedTargetRefusal
-	if errors.As(recoveryErr, &refusal) || errors.As(recoveryErr, &unrecorded) {
+	var freshPrimary *freshPrimaryV3RecoveryError
+	if errors.As(recoveryErr, &refusal) || errors.As(recoveryErr, &unrecorded) ||
+		errors.As(recoveryErr, &freshPrimary) {
 		return releasedDNSSwitchUnknownMessage(recoveryErr)
 	}
 	return "The DNS engine switch did not complete and its native result could not be verified. Its exact journal remains for DNS recovery, and new DNS changes are blocked. The server administrator should inspect the native DNS service and run recovery dns-switch-status --quiesced; after resolving the reported cause, restart the Agent to retry this same operation. Unrelated host changes can continue."

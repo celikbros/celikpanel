@@ -396,15 +396,26 @@ func TestDNSSwitchStatusNamesFreshPrestartOwnerCommand(t *testing.T) {
 	if ownerDNSRecoveryCommand(e) != "" {
 		t.Fatal("foreign observation named the fresh prestart command")
 	}
-	// The command refuses the Agent's released job at worker exclusion, so
-	// status must not name it for that job, at any phase.
-	for _, phase := range []string{dnsengineartifact.SwitchPhaseTargetStaged, dnsengineartifact.SwitchPhaseRollingBack} {
+	// The command admits the Agent's deliberate release of this exact
+	// pre-start request at every pre-start phase (the Agent may release
+	// before any rollback decision), and no other release reason.
+	for _, phase := range []string{dnsengineartifact.SwitchPhaseTargetStaged, dnsengineartifact.SwitchPhaseTargetEnableIntent,
+		dnsengineartifact.SwitchPhaseRollingBack, dnsengineartifact.SwitchPhaseRollingBackTargetEnable} {
 		e = ownerGuidanceReleased(ownerGuidanceFreshPrestartEvidence(), dnsengineartifact.ReleasedNativeUnknownCode)
 		e.Journal.Phase, e.Observation.Phase = phase, phase
-		requireNoOwnerGuidance(t, e)
+		requireOwnerGuidance(t, e, ownerPDNSFreshPrestartV3Command)
 	}
-	// Beside a rolled-back journal only the command's own terminal verdict
-	// is admitted; the Agent's release classified terminal is not.
+	for _, code := range []string{dnsengineartifact.ReleasedHostWindowCode, dnsengineartifact.ReleasedUnsupportedHostCode} {
+		requireNoOwnerGuidance(t, ownerGuidanceReleased(ownerGuidanceFreshPrestartEvidence(), code))
+	}
+	foreignRelease := ownerGuidanceReleased(ownerGuidanceFreshPrestartEvidence(), dnsengineartifact.ReleasedNativeUnknownCode)
+	foreignRelease.AcceptedJob.OwnerID = strings.Repeat("e", 32)
+	requireNoOwnerGuidance(t, foreignRelease)
+	startedRelease := ownerGuidanceReleased(ownerGuidanceFreshPrestartEvidence(), dnsengineartifact.ReleasedNativeUnknownCode)
+	startedRelease.Journal.Phase, startedRelease.Observation.Phase = dnsengineartifact.SwitchPhaseTargetStarted, dnsengineartifact.SwitchPhaseTargetStarted
+	requireNoOwnerGuidance(t, startedRelease)
+	// Beside a rolled-back journal the command's own terminal verdict and the
+	// Agent's release classified terminal are admitted; nothing else.
 	e = ownerGuidanceFreshPrestartEvidence()
 	e.Journal.Phase, e.Observation.Phase = dnsengineartifact.SwitchPhaseRolledBack, dnsengineartifact.SwitchPhaseRolledBack
 	e.Observation.Status = dnsenginerecovery.EvidenceTerminalRolledBack
@@ -412,6 +423,9 @@ func TestDNSSwitchStatusNamesFreshPrestartOwnerCommand(t *testing.T) {
 	requireOwnerGuidance(t, e, ownerPDNSFreshPrestartV3Command)
 	e = ownerGuidanceReleased(e, dnsengineartifact.ReleasedNativeUnknownCode)
 	e.Observation.Status = dnsenginerecovery.EvidenceTerminalRolledBack
+	requireOwnerGuidance(t, e, ownerPDNSFreshPrestartV3Command)
+	e.AcceptedJob.ErrorCode = "dns_engine_switch_rolled_back_after_restart"
+	e.Observation.ReleaseReason = e.AcceptedJob.ErrorCode
 	requireNoOwnerGuidance(t, e)
 }
 
@@ -474,15 +488,14 @@ func TestDNSSwitchStatusReleasedTextPointsToAdmittedOwnerCommand(t *testing.T) {
 			t.Fatalf("%s: host-window release text changed: %q", tc.name, text)
 		}
 	}
-	// A deliberate release of a V3 journal: the Agent never runs its inverse
-	// and the fresh prestart command refuses a released job, so the text
-	// neither names a command nor promises that a restart finishes it.
+	// A deliberate release of a V3 pre-start journal: the owner command
+	// admits it and the Agent retries its own pre-start undo on restart.
 	fresh := ownerGuidanceReleased(ownerGuidanceFreshPrestartEvidence(), dnsengineartifact.ReleasedNativeUnknownCode)
-	if text, known := releasedDNSSwitchGuidance(fresh); !known || strings.Contains(text, "named above") ||
-		strings.Contains(text, "restart the Agent to retry") ||
-		!strings.Contains(text, "another restart will not finish it") ||
-		!strings.Contains(text, "contact support with request id "+ownerGuidanceRequest) {
-		t.Fatalf("fresh prestart release text promises an Agent restart or a command: %q", text)
+	if text, known := releasedDNSSwitchGuidance(fresh); !known || !strings.Contains(text, "named above") ||
+		!strings.Contains(text, "If PowerDNS never started") ||
+		!strings.Contains(text, "restarting the Agent also retries the same automatic undo") ||
+		strings.Contains(text, "another restart will not finish it") {
+		t.Fatalf("fresh prestart release text does not name the command and the Agent retry: %q", text)
 	}
 	// A V1 journal without an admitting command keeps the Agent-restart text.
 	v1 := ownerGuidanceReleased(ownerGuidancePDNSAdoptionEvidence(), dnsengineartifact.ReleasedNativeUnknownCode)

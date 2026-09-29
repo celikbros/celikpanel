@@ -85,7 +85,10 @@ func (p *Panel) readDomainDeletionStatusSnapshot(ctx context.Context, domainID i
 		state.DesiredGeneration > state.AppliedGeneration &&
 		state.DesiredZoneType == markerType &&
 		lease.valid() && lease.ZoneName == snapshot.domain &&
-		lease.Engine == transport.DNSEngineBIND &&
+		// Either managed primary engine can hold a zone-sync V3 deletion
+		// pending on its peer proof (a PowerDNS primary uses the same
+		// typed codes); the lease must still name the active engine.
+		(lease.Engine == transport.DNSEngineBIND || lease.Engine == transport.DNSEnginePowerDNS) &&
 		lease.DesiredAction == "delete" &&
 		lease.DesiredGeneration == state.DesiredGeneration &&
 		lease.DesiredZoneType == markerType {

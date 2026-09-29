@@ -32,9 +32,15 @@ func TestServerSetupProfileDNSMatrixPreservesIdentityAndServiceScope(t *testing.
 						if err != nil {
 							t.Fatal(err)
 						}
-						wantBlocked := (purpose == "dns" && mode != "local") || (purpose != "dns" && mode == "local" && role == "secondary")
+						// The paired PowerDNS primary is refused at review while
+						// its product gate is closed (pdnsPairedPrimaryBlocker).
+						pdnsPrimaryPaused := mode == "local" && engine == "pdns" && role == "primary" && !pdnsPairedPrimaryGateOpen
+						wantBlocked := (purpose == "dns" && mode != "local") || (purpose != "dns" && mode == "local" && role == "secondary") || pdnsPrimaryPaused
 						if plan.CanStart == wantBlocked {
 							t.Fatalf("unexpected plan decision: %v", plan.Blockers)
+						}
+						if slices.Contains(plan.Blockers, "pdns_primary_switch_paused") != pdnsPrimaryPaused {
+							t.Fatalf("paired PowerDNS primary review blocker=%v", plan.Blockers)
 						}
 						if plan.HostnameChange != "" {
 							t.Fatal("setup planned an OS rename")

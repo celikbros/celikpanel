@@ -1209,6 +1209,60 @@ func addDNSEngineBlocker(
 	return append(blockers, dnsEnginePreviewBlocker{Code: code})
 }
 
+// freshPairedPDNSPrimaryOffered is the Panel's single product gate for the
+// first install of PowerDNS as the paired primary on a server with no DNS
+// engine (the Agent's V3 journal). It stays false until row 6 of the DNS
+// recovery acceptance register has native evidence through the public RPC;
+// the Agent carries the matching constant (freshPairedPDNSPrimaryAdmitted).
+// Server setup and the DNS engine card both reach it through
+// dnsEnginePreviewBlockers.
+//
+// freshPairedPDNSPrimaryOffered, DNS motoru olmayan bir sunucuya PowerDNS'in
+// eşli birincil olarak ilk kurulumunun Panel tarafındaki tek ürün kapısıdır.
+const freshPairedPDNSPrimaryOffered = false
+
+// pdnsPairedPrimaryGateOpen carries the constant above. Only tests assign it,
+// to exercise the open policy; production never changes it.
+var pdnsPairedPrimaryGateOpen = freshPairedPDNSPrimaryOffered
+
+// pdnsPairedPrimaryBlocker is the Panel's one policy for a PowerDNS install or
+// switch on a paired primary. applies reports whether the transition is one;
+// code is its blocker, or "" when it is offered.
+func pdnsPairedPrimaryBlocker(
+	snapshot dnsEngineSnapshot,
+	target transport.DNSEngine,
+	action string,
+) (code string, applies bool) {
+	return pdnsPairedPrimaryBlockerWithGate(snapshot, target, action, pdnsPairedPrimaryGateOpen)
+}
+
+// pdnsPairedPrimaryBlockerWithGate is that policy for an explicit gate value.
+// Closed, every such transition is paused. Open, only a server without an
+// active DNS engine is offered; a serving BIND keeps its D-026 refusal and any
+// other active engine stays paused.
+func pdnsPairedPrimaryBlockerWithGate(
+	snapshot dnsEngineSnapshot,
+	target transport.DNSEngine,
+	action string,
+	open bool,
+) (string, bool) {
+	if (action != "switch" && action != "install") || target != transport.DNSEnginePowerDNS ||
+		snapshot.Topology != transport.DNSTopologyPaired ||
+		snapshot.PairRole != transport.DNSPairRolePrimary {
+		return "", false
+	}
+	switch {
+	case !open:
+		return "pdns_primary_switch_paused", true
+	case snapshot.ActiveEngine == nil && snapshot.EngineEpoch == 0:
+		return "", true
+	case snapshot.ActiveEngine != nil && *snapshot.ActiveEngine == transport.DNSEngineBIND:
+		return "bind_source_pdns_switch_unsupported", true
+	default:
+		return "pdns_primary_switch_paused", true
+	}
+}
+
 func dnsEnginePreviewBlockers(
 	snapshot dnsEngineSnapshot,
 	target, expectedSource transport.DNSEngine,
@@ -1216,10 +1270,10 @@ func dnsEnginePreviewBlockers(
 ) []dnsEnginePreviewBlocker {
 	blockers := make([]dnsEnginePreviewBlocker, 0, 8)
 	action := dnsEngineAction(snapshot, target)
-	if (action == "switch" || action == "install") && target == transport.DNSEnginePowerDNS &&
-		snapshot.Topology == transport.DNSTopologyPaired &&
-		snapshot.PairRole == transport.DNSPairRolePrimary {
-		blockers = addDNSEngineBlocker(blockers, "pdns_primary_switch_paused")
+	if code, applies := pdnsPairedPrimaryBlocker(snapshot, target, action); applies {
+		if code != "" {
+			blockers = addDNSEngineBlocker(blockers, code)
+		}
 	} else if (action == "switch" || action == "install") &&
 		target == transport.DNSEnginePowerDNS &&
 		snapshot.ActiveEngine != nil &&

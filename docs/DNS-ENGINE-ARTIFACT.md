@@ -1712,3 +1712,61 @@ proofs; every shape with a source is refused with text that says so.
 Open: the fail-closed sentinel text still reads "after an ambiguous ledger
 write"; a failed finalize still fails closed; the in-process path with an
 unreadable journal still fails closed until a restart.
+
+### Fresh paired PowerDNS primary: recovery policy and single gate (2026-09-30)
+
+P0.4; constitutional invariants 1, 2, 4, 5; D-024, D-026 decision 2. No
+journal, ledger, state or enrollment schema or version change. Component
+tests only; the gate stays CLOSED at this commit.
+
+**Policy.** The prior state of a first install is "no DNS engine", so
+same-operation recovery is the contract. Every V3 journal is routed by shape:
+- cut before the target ever started (`intent`, `target-staged`, or
+  `target-enable-intent` with PowerDNS stopped): the restarted Agent rolls the
+  install back by itself under the first-install stopped proof (absent,
+  guard-masked or loaded; inactive/dead; zero PIDs; empty cgroup; listener
+  proofs including local sockets; read twice), with the candidate exactly as
+  sealed, writes a durable rollback decision first, restores the unit to its
+  frozen standby, restores configuration, removes the staged candidate and
+  writes `rolled-back` only after the pre-install state is proved. A retry may
+  run forward past the guard mask only when the install-ownership receipt
+  shows CelikPanel installed exactly these packages;
+- cut after the target started: forward only, by policy. CelikPanel never
+  removes a PowerDNS that has started, because its database may already hold
+  the daemon's own changes;
+- owner change at any boundary (configuration, SQL, state or ownership
+  receipt not as the install wrote it): refuse, keep journal and database,
+  DNS-only hold. A capture that cannot complete stays unknown, not "changed".
+`recover-dns-pdns-fresh-prestart` also admits the Agent's deliberate release,
+keeps the released job and exits 0 on a completed re-run.
+
+**Catalog the primary publishes.** Staged: one PRODUCER row and its SOA/NS
+to `invalid.`; members MASTER assigned to it; no metadata. Admitted daemon
+changes at first start: the producer SOA re-stamped with the epoch serial,
+one `CATALOG-HASH` metadata row, `notified_serial`. `last_check` must not
+change (the checker had left it unconstrained). After commit the producer's
+master, last_check, options and catalog stay NULL and its metadata is none
+or that single row. Zone publication follows a daemon re-stamp during a
+propagation wave only when the serial is strictly higher and identity,
+members and member serials are identical, at most twice per wave and only
+before any native peer inspection.
+
+**Producer by local engine.** Three call sites read a legacy primary's own
+catalog, as the peer re-serves it, with the BIND policy regardless of engine;
+they now select the parser by the local engine that produced the catalog.
+
+**Gate.** One policy constant per side decides whether the fresh paired
+PowerDNS primary is offered (Panel) and admitted (Agent); both are closed and
+behaviour is unchanged. With the constant open only an empty source is
+admitted, Debian 13 amd64 only; a BIND source still gets
+`bind_source_pdns_switch_unsupported`. The setup wizard's refusal is now
+server-side at plan time and before any DNS identity is staged; the web
+renders the server's blocker.
+
+**Before the gate may be opened:** native evidence through the public RPC for
+pre-start cuts, post-start cuts including a daemon re-stamp during zone
+publication, an owner-edit cut, an Agent-released job finished by the owner
+command and a reboot during recovery; a pre-install check of the candidate
+package version; a recovery path for an unsealed partial candidate at
+`intent`; owner enrollment for a PowerDNS secondary and truthful Panel
+guidance for parentless deletion.

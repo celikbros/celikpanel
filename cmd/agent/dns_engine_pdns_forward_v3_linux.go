@@ -180,13 +180,16 @@ func observeFreshPrimaryForwardV3(ctx context.Context, profile hostplatform.Prof
 	}
 	configs, err := dnsenginerecovery.ProbeInstalledPDNSFreshConfigsV3(ctx, dnsJournalPolicy(), j, gid)
 	if err != nil {
-		return empty, err
+		return empty, freshPrimaryV3Changed(freshPrimaryV3ChangedConfig, err)
 	}
 	if err := verifyFreshPrimaryPreparedConfigsV3(configs, j); err != nil {
-		return empty, err
+		return empty, freshPrimaryV3Changed(freshPrimaryV3ChangedConfig, err)
 	}
 	live, err := dnsenginerecovery.CaptureFreshPrimaryNativeV3(ctx, dnsJournalPolicy(), j)
 	if err != nil {
+		// A capture that could not complete (for example a busy database) is
+		// an unknown observation, not a change; only a content mismatch below
+		// is reported as a change.
 		return empty, err
 	}
 	snapshot, err := captureDNSEngineStateSnapshot(true)
@@ -222,7 +225,18 @@ func observeFreshPrimaryForwardV3(ctx context.Context, profile hostplatform.Prof
 		}
 		observed, err = dnsJournalPolicy().AttachPDNSFreshNativeObservationV3(observed, domain, live)
 		if err != nil {
+			// Only the measured daemon start-up transform is admitted.
+			return empty, freshPrimaryV3Changed(freshPrimaryV3ChangedDatabase, err)
+		}
+	} else {
+		domain, err := binddns.CatalogDomain(j.LocalIP)
+		if err != nil {
 			return empty, err
+		}
+		if err := pdnsnative.VerifyRecordedFreshPrimaryCatalogTransition(
+			*j.PDNSFreshPlan.Staged, live, domain, j.PrimaryCatalogSerial, *j.PDNSFreshPlan.Native,
+		); err != nil {
+			return empty, freshPrimaryV3Changed(freshPrimaryV3ChangedDatabase, err)
 		}
 	}
 	desired, err := dnsengineartifact.FreshPrimaryTargetStateV3(observed)
@@ -230,14 +244,14 @@ func observeFreshPrimaryForwardV3(ctx context.Context, profile hostplatform.Prof
 		return empty, err
 	}
 	if state != nil && *state != desired {
-		return empty, errors.New("v3 owner-edited state differs from observed target")
+		return empty, freshPrimaryV3Changed(freshPrimaryV3ChangedState, errors.New("v3 owner-edited state differs from observed target"))
 	}
 	ownership, ownershipExists, err := readDNSEngineOwnership(transport.DNSEnginePowerDNS)
 	if err != nil {
 		return empty, err
 	}
 	if ownershipExists && ownership != desired {
-		return empty, errors.New("v3 owner-edited ownership differs from observed target")
+		return empty, freshPrimaryV3Changed(freshPrimaryV3ChangedState, errors.New("v3 owner-edited ownership differs from observed target"))
 	}
 	if err := verifyManagedPDNSPairIdentity(manifest, desired); err != nil {
 		return empty, err

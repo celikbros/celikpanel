@@ -9,6 +9,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/pdnsnative"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -160,15 +161,28 @@ func TestRolledBackStatusV1SwitchIsConditionalAndReconfigureIsNot(t *testing.T) 
 	}
 }
 
-// V3 and V4 journals: the Agent never runs their inverse. A V4 command is
-// named only under --quiesced, as the existing guidance does.
-func TestRolledBackStatusV3AndV4NeverPromiseAgentRestart(t *testing.T) {
+// A V3 pre-start journal at rolled-back is re-proved by the Agent's own
+// pre-start inverse without any effect, and the owner command is also named.
+// V4 journals: the Agent never runs their inverse; a V4 command is named only
+// under --quiesced, as the existing guidance does.
+func TestRolledBackStatusV3AgentReprovesAndV4NeverPromisesAgentRestart(t *testing.T) {
 	v3 := rolledBackTerminal(ownerGuidanceFreshPrestartEvidence())
 	v3.AcceptedJob = ownerRecoveryVerdictTestJob()
+	if finishes, reproveOnly := agentFinishesRolledBackDNSJournal(v3); !finishes || !reproveOnly {
+		t.Fatalf("V3 pre-start rolled-back journal: finishes=%v reproveOnly=%v", finishes, reproveOnly)
+	}
 	requireRolledBackText(t, terminalRolledBackDNSSwitchGuidance(v3, false),
-		[]string{"does not run this journal's rollback itself", "recover-dns-pdns-fresh-prestart --request-id " + ownerGuidanceRequest + ";"},
-		[]string{"systemctl restart celikpanel-agent"},
+		[]string{"systemctl restart celikpanel-agent", "without changing anything, that PowerDNS is stopped",
+			"recover-dns-pdns-fresh-prestart --request-id " + ownerGuidanceRequest + ";"},
+		[]string{"does not run this journal's rollback itself", "restored PowerDNS source"},
 	)
+	started := v3
+	started.Journal.PDNSFreshPlan = &dnsengineartifact.PDNSFreshPrimaryPlanV3{
+		Candidate: &dnsengineartifact.PDNSTargetCandidateProofV4{}, Native: &pdnsnative.RecordedTransition{},
+	}
+	if finishes, _ := agentFinishesRolledBackDNSJournal(started); finishes {
+		t.Fatal("a V3 journal with a native receipt was promised a pre-start re-proof")
+	}
 	v4 := dnsenginerecovery.SwitchEvidence{
 		Journal: dnsengineartifact.SwitchJournalV1{
 			Schema: dnsengineartifact.SwitchJournalSchemaV4, MutationRequestID: ownerGuidanceRequest,
@@ -196,7 +210,9 @@ func TestAgentRetriesReleasedDNSJournalByClass(t *testing.T) {
 		{dnsengineartifact.SwitchJournalSchemaV1, dnsengineartifact.SwitchPhaseTargetStaged, true},
 		{dnsengineartifact.SwitchJournalSchemaV2, dnsengineartifact.SwitchPhaseTargetStaged, true},
 		{dnsengineartifact.SwitchJournalSchemaV2, dnsengineartifact.SwitchPhaseRollingBack, false},
-		{dnsengineartifact.SwitchJournalSchemaV3, dnsengineartifact.SwitchPhaseTargetStaged, false},
+		{dnsengineartifact.SwitchJournalSchemaV3, dnsengineartifact.SwitchPhaseTargetStaged, true},
+		{dnsengineartifact.SwitchJournalSchemaV3, dnsengineartifact.SwitchPhaseTargetEnableIntent, true},
+		{dnsengineartifact.SwitchJournalSchemaV3, dnsengineartifact.SwitchPhaseRollingBack, true},
 		{dnsengineartifact.SwitchJournalSchemaV3, dnsengineartifact.SwitchPhaseCommitted, true},
 		{dnsengineartifact.SwitchJournalSchemaV4, dnsengineartifact.SwitchPhaseTargetEnableIntent, false},
 		{dnsengineartifact.SwitchJournalSchemaV4, dnsengineartifact.SwitchPhaseRollingBack, false},

@@ -915,8 +915,8 @@ func (hostDNSEngineBackend) Sync(
 			}
 			return "", evidenceErr
 		}
-		if _, proofErr := verifyDNSLegacyPrimaryPairReadyAuthorityAt(
-			ctx, evidence, probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+		if _, proofErr := verifyLegacyPrimaryPeerCatalogAuthorityForLocalEngine(
+			ctx, evidence, transport.DNSEngineBIND,
 		); proofErr != nil {
 			return "", proofErr
 		}
@@ -2989,8 +2989,10 @@ func syncPDNSV3Zone(
 			return "", evidenceErr
 		}
 		if primary {
-			if _, proofErr := verifyDNSLegacyPrimaryPairReadyAuthorityAt(
-				ctx, evidence, probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+			// The peer re-serves the catalog this PowerDNS produced, so it
+			// is read with the PowerDNS producer policy.
+			if _, proofErr := verifyLegacyPrimaryPeerCatalogAuthorityForLocalEngine(
+				ctx, evidence, transport.DNSEnginePowerDNS,
 			); proofErr != nil {
 				return "", proofErr
 			}

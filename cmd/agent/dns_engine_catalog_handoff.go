@@ -378,9 +378,14 @@ func primaryCatalogSerialFromSource(
 	}
 	var verifyErr error
 	if state.PairRole == `` && state.PrimaryCatalogSerial == 0 {
+		// The peer re-serves the catalog the local source engine produced.
+		peerAXFR, peerErr := peerReservedCatalogAXFRForLocalEngine(manifest.SourceEngine)
+		if peerErr != nil {
+			return 0, peerErr
+		}
 		verifyErr = verifyLegacyPrimaryCatalogHandoffEvidenceAt(
 			ctx, evidence, manifest, serial,
-			probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+			probeDNSZoneSOA, peerAXFR,
 		)
 	} else {
 		producerAXFR := probeDNSCatalogAXFR
@@ -445,9 +450,14 @@ func verifyLegacyCompletedPrimaryCatalogTarget(
 	if err != nil {
 		return err
 	}
+	// The peer re-serves the catalog the local target engine produced.
+	peerAXFR, err := peerReservedCatalogAXFRForLocalEngine(manifest.TargetEngine)
+	if err != nil {
+		return err
+	}
 	return verifyLegacyPrimaryCatalogHandoffEvidenceAt(
 		ctx, evidence, manifest, serial,
-		probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+		probeDNSZoneSOA, peerAXFR,
 	)
 }
 

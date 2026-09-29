@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -1317,7 +1318,53 @@ func verifyPDNSProducerBaseTxMode(
 			return 0, err
 		}
 	}
+	if nativeV3 {
+		if err := verifyNativePDNSProducerDaemonStateTx(ctx, tx, domainID); err != nil {
+			return 0, err
+		}
+	}
 	return serial, nil
+}
+
+// verifyNativePDNSProducerDaemonStateTx admits, on a native V3 producer, only
+// the producer fields the PowerDNS 4.9 daemon writes by itself: the
+// notified_serial column and one CATALOG-HASH metadata row (a base64 SHA-256
+// digest it recomputes after a membership change). The producer's master,
+// last_check, options and catalog columns stay as staged (NULL), and no other
+// metadata kind is admitted; such a change was not made by the daemon or by
+// this product and is refused rather than overwritten.
+func verifyNativePDNSProducerDaemonStateTx(ctx context.Context, tx *sql.Tx, domainID int64) error {
+	var foreign int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM domains WHERE id = ? AND
+		 (COALESCE(master, '') <> '' OR last_check IS NOT NULL OR
+		  COALESCE(options, '') <> '' OR COALESCE(catalog, '') <> '')
+	`, domainID).Scan(&foreign); err != nil {
+		return err
+	}
+	if foreign != 0 {
+		return errors.New("native PowerDNS producer row has fields the daemon does not write")
+	}
+	rows, err := tx.QueryContext(ctx, `
+		SELECT kind, COALESCE(content, '') FROM domainmetadata WHERE domain_id = ?
+	`, domainID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		var kind, content string
+		if err := rows.Scan(&kind, &content); err != nil {
+			return err
+		}
+		count++
+		decoded, decodeErr := base64.StdEncoding.DecodeString(content)
+		if count > 1 || kind != "CATALOG-HASH" || decodeErr != nil || len(decoded) != 32 {
+			return errors.New("native PowerDNS producer metadata is not only the daemon's catalog hash")
+		}
+	}
+	return rows.Err()
 }
 
 // PowerDNS 4.9 normalizes the built-in catalog SOA RDATA when the

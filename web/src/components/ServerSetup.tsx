@@ -53,6 +53,7 @@ const codeKey: Record<string, TranslationKey> = {
     server_setup_dns_readiness_required: 'setup.publisher.pairWaiting',
     server_setup_dns_engine_unsupported: 'setup.blocker.profile',
     server_setup_existing_dns_requires_migration: 'setup.blocker.migration',
+    pdns_primary_switch_paused: 'setup.pdnsPrimaryPaused',
     server_setup_dns_failed: 'setup.blocker.dnsIdentity',
     server_setup_access_dns_required: 'setup.infrastructure.accessRequired',
     server_setup_access_dns_mismatch: 'setup.infrastructure.accessMismatch',
@@ -422,12 +423,12 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const hostingDNSManagement = draft.dns_hosting_management || (draft.dns_publisher_endpoint ? 'panel' : 'manual');
     const automaticPublisher = secondaryHosting && hostingDNSManagement === 'panel';
     const publisherEndpoint = remoteDNSEndpoint(draft.dns_publisher_endpoint || '');
+    // Whether PowerDNS may be the paired primary is the server's product
+    // gate; the review shows its pdns_primary_switch_paused blocker.
     const dnsSelectionError: TranslationKey | null = isDNS && draft.dns_mode !== 'local'
         ? 'setup.components.localDNSRequired'
-        : draft.dns_mode === 'local' && draft.dns_role === 'primary' && draft.dns_engine === 'pdns'
-            ? 'setup.pdnsPrimaryPaused'
-            : automaticPublisher && !publisherEndpoint
-                ? 'setup.publisher.endpointRequired' : null;
+        : automaticPublisher && !publisherEndpoint
+            ? 'setup.publisher.endpointRequired' : null;
     const isMail = ['postfix', 'dovecot', 'rspamd', 'roundcube'].some(id => selectedComponents.has(id));
     const isNode = selectedComponents.has('node');
     const nextPath = setupNextPath(snapshot.draft.purpose, customized ? selectedComponents : undefined);

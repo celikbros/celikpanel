@@ -296,8 +296,9 @@ func repairMissingBINDTargetPointer(
 }
 
 // releasedDNSSwitchUnknownMessage is the panel receipt text for a released,
-// undecided DNS switch. A refused BIND pointer repair and an unrecorded BIND
-// target without its pointer have their own texts.
+// undecided DNS switch. A refused BIND pointer repair, an unrecorded BIND
+// target without its pointer and an unfinished fresh paired PowerDNS primary
+// have their own texts.
 func releasedDNSSwitchUnknownMessage(recoveryErr error) string {
 	var refusal *bindTargetPointerRefusal
 	if errors.As(recoveryErr, &refusal) {
@@ -306,6 +307,10 @@ func releasedDNSSwitchUnknownMessage(recoveryErr error) string {
 	var unrecorded *bindUnrecordedTargetRefusal
 	if errors.As(recoveryErr, &unrecorded) {
 		return unrecorded.ledgerMessage()
+	}
+	var freshPrimary *freshPrimaryV3RecoveryError
+	if errors.As(recoveryErr, &freshPrimary) {
+		return freshPrimary.ledgerMessage()
 	}
 	return "The interrupted DNS switch could not be verified after the Agent restarted. Its exact journal remains for DNS recovery, and new DNS changes are blocked. The server administrator should inspect the native DNS service and run recovery dns-switch-status --quiesced; after resolving the reported cause, restart the Agent to retry this same operation. Unrelated host changes can continue."
 }

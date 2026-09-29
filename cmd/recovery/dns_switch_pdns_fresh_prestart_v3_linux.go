@@ -59,7 +59,9 @@ func dispatchOwnerPDNSFreshPrestartV3(
 		}
 		return exitOK
 	}
-	if code, complete := writeOwnCompletedPDNSInverse(err, "en", request, out); complete {
+	// This command admits the Agent's deliberate release, so its reconciled
+	// re-run is complete too, exactly as for the three V2/V1 owner inverses.
+	if code, complete := writeCompletedDNSInverse(err, "en", request, out); complete {
 		return code
 	}
 	fmt.Fprintln(diagnostic, "Fresh PowerDNS prestart recovery did not reach a terminal verdict. Preserve the journal and ledger; inspect recovery dns-switch-status --quiesced --request-id "+request+". A running or changed target requires forward reconciliation, not deletion. Reason: "+err.Error())
@@ -121,7 +123,7 @@ func completeInstalledFreshPDNSPrestartV3(parent context.Context, request string
 		if e.Journal.MutationRequestID != request || e.Journal.Schema != dnsengineartifact.SwitchJournalSchemaV3 {
 			return dnsenginerecovery.SwitchEvidence{}, errors.New("exact v3 request journal is absent or owned by another operation")
 		}
-		if err := excludeInstalledDNSInverseWorker(ctx, e); err != nil {
+		if err := excludeInstalledFreshPrestartV3Worker(ctx, e); err != nil {
 			return e, err
 		}
 		return e, nil
@@ -229,16 +231,48 @@ func completeInstalledFreshPDNSPrestartV3(parent context.Context, request string
 
 // publishFreshPDNSPrestartVerdictV3 publishes this command's rollback verdict
 // for an active job. A terminal job beside the rolled-back journal is kept
-// only when it is exactly an owner recovery run's verdict: an earlier run of
-// this command published it and was interrupted before retiring the journal.
-// Any other terminal result, such as the Agent's release, is refused.
+// when it is exactly an owner recovery run's verdict (an earlier run of this
+// command published it and was interrupted before retiring the journal) or
+// the Agent's own deliberate release of this request, which already is the
+// operation's terminal ledger verdict and is never rewritten. Any other
+// terminal result is refused.
 func publishFreshPDNSPrestartVerdictV3(current dnsenginerecovery.SwitchEvidence, publish func() error) error {
 	if current.Observation.Status != dnsenginerecovery.EvidenceTerminalRolledBack {
 		return publish()
 	}
 	if current.Journal.Phase != dnsengineartifact.SwitchPhaseRolledBack ||
-		!ownerRecoveryRollbackVerdictJob(current.AcceptedJob) {
-		return errors.New("the terminal ledger result of this v3 request was not recorded by an owner recovery run; this command does not retire its journal")
+		!(ownerRecoveryRollbackVerdictJob(current.AcceptedJob) ||
+			freshPrestartV3ReleasedJob(current)) {
+		return errors.New("the terminal ledger result of this v3 request was not recorded by an owner recovery run or the Agent's release; this command does not retire its journal")
 	}
 	return nil
+}
+
+// freshPrestartV3ReleasedJob reports whether the accepted job is the Agent's
+// deliberate release of exactly this journal's request.
+func freshPrestartV3ReleasedJob(e dnsenginerecovery.SwitchEvidence) bool {
+	j, job := e.Journal, e.AcceptedJob
+	return e.Observation.ReleaseReason == dnsengineartifact.ReleasedNativeUnknownCode &&
+		job.RequestID == j.MutationRequestID && job.OwnerID == j.MutationOwnerID &&
+		job.Target == string(j.TargetEngine) && job.PackageName == j.ManifestQualifier &&
+		dnsenginerecovery.AgentDeliberateReleaseJob(job)
+}
+
+// excludeInstalledFreshPrestartV3Worker is this command's worker exclusion.
+// Beyond the shared exclusion it admits only the Agent's deliberate release
+// of this exact request with its journal still in the pre-start shape: the
+// Agent wrote that release after proving the worker gone under the host lock
+// this command now holds, and it records no worker or lease. Every native,
+// lock and owner-change proof of the command still runs.
+func excludeInstalledFreshPrestartV3Worker(ctx context.Context, e dnsenginerecovery.SwitchEvidence) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if e.Observation.Status != dnsenginerecovery.EvidenceReleasedUndecided {
+		return excludeInstalledDNSInverseWorker(ctx, e)
+	}
+	if !dnsenginerecovery.AgentReleasedFreshPrimaryPrestartEvidenceV3(e) {
+		return errors.New("released DNS job is not the Agent's deliberate release of this exact pre-start request")
+	}
+	return ctx.Err()
 }

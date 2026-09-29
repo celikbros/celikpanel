@@ -58,6 +58,10 @@ func TestMeasuredFreshPrimaryNativeCatalogTransition(t *testing.T) {
 		{"foreign catalog row", func(s *Snapshot) { s.Tables["records"][1][4] = "owner.invalid" }},
 		{"member type drift", func(s *Snapshot) { s.Tables["domains"][1][4] = "NATIVE" }},
 		{"member last check drift", func(s *Snapshot) { s.Tables["domains"][1][5] = float64(9) }},
+		// The measured daemon writes only notified_serial; last_check stays NULL.
+		{"producer last_check written", func(s *Snapshot) { s.Tables["domains"][0][3] = float64(1790542951) }},
+		{"member last_check written", func(s *Snapshot) { s.Tables["domains"][1][3] = float64(1790542951) }},
+		{"producer options written", func(s *Snapshot) { s.Tables["domains"][0][7] = `{"coo":"other.test."}` }},
 		{"foreign metadata", func(s *Snapshot) {
 			s.Tables["domainmetadata"] = append(s.Tables["domainmetadata"], []any{2., 1., "ALSO", "value"})
 		}},

@@ -885,7 +885,9 @@ func (hostDNSEngineBackend) RecoverSwitch(
 	if journal, exists, readErr := readDNSEngineSwitchJournal(); readErr != nil {
 		return dnsenginerecovery.OutcomeAbsent, readErr
 	} else if exists && journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
-		return recoverFreshPrimaryForwardV3(ctx, id, journal)
+		// Pre-start journals roll back under the first-install proofs;
+		// started targets go forward only (recoverFreshPrimaryV3).
+		return recoverFreshPrimaryV3(ctx, id, journal)
 	}
 	outcome, err := dnsenginerecovery.Reconcile(ctx, dnsJournalPolicy(), id, dnsenginerecovery.Operations{
 		Read: func(context.Context) (dnsengineartifact.SwitchJournalV1, bool, error) {

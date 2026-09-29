@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type dnsPrimaryCatalogEvidence struct {
@@ -398,8 +399,8 @@ func bindPrimaryPairReadyForState(
 		return false, err
 	}
 	if legacy {
-		_, err = verifyDNSLegacyPrimaryPairReadyAuthorityAt(
-			ctx, evidence, probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+		_, err = verifyLegacyPrimaryPeerCatalogAuthorityForLocalEngine(
+			ctx, evidence, transport.DNSEngineBIND,
 		)
 	} else {
 		err = verifyDNSPrimaryPairReadyAt(
@@ -461,8 +462,8 @@ func powerDNSPrimaryPairReady(
 		return false, err
 	}
 	if state.PairRole == "" && state.PrimaryCatalogSerial == 0 {
-		_, err = verifyDNSLegacyPrimaryPairReadyAuthorityAt(
-			ctx, evidence, probeDNSZoneSOA, probeDNSBoundPDNSCatalogAXFR,
+		_, err = verifyLegacyPrimaryPeerCatalogAuthorityForLocalEngine(
+			ctx, evidence, transport.DNSEnginePowerDNS,
 		)
 	} else {
 		err = verifyDNSPrimaryPairReadyAt(
@@ -474,4 +475,32 @@ func powerDNSPrimaryPairReady(
 		return false, err
 	}
 	return true, nil
+}
+
+// peerReservedCatalogAXFRForLocalEngine selects the catalog parse policy for
+// this host's OWN catalog as the paired peer re-serves it. A secondary keeps
+// the producer's encoding (member labels, TTLs), so the policy follows the
+// LOCAL engine that produced the catalog, never the daemon answering the
+// transfer. Reads of the PEER's own catalog use selectDNSPeerCatalogAXFR instead.
+//
+// Eşin yeniden sunduğu kendi kataloğumuz, onu üreten YEREL motorun biçimiyle
+// okunur; aktarımı yanıtlayan eşin motoruna göre değil.
+func peerReservedCatalogAXFRForLocalEngine(engine transport.DNSEngine) (dnsBoundCatalogAXFRProbe, error) {
+	_, bound, err := catalogAXFRProbesForSourceEngine(engine)
+	return bound, err
+}
+
+// verifyLegacyPrimaryPeerCatalogAuthorityForLocalEngine is the legacy
+// (receipt without pair role or catalog serial) primary pair proof with the
+// peer catalog read in the encoding of the local producing engine.
+func verifyLegacyPrimaryPeerCatalogAuthorityForLocalEngine(
+	ctx context.Context,
+	evidence dnsPrimaryCatalogEvidence,
+	engine transport.DNSEngine,
+) (dnsPeerAXFRAuthority, error) {
+	peerAXFR, err := peerReservedCatalogAXFRForLocalEngine(engine)
+	if err != nil {
+		return dnsPeerAXFRAuthority{}, err
+	}
+	return verifyDNSLegacyPrimaryPairReadyAuthorityAt(ctx, evidence, probeDNSZoneSOA, peerAXFR)
 }

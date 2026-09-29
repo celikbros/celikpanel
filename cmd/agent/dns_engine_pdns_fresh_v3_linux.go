@@ -36,6 +36,16 @@ func validateFreshPDNSTargetBeforePackagesV3(before dnsUnitSnapshot) error {
 	return nil
 }
 
+// validateFreshPDNSTargetAfterOwnGuardMaskV3 is the after-package check for a
+// target admitted by freshPDNSTargetOwnGuardMaskV3: nothing was installed now
+// and the sealed unit is unchanged.
+func validateFreshPDNSTargetAfterOwnGuardMaskV3(before, after dnsUnitSnapshot, installedNow bool) error {
+	if !installedNow && before == freshPDNSGuardMaskV3 && after == before {
+		return nil
+	}
+	return errors.New("fresh PowerDNS target changed after its guarded package seal")
+}
+
 func validateFreshPDNSTargetAfterPackagesV3(before, after dnsUnitSnapshot, installedNow bool) error {
 	if err := validateFreshPDNSTargetBeforePackagesV3(before); err != nil {
 		return err
@@ -48,6 +58,72 @@ func validateFreshPDNSTargetAfterPackagesV3(before, after dnsUnitSnapshot, insta
 		return nil
 	}
 	return errors.New("fresh PowerDNS target changed outside the guarded package install")
+}
+
+// freshPDNSGuardMaskV3 is the package guard's persistent seal of a stopped,
+// never-enabled PowerDNS unit.
+var freshPDNSGuardMaskV3 = dnsUnitSnapshot{Name: "pdns.service", LoadState: "masked", ActiveState: "inactive", UnitFileState: "masked"}
+
+// freshPDNSTargetOwnGuardMaskV3 reports whether a masked pre-package target
+// is this product's own rollback standby: the state a rolled-back first
+// install leaves (its guarded package install sealed the unit, the inverse
+// restored that seal and kept the packages). It is admitted only when every
+// PowerDNS package is already installed, so nothing is installed now, and the
+// PowerDNS install-ownership receipt records that CelikPanel itself installed
+// exactly these packages (a non-empty missing-before set, not an adoption of
+// packages that were already present). Without that receipt the mask stays
+// the owner's and the target is refused, as before. The frozen journal keeps
+// the masked preimage, so an inverse returns the unit to the same seal.
+//
+// Maskelenmiş bir hedef yalnız, PowerDNS paketlerini CelikPanel'in kendisinin
+// kurduğunu kanıtlayan kurulum makbuzu varken ve şimdi hiçbir paket
+// kurulmayacakken, geri alınmış ilk kurulumun bekleme durumu olarak kabul edilir.
+func freshPDNSTargetOwnGuardMaskV3(
+	before dnsUnitSnapshot,
+	allPackagesPresent bool,
+	packages []string,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) (bool, error) {
+	return freshPDNSTargetOwnGuardMaskWithReceiptV3(
+		before, allPackagesPresent, packages, profile, manifest, readDNSEngineInstallOwnership,
+	)
+}
+
+func freshPDNSTargetOwnGuardMaskWithReceiptV3(
+	before dnsUnitSnapshot,
+	allPackagesPresent bool,
+	packages []string,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	read func(transport.DNSEngine) (dnsEngineInstallOwnershipReceipt, bool, error),
+) (bool, error) {
+	if before != freshPDNSGuardMaskV3 || !allPackagesPresent ||
+		manifest.TargetEngine != transport.DNSEnginePowerDNS || read == nil {
+		return false, nil
+	}
+	receipt, exists, err := read(transport.DNSEnginePowerDNS)
+	if err != nil {
+		return false, err
+	}
+	if !exactDNSEngineInstallOwnership(receipt, exists, transport.DNSEnginePowerDNS, profile.PackageManager, packages) ||
+		receipt.AdoptedPresent || len(receipt.MissingBefore) == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+
+// validateFreshPDNSPrimaryHostProfileV3 is the measured host class of the V3
+// native catalog transform. It runs before any package, unit or file effect so
+// an unmeasured host is refused while nothing has changed.
+func validateFreshPDNSPrimaryHostProfileV3(profile hostplatform.Profile) error {
+	if profile.ID != "debian" || profile.Version != "13" || profile.Arch != "amd64" ||
+		profile.DistroFamily != hostplatform.DistroFamilyDebian ||
+		profile.PackageManager != hostplatform.PackageManagerAPT ||
+		profile.ServiceManager != hostplatform.ServiceManagerSystemd {
+		return errors.New("PowerDNS as the paired primary is supported only on Debian 13 amd64 in this release; nothing was changed; install BIND as the paired primary on this host instead")
+	}
+	return nil
 }
 
 // prepareFreshPDNSPrimaryIntentV3 binds the prepared config and absent target

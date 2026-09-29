@@ -205,9 +205,10 @@ func terminalDNSInverseVerdictText(lang, requestID string) string {
 		requestID+" işlemi zaten tamamlanmış: sahibin daha önce çalıştırdığı kurtarma komutu işlemi geri aldı, doğrulanmış geri alma sonucunu kaydetti ve günlüğü kaldırdı. Şimdi hiçbir şey değiştirilmedi. Bu işlem artık DNS değişikliklerini engellemiyor. Bu komut DNS'in şu anki sağlığını kontrol etmez: önceki DNS motoru o geri alma sırasında doğrulandı, şimdi değil. Yeni bir geçişten önce panelde güncel DNS motorunu ve yetkili DNS yanıtlarını kontrol edin.")
 }
 
-// writeOwnCompletedPDNSInverse is writeCompletedDNSInverse for the two owner
-// commands that never admit the Agent's release (recover-dns-pdns-fresh-prestart
-// and recover-dns-pdns-target-staged). Only an earlier owner recovery run's
+// writeOwnCompletedPDNSInverse is writeCompletedDNSInverse for the owner
+// command that never admits the Agent's release (recover-dns-pdns-target-staged;
+// recover-dns-pdns-fresh-prestart admits it since the Agent's own V3 pre-start
+// inverse was added). Only an earlier owner recovery run's
 // exact rollback verdict for this request, with the journal retired, is their
 // own evidence of completion; the Agent's reconciled release keeps the
 // caller's refusal.

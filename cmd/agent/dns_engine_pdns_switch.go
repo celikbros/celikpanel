@@ -25,13 +25,72 @@ import (
 
 const pdnsPairedPrimarySwitchPausedReason = "PowerDNS paired-primary switch is paused pending native catalog and rollback support; leave any current DNS engine serving and review another DNS plan"
 
+// freshPairedPDNSPrimaryAdmitted is the Agent's single product gate for the
+// first install of PowerDNS as the paired primary on a host with no DNS engine
+// (the V3 journal). It stays false until row 6 of the DNS recovery acceptance
+// register has native evidence through the public RPC; the Panel carries the
+// matching constant (freshPairedPDNSPrimaryOffered). Opening it admits only
+// the empty-source manifest: every other PowerDNS paired-primary manifest
+// stays refused, and a serving BIND source keeps its D-026 refusal.
+//
+// freshPairedPDNSPrimaryAdmitted, DNS motoru olmayan bir sunucuya PowerDNS'in
+// eşli birincil olarak ilk kurulumunun (V3 günlüğü) Agent tarafındaki tek ürün
+// kapısıdır. Kabul defterinin 6. satırı herkese açık RPC üzerinden yerel kanıt
+// alana kadar kapalı kalır.
+const freshPairedPDNSPrimaryAdmitted = false
+
+// pdnsFreshPairedPrimaryGateOpen carries the constant above. Only tests
+// assign it, to exercise the open policy; production never changes it.
+var pdnsFreshPairedPrimaryGateOpen = freshPairedPDNSPrimaryAdmitted
+
+// pdnsPairedPrimarySwitchPaused is the Agent's one policy for a PowerDNS
+// target on a paired primary. It is applied by the RPC before the mutation
+// step claim and again by the host backend before journal reconciliation.
 func pdnsPairedPrimarySwitchPaused(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 ) bool {
-	return manifest.Mode == transport.DNSEngineSwitchModeSwitch &&
-		manifest.TargetEngine == transport.DNSEnginePowerDNS &&
-		manifest.Topology == transport.DNSTopologyPaired &&
-		manifest.PairRole == transport.DNSPairRolePrimary
+	return pdnsPairedPrimarySwitchPausedWithGate(manifest, pdnsFreshPairedPrimaryGateOpen)
+}
+
+// pdnsPairedPrimarySwitchPausedWithGate is that policy for an explicit gate
+// value. Closed, it refuses every PowerDNS paired-primary switch, whatever the
+// source. Open, it admits only the empty-source (fresh) manifest and leaves a
+// BIND source to bindSourcePDNSSwitchUnsupported, which every caller applies
+// next; any other source (an active PowerDNS or an unknown engine) stays
+// refused here.
+func pdnsPairedPrimarySwitchPausedWithGate(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	open bool,
+) bool {
+	if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+		manifest.TargetEngine != transport.DNSEnginePowerDNS ||
+		manifest.Topology != transport.DNSTopologyPaired ||
+		manifest.PairRole != transport.DNSPairRolePrimary {
+		return false
+	}
+	if !open {
+		return true
+	}
+	if manifest.SourceEngine == transport.DNSEngineBIND {
+		return false
+	}
+	return manifest.SourceEngine != "" || manifest.SourceEpoch != 0
+}
+
+// pdnsPairedPrimaryHostAdmission is the host backend's half of the gate:
+// the only PowerDNS paired-primary switch it runs is the V3 first install on
+// a host with no DNS engine and no state receipt. Any other paired-primary
+// shape would take the legacy V1 path, which has no recovery contract for it.
+func pdnsPairedPrimaryHostAdmission(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	stateExists bool,
+) error {
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary &&
+		(manifest.SourceEngine != "" || manifest.SourceEpoch != 0 || stateExists) {
+		return errors.New(pdnsPairedPrimarySwitchPausedReason)
+	}
+	return nil
 }
 
 const bindSourcePDNSSwitchUnsupportedReason = "switching a serving BIND source to PowerDNS is unsupported in this release: an interrupted switch has no Agent-independent recovery; BIND keeps serving and nothing was changed; install PowerDNS on a host without a DNS engine instead"
@@ -1650,6 +1709,9 @@ func switchToPDNSOnCertifiedProfile(
 		}
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	if err := pdnsPairedPrimaryHostAdmission(manifest, stateExists); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	sourceProof, err := proveDNSEngineSwitchSource(
 		ctx, profile, manifest, state, stateExists,
 	)
@@ -1705,14 +1767,28 @@ func switchToPDNSOnCertifiedProfile(
 		manifest.Topology == transport.DNSTopologyPaired &&
 		manifest.PairRole == transport.DNSPairRolePrimary
 	var freshTargetBeforePackages dnsUnitSnapshot
+	freshTargetOwnGuardMask := false
 	if freshPairedPrimaryV3 {
+		// Refuse an unmeasured host before any package, unit or file effect.
+		if err := validateFreshPDNSPrimaryHostProfileV3(profile); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
 		beforePackages, captureErr := captureDNSUnitSnapshots(ctx, systemctl, []string{"pdns.service"})
 		if captureErr != nil {
 			return transport.SwitchDNSEngineV1Response{}, captureErr
 		}
 		freshTargetBeforePackages = beforePackages[0]
-		if err := validateFreshPDNSTargetBeforePackagesV3(freshTargetBeforePackages); err != nil {
-			return transport.SwitchDNSEngineV1Response{}, err
+		ownGuardMask, maskErr := freshPDNSTargetOwnGuardMaskV3(
+			freshTargetBeforePackages, len(missing) == 0, packages, profile, manifest,
+		)
+		if maskErr != nil {
+			return transport.SwitchDNSEngineV1Response{}, maskErr
+		}
+		freshTargetOwnGuardMask = ownGuardMask
+		if !ownGuardMask {
+			if err := validateFreshPDNSTargetBeforePackagesV3(freshTargetBeforePackages); err != nil {
+				return transport.SwitchDNSEngineV1Response{}, err
+			}
 		}
 	}
 	if err := verifyBINDMaskParentMetadata(); err != nil {
@@ -1820,7 +1896,11 @@ func switchToPDNSOnCertifiedProfile(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if freshPairedPrimaryV3 {
-		if err := validateFreshPDNSTargetAfterPackagesV3(
+		validateAfter := validateFreshPDNSTargetAfterPackagesV3
+		if freshTargetOwnGuardMask {
+			validateAfter = validateFreshPDNSTargetAfterOwnGuardMaskV3
+		}
+		if err := validateAfter(
 			freshTargetBeforePackages, targetBefore[0], len(missing) != 0,
 		); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err

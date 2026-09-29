@@ -192,6 +192,22 @@ func serverSetupAdmin(w http.ResponseWriter, r *http.Request, method string) boo
 	return true
 }
 
+// setupPDNSPairedPrimaryBlocker applies pdnsPairedPrimaryBlocker to a setup
+// draft that would install PowerDNS as the paired primary on a server with no
+// active DNS engine. A server whose active engine differs from the draft is
+// already refused as a migration; one that matches installs nothing.
+func setupPDNSPairedPrimaryBlocker(draft serverSetupDraft, state dnsEngineDBState) string {
+	if draft.DNSMode != setupDNSModeLocal || draft.DNSRole != transport.DNSPairRolePrimary ||
+		state.ActiveEngine != "" {
+		return ""
+	}
+	code, _ := pdnsPairedPrimaryBlocker(dnsEngineSnapshot{
+		Topology: transport.DNSTopologyPaired, PairRole: transport.DNSPairRolePrimary,
+		EngineEpoch: state.EngineEpoch,
+	}, transport.DNSEngine(draft.DNSEngine), "install")
+	return code
+}
+
 func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState, actor serviceOperationActor) (serverSetupPlan, error) {
 	draft := state.Draft
 	plan := serverSetupPlan{Version: serverSetupPlanVersion, Revision: state.Revision, Purpose: draft.Purpose, Draft: draft, Actor: actor,
@@ -249,6 +265,12 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 			}
 			if state.ActiveEngine != "" && !setupDNSDraftMatchesState(draft, request, local, state) {
 				addBlocker("server_setup_existing_dns_requires_migration")
+			}
+			// Setup installs the first engine only. The paired PowerDNS
+			// primary is decided by the same policy as the DNS engine card,
+			// here at review time, before any DNS identity is saved.
+			if code := setupPDNSPairedPrimaryBlocker(draft, state); code != "" {
+				addBlocker(code)
 			}
 			if serverSetupSecondaryHosting(draft) {
 				endpoint, err := canonicalRemoteDNSEndpoint(draft.DNSPublisherEndpoint)

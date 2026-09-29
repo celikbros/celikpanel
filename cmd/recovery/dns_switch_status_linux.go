@@ -1108,6 +1108,8 @@ func releasedDNSSwitchGuidance(e dnsenginerecovery.SwitchEvidence) (text string,
 		return "The Agent released this interrupted DNS switch lease because host startup did not finish within its recovery window. The server owner should confirm startup and native DNS authority, then retry observation of this same operation. The frozen journal remains; no inverse or new switch is authorized.", true
 	case dnsengineartifact.ReleasedNativeUnknownCode:
 		switch ownerDNSRecoveryCommand(e) {
+		case ownerPDNSFreshPrestartV3Command:
+			return "The Agent could not prove that this first PowerDNS install as paired primary never started, so it did not undo it and released its lease; the journal is kept. If PowerDNS never started, the server owner can restore the state before the install with the owner recovery command named above; it rechecks locks, owner changes and the native target and refuses a started or changed target. After the reported cause is resolved, restarting the Agent also retries the same automatic undo. The journal blocks a new DNS switch; this read-only status does not start recovery.", true
 		case ownerBINDSwitchInverseCommand, ownerBINDAdoptionInverseCommand, ownerPDNSAdoptionInverseCommand:
 			return "The Agent could not complete this DNS switch rollback itself (during the operation or after a restart), released its lease and kept the journal. The server owner continues the same rollback with the owner recovery command named above; it rechecks locks, owner changes and native DNS before any change. The journal blocks a new DNS switch until that command retires it; this read-only status does not start recovery.", true
 		}
@@ -1123,12 +1125,20 @@ func releasedDNSSwitchGuidance(e dnsenginerecovery.SwitchEvidence) (text string,
 // can finish a rolled-back journal of this class: re-prove the restored source
 // and retire the journal. The Agent executes only V1 inverses. For a V1
 // PowerDNS adoption it re-proves the restored owner PowerDNS without any
-// effect; other V1 inverses are re-run and re-proved. V2, V3 and V4 journals
-// are never finished by the Agent; only an owner recovery command can. The
+// effect; other V1 inverses are re-run and re-proved. A V3 fresh paired
+// PowerDNS primary rolled back before it started is re-proved without any
+// effect. V2 and V4 journals are never finished by the Agent; only an owner
+// recovery command can. The
 // Agent's paired-secondary PowerDNS reconfiguration proof accepts only a
 // rolling-back journal, so that V1 class cannot be finished at rolled-back.
 func agentFinishesRolledBackDNSJournal(e dnsenginerecovery.SwitchEvidence) (finishes, reproveOnly bool) {
 	j := e.Journal
+	if j.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		// The Agent's V3 pre-start inverse re-proves the restored pre-install
+		// state at rolled-back without any effect and retires the journal.
+		return j.Phase == dnsengineartifact.SwitchPhaseRolledBack &&
+			dnsenginerecovery.FreshPrimaryPrestartJournalV3(j), true
+	}
 	if j.Schema != dnsengineartifact.SwitchJournalSchemaV1 {
 		return false, false
 	}
@@ -1153,14 +1163,16 @@ func agentFinishesRolledBackDNSJournal(e dnsenginerecovery.SwitchEvidence) (fini
 
 // agentRetriesReleasedDNSJournal reports whether an Agent restart can still
 // make progress on a released journal. The Agent never executes a V2 or V4
-// inverse or a V4 enable-intent checkpoint, and it recovers a V3 journal only
-// once committed; for those, "restart the Agent" would be a false promise.
+// inverse or a V4 enable-intent checkpoint; for those, "restart the Agent"
+// would be a false promise. A V3 fresh paired PowerDNS primary is retried at
+// every phase: a journal that records only pre-start work by the Agent's own
+// pre-start inverse, a started target by forward recovery.
 func agentRetriesReleasedDNSJournal(j dnsengineartifact.SwitchJournalV1) bool {
 	switch j.Schema {
 	case dnsengineartifact.SwitchJournalSchemaV1:
 		return true
 	case dnsengineartifact.SwitchJournalSchemaV3:
-		return j.Phase == dnsengineartifact.SwitchPhaseCommitted
+		return true
 	case dnsengineartifact.SwitchJournalSchemaV2, dnsengineartifact.SwitchJournalSchemaV4:
 		switch j.Phase {
 		case dnsengineartifact.SwitchPhaseRollingBack, dnsengineartifact.SwitchPhaseRolledBack,
@@ -1192,6 +1204,8 @@ func terminalRolledBackDNSSwitchGuidance(e dnsenginerecovery.SwitchEvidence, qui
 	support := fmt.Sprintf(" If the journal is still present afterwards, keep it and the ledger and contact support with request id %s.", request)
 	finishes, reproveOnly := agentFinishesRolledBackDNSJournal(e)
 	switch {
+	case finishes && e.Journal.Schema == dnsengineartifact.SwitchJournalSchemaV3:
+		return text + " A restart of the CelikPanel Agent (systemctl restart celikpanel-agent) re-proves under the host lock, without changing anything, that PowerDNS is stopped and that its staged files and configuration are back as they were before this first install, and retires this exact journal when that proof passes." + ownerText + support
 	case finishes && reproveOnly:
 		return text + " A restart of the CelikPanel Agent (systemctl restart celikpanel-agent) re-proves the restored PowerDNS source under the host lock without changing it and retires this exact journal when that proof passes." + ownerText + support
 	case finishes:
@@ -1205,10 +1219,10 @@ func terminalRolledBackDNSSwitchGuidance(e dnsenginerecovery.SwitchEvidence, qui
 // freshPDNSPrestartV3OwnerRecoveryCandidate is the evidence gate of
 // recover-dns-pdns-fresh-prestart: the exact V3 request journal with the
 // pre-start shape assessInstalledFreshPrimaryV3 requires, and a ledger status
-// the command's worker exclusion admits - an active job, or the command's own
-// terminal verdict beside its rolled-back journal. It refuses the Agent's
-// released job, so status does not name it there. Whether PowerDNS started is
-// a native fact that only the command proves under its locks.
+// the command's worker exclusion admits - an active job, the Agent's
+// deliberate release of this request, or (beside the rolled-back journal)
+// the command's own terminal verdict or that same release. Whether PowerDNS
+// started is a native fact that only the command proves under its locks.
 func freshPDNSPrestartV3OwnerRecoveryCandidate(e dnsenginerecovery.SwitchEvidence) bool {
 	if e.Observation.RequestID != e.Journal.MutationRequestID ||
 		e.Observation.Phase != e.Journal.Phase ||
@@ -1218,9 +1232,11 @@ func freshPDNSPrestartV3OwnerRecoveryCandidate(e dnsenginerecovery.SwitchEvidenc
 	switch {
 	case activeDNSSwitchStatus(e.Observation.Status):
 		return true
+	case e.Observation.Status == dnsenginerecovery.EvidenceReleasedUndecided:
+		return dnsenginerecovery.AgentReleasedFreshPrimaryPrestartEvidenceV3(e)
 	case e.Observation.Status == dnsenginerecovery.EvidenceTerminalRolledBack:
 		return e.Journal.Phase == dnsengineartifact.SwitchPhaseRolledBack &&
-			ownerRecoveryRollbackVerdictJob(e.AcceptedJob)
+			(ownerRecoveryRollbackVerdictJob(e.AcceptedJob) || freshPrestartV3ReleasedJob(e))
 	}
 	return false
 }

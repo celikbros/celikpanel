@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -38,6 +40,25 @@ type dnsV3PrimaryPropagationPlan struct {
 	Changed     expectedDNSZoneAuthority
 	Legacy      bool
 	Operation   dnsV3DeletionOperation
+	// RefreshEvidence is set only for a native V3 PowerDNS producer. It
+	// rereads the durable catalog evidence so the completion wave can follow
+	// the one change the daemon makes by itself after a membership change:
+	// a higher producer SOA serial (pdnsDaemonCatalogSerialAdvance).
+	RefreshEvidence func(context.Context) (dnsPrimaryCatalogEvidence, error)
+}
+
+// pdnsDaemonCatalogSerialAdvance reports whether fresh differs from planned
+// only by a higher producer serial. After CelikPanel's own publication
+// raises the producer serial by one, PowerDNS 4.9 recomputes CATALOG-HASH on
+// its next primary check and re-stamps the producer SOA serial (measured as
+// the current epoch time). Identity, member set and member serials must stay
+// exact; any other difference is not the daemon's and keeps the plan.
+func pdnsDaemonCatalogSerialAdvance(planned, fresh dnsPrimaryCatalogEvidence) bool {
+	return fresh.Serial > planned.Serial &&
+		fresh.LocalIP == planned.LocalIP && fresh.PeerIP == planned.PeerIP &&
+		fresh.Domain == planned.Domain &&
+		slices.Equal(fresh.Members, planned.Members) &&
+		slices.Equal(fresh.MemberSerials, planned.MemberSerials)
 }
 
 func trustedPDNSControl(ctx context.Context, args ...string) error {
@@ -190,13 +211,24 @@ func completePDNSV3Propagation(
 	if !plan.Primary {
 		return nil
 	}
-	err := completeDNSV3PrimaryPropagation(ctx, dnsV3PrimaryPropagationPlan{
+	primaryPlan := dnsV3PrimaryPropagationPlan{
 		SourceState: plan.State,
 		Evidence:    plan.Evidence,
 		Changed:     plan.Changed,
 		Legacy:      plan.Legacy,
 		Operation:   plan.Operation,
-	})
+	}
+	if !plan.Legacy && plan.State.NativeCatalogV3 == dnsengineartifact.NativeCatalogDebian49V3 {
+		state := plan.State
+		primaryPlan.RefreshEvidence = func(ctx context.Context) (dnsPrimaryCatalogEvidence, error) {
+			evidence, primary, err := managedPDNSPrimaryCatalogEvidenceForState(ctx, state)
+			if err != nil || !primary {
+				return dnsPrimaryCatalogEvidence{}, errors.Join(errors.New("PowerDNS producer evidence is unavailable"), err)
+			}
+			return evidence, nil
+		}
+	}
+	err := completeDNSV3PrimaryPropagation(ctx, primaryPlan)
 	return dnsZoneV3RecoveryPending(err)
 }
 
@@ -264,6 +296,7 @@ func completeDNSV3PrimaryPropagationWithNativeAt(
 	// catches up, but it mints at most one durable native challenge and opens
 	// at most one SSH inspection. A later owner retry is a new ledger attempt.
 	nativeAttempted := false
+	daemonAdvances := 0
 	var nativePending error
 	nativeOnce := native
 	if native != nil {
@@ -300,6 +333,17 @@ func completeDNSV3PrimaryPropagationWithNativeAt(
 				fmt.Errorf("paired DNS deletion is unverified (check=%s); the peer administrator must check native zone state and DNS access, then retry verification of the same operation", dnsV3ProofNativePeer),
 				nativePending,
 			)
+		}
+		// Follow the daemon's own producer serial re-stamp, and nothing else,
+		// before any native inspection binds this wave to a serial.
+		if check == dnsV3ProofCatalogPair && plan.RefreshEvidence != nil && !nativeAttempted &&
+			daemonAdvances < 2 {
+			if fresh, refreshErr := plan.RefreshEvidence(proofCtx); refreshErr == nil &&
+				pdnsDaemonCatalogSerialAdvance(plan.Evidence, fresh) {
+				plan.Evidence = fresh
+				daemonAdvances++
+				continue
+			}
 		}
 		select {
 		case <-proofCtx.Done():

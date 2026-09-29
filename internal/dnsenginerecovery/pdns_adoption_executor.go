@@ -183,6 +183,31 @@ func AgentReleasedDNSInverseEvidence(e SwitchEvidence) bool {
 		AgentDeliberateReleaseJob(job)
 }
 
+// AgentReleasedFreshPrimaryPrestartEvidenceV3 is the one released-undecided
+// admission of recover-dns-pdns-fresh-prestart: the restarted Agent's own
+// deliberate release (ReleasedNativeUnknownCode) of this exact request, with
+// its V3 journal still in the pre-start shape FreshPrimaryPrestartJournalV3
+// names. Unlike the V2 inverses the Agent may release before it writes a
+// rollback decision (it could not prove the target never started), so every
+// pre-start phase is admitted; the command writes the decision itself only
+// after its own native proof. Other release reasons, another request or a
+// journal with a native receipt stay refused. Success grants no lock, worker
+// or native authority, and the command publishes no ledger change over the
+// released job.
+func AgentReleasedFreshPrimaryPrestartEvidenceV3(e SwitchEvidence) bool {
+	j, o := e.Journal, e.Observation
+	if o.Status != EvidenceReleasedUndecided ||
+		o.ReleaseReason != dnsengineartifact.ReleasedNativeUnknownCode ||
+		o.RequestID != j.MutationRequestID || o.Phase != j.Phase ||
+		!FreshPrimaryPrestartJournalV3(j) {
+		return false
+	}
+	job := e.AcceptedJob
+	return job.RequestID == j.MutationRequestID && job.OwnerID == j.MutationOwnerID &&
+		job.Target == string(j.TargetEngine) && job.PackageName == j.ManifestQualifier &&
+		AgentDeliberateReleaseJob(job)
+}
+
 // AgentDeliberateReleaseJob reports whether a ledger job, read on its own, is
 // exactly the Agent's deliberate lease release (ReleasedNativeUnknownCode) for
 // its own DNS switch identity. It reads nothing else: journal presence, native

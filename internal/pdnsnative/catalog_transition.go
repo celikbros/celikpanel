@@ -68,13 +68,15 @@ func VerifyFreshPrimaryCatalogTransition(staged, live Snapshot, catalog string, 
 		}
 		memberSerials[id] = serial
 	}
+	// domains columns: id, name, master, last_check, type, notified_serial,
+	// account, options, catalog. The measured daemon writes only
+	// notified_serial (index 5); last_check stays NULL on this primary.
 	for i, before := range beforeDomains {
 		after := afterDomains[i]
 		if len(before) != 9 || len(after) != 9 || before[3] != nil ||
-			!reflect.DeepEqual(before[:3], after[:3]) ||
-			!reflect.DeepEqual(before[4:5], after[4:5]) ||
+			!reflect.DeepEqual(before[:5], after[:5]) ||
 			!reflect.DeepEqual(before[6:], after[6:]) {
-			return CatalogTransition{}, errors.New("PowerDNS native domain changed outside last_check")
+			return CatalogTransition{}, errors.New("PowerDNS native domain changed outside notified_serial")
 		}
 		id, ok := integer(before[0])
 		if !ok || before[5] != nil {
@@ -91,7 +93,7 @@ func VerifyFreshPrimaryCatalogTransition(staged, live Snapshot, catalog string, 
 		}
 		actual, valid := integer(after[5])
 		if !valid || want == 0 || actual != want {
-			return CatalogTransition{}, errors.New("PowerDNS native last_check differs from staged member serial")
+			return CatalogTransition{}, errors.New("PowerDNS native notified_serial differs from staged member serial")
 		}
 	}
 	if producerID == 0 {
