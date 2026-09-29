@@ -1,0 +1,13 @@
+### collect 2026-09-29T21:08:17.368093650Z
+last watcher dir: /var/tmp/cp-b8-watch
+request id: dbf9982f7d79645b1cc9ddfa99573f41
+ownerpost rc=0
+smstatus rc=0
+probe rc=0
+pdnsdb rc=0
+bindsec rc=0
+peer journal rc=0
+peerloop rc=0 lines=18
+cell directory: /var/tmp/cp-b8-0930/r3/cells/7fc4eccb599d2ce9b7d2a44c
+no fresh-primary-peer directory
+tar rc=0 size=614400

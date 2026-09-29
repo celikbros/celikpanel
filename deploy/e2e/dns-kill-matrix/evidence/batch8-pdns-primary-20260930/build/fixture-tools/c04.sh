@@ -1,0 +1,1 @@
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8/runcell.sh c04-pri-started-zl pdns-switch__target-started__after-write__paired-primary__peer-reachable /var/tmp/cp-b8-0930 0 --zone-lifecycle --reboot-after-recovery

@@ -1,0 +1,1 @@
+no boundary marker or kill in result.json (status unverified, kill_proven False); nothing to check

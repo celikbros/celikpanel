@@ -1,0 +1,25 @@
+{
+  "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+  "combined_exit": 1,
+  "error": null,
+  "guest_controller_exit": 1,
+  "note": "The native BIND secondary loaded this primary's PowerDNS PRODUCER catalog and member and answers them authoritatively over UDP and TCP exactly as the primary does.",
+  "observation": {
+    "action": "observe-native-pdns-bind-peer",
+    "address": "192.0.2.10",
+    "authoritative_udp_tcp": true,
+    "catalog": "catalog-c000020a.celikpanel.invalid",
+    "catalog_members": [
+      "s1-kill.test"
+    ],
+    "catalog_serial": 1790715126,
+    "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+    "execute": true,
+    "management_installed_on_secondary": false,
+    "member": "s1-kill.test",
+    "primary_ip": "192.0.2.10",
+    "secondary_ip": "192.0.2.11"
+  },
+  "schema": "celikpanel/dns-kill-fresh-primary-peer-verdict/v1",
+  "status": "passed"
+}

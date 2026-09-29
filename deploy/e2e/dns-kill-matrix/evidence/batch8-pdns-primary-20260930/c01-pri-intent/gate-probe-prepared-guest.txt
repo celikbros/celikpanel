@@ -1,0 +1,22 @@
+wall=2026-09-29T20:20:04.406272225Z boot_id=b21ec36e-af08-45ca-8167-917417a840f6
+cell=pdns-switch__intent__after-write__paired-primary__peer-reachable
+MainPID=0
+ActiveState=inactive
+6f7b61a53edf643e411d84c0dcc94189bcfdb151b87fc26300de8ea3bec5939c  /opt/celikpanel/bin/agent
+5b0870b69824811a9f9a0285e0ac260d3f6086ec83bd2a4f0a1493c698dbc4ce  /opt/celikpanel/bin/dns-kill-trigger
+== private evidence before
+177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211  service-mutations.json
+probe request id (unused by the probe RPC, required by the trigger's environment check): a2ea687377af3aa7311559db44709bcf
+{"schema":"celikpanel/dns-kill-matrix-gate-probe/v1","cell_id":"pdns-switch__intent__after-write__paired-primary__peer-reachable","manifest_qualifier":"dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5","gate":"unknown","detail":"the gate probe RPC failed: cannot reach agent socket: dial unix /run/celikpanel/agent.sock: connect: no such file or directory"}
+GATE_PROBE_RC=75
+== private evidence after
+177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211  service-mutations.json
+== units after
+MainPID=0
+LoadState=not-found
+ActiveState=inactive
+UnitFileState=
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=21))

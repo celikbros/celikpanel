@@ -1,0 +1,19 @@
+== c05-pri-verified pdns-switch__target-verified__after-write__paired-primary__peer-reachable
+  status=failed safety=passed class=target_converged complete=False RUN_PREPARED_RC=1 kill_proven=True
+  request=d16db23abded40a37a08a7c03f0bd35b controller 2026-09-29T20:47:36.404746Z -> 2026-09-29T20:48:28.424891Z gate=open agent_error='a valid durable service mutation lease is required'
+  boundary=target-verified disk=target-verified sha=c2fdd075ef88 marker=2026-09-29T20:47:50.746215658Z kill=2026-09-29T20:47:50.765523Z pid=1808 state=T exit=137 trigger_rc=75
+  failures v=[] s=[] d=[]
+  fp.failures=["pair: primary udp www A ['192.0.2.10']", "pair: primary tcp www A ['192.0.2.10']"] fp.unknown=[]
+  restart: variant=post-start code=None status=succeeded attempt=1 retired=True msg=None
+  forward failures=[] unknown=[] pid={'after_recovery': 3825, 'at_cut': 3825} restamp={"native_serial_at_cut": 1790714869, "restamped": true, "served": {"primary": {"tcp": [1790714869], "udp": [1790714869]}, "secondary": {"tcp": [1790714869], "udp": [1790714869]}}, "staged_serial": 1, "state_serial": 1790714869}
+  pair primary={"catalog_soa": {"tcp": [1790714869], "udp": [1790714869]}, "member_soa": {"tcp": [2026083101], "udp": [2026083101]}, "www_a": {"tcp": ["192.0.2.10"], "udp": ["192.0.2.10"]}} secondary_equal=True state_serial=1790714869
+  cut: variant=post-start pid=3825 files={'candidate': False, 'database': True, 'state': True} sealed=True staged_serial=1 native_serial=1790714869 unit_before={'active_state': 'inactive', 'load_state': 'masked', 'name': 'pdns.service', 'unit_file_state': 'masked'}
+  status-read after-recovery avail=True rc=0 mutated=False :: 'No DNS switch journal was observed for request d16db23abded40a37a08a7c03f0bd35b. Its exact ledger job records status succeeded. This is a point-in-time ledger o'
+  status-read before-recovery avail=True rc=0 mutated=False :: "DNS switch request d16db23abded40a37a08a7c03f0bd35b: accepted-active (journal phase target-verified).\nNo owner recovery command applies to this journal's record"
+  retry 1 rc=0 dur=0.00876
+  retry 2 rc=0 dur=0.00805
+  probe 1 target_converged 8cc5baa17cc4
+  probe 2 target_converged 8cc5baa17cc4
+  stability n=31
+  peer status=passed combined=1 guest_exit=1 error=None serial=1790714869 members=['s1-kill.test']
+  smstatus: status=succeeded code=None attempt=1 msg=None

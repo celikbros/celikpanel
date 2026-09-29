@@ -1,0 +1,20 @@
+== c02-pri-staged pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+  status=failed safety=passed class=target_converged complete=False RUN_PREPARED_RC=1 kill_proven=True
+  request=dbf9982f7d79645b1cc9ddfa99573f41 controller 2026-09-29T20:33:32.243869Z -> 2026-09-29T20:34:34.910430Z gate=open agent_error='a valid durable service mutation lease is required'
+  boundary=target-staged disk=target-staged sha=61cf5359aca6 marker=2026-09-29T20:33:51.03656521Z kill=2026-09-29T20:33:51.058858Z pid=1830 state=T exit=137 trigger_rc=75
+  failures v=[] s=[] d=[]
+  fp.failures=["pair: primary udp www A ['192.0.2.10']", "pair: primary tcp www A ['192.0.2.10']"] fp.unknown=[]
+  restart: variant=pre-start code=dns_engine_switch_rolled_back_after_restart status=failed attempt=1 retired=True msg='The interrupted DNS engine switch was rolled back to the verified previous state.'
+  pre_install failures=[] unknown=[] unit={'LoadState': 'masked', 'UnitFileState': 'masked', 'ActiveState': 'inactive', 'MainPID': '0'} db=[]
+  agent names owner command: False
+  pair primary={"catalog_soa": {"tcp": [1790714038], "udp": [1790714038]}, "member_soa": {"tcp": [2026083101], "udp": [2026083101]}, "www_a": {"tcp": ["192.0.2.10"], "udp": ["192.0.2.10"]}} secondary_equal=True state_serial=1790714038
+  cut: variant=pre-start pid=0 files={'candidate': True, 'database': False, 'state': False} sealed=True staged_serial=1 native_serial=None unit_before={'active_state': 'inactive', 'load_state': 'masked', 'name': 'pdns.service', 'unit_file_state': 'masked'}
+  status-read after-recovery avail=True rc=0 mutated=False :: 'No DNS switch journal was observed for request dbf9982f7d79645b1cc9ddfa99573f41. Its exact ledger job records status succeeded. This is a point-in-time ledger o'
+  status-read before-recovery avail=True rc=0 mutated=False :: 'DNS switch request dbf9982f7d79645b1cc9ddfa99573f41: accepted-active (journal phase target-staged).\nIf PowerDNS never started for this fresh paired primary, the'
+  retry 1 rc=0 dur=9.82301
+  retry 2 rc=0 dur=0.008589
+  probe 1 target_converged 4902fa3bcb93
+  probe 2 target_converged 4902fa3bcb93
+  stability n=31
+  peer status=passed combined=1 guest_exit=1 error=None serial=1790714038 members=['s1-kill.test']
+  smstatus: status=succeeded code=None attempt=2 msg=None

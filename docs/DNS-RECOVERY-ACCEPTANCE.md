@@ -225,6 +225,28 @@ Measured PowerDNS outage upper bounds in the post-stop V2 cells: 27.2 s,
 8.8 s and 25.9 s (the last includes two reboots' surrounding work but not the
 reboots themselves are judged); recorded, not bounded.
 
+**2026-09-30, batch 8, fresh paired PowerDNS primary** ([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch8-pdns-primary-20260930/README.md),
+acceptance branch `accept/pdns-primary-gate-open` commit `916e1577`, gate
+open; the main line keeps the gate closed; ten cells through the public Agent
+RPC, each run once, no harness workaround, no re-run). Row 6. Two passed,
+seven failed on one wrong harness expectation, one unverified. The boundary
+held in all nine cuts.
+
+| Cell | Product behaviour observed | Verdict |
+|---|---|---|
+| pre-start cuts at `intent`, `target-staged`, `target-enable-intent` | restarted Agent rolled the install back by itself, retired the journal, unit back at its guard-masked standby, no database, candidate, receipt or listener; same-request retry converged; native BIND secondary answered exactly as the primary | **failed (harness)**: the pair check compared the primary's `www` A with the guest's management address instead of the zone's record |
+| pre-journal cut at `intent` before-write | job ended with the pre-commit restart code; retry converged | **failed (harness)**, same cause |
+| post-start cuts at `target-started`, `target-verified`, `committed` | forward only; the same request succeeded; PowerDNS kept its process | **failed (harness)**, same cause; the zone lifecycle and the reboots did not run because they follow a passing verdict |
+| owner SQL edit between the kill and the Agent restart, post-start | refused; journal and database kept; the owner's row preserved; an unrelated mutation could begin | **passed** |
+| Agent-released pre-start recovery finished by `recover-dns-pdns-fresh-prestart` | exit 0, pre-install state, ledger byte-identical to the Agent's release, re-run exit 0 | **passed** |
+| owner configuration edit on a pre-start cell | the Agent answered `HOST_MUTATION_BUSY` before any mutation; no cut | **unverified**; cause not established |
+
+Catalog re-stamp as observed: staged serial 1 with no metadata; at first
+start the daemon added one `CATALOG-HASH` row and re-stamped the producer SOA
+to an epoch serial; the state receipt and both servers' served serials
+equalled it. Guidance gap recorded: `dns-switch-status` in the two owner-edit
+cells does not name the owner change that was refused.
+
 Source changes after batches 4 and 5, component tests only, native re-run
 pending: boundary stop, missing-pointer repair and pointer ordering
 (`c04d8a2b`); no inverse without a durable rollback decision, consumed

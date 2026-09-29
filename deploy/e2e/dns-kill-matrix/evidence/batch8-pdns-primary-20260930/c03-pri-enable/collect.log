@@ -1,0 +1,16 @@
+### collect 2026-09-29T20:39:34.273468907Z
+last watcher dir: /var/tmp/cp-b8-watch
+request id: 4b3fdfacc972232747641c9d5b38ce1e
+ownerpost rc=0
+smstatus rc=0
+probe rc=0
+pdnsdb rc=0
+bindsec rc=0
+peer journal rc=0
+peerloop rc=0 lines=32
+cell directory: /var/tmp/cp-b8-0930/cells/7e6184f4f9c6471937dd5a30
+total 12
+drwx------ 2 root root 4096 Sep 29 23:39 .
+drwxr-xr-x 3 root root 4096 Sep 29 23:39 ..
+-rw------- 1 root root  956 Sep 29 23:39 peer-verdict.json
+tar rc=0 size=1454080

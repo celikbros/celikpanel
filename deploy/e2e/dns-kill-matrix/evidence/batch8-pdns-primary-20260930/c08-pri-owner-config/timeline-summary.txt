@@ -1,0 +1,10 @@
+######## raw/watch/cp-b8-watch/timeline.log
+21:00:09.464135264 CHANGE journal none -> absent
+21:00:09.478921107 CHANGE ledger none -> 177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211
+21:00:09.485574409 CHANGE state none -> absent
+21:00:09.492129452 CHANGE pdnsdb none -> absent
+21:00:09.505339713 POINTER 
+21:00:09.507331822 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=
+21:00:10.684148737 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2072,
+21:00:10.981968291 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=
+done

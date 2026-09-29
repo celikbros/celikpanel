@@ -1,0 +1,2 @@
+guest bootstrap: --zone-lifecycle needs the running Agent; it cannot follow --disable-management-before-reboot; nothing was started
+rc=1

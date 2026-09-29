@@ -1,0 +1,8 @@
+/var/lib/celikpanel-agent-private:
+total 84
+drwx------  2 root celikpanel  4096 2026-09-29 20:39:00.328991594 +0000 .
+drwxr-xr-x 29 root root        4096 2026-09-29 20:38:45.337036534 +0000 ..
+-rw-------  1 root celikpanel   735 2026-09-29 20:38:59.636993431 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel   731 2026-09-29 20:38:59.040995026 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 65529 2026-09-29 20:38:59.660993368 +0000 dns-engine-switch-v3-archive-4b3fdfacc972232747641c9d5b38ce1e-0ce0efbb1a14cc2f249ff6189934aa67b08db292bbdd6f6e19bf88f046ded7fa.json
+-rw-------  1 root celikpanel   741 2026-09-29 20:39:00.316991625 +0000 service-mutations.json

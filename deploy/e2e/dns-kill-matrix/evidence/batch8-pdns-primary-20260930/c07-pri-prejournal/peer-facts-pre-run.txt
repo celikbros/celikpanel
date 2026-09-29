@@ -1,0 +1,56 @@
+wall=2026-09-29T20:56:01.655764355Z boot_id=1c4dd077-ab9a-49d5-9948-efbab9470d54
+NAME="Arch Linux"
+PRETTY_NAME="Arch Linux"
+ID=arch
+BUILD_ID=rolling
+7.1.8-arch1-3
+== packages
+error: package 'powerdns' was not found
+bind 9.20.29-1
+python 3.14.7-1
+== named.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+FragmentPath=/usr/lib/systemd/system/named.service
+UnitFileState=enabled
+MainPID=4968
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 20:55:29 UTC
+User=
+== pdns.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+User=
+== ss 53
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4968,fd=24))
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4968,fd=23))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4968,fd=18))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4968,fd=17))
+udp UNCONN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1486,fd=26))
+udp UNCONN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1486,fd=24))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4968,fd=26))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4968,fd=25))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4968,fd=21))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4968,fd=19))
+tcp LISTEN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1486,fd=27))
+tcp LISTEN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1486,fd=25))
+== management binaries
+ls: cannot access '/opt/celikpanel/bin': No such file or directory
+== config and zone file hashes
+b0cb30473a30e3ccf11ba43cb44ed92112ffb48648c80559ec1b9bcf1b86e6c0  /etc/named.conf
+sha256sum: /var/named/celikpanel-fixture-catalog.zone: No such file or directory
+sha256sum: /var/named/celikpanel-fixture-member.zone: No such file or directory
+sha256sum: /etc/powerdns/pdns.conf: No such file or directory
+sha256sum: /var/lib/powerdns/pdns.sqlite3: No such file or directory
+== peer DNS sampler state
+ActiveState=inactive
+SubState=dead
+MainPID=0
+wc: /var/tmp/cp-b8-peerloop/samples.log: No such file or directory
