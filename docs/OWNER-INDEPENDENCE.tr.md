@@ -41,6 +41,32 @@ Oluşturulan aktarım izni incelenen eş IP ile sınırlıdır. Bu değişiklik 
 katalog adı, genel bölge devralma, TSIG eşleştirmesi veya bölge başına karşılıklı
 birincil roller eklemez.
 
+### Katalog üreticisi ve motoru kendiniz kaldırmak (30 Eylül 2026)
+
+Kaynak durumudur; bileşen testleri ve gerçek sistem kesinti denemeleri
+[DNS kurtarma kabul kütüğünde](DNS-RECOVERY-ACCEPTANCE.tr.md) kayıtlıdır;
+henüz yayımlanmış bir sürümün parçası değildir.
+
+CelikPanel ikincil sunucusu artık birincilin kataloğunu bilinen iki üreticiden
+de kabul eder: yukarıda anlatılan BIND katalog biçimi ya da PowerDNS
+birincilin kendi yayımladığı katalog (kendi üye etiketleri ve TTL değerleriyle).
+Biçimi aktarımın kendisinden, her biri için aynı sıkı denetimlerle belirler;
+ikincil sunucunun sahibi birincilin hangi motoru çalıştırdığını bilmek ya da
+bildirmek zorunda değildir. Gerçek sistem denemelerinde BIND ikincil ve
+PowerDNS ikincil, panelsiz BIND birincilden ve panelsiz PowerDNS birincilden
+üye bölgeyi yükledi ve yönetim durdurulup devre dışı bırakılmışken yeniden
+açılıştan sonra hizmet verdi.
+
+Daha önceki bir CelikPanel sürümünün kurduğu sunucuda BIND'i kendiniz
+kaldırırsanız şu komutu da çalıştırın:
+`dpkg-statoverride --remove /var/cache/bind`. Önceki sürümler bu izin kuralını
+grup adıyla kaydediyordu; paket kaldırılırken `bind` grubu silinince dpkg, kural
+kaldırılana kadar o sunucudaki bütün paket işlemlerini reddeder. CelikPanel yeni
+kurulumlarda bu kuralı artık eklemez; var olan kuralı, önceki sürüme geri dönüş
+çalışmaya devam etsin diye yerinde bırakır; paket kurmadan önce kendi kaydını
+onarır. Kendisinin oluşturmadığı bir kuralı asla değiştirmez; bunun yerine kaydı
+ve çalıştırılacak komutu söyler.
+
 ## Kanıt
 
 [Yerel doğrulama](validation/native-dns-independence-20260912/README.tr.md),

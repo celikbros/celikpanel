@@ -41,6 +41,32 @@ The generated transfer ACL is restricted to the reviewed peer. This change does
 not add arbitrary catalog names, general zone adoption, TSIG enrollment or
 reciprocal per-zone primary roles.
 
+### Catalog producer and removing an engine yourself (2026-09-30)
+
+Source state, component and native kill-matrix evidence as recorded in the
+[DNS recovery acceptance register](DNS-RECOVERY-ACCEPTANCE.md); not yet part
+of a published release.
+
+A CelikPanel secondary now accepts the primary's catalog from either known
+producer: the BIND catalog format described above, or the catalog a PowerDNS
+primary publishes natively (its own member labels and TTLs). It detects the
+format from the transfer itself, with the same strict checks for each, so the
+owner of a secondary does not have to know or declare which engine the
+primary runs. Native runs showed a BIND secondary and a PowerDNS secondary
+each loading the member zone from a panel-free BIND primary and from a
+panel-free PowerDNS primary, and serving after a reboot with management
+stopped and disabled.
+
+If you remove BIND yourself on a server that an earlier CelikPanel release
+set up, also run `dpkg-statoverride --remove /var/cache/bind`. Earlier
+releases registered that permission override by group name; once the package
+removal deletes the `bind` group, dpkg refuses every package operation on the
+server until the override is removed. CelikPanel no longer adds the override
+on new installations, leaves an existing one in place so that a rollback to
+an earlier release keeps working, and repairs its own entry before it
+installs packages. It never changes an override it did not create; it names
+the entry and the command instead.
+
 ## Evidence
 
 [Local validation](validation/native-dns-independence-20260912/README.md) covers
