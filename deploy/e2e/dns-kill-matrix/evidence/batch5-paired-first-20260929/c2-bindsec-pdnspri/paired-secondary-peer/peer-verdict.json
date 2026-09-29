@@ -1,0 +1,131 @@
+{
+  "after_recovery": {
+    "catalog": "catalog-c000020b.celikpanel.invalid",
+    "catalog_members": [
+      "s1-kill.test"
+    ],
+    "catalog_parser": "agent-bind-producer-policy",
+    "catalog_serial": 1,
+    "config_sha256": {
+      "/etc/powerdns/pdns.conf": "b9e32d0b8af1297ec10603784b6699f0e736e5731bf615e4ca3b2c90b116e9aa"
+    },
+    "engine": "pdns",
+    "management_installed_on_primary": false,
+    "member_soa": {
+      "s1-kill.test": {
+        "authoritative_udp_tcp": true,
+        "serial": 2026083101
+      }
+    },
+    "native_service_active": true,
+    "primary_ip": "192.0.2.11",
+    "schema": "celikpanel/native-primary-peer-observation/v1",
+    "secondary_ip": "192.0.2.10",
+    "transfer_notify_log": [
+      "Unable to queue notification of domain 'catalog-c000020b.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!",
+      "Queued also-notification of domain 'catalog-c000020b.celikpanel.invalid' to 192.0.2.10:53",
+      "Queued notification of domain 's1-kill.test' to 192.0.2.10:53",
+      "Queued also-notification of domain 's1-kill.test' to 192.0.2.10:53",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:50812', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:50812', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:50812', AXFR finished",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:33724', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:33724', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:33724', AXFR finished",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:44992', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:44992', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:44992', AXFR finished",
+      "Notification for catalog-c000020b.celikpanel.invalid to 192.0.2.10:53 failed after retries",
+      "Notification for s1-kill.test to 192.0.2.10:53 failed after retries",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40420', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40420', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40420', AXFR finished",
+      "AXFR-out zone 's1-kill.test', client '192.0.2.10:40423', transfer initiated",
+      "AXFR-out zone 's1-kill.test', client '192.0.2.10:40423', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 's1-kill.test', client '192.0.2.10:40423', AXFR finished",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40426', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40426', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40426', AXFR finished",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40440', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40440', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40440', AXFR finished",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40452', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40452', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:40452', AXFR finished",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:38502', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:38502', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:38502', AXFR finished",
+      "AXFR-out zone 's1-kill.test', client '192.0.2.10:38508', transfer initiated",
+      "AXFR-out zone 's1-kill.test', client '192.0.2.10:38508', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 's1-kill.test', client '192.0.2.10:38508', AXFR finished",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36358', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36358', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:36358', AXFR finished"
+    ],
+    "transfers_to_secondary": {
+      "catalog-c000020b.celikpanel.invalid": true,
+      "s1-kill.test": true
+    },
+    "unit": "pdns.service",
+    "www_a": [
+      "192.0.2.11"
+    ]
+  },
+  "before_controller": {
+    "catalog": "catalog-c000020b.celikpanel.invalid",
+    "catalog_members": [
+      "s1-kill.test"
+    ],
+    "catalog_parser": "agent-bind-producer-policy",
+    "catalog_serial": 1,
+    "config_sha256": {
+      "/etc/powerdns/pdns.conf": "b9e32d0b8af1297ec10603784b6699f0e736e5731bf615e4ca3b2c90b116e9aa"
+    },
+    "engine": "pdns",
+    "management_installed_on_primary": false,
+    "member_soa": {
+      "s1-kill.test": {
+        "authoritative_udp_tcp": true,
+        "serial": 2026083101
+      }
+    },
+    "native_service_active": true,
+    "primary_ip": "192.0.2.11",
+    "schema": "celikpanel/native-primary-peer-observation/v1",
+    "secondary_ip": "192.0.2.10",
+    "transfer_notify_log": [
+      "Unable to queue notification of domain 'catalog-c000020b.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!",
+      "Queued also-notification of domain 'catalog-c000020b.celikpanel.invalid' to 192.0.2.10:53",
+      "Queued notification of domain 's1-kill.test' to 192.0.2.10:53",
+      "Queued also-notification of domain 's1-kill.test' to 192.0.2.10:53",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:50812', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:50812', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:50812', AXFR finished",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:33724', transfer initiated",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:33724', allowed: client IP is in allow-axfr-ips",
+      "AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:33724', AXFR finished"
+    ],
+    "transfers_to_secondary": {
+      "catalog-c000020b.celikpanel.invalid": false,
+      "s1-kill.test": false
+    },
+    "unit": "pdns.service",
+    "www_a": [
+      "192.0.2.11"
+    ]
+  },
+  "cell_id": "bind__target-verified__after-write__paired-secondary__peer-reachable",
+  "combined_exit": 0,
+  "failures": [],
+  "guest_controller_exit": 0,
+  "note": "The peer serves the catalog in the BIND producer format; a PowerDNS primary publishing its native PRODUCER catalog is not what this cell tests.",
+  "observation_error": null,
+  "peer_engine": "pdns",
+  "require_secondary_transfer": {
+    "error": null,
+    "passed": true
+  },
+  "schema": "celikpanel/dns-kill-paired-secondary-peer-verdict/v1",
+  "status": "passed",
+  "unknown": []
+}

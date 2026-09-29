@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "/opt/celikpanel/libexec/dns-kill-run-cell.py", line 10996, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/opt/celikpanel/libexec/dns-kill-run-cell.py", line 10957, in main
+    resume_cell(settings) if settings.resume_after_reboot else run_cell(settings)
+                                                               ~~~~~~~~^^^^^^^^^^
+  File "/opt/celikpanel/libexec/dns-kill-run-cell.py", line 9701, in run_cell
+    source_proof = validate_socket_source_proof(
+        settings.source_proof_path,
+    ...<9 lines>...
+        owner_inverse_after_restart=settings.owner_inverse_after_restart,
+    )
+  File "/opt/celikpanel/libexec/dns-kill-run-cell.py", line 3653, in validate_socket_source_proof
+    validate_managed_bind_setup(proof, cell, scenario, state)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/celikpanel/libexec/dns-kill-run-cell.py", line 3287, in validate_managed_bind_setup
+    "manifest_qualifier": state["manifest_qualifier"],
+                          ~~~~~^^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'manifest_qualifier'

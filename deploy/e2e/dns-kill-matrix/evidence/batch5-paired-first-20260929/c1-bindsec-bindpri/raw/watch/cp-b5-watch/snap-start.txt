@@ -1,0 +1,87 @@
+tag=start wall=2026-09-29T13:56:55.386418997Z mono=124.79 231.95 boot_id=36caec83-f4fe-400b-a922-cf3caea1c602
+== pdns.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:55:44 UTC
+ExecMainStartTimestampMonotonic=53474563
+ExecMainPID=1197
+ExecMainCode=2
+ExecMainStatus=15
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:55:44 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 13:56:24 UTC
+InvocationID=d524cae4ca0348d9a8f28ba504b44772
+== celikpanel-panel.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:55:44 UTC
+ExecMainStartTimestampMonotonic=53521336
+ExecMainPID=1206
+ExecMainCode=1
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:55:44 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 13:56:24 UTC
+InvocationID=8367970c1cb74a49bf955ef65b9d7917
+== processes
+== journal file
+total 12
+drwx------  2 root celikpanel 4096 2026-09-29 13:55:42.901306798 +0000 .
+drwxr-xr-x 27 root root       4096 2026-09-29 13:55:42.746198164 +0000 ..
+-rw-------  1 root celikpanel   23 2026-09-29 13:55:42.897329654 +0000 service-mutations.json
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))

@@ -1,0 +1,106 @@
+2026-09-29T14:12:22.930476+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-29T14:12:23.002839+00:00 dns-debian13 pdns_server[5976]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-29T14:12:23.003602+00:00 dns-debian13 pdns_server[5976]: This is a standalone pdns
+2026-09-29T14:12:23.003629+00:00 dns-debian13 pdns_server[5976]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T14:12:23.004095+00:00 dns-debian13 pdns_server[5976]: UDP server bound to 10.0.2.15:53
+2026-09-29T14:12:23.004095+00:00 dns-debian13 pdns_server[5976]: UDP server bound to 192.0.2.10:53
+2026-09-29T14:12:23.004155+00:00 dns-debian13 pdns_server[5976]: TCP server bound to 10.0.2.15:53
+2026-09-29T14:12:23.004155+00:00 dns-debian13 pdns_server[5976]: TCP server bound to 192.0.2.10:53
+2026-09-29T14:12:23.004336+00:00 dns-debian13 pdns_server[5976]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T14:12:23.004336+00:00 dns-debian13 pdns_server[5976]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T14:12:23.004336+00:00 dns-debian13 pdns_server[5976]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T14:12:23.040415+00:00 dns-debian13 pdns_server[5976]: Creating backend connection for TCP
+2026-09-29T14:12:23.040761+00:00 dns-debian13 pdns_server[5976]: Primary/secondary communicator launching
+2026-09-29T14:12:23.040918+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T14:12:23.042467+00:00 dns-debian13 pdns_server[5976]: About to create 3 backend threads for UDP
+2026-09-29T14:12:23.089306+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-29T14:12:23.089651+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone create zone 's1-kill.test'
+2026-09-29T14:12:23.104973+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 'catalog-c000020b.celikpanel.invalid' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:23.132631+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-29T14:12:23.160728+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:23.173677+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 1
+2026-09-29T14:12:23.193216+00:00 dns-debian13 pdns_server[5976]: Done launching threads, ready to distribute questions
+2026-09-29T14:12:23.215049+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:23.577526+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:23.700674+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:24.161883+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:24.678166+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:25.723755+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:25.797296+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:26.020598+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:26.088653+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:26.307718+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:26.364010+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:26.595454+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:26.652100+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:26.878693+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:26.935660+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:27.166327+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:27.235865+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:27.450560+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:27.504471+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:27.743976+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:27.796763+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:28.039934+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:28.118298+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:28.330424+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:28.384277+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:28.617921+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:28.676636+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:28.913976+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:28.972567+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:29.205068+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:29.267832+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:29.496695+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:29.556366+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:29.782212+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:29.856665+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:30.100075+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:30.159833+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:30.391209+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:30.441784+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:30.687723+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:30.745536+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:30.972125+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:31.035502+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:31.267618+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:31.333016+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:31.589612+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:31.688002+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:32.000696+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:32.175078+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:32.401627+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:32.519393+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:32.759022+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:32.843493+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:33.092760+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:33.164335+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:33.408867+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:33.516134+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:33.783543+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:33.874331+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:34.137862+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:34.317575+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:34.613613+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:34.720698+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:35.015563+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:35.186525+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:35.467872+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:35.569735+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:35.870741+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:36.018461+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:36.311059+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:36.509267+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:36.764998+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:36.827185+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:37.059137+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:37.127478+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:37.365595+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:37.425339+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:37.669285+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:37.721026+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:37.959981+00:00 dns-debian13 pdns_server[5976]: Retrieval request for zone 's1-kill.test' from primary '192.0.2.11' received from operator
+2026-09-29T14:12:38.020697+00:00 dns-debian13 pdns_server[5976]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:12:38.261474+00:00 dns-debian13 systemd[1]: Stopping pdns.service - PowerDNS Authoritative Server...
+2026-09-29T14:12:38.266551+00:00 dns-debian13 systemd[1]: pdns.service: Deactivated successfully.
+2026-09-29T14:12:38.266860+00:00 dns-debian13 systemd[1]: Stopped pdns.service - PowerDNS Authoritative Server.

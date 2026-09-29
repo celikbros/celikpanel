@@ -1,0 +1,119 @@
+tag=at-result wall=2026-09-29T14:17:22.968964850Z mono=215.55 366.15 boot_id=5813ff01-2d67-42fa-8a04-f5e362d686ed
+== pdns.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== named.service
+MainPID=5377
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:16:46 UTC
+ExecMainStartTimestampMonotonic=178962723
+ExecMainPID=5377
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:16:46 UTC
+InactiveEnterTimestamp=
+InvocationID=14e2ec1569f24003b1fb8706f8e4386b
+== bind9.service
+MainPID=5377
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:16:46 UTC
+ExecMainStartTimestampMonotonic=178962723
+ExecMainPID=5377
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:16:46 UTC
+InactiveEnterTimestamp=
+InvocationID=14e2ec1569f24003b1fb8706f8e4386b
+== celikpanel-agent.service
+MainPID=3290
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:16:38 UTC
+ExecMainStartTimestampMonotonic=170839882
+ExecMainPID=3290
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:16:38 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 14:15:29 UTC
+InvocationID=1ffcb5af4e384a99a837afdabd3203c3
+== celikpanel-panel.service
+MainPID=6340
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:16:49 UTC
+ExecMainStartTimestampMonotonic=182062210
+ExecMainPID=6340
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:16:49 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 14:15:29 UTC
+InvocationID=218bc172dee242d78e92b05789a43ef7
+== processes
+3290 /opt/celikpanel/bin/agent
+5377 /usr/sbin/named -f -u bind
+== journal file
+total 20
+drwx------  2 root celikpanel 4096 2026-09-29 14:16:49.223507468 +0000 .
+drwxr-xr-x 28 root root       4096 2026-09-29 14:15:25.147696600 +0000 ..
+-rw-------  1 root celikpanel  641 2026-09-29 14:16:49.207507562 +0000 dns-engine-ownership-bind.json
+-rw-------  1 root celikpanel  637 2026-09-29 14:16:48.667510847 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel  741 2026-09-29 14:16:49.219507491 +0000 service-mutations.json
+== ss 53
+udp UNCONN 0      0                         192.0.2.10:53 0.0.0.0:* users:(("named",pid=5377,fd=29))         
+udp UNCONN 0      0                         192.0.2.10:53 0.0.0.0:* users:(("named",pid=5377,fd=28))         
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=5377,fd=25))         
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=5377,fd=24))         
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=5377,fd=19))         
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=5377,fd=18))         
+udp UNCONN 0      0                         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=367,fd=20))
+udp UNCONN 0      0                      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=367,fd=18))
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=5377,fd=32))         
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=5377,fd=33))         
+udp UNCONN 0      0            [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=5377,fd=36))         
+udp UNCONN 0      0            [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=5377,fd=37))         
+udp UNCONN 0      0      [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=5377,fd=40))         
+udp UNCONN 0      0      [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=5377,fd=41))         
+udp UNCONN 0      0      [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=5377,fd=44))         
+udp UNCONN 0      0      [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=5377,fd=45))         
+tcp LISTEN 0      10                        192.0.2.10:53 0.0.0.0:* users:(("named",pid=5377,fd=31))         
+tcp LISTEN 0      10                        192.0.2.10:53 0.0.0.0:* users:(("named",pid=5377,fd=30))         
+tcp LISTEN 0      4096                   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=367,fd=19))
+tcp LISTEN 0      4096                      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=367,fd=21))
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=5377,fd=22))         
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=5377,fd=20))         
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=5377,fd=27))         
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=5377,fd=26))         
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=5377,fd=34))         
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=5377,fd=35))         
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=5377,fd=38))         
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=5377,fd=39))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=5377,fd=42))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=5377,fd=43))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=5377,fd=46))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=5377,fd=47))         

@@ -1,0 +1,14 @@
+### 2026-09-29T14:18:04.836Z start-cell c6-reinstall bind__target-staged__after-write__standalone__peer-reachable debian13 fixture=managed-bind-absent prep=prepare-bind enroll=0 root=/var/tmp/cp-b5-0929/r2 peer=none flags=
+### 2026-09-29T14:18:04.837Z prepare
+### 2026-09-29T14:18:05.676Z start
+### 2026-09-29T14:18:05.901Z wait-ssh
+### 2026-09-29T14:19:02.403Z guest-identity
+### 2026-09-29T14:19:03.093Z install
+### 2026-09-29T14:19:11.856Z prepare-bind
+### 2026-09-29T14:19:34.092Z pre-run-snapshot
+### 2026-09-29T14:20:35.129Z start-watcher
+Running as unit: cp-b5-watch.service; invocation ID: 26b42151a00b44bd854bda2f24e93de9
+### 2026-09-29T14:20:35.963Z run-prepared-dry-run
+### 2026-09-29T14:20:36.062Z run-prepared
+RUN_PREPARED_RC=1
+### 2026-09-29T14:20:39.298Z done-run rc=1

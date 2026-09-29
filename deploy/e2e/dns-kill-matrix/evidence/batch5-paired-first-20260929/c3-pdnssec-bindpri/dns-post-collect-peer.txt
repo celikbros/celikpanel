@@ -1,0 +1,19 @@
+wall=2026-09-29T14:07:50.113944+00:00
+{"server": "192.0.2.10", "qname": "s1-kill.test", "qtype": "SOA", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "192.0.2.10", "qname": "s1-kill.test", "qtype": "SOA", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "192.0.2.10", "qname": "www.s1-kill.test", "qtype": "A", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "192.0.2.10", "qname": "www.s1-kill.test", "qtype": "A", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "192.0.2.10", "qname": "catalog-c000020b.celikpanel.invalid", "qtype": "SOA", "transport": "udp", "error": "TimeoutError: timed out"}
+{"server": "192.0.2.10", "qname": "catalog-c000020b.celikpanel.invalid", "qtype": "SOA", "transport": "tcp", "error": "ConnectionRefusedError: [Errno 111] Connection refused"}
+{"server": "192.0.2.11", "qname": "s1-kill.test", "qtype": "SOA", "transport": "udp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": [2026083101]}
+{"server": "192.0.2.11", "qname": "s1-kill.test", "qtype": "SOA", "transport": "tcp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": [2026083101]}
+{"server": "192.0.2.11", "qname": "www.s1-kill.test", "qtype": "A", "transport": "udp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.11"]}
+{"server": "192.0.2.11", "qname": "www.s1-kill.test", "qtype": "A", "transport": "tcp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.11"]}
+{"server": "192.0.2.11", "qname": "catalog-c000020b.celikpanel.invalid", "qtype": "SOA", "transport": "udp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": [1]}
+{"server": "192.0.2.11", "qname": "catalog-c000020b.celikpanel.invalid", "qtype": "SOA", "transport": "tcp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": [1]}
+{"server": "127.0.0.1", "qname": "s1-kill.test", "qtype": "SOA", "transport": "udp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": [2026083101]}
+{"server": "127.0.0.1", "qname": "s1-kill.test", "qtype": "SOA", "transport": "tcp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": [2026083101]}
+{"server": "127.0.0.1", "qname": "www.s1-kill.test", "qtype": "A", "transport": "udp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.11"]}
+{"server": "127.0.0.1", "qname": "www.s1-kill.test", "qtype": "A", "transport": "tcp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.11"]}
+{"server": "127.0.0.1", "qname": "catalog-c000020b.celikpanel.invalid", "qtype": "SOA", "transport": "udp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": [1]}
+{"server": "127.0.0.1", "qname": "catalog-c000020b.celikpanel.invalid", "qtype": "SOA", "transport": "tcp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": [1]}

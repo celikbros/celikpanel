@@ -149,6 +149,22 @@ catalog producer accepted by a secondary, V1 adoption finished by the Agent at
 cells against a panel-free native primary of either engine, takeover and
 reinstall fixtures (`883102c1`, `7ce3827e`).
 
+**2026-09-29, batch 5, exploratory** ([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch5-paired-first-20260929/README.md),
+source `65b86621`, built before the kill-hook fix `c04d8a2b`; first native run
+of the panel-free primary peer and the paired-secondary flow; each cell once):
+
+| Row | Cell | Result |
+|---|---|---|
+| 3 | fresh BIND secondary against a BIND primary, `target-verified` after-write | **failed, kill-hook race signature**: pointer removed between marker and SIGKILL, as in batch 4 c6. Peer verdict passed. To be re-run with the fixed hook. |
+| 3 | same cell against a PowerDNS 5.1.4 primary serving the catalog in the BIND catalog format, reboot with management disabled | **passed**, peer verdict passed, second window 31/31; carries the kill-hook caveat. |
+| 5 | fresh PowerDNS secondary against a BIND primary and against a PowerDNS primary, `target-started` after-write | **unverified, product defect before the boundary**: PowerDNS 4.9.17 consumed the catalog, transferred the member and answered authoritatively, then wrote `{"consumer": {"unique": …}}` into the member row's `options`; the Agent requires that field empty, retried until its limit and failed; the rollback refused the live database; the mutation manager went fail-closed; no DNS served. |
+| 12 | takeover of a stopped unmanaged BIND, `target-staged` after-write | **passed**; carries the kill-hook caveat. |
+| 14 | BIND reinstall | **not run**: the controller read the state receipt with v1 keys and stopped before any mutation. |
+
+Native answers: PowerDNS does write a non-empty `options` value on consumed
+member rows; a BIND secondary does load the member from a PowerDNS primary
+serving a BIND-format catalog.
+
 ## What closed item 1
 
 Item 1's exit condition is: for supported interruptions the same operation

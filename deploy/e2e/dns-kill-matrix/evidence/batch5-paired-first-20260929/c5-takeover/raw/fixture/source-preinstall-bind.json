@@ -1,0 +1,84 @@
+{
+  "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+  "dns_install_ownership_bind": {
+    "exists": false
+  },
+  "dns_journal_absent": true,
+  "dns_ownership_bind": {
+    "exists": false
+  },
+  "dns_state": {
+    "exists": false
+  },
+  "global_udp_tcp_53_bindable": true,
+  "owner_files": {
+    "/etc/bind/named.conf": {
+      "gid": 104,
+      "mode": "0644",
+      "sha256": "50c296bb3ae376b6fdde1f092ebf228056d38e525b53dc3415b7945136af14b7",
+      "size": 455,
+      "uid": 0
+    },
+    "/etc/bind/named.conf.local": {
+      "gid": 104,
+      "mode": "0644",
+      "sha256": "63963de797ff06ede5645c4169084128f1a6a11e1aa43ec9b4971751ceedc18e",
+      "size": 42,
+      "uid": 0
+    },
+    "/etc/bind/named.conf.options": {
+      "gid": 104,
+      "mode": "0644",
+      "sha256": "f1c37414f29088ef439527a855356c888e83fec06dcc762f878a4c24d45c59e4",
+      "size": 43,
+      "uid": 0
+    },
+    "/etc/bind/named.conf.root-hints": {
+      "gid": 104,
+      "mode": "0644",
+      "sha256": "7f4afbc7ea88cc94fe849d622a2d8e2a7b8863089cc7909e75cb77ba8e682d87",
+      "size": 116,
+      "uid": 0
+    },
+    "/etc/bind/rndc.key": {
+      "gid": 104,
+      "mode": "0640",
+      "sha256": "e5b5132a2ddba0e76940096a08ac60af10c72f89c7441b05ec36f4163158a34f",
+      "size": 100,
+      "uid": 103
+    },
+    "/etc/default/named": {
+      "gid": 0,
+      "mode": "0644",
+      "sha256": "b825c0739a949b3dff55d2587d94df934a3a16384d5a9d0b1a2e0e969b8fca42",
+      "size": 86,
+      "uid": 0
+    }
+  },
+  "package": {
+    "name": "bind9",
+    "status": "install ok installed",
+    "version": "1:9.20.29-1~deb13u1"
+  },
+  "pdns_receipts_absent": true,
+  "preparation": "apt-get install bind9 under a guard mask, unmask, systemctl disable named.service; no CelikPanel receipt",
+  "product_rewrites_on_takeover": [
+    "/etc/bind/named.conf.local",
+    "/etc/bind/named.conf.options"
+  ],
+  "schema": "celikpanel/dns-kill-source-preinstall-bind/v1",
+  "scope": "owner-installed-stopped-bind-for-takeover",
+  "source_fixture": "unmanaged-bind-stopped",
+  "units": {
+    "bind9.service": {
+      "active_state": "inactive",
+      "load_state": "not-found",
+      "unit_file_state": ""
+    },
+    "named.service": {
+      "active_state": "inactive",
+      "load_state": "loaded",
+      "unit_file_state": "disabled"
+    }
+  }
+}

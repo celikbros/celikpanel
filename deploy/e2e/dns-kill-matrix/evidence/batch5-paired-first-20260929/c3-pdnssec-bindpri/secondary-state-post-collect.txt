@@ -1,0 +1,128 @@
+wall=2026-09-29T14:07:59.377488749Z boot_id=a79fbe77-c687-4c31-8205-a68bddab456d
+== named.service
+MainPID=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== bind9.service
+MainPID=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== pdns.service
+MainPID=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:07:09 UTC
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+== celikpanel-agent.service
+MainPID=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:05:41 UTC
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+== celikpanel-panel.service
+MainPID=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:05:41 UTC
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+== rndc: not run (rndc absent or named inactive)
+== named-checkconf -l
+== managed BIND files (/var/cache/bind, no follow)
+find: ‘/var/cache/bind’: No such file or directory
+== secondary zone files (regular files under /var/cache/bind), metadata, hash, text
+== PowerDNS database
+total 1064
+drwxr-xr-x  2 pdns pdns   4096 2026-09-29 14:07:09.208002448 +0000 .
+drwxr-xr-x 28 root root   4096 2026-09-29 14:07:01.306248299 +0000 ..
+-rw-r-----  1 pdns pdns  98304 2026-09-29 14:07:09.203998056 +0000 pdns.sqlite3
+-rw-r-----  1 pdns pdns  32768 2026-09-29 14:07:24.886193549 +0000 pdns.sqlite3-shm
+-rw-r-----  1 pdns pdns 939392 2026-09-29 14:07:24.133634973 +0000 pdns.sqlite3-wal
+35d61d45539df7137e71c28466b5d2a159fdfdad850bd1f59508806947b322c7  /var/lib/powerdns/pdns.sqlite3
+domains columns: ['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+domain: {"id": 1, "name": "catalog-c000020b.celikpanel.invalid", "master": "192.0.2.11", "last_check": 1790690829, "type": "CONSUMER", "notified_serial": null, "account": "celikpanel-peer-catalog-v1", "options": null, "catalog": null}
+domain: {"id": 2, "name": "s1-kill.test", "master": "192.0.2.11", "last_check": 1790690844, "type": "SLAVE", "notified_serial": null, "account": "", "options": "{\"consumer\": {\"unique\": \"b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.\"}}", "catalog": "catalog-c000020b.celikpanel.invalid"}
+record: ["catalog-c000020b.celikpanel.invalid", "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.zones.catalog-c000020b.celikpanel.invalid", "PTR", "s1-kill.test", 60]
+record: ["catalog-c000020b.celikpanel.invalid", "catalog-c000020b.celikpanel.invalid", "NS", "invalid", 60]
+record: ["catalog-c000020b.celikpanel.invalid", "catalog-c000020b.celikpanel.invalid", "SOA", "invalid invalid 1 60 30 3600 30", 60]
+record: ["catalog-c000020b.celikpanel.invalid", "version.catalog-c000020b.celikpanel.invalid", "TXT", "\"2\"", 60]
+record: ["catalog-c000020b.celikpanel.invalid", "zones.catalog-c000020b.celikpanel.invalid", null, null, null]
+record: ["s1-kill.test", "ns1.s1-kill.test", "A", "192.0.2.11", 300]
+record: ["s1-kill.test", "ns2.s1-kill.test", "A", "192.0.2.10", 300]
+record: ["s1-kill.test", "s1-kill.test", "NS", "ns1.s1-kill.test", 3600]
+record: ["s1-kill.test", "s1-kill.test", "NS", "ns2.s1-kill.test", 3600]
+record: ["s1-kill.test", "s1-kill.test", "SOA", "ns1.s1-kill.test hostmaster.s1-kill.test 2026083101 10800 3600 604800 3600", 3600]
+record: ["s1-kill.test", "www.s1-kill.test", "A", "192.0.2.11", 300]
+== pdns journal (transfer/notify/catalog lines, all boots)
+2026-09-29T14:07:09.212681+00:00 dns-debian13 pdns_server[3716]: Primary/secondary communicator launching
+2026-09-29T14:07:09.261455+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-29T14:07:09.261455+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone create zone 's1-kill.test'
+2026-09-29T14:07:09.272916+00:00 dns-debian13 pdns_server[3716]: Retrieval request for zone 'catalog-c000020b.celikpanel.invalid' from primary '192.0.2.11' received from operator
+2026-09-29T14:07:09.301697+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-29T14:07:09.331564+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 1
+2026-09-29T14:07:09.385951+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:09.700941+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:10.021408+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:10.305846+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:10.604677+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:10.903070+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:11.211007+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:11.483999+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:11.774874+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:12.084636+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:12.375754+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:12.660502+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:12.944874+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:13.257333+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:13.525566+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:13.817233+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:14.113689+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:14.426694+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:14.711290+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:15.001174+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:15.286715+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:15.548350+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:15.824455+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:16.102449+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:16.364542+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:16.643838+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:16.922783+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:17.194250+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:17.458014+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:17.733058+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:18.015206+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:18.280769+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:18.552479+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:18.824722+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:19.094984+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:19.366758+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:19.633784+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:19.903061+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:20.226743+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:20.566203+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:20.818527+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:21.093664+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:21.522327+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:21.927111+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:22.265141+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:22.623902+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:22.984040+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:23.283219+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:23.583046+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:23.863607+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+2026-09-29T14:07:24.139695+00:00 dns-debian13 pdns_server[3716]: AXFR-in zone: 's1-kill.test', primary: '192.0.2.11', zone committed with serial 2026083101
+== named journal (transfer/notify/catalog/zone lines, all boots)
+== agent journal: catalog/producer lines (all boots)

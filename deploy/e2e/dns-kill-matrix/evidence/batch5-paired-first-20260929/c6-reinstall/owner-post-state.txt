@@ -1,0 +1,162 @@
+wall=2026-09-29T14:21:54.547051740Z boot_id=a539c5d8-718f-4b38-bed5-a6ed8cb9c53e request_id=
+== systemctl show pdns.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=pdns.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+UnitFilePreset=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit pdns.service not found."
+InvocationID=
+== systemctl is-enabled pdns.service
+not-found
+rc=4
+== systemctl is-active pdns.service
+inactive
+rc=4
+== systemctl show named.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=named.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+UnitFilePreset=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit named.service not found."
+InvocationID=
+== systemctl is-enabled named.service
+not-found
+rc=4
+== systemctl is-active named.service
+inactive
+rc=4
+== systemctl show bind9.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=bind9.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+UnitFilePreset=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit bind9.service not found."
+InvocationID=
+== systemctl is-enabled bind9.service
+not-found
+rc=4
+== systemctl is-active bind9.service
+inactive
+rc=4
+== mask symlinks (persistent and runtime)
+/etc/systemd/system/named.service absent
+/etc/systemd/system/bind9.service absent
+/run/systemd/system/named.service absent
+/run/systemd/system/bind9.service absent
+== named processes
+no named process
+== pdns_server processes
+no pdns_server process
+== journal entry counts
+named.service 110
+bind9.service 0
+== dpkg -l bind9*
+Desired=Unknown/Install/Remove/Purge/Hold
+| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
+||/ Name             Version             Architecture Description
++++-================-===================-============-=================================
+ii  bind9-host       1:9.20.29-1~deb13u1 amd64        DNS Lookup Utility
+ii  bind9-libs:amd64 1:9.20.29-1~deb13u1 amd64        Shared Libraries used by BIND 9
+ii  bind9-utils      1:9.20.29-1~deb13u1 amd64        Utilities for BIND 9
+un  bind9utils       <none>              <none>       (no description available)
+== dpkg -l pdns*
+dpkg-query: no packages found matching pdns*
+== dpkg --verify bind9 bind9-utils bind9-libs bind9-host bind9-dnsutils (read-only; no output = unchanged)
+dpkg: package 'bind9' is not installed
+dpkg: package 'bind9-dnsutils' is not installed
+rc=1
+== install-ownership receipt
+ls: cannot access '/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json': No such file or directory
+== /var/cache/bind tree (managed BIND root parent)
+drwxrwxr-t root:104 4096 2026-09-29T14:19:30.4681818610 /var/cache/bind
+drwxr-xr-x root:root 4096 2026-09-29T14:19:23.8001978470 /var/cache/bind/celikpanel
+lrwxrwxrwx root:root 76 2026-09-29T14:19:23.7961978590 /var/cache/bind/celikpanel/currentgenerations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c
+drwxr-xr-x root:root 4096 2026-09-29T14:19:23.6241983760 /var/cache/bind/celikpanel/generations
+dr-xr-xr-x root:root 4096 2026-09-29T14:19:23.6121984130 /var/cache/bind/celikpanel/generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c
+-r--r--r-- root:root 913 2026-09-29T14:19:23.6121984130 /var/cache/bind/celikpanel/generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c/receipt.json
+dr-xr-xr-x root:root 4096 2026-09-29T14:19:23.5041987370 /var/cache/bind/celikpanel/generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c/zones
+-r--r--r-- root:root 374 2026-09-29T14:19:23.5761985210 /var/cache/bind/celikpanel/generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c/zones.conf
+-r--r--r-- root:root 282 2026-09-29T14:19:23.5041987370 /var/cache/bind/celikpanel/generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c/zones/4b853b537823a50fa36969a0deee07ba6fb754cea71a7db8039e4b77ef7bf4d9.zone
+-rw-r--r-- 103:104 1336 2026-09-29T14:19:27.1161890320 /var/cache/bind/managed-keys.bind.jnl
+-rw-r--r-- 103:104 1411 2026-09-29T14:19:30.4681818610 /var/cache/bind/tmp-bepnQvY444
+== /var/cache/bind file hashes
+57334c938ee71c5c22e8095e917b3b4a6f26f38192ac143fc39fac102fb74408  /var/cache/bind/celikpanel/generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c/receipt.json
+62799054c86fe74ebf68ad855e620a096dfe7c3a2e687528a3c949c7ecce3299  /var/cache/bind/celikpanel/generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c/zones.conf
+f0fd4fb5711f7bd2ce32c89b2bd3caab44856a49f07cf8f6a98f692bcd57f593  /var/cache/bind/celikpanel/generations/ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c/zones/4b853b537823a50fa36969a0deee07ba6fb754cea71a7db8039e4b77ef7bf4d9.zone
+3930e98180516af82b785de2008aa32b7e9f89a4277bd47538af9a3db7a6f6a7  /var/cache/bind/managed-keys.bind.jnl
+e0dfb4c31f6e707aa984d27bb018af3a912c58ab88c666f5092192938d3bd877  /var/cache/bind/tmp-bepnQvY444
+== /var/lib/bind tree
+find: ‘/var/lib/bind’: No such file or directory
+== /etc/bind tree
+find: ‘/etc/bind’: No such file or directory
+== /etc/bind file hashes
+== /etc/bind package ownership
+find: ‘/etc/bind’: No such file or directory
+== bind9 conffiles (package md5)
+dpkg-query: no packages found matching bind9
+== md5 of /etc/bind files
+== apt history (bind9 transactions)
+2-Start-Date: 2026-09-29  14:19:18
+3:Commandline: /usr/bin/apt-get install -y --no-install-recommends bind9
+4:Install: bind9:amd64 (1:9.20.29-1~deb13u1), bind9-utils:amd64 (1:9.20.29-1~deb13u1, automatic), dns-root-data:amd64 (2025080400~deb13u1, automatic)
+5:Upgrade: bind9-host:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1), bind9-libs:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1)
+6-End-Date: 2026-09-29  14:19:21
+7-
+8-Start-Date: 2026-09-29  14:19:31
+9:Commandline: /usr/bin/apt-get purge -y bind9
+10-Requested-By: celik (1000)
+11:Purge: bind9:amd64 (1:9.20.29-1~deb13u1)
+12-End-Date: 2026-09-29  14:19:33
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+== recovery dns-switch-status --quiesced (after owner command and re-run)
+env: ‘/usr/libexec/celikpanel/recovery’: No such file or directory
+STATUS_RC=127
+2f614065705342f030cabbf67cb88ec8a539198b4d665f92286b467c52ce9932  /tmp/b5-status.out
+== private evidence after status
+total 20
+drwx------  2 root celikpanel 4096 2026-09-29 14:19:29.656183460 +0000 .
+drwxr-xr-x 27 root root       4096 2026-09-29 14:19:33.080177238 +0000 ..
+-rw-------  1 root celikpanel  641 2026-09-29 14:19:29.636183501 +0000 dns-engine-ownership-bind.json
+-rw-------  1 root celikpanel  637 2026-09-29 14:19:29.040184718 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel  741 2026-09-29 14:19:29.652183468 +0000 service-mutations.json
+b5eef3763cdb12a4bcd029ed1da3d0979e621c3788ba079aada98a07bf1c6793  dns-engine-ownership-bind.json
+4992553da814068112774ebe8206feffb8621fbae8399d2e5c0dfdcdddad0b1f  dns-engine-state.json
+707af258580fd1e9c02a59c6a02a5bfa5085db1e6f2c90d3354631c1275fd2e9  service-mutations.json

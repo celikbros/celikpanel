@@ -1,0 +1,244 @@
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 ff1f23b5f3444c81a4e70ab526d4f250 Tue 2026-09-29 14:09:29 UTC Tue 2026-09-29 14:13:13 UTC
+== journalctl -u pdns.service
+2026-09-29T14:11:07.225266+00:00 dns-arch systemd[1]: Starting PowerDNS Authoritative Server...
+2026-09-29T14:11:07.281216+00:00 dns-arch pdns_server[4971]: Loading '/usr/lib/powerdns/libgsqlite3backend.so'
+2026-09-29T14:11:07.281596+00:00 dns-arch pdns_server[4971]: [gsqlite3] This is the gsqlite3 backend version 5.1.4 reporting
+2026-09-29T14:11:07.281596+00:00 dns-arch pdns_server[4971]: This is a standalone pdns
+2026-09-29T14:11:07.283013+00:00 dns-arch pdns_server[4971]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T14:11:07.283085+00:00 dns-arch pdns_server[4971]: UDP server bound to 127.0.0.1:53
+2026-09-29T14:11:07.283115+00:00 dns-arch pdns_server[4971]: UDP server bound to 192.0.2.11:53
+2026-09-29T14:11:07.283115+00:00 dns-arch pdns_server[4971]: TCP server bound to 127.0.0.1:53
+2026-09-29T14:11:07.283135+00:00 dns-arch pdns_server[4971]: TCP server bound to 192.0.2.11:53
+2026-09-29T14:11:07.283281+00:00 dns-arch pdns_server[4971]: PowerDNS Authoritative Server 5.1.4 (C) PowerDNS.COM BV
+2026-09-29T14:11:07.283281+00:00 dns-arch pdns_server[4971]: Using 64-bits mode. Built using gcc 16.2.1 20260810.
+2026-09-29T14:11:07.283281+00:00 dns-arch pdns_server[4971]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T14:11:07.360008+00:00 dns-arch pdns_server[4971]: Polled security status of version 5.1.4 at startup, no known issues reported: OK
+2026-09-29T14:11:07.402847+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:11:07.404074+00:00 dns-arch pdns_server[4971]: Creating backend connection for TCP
+2026-09-29T14:11:07.404074+00:00 dns-arch pdns_server[4971]: Primary/secondary communicator launching
+2026-09-29T14:11:07.404391+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:11:07.404512+00:00 dns-arch pdns_server[4971]: 2 domains for which we are primary or producer needs notifications
+2026-09-29T14:11:07.404779+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:11:07.405112+00:00 dns-arch systemd[1]: Started PowerDNS Authoritative Server.
+2026-09-29T14:11:07.407151+00:00 dns-arch pdns_server[4971]: About to create 3 backend threads for UDP
+2026-09-29T14:11:07.408036+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:11:07.408036+00:00 dns-arch pdns_server[4971]: Unable to queue notification of domain 'catalog-c000020b.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-29T14:11:07.408036+00:00 dns-arch pdns_server[4971]: Queued also-notification of domain 'catalog-c000020b.celikpanel.invalid' to 192.0.2.10:53
+2026-09-29T14:11:07.457991+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:11:07.508116+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:11:07.545220+00:00 dns-arch pdns_server[4971]: Queued notification of domain 's1-kill.test' to 192.0.2.10:53
+2026-09-29T14:11:07.545220+00:00 dns-arch pdns_server[4971]: Queued also-notification of domain 's1-kill.test' to 192.0.2.10:53
+2026-09-29T14:11:07.557795+00:00 dns-arch pdns_server[4971]: Done launching threads, ready to distribute questions
+2026-09-29T14:11:08.037910+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:49320', transfer initiated
+2026-09-29T14:11:08.037910+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:49320', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:11:08.038368+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:11:08.038918+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:49320', AXFR finished
+2026-09-29T14:11:40.162703+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:34330', transfer initiated
+2026-09-29T14:11:40.163031+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:34330', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:11:40.163455+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:11:40.163852+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:34330', AXFR finished
+2026-09-29T14:11:40.881505+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39290', transfer initiated
+2026-09-29T14:11:40.881505+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39290', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:11:40.881915+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:11:40.882210+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39290', AXFR finished
+2026-09-29T14:11:41.578403+00:00 dns-arch pdns_server[4971]: Notification for catalog-c000020b.celikpanel.invalid to 192.0.2.10:53 failed after retries
+2026-09-29T14:11:41.578403+00:00 dns-arch pdns_server[4971]: Notification for s1-kill.test to 192.0.2.10:53 failed after retries
+2026-09-29T14:12:07.584697+00:00 dns-arch pdns_server[4971]: no primary or producer domains need notifications
+2026-09-29T14:12:20.049731+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37634', transfer initiated
+2026-09-29T14:12:20.049731+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37634', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:20.050388+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:20.050735+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37634', AXFR finished
+2026-09-29T14:12:20.137708+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37642', transfer initiated
+2026-09-29T14:12:20.137708+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37642', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:20.138104+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:20.138435+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37642', AXFR finished
+2026-09-29T14:12:20.229708+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37644', transfer initiated
+2026-09-29T14:12:20.229708+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37644', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:20.230128+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:20.230454+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37644', AXFR finished
+2026-09-29T14:12:23.085941+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:59445', transfer initiated
+2026-09-29T14:12:23.085941+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:59445', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:23.086880+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:23.087158+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:59445', AXFR finished
+2026-09-29T14:12:23.087302+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37652', transfer initiated
+2026-09-29T14:12:23.087302+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37652', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:23.087682+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:23.087942+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:37652', AXFR finished
+2026-09-29T14:12:23.177671+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:60783', transfer initiated
+2026-09-29T14:12:23.177671+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:60783', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:23.178188+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:23.178606+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:60783', AXFR finished
+2026-09-29T14:12:23.645894+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:41491', transfer initiated
+2026-09-29T14:12:23.647129+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:41491', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:23.649612+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:23.655963+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:41491', AXFR finished
+2026-09-29T14:12:24.398512+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39061', transfer initiated
+2026-09-29T14:12:24.398512+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39061', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:24.503836+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:24.531723+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39061', AXFR finished
+2026-09-29T14:12:25.769972+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:57367', transfer initiated
+2026-09-29T14:12:25.769972+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:57367', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:25.771395+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:25.771395+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:57367', AXFR finished
+2026-09-29T14:12:26.061901+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:33739', transfer initiated
+2026-09-29T14:12:26.061901+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:33739', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:26.062371+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:26.062727+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:33739', AXFR finished
+2026-09-29T14:12:26.349917+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:43467', transfer initiated
+2026-09-29T14:12:26.349917+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:43467', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:26.350307+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:26.350601+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:43467', AXFR finished
+2026-09-29T14:12:26.637723+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:55895', transfer initiated
+2026-09-29T14:12:26.637723+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:55895', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:26.638061+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:26.638465+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:55895', AXFR finished
+2026-09-29T14:12:26.921760+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:41505', transfer initiated
+2026-09-29T14:12:26.921760+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:41505', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:26.922090+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:26.922332+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:41505', AXFR finished
+2026-09-29T14:12:27.209804+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:46513', transfer initiated
+2026-09-29T14:12:27.209804+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:46513', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:27.210115+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:27.210402+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:46513', AXFR finished
+2026-09-29T14:12:27.493660+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39879', transfer initiated
+2026-09-29T14:12:27.493660+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39879', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:27.494050+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:27.494319+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39879', AXFR finished
+2026-09-29T14:12:27.785812+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:44039', transfer initiated
+2026-09-29T14:12:27.785812+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:44039', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:27.786553+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:27.786875+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:44039', AXFR finished
+2026-09-29T14:12:28.082150+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:51485', transfer initiated
+2026-09-29T14:12:28.082150+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:51485', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:28.082871+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:28.083381+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:51485', AXFR finished
+2026-09-29T14:12:28.366137+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:55795', transfer initiated
+2026-09-29T14:12:28.366137+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:55795', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:28.366431+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:28.366778+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:55795', AXFR finished
+2026-09-29T14:12:28.665844+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:47155', transfer initiated
+2026-09-29T14:12:28.665844+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:47155', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:28.666157+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:28.666627+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:47155', AXFR finished
+2026-09-29T14:12:28.961834+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:53779', transfer initiated
+2026-09-29T14:12:28.961834+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:53779', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:28.962214+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:28.962631+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:53779', AXFR finished
+2026-09-29T14:12:29.245722+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:46937', transfer initiated
+2026-09-29T14:12:29.245722+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:46937', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:29.246078+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:29.246410+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:46937', AXFR finished
+2026-09-29T14:12:29.541838+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:48479', transfer initiated
+2026-09-29T14:12:29.541838+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:48479', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:29.542175+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:29.542485+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:48479', AXFR finished
+2026-09-29T14:12:29.825997+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:59881', transfer initiated
+2026-09-29T14:12:29.825997+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:59881', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:29.826298+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:29.826585+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:59881', AXFR finished
+2026-09-29T14:12:30.141743+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39943', transfer initiated
+2026-09-29T14:12:30.141743+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39943', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:30.142058+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:30.142310+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:39943', AXFR finished
+2026-09-29T14:12:30.412082+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:33553', transfer initiated
+2026-09-29T14:12:30.412082+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:33553', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:30.412636+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:30.412783+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:33553', AXFR finished
+2026-09-29T14:12:30.729871+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:57575', transfer initiated
+2026-09-29T14:12:30.729871+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:57575', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:30.730153+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:30.730504+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:57575', AXFR finished
+2026-09-29T14:12:31.013772+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:52499', transfer initiated
+2026-09-29T14:12:31.013772+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:52499', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:31.014154+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:31.014463+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:52499', AXFR finished
+2026-09-29T14:12:31.309982+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:55997', transfer initiated
+2026-09-29T14:12:31.309982+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:55997', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:31.310499+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:31.310939+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:55997', AXFR finished
+2026-09-29T14:12:31.634128+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:36211', transfer initiated
+2026-09-29T14:12:31.634128+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:36211', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:31.634719+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:31.635181+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:36211', AXFR finished
+2026-09-29T14:12:32.046020+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:48063', transfer initiated
+2026-09-29T14:12:32.046020+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:48063', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:32.046711+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:32.047276+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:48063', AXFR finished
+2026-09-29T14:12:32.446097+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40537', transfer initiated
+2026-09-29T14:12:32.446097+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40537', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:32.446693+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:32.447139+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40537', AXFR finished
+2026-09-29T14:12:32.802009+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40907', transfer initiated
+2026-09-29T14:12:32.802009+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40907', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:32.802806+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:32.803393+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40907', AXFR finished
+2026-09-29T14:12:33.133997+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40793', transfer initiated
+2026-09-29T14:12:33.133997+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40793', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:33.134491+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:33.134859+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40793', AXFR finished
+2026-09-29T14:12:33.454106+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:51103', transfer initiated
+2026-09-29T14:12:33.454106+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:51103', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:33.454844+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:33.455406+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:51103', AXFR finished
+2026-09-29T14:12:33.838657+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:38639', transfer initiated
+2026-09-29T14:12:33.838657+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:38639', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:33.839310+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:33.839461+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:38639', AXFR finished
+2026-09-29T14:12:34.196419+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:53191', transfer initiated
+2026-09-29T14:12:34.196419+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:53191', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:34.198126+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:34.199388+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:53191', AXFR finished
+2026-09-29T14:12:34.653999+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:52577', transfer initiated
+2026-09-29T14:12:34.653999+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:52577', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:34.654635+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:34.655090+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:52577', AXFR finished
+2026-09-29T14:12:35.058205+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:42965', transfer initiated
+2026-09-29T14:12:35.058205+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:42965', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:35.058923+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:35.059317+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:42965', AXFR finished
+2026-09-29T14:12:35.517996+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:34423', transfer initiated
+2026-09-29T14:12:35.517996+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:34423', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:35.518787+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:35.519414+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:34423', AXFR finished
+2026-09-29T14:12:35.914088+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:42871', transfer initiated
+2026-09-29T14:12:35.914088+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:42871', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:35.914786+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:35.915303+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:42871', AXFR finished
+2026-09-29T14:12:36.366008+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:47829', transfer initiated
+2026-09-29T14:12:36.366008+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:47829', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:36.366601+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:36.366914+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:47829', AXFR finished
+2026-09-29T14:12:36.805887+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:44885', transfer initiated
+2026-09-29T14:12:36.805887+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:44885', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:36.806285+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:36.806627+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:44885', AXFR finished
+2026-09-29T14:12:37.101983+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:36661', transfer initiated
+2026-09-29T14:12:37.101983+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:36661', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:37.102621+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:37.103372+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:36661', AXFR finished
+2026-09-29T14:12:37.406175+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40749', transfer initiated
+2026-09-29T14:12:37.406175+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40749', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:37.406883+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:37.407421+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:40749', AXFR finished
+2026-09-29T14:12:37.709822+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:41327', transfer initiated
+2026-09-29T14:12:37.709822+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:41327', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:37.710176+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:37.710559+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:41327', AXFR finished
+2026-09-29T14:12:38.001721+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:47087', transfer initiated
+2026-09-29T14:12:38.001721+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:47087', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:38.002108+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:38.002394+00:00 dns-arch pdns_server[4971]: AXFR-out zone 's1-kill.test', client '192.0.2.10:47087', AXFR finished
+2026-09-29T14:12:38.717963+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39706', transfer initiated
+2026-09-29T14:12:38.717963+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39706', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:38.718745+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:38.719071+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39706', AXFR finished
+2026-09-29T14:12:38.901800+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39712', transfer initiated
+2026-09-29T14:12:38.901800+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39712', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:38.902202+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:38.902589+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.10:39712', AXFR finished
+2026-09-29T14:12:39.727343+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:44782', transfer initiated
+2026-09-29T14:12:39.727343+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:44782', allowed: client IP is in allow-axfr-ips
+2026-09-29T14:12:39.727632+00:00 dns-arch pdns_server[4971]: gsqlite3: connection to '/var/lib/powerdns/pdns.sqlite3' successful
+2026-09-29T14:12:39.727842+00:00 dns-arch pdns_server[4971]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '127.0.0.1:44782', AXFR finished
+2026-09-29T14:13:07.600784+00:00 dns-arch pdns_server[4971]: no primary or producer domains need notifications

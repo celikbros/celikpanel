@@ -1,0 +1,17 @@
+### 2026-09-29T14:09:21.632Z start-cell c4-pdnssec-pdnspri pdns-switch__target-started__after-write__paired-secondary__peer-reachable debian13 fixture=uninitialized prep=prepare-pdns-switch enroll=0 root=/var/tmp/cp-b5-0929/r2 peer=pdns flags=--reboot-after-recovery --disable-management-before-reboot
+### 2026-09-29T14:09:21.634Z prepare
+### 2026-09-29T14:09:22.568Z start
+### 2026-09-29T14:09:22.806Z wait-ssh
+### 2026-09-29T14:10:19.413Z guest-identity
+### 2026-09-29T14:10:20.134Z install
+### 2026-09-29T14:10:31.647Z prepare-pdns-switch
+### 2026-09-29T14:11:09.091Z pre-run-snapshot
+### 2026-09-29T14:11:38.187Z start-peer-dns-sampler
+Running as unit: cp-b5-peerloop.service; invocation ID: 19142b71bc2541f9860c85a74957c824
+peerloop start rc=0
+### 2026-09-29T14:11:38.724Z start-watcher
+Running as unit: cp-b5-watch.service; invocation ID: 9069f7152d444eeca969d56956b1b64b
+### 2026-09-29T14:11:39.401Z run-prepared-dry-run
+### 2026-09-29T14:11:39.489Z run-prepared
+RUN_PREPARED_RC=2
+### 2026-09-29T14:12:42.450Z done-run rc=2

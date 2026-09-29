@@ -1,0 +1,32 @@
+/var/lib/celikpanel-dns-kill-matrix:
+total 1416
+drwx------  4 root root    4096 2026-09-29 14:11:09.006143379 +0000 .
+drwxr-xr-x 28 root root    4096 2026-09-29 14:12:16.074814017 +0000 ..
+-rw-------  1 root root    3314 2026-09-29 14:11:08.842143563 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 14:11:08.986143401 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 14:10:31.570252035 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 14:10:21.582252035 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 14:11:40.610128688 +0000 measured
+-rw-------  1 root root     267 2026-09-29 14:11:08.718143700 +0000 peer-primary-preflight.json
+drwx------  3 root root    4096 2026-09-29 14:11:08.814143595 +0000 results
+-rw-------  1 root root     445 2026-09-29 14:11:08.582143855 +0000 scenario.json
+-rw-------  1 root root    1453 2026-09-29 14:11:08.786143626 +0000 source-proof.json
+
+/var/lib/celikpanel-dns-kill-matrix/measured:
+total 12
+drwx------ 2 root root       4096 2026-09-29 14:11:40.610128688 +0000 .
+drwx------ 4 root root       4096 2026-09-29 14:11:09.006143379 +0000 ..
+-rw------- 1 root celikpanel  413 2026-09-29 14:11:40.598128690 +0000 trigger-identity.json
+
+/var/lib/celikpanel-dns-kill-matrix/results:
+total 12
+drwx------ 3 root root 4096 2026-09-29 14:11:08.814143595 +0000 .
+drwx------ 4 root root 4096 2026-09-29 14:11:09.006143379 +0000 ..
+drwx------ 2 root root 4096 2026-09-29 14:12:38.971042379 +0000 pdns-switch__target-started__after-write__paired-secondary__peer-reachable
+
+/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-started__after-write__paired-secondary__peer-reachable:
+total 32
+drwx------ 2 root root        4096 2026-09-29 14:12:38.971042379 +0000 .
+drwx------ 3 root root        4096 2026-09-29 14:11:08.814143595 +0000 ..
+-rw------- 1 root celikpanel 11481 2026-09-29 14:12:38.967042347 +0000 result.json
+-rw------- 1 root celikpanel  9774 2026-09-29 14:12:38.955042251 +0000 transcript.jsonl
