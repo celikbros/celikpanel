@@ -2998,6 +2998,13 @@ class FakeOwnerGuest:
             "bind_after_owner_active": False,
             "named_after_owner": [],
             "journal_readable": True,
+            # Completed re-runs exit 0 since f7a844f7.
+            "rerun_exit": 0,
+            # V2 rollback standby end state (f7a844f7).
+            "bind_sealed": True,
+            "tree_after": False,
+            "tree_at_step2": True,
+            "summary": None,
             **deviations,
         }
         self.journal_exists = True
@@ -3069,6 +3076,7 @@ class FakeOwnerGuest:
             return {"ran": True, "argv": list(argv), "returncode": 0,
                     "output": text, "_raw_output": text.encode()}
         self.owner_calls.append(label)
+        output = "evidence only\n"
         if label == f"owner-{self.command}":
             self.after_owner = True
             if self.d["owner_retires"]:
@@ -3081,12 +3089,70 @@ class FakeOwnerGuest:
             if self.d["owner_changes_ledger"] is not None:
                 self.job = self.job_for(self.d["owner_changes_ledger"])
                 self.ledger_sha = "6" * 64
+            output = self.summary_text()
         else:
-            returncode = 3
+            returncode = self.d["rerun_exit"]
+            output = ("This request is already reconciled; current DNS health is not "
+                      "checked. Nothing was changed now.\n")
             if self.d["rerun_mutates"]:
                 self.ledger_sha = "7" * 64
         return {"ran": True, "argv": list(argv), "returncode": returncode,
-                "output": "evidence only\n", "_raw_output": b"evidence only\n"}
+                "output": output, "_raw_output": output.encode()}
+
+    GENERATION = "a" * 64
+
+    def summary_text(self) -> str:
+        if self.d["summary"] is not None:
+            return self.d["summary"]
+        return "\n".join([
+            "The accepted BIND switch rollback reached its terminal verdict for request "
+            + self.REQUEST + ".",
+            "Restored: the PowerDNS service, its DNS state receipt, the BIND configuration "
+            "files this switch changed and the managed BIND pointer.",
+            "BIND units: named.service and bind9.service are under the package guard's "
+            "persistent mask, inactive and not enabled, so BIND cannot start by accident.",
+            f"Removed: the staged BIND generation {self.GENERATION} that this switch created.",
+            "Intentionally kept as rollback standby: the installed bind9 packages, the rndc "
+            "key and the BIND install-ownership record. This command does not remove packages.",
+            "Left in BIND's working directory /var/cache/bind, which is outside the managed "
+            "BIND root, so they were not removed: managed-keys.bind.",
+            "Local port-53 listeners accepted as the systemd-resolved stub resolver (unit "
+            "cgroup and address proved; not DNS authority): 127.0.0.53:53, 127.0.0.54:53.",
+            "",
+        ])
+
+    def rollback_facts(self, journal_path: str) -> dict[str, object]:
+        return {
+            "target_generation": self.GENERATION,
+            "target_units_before": [
+                {"name": "named.service", "load_state": "not-found"},
+                {"name": "bind9.service", "load_state": "not-found"},
+            ],
+            "sealed_end_state_expected": True,
+            "generation_tree": "/var/cache/bind/celikpanel/generations/" + self.GENERATION,
+            "generation_tree_present_at_step2": self.d["tree_at_step2"],
+        }
+
+    def guard_masks(self, settings: object, environment: object) -> dict[str, object]:
+        units = {}
+        for unit in ("named.service", "bind9.service"):
+            sealed = self.d["bind_sealed"]
+            units[unit] = {
+                "properties": {
+                    "LoadState": "masked" if sealed else "loaded",
+                    "ActiveState": "inactive",
+                    "SubState": "dead",
+                    "UnitFileState": "masked" if sealed else "disabled",
+                    "MainPID": "0",
+                },
+                "persistent_link": (
+                    {"path": "/etc/systemd/system/" + unit, "exists": True, "symlink": True,
+                     "uid": 0, "target": "/dev/null"}
+                    if sealed else {"path": "/etc/systemd/system/" + unit, "exists": False}
+                ),
+                "runtime_link": {"path": "/run/systemd/system/" + unit, "exists": False},
+            }
+        return {"units": units, "unknown": []}
 
     def source(self, settings, environment, *, expected_pid=None) -> dict[str, object]:
         pid = self.d["pid_after_owner"] if self.after_owner else 600
@@ -3132,14 +3198,19 @@ class FakeOwnerGuest:
         pdns_state = "active" if pdns_active else (
             "inactive" if self.after_owner else self.d["pdns_step2_state"]
         )
+        # The rollback standby: both BIND names under the guard's mask.
+        sealed = self.after_owner and not bind_active and self.d["bind_sealed"]
+        bind_load, bind_file = ("masked", "masked") if sealed else ("loaded", "disabled")
         return {
             "at": "2026-09-29T10:00:20Z",
             "units": {
                 "pdns.service": unit(
                     pdns_state, file_state="enabled", pid=700 if pdns_active else 0,
                 ),
-                "named.service": unit(bind_state, pid=812 if bind_active else 0),
-                "bind9.service": unit(bind_state, pid=812 if bind_active else 0),
+                "named.service": unit(bind_state, load=bind_load, file_state=bind_file,
+                                      pid=812 if bind_active else 0),
+                "bind9.service": unit(bind_state, load=bind_load, file_state=bind_file,
+                                      pid=812 if bind_active else 0),
             },
             "named_processes": named,
             "port53_listeners": {"tcp": [], "udp": []},
@@ -3168,6 +3239,42 @@ class FakeOwnerGuest:
                 "detail": "rolled back"}
 
 
+PDNS_ROLLED_BACK_CELL = "pdns-adopt__rolled-back__after-write__standalone__peer-reachable"
+
+
+def complete_rpc_retry_pass(**extra: object) -> dict:
+    """A complete passing rpc-retry result: the pre-reboot verdict passes."""
+
+    probe_value = {"valid": True, "recovery_outcome": "target_converged",
+                   "fingerprint": "f" * 64}
+    return {
+        "status": "passed", "safety_status": "passed",
+        "recovery_outcome": {"classification": "target_converged"},
+        "recovery": {"attempts": [
+            {"ordinal": 1, "command": {"returncode": 0}, "error": None},
+            {"ordinal": 2, "command": {"returncode": 0}, "error": None},
+        ]},
+        "recovery_probes": [dict(probe_value, ordinal=1), dict(probe_value, ordinal=2)],
+        **extra,
+    }
+
+
+def hypothetical_pdns_owner_admission():
+    """Admit the retained pdns-adoption-v1 owner profile inside one test only.
+
+    Since 3cc2de22 no cell is admitted with this profile (the restarted Agent
+    finishes the V1 adoption at rolled-back itself); the profile code stays as
+    the owner path for a host whose Agent re-proof fails, so its judgements are
+    still exercised offline under this hypothetical admission.
+    """
+
+    cell_id, admission = run_cell._admission(
+        "pdns-adoption-v1", "pdns-adopt", "rolled-back", "after-write", "reachable",
+        "driver-specific", "pre-start", step2="rolled-back",
+    )
+    return mock.patch.dict(run_cell.OWNER_INVERSE_ADMISSIONS, {cell_id: admission})
+
+
 class OwnerInverseAfterRestartTest(unittest.TestCase):
     NORMALIZATION = {
         "configuration": {"main": {"sha256": "8" * 64}, "managed": {"sha256": "9" * 64}},
@@ -3189,7 +3296,6 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
             "bind__rolled-back__before-write__standalone__peer-reachable": "pre-start",
             "bind__rolled-back__after-write__standalone__peer-reachable": "pre-start",
             "bind__rolling-back__after-write__standalone__peer-reachable": "pre-start",
-            "pdns-adopt__rolled-back__after-write__standalone__peer-reachable": "pre-start",
         }
         self.assertEqual(set(run_cell.OWNER_INVERSE_CELLS), set(expected_variants))
         self.assertEqual(set(guest_bootstrap.OWNER_INVERSE_CELLS), set(expected_variants))
@@ -3222,11 +3328,18 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
             manifest, "bind__target-started__before-write__standalone__peer-reachable"
         )
         self.assertTrue(run_cell.owner_inverse_expectation(before_started).bind_active_after_restart)
+        # The PowerDNS adoption rolled-back cut left the owner flow (3cc2de22).
+        pdns_rolled = run_cell.CellSpec.from_manifest(manifest, PDNS_ROLLED_BACK_CELL)
+        self.assertIsNone(run_cell.owner_inverse_profile(pdns_rolled))
+        self.assertIn(PDNS_ROLLED_BACK_CELL, run_cell.PDNS_ADOPTION_STARTUP_ROLLBACK_CELLS)
+        with hypothetical_pdns_owner_admission():
+            self.assertEqual(
+                run_cell.owner_inverse_profile(pdns_rolled).journal_schema,
+                run_cell.JOURNAL_SCHEMA,
+            )
         self.assertEqual(
-            run_cell.owner_inverse_profile(run_cell.CellSpec.from_manifest(
-                manifest, "pdns-adopt__rolled-back__after-write__standalone__peer-reachable"
-            )).journal_schema,
-            run_cell.JOURNAL_SCHEMA,
+            run_cell.V2_SWITCH_OWNER_CELLS,
+            frozenset(c for c in expected_variants if c != run_cell.BIND_HANDOFF_CELL),
         )
         for changed in (
             owner_cell("committed"),
@@ -3588,6 +3701,10 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
             ),
             observe_bind_source_serving=mock.Mock(side_effect=guest.source),
             read_dns_state_optional=mock.Mock(return_value={"exists": False}),
+            read_v2_rollback_facts=mock.Mock(side_effect=guest.rollback_facts),
+            observe_bind_guard_masks=mock.Mock(side_effect=guest.guard_masks),
+            generation_tree_present=mock.Mock(side_effect=lambda path: guest.d["tree_after"]),
+            record_bind_rollback_leftovers=mock.Mock(return_value={"judged": False}),
         )
         patches.update(extra or {})
         return mock.patch.multiple(run_cell, **patches)
@@ -3676,6 +3793,9 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
         ])
         self.assertNotIn("_raw_output", json.dumps(result))
         self.assertEqual(len(result["stability"]["samples"]), 31)
+        self.assertTrue(result["complete_verdict"]["passed"], result["complete_verdict"])
+        failed, _, _, _ = self.run_flow(FakeOwnerGuest(rerun_exit=3))
+        self.assertFalse(failed["complete_verdict"]["passed"])
 
     def assert_failed_before_owner(self, guest: FakeOwnerGuest, text: str) -> dict:
         result, _, _, _ = self.run_flow(guest)
@@ -3809,7 +3929,10 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
                     "reason": "the source was stopped before the cut; the inverse starts it again",
                 })
                 self.assertEqual(step5["bind_unit_files"]["named.service"],
-                                 {"LoadState": "loaded", "UnitFileState": "disabled"})
+                                 {"LoadState": "masked", "UnitFileState": "masked"})
+                end_state = step5["rollback_end_state"]
+                self.assertEqual(end_state["failures"], [])
+                self.assertEqual(len(end_state["accepted_stub_listener_lines"]), 1)
                 self.assertEqual(step5["native"]["named_processes"], [])
                 self.assertFalse(
                     flow["steps"]["after_stability"]["source"]["pdns_main_pid_changed"]
@@ -4062,18 +4185,19 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
         current = run_cell.owner_pdns_adoption_expected(proof)
         if drift:
             current = dict(current, database={"sha256": "4" * 64})
-        result, _, _, _ = self.run_flow(
-            guest,
-            selected=self.manifest_cell(
-                "pdns-adopt__rolled-back__after-write__standalone__peer-reachable"
-            ),
-            state_before={"exists": False},
-            source_proof=proof,
-            extra={"owner_pdns_adoption_files": mock.Mock(return_value=current)},
-        )
+        with hypothetical_pdns_owner_admission():
+            result, _, _, _ = self.run_flow(
+                guest,
+                selected=self.manifest_cell(PDNS_ROLLED_BACK_CELL),
+                state_before={"exists": False},
+                source_proof=proof,
+                extra={"owner_pdns_adoption_files": mock.Mock(return_value=current)},
+            )
         return result, guest
 
     def test_pdns_adoption_rolled_back_owner_flow(self) -> None:
+        # The retained owner profile under a hypothetical admission; the real
+        # cell runs with --expect-agent-startup-rollback since 3cc2de22.
         result, guest = self.run_pdns_adoption()
         flow = result["owner_inverse_after_restart"]
         self.assertEqual((result["status"], flow["status"]), ("passed", "passed"),
@@ -4107,13 +4231,16 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
         ):
             with self.subTest(bad=bad), self.assertRaises(run_cell.BoundaryUnverified):
                 run_cell.validate_owner_inverse_journal_source(bad, adoption)
-        pdns = self.manifest_cell("pdns-adopt__rolled-back__after-write__standalone__peer-reachable")
+        pdns = self.manifest_cell(PDNS_ROLLED_BACK_CELL)
         v1 = {"mode": "adopt", "source_engine": "", "target_engine": "pdns",
               "state_before": {"exists": False}}
-        run_cell.validate_owner_inverse_journal_source(v1, pdns)
-        for bad in (dict(v1, mode="switch"), dict(v1, state_before={"exists": True})):
-            with self.subTest(bad=bad), self.assertRaises(run_cell.BoundaryUnverified):
-                run_cell.validate_owner_inverse_journal_source(bad, pdns)
+        with self.assertRaisesRegex(run_cell.ControllerError, "exact owner-inverse cell"):
+            run_cell.validate_owner_inverse_journal_source(v1, pdns)
+        with hypothetical_pdns_owner_admission():
+            run_cell.validate_owner_inverse_journal_source(v1, pdns)
+            for bad in (dict(v1, mode="switch"), dict(v1, state_before={"exists": True})):
+                with self.subTest(bad=bad), self.assertRaises(run_cell.BoundaryUnverified):
+                    run_cell.validate_owner_inverse_journal_source(bad, pdns)
         with self.assertRaises(run_cell.ControllerError):
             run_cell.validate_owner_inverse_journal_source(v1, cell("intent", "after-write"))
 
@@ -4133,22 +4260,25 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
             preflight = run_cell.prove_owner_inverse_preconditions(settings, {}, mock.Mock())
         self.assertEqual(run.call_args.args[0][1], "check-bind-adoption-inverse-v1")
         self.assertEqual(preflight["state"], {"exists": False})
-        settings.cell = self.manifest_cell(
-            "pdns-adopt__rolled-back__after-write__standalone__peer-reachable"
-        )
+        settings.cell = self.manifest_cell(PDNS_ROLLED_BACK_CELL)
         pdns = {"ok": True, "errors": [], "unknown": [], "pdns_main_pid": 600}
-        with mock.patch.object(run_cell, "run_bounded_command") as run, \
-                mock.patch.object(run_cell, "observe_pdns_source_serving", return_value=pdns), \
-                mock.patch.object(run_cell, "read_dns_state_optional",
-                                  return_value={"exists": False}):
-            preflight = run_cell.prove_owner_inverse_preconditions(settings, {}, mock.Mock())
-            run.assert_not_called()
-        self.assertIs(preflight["capability"]["probed"], False)
-        with mock.patch.object(run_cell, "run_bounded_command"), \
-                mock.patch.object(run_cell, "observe_pdns_source_serving",
-                                  return_value=dict(pdns, ok=False, errors=["x"])), \
-                self.assertRaisesRegex(run_cell.ControllerError, "external PowerDNS"):
+        with self.assertRaisesRegex(run_cell.ControllerError, "admitted owner-inverse cell"):
             run_cell.prove_owner_inverse_preconditions(settings, {}, mock.Mock())
+        with hypothetical_pdns_owner_admission():
+            with mock.patch.object(run_cell, "run_bounded_command") as run, \
+                    mock.patch.object(run_cell, "observe_pdns_source_serving",
+                                      return_value=pdns), \
+                    mock.patch.object(run_cell, "read_dns_state_optional",
+                                      return_value={"exists": False}):
+                preflight = run_cell.prove_owner_inverse_preconditions(
+                    settings, {}, mock.Mock())
+                run.assert_not_called()
+            self.assertIs(preflight["capability"]["probed"], False)
+            with mock.patch.object(run_cell, "run_bounded_command"), \
+                    mock.patch.object(run_cell, "observe_pdns_source_serving",
+                                      return_value=dict(pdns, ok=False, errors=["x"])), \
+                    self.assertRaisesRegex(run_cell.ControllerError, "external PowerDNS"):
+                run_cell.prove_owner_inverse_preconditions(settings, {}, mock.Mock())
 
     # -- deliverable 2: reboot before the owner command ------------------------
 
@@ -4289,7 +4419,7 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
         failed = {"status": "failed"}
         run_cell.maybe_request_reboot_after_recovery(settings, failed, {}, {})
         self.assertIs(failed["reboot_after_recovery"]["run"], False)
-        passed = {"status": "passed"}
+        passed = complete_rpc_retry_pass()
         with mock.patch.multiple(
             run_cell,
             observe_serving_authority=mock.Mock(return_value={"authority": {"answered": True}}),
@@ -4891,6 +5021,657 @@ class DNSProbeTest(unittest.TestCase):
                 proof["source_setup_identity_receipt_sha256"] = hashlib.sha256(forged_raw).hexdigest()
                 with self.assertRaises(run_cell.ControllerError):
                     run_cell.validate_managed_bind_setup(proof, selected, measured, state)
+
+
+class OwnerFlowHelpers:
+    """Reuse the owner-flow scaffolding without re-running its tests."""
+
+    def setUp(self) -> None:
+        self.owner = OwnerInverseAfterRestartTest("test_agent_decides_owner_executes_passes")
+
+    def run_flow(self, *args, **kwargs):
+        return self.owner.run_flow(*args, **kwargs)
+
+    def run_adoption(self, **deviations):
+        return self.owner.run_adoption(**deviations)
+
+    critical_guest = staticmethod(OwnerInverseAfterRestartTest.critical_guest)
+
+
+class V2RollbackStandbyEndStateTest(OwnerFlowHelpers, unittest.TestCase):
+    """Step 5 judges the rollback standby; step 6 expects a completed re-run (f7a844f7)."""
+
+    def end_state(self, phase: str = "target-staged", **deviations: object):
+        guest = FakeOwnerGuest(**deviations)
+        if phase in run_cell.OWNER_INVERSE_CRITICAL_PHASES:
+            guest = self.critical_guest(phase, **deviations)
+        result, _, _, _ = self.run_flow(guest, phase)
+        flow = result["owner_inverse_after_restart"]
+        return result, flow, flow["steps"]["after_owner_command"].get("rollback_end_state")
+
+    def test_sealed_standby_passes_in_both_variants(self) -> None:
+        for phase in ("intent", "target-staged", "source-stopped", "target-started"):
+            with self.subTest(phase=phase):
+                result, flow, end = self.end_state(phase)
+                self.assertEqual((result["status"], flow["status"]), ("passed", "passed"),
+                                 flow["failures"] + flow["ambiguities"])
+                self.assertEqual(end["failures"], [])
+                self.assertEqual(len(end["summary"]["restored"]), 1)
+                self.assertEqual(len(end["summary"]["removed"]), 1)
+                self.assertEqual(len(end["summary"]["intentionally_kept"]), 1)
+                self.assertEqual(len(end["summary"]["working_directory"]), 1)
+                self.assertTrue(end["removed_line_required"])
+                self.assertIs(end["generation_tree_present_after"], False)
+                self.assertEqual(end["leftovers"], {"judged": False})
+                rerun = flow["steps"]["rerun"]
+                self.assertEqual((rerun["expected_returncode"],
+                                  rerun["command"]["returncode"]), (0, 0))
+                self.assertIn("already reconciled", rerun["stdout"])
+
+    def test_standby_deviations_fail(self) -> None:
+        no_removed = FakeOwnerGuest().summary_text().replace("Removed:", "Gone:")
+        no_kept = FakeOwnerGuest().summary_text().replace("Intentionally kept", "Kept")
+        no_restored = FakeOwnerGuest().summary_text().replace("Restored:", "Back:")
+        kept_changed = FakeOwnerGuest().summary_text() + (
+            "Not removed: the BIND generation " + "a" * 64 + " under "
+            "/var/cache/bind/celikpanel/generations, because it is not exactly what this "
+            "switch staged (content differs). Check it before removing it yourself.\n")
+        for phase, deviation, text in (
+            ("target-staged", {"bind_sealed": False}, "not under a persistent mask"),
+            ("target-started", {"bind_sealed": False}, "persistent mask is not a root-owned link"),
+            ("target-staged", {"tree_after": True}, "staged BIND generation tree"),
+            ("source-stopped", {"summary": no_removed}, "no 'Removed:' line"),
+            ("target-staged", {"summary": no_kept}, "Intentionally kept as rollback standby"),
+            ("target-staged", {"summary": no_restored}, "no 'Restored:' line"),
+            ("target-staged", {"summary": kept_changed}, "these cells do not edit it"),
+            ("target-staged", {"rerun_exit": 3}, "re-run exited 3, want 0"),
+            ("target-started", {"rerun_exit": 3}, "re-run exited 3, want 0"),
+        ):
+            with self.subTest(phase=phase, deviation=deviation):
+                result, flow, _ = self.end_state(phase, **deviation)
+                self.assertEqual((result["status"], flow["status"]), ("failed", "failed"))
+                self.assertIn(text, " ".join(flow["failures"]))
+
+    def test_removed_line_needs_a_tree_present_at_step2(self) -> None:
+        # The in-process rollback already removed the tree (rolled-back cells).
+        summary = FakeOwnerGuest().summary_text().replace("Removed:", "Gone:")
+        result, flow, end = self.end_state(tree_at_step2=False, summary=summary)
+        self.assertEqual(result["status"], "passed", flow["failures"])
+        self.assertFalse(end["removed_line_required"])
+        self.assertIn("already absent at step 2", end["removed_line_absent_reason"])
+
+    def test_adoption_profile_has_no_switch_standby_judgement(self) -> None:
+        result, _ = self.run_adoption()
+        step5 = result["owner_inverse_after_restart"]["steps"]["after_owner_command"]
+        self.assertNotIn("rollback_end_state", step5)
+        self.assertEqual(result["status"], "passed")
+        result, _ = self.run_adoption(rerun_exit=3)
+        self.assertIn("re-run exited 3", " ".join(
+            result["owner_inverse_after_restart"]["failures"]))
+
+    def test_pure_standby_judgement(self) -> None:
+        guest = FakeOwnerGuest()
+        masks = guest.guard_masks(None, None)
+        facts = guest.rollback_facts("/j")
+        text = guest.summary_text()
+        report = run_cell.judge_v2_bind_rollback_end_state(facts, masks, text, False)
+        self.assertEqual((report["failures"], report["unknown"]), ([], []))
+        # Unreadable facts are an unknown, not a pass.
+        report = run_cell.judge_v2_bind_rollback_end_state({"error": "gone"}, masks, text, None)
+        self.assertIn("rollback facts were not read", " ".join(report["unknown"]))
+        # A journal that froze an existing BIND is restored exactly: recorded.
+        report = run_cell.judge_v2_bind_rollback_end_state(
+            dict(facts, sealed_end_state_expected=False),
+            FakeOwnerGuest(bind_sealed=False).guard_masks(None, None), text, False)
+        self.assertEqual(report["failures"], [])
+        self.assertIs(report["sealed_end_state"]["judged"], False)
+        # Only names that exist are judged; none existing is a failure.
+        absent = {"units": {unit: {
+            "properties": {"LoadState": "not-found", "ActiveState": "inactive",
+                           "UnitFileState": ""},
+            "persistent_link": {"exists": False}, "runtime_link": {"exists": False},
+        } for unit in run_cell.BIND_TARGET_UNITS}, "unknown": []}
+        failures, _ = run_cell.judge_bind_guard_sealed(absent)
+        self.assertIn("no BIND unit name exists", failures[0])
+        one = json.loads(json.dumps(masks))
+        one["units"]["bind9.service"] = absent["units"]["bind9.service"]
+        self.assertEqual(run_cell.judge_bind_guard_sealed(one), ([], []))
+        runtime = json.loads(json.dumps(masks))
+        runtime["units"]["named.service"]["runtime_link"] = {
+            "path": "/run/systemd/system/named.service", "exists": True, "symlink": True,
+            "uid": 0, "target": "/dev/null"}
+        self.assertIn("runtime mask", " ".join(run_cell.judge_bind_guard_sealed(runtime)[0]))
+        active = json.loads(json.dumps(masks))
+        active["units"]["named.service"]["properties"]["ActiveState"] = "active"
+        self.assertIn("want inactive", " ".join(run_cell.judge_bind_guard_sealed(active)[0]))
+        lines = run_cell.parse_bind_rollback_summary(text)
+        self.assertEqual(lines["accepted_stub_listeners"][0][:20], "Local port-53 listen")
+        self.assertEqual(lines["bind_units"][0][:11], "BIND units:")
+
+    def test_rollback_facts_are_read_from_the_v2_journal(self) -> None:
+        if not (hasattr(os, "geteuid") and os.geteuid() == 0):
+            self.skipTest("the journal proof requires root ownership")
+        with tempfile.TemporaryDirectory() as root:
+            journal = Path(root, "journal.json")
+            generation = "b" * 64
+            journal.write_text(json.dumps({
+                "target_generation": generation,
+                "target_units_before": [
+                    {"name": "named.service", "load_state": "not-found"},
+                    {"name": "bind9.service", "load_state": "masked"},
+                ],
+            }), encoding="utf-8")
+            journal.chmod(0o600)
+            with mock.patch.object(run_cell, "generation_tree_present", return_value=True):
+                facts = run_cell.read_v2_rollback_facts(str(journal))
+            self.assertEqual(facts["generation_tree"],
+                             "/var/cache/bind/celikpanel/generations/" + generation)
+            self.assertTrue(facts["sealed_end_state_expected"])
+            self.assertTrue(facts["generation_tree_present_at_step2"])
+            journal.write_text(json.dumps({
+                "target_generation": "../escape",
+                "target_units_before": [{"name": "named.service", "load_state": "loaded"}],
+            }), encoding="utf-8")
+            facts = run_cell.read_v2_rollback_facts(str(journal))
+            self.assertIsNone(facts["generation_tree"])
+            self.assertFalse(facts["sealed_end_state_expected"])
+
+
+class RetrySwitchAfterRollbackTest(unittest.TestCase):
+    """--retry-switch-after-rollback: a NEW request must complete forward."""
+
+    def retry_settings(self, root: str, **changes: object) -> object:
+        settings = plain_settings(
+            root, owner_cell("target-started"), reboot_before_owner_command=False,
+            reboot_dir=None, retry_switch_after_rollback=True,
+            recovery_probe_command=(
+                "/opt/probe", "--cell-id", "x", "--identity-receipt", root + "/identity.json",
+            ),
+        )
+        return replace(settings, **changes) if changes else settings
+
+    def passing_result(self) -> dict:
+        return {
+            "status": "passed", "safety_status": "passed",
+            "owner_inverse_after_restart": {"status": "passed"},
+            "recovery_outcome": {"classification": "rolled_back_source_serving"},
+        }
+
+    def run_retry(self, settings, result, **deviations: object) -> dict:
+        d = {"returncode": 0, "status": "succeeded", "masked": False, "pdns": "inactive",
+             "bind_errors": [], "journal": False, "old_changes": False,
+             "probe": "target_converged", **deviations}
+        retry_id = run_cell.retry_switch_request_id(settings.request_id)
+        old_job = {"request_id": settings.request_id, "status": "failed"}
+        reads = {"count": 0}
+
+        def ledger(state_dir, request_id):
+            if request_id == retry_id:
+                return ({"active_request_id": ""}, {
+                    "request_id": retry_id, "status": d["status"], "target": "bind",
+                    "phase": "commit/dns-engine-switch/v2/finalized/" + retry_id + "/q"})
+            reads["count"] += 1
+            job = dict(old_job, touched=True) if d["old_changes"] and reads["count"] > 1 \
+                else old_job
+            return ({"active_request_id": ""}, job)
+
+        def masks(settings, environment):
+            state = "masked" if d["masked"] else "loaded"
+            return {"units": {unit: {
+                "properties": {"LoadState": state, "ActiveState": "active",
+                               "UnitFileState": "masked" if d["masked"] else "enabled"},
+                "persistent_link": {"exists": True, "symlink": True, "uid": 0,
+                                    "target": "/dev/null" if d["masked"] else
+                                    "/usr/lib/systemd/system/named.service",
+                                    "path": "/etc/systemd/system/" + unit},
+                "runtime_link": {"exists": False, "path": "/run/systemd/system/" + unit},
+            } for unit in run_cell.BIND_TARGET_UNITS}, "unknown": []}
+
+        command = mock.Mock(returncode=d["returncode"], output=b"rpc-switch-complete\n",
+                            truncated=False)
+        command.report.return_value = {"returncode": d["returncode"]}
+        probe = {"valid": True, "recovery_outcome": d["probe"], "fingerprint": "c" * 64,
+                 "active_dns_engine": "bind"}
+        ok = {"ok": True}
+        with mock.patch.multiple(
+            run_cell,
+            read_request_ledger=mock.Mock(side_effect=ledger),
+            wait_for_unix_socket=mock.Mock(return_value=(1, 2)),
+            run_bounded_command=mock.Mock(return_value=command),
+            validate_trigger_identity_receipt=mock.Mock(return_value={"request_id": retry_id}),
+            read_dns_state_semantic=mock.Mock(return_value={"semantic": {"engine": "bind"}}),
+            observe_bind_source_serving=mock.Mock(return_value={
+                "errors": list(d["bind_errors"]), "unknown": []}),
+            observe_bind_guard_masks=mock.Mock(side_effect=masks),
+            observe_native_dns_state=mock.Mock(return_value={
+                "units": {"pdns.service": {"ActiveState": d["pdns"]}}}),
+            decode_recovery_probe=mock.Mock(side_effect=lambda c, ordinal: dict(
+                probe, ordinal=ordinal)),
+            run_stability_window=mock.Mock(return_value=(
+                {"samples": [{"agent": ok, "panel": ok, "dns": ok}] * 31}, [], [])),
+            require_new_output_path=mock.Mock(),
+        ), mock.patch.object(run_cell.os.path, "lexists", return_value=d["journal"]):
+            run_cell.maybe_retry_switch_after_rollback(
+                settings, result, transcript=mock.Mock(), ordinary={"PATH": "/usr/bin"},
+                owner_environment={}, verification_failures=[],
+            )
+            self.last_trigger = run_cell.run_bounded_command.call_args_list[0]
+        return result
+
+    def test_new_request_identity_and_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            settings = self.retry_settings(root)
+            retry_id = run_cell.retry_switch_request_id(settings.request_id)
+            self.assertRegex(retry_id, "^[0-9a-f]{32}$")
+            self.assertNotEqual(retry_id, settings.request_id)
+            trigger, probe, receipt = run_cell.retry_switch_commands(settings, retry_id)
+            self.assertEqual(trigger[1], "rpc-switch")
+            self.assertEqual(receipt, root + "/" + run_cell.RETRY_SWITCH_IDENTITY_NAME)
+            self.assertEqual(trigger[5], receipt)
+            self.assertEqual(probe[probe.index("--identity-receipt") + 1], receipt)
+            self.assertEqual(trigger[3], settings.trigger_command[3])  # same scenario
+            with self.assertRaises(run_cell.ControllerError):
+                run_cell.retry_switch_commands(replace(settings, trigger_command=None), retry_id)
+
+    def test_forward_retry_passes_and_uses_a_new_request(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            settings = self.retry_settings(root)
+            result = self.run_retry(settings, self.passing_result())
+            report = result["retry_switch_after_rollback"]
+            self.assertEqual((result["status"], report["status"]), ("passed", "passed"),
+                             report["failures"] + report["unknown"])
+            self.assertEqual(report["request_id"],
+                             run_cell.retry_switch_request_id(settings.request_id))
+            argv, label = self.last_trigger.args[0], self.last_trigger.args[1]
+            self.assertEqual(label, "retry-switch-after-rollback")
+            self.assertEqual(argv[1], "rpc-switch")
+            environment = self.last_trigger.args[3]
+            self.assertEqual(environment["CELIKPANEL_S1_REQUEST_ID"], report["request_id"])
+            self.assertEqual(report["recovery_outcome"]["classification"], "target_converged")
+            self.assertEqual(len(report["stability"]["samples"]), 31)
+
+    def test_forward_retry_deviations_fail(self) -> None:
+        for deviation, text in (
+            ({"returncode": 1}, "exited 1, want 0"),
+            ({"status": "failed"}, "not a finalized succeeded BIND switch"),
+            ({"masked": True}, "still masked after the forward switch"),
+            ({"pdns": "active"}, "PowerDNS is active"),
+            ({"bind_errors": ["owner BIND unit is not active"]}, "BIND serving"),
+            ({"journal": True}, "journal remains"),
+            ({"old_changes": True}, "changed the rolled-back job"),
+            ({"probe": "indeterminate"}, "want target_converged"),
+        ):
+            with self.subTest(deviation=deviation), tempfile.TemporaryDirectory() as root:
+                result = self.run_retry(self.retry_settings(root), self.passing_result(),
+                                        **deviation)
+                report = result["retry_switch_after_rollback"]
+                self.assertEqual((result["status"], report["status"]), ("failed", "failed"))
+                self.assertIn(text, " ".join(report["failures"]))
+
+    def test_retry_runs_only_after_a_passed_rollback(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            settings = self.retry_settings(root)
+            for result, text in (
+                (dict(self.passing_result(), status="failed"), "status is 'failed'"),
+                (dict(self.passing_result(),
+                      recovery_outcome={"classification": "repeated_nonconvergence"}),
+                 "classification"),
+                (dict(self.passing_result(), reboot_after_recovery={
+                    "run": True, "judged": False, "observed_status": "passed"}),
+                 "reboot was not a judged pass"),
+            ):
+                with self.subTest(text=text), mock.patch.object(
+                    run_cell, "run_bounded_command") as run:
+                    run_cell.maybe_retry_switch_after_rollback(
+                        settings, result, transcript=mock.Mock(), ordinary={},
+                        owner_environment={}, verification_failures=[],
+                    )
+                    run.assert_not_called()
+                    report = result["retry_switch_after_rollback"]
+                    self.assertIs(report["run"], False)
+                    self.assertIn(text, report["reason"])
+            untouched = self.passing_result()
+            run_cell.maybe_retry_switch_after_rollback(
+                replace(settings, retry_switch_after_rollback=False), untouched,
+                transcript=mock.Mock(), ordinary={}, owner_environment={},
+                verification_failures=[],
+            )
+            self.assertNotIn("retry_switch_after_rollback", untouched)
+
+    def test_owner_flow_calls_the_retry_after_the_rollback(self) -> None:
+        source = MODULE_PATH.read_text(encoding="utf-8")
+        flow = source[source.index("def run_owner_inverse_after_restart("):]
+        flow = flow[:flow.index("\ndef ")]
+        self.assertLess(flow.index("flow.finish()"),
+                        flow.index("maybe_request_reboot_after_recovery("))
+        self.assertLess(flow.index("maybe_request_reboot_after_recovery("),
+                        flow.index("maybe_retry_switch_after_rollback("))
+        resume = source[source.index("def resume_cell("):]
+        self.assertLess(resume.index("verify_after_recovery_reboot("),
+                        resume.index("maybe_retry_switch_after_rollback("))
+
+
+class PreRebootVerdictTest(unittest.TestCase):
+    BOOT = RebootCheckpointTest.BOOT
+
+    def test_c6_shape_is_not_rebooted(self) -> None:
+        # Batch cell c6: status "passed" (D-021 safety), both retries exited 1,
+        # both probes indeterminate, classification repeated_nonconvergence.
+        indeterminate = {"valid": True, "recovery_outcome": "indeterminate",
+                         "fingerprint": "e" * 64}
+        c6 = {
+            "status": "passed", "safety_status": "passed",
+            "source_proof": {"source_fixture": "uninitialized"},
+            "recovery_outcome": {"classification": "repeated_nonconvergence"},
+            "recovery": {"attempts": [
+                {"ordinal": 1, "command": {"returncode": 1}, "error": "exited 1"},
+                {"ordinal": 2, "command": {"returncode": 1}, "error": "exited 1"},
+            ]},
+            "recovery_probes": [dict(indeterminate, ordinal=1), dict(indeterminate, ordinal=2)],
+        }
+        verdict = run_cell.pre_reboot_verdict(c6, {"flow": "rpc-retry"})
+        self.assertFalse(verdict["passed"])
+        joined = " ".join(verdict["reasons"])
+        for text in ("retry 1: exited 1", "first recovery probe is indeterminate",
+                     "classification is 'repeated_nonconvergence'"):
+            self.assertIn(text, joined)
+        self.assertEqual(verdict["required_classification"], ["target_converged"])
+        settings = mock.Mock(reboot_after_recovery=True, reboot_even_if_failed=False,
+                             disable_management_before_reboot=False)
+        result = json.loads(json.dumps(c6))
+        with mock.patch.object(run_cell, "read_guest_boot_identity") as boot:
+            run_cell.maybe_request_reboot_after_recovery(settings, result, {}, {"flow": "rpc-retry"})
+            boot.assert_not_called()
+        self.assertIs(result["reboot_after_recovery"]["run"], False)
+        self.assertIn("--reboot-even-if-failed", result["reboot_after_recovery"]["reason"])
+        self.assertEqual(result["status"], "passed")  # D-021 status is unchanged
+        # The diagnostic flag reboots anyway and marks the state.
+        settings.reboot_even_if_failed = True
+        with mock.patch.multiple(
+            run_cell,
+            observe_serving_authority=mock.Mock(return_value={"authority": {}}),
+            observe_management_units=mock.Mock(return_value={"units": {}, "unknown": []}),
+            read_guest_boot_identity=mock.Mock(return_value=self.BOOT),
+        ), self.assertRaises(run_cell.RebootRequested) as raised:
+            run_cell.maybe_request_reboot_after_recovery(
+                settings, json.loads(json.dumps(c6)), {}, {"flow": "rpc-retry"})
+        self.assertIs(raised.exception.state["diagnostic_reboot"], True)
+
+    def test_required_classification_follows_the_pass_definition(self) -> None:
+        self.assertEqual(run_cell.required_rpc_retry_classifications(
+            {"source_proof": {"source_fixture": "managed-pdns"}}),
+            frozenset({"target_converged", "rolled_back_source_serving"}))
+        for result in ({"source_proof": {"source_fixture": "uninitialized"}},
+                       {"fixture_pass_definition": {}}, {"agent_startup_rollback": {}}):
+            with self.subTest(result=result):
+                self.assertEqual(run_cell.required_rpc_retry_classifications(result),
+                                 frozenset({"target_converged"}))
+        owner = {"status": "passed", "safety_status": "passed",
+                 "owner_inverse_after_restart": {"status": "passed"},
+                 "recovery_outcome": {"classification": "rolled_back_source_serving"}}
+        self.assertTrue(run_cell.pre_reboot_verdict(owner, {"flow": "owner-inverse"})["passed"])
+        failed_owner = dict(owner, owner_inverse_after_restart={"status": "failed"})
+        self.assertFalse(run_cell.pre_reboot_verdict(failed_owner,
+                                                     {"flow": "owner-inverse"})["passed"])
+        self.assertFalse(run_cell.pre_reboot_verdict(
+            dict(owner, safety_status="failed"), {"flow": "owner-inverse"})["passed"])
+        self.assertTrue(run_cell.pre_reboot_verdict(complete_rpc_retry_pass(),
+                                                    {"flow": "rpc-retry"})["passed"])
+
+    def test_diagnostic_reboot_records_unjudged_and_keeps_the_status(self) -> None:
+        before = RebootCheckpointTest().authority({"tcp": ["bind"], "udp": ["bind"]})
+        dead = RebootCheckpointTest().authority({"tcp": [], "udp": []})
+        dead["authority"]["answered"] = False
+        state = {"flow": "rpc-retry", "authority_before": before, "diagnostic_reboot": True}
+        settings = mock.Mock(cell=owner_cell("target-staged"), agent_socket="/s",
+                             endpoint_timeout=1.0, panel_address="127.0.0.1", panel_port=2083)
+        result = {"status": "passed", "safety_status": "passed"}
+        safety: list = []
+        verification: list = []
+        bad = {"ok": False}
+        with mock.patch.multiple(
+            run_cell,
+            observe_management_units=mock.Mock(return_value={"unknown": [], "units": {
+                unit: {"ActiveState": "active"} for unit in run_cell.MANAGEMENT_UNITS}}),
+            wait_for_unix_socket=mock.Mock(return_value=(1, 2)),
+            inspect_restarted_agent_process=mock.Mock(return_value={"pid": 9}),
+            wait_for_tcp=mock.Mock(return_value=None),
+            observe_serving_authority=mock.Mock(return_value=dead),
+            run_stability_window=mock.Mock(return_value=(
+                {"samples": [{"agent": bad, "panel": bad, "dns": bad}] * 31},
+                ["stability sample 1: refused"], [])),
+        ):
+            run_cell.verify_after_recovery_reboot(
+                settings, state, result=result, transcript=mock.Mock(), ordinary={},
+                owner_environment={}, controller_identity={"effective_gid": 1},
+                boot={"boot_id_after": "b"}, safety_failures=safety,
+                verification_failures=verification,
+            )
+        report = result["reboot_after_recovery"]
+        self.assertIs(report["judged"], False)
+        self.assertEqual(report["observed_status"], "failed")
+        self.assertIn("authority changed", " ".join(report["failures"]))
+        self.assertTrue(report["observed_safety_failures"])
+        self.assertEqual((result["status"], result["safety_status"]), ("passed", "passed"))
+        self.assertEqual((safety, verification), ([], []))
+
+    def test_reboot_settings_gate_the_diagnostic_and_adoption_flags(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            base = plain_settings(root, reboot_before_owner_command=False,
+                                  reboot_after_recovery=True)
+            run_cell.validate_reboot_settings(replace(base, reboot_even_if_failed=True))
+            with self.assertRaisesRegex(run_cell.ControllerError, "--reboot-even-if-failed"):
+                run_cell.validate_reboot_settings(replace(
+                    base, reboot_after_recovery=False, reboot_before_owner_command=True,
+                    reboot_even_if_failed=True))
+            manifest = json.loads(MANIFEST_TEXT)
+            adoption = run_cell.CellSpec.from_manifest(manifest, run_cell.BIND_HANDOFF_CELL)
+            for before, after in ((True, False), (False, True), (True, True)):
+                with self.subTest(before=before, after=after):
+                    run_cell.validate_reboot_settings(replace(
+                        base, cell=adoption, bind_rollback_after_target_started=True,
+                        reboot_before_owner_command=before, reboot_after_recovery=after))
+                    self.assertTrue(run_cell.reboot_keeps_target_started_precursor(replace(
+                        base, cell=adoption, bind_rollback_after_target_started=True)))
+            for changed in (
+                {"cell": adoption, "bind_rollback_after_target_started": True,
+                 "owner_inverse_after_restart": False,
+                 "stop_after_kill_for_independent_recovery": True},
+                {"bind_rollback_after_target_started": True},
+            ):
+                with self.subTest(changed=changed), self.assertRaisesRegex(
+                    run_cell.ControllerError, "handoff"
+                ):
+                    run_cell.validate_reboot_settings(replace(base, **changed))
+
+
+class AfterRecoveryRebootOwnerFilesTest(unittest.TestCase):
+    def owner_verify(self, files, expected, *, profile_cell=None):
+        helper = RebootCheckpointTest()
+        before = helper.authority({"tcp": ["bind"], "udp": ["bind"]})
+        state = {"flow": "owner-inverse", "authority_before": before, "pid_reference": 600}
+        manifest = json.loads(MANIFEST_TEXT)
+        selected = profile_cell or run_cell.CellSpec.from_manifest(
+            manifest, run_cell.BIND_HANDOFF_CELL)
+        with mock.patch.object(run_cell, "owner_inverse_owner_files",
+                               return_value=(files, expected, "owner BIND files changed")):
+            return helper.verify(state, before, flow_cell=selected,
+                                 source={"errors": [], "unknown": [], "named_main_pid": 700})
+
+    def test_owner_files_are_judged_and_the_new_pid_recorded(self) -> None:
+        result = self.owner_verify({"a": 1}, {"a": 1})
+        report = result["reboot_after_recovery"]
+        self.assertEqual(result["status"], "passed", report.get("failures"))
+        self.assertTrue(report["owner_files_unchanged"])
+        self.assertEqual(report["source_main_pid"], {
+            "judged": False, "before_reboot": 600, "after_reboot": 700,
+            "reason": "a reboot restarts the source service"})
+        result = self.owner_verify({"a": 2}, {"a": 1})
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("owner BIND files changed",
+                      " ".join(result["reboot_after_recovery"]["failures"]))
+
+    def test_after_boot_records_owner_files_unjudged(self) -> None:
+        source = MODULE_PATH.read_text(encoding="utf-8")
+        body = source[source.index("    def after_boot("):source.index("    def owner_steps(")]
+        self.assertIn('step["owner_files"] = {', body)
+        self.assertIn('"judged": False', body)
+
+
+class StabilityWindowCountTest(unittest.TestCase):
+    def test_slow_samples_still_give_31_samples(self) -> None:
+        clock = {"now": 100.0}
+
+        def monotonic() -> float:
+            return clock["now"]
+
+        def sleep(seconds: float) -> None:
+            clock["now"] += seconds
+
+        def slow_dns(*args, **kwargs):
+            clock["now"] += 0.05  # each sample costs 50 ms
+            return {"udp": {}, "tcp": {}}
+
+        settings = mock.Mock(cell=owner_cell("target-staged"), stability_seconds=30,
+                             stability_interval=1, dns_address="10.0.2.15", dns_port=53,
+                             dns_name="www.s1-kill.test", dns_type="A", dns_timeout=1)
+        with mock.patch.object(run_cell.time, "monotonic", side_effect=monotonic), \
+                mock.patch.object(run_cell.time, "sleep", side_effect=sleep), \
+                mock.patch.object(run_cell, "query_authoritative_dns", side_effect=slow_dns):
+            report, failures, _ = run_cell.run_stability_window(
+                settings, None, mock.Mock(), "", dns_only=True)
+        self.assertEqual(len(report["samples"]), 31)
+        self.assertEqual(report["sample_count"], 31)
+        self.assertEqual(failures, [])
+        self.assertEqual(run_cell.stability_samples_count(30, 1), 31)
+        self.assertEqual(run_cell.stability_samples_count(1, 1), 2)
+        with self.assertRaises(run_cell.ControllerError):
+            run_cell.stability_samples_count(0, 1)
+
+
+class RecoveryStatusReadTest(unittest.TestCase):
+    def test_absent_launcher_is_recorded_not_failed(self) -> None:
+        with tempfile.TemporaryDirectory() as root, mock.patch.object(
+            run_cell, "OWNER_RECOVERY_EXECUTABLE", root + "/absent"
+        ):
+            report = run_cell.record_recovery_status(
+                mock.Mock(request_id="1" * 32), {}, mock.Mock(), "before-recovery")
+        self.assertIs(report["available"], False)
+        self.assertIn("enroll-recovery-runtime", report["reason"])
+
+    def test_status_read_is_judged_only_for_no_mutation(self) -> None:
+        if not (hasattr(os, "geteuid") and os.geteuid() == 0):
+            self.skipTest("the launcher proof requires a root-owned file")
+        with tempfile.TemporaryDirectory() as root:
+            launcher = Path(root, "recovery")
+            launcher.write_text("#!/bin/sh\n", encoding="utf-8")
+            launcher.chmod(0o755)
+            settings = mock.Mock(request_id="1" * 32, state_dir=root,
+                                 journal_path=root + "/j.json")
+            snapshots = iter([{"ledger": {"sha256": "a"}}, {"ledger": {"sha256": "b"}}])
+            status = {"ran": True, "returncode": 3, "output": "unknown\n",
+                      "_raw_output": b"unknown\n"}
+            runner = mock.Mock(return_value=status)
+            with mock.patch.multiple(
+                run_cell, OWNER_RECOVERY_EXECUTABLE=str(launcher),
+                snapshot_private_evidence=mock.Mock(side_effect=lambda *a: next(snapshots)),
+                run_owner_command=runner,
+            ):
+                report = run_cell.record_recovery_status(settings, {}, mock.Mock(), "after-recovery")
+            self.assertTrue(report["mutated"])
+            self.assertEqual(runner.call_args.args[1], [
+                str(launcher), "dns-switch-status", "--quiesced", "--request-id", "1" * 32])
+            self.assertEqual(runner.call_args.args[2], "recovery-status-after-recovery")
+            self.assertNotIn("_raw_output", report["command"])
+            result = {"status": "passed", "recovery_status_reads": {"after-recovery": report}}
+            run_cell.judge_recovery_status_reads(result)
+            self.assertEqual(result["status"], "failed")
+            self.assertIn("changed private evidence", result["recovery_status_read_failures"][0])
+            quiet = {"status": "passed", "recovery_status_reads": {
+                "before-recovery": {"available": False},
+                "after-recovery": dict(report, mutated=False, changed_evidence=[])}}
+            run_cell.judge_recovery_status_reads(quiet)
+            self.assertEqual(quiet["status"], "passed")
+            launcher.chmod(0o777)
+            with mock.patch.object(run_cell, "OWNER_RECOVERY_EXECUTABLE", str(launcher)):
+                report = run_cell.record_recovery_status(settings, {}, mock.Mock(), "x")
+            self.assertIs(report["available"], False)
+
+    def test_rpc_retry_flow_reads_status_before_and_after_recovery(self) -> None:
+        source = MODULE_PATH.read_text(encoding="utf-8")
+        flow = source[source.index("def run_cell(settings:"):]
+        before = flow.index('"before-recovery": record_recovery_status(')
+        self.assertLess(flow.index("raise OwnerInverseFlowFinished()"), before)
+        self.assertLess(before, flow.index('"agent-restart",'))
+        after = flow.index('["after-recovery"] = (')
+        self.assertLess(flow.index("assess_recovery_probes(recovery_probes[0]"), after)
+        self.assertLess(after, flow.index('"panel-restart",'))
+        self.assertLess(flow.index("judge_fixture_pass_definition("),
+                        flow.index("judge_recovery_status_reads(result)"))
+        self.assertLess(flow.index("judge_recovery_status_reads(result)"),
+                        flow.index('result["complete_verdict"] = pre_reboot_verdict('))
+        self.assertLess(flow.index('result["complete_verdict"] = pre_reboot_verdict('),
+                        flow.index("maybe_request_reboot_after_recovery("))
+
+
+class AdoptionRolledBackStartupCellTest(unittest.TestCase):
+    def test_cell_is_in_the_startup_family_and_refused_under_the_owner_flag(self) -> None:
+        manifest = json.loads(MANIFEST_TEXT)
+        selected = run_cell.CellSpec.from_manifest(manifest, PDNS_ROLLED_BACK_CELL)
+        self.assertIn(PDNS_ROLLED_BACK_CELL, run_cell.PDNS_ADOPTION_STARTUP_ROLLBACK_CELLS)
+        self.assertNotIn(PDNS_ROLLED_BACK_CELL, run_cell.OWNER_INVERSE_CELLS)
+        self.assertEqual(run_cell.PDNS_ADOPTION_STARTUP_ROLLBACK_CELLS,
+                         guest_bootstrap.STARTUP_ROLLBACK_CELLS)
+        with tempfile.TemporaryDirectory() as root:
+            settings = plain_settings(root, selected, reboot_before_owner_command=False,
+                                      reboot_dir=None)
+            with mock.patch.object(run_cell, "validate_reboot_settings"), \
+                    self.assertRaisesRegex(run_cell.ControllerError,
+                                           "run it with --expect-agent-startup-rollback"):
+                run_cell.validate_settings(settings)
+        # The startup judgement the cell now gets: the Agent publishes its own
+        # rollback verdict, no lease, journal retired, PowerDNS on its pre-cut
+        # PID and no owner command named (observe_agent_startup_rollback).
+        guest = FakeOwnerGuest(release_code=run_cell.AGENT_ROLLED_BACK_AFTER_RESTART,
+                               target="pdns")
+        identity = {"request_id": guest.REQUEST, "owner_id": guest.OWNER,
+                    "manifest_qualifier": guest.QUALIFIER}
+        ledger, job = guest.read_ledger("", guest.REQUEST)
+        self.assertEqual(run_cell.classify_agent_startup_rollback(
+            ledger, job, identity, target="pdns"), [])
+        released = guest.job_for(run_cell.AGENT_RELEASED_NATIVE_UNKNOWN)
+        self.assertTrue(run_cell.classify_agent_startup_rollback(
+            ledger, released, identity, target="pdns"))
+
+    def test_peer_catalog_flags_are_parsed_and_scoped(self) -> None:
+        parser = run_cell.build_argument_parser()
+        base = ["--manifest", "/m", "--cell-id", "c", "--request-id", "r", "--nonce", "n",
+                "--tagged-agent-command", "[]", "--trigger-mode", "socket",
+                "--recovery-command", "[]", "--agent-restart-command", "[]",
+                "--panel-restart-command", "[]", "--recovery-probe-command", "[]",
+                "--command-cwd", "/", "--state-dir", "/", "--mutation-lock", "/l",
+                "--agent-socket", "/s", "--agent-token-file", "/t", "--journal", "/j",
+                "--marker", "/k", "--proof", "/p", "--result", "/r", "--transcript", "/x",
+                "--dns-address", "1", "--dns-port", "53", "--dns-name", "n",
+                "--panel-address", "a", "--panel-port", "1", "--startup-timeout", "1",
+                "--boundary-timeout", "1", "--stop-timeout", "1", "--kill-timeout", "1",
+                "--command-timeout", "1", "--recovery-timeout", "1", "--endpoint-timeout", "1",
+                "--dns-timeout", "1", "--stability-seconds", "1", "--stability-interval", "1"]
+        self.assertIsNone(parser.parse_args(base).peer_catalog_format)
+        self.assertEqual(parser.parse_args(base + ["--peer-catalog-format-bind"])
+                         .peer_catalog_format, "bind")
+        args = parser.parse_args(base + ["--peer-catalog-format-pdns-native",
+                                         "--retry-switch-after-rollback",
+                                         "--reboot-even-if-failed"])
+        self.assertEqual(args.peer_catalog_format, "pdns-native")
+        self.assertTrue(args.retry_switch_after_rollback and args.reboot_even_if_failed)
+        with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
+            parser.parse_args(base + ["--peer-catalog-format-bind",
+                                      "--peer-catalog-format-pdns-native"])
+
+
+MANIFEST_TEXT = Path(__file__).with_name("manifest.json").read_text(encoding="utf-8")
+
 
 if __name__ == "__main__":
     unittest.main()

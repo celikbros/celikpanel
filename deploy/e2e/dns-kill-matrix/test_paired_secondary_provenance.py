@@ -92,6 +92,23 @@ def settings_for(root: str, selected: object, **changes: object) -> object:
     return replace(settings, **changes) if changes else settings
 
 
+def complete_pass(**extra: object) -> dict:
+    """A complete passing rpc-retry result (the pre-reboot verdict passes)."""
+
+    probe_value = {"valid": True, "recovery_outcome": "target_converged",
+                   "fingerprint": "f" * 64}
+    return {
+        "status": "passed", "safety_status": "passed",
+        "recovery_outcome": {"classification": "target_converged"},
+        "recovery": {"attempts": [
+            {"ordinal": 1, "command": {"returncode": 0}, "error": None},
+            {"ordinal": 2, "command": {"returncode": 0}, "error": None},
+        ]},
+        "recovery_probes": [dict(probe_value, ordinal=1), dict(probe_value, ordinal=2)],
+        **extra,
+    }
+
+
 def dns_name(name: str) -> bytes:
     return b"".join(bytes([len(label)]) + label.encode() for label in name.split(".")) + b"\0"
 
@@ -185,10 +202,18 @@ class AdmissionTest(unittest.TestCase):
                 ):
                     run_cell.refuse_unadmitted_paired_secondary(settings_for(root, spec(cell_id)))
             admitted = spec("pdns-switch__rolled-back__before-write__paired-secondary__peer-reachable")
-            run_cell.refuse_unadmitted_paired_secondary(settings_for(root, admitted))
+            for catalog_format in ("bind", "pdns-native"):
+                run_cell.refuse_unadmitted_paired_secondary(
+                    settings_for(root, admitted, peer_catalog_format=catalog_format)
+                )
+            # The prepared peer catalog format is required: the Agent's log
+            # line naming the accepted format is judged against it.
+            with self.assertRaisesRegex(run_cell.ControllerError, "--peer-catalog-format-bind"):
+                run_cell.refuse_unadmitted_paired_secondary(settings_for(root, admitted))
             with self.assertRaisesRegex(run_cell.ControllerError, "rpc-retry flow"):
                 run_cell.refuse_unadmitted_paired_secondary(
-                    settings_for(root, admitted, expect_agent_startup_rollback=True)
+                    settings_for(root, admitted, expect_agent_startup_rollback=True,
+                                 peer_catalog_format="bind")
                 )
             # The reconfiguration driver is untouched by this admission.
             run_cell.refuse_unadmitted_paired_secondary(settings_for(
@@ -417,13 +442,32 @@ class DNSContentTest(unittest.TestCase):
                 run_cell.prove_paired_secondary_preflight(settings, "192.0.2.11")
 
 
+AGENT_LOG = (
+    "2026/09/29 13:25:51 DNS engine change {request}: the paired primary at 192.0.2.11 "
+    "serves catalog catalog-c000020b.celikpanel.invalid in the {name} catalog format; "
+    "this operation reads it in that format"
+)
+
+
+def agent_log(name: str = "PowerDNS", request: str = "1" * 32) -> dict:
+    return run_cell.parse_peer_catalog_format_lines(
+        AGENT_LOG.format(name=name, request=request), "192.0.2.11",
+        "catalog-c000020b.celikpanel.invalid",
+    ) | {"catalog": "catalog-c000020b.celikpanel.invalid", "peer_ip": "192.0.2.11",
+         "unknown": []}
+
+
 class PassDefinitionTest(unittest.TestCase):
-    def judge(self, selected: object, result: dict, **patches: object) -> dict:
+    def judge(self, selected: object, result: dict, *, catalog_format: str | None = "pdns-native",
+              **patches: object) -> dict:
         verification: list[str] = []
         patches = patches or {"PDNS_DATABASE_PATH": run_cell.PDNS_DATABASE_PATH}
+        patches.setdefault("collect_agent_peer_catalog_log",
+                           mock.Mock(return_value=agent_log("PowerDNS")))
         with tempfile.TemporaryDirectory() as root, mock.patch.multiple(run_cell, **patches):
             run_cell.judge_fixture_pass_definition(
-                settings_for(root, selected), result, {}, "192.0.2.11", verification
+                settings_for(root, selected, peer_catalog_format=catalog_format),
+                result, {}, "192.0.2.11", verification,
             )
         result["_verification"] = verification
         return result
@@ -459,6 +503,81 @@ class PassDefinitionTest(unittest.TestCase):
                             check_pdns_secondary_rows=rows)
         self.assertEqual(result["status"], "failed")
         rows.assert_not_called()
+
+    def test_agent_log_must_name_the_catalog_format_the_peer_serves(self) -> None:
+        clean = {"failures": [], "unknown": []}
+        selected = spec("bind__target-verified__after-write__paired-secondary__peer-reachable")
+        serving = {"check_secondary_serving": mock.Mock(return_value=clean)}
+        for catalog_format, name, status in (
+            ("pdns-native", "PowerDNS", "passed"),
+            ("bind", "BIND", "passed"),
+            ("pdns-native", "BIND", "failed"),
+            ("bind", "PowerDNS", "failed"),
+        ):
+            with self.subTest(catalog_format=catalog_format, logged=name):
+                result = self.judge(
+                    selected, self.passing(), catalog_format=catalog_format,
+                    collect_agent_peer_catalog_log=mock.Mock(return_value=agent_log(name)),
+                    **serving,
+                )
+                self.assertEqual(result["status"], status)
+                part = result["fixture_pass_definition"]["peer_catalog_format_log"]
+                self.assertEqual(part["expected_agent_name"],
+                                 {"pdns-native": "PowerDNS", "bind": "BIND"}[catalog_format])
+                if status == "failed":
+                    self.assertIn(f"accepted the peer catalog in the {name} format",
+                                  " ".join(part["failures"]))
+        # No line at all is an unknown, not a pass.
+        empty = dict(agent_log("PowerDNS"), lines=[], formats=[])
+        result = self.judge(selected, self.passing(),
+                            collect_agent_peer_catalog_log=mock.Mock(return_value=empty),
+                            **serving)
+        self.assertEqual(result["status"], "unverified")
+        # A reported producer change mid-operation is a verified failure.
+        changed = dict(agent_log("PowerDNS"), producer_changed_lines=[
+            "peer catalog producer changed during the operation: catalog x"])
+        result = self.judge(selected, self.passing(),
+                            collect_agent_peer_catalog_log=mock.Mock(return_value=changed),
+                            **serving)
+        self.assertEqual(result["status"], "failed")
+
+    def test_agent_log_parser_is_exact(self) -> None:
+        catalog = "catalog-c000020b.celikpanel.invalid"
+        text = "\n".join([
+            AGENT_LOG.format(name="PowerDNS", request="1" * 32),
+            AGENT_LOG.format(name="BIND", request="2" * 32).replace("192.0.2.11", "192.0.2.12"),
+            "DNS readiness check: the paired primary at 192.0.2.11 serves catalog "
+            "catalog-c000020a.celikpanel.invalid in the BIND catalog format; this operation "
+            "reads it in that format",
+            "unrelated line",
+        ])
+        parsed = run_cell.parse_peer_catalog_format_lines(text, "192.0.2.11", catalog)
+        self.assertEqual(parsed["formats"], ["PowerDNS"])
+        self.assertEqual(len(parsed["lines"]), 1)
+        self.assertEqual(parsed["producer_changed_lines"], [])
+        with tempfile.TemporaryDirectory() as root:
+            transcript = Path(root, "transcript.jsonl")
+            transcript.write_text(AGENT_LOG.format(name="PowerDNS", request="1" * 32) + "\n",
+                                  encoding="utf-8")
+            settings = settings_for(root, spec(
+                "bind__target-verified__after-write__paired-secondary__peer-reachable"),
+                transcript_path=str(transcript))
+            journal = subprocess.CompletedProcess(
+                [], 0, (AGENT_LOG.format(name="PowerDNS", request="3" * 32) + "\n").encode(), b"")
+            with mock.patch.object(run_cell.subprocess, "run", return_value=journal) as run:
+                log = run_cell.collect_agent_peer_catalog_log(settings, {}, "192.0.2.11", 100)
+            self.assertIn("--since=@100", run.call_args.args[0])
+            self.assertIn("--unit=celikpanel-agent.service", run.call_args.args[0])
+            self.assertEqual(log["formats"], ["PowerDNS", "PowerDNS"])
+            self.assertEqual(log["unknown"], [])
+            with mock.patch.object(run_cell.subprocess, "run",
+                                   return_value=subprocess.CompletedProcess([], 1, b"", b"")):
+                log = run_cell.collect_agent_peer_catalog_log(settings, {}, "192.0.2.11", 100)
+            self.assertIn("journalctl exited 1", log["unknown"])
+            log = run_cell.collect_agent_peer_catalog_log(settings, {}, "192.0.2.11", None)
+            self.assertIn("start time is unknown", " ".join(log["unknown"]))
+        self.assertEqual(run_cell._epoch_from_result({"started_at": "2026-09-29T13:00:00Z"}),
+                         1790686800 - 1)
 
     def test_other_cells_are_untouched(self) -> None:
         result = self.judge(spec(TAKEOVER_CELL), self.passing(
@@ -633,10 +752,11 @@ class RebootWithManagementDisabledTest(unittest.TestCase):
                                      **common):
                 with self.assertRaises(run_cell.RebootRequested) as requested:
                     run_cell.maybe_request_reboot_after_recovery(
-                        settings, {"status": "passed"}, {}, {"flow": "rpc-retry", "peer_ip": ""}
+                        settings, complete_pass(), {}, {"flow": "rpc-retry", "peer_ip": ""}
                     )
             self.assertTrue(requested.exception.state["management_disabled"])
-            result = {"status": "passed"}
+            self.assertIs(requested.exception.state["diagnostic_reboot"], False)
+            result = complete_pass()
             with mock.patch.multiple(
                 run_cell, disable_management_units=mock.Mock(
                     return_value={"failures": ["celikpanel-agent.service is not stopped"],
@@ -1052,7 +1172,8 @@ class HostOrchestrationTest(unittest.TestCase):
     def test_run_prepared_observes_the_peer_around_the_controller(self) -> None:
         raw = raw_cell(self.SECONDARY)
         observation = {"config_sha256": {"/etc/powerdns/pdns.conf": "1" * 64},
-                       "catalog_serial": 1, "catalog_members": ["s1-kill.test"],
+                       "catalog_serial": 1790542951, "catalog_members": ["s1-kill.test"],
+                       "catalog_producer": "powerdns", "catalog_format": "pdns-native",
                        "member_soa": {}, "www_a": ["192.0.2.11"],
                        "transfers_to_secondary": {"catalog": True, "s1-kill.test": True}}
         written: dict[str, object] = {}
@@ -1065,7 +1186,8 @@ class HostOrchestrationTest(unittest.TestCase):
                     mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/k")), \
                     mock.patch.object(bootstrap, "ssh_base", return_value=["ssh"]), \
                     mock.patch.object(bootstrap, "read_peer_evidence",
-                                      return_value={"engine": "pdns"}), \
+                                      return_value={"engine": "pdns",
+                                                    "catalog_format": "pdns-native"}), \
                     mock.patch.object(bootstrap, "write_peer_evidence",
                                       side_effect=lambda _p, name, value, execute:
                                       written.__setitem__(name, value)), \
@@ -1079,17 +1201,59 @@ class HostOrchestrationTest(unittest.TestCase):
                 self.assertEqual(bootstrap.run_prepared(args), expected)
             self.assertEqual(sorted(written), ["peer-before-kill.json", "peer-verdict.json"])
             self.assertTrue(run.call_args_list[0].args[0][-1].endswith(
+                f"{bootstrap.PEER_CATALOG_PDNS_FLAG} "
                 "--reboot-after-recovery --disable-management-before-reboot"))
-            self.assertEqual(written["peer-verdict.json"]["guest_controller_exit"], guest_exit)
-        args = self.args(raw, action="run-prepared", execute=True, peer_engine="bind")
-        with mock.patch.object(bootstrap, "load_plan", return_value=(plan, raw, {})), \
-                mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/k")), \
-                mock.patch.object(bootstrap, "ssh_base", return_value=["ssh"]), \
-                mock.patch.object(bootstrap, "read_peer_evidence", return_value={"engine": "pdns"}), \
-                mock.patch.object(bootstrap.subprocess, "run") as run, \
-                self.assertRaisesRegex(bootstrap.BootstrapError, "prepared --peer-engine"):
-            bootstrap.run_prepared(args)
-        run.assert_not_called()
+            verdict = written["peer-verdict.json"]
+            self.assertEqual(verdict["guest_controller_exit"], guest_exit)
+            self.assertEqual(verdict["peer_catalog_format"], "pdns-native")
+            self.assertEqual(verdict["peer_catalog_producer_expected"], "powerdns")
+            self.assertEqual(verdict["status"], "passed")
+        for overrides, evidence, text in (
+            ({"peer_engine": "bind"}, {"engine": "pdns"}, "prepared --peer-engine"),
+            ({}, {"engine": "pdns"}, "prepared --peer-catalog-format"),
+            ({"peer_catalog_format": "bind"}, {"engine": "pdns", "catalog_format": "pdns-native"},
+             "prepared --peer-catalog-format"),
+            ({"peer_engine": "bind", "peer_catalog_format": "pdns-native"}, {"engine": "bind"},
+             "serves only the bind catalog format"),
+        ):
+            args = self.args(raw, action="run-prepared", execute=True, **overrides)
+            with self.subTest(overrides=overrides), \
+                    mock.patch.object(bootstrap, "load_plan", return_value=(plan, raw, {})), \
+                    mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/k")), \
+                    mock.patch.object(bootstrap, "ssh_base", return_value=["ssh"]), \
+                    mock.patch.object(bootstrap, "read_peer_evidence", return_value=evidence), \
+                    mock.patch.object(bootstrap.subprocess, "run") as run, \
+                    self.assertRaisesRegex(bootstrap.BootstrapError, text):
+                bootstrap.run_prepared(args)
+            run.assert_not_called()
+
+    def test_peer_catalog_format_resolution(self) -> None:
+        raw = raw_cell(self.SECONDARY)
+        self.assertEqual(bootstrap.require_peer_catalog_format(raw, "pdns", None), "pdns-native")
+        self.assertEqual(bootstrap.require_peer_catalog_format(raw, "pdns", "bind"), "bind")
+        self.assertEqual(bootstrap.require_peer_catalog_format(raw, "bind", None), "bind")
+        self.assertEqual(bootstrap.require_peer_catalog_format(raw, "bind", mock.Mock()), "bind")
+        for engine, value, text in (
+            ("bind", "pdns-native", "serves only the bind"),
+            ("pdns", "knot", "bind or pdns-native"),
+            (None, "bind", "only to paired-secondary"),
+        ):
+            with self.subTest(engine=engine, value=value), \
+                    self.assertRaisesRegex(bootstrap.BootstrapError, text):
+                bootstrap.require_peer_catalog_format(raw, engine, value)
+        self.assertIsNone(bootstrap.require_peer_catalog_format(raw, None, None))
+        observation = {"catalog_producer": "powerdns", "transfers_to_secondary": {"c": True}}
+        self.assertEqual(bootstrap.judge_peer_observations(
+            observation, observation, True, "pdns-native")["status"], "passed")
+        verdict = bootstrap.judge_peer_observations(observation, observation, True, "bind")
+        self.assertEqual(verdict["status"], "failed")
+        self.assertIn("not the prepared 'bind' format", verdict["failures"][0])
+        silent = {"transfers_to_secondary": {"c": True}}
+        self.assertEqual(bootstrap.judge_peer_observations(
+            silent, silent, True, "pdns-native")["status"], "unverified")
+        switched = dict(observation, catalog_producer="bind")
+        verdict = bootstrap.judge_peer_observations(observation, switched, True, None)
+        self.assertIn("peer catalog_producer changed", verdict["failures"][0])
 
     def test_disable_flag_is_gated_on_the_host_and_in_the_guest_program(self) -> None:
         raw = raw_cell(self.SECONDARY)

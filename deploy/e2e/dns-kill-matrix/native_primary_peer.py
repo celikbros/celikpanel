@@ -8,16 +8,28 @@ CelikPanel Panel, Agent, HTTPS API or remote record-management automation
 CelikPanel). Two flavours are selectable with ``--engine``:
 
 * ``bind``: named with two ``type primary`` zones read from zone files;
-* ``pdns``: PowerDNS gsqlite3 with two ordinary ``MASTER`` zones.
+* ``pdns``: PowerDNS gsqlite3 with the member as an ordinary ``MASTER`` zone.
 
-Both flavours serve the product catalog ``catalog-<hex(peer)>.celikpanel.invalid``
-byte-for-byte in the format written by ``binddns.renderCatalogZone`` /
-``binddns.CatalogZoneRecords`` (SOA/NS ``invalid.``, TTL 60, version "2",
-SHA-224 member labels). The PowerDNS flavour deliberately does NOT use a native
-PowerDNS ``PRODUCER`` catalog: its 32-character base32hex member labels and
-TTL 0 properties are rejected by the Agent's paired-secondary catalog reader,
-which applies the BIND producer policy (cmd/agent/dns_engine_host.go
-probeDNSCatalogAXFR, cmd/agent/dns_engine_pdns_catalog.go peerPDNSCatalog).
+The catalog is ``catalog-<hex(peer)>.celikpanel.invalid``. ``--catalog-format``
+selects its producer:
+
+* ``bind`` (the only format of the BIND flavour; selectable for PowerDNS):
+  byte-for-byte the format of ``binddns.renderCatalogZone`` /
+  ``binddns.CatalogZoneRecords`` (SOA/NS ``invalid.``, TTL 60, version "2",
+  SHA-224 member labels). The PowerDNS flavour then serves it as an ordinary
+  ``MASTER`` zone with those explicit rows.
+* ``pdns-native`` (default for PowerDNS): PowerDNS's own ``PRODUCER`` catalog,
+  set up with the same SQL steps as a CelikPanel PowerDNS primary
+  (cmd/agent/dns_engine_pdns_catalog.go reconcilePDNSBINDCatalogWithSeedModeTx:
+  a ``PRODUCER`` domain row, only its SOA and NS rows, then ``catalog`` set on
+  each ``MASTER`` member). PowerDNS itself emits the version TXT and the member
+  PTRs (TTL 0, 32-character base32hex labels) and maintains the serial.
+
+Since 3cc2de22 the Agent's peer catalog reader tries the BIND format and, only
+on a producer-format refusal, the PowerDNS format (cmd/agent/dns_peer_catalog.go),
+so a CelikPanel secondary accepts either. The producer row carries the fixture
+account, not the product's ``celikpanel-bind-catalog-v1`` authority marker: the
+peer is panel-free and the account column is not transferred.
 
 AXFR is allowed only to the guest under test and the peer's own loopback (for
 the read-only probe); NOTIFY is sent only to the guest under test. Dry-run is
@@ -44,6 +56,8 @@ CATALOG_SERIAL = probe.CATALOG_SERIAL
 FIXTURE_ACCOUNT = probe.FIXTURE_ACCOUNT
 NODE_ADDRESSES = {"debian13": "192.0.2.10", "arch": "192.0.2.11"}
 ENGINES = ("bind", "pdns")
+CATALOG_FORMATS = ("bind", "pdns-native")
+DEFAULT_CATALOG_FORMAT = {"bind": "bind", "pdns": "pdns-native"}
 SUPPORTED_DRIVERS = frozenset({"bind", "pdns-switch"})
 # Early fresh-secondary cells only. Managed-PowerDNS-source secondary cells have
 # no guest-side producer yet; widen together with guest_bootstrap.
@@ -106,6 +120,24 @@ LAYOUTS = {
 # ---------------------------------------------------------------------------
 # Pure rendering (offline-tested).
 # ---------------------------------------------------------------------------
+
+def resolve_catalog_format(engine: str, value: object = None) -> str:
+    """--catalog-format for this engine: default per engine, bind-only for BIND."""
+
+    if engine not in ENGINES:
+        raise bootstrap.BootstrapError("native primary engine must be bind or pdns")
+    if not isinstance(value, str):
+        value = None  # argparse default, or an absent/mock attribute
+    selected = DEFAULT_CATALOG_FORMAT[engine] if value is None else value
+    if selected not in CATALOG_FORMATS:
+        raise bootstrap.BootstrapError("catalog format must be bind or pdns-native")
+    if engine == "bind" and selected != "bind":
+        raise bootstrap.BootstrapError(
+            "a native BIND primary serves only the bind catalog format; "
+            "--catalog-format pdns-native needs --engine pdns"
+        )
+    return selected
+
 
 def check_pair(primary_ip: str, secondary_ip: str) -> tuple[str, str]:
     primary = ipaddress.IPv4Address(primary_ip)
@@ -263,30 +295,86 @@ def _sql_text(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
-def pdns_seed_sql(primary_ip: str, secondary_ip: str) -> str:
-    """Rows for two ordinary MASTER zones; notified_serial NULL forces NOTIFY."""
+def _record_inserts(zone: str, records: list[tuple[str, str, str, int]]) -> list[str]:
+    return [
+        "INSERT INTO records(domain_id,name,type,content,ttl,prio,disabled,auth) "
+        f"SELECT id,{_sql_text(name)},{_sql_text(kind)},{_sql_text(content)},"
+        f"{int(ttl)},0,0,1 FROM domains WHERE name={_sql_text(zone)};"
+        for name, kind, content, ttl in records
+    ]
+
+
+def pdns_seed_sql(primary_ip: str, secondary_ip: str, catalog_format: str = "bind") -> str:
+    """SQLite seed for the PowerDNS flavour; notified_serial NULL forces NOTIFY.
+
+    ``bind``: the catalog and the member as two ordinary MASTER zones, the
+    catalog with the explicit binddns.CatalogZoneRecords rows.
+
+    ``pdns-native``: the steps of a CelikPanel PowerDNS primary, in its order
+    (cmd/agent/dns_engine_pdns.go buildPDNSSwitchCandidateWithPrimaryCatalogSerial
+    then dns_engine_pdns_catalog.go reconcilePDNSBINDCatalogWithSeedModeTx):
+    the MASTER member zone and its records first; then the PRODUCER domain row
+    ``INSERT INTO domains (name, type, account) VALUES (?, 'PRODUCER', ?)``;
+    only its SOA and NS rows (canonicalPDNSCatalogBaseRecords, serial 1,
+    prio 0, disabled 0, auth 1); then ``UPDATE domains SET catalog = ? WHERE
+    name = ? COLLATE NOCASE AND UPPER(type) IN ('NATIVE','MASTER','PRIMARY')``
+    for the member. No domainmetadata row is written, as the product writes
+    none; the version TXT and member PTRs are PowerDNS's own output.
+    """
 
     check_pair(primary_ip, secondary_ip)
+    if catalog_format not in CATALOG_FORMATS:
+        raise bootstrap.BootstrapError("catalog format must be bind or pdns-native")
     catalog = probe.catalog_name(primary_ip)
     statements = ["BEGIN;"]
-    zones = (
-        (catalog, catalog_records(primary_ip)),
-        (ZONE, member_zone_records(primary_ip, secondary_ip)),
-    )
-    for zone, _records in zones:
-        statements.append(
-            "INSERT INTO domains(name,type,account) VALUES("
-            f"{_sql_text(zone)},'MASTER',{_sql_text(FIXTURE_ACCOUNT)});"
+    if catalog_format == "bind":
+        zones = (
+            (catalog, catalog_records(primary_ip)),
+            (ZONE, member_zone_records(primary_ip, secondary_ip)),
         )
-    for zone, records in zones:
-        for name, kind, content, ttl in records:
+        for zone, _records in zones:
             statements.append(
-                "INSERT INTO records(domain_id,name,type,content,ttl,prio,disabled,auth) "
-                f"SELECT id,{_sql_text(name)},{_sql_text(kind)},{_sql_text(content)},"
-                f"{int(ttl)},0,0,1 FROM domains WHERE name={_sql_text(zone)};"
+                "INSERT INTO domains(name,type,account) VALUES("
+                f"{_sql_text(zone)},'MASTER',{_sql_text(FIXTURE_ACCOUNT)});"
             )
+        for zone, records in zones:
+            statements += _record_inserts(zone, records)
+        statements.append("COMMIT;")
+        return "\n".join(statements) + "\n"
+    statements.append(
+        "INSERT INTO domains(name,type,account) VALUES("
+        f"{_sql_text(ZONE)},'MASTER',{_sql_text(FIXTURE_ACCOUNT)});"
+    )
+    statements += _record_inserts(ZONE, member_zone_records(primary_ip, secondary_ip))
+    statements.append(
+        "INSERT INTO domains(name,type,account) VALUES("
+        f"{_sql_text(catalog)},'PRODUCER',{_sql_text(FIXTURE_ACCOUNT)});"
+    )
+    statements += _record_inserts(catalog, pdns_producer_base_records(primary_ip))
+    members = catalog_members()
+    for member in members:
+        statements.append(
+            f"UPDATE domains SET catalog={_sql_text(catalog)} "
+            f"WHERE name={_sql_text(member)} COLLATE NOCASE "
+            "AND UPPER(type) IN ('NATIVE','MASTER','PRIMARY');"
+        )
+    # The product requires each update to change exactly one row. SQLite has
+    # no assertion statement; abs() of the smallest integer raises "integer
+    # overflow", which aborts the script before COMMIT (fail closed).
+    statements.append(
+        "SELECT CASE WHEN (SELECT COUNT(*) FROM domains WHERE catalog="
+        f"{_sql_text(catalog)})={len(members)} AND (SELECT COUNT(*) FROM domains "
+        f"WHERE UPPER(type)='PRODUCER' AND name={_sql_text(catalog)})=1 "
+        "THEN 1 ELSE abs(-9223372036854775808) END;"
+    )
     statements.append("COMMIT;")
     return "\n".join(statements) + "\n"
+
+
+def pdns_producer_base_records(primary_ip: str) -> list[tuple[str, str, str, int]]:
+    """canonicalPDNSCatalogBaseRecords: only the SOA and NS of CatalogZoneRecords."""
+
+    return [row for row in catalog_records(primary_ip) if row[1] in ("SOA", "NS")]
 
 
 # ---------------------------------------------------------------------------
@@ -425,7 +513,9 @@ def activation_command(node: str, engine: str, staged: dict[str, str], catalog: 
     return " && ".join(parts)
 
 
-def rendered_files(node: str, engine: str, primary_ip: str, secondary_ip: str) -> dict[str, str]:
+def rendered_files(node: str, engine: str, primary_ip: str, secondary_ip: str,
+                   catalog_format: str | None = None) -> dict[str, str]:
+    catalog_format = resolve_catalog_format(engine, catalog_format)
     if engine == "bind":
         return {
             "config": bind_primary_config(node, primary_ip, secondary_ip),
@@ -434,7 +524,7 @@ def rendered_files(node: str, engine: str, primary_ip: str, secondary_ip: str) -
         }
     return {
         "config": pdns_primary_config(node, primary_ip, secondary_ip),
-        "seed": pdns_seed_sql(primary_ip, secondary_ip),
+        "seed": pdns_seed_sql(primary_ip, secondary_ip, catalog_format),
     }
 
 
@@ -444,11 +534,12 @@ def rendered_files(node: str, engine: str, primary_ip: str, secondary_ip: str) -
 
 def prepare(args: argparse.Namespace) -> dict:
     node, primary_ip, secondary_ip, peer, identity = selected(args)
+    catalog_format = resolve_catalog_format(args.engine, getattr(args, "catalog_format", None))
     ssh = bootstrap.ssh_base(peer, identity)
     verify_peer_guest(ssh, args.cell_id, node, args.execute)
     bootstrap.run(ssh + [fresh_peer_check(node, args.engine)], execute=args.execute)
     catalog = probe.catalog_name(primary_ip)
-    files = rendered_files(node, args.engine, primary_ip, secondary_ip)
+    files = rendered_files(node, args.engine, primary_ip, secondary_ip, catalog_format)
     stage = bootstrap.stage_name(args.cell_id) + ".primary-peer."
     staged = {key: stage + key for key in files}
     bootstrap.run(ssh + [install_command(node, args.engine)], execute=args.execute)
@@ -473,6 +564,10 @@ def prepare(args: argparse.Namespace) -> dict:
         "primary_ip": primary_ip,
         "secondary_ip": secondary_ip,
         "catalog": catalog,
+        "catalog_format": catalog_format,
+        "catalog_producer": probe.CATALOG_FORMATS[catalog_format],
+        # Seeded serial; a PowerDNS PRODUCER maintains its own serial once it
+        # serves, so the served serial is taken from the observation.
         "catalog_serial": CATALOG_SERIAL,
         "catalog_members": catalog_members(),
         "management_installed_on_primary": False,
@@ -482,6 +577,7 @@ def prepare(args: argparse.Namespace) -> dict:
 
 def observe(args: argparse.Namespace) -> dict:
     node, primary_ip, secondary_ip, peer, identity = selected(args)
+    catalog_format = resolve_catalog_format(args.engine, getattr(args, "catalog_format", None))
     ssh = bootstrap.ssh_base(peer, identity)
     verify_peer_guest(ssh, args.cell_id, node, args.execute)
     layout = LAYOUTS[(node, args.engine)]
@@ -498,6 +594,8 @@ def observe(args: argparse.Namespace) -> dict:
     command = (
         f"sudo /usr/bin/python3 {remote_probe} --engine {args.engine}"
         f" --primary {primary_ip} --secondary {secondary_ip} --catalog {catalog}"
+        f" --catalog-format {catalog_format}"
+        + (f" --pdns-database {layout['database']}" if args.engine == "pdns" else "")
         + "".join(f" --config {path}" for path in configs)
         + (" --require-secondary-transfer" if args.require_secondary_transfer else "")
         + f"; status=$?; rm -f -- {remote_probe}; exit $status"
@@ -506,26 +604,49 @@ def observe(args: argparse.Namespace) -> dict:
     result = None
     if args.execute:
         result = json.loads(output)
-        if (result.get("schema") != "celikpanel/native-primary-peer-observation/v1"
-                or result.get("engine") != args.engine
-                or result.get("primary_ip") != primary_ip
-                or result.get("secondary_ip") != secondary_ip
-                or result.get("catalog") != catalog
-                or result.get("catalog_members") != catalog_members()):
-            raise bootstrap.BootstrapError("native primary observation differs from the fixture")
+        validate_observation(result, args.engine, primary_ip, secondary_ip, catalog,
+                             catalog_format)
     return {
         "action": "observe-native-primary-peer",
         "cell_id": args.cell_id,
         "engine": args.engine,
+        "catalog_format": catalog_format,
         "observation": result,
         "execute": args.execute,
     }
+
+
+def validate_observation(result: object, engine: str, primary_ip: str, secondary_ip: str,
+                         catalog: str, catalog_format: str) -> None:
+    """The probe's JSON names this fixture and the producer it was prepared with."""
+
+    if (not isinstance(result, dict)
+            or result.get("schema") != "celikpanel/native-primary-peer-observation/v1"
+            or result.get("engine") != engine
+            or result.get("primary_ip") != primary_ip
+            or result.get("secondary_ip") != secondary_ip
+            or result.get("catalog") != catalog
+            or result.get("catalog_members") != catalog_members()):
+        raise bootstrap.BootstrapError("native primary observation differs from the fixture")
+    producer = probe.CATALOG_FORMATS[catalog_format]
+    if (result.get("catalog_format") != catalog_format
+            or result.get("catalog_producer") != producer
+            or result.get("agent_catalog_format_name") != probe.AGENT_PRODUCER_NAMES[producer]):
+        raise bootstrap.BootstrapError(
+            f"native primary serves the catalog as {result.get('catalog_producer')!r}, "
+            f"not the prepared {catalog_format!r} format"
+        )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("prepare", "observe"))
     parser.add_argument("--engine", choices=ENGINES, required=True)
+    parser.add_argument(
+        "--catalog-format", choices=CATALOG_FORMATS, default=None,
+        help="catalog producer the peer serves: bind (BIND flavour's only format) or "
+             "pdns-native (PowerDNS PRODUCER catalog; default for --engine pdns)",
+    )
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--cell-id", required=True)
     parser.add_argument("--identity-file", type=Path, required=True)

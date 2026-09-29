@@ -124,16 +124,21 @@ def axfr_records(rows: list[tuple[str, str, str, int]]) -> list[bytes]:
     return [rr(*row) for row in soa + rest + soa]
 
 
+PDNS_SCHEMA = (
+    "CREATE TABLE domains(id INTEGER PRIMARY KEY, name TEXT UNIQUE, master TEXT, "
+    "last_check INTEGER, type TEXT, notified_serial INTEGER, account TEXT, "
+    "options TEXT, catalog TEXT);"
+    "CREATE TABLE records(id INTEGER PRIMARY KEY, domain_id INTEGER, name TEXT, "
+    "type TEXT, content TEXT, ttl INTEGER, prio INTEGER, disabled INTEGER, "
+    "ordername TEXT, auth INTEGER);"
+    "CREATE TABLE domainmetadata(id INTEGER PRIMARY KEY, domain_id INTEGER, kind TEXT, "
+    "content TEXT);"
+)
+
+
 def pdns_rows(seed: str, zone: str) -> list[tuple[str, str, str, int]]:
     db = sqlite3.connect(":memory:")
-    db.executescript(
-        "CREATE TABLE domains(id INTEGER PRIMARY KEY, name TEXT UNIQUE, master TEXT, "
-        "last_check INTEGER, type TEXT, notified_serial INTEGER, account TEXT, "
-        "options TEXT, catalog TEXT);"
-        "CREATE TABLE records(id INTEGER PRIMARY KEY, domain_id INTEGER, name TEXT, "
-        "type TEXT, content TEXT, ttl INTEGER, prio INTEGER, disabled INTEGER, "
-        "ordername TEXT, auth INTEGER);"
-    )
+    db.executescript(PDNS_SCHEMA)
     db.executescript(seed)
     domain = db.execute(
         "SELECT type, master, notified_serial, account, catalog FROM domains WHERE name=?", (zone,)
@@ -146,6 +151,14 @@ def pdns_rows(seed: str, zone: str) -> list[tuple[str, str, str, int]]:
     ).fetchall()
     db.close()
     return [tuple(row) for row in rows]
+
+
+def pdns_rows_any(db: sqlite3.Connection, zone: str) -> list[tuple[str, str, str, int]]:
+    return [tuple(row) for row in db.execute(
+        "SELECT r.name, r.type, r.content, r.ttl FROM records r JOIN domains d "
+        "ON r.domain_id=d.id WHERE d.name=? AND r.disabled=0 AND r.auth=1 ORDER BY r.id",
+        (zone,),
+    ).fetchall()]
 
 
 class CatalogFormatTest(unittest.TestCase):
@@ -214,9 +227,141 @@ class CatalogFormatTest(unittest.TestCase):
         self.assertEqual(probe.read_catalog_axfr_stream(framed(compressed), QUERY_ID, catalog),
                          (1, ["s1-kill.test"]))
 
+    def test_native_producer_seed_mirrors_the_product_steps(self) -> None:
+        for primary, secondary in (("192.0.2.10", "192.0.2.11"), ("192.0.2.11", "192.0.2.10")):
+            catalog = probe.catalog_name(primary)
+            seed = peer.pdns_seed_sql(primary, secondary, "pdns-native")
+            db = sqlite3.connect(":memory:")
+            db.executescript(PDNS_SCHEMA)
+            db.executescript(seed)
+            domains = db.execute(
+                "SELECT name, type, account, catalog, notified_serial FROM domains ORDER BY id"
+            ).fetchall()
+            # Member first, then the PRODUCER row, as the product orders them.
+            self.assertEqual(domains, [
+                ("s1-kill.test", "MASTER", peer.FIXTURE_ACCOUNT, catalog, None),
+                (catalog, "PRODUCER", peer.FIXTURE_ACCOUNT, None, None),
+            ])
+            rows = db.execute(
+                "SELECT r.name, r.type, r.content, r.ttl, r.prio, r.disabled, r.auth "
+                "FROM records r JOIN domains d ON r.domain_id = d.id WHERE d.name = ? "
+                "ORDER BY r.id", (catalog,)
+            ).fetchall()
+            # Only SOA and NS (canonicalPDNSCatalogBaseRecords); PowerDNS emits
+            # the version TXT and member PTRs itself.
+            self.assertEqual(rows, [
+                (catalog, "SOA", "invalid. invalid. 1 60 30 3600 30", 60, 0, 0, 1),
+                (catalog, "NS", "invalid.", 60, 0, 0, 1),
+            ])
+            self.assertEqual([row[:4] for row in rows], peer.pdns_producer_base_records(primary))
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM domainmetadata").fetchone(), (0,))
+            self.assertEqual(pdns_rows_any(db, "s1-kill.test"),
+                             peer.member_zone_records(primary, secondary))
+            self.assertNotIn("celikpanel-bind-catalog-v1", seed)
+            db.close()
+        # The guard statement aborts the script before COMMIT when the member
+        # update did not assign exactly one zone (the product's RowsAffected).
+        broken = peer.pdns_seed_sql("192.0.2.10", "192.0.2.11", "pdns-native").replace(
+            "WHERE name='s1-kill.test' COLLATE NOCASE", "WHERE name='absent.test' COLLATE NOCASE")
+        db = sqlite3.connect(":memory:")
+        db.executescript(PDNS_SCHEMA)
+        with self.assertRaises(sqlite3.Error):
+            db.executescript(broken)
+        db.close()
+        self.assertEqual(peer.pdns_seed_sql("192.0.2.10", "192.0.2.11"),
+                         peer.pdns_seed_sql("192.0.2.10", "192.0.2.11", "bind"))
+        with self.assertRaises(bootstrap.BootstrapError):
+            peer.pdns_seed_sql("192.0.2.10", "192.0.2.11", "knot")
+
+    def test_catalog_format_resolution_per_engine(self) -> None:
+        self.assertEqual(peer.resolve_catalog_format("pdns"), "pdns-native")
+        self.assertEqual(peer.resolve_catalog_format("pdns", "bind"), "bind")
+        self.assertEqual(peer.resolve_catalog_format("bind"), "bind")
+        self.assertEqual(peer.resolve_catalog_format("bind", mock.Mock()), "bind")
+        for engine, value in (("bind", "pdns-native"), ("pdns", "knot"), ("knot", None)):
+            with self.subTest(engine=engine, value=value), self.assertRaises(bootstrap.BootstrapError):
+                peer.resolve_catalog_format(engine, value)
+        self.assertEqual(probe.validate_catalog_format("pdns", "pdns-native"), probe.PRODUCER_POWERDNS)
+        with self.assertRaises(ValueError):
+            probe.validate_catalog_format("bind", "pdns-native")
+
+    def native_stream(self, catalog: str, serial: int = 1790542951, *,
+                      member_ttl: int = 0, version_ttl: int = 0,
+                      label: str = "lf5eijnqp9ob8kmq5mv0vhjaevtcfuus") -> bytes:
+        rows = [
+            (catalog, "SOA", f"invalid. invalid. {serial} 60 30 3600 30", 60),
+            (catalog, "NS", "invalid.", 60),
+            ("version." + catalog, "TXT", '"2"', version_ttl),
+            (label + ".zones." + catalog, "PTR", "s1-kill.test", member_ttl),
+        ]
+        return framed(message(catalog, axfr_records(rows)))
+
+    def test_peer_catalog_selection_matches_the_agent(self) -> None:
+        catalog = probe.catalog_name("192.0.2.11")
+        bind_stream = framed(message(catalog, axfr_records(peer.catalog_records("192.0.2.11"))))
+        native = self.native_stream(catalog)
+
+        def reader(stream: bytes):
+            calls: list[str] = []
+
+            def read(producer: str):
+                calls.append(producer)
+                return probe.read_catalog_axfr_stream(stream, QUERY_ID, catalog, producer)
+            return read, calls
+
+        read, calls = reader(bind_stream)
+        self.assertEqual(probe.select_peer_catalog(read, catalog),
+                         (1, ["s1-kill.test"], probe.PRODUCER_BIND))
+        self.assertEqual(calls, ["bind"])
+        read, calls = reader(native)
+        self.assertEqual(probe.select_peer_catalog(read, catalog),
+                         (1790542951, ["s1-kill.test"], probe.PRODUCER_POWERDNS))
+        self.assertEqual(calls, ["bind", "powerdns"])  # a fresh read per format
+        # A refusal common to both formats is never retried in the other one.
+        read, calls = reader(framed(message(catalog, axfr_records([
+            (catalog, "SOA", "invalid. invalid. 7 60 30 86400 30", 60),
+            (catalog, "NS", "invalid.", 60),
+            ("version." + catalog, "TXT", '"2"', 60),
+        ]))))
+        with self.assertRaisesRegex(probe.CatalogAXFRError, "timers"):
+            probe.select_peer_catalog(read, catalog)
+        self.assertEqual(calls, ["bind"])
+        # Format refusals in both formats name both reasons.
+        mixed = self.native_stream(catalog, member_ttl=60)
+        read, calls = reader(mixed)
+        with self.assertRaisesRegex(probe.CatalogAXFRError, "matches neither supported") as raised:
+            probe.select_peer_catalog(read, catalog)
+        self.assertIn("BIND format:", str(raised.exception))
+        self.assertIn("PowerDNS format:", str(raised.exception))
+        self.assertEqual(calls, ["bind", "powerdns"])
+        # A TTL other than 0 or 60 is a common refusal: not retried.
+        read, calls = reader(self.native_stream(catalog, version_ttl=61))
+        with self.assertRaises(probe.CatalogAXFRError) as raised:
+            probe.select_peer_catalog(read, catalog)
+        self.assertNotIsInstance(raised.exception, probe.CatalogAXFRFormatError)
+        self.assertEqual(calls, ["bind"])
+        # A member label of neither producer's shape is a common refusal.
+        read, calls = reader(framed(message(catalog, axfr_records([
+            (catalog, "SOA", "invalid. invalid. 3 60 30 3600 30", 60),
+            (catalog, "NS", "invalid.", 60),
+            ("version." + catalog, "TXT", '"2"', 60),
+            ("not-a-producer-label.zones." + catalog, "PTR", "s1-kill.test", 60),
+        ]))))
+        with self.assertRaises(probe.CatalogAXFRError):
+            probe.select_peer_catalog(read, catalog)
+        self.assertEqual(calls, ["bind"])
+        # A PowerDNS-shaped catalog refused in the PowerDNS format after a
+        # BIND format refusal (transport or content) still names both.
+        def flaky(producer: str):
+            if producer == probe.PRODUCER_BIND:
+                return probe.read_catalog_axfr_stream(native, QUERY_ID, catalog, producer)
+            raise OSError("connection reset")
+        with self.assertRaisesRegex(probe.CatalogAXFRError, "PowerDNS format: connection reset"):
+            probe.select_peer_catalog(flaky, catalog)
+
     def test_native_powerdns_producer_catalog_is_refused_by_the_secondary_policy(self) -> None:
         # Mirrors cmd/agent TestPowerDNSCatalogAXFRProducerIsExplicitAndBounded:
-        # this is why the PowerDNS flavour serves an ordinary MASTER catalog.
+        # one reader in one explicit format; select_peer_catalog tries both.
         catalog = probe.catalog_name("192.0.2.10")
         rows = [
             (catalog, "SOA", "invalid. invalid. 1790542951 60 30 3600 30", 60),
@@ -491,6 +636,49 @@ class ActionTest(unittest.TestCase):
                          "systemctl restart pdns.service"):
             self.assertIn(fragment, commands[3])
 
+    def test_observe_passes_the_catalog_format_and_checks_the_producer(self) -> None:
+        for engine, catalog_format, fragments in (
+            ("pdns", None, ("--catalog-format pdns-native",
+                            "--pdns-database /var/lib/powerdns/pdns.sqlite3")),
+            ("pdns", "bind", ("--catalog-format bind", "--pdns-database")),
+            ("bind", None, ("--catalog-format bind",)),
+        ):
+            with tempfile.TemporaryDirectory() as temporary, self.subTest(engine=engine):
+                args = self.args(temporary, PDNS_CELL, engine, False)
+                args.catalog_format = catalog_format
+                calls: list[list[str]] = []
+                with self.patched(args, PDNS_CELL), \
+                        mock.patch.object(bootstrap, "run",
+                                          side_effect=lambda c, execute: calls.append(c)), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    result = peer.observe(args)
+                command = calls[-1][-1]
+                for fragment in fragments:
+                    self.assertIn(fragment, command)
+                if engine == "bind":
+                    self.assertNotIn("--pdns-database", command)
+                self.assertEqual(result["catalog_format"], catalog_format or
+                                 peer.DEFAULT_CATALOG_FORMAT[engine])
+        catalog = probe.catalog_name("192.0.2.11")
+        good = {"schema": "celikpanel/native-primary-peer-observation/v1", "engine": "pdns",
+                "primary_ip": "192.0.2.11", "secondary_ip": "192.0.2.10", "catalog": catalog,
+                "catalog_members": ["s1-kill.test"], "catalog_format": "pdns-native",
+                "catalog_producer": "powerdns", "agent_catalog_format_name": "PowerDNS"}
+        peer.validate_observation(good, "pdns", "192.0.2.11", "192.0.2.10", catalog,
+                                  "pdns-native")
+        for bad in (dict(good, catalog_producer="bind"), dict(good, catalog_format="bind"),
+                    dict(good, agent_catalog_format_name="BIND"), dict(good, engine="bind")):
+            with self.subTest(bad=bad), self.assertRaises(bootstrap.BootstrapError):
+                peer.validate_observation(bad, "pdns", "192.0.2.11", "192.0.2.10", catalog,
+                                          "pdns-native")
+        with tempfile.TemporaryDirectory() as temporary:
+            args = self.args(temporary, PDNS_CELL, "bind", False)
+            args.catalog_format = "pdns-native"
+            with self.patched(args, PDNS_CELL), self.assertRaises(bootstrap.BootstrapError), \
+                    mock.patch.object(bootstrap, "run") as run:
+                peer.prepare(args)
+            run.assert_not_called()
+
     def test_dry_run_debian_primary_masks_package_defaults(self) -> None:
         for engine, units in (("bind", "named.service bind9.service"), ("pdns", "pdns.service")):
             result, calls = self.run_dry(ARCH_BIND_CELL, engine)
@@ -537,6 +725,58 @@ class ProbeTest(unittest.TestCase):
             probe.parse_rrset_response(raw + b"\x00", 7, "s1-kill.test", probe.DNS_TYPE_SOA)
         with self.assertRaises(ValueError):
             probe.parse_rrset_response(raw, 8, "s1-kill.test", probe.DNS_TYPE_SOA)
+
+    def test_probe_observation_names_and_requires_the_prepared_producer(self) -> None:
+        catalog = probe.catalog_name("192.0.2.11")
+        native = CatalogFormatTest().native_stream(catalog)
+
+        def axfr(address, name, timeout=8.0, producer=probe.PRODUCER_BIND):
+            return probe.read_catalog_axfr_stream(native, QUERY_ID, name, producer)
+
+        def rrset(address, name, qtype, *, tcp, timeout=4.0):
+            value = 1790542951 if name == catalog else (
+                2026083101 if qtype == probe.DNS_TYPE_SOA else "192.0.2.11")
+            return {"authoritative": True, "rcode": 0, "answers": 1, "values": [value]}
+
+        journal = ["AXFR-out zone '" + catalog + "', client '192.0.2.10:53001', transfer initiated",
+                   "AXFR-out zone 's1-kill.test', client '192.0.2.10:53002', transfer initiated"]
+        with mock.patch.object(probe, "unit_active", side_effect=lambda unit: unit == "pdns.service"), \
+                mock.patch.object(probe.os.path, "lexists", return_value=False), \
+                mock.patch.object(probe, "query_catalog_axfr", side_effect=axfr), \
+                mock.patch.object(probe, "query_rrset", side_effect=rrset), \
+                mock.patch.object(probe, "read_service_journal", return_value=journal), \
+                mock.patch.object(probe, "read_pdns_catalog_rows",
+                                  return_value={"read": True, "domains": []}) as rows:
+            result = probe.observe("pdns", "192.0.2.11", "192.0.2.10", catalog,
+                                   ["s1-kill.test"], [], True, catalog_format="pdns-native",
+                                   pdns_database="/var/lib/powerdns/pdns.sqlite3")
+            self.assertEqual((result["catalog_producer"], result["agent_catalog_format_name"],
+                              result["catalog_format"]),
+                             ("powerdns", "PowerDNS", "pdns-native"))
+            self.assertEqual(result["catalog_serial"], 1790542951)
+            self.assertTrue(all(result["transfers_to_secondary"].values()))
+            rows.assert_called_once_with("/var/lib/powerdns/pdns.sqlite3", catalog)
+            with self.assertRaisesRegex(ValueError, "--catalog-format bind"):
+                probe.observe("pdns", "192.0.2.11", "192.0.2.10", catalog, ["s1-kill.test"],
+                              [], False, catalog_format="bind")
+
+    def test_pdns_catalog_rows_are_read_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "pdns.sqlite3"
+            db = sqlite3.connect(path)
+            db.executescript(PDNS_SCHEMA)
+            db.executescript(peer.pdns_seed_sql("192.0.2.11", "192.0.2.10", "pdns-native"))
+            db.close()
+            before = path.read_bytes()
+            catalog = probe.catalog_name("192.0.2.11")
+            rows = probe.read_pdns_catalog_rows(str(path), catalog)
+            self.assertTrue(rows["read"])
+            self.assertIn([catalog, "PRODUCER", "", peer.FIXTURE_ACCOUNT], rows["domains"])
+            self.assertIn(["s1-kill.test", "MASTER", catalog, peer.FIXTURE_ACCOUNT],
+                          rows["domains"])
+            self.assertEqual(rows["catalog_metadata_kinds"], [])
+            self.assertEqual(path.read_bytes(), before)
+            self.assertFalse(probe.read_pdns_catalog_rows(str(Path(temporary) / "x"), catalog)["read"])
 
     def test_probe_identity_refusals(self) -> None:
         catalog = probe.catalog_name("192.0.2.11")

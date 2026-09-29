@@ -68,6 +68,16 @@ FRESH_BIND_SECONDARY_PHASES = EARLY_UNINITIALIZED_PHASES | frozenset({"target-ve
 FRESH_PDNS_SECONDARY_PHASES = PDNS_SWITCH_PHASES
 PAIRED_SECONDARY_DRIVERS = frozenset({"bind", "pdns-switch"})
 PEER_ENGINES = ("bind", "pdns")
+# Catalog producer the native primary peer serves (native_primary_peer.py
+# --catalog-format). A PowerDNS peer defaults to its native PRODUCER catalog,
+# which is what a real PowerDNS primary, a CelikPanel one included, publishes.
+PEER_CATALOG_FORMATS = ("bind", "pdns-native")
+DEFAULT_PEER_CATALOG_FORMAT = {"bind": "bind", "pdns": "pdns-native"}
+# The Agent logs the accepted peer catalog format once per operation; the
+# controller judges that line against the format the host prepared.
+PEER_CATALOG_BIND_FLAG = "--peer-catalog-format-bind"
+PEER_CATALOG_PDNS_FLAG = "--peer-catalog-format-pdns-native"
+PEER_CATALOG_FLAGS = {"bind": PEER_CATALOG_BIND_FLAG, "pdns-native": PEER_CATALOG_PDNS_FLAG}
 SECONDARY_LOCAL_NS = "ns2.s1-kill.test"
 SECONDARY_PEER_NS = "ns1.s1-kill.test"
 PRIMARY_MEMBER_SOA_SERIAL = 2026083101
@@ -129,22 +139,38 @@ OWNER_INVERSE_ADMISSIONS = {
         ("managed-pdns", "managed-pdns-required", False),
     "bind__rolling-back__after-write__standalone__peer-reachable":
         ("owner-bind", "driver-specific", True),
-    "pdns-adopt__rolled-back__after-write__standalone__peer-reachable":
-        ("external-pdns-adoption", "driver-specific", False),
 }
 OWNER_INVERSE_CELLS = frozenset(OWNER_INVERSE_ADMISSIONS)
+# The PowerDNS -> BIND switch cells (managed PowerDNS source, V2 journal).
+V2_SWITCH_OWNER_CELLS = frozenset(
+    cell_id for cell_id, admission in OWNER_INVERSE_ADMISSIONS.items()
+    if admission[0] == "managed-pdns"
+)
 # Row 13 with a running Agent: the Agent rolls back by itself at restart and
 # the same request converges forward on rpc-retry; no owner command applies.
+# Since 3cc2de22 the restarted Agent also finishes a V1 adoption journal that
+# is already at rolled-back (re-proof, no effect, verdict, journal retired),
+# so that cut belongs here and no longer to the owner-inverse flow.
 STARTUP_ROLLBACK_FLAG = "--expect-agent-startup-rollback"
+PDNS_ADOPTION_ROLLED_BACK_CELL = (
+    "pdns-adopt__rolled-back__after-write__standalone__peer-reachable"
+)
 STARTUP_ROLLBACK_CELLS = frozenset({
     "pdns-adopt__intent__after-write__standalone__peer-reachable",
     "pdns-adopt__rolling-back__after-write__standalone__peer-reachable",
+    PDNS_ADOPTION_ROLLED_BACK_CELL,
 })
+# After a passed V2 owner rollback (and an optional reboot), request the same
+# switch again as a NEW request; it must complete forward.
+RETRY_SWITCH_FLAG = "--retry-switch-after-rollback"
 # Reboot during recovery. The controller exits REBOOT_REQUESTED_EXIT after it
 # persisted a checkpoint; run-prepared reboots exactly this guest through
 # fixture.reboot_guest and runs the prepared argv again with RESUME_FLAG.
 REBOOT_BEFORE_OWNER_FLAG = "--reboot-before-owner-command"
 REBOOT_AFTER_RECOVERY_FLAG = "--reboot-after-recovery"
+# Diagnostic only: reboot after recovery even when the pre-reboot verdict is
+# not a complete pass; the post-reboot state is recorded with judged: false.
+REBOOT_EVEN_IF_FAILED_FLAG = "--reboot-even-if-failed"
 # Stop and disable the Panel and Agent units before the after-recovery reboot;
 # the DNS daemon must then serve alone and the second window judges only DNS.
 DISABLE_MANAGEMENT_FLAG = "--disable-management-before-reboot"
@@ -156,8 +182,12 @@ PREPARED_FLAG_ORDER = (
     LATER_BIND_ROLLBACK_FLAG,
     OWNER_INVERSE_FLAG,
     STARTUP_ROLLBACK_FLAG,
+    PEER_CATALOG_BIND_FLAG,
+    PEER_CATALOG_PDNS_FLAG,
+    RETRY_SWITCH_FLAG,
     REBOOT_BEFORE_OWNER_FLAG,
     REBOOT_AFTER_RECOVERY_FLAG,
+    REBOOT_EVEN_IF_FAILED_FLAG,
     DISABLE_MANAGEMENT_FLAG,
     RESUME_FLAG,
 )
@@ -211,11 +241,16 @@ handoff = "--stop-after-kill-for-independent-recovery"
 later = "--bind-rollback-after-target-started"
 owner = "--owner-inverse-after-restart"
 startup = "--expect-agent-startup-rollback"
+peer_bind = "--peer-catalog-format-bind"
+peer_pdns = "--peer-catalog-format-pdns-native"
+retry = "--retry-switch-after-rollback"
 reboot_before = "--reboot-before-owner-command"
 reboot_after = "--reboot-after-recovery"
+even_if_failed = "--reboot-even-if-failed"
 disable = "--disable-management-before-reboot"
 resume = "--resume-after-reboot"
-order = [handoff, later, owner, startup, reboot_before, reboot_after, disable, resume]
+order = [handoff, later, owner, startup, peer_bind, peer_pdns, retry, reboot_before,
+         reboot_after, even_if_failed, disable, resume]
 if (len(sys.argv) < 2 or len(set(flags)) != len(flags)
         or any(flag not in order for flag in flags)
         or flags != [flag for flag in order if flag in flags]):
@@ -230,6 +265,7 @@ handoff_cells = {
 }
 owner_cells = set(@OWNER_CELLS@)
 startup_cells = set(@STARTUP_CELLS@)
+retry_cells = set(@RETRY_CELLS@)
 if owner in chosen:
     if (cell not in owner_cells or handoff in chosen or startup in chosen
             or (later in chosen) != (cell == bind_handoff)):
@@ -240,10 +276,17 @@ if later in chosen and (cell != bind_handoff or not chosen & {handoff, owner}):
     raise SystemExit("later BIND rollback requires the exact handoff cell")
 if startup in chosen and (cell not in startup_cells or handoff in chosen):
     raise SystemExit("agent startup rollback is not valid for prepared cell")
+if chosen & {peer_bind, peer_pdns} and (
+        "__paired-secondary__" not in cell or {peer_bind, peer_pdns} <= chosen):
+    raise SystemExit("one peer catalog format applies only to a paired-secondary cell")
+if retry in chosen and (owner not in chosen or cell not in retry_cells):
+    raise SystemExit("retry after rollback requires the owner inverse flow of a V2 switch cell")
 if reboot_before in chosen and owner not in chosen:
     raise SystemExit("reboot before the owner command requires the owner inverse flow")
 if chosen & {reboot_before, reboot_after} and handoff in chosen:
     raise SystemExit("reboot steps exclude the independent handoff")
+if even_if_failed in chosen and reboot_after not in chosen:
+    raise SystemExit("rebooting after a failed flow requires the after-recovery reboot")
 if disable in chosen and (reboot_after not in chosen or owner in chosen):
     raise SystemExit("disabling management requires the after-recovery reboot of the rpc-retry flow")
 if resume in chosen and not chosen & {reboot_before, reboot_after}:
@@ -267,6 +310,8 @@ os.execv(argv[0], argv)
     "@OWNER_CELLS@", repr(sorted(OWNER_INVERSE_CELLS))
 ).replace(
     "@STARTUP_CELLS@", repr(sorted(STARTUP_ROLLBACK_CELLS))
+).replace(
+    "@RETRY_CELLS@", repr(sorted(V2_SWITCH_OWNER_CELLS))
 )
 
 class BootstrapError(RuntimeError):
@@ -1144,6 +1189,17 @@ def write_recovery_kit(runtime: Path, target: Path) -> None:
         archive.add(runtime, arcname="recovery-runtime", filter=root_owned)
 
 
+def validate_enrollment_cell(cell: dict[str, Any], node: str, source_fixture: str) -> None:
+    """Any supported standalone cell may carry the recovery runtime."""
+
+    if cell.get("role") != "standalone":
+        raise BootstrapError(
+            "enroll-recovery-runtime applies to standalone cells (only the kill guest "
+            f"is enrolled); {cell.get('id')} is {cell.get('role')}"
+        )
+    validate_supported_cell(cell, node, source_fixture)
+
+
 def enroll_recovery_runtime(args: argparse.Namespace) -> None:
     """Select the built recovery runtime in the guest, as the 2026-09-27 trial did.
 
@@ -1152,12 +1208,22 @@ def enroll_recovery_runtime(args: argparse.Namespace) -> None:
     source inverse and, for the running-BIND adoption cell, the BIND adoption
     inverse. recover-dns-pdns-adoption has no capability probe; for it the BIND
     source marker only shows that the enrolled runtime is the selected one.
-    Dry-run unless --execute.
+
+    Admitted for every supported STANDALONE cell, because an installed server
+    always has the recovery launcher; the socket-recovery flows then record the
+    read-only `recovery dns-switch-status` before and after recovery. The
+    adoption capability is additionally required only for the running-BIND
+    adoption cell with its owner-bind fixture. Dry-run unless --execute.
     """
 
     _, cell, node = load_plan(args)
-    validate_owner_inverse_cell(cell, args.node, args.source_fixture)
-    adoption = OWNER_INVERSE_ADMISSIONS[cell["id"]][0] == "owner-bind"
+    validate_enrollment_cell(cell, args.node, args.source_fixture)
+    admission = OWNER_INVERSE_ADMISSIONS.get(cell["id"])
+    adoption = (
+        admission is not None
+        and admission[0] == "owner-bind"
+        and args.source_fixture == "owner-bind"
+    )
     runtime = validate_recovery_runtime_dir(args.recovery_runtime)
     identity = identity_file(args.identity_file)
     stage = stage_name(args.cell_id)
@@ -1257,9 +1323,43 @@ def require_peer_engine(cell: dict[str, Any], peer_engine: Any) -> str | None:
     return None
 
 
-def peer_namespace(args: argparse.Namespace, engine: str, *, require_transfer: bool) -> argparse.Namespace:
+def require_peer_catalog_format(
+    cell: dict[str, Any], peer_engine: str | None, value: Any
+) -> str | None:
+    """--peer-catalog-format: paired-secondary only; default per peer engine.
+
+    A BIND peer serves only the bind format. A PowerDNS peer defaults to
+    pdns-native (its own PRODUCER catalog); bind stays selectable so both
+    producers can be run against a PowerDNS primary.
+    """
+
+    if not isinstance(value, str):
+        value = None  # argparse default (or an absent attribute)
+    if peer_engine is None:
+        if value is not None:
+            raise BootstrapError(
+                "--peer-catalog-format applies only to paired-secondary cells "
+                "(with --peer-engine)"
+            )
+        return None
+    selected = DEFAULT_PEER_CATALOG_FORMAT[peer_engine] if value is None else value
+    if selected not in PEER_CATALOG_FORMATS:
+        raise BootstrapError("--peer-catalog-format must be bind or pdns-native")
+    if peer_engine == "bind" and selected != "bind":
+        raise BootstrapError(
+            "a native BIND primary peer serves only the bind catalog format; "
+            "--peer-catalog-format pdns-native needs --peer-engine pdns. Nothing was prepared"
+        )
+    return selected
+
+
+def peer_namespace(
+    args: argparse.Namespace, engine: str, *, require_transfer: bool,
+    catalog_format: str | None = None,
+) -> argparse.Namespace:
     return argparse.Namespace(
         engine=engine,
+        catalog_format=catalog_format,
         work_root=args.work_root,
         cell_id=args.cell_id,
         identity_file=args.identity_file,
@@ -1300,24 +1400,30 @@ def read_peer_evidence(plan: dict[str, Any], name: str) -> Any:
 
 
 def prepare_native_primary_peer(
-    args: argparse.Namespace, plan: dict[str, Any], engine: str
+    args: argparse.Namespace, plan: dict[str, Any], engine: str,
+    catalog_format: str | None = None,
 ) -> None:
     """Run native_primary_peer.py prepare, then a baseline observe, on the peer.
 
     Order from PAIRED-SECONDARY-FIXTURE.md: the native primary must serve and
     NOTIFY/AXFR before the guest's secondary install starts. Its observation
-    here cannot show a transfer yet (the guest has no secondary).
+    here cannot show a transfer yet (the guest has no secondary). The catalog
+    format the peer serves is recorded; run-prepared must use the same one.
     """
 
     import native_primary_peer  # noqa: PLC0415 - imports this module
 
-    prepared = native_primary_peer.prepare(peer_namespace(args, engine, require_transfer=False))
+    catalog_format = catalog_format or DEFAULT_PEER_CATALOG_FORMAT[engine]
+    prepared = native_primary_peer.prepare(peer_namespace(
+        args, engine, require_transfer=False, catalog_format=catalog_format))
     print(json.dumps(prepared, sort_keys=True))
-    observed = native_primary_peer.observe(peer_namespace(args, engine, require_transfer=False))
+    observed = native_primary_peer.observe(peer_namespace(
+        args, engine, require_transfer=False, catalog_format=catalog_format))
     print(json.dumps(observed, sort_keys=True))
     write_peer_evidence(
         plan, "peer-prepared.json",
-        {"engine": engine, "cell_id": args.cell_id, "prepare": prepared, "observe": observed},
+        {"engine": engine, "catalog_format": catalog_format, "cell_id": args.cell_id,
+         "prepare": prepared, "observe": observed},
         execute=args.execute,
     )
 
@@ -1325,6 +1431,9 @@ def prepare_native_primary_peer(
 def prepare(args: argparse.Namespace) -> None:
     plan, cell, node = load_plan(args)
     peer_engine = require_peer_engine(cell, getattr(args, "peer_engine", None))
+    peer_catalog_format = require_peer_catalog_format(
+        cell, peer_engine, getattr(args, "peer_catalog_format", None)
+    )
     if args.action == "prepare-bind":
         validate_bind_cell(cell, args.node, args.source_fixture)
         scenario = bind_scenario(
@@ -1356,7 +1465,7 @@ def prepare(args: argparse.Namespace) -> None:
     identity_guest = trigger_command[5]
     if peer_engine is not None:
         # The native primary must serve before the guest's secondary install.
-        prepare_native_primary_peer(args, plan, peer_engine)
+        prepare_native_primary_peer(args, plan, peer_engine, peer_catalog_format)
     with tempfile.TemporaryDirectory(prefix="celikpanel-s1-scenario-") as temporary:
         temporary_path = Path(temporary)
         scenario_path = temporary_path / "scenario.json"
@@ -1419,6 +1528,7 @@ def prepare(args: argparse.Namespace) -> None:
                         else None
                     ),
                     "native_primary_peer_engine": peer_engine,
+                    "native_primary_peer_catalog_format": peer_catalog_format,
                     "source_adoption_proof": (
                         "/var/lib/celikpanel-dns-kill-matrix/source-adoption-pdns.json"
                         if args.source_fixture == "managed-pdns"
@@ -1473,6 +1583,13 @@ def validate_owner_inverse_cell(
     boundary = cell.get("boundary", {})
     phase = boundary.get("phase")
     edge = boundary.get("edge")
+    if cell.get("id") in STARTUP_ROLLBACK_CELLS:
+        raise BootstrapError(
+            f"{cell.get('id')} is not an owner-inverse cell: the restarted Agent "
+            "rolls this PowerDNS adoption back and retires the journal by itself "
+            f"(since 3cc2de22 also from rolled-back); run it with {STARTUP_ROLLBACK_FLAG}. "
+            "Nothing was started"
+        )
     if admission is None or not isinstance(edge, str):
         raise BootstrapError(
             "owner inverse after restart requires an admitted Debian standalone cell: "
@@ -1528,7 +1645,9 @@ def refuse_v2_managed_pdns_without_owner_flow(
     )
 
 
-def prepared_flags(args: argparse.Namespace) -> list[str]:
+def prepared_flags(
+    args: argparse.Namespace, peer_catalog_format: str | None = None
+) -> list[str]:
     """The guest-program flags of this run, in PREPARED_FLAG_ORDER."""
 
     selected = {
@@ -1536,8 +1655,12 @@ def prepared_flags(args: argparse.Namespace) -> list[str]:
         LATER_BIND_ROLLBACK_FLAG: getattr(args, "bind_rollback_after_target_started", False) is True,
         OWNER_INVERSE_FLAG: getattr(args, "owner_inverse_after_restart", False) is True,
         STARTUP_ROLLBACK_FLAG: getattr(args, "expect_agent_startup_rollback", False) is True,
+        PEER_CATALOG_BIND_FLAG: peer_catalog_format == "bind",
+        PEER_CATALOG_PDNS_FLAG: peer_catalog_format == "pdns-native",
+        RETRY_SWITCH_FLAG: getattr(args, "retry_switch_after_rollback", False) is True,
         REBOOT_BEFORE_OWNER_FLAG: getattr(args, "reboot_before_owner_command", False) is True,
         REBOOT_AFTER_RECOVERY_FLAG: getattr(args, "reboot_after_recovery", False) is True,
+        REBOOT_EVEN_IF_FAILED_FLAG: getattr(args, "reboot_even_if_failed", False) is True,
         DISABLE_MANAGEMENT_FLAG: (
             getattr(args, "disable_management_before_reboot", False) is True
         ),
@@ -1637,6 +1760,17 @@ def run_prepared(args: argparse.Namespace) -> int:
         )
     if reboot_before and not owner_inverse:
         raise BootstrapError(f"{REBOOT_BEFORE_OWNER_FLAG} requires {OWNER_INVERSE_FLAG}")
+    retry_switch = getattr(args, "retry_switch_after_rollback", False) is True
+    if retry_switch and not (owner_inverse and args.cell_id in V2_SWITCH_OWNER_CELLS):
+        raise BootstrapError(
+            f"{RETRY_SWITCH_FLAG} applies only to the PowerDNS -> BIND switch cells "
+            f"with {OWNER_INVERSE_FLAG}: " + ", ".join(sorted(V2_SWITCH_OWNER_CELLS))
+            + ". Nothing was started"
+        )
+    if getattr(args, "reboot_even_if_failed", False) is True and not reboot_after:
+        raise BootstrapError(
+            f"{REBOOT_EVEN_IF_FAILED_FLAG} requires {REBOOT_AFTER_RECOVERY_FLAG}"
+        )
     disable_management = getattr(args, "disable_management_before_reboot", False) is True
     if disable_management and (not reboot_after or owner_inverse):
         raise BootstrapError(
@@ -1655,12 +1789,15 @@ def run_prepared(args: argparse.Namespace) -> int:
             "without the independent handoff"
         )
     peer_engine = require_peer_engine(cell, getattr(args, "peer_engine", None))
+    peer_catalog_format = require_peer_catalog_format(
+        cell, peer_engine, getattr(args, "peer_catalog_format", None)
+    )
     refuse_v2_managed_pdns_without_owner_flow(
         cell, args.source_fixture, owner_inverse,
         bool(args.stop_after_kill_for_independent_recovery is True),
     )
     identity = identity_file(args.identity_file)
-    flags = prepared_flags(args)
+    flags = prepared_flags(args, peer_catalog_format)
     command = ssh_base(node, identity) + [prepared_remote(args.cell_id, flags)]
     reboots_allowed = int(reboot_before) + int(reboot_after)
     resume_command = (
@@ -1673,6 +1810,7 @@ def run_prepared(args: argparse.Namespace) -> int:
             print(json.dumps({
                 "before_controller": "native_primary_peer.py observe",
                 "engine": peer_engine,
+                "catalog_format": peer_catalog_format,
                 "require_secondary_transfer": False,
                 "evidence": f"{PEER_EVIDENCE_DIRECTORY}/peer-before-kill.json",
             }))
@@ -1692,13 +1830,16 @@ def run_prepared(args: argparse.Namespace) -> int:
             print(json.dumps({
                 "after_controller": "native_primary_peer.py observe",
                 "engine": peer_engine,
+                "catalog_format": peer_catalog_format,
                 "require_secondary_transfer": True,
                 "evidence": f"{PEER_EVIDENCE_DIRECTORY}/peer-verdict.json",
             }))
         return 0
     peer_before: dict[str, Any] | None = None
     if peer_engine is not None:
-        peer_before = observe_peer_before_controller(args, plan, peer_engine)
+        peer_before = observe_peer_before_controller(
+            args, plan, peer_engine, peer_catalog_format
+        )
     returncode = subprocess.run(command, check=False).returncode
     reboots = 0
     while returncode == REBOOT_REQUESTED_EXIT and resume_command is not None:
@@ -1716,36 +1857,51 @@ def run_prepared(args: argparse.Namespace) -> int:
         reboots += 1
         returncode = subprocess.run(resume_command, check=False).returncode
     if peer_engine is not None:
-        return finish_peer_verdict(args, plan, peer_engine, peer_before, returncode)
+        return finish_peer_verdict(
+            args, plan, peer_engine, peer_before, returncode, peer_catalog_format
+        )
     return returncode
 
 
 def observe_peer_before_controller(
-    args: argparse.Namespace, plan: dict[str, Any], engine: str
+    args: argparse.Namespace, plan: dict[str, Any], engine: str,
+    catalog_format: str | None = None,
 ) -> dict[str, Any] | None:
     """Peer baseline right before the controller (the guest is not a secondary yet)."""
 
     import native_primary_peer  # noqa: PLC0415 - imports this module
 
+    catalog_format = catalog_format or DEFAULT_PEER_CATALOG_FORMAT[engine]
     prepared = read_peer_evidence(plan, "peer-prepared.json")
     if not isinstance(prepared, dict) or prepared.get("engine") != engine:
         raise BootstrapError(
             f"the native primary peer was prepared as {prepared.get('engine') if isinstance(prepared, dict) else None!r}, "
             f"not {engine!r}; run-prepared must use the prepared --peer-engine. Nothing was started"
         )
-    observed = native_primary_peer.observe(peer_namespace(args, engine, require_transfer=False))
+    # Evidence written before --peer-catalog-format existed was always bind.
+    prepared_format = prepared.get("catalog_format", "bind")
+    if prepared_format != catalog_format:
+        raise BootstrapError(
+            f"the native primary peer was prepared with --peer-catalog-format "
+            f"{prepared_format}, not {catalog_format}; run-prepared must use the "
+            "prepared --peer-catalog-format. Nothing was started"
+        )
+    observed = native_primary_peer.observe(peer_namespace(
+        args, engine, require_transfer=False, catalog_format=catalog_format))
     write_peer_evidence(plan, "peer-before-kill.json", observed, execute=True)
     return observed.get("observation")
 
 
 def _peer_observation_or_error(
-    args: argparse.Namespace, engine: str, *, require_transfer: bool
+    args: argparse.Namespace, engine: str, *, require_transfer: bool,
+    catalog_format: str | None = None,
 ) -> tuple[dict[str, Any] | None, str | None]:
     import native_primary_peer  # noqa: PLC0415 - imports this module
 
     try:
         observed = native_primary_peer.observe(
-            peer_namespace(args, engine, require_transfer=require_transfer)
+            peer_namespace(args, engine, require_transfer=require_transfer,
+                           catalog_format=catalog_format)
         )
     except (BootstrapError, fixture.FixtureError, OSError, ValueError, KeyError,
             json.JSONDecodeError, subprocess.SubprocessError) as exc:
@@ -1753,17 +1909,22 @@ def _peer_observation_or_error(
     return observed.get("observation"), None
 
 
+PEER_PRODUCER_FOR_FORMAT = {"bind": "bind", "pdns-native": "powerdns"}
+
+
 def judge_peer_observations(
     before: dict[str, Any] | None,
     after: dict[str, Any] | None,
     required_transfer_passed: bool,
+    catalog_format: str | None = None,
 ) -> dict[str, Any]:
     """Peer half of the paired-secondary pass definition (pure; offline-tested).
 
     Verified failures: the after-recovery observation shows no logged transfer
-    of the catalog or the member to this guest, or the peer's native config
-    digests, catalog serial/members or member SOA changed across the run.
-    Unknown: an observation that could not be taken.
+    of the catalog or the member to this guest; the peer serves its catalog in
+    another producer format than the one prepared (``catalog_format``); or the
+    peer's native config digests, catalog producer, serial/members or member
+    SOA changed across the run. Unknown: an observation that could not be taken.
     """
 
     failures: list[str] = []
@@ -1773,6 +1934,16 @@ def judge_peer_observations(
     if after is None:
         unknown.append("no peer observation after recovery")
     else:
+        if catalog_format is not None:
+            expected = PEER_PRODUCER_FOR_FORMAT[catalog_format]
+            served = after.get("catalog_producer")
+            if served is None:
+                unknown.append("the peer observation does not name its catalog producer")
+            elif served != expected:
+                failures.append(
+                    f"the native primary serves its catalog as {served!r}, not the "
+                    f"prepared {catalog_format!r} format"
+                )
         transfers = after.get("transfers_to_secondary")
         if not isinstance(transfers, dict) or not transfers:
             unknown.append("peer observation has no transfer record")
@@ -1788,7 +1959,8 @@ def judge_peer_observations(
                     "--require-secondary-transfer did not pass although transfers were logged"
                 )
     if before is not None and after is not None:
-        for key in ("config_sha256", "catalog_serial", "catalog_members", "member_soa", "www_a"):
+        for key in ("config_sha256", "catalog_producer", "catalog_serial", "catalog_members",
+                    "member_soa", "www_a"):
             if before.get(key) != after.get(key):
                 failures.append(
                     f"peer {key} changed across the run: {before.get(key)!r} -> {after.get(key)!r}"
@@ -1818,20 +1990,26 @@ def finish_peer_verdict(
     engine: str,
     before: dict[str, Any] | None,
     guest_returncode: int,
+    catalog_format: str | None = None,
 ) -> int:
-    after, error = _peer_observation_or_error(args, engine, require_transfer=True)
+    catalog_format = catalog_format or DEFAULT_PEER_CATALOG_FORMAT[engine]
+    after, error = _peer_observation_or_error(
+        args, engine, require_transfer=True, catalog_format=catalog_format)
     required_passed = error is None
     after_error = None
     if after is None:
         # The strict probe failed; take one read-only observation without the
         # requirement so a missing transfer (failed) is told apart from an
         # unreachable peer (unknown).
-        after, after_error = _peer_observation_or_error(args, engine, require_transfer=False)
-    verdict = judge_peer_observations(before, after, required_passed)
+        after, after_error = _peer_observation_or_error(
+            args, engine, require_transfer=False, catalog_format=catalog_format)
+    verdict = judge_peer_observations(before, after, required_passed, catalog_format)
     record = {
         "schema": "celikpanel/dns-kill-paired-secondary-peer-verdict/v1",
         "cell_id": args.cell_id,
         "peer_engine": engine,
+        "peer_catalog_format": catalog_format,
+        "peer_catalog_producer_expected": PEER_PRODUCER_FOR_FORMAT[catalog_format],
         "guest_controller_exit": guest_returncode,
         "require_secondary_transfer": {"passed": required_passed, "error": error},
         "observation_error": after_error,
@@ -1840,8 +2018,9 @@ def finish_peer_verdict(
         **verdict,
         "combined_exit": combine_paired_secondary_exit(guest_returncode, verdict["status"]),
         "note": (
-            "The peer serves the catalog in the BIND producer format; a PowerDNS primary "
-            "publishing its native PRODUCER catalog is not what this cell tests."
+            "The peer serves the catalog in the format named by peer_catalog_format "
+            "(pdns-native: PowerDNS's own PRODUCER catalog). The guest controller "
+            "separately judges that the Agent logged accepting that same format."
         ),
     }
     write_peer_evidence(plan, "peer-verdict.json", record, execute=True)
@@ -1872,6 +2051,14 @@ def common_parser(parser: argparse.ArgumentParser) -> None:
         help=(
             "paired-secondary cells only: flavour of the panel-free native primary "
             "peer (native_primary_peer.py --engine)"
+        ),
+    )
+    parser.add_argument(
+        "--peer-catalog-format", choices=PEER_CATALOG_FORMATS, default=None,
+        help=(
+            "paired-secondary cells only: catalog producer the native primary peer "
+            "serves (native_primary_peer.py --catalog-format); default bind for a "
+            "BIND peer and pdns-native for a PowerDNS peer"
         ),
     )
     parser.add_argument("--execute", action="store_true")
@@ -1907,8 +2094,24 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     current.add_argument(LATER_BIND_ROLLBACK_FLAG, action="store_true")
     current.add_argument(OWNER_INVERSE_FLAG, action="store_true")
     current.add_argument(STARTUP_ROLLBACK_FLAG, action="store_true")
+    current.add_argument(
+        RETRY_SWITCH_FLAG, action="store_true",
+        help=(
+            f"with {OWNER_INVERSE_FLAG} on a PowerDNS -> BIND switch cell: after a "
+            "passed rollback (and optional reboot) request the same switch again as a "
+            "new request; it must complete forward"
+        ),
+    )
     current.add_argument(REBOOT_BEFORE_OWNER_FLAG, action="store_true")
     current.add_argument(REBOOT_AFTER_RECOVERY_FLAG, action="store_true")
+    current.add_argument(
+        REBOOT_EVEN_IF_FAILED_FLAG, action="store_true",
+        help=(
+            f"with {REBOOT_AFTER_RECOVERY_FLAG}: reboot even when the pre-reboot verdict "
+            "is not a complete pass, as a diagnostic; the post-reboot state is recorded "
+            "with judged: false and never turns a failure into a pass"
+        ),
+    )
     current.add_argument(
         DISABLE_MANAGEMENT_FLAG, action="store_true",
         help=(

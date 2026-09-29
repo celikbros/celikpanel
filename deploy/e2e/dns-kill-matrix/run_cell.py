@@ -113,9 +113,11 @@ OWNER_INVERSE_PROFILES = {
         journal_schema=BIND_HANDOFF_JOURNAL_SCHEMA, ledger_target="bind",
         source_engine="bind", source_pid_change_fails=True,
     ),
-    # External PowerDNS adoption (V1). The Agent runs this inverse itself at
-    # restart except from rolled-back, where its restored-source proof demands
-    # rolling-back; that cut is the one deterministic owner path.
+    # External PowerDNS adoption (V1). Since 3cc2de22 the restarted Agent runs
+    # this inverse itself from every cut, rolled-back included (re-proof, no
+    # effect, verdict, journal retired), so no cell is admitted to the owner
+    # flow with this profile any more; the profile stays as the description of
+    # the owner command for a host whose Agent re-proof fails.
     "pdns-adoption-v1": OwnerInverseProfile(
         name="pdns-adoption-v1", driver="pdns-adopt",
         source_fixture="external-pdns-adoption",
@@ -192,21 +194,43 @@ OWNER_INVERSE_ADMISSIONS = dict(
         # with the adoption configuration before the in-process rollback).
         _admission("bind-adoption-v2", "bind", "rolling-back", "after-write", "reachable",
                    "driver-specific", "pre-start", later=True),
-        # V1 external PowerDNS adoption, rolled-back:after-write.
-        _admission("pdns-adoption-v1", "pdns-adopt", "rolled-back", "after-write",
-                   "reachable", "driver-specific", "pre-start", step2="rolled-back"),
     )
 )
 OWNER_INVERSE_CELLS = frozenset(OWNER_INVERSE_ADMISSIONS)
 # Row 13 with a running Agent: from these cuts the restarted Agent runs the V1
 # adoption inverse itself and the same request converges forward on rpc-retry;
-# no owner command applies (--expect-agent-startup-rollback).
+# no owner command applies (--expect-agent-startup-rollback). The rolled-back
+# after-write cut joined with 3cc2de22: the Agent re-proves the restored source
+# (pdnsAdoptionEvidenceRolledBack), restores nothing, publishes the verdict and
+# retires the journal. The batch run of 2026-09-29 on 8f86bdad exercised the
+# OLD behaviour (Agent refusal, owner command) for that cell.
+PDNS_ADOPTION_ROLLED_BACK_CELL = (
+    "pdns-adopt__rolled-back__after-write__standalone__peer-reachable"
+)
 PDNS_ADOPTION_STARTUP_ROLLBACK_CELLS = frozenset(
     {
         "pdns-adopt__intent__after-write__standalone__peer-reachable",
         "pdns-adopt__rolling-back__after-write__standalone__peer-reachable",
+        PDNS_ADOPTION_ROLLED_BACK_CELL,
     }
 )
+# The PowerDNS -> BIND switch cells whose rollback leaves the target sealed
+# under the package guard's persistent mask (--retry-switch-after-rollback).
+V2_SWITCH_OWNER_CELLS = frozenset(
+    cell_id for cell_id, admission in OWNER_INVERSE_ADMISSIONS.items()
+    if admission.profile == "bind-switch-v2"
+)
+RETRY_SWITCH_REQUEST_NAMESPACE = "celikpanel/dns-kill-matrix-retry-after-rollback/v1"
+RETRY_SWITCH_IDENTITY_NAME = "trigger-identity-retry-after-rollback.json"
+# Peer catalog formats (--peer-catalog-format-*) and the producer name the
+# Agent logs for each (dnsCatalogAXFRProducer.String()).
+PEER_CATALOG_AGENT_NAMES = {"bind": "BIND", "pdns-native": "PowerDNS"}
+PEER_CATALOG_LOG_RE = re.compile(
+    r"the paired primary at (?P<address>[0-9.]+) serves catalog "
+    r"(?P<catalog>[a-z0-9.-]+) in the (?P<format>\S+) catalog format; "
+    r"this operation reads it in that format"
+)
+PEER_CATALOG_CHANGED_TEXT = "peer catalog producer changed during the operation"
 JOURNALCTL_EXECUTABLE = "/usr/bin/journalctl"
 SS_EXECUTABLE = "/usr/bin/ss"
 # Reboot during recovery. The controller runs inside the guest, so a reboot
@@ -5378,6 +5402,11 @@ class Settings:
     reboot_dir: str | None = None
     expect_agent_startup_rollback: bool = False
     disable_management_before_reboot: bool = False
+    # "bind" or "pdns-native": the catalog format the native primary peer of a
+    # fresh paired-secondary cell serves (--peer-catalog-format-*).
+    peer_catalog_format: str | None = None
+    retry_switch_after_rollback: bool = False
+    reboot_even_if_failed: bool = False
 
 
 def inspect_command_executable(
@@ -5661,8 +5690,30 @@ def reboot_checkpoint_paths(reboot_dir: str, ordinal: int) -> dict[str, str]:
     }
 
 
+def reboot_keeps_target_started_precursor(settings: Settings) -> bool:
+    """The running-BIND adoption owner flow keeps its precursor across reboots.
+
+    --bind-rollback-after-target-started only shapes the tagged Agent's
+    environment and the boundary marker; both are consumed before the kill, so
+    a reboot later in the owner-inverse flow does not depend on it.
+    """
+
+    admission = owner_inverse_admission(settings.cell)
+    return bool(
+        settings.bind_rollback_after_target_started
+        and settings.owner_inverse_after_restart
+        and not settings.stop_after_kill_for_independent_recovery
+        and admission is not None
+        and admission.requires_target_started_precursor
+    )
+
+
 def validate_reboot_settings(settings: Settings) -> None:
     wants = settings.reboot_before_owner_command or settings.reboot_after_recovery
+    if getattr(settings, "reboot_even_if_failed", False) and not settings.reboot_after_recovery:
+        raise ControllerError(
+            "--reboot-even-if-failed requires --reboot-after-recovery"
+        )
     if settings.disable_management_before_reboot and (
         not settings.reboot_after_recovery or settings.owner_inverse_after_restart
     ):
@@ -5683,10 +5734,15 @@ def validate_reboot_settings(settings: Settings) -> None:
     if (
         settings.trigger_mode != "socket"
         or settings.stop_after_kill_for_independent_recovery
-        or settings.bind_rollback_after_target_started
+        or (
+            settings.bind_rollback_after_target_started
+            and not reboot_keeps_target_started_precursor(settings)
+        )
     ):
         raise ControllerError(
-            "reboot steps require the socket flow without the independent handoff flags"
+            "reboot steps require the socket flow without the independent handoff flags "
+            "(--bind-rollback-after-target-started is admitted only with the running-BIND "
+            "adoption owner-inverse cell)"
         )
     if settings.cell.role != "standalone" and not (
         is_admitted_paired_secondary(settings.cell)
@@ -5834,6 +5890,16 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
         raise ControllerError(
             "independent recovery handoff requires the exact PowerDNS adoption or BIND switch rollback cell"
         )
+    if (
+        settings.owner_inverse_after_restart
+        and settings.cell.cell_id in PDNS_ADOPTION_STARTUP_ROLLBACK_CELLS
+    ):
+        raise ControllerError(
+            f"{settings.cell.cell_id} is not an owner-inverse cell: the restarted Agent "
+            "rolls this PowerDNS adoption back and retires the journal by itself (since "
+            "3cc2de22 also from rolled-back); run it with --expect-agent-startup-rollback. "
+            "Nothing was started"
+        )
     if settings.owner_inverse_after_restart and not (
         admission is not None
         and settings.trigger_mode == "socket"
@@ -5862,6 +5928,25 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
             "--expect-agent-startup-rollback applies only to the PowerDNS adoption "
             f"cells {', '.join(sorted(PDNS_ADOPTION_STARTUP_ROLLBACK_CELLS))} on the "
             "socket rpc-retry path"
+        )
+    if getattr(settings, "retry_switch_after_rollback", False) and not (
+        settings.owner_inverse_after_restart
+        and admission is not None
+        and admission.profile == "bind-switch-v2"
+        and settings.cell.cell_id in V2_SWITCH_OWNER_CELLS
+    ):
+        raise ControllerError(
+            "--retry-switch-after-rollback applies only to the PowerDNS -> BIND switch "
+            f"cells with --owner-inverse-after-restart: {', '.join(sorted(V2_SWITCH_OWNER_CELLS))}"
+        )
+    peer_catalog_format = getattr(settings, "peer_catalog_format", None)
+    if peer_catalog_format is not None and (
+        peer_catalog_format not in PEER_CATALOG_AGENT_NAMES
+        or not is_admitted_paired_secondary(settings.cell)
+    ):
+        raise ControllerError(
+            "--peer-catalog-format-bind / --peer-catalog-format-pdns-native apply only "
+            "to the admitted fresh paired-secondary cells"
         )
     if settings.trigger_mode == "startup":
         if (
@@ -6223,14 +6308,23 @@ def run_stability_window(
     dns_only: bool = False,
 ) -> tuple[dict[str, Any], list[str], list[str]]:
     """31 samples over 30 s. ``dns_only``: management is deliberately disabled,
-    so Agent and Panel are recorded as not applicable and only DNS is judged."""
-    deadline = time.monotonic() + settings.stability_seconds
+    so Agent and Panel are recorded as not applicable and only DNS is judged.
+
+    The count is fixed, stability_samples_count() (duration / interval + 1),
+    and sample N is scheduled at start + (N - 1) * interval. The earlier
+    deadline loop took one sample per (interval + sample cost) until the
+    deadline, so slow samples fitted only 30 in 30 s (batch run c2); a late
+    sample now runs immediately and is never skipped.
+    """
+    count = stability_samples_count(settings.stability_seconds, settings.stability_interval)
+    started = time.monotonic()
     samples: list[dict[str, Any]] = []
     failures: list[str] = []
     peer_verification_failures: list[str] = []
-    ordinal = 0
-    while True:
-        ordinal += 1
+    for ordinal in range(1, count + 1):
+        delay = started + (ordinal - 1) * settings.stability_interval - time.monotonic()
+        if delay > 0:
+            time.sleep(delay)
         sample: dict[str, Any] = {"ordinal": ordinal, "at": utc_now()}
         if dns_only:
             sample["agent"] = {"judged": False, "reason": "management disabled"}
@@ -6273,16 +6367,22 @@ def run_stability_window(
                     f"stability sample {ordinal}: {peer_error}"
                 )
         samples.append(sample)
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            break
-        time.sleep(min(settings.stability_interval, remaining))
     return {
         "duration_seconds": settings.stability_seconds,
         "interval_seconds": settings.stability_interval,
+        "sample_count": count,
+        "elapsed_seconds": round(time.monotonic() - started, 6),
         "dns_only": dns_only,
         "samples": samples,
     }, failures, peer_verification_failures
+
+
+def stability_samples_count(seconds: float, interval: float) -> int:
+    """Samples at 0, interval, ..., seconds: 31 for 30 s at 1 s."""
+
+    if seconds <= 0 or interval <= 0:
+        raise ControllerError("stability duration and interval must be positive")
+    return int(seconds / interval + 1e-9) + 1
 
 
 def _management_stability_sample(
@@ -6353,15 +6453,20 @@ def classify_cell_status(
 #      serving (MainPID continuity recorded), BIND inactive, owner PowerDNS
 #      files and the source state receipt as before the cut. The status output
 #      after the command is recorded, not judged;
-#   6. an identical re-run changes no file; its exit code/output are recorded;
+#   5b. (V2 switch, every variant) the rollback standby end state: each BIND
+#      unit name that exists under the package guard's persistent mask (root
+#      link to /dev/null, no runtime mask), inactive, not enabled; the staged
+#      generation tree the journal names removed; the command's summary holds
+#      its Restored / Removed / Intentionally kept lines;
+#   6. an identical re-run exits 0 (completed re-run) and changes no file; its
+#      output is recorded;
 #   7. D-021 liveness and the stability window, then rolled_back_source_serving
 #      from the two post-command probes.
 # Critical variant (source-stopped, target-started; OwnerInverseExpectation):
 # at step 2 native state is recorded and only "PowerDNS not active" (and "BIND
 # active" after target-started) is judged; at step 5 PowerDNS must also be
-# active+enabled, BIND units inactive (unit-file state recorded) and no named
-# process may remain; the new PowerDNS MainPID is recorded, not an ambiguity,
-# and later steps keep it. A `dns_outage` object is recorded, never judged:
+# active+enabled, BIND units inactive and no named process may remain; the new
+# PowerDNS MainPID is recorded, not an ambiguity, and later steps keep it. A `dns_outage` object is recorded, never judged:
 # DNS is not continuous in these cells by construction.
 # Verified deviations make the cell "failed"; unknown results make it
 # "unverified". Raw observations are always retained.
@@ -7039,6 +7144,273 @@ def classify_agent_startup_rollback(
     )
 
 
+# PowerDNS -> BIND rollback standby (docs/DNS-ENGINE-ARTIFACT.md, "Rollback
+# standby, local listeners, completed re-runs, pre-decision status"). Debian
+# APT layout: the managed BIND root and BIND's working directory.
+BIND_MANAGED_ROOT = "/var/cache/bind/celikpanel"
+BIND_WORKING_DIRECTORY = "/var/cache/bind"
+BIND_TARGET_UNITS = ("named.service", "bind9.service")
+SYSTEMD_PERSISTENT_UNIT_DIR = "/etc/systemd/system"
+SYSTEMD_RUNTIME_UNIT_DIR = "/run/systemd/system"
+BIND_PACKAGES_RECORDED = ("bind9", "bind9-libs", "bind9-host", "bind9-utils")
+GENERATION_ID_RE = re.compile(r"[0-9a-f]{64}")
+# cmd/recovery/dns_switch_bind_residue_linux.go bindRollbackSummaryText (English)
+# and internal/dnsenginerecovery LocalDNSListenerRecordText.
+BIND_SUMMARY_PREFIXES = {
+    "restored": "Restored: ",
+    "removed": "Removed: the staged BIND generation ",
+    "not_removed": "Not removed: the BIND generation ",
+    "intentionally_kept": "Intentionally kept as rollback standby: ",
+    "bind_units": "BIND units: ",
+    "working_directory": ("Left in BIND's working directory ", "BIND's working directory "),
+    "accepted_stub_listeners": (
+        "Local port-53 listeners accepted as the systemd-resolved stub resolver"
+    ),
+}
+
+
+def read_v2_rollback_facts(journal_path: str) -> dict[str, Any]:
+    """Step 2 (read only, before the journal is retired): what the rollback must end in.
+
+    The V2 journal names the staged generation (``target_generation``) and the
+    frozen BIND unit preimage. A journal that froze both units absent or
+    masked (this operation created BIND) ends sealed under the package guard's
+    persistent mask; another preimage is restored exactly and is only recorded.
+    """
+
+    journal, _ = secure_read_json(
+        journal_path, "V2 switch journal (rollback facts)", maximum=MAX_JSON_BYTES,
+        required_mode=0o600, required_uid=0,
+    )
+    if not isinstance(journal, dict):
+        raise ControllerError("V2 switch journal root is not an object")
+    generation = journal.get("target_generation")
+    units = journal.get("target_units_before")
+    frozen = {
+        item.get("name"): item.get("load_state")
+        for item in units if isinstance(item, dict)
+    } if isinstance(units, list) else {}
+    facts: dict[str, Any] = {
+        "target_generation": generation,
+        "target_units_before": units,
+        "sealed_end_state_expected": all(
+            frozen.get(unit) in {"not-found", "masked"} for unit in BIND_TARGET_UNITS
+        ),
+    }
+    if isinstance(generation, str) and GENERATION_ID_RE.fullmatch(generation):
+        tree = f"{BIND_MANAGED_ROOT}/generations/{generation}"
+        facts["generation_tree"] = tree
+        facts["generation_tree_present_at_step2"] = generation_tree_present(tree)
+    else:
+        facts["generation_tree"] = None
+        facts["generation_tree_error"] = "journal target_generation is not a generation ID"
+    return facts
+
+
+def generation_tree_present(path: str) -> bool:
+    """Read only: whether the staged generation tree (or anything) is at path."""
+
+    return os.path.lexists(path)
+
+
+def _unit_link(path: str) -> dict[str, Any]:
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        return {"path": path, "exists": False}
+    except OSError as exc:
+        return {"path": path, "error": str(exc)}
+    report: dict[str, Any] = {
+        "path": path, "exists": True, "symlink": stat.S_ISLNK(info.st_mode),
+        "uid": info.st_uid,
+    }
+    if report["symlink"]:
+        try:
+            report["target"] = os.readlink(path)
+        except OSError as exc:
+            report["error"] = str(exc)
+    return report
+
+
+def observe_bind_guard_masks(
+    settings: Settings, environment: Mapping[str, str]
+) -> dict[str, Any]:
+    """Unit properties plus the persistent and runtime mask links of both names."""
+
+    report: dict[str, Any] = {"units": {}, "unknown": []}
+    for unit in BIND_TARGET_UNITS:
+        entry: dict[str, Any] = {
+            "persistent_link": _unit_link(f"{SYSTEMD_PERSISTENT_UNIT_DIR}/{unit}"),
+            "runtime_link": _unit_link(f"{SYSTEMD_RUNTIME_UNIT_DIR}/{unit}"),
+        }
+        try:
+            entry["properties"] = read_unit_properties(
+                unit, settings.endpoint_timeout, environment
+            )
+        except ControllerError as exc:
+            report["unknown"].append(str(exc))
+        report["units"][unit] = entry
+    return report
+
+
+def judge_bind_guard_sealed(masks: Mapping[str, Any]) -> tuple[list[str], list[str]]:
+    """Every BIND unit name that exists is sealed: persistent mask only, inactive."""
+
+    failures: list[str] = []
+    unknown: list[str] = list(masks.get("unknown", []))
+    existing = 0
+    for unit in BIND_TARGET_UNITS:
+        entry = masks.get("units", {}).get(unit, {})
+        properties = entry.get("properties")
+        persistent = entry.get("persistent_link", {})
+        runtime = entry.get("runtime_link", {})
+        if "error" in persistent or "error" in runtime:
+            unknown.append(f"{unit} mask links could not be read")
+            continue
+        if properties is None:
+            continue  # already an unknown from observe_bind_guard_masks
+        if properties.get("LoadState") == "not-found" and not persistent.get("exists"):
+            continue  # this name does not exist
+        existing += 1
+        if (properties.get("LoadState"), properties.get("UnitFileState")) != ("masked", "masked"):
+            failures.append(
+                f"{unit} is not under a persistent mask: load={properties.get('LoadState')} "
+                f"unit-file={properties.get('UnitFileState')}"
+            )
+        if properties.get("ActiveState") != "inactive":
+            failures.append(f"{unit} is {properties.get('ActiveState')}, want inactive")
+        if not (
+            persistent.get("exists") and persistent.get("symlink")
+            and persistent.get("uid") == 0 and persistent.get("target") == "/dev/null"
+        ):
+            failures.append(
+                f"{unit} persistent mask is not a root-owned link to /dev/null: {persistent}"
+            )
+        if runtime.get("exists"):
+            failures.append(f"{unit} has a runtime mask or unit at {runtime.get('path')}")
+    if existing == 0 and not unknown:
+        failures.append(
+            "no BIND unit name exists; the rollback standby keeps both names under the "
+            "package guard's persistent mask"
+        )
+    return failures, unknown
+
+
+def parse_bind_rollback_summary(output: str) -> dict[str, list[str]]:
+    """The command's restored / removed / kept account, verbatim, by kind."""
+
+    kinds: dict[str, list[str]] = {kind: [] for kind in BIND_SUMMARY_PREFIXES}
+    for line in output.splitlines():
+        text = line.strip()
+        for kind, prefixes in BIND_SUMMARY_PREFIXES.items():
+            options = prefixes if isinstance(prefixes, tuple) else (prefixes,)
+            if text.startswith(options):
+                kinds[kind].append(text)
+    return kinds
+
+
+def record_bind_rollback_leftovers(
+    settings: Settings, environment: Mapping[str, str]
+) -> dict[str, Any]:
+    """Recorded, never judged: BIND's working directory and the BIND packages."""
+
+    report: dict[str, Any] = {"judged": False}
+    try:
+        report["working_directory"] = sorted(
+            name for name in os.listdir(BIND_WORKING_DIRECTORY) if name != "celikpanel"
+        )
+    except OSError as exc:
+        report["working_directory"] = {"error": str(exc)}
+    try:
+        completed = subprocess.run(
+            ["/usr/bin/dpkg-query", "-W", "-f=${Package} ${Version} ${db:Status-Abbrev}\\n",
+             *BIND_PACKAGES_RECORDED],
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            env=dict(environment), check=False, timeout=settings.command_timeout,
+        )
+        report["packages"] = {
+            "returncode": completed.returncode,
+            "rows": completed.stdout.decode("utf-8", errors="replace").splitlines()[:16],
+        }
+    except (OSError, subprocess.SubprocessError) as exc:
+        report["packages"] = {"error": str(exc)}
+    return report
+
+
+def judge_v2_bind_rollback_end_state(
+    facts: Mapping[str, Any] | None,
+    masks: Mapping[str, Any],
+    command_output: str,
+    tree_present_after: bool | None,
+) -> dict[str, Any]:
+    """Step 5 of a PowerDNS -> BIND owner rollback (pure; offline-tested).
+
+    Judged: every existing BIND unit name sealed (persistent root-owned mask
+    link to /dev/null, no runtime mask, inactive, not enabled) whether or not
+    BIND had started; the staged generation tree named by the journal absent,
+    and no "Not removed" line for it (these cells do not edit it); the
+    summary holds a Restored and an Intentionally kept line, and a Removed line
+    whenever the tree still existed at step 2. Recorded verbatim: every summary
+    line, BIND unit and working-directory lines and accepted stub listeners.
+    """
+
+    report: dict[str, Any] = {"failures": [], "unknown": [], "masks": dict(masks)}
+    summary = parse_bind_rollback_summary(command_output)
+    report["summary"] = summary
+    report["accepted_stub_listener_lines"] = summary["accepted_stub_listeners"]
+    if facts is None or "error" in facts:
+        report["unknown"].append(
+            "the journal's rollback facts were not read at step 2: "
+            + str((facts or {}).get("error", "absent"))
+        )
+        facts = {}
+    report["facts"] = dict(facts)
+    if facts.get("sealed_end_state_expected") is False:
+        report["sealed_end_state"] = {
+            "judged": False,
+            "reason": "the journal froze an existing BIND preimage, which is restored exactly",
+        }
+    else:
+        failures, unknown = judge_bind_guard_sealed(masks)
+        report["failures"].extend(failures)
+        report["unknown"].extend(unknown)
+    generation = facts.get("target_generation")
+    tree = facts.get("generation_tree")
+    if tree:
+        report["generation_tree_present_after"] = tree_present_after
+        if tree_present_after is None:
+            report["unknown"].append(f"staged generation tree {tree} could not be inspected")
+        elif tree_present_after:
+            report["failures"].append(f"the staged BIND generation tree {tree} remains")
+    elif facts:
+        report["unknown"].append("the journal named no staged generation")
+    if summary["not_removed"]:
+        report["failures"].append(
+            "the command kept a BIND generation it says was changed or left earlier; "
+            "these cells do not edit it: " + " | ".join(summary["not_removed"])
+        )
+    if not summary["restored"]:
+        report["failures"].append("the command output has no 'Restored:' line")
+    if not summary["intentionally_kept"]:
+        report["failures"].append(
+            "the command output has no 'Intentionally kept as rollback standby:' line"
+        )
+    removed_required = facts.get("generation_tree_present_at_step2") is True
+    report["removed_line_required"] = removed_required
+    if removed_required:
+        if not any(isinstance(generation, str) and generation in line
+                   for line in summary["removed"]):
+            report["failures"].append(
+                f"the command output has no 'Removed:' line for the staged generation {generation}"
+            )
+    elif not summary["removed"]:
+        report["removed_line_absent_reason"] = (
+            "the staged generation tree was already absent at step 2 (an earlier "
+            "in-process rollback removed it)"
+        )
+    return report
+
+
 def owner_status_names_command(
     output: bytes, request_id: str, command: str = OWNER_BIND_SWITCH_COMMAND
 ) -> bool:
@@ -7272,6 +7644,98 @@ def run_owner_command(
     }
 
 
+def owner_inverse_owner_files(
+    settings: Settings, result: Mapping[str, Any], profile: OwnerInverseProfile
+) -> tuple[Any, Any, str]:
+    """(current, expected, deviation text) of the profile's owner files."""
+
+    source_proof = result["source_proof"]
+    if profile.name == "bind-switch-v2":
+        files = owner_pdns_files(settings, source_proof)
+        normalization = source_proof["source_normalization"]
+        expected = {
+            "configuration": normalization["configuration"],
+            "database": normalization["database"],
+        }
+        return files, expected, "owner PowerDNS configuration or database changed"
+    if profile.name == "bind-adoption-v2":
+        return (
+            owner_bind_files(),
+            owner_bind_comparable(source_proof["owner_bind_native_source"]),
+            "owner BIND configuration, zone file or native inventory changed",
+        )
+    return (
+        owner_pdns_adoption_files(source_proof),
+        owner_pdns_adoption_expected(source_proof),
+        "external PowerDNS configuration or database changed",
+    )
+
+
+def record_recovery_status(
+    settings: Settings,
+    environment: Mapping[str, str],
+    transcript: Transcript,
+    stage: str,
+) -> dict[str, Any]:
+    """Read-only `recovery dns-switch-status --quiesced --request-id` (socket flows).
+
+    Recorded for every enrolled cell, as an owner of an installed server would
+    see it. Judged only for "made no mutation": the private evidence before and
+    after the command must be identical. Without an enrolled launcher the read
+    is recorded as unavailable, never as a failure.
+    """
+
+    report: dict[str, Any] = {"stage": stage, "judged": "made no mutation only"}
+    try:
+        info = os.stat(OWNER_RECOVERY_EXECUTABLE)
+    except FileNotFoundError:
+        return {**report, "available": False, "reason": (
+            "the recovery launcher is not enrolled; enroll it with "
+            "guest_bootstrap.py enroll-recovery-runtime before prepare"
+        )}
+    except OSError as exc:
+        return {**report, "available": False, "reason": f"inspect recovery launcher: {exc}"}
+    if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+        return {**report, "available": False, "reason": (
+            "the recovery launcher is not a root-owned file without group/world write; not run"
+        )}
+    argv = [OWNER_RECOVERY_EXECUTABLE, "dns-switch-status", "--quiesced",
+            "--request-id", settings.request_id]
+    try:
+        before = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+        status = run_owner_command(
+            settings, argv, f"recovery-status-{stage}", environment, transcript
+        )
+        after = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+    except ControllerError as exc:
+        return {**report, "available": True, "unknown": str(exc)}
+    changed = changed_private_evidence(before, after)
+    report.update({
+        "available": True,
+        "command": _public(status),
+        "changed_evidence": changed,
+        "mutated": bool(changed),
+    })
+    return report
+
+
+def judge_recovery_status_reads(result: dict[str, Any]) -> None:
+    """A read-only status command that changed private evidence fails the cell."""
+
+    reads = result.get("recovery_status_reads") or {}
+    mutated = sorted(
+        f"{stage}: {read.get('changed_evidence')}"
+        for stage, read in reads.items()
+        if isinstance(read, dict) and read.get("mutated")
+    )
+    if mutated:
+        result["recovery_status_read_failures"] = [
+            "read-only recovery dns-switch-status changed private evidence at " + item
+            for item in mutated
+        ]
+        result["status"] = "failed"
+
+
 def _public(report: Mapping[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in report.items() if not key.startswith("_")}
 
@@ -7448,26 +7912,7 @@ class OwnerInverseFlow:
         return f"{version} {self.admission.step2_journal_phase}"
 
     def owner_files(self) -> tuple[Any, Any, str]:
-        source_proof = self.result["source_proof"]
-        if self.profile.name == "bind-switch-v2":
-            files = owner_pdns_files(self.settings, source_proof)
-            normalization = source_proof["source_normalization"]
-            expected = {
-                "configuration": normalization["configuration"],
-                "database": normalization["database"],
-            }
-            return files, expected, "owner PowerDNS configuration or database changed"
-        if self.profile.name == "bind-adoption-v2":
-            return (
-                owner_bind_files(),
-                owner_bind_comparable(source_proof["owner_bind_native_source"]),
-                "owner BIND configuration, zone file or native inventory changed",
-            )
-        return (
-            owner_pdns_adoption_files(source_proof),
-            owner_pdns_adoption_expected(source_proof),
-            "external PowerDNS configuration or database changed",
-        )
+        return owner_inverse_owner_files(self.settings, self.result, self.profile)
 
     # -- step 2: the restarted Agent decides -----------------------------------
 
@@ -7600,6 +8045,13 @@ class OwnerInverseFlow:
                 f"journal after Agent restart is not {self.journal_label()}: {exc}"
             )
             self.prerequisites_met = False
+        if self.profile.name == "bind-switch-v2":
+            # Read only, while the journal still exists: the staged generation
+            # and frozen BIND preimage step 5 judges the rollback end state by.
+            try:
+                step2["rollback_facts"] = read_v2_rollback_facts(settings.journal_path)
+            except ControllerError as exc:
+                step2["rollback_facts"] = {"error": str(exc)}
         refusal = find_agent_owner_refusal(
             settings, self.owner_environment, self.transcript, restart_epoch,
             command=self.profile.owner_command,
@@ -7760,6 +8212,17 @@ class OwnerInverseFlow:
             step["pdns_unit_journal"] = read_pdns_unit_journal(
                 settings, self.owner_environment, self.preflight_epoch
             )
+        # Recorded, not judged: before the owner command the product may still
+        # hold its own configuration (the running-BIND adoption rewrote the
+        # owner's options and local files); step 5 and the after-recovery
+        # reboot judge the owner files.
+        try:
+            files, expected_files, _message = self.owner_files()
+            step["owner_files"] = {
+                "judged": False, "files": files, "unchanged": files == expected_files,
+            }
+        except (ControllerError, KeyError) as exc:
+            step["owner_files"] = {"judged": False, "error": str(exc)}
         step["probe"] = run_recovery_probe(settings, self.ordinary, self.transcript, 3)
         if self.agent_identity is None:
             self.prerequisites_met = False
@@ -7820,7 +8283,7 @@ class OwnerInverseFlow:
         self.steps["owner_command"] = {"command": _public(owner), "evidence_before": before}
         if not owner.get("ran"):
             self.ambiguities.append(f"owner command did not complete: {owner.get('unknown')}")
-        self.step5()
+        self.step5(owner)
         # Recorded, never judged: what the owner is told once the journal is
         # retired.
         told_before = snapshot_private_evidence(settings.state_dir, settings.journal_path)
@@ -7846,12 +8309,22 @@ class OwnerInverseFlow:
         rerun_changed = changed_private_evidence(rerun_before, rerun_after)
         self.steps["rerun"] = {
             "command": _public(rerun),
+            # Combined stdout/stderr of the re-run, recorded verbatim.
+            "stdout": rerun.get("output"),
+            "expected_returncode": 0,
             "evidence_before": rerun_before,
             "evidence_after": rerun_after,
             "changed_evidence": rerun_changed,
         }
         if not rerun.get("ran"):
             self.ambiguities.append(f"owner re-run did not complete: {rerun.get('unknown')}")
+        elif rerun.get("returncode") != 0:
+            # Since f7a844f7 a re-run of an already reconciled request exits 0
+            # with the text on stdout; refusals and unknown results keep 3.
+            self.failures.append(
+                f"owner command re-run exited {rerun.get('returncode')}, want 0 for the "
+                "already reconciled request"
+            )
         if rerun_changed:
             self.failures.append(f"owner command re-run changed private evidence: {rerun_changed}")
         self.probes.append(run_recovery_probe(settings, self.ordinary, self.transcript, 2))
@@ -7861,7 +8334,7 @@ class OwnerInverseFlow:
             error.startswith("authoritative") for error in rerun_source["errors"]
         )
 
-    def step5(self) -> None:
+    def step5(self, owner: Mapping[str, Any] | None = None) -> None:
         settings = self.settings
         after = snapshot_private_evidence(settings.state_dir, settings.journal_path)
         step5: dict[str, Any] = {"evidence": after}
@@ -7933,6 +8406,25 @@ class OwnerInverseFlow:
             step5["owner_files"] = {"error": str(exc)}
             label = "PowerDNS" if self.profile.source_engine == "pdns" else "BIND"
             self.failures.append(f"owner {label} files could not be re-proved: {exc}")
+        if self.profile.name == "bind-switch-v2" and owner is not None and owner.get("ran"):
+            self.judge_v2_rollback_end_state(step5, owner)
+
+    def judge_v2_rollback_end_state(
+        self, step5: dict[str, Any], owner: Mapping[str, Any]
+    ) -> None:
+        facts = self.steps["agent_restarted"].get("rollback_facts")
+        masks = observe_bind_guard_masks(self.settings, self.owner_environment)
+        tree = (facts or {}).get("generation_tree")
+        tree_after = generation_tree_present(tree) if isinstance(tree, str) else None
+        judged = judge_v2_bind_rollback_end_state(
+            facts, masks, str(owner.get("output", "")), tree_after
+        )
+        judged["leftovers"] = record_bind_rollback_leftovers(
+            self.settings, self.owner_environment
+        )
+        step5["rollback_end_state"] = judged
+        self.failures.extend(f"after owner command: {item}" for item in judged["failures"])
+        self.ambiguities.extend(f"after owner command: {item}" for item in judged["unknown"])
 
     def judge_state_receipt(self, step5: dict[str, Any]) -> None:
         pre = self.preflight["state"]
@@ -7981,7 +8473,8 @@ class OwnerInverseFlow:
                 self.ambiguities.append(f"{stage}: {unit} state is unknown")
             elif state != "inactive":
                 self.failures.append(f"{stage}: {unit} is {state}, want inactive")
-        # Recorded, not judged: which absent-preimage restoration was used.
+        # Recorded here; the sealed end state (persistent guard mask on every
+        # existing BIND name) is judged by judge_v2_rollback_end_state.
         step5["bind_unit_files"] = {
             unit: {
                 "LoadState": self.unit_state(native, unit, "LoadState"),
@@ -8195,6 +8688,215 @@ class OwnerInverseFlow:
         request_reboot(settings, REBOOT_BEFORE_OWNER_COMMAND, self.result, self.state())
 
 
+# ---------------------------------------------------------------------------
+# --retry-switch-after-rollback (V2 PowerDNS -> BIND owner-inverse cells).
+#
+# After a passed owner rollback (and the optional after-recovery reboot), the
+# same switch is requested again as a NEW request through the unchanged
+# trigger: `rpc-switch` with a derived request ID (CELIKPANEL_S1_REQUEST_ID)
+# and a new identity receipt in the same directory; the trigger derives the
+# deterministic owner from (cell, request). No Go change is needed. The new
+# request must complete forward: BIND serving authoritatively alone, PowerDNS
+# stopped, the package guard's mask lifted by the product, the journal retired,
+# the new job finalized, the rolled-back job untouched, and 31 samples. It
+# exercises "the forward path accepts the rollback standby".
+# ---------------------------------------------------------------------------
+
+
+def retry_switch_request_id(request_id: str) -> str:
+    return hashlib.sha256(
+        (RETRY_SWITCH_REQUEST_NAMESPACE + "\x00" + request_id).encode("utf-8")
+    ).hexdigest()[:32]
+
+
+def retry_switch_commands(
+    settings: Settings, retry_request: str
+) -> tuple[list[str], list[str], str]:
+    """The trigger and probe argv of the new request, and its receipt path."""
+
+    trigger = list(settings.trigger_command or ())
+    if len(trigger) != 8 or trigger[1] != "rpc-switch" or trigger[4] != "--identity-receipt":
+        raise ControllerError("the retry needs the exact socket rpc-switch trigger argv")
+    receipt = os.path.join(os.path.dirname(trigger[5]), RETRY_SWITCH_IDENTITY_NAME)
+    trigger[5] = receipt
+    probe = list(settings.recovery_probe_command)
+    if probe.count("--identity-receipt") != 1:
+        raise ControllerError("the recovery probe argv has no single --identity-receipt")
+    probe[probe.index("--identity-receipt") + 1] = receipt
+    return trigger, probe, receipt
+
+
+def judge_bind_guard_lifted(masks: Mapping[str, Any]) -> tuple[list[str], list[str]]:
+    """After the forward retry no BIND name is masked (the product lifted it)."""
+
+    failures: list[str] = []
+    unknown: list[str] = list(masks.get("unknown", []))
+    for unit in BIND_TARGET_UNITS:
+        entry = masks.get("units", {}).get(unit, {})
+        properties = entry.get("properties") or {}
+        persistent = entry.get("persistent_link", {})
+        runtime = entry.get("runtime_link", {})
+        if "error" in persistent or "error" in runtime:
+            unknown.append(f"{unit} mask links could not be read")
+            continue
+        if properties.get("LoadState") == "masked":
+            failures.append(f"{unit} is still masked after the forward switch")
+        for label, link in (("persistent", persistent), ("runtime", runtime)):
+            if link.get("symlink") and link.get("target") == "/dev/null":
+                failures.append(f"{unit} still has a {label} mask link at {link.get('path')}")
+    return failures, unknown
+
+
+def maybe_retry_switch_after_rollback(
+    settings: Settings,
+    result: dict[str, Any],
+    *,
+    transcript: Transcript,
+    ordinary: Mapping[str, str],
+    owner_environment: Mapping[str, str],
+    verification_failures: list[str],
+) -> None:
+    if getattr(settings, "retry_switch_after_rollback", False) is not True:
+        return
+    gate = pre_reboot_verdict(result, {"flow": "owner-inverse"})
+    reasons = list(gate["reasons"])
+    reboot = result.get("reboot_after_recovery")
+    if isinstance(reboot, dict) and reboot.get("run") is not False and (
+        reboot.get("judged") is False or reboot.get("status") != "passed"
+    ):
+        reasons.append("the after-recovery reboot was not a judged pass")
+    report: dict[str, Any] = {"requested": True, "failures": [], "unknown": []}
+    result["retry_switch_after_rollback"] = report
+    if reasons:
+        report.update({
+            "run": False,
+            "reason": "the rollback flow did not pass: " + "; ".join(reasons),
+        })
+        return
+    retry_request = retry_switch_request_id(settings.request_id)
+    report.update({"run": True, "request_id": retry_request})
+    try:
+        trigger, probe_argv, receipt_path = retry_switch_commands(settings, retry_request)
+        require_new_output_path(receipt_path, "retry identity receipt")
+        _ledger, old_job = read_request_ledger(settings.state_dir, settings.request_id)
+        agent_identity = wait_for_unix_socket(settings.agent_socket, settings.endpoint_timeout)
+    except (ControllerError, OSError) as exc:
+        report["unknown"].append(f"retry prerequisites: {exc}")
+        _finish_retry_report(result, report, verification_failures)
+        return
+    environment = dict(ordinary)
+    environment["CELIKPANEL_S1_REQUEST_ID"] = retry_request
+    report["trigger_argv"] = trigger
+    try:
+        command = run_bounded_command(
+            trigger, "retry-switch-after-rollback", settings.recovery_timeout,
+            environment, settings.command_cwd, transcript,
+        )
+        report["trigger"] = {
+            **command.report(), "output": command.output.decode("utf-8", errors="replace"),
+        }
+        if command.returncode != 0:
+            report["failures"].append(
+                f"the new switch request exited {command.returncode}, want 0 (completed forward)"
+            )
+    except (ControllerError, OSError) as exc:
+        report["unknown"].append(f"the new switch request did not complete: {exc}")
+    try:
+        report["identity_receipt"] = validate_trigger_identity_receipt(
+            receipt_path, settings.cell, retry_request
+        )
+    except ControllerError as exc:
+        report["failures"].append(f"retry identity receipt: {exc}")
+    try:
+        ledger, job = read_request_ledger(settings.state_dir, retry_request)
+        _ledger_again, old_after = read_request_ledger(settings.state_dir, settings.request_id)
+        report["job"] = job
+        expected_phase = "commit/dns-engine-switch/v2/finalized/" + retry_request + "/"
+        if (
+            job is None
+            or job.get("status") != "succeeded"
+            or not str(job.get("phase", "")).startswith(expected_phase)
+            or job.get("target") != "bind"
+            or ledger["active_request_id"] != ""
+        ):
+            report["failures"].append(
+                "the new request is not a finalized succeeded BIND switch with no active "
+                f"request: {job}"
+            )
+        if old_after != old_job:
+            report["failures"].append("the new request changed the rolled-back job's record")
+    except ControllerError as exc:
+        report["unknown"].append(f"ledger after the retry: {exc}")
+    if os.path.lexists(settings.journal_path):
+        report["failures"].append("the switch journal remains after the forward retry")
+    try:
+        state = read_dns_state_semantic(settings.state_dir)
+        report["state"] = state
+        semantic = state.get("semantic") or {}
+        if semantic.get("engine") != "bind":
+            report["failures"].append(
+                f"the DNS state receipt names {semantic.get('engine')!r}, want bind"
+            )
+    except ControllerError as exc:
+        report["unknown"].append(f"DNS state receipt after the retry: {exc}")
+    serving = observe_bind_source_serving(settings, owner_environment)
+    report["bind_serving"] = serving
+    report["failures"].extend(f"BIND serving: {item}" for item in serving["errors"])
+    report["unknown"].extend(f"BIND serving: {item}" for item in serving["unknown"])
+    masks = observe_bind_guard_masks(settings, owner_environment)
+    report["bind_units"] = masks
+    lifted_failures, lifted_unknown = judge_bind_guard_lifted(masks)
+    report["failures"].extend(lifted_failures)
+    report["unknown"].extend(lifted_unknown)
+    native = observe_native_dns_state(settings, owner_environment)
+    report["native"] = native
+    pdns_state = native.get("units", {}).get("pdns.service", {}).get("ActiveState")
+    if pdns_state is None:
+        report["unknown"].append("PowerDNS unit state is unknown after the retry")
+    elif pdns_state != "inactive":
+        report["failures"].append(f"PowerDNS is {pdns_state} after the forward switch")
+    probes = []
+    for ordinal in (1, 2):
+        try:
+            command = run_bounded_command(
+                probe_argv, f"retry-switch-probe-{ordinal}", settings.recovery_timeout,
+                ordinary, settings.command_cwd, transcript,
+            )
+            probes.append(decode_recovery_probe(command, ordinal))
+        except ControllerError as exc:
+            probes.append({"ordinal": ordinal, "valid": False, "error": str(exc)})
+    report["probes"] = probes
+    outcome = summarize_recovery_outcome(probes[0], probes[1], not serving["errors"])
+    report["recovery_outcome"] = outcome
+    if outcome["classification"] in {"unverified", "changed/race"}:
+        report["unknown"].append(f"retry probes are {outcome['classification']}")
+    elif outcome["classification"] != "target_converged":
+        report["failures"].append(
+            f"retry classification is {outcome['classification']}, want target_converged"
+        )
+    stability, stability_failures, _peer = run_stability_window(
+        settings, agent_identity, transcript, ""
+    )
+    report["stability"] = stability
+    report["failures"].extend(f"after the retry: {item}" for item in stability_failures)
+    _finish_retry_report(result, report, verification_failures)
+
+
+def _finish_retry_report(
+    result: dict[str, Any], report: dict[str, Any], verification_failures: list[str]
+) -> None:
+    report["status"] = (
+        "failed" if report["failures"] else ("unverified" if report["unknown"] else "passed")
+    )
+    verification_failures.extend(
+        f"retry switch after rollback unknown: {item}" for item in report["unknown"]
+    )
+    if report["failures"]:
+        result["status"] = "failed"
+    elif report["unknown"] and result.get("status") == "passed":
+        result["status"] = "unverified"
+
+
 def run_owner_inverse_after_restart(
     settings: Settings,
     *,
@@ -8228,8 +8930,15 @@ def run_owner_inverse_after_restart(
         flow.request_reboot_before_owner_command()
     flow.owner_steps()
     flow.finish()
+    result["complete_verdict"] = pre_reboot_verdict(result, flow.state())
     maybe_request_reboot_after_recovery(
         settings, result, owner_environment, flow.state()
+    )
+    # Without an after-recovery reboot the retry follows the flow directly;
+    # with one, resume_cell runs it after the post-reboot window.
+    maybe_retry_switch_after_rollback(
+        settings, result, transcript=transcript, ordinary=ordinary,
+        owner_environment=owner_environment, verification_failures=verification_failures,
     )
 
 
@@ -8480,25 +9189,113 @@ def request_reboot(
     raise RebootRequested(stage, {**state, "boot": boot})
 
 
+def required_rpc_retry_classifications(result: Mapping[str, Any]) -> frozenset[str]:
+    """The convergence classification the rpc-retry cell's pass definition needs.
+
+    Fresh installs (a non-serving source), the data-driven fixture pass
+    definitions (paired secondary, takeover, reinstall) and the Agent startup
+    rollback all require the same request to converge forward. Other rpc-retry
+    cells accept either defined convergent shape.
+    """
+
+    source_fixture = (result.get("source_proof") or {}).get("source_fixture")
+    if (
+        source_fixture in NON_SERVING_SOURCE_FIXTURES
+        or result.get("fixture_pass_definition") is not None
+        or result.get("agent_startup_rollback") is not None
+    ):
+        return frozenset({"target_converged"})
+    return frozenset({"target_converged", "rolled_back_source_serving"})
+
+
+def pre_reboot_verdict(result: Mapping[str, Any], state: Mapping[str, Any]) -> dict[str, Any]:
+    """The COMPLETE verdict of the flow before an after-recovery reboot.
+
+    ``status`` alone is not enough: on the rpc-retry flow it is the D-021
+    safety verdict (plus unverified dimensions) and deliberately excludes the
+    convergence classification, retry exits and probe shapes, which the
+    controller keeps as diagnostics. In batch cell c6 both retries exited 1,
+    both probes were indeterminate and the classification was
+    repeated_nonconvergence while ``status`` still read "passed", so the guest
+    was rebooted. The complete verdict also requires: safety passed; for the
+    owner-inverse flow its own status passed; for the rpc-retry flow both
+    retries ran and exited 0 (when retries apply), both probes valid, not
+    indeterminate and with one fingerprint; and the classification the cell's
+    pass definition requires.
+    """
+
+    reasons: list[str] = []
+    if result.get("safety_status") != "passed":
+        reasons.append(f"safety_status is {result.get('safety_status')!r}")
+    if result.get("status") != "passed":
+        reasons.append(f"status is {result.get('status')!r}")
+    classification = (result.get("recovery_outcome") or {}).get("classification")
+    if state.get("flow") == "owner-inverse":
+        owner = result.get("owner_inverse_after_restart") or {}
+        if owner.get("status") != "passed":
+            reasons.append(f"owner-inverse flow status is {owner.get('status')!r}")
+        required = frozenset({"rolled_back_source_serving"})
+    else:
+        required = required_rpc_retry_classifications(result)
+        attempts = (result.get("recovery") or {}).get("attempts") or []
+        if len(attempts) != 2:
+            reasons.append(f"{len(attempts)} same-request retries ran, want 2")
+        for attempt in attempts:
+            command = attempt.get("command") or {}
+            if attempt.get("error") or command.get("not_run"):
+                reasons.append(
+                    f"retry {attempt.get('ordinal')}: {attempt.get('error') or 'not run'}"
+                )
+        probes = result.get("recovery_probes") or []
+        if len(probes) != 2:
+            reasons.append(f"{len(probes)} recovery probes, want 2")
+        else:
+            reasons.extend(assess_recovery_probes(probes[0], probes[1]))
+    if classification not in required:
+        reasons.append(
+            f"classification is {classification!r}, the pass definition needs "
+            + " or ".join(sorted(required))
+        )
+    return {
+        "passed": not reasons,
+        "reasons": reasons,
+        "required_classification": sorted(required),
+        "status": result.get("status"),
+        "safety_status": result.get("safety_status"),
+    }
+
+
 def maybe_request_reboot_after_recovery(
     settings: Settings,
     result: dict[str, Any],
     environment: Mapping[str, str],
     state: Mapping[str, Any],
 ) -> None:
-    """Reboot after the final health samples, only for a passing flow."""
+    """Reboot after the final health samples, only after a COMPLETE pass.
+
+    With --reboot-even-if-failed a flow whose complete verdict is not a pass is
+    still rebooted as a diagnostic: the resumed run records the post-reboot
+    state with ``judged: false`` and keeps the pre-reboot status.
+    """
 
     if getattr(settings, "reboot_after_recovery", False) is not True:
         return
-    if result.get("status") != "passed":
-        result["reboot_after_recovery"] = {
-            "run": False,
-            "reason": (
-                f"the flow ended {result.get('status')!r}, not passed; the reboot "
-                "is defined only for a passing flow and was not run"
-            ),
-        }
-        return
+    verdict = pre_reboot_verdict(result, state)
+    result["pre_reboot_verdict"] = verdict
+    diagnostic = False
+    if not verdict["passed"]:
+        if getattr(settings, "reboot_even_if_failed", False) is not True:
+            result["reboot_after_recovery"] = {
+                "run": False,
+                "reason": (
+                    "the complete pre-reboot verdict is not a pass ("
+                    + "; ".join(verdict["reasons"])
+                    + "); the reboot is defined only for a passing flow and was not "
+                    "run (--reboot-even-if-failed runs it as an unjudged diagnostic)"
+                ),
+            }
+            return
+        diagnostic = True
     authority_before = observe_serving_authority(settings, environment)
     management_before = observe_management_units(settings, environment)
     disabled: dict[str, Any] | None = None
@@ -8526,6 +9323,7 @@ def maybe_request_reboot_after_recovery(
             "authority_before": authority_before,
             "management_before": management_before,
             "management_disabled": disabled is not None,
+            "diagnostic_reboot": diagnostic,
         },
     )
 
@@ -8716,6 +9514,58 @@ def verify_after_recovery_reboot(
     safety_failures: list[str],
     verification_failures: list[str],
 ) -> None:
+    """Judge the post-reboot window, or record it unjudged after a failed flow.
+
+    A diagnostic reboot (--reboot-even-if-failed after a flow whose complete
+    verdict was not a pass) runs every observation below into its own lists,
+    records them under ``reboot_after_recovery`` with ``judged: false`` and
+    restores the pre-reboot status and failure lists: it never turns a failure
+    into a pass and never adds a verdict.
+    """
+
+    if state.get("diagnostic_reboot") is not True:
+        _verify_after_recovery_reboot(
+            settings, state, result=result, transcript=transcript, ordinary=ordinary,
+            owner_environment=owner_environment, controller_identity=controller_identity,
+            boot=boot, safety_failures=safety_failures,
+            verification_failures=verification_failures,
+        )
+        return
+    saved = (result.get("status"), result.get("safety_status"))
+    observed_safety: list[str] = []
+    observed_verification: list[str] = []
+    _verify_after_recovery_reboot(
+        settings, state, result=result, transcript=transcript, ordinary=ordinary,
+        owner_environment=owner_environment, controller_identity=controller_identity,
+        boot=boot, safety_failures=observed_safety,
+        verification_failures=observed_verification,
+    )
+    report = result["reboot_after_recovery"]
+    report["judged"] = False
+    report["diagnostic"] = (
+        "rebooted with --reboot-even-if-failed after a flow whose complete verdict was "
+        "not a pass; these observations are recorded, not judged"
+    )
+    report["observed_status"] = report.pop("status", None)
+    report["observed_safety_failures"] = observed_safety
+    report["observed_verification_failures"] = observed_verification
+    result["status"], result["safety_status"] = saved
+    transcript.event("reboot-after-recovery-recorded-unjudged", status=saved[0])
+
+
+def _verify_after_recovery_reboot(
+    settings: Settings,
+    state: Mapping[str, Any],
+    *,
+    result: dict[str, Any],
+    transcript: Transcript,
+    ordinary: Mapping[str, str],
+    owner_environment: Mapping[str, str],
+    controller_identity: Mapping[str, Any],
+    boot: Mapping[str, Any],
+    safety_failures: list[str],
+    verification_failures: list[str],
+) -> None:
     """Second window after the reboot: same authority, same state, units up.
 
     Judged (verified failure): an Agent or Panel unit that did not come up, a
@@ -8800,12 +9650,34 @@ def verify_after_recovery_reboot(
             report["source"] = source
             failures.extend(f"after reboot: {item}" for item in source["errors"])
             unknown.extend(f"after reboot: {item}" for item in source["unknown"])
+            pid_key = source_pid_key(profile)
+            # A reboot starts the source again: its MainPID necessarily
+            # changes. Recorded, never judged (also for the running-BIND
+            # adoption, whose no-restart promise covers the owner command).
+            report["source_main_pid"] = {
+                "judged": False,
+                "before_reboot": state.get("pid_reference"),
+                "after_reboot": source.get(pid_key),
+                "reason": "a reboot restarts the source service",
+            }
             if profile.name == "bind-switch-v2":
                 named = after.get("named_processes")
                 if named is None:
                     unknown.append("after reboot: named processes could not be listed")
                 elif named:
                     failures.append(f"after reboot: BIND is serving again: named {named}")
+            # The owner's files stay byte-identical across the reboot.
+            try:
+                files, expected_files, message = owner_inverse_owner_files(
+                    settings, result, profile
+                )
+                report["owner_files"] = files
+                report["owner_files_unchanged"] = files == expected_files
+                if files != expected_files:
+                    failures.append(f"after reboot: {message}")
+            except (ControllerError, KeyError) as exc:
+                report["owner_files"] = {"error": str(exc)}
+                unknown.append(f"after reboot: owner files could not be re-proved: {exc}")
     if agent_identity is not None:
         stability, stability_failures, peer_failures = run_stability_window(
             settings, agent_identity, transcript, state.get("peer_ip", "") or ""
@@ -8990,7 +9862,12 @@ def resume_owner_inverse_before_owner_command(
     flow.after_boot(boot)
     flow.owner_steps()
     flow.finish()
+    result["complete_verdict"] = pre_reboot_verdict(result, flow.state())
     maybe_request_reboot_after_recovery(settings, result, owner_environment, flow.state())
+    maybe_retry_switch_after_rollback(
+        settings, result, transcript=transcript, ordinary=ordinary,
+        owner_environment=owner_environment, verification_failures=verification_failures,
+    )
 
 
 def resume_cell(settings: Settings) -> int:
@@ -9079,6 +9956,12 @@ def resume_cell(settings: Settings) -> int:
                 safety_failures=safety_failures,
                 verification_failures=verification_failures,
             )
+            if state.get("flow") == "owner-inverse":
+                maybe_retry_switch_after_rollback(
+                    settings, result, transcript=transcript, ordinary=ordinary,
+                    owner_environment=clean_base_environment,
+                    verification_failures=verification_failures,
+                )
     except RebootRequested as request:
         reboot_request = request
         transcript.event("reboot-requested", stage=request.stage)
@@ -9174,6 +10057,13 @@ def refuse_unadmitted_paired_secondary(settings: Settings) -> None:
     ):
         raise ControllerError(
             "a fresh paired-secondary cell runs only on the socket rpc-retry flow"
+        )
+    if getattr(settings, "peer_catalog_format", None) not in PEER_CATALOG_AGENT_NAMES:
+        raise ControllerError(
+            "a fresh paired-secondary cell needs the catalog format its native primary "
+            "serves: --peer-catalog-format-bind or --peer-catalog-format-pdns-native "
+            "(guest_bootstrap.py run-prepared passes the prepared one); the Agent's log "
+            "line naming the accepted format is judged against it. Nothing was started"
         )
 
 
@@ -9391,6 +10281,122 @@ def check_pdns_secondary_rows(peer_ip: str) -> dict[str, Any]:
     return report
 
 
+def parse_peer_catalog_format_lines(text: str, peer_ip: str, catalog: str) -> dict[str, Any]:
+    """Agent log lines naming the accepted peer catalog format (pure).
+
+    cmd/agent/dns_peer_catalog.go logs once per operation: "<operation>: the
+    paired primary at <ip> serves catalog <catalog> in the <BIND|PowerDNS>
+    catalog format; this operation reads it in that format". A line reporting
+    errDNSPeerCatalogProducerChanged is collected separately.
+    """
+
+    lines: list[str] = []
+    formats: list[str] = []
+    changed: list[str] = []
+    for line in text.splitlines():
+        if PEER_CATALOG_CHANGED_TEXT in line:
+            changed.append(line.strip()[:2048])
+        match = PEER_CATALOG_LOG_RE.search(line)
+        if match and match["address"] == peer_ip and match["catalog"] == catalog:
+            lines.append(line.strip()[:2048])
+            formats.append(match["format"])
+    return {"lines": lines, "formats": formats, "producer_changed_lines": changed}
+
+
+def _epoch_from_result(result: Mapping[str, Any]) -> int | None:
+    started = result.get("started_at")
+    if not isinstance(started, str):
+        return None
+    try:
+        return int(dt.datetime.fromisoformat(started.replace("Z", "+00:00")).timestamp()) - 1
+    except ValueError:
+        return None
+
+
+def collect_agent_peer_catalog_log(
+    settings: Settings,
+    environment: Mapping[str, str],
+    peer_ip: str,
+    since_epoch: int | None,
+) -> dict[str, Any]:
+    """Read-only: the tagged Agent's output (the transcript) and the restarted
+    ordinary Agent's journal since the cell started."""
+
+    catalog = peer_catalog_name(peer_ip)
+    report: dict[str, Any] = {"catalog": catalog, "peer_ip": peer_ip, "sources": {},
+                              "unknown": []}
+    texts: list[str] = []
+    try:
+        with open(settings.transcript_path, "rb") as stream:
+            texts.append(stream.read(64 << 20).decode("utf-8", errors="replace"))
+        report["sources"]["tagged_agent_transcript"] = settings.transcript_path
+    except OSError as exc:
+        report["unknown"].append(f"read the tagged Agent transcript: {exc}")
+    if since_epoch is None:
+        report["unknown"].append("the cell start time is unknown; the Agent journal was not read")
+    else:
+        argv = [
+            JOURNALCTL_EXECUTABLE, "--no-pager", "--quiet", "--output=cat",
+            "--unit=celikpanel-agent.service", f"--since=@{since_epoch}",
+        ]
+        try:
+            completed = subprocess.run(
+                argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, env=dict(environment), check=False,
+                timeout=settings.command_timeout,
+            )
+            if completed.returncode != 0:
+                report["unknown"].append(f"journalctl exited {completed.returncode}")
+            else:
+                texts.append(completed.stdout[:MAX_COMMAND_OUTPUT].decode(
+                    "utf-8", errors="replace"))
+                report["sources"]["agent_journal"] = argv
+        except (OSError, subprocess.SubprocessError) as exc:
+            report["unknown"].append(f"read the Agent journal: {exc}")
+    report.update(parse_peer_catalog_format_lines("\n".join(texts), peer_ip, catalog))
+    return report
+
+
+def judge_peer_catalog_format_log(
+    log: Mapping[str, Any], expected_format: str | None
+) -> dict[str, Any]:
+    """The Agent accepted the peer catalog in the format the peer serves.
+
+    Verified failure: a line naming another format, or a producer change
+    reported during an operation. Unknown: no line found (the operation may
+    not have logged where the controller could read), or unreadable logs.
+    """
+
+    report: dict[str, Any] = {
+        "expected_format": expected_format,
+        "expected_agent_name": PEER_CATALOG_AGENT_NAMES.get(expected_format or ""),
+        "log": dict(log),
+        "failures": [],
+        "unknown": list(log.get("unknown", [])),
+    }
+    expected_name = report["expected_agent_name"]
+    if expected_name is None:
+        report["unknown"].append("the prepared peer catalog format is unknown")
+        return report
+    formats = list(log.get("formats", []))
+    wrong = sorted({value for value in formats if value != expected_name})
+    if log.get("producer_changed_lines"):
+        report["failures"].append(
+            "the Agent reported that the peer catalog producer changed during an operation"
+        )
+    if wrong:
+        report["failures"].append(
+            f"the Agent accepted the peer catalog in the {', '.join(wrong)} format, but the "
+            f"native primary serves the {expected_name} format ({expected_format})"
+        )
+    elif not formats:
+        report["unknown"].append(
+            "no Agent log line names the accepted peer catalog format for "
+            f"{log.get('catalog')} at {log.get('peer_ip')}"
+        )
+    return report
+
+
 def observe_provenance_boundary(settings: Settings, source_fixture: str) -> dict[str, Any]:
     """Rows 12/14 at the proven cut: the product's own BIND install receipt.
 
@@ -9495,13 +10501,17 @@ def judge_fixture_pass_definition(
     environment: Mapping[str, str],
     peer_ip: str,
     verification_failures: list[str],
+    *,
+    since_epoch: int | None = None,
 ) -> None:
     """Pass definitions of the paired-secondary and takeover/reinstall cells.
 
     Common: D-021 safety and ``target_converged`` from both post-retry probes.
     Paired secondary: the guest answers the member over UDP and TCP with the
     primary's SOA serial and www A; a PowerDNS secondary also holds the exact
-    CONSUMER row and the member as a loaded secondary zone. Takeover: the
+    CONSUMER row and the member as a loaded secondary zone; the Agent's log
+    line naming the accepted peer catalog format names the format the native
+    primary serves (--peer-catalog-format-*). Takeover: the
     boundary receipt is an adoption; BIND alone serves; owner files the
     takeover does not rewrite are byte-identical. Reinstall: the boundary
     receipt names the purged package; BIND alone serves.
@@ -9527,6 +10537,13 @@ def judge_fixture_pass_definition(
         parts["secondary_serving"] = check_secondary_serving(settings, peer_ip)
         if settings.cell.driver == "pdns-switch":
             parts["pdns_secondary_rows"] = check_pdns_secondary_rows(peer_ip)
+        parts["peer_catalog_format_log"] = judge_peer_catalog_format_log(
+            collect_agent_peer_catalog_log(
+                settings, environment, peer_ip,
+                since_epoch if since_epoch is not None else _epoch_from_result(result),
+            ),
+            getattr(settings, "peer_catalog_format", None),
+        )
     else:
         boundary = result.get("provenance_boundary")
         if boundary is None:
@@ -10309,6 +11326,13 @@ def run_cell(settings: Settings) -> int:
                 "timing": "after replacement agent socket, before panel restart and final liveness",
                 "attempts": recovery_attempts,
             }
+            # What an owner reading the status sees before any recovery (the
+            # Agent is still down); recorded, judged only for no mutation.
+            result["recovery_status_reads"] = {
+                "before-recovery": record_recovery_status(
+                    settings, clean_base_environment, transcript, "before-recovery"
+                )
+            }
 
         restarts: dict[str, Any] = {}
         agent_restart_epoch = int(time.time()) - 1
@@ -10492,6 +11516,12 @@ def run_cell(settings: Settings) -> int:
         diagnostic_failures.extend(
             assess_recovery_probes(recovery_probes[0], recovery_probes[1])
         )
+        if settings.trigger_mode == "socket":
+            result.setdefault("recovery_status_reads", {})["after-recovery"] = (
+                record_recovery_status(
+                    settings, clean_base_environment, transcript, "after-recovery"
+                )
+            )
 
         result["recovery"] = recovery
         panel_restart, error = checked_command(
@@ -10632,6 +11662,10 @@ def run_cell(settings: Settings) -> int:
         judge_fixture_pass_definition(
             settings, result, clean_base_environment, peer_ip, verification_failures
         )
+        judge_recovery_status_reads(result)
+        # ``status`` stays the D-021 verdict; this is the complete one
+        # (classification, retries, probes) the reboot gate also uses.
+        result["complete_verdict"] = pre_reboot_verdict(result, {"flow": "rpc-retry"})
         maybe_request_reboot_after_recovery(
             settings,
             result,
@@ -10785,9 +11819,38 @@ def build_argument_parser() -> argparse.ArgumentParser:
         "--expect-agent-startup-rollback",
         action="store_true",
         help=(
-            "PowerDNS adoption intent/rolling-back after-write: judge that the "
-            "restarted Agent rolled back by itself before the same-request retry"
+            "PowerDNS adoption intent/rolling-back/rolled-back after-write: judge that "
+            "the restarted Agent rolled back by itself before the same-request retry"
         ),
+    )
+    parser.add_argument(
+        "--reboot-even-if-failed",
+        action="store_true",
+        help=(
+            "with --reboot-after-recovery: reboot even when the pre-reboot verdict is "
+            "not a complete pass; the post-reboot state is recorded with judged: false "
+            "and never turns a failure into a pass"
+        ),
+    )
+    parser.add_argument(
+        "--retry-switch-after-rollback",
+        action="store_true",
+        help=(
+            "PowerDNS -> BIND owner-inverse cells: after a passed rollback (and an "
+            "optional reboot) request the same switch again as a new request through "
+            "the trigger; it must complete forward"
+        ),
+    )
+    peer_catalog = parser.add_mutually_exclusive_group()
+    peer_catalog.add_argument(
+        "--peer-catalog-format-bind",
+        dest="peer_catalog_format", action="store_const", const="bind",
+        help="fresh paired-secondary cells: the native primary serves the BIND-format catalog",
+    )
+    peer_catalog.add_argument(
+        "--peer-catalog-format-pdns-native",
+        dest="peer_catalog_format", action="store_const", const="pdns-native",
+        help="fresh paired-secondary cells: the native primary serves its PowerDNS PRODUCER catalog",
     )
     parser.add_argument("--cell-id", required=True)
     parser.add_argument("--request-id", required=True)
@@ -10934,6 +11997,9 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         reboot_dir=args.reboot_dir,
         expect_agent_startup_rollback=args.expect_agent_startup_rollback,
         disable_management_before_reboot=args.disable_management_before_reboot,
+        peer_catalog_format=args.peer_catalog_format,
+        retry_switch_after_rollback=args.retry_switch_after_rollback,
+        reboot_even_if_failed=args.reboot_even_if_failed,
         native_dns_status_command=(
             parse_command_json(args.native_dns_status_command, "native DNS status command")
             if args.native_dns_status_command is not None else None

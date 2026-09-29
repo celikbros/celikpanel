@@ -330,6 +330,98 @@ class GuestRecoveryProbeTest(unittest.TestCase):
         write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
         self.assertEqual(probe.probe(self.args, lambda unit: "inactive")["recovery_outcome"], "indeterminate")
 
+    def external_adoption(self) -> tuple[dict, dict]:
+        """A rolled-back external PowerDNS adoption: only the ledger remains."""
+
+        self.scenario_value.update({
+            "driver": "pdns-adopt", "source_fixture": "external-pdns-adoption",
+            "mode": "adopt", "target_engine": "pdns",
+        })
+        self.identity_value.update({"driver": "pdns-adopt",
+                                    "source_fixture": "external-pdns-adoption"})
+        write_json(self.scenario, self.scenario_value)
+        write_json(self.identity, self.identity_value)
+        self.state.unlink()
+        (self.root / "dns-engine-ownership-pdns.json").unlink()
+        self.job.update({
+            "status": "failed", "phase": "interrupted",
+            "error_code": "dns_engine_switch_rolled_back_after_restart",
+            "error_message": "The interrupted DNS engine switch was rolled back.",
+        })
+        write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
+        files = {}
+        preimage = {"schema": probe.EXTERNAL_PDNS_PREIMAGE_SCHEMA, "cell_id": CELL}
+        for key in probe.EXTERNAL_PDNS_OWNER_FILES:
+            path = self.root / f"owner-{key}"
+            path.write_bytes(f"owner {key}\n".encode())
+            files[key] = str(path)
+            preimage[key] = {"path": str(path),
+                             "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        write_json(self.root / probe.EXTERNAL_PDNS_PREIMAGE_NAME, preimage)
+        return files, preimage
+
+    def test_rolled_back_external_pdns_adoption_is_classified(self) -> None:
+        files, preimage = self.external_adoption()
+        with mock.patch.dict(probe.EXTERNAL_PDNS_OWNER_FILES, files):
+            first = probe.probe(self.args, self.units)
+            second = probe.probe(self.args, self.units)
+            self.assertFalse(first["converged"])
+            self.assertEqual(first["recovery_outcome"], "rolled_back_source_active",
+                             first["detail"])
+            self.assertEqual(first["active_dns_engine"], "pdns")
+            self.assertEqual(first["fingerprint"], second["fingerprint"])
+            self.assertIn("controller must prove DNS serving", first["detail"])
+            # Every deviation from the defined end state stays indeterminate.
+            for label, change, restore in (
+                ("state receipt", lambda: write_state(self.state, self.state_value),
+                 lambda: self.state.unlink()),
+                ("ownership receipt",
+                 lambda: write_state(self.root / "dns-engine-ownership-pdns.json", self.state_value),
+                 lambda: (self.root / "dns-engine-ownership-pdns.json").unlink()),
+                ("journal", lambda: write_json(self.journal, {"phase": "rolled-back"}),
+                 lambda: self.journal.unlink()),
+                ("owner database drift",
+                 lambda: Path(files["database"]).write_bytes(b"changed\n"),
+                 lambda: Path(files["database"]).write_bytes(b"owner database\n")),
+            ):
+                with self.subTest(label=label):
+                    change()
+                    self.assertEqual(probe.probe(self.args, self.units)["recovery_outcome"],
+                                     "indeterminate")
+                    restore()
+            self.assertEqual(probe.probe(self.args, self.units)["recovery_outcome"],
+                             "rolled_back_source_active")
+            # BIND active, PowerDNS inactive, a live lease, a foreign preimage.
+            self.assertEqual(probe.probe(self.args, lambda unit: "active")["recovery_outcome"],
+                             "indeterminate")
+            self.assertEqual(probe.probe(self.args, lambda unit: "inactive")["recovery_outcome"],
+                             "indeterminate")
+            self.job["lease_expires_at"] = "2026-09-29T11:00:00Z"
+            write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
+            self.assertEqual(probe.probe(self.args, self.units)["recovery_outcome"],
+                             "indeterminate")
+            self.job["lease_expires_at"] = "0001-01-01T00:00:00Z"
+            write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
+            write_json(self.root / probe.EXTERNAL_PDNS_PREIMAGE_NAME,
+                       dict(preimage, cell_id="other"))
+            self.assertEqual(probe.probe(self.args, self.units)["recovery_outcome"],
+                             "indeterminate")
+        # The fixed owner paths are the product's Debian paths.
+        self.assertEqual(probe.EXTERNAL_PDNS_OWNER_FILES["main_config"], "/etc/powerdns/pdns.conf")
+
+    def test_converged_external_adoption_keeps_the_target_path(self) -> None:
+        files, _ = self.external_adoption()
+        adopted = dict(self.state_value, mode="adopt")
+        write_state(self.state, adopted)
+        write_state(self.root / "dns-engine-ownership-pdns.json", adopted)
+        self.job.update({"status": "succeeded", "error_code": "", "error_message": "",
+                         "phase": "commit/dns-engine-switch/v2/finalized/" + REQUEST + "/"
+                         + QUALIFIER})
+        write_json(self.ledger, {"version": 1, "jobs": {REQUEST: self.job}})
+        with mock.patch.dict(probe.EXTERNAL_PDNS_OWNER_FILES, files):
+            result = probe.probe(self.args, self.units)
+        self.assertNotEqual(result["recovery_outcome"], "rolled_back_source_active")
+
     def test_unexpected_error_still_emits_the_exact_probe_shape(self) -> None:
         argv = [
             "guest-recovery-probe",

@@ -2038,9 +2038,10 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
         "bind__rolled-back__after-write__standalone__peer-reachable",
     })
     ALL_OWNER_INVERSE = OWNER_INVERSE | CRITICAL_OWNER_INVERSE
+    # Since 3cc2de22 the PowerDNS adoption rolled-back cut is finished by the
+    # restarted Agent itself (--expect-agent-startup-rollback), not the owner.
     ADOPTION_OWNER_INVERSE = frozenset({
         "bind__rolling-back__after-write__standalone__peer-reachable",
-        "pdns-adopt__rolled-back__after-write__standalone__peer-reachable",
     })
 
     @staticmethod
@@ -2493,20 +2494,26 @@ class OwnerProfilesAndRebootRunnerTest(unittest.TestCase):
                             "owner_inverse_after_restart": True,
                             "bind_rollback_after_target_started": True, **change},
                 ))
+        # Since 3cc2de22 the restarted Agent finishes the PowerDNS adoption at
+        # rolled-back itself: the owner flag is refused with the right flag named.
         pdns = self.raw("pdns-adopt__rolled-back__after-write__standalone__peer-reachable")
-        lines = self.dry(pdns, self.args(
-            pdns, source_fixture="external-pdns-adoption", owner_inverse_after_restart=True,
-        ))
-        self.assertTrue(lines[0][-1].endswith(f"{pdns['id']} {bootstrap.OWNER_INVERSE_FLAG}"))
-        self.refused(pdns, self.args(
-            pdns, source_fixture="external-pdns-adoption", owner_inverse_after_restart=True,
-            bind_rollback_after_target_started=True,
-        ))
-        # Without the flag the PowerDNS adoption cell keeps its earlier run.
+        for extra in ({}, {"bind_rollback_after_target_started": True}):
+            with self.subTest(extra=extra):
+                self.refused(pdns, self.args(
+                    pdns, source_fixture="external-pdns-adoption",
+                    owner_inverse_after_restart=True, **extra,
+                ), "run it with " + bootstrap.STARTUP_ROLLBACK_FLAG)
+        self.assertNotIn(pdns["id"], bootstrap.OWNER_INVERSE_CELLS)
+        # Without any flag the PowerDNS adoption cell keeps its plain run.
         lines = self.dry(pdns, self.args(pdns, source_fixture="external-pdns-adoption"))
         self.assertTrue(lines[0][-1].endswith(" " + pdns["id"]))
 
     def test_startup_rollback_expectation_is_scoped(self) -> None:
+        self.assertEqual(bootstrap.STARTUP_ROLLBACK_CELLS, frozenset({
+            "pdns-adopt__intent__after-write__standalone__peer-reachable",
+            "pdns-adopt__rolling-back__after-write__standalone__peer-reachable",
+            "pdns-adopt__rolled-back__after-write__standalone__peer-reachable",
+        }))
         for cell_id in sorted(bootstrap.STARTUP_ROLLBACK_CELLS):
             raw = self.raw(cell_id)
             with self.subTest(cell_id=cell_id):
@@ -2517,7 +2524,14 @@ class OwnerProfilesAndRebootRunnerTest(unittest.TestCase):
                 self.assertTrue(lines[0][-1].endswith(
                     f"{cell_id} {bootstrap.STARTUP_ROLLBACK_FLAG}"
                 ))
+        # The rolled-back cut: the startup flag with the owner flag is refused.
         raw = self.raw("pdns-adopt__rolled-back__after-write__standalone__peer-reachable")
+        self.refused(raw, self.args(raw, source_fixture="external-pdns-adoption",
+                                    expect_agent_startup_rollback=True,
+                                    owner_inverse_after_restart=True),
+                     bootstrap.STARTUP_ROLLBACK_FLAG)
+        # Other adoption cells stay refused under the startup flag.
+        raw = self.raw("pdns-adopt__committed__after-write__standalone__peer-reachable")
         self.refused(raw, self.args(raw, source_fixture="external-pdns-adoption",
                                     expect_agent_startup_rollback=True))
         raw = self.raw("bind__target-staged__after-write__standalone__peer-reachable")
@@ -2625,11 +2639,127 @@ class OwnerProfilesAndRebootRunnerTest(unittest.TestCase):
             "--source-fixture", "managed-pdns", bootstrap.OWNER_INVERSE_FLAG,
             bootstrap.REBOOT_BEFORE_OWNER_FLAG, bootstrap.REBOOT_AFTER_RECOVERY_FLAG,
             bootstrap.STARTUP_ROLLBACK_FLAG, "--reboot-timeout", "900",
+            bootstrap.RETRY_SWITCH_FLAG, bootstrap.REBOOT_EVEN_IF_FAILED_FLAG,
+            "--peer-catalog-format", "pdns-native",
         ])
         self.assertIs(args.reboot_before_owner_command, True)
         self.assertIs(args.reboot_after_recovery, True)
         self.assertIs(args.expect_agent_startup_rollback, True)
+        self.assertIs(args.retry_switch_after_rollback, True)
+        self.assertIs(args.reboot_even_if_failed, True)
+        self.assertEqual(args.peer_catalog_format, "pdns-native")
         self.assertEqual(args.reboot_timeout, 900)
+        with mock.patch("sys.stderr", new_callable=io.StringIO), \
+                self.assertRaises(SystemExit):
+            bootstrap.parse_args([
+                "prepare-bind", "--work-root", "/tmp/root", "--cell-id", "x",
+                "--node", "debian13", "--identity-file", "/tmp/key",
+                "--source-fixture", "uninitialized", "--peer-catalog-format", "knot",
+            ])
+
+    def test_retry_switch_and_diagnostic_reboot_flags_are_gated(self) -> None:
+        switch = self.raw("bind__target-started__after-write__standalone__peer-reachable")
+        self.assertIn(switch["id"], bootstrap.V2_SWITCH_OWNER_CELLS)
+        self.assertEqual(
+            bootstrap.V2_SWITCH_OWNER_CELLS,
+            frozenset(cell for cell, admission in bootstrap.OWNER_INVERSE_ADMISSIONS.items()
+                      if admission[0] == "managed-pdns"),
+        )
+        lines = self.dry(switch, self.args(
+            switch, owner_inverse_after_restart=True, retry_switch_after_rollback=True,
+            reboot_after_recovery=True, reboot_even_if_failed=True,
+        ))
+        self.assertTrue(lines[0][-1].endswith(
+            f"{switch['id']} {bootstrap.OWNER_INVERSE_FLAG} {bootstrap.RETRY_SWITCH_FLAG} "
+            f"{bootstrap.REBOOT_AFTER_RECOVERY_FLAG} {bootstrap.REBOOT_EVEN_IF_FAILED_FLAG}"
+        ))
+        # The retry needs the owner flow of a V2 switch cell.
+        self.refused(switch, self.args(switch, retry_switch_after_rollback=True),
+                     bootstrap.RETRY_SWITCH_FLAG)
+        adoption = self.raw(bootstrap.INDEPENDENT_BIND_HANDOFF_CELL)
+        self.refused(adoption, self.args(
+            adoption, source_fixture="owner-bind", owner_inverse_after_restart=True,
+            bind_rollback_after_target_started=True, retry_switch_after_rollback=True,
+        ), bootstrap.RETRY_SWITCH_FLAG)
+        # The diagnostic reboot needs the after-recovery reboot.
+        fresh = self.raw("bind__target-verified__after-write__standalone__peer-reachable")
+        self.refused(fresh, self.args(fresh, source_fixture="uninitialized",
+                                      reboot_even_if_failed=True),
+                     "requires " + bootstrap.REBOOT_AFTER_RECOVERY_FLAG)
+        lines = self.dry(fresh, self.args(fresh, source_fixture="uninitialized",
+                                          reboot_after_recovery=True,
+                                          reboot_even_if_failed=True))
+        self.assertTrue(lines[0][-1].endswith(
+            f"{bootstrap.REBOOT_AFTER_RECOVERY_FLAG} {bootstrap.REBOOT_EVEN_IF_FAILED_FLAG}"
+        ))
+
+    def test_running_bind_adoption_admits_both_reboot_flags(self) -> None:
+        raw = self.raw(bootstrap.INDEPENDENT_BIND_HANDOFF_CELL)
+        lines = self.dry(raw, self.args(
+            raw, source_fixture="owner-bind", owner_inverse_after_restart=True,
+            bind_rollback_after_target_started=True, reboot_before_owner_command=True,
+            reboot_after_recovery=True,
+        ))
+        self.assertTrue(lines[0][-1].endswith(
+            f"{raw['id']} {bootstrap.LATER_BIND_ROLLBACK_FLAG} {bootstrap.OWNER_INVERSE_FLAG} "
+            f"{bootstrap.REBOOT_BEFORE_OWNER_FLAG} {bootstrap.REBOOT_AFTER_RECOVERY_FLAG}"
+        ))
+        self.assertEqual(lines[1]["reboot"]["at_most"], 2)
+        # The independent handoff still excludes reboots.
+        self.refused(raw, self.args(
+            raw, source_fixture="owner-bind", stop_after_kill_for_independent_recovery=True,
+            bind_rollback_after_target_started=True, reboot_after_recovery=True,
+        ))
+
+    def enroll(self, raw: dict, **overrides) -> list:
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = Path(temporary) / "recovery-runtime"
+            (runtime / "bin").mkdir(parents=True)
+            (runtime / "runtime.manifest").write_text("format=test\n", encoding="utf-8")
+            (runtime / "bin" / "recovery").write_text("#!/bin/sh\n", encoding="utf-8")
+            (runtime / "bin" / "recovery").chmod(0o755)
+            args = self.args(raw, recovery_runtime=runtime, **overrides)
+            with (
+                mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+                mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/k")),
+                mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+                mock.patch.object(bootstrap, "scp_base", return_value=["scp"]),
+                mock.patch.object(bootstrap, "remote_destination",
+                                  side_effect=lambda _node, path: "guest:" + path),
+                mock.patch.object(bootstrap.subprocess, "run") as run,
+                mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+            ):
+                bootstrap.enroll_recovery_runtime(args)
+                run.assert_not_called()
+        return [json.loads(line) for line in output.getvalue().splitlines()]
+
+    def test_enrollment_is_admitted_for_every_supported_standalone_cell(self) -> None:
+        for cell_id, fixture_name in (
+            ("bind__target-verified__after-write__standalone__peer-reachable", "uninitialized"),
+            ("pdns-switch__target-started__after-write__standalone__peer-reachable",
+             "uninitialized"),
+            ("pdns-adopt__intent__after-write__standalone__peer-reachable",
+             "external-pdns-adoption"),
+            ("pdns-adopt__rolled-back__after-write__standalone__peer-reachable",
+             "external-pdns-adoption"),
+            ("bind__target-staged__after-write__standalone__peer-reachable", "managed-pdns"),
+        ):
+            raw = self.raw(cell_id)
+            with self.subTest(cell_id=cell_id):
+                lines = self.enroll(raw, source_fixture=fixture_name)
+                self.assertEqual(lines[-1]["action"], "enroll-recovery-runtime")
+                self.assertNotIn("additional_capability", lines[-1])
+                self.assertFalse(lines[2][-1].endswith("celikpanel-bind-adoption-inverse/v1"))
+        paired = self.raw("bind__intent__after-write__paired-secondary__peer-reachable")
+        with mock.patch.object(bootstrap, "load_plan", return_value=({}, paired, {})), \
+                self.assertRaisesRegex(bootstrap.BootstrapError, "standalone cells"):
+            bootstrap.enroll_recovery_runtime(self.args(
+                paired, source_fixture="uninitialized", recovery_runtime=Path("/x")))
+        wrong = self.raw("bind__target-verified__after-write__standalone__peer-reachable")
+        with mock.patch.object(bootstrap, "load_plan", return_value=({}, wrong, {})), \
+                self.assertRaises(bootstrap.BootstrapError):
+            bootstrap.enroll_recovery_runtime(self.args(
+                wrong, source_fixture="external-pdns-adoption", recovery_runtime=Path("/x")))
 
     @unittest.skipUnless(
         sys.platform == "linux" and hasattr(os, "geteuid") and os.geteuid() == 0,
@@ -2680,7 +2810,26 @@ class OwnerProfilesAndRebootRunnerTest(unittest.TestCase):
             startup = sorted(bootstrap.STARTUP_ROLLBACK_CELLS)[0]
             self.assertEqual(run(startup, bootstrap.STARTUP_ROLLBACK_FLAG),
                              [bootstrap.STARTUP_ROLLBACK_FLAG])
+            rolled = "pdns-adopt__rolled-back__after-write__standalone__peer-reachable"
+            self.assertEqual(run(rolled, bootstrap.STARTUP_ROLLBACK_FLAG),
+                             [bootstrap.STARTUP_ROLLBACK_FLAG])
+            retry = bootstrap.RETRY_SWITCH_FLAG
+            even = bootstrap.REBOOT_EVEN_IF_FAILED_FLAG
+            self.assertEqual(run(switch, owner, retry, after, even),
+                             [owner, retry, after, even, "--reboot-dir", "/var/lib/x/results/c"])
+            self.assertEqual(run(handoff, later, owner, before, after),
+                             [later, owner, before, after, "--reboot-dir", "/var/lib/x/results/c"])
+            secondary = "bind__intent__after-write__paired-secondary__peer-reachable"
+            pdns_format = bootstrap.PEER_CATALOG_PDNS_FLAG
+            self.assertEqual(run(secondary, pdns_format), [pdns_format])
             for cell_id, flags in (
+                (rolled, (owner,)),
+                (switch, (retry,)),
+                (handoff, (later, owner, retry)),
+                (switch, (owner, even)),
+                (switch, (owner, after, retry)),
+                (secondary, (bootstrap.PEER_CATALOG_BIND_FLAG, pdns_format)),
+                (switch, (owner, bootstrap.PEER_CATALOG_BIND_FLAG)),
                 (handoff, (owner,)),
                 (handoff, (owner, later)),
                 (switch, (owner, later)),

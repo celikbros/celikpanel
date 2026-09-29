@@ -65,6 +65,11 @@ class ProbeObservationError(RuntimeError):
     pass
 
 
+# Sources CelikPanel never owned: after a rollback no DNS state receipt exists
+# (owner-bind: running-BIND adoption; external-pdns-adoption: V1 adoption).
+RECEIPTLESS_SOURCE_FIXTURES = frozenset({"owner-bind", "external-pdns-adoption"})
+
+
 def exact_keys(value: Any, allowed: set[str], required: set[str], label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ProbeObservationError(f"{label} is not an object")
@@ -709,38 +714,50 @@ def validate_owner_bind_rollback(
         raise ProbeObservationError("owner BIND rollback has a different source fixture")
     if states.get("named.service") != "active" or states.get("pdns.service") == "active" or states.get("bind9.service") != "active":
         raise ProbeObservationError("owner BIND source units are not exclusively active")
-    for path, label in (
-        (args.state, "owner BIND engine state"),
-        (args.state.parent / "dns-engine-ownership-bind.json", "owner BIND ownership"),
+    return validate_receiptless_rollback(args, receipt, "bind", "owner BIND rollback")
+
+
+def validate_receiptless_rollback(
+    args: argparse.Namespace, receipt: dict[str, Any], target: str, label: str
+) -> dict[str, Any]:
+    """No CelikPanel receipt or journal is left and the job holds a terminal verdict.
+
+    Shared by the two sources CelikPanel never owned: an owner BIND and an
+    external PowerDNS whose adoption was rolled back. Returns the job.
+    """
+
+    for path, receipt_label in (
+        (args.state, "DNS engine state"),
+        (args.state.parent / "dns-engine-ownership-bind.json", "BIND ownership"),
         (args.state.parent / "dns-engine-ownership-pdns.json", "PowerDNS ownership"),
         (args.state.parent / "dns-engine-install-ownership-bind.json", "BIND install ownership"),
         (args.state.parent / "dns-engine-install-ownership-pdns.json", "PowerDNS install ownership"),
     ):
-        value, _, _ = optional_secure_json(path, label, 1 << 20)
+        value, _, _ = optional_secure_json(path, receipt_label, 1 << 20)
         if value is not None:
-            raise ProbeObservationError(f"{label} remains after owner rollback")
+            raise ProbeObservationError(f"{receipt_label} remains after the {label}")
     exists, _ = journal_observation(args.journal)
     if exists:
-        raise ProbeObservationError("owner BIND rollback journal remains")
-    ledger, _, _ = read_secure_json(args.ledger, "owner BIND rollback ledger", 1 << 20)
-    ledger = exact_keys(ledger, LEDGER_KEYS, {"version", "jobs"}, "owner BIND rollback ledger")
+        raise ProbeObservationError(f"{label} journal remains")
+    ledger, _, _ = read_secure_json(args.ledger, f"{label} ledger", 1 << 20)
+    ledger = exact_keys(ledger, LEDGER_KEYS, {"version", "jobs"}, f"{label} ledger")
     if ledger.get("version") != 1 or ledger.get("active_request_id", "") != "" or not isinstance(ledger.get("jobs"), dict):
-        raise ProbeObservationError("owner BIND rollback ledger is not idle")
+        raise ProbeObservationError(f"{label} ledger is not idle")
     job = exact_keys(
         ledger["jobs"].get(receipt["request_id"]), JOB_KEYS,
         {"request_id", "owner_id", "kind", "target", "status", "phase", "attempt", "started_at", "updated_at", "deadline_at"},
-        "owner BIND rollback job",
+        f"{label} job",
     )
     expected = {
         "request_id": receipt["request_id"], "owner_id": receipt["owner_id"],
-        "kind": "dns_engine_switch", "target": "bind",
+        "kind": "dns_engine_switch", "target": target,
         "package_name": receipt["manifest_qualifier"], "status": "failed",
     }
     if (any(job.get(key) != value for key, value in expected.items())
             or job.get("phase") not in {"failed", "interrupted"}
             or not str(job.get("error_code", "")).strip()
             or not str(job.get("error_message", "")).strip()):
-        raise ProbeObservationError("owner BIND rollback lacks exact failed mutation verdict")
+        raise ProbeObservationError(f"{label} lacks exact failed mutation verdict")
     if (isinstance(job.get("attempt"), bool)
             or not isinstance(job.get("attempt"), int)
             or job["attempt"] <= 0
@@ -748,24 +765,101 @@ def validate_owner_bind_rollback(
             or job.get("worker_pid", 0) != 0
             or str(job.get("worker_started", "")).strip()
             or str(job.get("worker_command", "")).strip()):
-        raise ProbeObservationError("owner BIND rollback retains worker or lease")
+        raise ProbeObservationError(f"{label} retains worker or lease")
     times: dict[str, dt.datetime] = {}
     for field in ("started_at", "updated_at", "deadline_at", "finished_at"):
         value = job.get(field)
         if not isinstance(value, str) or not value:
-            raise ProbeObservationError(f"owner BIND rollback {field} is absent")
+            raise ProbeObservationError(f"{label} {field} is absent")
         try:
             parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError as exc:
-            raise ProbeObservationError(f"owner BIND rollback {field} is invalid") from exc
+            raise ProbeObservationError(f"{label} {field} is invalid") from exc
         if parsed.year <= 1 or parsed.tzinfo is None:
-            raise ProbeObservationError(f"owner BIND rollback {field} is invalid")
+            raise ProbeObservationError(f"{label} {field} is invalid")
         times[field] = parsed
     if (times["updated_at"] != times["finished_at"]
             or times["updated_at"] < times["started_at"]
             or times["deadline_at"] < times["started_at"]
             or times["finished_at"] < times["started_at"]):
-        raise ProbeObservationError("owner BIND rollback timestamps are inconsistent")
+        raise ProbeObservationError(f"{label} timestamps are inconsistent")
+    return job
+
+
+EXTERNAL_PDNS_PREIMAGE_NAME = "source-external-pdns-preimage.json"
+EXTERNAL_PDNS_PREIMAGE_SCHEMA = "celikpanel/dns-kill-external-pdns-adoption-preimage/v1"
+# The fixed Debian paths the sealed adoption preimage names; the probe never
+# reads a path taken from the document itself.
+EXTERNAL_PDNS_OWNER_FILES = {
+    "main_config": "/etc/powerdns/pdns.conf",
+    "managed_config": "/etc/powerdns/pdns.d/celikpanel.conf",
+    "database": "/var/lib/powerdns/pdns.sqlite3",
+}
+
+
+def owner_file_sha256(path: str, limit: int = 65 << 20) -> str:
+    """SHA-256 of a regular, non-symlink owner file, read only and bounded."""
+
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ProbeObservationError(f"owner file {path} is unavailable: {exc}") from exc
+    try:
+        info = os.fstat(descriptor)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > limit:
+            raise ProbeObservationError(f"owner file {path} is not a bounded regular file")
+        digest = hashlib.sha256()
+        remaining = limit + 1
+        while remaining > 0:
+            chunk = os.read(descriptor, min(1 << 20, remaining))
+            if not chunk:
+                break
+            digest.update(chunk)
+            remaining -= len(chunk)
+        if remaining <= 0:
+            raise ProbeObservationError(f"owner file {path} exceeds its size bound")
+        return digest.hexdigest()
+    finally:
+        os.close(descriptor)
+
+
+def validate_external_pdns_adoption_rollback(
+    args: argparse.Namespace,
+    scenario: dict[str, Any],
+    receipt: dict[str, Any],
+    states: dict[str, str],
+    owner_file_digest: Callable[[str], str] = owner_file_sha256,
+) -> dict[str, Any]:
+    """A rolled-back external PowerDNS adoption, read only.
+
+    The end state the product defines for this fixture: no CelikPanel state,
+    ownership or install receipt (the adoption's preimage was "no receipt"), no
+    journal, the job with its terminal failed verdict and no worker or lease,
+    the owner's PowerDNS the only active DNS unit, and the owner's main and
+    managed configuration and database byte-identical to the sealed adoption
+    preimage (source-external-pdns-preimage.json beside the scenario). DNS
+    serving itself is proved by the controller.
+    """
+
+    if scenario.get("source_fixture") != "external-pdns-adoption" or scenario.get("mode") != "adopt":
+        raise ProbeObservationError("external PowerDNS rollback has a different source fixture")
+    if states.get("pdns.service") != "active" or any(
+        states.get(unit) == "active" for unit in ("named.service", "bind9.service")
+    ):
+        raise ProbeObservationError("external PowerDNS source units are not exclusively active")
+    job = validate_receiptless_rollback(args, receipt, "pdns", "external PowerDNS adoption rollback")
+    preimage, _, _ = read_secure_json(
+        args.scenario.parent / EXTERNAL_PDNS_PREIMAGE_NAME, "external PowerDNS preimage", 1 << 20
+    )
+    if preimage.get("schema") != EXTERNAL_PDNS_PREIMAGE_SCHEMA or preimage.get("cell_id") != args.cell_id:
+        raise ProbeObservationError("external PowerDNS preimage is not this cell's sealed preimage")
+    for key, path in EXTERNAL_PDNS_OWNER_FILES.items():
+        entry = preimage.get(key)
+        if not isinstance(entry, dict) or entry.get("path") != path or not isinstance(entry.get("sha256"), str):
+            raise ProbeObservationError(f"external PowerDNS preimage {key} is not exact")
+        if owner_file_digest(path) != entry["sha256"]:
+            raise ProbeObservationError(f"owner PowerDNS {key} differs from the sealed adoption preimage")
     return job
 
 
@@ -872,10 +966,15 @@ def probe(args: argparse.Namespace, unit_runner: Callable[[str], str] = inspect_
     except ProbeObservationError as exc:
         errors.append(str(exc))
     owner_absent_state = False
+    # Sources CelikPanel never owned: a rollback ends with NO state receipt.
+    receiptless_source = (
+        scenario is not None
+        and scenario.get("source_fixture") in RECEIPTLESS_SOURCE_FIXTURES
+    )
     try:
-        if scenario is not None and scenario.get("source_fixture") == "owner-bind":
+        if receiptless_source:
             owner_state, _, _ = optional_secure_json(
-                args.state, "owner BIND engine state receipt", 1 << 20
+                args.state, "owner-source engine state receipt", 1 << 20
             )
             owner_absent_state = owner_state is None
         if owner_absent_state:
@@ -902,7 +1001,9 @@ def probe(args: argparse.Namespace, unit_runner: Callable[[str], str] = inspect_
             }
     except ProbeObservationError as exc:
         errors.append(str(exc))
-    if scenario is not None and scenario.get("source_fixture") == "owner-bind" and active_state is None:
+    if receiptless_source and owner_absent_state:
+        semantic["ownership_residue"] = {"checked_by_owner_rollback": True}
+    elif scenario is not None and scenario.get("source_fixture") == "owner-bind" and active_state is None:
         semantic["ownership_residue"] = {"checked_by_owner_rollback": True}
     elif scenario is not None and active_state is not None:
         residue, residue_errors = ownership_residue(
@@ -955,7 +1056,40 @@ def probe(args: argparse.Namespace, unit_runner: Callable[[str], str] = inspect_
     ):
         active_engine = ""
     outcome = "indeterminate"
-    if scenario is not None and scenario.get("source_fixture") == "owner-bind":
+    if (
+        scenario is not None
+        and scenario.get("source_fixture") == "external-pdns-adoption"
+        and owner_absent_state
+    ):
+        # A rolled-back external PowerDNS adoption (no receipt was the
+        # preimage). A converged adoption has a state receipt and takes the
+        # target_converged path below.
+        if receipt is not None and unit_states is not None and not errors:
+            try:
+                job = validate_external_pdns_adoption_rollback(
+                    args, scenario, receipt, unit_states
+                )
+                semantic["job"] = {
+                    key: job.get(key, "") for key in (
+                        "request_id", "owner_id", "kind", "target", "package_name",
+                        "status", "phase", "attempt", "error_code", "error_message",
+                    )
+                }
+                semantic["job"]["worker_present"] = False
+                semantic["job"]["lease_present"] = False
+                outcome = "rolled_back_source_active"
+                errors.append(
+                    "external PowerDNS adoption rollback is not target convergence; "
+                    "controller must prove DNS serving"
+                )
+            except ProbeObservationError as exc:
+                errors.append(f"external PowerDNS adoption rollback evidence: {exc}")
+        else:
+            errors.append(
+                "external PowerDNS adoption left no state receipt, but its rollback "
+                "evidence could not be read"
+            )
+    elif scenario is not None and scenario.get("source_fixture") == "owner-bind":
         if receipt is not None and unit_states is not None and not errors:
             try:
                 job = validate_owner_bind_rollback(args, scenario, receipt, unit_states)

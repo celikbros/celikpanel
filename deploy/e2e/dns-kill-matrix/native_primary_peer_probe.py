@@ -3,9 +3,10 @@
 
 Runs on the disposable peer guest prepared by ``native_primary_peer.py``. It
 changes no service, file, database or DNS state. It reports what the native
-primary serves (catalog serial and members, parsed with the same rules as the
-Agent's paired-secondary catalog reader) and which transfer/NOTIFY lines the
-native service logged for the guest under test. It is a fixture observation,
+primary serves (catalog serial, members and catalog producer format, parsed
+with the same rules and the same BIND-then-PowerDNS selection as the Agent's
+peer catalog reader) and which transfer/NOTIFY lines the native service logged
+for the guest under test. It is a fixture observation,
 not an Agent receipt, and proves nothing about the secondary by itself.
 
 The module is standard-library only so it can be copied to the peer alone.
@@ -56,6 +57,12 @@ AXFR_MAX_MEMBERS = 65536
 
 PRODUCER_BIND = "bind"
 PRODUCER_POWERDNS = "powerdns"
+# dnsCatalogAXFRProducer.String() in cmd/agent/dns_catalog_axfr.go: the name
+# the Agent logs once per operation for the accepted peer catalog format.
+AGENT_PRODUCER_NAMES = {PRODUCER_BIND: "BIND", PRODUCER_POWERDNS: "PowerDNS"}
+# Fixture catalog formats a native primary peer can serve (native_primary_peer.py
+# --catalog-format) and the producer the Agent's reader must accept for each.
+CATALOG_FORMATS = {"bind": PRODUCER_BIND, "pdns-native": PRODUCER_POWERDNS}
 
 ENGINE_UNITS = {"bind": "named.service", "pdns": "pdns.service"}
 FOREIGN_UNITS = {
@@ -69,6 +76,16 @@ LOG_LINE_LIMIT = 400
 
 class CatalogAXFRError(ValueError):
     """The catalog transfer differs from what the Agent's reader accepts."""
+
+
+class CatalogAXFRFormatError(CatalogAXFRError):
+    """errDNSCatalogAXFRProducerFormat: a refusal only the producer format explains.
+
+    Raised for the two encodings the BIND and PowerDNS producers write
+    differently: the TTL (0 or 60) of the version/member records and a member
+    label of exactly the other producer's shape. Every other refusal is common
+    to both formats and is never retried in the other format.
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +185,35 @@ def catalog_member_label(member: str) -> str:
     return hashlib.sha224(member.encode("ascii")).hexdigest()
 
 
+def exact_bind_member_owner(owner: str, catalog: str, member: str) -> bool:
+    """exactDNSCatalogMemberOwner: <sha224hex(member)>.zones.<catalog>."""
+
+    suffix = ".zones." + catalog
+    if not owner.endswith(suffix):
+        return False
+    label = owner[: -len(suffix)]
+    if len(label) != BIND_MEMBER_LABEL_SIZE or "." in label:
+        return False
+    if any(not ("0" <= char <= "9" or "a" <= char <= "f") for char in label):
+        return False
+    try:
+        return label == catalog_member_label(member)
+    except ValueError:
+        return False
+
+
+def exact_pdns_member_owner(owner: str, catalog: str) -> bool:
+    """exactPDNSCatalogMemberOwner: a 32-character base32hex label under .zones."""
+
+    suffix = ".zones." + catalog
+    if not owner.endswith(suffix):
+        return False
+    label = owner[: -len(suffix)]
+    if len(label) != PDNS_MEMBER_LABEL_SIZE or "." in label:
+        return False
+    return all("0" <= char <= "9" or "a" <= char <= "v" for char in label)
+
+
 # ---------------------------------------------------------------------------
 # Port of cmd/agent/dns_catalog_axfr.go dnsCatalogAXFRState.
 # ---------------------------------------------------------------------------
@@ -175,10 +221,11 @@ def catalog_member_label(member: str) -> str:
 class CatalogAXFRState:
     """Incremental catalog AXFR reader with the Agent's exact rules.
 
-    The paired-secondary install paths (dns_engine_host.go probeDNSCatalogAXFR,
-    dns_engine_pdns_catalog.go peerPDNSCatalog) use the BIND producer policy:
-    every record TTL 60 and SHA-224 member labels. The PowerDNS policy exists
-    only for a panel-managed PowerDNS primary reading its own producer zone.
+    One instance reads one transfer in one producer format: BIND (every record
+    TTL 60, SHA-224 member labels) or PowerDNS (TTL 0 on the version and member
+    records, 32-character base32hex member labels). Which format a PEER catalog
+    is read in is decided by select_peer_catalog, the port of
+    cmd/agent/dns_peer_catalog.go selectDNSPeerCatalogAXFR.
     """
 
     def __init__(self, query_id: int, catalog: str, producer: str = PRODUCER_BIND):
@@ -205,24 +252,16 @@ class CatalogAXFRState:
         self.record_owners.add(owner)
 
     def _exact_member_owner(self, owner: str, member: str) -> bool:
-        suffix = ".zones." + self.catalog
-        if not owner.endswith(suffix):
-            return False
-        label = owner[: -len(suffix)]
-        if "." in label:
-            return False
         if self.producer == PRODUCER_BIND:
-            if len(label) != BIND_MEMBER_LABEL_SIZE:
-                return False
-            if any(not ("0" <= char <= "9" or "a" <= char <= "f") for char in label):
-                return False
-            try:
-                return label == catalog_member_label(member)
-            except ValueError:
-                return False
-        if len(label) != PDNS_MEMBER_LABEL_SIZE:
-            return False
-        return all("0" <= char <= "9" or "a" <= char <= "v" for char in label)
+            return exact_bind_member_owner(owner, self.catalog, member)
+        return exact_pdns_member_owner(owner, self.catalog)
+
+    def _other_producer_member_owner(self, owner: str, member: str) -> bool:
+        """otherProducerMemberOwner: the refused owner is the other producer's shape."""
+
+        if self.producer == PRODUCER_BIND:
+            return exact_pdns_member_owner(owner, self.catalog)
+        return exact_bind_member_owner(owner, self.catalog, member)
 
     def _parse_soa(self, message: bytes, owner: str, rdata: int, end: int) -> int:
         if owner != self.catalog:
@@ -278,10 +317,16 @@ class CatalogAXFRState:
             if end > len(message):
                 raise CatalogAXFRError("BIND catalog AXFR record exceeds its message")
             expected_ttl = CATALOG_TTL
-            if (self.producer == PRODUCER_POWERDNS
-                    and record_type in (DNS_TYPE_TXT, DNS_TYPE_PTR)):
+            producer_ttl = record_type in (DNS_TYPE_TXT, DNS_TYPE_PTR)
+            if self.producer == PRODUCER_POWERDNS and producer_ttl:
                 expected_ttl = 0
-            if record_class != DNS_CLASS_IN or ttl != expected_ttl:
+            if record_class != DNS_CLASS_IN:
+                raise CatalogAXFRError("BIND catalog AXFR record class or TTL is not exact")
+            if ttl != expected_ttl:
+                if producer_ttl and ttl in (0, CATALOG_TTL):
+                    raise CatalogAXFRFormatError(
+                        "BIND catalog AXFR record class or TTL is not exact"
+                    )
                 raise CatalogAXFRError("BIND catalog AXFR record class or TTL is not exact")
             if not self.opened and record_type != DNS_TYPE_SOA:
                 raise CatalogAXFRError("BIND catalog AXFR does not start with its SOA")
@@ -318,8 +363,13 @@ class CatalogAXFRState:
                 member_raw, member_end = decode_name(message, rdata)
                 member = member_raw[:-1] if member_raw.endswith(".") else member_raw
                 if (member_end != end or member_raw != member + "."
-                        or not canonical_fqdn(member) or member == self.catalog
-                        or not self._exact_member_owner(owner, member)):
+                        or not canonical_fqdn(member) or member == self.catalog):
+                    raise CatalogAXFRError("BIND catalog AXFR member PTR is not exact")
+                if not self._exact_member_owner(owner, member):
+                    if self._other_producer_member_owner(owner, member):
+                        raise CatalogAXFRFormatError(
+                            "BIND catalog AXFR member PTR is not exact"
+                        )
                     raise CatalogAXFRError("BIND catalog AXFR member PTR is not exact")
                 if member in self.members:
                     raise CatalogAXFRError("BIND catalog AXFR contains a duplicate member")
@@ -371,6 +421,35 @@ def read_catalog_axfr_stream(
     raise CatalogAXFRError("BIND catalog AXFR did not terminate")
 
 
+def select_peer_catalog(read, catalog: str) -> tuple[int, list[str], str]:
+    """Port of selectDNSPeerCatalogAXFR (cmd/agent/dns_peer_catalog.go).
+
+    ``read(producer)`` performs one FRESH transfer read in that producer
+    format. The BIND format is tried first; only a CatalogAXFRFormatError
+    (a refusal the two formats encode differently) is retried in the PowerDNS
+    format. Transport errors and refusals common to both formats propagate
+    unchanged. If both formats refuse, the error names both reasons, as the
+    Agent's dnsPeerCatalogFormatError does. Returns (serial, members, producer).
+    """
+
+    try:
+        serial, members = read(PRODUCER_BIND)
+        return serial, members, PRODUCER_BIND
+    except CatalogAXFRFormatError as bind_error:
+        try:
+            serial, members = read(PRODUCER_POWERDNS)
+        except (CatalogAXFRError, OSError) as pdns_error:
+            def reason(error: Exception) -> str:
+                return str(error).removeprefix("BIND catalog AXFR ")
+
+            raise CatalogAXFRError(
+                f"the paired primary's catalog {catalog} matches neither supported "
+                f"catalog format (BIND format: {reason(bind_error)}; "
+                f"PowerDNS format: {reason(pdns_error)})"
+            ) from pdns_error
+        return serial, members, PRODUCER_POWERDNS
+
+
 # ---------------------------------------------------------------------------
 # Live, read-only DNS queries (no dig dependency).
 # ---------------------------------------------------------------------------
@@ -396,10 +475,11 @@ def _read_exact(connection: socket.socket, size: int) -> bytes:
     return bytes(data)
 
 
-def query_catalog_axfr(address: str, catalog: str, timeout: float = 8.0) -> tuple[int, list[str]]:
+def query_catalog_axfr(address: str, catalog: str, timeout: float = 8.0,
+                       producer: str = PRODUCER_BIND) -> tuple[int, list[str]]:
     query_id = _random_id()
     query = build_query(catalog, DNS_TYPE_AXFR, query_id)
-    state = CatalogAXFRState(query_id, catalog, PRODUCER_BIND)
+    state = CatalogAXFRState(query_id, catalog, producer)
     with socket.create_connection((address, 53), timeout=timeout) as connection:
         connection.sendall(struct.pack("!H", len(query)) + query)
         total = 0
@@ -531,6 +611,39 @@ def unit_active(unit: str) -> bool:
 # Observation.
 # ---------------------------------------------------------------------------
 
+def read_pdns_catalog_rows(database: str, catalog: str) -> dict:
+    """Read-only SQL view of the PowerDNS catalog rows (recorded, not judged).
+
+    The domains rows and the catalog's domainmetadata kinds show whether the
+    peer publishes a PRODUCER catalog with assigned members (pdns-native) or an
+    ordinary MASTER catalog zone (bind format). PowerDNS may add its own
+    metadata while it serves; that is recorded as observed.
+    """
+
+    import sqlite3  # noqa: PLC0415 - only the PowerDNS flavour needs it
+
+    try:
+        connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True, timeout=5)
+        try:
+            domains = connection.execute(
+                "SELECT name, UPPER(type), COALESCE(catalog,''), COALESCE(account,'') "
+                "FROM domains ORDER BY name COLLATE BINARY"
+            ).fetchall()
+            metadata = connection.execute(
+                "SELECT m.kind FROM domainmetadata m JOIN domains d ON m.domain_id = d.id "
+                "WHERE d.name = ? ORDER BY m.kind COLLATE BINARY", (catalog,)
+            ).fetchall()
+        finally:
+            connection.close()
+    except sqlite3.Error as exc:
+        return {"read": False, "error": str(exc)}
+    return {
+        "read": True,
+        "domains": [list(row) for row in domains],
+        "catalog_metadata_kinds": [row[0] for row in metadata],
+    }
+
+
 def validate_identity(engine: str, primary: str, secondary: str, catalog: str) -> None:
     if engine not in ENGINE_UNITS:
         raise ValueError("unsupported native primary engine")
@@ -544,10 +657,22 @@ def validate_identity(engine: str, primary: str, secondary: str, catalog: str) -
         raise ValueError("catalog identity differs from the primary address")
 
 
+def validate_catalog_format(engine: str, catalog_format: str) -> str:
+    """The producer the fixture format must be served as; BIND serves only bind."""
+
+    if catalog_format not in CATALOG_FORMATS:
+        raise ValueError(f"unsupported catalog format {catalog_format!r}")
+    if engine == "bind" and catalog_format != "bind":
+        raise ValueError("a native BIND primary serves the catalog in the bind format only")
+    return CATALOG_FORMATS[catalog_format]
+
+
 def observe(engine: str, primary: str, secondary: str, catalog: str,
             expected_members: list[str], config_paths: list[str],
-            require_secondary_transfer: bool) -> dict:
+            require_secondary_transfer: bool, catalog_format: str = "bind",
+            pdns_database: str | None = None) -> dict:
     validate_identity(engine, primary, secondary, catalog)
+    expected_producer = validate_catalog_format(engine, catalog_format)
     if any(os.path.lexists(path) for path in MANAGEMENT_BINARIES):
         raise ValueError("management software is present on the native primary peer")
     unit = ENGINE_UNITS[engine]
@@ -555,7 +680,15 @@ def observe(engine: str, primary: str, secondary: str, catalog: str,
         raise ValueError(f"native {unit} is inactive")
     if any(unit_active(other) for other in FOREIGN_UNITS[engine]):
         raise ValueError("another DNS engine is active on the native primary peer")
-    serial, members = query_catalog_axfr("127.0.0.1", catalog)
+    serial, members, producer = select_peer_catalog(
+        lambda selected: query_catalog_axfr("127.0.0.1", catalog, producer=selected),
+        catalog,
+    )
+    if producer != expected_producer:
+        raise ValueError(
+            f"native primary serves its catalog in the {AGENT_PRODUCER_NAMES[producer]} "
+            f"format, but the fixture was prepared with --catalog-format {catalog_format}"
+        )
     if members != sorted(expected_members):
         raise ValueError("native primary catalog members differ from the fixture expectation")
     member_soa: dict[str, dict] = {}
@@ -593,7 +726,14 @@ def observe(engine: str, primary: str, secondary: str, catalog: str,
         "catalog": catalog,
         "catalog_serial": serial,
         "catalog_members": members,
-        "catalog_parser": "agent-bind-producer-policy",
+        "catalog_parser": "agent-peer-catalog-selection",
+        "catalog_format": catalog_format,
+        "catalog_producer": producer,
+        "agent_catalog_format_name": AGENT_PRODUCER_NAMES[producer],
+        "pdns_catalog_rows": (
+            read_pdns_catalog_rows(pdns_database, catalog)
+            if engine == "pdns" and pdns_database else None
+        ),
         "member_soa": member_soa,
         "www_a": www["values"] if www else None,
         "transfers_to_secondary": transferred,
@@ -615,12 +755,17 @@ def main() -> int:
     parser.add_argument("--config", action="append", default=[],
                         help="native config or zone file to digest (read-only)")
     parser.add_argument("--require-secondary-transfer", action="store_true")
+    parser.add_argument("--catalog-format", choices=sorted(CATALOG_FORMATS), default="bind",
+                        help="catalog producer format the fixture peer was prepared with")
+    parser.add_argument("--pdns-database", default=None,
+                        help="PowerDNS SQLite database to read catalog rows from (read-only)")
     args = parser.parse_args()
     members = args.member if args.member is not None else [ZONE]
     try:
         print(json.dumps(observe(
             args.engine, args.primary, args.secondary, args.catalog, members,
             args.config, args.require_secondary_transfer,
+            catalog_format=args.catalog_format, pdns_database=args.pdns_database,
         ), sort_keys=True))
         return 0
     except (ValueError, OSError, subprocess.SubprocessError) as exc:

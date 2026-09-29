@@ -1,6 +1,8 @@
 # Paired-secondary fixture: panel-free native primary peer
 
-*Design note, 2026-09-29. Groundwork for register rows 3, 5 and 17 of
+*Design note, 2026-09-29 (updated the same day for `3cc2de22`: a PowerDNS
+peer now serves its native `PRODUCER` catalog by default). Groundwork for
+register rows 3, 5 and 17 of
 [DNS-RECOVERY-ACCEPTANCE.md](../../../docs/DNS-RECOVERY-ACCEPTANCE.md) (item 2).
 Nothing here is native evidence: no guest was started, nothing ran with
 `--execute`, and no row changes state because of this note.*
@@ -24,27 +26,30 @@ catalog SOA query (`cmd/panel/server_setup_secondary_prerequisite.go:21-44`).
 
 | Fact | Source | Consequence for the peer |
 |---|---|---|
-| A fresh BIND secondary reads the peer catalog before intent with the **BIND producer policy** | `cmd/agent/dns_engine_host.go:1405-1413` (`probeDNSCatalogAXFR`) | Every catalog record TTL 60; member owner `<sha224hex(member)>.zones.<catalog>` |
-| A fresh PowerDNS secondary does the same | `cmd/agent/dns_engine_pdns_catalog.go:35-51` (`peerPDNSCatalog` → `probeDNSCatalogAXFR`), called from `dns_engine_pdns_switch.go:1654-1659` | Same format for both secondary engines |
-| The reader is strict | `cmd/agent/dns_catalog_axfr.go:395-606` | Flags exactly QR\|AA; one question in the first message; no authority/additional; SOA `invalid. invalid.` with timers 60/30/3600/30 and serial > 0; exactly one apex NS `invalid.`; exactly one `version` TXT `"2"`; PTR members only; APL and every other type refused |
-| The PowerDNS policy (TTL 0, 32-char base32hex labels) is selected only for a panel-managed PowerDNS primary reading **its own** producer | `dns_catalog_axfr.go:100-104,117-125`, `dns_engine_pdns_catalog.go:1044` | A native PowerDNS `PRODUCER` catalog is **refused** by a CelikPanel secondary. The PowerDNS flavour therefore serves the catalog as an ordinary `MASTER` zone with explicit rows equal to `binddns.CatalogZoneRecords` |
+| Since `3cc2de22` every read of the PEER's catalog (install preflight, readiness, zone verification, legacy secondary, PowerDNS peer inspector) tries the **BIND format** first and, only on a producer-format refusal, the **PowerDNS format** on a fresh transfer | `cmd/agent/dns_peer_catalog.go` (`selectDNSPeerCatalogAXFR`, `queryDNSPeerCatalogAXFR`); BIND secondary `dns_engine_host.go` `requireBINDSecondaryPeerCatalog`; PowerDNS secondary `dns_engine_pdns_catalog.go` `peerPDNSCatalog` | A PowerDNS primary may serve either its native `PRODUCER` catalog or the BIND-format rows; both are tested (`--catalog-format pdns-native` default for the PowerDNS flavour, `bind` selectable) |
+| A producer-format refusal is only a version/member TTL of 0 or 60, or a member label of exactly the other producer's shape (`errDNSCatalogAXFRProducerFormat`); every other refusal is common and not retried; both refusing names both reasons | `cmd/agent/dns_catalog_axfr.go` (`dnsCatalogAXFRFormatError`, `otherProducerMemberOwner`) | Ported in `native_primary_peer_probe.py` (`CatalogAXFRFormatError`, `select_peer_catalog`) |
+| The accepted producer is pinned per operation and logged once: "`<operation>`: the paired primary at `<ip>` serves catalog `<catalog>` in the `<BIND|PowerDNS>` catalog format; this operation reads it in that format" | `dns_peer_catalog.go` (`dnsPeerCatalogSession.accept`) | The paired-secondary pass requires that line to name the format the peer serves |
+| The reader is strict | `cmd/agent/dns_catalog_axfr.go` (`dnsCatalogAXFRState.parseMessage`) | Flags exactly QR\|AA; one question in the first message; no authority/additional; SOA `invalid. invalid.` with timers 60/30/3600/30 and serial > 0; exactly one apex NS `invalid.`; exactly one `version` TXT `"2"`; PTR members only; APL and every other type refused |
+| A CelikPanel PowerDNS primary publishes a `PRODUCER` catalog: domain row `PRODUCER` with its authority account, only SOA and NS rows, `catalog` set on each `MASTER` member; PowerDNS emits version and member PTRs (TTL 0, 32-char base32hex labels) | `cmd/agent/dns_engine_pdns_catalog.go` `reconcilePDNSBINDCatalogWithSeedModeTx` (~584-819), `canonicalPDNSCatalogBaseRecords` | `pdns_seed_sql(..., "pdns-native")` mirrors those statements and their order, with the fixture account instead of the product's authority marker (the peer is panel-free; the account is not transferred) and no `domainmetadata` row, as the product writes none |
 | Some secondary proofs AXFR from the guest's own pair address | `dns_engine_pdns_switch.go:975-989` (`probeDNSBoundCatalogAXFR` from `LocalIP`), `dns_catalog_axfr.go:226-247` | AXFR must be allowed from the guest's `192.0.2.x` address |
 | Fresh PowerDNS paired secondary runs the V1 journal on certified Debian APT, retrieves catalog and members **before** `target-started` | `dns_engine_pdns_switch.go:2018-2023` (`retrievePDNSPairSecondaryZones`, `dns_engine_pdns_catalog.go:220-259`) | The primary must be serving and NOTIFY/AXFR-reachable before the operation starts |
 | Zone-sync V3 recovery refuses secondaries | `cmd/agent/dns_engine_secondary_write_guard_test.go:201,405` | Row 17 is cut on a CelikPanel **primary**, not with this peer |
 
-The catalog text is a byte-for-byte mirror of
-`internal/binddns/pairing.go:163-196` (`renderCatalogZone`); the PowerDNS
-rows mirror `pairing.go:97-143` (`CatalogZoneRecords`). The offline tests pin
-both to the Go golden vectors (`pairing_test.go` empty catalog text and the
-`example.test` SHA-224 label).
+The BIND-format catalog text is a byte-for-byte mirror of
+`internal/binddns/pairing.go:163-196` (`renderCatalogZone`); the
+PowerDNS-flavour rows of the `bind` format mirror `pairing.go:97-143`
+(`CatalogZoneRecords`). The offline tests pin both to the Go golden vectors
+(`pairing_test.go` empty catalog text and the `example.test` SHA-224 label).
+The `pdns-native` seed stores only the SOA/NS subset of those rows, as the
+product does.
 
 ## What was built
 
 | File | Role |
 |---|---|
-| `native_primary_peer.py` | Controller-side provisioner. `prepare` / `observe`, `--engine {bind,pdns}`, dry-run by default, `--execute` to act. Same argument style and guest-marker/absence checks as `native_bind_peer.py` and `native_pdns_bind_peer.py`. |
-| `native_primary_peer_probe.py` | Peer-side, read-only, stdlib-only probe (copied to the peer and removed after the run). Contains a port of the Agent's catalog AXFR reader. |
-| `test_native_primary_peer.py` | 22 offline tests (see below). |
+| `native_primary_peer.py` | Controller-side provisioner. `prepare` / `observe`, `--engine {bind,pdns}`, `--catalog-format {bind,pdns-native}` (PowerDNS only; default `pdns-native`), dry-run by default, `--execute` to act. Same argument style and guest-marker/absence checks as `native_bind_peer.py` and `native_pdns_bind_peer.py`. |
+| `native_primary_peer_probe.py` | Peer-side, read-only, stdlib-only probe (copied to the peer and removed after the run). Contains a port of the Agent's catalog AXFR reader and of its BIND-then-PowerDNS peer catalog selection. |
+| `test_native_primary_peer.py` | 28 offline tests (see below). |
 
 What `prepare` does, only after the guest marker names **the peer node** of
 the selected cell and the peer has no `/opt/celikpanel/bin/{agent,panel}`, no
@@ -58,8 +63,13 @@ active `named`/`bind9`/`pdns` unit and no leftover fixture file or database:
   during install) or `powerdns` (Arch); writes a native `pdns.conf`
   (`primary=yes`, `secondary=no`, gsqlite3, no include-dir, no API or
   webserver); creates the SQLite database from the packaged schema and seeds
-  two `MASTER` domains with `notified_serial` NULL so PowerDNS notifies on
-  start; enables and restarts `pdns.service`.
+  it with `notified_serial` NULL so PowerDNS notifies on start;
+  `--catalog-format pdns-native` (default): the `MASTER` member, a `PRODUCER`
+  catalog row with only SOA/NS, and the member assigned to it with the
+  product's `UPDATE domains SET catalog = ...` (the script aborts before
+  `COMMIT` unless exactly one member and one producer result);
+  `--catalog-format bind`: two `MASTER` domains with the explicit BIND-format
+  catalog rows. Enables and restarts `pdns.service`.
 - Both: AXFR allowed only to the guest under test and the peer's own loopback
   (the probe); NOTIFY only to the guest (`notify explicit` + `also-notify`;
   `also-notify` + `only-notify=<guest>/32`). Listens on `127.0.0.1` and the
@@ -70,9 +80,14 @@ active `named`/`bind9`/`pdns` unit and no leftover fixture file or database:
   `ns2` A → guest. Catalog serial 1, member set `{s1-kill.test}`.
 
 `observe` copies the probe, runs it once with `sudo`, deletes it, and checks
-the JSON identity. The probe (read-only) requires the engine unit active and
-the other engine inactive and no management binaries; AXFRs the catalog from
-loopback and parses it with the ported Agent rules; checks authoritative UDP
+the JSON identity and that the served producer equals the prepared format.
+The probe (read-only) requires the engine unit active and the other engine
+inactive and no management binaries; AXFRs the catalog from loopback and
+selects its producer exactly as the Agent does (BIND first, PowerDNS on a
+fresh transfer only after a producer-format refusal), reporting
+`catalog_producer`, `agent_catalog_format_name` and, for PowerDNS, the
+`domains` rows and catalog `domainmetadata` kinds (read-only SQLite); refuses
+a producer other than the prepared one; checks authoritative UDP
 and TCP SOA for each member and the catalog SOA; reads `www` A; filters
 `journalctl -b -u <unit>` to transfer/NOTIFY lines for the catalog and
 members; reports `transfers_to_secondary` per zone and SHA-256 of the native
@@ -83,12 +98,17 @@ transfer of both the catalog and the member to the guest.
 Usage (after both guests pass `wait-ssh`, **before** preparing the guest):
 
 ```sh
-python3 deploy/e2e/dns-kill-matrix/native_primary_peer.py prepare --engine bind \
+python3 deploy/e2e/dns-kill-matrix/native_primary_peer.py prepare --engine pdns \
+  --catalog-format pdns-native \
   --work-root "$ROOT" --cell-id "$CELL" --identity-file "$HOME/.ssh/id_ed25519" --execute
-python3 deploy/e2e/dns-kill-matrix/native_primary_peer.py observe --engine bind \
+python3 deploy/e2e/dns-kill-matrix/native_primary_peer.py observe --engine pdns \
+  --catalog-format pdns-native \
   --work-root "$ROOT" --cell-id "$CELL" --identity-file "$HOME/.ssh/id_ed25519" \
   --require-secondary-transfer --execute
 ```
+
+(`guest_bootstrap.py prepare-*`/`run-prepared` drive these with
+`--peer-engine` and `--peer-catalog-format`; see the README.)
 
 Accepted cells: role `paired-secondary`, driver `bind` or `pdns-switch`,
 placement policy `driver-specific` or `uninitialized-permitted-noncritical`;
@@ -96,12 +116,17 @@ placement policy `driver-specific` or `uninitialized-permitted-noncritical`;
 `placement.dns_peer_host`; addresses must be Debian `192.0.2.10`, Arch
 `192.0.2.11`. Both primary flavours are accepted for either secondary engine.
 
-Offline tests (WSL `CelikPanel-S2-Debian`, Python 3.13.5): 22 passed. They
+Offline tests (WSL `CelikPanel-S2-Debian`, Python 3.13.5): 28 passed. They
 cover the Go golden vectors; zone text and PowerDNS seed rows turned into DNS
 wire messages (single and split transfers, name compression) accepted by the
 ported reader; a native PowerDNS `PRODUCER` catalog refused by the BIND policy
 and accepted by the PowerDNS policy (parity with
-`TestPowerDNSCatalogAXFRProducerIsExplicitAndBounded`); the Go negative cases
+`TestPowerDNSCatalogAXFRProducerIsExplicitAndBounded`); the peer selection
+(BIND accepted in one read, a native producer on a second fresh read, common
+refusals not retried, both-format refusals naming both reasons, a PowerDNS
+transport error after a format refusal); the `pdns-native` seed rows and
+order and its fail-closed guard; per-engine format resolution; the observe
+command and producer check; the Go negative cases
 (serial, timers, MNAME/RNAME, NS target, quoted version, TTL, class, hash
 label, APL, duplicates, missing records, AA/RD/question/authority/additional);
 member zone equality with `bind_scenario`; config address sets and
@@ -114,8 +139,12 @@ without executing.
 **Not verified natively:** package installation, `named-checkzone` on the
 catalog, PowerDNS serving `invalid.` SOA/NS from SQL rows with AA set on AXFR,
 PowerDNS log format (`AXFR-out zone '…', client '…'`) at `loglevel=6`, and
-NOTIFY on start. The first native run must confirm each and retain the probe
-output.
+NOTIFY on start. For `pdns-native` also: that PowerDNS 4.9 (Debian) and the
+Arch package serve the producer with the seeded SOA timers and `invalid.`
+names, which serial it serves (the harness reads it and only requires it
+stable across the run), whether it writes its own `domainmetadata` for the
+producer (recorded), and that a CelikPanel secondary logs the `PowerDNS`
+format. The first native run must confirm each and retain the probe output.
 
 ## Trigger: fresh install versus legacy reconfiguration
 
@@ -284,10 +313,16 @@ for the commands and the full pass definition.
   BIND `pre-intent`, `intent`, `target-staged`, `target-verified` (7 cells,
   either kill host); PowerDNS every phase on Debian 13 (17 cells). The
   scenario is `paired_secondary_scenario` (zero zones, ns2 local / ns1 peer).
-  `--peer-engine {bind,pdns}` is required for these cells; `prepare-*` runs
-  `native_primary_peer.py prepare` and a baseline `observe` before preparing
-  the guest, and `run-prepared` observes the peer before the controller and
-  with `--require-secondary-transfer` after it, writing `peer-verdict.json`.
+  `--peer-engine {bind,pdns}` is required for these cells and
+  `--peer-catalog-format {bind,pdns-native}` selects the producer (default
+  `pdns-native` for a PowerDNS peer; checked against `peer-prepared.json`);
+  `prepare-*` runs `native_primary_peer.py prepare` and a baseline `observe`
+  before preparing the guest, and `run-prepared` observes the peer before the
+  controller and with `--require-secondary-transfer` after it, writing
+  `peer-verdict.json` (the served producer must equal the prepared format),
+  and passes `--peer-catalog-format-bind|--peer-catalog-format-pdns-native`
+  to the controller, whose pass definition requires the Agent's log line
+  naming the accepted catalog format to name that same format.
 - `guest_bootstrap.sh`: exact secondary scenario check, empty-source proof,
   and a read-only authoritative UDP+TCP catalog SOA check against the peer
   from the guest; PowerDNS additionally proves no database exists.
@@ -324,8 +359,8 @@ for `intent`, `target-staged`, `source-stopped`, `target-started`,
   `legacy-pdns-secondary` source producer (running managed PowerDNS,
   revision ≥ 1); still harness-blocked. The peer script refuses them today;
   admitting them later needs only the driver added to `SUPPORTED_DRIVERS`,
-  since `readLegacyPDNSPeerCatalogAuthority` reads the same BIND-policy
-  catalog.
+  since `readLegacyPDNSPeerCatalogAuthority` reads the peer catalog through
+  the same BIND-then-PowerDNS selection (`3cc2de22`).
 - `pdns-adopt` and `signed-update-finalize` paired-secondary cells are n/a in
   the manifest.
 - Row 17 is not a manifest cell (see (c)).
@@ -341,20 +376,15 @@ Still missing before the gate can open:
    `recover-dns-pdns-fresh-prestart` before start; Agent forward only after).
 3. **Acceptance through the public RPC**: Panel setup / DNS card →
    `SwitchDNSEngineV1`, not the tagged native tests.
-4. A product gap found while preparing this note: a CelikPanel secondary
-   (either engine) reads the peer catalog with the BIND producer policy
-   (`dns_engine_host.go:1411`, `dns_engine_pdns_catalog.go:47`), while a
-   CelikPanel PowerDNS primary publishes a native `PRODUCER` catalog (only SOA
-   and NS stored, `dns_engine_pdns_catalog.go:646,849-870`), whose members
-   PowerDNS emits with base32hex labels and TTL 0. By the Go tests
-   (`TestPowerDNSCatalogAXFRProducerIsExplicitAndBounded`) such a catalog is
-   refused under the BIND policy. So a CelikPanel-to-CelikPanel pair with a
-   PowerDNS primary would refuse the secondary install with "paired primary
-   catalog is unavailable". Panel-free native secondaries were used in every
-   trial so far, so none exposed this. Inferred from source and tests, not
-   observed natively; it needs a product decision (secondary parser selection,
-   or explicit records on the PowerDNS primary) before opening the gate for
-   CelikPanel pairs.
+4. The peer-catalog product gap found while preparing this note (a
+   CelikPanel secondary read the peer catalog in the BIND format only, while
+   a CelikPanel PowerDNS primary publishes its native `PRODUCER` catalog) is
+   addressed in code by `3cc2de22` (`cmd/agent/dns_peer_catalog.go`: BIND
+   format first, PowerDNS format on a producer-format refusal). The harness
+   now serves the native producer from a PowerDNS peer by default and judges
+   the Agent's accepted-format log line. Component tests only; the fresh
+   secondary cells against a `pdns-native` peer have not run natively, and a
+   CelikPanel-to-CelikPanel pair remains untested.
 5. Ordinary owner enrollment for parentless peer deletion (open since the
    V3 zone trial).
 
